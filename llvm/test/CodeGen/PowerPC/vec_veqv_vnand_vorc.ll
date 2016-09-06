@@ -1,6 +1,6 @@
 ; Check the miscellaneous logical vector operations added in P8
 ; 
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s
 ; Test x eqv y
 define <4 x i32> @test_veqv(<4 x i32> %x, <4 x i32> %y) nounwind {
        %tmp = xor <4 x i32> %x, %y

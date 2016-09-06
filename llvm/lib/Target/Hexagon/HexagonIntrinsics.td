@@ -23,27 +23,29 @@ class T_R_pat <InstHexagon MI, Intrinsic IntID>
 
 class T_P_pat <InstHexagon MI, Intrinsic IntID>
   : Pat <(IntID I64:$Rs),
-         (MI DoubleRegs:$Rs)>;
+         (MI I64:$Rs)>;
 
 class T_II_pat <InstHexagon MI, Intrinsic IntID, PatFrag Imm1, PatFrag Imm2>
   : Pat<(IntID Imm1:$Is, Imm2:$It),
         (MI Imm1:$Is, Imm2:$It)>;
 
-class T_RI_pat <InstHexagon MI, Intrinsic IntID, PatLeaf ImmPred = PatLeaf<(i32 imm)>>
+class T_RI_pat <InstHexagon MI, Intrinsic IntID,
+                PatLeaf ImmPred = PatLeaf<(i32 imm)>>
   : Pat<(IntID I32:$Rs, ImmPred:$It),
         (MI I32:$Rs, ImmPred:$It)>;
 
-class T_IR_pat <InstHexagon MI, Intrinsic IntID, PatFrag ImmPred = PatLeaf<(i32 imm)>>
+class T_IR_pat <InstHexagon MI, Intrinsic IntID,
+                PatFrag ImmPred = PatLeaf<(i32 imm)>>
   : Pat<(IntID ImmPred:$Is, I32:$Rt),
         (MI ImmPred:$Is, I32:$Rt)>;
 
 class T_PI_pat <InstHexagon MI, Intrinsic IntID>
   : Pat<(IntID I64:$Rs, imm:$It),
-        (MI DoubleRegs:$Rs, imm:$It)>;
+        (MI I64:$Rs, imm:$It)>;
 
 class T_RP_pat <InstHexagon MI, Intrinsic IntID>
   : Pat<(IntID I32:$Rs, I64:$Rt),
-        (MI I32:$Rs, DoubleRegs:$Rt)>;
+        (MI I32:$Rs, I64:$Rt)>;
 
 class T_RR_pat <InstHexagon MI, Intrinsic IntID>
   : Pat <(IntID I32:$Rs, I32:$Rt),
@@ -51,19 +53,31 @@ class T_RR_pat <InstHexagon MI, Intrinsic IntID>
 
 class T_PP_pat <InstHexagon MI, Intrinsic IntID>
   : Pat <(IntID I64:$Rs, I64:$Rt),
-         (MI DoubleRegs:$Rs, DoubleRegs:$Rt)>;
+         (MI I64:$Rs, I64:$Rt)>;
+
+class T_QQ_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat <(IntID I32:$Rs, I32:$Rt),
+         (MI (C2_tfrrp I32:$Rs), (C2_tfrrp I32:$Rt))>;
 
 class T_QII_pat <InstHexagon MI, Intrinsic IntID, PatFrag Imm1, PatFrag Imm2>
-  : Pat <(IntID (i32 PredRegs:$Ps), Imm1:$Is, Imm2:$It),
-         (MI PredRegs:$Ps, Imm1:$Is, Imm2:$It)>;
+  : Pat <(IntID I32:$Rp, Imm1:$Is, Imm2:$It),
+         (MI (C2_tfrrp I32:$Rp), Imm1:$Is, Imm2:$It)>;
+
+class T_QRR_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat <(IntID I32:$Rp, I32:$Rs, I32:$Rt),
+         (MI (C2_tfrrp I32:$Rp), I32:$Rs, I32:$Rt)>;
 
 class T_QRI_pat <InstHexagon MI, Intrinsic IntID, PatFrag ImmPred>
-  : Pat <(IntID (i32 PredRegs:$Ps), I32:$Rs, ImmPred:$Is),
-         (MI PredRegs:$Ps, I32:$Rs, ImmPred:$Is)>;
+  : Pat <(IntID I32:$Rp, I32:$Rs, ImmPred:$Is),
+         (MI (C2_tfrrp I32:$Rp), I32:$Rs, ImmPred:$Is)>;
 
 class T_QIR_pat <InstHexagon MI, Intrinsic IntID, PatFrag ImmPred>
-  : Pat <(IntID (i32 PredRegs:$Ps), ImmPred:$Is, I32:$Rs),
-         (MI PredRegs:$Ps, ImmPred:$Is, I32:$Rs)>;
+  : Pat <(IntID I32:$Rp, ImmPred:$Is, I32:$Rs),
+         (MI (C2_tfrrp I32:$Rp), ImmPred:$Is, I32:$Rs)>;
+
+class T_QPP_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat <(IntID I32:$Rp, I64:$Rs, I64:$Rt),
+         (MI (C2_tfrrp I32:$Rp), I64:$Rs, I64:$Rt)>;
 
 class T_RRI_pat <InstHexagon MI, Intrinsic IntID>
   : Pat <(IntID I32:$Rs, I32:$Rt, imm:$Iu),
@@ -91,31 +105,31 @@ class T_RRR_pat <InstHexagon MI, Intrinsic IntID>
 
 class T_PPI_pat <InstHexagon MI, Intrinsic IntID>
   : Pat <(IntID I64:$Rs, I64:$Rt, imm:$Iu),
-         (MI DoubleRegs:$Rs, DoubleRegs:$Rt, imm:$Iu)>;
+         (MI I64:$Rs, I64:$Rt, imm:$Iu)>;
 
 class T_PII_pat <InstHexagon MI, Intrinsic IntID>
   : Pat <(IntID I64:$Rs, imm:$It, imm:$Iu),
-         (MI DoubleRegs:$Rs, imm:$It, imm:$Iu)>;
+         (MI I64:$Rs, imm:$It, imm:$Iu)>;
 
 class T_PPP_pat <InstHexagon MI, Intrinsic IntID>
   : Pat <(IntID I64:$Rs, I64:$Rt, I64:$Ru),
-         (MI DoubleRegs:$Rs, DoubleRegs:$Rt, DoubleRegs:$Ru)>;
+         (MI I64:$Rs, I64:$Rt, I64:$Ru)>;
 
 class T_PPR_pat <InstHexagon MI, Intrinsic IntID>
   : Pat <(IntID I64:$Rs, I64:$Rt, I32:$Ru),
-         (MI DoubleRegs:$Rs, DoubleRegs:$Rt, I32:$Ru)>;
+         (MI I64:$Rs, I64:$Rt, I32:$Ru)>;
 
 class T_PRR_pat <InstHexagon MI, Intrinsic IntID>
   : Pat <(IntID I64:$Rs, I32:$Rt, I32:$Ru),
-         (MI DoubleRegs:$Rs, I32:$Rt, I32:$Ru)>;
+         (MI I64:$Rs, I32:$Rt, I32:$Ru)>;
 
 class T_PPQ_pat <InstHexagon MI, Intrinsic IntID>
-  : Pat <(IntID I64:$Rs, I64:$Rt, (i32 PredRegs:$Ru)),
-         (MI DoubleRegs:$Rs, DoubleRegs:$Rt, PredRegs:$Ru)>;
+  : Pat <(IntID I64:$Rs, I64:$Rt, I32:$Rp),
+         (MI I64:$Rs, I64:$Rt, (C2_tfrrp I32:$Rp))>;
 
 class T_PR_pat <InstHexagon MI, Intrinsic IntID>
   : Pat <(IntID I64:$Rs, I32:$Rt),
-         (MI DoubleRegs:$Rs, I32:$Rt)>;
+         (MI I64:$Rs, I32:$Rt)>;
 
 class T_D_pat <InstHexagon MI, Intrinsic IntID>
   : Pat<(IntID (F64:$Rs)),
@@ -131,7 +145,7 @@ class T_F_pat <InstHexagon MI, Intrinsic IntID>
         (MI F32:$Rs)>;
 
 class T_FI_pat <InstHexagon MI, Intrinsic IntID,
-                 PatLeaf ImmPred = PatLeaf<(i32 imm)>>
+                PatLeaf ImmPred = PatLeaf<(i32 imm)>>
   : Pat<(IntID F32:$Rs, ImmPred:$It),
         (MI F32:$Rs, ImmPred:$It)>;
 
@@ -148,8 +162,62 @@ class T_FFF_pat <InstHexagon MI, Intrinsic IntID>
         (MI F32:$Rs, F32:$Rt, F32:$Ru)>;
 
 class T_FFFQ_pat <InstHexagon MI, Intrinsic IntID>
-  : Pat <(IntID F32:$Rs, F32:$Rt, F32:$Ru, (i32 PredRegs:$Rx)),
-         (MI F32:$Rs, F32:$Rt, F32:$Ru, PredRegs:$Rx)>;
+  : Pat <(IntID F32:$Rs, F32:$Rt, F32:$Ru, I32:$Rp),
+         (MI F32:$Rs, F32:$Rt, F32:$Ru, (C2_tfrrp I32:$Rp))>;
+
+class T_Q_RI_pat <InstHexagon MI, Intrinsic IntID,
+                  PatLeaf ImmPred = PatLeaf<(i32 imm)>>
+  : Pat<(IntID I32:$Rs, ImmPred:$It),
+        (C2_tfrpr (MI I32:$Rs, ImmPred:$It))>;
+
+class T_Q_RR_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat <(IntID I32:$Rs, I32:$Rt),
+         (C2_tfrpr (MI I32:$Rs, I32:$Rt))>;
+
+class T_Q_RP_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat <(IntID I32:$Rs, I64:$Rt),
+         (C2_tfrpr (MI I32:$Rs, I64:$Rt))>;
+
+class T_Q_PR_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat <(IntID I64:$Rs, I32:$Rt),
+         (C2_tfrpr (MI I64:$Rs, I32:$Rt))>;
+
+class T_Q_PI_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat<(IntID I64:$Rs, imm:$It),
+        (C2_tfrpr (MI I64:$Rs, imm:$It))>;
+
+class T_Q_PP_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat <(IntID I64:$Rs, I64:$Rt),
+         (C2_tfrpr (MI I64:$Rs, I64:$Rt))>;
+
+class T_Q_Q_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat <(IntID I32:$Rp),
+         (C2_tfrpr (MI (C2_tfrrp I32:$Rp)))>;
+
+class T_Q_QQ_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat <(IntID I32:$Rp, I32:$Rq),
+         (C2_tfrpr (MI (C2_tfrrp I32:$Rp), (C2_tfrrp I32:$Rq)))>;
+
+class T_Q_FF_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat<(IntID F32:$Rs, F32:$Rt),
+        (C2_tfrpr (MI F32:$Rs, F32:$Rt))>;
+
+class T_Q_DD_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat<(IntID F64:$Rs, F64:$Rt),
+        (C2_tfrpr (MI F64:$Rs, F64:$Rt))>;
+
+class T_Q_FI_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat<(IntID F32:$Rs, imm:$It),
+        (C2_tfrpr (MI F32:$Rs, imm:$It))>;
+
+class T_Q_DI_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat<(IntID F64:$Rs, imm:$It),
+        (C2_tfrpr (MI F64:$Rs, imm:$It))>;
+
+class T_Q_QQQ_pat <InstHexagon MI, Intrinsic IntID>
+  : Pat <(IntID I32:$Rp, I32:$Rq, I32:$Rs),
+         (C2_tfrpr (MI (C2_tfrrp I32:$Rp), (C2_tfrrp I32:$Rq),
+                       (C2_tfrrp I32:$Rs)))>;
 
 //===----------------------------------------------------------------------===//
 // MPYS / Multipy signed/unsigned halfwords
@@ -645,9 +713,9 @@ def : T_PPR_pat <S2_lsr_r_p_or,   int_hexagon_S2_lsr_r_p_or>;
 def : T_PPR_pat <S2_asl_r_p_or,   int_hexagon_S2_asl_r_p_or>;
 def : T_PPR_pat <S2_lsl_r_p_or,   int_hexagon_S2_lsl_r_p_or>;
 
-/********************************************************************
-*            ALU32/ALU                                              *
-*********************************************************************/
+//*******************************************************************
+//           ALU32/ALU
+//*******************************************************************
 def : T_RR_pat<A2_add,      int_hexagon_A2_add>;
 def : T_RI_pat<A2_addi,     int_hexagon_A2_addi>;
 def : T_RR_pat<A2_sub,      int_hexagon_A2_sub>;
@@ -660,31 +728,46 @@ def : T_RR_pat<A2_xor,      int_hexagon_A2_xor>;
 def : T_RR_pat<A2_combinew, int_hexagon_A2_combinew>;
 
 // Assembler mapped from Rd32=not(Rs32) to Rd32=sub(#-1,Rs32)
-def : Pat <(int_hexagon_A2_not (I32:$Rs)),
-           (A2_subri -1, IntRegs:$Rs)>;
+def : Pat <(int_hexagon_A2_not I32:$Rs),
+           (A2_subri -1, I32:$Rs)>;
 
 // Assembler mapped from Rd32=neg(Rs32) to Rd32=sub(#0,Rs32)
-def : Pat <(int_hexagon_A2_neg IntRegs:$Rs),
-           (A2_subri 0, IntRegs:$Rs)>;
+def : Pat <(int_hexagon_A2_neg I32:$Rs),
+           (A2_subri 0, I32:$Rs)>;
 
 // Transfer immediate
-def  : Pat <(int_hexagon_A2_tfril (I32:$Rs), u16_0ImmPred:$Is),
-            (A2_tfril IntRegs:$Rs, u16_0ImmPred:$Is)>;
-def  : Pat <(int_hexagon_A2_tfrih (I32:$Rs), u16_0ImmPred:$Is),
-            (A2_tfrih IntRegs:$Rs, u16_0ImmPred:$Is)>;
+def  : Pat <(int_hexagon_A2_tfril I32:$Rs, u16_0ImmPred:$Is),
+            (A2_tfril I32:$Rs, u16_0ImmPred:$Is)>;
+def  : Pat <(int_hexagon_A2_tfrih I32:$Rs, u16_0ImmPred:$Is),
+            (A2_tfrih I32:$Rs, u16_0ImmPred:$Is)>;
 
 //  Transfer Register/immediate.
 def : T_R_pat <A2_tfr, int_hexagon_A2_tfr>;
 def : T_I_pat <A2_tfrsi, int_hexagon_A2_tfrsi>;
-def : T_I_pat <A2_tfrpi, int_hexagon_A2_tfrpi>;
+
+def ImmExt64: SDNodeXForm<imm, [{
+  int64_t V = N->getSExtValue();
+  return CurDAG->getTargetConstant(V, SDLoc(N), MVT::i64);
+}]>;
+
+// A2_tfrpi has an operand of type i64. This is necessary, since it is
+// generated from "(set I64:$Rd, imm)". That pattern would not appear
+// in the DAG, if the immediate was not a 64-bit value.
+// The builtin for A2_tfrpi, on the other hand, takes a 32-bit value,
+// which makes it impossible to simply replace it with the instruction.
+// To connect the builtin with the instruction, the builtin's operand
+// needs to be extended to the right type.
+
+def : Pat<(int_hexagon_A2_tfrpi imm:$Is),
+          (A2_tfrpi (ImmExt64 $Is))>;
 
 // Assembler mapped from Rdd32=Rss32 to Rdd32=combine(Rss.H32,Rss.L32)
-def : Pat<(int_hexagon_A2_tfrp DoubleRegs:$src),
-          (A2_combinew (HiReg DoubleRegs:$src), (LoReg DoubleRegs:$src))>;
+def : Pat<(int_hexagon_A2_tfrp I64:$src),
+          (A2_combinew (HiReg I64:$src), (LoReg I64:$src))>;
 
-/********************************************************************
-*            ALU32/PERM                                             *
-*********************************************************************/
+//*******************************************************************
+//           ALU32/PERM
+//*******************************************************************
 // Combine
 def: T_RR_pat<A2_combine_hh, int_hexagon_A2_combine_hh>;
 def: T_RR_pat<A2_combine_hl, int_hexagon_A2_combine_hl>;
@@ -693,10 +776,8 @@ def: T_RR_pat<A2_combine_ll, int_hexagon_A2_combine_ll>;
 
 def: T_II_pat<A2_combineii, int_hexagon_A2_combineii, s32ImmPred, s8ImmPred>;
 
-def: Pat<(i32 (int_hexagon_C2_mux (I32:$Rp), (I32:$Rs), (I32:$Rt))),
-         (i32 (C2_mux (C2_tfrrp IntRegs:$Rp), IntRegs:$Rs, IntRegs:$Rt))>;
-
 // Mux
+def : T_QRR_pat<C2_mux,   int_hexagon_C2_mux>;
 def : T_QRI_pat<C2_muxir, int_hexagon_C2_muxir, s32ImmPred>;
 def : T_QIR_pat<C2_muxri, int_hexagon_C2_muxri, s32ImmPred>;
 def : T_QII_pat<C2_muxii, int_hexagon_C2_muxii, s32ImmPred, s8ImmPred>;
@@ -712,41 +793,36 @@ def : T_R_pat<A2_sxtb, int_hexagon_A2_sxtb>;
 def : T_R_pat<A2_zxth, int_hexagon_A2_zxth>;
 def : T_R_pat<A2_zxtb, int_hexagon_A2_zxtb>;
 
-/********************************************************************
-*            ALU32/PRED                                             *
-*********************************************************************/
+//*******************************************************************
+//           ALU32/PRED
+//*******************************************************************
 // Compare
-def : T_RR_pat<C2_cmpeq,  int_hexagon_C2_cmpeq>;
-def : T_RR_pat<C2_cmpgt,  int_hexagon_C2_cmpgt>;
-def : T_RR_pat<C2_cmpgtu, int_hexagon_C2_cmpgtu>;
+def : T_Q_RR_pat<C2_cmpeq,  int_hexagon_C2_cmpeq>;
+def : T_Q_RR_pat<C2_cmpgt,  int_hexagon_C2_cmpgt>;
+def : T_Q_RR_pat<C2_cmpgtu, int_hexagon_C2_cmpgtu>;
 
-def : T_RI_pat<C2_cmpeqi, int_hexagon_C2_cmpeqi, s32ImmPred>;
-def : T_RI_pat<C2_cmpgti, int_hexagon_C2_cmpgti, s32ImmPred>;
-def : T_RI_pat<C2_cmpgtui, int_hexagon_C2_cmpgtui, u32ImmPred>;
+def : T_Q_RI_pat<C2_cmpeqi,  int_hexagon_C2_cmpeqi, s32ImmPred>;
+def : T_Q_RI_pat<C2_cmpgti,  int_hexagon_C2_cmpgti, s32ImmPred>;
+def : T_Q_RI_pat<C2_cmpgtui, int_hexagon_C2_cmpgtui, u32ImmPred>;
 
-def : Pat <(i32 (int_hexagon_C2_cmpgei (I32:$src1), s32ImmPred:$src2)),
-      (i32 (C2_cmpgti (I32:$src1),
-                      (DEC_CONST_SIGNED s32ImmPred:$src2)))>;
+def : Pat <(int_hexagon_C2_cmpgei I32:$src1, s32ImmPred:$src2),
+           (C2_tfrpr (C2_cmpgti I32:$src1,
+                                (DEC_CONST_SIGNED s32ImmPred:$src2)))>;
 
-def : Pat <(i32 (int_hexagon_C2_cmpgeui (I32:$src1), u32ImmPred:$src2)),
-      (i32 (C2_cmpgtui (I32:$src1),
-                       (DEC_CONST_UNSIGNED u32ImmPred:$src2)))>;
+def : Pat <(int_hexagon_C2_cmpgeui I32:$src1, u32ImmPred:$src2),
+           (C2_tfrpr (C2_cmpgtui I32:$src1,
+                                 (DEC_CONST_UNSIGNED u32ImmPred:$src2)))>;
 
-// The instruction, Pd=cmp.geu(Rs, #u8) -> Pd=cmp.eq(Rs,Rs) when #u8 == 0.
-def : Pat <(i32 (int_hexagon_C2_cmpgeui (I32:$src1), 0)),
-      (i32 (C2_cmpeq (I32:$src1), (I32:$src1)))>;
+def : Pat <(int_hexagon_C2_cmpgeui I32:$src, 0),
+           (C2_tfrpr (C2_cmpeq I32:$src, I32:$src))>;
+def : Pat <(int_hexagon_C2_cmplt I32:$src1, I32:$src2),
+           (C2_tfrpr (C2_cmpgt I32:$src2, I32:$src1))>;
+def : Pat <(int_hexagon_C2_cmpltu I32:$src1, I32:$src2),
+           (C2_tfrpr (C2_cmpgtu I32:$src2, I32:$src1))>;
 
-def : Pat <(i32 (int_hexagon_C2_cmplt (I32:$src1),
-                                      (I32:$src2))),
-      (i32 (C2_cmpgt (I32:$src2), (I32:$src1)))>;
-
-def : Pat <(i32 (int_hexagon_C2_cmpltu (I32:$src1),
-                                       (I32:$src2))),
-      (i32 (C2_cmpgtu (I32:$src2), (I32:$src1)))>;
-
-/********************************************************************
-*            ALU32/VH                                               *
-*********************************************************************/
+//*******************************************************************
+//           ALU32/VH
+//*******************************************************************
 // Vector add, subtract, average halfwords
 def: T_RR_pat<A2_svaddh,   int_hexagon_A2_svaddh>;
 def: T_RR_pat<A2_svaddhs,  int_hexagon_A2_svaddhs>;
@@ -760,28 +836,28 @@ def: T_RR_pat<A2_svavgh,   int_hexagon_A2_svavgh>;
 def: T_RR_pat<A2_svavghs,  int_hexagon_A2_svavghs>;
 def: T_RR_pat<A2_svnavgh,  int_hexagon_A2_svnavgh>;
 
-/********************************************************************
-*            ALU64/ALU                                              *
-*********************************************************************/
-def: T_RR_pat<A2_addsat,   int_hexagon_A2_addsat>;
-def: T_RR_pat<A2_subsat,   int_hexagon_A2_subsat>;
-def: T_PP_pat<A2_addp,     int_hexagon_A2_addp>;
-def: T_PP_pat<A2_subp,     int_hexagon_A2_subp>;
+//*******************************************************************
+//           ALU64/ALU
+//*******************************************************************
+def: T_RR_pat<A2_addsat,     int_hexagon_A2_addsat>;
+def: T_RR_pat<A2_subsat,     int_hexagon_A2_subsat>;
+def: T_PP_pat<A2_addp,       int_hexagon_A2_addp>;
+def: T_PP_pat<A2_subp,       int_hexagon_A2_subp>;
 
-def: T_PP_pat<A2_andp,     int_hexagon_A2_andp>;
-def: T_PP_pat<A2_orp,      int_hexagon_A2_orp>;
-def: T_PP_pat<A2_xorp,     int_hexagon_A2_xorp>;
+def: T_PP_pat<A2_andp,       int_hexagon_A2_andp>;
+def: T_PP_pat<A2_orp,        int_hexagon_A2_orp>;
+def: T_PP_pat<A2_xorp,       int_hexagon_A2_xorp>;
 
-def: T_PP_pat<C2_cmpeqp,   int_hexagon_C2_cmpeqp>;
-def: T_PP_pat<C2_cmpgtp,   int_hexagon_C2_cmpgtp>;
-def: T_PP_pat<C2_cmpgtup,  int_hexagon_C2_cmpgtup>;
+def: T_Q_PP_pat<C2_cmpeqp,   int_hexagon_C2_cmpeqp>;
+def: T_Q_PP_pat<C2_cmpgtp,   int_hexagon_C2_cmpgtp>;
+def: T_Q_PP_pat<C2_cmpgtup,  int_hexagon_C2_cmpgtup>;
 
-def: T_PP_pat<S2_parityp,  int_hexagon_S2_parityp>;
-def: T_RR_pat<S2_packhl,   int_hexagon_S2_packhl>;
+def: T_PP_pat<S2_parityp,    int_hexagon_S2_parityp>;
+def: T_RR_pat<S2_packhl,     int_hexagon_S2_packhl>;
 
-/********************************************************************
-*            ALU64/VB                                               *
-*********************************************************************/
+//*******************************************************************
+//           ALU64/VB
+//*******************************************************************
 // ALU64 - Vector add
 def : T_PP_pat <A2_vaddub,   int_hexagon_A2_vaddub>;
 def : T_PP_pat <A2_vaddubs,  int_hexagon_A2_vaddubs>;
@@ -838,23 +914,22 @@ def : T_PP_pat <A2_vsubw,    int_hexagon_A2_vsubw>;
 def : T_PP_pat <A2_vsubws,   int_hexagon_A2_vsubws>;
 
 // ALU64 - Vector compare bytes
-def : T_PP_pat <A2_vcmpbeq,  int_hexagon_A2_vcmpbeq>;
-def : T_PP_pat <A4_vcmpbgt,  int_hexagon_A4_vcmpbgt>;
-def : T_PP_pat <A2_vcmpbgtu, int_hexagon_A2_vcmpbgtu>;
+def : T_Q_PP_pat <A2_vcmpbeq,  int_hexagon_A2_vcmpbeq>;
+def : T_Q_PP_pat <A4_vcmpbgt,  int_hexagon_A4_vcmpbgt>;
+def : T_Q_PP_pat <A2_vcmpbgtu, int_hexagon_A2_vcmpbgtu>;
 
 // ALU64 - Vector compare halfwords
-def : T_PP_pat <A2_vcmpheq,  int_hexagon_A2_vcmpheq>;
-def : T_PP_pat <A2_vcmphgt,  int_hexagon_A2_vcmphgt>;
-def : T_PP_pat <A2_vcmphgtu, int_hexagon_A2_vcmphgtu>;
+def : T_Q_PP_pat <A2_vcmpheq,  int_hexagon_A2_vcmpheq>;
+def : T_Q_PP_pat <A2_vcmphgt,  int_hexagon_A2_vcmphgt>;
+def : T_Q_PP_pat <A2_vcmphgtu, int_hexagon_A2_vcmphgtu>;
 
 // ALU64 - Vector compare words
-def : T_PP_pat <A2_vcmpweq,  int_hexagon_A2_vcmpweq>;
-def : T_PP_pat <A2_vcmpwgt,  int_hexagon_A2_vcmpwgt>;
-def : T_PP_pat <A2_vcmpwgtu, int_hexagon_A2_vcmpwgtu>;
+def : T_Q_PP_pat <A2_vcmpweq,  int_hexagon_A2_vcmpweq>;
+def : T_Q_PP_pat <A2_vcmpwgt,  int_hexagon_A2_vcmpwgt>;
+def : T_Q_PP_pat <A2_vcmpwgtu, int_hexagon_A2_vcmpwgtu>;
 
 // ALU64 / VB / Vector mux.
-def : Pat<(int_hexagon_C2_vmux PredRegs:$Pu, DoubleRegs:$Rs, DoubleRegs:$Rt),
-          (C2_vmux PredRegs:$Pu, DoubleRegs:$Rs, DoubleRegs:$Rt)>;
+def : T_QPP_pat <C2_vmux,      int_hexagon_C2_vmux>;
 
 // MPY - Multiply and use full result
 // Rdd = mpy[u](Rs, Rt)
@@ -903,35 +978,24 @@ def : T_PRR_pat <M2_vmac2, int_hexagon_M2_vmac2>;
 def : T_PRR_pat <M2_vmac2s_s0, int_hexagon_M2_vmac2s_s0>;
 def : T_PRR_pat <M2_vmac2s_s1, int_hexagon_M2_vmac2s_s1>;
 
-/********************************************************************
-*            CR                                                     *
-*********************************************************************/
-class qi_CRInst_qi_pat<InstHexagon Inst, Intrinsic IntID> :
-  Pat<(i32 (IntID IntRegs:$Rs)),
-      (i32 (C2_tfrpr (Inst (C2_tfrrp IntRegs:$Rs))))>;
+//*******************************************************************
+//           CR
+//*******************************************************************
+def: T_Q_Q_pat<C2_not,       int_hexagon_C2_not>;
+def: T_Q_Q_pat<C2_all8,      int_hexagon_C2_all8>;
+def: T_Q_Q_pat<C2_any8,      int_hexagon_C2_any8>;
+def: T_Q_Q_pat<C2_pxfer_map, int_hexagon_C2_pxfer_map>;
 
-class qi_CRInst_qiqi_pat<InstHexagon Inst, Intrinsic IntID> :
-  Pat<(i32 (IntID IntRegs:$Rs, IntRegs:$Rt)),
-      (i32 (C2_tfrpr (Inst (C2_tfrrp IntRegs:$Rs), (C2_tfrrp IntRegs:$Rt))))>;
-
-def: qi_CRInst_qi_pat<C2_not,     int_hexagon_C2_not>;
-def: qi_CRInst_qi_pat<C2_all8,    int_hexagon_C2_all8>;
-def: qi_CRInst_qi_pat<C2_any8,    int_hexagon_C2_any8>;
-
-def: qi_CRInst_qiqi_pat<C2_and,   int_hexagon_C2_and>;
-def: qi_CRInst_qiqi_pat<C2_andn,  int_hexagon_C2_andn>;
-def: qi_CRInst_qiqi_pat<C2_or,    int_hexagon_C2_or>;
-def: qi_CRInst_qiqi_pat<C2_orn,   int_hexagon_C2_orn>;
-def: qi_CRInst_qiqi_pat<C2_xor,   int_hexagon_C2_xor>;
-
-// Assembler mapped from  Pd4=Ps4 to Pd4=or(Ps4,Ps4)
-def : Pat<(int_hexagon_C2_pxfer_map PredRegs:$src),
-          (C2_pxfer_map PredRegs:$src)>;
+def: T_Q_QQ_pat<C2_and,      int_hexagon_C2_and>;
+def: T_Q_QQ_pat<C2_andn,     int_hexagon_C2_andn>;
+def: T_Q_QQ_pat<C2_or,       int_hexagon_C2_or>;
+def: T_Q_QQ_pat<C2_orn,      int_hexagon_C2_orn>;
+def: T_Q_QQ_pat<C2_xor,      int_hexagon_C2_xor>;
 
 // Multiply 32x32 and use lower result
 def : T_RRI_pat <M2_macsip, int_hexagon_M2_macsip>;
 def : T_RRI_pat <M2_macsin, int_hexagon_M2_macsin>;
-def : T_RRR_pat <M2_maci, int_hexagon_M2_maci>;
+def : T_RRR_pat <M2_maci,   int_hexagon_M2_maci>;
 
 // Subtract and accumulate
 def : T_RRR_pat <M2_subacc, int_hexagon_M2_subacc>;
@@ -945,54 +1009,45 @@ def : T_RRI_pat <M2_naccii, int_hexagon_M2_naccii>;
 // XOR and XOR with destination
 def : T_RRR_pat <M2_xor_xacc, int_hexagon_M2_xor_xacc>;
 
-class MType_R32_pat <Intrinsic IntID, InstHexagon OutputInst> :
-      Pat <(IntID IntRegs:$src1, IntRegs:$src2),
-           (OutputInst IntRegs:$src1, IntRegs:$src2)>;
-
 // Vector dual multiply with round and pack
-
-def : Pat <(int_hexagon_M2_vdmpyrs_s0 DoubleRegs:$src1, DoubleRegs:$src2),
-           (M2_vdmpyrs_s0 DoubleRegs:$src1, DoubleRegs:$src2)>;
-
-def : Pat <(int_hexagon_M2_vdmpyrs_s1 DoubleRegs:$src1, DoubleRegs:$src2),
-           (M2_vdmpyrs_s1 DoubleRegs:$src1, DoubleRegs:$src2)>;
+def : T_PP_pat <M2_vdmpyrs_s0, int_hexagon_M2_vdmpyrs_s0>;
+def : T_PP_pat <M2_vdmpyrs_s1, int_hexagon_M2_vdmpyrs_s1>;
 
 // Vector multiply halfwords with round and pack
-
-def : MType_R32_pat <int_hexagon_M2_vmpy2s_s0pack, M2_vmpy2s_s0pack>;
-def : MType_R32_pat <int_hexagon_M2_vmpy2s_s1pack, M2_vmpy2s_s1pack>;
+def : T_RR_pat <M2_vmpy2s_s0pack, int_hexagon_M2_vmpy2s_s0pack>;
+def : T_RR_pat <M2_vmpy2s_s1pack, int_hexagon_M2_vmpy2s_s1pack>;
 
 // Multiply and use lower result
-def : MType_R32_pat <int_hexagon_M2_mpyi, M2_mpyi>;
-def : T_RI_pat<M2_mpysmi, int_hexagon_M2_mpysmi>;
+def : T_RR_pat <M2_mpyi, int_hexagon_M2_mpyi>;
+def : T_RI_pat <M2_mpysmi, int_hexagon_M2_mpysmi>;
 
 // Assembler mapped from Rd32=mpyui(Rs32,Rt32) to Rd32=mpyi(Rs32,Rt32)
-def : MType_R32_pat <int_hexagon_M2_mpyui, M2_mpyi>;
+def : T_RR_pat <M2_mpyi, int_hexagon_M2_mpyui>;
 
 // Multiply and use upper result
-def : MType_R32_pat <int_hexagon_M2_mpy_up, M2_mpy_up>;
-def : MType_R32_pat <int_hexagon_M2_mpyu_up, M2_mpyu_up>;
-def : MType_R32_pat <int_hexagon_M2_hmmpyh_rs1, M2_hmmpyh_rs1>;
-def : MType_R32_pat <int_hexagon_M2_hmmpyl_rs1, M2_hmmpyl_rs1>;
-def : MType_R32_pat <int_hexagon_M2_dpmpyss_rnd_s0, M2_dpmpyss_rnd_s0>;
+def : T_RR_pat <M2_mpy_up, int_hexagon_M2_mpy_up>;
+def : T_RR_pat <M2_mpyu_up, int_hexagon_M2_mpyu_up>;
+def : T_RR_pat <M2_hmmpyh_rs1, int_hexagon_M2_hmmpyh_rs1>;
+def : T_RR_pat <M2_hmmpyl_rs1, int_hexagon_M2_hmmpyl_rs1>;
+def : T_RR_pat <M2_dpmpyss_rnd_s0, int_hexagon_M2_dpmpyss_rnd_s0>;
 
 // Complex multiply with round and pack
 // Rxx32+=cmpy(Rs32,[*]Rt32:<<1]:rnd:sat
-def : MType_R32_pat <int_hexagon_M2_cmpyrs_s0, M2_cmpyrs_s0>;
-def : MType_R32_pat <int_hexagon_M2_cmpyrs_s1, M2_cmpyrs_s1>;
-def : MType_R32_pat <int_hexagon_M2_cmpyrsc_s0, M2_cmpyrsc_s0>;
-def : MType_R32_pat <int_hexagon_M2_cmpyrsc_s1, M2_cmpyrsc_s1>;
+def : T_RR_pat <M2_cmpyrs_s0, int_hexagon_M2_cmpyrs_s0>;
+def : T_RR_pat <M2_cmpyrs_s1, int_hexagon_M2_cmpyrs_s1>;
+def : T_RR_pat <M2_cmpyrsc_s0, int_hexagon_M2_cmpyrsc_s0>;
+def : T_RR_pat <M2_cmpyrsc_s1, int_hexagon_M2_cmpyrsc_s1>;
 
-/********************************************************************
-*            STYPE/ALU                                              *
-*********************************************************************/
+//*******************************************************************
+//           STYPE/ALU
+//*******************************************************************
 def : T_P_pat <A2_absp, int_hexagon_A2_absp>;
 def : T_P_pat <A2_negp, int_hexagon_A2_negp>;
 def : T_P_pat <A2_notp, int_hexagon_A2_notp>;
 
-/********************************************************************
-*            STYPE/BIT                                              *
-*********************************************************************/
+//*******************************************************************
+//           STYPE/BIT
+//*******************************************************************
 
 // Count leading/trailing
 def: T_R_pat<S2_cl0,     int_hexagon_S2_cl0>;
@@ -1023,6 +1078,11 @@ def : T_PP_pat <S2_vtrunowh, int_hexagon_S2_vtrunowh>;
 // Linear feedback-shift Iteration.
 def : T_PP_pat <S2_lfsp, int_hexagon_S2_lfsp>;
 
+// Vector align
+// Need custom lowering
+def : T_PPQ_pat <S2_valignrb, int_hexagon_S2_valignrb>;
+def : T_PPI_pat <S2_valignib, int_hexagon_S2_valignib>;
+
 // Vector splice
 def : T_PPQ_pat <S2_vsplicerb, int_hexagon_S2_vsplicerb>;
 def : T_PPI_pat <S2_vspliceib, int_hexagon_S2_vspliceib>;
@@ -1037,25 +1097,21 @@ def : T_RP_pat <S2_extractu_rp,  int_hexagon_S2_extractu_rp>;
 def : T_PP_pat <S2_extractup_rp, int_hexagon_S2_extractup_rp>;
 
 // Insert bitfield
-def : Pat <(int_hexagon_S2_insert_rp IntRegs:$src1, IntRegs:$src2,
-                                     DoubleRegs:$src3),
-           (S2_insert_rp IntRegs:$src1, IntRegs:$src2, DoubleRegs:$src3)>;
+def : Pat <(int_hexagon_S2_insert_rp I32:$src1, I32:$src2, I64:$src3),
+           (S2_insert_rp I32:$src1, I32:$src2, I64:$src3)>;
 
-def : Pat<(i64 (int_hexagon_S2_insertp_rp (I64:$src1),
-                 (I64:$src2), (I64:$src3))),
-          (i64 (S2_insertp_rp (I64:$src1), (I64:$src2),
-                              (I64:$src3)))>;
+def : Pat<(i64 (int_hexagon_S2_insertp_rp I64:$src1, I64:$src2, I64:$src3)),
+          (i64 (S2_insertp_rp I64:$src1, I64:$src2, I64:$src3))>;
 
-def : Pat<(int_hexagon_S2_insert IntRegs:$src1, IntRegs:$src2,
+def : Pat<(int_hexagon_S2_insert I32:$src1, I32:$src2,
                                  u5ImmPred:$src3, u5ImmPred:$src4),
-          (S2_insert IntRegs:$src1, IntRegs:$src2,
+          (S2_insert I32:$src1, I32:$src2,
                      u5ImmPred:$src3, u5ImmPred:$src4)>;
 
-def : Pat<(i64 (int_hexagon_S2_insertp (I64:$src1),
-                 (I64:$src2), u6ImmPred:$src3, u6ImmPred:$src4)),
-          (i64 (S2_insertp (I64:$src1), (I64:$src2),
+def : Pat<(i64 (int_hexagon_S2_insertp I64:$src1, I64:$src2,
+                                       u6ImmPred:$src3, u6ImmPred:$src4)),
+          (i64 (S2_insertp I64:$src1, I64:$src2,
                            u6ImmPred:$src3, u6ImmPred:$src4))>;
-
 
 // Innterleave/deinterleave
 def : T_P_pat <S2_interleave, int_hexagon_S2_interleave>;
@@ -1071,21 +1127,21 @@ def: T_RR_pat<S2_clrbit_r,    int_hexagon_S2_clrbit_r>;
 def: T_RR_pat<S2_togglebit_r, int_hexagon_S2_togglebit_r>;
 
 // Test Bit
-def: T_RI_pat<S2_tstbit_i,    int_hexagon_S2_tstbit_i>;
-def: T_RR_pat<S2_tstbit_r,    int_hexagon_S2_tstbit_r>;
+def: T_Q_RI_pat<S2_tstbit_i,  int_hexagon_S2_tstbit_i>;
+def: T_Q_RR_pat<S2_tstbit_r,  int_hexagon_S2_tstbit_r>;
 
-/********************************************************************
-*            STYPE/COMPLEX                                          *
-*********************************************************************/
+//*******************************************************************
+//           STYPE/COMPLEX
+//*******************************************************************
 // Vector Complex conjugate
 def : T_P_pat <A2_vconj, int_hexagon_A2_vconj>;
 
 // Vector Complex rotate
 def : T_PR_pat <S2_vcrotate, int_hexagon_S2_vcrotate>;
 
-/********************************************************************
-*            STYPE/PERM                                             *
-*********************************************************************/
+//*******************************************************************
+//           STYPE/PERM
+//*******************************************************************
 
 // Vector saturate without pack
 def : T_P_pat <S2_vsathb_nopack, int_hexagon_S2_vsathb_nopack>;
@@ -1093,28 +1149,26 @@ def : T_P_pat <S2_vsathub_nopack, int_hexagon_S2_vsathub_nopack>;
 def : T_P_pat <S2_vsatwh_nopack, int_hexagon_S2_vsatwh_nopack>;
 def : T_P_pat <S2_vsatwuh_nopack, int_hexagon_S2_vsatwuh_nopack>;
 
-/********************************************************************
-*            STYPE/PRED                                             *
-*********************************************************************/
+//*******************************************************************
+//           STYPE/PRED
+//*******************************************************************
 
 // Predicate transfer
-def: Pat<(i32 (int_hexagon_C2_tfrpr (I32:$Rs))),
-         (i32 (C2_tfrpr (C2_tfrrp (I32:$Rs))))>;
-def: Pat<(i32 (int_hexagon_C2_tfrrp (I32:$Rs))),
-         (i32 (C2_tfrpr (C2_tfrrp (I32:$Rs))))>;
+def: Pat<(i32 (int_hexagon_C2_tfrpr I32:$Rs)),
+         (i32 (C2_tfrpr (C2_tfrrp I32:$Rs)))>;
+def: Pat<(i32 (int_hexagon_C2_tfrrp I32:$Rs)),
+         (i32 (C2_tfrpr (C2_tfrrp I32:$Rs)))>;
 
 // Mask generate from predicate
-def: Pat<(i64 (int_hexagon_C2_mask (I32:$Rs))),
-         (i64 (C2_mask (C2_tfrrp (I32:$Rs))))>;
+def: Pat<(i64 (int_hexagon_C2_mask I32:$Rs)),
+         (i64 (C2_mask (C2_tfrrp I32:$Rs)))>;
 
 // Viterbi pack even and odd predicate bits
-def: Pat<(i32 (int_hexagon_C2_vitpack (I32:$Rs), (I32:$Rt))),
-         (i32 (C2_vitpack (C2_tfrrp (I32:$Rs)),
-                          (C2_tfrrp (I32:$Rt))))>;
+def: T_QQ_pat<C2_vitpack, int_hexagon_C2_vitpack>;
 
-/********************************************************************
-*            STYPE/SHIFT                                            *
-*********************************************************************/
+//*******************************************************************
+//           STYPE/SHIFT
+//*******************************************************************
 
 def : T_PI_pat <S2_asr_i_p, int_hexagon_S2_asr_i_p>;
 def : T_PI_pat <S2_lsr_i_p, int_hexagon_S2_lsr_i_p>;
@@ -1185,8 +1239,8 @@ def : T_RI_pat <S2_asl_i_r_sat, int_hexagon_S2_asl_i_r_sat>;
 //===----------------------------------------------------------------------===//
 class S2op_tableidx_pat <Intrinsic IntID, InstHexagon OutputInst,
                          SDNodeXForm XformImm>
-  : Pat <(IntID IntRegs:$src1, IntRegs:$src2, u4ImmPred:$src3, u5ImmPred:$src4),
-         (OutputInst IntRegs:$src1, IntRegs:$src2, u4ImmPred:$src3,
+  : Pat <(IntID I32:$src1, I32:$src2, u4ImmPred:$src3, u5ImmPred:$src4),
+         (OutputInst I32:$src1, I32:$src2, u4ImmPred:$src3,
                      (XformImm u5ImmPred:$src4))>;
 
 
@@ -1195,9 +1249,9 @@ class S2op_tableidx_pat <Intrinsic IntID, InstHexagon OutputInst,
 // values from the 4th input operand. Please note that subtraction is not
 // needed for int_hexagon_S2_tableidxb_goodsyntax.
 
-def : Pat <(int_hexagon_S2_tableidxb_goodsyntax IntRegs:$src1, IntRegs:$src2,
+def : Pat <(int_hexagon_S2_tableidxb_goodsyntax I32:$src1, I32:$src2,
                                               u4ImmPred:$src3, u5ImmPred:$src4),
-           (S2_tableidxb IntRegs:$src1, IntRegs:$src2,
+           (S2_tableidxb I32:$src1, I32:$src2,
                          u4ImmPred:$src3, u5ImmPred:$src4)>;
 
 def : S2op_tableidx_pat <int_hexagon_S2_tableidxh_goodsyntax, S2_tableidxh,
@@ -1207,9 +1261,9 @@ def : S2op_tableidx_pat <int_hexagon_S2_tableidxw_goodsyntax, S2_tableidxw,
 def : S2op_tableidx_pat <int_hexagon_S2_tableidxd_goodsyntax, S2_tableidxd,
                          DEC3_CONST_SIGNED>;
 
-/********************************************************************
-*            STYPE/VH                                               *
-*********************************************************************/
+//*******************************************************************
+//           STYPE/VH
+//*******************************************************************
 
 // Vector absolute value halfwords with and without saturation
 // Rdd64=vabsh(Rss64)[:sat]
@@ -1229,9 +1283,9 @@ def : T_PR_pat <S2_lsr_r_vh, int_hexagon_S2_lsr_r_vh>;
 def : T_PR_pat <S2_asl_r_vh, int_hexagon_S2_asl_r_vh>;
 def : T_PR_pat <S2_lsl_r_vh, int_hexagon_S2_lsl_r_vh>;
 
-/********************************************************************
-*            STYPE/VW                                               *
-*********************************************************************/
+//*******************************************************************
+//           STYPE/VW
+//*******************************************************************
 
 // Vector absolute value words with and without saturation
 def : T_P_pat <A2_vabsw, int_hexagon_A2_vabsw>;
@@ -1251,43 +1305,42 @@ def : T_PR_pat <S2_asl_r_vw, int_hexagon_S2_asl_r_vw>;
 def : T_PR_pat <S2_lsl_r_vw, int_hexagon_S2_lsl_r_vw>;
 
 // Vector shift words with truncate and pack
-
 def : T_PR_pat <S2_asr_r_svw_trun, int_hexagon_S2_asr_r_svw_trun>;
 
+// Load/store locked.
 def : T_R_pat<L2_loadw_locked, int_hexagon_L2_loadw_locked>;
 def : T_R_pat<L4_loadd_locked, int_hexagon_L4_loadd_locked>;
 
-def: Pat<(i32 (int_hexagon_S2_storew_locked (I32:$Rs), (I32:$Rt))),
-         (i32 (C2_tfrpr (S2_storew_locked (I32:$Rs), (I32:$Rt))))>;
-def: Pat<(i32 (int_hexagon_S4_stored_locked (I32:$Rs), (I64:$Rt))),
-         (i32 (C2_tfrpr (S4_stored_locked (I32:$Rs), (I64:$Rt))))>;
+def : Pat<(int_hexagon_S2_storew_locked I32:$Rs, I32:$Rt),
+          (C2_tfrpr (S2_storew_locked I32:$Rs, I32:$Rt))>;
+def : Pat<(int_hexagon_S4_stored_locked I32:$Rs, I64:$Rt),
+          (C2_tfrpr (S4_stored_locked I32:$Rs, I64:$Rt))>;
 
-/********************************************************************
-*            ST
-*********************************************************************/
+//*******************************************************************
+//           ST
+//*******************************************************************
 
 class T_stb_pat <InstHexagon MI, Intrinsic IntID, PatLeaf Val>
   : Pat<(IntID I32:$Rs, Val:$Rt, I32:$Ru),
-        (MI I32:$Rs, Val:$Rt, I32:$Ru)>;
+        (MI I32:$Rs, I32:$Ru, Val:$Rt)>;
 
-def : T_stb_pat <S2_storerh_pbr_pseudo, int_hexagon_brev_sth,   I32>;
-def : T_stb_pat <S2_storerb_pbr_pseudo, int_hexagon_brev_stb,   I32>;
-def : T_stb_pat <S2_storeri_pbr_pseudo, int_hexagon_brev_stw,   I32>;
-def : T_stb_pat <S2_storerf_pbr_pseudo, int_hexagon_brev_sthhi, I32>;
-def : T_stb_pat <S2_storerd_pbr_pseudo, int_hexagon_brev_std,   I64>;
+def : T_stb_pat <S2_storerh_pbr, int_hexagon_brev_sth,   I32>;
+def : T_stb_pat <S2_storerb_pbr, int_hexagon_brev_stb,   I32>;
+def : T_stb_pat <S2_storeri_pbr, int_hexagon_brev_stw,   I32>;
+def : T_stb_pat <S2_storerf_pbr, int_hexagon_brev_sthhi, I32>;
+def : T_stb_pat <S2_storerd_pbr, int_hexagon_brev_std,   I64>;
 
 class T_stc_pat <InstHexagon MI, Intrinsic IntID, PatLeaf Imm, PatLeaf Val>
   : Pat<(IntID I32:$Rs, Val:$Rt, I32:$Ru, Imm:$s),
-        (MI I32:$Rs, Val:$Rt, I32:$Ru, Imm:$s)>;
+        (MI I32:$Rs, Imm:$s, I32:$Ru, Val:$Rt)>;
 
-def: T_stc_pat<S2_storerb_pci_pseudo, int_hexagon_circ_stb,   s4_0ImmPred, I32>;
-def: T_stc_pat<S2_storerh_pci_pseudo, int_hexagon_circ_sth,   s4_1ImmPred, I32>;
-def: T_stc_pat<S2_storeri_pci_pseudo, int_hexagon_circ_stw,   s4_2ImmPred, I32>;
-def: T_stc_pat<S2_storerd_pci_pseudo, int_hexagon_circ_std,   s4_3ImmPred, I64>;
-def: T_stc_pat<S2_storerf_pci_pseudo, int_hexagon_circ_sthhi, s4_1ImmPred, I32>;
+def: T_stc_pat<S2_storerb_pci, int_hexagon_circ_stb,   s4_0ImmPred, I32>;
+def: T_stc_pat<S2_storerh_pci, int_hexagon_circ_sth,   s4_1ImmPred, I32>;
+def: T_stc_pat<S2_storeri_pci, int_hexagon_circ_stw,   s4_2ImmPred, I32>;
+def: T_stc_pat<S2_storerd_pci, int_hexagon_circ_std,   s4_3ImmPred, I64>;
+def: T_stc_pat<S2_storerf_pci, int_hexagon_circ_sthhi, s4_1ImmPred, I32>;
 
 include "HexagonIntrinsicsV3.td"
 include "HexagonIntrinsicsV4.td"
 include "HexagonIntrinsicsV5.td"
 include "HexagonIntrinsicsV60.td"
-

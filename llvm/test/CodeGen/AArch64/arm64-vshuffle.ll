@@ -36,7 +36,7 @@ bb:
 }
 
 ; CHECK: test3
-; CHECK: movi.4s v{{[0-9]+}}, #0x1
+; CHECK: movi.4s v{{[0-9]+}}, #1
 define <16 x i1> @test3(i1* %ptr, i32 %v) {
 bb:
   %Shuff = shufflevector <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0>, <16 x i1> undef,

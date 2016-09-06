@@ -9,6 +9,6 @@ define i2 @f(i32 %arg) {
 ; CHECK-LABEL: f:
 ; CHECK:      addb    %dil, %dil
 ; CHECK-NEXT: orb     $1, %dil
-; CHECK-NEXT: movb    %dil, %al
+; CHECK-NEXT: movl    %edi, %eax
 ; CHECK-NEXT: retq
 }

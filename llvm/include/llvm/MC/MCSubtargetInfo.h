@@ -14,6 +14,7 @@
 #ifndef LLVM_MC_MCSUBTARGETINFO_H
 #define LLVM_MC_MCSUBTARGETINFO_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include <string>

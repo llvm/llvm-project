@@ -39,19 +39,18 @@ public:
   bool Result;
 };
 
-// \brief Counts the number of err_using_directive_member_suggest diagnostics
-// correcting from one namespace to another while still passing all diagnostics
-// along a chain of consumers.
-class NamespaceDiagnosticWatcher : public clang::DiagnosticConsumer {
+/// Counts the number of typo-correcting diagnostics correcting from one name to
+/// another while still passing all diagnostics along a chain of consumers.
+class DiagnosticWatcher : public clang::DiagnosticConsumer {
   DiagnosticConsumer *Chained;
-  std::string FromNS;
-  std::string ToNS;
+  std::string FromName;
+  std::string ToName;
 
 public:
-  NamespaceDiagnosticWatcher(StringRef From, StringRef To)
-      : Chained(nullptr), FromNS(From), ToNS("'"), SeenCount(0) {
-    ToNS.append(To);
-    ToNS.append("'");
+  DiagnosticWatcher(StringRef From, StringRef To)
+      : Chained(nullptr), FromName(From), ToName("'"), SeenCount(0) {
+    ToName.append(To);
+    ToName.append("'");
   }
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
@@ -61,7 +60,12 @@ public:
     if (Info.getID() - 1 == diag::err_using_directive_member_suggest) {
       const IdentifierInfo *Ident = Info.getArgIdentifier(0);
       const std::string &CorrectedQuotedStr = Info.getArgStdStr(1);
-      if (Ident->getName() == FromNS && CorrectedQuotedStr == ToNS)
+      if (Ident->getName() == FromName && CorrectedQuotedStr == ToName)
+        ++SeenCount;
+    } else if (Info.getID() == diag::err_no_member_suggest) {
+      auto Ident = DeclarationName::getFromOpaqueInteger(Info.getRawArg(0));
+      const std::string &CorrectedQuotedStr = Info.getArgStdStr(3);
+      if (Ident.getAsString() == FromName && CorrectedQuotedStr == ToName)
         ++SeenCount;
     }
   }
@@ -78,7 +82,7 @@ public:
     return false;
   }
 
-  NamespaceDiagnosticWatcher *Chain(DiagnosticConsumer *ToChain) {
+  DiagnosticWatcher *Chain(DiagnosticConsumer *ToChain) {
     Chained = ToChain;
     return this;
   }
@@ -130,11 +134,53 @@ public:
   int CallCount;
 };
 
-// \brief Chains together a vector of NamespaceDiagnosticWatchers and
+class FunctionTypoProvider : public clang::ExternalSemaSource {
+  std::string CorrectFrom;
+  std::string CorrectTo;
+  Sema *CurrentSema;
+
+public:
+  FunctionTypoProvider(StringRef From, StringRef To)
+      : CorrectFrom(From), CorrectTo(To), CurrentSema(nullptr), CallCount(0) {}
+
+  void InitializeSema(Sema &S) override { CurrentSema = &S; }
+
+  void ForgetSema() override { CurrentSema = nullptr; }
+
+  TypoCorrection CorrectTypo(const DeclarationNameInfo &Typo, int LookupKind,
+                             Scope *S, CXXScopeSpec *SS,
+                             CorrectionCandidateCallback &CCC,
+                             DeclContext *MemberContext, bool EnteringContext,
+                             const ObjCObjectPointerType *OPT) override {
+    ++CallCount;
+    if (CurrentSema && Typo.getName().getAsString() == CorrectFrom) {
+      DeclContext *DestContext = nullptr;
+      ASTContext &Context = CurrentSema->getASTContext();
+      if (SS)
+        DestContext = CurrentSema->computeDeclContext(*SS, EnteringContext);
+      if (!DestContext)
+        DestContext = Context.getTranslationUnitDecl();
+      IdentifierInfo *ToIdent =
+          CurrentSema->getPreprocessor().getIdentifierInfo(CorrectTo);
+      auto *NewFunction = FunctionDecl::Create(
+          Context, DestContext, SourceLocation(), SourceLocation(), ToIdent,
+          Context.getFunctionType(Context.VoidTy, {}, {}), nullptr, SC_Static);
+      DestContext->addDecl(NewFunction);
+      TypoCorrection Correction(ToIdent);
+      Correction.addCorrectionDecl(NewFunction);
+      return Correction;
+    }
+    return TypoCorrection();
+  }
+
+  int CallCount;
+};
+
+// \brief Chains together a vector of DiagnosticWatchers and
 // adds a vector of ExternalSemaSources to the CompilerInstance before
 // performing semantic analysis.
 class ExternalSemaSourceInstaller : public clang::ASTFrontendAction {
-  std::vector<NamespaceDiagnosticWatcher *> Watchers;
+  std::vector<DiagnosticWatcher *> Watchers;
   std::vector<clang::ExternalSemaSource *> Sources;
   std::unique_ptr<DiagnosticConsumer> OwnedClient;
 
@@ -170,16 +216,14 @@ public:
     Sources.push_back(Source);
   }
 
-  void PushWatcher(NamespaceDiagnosticWatcher *Watcher) {
-    Watchers.push_back(Watcher);
-  }
+  void PushWatcher(DiagnosticWatcher *Watcher) { Watchers.push_back(Watcher); }
 };
 
-// Make sure that the NamespaceDiagnosticWatcher is not miscounting.
+// Make sure that the DiagnosticWatcher is not miscounting.
 TEST(ExternalSemaSource, SanityCheck) {
   std::unique_ptr<ExternalSemaSourceInstaller> Installer(
       new ExternalSemaSourceInstaller);
-  NamespaceDiagnosticWatcher Watcher("AAB", "BBB");
+  DiagnosticWatcher Watcher("AAB", "BBB");
   Installer->PushWatcher(&Watcher);
   std::vector<std::string> Args(1, "-std=c++11");
   ASSERT_TRUE(clang::tooling::runToolOnCodeWithArgs(
@@ -193,7 +237,7 @@ TEST(ExternalSemaSource, ExternalTypoCorrectionPrioritized) {
   std::unique_ptr<ExternalSemaSourceInstaller> Installer(
       new ExternalSemaSourceInstaller);
   NamespaceTypoProvider Provider("AAB", "BBB");
-  NamespaceDiagnosticWatcher Watcher("AAB", "BBB");
+  DiagnosticWatcher Watcher("AAB", "BBB");
   Installer->PushSource(&Provider);
   Installer->PushWatcher(&Watcher);
   std::vector<std::string> Args(1, "-std=c++11");
@@ -211,7 +255,7 @@ TEST(ExternalSemaSource, ExternalTypoCorrectionOrdering) {
   NamespaceTypoProvider First("XXX", "BBB");
   NamespaceTypoProvider Second("AAB", "CCC");
   NamespaceTypoProvider Third("AAB", "DDD");
-  NamespaceDiagnosticWatcher Watcher("AAB", "CCC");
+  DiagnosticWatcher Watcher("AAB", "CCC");
   Installer->PushSource(&First);
   Installer->PushSource(&Second);
   Installer->PushSource(&Third);
@@ -222,6 +266,21 @@ TEST(ExternalSemaSource, ExternalTypoCorrectionOrdering) {
   ASSERT_LE(1, First.CallCount);
   ASSERT_LE(1, Second.CallCount);
   ASSERT_EQ(0, Third.CallCount);
+  ASSERT_EQ(1, Watcher.SeenCount);
+}
+
+TEST(ExternalSemaSource, ExternalDelayedTypoCorrection) {
+  std::unique_ptr<ExternalSemaSourceInstaller> Installer(
+      new ExternalSemaSourceInstaller);
+  FunctionTypoProvider Provider("aaa", "bbb");
+  DiagnosticWatcher Watcher("aaa", "bbb");
+  Installer->PushSource(&Provider);
+  Installer->PushWatcher(&Watcher);
+  std::vector<std::string> Args(1, "-std=c++11");
+  ASSERT_TRUE(clang::tooling::runToolOnCodeWithArgs(
+      Installer.release(), "namespace AAA { } void foo() { AAA::aaa(); }",
+      Args));
+  ASSERT_LE(0, Provider.CallCount);
   ASSERT_EQ(1, Watcher.SeenCount);
 }
 

@@ -14,11 +14,10 @@ define void @f1() {
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!11, !13}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: " ", isOptimized: true, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !9, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: " ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !9, imports: !2)
 !1 = !DIFile(filename: "file.c", directory: "")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 2, file: !1, scope: !1, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 2, file: !1, scope: !1, type: !6, variables: !2)
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8}
 !8 = !DIBasicType(tag: DW_TAG_base_type, size: 32, align: 32, encoding: DW_ATE_signed)

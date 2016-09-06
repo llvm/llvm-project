@@ -15,10 +15,9 @@
 #ifndef LLVM_TRANSFORMS_UTILS_PROMOTEMEMTOREG_H
 #define LLVM_TRANSFORMS_UTILS_PROMOTEMEMTOREG_H
 
-#include "llvm/ADT/ArrayRef.h"
-
 namespace llvm {
 
+template <typename T> class ArrayRef;
 class AllocaInst;
 class DominatorTree;
 class AliasSetTracker;

@@ -12,16 +12,16 @@
 .section a,"ax",%progbits
 @ CHECK-LABEL: f2:
 f2:
-  ldr r0, =0x10001
+  ldr r0, =0x10002
 @ CHECK: ldr r0, .Ltmp[[TMP0:[0-9+]]]
   adds r0, r0, #1
   adds r0, r0, #1
   b f3
 .ltorg
 @ constant pool
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP0]]
-@ CHECK: .long 65537
+@ CHECK: .long 65538
 
 @ CHECK-LABEL: f3:
 f3:
@@ -32,30 +32,30 @@ f3:
 .section b,"ax",%progbits
 @ CHECK-LABEL: f4:
 f4:
-  ldr r0, =0x10002
+  ldr r0, =0x10003
 @ CHECK: ldr r0, .Ltmp[[TMP1:[0-9+]]]
   adds r0, r0, #1
   adds r0, r0, #1
   b f5
 .ltorg
 @ constant pool
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP1]]
-@ CHECK: .long 65538
+@ CHECK: .long 65539
 
 @ CHECK-LABEL: f5:
 f5:
   adds r0, r0, #1
   adds r0, r0, #1
-  ldr r0, =0x10003
+  ldr r0, =0x10004
 @ CHECK: ldr r0, .Ltmp[[TMP2:[0-9+]]]
   adds r0, r0, #1
   b f6
 .ltorg
 @ constant pool
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP2]]
-@ CHECK: .long 65539
+@ CHECK: .long 65540
 
 @ CHECK-LABEL: f6:
 f6:
@@ -86,7 +86,7 @@ f9:
   b f10
 .ltorg
 @ constant pool
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP3]]
 @ CHECK: .long bar
 
@@ -101,18 +101,18 @@ f10:
 f11:
   adds r0, r0, #1
   adds r0, r0, #1
-  ldr r0, =0x10004
+  ldr r0, =0x10005
 @ CHECK: ldr r0, .Ltmp[[TMP4:[0-9+]]]
   b f12
   .ltorg
 @ constant pool
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP4]]
-@ CHECK: .long 65540
+@ CHECK: .long 65541
 @ CHECK-LABEL: f12:
 f12:
   adds r0, r0, #1
-  ldr r0, =0x10005
+  ldr r0, =0x10006
 @ CHECK: ldr r0, .Ltmp[[TMP5:[0-9+]]]
 
 .section f,"ax",%progbits
@@ -130,9 +130,9 @@ f13:
 @ should have a non-empty constant pool at end of this section
 @ CHECK: .section e,"ax",%progbits
 @ constant pool
-@ CHECK: .align 2
+@ CHECK: .p2align 2
 @ CHECK: .Ltmp[[TMP5]]
-@ CHECK: .long 65541
+@ CHECK: .long 65542
 
 @ should not have a constant pool at end of section with empty constant pools
 @ CHECK-NOT: .section f,"ax",%progbits

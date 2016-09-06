@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
 #include "java.h"
 
 jptr varaddr;
@@ -10,7 +10,7 @@ void *Thread(void *p) {
   __tsan_java_mutex_lock(lockaddr);
   int rec = __tsan_java_mutex_unlock_rec(lockaddr);
   if (rec != 3) {
-    printf("FAILED 0 rec=%d\n", rec);
+    fprintf(stderr, "FAILED 0 rec=%d\n", rec);
     exit(1);
   }
   *(int*)varaddr = 42;
@@ -42,7 +42,7 @@ int main() {
   barrier_wait(&barrier);
   pthread_join(th, 0);
   __tsan_java_free(jheap, kBlockSize);
-  printf("DONE\n");
+  fprintf(stderr, "DONE\n");
   return __tsan_java_fini();
 }
 

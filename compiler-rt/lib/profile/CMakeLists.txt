@@ -22,7 +22,24 @@ int main() {
       }
 " COMPILER_RT_TARGET_HAS_ATOMICS)
 
+CHECK_CXX_SOURCE_COMPILES("
+#if defined(__linux__)
+#include <unistd.h>
+#endif
+#include <fcntl.h>
+int fd;
+int main() {
+ struct flock s_flock;
+
+ s_flock.l_type = F_WRLCK;
+ fcntl(fd, F_SETLKW, &s_flock);
+ return 0;
+}
+
+" COMPILER_RT_TARGET_HAS_FCNTL_LCK)
+
 add_custom_target(profile)
+set_target_properties(profile PROPERTIES FOLDER "Compiler-RT Misc")
 
 set(PROFILE_SOURCES
   GCDAProfiling.c
@@ -30,6 +47,8 @@ set(PROFILE_SOURCES
   InstrProfilingValue.c
   InstrProfilingBuffer.c
   InstrProfilingFile.c
+  InstrProfilingMerge.c
+  InstrProfilingMergeFile.c
   InstrProfilingWriter.c
   InstrProfilingPlatformDarwin.c
   InstrProfilingPlatformLinux.c
@@ -53,11 +72,23 @@ if(COMPILER_RT_TARGET_HAS_ATOMICS)
      -DCOMPILER_RT_HAS_ATOMICS=1)
 endif() 
 
+if(COMPILER_RT_TARGET_HAS_FCNTL_LCK)
+ set(EXTRA_FLAGS
+     ${EXTRA_FLAGS}
+     -DCOMPILER_RT_HAS_FCNTL_LCK=1)
+endif()
+
+# This appears to be a C-only warning banning the use of locals in aggregate
+# initializers. All other compilers accept this, though.
+# nonstandard extension used : 'identifier' : cannot be initialized using address of automatic variable
+append_list_if(COMPILER_RT_HAS_WD4221_FLAG /wd4221 EXTRA_FLAGS)
+
 if(APPLE)
   add_compiler_rt_runtime(clang_rt.profile
     STATIC
     OS ${PROFILE_SUPPORTED_OS}
     ARCHS ${PROFILE_SUPPORTED_ARCH}
+    CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
     PARENT_TARGET profile)
 else()

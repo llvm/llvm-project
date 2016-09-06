@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
 
@@ -13,8 +13,8 @@ declare <16 x double> @llvm.floor.v16f64(<16 x double>) nounwind readnone
 ; FUNC-LABEL: {{^}}ffloor_f64:
 ; CI: v_floor_f64_e32
 ; SI: v_fract_f64_e32
-; SI: v_min_f64
-; SI: v_cmp_class_f64_e64
+; SI-DAG: v_min_f64
+; SI-DAG: v_cmp_class_f64_e64
 ; SI: v_cndmask_b32_e64
 ; SI: v_cndmask_b32_e64
 ; SI: v_add_f64
@@ -28,8 +28,8 @@ define void @ffloor_f64(double addrspace(1)* %out, double %x) {
 ; FUNC-LABEL: {{^}}ffloor_f64_neg:
 ; CI: v_floor_f64_e64
 ; SI: v_fract_f64_e64 {{v[[0-9]+:[0-9]+]}}, -[[INPUT:s[[0-9]+:[0-9]+]]]
-; SI: v_min_f64
-; SI: v_cmp_class_f64_e64
+; SI-DAG: v_min_f64
+; SI-DAG: v_cmp_class_f64_e64
 ; SI: v_cndmask_b32_e64
 ; SI: v_cndmask_b32_e64
 ; SI: v_add_f64 {{v[[0-9]+:[0-9]+]}}, -[[INPUT]]
@@ -44,8 +44,8 @@ define void @ffloor_f64_neg(double addrspace(1)* %out, double %x) {
 ; FUNC-LABEL: {{^}}ffloor_f64_neg_abs:
 ; CI: v_floor_f64_e64
 ; SI: v_fract_f64_e64 {{v[[0-9]+:[0-9]+]}}, -|[[INPUT:s[[0-9]+:[0-9]+]]]|
-; SI: v_min_f64
-; SI: v_cmp_class_f64_e64
+; SI-DAG: v_min_f64
+; SI-DAG: v_cmp_class_f64_e64
 ; SI: v_cndmask_b32_e64
 ; SI: v_cndmask_b32_e64
 ; SI: v_add_f64 {{v[[0-9]+:[0-9]+]}}, -|[[INPUT]]|
@@ -67,15 +67,16 @@ define void @ffloor_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %x) {
   ret void
 }
 
-; FIXME-FUNC-LABEL: {{^}}ffloor_v3f64:
-; FIXME-CI: v_floor_f64_e32
-; FIXME-CI: v_floor_f64_e32
-; FIXME-CI: v_floor_f64_e32
-; define void @ffloor_v3f64(<3 x double> addrspace(1)* %out, <3 x double> %x) {
-;   %y = call <3 x double> @llvm.floor.v3f64(<3 x double> %x) nounwind readnone
-;   store <3 x double> %y, <3 x double> addrspace(1)* %out
-;   ret void
-; }
+; FUNC-LABEL: {{^}}ffloor_v3f64:
+; CI: v_floor_f64_e32
+; CI: v_floor_f64_e32
+; CI: v_floor_f64_e32
+; CI-NOT: v_floor_f64_e32
+define void @ffloor_v3f64(<3 x double> addrspace(1)* %out, <3 x double> %x) {
+  %y = call <3 x double> @llvm.floor.v3f64(<3 x double> %x) nounwind readnone
+  store <3 x double> %y, <3 x double> addrspace(1)* %out
+  ret void
+}
 
 ; FUNC-LABEL: {{^}}ffloor_v4f64:
 ; CI: v_floor_f64_e32

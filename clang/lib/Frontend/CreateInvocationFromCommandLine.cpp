@@ -60,25 +60,25 @@ clang::createInvocationFromCommandLine(ArrayRef<const char *> ArgList,
   }
 
   // We expect to get back exactly one command job, if we didn't something
-  // failed. CUDA compilation is an exception as it creates multiple jobs. If
-  // that's the case, we proceed with the first job. If caller needs particular
-  // CUDA job, it should be controlled via --cuda-{host|device}-only option
-  // passed to the driver.
+  // failed. Offload compilation is an exception as it creates multiple jobs. If
+  // that's the case, we proceed with the first job. If caller needs a
+  // particular job, it should be controlled via options (e.g.
+  // --cuda-{host|device}-only for CUDA) passed to the driver.
   const driver::JobList &Jobs = C->getJobs();
-  bool CudaCompilation = false;
+  bool OffloadCompilation = false;
   if (Jobs.size() > 1) {
     for (auto &A : C->getActions()){
       // On MacOSX real actions may end up being wrapped in BindArchAction
       if (isa<driver::BindArchAction>(A))
-        A = *A->begin();
-      if (isa<driver::CudaDeviceAction>(A)) {
-        CudaCompilation = true;
+        A = *A->input_begin();
+      if (isa<driver::OffloadAction>(A)) {
+        OffloadCompilation = true;
         break;
       }
     }
   }
   if (Jobs.size() == 0 || !isa<driver::Command>(*Jobs.begin()) ||
-      (Jobs.size() > 1 && !CudaCompilation)) {
+      (Jobs.size() > 1 && !OffloadCompilation)) {
     SmallString<256> Msg;
     llvm::raw_svector_ostream OS(Msg);
     Jobs.Print(OS, "; ", true);

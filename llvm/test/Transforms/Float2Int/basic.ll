@@ -1,4 +1,5 @@
 ; RUN: opt < %s -float2int -S | FileCheck %s
+; RUN: opt < %s -passes='float2int' -S | FileCheck %s
 
 ;
 ; Positive tests

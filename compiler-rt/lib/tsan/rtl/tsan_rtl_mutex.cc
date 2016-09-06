@@ -32,7 +32,7 @@ struct Callback : DDCallback {
   Callback(ThreadState *thr, uptr pc)
       : thr(thr)
       , pc(pc) {
-    DDCallback::pt = thr->dd_pt;
+    DDCallback::pt = thr->proc()->dd_pt;
     DDCallback::lt = thr->dd_lt;
   }
 
@@ -84,21 +84,14 @@ void MutexCreate(ThreadState *thr, uptr pc, uptr addr,
 void MutexDestroy(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexDestroy %zx\n", thr->tid, addr);
   StatInc(thr, StatMutexDestroy);
-#ifndef SANITIZER_GO
-  // Global mutexes not marked as LINKER_INITIALIZED
-  // cause tons of not interesting reports, so just ignore it.
-  if (IsGlobalVar(addr))
-    return;
-#endif
-  if (IsAppMem(addr)) {
-    CHECK(!thr->is_freeing);
-    thr->is_freeing = true;
-    MemoryWrite(thr, pc, addr, kSizeLog1);
-    thr->is_freeing = false;
-  }
-  SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr);
+  SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, true);
   if (s == 0)
     return;
+  if (s->is_linker_init) {
+    // Destroy is no-op for linker-initialized mutexes.
+    s->mtx.Unlock();
+    return;
+  }
   if (common_flags()->detect_deadlocks) {
     Callback cb(thr, pc);
     ctx->dd->MutexDestroy(&cb, &s->dd);
@@ -114,7 +107,7 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr) {
   u64 mid = s->GetId();
   u32 last_lock = s->last_lock;
   if (!unlock_locked)
-    s->Reset(thr);  // must not reset it before the report is printed
+    s->Reset(thr->proc());  // must not reset it before the report is printed
   s->mtx.Unlock();
   if (unlock_locked) {
     ThreadRegistryLock l(ctx->thread_registry);
@@ -128,15 +121,23 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr) {
     rep.AddStack(trace, true);
     rep.AddLocation(addr, 1);
     OutputReport(thr, rep);
-  }
-  if (unlock_locked) {
-    SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr);
+
+    SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, true);
     if (s != 0) {
-      s->Reset(thr);
+      s->Reset(thr->proc());
       s->mtx.Unlock();
     }
   }
   thr->mset.Remove(mid);
+  // Imitate a memory write to catch unlock-destroy races.
+  // Do this outside of sync mutex, because it can report a race which locks
+  // sync mutexes.
+  if (IsAppMem(addr)) {
+    CHECK(!thr->is_freeing);
+    thr->is_freeing = true;
+    MemoryWrite(thr, pc, addr, kSizeLog1);
+    thr->is_freeing = false;
+  }
   // s will be destroyed and freed in MetaMap::FreeBlock.
 }
 
@@ -362,7 +363,9 @@ void Acquire(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: Acquire %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
     return;
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, false);
+  SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, false);
+  if (!s)
+    return;
   AcquireImpl(thr, pc, &s->clock);
   s->mtx.ReadUnlock();
 }
@@ -434,7 +437,7 @@ void AcquireImpl(ThreadState *thr, uptr pc, SyncClock *c) {
   if (thr->ignore_sync)
     return;
   thr->clock.set(thr->fast_state.epoch());
-  thr->clock.acquire(&thr->clock_cache, c);
+  thr->clock.acquire(&thr->proc()->clock_cache, c);
   StatInc(thr, StatSyncAcquire);
 }
 
@@ -443,7 +446,7 @@ void ReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c) {
     return;
   thr->clock.set(thr->fast_state.epoch());
   thr->fast_synch_epoch = thr->fast_state.epoch();
-  thr->clock.release(&thr->clock_cache, c);
+  thr->clock.release(&thr->proc()->clock_cache, c);
   StatInc(thr, StatSyncRelease);
 }
 
@@ -452,7 +455,7 @@ void ReleaseStoreImpl(ThreadState *thr, uptr pc, SyncClock *c) {
     return;
   thr->clock.set(thr->fast_state.epoch());
   thr->fast_synch_epoch = thr->fast_state.epoch();
-  thr->clock.ReleaseStore(&thr->clock_cache, c);
+  thr->clock.ReleaseStore(&thr->proc()->clock_cache, c);
   StatInc(thr, StatSyncRelease);
 }
 
@@ -461,7 +464,7 @@ void AcquireReleaseImpl(ThreadState *thr, uptr pc, SyncClock *c) {
     return;
   thr->clock.set(thr->fast_state.epoch());
   thr->fast_synch_epoch = thr->fast_state.epoch();
-  thr->clock.acq_rel(&thr->clock_cache, c);
+  thr->clock.acq_rel(&thr->proc()->clock_cache, c);
   StatInc(thr, StatSyncAcquire);
   StatInc(thr, StatSyncRelease);
 }

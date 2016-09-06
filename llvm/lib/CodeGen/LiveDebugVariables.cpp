@@ -42,6 +42,7 @@
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <memory>
+#include <utility>
 
 using namespace llvm;
 
@@ -84,7 +85,7 @@ class UserValueScopes {
   SmallPtrSet<const MachineBasicBlock *, 4> LBlocks;
 
 public:
-  UserValueScopes(DebugLoc D, LexicalScopes &L) : DL(D), LS(L) {}
+  UserValueScopes(DebugLoc D, LexicalScopes &L) : DL(std::move(D)), LS(L) {}
 
   /// dominates - Return true if current scope dominates at least one machine
   /// instruction in a given machine basic block.
@@ -141,8 +142,8 @@ public:
   /// UserValue - Create a new UserValue.
   UserValue(const MDNode *var, const MDNode *expr, unsigned o, bool i,
             DebugLoc L, LocMap::Allocator &alloc)
-      : Variable(var), Expression(expr), offset(o), IsIndirect(i), dl(L),
-        leader(this), next(nullptr), locInts(alloc) {}
+      : Variable(var), Expression(expr), offset(o), IsIndirect(i),
+        dl(std::move(L)), leader(this), next(nullptr), locInts(alloc) {}
 
   /// getLeader - Get the leader of this value's equivalence class.
   UserValue *getLeader() {
@@ -172,8 +173,10 @@ public:
       return L1;
     // Splice L2 before L1's members.
     UserValue *End = L2;
-    while (End->next)
-      End->leader = L1, End = End->next;
+    while (End->next) {
+      End->leader = L1;
+      End = End->next;
+    }
     End->leader = L1;
     End->next = L1->next;
     L1->next = L2;
@@ -302,7 +305,7 @@ class LDVImpl {
 
   /// getUserValue - Find or create a UserValue.
   UserValue *getUserValue(const MDNode *Var, const MDNode *Expr,
-                          unsigned Offset, bool IsIndirect, DebugLoc DL);
+                          unsigned Offset, bool IsIndirect, const DebugLoc &DL);
 
   /// lookupVirtReg - Find the EC leader for VirtReg or null.
   UserValue *lookupVirtReg(unsigned VirtReg);
@@ -311,7 +314,7 @@ class LDVImpl {
   /// @param MI  DBG_VALUE instruction
   /// @param Idx Last valid SLotIndex before instruction.
   /// @return    True if the DBG_VALUE instruction should be deleted.
-  bool handleDebugValue(MachineInstr *MI, SlotIndex Idx);
+  bool handleDebugValue(MachineInstr &MI, SlotIndex Idx);
 
   /// collectDebugValues - Collect and erase all DBG_VALUE instructions, adding
   /// a UserValue def for each instruction.
@@ -355,7 +358,7 @@ public:
 };
 } // namespace
 
-static void printDebugLoc(DebugLoc DL, raw_ostream &CommentOS,
+static void printDebugLoc(const DebugLoc &DL, raw_ostream &CommentOS,
                           const LLVMContext &Ctx) {
   if (!DL)
     return;
@@ -456,7 +459,7 @@ void UserValue::mapVirtRegs(LDVImpl *LDV) {
 
 UserValue *LDVImpl::getUserValue(const MDNode *Var, const MDNode *Expr,
                                  unsigned Offset, bool IsIndirect,
-                                 DebugLoc DL) {
+                                 const DebugLoc &DL) {
   UserValue *&Leader = userVarMap[Var];
   if (Leader) {
     UserValue *UV = Leader->getLeader();
@@ -485,24 +488,23 @@ UserValue *LDVImpl::lookupVirtReg(unsigned VirtReg) {
   return nullptr;
 }
 
-bool LDVImpl::handleDebugValue(MachineInstr *MI, SlotIndex Idx) {
+bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   // DBG_VALUE loc, offset, variable
-  if (MI->getNumOperands() != 4 ||
-      !(MI->getOperand(1).isReg() || MI->getOperand(1).isImm()) ||
-      !MI->getOperand(2).isMetadata()) {
-    DEBUG(dbgs() << "Can't handle " << *MI);
+  if (MI.getNumOperands() != 4 ||
+      !(MI.getOperand(1).isReg() || MI.getOperand(1).isImm()) ||
+      !MI.getOperand(2).isMetadata()) {
+    DEBUG(dbgs() << "Can't handle " << MI);
     return false;
   }
 
   // Get or create the UserValue for (variable,offset).
-  bool IsIndirect = MI->isIndirectDebugValue();
-  unsigned Offset = IsIndirect ? MI->getOperand(1).getImm() : 0;
-  const MDNode *Var = MI->getDebugVariable();
-  const MDNode *Expr = MI->getDebugExpression();
+  bool IsIndirect = MI.isIndirectDebugValue();
+  unsigned Offset = IsIndirect ? MI.getOperand(1).getImm() : 0;
+  const MDNode *Var = MI.getDebugVariable();
+  const MDNode *Expr = MI.getDebugExpression();
   //here.
-  UserValue *UV =
-      getUserValue(Var, Expr, Offset, IsIndirect, MI->getDebugLoc());
-  UV->addDef(Idx, MI->getOperand(0));
+  UserValue *UV = getUserValue(Var, Expr, Offset, IsIndirect, MI.getDebugLoc());
+  UV->addDef(Idx, MI.getOperand(0));
   return true;
 }
 
@@ -518,12 +520,13 @@ bool LDVImpl::collectDebugValues(MachineFunction &mf) {
         continue;
       }
       // DBG_VALUE has no slot index, use the previous instruction instead.
-      SlotIndex Idx = MBBI == MBB->begin() ?
-        LIS->getMBBStartIdx(MBB) :
-        LIS->getInstructionIndex(std::prev(MBBI)).getRegSlot();
+      SlotIndex Idx =
+          MBBI == MBB->begin()
+              ? LIS->getMBBStartIdx(MBB)
+              : LIS->getInstructionIndex(*std::prev(MBBI)).getRegSlot();
       // Handle consecutive DBG_VALUE instructions with the same slot index.
       do {
-        if (handleDebugValue(MBBI, Idx)) {
+        if (handleDebugValue(*MBBI, Idx)) {
           MBBI = MBB->erase(MBBI);
           Changed = true;
         } else
@@ -554,8 +557,10 @@ void UserValue::extendDef(SlotIndex Idx, unsigned LocNo, LiveRange *LR,
         Kills->push_back(Start);
       return;
     }
-    if (Segment->end < Stop)
-      Stop = Segment->end, ToEnd = false;
+    if (Segment->end < Stop) {
+      Stop = Segment->end;
+      ToEnd = false;
+    }
   }
 
   // There could already be a short def at Start.
@@ -569,8 +574,10 @@ void UserValue::extendDef(SlotIndex Idx, unsigned LocNo, LiveRange *LR,
   }
 
   // Limited by the next def.
-  if (I.valid() && I.start() < Stop)
-    Stop = I.start(), ToEnd = false;
+  if (I.valid() && I.start() < Stop) {
+    Stop = I.start();
+    ToEnd = false;
+  }
   // Limited by VNI's live range.
   else if (!ToEnd && Kills)
     Kills->push_back(Stop);
@@ -608,7 +615,7 @@ UserValue::addDefsFromCopies(LiveInterval *LI, unsigned LocNo,
 
     // Is LocNo extended to reach this copy? If not, another def may be blocking
     // it, or we are looking at a wrong value of LI.
-    SlotIndex Idx = LIS.getInstructionIndex(MI);
+    SlotIndex Idx = LIS.getInstructionIndex(*MI);
     LocMap::iterator I = locInts.find(Idx.getRegSlot(true));
     if (!I.valid() || I.value() != LocNo)
       continue;
@@ -1033,7 +1040,7 @@ bool LiveDebugVariables::doInitialization(Module &M) {
 }
 
 #ifndef NDEBUG
-void LiveDebugVariables::dump() {
+LLVM_DUMP_METHOD void LiveDebugVariables::dump() {
   if (pImpl)
     static_cast<LDVImpl*>(pImpl)->print(dbgs());
 }

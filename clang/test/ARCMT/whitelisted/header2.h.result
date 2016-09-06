@@ -1,4 +1,7 @@
 
+#define NS_ENUM(_type, _name) enum _name : _type _name; enum _name : _type
+typedef NS_ENUM(NSInteger, ApplicableEnum) {five};
+
 @interface I2 : NSObject
 @property (nonatomic) int prop;
 @end

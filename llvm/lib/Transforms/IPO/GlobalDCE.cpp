@@ -15,15 +15,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Pass.h"
+#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
-#include "llvm/Pass.h"
 #include <unordered_map>
 using namespace llvm;
 
@@ -31,32 +32,41 @@ using namespace llvm;
 
 STATISTIC(NumAliases  , "Number of global aliases removed");
 STATISTIC(NumFunctions, "Number of functions removed");
+STATISTIC(NumIFuncs,    "Number of indirect functions removed");
 STATISTIC(NumVariables, "Number of global variables removed");
 
 namespace {
-  struct GlobalDCE : public ModulePass {
+  class GlobalDCELegacyPass : public ModulePass {
+  public:
     static char ID; // Pass identification, replacement for typeid
-    GlobalDCE() : ModulePass(ID) {
-      initializeGlobalDCEPass(*PassRegistry::getPassRegistry());
+    GlobalDCELegacyPass() : ModulePass(ID) {
+      initializeGlobalDCELegacyPassPass(*PassRegistry::getPassRegistry());
     }
 
     // run - Do the GlobalDCE pass on the specified module, optionally updating
     // the specified callgraph to reflect the changes.
     //
-    bool runOnModule(Module &M) override;
+    bool runOnModule(Module &M) override {
+      if (skipModule(M))
+        return false;
+
+      ModuleAnalysisManager DummyMAM;
+      auto PA = Impl.run(M, DummyMAM);
+      return !PA.areAllPreserved();
+    }
 
   private:
-    SmallPtrSet<GlobalValue*, 32> AliveGlobals;
-    SmallPtrSet<Constant *, 8> SeenConstants;
-    std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
-
-    /// GlobalIsNeeded - mark the specific global value as needed, and
-    /// recursively mark anything that it uses as also needed.
-    void GlobalIsNeeded(GlobalValue *GV);
-    void MarkUsedGlobalsAsNeeded(Constant *C);
-
-    bool RemoveUnusedGlobalValue(GlobalValue &GV);
+    GlobalDCEPass Impl;
   };
+}
+
+char GlobalDCELegacyPass::ID = 0;
+INITIALIZE_PASS(GlobalDCELegacyPass, "globaldce",
+                "Dead Global Elimination", false, false)
+
+// Public interface to the GlobalDCEPass.
+ModulePass *llvm::createGlobalDCEPass() {
+  return new GlobalDCELegacyPass();
 }
 
 /// Returns true if F contains only a single "ret" instruction.
@@ -68,13 +78,7 @@ static bool isEmptyFunction(Function *F) {
   return RI.getReturnValue() == nullptr;
 }
 
-char GlobalDCE::ID = 0;
-INITIALIZE_PASS(GlobalDCE, "globaldce",
-                "Dead Global Elimination", false, false)
-
-ModulePass *llvm::createGlobalDCEPass() { return new GlobalDCE(); }
-
-bool GlobalDCE::runOnModule(Module &M) {
+PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &) {
   bool Changed = false;
 
   // Remove empty functions from the global ctors list.
@@ -92,21 +96,14 @@ bool GlobalDCE::runOnModule(Module &M) {
       ComdatMembers.insert(std::make_pair(C, &GA));
 
   // Loop over the module, adding globals which are obviously necessary.
-  for (Function &F : M) {
-    Changed |= RemoveUnusedGlobalValue(F);
-    // Functions with external linkage are needed if they have a body
-    if (!F.isDeclaration() && !F.hasAvailableExternallyLinkage())
-      if (!F.isDiscardableIfUnused())
-        GlobalIsNeeded(&F);
-  }
-
-  for (GlobalVariable &GV : M.globals()) {
-    Changed |= RemoveUnusedGlobalValue(GV);
+  for (GlobalObject &GO : M.global_objects()) {
+    Changed |= RemoveUnusedGlobalValue(GO);
+    // Functions with external linkage are needed if they have a body.
     // Externally visible & appending globals are needed, if they have an
     // initializer.
-    if (!GV.isDeclaration() && !GV.hasAvailableExternallyLinkage())
-      if (!GV.isDiscardableIfUnused())
-        GlobalIsNeeded(&GV);
+    if (!GO.isDeclaration() && !GO.hasAvailableExternallyLinkage())
+      if (!GO.isDiscardableIfUnused())
+        GlobalIsNeeded(&GO);
   }
 
   for (GlobalAlias &GA : M.aliases()) {
@@ -114,6 +111,13 @@ bool GlobalDCE::runOnModule(Module &M) {
     // Externally visible aliases are needed.
     if (!GA.isDiscardableIfUnused())
       GlobalIsNeeded(&GA);
+  }
+
+  for (GlobalIFunc &GIF : M.ifuncs()) {
+    Changed |= RemoveUnusedGlobalValue(GIF);
+    // Externally visible ifuncs are needed.
+    if (!GIF.isDiscardableIfUnused())
+      GlobalIsNeeded(&GIF);
   }
 
   // Now that all globals which are needed are in the AliveGlobals set, we loop
@@ -150,6 +154,14 @@ bool GlobalDCE::runOnModule(Module &M) {
       GA.setAliasee(nullptr);
     }
 
+  // The third pass drops targets of ifuncs which are dead...
+  std::vector<GlobalIFunc*> DeadIFuncs;
+  for (GlobalIFunc &GIF : M.ifuncs())
+    if (!AliveGlobals.count(&GIF)) {
+      DeadIFuncs.push_back(&GIF);
+      GIF.setResolver(nullptr);
+    }
+
   if (!DeadFunctions.empty()) {
     // Now that all interferences have been dropped, delete the actual objects
     // themselves.
@@ -180,17 +192,29 @@ bool GlobalDCE::runOnModule(Module &M) {
     Changed = true;
   }
 
+  // Now delete any dead aliases.
+  if (!DeadIFuncs.empty()) {
+    for (GlobalIFunc *GIF : DeadIFuncs) {
+      RemoveUnusedGlobalValue(*GIF);
+      M.getIFuncList().erase(GIF);
+    }
+    NumIFuncs += DeadIFuncs.size();
+    Changed = true;
+  }
+
   // Make sure that all memory is released
   AliveGlobals.clear();
   SeenConstants.clear();
   ComdatMembers.clear();
 
-  return Changed;
+  if (Changed)
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
 }
 
 /// GlobalIsNeeded - the specific global value as needed, and
 /// recursively mark anything that it uses as also needed.
-void GlobalDCE::GlobalIsNeeded(GlobalValue *G) {
+void GlobalDCEPass::GlobalIsNeeded(GlobalValue *G) {
   // If the global is already in the set, no need to reprocess it.
   if (!AliveGlobals.insert(G).second)
     return;
@@ -205,9 +229,9 @@ void GlobalDCE::GlobalIsNeeded(GlobalValue *G) {
     // referenced by the initializer to the alive set.
     if (GV->hasInitializer())
       MarkUsedGlobalsAsNeeded(GV->getInitializer());
-  } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(G)) {
-    // The target of a global alias is needed.
-    MarkUsedGlobalsAsNeeded(GA->getAliasee());
+  } else if (GlobalIndirectSymbol *GIS = dyn_cast<GlobalIndirectSymbol>(G)) {
+    // The target of a global alias or ifunc is needed.
+    MarkUsedGlobalsAsNeeded(GIS->getIndirectSymbol());
   } else {
     // Otherwise this must be a function object.  We have to scan the body of
     // the function looking for constants and global values which are used as
@@ -228,7 +252,7 @@ void GlobalDCE::GlobalIsNeeded(GlobalValue *G) {
   }
 }
 
-void GlobalDCE::MarkUsedGlobalsAsNeeded(Constant *C) {
+void GlobalDCEPass::MarkUsedGlobalsAsNeeded(Constant *C) {
   if (GlobalValue *GV = dyn_cast<GlobalValue>(C))
     return GlobalIsNeeded(GV);
 
@@ -248,7 +272,7 @@ void GlobalDCE::MarkUsedGlobalsAsNeeded(Constant *C) {
 // so, nuke it.  This will reduce the reference count on the global value, which
 // might make it deader.
 //
-bool GlobalDCE::RemoveUnusedGlobalValue(GlobalValue &GV) {
+bool GlobalDCEPass::RemoveUnusedGlobalValue(GlobalValue &GV) {
   if (GV.use_empty())
     return false;
   GV.removeDeadConstantUsers();

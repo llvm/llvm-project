@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 | grep lha
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 | grep lha
 
 define i32 @test(i16* %a) {
         %tmp.1 = load i16, i16* %a           ; <i16> [#uses=1]

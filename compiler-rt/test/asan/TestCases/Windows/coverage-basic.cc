@@ -6,8 +6,8 @@
 // RUN: %sancov print *.sancov | FileCheck %s
 #include <stdio.h>
 
-void foo() { fprintf(stderr, "FOO\n"); }
-void bar() { fprintf(stderr, "BAR\n"); }
+void foo() { fputs("FOO", stderr); }
+void bar() { fputs("BAR", stderr); }
 
 int main(int argc, char **argv) {
   if (argc == 2) {

@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s
+; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck %s
 
 ; CHECK-LABEL: foo6:
 ; CHECK: %while.body
@@ -30,7 +30,7 @@ declare void @foo2()
 ; CHECK: lw $25, %call16(foo2)(${{[0-9]+}})
 ; CHECK: jalr $25
 ; CHECK: lw $25, %call16(foo2)(${{[0-9]+}})
-; CHECK: jalr $25
+; CHECK: jr $25
 
 define void @foo1() {
 entry:

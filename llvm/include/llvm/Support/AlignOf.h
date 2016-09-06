@@ -38,7 +38,7 @@ struct AlignmentCalcImpl {
 #endif
   T t;
 private:
-  AlignmentCalcImpl() {} // Never instantiate.
+  AlignmentCalcImpl() = delete;
 };
 
 // Abstract base class helper, this will have the minimal alignment and size
@@ -55,7 +55,7 @@ struct AlignmentCalcImplBase {
 // of type T.
 template <typename T>
 struct AlignmentCalcImpl<T, true> : AlignmentCalcImplBase, T {
-  virtual ~AlignmentCalcImpl() = 0;
+  ~AlignmentCalcImpl() override = 0;
 };
 
 } // End detail namespace.
@@ -79,8 +79,8 @@ struct AlignOf {
       sizeof(detail::AlignmentCalcImpl<T>) - sizeof(T));
 #else
   enum {
-    Alignment = static_cast<unsigned int>(sizeof(detail::AlignmentCalcImpl<T>) -
-                                          sizeof(T))
+    Alignment = static_cast<unsigned int>(
+        sizeof(::llvm::detail::AlignmentCalcImpl<T>) - sizeof(T))
   };
 #endif
   enum { Alignment_GreaterEqual_2Bytes = Alignment >= 2 ? 1 : 0 };
@@ -103,7 +103,7 @@ template <typename T> constexpr unsigned AlignOf<T>::Alignment;
 ///  class besides some cosmetic cleanliness.  Example usage:
 ///  alignOf<int>() returns the alignment of an int.
 template <typename T>
-inline unsigned alignOf() { return AlignOf<T>::Alignment; }
+LLVM_CONSTEXPR inline unsigned alignOf() { return AlignOf<T>::Alignment; }
 
 /// \struct AlignedCharArray
 /// \brief Helper for building an aligned character array type.
@@ -223,7 +223,7 @@ template <typename T1,
 class AlignerImpl {
   T1 t1; T2 t2; T3 t3; T4 t4; T5 t5; T6 t6; T7 t7; T8 t8; T9 t9; T10 t10;
 
-  AlignerImpl(); // Never defined or instantiated.
+  AlignerImpl() = delete;
 };
 
 template <typename T1,
@@ -249,10 +249,11 @@ template <typename T1,
           typename T5 = char, typename T6 = char, typename T7 = char,
           typename T8 = char, typename T9 = char, typename T10 = char>
 struct AlignedCharArrayUnion : llvm::AlignedCharArray<
-    AlignOf<detail::AlignerImpl<T1, T2, T3, T4, T5,
-                                T6, T7, T8, T9, T10> >::Alignment,
-    sizeof(detail::SizerImpl<T1, T2, T3, T4, T5,
-                             T6, T7, T8, T9, T10>)> {
+    AlignOf<llvm::detail::AlignerImpl<T1, T2, T3, T4, T5,
+                                      T6, T7, T8, T9, T10> >::Alignment,
+    sizeof(::llvm::detail::SizerImpl<T1, T2, T3, T4, T5,
+                                     T6, T7, T8, T9, T10>)> {
 };
 } // end namespace llvm
-#endif
+
+#endif // LLVM_SUPPORT_ALIGNOF_H

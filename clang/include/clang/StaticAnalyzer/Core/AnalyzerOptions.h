@@ -149,6 +149,7 @@ public:
   unsigned DisableAllChecks : 1;
 
   unsigned ShowCheckerHelp : 1;
+  unsigned ShowEnabledCheckerList : 1;
   unsigned AnalyzeAll : 1;
   unsigned AnalyzerDisplayProgress : 1;
   unsigned AnalyzeNestedBlocks : 1;
@@ -541,6 +542,7 @@ public:
     AnalysisPurgeOpt(PurgeStmt),
     DisableAllChecks(0),
     ShowCheckerHelp(0),
+    ShowEnabledCheckerList(0),
     AnalyzeAll(0),
     AnalyzerDisplayProgress(0),
     AnalyzeNestedBlocks(0),

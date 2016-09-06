@@ -178,7 +178,7 @@ static void InitializeFlags() {
 #endif
   VPrintf(1, "MSAN_OPTIONS: %s\n", msan_options ? msan_options : "<empty>");
 
-  SetVerbosity(common_flags()->verbosity);
+  InitializeCommonFlags();
 
   if (Verbosity()) ReportUnrecognizedFlags();
 
@@ -375,6 +375,7 @@ void __msan_init() {
   msan_init_is_running = 1;
   SanitizerToolName = "MemorySanitizer";
 
+  AvoidCVE_2016_2143();
   InitTlsSize();
 
   CacheBinaryName();
@@ -462,13 +463,8 @@ void __msan_dump_shadow(const void *x, uptr size) {
   }
 
   unsigned char *s = (unsigned char*)MEM_TO_SHADOW(x);
-  for (uptr i = 0; i < size; i++) {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    Printf("%x%x ", s[i] & 0xf, s[i] >> 4);
-#else
+  for (uptr i = 0; i < size; i++)
     Printf("%x%x ", s[i] >> 4, s[i] & 0xf);
-#endif
-  }
   Printf("\n");
 }
 
@@ -542,6 +538,13 @@ void __msan_set_alloca_origin4(void *a, uptr size, char *descr, uptr pc) {
     u32 idx = atomic_fetch_add(&NumStackOriginDescrs, 1, memory_order_relaxed);
     CHECK_LT(idx, kNumStackOriginDescrs);
     StackOriginDescr[idx] = descr + 4;
+#if SANITIZER_PPC64V1
+    // On PowerPC64 ELFv1, the address of a function actually points to a
+    // three-doubleword data structure with the first field containing
+    // the address of the function's code.
+    if (pc)
+      pc = *reinterpret_cast<uptr*>(pc);
+#endif
     StackOriginPC[idx] = pc;
     id = Origin::CreateStackOrigin(idx).raw_id();
     *id_ptr = id;
@@ -580,13 +583,13 @@ u32 __msan_get_umr_origin() {
 }
 
 u16 __sanitizer_unaligned_load16(const uu16 *p) {
-  __msan_retval_tls[0] = *(uu16 *)MEM_TO_SHADOW((uptr)p);
+  *(uu16 *)&__msan_retval_tls[0] = *(uu16 *)MEM_TO_SHADOW((uptr)p);
   if (__msan_get_track_origins())
     __msan_retval_origin_tls = GetOriginIfPoisoned((uptr)p, sizeof(*p));
   return *p;
 }
 u32 __sanitizer_unaligned_load32(const uu32 *p) {
-  __msan_retval_tls[0] = *(uu32 *)MEM_TO_SHADOW((uptr)p);
+  *(uu32 *)&__msan_retval_tls[0] = *(uu32 *)MEM_TO_SHADOW((uptr)p);
   if (__msan_get_track_origins())
     __msan_retval_origin_tls = GetOriginIfPoisoned((uptr)p, sizeof(*p));
   return *p;
@@ -598,7 +601,7 @@ u64 __sanitizer_unaligned_load64(const uu64 *p) {
   return *p;
 }
 void __sanitizer_unaligned_store16(uu16 *p, u16 x) {
-  u16 s = __msan_param_tls[1];
+  u16 s = *(uu16 *)&__msan_param_tls[1];
   *(uu16 *)MEM_TO_SHADOW((uptr)p) = s;
   if (s && __msan_get_track_origins())
     if (uu32 o = __msan_param_origin_tls[2])
@@ -606,7 +609,7 @@ void __sanitizer_unaligned_store16(uu16 *p, u16 x) {
   *p = x;
 }
 void __sanitizer_unaligned_store32(uu32 *p, u32 x) {
-  u32 s = __msan_param_tls[1];
+  u32 s = *(uu32 *)&__msan_param_tls[1];
   *(uu32 *)MEM_TO_SHADOW((uptr)p) = s;
   if (s && __msan_get_track_origins())
     if (uu32 o = __msan_param_origin_tls[2])

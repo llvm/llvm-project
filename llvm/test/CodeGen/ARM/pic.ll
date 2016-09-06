@@ -11,10 +11,10 @@ define void @test() {
 entry:
 
   %0 = call i32 @get()
-; CHECK: bl get(PLT)
+; CHECK: bl get
 
   call void @put(i32 %0)
-; CHECK: bl put(PLT)
+; CHECK: bl put
 
   ret void
 }

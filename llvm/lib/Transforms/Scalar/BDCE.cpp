@@ -14,11 +14,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/BDCE.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/DemandedBits.h"
+#include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -27,6 +27,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "bdce"
@@ -34,35 +35,7 @@ using namespace llvm;
 STATISTIC(NumRemoved, "Number of instructions removed (unused)");
 STATISTIC(NumSimplified, "Number of instructions trivialized (dead bits)");
 
-namespace {
-struct BDCE : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  BDCE() : FunctionPass(ID) {
-    initializeBDCEPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function& F) override;
-
-  void getAnalysisUsage(AnalysisUsage& AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<DemandedBits>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-  }
-};
-}
-
-char BDCE::ID = 0;
-INITIALIZE_PASS_BEGIN(BDCE, "bdce", "Bit-Tracking Dead Code Elimination",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(DemandedBits)
-INITIALIZE_PASS_END(BDCE, "bdce", "Bit-Tracking Dead Code Elimination",
-                    false, false)
-
-bool BDCE::runOnFunction(Function& F) {
-  if (skipOptnoneFunction(F))
-    return false;
-  DemandedBits &DB = getAnalysis<DemandedBits>();
-
+static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
   SmallVector<Instruction*, 128> Worklist;
   bool Changed = false;
   for (Instruction &I : instructions(F)) {
@@ -96,7 +69,44 @@ bool BDCE::runOnFunction(Function& F) {
   return Changed;
 }
 
-FunctionPass *llvm::createBitTrackingDCEPass() {
-  return new BDCE();
+PreservedAnalyses BDCEPass::run(Function &F, FunctionAnalysisManager &AM) {
+  auto &DB = AM.getResult<DemandedBitsAnalysis>(F);
+  if (!bitTrackingDCE(F, DB))
+    return PreservedAnalyses::all();
+
+  // FIXME: This should also 'preserve the CFG'.
+  auto PA = PreservedAnalyses();
+  PA.preserve<GlobalsAA>();
+  return PA;
 }
 
+namespace {
+struct BDCELegacyPass : public FunctionPass {
+  static char ID; // Pass identification, replacement for typeid
+  BDCELegacyPass() : FunctionPass(ID) {
+    initializeBDCELegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+    auto &DB = getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
+    return bitTrackingDCE(F, DB);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<DemandedBitsWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
+  }
+};
+}
+
+char BDCELegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(BDCELegacyPass, "bdce",
+                      "Bit-Tracking Dead Code Elimination", false, false)
+INITIALIZE_PASS_DEPENDENCY(DemandedBitsWrapperPass)
+INITIALIZE_PASS_END(BDCELegacyPass, "bdce",
+                    "Bit-Tracking Dead Code Elimination", false, false)
+
+FunctionPass *llvm::createBitTrackingDCEPass() { return new BDCELegacyPass(); }

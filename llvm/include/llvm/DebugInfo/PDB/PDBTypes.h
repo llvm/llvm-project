@@ -12,11 +12,13 @@
 
 #include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/Support/Endian.h"
+#include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
+#include <cstdint>
+#include <cstring>
 #include <functional>
-#include <stdint.h>
 
 namespace llvm {
+namespace pdb {
 
 class PDBSymDumper;
 class PDBSymbol;
@@ -69,14 +71,7 @@ class PDBSymbolUnknown;
 /// of PDB_ReaderType::DIA is supported.
 enum class PDB_ReaderType {
   DIA = 0,
-};
-
-/// Defines a 128-bit unique identifier.  This maps to a GUID on Windows, but
-/// is abstracted here for the purposes of non-Windows platforms that don't have
-/// the GUID structure defined.
-struct PDB_UniqueId {
-  uint64_t HighPart;
-  uint64_t LowPart;
+  Raw = 1,
 };
 
 /// An enumeration indicating the type of data contained in this table.
@@ -216,18 +211,6 @@ enum class PDB_LocType {
   Max
 };
 
-/// These values correspond to the THUNK_ORDINAL enumeration, and are documented
-/// here: https://msdn.microsoft.com/en-us/library/dh0k8hft.aspx
-enum class PDB_ThunkOrdinal {
-  Standard,
-  ThisAdjustor,
-  Vcall,
-  Pcode,
-  UnknownLoad,
-  TrampIncremental,
-  BranchIsland
-};
-
 /// These values correspond to the UdtKind enumeration, and are documented
 /// here: https://msdn.microsoft.com/en-us/library/wcstk66t.aspx
 enum class PDB_UdtType { Struct, Class, Union, Interface };
@@ -263,71 +246,7 @@ enum class PDB_BuiltinType {
   HResult = 31
 };
 
-enum class PDB_RegisterId {
-  Unknown = 0,
-  VFrame = 30006,
-  AL = 1,
-  CL = 2,
-  DL = 3,
-  BL = 4,
-  AH = 5,
-  CH = 6,
-  DH = 7,
-  BH = 8,
-  AX = 9,
-  CX = 10,
-  DX = 11,
-  BX = 12,
-  SP = 13,
-  BP = 14,
-  SI = 15,
-  DI = 16,
-  EAX = 17,
-  ECX = 18,
-  EDX = 19,
-  EBX = 20,
-  ESP = 21,
-  EBP = 22,
-  ESI = 23,
-  EDI = 24,
-  ES = 25,
-  CS = 26,
-  SS = 27,
-  DS = 28,
-  FS = 29,
-  GS = 30,
-  IP = 31,
-  RAX = 328,
-  RBX = 329,
-  RCX = 330,
-  RDX = 331,
-  RSI = 332,
-  RDI = 333,
-  RBP = 334,
-  RSP = 335,
-  R8 = 336,
-  R9 = 337,
-  R10 = 338,
-  R11 = 339,
-  R12 = 340,
-  R13 = 341,
-  R14 = 342,
-  R15 = 343,
-};
-
 enum class PDB_MemberAccess { Private = 1, Protected = 2, Public = 3 };
-
-enum class PDB_ErrorCode {
-  Success,
-  NoPdbImpl,
-  InvalidPath,
-  InvalidFileFormat,
-  InvalidParameter,
-  AlreadyLoaded,
-  UnknownError,
-  NoMemory,
-  DebugInfoMismatch
-};
 
 struct VersionInfo {
   uint32_t Major;
@@ -350,11 +269,19 @@ enum PDB_VariantType {
   UInt32,
   UInt64,
   Bool,
+  String
 };
 
 struct Variant {
-  Variant()
-    : Type(PDB_VariantType::Empty) {
+  Variant() : Type(PDB_VariantType::Empty) {}
+
+  Variant(const Variant &Other) : Type(PDB_VariantType::Empty) {
+    *this = Other;
+  }
+
+  ~Variant() {
+    if (Type == PDB_VariantType::String)
+      delete[] Value.String;
   }
 
   PDB_VariantType Type;
@@ -370,10 +297,13 @@ struct Variant {
     uint16_t UInt16;
     uint32_t UInt32;
     uint64_t UInt64;
-  };
+    char *String;
+  } Value;
+
 #define VARIANT_EQUAL_CASE(Enum)                                               \
   case PDB_VariantType::Enum:                                                  \
-    return Enum == Other.Enum;
+    return Value.Enum == Other.Value.Enum;
+
   bool operator==(const Variant &Other) const {
     if (Type != Other.Type)
       return false;
@@ -389,55 +319,43 @@ struct Variant {
       VARIANT_EQUAL_CASE(UInt16)
       VARIANT_EQUAL_CASE(UInt32)
       VARIANT_EQUAL_CASE(UInt64)
+      VARIANT_EQUAL_CASE(String)
     default:
       return true;
     }
   }
+
 #undef VARIANT_EQUAL_CASE
+
   bool operator!=(const Variant &Other) const { return !(*this == Other); }
+  Variant &operator=(const Variant &Other) {
+    if (this == &Other)
+      return *this;
+    if (Type == PDB_VariantType::String)
+      delete[] Value.String;
+    Type = Other.Type;
+    Value = Other.Value;
+    if (Other.Type == PDB_VariantType::String &&
+        Other.Value.String != nullptr) {
+      Value.String = new char[strlen(Other.Value.String) + 1];
+      ::strcpy(Value.String, Other.Value.String);
+    }
+    return *this;
+  }
 };
 
-namespace PDB {
-static const char Magic[] = {'M',  'i',  'c',    'r', 'o', 's',  'o',  'f',
-                             't',  ' ',  'C',    '/', 'C', '+',  '+',  ' ',
-                             'M',  'S',  'F',    ' ', '7', '.',  '0',  '0',
-                             '\r', '\n', '\x1a', 'D', 'S', '\0', '\0', '\0'};
-
-// The superblock is overlaid at the beginning of the file (offset 0).
-// It starts with a magic header and is followed by information which describes
-// the layout of the file system.
-struct SuperBlock {
-  char MagicBytes[sizeof(Magic)];
-  // The file system is split into a variable number of fixed size elements.
-  // These elements are referred to as blocks.  The size of a block may vary
-  // from system to system.
-  support::ulittle32_t BlockSize;
-  // This field's purpose is not yet known.
-  support::ulittle32_t Unknown0;
-  // This contains the number of blocks resident in the file system.  In
-  // practice, NumBlocks * BlockSize is equivalent to the size of the PDB file.
-  support::ulittle32_t NumBlocks;
-  // This contains the number of bytes which make up the directory.
-  support::ulittle32_t NumDirectoryBytes;
-  // This field's purpose is not yet known.
-  support::ulittle32_t Unknown1;
-  // This contains the block # of the block map.
-  support::ulittle32_t BlockMapAddr;
-};
+} // end namespace llvm
 }
 
-} // namespace llvm
-
 namespace std {
-template <> struct hash<llvm::PDB_SymType> {
-  typedef llvm::PDB_SymType argument_type;
+template <> struct hash<llvm::pdb::PDB_SymType> {
+  typedef llvm::pdb::PDB_SymType argument_type;
   typedef std::size_t result_type;
 
   result_type operator()(const argument_type &Arg) const {
     return std::hash<int>()(static_cast<int>(Arg));
   }
 };
-}
+} // end namespace std
 
-
-#endif
+#endif // LLVM_DEBUGINFO_PDB_PDBTYPES_H

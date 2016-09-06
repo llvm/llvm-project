@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple=aarch64-none-linux-gnu -start-after branch-folder -stop-after branch-folder -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=aarch64-none-linux-gnu -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 
 --- |
 

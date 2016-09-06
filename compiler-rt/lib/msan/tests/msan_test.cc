@@ -115,7 +115,10 @@ void *mempcpy(void *dest, const void *src, size_t n);
 # define SUPERUSER_GROUP "root"
 #endif
 
-const size_t kPageSize = 4096;
+static uintptr_t GetPageSize() {
+  return sysconf(_SC_PAGESIZE);
+}
+
 const size_t kMaxPathLength = 4096;
 
 typedef unsigned char      U1;
@@ -1117,8 +1120,8 @@ TEST(MemorySanitizer, gethostbyname_r_erange) {
   struct hostent he;
   struct hostent *result;
   int err;
-  int res = gethostbyname_r("localhost", &he, buf, sizeof(buf), &result, &err);
-  ASSERT_EQ(ERANGE, res);
+  gethostbyname_r("localhost", &he, buf, sizeof(buf), &result, &err);
+  ASSERT_EQ(ERANGE, errno);
   EXPECT_NOT_POISONED(err);
 }
 
@@ -1214,17 +1217,21 @@ TEST(MemorySanitizer, shmctl) {
 }
 
 TEST(MemorySanitizer, shmat) {
-  void *p = mmap(NULL, 4096, PROT_READ | PROT_WRITE,
-                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  ASSERT_NE(MAP_FAILED, p);
+  const int kShmSize = 4096;
+  void *mapping_start = mmap(NULL, kShmSize + SHMLBA, PROT_READ | PROT_WRITE,
+                             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  ASSERT_NE(MAP_FAILED, mapping_start);
+
+  void *p = (void *)(((unsigned long)mapping_start + SHMLBA - 1) / SHMLBA * SHMLBA);
+  // p is now SHMLBA-aligned;
 
   ((char *)p)[10] = *GetPoisoned<U1>();
-  ((char *)p)[4095] = *GetPoisoned<U1>();
+  ((char *)p)[kShmSize - 1] = *GetPoisoned<U1>();
 
-  int res = munmap(p, 4096);
+  int res = munmap(mapping_start, kShmSize + SHMLBA);
   ASSERT_EQ(0, res);
 
-  int id = shmget(IPC_PRIVATE, 4096, 0644 | IPC_CREAT);
+  int id = shmget(IPC_PRIVATE, kShmSize, 0644 | IPC_CREAT);
   ASSERT_GT(id, -1);
 
   void *q = shmat(id, p, 0);
@@ -1232,7 +1239,7 @@ TEST(MemorySanitizer, shmat) {
 
   EXPECT_NOT_POISONED(((char *)q)[0]);
   EXPECT_NOT_POISONED(((char *)q)[10]);
-  EXPECT_NOT_POISONED(((char *)q)[4095]);
+  EXPECT_NOT_POISONED(((char *)q)[kShmSize - 1]);
 
   res = shmdt(q);
   ASSERT_EQ(0, res);
@@ -2389,13 +2396,19 @@ TEST(MemorySanitizer, Invoke) {
 
 TEST(MemorySanitizer, ptrtoint) {
   // Test that shadow is propagated through pointer-to-integer conversion.
-  void* p = (void*)0xABCD;
-  __msan_poison(((char*)&p) + 1, sizeof(p));
-  EXPECT_NOT_POISONED((((uintptr_t)p) & 0xFF) == 0);
+  unsigned char c = 0;
+  __msan_poison(&c, 1);
+  uintptr_t u = (uintptr_t)c << 8;
+  EXPECT_NOT_POISONED(u & 0xFF00FF);
+  EXPECT_POISONED(u & 0xFF00);
 
-  void* q = (void*)0xABCD;
-  __msan_poison(&q, sizeof(q) - 1);
-  EXPECT_POISONED((((uintptr_t)q) & 0xFF) == 0);
+  break_optimization(&u);
+  void* p = (void*)u;
+
+  break_optimization(&p);
+  EXPECT_POISONED(p);
+  EXPECT_NOT_POISONED(((uintptr_t)p) & 0xFF00FF);
+  EXPECT_POISONED(((uintptr_t)p) & 0xFF00);
 }
 
 static void vaargsfn2(int guard, ...) {
@@ -2447,6 +2460,20 @@ TEST(MemorySanitizer, VAArgManyTest) {
   int* x = GetPoisoned<int>();
   int* y = GetPoisoned<int>(4);
   vaargsfn_many(1, 2, *x, 3, 4, 5, 6, 7, 8, 9, *y);
+}
+
+static void vaargsfn_manyfix(int g1, int g2, int g3, int g4, int g5, int g6, int g7, int g8, int g9, ...) {
+  va_list vl;
+  va_start(vl, g9);
+  EXPECT_NOT_POISONED(va_arg(vl, int));
+  EXPECT_POISONED(va_arg(vl, int));
+  va_end(vl);
+}
+
+TEST(MemorySanitizer, VAArgManyFixTest) {
+  int* x = GetPoisoned<int>();
+  int* y = GetPoisoned<int>();
+  vaargsfn_manyfix(1, *x, 3, 4, 5, 6, 7, 8, 9, 10, *y);
 }
 
 static void vaargsfn_pass2(va_list vl) {
@@ -2805,6 +2832,22 @@ TEST(MemorySanitizer, getrlimit) {
   ASSERT_EQ(result, 0);
   EXPECT_NOT_POISONED(limit.rlim_cur);
   EXPECT_NOT_POISONED(limit.rlim_max);
+
+  struct rlimit limit2;
+  __msan_poison(&limit2, sizeof(limit2));
+  result = prlimit(getpid(), RLIMIT_DATA, &limit, &limit2);
+  ASSERT_EQ(result, 0);
+  EXPECT_NOT_POISONED(limit2.rlim_cur);
+  EXPECT_NOT_POISONED(limit2.rlim_max);
+
+  __msan_poison(&limit, sizeof(limit));
+  result = prlimit(getpid(), RLIMIT_DATA, nullptr, &limit);
+  ASSERT_EQ(result, 0);
+  EXPECT_NOT_POISONED(limit.rlim_cur);
+  EXPECT_NOT_POISONED(limit.rlim_max);
+
+  result = prlimit(getpid(), RLIMIT_DATA, &limit, nullptr);
+  ASSERT_EQ(result, 0);
 }
 
 TEST(MemorySanitizer, getrusage) {
@@ -2888,6 +2931,10 @@ static void GetPathToLoadable(char *buf, size_t sz) {
   static const char basename[] = "libmsan_loadable.mips64el.so";
 #elif defined(__aarch64__)
   static const char basename[] = "libmsan_loadable.aarch64.so";
+#elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+  static const char basename[] = "libmsan_loadable.powerpc64.so";
+#elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  static const char basename[] = "libmsan_loadable.powerpc64le.so";
 #endif
   int res = snprintf(buf, sz, "%.*s/%s",
                      (int)dir_len, program_path, basename);
@@ -3195,28 +3242,30 @@ TEST(MemorySanitizer, posix_memalign) {
 #if !defined(__FreeBSD__)
 TEST(MemorySanitizer, memalign) {
   void *p = memalign(4096, 13);
-  EXPECT_EQ(0U, (uintptr_t)p % kPageSize);
+  EXPECT_EQ(0U, (uintptr_t)p % 4096);
   free(p);
 }
 #endif
 
 TEST(MemorySanitizer, valloc) {
   void *a = valloc(100);
-  EXPECT_EQ(0U, (uintptr_t)a % kPageSize);
+  uintptr_t PageSize = GetPageSize();
+  EXPECT_EQ(0U, (uintptr_t)a % PageSize);
   free(a);
 }
 
 // There's no pvalloc() on FreeBSD.
 #if !defined(__FreeBSD__)
 TEST(MemorySanitizer, pvalloc) {
-  void *p = pvalloc(kPageSize + 100);
-  EXPECT_EQ(0U, (uintptr_t)p % kPageSize);
-  EXPECT_EQ(2 * kPageSize, __sanitizer_get_allocated_size(p));
+  uintptr_t PageSize = GetPageSize();
+  void *p = pvalloc(PageSize + 100);
+  EXPECT_EQ(0U, (uintptr_t)p % PageSize);
+  EXPECT_EQ(2 * PageSize, __sanitizer_get_allocated_size(p));
   free(p);
 
   p = pvalloc(0);  // pvalloc(0) should allocate at least one page.
-  EXPECT_EQ(0U, (uintptr_t)p % kPageSize);
-  EXPECT_EQ(kPageSize, __sanitizer_get_allocated_size(p));
+  EXPECT_EQ(0U, (uintptr_t)p % PageSize);
+  EXPECT_EQ(PageSize, __sanitizer_get_allocated_size(p));
   free(p);
 }
 #endif
@@ -3920,7 +3969,48 @@ TEST(VectorMaddTest, mmx_pmadd_wd) {
 
   EXPECT_EQ((unsigned)(2 * 102 + 3 * 103), c[1]);
 }
-#endif  // defined(__clang__)
+
+TEST(VectorCmpTest, mm_cmpneq_ps) {
+  V4x32 c;
+  c = _mm_cmpneq_ps(V4x32{Poisoned<U4>(), 1, 2, 3}, V4x32{4, 5, Poisoned<U4>(), 6});
+  EXPECT_POISONED(c[0]);
+  EXPECT_NOT_POISONED(c[1]);
+  EXPECT_POISONED(c[2]);
+  EXPECT_NOT_POISONED(c[3]);
+
+  c = _mm_cmpneq_ps(V4x32{0, 1, 2, 3}, V4x32{4, 5, 6, 7});
+  EXPECT_NOT_POISONED(c);
+}
+
+TEST(VectorCmpTest, mm_cmpneq_sd) {
+  V2x64 c;
+  c = _mm_cmpneq_sd(V2x64{Poisoned<U8>(), 1}, V2x64{2, 3});
+  EXPECT_POISONED(c[0]);
+  c = _mm_cmpneq_sd(V2x64{1, 2}, V2x64{Poisoned<U8>(), 3});
+  EXPECT_POISONED(c[0]);
+  c = _mm_cmpneq_sd(V2x64{1, 2}, V2x64{3, 4});
+  EXPECT_NOT_POISONED(c[0]);
+  c = _mm_cmpneq_sd(V2x64{1, Poisoned<U8>()}, V2x64{2, Poisoned<U8>()});
+  EXPECT_NOT_POISONED(c[0]);
+  c = _mm_cmpneq_sd(V2x64{1, Poisoned<U8>()}, V2x64{1, Poisoned<U8>()});
+  EXPECT_NOT_POISONED(c[0]);
+}
+
+TEST(VectorCmpTest, builtin_ia32_ucomisdlt) {
+  U4 c;
+  c = __builtin_ia32_ucomisdlt(V2x64{Poisoned<U8>(), 1}, V2x64{2, 3});
+  EXPECT_POISONED(c);
+  c = __builtin_ia32_ucomisdlt(V2x64{1, 2}, V2x64{Poisoned<U8>(), 3});
+  EXPECT_POISONED(c);
+  c = __builtin_ia32_ucomisdlt(V2x64{1, 2}, V2x64{3, 4});
+  EXPECT_NOT_POISONED(c);
+  c = __builtin_ia32_ucomisdlt(V2x64{1, Poisoned<U8>()}, V2x64{2, Poisoned<U8>()});
+  EXPECT_NOT_POISONED(c);
+  c = __builtin_ia32_ucomisdlt(V2x64{1, Poisoned<U8>()}, V2x64{1, Poisoned<U8>()});
+  EXPECT_NOT_POISONED(c);
+}
+
+#endif // defined(__x86_64__) && defined(__clang__)
 
 TEST(MemorySanitizerOrigins, SetGet) {
   EXPECT_EQ(TrackingOrigins(), !!__msan_get_track_origins());
@@ -4173,7 +4263,7 @@ TEST(MemorySanitizerOrigins, StoreIntrinsic) {
   U4 origin = __LINE__;
   __msan_set_origin(&x, sizeof(x), origin);
   __msan_poison(&x, sizeof(x));
-  __builtin_ia32_storeups((float*)&y, x);
+  _mm_storeu_ps((float*)&y, x);
   EXPECT_POISONED_O(y, origin);
 }
 #endif

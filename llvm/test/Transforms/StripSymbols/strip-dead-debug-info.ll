@@ -1,8 +1,8 @@
 ; RUN: opt -strip-dead-debug-info -verify %s -S | FileCheck %s
 
 ; CHECK: ModuleID = '{{.*}}'
-; CHECK-NOT: bar
-; CHECK-NOT: abcd
+; CHECK-NOT: "bar"
+; CHECK-NOT: "abcd"
 
 @xyz = global i32 2
 
@@ -30,17 +30,17 @@ attributes #2 = { nounwind readonly ssp }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!25}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 1, file: !1, enums: !{}, retainedTypes: !{}, subprograms: !23, globals: !24)
+!0 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !{}, retainedTypes: !{}, globals: !24)
 !1 = !DIFile(filename: "g.c", directory: "/tmp/")
 !2 = !{null}
-!3 = distinct !DISubprogram(name: "bar", line: 5, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: true, file: !1, scope: null, type: !4)
+!3 = distinct !DISubprogram(name: "bar", line: 5, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !0, file: !1, scope: null, type: !4)
 !4 = !DISubroutineType(types: !2)
 !5 = !DIFile(filename: "g.c", directory: "/tmp/")
-!6 = distinct !DISubprogram(name: "fn", linkageName: "fn", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, file: !1, scope: null, type: !7)
+!6 = distinct !DISubprogram(name: "fn", linkageName: "fn", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !0, file: !1, scope: null, type: !7)
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9}
 !9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!10 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, file: !1, scope: null, type: !11)
+!10 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !0, file: !1, scope: null, type: !11)
 !11 = !DISubroutineType(types: !12)
 !12 = !{!9, !9}
 !13 = !DILocalVariable(name: "bb", line: 5, scope: !14, file: !5, type: !9)
@@ -53,6 +53,5 @@ attributes #2 = { nounwind readonly ssp }
 !20 = !DILocation(line: 7, scope: !10)
 !21 = !DILocation(line: 10, scope: !22)
 !22 = distinct !DILexicalBlock(line: 7, column: 0, file: !1, scope: !10)
-!23 = !{!3, !6, !10}
 !24 = !{!16, !17}
 !25 = !{i32 1, !"Debug Info Version", i32 3}

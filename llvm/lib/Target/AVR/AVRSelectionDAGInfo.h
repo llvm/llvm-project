@@ -7,20 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the AVR subclass for TargetSelectionDAGInfo.
+// This file defines the AVR subclass for SelectionDAGTargetInfo.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_AVR_SELECTION_DAG_INFO_H
 #define LLVM_AVR_SELECTION_DAG_INFO_H
 
-#include "llvm/Target/TargetSelectionDAGInfo.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
 namespace llvm {
-/**
- * Holds information about the AVR instruction selection DAG.
- */
-class AVRSelectionDAGInfo : public TargetSelectionDAGInfo {
+
+/// Holds information about the AVR instruction selection DAG.
+class AVRSelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
 };
 

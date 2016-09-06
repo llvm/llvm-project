@@ -28,6 +28,7 @@ pointer is never null. How can I tell the analyzer that a pointer can never be
 null?</a></li>
   <li><a href="#dead_store">How do I tell the static analyzer that I don't care about a specific dead store?</a></li>
   <li><a href="#unused_ivar">How do I tell the static analyzer that I don't care about a specific unused instance variable in Objective C?</a></li>
+  <li><a href="#unlocalized_string">How do I tell the static analyzer that I don't care about a specific unlocalized string?</a></li>
   <li><a href="#use_assert">The analyzer assumes that a loop body is never entered.  How can I tell it that the loop body will be entered at least once?</a></li>
   <li><a href="#suppress_issue">How can I suppress a specific analyzer warning?</a></li>
   <li><a href="#exclude_code">How can I selectively exclude code the analyzer examines?</a></li>
@@ -77,6 +78,32 @@ You can use the <tt>(void)x;</tt> idiom to acknowledge that there is a dead stor
 <p>When the analyzer sees that a value stored into a variable is never used, it is going to produce a message similar to this one:
 <pre class="code_example">Instance variable 'commonName' in class 'HappyBird' is never used by the methods in its @implementation</pre>
 You can add <tt>__attribute__((unused))</tt> to the instance variable declaration to suppress the warning.</p>
+
+<h4 id="unlocalized_string" class="faq">Q: How do I tell the static analyzer that I don't care about a specific unlocalized string?</h4>
+
+<p>When the analyzer sees that an unlocalized string is passed to a method that will present that string to the user, it is going to produce a message similar to this one:
+<pre class="code_example">User-facing text should use localized string macro</pre>
+
+If your project deliberately uses unlocalized user-facing strings (for example, in a debugging UI that is never shown to users), you can suppress the analyzer warnings (and document your intent) with a function that just returns its input but is annotated to return a localized string:
+<pre class="code_example">
+__attribute__((annotate("returns_localized_nsstring")))
+static inline NSString *LocalizationNotNeeded(NSString *s) {
+  return s;
+}
+</pre>
+
+You can then call this function when creating your debugging UI:
+<pre class="code_example">
+[field setStringValue:LocalizationNotNeeded(@"Debug")];
+</pre>
+
+Some projects may also find it useful to use NSLocalizedString but add "DNL" or "Do Not Localize" to the string contents as a convention:
+<pre class="code_example">
+UILabel *testLabel = [[UILabel alloc] init];
+NSString *s = NSLocalizedString(@"Hello &lt;Do Not Localize&gt;", @"For debug purposes");
+[testLabel setText:s];
+</pre>
+</p>
 
 <h4 id="use_assert" class="faq">Q: The analyzer assumes that a loop body is never entered.  How can I tell it that the loop body will be entered at least once?</h4>
 

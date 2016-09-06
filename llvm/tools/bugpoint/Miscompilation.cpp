@@ -26,12 +26,13 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+
 using namespace llvm;
 
 namespace llvm {
   extern cl::opt<std::string> OutputPrefix;
   extern cl::list<std::string> InputArgv;
-}
+} // end namespace llvm
 
 namespace {
   static llvm::cl::opt<bool>
@@ -52,7 +53,7 @@ namespace {
                       std::vector<std::string> &Suffix,
                       std::string &Error) override;
   };
-}
+} // end anonymous namespace
 
 /// TestResult - After passes have been split into a test group and a control
 /// group, see if they still break the program.
@@ -208,7 +209,7 @@ namespace {
 
     bool TestFuncs(const std::vector<Function*> &Prefix, std::string &Error);
   };
-}
+} // end anonymous namespace
 
 /// Given two modules, link them together and run the program, checking to see
 /// if the program matches the diff. If there is an error, return NULL. If not,
@@ -469,7 +470,7 @@ namespace {
 
     bool TestFuncs(const std::vector<BasicBlock*> &BBs, std::string &Error);
   };
-}
+} // end anonymous namespace
 
 /// TestFuncs - Extract all blocks for the miscompiled functions except for the
 /// specified blocks.  If the problem still exists, return true.
@@ -696,8 +697,14 @@ static bool TestOptimizer(BugDriver &BD, std::unique_ptr<Module> Test,
   // of the functions being tested.
   outs() << "  Optimizing functions being tested: ";
   std::unique_ptr<Module> Optimized =
-      BD.runPassesOn(Test.get(), BD.getPassesToRun(),
-                     /*AutoDebugCrashes*/ true);
+      BD.runPassesOn(Test.get(), BD.getPassesToRun());
+  if (!Optimized) {
+    errs() << " Error running this sequence of passes"
+           << " on the input program!\n";
+    delete BD.swapProgramIn(Test.get());
+    BD.EmitProgressBitcode(Test.get(), "pass-error",  false);
+    return BD.debugOptimizerCrash();
+  }
   outs() << "done.\n";
 
   outs() << "  Checking to see if the merged program executes correctly: ";
@@ -711,7 +718,6 @@ static bool TestOptimizer(BugDriver &BD, std::unique_ptr<Module> Test,
   }
   return Broken;
 }
-
 
 /// debugMiscompilation - This method is used when the passes selected are not
 /// crashing, but the generated output is semantically different from the
@@ -752,8 +758,6 @@ void BugDriver::debugMiscompilation(std::string *Error) {
   outs() << "  Portion that is input to optimizer: ";
   EmitProgressBitcode(ToOptimize, "tooptimize");
   delete ToOptimize;      // Delete hacked module.
-
-  return;
 }
 
 /// Get the specified modules ready for code generator testing.
@@ -983,7 +987,6 @@ static bool TestCodeGenerator(BugDriver &BD, std::unique_ptr<Module> Test,
 
   return Result;
 }
-
 
 /// debugCodeGenerator - debug errors in LLC, LLI, or CBE.
 ///

@@ -169,6 +169,27 @@ struct Mapping42 {
   static const uptr kVdsoBeg       = 0x37f00000000ull;
 };
 
+struct Mapping48 {
+  static const uptr kLoAppMemBeg   = 0x0000000001000ull;
+  static const uptr kLoAppMemEnd   = 0x0000200000000ull;
+  static const uptr kShadowBeg     = 0x0002000000000ull;
+  static const uptr kShadowEnd     = 0x0004000000000ull;
+  static const uptr kMetaShadowBeg = 0x0005000000000ull;
+  static const uptr kMetaShadowEnd = 0x0006000000000ull;
+  static const uptr kMidAppMemBeg  = 0x0aaaa00000000ull;
+  static const uptr kMidAppMemEnd  = 0x0aaaf00000000ull;
+  static const uptr kMidShadowOff  = 0x0aaa800000000ull;
+  static const uptr kTraceMemBeg   = 0x0f06000000000ull;
+  static const uptr kTraceMemEnd   = 0x0f06200000000ull;
+  static const uptr kHeapMemBeg    = 0x0ffff00000000ull;
+  static const uptr kHeapMemEnd    = 0x0ffff00000000ull;
+  static const uptr kHiAppMemBeg   = 0x0ffff00000000ull;
+  static const uptr kHiAppMemEnd   = 0x1000000000000ull;
+  static const uptr kAppMemMsk     = 0x0fff800000000ull;
+  static const uptr kAppMemXor     = 0x0000800000000ull;
+  static const uptr kVdsoBeg       = 0xffff000000000ull;
+};
+
 // Indicates the runtime will define the memory regions at runtime.
 #define TSAN_RUNTIME_VMA 1
 // Indicates that mapping defines a mid range memory segment.
@@ -297,7 +318,7 @@ struct Mapping {
   static const uptr kShadowEnd     = 0x050000000000ull;
   static const uptr kAppMemBeg     = 0x000000001000ull;
   static const uptr kAppMemEnd     = 0x00e000000000ull;
-}
+};
 
 #else
 # error "Unknown platform"
@@ -362,11 +383,13 @@ uptr MappingImpl(void) {
 template<int Type>
 uptr MappingArchImpl(void) {
 #ifdef __aarch64__
-  if (vmaSize == 39)
-    return MappingImpl<Mapping39, Type>();
-  else
-    return MappingImpl<Mapping42, Type>();
+  switch (vmaSize) {
+    case 39: return MappingImpl<Mapping39, Type>();
+    case 42: return MappingImpl<Mapping42, Type>();
+    case 48: return MappingImpl<Mapping48, Type>();
+  }
   DCHECK(0);
+  return 0;
 #elif defined(__powerpc64__)
   if (vmaSize == 44)
     return MappingImpl<Mapping44, Type>();
@@ -513,11 +536,13 @@ bool IsAppMemImpl(uptr mem) {
 ALWAYS_INLINE
 bool IsAppMem(uptr mem) {
 #ifdef __aarch64__
-  if (vmaSize == 39)
-    return IsAppMemImpl<Mapping39>(mem);
-  else
-    return IsAppMemImpl<Mapping42>(mem);
+  switch (vmaSize) {
+    case 39: return IsAppMemImpl<Mapping39>(mem);
+    case 42: return IsAppMemImpl<Mapping42>(mem);
+    case 48: return IsAppMemImpl<Mapping48>(mem);
+  }
   DCHECK(0);
+  return false;
 #elif defined(__powerpc64__)
   if (vmaSize == 44)
     return IsAppMemImpl<Mapping44>(mem);
@@ -538,11 +563,13 @@ bool IsShadowMemImpl(uptr mem) {
 ALWAYS_INLINE
 bool IsShadowMem(uptr mem) {
 #ifdef __aarch64__
-  if (vmaSize == 39)
-    return IsShadowMemImpl<Mapping39>(mem);
-  else
-    return IsShadowMemImpl<Mapping42>(mem);
+  switch (vmaSize) {
+    case 39: return IsShadowMemImpl<Mapping39>(mem);
+    case 42: return IsShadowMemImpl<Mapping42>(mem);
+    case 48: return IsShadowMemImpl<Mapping48>(mem);
+  }
   DCHECK(0);
+  return false;
 #elif defined(__powerpc64__)
   if (vmaSize == 44)
     return IsShadowMemImpl<Mapping44>(mem);
@@ -563,11 +590,13 @@ bool IsMetaMemImpl(uptr mem) {
 ALWAYS_INLINE
 bool IsMetaMem(uptr mem) {
 #ifdef __aarch64__
-  if (vmaSize == 39)
-    return IsMetaMemImpl<Mapping39>(mem);
-  else
-    return IsMetaMemImpl<Mapping42>(mem);
+  switch (vmaSize) {
+    case 39: return IsMetaMemImpl<Mapping39>(mem);
+    case 42: return IsMetaMemImpl<Mapping42>(mem);
+    case 48: return IsMetaMemImpl<Mapping48>(mem);
+  }
   DCHECK(0);
+  return false;
 #elif defined(__powerpc64__)
   if (vmaSize == 44)
     return IsMetaMemImpl<Mapping44>(mem);
@@ -587,18 +616,24 @@ uptr MemToShadowImpl(uptr x) {
   return (((x) & ~(Mapping::kAppMemMsk | (kShadowCell - 1)))
       ^ Mapping::kAppMemXor) * kShadowCnt;
 #else
+# ifndef SANITIZER_WINDOWS
   return ((x & ~(kShadowCell - 1)) * kShadowCnt) | Mapping::kShadowBeg;
+# else
+  return ((x & ~(kShadowCell - 1)) * kShadowCnt) + Mapping::kShadowBeg;
+# endif
 #endif
 }
 
 ALWAYS_INLINE
 uptr MemToShadow(uptr x) {
 #ifdef __aarch64__
-  if (vmaSize == 39)
-    return MemToShadowImpl<Mapping39>(x);
-  else
-    return MemToShadowImpl<Mapping42>(x);
+  switch (vmaSize) {
+    case 39: return MemToShadowImpl<Mapping39>(x);
+    case 42: return MemToShadowImpl<Mapping42>(x);
+    case 48: return MemToShadowImpl<Mapping48>(x);
+  }
   DCHECK(0);
+  return 0;
 #elif defined(__powerpc64__)
   if (vmaSize == 44)
     return MemToShadowImpl<Mapping44>(x);
@@ -627,11 +662,13 @@ u32 *MemToMetaImpl(uptr x) {
 ALWAYS_INLINE
 u32 *MemToMeta(uptr x) {
 #ifdef __aarch64__
-  if (vmaSize == 39)
-    return MemToMetaImpl<Mapping39>(x);
-  else
-    return MemToMetaImpl<Mapping42>(x);
+  switch (vmaSize) {
+    case 39: return MemToMetaImpl<Mapping39>(x);
+    case 42: return MemToMetaImpl<Mapping42>(x);
+    case 48: return MemToMetaImpl<Mapping48>(x);
+  }
   DCHECK(0);
+  return 0;
 #elif defined(__powerpc64__)
   if (vmaSize == 44)
     return MemToMetaImpl<Mapping44>(x);
@@ -662,7 +699,6 @@ uptr ShadowToMemImpl(uptr s) {
 # ifndef SANITIZER_WINDOWS
   return (s & ~Mapping::kShadowBeg) / kShadowCnt;
 # else
-  // FIXME(dvyukov): this is most likely wrong as the mapping is not bijection.
   return (s - Mapping::kShadowBeg) / kShadowCnt;
 # endif // SANITIZER_WINDOWS
 #endif
@@ -671,11 +707,13 @@ uptr ShadowToMemImpl(uptr s) {
 ALWAYS_INLINE
 uptr ShadowToMem(uptr s) {
 #ifdef __aarch64__
-  if (vmaSize == 39)
-    return ShadowToMemImpl<Mapping39>(s);
-  else
-    return ShadowToMemImpl<Mapping42>(s);
+  switch (vmaSize) {
+    case 39: return ShadowToMemImpl<Mapping39>(s);
+    case 42: return ShadowToMemImpl<Mapping42>(s);
+    case 48: return ShadowToMemImpl<Mapping48>(s);
+  }
   DCHECK(0);
+  return 0;
 #elif defined(__powerpc64__)
   if (vmaSize == 44)
     return ShadowToMemImpl<Mapping44>(s);
@@ -704,11 +742,13 @@ uptr GetThreadTraceImpl(int tid) {
 ALWAYS_INLINE
 uptr GetThreadTrace(int tid) {
 #ifdef __aarch64__
-  if (vmaSize == 39)
-    return GetThreadTraceImpl<Mapping39>(tid);
-  else
-    return GetThreadTraceImpl<Mapping42>(tid);
+  switch (vmaSize) {
+    case 39: return GetThreadTraceImpl<Mapping39>(tid);
+    case 42: return GetThreadTraceImpl<Mapping42>(tid);
+    case 48: return GetThreadTraceImpl<Mapping48>(tid);
+  }
   DCHECK(0);
+  return 0;
 #elif defined(__powerpc64__)
   if (vmaSize == 44)
     return GetThreadTraceImpl<Mapping44>(tid);
@@ -732,11 +772,13 @@ uptr GetThreadTraceHeaderImpl(int tid) {
 ALWAYS_INLINE
 uptr GetThreadTraceHeader(int tid) {
 #ifdef __aarch64__
-  if (vmaSize == 39)
-    return GetThreadTraceHeaderImpl<Mapping39>(tid);
-  else
-    return GetThreadTraceHeaderImpl<Mapping42>(tid);
+  switch (vmaSize) {
+    case 39: return GetThreadTraceHeaderImpl<Mapping39>(tid);
+    case 42: return GetThreadTraceHeaderImpl<Mapping42>(tid);
+    case 48: return GetThreadTraceHeaderImpl<Mapping48>(tid);
+  }
   DCHECK(0);
+  return 0;
 #elif defined(__powerpc64__)
   if (vmaSize == 44)
     return GetThreadTraceHeaderImpl<Mapping44>(tid);
@@ -754,10 +796,6 @@ void CheckAndProtect();
 void InitializeShadowMemoryPlatform();
 void FlushShadowMemory();
 void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive);
-
-// Says whether the addr relates to a global var.
-// Guesses with high probability, may yield both false positives and negatives.
-bool IsGlobalVar(uptr addr);
 int ExtractResolvFDs(void *state, int *fds, int nfd);
 int ExtractRecvmsgFDs(void *msg, int *fds, int nfd);
 

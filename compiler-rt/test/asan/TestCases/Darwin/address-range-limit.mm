@@ -1,7 +1,7 @@
 // Regression test for https://code.google.com/p/address-sanitizer/issues/detail?id=368.
 
-// RUN: %clang_asan %s -Wno-deprecated-declarations -flat_namespace -bundle -undefined suppress -o %t.bundle
-// RUN: %clang_asan %s -Wno-deprecated-declarations -o %t -framework Foundation && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan %s -Wno-deprecated-declarations -flat_namespace -bundle -undefined suppress -o %t.bundle
+// RUN: %clangxx_asan %s -Wno-deprecated-declarations -o %t -framework Foundation && not %run %t 2>&1 | FileCheck %s
 
 #import <Foundation/Foundation.h>
 #import <mach-o/dyld.h>

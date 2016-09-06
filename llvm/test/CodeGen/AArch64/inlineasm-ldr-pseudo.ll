@@ -5,7 +5,7 @@
 ; RUN: llc -mtriple=aarch64   < %s -filetype=obj | llvm-objdump -arch=aarch64 -d - | FileCheck %s
 
 ; CHECK-LABEL: foo:
-; CHECK:       a0 79 95 d2 	 movz	x0, #0xabcd
+; CHECK:       a0 79 95 d2   mov x0, #43981
 ; CHECK:       c0 03 5f d6   ret
 define i32 @foo() nounwind {
 entry:
@@ -22,5 +22,3 @@ entry:
   %0 = tail call i32 asm sideeffect "ldr $0,=0x10001", "=r"() nounwind
   ret i32 %0
 }
-
-

@@ -14,15 +14,11 @@
 #ifndef LLVM_AVR_MACHINE_FUNCTION_INFO_H
 #define LLVM_AVR_MACHINE_FUNCTION_INFO_H
 
-#include "AVRConfig.h"
-
 #include "llvm/CodeGen/MachineFunction.h"
 
 namespace llvm {
 
-/**
- * Contains AVR-specific information for each MachineFunction.
- */
+/// Contains AVR-specific information for each MachineFunction.
 class AVRMachineFunctionInfo : public MachineFunctionInfo {
   /// Indicates if a register has been spilled by the register
   /// allocator.

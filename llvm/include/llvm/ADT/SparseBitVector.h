@@ -245,20 +245,9 @@ public:
 };
 
 template <unsigned ElementSize>
-struct ilist_traits<SparseBitVectorElement<ElementSize> >
-  : public ilist_default_traits<SparseBitVectorElement<ElementSize> > {
-  typedef SparseBitVectorElement<ElementSize> Element;
-
-  Element *createSentinel() const { return static_cast<Element *>(&Sentinel); }
-  static void destroySentinel(Element *) {}
-
-  Element *provideInitialHead() const { return createSentinel(); }
-  Element *ensureHead(Element *) const { return createSentinel(); }
-  static void noteHead(Element *, Element *) {}
-
-private:
-  mutable ilist_half_node<Element> Sentinel;
-};
+struct ilist_sentinel_traits<SparseBitVectorElement<ElementSize>>
+    : public ilist_half_embedded_sentinel_traits<
+          SparseBitVectorElement<ElementSize>> {};
 
 template <unsigned ElementSize = 128>
 class SparseBitVector {

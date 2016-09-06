@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=arm64 -mcpu=cyclone -aarch64-neon-syntax=apple | FileCheck %s
-; RUN: llc < %s -march=arm64 -mcpu=cortex-a57 | FileCheck --check-prefix=CHECK-A57 %s
+; RUN: llc < %s -mtriple=arm64-eabi -mcpu=cyclone -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -mcpu=cortex-a57 | FileCheck --check-prefix=CHECK-A57 %s
 ; rdar://13082402
 
 define float @t1(i32* nocapture %src) nounwind ssp {

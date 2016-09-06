@@ -56,29 +56,26 @@ protected:
 
       for (MachineBasicBlock::iterator I = MBB.begin(), IE = MBB.end();
            I != IE;) {
-        MachineInstr *MI = I;
+        MachineInstr &MI = *I;
 
-        if (MI->getOpcode() != PPC::ADDItlsgdLADDR &&
-            MI->getOpcode() != PPC::ADDItlsldLADDR &&
-            MI->getOpcode() != PPC::ADDItlsgdLADDR32 &&
-            MI->getOpcode() != PPC::ADDItlsldLADDR32) {
+        if (MI.getOpcode() != PPC::ADDItlsgdLADDR &&
+            MI.getOpcode() != PPC::ADDItlsldLADDR &&
+            MI.getOpcode() != PPC::ADDItlsgdLADDR32 &&
+            MI.getOpcode() != PPC::ADDItlsldLADDR32) {
           ++I;
           continue;
         }
 
-        DEBUG(dbgs() << "TLS Dynamic Call Fixup:\n    " << *MI;);
+        DEBUG(dbgs() << "TLS Dynamic Call Fixup:\n    " << MI);
 
-        unsigned OutReg = MI->getOperand(0).getReg();
-        unsigned InReg  = MI->getOperand(1).getReg();
-        DebugLoc DL = MI->getDebugLoc();
+        unsigned OutReg = MI.getOperand(0).getReg();
+        unsigned InReg = MI.getOperand(1).getReg();
+        DebugLoc DL = MI.getDebugLoc();
         unsigned GPR3 = Is64Bit ? PPC::X3 : PPC::R3;
         unsigned Opc1, Opc2;
-        SmallVector<unsigned, 4> OrigRegs;
-        OrigRegs.push_back(OutReg);
-        OrigRegs.push_back(InReg);
-        OrigRegs.push_back(GPR3);
+        const unsigned OrigRegs[] = {OutReg, InReg, GPR3};
 
-        switch (MI->getOpcode()) {
+        switch (MI.getOpcode()) {
         default:
           llvm_unreachable("Opcode inconsistency error");
         case PPC::ADDItlsgdLADDR:
@@ -107,7 +104,7 @@ protected:
         // Expand into two ops built prior to the existing instruction.
         MachineInstr *Addi = BuildMI(MBB, I, DL, TII->get(Opc1), GPR3)
           .addReg(InReg);
-        Addi->addOperand(MI->getOperand(2));
+        Addi->addOperand(MI.getOperand(2));
 
         // The ADDItls* instruction is the first instruction in the
         // repair range.
@@ -116,7 +113,7 @@ protected:
 
         MachineInstr *Call = (BuildMI(MBB, I, DL, TII->get(Opc2), GPR3)
                               .addReg(GPR3));
-        Call->addOperand(MI->getOperand(3));
+        Call->addOperand(MI.getOperand(3));
 
         BuildMI(MBB, I, DL, TII->get(PPC::ADJCALLSTACKUP)).addImm(0).addImm(0);
 
@@ -129,7 +126,7 @@ protected:
 
         // Move past the original instruction and remove it.
         ++I;
-        MI->removeFromParent();
+        MI.removeFromParent();
 
         // Repair the live intervals.
         LIS->repairIntervalsInRange(&MBB, First, Last, OrigRegs);

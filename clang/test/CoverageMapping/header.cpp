@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fprofile-instr-generate -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name header.cpp %s > %tmapping
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name header.cpp %s > %tmapping
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-FUNC
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-STATIC-FUNC
 // RUN: FileCheck -input-file %tmapping %s --check-prefix=CHECK-STATIC-FUNC2

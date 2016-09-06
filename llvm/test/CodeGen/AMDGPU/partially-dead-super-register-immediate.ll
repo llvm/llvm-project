@@ -8,10 +8,10 @@
 ; During live interval construction, the first sub register def is
 ; incorrectly marked as dead.
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 define void @dead_def_subregister(i32 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x() #1
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
   %val = load i64, i64 addrspace(1)* %in.gep
 

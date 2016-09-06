@@ -6,11 +6,13 @@
 
         .text
         .set noreorder
+        andi $2, $3, -1      # CHECK: :[[@LINE]]:22: error: expected 16-bit unsigned immediate
+        andi $2, $3, 65536   # CHECK: :[[@LINE]]:22: error: expected 16-bit unsigned immediate
         cache -1, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
         cache 32, 255($7)    # CHECK: :[[@LINE]]:15: error: expected 5-bit unsigned immediate
         # FIXME: Check various 'pos + size' constraints on dext*
-        dext $2, $3, -1, 1   # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
-        dext $2, $3, 32, 1   # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
+        dext $2, $3, -1, 1   # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
+        dext $2, $3, 64, 1   # CHECK: :[[@LINE]]:22: error: expected 6-bit unsigned immediate
         dext $2, $3, 1, 0    # CHECK: :[[@LINE]]:25: error: expected immediate in range 1 .. 32
         dext $2, $3, 1, 33   # CHECK: :[[@LINE]]:25: error: expected immediate in range 1 .. 32
         dextm $2, $3, -1, 1  # CHECK: :[[@LINE]]:23: error: expected 5-bit unsigned immediate
@@ -56,6 +58,8 @@
         ins $2, $3, 32, 1    # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
         jalr.hb $31          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
         jalr.hb $31, $31     # CHECK: :[[@LINE]]:{{[0-9]+}}: error: source and destination must be different
+        ori $2, $3, -1       # CHECK: :[[@LINE]]:21: error: expected 16-bit unsigned immediate
+        ori $2, $3, 65536    # CHECK: :[[@LINE]]:21: error: expected 16-bit unsigned immediate
         pref -1, 255($7)     # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate
         pref 32, 255($7)     # CHECK: :[[@LINE]]:14: error: expected 5-bit unsigned immediate
         sll $2, $3, -1       # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
@@ -66,3 +70,5 @@
         sra $2, $3, 32       # CHECK: :[[@LINE]]:21: error: expected 5-bit unsigned immediate
         rotr $2, $3, -1      # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
         rotr $2, $3, 32      # CHECK: :[[@LINE]]:22: error: expected 5-bit unsigned immediate
+        xori $2, $3, -1      # CHECK: :[[@LINE]]:22: error: expected 16-bit unsigned immediate
+        xori $2, $3, 65536   # CHECK: :[[@LINE]]:22: error: expected 16-bit unsigned immediate

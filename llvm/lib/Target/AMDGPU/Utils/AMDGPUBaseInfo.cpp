@@ -109,27 +109,43 @@ bool isReadOnlySegment(const GlobalValue *GV) {
   return GV->getType()->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
 }
 
-static unsigned getIntegerAttribute(const Function &F, const char *Name,
-                                    unsigned Default) {
+int getIntegerAttribute(const Function &F, StringRef Name, int Default) {
   Attribute A = F.getFnAttribute(Name);
-  unsigned Result = Default;
+  int Result = Default;
 
   if (A.isStringAttribute()) {
     StringRef Str = A.getValueAsString();
     if (Str.getAsInteger(0, Result)) {
       LLVMContext &Ctx = F.getContext();
-      Ctx.emitError("can't parse shader type");
+      Ctx.emitError("can't parse integer attribute " + Name);
     }
   }
+
   return Result;
 }
 
-unsigned getShaderType(const Function &F) {
-  return getIntegerAttribute(F, "ShaderType", ShaderType::COMPUTE);
+unsigned getMaximumWorkGroupSize(const Function &F) {
+  return getIntegerAttribute(F, "amdgpu-max-work-group-size", 256);
 }
 
 unsigned getInitialPSInputAddr(const Function &F) {
   return getIntegerAttribute(F, "InitialPSInputAddr", 0);
+}
+
+bool isShader(CallingConv::ID cc) {
+  switch(cc) {
+    case CallingConv::AMDGPU_VS:
+    case CallingConv::AMDGPU_GS:
+    case CallingConv::AMDGPU_PS:
+    case CallingConv::AMDGPU_CS:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool isCompute(CallingConv::ID cc) {
+  return !isShader(cc) || cc == CallingConv::AMDGPU_CS;
 }
 
 bool isSI(const MCSubtargetInfo &STI) {

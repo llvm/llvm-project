@@ -30,6 +30,13 @@ extern uint64_t
     CountersEnd __asm("section$end$__DATA$" INSTR_PROF_CNTS_SECT_NAME_STR);
 
 COMPILER_RT_VISIBILITY
+extern ValueProfNode
+    VNodesStart __asm("section$start$__DATA$" INSTR_PROF_VNODES_SECT_NAME_STR);
+COMPILER_RT_VISIBILITY
+extern ValueProfNode
+    VNodesEnd __asm("section$end$__DATA$" INSTR_PROF_VNODES_SECT_NAME_STR);
+
+COMPILER_RT_VISIBILITY
 const __llvm_profile_data *__llvm_profile_begin_data(void) {
   return &DataStart;
 }
@@ -43,4 +50,14 @@ COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_begin_counters(void) { return &CountersStart; }
 COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_end_counters(void) { return &CountersEnd; }
+
+COMPILER_RT_VISIBILITY
+ValueProfNode *__llvm_profile_begin_vnodes(void) {
+  return &VNodesStart;
+}
+COMPILER_RT_VISIBILITY
+ValueProfNode *__llvm_profile_end_vnodes(void) { return &VNodesEnd; }
+
+COMPILER_RT_VISIBILITY ValueProfNode *CurrentVNode = &VNodesStart;
+COMPILER_RT_VISIBILITY ValueProfNode *EndVNode = &VNodesEnd;
 #endif

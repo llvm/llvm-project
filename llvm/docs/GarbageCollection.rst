@@ -204,7 +204,7 @@ IR features is specified by the selected :ref:`GC strategy description
 Specifying GC code generation: ``gc "..."``
 -------------------------------------------
 
-.. code-block:: llvm
+.. code-block:: text
 
   define <returntype> @name(...) gc "name" { ... }
 

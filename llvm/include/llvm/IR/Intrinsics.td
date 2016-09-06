@@ -19,9 +19,7 @@ include "llvm/CodeGen/ValueTypes.td"
 
 class IntrinsicProperty;
 
-// Intr*Mem - Memory properties.  An intrinsic is allowed to have at most one of
-// these properties set.  They are listed from the most aggressive (best to use
-// if correct) to the least aggressive.  If no property is set, the worst case
+// Intr*Mem - Memory properties.  If no property is set, the worst case
 // is assumed (it may read and write any memory it can get access to and it may
 // have other side effects).
 
@@ -29,20 +27,21 @@ class IntrinsicProperty;
 // effects.  It may be CSE'd deleted if dead, etc.
 def IntrNoMem : IntrinsicProperty;
 
-// IntrReadArgMem - This intrinsic reads only from memory that one of its
-// pointer-typed arguments points to, but may read an unspecified amount.
-def IntrReadArgMem : IntrinsicProperty;
-
-// IntrReadMem - This intrinsic reads from unspecified memory, so it cannot be
-// moved across stores.  However, it can be reordered otherwise and can be
-// deleted if dead.
+// IntrReadMem - This intrinsic only reads from memory. It does not write to
+// memory and has no other side effects. Therefore, it cannot be moved across
+// potentially aliasing stores. However, it can be reordered otherwise and can
+// be deleted if dead.
 def IntrReadMem : IntrinsicProperty;
 
-// IntrReadWriteArgMem - This intrinsic reads and writes only from memory that
-// one of its arguments points to, but may access an unspecified amount.  The
-// reads and writes may be volatile, but except for this it has no other side
-// effects.
-def IntrReadWriteArgMem : IntrinsicProperty;
+// IntrWriteMem - This intrinsic only writes to memory, but does not read from
+// memory, and has no other side effects. This means dead stores before calls
+// to this intrinsics may be removed.
+def IntrWriteMem : IntrinsicProperty;
+
+// IntrArgMemOnly - This intrinsic only accesses memory that its pointer-typed
+// argument(s) points to, but may access an unspecified amount. Other than
+// reads from and (possibly volatile) writes to memory, it has no side effects.
+def IntrArgMemOnly : IntrinsicProperty;
 
 // Commutative - This intrinsic is commutative: X op Y == Y op X.
 def Commutative : IntrinsicProperty;
@@ -55,9 +54,21 @@ class NoCapture<int argNo> : IntrinsicProperty {
   int ArgNo = argNo;
 }
 
+// Returned - The specified argument is always the return value of the
+// intrinsic.
+class Returned<int argNo> : IntrinsicProperty {
+  int ArgNo = argNo;
+}
+
 // ReadOnly - The specified argument pointer is not written to through the
 // pointer by the intrinsic.
 class ReadOnly<int argNo> : IntrinsicProperty {
+  int ArgNo = argNo;
+}
+
+// WriteOnly - The intrinsic does not read memory through the specified
+// argument pointer.
+class WriteOnly<int argNo> : IntrinsicProperty {
   int ArgNo = argNo;
 }
 
@@ -240,7 +251,7 @@ class Intrinsic<list<LLVMType> ret_types,
   string TargetPrefix = "";   // Set to a prefix for target-specific intrinsics.
   list<LLVMType> RetTypes = ret_types;
   list<LLVMType> ParamTypes = param_types;
-  list<IntrinsicProperty> Properties = properties;
+  list<IntrinsicProperty> IntrProperties = properties;
 
   bit isTarget = 0;
 }
@@ -271,10 +282,10 @@ def int_gcroot  : Intrinsic<[],
                             [llvm_ptrptr_ty, llvm_ptr_ty]>;
 def int_gcread  : Intrinsic<[llvm_ptr_ty],
                             [llvm_ptr_ty, llvm_ptrptr_ty],
-                            [IntrReadArgMem]>;
+                            [IntrReadMem, IntrArgMemOnly]>;
 def int_gcwrite : Intrinsic<[],
                             [llvm_ptr_ty, llvm_ptr_ty, llvm_ptrptr_ty],
-                            [IntrReadWriteArgMem, NoCapture<1>, NoCapture<2>]>;
+                            [IntrArgMemOnly, NoCapture<1>, NoCapture<2>]>;
 
 //===--------------------- Code Generator Intrinsics ----------------------===//
 //
@@ -306,13 +317,16 @@ def int_stackrestore  : Intrinsic<[], [llvm_ptr_ty]>,
 
 def int_get_dynamic_area_offset : Intrinsic<[llvm_anyint_ty]>;
 
-// IntrReadWriteArgMem is more pessimistic than strictly necessary for prefetch,
+def int_thread_pointer : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>,
+                         GCCBuiltin<"__builtin_thread_pointer">;
+
+// IntrArgMemOnly is more pessimistic than strictly necessary for prefetch,
 // however it does conveniently prevent the prefetch from being reordered
 // with respect to nearby accesses to the same memory.
 def int_prefetch      : Intrinsic<[],
                                   [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty,
                                    llvm_i32_ty],
-                                  [IntrReadWriteArgMem, NoCapture<0>]>;
+                                  [IntrArgMemOnly, NoCapture<0>]>;
 def int_pcmarker      : Intrinsic<[], [llvm_i32_ty]>;
 
 def int_readcyclecounter : Intrinsic<[llvm_i64_ty]>;
@@ -324,8 +338,7 @@ def int_assume        : Intrinsic<[], [llvm_i1_ty], []>;
 // Stack Protector Intrinsic - The stackprotector intrinsic writes the stack
 // guard to the correct place on the stack frame.
 def int_stackprotector : Intrinsic<[], [llvm_ptr_ty, llvm_ptrptr_ty], []>;
-def int_stackprotectorcheck : Intrinsic<[], [llvm_ptrptr_ty],
-                                        [IntrReadWriteArgMem]>;
+def int_stackguard : Intrinsic<[llvm_ptr_ty], [], []>;
 
 // A counter increment for instrumentation based profiling.
 def int_instrprof_increment : Intrinsic<[],
@@ -347,19 +360,19 @@ def int_instrprof_value_profile : Intrinsic<[],
 def int_memcpy  : Intrinsic<[],
                              [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
                               llvm_i32_ty, llvm_i1_ty],
-                            [IntrReadWriteArgMem, NoCapture<0>, NoCapture<1>,
-                             ReadOnly<1>]>;
+                            [IntrArgMemOnly, NoCapture<0>, NoCapture<1>,
+                             WriteOnly<0>, ReadOnly<1>]>;
 def int_memmove : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
                              llvm_i32_ty, llvm_i1_ty],
-                            [IntrReadWriteArgMem, NoCapture<0>, NoCapture<1>,
+                            [IntrArgMemOnly, NoCapture<0>, NoCapture<1>,
                              ReadOnly<1>]>;
 def int_memset  : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty,
                              llvm_i32_ty, llvm_i1_ty],
-                            [IntrReadWriteArgMem, NoCapture<0>]>;
+                            [IntrArgMemOnly, NoCapture<0>, WriteOnly<0>]>;
 
-let Properties = [IntrNoMem] in {
+let IntrProperties = [IntrNoMem] in {
   def int_fma  : Intrinsic<[llvm_anyfloat_ty],
                            [LLVMMatchType<0>, LLVMMatchType<0>,
                             LLVMMatchType<0>]>;
@@ -382,8 +395,6 @@ let Properties = [IntrNoMem] in {
   def int_exp  : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_exp2 : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_fabs : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
-  def int_minnum : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
-  def int_maxnum : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_copysign : Intrinsic<[llvm_anyfloat_ty],
                                [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_floor : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
@@ -395,6 +406,13 @@ let Properties = [IntrNoMem] in {
   def int_canonicalize : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
                                    [IntrNoMem]>;
 }
+
+def int_minnum : Intrinsic<[llvm_anyfloat_ty],
+  [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, Commutative]
+>;
+def int_maxnum : Intrinsic<[llvm_anyfloat_ty],
+  [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, Commutative]
+>;
 
 // NOTE: these are internal interfaces.
 def int_setjmp     : Intrinsic<[llvm_i32_ty],  [llvm_ptr_ty]>;
@@ -416,7 +434,7 @@ def int_expect : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>,
 //
 
 // None of these intrinsics accesses memory at all.
-let Properties = [IntrNoMem] in {
+let IntrProperties = [IntrNoMem] in {
   def int_bswap: Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
   def int_ctpop: Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>]>;
   def int_ctlz : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, llvm_i1_ty]>;
@@ -430,7 +448,7 @@ let Properties = [IntrNoMem] in {
 // None of these intrinsics accesses memory at all...but that doesn't mean the
 // optimizers can change them aggressively.  Special handling needed in a few
 // places.
-let Properties = [IntrNoMem] in {
+let IntrProperties = [IntrNoMem] in {
   def int_dbg_declare      : Intrinsic<[],
                                        [llvm_metadata_ty,
                                        llvm_metadata_ty,
@@ -467,7 +485,7 @@ def int_eh_unwind_init: Intrinsic<[]>,
 
 def int_eh_dwarf_cfa  : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty]>;
 
-let Properties = [IntrNoMem] in {
+let IntrProperties = [IntrNoMem] in {
   def int_eh_sjlj_lsda             : Intrinsic<[llvm_ptr_ty]>;
   def int_eh_sjlj_callsite         : Intrinsic<[], [llvm_i32_ty]>;
 }
@@ -495,11 +513,11 @@ def int_annotation : Intrinsic<[llvm_anyint_ty],
 //
 def int_init_trampoline : Intrinsic<[],
                                     [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
-                                    [IntrReadWriteArgMem, NoCapture<0>]>,
+                                    [IntrArgMemOnly, NoCapture<0>]>,
                                    GCCBuiltin<"__builtin_init_trampoline">;
 
 def int_adjust_trampoline : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
-                                      [IntrReadArgMem]>,
+                                      [IntrReadMem, IntrArgMemOnly]>,
                                      GCCBuiltin<"__builtin_adjust_trampoline">;
 
 //===------------------------ Overflow Intrinsics -------------------------===//
@@ -531,17 +549,17 @@ def int_umul_with_overflow : Intrinsic<[llvm_anyint_ty, llvm_i1_ty],
 //
 def int_lifetime_start  : Intrinsic<[],
                                     [llvm_i64_ty, llvm_ptr_ty],
-                                    [IntrReadWriteArgMem, NoCapture<1>]>;
+                                    [IntrArgMemOnly, NoCapture<1>]>;
 def int_lifetime_end    : Intrinsic<[],
                                     [llvm_i64_ty, llvm_ptr_ty],
-                                    [IntrReadWriteArgMem, NoCapture<1>]>;
+                                    [IntrArgMemOnly, NoCapture<1>]>;
 def int_invariant_start : Intrinsic<[llvm_descriptor_ty],
-                                    [llvm_i64_ty, llvm_ptr_ty],
-                                    [IntrReadWriteArgMem, NoCapture<1>]>;
+                                    [llvm_i64_ty, llvm_anyptr_ty],
+                                    [IntrArgMemOnly, NoCapture<1>]>;
 def int_invariant_end   : Intrinsic<[],
                                     [llvm_descriptor_ty, llvm_i64_ty,
-                                     llvm_ptr_ty],
-                                    [IntrReadWriteArgMem, NoCapture<2>]>;
+                                     llvm_anyptr_ty],
+                                    [IntrArgMemOnly, NoCapture<2>]>;
 
 def int_invariant_group_barrier : Intrinsic<[llvm_ptr_ty], 
                                             [llvm_ptr_ty], 
@@ -579,7 +597,49 @@ def int_experimental_gc_relocate : Intrinsic<[llvm_any_ty],
                                 [llvm_token_ty, llvm_i32_ty, llvm_i32_ty],
                                 [IntrReadMem]>;
 
-//===-------------------------- Other Intrinsics --------------------------===//
+//===------------------------ Coroutine Intrinsics ---------------===//
+// These are documented in docs/Coroutines.rst
+
+// Coroutine Structure Intrinsics.
+
+def int_coro_id : Intrinsic<[llvm_token_ty], [llvm_i32_ty, llvm_ptr_ty, 
+                             llvm_ptr_ty], 
+                            [IntrArgMemOnly, IntrReadMem, 
+                             ReadNone<1>, ReadOnly<2>, NoCapture<2>]>;
+def int_coro_alloc : Intrinsic<[llvm_i1_ty], [llvm_token_ty], []>;
+def int_coro_begin : Intrinsic<[llvm_ptr_ty], [llvm_token_ty, llvm_ptr_ty],
+                               [WriteOnly<1>]>;
+
+def int_coro_free : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
+                              [IntrArgMemOnly, ReadOnly<0>, NoCapture<0>]>;
+def int_coro_end : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty], []>;
+
+def int_coro_frame : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
+def int_coro_size : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
+
+def int_coro_save : Intrinsic<[llvm_token_ty], [llvm_ptr_ty], []>;
+def int_coro_suspend : Intrinsic<[llvm_i8_ty], [llvm_token_ty, llvm_i1_ty], []>;
+
+def int_coro_param : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_ptr_ty],
+                               [IntrNoMem, ReadNone<0>, ReadNone<1>]>;
+
+// Coroutine Manipulation Intrinsics.
+
+def int_coro_resume : Intrinsic<[], [llvm_ptr_ty], [Throws]>;
+def int_coro_destroy : Intrinsic<[], [llvm_ptr_ty], [Throws]>;
+def int_coro_done : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty],
+                              [IntrArgMemOnly, ReadOnly<0>, NoCapture<0>]>;
+def int_coro_promise : Intrinsic<[llvm_ptr_ty],
+                                 [llvm_ptr_ty, llvm_i32_ty, llvm_i1_ty],
+                                 [IntrNoMem, NoCapture<0>]>;
+
+// Coroutine Lowering Intrinsics. Used internally by coroutine passes.
+
+def int_coro_subfn_addr : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i8_ty],
+                                    [IntrReadMem, IntrArgMemOnly, ReadOnly<0>,
+                                     NoCapture<0>]>;
+
+///===-------------------------- Other Intrinsics --------------------------===//
 //
 def int_flt_rounds : Intrinsic<[llvm_i32_ty]>,
                      GCCBuiltin<"__builtin_flt_rounds">;
@@ -588,11 +648,19 @@ def int_trap : Intrinsic<[], [], [IntrNoReturn]>,
 def int_debugtrap : Intrinsic<[]>,
                     GCCBuiltin<"__builtin_debugtrap">;
 
+// Support for dynamic deoptimization (or de-specialization)
+def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
+                                            [Throws]>;
+
+// Support for speculative runtime guards
+def int_experimental_guard : Intrinsic<[], [llvm_i1_ty, llvm_vararg_ty],
+                                       [Throws]>;
+
 // NOP: calls/invokes to this intrinsic are removed by codegen
 def int_donothing : Intrinsic<[], [], [IntrNoMem]>;
 
 // Intrisics to support half precision floating point format
-let Properties = [IntrNoMem] in {
+let IntrProperties = [IntrNoMem] in {
 def int_convert_to_fp16   : Intrinsic<[llvm_i16_ty], [llvm_anyfloat_ty]>;
 def int_convert_from_fp16 : Intrinsic<[llvm_anyfloat_ty], [llvm_i16_ty]>;
 }
@@ -627,31 +695,40 @@ def int_clear_cache : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty],
 
 //===-------------------------- Masked Intrinsics -------------------------===//
 //
-def int_masked_store : Intrinsic<[], [llvm_anyvector_ty, LLVMPointerTo<0>,
+def int_masked_store : Intrinsic<[], [llvm_anyvector_ty,
+                                      LLVMAnyPointerType<LLVMMatchType<0>>,
                                       llvm_i32_ty,
                                       LLVMVectorSameWidth<0, llvm_i1_ty>],
-                                 [IntrReadWriteArgMem]>;
+                                 [IntrArgMemOnly]>;
 
 def int_masked_load  : Intrinsic<[llvm_anyvector_ty],
-                                 [LLVMPointerTo<0>, llvm_i32_ty,
+                                 [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty,
                                   LLVMVectorSameWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
-                                 [IntrReadArgMem]>;
+                                 [IntrReadMem, IntrArgMemOnly]>;
 
 def int_masked_gather: Intrinsic<[llvm_anyvector_ty],
                                  [LLVMVectorOfPointersToElt<0>, llvm_i32_ty,
                                   LLVMVectorSameWidth<0, llvm_i1_ty>,
                                   LLVMMatchType<0>],
-                                 [IntrReadArgMem]>;
+                                 [IntrReadMem, IntrArgMemOnly]>;
 
 def int_masked_scatter: Intrinsic<[],
                                   [llvm_anyvector_ty,
                                    LLVMVectorOfPointersToElt<0>, llvm_i32_ty,
                                    LLVMVectorSameWidth<0, llvm_i1_ty>],
-                                  [IntrReadWriteArgMem]>;
+                                  [IntrArgMemOnly]>;
 
-// Intrinsics to support bit sets.
-def int_bitset_test : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
-                                [IntrNoMem]>;
+// Test whether a pointer is associated with a type metadata identifier.
+def int_type_test : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
+                              [IntrNoMem]>;
+
+// Safely loads a function pointer from a virtual table pointer using type metadata.
+def int_type_checked_load : Intrinsic<[llvm_ptr_ty, llvm_i1_ty],
+                                      [llvm_ptr_ty, llvm_i32_ty, llvm_metadata_ty],
+                                      [IntrNoMem]>;
+
+def int_load_relative: Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_anyint_ty],
+                                 [IntrReadMem, IntrArgMemOnly]>;
 
 //===----------------------------------------------------------------------===//
 // Target-specific intrinsics

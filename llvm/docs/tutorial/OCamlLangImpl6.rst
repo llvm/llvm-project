@@ -496,17 +496,17 @@ converge:
 
     # determine whether the specific location diverges.
     # Solve for z = z^2 + c in the complex plane.
-    def mandleconverger(real imag iters creal cimag)
+    def mandelconverger(real imag iters creal cimag)
       if iters > 255 | (real*real + imag*imag > 4) then
         iters
       else
-        mandleconverger(real*real - imag*imag + creal,
+        mandelconverger(real*real - imag*imag + creal,
                         2*real*imag + cimag,
                         iters+1, creal, cimag);
 
     # return the number of iterations required for the iteration to escape
-    def mandleconverge(real imag)
-      mandleconverger(real, imag, 0, real, imag);
+    def mandelconverge(real imag)
+      mandelconverger(real, imag, 0, real, imag);
 
 This "z = z\ :sup:`2`\  + c" function is a beautiful little creature
 that is the basis for computation of the `Mandelbrot
@@ -520,12 +520,12 @@ but we can whip together something using the density plotter above:
 
 ::
 
-    # compute and plot the mandlebrot set with the specified 2 dimensional range
+    # compute and plot the mandelbrot set with the specified 2 dimensional range
     # info.
     def mandelhelp(xmin xmax xstep   ymin ymax ystep)
       for y = ymin, y < ymax, ystep in (
         (for x = xmin, x < xmax, xstep in
-           printdensity(mandleconverge(x,y)))
+           printdensity(mandelconverge(x,y)))
         : putchard(10)
       )
 
@@ -535,7 +535,7 @@ but we can whip together something using the density plotter above:
       mandelhelp(realstart, realstart+realmag*78, realmag,
                  imagstart, imagstart+imagmag*40, imagmag);
 
-Given this, we can try plotting out the mandlebrot set! Lets try it out:
+Given this, we can try plotting out the mandelbrot set! Lets try it out:
 
 ::
 

@@ -150,6 +150,28 @@ public:
   template<typename RegionTy> const RegionTy* getAs() const;
 
   virtual bool isBoundable() const { return false; }
+
+
+  /// Get descriptive name for memory region. The name is obtained from
+  /// the variable/field declaration retrieved from the memory region.
+  /// Regions that point to an element of an array are returned as: "arr[0]".
+  /// Regions that point to a struct are returned as: "st.var".
+  //
+  /// \param UseQuotes Set if the name should be quoted.
+  ///
+  /// \returns variable name for memory region
+  std::string getDescriptiveName(bool UseQuotes = true) const;
+
+
+  /// Retrieve source range from memory region. The range retrieval
+  /// is based on the decl obtained from the memory region.
+  /// For a VarRegion the range of the base region is returned.
+  /// For a FieldRegion the range of the field is returned.
+  /// If no declaration is found, an empty source range is returned.
+  /// The client is responsible for checking if the returned range is valid.
+  ///
+  /// \returns source range for declaration retrieved from memory region
+  clang::SourceRange sourceRange() const;
 };
 
 /// MemSpaceRegion - A memory region that represents a "memory space";
@@ -1255,13 +1277,7 @@ public:
 
 private:
   template <typename RegionTy, typename A1>
-  RegionTy* getRegion(const A1 a1);
-
-  template <typename RegionTy, typename A1>
   RegionTy* getSubRegion(const A1 a1, const MemRegion* superRegion);
-
-  template <typename RegionTy, typename A1, typename A2>
-  RegionTy* getRegion(const A1 a1, const A2 a2);
 
   template <typename RegionTy, typename A1, typename A2>
   RegionTy* getSubRegion(const A1 a1, const A2 a2,

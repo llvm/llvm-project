@@ -52,43 +52,74 @@ WebAssemblyRegisterInfo::getReservedRegs(const MachineFunction & /*MF*/) const {
 }
 
 void WebAssemblyRegisterInfo::eliminateFrameIndex(
-    MachineBasicBlock::iterator II, int SPAdj,
-    unsigned FIOperandNum, RegScavenger * /*RS*/) const {
+    MachineBasicBlock::iterator II, int SPAdj, unsigned FIOperandNum,
+    RegScavenger * /*RS*/) const {
   assert(SPAdj == 0);
   MachineInstr &MI = *II;
 
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  const MachineFrameInfo& MFI = *MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   int64_t FrameOffset = MFI.getStackSize() + MFI.getObjectOffset(FrameIndex);
 
-  if (MI.mayLoadOrStore()) {
-    // If this is a load or store, make it relative to SP and fold the frame
-    // offset directly in.
+  // If this is the address operand of a load or store, make it relative to SP
+  // and fold the frame offset directly in.
+  if (MI.mayLoadOrStore() && FIOperandNum == WebAssembly::MemOpAddressOperandNo) {
     assert(FrameOffset >= 0 && MI.getOperand(1).getImm() >= 0);
     int64_t Offset = MI.getOperand(1).getImm() + FrameOffset;
 
-    if (static_cast<uint64_t>(Offset) > std::numeric_limits<uint32_t>::max()) {
-      // If this happens the program is invalid, but better to error here than
-      // generate broken code.
-      report_fatal_error("Memory offset field overflow");
+    if (static_cast<uint64_t>(Offset) <= std::numeric_limits<uint32_t>::max()) {
+      MI.getOperand(FIOperandNum - 1).setImm(Offset);
+      MI.getOperand(FIOperandNum)
+          .ChangeToRegister(WebAssembly::SP32, /*IsDef=*/false);
+      return;
     }
-    MI.getOperand(1).setImm(Offset);
-    MI.getOperand(2).ChangeToRegister(WebAssembly::SP32, /*IsDef=*/false);
-  } else {
-    // Otherwise create an i32.add SP, offset and make it the operand.
-    auto &MRI = MF.getRegInfo();
-    const auto *TII = MF.getSubtarget().getInstrInfo();
-
-    unsigned OffsetReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
-    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(WebAssembly::CONST_I32), OffsetReg)
-        .addImm(FrameOffset);
-    BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(WebAssembly::ADD_I32), OffsetReg)
-        .addReg(WebAssembly::SP32)
-        .addReg(OffsetReg);
-    MI.getOperand(FIOperandNum).ChangeToRegister(OffsetReg, /*IsDef=*/false);
   }
+
+  // If this is an address being added to a constant, fold the frame offset
+  // into the constant.
+  if (MI.getOpcode() == WebAssembly::ADD_I32) {
+    MachineOperand &OtherMO = MI.getOperand(3 - FIOperandNum);
+    if (OtherMO.isReg()) {
+      unsigned OtherMOReg = OtherMO.getReg();
+      if (TargetRegisterInfo::isVirtualRegister(OtherMOReg)) {
+        MachineInstr *Def = MF.getRegInfo().getUniqueVRegDef(OtherMOReg);
+        // TODO: For now we just opportunistically do this in the case where
+        // the CONST_I32 happens to have exactly one def and one use. We
+        // should generalize this to optimize in more cases.
+        if (Def && Def->getOpcode() == WebAssembly::CONST_I32 &&
+            MRI.hasOneNonDBGUse(Def->getOperand(0).getReg())) {
+          MachineOperand &ImmMO = Def->getOperand(1);
+          ImmMO.setImm(ImmMO.getImm() + uint32_t(FrameOffset));
+          MI.getOperand(FIOperandNum)
+              .ChangeToRegister(WebAssembly::SP32, /*IsDef=*/false);
+          return;
+        }
+      }
+    }
+  }
+
+  // Otherwise create an i32.add SP, offset and make it the operand.
+  const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
+
+  unsigned FIRegOperand = WebAssembly::SP32;
+  if (FrameOffset) {
+    // Create i32.add SP, offset and make it the operand.
+    const TargetRegisterClass *PtrRC =
+        MRI.getTargetRegisterInfo()->getPointerRegClass(MF);
+    unsigned OffsetOp = MRI.createVirtualRegister(PtrRC);
+    BuildMI(MBB, *II, II->getDebugLoc(), TII->get(WebAssembly::CONST_I32),
+            OffsetOp)
+        .addImm(FrameOffset);
+    FIRegOperand = MRI.createVirtualRegister(PtrRC);
+    BuildMI(MBB, *II, II->getDebugLoc(), TII->get(WebAssembly::ADD_I32),
+            FIRegOperand)
+        .addReg(WebAssembly::SP32)
+        .addReg(OffsetOp);
+  }
+  MI.getOperand(FIOperandNum).ChangeToRegister(FIRegOperand, /*IsDef=*/false);
 }
 
 unsigned

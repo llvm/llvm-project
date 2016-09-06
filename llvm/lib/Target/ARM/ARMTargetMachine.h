@@ -39,7 +39,7 @@ protected:
 public:
   ARMBaseTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Reloc::Model RM, CodeModel::Model CM,
+                       Optional<Reloc::Model> RM, CodeModel::Model CM,
                        CodeGenOpt::Level OL, bool isLittle);
   ~ARMBaseTargetMachine() override;
 
@@ -58,39 +58,40 @@ public:
   }
 };
 
-/// ARMTargetMachine - ARM target machine.
+/// ARM target machine.
 ///
 class ARMTargetMachine : public ARMBaseTargetMachine {
   virtual void anchor();
  public:
    ARMTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                    StringRef FS, const TargetOptions &Options, Reloc::Model RM,
-                    CodeModel::Model CM, CodeGenOpt::Level OL, bool isLittle);
+                    StringRef FS, const TargetOptions &Options,
+                    Optional<Reloc::Model> RM, CodeModel::Model CM,
+                    CodeGenOpt::Level OL, bool isLittle);
 };
 
-/// ARMLETargetMachine - ARM little endian target machine.
+/// ARM little endian target machine.
 ///
 class ARMLETargetMachine : public ARMTargetMachine {
   void anchor() override;
 public:
   ARMLETargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
-                     Reloc::Model RM, CodeModel::Model CM,
+                     Optional<Reloc::Model> RM, CodeModel::Model CM,
                      CodeGenOpt::Level OL);
 };
 
-/// ARMBETargetMachine - ARM big endian target machine.
+/// ARM big endian target machine.
 ///
 class ARMBETargetMachine : public ARMTargetMachine {
   void anchor() override;
 public:
   ARMBETargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
-                     Reloc::Model RM, CodeModel::Model CM,
+                     Optional<Reloc::Model> RM, CodeModel::Model CM,
                      CodeGenOpt::Level OL);
 };
 
-/// ThumbTargetMachine - Thumb target machine.
+/// Thumb target machine.
 /// Due to the way architectures are handled, this represents both
 ///   Thumb-1 and Thumb-2.
 ///
@@ -99,29 +100,29 @@ class ThumbTargetMachine : public ARMBaseTargetMachine {
 public:
   ThumbTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
-                     Reloc::Model RM, CodeModel::Model CM, CodeGenOpt::Level OL,
-                     bool isLittle);
+                     Optional<Reloc::Model> RM, CodeModel::Model CM,
+                     CodeGenOpt::Level OL, bool isLittle);
 };
 
-/// ThumbLETargetMachine - Thumb little endian target machine.
+/// Thumb little endian target machine.
 ///
 class ThumbLETargetMachine : public ThumbTargetMachine {
   void anchor() override;
 public:
   ThumbLETargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Reloc::Model RM, CodeModel::Model CM,
+                       Optional<Reloc::Model> RM, CodeModel::Model CM,
                        CodeGenOpt::Level OL);
 };
 
-/// ThumbBETargetMachine - Thumb big endian target machine.
+/// Thumb big endian target machine.
 ///
 class ThumbBETargetMachine : public ThumbTargetMachine {
   void anchor() override;
 public:
   ThumbBETargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
-                       Reloc::Model RM, CodeModel::Model CM,
+                       Optional<Reloc::Model> RM, CodeModel::Model CM,
                        CodeGenOpt::Level OL);
 };
 

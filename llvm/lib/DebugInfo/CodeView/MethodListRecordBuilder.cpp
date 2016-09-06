@@ -14,7 +14,7 @@ using namespace llvm;
 using namespace codeview;
 
 MethodListRecordBuilder::MethodListRecordBuilder()
-    : ListRecordBuilder(TypeRecordKind::MethodList) {}
+    : ListRecordBuilder(TypeRecordKind::MethodOverloadList) {}
 
 void MethodListRecordBuilder::writeMethod(MemberAccess Access, MethodKind Kind,
                                           MethodOptions Options, TypeIndex Type,

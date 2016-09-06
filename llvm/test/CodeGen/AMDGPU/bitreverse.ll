@@ -11,8 +11,6 @@ declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>) #1
 declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>) #1
 declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>) #1
 
-declare i32 @llvm.AMDGPU.brev(i32) #1
-
 ; FUNC-LABEL: {{^}}s_brev_i16:
 ; SI: s_brev_b32
 define void @s_brev_i16(i16 addrspace(1)* noalias %out, i16 %val) #0 {
@@ -100,14 +98,6 @@ define void @v_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2 x i64> addrsp
   %val = load <2 x i64>, <2 x i64> addrspace(1)* %valptr
   %brev = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %val) #1
   store <2 x i64> %brev, <2 x i64> addrspace(1)* %out
-  ret void
-}
-
-; FUNC-LABEL: {{^}}legacy_s_brev_i32:
-; SI: s_brev_b32
-define void @legacy_s_brev_i32(i32 addrspace(1)* noalias %out, i32 %val) nounwind {
-  %brev = call i32 @llvm.AMDGPU.brev(i32 %val) #1
-  store i32 %brev, i32 addrspace(1)* %out
   ret void
 }
 

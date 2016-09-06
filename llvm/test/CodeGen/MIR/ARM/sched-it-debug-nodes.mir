@@ -1,11 +1,11 @@
-# RUN: llc -mtriple thumbv7 -start-after if-converter -print-before=post-RA-sched -print-after=post-RA-sched %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple thumbv7 -verify-machineinstrs -start-after if-converter -print-before post-RA-sched -print-after post-RA-sched %s -o /dev/null 2>&1 | FileCheck %s
 --- |
   ; ModuleID = '/Volumes/Data/llvm/test/CodeGen/ARM/sched-it-debug-nodes.ll'
   target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv7"
-  
+
   %struct.s = type opaque
-  
+
   ; Function Attrs: nounwind
   define arm_aapcscc i32 @f(%struct.s* %s, i32 %u, i8* %b, i32 %n) #0 !dbg !4 {
   entry:
@@ -15,11 +15,11 @@
     tail call void @llvm.dbg.value(metadata i32 %n, i64 0, metadata !21, metadata !27), !dbg !28
     %cmp = icmp ult i32 %n, 4, !dbg !29
     br i1 %cmp, label %return, label %if.end, !dbg !31
-  
+
   if.end:                                           ; preds = %entry
     tail call arm_aapcscc void @g(%struct.s* %s, i8* %b, i32 %n) #3, !dbg !32
     br label %return, !dbg !33
-  
+
   return:                                           ; preds = %if.end, %entry
     %retval.0 = phi i32 [ 0, %if.end ], [ -1, %entry ]
     ret i32 %retval.0, !dbg !34
@@ -31,30 +31,29 @@
   ; attempts to schedule the Machine Instr, and tries to tag the register in the
   ; debug value as KILL'ed, resulting in a DEBUG_VALUE node changing codegen!  (or
   ; hopefully, triggering an assert).
-   
+
   ; CHECK: BUNDLE %ITSTATE<imp-def,dead>
   ; CHECK:  * DBG_VALUE %R1, %noreg, !"u"
   ; CHECK-NOT:  * DBG_VALUE %R1<kill>, %noreg, !"u"
- 
+
   declare arm_aapcscc void @g(%struct.s*, i8*, i32) #1
-  
+
   ; Function Attrs: nounwind readnone
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
-  
+
   attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #2 = { nounwind readnone }
   attributes #3 = { nounwind }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!22, !23, !24, !25}
   !llvm.ident = !{!26}
-  
-  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0  (llvm/trunk 237059)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0  (llvm/trunk 237059)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
   !1 = !DIFile(filename: "<stdin>", directory: "/Users/compnerd/Source/llvm")
   !2 = !{}
-  !3 = !{!4}
-  !4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 9, type: !5, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, variables: !17)
+  !4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 9, type: !5, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !17)
   !5 = !DISubroutineType(types: !6)
   !6 = !{!7, !8, !11, !12, !16}
   !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -92,28 +91,30 @@ name:            f
 alignment:       1
 exposesReturnsTwice: false
 hasInlineAsm:    false
+allVRegsAllocated: true
 isSSA:           false
 tracksRegLiveness: true
 tracksSubRegLiveness: false
-liveins:         
+liveins:
   - { reg: '%r0' }
+  - { reg: '%r1' }
   - { reg: '%r2' }
   - { reg: '%r3' }
-calleeSavedRegisters: [ '%lr', '%d8', '%d9', '%d10', '%d11', '%d12', '%d13', 
-                        '%d14', '%d15', '%q4', '%q5', '%q6', '%q7', '%r4', 
-                        '%r5', '%r6', '%r7', '%r8', '%r9', '%r10', '%r11', 
-                        '%s16', '%s17', '%s18', '%s19', '%s20', '%s21', 
-                        '%s22', '%s23', '%s24', '%s25', '%s26', '%s27', 
-                        '%s28', '%s29', '%s30', '%s31', '%d8_d10', '%d9_d11', 
-                        '%d10_d12', '%d11_d13', '%d12_d14', '%d13_d15', 
-                        '%q4_q5', '%q5_q6', '%q6_q7', '%q4_q5_q6_q7', '%r4_r5', 
-                        '%r6_r7', '%r8_r9', '%r10_r11', '%d8_d9_d10', '%d9_d10_d11', 
-                        '%d10_d11_d12', '%d11_d12_d13', '%d12_d13_d14', 
-                        '%d13_d14_d15', '%d8_d10_d12', '%d9_d11_d13', '%d10_d12_d14', 
-                        '%d11_d13_d15', '%d8_d10_d12_d14', '%d9_d11_d13_d15', 
-                        '%d9_d10', '%d11_d12', '%d13_d14', '%d9_d10_d11_d12', 
+calleeSavedRegisters: [ '%lr', '%d8', '%d9', '%d10', '%d11', '%d12', '%d13',
+                        '%d14', '%d15', '%q4', '%q5', '%q6', '%q7', '%r4',
+                        '%r5', '%r6', '%r7', '%r8', '%r9', '%r10', '%r11',
+                        '%s16', '%s17', '%s18', '%s19', '%s20', '%s21',
+                        '%s22', '%s23', '%s24', '%s25', '%s26', '%s27',
+                        '%s28', '%s29', '%s30', '%s31', '%d8_d10', '%d9_d11',
+                        '%d10_d12', '%d11_d13', '%d12_d14', '%d13_d15',
+                        '%q4_q5', '%q5_q6', '%q6_q7', '%q4_q5_q6_q7', '%r4_r5',
+                        '%r6_r7', '%r8_r9', '%r10_r11', '%d8_d9_d10', '%d9_d10_d11',
+                        '%d10_d11_d12', '%d11_d12_d13', '%d12_d13_d14',
+                        '%d13_d14_d15', '%d8_d10_d12', '%d9_d11_d13', '%d10_d12_d14',
+                        '%d11_d13_d15', '%d8_d10_d12_d14', '%d9_d11_d13_d15',
+                        '%d9_d10', '%d11_d12', '%d13_d14', '%d9_d10_d11_d12',
                         '%d11_d12_d13_d14' ]
-frameInfo:       
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -127,13 +128,13 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-stack:           
+stack:
   - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '%lr' }
   - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, callee-saved-register: '%r7' }
 body:             |
   bb.0.entry:
-    liveins: %r0, %r2, %r3, %lr, %r7
-  
+    liveins: %r0, %r1, %r2, %r3, %lr, %r7
+
     DBG_VALUE debug-use %r0, debug-use _, !18, !27, debug-location !28
     DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
     DBG_VALUE debug-use %r2, debug-use _, !20, !27, debug-location !28
@@ -144,9 +145,9 @@ body:             |
     DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
     tBX_RET 3, %cpsr, implicit %r0, debug-location !34
     %sp = frame-setup t2STMDB_UPD %sp, 14, _, killed %r7, killed %lr
-    frame-setup CFI_INSTRUCTION .cfi_def_cfa_offset 8
-    frame-setup CFI_INSTRUCTION .cfi_offset %lr, -4
-    frame-setup CFI_INSTRUCTION .cfi_offset %r7, -8
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset %lr, -4
+    frame-setup CFI_INSTRUCTION offset %r7, -8
     DBG_VALUE debug-use %r0, debug-use _, !18, !27, debug-location !28
     DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
     DBG_VALUE debug-use %r2, debug-use _, !20, !27, debug-location !28

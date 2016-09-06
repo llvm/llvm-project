@@ -1,5 +1,7 @@
 ; RUN:  %lli -remote-mcjit -O0 -mcjit-remote-process=lli-child-target%exeext %s
 ; XFAIL: mingw32,win32
+; UNSUPPORTED: powerpc64-unknown-linux-gnu
+; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 
 ; Check that a variable is always aligned as specified.
 

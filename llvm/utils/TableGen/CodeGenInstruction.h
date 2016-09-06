@@ -14,7 +14,6 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENINSTRUCTION_H
 #define LLVM_UTILS_TABLEGEN_CODEGENINSTRUCTION_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/SMLoc.h"
@@ -23,10 +22,10 @@
 #include <vector>
 
 namespace llvm {
+template <typename T> class ArrayRef;
   class Record;
   class DagInit;
   class CodeGenTarget;
-  class StringRef;
 
   class CGIOperandList {
   public:
@@ -257,6 +256,7 @@ namespace llvm {
     bool isExtractSubreg : 1;
     bool isInsertSubreg : 1;
     bool isConvergent : 1;
+    bool hasNoSchedulingInfo : 1;
 
     std::string DeprecatedReason;
     bool HasComplexDeprecationPredicate;
@@ -316,7 +316,8 @@ namespace llvm {
         K_Reg
       } Kind;
 
-      ResultOperand(std::string N, Record *r) : Name(N), R(r), Kind(K_Record) {}
+      ResultOperand(std::string N, Record *r)
+          : Name(std::move(N)), R(r), Kind(K_Record) {}
       ResultOperand(int64_t I) : Imm(I), Kind(K_Imm) {}
       ResultOperand(Record *r) : R(r), Kind(K_Reg) {}
 

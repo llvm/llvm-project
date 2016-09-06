@@ -32,39 +32,6 @@
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
-// EmittingAsmStreamer Implementation
-//===----------------------------------------------------------------------===//
-unsigned EmittingAsmStreamer::emitULEB128(uint64_t Value, const char *Desc,
-                                          unsigned PadTo) {
-  AP->EmitULEB128(Value, Desc, PadTo);
-  return 0;
-}
-
-unsigned EmittingAsmStreamer::emitInt8(unsigned char Value) {
-  AP->EmitInt8(Value);
-  return 0;
-}
-
-unsigned EmittingAsmStreamer::emitBytes(StringRef Data) {
-  AP->OutStreamer->EmitBytes(Data);
-  return 0;
-}
-
-//===----------------------------------------------------------------------===//
-// SizeReporterAsmStreamer Implementation
-//===----------------------------------------------------------------------===//
-unsigned SizeReporterAsmStreamer::emitULEB128(uint64_t Value, const char *Desc,
-                                              unsigned PadTo) {
-  return getULEB128Size(Value);
-}
-
-unsigned SizeReporterAsmStreamer::emitInt8(unsigned char Value) { return 1; }
-
-unsigned SizeReporterAsmStreamer::emitBytes(StringRef Data) {
-  return Data.size();
-}
-
-//===----------------------------------------------------------------------===//
 // DIEAbbrevData Implementation
 //===----------------------------------------------------------------------===//
 
@@ -509,20 +476,6 @@ unsigned DIEEntry::getRefAddrSize(const AsmPrinter *AP) {
 LLVM_DUMP_METHOD
 void DIEEntry::print(raw_ostream &O) const {
   O << format("Die: 0x%lx", (long)(intptr_t)&Entry);
-}
-
-//===----------------------------------------------------------------------===//
-// DIETypeSignature Implementation
-//===----------------------------------------------------------------------===//
-void DIETypeSignature::EmitValue(const AsmPrinter *Asm,
-                                 dwarf::Form Form) const {
-  assert(Form == dwarf::DW_FORM_ref_sig8);
-  Asm->OutStreamer->EmitIntValue(Unit->getTypeSignature(), 8);
-}
-
-LLVM_DUMP_METHOD
-void DIETypeSignature::print(raw_ostream &O) const {
-  O << format("Type Unit: 0x%lx", Unit->getTypeSignature());
 }
 
 //===----------------------------------------------------------------------===//

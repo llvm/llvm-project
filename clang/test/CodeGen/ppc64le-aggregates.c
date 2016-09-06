@@ -255,84 +255,84 @@ struct v3f9 { float3 v[9]; };
 struct v3fab { float3 a; float3 b; };
 struct v3fabc { float3 a; float3 b; float3 c; };
 
-// CHECK: define [1 x <3 x float>] @func_v3f1(<3 x float> inreg %x.coerce)
+// CHECK: define [1 x <4 x float>] @func_v3f1(<3 x float> inreg %x.coerce)
 struct v3f1 func_v3f1(struct v3f1 x) { return x; }
 
-// CHECK: define [2 x <3 x float>] @func_v3f2([2 x <3 x float>] %x.coerce)
+// CHECK: define [2 x <4 x float>] @func_v3f2([2 x <4 x float>] %x.coerce)
 struct v3f2 func_v3f2(struct v3f2 x) { return x; }
 
-// CHECK: define [3 x <3 x float>] @func_v3f3([3 x <3 x float>] %x.coerce)
+// CHECK: define [3 x <4 x float>] @func_v3f3([3 x <4 x float>] %x.coerce)
 struct v3f3 func_v3f3(struct v3f3 x) { return x; }
 
-// CHECK: define [4 x <3 x float>] @func_v3f4([4 x <3 x float>] %x.coerce)
+// CHECK: define [4 x <4 x float>] @func_v3f4([4 x <4 x float>] %x.coerce)
 struct v3f4 func_v3f4(struct v3f4 x) { return x; }
 
-// CHECK: define [5 x <3 x float>] @func_v3f5([5 x <3 x float>] %x.coerce)
+// CHECK: define [5 x <4 x float>] @func_v3f5([5 x <4 x float>] %x.coerce)
 struct v3f5 func_v3f5(struct v3f5 x) { return x; }
 
-// CHECK: define [6 x <3 x float>] @func_v3f6([6 x <3 x float>] %x.coerce)
+// CHECK: define [6 x <4 x float>] @func_v3f6([6 x <4 x float>] %x.coerce)
 struct v3f6 func_v3f6(struct v3f6 x) { return x; }
 
-// CHECK: define [7 x <3 x float>] @func_v3f7([7 x <3 x float>] %x.coerce)
+// CHECK: define [7 x <4 x float>] @func_v3f7([7 x <4 x float>] %x.coerce)
 struct v3f7 func_v3f7(struct v3f7 x) { return x; }
 
-// CHECK: define [8 x <3 x float>] @func_v3f8([8 x <3 x float>] %x.coerce)
+// CHECK: define [8 x <4 x float>] @func_v3f8([8 x <4 x float>] %x.coerce)
 struct v3f8 func_v3f8(struct v3f8 x) { return x; }
 
 // CHECK: define void @func_v3f9(%struct.v3f9* noalias sret %agg.result, %struct.v3f9* byval align 16 %x)
 struct v3f9 func_v3f9(struct v3f9 x) { return x; }
 
-// CHECK: define [2 x <3 x float>] @func_v3fab([2 x <3 x float>] %x.coerce)
+// CHECK: define [2 x <4 x float>] @func_v3fab([2 x <4 x float>] %x.coerce)
 struct v3fab func_v3fab(struct v3fab x) { return x; }
 
-// CHECK: define [3 x <3 x float>] @func_v3fabc([3 x <3 x float>] %x.coerce)
+// CHECK: define [3 x <4 x float>] @func_v3fabc([3 x <4 x float>] %x.coerce)
 struct v3fabc func_v3fabc(struct v3fabc x) { return x; }
 
 // CHECK-LABEL: @call_v3f1
 // CHECK: %[[TMP:[^ ]+]] = load <3 x float>, <3 x float>* getelementptr inbounds (%struct.v3f1, %struct.v3f1* @global_v3f1, i32 0, i32 0, i32 0), align 1
-// CHECK: call [1 x <3 x float>] @func_v3f1(<3 x float> inreg %[[TMP]])
+// CHECK: call [1 x <4 x float>] @func_v3f1(<3 x float> inreg %[[TMP]])
 struct v3f1 global_v3f1;
 void call_v3f1(void) { global_v3f1 = func_v3f1(global_v3f1); }
 
 // CHECK-LABEL: @call_v3f2
-// CHECK: %[[TMP:[^ ]+]] = load [2 x <3 x float>], [2 x <3 x float>]* getelementptr inbounds (%struct.v3f2, %struct.v3f2* @global_v3f2, i32 0, i32 0), align 1
-// CHECK: call [2 x <3 x float>] @func_v3f2([2 x <3 x float>] %[[TMP]])
+// CHECK: %[[TMP:[^ ]+]] = load [2 x <4 x float>], [2 x <4 x float>]* bitcast (%struct.v3f2* @global_v3f2 to [2 x <4 x float>]*), align 16
+// CHECK: call [2 x <4 x float>] @func_v3f2([2 x <4 x float>] %[[TMP]])
 struct v3f2 global_v3f2;
 void call_v3f2(void) { global_v3f2 = func_v3f2(global_v3f2); }
 
 // CHECK-LABEL: @call_v3f3
-// CHECK: %[[TMP:[^ ]+]] = load [3 x <3 x float>], [3 x <3 x float>]* getelementptr inbounds (%struct.v3f3, %struct.v3f3* @global_v3f3, i32 0, i32 0), align 1
-// CHECK: call [3 x <3 x float>] @func_v3f3([3 x <3 x float>] %[[TMP]])
+// CHECK: %[[TMP:[^ ]+]] = load [3 x <4 x float>], [3 x <4 x float>]* bitcast (%struct.v3f3* @global_v3f3 to [3 x <4 x float>]*), align 16
+// CHECK: call [3 x <4 x float>] @func_v3f3([3 x <4 x float>] %[[TMP]])
 struct v3f3 global_v3f3;
 void call_v3f3(void) { global_v3f3 = func_v3f3(global_v3f3); }
 
 // CHECK-LABEL: @call_v3f4
-// CHECK: %[[TMP:[^ ]+]] = load [4 x <3 x float>], [4 x <3 x float>]* getelementptr inbounds (%struct.v3f4, %struct.v3f4* @global_v3f4, i32 0, i32 0), align 1
-// CHECK: call [4 x <3 x float>] @func_v3f4([4 x <3 x float>] %[[TMP]])
+// CHECK: %[[TMP:[^ ]+]] = load [4 x <4 x float>], [4 x <4 x float>]* bitcast (%struct.v3f4* @global_v3f4 to [4 x <4 x float>]*), align 16
+// CHECK: call [4 x <4 x float>] @func_v3f4([4 x <4 x float>] %[[TMP]])
 struct v3f4 global_v3f4;
 void call_v3f4(void) { global_v3f4 = func_v3f4(global_v3f4); }
 
 // CHECK-LABEL: @call_v3f5
-// CHECK: %[[TMP:[^ ]+]] = load [5 x <3 x float>], [5 x <3 x float>]* getelementptr inbounds (%struct.v3f5, %struct.v3f5* @global_v3f5, i32 0, i32 0), align 1
-// CHECK: call [5 x <3 x float>] @func_v3f5([5 x <3 x float>] %[[TMP]])
+// CHECK: %[[TMP:[^ ]+]] = load [5 x <4 x float>], [5 x <4 x float>]* bitcast (%struct.v3f5* @global_v3f5 to [5 x <4 x float>]*), align 16
+// CHECK: call [5 x <4 x float>] @func_v3f5([5 x <4 x float>] %[[TMP]])
 struct v3f5 global_v3f5;
 void call_v3f5(void) { global_v3f5 = func_v3f5(global_v3f5); }
 
 // CHECK-LABEL: @call_v3f6
-// CHECK: %[[TMP:[^ ]+]] = load [6 x <3 x float>], [6 x <3 x float>]* getelementptr inbounds (%struct.v3f6, %struct.v3f6* @global_v3f6, i32 0, i32 0), align 1
-// CHECK: call [6 x <3 x float>] @func_v3f6([6 x <3 x float>] %[[TMP]])
+// CHECK: %[[TMP:[^ ]+]] = load [6 x <4 x float>], [6 x <4 x float>]* bitcast (%struct.v3f6* @global_v3f6 to [6 x <4 x float>]*), align 16
+// CHECK: call [6 x <4 x float>] @func_v3f6([6 x <4 x float>] %[[TMP]])
 struct v3f6 global_v3f6;
 void call_v3f6(void) { global_v3f6 = func_v3f6(global_v3f6); }
 
 // CHECK-LABEL: @call_v3f7
-// CHECK: %[[TMP:[^ ]+]] = load [7 x <3 x float>], [7 x <3 x float>]* getelementptr inbounds (%struct.v3f7, %struct.v3f7* @global_v3f7, i32 0, i32 0), align 1
-// CHECK: call [7 x <3 x float>] @func_v3f7([7 x <3 x float>] %[[TMP]])
+// CHECK: %[[TMP:[^ ]+]] = load [7 x <4 x float>], [7 x <4 x float>]* bitcast (%struct.v3f7* @global_v3f7 to [7 x <4 x float>]*), align 16
+// CHECK: call [7 x <4 x float>] @func_v3f7([7 x <4 x float>] %[[TMP]])
 struct v3f7 global_v3f7;
 void call_v3f7(void) { global_v3f7 = func_v3f7(global_v3f7); }
 
 // CHECK-LABEL: @call_v3f8
-// CHECK: %[[TMP:[^ ]+]] = load [8 x <3 x float>], [8 x <3 x float>]* getelementptr inbounds (%struct.v3f8, %struct.v3f8* @global_v3f8, i32 0, i32 0), align 1
-// CHECK: call [8 x <3 x float>] @func_v3f8([8 x <3 x float>] %[[TMP]])
+// CHECK: %[[TMP:[^ ]+]] = load [8 x <4 x float>], [8 x <4 x float>]* bitcast (%struct.v3f8* @global_v3f8 to [8 x <4 x float>]*), align 16
+// CHECK: call [8 x <4 x float>] @func_v3f8([8 x <4 x float>] %[[TMP]])
 struct v3f8 global_v3f8;
 void call_v3f8(void) { global_v3f8 = func_v3f8(global_v3f8); }
 
@@ -342,14 +342,14 @@ struct v3f9 global_v3f9;
 void call_v3f9(void) { global_v3f9 = func_v3f9(global_v3f9); }
 
 // CHECK-LABEL: @call_v3fab
-// CHECK: %[[TMP:[^ ]+]] = load [2 x <3 x float>], [2 x <3 x float>]* bitcast (%struct.v3fab* @global_v3fab to [2 x <3 x float>]*)
-// CHECK: call [2 x <3 x float>] @func_v3fab([2 x <3 x float>] %[[TMP]])
+// CHECK: %[[TMP:[^ ]+]] = load [2 x <4 x float>], [2 x <4 x float>]* bitcast (%struct.v3fab* @global_v3fab to [2 x <4 x float>]*), align 16
+// CHECK: call [2 x <4 x float>] @func_v3fab([2 x <4 x float>] %[[TMP]])
 struct v3fab global_v3fab;
 void call_v3fab(void) { global_v3fab = func_v3fab(global_v3fab); }
 
 // CHECK-LABEL: @call_v3fabc
-// CHECK: %[[TMP:[^ ]+]] = load [3 x <3 x float>], [3 x <3 x float>]* bitcast (%struct.v3fabc* @global_v3fabc to [3 x <3 x float>]*)
-// CHECK: call [3 x <3 x float>] @func_v3fabc([3 x <3 x float>] %[[TMP]])
+// CHECK: %[[TMP:[^ ]+]] = load [3 x <4 x float>], [3 x <4 x float>]* bitcast (%struct.v3fabc* @global_v3fabc to [3 x <4 x float>]*), align 16
+// CHECK: call [3 x <4 x float>] @func_v3fabc([3 x <4 x float>] %[[TMP]])
 struct v3fabc global_v3fabc;
 void call_v3fabc(void) { global_v3fabc = func_v3fabc(global_v3fabc); }
 

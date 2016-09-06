@@ -29,7 +29,7 @@ attributes #0 = { nounwind readnone }
 !llvm.module.flags = !{!7}
 !llvm.ident = !{!8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 256979) (llvm/trunk 257107)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, retainedTypes: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 256979) (llvm/trunk 257107)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: !2)
 !1 = !DIFile(filename: "tsan_shadow_test.cc", directory: "/tmp")
 !2 = !{!3, !5}
 !3 = !DICompositeType(tag: DW_TAG_class_type, name: "FastState", file: !4, line: 91, size: 64, align: 64, identifier: "_ZTSN6__tsan9FastStateE")
@@ -40,6 +40,6 @@ attributes #0 = { nounwind readnone }
 !8 = !{!"clang version 3.8.0 (trunk 256979) (llvm/trunk 257107)"}
 !9 = !DILocalVariable(name: "v1", scope: !10, file: !4, line: 136, type: !5)
 !10 = distinct !DILexicalBlock(scope: !11, file: !4, line: 136, column: 5)
-!11 = distinct !DISubprogram(name: "SetHistorySize", linkageName: "_ZN6__tsan9FastState14SetHistorySizeEi", scope: !"_ZTSN6__tsan9FastStateE", file: !4, line: 135, isLocal: false, isDefinition: true, scopeLine: 135, flags: DIFlagPrototyped, isOptimized: false)
+!11 = distinct !DISubprogram(name: "SetHistorySize", linkageName: "_ZN6__tsan9FastState14SetHistorySizeEi", scope: !3, file: !4, line: 135, isLocal: false, isDefinition: true, scopeLine: 135, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
 !12 = !DIExpression()
 !13 = !DILocation(line: 136, column: 5, scope: !10)

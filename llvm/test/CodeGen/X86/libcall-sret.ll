@@ -10,14 +10,25 @@ define void @test_sret_libcall(i128 %l, i128 %r) {
 ; CHECK-LABEL: test_sret_libcall:
 
   ; Stack for call: 4(sret ptr), 16(i128 %l), 16(128 %r). So next logical
-  ; (aligned) place for the actual sret data is %esp + 40.
-; CHECK: leal 40(%esp), [[SRET_ADDR:%[a-z]+]]
-; CHECK: movl [[SRET_ADDR]], (%esp)
+  ; (aligned) place for the actual sret data is %esp + 20.
+; CHECK: leal 20(%esp), [[SRET_ADDR:%[a-z]+]]
+; CHECK: pushl 72(%esp)
+; CHECK: pushl 72(%esp)
+; CHECK: pushl 72(%esp)
+; CHECK: pushl 72(%esp)
+; CHECK: pushl 72(%esp)
+; CHECK: pushl 72(%esp)
+; CHECK: pushl 72(%esp)
+; CHECK: pushl 72(%esp)
+; CHECK: pushl [[SRET_ADDR]]
+
 ; CHECK: calll __multi3
-; CHECK-DAG: movl 40(%esp), [[RES0:%[a-z]+]]
-; CHECK-DAG: movl 44(%esp), [[RES1:%[a-z]+]]
-; CHECK-DAG: movl 48(%esp), [[RES2:%[a-z]+]]
-; CHECK-DAG: movl 52(%esp), [[RES3:%[a-z]+]]
+
+; CHECK: addl $44, %esp
+; CHECK-DAG: movl 8(%esp), [[RES0:%[a-z]+]]
+; CHECK-DAG: movl 12(%esp), [[RES1:%[a-z]+]]
+; CHECK-DAG: movl 16(%esp), [[RES2:%[a-z]+]]
+; CHECK-DAG: movl 20(%esp), [[RES3:%[a-z]+]]
 ; CHECK-DAG: movl [[RES0]], var
 ; CHECK-DAG: movl [[RES1]], var+4
 ; CHECK-DAG: movl [[RES2]], var+8

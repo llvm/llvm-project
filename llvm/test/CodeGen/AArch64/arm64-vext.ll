@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 -aarch64-neon-syntax=apple < %s | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define void @test_vext_s8() nounwind ssp {
   ; CHECK-LABEL: test_vext_s8:

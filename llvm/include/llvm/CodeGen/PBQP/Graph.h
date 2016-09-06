@@ -15,12 +15,11 @@
 #ifndef LLVM_CODEGEN_PBQP_GRAPH_H
 #define LLVM_CODEGEN_PBQP_GRAPH_H
 
-#include "llvm/ADT/ilist.h"
-#include "llvm/ADT/ilist_node.h"
 #include "llvm/Support/Debug.h"
-#include <list>
-#include <map>
-#include <set>
+#include <algorithm>
+#include <cassert>
+#include <limits>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -72,7 +71,7 @@ namespace PBQP {
         return std::numeric_limits<AdjEdgeIdx>::max();
       }
 
-      NodeEntry(VectorPtr Costs) : Costs(Costs) {}
+      NodeEntry(VectorPtr Costs) : Costs(std::move(Costs)) {}
 
       AdjEdgeIdx addAdjEdgeId(EdgeId EId) {
         AdjEdgeIdx Idx = AdjEdgeIds.size();
@@ -103,7 +102,7 @@ namespace PBQP {
     class EdgeEntry {
     public:
       EdgeEntry(NodeId N1Id, NodeId N2Id, MatrixPtr Costs)
-        : Costs(Costs) {
+          : Costs(std::move(Costs)) {
         NIds[0] = N1Id;
         NIds[1] = N2Id;
         ThisEdgeAdjIdxs[0] = NodeEntry::getInvalidAdjEdgeIdx();
@@ -263,9 +262,7 @@ namespace PBQP {
 
     private:
       NodeId findNextInUse(NodeId NId) const {
-        while (NId < EndNId &&
-               std::find(FreeNodeIds.begin(), FreeNodeIds.end(), NId) !=
-               FreeNodeIds.end()) {
+        while (NId < EndNId && is_contained(FreeNodeIds, NId)) {
           ++NId;
         }
         return NId;
@@ -289,9 +286,7 @@ namespace PBQP {
 
     private:
       EdgeId findNextInUse(EdgeId EId) const {
-        while (EId < EndEId &&
-               std::find(FreeEdgeIds.begin(), FreeEdgeIds.end(), EId) !=
-               FreeEdgeIds.end()) {
+        while (EId < EndEId && is_contained(FreeEdgeIds, EId)) {
           ++EId;
         }
         return EId;
@@ -348,7 +343,8 @@ namespace PBQP {
     Graph() : Solver(nullptr) {}
 
     /// @brief Construct an empty PBQP graph with the given graph metadata.
-    Graph(GraphMetadata Metadata) : Metadata(Metadata), Solver(nullptr) {}
+    Graph(GraphMetadata Metadata)
+        : Metadata(std::move(Metadata)), Solver(nullptr) {}
 
     /// @brief Get a reference to the graph metadata.
     GraphMetadata& getMetadata() { return Metadata; }

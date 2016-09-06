@@ -362,12 +362,13 @@ static void InitializeFlags() {
   RegisterCommonFlags(&parser);
   RegisterDfsanFlags(&parser, &flags());
   parser.ParseString(GetEnv("DFSAN_OPTIONS"));
-  SetVerbosity(common_flags()->verbosity);
+  InitializeCommonFlags();
   if (Verbosity()) ReportUnrecognizedFlags();
   if (common_flags()->help) parser.PrintFlagDescriptions();
 }
 
 static void InitializePlatformEarly() {
+  AvoidCVE_2016_2143();
 #ifdef DFSAN_RUNTIME_VMA
   __dfsan::vmaSize =
     (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
@@ -411,7 +412,7 @@ static void dfsan_init(int argc, char **argv, char **envp) {
   // case by disabling memory protection when ASLR is disabled.
   uptr init_addr = (uptr)&dfsan_init;
   if (!(init_addr >= UnusedAddr() && init_addr < AppAddr()))
-    MmapNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
+    MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
 
   InitializeInterceptors();
 

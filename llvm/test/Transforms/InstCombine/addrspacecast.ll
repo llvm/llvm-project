@@ -145,3 +145,42 @@ end:
   ret i32 %sum.inc
 }
 
+; CHECK-LABEL: @constant_fold_null(
+; CHECK: i32 addrspace(3)* null to i32 addrspace(4)*
+define void @constant_fold_null() #0 {
+  %cast = addrspacecast i32 addrspace(3)* null to i32 addrspace(4)*
+  store i32 7, i32 addrspace(4)* %cast
+  ret void
+}
+
+; CHECK-LABEL: @constant_fold_undef(
+; CHECK: ret i32 addrspace(4)* undef
+define i32 addrspace(4)* @constant_fold_undef() #0 {
+  %cast = addrspacecast i32 addrspace(3)* undef to i32 addrspace(4)*
+  ret i32 addrspace(4)* %cast
+}
+
+; CHECK-LABEL: @constant_fold_null_vector(
+; CHECK: addrspacecast (<4 x i32 addrspace(3)*> zeroinitializer to <4 x i32 addrspace(4)*>)
+define <4 x i32 addrspace(4)*> @constant_fold_null_vector() #0 {
+  %cast = addrspacecast <4 x i32 addrspace(3)*> zeroinitializer to <4 x i32 addrspace(4)*>
+  ret <4 x i32 addrspace(4)*> %cast
+}
+
+; CHECK-LABEL: @constant_fold_inttoptr(
+; CHECK: addrspacecast (i32 addrspace(3)* inttoptr (i32 -1 to i32 addrspace(3)*) to i32 addrspace(4)*)
+define void @constant_fold_inttoptr() #0 {
+  %cast = addrspacecast i32 addrspace(3)* inttoptr (i32 -1 to i32 addrspace(3)*) to i32 addrspace(4)*
+  store i32 7, i32 addrspace(4)* %cast
+  ret void
+}
+
+; CHECK-LABEL: @constant_fold_gep_inttoptr(
+; CHECK: addrspacecast (i32 addrspace(3)* inttoptr (i64 1274 to i32 addrspace(3)*) to i32 addrspace(4)*)
+define void @constant_fold_gep_inttoptr() #0 {
+  %k = inttoptr i32 1234 to i32 addrspace(3)*
+  %gep = getelementptr i32, i32 addrspace(3)* %k, i32 10
+  %cast = addrspacecast i32 addrspace(3)* %gep to i32 addrspace(4)*
+  store i32 7, i32 addrspace(4)* %cast
+  ret void
+}

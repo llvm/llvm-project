@@ -88,6 +88,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   RegInfo = &MF->getRegInfo();
   MachineModuleInfo &MMI = MF->getMMI();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
+  unsigned StackAlign = TFI->getStackAlignment();
 
   // Check whether the function can return without sret-demotion.
   SmallVector<ISD::OutputArg, 4> Outs;
@@ -95,6 +96,31 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
                 mf.getDataLayout());
   CanLowerReturn = TLI->CanLowerReturn(Fn->getCallingConv(), *MF,
                                        Fn->isVarArg(), Outs, Fn->getContext());
+
+  // If this personality uses funclets, we need to do a bit more work.
+  DenseMap<const AllocaInst *, int *> CatchObjects;
+  EHPersonality Personality = classifyEHPersonality(
+      Fn->hasPersonalityFn() ? Fn->getPersonalityFn() : nullptr);
+  if (isFuncletEHPersonality(Personality)) {
+    // Calculate state numbers if we haven't already.
+    WinEHFuncInfo &EHInfo = *MF->getWinEHFuncInfo();
+    if (Personality == EHPersonality::MSVC_CXX)
+      calculateWinCXXEHStateNumbers(&fn, EHInfo);
+    else if (isAsynchronousEHPersonality(Personality))
+      calculateSEHStateNumbers(&fn, EHInfo);
+    else if (Personality == EHPersonality::CoreCLR)
+      calculateClrEHStateNumbers(&fn, EHInfo);
+
+    // Map all BB references in the WinEH data to MBBs.
+    for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
+      for (WinEHHandlerType &H : TBME.HandlerArray) {
+        if (const AllocaInst *AI = H.CatchObj.Alloca)
+          CatchObjects.insert({AI, &H.CatchObj.FrameIndex});
+        else
+          H.CatchObj.FrameIndex = INT_MAX;
+      }
+    }
+  }
 
   // Initialize the mapping of values to registers.  This is only set up for
   // instruction values that are used outside of the block that defines
@@ -108,7 +134,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         unsigned Align =
           std::max((unsigned)MF->getDataLayout().getPrefTypeAlignment(Ty),
                    AI->getAlignment());
-        unsigned StackAlign = TFI->getStackAlignment();
 
         // Static allocas can be folded into the initial stack frame
         // adjustment. For targets that don't realign the stack, don't
@@ -120,9 +145,21 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
 
           TySize *= CUI->getZExtValue();   // Get total allocated size.
           if (TySize == 0) TySize = 1; // Don't create zero-sized stack objects.
+          int FrameIndex = INT_MAX;
+          auto Iter = CatchObjects.find(AI);
+          if (Iter != CatchObjects.end() && TLI->needsFixedCatchObjects()) {
+            FrameIndex = MF->getFrameInfo().CreateFixedObject(
+                TySize, 0, /*Immutable=*/false, /*isAliased=*/true);
+            MF->getFrameInfo().setObjectAlignment(FrameIndex, Align);
+          } else {
+            FrameIndex =
+                MF->getFrameInfo().CreateStackObject(TySize, Align, false, AI);
+          }
 
-          StaticAllocaMap[AI] =
-            MF->getFrameInfo()->CreateStackObject(TySize, Align, false, AI);
+          StaticAllocaMap[AI] = FrameIndex;
+          // Update the catch handler information.
+          if (Iter != CatchObjects.end())
+            *Iter->second = FrameIndex;
         } else {
           // FIXME: Overaligned static allocas should be grouped into
           // a single dynamic allocation instead of using a separate
@@ -130,7 +167,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           if (Align <= StackAlign)
             Align = 0;
           // Inform the Frame Information that we have variable-sized objects.
-          MF->getFrameInfo()->CreateVariableSizedObject(Align ? Align : 1, AI);
+          MF->getFrameInfo().CreateVariableSizedObject(Align ? Align : 1, AI);
         }
       }
 
@@ -151,7 +188,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
                   TLI->getRegForInlineAsmConstraint(TRI, Op.ConstraintCode,
                                                     Op.ConstraintVT);
               if (PhysReg.first == SP)
-                MF->getFrameInfo()->setHasOpaqueSPAdjustment(true);
+                MF->getFrameInfo().setHasOpaqueSPAdjustment(true);
             }
           }
         }
@@ -162,14 +199,14 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       // arguments.
       if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
         if (II->getIntrinsicID() == Intrinsic::vastart)
-          MF->getFrameInfo()->setHasVAStart(true);
+          MF->getFrameInfo().setHasVAStart(true);
       }
 
       // If we have a musttail call in a variadic function, we need to ensure we
       // forward implicit register parameters.
       if (const auto *CI = dyn_cast<CallInst>(I)) {
         if (CI->isMustTailCall() && Fn->isVarArg())
-          MF->getFrameInfo()->setHasMustTailInVarArgFunc(true);
+          MF->getFrameInfo().setHasMustTailInVarArgFunc(true);
       }
 
       // Mark values used outside their block as exported, by allocating
@@ -223,7 +260,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       // this in such cases in order to improve frame layout.
       if (!isa<LandingPadInst>(I)) {
         MMI.setHasEHFunclets(true);
-        MF->getFrameInfo()->setHasOpaqueSPAdjustment(true);
+        MF->getFrameInfo().setHasOpaqueSPAdjustment(true);
       }
       if (isa<CatchSwitchInst>(I)) {
         assert(&*BB->begin() == I &&
@@ -281,31 +318,14 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       LPads.push_back(LPI);
   }
 
-  // If this personality uses funclets, we need to do a bit more work.
-  if (!Fn->hasPersonalityFn())
-    return;
-  EHPersonality Personality = classifyEHPersonality(Fn->getPersonalityFn());
   if (!isFuncletEHPersonality(Personality))
     return;
 
-  // Calculate state numbers if we haven't already.
   WinEHFuncInfo &EHInfo = *MF->getWinEHFuncInfo();
-  if (Personality == EHPersonality::MSVC_CXX)
-    calculateWinCXXEHStateNumbers(&fn, EHInfo);
-  else if (isAsynchronousEHPersonality(Personality))
-    calculateSEHStateNumbers(&fn, EHInfo);
-  else if (Personality == EHPersonality::CoreCLR)
-    calculateClrEHStateNumbers(&fn, EHInfo);
 
   // Map all BB references in the WinEH data to MBBs.
   for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
     for (WinEHHandlerType &H : TBME.HandlerArray) {
-      if (H.CatchObj.Alloca) {
-        assert(StaticAllocaMap.count(H.CatchObj.Alloca));
-        H.CatchObj.FrameIndex = StaticAllocaMap[H.CatchObj.Alloca];
-      } else {
-        H.CatchObj.FrameIndex = INT_MAX;
-      }
       if (H.Handler)
         H.Handler = MBBMap[H.Handler.get<const BasicBlock *>()];
     }
@@ -336,7 +356,7 @@ void FunctionLoweringInfo::clear() {
   ByValArgFrameIndexMap.clear();
   RegFixups.clear();
   StatepointStackSlots.clear();
-  StatepointRelocatedValues.clear();
+  StatepointSpillMaps.clear();
   PreferredExtendType.clear();
 }
 
@@ -579,27 +599,15 @@ void llvm::AddLandingPadInfo(const LandingPadInst &I, MachineModuleInfo &MMI,
 unsigned FunctionLoweringInfo::findSwiftErrorVReg(const MachineBasicBlock *MBB,
                                                   const Value* Val) const {
   // Find the index in SwiftErrorVals.
-  unsigned End = SwiftErrorVals.size();
-  unsigned Index = End;
-  for (unsigned I = 0; I < End; I++)
-    if (SwiftErrorVals[I] == Val) {
-      Index = I;
-      break;
-    }
-  assert(Index < End && "Can't find value in SwiftErrorVals");
-  return SwiftErrorMap.lookup(MBB)[Index];
+  SwiftErrorValues::const_iterator I = find(SwiftErrorVals, Val);
+  assert(I != SwiftErrorVals.end() && "Can't find value in SwiftErrorVals");
+  return SwiftErrorMap.lookup(MBB)[I - SwiftErrorVals.begin()];
 }
 
 void FunctionLoweringInfo::setSwiftErrorVReg(const MachineBasicBlock *MBB,
                                              const Value* Val, unsigned VReg) {
   // Find the index in SwiftErrorVals.
-  unsigned End = SwiftErrorVals.size();
-  unsigned Index = End;
-  for (unsigned I = 0, E = SwiftErrorVals.size(); I < E; I++)
-    if (SwiftErrorVals[I] == Val) {
-      Index = I;
-      break;
-    }
-  assert(Index < End && "Can't find value in SwiftErrorVals");
-  SwiftErrorMap[MBB][Index] = VReg;
+  SwiftErrorValues::iterator I = find(SwiftErrorVals, Val);
+  assert(I != SwiftErrorVals.end() && "Can't find value in SwiftErrorVals");
+  SwiftErrorMap[MBB][I - SwiftErrorVals.begin()] = VReg;
 }

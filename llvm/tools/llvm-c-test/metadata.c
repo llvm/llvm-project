@@ -13,9 +13,8 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "llvm-c-test.h"
-#include "llvm-c/Core.h"
 
-int add_named_metadata_operand(void) {
+int llvm_add_named_metadata_operand(void) {
   LLVMModuleRef m = LLVMModuleCreateWithName("Mod");
   LLVMValueRef values[] = { LLVMConstInt(LLVMInt32Type(), 0, 0) };
 
@@ -27,7 +26,7 @@ int add_named_metadata_operand(void) {
   return 0;
 }
 
-int set_metadata(void) {
+int llvm_set_metadata(void) {
   LLVMBuilderRef b = LLVMCreateBuilder();
   LLVMValueRef values[] = { LLVMConstInt(LLVMInt32Type(), 0, 0) };
 

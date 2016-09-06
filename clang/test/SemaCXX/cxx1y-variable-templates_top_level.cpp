@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -Wno-c++11-extensions -Wno-c++1y-extensions %s -DPRECXX11
+// RUN: %clang_cc1 -std=c++98 -verify -fsyntax-only -Wno-c++11-extensions -Wno-c++1y-extensions %s -DPRECXX11
 // RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only -Wno-c++1y-extensions %s
 // RUN: %clang_cc1 -std=c++1y -verify -fsyntax-only %s
 
@@ -458,3 +458,9 @@ namespace PR19169 {
   template<> int g<double>; // expected-error {{no variable template matches specialization; did you mean to use 'g' as function template instead?}}
 }
 
+#ifndef PRECXX11
+template <typename... Args> struct Variadic_t { };
+template <typename... Args> Variadic_t<Args...> Variadic;
+auto variadic1 = Variadic<>;
+auto variadic2 = Variadic<int, int>;
+#endif

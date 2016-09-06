@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -triple nvptx64-unknown-unknown -fcuda-is-device \
 // RUN:     -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple nvptx64-unknown-unknown -fcuda-is-device \
-// RUN:     -fcuda-target-overloads -fsyntax-only -verify %s
 
 #include "Inputs/cuda.h"
 

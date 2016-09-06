@@ -6,7 +6,7 @@ define i32 @main(i32 %x) nounwind gc "erlang" {
   ret i32 0
 
 ; CHECK64:      .section  .note.gc,"",@progbits
-; CHECK64-NEXT: .align 8
+; CHECK64-NEXT: .p2align 3
 ; CHECK64-NEXT: .short 1      # safe point count
 ; CHECK64-NEXT: .long  .Ltmp0 # safe point address
 ; CHECK64-NEXT: .short 1      # stack frame size (in words)
@@ -14,7 +14,7 @@ define i32 @main(i32 %x) nounwind gc "erlang" {
 ; CHECK64-NEXT: .short 0      # live root count
 
 ; CHECK32:      .section  .note.gc,"",@progbits
-; CHECK32-NEXT: .align 4
+; CHECK32-NEXT: .p2align 2
 ; CHECK32-NEXT: .short 1      # safe point count
 ; CHECK32-NEXT: .long  .Ltmp0 # safe point address
 ; CHECK32-NEXT: .short 3      # stack frame size (in words)

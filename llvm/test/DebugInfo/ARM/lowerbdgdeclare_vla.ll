@@ -67,11 +67,10 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!20, !33}
 !llvm.ident = !{!21}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.4 ", isOptimized: true, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.4 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "<unknown>", directory: "/Volumes/Data/radar/15464571")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "run", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 2, file: !5, scope: !6, type: !7, variables: !10)
+!4 = distinct !DISubprogram(name: "run", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 2, file: !5, scope: !6, type: !7, variables: !10)
 !5 = !DIFile(filename: "test.c", directory: "/Volumes/Data/radar/15464571")
 !6 = !DIFile(filename: "test.c", directory: "/Volumes/Data/radar/15464571")
 !7 = !DISubroutineType(types: !8)

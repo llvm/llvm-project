@@ -1,6 +1,7 @@
-; RUN: llc -mtriple=aarch64-apple-ios -asm-verbose=false -aarch64-collect-loh=false \
-; RUN:   -aarch64-global-merge -global-merge-group-by-use -global-merge-ignore-single-use \
-; RUN:   %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-apple-ios -asm-verbose=false \
+; RUN:   -aarch64-enable-collect-loh=false -aarch64-enable-global-merge \
+; RUN:   -global-merge-group-by-use -global-merge-ignore-single-use %s -o - \
+; RUN:   | FileCheck %s
 
 ; We assume that globals of the same size aren't reordered inside a set.
 

@@ -7,8 +7,8 @@
 define zeroext i16 @t1(i16 zeroext %x) nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: t1:
+; CHECK: xorl %eax, %eax
 ; CHECK: seta %al
-; CHECK: movzbl %al, %eax
 ; CHECK: shll $5, %eax
   %0 = icmp ugt i16 %x, 26                        ; <i1> [#uses=1]
   %iftmp.1.0 = select i1 %0, i16 32, i16 0        ; <i16> [#uses=1]
@@ -54,3 +54,27 @@ entry:
   %add = shl nuw nsw i32 %conv4.2, 16
   ret i32 %add
 }
+
+define i8 @t5(i32 %a) #0 {
+entry:
+; CHECK-LABEL: t5:
+; CHECK:  testl   %edi, %edi
+; CHECK:  setns   %al
+  %.lobit = lshr i32 %a, 31
+  %trunc = trunc i32 %.lobit to i8
+  %.not = xor i8 %trunc, 1
+  ret i8 %.not
+}
+
+define zeroext i1 @t6(i32 %a) #0 {
+entry:
+; CHECK-LABEL: t6:
+; CHECK:  testl   %edi, %edi
+; CHECK:  setns   %al
+  %.lobit = lshr i32 %a, 31
+  %trunc = trunc i32 %.lobit to i1
+  %.not = xor i1 %trunc, 1
+  ret i1 %.not
+}
+
+attributes #0 = { "target-cpu"="skylake-avx512" }

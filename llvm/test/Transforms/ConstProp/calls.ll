@@ -1,47 +1,47 @@
 ; RUN: opt < %s -constprop -S | FileCheck %s
 ; RUN: opt < %s -constprop -disable-simplify-libcalls -S | FileCheck %s --check-prefix=FNOBUILTIN
 
-declare double @acos(double)
-declare double @asin(double)
-declare double @atan(double)
-declare double @atan2(double, double)
-declare double @ceil(double)
-declare double @cos(double)
-declare double @cosh(double)
-declare double @exp(double)
-declare double @exp2(double)
-declare double @fabs(double)
-declare double @floor(double)
-declare double @fmod(double, double)
-declare double @log(double)
-declare double @log10(double)
-declare double @pow(double, double)
-declare double @sin(double)
-declare double @sinh(double)
-declare double @sqrt(double)
-declare double @tan(double)
-declare double @tanh(double)
+declare double @acos(double) readnone nounwind
+declare double @asin(double) readnone nounwind
+declare double @atan(double) readnone nounwind
+declare double @atan2(double, double) readnone nounwind
+declare double @ceil(double) readnone nounwind
+declare double @cos(double) readnone nounwind
+declare double @cosh(double) readnone nounwind
+declare double @exp(double) readnone nounwind
+declare double @exp2(double) readnone nounwind
+declare double @fabs(double) readnone nounwind
+declare double @floor(double) readnone nounwind
+declare double @fmod(double, double) readnone nounwind
+declare double @log(double) readnone nounwind
+declare double @log10(double) readnone nounwind
+declare double @pow(double, double) readnone nounwind
+declare double @sin(double) readnone nounwind
+declare double @sinh(double) readnone nounwind
+declare double @sqrt(double) readnone nounwind
+declare double @tan(double) readnone nounwind
+declare double @tanh(double) readnone nounwind
 
-declare float @acosf(float)
-declare float @asinf(float)
-declare float @atanf(float)
-declare float @atan2f(float, float)
-declare float @ceilf(float)
-declare float @cosf(float)
-declare float @coshf(float)
-declare float @expf(float)
-declare float @exp2f(float)
-declare float @fabsf(float)
-declare float @floorf(float)
-declare float @fmodf(float, float)
-declare float @logf(float)
-declare float @log10f(float)
-declare float @powf(float, float)
-declare float @sinf(float)
-declare float @sinhf(float)
-declare float @sqrtf(float)
-declare float @tanf(float)
-declare float @tanhf(float)
+declare float @acosf(float) readnone nounwind
+declare float @asinf(float) readnone nounwind
+declare float @atanf(float) readnone nounwind
+declare float @atan2f(float, float) readnone nounwind
+declare float @ceilf(float) readnone nounwind
+declare float @cosf(float) readnone nounwind
+declare float @coshf(float) readnone nounwind
+declare float @expf(float) readnone nounwind
+declare float @exp2f(float) readnone nounwind
+declare float @fabsf(float) readnone nounwind
+declare float @floorf(float) readnone nounwind
+declare float @fmodf(float, float) readnone nounwind
+declare float @logf(float) readnone nounwind
+declare float @log10f(float) readnone nounwind
+declare float @powf(float, float) readnone nounwind
+declare float @sinf(float) readnone nounwind
+declare float @sinhf(float) readnone nounwind
+declare float @sqrtf(float) readnone nounwind
+declare float @tanf(float) readnone nounwind
+declare float @tanhf(float) readnone nounwind
 
 define double @T() {
 ; CHECK-LABEL: @T(
@@ -176,27 +176,200 @@ define double @T() {
   ret double %d
 }
 
-define i1 @test_sse_cvt() nounwind readnone {
-; CHECK-LABEL: @test_sse_cvt(
+define i1 @test_sse_cvts_exact() nounwind readnone {
+; CHECK-LABEL: @test_sse_cvts_exact(
 ; CHECK-NOT: call
 ; CHECK: ret i1 true
 entry:
+  %i0 = tail call i32 @llvm.x86.sse.cvtss2si(<4 x float> <float 3.0, float undef, float undef, float undef>) nounwind
+  %i1 = tail call i64 @llvm.x86.sse.cvtss2si64(<4 x float> <float 3.0, float undef, float undef, float undef>) nounwind
+  %i2 = call i32 @llvm.x86.sse2.cvtsd2si(<2 x double> <double 7.0, double undef>) nounwind
+  %i3 = call i64 @llvm.x86.sse2.cvtsd2si64(<2 x double> <double 7.0, double undef>) nounwind
+  %sum02 = add i32 %i0, %i2
+  %sum13 = add i64 %i1, %i3
+  %cmp02 = icmp eq i32 %sum02, 10
+  %cmp13 = icmp eq i64 %sum13, 10
+  %b = and i1 %cmp02, %cmp13
+  ret i1 %b
+}
+
+; Inexact values should not fold as they are dependent on rounding mode
+define i1 @test_sse_cvts_inexact() nounwind readnone {
+; CHECK-LABEL: @test_sse_cvts_inexact(
+; CHECK: call
+; CHECK: call
+; CHECK: call
+; CHECK: call
+entry:
   %i0 = tail call i32 @llvm.x86.sse.cvtss2si(<4 x float> <float 1.75, float undef, float undef, float undef>) nounwind
-  %i1 = tail call i32 @llvm.x86.sse.cvttss2si(<4 x float> <float 1.75, float undef, float undef, float undef>) nounwind
-  %i2 = tail call i64 @llvm.x86.sse.cvtss2si64(<4 x float> <float 1.75, float undef, float undef, float undef>) nounwind
-  %i3 = tail call i64 @llvm.x86.sse.cvttss2si64(<4 x float> <float 1.75, float undef, float undef, float undef>) nounwind
-  %i4 = call i32 @llvm.x86.sse2.cvtsd2si(<2 x double> <double 1.75, double undef>) nounwind
-  %i5 = call i32 @llvm.x86.sse2.cvttsd2si(<2 x double> <double 1.75, double undef>) nounwind
-  %i6 = call i64 @llvm.x86.sse2.cvtsd2si64(<2 x double> <double 1.75, double undef>) nounwind
-  %i7 = call i64 @llvm.x86.sse2.cvttsd2si64(<2 x double> <double 1.75, double undef>) nounwind
-  %sum11 = add i32 %i0, %i1
-  %sum12 = add i32 %i4, %i5
-  %sum1 = add i32 %sum11, %sum12
-  %sum21 = add i64 %i2, %i3
-  %sum22 = add i64 %i6, %i7
-  %sum2 = add i64 %sum21, %sum22
-  %sum1.sext = sext i32 %sum1 to i64
-  %b = icmp eq i64 %sum1.sext, %sum2
+  %i1 = tail call i64 @llvm.x86.sse.cvtss2si64(<4 x float> <float 1.75, float undef, float undef, float undef>) nounwind
+  %i2 = call i32 @llvm.x86.sse2.cvtsd2si(<2 x double> <double 1.75, double undef>) nounwind
+  %i3 = call i64 @llvm.x86.sse2.cvtsd2si64(<2 x double> <double 1.75, double undef>) nounwind
+  %sum02 = add i32 %i0, %i2
+  %sum13 = add i64 %i1, %i3
+  %cmp02 = icmp eq i32 %sum02, 4
+  %cmp13 = icmp eq i64 %sum13, 4
+  %b = and i1 %cmp02, %cmp13
+  ret i1 %b
+}
+
+; FLT_MAX/DBL_MAX should not fold
+define i1 @test_sse_cvts_max() nounwind readnone {
+; CHECK-LABEL: @test_sse_cvts_max(
+; CHECK: call
+; CHECK: call
+; CHECK: call
+; CHECK: call
+entry:
+  %fm = bitcast <4 x i32> <i32 2139095039, i32 undef, i32 undef, i32 undef> to <4 x float>
+  %dm = bitcast <2 x i64> <i64 9218868437227405311, i64 undef> to <2 x double>
+  %i0 = tail call i32 @llvm.x86.sse.cvtss2si(<4 x float> %fm) nounwind
+  %i1 = tail call i64 @llvm.x86.sse.cvtss2si64(<4 x float> %fm) nounwind
+  %i2 = call i32 @llvm.x86.sse2.cvtsd2si(<2 x double> %dm) nounwind
+  %i3 = call i64 @llvm.x86.sse2.cvtsd2si64(<2 x double> %dm) nounwind
+  %sum02 = add i32 %i0, %i2
+  %sum13 = add i64 %i1, %i3
+  %sum02.sext = sext i32 %sum02 to i64
+  %b = icmp eq i64 %sum02.sext, %sum13
+  ret i1 %b
+}
+
+; INF should not fold
+define i1 @test_sse_cvts_inf() nounwind readnone {
+; CHECK-LABEL: @test_sse_cvts_inf(
+; CHECK: call
+; CHECK: call
+; CHECK: call
+; CHECK: call
+entry:
+  %fm = bitcast <4 x i32> <i32 2139095040, i32 undef, i32 undef, i32 undef> to <4 x float>
+  %dm = bitcast <2 x i64> <i64 9218868437227405312, i64 undef> to <2 x double>
+  %i0 = tail call i32 @llvm.x86.sse.cvtss2si(<4 x float> %fm) nounwind
+  %i1 = tail call i64 @llvm.x86.sse.cvtss2si64(<4 x float> %fm) nounwind
+  %i2 = call i32 @llvm.x86.sse2.cvtsd2si(<2 x double> %dm) nounwind
+  %i3 = call i64 @llvm.x86.sse2.cvtsd2si64(<2 x double> %dm) nounwind
+  %sum02 = add i32 %i0, %i2
+  %sum13 = add i64 %i1, %i3
+  %sum02.sext = sext i32 %sum02 to i64
+  %b = icmp eq i64 %sum02.sext, %sum13
+  ret i1 %b
+}
+
+; NAN should not fold
+define i1 @test_sse_cvts_nan() nounwind readnone {
+; CHECK-LABEL: @test_sse_cvts_nan(
+; CHECK: call
+; CHECK: call
+; CHECK: call
+; CHECK: call
+entry:
+  %fm = bitcast <4 x i32> <i32 2143289344, i32 undef, i32 undef, i32 undef> to <4 x float>
+  %dm = bitcast <2 x i64> <i64 9221120237041090560, i64 undef> to <2 x double>
+  %i0 = tail call i32 @llvm.x86.sse.cvtss2si(<4 x float> %fm) nounwind
+  %i1 = tail call i64 @llvm.x86.sse.cvtss2si64(<4 x float> %fm) nounwind
+  %i2 = call i32 @llvm.x86.sse2.cvtsd2si(<2 x double> %dm) nounwind
+  %i3 = call i64 @llvm.x86.sse2.cvtsd2si64(<2 x double> %dm) nounwind
+  %sum02 = add i32 %i0, %i2
+  %sum13 = add i64 %i1, %i3
+  %sum02.sext = sext i32 %sum02 to i64
+  %b = icmp eq i64 %sum02.sext, %sum13
+  ret i1 %b
+}
+
+define i1 @test_sse_cvtts_exact() nounwind readnone {
+; CHECK-LABEL: @test_sse_cvtts_exact(
+; CHECK-NOT: call
+; CHECK: ret i1 true
+entry:
+  %i0 = tail call i32 @llvm.x86.sse.cvttss2si(<4 x float> <float 3.0, float undef, float undef, float undef>) nounwind
+  %i1 = tail call i64 @llvm.x86.sse.cvttss2si64(<4 x float> <float 3.0, float undef, float undef, float undef>) nounwind
+  %i2 = call i32 @llvm.x86.sse2.cvttsd2si(<2 x double> <double 7.0, double undef>) nounwind
+  %i3 = call i64 @llvm.x86.sse2.cvttsd2si64(<2 x double> <double 7.0, double undef>) nounwind
+  %sum02 = add i32 %i0, %i2
+  %sum13 = add i64 %i1, %i3
+  %cmp02 = icmp eq i32 %sum02, 10
+  %cmp13 = icmp eq i64 %sum13, 10
+  %b = and i1 %cmp02, %cmp13
+  ret i1 %b
+}
+
+define i1 @test_sse_cvtts_inexact() nounwind readnone {
+; CHECK-LABEL: @test_sse_cvtts_inexact(
+; CHECK-NOT: call
+; CHECK: ret i1 true
+entry:
+  %i0 = tail call i32 @llvm.x86.sse.cvttss2si(<4 x float> <float 1.75, float undef, float undef, float undef>) nounwind
+  %i1 = tail call i64 @llvm.x86.sse.cvttss2si64(<4 x float> <float 1.75, float undef, float undef, float undef>) nounwind
+  %i2 = call i32 @llvm.x86.sse2.cvttsd2si(<2 x double> <double 1.75, double undef>) nounwind
+  %i3 = call i64 @llvm.x86.sse2.cvttsd2si64(<2 x double> <double 1.75, double undef>) nounwind
+  %sum02 = add i32 %i0, %i2
+  %sum13 = add i64 %i1, %i3
+  %cmp02 = icmp eq i32 %sum02, 2
+  %cmp13 = icmp eq i64 %sum13, 2
+  %b = and i1 %cmp02, %cmp13
+  ret i1 %b
+}
+
+; FLT_MAX/DBL_MAX should not fold
+define i1 @test_sse_cvtts_max() nounwind readnone {
+; CHECK-LABEL: @test_sse_cvtts_max(
+; CHECK: call
+; CHECK: call
+; CHECK: call
+; CHECK: call
+entry:
+  %fm = bitcast <4 x i32> <i32 2139095039, i32 undef, i32 undef, i32 undef> to <4 x float>
+  %dm = bitcast <2 x i64> <i64 9218868437227405311, i64 undef> to <2 x double>
+  %i0 = tail call i32 @llvm.x86.sse.cvttss2si(<4 x float> %fm) nounwind
+  %i1 = tail call i64 @llvm.x86.sse.cvttss2si64(<4 x float> %fm) nounwind
+  %i2 = call i32 @llvm.x86.sse2.cvttsd2si(<2 x double> %dm) nounwind
+  %i3 = call i64 @llvm.x86.sse2.cvttsd2si64(<2 x double> %dm) nounwind
+  %sum02 = add i32 %i0, %i2
+  %sum13 = add i64 %i1, %i3
+  %sum02.sext = sext i32 %sum02 to i64
+  %b = icmp eq i64 %sum02.sext, %sum13
+  ret i1 %b
+}
+
+; INF should not fold
+define i1 @test_sse_cvtts_inf() nounwind readnone {
+; CHECK-LABEL: @test_sse_cvtts_inf(
+; CHECK: call
+; CHECK: call
+; CHECK: call
+; CHECK: call
+entry:
+  %fm = bitcast <4 x i32> <i32 2139095040, i32 undef, i32 undef, i32 undef> to <4 x float>
+  %dm = bitcast <2 x i64> <i64 9218868437227405312, i64 undef> to <2 x double>
+  %i0 = tail call i32 @llvm.x86.sse.cvttss2si(<4 x float> %fm) nounwind
+  %i1 = tail call i64 @llvm.x86.sse.cvttss2si64(<4 x float> %fm) nounwind
+  %i2 = call i32 @llvm.x86.sse2.cvttsd2si(<2 x double> %dm) nounwind
+  %i3 = call i64 @llvm.x86.sse2.cvttsd2si64(<2 x double> %dm) nounwind
+  %sum02 = add i32 %i0, %i2
+  %sum13 = add i64 %i1, %i3
+  %sum02.sext = sext i32 %sum02 to i64
+  %b = icmp eq i64 %sum02.sext, %sum13
+  ret i1 %b
+}
+
+; NAN should not fold
+define i1 @test_sse_cvtts_nan() nounwind readnone {
+; CHECK-LABEL: @test_sse_cvtts_nan(
+; CHECK: call
+; CHECK: call
+; CHECK: call
+; CHECK: call
+entry:
+  %fm = bitcast <4 x i32> <i32 2143289344, i32 undef, i32 undef, i32 undef> to <4 x float>
+  %dm = bitcast <2 x i64> <i64 9221120237041090560, i64 undef> to <2 x double>
+  %i0 = tail call i32 @llvm.x86.sse.cvttss2si(<4 x float> %fm) nounwind
+  %i1 = tail call i64 @llvm.x86.sse.cvttss2si64(<4 x float> %fm) nounwind
+  %i2 = call i32 @llvm.x86.sse2.cvttsd2si(<2 x double> %dm) nounwind
+  %i3 = call i64 @llvm.x86.sse2.cvttsd2si64(<2 x double> %dm) nounwind
+  %sum02 = add i32 %i0, %i2
+  %sum13 = add i64 %i1, %i3
+  %sum02.sext = sext i32 %sum02 to i64
+  %b = icmp eq i64 %sum02.sext, %sum13
   ret i1 %b
 }
 

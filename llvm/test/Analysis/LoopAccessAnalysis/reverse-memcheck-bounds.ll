@@ -1,4 +1,5 @@
 ; RUN: opt -loop-accesses -analyze < %s | FileCheck %s
+; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
 
 ; The runtime memory check code and the access grouping
 ; algorithm both assume that the start and end values
@@ -15,7 +16,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnueabi"
 
 ; CHECK: function 'f':
-; CHECK: (Low: (20000 + %a) High: (60000 + %a))
+; CHECK: (Low: (20000 + %a) High: (60000 + %a)<nsw>)
 
 @B = common global i32* null, align 8
 @A = common global i32* null, align 8
@@ -58,7 +59,7 @@ for.end:                                          ; preds = %for.body
 ; Here it is not obvious what the limits are, since 'step' could be negative.
 
 ; CHECK: Low: (-1 + (-1 * ((-60001 + (-1 * %a)) umax (-60001 + (40000 * %step) + (-1 * %a)))))
-; CHECK: High: ((60000 + %a) umax (60000 + (-40000 * %step) + %a))
+; CHECK: High: ((60000 + %a)<nsw> umax (60000 + (-40000 * %step) + %a))
 
 define void @g(i64 %step) {
 entry:

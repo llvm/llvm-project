@@ -79,7 +79,7 @@ public:
   };
 
 private:
-  friend class BinaryOperator;
+  friend class Instruction;
   friend class ConstantExpr;
   void setHasNoUnsignedWrap(bool B) {
     SubclassOptionalData =
@@ -130,7 +130,7 @@ public:
   };
 
 private:
-  friend class BinaryOperator;
+  friend class Instruction;
   friend class ConstantExpr;
   void setIsExact(bool B) {
     SubclassOptionalData = (SubclassOptionalData & ~IsExact) | (B * IsExact);
@@ -401,6 +401,7 @@ public:
   }
 
   Type *getSourceElementType() const;
+  Type *getResultElementType() const;
 
   /// Method to return the address space of the pointer operand.
   unsigned getPointerAddressSpace() const {

@@ -20,7 +20,7 @@ int __tsan_get_report_mop(void *report, unsigned long idx, int *tid,
                           void **addr, int *size, int *write, int *atomic,
                           void **trace, unsigned long trace_size);
 int __tsan_get_report_thread(void *report, unsigned long idx, int *tid,
-                             unsigned long *pid, int *running,
+                             unsigned long *os_id, int *running,
                              const char **name, int *parent_tid, void **trace,
                              unsigned long trace_size);
 }
@@ -90,16 +90,16 @@ void __tsan_on_report(void *report) {
   fprintf(stderr, "thread_count = %d\n", thread_count);
   // CHECK: thread_count = 2
 
-  unsigned long pid;
+  unsigned long os_id;
   int running;
   const char *name;
   int parent_tid;
 
-  __tsan_get_report_thread(report, 0, &tid, &pid, &running, &name, &parent_tid, trace, 16);
+  __tsan_get_report_thread(report, 0, &tid, &os_id, &running, &name, &parent_tid, trace, 16);
   fprintf(stderr, "tid = %d\n", tid);
   // CHECK: tid = 1
 
-  __tsan_get_report_thread(report, 1, &tid, &pid, &running, &name, &parent_tid, trace, 16);
+  __tsan_get_report_thread(report, 1, &tid, &os_id, &running, &name, &parent_tid, trace, 16);
   fprintf(stderr, "tid = %d\n", tid);
   // CHECK: tid = 0
 }

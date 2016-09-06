@@ -1,4 +1,4 @@
-; RUN: llc < %s -tailcallopt -code-model=medium -stack-alignment=4 -mtriple=i686-linux-gnu -mcpu=pentium | FileCheck %s
+; RUN: llc < %s -stack-symbol-ordering=0 -tailcallopt -code-model=medium -stack-alignment=4 -mtriple=i686-linux-gnu -mcpu=pentium | FileCheck %s
 
 ; Check the HiPE calling convention works (x86-32)
 
@@ -73,5 +73,23 @@ define cc 11 void @baz() nounwind {
   ret void
 }
 
+; Sanity-check the tail call sequence. Number of arguments was chosen as to
+; expose a bug where the tail call sequence clobbered the stack.
+define cc 11 { i32, i32, i32 } @tailcaller(i32 %hp, i32 %p) nounwind {
+  ; CHECK:      movl	$15, %eax
+  ; CHECK-NEXT: movl	$31, %edx
+  ; CHECK-NEXT: movl	$47, %ecx
+  ; CHECK-NEXT: popl	%edi
+  ; CHECK-NEXT: jmp	tailcallee
+  %ret = tail call cc11 { i32, i32, i32 } @tailcallee(i32 %hp, i32 %p, i32 15,
+     i32 31, i32 47, i32 63) nounwind
+  ret { i32, i32, i32 } %ret
+}
+
+!hipe.literals = !{ !0, !1, !2 }
+!0 = !{ !"P_NSP_LIMIT", i32 84 }
+!1 = !{ !"X86_LEAF_WORDS", i32 24 }
+!2 = !{ !"AMD64_LEAF_WORDS", i32 24 }
 @clos = external constant i32
 declare cc 11 void @bar(i32, i32, i32, i32, i32)
+declare cc 11 { i32, i32, i32 } @tailcallee(i32, i32, i32, i32, i32, i32)

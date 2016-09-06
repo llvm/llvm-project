@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
@@ -34,8 +34,8 @@ define void @sdiv_i32_4(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
 ; working.
 
 ; FUNC-LABEL: {{^}}slow_sdiv_i32_3435:
-; SI: buffer_load_dword [[VAL:v[0-9]+]],
-; SI: v_mov_b32_e32 [[MAGIC:v[0-9]+]], 0x98a1930b
+; SI-DAG: buffer_load_dword [[VAL:v[0-9]+]],
+; SI-DAG: v_mov_b32_e32 [[MAGIC:v[0-9]+]], 0x98a1930b
 ; SI: v_mul_hi_i32 [[TMP:v[0-9]+]], [[MAGIC]], [[VAL]]
 ; SI: v_add_i32
 ; SI: v_lshrrev_b32
@@ -79,6 +79,60 @@ define void @sdiv_v4i32_4(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* 
   %num = load <4 x i32>, <4 x i32> addrspace(1) * %in
   %result = sdiv <4 x i32> %num, <i32 4, i32 4, i32 4, i32 4>
   store <4 x i32> %result, <4 x i32> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v_sdiv_i8:
+; SI: v_rcp_f32
+; SI: v_bfe_i32 [[BFE:v[0-9]+]], v{{[0-9]+}}, 0, 8
+; SI: buffer_store_dword [[BFE]]
+define void @v_sdiv_i8(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
+  %den_ptr = getelementptr i8, i8 addrspace(1)* %in, i8 1
+  %num = load i8, i8 addrspace(1) * %in
+  %den = load i8, i8 addrspace(1) * %den_ptr
+  %result = sdiv i8 %num, %den
+  %result.ext = sext i8 %result to i32
+  store i32 %result.ext, i32 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v_sdiv_i23:
+; SI: v_rcp_f32
+; SI: v_bfe_i32 [[BFE:v[0-9]+]], v{{[0-9]+}}, 0, 23
+; SI: buffer_store_dword [[BFE]]
+define void @v_sdiv_i23(i32 addrspace(1)* %out, i23 addrspace(1)* %in) {
+  %den_ptr = getelementptr i23, i23 addrspace(1)* %in, i23 1
+  %num = load i23, i23 addrspace(1) * %in
+  %den = load i23, i23 addrspace(1) * %den_ptr
+  %result = sdiv i23 %num, %den
+  %result.ext = sext i23 %result to i32
+  store i32 %result.ext, i32 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v_sdiv_i24:
+; SI: v_rcp_f32
+; SI: v_bfe_i32 [[BFE:v[0-9]+]], v{{[0-9]+}}, 0, 24
+; SI: buffer_store_dword [[BFE]]
+define void @v_sdiv_i24(i32 addrspace(1)* %out, i24 addrspace(1)* %in) {
+  %den_ptr = getelementptr i24, i24 addrspace(1)* %in, i24 1
+  %num = load i24, i24 addrspace(1) * %in
+  %den = load i24, i24 addrspace(1) * %den_ptr
+  %result = sdiv i24 %num, %den
+  %result.ext = sext i24 %result to i32
+  store i32 %result.ext, i32 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v_sdiv_i25:
+; SI-NOT: v_rcp_f32
+define void @v_sdiv_i25(i32 addrspace(1)* %out, i25 addrspace(1)* %in) {
+  %den_ptr = getelementptr i25, i25 addrspace(1)* %in, i25 1
+  %num = load i25, i25 addrspace(1) * %in
+  %den = load i25, i25 addrspace(1) * %den_ptr
+  %result = sdiv i25 %num, %den
+  %result.ext = sext i25 %result to i32
+  store i32 %result.ext, i32 addrspace(1)* %out
   ret void
 }
 

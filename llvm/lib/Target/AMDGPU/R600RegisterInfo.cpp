@@ -28,8 +28,8 @@ R600RegisterInfo::R600RegisterInfo() : AMDGPURegisterInfo() {
 BitVector R600RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
 
-  const R600InstrInfo *TII =
-      static_cast<const R600InstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();
+  const R600InstrInfo *TII = ST.getInstrInfo();
 
   Reserved.set(AMDGPU::ZERO);
   Reserved.set(AMDGPU::HALF);
@@ -88,4 +88,11 @@ bool R600RegisterInfo::isPhysRegLiveAcrossClauses(unsigned Reg) const {
   default:
     return true;
   }
+}
+
+void R600RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
+                                           int SPAdj,
+                                           unsigned FIOperandNum,
+                                           RegScavenger *RS) const {
+  llvm_unreachable("Subroutines not supported yet");
 }

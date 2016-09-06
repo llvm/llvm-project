@@ -17,13 +17,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hexagon-selectiondag-info"
 
-SDValue
-HexagonSelectionDAGInfo::
-EmitTargetCodeForMemcpy(SelectionDAG &DAG, SDLoc dl, SDValue Chain,
-                        SDValue Dst, SDValue Src, SDValue Size, unsigned Align,
-                        bool isVolatile, bool AlwaysInline,
-                        MachinePointerInfo DstPtrInfo,
-                        MachinePointerInfo SrcPtrInfo) const {
+SDValue HexagonSelectionDAGInfo::EmitTargetCodeForMemcpy(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue Size, unsigned Align, bool isVolatile, bool AlwaysInline,
+    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
   if (AlwaysInline || (Align & 0x3) != 0 || !ConstantSize)
     return SDValue();
@@ -47,15 +44,18 @@ EmitTargetCodeForMemcpy(SelectionDAG &DAG, SDLoc dl, SDValue Chain,
 
   const char *SpecialMemcpyName =
       "__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes";
+  const MachineFunction &MF = DAG.getMachineFunction();
+  bool LongCalls = MF.getSubtarget<HexagonSubtarget>().useLongCalls();
+  unsigned Flags = LongCalls ? HexagonII::HMOTF_ConstExtended : 0;
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setCallee(TLI.getLibcallCallingConv(RTLIB::MEMCPY),
                  Type::getVoidTy(*DAG.getContext()),
-                 DAG.getTargetExternalSymbol(
-                     SpecialMemcpyName, TLI.getPointerTy(DAG.getDataLayout())),
-                 std::move(Args), 0)
+                 DAG.getTargetExternalSymbol(SpecialMemcpyName,
+                      TLI.getPointerTy(DAG.getDataLayout()), Flags),
+                 std::move(Args))
       .setDiscardResult();
 
   std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);

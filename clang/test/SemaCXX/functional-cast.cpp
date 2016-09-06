@@ -126,14 +126,14 @@ void t_529_2()
   typedef A *Ap;
   (void)Ap((B*)0);
   typedef A &Ar;
-  (void)Ar(*((B*)0));
+  (void)Ar(*((B*)0)); // expected-warning {{binding dereferenced null pointer to reference has undefined behavior}}
   typedef const B *cBp;
   (void)cBp((C1*)0);
   typedef B &Br;
-  (void)Br(*((C1*)0));
+  (void)Br(*((C1*)0)); // expected-warning {{binding dereferenced null pointer to reference has undefined behavior}}
   (void)Ap((D*)0);
   typedef const A &cAr;
-  (void)cAr(*((D*)0));
+  (void)cAr(*((D*)0)); // expected-warning {{binding dereferenced null pointer to reference has undefined behavior}}
   typedef int B::*Bmp;
   (void)Bmp((int A::*)0);
   typedef void (B::*Bmfp)();

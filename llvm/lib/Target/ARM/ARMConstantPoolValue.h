@@ -37,11 +37,13 @@ namespace ARMCP {
   };
 
   enum ARMCPModifier {
-    no_modifier,
-    TLSGD,
-    GOT_PREL,
-    GOTTPOFF,
-    TPOFF
+    no_modifier, /// None
+    TLSGD,       /// Thread Local Storage (General Dynamic Mode)
+    GOT_PREL,    /// Global Offset Table, PC Relative
+    GOTTPOFF,    /// Global Offset Table, Thread Pointer Offset
+    TPOFF,       /// Thread Pointer Offset
+    SECREL,      /// Section Relative (Windows TLS)
+    SBREL,       /// Static Base Relative (RWPI)
   };
 }
 

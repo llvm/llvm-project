@@ -1,4 +1,5 @@
 ; RUN: opt -loop-accesses -analyze %s  | FileCheck %s
+; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
 
 ; Test that the loop accesses are proven safe in this case.
 ; The analyzer uses to be confused by the "diamond" because GetUnderlyingObjects

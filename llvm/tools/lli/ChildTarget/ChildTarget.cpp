@@ -1,4 +1,4 @@
-#include "llvm/ExecutionEngine/Orc/OrcArchitectureSupport.h"
+#include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetServer.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -12,10 +12,12 @@ using namespace llvm::orc;
 using namespace llvm::sys;
 
 #ifdef __x86_64__
-typedef OrcX86_64 HostOrcArch;
+typedef OrcX86_64_SysV HostOrcArch;
 #else
-typedef OrcGenericArchitecture HostOrcArch;
+typedef OrcGenericABI HostOrcArch;
 #endif
+
+ExitOnError ExitOnErr;
 
 int main(int argc, char *argv[]) {
 
@@ -23,6 +25,8 @@ int main(int argc, char *argv[]) {
     errs() << "Usage: " << argv[0] << " <input fd> <output fd>\n";
     return 1;
   }
+
+  ExitOnErr.setBanner(std::string(argv[0]) + ":");
 
   int InFD;
   int OutFD;
@@ -54,19 +58,16 @@ int main(int argc, char *argv[]) {
   JITServer Server(Channel, SymbolLookup, RegisterEHFrames, DeregisterEHFrames);
 
   while (1) {
-    JITServer::JITProcId Id = JITServer::InvalidId;
-    if (auto EC = Server.getNextProcId(Id)) {
-      errs() << "Error: " << EC.message() << "\n";
-      return 1;
-    }
+    uint32_t RawId;
+    ExitOnErr(Server.startReceivingFunction(Channel, RawId));
+    auto Id = static_cast<JITServer::JITFuncId>(RawId);
     switch (Id) {
     case JITServer::TerminateSessionId:
+      ExitOnErr(Server.handleTerminateSession());
       return 0;
     default:
-      if (auto EC = Server.handleKnownProcedure(Id)) {
-        errs() << "Error: " << EC.message() << "\n";
-        return 1;
-      }
+      ExitOnErr(Server.handleKnownFunction(Id));
+      break;
     }
   }
 

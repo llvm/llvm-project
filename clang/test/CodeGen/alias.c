@@ -24,20 +24,20 @@ extern const int __mod_usb_device_table __attribute__ ((alias("wacom_usb_ids")))
 // CHECKBASIC-DAG: @__mod_usb_device_table = alias i32, getelementptr inbounds ([8 x i32], [8 x i32]* @wacom_usb_ids, i32 0, i32 0)
 // CHECKASM-DAG: .globl __mod_usb_device_table
 // CHECKASM-DAG: __mod_usb_device_table = wacom_usb_ids
-// CHECKASM-DAG-NOT: .size __mod_usb_device_table
+// CHECKASM-NOT: .size __mod_usb_device_table
 
 extern int g1;
 extern int g1 __attribute((alias("g0")));
 // CHECKBASIC-DAG: @g1 = alias i32, i32* @g0
 // CHECKASM-DAG: .globl g1
 // CHECKASM-DAG: g1 = g0
-// CHECKASM-DAG-NOT: .size g1
+// CHECKASM-NOT: .size g1
 
 extern __thread int __libc_errno __attribute__ ((alias ("TL_WITH_ALIAS")));
 // CHECKBASIC-DAG: @__libc_errno = thread_local alias i32, i32* @TL_WITH_ALIAS
 // CHECKASM-DAG: .globl __libc_errno
 // CHECKASM-DAG: __libc_errno = TL_WITH_ALIAS
-// CHECKASM-DAG-NOT: .size __libc_errno
+// CHECKASM-NOT: .size __libc_errno
 
 void f0(void) { }
 extern void f1(void);

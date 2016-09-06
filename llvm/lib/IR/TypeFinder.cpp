@@ -41,23 +41,19 @@ void TypeFinder::run(const Module &M, bool onlyNamed) {
 
   // Get types from functions.
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDForInst;
-  for (Module::const_iterator FI = M.begin(), E = M.end(); FI != E; ++FI) {
-    incorporateType(FI->getType());
+  for (const Function &FI : M) {
+    incorporateType(FI.getType());
 
-    for (const Use &U : FI->operands())
+    for (const Use &U : FI.operands())
       incorporateValue(U.get());
 
     // First incorporate the arguments.
-    for (Function::const_arg_iterator AI = FI->arg_begin(),
-           AE = FI->arg_end(); AI != AE; ++AI)
+    for (Function::const_arg_iterator AI = FI.arg_begin(), AE = FI.arg_end();
+         AI != AE; ++AI)
       incorporateValue(&*AI);
 
-    for (Function::const_iterator BB = FI->begin(), E = FI->end();
-         BB != E;++BB)
-      for (BasicBlock::const_iterator II = BB->begin(),
-             E = BB->end(); II != E; ++II) {
-        const Instruction &I = *II;
-
+    for (const BasicBlock &BB : FI)
+      for (const Instruction &I : BB) {
         // Incorporate the type of the instruction.
         incorporateType(I.getType());
 

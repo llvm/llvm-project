@@ -8,8 +8,9 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: TestComp128GT:
 ; CHECK:       callq __gttf2
-; CHECK:       setg  %al
-; CHECK:       movzbl %al, %eax
+; CHECK:       xorl  %ecx, %ecx
+; CHECK:       setg  %cl
+; CHECK:       movl  %ecx, %eax
 ; CHECK:       retq
 }
 
@@ -20,9 +21,10 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: TestComp128GE:
 ; CHECK:       callq __getf2
+; CHECK:       xorl  %ecx, %ecx
 ; CHECK:       testl %eax, %eax
-; CHECK:       setns %al
-; CHECK:       movzbl %al, %eax
+; CHECK:       setns %cl
+; CHECK:       movl  %ecx, %eax
 ; CHECK:       retq
 }
 
@@ -48,9 +50,10 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: TestComp128LE:
 ; CHECK:       callq __letf2
-; CHECK-NEXT:  testl %eax, %eax
-; CHECK:       setle %al
-; CHECK:       movzbl %al, %eax
+; CHECK:       xorl  %ecx, %ecx
+; CHECK:       testl %eax, %eax
+; CHECK:       setle %cl
+; CHECK:       movl  %ecx, %eax
 ; CHECK:       retq
 }
 
@@ -61,9 +64,10 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: TestComp128EQ:
 ; CHECK:       callq __eqtf2
-; CHECK-NEXT:  testl %eax, %eax
-; CHECK:       sete %al
-; CHECK:       movzbl %al, %eax
+; CHECK:       xorl  %ecx, %ecx
+; CHECK:       testl %eax, %eax
+; CHECK:       sete  %cl
+; CHECK:       movl  %ecx, %eax
 ; CHECK:       retq
 }
 
@@ -74,9 +78,10 @@ entry:
   ret i32 %conv
 ; CHECK-LABEL: TestComp128NE:
 ; CHECK:       callq __netf2
-; CHECK-NEXT:  testl %eax, %eax
-; CHECK:       setne %al
-; CHECK:       movzbl %al, %eax
+; CHECK:       xorl  %ecx, %ecx
+; CHECK:       testl %eax, %eax
+; CHECK:       setne %cl
+; CHECK:       movl  %ecx, %eax
 ; CHECK:       retq
 }
 
@@ -86,8 +91,8 @@ entry:
   %cond = select i1 %cmp, fp128 %x, fp128 %y
   ret fp128 %cond
 ; CHECK-LABEL: TestMax:
-; CHECK: movaps %xmm1
 ; CHECK: movaps %xmm0
+; CHECK: movaps %xmm1
 ; CHECK: callq __gttf2
 ; CHECK: movaps {{.*}}, %xmm0
 ; CHECK: testl %eax, %eax

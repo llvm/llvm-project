@@ -25,7 +25,6 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
-#include <tuple>
 using namespace llvm;
 
 MCAsmLayout::MCAsmLayout(MCAssembler &Asm)
@@ -289,6 +288,12 @@ void MCFragment::destroy() {
     case FT_SafeSEH:
       delete cast<MCSafeSEHFragment>(this);
       return;
+    case FT_CVInlineLines:
+      delete cast<MCCVInlineLineTableFragment>(this);
+      return;
+    case FT_CVDefRange:
+      delete cast<MCCVDefRangeFragment>(this);
+      return;
     case FT_Dummy:
       delete cast<MCDummyFragment>(this);
       return;
@@ -311,7 +316,7 @@ raw_ostream &operator<<(raw_ostream &OS, const MCFixup &AF) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void MCFragment::dump() {
+LLVM_DUMP_METHOD void MCFragment::dump() {
   raw_ostream &OS = llvm::errs();
 
   OS << "<";
@@ -327,9 +332,9 @@ void MCFragment::dump() {
   case MCFragment::FT_DwarfFrame: OS << "MCDwarfCallFrameFragment"; break;
   case MCFragment::FT_LEB:   OS << "MCLEBFragment"; break;
   case MCFragment::FT_SafeSEH:    OS << "MCSafeSEHFragment"; break;
-  case MCFragment::FT_Dummy:
-    OS << "MCDummyFragment";
-    break;
+  case MCFragment::FT_CVInlineLines: OS << "MCCVInlineLineTableFragment"; break;
+  case MCFragment::FT_CVDefRange: OS << "MCCVDefRangeTableFragment"; break;
+  case MCFragment::FT_Dummy: OS << "MCDummyFragment"; break;
   }
 
   OS << "<MCFragment " << (void*) this << " LayoutOrder:" << LayoutOrder
@@ -427,13 +432,29 @@ void MCFragment::dump() {
     OS << " Sym:" << F->getSymbol();
     break;
   }
+  case MCFragment::FT_CVInlineLines: {
+    const auto *F = cast<MCCVInlineLineTableFragment>(this);
+    OS << "\n       ";
+    OS << " Sym:" << *F->getFnStartSym();
+    break;
+  }
+  case MCFragment::FT_CVDefRange: {
+    const auto *F = cast<MCCVDefRangeFragment>(this);
+    OS << "\n       ";
+    for (std::pair<const MCSymbol *, const MCSymbol *> RangeStartEnd :
+         F->getRanges()) {
+      OS << " RangeStart:" << RangeStartEnd.first;
+      OS << " RangeEnd:" << RangeStartEnd.second;
+    }
+    break;
+  }
   case MCFragment::FT_Dummy:
     break;
   }
   OS << ">";
 }
 
-void MCAssembler::dump() {
+LLVM_DUMP_METHOD void MCAssembler::dump() {
   raw_ostream &OS = llvm::errs();
 
   OS << "<MCAssembler\n";

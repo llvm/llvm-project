@@ -24,8 +24,7 @@ class RegScavenger;
 class TargetRegisterClass;
 class Triple;
 
-struct AArch64RegisterInfo : public AArch64GenRegisterInfo {
-private:
+class AArch64RegisterInfo final : public AArch64GenRegisterInfo {
   const Triple &TT;
 
 public:
@@ -61,11 +60,6 @@ public:
   /// this property
   const uint32_t *getThisReturnPreservedMask(const MachineFunction &MF,
                                              CallingConv::ID) const;
-
-  /// Return callee-saved registers for stack layout purpose. When we use
-  /// SwiftError CSR, we still need to use the standard CSR for layout purpose,
-  /// since compact unwinding expects the layout according to standard CSR.
-  const MCPhysReg *getCalleeSavedRegsForLayout(const MachineFunction *MF) const;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   const TargetRegisterClass *

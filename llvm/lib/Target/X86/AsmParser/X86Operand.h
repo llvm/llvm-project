@@ -233,46 +233,47 @@ struct X86Operand : public MCParsedAsmOperand {
   bool isMem512() const {
     return Kind == Memory && (!Mem.Size || Mem.Size == 512);
   }
+  bool isMemIndexReg(unsigned LowR, unsigned HighR) const {
+    assert(Kind == Memory && "Invalid access!");
+    return Mem.IndexReg >= LowR && Mem.IndexReg <= HighR;
+  }
 
-  bool isMemVX32() const {
-    return Kind == Memory && (!Mem.Size || Mem.Size == 32) &&
-      getMemIndexReg() >= X86::XMM0 && getMemIndexReg() <= X86::XMM15;
+  bool isMem64_RC128() const {
+    return isMem64() && isMemIndexReg(X86::XMM0, X86::XMM15);
   }
-  bool isMemVX32X() const {
-    return Kind == Memory && (!Mem.Size || Mem.Size == 32) &&
-      getMemIndexReg() >= X86::XMM0 && getMemIndexReg() <= X86::XMM31;
+  bool isMem128_RC128() const {
+    return isMem128() && isMemIndexReg(X86::XMM0, X86::XMM15);
   }
-  bool isMemVY32() const {
-    return Kind == Memory && (!Mem.Size || Mem.Size == 32) &&
-      getMemIndexReg() >= X86::YMM0 && getMemIndexReg() <= X86::YMM15;
+  bool isMem128_RC256() const {
+    return isMem128() && isMemIndexReg(X86::YMM0, X86::YMM15);
   }
-  bool isMemVY32X() const {
-    return Kind == Memory && (!Mem.Size || Mem.Size == 32) &&
-      getMemIndexReg() >= X86::YMM0 && getMemIndexReg() <= X86::YMM31;
+  bool isMem256_RC128() const {
+    return isMem256() && isMemIndexReg(X86::XMM0, X86::XMM15);
   }
-  bool isMemVX64() const {
-    return Kind == Memory && (!Mem.Size || Mem.Size == 64) &&
-      getMemIndexReg() >= X86::XMM0 && getMemIndexReg() <= X86::XMM15;
+  bool isMem256_RC256() const {
+    return isMem256() && isMemIndexReg(X86::YMM0, X86::YMM15);
   }
-  bool isMemVX64X() const {
-    return Kind == Memory && (!Mem.Size || Mem.Size == 64) &&
-      getMemIndexReg() >= X86::XMM0 && getMemIndexReg() <= X86::XMM31;
+
+  bool isMem64_RC128X() const {
+    return isMem64() && isMemIndexReg(X86::XMM0, X86::XMM31);
   }
-  bool isMemVY64() const {
-    return Kind == Memory && (!Mem.Size || Mem.Size == 64) &&
-      getMemIndexReg() >= X86::YMM0 && getMemIndexReg() <= X86::YMM15;
+  bool isMem128_RC128X() const {
+    return isMem128() && isMemIndexReg(X86::XMM0, X86::XMM31);
   }
-  bool isMemVY64X() const {
-    return Kind == Memory && (!Mem.Size || Mem.Size == 64) &&
-      getMemIndexReg() >= X86::YMM0 && getMemIndexReg() <= X86::YMM31;
+  bool isMem128_RC256X() const {
+    return isMem128() && isMemIndexReg(X86::YMM0, X86::YMM31);
   }
-  bool isMemVZ32() const {
-    return Kind == Memory && (!Mem.Size || Mem.Size == 32) &&
-      getMemIndexReg() >= X86::ZMM0 && getMemIndexReg() <= X86::ZMM31;
+  bool isMem256_RC128X() const {
+    return isMem256() && isMemIndexReg(X86::XMM0, X86::XMM31);
   }
-  bool isMemVZ64() const {
-    return Kind == Memory && (!Mem.Size || Mem.Size == 64) &&
-      getMemIndexReg() >= X86::ZMM0 && getMemIndexReg() <= X86::ZMM31;
+  bool isMem256_RC256X() const {
+    return isMem256() && isMemIndexReg(X86::YMM0, X86::YMM31);
+  }
+  bool isMem512_RC256X() const {
+    return isMem512() && isMemIndexReg(X86::YMM0, X86::YMM31);
+  }
+  bool isMem512_RC512() const {
+    return isMem512() && isMemIndexReg(X86::ZMM0, X86::ZMM31);
   }
 
   bool isAbsMem() const {

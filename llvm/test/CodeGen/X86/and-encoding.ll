@@ -15,27 +15,18 @@ define void @f1() {
   ret void
 }
 
-define void @f2(i1 *%x, i16 *%y) {
+define void @f2(i16 %x, i1 *%y) {
 ; CHECK-LABEL: f2:
-; CHECK: andl	$1, %eax                # encoding: [0x83,0xe0,0x01]
-  %a = load i1, i1* %x
-  %b = zext i1 %a to i16
-  store i16 %b, i16* %y
+; CHECK: andl	$1, %edi                # encoding: [0x83,0xe7,0x01]
+  %c = trunc i16 %x to i1
+  store i1 %c, i1* %y
   ret void
 }
 
-define i32 @f3(i1 *%x) {
+define void @f3(i32 %x, i1 *%y) {
 ; CHECK-LABEL: f3:
-; CHECK: andl	$1, %eax                # encoding: [0x83,0xe0,0x01]
-  %a = load i1, i1* %x
-  %b = zext i1 %a to i32
-  ret i32 %b
-}
-
-define i64 @f4(i1 *%x) {
-; CHECK-LABEL: f4:
-; CHECK: andl	$1, %eax                # encoding: [0x83,0xe0,0x01]
-  %a = load i1, i1* %x
-  %b = zext i1 %a to i64
-  ret i64 %b
+; CHECK: andl	$1, %edi                # encoding: [0x83,0xe7,0x01]
+  %c = trunc i32 %x to i1
+  store i1 %c, i1* %y
+  ret void
 }

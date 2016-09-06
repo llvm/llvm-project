@@ -1,4 +1,5 @@
 ; RUN: opt -mem2reg < %s -S | FileCheck %s
+; RUN: opt -passes=mem2reg < %s -S | FileCheck %s
 
 declare i32 @def(i32)
 declare i1 @use(i32)

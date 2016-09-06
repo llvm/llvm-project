@@ -67,20 +67,18 @@ static void *SignalSafeGetOrAllocate(uptr *dst, uptr size) {
 // when TLVs are not accessible (early process startup, thread cleanup, ...).
 // The following provides a "poor man's TLV" implementation, where we use the
 // shadow memory of the pointer returned by pthread_self() to store a pointer to
-// the ThreadState object. The main thread's ThreadState pointer is stored
-// separately in a static variable, because we need to access it even before the
+// the ThreadState object. The main thread's ThreadState is stored separately
+// in a static variable, because we need to access it even before the
 // shadow memory is set up.
 static uptr main_thread_identity = 0;
-static ThreadState *main_thread_state = nullptr;
+ALIGNED(64) static char main_thread_state[sizeof(ThreadState)];
 
 ThreadState *cur_thread() {
-  ThreadState **fake_tls;
   uptr thread_identity = (uptr)pthread_self();
   if (thread_identity == main_thread_identity || main_thread_identity == 0) {
-    fake_tls = &main_thread_state;
-  } else {
-    fake_tls = (ThreadState **)MemToShadow(thread_identity);
+    return (ThreadState *)&main_thread_state;
   }
+  ThreadState **fake_tls = (ThreadState **)MemToShadow(thread_identity);
   ThreadState *thr = (ThreadState *)SignalSafeGetOrAllocate(
       (uptr *)fake_tls, sizeof(ThreadState));
   return thr;
@@ -91,7 +89,11 @@ ThreadState *cur_thread() {
 // handler will try to access the unmapped ThreadState.
 void cur_thread_finalize() {
   uptr thread_identity = (uptr)pthread_self();
-  CHECK_NE(thread_identity, main_thread_identity);
+  if (thread_identity == main_thread_identity) {
+    // Calling dispatch_main() or xpc_main() actually invokes pthread_exit to
+    // exit the main thread. Let's keep the main thread's ThreadState.
+    return;
+  }
   ThreadState **fake_tls = (ThreadState **)MemToShadow(thread_identity);
   internal_munmap(*fake_tls, sizeof(ThreadState));
   *fake_tls = nullptr;
@@ -131,10 +133,12 @@ static void my_pthread_introspection_hook(unsigned int event, pthread_t thread,
   if (event == PTHREAD_INTROSPECTION_THREAD_CREATE) {
     if (thread == pthread_self()) {
       // The current thread is a newly created GCD worker thread.
+      ThreadState *thr = cur_thread();
+      Processor *proc = ProcCreate();
+      ProcWire(proc, thr);
       ThreadState *parent_thread_state = nullptr;  // No parent.
       int tid = ThreadCreate(parent_thread_state, 0, (uptr)thread, true);
       CHECK_NE(tid, 0);
-      ThreadState *thr = cur_thread();
       ThreadStart(thr, tid, GetTid());
     }
   } else if (event == PTHREAD_INTROSPECTION_THREAD_TERMINATE) {
@@ -182,10 +186,6 @@ int call_pthread_cancel_with_cleanup(int(*fn)(void *c, void *m,
   return res;
 }
 #endif
-
-bool IsGlobalVar(uptr addr) {
-  return false;
-}
 
 }  // namespace __tsan
 

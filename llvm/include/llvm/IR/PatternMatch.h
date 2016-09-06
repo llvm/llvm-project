@@ -294,10 +294,10 @@ template <typename Class> struct bind_ty {
 
 /// \brief Match a value, capturing it if we match.
 inline bind_ty<Value> m_Value(Value *&V) { return V; }
+inline bind_ty<const Value> m_Value(const Value *&V) { return V; }
 
 /// \brief Match an instruction, capturing it if we match.
 inline bind_ty<Instruction> m_Instruction(Instruction *&I) { return I; }
-
 /// \brief Match a binary operator, capturing it if we match.
 inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
 
@@ -682,7 +682,7 @@ template <typename SubPattern_t> struct Exact_match {
   Exact_match(const SubPattern_t &SP) : SubPattern(SP) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (PossiblyExactOperator *PEO = dyn_cast<PossiblyExactOperator>(V))
+    if (auto *PEO = dyn_cast<PossiblyExactOperator>(V))
       return PEO->isExact() && SubPattern.match(V);
     return false;
   }
@@ -706,7 +706,7 @@ struct CmpClass_match {
       : Predicate(Pred), L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (Class *I = dyn_cast<Class>(V))
+    if (auto *I = dyn_cast<Class>(V))
       if (L.match(I->getOperand(0)) && R.match(I->getOperand(1))) {
         Predicate = I->getPredicate();
         return true;
@@ -1310,6 +1310,43 @@ template <typename Opnd_t> struct Signum_match {
 ///      x <  0  -> -1
 template <typename Val_t> inline Signum_match<Val_t> m_Signum(const Val_t &V) {
   return Signum_match<Val_t>(V);
+}
+
+//===----------------------------------------------------------------------===//
+// Matchers for two-operands operators with the operators in either order
+//
+
+/// \brief Matches an ICmp with a predicate over LHS and RHS in either order.
+/// Does not swap the predicate.
+template<typename LHS, typename RHS>
+inline match_combine_or<CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>,
+                        CmpClass_match<RHS, LHS, ICmpInst, ICmpInst::Predicate>>
+m_c_ICmp(ICmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
+  return m_CombineOr(m_ICmp(Pred, L, R), m_ICmp(Pred, R, L));
+}
+
+/// \brief Matches an And with LHS and RHS in either order.
+template<typename LHS, typename RHS>
+inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::And>,
+                        BinaryOp_match<RHS, LHS, Instruction::And>>
+m_c_And(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_And(L, R), m_And(R, L));
+}
+
+/// \brief Matches an Or with LHS and RHS in either order.
+template<typename LHS, typename RHS>
+inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Or>,
+                        BinaryOp_match<RHS, LHS, Instruction::Or>>
+m_c_Or(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_Or(L, R), m_Or(R, L));
+}
+
+/// \brief Matches an Xor with LHS and RHS in either order.
+template<typename LHS, typename RHS>
+inline match_combine_or<BinaryOp_match<LHS, RHS, Instruction::Xor>,
+                        BinaryOp_match<RHS, LHS, Instruction::Xor>>
+m_c_Xor(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_Xor(L, R), m_Xor(R, L));
 }
 
 } // end namespace PatternMatch

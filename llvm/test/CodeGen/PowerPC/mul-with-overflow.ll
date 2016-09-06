@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -march=ppc32
 
 declare {i32, i1} @llvm.umul.with.overflow.i32(i32 %a, i32 %b)
 define zeroext i1 @a(i32 %x)  nounwind {

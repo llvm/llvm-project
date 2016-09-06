@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 < %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 < %s
 target triple = "powerpc64-unknown-linux-gnu"
 
 define <4 x i16> @test(<4 x float> %f, <4 x float> %g) {

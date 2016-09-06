@@ -1,9 +1,9 @@
-# RUN: llvm-mc -triple=mipsel-unknown-linux -mcpu=mips32r6 -relocation-model=pic -code-model=small -filetype=obj -o %T/test_ELF_O32R6.o %s
-# RUN: llc -mtriple=mipsel-unknown-linux -mcpu=mips32r6 -relocation-model=pic -filetype=obj -o %T/test_ELF_ExternalFunction_O32R6.o %S/Inputs/ExternalFunction.ll
+# RUN: llvm-mc -triple=mipsel-unknown-linux -mcpu=mips32r6 -code-model=small -filetype=obj -o %T/test_ELF_O32R6.o %s
+# RUN: llc -mtriple=mipsel-unknown-linux -mcpu=mips32r6 -filetype=obj -o %T/test_ELF_ExternalFunction_O32R6.o %S/Inputs/ExternalFunction.ll
 # RUN: llvm-rtdyld -triple=mipsel-unknown-linux -mcpu=mips32r6 -verify -map-section test_ELF_O32R6.o,.text=0x1000 -map-section test_ELF_ExternalFunction_O32R6.o,.text=0x10000 -check=%s %/T/test_ELF_O32R6.o %T/test_ELF_ExternalFunction_O32R6.o
 
-# RUN: llvm-mc -triple=mips-unknown-linux -mcpu=mips32r6 -relocation-model=pic -code-model=small -filetype=obj -o %T/test_ELF_O32R6.o %s
-# RUN: llc -mtriple=mips-unknown-linux -mcpu=mips32r6 -relocation-model=pic -filetype=obj -o %T/test_ELF_ExternalFunction_O32R6.o %S/Inputs/ExternalFunction.ll
+# RUN: llvm-mc -triple=mips-unknown-linux -mcpu=mips32r6 -code-model=small -filetype=obj -o %T/test_ELF_O32R6.o %s
+# RUN: llc -mtriple=mips-unknown-linux -mcpu=mips32r6 -filetype=obj -o %T/test_ELF_ExternalFunction_O32R6.o %S/Inputs/ExternalFunction.ll
 # RUN: llvm-rtdyld -triple=mips-unknown-linux -mcpu=mips32r6 -verify -map-section test_ELF_O32R6.o,.text=0x1000 -map-section test_ELF_ExternalFunction_O32R6.o,.text=0x10000 -check=%s %/T/test_ELF_O32R6.o %T/test_ELF_ExternalFunction_O32R6.o
 
 	.text
@@ -27,12 +27,12 @@ R_MIPS_PC19_S2:
 	lwpc $6,foo
 
 # Test R_MIPS_PC21_S2 relocation.
-# rtdyld-check:  decode_operand(R_MIPS_PC21_S2, 1)[22:0] = (foo - next_pc(R_MIPS_PC21_S2))[22:0]
+# rtdyld-check:  decode_operand(R_MIPS_PC21_S2, 1)[22:0] = (foo - next_pc(R_MIPS_PC21_S2) + 0x04)[22:0]
 R_MIPS_PC21_S2:
 	bnezc	$5,foo
 
 # Test R_MIPS_PC26_S2 relocation.
-# rtdyld-check:  decode_operand(R_MIPS_PC26_S2, 0)[27:0] = (foo - next_pc(R_MIPS_PC26_S2))[27:0]
+# rtdyld-check:  decode_operand(R_MIPS_PC26_S2, 0)[27:0] = (foo - next_pc(R_MIPS_PC26_S2) + 0x04)[27:0]
 R_MIPS_PC26_S2:
 	balc	foo
 

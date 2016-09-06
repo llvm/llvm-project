@@ -20,7 +20,7 @@ int main() {
     return printf("second mmap failed with %d\n", errno);
   __tsan_java_init(jheap, kHeapSize);
   __tsan_java_move(jheap + 16, jheap, 16);
-  printf("DONE\n");
+  fprintf(stderr, "DONE\n");
   return __tsan_java_fini();
 }
 

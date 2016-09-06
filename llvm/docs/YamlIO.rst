@@ -456,10 +456,11 @@ looks like:
 
     template <>
     struct ScalarTraits<MyCustomType> {
-      static void output(const T &value, void*, llvm::raw_ostream &out) {
+      static void output(const MyCustomType &value, void*,
+                         llvm::raw_ostream &out) {
         out << value;  // do custom formatting here
       }
-      static StringRef input(StringRef scalar, void*, T &value) {
+      static StringRef input(StringRef scalar, void*, MyCustomType &value) {
         // do custom parsing here.  Return the empty string on success,
         // or an error message on failure.
         return StringRef();

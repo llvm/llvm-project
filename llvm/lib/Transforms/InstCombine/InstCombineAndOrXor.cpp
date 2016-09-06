@@ -39,30 +39,29 @@ static inline Value *dyn_castNotVal(Value *V) {
 }
 
 /// Similar to getICmpCode but for FCmpInst. This encodes a fcmp predicate into
-/// a three bit mask. It also returns whether it is an ordered predicate by
-/// reference.
-static unsigned getFCmpCode(FCmpInst::Predicate CC, bool &isOrdered) {
-  isOrdered = false;
-  switch (CC) {
-  case FCmpInst::FCMP_ORD: isOrdered = true; return 0;  // 000
-  case FCmpInst::FCMP_UNO:                   return 0;  // 000
-  case FCmpInst::FCMP_OGT: isOrdered = true; return 1;  // 001
-  case FCmpInst::FCMP_UGT:                   return 1;  // 001
-  case FCmpInst::FCMP_OEQ: isOrdered = true; return 2;  // 010
-  case FCmpInst::FCMP_UEQ:                   return 2;  // 010
-  case FCmpInst::FCMP_OGE: isOrdered = true; return 3;  // 011
-  case FCmpInst::FCMP_UGE:                   return 3;  // 011
-  case FCmpInst::FCMP_OLT: isOrdered = true; return 4;  // 100
-  case FCmpInst::FCMP_ULT:                   return 4;  // 100
-  case FCmpInst::FCMP_ONE: isOrdered = true; return 5;  // 101
-  case FCmpInst::FCMP_UNE:                   return 5;  // 101
-  case FCmpInst::FCMP_OLE: isOrdered = true; return 6;  // 110
-  case FCmpInst::FCMP_ULE:                   return 6;  // 110
-    // True -> 7
-  default:
-    // Not expecting FCMP_FALSE and FCMP_TRUE;
-    llvm_unreachable("Unexpected FCmp predicate!");
-  }
+/// a four bit mask.
+static unsigned getFCmpCode(FCmpInst::Predicate CC) {
+  assert(FCmpInst::FCMP_FALSE <= CC && CC <= FCmpInst::FCMP_TRUE &&
+         "Unexpected FCmp predicate!");
+  // Take advantage of the bit pattern of FCmpInst::Predicate here.
+  //                                                 U L G E
+  static_assert(FCmpInst::FCMP_FALSE ==  0, "");  // 0 0 0 0
+  static_assert(FCmpInst::FCMP_OEQ   ==  1, "");  // 0 0 0 1
+  static_assert(FCmpInst::FCMP_OGT   ==  2, "");  // 0 0 1 0
+  static_assert(FCmpInst::FCMP_OGE   ==  3, "");  // 0 0 1 1
+  static_assert(FCmpInst::FCMP_OLT   ==  4, "");  // 0 1 0 0
+  static_assert(FCmpInst::FCMP_OLE   ==  5, "");  // 0 1 0 1
+  static_assert(FCmpInst::FCMP_ONE   ==  6, "");  // 0 1 1 0
+  static_assert(FCmpInst::FCMP_ORD   ==  7, "");  // 0 1 1 1
+  static_assert(FCmpInst::FCMP_UNO   ==  8, "");  // 1 0 0 0
+  static_assert(FCmpInst::FCMP_UEQ   ==  9, "");  // 1 0 0 1
+  static_assert(FCmpInst::FCMP_UGT   == 10, "");  // 1 0 1 0
+  static_assert(FCmpInst::FCMP_UGE   == 11, "");  // 1 0 1 1
+  static_assert(FCmpInst::FCMP_ULT   == 12, "");  // 1 1 0 0
+  static_assert(FCmpInst::FCMP_ULE   == 13, "");  // 1 1 0 1
+  static_assert(FCmpInst::FCMP_UNE   == 14, "");  // 1 1 1 0
+  static_assert(FCmpInst::FCMP_TRUE  == 15, "");  // 1 1 1 1
+  return CC;
 }
 
 /// This is the complement of getICmpCode, which turns an opcode and two
@@ -78,26 +77,16 @@ static Value *getNewICmpValue(bool Sign, unsigned Code, Value *LHS, Value *RHS,
 }
 
 /// This is the complement of getFCmpCode, which turns an opcode and two
-/// operands into either a FCmp instruction. isordered is passed in to determine
-/// which kind of predicate to use in the new fcmp instruction.
-static Value *getFCmpValue(bool isordered, unsigned code,
-                           Value *LHS, Value *RHS,
+/// operands into either a FCmp instruction, or a true/false constant.
+static Value *getFCmpValue(unsigned Code, Value *LHS, Value *RHS,
                            InstCombiner::BuilderTy *Builder) {
-  CmpInst::Predicate Pred;
-  switch (code) {
-  default: llvm_unreachable("Illegal FCmp code!");
-  case 0: Pred = isordered ? FCmpInst::FCMP_ORD : FCmpInst::FCMP_UNO; break;
-  case 1: Pred = isordered ? FCmpInst::FCMP_OGT : FCmpInst::FCMP_UGT; break;
-  case 2: Pred = isordered ? FCmpInst::FCMP_OEQ : FCmpInst::FCMP_UEQ; break;
-  case 3: Pred = isordered ? FCmpInst::FCMP_OGE : FCmpInst::FCMP_UGE; break;
-  case 4: Pred = isordered ? FCmpInst::FCMP_OLT : FCmpInst::FCMP_ULT; break;
-  case 5: Pred = isordered ? FCmpInst::FCMP_ONE : FCmpInst::FCMP_UNE; break;
-  case 6: Pred = isordered ? FCmpInst::FCMP_OLE : FCmpInst::FCMP_ULE; break;
-  case 7:
-    if (!isordered)
-      return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 1);
-    Pred = FCmpInst::FCMP_ORD; break;
-  }
+  const auto Pred = static_cast<FCmpInst::Predicate>(Code);
+  assert(FCmpInst::FCMP_FALSE <= Pred && Pred <= FCmpInst::FCMP_TRUE &&
+         "Unexpected FCmp predicate!");
+  if (Pred == FCmpInst::FCMP_FALSE)
+    return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
+  if (Pred == FCmpInst::FCMP_TRUE)
+    return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 1);
   return Builder->CreateFCmp(Pred, LHS, RHS);
 }
 
@@ -243,7 +232,7 @@ Instruction *InstCombiner::OptAndOp(Instruction *Op,
 
     if (CI->getValue() == ShlMask)
       // Masking out bits that the shift already masks.
-      return ReplaceInstUsesWith(TheAnd, Op);   // No need for the and.
+      return replaceInstUsesWith(TheAnd, Op);   // No need for the and.
 
     if (CI != AndRHS) {                  // Reducing bits set in and.
       TheAnd.setOperand(1, CI);
@@ -263,7 +252,7 @@ Instruction *InstCombiner::OptAndOp(Instruction *Op,
 
     if (CI->getValue() == ShrMask)
       // Masking out bits that the shift already masks.
-      return ReplaceInstUsesWith(TheAnd, Op);
+      return replaceInstUsesWith(TheAnd, Op);
 
     if (CI != AndRHS) {
       TheAnd.setOperand(1, CI);  // Reduce bits set in and cst.
@@ -465,11 +454,9 @@ static unsigned getTypeOfMaskedICmp(Value* A, Value* B, Value* C,
   if (CCst && CCst->isZero()) {
     // if C is zero, then both A and B qualify as mask
     result |= (icmp_eq ? (FoldMskICmp_Mask_AllZeroes |
-                          FoldMskICmp_Mask_AllZeroes |
                           FoldMskICmp_AMask_Mixed |
                           FoldMskICmp_BMask_Mixed)
                        : (FoldMskICmp_Mask_NotAllZeroes |
-                          FoldMskICmp_Mask_NotAllZeroes |
                           FoldMskICmp_AMask_NotMixed |
                           FoldMskICmp_BMask_NotMixed));
     if (icmp_abit)
@@ -535,53 +522,6 @@ static unsigned conjugateICmpMask(unsigned Mask) {
       >> 1;
 
   return NewMask;
-}
-
-/// Decompose an icmp into the form ((X & Y) pred Z) if possible.
-/// The returned predicate is either == or !=. Returns false if
-/// decomposition fails.
-static bool decomposeBitTestICmp(const ICmpInst *I, ICmpInst::Predicate &Pred,
-                                 Value *&X, Value *&Y, Value *&Z) {
-  ConstantInt *C = dyn_cast<ConstantInt>(I->getOperand(1));
-  if (!C)
-    return false;
-
-  switch (I->getPredicate()) {
-  default:
-    return false;
-  case ICmpInst::ICMP_SLT:
-    // X < 0 is equivalent to (X & SignBit) != 0.
-    if (!C->isZero())
-      return false;
-    Y = ConstantInt::get(I->getContext(), APInt::getSignBit(C->getBitWidth()));
-    Pred = ICmpInst::ICMP_NE;
-    break;
-  case ICmpInst::ICMP_SGT:
-    // X > -1 is equivalent to (X & SignBit) == 0.
-    if (!C->isAllOnesValue())
-      return false;
-    Y = ConstantInt::get(I->getContext(), APInt::getSignBit(C->getBitWidth()));
-    Pred = ICmpInst::ICMP_EQ;
-    break;
-  case ICmpInst::ICMP_ULT:
-    // X <u 2^n is equivalent to (X & ~(2^n-1)) == 0.
-    if (!C->getValue().isPowerOf2())
-      return false;
-    Y = ConstantInt::get(I->getContext(), -C->getValue());
-    Pred = ICmpInst::ICMP_EQ;
-    break;
-  case ICmpInst::ICMP_UGT:
-    // X >u 2^n-1 is equivalent to (X & ~(2^n-1)) != 0.
-    if (!(C->getValue() + 1).isPowerOf2())
-      return false;
-    Y = ConstantInt::get(I->getContext(), ~C->getValue());
-    Pred = ICmpInst::ICMP_NE;
-    break;
-  }
-
-  X = I->getOperand(0);
-  Z = ConstantInt::getNullValue(C->getType());
-  return true;
 }
 
 /// Handle (icmp(A & B) ==/!= C) &/| (icmp(A & D) ==/!= E)
@@ -666,7 +606,7 @@ static unsigned foldLogOpOfMaskedICmpsHelper(Value*& A,
   if (!ICmpInst::isEquality(RHSCC))
     return 0;
 
-  // Look for ANDs in on the right side of the RHS icmp.
+  // Look for ANDs on the right side of the RHS icmp.
   if (!ok && R2->getType()->isIntegerTy()) {
     if (!match(R2, m_And(m_Value(R11), m_Value(R12)))) {
       R11 = R2;
@@ -970,16 +910,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
       RHSCC == ICmpInst::ICMP_SGE || RHSCC == ICmpInst::ICMP_SLE)
     return nullptr;
 
-  // Make a constant range that's the intersection of the two icmp ranges.
-  // If the intersection is empty, we know that the result is false.
-  ConstantRange LHSRange =
-      ConstantRange::makeAllowedICmpRegion(LHSCC, LHSCst->getValue());
-  ConstantRange RHSRange =
-      ConstantRange::makeAllowedICmpRegion(RHSCC, RHSCst->getValue());
-
-  if (LHSRange.intersectWith(RHSRange).isEmptySet())
-    return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
-
   // We can't fold (ugt x, C) & (sgt x, C2).
   if (!PredicatesFoldable(LHSCC, RHSCC))
     return nullptr;
@@ -1119,6 +1049,29 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
 /// Optimize (fcmp)&(fcmp).  NOTE: Unlike the rest of instcombine, this returns
 /// a Value which should already be inserted into the function.
 Value *InstCombiner::FoldAndOfFCmps(FCmpInst *LHS, FCmpInst *RHS) {
+  Value *Op0LHS = LHS->getOperand(0), *Op0RHS = LHS->getOperand(1);
+  Value *Op1LHS = RHS->getOperand(0), *Op1RHS = RHS->getOperand(1);
+  FCmpInst::Predicate Op0CC = LHS->getPredicate(), Op1CC = RHS->getPredicate();
+
+  if (Op0LHS == Op1RHS && Op0RHS == Op1LHS) {
+    // Swap RHS operands to match LHS.
+    Op1CC = FCmpInst::getSwappedPredicate(Op1CC);
+    std::swap(Op1LHS, Op1RHS);
+  }
+
+  // Simplify (fcmp cc0 x, y) & (fcmp cc1 x, y).
+  // Suppose the relation between x and y is R, where R is one of
+  // U(1000), L(0100), G(0010) or E(0001), and CC0 and CC1 are the bitmasks for
+  // testing the desired relations.
+  //
+  // Since (R & CC0) and (R & CC1) are either R or 0, we actually have this:
+  //    bool(R & CC0) && bool(R & CC1)
+  //  = bool((R & CC0) & (R & CC1))
+  //  = bool(R & (CC0 & CC1)) <= by re-association, commutation, and idempotency
+  if (Op0LHS == Op1LHS && Op0RHS == Op1RHS)
+    return getFCmpValue(getFCmpCode(Op0CC) & getFCmpCode(Op1CC), Op0LHS, Op0RHS,
+                        Builder);
+
   if (LHS->getPredicate() == FCmpInst::FCMP_ORD &&
       RHS->getPredicate() == FCmpInst::FCMP_ORD) {
     if (LHS->getOperand(0)->getType() != RHS->getOperand(0)->getType())
@@ -1140,56 +1093,6 @@ Value *InstCombiner::FoldAndOfFCmps(FCmpInst *LHS, FCmpInst *RHS) {
         isa<ConstantAggregateZero>(RHS->getOperand(1)))
       return Builder->CreateFCmpORD(LHS->getOperand(0), RHS->getOperand(0));
     return nullptr;
-  }
-
-  Value *Op0LHS = LHS->getOperand(0), *Op0RHS = LHS->getOperand(1);
-  Value *Op1LHS = RHS->getOperand(0), *Op1RHS = RHS->getOperand(1);
-  FCmpInst::Predicate Op0CC = LHS->getPredicate(), Op1CC = RHS->getPredicate();
-
-
-  if (Op0LHS == Op1RHS && Op0RHS == Op1LHS) {
-    // Swap RHS operands to match LHS.
-    Op1CC = FCmpInst::getSwappedPredicate(Op1CC);
-    std::swap(Op1LHS, Op1RHS);
-  }
-
-  if (Op0LHS == Op1LHS && Op0RHS == Op1RHS) {
-    // Simplify (fcmp cc0 x, y) & (fcmp cc1 x, y).
-    if (Op0CC == Op1CC)
-      return Builder->CreateFCmp((FCmpInst::Predicate)Op0CC, Op0LHS, Op0RHS);
-    if (Op0CC == FCmpInst::FCMP_FALSE || Op1CC == FCmpInst::FCMP_FALSE)
-      return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
-    if (Op0CC == FCmpInst::FCMP_TRUE)
-      return RHS;
-    if (Op1CC == FCmpInst::FCMP_TRUE)
-      return LHS;
-
-    bool Op0Ordered;
-    bool Op1Ordered;
-    unsigned Op0Pred = getFCmpCode(Op0CC, Op0Ordered);
-    unsigned Op1Pred = getFCmpCode(Op1CC, Op1Ordered);
-    // uno && ord -> false
-    if (Op0Pred == 0 && Op1Pred == 0 && Op0Ordered != Op1Ordered)
-        return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
-    if (Op1Pred == 0) {
-      std::swap(LHS, RHS);
-      std::swap(Op0Pred, Op1Pred);
-      std::swap(Op0Ordered, Op1Ordered);
-    }
-    if (Op0Pred == 0) {
-      // uno && ueq -> uno && (uno || eq) -> uno
-      // ord && olt -> ord && (ord && lt) -> olt
-      if (!Op0Ordered && (Op0Ordered == Op1Ordered))
-        return LHS;
-      if (Op0Ordered && (Op0Ordered == Op1Ordered))
-        return RHS;
-
-      // uno && oeq -> uno && (ord && eq) -> false
-      if (!Op0Ordered)
-        return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
-      // ord && ueq -> ord && (uno || eq) -> oeq
-      return getFCmpValue(true, Op1Pred, Op0LHS, Op0RHS, Builder);
-    }
   }
 
   return nullptr;
@@ -1220,24 +1123,150 @@ static Instruction *matchDeMorgansLaws(BinaryOperator &I,
         return BinaryOperator::CreateNot(LogicOp);
       }
 
-  // De Morgan's Law in disguise:
-  // (zext(bool A) ^ 1) & (zext(bool B) ^ 1) -> zext(~(A | B))
-  // (zext(bool A) ^ 1) | (zext(bool B) ^ 1) -> zext(~(A & B))
-  Value *A = nullptr;
-  Value *B = nullptr;
-  ConstantInt *C1 = nullptr;
-  if (match(Op0, m_OneUse(m_Xor(m_ZExt(m_Value(A)), m_ConstantInt(C1)))) &&
-      match(Op1, m_OneUse(m_Xor(m_ZExt(m_Value(B)), m_Specific(C1))))) {
-    // TODO: This check could be loosened to handle different type sizes.
-    // Alternatively, we could fix the definition of m_Not to recognize a not
-    // operation hidden by a zext?
-    if (A->getType()->isIntegerTy(1) && B->getType()->isIntegerTy(1) &&
-        C1->isOne()) {
-      Value *LogicOp = Builder->CreateBinOp(Opcode, A, B,
-                                            I.getName() + ".demorgan");
-      Value *Not = Builder->CreateNot(LogicOp);
-      return CastInst::CreateZExtOrBitCast(Not, I.getType());
+  return nullptr;
+}
+
+bool InstCombiner::shouldOptimizeCast(CastInst *CI) {
+  Value *CastSrc = CI->getOperand(0);
+
+  // Noop casts and casts of constants should be eliminated trivially.
+  if (CI->getSrcTy() == CI->getDestTy() || isa<Constant>(CastSrc))
+    return false;
+
+  // If this cast is paired with another cast that can be eliminated, we prefer
+  // to have it eliminated.
+  if (const auto *PrecedingCI = dyn_cast<CastInst>(CastSrc))
+    if (isEliminableCastPair(PrecedingCI, CI))
+      return false;
+
+  // If this is a vector sext from a compare, then we don't want to break the
+  // idiom where each element of the extended vector is either zero or all ones.
+  if (CI->getOpcode() == Instruction::SExt &&
+      isa<CmpInst>(CastSrc) && CI->getDestTy()->isVectorTy())
+    return false;
+
+  return true;
+}
+
+Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
+  auto LogicOpc = I.getOpcode();
+  assert((LogicOpc == Instruction::And || LogicOpc == Instruction::Or ||
+          LogicOpc == Instruction::Xor) &&
+         "Unexpected opcode for bitwise logic folding");
+
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  CastInst *Cast0 = dyn_cast<CastInst>(Op0);
+  if (!Cast0)
+    return nullptr;
+
+  // This must be a cast from an integer or integer vector source type to allow
+  // transformation of the logic operation to the source type.
+  Type *DestTy = I.getType();
+  Type *SrcTy = Cast0->getSrcTy();
+  if (!SrcTy->isIntOrIntVectorTy())
+    return nullptr;
+
+  // If one operand is a bitcast and the other is a constant, move the logic
+  // operation ahead of the bitcast. That is, do the logic operation in the
+  // original type. This can eliminate useless bitcasts and allow normal
+  // combines that would otherwise be impeded by the bitcast. Canonicalization
+  // ensures that if there is a constant operand, it will be the second operand.
+  Value *BC = nullptr;
+  Constant *C = nullptr;
+  if ((match(Op0, m_BitCast(m_Value(BC))) && match(Op1, m_Constant(C)))) {
+    Value *NewConstant = ConstantExpr::getBitCast(C, SrcTy);
+    Value *NewOp = Builder->CreateBinOp(LogicOpc, BC, NewConstant, I.getName());
+    return CastInst::CreateBitOrPointerCast(NewOp, DestTy);
+  }
+
+  // Similarly, if one operand is zexted and the other is a constant, move the
+  // logic operation ahead of the zext if the constant is unchanged in the
+  // smaller source type. Performing the logic in a smaller type may provide
+  // more information to later folds, and the smaller logic instruction may be
+  // cheaper (particularly in the case of vectors).
+  Value *X;
+  if (match(Op0, m_OneUse(m_ZExt(m_Value(X)))) && match(Op1, m_Constant(C))) {
+    Constant *TruncC = ConstantExpr::getTrunc(C, SrcTy);
+    Constant *ZextTruncC = ConstantExpr::getZExt(TruncC, DestTy);
+    if (ZextTruncC == C) {
+      // LogicOpc (zext X), C --> zext (LogicOpc X, C)
+      Value *NewOp = Builder->CreateBinOp(LogicOpc, X, TruncC);
+      return new ZExtInst(NewOp, DestTy);
     }
+  }
+
+  CastInst *Cast1 = dyn_cast<CastInst>(Op1);
+  if (!Cast1)
+    return nullptr;
+
+  // Both operands of the logic operation are casts. The casts must be of the
+  // same type for reduction.
+  auto CastOpcode = Cast0->getOpcode();
+  if (CastOpcode != Cast1->getOpcode() || SrcTy != Cast1->getSrcTy())
+    return nullptr;
+
+  Value *Cast0Src = Cast0->getOperand(0);
+  Value *Cast1Src = Cast1->getOperand(0);
+
+  // fold logic(cast(A), cast(B)) -> cast(logic(A, B))
+  if (shouldOptimizeCast(Cast0) && shouldOptimizeCast(Cast1)) {
+    Value *NewOp = Builder->CreateBinOp(LogicOpc, Cast0Src, Cast1Src,
+                                        I.getName());
+    return CastInst::Create(CastOpcode, NewOp, DestTy);
+  }
+
+  // For now, only 'and'/'or' have optimizations after this.
+  if (LogicOpc == Instruction::Xor)
+    return nullptr;
+
+  // If this is logic(cast(icmp), cast(icmp)), try to fold this even if the
+  // cast is otherwise not optimizable.  This happens for vector sexts.
+  ICmpInst *ICmp0 = dyn_cast<ICmpInst>(Cast0Src);
+  ICmpInst *ICmp1 = dyn_cast<ICmpInst>(Cast1Src);
+  if (ICmp0 && ICmp1) {
+    Value *Res = LogicOpc == Instruction::And ? FoldAndOfICmps(ICmp0, ICmp1)
+                                              : FoldOrOfICmps(ICmp0, ICmp1, &I);
+    if (Res)
+      return CastInst::Create(CastOpcode, Res, DestTy);
+    return nullptr;
+  }
+
+  // If this is logic(cast(fcmp), cast(fcmp)), try to fold this even if the
+  // cast is otherwise not optimizable.  This happens for vector sexts.
+  FCmpInst *FCmp0 = dyn_cast<FCmpInst>(Cast0Src);
+  FCmpInst *FCmp1 = dyn_cast<FCmpInst>(Cast1Src);
+  if (FCmp0 && FCmp1) {
+    Value *Res = LogicOpc == Instruction::And ? FoldAndOfFCmps(FCmp0, FCmp1)
+                                              : FoldOrOfFCmps(FCmp0, FCmp1);
+    if (Res)
+      return CastInst::Create(CastOpcode, Res, DestTy);
+    return nullptr;
+  }
+
+  return nullptr;
+}
+
+static Instruction *foldBoolSextMaskToSelect(BinaryOperator &I) {
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+
+  // Canonicalize SExt or Not to the LHS
+  if (match(Op1, m_SExt(m_Value())) || match(Op1, m_Not(m_Value()))) {
+    std::swap(Op0, Op1);
+  }
+
+  // Fold (and (sext bool to A), B) --> (select bool, B, 0)
+  Value *X = nullptr;
+  if (match(Op0, m_SExt(m_Value(X))) &&
+      X->getType()->getScalarType()->isIntegerTy(1)) {
+    Value *Zero = Constant::getNullValue(Op1->getType());
+    return SelectInst::Create(X, Op1, Zero);
+  }
+
+  // Fold (and ~(sext bool to A), B) --> (select bool, 0, B)
+  if (match(Op0, m_Not(m_SExt(m_Value(X)))) &&
+      X->getType()->getScalarType()->isIntegerTy(1)) {
+    Value *Zero = Constant::getNullValue(Op0->getType());
+    return SelectInst::Create(X, Zero, Op1);
   }
 
   return nullptr;
@@ -1248,14 +1277,14 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   if (Value *V = SimplifyVectorOp(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyAndInst(Op0, Op1, DL, TLI, DT, AC))
-    return ReplaceInstUsesWith(I, V);
+  if (Value *V = SimplifyAndInst(Op0, Op1, DL, &TLI, &DT, &AC))
+    return replaceInstUsesWith(I, V);
 
   // (A|B)&(A|C) -> A|(B&C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // See if we can simplify any instructions used by the instruction whose sole
   // purpose is to compute bits we don't care about.
@@ -1263,7 +1292,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     return &I;
 
   if (Value *V = SimplifyBSwap(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   if (ConstantInt *AndRHS = dyn_cast<ConstantInt>(Op1)) {
     const APInt &AndRHSMask = AndRHS->getValue();
@@ -1451,7 +1480,7 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     ICmpInst *RHS = dyn_cast<ICmpInst>(Op1);
     if (LHS && RHS)
       if (Value *Res = FoldAndOfICmps(LHS, RHS))
-        return ReplaceInstUsesWith(I, Res);
+        return replaceInstUsesWith(I, Res);
 
     // TODO: Make this recursive; it's a little tricky because an arbitrary
     // number of 'and' instructions might have to be created.
@@ -1459,18 +1488,18 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
     if (LHS && match(Op1, m_OneUse(m_And(m_Value(X), m_Value(Y))))) {
       if (auto *Cmp = dyn_cast<ICmpInst>(X))
         if (Value *Res = FoldAndOfICmps(LHS, Cmp))
-          return ReplaceInstUsesWith(I, Builder->CreateAnd(Res, Y));
+          return replaceInstUsesWith(I, Builder->CreateAnd(Res, Y));
       if (auto *Cmp = dyn_cast<ICmpInst>(Y))
         if (Value *Res = FoldAndOfICmps(LHS, Cmp))
-          return ReplaceInstUsesWith(I, Builder->CreateAnd(Res, X));
+          return replaceInstUsesWith(I, Builder->CreateAnd(Res, X));
     }
     if (RHS && match(Op0, m_OneUse(m_And(m_Value(X), m_Value(Y))))) {
       if (auto *Cmp = dyn_cast<ICmpInst>(X))
         if (Value *Res = FoldAndOfICmps(Cmp, RHS))
-          return ReplaceInstUsesWith(I, Builder->CreateAnd(Res, Y));
+          return replaceInstUsesWith(I, Builder->CreateAnd(Res, Y));
       if (auto *Cmp = dyn_cast<ICmpInst>(Y))
         if (Value *Res = FoldAndOfICmps(Cmp, RHS))
-          return ReplaceInstUsesWith(I, Builder->CreateAnd(Res, X));
+          return replaceInstUsesWith(I, Builder->CreateAnd(Res, X));
     }
   }
 
@@ -1478,92 +1507,46 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   if (FCmpInst *LHS = dyn_cast<FCmpInst>(I.getOperand(0)))
     if (FCmpInst *RHS = dyn_cast<FCmpInst>(I.getOperand(1)))
       if (Value *Res = FoldAndOfFCmps(LHS, RHS))
-        return ReplaceInstUsesWith(I, Res);
+        return replaceInstUsesWith(I, Res);
 
+  if (Instruction *CastedAnd = foldCastedBitwiseLogic(I))
+    return CastedAnd;
 
-  if (CastInst *Op0C = dyn_cast<CastInst>(Op0)) {
-    Value *Op0COp = Op0C->getOperand(0);
-    Type *SrcTy = Op0COp->getType();
-    // fold (and (cast A), (cast B)) -> (cast (and A, B))
-    if (CastInst *Op1C = dyn_cast<CastInst>(Op1)) {
-      if (Op0C->getOpcode() == Op1C->getOpcode() && // same cast kind ?
-          SrcTy == Op1C->getOperand(0)->getType() &&
-          SrcTy->isIntOrIntVectorTy()) {
-        Value *Op1COp = Op1C->getOperand(0);
-
-        // Only do this if the casts both really cause code to be generated.
-        if (ShouldOptimizeCast(Op0C->getOpcode(), Op0COp, I.getType()) &&
-            ShouldOptimizeCast(Op1C->getOpcode(), Op1COp, I.getType())) {
-          Value *NewOp = Builder->CreateAnd(Op0COp, Op1COp, I.getName());
-          return CastInst::Create(Op0C->getOpcode(), NewOp, I.getType());
-        }
-
-        // If this is and(cast(icmp), cast(icmp)), try to fold this even if the
-        // cast is otherwise not optimizable.  This happens for vector sexts.
-        if (ICmpInst *RHS = dyn_cast<ICmpInst>(Op1COp))
-          if (ICmpInst *LHS = dyn_cast<ICmpInst>(Op0COp))
-            if (Value *Res = FoldAndOfICmps(LHS, RHS))
-              return CastInst::Create(Op0C->getOpcode(), Res, I.getType());
-
-        // If this is and(cast(fcmp), cast(fcmp)), try to fold this even if the
-        // cast is otherwise not optimizable.  This happens for vector sexts.
-        if (FCmpInst *RHS = dyn_cast<FCmpInst>(Op1COp))
-          if (FCmpInst *LHS = dyn_cast<FCmpInst>(Op0COp))
-            if (Value *Res = FoldAndOfFCmps(LHS, RHS))
-              return CastInst::Create(Op0C->getOpcode(), Res, I.getType());
-      }
-    }
-
-    // If we are masking off the sign bit of a floating-point value, convert
-    // this to the canonical fabs intrinsic call and cast back to integer.
-    // The backend should know how to optimize fabs().
-    // TODO: This transform should also apply to vectors.
-    ConstantInt *CI;
-    if (isa<BitCastInst>(Op0C) && SrcTy->isFloatingPointTy() &&
-        match(Op1, m_ConstantInt(CI)) && CI->isMaxValue(true)) {
-      Module *M = I.getModule();
-      Function *Fabs = Intrinsic::getDeclaration(M, Intrinsic::fabs, SrcTy);
-      Value *Call = Builder->CreateCall(Fabs, Op0COp, "fabs");
-      return CastInst::CreateBitOrPointerCast(Call, I.getType());
-    }
-  }
-
-  {
-    Value *X = nullptr;
-    bool OpsSwapped = false;
-    // Canonicalize SExt or Not to the LHS
-    if (match(Op1, m_SExt(m_Value())) ||
-        match(Op1, m_Not(m_Value()))) {
-      std::swap(Op0, Op1);
-      OpsSwapped = true;
-    }
-
-    // Fold (and (sext bool to A), B) --> (select bool, B, 0)
-    if (match(Op0, m_SExt(m_Value(X))) &&
-        X->getType()->getScalarType()->isIntegerTy(1)) {
-      Value *Zero = Constant::getNullValue(Op1->getType());
-      return SelectInst::Create(X, Op1, Zero);
-    }
-
-    // Fold (and ~(sext bool to A), B) --> (select bool, 0, B)
-    if (match(Op0, m_Not(m_SExt(m_Value(X)))) &&
-        X->getType()->getScalarType()->isIntegerTy(1)) {
-      Value *Zero = Constant::getNullValue(Op0->getType());
-      return SelectInst::Create(X, Zero, Op1);
-    }
-
-    if (OpsSwapped)
-      std::swap(Op0, Op1);
-  }
+  if (Instruction *Select = foldBoolSextMaskToSelect(I))
+    return Select;
 
   return Changed ? &I : nullptr;
 }
 
-/// Given an OR instruction, check to see if this is a bswap or bitreverse
-/// idiom. If so, insert the new intrinsic and return it.
-Instruction *InstCombiner::MatchBSwapOrBitReverse(BinaryOperator &I) {
+/// Given an OR instruction, check to see if this is a bswap idiom. If so,
+/// insert the new intrinsic and return it.
+Instruction *InstCombiner::MatchBSwap(BinaryOperator &I) {
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+
+  // Look through zero extends.
+  if (Instruction *Ext = dyn_cast<ZExtInst>(Op0))
+    Op0 = Ext->getOperand(0);
+
+  if (Instruction *Ext = dyn_cast<ZExtInst>(Op1))
+    Op1 = Ext->getOperand(0);
+
+  // (A | B) | C  and  A | (B | C)                  -> bswap if possible.
+  bool OrOfOrs = match(Op0, m_Or(m_Value(), m_Value())) ||
+                 match(Op1, m_Or(m_Value(), m_Value()));
+
+  // (A >> B) | (C << D)  and  (A << B) | (B >> C)  -> bswap if possible.
+  bool OrOfShifts = match(Op0, m_LogicalShift(m_Value(), m_Value())) &&
+                    match(Op1, m_LogicalShift(m_Value(), m_Value()));
+
+  // (A & B) | (C & D)                              -> bswap if possible.
+  bool OrOfAnds = match(Op0, m_And(m_Value(), m_Value())) &&
+                  match(Op1, m_And(m_Value(), m_Value()));
+
+  if (!OrOfOrs && !OrOfShifts && !OrOfAnds)
+    return nullptr;
+
   SmallVector<Instruction*, 4> Insts;
-  if (!recognizeBitReverseOrBSwapIdiom(&I, true, false, Insts))
+  if (!recognizeBSwapOrBitReverseIdiom(&I, true, false, Insts))
     return nullptr;
   Instruction *LastInst = Insts.pop_back_val();
   LastInst->removeFromParent();
@@ -1573,28 +1556,89 @@ Instruction *InstCombiner::MatchBSwapOrBitReverse(BinaryOperator &I) {
   return LastInst;
 }
 
-/// We have an expression of the form (A&C)|(B&D).  Check if A is (cond?-1:0)
-/// and either B or D is ~(cond?-1,0) or (cond?0,-1), then we can simplify this
-/// expression to "cond ? C : D or B".
-static Instruction *MatchSelectFromAndOr(Value *A, Value *B,
-                                         Value *C, Value *D) {
-  // If A is not a select of -1/0, this cannot match.
-  Value *Cond = nullptr;
-  if (!match(A, m_SExt(m_Value(Cond))) ||
-      !Cond->getType()->isIntegerTy(1))
+/// If all elements of two constant vectors are 0/-1 and inverses, return true.
+static bool areInverseVectorBitmasks(Constant *C1, Constant *C2) {
+  unsigned NumElts = C1->getType()->getVectorNumElements();
+  for (unsigned i = 0; i != NumElts; ++i) {
+    Constant *EltC1 = C1->getAggregateElement(i);
+    Constant *EltC2 = C2->getAggregateElement(i);
+    if (!EltC1 || !EltC2)
+      return false;
+
+    // One element must be all ones, and the other must be all zeros.
+    // FIXME: Allow undef elements.
+    if (!((match(EltC1, m_Zero()) && match(EltC2, m_AllOnes())) ||
+          (match(EltC2, m_Zero()) && match(EltC1, m_AllOnes()))))
+      return false;
+  }
+  return true;
+}
+
+/// We have an expression of the form (A & C) | (B & D). If A is a scalar or
+/// vector composed of all-zeros or all-ones values and is the bitwise 'not' of
+/// B, it can be used as the condition operand of a select instruction.
+static Value *getSelectCondition(Value *A, Value *B,
+                                 InstCombiner::BuilderTy &Builder) {
+  // If these are scalars or vectors of i1, A can be used directly.
+  Type *Ty = A->getType();
+  if (match(A, m_Not(m_Specific(B))) && Ty->getScalarType()->isIntegerTy(1))
+    return A;
+
+  // If A and B are sign-extended, look through the sexts to find the booleans.
+  Value *Cond;
+  if (match(A, m_SExt(m_Value(Cond))) &&
+      Cond->getType()->getScalarType()->isIntegerTy(1) &&
+      match(B, m_CombineOr(m_Not(m_SExt(m_Specific(Cond))),
+                           m_SExt(m_Not(m_Specific(Cond))))))
+    return Cond;
+
+  // All scalar (and most vector) possibilities should be handled now.
+  // Try more matches that only apply to non-splat constant vectors.
+  if (!Ty->isVectorTy())
     return nullptr;
 
-  // ((cond?-1:0)&C) | (B&(cond?0:-1)) -> cond ? C : B.
-  if (match(D, m_Not(m_SExt(m_Specific(Cond)))))
-    return SelectInst::Create(Cond, C, B);
-  if (match(D, m_SExt(m_Not(m_Specific(Cond)))))
-    return SelectInst::Create(Cond, C, B);
+  // If both operands are constants, see if the constants are inverse bitmasks.
+  Constant *AC, *BC;
+  if (match(A, m_Constant(AC)) && match(B, m_Constant(BC)) &&
+      areInverseVectorBitmasks(AC, BC))
+    return ConstantExpr::getTrunc(AC, CmpInst::makeCmpResultType(Ty));
 
-  // ((cond?-1:0)&C) | ((cond?0:-1)&D) -> cond ? C : D.
-  if (match(B, m_Not(m_SExt(m_Specific(Cond)))))
-    return SelectInst::Create(Cond, C, D);
-  if (match(B, m_SExt(m_Not(m_Specific(Cond)))))
-    return SelectInst::Create(Cond, C, D);
+  // If both operands are xor'd with constants using the same sexted boolean
+  // operand, see if the constants are inverse bitmasks.
+  if (match(A, (m_Xor(m_SExt(m_Value(Cond)), m_Constant(AC)))) &&
+      match(B, (m_Xor(m_SExt(m_Specific(Cond)), m_Constant(BC)))) &&
+      Cond->getType()->getScalarType()->isIntegerTy(1) &&
+      areInverseVectorBitmasks(AC, BC)) {
+    AC = ConstantExpr::getTrunc(AC, CmpInst::makeCmpResultType(Ty));
+    return Builder.CreateXor(Cond, AC);
+  }
+  return nullptr;
+}
+
+/// We have an expression of the form (A & C) | (B & D). Try to simplify this
+/// to "A' ? C : D", where A' is a boolean or vector of booleans.
+static Value *matchSelectFromAndOr(Value *A, Value *C, Value *B, Value *D,
+                                   InstCombiner::BuilderTy &Builder) {
+  // The potential condition of the select may be bitcasted. In that case, look
+  // through its bitcast and the corresponding bitcast of the 'not' condition.
+  Type *OrigType = A->getType();
+  Value *SrcA, *SrcB;
+  if (match(A, m_OneUse(m_BitCast(m_Value(SrcA)))) &&
+      match(B, m_OneUse(m_BitCast(m_Value(SrcB))))) {
+    A = SrcA;
+    B = SrcB;
+  }
+
+  if (Value *Cond = getSelectCondition(A, B, Builder)) {
+    // ((bc Cond) & C) | ((bc ~Cond) & D) --> bc (select Cond, (bc C), (bc D))
+    // The bitcasts will either all exist or all not exist. The builder will
+    // not create unnecessary casts if the types already match.
+    Value *BitcastC = Builder.CreateBitCast(C, A->getType());
+    Value *BitcastD = Builder.CreateBitCast(D, A->getType());
+    Value *Select = Builder.CreateSelect(Cond, BitcastC, BitcastD);
+    return Builder.CreateBitCast(Select, OrigType);
+  }
+
   return nullptr;
 }
 
@@ -1620,17 +1664,17 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       Value *Mask = nullptr;
       Value *Masked = nullptr;
       if (LAnd->getOperand(0) == RAnd->getOperand(0) &&
-          isKnownToBeAPowerOfTwo(LAnd->getOperand(1), DL, false, 0, AC, CxtI,
-                                 DT) &&
-          isKnownToBeAPowerOfTwo(RAnd->getOperand(1), DL, false, 0, AC, CxtI,
-                                 DT)) {
+          isKnownToBeAPowerOfTwo(LAnd->getOperand(1), DL, false, 0, &AC, CxtI,
+                                 &DT) &&
+          isKnownToBeAPowerOfTwo(RAnd->getOperand(1), DL, false, 0, &AC, CxtI,
+                                 &DT)) {
         Mask = Builder->CreateOr(LAnd->getOperand(1), RAnd->getOperand(1));
         Masked = Builder->CreateAnd(LAnd->getOperand(0), Mask);
       } else if (LAnd->getOperand(1) == RAnd->getOperand(1) &&
-                 isKnownToBeAPowerOfTwo(LAnd->getOperand(0), DL, false, 0, AC,
-                                        CxtI, DT) &&
-                 isKnownToBeAPowerOfTwo(RAnd->getOperand(0), DL, false, 0, AC,
-                                        CxtI, DT)) {
+                 isKnownToBeAPowerOfTwo(LAnd->getOperand(0), DL, false, 0, &AC,
+                                        CxtI, &DT) &&
+                 isKnownToBeAPowerOfTwo(RAnd->getOperand(0), DL, false, 0, &AC,
+                                        CxtI, &DT)) {
         Mask = Builder->CreateOr(LAnd->getOperand(0), RAnd->getOperand(0));
         Masked = Builder->CreateAnd(LAnd->getOperand(1), Mask);
       }
@@ -1748,7 +1792,7 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
   if (Value *V = simplifyRangeCheck(RHS, LHS, /*Inverted=*/true))
     return V;
- 
+
   // This only handles icmp of constants: (icmp1 A, C1) | (icmp2 B, C2).
   if (!LHSCst || !RHSCst) return nullptr;
 
@@ -1933,6 +1977,27 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 /// Optimize (fcmp)|(fcmp).  NOTE: Unlike the rest of instcombine, this returns
 /// a Value which should already be inserted into the function.
 Value *InstCombiner::FoldOrOfFCmps(FCmpInst *LHS, FCmpInst *RHS) {
+  Value *Op0LHS = LHS->getOperand(0), *Op0RHS = LHS->getOperand(1);
+  Value *Op1LHS = RHS->getOperand(0), *Op1RHS = RHS->getOperand(1);
+  FCmpInst::Predicate Op0CC = LHS->getPredicate(), Op1CC = RHS->getPredicate();
+
+  if (Op0LHS == Op1RHS && Op0RHS == Op1LHS) {
+    // Swap RHS operands to match LHS.
+    Op1CC = FCmpInst::getSwappedPredicate(Op1CC);
+    std::swap(Op1LHS, Op1RHS);
+  }
+
+  // Simplify (fcmp cc0 x, y) | (fcmp cc1 x, y).
+  // This is a similar transformation to the one in FoldAndOfFCmps.
+  //
+  // Since (R & CC0) and (R & CC1) are either R or 0, we actually have this:
+  //    bool(R & CC0) || bool(R & CC1)
+  //  = bool((R & CC0) | (R & CC1))
+  //  = bool(R & (CC0 | CC1)) <= by reversed distribution (contribution? ;)
+  if (Op0LHS == Op1LHS && Op0RHS == Op1RHS)
+    return getFCmpValue(getFCmpCode(Op0CC) | getFCmpCode(Op1CC), Op0LHS, Op0RHS,
+                        Builder);
+
   if (LHS->getPredicate() == FCmpInst::FCMP_UNO &&
       RHS->getPredicate() == FCmpInst::FCMP_UNO &&
       LHS->getOperand(0)->getType() == RHS->getOperand(0)->getType()) {
@@ -1957,35 +2022,6 @@ Value *InstCombiner::FoldOrOfFCmps(FCmpInst *LHS, FCmpInst *RHS) {
     return nullptr;
   }
 
-  Value *Op0LHS = LHS->getOperand(0), *Op0RHS = LHS->getOperand(1);
-  Value *Op1LHS = RHS->getOperand(0), *Op1RHS = RHS->getOperand(1);
-  FCmpInst::Predicate Op0CC = LHS->getPredicate(), Op1CC = RHS->getPredicate();
-
-  if (Op0LHS == Op1RHS && Op0RHS == Op1LHS) {
-    // Swap RHS operands to match LHS.
-    Op1CC = FCmpInst::getSwappedPredicate(Op1CC);
-    std::swap(Op1LHS, Op1RHS);
-  }
-  if (Op0LHS == Op1LHS && Op0RHS == Op1RHS) {
-    // Simplify (fcmp cc0 x, y) | (fcmp cc1 x, y).
-    if (Op0CC == Op1CC)
-      return Builder->CreateFCmp((FCmpInst::Predicate)Op0CC, Op0LHS, Op0RHS);
-    if (Op0CC == FCmpInst::FCMP_TRUE || Op1CC == FCmpInst::FCMP_TRUE)
-      return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 1);
-    if (Op0CC == FCmpInst::FCMP_FALSE)
-      return RHS;
-    if (Op1CC == FCmpInst::FCMP_FALSE)
-      return LHS;
-    bool Op0Ordered;
-    bool Op1Ordered;
-    unsigned Op0Pred = getFCmpCode(Op0CC, Op0Ordered);
-    unsigned Op1Pred = getFCmpCode(Op1CC, Op1Ordered);
-    if (Op0Ordered == Op1Ordered) {
-      // If both are ordered or unordered, return a new fcmp with
-      // or'ed predicates.
-      return getFCmpValue(Op0Ordered, Op0Pred|Op1Pred, Op0LHS, Op0RHS, Builder);
-    }
-  }
   return nullptr;
 }
 
@@ -2055,14 +2091,14 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   if (Value *V = SimplifyVectorOp(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyOrInst(Op0, Op1, DL, TLI, DT, AC))
-    return ReplaceInstUsesWith(I, V);
+  if (Value *V = SimplifyOrInst(Op0, Op1, DL, &TLI, &DT, &AC))
+    return replaceInstUsesWith(I, V);
 
   // (A&B)|(A&C) -> A&(B|C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // See if we can simplify any instructions used by the instruction whose sole
   // purpose is to compute bits we don't care about.
@@ -2070,7 +2106,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
     return &I;
 
   if (Value *V = SimplifyBSwap(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   if (ConstantInt *RHS = dyn_cast<ConstantInt>(Op1)) {
     ConstantInt *C1 = nullptr; Value *X = nullptr;
@@ -2104,22 +2140,12 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
         return NV;
   }
 
+  // Given an OR instruction, check to see if this is a bswap.
+  if (Instruction *BSwap = MatchBSwap(I))
+    return BSwap;
+
   Value *A = nullptr, *B = nullptr;
   ConstantInt *C1 = nullptr, *C2 = nullptr;
-
-  // (A | B) | C  and  A | (B | C)                  -> bswap if possible.
-  bool OrOfOrs = match(Op0, m_Or(m_Value(), m_Value())) ||
-                 match(Op1, m_Or(m_Value(), m_Value()));
-  // (A >> B) | (C << D)  and  (A << B) | (B >> C)  -> bswap if possible.
-  bool OrOfShifts = match(Op0, m_LogicalShift(m_Value(), m_Value())) &&
-                    match(Op1, m_LogicalShift(m_Value(), m_Value()));
-  // (A & B) | (C & D)                              -> bswap if possible.
-  bool OrOfAnds = match(Op0, m_And(m_Value(), m_Value())) &&
-                  match(Op1, m_And(m_Value(), m_Value()));
-
-  if (OrOfOrs || OrOfShifts || OrOfAnds)
-    if (Instruction *BSwap = MatchBSwapOrBitReverse(I))
-      return BSwap;
 
   // (X^C)|Y -> (X|Y)^C iff Y&C == 0
   if (Op0->hasOneUse() &&
@@ -2200,18 +2226,27 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
       }
     }
 
-    // (A & (C0?-1:0)) | (B & ~(C0?-1:0)) ->  C0 ? A : B, and commuted variants.
-    // Don't do this for vector select idioms, the code generator doesn't handle
-    // them well yet.
-    if (!I.getType()->isVectorTy()) {
-      if (Instruction *Match = MatchSelectFromAndOr(A, B, C, D))
-        return Match;
-      if (Instruction *Match = MatchSelectFromAndOr(B, A, D, C))
-        return Match;
-      if (Instruction *Match = MatchSelectFromAndOr(C, B, A, D))
-        return Match;
-      if (Instruction *Match = MatchSelectFromAndOr(D, A, B, C))
-        return Match;
+    // Don't try to form a select if it's unlikely that we'll get rid of at
+    // least one of the operands. A select is generally more expensive than the
+    // 'or' that it is replacing.
+    if (Op0->hasOneUse() || Op1->hasOneUse()) {
+      // (Cond & C) | (~Cond & D) -> Cond ? C : D, and commuted variants.
+      if (Value *V = matchSelectFromAndOr(A, C, B, D, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(A, C, D, B, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(C, A, B, D, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(C, A, D, B, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(B, D, A, C, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(B, D, C, A, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(D, B, A, C, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(D, B, C, A, *Builder))
+        return replaceInstUsesWith(I, V);
     }
 
     // ((A&~B)|(~A&B)) -> A^B
@@ -2335,7 +2370,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
     ICmpInst *RHS = dyn_cast<ICmpInst>(Op1);
     if (LHS && RHS)
       if (Value *Res = FoldOrOfICmps(LHS, RHS, &I))
-        return ReplaceInstUsesWith(I, Res);
+        return replaceInstUsesWith(I, Res);
 
     // TODO: Make this recursive; it's a little tricky because an arbitrary
     // number of 'or' instructions might have to be created.
@@ -2343,18 +2378,18 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
     if (LHS && match(Op1, m_OneUse(m_Or(m_Value(X), m_Value(Y))))) {
       if (auto *Cmp = dyn_cast<ICmpInst>(X))
         if (Value *Res = FoldOrOfICmps(LHS, Cmp, &I))
-          return ReplaceInstUsesWith(I, Builder->CreateOr(Res, Y));
+          return replaceInstUsesWith(I, Builder->CreateOr(Res, Y));
       if (auto *Cmp = dyn_cast<ICmpInst>(Y))
         if (Value *Res = FoldOrOfICmps(LHS, Cmp, &I))
-          return ReplaceInstUsesWith(I, Builder->CreateOr(Res, X));
+          return replaceInstUsesWith(I, Builder->CreateOr(Res, X));
     }
     if (RHS && match(Op0, m_OneUse(m_Or(m_Value(X), m_Value(Y))))) {
       if (auto *Cmp = dyn_cast<ICmpInst>(X))
         if (Value *Res = FoldOrOfICmps(Cmp, RHS, &I))
-          return ReplaceInstUsesWith(I, Builder->CreateOr(Res, Y));
+          return replaceInstUsesWith(I, Builder->CreateOr(Res, Y));
       if (auto *Cmp = dyn_cast<ICmpInst>(Y))
         if (Value *Res = FoldOrOfICmps(Cmp, RHS, &I))
-          return ReplaceInstUsesWith(I, Builder->CreateOr(Res, X));
+          return replaceInstUsesWith(I, Builder->CreateOr(Res, X));
     }
   }
 
@@ -2362,48 +2397,17 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (FCmpInst *LHS = dyn_cast<FCmpInst>(I.getOperand(0)))
     if (FCmpInst *RHS = dyn_cast<FCmpInst>(I.getOperand(1)))
       if (Value *Res = FoldOrOfFCmps(LHS, RHS))
-        return ReplaceInstUsesWith(I, Res);
+        return replaceInstUsesWith(I, Res);
 
-  // fold (or (cast A), (cast B)) -> (cast (or A, B))
-  if (CastInst *Op0C = dyn_cast<CastInst>(Op0)) {
-    CastInst *Op1C = dyn_cast<CastInst>(Op1);
-    if (Op1C && Op0C->getOpcode() == Op1C->getOpcode()) {// same cast kind ?
-      Type *SrcTy = Op0C->getOperand(0)->getType();
-      if (SrcTy == Op1C->getOperand(0)->getType() &&
-          SrcTy->isIntOrIntVectorTy()) {
-        Value *Op0COp = Op0C->getOperand(0), *Op1COp = Op1C->getOperand(0);
+  if (Instruction *CastedOr = foldCastedBitwiseLogic(I))
+    return CastedOr;
 
-        if ((!isa<ICmpInst>(Op0COp) || !isa<ICmpInst>(Op1COp)) &&
-            // Only do this if the casts both really cause code to be
-            // generated.
-            ShouldOptimizeCast(Op0C->getOpcode(), Op0COp, I.getType()) &&
-            ShouldOptimizeCast(Op1C->getOpcode(), Op1COp, I.getType())) {
-          Value *NewOp = Builder->CreateOr(Op0COp, Op1COp, I.getName());
-          return CastInst::Create(Op0C->getOpcode(), NewOp, I.getType());
-        }
-
-        // If this is or(cast(icmp), cast(icmp)), try to fold this even if the
-        // cast is otherwise not optimizable.  This happens for vector sexts.
-        if (ICmpInst *RHS = dyn_cast<ICmpInst>(Op1COp))
-          if (ICmpInst *LHS = dyn_cast<ICmpInst>(Op0COp))
-            if (Value *Res = FoldOrOfICmps(LHS, RHS, &I))
-              return CastInst::Create(Op0C->getOpcode(), Res, I.getType());
-
-        // If this is or(cast(fcmp), cast(fcmp)), try to fold this even if the
-        // cast is otherwise not optimizable.  This happens for vector sexts.
-        if (FCmpInst *RHS = dyn_cast<FCmpInst>(Op1COp))
-          if (FCmpInst *LHS = dyn_cast<FCmpInst>(Op0COp))
-            if (Value *Res = FoldOrOfFCmps(LHS, RHS))
-              return CastInst::Create(Op0C->getOpcode(), Res, I.getType());
-      }
-    }
-  }
-
-  // or(sext(A), B) -> A ? -1 : B where A is an i1
-  // or(A, sext(B)) -> B ? -1 : A where B is an i1
-  if (match(Op0, m_SExt(m_Value(A))) && A->getType()->isIntegerTy(1))
+  // or(sext(A), B) / or(B, sext(A)) --> A ? -1 : B, where A is i1 or <N x i1>.
+  if (match(Op0, m_OneUse(m_SExt(m_Value(A)))) &&
+      A->getType()->getScalarType()->isIntegerTy(1))
     return SelectInst::Create(A, ConstantInt::getSigned(I.getType(), -1), Op1);
-  if (match(Op1, m_SExt(m_Value(A))) && A->getType()->isIntegerTy(1))
+  if (match(Op1, m_OneUse(m_SExt(m_Value(A)))) &&
+      A->getType()->getScalarType()->isIntegerTy(1))
     return SelectInst::Create(A, ConstantInt::getSigned(I.getType(), -1), Op0);
 
   // Note: If we've gotten to the point of visiting the outer OR, then the
@@ -2440,14 +2444,14 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
   if (Value *V = SimplifyVectorOp(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
-  if (Value *V = SimplifyXorInst(Op0, Op1, DL, TLI, DT, AC))
-    return ReplaceInstUsesWith(I, V);
+  if (Value *V = SimplifyXorInst(Op0, Op1, DL, &TLI, &DT, &AC))
+    return replaceInstUsesWith(I, V);
 
   // (A&B)^(A&C) -> A&(B^C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // See if we can simplify any instructions used by the instruction whose sole
   // purpose is to compute bits we don't care about.
@@ -2455,7 +2459,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
     return &I;
 
   if (Value *V = SimplifyBSwap(I))
-    return ReplaceInstUsesWith(I, V);
+    return replaceInstUsesWith(I, V);
 
   // Is this a ~ operation?
   if (Value *NotOp = dyn_castNotVal(&I)) {
@@ -2724,29 +2728,14 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
           Value *Op0 = LHS->getOperand(0), *Op1 = LHS->getOperand(1);
           unsigned Code = getICmpCode(LHS) ^ getICmpCode(RHS);
           bool isSigned = LHS->isSigned() || RHS->isSigned();
-          return ReplaceInstUsesWith(I,
+          return replaceInstUsesWith(I,
                                getNewICmpValue(isSigned, Code, Op0, Op1,
                                                Builder));
         }
       }
 
-  // fold (xor (cast A), (cast B)) -> (cast (xor A, B))
-  if (CastInst *Op0C = dyn_cast<CastInst>(Op0)) {
-    if (CastInst *Op1C = dyn_cast<CastInst>(Op1))
-      if (Op0C->getOpcode() == Op1C->getOpcode()) { // same cast kind?
-        Type *SrcTy = Op0C->getOperand(0)->getType();
-        if (SrcTy == Op1C->getOperand(0)->getType() && SrcTy->isIntegerTy() &&
-            // Only do this if the casts both really cause code to be generated.
-            ShouldOptimizeCast(Op0C->getOpcode(), Op0C->getOperand(0),
-                               I.getType()) &&
-            ShouldOptimizeCast(Op1C->getOpcode(), Op1C->getOperand(0),
-                               I.getType())) {
-          Value *NewOp = Builder->CreateXor(Op0C->getOperand(0),
-                                            Op1C->getOperand(0), I.getName());
-          return CastInst::Create(Op0C->getOpcode(), NewOp, I.getType());
-        }
-      }
-  }
+  if (Instruction *CastedXor = foldCastedBitwiseLogic(I))
+    return CastedXor;
 
   return Changed ? &I : nullptr;
 }

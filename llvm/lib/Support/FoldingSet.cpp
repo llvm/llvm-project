@@ -266,12 +266,12 @@ void FoldingSetImpl::clear() {
   NumNodes = 0;
 }
 
-/// GrowHashTable - Double the size of the hash table and rehash everything.
-///
-void FoldingSetImpl::GrowHashTable() {
+void FoldingSetImpl::GrowBucketCount(unsigned NewBucketCount) {
+  assert((NewBucketCount > NumBuckets) && "Can't shrink a folding set with GrowBucketCount");
+  assert(isPowerOf2_32(NewBucketCount) && "Bad bucket count!");
   void **OldBuckets = Buckets;
   unsigned OldNumBuckets = NumBuckets;
-  NumBuckets <<= 1;
+  NumBuckets = NewBucketCount;
   
   // Clear out new buckets.
   Buckets = AllocateBuckets(NumBuckets);
@@ -296,6 +296,21 @@ void FoldingSetImpl::GrowHashTable() {
   }
   
   free(OldBuckets);
+}
+
+/// GrowHashTable - Double the size of the hash table and rehash everything.
+///
+void FoldingSetImpl::GrowHashTable() {
+  GrowBucketCount(NumBuckets * 2);
+}
+
+void FoldingSetImpl::reserve(unsigned EltCount) {
+  // This will give us somewhere between EltCount / 2 and
+  // EltCount buckets.  This puts us in the load factor
+  // range of 1.0 - 2.0.
+  if(EltCount < capacity())
+    return;
+  GrowBucketCount(PowerOf2Floor(EltCount));
 }
 
 /// FindNodeOrInsertPos - Look up the node specified by ID.  If it exists,
@@ -330,7 +345,7 @@ FoldingSetImpl::Node
 void FoldingSetImpl::InsertNode(Node *N, void *InsertPos) {
   assert(!N->getNextInBucket());
   // Do we need to grow the hashtable?
-  if (NumNodes+1 > NumBuckets*2) {
+  if (NumNodes+1 > capacity()) {
     GrowHashTable();
     FoldingSetNodeID TempID;
     InsertPos = GetBucketFor(ComputeNodeHash(N, TempID), Buckets, NumBuckets);

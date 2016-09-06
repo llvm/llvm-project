@@ -124,6 +124,11 @@ namespace llvm {
       return isSimple() ? V.isInteger() : isExtendedInteger();
     }
 
+    /// isScalarInteger - Return true if this is an integer, but not a vector.
+    bool isScalarInteger() const {
+      return isSimple() ? V.isScalarInteger() : isExtendedScalarInteger();
+    }
+
     /// isVector - Return true if this is a vector value type.
     bool isVector() const {
       return isSimple() ? V.isVector() : isExtendedVector();
@@ -367,6 +372,7 @@ namespace llvm {
                                    unsigned NumElements);
     bool isExtendedFloatingPoint() const LLVM_READONLY;
     bool isExtendedInteger() const LLVM_READONLY;
+    bool isExtendedScalarInteger() const LLVM_READONLY;
     bool isExtendedVector() const LLVM_READONLY;
     bool isExtended16BitVector() const LLVM_READONLY;
     bool isExtended32BitVector() const LLVM_READONLY;
@@ -378,7 +384,7 @@ namespace llvm {
     bool isExtended2048BitVector() const LLVM_READONLY;
     EVT getExtendedVectorElementType() const;
     unsigned getExtendedVectorNumElements() const LLVM_READONLY;
-    unsigned getExtendedSizeInBits() const;
+    unsigned getExtendedSizeInBits() const LLVM_READONLY;
   };
 
 } // End llvm namespace

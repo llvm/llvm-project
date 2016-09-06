@@ -237,5 +237,32 @@ TEST_F(ScalarEvolutionsTest, SCEVMultiplyAddRecs) {
   EXPECT_EQ(Product->getOperand(8), SE.getAddExpr(Sum));
 }
 
+TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context),
+                                              std::vector<Type *>(), false);
+  Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+  BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
+  BasicBlock *LoopBB = BasicBlock::Create(Context, "loop", F);
+  BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
+  BranchInst::Create(LoopBB, EntryBB);
+  BranchInst::Create(LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)),
+                     LoopBB);
+  ReturnInst::Create(Context, nullptr, ExitBB);
+  auto *Ty = Type::getInt32Ty(Context);
+  auto *PN = PHINode::Create(Ty, 2, "", &*LoopBB->begin());
+  PN->addIncoming(Constant::getNullValue(Ty), EntryBB);
+  PN->addIncoming(UndefValue::get(Ty), LoopBB);
+  ScalarEvolution SE = buildSE(*F);
+  auto *S1 = SE.getSCEV(PN);
+  auto *S2 = SE.getSCEV(PN);
+  auto *ZeroConst = SE.getConstant(Ty, 0);
+
+  // At some point, only the first call to getSCEV returned the simplified
+  // SCEVConstant and later calls just returned a SCEVUnknown referencing the
+  // PHI node.
+  EXPECT_EQ(S1, ZeroConst);
+  EXPECT_EQ(S1, S2);
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

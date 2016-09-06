@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86-64 | grep mov | count 2
+; RUN: llc < %s -march=x86-64 | grep mov | count 1
 ; rdar://6806252
 
 define i64 @test(i32* %tmp13) nounwind {

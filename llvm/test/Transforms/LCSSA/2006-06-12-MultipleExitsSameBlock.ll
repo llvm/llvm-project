@@ -1,13 +1,12 @@
-; RUN: opt < %s -lcssa -S | \
-; RUN:    grep "%X.1.lcssa"
-; RUN: opt < %s -lcssa -S | \
-; RUN:    not grep "%X.1.lcssa1"
+; RUN: opt < %s -lcssa -S | FileCheck %s
+; RUN: opt < %s -passes=lcssa -S | FileCheck %s
 
 declare i1 @c1()
 
 declare i1 @c2()
 
 define i32 @foo() {
+; CHECK-LABEL: @foo
 entry:
 	br label %loop_begin
 loop_begin:		; preds = %loop_body.2, %entry
@@ -20,8 +19,10 @@ loop_body.2:		; preds = %loop_body.1
 	%rel.2 = call i1 @c2( )		; <i1> [#uses=1]
 	br i1 %rel.2, label %loop_exit, label %loop_begin
 loop_exit:		; preds = %loop_body.2, %loop_body.1
+; CHECK: %X.1.lcssa = phi
 	ret i32 %X.1
 loop_exit2:		; preds = %loop_begin
 	ret i32 1
+; CHECK-NOT: %X.1.lcssa1
 }
 

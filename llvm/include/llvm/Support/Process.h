@@ -25,7 +25,6 @@
 #ifndef LLVM_SUPPORT_PROCESS_H
 #define LLVM_SUPPORT_PROCESS_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Allocator.h"
@@ -34,6 +33,7 @@
 #include <system_error>
 
 namespace llvm {
+template <typename T> class ArrayRef;
 class StringRef;
 
 namespace sys {
@@ -68,6 +68,9 @@ public:
   /// occur when a program fails.
   /// @brief Prevent core file generation.
   static void PreventCoreFiles();
+
+  /// \brief true if PreventCoreFiles has been called, false otherwise.
+  static bool AreCoreFilesPrevented();
 
   // This function returns the environment variable \arg name's value as a UTF-8
   // string. \arg Name is assumed to be in UTF-8 encoding too.

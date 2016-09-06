@@ -1,6 +1,6 @@
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}udiv_i32:
 ; EG-NOT: SETGE_INT
@@ -89,5 +89,59 @@ define void @udiv_i32_div_k_odd(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
   %a = load i32, i32 addrspace(1)* %in
   %result = udiv i32 %a, 34259183
   store i32 %result, i32 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v_udiv_i8:
+; SI: v_rcp_f32
+; SI: v_and_b32_e32 [[TRUNC:v[0-9]+]], 0xff, v{{[0-9]+}}
+; SI: buffer_store_dword [[TRUNC]]
+define void @v_udiv_i8(i32 addrspace(1)* %out, i8 addrspace(1)* %in) {
+  %den_ptr = getelementptr i8, i8 addrspace(1)* %in, i8 1
+  %num = load i8, i8 addrspace(1) * %in
+  %den = load i8, i8 addrspace(1) * %den_ptr
+  %result = udiv i8 %num, %den
+  %result.ext = zext i8 %result to i32
+  store i32 %result.ext, i32 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v_udiv_i16:
+; SI: v_rcp_f32
+; SI: v_and_b32_e32 [[TRUNC:v[0-9]+]], 0xffff, v{{[0-9]+}}
+; SI: buffer_store_dword [[TRUNC]]
+define void @v_udiv_i16(i32 addrspace(1)* %out, i16 addrspace(1)* %in) {
+  %den_ptr = getelementptr i16, i16 addrspace(1)* %in, i16 1
+  %num = load i16, i16 addrspace(1) * %in
+  %den = load i16, i16 addrspace(1) * %den_ptr
+  %result = udiv i16 %num, %den
+  %result.ext = zext i16 %result to i32
+  store i32 %result.ext, i32 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v_udiv_i23:
+; SI: v_rcp_f32
+; SI: v_and_b32_e32 [[TRUNC:v[0-9]+]], 0x7fffff, v{{[0-9]+}}
+; SI: buffer_store_dword [[TRUNC]]
+define void @v_udiv_i23(i32 addrspace(1)* %out, i23 addrspace(1)* %in) {
+  %den_ptr = getelementptr i23, i23 addrspace(1)* %in, i23 1
+  %num = load i23, i23 addrspace(1) * %in
+  %den = load i23, i23 addrspace(1) * %den_ptr
+  %result = udiv i23 %num, %den
+  %result.ext = zext i23 %result to i32
+  store i32 %result.ext, i32 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}v_udiv_i24:
+; SI-NOT: v_rcp_f32
+define void @v_udiv_i24(i32 addrspace(1)* %out, i24 addrspace(1)* %in) {
+  %den_ptr = getelementptr i24, i24 addrspace(1)* %in, i24 1
+  %num = load i24, i24 addrspace(1) * %in
+  %den = load i24, i24 addrspace(1) * %den_ptr
+  %result = udiv i24 %num, %den
+  %result.ext = zext i24 %result to i32
+  store i32 %result.ext, i32 addrspace(1)* %out
   ret void
 }

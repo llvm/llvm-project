@@ -24,9 +24,11 @@
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_mac.h"
 
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <libkern/OSAtomic.h>
 #include <mach-o/dyld.h>
+#include <mach-o/getsect.h>
 #include <mach-o/loader.h>
 #include <pthread.h>
 #include <stdlib.h>  // for free()
@@ -36,9 +38,16 @@
 #include <sys/ucontext.h>
 #include <unistd.h>
 
+// from <crt_externs.h>, but we don't have that file on iOS
+extern "C" {
+  extern char ***_NSGetArgv(void);
+  extern char ***_NSGetEnviron(void);
+}
+
 namespace __asan {
 
 void InitializePlatformInterceptors() {}
+void InitializePlatformExceptionHandlers() {}
 
 bool PlatformHasDifferentMemcpyAndMemmove() {
   // On OS X 10.7 memcpy() and memmove() are both resolved
@@ -59,6 +68,30 @@ void AsanCheckDynamicRTPrereqs() {}
 
 // No-op. Mac does not support static linkage anyway.
 void AsanCheckIncompatibleRT() {}
+
+void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
+  // Find the Mach-O header for the image containing the needle
+  Dl_info info;
+  int err = dladdr(needle, &info);
+  if (err == 0) return;
+
+#if __LP64__
+  const struct mach_header_64 *mh = (struct mach_header_64 *)info.dli_fbase;
+#else
+  const struct mach_header *mh = (struct mach_header *)info.dli_fbase;
+#endif
+
+  // Look up the __asan_globals section in that image and register its globals
+  unsigned long size = 0;
+  __asan_global *globals = (__asan_global *)getsectiondata(
+      mh,
+      "__DATA", "__asan_globals",
+      &size);
+
+  if (!globals) return;
+  if (size % sizeof(__asan_global) != 0) return;
+  op(globals, size / sizeof(__asan_global));
+}
 
 void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
   UNIMPLEMENTED();

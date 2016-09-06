@@ -106,7 +106,7 @@ support the if/then/else construct, a for loop, user defined operators,
 JIT compilation with a simple command line interface, etc.
 
 Because we want to keep things simple, the only datatype in Kaleidoscope
-is a 64-bit floating point type (aka 'float' in O'Caml parlance). As
+is a 64-bit floating point type (aka 'float' in OCaml parlance). As
 such, all values are implicitly double precision and the language
 doesn't require type declarations. This gives the language a very nice
 and simple syntax. For example, the following simple example computes

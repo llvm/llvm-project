@@ -7,25 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the Hexagon subclass for TargetSelectionDAGInfo.
+// This file defines the Hexagon subclass for SelectionDAGTargetInfo.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGONSELECTIONDAGINFO_H
 #define LLVM_LIB_TARGET_HEXAGON_HEXAGONSELECTIONDAGINFO_H
 
-#include "llvm/Target/TargetSelectionDAGInfo.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 
 namespace llvm {
 
-class HexagonSelectionDAGInfo : public TargetSelectionDAGInfo {
+class HexagonSelectionDAGInfo : public SelectionDAGTargetInfo {
 public:
-
-  SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, SDLoc dl,
-                                  SDValue Chain,
-                                  SDValue Dst, SDValue Src,
-                                  SDValue Size, unsigned Align,
-                                  bool isVolatile, bool AlwaysInline,
+  SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
+                                  SDValue Chain, SDValue Dst, SDValue Src,
+                                  SDValue Size, unsigned Align, bool isVolatile,
+                                  bool AlwaysInline,
                                   MachinePointerInfo DstPtrInfo,
                                   MachinePointerInfo SrcPtrInfo) const override;
 };

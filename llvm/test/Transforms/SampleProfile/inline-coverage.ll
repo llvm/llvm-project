@@ -1,4 +1,5 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-coverage.prof -sample-profile-check-record-coverage=100 -sample-profile-check-sample-coverage=110 -pass-remarks=sample-profile -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt < %s -instcombine -sample-profile -sample-profile-file=%S/Inputs/inline-coverage.prof -sample-profile-check-record-coverage=100 -sample-profile-check-sample-coverage=110 -pass-remarks=sample-profile -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt < %s -passes="function(instcombine),sample-profile" -sample-profile-file=%S/Inputs/inline-coverage.prof -sample-profile-check-record-coverage=100 -sample-profile-check-sample-coverage=110 -pass-remarks=sample-profile -o /dev/null 2>&1 | FileCheck %s
 ;
 ; Original code:
 ;
@@ -16,7 +17,7 @@
 ;    12    }
 ;
 ; CHECK: remark: coverage.cc:10:12: inlined hot callee '_Z3fool' with 172746 samples into 'main'
-; CHECK: remark: coverage.cc:9:19: Applied 23478 samples from profile (offset: 2.1)
+; CHECK: remark: coverage.cc:9:21: Applied 23478 samples from profile (offset: 2.1)
 ; CHECK: remark: coverage.cc:10:16: Applied 23478 samples from profile (offset: 3)
 ; CHECK: remark: coverage.cc:4:10: Applied 31878 samples from profile (offset: 1)
 ; CHECK: remark: coverage.cc:11:10: Applied 0 samples from profile (offset: 4)
@@ -90,16 +91,15 @@ for.end:                                          ; preds = %for.cond
 !llvm.module.flags = !{!13, !14}
 !llvm.ident = !{!15}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 251738) (llvm/trunk 251737)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (trunk 251738) (llvm/trunk 251737)", isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug, enums: !2)
 !1 = !DIFile(filename: "coverage.cc", directory: ".")
 !2 = !{}
-!3 = !{!4, !9}
-!4 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fool", scope: !1, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!4 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fool", scope: !1, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !8}
 !7 = !DIBasicType(name: "long long int", size: 64, align: 64, encoding: DW_ATE_signed)
 !8 = !DIBasicType(name: "long int", size: 64, align: 64, encoding: DW_ATE_signed)
-!9 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 7, type: !10, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!9 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 7, type: !10, isLocal: false, isDefinition: true, scopeLine: 7, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !10 = !DISubroutineType(types: !11)
 !11 = !{!12}
 !12 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

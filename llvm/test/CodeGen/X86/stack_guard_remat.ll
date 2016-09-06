@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -no-integrated-as | FileCheck %s -check-prefix=CHECK
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -no-integrated-as | FileCheck %s
 
 ;CHECK:  foo2
 ;CHECK:  movq ___stack_chk_guard@GOTPCREL(%rip), [[R0:%[a-z0-9]+]]

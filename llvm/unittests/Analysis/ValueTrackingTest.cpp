@@ -25,7 +25,7 @@ class MatchSelectPatternTest : public testing::Test {
 protected:
   void parseAssembly(const char *Assembly) {
     SMDiagnostic Error;
-    M = parseAssemblyString(Assembly, Error, getGlobalContext());
+    M = parseAssemblyString(Assembly, Error, Context);
 
     std::string errMsg;
     raw_string_ostream os(errMsg);
@@ -59,6 +59,7 @@ protected:
     EXPECT_EQ(P.Ordered, R.Ordered);
   }
 
+  LLVMContext Context;
   std::unique_ptr<Module> M;
   Instruction *A, *B;
 };

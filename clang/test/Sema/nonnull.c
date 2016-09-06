@@ -86,7 +86,7 @@ void redecl_test(void *p) {
 
 // rdar://18712242
 #define NULL (void*)0
-__attribute__((__nonnull__))
+__attribute__((__nonnull__))  // expected-note 2{{declared 'nonnull' here}}
 int evil_nonnull_func(int* pointer, void * pv)
 {
    if (pointer == NULL) {  // expected-warning {{comparison of nonnull parameter 'pointer' equal to a null pointer is 'false' on first encounter}}
@@ -105,7 +105,7 @@ int evil_nonnull_func(int* pointer, void * pv)
 }
 
 void set_param_to_null(int**);
-int another_evil_nonnull_func(int* pointer, char ch, void * pv) __attribute__((nonnull(1, 3)));
+int another_evil_nonnull_func(int* pointer, char ch, void * pv) __attribute__((nonnull(1, 3)));  // expected-note 2{{declared 'nonnull' here}}
 int another_evil_nonnull_func(int* pointer, char ch, void * pv) {
    if (pointer == NULL) { // expected-warning {{comparison of nonnull parameter 'pointer' equal to a null pointer is 'false' on first encounter}}
      return 0;
@@ -127,7 +127,7 @@ extern void FOO();
 extern void FEE();
 
 extern void *pv;
-__attribute__((__nonnull__))
+__attribute__((__nonnull__))  // expected-note {{declared 'nonnull' here}}
 void yet_another_evil_nonnull_func(int* pointer)
 {
  while (pv) {
@@ -141,7 +141,7 @@ void yet_another_evil_nonnull_func(int* pointer)
  }
 }
 
-void pr21668_1(__attribute__((nonnull)) const char *p, const char *s) {
+void pr21668_1(__attribute__((nonnull)) const char *p, const char *s) { // expected-note {{declared 'nonnull' here}}
   if (p) // expected-warning {{nonnull parameter 'p' will evaluate to 'true' on first encounter}}
     ;
   if (s) // No warning
@@ -154,7 +154,7 @@ void pr21668_2(__attribute__((nonnull)) const char *p) {
     ;
 }
 
-__attribute__((returns_nonnull)) void *returns_nonnull_whee();
+__attribute__((returns_nonnull)) void *returns_nonnull_whee();  // expected-note 6{{declared 'returns_nonnull' here}}
 
 void returns_nonnull_warning_tests() {
   if (returns_nonnull_whee() == NULL) {} // expected-warning {{comparison of nonnull function call 'returns_nonnull_whee()' equal to a null pointer is 'false' on first encounter}}

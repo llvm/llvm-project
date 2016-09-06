@@ -23,12 +23,15 @@ public:
 
 private:
   SmallString<256> StringTable;
-  DenseMap<StringRef, size_t> StringIndexMap;
+  DenseMap<CachedHash<StringRef>, size_t> StringIndexMap;
   size_t Size = 0;
   Kind K;
+  unsigned Alignment;
+
+  void finalizeStringTable(bool Optimize);
 
 public:
-  StringTableBuilder(Kind K);
+  StringTableBuilder(Kind K, unsigned Alignment = 1);
 
   /// \brief Add a string to the builder. Returns the position of S in the
   /// table. The position will be changed if finalize is used.
@@ -38,6 +41,10 @@ public:
   /// \brief Analyze the strings and build the final table. No more strings can
   /// be added after this point.
   void finalize();
+
+  /// Finalize the string table without reording it. In this mode, offsets
+  /// returned by add will still be valid.
+  void finalizeInOrder();
 
   /// \brief Retrieve the string table data. Can only be used after the table
   /// is finalized.
@@ -50,7 +57,10 @@ public:
   /// after the table is finalized.
   size_t getOffset(StringRef S) const;
 
-  const DenseMap<StringRef, size_t> &getMap() const { return StringIndexMap; }
+  const DenseMap<CachedHash<StringRef>, size_t> &getMap() const {
+    return StringIndexMap;
+  }
+
   size_t getSize() const { return Size; }
   void clear();
 

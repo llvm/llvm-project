@@ -24,3 +24,6 @@ DEFINE_COMPILERRT_FUNCTION(__truncdfsf2vfp)
 	vmov 	r0, s15      // return result in r0
 	bx	lr
 END_COMPILERRT_FUNCTION(__truncdfsf2vfp)
+
+NO_EXEC_STACK_DIRECTIVE
+

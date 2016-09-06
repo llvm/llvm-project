@@ -48,12 +48,13 @@ STATISTIC(NumGlobals  , "Number of global vars initialized");
 ExecutionEngine *(*ExecutionEngine::MCJITCtor)(
     std::unique_ptr<Module> M, std::string *ErrorStr,
     std::shared_ptr<MCJITMemoryManager> MemMgr,
-    std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver,
+
+    std::shared_ptr<JITSymbolResolver> Resolver,
     std::unique_ptr<TargetMachine> TM) = nullptr;
 
 ExecutionEngine *(*ExecutionEngine::OrcMCJITReplacementCtor)(
   std::string *ErrorStr, std::shared_ptr<MCJITMemoryManager> MemMgr,
-  std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver,
+  std::shared_ptr<JITSymbolResolver> Resolver,
   std::unique_ptr<TargetMachine> TM) = nullptr;
 
 ExecutionEngine *(*ExecutionEngine::InterpCtor)(std::unique_ptr<Module> M,
@@ -235,10 +236,8 @@ void ExecutionEngine::clearAllGlobalMappings() {
 void ExecutionEngine::clearGlobalMappingsFromModule(Module *M) {
   MutexGuard locked(lock);
 
-  for (Function &FI : *M)
-    EEState.RemoveMapping(getMangledName(&FI));
-  for (GlobalVariable &GI : M->globals())
-    EEState.RemoveMapping(getMangledName(&GI));
+  for (GlobalObject &GO : M->global_objects())
+    EEState.RemoveMapping(getMangledName(&GO));
 }
 
 uint64_t ExecutionEngine::updateGlobalMapping(const GlobalValue *GV,
@@ -474,8 +473,7 @@ EngineBuilder::EngineBuilder() : EngineBuilder(nullptr) {}
 EngineBuilder::EngineBuilder(std::unique_ptr<Module> M)
     : M(std::move(M)), WhichEngine(EngineKind::Either), ErrorStr(nullptr),
       OptLevel(CodeGenOpt::Default), MemMgr(nullptr), Resolver(nullptr),
-      RelocModel(Reloc::Default), CMModel(CodeModel::JITDefault),
-      UseOrcMCJITReplacement(false) {
+      CMModel(CodeModel::JITDefault), UseOrcMCJITReplacement(false) {
 // IR module verification is enabled by default in debug builds, and disabled
 // by default in release builds.
 #ifndef NDEBUG
@@ -502,8 +500,8 @@ EngineBuilder::setMemoryManager(std::unique_ptr<MCJITMemoryManager> MM) {
 }
 
 EngineBuilder&
-EngineBuilder::setSymbolResolver(std::unique_ptr<RuntimeDyld::SymbolResolver> SR) {
-  Resolver = std::shared_ptr<RuntimeDyld::SymbolResolver>(std::move(SR));
+EngineBuilder::setSymbolResolver(std::unique_ptr<JITSymbolResolver> SR) {
+  Resolver = std::shared_ptr<JITSymbolResolver>(std::move(SR));
   return *this;
 }
 

@@ -16,13 +16,19 @@ struct External { int v; };
 
 
 // Invalid usage.
-__declspec(dllexport) typedef int typedef1; // expected-warning{{'dllexport' attribute only applies to variables, functions and classes}}
-typedef __declspec(dllexport) int typedef2; // expected-warning{{'dllexport' attribute only applies to variables, functions and classes}}
-typedef int __declspec(dllexport) typedef3; // expected-warning{{'dllexport' attribute only applies to variables, functions and classes}}
-typedef __declspec(dllexport) void (*FunTy)(); // expected-warning{{'dllexport' attribute only applies to variables, functions and classes}}
-enum __declspec(dllexport) Enum {}; // expected-warning{{'dllexport' attribute only applies to variables, functions and classes}}
+__declspec(dllexport) typedef int typedef1;
+// expected-warning@-1{{'dllexport' attribute only applies to variables, functions and classes}}
+typedef __declspec(dllexport) int typedef2;
+// expected-warning@-1{{'dllexport' attribute only applies to variables, functions and classes}}
+typedef int __declspec(dllexport) typedef3;
+// expected-warning@-1{{'dllexport' attribute only applies to variables, functions and classes}}
+typedef __declspec(dllexport) void (*FunTy)();
+// expected-warning@-1{{'dllexport' attribute only applies to variables, functions and classes}}
+enum __declspec(dllexport) Enum {};
+// expected-warning@-1{{'dllexport' attribute only applies to variables, functions and classes}}
 #if __has_feature(cxx_strong_enums)
-  enum class __declspec(dllexport) EnumClass {}; // expected-warning{{'dllexport' attribute only applies to variables, functions and classes}}
+enum class __declspec(dllexport) EnumClass {};
+// expected-warning@-1{{'dllexport' attribute only applies to variables, functions and classes}}
 #endif
 
 

@@ -1,4 +1,4 @@
-# RUN: yaml2obj -format=elf -docnum=1 %s > %t.o32
+# RUN: yaml2obj -docnum=1 %s > %t.o32
 # RUN: llvm-readobj -file-headers %t.o32 | FileCheck -check-prefix=O32OBJ %s
 # RUN: obj2yaml %t.o32 | FileCheck -check-prefix=O32YAML %s
 
@@ -10,7 +10,7 @@
 
 # O32YAML:  Flags:  [ EF_MIPS_PIC, EF_MIPS_ABI_O32, EF_MIPS_ARCH_32 ]
 
-# RUN: yaml2obj -format=elf -docnum=2 %s > %t.o64
+# RUN: yaml2obj -docnum=2 %s > %t.o64
 # RUN: llvm-readobj -file-headers %t.o64 | FileCheck -check-prefix=O64OBJ %s
 # RUN: obj2yaml %t.o64 | FileCheck -check-prefix=O64YAML %s
 
@@ -22,7 +22,7 @@
 
 # O64YAML:  Flags:  [ EF_MIPS_PIC, EF_MIPS_ABI_O64, EF_MIPS_ARCH_64 ]
 
-# RUN: yaml2obj -format=elf -docnum=3 %s > %t.eabi32
+# RUN: yaml2obj -docnum=3 %s > %t.eabi32
 # RUN: llvm-readobj -file-headers %t.eabi32 | FileCheck -check-prefix=E32OBJ %s
 # RUN: obj2yaml %t.eabi32 | FileCheck -check-prefix=E32YAML %s
 
@@ -34,7 +34,7 @@
 
 # E32YAML:  Flags:  [ EF_MIPS_PIC, EF_MIPS_ABI_EABI32, EF_MIPS_ARCH_32 ]
 
-# RUN: yaml2obj -format=elf -docnum=4 %s > %t.eabi64
+# RUN: yaml2obj -docnum=4 %s > %t.eabi64
 # RUN: llvm-readobj -file-headers %t.eabi64 | FileCheck -check-prefix=E64OBJ %s
 # RUN: obj2yaml %t.eabi64 | FileCheck -check-prefix=E64YAML %s
 
@@ -47,7 +47,7 @@
 # E64YAML:  Flags:  [ EF_MIPS_PIC, EF_MIPS_ABI_EABI64, EF_MIPS_ARCH_64 ]
 
 # o32
----
+--- !ELF
 FileHeader:
   Class:           ELFCLASS32
   Data:            ELFDATA2LSB
@@ -69,7 +69,7 @@ Symbols:
       Size:    4
 
 # o64
----
+--- !ELF
 FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
@@ -91,7 +91,7 @@ Symbols:
       Size:    4
 
 # eabio32
----
+--- !ELF
 FileHeader:
   Class:           ELFCLASS32
   Data:            ELFDATA2LSB
@@ -113,7 +113,7 @@ Symbols:
       Size:    4
 
 # eabi64
----
+--- !ELF
 FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB

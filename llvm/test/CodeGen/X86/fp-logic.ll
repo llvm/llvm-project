@@ -262,3 +262,51 @@ define float @movmsk(float %x) {
   ret float %bc2
 }
 
+define double @bitcast_fabs(double %x) {
+; CHECK-LABEL: bitcast_fabs:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+;
+  %bc1 = bitcast double %x to i64
+  %and = and i64 %bc1, 9223372036854775807
+  %bc2 = bitcast i64 %and to double
+  ret double %bc2
+}
+
+define float @bitcast_fneg(float %x) {
+; CHECK-LABEL: bitcast_fneg:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    xorps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+;
+  %bc1 = bitcast float %x to i32
+  %xor = xor i32 %bc1, 2147483648
+  %bc2 = bitcast i32 %xor to float
+  ret float %bc2
+}
+
+define <2 x double> @bitcast_fabs_vec(<2 x double> %x) {
+; CHECK-LABEL: bitcast_fabs_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+;
+  %bc1 = bitcast <2 x double> %x to <2 x i64>
+  %and = and <2 x i64> %bc1, <i64 9223372036854775807, i64 9223372036854775807>
+  %bc2 = bitcast <2 x i64> %and to <2 x double>
+  ret <2 x double> %bc2
+}
+
+define <4 x float> @bitcast_fneg_vec(<4 x float> %x) {
+; CHECK-LABEL: bitcast_fneg_vec:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    xorps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+;
+  %bc1 = bitcast <4 x float> %x to <4 x i32>
+  %xor = xor <4 x i32> %bc1, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
+  %bc2 = bitcast <4 x i32> %xor to <4 x float>
+  ret <4 x float> %bc2
+}
+

@@ -1,0 +1,11 @@
+# RUN: yaml2obj %s > %t.o
+# RUN: llvm-readobj -s -file-headers %t.o | FileCheck %s
+
+# CHECK: Format: ELF64-amdgpu
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_AMDGPU

@@ -1,6 +1,6 @@
-; RUN: llc -march=mips -mcpu=mips32r2 -O1 -filetype=obj <%s | \
+; RUN: llc -march=mips -mcpu=mips32r2 -O1 -filetype=obj -relocation-model=pic <%s | \
 ; RUN:    llvm-dwarfdump -debug-dump=all - | FileCheck %s -check-prefix=F0
-; RUN: llc -march=mips -mcpu=mips32r2 -O1 -filetype=obj <%s | \
+; RUN: llc -march=mips -mcpu=mips32r2 -O1 -filetype=obj -relocation-model=pic <%s | \
 ; RUN:    llvm-dwarfdump -debug-dump=all - | FileCheck %s -check-prefix=F1
 
 ; void foo(int *);
@@ -98,11 +98,10 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !llvm.module.flags = !{!23, !24}
 !llvm.ident = !{!25}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251783) (llvm/trunk 251781)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251783) (llvm/trunk 251781)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "test.c", directory: "/home/vk/repos/tmp/dwarf")
 !2 = !{}
-!3 = !{!4, !15}
-!4 = distinct !DISubprogram(name: "f0", scope: !1, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, variables: !8)
+!4 = distinct !DISubprogram(name: "f0", scope: !1, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !8)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !7, !7, !7, !7, !7}
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -113,7 +112,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !12 = !DILocalVariable(name: "d", arg: 4, scope: !4, file: !1, line: 4, type: !7)
 !13 = !DILocalVariable(name: "e", arg: 5, scope: !4, file: !1, line: 4, type: !7)
 !14 = !DILocalVariable(name: "x", scope: !4, file: !1, line: 5, type: !7)
-!15 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 11, type: !5, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: true, variables: !16)
+!15 = distinct !DISubprogram(name: "f1", scope: !1, file: !1, line: 11, type: !5, isLocal: false, isDefinition: true, scopeLine: 11, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !16)
 !16 = !{!17, !18, !19, !20, !21, !22}
 !17 = !DILocalVariable(name: "a", arg: 1, scope: !15, file: !1, line: 11, type: !7)
 !18 = !DILocalVariable(name: "b", arg: 2, scope: !15, file: !1, line: 11, type: !7)

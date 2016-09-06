@@ -2416,7 +2416,7 @@ private:
   MethodVFTableLocationsTy MethodVFTableLocations;
 
   /// \brief Does this class have an RTTI component?
-  bool HasRTTIComponent;
+  bool HasRTTIComponent = false;
 
   /// MethodInfo - Contains information about a method in a vtable.
   /// (Used for computing 'this' pointer adjustment thunks.
@@ -2545,12 +2545,13 @@ public:
         MostDerivedClassLayout(Context.getASTRecordLayout(MostDerivedClass)),
         WhichVFPtr(*Which),
         Overriders(MostDerivedClass, CharUnits(), MostDerivedClass) {
-    // Only include the RTTI component if we know that we will provide a
-    // definition of the vftable.
-    HasRTTIComponent = Context.getLangOpts().RTTIData &&
-                       !MostDerivedClass->hasAttr<DLLImportAttr>() &&
-                       MostDerivedClass->getTemplateSpecializationKind() !=
-                           TSK_ExplicitInstantiationDeclaration;
+    // Provide the RTTI component if RTTIData is enabled. If the vftable would
+    // be available externally, we should not provide the RTTI componenent. It
+    // is currently impossible to get available externally vftables with either
+    // dllimport or extern template instantiations, but eventually we may add a
+    // flag to support additional devirtualization that needs this.
+    if (Context.getLangOpts().RTTIData)
+      HasRTTIComponent = true;
 
     LayoutVFTable();
 
@@ -2930,8 +2931,8 @@ void VFTableBuilder::AddMethods(BaseSubobject Base, unsigned BaseDepth,
   // class.
   const CXXRecordDecl *NextBase = nullptr, *NextLastVBase = LastVBase;
   CharUnits NextBaseOffset;
-  if (BaseDepth < WhichVFPtr.PathToBaseWithVPtr.size()) {
-    NextBase = WhichVFPtr.PathToBaseWithVPtr[BaseDepth];
+  if (BaseDepth < WhichVFPtr.PathToIntroducingObject.size()) {
+    NextBase = WhichVFPtr.PathToIntroducingObject[BaseDepth];
     if (isDirectVBase(NextBase, RD)) {
       NextLastVBase = NextBase;
       NextBaseOffset = MostDerivedClassLayout.getVBaseClassOffset(NextBase);
@@ -3123,7 +3124,7 @@ static void dumpMicrosoftThunkAdjustment(const ThunkInfo &TI, raw_ostream &Out,
 
 void VFTableBuilder::dumpLayout(raw_ostream &Out) {
   Out << "VFTable for ";
-  PrintBasePath(WhichVFPtr.PathToBaseWithVPtr, Out);
+  PrintBasePath(WhichVFPtr.PathToIntroducingObject, Out);
   Out << "'";
   MostDerivedClass->printQualifiedName(Out);
   Out << "' (" << Components.size()
@@ -3310,10 +3311,10 @@ void MicrosoftVTableContext::computeVTablePaths(bool ForVBTables,
       // Keep track of which vtable the derived class is going to extend with
       // new methods or bases.  We append to either the vftable of our primary
       // base, or the first non-virtual base that has a vbtable.
-      if (P->ReusingBase == Base &&
+      if (P->ObjectWithVPtr == Base &&
           Base == (ForVBTables ? Layout.getBaseSharingVBPtr()
                                : Layout.getPrimaryBase()))
-        P->ReusingBase = RD;
+        P->ObjectWithVPtr = RD;
 
       // Keep track of the full adjustment from the MDC to this vtable.  The
       // adjustment is captured by an optional vbase and a non-virtual offset.
@@ -3400,14 +3401,14 @@ typedef llvm::SetVector<BaseSubobject, std::vector<BaseSubobject>,
 }
 
 // This recursive function finds all paths from a subobject centered at
-// (RD, Offset) to the subobject located at BaseWithVPtr.
+// (RD, Offset) to the subobject located at IntroducingObject.
 static void findPathsToSubobject(ASTContext &Context,
                                  const ASTRecordLayout &MostDerivedLayout,
                                  const CXXRecordDecl *RD, CharUnits Offset,
-                                 BaseSubobject BaseWithVPtr,
+                                 BaseSubobject IntroducingObject,
                                  FullPathTy &FullPath,
                                  std::list<FullPathTy> &Paths) {
-  if (BaseSubobject(RD, Offset) == BaseWithVPtr) {
+  if (BaseSubobject(RD, Offset) == IntroducingObject) {
     Paths.push_back(FullPath);
     return;
   }
@@ -3421,7 +3422,7 @@ static void findPathsToSubobject(ASTContext &Context,
                               : Offset + Layout.getBaseClassOffset(Base);
     FullPath.insert(BaseSubobject(Base, NewOffset));
     findPathsToSubobject(Context, MostDerivedLayout, Base, NewOffset,
-                         BaseWithVPtr, FullPath, Paths);
+                         IntroducingObject, FullPath, Paths);
     FullPath.pop_back();
   }
 }
@@ -3496,7 +3497,7 @@ static const FullPathTy *selectBestPath(ASTContext &Context,
     CharUnits BaseOffset =
         getOffsetOfFullPath(Context, TopLevelRD, SpecificPath);
     FinalOverriders Overriders(TopLevelRD, CharUnits::Zero(), TopLevelRD);
-    for (const CXXMethodDecl *MD : Info->BaseWithVPtr->methods()) {
+    for (const CXXMethodDecl *MD : Info->IntroducingObject->methods()) {
       if (!MD->isVirtual())
         continue;
       FinalOverriders::OverriderInfo OI =
@@ -3554,15 +3555,15 @@ static void computeFullPathsForVFTables(ASTContext &Context,
   for (VPtrInfo *Info : Paths) {
     findPathsToSubobject(
         Context, MostDerivedLayout, RD, CharUnits::Zero(),
-        BaseSubobject(Info->BaseWithVPtr, Info->FullOffsetInMDC), FullPath,
+        BaseSubobject(Info->IntroducingObject, Info->FullOffsetInMDC), FullPath,
         FullPaths);
     FullPath.clear();
     removeRedundantPaths(FullPaths);
-    Info->PathToBaseWithVPtr.clear();
+    Info->PathToIntroducingObject.clear();
     if (const FullPathTy *BestPath =
             selectBestPath(Context, RD, Info, FullPaths))
       for (const BaseSubobject &BSO : *BestPath)
-        Info->PathToBaseWithVPtr.push_back(BSO.getBase());
+        Info->PathToIntroducingObject.push_back(BSO.getBase());
     FullPaths.clear();
   }
 }

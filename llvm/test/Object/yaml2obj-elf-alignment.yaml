@@ -1,6 +1,6 @@
 # Check that yaml2obj takes in account section AddressAlign field.
 
-# RUN: yaml2obj -format=elf %s > %t
+# RUN: yaml2obj %s > %t
 # RUN: llvm-readobj -s %t | FileCheck %s
 
 # CHECK:      Section {
@@ -20,7 +20,7 @@
 # CHECK-NEXT:   EntrySize: 0
 # CHECK-NEXT: }
 
----
+--- !ELF
 FileHeader:
   Class:    ELFCLASS32
   Data:     ELFDATA2LSB

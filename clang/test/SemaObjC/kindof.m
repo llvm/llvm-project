@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -fsyntax-only %s -verify
+// RUN: %clang_cc1 -fblocks -fsyntax-only %s -verify -Wmethod-signatures
 
 // Tests Objective-C 'kindof' types.
 
@@ -24,7 +24,8 @@ __attribute__((objc_root_class))
 - (NSObject *)retain;
 @end
 
-@interface NSString : NSObject <NSCopying>
+@interface NSString : NSObject <NSCopying> // expected-note{{receiver is instance of class declared here}}
+- (void)compare:(NSString *)string;
 - (NSString *)stringByAppendingString:(NSString *)string;
 + (instancetype)string;
 @end
@@ -186,6 +187,39 @@ void test_crosscast_conversions(void) {
   NSString_obj = kindof_NSNumber_obj; // expected-warning{{from '__kindof NSNumber *'}}
 }
 
+@interface NSCell : NSObject
+@end
+@interface NSCellSub : NSCell
+@end
+@interface NSCellSub2 : NSCell
+@end
+@interface NSCellSubSub : NSCellSub
+@end
+
+typedef signed char BOOL;
+void test_conditional(BOOL flag) {
+  NSCellSubSub *result;
+  __kindof NSCellSub *kindof_Sub;
+  NSCell *cell;
+  NSCellSub *sub;
+  NSCellSub2 *sub2;
+  NSCellSubSub *subsub;
+
+  // LHS is kindof NSCellSub, RHS is NSCell --> kindof NSCell
+  // LHS is kindof NSCellSub, RHS is NSCellSub --> kindof NSCellSub
+  // LHS is kindof NSCellSub, RHS is NSCellSub2 --> kindof NSCell
+  // LHS is kindof NSCellSub, RHS is NSCellSubSub --> kindof NSCellSub
+  result = flag ? kindof_Sub : cell;
+  result = flag ? kindof_Sub : sub;
+  result = flag ? kindof_Sub : sub2;
+  result = flag ? kindof_Sub : subsub;
+
+  result = flag ? cell : kindof_Sub;
+  result = flag ? sub : kindof_Sub;
+  result = flag ? sub2 : kindof_Sub;
+  result = flag ? subsub : kindof_Sub;
+}
+
 // ---------------------------------------------------------------------------
 // Blocks
 // ---------------------------------------------------------------------------
@@ -246,7 +280,7 @@ void message_kindof_object(__kindof NSString *kindof_NSString) {
   [kindof_NSString retain]; // in superclass
   [kindof_NSString stringByAppendingString:0]; // in class
   [kindof_NSString appendString:0]; // in subclass
-  [kindof_NSString numberByAddingNumber: 0]; // FIXME: in unrelated class
+  [kindof_NSString numberByAddingNumber: 0]; // expected-warning{{instance method '-numberByAddingNumber:' not found (return type defaults to 'id')}}
   [kindof_NSString randomMethod]; // in protocol
 }
 
@@ -261,6 +295,43 @@ void message_kindof_qualified_class(
   [kindof_NSCopying classCopy]; // in protocol
   [kindof_NSCopying string]; // in some class
   [kindof_NSCopying randomClassMethod]; // in unrelated protocol
+}
+
+// Make sure we don't emit warning about multiple methods found.
+typedef int NSInteger;
+@interface Foo : NSObject
+- (NSString*)test;
+@end
+@interface Bar : NSObject
+- (NSInteger)test;
+@end
+void test(__kindof Bar *kBar) {
+    [kBar test];
+}
+
+// Make sure we don't emit warning about no method found.
+@interface A : NSObject
+@property (readonly, getter=isActive) BOOL active;
+@end
+@interface B : NSObject
+@property (getter=isActive, readonly) BOOL active;
+@end
+void foo() {
+  __kindof B *NSApp;
+  if ([NSApp isActive]) {
+  }
+}
+
+typedef const struct CGPath *CGPathRef;
+@interface C : NSObject
+@property (copy) NSString *path;
+@end
+@interface D : NSObject
+@property CGPathRef path __attribute__((availability(macosx,unavailable)));
+@end
+// Make sure we choose "NSString *path" for [s1 path].
+void bar(id s1, id s2) {
+  return [[s1 path] compare:[s2 path]];
 }
 
 // ---------------------------------------------------------------------------
@@ -302,6 +373,27 @@ void testNullability() {
   void processCopyable(__typeof(getSomeCopyable()) string);
   processCopyable(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
 }
+
+// Make sure that we don't emit a warning about conflicting parameter types
+// between __kindof id and id.
+@interface A2 : NSObject
+- (void)test:(__kindof id)T;
+@end
+@implementation A2
+- (void)test:(id)T {
+}
+@end
+
+@interface NSGeneric<ObjectType> : NSObject
+- (void)test:(__kindof ObjectType)T;
+- (void)mapUsingBlock:(id (^)(__kindof ObjectType))block;
+@end
+@implementation NSGeneric
+- (void)test:(id)T {
+}
+- (void)mapUsingBlock:(id (^)(id))block {
+}
+@end
 
 // Check that clang doesn't crash when a type parameter is illegal.
 @interface Array1<T> : NSObject

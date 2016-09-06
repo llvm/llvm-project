@@ -12,6 +12,6 @@ entry:
   ret <4 x i1> %cmp
 }
 
-global <4 x i1> icmp slt ( <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>  <i32 1, i32 2, i32 1, i32 2> )
+@0 = global <4 x i1> icmp slt ( <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32>  <i32 1, i32 2, i32 1, i32 2> )
 @B = external global i32
-global <4 x i1> icmp slt ( <4 x i32> <i32 ptrtoint (i32 * @B to i32), i32 1, i32 1, i32 1>, <4 x i32>  <i32 1, i32 2, i32 1, i32 2> )
+@1 = global <4 x i1> icmp slt ( <4 x i32> <i32 ptrtoint (i32 * @B to i32), i32 1, i32 1, i32 1>, <4 x i32>  <i32 1, i32 2, i32 1, i32 2> )

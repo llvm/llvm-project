@@ -16,6 +16,7 @@
 
 #include "llvm/ExecutionEngine/Orc/RPCChannel.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include <mutex>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -28,23 +29,43 @@ class FDRPCChannel final : public llvm::orc::remote::RPCChannel {
 public:
   FDRPCChannel(int InFD, int OutFD) : InFD(InFD), OutFD(OutFD) {}
 
-  std::error_code readBytes(char *Dst, unsigned Size) override {
+  llvm::Error readBytes(char *Dst, unsigned Size) override {
     assert(Dst && "Attempt to read into null.");
-    ssize_t ReadResult = ::read(InFD, Dst, Size);
-    if (ReadResult != (ssize_t)Size)
-      return std::error_code(errno, std::generic_category());
-    return std::error_code();
+    ssize_t Completed = 0;
+    while (Completed < static_cast<ssize_t>(Size)) {
+      ssize_t Read = ::read(InFD, Dst + Completed, Size - Completed);
+      if (Read <= 0) {
+        auto ErrNo = errno;
+        if (ErrNo == EAGAIN || ErrNo == EINTR)
+          continue;
+        else
+          return llvm::errorCodeToError(
+                   std::error_code(errno, std::generic_category()));
+      }
+      Completed += Read;
+    }
+    return llvm::Error::success();
   }
 
-  std::error_code appendBytes(const char *Src, unsigned Size) override {
+  llvm::Error appendBytes(const char *Src, unsigned Size) override {
     assert(Src && "Attempt to append from null.");
-    ssize_t WriteResult = ::write(OutFD, Src, Size);
-    if (WriteResult != (ssize_t)Size)
-      std::error_code(errno, std::generic_category());
-    return std::error_code();
+    ssize_t Completed = 0;
+    while (Completed < static_cast<ssize_t>(Size)) {
+      ssize_t Written = ::write(OutFD, Src + Completed, Size - Completed);
+      if (Written < 0) {
+        auto ErrNo = errno;
+        if (ErrNo == EAGAIN || ErrNo == EINTR)
+          continue;
+        else
+          return llvm::errorCodeToError(
+                   std::error_code(errno, std::generic_category()));
+      }
+      Completed += Written;
+    }
+    return llvm::Error::success();
   }
 
-  std::error_code send() override { return std::error_code(); }
+  llvm::Error send() override { return llvm::Error::success(); }
 
 private:
   int InFD, OutFD;
@@ -62,7 +83,7 @@ public:
     this->MemMgr = std::move(MemMgr);
   }
 
-  void setResolver(std::unique_ptr<RuntimeDyld::SymbolResolver> Resolver) {
+  void setResolver(std::unique_ptr<JITSymbolResolver> Resolver) {
     this->Resolver = std::move(Resolver);
   }
 
@@ -113,18 +134,18 @@ public:
   // Don't hide the sibling notifyObjectLoaded from RTDyldMemoryManager.
   using RTDyldMemoryManager::notifyObjectLoaded;
 
-  RuntimeDyld::SymbolInfo findSymbol(const std::string &Name) override {
+  JITSymbol findSymbol(const std::string &Name) override {
     return Resolver->findSymbol(Name);
   }
 
-  RuntimeDyld::SymbolInfo
+  JITSymbol
   findSymbolInLogicalDylib(const std::string &Name) override {
     return Resolver->findSymbolInLogicalDylib(Name);
   }
 
 private:
   std::unique_ptr<RuntimeDyld::MemoryManager> MemMgr;
-  std::unique_ptr<RuntimeDyld::SymbolResolver> Resolver;
+  std::unique_ptr<JITSymbolResolver> Resolver;
 };
 }
 

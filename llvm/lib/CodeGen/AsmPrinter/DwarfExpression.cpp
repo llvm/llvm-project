@@ -65,8 +65,9 @@ void DwarfExpression::AddShr(unsigned ShiftBy) {
   EmitOp(dwarf::DW_OP_shr);
 }
 
-bool DwarfExpression::AddMachineRegIndirect(unsigned MachineReg, int Offset) {
-  if (isFrameRegister(MachineReg)) {
+bool DwarfExpression::AddMachineRegIndirect(const TargetRegisterInfo &TRI,
+                                            unsigned MachineReg, int Offset) {
+  if (isFrameRegister(TRI, MachineReg)) {
     // If variable offset is based in frame register then use fbreg.
     EmitOp(dwarf::DW_OP_fbreg);
     EmitSigned(Offset);
@@ -81,7 +82,8 @@ bool DwarfExpression::AddMachineRegIndirect(unsigned MachineReg, int Offset) {
   return true;
 }
 
-bool DwarfExpression::AddMachineRegPiece(unsigned MachineReg,
+bool DwarfExpression::AddMachineRegPiece(const TargetRegisterInfo &TRI,
+                                         unsigned MachineReg,
                                          unsigned PieceSizeInBits,
                                          unsigned PieceOffsetInBits) {
   if (!TRI.isPhysicalRegister(MachineReg))
@@ -159,29 +161,37 @@ bool DwarfExpression::AddMachineRegPiece(unsigned MachineReg,
   return CurPos > PieceOffsetInBits;
 }
 
-void DwarfExpression::AddSignedConstant(int Value) {
-  EmitOp(dwarf::DW_OP_consts);
-  EmitSigned(Value);
-  // The proper way to describe a constant value is
-  // DW_OP_constu <const>, DW_OP_stack_value.
-  // Unfortunately, DW_OP_stack_value was not available until DWARF-4,
-  // so we will continue to generate DW_OP_constu <const> for DWARF-2
-  // and DWARF-3. Technically, this is incorrect since DW_OP_const <const>
-  // actually describes a value at a constant addess, not a constant value.
-  // However, in the past there was no better way  to describe a constant
-  // value, so the producers and consumers started to rely on heuristics
-  // to disambiguate the value vs. location status of the expression.
-  // See PR21176 for more details.
+void DwarfExpression::AddStackValue() {
   if (DwarfVersion >= 4)
     EmitOp(dwarf::DW_OP_stack_value);
 }
 
-void DwarfExpression::AddUnsignedConstant(unsigned Value) {
+void DwarfExpression::AddSignedConstant(int64_t Value) {
+  EmitOp(dwarf::DW_OP_consts);
+  EmitSigned(Value);
+  AddStackValue();
+}
+
+void DwarfExpression::AddUnsignedConstant(uint64_t Value) {
   EmitOp(dwarf::DW_OP_constu);
   EmitUnsigned(Value);
-  // cf. comment in DwarfExpression::AddSignedConstant().
-  if (DwarfVersion >= 4)
-    EmitOp(dwarf::DW_OP_stack_value);
+  AddStackValue();
+}
+
+void DwarfExpression::AddUnsignedConstant(const APInt &Value) {
+  unsigned Size = Value.getBitWidth();
+  const uint64_t *Data = Value.getRawData();
+
+  // Chop it up into 64-bit pieces, because that's the maximum that
+  // AddUnsignedConstant takes.
+  unsigned Offset = 0;
+  while (Offset < Size) {
+    AddUnsignedConstant(*Data++);
+    if (Offset == 0 && Size <= 64)
+      break;
+    AddOpPiece(std::min(Size-Offset, 64u), Offset);
+    Offset += 64;
+  }
 }
 
 static unsigned getOffsetOrZero(unsigned OffsetInBits,
@@ -192,13 +202,14 @@ static unsigned getOffsetOrZero(unsigned OffsetInBits,
   return OffsetInBits;
 }
 
-bool DwarfExpression::AddMachineRegExpression(const DIExpression *Expr,
+bool DwarfExpression::AddMachineRegExpression(const TargetRegisterInfo &TRI,
+                                              const DIExpression *Expr,
                                               unsigned MachineReg,
                                               unsigned PieceOffsetInBits) {
   auto I = Expr->expr_op_begin();
   auto E = Expr->expr_op_end();
   if (I == E)
-    return AddMachineRegPiece(MachineReg);
+    return AddMachineRegPiece(TRI, MachineReg);
 
   // Pattern-match combinations for which more efficient representations exist
   // first.
@@ -208,7 +219,7 @@ bool DwarfExpression::AddMachineRegExpression(const DIExpression *Expr,
     unsigned OffsetInBits = I->getArg(0);
     unsigned SizeInBits   = I->getArg(1);
     // Piece always comes at the end of the expression.
-    return AddMachineRegPiece(MachineReg, SizeInBits,
+    return AddMachineRegPiece(TRI, MachineReg, SizeInBits,
                getOffsetOrZero(OffsetInBits, PieceOffsetInBits));
   }
   case dwarf::DW_OP_plus:
@@ -219,15 +230,15 @@ bool DwarfExpression::AddMachineRegExpression(const DIExpression *Expr,
     if (N != E && N->getOp() == dwarf::DW_OP_deref) {
       unsigned Offset = I->getArg(0);
       ValidReg = AddMachineRegIndirect(
-          MachineReg, I->getOp() == dwarf::DW_OP_plus ? Offset : -Offset);
+          TRI, MachineReg, I->getOp() == dwarf::DW_OP_plus ? Offset : -Offset);
       std::advance(I, 2);
       break;
     } else
-      ValidReg = AddMachineRegPiece(MachineReg);
+      ValidReg = AddMachineRegPiece(TRI, MachineReg);
   }
   case dwarf::DW_OP_deref: {
       // [DW_OP_reg,DW_OP_deref] --> [DW_OP_breg].
-      ValidReg = AddMachineRegIndirect(MachineReg);
+      ValidReg = AddMachineRegIndirect(TRI, MachineReg);
       ++I;
       break;
   }

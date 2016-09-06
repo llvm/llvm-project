@@ -48,7 +48,7 @@ AllocationOrder::AllocationOrder(unsigned VirtReg,
   });
 #ifndef NDEBUG
   for (unsigned I = 0, E = Hints.size(); I != E; ++I)
-    assert(std::find(Order.begin(), Order.end(), Hints[I]) != Order.end() &&
+    assert(is_contained(Order, Hints[I]) &&
            "Target hint is outside allocation order.");
 #endif
 }

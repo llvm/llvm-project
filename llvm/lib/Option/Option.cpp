@@ -51,6 +51,7 @@ void Option::print(raw_ostream &O) const {
     P(JoinedOrSeparateClass);
     P(JoinedAndSeparateClass);
     P(RemainingArgsClass);
+    P(RemainingArgsJoinedClass);
 #undef P
   }
 
@@ -82,7 +83,7 @@ void Option::print(raw_ostream &O) const {
   O << ">\n";
 }
 
-void Option::dump() const { print(dbgs()); }
+LLVM_DUMP_METHOD void Option::dump() const { print(dbgs()); }
 
 bool Option::matches(OptSpecifier Opt) const {
   // Aliases are never considered in matching, look through them.
@@ -234,6 +235,19 @@ Arg *Option::accept(const ArgList &Args,
       A->getValues().push_back(Args.getArgString(Index++));
     return A;
   }
+  case RemainingArgsJoinedClass: {
+    Arg *A = new Arg(UnaliasedOption, Spelling, Index);
+    if (ArgSize != strlen(Args.getArgString(Index))) {
+      // An inexact match means there is a joined arg.
+      A->getValues().push_back(Args.getArgString(Index) + ArgSize);
+    }
+    Index++;
+    while (Index < Args.getNumInputArgStrings() &&
+           Args.getArgString(Index) != nullptr)
+      A->getValues().push_back(Args.getArgString(Index++));
+    return A;
+  }
+
   default:
     llvm_unreachable("Invalid option kind!");
   }

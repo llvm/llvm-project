@@ -10,9 +10,11 @@
 #ifndef LLVM_TOOLS_LLVMPDBDUMP_BUILTINDUMPER_H
 #define LLVM_TOOLS_LLVMPDBDUMP_BUILTINDUMPER_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
 
 namespace llvm {
+namespace pdb {
 
 class LinePrinter;
 
@@ -27,6 +29,7 @@ private:
 
   LinePrinter &Printer;
 };
+}
 }
 
 #endif

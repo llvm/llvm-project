@@ -48,7 +48,9 @@ inline void PTHREAD_CREATE(pthread_t *thread, void *attr,
   data->start_routine = start_routine;
   data->arg = arg;
   *thread = CreateThread(0, 0, PthreadHelperThreadProc, data, 0, 0);
-  ASSERT_NE(nullptr, *thread) << "Failed to create a thread.";
+  DWORD err = GetLastError();
+  ASSERT_NE(nullptr, *thread) << "Failed to create a thread, got error 0x"
+                              << std::hex << err;
 }
 
 inline void PTHREAD_JOIN(pthread_t thread, void **value_ptr) {

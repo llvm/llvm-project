@@ -257,6 +257,9 @@ namespace ISD {
     /// value as an integer 0/1 value.
     FGETSIGN,
 
+    /// Returns platform specific canonical encoding of a floating point number.
+    FCANONICALIZE,
+
     /// BUILD_VECTOR(ELT0, ELT1, ELT2, ELT3,...) - Return a vector with the
     /// specified, possibly variable, elements.  The number of elements is
     /// required to be a power of two.  The types of the operands must all be
@@ -483,6 +486,12 @@ namespace ISD {
     /// the same bit size (e.g.  f32 <-> i32).  This can also be used for
     /// int-to-int or fp-to-fp conversions, but that is a noop, deleted by
     /// getNode().
+    ///
+    /// This operator is subtly different from the bitcast instruction from
+    /// LLVM-IR since this node may change the bits in the register. For
+    /// example, this occurs on big-endian NEON and big-endian MSA where the
+    /// layout of the bits in the register depends on the vector type and this
+    /// operator acts as a shuffle operation for some vector type combinations.
     BITCAST,
 
     /// ADDRSPACECAST - This operator converts between pointers of different
@@ -869,56 +878,52 @@ namespace ISD {
     SETCC_INVALID       // Marker value.
   };
 
-  /// isSignedIntSetCC - Return true if this is a setcc instruction that
-  /// performs a signed comparison when used with integer operands.
+  /// Return true if this is a setcc instruction that performs a signed
+  /// comparison when used with integer operands.
   inline bool isSignedIntSetCC(CondCode Code) {
     return Code == SETGT || Code == SETGE || Code == SETLT || Code == SETLE;
   }
 
-  /// isUnsignedIntSetCC - Return true if this is a setcc instruction that
-  /// performs an unsigned comparison when used with integer operands.
+  /// Return true if this is a setcc instruction that performs an unsigned
+  /// comparison when used with integer operands.
   inline bool isUnsignedIntSetCC(CondCode Code) {
     return Code == SETUGT || Code == SETUGE || Code == SETULT || Code == SETULE;
   }
 
-  /// isTrueWhenEqual - Return true if the specified condition returns true if
-  /// the two operands to the condition are equal.  Note that if one of the two
-  /// operands is a NaN, this value is meaningless.
+  /// Return true if the specified condition returns true if the two operands to
+  /// the condition are equal. Note that if one of the two operands is a NaN,
+  /// this value is meaningless.
   inline bool isTrueWhenEqual(CondCode Cond) {
     return ((int)Cond & 1) != 0;
   }
 
-  /// getUnorderedFlavor - This function returns 0 if the condition is always
-  /// false if an operand is a NaN, 1 if the condition is always true if the
-  /// operand is a NaN, and 2 if the condition is undefined if the operand is a
-  /// NaN.
+  /// This function returns 0 if the condition is always false if an operand is
+  /// a NaN, 1 if the condition is always true if the operand is a NaN, and 2 if
+  /// the condition is undefined if the operand is a NaN.
   inline unsigned getUnorderedFlavor(CondCode Cond) {
     return ((int)Cond >> 3) & 3;
   }
 
-  /// getSetCCInverse - Return the operation corresponding to !(X op Y), where
-  /// 'op' is a valid SetCC operation.
+  /// Return the operation corresponding to !(X op Y), where 'op' is a valid
+  /// SetCC operation.
   CondCode getSetCCInverse(CondCode Operation, bool isInteger);
 
-  /// getSetCCSwappedOperands - Return the operation corresponding to (Y op X)
-  /// when given the operation for (X op Y).
+  /// Return the operation corresponding to (Y op X) when given the operation
+  /// for (X op Y).
   CondCode getSetCCSwappedOperands(CondCode Operation);
 
-  /// getSetCCOrOperation - Return the result of a logical OR between different
-  /// comparisons of identical values: ((X op1 Y) | (X op2 Y)).  This
-  /// function returns SETCC_INVALID if it is not possible to represent the
-  /// resultant comparison.
+  /// Return the result of a logical OR between different comparisons of
+  /// identical values: ((X op1 Y) | (X op2 Y)). This function returns
+  /// SETCC_INVALID if it is not possible to represent the resultant comparison.
   CondCode getSetCCOrOperation(CondCode Op1, CondCode Op2, bool isInteger);
 
-  /// getSetCCAndOperation - Return the result of a logical AND between
-  /// different comparisons of identical values: ((X op1 Y) & (X op2 Y)).  This
-  /// function returns SETCC_INVALID if it is not possible to represent the
-  /// resultant comparison.
+  /// Return the result of a logical AND between different comparisons of
+  /// identical values: ((X op1 Y) & (X op2 Y)). This function returns
+  /// SETCC_INVALID if it is not possible to represent the resultant comparison.
   CondCode getSetCCAndOperation(CondCode Op1, CondCode Op2, bool isInteger);
 
   //===--------------------------------------------------------------------===//
-  /// CvtCode enum - This enum defines the various converts CONVERT_RNDSAT
-  /// supports.
+  /// This enum defines the various converts CONVERT_RNDSAT supports.
   enum CvtCode {
     CVT_FF,     /// Float from Float
     CVT_FS,     /// Float from Signed

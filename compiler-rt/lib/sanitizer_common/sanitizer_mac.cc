@@ -72,19 +72,30 @@ extern "C" {
 #include <unistd.h>
 #include <util.h>
 
+// from <crt_externs.h>, but we don't have that file on iOS
+extern "C" {
+  extern char ***_NSGetArgv(void);
+  extern char ***_NSGetEnviron(void);
+}
+
 namespace __sanitizer {
 
 #include "sanitizer_syscall_generic.inc"
+
+// Direct syscalls, don't call libmalloc hooks.
+extern "C" void *__mmap(void *addr, size_t len, int prot, int flags, int fildes,
+                        off_t off);
+extern "C" int __munmap(void *, size_t);
 
 // ---------------------- sanitizer_libc.h
 uptr internal_mmap(void *addr, size_t length, int prot, int flags,
                    int fd, u64 offset) {
   if (fd == -1) fd = VM_MAKE_TAG(VM_MEMORY_ANALYSIS_TOOL);
-  return (uptr)mmap(addr, length, prot, flags, fd, offset);
+  return (uptr)__mmap(addr, length, prot, flags, fd, offset);
 }
 
 uptr internal_munmap(void *addr, uptr length) {
-  return munmap(addr, length);
+  return __munmap(addr, length);
 }
 
 int internal_mprotect(void *addr, uptr length, int prot) {
@@ -150,6 +161,10 @@ void internal__exit(int exitcode) {
   _exit(exitcode);
 }
 
+unsigned int internal_sleep(unsigned int seconds) {
+  return sleep(seconds);
+}
+
 uptr internal_getpid() {
   return getpid();
 }
@@ -184,7 +199,11 @@ int internal_forkpty(int *amaster) {
   }
   if (pid == 0) {
     close(master);
-    CHECK_EQ(login_tty(slave), 0);
+    if (login_tty(slave) != 0) {
+      // We already forked, there's not much we can do.  Let's quit.
+      Report("login_tty failed (errno %d)\n", errno);
+      internal__exit(1);
+    }
   } else {
     *amaster = master;
     close(slave);
@@ -219,7 +238,10 @@ bool FileExists(const char *filename) {
 }
 
 uptr GetTid() {
-  return reinterpret_cast<uptr>(pthread_self());
+  // FIXME: This can potentially get truncated on 32-bit, where uptr is 4 bytes.
+  uint64_t tid;
+  pthread_threadid_np(nullptr, &tid);
+  return tid;
 }
 
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
@@ -355,13 +377,16 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
 #endif
 }
 
-uptr GetListOfModules(LoadedModule *modules, uptr max_modules,
-                      string_predicate_t filter) {
+void ListOfModules::init() {
+  clear();
   MemoryMappingLayout memory_mapping(false);
-  return memory_mapping.DumpListOfModules(modules, max_modules, filter);
+  memory_mapping.DumpListOfModules(&modules_);
 }
 
-bool IsDeadlySignal(int signum) {
+bool IsHandledDeadlySignal(int signum) {
+  if ((SANITIZER_WATCHOS || SANITIZER_TVOS) && !(SANITIZER_IOSSIM))
+    // Handling fatal signals on watchOS and tvOS devices is disallowed.
+    return false;
   return (signum == SIGSEGV || signum == SIGBUS) && common_flags()->handle_segv;
 }
 
@@ -433,11 +458,15 @@ void *internal_start_thread(void(*func)(void *arg), void *arg) {
 
 void internal_join_thread(void *th) { pthread_join((pthread_t)th, 0); }
 
+#ifndef SANITIZER_GO
 static BlockingMutex syslog_lock(LINKER_INITIALIZED);
+#endif
 
 void WriteOneLineToSyslog(const char *s) {
+#ifndef SANITIZER_GO
   syslog_lock.CheckLocked();
   asl_log(nullptr, nullptr, ASL_LEVEL_ERR, "%s", s);
+#endif
 }
 
 void LogMessageOnPrintf(const char *str) {
@@ -447,6 +476,7 @@ void LogMessageOnPrintf(const char *str) {
 }
 
 void LogFullErrorReport(const char *buffer) {
+#ifndef SANITIZER_GO
   // Log with os_trace. This will make it into the crash log.
 #if SANITIZER_OS_TRACE
   if (GetMacosVersion() >= MACOS_VERSION_YOSEMITE) {
@@ -480,6 +510,16 @@ void LogFullErrorReport(const char *buffer) {
     WriteToSyslog(buffer);
 
   // The report is added to CrashLog as part of logging all of Printf output.
+#endif
+}
+
+SignalContext::WriteFlag SignalContext::GetWriteFlag(void *context) {
+#if defined(__x86_64__) || defined(__i386__)
+  ucontext_t *ucontext = static_cast<ucontext_t*>(context);
+  return ucontext->uc_mcontext->__es.__err & 2 /*T_PF_WRITE*/ ? WRITE : READ;
+#else
+  return UNKNOWN;
+#endif
 }
 
 void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
@@ -509,6 +549,7 @@ void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 # endif
 }
 
+#ifndef SANITIZER_GO
 static const char kDyldInsertLibraries[] = "DYLD_INSERT_LIBRARIES";
 LowLevelAllocator allocator_for_env;
 
@@ -546,10 +587,14 @@ bool ReexecDisabled() {
   return false;
 }
 
-extern "C" double dyldVersionNumber;
+extern "C" SANITIZER_WEAK_ATTRIBUTE double dyldVersionNumber;
 static const double kMinDyldVersionWithAutoInterposition = 360.0;
 
 bool DyldNeedsEnvVariable() {
+  // Although sanitizer support was added to LLVM on OS X 10.7+, GCC users
+  // still may want use them on older systems. On older Darwin platforms, dyld
+  // doesn't export dyldVersionNumber symbol and we simply return true.
+  if (!&dyldVersionNumber) return true;
   // If running on OS X 10.11+ or iOS 9.0+, dyld will interpose even if
   // DYLD_INSERT_LIBRARIES is not set. However, checking OS version via
   // GetMacosVersion() doesn't work for the simulator. Let's instead check
@@ -565,7 +610,7 @@ void MaybeReexec() {
   // wrappers work. If it is not, set DYLD_INSERT_LIBRARIES and re-exec
   // ourselves.
   Dl_info info;
-  CHECK(dladdr((void*)((uptr)&__sanitizer_report_error_summary), &info));
+  RAW_CHECK(dladdr((void*)((uptr)&__sanitizer_report_error_summary), &info));
   char *dyld_insert_libraries =
       const_cast<char*>(GetEnv(kDyldInsertLibraries));
   uptr old_env_len = dyld_insert_libraries ?
@@ -610,7 +655,7 @@ void MaybeReexec() {
            "environment variable and re-execute itself, but execv() failed, "
            "possibly because of sandbox restrictions. Make sure to launch the "
            "executable with:\n%s=%s\n", kDyldInsertLibraries, new_env);
-    CHECK("execv failed" && 0);
+    RAW_CHECK("execv failed" && 0);
   }
 
   // Verify that interceptors really work.  We'll use dlsym to locate
@@ -618,14 +663,14 @@ void MaybeReexec() {
   // "wrap_pthread_create" within our own dylib.
   Dl_info info_pthread_create;
   void *dlopen_addr = dlsym(RTLD_DEFAULT, "pthread_create");
-  CHECK(dladdr(dlopen_addr, &info_pthread_create));
+  RAW_CHECK(dladdr(dlopen_addr, &info_pthread_create));
   if (internal_strcmp(info.dli_fname, info_pthread_create.dli_fname) != 0) {
     Report(
         "ERROR: Interceptors are not working. This may be because %s is "
         "loaded too late (e.g. via dlopen). Please launch the executable "
         "with:\n%s=%s\n",
         SanitizerToolName, kDyldInsertLibraries, info.dli_fname);
-    CHECK("interceptors not installed" && 0);
+    RAW_CHECK("interceptors not installed" && 0);
   }
 
   if (!lib_is_in_env)
@@ -640,7 +685,7 @@ void MaybeReexec() {
   // sign and the '\0' char.
   char *new_env = (char*)allocator_for_env.Allocate(
       old_env_len + 2 + env_name_len);
-  CHECK(new_env);
+  RAW_CHECK(new_env);
   internal_memset(new_env, '\0', old_env_len + 2 + env_name_len);
   internal_strncpy(new_env, kDyldInsertLibraries, env_name_len);
   new_env[env_name_len] = '=';
@@ -689,10 +734,14 @@ void MaybeReexec() {
   if (new_env_pos == new_env + env_name_len + 1) new_env = NULL;
   LeakyResetEnv(kDyldInsertLibraries, new_env);
 }
+#endif  // SANITIZER_GO
 
 char **GetArgv() {
   return *_NSGetArgv();
 }
+
+// FIXME implement on this platform.
+void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) { }
 
 }  // namespace __sanitizer
 

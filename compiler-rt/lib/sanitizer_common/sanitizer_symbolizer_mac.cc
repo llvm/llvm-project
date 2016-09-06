@@ -32,7 +32,7 @@ bool DlAddrSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   Dl_info info;
   int result = dladdr((const void *)addr, &info);
   if (!result) return false;
-  const char *demangled = DemangleCXXABI(info.dli_sname);
+  const char *demangled = DemangleSwiftAndCXX(info.dli_sname);
   stack->info.function = demangled ? internal_strdup(demangled) : nullptr;
   return true;
 }
@@ -41,7 +41,7 @@ bool DlAddrSymbolizer::SymbolizeData(uptr addr, DataInfo *datainfo) {
   Dl_info info;
   int result = dladdr((const void *)addr, &info);
   if (!result) return false;
-  const char *demangled = DemangleCXXABI(info.dli_sname);
+  const char *demangled = DemangleSwiftAndCXX(info.dli_sname);
   datainfo->name = internal_strdup(demangled);
   datainfo->start = (uptr)info.dli_saddr;
   return true;
@@ -79,23 +79,6 @@ class AtosSymbolizerProcess : public SymbolizerProcess {
   char pid_str_[16];
 };
 
-static const char *kAtosErrorMessages[] = {
-  "atos cannot examine process",
-  "unable to get permission to examine process",
-  "An admin user name and password is required",
-  "could not load inserted library",
-  "architecture mismatch between analysis process",
-};
-
-static bool IsAtosErrorMessage(const char *str) {
-  for (uptr i = 0; i < ARRAY_SIZE(kAtosErrorMessages); i++) {
-    if (internal_strstr(str, kAtosErrorMessages[i])) {
-      return true;
-    }
-  }
-  return false;
-}
-
 static bool ParseCommandOutput(const char *str, uptr addr, char **out_name,
                                char **out_module, char **out_file, uptr *line,
                                uptr *start_address) {
@@ -111,12 +94,6 @@ static bool ParseCommandOutput(const char *str, uptr addr, char **out_name,
   //   0xdeadbeef (in library.dylib) + 15
   //   0xdeadbeef (in library.dylib)
   //   0xdeadbeef
-
-  if (IsAtosErrorMessage(trim)) {
-    Report("atos returned an error: %s\n", trim);
-    InternalFree(trim);
-    return false;
-  }
 
   const char *rest = trim;
   char *symbol_name;
@@ -157,6 +134,7 @@ AtosSymbolizer::AtosSymbolizer(const char *path, LowLevelAllocator *allocator)
 
 bool AtosSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   if (!process_) return false;
+  if (addr == 0) return false;
   char command[32];
   internal_snprintf(command, sizeof(command), "0x%zx\n", addr);
   const char *buf = process_->SendCommand(command);

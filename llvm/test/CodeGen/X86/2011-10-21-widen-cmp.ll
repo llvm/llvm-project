@@ -42,7 +42,7 @@ entry:
 define void @mp_11193(<8 x float> * nocapture %aFOO, <8 x float>* nocapture %RET) nounwind {
 ; CHECK-LABEL: mp_11193:
 ; CHECK:       # BB#0: # %allocas
-; CHECK-NEXT:    movl $-1082130432, (%rsi) # imm = 0xFFFFFFFFBF800000
+; CHECK-NEXT:    movl $-1082130432, (%rsi) # imm = 0xBF800000
 ; CHECK-NEXT:    retq
 allocas:
   %bincmp = fcmp olt <8 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 9.000000e+00, float 1.000000e+00, float 9.000000e+00, float 1.000000e+00> , <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>

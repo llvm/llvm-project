@@ -21,13 +21,13 @@
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/VersionTuple.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <string>
@@ -40,6 +40,7 @@ struct fltSemantics;
 namespace clang {
 class DiagnosticsEngine;
 class LangOptions;
+class CodeGenOptions;
 class MacroBuilder;
 class SourceLocation;
 class SourceManager;
@@ -57,13 +58,14 @@ protected:
   bool BigEndian;
   bool TLSSupported;
   bool NoAsmVariants;  // True if {|} are normal characters.
+  bool HasFloat128;
   unsigned char PointerWidth, PointerAlign;
   unsigned char BoolWidth, BoolAlign;
   unsigned char IntWidth, IntAlign;
   unsigned char HalfWidth, HalfAlign;
   unsigned char FloatWidth, FloatAlign;
   unsigned char DoubleWidth, DoubleAlign;
-  unsigned char LongDoubleWidth, LongDoubleAlign;
+  unsigned char LongDoubleWidth, LongDoubleAlign, Float128Align;
   unsigned char LargeArrayMinWidth, LargeArrayAlign;
   unsigned char LongWidth, LongAlign;
   unsigned char LongLongWidth, LongLongAlign;
@@ -74,11 +76,10 @@ protected:
   unsigned short MaxVectorAlign;
   unsigned short MaxTLSAlign;
   unsigned short SimdDefaultAlign;
-  const char *DataLayoutString;
-  const char *UserLabelPrefix;
+  std::unique_ptr<llvm::DataLayout> DataLayout;
   const char *MCountName;
   const llvm::fltSemantics *HalfFormat, *FloatFormat, *DoubleFormat,
-    *LongDoubleFormat;
+    *LongDoubleFormat, *Float128Format;
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
   const LangAS::Map *AddrSpaceMap;
@@ -92,8 +93,14 @@ protected:
 
   unsigned HasBuiltinMSVaList : 1;
 
+  unsigned IsRenderScriptTarget : 1;
+
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
+
+  void resetDataLayout(StringRef DL) {
+    DataLayout.reset(new llvm::DataLayout(DL));
+  }
 
 public:
   /// \brief Construct a target for the given options.
@@ -132,7 +139,8 @@ public:
     NoFloat = 255,
     Float = 0,
     Double,
-    LongDouble
+    LongDouble,
+    Float128
   };
 
   /// \brief The different kinds of __builtin_va_list types defined by
@@ -201,6 +209,9 @@ protected:
   /// that follows it, `bar', `bar' will be aligned as the type of the
   /// zero-length bitfield.
   unsigned UseZeroLengthBitfieldAlignment : 1;
+
+  /// \brief  Whether explicit bit field alignment attributes are honored.
+  unsigned UseExplicitBitFieldAlignment : 1;
 
   /// If non-zero, specifies a fixed alignment value for bitfields that follow
   /// zero length bitfield, regardless of the zero length bitfield type.
@@ -320,6 +331,9 @@ public:
     return getPointerWidth(0) >= 64;
   } // FIXME
 
+  /// \brief Determine whether the __float128 type is supported on this target.
+  virtual bool hasFloat128Type() const { return HasFloat128; }
+
   /// \brief Return the alignment that is suitable for storing any
   /// object with a fundamental alignment requirement.
   unsigned getSuitableAlign() const { return SuitableAlign; }
@@ -372,6 +386,14 @@ public:
     return *LongDoubleFormat;
   }
 
+  /// getFloat128Width/Align/Format - Return the size/align/format of
+  /// '__float128'.
+  unsigned getFloat128Width() const { return 128; }
+  unsigned getFloat128Align() const { return Float128Align; }
+  const llvm::fltSemantics &getFloat128Format() const {
+    return *Float128Format;
+  }
+
   /// \brief Return true if the 'long double' type should be mangled like
   /// __float128.
   virtual bool useFloat128ManglingForLongDouble() const { return false; }
@@ -407,28 +429,35 @@ public:
   /// types for the given target.
   unsigned getSimdDefaultAlign() const { return SimdDefaultAlign; }
 
+  /// Return the alignment (in bits) of the thrown exception object. This is
+  /// only meaningful for targets that allocate C++ exceptions in a system
+  /// runtime, such as those using the Itanium C++ ABI.
+  virtual unsigned getExnObjectAlignment() const {
+    // Itanium says that an _Unwind_Exception has to be "double-word"
+    // aligned (and thus the end of it is also so-aligned), meaning 16
+    // bytes.  Of course, that was written for the actual Itanium,
+    // which is a 64-bit platform.  Classically, the ABI doesn't really
+    // specify the alignment on other platforms, but in practice
+    // libUnwind declares the struct with __attribute__((aligned)), so
+    // we assume that alignment here.  (It's generally 16 bytes, but
+    // some targets overwrite it.)
+    return getDefaultAlignForAttributeAligned();
+  }
+
   /// \brief Return the size of intmax_t and uintmax_t for this target, in bits.
   unsigned getIntMaxTWidth() const {
     return getTypeWidth(IntMaxType);
   }
 
   // Return the size of unwind_word for this target.
-  unsigned getUnwindWordWidth() const { return getPointerWidth(0); }
+  virtual unsigned getUnwindWordWidth() const { return getPointerWidth(0); }
 
   /// \brief Return the "preferred" register width on this target.
-  unsigned getRegisterWidth() const {
+  virtual unsigned getRegisterWidth() const {
     // Currently we assume the register width on the target matches the pointer
     // width, we can introduce a new variable for this if/when some target wants
     // it.
     return PointerWidth;
-  }
-
-  /// \brief Returns the default value of the __USER_LABEL_PREFIX__ macro,
-  /// which is the prefix given to user symbols by default.
-  ///
-  /// On most platforms this is "_", but it is "" on some, and "." on others.
-  const char *getUserLabelPrefix() const {
-    return UserLabelPrefix;
   }
 
   /// \brief Returns the name of the mcount instrumentation function.
@@ -464,6 +493,12 @@ public:
   /// a zero length bitfield.
   unsigned getZeroLengthBitfieldBoundary() const {
     return ZeroLengthBitfieldBoundary;
+  }
+
+  /// \brief Check whether explicit bitfield alignment attributes should be
+  //  honored, as in "__attribute__((aligned(2))) int b : 1;".
+  bool useExplicitBitFieldAlignment() const {
+    return UseExplicitBitFieldAlignment;
   }
 
   /// \brief Check whether this target support '\#pragma options align=mac68k'.
@@ -532,6 +567,9 @@ public:
   /// Returns whether or not type \c __builtin_ms_va_list type is
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }
+
+  /// Returns true for RenderScript.
+  bool isRenderScriptTarget() const { return IsRenderScriptTarget; }
 
   /// \brief Returns whether the passed in string is a valid clobber in an
   /// inline asm statement.
@@ -712,9 +750,9 @@ public:
     return Triple;
   }
 
-  const char *getDataLayoutString() const {
-    assert(DataLayoutString && "Uninitialized DataLayoutString!");
-    return DataLayoutString;
+  const llvm::DataLayout &getDataLayout() const {
+    assert(DataLayout && "Uninitialized DataLayout!");
+    return *DataLayout;
   }
 
   struct GCCRegAlias {
@@ -759,6 +797,10 @@ public:
   /// Apply changes to the target information with respect to certain
   /// language options which change the target configuration.
   virtual void adjust(const LangOptions &Opts);
+
+  /// \brief Adjust target options based on codegen options.
+  virtual void adjustTargetOptions(const CodeGenOptions &CGOpts,
+                                   TargetOptions &TargetOpts) const {}
 
   /// \brief Initialize the map with the default set of target features for the
   /// CPU this should include all legal feature strings on the target.
@@ -868,6 +910,8 @@ public:
 
   /// \brief Return the register number that __builtin_eh_return_regno would
   /// return with the specified argument.
+  /// This corresponds with TargetLowering's getExceptionPointerRegister
+  /// and getExceptionSelectorRegister in the backend.
   virtual int getEHDataRegisterNumber(unsigned RegNo) const {
     return -1;
   }
@@ -929,6 +973,32 @@ public:
   /// llvm.eh.sjlj.longjmp / llvm.eh.sjlj.setjmp.
   virtual bool hasSjLjLowering() const {
     return false;
+  }
+
+  /// \brief Whether target allows to overalign ABI-specified prefered alignment
+  virtual bool allowsLargerPreferedTypeAlignment() const { return true; }
+
+  /// \brief Set supported OpenCL extensions and optional core features.
+  virtual void setSupportedOpenCLOpts() {}
+
+  /// \brief Get supported OpenCL extensions and optional core features.
+  OpenCLOptions &getSupportedOpenCLOpts() {
+    return getTargetOpts().SupportedOpenCLOptions;
+  }
+
+  /// \brief Get const supported OpenCL extensions and optional core features.
+  const OpenCLOptions &getSupportedOpenCLOpts() const {
+      return getTargetOpts().SupportedOpenCLOptions;
+  }
+
+  /// \brief Get OpenCL image type address space.
+  virtual LangAS::ID getOpenCLImageAddrSpace() const {
+    return LangAS::opencl_global;
+  }
+
+  /// \brief Check the target is valid after it is fully initialized.
+  virtual bool validateTarget(DiagnosticsEngine &Diags) const {
+    return true;
   }
 
 protected:

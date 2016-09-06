@@ -243,13 +243,14 @@ FunctionModRefBehavior
 GlobalsAAResult::getModRefBehavior(ImmutableCallSite CS) {
   FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
 
-  if (const Function *F = CS.getCalledFunction())
-    if (FunctionInfo *FI = getFunctionInfo(F)) {
-      if (FI->getModRefInfo() == MRI_NoModRef)
-        Min = FMRB_DoesNotAccessMemory;
-      else if ((FI->getModRefInfo() & MRI_Mod) == 0)
-        Min = FMRB_OnlyReadsMemory;
-    }
+  if (!CS.hasOperandBundles())
+    if (const Function *F = CS.getCalledFunction())
+      if (FunctionInfo *FI = getFunctionInfo(F)) {
+        if (FI->getModRefInfo() == MRI_NoModRef)
+          Min = FMRB_DoesNotAccessMemory;
+        else if ((FI->getModRefInfo() & MRI_Mod) == 0)
+          Min = FMRB_OnlyReadsMemory;
+      }
 
   return FunctionModRefBehavior(AAResultBase::getModRefBehavior(CS) & Min);
 }
@@ -470,9 +471,10 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     const std::vector<CallGraphNode *> &SCC = *I;
     assert(!SCC.empty() && "SCC with no functions?");
 
-    if (!SCC[0]->getFunction() || SCC[0]->getFunction()->mayBeOverridden()) {
-      // Calls externally or is weak - can't say anything useful. Remove any existing
-      // function records (may have been created when scanning globals).
+    if (!SCC[0]->getFunction() || !SCC[0]->getFunction()->isDefinitionExact()) {
+      // Calls externally or not exact - can't say anything useful. Remove any
+      // existing function records (may have been created when scanning
+      // globals).
       for (auto *Node : SCC)
         FunctionInfos.erase(Node->getFunction());
       continue;
@@ -496,7 +498,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
           // Can't do better than that!
         } else if (F->onlyReadsMemory()) {
           FI.addModRefInfo(MRI_Ref);
-          if (!F->isIntrinsic())
+          if (!F->isIntrinsic() && !F->onlyAccessesArgMemory())
             // This function might call back into the module and read a global -
             // consider every global as possibly being read by this function.
             FI.setMayReadAnyGlobal();
@@ -519,7 +521,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
             // Can't say anything about it.  However, if it is inside our SCC,
             // then nothing needs to be done.
             CallGraphNode *CalleeNode = CG[Callee];
-            if (std::find(SCC.begin(), SCC.end(), CalleeNode) == SCC.end())
+            if (!is_contained(SCC, CalleeNode))
               KnowNothing = true;
           }
         } else {
@@ -698,7 +700,7 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
       auto *InputGVar = dyn_cast<GlobalVariable>(InputGV);
       if (GVar && InputGVar &&
           !GVar->isDeclaration() && !InputGVar->isDeclaration() &&
-          !GVar->mayBeOverridden() && !InputGVar->mayBeOverridden()) {
+          !GVar->isInterposable() && !InputGVar->isInterposable()) {
         Type *GVType = GVar->getInitializer()->getType();
         Type *InputGVType = InputGVar->getInitializer()->getType();
         if (GVType->isSized() && InputGVType->isSized() &&
@@ -855,22 +857,22 @@ ModRefInfo GlobalsAAResult::getModRefInfoForArgument(ImmutableCallSite CS,
   if (CS.doesNotAccessMemory())
     return MRI_NoModRef;
   ModRefInfo ConservativeResult = CS.onlyReadsMemory() ? MRI_Ref : MRI_ModRef;
-  
+
   // Iterate through all the arguments to the called function. If any argument
   // is based on GV, return the conservative result.
   for (auto &A : CS.args()) {
     SmallVector<Value*, 4> Objects;
     GetUnderlyingObjects(A, Objects, DL);
-    
+
     // All objects must be identified.
-    if (!std::all_of(Objects.begin(), Objects.end(), isIdentifiedObject) &&
+    if (!all_of(Objects, isIdentifiedObject) &&
         // Try ::alias to see if all objects are known not to alias GV.
-        !std::all_of(Objects.begin(), Objects.end(), [&](Value *V) {
+        !all_of(Objects, [&](Value *V) {
           return this->alias(MemoryLocation(V), MemoryLocation(GV)) == NoAlias;
-          }))
+        }))
       return ConservativeResult;
 
-    if (std::find(Objects.begin(), Objects.end(), GV) != Objects.end())
+    if (is_contained(Objects, GV))
       return ConservativeResult;
   }
 
@@ -900,10 +902,10 @@ ModRefInfo GlobalsAAResult::getModRefInfo(ImmutableCallSite CS,
 
 GlobalsAAResult::GlobalsAAResult(const DataLayout &DL,
                                  const TargetLibraryInfo &TLI)
-    : AAResultBase(TLI), DL(DL) {}
+    : AAResultBase(), DL(DL), TLI(TLI) {}
 
 GlobalsAAResult::GlobalsAAResult(GlobalsAAResult &&Arg)
-    : AAResultBase(std::move(Arg)), DL(Arg.DL),
+    : AAResultBase(std::move(Arg)), DL(Arg.DL), TLI(Arg.TLI),
       NonAddressTakenGlobals(std::move(Arg.NonAddressTakenGlobals)),
       IndirectGlobals(std::move(Arg.IndirectGlobals)),
       AllocsForIndirectGlobals(std::move(Arg.AllocsForIndirectGlobals)),
@@ -915,6 +917,8 @@ GlobalsAAResult::GlobalsAAResult(GlobalsAAResult &&Arg)
     H.GAR = this;
   }
 }
+
+GlobalsAAResult::~GlobalsAAResult() {}
 
 /*static*/ GlobalsAAResult
 GlobalsAAResult::analyzeModule(Module &M, const TargetLibraryInfo &TLI,
@@ -933,13 +937,13 @@ GlobalsAAResult::analyzeModule(Module &M, const TargetLibraryInfo &TLI,
   return Result;
 }
 
-GlobalsAAResult GlobalsAA::run(Module &M, AnalysisManager<Module> *AM) {
-  return GlobalsAAResult::analyzeModule(M,
-                                        AM->getResult<TargetLibraryAnalysis>(M),
-                                        AM->getResult<CallGraphAnalysis>(M));
-}
-
 char GlobalsAA::PassID;
+
+GlobalsAAResult GlobalsAA::run(Module &M, ModuleAnalysisManager &AM) {
+  return GlobalsAAResult::analyzeModule(M,
+                                        AM.getResult<TargetLibraryAnalysis>(M),
+                                        AM.getResult<CallGraphAnalysis>(M));
+}
 
 char GlobalsAAWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(GlobalsAAWrapperPass, "globals-aa",

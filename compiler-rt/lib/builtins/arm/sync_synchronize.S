@@ -33,3 +33,6 @@ END_COMPILERRT_FUNCTION(__sync_synchronize)
 	.subsections_via_symbols
 		
 #endif
+
+NO_EXEC_STACK_DIRECTIVE
+

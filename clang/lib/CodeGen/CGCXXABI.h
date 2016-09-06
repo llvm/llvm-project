@@ -106,6 +106,16 @@ public:
 
   virtual bool hasMostDerivedReturn(GlobalDecl GD) const { return false; }
 
+  /// Returns true if the target allows calling a function through a pointer
+  /// with a different signature than the actual function (or equivalently,
+  /// bitcasting a function or function pointer to a different function type).
+  /// In principle in the most general case this could depend on the target, the
+  /// calling convention, and the actual types of the arguments and return
+  /// value. Here it just means whether the signature mismatch could *ever* be
+  /// allowed; in other words, does the target do strict checking of signatures
+  /// for all calls.
+  virtual bool canCallMismatchedFunctionType() const { return true; }
+
   /// If the C++ ABI requires the given type be returned in a particular way,
   /// this method sets RetAI and returns true.
   virtual bool classifyReturnType(CGFunctionInfo &FI) const = 0;
@@ -325,6 +335,12 @@ public:
   /// the formal return type of the function otherwise.
   virtual void addImplicitStructorParams(CodeGenFunction &CGF, QualType &ResTy,
                                          FunctionArgList &Params) = 0;
+
+  /// Get the ABI-specific "this" parameter adjustment to apply in the prologue
+  /// of a virtual function.
+  virtual CharUnits getVirtualFunctionPrologueThisAdjustment(GlobalDecl GD) {
+    return CharUnits::Zero();
+  }
 
   /// Perform ABI-specific "this" parameter adjustment in a virtual function
   /// prologue.

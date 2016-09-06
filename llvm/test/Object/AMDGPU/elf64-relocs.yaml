@@ -1,0 +1,66 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-readobj -r %t | FileCheck %s
+
+# CHECK: Relocations [
+# CHECK:   Section (2) .rela.text {
+# CHECK:     0x0 R_AMDGPU_NONE main 0x0
+# CHECK:     0x8 R_AMDGPU_ABS32_LO - 0x0
+# CHECK:     0x10 R_AMDGPU_ABS32_HI - 0x0
+# CHECK:     0x18 R_AMDGPU_ABS64 - 0x0
+# CHECK:     0x20 R_AMDGPU_REL32 - 0x0
+# CHECK:     0x28 R_AMDGPU_REL64 - 0x0
+# CHECK:     0x30 R_AMDGPU_ABS32 - 0x0
+# CHECK:   }
+# CHECK: ]
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_AMDGPU
+Sections:
+  - Type:            SHT_PROGBITS
+    Name:            .text
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x08
+    Content:         0000000000000000
+  - Type:            SHT_RELA
+    Name:            .rela.text
+    Link:            .symtab
+    Info:            .text
+    AddressAlign:    0x08
+    Relocations:
+      - Offset:          0x0
+        Symbol:          main
+        Type:            R_AMDGPU_NONE
+      - Offset:          0x8
+        Symbol:          a
+        Type:            R_AMDGPU_ABS32_LO
+      - Offset:          0x10
+        Symbol:          b
+        Type:            R_AMDGPU_ABS32_HI
+      - Offset:          0x18
+        Symbol:          c
+        Type:            R_AMDGPU_ABS64
+      - Offset:          0x20
+        Symbol:          d
+        Type:            R_AMDGPU_REL32
+      - Offset:          0x28
+        Symbol:          e
+        Type:            R_AMDGPU_REL64
+      - Offset:          0x30
+        Symbol:          f
+        Type:            R_AMDGPU_ABS32
+
+Symbols:
+  Local:
+    - Name:            .text
+      Type:            STT_SECTION
+      Section:         .text
+
+  Global:
+    - Name:            main
+      Type:            STT_FUNC
+      Section:         .text
+      Size:            0x08

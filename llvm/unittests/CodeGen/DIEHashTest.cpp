@@ -1,4 +1,4 @@
-//===- llvm/unittest/DebugInfo/DWARFFormValueTest.cpp ---------------------===//
+//===- llvm/unittest/CodeGen/DIEHashTest.cpp ------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

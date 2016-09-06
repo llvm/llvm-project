@@ -1,5 +1,7 @@
 ; RUN: %lli -jit-kind=orc-mcjit -remote-mcjit -mcjit-remote-process=lli-child-target%exeext %s > /dev/null
 ; XFAIL: mingw32,win32
+; UNSUPPORTED: powerpc64-unknown-linux-gnu
+; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 
 define double @test(double* %DP, double %Arg) nounwind {
 	%D = load double, double* %DP		; <double> [#uses=1]

@@ -188,6 +188,8 @@ public:
     bool lookupAddressRange(uint64_t address, uint64_t size,
                             std::vector<uint32_t> &result) const;
 
+    bool hasFileAtIndex(uint64_t FileIndex) const;
+
     // Extracts filename by its index in filename table in prologue.
     // Returns true on success.
     bool getFileNameByIndex(uint64_t FileIndex, const char *CompDir,

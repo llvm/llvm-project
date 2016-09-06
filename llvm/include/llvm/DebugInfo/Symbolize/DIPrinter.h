@@ -31,7 +31,7 @@ class DIPrinter {
   int PrintSourceContext;
 
   void print(const DILineInfo &Info, bool Inlined);
-  void printContext(std::string FileName, int64_t Line);
+  void printContext(const std::string &FileName, int64_t Line);
 
 public:
   DIPrinter(raw_ostream &OS, bool PrintFunctionNames = true,

@@ -1,4 +1,4 @@
-; RUN: llc -O1 -march=aarch64 < %s | FileCheck %s
+; RUN: llc < %s -O1 -mtriple=aarch64-eabi | FileCheck %s
 
 declare void @t()
 

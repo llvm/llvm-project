@@ -41,7 +41,6 @@ define fp128 @square_fabs_call_f128(fp128 %x) {
 declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare fp128 @llvm.fabs.f128(fp128)
-declare <4 x float> @llvm.fabs.v4f32(<4 x float>)
 
 define float @square_fabs_intrinsic_f32(float %x) {
   %mul = fmul float %x, %x
@@ -97,29 +96,5 @@ define float @square_fabs_shrink_call2(float %x) {
 ; CHECK-LABEL: square_fabs_shrink_call2(
 ; CHECK-NEXT: %sq = fmul float %x, %x
 ; CHECK-NEXT: ret float %sq
-}
-
-; A scalar fabs op makes the sign bit zero, so masking off all of the other bits means we can return zero.
-
-define i32 @fabs_value_tracking_f32(float %x) {
-  %call = call float @llvm.fabs.f32(float %x)
-  %bc = bitcast float %call to i32
-  %and = and i32 %bc, 2147483648
-  ret i32 %and
-
-; CHECK-LABEL: fabs_value_tracking_f32(
-; CHECK:       ret i32 0
-}
-
-; TODO: A vector fabs op makes the sign bits zero, so masking off all of the other bits means we can return zero.
-
-define <4 x i32> @fabs_value_tracking_v4f32(<4 x float> %x) {
-  %call = call <4 x float> @llvm.fabs.v4f32(<4 x float> %x)
-  %bc = bitcast <4 x float> %call to <4 x i32>
-  %and = and <4 x i32> %bc, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
-  ret <4 x i32> %and
-
-; CHECK-LABEL: fabs_value_tracking_v4f32(
-; CHECK:       ret <4 x i32> %and
 }
 

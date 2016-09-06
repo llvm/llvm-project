@@ -64,18 +64,10 @@ class CGDebugInfo {
   llvm::DIType *ClassTy = nullptr;
   llvm::DICompositeType *ObjTy = nullptr;
   llvm::DIType *SelTy = nullptr;
-  llvm::DIType *OCLImage1dDITy = nullptr;
-  llvm::DIType *OCLImage1dArrayDITy = nullptr;
-  llvm::DIType *OCLImage1dBufferDITy = nullptr;
-  llvm::DIType *OCLImage2dDITy = nullptr;
-  llvm::DIType *OCLImage2dArrayDITy = nullptr;
-  llvm::DIType *OCLImage2dDepthDITy = nullptr;
-  llvm::DIType *OCLImage2dArrayDepthDITy = nullptr;
-  llvm::DIType *OCLImage2dMSAADITy = nullptr;
-  llvm::DIType *OCLImage2dArrayMSAADITy = nullptr;
-  llvm::DIType *OCLImage2dMSAADepthDITy = nullptr;
-  llvm::DIType *OCLImage2dArrayMSAADepthDITy = nullptr;
-  llvm::DIType *OCLImage3dDITy = nullptr;
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+  llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/OpenCLImageTypes.def"
+  llvm::DIType *OCLSamplerDITy = nullptr;
   llvm::DIType *OCLEventDITy = nullptr;
   llvm::DIType *OCLClkEventDITy = nullptr;
   llvm::DIType *OCLQueueDITy = nullptr;
@@ -109,7 +101,7 @@ class CGDebugInfo {
   /// compilation.
   std::vector<std::pair<const TagType *, llvm::TrackingMDRef>> ReplaceMap;
 
-  /// Cache of replaceable forward declarartions (functions and
+  /// Cache of replaceable forward declarations (functions and
   /// variables) to RAUW at the end of compilation.
   std::vector<std::pair<const DeclaratorDecl *, llvm::TrackingMDRef>>
       FwdDeclReplaceMap;
@@ -241,10 +233,15 @@ class CGDebugInfo {
                            llvm::DIFile *F);
 
   llvm::DIType *createFieldType(StringRef name, QualType type,
-                                uint64_t sizeInBitsOverride, SourceLocation loc,
-                                AccessSpecifier AS, uint64_t offsetInBits,
-                                llvm::DIFile *tunit, llvm::DIScope *scope,
+                                SourceLocation loc, AccessSpecifier AS,
+                                uint64_t offsetInBits, llvm::DIFile *tunit,
+                                llvm::DIScope *scope,
                                 const RecordDecl *RD = nullptr);
+
+  /// Create new bit field member.
+  llvm::DIType *createBitFieldType(const FieldDecl *BitFieldDecl,
+                                   llvm::DIScope *RecordTy,
+                                   const RecordDecl *RD);
 
   /// Helpers for collecting fields of a record.
   /// @{
@@ -258,6 +255,8 @@ class CGDebugInfo {
                                 llvm::DIFile *F,
                                 SmallVectorImpl<llvm::Metadata *> &E,
                                 llvm::DIType *RecordTy, const RecordDecl *RD);
+  void CollectRecordNestedRecord(const RecordDecl *RD,
+                                 SmallVectorImpl<llvm::Metadata *> &E);
   void CollectRecordFields(const RecordDecl *Decl, llvm::DIFile *F,
                            SmallVectorImpl<llvm::Metadata *> &E,
                            llvm::DICompositeType *RecordTy);

@@ -27,6 +27,7 @@ public:
 
 private:
   void emitTargetIndependentEnums(raw_ostream &OS);
+  void emitConversionFn(raw_ostream &OS);
   void emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr);
 
   void printEnumAttrClasses(raw_ostream &OS,
@@ -48,6 +49,27 @@ void Attributes::emitTargetIndependentEnums(raw_ostream &OS) {
 
   for (auto A : Attrs)
     OS << A->getName() << ",\n";
+
+  OS << "#endif\n";
+}
+
+void Attributes::emitConversionFn(raw_ostream &OS) {
+  OS << "#ifdef GET_ATTR_KIND_FROM_NAME\n";
+  OS << "#undef GET_ATTR_KIND_FROM_NAME\n";
+
+  std::vector<Record*> Attrs =
+      Records.getAllDerivedDefinitions("EnumAttr");
+
+  OS << "static Attribute::AttrKind getAttrKindFromName(StringRef AttrName) {\n";
+  OS << "  return StringSwitch<Attribute::AttrKind>(AttrName)\n";
+
+  for (auto A : Attrs) {
+    OS << "    .Case(\"" << A->getValueAsString("AttrString");
+    OS << "\", Attribute::" << A->getName() << ")\n";
+  }
+
+  OS << "    .Default(Attribute::None);\n";
+  OS << "}\n\n";
 
   OS << "#endif\n";
 }
@@ -144,6 +166,7 @@ void Attributes::printStrBoolAttrClasses(raw_ostream &OS,
 
 void Attributes::emit(raw_ostream &OS) {
   emitTargetIndependentEnums(OS);
+  emitConversionFn(OS);
   emitFnAttrCompatCheck(OS, false);
 }
 

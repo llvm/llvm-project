@@ -12,7 +12,9 @@
 #include "llvm-pdbdump.h"
 
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
+#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
+#include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolCompiland.h"
@@ -31,9 +33,9 @@
 #include "FunctionDumper.h"
 
 #include <utility>
-#include <vector>
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 CompilandDumper::CompilandDumper(LinePrinter &P)
     : PDBSymDumper(true), Printer(P) {}
@@ -42,21 +44,65 @@ void CompilandDumper::dump(const PDBSymbolCompilandDetails &Symbol) {}
 
 void CompilandDumper::dump(const PDBSymbolCompilandEnv &Symbol) {}
 
-void CompilandDumper::start(const PDBSymbolCompiland &Symbol, bool Children) {
+void CompilandDumper::start(const PDBSymbolCompiland &Symbol,
+                            CompilandDumpFlags opts) {
   std::string FullName = Symbol.getName();
   if (Printer.IsCompilandExcluded(FullName))
     return;
 
   Printer.NewLine();
   WithColor(Printer, PDB_ColorItem::Path).get() << FullName;
-  if (!Children)
-    return;
 
-  auto ChildrenEnum = Symbol.findAllChildren();
-  Printer.Indent();
-  while (auto Child = ChildrenEnum->getNext())
-    Child->dump(*this);
-  Printer.Unindent();
+  if (opts & Flags::Lines) {
+    const IPDBSession &Session = Symbol.getSession();
+    auto Files = Session.getSourceFilesForCompiland(Symbol);
+    Printer.Indent();
+    while (auto File = Files->getNext()) {
+      Printer.NewLine();
+      WithColor(Printer, PDB_ColorItem::Path).get() << File->getFileName();
+
+      auto Lines = Session.findLineNumbers(Symbol, *File);
+      Printer.Indent();
+      while (auto Line = Lines->getNext()) {
+        Printer.NewLine();
+        uint32_t LineStart = Line->getLineNumber();
+        uint32_t LineEnd = Line->getLineNumberEnd();
+
+        Printer << "Line ";
+        PDB_ColorItem StatementColor = Line->isStatement()
+                                           ? PDB_ColorItem::Keyword
+                                           : PDB_ColorItem::LiteralValue;
+        WithColor(Printer, StatementColor).get() << LineStart;
+        if (LineStart != LineEnd)
+          WithColor(Printer, StatementColor).get() << " - " << LineEnd;
+
+        Printer << ", Address: ";
+        if (Line->getLength() > 0) {
+          uint64_t AddrStart = Line->getVirtualAddress();
+          uint64_t AddrEnd = AddrStart + Line->getLength() - 1;
+          WithColor(Printer, PDB_ColorItem::Address).get()
+              << "[" << format_hex(AddrStart, 10) << " - "
+              << format_hex(AddrEnd, 10) << "]";
+          Printer << " (" << Line->getLength() << " bytes)";
+        } else {
+          uint64_t AddrStart = Line->getVirtualAddress();
+          WithColor(Printer, PDB_ColorItem::Address).get()
+              << "[" << format_hex(AddrStart, 10) << "] ";
+          Printer << "(0 bytes)";
+        }
+      }
+      Printer.Unindent();
+    }
+    Printer.Unindent();
+  }
+
+  if (opts & Flags::Children) {
+    auto ChildrenEnum = Symbol.findAllChildren();
+    Printer.Indent();
+    while (auto Child = ChildrenEnum->getNext())
+      Child->dump(*this);
+    Printer.Unindent();
+  }
 }
 
 void CompilandDumper::dump(const PDBSymbolData &Symbol) {
@@ -112,9 +158,9 @@ void CompilandDumper::dump(const PDBSymbolThunk &Symbol) {
 
   Printer.NewLine();
   Printer << "thunk ";
-  PDB_ThunkOrdinal Ordinal = Symbol.getThunkOrdinal();
+  codeview::ThunkOrdinal Ordinal = Symbol.getThunkOrdinal();
   uint64_t VA = Symbol.getVirtualAddress();
-  if (Ordinal == PDB_ThunkOrdinal::TrampIncremental) {
+  if (Ordinal == codeview::ThunkOrdinal::TrampIncremental) {
     uint64_t Target = Symbol.getTargetVirtualAddress();
     WithColor(Printer, PDB_ColorItem::Address).get() << format_hex(VA, 10);
     Printer << " -> ";

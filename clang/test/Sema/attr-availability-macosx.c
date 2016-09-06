@@ -15,11 +15,11 @@ void f6(int) __attribute__((availability(macosx,strict,introduced=10.6))); //exp
 void test() {
   f0(0);
   f1(0);
-  f2(0); // expected-warning{{'f2' is deprecated: first deprecated in OS X 10.5}}
+  f2(0); // expected-warning{{'f2' is deprecated: first deprecated in macOS 10.5}}
   f3(0);
-  f4(0); // expected-error{{f4' is unavailable: obsoleted in OS X 10.5}}
-  f5(0); // expected-error{{'f5' is unavailable: not available on OS X}}
-  f6(0); // expected-error{{'f6' is unavailable: introduced in OS X 10.6}}
+  f4(0); // expected-error{{f4' is unavailable: obsoleted in macOS 10.5}}
+  f5(0); // expected-error{{'f5' is unavailable: not available on macOS}}
+  f6(0); // expected-error{{'f6' is unavailable: introduced in macOS 10.6}}
 }
 
 struct __attribute__((availability(macosx,strict,introduced=10.6)))
@@ -27,7 +27,7 @@ struct __attribute__((availability(macosx,strict,introduced=10.6)))
     expected-note{{'not_yet_introduced_struct' has been explicitly marked unavailable here}}
 
 void uses_not_introduced_struct(struct not_yet_introduced_struct *); // \
-    expected-error{{'not_yet_introduced_struct' is unavailable: introduced in OS X 10.6}}
+    expected-error{{'not_yet_introduced_struct' is unavailable: introduced in macOS 10.6}}
 
 __attribute__((availability(macosx,strict,introduced=10.6)))
 void uses_not_introduced_struct_same_availability(struct not_yet_introduced_struct *);
@@ -45,3 +45,14 @@ enum {
 enum __attribute__((availability(macosx,introduced=8.0,deprecated=9.0))) {
     bar1 = foo
 };
+
+// Make sure the note is on the declaration with the actual availability attributes.
+struct __attribute__((availability(macosx,strict,introduced=10.9))) type_info // \
+    expected-note{{'type_info' has been explicitly marked unavailable here}}
+{
+};
+struct type_info;
+int test2() {
+  struct type_info *t; // expected-error{{'type_info' is unavailable: introduced in macOS 10.9}}
+  return 0;
+}

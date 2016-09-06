@@ -18,6 +18,7 @@
 
 #define AA_NAME "alignment-from-assumptions"
 #define DEBUG_TYPE AA_NAME
+#include "llvm/Transforms/Scalar/AlignmentFromAssumptions.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -25,13 +26,11 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
@@ -67,18 +66,7 @@ struct AlignmentFromAssumptions : public FunctionPass {
     AU.addPreserved<ScalarEvolutionWrapperPass>();
   }
 
-  // For memory transfers, we need a common alignment for both the source and
-  // destination. If we have a new alignment for only one operand of a transfer
-  // instruction, save it in these maps.  If we reach the other operand through
-  // another assumption later, then we may change the alignment at that point.
-  DenseMap<MemTransferInst *, unsigned> NewDestAlignments, NewSrcAlignments;
-
-  ScalarEvolution *SE;
-  DominatorTree *DT;
-
-  bool extractAlignmentInfo(CallInst *I, Value *&AAPtr, const SCEV *&AlignSCEV,
-                            const SCEV *&OffSCEV);
-  bool processAssumption(CallInst *I);
+  AlignmentFromAssumptionsPass Impl;
 };
 }
 
@@ -209,9 +197,10 @@ static unsigned getNewAlignment(const SCEV *AASCEV, const SCEV *AlignSCEV,
   return 0;
 }
 
-bool AlignmentFromAssumptions::extractAlignmentInfo(CallInst *I,
-                                 Value *&AAPtr, const SCEV *&AlignSCEV,
-                                 const SCEV *&OffSCEV) {
+bool AlignmentFromAssumptionsPass::extractAlignmentInfo(CallInst *I,
+                                                        Value *&AAPtr,
+                                                        const SCEV *&AlignSCEV,
+                                                        const SCEV *&OffSCEV) {
   // An alignment assume must be a statement about the least-significant
   // bits of the pointer being zero, possibly with some offset.
   ICmpInst *ICI = dyn_cast<ICmpInst>(I->getArgOperand(0));
@@ -302,7 +291,7 @@ bool AlignmentFromAssumptions::extractAlignmentInfo(CallInst *I,
   return true;
 }
 
-bool AlignmentFromAssumptions::processAssumption(CallInst *ACall) {
+bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall) {
   Value *AAPtr;
   const SCEV *AlignSCEV, *OffSCEV;
   if (!extractAlignmentInfo(ACall, AAPtr, AlignSCEV, OffSCEV))
@@ -411,14 +400,26 @@ bool AlignmentFromAssumptions::processAssumption(CallInst *ACall) {
 }
 
 bool AlignmentFromAssumptions::runOnFunction(Function &F) {
-  bool Changed = false;
+  if (skipFunction(F))
+    return false;
+
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+
+  return Impl.runImpl(F, AC, SE, DT);
+}
+
+bool AlignmentFromAssumptionsPass::runImpl(Function &F, AssumptionCache &AC,
+                                           ScalarEvolution *SE_,
+                                           DominatorTree *DT_) {
+  SE = SE_;
+  DT = DT_;
 
   NewDestAlignments.clear();
   NewSrcAlignments.clear();
 
+  bool Changed = false;
   for (auto &AssumeVH : AC.assumptions())
     if (AssumeVH)
       Changed |= processAssumption(cast<CallInst>(AssumeVH));
@@ -426,3 +427,25 @@ bool AlignmentFromAssumptions::runOnFunction(Function &F) {
   return Changed;
 }
 
+PreservedAnalyses
+AlignmentFromAssumptionsPass::run(Function &F, FunctionAnalysisManager &AM) {
+
+  AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
+  ScalarEvolution &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  bool Changed = runImpl(F, AC, &SE, &DT);
+
+  // FIXME: We need to invalidate this to avoid PR28400. Is there a better
+  // solution?
+  AM.invalidate<ScalarEvolutionAnalysis>(F);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<AAManager>();
+  PA.preserve<ScalarEvolutionAnalysis>();
+  PA.preserve<GlobalsAA>();
+  PA.preserve<LoopAnalysis>();
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
+}

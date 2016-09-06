@@ -81,32 +81,23 @@ public:
 
   /// \brief Looks for summary sections in the given memory buffer,
   /// returns true if found, else false.
-  static bool
-  hasGlobalValueSummaryInMemBuffer(MemoryBufferRef Object,
-                                   DiagnosticHandlerFunction DiagnosticHandler);
+  static bool hasGlobalValueSummaryInMemBuffer(
+      MemoryBufferRef Object,
+      const DiagnosticHandlerFunction &DiagnosticHandler);
 
   /// \brief Parse module summary index in the given memory buffer.
   /// Return new ModuleSummaryIndexObjectFile instance containing parsed module
   /// summary/index.
   static ErrorOr<std::unique_ptr<ModuleSummaryIndexObjectFile>>
-  create(MemoryBufferRef Object, DiagnosticHandlerFunction DiagnosticHandler,
-         bool IsLazy = false);
-
-  /// \brief Parse the summary information for global value with the
-  /// given name out of the given buffer. Parsed information is
-  /// stored on the index object saved in this object.
-  std::error_code
-  findGlobalValueSummaryInMemBuffer(MemoryBufferRef Object,
-                                    DiagnosticHandlerFunction DiagnosticHandler,
-                                    StringRef ValueName);
+  create(MemoryBufferRef Object,
+         const DiagnosticHandlerFunction &DiagnosticHandler);
 };
 }
 
 /// Parse the module summary index out of an IR file and return the module
 /// summary index object if found, or nullptr if not.
-ErrorOr<std::unique_ptr<ModuleSummaryIndex>>
-getModuleSummaryIndexForFile(StringRef Path,
-                             DiagnosticHandlerFunction DiagnosticHandler);
+ErrorOr<std::unique_ptr<ModuleSummaryIndex>> getModuleSummaryIndexForFile(
+    StringRef Path, const DiagnosticHandlerFunction &DiagnosticHandler);
 }
 
 #endif

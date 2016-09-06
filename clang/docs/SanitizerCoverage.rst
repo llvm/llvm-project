@@ -16,8 +16,9 @@ How to build and run
 ====================
 
 SanitizerCoverage can be used with :doc:`AddressSanitizer`,
-:doc:`LeakSanitizer`, :doc:`MemorySanitizer`, and UndefinedBehaviorSanitizer.
-In addition to ``-fsanitize=``, pass one of the following compile-time flags:
+:doc:`LeakSanitizer`, :doc:`MemorySanitizer`,
+UndefinedBehaviorSanitizer, or without any sanitizer.  Pass one of the
+following compile-time flags:
 
 * ``-fsanitize-coverage=func`` for function-level coverage (very fast).
 * ``-fsanitize-coverage=bb`` for basic-block-level coverage (may add up to 30%
@@ -27,8 +28,9 @@ In addition to ``-fsanitize=``, pass one of the following compile-time flags:
 You may also specify ``-fsanitize-coverage=indirect-calls`` for
 additional `caller-callee coverage`_.
 
-At run time, pass ``coverage=1`` in ``ASAN_OPTIONS``, ``LSAN_OPTIONS``,
-``MSAN_OPTIONS`` or ``UBSAN_OPTIONS``, as appropriate.
+At run time, pass ``coverage=1`` in ``ASAN_OPTIONS``,
+``LSAN_OPTIONS``, ``MSAN_OPTIONS`` or ``UBSAN_OPTIONS``, as
+appropriate. For the standalone coverage mode, use ``UBSAN_OPTIONS``.
 
 To get `Coverage counters`_, add ``-fsanitize-coverage=8bit-counters``
 to one of the above compile-time flags. At runtime, use
@@ -93,6 +95,41 @@ numbers:
     % sancov.py print a.out.22679.sancov a.out.22673.sancov 2> /dev/null | llvm-symbolizer --obj a.out
     cov.cc:3
     cov.cc:5
+
+Sancov Tool
+===========
+
+A new experimental ``sancov`` tool is developed to process coverage files.
+The tool is part of LLVM project and is currently supported only on Linux.
+It can handle symbolization tasks autonomously without any extra support
+from the environment. You need to pass .sancov files (named 
+``<module_name>.<pid>.sancov`` and paths to all corresponding binary elf files. 
+Sancov matches these files using module names and binaries file names.
+
+.. code-block:: console
+
+    USAGE: sancov [options] <action> (<binary file>|<.sancov file>)...
+
+    Action (required)
+      -print                    - Print coverage addresses
+      -covered-functions        - Print all covered functions.
+      -not-covered-functions    - Print all not covered functions.
+      -html-report              - Print HTML coverage report.
+
+    Options
+      -blacklist=<string>         - Blacklist file (sanitizer blacklist format).
+      -demangle                   - Print demangled function name.
+      -strip_path_prefix=<string> - Strip this prefix from file paths in reports
+
+
+Automatic HTML Report Generation
+================================
+
+If ``*SAN_OPTIONS`` contains ``html_cov_report=1`` option set, then html
+coverage report would be automatically generated alongside the coverage files.
+The ``sancov`` binary should be present in ``PATH`` or
+``sancov_path=<path_to_sancov`` option can be used to specify tool location.
+
 
 How good is the coverage?
 =========================
@@ -209,7 +246,7 @@ Coverage counters
 =================
 
 This experimental feature is inspired by
-`AFL <http://lcamtuf.coredump.cx/afl/technical_details.txt>`_'s coverage
+`AFL <http://lcamtuf.coredump.cx/afl/technical_details.txt>`__'s coverage
 instrumentation. With additional compile-time and run-time flags you can get
 more sensitive coverage information.  In addition to boolean values assigned to
 every basic block (edge) the instrumentation will collect imprecise counters.
@@ -251,10 +288,38 @@ These counters may also be used for in-process coverage-guided fuzzers. See
 
 Tracing basic blocks
 ====================
-An *experimental* feature to support basic block (or edge) tracing.
+Experimental support for basic block (or edge) tracing.
 With ``-fsanitize-coverage=trace-bb`` the compiler will insert
 ``__sanitizer_cov_trace_basic_block(s32 *id)`` before every function, basic block, or edge
 (depending on the value of ``-fsanitize-coverage=[func,bb,edge]``).
+Example:
+
+.. code-block:: console
+
+    % clang -g -fsanitize=address -fsanitize-coverage=edge,trace-bb foo.cc
+    % ASAN_OPTIONS=coverage=1 ./a.out
+
+This will produce two files after the process exit:
+`trace-points.PID.sancov` and `trace-events.PID.sancov`.
+The first file will contain a textual description of all the instrumented points in the program
+in the form that you can feed into llvm-symbolizer (e.g. `a.out 0x4dca89`), one per line.
+The second file will contain the actual execution trace as a sequence of 4-byte integers
+-- these integers are the indices into the array of instrumented points (the first file).
+
+Basic block tracing is currently supported only for single-threaded applications.
+
+
+Tracing PCs
+===========
+*Experimental* feature similar to tracing basic blocks, but with a different API.
+With ``-fsanitize-coverage=trace-pc`` the compiler will insert
+``__sanitizer_cov_trace_pc()`` on every edge.
+With an additional ``...=trace-pc,indirect-calls`` flag
+``__sanitizer_cov_trace_pc_indirect(void *callee)`` will be inserted on every indirect call.
+These callbacks are not implemented in the Sanitizer run-time and should be defined
+by the user. So, these flags do not require the other sanitizer to be used.
+This mechanism is used for fuzzing the Linux kernel (https://github.com/google/syzkaller)
+and can be used with `AFL <http://lcamtuf.coredump.cx/afl>`__.
 
 Tracing data flow
 =================

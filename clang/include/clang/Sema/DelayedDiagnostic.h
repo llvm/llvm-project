@@ -122,7 +122,7 @@ public:
 
   void Destroy();
 
-  static DelayedDiagnostic makeAvailability(Sema::AvailabilityDiagnostic AD,
+  static DelayedDiagnostic makeAvailability(AvailabilityResult AR,
                                             SourceLocation Loc,
                                             const NamedDecl *D,
                                             const ObjCInterfaceDecl *UnknownObjCClass,

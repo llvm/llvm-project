@@ -4,6 +4,7 @@
 -(const id) mymethod2:(id)x blah:(Class)y boo:(SEL)z;
 -(bycopy)methodIn:(in int)i andOut:(out short *)j , ...;
 -(void)kindof_meth:(__kindof Foo *)p;
+@property (class) int classProp;
 @end
 
 // RUN: c-index-test -test-print-type %s | FileCheck %s
@@ -15,3 +16,4 @@
 // CHECK: ParmDecl=i:5:27 (Definition) [In,] [type=int] [typekind=Int] [isPOD=1]
 // CHECK: ParmDecl=j:5:49 (Definition) [Out,] [type=short *] [typekind=Pointer] [isPOD=1] [pointeetype=short] [pointeekind=Short]
 // CHECK: ParmDecl=p:6:36 (Definition) [type=__kindof Foo *] [typekind=ObjCObjectPointer] [canonicaltype=__kindof Foo *] [canonicaltypekind=ObjCObjectPointer] [isPOD=1] [pointeetype=Foo] [pointeekind=ObjCInterface]
+// CHECK: ObjCPropertyDecl=classProp:7:23 [class,] [type=int] [typekind=Int] [isPOD=1]

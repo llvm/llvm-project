@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=x86_64-pc-windows-msvc \
-// RUN:     -mconstructor-aliases -fexceptions -fcxx-exceptions -fnew-ms-eh \
+// RUN:     -mconstructor-aliases -fexceptions -fcxx-exceptions \
 // RUN:     -O1 -disable-llvm-optzns \
 // RUN:     | FileCheck -check-prefix WIN64 %s
 

@@ -1,4 +1,4 @@
-; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon -output-asm-variant=1 -show-encoding < %s | FileCheck %s
+; RUN: llvm-mc -triple arm64-apple-darwin -mattr=neon -output-asm-variant=1 -show-encoding -print-imm-hex < %s | FileCheck %s
 
 foo:
 ;-----------------------------------------------------------------------------
@@ -66,8 +66,8 @@ foo:
   cmn x2, w3, uxtb #1
   cmn x4, x5, uxtx #1
 
-; CHECK: cmn	w1, #3                  ; encoding: [0x3f,0x0c,0x00,0x31]
-; CHECK: cmn	x2, #1024, lsl #12      ; encoding: [0x5f,0x00,0x50,0xb1]
+; CHECK: cmn	w1, #0x3                  ; encoding: [0x3f,0x0c,0x00,0x31]
+; CHECK: cmn	x2, #0x400, lsl #12      ; encoding: [0x5f,0x00,0x50,0xb1]
 ; CHECK: cmn	w4, w5                  ; encoding: [0x9f,0x00,0x05,0x2b]
 ; CHECK: cmn	x6, x7                  ; encoding: [0xdf,0x00,0x07,0xab]
 ; CHECK: cmn	w8, w9, asr #3          ; encoding: [0x1f,0x0d,0x89,0x2b]
@@ -92,8 +92,8 @@ foo:
   cmp w9, w8, uxtw
   cmp wsp, w9, lsl #0
 
-; CHECK: cmp	w1, #1024, lsl #12      ; encoding: [0x3f,0x00,0x50,0x71]
-; CHECK: cmp	x2, #1024               ; encoding: [0x5f,0x00,0x10,0xf1]
+; CHECK: cmp	w1, #0x400, lsl #12      ; encoding: [0x3f,0x00,0x50,0x71]
+; CHECK: cmp	x2, #0x400               ; encoding: [0x5f,0x00,0x10,0xf1]
 ; CHECK: cmp	w4, w5                  ; encoding: [0x9f,0x00,0x05,0x6b]
 ; CHECK: cmp	x6, x7                  ; encoding: [0xdf,0x00,0x07,0xeb]
 ; CHECK: cmp	w8, w9, asr #3          ; encoding: [0x1f,0x0d,0x89,0x6b]
@@ -134,18 +134,101 @@ foo:
   mov x0, #281470681743360
   mov x0, #18446744073709486080
 
-; CHECK: movz	x0, #0xffff, lsl #32
-; CHECK: movn	x0, #0xffff
+; CHECK: mov x0, #0xffff00000000
+; CHECK: mov x0, #-0x10000
 
   mov w0, #0xffffffff
   mov w0, #0xffffff00
   mov wzr, #0xffffffff
   mov wzr, #0xffffff00
 
-; CHECK: movn   w0, #0
-; CHECK: movn   w0, #0xff
-; CHECK: movn   wzr, #0
-; CHECK: movn   wzr, #0xff
+; CHECK: mov   w0, #-0x1
+; CHECK: mov   w0, #-0x100
+; CHECK: mov   wzr, #-0x1
+; CHECK: mov   wzr, #-0x100
+
+  ; 0 can be encoded by MOVZ in multiple ways, only "lsl #0" is a MOV alias.
+  movz x0, #0
+  movz x0, #0, lsl #16
+  movz x0, #0, lsl #32
+  movz x0, #0, lsl #48
+  movz w0, #0
+  movz w0, #0, lsl #16
+; CHECK: mov x0, #0x0
+; CHECK: movz x0, #0x0, lsl #16
+; CHECK: movz x0, #0x0, lsl #32
+; CHECK: movz x0, #0x0, lsl #48
+; CHECK: mov w0, #0x0
+; CHECK: movz w0, #0x0, lsl #16
+
+  ; Similarly to MOVZ, -1 can be encoded in multiple ways, only one of which is
+  ; "MOV".
+  movn x0, #0
+  movn x0, #0, lsl #16
+  movn x0, #0, lsl #32
+  movn x0, #0, lsl #48
+  movn w0, #0
+  movn w0, #0, lsl #16
+; CHECK: mov x0, #-0x1
+; CHECK: movn x0, #0x0, lsl #16
+; CHECK: movn x0, #0x0, lsl #32
+; CHECK: movn x0, #0x0, lsl #48
+; CHECK: mov w0, #-0x1
+; CHECK: movn w0, #0x0, lsl #16
+
+  ; Two 32-bit immediates are encodable by both MOVN and MOVZ, make sure the MOV
+  ; corresponds to the MOVZ version.
+  movz w0, #0xffff
+  movz w0, #0xffff, lsl #16
+  movn w0, #0xffff
+  movn w0, #0xffff, lsl #16
+; CHECK: mov w0, #0xffff
+; CHECK: mov w0, #-0x10000
+; CHECK: movn w0, #0xffff
+; CHECK: movn w0, #0xffff, lsl #16
+
+  orr x20, xzr, #0xaaaaaaaaaaaaaaaa
+  orr w15, wzr, #0xaaaaaaaa
+; CHECK: mov x20, #-0x5555555555555556
+; CHECK: mov w15, #-0x55555556
+
+  ; ORR is mostly repeating bit sequences and cannot encode -1, so it only
+  ; overlaps with MOVZ or MOVN if the repeat-width is the whole register. In
+  ; both cases MOVZ/MOVN are preferred.
+  orr x3, xzr, #0x1
+  orr w3, wzr, #0x1
+  orr x3, xzr, #0x10000
+  orr w3, wzr, #0x10000
+  orr x3, xzr, #0x700000000
+  orr x3, xzr, #0x3000000000000
+; CHECK: orr x3, xzr, #0x1
+; CHECK: orr w3, wzr, #0x1
+; CHECK: orr x3, xzr, #0x10000
+; CHECK: orr w3, wzr, #0x10000
+; CHECK: orr x3, xzr, #0x700000000
+; CHECK: orr x3, xzr, #0x3000000000000
+
+
+  orr x5, xzr, #0xfffffffffffffff0
+  orr w2, wzr, #0xfffffffe
+  orr x5, xzr, #0xfffffffffcffffff
+  orr w2, wzr, #0xf0ffffff
+  orr x5, xzr, #0xffffff00ffffffff
+  orr x5, xzr, #0x8000ffffffffffff
+; CHECK: orr x5, xzr, #0xfffffffffffffff0
+; CHECK: orr w2, wzr, #0xfffffffe
+; CHECK: orr x5, xzr, #0x8000ffffffffffff
+
+  ; 0xffff is interesting because there are exceptions in the MOVN rules for
+  ; it. Make sure we don't accidentally fall down any of those holes.
+  orr w3, wzr, #0xffff0000
+  orr w3, wzr, #0xffff
+  orr x3, xzr, #0xffff000000000000
+  orr x5, xzr, #0x0000ffffffffffff
+; CHECK: orr w3, wzr, #0xffff0000
+; CHECK: orr w3, wzr, #0xffff
+; CHECK: orr x3, xzr, #0xffff000000000000
+; CHECK: orr x5, xzr, #0xffffffffffff
 
 ;-----------------------------------------------------------------------------
 ; MVN aliases
@@ -218,8 +301,8 @@ foo:
    ubfm x0, x0, #63, #62
    ubfm w0, w0, #4, #31
    ubfm x0, x0, #4, #63
-; CHECK: ror w1, w3, #5
-; CHECK: ror x1, x3, #5
+; CHECK: ror w1, w3, #0x5
+; CHECK: ror x1, x3, #0x5
    ror w1, w3, #5
    ror x1, x3, #5
 ; CHECK: lsl w1, wzr, #3
@@ -745,7 +828,7 @@ foo:
   movi v1.2d, #0x000000000000ff
   movi v2.2D, #0x000000000000ff
 
-; CHECK: movi.16b	v4, #0              ; encoding: [0x04,0xe4,0x00,0x4f]
+; CHECK: movi.16b	v4, #0x0              ; encoding: [0x04,0xe4,0x00,0x4f]
 ; CHECK: movi.16b	v4, #0x1              ; encoding: [0x24,0xe4,0x00,0x4f]
 ; CHECK: movi.8b	v4, #0x2               ; encoding: [0x44,0xe4,0x00,0x0f]
 ; CHECK: movi.8b	v4, #0x3               ; encoding: [0x64,0xe4,0x00,0x0f]

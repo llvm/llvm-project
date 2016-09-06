@@ -24,7 +24,7 @@
 
 // CHECK-X86_64-HIDDEN: @"OBJC_CLASS_$_MySecretNamespace.A" = hidden global {{.*}}, section "__DATA, __objc_data", align 8
 // CHECK-X86_64-HIDDEN: @"OBJC_METACLASS_$_MySecretNamespace.A" = hidden global {{.*}}, section "__DATA, __objc_data", align 8
-// CHECK-X86_64-HIDDEN: @"OBJC_EHTYPE_$_MySecretNamespace.EH1" = weak hidden global {{.*}}
+// CHECK-X86_64-HIDDEN: @"OBJC_EHTYPE_$_MySecretNamespace.EH1" = weak hidden global
 // CHECK-X86_64-HIDDEN: @"OBJC_EHTYPE_$_MySecretNamespace.EH2" = external global
 // CHECK-X86_64-HIDDEN: @"OBJC_EHTYPE_$_MySecretNamespace.EH3" = hidden global {{.*}}, section "__DATA,__objc_const", align 8
 // CHECK-X86_64-HIDDEN: define internal void @"\01-[A im0]"

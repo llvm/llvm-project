@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=FUNC %s
 
 ; FIXME: This should be merged with sint_to_fp.ll, but s_sint_to_fp_v2i64 crashes on r600
@@ -25,10 +25,10 @@ define void @s_sint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 %in) #0 {
 ; GCN-DAG: v_cmp_lt_u64
 
 ; GCN: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, v{{[0-9]+}}
-; GCN: v_cndmask_b32_e32 [[SIGN_SEL:v[0-9]+]],
-; GCN: {{buffer|flat}}_store_dword [[SIGN_SEL]]
+; GCN: v_cndmask_b32_e{{32|64}} [[SIGN_SEL:v[0-9]+]],
+; GCN: {{buffer|flat}}_store_dword {{.*}}[[SIGN_SEL]]
 define void @v_sint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %val = load i64, i64 addrspace(1)* %in.gep
@@ -46,7 +46,7 @@ define void @s_sint_to_fp_v2i64(<2 x float> addrspace(1)* %out, <2 x i64> %in) #
 
 ; FUNC-LABEL: {{^}}v_sint_to_fp_v4i64:
 define void @v_sint_to_fp_v4i64(<4 x float> addrspace(1)* %out, <4 x i64> addrspace(1)* %in) #0 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <4 x i64>, <4 x i64> addrspace(1)* %in, i32 %tid
   %out.gep = getelementptr <4 x float>, <4 x float> addrspace(1)* %out, i32 %tid
   %value = load <4 x i64>, <4 x i64> addrspace(1)* %in.gep
@@ -55,7 +55,7 @@ define void @v_sint_to_fp_v4i64(<4 x float> addrspace(1)* %out, <4 x i64> addrsp
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

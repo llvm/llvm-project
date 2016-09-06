@@ -7,55 +7,68 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// 
+// This file contains some utility functions to help recognize gc.statepoint
+// intrinsics.
+//
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Constant.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Statepoint.h"
-#include "llvm/Support/CommandLine.h"
 
-using namespace std;
+#include "llvm/IR/Function.h"
+
 using namespace llvm;
 
-bool llvm::isStatepoint(const ImmutableCallSite &CS) {
-  if (!CS.getInstruction()) {
-    // This is not a call site
-    return false;
-  }
-
-  const Function *F = CS.getCalledFunction();
-  return (F && F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint);
+static const Function *getCalledFunction(ImmutableCallSite CS) {
+  if (!CS.getInstruction())
+    return nullptr;
+  return CS.getCalledFunction();
 }
-bool llvm::isStatepoint(const Value *inst) {
-  if (isa<InvokeInst>(inst) || isa<CallInst>(inst)) {
-    ImmutableCallSite CS(inst);
-    return isStatepoint(CS);
-  }
+
+bool llvm::isStatepoint(ImmutableCallSite CS) {
+  if (auto *F = getCalledFunction(CS))
+    return F->getIntrinsicID() == Intrinsic::experimental_gc_statepoint;
   return false;
 }
-bool llvm::isStatepoint(const Value &inst) {
-  return isStatepoint(&inst);
+
+bool llvm::isStatepoint(const Value *V) {
+  if (auto CS = ImmutableCallSite(V))
+    return isStatepoint(CS);
+  return false;
 }
 
-bool llvm::isGCRelocate(const ImmutableCallSite &CS) {
+bool llvm::isStatepoint(const Value &V) {
+  return isStatepoint(&V);
+}
+
+bool llvm::isGCRelocate(ImmutableCallSite CS) {
   return CS.getInstruction() && isa<GCRelocateInst>(CS.getInstruction());
 }
 
-bool llvm::isGCResult(const ImmutableCallSite &CS) {
-  if (!CS.getInstruction()) {
-    // This is not a call site
-    return false;
-  }
-
-  return isGCResult(CS.getInstruction());
+bool llvm::isGCResult(ImmutableCallSite CS) {
+  return CS.getInstruction() && isa<GCResultInst>(CS.getInstruction());
 }
-bool llvm::isGCResult(const Value *inst) {
-  if (const CallInst *call = dyn_cast<CallInst>(inst)) {
-    if (Function *F = call->getCalledFunction()) {
-      return F->getIntrinsicID() == Intrinsic::experimental_gc_result;
-    }
-  }
-  return false;
+
+bool llvm::isStatepointDirectiveAttr(Attribute Attr) {
+  return Attr.hasAttribute("statepoint-id") ||
+         Attr.hasAttribute("statepoint-num-patch-bytes");
+}
+
+StatepointDirectives llvm::parseStatepointDirectivesFromAttrs(AttributeSet AS) {
+  StatepointDirectives Result;
+
+  Attribute AttrID =
+      AS.getAttribute(AttributeSet::FunctionIndex, "statepoint-id");
+  uint64_t StatepointID;
+  if (AttrID.isStringAttribute())
+    if (!AttrID.getValueAsString().getAsInteger(10, StatepointID))
+      Result.StatepointID = StatepointID;
+
+  uint32_t NumPatchBytes;
+  Attribute AttrNumPatchBytes = AS.getAttribute(AttributeSet::FunctionIndex,
+                                                "statepoint-num-patch-bytes");
+  if (AttrNumPatchBytes.isStringAttribute())
+    if (!AttrNumPatchBytes.getValueAsString().getAsInteger(10, NumPatchBytes))
+      Result.NumPatchBytes = NumPatchBytes;
+
+  return Result;
 }

@@ -238,7 +238,7 @@ Thumb2.
 //===---------------------------------------------------------------------===//
 
 Rather than having tBR_JTr print a ".align 2" and constant island pass pad it,
-add a target specific ALIGN instruction instead. That way, GetInstSizeInBytes
+add a target specific ALIGN instruction instead. That way, getInstSizeInBytes
 won't have to over-estimate. It can also be used for loop alignment pass.
 
 //===---------------------------------------------------------------------===//

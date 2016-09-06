@@ -42,9 +42,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.module.flags = !{!56}
 !llvm.dbg.cu = !{!2}
 
-!0 = distinct !DISubprogram(name: "test0001", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, file: !54, scope: null, type: !3, variables: !51)
+!0 = distinct !DISubprogram(name: "test0001", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !54, scope: null, type: !3, variables: !51)
 !1 = !DIFile(filename: "build2.c", directory: "/private/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 129915)", isOptimized: true, emissionKind: 1, file: !54, enums: !{}, retainedTypes: !{}, subprograms: !50, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 129915)", isOptimized: true, emissionKind: FullDebug, file: !54, enums: !{}, retainedTypes: !{}, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIDerivedType(tag: DW_TAG_typedef, name: "v4f32", line: 14, file: !54, scope: !2, baseType: !6)
@@ -52,11 +52,11 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !7 = !DIBasicType(tag: DW_TAG_base_type, name: "float", size: 32, align: 32, encoding: DW_ATE_float)
 !8 = !{!9}
 !9 = !DISubrange(count: 4)
-!10 = distinct !DISubprogram(name: "main", line: 59, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, file: !54, scope: null, type: !11, variables: !52)
+!10 = distinct !DISubprogram(name: "main", line: 59, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !54, scope: null, type: !11, variables: !52)
 !11 = !DISubroutineType(types: !12)
 !12 = !{!13}
 !13 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!14 = distinct !DISubprogram(name: "printFV", line: 41, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, file: !55, scope: null, type: !16, variables: !53)
+!14 = distinct !DISubprogram(name: "printFV", line: 41, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, file: !55, scope: null, type: !16, variables: !53)
 !15 = !DIFile(filename: "/Volumes/Lalgate/work/llvm/projects/llvm-test/SingleSource/UnitTests/Vector/helpers.h", directory: "/private/tmp")
 !16 = !DISubroutineType(types: !17)
 !17 = !{null}
@@ -92,7 +92,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !47 = distinct !DILexicalBlock(line: 41, column: 28, file: !15, scope: !14)
 !48 = !DILocation(line: 95, column: 3, scope: !25)
 !49 = !DILocation(line: 99, column: 3, scope: !25)
-!50 = !{!0, !10, !14}
 !51 = !{!18}
 !52 = !{!19, !20, !24, !26, !27, !28, !29}
 !53 = !{!30}

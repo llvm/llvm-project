@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fprofile-instr-generate -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name switchmacro.c %s | FileCheck %s
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name switchmacro.c %s | FileCheck %s
 
 #define FOO(x) (void)x
 
@@ -30,6 +30,14 @@ void bar() {
   START      // CHECK: File 0, [[@LINE]]:8 -> [[@LINE+2]]:6
 default: ;
   END
+}
+
+// PR27948 - Crash when handling a switch partially covered by a macro
+// CHECK: baz
+#define START2 switch (0) default:
+void baz() {
+  for (;;)
+    START2 return; // CHECK: Expansion,File 0, [[@LINE]]:5 -> [[@LINE]]:11 = #1 (Expanded file = 1)
 }
 
 int main(int argc, const char *argv[]) {

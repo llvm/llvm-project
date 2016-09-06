@@ -16,7 +16,7 @@ extension S {
     var c = 1.25
   }
   
-  private func fA() -> Int {
+  fileprivate func fA() -> Int {
     var a = A()
     return a.a + 1 // break here
   }

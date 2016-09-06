@@ -8,6 +8,12 @@
 /* Bug report URL. */
 #define BUG_REPORT_URL "${BUG_REPORT_URL}"
 
+/* Default C++ stdlib to use. */
+#define CLANG_DEFAULT_CXX_STDLIB "${CLANG_DEFAULT_CXX_STDLIB}"
+
+/* Default runtime library to use. */
+#define CLANG_DEFAULT_RTLIB "${CLANG_DEFAULT_RTLIB}"
+
 /* Default OpenMP runtime used by -fopenmp. */
 #define CLANG_DEFAULT_OPENMP_RUNTIME "${CLANG_DEFAULT_OPENMP_RUNTIME}"
 
@@ -34,5 +40,11 @@
 
 /* Linker version detected at compile time. */
 #cmakedefine HOST_LINK_VERSION "${HOST_LINK_VERSION}"
+
+/* pass --build-id to ld */
+#cmakedefine ENABLE_LINKER_BUILD_ID
+
+/* enable x86 relax relocations by default */
+#cmakedefine01 ENABLE_X86_RELAX_RELOCATIONS
 
 #endif

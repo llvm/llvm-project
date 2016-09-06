@@ -12,20 +12,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_R600MACHINESCHEDULER_H
-#define LLVM_LIB_TARGET_R600_R600MACHINESCHEDULER_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_R600MACHINESCHEDULER_H
+#define LLVM_LIB_TARGET_AMDGPU_R600MACHINESCHEDULER_H
 
-#include "R600InstrInfo.h"
-#include "llvm/ADT/PriorityQueue.h"
 #include "llvm/CodeGen/MachineScheduler.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
 namespace llvm {
 
-class R600SchedStrategy : public MachineSchedStrategy {
+class R600InstrInfo;
+struct R600RegisterInfo;
 
+class R600SchedStrategy final : public MachineSchedStrategy {
   const ScheduleDAGMILive *DAG;
   const R600InstrInfo *TII;
   const R600RegisterInfo *TRI;

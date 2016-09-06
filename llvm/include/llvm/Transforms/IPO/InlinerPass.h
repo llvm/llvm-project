@@ -18,43 +18,47 @@
 #define LLVM_TRANSFORMS_IPO_INLINERPASS_H
 
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/InlineCost.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Transforms/Utils/ImportedFunctionsInliningStatistics.h"
 
 namespace llvm {
 class AssumptionCacheTracker;
 class CallSite;
 class DataLayout;
 class InlineCost;
+class OptimizationRemarkEmitter;
+class ProfileSummaryInfo;
 template <class PtrType, unsigned SmallSize> class SmallPtrSet;
 
-/// Inliner - This class contains all of the helper code which is used to
-/// perform the inlining operations that do not depend on the policy.
-///
+/// This class contains all of the helper code which is used to perform the
+/// inlining operations that do not depend on the policy.
 struct Inliner : public CallGraphSCCPass {
   explicit Inliner(char &ID);
   explicit Inliner(char &ID, bool InsertLifetime);
 
-  /// getAnalysisUsage - For this class, we declare that we require and preserve
-  /// the call graph.  If the derived class implements this method, it should
-  /// always explicitly call the implementation here.
+  /// For this class, we declare that we require and preserve the call graph.
+  /// If the derived class implements this method, it should always explicitly
+  /// call the implementation here.
   void getAnalysisUsage(AnalysisUsage &Info) const override;
 
-  // Main run interface method, this implements the interface required by the
-  // Pass class.
+  bool doInitialization(CallGraph &CG) override;
+
+  /// Main run interface method, this implements the interface required by the
+  /// Pass class.
   bool runOnSCC(CallGraphSCC &SCC) override;
 
   using llvm::Pass::doFinalization;
-  // doFinalization - Remove now-dead linkonce functions at the end of
-  // processing to avoid breaking the SCC traversal.
+  /// Remove now-dead linkonce functions at the end of processing to avoid
+  /// breaking the SCC traversal.
   bool doFinalization(CallGraph &CG) override;
 
-  /// getInlineCost - This method must be implemented by the subclass to
-  /// determine the cost of inlining the specified call site.  If the cost
-  /// returned is greater than the current inline threshold, the call site is
-  /// not inlined.
-  ///
+  /// This method must be implemented by the subclass to determine the cost of
+  /// inlining the specified call site.  If the cost returned is greater than
+  /// the current inline threshold, the call site is not inlined.
   virtual InlineCost getInlineCost(CallSite CS) = 0;
 
-  /// removeDeadFunctions - Remove dead functions.
+  /// Remove dead functions.
   ///
   /// This also includes a hack in the form of the 'AlwaysInlineOnly' flag
   /// which restricts it to deleting functions with an 'AlwaysInline'
@@ -62,16 +66,20 @@ struct Inliner : public CallGraphSCCPass {
   /// deal with that subset of the functions.
   bool removeDeadFunctions(CallGraph &CG, bool AlwaysInlineOnly = false);
 
-private:
-  // InsertLifetime - Insert @llvm.lifetime intrinsics.
-  bool InsertLifetime;
+  /// This function performs the main work of the pass.  The default of
+  /// Inlinter::runOnSCC() calls skipSCC() before calling this method, but
+  /// derived classes which cannot be skipped can override that method and call
+  /// this function unconditionally.
+  bool inlineCalls(CallGraphSCC &SCC);
 
-  /// shouldInline - Return true if the inliner should attempt to
-  /// inline at the given CallSite.
-  bool shouldInline(CallSite CS);
+private:
+  // Insert @llvm.lifetime intrinsics.
+  bool InsertLifetime;
 
 protected:
   AssumptionCacheTracker *ACT;
+  ProfileSummaryInfo *PSI;
+  ImportedFunctionsInliningStatistics ImportedFunctionsStats;
 };
 
 } // End llvm namespace

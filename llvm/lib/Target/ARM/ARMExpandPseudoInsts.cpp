@@ -20,6 +20,7 @@
 #include "ARMConstantPoolValue.h"
 #include "ARMMachineFunctionInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -50,6 +51,11 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
+
     const char *getPassName() const override {
       return "ARM pseudo instruction expansion pass";
     }
@@ -58,7 +64,8 @@ namespace {
     void TransferImpOps(MachineInstr &OldMI,
                         MachineInstrBuilder &UseMI, MachineInstrBuilder &DefMI);
     bool ExpandMI(MachineBasicBlock &MBB,
-                  MachineBasicBlock::iterator MBBI);
+                  MachineBasicBlock::iterator MBBI,
+                  MachineBasicBlock::iterator &NextMBBI);
     bool ExpandMBB(MachineBasicBlock &MBB);
     void ExpandVLD(MachineBasicBlock::iterator &MBBI);
     void ExpandVST(MachineBasicBlock::iterator &MBBI);
@@ -67,6 +74,14 @@ namespace {
                     unsigned Opc, bool IsExt);
     void ExpandMOV32BitImm(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator &MBBI);
+    bool ExpandCMP_SWAP(MachineBasicBlock &MBB,
+                        MachineBasicBlock::iterator MBBI, unsigned LdrexOp,
+                        unsigned StrexOp, unsigned UxtOp,
+                        MachineBasicBlock::iterator &NextMBBI);
+
+    bool ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MBBI,
+                           MachineBasicBlock::iterator &NextMBBI);
   };
   char ARMExpandPseudo::ID = 0;
 }
@@ -642,6 +657,8 @@ static bool IsAnAddressOperand(const MachineOperand &MO) {
     return true;
   case MachineOperand::MO_CFIIndex:
     return false;
+  case MachineOperand::MO_IntrinsicID:
+    llvm_unreachable("should not exist post-isel");
   }
   llvm_unreachable("unhandled machine operand type");
 }
@@ -651,7 +668,7 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
   unsigned PredReg = 0;
-  ARMCC::CondCodes Pred = getInstrPredicate(&MI, PredReg);
+  ARMCC::CondCodes Pred = getInstrPredicate(MI, PredReg);
   unsigned DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
   bool isCC = Opcode == ARM::MOVCCi32imm || Opcode == ARM::t2MOVCCi32imm;
@@ -737,8 +754,242 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
   MI.eraseFromParent();
 }
 
+static void addPostLoopLiveIns(MachineBasicBlock *MBB, LivePhysRegs &LiveRegs) {
+  for (auto I = LiveRegs.begin(); I != LiveRegs.end(); ++I)
+    MBB->addLiveIn(*I);
+}
+
+/// Expand a CMP_SWAP pseudo-inst to an ldrex/strex loop as simply as
+/// possible. This only gets used at -O0 so we don't care about efficiency of the
+/// generated code.
+bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator MBBI,
+                                     unsigned LdrexOp, unsigned StrexOp,
+                                     unsigned UxtOp,
+                                     MachineBasicBlock::iterator &NextMBBI) {
+  bool IsThumb = STI->isThumb();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  MachineOperand &Dest = MI.getOperand(0);
+  unsigned StatusReg = MI.getOperand(1).getReg();
+  MachineOperand &Addr = MI.getOperand(2);
+  MachineOperand &Desired = MI.getOperand(3);
+  MachineOperand &New = MI.getOperand(4);
+
+  LivePhysRegs LiveRegs(&TII->getRegisterInfo());
+  LiveRegs.addLiveOuts(MBB);
+  for (auto I = std::prev(MBB.end()); I != MBBI; --I)
+    LiveRegs.stepBackward(*I);
+
+  MachineFunction *MF = MBB.getParent();
+  auto LoadCmpBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto StoreBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto DoneBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+
+  MF->insert(++MBB.getIterator(), LoadCmpBB);
+  MF->insert(++LoadCmpBB->getIterator(), StoreBB);
+  MF->insert(++StoreBB->getIterator(), DoneBB);
+
+  if (UxtOp) {
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, MBBI, DL, TII->get(UxtOp), Desired.getReg())
+            .addReg(Desired.getReg(), RegState::Kill);
+    if (!IsThumb)
+      MIB.addImm(0);
+    AddDefaultPred(MIB);
+  }
+
+  // .Lloadcmp:
+  //     ldrex rDest, [rAddr]
+  //     cmp rDest, rDesired
+  //     bne .Ldone
+  LoadCmpBB->addLiveIn(Addr.getReg());
+  LoadCmpBB->addLiveIn(Dest.getReg());
+  LoadCmpBB->addLiveIn(Desired.getReg());
+  addPostLoopLiveIns(LoadCmpBB, LiveRegs);
+
+  MachineInstrBuilder MIB;
+  MIB = BuildMI(LoadCmpBB, DL, TII->get(LdrexOp), Dest.getReg());
+  MIB.addReg(Addr.getReg());
+  if (LdrexOp == ARM::t2LDREX)
+    MIB.addImm(0); // a 32-bit Thumb ldrex (only) allows an offset.
+  AddDefaultPred(MIB);
+
+  unsigned CMPrr = IsThumb ? ARM::tCMPhir : ARM::CMPrr;
+  AddDefaultPred(BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
+                     .addReg(Dest.getReg(), getKillRegState(Dest.isDead()))
+                     .addOperand(Desired));
+  unsigned Bcc = IsThumb ? ARM::tBcc : ARM::Bcc;
+  BuildMI(LoadCmpBB, DL, TII->get(Bcc))
+      .addMBB(DoneBB)
+      .addImm(ARMCC::NE)
+      .addReg(ARM::CPSR, RegState::Kill);
+  LoadCmpBB->addSuccessor(DoneBB);
+  LoadCmpBB->addSuccessor(StoreBB);
+
+  // .Lstore:
+  //     strex rStatus, rNew, [rAddr]
+  //     cmp rStatus, #0
+  //     bne .Lloadcmp
+  StoreBB->addLiveIn(Addr.getReg());
+  StoreBB->addLiveIn(New.getReg());
+  addPostLoopLiveIns(StoreBB, LiveRegs);
+
+
+  MIB = BuildMI(StoreBB, DL, TII->get(StrexOp), StatusReg);
+  MIB.addOperand(New);
+  MIB.addOperand(Addr);
+  if (StrexOp == ARM::t2STREX)
+    MIB.addImm(0); // a 32-bit Thumb strex (only) allows an offset.
+  AddDefaultPred(MIB);
+
+  unsigned CMPri = IsThumb ? ARM::t2CMPri : ARM::CMPri;
+  AddDefaultPred(BuildMI(StoreBB, DL, TII->get(CMPri))
+                     .addReg(StatusReg, RegState::Kill)
+                     .addImm(0));
+  BuildMI(StoreBB, DL, TII->get(Bcc))
+      .addMBB(LoadCmpBB)
+      .addImm(ARMCC::NE)
+      .addReg(ARM::CPSR, RegState::Kill);
+  StoreBB->addSuccessor(LoadCmpBB);
+  StoreBB->addSuccessor(DoneBB);
+
+  DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
+  DoneBB->transferSuccessors(&MBB);
+  addPostLoopLiveIns(DoneBB, LiveRegs);
+
+  MBB.addSuccessor(LoadCmpBB);
+
+  NextMBBI = MBB.end();
+  MI.eraseFromParent();
+  return true;
+}
+
+/// ARM's ldrexd/strexd take a consecutive register pair (represented as a
+/// single GPRPair register), Thumb's take two separate registers so we need to
+/// extract the subregs from the pair.
+static void addExclusiveRegPair(MachineInstrBuilder &MIB, MachineOperand &Reg,
+                                unsigned Flags, bool IsThumb,
+                                const TargetRegisterInfo *TRI) {
+  if (IsThumb) {
+    unsigned RegLo = TRI->getSubReg(Reg.getReg(), ARM::gsub_0);
+    unsigned RegHi = TRI->getSubReg(Reg.getReg(), ARM::gsub_1);
+    MIB.addReg(RegLo, Flags | getKillRegState(Reg.isDead()));
+    MIB.addReg(RegHi, Flags | getKillRegState(Reg.isDead()));
+  } else
+    MIB.addReg(Reg.getReg(), Flags | getKillRegState(Reg.isDead()));
+}
+
+/// Expand a 64-bit CMP_SWAP to an ldrexd/strexd loop.
+bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI,
+                                        MachineBasicBlock::iterator &NextMBBI) {
+  bool IsThumb = STI->isThumb();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  MachineOperand &Dest = MI.getOperand(0);
+  unsigned StatusReg = MI.getOperand(1).getReg();
+  MachineOperand &Addr = MI.getOperand(2);
+  MachineOperand &Desired = MI.getOperand(3);
+  MachineOperand &New = MI.getOperand(4);
+
+  unsigned DestLo = TRI->getSubReg(Dest.getReg(), ARM::gsub_0);
+  unsigned DestHi = TRI->getSubReg(Dest.getReg(), ARM::gsub_1);
+  unsigned DesiredLo = TRI->getSubReg(Desired.getReg(), ARM::gsub_0);
+  unsigned DesiredHi = TRI->getSubReg(Desired.getReg(), ARM::gsub_1);
+
+  LivePhysRegs LiveRegs(&TII->getRegisterInfo());
+  LiveRegs.addLiveOuts(MBB);
+  for (auto I = std::prev(MBB.end()); I != MBBI; --I)
+    LiveRegs.stepBackward(*I);
+
+  MachineFunction *MF = MBB.getParent();
+  auto LoadCmpBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto StoreBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto DoneBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+
+  MF->insert(++MBB.getIterator(), LoadCmpBB);
+  MF->insert(++LoadCmpBB->getIterator(), StoreBB);
+  MF->insert(++StoreBB->getIterator(), DoneBB);
+
+  // .Lloadcmp:
+  //     ldrexd rDestLo, rDestHi, [rAddr]
+  //     cmp rDestLo, rDesiredLo
+  //     sbcs rStatus<dead>, rDestHi, rDesiredHi
+  //     bne .Ldone
+  LoadCmpBB->addLiveIn(Addr.getReg());
+  LoadCmpBB->addLiveIn(Dest.getReg());
+  LoadCmpBB->addLiveIn(Desired.getReg());
+  addPostLoopLiveIns(LoadCmpBB, LiveRegs);
+
+  unsigned LDREXD = IsThumb ? ARM::t2LDREXD : ARM::LDREXD;
+  MachineInstrBuilder MIB;
+  MIB = BuildMI(LoadCmpBB, DL, TII->get(LDREXD));
+  addExclusiveRegPair(MIB, Dest, RegState::Define, IsThumb, TRI);
+  MIB.addReg(Addr.getReg());
+  AddDefaultPred(MIB);
+
+  unsigned CMPrr = IsThumb ? ARM::tCMPhir : ARM::CMPrr;
+  AddDefaultPred(BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
+                     .addReg(DestLo, getKillRegState(Dest.isDead()))
+                     .addReg(DesiredLo, getKillRegState(Desired.isDead())));
+
+  unsigned SBCrr = IsThumb ? ARM::t2SBCrr : ARM::SBCrr;
+  MIB = BuildMI(LoadCmpBB, DL, TII->get(SBCrr))
+            .addReg(StatusReg, RegState::Define | RegState::Dead)
+            .addReg(DestHi, getKillRegState(Dest.isDead()))
+            .addReg(DesiredHi, getKillRegState(Desired.isDead()));
+  AddDefaultPred(MIB);
+  MIB.addReg(ARM::CPSR, RegState::Kill);
+
+  unsigned Bcc = IsThumb ? ARM::tBcc : ARM::Bcc;
+  BuildMI(LoadCmpBB, DL, TII->get(Bcc))
+      .addMBB(DoneBB)
+      .addImm(ARMCC::NE)
+      .addReg(ARM::CPSR, RegState::Kill);
+  LoadCmpBB->addSuccessor(DoneBB);
+  LoadCmpBB->addSuccessor(StoreBB);
+
+  // .Lstore:
+  //     strexd rStatus, rNewLo, rNewHi, [rAddr]
+  //     cmp rStatus, #0
+  //     bne .Lloadcmp
+  StoreBB->addLiveIn(Addr.getReg());
+  StoreBB->addLiveIn(New.getReg());
+  addPostLoopLiveIns(StoreBB, LiveRegs);
+
+  unsigned STREXD = IsThumb ? ARM::t2STREXD : ARM::STREXD;
+  MIB = BuildMI(StoreBB, DL, TII->get(STREXD), StatusReg);
+  addExclusiveRegPair(MIB, New, 0, IsThumb, TRI);
+  MIB.addOperand(Addr);
+  AddDefaultPred(MIB);
+
+  unsigned CMPri = IsThumb ? ARM::t2CMPri : ARM::CMPri;
+  AddDefaultPred(BuildMI(StoreBB, DL, TII->get(CMPri))
+                     .addReg(StatusReg, RegState::Kill)
+                     .addImm(0));
+  BuildMI(StoreBB, DL, TII->get(Bcc))
+      .addMBB(LoadCmpBB)
+      .addImm(ARMCC::NE)
+      .addReg(ARM::CPSR, RegState::Kill);
+  StoreBB->addSuccessor(LoadCmpBB);
+  StoreBB->addSuccessor(DoneBB);
+
+  DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
+  DoneBB->transferSuccessors(&MBB);
+  addPostLoopLiveIns(DoneBB, LiveRegs);
+
+  MBB.addSuccessor(LoadCmpBB);
+
+  NextMBBI = MBB.end();
+  MI.eraseFromParent();
+  return true;
+}
+
+
 bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI) {
+                               MachineBasicBlock::iterator MBBI,
+                               MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
@@ -784,7 +1035,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
             .addReg(JumpTarget.getReg(), RegState::Kill);
       }
 
-      MachineInstr *NewMI = std::prev(MBBI);
+      auto NewMI = std::prev(MBBI);
       for (unsigned i = 1, e = MBBI->getNumOperands(); i != e; ++i)
         NewMI->addOperand(MBBI->getOperand(i));
 
@@ -929,8 +1180,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         }
         // If there's dynamic realignment, adjust for it.
         if (RI.needsStackRealignment(MF)) {
-          MachineFrameInfo  *MFI = MF.getFrameInfo();
-          unsigned MaxAlign = MFI->getMaxAlignment();
+          MachineFrameInfo &MFI = MF.getFrameInfo();
+          unsigned MaxAlign = MFI.getMaxAlignment();
           assert (!AFI->isThumb1OnlyFunction());
           // Emit bic r6, r6, MaxAlign
           assert(MaxAlign <= 256 && "The BIC instruction cannot encode "
@@ -1375,6 +1626,30 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     case ARM::VTBL4Pseudo: ExpandVTBL(MBBI, ARM::VTBL4, false); return true;
     case ARM::VTBX3Pseudo: ExpandVTBL(MBBI, ARM::VTBX3, true); return true;
     case ARM::VTBX4Pseudo: ExpandVTBL(MBBI, ARM::VTBX4, true); return true;
+
+    case ARM::CMP_SWAP_8:
+      if (STI->isThumb())
+        return ExpandCMP_SWAP(MBB, MBBI, ARM::t2LDREXB, ARM::t2STREXB,
+                              ARM::tUXTB, NextMBBI);
+      else
+        return ExpandCMP_SWAP(MBB, MBBI, ARM::LDREXB, ARM::STREXB,
+                              ARM::UXTB, NextMBBI);
+    case ARM::CMP_SWAP_16:
+      if (STI->isThumb())
+        return ExpandCMP_SWAP(MBB, MBBI, ARM::t2LDREXH, ARM::t2STREXH,
+                              ARM::tUXTH, NextMBBI);
+      else
+        return ExpandCMP_SWAP(MBB, MBBI, ARM::LDREXH, ARM::STREXH,
+                              ARM::UXTH, NextMBBI);
+    case ARM::CMP_SWAP_32:
+      if (STI->isThumb())
+        return ExpandCMP_SWAP(MBB, MBBI, ARM::t2LDREX, ARM::t2STREX, 0,
+                              NextMBBI);
+      else
+        return ExpandCMP_SWAP(MBB, MBBI, ARM::LDREX, ARM::STREX, 0, NextMBBI);
+
+    case ARM::CMP_SWAP_64:
+      return ExpandCMP_SWAP_64(MBB, MBBI, NextMBBI);
   }
 }
 
@@ -1384,7 +1659,7 @@ bool ARMExpandPseudo::ExpandMBB(MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
   while (MBBI != E) {
     MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= ExpandMI(MBB, MBBI);
+    Modified |= ExpandMI(MBB, MBBI, NMBBI);
     MBBI = NMBBI;
   }
 

@@ -8,7 +8,7 @@ target triple = "x86_64-apple-macosx"
 
 ; CHECK-LABEL: foo:
 ; CHECK: movq ___stack_chk_guard@GOTPCREL(%rip), %rax
-; CHECK-NOT: movq ___stack_chk_guard@GOTPCREL(%rip), %rax
+; CHECK: movq ___stack_chk_guard@GOTPCREL(%rip), %rax
 define void @foo() #0 {
 entry:
   %_tags = alloca [3 x i32], align 4
@@ -16,8 +16,10 @@ entry:
 }
 
 ; CHECK-LABEL: bar:
-; CHECK: movq ___stack_chk_guard@GOTPCREL(%rip), %rax
-; CHECK: movq ___stack_chk_guard@GOTPCREL(%rip), %rax
+; CHECK: movq ___stack_chk_guard@GOTPCREL(%rip), %{{r.x}}
+; CHECK-DAG: movq ___stack_chk_guard@GOTPCREL(%rip), %[[GUARD:r.x]]
+; CHECK-DAG: movq {{[0-9]+}}(%rsp), %[[CANARY:r.x]]
+; CHECK: subq %[[CANARY]], %[[GUARD]]
 define void @bar() #1 {
 entry:
   %vt = alloca [2 x double], align 16

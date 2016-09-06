@@ -22,7 +22,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -920,7 +919,7 @@ ProgramStateRef CStringChecker::InvalidateBuffer(CheckerContext &C,
     // Invalidate and escape only indirect regions accessible through the source
     // buffer.
     if (IsSourceBuffer) {
-      ITraits.setTrait(R,
+      ITraits.setTrait(R->getBaseRegion(),
                        RegionAndSymbolInvalidationTraits::TK_PreserveContents);
       ITraits.setTrait(R, RegionAndSymbolInvalidationTraits::TK_SuppressEscape);
       CausesPointerEscape = true;
@@ -1837,6 +1836,8 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallExpr *CE,
   const StringLiteral *s1StrLiteral = getCStringLiteral(C, state, s1, s1Val);
   const StringLiteral *s2StrLiteral = getCStringLiteral(C, state, s2, s2Val);
   bool canComputeResult = false;
+  SVal resultVal = svalBuilder.conjureSymbolVal(nullptr, CE, LCtx,
+                                                C.blockCount());
 
   if (s1StrLiteral && s2StrLiteral) {
     StringRef s1StrRef = s1StrLiteral->getString();
@@ -1870,28 +1871,29 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallExpr *CE,
         s2StrRef = s2StrRef.substr(0, s2Term);
 
       // Use StringRef's comparison methods to compute the actual result.
-      int result;
+      int compareRes = ignoreCase ? s1StrRef.compare_lower(s2StrRef)
+                                  : s1StrRef.compare(s2StrRef);
 
-      if (ignoreCase) {
-        // Compare string 1 to string 2 the same way strcasecmp() does.
-        result = s1StrRef.compare_lower(s2StrRef);
-      } else {
-        // Compare string 1 to string 2 the same way strcmp() does.
-        result = s1StrRef.compare(s2StrRef);
+      // The strcmp function returns an integer greater than, equal to, or less
+      // than zero, [c11, p7.24.4.2].
+      if (compareRes == 0) {
+        resultVal = svalBuilder.makeIntVal(compareRes, CE->getType());
       }
-
-      // Build the SVal of the comparison and bind the return value.
-      SVal resultVal = svalBuilder.makeIntVal(result, CE->getType());
-      state = state->BindExpr(CE, LCtx, resultVal);
+      else {
+        DefinedSVal zeroVal = svalBuilder.makeIntVal(0, CE->getType());
+        // Constrain strcmp's result range based on the result of StringRef's
+        // comparison methods.
+        BinaryOperatorKind op = (compareRes == 1) ? BO_GT : BO_LT;
+        SVal compareWithZero =
+          svalBuilder.evalBinOp(state, op, resultVal, zeroVal,
+                                svalBuilder.getConditionType());
+        DefinedSVal compareWithZeroVal = compareWithZero.castAs<DefinedSVal>();
+        state = state->assume(compareWithZeroVal, true);
+      }
     }
   }
 
-  if (!canComputeResult) {
-    // Conjure a symbolic value. It's the best we can do.
-    SVal resultVal = svalBuilder.conjureSymbolVal(nullptr, CE, LCtx,
-                                                  C.blockCount());
-    state = state->BindExpr(CE, LCtx, resultVal);
-  }
+  state = state->BindExpr(CE, LCtx, resultVal);
 
   // Record this as a possible path.
   C.addTransition(state);

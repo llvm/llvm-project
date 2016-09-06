@@ -1,5 +1,5 @@
 ; RUN: llc -emulated-tls -mtriple=aarch64-linux-android \
-; RUN:     -relocation-model=pic < %s | FileCheck -check-prefix=ARM64 %s
+; RUN:     -relocation-model=pic -disable-fp-elim < %s | FileCheck -check-prefix=ARM64 %s
 
 ; Copied from X86/emutls.ll
 
@@ -189,7 +189,7 @@ entry:
 
 ; ARM64:      .section .data.__emutls_v._ZN1AIiE1xE,{{.*}},__emutls_v._ZN1AIiE1xE,comdat
 ; ARM64:      .weak __emutls_v._ZN1AIiE1xE
-; ARM64:      .align 3
+; ARM64:      .p2align 3
 ; ARM64-LABEL: __emutls_v._ZN1AIiE1xE:
 ; ARM64-NEXT: .xword 4
 ; ARM64-NEXT: .xword 4
@@ -198,7 +198,7 @@ entry:
 
 ; ARM64:      .section .data.__emutls_v._ZN1AIfE1xE,{{.*}},__emutls_v._ZN1AIfE1xE,comdat
 ; ARM64:      .weak __emutls_v._ZN1AIfE1xE
-; ARM64:      .align 3
+; ARM64:      .p2align 3
 ; ARM64-LABEL: __emutls_v._ZN1AIfE1xE:
 ; ARM64-NEXT: .xword 4
 ; ARM64-NEXT: .xword 4
@@ -207,7 +207,7 @@ entry:
 
 ; ARM64:      .section .rodata.__emutls_t._ZN1AIfE1xE,{{.*}},__emutls_t._ZN1AIfE1xE,comdat
 ; ARM64:      .weak __emutls_t._ZN1AIfE1xE
-; ARM64:      .align 2
+; ARM64:      .p2align 2
 ; ARM64-LABEL: __emutls_t._ZN1AIfE1xE:
 ; ARM64-NEXT: .word 0
 ; ARM64-NEXT: .size

@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu | FileCheck %s --check-prefix=CHECK
+; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mattr=-neon | FileCheck --check-prefix=CHECK-NONEON %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64_be-none-linux-gnu | FileCheck --check-prefix=CHECK-BE %s
@@ -89,11 +89,11 @@ define void @check_stack_args() {
   ; that varstruct is passed on the stack. Rather dependent on how a
   ; memcpy gets created, but the following works for now.
 
-; CHECK-DAG: str {{q[0-9]+}}, [sp, #-16]
+; CHECK-DAG: str {{q[0-9]+}}, [sp]
 ; CHECK-DAG: fmov d[[FINAL_DOUBLE:[0-9]+]], #1.0
 ; CHECK: mov v0.16b, v[[FINAL_DOUBLE]].16b
 
-; CHECK-NONEON-DAG: str {{q[0-9]+}}, [sp, #-16]!
+; CHECK-NONEON-DAG: str {{q[0-9]+}}, [sp]
 ; CHECK-NONEON-DAG: fmov d[[FINAL_DOUBLE:[0-9]+]], #1.0
 ; CHECK-NONEON: fmov d0, d[[FINAL_DOUBLE]]
 
@@ -104,10 +104,10 @@ define void @check_stack_args() {
                          float -2.0, float -8.0, float 16.0, float 1.0,
                          float 64.0)
 
-; CHECK:  movz [[SIXTY_FOUR:w[0-9]+]], #0x4280, lsl #16
+; CHECK:  mov [[SIXTY_FOUR:w[0-9]+]], #1115684864
 ; CHECK: str [[SIXTY_FOUR]], [sp]
 
-; CHECK-NONEON:  movz [[SIXTY_FOUR:w[0-9]+]], #0x4280, lsl #16
+; CHECK-NONEON:  mov [[SIXTY_FOUR:w[0-9]+]], #1115684864
 ; CHECK-NONEON: str [[SIXTY_FOUR]], [sp]
 
 ; CHECK: bl stacked_fpu
@@ -139,9 +139,9 @@ define void @check_i128_align() {
 
   call void @check_i128_regalign(i32 0, i128 42)
 ; CHECK-NOT: mov x1
-; CHECK-LE: movz x2, #{{0x2a|42}}
+; CHECK-LE: mov x2, #{{0x2a|42}}
 ; CHECK-LE: mov x3, xzr
-; CHECK-BE: movz {{x|w}}3, #{{0x2a|42}}
+; CHECK-BE: mov {{x|w}}3, #{{0x2a|42}}
 ; CHECK-BE: mov x2, xzr
 ; CHECK: bl check_i128_regalign
 

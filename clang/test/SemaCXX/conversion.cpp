@@ -228,3 +228,73 @@ namespace test10 {
     assert(test2(x));
   }
 }
+
+namespace test11 {
+
+#define assert11(expr) ((expr) ? 0 : 0)
+
+// The whitespace in macro run1 are important to trigger the macro being split
+// over multiple SLocEntry's.
+#define run1() (dostuff() ? \
+    NULL                                   : NULL)
+#define run2() (dostuff() ? NULL : NULL)
+int dostuff ();
+
+void test(const char * content_type) {
+  assert11(run1());
+  assert11(run2());
+}
+
+}
+
+namespace test12 {
+
+#define x return NULL;
+
+bool run() {
+  x  // expected-warning{{}}
+}
+
+}
+
+// More tests with macros.  Specficially, test function-like macros that either
+// have a pointer return type or take pointer arguments.  Basically, if the
+// macro was changed into a function and Clang doesn't warn, then it shouldn't
+// warn for the macro either.
+namespace test13 {
+#define check_str_nullptr_13(str) ((str) ? str : nullptr)
+#define check_str_null_13(str) ((str) ? str : NULL)
+#define test13(condition) if (condition) return;
+#define identity13(arg) arg
+#define CHECK13(condition) test13(identity13(!(condition)))
+
+void function1(const char* str) {
+  CHECK13(check_str_nullptr_13(str));
+  CHECK13(check_str_null_13(str));
+}
+
+bool some_bool_function(bool);
+void function2() {
+  CHECK13(some_bool_function(nullptr));  // expected-warning{{implicit conversion of nullptr constant to 'bool'}}
+  CHECK13(some_bool_function(NULL));  // expected-warning{{implicit conversion of NULL constant to 'bool'}}
+}
+
+#define run_check_nullptr_13(str) \
+    if (check_str_nullptr_13(str)) return;
+#define run_check_null_13(str) \
+    if (check_str_null_13(str)) return;
+void function3(const char* str) {
+  run_check_nullptr_13(str)
+  run_check_null_13(str)
+  if (check_str_nullptr_13(str)) return;
+  if (check_str_null_13(str)) return;
+}
+
+void run(int* ptr);
+#define conditional_run_13(ptr) \
+    if (ptr) run(ptr);
+void function4() {
+  conditional_run_13(nullptr);
+  conditional_run_13(NULL);
+}
+}

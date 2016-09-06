@@ -578,7 +578,7 @@ bool ObjCPropertyOpBuilder::isWeakProperty() const {
   if (RefExpr->isExplicitProperty()) {
     const ObjCPropertyDecl *Prop = RefExpr->getExplicitProperty();
     if (Prop->getPropertyAttributes() & ObjCPropertyDecl::OBJC_PR_weak)
-      return !Prop->hasAttr<IBOutletAttr>();
+      return true;
 
     T = Prop->getType();
   } else if (Getter) {

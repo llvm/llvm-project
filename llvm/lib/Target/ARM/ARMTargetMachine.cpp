@@ -16,6 +16,7 @@
 #include "ARMTargetObjectFile.h"
 #include "ARMTargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -53,6 +54,10 @@ extern "C" void LLVMInitializeARMTarget() {
   RegisterTargetMachine<ARMBETargetMachine> Y(TheARMBETarget);
   RegisterTargetMachine<ThumbLETargetMachine> A(TheThumbLETarget);
   RegisterTargetMachine<ThumbBETargetMachine> B(TheThumbBETarget);
+
+  PassRegistry &Registry = *PassRegistry::getPassRegistry();
+  initializeARMLoadStoreOptPass(Registry);
+  initializeARMPreAllocLoadStoreOptPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -99,6 +104,8 @@ computeTargetABI(const Triple &TT, StringRef CPU,
     case llvm::Triple::Android:
     case llvm::Triple::GNUEABI:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::MuslEABI:
+    case llvm::Triple::MuslEABIHF:
     case llvm::Triple::EABIHF:
     case llvm::Triple::EABI:
       TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS;
@@ -171,15 +178,34 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   return Ret;
 }
 
-/// TargetMachine ctor - Create an ARM architecture model.
+static Reloc::Model getEffectiveRelocModel(const Triple &TT,
+                                           Optional<Reloc::Model> RM) {
+  if (!RM.hasValue())
+    // Default relocation model on Darwin is PIC.
+    return TT.isOSBinFormatMachO() ? Reloc::PIC_ : Reloc::Static;
+
+  if (*RM == Reloc::ROPI || *RM == Reloc::RWPI || *RM == Reloc::ROPI_RWPI)
+    assert(TT.isOSBinFormatELF() &&
+           "ROPI/RWPI currently only supported for ELF");
+
+  // DynamicNoPIC is only used on darwin.
+  if (*RM == Reloc::DynamicNoPIC && !TT.isOSDarwin())
+    return Reloc::Static;
+
+  return *RM;
+}
+
+/// Create an ARM architecture model.
 ///
 ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
-                                           Reloc::Model RM, CodeModel::Model CM,
+                                           Optional<Reloc::Model> RM,
+                                           CodeModel::Model CM,
                                            CodeGenOpt::Level OL, bool isLittle)
     : LLVMTargetMachine(T, computeDataLayout(TT, CPU, Options, isLittle), TT,
-                        CPU, FS, Options, RM, CM, OL),
+                        CPU, FS, Options, getEffectiveRelocModel(TT, RM), CM,
+                        OL),
       TargetABI(computeTargetABI(TT, CPU, Options)),
       TLOF(createTLOF(getTargetTriple())),
       Subtarget(TT, CPU, FS, *this, isLittle), isLittle(isLittle) {
@@ -192,7 +218,8 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
   // Default to triple-appropriate EABI
   if (Options.EABIVersion == EABI::Default ||
       Options.EABIVersion == EABI::Unknown) {
-    if (Subtarget.isTargetGNUAEABI())
+    // musl is compatible with glibc with regard to EABI version
+    if (Subtarget.isTargetGNUAEABI() || Subtarget.isTargetMuslAEABI())
       this->Options.EABIVersion = EABI::GNU;
     else
       this->Options.EABIVersion = EABI::EABI5;
@@ -219,7 +246,6 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   // it as a key for the subtarget since that can be the only difference
   // between two functions.
   bool SoftFloat =
-      F.hasFnAttribute("use-soft-float") &&
       F.getFnAttribute("use-soft-float").getValueAsString() == "true";
   // If the soft float attribute is set on the function turn on the soft float
   // subtarget feature.
@@ -248,8 +274,9 @@ void ARMTargetMachine::anchor() {}
 ARMTargetMachine::ARMTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
-                                   Reloc::Model RM, CodeModel::Model CM,
-                                   CodeGenOpt::Level OL, bool isLittle)
+                                   Optional<Reloc::Model> RM,
+                                   CodeModel::Model CM, CodeGenOpt::Level OL,
+                                   bool isLittle)
     : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, isLittle) {
   initAsmInfo();
   if (!Subtarget.hasARMOps())
@@ -262,7 +289,8 @@ void ARMLETargetMachine::anchor() {}
 ARMLETargetMachine::ARMLETargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
-                                       Reloc::Model RM, CodeModel::Model CM,
+                                       Optional<Reloc::Model> RM,
+                                       CodeModel::Model CM,
                                        CodeGenOpt::Level OL)
     : ARMTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
 
@@ -271,7 +299,8 @@ void ARMBETargetMachine::anchor() {}
 ARMBETargetMachine::ARMBETargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
-                                       Reloc::Model RM, CodeModel::Model CM,
+                                       Optional<Reloc::Model> RM,
+                                       CodeModel::Model CM,
                                        CodeGenOpt::Level OL)
     : ARMTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
 
@@ -280,7 +309,8 @@ void ThumbTargetMachine::anchor() {}
 ThumbTargetMachine::ThumbTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
-                                       Reloc::Model RM, CodeModel::Model CM,
+                                       Optional<Reloc::Model> RM,
+                                       CodeModel::Model CM,
                                        CodeGenOpt::Level OL, bool isLittle)
     : ARMBaseTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, isLittle) {
   initAsmInfo();
@@ -291,7 +321,8 @@ void ThumbLETargetMachine::anchor() {}
 ThumbLETargetMachine::ThumbLETargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
-                                           Reloc::Model RM, CodeModel::Model CM,
+                                           Optional<Reloc::Model> RM,
+                                           CodeModel::Model CM,
                                            CodeGenOpt::Level OL)
     : ThumbTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
 
@@ -300,7 +331,8 @@ void ThumbBETargetMachine::anchor() {}
 ThumbBETargetMachine::ThumbBETargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
-                                           Reloc::Model RM, CodeModel::Model CM,
+                                           Optional<Reloc::Model> RM,
+                                           CodeModel::Model CM,
                                            CodeGenOpt::Level OL)
     : ThumbTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
 

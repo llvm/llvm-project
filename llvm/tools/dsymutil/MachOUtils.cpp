@@ -16,6 +16,7 @@
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/FileUtilities.h"

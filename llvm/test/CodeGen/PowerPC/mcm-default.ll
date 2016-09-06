@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr7 -O0 <%s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 <%s | FileCheck %s
 
 ; Test that we generate code for the medium model as the default.
 ; Use an external variable reference as an example.

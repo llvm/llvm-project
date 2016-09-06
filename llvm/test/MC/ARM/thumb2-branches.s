@@ -284,3 +284,21 @@
 @ CHECK: addeq	r0, r1                  @ encoding: [0x08,0x44]
 @ CHECK: bne	#128                    @ encoding: [0x40,0xe0]
 
+
+@------------------------------------------------------------------------------
+@ Branch targets destined for ARM mode must == 0 (mod 4), otherwise (mod 2).
+@------------------------------------------------------------------------------
+
+        b #2
+        bl #2
+        beq #2
+        cbz r0, #2
+        @ N.b. destination is "align(PC, 4) + imm" so imm is still 4-byte
+        @ aligned even though current PC may not and destination must be.
+        blx #4
+
+@ CHECK: b	#2                      @ encoding: [0x01,0xe0]
+@ CHECK: bl	#2                      @ encoding: [0x00,0xf0,0x01,0xf8]
+@ CHECK: beq	#2                      @ encoding: [0x01,0xd0]
+@ CHECK: cbz	r0, #2                  @ encoding: [0x08,0xb1]
+@ CHECK: blx	#4                      @ encoding: [0x00,0xf0,0x02,0xe8]

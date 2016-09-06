@@ -193,3 +193,28 @@ define void @test6_2(i8* %x6_2, i8* %y6_2, i8* %z6_2) {
   ret void
 }
 
+; CHECK: define void @test_cmpxchg(i32* nocapture %p)
+define void @test_cmpxchg(i32* %p) {
+  cmpxchg i32* %p, i32 0, i32 1 acquire monotonic
+  ret void
+}
+
+; CHECK: define void @test_cmpxchg_ptr(i32** nocapture %p, i32* %q)
+define void @test_cmpxchg_ptr(i32** %p, i32* %q) {
+  cmpxchg i32** %p, i32* null, i32* %q acquire monotonic
+  ret void
+}
+
+; CHECK: define void @test_atomicrmw(i32* nocapture %p)
+define void @test_atomicrmw(i32* %p) {
+  atomicrmw add i32* %p, i32 1 seq_cst
+  ret void
+}
+
+; CHECK: define void @test_volatile(i32* %x)
+define void @test_volatile(i32* %x) {
+entry:
+  %gep = getelementptr i32, i32* %x, i64 1
+  store volatile i32 0, i32* %gep, align 4
+  ret void
+}

@@ -7,7 +7,6 @@ add_clang_subdirectory(clang-format-vs)
 add_clang_subdirectory(clang-fuzzer)
 
 add_clang_subdirectory(c-index-test)
-add_clang_subdirectory(libclang)
 
 if(CLANG_ENABLE_ARCMT)
   add_clang_subdirectory(arcmt-test)
@@ -26,3 +25,6 @@ endif()
 # to keep the primary Clang repository small and focused.
 # It also may be included by LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR.
 add_llvm_external_project(clang-tools-extra extra)
+
+# libclang may require clang-tidy in clang-tools-extra.
+add_clang_subdirectory(libclang)

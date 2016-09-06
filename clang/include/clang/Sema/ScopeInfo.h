@@ -19,6 +19,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Sema/CleanupInfo.h"
 #include "clang/Sema/Ownership.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
@@ -103,6 +104,16 @@ public:
 
   /// \brief Whether a statement was dropped because it was invalid.
   bool HasDroppedStmt : 1;
+
+  /// \brief True if current scope is for OpenMP declare reduction combiner.
+  bool HasOMPDeclareReductionCombiner : 1;
+
+  /// \brief Whether there is a fallthrough statement in this function.
+  bool HasFallthroughStmt : 1;
+
+  /// \brief Whether we make reference to a declaration that could be
+  /// unavailable.
+  bool HasPotentialAvailabilityViolations : 1;
 
   /// A flag that is set when parsing a method that must call super's
   /// implementation, such as \c -dealloc, \c -finalize, or any method marked
@@ -342,6 +353,14 @@ public:
     HasDroppedStmt = true;
   }
 
+  void setHasOMPDeclareReductionCombiner() {
+    HasOMPDeclareReductionCombiner = true;
+  }
+
+  void setHasFallthroughStmt() {
+    HasFallthroughStmt = true;
+  }
+
   void setHasCXXTry(SourceLocation TryLoc) {
     setHasBranchProtectedScope();
     FirstCXXTryLoc = TryLoc;
@@ -364,6 +383,9 @@ public:
       HasBranchIntoScope(false),
       HasIndirectGoto(false),
       HasDroppedStmt(false),
+      HasOMPDeclareReductionCombiner(false),
+      HasFallthroughStmt(false),
+      HasPotentialAvailabilityViolations(false),
       ObjCShouldCallSuper(false),
       ObjCIsDesignatedInit(false),
       ObjCWarnForNoDesignatedInitChain(false),
@@ -405,19 +427,21 @@ public:
     // variables of reference type are captured by reference, and other
     // variables are captured by copy.
     enum CaptureKind {
-      Cap_ByCopy, Cap_ByRef, Cap_Block, Cap_This
+      Cap_ByCopy, Cap_ByRef, Cap_Block, Cap_VLA
     };
-
+    enum {
+      IsNestedCapture = 0x1,
+      IsThisCaptured = 0x2
+    };
     /// The variable being captured (if we are not capturing 'this') and whether
-    /// this is a nested capture.
-    llvm::PointerIntPair<VarDecl*, 1, bool> VarAndNested;
-
+    /// this is a nested capture, and whether we are capturing 'this'
+    llvm::PointerIntPair<VarDecl*, 2> VarAndNestedAndThis;
     /// Expression to initialize a field of the given type, and the kind of
     /// capture (if this is a capture and not an init-capture). The expression
     /// is only required if we are capturing ByVal and the variable's type has
     /// a non-trivial copy constructor.
     llvm::PointerIntPair<void *, 2, CaptureKind> InitExprAndCaptureKind;
-
+    
     /// \brief The source location at which the first capture occurred.
     SourceLocation Loc;
 
@@ -432,27 +456,28 @@ public:
     Capture(VarDecl *Var, bool Block, bool ByRef, bool IsNested,
             SourceLocation Loc, SourceLocation EllipsisLoc,
             QualType CaptureType, Expr *Cpy)
-        : VarAndNested(Var, IsNested),
-          InitExprAndCaptureKind(Cpy, Block ? Cap_Block :
-                                      ByRef ? Cap_ByRef : Cap_ByCopy),
+        : VarAndNestedAndThis(Var, IsNested ? IsNestedCapture : 0),
+          InitExprAndCaptureKind(
+              Cpy, !Var ? Cap_VLA : Block ? Cap_Block : ByRef ? Cap_ByRef
+                                                              : Cap_ByCopy),
           Loc(Loc), EllipsisLoc(EllipsisLoc), CaptureType(CaptureType) {}
 
     enum IsThisCapture { ThisCapture };
     Capture(IsThisCapture, bool IsNested, SourceLocation Loc,
-            QualType CaptureType, Expr *Cpy)
-        : VarAndNested(nullptr, IsNested),
-          InitExprAndCaptureKind(Cpy, Cap_This),
+            QualType CaptureType, Expr *Cpy, const bool ByCopy)
+        : VarAndNestedAndThis(
+              nullptr, (IsThisCaptured | (IsNested ? IsNestedCapture : 0))),
+          InitExprAndCaptureKind(Cpy, ByCopy ? Cap_ByCopy : Cap_ByRef),
           Loc(Loc), EllipsisLoc(), CaptureType(CaptureType) {}
 
     bool isThisCapture() const {
-      return InitExprAndCaptureKind.getInt() == Cap_This;
+      return VarAndNestedAndThis.getInt() & IsThisCaptured;
     }
     bool isVariableCapture() const {
-      return InitExprAndCaptureKind.getInt() != Cap_This && !isVLATypeCapture();
+      return !isThisCapture() && !isVLATypeCapture();
     }
     bool isCopyCapture() const {
-      return InitExprAndCaptureKind.getInt() == Cap_ByCopy &&
-             !isVLATypeCapture();
+      return InitExprAndCaptureKind.getInt() == Cap_ByCopy;
     }
     bool isReferenceCapture() const {
       return InitExprAndCaptureKind.getInt() == Cap_ByRef;
@@ -461,13 +486,14 @@ public:
       return InitExprAndCaptureKind.getInt() == Cap_Block;
     }
     bool isVLATypeCapture() const {
-      return InitExprAndCaptureKind.getInt() == Cap_ByCopy &&
-             getVariable() == nullptr;
+      return InitExprAndCaptureKind.getInt() == Cap_VLA;
     }
-    bool isNested() const { return VarAndNested.getInt(); }
+    bool isNested() const {
+      return VarAndNestedAndThis.getInt() & IsNestedCapture;
+    }
 
     VarDecl *getVariable() const {
-      return VarAndNested.getPointer();
+      return VarAndNestedAndThis.getPointer();
     }
     
     /// \brief Retrieve the location at which this variable was captured.
@@ -480,8 +506,11 @@ public:
     /// \brief Retrieve the capture type for this capture, which is effectively
     /// the type of the non-static data member in the lambda/block structure
     /// that would store this capture.
-    QualType getCaptureType() const { return CaptureType; }
-    
+    QualType getCaptureType() const {
+      assert(!isThisCapture());
+      return CaptureType;
+    }
+
     Expr *getInitExpr() const {
       assert(!isVLATypeCapture() && "no init expression for type capture");
       return static_cast<Expr *>(InitExprAndCaptureKind.getPointer());
@@ -526,8 +555,11 @@ public:
                                /*Cpy*/ nullptr));
   }
 
-  void addThisCapture(bool isNested, SourceLocation Loc, QualType CaptureType,
-                      Expr *Cpy);
+  // Note, we do not need to add the type of 'this' since that is always
+  // retrievable from Sema::getCurrentThisType - and is also encoded within the
+  // type of the corresponding FieldDecl.
+  void addThisCapture(bool isNested, SourceLocation Loc,
+                      Expr *Cpy, bool ByCopy);
 
   /// \brief Determine whether the C++ 'this' is captured.
   bool isCXXThisCaptured() const { return CXXThisCaptureIndex != 0; }
@@ -605,14 +637,15 @@ public:
   /// \brief The implicit parameter for the captured variables.
   ImplicitParamDecl *ContextParam;
   /// \brief The kind of captured region.
-  CapturedRegionKind CapRegionKind;
+  unsigned short CapRegionKind;
+  unsigned short OpenMPLevel;
 
   CapturedRegionScopeInfo(DiagnosticsEngine &Diag, Scope *S, CapturedDecl *CD,
                           RecordDecl *RD, ImplicitParamDecl *Context,
-                          CapturedRegionKind K)
+                          CapturedRegionKind K, unsigned OpenMPLevel)
     : CapturingScopeInfo(Diag, ImpCap_CapturedRegion),
       TheCapturedDecl(CD), TheRecordDecl(RD), TheScope(S),
-      ContextParam(Context), CapRegionKind(K)
+      ContextParam(Context), CapRegionKind(K), OpenMPLevel(OpenMPLevel)
   {
     Kind = SK_CapturedRegion;
   }
@@ -661,7 +694,7 @@ public:
   bool ExplicitParams;
 
   /// \brief Whether any of the capture expressions requires cleanups.
-  bool ExprNeedsCleanups;
+  CleanupInfo Cleanup;
 
   /// \brief Whether the lambda contains an unexpanded parameter pack.
   bool ContainsUnexpandedParameterPack;
@@ -709,7 +742,7 @@ public:
   LambdaScopeInfo(DiagnosticsEngine &Diag)
     : CapturingScopeInfo(Diag, ImpCap_None), Lambda(nullptr),
       CallOperator(nullptr), NumExplicitCaptures(0), Mutable(false),
-      ExplicitParams(false), ExprNeedsCleanups(false),
+      ExplicitParams(false), Cleanup{},
       ContainsUnexpandedParameterPack(false), AutoTemplateParameterDepth(0),
       GLTemplateParameterList(nullptr) {
     Kind = SK_Lambda;
@@ -847,9 +880,10 @@ void FunctionScopeInfo::recordUseOfWeak(const ExprT *E, bool IsRead) {
 
 inline void
 CapturingScopeInfo::addThisCapture(bool isNested, SourceLocation Loc,
-                                   QualType CaptureType, Expr *Cpy) {
-  Captures.push_back(Capture(Capture::ThisCapture, isNested, Loc, CaptureType,
-                             Cpy));
+                                   Expr *Cpy,
+                                   const bool ByCopy) {
+  Captures.push_back(Capture(Capture::ThisCapture, isNested, Loc, QualType(),
+                             Cpy, ByCopy));
   CXXThisCaptureIndex = Captures.size();
 }
 

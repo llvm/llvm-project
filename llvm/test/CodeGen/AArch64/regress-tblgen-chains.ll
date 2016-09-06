@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=arm64-apple-ios7.0 -o - %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=arm64-apple-ios7.0 -disable-fp-elim -o - %s | FileCheck %s
 
 ; When generating DAG selection tables, TableGen used to only flag an
 ; instruction as needing a chain on its own account if it had a built-in pattern

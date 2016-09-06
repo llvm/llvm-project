@@ -105,7 +105,7 @@ memory, or a global variable.
 
 To make this clear, let's consider a more obtuse example:
 
-.. code-block:: llvm
+.. code-block:: text
 
   %MyVar = uninitialized global i32
   ...
@@ -142,7 +142,7 @@ Quick answer: there are no superfluous indices.
 This question arises most often when the GEP instruction is applied to a global
 variable which is always a pointer type. For example, consider this:
 
-.. code-block:: llvm
+.. code-block:: text
 
   %MyStruct = uninitialized global { float*, i32 }
   ...
@@ -178,7 +178,7 @@ The GetElementPtr instruction dereferences nothing. That is, it doesn't access
 memory in any way. That's what the Load and Store instructions are for.  GEP is
 only involved in the computation of addresses. For example, consider this:
 
-.. code-block:: llvm
+.. code-block:: text
 
   %MyVar = uninitialized global { [40 x i32 ]* }
   ...
@@ -195,7 +195,7 @@ illegal.
 In order to access the 18th integer in the array, you would need to do the
 following:
 
-.. code-block:: llvm
+.. code-block:: text
 
   %idx = getelementptr { [40 x i32]* }, { [40 x i32]* }* %, i64 0, i32 0
   %arr = load [40 x i32]** %idx
@@ -204,7 +204,7 @@ following:
 In this case, we have to load the pointer in the structure with a load
 instruction before we can index into the array. If the example was changed to:
 
-.. code-block:: llvm
+.. code-block:: text
 
   %MyVar = uninitialized global { [40 x i32 ] }
   ...

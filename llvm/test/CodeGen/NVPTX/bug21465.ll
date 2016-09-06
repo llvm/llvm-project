@@ -1,4 +1,4 @@
-; RUN: opt < %s -nvptx-lower-kernel-args -S | FileCheck %s
+; RUN: opt < %s -nvptx-lower-args -S | FileCheck %s
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 | FileCheck %s --check-prefix PTX
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
@@ -15,7 +15,7 @@ entry:
   %b = getelementptr inbounds %struct.S, %struct.S* %input, i64 0, i32 1
   %0 = load i32, i32* %b, align 4
 ; PTX-NOT: ld.param.u32 {{%r[0-9]+}}, [{{%rd[0-9]+}}]
-; PTX: ld.param.u32 [[value:%r[0-9]+]], [{{%rd[0-9]+}}+4]
+; PTX: ld.param.u32 [[value:%r[0-9]+]], [_Z11TakesStruct1SPi_param_0+4]
   store i32 %0, i32* %output, align 4
 ; PTX-NEXT: st.global.u32 [{{%rd[0-9]+}}], [[value]]
   ret void

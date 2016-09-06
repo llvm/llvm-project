@@ -3,10 +3,10 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare {}* @llvm.invariant.start(i64 %size, i8* nocapture %ptr)
+declare {}* @llvm.invariant.start.p0i8(i64 %size, i8* nocapture %ptr)
 
 define void @test1(i8* %ptr) {
-  call {}* @llvm.invariant.start(i64 4, i8* %ptr)
+  call {}* @llvm.invariant.start.p0i8(i64 4, i8* %ptr)
   ret void
 }
 
@@ -25,7 +25,7 @@ define void @ctor1() {
 define void @ctor2() {
   store i32 -1, i32* @object2
   %A = bitcast i32* @object2 to i8*
-  %B = call {}* @llvm.invariant.start(i64 4, i8* %A)
+  %B = call {}* @llvm.invariant.start.p0i8(i64 4, i8* %A)
   %C = bitcast {}* %B to i8*
   ret void
 }
@@ -36,7 +36,7 @@ define void @ctor2() {
 define void @ctor3() {
   store i32 -1, i32* @object3
   %A = bitcast i32* @object3 to i8*
-  call {}* @llvm.invariant.start(i64 3, i8* %A)
+  call {}* @llvm.invariant.start.p0i8(i64 3, i8* %A)
   ret void
 }
 
@@ -46,7 +46,7 @@ define void @ctor3() {
 define void @ctor4() {
   store i32 -1, i32* @object4
   %A = bitcast i32* @object4 to i8*
-  call {}* @llvm.invariant.start(i64 -1, i8* %A)
+  call {}* @llvm.invariant.start.p0i8(i64 -1, i8* %A)
   ret void
 }
 

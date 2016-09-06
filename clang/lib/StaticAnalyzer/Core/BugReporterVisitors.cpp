@@ -324,6 +324,9 @@ public:
     }
 
     PathDiagnosticLocation L(Ret, BRC.getSourceManager(), StackFrame);
+    if (!L.isValid() || !L.asLocation().isValid())
+      return nullptr;
+
     return new PathDiagnosticEventPiece(L, Out.str());
   }
 
@@ -908,6 +911,15 @@ static const Expr *peelOffOuterExpr(const Expr *Ex,
     return peelOffOuterExpr(EWC->getSubExpr(), N);
   if (const OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(Ex))
     return peelOffOuterExpr(OVE->getSourceExpr(), N);
+  if (auto *POE = dyn_cast<PseudoObjectExpr>(Ex)) {
+    auto *PropRef = dyn_cast<ObjCPropertyRefExpr>(POE->getSyntacticForm());
+    if (PropRef && PropRef->isMessagingGetter()) {
+      const Expr *GetterMessageSend =
+          POE->getSemanticExpr(POE->getNumSemanticExprs() - 1);
+      assert(isa<ObjCMessageExpr>(GetterMessageSend));
+      return peelOffOuterExpr(GetterMessageSend, N);
+    }
+  }
 
   // Peel off the ternary operator.
   if (const ConditionalOperator *CO = dyn_cast<ConditionalOperator>(Ex)) {
@@ -1584,12 +1596,6 @@ LikelyFalsePositiveSuppressionBRVisitor::getEndPath(BugReporterContext &BRC,
         }
       }
 
-      // The analyzer issues a false positive on
-      //   std::basic_string<uint8_t> v; v.push_back(1);
-      // and
-      //   std::u16string s; s += u'a';
-      // because we cannot reason about the internal invariants of the
-      // datastructure.
       for (const LocationContext *LCtx = N->getLocationContext(); LCtx;
            LCtx = LCtx->getParent()) {
         const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(LCtx->getDecl());
@@ -1597,7 +1603,21 @@ LikelyFalsePositiveSuppressionBRVisitor::getEndPath(BugReporterContext &BRC,
           continue;
 
         const CXXRecordDecl *CD = MD->getParent();
+        // The analyzer issues a false positive on
+        //   std::basic_string<uint8_t> v; v.push_back(1);
+        // and
+        //   std::u16string s; s += u'a';
+        // because we cannot reason about the internal invariants of the
+        // datastructure.
         if (CD->getName() == "basic_string") {
+          BR.markInvalid(getTag(), nullptr);
+          return nullptr;
+        }
+
+        // The analyzer issues a false positive on
+        //    std::shared_ptr<int> p(new int(1)); p = nullptr;
+        // because it does not reason properly about temporary destructors.
+        if (CD->getName() == "shared_ptr") {
           BR.markInvalid(getTag(), nullptr);
           return nullptr;
         }
@@ -1672,4 +1692,57 @@ UndefOrNullArgVisitor::VisitNode(const ExplodedNode *N,
     }
   }
   return nullptr;
+}
+
+PathDiagnosticPiece *
+CXXSelfAssignmentBRVisitor::VisitNode(const ExplodedNode *Succ,
+                                      const ExplodedNode *Pred,
+                                      BugReporterContext &BRC, BugReport &BR) {
+  if (Satisfied)
+    return nullptr;
+
+  auto Edge = Succ->getLocation().getAs<BlockEdge>();
+  if (!Edge.hasValue())
+    return nullptr;
+
+  auto Tag = Edge->getTag();
+  if (!Tag)
+    return nullptr;
+
+  if (Tag->getTagDescription() != "cplusplus.SelfAssignment")
+    return nullptr;
+
+  Satisfied = true;
+
+  const auto *Met =
+      dyn_cast<CXXMethodDecl>(Succ->getCodeDecl().getAsFunction());
+  assert(Met && "Not a C++ method.");
+  assert((Met->isCopyAssignmentOperator() || Met->isMoveAssignmentOperator()) &&
+         "Not a copy/move assignment operator.");
+
+  const auto *LCtx = Edge->getLocationContext();
+
+  const auto &State = Succ->getState();
+  auto &SVB = State->getStateManager().getSValBuilder();
+
+  const auto Param =
+      State->getSVal(State->getRegion(Met->getParamDecl(0), LCtx));
+  const auto This =
+      State->getSVal(SVB.getCXXThis(Met, LCtx->getCurrentStackFrame()));
+
+  auto L = PathDiagnosticLocation::create(Met, BRC.getSourceManager());
+
+  if (!L.isValid() || !L.asLocation().isValid())
+    return nullptr;
+
+  SmallString<256> Buf;
+  llvm::raw_svector_ostream Out(Buf);
+
+  Out << "Assuming " << Met->getParamDecl(0)->getName() <<
+    ((Param == This) ? " == " : " != ") << "*this";
+
+  auto *Piece = new PathDiagnosticEventPiece(L, Out.str());
+  Piece->addRange(Met->getSourceRange());
+
+  return Piece;
 }

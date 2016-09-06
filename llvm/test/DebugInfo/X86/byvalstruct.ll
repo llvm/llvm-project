@@ -87,14 +87,13 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!24, !25, !26, !27, !38}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC_plus_plus, producer: "clang version 3.4 ", isOptimized: false, runtimeVersion: 2, emissionKind: 0, file: !1, enums: !2, retainedTypes: !3, subprograms: !6, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC_plus_plus, producer: "clang version 3.4 ", isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, globals: !2, imports: !2)
 !1 = !DIFile(filename: "t.mm", directory: "")
 !2 = !{}
 !3 = !{!4}
 !4 = !DICompositeType(tag: DW_TAG_structure_type, name: "Bitmap", line: 8, size: 8, align: 8, flags: DIFlagObjcClassComplete, runtimeLang: DW_LANG_ObjC_plus_plus, file: !1, scope: !5, elements: !2)
 !5 = !DIFile(filename: "t.mm", directory: "")
-!6 = !{!7}
-!7 = distinct !DISubprogram(name: "-[Bitmap initWithCopy:andInfo:andLength:]", line: 9, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 9, file: !1, scope: !5, type: !8, variables: !2)
+!7 = distinct !DISubprogram(name: "-[Bitmap initWithCopy:andInfo:andLength:]", line: 9, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 9, file: !1, scope: !5, type: !8, variables: !2)
 !8 = !DISubroutineType(types: !9)
 !9 = !{!4, !10, !11, !14, !15, !19}
 !10 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer, baseType: !4)

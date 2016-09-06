@@ -226,6 +226,46 @@ bb3:
   ret i32 17
 }
 
+; This test checks if GVN can do the constant propagation correctly
+; when there are multiple uses of the same assume value in the 
+; basic block that has a loop back-edge pointing to itself.
+;
+; CHECK-LABEL: define i32 @_Z1il(i32 %val, i1 %k)
+define i32 @_Z1il(i32 %val, i1 %k) {
+  br label %next
+
+next:
+; CHECK: tail call void @llvm.assume(i1 %k)
+; CHECK-NEXT: %cmp = icmp eq i32 %val, 50
+  tail call void @llvm.assume(i1 %k)
+  tail call void @llvm.assume(i1 %k)
+  %cmp = icmp eq i32 %val, 50
+  br i1 %cmp, label %next, label %meh
+
+meh:
+  ret i32 0 
+}
+
+; This test checks if GVN can prevent the constant propagation correctly
+; in the successor blocks that are not dominated by the basic block
+; with the assume instruction.
+;
+; CHECK-LABEL: define i1 @_z1im(i32 %val, i1 %k, i1 %j)
+define i1 @_z1im(i32 %val, i1 %k, i1 %j) {
+  br i1 %j, label %next, label %meh
+
+next:
+; CHECK: tail call void @llvm.assume(i1 %k)
+; CHECK-NEXT: br label %meh
+  tail call void @llvm.assume(i1 %k)
+  tail call void @llvm.assume(i1 %k)
+  br label %meh
+
+meh:
+; CHECK: ret i1 %k
+  ret i1 %k
+}
+
 declare noalias i8* @_Znwm(i64)
 declare void @_ZN1AC1Ev(%struct.A*)
 declare void @llvm.assume(i1)

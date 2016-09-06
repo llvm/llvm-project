@@ -31,21 +31,31 @@
 // CHECK: ![[MODULE]] = !DIModule(scope: null, name: "DebugObjC
 
 // CHECK: ![[TD_ENUM:.*]] = !DICompositeType(tag: DW_TAG_enumeration_type,
-// CHECK-SAME-NOT:         name:
+// CHECK-NOT:              name:
 // CHECK-SAME:             elements:
 
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type,
-// CHECK-SAME:             name: "FwdDecl",
+// CHECK: !DISubprogram(name: "+[ObjCClass classMethod]",
+// CHECK-SAME:          scope: ![[MODULE]],
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ObjCClass",
 // CHECK-SAME:             scope: ![[MODULE]],
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type,
-// CHECK-SAME:             name: "ObjCClass",
+// CHECK-SAME:             elements
+
+// The forward declaration should not be in the module scope.
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "OpaqueData", file
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "FwdDecl",
 // CHECK-SAME:             scope: ![[MODULE]],
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ObjCClassWithPrivateIVars",
+// CHECK-SAME:             scope: ![[MODULE]],
+// CHECK-SAME:             elements
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "FwdDeclared"
 // CHECK-SAME:             elements:
 
-// CHECK: ![[TD_UNION:.*]] = !DICompositeType(tag: DW_TAG_union_type,
-// CHECK-SAME-NOT:         name:
+// CHECK: ![[TD_UNION:.*]] = distinct !DICompositeType(tag: DW_TAG_union_type,
+// CHECK-NOT:              name:
 // CHECK-SAME:             elements:
 
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefUnion",
@@ -54,36 +64,30 @@
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefEnum",
 // CHECK-SAME:           baseType: ![[TD_ENUM:.*]])
 
-// CHECK: ![[TD_STRUCT:.*]] = !DICompositeType(tag: DW_TAG_structure_type,
-// CHECK-SAME-NOT:         name:
+// CHECK: ![[TD_STRUCT:.*]] = distinct !DICompositeType(tag: DW_TAG_structure_type,
+// CHECK-NOT:              name:
 // CHECK-SAME:             elements:
 // CHECK: !DIDerivedType(tag: DW_TAG_typedef, name: "TypedefStruct",
 // CHECK-SAME:           baseType: ![[TD_STRUCT]])
 
 // CHECK: !DICompositeType(tag: DW_TAG_union_type,
-// CHECK-SAME-NOT:         name:
+// CHECK-NOT:              name:
+// CHECK-SAME:             )
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type,
-// CHECK-SAME-NOT:         name:
-
-// CHECK: !DISubprogram(name: "+[ObjCClass classMethod]",
-// CHECK-SAME:          scope: ![[MODULE]],
-
-// The forward declaration should not be in the module scope.
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "OpaqueData", file
+// CHECK-NOT:              name:
+// CHECK-SAME:             )
 
 // CHECK-NEG-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "PureForwardDecl"
 
 // The output order is sublty different for module vs. pch,
 // so these are checked separately:
 //
-// CHECK2: !DICompositeType(tag: DW_TAG_structure_type,
-// CHECK2-SAME:             name: "FwdDecl",
-// CHECK2: !DICompositeType(tag: DW_TAG_structure_type,
-// CHECK2-SAME:             name: "ObjCClass",
-// CHECK2: !DIObjCProperty(name: "property",
-// CHECK2: !DIDerivedType(tag: DW_TAG_member, name: "ivar"
-// CHECK2: !DIDerivedType(tag: DW_TAG_typedef, name: "InnerEnum"
 // CHECK2: !DISubprogram(name: "+[ObjCClass classMethod]"
 // CHECK2: !DISubprogram(name: "-[ObjCClass instanceMethodWithInt:]"
+// CHECK2: !DICompositeType(tag: DW_TAG_structure_type, name: "ObjCClass",
+// CHECK2: !DIObjCProperty(name: "property",
+// CHECK2: !DIDerivedType(tag: DW_TAG_member, name: "ivar"
 // CHECK2: !DISubprogram(name: "-[Category(Category) categoryMethod]"
+// CHECK2: !DICompositeType(tag: DW_TAG_structure_type, name: "FwdDecl",
+// CHECK2: !DIDerivedType(tag: DW_TAG_typedef, name: "InnerEnum"

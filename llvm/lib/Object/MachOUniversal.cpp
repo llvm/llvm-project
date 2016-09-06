@@ -22,22 +22,11 @@
 using namespace llvm;
 using namespace object;
 
-template<typename T>
-static void SwapStruct(T &Value);
-
-template<>
-void SwapStruct(MachO::fat_header &H) {
-  sys::swapByteOrder(H.magic);
-  sys::swapByteOrder(H.nfat_arch);
-}
-
-template<>
-void SwapStruct(MachO::fat_arch &H) {
-  sys::swapByteOrder(H.cputype);
-  sys::swapByteOrder(H.cpusubtype);
-  sys::swapByteOrder(H.offset);
-  sys::swapByteOrder(H.size);
-  sys::swapByteOrder(H.align);
+static Error
+malformedError(Twine Msg) {
+  std::string StringMsg = "truncated or malformed fat file (" + Msg.str() + ")";
+  return make_error<GenericBinaryError>(std::move(StringMsg),
+                                        object_error::parse_failed);
 }
 
 template<typename T>
@@ -46,7 +35,7 @@ static T getUniversalBinaryStruct(const char *Ptr) {
   memcpy(&Res, Ptr, sizeof(T));
   // Universal binary headers have big-endian byte order.
   if (sys::IsLittleEndianHost)
-    SwapStruct(Res);
+    swapStruct(Res);
   return Res;
 }
 
@@ -58,34 +47,53 @@ MachOUniversalBinary::ObjectForArch::ObjectForArch(
   } else {
     // Parse object header.
     StringRef ParentData = Parent->getData();
-    const char *HeaderPos = ParentData.begin() + sizeof(MachO::fat_header) +
-                            Index * sizeof(MachO::fat_arch);
-    Header = getUniversalBinaryStruct<MachO::fat_arch>(HeaderPos);
-    if (ParentData.size() < Header.offset + Header.size) {
-      clear();
+    if (Parent->getMagic() == MachO::FAT_MAGIC) {
+      const char *HeaderPos = ParentData.begin() + sizeof(MachO::fat_header) +
+                              Index * sizeof(MachO::fat_arch);
+      Header = getUniversalBinaryStruct<MachO::fat_arch>(HeaderPos);
+      if (ParentData.size() < Header.offset + Header.size) {
+        clear();
+      }
+    } else { // Parent->getMagic() == MachO::FAT_MAGIC_64
+      const char *HeaderPos = ParentData.begin() + sizeof(MachO::fat_header) +
+                              Index * sizeof(MachO::fat_arch_64);
+      Header64 = getUniversalBinaryStruct<MachO::fat_arch_64>(HeaderPos);
+      if (ParentData.size() < Header64.offset + Header64.size) {
+        clear();
+      }
     }
   }
 }
 
-ErrorOr<std::unique_ptr<MachOObjectFile>>
+Expected<std::unique_ptr<MachOObjectFile>>
 MachOUniversalBinary::ObjectForArch::getAsObjectFile() const {
   if (!Parent)
-    return object_error::parse_failed;
+    report_fatal_error("MachOUniversalBinary::ObjectForArch::getAsObjectFile() "
+                       "called when Parent is a nullptr");
 
   StringRef ParentData = Parent->getData();
-  StringRef ObjectData = ParentData.substr(Header.offset, Header.size);
+  StringRef ObjectData;
+  if (Parent->getMagic() == MachO::FAT_MAGIC)
+    ObjectData = ParentData.substr(Header.offset, Header.size);
+  else // Parent->getMagic() == MachO::FAT_MAGIC_64
+    ObjectData = ParentData.substr(Header64.offset, Header64.size);
   StringRef ObjectName = Parent->getFileName();
   MemoryBufferRef ObjBuffer(ObjectData, ObjectName);
   return ObjectFile::createMachOObjectFile(ObjBuffer);
 }
 
-ErrorOr<std::unique_ptr<Archive>>
+Expected<std::unique_ptr<Archive>>
 MachOUniversalBinary::ObjectForArch::getAsArchive() const {
   if (!Parent)
-    return object_error::parse_failed;
+    report_fatal_error("MachOUniversalBinary::ObjectForArch::getAsArchive() "
+                       "called when Parent is a nullptr");
 
   StringRef ParentData = Parent->getData();
-  StringRef ObjectData = ParentData.substr(Header.offset, Header.size);
+  StringRef ObjectData;
+  if (Parent->getMagic() == MachO::FAT_MAGIC)
+    ObjectData = ParentData.substr(Header.offset, Header.size);
+  else // Parent->getMagic() == MachO::FAT_MAGIC_64
+    ObjectData = ParentData.substr(Header64.offset, Header64.size);
   StringRef ObjectName = Parent->getFileName();
   MemoryBufferRef ObjBuffer(ObjectData, ObjectName);
   return Archive::create(ObjBuffer);
@@ -93,44 +101,64 @@ MachOUniversalBinary::ObjectForArch::getAsArchive() const {
 
 void MachOUniversalBinary::anchor() { }
 
-ErrorOr<std::unique_ptr<MachOUniversalBinary>>
+Expected<std::unique_ptr<MachOUniversalBinary>>
 MachOUniversalBinary::create(MemoryBufferRef Source) {
-  std::error_code EC;
+  Error Err;
   std::unique_ptr<MachOUniversalBinary> Ret(
-      new MachOUniversalBinary(Source, EC));
-  if (EC)
-    return EC;
+      new MachOUniversalBinary(Source, Err));
+  if (Err)
+    return std::move(Err);
   return std::move(Ret);
 }
 
-MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source,
-                                           std::error_code &ec)
-    : Binary(Binary::ID_MachOUniversalBinary, Source), NumberOfObjects(0) {
+MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source, Error &Err)
+    : Binary(Binary::ID_MachOUniversalBinary, Source), Magic(0),
+      NumberOfObjects(0) {
+  ErrorAsOutParameter ErrAsOutParam(&Err);
   if (Data.getBufferSize() < sizeof(MachO::fat_header)) {
-    ec = object_error::invalid_file_type;
+    Err = make_error<GenericBinaryError>("File too small to be a Mach-O "
+                                         "universal file",
+                                         object_error::invalid_file_type);
     return;
   }
   // Check for magic value and sufficient header size.
   StringRef Buf = getData();
-  MachO::fat_header H= getUniversalBinaryStruct<MachO::fat_header>(Buf.begin());
+  MachO::fat_header H =
+      getUniversalBinaryStruct<MachO::fat_header>(Buf.begin());
+  Magic = H.magic;
   NumberOfObjects = H.nfat_arch;
-  uint32_t MinSize = sizeof(MachO::fat_header) +
-                     sizeof(MachO::fat_arch) * NumberOfObjects;
-  if (H.magic != MachO::FAT_MAGIC || Buf.size() < MinSize) {
-    ec = object_error::parse_failed;
+  uint32_t MinSize = sizeof(MachO::fat_header);
+  if (Magic == MachO::FAT_MAGIC)
+    MinSize += sizeof(MachO::fat_arch) * NumberOfObjects;
+  else if (Magic == MachO::FAT_MAGIC_64)
+    MinSize += sizeof(MachO::fat_arch_64) * NumberOfObjects;
+  else {
+    Err = malformedError("bad magic number");
     return;
   }
-  ec = std::error_code();
+  if (Buf.size() < MinSize) {
+    Err = malformedError("fat_arch" +
+                         Twine(Magic == MachO::FAT_MAGIC ? "" : "_64") +
+                         " structs would extend past the end of the file");
+    return;
+  }
+  Err = Error::success();
 }
 
-ErrorOr<std::unique_ptr<MachOObjectFile>>
+Expected<std::unique_ptr<MachOObjectFile>>
 MachOUniversalBinary::getObjectForArch(StringRef ArchName) const {
   if (Triple(ArchName).getArch() == Triple::ArchType::UnknownArch)
-    return object_error::arch_not_found;
+    return make_error<GenericBinaryError>("Unknown architecture "
+                                          "named: " +
+                                              ArchName,
+                                          object_error::arch_not_found);
 
   for (object_iterator I = begin_objects(), E = end_objects(); I != E; ++I) {
     if (I->getArchTypeName() == ArchName)
       return I->getAsObjectFile();
   }
-  return object_error::arch_not_found;
+  return make_error<GenericBinaryError>("fat file does not "
+                                        "contain " +
+                                            ArchName,
+                                        object_error::arch_not_found);
 }

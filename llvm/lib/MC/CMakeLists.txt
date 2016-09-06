@@ -9,7 +9,7 @@ add_llvm_library(LLVMMC
   MCAsmStreamer.cpp
   MCAssembler.cpp
   MCCodeEmitter.cpp
-  MCCodeGenInfo.cpp
+  MCCodeView.cpp
   MCContext.cpp
   MCDwarf.cpp
   MCELFObjectTargetWriter.cpp
@@ -47,7 +47,6 @@ add_llvm_library(LLVMMC
   SubtargetFeature.cpp
   WinCOFFObjectWriter.cpp
   WinCOFFStreamer.cpp
-  YAML.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/MC

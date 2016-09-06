@@ -6,7 +6,7 @@
 ;SI: v_mbcnt_hi_u32_b32_e32 {{v[0-9]+}}, -1, [[LO]]
 ;VI: v_mbcnt_hi_u32_b32_e64 {{v[0-9]+}}, -1, [[LO]]
 
-define void @mbcnt_intrinsics(<16 x i8> addrspace(2)* inreg, <16 x i8> addrspace(2)* inreg, <32 x i8> addrspace(2)* inreg, i32 inreg) "ShaderType"="0" {
+define amdgpu_ps void @mbcnt_intrinsics(<16 x i8> addrspace(2)* inreg, <16 x i8> addrspace(2)* inreg, <32 x i8> addrspace(2)* inreg, i32 inreg) {
 main_body:
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #1
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo) #1

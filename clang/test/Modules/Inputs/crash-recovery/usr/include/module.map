@@ -1,0 +1,16 @@
+module cstd [system] {
+  // Only in system headers directory
+  module stdio {
+    header "stdio.h"
+  }
+
+  module pthread {
+    header "pthread.h"
+    export *
+
+    module impl {
+      header "pthread_impl.h"
+      export *
+    }
+  }
+}

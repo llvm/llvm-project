@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs< %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs< %s | FileCheck -check-prefix=SI %s
 ;
 ;
 ; Most SALU instructions ignore control flow, so we need to make sure
@@ -40,7 +40,7 @@ endif:
 
 define void @sgpr_if_else_valu_br(i32 addrspace(1)* %out, float %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 entry:
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %tid_f = uitofp i32 %tid to float
   %tmp1 = fcmp ueq float %tid_f, 0.0
   br i1 %tmp1, label %if, label %else
@@ -67,7 +67,7 @@ endif:
 ; SI: v_cmp_gt_i32_e32 [[CMP_IF:vcc]], 0, [[AVAL]]
 ; SI: v_cndmask_b32_e64 [[V_CMP:v[0-9]+]], 0, -1, [[CMP_IF]]
 
-; SI: BB2_1:
+; SI: BB2_2:
 ; SI: buffer_load_dword [[AVAL:v[0-9]+]]
 ; SI: v_cmp_eq_i32_e32 [[CMP_ELSE:vcc]], 0, [[AVAL]]
 ; SI: v_cndmask_b32_e64 [[V_CMP]], 0, -1, [[CMP_ELSE]]
@@ -77,7 +77,7 @@ endif:
 ; SI: buffer_store_dword [[RESULT]]
 define void @sgpr_if_else_valu_cmp_phi_br(i32 addrspace(1)* %out, i32 addrspace(1)* %a, i32 addrspace(1)* %b) {
 entry:
-  %tid = call i32 @llvm.r600.read.tidig.x() #0
+  %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %tmp1 = icmp eq i32 %tid, 0
   br i1 %tmp1, label %if, label %else
 
@@ -100,6 +100,6 @@ endif:
   ret void
 }
 
-declare i32 @llvm.r600.read.tidig.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { readnone }

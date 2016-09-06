@@ -1,4 +1,4 @@
-// RUN: %clang -target i386-apple-darwin9 -miphoneos-version-min=3.0 -arch armv7 -flto -S -o - %s | FileCheck %s
+// RUN: %clang -target i386-apple-darwin9 -miphoneos-version-min=3.0 -arch armv7 -stdlib=platform -flto -S -o - %s | FileCheck %s
 
 // CHECK: @f0() [[F0:#[0-9]+]]
 // CHECK: @__f0_block_invoke

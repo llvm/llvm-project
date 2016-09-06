@@ -47,7 +47,7 @@ define void @s_fsub_f64(double addrspace(1)* %out, double %a, double %b) {
 }
 
 ; SI-LABEL: {{^}}s_fsub_imm_f64:
-; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], 4.0, -s\[[0-9]+:[0-9]+\]}}
+; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], -s\[[0-9]+:[0-9]+\]}}, 4.0
 define void @s_fsub_imm_f64(double addrspace(1)* %out, double %a, double %b) {
   %sub = fsub double 4.0, %a
   store double %sub, double addrspace(1)* %out
@@ -55,7 +55,7 @@ define void @s_fsub_imm_f64(double addrspace(1)* %out, double %a, double %b) {
 }
 
 ; SI-LABEL: {{^}}s_fsub_imm_inv_f64:
-; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], -4.0, s\[[0-9]+:[0-9]+\]}}
+; SI: v_add_f64 {{v\[[0-9]+:[0-9]+\], s\[[0-9]+:[0-9]+\]}}, -4.0
 define void @s_fsub_imm_inv_f64(double addrspace(1)* %out, double %a, double %b) {
   %sub = fsub double %a, 4.0
   store double %sub, double addrspace(1)* %out

@@ -1,6 +1,17 @@
-; RUN: llc -march=ppc32 -mtriple=ppc32-unknown-linux < %s | FileCheck %s
-; CHECK: __stack_chk_guard
-; CHECK: __stack_chk_fail
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-apple-darwin8 < %s | FileCheck -check-prefix=DARWIN32 %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-apple-darwin < %s | FileCheck -check-prefix=DARWIN64 %s
+; RUN: llc -verify-machineinstrs -mtriple=ppc32-unknown-linux < %s | FileCheck -check-prefix=LINUX32 %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux < %s | FileCheck -check-prefix=LINUX64 %s
+
+; DARWIN32: __stack_chk_guard
+; DARWIN64: __stack_chk_guard
+; LINUX32: lwz {{[0-9]+}}, -28680(2)
+; LINUX64: ld {{[0-9]+}}, -28688(13)
+
+; DARWIN32: __stack_chk_fail
+; DARWIN64: __stack_chk_fail
+; LINUX32: __stack_chk_fail
+; LINUX64: __stack_chk_fail
 
 @"\01LC" = internal constant [11 x i8] c"buf == %s\0A\00"		; <[11 x i8]*> [#uses=1]
 

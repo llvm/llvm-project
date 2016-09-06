@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 %s -triple x86_64-pc-win32 -fms-extensions -fnew-ms-eh -emit-llvm -o - \
+// RUN: %clang_cc1 %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK --check-prefix=X64
-// RUN: %clang_cc1 %s -triple i686-pc-win32 -fms-extensions -fnew-ms-eh -emit-llvm -o - \
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -fms-extensions -emit-llvm -o - \
 // RUN:         | FileCheck %s --check-prefix=CHECK --check-prefix=X86
-// RUN: %clang_cc1 %s -triple i686-pc-windows-gnu -fms-extensions -fnew-ms-eh -emit-llvm -o - \
+// RUN: %clang_cc1 %s -triple i686-pc-windows-gnu -fms-extensions -emit-llvm -o - \
 // RUN:         | FileCheck %s --check-prefix=X86-GNU
-// RUN: %clang_cc1 %s -triple x86_64-pc-windows-gnu -fms-extensions -fnew-ms-eh -emit-llvm -o - \
+// RUN: %clang_cc1 %s -triple x86_64-pc-windows-gnu -fms-extensions -emit-llvm -o - \
 // RUN:         | FileCheck %s --check-prefix=X64-GNU
 
 void try_body(int numerator, int denominator, int *myres) {

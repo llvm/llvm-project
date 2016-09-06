@@ -135,27 +135,23 @@ void Symbolizer::PrepareForSandboxing() {
 bool Symbolizer::FindModuleNameAndOffsetForAddress(uptr address,
                                                    const char **module_name,
                                                    uptr *module_offset) {
-  LoadedModule *module = FindModuleForAddress(address);
-  if (module == 0)
+  const LoadedModule *module = FindModuleForAddress(address);
+  if (module == nullptr)
     return false;
   *module_name = module->full_name();
   *module_offset = address - module->base_address();
   return true;
 }
 
-LoadedModule *Symbolizer::FindModuleForAddress(uptr address) {
+const LoadedModule *Symbolizer::FindModuleForAddress(uptr address) {
   bool modules_were_reloaded = false;
   if (!modules_fresh_) {
-    for (uptr i = 0; i < n_modules_; i++)
-      modules_[i].clear();
-    n_modules_ =
-        GetListOfModules(modules_, kMaxNumberOfModules, /* filter */ nullptr);
-    CHECK_GT(n_modules_, 0);
-    CHECK_LT(n_modules_, kMaxNumberOfModules);
+    modules_.init();
+    RAW_CHECK(modules_.size() > 0);
     modules_fresh_ = true;
     modules_were_reloaded = true;
   }
-  for (uptr i = 0; i < n_modules_; i++) {
+  for (uptr i = 0; i < modules_.size(); i++) {
     if (modules_[i].containsAddress(address)) {
       return &modules_[i];
     }
@@ -209,10 +205,18 @@ class LLVMSymbolizerProcess : public SymbolizerProcess {
     const char* const kSymbolizerArch = "--default-arch=x86_64";
 #elif defined(__i386__)
     const char* const kSymbolizerArch = "--default-arch=i386";
-#elif defined(__powerpc64__) && defined(__BIG_ENDIAN__)
+#elif defined(__aarch64__)
+    const char* const kSymbolizerArch = "--default-arch=arm64";
+#elif defined(__arm__)
+    const char* const kSymbolizerArch = "--default-arch=arm";
+#elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
     const char* const kSymbolizerArch = "--default-arch=powerpc64";
-#elif defined(__powerpc64__) && defined(__LITTLE_ENDIAN__)
+#elif defined(__powerpc64__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     const char* const kSymbolizerArch = "--default-arch=powerpc64le";
+#elif defined(__s390x__)
+    const char* const kSymbolizerArch = "--default-arch=s390x";
+#elif defined(__s390__)
+    const char* const kSymbolizerArch = "--default-arch=s390";
 #else
     const char* const kSymbolizerArch = "--default-arch=unknown";
 #endif

@@ -61,6 +61,15 @@ define void @test_simplify4(%FILE* %fp) {
 ; CHECK-IPRINTF-NEXT: ret void
 }
 
+define void @test_simplify5(%FILE* %fp) {
+; CHECK-LABEL: @test_simplify5(
+  %fmt = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
+  call i32 (%FILE*, i8*, ...) @fprintf(%FILE* %fp, i8* %fmt) [ "deopt"() ]
+; CHECK-NEXT: call i32 @fwrite(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0), i32 12, i32 1, %FILE* %fp) [ "deopt"() ]
+  ret void
+; CHECK-NEXT: ret void
+}
+
 define void @test_no_simplify1(%FILE* %fp) {
 ; CHECK-IPRINTF-LABEL: @test_no_simplify1(
   %fmt = getelementptr [3 x i8], [3 x i8]* @percent_f, i32 0, i32 0

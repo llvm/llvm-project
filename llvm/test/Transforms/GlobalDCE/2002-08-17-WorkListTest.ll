@@ -1,7 +1,9 @@
 ; This testcase tests that a worklist is being used, and that globals can be 
 ; removed if they are the subject of a constexpr and ConstantPointerRef
 
-; RUN: opt < %s -globaldce -S | not grep global
+; RUN: opt < %s -globaldce -S | FileCheck %s
+
+; CHECK-NOT: global
 
 @t0 = internal global [4 x i8] c"foo\00"                ; <[4 x i8]*> [#uses=1]
 @t1 = internal global [4 x i8] c"bar\00"                ; <[4 x i8]*> [#uses=1]

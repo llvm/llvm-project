@@ -31,5 +31,5 @@ has_jit = 1
 type = Library
 name = AArch64CodeGen
 parent = AArch64
-required_libraries = AArch64AsmPrinter AArch64Desc AArch64Info AArch64Utils Analysis AsmPrinter CodeGen Core MC Scalar SelectionDAG Support Target
+required_libraries = AArch64AsmPrinter AArch64Desc AArch64Info AArch64Utils Analysis AsmPrinter CodeGen Core MC Scalar SelectionDAG Support Target GlobalISel
 add_to_library_groups = AArch64

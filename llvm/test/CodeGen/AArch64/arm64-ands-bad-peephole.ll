@@ -1,4 +1,4 @@
-; RUN: llc %s -o - -aarch64-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc %s -o - -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
 ; Check that ANDS (tst) is not merged with ADD when the immediate
 ; is not 0.
 ; <rdar://problem/16693089>

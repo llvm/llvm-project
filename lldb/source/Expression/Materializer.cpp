@@ -482,6 +482,7 @@ public:
         if (m_is_archetype)
         {
             valobj_sp = valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
+            valobj_type = valobj_sp->GetCompilerType(); // update the type to refer to the dynamic type
         }
         
         if (m_is_reference)
@@ -511,9 +512,11 @@ public:
         else
         {
             AddressType address_type = eAddressTypeInvalid;
+            const bool is_dynamic_class_type = m_is_archetype && (valobj_type.GetTypeClass() == lldb::eTypeClassClass);
             const bool scalar_is_load_address = m_is_archetype; // this is the only time we're dealing with dynamic values
             
-            lldb::addr_t addr_of_valobj = valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
+            // if the dynamic type is a class, bypass the GetAddressOf() optimization as it doesn't do the right thing
+            lldb::addr_t addr_of_valobj = is_dynamic_class_type ? LLDB_INVALID_ADDRESS : valobj_sp->GetAddressOf(scalar_is_load_address, &address_type);
             if (addr_of_valobj != LLDB_INVALID_ADDRESS)
             {
                 Error write_error;

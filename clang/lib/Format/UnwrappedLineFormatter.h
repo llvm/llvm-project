@@ -19,8 +19,6 @@
 #include "ContinuationIndenter.h"
 #include "clang/Format/Format.h"
 #include <map>
-#include <queue>
-#include <string>
 
 namespace clang {
 namespace format {

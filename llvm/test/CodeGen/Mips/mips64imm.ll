@@ -13,7 +13,7 @@ define i64 @foo3() nounwind readnone {
 entry:
 ; CHECK: foo3
 ; CHECK: lui $[[R0:[0-9]+]], 4660
-; CHECK: daddiu ${{[0-9]+}}, $[[R0]], 22136
+; CHECK: ori ${{[0-9]+}}, $[[R0]], 22136
   ret i64 305419896
 }
 

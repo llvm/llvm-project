@@ -1,5 +1,5 @@
-; RUN: llc -mtriple aarch64_be < %s -aarch64-load-store-opt=false -O1 -o - | FileCheck %s
-; RUN: llc -mtriple aarch64_be < %s -aarch64-load-store-opt=false -O0 -fast-isel=true -o - | FileCheck %s
+; RUN: llc -mtriple aarch64_be < %s -aarch64-enable-ldst-opt=false -O1 -o - | FileCheck %s
+; RUN: llc -mtriple aarch64_be < %s -aarch64-enable-ldst-opt=false -O0 -fast-isel=true -o - | FileCheck %s
 
 ; CHECK-LABEL: test_i64_f64:
 define void @test_i64_f64(double* %p, i64* %q) {

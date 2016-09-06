@@ -57,6 +57,30 @@ exit:
   ret void
 }
 
+define void @test-add-nuw-from-icmp(float* %input, i32 %offset,
+                                    i32 %numIterations) {
+; CHECK-LABEL: @test-add-nuw-from-icmp
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %nexti, %loop ], [ 0, %entry ]
+
+; CHECK: %index32 =
+; CHECK: --> {%offset,+,1}<nuw>
+  %index32 = add nuw i32 %i, %offset
+  %cmp = icmp sgt i32 %index32, 0
+  %cmp.idx = sext i1 %cmp to i32
+
+  %ptr = getelementptr inbounds float, float* %input, i32 %cmp.idx
+  %nexti = add nuw i32 %i, 1
+  %f = load float, float* %ptr, align 4
+  %exitcond = icmp eq i32 %nexti, %numIterations
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; With no load to trigger UB from poison, we cannot infer nsw.
 define void @test-add-no-load(float* %input, i32 %offset, i32 %numIterations) {
 ; CHECK-LABEL: @test-add-no-load
@@ -113,7 +137,7 @@ loop:
   %i = phi i32 [ %nexti, %loop2 ], [ 0, %entry ]
 
 ; CHECK: %index32 =
-; CHECK: --> {%offset,+,1}<nw>
+; CHECK: --> {%offset,+,1}<nsw>
   %index32 = add nsw i32 %i, %offset
 
   %ptr = getelementptr inbounds float, float* %input, i32 %index32
@@ -123,6 +147,80 @@ loop2:
   %f = load float, float* %ptr, align 4
   %exitcond = icmp eq i32 %nexti, %numIterations
   br i1 %exitcond, label %exit, label %loop
+exit:
+  ret void
+}
+
+; Similar to test-add-not-header, but in this case the load
+; instruction may not be executed.
+define void @test-add-not-header3(float* %input, i32 %offset, i32 %numIterations,
+                                 i1* %cond_buf) {
+; CHECK-LABEL: @test-add-not-header3
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %nexti, %loop2 ], [ 0, %entry ]
+
+; CHECK: %index32 =
+; CHECK: --> {%offset,+,1}<nw>
+  %index32 = add nsw i32 %i, %offset
+
+  %ptr = getelementptr inbounds float, float* %input, i32 %index32
+  %nexti = add nsw i32 %i, 1
+  %cond = load volatile i1, i1* %cond_buf
+  br i1 %cond, label %loop2, label %exit
+loop2:
+  %f = load float, float* %ptr, align 4
+  %exitcond = icmp eq i32 %nexti, %numIterations
+  br i1 %exitcond, label %exit, label %loop
+exit:
+  ret void
+}
+
+; Same thing as test-add-not-header2, except we have a few extra
+; blocks.
+define void @test-add-not-header4(float* %input, i32 %offset, i32 %numIterations) {
+; CHECK-LABEL: @test-add-not-header4
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %nexti, %loop2 ], [ 0, %entry ]
+
+; CHECK: %index32 =
+; CHECK: --> {%offset,+,1}<nsw>
+  %index32 = add nsw i32 %i, %offset
+
+  %ptr = getelementptr inbounds float, float* %input, i32 %index32
+  %nexti = add nsw i32 %i, 1
+  br label %loop3
+loop3:
+  br label %loop4
+loop4:
+  br label %loop2
+loop2:
+  %f = load float, float* %ptr, align 4
+  %exitcond = icmp eq i32 %nexti, %numIterations
+  br i1 %exitcond, label %exit, label %loop
+exit:
+  ret void
+}
+
+; Demonstrate why we need a Visited set in llvm::isKnownNotFullPoison.
+define void @test-add-not-header5(float* %input, i32 %offset) {
+; CHECK-LABEL: @test-add-not-header5
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [ %nexti, %loop ], [ 0, %entry ]
+
+; CHECK: %index32 =
+; CHECK: --> {%offset,+,1}<nw>
+  %index32 = add nsw i32 %i, %offset
+
+  %ptr = getelementptr inbounds float, float* %input, i32 %index32
+  %nexti = add nsw i32 %i, 1
+  br label %loop
+
 exit:
   ret void
 }
@@ -346,7 +444,7 @@ loop:
 
   %j = add nsw i32 %i, 1
 ; CHECK: %index32 =
-; CHECK: --> {(1 + %offset),+,1}<nsw>
+; CHECK: --> {(1 + %offset)<nsw>,+,1}<nsw>
   %index32 = add nsw i32 %j, %offset
 
   %ptr = getelementptr inbounds float, float* %input, i32 %index32
@@ -488,7 +586,7 @@ loop:
   %i = phi i32 [ %nexti, %loop ], [ %start, %entry ]
 
 ; CHECK: %index32 =
-; CHECK: --> {((-1 * %halfsub)<nsw> + %start),+,1}<nsw>
+; CHECK: --> {((-1 * %halfsub)<nsw> + %start)<nsw>,+,1}<nsw>
   %index32 = sub nsw i32 %i, %halfsub
   %index64 = sext i32 %index32 to i64
 
@@ -547,7 +645,7 @@ loop:
 
   %j = add nsw i32 %i, 1
 ; CHECK: %index32 =
-; CHECK: --> {(1 + (-1 * %offset)),+,1}<nsw>
+; CHECK: --> {(1 + (-1 * %offset))<nsw>,+,1}<nsw>
   %index32 = sub nsw i32 %j, %offset
 
   %ptr = getelementptr inbounds float, float* %input, i32 %index32

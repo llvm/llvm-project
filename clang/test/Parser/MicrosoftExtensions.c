@@ -35,6 +35,9 @@ void test_ms_alignof_alias(void) {
 /* Charify extension. */
 #define FOO(x) #@x
 char x = FOO(a);
+#define HASHAT #@
+#define MISSING_ARG(x) #@
+/* expected-error@-1 {{'#@' is not followed by a macro parameter}} */
 
 typedef enum E { e1 };
 
@@ -103,3 +106,12 @@ __declspec(align(16)) struct align_before_key3 {} *align_before_key3_var;
 _Static_assert(__alignof(struct align_before_key1) == 16, "");
 _Static_assert(__alignof(struct align_before_key2) == 16, "");
 _Static_assert(__alignof(struct align_before_key3) == 16, "");
+
+void PR28782(int i) {
+foo:
+  int n;
+  switch (i) {
+  case 0:
+    int m;
+  }
+}

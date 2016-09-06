@@ -1,8 +1,8 @@
-; RUN: llc -march=mipsel -mcpu=mips32 < %s | FileCheck %s -check-prefix=ALL -check-prefix=ODDSPREG -check-prefix=ODDSPREG-NO-EMIT
-; RUN: llc -march=mipsel -mcpu=mips32 -mattr=+nooddspreg < %s | FileCheck %s -check-prefix=ALL -check-prefix=NOODDSPREG
-; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fp64 < %s | FileCheck %s -check-prefix=ALL -check-prefix=ODDSPREG -check-prefix=ODDSPREG-NO-EMIT
-; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fp64,+nooddspreg < %s | FileCheck %s -check-prefix=ALL -check-prefix=NOODDSPREG
-; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fpxx,-nooddspreg < %s | FileCheck %s -check-prefix=ALL -check-prefix=ODDSPREG -check-prefix=ODDSPREG-EMIT
+; RUN: llc -march=mipsel -mcpu=mips32 < %s | FileCheck %s -check-prefixes=ALL,ODDSPREG,ODDSPREG-NO-EMIT
+; RUN: llc -march=mipsel -mcpu=mips32 -mattr=+nooddspreg < %s | FileCheck %s -check-prefixes=ALL,NOODDSPREG
+; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fp64 < %s | FileCheck %s -check-prefixes=ALL,ODDSPREG,ODDSPREG-NO-EMIT
+; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fp64,+nooddspreg < %s | FileCheck %s -check-prefixes=ALL,NOODDSPREG
+; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fpxx,-nooddspreg < %s | FileCheck %s -check-prefixes=ALL,ODDSPREG,ODDSPREG-EMIT
 
 ; We don't emit a directive unless we need to. This is to support versions of
 ; GAS which do not support the directive.

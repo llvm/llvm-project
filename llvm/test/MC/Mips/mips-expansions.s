@@ -1,44 +1,44 @@
 # RUN: llvm-mc %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips32r2 | \
-# RUN:   FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LE
+# RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-LE
 # RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mcpu=mips32r2 | \
-# RUN:   FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BE
+# RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-BE
 
 # Check that the IAS expands macro instructions in the same way as GAS.
 
 # Load address, done by MipsAsmParser::expandLoadAddressReg()
 # and MipsAsmParser::expandLoadAddressImm():
   la $8, 1f
-# CHECK-LE: lui     $8, %hi(($tmp0))      # encoding: [A,A,0x08,0x3c]
-# CHECK-LE:                             #   fixup A - offset: 0, value: %hi(($tmp0)), kind: fixup_Mips_HI16
-# CHECK-LE: addiu   $8, $8, %lo(($tmp0))  # encoding: [A,A,0x08,0x25]
-# CHECK-LE:                             #   fixup A - offset: 0, value: %lo(($tmp0)), kind: fixup_Mips_LO16
+# CHECK-LE: lui     $8, %hi($tmp0)        # encoding: [A,A,0x08,0x3c]
+# CHECK-LE:                               #   fixup A - offset: 0, value: %hi($tmp0), kind: fixup_Mips_HI16
+# CHECK-LE: addiu   $8, $8, %lo($tmp0)    # encoding: [A,A,0x08,0x25]
+# CHECK-LE:                               #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_Mips_LO16
 
 # LW/SW and LDC1/SDC1 of symbol address, done by MipsAsmParser::expandMemInst():
   .set noat
   lw $10, symbol($4)
 # CHECK-LE: lui     $10, %hi(symbol)        # encoding: [A,A,0x0a,0x3c]
-# CHECK-LE:                                 #   fixup A - offset: 0, value: symbol@ABS_HI, kind: fixup_Mips_HI16
+# CHECK-LE:                                 #   fixup A - offset: 0, value: %hi(symbol), kind: fixup_Mips_HI16
 # CHECK-LE: addu    $10, $10, $4            # encoding: [0x21,0x50,0x44,0x01]
 # CHECK-LE: lw      $10, %lo(symbol)($10)   # encoding: [A,A,0x4a,0x8d]
-# CHECK-LE:                                 #   fixup A - offset: 0, value: symbol@ABS_LO, kind: fixup_Mips_LO16
+# CHECK-LE:                                 #   fixup A - offset: 0, value: %lo(symbol), kind: fixup_Mips_LO16
   .set at
   sw $10, symbol($9)
 # CHECK-LE: lui     $1, %hi(symbol)         # encoding: [A,A,0x01,0x3c]
-# CHECK-LE:                                 #   fixup A - offset: 0, value: symbol@ABS_HI, kind: fixup_Mips_HI16
+# CHECK-LE:                                 #   fixup A - offset: 0, value: %hi(symbol), kind: fixup_Mips_HI16
 # CHECK-LE: addu    $1, $1, $9              # encoding: [0x21,0x08,0x29,0x00]
 # CHECK-LE: sw      $10, %lo(symbol)($1)    # encoding: [A,A,0x2a,0xac]
-# CHECK-LE:                                 #   fixup A - offset: 0, value: symbol@ABS_LO, kind: fixup_Mips_LO16
+# CHECK-LE:                                 #   fixup A - offset: 0, value: %lo(symbol), kind: fixup_Mips_LO16
 
   lw $8, 1f
 # CHECK-LE: lui $8, %hi($tmp0)              # encoding: [A,A,0x08,0x3c]
-# CHECK-LE:                                 #   fixup A - offset: 0, value: ($tmp0)@ABS_HI, kind: fixup_Mips_HI16
+# CHECK-LE:                                 #   fixup A - offset: 0, value: %hi($tmp0), kind: fixup_Mips_HI16
 # CHECK-LE: lw  $8, %lo($tmp0)($8)          # encoding: [A,A,0x08,0x8d]
-# CHECK-LE:                                 #   fixup A - offset: 0, value: ($tmp0)@ABS_LO, kind: fixup_Mips_LO16
+# CHECK-LE:                                 #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_Mips_LO16
   sw $8, 1f
 # CHECK-LE: lui $1, %hi($tmp0)              # encoding: [A,A,0x01,0x3c]
-# CHECK-LE:                                 #   fixup A - offset: 0, value: ($tmp0)@ABS_HI, kind: fixup_Mips_HI16
+# CHECK-LE:                                 #   fixup A - offset: 0, value: %hi($tmp0), kind: fixup_Mips_HI16
 # CHECK-LE: sw  $8, %lo($tmp0)($1)          # encoding: [A,A,0x28,0xac]
-# CHECK-LE:                                 #   fixup A - offset: 0, value: ($tmp0)@ABS_LO, kind: fixup_Mips_LO16
+# CHECK-LE:                                 #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_Mips_LO16
 
   lw $10, 655483($4)
 # CHECK-LE: lui     $10, 10                 # encoding: [0x0a,0x00,0x0a,0x3c]
@@ -47,20 +47,20 @@
   sw $10, 123456($9)
 # CHECK-LE: lui     $1, 2                   # encoding: [0x02,0x00,0x01,0x3c]
 # CHECK-LE: addu    $1, $1, $9              # encoding: [0x21,0x08,0x29,0x00]
-# CHECK-LE: sw      $10, 57920($1)          # encoding: [0x40,0xe2,0x2a,0xac]
+# CHECK-LE: sw      $10, -7616($1)          # encoding: [0x40,0xe2,0x2a,0xac]
 
   lw $8, symbol
 # CHECK-LE:     lui     $8, %hi(symbol)     # encoding: [A,A,0x08,0x3c]
-# CHECK-LE:                                 #   fixup A - offset: 0, value: symbol@ABS_HI, kind: fixup_Mips_HI16
+# CHECK-LE:                                 #   fixup A - offset: 0, value: %hi(symbol), kind: fixup_Mips_HI16
 # CHECK-LE-NOT: move    $8, $8              # encoding: [0x21,0x40,0x00,0x01]
 # CHECK-LE:     lw      $8, %lo(symbol)($8) # encoding: [A,A,0x08,0x8d]
-# CHECK-LE:                                 #   fixup A - offset: 0, value: symbol@ABS_LO, kind: fixup_Mips_LO16
+# CHECK-LE:                                 #   fixup A - offset: 0, value: %lo(symbol), kind: fixup_Mips_LO16
   sw $8, symbol
 # CHECK-LE:     lui     $1, %hi(symbol)     # encoding: [A,A,0x01,0x3c]
-# CHECK-LE:                                 #   fixup A - offset: 0, value: symbol@ABS_HI, kind: fixup_Mips_HI16
+# CHECK-LE:                                 #   fixup A - offset: 0, value: %hi(symbol), kind: fixup_Mips_HI16
 # CHECK-LE-NOT: move    $1, $1              # encoding: [0x21,0x08,0x20,0x00]
 # CHECK-LE:     sw      $8, %lo(symbol)($1) # encoding: [A,A,0x28,0xac]
-# CHECK-LE:                                 #   fixup A - offset: 0, value: symbol@ABS_LO, kind: fixup_Mips_LO16
+# CHECK-LE:                                 #   fixup A - offset: 0, value: %lo(symbol), kind: fixup_Mips_LO16
 
   ldc1 $f0, symbol
 # CHECK-LE: lui     $1, %hi(symbol)
@@ -129,6 +129,12 @@
   beq $2, 0x10000, 1332
 # CHECK-LE: lui   $1, 1             # encoding: [0x01,0x00,0x01,0x3c]
 # CHECK-LE: beq   $2, $1, 1332      # encoding: [0x4d,0x01,0x41,0x10]
+# CHECK-LE: nop                     # encoding: [0x00,0x00,0x00,0x00]
+
+  beq $2, 65538, foo
+# CHECK-LE: lui   $1, 1             # encoding: [0x01,0x00,0x01,0x3c]
+# CHECK-LE: ori   $1, $1, 2         # encoding: [0x02,0x00,0x21,0x34]
+# CHECK-LE: beq   $2, $1, foo       # encoding: [A,A,0x41,0x10]
 # CHECK-LE: nop                     # encoding: [0x00,0x00,0x00,0x00]
 
 # Test ULH with immediate operand.

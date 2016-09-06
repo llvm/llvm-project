@@ -54,7 +54,7 @@ public:
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
-  SDNode *Select(SDNode *Node) override;
+  void Select(SDNode *Node) override;
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
@@ -67,7 +67,7 @@ private:
 };
 } // end anonymous namespace
 
-SDNode *WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
+void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   // Dump information about the Node being selected.
   DEBUG(errs() << "Selecting: ");
   DEBUG(Node->dump(CurDAG));
@@ -77,11 +77,10 @@ SDNode *WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   if (Node->isMachineOpcode()) {
     DEBUG(errs() << "== "; Node->dump(CurDAG); errs() << "\n");
     Node->setNodeId(-1);
-    return nullptr;
+    return;
   }
 
   // Few custom selection stuff.
-  SDNode *ResNode = nullptr;
   EVT VT = Node->getValueType(0);
 
   switch (Node->getOpcode()) {
@@ -92,16 +91,7 @@ SDNode *WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   }
 
   // Select the default instruction.
-  ResNode = SelectCode(Node);
-
-  DEBUG(errs() << "=> ");
-  if (ResNode == nullptr || ResNode == Node)
-    DEBUG(Node->dump(CurDAG));
-  else
-    DEBUG(ResNode->dump(CurDAG));
-  DEBUG(errs() << "\n");
-
-  return ResNode;
+  SelectCode(Node);
 }
 
 bool WebAssemblyDAGToDAGISel::SelectInlineAsmMemoryOperand(

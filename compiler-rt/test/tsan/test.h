@@ -67,3 +67,38 @@ unsigned long long monotonic_clock_ns() {
   return (unsigned long long)t.tv_sec * 1000000000ull + t.tv_nsec;
 }
 #endif
+
+//The const kPCInc must be in sync with StackTrace::GetPreviousInstructionPc
+#if defined(__powerpc64__)
+// PCs are always 4 byte aligned.
+const int kPCInc = 4;
+#elif defined(__sparc__) || defined(__mips__)
+const int kPCInc = 8;
+#else
+const int kPCInc = 1;
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void AnnotateRWLockCreate(const char *f, int l, void *m);
+void AnnotateRWLockCreateStatic(const char *f, int l, void *m);
+void AnnotateRWLockDestroy(const char *f, int l, void *m);
+void AnnotateRWLockAcquired(const char *f, int l, void *m, long is_w);
+void AnnotateRWLockReleased(const char *f, int l, void *m, long is_w);
+
+#ifdef __cplusplus
+}
+#endif
+
+#define ANNOTATE_RWLOCK_CREATE(m) \
+    AnnotateRWLockCreate(__FILE__, __LINE__, m)
+#define ANNOTATE_RWLOCK_CREATE_STATIC(m) \
+    AnnotateRWLockCreateStatic(__FILE__, __LINE__, m)
+#define ANNOTATE_RWLOCK_DESTROY(m) \
+    AnnotateRWLockDestroy(__FILE__, __LINE__, m)
+#define ANNOTATE_RWLOCK_ACQUIRED(m, is_w) \
+    AnnotateRWLockAcquired(__FILE__, __LINE__, m, is_w)
+#define ANNOTATE_RWLOCK_RELEASED(m, is_w) \
+    AnnotateRWLockReleased(__FILE__, __LINE__, m, is_w)

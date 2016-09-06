@@ -13,8 +13,8 @@
 
 let Namespace = "Hexagon" in {
 
-  class HexagonReg<bits<5> num, string n, list<string> alt = [], 
-                   list<Register> alias = []> : Register<n> {
+  class HexagonReg<bits<5> num, string n, list<string> alt = [],
+                   list<Register> alias = []> : Register<n, alt> {
     field bits<5> Num;
     let Aliases = alias;
     let HWEncoding{4-0} = num;
@@ -31,7 +31,8 @@ let Namespace = "Hexagon" in {
 
   // Registers are identified with 5-bit ID numbers.
   // Ri - 32-bit integer registers.
-  class Ri<bits<5> num, string n, list<string> alt = []> : HexagonReg<num, n, alt> {
+  class Ri<bits<5> num, string n, list<string> alt = []> :
+        HexagonReg<num, n, alt> {
     let Num = num;
   }
 
@@ -42,8 +43,9 @@ let Namespace = "Hexagon" in {
 
 
   // Rd - 64-bit registers.
-  class Rd<bits<5> num, string n, list<Register> subregs> :
-        HexagonDoubleReg<num, n, subregs> {
+  class Rd<bits<5> num, string n, list<Register> subregs,
+           list<string> alt = []> :
+        HexagonDoubleReg<num, n, subregs, alt> {
     let Num = num;
     let SubRegs = subregs;
   }
@@ -94,11 +96,11 @@ let Namespace = "Hexagon" in {
 
   // Aliases of the R* registers used to hold 64-bit int values (doubles).
   let SubRegIndices = [subreg_loreg, subreg_hireg], CoveredBySubRegs = 1 in {
-  def D0  : Rd< 0,  "r1:0",  [R0,  R1]>, DwarfRegNum<[32]>;
-  def D1  : Rd< 2,  "r3:2",  [R2,  R3]>, DwarfRegNum<[34]>;
-  def D2  : Rd< 4,  "r5:4",  [R4,  R5]>, DwarfRegNum<[36]>;
-  def D3  : Rd< 6,  "r7:6",  [R6,  R7]>, DwarfRegNum<[38]>;
-  def D4  : Rd< 8,  "r9:8",  [R8,  R9]>, DwarfRegNum<[40]>;
+  def D0  : Rd< 0,  "r1:0",  [R0,  R1]>,  DwarfRegNum<[32]>;
+  def D1  : Rd< 2,  "r3:2",  [R2,  R3]>,  DwarfRegNum<[34]>;
+  def D2  : Rd< 4,  "r5:4",  [R4,  R5]>,  DwarfRegNum<[36]>;
+  def D3  : Rd< 6,  "r7:6",  [R6,  R7]>,  DwarfRegNum<[38]>;
+  def D4  : Rd< 8,  "r9:8",  [R8,  R9]>,  DwarfRegNum<[40]>;
   def D5  : Rd<10, "r11:10", [R10, R11]>, DwarfRegNum<[42]>;
   def D6  : Rd<12, "r13:12", [R12, R13]>, DwarfRegNum<[44]>;
   def D7  : Rd<14, "r15:14", [R14, R15]>, DwarfRegNum<[46]>;
@@ -109,7 +111,7 @@ let Namespace = "Hexagon" in {
   def D12 : Rd<24, "r25:24", [R24, R25]>, DwarfRegNum<[56]>;
   def D13 : Rd<26, "r27:26", [R26, R27]>, DwarfRegNum<[58]>;
   def D14 : Rd<28, "r29:28", [R28, R29]>, DwarfRegNum<[60]>;
-  def D15 : Rd<30, "r31:30", [R30, R31]>, DwarfRegNum<[62]>;
+  def D15 : Rd<30, "r31:30", [R30, R31], ["lr:fp"]>, DwarfRegNum<[62]>;
   }
 
   // Predicate registers.
@@ -130,6 +132,11 @@ let Namespace = "Hexagon" in {
   // on the entire USR.
   def USR_OVF : Rc<?, "usr.ovf">;
 
+  def USR  : Rc<8,  "usr",       ["c8"]>,   DwarfRegNum<[75]> {
+    let SubRegIndices = [subreg_overflow];
+    let SubRegs = [USR_OVF];
+  }
+
   // Control registers.
   def SA0  : Rc<0,  "sa0",       ["c0"]>,   DwarfRegNum<[67]>;
   def LC0  : Rc<1,  "lc0",       ["c1"]>,   DwarfRegNum<[68]>;
@@ -140,11 +147,12 @@ let Namespace = "Hexagon" in {
   def C5   : Rc<5,  "c5",        ["c5"]>,   DwarfRegNum<[72]>; // future use
   def C6   : Rc<6,  "c6",        [], [M0]>, DwarfRegNum<[73]>;
   def C7   : Rc<7,  "c7",        [], [M1]>, DwarfRegNum<[74]>;
-
-  def USR  : Rc<8,  "usr",       ["c8"]>,   DwarfRegNum<[75]> {
-    let SubRegIndices = [subreg_overflow];
-    let SubRegs = [USR_OVF];
-  }
+  // Define C8 separately and make it aliased with USR.
+  // The problem is that USR has subregisters (e.g. overflow). If USR was
+  // specified as a subregister of C9_8, it would imply that subreg_overflow
+  // and subreg_loreg can be composed, which leads to all kinds of issues
+  // with lane masks.
+  def C8   : Rc<8,  "c8",       [], [USR]>, DwarfRegNum<[75]>;
   def PC   : Rc<9,  "pc">,                  DwarfRegNum<[76]>;
   def UGP  : Rc<10, "ugp",       ["c10"]>,  DwarfRegNum<[77]>;
   def GP   : Rc<11, "gp">,                  DwarfRegNum<[78]>;
@@ -159,7 +167,8 @@ let Namespace = "Hexagon" in {
     def C1_0   : Rcc<0,   "c1:0",  [SA0, LC0], ["lc0:sa0"]>, DwarfRegNum<[67]>;
     def C3_2   : Rcc<2,   "c3:2",  [SA1, LC1], ["lc1:sa1"]>, DwarfRegNum<[69]>;
     def C7_6   : Rcc<6,   "c7:6",  [C6, C7],   ["m1:0"]>,    DwarfRegNum<[72]>;
-    def C9_8   : Rcc<8,   "c9:8",  [USR, PC]>,               DwarfRegNum<[74]>;
+    // Use C8 instead of USR as a subregister of C9_8.
+    def C9_8   : Rcc<8,   "c9:8",  [C8, PC]>,                DwarfRegNum<[74]>;
     def C11_10 : Rcc<10, "c11:10", [UGP, GP]>,               DwarfRegNum<[76]>;
     def CS     : Rcc<12, "c13:12", [CS0, CS1], ["cs1:0"]>,   DwarfRegNum<[78]>;
     def UPC    : Rcc<14, "c15:14", [UPCL, UPCH]>,            DwarfRegNum<[80]>;
@@ -261,7 +270,13 @@ def VolatileV3 {
                          R28, R31,
                          P0, P1, P2, P3,
                          M0, M1,
-                         LC0, LC1, SA0, SA1, USR, USR_OVF];
+                         LC0, LC1, SA0, SA1, USR, USR_OVF, CS0, CS1,
+                         V0, V1, V2, V3, V4, V5, V6, V7, V8, V9, V10, V11,
+                         V12, V13, V14, V15, V16, V17, V18, V19, V20, V21,
+                         V22, V23, V24, V25, V26, V27, V28, V29, V30, V31,
+                         W0, W1, W2, W3, W4, W5, W6, W7, W8, W9, W10, W11,
+                         W12, W13, W14, W15,
+                         Q0, Q1, Q2, Q3];
 }
 
 def PositiveHalfWord : PatLeaf<(i32 IntRegs:$a),

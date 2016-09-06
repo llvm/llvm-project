@@ -1,0 +1,38 @@
+RUN: llvm-pdbdump pdb2yaml -dbi-module-info -dbi-module-source-info \
+RUN:   -dbi-stream -pdb-stream -stream-directory -stream-metadata \
+RUN:   %p/Inputs/empty.pdb > %t.1
+RUN: llvm-pdbdump yaml2pdb -pdb=%t.2 %t.1
+
+RUN: llvm-pdbdump raw -headers %p/Inputs/empty.pdb | FileCheck %s
+RUN: llvm-pdbdump raw -headers %t.2 | FileCheck %s
+
+CHECK:      FileHeaders {
+CHECK-NEXT:   BlockSize: 4096
+CHECK-NEXT:   FreeBlockMap: 2
+CHECK-NEXT:   NumBlocks: 25
+CHECK-NEXT:   NumDirectoryBytes: 136
+CHECK-NEXT:   Unknown1: 0
+CHECK-NEXT:   BlockMapAddr: 24
+CHECK-NEXT:   NumDirectoryBlocks: 1
+CHECK-NEXT:   DirectoryBlocks: [23]
+CHECK-NEXT:   NumStreams: 17
+CHECK-NEXT: }
+CHECK-NEXT: PDB Stream {
+CHECK-NEXT:   Version: 20000404
+CHECK-NEXT:   Signature: 0x54E507E2
+CHECK-NEXT:   Age: 1
+CHECK-NEXT:   Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+CHECK-NEXT: }
+CHECK-NEXT: DBI Stream {
+CHECK-NEXT:   Dbi Version: 19990903
+CHECK-NEXT:   Age: 1
+CHECK-NEXT:   Incremental Linking: Yes
+CHECK-NEXT:   Has CTypes: No
+CHECK-NEXT:   Is Stripped: No
+CHECK-NEXT:   Machine Type: x86
+CHECK-NEXT:   Symbol Record Stream Index:
+CHECK-NEXT:   Public Symbol Stream Index:
+CHECK-NEXT:   Global Symbol Stream Index:
+CHECK-NEXT:   Toolchain Version: 12.0
+CHECK-NEXT:   mspdb120.dll version: 12.0.31101
+CHECK-NEXT: }

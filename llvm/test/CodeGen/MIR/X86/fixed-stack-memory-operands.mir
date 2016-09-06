@@ -1,4 +1,4 @@
-# RUN: llc -march=x86 -start-after branch-folder -stop-after branch-folder -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses fixed stack memory operands
 # correctly.
 
@@ -29,7 +29,7 @@ stack:
 body: |
   bb.0.entry:
     frame-setup PUSH32r undef %eax, implicit-def %esp, implicit %esp
-    CFI_INSTRUCTION .cfi_def_cfa_offset 8
+    CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK: name: test
   ; CHECK: %eax = MOV32rm %esp, 1, _, 8, _ :: (load 4 from %fixed-stack.0, align 16)
     %eax = MOV32rm %esp, 1, _, 8, _ :: (load 4 from %fixed-stack.0, align 16)

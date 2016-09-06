@@ -95,6 +95,7 @@ public:
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
 
 private:
+
   // Helpers for EmitStartOfAsmFile() and EmitEndOfAsmFile()
   void emitAttributes();
 

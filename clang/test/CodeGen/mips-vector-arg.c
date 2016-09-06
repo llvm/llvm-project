@@ -8,18 +8,18 @@
 typedef float  v4sf __attribute__ ((__vector_size__ (16)));
 typedef int v4i32 __attribute__ ((__vector_size__ (16)));
 
-// O32: define void @test_v4sf(i32 inreg %a1.coerce0, i32 inreg %a1.coerce1, i32 inreg %a1.coerce2, i32 inreg %a1.coerce3, i32 signext %a2, i32, i32 inreg %a3.coerce0, i32 inreg %a3.coerce1, i32 inreg %a3.coerce2, i32 inreg %a3.coerce3) [[NUW:#[0-9]+]]
+// O32: define void @test_v4sf(i32 inreg %a1.coerce0, i32 inreg %a1.coerce1, i32 inreg %a1.coerce2, i32 inreg %a1.coerce3, i32 signext %a2, i32, i32 inreg %a3.coerce0, i32 inreg %a3.coerce1, i32 inreg %a3.coerce2, i32 inreg %a3.coerce3) local_unnamed_addr [[NUW:#[0-9]+]]
 // O32: declare i32 @test_v4sf_2(i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 signext, i32, i32 inreg, i32 inreg, i32 inreg, i32 inreg)
-// N64: define void @test_v4sf(i64 inreg %a1.coerce0, i64 inreg %a1.coerce1, i32 signext %a2, i64, i64 inreg %a3.coerce0, i64 inreg %a3.coerce1) [[NUW:#[0-9]+]]
+// N64: define void @test_v4sf(i64 inreg %a1.coerce0, i64 inreg %a1.coerce1, i32 signext %a2, i64, i64 inreg %a3.coerce0, i64 inreg %a3.coerce1) local_unnamed_addr [[NUW:#[0-9]+]]
 // N64: declare i32 @test_v4sf_2(i64 inreg, i64 inreg, i32 signext, i64, i64 inreg, i64 inreg)
 extern test_v4sf_2(v4sf, int, v4sf);
 void test_v4sf(v4sf a1, int a2, v4sf a3) {
   test_v4sf_2(a3, a2, a1);
 }
 
-// O32: define void @test_v4i32(i32 inreg %a1.coerce0, i32 inreg %a1.coerce1, i32 inreg %a1.coerce2, i32 inreg %a1.coerce3, i32 signext %a2, i32, i32 inreg %a3.coerce0, i32 inreg %a3.coerce1, i32 inreg %a3.coerce2, i32 inreg %a3.coerce3) [[NUW]]
+// O32: define void @test_v4i32(i32 inreg %a1.coerce0, i32 inreg %a1.coerce1, i32 inreg %a1.coerce2, i32 inreg %a1.coerce3, i32 signext %a2, i32, i32 inreg %a3.coerce0, i32 inreg %a3.coerce1, i32 inreg %a3.coerce2, i32 inreg %a3.coerce3) local_unnamed_addr [[NUW]]
 // O32: declare i32 @test_v4i32_2(i32 inreg, i32 inreg, i32 inreg, i32 inreg, i32 signext, i32, i32 inreg, i32 inreg, i32 inreg, i32 inreg)
-// N64: define void @test_v4i32(i64 inreg %a1.coerce0, i64 inreg %a1.coerce1, i32 signext %a2, i64, i64 inreg %a3.coerce0, i64 inreg %a3.coerce1) [[NUW]]
+// N64: define void @test_v4i32(i64 inreg %a1.coerce0, i64 inreg %a1.coerce1, i32 signext %a2, i64, i64 inreg %a3.coerce0, i64 inreg %a3.coerce1) local_unnamed_addr [[NUW]]
 // N64: declare i32 @test_v4i32_2(i64 inreg, i64 inreg, i32 signext, i64, i64 inreg, i64 inreg)
 extern test_v4i32_2(v4i32, int, v4i32);
 void test_v4i32(v4i32 a1, int a2, v4i32 a3) {

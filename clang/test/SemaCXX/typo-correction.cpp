@@ -663,3 +663,19 @@ class Bar : public A::B::Foofoo {};
 
 using C::D::Foofoo;  // expected-error {{no member named 'Foofoo' in namespace 'PR24781_using_crash::C::D'; did you mean 'A::B::Foofoo'?}}
 }
+
+int d = ? L : d; // expected-error {{expected expression}} expected-error {{undeclared identifier}}
+
+struct B0 {
+  int : 0 |         // expected-error {{invalid operands to binary expression}}
+      (struct B0)e; // expected-error {{use of undeclared identifier}}
+};
+
+namespace {
+struct a0is0 {};
+struct b0is0 {};
+int g() {
+  0 [                 // expected-error {{subscripted value is not an array}}
+      sizeof(c0is0)]; // expected-error {{use of undeclared identifier}}
+};
+}

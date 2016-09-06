@@ -22,12 +22,11 @@ namespace orc {
 
 /// SymbolResolver impliementation that rejects all resolution requests.
 /// Useful for clients that have no cross-object fixups.
-class NullResolver : public RuntimeDyld::SymbolResolver {
+class NullResolver : public JITSymbolResolver {
 public:
-  RuntimeDyld::SymbolInfo findSymbol(const std::string &Name) final;
+  JITSymbol findSymbol(const std::string &Name) final;
 
-  RuntimeDyld::SymbolInfo
-  findSymbolInLogicalDylib(const std::string &Name) final;
+  JITSymbol findSymbolInLogicalDylib(const std::string &Name) final;
 };
 
 } // End namespace orc.

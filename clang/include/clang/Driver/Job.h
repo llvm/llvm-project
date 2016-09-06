@@ -138,6 +138,20 @@ private:
   std::unique_ptr<Command> Fallback;
 };
 
+/// Like Command, but always pretends that the wrapped command succeeded.
+class ForceSuccessCommand : public Command {
+public:
+  ForceSuccessCommand(const Action &Source_, const Tool &Creator_,
+                      const char *Executable_, const ArgStringList &Arguments_,
+                      ArrayRef<InputInfo> Inputs);
+
+  void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
+             CrashReportInfo *CrashInfo = nullptr) const override;
+
+  int Execute(const StringRef **Redirects, std::string *ErrMsg,
+              bool *ExecutionFailed) const override;
+};
+
 /// JobList - A sequence of jobs to perform.
 class JobList {
 public:

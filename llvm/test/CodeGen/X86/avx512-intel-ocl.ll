@@ -15,7 +15,8 @@ declare i32 @func_int(i32, i32)
 
 ; X32-LABEL: testf16_inp
 ; X32: vaddps  {{.*}}, {{%zmm[0-1]}}
-; X32: movl    %eax, (%esp)
+; Push is not deemed profitable if we're realigning the stack.
+; X32: {{pushl|movl}}   %eax
 ; X32: call
 ; X32: ret
 
@@ -61,17 +62,17 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 
 ; test calling conventions - prolog and epilog
 ; WIN64-LABEL: test_prolog_epilog
-; WIN64: vmovups %zmm21, {{.*(%rbp).*}}     # 64-byte Spill
-; WIN64: vmovups %zmm6, {{.*(%rbp).*}}     # 64-byte Spill
+; WIN64: vmovaps %zmm21, {{.*(%rbp).*}}     # 64-byte Spill
+; WIN64: vmovaps %zmm6, {{.*(%rbp).*}}     # 64-byte Spill
 ; WIN64: call
-; WIN64: vmovups {{.*(%rbp).*}}, %zmm6      # 64-byte Reload
-; WIN64: vmovups {{.*(%rbp).*}}, %zmm21     # 64-byte Reload
+; WIN64: vmovaps {{.*(%rbp).*}}, %zmm6      # 64-byte Reload
+; WIN64: vmovaps {{.*(%rbp).*}}, %zmm21     # 64-byte Reload
 
 ; X64-LABEL: test_prolog_epilog
-; X64:  kmovw   %k7, {{.*}}(%rsp)         ## 8-byte Folded Spill
-; X64:  kmovw   %k6, {{.*}}(%rsp)         ## 8-byte Folded Spill
-; X64:  kmovw   %k5, {{.*}}(%rsp)         ## 8-byte Folded Spill
-; X64:  kmovw   %k4, {{.*}}(%rsp)         ## 8-byte Folded Spill
+; X64:  kmovq   %k7, {{.*}}(%rsp)         ## 8-byte Spill
+; X64:  kmovq   %k6, {{.*}}(%rsp)         ## 8-byte Spill
+; X64:  kmovq   %k5, {{.*}}(%rsp)         ## 8-byte Spill
+; X64:  kmovq   %k4, {{.*}}(%rsp)         ## 8-byte Spill
 ; X64: vmovups %zmm31, {{.*}}(%rsp)  ## 64-byte Spill
 ; X64: vmovups %zmm16, {{.*}}(%rsp)  ## 64-byte Spill
 ; X64: call

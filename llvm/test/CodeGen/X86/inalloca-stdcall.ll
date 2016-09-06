@@ -8,8 +8,8 @@ declare x86_stdcallcc void @i(i32 %a)
 define void @g() {
 ; CHECK-LABEL: _g:
   %b = alloca inalloca %Foo
-; CHECK: movl    $8, %eax
-; CHECK: calll   __chkstk
+; CHECK: pushl   %eax
+; CHECK: pushl   %eax
   %f1 = getelementptr %Foo, %Foo* %b, i32 0, i32 0
   %f2 = getelementptr %Foo, %Foo* %b, i32 0, i32 1
   store i32 13, i32* %f1

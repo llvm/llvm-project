@@ -80,6 +80,10 @@ input. Otherwise, it will read from the specified ``filenames``.
 
  Display the ELF program headers (only for ELF object files).
 
+.. option:: -elf-section-groups, -g
+
+ Display section groups (only for ELF object files).
+
 EXIT STATUS
 -----------
 

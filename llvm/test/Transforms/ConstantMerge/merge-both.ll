@@ -1,4 +1,4 @@
-; RUN: opt -constmerge -S < %s | FileCheck %s
+; RUN: opt -S < %s -passes=constmerge | FileCheck %s
 ; Test that in one run var3 is merged into var2 and var1 into var4.
 ; Test that we merge @var5 and @var6 into one with the higher alignment
 

@@ -47,6 +47,9 @@ void TestFlag(const char *start_value, const char *env,
   parser.ParseString(env);
 
   EXPECT_EQ(0, internal_strcmp(final_value, flag));
+
+  // Reporting unrecognized flags is needed to reset them.
+  ReportUnrecognizedFlags();
 }
 
 TEST(SanitizerCommon, BooleanFlags) {
@@ -97,6 +100,9 @@ static void TestTwoFlags(const char *env, bool expected_flag1,
 
   EXPECT_EQ(expected_flag1, flag1);
   EXPECT_EQ(0, internal_strcmp(flag2, expected_flag2));
+
+  // Reporting unrecognized flags is needed to reset them.
+  ReportUnrecognizedFlags();
 }
 
 TEST(SanitizerCommon, MultipleFlags) {

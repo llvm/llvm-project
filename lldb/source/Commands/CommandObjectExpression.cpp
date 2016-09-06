@@ -647,6 +647,11 @@ CommandObjectExpression::DoExecute(const char *command,
             if (m_repl_option.GetOptionValue().GetCurrentValue())
             {
                 Target *target = m_interpreter.GetExecutionContext().GetTargetPtr();
+                
+                // If we weren't passed in a target, let's see if the dummy target can make a REPL:
+                if (!target)
+                    target = GetDummyTarget();
+                    
                 if (target)
                 {
                     // Drop into REPL

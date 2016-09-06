@@ -1,7 +1,7 @@
 ; Test the doubleword comparison instructions that were added in POWER8
 ;
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s
 
 define <2 x i64> @v2si64_cmp(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
        %cmp = icmp eq <2 x i64> %x, %y

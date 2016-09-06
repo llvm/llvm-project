@@ -84,17 +84,22 @@ The status of major ABI-impacting C++ features:
 * RTTI: :good:`Complete`.  Generation of RTTI data structures has been
   finished, along with support for the ``/GR`` flag.
 
-* Exceptions and SEH: :partial:`Partial`.
-  C++ exceptions (``try`` / ``catch`` / ``throw``) and
-  structured exceptions (``__try`` / ``__except`` / ``__finally``) mostly
-  work on x64. 32-bit exception handling support is being worked on.  LLVM does
-  not model asynchronous exceptions, so it is currently impossible to catch an
-  asynchronous exception generated in the same frame as the catching ``__try``.
+* C++ Exceptions: :good:`Mostly complete`.  Support for
+  C++ exceptions (``try`` / ``catch`` / ``throw``) have been implemented for
+  x86 and x64.  Our implementation has been well tested but we still get the
+  odd bug report now and again.
   C++ exception specifications are ignored, but this is `consistent with Visual
   C++`_.
 
 .. _consistent with Visual C++:
   https://msdn.microsoft.com/en-us/library/wfa0edys.aspx
+
+* Asynchronous Exceptions (SEH): :partial:`Partial`.
+  Structured exceptions (``__try`` / ``__except`` / ``__finally``) mostly
+  work on x86 and x64.
+  LLVM does not model asynchronous exceptions, so it is currently impossible to
+  catch an asynchronous exception generated in the same frame as the catching
+  ``__try``.
 
 * Thread-safe initialization of local statics: :good:`Complete`.  MSVC 2015
   added support for thread-safe initialization of such variables by taking an

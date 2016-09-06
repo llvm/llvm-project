@@ -9,24 +9,22 @@
 
 #define DEBUG_TYPE "gen-pred"
 
+#include "HexagonTargetMachine.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetInstrInfo.h"
-#include "HexagonTargetMachine.h"
+#include "llvm/Target/TargetMachine.h"
 
 #include <functional>
 #include <queue>
 #include <set>
-#include <vector>
 
 using namespace llvm;
 
@@ -157,7 +155,7 @@ unsigned HexagonGenPredicate::getPredForm(unsigned Opc) {
   // The opcode corresponding to 0 is TargetOpcode::PHI. We can use 0 here
   // to denote "none", but we need to make sure that none of the valid opcodes
   // that we return will ever be 0.
-  assert(PHI == 0 && "Use different value for <none>");
+  static_assert(PHI == 0, "Use different value for <none>");
   return 0;
 }
 
@@ -332,7 +330,7 @@ bool HexagonGenPredicate::isScalarPred(Register PredReg) {
       case Hexagon::C4_or_orn:
       case Hexagon::C2_xor:
         // Add operands to the queue.
-        for (ConstMIOperands Mo(DefI); Mo.isValid(); ++Mo)
+        for (ConstMIOperands Mo(*DefI); Mo.isValid(); ++Mo)
           if (Mo->isReg() && Mo->isUse())
             WorkQ.push(Register(Mo->getReg()));
         break;
@@ -449,13 +447,12 @@ bool HexagonGenPredicate::eliminatePredCopies(MachineFunction &MF) {
   // the convertible instruction is converted, its predicate result will be
   // copied back into the original gpr.
 
-  for (MachineFunction::iterator A = MF.begin(), Z = MF.end(); A != Z; ++A) {
-    MachineBasicBlock &B = *A;
-    for (MachineBasicBlock::iterator I = B.begin(), E = B.end(); I != E; ++I) {
-      if (I->getOpcode() != TargetOpcode::COPY)
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (MI.getOpcode() != TargetOpcode::COPY)
         continue;
-      Register DR = I->getOperand(0);
-      Register SR = I->getOperand(1);
+      Register DR = MI.getOperand(0);
+      Register SR = MI.getOperand(1);
       if (!TargetRegisterInfo::isVirtualRegister(DR.R))
         continue;
       if (!TargetRegisterInfo::isVirtualRegister(SR.R))
@@ -466,7 +463,7 @@ bool HexagonGenPredicate::eliminatePredCopies(MachineFunction &MF) {
         continue;
       assert(!DR.S && !SR.S && "Unexpected subregister");
       MRI->replaceRegWith(DR.R, SR.R);
-      Erase.insert(I);
+      Erase.insert(&MI);
       Changed = true;
     }
   }
@@ -479,6 +476,9 @@ bool HexagonGenPredicate::eliminatePredCopies(MachineFunction &MF) {
 
 
 bool HexagonGenPredicate::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   TII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   TRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   MRI = &MF.getRegInfo();

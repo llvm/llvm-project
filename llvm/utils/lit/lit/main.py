@@ -336,6 +336,9 @@ def main(builtinParameters = {}):
                 print('  %s - %d tests' %(ts.name, len(ts_tests)))
                 print('    Source Root: %s' % ts.source_root)
                 print('    Exec Root  : %s' % ts.exec_root)
+                if ts.config.available_features:
+                    print('    Available Features : %s' % ' '.join(
+                        sorted(ts.config.available_features)))
 
         # Show the tests, if requested.
         if opts.showTests:
@@ -367,7 +370,7 @@ def main(builtinParameters = {}):
     elif opts.incremental:
         sort_by_incremental_cache(run)
     else:
-        run.tests.sort(key = lambda result_test: result_test.getFullName())
+        run.tests.sort(key = lambda t: (not t.isEarlyTest(), t.getFullName()))
 
     # Finally limit the number of tests, if desired.
     if opts.maxTests is not None:

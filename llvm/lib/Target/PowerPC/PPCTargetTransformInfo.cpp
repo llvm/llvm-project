@@ -36,8 +36,9 @@ CacheLineSize("ppc-loop-prefetch-cache-line", cl::Hidden, cl::init(64),
 TargetTransformInfo::PopcntSupportKind
 PPCTTIImpl::getPopcntSupport(unsigned TyWidth) {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
-  if (ST->hasPOPCNTD() && TyWidth <= 64)
-    return TTI::PSK_FastHardware;
+  if (ST->hasPOPCNTD() != PPCSubtarget::POPCNTD_Unavailable && TyWidth <= 64)
+    return ST->hasPOPCNTD() == PPCSubtarget::POPCNTD_Slow ?
+             TTI::PSK_SlowHardware : TTI::PSK_FastHardware;
   return TTI::PSK_Software;
 }
 
@@ -242,6 +243,12 @@ unsigned PPCTTIImpl::getCacheLineSize() {
   return CacheLineSize;
 }
 
+unsigned PPCTTIImpl::getPrefetchDistance() {
+  // This seems like a reasonable default for the BG/Q (this pass is enabled, by
+  // default, only on the BG/Q).
+  return 300;
+}
+
 unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   unsigned Directive = ST->getDarwinDirective();
   // The 440 has no SIMD support, but floating-point instructions
@@ -260,8 +267,9 @@ unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
 
   // For P7 and P8, floating-point instructions have a 6-cycle latency and
   // there are two execution units, so unroll by 12x for latency hiding.
-  if (Directive == PPC::DIR_PWR7 ||
-      Directive == PPC::DIR_PWR8)
+  // FIXME: the same for P9 as previous gen until POWER9 scheduling is ready
+  if (Directive == PPC::DIR_PWR7 || Directive == PPC::DIR_PWR8 ||
+      Directive == PPC::DIR_PWR9)
     return 12;
 
   // For most things, modern systems have two execution units (and
@@ -367,7 +375,7 @@ int PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src, unsigned Alignment,
   // If we can use the permutation-based load sequence, then this is also
   // relatively cheap (not counting loop-invariant instructions): one load plus
   // one permute (the last load in a series has extra cost, but we're
-  // neglecting that here). Note that on the P7, we should do unaligned loads
+  // neglecting that here). Note that on the P7, we could do unaligned loads
   // for Altivec types using the VSX instructions, but that's more expensive
   // than using the permutation-based load sequence. On the P8, that's no
   // longer true.

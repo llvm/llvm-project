@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define <2 x float> @f1(<2 x float> %a, <2 x float> %b) nounwind readnone ssp {
 ; CHECK: fmaxnm.2s	v0, v0, v1

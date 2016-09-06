@@ -15,12 +15,14 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/PrettyDeclStackTrace.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 
@@ -446,10 +448,8 @@ void Sema::PrintInstantiationStack() {
       SmallVector<char, 128> TemplateArgsStr;
       llvm::raw_svector_ostream OS(TemplateArgsStr);
       Template->printName(OS);
-      TemplateSpecializationType::PrintTemplateArgumentList(OS,
-                                                         Active->TemplateArgs,
-                                                      Active->NumTemplateArgs,
-                                                      getPrintingPolicy());
+      TemplateSpecializationType::PrintTemplateArgumentList(
+          OS, Active->template_arguments(), getPrintingPolicy());
       Diags.Report(Active->PointOfInstantiation,
                    diag::note_default_arg_instantiation_here)
         << OS.str()
@@ -500,10 +500,8 @@ void Sema::PrintInstantiationStack() {
       SmallVector<char, 128> TemplateArgsStr;
       llvm::raw_svector_ostream OS(TemplateArgsStr);
       FD->printName(OS);
-      TemplateSpecializationType::PrintTemplateArgumentList(OS,
-                                                         Active->TemplateArgs,
-                                                      Active->NumTemplateArgs,
-                                                      getPrintingPolicy());
+      TemplateSpecializationType::PrintTemplateArgumentList(
+          OS, Active->template_arguments(), getPrintingPolicy());
       Diags.Report(Active->PointOfInstantiation,
                    diag::note_default_function_arg_instantiation_here)
         << OS.str()
@@ -729,6 +727,11 @@ namespace {
       }
       
       SemaRef.CurrentInstantiationScope->InstantiatedLocal(Old, New);
+
+      // We recreated a local declaration, but not by instantiating it. There
+      // may be pending dependent diagnostics to produce.
+      if (auto *DC = dyn_cast<DeclContext>(Old))
+        SemaRef.PerformDependentDiagnostics(DC, TemplateArgs);
     }
     
     /// \brief Transform the definition of the given declaration by
@@ -1512,7 +1515,7 @@ QualType Sema::SubstType(QualType T,
 }
 
 static bool NeedsInstantiationAsFunctionType(TypeSourceInfo *T) {
-  if (T->getType()->isInstantiationDependentType() || 
+  if (T->getType()->isInstantiationDependentType() ||
       T->getType()->isVariablyModifiedType())
     return true;
 
@@ -1521,23 +1524,13 @@ static bool NeedsInstantiationAsFunctionType(TypeSourceInfo *T) {
     return false;
 
   FunctionProtoTypeLoc FP = TL.castAs<FunctionProtoTypeLoc>();
-  for (unsigned I = 0, E = FP.getNumParams(); I != E; ++I) {
-    ParmVarDecl *P = FP.getParam(I);
-
+  for (ParmVarDecl *P : FP.getParams()) {
     // This must be synthesized from a typedef.
     if (!P) continue;
 
-    // The parameter's type as written might be dependent even if the
-    // decayed type was not dependent.
-    if (TypeSourceInfo *TSInfo = P->getTypeSourceInfo())
-      if (TSInfo->getType()->isInstantiationDependentType())
-        return true;
-
-    // TODO: currently we always rebuild expressions.  When we
-    // properly get lazier about this, we should use the same
-    // logic to avoid rebuilding prototypes here.
-    if (P->hasDefaultArg())
-      return true;
+    // If there are any parameters, a new TypeSourceInfo that refers to the
+    // instantiated parameters must be built.
+    return true;
   }
 
   return false;
@@ -1556,7 +1549,7 @@ TypeSourceInfo *Sema::SubstFunctionDeclType(TypeSourceInfo *T,
   assert(!ActiveTemplateInstantiations.empty() &&
          "Cannot perform an instantiation without some context on the "
          "instantiation stack");
-  
+
   if (!NeedsInstantiationAsFunctionType(T))
     return T;
 
@@ -1718,20 +1711,21 @@ ParmVarDecl *Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
 /// \brief Substitute the given template arguments into the given set of
 /// parameters, producing the set of parameter types that would be generated
 /// from such a substitution.
-bool Sema::SubstParmTypes(SourceLocation Loc, 
-                          ParmVarDecl **Params, unsigned NumParams,
-                          const MultiLevelTemplateArgumentList &TemplateArgs,
-                          SmallVectorImpl<QualType> &ParamTypes,
-                          SmallVectorImpl<ParmVarDecl *> *OutParams) {
+bool Sema::SubstParmTypes(
+    SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
+    const FunctionProtoType::ExtParameterInfo *ExtParamInfos,
+    const MultiLevelTemplateArgumentList &TemplateArgs,
+    SmallVectorImpl<QualType> &ParamTypes,
+    SmallVectorImpl<ParmVarDecl *> *OutParams,
+    ExtParameterInfoBuilder &ParamInfos) {
   assert(!ActiveTemplateInstantiations.empty() &&
          "Cannot perform an instantiation without some context on the "
          "instantiation stack");
   
   TemplateInstantiator Instantiator(*this, TemplateArgs, Loc, 
                                     DeclarationName());
-  return Instantiator.TransformFunctionTypeParams(Loc, Params, NumParams,
-                                                  nullptr, ParamTypes,
-                                                  OutParams);
+  return Instantiator.TransformFunctionTypeParams(
+      Loc, Params, nullptr, ExtParamInfos, ParamTypes, OutParams, ParamInfos);
 }
 
 /// \brief Perform substitution on the base class specifiers of the
@@ -1861,8 +1855,19 @@ static bool DiagnoseUninstantiableTemplate(Sema &S,
                                            TagDecl *PatternDef,
                                            TemplateSpecializationKind TSK,
                                            bool Complain = true) {
-  if (PatternDef && !PatternDef->isBeingDefined())
+  if (PatternDef && !PatternDef->isBeingDefined()) {
+    NamedDecl *SuggestedDef = nullptr;
+    if (!S.hasVisibleDefinition(PatternDef, &SuggestedDef,
+                                /*OnlyNeedComplete*/false)) {
+      // If we're allowed to diagnose this and recover, do so.
+      bool Recover = Complain && !S.isSFINAEContext();
+      if (Complain)
+        S.diagnoseMissingImport(PointOfInstantiation, SuggestedDef,
+                                Sema::MissingImportKind::Definition, Recover);
+      return !Recover;
+    }
     return false;
+  }
 
   if (!Complain || (PatternDef && PatternDef->isInvalidDecl())) {
     // Say nothing
@@ -1946,6 +1951,8 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Instantiation);
   if (Inst.isInvalid())
     return true;
+  PrettyDeclStackTraceEntry CrashInfo(*this, Instantiation, SourceLocation(),
+                                      "instantiating class definition");
 
   // Enter the scope of this instantiation. We don't use
   // PushDeclContext because we don't have a scope.
@@ -1958,6 +1965,13 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   // instantiation of a class has its own local instantiation scope.
   bool MergeWithParentScope = !Instantiation->isDefinedOutsideFunctionOrMethod();
   LocalInstantiationScope Scope(*this, MergeWithParentScope);
+
+  // All dllexported classes created during instantiation should be fully
+  // emitted after instantiation completes. We may not be ready to emit any
+  // delayed classes already on the stack, so save them away and put them back
+  // later.
+  decltype(DelayedDllExportClasses) ExportedClasses;
+  std::swap(ExportedClasses, DelayedDllExportClasses);
 
   // Pull attributes from the pattern onto the instantiation.
   InstantiateAttrs(TemplateArgs, Pattern, Instantiation);
@@ -2044,6 +2058,9 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   // default arg exprs for default constructors if necessary now.
   ActOnFinishCXXNonNestedClass(Instantiation);
 
+  // Put back the delayed exported classes that we moved out of the way.
+  std::swap(ExportedClasses, DelayedDllExportClasses);
+
   // Instantiate late parsed attributes, and attach them to their decls.
   // See Sema::InstantiateAttrs
   for (LateInstantiatedAttrVec::iterator I = LateAttrs.begin(),
@@ -2074,7 +2091,7 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
   if (TSK == TSK_ImplicitInstantiation) {
     Instantiation->setLocation(Pattern->getLocation());
     Instantiation->setLocStart(Pattern->getInnerLocStart());
-    Instantiation->setRBraceLoc(Pattern->getRBraceLoc());
+    Instantiation->setBraceRange(Pattern->getBraceRange());
   }
 
   if (!Instantiation->isInvalidDecl()) {
@@ -2159,6 +2176,8 @@ bool Sema::InstantiateEnum(SourceLocation PointOfInstantiation,
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Instantiation);
   if (Inst.isInvalid())
     return true;
+  PrettyDeclStackTraceEntry CrashInfo(*this, Instantiation, SourceLocation(),
+                                      "instantiating enum definition");
 
   // The instantiation is visible here, even if it was first declared in an
   // unimported module.
@@ -2231,6 +2250,8 @@ bool Sema::InstantiateInClassInitializer(
   InstantiatingTemplate Inst(*this, PointOfInstantiation, Instantiation);
   if (Inst.isInvalid())
     return true;
+  PrettyDeclStackTraceEntry CrashInfo(*this, Instantiation, SourceLocation(),
+                                      "instantiating default member init");
 
   // Enter the scope of this instantiation. We don't use PushDeclContext because
   // we don't have a scope.
@@ -2250,6 +2271,9 @@ bool Sema::InstantiateInClassInitializer(
   assert((!Init || !isa<ParenListExpr>(Init)) && "call-style init in class");
   ActOnFinishCXXInClassMemberInitializer(
       Instantiation, Init ? Init->getLocStart() : SourceLocation(), Init);
+
+  if (auto *L = getASTMutationListener())
+    L->DefaultMemberInitializerInstantiated(Instantiation);
 
   // Exit the scope of this instantiation.
   SavedContext.pop();
@@ -2302,8 +2326,9 @@ bool Sema::InstantiateClassTemplateSpecialization(
                                     Info)) {
       // Store the failed-deduction information for use in diagnostics, later.
       // TODO: Actually use the failed-deduction info?
-      FailedCandidates.addCandidate()
-          .set(Partial, MakeDeductionFailureInfo(Context, Result, Info));
+      FailedCandidates.addCandidate().set(
+          DeclAccessPair::make(Template, AS_public), Partial,
+          MakeDeductionFailureInfo(Context, Result, Info));
       (void)Result;
     } else {
       Matched.push_back(PartialSpecMatchResult());
@@ -2495,8 +2520,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
           //   specialization and is only an explicit instantiation definition 
           //   of members whose definition is visible at the point of 
           //   instantiation.
-          if (!Var->getInstantiatedFromStaticDataMember()
-                                                     ->getOutOfLineDefinition())
+          if (!Var->getInstantiatedFromStaticDataMember()->getDefinition())
             continue;
           
           Var->setTemplateSpecializationKind(TSK, PointOfInstantiation);
@@ -2521,6 +2545,13 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
       if (MSInfo->getTemplateSpecializationKind()
                                                 == TSK_ExplicitSpecialization)
         continue;
+
+      if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+          TSK == TSK_ExplicitInstantiationDeclaration) {
+        // In MSVC mode, explicit instantiation decl of the outer class doesn't
+        // affect the inner class.
+        continue;
+      }
 
       if (CheckSpecializationInstantiationRedecl(PointOfInstantiation, TSK, 
                                                  Record, 
@@ -2583,7 +2614,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
       if (Enum->getDefinition())
         continue;
 
-      EnumDecl *Pattern = Enum->getInstantiatedFromMemberEnum();
+      EnumDecl *Pattern = Enum->getTemplateInstantiationPattern();
       assert(Pattern && "Missing instantiated-from-template information");
 
       if (TSK == TSK_ExplicitInstantiationDefinition) {
@@ -2603,8 +2634,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
             Instantiation->getTemplateInstantiationPattern();
         DeclContext::lookup_result Lookup =
             ClassPattern->lookup(Field->getDeclName());
-        assert(Lookup.size() == 1);
-        FieldDecl *Pattern = cast<FieldDecl>(Lookup[0]);
+        FieldDecl *Pattern = cast<FieldDecl>(Lookup.front());
         InstantiateInClassInitializer(PointOfInstantiation, Field, Pattern,
                                       TemplateArgs);
       }

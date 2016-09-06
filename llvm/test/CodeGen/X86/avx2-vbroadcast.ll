@@ -232,6 +232,43 @@ entry:
   ret <4 x i64> %q3
 }
 
+define <8 x i16> @broadcast_mem_v4i16_v8i16(<4 x i16>* %ptr) {
+; X32-LABEL: broadcast_mem_v4i16_v8i16:
+; X32:       ## BB#0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X32-NEXT:    retl
+;
+; X64-LABEL: broadcast_mem_v4i16_v8i16:
+; X64:       ## BB#0:
+; X64-NEXT:    vpbroadcastq (%rdi), %xmm0
+; X64-NEXT:    retq
+  %load = load <4 x i16>, <4 x i16>* %ptr
+  %shuf = shufflevector <4 x i16> %load, <4 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  ret <8 x i16> %shuf
+}
+
+define <16 x i16> @broadcast_mem_v4i16_v16i16(<4 x i16>* %ptr) {
+; X32-LABEL: broadcast_mem_v4i16_v16i16:
+; X32:       ## BB#0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; X32-NEXT:    vpbroadcastq %xmm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: broadcast_mem_v4i16_v16i16:
+; X64:       ## BB#0:
+; X64-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; X64-NEXT:    vpbroadcastq %xmm0, %ymm0
+; X64-NEXT:    retq
+  %load = load <4 x i16>, <4 x i16>* %ptr
+  %shuf = shufflevector <4 x i16> %load, <4 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  ret <16 x i16> %shuf
+}
+
 ; FIXME: Pointer adjusted broadcasts
 
 define <16 x i8> @load_splat_16i8_16i8_1111111111111111(<16 x i8>* %ptr) nounwind uwtable readnone ssp {
@@ -442,8 +479,7 @@ define <2 x i64> @load_splat_2i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable re
 ; X32-LABEL: load_splat_2i64_2i64_1111:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: load_splat_2i64_2i64_1111:
@@ -494,14 +530,12 @@ define <2 x double> @load_splat_2f64_2f64_1111(<2 x double>* %ptr) nounwind uwta
 ; X32-LABEL: load_splat_2f64_2f64_1111:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovaps (%eax), %xmm0
-; X32-NEXT:    vmovhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: load_splat_2f64_2f64_1111:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    vmovaps (%rdi), %xmm0
-; X64-NEXT:    vmovhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
 entry:
   %ld = load <2 x double>, <2 x double>* %ptr
@@ -566,7 +600,7 @@ entry:
 define <8 x i32> @V111(<8 x i32> %in) nounwind uwtable readnone ssp {
 ; X32-LABEL: V111:
 ; X32:       ## BB#0: ## %entry
-; X32-NEXT:    vpbroadcastd LCPI27_0, %ymm1
+; X32-NEXT:    vpbroadcastd LCPI29_0, %ymm1
 ; X32-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
@@ -583,7 +617,7 @@ entry:
 define <8 x float> @V113(<8 x float> %in) nounwind uwtable readnone ssp {
 ; X32-LABEL: V113:
 ; X32:       ## BB#0: ## %entry
-; X32-NEXT:    vbroadcastss LCPI28_0, %ymm1
+; X32-NEXT:    vbroadcastss LCPI30_0, %ymm1
 ; X32-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
@@ -600,7 +634,7 @@ entry:
 define <4 x float> @_e2(float* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: _e2:
 ; X32:       ## BB#0:
-; X32-NEXT:    vbroadcastss LCPI29_0, %xmm0
+; X32-NEXT:    vbroadcastss LCPI31_0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: _e2:
@@ -640,25 +674,25 @@ define void @crash() nounwind alwaysinline {
 ; X32:       ## BB#0: ## %WGLoopsEntry
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    testb %al, %al
-; X32-NEXT:    je LBB31_1
+; X32-NEXT:    je LBB33_1
 ; X32-NEXT:  ## BB#2: ## %ret
 ; X32-NEXT:    retl
-; X32-NEXT:    .align 4, 0x90
-; X32-NEXT:  LBB31_1: ## %footer349VF
+; X32-NEXT:    .p2align 4, 0x90
+; X32-NEXT:  LBB33_1: ## %footer349VF
 ; X32-NEXT:    ## =>This Inner Loop Header: Depth=1
-; X32-NEXT:    jmp LBB31_1
+; X32-NEXT:    jmp LBB33_1
 ;
 ; X64-LABEL: crash:
 ; X64:       ## BB#0: ## %WGLoopsEntry
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testb %al, %al
-; X64-NEXT:    je LBB31_1
+; X64-NEXT:    je LBB33_1
 ; X64-NEXT:  ## BB#2: ## %ret
 ; X64-NEXT:    retq
-; X64-NEXT:    .align 4, 0x90
-; X64-NEXT:  LBB31_1: ## %footer349VF
+; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:  LBB33_1: ## %footer349VF
 ; X64-NEXT:    ## =>This Inner Loop Header: Depth=1
-; X64-NEXT:    jmp LBB31_1
+; X64-NEXT:    jmp LBB33_1
 WGLoopsEntry:
   br i1 undef, label %ret, label %footer329VF
 

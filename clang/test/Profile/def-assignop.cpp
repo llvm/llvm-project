@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -x c++ -std=c++11 %s -triple x86_64-unknown-linux-gnu -main-file-name def-assignop.cpp -o - -emit-llvm -fprofile-instr-generate | FileCheck --check-prefix=PGOGEN %s
-// RUN: %clang_cc1 -x c++ -std=c++11 %s -triple x86_64-unknown-linux-gnu -main-file-name def-assignop.cpp -o - -emit-llvm -fprofile-instr-generate -fcoverage-mapping | FileCheck --check-prefix=COVMAP %s
+// RUN: %clang_cc1 -x c++ -std=c++11 %s -triple x86_64-unknown-linux-gnu -main-file-name def-assignop.cpp -o - -emit-llvm -fprofile-instrument=clang | FileCheck --check-prefix=PGOGEN %s
+// RUN: %clang_cc1 -x c++ -std=c++11 %s -triple x86_64-unknown-linux-gnu -main-file-name def-assignop.cpp -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping | FileCheck --check-prefix=COVMAP %s
 
 struct B {
   B& operator=(const B &b);
@@ -24,9 +24,8 @@ struct A {
   B b;
 };
 
-int main() {
-  A a1, a2;
+A a1, a2;
+void foo() {
   a1 = a2;
   a2 = static_cast<A &&>(a1);
-  return 0;
 }

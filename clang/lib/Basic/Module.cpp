@@ -31,7 +31,8 @@ Module::Module(StringRef Name, SourceLocation DefinitionLoc, Module *Parent,
       IsMissingRequirement(false), HasIncompatibleModuleFile(false),
       IsAvailable(true), IsFromModuleFile(false), IsFramework(IsFramework),
       IsExplicit(IsExplicit), IsSystem(false), IsExternC(false),
-      IsInferred(false), InferSubmodules(false), InferExplicitSubmodules(false),
+      IsInferred(false), IsSwiftInferImportAsMember(false),
+      InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
       NameVisibility(Hidden) {
   if (Parent) {
@@ -337,6 +338,8 @@ void Module::print(raw_ostream &OS, unsigned Indent) const {
       OS << " [system]";
     if (IsExternC)
       OS << " [extern_c]";
+    if (IsSwiftInferImportAsMember)
+      OS << " [swift_infer_import_as_member]";
   }
 
   OS << " {\n";
@@ -423,12 +426,8 @@ void Module::print(raw_ostream &OS, unsigned Indent) const {
     OS.indent(Indent + 2);
     OS << "export ";
     printModuleId(OS, UnresolvedExports[I].Id);
-    if (UnresolvedExports[I].Wildcard) {
-      if (UnresolvedExports[I].Id.empty())
-        OS << "*";
-      else
-        OS << ".*";
-    }
+    if (UnresolvedExports[I].Wildcard)
+      OS << (UnresolvedExports[I].Id.empty() ? "*" : ".*");
     OS << "\n";
   }
 

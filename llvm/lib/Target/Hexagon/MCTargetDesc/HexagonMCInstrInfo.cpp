@@ -99,7 +99,8 @@ void HexagonMCInstrInfo::clampExtended(MCInstrInfo const &MCII,
   int64_t Value;
   if (exOp.getExpr()->evaluateAsAbsolute(Value)) {
     unsigned Shift = HexagonMCInstrInfo::getExtentAlignment(MCII, MCI);
-    exOp.setExpr(MCConstantExpr::create((Value & 0x3f) << Shift, Context));
+    exOp.setExpr(HexagonMCExpr::create(
+        MCConstantExpr::create((Value & 0x3f) << Shift, Context), Context));
   }
 }
 
@@ -159,8 +160,8 @@ MCInst const *HexagonMCInstrInfo::extenderForIndex(MCInst const &MCB,
 
 void HexagonMCInstrInfo::extendIfNeeded(MCContext &Context,
                                         MCInstrInfo const &MCII, MCInst &MCB,
-                                        MCInst const &MCI, bool MustExtend) {
-  if (isConstExtended(MCII, MCI) || MustExtend)
+                                        MCInst const &MCI) {
+  if (isConstExtended(MCII, MCI))
     addConstExtender(Context, MCII, MCB, MCI);
 }
 
@@ -188,6 +189,61 @@ unsigned short HexagonMCInstrInfo::getCExtOpNum(MCInstrInfo const &MCII,
 MCInstrDesc const &HexagonMCInstrInfo::getDesc(MCInstrInfo const &MCII,
                                                MCInst const &MCI) {
   return (MCII.get(MCI.getOpcode()));
+}
+
+unsigned HexagonMCInstrInfo::getDuplexRegisterNumbering(unsigned Reg) {
+  using namespace Hexagon;
+  switch (Reg) {
+  default:
+    llvm_unreachable("unknown duplex register");
+  // Rs       Rss
+  case R0:
+  case D0:
+    return 0;
+  case R1:
+  case D1:
+    return 1;
+  case R2:
+  case D2:
+    return 2;
+  case R3:
+  case D3:
+    return 3;
+  case R4:
+  case D8:
+    return 4;
+  case R5:
+  case D9:
+    return 5;
+  case R6:
+  case D10:
+    return 6;
+  case R7:
+  case D11:
+    return 7;
+  case R16:
+    return 8;
+  case R17:
+    return 9;
+  case R18:
+    return 10;
+  case R19:
+    return 11;
+  case R20:
+    return 12;
+  case R21:
+    return 13;
+  case R22:
+    return 14;
+  case R23:
+    return 15;
+  }
+}
+
+MCExpr const &HexagonMCInstrInfo::getExpr(MCExpr const &Expr) {
+  const auto &HExpr = cast<HexagonMCExpr>(Expr);
+  assert(HExpr.getExpr());
+  return *HExpr.getExpr();
 }
 
 unsigned short HexagonMCInstrInfo::getExtendableOp(MCInstrInfo const &MCII,
@@ -401,6 +457,12 @@ bool HexagonMCInstrInfo::isConstExtended(MCInstrInfo const &MCII,
                                          MCInst const &MCI) {
   if (HexagonMCInstrInfo::isExtended(MCII, MCI))
     return true;
+  if (!HexagonMCInstrInfo::isExtendable(MCII, MCI))
+    return false;
+  MCOperand const &MO = HexagonMCInstrInfo::getExtendableOperand(MCII, MCI);
+  if (isa<HexagonMCExpr>(MO.getExpr()) &&
+      HexagonMCInstrInfo::mustExtend(*MO.getExpr()))
+    return true;
   // Branch insns are handled as necessary by relaxation.
   if ((HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeJ) ||
       (HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeCOMPOUND &&
@@ -412,18 +474,11 @@ bool HexagonMCInstrInfo::isConstExtended(MCInstrInfo const &MCII,
   else if ((HexagonMCInstrInfo::getType(MCII, MCI) == HexagonII::TypeCR) &&
            (MCI.getOpcode() != Hexagon::C4_addipc))
     return false;
-  else if (!HexagonMCInstrInfo::isExtendable(MCII, MCI))
-    return false;
 
-  MCOperand const &MO = HexagonMCInstrInfo::getExtendableOperand(MCII, MCI);
-
-  // We could be using an instruction with an extendable immediate and shoehorn
-  // a global address into it. If it is a global address it will be constant
-  // extended. We do this for COMBINE.
-  // We currently only handle isGlobal() because it is the only kind of
-  // object we are going to end up with here for now.
-  // In the future we probably should add isSymbol(), etc.
   assert(!MO.isImm());
+  if (isa<HexagonMCExpr>(MO.getExpr()) &&
+      HexagonMCInstrInfo::mustNotExtend(*MO.getExpr()))
+    return false;
   int64_t Value;
   if (!MO.getExpr()->evaluateAsAbsolute(Value))
     return true;
@@ -543,6 +598,66 @@ bool HexagonMCInstrInfo::isMemStoreReorderEnabled(MCInst const &MCI) {
   return (Flags & memStoreReorderEnabledMask) != 0;
 }
 
+bool HexagonMCInstrInfo::isSubInstruction(MCInst const &MCI) {
+  switch (MCI.getOpcode()) {
+  default:
+    return false;
+  case Hexagon::V4_SA1_addi:
+  case Hexagon::V4_SA1_addrx:
+  case Hexagon::V4_SA1_addsp:
+  case Hexagon::V4_SA1_and1:
+  case Hexagon::V4_SA1_clrf:
+  case Hexagon::V4_SA1_clrfnew:
+  case Hexagon::V4_SA1_clrt:
+  case Hexagon::V4_SA1_clrtnew:
+  case Hexagon::V4_SA1_cmpeqi:
+  case Hexagon::V4_SA1_combine0i:
+  case Hexagon::V4_SA1_combine1i:
+  case Hexagon::V4_SA1_combine2i:
+  case Hexagon::V4_SA1_combine3i:
+  case Hexagon::V4_SA1_combinerz:
+  case Hexagon::V4_SA1_combinezr:
+  case Hexagon::V4_SA1_dec:
+  case Hexagon::V4_SA1_inc:
+  case Hexagon::V4_SA1_seti:
+  case Hexagon::V4_SA1_setin1:
+  case Hexagon::V4_SA1_sxtb:
+  case Hexagon::V4_SA1_sxth:
+  case Hexagon::V4_SA1_tfr:
+  case Hexagon::V4_SA1_zxtb:
+  case Hexagon::V4_SA1_zxth:
+  case Hexagon::V4_SL1_loadri_io:
+  case Hexagon::V4_SL1_loadrub_io:
+  case Hexagon::V4_SL2_deallocframe:
+  case Hexagon::V4_SL2_jumpr31:
+  case Hexagon::V4_SL2_jumpr31_f:
+  case Hexagon::V4_SL2_jumpr31_fnew:
+  case Hexagon::V4_SL2_jumpr31_t:
+  case Hexagon::V4_SL2_jumpr31_tnew:
+  case Hexagon::V4_SL2_loadrb_io:
+  case Hexagon::V4_SL2_loadrd_sp:
+  case Hexagon::V4_SL2_loadrh_io:
+  case Hexagon::V4_SL2_loadri_sp:
+  case Hexagon::V4_SL2_loadruh_io:
+  case Hexagon::V4_SL2_return:
+  case Hexagon::V4_SL2_return_f:
+  case Hexagon::V4_SL2_return_fnew:
+  case Hexagon::V4_SL2_return_t:
+  case Hexagon::V4_SL2_return_tnew:
+  case Hexagon::V4_SS1_storeb_io:
+  case Hexagon::V4_SS1_storew_io:
+  case Hexagon::V4_SS2_allocframe:
+  case Hexagon::V4_SS2_storebi0:
+  case Hexagon::V4_SS2_storebi1:
+  case Hexagon::V4_SS2_stored_sp:
+  case Hexagon::V4_SS2_storeh_io:
+  case Hexagon::V4_SS2_storew_sp:
+  case Hexagon::V4_SS2_storewi0:
+  case Hexagon::V4_SS2_storewi1:
+    return true;
+  }
+}
+
 bool HexagonMCInstrInfo::isSoloAX(MCInstrInfo const &MCII, MCInst const &MCI) {
   const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
   return ((F >> HexagonII::SoloAXPos) & HexagonII::SoloAXMask);
@@ -573,6 +688,25 @@ int64_t HexagonMCInstrInfo::minConstant(MCInst const &MCI, size_t Index) {
   if (!MCO.getExpr()->evaluateAsAbsolute(Value))
     return Sentinal;
   return Value;
+}
+
+void HexagonMCInstrInfo::setMustExtend(MCExpr const &Expr, bool Val) {
+  HexagonMCExpr &HExpr = const_cast<HexagonMCExpr &>(cast<HexagonMCExpr>(Expr));
+  HExpr.setMustExtend(Val);
+}
+
+bool HexagonMCInstrInfo::mustExtend(MCExpr const &Expr) {
+  HexagonMCExpr const &HExpr = cast<HexagonMCExpr>(Expr);
+  return HExpr.mustExtend();
+}
+void HexagonMCInstrInfo::setMustNotExtend(MCExpr const &Expr, bool Val) {
+  HexagonMCExpr &HExpr =
+      const_cast<HexagonMCExpr &>(cast<HexagonMCExpr>(Expr));
+  HExpr.setMustNotExtend(Val);
+}
+bool HexagonMCInstrInfo::mustNotExtend(MCExpr const &Expr) {
+  HexagonMCExpr const &HExpr = cast<HexagonMCExpr>(Expr);
+  return HExpr.mustNotExtend();
 }
 
 void HexagonMCInstrInfo::padEndloop(MCContext &Context, MCInst &MCB) {
@@ -639,10 +773,32 @@ void HexagonMCInstrInfo::setMemStoreReorderEnabled(MCInst &MCI) {
   Operand.setImm(Operand.getImm() | memStoreReorderEnabledMask);
   assert(isMemStoreReorderEnabled(MCI));
 }
+void HexagonMCInstrInfo::setS23_2_reloc(MCExpr const &Expr, bool Val) {
+  HexagonMCExpr &HExpr =
+      const_cast<HexagonMCExpr &>(*llvm::cast<HexagonMCExpr>(&Expr));
+  HExpr.setS23_2_reloc(Val);
+}
+bool HexagonMCInstrInfo::s23_2_reloc(MCExpr const &Expr) {
+  HexagonMCExpr const &HExpr = *llvm::cast<HexagonMCExpr>(&Expr);
+  return HExpr.s23_2_reloc();
+}
 
 void HexagonMCInstrInfo::setOuterLoop(MCInst &MCI) {
   assert(isBundle(MCI));
   MCOperand &Operand = MCI.getOperand(0);
   Operand.setImm(Operand.getImm() | outerLoopMask);
+}
+
+unsigned HexagonMCInstrInfo::SubregisterBit(unsigned Consumer,
+                                            unsigned Producer,
+                                            unsigned Producer2) {
+  // If we're a single vector consumer of a double producer, set subreg bit
+  // based on if we're accessing the lower or upper register component
+  if (Producer >= Hexagon::W0 && Producer <= Hexagon::W15)
+    if (Consumer >= Hexagon::V0 && Consumer <= Hexagon::V31)
+      return (Consumer - Hexagon::V0) & 0x1;
+  if (Consumer == Producer2)
+    return 0x1;
+  return 0;
 }
 }

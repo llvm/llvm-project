@@ -1,4 +1,5 @@
 add_custom_target(cfi)
+set_target_properties(cfi PROPERTIES FOLDER "Compiler-RT Misc")
 
 set(CFI_SOURCES cfi.cc)
 
@@ -30,11 +31,9 @@ foreach(arch ${CFI_SUPPORTED_ARCH})
                 RTSanitizerCommon
                 RTSanitizerCommonLibc
 		RTUbsan
-		RTUbsan_cxx
     CFLAGS ${CFI_CFLAGS} ${CFI_DIAG_CFLAGS}
     PARENT_TARGET cfi)
 endforeach()
 
-add_compiler_rt_resource_file(cfi_blacklist cfi_blacklist.txt)
-add_dependencies(cfi cfi_blacklist)
+add_compiler_rt_resource_file(cfi_blacklist cfi_blacklist.txt cfi)
 add_dependencies(compiler-rt cfi)

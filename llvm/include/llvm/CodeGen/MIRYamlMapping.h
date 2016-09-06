@@ -7,9 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The MIR serialization library is currently a work in progress. It can't
-// serialize machine functions at this time.
-//
 // This file implements the mapping between various MIR data structures and
 // their corresponding YAML representation.
 //
@@ -385,6 +382,12 @@ struct MachineFunction {
   unsigned Alignment = 0;
   bool ExposesReturnsTwice = false;
   bool HasInlineAsm = false;
+  // MachineFunctionProperties
+  bool AllVRegsAllocated = false;
+  // GISel MachineFunctionProperties.
+  bool Legalized = false;
+  bool RegBankSelected = false;
+  bool Selected = false;
   // Register information
   bool IsSSA = false;
   bool TracksRegLiveness = false;
@@ -408,6 +411,10 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("alignment", MF.Alignment);
     YamlIO.mapOptional("exposesReturnsTwice", MF.ExposesReturnsTwice);
     YamlIO.mapOptional("hasInlineAsm", MF.HasInlineAsm);
+    YamlIO.mapOptional("allVRegsAllocated", MF.AllVRegsAllocated);
+    YamlIO.mapOptional("legalized", MF.Legalized);
+    YamlIO.mapOptional("regBankSelected", MF.RegBankSelected);
+    YamlIO.mapOptional("selected", MF.Selected);
     YamlIO.mapOptional("isSSA", MF.IsSSA);
     YamlIO.mapOptional("tracksRegLiveness", MF.TracksRegLiveness);
     YamlIO.mapOptional("tracksSubRegLiveness", MF.TracksSubRegLiveness);

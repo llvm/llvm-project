@@ -11,14 +11,13 @@
 //  modules for the ASTReader.
 //
 //===----------------------------------------------------------------------===//
+#include "clang/Serialization/ModuleManager.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
-#include "clang/Serialization/ModuleManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
 #ifndef NDEBUG
@@ -320,11 +319,11 @@ void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
     Queue.reserve(N);
     llvm::SmallVector<unsigned, 4> UnusedIncomingEdges;
     UnusedIncomingEdges.resize(size());
-    for (auto M = rbegin(), MEnd = rend(); M != MEnd; ++M) {
-      unsigned Size = (*M)->ImportedBy.size();
-      UnusedIncomingEdges[(*M)->Index] = Size;
+    for (ModuleFile *M : llvm::reverse(*this)) {
+      unsigned Size = M->ImportedBy.size();
+      UnusedIncomingEdges[M->Index] = Size;
       if (!Size)
-        Queue.push_back(*M);
+        Queue.push_back(M);
     }
 
     // Traverse the graph, making sure to visit a module before visiting any

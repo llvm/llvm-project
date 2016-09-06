@@ -376,7 +376,7 @@ return:
 ; CHECK-LABEL: two_minsize:
 ; CHECK-NOT: XYZ
 ; CHECK: ret
-; CHECK: movl $0, XYZ(%rip)
+; CHECK: andl $0, XYZ(%rip)
 ; CHECK: movl $1, XYZ(%rip)
 ; CHECK-NOT: XYZ
 

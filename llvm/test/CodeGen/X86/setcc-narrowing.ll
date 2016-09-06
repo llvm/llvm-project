@@ -6,9 +6,9 @@
 define i32 @t1() nounwind ssp {
 entry:
 ; CHECK-LABEL: t1:
-; CHECK: cmpl	$0, _t1.global
+; CHECK:      xorl %eax, %eax
+; CHECK-NEXT: cmpl	$0, _t1.global
 ; CHECK-NEXT: setne %al
-; CHECK-NEXT: movzbl %al, %eax
 ; CHECK-NEXT: ret
   %0 = load i64, i64* @t1.global, align 8
   %and = and i64 4294967295, %0

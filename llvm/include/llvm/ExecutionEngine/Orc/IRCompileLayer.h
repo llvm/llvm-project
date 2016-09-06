@@ -14,9 +14,8 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_IRCOMPILELAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_IRCOMPILELAYER_H
 
-#include "JITSymbol.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
-#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Object/ObjectFile.h"
 #include <memory>
 
@@ -124,10 +123,13 @@ private:
     if (!ObjBuffer)
       return object::OwningBinary<object::ObjectFile>();
 
-    ErrorOr<std::unique_ptr<object::ObjectFile>> Obj =
+    Expected<std::unique_ptr<object::ObjectFile>> Obj =
         object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef());
-    if (!Obj)
+    if (!Obj) {
+      // TODO: Actually report errors helpfully.
+      consumeError(Obj.takeError());
       return object::OwningBinary<object::ObjectFile>();
+    }
 
     return object::OwningBinary<object::ObjectFile>(std::move(*Obj),
                                                     std::move(ObjBuffer));

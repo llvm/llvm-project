@@ -9,6 +9,29 @@ The AMDGPU back-end provides ISA code generation for AMD GPUs, starting with
 the R600 family up until the current Volcanic Islands (GCN Gen 3).
 
 
+Conventions
+===========
+
+Address Spaces
+--------------
+
+The AMDGPU back-end uses the following address space mapping:
+
+   ============= ============================================
+   Address Space Memory Space
+   ============= ============================================
+   0             Private
+   1             Global
+   2             Constant
+   3             Local
+   4             Generic (Flat)
+   5             Region
+   ============= ============================================
+
+The terminology in the table, aside from the region memory space, is from the
+OpenCL standard.
+
+
 Assembler
 =========
 
@@ -65,14 +88,14 @@ wait for.
 
 .. code-block:: nasm
 
-   // Wait for all counters to be 0
+   ; Wait for all counters to be 0
    s_waitcnt 0
 
-   // Equivalent to s_waitcnt 0.  Counter names can also be delimited by
-   // '&' or ','.
+   ; Equivalent to s_waitcnt 0.  Counter names can also be delimited by
+   ; '&' or ','.
    s_waitcnt vmcnt(0) expcnt(0) lgkcmt(0)
 
-   // Wait for vmcnt counter to be 1.
+   ; Wait for vmcnt counter to be 1.
    s_waitcnt vmcnt(1)
 
 VOP1, VOP2, VOP3, VOPC Instructions
@@ -148,12 +171,15 @@ keys, see the comments in lib/Target/AMDGPU/AmdKernelCodeT.h
 
 Here is an example of a minimal amd_kernel_code_t specification:
 
-.. code-block:: nasm
+.. code-block:: none
 
    .hsa_code_object_version 1,0
    .hsa_code_object_isa
 
-   .text
+   .hsatext
+   .globl  hello_world
+   .p2align 8
+   .amdgpu_hsa_kernel hello_world
 
    hello_world:
 
@@ -173,5 +199,7 @@ Here is an example of a minimal amd_kernel_code_t specification:
      s_waitcnt lgkmcnt(0)
      v_mov_b32 v1, s0
      v_mov_b32 v2, s1
-     flat_store_dword v0, v[1:2]
+     flat_store_dword v[1:2], v0
      s_endpgm
+   .Lfunc_end0:
+        .size   hello_world, .Lfunc_end0-hello_world

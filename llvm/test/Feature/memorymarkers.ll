@@ -6,8 +6,8 @@ declare void @_Z3barRKi(i32*)
 
 declare void @llvm.lifetime.start(i64, i8* nocapture) nounwind
 declare void @llvm.lifetime.end(i64, i8* nocapture) nounwind
-declare {}* @llvm.invariant.start(i64, i8* nocapture) readonly nounwind
-declare void @llvm.invariant.end({}*, i64, i8* nocapture) nounwind
+declare {}* @llvm.invariant.start.p0i8(i64, i8* nocapture) readonly nounwind
+declare void @llvm.invariant.end.p0i8({}*, i64, i8* nocapture) nounwind
 
 define i32 @_Z4foo2v() nounwind {
 entry:
@@ -24,12 +24,12 @@ entry:
   store i32 5, i32* %1, align 4
 
   ;; Constructor has finished here.
-  %inv = call {}* @llvm.invariant.start(i64 8, i8* %y)
+  %inv = call {}* @llvm.invariant.start.p0i8(i64 8, i8* %y)
   call void @_Z3barRKi(i32* %0) nounwind
   %2 = load i32, i32* %0, align 8
 
   ;; Destructor is run here.
-  call void @llvm.invariant.end({}* %inv, i64 8, i8* %y)
+  call void @llvm.invariant.end.p0i8({}* %inv, i64 8, i8* %y)
   ;; Destructor is done here.
   call void @llvm.lifetime.end(i64 8, i8* %y)
   ret i32 %2

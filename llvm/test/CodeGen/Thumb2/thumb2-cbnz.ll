@@ -5,6 +5,7 @@ declare double @foo(double) nounwind readnone
 
 define void @t(i32 %c, double %b) {
 entry:
+; CHECK:      cmp	r0, #0
   %cmp1 = icmp ne i32 %c, 0
   br i1 %cmp1, label %bb3, label %bb1
 
@@ -23,8 +24,7 @@ bb7:                                              ; preds = %bb3
   br i1 %cmp3, label %bb11, label %bb9
 
 bb9:                                              ; preds = %bb7
-; CHECK:      cmp	r0, #0
-; CHECK-NEXT:      cbnz
+; CHECK:      cbnz
   %0 = tail call  double @foo(double %b) nounwind readnone ; <double> [#uses=0]
   br label %bb11
 

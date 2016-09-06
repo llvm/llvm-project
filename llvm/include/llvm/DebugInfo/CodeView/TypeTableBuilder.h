@@ -10,13 +10,15 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_TYPETABLEBUILDER_H
 #define LLVM_DEBUGINFO_CODEVIEW_TYPETABLEBUILDER_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+
+class StringRef;
+
 namespace codeview {
 
 class FieldListRecordBuilder;
@@ -35,23 +37,31 @@ public:
   virtual ~TypeTableBuilder();
 
 public:
-  TypeIndex writeModifier(const ModifierRecord &Record);
-  TypeIndex writeProcedure(const ProcedureRecord &Record);
-  TypeIndex writeMemberFunction(const MemberFunctionRecord &Record);
-  TypeIndex writeArgumentList(const ArgumentListRecord &Record);
-  TypeIndex writeRecord(TypeRecordBuilder &builder);
-  TypeIndex writePointer(const PointerRecord &Record);
-  TypeIndex writePointerToMember(const PointerToMemberRecord &Record);
-  TypeIndex writeArray(const ArrayRecord &Record);
-  TypeIndex writeAggregate(const AggregateRecord &Record);
-  TypeIndex writeEnum(const EnumRecord &Record);
-  TypeIndex writeBitField(const BitFieldRecord &Record);
-  TypeIndex writeVirtualTableShape(const VirtualTableShapeRecord &Record);
+  TypeIndex writeKnownType(const ModifierRecord &Record);
+  TypeIndex writeKnownType(const ProcedureRecord &Record);
+  TypeIndex writeKnownType(const MemberFunctionRecord &Record);
+  TypeIndex writeKnownType(const ArgListRecord &Record);
+  TypeIndex writeKnownType(const PointerRecord &Record);
+  TypeIndex writeKnownType(const ArrayRecord &Record);
+  TypeIndex writeKnownType(const ClassRecord &Record);
+  TypeIndex writeKnownType(const UnionRecord &Record);
+  TypeIndex writeKnownType(const EnumRecord &Record);
+  TypeIndex writeKnownType(const BitFieldRecord &Record);
+  TypeIndex writeKnownType(const VFTableShapeRecord &Record);
+  TypeIndex writeKnownType(const StringIdRecord &Record);
+  TypeIndex writeKnownType(const VFTableRecord &Record);
+  TypeIndex writeKnownType(const UdtSourceLineRecord &Record);
+  TypeIndex writeKnownType(const UdtModSourceLineRecord &Record);
+  TypeIndex writeKnownType(const FuncIdRecord &Record);
+  TypeIndex writeKnownType(const MemberFuncIdRecord &Record);
+  TypeIndex writeKnownType(const BuildInfoRecord &Record);
+  TypeIndex writeKnownType(const MethodOverloadListRecord &Record);
+  TypeIndex writeKnownType(const TypeServer2Record &Record);
 
   TypeIndex writeFieldList(FieldListRecordBuilder &FieldList);
-  TypeIndex writeMethodList(MethodListRecordBuilder &MethodList);
 
-private:
+  TypeIndex writeRecord(TypeRecordBuilder &builder);
+
   virtual TypeIndex writeRecord(llvm::StringRef record) = 0;
 };
 }

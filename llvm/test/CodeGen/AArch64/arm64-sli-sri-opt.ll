@@ -1,4 +1,4 @@
-; RUN: llc -aarch64-shift-insert-generation=true -march=arm64 -aarch64-neon-syntax=apple < %s | FileCheck %s
+; RUN: llc < %s -aarch64-shift-insert-generation=true -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define void @testLeftGood(<16 x i8> %src1, <16 x i8> %src2, <16 x i8>* %dest) nounwind {
 ; CHECK-LABEL: testLeftGood:

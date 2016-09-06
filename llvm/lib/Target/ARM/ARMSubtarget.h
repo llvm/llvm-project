@@ -43,8 +43,9 @@ class ARMSubtarget : public ARMGenSubtargetInfo {
 protected:
   enum ARMProcFamilyEnum {
     Others, CortexA5, CortexA7, CortexA8, CortexA9, CortexA12, CortexA15,
-    CortexA17, CortexR4, CortexR4F, CortexR5, CortexR7, CortexA35, CortexA53,
-    CortexA57, CortexA72, Krait, Swift, ExynosM1
+    CortexA17, CortexR4, CortexR4F, CortexR5, CortexR7, CortexM3,
+    CortexA32, CortexA35, CortexA53, CortexA57, CortexA72, CortexA73,
+    Krait, Swift, ExynosM1
   };
   enum ARMProcClassEnum {
     None, AClass, RClass, MClass
@@ -55,193 +56,271 @@ protected:
     ARMv7m, ARMv7em, ARMv8a, ARMv81a, ARMv82a, ARMv8mMainline, ARMv8mBaseline
   };
 
+public:
+  /// What kind of timing do load multiple/store multiple instructions have.
+  enum ARMLdStMultipleTiming {
+    /// Can load/store 2 registers/cycle.
+    DoubleIssue,
+    /// Can load/store 2 registers/cycle, but needs an extra cycle if the access
+    /// is not 64-bit aligned.
+    DoubleIssueCheckUnalignedAccess,
+    /// Can load/store 1 register/cycle.
+    SingleIssue,
+    /// Can load/store 1 register/cycle, but needs an extra cycle for address
+    /// computation and potentially also for register writeback.
+    SingleIssuePlusExtras,
+  };
+
+protected:
   /// ARMProcFamily - ARM processor family: Cortex-A8, Cortex-A9, and others.
-  ARMProcFamilyEnum ARMProcFamily;
+  ARMProcFamilyEnum ARMProcFamily = Others;
 
   /// ARMProcClass - ARM processor class: None, AClass, RClass or MClass.
-  ARMProcClassEnum ARMProcClass;
+  ARMProcClassEnum ARMProcClass = None;
 
   /// ARMArch - ARM architecture
-  ARMArchEnum ARMArch;
+  ARMArchEnum ARMArch = ARMv4t;
 
   /// HasV4TOps, HasV5TOps, HasV5TEOps,
   /// HasV6Ops, HasV6MOps, HasV6KOps, HasV6T2Ops, HasV7Ops, HasV8Ops -
   /// Specify whether target support specific ARM ISA variants.
-  bool HasV4TOps;
-  bool HasV5TOps;
-  bool HasV5TEOps;
-  bool HasV6Ops;
-  bool HasV6MOps;
-  bool HasV6KOps;
-  bool HasV6T2Ops;
-  bool HasV7Ops;
-  bool HasV8Ops;
-  bool HasV8_1aOps;
-  bool HasV8_2aOps;
-  bool HasV8MBaselineOps;
-  bool HasV8MMainlineOps;
+  bool HasV4TOps = false;
+  bool HasV5TOps = false;
+  bool HasV5TEOps = false;
+  bool HasV6Ops = false;
+  bool HasV6MOps = false;
+  bool HasV6KOps = false;
+  bool HasV6T2Ops = false;
+  bool HasV7Ops = false;
+  bool HasV8Ops = false;
+  bool HasV8_1aOps = false;
+  bool HasV8_2aOps = false;
+  bool HasV8MBaselineOps = false;
+  bool HasV8MMainlineOps = false;
 
   /// HasVFPv2, HasVFPv3, HasVFPv4, HasFPARMv8, HasNEON - Specify what
   /// floating point ISAs are supported.
-  bool HasVFPv2;
-  bool HasVFPv3;
-  bool HasVFPv4;
-  bool HasFPARMv8;
-  bool HasNEON;
+  bool HasVFPv2 = false;
+  bool HasVFPv3 = false;
+  bool HasVFPv4 = false;
+  bool HasFPARMv8 = false;
+  bool HasNEON = false;
 
   /// UseNEONForSinglePrecisionFP - if the NEONFP attribute has been
   /// specified. Use the method useNEONForSinglePrecisionFP() to
   /// determine if NEON should actually be used.
-  bool UseNEONForSinglePrecisionFP;
+  bool UseNEONForSinglePrecisionFP = false;
 
   /// UseMulOps - True if non-microcoded fused integer multiply-add and
   /// multiply-subtract instructions should be used.
-  bool UseMulOps;
+  bool UseMulOps = false;
 
   /// SlowFPVMLx - If the VFP2 / NEON instructions are available, indicates
   /// whether the FP VML[AS] instructions are slow (if so, don't use them).
-  bool SlowFPVMLx;
+  bool SlowFPVMLx = false;
 
   /// HasVMLxForwarding - If true, NEON has special multiplier accumulator
   /// forwarding to allow mul + mla being issued back to back.
-  bool HasVMLxForwarding;
+  bool HasVMLxForwarding = false;
 
   /// SlowFPBrcc - True if floating point compare + branch is slow.
-  bool SlowFPBrcc;
+  bool SlowFPBrcc = false;
 
   /// InThumbMode - True if compiling for Thumb, false for ARM.
-  bool InThumbMode;
+  bool InThumbMode = false;
 
   /// UseSoftFloat - True if we're using software floating point features.
-  bool UseSoftFloat;
+  bool UseSoftFloat = false;
 
   /// HasThumb2 - True if Thumb2 instructions are supported.
-  bool HasThumb2;
+  bool HasThumb2 = false;
 
   /// NoARM - True if subtarget does not support ARM mode execution.
-  bool NoARM;
+  bool NoARM = false;
 
   /// ReserveR9 - True if R9 is not available as a general purpose register.
-  bool ReserveR9;
+  bool ReserveR9 = false;
 
   /// NoMovt - True if MOVT / MOVW pairs are not used for materialization of
   /// 32-bit imms (including global addresses).
-  bool NoMovt;
+  bool NoMovt = false;
 
   /// SupportsTailCall - True if the OS supports tail call. The dynamic linker
   /// must be able to synthesize call stubs for interworking between ARM and
   /// Thumb.
-  bool SupportsTailCall;
+  bool SupportsTailCall = false;
 
   /// HasFP16 - True if subtarget supports half-precision FP conversions
-  bool HasFP16;
+  bool HasFP16 = false;
 
   /// HasFullFP16 - True if subtarget supports half-precision FP operations
-  bool HasFullFP16;
+  bool HasFullFP16 = false;
 
   /// HasD16 - True if subtarget is limited to 16 double precision
   /// FP registers for VFPv3.
-  bool HasD16;
+  bool HasD16 = false;
 
   /// HasHardwareDivide - True if subtarget supports [su]div
-  bool HasHardwareDivide;
+  bool HasHardwareDivide = false;
 
   /// HasHardwareDivideInARM - True if subtarget supports [su]div in ARM mode
-  bool HasHardwareDivideInARM;
+  bool HasHardwareDivideInARM = false;
 
   /// HasT2ExtractPack - True if subtarget supports thumb2 extract/pack
   /// instructions.
-  bool HasT2ExtractPack;
+  bool HasT2ExtractPack = false;
 
   /// HasDataBarrier - True if the subtarget supports DMB / DSB data barrier
   /// instructions.
-  bool HasDataBarrier;
+  bool HasDataBarrier = false;
 
   /// HasV7Clrex - True if the subtarget supports CLREX instructions
-  bool HasV7Clrex;
+  bool HasV7Clrex = false;
 
   /// HasAcquireRelease - True if the subtarget supports v8 atomics (LDA/LDAEX etc)
   /// instructions
-  bool HasAcquireRelease;
+  bool HasAcquireRelease = false;
 
   /// Pref32BitThumb - If true, codegen would prefer 32-bit Thumb instructions
   /// over 16-bit ones.
-  bool Pref32BitThumb;
+  bool Pref32BitThumb = false;
 
   /// AvoidCPSRPartialUpdate - If true, codegen would avoid using instructions
   /// that partially update CPSR and add false dependency on the previous
   /// CPSR setting instruction.
-  bool AvoidCPSRPartialUpdate;
+  bool AvoidCPSRPartialUpdate = false;
 
   /// AvoidMOVsShifterOperand - If true, codegen should avoid using flag setting
   /// movs with shifter operand (i.e. asr, lsl, lsr).
-  bool AvoidMOVsShifterOperand;
+  bool AvoidMOVsShifterOperand = false;
 
-  /// HasRAS - Some processors perform return stack prediction. CodeGen should
+  /// HasRetAddrStack - Some processors perform return stack prediction. CodeGen should
   /// avoid issue "normal" call instructions to callees which do not return.
-  bool HasRAS;
+  bool HasRetAddrStack = false;
 
   /// HasMPExtension - True if the subtarget supports Multiprocessing
   /// extension (ARMv7 only).
-  bool HasMPExtension;
+  bool HasMPExtension = false;
 
   /// HasVirtualization - True if the subtarget supports the Virtualization
   /// extension.
-  bool HasVirtualization;
+  bool HasVirtualization = false;
 
   /// FPOnlySP - If true, the floating point unit only supports single
   /// precision.
-  bool FPOnlySP;
+  bool FPOnlySP = false;
 
   /// If true, the processor supports the Performance Monitor Extensions. These
   /// include a generic cycle-counter as well as more fine-grained (often
   /// implementation-specific) events.
-  bool HasPerfMon;
+  bool HasPerfMon = false;
 
   /// HasTrustZone - if true, processor supports TrustZone security extensions
-  bool HasTrustZone;
+  bool HasTrustZone = false;
+
+  /// Has8MSecExt - if true, processor supports ARMv8-M Security Extensions
+  bool Has8MSecExt = false;
 
   /// HasCrypto - if true, processor supports Cryptography extensions
-  bool HasCrypto;
+  bool HasCrypto = false;
 
   /// HasCRC - if true, processor supports CRC instructions
-  bool HasCRC;
+  bool HasCRC = false;
+
+  /// HasRAS - if true, the processor supports RAS extensions
+  bool HasRAS = false;
 
   /// If true, the instructions "vmov.i32 d0, #0" and "vmov.i32 q0, #0" are
   /// particularly effective at zeroing a VFP register.
-  bool HasZeroCycleZeroing;
+  bool HasZeroCycleZeroing = false;
+
+  /// If true, if conversion may decide to leave some instructions unpredicated.
+  bool IsProfitableToUnpredicate = false;
+
+  /// If true, VMOV will be favored over VGETLNi32.
+  bool HasSlowVGETLNi32 = false;
+
+  /// If true, VMOV will be favored over VDUP.
+  bool HasSlowVDUP32 = false;
+
+  /// If true, VMOVSR will be favored over VMOVDRR.
+  bool PreferVMOVSR = false;
+
+  /// If true, ISHST barriers will be used for Release semantics.
+  bool PreferISHST = false;
+
+  /// If true, a VLDM/VSTM starting with an odd register number is considered to
+  /// take more microops than single VLDRS/VSTRS.
+  bool SlowOddRegister = false;
+
+  /// If true, loading into a D subregister will be penalized.
+  bool SlowLoadDSubregister = false;
+
+  /// If true, the AGU and NEON/FPU units are multiplexed.
+  bool HasMuxedUnits = false;
+
+  /// If true, VMOVS will never be widened to VMOVD
+  bool DontWidenVMOVS = false;
+
+  /// If true, run the MLx expansion pass.
+  bool ExpandMLx = false;
+
+  /// If true, VFP/NEON VMLA/VMLS have special RAW hazards.
+  bool HasVMLxHazards = false;
+
+  /// If true, VMOVRS, VMOVSR and VMOVS will be converted from VFP to NEON.
+  bool UseNEONForFPMovs = false;
+
+  /// If true, VLDn instructions take an extra cycle for unaligned accesses.
+  bool CheckVLDnAlign = false;
+
+  /// If true, VFP instructions are not pipelined.
+  bool NonpipelinedVFP = false;
 
   /// StrictAlign - If true, the subtarget disallows unaligned memory
   /// accesses for some types.  For details, see
   /// ARMTargetLowering::allowsMisalignedMemoryAccesses().
-  bool StrictAlign;
+  bool StrictAlign = false;
 
   /// RestrictIT - If true, the subtarget disallows generation of deprecated IT
   ///  blocks to conform to ARMv8 rule.
-  bool RestrictIT;
+  bool RestrictIT = false;
 
   /// HasDSP - If true, the subtarget supports the DSP (saturating arith
   /// and such) instructions.
-  bool HasDSP;
+  bool HasDSP = false;
 
   /// NaCl TRAP instruction is generated instead of the regular TRAP.
-  bool UseNaClTrap;
+  bool UseNaClTrap = false;
 
   /// Generate calls via indirect call instructions.
-  bool GenLongCalls;
+  bool GenLongCalls = false;
 
   /// Target machine allowed unsafe FP math (such as use of NEON fp)
-  bool UnsafeFPMath;
+  bool UnsafeFPMath = false;
 
   /// UseSjLjEH - If true, the target uses SjLj exception handling (e.g. iOS).
-  bool UseSjLjEH;
+  bool UseSjLjEH = false;
 
   /// stackAlignment - The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
-  unsigned stackAlignment;
+  unsigned stackAlignment = 4;
 
   /// CPUString - String name of used CPU.
   std::string CPUString;
+
+  unsigned MaxInterleaveFactor = 1;
+
+  /// Clearance before partial register updates (in number of instructions)
+  unsigned PartialUpdateClearance = 0;
+
+  /// What kind of timing do load multiple/store multiple have (double issue,
+  /// single issue etc).
+  ARMLdStMultipleTiming LdStMultipleTiming = SingleIssue;
+
+  /// The adjustment that we need to apply to get the operand latency from the
+  /// operand cycle returned by the itinerary data for pre-ISel operands.
+  int PreISelOperandLatencyAdjustment = 2;
 
   /// IsLittle - The target is Little Endian
   bool IsLittle;
@@ -325,16 +404,20 @@ public:
   bool hasV8MBaselineOps() const { return HasV8MBaselineOps; }
   bool hasV8MMainlineOps() const { return HasV8MMainlineOps; }
 
+  /// @{
+  /// These functions are obsolete, please consider adding subtarget features
+  /// or properties instead of calling them.
   bool isCortexA5() const { return ARMProcFamily == CortexA5; }
   bool isCortexA7() const { return ARMProcFamily == CortexA7; }
   bool isCortexA8() const { return ARMProcFamily == CortexA8; }
   bool isCortexA9() const { return ARMProcFamily == CortexA9; }
   bool isCortexA15() const { return ARMProcFamily == CortexA15; }
   bool isSwift()    const { return ARMProcFamily == Swift; }
-  bool isCortexM3() const { return CPUString == "cortex-m3"; }
+  bool isCortexM3() const { return ARMProcFamily == CortexM3; }
   bool isLikeA9() const { return isCortexA9() || isCortexA15() || isKrait(); }
   bool isCortexR5() const { return ARMProcFamily == CortexR5; }
   bool isKrait() const { return ARMProcFamily == Krait; }
+  /// @}
 
   bool hasARMOps() const { return !NoARM; }
 
@@ -345,6 +428,7 @@ public:
   bool hasNEON() const { return HasNEON;  }
   bool hasCrypto() const { return HasCrypto; }
   bool hasCRC() const { return HasCRC; }
+  bool hasRAS() const { return HasRAS; }
   bool hasVirtualization() const { return HasVirtualization; }
   bool useNEONForSinglePrecisionFP() const {
     return hasNEON() && UseNEONForSinglePrecisionFP;
@@ -366,11 +450,26 @@ public:
   bool isFPOnlySP() const { return FPOnlySP; }
   bool hasPerfMon() const { return HasPerfMon; }
   bool hasTrustZone() const { return HasTrustZone; }
+  bool has8MSecExt() const { return Has8MSecExt; }
   bool hasZeroCycleZeroing() const { return HasZeroCycleZeroing; }
+  bool isProfitableToUnpredicate() const { return IsProfitableToUnpredicate; }
+  bool hasSlowVGETLNi32() const { return HasSlowVGETLNi32; }
+  bool hasSlowVDUP32() const { return HasSlowVDUP32; }
+  bool preferVMOVSR() const { return PreferVMOVSR; }
+  bool preferISHSTBarriers() const { return PreferISHST; }
+  bool expandMLx() const { return ExpandMLx; }
+  bool hasVMLxHazards() const { return HasVMLxHazards; }
+  bool hasSlowOddRegister() const { return SlowOddRegister; }
+  bool hasSlowLoadDSubregister() const { return SlowLoadDSubregister; }
+  bool hasMuxedUnits() const { return HasMuxedUnits; }
+  bool dontWidenVMOVS() const { return DontWidenVMOVS; }
+  bool useNEONForFPMovs() const { return UseNEONForFPMovs; }
+  bool checkVLDnAccessAlignment() const { return CheckVLDnAlign; }
+  bool nonpipelinedVFP() const { return NonpipelinedVFP; }
   bool prefers32BitThumb() const { return Pref32BitThumb; }
   bool avoidCPSRPartialUpdate() const { return AvoidCPSRPartialUpdate; }
   bool avoidMOVsShifterOperand() const { return AvoidMOVsShifterOperand; }
-  bool hasRAS() const { return HasRAS; }
+  bool hasRetAddrStack() const { return HasRetAddrStack; }
   bool hasMPExtension() const { return HasMPExtension; }
   bool hasDSP() const { return HasDSP; }
   bool useNaClTrap() const { return UseNaClTrap; }
@@ -413,14 +512,21 @@ public:
             TargetTriple.getEnvironment() == Triple::GNUEABIHF) &&
            !isTargetDarwin() && !isTargetWindows();
   }
+  bool isTargetMuslAEABI() const {
+    return (TargetTriple.getEnvironment() == Triple::MuslEABI ||
+            TargetTriple.getEnvironment() == Triple::MuslEABIHF) &&
+           !isTargetDarwin() && !isTargetWindows();
+  }
 
   // ARM Targets that support EHABI exception handling standard
   // Darwin uses SjLj. Other targets might need more checks.
   bool isTargetEHABICompatible() const {
     return (TargetTriple.getEnvironment() == Triple::EABI ||
             TargetTriple.getEnvironment() == Triple::GNUEABI ||
+            TargetTriple.getEnvironment() == Triple::MuslEABI ||
             TargetTriple.getEnvironment() == Triple::EABIHF ||
             TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+            TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
             isTargetAndroid()) &&
            !isTargetDarwin() && !isTargetWindows();
   }
@@ -428,6 +534,7 @@ public:
   bool isTargetHardFloat() const {
     // FIXME: this is invalid for WindowsCE
     return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+           TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
            TargetTriple.getEnvironment() == Triple::EABIHF ||
            isTargetWindows() || isAAPCS16_ABI();
   }
@@ -436,6 +543,9 @@ public:
   bool isAPCS_ABI() const;
   bool isAAPCS_ABI() const;
   bool isAAPCS16_ABI() const;
+
+  bool isROPI() const;
+  bool isRWPI() const;
 
   bool useSoftFloat() const { return UseSoftFloat; }
   bool isThumb() const { return InThumbMode; }
@@ -448,6 +558,13 @@ public:
 
   bool isR9Reserved() const {
     return isTargetMachO() ? (ReserveR9 || !HasV6Ops) : ReserveR9;
+  }
+
+  /// Returns true if the frame setup is split into two separate pushes (first
+  /// r0-r7,lr then r8-r11), principally so that the frame pointer is adjacent
+  /// to lr.
+  bool splitFramePushPop() const {
+    return isTargetMachO();
   }
 
   bool useStride4VFPs(const MachineFunction &MF) const;
@@ -490,9 +607,20 @@ public:
   /// function for this subtarget.
   unsigned getStackAlignment() const { return stackAlignment; }
 
-  /// GVIsIndirectSymbol - true if the GV will be accessed via an indirect
-  /// symbol.
-  bool GVIsIndirectSymbol(const GlobalValue *GV, Reloc::Model RelocM) const;
+  unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
+
+  unsigned getPartialUpdateClearance() const { return PartialUpdateClearance; }
+
+  ARMLdStMultipleTiming getLdStMultipleTiming() const {
+    return LdStMultipleTiming;
+  }
+
+  int getPreISelOperandLatencyAdjustment() const {
+    return PreISelOperandLatencyAdjustment;
+  }
+
+  /// True if the GV will be accessed via an indirect symbol.
+  bool isGVIndirectSymbol(const GlobalValue *GV) const;
 
   /// True if fast-isel is used.
   bool useFastISel() const;

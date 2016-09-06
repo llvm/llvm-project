@@ -7,6 +7,8 @@
 // RUN:   | FileCheck %s --check-prefix=NATIVE-HALF
 // RUN: %clang_cc1 -emit-llvm -o - -triple aarch64-none-linux-gnueabi -fnative-half-type %s \
 // RUN:   | FileCheck %s --check-prefix=NATIVE-HALF
+// RUN: %clang_cc1 -emit-llvm -o - -x renderscript %s \
+// RUN:   | FileCheck %s --check-prefix=NATIVE-HALF
 typedef unsigned cond_t;
 
 volatile cond_t test;

@@ -227,7 +227,27 @@ namespace HexagonII {
     MO_LO16, MO_HI16,
 
     // Offset from the base of the SDA.
-    MO_GPREL
+    MO_GPREL,
+
+    // MO_GDGOT - indicates GOT relative relocation for TLS
+    // GeneralDynamic method
+    MO_GDGOT,
+
+    // MO_GDPLT - indicates PLT relative relocation for TLS
+    // GeneralDynamic method
+    MO_GDPLT,
+
+    // MO_IE - indicates non PIC relocation for TLS
+    // Initial Executable method
+    MO_IE,
+
+    // MO_IEGOT - indicates PIC relocation for TLS
+    // Initial Executable method
+    MO_IEGOT,
+
+    // MO_TPREL - indicates relocation for TLS
+    // local Executable method
+    MO_TPREL
   };
 
   // Hexagon Sub-instruction classes.

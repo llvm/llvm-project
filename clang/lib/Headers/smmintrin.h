@@ -121,7 +121,7 @@ _mm_blendv_epi8 (__m128i __V1, __m128i __V2, __m128i __M)
 static __inline__  __m128i __DEFAULT_FN_ATTRS
 _mm_mullo_epi32 (__m128i __V1, __m128i __V2)
 {
-  return (__m128i) ((__v4si)__V1 * (__v4si)__V2);
+  return (__m128i) ((__v4su)__V1 * (__v4su)__V2);
 }
 
 static __inline__  __m128i __DEFAULT_FN_ATTRS
@@ -220,16 +220,16 @@ _mm_max_epu32 (__m128i __V1, __m128i __V2)
 #define _mm_insert_epi8(X, I, N) (__extension__                           \
                                   ({ __v16qi __a = (__v16qi)(__m128i)(X); \
                                      __a[(N) & 15] = (I);                 \
-                                     __a;}))
+                                     (__m128i)__a;}))
 #define _mm_insert_epi32(X, I, N) (__extension__                         \
                                    ({ __v4si __a = (__v4si)(__m128i)(X); \
                                       __a[(N) & 3] = (I);                \
-                                      __a;}))
+                                      (__m128i)__a;}))
 #ifdef __x86_64__
 #define _mm_insert_epi64(X, I, N) (__extension__                         \
                                    ({ __v2di __a = (__v2di)(__m128i)(X); \
                                       __a[(N) & 1] = (I);                \
-                                      __a;}))
+                                      (__m128i)__a;}))
 #endif /* __x86_64__ */
 
 /* Extract int from packed integer array at index.  This returns the element
@@ -299,7 +299,6 @@ _mm_cvtepi8_epi64(__m128i __V)
 {
   /* This function always performs a signed extension, but __v16qi is a char
      which may be signed or unsigned, so use __v16qs. */
-  typedef signed char __v16qs __attribute__((__vector_size__(16)));
   return (__m128i)__builtin_convertvector(__builtin_shufflevector((__v16qs)__V, (__v16qs)__V, 0, 1), __v2di);
 }
 
@@ -325,37 +324,37 @@ _mm_cvtepi32_epi64(__m128i __V)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepu8_epi16(__m128i __V)
 {
-  return (__m128i) __builtin_ia32_pmovzxbw128((__v16qi) __V);
+  return (__m128i)__builtin_convertvector(__builtin_shufflevector((__v16qu)__V, (__v16qu)__V, 0, 1, 2, 3, 4, 5, 6, 7), __v8hi);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepu8_epi32(__m128i __V)
 {
-  return (__m128i) __builtin_ia32_pmovzxbd128((__v16qi)__V);
+  return (__m128i)__builtin_convertvector(__builtin_shufflevector((__v16qu)__V, (__v16qu)__V, 0, 1, 2, 3), __v4si);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepu8_epi64(__m128i __V)
 {
-  return (__m128i) __builtin_ia32_pmovzxbq128((__v16qi)__V);
+  return (__m128i)__builtin_convertvector(__builtin_shufflevector((__v16qu)__V, (__v16qu)__V, 0, 1), __v2di);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepu16_epi32(__m128i __V)
 {
-  return (__m128i) __builtin_ia32_pmovzxwd128((__v8hi)__V);
+  return (__m128i)__builtin_convertvector(__builtin_shufflevector((__v8hu)__V, (__v8hu)__V, 0, 1, 2, 3), __v4si);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepu16_epi64(__m128i __V)
 {
-  return (__m128i) __builtin_ia32_pmovzxwq128((__v8hi)__V);
+  return (__m128i)__builtin_convertvector(__builtin_shufflevector((__v8hu)__V, (__v8hu)__V, 0, 1), __v2di);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvtepu32_epi64(__m128i __V)
 {
-  return (__m128i) __builtin_ia32_pmovzxdq128((__v4si)__V);
+  return (__m128i)__builtin_convertvector(__builtin_shufflevector((__v4su)__V, (__v4su)__V, 0, 1), __v2di);
 }
 
 /* SSE4 Pack with Unsigned Saturation.  */

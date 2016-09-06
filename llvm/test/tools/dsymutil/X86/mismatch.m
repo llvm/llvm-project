@@ -14,10 +14,17 @@
       -fdisable-module-hash mismatch.m -o /dev/null
 */
 
-// RUN: llvm-dsymutil -f -oso-prepend-path=%p/../Inputs/mismatch \
+// RUN: rm -rf %t.dir && mkdir %t.dir
+// RUN: cp %p/../Inputs/mismatch/1.o %p/../Inputs/mismatch/mismatch.pcm %t.dir
+// RUN: cp %p/../Inputs/mismatch/1.o %t.dir/2.o
+// RUN: llvm-dsymutil --verbose -f -oso-prepend-path=%t.dir \
 // RUN:   -y %p/dummy-debug-map.map -o %t.bin 2>&1 | FileCheck %s
 
 @import mismatch;
 
 void f() {}
+// Mismatch after importing the module.
 // CHECK: warning: hash mismatch
+// Mismatch in the cache.
+// CHECK: warning: hash mismatch
+// CHECK: cached

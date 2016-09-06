@@ -59,7 +59,6 @@
 // We use heuristics to discover the best global grouping we can (cf cl::opts).
 // ===---------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -91,6 +90,11 @@ static cl::opt<bool>
 EnableGlobalMerge("enable-global-merge", cl::Hidden,
                   cl::desc("Enable the global merge pass"),
                   cl::init(true));
+
+static cl::opt<unsigned>
+GlobalMergeMaxOffset("global-merge-max-offset", cl::Hidden,
+                     cl::desc("Set maximum offset for global merge pass"),
+                     cl::init(0));
 
 static cl::opt<bool> GlobalMergeGroupByUse(
     "global-merge-group-by-use", cl::Hidden,
@@ -131,6 +135,8 @@ namespace {
     /// Whether we should merge global variables that have external linkage.
     bool MergeExternalGlobals;
 
+    bool IsMachO;
+
     bool doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
                  Module &M, bool isConst, unsigned AddrSpace) const;
     /// \brief Merge everything in \p Globals for which the corresponding bit
@@ -158,10 +164,14 @@ namespace {
 
   public:
     static char ID;             // Pass identification, replacement for typeid.
-    explicit GlobalMerge(const TargetMachine *TM = nullptr,
-                         unsigned MaximalOffset = 0,
-                         bool OnlyOptimizeForSize = false,
-                         bool MergeExternalGlobals = false)
+    explicit GlobalMerge()
+        : FunctionPass(ID), TM(nullptr), MaxOffset(GlobalMergeMaxOffset),
+          OnlyOptimizeForSize(false), MergeExternalGlobals(false) {
+      initializeGlobalMergePass(*PassRegistry::getPassRegistry());
+    }
+
+    explicit GlobalMerge(const TargetMachine *TM, unsigned MaximalOffset,
+                         bool OnlyOptimizeForSize, bool MergeExternalGlobals)
         : FunctionPass(ID), TM(TM), MaxOffset(MaximalOffset),
           OnlyOptimizeForSize(OnlyOptimizeForSize),
           MergeExternalGlobals(MergeExternalGlobals) {
@@ -459,8 +469,7 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
       // we can also emit an alias for internal linkage as it's safe to do so.
       // It's not safe on Mach-O as the alias (and thus the portion of the
       // MergedGlobals variable) may be dead stripped at link time.
-      if (Linkage != GlobalValue::InternalLinkage ||
-          !TM->getTargetTriple().isOSBinFormatMachO()) {
+      if (Linkage != GlobalValue::InternalLinkage || !IsMachO) {
         GlobalAlias::create(Tys[idx], AddrSpace, Linkage, Name, GEP, &M);
       }
 
@@ -513,6 +522,8 @@ bool GlobalMerge::doInitialization(Module &M) {
   if (!EnableGlobalMerge)
     return false;
 
+  IsMachO = Triple(M.getTargetTriple()).isOSBinFormatMachO();
+
   auto &DL = M.getDataLayout();
   DenseMap<unsigned, SmallVector<GlobalVariable*, 16> > Globals, ConstGlobals,
                                                         BSSGlobals;
@@ -550,7 +561,8 @@ bool GlobalMerge::doInitialization(Module &M) {
       continue;
 
     if (DL.getTypeAllocSize(Ty) < MaxOffset) {
-      if (TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSSLocal())
+      if (TM &&
+          TargetLoweringObjectFile::getKindForGlobal(&GV, *TM).isBSSLocal())
         BSSGlobals[AddressSpace].push_back(&GV);
       else if (GV.isConstant())
         ConstGlobals[AddressSpace].push_back(&GV);

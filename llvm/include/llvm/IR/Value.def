@@ -54,21 +54,29 @@
 
 HANDLE_VALUE(Argument)
 HANDLE_VALUE(BasicBlock)
+HANDLE_VALUE(MemoryUse)
+HANDLE_VALUE(MemoryDef)
+HANDLE_VALUE(MemoryPhi)
 
 HANDLE_GLOBAL_VALUE(Function)
 HANDLE_GLOBAL_VALUE(GlobalAlias)
+HANDLE_GLOBAL_VALUE(GlobalIFunc)
 HANDLE_GLOBAL_VALUE(GlobalVariable)
-HANDLE_CONSTANT(UndefValue)
 HANDLE_CONSTANT(BlockAddress)
 HANDLE_CONSTANT(ConstantExpr)
+
+// ConstantAggregate.
+HANDLE_CONSTANT(ConstantArray)
+HANDLE_CONSTANT(ConstantStruct)
+HANDLE_CONSTANT(ConstantVector)
+
+// ConstantData.
+HANDLE_CONSTANT(UndefValue)
 HANDLE_CONSTANT(ConstantAggregateZero)
 HANDLE_CONSTANT(ConstantDataArray)
 HANDLE_CONSTANT(ConstantDataVector)
 HANDLE_CONSTANT(ConstantInt)
 HANDLE_CONSTANT(ConstantFP)
-HANDLE_CONSTANT(ConstantArray)
-HANDLE_CONSTANT(ConstantStruct)
-HANDLE_CONSTANT(ConstantVector)
 HANDLE_CONSTANT(ConstantPointerNull)
 HANDLE_CONSTANT(ConstantTokenNone)
 
@@ -81,6 +89,10 @@ HANDLE_INSTRUCTION(Instruction)
 
 HANDLE_CONSTANT_MARKER(ConstantFirstVal, Function)
 HANDLE_CONSTANT_MARKER(ConstantLastVal, ConstantTokenNone)
+HANDLE_CONSTANT_MARKER(ConstantDataFirstVal, UndefValue)
+HANDLE_CONSTANT_MARKER(ConstantDataLastVal, ConstantTokenNone)
+HANDLE_CONSTANT_MARKER(ConstantAggregateFirstVal, ConstantArray)
+HANDLE_CONSTANT_MARKER(ConstantAggregateLastVal, ConstantVector)
 
 #undef HANDLE_GLOBAL_VALUE
 #undef HANDLE_CONSTANT

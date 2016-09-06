@@ -11,7 +11,17 @@ add_llvm_tool(llvm-config
 # Compute the substitution values for various items.
 get_property(LLVM_SYSTEM_LIBS_LIST TARGET LLVMSupport PROPERTY LLVM_SYSTEM_LIBS)
 foreach(l ${LLVM_SYSTEM_LIBS_LIST})
-  set(SYSTEM_LIBS ${SYSTEM_LIBS} "-l${l}")
+  if(MSVC)
+    set(SYSTEM_LIBS ${SYSTEM_LIBS} "${l}.lib")
+  else()
+    if (l MATCHES "^-")
+      # If it's an option, pass it without changes.
+      set(SYSTEM_LIBS ${SYSTEM_LIBS} "${l}")
+    else()
+      # Otherwise assume it's a library name we need to link with.
+      set(SYSTEM_LIBS ${SYSTEM_LIBS} "-l${l}")
+    endif()
+  endif()
 endforeach()
 string(REPLACE ";" " " SYSTEM_LIBS "${SYSTEM_LIBS}")
 
@@ -26,6 +36,12 @@ set(LLVM_CFLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${uppercase_CMAKE_BUILD_TYPE}}
 set(LLVM_CXXFLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${COMPILE_FLAGS} ${LLVM_DEFINITIONS}")
 set(LLVM_BUILD_SYSTEM cmake)
 set(LLVM_HAS_RTTI ${LLVM_CONFIG_HAS_RTTI})
+set(LLVM_DYLIB_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}")
+if(LLVM_BUILD_GLOBAL_ISEL)
+  set(LLVM_HAS_GLOBAL_ISEL "ON")
+else()
+  set(LLVM_HAS_GLOBAL_ISEL "OFF")
+endif()
 
 # Use the C++ link flags, since they should be a superset of C link flags.
 set(LLVM_LDFLAGS "${CMAKE_CXX_LINK_FLAGS}")

@@ -597,10 +597,11 @@ def PPC440Itineraries : ProcessorItineraries<
 
 def PPC440Model : SchedMachineModel {
   let IssueWidth = 2;  // 2 instructions are dispatched per cycle.
-  let MinLatency = -1; // OperandCycles are interpreted as MinLatency.
   let LoadLatency = 5; // Optimistic load latency assuming bypass.
                        // This is overriden by OperandCycles if the
                        // Itineraries are queried instead.
+
+  let CompleteModel = 0;
 
   let Itineraries = PPC440Itineraries;
 }

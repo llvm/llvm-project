@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s -check-prefix=CHECK
+; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux < %s | FileCheck %s
 
 define void @foo() {
 ; Test that when determining the edge probability from a node in an inner loop

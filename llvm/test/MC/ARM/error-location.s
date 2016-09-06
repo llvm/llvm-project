@@ -23,9 +23,6 @@
 @ CHECK: <unknown>:0: error: Common symbol 'common' cannot be used in assignment expr
   .set v3, common
 
-@ CHECK: <unknown>:0: error: Undefined temporary symbol
-  .word 5f
-
 @ CHECK: <unknown>:0: error: symbol 'undef' could not be evaluated in a subtraction expression
   .set v2, a-undef
 

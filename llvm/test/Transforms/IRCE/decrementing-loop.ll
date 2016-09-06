@@ -1,4 +1,4 @@
-; RUN: opt -irce -S < %s | FileCheck %s
+; RUN: opt -verify-loop-info -irce -S < %s | FileCheck %s
 
 define void @decrementing_loop(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
  entry:
@@ -28,7 +28,6 @@ define void @decrementing_loop(i32 *%arr, i32 *%a_len_ptr, i32 %n) {
   ret void
 
 ; CHECK: loop.preheader:
-; CHECK:   [[indvar_start:[^ ]+]] = add i32 %n, -1
 ; CHECK:   [[not_len:[^ ]+]] = sub i32 -1, %len
 ; CHECK:   [[not_n:[^ ]+]] = sub i32 -1, %n
 ; CHECK:   [[not_len_hiclamp_cmp:[^ ]+]] = icmp sgt i32 [[not_len]], [[not_n]]

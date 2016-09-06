@@ -22,10 +22,11 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 declare i32 @foo(i32) ssp
 
+!llvm.dbg.cu = !{!3}
 !0 = !DILocation(line: 5, column: 2, scope: !1)
 !1 = distinct !DILexicalBlock(line: 1, column: 1, file: null, scope: !2)
-!2 = distinct !DISubprogram(name: "bar", linkageName: "bar", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scope: !3)
-!3 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang 1.1", isOptimized: true, emissionKind: 0, file: !8, retainedTypes: !9)
+!2 = distinct !DISubprogram(name: "bar", linkageName: "bar", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, scope: !3)
+!3 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang 1.1", isOptimized: true, emissionKind: FullDebug, file: !8, retainedTypes: !9)
 !4 = !DILocalVariable(name: "count_", line: 5, scope: !5, file: !3, type: !6)
 !5 = distinct !DILexicalBlock(line: 1, column: 1, file: null, scope: !1)
 !6 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

@@ -18,7 +18,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 
@@ -208,6 +207,11 @@ bool CoreEngine::ExecuteWorkList(const LocationContext *L, unsigned Steps,
 
   // Check if we have a steps limit
   bool UnlimitedSteps = Steps == 0;
+  // Cap our pre-reservation in the event that the user specifies
+  // a very large number of maximum steps.
+  const unsigned PreReservationCap = 4000000;
+  if(!UnlimitedSteps)
+    G.reserve(std::min(Steps,PreReservationCap));
 
   while (WList->hasWork()) {
     if (!UnlimitedSteps) {

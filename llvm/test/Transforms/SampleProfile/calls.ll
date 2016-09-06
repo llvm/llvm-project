@@ -1,4 +1,5 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/calls.prof | opt -analyze -branch-prob | FileCheck %s
+; RUN: opt < %s -instcombine -sample-profile -sample-profile-file=%S/Inputs/calls.prof | opt -analyze -branch-prob | FileCheck %s
+; RUN: opt < %s -passes="function(instcombine),sample-profile" -sample-profile-file=%S/Inputs/calls.prof | opt -analyze -branch-prob | FileCheck %s
 
 ; Original C++ test case
 ;
@@ -16,11 +17,6 @@
 ;   return 0;
 ; }
 ;
-; Note that this test is missing the llvm.dbg.cu annotation. This emulates
-; the effect of the user having only used -fprofile-sample-use without
-; -gmlt when invoking the driver. In those cases, we need to track source
-; location information but we do not have to generate debug info in the
-; final binary.
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
 ; Function Attrs: nounwind uwtable
@@ -52,8 +48,8 @@ while.cond:                                       ; preds = %if.end, %entry
   store i32 %inc, i32* %i, align 4, !dbg !14
   %cmp = icmp slt i32 %0, 400000000, !dbg !14
   br i1 %cmp, label %while.body, label %while.end, !dbg !14
-; CHECK: edge while.cond -> while.body probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK: edge while.cond -> while.end probability is 0x00000000 / 0x80000000 = 0.00%
+; CHECK: edge while.cond -> while.body probability is 0x7ffa4e20 / 0x80000000 = 99.98% [HOT edge]
+; CHECK: edge while.cond -> while.end probability is 0x0005b1e0 / 0x80000000 = 0.02%
 
 while.body:                                       ; preds = %while.cond
   %1 = load i32, i32* %i, align 4, !dbg !16
@@ -63,8 +59,8 @@ while.body:                                       ; preds = %while.cond
 ; both branches out of while.body had the same weight. In reality,
 ; the edge while.body->if.then is taken most of the time.
 ;
-; CHECK: edge while.body -> if.then probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK: edge while.body -> if.else probability is 0x00000000 / 0x80000000 = 0.00%
+; CHECK: edge while.body -> if.else probability is 0x0005b1e0 / 0x80000000 = 0.02%
+; CHECK: edge while.body -> if.then probability is 0x7ffa4e20 / 0x80000000 = 99.98% [HOT edge]
 
 
 if.then:                                          ; preds = %while.body
@@ -89,17 +85,17 @@ while.end:                                        ; preds = %while.cond
 
 declare i32 @printf(i8*, ...) #2
 
+!llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, emissionKind: NoDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "calls.cc", directory: ".")
 !2 = !{}
-!3 = !{!4, !7}
-!4 = distinct !DISubprogram(name: "sum", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 3, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "sum", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "calls.cc", directory: ".")
 !6 = !DISubroutineType(types: !2)
-!7 = distinct !DISubprogram(name: "main", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 7, file: !1, scope: !5, type: !6, variables: !2)
+!7 = distinct !DISubprogram(name: "main", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !5, type: !6, variables: !2)
 !8 = !{i32 2, !"Dwarf Version", i32 4}
 !9 = !{i32 1, !"Debug Info Version", i32 3}
 !10 = !{!"clang version 3.5 "}

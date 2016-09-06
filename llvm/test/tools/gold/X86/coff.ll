@@ -17,6 +17,6 @@ define hidden void @g() {
 }
 
 ; CHECK: define internal void @h() {
-define linkonce_odr void @h() {
+define linkonce_odr void @h() local_unnamed_addr {
   ret void
 }

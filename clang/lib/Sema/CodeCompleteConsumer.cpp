@@ -17,6 +17,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
@@ -309,7 +310,7 @@ StringRef CodeCompletionTUInfo::getParentName(const DeclContext *DC) {
         if (!Interface) {
           // Assign an empty StringRef but with non-null data to distinguish
           // between empty because we didn't process the DeclContext yet.
-          CachedParentName = StringRef((const char *)~0U, 0);
+          CachedParentName = StringRef((const char *)(uintptr_t)~0U, 0);
           return StringRef();
         }
         
@@ -428,6 +429,26 @@ CodeCompleteConsumer::OverloadCandidate::getFunctionType() const {
 
 CodeCompleteConsumer::~CodeCompleteConsumer() { }
 
+bool PrintingCodeCompleteConsumer::isResultFilteredOut(StringRef Filter,
+                                                CodeCompletionResult Result) {
+  switch (Result.Kind) {
+  case CodeCompletionResult::RK_Declaration: {
+    return !(Result.Declaration->getIdentifier() &&
+            Result.Declaration->getIdentifier()->getName().startswith(Filter));
+  }
+  case CodeCompletionResult::RK_Keyword: {
+    return !StringRef(Result.Keyword).startswith(Filter);
+  }
+  case CodeCompletionResult::RK_Macro: {
+    return !Result.Macro->getName().startswith(Filter);
+  }
+  case CodeCompletionResult::RK_Pattern: {
+    return !StringRef(Result.Pattern->getAsString()).startswith(Filter);
+  }
+  }
+  llvm_unreachable("Unknown code completion result Kind.");
+}
+
 void 
 PrintingCodeCompleteConsumer::ProcessCodeCompleteResults(Sema &SemaRef,
                                                  CodeCompletionContext Context,
@@ -435,8 +456,12 @@ PrintingCodeCompleteConsumer::ProcessCodeCompleteResults(Sema &SemaRef,
                                                          unsigned NumResults) {
   std::stable_sort(Results, Results + NumResults);
   
+  StringRef Filter = SemaRef.getPreprocessor().getCodeCompletionFilter();
+
   // Print the results.
   for (unsigned I = 0; I != NumResults; ++I) {
+    if(!Filter.empty() && isResultFilteredOut(Filter, Results[I]))
+      continue;
     OS << "COMPLETION: ";
     switch (Results[I].Kind) {
     case CodeCompletionResult::RK_Declaration:

@@ -523,7 +523,7 @@ void PromoteMem2Reg::run() {
 
   AllocaInfo Info;
   LargeBlockInfo LBI;
-  IDFCalculator IDF(DT);
+  ForwardIDFCalculator IDF(DT);
 
   for (unsigned AllocaNum = 0; AllocaNum != Allocas.size(); ++AllocaNum) {
     AllocaInst *AI = Allocas[AllocaNum];
@@ -802,7 +802,8 @@ void PromoteMem2Reg::ComputeLiveInBlocks(
         // actually live-in here.
         LiveInBlockWorklist[i] = LiveInBlockWorklist.back();
         LiveInBlockWorklist.pop_back();
-        --i, --e;
+        --i;
+        --e;
         break;
       }
 

@@ -105,8 +105,7 @@ namespace PR9026 {
 namespace PR10270 {
   template<typename T> class C;
   template<typename T> void f() {
-    if (C<T> == 1) // expected-error{{expected unqualified-id}} \
-                   // expected-error{{invalid '==' at end of declaration}}
+    if (C<T> == 1) // expected-error{{expected unqualified-id}}
       return;
   }
 }

@@ -1,6 +1,6 @@
 // RUN: %clangxx_tsan -O1 %s -o %t
-// RUN: %deflake %run %t | FileCheck %s
-// RUN: %deflake %run %t arg | FileCheck %s
+// RUN: %deflake %run %t 2>&1 | FileCheck %s
+// RUN: %deflake %run %t arg 2>&1 | FileCheck %s
 #include "java.h"
 
 jptr varaddr1_old;
@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
   barrier_wait(&barrier);
   pthread_join(th, 0);
   __tsan_java_free(varaddr1_new, kBlockSize);
-  printf("DONE\n");
+  fprintf(stderr, "DONE\n");
   return __tsan_java_fini();
 }
 

@@ -24,8 +24,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/TaintTag.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableMap.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/Allocator.h"
+#include <utility>
 
 namespace llvm {
 class APSInt;
@@ -836,9 +836,8 @@ class ScanReachableSymbols {
   ProgramStateRef state;
   SymbolVisitor &visitor;
 public:
-
-  ScanReachableSymbols(ProgramStateRef st, SymbolVisitor& v)
-    : state(st), visitor(v) {}
+  ScanReachableSymbols(ProgramStateRef st, SymbolVisitor &v)
+      : state(std::move(st)), visitor(v) {}
 
   bool scan(nonloc::LazyCompoundVal val);
   bool scan(nonloc::CompoundVal val);

@@ -46,104 +46,98 @@ X86EarlyIfConv("x86-early-ifcvt", cl::Hidden,
 
 /// Classify a blockaddress reference for the current subtarget according to how
 /// we should reference it in a non-pcrel context.
-unsigned char X86Subtarget::ClassifyBlockAddressReference() const {
-  if (isPICStyleGOT())    // 32-bit ELF targets.
-    return X86II::MO_GOTOFF;
-
-  if (isPICStyleStubPIC())   // Darwin/32 in PIC mode.
-    return X86II::MO_PIC_BASE_OFFSET;
-
-  // Direct static reference to label.
-  return X86II::MO_NO_FLAG;
+unsigned char X86Subtarget::classifyBlockAddressReference() const {
+  return classifyLocalReference(nullptr);
 }
 
 /// Classify a global variable reference for the current subtarget according to
 /// how we should reference it in a non-pcrel context.
-unsigned char X86Subtarget::
-ClassifyGlobalReference(const GlobalValue *GV, const TargetMachine &TM) const {
-  // DLLImport only exists on windows, it is implemented as a load from a
-  // DLLIMPORT stub.
-  if (GV->hasDLLImportStorageClass())
-    return X86II::MO_DLLIMPORT;
+unsigned char
+X86Subtarget::classifyGlobalReference(const GlobalValue *GV) const {
+  return classifyGlobalReference(GV, *GV->getParent());
+}
 
-  bool isDef = GV->isStrongDefinitionForLinker();
-
-  // X86-64 in PIC mode.
-  if (isPICStyleRIPRel()) {
-    // Large model never uses stubs.
-    if (TM.getCodeModel() == CodeModel::Large)
-      return X86II::MO_NO_FLAG;
-
-    if (isTargetDarwin()) {
-      // If symbol visibility is hidden, the extra load is not needed if
-      // target is x86-64 or the symbol is definitely defined in the current
-      // translation unit.
-      if (GV->hasDefaultVisibility() && !isDef)
-        return X86II::MO_GOTPCREL;
-    } else if (!isTargetWin64()) {
-      assert(isTargetELF() && "Unknown rip-relative target");
-
-      // Extra load is needed for all externally visible.
-      if (!GV->hasLocalLinkage() && GV->hasDefaultVisibility())
-        return X86II::MO_GOTPCREL;
-    }
-
+unsigned char
+X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
+  // 64 bits can use %rip addressing for anything local.
+  if (is64Bit())
     return X86II::MO_NO_FLAG;
-  }
 
-  if (isPICStyleGOT()) {   // 32-bit ELF targets.
-    // Extra load is needed for all externally visible.
-    if (GV->hasLocalLinkage() || GV->hasHiddenVisibility())
-      return X86II::MO_GOTOFF;
-    return X86II::MO_GOT;
-  }
+  // If this is for a position dependent executable, the static linker can
+  // figure it out.
+  if (!isPositionIndependent())
+    return X86II::MO_NO_FLAG;
 
-  if (isPICStyleStubPIC()) {  // Darwin/32 in PIC mode.
-    // Determine whether we have a stub reference and/or whether the reference
-    // is relative to the PIC base or not.
+  // The COFF dynamic linker just patches the executable sections.
+  if (isTargetCOFF())
+    return X86II::MO_NO_FLAG;
 
-    // If this is a strong reference to a definition, it is definitely not
-    // through a stub.
-    if (isDef)
-      return X86II::MO_PIC_BASE_OFFSET;
-
-    // Unless we have a symbol with hidden visibility, we have to go through a
-    // normal $non_lazy_ptr stub because this symbol might be resolved late.
-    if (!GV->hasHiddenVisibility())  // Non-hidden $non_lazy_ptr reference.
+  if (isTargetDarwin()) {
+    // 32 bit macho has no relocation for a-b if a is undefined, even if
+    // b is in the section that is being relocated.
+    // This means we have to use o load even for GVs that are known to be
+    // local to the dso.
+    if (GV && (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
       return X86II::MO_DARWIN_NONLAZY_PIC_BASE;
 
-    // If symbol visibility is hidden, we have a stub for common symbol
-    // references and external declarations.
-    if (GV->isDeclarationForLinker() || GV->hasCommonLinkage()) {
-      // Hidden $non_lazy_ptr reference.
-      return X86II::MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE;
-    }
-
-    // Otherwise, no stub.
     return X86II::MO_PIC_BASE_OFFSET;
   }
 
-  if (isPICStyleStubNoDynamic()) {  // Darwin/32 in -mdynamic-no-pic mode.
-    // Determine whether we have a stub reference.
+  return X86II::MO_GOTOFF;
+}
 
-    // If this is a strong reference to a definition, it is definitely not
-    // through a stub.
-    if (isDef)
-      return X86II::MO_NO_FLAG;
+unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
+                                                    const Module &M) const {
+  // Large model never uses stubs.
+  if (TM.getCodeModel() == CodeModel::Large)
+    return X86II::MO_NO_FLAG;
 
-    // Unless we have a symbol with hidden visibility, we have to go through a
-    // normal $non_lazy_ptr stub because this symbol might be resolved late.
-    if (!GV->hasHiddenVisibility())  // Non-hidden $non_lazy_ptr reference.
+  if (TM.shouldAssumeDSOLocal(M, GV))
+    return classifyLocalReference(GV);
+
+  if (isTargetCOFF())
+    return X86II::MO_DLLIMPORT;
+
+  if (is64Bit())
+    return X86II::MO_GOTPCREL;
+
+  if (isTargetDarwin()) {
+    if (!isPositionIndependent())
       return X86II::MO_DARWIN_NONLAZY;
+    return X86II::MO_DARWIN_NONLAZY_PIC_BASE;
+  }
 
-    // Otherwise, no stub.
+  return X86II::MO_GOT;
+}
+
+unsigned char
+X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV) const {
+  return classifyGlobalFunctionReference(GV, *GV->getParent());
+}
+
+unsigned char
+X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
+                                              const Module &M) const {
+  if (TM.shouldAssumeDSOLocal(M, GV))
+    return X86II::MO_NO_FLAG;
+
+  assert(!isTargetCOFF());
+
+  if (isTargetELF())
+    return X86II::MO_PLT;
+
+  if (is64Bit()) {
+    auto *F = dyn_cast_or_null<Function>(GV);
+    if (F && F->hasFnAttribute(Attribute::NonLazyBind))
+      // If the function is marked as non-lazy, generate an indirect call
+      // which loads from the GOT directly. This avoids runtime overhead
+      // at the cost of eager binding (and one extra byte of encoding).
+      return X86II::MO_GOTPCREL;
     return X86II::MO_NO_FLAG;
   }
 
-  // Direct static reference to global.
   return X86II::MO_NO_FLAG;
 }
-
 
 /// This function returns the name of a function which has an interface like
 /// the non-standard bzero function, if such a function exists on the
@@ -165,7 +159,7 @@ bool X86Subtarget::hasSinCos() const {
 }
 
 /// Return true if the subtarget allows calls to immediate address.
-bool X86Subtarget::IsLegalToCallImmediateAddr(const TargetMachine &TM) const {
+bool X86Subtarget::isLegalToCallImmediateAddr() const {
   // FIXME: I386 PE/COFF supports PC relative calls using IMAGE_REL_I386_REL32
   // but WinCOFFObjectWriter::RecordRelocation cannot emit them.  Once it does,
   // the following check for Win32 should be removed.
@@ -227,18 +221,19 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   assert((!In64BitMode || HasX86_64) &&
          "64-bit code requested on a subtarget that doesn't support it!");
 
-  // Stack alignment is 16 bytes on Darwin, Linux and Solaris (both
+  // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD and Solaris (both
   // 32 and 64 bit) and for all 64-bit targets.
   if (StackAlignOverride)
     stackAlignment = StackAlignOverride;
   else if (isTargetDarwin() || isTargetLinux() || isTargetSolaris() ||
-           In64BitMode)
+           isTargetKFreeBSD() || In64BitMode)
     stackAlignment = 16;
 }
 
 void X86Subtarget::initializeEnvironment() {
   X86SSELevel = NoSSE;
   X863DNowLevel = NoThreeDNow;
+  HasX87 = false;
   HasCMov = false;
   HasX86_64 = false;
   HasPOPCNT = false;
@@ -262,6 +257,7 @@ void X86Subtarget::initializeEnvironment() {
   HasBMI = false;
   HasBMI2 = false;
   HasVBMI = false;
+  HasIFMA = false;
   HasRTM = false;
   HasHLE = false;
   HasERI = false;
@@ -276,6 +272,7 @@ void X86Subtarget::initializeEnvironment() {
   HasPRFCHW = false;
   HasRDSEED = false;
   HasLAHFSAHF = false;
+  HasMWAITX = false;
   HasMPX = false;
   IsBTMemSlow = false;
   IsSHLDSlow = false;
@@ -284,6 +281,9 @@ void X86Subtarget::initializeEnvironment() {
   HasSSEUnalignedMem = false;
   HasCmpxchg16b = false;
   UseLeaForSP = false;
+  HasFastPartialYMMWrite = false;
+  HasFastScalarFSQRT = false;
+  HasFastVectorFSQRT = false;
   HasSlowDivide32 = false;
   HasSlowDivide64 = false;
   PadShortFunctions = false;
@@ -304,11 +304,11 @@ X86Subtarget &X86Subtarget::initializeSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
-X86Subtarget::X86Subtarget(const Triple &TT, const std::string &CPU,
-                           const std::string &FS, const X86TargetMachine &TM,
+X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
+                           const X86TargetMachine &TM,
                            unsigned StackAlignOverride)
     : X86GenSubtargetInfo(TT, CPU, FS), X86ProcFamily(Others),
-      PICStyle(PICStyles::None), TargetTriple(TT),
+      PICStyle(PICStyles::None), TM(TM), TargetTriple(TT),
       StackAlignOverride(StackAlignOverride),
       In64BitMode(TargetTriple.getArch() == Triple::x86_64),
       In32BitMode(TargetTriple.getArch() == Triple::x86 &&
@@ -318,24 +318,16 @@ X86Subtarget::X86Subtarget(const Triple &TT, const std::string &CPU,
       TSInfo(), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
       TLInfo(TM, *this), FrameLowering(*this, getStackAlignment()) {
   // Determine the PICStyle based on the target selected.
-  if (TM.getRelocationModel() == Reloc::Static) {
-    // Unless we're in PIC or DynamicNoPIC mode, set the PIC style to None.
+  if (!isPositionIndependent())
     setPICStyle(PICStyles::None);
-  } else if (is64Bit()) {
-    // PIC in 64 bit mode is always rip-rel.
+  else if (is64Bit())
     setPICStyle(PICStyles::RIPRel);
-  } else if (isTargetCOFF()) {
+  else if (isTargetCOFF())
     setPICStyle(PICStyles::None);
-  } else if (isTargetDarwin()) {
-    if (TM.getRelocationModel() == Reloc::PIC_)
-      setPICStyle(PICStyles::StubPIC);
-    else {
-      assert(TM.getRelocationModel() == Reloc::DynamicNoPIC);
-      setPICStyle(PICStyles::StubDynamicNoPIC);
-    }
-  } else if (isTargetELF()) {
+  else if (isTargetDarwin())
+    setPICStyle(PICStyles::StubPIC);
+  else if (isTargetELF())
     setPICStyle(PICStyles::GOT);
-  }
 }
 
 bool X86Subtarget::enableEarlyIfConversion() const {

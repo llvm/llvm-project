@@ -1,30 +1,75 @@
 // Basic handling of line counts.
 // RUN: llvm-profdata merge %S/Inputs/lineExecutionCounts.proftext -o %t.profdata
 
-// before any coverage              // WHOLE-FILE:      | [[@LINE]]|// before
-                                    // FILTER-NOT:      | [[@LINE-1]]|// before
-int main() {                             // CHECK:   161| [[@LINE]]|int main(
-  int x = 0;                             // CHECK:   161| [[@LINE]]|  int x
-                                         // CHECK:   161| [[@LINE]]|
-  if (x) {                               // CHECK:     0| [[@LINE]]|  if (x)
-    x = 0;                               // CHECK:     0| [[@LINE]]|    x = 0
-  } else {                               // CHECK:   161| [[@LINE]]|  } else
-    x = 1;                               // CHECK:   161| [[@LINE]]|    x = 1
-  }                                      // CHECK:   161| [[@LINE]]|  }
-                                         // CHECK:   161| [[@LINE]]|
-  for (int i = 0; i < 100; ++i) {        // CHECK: 16.2k| [[@LINE]]|  for (
-    x = 1;                               // CHECK: 16.1k| [[@LINE]]|    x = 1
-  }                                      // CHECK: 16.1k| [[@LINE]]|  }
-                                         // CHECK:   161| [[@LINE]]|
-  x = x < 10 ? x + 1 : x - 1;            // CHECK:   161| [[@LINE]]|  x =
-  x = x > 10 ?                           // CHECK:   161| [[@LINE]]|  x =
-        x - 1:                           // CHECK:     0| [[@LINE]]|        x
-        x + 1;                           // CHECK:   161| [[@LINE]]|        x
-                                         // CHECK:   161| [[@LINE]]|
-  return 0;                              // CHECK:   161| [[@LINE]]|  return
-}                                        // CHECK:   161| [[@LINE]]|}
-// after coverage                   // WHOLE-FILE:      | [[@LINE]]|// after
-                                    // FILTER-NOT:      | [[@LINE-1]]|// after
+// before any coverage              // WHOLE-FILE: [[@LINE]]|      |// before
+                                    // FILTER-NOT: [[@LINE-1]]|    |// before
+int main() {                              // TEXT: [[@LINE]]|   161|int main(
+  int x = 0;                              // TEXT: [[@LINE]]|   161|  int x
+                                          // TEXT: [[@LINE]]|   161|
+  if (x) {                                // TEXT: [[@LINE]]|     0|  if (x)
+    x = 0;                                // TEXT: [[@LINE]]|     0|    x = 0
+  } else {                                // TEXT: [[@LINE]]|   161|  } else
+    x = 1;                                // TEXT: [[@LINE]]|   161|    x = 1
+  }                                       // TEXT: [[@LINE]]|   161|  }
+                                          // TEXT: [[@LINE]]|   161|
+  for (int i = 0; i < 100; ++i) {         // TEXT: [[@LINE]]| 16.2k|  for (
+    x = 1;                                // TEXT: [[@LINE]]| 16.1k|    x = 1
+  }                                       // TEXT: [[@LINE]]| 16.1k|  }
+                                          // TEXT: [[@LINE]]|   161|
+  x = x < 10 ? x + 1 : x - 1;             // TEXT: [[@LINE]]|   161|  x =
+  x = x > 10 ?                            // TEXT: [[@LINE]]|   161|  x =
+        x - 1:                            // TEXT: [[@LINE]]|     0|        x
+        x + 1;                            // TEXT: [[@LINE]]|   161|        x
+                                          // TEXT: [[@LINE]]|   161|
+  return 0;                               // TEXT: [[@LINE]]|   161|  return
+}                                         // TEXT: [[@LINE]]|   161|}
+// after coverage                   // WHOLE-FILE: [[@LINE]]|      |// after
+                                    // FILTER-NOT: [[@LINE-1]]|    |// after
 
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -filename-equivalence %s | FileCheck -check-prefix=CHECK -check-prefix=WHOLE-FILE %s
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -filename-equivalence -name=main %s | FileCheck -check-prefix=CHECK -check-prefix=FILTER %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -filename-equivalence %s | FileCheck -check-prefixes=TEXT,WHOLE-FILE %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -filename-equivalence -name=main %s | FileCheck -check-prefixes=TEXT,FILTER %s
+
+// Test -output-dir.
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -o %t.dir -instr-profile %t.profdata -filename-equivalence %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -output-dir %t.dir -instr-profile %t.profdata -filename-equivalence -name=main %s
+// RUN: FileCheck -check-prefixes=TEXT,WHOLE-FILE -input-file %t.dir/coverage/tmp/showLineExecutionCounts.cpp.txt %s
+// RUN: FileCheck -check-prefixes=TEXT,FILTER -input-file %t.dir/functions.txt %s
+//
+// Test index creation.
+// RUN: FileCheck -check-prefix=INDEX -input-file %t.dir/index.txt %s
+// INDEX: showLineExecutionCounts.cpp.txt
+//
+// Test html output.
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.html.dir -instr-profile %t.profdata -filename-equivalence %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -format html -o %t.html.dir -instr-profile %t.profdata -filename-equivalence -name=main %s
+// RUN: FileCheck -check-prefixes=HTML,HTML-WHOLE-FILE -input-file %t.html.dir/coverage/tmp/showLineExecutionCounts.cpp.html %s
+// RUN: FileCheck -check-prefixes=HTML,HTML-FILTER -input-file %t.html.dir/functions.html %s
+//
+// HTML-WHOLE-FILE: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before
+// HTML-FILTER-NOT: <td class='line-number'><a name='L[[@LINE-45]]'><pre>[[@LINE-45]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// before
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>int main() {
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  int x = 0
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre><span class='red'>  if (x) {
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre>
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre><span class='red'>  }</span>
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>    x = 1;
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  }
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>16.2k</pre></td><td class='code'><pre>  for (int i = 0; i &lt; 100; ++i)
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>16.1k</pre></td><td class='code'><pre>    x = 1;
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>16.1k</pre></td><td class='code'><pre>  }
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  x = x &lt; 10
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  x = x &gt; 10
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'><pre>0</pre></td><td class='code'><pre><span class='red'>        x - 1:
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>        x + 1;
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>  return 0;
+// HTML: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='covered-line'><pre>161</pre></td><td class='code'><pre>}
+// HTML-WHOLE-FILE: <td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// after
+// HTML-FILTER-NOT: <td class='line-number'><a name='L[[@LINE-45]]'><pre>[[@LINE-45]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// after
+
+// RUN: llvm-cov export %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -name=main 2>/dev/null > %t.export.json
+// RUN: FileCheck -input-file %t.export.json %S/Inputs/lineExecutionCounts.json
+// RUN: cat %t.export.json | %python -c "import json, sys; json.loads(sys.stdin.read())"

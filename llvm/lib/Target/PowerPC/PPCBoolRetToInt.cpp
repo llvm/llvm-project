@@ -66,7 +66,10 @@ class PPCBoolRetToInt : public FunctionPass {
     while (!WorkList.empty()) {
       Value *Curr = WorkList.back();
       WorkList.pop_back();
-      if (User *CurrUser = dyn_cast<User>(Curr))
+      User *CurrUser = dyn_cast<User>(Curr);
+      // Operands of CallInst are skipped because they may not be Bool type,
+      // and their positions are defined by ABI.
+      if (CurrUser && !isa<CallInst>(Curr))
         for (auto &Op : CurrUser->operands())
           if (Defs.insert(Op).second)
             WorkList.push_back(Op);
@@ -119,7 +122,7 @@ class PPCBoolRetToInt : public FunctionPass {
             Promotable.insert(P);
 
     SmallVector<const PHINode *, 8> ToRemove;
-    for (const auto &P : Promotable) {
+    for (const PHINode *P : Promotable) {
       // Condition 2 and 3
       auto IsValidUser = [] (const Value *V) -> bool {
         return isa<ReturnInst>(V) || isa<CallInst>(V) || isa<PHINode>(V) ||
@@ -131,8 +134,7 @@ class PPCBoolRetToInt : public FunctionPass {
       };
       const auto &Users = P->users();
       const auto &Operands = P->operands();
-      if (!std::all_of(Users.begin(), Users.end(), IsValidUser) ||
-          !std::all_of(Operands.begin(), Operands.end(), IsValidOperand))
+      if (!all_of(Users, IsValidUser) || !all_of(Operands, IsValidOperand))
         ToRemove.push_back(P);
     }
 
@@ -146,12 +148,11 @@ class PPCBoolRetToInt : public FunctionPass {
         Promotable.erase(User);
       ToRemove.clear();
 
-      for (const auto &P : Promotable) {
+      for (const PHINode *P : Promotable) {
         // Condition 4 and 5
         const auto &Users = P->users();
         const auto &Operands = P->operands();
-        if (!std::all_of(Users.begin(), Users.end(), IsPromotable) ||
-            !std::all_of(Operands.begin(), Operands.end(), IsPromotable))
+        if (!all_of(Users, IsPromotable) || !all_of(Operands, IsPromotable))
           ToRemove.push_back(P);
       }
     }
@@ -168,6 +169,9 @@ class PPCBoolRetToInt : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) {
+    if (skipFunction(F))
+      return false;
+
     PHINodeSet PromotablePHINodes = getPromotablePHINodes(F);
     B2IMap Bool2IntMap;
     bool Changed = false;
@@ -193,17 +197,18 @@ class PPCBoolRetToInt : public FunctionPass {
     auto Defs = findAllDefs(U);
 
     // If the values are all Constants or Arguments, don't bother
-    if (!std::any_of(Defs.begin(), Defs.end(), isa<Instruction, Value *>))
+    if (none_of(Defs, isa<Instruction, Value *>))
       return false;
 
-    // Presently, we only know how to handle PHINode, Constant, and Arguments.
-    // Potentially, bitwise operations (AND, OR, XOR, NOT) and sign extension
-    // could also be handled in the future.
-    for (const auto &V : Defs)
-      if (!isa<PHINode>(V) && !isa<Constant>(V) && !isa<Argument>(V))
+    // Presently, we only know how to handle PHINode, Constant, Arguments and
+    // CallInst. Potentially, bitwise operations (AND, OR, XOR, NOT) and sign
+    // extension could also be handled in the future.
+    for (Value *V : Defs)
+      if (!isa<PHINode>(V) && !isa<Constant>(V) &&
+          !isa<Argument>(V) && !isa<CallInst>(V))
         return false;
 
-    for (const auto &V : Defs)
+    for (Value *V : Defs)
       if (const PHINode *P = dyn_cast<PHINode>(V))
         if (!PromotablePHINodes.count(P))
           return false;
@@ -214,17 +219,19 @@ class PPCBoolRetToInt : public FunctionPass {
       ++NumBoolCallPromotion;
     ++NumBoolToIntPromotion;
 
-    for (const auto &V : Defs)
+    for (Value *V : Defs)
       if (!BoolToIntMap.count(V))
         BoolToIntMap[V] = translate(V);
 
-    // Replace the operands of the translated instructions. There were set to
+    // Replace the operands of the translated instructions. They were set to
     // zero in the translate function.
     for (auto &Pair : BoolToIntMap) {
       User *First = dyn_cast<User>(Pair.first);
       User *Second = dyn_cast<User>(Pair.second);
       assert((!First || Second) && "translated from user to non-user!?");
-      if (First)
+      // Operands of CallInst are skipped because they may not be Bool type,
+      // and their positions are defined by ABI.
+      if (First && !isa<CallInst>(First))
         for (unsigned i = 0; i < First->getNumOperands(); ++i)
           Second->setOperand(i, BoolToIntMap[First->getOperand(i)]);
     }

@@ -75,6 +75,10 @@ OptLevelO2("O2",
            cl::desc("Optimization level 2. Identical to 'opt -O2'"));
 
 static cl::opt<bool>
+OptLevelOs("Os",
+           cl::desc("Like -O2 with extra optimizations for size. Similar to clang -Os"));
+
+static cl::opt<bool>
 OptLevelO3("O3",
            cl::desc("Optimization level 3. Identical to 'opt -O3'"));
 
@@ -113,7 +117,7 @@ void initializePollyPasses(llvm::PassRegistry &Registry);
 
 int main(int argc, char **argv) {
 #ifndef DEBUG_BUGPOINT
-  llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 #endif
@@ -143,7 +147,7 @@ int main(int argc, char **argv) {
   sys::SetInterruptFunction(BugpointInterruptFunction);
 #endif
 
-  LLVMContext& Context = getGlobalContext();
+  LLVMContext Context;
   // If we have an override, set it and then track the triple we want Modules
   // to use.
   if (!OverrideTriple.empty()) {
@@ -176,8 +180,8 @@ int main(int argc, char **argv) {
     PassManagerBuilder Builder;
     if (OptLevelO1)
       Builder.Inliner = createAlwaysInlinerPass();
-    else if (OptLevelO2)
-      Builder.Inliner = createFunctionInliningPass(225);
+    else if (OptLevelOs || OptLevelO2)
+      Builder.Inliner = createFunctionInliningPass(2, OptLevelOs ? 1 : 0);
     else
       Builder.Inliner = createFunctionInliningPass(275);
     Builder.populateFunctionPassManager(PM);

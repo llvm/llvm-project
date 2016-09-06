@@ -1,4 +1,4 @@
-# RUN: not llc -march=x86-64 -start-after machine-sink -stop-after machine-sink -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 # This test ensures that the MIR parser reports an error when it encounters an
 # unknown register class.
 
@@ -15,7 +15,7 @@ name:            test
 isSSA:           true
 tracksRegLiveness: true
 registers:
-  # CHECK: [[@LINE+1]]:20: use of undefined register class 'gr3200'
+  # CHECK: [[@LINE+1]]:20: use of undefined register class or register bank 'gr3200'
   - {id: 0, class: 'gr3200'}
 body: |
   bb.0.entry:

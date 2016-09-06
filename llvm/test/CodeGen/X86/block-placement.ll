@@ -7,15 +7,15 @@ define i32 @test_ifchains(i32 %i, i32* %a, i32 %b) {
 ; that is not expected to run.
 ; CHECK-LABEL: test_ifchains:
 ; CHECK: %entry
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %else1
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %else2
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %else3
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %else4
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %exit
 ; CHECK: %then1
 ; CHECK: %then2
@@ -81,11 +81,11 @@ define i32 @test_loop_cold_blocks(i32 %i, i32* %a) {
 ; Check that we sink cold loop blocks after the hot loop body.
 ; CHECK-LABEL: test_loop_cold_blocks:
 ; CHECK: %entry
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %unlikely1
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %unlikely2
-; CHECK: .align
+; CHECK: .p2align
 ; CHECK: %body1
 ; CHECK: %body2
 ; CHECK: %body3
@@ -242,7 +242,7 @@ define i32 @test_loop_align(i32 %i, i32* %a) {
 ; pass.
 ; CHECK-LABEL: test_loop_align:
 ; CHECK: %entry
-; CHECK: .align [[ALIGN:[0-9]+]],
+; CHECK: .p2align [[ALIGN:[0-9]+]],
 ; CHECK-NEXT: %body
 ; CHECK: %exit
 
@@ -267,11 +267,11 @@ define i32 @test_nested_loop_align(i32 %i, i32* %a, i32* %b) {
 ; Check that we provide nested loop body alignment.
 ; CHECK-LABEL: test_nested_loop_align:
 ; CHECK: %entry
-; CHECK: .align [[ALIGN]],
+; CHECK: .p2align [[ALIGN]],
 ; CHECK-NEXT: %loop.body.1
-; CHECK: .align [[ALIGN]],
+; CHECK: .p2align [[ALIGN]],
 ; CHECK-NEXT: %inner.loop.body
-; CHECK-NOT: .align
+; CHECK-NOT: .p2align
 ; CHECK: %exit
 
 entry:
@@ -463,26 +463,24 @@ exit:
 }
 
 define void @fpcmp_unanalyzable_branch(i1 %cond) {
-; This function's CFG contains an unanalyzable branch that is likely to be
-; split due to having a different high-probability predecessor.
-; CHECK: fpcmp_unanalyzable_branch
-; CHECK: %entry
-; CHECK: %exit
-; CHECK-NOT: %if.then
-; CHECK-NOT: %if.end
-; CHECK-NOT: jne
-; CHECK-NOT: jnp
-; CHECK: jne
-; CHECK-NEXT: jnp
-; CHECK-NEXT: %if.then
+; This function's CFG contains an once-unanalyzable branch (une on floating
+; points). As now it becomes analyzable, we should get best layout in which each
+; edge in 'entry' -> 'entry.if.then_crit_edge' -> 'if.then' -> 'if.end' is
+; fall-through.
+; CHECK-LABEL: fpcmp_unanalyzable_branch:
+; CHECK:       # BB#0: # %entry
+; CHECK:       # BB#1: # %entry.if.then_crit_edge
+; CHECK:       .LBB10_4: # %if.then
+; CHECK:       .LBB10_5: # %if.end
+; CHECK:       # BB#3: # %exit
+; CHECK:       jne .LBB10_4
+; CHECK-NEXT:  jnp .LBB10_5
+; CHECK-NEXT:  jmp .LBB10_4
 
 entry:
 ; Note that this branch must be strongly biased toward
 ; 'entry.if.then_crit_edge' to ensure that we would try to form a chain for
-; 'entry' -> 'entry.if.then_crit_edge' -> 'if.then'. It is the last edge in that
-; chain which would violate the unanalyzable branch in 'exit', but we won't even
-; try this trick unless 'if.then' is believed to almost always be reached from
-; 'entry.if.then_crit_edge'.
+; 'entry' -> 'entry.if.then_crit_edge' -> 'if.then' -> 'if.end'.
   br i1 %cond, label %entry.if.then_crit_edge, label %lor.lhs.false, !prof !1
 
 entry.if.then_crit_edge:
@@ -494,7 +492,7 @@ lor.lhs.false:
 
 exit:
   %cmp.i = fcmp une double 0.000000e+00, undef
-  br i1 %cmp.i, label %if.then, label %if.end
+  br i1 %cmp.i, label %if.then, label %if.end, !prof !3
 
 if.then:
   %0 = phi i8 [ %.pre14, %entry.if.then_crit_edge ], [ undef, %exit ]
@@ -507,6 +505,7 @@ if.end:
 }
 
 !1 = !{!"branch_weights", i32 1000, i32 1}
+!3 = !{!"branch_weights", i32 1, i32 1000}
 
 declare i32 @f()
 declare i32 @g()
@@ -604,10 +603,8 @@ define void @test_unnatural_cfg_backwards_inner_loop() {
 ;
 ; CHECK: test_unnatural_cfg_backwards_inner_loop
 ; CHECK: %entry
-; CHECK: [[BODY:# BB#[0-9]+]]:
 ; CHECK: %loop2b
 ; CHECK: %loop1
-; CHECK: %loop2a
 
 entry:
   br i1 undef, label %loop2a, label %body
@@ -665,11 +662,14 @@ define void @unanalyzable_branch_to_best_succ(i1 %cond) {
 ; Ensure that we can handle unanalyzable branches where the destination block
 ; gets selected as the optimal successor to merge.
 ;
+; This branch is now analyzable and hence the destination block becomes the
+; hotter one. The right order is entry->bar->exit->foo.
+;
 ; CHECK: unanalyzable_branch_to_best_succ
 ; CHECK: %entry
-; CHECK: %foo
 ; CHECK: %bar
 ; CHECK: %exit
+; CHECK: %foo
 
 entry:
   ; Bias this branch toward bar to ensure we form that chain.
@@ -943,18 +943,18 @@ define void @benchmark_heapsort(i32 %n, double* nocapture %ra) {
 ; CHECK: @benchmark_heapsort
 ; CHECK: %entry
 ; First rotated loop top.
-; CHECK: .align
+; CHECK: .p2align
 ; CHECK: %while.end
 ; CHECK: %for.cond
 ; CHECK: %if.then
 ; CHECK: %if.else
 ; CHECK: %if.end10
 ; Second rotated loop top
-; CHECK: .align
+; CHECK: .p2align
 ; CHECK: %if.then24
 ; CHECK: %while.cond.outer
 ; Third rotated loop top
-; CHECK: .align
+; CHECK: .p2align
 ; CHECK: %while.cond
 ; CHECK: %while.body
 ; CHECK: %land.lhs.true
@@ -1083,3 +1083,374 @@ exit:
   %ret = phi i32 [ %val1, %then ], [ %val2, %else ]
   ret i32 %ret
 }
+
+; Make sure we put landingpads out of the way.
+declare i32 @pers(...)
+
+declare i32 @foo();
+
+declare i32 @bar();
+
+define i32 @test_lp(i32 %a) personality i32 (...)* @pers {
+; CHECK-LABEL: test_lp:
+; CHECK: %entry
+; CHECK: %hot
+; CHECK: %then
+; CHECK: %cold
+; CHECK: %coldlp
+; CHECK: %hotlp
+; CHECK: %lpret
+entry:
+  %0 = icmp sgt i32 %a, 1
+  br i1 %0, label %hot, label %cold, !prof !4
+
+hot:
+  %1 = invoke i32 @foo()
+          to label %then unwind label %hotlp
+
+cold:
+  %2 = invoke i32 @bar()
+          to label %then unwind label %coldlp
+
+then:
+  %3 = phi i32 [ %1, %hot ], [ %2, %cold ]
+  ret i32 %3
+
+hotlp:
+  %4 = landingpad { i8*, i32 }
+          cleanup
+  br label %lpret
+
+coldlp:
+  %5 = landingpad { i8*, i32 }
+          cleanup
+  br label %lpret
+
+lpret:
+  %6 = phi i32 [-1, %hotlp], [-2, %coldlp]
+  %7 = add i32 %6, 42
+  ret i32 %7
+}
+
+!4 = !{!"branch_weights", i32 65536, i32 0}
+
+; Make sure that ehpad are scheduled from the least probable one
+; to the most probable one. See selectBestCandidateBlock as to why.
+declare void @clean();
+
+define void @test_flow_unwind() personality i32 (...)* @pers {
+; CHECK-LABEL: test_flow_unwind:
+; CHECK: %entry
+; CHECK: %then
+; CHECK: %exit
+; CHECK: %innerlp
+; CHECK: %outerlp
+; CHECK: %outercleanup
+entry:
+  %0 = invoke i32 @foo()
+          to label %then unwind label %outerlp
+
+then:
+  %1 = invoke i32 @bar()
+          to label %exit unwind label %innerlp
+
+exit:
+  ret void
+
+innerlp:
+  %2 = landingpad { i8*, i32 }
+          cleanup
+  br label %innercleanup
+
+outerlp:
+  %3 = landingpad { i8*, i32 }
+          cleanup
+  br label %outercleanup
+
+outercleanup:
+  %4 = phi { i8*, i32 } [%2, %innercleanup], [%3, %outerlp]
+  call void @clean()
+  resume { i8*, i32 } %4
+
+innercleanup:
+  call void @clean()
+  br label %outercleanup
+}
+
+declare void @hot_function()
+
+define void @test_hot_branch(i32* %a) {
+; Test that a hot branch that has a probability a little larger than 80% will
+; break CFG constrains when doing block placement.
+; CHECK-LABEL: test_hot_branch:
+; CHECK: %entry
+; CHECK: %then
+; CHECK: %exit
+; CHECK: %else
+
+entry:
+  %gep1 = getelementptr i32, i32* %a, i32 1
+  %val1 = load i32, i32* %gep1
+  %cond1 = icmp ugt i32 %val1, 1
+  br i1 %cond1, label %then, label %else, !prof !5
+
+then:
+  call void @hot_function()
+  br label %exit
+
+else:
+  call void @cold_function()
+  br label %exit
+
+exit:
+  call void @hot_function()
+  ret void
+}
+
+define void @test_hot_branch_profile(i32* %a) !prof !6 {
+; Test that a hot branch that has a probability a little larger than 50% will
+; break CFG constrains when doing block placement when profile is available.
+; CHECK-LABEL: test_hot_branch_profile:
+; CHECK: %entry
+; CHECK: %then
+; CHECK: %exit
+; CHECK: %else
+
+entry:
+  %gep1 = getelementptr i32, i32* %a, i32 1
+  %val1 = load i32, i32* %gep1
+  %cond1 = icmp ugt i32 %val1, 1
+  br i1 %cond1, label %then, label %else, !prof !7
+
+then:
+  call void @hot_function()
+  br label %exit
+
+else:
+  call void @cold_function()
+  br label %exit
+
+exit:
+  call void @hot_function()
+  ret void
+}
+
+define void @test_hot_branch_triangle_profile(i32* %a) !prof !6 {
+; Test that a hot branch that has a probability a little larger than 80% will
+; break triangle shaped CFG constrains when doing block placement if profile
+; is present.
+; CHECK-LABEL: test_hot_branch_triangle_profile:
+; CHECK: %entry
+; CHECK: %exit
+; CHECK: %then
+
+entry:
+  %gep1 = getelementptr i32, i32* %a, i32 1
+  %val1 = load i32, i32* %gep1
+  %cond1 = icmp ugt i32 %val1, 1
+  br i1 %cond1, label %exit, label %then, !prof !5
+
+then:
+  call void @hot_function()
+  br label %exit
+
+exit:
+  call void @hot_function()
+  ret void
+}
+
+define void @test_hot_branch_triangle_profile_topology(i32* %a) !prof !6 {
+; Test that a hot branch that has a probability between 50% and 66% will not
+; break triangle shaped CFG constrains when doing block placement if profile
+; is present.
+; CHECK-LABEL: test_hot_branch_triangle_profile_topology:
+; CHECK: %entry
+; CHECK: %then
+; CHECK: %exit
+
+entry:
+  %gep1 = getelementptr i32, i32* %a, i32 1
+  %val1 = load i32, i32* %gep1
+  %cond1 = icmp ugt i32 %val1, 1
+  br i1 %cond1, label %exit, label %then, !prof !7
+
+then:
+  call void @hot_function()
+  br label %exit
+
+exit:
+  call void @hot_function()
+  ret void
+}
+
+declare void @a()
+declare void @b()
+
+define void @test_forked_hot_diamond(i32* %a) {
+; Test that a hot-branch with probability > 80% followed by a 50/50 branch
+; will not place the cold predecessor if the probability for the fallthrough
+; remains above 80%
+; CHECK-LABEL: test_forked_hot_diamond
+; CHECK: %entry
+; CHECK: %then
+; CHECK: %fork1
+; CHECK: %else
+; CHECK: %fork2
+; CHECK: %exit
+entry:
+  %gep1 = getelementptr i32, i32* %a, i32 1
+  %val1 = load i32, i32* %gep1
+  %cond1 = icmp ugt i32 %val1, 1
+  br i1 %cond1, label %then, label %else, !prof !5
+
+then:
+  call void @hot_function()
+  %gep2 = getelementptr i32, i32* %a, i32 2
+  %val2 = load i32, i32* %gep2
+  %cond2 = icmp ugt i32 %val2, 2
+  br i1 %cond2, label %fork1, label %fork2, !prof !8
+
+else:
+  call void @cold_function()
+  %gep3 = getelementptr i32, i32* %a, i32 3
+  %val3 = load i32, i32* %gep3
+  %cond3 = icmp ugt i32 %val3, 3
+  br i1 %cond3, label %fork1, label %fork2, !prof !8
+
+fork1:
+  call void @a()
+  br label %exit
+
+fork2:
+  call void @b()
+  br label %exit
+
+exit:
+  call void @hot_function()
+  ret void
+}
+
+define void @test_forked_hot_diamond_gets_cold(i32* %a) {
+; Test that a hot-branch with probability > 80% followed by a 50/50 branch
+; will place the cold predecessor if the probability for the fallthrough
+; falls below 80%
+; The probability for both branches is 85%. For then2 vs else1
+; this results in a compounded probability of 83%.
+; Neither then2->fork1 nor then2->fork2 has a large enough relative
+; probability to break the CFG.
+; Relative probs:
+; then2 -> fork1 vs else1 -> fork1 = 71%
+; then2 -> fork2 vs else2 -> fork2 = 74%
+; CHECK-LABEL: test_forked_hot_diamond_gets_cold
+; CHECK: %entry
+; CHECK: %then1
+; CHECK: %then2
+; CHECK: %else1
+; CHECK: %fork1
+; CHECK: %else2
+; CHECK: %fork2
+; CHECK: %exit
+entry:
+  %gep1 = getelementptr i32, i32* %a, i32 1
+  %val1 = load i32, i32* %gep1
+  %cond1 = icmp ugt i32 %val1, 1
+  br i1 %cond1, label %then1, label %else1, !prof !9
+
+then1:
+  call void @hot_function()
+  %gep2 = getelementptr i32, i32* %a, i32 2
+  %val2 = load i32, i32* %gep2
+  %cond2 = icmp ugt i32 %val2, 2
+  br i1 %cond2, label %then2, label %else2, !prof !9
+
+else1:
+  call void @cold_function()
+  br label %fork1
+
+then2:
+  call void @hot_function()
+  %gep3 = getelementptr i32, i32* %a, i32 3
+  %val3 = load i32, i32* %gep2
+  %cond3 = icmp ugt i32 %val2, 3
+  br i1 %cond3, label %fork1, label %fork2, !prof !8
+
+else2:
+  call void @cold_function()
+  br label %fork2
+
+fork1:
+  call void @a()
+  br label %exit
+
+fork2:
+  call void @b()
+  br label %exit
+
+exit:
+  call void @hot_function()
+  ret void
+}
+
+define void @test_forked_hot_diamond_stays_hot(i32* %a) {
+; Test that a hot-branch with probability > 88.88% (1:8) followed by a 50/50
+; branch will not place the cold predecessor as the probability for the
+; fallthrough stays above 80%
+; (1:8) followed by (1:1) is still (1:4)
+; Here we use 90% probability because two in a row
+; have a 89 % probability vs the original branch.
+; CHECK-LABEL: test_forked_hot_diamond_stays_hot
+; CHECK: %entry
+; CHECK: %then1
+; CHECK: %then2
+; CHECK: %fork1
+; CHECK: %else1
+; CHECK: %else2
+; CHECK: %fork2
+; CHECK: %exit
+entry:
+  %gep1 = getelementptr i32, i32* %a, i32 1
+  %val1 = load i32, i32* %gep1
+  %cond1 = icmp ugt i32 %val1, 1
+  br i1 %cond1, label %then1, label %else1, !prof !10
+
+then1:
+  call void @hot_function()
+  %gep2 = getelementptr i32, i32* %a, i32 2
+  %val2 = load i32, i32* %gep2
+  %cond2 = icmp ugt i32 %val2, 2
+  br i1 %cond2, label %then2, label %else2, !prof !10
+
+else1:
+  call void @cold_function()
+  br label %fork1
+
+then2:
+  call void @hot_function()
+  %gep3 = getelementptr i32, i32* %a, i32 3
+  %val3 = load i32, i32* %gep2
+  %cond3 = icmp ugt i32 %val2, 3
+  br i1 %cond3, label %fork1, label %fork2, !prof !8
+
+else2:
+  call void @cold_function()
+  br label %fork2
+
+fork1:
+  call void @a()
+  br label %exit
+
+fork2:
+  call void @b()
+  br label %exit
+
+exit:
+  call void @hot_function()
+  ret void
+}
+
+!5 = !{!"branch_weights", i32 84, i32 16}
+!6 = !{!"function_entry_count", i32 10}
+!7 = !{!"branch_weights", i32 60, i32 40}
+!8 = !{!"branch_weights", i32 5001, i32 4999}
+!9 = !{!"branch_weights", i32 85, i32 15}
+!10 = !{!"branch_weights", i32 90, i32 10}

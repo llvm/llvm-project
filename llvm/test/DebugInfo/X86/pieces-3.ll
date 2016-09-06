@@ -24,8 +24,13 @@
 ;
 ; CHECK: .debug_loc
 ; CHECK: [[LOC1]]: Beginning address offset: 0x0000000000000000
-; CHECK:              Ending address offset: 0x0000000000000008
+; CHECK-NEXT:         Ending address offset: 0x0000000000000004
 ;             rdi, piece 0x00000008, piece 0x00000004, rsi, piece 0x00000004
+; CHECK-NEXT: Location description: 55 93 08 93 04 54 93 04
+; This location is split into two ranges with identical locations
+; because it comes from a DBG_VALUE %RSI followed by a DBG_VALUE %ESI.
+; CHECK:           Beginning address offset: 0x0000000000000004
+; CHECK-NEXT:         Ending address offset: 0x0000000000000008
 ; CHECK-NEXT: Location description: 55 93 08 93 04 54 93 04
 ; CHECK: [[LOC2]]: Beginning address offset: 0x0000000000000004
 ; CHECK-NEXT:         Ending address offset: 0x0000000000000008
@@ -70,11 +75,10 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!21, !22}
 !llvm.ident = !{!23}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "sroasplit-2.c", directory: "")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 10, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "foo", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 10, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "sroasplit-2.c", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !9}

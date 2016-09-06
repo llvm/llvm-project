@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -enable-misched=false -aarch64-stp-suppress=false -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -enable-misched=false -aarch64-enable-stp-suppress=false -verify-machineinstrs | FileCheck %s
 
 ; The next set of tests makes sure we can combine the second instruction into
 ; the first.
@@ -108,4 +108,38 @@ define double @stp_double_aa_after(double %d0, double %a, double %b, double* noc
   %add.ptr = getelementptr inbounds double, double* %p, i64 1
   store double %b, double* %add.ptr, align 8
   ret double %tmp
+}
+
+; Check that the stores %c and %d are paired after the fadd instruction,
+; and then the stores %a and %d are paired after proving that they do not
+; depend on the the (%c, %d) pair.
+;
+; CHECK-LABEL: st1:
+; CHECK: stp q0, q1, [x{{[0-9]+}}]
+; CHECK: fadd
+; CHECK: stp q2, q0, [x{{[0-9]+}}, #32]
+define void @st1(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, float* %base, i64 %index) {
+entry:
+  %a0 = getelementptr inbounds float, float* %base, i64 %index
+  %b0 = getelementptr float, float* %a0, i64 4
+  %c0 = getelementptr float, float* %a0, i64 8
+  %d0 = getelementptr float, float* %a0, i64 12
+
+  %a1 = bitcast float* %a0 to <4 x float>*
+  %b1 = bitcast float* %b0 to <4 x float>*
+  %c1 = bitcast float* %c0 to <4 x float>*
+  %d1 = bitcast float* %d0 to <4 x float>*
+
+  store <4 x float> %c, <4 x float> * %c1, align 4
+  store <4 x float> %a, <4 x float> * %a1, align 4
+
+  ; This fadd forces the compiler to pair %c and %e after fadd, and leave the
+  ; stores %a and %b separated by a stp. The dependence analysis needs then to
+  ; prove that it is safe to move %b past the stp to be paired with %a.
+  %e = fadd fast <4 x float> %d, %a
+
+  store <4 x float> %e, <4 x float>* %d1, align 4
+  store <4 x float> %b, <4 x float>* %b1, align 4
+
+  ret void
 }

@@ -116,15 +116,27 @@ void test(int *List, int Length) {
     VList[j] = List[j];
   }
 
+#pragma clang loop distribute(enable)
+  for (int j : VList) {
+    VList[j] = List[j];
+  }
+
+#pragma clang loop distribute(disable)
+  for (int j : VList) {
+    VList[j] = List[j];
+  }
+
   test_nontype_template_param<4, 8>(List, Length);
 
 /* expected-error {{expected '('}} */ #pragma clang loop vectorize
 /* expected-error {{expected '('}} */ #pragma clang loop interleave
 /* expected-error {{expected '('}} */ #pragma clang loop unroll
+/* expected-error {{expected '('}} */ #pragma clang loop distribute
 
 /* expected-error {{expected ')'}} */ #pragma clang loop vectorize(enable
 /* expected-error {{expected ')'}} */ #pragma clang loop interleave(enable
 /* expected-error {{expected ')'}} */ #pragma clang loop unroll(full
+/* expected-error {{expected ')'}} */ #pragma clang loop distribute(enable
 
 /* expected-error {{expected ')'}} */ #pragma clang loop vectorize_width(4
 /* expected-error {{expected ')'}} */ #pragma clang loop interleave_count(4
@@ -133,8 +145,9 @@ void test(int *List, int Length) {
 /* expected-error {{missing argument; expected 'enable', 'assume_safety' or 'disable'}} */ #pragma clang loop vectorize()
 /* expected-error {{missing argument; expected an integer value}} */ #pragma clang loop interleave_count()
 /* expected-error {{missing argument; expected 'enable', 'full' or 'disable'}} */ #pragma clang loop unroll()
+/* expected-error {{missing argument; expected 'enable' or 'disable'}} */ #pragma clang loop distribute()
 
-/* expected-error {{missing option; expected vectorize, vectorize_width, interleave, interleave_count, unroll, or unroll_count}} */ #pragma clang loop
+/* expected-error {{missing option; expected vectorize, vectorize_width, interleave, interleave_count, unroll, unroll_count, or distribute}} */ #pragma clang loop
 /* expected-error {{invalid option 'badkeyword'}} */ #pragma clang loop badkeyword
 /* expected-error {{invalid option 'badkeyword'}} */ #pragma clang loop badkeyword(enable)
 /* expected-error {{invalid option 'badkeyword'}} */ #pragma clang loop vectorize(enable) badkeyword(4)
@@ -187,6 +200,7 @@ const int VV = 4;
 /* expected-error {{invalid argument; expected 'enable', 'assume_safety' or 'disable'}} */ #pragma clang loop vectorize(badidentifier)
 /* expected-error {{invalid argument; expected 'enable', 'assume_safety' or 'disable'}} */ #pragma clang loop interleave(badidentifier)
 /* expected-error {{invalid argument; expected 'enable', 'full' or 'disable'}} */ #pragma clang loop unroll(badidentifier)
+/* expected-error {{invalid argument; expected 'enable' or 'disable'}} */ #pragma clang loop distribute(badidentifier)
   while (i-7 < Length) {
     List[i] = i;
   }
@@ -196,6 +210,7 @@ const int VV = 4;
 /* expected-error {{expected ')'}} */ #pragma clang loop vectorize(()
 /* expected-error {{invalid argument; expected 'enable', 'assume_safety' or 'disable'}} */ #pragma clang loop interleave(*)
 /* expected-error {{invalid argument; expected 'enable', 'full' or 'disable'}} */ #pragma clang loop unroll(=)
+/* expected-error {{invalid argument; expected 'enable' or 'disable'}} */ #pragma clang loop distribute(+)
 /* expected-error {{type name requires a specifier or qualifier}} expected-error {{expected expression}} */ #pragma clang loop vectorize_width(^)
 /* expected-error {{expected expression}} expected-error {{expected expression}} */ #pragma clang loop interleave_count(/)
 /* expected-error {{expected expression}} expected-error {{expected expression}} */ #pragma clang loop unroll_count(==)
@@ -232,6 +247,8 @@ const int VV = 4;
 #pragma clang loop interleave(disable)
 /* expected-error {{duplicate directives 'unroll(disable)' and 'unroll(full)'}} */ #pragma clang loop unroll(full)
 #pragma clang loop unroll(disable)
+/* expected-error {{duplicate directives 'distribute(disable)' and 'distribute(enable)'}} */ #pragma clang loop distribute(enable)
+#pragma clang loop distribute(disable)
   while (i-9 < Length) {
     List[i] = i;
   }

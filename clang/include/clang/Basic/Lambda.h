@@ -32,7 +32,8 @@ enum LambdaCaptureDefault {
 /// by reference.  C++1y also allows "init-capture", where the initializer
 /// is an expression.
 enum LambdaCaptureKind {
-  LCK_This,   ///< Capturing the \c this pointer
+  LCK_This,   ///< Capturing the \c *this object by reference
+  LCK_StarThis, /// < Capturing the \c *this object by copy
   LCK_ByCopy, ///< Capturing by copy (a.k.a., by value)
   LCK_ByRef,  ///< Capturing by reference
   LCK_VLAType ///< Capturing variable-length array type

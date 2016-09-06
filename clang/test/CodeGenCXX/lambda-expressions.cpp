@@ -116,6 +116,56 @@ int *PR22071_fun() {
   return [&] { return &y; }();
 }
 
+namespace pr28595 {
+  struct Temp {
+    Temp();
+    ~Temp() noexcept(false);
+  };
+  struct A {
+    A();
+    A(const A &a, const Temp &temp = Temp());
+    ~A();
+  };
+
+  // CHECK-LABEL: define void @_ZN7pr285954testEv()
+  void test() {
+    // CHECK: [[ARRAY:%.*]] = alloca [3 x [5 x [[A:%.*]]]], align 1
+    // CHECK: [[DESTIDX:%.*]] = alloca i64, align 8
+    // CHECK: [[I0:%.*]] = alloca i64, align 8
+    // CHECK: [[I1:%.*]] = alloca i64, align 8
+    A array[3][5];
+
+    // CHECK: [[DESTBASE:%.*]] = bitcast [3 x [5 x [[A]]]]* {{.*}} to [[A]]*
+    // CHECK: store i64 0, i64* [[DESTIDX]], align 8
+    // CHECK: store i64 0, i64* [[I0]], align 8
+    // CHECK: br label
+    // CHECK: icmp ult
+    // CHECK: store i64 0, i64* [[I1]], align 8
+    // CHECK: br label
+    // CHECK: icmp ult
+    // CHECK: [[T0:%.*]] = load i64, i64* [[DESTIDX]], align 8
+    // CHECK: [[DEST:%.*]] = getelementptr inbounds [[A]], [[A]]* [[DESTBASE]], i64 [[T0]]
+    // CHECK: invoke void @_ZN7pr285954TempC1Ev
+    // CHECK: invoke void @_ZN7pr285951AC1ERKS0_RKNS_4TempE
+    // CHECK: invoke void @_ZN7pr285954TempD1Ev
+    // CHECK: landingpad
+    // CHECK: landingpad
+    // CHECK: br label [[CLEANUP:%.*]]{{$}}
+    // CHECK: landingpad
+    // CHECK: invoke void @_ZN7pr285954TempD1Ev
+    // CHECK: br label [[CLEANUP]]
+    // CHECK: icmp eq [[A]]* [[DESTBASE]], [[DEST]]
+    // CHECK: [[T0:%.*]] = phi [[A]]*
+    // CHECK: [[T1:%.*]] = getelementptr inbounds [[A]], [[A]]* [[T0]], i64 -1
+    // CHECK: call void @_ZN7pr285951AD1Ev([[A]]* [[T1]])
+    // CHECK: icmp eq [[A]]* [[T1]], [[DESTBASE]]
+    (void) [array]{};
+
+    //   Skip over the initialization loop.
+    // CHECK: [[BEGIN:%.*]] = getelementptr inbounds [3 x [5 x [[A]]]], [3 x [5 x [[A]]]]* [[ARRAY]], i32 0, i32 0, i32 0
+  }
+}
+
 // CHECK-LABEL: define internal void @"_ZZ1e1ES_bEN3$_5D2Ev"
 
 // CHECK-LABEL: define internal i32 @"_ZZ1fvEN3$_68__invokeEii"
@@ -126,9 +176,9 @@ int *PR22071_fun() {
 // CHECK-NEXT: call i32 @"_ZZ1fvENK3$_6clEii"
 // CHECK-NEXT: ret i32
 
-// CHECK-LABEL: define internal void @"_ZZ1hvEN4$_108__invokeEv"(%struct.A* noalias sret %agg.result) {{.*}} {
+// CHECK-LABEL: define internal void @"_ZZ1hvEN4$_118__invokeEv"(%struct.A* noalias sret %agg.result) {{.*}} {
 // CHECK-NOT: =
-// CHECK: call void @"_ZZ1hvENK4$_10clEv"(%struct.A* sret %agg.result,
+// CHECK: call void @"_ZZ1hvENK4$_11clEv"(%struct.A* sret %agg.result,
 // CHECK-NEXT: ret void
 struct A { ~A(); };
 void h() {

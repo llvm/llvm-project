@@ -47,7 +47,7 @@ protected:
   virtual void parseImpl(DWARFContext &Context, const DWARFSection &Section,
                          const DWARFDebugAbbrev *DA, StringRef RS, StringRef SS,
                          StringRef SOS, StringRef AOS, StringRef LS,
-                         bool isLittleEndian) = 0;
+                         bool isLittleEndian, bool isDWO) = 0;
 
   ~DWARFUnitSectionBase() = default;
 };
@@ -59,13 +59,9 @@ const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
 template<typename UnitType>
 class DWARFUnitSection final : public SmallVector<std::unique_ptr<UnitType>, 1>,
                                public DWARFUnitSectionBase {
-  bool Parsed;
+  bool Parsed = false;
 
 public:
-  DWARFUnitSection() : Parsed(false) {}
-  DWARFUnitSection(DWARFUnitSection &&DUS) :
-    SmallVector<std::unique_ptr<UnitType>, 1>(std::move(DUS)), Parsed(DUS.Parsed) {}
-
   typedef llvm::SmallVectorImpl<std::unique_ptr<UnitType>> UnitVector;
   typedef typename UnitVector::iterator iterator;
   typedef llvm::iterator_range<typename UnitVector::iterator> iterator_range;
@@ -84,7 +80,8 @@ public:
 private:
   void parseImpl(DWARFContext &Context, const DWARFSection &Section,
                  const DWARFDebugAbbrev *DA, StringRef RS, StringRef SS,
-                 StringRef SOS, StringRef AOS, StringRef LS, bool LE) override {
+                 StringRef SOS, StringRef AOS, StringRef LS, bool LE,
+                 bool IsDWO) override {
     if (Parsed)
       return;
     const auto &Index = getDWARFUnitIndex(Context, UnitType::Section);
@@ -92,7 +89,7 @@ private:
     uint32_t Offset = 0;
     while (Data.isValidOffset(Offset)) {
       auto U = llvm::make_unique<UnitType>(Context, Section, DA, RS, SS, SOS,
-                                           AOS, LS, LE, *this,
+                                           AOS, LS, LE, IsDWO, *this,
                                            Index.getFromOffset(Offset));
       if (!U->extract(Data, &Offset))
         break;
@@ -117,6 +114,7 @@ class DWARFUnit {
   StringRef AddrOffsetSection;
   uint32_t AddrOffsetSectionBase;
   bool isLittleEndian;
+  bool isDWO;
   const DWARFUnitSectionBase &UnitSection;
 
   uint32_t Offset;
@@ -148,7 +146,7 @@ protected:
 public:
   DWARFUnit(DWARFContext &Context, const DWARFSection &Section,
             const DWARFDebugAbbrev *DA, StringRef RS, StringRef SS,
-            StringRef SOS, StringRef AOS, StringRef LS, bool LE,
+            StringRef SOS, StringRef AOS, StringRef LS, bool LE, bool IsDWO,
             const DWARFUnitSectionBase &UnitSection,
             const DWARFUnitIndex::Entry *IndexEntry = nullptr);
 
@@ -249,7 +247,7 @@ public:
   /// \brief Return the DIE object for a given offset inside the
   /// unit's DIE vector.
   ///
-  /// The unit needs to have his DIEs extracted for this method to work.
+  /// The unit needs to have its DIEs extracted for this method to work.
   const DWARFDebugInfoEntryMinimal *getDIEForOffset(uint32_t Offset) const {
     assert(!DieArray.empty());
     auto it = std::lower_bound(

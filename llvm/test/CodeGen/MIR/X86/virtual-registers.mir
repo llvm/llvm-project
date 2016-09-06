@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -start-after machine-sink -stop-after machine-sink -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses virtual register definitions and
 # references correctly.
 

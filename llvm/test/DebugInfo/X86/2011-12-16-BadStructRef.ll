@@ -89,7 +89,7 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!83}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.1 (trunk 146596)", isOptimized: false, emissionKind: 0, file: !82, enums: !1, retainedTypes: !3, subprograms: !27, globals: !1, imports:  !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.1 (trunk 146596)", isOptimized: false, emissionKind: FullDebug, file: !82, enums: !1, retainedTypes: !3, globals: !1, imports:  !1)
 !1 = !{}
 !3 = !{!5, !9}
 !5 = !DICompositeType(tag: DW_TAG_class_type, name: "bar", line: 9, size: 128, align: 64, file: !82, elements: !7)
@@ -110,8 +110,7 @@ entry:
 !22 = !DISubroutineType(types: !23)
 !23 = !{null, !24, !12}
 !24 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial, baseType: !5)
-!27 = !{!29, !37, !40, !43, !46}
-!29 = distinct !DISubprogram(name: "main", line: 17, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !82, scope: !6, type: !30)
+!29 = distinct !DISubprogram(name: "main", line: 17, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, file: !82, scope: !6, type: !30)
 !30 = !DISubroutineType(types: !31)
 !31 = !{!12, !12, !32}
 !32 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !33)
@@ -119,16 +118,16 @@ entry:
 !34 = !DIBasicType(tag: DW_TAG_base_type, name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
 !35 = !{!36}
 !36 = !{} ; previously: invalid DW_TAG_base_type
-!37 = distinct !DISubprogram(name: "bar", linkageName: "_ZN3barC1Ei", line: 13, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !82, scope: null, type: !22, declaration: !21)
+!37 = distinct !DISubprogram(name: "bar", linkageName: "_ZN3barC1Ei", line: 13, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, file: !82, scope: null, type: !22, declaration: !21)
 !38 = !{!39}
 !39 = !{} ; previously: invalid DW_TAG_base_type
-!40 = distinct !DISubprogram(name: "bar", linkageName: "_ZN3barC2Ei", line: 13, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !82, scope: null, type: !22, declaration: !21)
+!40 = distinct !DISubprogram(name: "bar", linkageName: "_ZN3barC2Ei", line: 13, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, file: !82, scope: null, type: !22, declaration: !21)
 !41 = !{!42}
 !42 = !{} ; previously: invalid DW_TAG_base_type
-!43 = distinct !DISubprogram(name: "baz", linkageName: "_ZN3bazC1Ei", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !82, scope: null, type: !14, declaration: !13)
+!43 = distinct !DISubprogram(name: "baz", linkageName: "_ZN3bazC1Ei", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, file: !82, scope: null, type: !14, declaration: !13)
 !44 = !{!45}
 !45 = !{} ; previously: invalid DW_TAG_base_type
-!46 = distinct !DISubprogram(name: "baz", linkageName: "_ZN3bazC2Ei", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, file: !82, scope: null, type: !14, declaration: !13)
+!46 = distinct !DISubprogram(name: "baz", linkageName: "_ZN3bazC2Ei", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, file: !82, scope: null, type: !14, declaration: !13)
 !49 = !DILocalVariable(name: "argc", line: 16, arg: 1, scope: !29, file: !6, type: !12)
 !50 = !DILocation(line: 16, column: 14, scope: !29)
 !51 = !DILocalVariable(name: "argv", line: 16, arg: 2, scope: !29, file: !6, type: !32)

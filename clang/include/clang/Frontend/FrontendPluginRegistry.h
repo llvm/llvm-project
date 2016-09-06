@@ -13,9 +13,6 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "llvm/Support/Registry.h"
 
-// Instantiated in FrontendAction.cpp.
-extern template class llvm::Registry<clang::PluginASTAction>;
-
 namespace clang {
 
 /// The frontend plugin registry.

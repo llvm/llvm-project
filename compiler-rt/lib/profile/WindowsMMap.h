@@ -21,13 +21,7 @@
  */
 #define PROT_READ     0x1
 #define PROT_WRITE    0x2
-/* This flag is only available in WinXP+ */
-#ifdef FILE_MAP_EXECUTE
-#define PROT_EXEC     0x4
-#else
-#define PROT_EXEC        0x0
-#define FILE_MAP_EXECUTE 0
-#endif
+#define PROT_EXEC     0x0
 
 #define MAP_FILE      0x00
 #define MAP_SHARED    0x01

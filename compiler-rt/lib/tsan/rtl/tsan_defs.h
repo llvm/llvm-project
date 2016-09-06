@@ -29,7 +29,11 @@
 #endif
 
 #ifndef TSAN_CONTAINS_UBSAN
-# define TSAN_CONTAINS_UBSAN (CAN_SANITIZE_UB && !defined(SANITIZER_GO))
+# if CAN_SANITIZE_UB && !defined(SANITIZER_GO)
+#  define TSAN_CONTAINS_UBSAN 1
+# else
+#  define TSAN_CONTAINS_UBSAN 0
+# endif
 #endif
 
 namespace __tsan {
@@ -145,6 +149,7 @@ struct MD5Hash {
 
 MD5Hash md5_hash(const void *data, uptr size);
 
+struct Processor;
 struct ThreadState;
 class ThreadContext;
 struct Context;

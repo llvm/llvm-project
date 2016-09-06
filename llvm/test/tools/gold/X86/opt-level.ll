@@ -1,13 +1,13 @@
 ; RUN: llvm-as -o %t.bc %s
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so -plugin-opt=save-temps \
 ; RUN:    -plugin-opt=O0 -r -o %t.o %t.bc
-; RUN: llvm-dis < %t.o.opt.bc -o - | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llvm-dis < %t.o.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O0 %s
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so -plugin-opt=save-temps \
 ; RUN:    -plugin-opt=O1 -r -o %t.o %t.bc
-; RUN: llvm-dis < %t.o.opt.bc -o - | FileCheck --check-prefix=CHECK-O1 %s
+; RUN: llvm-dis < %t.o.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O1 %s
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so -plugin-opt=save-temps \
 ; RUN:    -plugin-opt=O2 -r -o %t.o %t.bc
-; RUN: llvm-dis < %t.o.opt.bc -o - | FileCheck --check-prefix=CHECK-O2 %s
+; RUN: llvm-dis < %t.o.4.opt.bc -o - | FileCheck --check-prefix=CHECK-O2 %s
 
 ; CHECK-O0: define internal void @foo(
 ; CHECK-O1: define internal void @foo(
@@ -34,17 +34,18 @@ end:
   ret i32 %r
 }
 
-define void @baz() {
+define i1 @baz() {
   call void @foo()
   %c = call i32 @bar(i1 true)
-  ret void
+  %p = call i1 @llvm.type.test(i8* undef, metadata !"typeid1")
+  ret i1 %p
 }
 
-@a = constant i32 1
+; CHECK-O0-NOT: !type
+; CHECK-O1-NOT: !type
+; CHECK-O2-NOT: !type
+@a = constant i32 1, !type !0
 
-!0 = !{!"bitset1", i32* @a, i32 0}
+!0 = !{i32 0, !"typeid1"}
 
-; CHECK-O0-NOT: llvm.bitsets
-; CHECK-O1-NOT: llvm.bitsets
-; CHECK-O2-NOT: llvm.bitsets
-!llvm.bitsets = !{ !0 }
+declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone

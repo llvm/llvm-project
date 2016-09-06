@@ -20,11 +20,11 @@
 #define LLVM_PASSANALYSISSUPPORT_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Pass.h"
 #include <vector>
 
 namespace llvm {
+class StringRef;
 
 //===----------------------------------------------------------------------===//
 /// Represent the analysis usage information of a pass.  This tracks analyses
@@ -153,9 +153,9 @@ public:
   /// Find pass that is implementing PI.
   Pass *findImplPass(AnalysisID PI) {
     Pass *ResultPass = nullptr;
-    for (unsigned i = 0; i < AnalysisImpls.size() ; ++i) {
-      if (AnalysisImpls[i].first == PI) {
-        ResultPass = AnalysisImpls[i].second;
+    for (const auto &AnalysisImpl : AnalysisImpls) {
+      if (AnalysisImpl.first == PI) {
+        ResultPass = AnalysisImpl.second;
         break;
       }
     }

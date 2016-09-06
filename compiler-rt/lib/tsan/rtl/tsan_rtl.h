@@ -325,6 +325,36 @@ struct JmpBuf {
   uptr *shadow_stack_pos;
 };
 
+// A Processor represents a physical thread, or a P for Go.
+// It is used to store internal resources like allocate cache, and does not
+// participate in race-detection logic (invisible to end user).
+// In C++ it is tied to an OS thread just like ThreadState, however ideally
+// it should be tied to a CPU (this way we will have fewer allocator caches).
+// In Go it is tied to a P, so there are significantly fewer Processor's than
+// ThreadState's (which are tied to Gs).
+// A ThreadState must be wired with a Processor to handle events.
+struct Processor {
+  ThreadState *thr; // currently wired thread, or nullptr
+#ifndef SANITIZER_GO
+  AllocatorCache alloc_cache;
+  InternalAllocatorCache internal_alloc_cache;
+#endif
+  DenseSlabAllocCache block_cache;
+  DenseSlabAllocCache sync_cache;
+  DenseSlabAllocCache clock_cache;
+  DDPhysicalThread *dd_pt;
+};
+
+#ifndef SANITIZER_GO
+// ScopedGlobalProcessor temporary setups a global processor for the current
+// thread, if it does not have one. Intended for interceptors that can run
+// at the very thread end, when we already destroyed the thread processor.
+struct ScopedGlobalProcessor {
+  ScopedGlobalProcessor();
+  ~ScopedGlobalProcessor();
+};
+#endif
+
 // This struct is stored in TLS.
 struct ThreadState {
   FastState fast_state;
@@ -360,8 +390,6 @@ struct ThreadState {
   MutexSet mset;
   ThreadClock clock;
 #ifndef SANITIZER_GO
-  AllocatorCache alloc_cache;
-  InternalAllocatorCache internal_alloc_cache;
   Vector<JmpBuf> jmp_bufs;
   int ignore_interceptors;
 #endif
@@ -385,15 +413,18 @@ struct ThreadState {
 #if SANITIZER_DEBUG && !SANITIZER_GO
   InternalDeadlockDetector internal_deadlock_detector;
 #endif
-  DDPhysicalThread *dd_pt;
   DDLogicalThread *dd_lt;
+
+  // Current wired Processor, or nullptr. Required to handle any events.
+  Processor *proc1;
+#ifndef SANITIZER_GO
+  Processor *proc() { return proc1; }
+#else
+  Processor *proc();
+#endif
 
   atomic_uintptr_t in_signal_handler;
   ThreadSignalContext *signal_ctx;
-
-  DenseSlabAllocCache block_cache;
-  DenseSlabAllocCache sync_cache;
-  DenseSlabAllocCache clock_cache;
 
 #ifndef SANITIZER_GO
   u32 last_sleep_stack_id;
@@ -684,6 +715,11 @@ void ThreadFinalize(ThreadState *thr);
 void ThreadSetName(ThreadState *thr, const char *name);
 int ThreadCount(ThreadState *thr);
 void ProcessPendingSignals(ThreadState *thr);
+
+Processor *ProcCreate();
+void ProcDestroy(Processor *proc);
+void ProcWire(Processor *proc, ThreadState *thr);
+void ProcUnwire(Processor *proc, ThreadState *thr);
 
 void MutexCreate(ThreadState *thr, uptr pc, uptr addr,
                  bool rw, bool recursive, bool linker_init);

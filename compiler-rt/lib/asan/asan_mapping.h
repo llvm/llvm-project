@@ -87,6 +87,20 @@
 // || `[0x08000000000, 0x08fffffffff]` || lowshadow  ||
 // || `[0x00000000000, 0x07fffffffff]` || lowmem     ||
 //
+// Default Linux/S390 mapping:
+// || `[0x30000000, 0x7fffffff]` || HighMem    ||
+// || `[0x26000000, 0x2fffffff]` || HighShadow ||
+// || `[0x24000000, 0x25ffffff]` || ShadowGap  ||
+// || `[0x20000000, 0x23ffffff]` || LowShadow  ||
+// || `[0x00000000, 0x1fffffff]` || LowMem     ||
+//
+// Default Linux/SystemZ mapping:
+// || `[0x14000000000000, 0x1fffffffffffff]` || HighMem    ||
+// || `[0x12800000000000, 0x13ffffffffffff]` || HighShadow ||
+// || `[0x12000000000000, 0x127fffffffffff]` || ShadowGap  ||
+// || `[0x10000000000000, 0x11ffffffffffff]` || LowShadow  ||
+// || `[0x00000000000000, 0x0fffffffffffff]` || LowMem     ||
+//
 // Shadow mapping on FreeBSD/x86-64 with SHADOW_OFFSET == 0x400000000000:
 // || `[0x500000000000, 0x7fffffffffff]` || HighMem    ||
 // || `[0x4a0000000000, 0x4fffffffffff]` || HighShadow ||
@@ -115,16 +129,18 @@ static const u64 kDefaultShadowOffset32 = 1ULL << 29;  // 0x20000000
 static const u64 kDefaultShadowOffset64 = 1ULL << 44;
 static const u64 kDefaultShort64bitShadowOffset = 0x7FFF8000;  // < 2G.
 static const u64 kIosShadowOffset32 = 1ULL << 30;  // 0x40000000
-static const u64 kIosShadowOffset64 = 0x130000000;
+static const u64 kIosShadowOffset64 = 0x120200000;
 static const u64 kIosSimShadowOffset32 = 1ULL << 30;
 static const u64 kIosSimShadowOffset64 = kDefaultShadowOffset64;
 static const u64 kAArch64_ShadowOffset64 = 1ULL << 36;
 static const u64 kMIPS32_ShadowOffset32 = 0x0aaa0000;
 static const u64 kMIPS64_ShadowOffset64 = 1ULL << 37;
 static const u64 kPPC64_ShadowOffset64 = 1ULL << 41;
+static const u64 kSystemZ_ShadowOffset64 = 1ULL << 52;
 static const u64 kFreeBSD_ShadowOffset32 = 1ULL << 30;  // 0x40000000
 static const u64 kFreeBSD_ShadowOffset64 = 1ULL << 46;  // 0x400000000000
 static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
+static const u64 kWindowsShadowOffset64 = 1ULL << 45;  // 32TB
 
 #define SHADOW_SCALE kDefaultShadowScale
 
@@ -138,28 +154,36 @@ static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
 #    define SHADOW_OFFSET kFreeBSD_ShadowOffset32
 #  elif SANITIZER_WINDOWS
 #    define SHADOW_OFFSET kWindowsShadowOffset32
-#  elif SANITIZER_IOSSIM
-#    define SHADOW_OFFSET kIosSimShadowOffset32
 #  elif SANITIZER_IOS
-#    define SHADOW_OFFSET kIosShadowOffset32
+#    if SANITIZER_IOSSIM
+#      define SHADOW_OFFSET kIosSimShadowOffset32
+#    else
+#      define SHADOW_OFFSET kIosShadowOffset32
+#    endif
 #  else
 #    define SHADOW_OFFSET kDefaultShadowOffset32
 #  endif
 #else
-#  if defined(__aarch64__)
+#  if SANITIZER_IOS
+#    if SANITIZER_IOSSIM
+#      define SHADOW_OFFSET kIosSimShadowOffset64
+#    else
+#      define SHADOW_OFFSET kIosShadowOffset64
+#    endif
+#  elif defined(__aarch64__)
 #    define SHADOW_OFFSET kAArch64_ShadowOffset64
 #  elif defined(__powerpc64__)
 #    define SHADOW_OFFSET kPPC64_ShadowOffset64
+#  elif defined(__s390x__)
+#    define SHADOW_OFFSET kSystemZ_ShadowOffset64
 #  elif SANITIZER_FREEBSD
 #    define SHADOW_OFFSET kFreeBSD_ShadowOffset64
 #  elif SANITIZER_MAC
 #   define SHADOW_OFFSET kDefaultShadowOffset64
 #  elif defined(__mips64)
 #   define SHADOW_OFFSET kMIPS64_ShadowOffset64
-#  elif SANITIZER_IOSSIM
-#    define SHADOW_OFFSET kIosSimShadowOffset64
-#  elif SANITIZER_IOS
-#    define SHADOW_OFFSET kIosShadowOffset64
+#  elif SANITIZER_WINDOWS64
+#   define SHADOW_OFFSET kWindowsShadowOffset64
 #  else
 #   define SHADOW_OFFSET kDefaultShort64bitShadowOffset
 #  endif

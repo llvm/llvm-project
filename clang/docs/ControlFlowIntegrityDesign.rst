@@ -90,10 +90,10 @@ For example on x86 a typical virtual call may look like this:
 
 The compiler relies on co-operation from the linker in order to assemble
 the bit vectors for the whole program. It currently does this using LLVM's
-`bit sets`_ mechanism together with link-time optimization.
+`type metadata`_ mechanism together with link-time optimization.
 
 .. _address point: https://mentorembedded.github.io/cxx-abi/abi.html#vtable-general
-.. _bit sets: http://llvm.org/docs/BitSets.html
+.. _type metadata: http://llvm.org/docs/TypeMetadata.html
 .. _ByteArrayBuilder: http://llvm.org/docs/doxygen/html/structllvm_1_1ByteArrayBuilder.html
 
 Optimizations
@@ -196,7 +196,7 @@ those sub-hierarchies need to be (see "Stripping Leading/Trailing Zeros in Bit
 Vectors" above). The `GlobalLayoutBuilder`_ class is responsible for laying
 out the globals efficiently to minimize the sizes of the underlying bitsets.
 
-.. _GlobalLayoutBuilder: http://llvm.org/viewvc/llvm-project/llvm/trunk/include/llvm/Transforms/IPO/LowerBitSets.h?view=markup
+.. _GlobalLayoutBuilder: http://llvm.org/viewvc/llvm-project/llvm/trunk/include/llvm/Transforms/IPO/LowerTypeTests.h?view=markup
 
 Alignment
 ~~~~~~~~~
@@ -297,8 +297,8 @@ file's symbol table, the symbols for the target functions also refer to the
 jump table entries, so that addresses taken outside the module will pass
 any verification done inside the module.
 
-In more concrete terms, suppose we have three functions ``f``, ``g``, ``h``
-which are members of a single bitset, and a function foo that returns their
+In more concrete terms, suppose we have three functions ``f``, ``g``,
+``h`` which are all of the same type, and a function foo that returns their
 addresses:
 
 .. code-block:: none
@@ -439,10 +439,10 @@ export this information, every DSO implements
 
    void __cfi_check(uint64 CallSiteTypeId, void *TargetAddr)
 
-This function provides external modules with access to CFI checks for
-the targets inside this DSO.  For each known ``CallSiteTypeId``, this
-functions performs an ``llvm.bitset.test`` with the corresponding bit
-set. It aborts if the type is unknown, or if the check fails.
+This function provides external modules with access to CFI checks for the
+targets inside this DSO.  For each known ``CallSiteTypeId``, this function
+performs an ``llvm.type.test`` with the corresponding type identifier. It
+aborts if the type is unknown, or if the check fails.
 
 The basic implementation is a large switch statement over all values
 of CallSiteTypeId supported by this DSO, and each case is similar to

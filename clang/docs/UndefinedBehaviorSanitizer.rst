@@ -92,11 +92,14 @@ Available checks are:
      parameter which is declared to never be null.
   -  ``-fsanitize=null``: Use of a null pointer or creation of a null
      reference.
-  -  ``-fsanitize=object-size``: An attempt to use bytes which the
-     optimizer can determine are not part of the object being
-     accessed. The sizes of objects are determined using
-     ``__builtin_object_size``, and consequently may be able to detect
-     more problems at higher optimization levels.
+  -  ``-fsanitize=object-size``: An attempt to potentially use bytes which
+     the optimizer can determine are not part of the object being accessed.
+     This will also detect some types of undefined behavior that may not
+     directly access memory, but are provably incorrect given the size of
+     the objects involved, such as invalid downcasts and calling methods on
+     invalid pointers. These checks are made in terms of
+     ``__builtin_object_size``, and consequently may be able to detect more
+     problems at higher optimization levels.
   -  ``-fsanitize=return``: In C++, reaching the end of a
      value-returning function without returning a value.
   -  ``-fsanitize=returns-nonnull-attribute``: Returning null pointer
@@ -168,6 +171,38 @@ UndefinedBehaviorSanitizer supports ``src`` and ``fun`` entity types in
 :doc:`SanitizerSpecialCaseList`, that can be used to suppress error reports
 in the specified source files or functions.
 
+Runtime suppressions
+--------------------
+
+Sometimes you can suppress UBSan error reports for specific files, functions,
+or libraries without recompiling the code. You need to pass a path to
+suppression file in a ``UBSAN_OPTIONS`` environment variable.
+
+.. code-block:: bash
+
+    UBSAN_OPTIONS=suppressions=MyUBSan.supp
+
+You need to specify a :ref:`check <ubsan-checks>` you are suppressing and the
+bug location. For example:
+
+.. code-block:: bash
+
+  signed-integer-overflow:file-with-known-overflow.cpp
+  alignment:function_doing_unaligned_access
+  vptr:shared_object_with_vptr_failures.so
+
+There are several limitations:
+
+* Sometimes your binary must have enough debug info and/or symbol table, so
+  that the runtime could figure out source file or function name to match
+  against the suppression.
+* It is only possible to suppress recoverable checks. For the example above,
+  you can additionally pass
+  ``-fsanitize-recover=signed-integer-overflow,alignment,vptr``, although
+  most of UBSan checks are recoverable by default.
+* Check groups (like ``undefined``) can't be used in suppressions file, only
+  fine-grained checks are supported.
+
 Supported Platforms
 ===================
 
@@ -192,6 +227,26 @@ Current Status
 UndefinedBehaviorSanitizer is available on selected platforms starting from LLVM
 3.3. The test suite is integrated into the CMake build and can be run with
 ``check-ubsan`` command.
+
+Additional Configuration
+========================
+
+UndefinedBehaviorSanitizer adds static check data for each check unless it is
+in trap mode. This check data includes the full file name. The option
+``-fsanitize-undefined-strip-path-components=N`` can be used to trim this
+information. If ``N`` is positive, file information emitted by
+UndefinedBehaviorSanitizer will drop the first ``N`` components from the file
+path. If ``N`` is negative, the last ``N`` components will be kept.
+
+Example
+-------
+
+For a file called ``/code/library/file.cpp``, here is what would be emitted:
+* Default (No flag, or ``-fsanitize-undefined-strip-path-components=0``): ``/code/library/file.cpp``
+* ``-fsanitize-undefined-strip-path-components=1``: ``code/library/file.cpp``
+* ``-fsanitize-undefined-strip-path-components=2``: ``library/file.cpp``
+* ``-fsanitize-undefined-strip-path-components=-1``: ``file.cpp``
+* ``-fsanitize-undefined-strip-path-components=-2``: ``library/file.cpp``
 
 More Information
 ================

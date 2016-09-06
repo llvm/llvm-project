@@ -31,7 +31,9 @@
 ; and BB#4.
 ; CHECK:       .LBB0_5:
 ; CHECK-NEXT:  #DEBUG_VALUE: main:n <- %EBX
-; CHECK-NEXT:  #DEBUG_VALUE: main:argv <- %RSI
+;   Other register values have been clobbered.
+; CHECK-NOT:   #DEBUG_VALUE:
+; CHECK:         movl    %ecx, m(%rip)
 
 ; ModuleID = 'LiveDebugValues.c'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -102,11 +104,10 @@ attributes #4 = { nounwind }
 !llvm.module.flags = !{!17, !18}
 !llvm.ident = !{!19}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 253049) ", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3, globals: !15)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 253049) ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !15)
 !1 = !DIFile(filename: "LiveDebugValues.c", directory: "/home/vt/julia/test/tvvikram")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 6, type: !5, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, variables: !11)
+!4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 6, type: !5, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !11)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !7, !8}
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

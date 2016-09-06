@@ -91,5 +91,5 @@ int user_of_forceinline_optnone_function() {
 
 // CHECK: attributes [[OPTNONE]] = { noinline nounwind optnone {{.*}} }
 // CHECK: attributes [[NORMAL]] =
-// CHECK-SAME-NOT: noinline
-// CHECK-SAME-NOT: optnone
+// CHECK-NOT: noinline
+// CHECK-NOT: optnone

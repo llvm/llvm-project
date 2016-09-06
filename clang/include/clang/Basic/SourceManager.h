@@ -44,7 +44,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DataTypes.h"
@@ -61,7 +60,6 @@ class SourceManager;
 class FileManager;
 class FileEntry;
 class LineTableInfo;
-class LangOptions;
 class ASTWriter;
 class ASTReader;
 
@@ -798,6 +796,15 @@ public:
                         IncludeLoc, FileCharacter, LoadedID, LoadedOffset);
   }
 
+  /// \brief Get the FileID for \p SourceFile if it exists. Otherwise, create a
+  /// new FileID for the \p SourceFile.
+  FileID getOrCreateFileID(const FileEntry *SourceFile,
+                           SrcMgr::CharacteristicKind FileCharacter) {
+    FileID ID = translateFile(SourceFile);
+    return ID.isValid() ? ID : createFileID(SourceFile, SourceLocation(),
+                                            FileCharacter);
+  }
+
   /// \brief Return a new SourceLocation that encodes the
   /// fact that a token from SpellingLoc should actually be referenced from
   /// ExpansionLoc, and that it represents the expansion of a macro argument
@@ -1350,7 +1357,7 @@ public:
   }
 
   /// \brief Returns whether \p Loc is expanded from a macro in a system header.
-  bool isInSystemMacro(SourceLocation loc) {
+  bool isInSystemMacro(SourceLocation loc) const {
     return loc.isMacroID() && isInSystemHeader(getSpellingLoc(loc));
   }
 

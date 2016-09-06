@@ -25,17 +25,16 @@ define i32 @unused() !dbg !10 {
 !llvm.module.flags = !{!16, !17}
 !llvm.ident = !{!18}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251407) (llvm/trunk 251401)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3, globals: !13)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251407) (llvm/trunk 251401)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !13)
 !1 = !DIFile(filename: "linkused2.c", directory: "/usr/local/google/home/tejohnson/llvm/tmp")
 !2 = !{}
-!3 = !{!4, !10}
-!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, variables: !8)
+!4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !8)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !7}
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !8 = !{!9}
 !9 = !DILocalVariable(name: "x", arg: 1, scope: !4, file: !1, line: 4, type: !7)
-!10 = distinct !DISubprogram(name: "unused", scope: !1, file: !1, line: 8, type: !11, isLocal: false, isDefinition: true, scopeLine: 8, isOptimized: true, variables: !2)
+!10 = distinct !DISubprogram(name: "unused", scope: !1, file: !1, line: 8, type: !11, isLocal: false, isDefinition: true, scopeLine: 8, isOptimized: true, unit: !0, variables: !2)
 !11 = !DISubroutineType(types: !12)
 !12 = !{!7}
 !13 = !{!14, !15}

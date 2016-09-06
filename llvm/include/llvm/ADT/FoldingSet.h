@@ -17,10 +17,8 @@
 #define LLVM_ADT_FOLDINGSET_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/DataTypes.h"
 
 namespace llvm {
 /// This folding set used for two purposes:
@@ -98,6 +96,7 @@ namespace llvm {
 /// The result indicates whether the node existed in the folding set.
 
 class FoldingSetNodeID;
+class StringRef;
 
 //===----------------------------------------------------------------------===//
 /// FoldingSetImpl - Implements the folding set functionality.  The main
@@ -181,11 +180,26 @@ public:
   /// empty - Returns true if there are no nodes in the folding set.
   bool empty() const { return NumNodes == 0; }
 
+  /// reserve - Increase the number of buckets such that adding the
+  /// EltCount-th node won't cause a rebucket operation. reserve is permitted
+  /// to allocate more space than requested by EltCount.
+  void reserve(unsigned EltCount);
+  /// capacity - Returns the number of nodes permitted in the folding set
+  /// before a rebucket operation is performed.
+  unsigned capacity() {
+    // We allow a load factor of up to 2.0,
+    // so that means our capacity is NumBuckets * 2
+    return NumBuckets * 2;
+  }
+
 private:
   /// GrowHashTable - Double the size of the hash table and rehash everything.
-  ///
   void GrowHashTable();
 
+  /// GrowBucketCount - resize the hash table and rehash everything.
+  /// NewBucketCount must be a power of two, and must be greater than the old
+  /// bucket count.
+  void GrowBucketCount(unsigned NewBucketCount);
 protected:
   /// GetNodeProfile - Instantiations of the FoldingSet template implement
   /// this function to gather data bits for the given node.

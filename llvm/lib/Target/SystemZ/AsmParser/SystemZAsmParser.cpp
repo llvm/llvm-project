@@ -12,6 +12,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
@@ -322,6 +323,7 @@ public:
   bool isVR64() const { return isReg(VR64Reg); }
   bool isVF128() const { return false; }
   bool isVR128() const { return isReg(VR128Reg); }
+  bool isAnyReg() const { return (isReg() || isImm(0, 15)); }
   bool isBDAddr32Disp12() const { return isMemDisp12(BDMem, ADDR32Reg); }
   bool isBDAddr32Disp20() const { return isMemDisp20(BDMem, ADDR32Reg); }
   bool isBDAddr64Disp12() const { return isMemDisp12(BDMem, ADDR64Reg); }
@@ -342,6 +344,7 @@ public:
   bool isS16Imm() const { return isImm(-32768, 32767); }
   bool isU32Imm() const { return isImm(0, (1LL << 32) - 1); }
   bool isS32Imm() const { return isImm(-(1LL << 31), (1LL << 31) - 1); }
+  bool isU48Imm() const { return isImm(0, (1LL << 48) - 1); }
 };
 
 class SystemZAsmParser : public MCTargetAsmParser {
@@ -371,9 +374,13 @@ private:
                                      RegisterGroup Group, const unsigned *Regs,
                                      RegisterKind Kind);
 
+  OperandMatchResultTy parseAnyRegister(OperandVector &Operands);
+
   bool parseAddress(unsigned &Base, const MCExpr *&Disp,
                     unsigned &Index, bool &IsVector, const MCExpr *&Length,
                     const unsigned *Regs, RegisterKind RegKind);
+
+  bool ParseDirectiveInsn(SMLoc L);
 
   OperandMatchResultTy parseAddress(OperandVector &Operands,
                                     MemoryKind MemKind, const unsigned *Regs,
@@ -390,6 +397,9 @@ public:
                    const MCTargetOptions &Options)
     : MCTargetAsmParser(Options, sti), Parser(parser) {
     MCAsmParserExtension::Initialize(Parser);
+
+    // Alias the .word directive to .short.
+    parser.addAliasForDirective(".word", ".short");
 
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
@@ -451,6 +461,9 @@ public:
   OperandMatchResultTy parseVR128(OperandVector &Operands) {
     return parseRegister(Operands, RegV, SystemZMC::VR128Regs, VR128Reg);
   }
+  OperandMatchResultTy parseAnyReg(OperandVector &Operands) {
+    return parseAnyRegister(Operands);
+  }
   OperandMatchResultTy parseBDAddr32(OperandVector &Operands) {
     return parseAddress(Operands, BDMem, SystemZMC::GR32Regs, ADDR32Reg);
   }
@@ -486,6 +499,83 @@ public:
 #define GET_SUBTARGET_FEATURE_NAME
 #define GET_MATCHER_IMPLEMENTATION
 #include "SystemZGenAsmMatcher.inc"
+
+// Used for the .insn directives; contains information needed to parse the
+// operands in the directive.
+struct InsnMatchEntry {
+  StringRef Format;
+  uint64_t Opcode;
+  int32_t NumOperands;
+  MatchClassKind OperandKinds[5];
+};
+
+// For equal_range comparison.
+struct CompareInsn {
+  bool operator() (const InsnMatchEntry &LHS, StringRef RHS) {
+    return LHS.Format < RHS;
+  }
+  bool operator() (StringRef LHS, const InsnMatchEntry &RHS) {
+    return LHS < RHS.Format;
+  }
+  bool operator() (const InsnMatchEntry &LHS, const InsnMatchEntry &RHS) {
+    return LHS.Format < RHS.Format;
+  }
+};
+
+// Table initializing information for parsing the .insn directive.
+static struct InsnMatchEntry InsnMatchTable[] = {
+  /* Format, Opcode, NumOperands, OperandKinds */
+  { "e", SystemZ::InsnE, 1,
+    { MCK_U16Imm } },
+  { "ri", SystemZ::InsnRI, 3,
+    { MCK_U32Imm, MCK_AnyReg, MCK_S16Imm } },
+  { "rie", SystemZ::InsnRIE, 4,
+    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_PCRel16 } },
+  { "ril", SystemZ::InsnRIL, 3,
+    { MCK_U48Imm, MCK_AnyReg, MCK_PCRel32 } },
+  { "rilu", SystemZ::InsnRILU, 3,
+    { MCK_U48Imm, MCK_AnyReg, MCK_U32Imm } },
+  { "ris", SystemZ::InsnRIS, 5,
+    { MCK_U48Imm, MCK_AnyReg, MCK_S8Imm, MCK_U4Imm, MCK_BDAddr64Disp12 } },
+  { "rr", SystemZ::InsnRR, 3,
+    { MCK_U16Imm, MCK_AnyReg, MCK_AnyReg } },
+  { "rre", SystemZ::InsnRRE, 3,
+    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg } },
+  { "rrf", SystemZ::InsnRRF, 5,
+    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm } },
+  { "rrs", SystemZ::InsnRRS, 5,
+    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm, MCK_BDAddr64Disp12 } },
+  { "rs", SystemZ::InsnRS, 4,
+    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp12 } },
+  { "rse", SystemZ::InsnRSE, 4,
+    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp12 } },
+  { "rsi", SystemZ::InsnRSI, 4,
+    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_PCRel16 } },
+  { "rsy", SystemZ::InsnRSY, 4,
+    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp20 } },
+  { "rx", SystemZ::InsnRX, 3,
+    { MCK_U32Imm, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
+  { "rxe", SystemZ::InsnRXE, 3,
+    { MCK_U48Imm, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
+  { "rxf", SystemZ::InsnRXF, 4,
+    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
+  { "rxy", SystemZ::InsnRXY, 3,
+    { MCK_U48Imm, MCK_AnyReg, MCK_BDXAddr64Disp20 } },
+  { "s", SystemZ::InsnS, 2,
+    { MCK_U32Imm, MCK_BDAddr64Disp12 } },
+  { "si", SystemZ::InsnSI, 3,
+    { MCK_U32Imm, MCK_BDAddr64Disp12, MCK_S8Imm } },
+  { "sil", SystemZ::InsnSIL, 3,
+    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_U16Imm } },
+  { "siy", SystemZ::InsnSIY, 3,
+    { MCK_U48Imm, MCK_BDAddr64Disp20, MCK_U8Imm } },
+  { "ss", SystemZ::InsnSS, 4,
+    { MCK_U48Imm, MCK_BDXAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg } },
+  { "sse", SystemZ::InsnSSE, 3,
+    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12 } },
+  { "ssf", SystemZ::InsnSSF, 4,
+    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg } }
+};
 
 void SystemZOperand::print(raw_ostream &OS) const {
   llvm_unreachable("Not implemented");
@@ -566,6 +656,59 @@ SystemZAsmParser::parseRegister(OperandVector &Operands, RegisterGroup Group,
 
   Operands.push_back(SystemZOperand::createReg(Kind, Reg.Num,
                                                Reg.StartLoc, Reg.EndLoc));
+  return MatchOperand_Success;
+}
+
+// Parse any type of register (including integers) and add it to Operands.
+SystemZAsmParser::OperandMatchResultTy
+SystemZAsmParser::parseAnyRegister(OperandVector &Operands) {
+  // Handle integer values.
+  if (Parser.getTok().is(AsmToken::Integer)) {
+    const MCExpr *Register;
+    SMLoc StartLoc = Parser.getTok().getLoc();
+    if (Parser.parseExpression(Register))
+      return MatchOperand_ParseFail;
+
+    if (auto *CE = dyn_cast<MCConstantExpr>(Register)) {
+      int64_t Value = CE->getValue();
+      if (Value < 0 || Value > 15) {
+        Error(StartLoc, "invalid register");
+        return MatchOperand_ParseFail;
+      }
+    }
+
+    SMLoc EndLoc =
+      SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+
+    Operands.push_back(SystemZOperand::createImm(Register, StartLoc, EndLoc));
+  }
+  else {
+    Register Reg;
+    if (parseRegister(Reg))
+      return MatchOperand_ParseFail;
+
+    // Map to the correct register kind.
+    RegisterKind Kind;
+    unsigned RegNo;
+    if (Reg.Group == RegGR) {
+      Kind = GR64Reg;
+      RegNo = SystemZMC::GR64Regs[Reg.Num];
+    }
+    else if (Reg.Group == RegFP) {
+      Kind = FP64Reg;
+      RegNo = SystemZMC::FP64Regs[Reg.Num];
+    }
+    else if (Reg.Group == RegV) {
+      Kind = VR128Reg;
+      RegNo = SystemZMC::VR128Regs[Reg.Num];
+    }
+    else {
+      return MatchOperand_ParseFail;
+    }
+
+    Operands.push_back(SystemZOperand::createReg(Kind, RegNo,
+                                                 Reg.StartLoc, Reg.EndLoc));
+  }
   return MatchOperand_Success;
 }
 
@@ -678,7 +821,114 @@ SystemZAsmParser::parseAddress(OperandVector &Operands, MemoryKind MemKind,
 }
 
 bool SystemZAsmParser::ParseDirective(AsmToken DirectiveID) {
+  StringRef IDVal = DirectiveID.getIdentifier();
+
+  if (IDVal == ".insn")
+    return ParseDirectiveInsn(DirectiveID.getLoc());
+
   return true;
+}
+
+/// ParseDirectiveInsn
+/// ::= .insn [ format, encoding, (operands (, operands)*) ]
+bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
+  MCAsmParser &Parser = getParser();
+
+  // Expect instruction format as identifier.
+  StringRef Format;
+  SMLoc ErrorLoc = Parser.getTok().getLoc();
+  if (Parser.parseIdentifier(Format))
+    return Error(ErrorLoc, "expected instruction format");
+
+  SmallVector<std::unique_ptr<MCParsedAsmOperand>, 8> Operands;
+
+  // Find entry for this format in InsnMatchTable.
+  auto EntryRange =
+    std::equal_range(std::begin(InsnMatchTable), std::end(InsnMatchTable),
+                     Format, CompareInsn());
+
+  // If first == second, couldn't find a match in the table.
+  if (EntryRange.first == EntryRange.second)
+    return Error(ErrorLoc, "unrecognized format");
+
+  struct InsnMatchEntry *Entry = EntryRange.first;
+
+  // Format should match from equal_range.
+  assert(Entry->Format == Format);
+
+  // Parse the following operands using the table's information.
+  for (int i = 0; i < Entry->NumOperands; i++) {
+    MatchClassKind Kind = Entry->OperandKinds[i];
+
+    SMLoc StartLoc = Parser.getTok().getLoc();
+
+    // Always expect commas as separators for operands.
+    if (getLexer().isNot(AsmToken::Comma))
+      return Error(StartLoc, "unexpected token in directive");
+    Lex();
+
+    // Parse operands.
+    OperandMatchResultTy ResTy;
+    if (Kind == MCK_AnyReg)
+      ResTy = parseAnyReg(Operands);
+    else if (Kind == MCK_BDXAddr64Disp12 || Kind == MCK_BDXAddr64Disp20)
+      ResTy = parseBDXAddr64(Operands);
+    else if (Kind == MCK_BDAddr64Disp12 || Kind == MCK_BDAddr64Disp20)
+      ResTy = parseBDAddr64(Operands);
+    else if (Kind == MCK_PCRel32)
+      ResTy = parsePCRel32(Operands);
+    else if (Kind == MCK_PCRel16)
+      ResTy = parsePCRel16(Operands);
+    else {
+      // Only remaining operand kind is an immediate.
+      const MCExpr *Expr;
+      SMLoc StartLoc = Parser.getTok().getLoc();
+
+      // Expect immediate expression.
+      if (Parser.parseExpression(Expr))
+        return Error(StartLoc, "unexpected token in directive");
+
+      SMLoc EndLoc =
+        SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+
+      Operands.push_back(SystemZOperand::createImm(Expr, StartLoc, EndLoc));
+      ResTy = MatchOperand_Success;
+    }
+
+    if (ResTy != MatchOperand_Success)
+      return true;
+  }
+
+  // Build the instruction with the parsed operands.
+  MCInst Inst = MCInstBuilder(Entry->Opcode);
+
+  for (size_t i = 0; i < Operands.size(); i++) {
+    MCParsedAsmOperand &Operand = *Operands[i];
+    MatchClassKind Kind = Entry->OperandKinds[i];
+
+    // Verify operand.
+    unsigned Res = validateOperandClass(Operand, Kind);
+    if (Res != Match_Success)
+      return Error(Operand.getStartLoc(), "unexpected operand type");
+
+    // Add operands to instruction.
+    SystemZOperand &ZOperand = static_cast<SystemZOperand &>(Operand);
+    if (ZOperand.isReg())
+      ZOperand.addRegOperands(Inst, 1);
+    else if (ZOperand.isMem(BDMem))
+      ZOperand.addBDAddrOperands(Inst, 2);
+    else if (ZOperand.isMem(BDXMem))
+      ZOperand.addBDXAddrOperands(Inst, 3);
+    else if (ZOperand.isImm())
+      ZOperand.addImmOperands(Inst, 1);
+    else
+      llvm_unreachable("unexpected operand type");
+  }
+
+  // Emit as a regular instruction.
+  Parser.getStreamer().EmitInstruction(Inst, getSTI());
+
+  return false;
 }
 
 bool SystemZAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,

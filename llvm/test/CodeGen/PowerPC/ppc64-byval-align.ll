@@ -1,4 +1,4 @@
-; RUN: llc -O1 < %s -march=ppc64 -mcpu=pwr7 | FileCheck %s
+; RUN: llc -verify-machineinstrs -O1 < %s -march=ppc64 -mcpu=pwr7 | FileCheck %s
 
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
@@ -35,8 +35,7 @@ entry:
   ret i64 %0
 }
 ; CHECK-LABEL: @callee2
-; CHECK: ld [[REG:[0-9]+]], 128(1)
-; CHECK: mr 3, [[REG]]
+; CHECK: ld 3, 128(1)
 ; CHECK: blr
 
 declare i64 @test2(%struct.pad* byval, i32 signext, %struct.test* byval align 16)

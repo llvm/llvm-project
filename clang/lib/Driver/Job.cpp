@@ -7,17 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/Job.h"
 #include "InputInfo.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Job.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -40,17 +42,16 @@ static int skipArgs(const char *Flag, bool HaveCrashVFS) {
   // These flags are all of the form -Flag <Arg> and are treated as two
   // arguments.  Therefore, we need to skip the flag and the next argument.
   bool Res = llvm::StringSwitch<bool>(Flag)
-    .Cases("-I", "-MF", "-MT", "-MQ", true)
+    .Cases("-MF", "-MT", "-MQ", "-serialize-diagnostic-file", true)
     .Cases("-o", "-coverage-file", "-dependency-file", true)
     .Cases("-fdebug-compilation-dir", "-idirafter", true)
     .Cases("-include", "-include-pch", "-internal-isystem", true)
     .Cases("-internal-externc-isystem", "-iprefix", "-iwithprefix", true)
     .Cases("-iwithprefixbefore", "-isystem", "-iquote", true)
-    .Cases("-resource-dir", "-serialize-diagnostic-file", true)
     .Cases("-dwarf-debug-flags", "-ivfsoverlay", true)
     .Cases("-header-include-file", "-diagnostic-log-file", true)
     // Some include flags shouldn't be skipped if we have a crash VFS
-    .Case("-isysroot", !HaveCrashVFS)
+    .Cases("-isysroot", "-I", "-F", "-resource-dir", !HaveCrashVFS)
     .Default(false);
 
   // Match found.
@@ -71,7 +72,8 @@ static int skipArgs(const char *Flag, bool HaveCrashVFS) {
 
   // These flags are treated as a single argument (e.g., -F<Dir>).
   StringRef FlagRef(Flag);
-  if (FlagRef.startswith("-F") || FlagRef.startswith("-I") ||
+  if ((!HaveCrashVFS &&
+       (FlagRef.startswith("-F") || FlagRef.startswith("-I"))) ||
       FlagRef.startswith("-fmodules-cache-path=") ||
       FlagRef.startswith("-fapinotes-cache-path="))
     return 1;
@@ -195,6 +197,18 @@ void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
     printArg(OS, "-ivfsoverlay", Quote);
     OS << ' ';
     printArg(OS, CrashInfo->VFSPath.str().c_str(), Quote);
+
+    // Insert -fmodules-cache-path and use the relative module directory
+    // <name>.cache/vfs/modules where we already dumped the modules.
+    SmallString<128> RelModCacheDir = llvm::sys::path::parent_path(
+        llvm::sys::path::parent_path(CrashInfo->VFSPath));
+    llvm::sys::path::append(RelModCacheDir, "modules");
+
+    std::string ModCachePath = "-fmodules-cache-path=";
+    ModCachePath.append(RelModCacheDir.c_str());
+
+    OS << ' ';
+    printArg(OS, ModCachePath.c_str(), Quote);
   }
 
   if (ResponseFile != nullptr) {
@@ -296,6 +310,29 @@ int FallbackCommand::Execute(const StringRef **Redirects, std::string *ErrMsg,
 
   int SecondaryStatus = Fallback->Execute(Redirects, ErrMsg, ExecutionFailed);
   return SecondaryStatus;
+}
+
+ForceSuccessCommand::ForceSuccessCommand(const Action &Source_,
+                                         const Tool &Creator_,
+                                         const char *Executable_,
+                                         const ArgStringList &Arguments_,
+                                         ArrayRef<InputInfo> Inputs)
+    : Command(Source_, Creator_, Executable_, Arguments_, Inputs) {}
+
+void ForceSuccessCommand::Print(raw_ostream &OS, const char *Terminator,
+                            bool Quote, CrashReportInfo *CrashInfo) const {
+  Command::Print(OS, "", Quote, CrashInfo);
+  OS << " || (exit 0)" << Terminator;
+}
+
+int ForceSuccessCommand::Execute(const StringRef **Redirects,
+                                 std::string *ErrMsg,
+                                 bool *ExecutionFailed) const {
+  int Status = Command::Execute(Redirects, ErrMsg, ExecutionFailed);
+  (void)Status;
+  if (ExecutionFailed)
+    *ExecutionFailed = false;
+  return 0;
 }
 
 void JobList::Print(raw_ostream &OS, const char *Terminator, bool Quote,

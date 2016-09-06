@@ -1,29 +1,67 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-apple-ios | FileCheck --check-prefix=CHECK-APPLE %s
-; RUN: llc -O0 -verify-machineinstrs < %s -mtriple=aarch64-apple-ios | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llc -verify-machineinstrs -mtriple=aarch64-apple-ios -o - %s | FileCheck --check-prefix=CHECK --check-prefix=OPT %s
+; RUN: llc -O0 -verify-machineinstrs -mtriple=aarch64-apple-ios -o - %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=aarch64-unknown-linux-gnu -o - %s | FileCheck --check-prefix=CHECK --check-prefix=OPT %s
 
-; Parameter with swiftself should be allocated to x9.
-define void @check_swiftself(i32* swiftself %addr0) {
-; CHECK-APPLE-LABEL: check_swiftself:
-; CHECK-O0-LABEL: check_swiftself:
-
-    %val0 = load volatile i32, i32* %addr0
-; CHECK-APPLE: ldr w{{.*}}, [x9]
-; CHECK-O0: ldr w{{.*}}, [x9]
-    ret void
+; Parameter with swiftself should be allocated to x20.
+; CHECK-LABEL: swiftself_param:
+; CHECK: mov x0, x20
+; CHECK-NEXT: ret
+define i8* @swiftself_param(i8* swiftself %addr0) {
+  ret i8 *%addr0
 }
 
-@var8_3 = global i8 0
-declare void @take_swiftself(i8* swiftself %addr0)
+; Check that x20 is used to pass a swiftself argument.
+; CHECK-LABEL: call_swiftself:
+; CHECK: mov x20, x0
+; CHECK: bl {{_?}}swiftself_param
+; CHECK: ret
+define i8 *@call_swiftself(i8* %arg) {
+  %res = call i8 *@swiftself_param(i8* swiftself %arg)
+  ret i8 *%res
+}
 
-define void @simple_args() {
-; CHECK-APPLE-LABEL: simple_args:
-; CHECK-O0-LABEL: simple_args:
+; x20 should be saved by the callee even if used for swiftself
+; CHECK-LABEL: swiftself_clobber:
+; CHECK: {{stp|str}} {{.*}}x20{{.*}}sp
+; ...
+; CHECK: {{ldp|ldr}} {{.*}}x20{{.*}}sp
+; CHECK: ret
+define i8 *@swiftself_clobber(i8* swiftself %addr0) {
+  call void asm sideeffect "", "~{x20}"()
+  ret i8 *%addr0
+}
 
-  call void @take_swiftself(i8* @var8_3)
-; CHECK-APPLE: add x9,
-; CHECK-APPLE: bl {{_?}}take_swiftself
-; CHECK-O0: add x9,
-; CHECK-O0: bl {{_?}}take_swiftself
-
+; Demonstrate that we do not need any movs when calling multiple functions
+; with swiftself argument.
+; CHECK-LABEL: swiftself_passthrough:
+; OPT-NOT: mov{{.*}}x20
+; OPT: bl {{_?}}swiftself_param
+; OPT-NOT: mov{{.*}}x20
+; OPT-NEXT: bl {{_?}}swiftself_param
+; OPT: ret
+define void @swiftself_passthrough(i8* swiftself %addr0) {
+  call i8 *@swiftself_param(i8* swiftself %addr0)
+  call i8 *@swiftself_param(i8* swiftself %addr0)
   ret void
+}
+
+; We can use a tail call if the callee swiftself is the same as the caller one.
+; CHECK-LABEL: swiftself_tail:
+; OPT: b {{_?}}swiftself_param
+; OPT-NOT: ret
+define i8* @swiftself_tail(i8* swiftself %addr0) {
+  call void asm sideeffect "", "~{x20}"()
+  %res = tail call i8* @swiftself_param(i8* swiftself %addr0)
+  ret i8* %res
+}
+
+; We can not use a tail call if the callee swiftself is not the same as the
+; caller one.
+; CHECK-LABEL: swiftself_notail:
+; CHECK: mov x20, x0
+; CHECK: bl {{_?}}swiftself_param
+; CHECK: ret
+define i8* @swiftself_notail(i8* swiftself %addr0, i8* %addr1) nounwind {
+  %res = tail call i8* @swiftself_param(i8* swiftself %addr1)
+  ret i8* %res
 }

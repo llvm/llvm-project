@@ -1,0 +1,28 @@
+set(SCUDO_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(SCUDO_LIT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+
+set(SCUDO_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
+if(NOT COMPILER_RT_STANDALONE_BUILD)
+  list(APPEND SCUDO_TEST_DEPS scudo)
+endif()
+
+configure_lit_site_cfg(
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
+  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
+  )
+
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+   EXEC_PROGRAM(cat ARGS "/proc/cpuinfo" OUTPUT_VARIABLE CPUINFO)
+   STRING(REGEX REPLACE "^.*(sse4_2).*$" "\\1" SSE_THERE ${CPUINFO})
+   STRING(COMPARE EQUAL "sse4_2" "${SSE_THERE}" SSE42_TRUE)
+endif(CMAKE_SYSTEM_NAME MATCHES "Linux")
+
+if (SSE42_TRUE AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+  add_lit_testsuite(check-scudo
+    "Running the Scudo Hardened Allocator tests"
+    ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS ${SCUDO_TEST_DEPS})
+  set_target_properties(check-scudo PROPERTIES FOLDER
+    "Compiler-RT Misc")
+endif(SSE42_TRUE AND CMAKE_SIZEOF_VOID_P EQUAL 8)

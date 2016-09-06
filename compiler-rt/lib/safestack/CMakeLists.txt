@@ -1,4 +1,6 @@
 add_custom_target(safestack)
+set_target_properties(safestack PROPERTIES
+  FOLDER "Compiler-RT Misc")
 
 set(SAFESTACK_SOURCES safestack.cc)
 

@@ -13,8 +13,11 @@
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
+#include "llvm/Object/MachO.h"
+#include "llvm/Object/RelocVisitor.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Dwarf.h"
+#include "llvm/Support/ELF.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -72,7 +75,7 @@ static void dumpAccelSection(raw_ostream &OS, StringRef Name,
   Accel.dump(OS);
 }
 
-void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
+void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType, bool DumpEH) {
   if (DumpType == DIDT_All || DumpType == DIDT_Abbrev) {
     OS << ".debug_abbrev contents:\n";
     getDebugAbbrev()->dump(OS);
@@ -125,6 +128,10 @@ void DWARFContext::dump(raw_ostream &OS, DIDumpType DumpType) {
   if (DumpType == DIDT_All || DumpType == DIDT_Frames) {
     OS << "\n.debug_frame contents:\n";
     getDebugFrame()->dump(OS);
+    if (DumpEH) {
+      OS << "\n.eh_frame contents:\n";
+      getEHFrame()->dump(OS);
+    }
   }
 
   if (DumpType == DIDT_All || DumpType == DIDT_Macro) {
@@ -355,7 +362,18 @@ const DWARFDebugFrame *DWARFContext::getDebugFrame() {
   // http://lists.dwarfstd.org/htdig.cgi/dwarf-discuss-dwarfstd.org/2011-December/001173.html
   DataExtractor debugFrameData(getDebugFrameSection(), isLittleEndian(),
                                getAddressSize());
-  DebugFrame.reset(new DWARFDebugFrame());
+  DebugFrame.reset(new DWARFDebugFrame(false /* IsEH */));
+  DebugFrame->parse(debugFrameData);
+  return DebugFrame.get();
+}
+
+const DWARFDebugFrame *DWARFContext::getEHFrame() {
+  if (EHFrame)
+    return EHFrame.get();
+
+  DataExtractor debugFrameData(getEHFrameSection(), isLittleEndian(),
+                               getAddressSize());
+  DebugFrame.reset(new DWARFDebugFrame(true /* IsEH */));
   DebugFrame->parse(debugFrameData);
   return DebugFrame.get();
 }
@@ -575,8 +593,8 @@ DWARFContext::getInliningInfoForAddress(uint64_t Address,
   return InliningInfo;
 }
 
-static bool consumeCompressedDebugSectionHeader(StringRef &data,
-                                                uint64_t &OriginalSize) {
+static bool consumeCompressedGnuHeader(StringRef &data,
+                                       uint64_t &OriginalSize) {
   // Consume "ZLIB" prefix.
   if (!data.startswith("ZLIB"))
     return false;
@@ -588,6 +606,50 @@ static bool consumeCompressedDebugSectionHeader(StringRef &data,
   if (Offset == 0)
     return false;
   data = data.substr(Offset);
+  return true;
+}
+
+static bool consumeCompressedZLibHeader(StringRef &Data, uint64_t &OriginalSize,
+                                        bool IsLE, bool Is64Bit) {
+  using namespace ELF;
+  uint64_t HdrSize = Is64Bit ? sizeof(Elf64_Chdr) : sizeof(Elf32_Chdr);
+  if (Data.size() < HdrSize)
+    return false;
+
+  DataExtractor Extractor(Data, IsLE, 0);
+  uint32_t Offset = 0;
+  if (Extractor.getUnsigned(&Offset, Is64Bit ? sizeof(Elf64_Word)
+                                             : sizeof(Elf32_Word)) !=
+      ELFCOMPRESS_ZLIB)
+    return false;
+
+  // Skip Elf64_Chdr::ch_reserved field.
+  if (Is64Bit)
+    Offset += sizeof(Elf64_Word);
+
+  OriginalSize = Extractor.getUnsigned(&Offset, Is64Bit ? sizeof(Elf64_Xword)
+                                                        : sizeof(Elf32_Word));
+  Data = Data.substr(HdrSize);
+  return true;
+}
+
+static bool tryDecompress(StringRef &Name, StringRef &Data,
+                          SmallString<32> &Out, bool ZLibStyle, bool IsLE,
+                          bool Is64Bit) {
+  if (!zlib::isAvailable())
+    return false;
+
+  uint64_t OriginalSize;
+  bool Result =
+      ZLibStyle ? consumeCompressedZLibHeader(Data, OriginalSize, IsLE, Is64Bit)
+                : consumeCompressedGnuHeader(Data, OriginalSize);
+
+  if (!Result || zlib::uncompress(Data, Out, OriginalSize) != zlib::StatusOK)
+    return false;
+
+  // gnu-style names are started from "z", consume that.
+  if (!ZLibStyle)
+    Name = Name.substr(1);
   return true;
 }
 
@@ -616,20 +678,13 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
 
     name = name.substr(name.find_first_not_of("._")); // Skip . and _ prefixes.
 
-    // Check if debug info section is compressed with zlib.
-    if (name.startswith("zdebug_")) {
-      uint64_t OriginalSize;
-      if (!zlib::isAvailable() ||
-          !consumeCompressedDebugSectionHeader(data, OriginalSize))
+    bool ZLibStyleCompressed = Section.isCompressed();
+    if (ZLibStyleCompressed || name.startswith("zdebug_")) {
+      SmallString<32> Out;
+      if (!tryDecompress(name, data, Out, ZLibStyleCompressed, IsLittleEndian,
+                         AddressSize == 8))
         continue;
-      UncompressedSections.resize(UncompressedSections.size() + 1);
-      if (zlib::uncompress(data, UncompressedSections.back(), OriginalSize) !=
-          zlib::StatusOK) {
-        UncompressedSections.pop_back();
-        continue;
-      }
-      // Make data point to uncompressed section contents and save its contents.
-      name = name.substr(1);
+      UncompressedSections.emplace_back(std::move(Out));
       data = UncompressedSections.back();
     }
 
@@ -641,6 +696,7 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
             .Case("debug_line", &LineSection.Data)
             .Case("debug_aranges", &ARangeSection)
             .Case("debug_frame", &DebugFrameSection)
+            .Case("eh_frame", &EHFrameSection)
             .Case("debug_str", &StringSection)
             .Case("debug_ranges", &RangeSection)
             .Case("debug_macinfo", &MacinfoSection)
@@ -739,15 +795,29 @@ DWARFContextInMemory::DWARFContextInMemory(const object::ObjectFile &Obj,
         // First calculate the address of the symbol or section as it appears
         // in the objct file
         if (Sym != Obj.symbol_end()) {
-          ErrorOr<uint64_t> SymAddrOrErr = Sym->getAddress();
-          if (std::error_code EC = SymAddrOrErr.getError()) {
+          Expected<uint64_t> SymAddrOrErr = Sym->getAddress();
+          if (!SymAddrOrErr) {
+            std::string Buf;
+            raw_string_ostream OS(Buf);
+            logAllUnhandledErrors(SymAddrOrErr.takeError(), OS, "");
+            OS.flush();
             errs() << "error: failed to compute symbol address: "
-                   << EC.message() << '\n';
+                   << Buf << '\n';
             continue;
           }
           SymAddr = *SymAddrOrErr;
           // Also remember what section this symbol is in for later
-          RSec = *Sym->getSection();
+          auto SectOrErr = Sym->getSection();
+          if (!SectOrErr) {
+            std::string Buf;
+            raw_string_ostream OS(Buf);
+            logAllUnhandledErrors(SectOrErr.takeError(), OS, "");
+            OS.flush();
+            errs() << "error: failed to get symbol section: "
+                   << Buf << '\n';
+            continue;
+          }
+          RSec = *SectOrErr;
         } else if (auto *MObj = dyn_cast<MachOObjectFile>(&Obj)) {
           // MachO also has relocations that point to sections and
           // scattered relocations.

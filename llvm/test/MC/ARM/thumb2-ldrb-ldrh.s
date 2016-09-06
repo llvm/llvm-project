@@ -1,5 +1,5 @@
-@ RUN: not llvm-mc -triple thumbv7a-none-eabi -show-encoding < %s 2>&1 | FileCheck %s --check-prefix=CHECK
-@ RUN: not llvm-mc -triple thumbv7m-none-eabi -show-encoding < %s 2>&1 | FileCheck %s --check-prefix=CHECK
+@ RUN: not llvm-mc -triple thumbv7a-none-eabi -show-encoding < %s 2>&1 | FileCheck %s
+@ RUN: not llvm-mc -triple thumbv7m-none-eabi -show-encoding < %s 2>&1 | FileCheck %s
 
 @ Thumb2 LDRS?[BH] are not valid when Rt == PC (these encodings are used for
 @ preload hints).

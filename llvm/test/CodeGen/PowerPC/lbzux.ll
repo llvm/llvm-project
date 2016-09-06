@@ -1,8 +1,8 @@
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
-; RUN: llc -disable-ppc-unaligned < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -disable-ppc-unaligned < %s | FileCheck %s
 
-define fastcc void @allocateSpace(i1 %cond1, i1 %cond2) nounwind {
+define fastcc void @allocateSpace(i1 %cond1, i1 %cond2, i32 %offset) nounwind {
 entry:
   %0 = load i8*, i8** undef, align 8
   br i1 undef, label %return, label %lor.lhs.false
@@ -19,14 +19,13 @@ if.then15:                                        ; preds = %if.end7
 while.cond:                                       ; preds = %while.body, %if.then15
   %idxprom17 = sext i32 0 to i64
   %arrayidx18 = getelementptr inbounds i8, i8* %0, i64 %idxprom17
-  %or = or i32 undef, undef
   br i1 %cond1, label %if.end71, label %while.body
 
 while.body:                                       ; preds = %while.cond
   br i1 %cond2, label %while.cond, label %if.then45
 
 if.then45:                                        ; preds = %while.body
-  %idxprom48139 = zext i32 %or to i64
+  %idxprom48139 = zext i32 %offset to i64
   %arrayidx49 = getelementptr inbounds i8, i8* %0, i64 %idxprom48139
   %1 = bitcast i8* %arrayidx49 to i16*
   %2 = bitcast i8* %arrayidx18 to i16*

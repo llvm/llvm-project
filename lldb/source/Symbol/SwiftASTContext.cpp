@@ -291,6 +291,8 @@ SwiftASTContext::GetGlobalLLVMContext()
 CachedMemberInfo *
 SwiftASTContext::GetCachedMemberInfo (void* type)
 {
+    VALID_OR_RETURN(nullptr);
+
     if (type)
     {
         //printf("CompilerType::GetCachedMemberInfo () for %s...", GetTypeName().c_str());
@@ -1203,6 +1205,8 @@ GetEnumInfoFromEnumDecl (swift::ASTContext *ast,
 SwiftEnumDescriptor*
 SwiftASTContext::GetCachedEnumInfo (void* type)
 {
+    VALID_OR_RETURN(nullptr);
+
     if (type)
     {
         EnumInfoCache *enum_info_cache = GetEnumInfoCache (GetASTContext());
@@ -1795,7 +1799,7 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
                         StreamString ss;
                         module_sp->GetDescription(&ss, eDescriptionLevelBrief);
                         target->GetDebugger().GetErrorFile()->Printf("warning: Swift error in module %s"/*": \n    %s\n"*/
-                                                                     "Debug info from this module will be unavailable in the debugger.\n\n",
+                                                                     ".\nDebug info from this module will be unavailable in the debugger.\n\n",
                                                                      ss.GetData());
                     }
                     
@@ -1841,7 +1845,7 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
             // If we're debugging a testsuite, then treat the main test bundle as the executable
             static ConstString s_XCTest("XCTest");
             
-            if (exe_module_sp->GetFileSpec().GetFilename() == s_XCTest)
+            if (exe_module_sp && exe_module_sp->GetFileSpec().GetFilename() == s_XCTest)
             {
                 ModuleSP unit_test_module = PlatformDarwin::GetUnitTestModule(target->GetImages());
                 
@@ -2052,11 +2056,19 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
             if (swift_ast_sp->HasFatalErrors())
             {
                 swift_ast_sp->m_error.SetErrorStringWithFormat("Error creating target Swift AST context: %s", swift_ast_sp->GetFatalErrors().AsCString());
+                return lldb::TypeSystemSP();
             }
-            else
+            
             {
-                return swift_ast_sp;
+                const bool can_create = true;
+                if (!swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create))
+                {
+                    // We need to be able to load the standard library!
+                    return lldb::TypeSystemSP();
+                }
             }
+            
+            return swift_ast_sp;
         }
     }
     return lldb::TypeSystemSP();
@@ -3414,6 +3426,8 @@ SwiftASTContext::GetASTContext ()
 swift::SerializedModuleLoader *
 SwiftASTContext::GetSerializeModuleLoader ()
 {
+    VALID_OR_RETURN(nullptr);
+
     GetASTContext();
     return m_serialized_module_loader;
 }
@@ -3421,6 +3435,8 @@ SwiftASTContext::GetSerializeModuleLoader ()
 swift::ClangImporter *
 SwiftASTContext::GetClangImporter ()
 {
+    VALID_OR_RETURN(nullptr);
+
     if (m_clang_importer == NULL)
     {
         swift::ASTContext *ast_ctx = GetASTContext();
@@ -3462,6 +3478,8 @@ SwiftASTContext::GetClangImporter ()
 bool
 SwiftASTContext::AddModuleSearchPath (const char *path)
 {
+    VALID_OR_RETURN(false);
+
     if (path && path[0])
     {
         swift::ASTContext *ast = GetASTContext();
@@ -3488,6 +3506,8 @@ SwiftASTContext::AddModuleSearchPath (const char *path)
 bool
 SwiftASTContext::AddFrameworkSearchPath (const char *path)
 {
+    VALID_OR_RETURN(false);
+
     if (path && path[0])
     {
         swift::ASTContext *ast = GetASTContext();
@@ -3573,6 +3593,8 @@ SwiftASTContext::AddClangArgumentPair (const char *clang_arg_1, const char *clan
 size_t
 SwiftASTContext::GetNumModuleSearchPaths () const
 {
+    VALID_OR_RETURN(0);
+
     if (m_ast_context_ap.get())
         return m_ast_context_ap->SearchPathOpts.ImportSearchPaths.size();
     return 0;
@@ -3581,6 +3603,8 @@ SwiftASTContext::GetNumModuleSearchPaths () const
 const char *
 SwiftASTContext::GetModuleSearchPathAtIndex (size_t idx) const
 {
+    VALID_OR_RETURN(nullptr);
+
     if (m_ast_context_ap.get())
     {
         if (idx < m_ast_context_ap->SearchPathOpts.ImportSearchPaths.size())
@@ -3592,6 +3616,8 @@ SwiftASTContext::GetModuleSearchPathAtIndex (size_t idx) const
 size_t
 SwiftASTContext::GetNumFrameworkSearchPaths () const
 {
+    VALID_OR_RETURN(0);
+
     if (m_ast_context_ap.get())
         return m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths.size();
     return 0;
@@ -3600,6 +3626,8 @@ SwiftASTContext::GetNumFrameworkSearchPaths () const
 const char *
 SwiftASTContext::GetFrameworkSearchPathAtIndex (size_t idx) const
 {
+    VALID_OR_RETURN(nullptr);
+
     if (m_ast_context_ap.get())
     {
         if (idx < m_ast_context_ap->SearchPathOpts.FrameworkSearchPaths.size())
@@ -4491,6 +4519,7 @@ SwiftASTContext::FindQualifiedType (const char *qualified_name)
                             case swift::DeclKind::IfConfig:
                             case swift::DeclKind::Param:
                             case swift::DeclKind::Module:
+                            case swift::DeclKind::PrecedenceGroup:
                                 break;
                                 
                             case swift::DeclKind::TypeAlias:
@@ -4559,9 +4588,19 @@ ValueDeclToType (swift::ValueDecl *decl,
     return CompilerType();
 }
 
+static CompilerType
+DeclToType (swift::Decl *decl,
+            swift::ASTContext *ast,
+            bool metatype_is_instance = true)
+{
+    if (swift::ValueDecl *value_decl = llvm::dyn_cast_or_null<swift::ValueDecl>(decl))
+        return ValueDeclToType(value_decl, ast, metatype_is_instance);
+    return CompilerType();
+}
+
 static SwiftASTContext::TypeOrDecl
 DeclToTypeOrDecl (swift::ASTContext* ast,
-                  swift::ValueDecl* decl)
+                  swift::Decl* decl)
 {
     if (decl)
     {
@@ -4571,9 +4610,6 @@ DeclToTypeOrDecl (swift::ASTContext* ast,
             case swift::DeclKind::Extension:
             case swift::DeclKind::PatternBinding:
             case swift::DeclKind::TopLevelCode:
-            case swift::DeclKind::InfixOperator:
-            case swift::DeclKind::PrefixOperator:
-            case swift::DeclKind::PostfixOperator:
             case swift::DeclKind::GenericTypeParam:
             case swift::DeclKind::AssociatedType:
             case swift::DeclKind::EnumElement:
@@ -4582,27 +4618,35 @@ DeclToTypeOrDecl (swift::ASTContext* ast,
             case swift::DeclKind::Param:
             case swift::DeclKind::Module:
                 break;
-                
+
+            case swift::DeclKind::InfixOperator:
+            case swift::DeclKind::PrefixOperator:
+            case swift::DeclKind::PostfixOperator:
+            case swift::DeclKind::PrecedenceGroup:
+                return decl;
+
             case swift::DeclKind::TypeAlias:
             case swift::DeclKind::Enum:
             case swift::DeclKind::Struct:
             case swift::DeclKind::Class:
             case swift::DeclKind::Protocol:
-                if (decl->hasType())
+            {
+                swift::ValueDecl *value_decl = llvm::dyn_cast_or_null<swift::ValueDecl>(decl);
+                if (value_decl->hasType())
                 {
-                    swift::Type swift_type = decl->getType();
+                    swift::Type swift_type = value_decl->getType();
                     swift::MetatypeType *meta_type = swift_type->getAs<swift::MetatypeType>();
                     if (meta_type)
                         return CompilerType (ast, meta_type->getInstanceType().getPointer());
                     else
                         return CompilerType (ast, swift_type.getPointer());
                 }
+            }
                 break;
                 
             case swift::DeclKind::Func:
             case swift::DeclKind::Var:
                 return decl;
-                break;
                 
             case swift::DeclKind::Subscript:
             case swift::DeclKind::Constructor:
@@ -4634,8 +4678,8 @@ SwiftASTContext::FindContainedType (llvm::StringRef name,
         CompilerType type = result.Apply<CompilerType> ([] (CompilerType type) -> CompilerType {
                                               return type;
                                           },
-                                          [this] (swift::ValueDecl* decl) -> CompilerType {
-                                              return ValueDeclToType(decl, GetASTContext());
+                                          [this] (swift::Decl* decl) -> CompilerType {
+                                              return DeclToType(decl, GetASTContext());
                                           });
         results.emplace(type);
     }
@@ -4658,8 +4702,8 @@ SwiftASTContext::FindContainedTypeOrDecl (llvm::StringRef name,
     CompilerType container_type = container_type_or_decl.Apply<CompilerType> ([] (CompilerType type) -> CompilerType {
         return type;
     },
-                                                    [this] (swift::ValueDecl* decl) -> CompilerType {
-                                                        return ValueDeclToType(decl, GetASTContext());
+                                                    [this] (swift::Decl* decl) -> CompilerType {
+                                                        return DeclToType(decl, GetASTContext());
                                                     });
     
     if (false == name.empty() &&
@@ -4736,16 +4780,19 @@ SwiftASTContext::FindTypes (const char *name,
         CompilerType type = result.Apply<CompilerType> ([] (CompilerType type) -> CompilerType {
                                              return type;
                                          },
-                                         [this] (swift::ValueDecl* decl) -> CompilerType {
-                                             if (decl->hasType())
+                                         [this] (swift::Decl* decl) -> CompilerType {
+                                             if (swift::ValueDecl *value_decl = llvm::dyn_cast_or_null<swift::ValueDecl>(decl))
                                              {
-                                                 swift::Type swift_type = decl->getType();
-                                                 swift::MetatypeType *meta_type = swift_type->getAs<swift::MetatypeType>();
-                                                 swift::ASTContext *ast = GetASTContext ();
-                                                 if (meta_type)
-                                                     return CompilerType (ast, meta_type->getInstanceType().getPointer());
-                                                 else
-                                                     return CompilerType (ast, swift_type.getPointer());
+                                                 if (value_decl->hasType())
+                                                 {
+                                                     swift::Type swift_type = value_decl->getType();
+                                                     swift::MetatypeType *meta_type = swift_type->getAs<swift::MetatypeType>();
+                                                     swift::ASTContext *ast = GetASTContext ();
+                                                     if (meta_type)
+                                                         return CompilerType (ast, meta_type->getInstanceType().getPointer());
+                                                     else
+                                                         return CompilerType (ast, swift_type.getPointer());
+                                                 }
                                              }
                                              return CompilerType();
                                          });
@@ -4771,16 +4818,27 @@ SwiftASTContext::FindTypesOrDecls (const char *name,
     if (name && name[0] && swift_module)
     {
         swift::Module::AccessPathTy access_path;
-        llvm::SmallVector<swift::ValueDecl*, 4> decls;
+        llvm::SmallVector<swift::ValueDecl*, 4> value_decls;
+        swift::Identifier identifier(GetIdentifier(name));
         if (strchr(name, '.'))
-            swift_module->lookupValue(access_path, GetIdentifier(name), swift::NLKind::QualifiedLookup, decls);
+            swift_module->lookupValue(access_path, identifier, swift::NLKind::QualifiedLookup, value_decls);
         else
-            swift_module->lookupValue(access_path, GetIdentifier(name), swift::NLKind::UnqualifiedLookup, decls);
-        if (!decls.empty())
+            swift_module->lookupValue(access_path, identifier, swift::NLKind::UnqualifiedLookup, value_decls);
+        if (identifier.isOperator())
         {
-            for (auto decl : decls)
-                results.emplace(DeclToTypeOrDecl(GetASTContext(), decl));
+            swift::OperatorDecl *op_decl = swift_module->lookupPrefixOperator(identifier);
+            if (op_decl)
+                results.emplace(DeclToTypeOrDecl(GetASTContext(), op_decl));
+            if ( (op_decl = swift_module->lookupInfixOperator(identifier)) )
+                results.emplace(DeclToTypeOrDecl(GetASTContext(), op_decl));
+            if ( (op_decl = swift_module->lookupPostfixOperator(identifier)) )
+                results.emplace(DeclToTypeOrDecl(GetASTContext(), op_decl));
         }
+        if (swift::PrecedenceGroupDecl *pg_decl = swift_module->lookupPrecedenceGroup(identifier))
+            results.emplace(DeclToTypeOrDecl(GetASTContext(), pg_decl));
+        
+        for (auto decl : value_decls)
+            results.emplace(DeclToTypeOrDecl(GetASTContext(), decl));
     }
     
     return results.size() - before;
@@ -5143,6 +5201,8 @@ SwiftASTContext::BindGenericType (CompilerType type,
                                   std::vector<CompilerType> generic_args,
                                   bool rebind_if_necessary)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (type.IsValid() && llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem()))
     {
         swift::CanType swift_can_type (GetCanonicalSwiftType (type));
@@ -5254,6 +5314,8 @@ SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
     // If this is a fatal error, copy the error into the AST Context's fatal error field,
     // and then put it to the stream, otherwise just dump the diagnostics to the stream.
 
+    VALID_OR_RETURN_VOID();
+    
     if (m_ast_context_ap->Diags.hasFatalErrorOccurred() && !m_reported_fatal_error)
     {
         DiagnosticManager fatal_diagnostics;
@@ -5308,6 +5370,8 @@ SwiftASTContext::ClearModuleDependentCaches ()
 void
 SwiftASTContext::DumpConfiguration(Log *log)
 {
+    VALID_OR_RETURN_VOID();
+
     if (!log)
         return;
     
@@ -5546,6 +5610,8 @@ SwiftASTContext::IsArrayType (void* type,
                               uint64_t *size,
                               bool *is_incomplete)
 {
+    VALID_OR_RETURN(false);
+
     swift::CanType swift_can_type (GetCanonicalSwiftType (type));
     const swift::TypeKind type_kind = swift_can_type->getKind();
     switch (type_kind)
@@ -5753,6 +5819,8 @@ SwiftASTContext::GetNumberOfFunctionArguments (void* type)
 CompilerType
 SwiftASTContext::GetFunctionArgumentAtIndex (void* type, const size_t index)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (type)
     {
         swift::CanType swift_can_type (GetCanonicalSwiftType (type));
@@ -5800,6 +5868,8 @@ SwiftASTContext::IsIntegerType (void* type, bool &is_signed)
 bool
 SwiftASTContext::IsPointerType (void* type, CompilerType *pointee_type)
 {
+    VALID_OR_RETURN(false);
+
     if (type)
     {
         swift::CanType swift_can_type (GetCanonicalSwiftType (type));
@@ -6020,12 +6090,27 @@ SwiftASTContext::IsTypedefType (void* type)
 {
     if (!type)
         return false;
-    return GetSwiftType (type)->getKind() == swift::TypeKind::NameAlias;
+    swift::Type swift_type(GetSwiftType(type));
+    switch (swift_type->getKind())
+    {
+        case swift::TypeKind::NameAlias:
+            return true;
+        case swift::TypeKind::Substituted:
+            if (swift::SubstitutedType *substituted = (swift::SubstitutedType*)swift_type.getPointer())
+                return IsTypedefType(substituted->getReplacementType().getPointer());
+            break;
+        default:
+            break;
+    }
+    
+    return false;
 }
 
 bool
 SwiftASTContext::IsVoidType (void* type)
 {
+    VALID_OR_RETURN(false);
+
     if (!type)
         return false;
     return type == GetASTContext()->TheEmptyTupleType.getPointer();
@@ -6090,6 +6175,8 @@ SwiftASTContext::IsErrorType (const CompilerType& compiler_type)
 CompilerType
 SwiftASTContext::GetReferentType (const CompilerType& compiler_type)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (compiler_type.IsValid() &&
         llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem()))
     {
@@ -6224,6 +6311,56 @@ SwiftASTContext::GetProtocolTypeInfo (const CompilerType& type,
     }
     
     return false;
+}
+
+bool
+SwiftASTContext::IsOptionalChain (CompilerType type,
+                                  CompilerType &payload_type,
+                                  uint32_t &depth)
+{
+    auto is_optional = [] (const CompilerType &type) -> bool {
+        if (auto ast = llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem()))
+        {
+            if (auto swift_ast = ast->GetASTContext())
+            {
+                swift::CanType swift_can_type (GetCanonicalSwiftType (type));
+                const swift::TypeKind type_kind = swift_can_type->getKind();
+                switch (type_kind)
+                {
+                    case swift::TypeKind::BoundGenericEnum:
+                    {
+                        swift::BoundGenericEnumType *t = swift_can_type->getAs<swift::BoundGenericEnumType>();
+                        if (t)
+                        {
+                            swift::EnumDecl *enum_decl = t->getDecl();
+                            return (enum_decl == swift_ast->getOptionalDecl());
+                        }
+                    }
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        return false;
+    };
+
+    depth = 0;
+    
+    while (is_optional(type))
+    {
+        ++depth;
+        lldb::TemplateArgumentKind kind;
+        type = type.GetTemplateArgument(0, kind);
+    }
+    
+    if (depth > 0)
+    {
+        payload_type = type;
+        return true;
+    }
+    else
+        return false;
 }
 
 SwiftASTContext::TypeAllocationStrategy
@@ -6363,6 +6500,8 @@ SwiftASTContext::GetMangledTypeName (void * type)
 uint32_t
 SwiftASTContext::GetTypeInfo (void* type, CompilerType *pointee_or_element_clang_type)
 {
+    VALID_OR_RETURN(0);
+
     if (!type)
         return 0;
     
@@ -6483,6 +6622,8 @@ SwiftASTContext::GetMinimumLanguage (void* type)
 lldb::TypeClass
 SwiftASTContext::GetTypeClass (void* type)
 {
+    VALID_OR_RETURN(lldb::eTypeClassInvalid);
+
     if (!type)
         return lldb::eTypeClassInvalid;
     
@@ -6556,6 +6697,8 @@ SwiftASTContext::GetTypeQualifiers(void* type)
 CompilerType
 SwiftASTContext::GetArrayElementType (void* type, uint64_t *stride)
 {
+    VALID_OR_RETURN(CompilerType());
+
     CompilerType element_type;
     if (type)
     {
@@ -6613,6 +6756,8 @@ SwiftASTContext::GetArrayElementType (void* type, uint64_t *stride)
 CompilerType
 SwiftASTContext::GetCanonicalType (void* type)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (type)
         return CompilerType (GetASTContext(), GetCanonicalSwiftType(type).getPointer());
     return CompilerType();
@@ -6621,6 +6766,8 @@ SwiftASTContext::GetCanonicalType (void* type)
 CompilerType
 SwiftASTContext::GetInstanceType (void* type)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (!type)
         return CompilerType();
 
@@ -6645,6 +6792,8 @@ SwiftASTContext::GetInstanceType (void* type)
 CompilerType
 SwiftASTContext::GetFullyUnqualifiedType (void* type)
 {
+    VALID_OR_RETURN(CompilerType());
+
     return CompilerType(GetASTContext(), GetSwiftType(type));
 }
 
@@ -6674,6 +6823,8 @@ SwiftASTContext::GetFunctionArgumentCount (void* type)
 CompilerType
 SwiftASTContext::GetFunctionArgumentTypeAtIndex (void* type, size_t idx)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (type)
     {
         const swift::AnyFunctionType* func = llvm::dyn_cast<swift::AnyFunctionType>(GetCanonicalSwiftType (type).getPointer());
@@ -6703,6 +6854,8 @@ SwiftASTContext::GetFunctionArgumentTypeAtIndex (void* type, size_t idx)
 CompilerType
 SwiftASTContext::GetFunctionReturnType (void* type)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (type)
     {
         const swift::AnyFunctionType* func = llvm::dyn_cast<swift::AnyFunctionType>(GetCanonicalSwiftType (type).getPointer());
@@ -6791,6 +6944,8 @@ SwiftASTContext::GetNumMemberFunctions (void* type)
 TypeMemberFunctionImpl
 SwiftASTContext::GetMemberFunctionAtIndex (void* type, size_t idx)
 {
+    VALID_OR_RETURN(TypeMemberFunctionImpl());
+
     std::string name("");
     CompilerType result_type;
     MemberFunctionKind kind(MemberFunctionKind::eMemberFunctionKindUnknown);
@@ -6958,6 +7113,8 @@ SwiftASTContext::GetMemberFunctionAtIndex (void* type, size_t idx)
 CompilerType
 SwiftASTContext::GetLValueReferenceType (void *type)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (type)
         return CompilerType(GetASTContext(), swift::LValueType::get(GetSwiftType(type)));
     return CompilerType();
@@ -6972,6 +7129,8 @@ SwiftASTContext::GetRValueReferenceType (void *type)
 CompilerType
 SwiftASTContext::GetNonReferenceType (void* type)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (type)
     {
         swift::CanType swift_can_type (GetCanonicalSwiftType (type));
@@ -7002,6 +7161,8 @@ SwiftASTContext::GetPointeeType (void* type)
 CompilerType
 SwiftASTContext::GetPointerType (void* type)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (type)
     {
         swift::Type swift_type (::GetSwiftType(type));
@@ -7015,25 +7176,40 @@ SwiftASTContext::GetPointerType (void* type)
 CompilerType
 SwiftASTContext::GetTypedefedType (void* type)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (type)
     {
         swift::Type swift_type (::GetSwiftType(type));
         const swift::TypeKind type_kind = swift_type->getKind();
-        if (type_kind == swift::TypeKind::NameAlias)
+        switch (type_kind)
         {
-            swift::NameAliasType *name_alias_type = llvm::dyn_cast_or_null<swift::NameAliasType>(swift_type.getPointer());
-            if (name_alias_type)
-            {
-                return CompilerType (GetASTContext(), name_alias_type->getSinglyDesugaredType());
+            case swift::TypeKind::NameAlias: {
+                swift::NameAliasType *name_alias_type = llvm::dyn_cast_or_null<swift::NameAliasType>(swift_type.getPointer());
+                if (name_alias_type)
+                {
+                    return CompilerType (GetASTContext(), name_alias_type->getSinglyDesugaredType());
+                }
             }
+                break;
+            case swift::TypeKind::Substituted: {
+                if (swift::SubstitutedType *substituted = (swift::SubstitutedType*)swift_type.getPointer())
+                    return GetTypedefedType(substituted->getReplacementType().getPointer());
+            }
+                break;
+            default:
+                break;
         }
     }
+
     return CompilerType();
 }
 
 CompilerType
 SwiftASTContext::GetUnboundType (lldb::opaque_compiler_type_t type)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (type)
     {
         swift::CanType swift_can_type (GetCanonicalSwiftType (type));
@@ -7091,6 +7267,8 @@ SwiftASTContext::GetFloatTypeFromBitSize (size_t bit_size)
 const swift::irgen::TypeInfo *
 SwiftASTContext::GetSwiftTypeInfo (void* type)
 {
+    VALID_OR_RETURN(nullptr);
+
     if (type)
     {
         swift::CanType swift_can_type (GetCanonicalSwiftType (type));
@@ -7167,6 +7345,8 @@ StripRedundantParentheses (swift::Type t)
 CompilerType
 SwiftASTContext::StripRedundantParentheses (void* type)
 {
+    VALID_OR_RETURN(CompilerType());
+
     swift::Type swift_type(GetSwiftType(type));
     swift_type = swift_type.transform(::StripRedundantParentheses);
     return CompilerType(GetASTContext(),swift_type.getPointer());
@@ -7226,6 +7406,8 @@ SwiftASTContext::GetTypeBitAlign (void* type)
 lldb::Encoding
 SwiftASTContext::GetEncoding (void* type, uint64_t &count)
 {
+    VALID_OR_RETURN(lldb::eEncodingInvalid);
+
     if (!type)
         return lldb::eEncodingInvalid;
     
@@ -7311,6 +7493,8 @@ SwiftASTContext::GetEncoding (void* type, uint64_t &count)
 lldb::Format
 SwiftASTContext::GetFormat (void* type)
 {
+    VALID_OR_RETURN(lldb::eFormatInvalid);
+
     if (!type)
         return lldb::eFormatDefault;
     
@@ -7396,6 +7580,8 @@ SwiftASTContext::GetFormat (void* type)
 uint32_t
 SwiftASTContext::GetNumChildren (void* type, bool omit_empty_base_classes)
 {
+    VALID_OR_RETURN(0);
+
     if (!type)
         return 0;
     
@@ -7553,6 +7739,8 @@ SwiftASTContext::GetNumVirtualBaseClasses (void* opaque_type)
 uint32_t
 SwiftASTContext::GetNumFields (void* type)
 {
+    VALID_OR_RETURN(0);
+
     if (!type)
         return 0;
     
@@ -7653,6 +7841,8 @@ SwiftASTContext::GetNumFields (void* type)
 CompilerType
 SwiftASTContext::GetDirectBaseClassAtIndex (void* opaque_type, size_t idx, uint32_t *bit_offset_ptr)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (opaque_type)
     {
         swift::CanType swift_can_type (GetCanonicalSwiftType (opaque_type));
@@ -7680,6 +7870,8 @@ SwiftASTContext::GetFieldAtIndex (void* type, size_t idx,
                                   uint32_t *bitfield_bit_size_ptr,
                                   bool *is_bitfield_ptr)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (!type)
         return CompilerType();
     
@@ -8081,6 +8273,8 @@ SwiftASTContext::GetChildCompilerTypeAtIndex (void* type,
                                               ValueObject *valobj,
                                               uint64_t &language_flags)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (!type)
         return CompilerType();
     
@@ -8360,6 +8554,8 @@ SwiftASTContext::GetIndexOfChildMemberWithName (void* type, const char *name,
                                                 bool omit_empty_base_classes,
                                                 std::vector<uint32_t>& child_indexes)
 {
+    VALID_OR_RETURN(0);
+
     if (type && name && name[0])
     {
         swift::CanType swift_can_type (GetCanonicalSwiftType (type));
@@ -8544,6 +8740,8 @@ SwiftASTContext::GetIndexOfChildMemberWithName (void* type, const char *name,
 uint32_t
 SwiftASTContext::GetIndexOfChildWithName (void* type, const char *name, bool omit_empty_base_classes)
 {
+    VALID_OR_RETURN(0);
+
     if (type && name && name[0])
     {
         swift::CanType swift_can_type (GetCanonicalSwiftType (type));
@@ -8847,6 +9045,8 @@ SwiftASTContext::GetTemplateArgument (void* type,
                                       size_t arg_idx,
                                       lldb::TemplateArgumentKind &kind)
 {
+    VALID_OR_RETURN(CompilerType());
+
     if (type)
     {
         swift::CanType swift_can_type (GetCanonicalSwiftType (type));
@@ -8862,15 +9062,23 @@ SwiftASTContext::GetTemplateArgument (void* type,
                 auto *nominal_type_decl = unbound_generic_type->getDecl();
                 if (!nominal_type_decl)
                     break;
-                swift::GenericParamList *generic_param_list = nominal_type_decl->getGenericParams();
-                if (!generic_param_list)
+                swift::GenericSignature *generic_sig =
+                    nominal_type_decl->getGenericSignature();
+                if (!generic_sig)
                     break;
-                if (arg_idx >= generic_param_list->getAllArchetypes().size())
-                    break;
-                kind = eTemplateArgumentKindType;
-                return CompilerType(GetASTContext(),generic_param_list->getAllArchetypes()[arg_idx]);
-            }
+                for (auto depTy : generic_sig->getAllDependentTypes()) {
+                  if (arg_idx == 0) {
+                      return CompilerType(GetASTContext(),
+                          swift::ArchetypeBuilder::mapTypeIntoContext(
+                              nominal_type_decl, depTy)->castTo<swift::ArchetypeType>());
+                  }
+
+                  arg_idx--;
+                }
+
+                // Index was out of bounds...
                 break;
+            }
             case swift::TypeKind::BoundGenericClass:
             case swift::TypeKind::BoundGenericStruct:
             case swift::TypeKind::BoundGenericEnum:
@@ -8988,6 +9196,8 @@ SwiftASTContext::DumpTypeValue (void* type, Stream *s,
                                 ExecutionContextScope *exe_scope,
                                 bool is_base_class)
 {
+    VALID_OR_RETURN(false);
+
     if (!type)
         return false;
 
@@ -9624,3 +9834,4 @@ SwiftASTContextForExpressions::GetPersistentExpressionState()
 {
     return m_persistent_state_up.get();
 }
+

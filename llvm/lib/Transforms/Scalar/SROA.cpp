@@ -55,8 +55,8 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 
-#if __cplusplus >= 201103L && !defined(NDEBUG)
-// We only use this for a debug check in C++11
+#ifndef NDEBUG
+// We only use this for a debug check.
 #include <random>
 #endif
 
@@ -432,19 +432,18 @@ class AllocaSlices::partition_iterator
         // cannot change the max split slice end because we just checked that
         // the prior partition ended prior to that max.
         P.SplitTails.erase(
-            std::remove_if(
-                P.SplitTails.begin(), P.SplitTails.end(),
-                [&](Slice *S) { return S->endOffset() <= P.EndOffset; }),
+            remove_if(P.SplitTails,
+                      [&](Slice *S) { return S->endOffset() <= P.EndOffset; }),
             P.SplitTails.end());
-        assert(std::any_of(P.SplitTails.begin(), P.SplitTails.end(),
-                           [&](Slice *S) {
-                             return S->endOffset() == MaxSplitSliceEndOffset;
-                           }) &&
+        assert(any_of(P.SplitTails,
+                      [&](Slice *S) {
+                        return S->endOffset() == MaxSplitSliceEndOffset;
+                      }) &&
                "Could not find the current max split slice offset!");
-        assert(std::all_of(P.SplitTails.begin(), P.SplitTails.end(),
-                           [&](Slice *S) {
-                             return S->endOffset() <= MaxSplitSliceEndOffset;
-                           }) &&
+        assert(all_of(P.SplitTails,
+                      [&](Slice *S) {
+                        return S->endOffset() <= MaxSplitSliceEndOffset;
+                      }) &&
                "Max split slice end offset is not actually the max!");
       }
     }
@@ -681,7 +680,7 @@ private:
       // langref in a very strict sense. If we ever want to enable
       // SROAStrictInbounds, this code should be factored cleanly into
       // PtrUseVisitor, but it is easier to experiment with SROAStrictInbounds
-      // by writing out the code here where we have tho underlying allocation
+      // by writing out the code here where we have the underlying allocation
       // size readily available.
       APInt GEPOffset = Offset;
       const DataLayout &DL = GEPI.getModule()->getDataLayout();
@@ -996,13 +995,10 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
     return;
   }
 
-  Slices.erase(std::remove_if(Slices.begin(), Slices.end(),
-                              [](const Slice &S) {
-                                return S.isDead();
-                              }),
+  Slices.erase(remove_if(Slices, [](const Slice &S) { return S.isDead(); }),
                Slices.end());
 
-#if __cplusplus >= 201103L && !defined(NDEBUG)
+#ifndef NDEBUG
   if (SROARandomShuffleSlices) {
     std::mt19937 MT(static_cast<unsigned>(sys::TimeValue::now().msec()));
     std::shuffle(Slices.begin(), Slices.end(), MT);
@@ -1156,6 +1152,8 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
   if (!HaveLoad)
     return false;
 
+  const DataLayout &DL = PN.getModule()->getDataLayout();
+
   // We can only transform this if it is safe to push the loads into the
   // predecessor blocks. The only thing to watch out for is that we can't put
   // a possibly trapping load in the predecessor if it is a critical edge.
@@ -1177,7 +1175,7 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
     // If this pointer is always safe to load, or if we can prove that there
     // is already a load in the block, then we can move the load to the pred
     // block.
-    if (isSafeToLoadUnconditionally(InVal, MaxAlign, TI))
+    if (isSafeToLoadUnconditionally(InVal, MaxAlign, DL, TI))
       continue;
 
     return false;
@@ -1245,6 +1243,7 @@ static void speculatePHINodeLoads(PHINode &PN) {
 static bool isSafeSelectToSpeculate(SelectInst &SI) {
   Value *TValue = SI.getTrueValue();
   Value *FValue = SI.getFalseValue();
+  const DataLayout &DL = SI.getModule()->getDataLayout();
 
   for (User *U : SI.users()) {
     LoadInst *LI = dyn_cast<LoadInst>(U);
@@ -1254,9 +1253,9 @@ static bool isSafeSelectToSpeculate(SelectInst &SI) {
     // Both operands to the select need to be dereferencable, either
     // absolutely (e.g. allocas) or at this point because we can see other
     // accesses to it.
-    if (!isSafeToLoadUnconditionally(TValue, LI->getAlignment(), LI))
+    if (!isSafeToLoadUnconditionally(TValue, LI->getAlignment(), DL, LI))
       return false;
-    if (!isSafeToLoadUnconditionally(FValue, LI->getAlignment(), LI))
+    if (!isSafeToLoadUnconditionally(FValue, LI->getAlignment(), DL, LI))
       return false;
   }
 
@@ -1549,7 +1548,7 @@ static Value *getAdjustedPtr(IRBuilderTy &IRB, const DataLayout &DL, Value *Ptr,
     if (Operator::getOpcode(Ptr) == Instruction::BitCast) {
       Ptr = cast<Operator>(Ptr)->getOperand(0);
     } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(Ptr)) {
-      if (GA->mayBeOverridden())
+      if (GA->isInterposable())
         break;
       Ptr = GA->getAliasee();
     } else {
@@ -1632,8 +1631,10 @@ static bool canConvertValue(const DataLayout &DL, Type *OldTy, Type *NewTy) {
   OldTy = OldTy->getScalarType();
   NewTy = NewTy->getScalarType();
   if (NewTy->isPointerTy() || OldTy->isPointerTy()) {
-    if (NewTy->isPointerTy() && OldTy->isPointerTy())
-      return true;
+    if (NewTy->isPointerTy() && OldTy->isPointerTy()) {
+      return cast<PointerType>(NewTy)->getPointerAddressSpace() ==
+        cast<PointerType>(OldTy)->getPointerAddressSpace();
+    }
     if (NewTy->isIntegerTy() || OldTy->isIntegerTy())
       return true;
     return false;
@@ -1810,10 +1811,10 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
   // do that until all the backends are known to produce good code for all
   // integer vector types.
   if (!HaveCommonEltTy) {
-    CandidateTys.erase(std::remove_if(CandidateTys.begin(), CandidateTys.end(),
-                                      [](VectorType *VTy) {
-                         return !VTy->getElementType()->isIntegerTy();
-                       }),
+    CandidateTys.erase(remove_if(CandidateTys,
+                                 [](VectorType *VTy) {
+                                   return !VTy->getElementType()->isIntegerTy();
+                                 }),
                        CandidateTys.end());
 
     // If there were no integer vector types, give up.
@@ -2885,7 +2886,13 @@ private:
 
     (void)New;
     DEBUG(dbgs() << "          to: " << *New << "\n");
-    return true;
+
+    // Lifetime intrinsics are only promotable if they cover the whole alloca.
+    // (In theory, intrinsics which partially cover an alloca could be
+    // promoted, but PromoteMemToReg doesn't handle that case.)
+    bool IsWholeAlloca = NewBeginOffset == NewAllocaBeginOffset &&
+                         NewEndOffset == NewAllocaEndOffset;
+    return IsWholeAlloca;
   }
 
   bool visitPHINode(PHINode &PN) {
@@ -3102,9 +3109,14 @@ private:
     void emitFunc(Type *Ty, Value *&Agg, const Twine &Name) {
       assert(Ty->isSingleValueType());
       // Extract the single value and store it using the indices.
-      Value *Store = IRB.CreateStore(
-          IRB.CreateExtractValue(Agg, Indices, Name + ".extract"),
-          IRB.CreateInBoundsGEP(nullptr, Ptr, GEPIndices, Name + ".gep"));
+      //
+      // The gep and extractvalue values are factored out of the CreateStore
+      // call to make the output independent of the argument evaluation order.
+      Value *ExtractValue =
+          IRB.CreateExtractValue(Agg, Indices, Name + ".extract");
+      Value *InBoundsGEP =
+          IRB.CreateInBoundsGEP(nullptr, Ptr, GEPIndices, Name + ".gep");
+      Value *Store = IRB.CreateStore(ExtractValue, InBoundsGEP);
       (void)Store;
       DEBUG(dbgs() << "          to: " << *Store << "\n");
     }
@@ -3359,11 +3371,15 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   for (auto &P : AS.partitions()) {
     for (Slice &S : P) {
       Instruction *I = cast<Instruction>(S.getUse()->getUser());
-      if (!S.isSplittable() ||S.endOffset() <= P.endOffset()) {
-        // If this was a load we have to track that it can't participate in any
-        // pre-splitting!
+      if (!S.isSplittable() || S.endOffset() <= P.endOffset()) {
+        // If this is a load we have to track that it can't participate in any
+        // pre-splitting. If this is a store of a load we have to track that
+        // that load also can't participate in any pre-splitting.
         if (auto *LI = dyn_cast<LoadInst>(I))
           UnsplittableLoads.insert(LI);
+        else if (auto *SI = dyn_cast<StoreInst>(I))
+          if (auto *LI = dyn_cast<LoadInst>(SI->getValueOperand()))
+            UnsplittableLoads.insert(LI);
         continue;
       }
       assert(P.endOffset() > S.beginOffset() &&
@@ -3390,9 +3406,9 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         }
 
         Loads.push_back(LI);
-      } else if (auto *SI = dyn_cast<StoreInst>(S.getUse()->getUser())) {
-        if (!SI ||
-            S.getUse() != &SI->getOperandUse(SI->getPointerOperandIndex()))
+      } else if (auto *SI = dyn_cast<StoreInst>(I)) {
+        if (S.getUse() != &SI->getOperandUse(SI->getPointerOperandIndex()))
+          // Skip stores *of* pointers. FIXME: This shouldn't even be possible!
           continue;
         auto *StoredLoad = dyn_cast<LoadInst>(SI->getValueOperand());
         if (!StoredLoad || !StoredLoad->isSimple())
@@ -3442,62 +3458,59 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   // match relative to their starting offset. We have to verify this prior to
   // any rewriting.
   Stores.erase(
-      std::remove_if(Stores.begin(), Stores.end(),
-                     [&UnsplittableLoads, &SplitOffsetsMap](StoreInst *SI) {
-                       // Lookup the load we are storing in our map of split
-                       // offsets.
-                       auto *LI = cast<LoadInst>(SI->getValueOperand());
-                       // If it was completely unsplittable, then we're done,
-                       // and this store can't be pre-split.
-                       if (UnsplittableLoads.count(LI))
-                         return true;
+      remove_if(Stores,
+                [&UnsplittableLoads, &SplitOffsetsMap](StoreInst *SI) {
+                  // Lookup the load we are storing in our map of split
+                  // offsets.
+                  auto *LI = cast<LoadInst>(SI->getValueOperand());
+                  // If it was completely unsplittable, then we're done,
+                  // and this store can't be pre-split.
+                  if (UnsplittableLoads.count(LI))
+                    return true;
 
-                       auto LoadOffsetsI = SplitOffsetsMap.find(LI);
-                       if (LoadOffsetsI == SplitOffsetsMap.end())
-                         return false; // Unrelated loads are definitely safe.
-                       auto &LoadOffsets = LoadOffsetsI->second;
+                  auto LoadOffsetsI = SplitOffsetsMap.find(LI);
+                  if (LoadOffsetsI == SplitOffsetsMap.end())
+                    return false; // Unrelated loads are definitely safe.
+                  auto &LoadOffsets = LoadOffsetsI->second;
 
-                       // Now lookup the store's offsets.
-                       auto &StoreOffsets = SplitOffsetsMap[SI];
+                  // Now lookup the store's offsets.
+                  auto &StoreOffsets = SplitOffsetsMap[SI];
 
-                       // If the relative offsets of each split in the load and
-                       // store match exactly, then we can split them and we
-                       // don't need to remove them here.
-                       if (LoadOffsets.Splits == StoreOffsets.Splits)
-                         return false;
+                  // If the relative offsets of each split in the load and
+                  // store match exactly, then we can split them and we
+                  // don't need to remove them here.
+                  if (LoadOffsets.Splits == StoreOffsets.Splits)
+                    return false;
 
-                       DEBUG(dbgs()
-                             << "    Mismatched splits for load and store:\n"
-                             << "      " << *LI << "\n"
-                             << "      " << *SI << "\n");
+                  DEBUG(dbgs() << "    Mismatched splits for load and store:\n"
+                               << "      " << *LI << "\n"
+                               << "      " << *SI << "\n");
 
-                       // We've found a store and load that we need to split
-                       // with mismatched relative splits. Just give up on them
-                       // and remove both instructions from our list of
-                       // candidates.
-                       UnsplittableLoads.insert(LI);
-                       return true;
-                     }),
+                  // We've found a store and load that we need to split
+                  // with mismatched relative splits. Just give up on them
+                  // and remove both instructions from our list of
+                  // candidates.
+                  UnsplittableLoads.insert(LI);
+                  return true;
+                }),
       Stores.end());
   // Now we have to go *back* through all the stores, because a later store may
   // have caused an earlier store's load to become unsplittable and if it is
   // unsplittable for the later store, then we can't rely on it being split in
   // the earlier store either.
-  Stores.erase(std::remove_if(Stores.begin(), Stores.end(),
-                              [&UnsplittableLoads](StoreInst *SI) {
-                                auto *LI =
-                                    cast<LoadInst>(SI->getValueOperand());
-                                return UnsplittableLoads.count(LI);
-                              }),
+  Stores.erase(remove_if(Stores,
+                         [&UnsplittableLoads](StoreInst *SI) {
+                           auto *LI = cast<LoadInst>(SI->getValueOperand());
+                           return UnsplittableLoads.count(LI);
+                         }),
                Stores.end());
   // Once we've established all the loads that can't be split for some reason,
   // filter any that made it into our list out.
-  Loads.erase(std::remove_if(Loads.begin(), Loads.end(),
-                             [&UnsplittableLoads](LoadInst *LI) {
-                               return UnsplittableLoads.count(LI);
-                             }),
+  Loads.erase(remove_if(Loads,
+                        [&UnsplittableLoads](LoadInst *LI) {
+                          return UnsplittableLoads.count(LI);
+                        }),
               Loads.end());
-
 
   // If no loads or stores are left, there is no pre-splitting to be done for
   // this alloca.
@@ -3756,9 +3769,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   }
 
   // Remove the killed slices that have ben pre-split.
-  AS.erase(std::remove_if(AS.begin(), AS.end(), [](const Slice &S) {
-    return S.isDead();
-  }), AS.end());
+  AS.erase(remove_if(AS, [](const Slice &S) { return S.isDead(); }), AS.end());
 
   // Insert our new slices. This will sort and merge them into the sorted
   // sequence.
@@ -3773,8 +3784,8 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   // Finally, don't try to promote any allocas that new require re-splitting.
   // They have already been added to the worklist above.
   PromotableAllocas.erase(
-      std::remove_if(
-          PromotableAllocas.begin(), PromotableAllocas.end(),
+      remove_if(
+          PromotableAllocas,
           [&](AllocaInst *AI) { return ResplitPromotableAllocas.count(AI); }),
       PromotableAllocas.end());
 
@@ -3916,15 +3927,19 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
       Worklist.insert(NewAI);
     }
   } else {
-    // If we can't promote the alloca, iterate on it to check for new
-    // refinements exposed by splitting the current alloca. Don't iterate on an
-    // alloca which didn't actually change and didn't get promoted.
-    if (NewAI != &AI)
-      Worklist.insert(NewAI);
-
     // Drop any post-promotion work items if promotion didn't happen.
     while (PostPromotionWorklist.size() > PPWOldSize)
       PostPromotionWorklist.pop_back();
+
+    // We couldn't promote and we didn't create a new partition, nothing
+    // happened.
+    if (NewAI == &AI)
+      return nullptr;
+
+    // If we can't promote the alloca, iterate on it to check for new
+    // refinements exposed by splitting the current alloca. Don't iterate on an
+    // alloca which didn't actually change and didn't get promoted.
+    Worklist.insert(NewAI);
   }
 
   return NewAI;
@@ -4205,9 +4220,7 @@ PreservedAnalyses SROA::runImpl(Function &F, DominatorTree &RunDT,
         auto IsInSet = [&](AllocaInst *AI) { return DeletedAllocas.count(AI); };
         Worklist.remove_if(IsInSet);
         PostPromotionWorklist.remove_if(IsInSet);
-        PromotableAllocas.erase(std::remove_if(PromotableAllocas.begin(),
-                                               PromotableAllocas.end(),
-                                               IsInSet),
+        PromotableAllocas.erase(remove_if(PromotableAllocas, IsInSet),
                                 PromotableAllocas.end());
         DeletedAllocas.clear();
       }
@@ -4219,14 +4232,19 @@ PreservedAnalyses SROA::runImpl(Function &F, DominatorTree &RunDT,
     PostPromotionWorklist.clear();
   } while (!Worklist.empty());
 
+  if (!Changed)
+    return PreservedAnalyses::all();
+
   // FIXME: Even when promoting allocas we should preserve some abstract set of
   // CFG-specific analyses.
-  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<GlobalsAA>();
+  return PA;
 }
 
-PreservedAnalyses SROA::run(Function &F, AnalysisManager<Function> *AM) {
-  return runImpl(F, AM->getResult<DominatorTreeAnalysis>(F),
-                 AM->getResult<AssumptionAnalysis>(F));
+PreservedAnalyses SROA::run(Function &F, FunctionAnalysisManager &AM) {
+  return runImpl(F, AM.getResult<DominatorTreeAnalysis>(F),
+                 AM.getResult<AssumptionAnalysis>(F));
 }
 
 /// A legacy pass for the legacy pass manager that wraps the \c SROA pass.
@@ -4242,7 +4260,7 @@ public:
     initializeSROALegacyPassPass(*PassRegistry::getPassRegistry());
   }
   bool runOnFunction(Function &F) override {
-    if (skipOptnoneFunction(F))
+    if (skipFunction(F))
       return false;
 
     auto PA = Impl.runImpl(

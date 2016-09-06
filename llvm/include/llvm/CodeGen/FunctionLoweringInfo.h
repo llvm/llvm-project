@@ -81,17 +81,19 @@ public:
 
   /// Track the virtual register for each swifterror value in a given basic
   /// block. Entries in SwiftErrorVRegs have the same ordering as entries
-  /// in SwiftErrorValues.
+  /// in SwiftErrorVals.
   /// Note that another choice that is more straight-forward is to use
   /// Map<const MachineBasicBlock*, Map<Value*, unsigned/*VReg*/>>. It
   /// maintains a map from swifterror values to virtual registers for each
   /// machine basic block. This choice does not require a one-to-one
-  /// corresponse between SwiftErrorValues and SwiftErrorVRegs. But because of
-  /// efficiency concern, we do not choose it.
+  /// correspondence between SwiftErrorValues and SwiftErrorVRegs. But because
+  /// of efficiency concern, we do not choose it.
   llvm::DenseMap<const MachineBasicBlock*, SwiftErrorVRegs> SwiftErrorMap;
 
-  /// Track the virtual register for a swifterror value at the end of a basic
-  /// block when the basic block is not yet visited.
+  /// Track the virtual register for each swifterror value at the end of a basic
+  /// block when we need the assignment of a virtual register before the basic
+  /// block is visited. When we actually visit the basic block, we will make
+  /// sure the swifterror value is in the correct virtual register.
   llvm::DenseMap<const MachineBasicBlock*, SwiftErrorVRegs>
       SwiftErrorWorklist;
 
@@ -109,15 +111,36 @@ public:
   /// Track virtual registers created for exception pointers.
   DenseMap<const Value *, unsigned> CatchPadExceptionPointers;
 
-  // Keep track of frame indices allocated for statepoints as they could be used
-  // across basic block boundaries.
-  // Key of the map is statepoint instruction, value is a map from spilled
-  // llvm Value to the optional stack stack slot index.
-  // If optional is unspecified it means that we have visited this value
-  // but didn't spill it.
-  typedef DenseMap<const Value*, Optional<int>> StatepointSpilledValueMapTy;
-  DenseMap<const Instruction*, StatepointSpilledValueMapTy>
-    StatepointRelocatedValues;
+  /// Keep track of frame indices allocated for statepoints as they could be
+  /// used across basic block boundaries.  This struct is more complex than a
+  /// simple map because the stateopint lowering code de-duplicates gc pointers
+  /// based on their SDValue (so %p and (bitcast %p to T) will get the same
+  /// slot), and we track that here.
+
+  struct StatepointSpillMap {
+    typedef DenseMap<const Value *, Optional<int>> SlotMapTy;
+
+    /// Maps uniqued llvm IR values to the slots they were spilled in.  If a
+    /// value is mapped to None it means we visited the value but didn't spill
+    /// it (because it was a constant, for instance).
+    SlotMapTy SlotMap;
+
+    /// Maps llvm IR values to the values they were de-duplicated to.
+    DenseMap<const Value *, const Value *> DuplicateMap;
+
+    SlotMapTy::const_iterator find(const Value *V) const {
+      auto DuplIt = DuplicateMap.find(V);
+      if (DuplIt != DuplicateMap.end())
+        V = DuplIt->second;
+      return SlotMap.find(V);
+    }
+
+    SlotMapTy::const_iterator end() const { return SlotMap.end(); }
+  };
+
+  /// Maps gc.statepoint instructions to their corresponding StatepointSpillMap
+  /// instances.
+  DenseMap<const Instruction *, StatepointSpillMap> StatepointSpillMaps;
 
   /// StaticAllocaMap - Keep track of frame indices for fixed sized allocas in
   /// the entry block.  This allows the allocas to be efficiently referenced
@@ -148,7 +171,7 @@ public:
 
   struct LiveOutInfo {
     unsigned NumSignBits : 31;
-    bool IsValid : 1;
+    unsigned IsValid : 1;
     APInt KnownOne, KnownZero;
     LiveOutInfo() : NumSignBits(0), IsValid(true), KnownOne(1, 0),
                     KnownZero(1, 0) {}

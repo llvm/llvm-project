@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -Wno-unused-value -fsyntax-only -verify -fblocks %s
-// RUN: %clang_cc1 -std=c++1y -Wno-unused-value -fsyntax-only -verify -fblocks %s
+// RUN: %clang_cc1 -std=c++14 -Wno-unused-value -fsyntax-only -verify -fblocks %s
 
 namespace std { class type_info; };
 
@@ -485,5 +484,44 @@ void foo() {
       return undeclared_error; // expected-error {{use of undeclared identifier}}
     return 0;
   };
+}
+}
+
+namespace nested_lambda {
+template <int N>
+class S {};
+
+void foo() {
+  const int num = 18;  // expected-note {{'num' declared here}}
+  auto outer = []() {
+    auto inner = [](S<num> &X) {};  // expected-error {{variable 'num' cannot be implicitly captured in a lambda with no capture-default specified}}
+  };
+}
+}
+
+namespace PR27994 {
+struct A { template <class T> A(T); };
+
+template <class T>
+struct B {
+  int x;
+  A a = [&] { int y = x; };
+  A b = [&] { [&] { [&] { int y = x; }; }; };
+  A d = [&](auto param) { int y = x; };
+  A e = [&](auto param) { [&] { [&](auto param2) { int y = x; }; }; };
+};
+
+B<int> b;
+
+template <class T> struct C {
+  struct D {
+    int x;
+    A f = [&] { int y = x; };
+  };
+};
+
+int func() {
+  C<int> a;
+  decltype(a)::D b;
 }
 }

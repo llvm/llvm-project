@@ -18,7 +18,6 @@
 
 #include "UnwrappedLineParser.h"
 #include "clang/Format/Format.h"
-#include <string>
 
 namespace clang {
 class SourceManager;
@@ -83,7 +82,15 @@ public:
   /// \c true if this line starts with the given tokens in order, ignoring
   /// comments.
   template <typename... Ts> bool startsWith(Ts... Tokens) const {
-    return startsWith(First, Tokens...);
+    return First && First->startsSequence(Tokens...);
+  }
+
+  /// \c true if this line ends with the given tokens in reversed order,
+  /// ignoring comments.
+  /// For example, given tokens [T1, T2, T3, ...], the function returns true if
+  /// this line is like "... T3 T2 T1".
+  template <typename... Ts> bool endsWith(Ts... Tokens) const {
+    return Last && Last->endsSequence(Tokens...);
   }
 
   /// \c true if this line looks like a function definition instead of a
@@ -122,18 +129,6 @@ private:
   // Disallow copying.
   AnnotatedLine(const AnnotatedLine &) = delete;
   void operator=(const AnnotatedLine &) = delete;
-
-  template <typename A, typename... Ts>
-  bool startsWith(FormatToken *Tok, A K1) const {
-    while (Tok && Tok->is(tok::comment))
-      Tok = Tok->Next;
-    return Tok && Tok->is(K1);
-  }
-
-  template <typename A, typename... Ts>
-  bool startsWith(FormatToken *Tok, A K1, Ts... Tokens) const {
-    return startsWith(Tok, K1) && startsWith(Tok->Next, Tokens...);
-  }
 };
 
 /// \brief Determines extra information about the tokens comprising an

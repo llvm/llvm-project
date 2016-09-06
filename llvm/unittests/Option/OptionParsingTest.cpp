@@ -79,32 +79,32 @@ TEST(Option, OptionParsing) {
   EXPECT_TRUE(AL.hasArg(OPT_G));
 
   // Check the values.
-  EXPECT_EQ(AL.getLastArgValue(OPT_B), "hi");
-  EXPECT_EQ(AL.getLastArgValue(OPT_C), "bye");
-  EXPECT_EQ(AL.getLastArgValue(OPT_D), "adena");
+  EXPECT_EQ("hi", AL.getLastArgValue(OPT_B));
+  EXPECT_EQ("bye", AL.getLastArgValue(OPT_C));
+  EXPECT_EQ("adena", AL.getLastArgValue(OPT_D));
   std::vector<std::string> Es = AL.getAllArgValues(OPT_E);
-  EXPECT_EQ(Es[0], "apple");
-  EXPECT_EQ(Es[1], "bloom");
-  EXPECT_EQ(AL.getLastArgValue(OPT_F), "42");
+  EXPECT_EQ("apple", Es[0]);
+  EXPECT_EQ("bloom", Es[1]);
+  EXPECT_EQ("42", AL.getLastArgValue(OPT_F));
   std::vector<std::string> Gs = AL.getAllArgValues(OPT_G);
-  EXPECT_EQ(Gs[0], "chuu");
-  EXPECT_EQ(Gs[1], "2");
+  EXPECT_EQ("chuu", Gs[0]);
+  EXPECT_EQ("2", Gs[1]);
 
   // Check the help text.
   std::string Help;
   raw_string_ostream RSO(Help);
   T.PrintHelp(RSO, "test", "title!");
-  EXPECT_NE(Help.find("-A"), std::string::npos);
+  EXPECT_NE(std::string::npos, Help.find("-A"));
 
   // Test aliases.
   arg_iterator Cs = AL.filtered_begin(OPT_C);
-  ASSERT_NE(Cs, AL.filtered_end());
-  EXPECT_EQ(StringRef((*Cs)->getValue()), "desu");
+  ASSERT_NE(AL.filtered_end(), Cs);
+  EXPECT_EQ("desu", StringRef((*Cs)->getValue()));
   ArgStringList ASL;
   (*Cs)->render(AL, ASL);
-  ASSERT_EQ(ASL.size(), 2u);
-  EXPECT_EQ(StringRef(ASL[0]), "-C");
-  EXPECT_EQ(StringRef(ASL[1]), "desu");
+  ASSERT_EQ(2u, ASL.size());
+  EXPECT_EQ("-C", StringRef(ASL[0]));
+  EXPECT_EQ("desu", StringRef(ASL[1]));
 }
 
 TEST(Option, ParseWithFlagExclusions) {
@@ -131,8 +131,8 @@ TEST(Option, ParseWithFlagExclusions) {
   AL = T.ParseArgs(NewArgs, MAI, MAC);
   EXPECT_TRUE(AL.hasArg(OPT_SLASH_C));
   EXPECT_TRUE(AL.hasArg(OPT_C));
-  EXPECT_EQ(AL.getLastArgValue(OPT_SLASH_C), "foo");
-  EXPECT_EQ(AL.getLastArgValue(OPT_C), "bar");
+  EXPECT_EQ("foo", AL.getLastArgValue(OPT_SLASH_C));
+  EXPECT_EQ("bar", AL.getLastArgValue(OPT_C));
 }
 
 TEST(Option, ParseAliasInGroup) {
@@ -151,8 +151,8 @@ TEST(Option, AliasArgs) {
   const char *MyArgs[] = { "-J", "-Joo" };
   InputArgList AL = T.ParseArgs(MyArgs, MAI, MAC);
   EXPECT_TRUE(AL.hasArg(OPT_B));
-  EXPECT_EQ(AL.getAllArgValues(OPT_B)[0], "foo");
-  EXPECT_EQ(AL.getAllArgValues(OPT_B)[1], "bar");
+  EXPECT_EQ("foo", AL.getAllArgValues(OPT_B)[0]);
+  EXPECT_EQ("bar", AL.getAllArgValues(OPT_B)[1]);
 }
 
 TEST(Option, IgnoreCase) {
@@ -183,7 +183,7 @@ TEST(Option, SlurpEmpty) {
   InputArgList AL = T.ParseArgs(MyArgs, MAI, MAC);
   EXPECT_TRUE(AL.hasArg(OPT_A));
   EXPECT_TRUE(AL.hasArg(OPT_Slurp));
-  EXPECT_EQ(AL.getAllArgValues(OPT_Slurp).size(), 0U);
+  EXPECT_EQ(0U, AL.getAllArgValues(OPT_Slurp).size());
 }
 
 TEST(Option, Slurp) {
@@ -196,10 +196,61 @@ TEST(Option, Slurp) {
   EXPECT_TRUE(AL.hasArg(OPT_A));
   EXPECT_FALSE(AL.hasArg(OPT_B));
   EXPECT_TRUE(AL.hasArg(OPT_Slurp));
-  EXPECT_EQ(AL.getAllArgValues(OPT_Slurp).size(), 3U);
-  EXPECT_EQ(AL.getAllArgValues(OPT_Slurp)[0], "-B");
-  EXPECT_EQ(AL.getAllArgValues(OPT_Slurp)[1], "--");
-  EXPECT_EQ(AL.getAllArgValues(OPT_Slurp)[2], "foo");
+  EXPECT_EQ(3U, AL.getAllArgValues(OPT_Slurp).size());
+  EXPECT_EQ("-B", AL.getAllArgValues(OPT_Slurp)[0]);
+  EXPECT_EQ("--", AL.getAllArgValues(OPT_Slurp)[1]);
+  EXPECT_EQ("foo", AL.getAllArgValues(OPT_Slurp)[2]);
+}
+
+TEST(Option, SlurpJoinedEmpty) {
+  TestOptTable T;
+  unsigned MAI, MAC;
+
+  const char *MyArgs[] = { "-A", "-slurpjoined" };
+  InputArgList AL = T.ParseArgs(MyArgs, MAI, MAC);
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_TRUE(AL.hasArg(OPT_SlurpJoined));
+  EXPECT_EQ(AL.getAllArgValues(OPT_SlurpJoined).size(), 0U);
+}
+
+TEST(Option, SlurpJoinedOneJoined) {
+  TestOptTable T;
+  unsigned MAI, MAC;
+
+  const char *MyArgs[] = { "-A", "-slurpjoinedfoo" };
+  InputArgList AL = T.ParseArgs(MyArgs, MAI, MAC);
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_TRUE(AL.hasArg(OPT_SlurpJoined));
+  EXPECT_EQ(AL.getAllArgValues(OPT_SlurpJoined).size(), 1U);
+  EXPECT_EQ(AL.getAllArgValues(OPT_SlurpJoined)[0], "foo");
+}
+
+TEST(Option, SlurpJoinedAndSeparate) {
+  TestOptTable T;
+  unsigned MAI, MAC;
+
+  const char *MyArgs[] = { "-A", "-slurpjoinedfoo", "bar", "baz" };
+  InputArgList AL = T.ParseArgs(MyArgs, MAI, MAC);
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_TRUE(AL.hasArg(OPT_SlurpJoined));
+  EXPECT_EQ(3U, AL.getAllArgValues(OPT_SlurpJoined).size());
+  EXPECT_EQ("foo", AL.getAllArgValues(OPT_SlurpJoined)[0]);
+  EXPECT_EQ("bar", AL.getAllArgValues(OPT_SlurpJoined)[1]);
+  EXPECT_EQ("baz", AL.getAllArgValues(OPT_SlurpJoined)[2]);
+}
+
+TEST(Option, SlurpJoinedButSeparate) {
+  TestOptTable T;
+  unsigned MAI, MAC;
+
+  const char *MyArgs[] = { "-A", "-slurpjoined", "foo", "bar", "baz" };
+  InputArgList AL = T.ParseArgs(MyArgs, MAI, MAC);
+  EXPECT_TRUE(AL.hasArg(OPT_A));
+  EXPECT_TRUE(AL.hasArg(OPT_SlurpJoined));
+  EXPECT_EQ(3U, AL.getAllArgValues(OPT_SlurpJoined).size());
+  EXPECT_EQ("foo", AL.getAllArgValues(OPT_SlurpJoined)[0]);
+  EXPECT_EQ("bar", AL.getAllArgValues(OPT_SlurpJoined)[1]);
+  EXPECT_EQ("baz", AL.getAllArgValues(OPT_SlurpJoined)[2]);
 }
 
 TEST(Option, FlagAliasToJoined) {
@@ -211,6 +262,6 @@ TEST(Option, FlagAliasToJoined) {
   InputArgList AL = T.ParseArgs(MyArgs, MAI, MAC);
   EXPECT_EQ(AL.size(), 1U);
   EXPECT_TRUE(AL.hasArg(OPT_B));
-  EXPECT_EQ(AL.getAllArgValues(OPT_B).size(), 1U);
-  EXPECT_EQ(AL.getAllArgValues(OPT_B)[0], "");
+  EXPECT_EQ(1U, AL.getAllArgValues(OPT_B).size());
+  EXPECT_EQ("", AL.getAllArgValues(OPT_B)[0]);
 }

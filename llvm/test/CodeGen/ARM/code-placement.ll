@@ -12,9 +12,9 @@ entry:
   br i1 %0, label %bb2, label %bb
 
 bb:
-; CHECK: LBB0_1:
-; CHECK: bne LBB0_1
-; CHECK-NOT: b LBB0_1
+; CHECK: LBB0_2:
+; CHECK: bne LBB0_2
+; CHECK-NOT: b LBB0_2
 ; CHECK: bx lr
   %list_addr.05 = phi %struct.list_head* [ %2, %bb ], [ %list, %entry ]
   %next.04 = phi %struct.list_head* [ %list_addr.05, %bb ], [ null, %entry ]

@@ -30,15 +30,17 @@ bb:		; preds = %bb1, %bb.nph
 	%tmp8 = add nsw i32 %i.01, 1		; <i32> [#uses=2]
 ; CHECK: %tmp8
 ; CHECK-NEXT: -->  {1,+,1}<nuw><nsw><%bb>
+	%p.gep = getelementptr double, double* %p, i32 %tmp8
+	%p.val = load double, double* %p.gep
 	br label %bb1
 
 bb1:		; preds = %bb
 	%phitmp = sext i32 %tmp8 to i64		; <i64> [#uses=1]
 ; CHECK: %phitmp
 ; CHECK-NEXT: -->  {1,+,1}<nuw><nsw><%bb>
-	%tmp9 = getelementptr double, double* %p, i64 %phitmp		; <double*> [#uses=1]
+	%tmp9 = getelementptr inbounds double, double* %p, i64 %phitmp		; <double*> [#uses=1]
 ; CHECK: %tmp9
-; CHECK-NEXT:  -->  {(8 + %p),+,8}<%bb>
+; CHECK-NEXT:  -->  {(8 + %p)<nsw>,+,8}<nsw><%bb>
 	%tmp10 = load double, double* %tmp9, align 8		; <double> [#uses=1]
 	%tmp11 = fcmp ogt double %tmp10, 2.000000e+00		; <i1> [#uses=1]
 	br i1 %tmp11, label %bb, label %bb1.return_crit_edge
@@ -66,7 +68,7 @@ for.body.i.i:                                     ; preds = %for.body.i.i, %for.
   store i32 0, i32* %__first.addr.02.i.i, align 4
   %ptrincdec.i.i = getelementptr inbounds i32, i32* %__first.addr.02.i.i, i64 1
 ; CHECK: %ptrincdec.i.i
-; CHECK-NEXT: -->  {(4 + %begin),+,4}<nuw><%for.body.i.i>
+; CHECK-NEXT: -->  {(4 + %begin)<nsw>,+,4}<nuw><%for.body.i.i>
   %cmp.i.i = icmp eq i32* %ptrincdec.i.i, %end
   br i1 %cmp.i.i, label %for.cond.for.end_crit_edge.i.i, label %for.body.i.i
 
@@ -92,7 +94,7 @@ for.body.i.i:                                     ; preds = %entry, %for.body.i.
 ; CHECK: {1,+,1}<nuw><nsw><%for.body.i.i>
   %ptrincdec.i.i = getelementptr inbounds i32, i32* %begin, i64 %tmp
 ; CHECK: %ptrincdec.i.i =
-; CHECK: {(4 + %begin),+,4}<nsw><%for.body.i.i>
+; CHECK: {(4 + %begin)<nsw>,+,4}<nsw><%for.body.i.i>
   %__first.addr.08.i.i = getelementptr inbounds i32, i32* %begin, i64 %indvar.i.i
 ; CHECK: %__first.addr.08.i.i
 ; CHECK: {%begin,+,4}<nsw><%for.body.i.i>
@@ -124,7 +126,7 @@ exit:
 }
 
 ; CHECK-LABEL: PR12375
-; CHECK: -->  {(4 + %arg),+,4}<nuw><%bb1>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (8 + %arg)<nsw>
+; CHECK: -->  {(4 + %arg)<nsw>,+,4}<nuw><%bb1>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (4 + (4 * ((-1 + (-1 * %arg) + ((4 + %arg)<nsw> umax (8 + %arg)<nsw>)) /u 4)) + %arg)
 define i32 @PR12375(i32* readnone %arg) {
 bb:
   %tmp = getelementptr inbounds i32, i32* %arg, i64 2
@@ -143,15 +145,15 @@ bb7:                                              ; preds = %bb1
 }
 
 ; CHECK-LABEL: PR12376
-; CHECK: -->  {(4 + %arg),+,4}<nuw><%bb2>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (4 + (4 * ((3 + (-1 * %arg) + (%arg umax %arg1)) /u 4)) + %arg)
+; CHECK: -->  {(4 + %arg)<nsw>,+,4}<nuw><%bb2>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (4 + (4 * ((-1 + (-1 * %arg) + ((4 + %arg)<nsw> umax %arg1)) /u 4)) + %arg)
 define void @PR12376(i32* nocapture %arg, i32* nocapture %arg1)  {
 bb:
   br label %bb2
 
 bb2:                                              ; preds = %bb2, %bb
   %tmp = phi i32* [ %arg, %bb ], [ %tmp4, %bb2 ]
-  %tmp3 = icmp ult i32* %tmp, %arg1
   %tmp4 = getelementptr inbounds i32, i32* %tmp, i64 1
+  %tmp3 = icmp ult i32* %tmp4, %arg1
   br i1 %tmp3, label %bb2, label %bb5
 
 bb5:                                              ; preds = %bb2
@@ -161,8 +163,8 @@ bb5:                                              ; preds = %bb2
 declare void @f(i32)
 
 ; CHECK-LABEL: nswnowrap
-; CHECK: --> {(1 + %v),+,1}<nsw><%for.body>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (2 + %v)
-define void @nswnowrap(i32 %v) {
+; CHECK: --> {(1 + %v)<nsw>,+,1}<nsw><%for.body>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (1 + ((1 + %v)<nsw> smax %v))
+define void @nswnowrap(i32 %v, i32* %buf) {
 entry:
   %add = add nsw i32 %v, 1
   br label %for.body
@@ -170,10 +172,91 @@ entry:
 for.body:
   %i.04 = phi i32 [ %v, %entry ], [ %inc, %for.body ]
   %inc = add nsw i32 %i.04, 1
-  tail call void @f(i32 %i.04)
+  %buf.gep = getelementptr inbounds i32, i32* %buf, i32 %inc
+  %buf.val = load i32, i32* %buf.gep
   %cmp = icmp slt i32 %i.04, %add
+  tail call void @f(i32 %i.04)
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:
+  ret void
+}
+
+; This test checks if no-wrap flags are propagated when folding {S,+,X}+T ==> {S+T,+,X}
+; CHECK-LABEL: test4
+; CHECK: %idxprom
+; CHECK-NEXT: -->  {(-2 + (sext i32 %arg to i64))<nsw>,+,1}<nsw><%for.body>
+define void @test4(i32 %arg) {
+entry:
+  %array = alloca [10 x i32], align 4
+  br label %for.body
+
+for.body:
+  %index = phi i32 [ %inc5, %for.body ], [ %arg, %entry ]
+  %sub = add nsw i32 %index, -2
+  %idxprom = sext i32 %sub to i64
+  %arrayidx = getelementptr inbounds [10 x i32], [10 x i32]* %array, i64 0, i64 %idxprom
+  %data = load i32, i32* %arrayidx, align 4
+  %inc5 = add nsw i32 %index, 1
+  %cmp2 = icmp slt i32 %inc5, 10
+  br i1 %cmp2, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+
+define void @bad_postinc_nsw_a(i32 %n) {
+; CHECK-LABEL: Classifying expressions for: @bad_postinc_nsw_a
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
+  %iv.inc = add nsw i32 %iv, 7
+; CHECK:    %iv.inc = add nsw i32 %iv, 7
+; CHECK-NEXT:  -->  {7,+,7}<nuw><%loop>
+  %becond = icmp ult i32 %iv, %n
+  br i1 %becond, label %loop, label %leave
+
+leave:
+  ret void
+}
+
+define void @bad_postinc_nsw_b(i32 %n) {
+; CHECK-LABEL: Classifying expressions for: @bad_postinc_nsw_b
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
+  %iv.inc = add nsw i32 %iv, 7
+  %iv.inc.and = and i32 %iv.inc, 0
+; CHECK:    %iv.inc = add nsw i32 %iv, 7
+; CHECK-NEXT:  -->  {7,+,7}<nuw><%loop>
+  %becond = icmp ult i32 %iv.inc.and, %n
+  br i1 %becond, label %loop, label %leave
+
+leave:
+  ret void
+}
+
+declare void @may_exit() nounwind
+
+define void @pr28012(i32 %n) {
+; CHECK-LABEL: Classifying expressions for: @pr28012
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
+  %iv.inc = add nsw i32 %iv, 7
+; CHECK:    %iv.inc = add nsw i32 %iv, 7
+; CHECK-NEXT:  -->  {7,+,7}<nuw><%loop>
+  %becond = icmp ult i32 %iv.inc, %n
+  call void @may_exit()
+  br i1 %becond, label %loop, label %leave
+
+leave:
   ret void
 }

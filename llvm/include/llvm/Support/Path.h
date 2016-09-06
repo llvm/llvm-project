@@ -16,7 +16,6 @@
 #ifndef LLVM_SUPPORT_PATH_H
 #define LLVM_SUPPORT_PATH_H
 
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
 #include <iterator>
@@ -88,6 +87,9 @@ public:
   reverse_iterator &operator++();    // preincrement
   bool operator==(const reverse_iterator &RHS) const;
   bool operator!=(const reverse_iterator &RHS) const { return !(*this == RHS); }
+
+  /// @brief Difference in bytes between this and RHS.
+  ptrdiff_t operator-(const reverse_iterator &RHS) const;
 };
 
 /// @brief Get begin iterator over \a path.
@@ -139,6 +141,23 @@ void remove_filename(SmallVectorImpl<char> &path);
 ///                  optionally start with a '.', if it does not, one will be
 ///                  prepended.
 void replace_extension(SmallVectorImpl<char> &path, const Twine &extension);
+
+/// @brief Replace matching path prefix with another path.
+///
+/// @code
+///   /foo, /old, /new => /foo
+///   /old/foo, /old, /new => /new/foo
+///   /foo, <empty>, /new => /new/foo
+///   /old/foo, /old, <empty> => /foo
+/// @endcode
+///
+/// @param Path If \a Path starts with \a OldPrefix modify to instead
+///        start with \a NewPrefix.
+/// @param OldPrefix The path prefix to strip from \a Path.
+/// @param NewPrefix The path prefix to replace \a NewPrefix with.
+void replace_path_prefix(SmallVectorImpl<char> &Path,
+                         const StringRef &OldPrefix,
+                         const StringRef &NewPrefix);
 
 /// @brief Append to path.
 ///

@@ -24,7 +24,6 @@
 #define LLVM_LIB_TRANSFORMS_OBJCARC_OBJCARC_H
 
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"

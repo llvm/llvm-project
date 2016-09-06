@@ -53,6 +53,9 @@ void check_string_literal( FILE* fp, const char* s, char *buf, ... ) {
 
   vscanf(s, ap); // expected-warning {{format string is not a string literal}}
 
+  const char *const fmt = "%d"; // FIXME -- defined here
+  printf(fmt, 1, 2); // expected-warning{{data argument not used}}
+
   // rdar://6079877
   printf("abc"
          "%*d", 1, 1); // no-warning
@@ -99,6 +102,20 @@ void check_conditional_literal(const char* s, int i) {
   printf(i == 0 ? (i == 1 ? s : "no") : "dont know"); // expected-warning{{format string is not a string literal}}
   // expected-note@-1{{treat the string as an argument to avoid this}}
   printf("yes" ?: "no %d", 1); // expected-warning{{data argument not used by format string}}
+  printf(0 ? "yes %s" : "no %d", 1); // no-warning
+  printf(0 ? "yes %d" : "no %s", 1); // expected-warning{{format specifies type 'char *'}}
+
+  printf(0 ? "yes" : "no %d", 1); // no-warning
+  printf(0 ? "yes %d" : "no", 1); // expected-warning{{data argument not used by format string}}
+  printf(1 ? "yes" : "no %d", 1); // expected-warning{{data argument not used by format string}}
+  printf(1 ? "yes %d" : "no", 1); // no-warning
+  printf(i ? "yes" : "no %d", 1); // no-warning
+  printf(i ? "yes %s" : "no %d", 1); // expected-warning{{format specifies type 'char *'}}
+  printf(i ? "yes" : "no %d", 1, 2); // expected-warning{{data argument not used by format string}}
+
+  printf(i ? "%*s" : "-", i, s); // no-warning
+  printf(i ? "yes" : 0 ? "no %*d" : "dont know %d", 1, 2); // expected-warning{{data argument not used by format string}}
+  printf(i ? "%i\n" : "%i %s %s\n", i, s); // expected-warning{{more '%' conversions than data arguments}}
 }
 
 void check_writeback_specifier()
@@ -536,7 +553,7 @@ void pr9751() {
 
   // Make sure that the "format string is defined here" note is not emitted
   // when the original string is within the argument expression.
-  printf(1 ? "yes %d" : "no %d"); // expected-warning 2{{more '%' conversions than data arguments}}
+  printf(1 ? "yes %d" : "no %d"); // expected-warning{{more '%' conversions than data arguments}}
 
   const char kFormat17[] = "%hu"; // expected-note{{format string is defined here}}}
   printf(kFormat17, (int[]){0}); // expected-warning{{format specifies type 'unsigned short' but the argument}}
@@ -635,3 +652,30 @@ void test_format_security_pos(char* string) {
   // expected-note@-1{{treat the string as an argument to avoid this}}
 }
 #pragma GCC diagnostic warning "-Wformat-nonliteral"
+
+void test_os_log_format(char c, const char *pc, int i, int *pi, void *p, void *buf) {
+  __builtin_os_log_format(buf, "");
+  __builtin_os_log_format(buf, "%d"); // expected-warning {{more '%' conversions than data arguments}}
+  __builtin_os_log_format(buf, "%d", i);
+  __builtin_os_log_format(buf, "%P", p); // expected-warning {{using '%P' format specifier without precision}}
+  __builtin_os_log_format(buf, "%.10P", p);
+  __builtin_os_log_format(buf, "%.*P", p); // expected-warning {{field precision should have type 'int', but argument has type 'void *'}}
+  __builtin_os_log_format(buf, "%.*P", i, p);
+  __builtin_os_log_format(buf, "%.*P", i, i); // expected-warning {{format specifies type 'void *' but the argument has type 'int'}}
+  __builtin_os_log_format(buf, pc); // expected-error {{os_log() format argument is not a string constant}}
+
+  printf("%{private}s", pc); // expected-warning {{using 'private' format specifier annotation outside of os_log()/os_trace()}}
+  __builtin_os_log_format(buf, "%{private}s", pc);
+
+  // <rdar://problem/23835805>
+  __builtin_os_log_format_buffer_size("no-args");
+  __builtin_os_log_format(buf, "%s", "hi");
+
+  // <rdar://problem/24828090>
+  wchar_t wc = 'a';
+  __builtin_os_log_format(buf, "%C", wc);
+  printf("%C", wc);
+  wchar_t wcs[] = {'a', 0};
+  __builtin_os_log_format(buf, "%S", wcs);
+  printf("%S", wcs);
+}

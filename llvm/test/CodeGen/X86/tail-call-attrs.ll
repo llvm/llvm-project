@@ -13,11 +13,11 @@ define zeroext i1 @test_bool() {
 ; Here, there's more zero extension to be done between the call and the return,
 ; so a tail call is impossible (well, according to current Clang practice
 ; anyway. The AMD64 ABI isn't crystal clear on the matter).
+; FIXME: The high 24 bits returned from test_i32 are undefined; do tail call!
 declare zeroext i32 @give_i32()
 define zeroext i8 @test_i32() {
 ; CHECK-LABEL: test_i32:
 ; CHECK: callq _give_i32
-; CHECK: movzbl %al, %eax
 ; CHECK: ret
 
   %call = tail call zeroext i32 @give_i32()
@@ -27,11 +27,11 @@ define zeroext i8 @test_i32() {
 
 ; Here, one function is zeroext and the other is signext. To the extent that
 ; these both mean something they are incompatible so no tail call is possible.
+; FIXME: The high 16 bits returned are undefined; do tail call!
 declare zeroext i16 @give_unsigned_i16()
 define signext i16 @test_incompatible_i16() {
 ; CHECK-LABEL: test_incompatible_i16:
 ; CHECK: callq _give_unsigned_i16
-; CHECK: cwtl
 ; CHECK: ret
 
   %call = tail call zeroext i16 @give_unsigned_i16()

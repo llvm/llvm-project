@@ -5,11 +5,13 @@
 ; FUNC-LABEL: {{^}}frem_f32:
 ; GCN-DAG: buffer_load_dword [[X:v[0-9]+]], {{.*$}}
 ; GCN-DAG: buffer_load_dword [[Y:v[0-9]+]], {{.*}} offset:16
-; GCN-DAG: v_cmp
-; GCN-DAG: v_mul_f32
+; GCN: v_div_scale_f32
+
 ; GCN: v_rcp_f32_e32
+; GCN: v_fma_f32
 ; GCN: v_mul_f32_e32
-; GCN: v_mul_f32_e32
+; GCN: v_div_fmas_f32
+; GCN: v_div_fixup_f32
 ; GCN: v_trunc_f32_e32
 ; GCN: v_mad_f32
 ; GCN: s_endpgm

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 -mtriple=powerpc-apple-darwin | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mtriple=powerpc-apple-darwin | FileCheck %s
 ; Formerly dropped the RHS of %tmp6 when constructing rlwimi.
 ; 7346117
 

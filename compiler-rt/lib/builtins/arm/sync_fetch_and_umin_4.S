@@ -18,3 +18,5 @@
 
 SYNC_OP_4(umin_4)
 
+NO_EXEC_STACK_DIRECTIVE
+

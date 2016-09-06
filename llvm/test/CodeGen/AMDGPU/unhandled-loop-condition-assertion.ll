@@ -1,8 +1,6 @@
-; REQUIRES: asserts
-; XFAIL: *
-; RUN: llc -O0 -verify-machineinstrs -asm-verbose=0 -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI -check-prefix=COMMON %s
+; RUN: llc -O0 -verify-machineinstrs -asm-verbose=0 -march=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=COMMON %s
 ; RUN: llc -O0 -verify-machineinstrs -asm-verbose=0 -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=COMMON %s
-; RUN: llc -O0 -verify-machineinstrs -asm-verbose=0 -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=COMMON %s
+; XUN: llc -O0 -verify-machineinstrs -asm-verbose=0 -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=COMMON %s
 
 ; SI hits an assertion at -O0, evergreen hits a not implemented unreachable.
 
@@ -41,8 +39,9 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; COMMON-LABEL: {{^}}branch_false:
-; SI: .text
-; SI-NEXT: s_endpgm
+; SI: s_cbranch_vccnz
+; SI: s_cbranch_vccnz
+; SI: s_endpgm
 define void @branch_false(i8 addrspace(1)* nocapture %main, i32 %main_stride) #0 {
 entry:
   br i1 false, label %for.end, label %for.body.lr.ph
@@ -77,8 +76,9 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; COMMON-LABEL: {{^}}branch_undef:
-; SI: .text
-; SI-NEXT: s_endpgm
+; SI: s_cbranch_vccnz
+; SI: s_cbranch_vccnz
+; SI: s_endpgm
 define void @branch_undef(i8 addrspace(1)* nocapture %main, i32 %main_stride) #0 {
 entry:
   br i1 undef, label %for.end, label %for.body.lr.ph

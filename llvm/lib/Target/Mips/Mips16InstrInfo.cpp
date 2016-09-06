@@ -15,12 +15,10 @@
 #include "MipsMachineFunction.h"
 #include "MipsTargetMachine.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -43,7 +41,7 @@ const MipsRegisterInfo &Mips16InstrInfo::getRegisterInfo() const {
 /// the destination along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
-unsigned Mips16InstrInfo::isLoadFromStackSlot(const MachineInstr *MI,
+unsigned Mips16InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                               int &FrameIndex) const {
   return 0;
 }
@@ -53,15 +51,15 @@ unsigned Mips16InstrInfo::isLoadFromStackSlot(const MachineInstr *MI,
 /// the source reg along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than storing to the stack slot.
-unsigned Mips16InstrInfo::isStoreToStackSlot(const MachineInstr *MI,
+unsigned Mips16InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                              int &FrameIndex) const {
   return 0;
 }
 
 void Mips16InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator I, DebugLoc DL,
-                                  unsigned DestReg, unsigned SrcReg,
-                                  bool KillSrc) const {
+                                  MachineBasicBlock::iterator I,
+                                  const DebugLoc &DL, unsigned DestReg,
+                                  unsigned SrcReg, bool KillSrc) const {
   unsigned Opc = 0;
 
   if (Mips::CPU16RegsRegClass.contains(DestReg) &&
@@ -126,9 +124,9 @@ void Mips16InstrInfo::loadRegFromStack(MachineBasicBlock &MBB,
     .addMemOperand(MMO);
 }
 
-bool Mips16InstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
-  MachineBasicBlock &MBB = *MI->getParent();
-  switch(MI->getDesc().getOpcode()) {
+bool Mips16InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  MachineBasicBlock &MBB = *MI.getParent();
+  switch (MI.getDesc().getOpcode()) {
   default:
     return false;
   case Mips::RetRA16:
@@ -136,7 +134,7 @@ bool Mips16InstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
     break;
   }
 
-  MBB.erase(MI);
+  MBB.erase(MI.getIterator());
   return true;
 }
 
@@ -174,7 +172,7 @@ static void addSaveRestoreRegs(MachineInstrBuilder &MIB,
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     // Add the callee-saved register as live-in. Do not add if the register is
     // RA and return address is taken, because it has already been added in
-    // method MipsTargetLowering::LowerRETURNADDR.
+    // method MipsTargetLowering::lowerRETURNADDR.
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
     unsigned Reg = CSI[e-i-1].getReg();
@@ -198,13 +196,13 @@ void Mips16InstrInfo::makeFrame(unsigned SP, int64_t FrameSize,
                                 MachineBasicBlock::iterator I) const {
   DebugLoc DL;
   MachineFunction &MF = *MBB.getParent();
-  MachineFrameInfo *MFI    = MF.getFrameInfo();
+  MachineFrameInfo &MFI    = MF.getFrameInfo();
   const BitVector Reserved = RI.getReservedRegs(MF);
   bool SaveS2 = Reserved[Mips::S2];
   MachineInstrBuilder MIB;
   unsigned Opc = ((FrameSize <= 128) && !SaveS2)? Mips::Save16:Mips::SaveX16;
   MIB = BuildMI(MBB, I, DL, get(Opc));
-  const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   addSaveRestoreRegs(MIB, CSI);
   if (SaveS2)
     MIB.addReg(Mips::S2);
@@ -228,7 +226,7 @@ void Mips16InstrInfo::restoreFrame(unsigned SP, int64_t FrameSize,
                                    MachineBasicBlock::iterator I) const {
   DebugLoc DL = I != MBB.end() ? I->getDebugLoc() : DebugLoc();
   MachineFunction *MF = MBB.getParent();
-  MachineFrameInfo *MFI    = MF->getFrameInfo();
+  MachineFrameInfo &MFI    = MF->getFrameInfo();
   const BitVector Reserved = RI.getReservedRegs(*MF);
   bool SaveS2 = Reserved[Mips::S2];
   MachineInstrBuilder MIB;
@@ -247,7 +245,7 @@ void Mips16InstrInfo::restoreFrame(unsigned SP, int64_t FrameSize,
       adjustStackPtrBig(SP, Remainder, MBB, I, Mips::A0, Mips::A1);
   }
   MIB = BuildMI(MBB, I, DL, get(Opc));
-  const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   addSaveRestoreRegs(MIB, CSI, RegState::Define);
   if (SaveS2)
     MIB.addReg(Mips::S2, RegState::Define);
@@ -307,7 +305,8 @@ void Mips16InstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
 unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
                                         MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator II,
-                                        DebugLoc DL, unsigned &NewImm) const {
+                                        const DebugLoc &DL,
+                                        unsigned &NewImm) const {
   //
   // given original instruction is:
   // Instr rx, T[offset] where offset is too big.
@@ -326,7 +325,7 @@ unsigned Mips16InstrInfo::loadImmediate(unsigned FrameReg, int64_t Imm,
   int Reg =0;
   int SpReg = 0;
 
-  rs.enterBasicBlock(&MBB);
+  rs.enterBasicBlock(MBB);
   rs.forward(II);
   //
   // We need to know which registers can be used, in the case where there

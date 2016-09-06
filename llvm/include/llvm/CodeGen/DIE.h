@@ -20,7 +20,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/Support/Dwarf.h"
-#include <vector>
 
 namespace llvm {
 class AsmPrinter;
@@ -28,48 +27,6 @@ class MCExpr;
 class MCSymbol;
 class raw_ostream;
 class DwarfTypeUnit;
-
-// AsmStreamerBase - A base abstract interface class defines methods that
-// can be implemented to stream objects or can be implemented to
-// calculate the size of the streamed objects.
-// The derived classes will use an AsmPrinter to implement the methods.
-//
-// TODO: complete this interface and use it to merge EmitValue and SizeOf
-//       methods in the DIE classes below.
-class AsmStreamerBase {
-protected:
-  const AsmPrinter *AP;
-  AsmStreamerBase(const AsmPrinter *AP) : AP(AP) {}
-
-public:
-  virtual ~AsmStreamerBase() {}
-  virtual unsigned emitULEB128(uint64_t Value, const char *Desc = nullptr,
-                               unsigned PadTo = 0) = 0;
-  virtual unsigned emitInt8(unsigned char Value) = 0;
-  virtual unsigned emitBytes(StringRef Data) = 0;
-};
-
-/// EmittingAsmStreamer - Implements AbstractAsmStreamer to stream objects.
-/// Notice that the return value is not the actual size of the streamed object.
-/// For size calculation use SizeReporterAsmStreamer.
-class EmittingAsmStreamer : public AsmStreamerBase {
-public:
-  EmittingAsmStreamer(const AsmPrinter *AP) : AsmStreamerBase(AP) {}
-  unsigned emitULEB128(uint64_t Value, const char *Desc = nullptr,
-                       unsigned PadTo = 0) override;
-  unsigned emitInt8(unsigned char Value) override;
-  unsigned emitBytes(StringRef Data) override;
-};
-
-/// SizeReporterAsmStreamer - Only reports the size of the streamed objects.
-class SizeReporterAsmStreamer : public AsmStreamerBase {
-public:
-  SizeReporterAsmStreamer(const AsmPrinter *AP) : AsmStreamerBase(AP) {}
-  unsigned emitULEB128(uint64_t Value, const char *Desc = nullptr,
-                       unsigned PadTo = 0) override;
-  unsigned emitInt8(unsigned char Value) override;
-  unsigned emitBytes(StringRef Data) override;
-};
 
 //===--------------------------------------------------------------------===//
 /// DIEAbbrevData - Dwarf abbreviation data, describes one attribute of a
@@ -286,25 +243,6 @@ public:
 };
 
 //===--------------------------------------------------------------------===//
-/// \brief A signature reference to a type unit.
-class DIETypeSignature {
-  const DwarfTypeUnit *Unit;
-
-  DIETypeSignature() = delete;
-
-public:
-  explicit DIETypeSignature(const DwarfTypeUnit &Unit) : Unit(&Unit) {}
-
-  void EmitValue(const AsmPrinter *AP, dwarf::Form Form) const;
-  unsigned SizeOf(const AsmPrinter *AP, dwarf::Form Form) const {
-    assert(Form == dwarf::DW_FORM_ref_sig8);
-    return 8;
-  }
-
-  void print(raw_ostream &O) const;
-};
-
-//===--------------------------------------------------------------------===//
 /// DIELocList - Represents a pointer to a location list in the debug_loc
 /// section.
 //
@@ -350,8 +288,9 @@ private:
   /// All values that aren't standard layout (or are larger than 8 bytes)
   /// should be stored by reference instead of by value.
   typedef AlignedCharArrayUnion<DIEInteger, DIEString, DIEExpr, DIELabel,
-                                DIEDelta *, DIEEntry, DIETypeSignature,
-                                DIEBlock *, DIELoc *, DIELocList> ValTy;
+                                DIEDelta *, DIEEntry, DIEBlock *, DIELoc *,
+                                DIELocList>
+      ValTy;
   static_assert(sizeof(ValTy) <= sizeof(uint64_t) ||
                     sizeof(ValTy) <= sizeof(void *),
                 "Expected all large types to be stored via pointer");
@@ -626,7 +565,7 @@ public:
   typedef iterator_range<value_iterator> value_range;
   typedef iterator_range<const_value_iterator> const_value_range;
 
-  value_iterator addValue(BumpPtrAllocator &Alloc, DIEValue V) {
+  value_iterator addValue(BumpPtrAllocator &Alloc, const DIEValue &V) {
     List.push_back(*new (Alloc) Node(V));
     return value_iterator(ListTy::toIterator(List.back()));
   }

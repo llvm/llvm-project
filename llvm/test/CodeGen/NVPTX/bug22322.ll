@@ -10,10 +10,10 @@ target triple = "nvptx64-nvidia-cuda"
 define void @some_kernel(%class.float3* nocapture %dst) #0 {
 _ZL11compute_vecRK6float3jb.exit:
   %ret_vec.sroa.8.i = alloca float, align 4
-  %0 = tail call i32 @llvm.ptx.read.ctaid.x()
-  %1 = tail call i32 @llvm.ptx.read.ntid.x()
+  %0 = tail call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
+  %1 = tail call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
   %2 = mul nsw i32 %1, %0
-  %3 = tail call i32 @llvm.ptx.read.tid.x()
+  %3 = tail call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   %4 = add nsw i32 %2, %3
   %5 = zext i32 %4 to i64
   %6 = bitcast float* %ret_vec.sroa.8.i to i8*
@@ -37,13 +37,13 @@ _ZL11compute_vecRK6float3jb.exit:
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.ptx.read.ctaid.x() #1
+declare i32 @llvm.nvvm.read.ptx.sreg.ctaid.x() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.ptx.read.ntid.x() #1
+declare i32 @llvm.nvvm.read.ptx.sreg.ntid.x() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.ptx.read.tid.x() #1
+declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() #1
 
 ; Function Attrs: nounwind
 declare void @llvm.lifetime.start(i64, i8* nocapture) #2

@@ -93,11 +93,13 @@ bb7:
 ; DARWIN64: Lfunc_end
 ; DARWIN64-NEXT: .cfi_endproc
 ; DARWIN64-NOT: .section
+; DARWIN64: .data_region jt32
 ; DARWIN64: LJTI{{.*}}:
 ; DARWIN64-NEXT: .long
 ; DARWIN64-NEXT: .long
 ; DARWIN64-NEXT: .long
 ; DARWIN64-NEXT: .long
+; DARWIN64-NEXT: .end_data_region
 ; DARWIN64-NEXT: .section        __TEXT,__gcc_except_tab
 
 ; int G1;
@@ -241,13 +243,13 @@ bb7:
 ; DARWIN:       .section        __DATA,__data{{$}}
 ; DARWIN: .globl _G10
 ; DARWIN:       .weak_definition _G10
-; DARWIN:       .align  5
+; DARWIN:       .p2align  5
 ; DARWIN: _G10:
 ; DARWIN:       .space  400
 
 ; LINUX:        .bss
 ; LINUX:        .weak   G10
-; LINUX:        .align  32
+; LINUX:        .p2align  5
 ; LINUX: G10:
 ; LINUX:        .zero   400
 
@@ -298,3 +300,32 @@ bb7:
 
 ; WIN32-SECTIONS: .section      .rdata,"dr",one_only,_G15
 ; WIN32-SECTIONS: _G15:
+
+@G16 = unnamed_addr constant i256 0
+
+; LINUX: .section        .rodata.cst32,"aM",@progbits,32
+; LINUX: G16:
+
+; LINUX-SECTIONS: .section      .rodata.cst32,"aM",@progbits,32
+; LINUX-SECTIONS: G16:
+
+; WIN32-SECTIONS: .section      .rdata,"dr",one_only,_G16
+; WIN32-SECTIONS: _G16:
+
+; PR26570
+
+@G17 = internal global i8 0
+; LINUX: .type	G17,@object
+; LINUX: .local	G17
+; LINUX: .comm	G17,1,1
+
+; DARWIN: .zerofill __DATA,__bss,_G17,1,0
+
+; LINUX-SECTIONS: .type	G17,@object
+; LINUX-SECTIONS: .section	.bss.G17,"aw",@nobits
+; LINUX-SECTIONS: .byte	0
+; LINUX-SECTIONS: .size	G17, 1
+
+; WIN32-SECTIONS: .section	.bss,"bw",one_only,_G17
+; WIN32-SECTIONS: _G17:
+; WIN32-SECTIONS:.byte	0

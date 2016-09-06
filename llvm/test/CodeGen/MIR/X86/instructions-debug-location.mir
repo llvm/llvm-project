@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -start-after machine-sink -stop-after machine-sink -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses the machine instruction's
 # debug location metadata correctly.
 
@@ -31,11 +31,10 @@
   !llvm.module.flags = !{!9, !10}
   !llvm.ident = !{!11}
 
-  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
   !1 = !DIFile(filename: "test.ll", directory: "")
   !2 = !{}
-  !3 = !{!4}
-  !4 = distinct !DISubprogram(name: "test", scope: !5, file: !5, line: 4, type: !6, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+  !4 = distinct !DISubprogram(name: "test", scope: !5, file: !5, line: 4, type: !6, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
   !5 = !DIFile(filename: "test.c", directory: "")
   !6 = !DISubroutineType(types: !7)
   !7 = !{!8, !8}
@@ -62,9 +61,9 @@ stack:
 body: |
   bb.0.entry:
     liveins: %edi
-    ; CHECK: DBG_VALUE debug-use _, 0, !12, !13, debug-location !14
-    ; CHECK: %eax = COPY %0, debug-location !15
-    ; CHECK: RETQ %eax, debug-location !15
+    ; CHECK: DBG_VALUE debug-use _, 0, !11, !12, debug-location !13
+    ; CHECK: %eax = COPY %0, debug-location !14
+    ; CHECK: RETQ %eax, debug-location !14
     %0 = COPY %edi
     DBG_VALUE debug-use _, 0, !12, !13, debug-location !14
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0
@@ -86,9 +85,9 @@ body: |
     liveins: %edi
 
     %0 = COPY %edi
-  ; CHECK:      DBG_VALUE _, i32 0, !12, !13
-  ; CHECK-NEXT: DBG_VALUE _, i64 -22, !12, !13
-  ; CHECK-NEXT: DBG_VALUE _, i128 123492148938512984928424384934328985928, !12, !13
+  ; CHECK:      DBG_VALUE _, i32 0, !11, !12
+  ; CHECK-NEXT: DBG_VALUE _, i64 -22, !11, !12
+  ; CHECK-NEXT: DBG_VALUE _, i128 123492148938512984928424384934328985928, !11, !12
     DBG_VALUE _, i32 0, !12, !13
     DBG_VALUE _, i64 -22, !12, !13
     DBG_VALUE _, i128 123492148938512984928424384934328985928, !12, !13

@@ -106,7 +106,7 @@ class MacroInfo {
   bool IsWarnIfUnused : 1;
 
   /// \brief Whether this macro info was loaded from an AST file.
-  unsigned FromASTFile : 1;
+  bool FromASTFile : 1;
 
   /// \brief Whether this macro was used as header guard.
   bool UsedForHeaderGuard : 1;
@@ -318,13 +318,13 @@ protected:
   unsigned MDKind : 2;
 
   /// \brief True if the macro directive was loaded from a PCH file.
-  bool IsFromPCH : 1;
+  unsigned IsFromPCH : 1;
 
   // Used by VisibilityMacroDirective ----------------------------------------//
 
   /// \brief Whether the macro has public visibility (when described in a
   /// module).
-  bool IsPublic : 1;
+  unsigned IsPublic : 1;
 
   MacroDirective(Kind K, SourceLocation Loc)
       : Previous(nullptr), Loc(Loc), MDKind(K), IsFromPCH(false),

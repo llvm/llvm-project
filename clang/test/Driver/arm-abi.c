@@ -28,12 +28,16 @@
 // RUN: %clang -target arm--netbsd-eabihf %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-AAPCS %s
 
-// Otherwise, ABI is celected based on environment
+// Otherwise, ABI is selected based on environment
 // RUN: %clang -target arm---android %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-AAPCS-LINUX %s
 // RUN: %clang -target arm---gnueabi %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-AAPCS-LINUX %s
 // RUN: %clang -target arm---gnueabihf %s -### -o %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-AAPCS-LINUX %s
+// RUN: %clang -target arm---musleabi %s -### -o %t.o 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-AAPCS-LINUX %s
+// RUN: %clang -target arm---musleabihf %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-AAPCS-LINUX %s
 // RUN: %clang -target arm---eabi %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-AAPCS %s

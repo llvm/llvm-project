@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCSYMBOLMACHO_H
 #define LLVM_MC_MCSYMBOLMACHO_H
 
+#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCSymbol.h"
 
 namespace llvm {
@@ -93,6 +94,10 @@ public:
     modifyFlags(SF_AltEntry, SF_AltEntry);
   }
 
+  bool isAltEntry() const {
+    return getFlags() & SF_AltEntry;
+  }
+
   void setDesc(unsigned Value) const {
     assert(Value == (Value & SF_DescFlagsMask) &&
            "Invalid .desc value!");
@@ -101,7 +106,7 @@ public:
 
   /// \brief Get the encoded value of the flags as they will be emitted in to
   /// the MachO binary
-  uint16_t getEncodedFlags() const {
+  uint16_t getEncodedFlags(bool EncodeAsAltEntry) const {
     uint16_t Flags = getFlags();
 
     // Common alignment is packed into the 'desc' bits.
@@ -117,6 +122,9 @@ public:
                 (Log2Size << SF_CommonAlignmentShift);
       }
     }
+
+    if (EncodeAsAltEntry)
+      Flags |= SF_AltEntry;
 
     return Flags;
   }

@@ -19,6 +19,14 @@
 /// \param FEATURES - The standard features as flags, these are enums from the
 /// clang::frontend namespace, which is assumed to be be available.
 
+/// LANGSTANDARD_ALIAS(IDENT, ALIAS)
+/// \param IDENT - The name of the standard as a C++ identifier.
+/// \param ALIAS - The alias of the standard.
+
+#ifndef LANGSTANDARD_ALIAS
+#define LANGSTANDARD_ALIAS(IDENT, ALIAS)
+#endif
+
 // C89-ish modes.
 LANGSTANDARD(c89, "c89",
              "ISO C 1990",
@@ -125,25 +133,30 @@ LANGSTANDARD(gnucxx14, "gnu++14",
 LANGSTANDARD(cxx1z, "c++1z",
              "Working draft for ISO C++ 2017",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus1z |
-             Digraphs)
+             Digraphs | HexFloat)
 LANGSTANDARD(gnucxx1z, "gnu++1z",
              "Working draft for ISO C++ 2017 with GNU extensions",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus1z |
-             Digraphs | GNUMode)
+             Digraphs | HexFloat | GNUMode)
 
 // OpenCL
 LANGSTANDARD(opencl, "cl",
              "OpenCL 1.0",
              LineComment | C99 | Digraphs | HexFloat)
-LANGSTANDARD(opencl11, "CL1.1",
+LANGSTANDARD(opencl11, "cl1.1",
              "OpenCL 1.1",
              LineComment | C99 | Digraphs | HexFloat)
-LANGSTANDARD(opencl12, "CL1.2",
+LANGSTANDARD(opencl12, "cl1.2",
              "OpenCL 1.2",
              LineComment | C99 | Digraphs | HexFloat)
-LANGSTANDARD(opencl20, "CL2.0",
+LANGSTANDARD(opencl20, "cl2.0",
              "OpenCL 2.0",
              LineComment | C99 | Digraphs | HexFloat)
+
+LANGSTANDARD_ALIAS(opencl, "CL")
+LANGSTANDARD_ALIAS(opencl11, "CL1.1")
+LANGSTANDARD_ALIAS(opencl12, "CL1.2")
+LANGSTANDARD_ALIAS(opencl20, "CL2.0")
 
 // CUDA
 LANGSTANDARD(cuda, "cuda",
@@ -151,3 +164,5 @@ LANGSTANDARD(cuda, "cuda",
              LineComment | CPlusPlus | Digraphs)
 
 #undef LANGSTANDARD
+#undef LANGSTANDARD_ALIAS
+

@@ -1,9 +1,11 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin -target-feature +sse4a -emit-llvm -o - -Werror | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin -target-feature +sse4a -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 // Don't include mm_malloc.h, it's system specific.
 #define __MM_MALLOC_H
 
 #include <x86intrin.h>
+
+// NOTE: This should match the tests in llvm/test/CodeGen/X86/sse4a-intrinsics-fast-isel.ll
 
 __m128i test_mm_extracti_si64(__m128i x) {
   // CHECK-LABEL: test_mm_extracti_si64
@@ -31,12 +33,14 @@ __m128i test_mm_insert_si64(__m128i x, __m128i y) {
 
 void test_mm_stream_sd(double *p, __m128d a) {
   // CHECK-LABEL: test_mm_stream_sd
-  // CHECK: call void @llvm.x86.sse4a.movnt.sd(i8* %{{[^,]+}}, <2 x double> %{{[^,]+}})
-  _mm_stream_sd(p, a);
+  // CHECK: extractelement <2 x double> %{{.*}}, i64 0
+  // CHECK: store double %{{.*}}, double* %{{.*}}, align 1, !nontemporal
+   _mm_stream_sd(p, a);
 }
 
 void test_mm_stream_ss(float *p, __m128 a) {
   // CHECK-LABEL: test_mm_stream_ss
-  // CHECK: call void @llvm.x86.sse4a.movnt.ss(i8* %{{[^,]+}}, <4 x float> %{{[^,]+}})
+  // CHECK: extractelement <4 x float> %{{.*}}, i64 0
+  // CHECK: store float %{{.*}}, float* %{{.*}}, align 1, !nontemporal
   _mm_stream_ss(p, a);
 }

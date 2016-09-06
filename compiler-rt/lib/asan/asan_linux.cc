@@ -69,10 +69,15 @@ asan_rt_version_t  __asan_rt_version;
 namespace __asan {
 
 void InitializePlatformInterceptors() {}
+void InitializePlatformExceptionHandlers() {}
 
 void *AsanDoesNotSupportStaticLinkage() {
   // This will fail to link with -static.
   return &_DYNAMIC;  // defined in link.h
+}
+
+void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
+  UNIMPLEMENTED();
 }
 
 #if SANITIZER_ANDROID

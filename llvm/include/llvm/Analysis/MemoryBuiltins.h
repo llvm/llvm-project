@@ -32,6 +32,11 @@ class TargetLibraryInfo;
 class Type;
 class Value;
 
+enum class ObjSizeMode {
+  Exact = 0,
+  Min = 1,
+  Max = 2
+};
 
 /// \brief Tests if a value is a call or invoke to a library function that
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
@@ -130,8 +135,11 @@ static inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
 /// underlying object pointed to by Ptr.
 /// If RoundToAlign is true, then Size is rounded up to the aligment of allocas,
 /// byval arguments, and global variables.
+/// If Mode is Min or Max the size will be evaluated even if it depends on
+/// a condition and corresponding value will be returned (min or max).
 bool getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
-                   const TargetLibraryInfo *TLI, bool RoundToAlign = false);
+                   const TargetLibraryInfo *TLI, bool RoundToAlign = false,
+                   ObjSizeMode Mode = ObjSizeMode::Exact);
 
 typedef std::pair<APInt, APInt> SizeOffsetType;
 
@@ -143,6 +151,7 @@ class ObjectSizeOffsetVisitor
   const DataLayout &DL;
   const TargetLibraryInfo *TLI;
   bool RoundToAlign;
+  ObjSizeMode Mode;
   unsigned IntTyBits;
   APInt Zero;
   SmallPtrSet<Instruction *, 8> SeenInsts;
@@ -155,19 +164,20 @@ class ObjectSizeOffsetVisitor
 
 public:
   ObjectSizeOffsetVisitor(const DataLayout &DL, const TargetLibraryInfo *TLI,
-                          LLVMContext &Context, bool RoundToAlign = false);
+                          LLVMContext &Context, bool RoundToAlign = false,
+                          ObjSizeMode Mode = ObjSizeMode::Exact);
 
   SizeOffsetType compute(Value *V);
 
-  bool knownSize(SizeOffsetType &SizeOffset) {
+  static bool knownSize(const SizeOffsetType &SizeOffset) {
     return SizeOffset.first.getBitWidth() > 1;
   }
 
-  bool knownOffset(SizeOffsetType &SizeOffset) {
+  static bool knownOffset(const SizeOffsetType &SizeOffset) {
     return SizeOffset.second.getBitWidth() > 1;
   }
 
-  bool bothKnown(SizeOffsetType &SizeOffset) {
+  static bool bothKnown(const SizeOffsetType &SizeOffset) {
     return knownSize(SizeOffset) && knownOffset(SizeOffset);
   }
 

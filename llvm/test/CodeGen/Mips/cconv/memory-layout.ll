@@ -1,14 +1,14 @@
-; RUN: llc -march=mips < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
-; RUN: llc -march=mipsel < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
+; RUN: llc -march=mips < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -march=mipsel < %s | FileCheck --check-prefixes=ALL,O32 %s
 
-; RUN-TODO: llc -march=mips64 -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
-; RUN-TODO: llc -march=mips64el -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
+; RUN-TODO: llc -march=mips64 -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN-TODO: llc -march=mips64el -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
 
-; RUN: llc -march=mips64 -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=N32 %s
-; RUN: llc -march=mips64el -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=N32 %s
+; RUN: llc -march=mips64 -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
+; RUN: llc -march=mips64el -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
 
-; RUN: llc -march=mips64 -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=N64 %s
-; RUN: llc -march=mips64el -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=N64 %s
+; RUN: llc -march=mips64 -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64 %s
+; RUN: llc -march=mips64el -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64 %s
 
 ; Test the memory layout for all ABI's and byte orders as specified by section
 ; 4 of MD00305 (MIPS ABIs Described).
@@ -27,39 +27,39 @@
 @double = global double 1.0, align 1
 @pointer = global i8* @byte
 
-; ALL-NOT:       .align
+; ALL-NOT:       .p2align
 ; ALL-LABEL: byte:
 ; ALL:           .byte 1
 ; ALL:           .size byte, 1
 
-; ALL:           .align 1
+; ALL:           .p2align 1
 ; ALL-LABEL: halfword:
 ; ALL:           .2byte 258
 ; ALL:           .size halfword, 2
 
-; ALL:           .align 2
+; ALL:           .p2align 2
 ; ALL-LABEL: word:
 ; ALL:           .4byte 16909060
 ; ALL:           .size word, 4
 
-; ALL:           .align 2
+; ALL:           .p2align 2
 ; ALL-LABEL: float:
 ; ALL:           .4byte 1065353216
 ; ALL:           .size float, 4
 
-; ALL:           .align 3
+; ALL:           .p2align 3
 ; ALL-LABEL: dword:
 ; ALL:           .8byte 283686952306183
 ; ALL:           .size dword, 8
 
-; ALL:           .align 3
+; ALL:           .p2align 3
 ; ALL-LABEL: double:
 ; ALL:           .8byte 4607182418800017408
 ; ALL:           .size double, 8
 
-; O32:           .align 2
-; N32:           .align 2
-; N64:           .align 3
+; O32:           .p2align 2
+; N32:           .p2align 2
+; N64:           .p2align 3
 ; ALL-LABEL: pointer:
 ; O32:           .4byte byte
 ; O32:           .size pointer, 4
@@ -76,44 +76,44 @@
 @double_array = global [2 x double] [double 1.0, double 2.0], align 1
 @pointer_array = global [2 x i8*] [i8* @byte, i8* @byte]
 
-; ALL-NOT:       .align
+; ALL-NOT:       .p2align
 ; ALL-LABEL: byte_array:
 ; ALL:           .ascii "\001\002"
 ; ALL:           .size byte_array, 2
 
-; ALL:           .align 1
+; ALL:           .p2align 1
 ; ALL-LABEL: halfword_array:
 ; ALL:           .2byte 1
 ; ALL:           .2byte 2
 ; ALL:           .size halfword_array, 4
 
-; ALL:           .align 2
+; ALL:           .p2align 2
 ; ALL-LABEL: word_array:
 ; ALL:           .4byte 1
 ; ALL:           .4byte 2
 ; ALL:           .size word_array, 8
 
-; ALL:           .align 2
+; ALL:           .p2align 2
 ; ALL-LABEL: float_array:
 ; ALL:           .4byte 1065353216
 ; ALL:           .4byte 1073741824
 ; ALL:           .size float_array, 8
 
-; ALL:           .align 3
+; ALL:           .p2align 3
 ; ALL-LABEL: dword_array:
 ; ALL:           .8byte 1
 ; ALL:           .8byte 2
 ; ALL:           .size dword_array, 16
 
-; ALL:           .align 3
+; ALL:           .p2align 3
 ; ALL-LABEL: double_array:
 ; ALL:           .8byte 4607182418800017408
 ; ALL:           .8byte 4611686018427387904
 ; ALL:           .size double_array, 16
 
-; O32:           .align 2
-; N32:           .align 2
-; N64:           .align 3
+; O32:           .p2align 2
+; N32:           .p2align 2
+; N64:           .p2align 3
 ; ALL-LABEL: pointer_array:
 ; O32:           .4byte byte
 ; O32:           .4byte byte
@@ -128,7 +128,7 @@
 %mixed = type { i8, double, i16 }
 @mixed = global %mixed { i8 1, double 1.0, i16 515 }, align 1
 
-; ALL:           .align 3
+; ALL:           .p2align 3
 ; ALL-LABEL: mixed:
 ; ALL:           .byte 1
 ; ALL:           .space 7

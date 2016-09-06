@@ -15,9 +15,10 @@ declare i32 @func_int(i32, i32)
 ; WIN64: ret
 
 ; X32-LABEL: testf16_inp
-; X32: movl    %eax, (%esp)
 ; X32: vaddps  {{.*}}, {{%ymm[0-1]}}
 ; X32: vaddps  {{.*}}, {{%ymm[0-1]}}
+; Push is not deemed profitable if we're realigning the stack.
+; X32: {{pushl|movl}}   %eax
 ; X32: call
 ; X32: ret
 
@@ -114,8 +115,8 @@ define intel_ocl_bicc <16 x float> @test_prolog_epilog(<16 x float> %a, <16 x fl
 ; test functions with integer parameters
 ; pass parameters on stack for 32-bit platform
 ; X32-LABEL: test_int
-; X32: movl {{.*}}, 4(%esp)
-; X32: movl {{.*}}, (%esp)
+; X32: pushl {{.*}}
+; X32: pushl {{.*}}
 ; X32: call
 ; X32: addl {{.*}}, %eax
 

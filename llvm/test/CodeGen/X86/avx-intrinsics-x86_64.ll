@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -march=x86-64 -mcpu=corei7 -mattr=avx | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -march=x86-64 -mcpu=corei7 -mattr=avx512vl | FileCheck %s
 
 define i64 @test_x86_sse2_cvtsd2si64(<2 x double> %a0) {
   ; CHECK: vcvtsd2si

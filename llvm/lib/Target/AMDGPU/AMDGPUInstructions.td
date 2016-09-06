@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-class AMDGPUInst <dag outs, dag ins, string asm, list<dag> pattern> : Instruction {
+class AMDGPUInst <dag outs, dag ins, string asm = "",
+  list<dag> pattern = []> : Instruction {
   field bit isRegisterLoad = 0;
   field bit isRegisterStore = 0;
 
@@ -23,15 +24,22 @@ class AMDGPUInst <dag outs, dag ins, string asm, list<dag> pattern> : Instructio
   let Pattern = pattern;
   let Itinerary = NullALU;
 
+  // SoftFail is a field the disassembler can use to provide a way for
+  // instructions to not match without killing the whole decode process. It is
+  // mainly used for ARM, but Tablegen expects this field to exist or it fails
+  // to build the decode table.
+  field bits<64> SoftFail = 0;
+
+  let DecoderNamespace = Namespace;
+
   let TSFlags{63} = isRegisterLoad;
   let TSFlags{62} = isRegisterStore;
 }
 
-class AMDGPUShaderInst <dag outs, dag ins, string asm, list<dag> pattern>
-    : AMDGPUInst<outs, ins, asm, pattern> {
+class AMDGPUShaderInst <dag outs, dag ins, string asm = "",
+  list<dag> pattern = []> : AMDGPUInst<outs, ins, asm, pattern> {
 
   field bits<32> Inst = 0xffffffff;
-
 }
 
 def FP32Denormals : Predicate<"Subtarget.hasFP32Denormals()">;
@@ -40,6 +48,13 @@ def UnsafeFPMath : Predicate<"TM.Options.UnsafeFPMath">;
 
 def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
 def ADDRIndirect : ComplexPattern<iPTR, 2, "SelectADDRIndirect", [], []>;
+
+// 32-bit VALU immediate operand that uses the constant bus.
+def u32kimm : Operand<i32> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_KIMM32";
+  let PrintMethod = "printU32ImmOperand";
+}
 
 let OperandType = "OPERAND_IMMEDIATE" in {
 
@@ -146,6 +161,17 @@ def COND_NULL : PatLeaf <
   [{(void)N; return false;}]
 >;
 
+
+//===----------------------------------------------------------------------===//
+// Misc. PatFrags
+//===----------------------------------------------------------------------===//
+
+class HasOneUseBinOp<SDPatternOperator op> : PatFrag<
+  (ops node:$src0, node:$src1),
+  (op $src0, $src1),
+  [{ return N->hasOneUse(); }]
+>;
+
 //===----------------------------------------------------------------------===//
 // Load/Store Pattern Fragments
 //===----------------------------------------------------------------------===//
@@ -168,20 +194,57 @@ def truncstorei8_private : PrivateStore <truncstorei8>;
 def truncstorei16_private : PrivateStore <truncstorei16>;
 def store_private : PrivateStore <store>;
 
-def global_store : PatFrag<(ops node:$val, node:$ptr),
-    (store node:$val, node:$ptr), [{
-        return isGlobalStore(dyn_cast<StoreSDNode>(N));
+class GlobalMemOp <dag ops, dag frag> : PatFrag <ops, frag, [{
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
 }]>;
 
 // Global address space loads
-def global_load : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-    return isGlobalLoad(dyn_cast<LoadSDNode>(N));
+class GlobalLoad <SDPatternOperator op> : GlobalMemOp <
+  (ops node:$ptr), (op node:$ptr)
+>;
+
+def global_load : GlobalLoad <load>;
+
+// Global address space stores
+class GlobalStore <SDPatternOperator op> : GlobalMemOp <
+  (ops node:$value, node:$ptr), (op node:$value, node:$ptr)
+>;
+
+def global_store : GlobalStore <store>;
+def global_store_atomic : GlobalStore<atomic_store>;
+
+
+class ConstantMemOp <dag ops, dag frag> : PatFrag <ops, frag, [{
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
 }]>;
 
 // Constant address space loads
-def constant_load : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-    return isConstantLoad(dyn_cast<LoadSDNode>(N), -1);
+class ConstantLoad <SDPatternOperator op> : ConstantMemOp <
+  (ops node:$ptr), (op node:$ptr)
+>;
+
+def constant_load : ConstantLoad<load>;
+
+class LocalMemOp <dag ops, dag frag> : PatFrag <ops, frag, [{
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
 }]>;
+
+// Local address space loads
+class LocalLoad <SDPatternOperator op> : LocalMemOp <
+  (ops node:$ptr), (op node:$ptr)
+>;
+
+class LocalStore <SDPatternOperator op> : LocalMemOp <
+  (ops node:$value, node:$ptr), (op node:$value, node:$ptr)
+>;
+
+class FlatMemOp <dag ops, dag frag> : PatFrag <ops, frag, [{
+  return cast<MemSDNode>(N)->getAddressSPace() == AMDGPUAS::FLAT_ADDRESS;
+}]>;
+
+class FlatLoad <SDPatternOperator op> : FlatMemOp <
+  (ops node:$ptr), (op node:$ptr)
+>;
 
 class AZExtLoadBase <SDPatternOperator ld_node>: PatFrag<(ops node:$ptr),
                                               (ld_node node:$ptr), [{
@@ -196,29 +259,14 @@ def az_extloadi8 : PatFrag<(ops node:$ptr), (az_extload node:$ptr), [{
   return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;
 }]>;
 
-def az_extloadi8_global : PatFrag<(ops node:$ptr), (az_extloadi8 node:$ptr), [{
-    return isGlobalLoad(dyn_cast<LoadSDNode>(N));
-}]>;
+def az_extloadi8_global : GlobalLoad <az_extloadi8>;
+def sextloadi8_global : GlobalLoad <sextloadi8>;
 
-def sextloadi8_global : PatFrag<(ops node:$ptr), (sextloadi8 node:$ptr), [{
-    return isGlobalLoad(dyn_cast<LoadSDNode>(N));
-}]>;
+def az_extloadi8_constant : ConstantLoad <az_extloadi8>;
+def sextloadi8_constant : ConstantLoad <sextloadi8>;
 
-def az_extloadi8_constant : PatFrag<(ops node:$ptr), (az_extloadi8 node:$ptr), [{
-    return isConstantLoad(dyn_cast<LoadSDNode>(N), -1);
-}]>;
-
-def sextloadi8_constant : PatFrag<(ops node:$ptr), (sextloadi8 node:$ptr), [{
-    return isConstantLoad(dyn_cast<LoadSDNode>(N), -1);
-}]>;
-
-def az_extloadi8_local : PatFrag<(ops node:$ptr), (az_extloadi8 node:$ptr), [{
-    return isLocalLoad(dyn_cast<LoadSDNode>(N));
-}]>;
-
-def sextloadi8_local : PatFrag<(ops node:$ptr), (sextloadi8 node:$ptr), [{
-    return isLocalLoad(dyn_cast<LoadSDNode>(N));
-}]>;
+def az_extloadi8_local : LocalLoad <az_extloadi8>;
+def sextloadi8_local : LocalLoad <sextloadi8>;
 
 def extloadi8_private : PrivateLoad <az_extloadi8>;
 def sextloadi8_private : PrivateLoad <sextloadi8>;
@@ -227,29 +275,14 @@ def az_extloadi16 : PatFrag<(ops node:$ptr), (az_extload node:$ptr), [{
   return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
 }]>;
 
-def az_extloadi16_global : PatFrag<(ops node:$ptr), (az_extloadi16 node:$ptr), [{
-    return isGlobalLoad(dyn_cast<LoadSDNode>(N));
-}]>;
+def az_extloadi16_global : GlobalLoad <az_extloadi16>;
+def sextloadi16_global : GlobalLoad <sextloadi16>;
 
-def sextloadi16_global : PatFrag<(ops node:$ptr), (sextloadi16 node:$ptr), [{
-    return isGlobalLoad(dyn_cast<LoadSDNode>(N));
-}]>;
+def az_extloadi16_constant : ConstantLoad <az_extloadi16>;
+def sextloadi16_constant : ConstantLoad <sextloadi16>;
 
-def az_extloadi16_constant : PatFrag<(ops node:$ptr), (az_extloadi16 node:$ptr), [{
-    return isConstantLoad(dyn_cast<LoadSDNode>(N), -1);
-}]>;
-
-def sextloadi16_constant : PatFrag<(ops node:$ptr), (sextloadi16 node:$ptr), [{
-    return isConstantLoad(dyn_cast<LoadSDNode>(N), -1);
-}]>;
-
-def az_extloadi16_local : PatFrag<(ops node:$ptr), (az_extloadi16 node:$ptr), [{
-    return isLocalLoad(dyn_cast<LoadSDNode>(N));
-}]>;
-
-def sextloadi16_local : PatFrag<(ops node:$ptr), (sextloadi16 node:$ptr), [{
-    return isLocalLoad(dyn_cast<LoadSDNode>(N));
-}]>;
+def az_extloadi16_local : LocalLoad <az_extloadi16>;
+def sextloadi16_local : LocalLoad <sextloadi16>;
 
 def extloadi16_private : PrivateLoad <az_extloadi16>;
 def sextloadi16_private : PrivateLoad <sextloadi16>;
@@ -258,49 +291,20 @@ def az_extloadi32 : PatFrag<(ops node:$ptr), (az_extload node:$ptr), [{
   return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i32;
 }]>;
 
-def az_extloadi32_global : PatFrag<(ops node:$ptr),
-                                   (az_extloadi32 node:$ptr), [{
-  return isGlobalLoad(dyn_cast<LoadSDNode>(N));
-}]>;
+def az_extloadi32_global : GlobalLoad <az_extloadi32>;
 
-def az_extloadi32_flat : PatFrag<(ops node:$ptr),
-                                   (az_extloadi32 node:$ptr), [{
-  return isFlatLoad(dyn_cast<LoadSDNode>(N));
-}]>;
+def az_extloadi32_flat : FlatLoad <az_extloadi32>;
 
-def az_extloadi32_constant : PatFrag<(ops node:$ptr),
-                                     (az_extloadi32 node:$ptr), [{
-  return isConstantLoad(dyn_cast<LoadSDNode>(N), -1);
-}]>;
+def az_extloadi32_constant : ConstantLoad <az_extloadi32>;
 
-def truncstorei8_global : PatFrag<(ops node:$val, node:$ptr),
-                                  (truncstorei8 node:$val, node:$ptr), [{
-  return isGlobalStore(dyn_cast<StoreSDNode>(N));
-}]>;
+def truncstorei8_global : GlobalStore <truncstorei8>;
+def truncstorei16_global : GlobalStore <truncstorei16>;
 
-def truncstorei16_global : PatFrag<(ops node:$val, node:$ptr),
-                                  (truncstorei16 node:$val, node:$ptr), [{
-  return isGlobalStore(dyn_cast<StoreSDNode>(N));
-}]>;
+def local_store : LocalStore <store>;
+def truncstorei8_local : LocalStore <truncstorei8>;
+def truncstorei16_local : LocalStore <truncstorei16>;
 
-def local_store : PatFrag<(ops node:$val, node:$ptr),
-                             (store node:$val, node:$ptr), [{
-  return isLocalStore(dyn_cast<StoreSDNode>(N));
-}]>;
-
-def truncstorei8_local : PatFrag<(ops node:$val, node:$ptr),
-                                  (truncstorei8 node:$val, node:$ptr), [{
-  return isLocalStore(dyn_cast<StoreSDNode>(N));
-}]>;
-
-def truncstorei16_local : PatFrag<(ops node:$val, node:$ptr),
-                                  (truncstorei16 node:$val, node:$ptr), [{
-  return isLocalStore(dyn_cast<StoreSDNode>(N));
-}]>;
-
-def local_load : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-    return isLocalLoad(dyn_cast<LoadSDNode>(N));
-}]>;
+def local_load : LocalLoad <load>;
 
 class Aligned8Bytes <dag ops, dag frag> : PatFrag <ops, frag, [{
     return cast<MemSDNode>(N)->getAlignment() % 8 == 0;
@@ -370,6 +374,12 @@ class global_binary_atomic_op<SDNode atomic_op> : PatFrag<
   [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;}]
 >;
 
+class flat_binary_atomic_op<SDNode atomic_op> : PatFrag<
+  (ops node:$ptr, node:$value),
+  (atomic_op node:$ptr, node:$value),
+  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::FLAT_ADDRESS;}]
+>;
+
 def atomic_swap_global : global_binary_atomic_op<atomic_swap>;
 def atomic_add_global : global_binary_atomic_op<atomic_load_add>;
 def atomic_and_global : global_binary_atomic_op<atomic_load_and>;
@@ -381,6 +391,26 @@ def atomic_umax_global : global_binary_atomic_op<atomic_load_umax>;
 def atomic_umin_global : global_binary_atomic_op<atomic_load_umin>;
 def atomic_xor_global : global_binary_atomic_op<atomic_load_xor>;
 
+def atomic_cmp_swap_global : global_binary_atomic_op<AMDGPUatomic_cmp_swap>;
+def atomic_cmp_swap_global_nortn : PatFrag<
+  (ops node:$ptr, node:$value),
+  (atomic_cmp_swap_global node:$ptr, node:$value),
+  [{ return SDValue(N, 0).use_empty(); }]
+>;
+
+def atomic_swap_flat : flat_binary_atomic_op<atomic_swap>;
+def atomic_add_flat : flat_binary_atomic_op<atomic_load_add>;
+def atomic_and_flat : flat_binary_atomic_op<atomic_load_and>;
+def atomic_max_flat : flat_binary_atomic_op<atomic_load_max>;
+def atomic_min_flat : flat_binary_atomic_op<atomic_load_min>;
+def atomic_or_flat : flat_binary_atomic_op<atomic_load_or>;
+def atomic_sub_flat : flat_binary_atomic_op<atomic_load_sub>;
+def atomic_umax_flat : flat_binary_atomic_op<atomic_load_umax>;
+def atomic_umin_flat : flat_binary_atomic_op<atomic_load_umin>;
+def atomic_xor_flat : flat_binary_atomic_op<atomic_load_xor>;
+
+def atomic_cmp_swap_flat : flat_binary_atomic_op<AMDGPUatomic_cmp_swap>;
+
 //===----------------------------------------------------------------------===//
 // Misc Pattern Fragments
 //===----------------------------------------------------------------------===//
@@ -390,8 +420,10 @@ int TWO_PI = 0x40c90fdb;
 int PI = 0x40490fdb;
 int TWO_PI_INV = 0x3e22f983;
 int FP_UINT_MAX_PLUS_1 = 0x4f800000;    // 1 << 32 in floating point encoding
-int FP32_NEG_ONE = 0xbf800000;
 int FP32_ONE = 0x3f800000;
+int FP32_NEG_ONE = 0xbf800000;
+int FP64_ONE = 0x3ff0000000000000;
+int FP64_NEG_ONE = 0xbff0000000000000;
 }
 def CONST : Constants;
 
@@ -570,6 +602,25 @@ class ROTRPattern <Instruction BIT_ALIGN> : Pat <
   (BIT_ALIGN $src0, $src0, $src1)
 >;
 
+// This matches 16 permutations of
+// max(min(x, y), min(max(x, y), z))
+class IntMed3Pat<Instruction med3Inst,
+                 SDPatternOperator max,
+                 SDPatternOperator max_oneuse,
+                 SDPatternOperator min_oneuse> : Pat<
+  (max (min_oneuse i32:$src0, i32:$src1),
+       (min_oneuse (max_oneuse i32:$src0, i32:$src1), i32:$src2)),
+  (med3Inst $src0, $src1, $src2)
+>;
+
+let Properties = [SDNPCommutative, SDNPAssociative] in {
+def smax_oneuse : HasOneUseBinOp<smax>;
+def smin_oneuse : HasOneUseBinOp<smin>;
+def umax_oneuse : HasOneUseBinOp<umax>;
+def umin_oneuse : HasOneUseBinOp<umin>;
+} // Properties = [SDNPCommutative, SDNPAssociative]
+
+
 // 24-bit arithmetic patterns
 def umul24 : PatFrag <(ops node:$x, node:$y), (mul node:$x, node:$y)>;
 
@@ -587,13 +638,6 @@ def cvt_flr_i32_f32 : PatFrag <
   [{ (void)N; return TM.Options.NoNaNsFPMath; }]
 >;
 
-/*
-class UMUL24Pattern <Instruction UMUL24> : Pat <
-  (mul U24:$x, U24:$y),
-  (UMUL24 $x, $y)
->;
-*/
-
 class IMad24Pat<Instruction Inst> : Pat <
   (add (AMDGPUmul_i24 i32:$src0, i32:$src1), i32:$src2),
   (Inst $src0, $src1, $src2)
@@ -603,30 +647,6 @@ class UMad24Pat<Instruction Inst> : Pat <
   (add (AMDGPUmul_u24 i32:$src0, i32:$src1), i32:$src2),
   (Inst $src0, $src1, $src2)
 >;
-
-multiclass Expand24IBitOps<Instruction MulInst, Instruction AddInst> {
-  def _expand_imad24 : Pat <
-    (AMDGPUmad_i24 i32:$src0, i32:$src1, i32:$src2),
-    (AddInst (MulInst $src0, $src1), $src2)
-  >;
-
-  def _expand_imul24 : Pat <
-    (AMDGPUmul_i24 i32:$src0, i32:$src1),
-    (MulInst $src0, $src1)
-  >;
-}
-
-multiclass Expand24UBitOps<Instruction MulInst, Instruction AddInst> {
-  def _expand_umad24 : Pat <
-    (AMDGPUmad_u24 i32:$src0, i32:$src1, i32:$src2),
-    (AddInst (MulInst $src0, $src1), $src2)
-  >;
-
-  def _expand_umul24 : Pat <
-    (AMDGPUmul_u24 i32:$src0, i32:$src1),
-    (MulInst $src0, $src1)
-  >;
-}
 
 class RcpPat<Instruction RcpInst, ValueType vt> : Pat <
   (fdiv FP_ONE, vt:$src),

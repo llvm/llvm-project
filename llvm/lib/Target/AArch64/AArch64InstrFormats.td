@@ -496,7 +496,7 @@ def imm0_65535 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint32_t)Imm) < 65536;
 }]> {
   let ParserMatchClass = Imm0_65535Operand;
-  let PrintMethod = "printHexImm";
+  let PrintMethod = "printImmHex";
 }
 
 // imm0_255 predicate - True if the immediate is in the range [0,255].
@@ -505,7 +505,7 @@ def imm0_255 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint32_t)Imm) < 256;
 }]> {
   let ParserMatchClass = Imm0_255Operand;
-  let PrintMethod = "printHexImm";
+  let PrintMethod = "printImm";
 }
 
 // imm0_127 predicate - True if the immediate is in the range [0,127]
@@ -514,7 +514,7 @@ def imm0_127 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint32_t)Imm) < 128;
 }]> {
   let ParserMatchClass = Imm0_127Operand;
-  let PrintMethod = "printHexImm";
+  let PrintMethod = "printImm";
 }
 
 // NOTE: These imm0_N operands have to be of type i64 because i64 is the size
@@ -923,10 +923,7 @@ def psbhint_op : Operand<i32> {
     // "psb" is an alias to "hint" only for certain values of CRm:Op2 fields.
     if (!MCOp.isImm())
       return false;
-    bool ValidNamed;
-    (void)AArch64PSBHint::PSBHintMapper().toString(MCOp.getImm(),
-      STI.getFeatureBits(), ValidNamed);
-    return ValidNamed;
+    return AArch64PSBHint::lookupPSBByEncoding(MCOp.getImm()) != nullptr;
   }];
 }
 
@@ -1549,7 +1546,7 @@ class ADRI<bit page, string asm, Operand adr, list<dag> pattern>
 def movimm32_imm : Operand<i32> {
   let ParserMatchClass = Imm0_65535Operand;
   let EncoderMethod = "getMoveWideImmOpValue";
-  let PrintMethod = "printHexImm";
+  let PrintMethod = "printImm";
 }
 def movimm32_shift : Operand<i32> {
   let PrintMethod = "printShifter";
@@ -9377,7 +9374,8 @@ class BaseCASEncoding<dag oops, dag iops, string asm, string operands,
 class BaseCAS<string order, string size, RegisterClass RC>
       : BaseCASEncoding<(outs RC:$out),(ins RC:$Rs, RC:$Rt, GPR64sp:$Rn),
                         "cas" # order # size, "\t$Rs, $Rt, [$Rn]",
-                        "$out = $Rs",[]> {
+                        "$out = $Rs",[]>,
+        Sched<[WriteAtomic]> {
   let NP = 1;
 }
 
@@ -9391,7 +9389,8 @@ multiclass CompareAndSwap<bits<1> Acq, bits<1> Rel, string order> {
 class BaseCASP<string order, string size, RegisterOperand RC>
       : BaseCASEncoding<(outs RC:$out),(ins RC:$Rs, RC:$Rt, GPR64sp:$Rn),
                         "casp" # order # size, "\t$Rs, $Rt, [$Rn]",
-                        "$out = $Rs",[]> {
+                        "$out = $Rs",[]>,
+        Sched<[WriteAtomic]> {
   let NP = 0;
 }
 
@@ -9405,7 +9404,8 @@ multiclass CompareAndSwapPair<bits<1> Acq, bits<1> Rel, string order> {
 let Predicates = [HasV8_1a] in
 class BaseSWP<string order, string size, RegisterClass RC>
       : I<(outs RC:$Rt),(ins RC:$Rs, GPR64sp:$Rn), "swp" # order # size,
-          "\t$Rs, $Rt, [$Rn]","",[]> {
+          "\t$Rs, $Rt, [$Rn]","",[]>,
+        Sched<[WriteAtomic]> {
   bits<2> Sz;
   bit Acq;
   bit Rel;
@@ -9436,7 +9436,8 @@ multiclass Swap<bits<1> Acq, bits<1> Rel, string order> {
 let Predicates = [HasV8_1a], mayLoad = 1, mayStore = 1, hasSideEffects = 1 in
 class BaseLDOPregister<string op, string order, string size, RegisterClass RC>
       : I<(outs RC:$Rt),(ins RC:$Rs, GPR64sp:$Rn), "ld" # op # order # size,
-          "\t$Rs, $Rt, [$Rn]","",[]> {
+          "\t$Rs, $Rt, [$Rn]","",[]>,
+        Sched<[WriteAtomic]> {
   bits<2> Sz;
   bit Acq;
   bit Rel;

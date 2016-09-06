@@ -20,6 +20,7 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+#include "InstrProfilingPort.h"
 #include "InstrProfilingUtil.h"
 
 #include <errno.h>
@@ -33,6 +34,9 @@
 #else
 #include <sys/mman.h>
 #include <sys/file.h>
+#ifndef MAP_FILE
+#define MAP_FILE 0
+#endif
 #endif
 
 #if defined(__FreeBSD__) && defined(__i386__)
@@ -170,44 +174,16 @@ static uint64_t read_64bit_value() {
 
 static char *mangle_filename(const char *orig_filename) {
   char *new_filename;
-  size_t filename_len, prefix_len;
+  size_t prefix_len;
   int prefix_strip;
-  int level = 0;
-  const char *fname, *ptr;
-  const char *prefix = getenv("GCOV_PREFIX");
-  const char *prefix_strip_str = getenv("GCOV_PREFIX_STRIP");
+  const char *prefix = lprofGetPathPrefix(&prefix_strip, &prefix_len);
 
-  if (prefix == NULL || prefix[0] == '\0')
+  if (prefix == NULL)
     return strdup(orig_filename);
 
-  if (prefix_strip_str) {
-    prefix_strip = atoi(prefix_strip_str);
-
-    /* Negative GCOV_PREFIX_STRIP values are ignored */
-    if (prefix_strip < 0)
-      prefix_strip = 0;
-  } else {
-    prefix_strip = 0;
-  }
-
-  fname = orig_filename;
-  for (level = 0, ptr = fname + 1; level < prefix_strip; ++ptr) {
-    if (*ptr == '\0')
-      break;
-    if (*ptr != '/')
-      continue;
-    fname = ptr;
-    ++level;
-  }
-
-  filename_len = strlen(fname);
-  prefix_len = strlen(prefix);
-  new_filename = malloc(prefix_len + 1 + filename_len + 1);
-  memcpy(new_filename, prefix, prefix_len);
-
-  if (prefix[prefix_len - 1] != '/')
-    new_filename[prefix_len++] = '/';
-  memcpy(new_filename + prefix_len, fname, filename_len + 1);
+  new_filename = malloc(prefix_len + 1 + strlen(orig_filename) + 1);
+  lprofApplyPathPrefix(new_filename, orig_filename, prefix, prefix_len,
+                       prefix_strip);
 
   return new_filename;
 }
@@ -511,7 +487,7 @@ void llvm_register_writeout_function(writeout_fn fn) {
   }
 }
 
-void llvm_writeout_files() {
+void llvm_writeout_files(void) {
   struct writeout_fn_node *curr = writeout_fn_head;
 
   while (curr) {
@@ -520,7 +496,7 @@ void llvm_writeout_files() {
   }
 }
 
-void llvm_delete_writeout_function_list() {
+void llvm_delete_writeout_function_list(void) {
   while (writeout_fn_head) {
     struct writeout_fn_node *node = writeout_fn_head;
     writeout_fn_head = writeout_fn_head->next;
@@ -552,7 +528,7 @@ void __gcov_flush() {
   }
 }
 
-void llvm_delete_flush_function_list() {
+void llvm_delete_flush_function_list(void) {
   while (flush_fn_head) {
     struct flush_fn_node *node = flush_fn_head;
     flush_fn_head = flush_fn_head->next;

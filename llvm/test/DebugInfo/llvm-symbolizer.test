@@ -20,12 +20,27 @@ RUN: echo "%p/Inputs/llvm-symbolizer-dwo-test 0x400514" >> %t.input
 RUN: echo "%p/Inputs/fission-ranges.elf-x86_64 0x720" >> %t.input
 RUN: echo "%p/Inputs/arange-overlap.elf-x86_64 0x714" >> %t.input
 RUN: cp %p/Inputs/split-dwarf-test.dwo %T
-RUN: echo "%p/Inputs/split-dwarf-test 0x4004d0" >> %t.input
-RUN: echo "%p/Inputs/split-dwarf-test 0x4004c0" >> %t.input
+RUN: echo "%p/Inputs/split-dwarf-test 0x4005d4" >> %t.input
+RUN: echo "%p/Inputs/split-dwarf-test 0x4005c4" >> %t.input
 RUN: echo "%p/Inputs/cross-cu-inlining.x86_64-macho.o 0x17" >> %t.input
 
 RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
-RUN:    --default-arch=i386 < %t.input | FileCheck %s
+RUN:    --default-arch=i386 < %t.input | FileCheck --check-prefix=CHECK --check-prefix=SPLIT --check-prefix=DWO %s
+
+Ensure we get the same results in the absence of gmlt-like data in the executable but the presence of a .dwo file
+
+RUN: echo "%p/Inputs/split-dwarf-test-nogmlt 0x4005d4" >> %t.input
+RUN: echo "%p/Inputs/split-dwarf-test-nogmlt 0x4005c4" >> %t.input
+RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
+RUN:    --default-arch=i386 < %t.input | FileCheck --check-prefix=SPLIT --check-prefix=DWO %s
+
+Ensure we get gmlt like results in the absence of a .dwo file but the presence of gmlt-like data in the executable
+
+RUN: rm %T/split-dwarf-test.dwo
+RUN: echo "%p/Inputs/split-dwarf-test 0x4005d4" >> %t.input
+RUN: echo "%p/Inputs/split-dwarf-test 0x4005c4" >> %t.input
+RUN: llvm-symbolizer --functions=linkage --inlining --demangle=false \
+RUN:    --default-arch=i386 < %t.input | FileCheck --check-prefix=SPLIT --check-prefix=NODWO %s
 
 CHECK:       main
 CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test.cc:16
@@ -102,13 +117,14 @@ CHECK-NEXT: {{.*}}fission-ranges.cc:6
 CHECK: _ZN1S3bazEv
 CHECK-NEXT: {{.*}}arange-overlap.cc:6
 
-CHECK: _Z3fooi
-CHECK-NEXT: {{.*}}split-dwarf-test.cc
-CHECK-NEXT: main
-CHECK-NEXT: {{.*}}split-dwarf-test.cc
+DWO: _Z2f2v
+NODWO: {{^f2$}}
+SPLIT-NEXT: {{.*}}split-dwarf-test.cc
+SPLIT-NEXT: main
+SPLIT-NEXT: {{.*}}split-dwarf-test.cc
 
-CHECK: _Z3fooi
-CHECK-NEXT: {{.*}}split-dwarf-test.cc
+SPLIT: _Z2f1v
+SPLIT-NEXT: {{.*}}split-dwarf-test.cc
 
 ; func has been inlined into main by LTO. Check that the symbolizer is able
 ; to resolve the cross-cu reference and retrieve func's name

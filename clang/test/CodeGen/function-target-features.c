@@ -9,7 +9,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -target-cpu corei7 -target-feature +avx | FileCheck %s -check-prefix=CORE-CPU-AND-FEATURES
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -target-cpu x86-64 | FileCheck %s -check-prefix=X86-64-CPU
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -target-cpu corei7-avx -target-feature -avx | FileCheck %s -check-prefix=AVX-MINUS-FEATURE
-// RUN: %clang_cc1 -triple sparc-unknown-unknown -emit-llvm -o - %s -target-feature +soft-float | FileCheck %s -check-prefix=NO-SOFT-FLOAT
+// RUN: %clang_cc1 -triple sparc-unknown-unknown -emit-llvm -o - %s -target-feature +soft-float | FileCheck %s -check-prefix=SOFT-FLOAT
 // RUN: %clang_cc1 -triple arm-unknown-unknown -emit-llvm -o - %s -target-feature +soft-float | FileCheck %s -check-prefix=SOFT-FLOAT
 // RUN: %clang_cc1 -triple mips-unknown-unknown -emit-llvm -o - %s -target-feature +soft-float | FileCheck %s -check-prefix=SOFT-FLOAT
 

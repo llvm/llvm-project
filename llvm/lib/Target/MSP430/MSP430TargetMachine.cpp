@@ -15,6 +15,7 @@
 #include "MSP430.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -25,13 +26,20 @@ extern "C" void LLVMInitializeMSP430Target() {
   RegisterTargetMachine<MSP430TargetMachine> X(TheMSP430Target);
 }
 
+static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
+  if (!RM.hasValue())
+    return Reloc::Static;
+  return *RM;
+}
+
 MSP430TargetMachine::MSP430TargetMachine(const Target &T, const Triple &TT,
                                          StringRef CPU, StringRef FS,
                                          const TargetOptions &Options,
-                                         Reloc::Model RM, CodeModel::Model CM,
+                                         Optional<Reloc::Model> RM,
+                                         CodeModel::Model CM,
                                          CodeGenOpt::Level OL)
     : LLVMTargetMachine(T, "e-m:e-p:16:16-i32:16:32-a:16-n8:16", TT, CPU, FS,
-                        Options, RM, CM, OL),
+                        Options, getEffectiveRelocModel(RM), CM, OL),
       TLOF(make_unique<TargetLoweringObjectFileELF>()),
       // FIXME: Check DataLayout string.
       Subtarget(TT, CPU, FS, *this) {

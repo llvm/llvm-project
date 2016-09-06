@@ -58,6 +58,10 @@ public:
   /// the Size of the set.
   void resize(size_t Size) { TheMap.resize(Size); }
 
+  /// Grow the DenseSet so that it can contain at least \p NumEntries items
+  /// before resizing again.
+  void reserve(size_t Size) { TheMap.reserve(Size); }
+
   void clear() {
     TheMap.clear();
   }
@@ -94,6 +98,7 @@ public:
     ValueT *operator->() { return &I->getFirst(); }
 
     Iterator& operator++() { ++I; return *this; }
+    Iterator operator++(int) { auto T = *this; ++I; return T; }
     bool operator==(const Iterator& X) const { return I == X.I; }
     bool operator!=(const Iterator& X) const { return I != X.I; }
   };
@@ -115,6 +120,7 @@ public:
     const ValueT *operator->() { return &I->getFirst(); }
 
     ConstIterator& operator++() { ++I; return *this; }
+    ConstIterator operator++(int) { auto T = *this; ++I; return T; }
     bool operator==(const ConstIterator& X) const { return I == X.I; }
     bool operator!=(const ConstIterator& X) const { return I != X.I; }
   };
@@ -149,7 +155,25 @@ public:
 
   std::pair<iterator, bool> insert(const ValueT &V) {
     detail::DenseSetEmpty Empty;
-    return TheMap.insert(std::make_pair(V, Empty));
+    return TheMap.try_emplace(V, Empty);
+  }
+
+  std::pair<iterator, bool> insert(ValueT &&V) {
+    detail::DenseSetEmpty Empty;
+    return TheMap.try_emplace(std::move(V), Empty);
+  }
+
+  /// Alternative version of insert that uses a different (and possibly less
+  /// expensive) key type.
+  template <typename LookupKeyT>
+  std::pair<iterator, bool> insert_as(const ValueT &V,
+                                      const LookupKeyT &LookupKey) {
+    return insert_as(ValueT(V), LookupKey);
+  }
+  template <typename LookupKeyT>
+  std::pair<iterator, bool> insert_as(ValueT &&V, const LookupKeyT &LookupKey) {
+    detail::DenseSetEmpty Empty;
+    return TheMap.insert_as(std::make_pair(std::move(V), Empty), LookupKey);
   }
 
   // Range insertion of values.

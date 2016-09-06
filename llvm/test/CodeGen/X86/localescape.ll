@@ -39,21 +39,19 @@ define void @print_framealloc_from_fp(i8* %fp) {
 
 ; X86-LABEL: print_framealloc_from_fp:
 ; X86: pushl   %esi
-; X86: subl    $8, %esp
-; X86: movl    16(%esp), %esi
-; X86: movl    Lalloc_func$frame_escape_0(%esi), %eax
-; X86: movl    %eax, 4(%esp)
-; X86: movl    $_str, (%esp)
+; X86: movl    8(%esp), %esi
+; X86: pushl   Lalloc_func$frame_escape_0(%esi)
+; X86: pushl   $_str
 ; X86: calll   _printf
-; X86: movl    Lalloc_func$frame_escape_1(%esi), %eax
-; X86: movl    %eax, 4(%esp)
-; X86: movl    $_str, (%esp)
+; X86: addl    $8, %esp
+; X86: pushl   Lalloc_func$frame_escape_1(%esi)
+; X86: pushl   $_str
 ; X86: calll   _printf
+; X86: addl    $8, %esp
 ; X86: movl    $42, Lalloc_func$frame_escape_1(%esi)
 ; X86: movl    $4, %eax
-; X86: movl    Lalloc_func$frame_escape_1(%esi,%eax), %eax
-; X86: movl    %eax, 4(%esp)
-; X86: movl    $_str, (%esp)
+; X86: pushl   Lalloc_func$frame_escape_1(%esi,%eax)
+; X86: pushl   $_str
 ; X86: calll   _printf
 ; X86: addl    $8, %esp
 ; X86: popl    %esi
@@ -132,12 +130,12 @@ define void @alloc_func_no_frameaddr() {
 ; X64: retq
 
 ; X86-LABEL: alloc_func_no_frameaddr:
-; X86: subl    $12, %esp
-; X86: Lalloc_func_no_frameaddr$frame_escape_0 = 8
-; X86: Lalloc_func_no_frameaddr$frame_escape_1 = 4
-; X86: movl $42, 8(%esp)
-; X86: movl $13, 4(%esp)
-; X86: movl $0, (%esp)
+; X86: subl    $8, %esp
+; X86: Lalloc_func_no_frameaddr$frame_escape_0 = 4
+; X86: Lalloc_func_no_frameaddr$frame_escape_1 = 0
+; X86: movl $42, 4(%esp)
+; X86: movl $13, (%esp)
+; X86: pushl $0
 ; X86: calll _print_framealloc_from_fp
-; X86: addl $12, %esp
+; X86: addl    $12, %esp
 ; X86: retl

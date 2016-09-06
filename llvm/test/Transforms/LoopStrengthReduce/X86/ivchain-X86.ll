@@ -12,7 +12,7 @@
 ; X64: shlq $2
 ; no other address computation in the preheader
 ; X64-NEXT: xorl
-; X64-NEXT: .align
+; X64-NEXT: .p2align
 ; X64: %loop
 ; no complex address modes
 ; X64-NOT: (%{{[^)]+}},%{{[^)]+}},

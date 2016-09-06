@@ -9,7 +9,7 @@ void *Thread(void *x) {
 int main() {
   pthread_t t;
   pthread_create(&t, 0, Thread, 0);
-  printf("DONE\n");
+  fprintf(stderr, "DONE\n");
   return 0;
 }
 

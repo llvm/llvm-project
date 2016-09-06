@@ -159,6 +159,6 @@ int bar() {
 
 
 // CHECK: attributes [[NORMAL]] =
-// CHECK-SAME-NOT: noinline
-// CHECK-SAME-NOT: optnone
+// CHECK-NOT: noinline
+// CHECK-NOT: optnone
 // CHECK: attributes [[OPTNONE]] = {{.*}} noinline {{.*}} optnone

@@ -48,6 +48,13 @@ int test1() {
 }
 @end
 
+// rdar://25372906
+@class I5;
+@interface I5
+-(void)meth;
+@property (class) int c;
+@end
+
 // RUN: c-index-test -index-file %s -target x86_64-apple-macosx10.7 > %t
 // RUN: FileCheck %s -input-file=%t
 // CHECK: [indexDeclaration]: kind: objc-class | name: I | {{.*}} | loc: 1:12
@@ -71,5 +78,9 @@ int test1() {
 // CHECK: [indexEntityReference]: kind: function | name: extfn | {{.*}} | loc: 33:10
 
 // CHECK: [indexDeclaration]: kind: objc-class | name: I4 | {{.*}} | loc: 36:12
+// CHECK: [indexEntityReference]: kind: objc-property | name: prop | {{.*}} | cursor: ObjCSynthesizeDecl=prop:37:34 (Definition) | loc: 43:13 | <parent>:: kind: objc-class | name: I4 | {{.*}} | container: [I4:42:17] | refkind: direct
 // CHECK-NOT: [indexDeclaration]: kind: objc-instance-method {{.*}} loc: 37:
 // CHECK-NOT: [indexDeclaration]: kind: objc-instance-method {{.*}} loc: 43:
+
+// CHECK: [indexDeclaration]: kind: objc-instance-method | name: meth | {{.*}} loc: 54:1 | {{.*}} | isRedecl: 0 | isDef: 0 |
+// CHECK: [indexDeclaration]: kind: objc-property | name: c | USR: c:objc(cs)I5(cpy)c | lang: ObjC | cursor: ObjCPropertyDecl=c:55:23 [class,] | loc: 55:23

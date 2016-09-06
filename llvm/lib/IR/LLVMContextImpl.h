@@ -32,6 +32,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Dwarf.h"
 #include <vector>
 
 namespace llvm {
@@ -211,6 +212,17 @@ public:
 template <class NodeTy> struct MDNodeKeyImpl;
 template <class NodeTy> struct MDNodeInfo;
 
+/// Configuration point for MDNodeInfo::isEqual().
+template <class NodeTy> struct MDNodeSubsetEqualImpl {
+  typedef MDNodeKeyImpl<NodeTy> KeyTy;
+  static bool isSubsetEqual(const KeyTy &LHS, const NodeTy *RHS) {
+    return false;
+  }
+  static bool isSubsetEqual(const NodeTy *LHS, const NodeTy *RHS) {
+    return false;
+  }
+};
+
 /// \brief DenseMapInfo for MDTuple.
 ///
 /// Note that we don't need the is-function-local bit, since that's implicit in
@@ -365,11 +377,47 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
            ExtraData == RHS->getRawExtraData();
   }
   unsigned getHashValue() const {
+    // If this is a member inside an ODR type, only hash the type and the name.
+    // Otherwise the hash will be stronger than
+    // MDNodeSubsetEqualImpl::isODRMember().
+    if (Tag == dwarf::DW_TAG_member && Name)
+      if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
+        if (CT->getRawIdentifier())
+          return hash_combine(Name, Scope);
+
     // Intentionally computes the hash on a subset of the operands for
     // performance reason. The subset has to be significant enough to avoid
     // collision "most of the time". There is no correctness issue in case of
     // collision because of the full check above.
     return hash_combine(Tag, Name, File, Line, Scope, BaseType, Flags);
+  }
+};
+
+template <> struct MDNodeSubsetEqualImpl<DIDerivedType> {
+  typedef MDNodeKeyImpl<DIDerivedType> KeyTy;
+  static bool isSubsetEqual(const KeyTy &LHS, const DIDerivedType *RHS) {
+    return isODRMember(LHS.Tag, LHS.Scope, LHS.Name, RHS);
+  }
+  static bool isSubsetEqual(const DIDerivedType *LHS, const DIDerivedType *RHS) {
+    return isODRMember(LHS->getTag(), LHS->getRawScope(), LHS->getRawName(),
+                       RHS);
+  }
+
+  /// Subprograms compare equal if they declare the same function in an ODR
+  /// type.
+  static bool isODRMember(unsigned Tag, const Metadata *Scope,
+                          const MDString *Name, const DIDerivedType *RHS) {
+    // Check whether the LHS is eligible.
+    if (Tag != dwarf::DW_TAG_member || !Name)
+      return false;
+
+    auto *CT = dyn_cast_or_null<DICompositeType>(Scope);
+    if (!CT || !CT->getRawIdentifier())
+      return false;
+
+    // Compare to the RHS.
+    return Tag == RHS->getTag() && Name == RHS->getRawName() &&
+           Scope == RHS->getRawScope();
   }
 };
 
@@ -436,17 +484,19 @@ template <> struct MDNodeKeyImpl<DICompositeType> {
 
 template <> struct MDNodeKeyImpl<DISubroutineType> {
   unsigned Flags;
+  uint8_t CC;
   Metadata *TypeArray;
 
-  MDNodeKeyImpl(int64_t Flags, Metadata *TypeArray)
-      : Flags(Flags), TypeArray(TypeArray) {}
+  MDNodeKeyImpl(unsigned Flags, uint8_t CC, Metadata *TypeArray)
+      : Flags(Flags), CC(CC), TypeArray(TypeArray) {}
   MDNodeKeyImpl(const DISubroutineType *N)
-      : Flags(N->getFlags()), TypeArray(N->getRawTypeArray()) {}
+      : Flags(N->getFlags()), CC(N->getCC()), TypeArray(N->getRawTypeArray()) {}
 
   bool isKeyOf(const DISubroutineType *RHS) const {
-    return Flags == RHS->getFlags() && TypeArray == RHS->getRawTypeArray();
+    return Flags == RHS->getFlags() && CC == RHS->getCC() &&
+           TypeArray == RHS->getRawTypeArray();
   }
-  unsigned getHashValue() const { return hash_combine(Flags, TypeArray); }
+  unsigned getHashValue() const { return hash_combine(Flags, CC, TypeArray); }
 };
 
 template <> struct MDNodeKeyImpl<DIFile> {
@@ -478,8 +528,10 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   Metadata *ContainingType;
   unsigned Virtuality;
   unsigned VirtualIndex;
+  int ThisAdjustment;
   unsigned Flags;
   bool IsOptimized;
+  Metadata *Unit;
   Metadata *TemplateParams;
   Metadata *Declaration;
   Metadata *Variables;
@@ -488,14 +540,15 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
                 Metadata *File, unsigned Line, Metadata *Type,
                 bool IsLocalToUnit, bool IsDefinition, unsigned ScopeLine,
                 Metadata *ContainingType, unsigned Virtuality,
-                unsigned VirtualIndex, unsigned Flags, bool IsOptimized,
-                Metadata *TemplateParams, Metadata *Declaration,
-                Metadata *Variables)
+                unsigned VirtualIndex, int ThisAdjustment, unsigned Flags,
+                bool IsOptimized, Metadata *Unit, Metadata *TemplateParams,
+                Metadata *Declaration, Metadata *Variables)
       : Scope(Scope), Name(Name), LinkageName(LinkageName), File(File),
         Line(Line), Type(Type), IsLocalToUnit(IsLocalToUnit),
         IsDefinition(IsDefinition), ScopeLine(ScopeLine),
         ContainingType(ContainingType), Virtuality(Virtuality),
-        VirtualIndex(VirtualIndex), Flags(Flags), IsOptimized(IsOptimized),
+        VirtualIndex(VirtualIndex), ThisAdjustment(ThisAdjustment),
+        Flags(Flags), IsOptimized(IsOptimized), Unit(Unit),
         TemplateParams(TemplateParams), Declaration(Declaration),
         Variables(Variables) {}
   MDNodeKeyImpl(const DISubprogram *N)
@@ -505,7 +558,8 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
         IsLocalToUnit(N->isLocalToUnit()), IsDefinition(N->isDefinition()),
         ScopeLine(N->getScopeLine()), ContainingType(N->getRawContainingType()),
         Virtuality(N->getVirtuality()), VirtualIndex(N->getVirtualIndex()),
-        Flags(N->getFlags()), IsOptimized(N->isOptimized()),
+        ThisAdjustment(N->getThisAdjustment()), Flags(N->getFlags()),
+        IsOptimized(N->isOptimized()), Unit(N->getRawUnit()),
         TemplateParams(N->getRawTemplateParams()),
         Declaration(N->getRawDeclaration()), Variables(N->getRawVariables()) {}
 
@@ -518,18 +572,58 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
            ScopeLine == RHS->getScopeLine() &&
            ContainingType == RHS->getRawContainingType() &&
            Virtuality == RHS->getVirtuality() &&
-           VirtualIndex == RHS->getVirtualIndex() && Flags == RHS->getFlags() &&
-           IsOptimized == RHS->isOptimized() &&
+           VirtualIndex == RHS->getVirtualIndex() &&
+           ThisAdjustment == RHS->getThisAdjustment() &&
+           Flags == RHS->getFlags() && IsOptimized == RHS->isOptimized() &&
+           Unit == RHS->getUnit() &&
            TemplateParams == RHS->getRawTemplateParams() &&
            Declaration == RHS->getRawDeclaration() &&
            Variables == RHS->getRawVariables();
   }
   unsigned getHashValue() const {
+    // If this is a declaration inside an ODR type, only hash the type and the
+    // name.  Otherwise the hash will be stronger than
+    // MDNodeSubsetEqualImpl::isDeclarationOfODRMember().
+    if (!IsDefinition && LinkageName)
+      if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
+        if (CT->getRawIdentifier())
+          return hash_combine(LinkageName, Scope);
+
     // Intentionally computes the hash on a subset of the operands for
     // performance reason. The subset has to be significant enough to avoid
     // collision "most of the time". There is no correctness issue in case of
     // collision because of the full check above.
     return hash_combine(Name, Scope, File, Type, Line);
+  }
+};
+
+template <> struct MDNodeSubsetEqualImpl<DISubprogram> {
+  typedef MDNodeKeyImpl<DISubprogram> KeyTy;
+  static bool isSubsetEqual(const KeyTy &LHS, const DISubprogram *RHS) {
+    return isDeclarationOfODRMember(LHS.IsDefinition, LHS.Scope,
+                                    LHS.LinkageName, RHS);
+  }
+  static bool isSubsetEqual(const DISubprogram *LHS, const DISubprogram *RHS) {
+    return isDeclarationOfODRMember(LHS->isDefinition(), LHS->getRawScope(),
+                                    LHS->getRawLinkageName(), RHS);
+  }
+
+  /// Subprograms compare equal if they declare the same function in an ODR
+  /// type.
+  static bool isDeclarationOfODRMember(bool IsDefinition, const Metadata *Scope,
+                                       const MDString *LinkageName,
+                                       const DISubprogram *RHS) {
+    // Check whether the LHS is eligible.
+    if (IsDefinition || !Scope || !LinkageName)
+      return false;
+
+    auto *CT = dyn_cast_or_null<DICompositeType>(Scope);
+    if (!CT || !CT->getRawIdentifier())
+      return false;
+
+    // Compare to the RHS.
+    return IsDefinition == RHS->isDefinition() && Scope == RHS->getRawScope() &&
+           LinkageName == RHS->getRawLinkageName();
   }
 };
 
@@ -834,7 +928,7 @@ template <> struct MDNodeKeyImpl<DIMacroFile> {
 
   bool isKeyOf(const DIMacroFile *RHS) const {
     return MIType == RHS->getMacinfoType() && Line == RHS->getLine() &&
-           File == RHS->getRawFile() && File == RHS->getRawElements();
+           File == RHS->getRawFile() && Elements == RHS->getRawElements();
   }
   unsigned getHashValue() const {
     return hash_combine(MIType, Line, File, Elements);
@@ -844,6 +938,7 @@ template <> struct MDNodeKeyImpl<DIMacroFile> {
 /// \brief DenseMapInfo for MDNode subclasses.
 template <class NodeTy> struct MDNodeInfo {
   typedef MDNodeKeyImpl<NodeTy> KeyTy;
+  typedef MDNodeSubsetEqualImpl<NodeTy> SubsetEqualTy;
   static inline NodeTy *getEmptyKey() {
     return DenseMapInfo<NodeTy *>::getEmptyKey();
   }
@@ -857,10 +952,14 @@ template <class NodeTy> struct MDNodeInfo {
   static bool isEqual(const KeyTy &LHS, const NodeTy *RHS) {
     if (RHS == getEmptyKey() || RHS == getTombstoneKey())
       return false;
-    return LHS.isKeyOf(RHS);
+    return SubsetEqualTy::isSubsetEqual(LHS, RHS) || LHS.isKeyOf(RHS);
   }
   static bool isEqual(const NodeTy *LHS, const NodeTy *RHS) {
-    return LHS == RHS;
+    if (LHS == RHS)
+      return true;
+    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+      return false;
+    return SubsetEqualTy::isSubsetEqual(LHS, RHS);
   }
 };
 
@@ -899,10 +998,36 @@ public:
   ///
   /// Erases all attachments matching the \c shouldRemove predicate.
   template <class PredTy> void remove_if(PredTy shouldRemove) {
-    Attachments.erase(
-        std::remove_if(Attachments.begin(), Attachments.end(), shouldRemove),
-        Attachments.end());
+    Attachments.erase(llvm::remove_if(Attachments, shouldRemove),
+                      Attachments.end());
   }
+};
+
+/// Multimap-like storage for metadata attachments for globals. This differs
+/// from MDAttachmentMap in that it allows multiple attachments per metadata
+/// kind.
+class MDGlobalAttachmentMap {
+  struct Attachment {
+    unsigned MDKind;
+    TrackingMDNodeRef Node;
+  };
+  SmallVector<Attachment, 1> Attachments;
+
+public:
+  bool empty() const { return Attachments.empty(); }
+
+  /// Appends all attachments with the given ID to \c Result in insertion order.
+  /// If the global has no attachments with the given ID, or if ID is invalid,
+  /// leaves Result unchanged.
+  void get(unsigned ID, SmallVectorImpl<MDNode *> &Result);
+
+  void insert(unsigned ID, MDNode &MD);
+  void erase(unsigned ID);
+
+  /// Appends all attachments for the global to \c Result, sorting by attachment
+  /// ID. Attachments with the same ID appear in insertion order. This function
+  /// does \em not clear \c Result.
+  void getAll(SmallVectorImpl<std::pair<unsigned, MDNode *>> &Result) const;
 };
 
 class LLVMContextImpl {
@@ -917,6 +1042,7 @@ public:
   LLVMContext::DiagnosticHandlerTy DiagnosticHandler;
   void *DiagnosticContext;
   bool RespectDiagnosticFilters;
+  bool DiagnosticHotnessRequested;
 
   LLVMContext::YieldCallbackTy YieldCallback;
   void *YieldOpaqueHandle;
@@ -931,7 +1057,7 @@ public:
   FoldingSet<AttributeSetImpl> AttrsLists;
   FoldingSet<AttributeSetNode> AttrsSetNodes;
 
-  StringMap<MDString> MDStringCache;
+  StringMap<MDString, BumpPtrAllocator> MDStringCache;
   DenseMap<Value *, ValueAsMetadata *> ValuesAsMetadata;
   DenseMap<Metadata *, MetadataAsValue *> MetadataAsValues;
 
@@ -941,11 +1067,14 @@ public:
   DenseSet<CLASS *, CLASS##Info> CLASS##s;
 #include "llvm/IR/Metadata.def"
 
+  // Optional map for looking up composite types by identifier.
+  Optional<DenseMap<const MDString *, DICompositeType *>> DITypeMap;
+
   // MDNodes may be uniqued or not uniqued.  When they're not uniqued, they
   // aren't in the MDNodeSet, but they're still shared between objects, so no
-  // one object can destroy them.  This set allows us to at least destroy them
-  // on Context destruction.
-  SmallPtrSet<MDNode *, 1> DistinctMDNodes;
+  // one object can destroy them.  Keep track of them here so we can delete
+  // them on context teardown.
+  std::vector<MDNode *> DistinctMDNodes;
 
   DenseMap<Type*, ConstantAggregateZero*> CAZConstants;
 
@@ -1012,8 +1141,8 @@ public:
   /// Collection of per-instruction metadata used in this context.
   DenseMap<const Instruction *, MDAttachmentMap> InstructionMetadata;
 
-  /// Collection of per-function metadata used in this context.
-  DenseMap<const Function *, MDAttachmentMap> FunctionMetadata;
+  /// Collection of per-GlobalObject metadata used in this context.
+  DenseMap<const GlobalObject *, MDGlobalAttachmentMap> GlobalObjectMetadata;
 
   /// DiscriminatorTable - This table maps file:line locations to an
   /// integer representing the next DWARF path discriminator to assign to
@@ -1049,6 +1178,10 @@ public:
 
   /// Destroy the ConstantArrays if they are not used.
   void dropTriviallyDeadConstantArrays();
+
+  /// \brief Access the object which manages optimization bisection for failure
+  /// analysis.
+  OptBisect &getOptBisect();
 };
 
 }

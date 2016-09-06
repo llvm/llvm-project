@@ -15,6 +15,7 @@
 // RUN:     not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-HEAP < %t.out
 
+// XFAIL: target-is-mips64el
 
 #include <stdio.h>
 
@@ -48,19 +49,19 @@ int main(int argc, char *argv[]) {
 }
 
 // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
-// CHECK: {{#0 .* in main.*chained_origin.cc:47}}
+// CHECK: {{#0 .* in main.*chained_origin.cc:}}[[@LINE-4]]
 
 // CHECK: Uninitialized value was stored to memory at
-// CHECK: {{#0 .* in fn_h.*chained_origin.cc:35}}
-// CHECK: {{#1 .* in main.*chained_origin.cc:46}}
+// CHECK: {{#0 .* in fn_h.*chained_origin.cc:}}[[@LINE-19]]
+// CHECK: {{#1 .* in main.*chained_origin.cc:}}[[@LINE-9]]
 
 // CHECK: Uninitialized value was stored to memory at
-// CHECK: {{#0 .* in fn_g.*chained_origin.cc:25}}
-// CHECK: {{#1 .* in fn_f.*chained_origin.cc:30}}
-// CHECK: {{#2 .* in main.*chained_origin.cc:45}}
+// CHECK: {{#0 .* in fn_g.*chained_origin.cc:}}[[@LINE-33]]
+// CHECK: {{#1 .* in fn_f.*chained_origin.cc:}}[[@LINE-29]]
+// CHECK: {{#2 .* in main.*chained_origin.cc:}}[[@LINE-15]]
 
 // CHECK-STACK: Uninitialized value was created by an allocation of 'z' in the stack frame of function 'main'
-// CHECK-STACK: {{#0 .* in main.*chained_origin.cc:38}}
+// CHECK-STACK: {{#0 .* in main.*chained_origin.cc:}}[[@LINE-25]]
 
 // CHECK-HEAP: Uninitialized value was created by a heap allocation
-// CHECK-HEAP: {{#1 .* in main.*chained_origin.cc:40}}
+// CHECK-HEAP: {{#1 .* in main.*chained_origin.cc:}}[[@LINE-26]]

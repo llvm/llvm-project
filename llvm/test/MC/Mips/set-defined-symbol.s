@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 -filetype=obj -o - | \
-# RUN:   llvm-objdump -d -r -arch=mips - | FileCheck %s
+# RUN:   llvm-objdump -d -r - | FileCheck %s
 
   .global foo
   .weak bar

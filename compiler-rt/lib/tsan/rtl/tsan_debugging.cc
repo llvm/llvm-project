@@ -57,8 +57,7 @@ static void CopyTrace(SymbolizedStack *first_frame, void **trace,
 // Meant to be called by the debugger.
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__tsan_get_current_report() {
-  const ReportDesc *rep = cur_thread()->current_report;
-  return (void *)rep;
+  return const_cast<ReportDesc*>(cur_thread()->current_report);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -139,14 +138,14 @@ int __tsan_get_report_mutex(void *report, uptr idx, uptr *mutex_id, void **addr,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-int __tsan_get_report_thread(void *report, uptr idx, int *tid, uptr *pid,
+int __tsan_get_report_thread(void *report, uptr idx, int *tid, uptr *os_id,
                              int *running, const char **name, int *parent_tid,
                              void **trace, uptr trace_size) {
   const ReportDesc *rep = (ReportDesc *)report;
   CHECK_LT(idx, rep->threads.Size());
   ReportThread *thread = rep->threads[idx];
   *tid = thread->id;
-  *pid = thread->pid;
+  *os_id = thread->os_id;
   *running = thread->running;
   *name = thread->name;
   *parent_tid = thread->parent_tid;

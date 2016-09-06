@@ -190,8 +190,8 @@ namespace llvm {
       void dump() const;
     };
 
-    typedef SmallVector<Segment,4> Segments;
-    typedef SmallVector<VNInfo*,4> VNInfoList;
+    typedef SmallVector<Segment, 2> Segments;
+    typedef SmallVector<VNInfo *, 2> VNInfoList;
 
     Segments segments;   // the liveness segments
     VNInfoList valnos;   // value#'s
@@ -544,6 +544,11 @@ namespace llvm {
       return true;
     }
 
+    // Returns true if any segment in the live range contains any of the
+    // provided slot indexes.  Slots which occur in holes between
+    // segments will not cause the function to return true.
+    bool isLiveAtIndexes(ArrayRef<SlotIndex> Slots) const;
+
     bool operator<(const LiveRange& other) const {
       const SlotIndex &thisIndex = beginIndex();
       const SlotIndex &otherIndex = other.beginIndex();
@@ -608,6 +613,9 @@ namespace llvm {
                BumpPtrAllocator &Allocator)
         : LiveRange(Other, Allocator), Next(nullptr), LaneMask(LaneMask) {
       }
+
+      void print(raw_ostream &OS) const;
+      void dump() const;
     };
 
   private:
@@ -707,10 +715,6 @@ namespace llvm {
     /// are not considered valid and should only exist temporarily).
     void removeEmptySubRanges();
 
-    /// Construct main live range by merging the SubRanges of @p LI.
-    void constructMainRangeFromSubranges(const SlotIndexes &Indexes,
-                                         VNInfo::Allocator &VNIAllocator);
-
     /// getSize - Returns the sum of sizes of all the LiveRange's.
     ///
     unsigned getSize() const;
@@ -753,6 +757,12 @@ namespace llvm {
     /// Free memory held by SubRange.
     void freeSubRange(SubRange *S);
   };
+
+  inline raw_ostream &operator<<(raw_ostream &OS,
+                                 const LiveInterval::SubRange &SR) {
+    SR.print(OS);
+    return OS;
+  }
 
   inline raw_ostream &operator<<(raw_ostream &OS, const LiveInterval &LI) {
     LI.print(OS);
@@ -862,76 +872,6 @@ namespace llvm {
     /// left in \p LI.
     void Distribute(LiveInterval &LI, LiveInterval *LIV[],
                     MachineRegisterInfo &MRI);
-  };
-
-  /// Helper class that can divide MachineOperands of a virtual register into
-  /// equivalence classes of connected components.
-  /// MachineOperands belong to the same equivalence class when they are part of
-  /// the same SubRange segment or adjacent segments (adjacent in control
-  /// flow); Different subranges affected by the same MachineOperand belong to
-  /// the same equivalence class.
-  ///
-  /// Example:
-  ///   vreg0:sub0 = ...
-  ///   vreg0:sub1 = ...
-  ///   vreg0:sub2 = ...
-  ///   ...
-  ///   xxx        = op vreg0:sub1
-  ///   vreg0:sub1 = ...
-  ///   store vreg0:sub0_sub1
-  ///
-  /// The example contains 3 different equivalence classes:
-  ///   - One for the (dead) vreg0:sub2 definition
-  ///   - One containing the first vreg0:sub1 definition and its use,
-  ///     but not the second definition!
-  ///   - The remaining class contains all other operands involving vreg0.
-  ///
-  /// We provide a utility function here to rename disjunct classes to different
-  /// virtual registers.
-  class ConnectedSubRegClasses {
-    LiveIntervals &LIS;
-    MachineRegisterInfo &MRI;
-
-  public:
-    ConnectedSubRegClasses(LiveIntervals &LIS, MachineRegisterInfo &MRI)
-      : LIS(LIS), MRI(MRI) {}
-
-    /// Split unrelated subregister components and rename them to new vregs.
-    void renameComponents(LiveInterval &LI) const;
-
-  private:
-    struct SubRangeInfo {
-      ConnectedVNInfoEqClasses ConEQ;
-      LiveInterval::SubRange *SR;
-      unsigned Index;
-
-      SubRangeInfo(LiveIntervals &LIS, LiveInterval::SubRange &SR,
-                   unsigned Index)
-        : ConEQ(LIS), SR(&SR), Index(Index) {}
-    };
-
-    /// \brief Build a vector of SubRange infos and a union find set of
-    /// equivalence classes.
-    /// Returns true if more than 1 equivalence class was found.
-    bool findComponents(IntEqClasses &Classes,
-                        SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
-                        LiveInterval &LI) const;
-
-    /// \brief Distribute the LiveInterval segments into the new LiveIntervals
-    /// belonging to their class.
-    void distribute(const IntEqClasses &Classes,
-                    const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
-                    const SmallVectorImpl<LiveInterval*> &Intervals) const;
-
-    /// \brief Constructs main liverange and add missing undef+dead flags.
-    void computeMainRangesFixFlags(const IntEqClasses &Classes,
-        const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
-        const SmallVectorImpl<LiveInterval*> &Intervals) const;
-
-    /// Rewrite Machine Operands to use the new vreg belonging to their class.
-    void rewriteOperands(const IntEqClasses &Classes,
-                         const SmallVectorImpl<SubRangeInfo> &SubRangeInfos,
-                         const SmallVectorImpl<LiveInterval*> &Intervals) const;
   };
 }
 #endif

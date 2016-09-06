@@ -23,9 +23,9 @@ void f() {
 
   if (S b(a)) {} // expected-error {{variable declaration in condition cannot have a parenthesized initializer}}
 
-  if (S b(n)) {} // expected-error {{a function type is not allowed here}} expected-error {{must have an initializer}}
+  if (S b(n)) {} // expected-error {{a function type is not allowed here}}
   if (S b(n) = 0) {} // expected-error {{a function type is not allowed here}}
-  if (S b(n) == 0) {} // expected-error {{a function type is not allowed here}} expected-error {{did you mean '='?}}
+  if (S b(n) == 0) {} // expected-error {{a function type is not allowed here}}
 
   S s(a);
   if (S{s}) {} // ok

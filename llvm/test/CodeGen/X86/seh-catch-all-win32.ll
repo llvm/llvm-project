@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-windows-msvc < %s | FileCheck %s
+; RUN: llc -stack-symbol-ordering=0 -mtriple=i686-windows-msvc < %s | FileCheck %s
 
 ; 32-bit catch-all has to use a filter function because that's how it saves the
 ; exception code.
@@ -75,13 +75,13 @@ entry:
 ; CHECK: movl -24(%ebp), %esp
 ;       EH state -1
 ; CHECK: movl [[code_offs]](%ebp), %[[code:[a-z]+]]
-; CHECK-DAG: movl %[[code]], 4(%esp)
-; CHECK-DAG: movl $_str, (%esp)
+; CHECK: pushl %[[code]]
+; CHECK: pushl $_str
 ; CHECK: calll _printf
 
 ; CHECK: .section .xdata,"dr"
 ; CHECK: Lmain$parent_frame_offset = [[reg_offs]]
-; CHECK: .align 4
+; CHECK: .p2align 2
 ; CHECK: L__ehtable$main
 ; CHECK-NEXT: .long -1
 ; CHECK-NEXT: .long _filt$main

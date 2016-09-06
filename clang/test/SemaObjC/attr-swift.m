@@ -50,7 +50,7 @@ __attribute__((swift_name("SNFooClass")))
 + (SNFoo *)fooWithValue:(int)value value:(int)value2 __attribute__((swift_name("foo(value:extra:)")));
 + (SNFoo *)fooWithConvertingValue:(int)value value:(int)value2 __attribute__((swift_name("init(_:extra:)")));
 
-+ (SNFoo *)fooWithOtherValue:(int)value __attribute__((swift_name("init"))); // expected-error {{parameter of 'swift_name' attribute must be a Swift function name string}}
++ (SNFoo *)fooWithOtherValue:(int)value __attribute__((swift_name("init"))); // expected-warning {{parameter of 'swift_name' attribute must be a Swift function name string}}
 + (SNFoo *)fooWithAnotherValue:(int)value __attribute__((swift_name("foo()"))); // expected-warning {{too few parameters in 'swift_name' attribute (expected 1; got 0)}}
 + (SNFoo *)fooWithYetAnotherValue:(int)value __attribute__((swift_name("foo(value:extra:)"))); // expected-warning {{too many parameters in 'swift_name' attribute (expected 1; got 2)}}
 
@@ -68,10 +68,10 @@ __attribute__((swift_name("SNFooClass")))
 + (instancetype)specialBaz __attribute__((swift_name("init(_:)"))); // expected-warning {{too many parameters in 'swift_name' attribute (expected 0; got 1)}}
 + (instancetype)specialGarply __attribute__((swift_name("foo(options:)"))); // expected-warning {{too many parameters in 'swift_name' attribute (expected 0; got 1)}}
 
-+ (instancetype)trailingParen __attribute__((swift_name("foo("))); // expected-error {{parameter of 'swift_name' attribute must be a Swift function name string}}
-+ (instancetype)trailingColon:(int)value __attribute__((swift_name("foo(value)"))); // expected-error {{parameter of 'swift_name' attribute must be a Swift function name string}}
-+ (instancetype)initialIgnore:(int)value __attribute__((swift_name("_(value:)"))); // expected-error {{parameter of 'swift_name' attribute must be a Swift function name string}}
-+ (instancetype)middleOmitted:(int)value __attribute__((swift_name("foo(:)"))); // expected-error {{parameter of 'swift_name' attribute must be a Swift function name string}}
++ (instancetype)trailingParen __attribute__((swift_name("foo("))); // expected-warning {{parameter of 'swift_name' attribute must be a Swift function name string}}
++ (instancetype)trailingColon:(int)value __attribute__((swift_name("foo(value)"))); // expected-warning {{parameter of 'swift_name' attribute must be a Swift function name string}}
++ (instancetype)initialIgnore:(int)value __attribute__((swift_name("_(value:)"))); // expected-warning {{'swift_name' attribute has invalid identifier for base name}}
++ (instancetype)middleOmitted:(int)value __attribute__((swift_name("foo(:)"))); // expected-warning {{'swift_name' attribute has invalid identifier for parameter name}}
 
 @property(strong) id someProp __attribute__((swift_name("prop")));
 @end
@@ -80,7 +80,7 @@ enum __attribute__((swift_name("MoreColors"))) MoreColors {
   Cyan,
   Magenta,
   Yellow __attribute__((swift_name("RoseGold"))),
-  Black __attribute__((swift_name("SpaceGrey()"))) // expected-error {{parameter of 'swift_name' attribute must be an ASCII identifier string}}
+  Black __attribute__((swift_name("SpaceGrey()"))) // expected-warning {{'swift_name' attribute has invalid identifier for base name}}
 };
 
 struct __attribute__((swift_name("FooStruct"))) BarStruct {
@@ -89,7 +89,7 @@ struct __attribute__((swift_name("FooStruct"))) BarStruct {
 
 int global_int __attribute__((swift_name("GlobalInt")));
 
-void foo1(int i) __attribute__((swift_name("foo"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
+void foo1(int i) __attribute__((swift_name("foo"))); // expected-warning{{parameter of 'swift_name' attribute must be a Swift function name string}}
 void foo2(int i) __attribute__((swift_name("foo()"))); // expected-warning{{too few parameters in 'swift_name' attribute (expected 1; got 0)}}
 void foo2(int i) __attribute__((swift_name("foo(a:b:)"))); // expected-warning{{too many parameters in 'swift_name' attribute (expected 1; got 2)}}
 void foo3(int i, int j) __attribute__((swift_name("fooWithX(_:y:)"))); // okay
@@ -106,26 +106,55 @@ extern struct Point3D identityPoint __attribute__((swift_name("Point3D.identity"
 // Getters and setters.
 float Point3DGetMagnitude(Point3D point) __attribute__((swift_name("getter:Point3D.magnitude(self:)")));
 
+float Point3DGetMagnitudeAndSomethingElse(Point3D point, float wat) __attribute__((swift_name("getter:Point3D.magnitude(self:wat:)"))); // expected-warning {{'swift_name' attribute for getter must not take any parameters besides 'self:'}}
+
 float Point3DGetRadius(Point3D point) __attribute__((swift_name("getter:Point3D.radius(self:)")));
-void Point3DSetRadius(Point3D point, float radius) __attribute__((swift_name("setter:Point3D.radius(self:_:)")));
+void Point3DSetRadius(Point3D point, float radius) __attribute__((swift_name("setter:Point3D.radius(self:newValue:)")));
+
+float Point3DPreGetRadius(Point3D point) __attribute__((swift_name("getter:Point3D.preRadius(self:)")));
+void Point3DPreSetRadius(float radius, Point3D point) __attribute__((swift_name("setter:Point3D.preRadius(newValue:self:)")));
+
+void Point3DSetRadiusAndSomethingElse(Point3D point, float radius, float wat) __attribute__((swift_name("setter:Point3D.radius(self:newValue:wat:)"))); // expected-warning {{'swift_name' attribute for setter must take one parameter for new value}}
+
+float Point3DGetComponent(Point3D point, unsigned index) __attribute__((swift_name("getter:Point3D.subscript(self:_:)")));
+float Point3DSetComponent(Point3D point, unsigned index, float value) __attribute__((swift_name("setter:Point3D.subscript(self:_:newValue:)")));
+
+float Point3DGetMatrixComponent(Point3D point, unsigned x, unsigned y) __attribute__((swift_name("getter:Point3D.subscript(self:x:y:)")));
+void Point3DSetMatrixComponent(Point3D point, unsigned x, float value, unsigned y) __attribute__((swift_name("setter:Point3D.subscript(self:x:newValue:y:)")));
+
+float Point3DSetWithoutNewValue(Point3D point, unsigned x, unsigned y) __attribute__((swift_name("setter:Point3D.subscript(self:x:y:)"))); // expected-warning {{'swift_name' attribute for 'subscript' setter must take a 'newValue:' parameter}}
+
+float Point3DSubscriptButNotGetterSetter(Point3D point, unsigned x) __attribute__((swift_name("Point3D.subscript(self:_:)"))); // expected-warning {{'swift_name' attribute for 'subscript' must be a getter or setter}}
+
+void Point3DSubscriptSetterTwoNewValues(Point3D point, unsigned x, float a, float b) __attribute__((swift_name("setter:Point3D.subscript(self:_:newValue:newValue:)"))); // expected-warning {{'swift_name' attribute for 'subscript' setter cannot take multiple 'newValue:' parameters}}
+float Point3DSubscriptGetterNewValue(Point3D point, unsigned x, float a, float b) __attribute__((swift_name("getter:Point3D.subscript(self:_:newValue:newValue:)"))); // expected-warning {{'swift_name' attribute for 'subscript' getter cannot take a 'newValue:' parameter}}
+
+void Point3DMethodWithNewValue(Point3D point, float newValue) __attribute__((swift_name("Point3D.method(self:newValue:)")));
+void Point3DMethodWithNewValues(Point3D point, float newValue, float newValueB) __attribute__((swift_name("Point3D.method(self:newValue:newValue:)")));
+
+float Point3DStaticSubscript(unsigned x) __attribute__((swift_name("getter:Point3D.subscript(_:)"))); // expected-warning {{'swift_name' attribute for 'subscript' must take a 'self:' parameter}}
+float Point3DStaticSubscriptNoArgs(void) __attribute__((swift_name("getter:Point3D.subscript()"))); // expected-warning {{'swift_name' attribute for 'subscript' must take at least one parameter}}
+
+float Point3DPreGetComponent(Point3D point, unsigned index) __attribute__((swift_name("getter:Point3D.subscript(self:_:)")));
 
 Point3D getCurrentPoint3D(void) __attribute__((swift_name("getter:currentPoint3D()")));
 
-void setCurrentPoint3D(Point3D point) __attribute__((swift_name("setter:currentPoint3D(_:)")));
+void setCurrentPoint3D(Point3D point) __attribute__((swift_name("setter:currentPoint3D(newValue:)")));
 
 Point3D getLastPoint3D(void) __attribute__((swift_name("getter:lastPoint3D()")));
 
-void setLastPoint3D(Point3D point) __attribute__((swift_name("setter:lastPoint3D(_:)")));
+void setLastPoint3D(Point3D point) __attribute__((swift_name("setter:lastPoint3D(newValue:)")));
 
-Point3D getZeroPoint() __attribute__((swift_name("getter:Point3D.zero()")));
-void setZeroPoint(Point3D point) __attribute__((swift_name("setter:Point3D.zero(_:)")));
+Point3D getZeroPoint(void) __attribute__((swift_name("getter:Point3D.zero()")));
+Point3D getZeroPointNoPrototype() __attribute__((swift_name("getter:Point3D.zeroNoPrototype()"))); // expected-warning{{'swift_name' attribute can only be applied to function declarations with prototypes}}
+void setZeroPoint(Point3D point) __attribute__((swift_name("setter:Point3D.zero(newValue:)")));
 
-Point3D badGetter1(int x) __attribute__((swift_name("getter:bad1(_:))"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
-void badSetter1() __attribute__((swift_name("getter:bad1())"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
+Point3D badGetter1(int x) __attribute__((swift_name("getter:bad1(_:))"))); // expected-warning{{parameter of 'swift_name' attribute must be a Swift function name string}}
+void badSetter1(void) __attribute__((swift_name("getter:bad1())"))); // expected-warning{{parameter of 'swift_name' attribute must be a Swift function name string}}
 
-Point3D badGetter2(Point3D point) __attribute__((swift_name("getter:bad2(_:))"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
+Point3D badGetter2(Point3D point) __attribute__((swift_name("getter:bad2(_:))"))); // expected-warning{{parameter of 'swift_name' attribute must be a Swift function name string}}
 
-void badSetter2(Point3D point) __attribute__((swift_name("setter:bad2(self:))"))); // expected-error{{parameter of 'swift_name' attribute must be a Swift function name string}}
+void badSetter2(Point3D point) __attribute__((swift_name("setter:bad2(self:))"))); // expected-warning{{parameter of 'swift_name' attribute must be a Swift function name string}}
 
 // --- swift_error ---
 

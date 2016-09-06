@@ -52,9 +52,22 @@ OutputFilename("o", cl::desc("Output filename"),
 static cl::opt<bool>
 ShowEncoding("show-encoding", cl::desc("Show instruction encodings"));
 
-static cl::opt<bool>
-CompressDebugSections("compress-debug-sections",
-                      cl::desc("Compress DWARF debug sections"));
+static cl::opt<bool> RelaxELFRel(
+    "relax-relocations", cl::init(true),
+    cl::desc("Emit R_X86_64_GOTPCRELX instead of R_X86_64_GOTPCREL"));
+
+static cl::opt<DebugCompressionType>
+CompressDebugSections("compress-debug-sections", cl::ValueOptional,
+  cl::init(DebugCompressionType::DCT_None),
+  cl::desc("Choose DWARF debug sections compression:"),
+  cl::values(
+    clEnumValN(DebugCompressionType::DCT_None, "none",
+      "No compression"),
+    clEnumValN(DebugCompressionType::DCT_Zlib, "zlib",
+      "Use zlib compression"),
+    clEnumValN(DebugCompressionType::DCT_ZlibGnu, "zlib-gnu",
+      "Use zlib-gnu compression (depricated)"),
+    clEnumValEnd));
 
 static cl::opt<bool>
 ShowInst("show-inst", cl::desc("Show internal instruction representation"));
@@ -73,6 +86,10 @@ PrintImmHex("print-imm-hex", cl::init(false),
 
 static cl::list<std::string>
 DefineSymbol("defsym", cl::desc("Defines a symbol to be an integer constant"));
+
+static cl::opt<bool>
+    PreserveComments("preserve-comments",
+                     cl::desc("Preserve Comments in outputted assembly"));
 
 enum OutputFileType {
   OFT_Null,
@@ -115,20 +132,8 @@ MAttrs("mattr",
   cl::desc("Target specific attributes (-mattr=help for details)"),
   cl::value_desc("a1,+a2,-a3,..."));
 
-static cl::opt<Reloc::Model>
-RelocModel("relocation-model",
-             cl::desc("Choose relocation model"),
-             cl::init(Reloc::Default),
-             cl::values(
-            clEnumValN(Reloc::Default, "default",
-                       "Target default relocation model"),
-            clEnumValN(Reloc::Static, "static",
-                       "Non-relocatable code"),
-            clEnumValN(Reloc::PIC_, "pic",
-                       "Fully relocatable, position independent code"),
-            clEnumValN(Reloc::DynamicNoPIC, "dynamic-no-pic",
-                       "Relocatable external references, non-relocatable code"),
-            clEnumValEnd));
+static cl::opt<bool> PIC("position-independent",
+                         cl::desc("Position independent"), cl::init(false));
 
 static cl::opt<llvm::CodeModel::Model>
 CMModel("code-model",
@@ -249,7 +254,7 @@ static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI,
 
   bool Error = false;
   while (Lexer.Lex().isNot(AsmToken::Eof)) {
-    AsmToken Tok = Lexer.getTok();
+    const AsmToken &Tok = Lexer.getTok();
 
     switch (Tok.getKind()) {
     default:
@@ -309,6 +314,78 @@ static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI,
     case AsmToken::Slash:          OS << "Slash"; break;
     case AsmToken::Star:           OS << "Star"; break;
     case AsmToken::Tilde:          OS << "Tilde"; break;
+    case AsmToken::PercentCall16:
+      OS << "PercentCall16";
+      break;
+    case AsmToken::PercentCall_Hi:
+      OS << "PercentCall_Hi";
+      break;
+    case AsmToken::PercentCall_Lo:
+      OS << "PercentCall_Lo";
+      break;
+    case AsmToken::PercentDtprel_Hi:
+      OS << "PercentDtprel_Hi";
+      break;
+    case AsmToken::PercentDtprel_Lo:
+      OS << "PercentDtprel_Lo";
+      break;
+    case AsmToken::PercentGot:
+      OS << "PercentGot";
+      break;
+    case AsmToken::PercentGot_Disp:
+      OS << "PercentGot_Disp";
+      break;
+    case AsmToken::PercentGot_Hi:
+      OS << "PercentGot_Hi";
+      break;
+    case AsmToken::PercentGot_Lo:
+      OS << "PercentGot_Lo";
+      break;
+    case AsmToken::PercentGot_Ofst:
+      OS << "PercentGot_Ofst";
+      break;
+    case AsmToken::PercentGot_Page:
+      OS << "PercentGot_Page";
+      break;
+    case AsmToken::PercentGottprel:
+      OS << "PercentGottprel";
+      break;
+    case AsmToken::PercentGp_Rel:
+      OS << "PercentGp_Rel";
+      break;
+    case AsmToken::PercentHi:
+      OS << "PercentHi";
+      break;
+    case AsmToken::PercentHigher:
+      OS << "PercentHigher";
+      break;
+    case AsmToken::PercentHighest:
+      OS << "PercentHighest";
+      break;
+    case AsmToken::PercentLo:
+      OS << "PercentLo";
+      break;
+    case AsmToken::PercentNeg:
+      OS << "PercentNeg";
+      break;
+    case AsmToken::PercentPcrel_Hi:
+      OS << "PercentPcrel_Hi";
+      break;
+    case AsmToken::PercentPcrel_Lo:
+      OS << "PercentPcrel_Lo";
+      break;
+    case AsmToken::PercentTlsgd:
+      OS << "PercentTlsgd";
+      break;
+    case AsmToken::PercentTlsldm:
+      OS << "PercentTlsldm";
+      break;
+    case AsmToken::PercentTprel_Hi:
+      OS << "PercentTprel_Hi";
+      break;
+    case AsmToken::PercentTprel_Lo:
+      OS << "PercentTprel_Lo";
+      break;
     }
 
     // Print the token string.
@@ -368,7 +445,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
 
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 
@@ -419,20 +496,23 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCAsmInfo> MAI(TheTarget->createMCAsmInfo(*MRI, TripleName));
   assert(MAI && "Unable to create target asm info!");
 
-  if (CompressDebugSections) {
+  MAI->setRelaxELFRelocations(RelaxELFRel);
+
+  if (CompressDebugSections != DebugCompressionType::DCT_None) {
     if (!zlib::isAvailable()) {
       errs() << ProgName
              << ": build tools with zlib to enable -compress-debug-sections";
       return 1;
     }
-    MAI->setCompressDebugSections(true);
+    MAI->setCompressDebugSections(CompressDebugSections);
   }
+  MAI->setPreserveAsmComments(PreserveComments);
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
   MCObjectFileInfo MOFI;
   MCContext Ctx(MAI.get(), MRI.get(), &MOFI, &SrcMgr);
-  MOFI.InitMCObjectFileInfo(TheTriple, RelocModel, CMModel, Ctx);
+  MOFI.InitMCObjectFileInfo(TheTriple, PIC, CMModel, Ctx);
 
   if (SaveTempLabels)
     Ctx.setAllowTemporaryLabels(false);
@@ -452,6 +532,12 @@ int main(int argc, char **argv) {
     Ctx.setDwarfDebugProducer(StringRef(DwarfDebugProducer));
   if (!DebugCompilationDir.empty())
     Ctx.setCompilationDir(DebugCompilationDir);
+  else {
+    // If no compilation dir is set, try to use the current directory.
+    SmallString<128> CWD;
+    if (!sys::fs::current_path(CWD))
+      Ctx.setCompilationDir(CWD);
+  }
   if (!MainFileName.empty())
     Ctx.setMainFileName(MainFileName);
 
@@ -489,7 +575,7 @@ int main(int argc, char **argv) {
     MCAsmBackend *MAB = nullptr;
     if (ShowEncoding) {
       CE = TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx);
-      MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, MCPU);
+      MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, MCPU, MCOptions);
     }
     auto FOut = llvm::make_unique<formatted_raw_ostream>(*OS);
     Str.reset(TheTarget->createAsmStreamer(
@@ -510,7 +596,8 @@ int main(int argc, char **argv) {
     }
 
     MCCodeEmitter *CE = TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx);
-    MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, MCPU);
+    MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, MCPU,
+                                                      MCOptions);
     Str.reset(TheTarget->createMCObjectStreamer(
         TheTriple, Ctx, *MAB, *OS, CE, *STI, MCOptions.MCRelaxAll,
         MCOptions.MCIncrementalLinkerCompatible,

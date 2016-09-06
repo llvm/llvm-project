@@ -1,14 +1,14 @@
 ; An integer truncation to i1 should be done with an and instruction to make
 ; sure only the LSBit survives. Test that this is the case both for a returned
 ; value and as the operand of a branch.
-; RUN: llc < %s -march=x86 | FileCheck %s
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu | FileCheck %s
 
 define zeroext i1 @test1(i32 %X)  nounwind {
     %Y = trunc i32 %X to i1
     ret i1 %Y
 }
 ; CHECK-LABEL: test1:
-; CHECK: andl $1, %eax
+; CHECK: andb $1, %al
 
 define i1 @test2(i32 %val, i32 %mask) nounwind {
 entry:

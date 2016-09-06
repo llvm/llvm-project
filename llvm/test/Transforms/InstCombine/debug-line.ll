@@ -13,16 +13,14 @@ declare i32 @printf(i8*, ...)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!10}
-!llvm.dbg.sp = !{!0}
 
-!0 = distinct !DISubprogram(name: "foo", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !8, scope: !1, type: !3)
+!0 = distinct !DISubprogram(name: "foo", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !2, file: !8, scope: !1, type: !3)
 !1 = !DIFile(filename: "m.c", directory: "/private/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang", isOptimized: true, emissionKind: 0, file: !8, enums: !{}, retainedTypes: !{}, subprograms: !9)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang", isOptimized: true, emissionKind: FullDebug, file: !8, enums: !{}, retainedTypes: !{})
 !3 = !DISubroutineType(types: !4)
 !4 = !{null}
 !5 = !DILocation(line: 5, column: 2, scope: !6)
 !6 = distinct !DILexicalBlock(line: 4, column: 12, file: !8, scope: !0)
 !7 = !DILocation(line: 6, column: 1, scope: !6)
 !8 = !DIFile(filename: "m.c", directory: "/private/tmp")
-!9 = !{!0}
 !10 = !{i32 1, !"Debug Info Version", i32 3}

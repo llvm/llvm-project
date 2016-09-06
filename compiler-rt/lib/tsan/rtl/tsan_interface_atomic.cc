@@ -23,38 +23,15 @@
 #include "sanitizer_common/sanitizer_stacktrace.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "tsan_flags.h"
+#include "tsan_interface.h"
 #include "tsan_rtl.h"
 
 using namespace __tsan;  // NOLINT
-
-// These should match declarations from public tsan_interface_atomic.h header.
-typedef unsigned char      a8;
-typedef unsigned short     a16;  // NOLINT
-typedef unsigned int       a32;
-typedef unsigned long long a64;  // NOLINT
-#if !defined(SANITIZER_GO) && (defined(__SIZEOF_INT128__) \
-    || (__clang_major__ * 100 + __clang_minor__ >= 302)) && !defined(__mips64)
-__extension__ typedef __int128 a128;
-# define __TSAN_HAS_INT128 1
-#else
-# define __TSAN_HAS_INT128 0
-#endif
 
 #if !defined(SANITIZER_GO) && __TSAN_HAS_INT128
 // Protects emulation of 128-bit atomic operations.
 static StaticSpinMutex mutex128;
 #endif
-
-// Part of ABI, do not change.
-// http://llvm.org/viewvc/llvm-project/libcxx/trunk/include/atomic?view=markup
-typedef enum {
-  mo_relaxed,
-  mo_consume,
-  mo_acquire,
-  mo_release,
-  mo_acq_rel,
-  mo_seq_cst
-} morder;
 
 static bool IsLoadOrder(morder mo) {
   return mo == mo_relaxed || mo == mo_consume

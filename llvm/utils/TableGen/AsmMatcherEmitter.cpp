@@ -112,10 +112,10 @@
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cassert>
 #include <cctype>
+#include <forward_list>
 #include <map>
 #include <set>
-#include <sstream>
-#include <forward_list>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-matcher-emitter"
@@ -199,6 +199,14 @@ struct ClassInfo {
 
   /// For custom match classes: the diagnostic kind for when the predicate fails.
   std::string DiagnosticType;
+
+  /// Is this operand optional and not always required.
+  bool IsOptional;
+
+  /// DefaultMethod - The name of the method that returns the default operand
+  /// for optional operand
+  std::string DefaultMethod;
+
 public:
   /// isRegisterClass() - Check if this is a register class.
   bool isRegisterClass() const {
@@ -263,34 +271,79 @@ public:
     return false;
   }
 
-  /// operator< - Compare two classes.
-  // FIXME: This ordering seems to be broken. For example:
-  // u64 < i64, i64 < s8, s8 < u64, forming a cycle
-  // u64 is a subset of i64
-  // i64 and s8 are not subsets of each other, so are ordered by name
-  // s8 and u64 are not subsets of each other, so are ordered by name
+  int getTreeDepth() const {
+    int Depth = 0;
+    const ClassInfo *Root = this;
+    while (!Root->SuperClasses.empty()) {
+      Depth++;
+      Root = Root->SuperClasses.front();
+    }
+    return Depth;
+  }
+
+  const ClassInfo *findRoot() const {
+    const ClassInfo *Root = this;
+    while (!Root->SuperClasses.empty())
+      Root = Root->SuperClasses.front();
+    return Root;
+  }
+
+  /// Compare two classes. This does not produce a total ordering, but does
+  /// guarantee that subclasses are sorted before their parents, and that the
+  /// ordering is transitive.
   bool operator<(const ClassInfo &RHS) const {
     if (this == &RHS)
       return false;
 
-    // Unrelated classes can be ordered by kind.
-    if (!isRelatedTo(RHS))
-      return Kind < RHS.Kind;
-
-    switch (Kind) {
-    case Invalid:
-      llvm_unreachable("Invalid kind!");
-
-    default:
-      // This class precedes the RHS if it is a proper subset of the RHS.
-      if (isSubsetOf(RHS))
+    // First, enforce the ordering between the three different types of class.
+    // Tokens sort before registers, which sort before user classes.
+    if (Kind == Token) {
+      if (RHS.Kind != Token)
         return true;
-      if (RHS.isSubsetOf(*this))
+      assert(RHS.Kind == Token);
+    } else if (isRegisterClass()) {
+      if (RHS.Kind == Token)
         return false;
-
-      // Otherwise, order by name to ensure we have a total ordering.
-      return ValueName < RHS.ValueName;
+      else if (RHS.isUserClass())
+        return true;
+      assert(RHS.isRegisterClass());
+    } else if (isUserClass()) {
+      if (!RHS.isUserClass())
+        return false;
+      assert(RHS.isUserClass());
+    } else {
+      llvm_unreachable("Unknown ClassInfoKind");
     }
+
+    if (Kind == Token || isUserClass()) {
+      // Related tokens and user classes get sorted by depth in the inheritence
+      // tree (so that subclasses are before their parents).
+      if (isRelatedTo(RHS)) {
+        if (getTreeDepth() > RHS.getTreeDepth())
+          return true;
+        if (getTreeDepth() < RHS.getTreeDepth())
+          return false;
+      } else {
+        // Unrelated tokens and user classes are ordered by the name of their
+        // root nodes, so that there is a consistent ordering between
+        // unconnected trees.
+        return findRoot()->ValueName < RHS.findRoot()->ValueName;
+      }
+    } else if (isRegisterClass()) {
+      // For register sets, sort by number of registers. This guarantees that
+      // a set will always sort before all of it's strict supersets.
+      if (Registers.size() != RHS.Registers.size())
+        return Registers.size() < RHS.Registers.size();
+    } else {
+      llvm_unreachable("Unknown ClassInfoKind");
+    }
+
+    // FIXME: We should be able to just return false here, as we only need a
+    // partial order (we use stable sorts, so this is deterministic) and the
+    // name of a class shouldn't be significant. However, some of the backends
+    // accidentally rely on this behaviour, so it will have to stay like this
+    // until they are fixed.
+    return ValueName < RHS.ValueName;
   }
 };
 
@@ -503,20 +556,17 @@ struct MatchableInfo {
   /// findAsmOperand - Find the AsmOperand with the specified name and
   /// suboperand index.
   int findAsmOperand(StringRef N, int SubOpIdx) const {
-    auto I = std::find_if(AsmOperands.begin(), AsmOperands.end(),
-                          [&](const AsmOperand &Op) {
-                            return Op.SrcOpName == N && Op.SubOpIdx == SubOpIdx;
-                          });
+    auto I = find_if(AsmOperands, [&](const AsmOperand &Op) {
+      return Op.SrcOpName == N && Op.SubOpIdx == SubOpIdx;
+    });
     return (I != AsmOperands.end()) ? I - AsmOperands.begin() : -1;
   }
 
   /// findAsmOperandNamed - Find the first AsmOperand with the specified name.
   /// This does not check the suboperand index.
   int findAsmOperandNamed(StringRef N) const {
-    auto I = std::find_if(AsmOperands.begin(), AsmOperands.end(),
-                          [&](const AsmOperand &Op) {
-                            return Op.SrcOpName == N;
-                          });
+    auto I = find_if(AsmOperands,
+                     [&](const AsmOperand &Op) { return Op.SrcOpName == N; });
     return (I != AsmOperands.end()) ? I - AsmOperands.begin() : -1;
   }
 
@@ -526,8 +576,8 @@ struct MatchableInfo {
   /// operator< - Compare two matchables.
   bool operator<(const MatchableInfo &RHS) const {
     // The primary comparator is the instruction mnemonic.
-    if (Mnemonic != RHS.Mnemonic)
-      return Mnemonic < RHS.Mnemonic;
+    if (int Cmp = Mnemonic.compare(RHS.Mnemonic))
+      return Cmp == -1;
 
     if (AsmOperands.size() != RHS.AsmOperands.size())
       return AsmOperands.size() < RHS.AsmOperands.size();
@@ -637,7 +687,6 @@ struct OperandMatchEntry {
   }
 };
 
-
 class AsmMatcherInfo {
 public:
   /// Tracked Records
@@ -720,9 +769,15 @@ public:
   RecordKeeper &getRecords() const {
     return Records;
   }
+
+  bool hasOptionalOperands() const {
+    return find_if(Classes, [](const ClassInfo &Class) {
+             return Class.IsOptional;
+           }) != Classes.end();
+  }
 };
 
-} // End anonymous namespace
+} // end anonymous namespace
 
 void MatchableInfo::dump() const {
   errs() << TheDef->getName() << " -- " << "flattened:\"" << AsmString <<"\"\n";
@@ -833,7 +888,6 @@ extractSingletonRegisterForAsmOperand(MatchableInfo::AsmOperand &Op,
 
   // If there is no register prefix (i.e. "%" in "%eax"), then this may
   // be some random non-register token, just ignore it.
-  return;
 }
 
 void MatchableInfo::initialize(const AsmMatcherInfo &Info,
@@ -1071,6 +1125,8 @@ ClassInfo *AsmMatcherInfo::getTokenClass(StringRef Token) {
     Entry->RenderMethod = "<invalid>";
     Entry->ParserMethod = "";
     Entry->DiagnosticType = "";
+    Entry->IsOptional = false;
+    Entry->DefaultMethod = "<invalid>";
   }
 
   return Entry;
@@ -1110,7 +1166,6 @@ AsmMatcherInfo::getOperandClass(Record *Rec, int SubOpIdx) {
       return CI;
     PrintFatalError(Rec->getLoc(), "register class has no class info!");
   }
-
 
   if (Rec->isSubClassOf("RegisterClass")) {
     if (ClassInfo *CI = RegisterClassClasses[Rec])
@@ -1206,6 +1261,8 @@ buildRegisterClasses(SmallPtrSetImpl<Record*> &SingletonRegisters) {
     CI->Registers = RS;
     // FIXME: diagnostic type.
     CI->DiagnosticType = "";
+    CI->IsOptional = false;
+    CI->DefaultMethod = ""; // unused
     RegisterSetClasses.insert(std::make_pair(RS, CI));
     ++Index;
   }
@@ -1319,6 +1376,19 @@ void AsmMatcherInfo::buildOperandClasses() {
     Init *DiagnosticType = Rec->getValueInit("DiagnosticType");
     if (StringInit *SI = dyn_cast<StringInit>(DiagnosticType))
       CI->DiagnosticType = SI->getValue();
+
+    Init *IsOptional = Rec->getValueInit("IsOptional");
+    if (BitInit *BI = dyn_cast<BitInit>(IsOptional))
+      CI->IsOptional = BI->getValue();
+
+    // Get or construct the default method name.
+    Init *DMName = Rec->getValueInit("DefaultMethod");
+    if (StringInit *SI = dyn_cast<StringInit>(DMName)) {
+      CI->DefaultMethod = SI->getValue();
+    } else {
+      assert(isa<UnsetInit>(DMName) && "Unexpected DefaultMethod field!");
+      CI->DefaultMethod = "default" + CI->ClassName + "Operands";
+    }
 
     ++Index;
   }
@@ -1539,6 +1609,16 @@ void AsmMatcherInfo::buildInfo() {
 
   // Reorder classes so that classes precede super classes.
   Classes.sort();
+
+#ifndef NDEBUG
+  // Verify that the table is now sorted
+  for (auto I = Classes.begin(), E = Classes.end(); I != E; ++I) {
+    for (auto J = I; J != E; ++J) {
+      assert(!(*J < *I));
+      assert(I == J || !J->isSubsetOf(*I));
+    }
+  }
+#endif // NDEBUG
 }
 
 /// buildInstructionOperandReference - The specified operand is a reference to a
@@ -1736,18 +1816,17 @@ static unsigned getConverterOperandID(const std::string &Name,
                                       bool &IsNew) {
   IsNew = Table.insert(Name);
 
-  unsigned ID = IsNew ? Table.size() - 1 :
-    std::find(Table.begin(), Table.end(), Name) - Table.begin();
+  unsigned ID = IsNew ? Table.size() - 1 : find(Table, Name) - Table.begin();
 
   assert(ID < Table.size());
 
   return ID;
 }
 
-
 static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
                              std::vector<std::unique_ptr<MatchableInfo>> &Infos,
-                             bool HasMnemonicFirst, raw_ostream &OS) {
+                             bool HasMnemonicFirst, bool HasOptionalOperands,
+                             raw_ostream &OS) {
   SmallSetVector<std::string, 16> OperandConversionKinds;
   SmallSetVector<std::string, 16> InstructionConversionKinds;
   std::vector<std::vector<uint8_t> > ConversionTable;
@@ -1762,24 +1841,40 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   std::string ConvertFnBody;
   raw_string_ostream CvtOS(ConvertFnBody);
   // Start the unified conversion function.
-  CvtOS << "void " << Target.getName() << ClassName << "::\n"
-        << "convertToMCInst(unsigned Kind, MCInst &Inst, "
-        << "unsigned Opcode,\n"
-        << "                const OperandVector"
-        << " &Operands) {\n"
-        << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n"
-        << "  const uint8_t *Converter = ConversionTable[Kind];\n"
-        << "  Inst.setOpcode(Opcode);\n"
-        << "  for (const uint8_t *p = Converter; *p; p+= 2) {\n"
-        << "    switch (*p) {\n"
-        << "    default: llvm_unreachable(\"invalid conversion entry!\");\n"
-        << "    case CVT_Reg:\n"
-        << "      static_cast<" << TargetOperandClass
-        << "&>(*Operands[*(p + 1)]).addRegOperands(Inst, 1);\n"
-        << "      break;\n"
-        << "    case CVT_Tied:\n"
-        << "      Inst.addOperand(Inst.getOperand(*(p + 1)));\n"
-        << "      break;\n";
+  if (HasOptionalOperands) {
+    CvtOS << "void " << Target.getName() << ClassName << "::\n"
+          << "convertToMCInst(unsigned Kind, MCInst &Inst, "
+          << "unsigned Opcode,\n"
+          << "                const OperandVector &Operands,\n"
+          << "                const SmallBitVector &OptionalOperandsMask) {\n";
+  } else {
+    CvtOS << "void " << Target.getName() << ClassName << "::\n"
+          << "convertToMCInst(unsigned Kind, MCInst &Inst, "
+          << "unsigned Opcode,\n"
+          << "                const OperandVector &Operands) {\n";
+  }
+  CvtOS << "  assert(Kind < CVT_NUM_SIGNATURES && \"Invalid signature!\");\n";
+  CvtOS << "  const uint8_t *Converter = ConversionTable[Kind];\n";
+  if (HasOptionalOperands) {
+    CvtOS << "  unsigned NumDefaults = 0;\n";
+  }
+  CvtOS << "  unsigned OpIdx;\n";
+  CvtOS << "  Inst.setOpcode(Opcode);\n";
+  CvtOS << "  for (const uint8_t *p = Converter; *p; p+= 2) {\n";
+  if (HasOptionalOperands) {
+    CvtOS << "    OpIdx = *(p + 1) - NumDefaults;\n";
+  } else {
+    CvtOS << "    OpIdx = *(p + 1);\n";
+  }
+  CvtOS << "    switch (*p) {\n";
+  CvtOS << "    default: llvm_unreachable(\"invalid conversion entry!\");\n";
+  CvtOS << "    case CVT_Reg:\n";
+  CvtOS << "      static_cast<" << TargetOperandClass
+        << "&>(*Operands[OpIdx]).addRegOperands(Inst, 1);\n";
+  CvtOS << "      break;\n";
+  CvtOS << "    case CVT_Tied:\n";
+  CvtOS << "      Inst.addOperand(Inst.getOperand(OpIdx));\n";
+  CvtOS << "      break;\n";
 
   std::string OperandFnBody;
   raw_string_ostream OpOS(OperandFnBody);
@@ -1873,6 +1968,11 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
         // the index of its entry in the vector).
         std::string Name = "CVT_" + (Op.Class->isRegisterClass() ? "Reg" :
                                      Op.Class->RenderMethod);
+        if (Op.Class->IsOptional) {
+          // For optional operands we must also care about DefaultMethod
+          assert(HasOptionalOperands);
+          Name += "_" + Op.Class->DefaultMethod;
+        }
         Name = getEnumNameForToken(Name);
 
         bool IsNewConverter = false;
@@ -1888,11 +1988,27 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
 
         // This is a new operand kind. Add a handler for it to the
         // converter driver.
-        CvtOS << "    case " << Name << ":\n"
-              << "      static_cast<" << TargetOperandClass
-              << "&>(*Operands[*(p + 1)])." << Op.Class->RenderMethod
-              << "(Inst, " << OpInfo.MINumOperands << ");\n"
-              << "      break;\n";
+        CvtOS << "    case " << Name << ":\n";
+        if (Op.Class->IsOptional) {
+          // If optional operand is not present in actual instruction then we
+          // should call its DefaultMethod before RenderMethod
+          assert(HasOptionalOperands);
+          CvtOS << "      if (OptionalOperandsMask[*(p + 1) - 1]) {\n"
+                << "        " << Op.Class->DefaultMethod << "()"
+                << "->" << Op.Class->RenderMethod << "(Inst, "
+                << OpInfo.MINumOperands << ");\n"
+                << "        ++NumDefaults;\n"
+                << "      } else {\n"
+                << "        static_cast<" << TargetOperandClass
+                << "&>(*Operands[OpIdx])." << Op.Class->RenderMethod
+                << "(Inst, " << OpInfo.MINumOperands << ");\n"
+                << "      }\n";
+        } else {
+          CvtOS << "      static_cast<" << TargetOperandClass
+                << "&>(*Operands[OpIdx])." << Op.Class->RenderMethod
+                << "(Inst, " << OpInfo.MINumOperands << ");\n";
+        }
+        CvtOS << "      break;\n";
 
         // Add a handler for the operand number lookup.
         OpOS << "    case " << Name << ":\n"
@@ -2015,7 +2131,6 @@ static void emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   OS << "  CVT_NUM_SIGNATURES\n";
   OS << "};\n\n";
 
-
   OS << "} // end anonymous namespace\n\n";
 
   // Output the conversion table.
@@ -2051,6 +2166,7 @@ static void emitMatchClassEnumeration(CodeGenTarget &Target,
      << "/// instruction matching.\n";
   OS << "enum MatchClassKind {\n";
   OS << "  InvalidMatchClass = 0,\n";
+  OS << "  OptionalMatchClass = 1,\n";
   for (const auto &CI : Infos) {
     OS << "  " << CI.Name << ", // ";
     if (CI.Kind == ClassInfo::Token) {
@@ -2091,19 +2207,23 @@ static void emitValidateOperandClass(AsmMatcherInfo &Info,
 
   // Check the user classes. We don't care what order since we're only
   // actually matching against one of them.
+  OS << "  switch (Kind) {\n"
+        "  default: break;\n";
   for (const auto &CI : Info.Classes) {
     if (!CI.isUserClass())
       continue;
 
     OS << "  // '" << CI.ClassName << "' class\n";
-    OS << "  if (Kind == " << CI.Name << ") {\n";
+    OS << "  case " << CI.Name << ":\n";
     OS << "    if (Operand." << CI.PredicateMethod << "())\n";
     OS << "      return MCTargetAsmParser::Match_Success;\n";
     if (!CI.DiagnosticType.empty())
       OS << "    return " << Info.Target.getName() << "AsmParser::Match_"
          << CI.DiagnosticType << ";\n";
-    OS << "  }\n\n";
+    else
+      OS << "    break;\n";
   }
+  OS << "  } // end switch (Kind)\n\n";
 
   // Check for register operands, including sub-classes.
   OS << "  if (Operand.isReg()) {\n";
@@ -2137,6 +2257,8 @@ static void emitIsSubclass(CodeGenTarget &Target,
   bool EmittedSwitch = false;
   for (const auto &A : Infos) {
     std::vector<StringRef> SuperClasses;
+    if (A.IsOptional)
+      SuperClasses.push_back("OptionalMatchClass");
     for (const auto &B : Infos) {
       if (&A != &B && A.isSubsetOf(B))
         SuperClasses.push_back(B.Name);
@@ -2218,6 +2340,37 @@ static void emitMatchRegisterName(CodeGenTarget &Target, Record *AsmParser,
   }
 
   OS << "static unsigned MatchRegisterName(StringRef Name) {\n";
+
+  StringMatcher("Name", Matches, OS).Emit();
+
+  OS << "  return 0;\n";
+  OS << "}\n\n";
+}
+
+/// Emit the function to match a string to the target
+/// specific register enum.
+static void emitMatchRegisterAltName(CodeGenTarget &Target, Record *AsmParser,
+                                     raw_ostream &OS) {
+  // Construct the match list.
+  std::vector<StringMatcher::StringPair> Matches;
+  const auto &Regs = Target.getRegBank().getRegisters();
+  for (const CodeGenRegister &Reg : Regs) {
+
+    auto AltNames = Reg.TheDef->getValueAsListOfStrings("AltNames");
+
+    for (auto AltName : AltNames) {
+      AltName = StringRef(AltName).trim();
+
+      // don't handle empty alternative names
+      if (AltName.empty())
+        continue;
+
+      Matches.emplace_back(AltName,
+                           "return " + utostr(Reg.EnumValue) + ";");
+    }
+  }
+
+  OS << "static unsigned MatchRegisterAltName(StringRef Name) {\n";
 
   StringMatcher("Name", Matches, OS).Emit();
 
@@ -2665,6 +2818,16 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
                       const std::unique_ptr<MatchableInfo> &b){
                      return *a < *b;});
 
+#ifndef NDEBUG
+  // Verify that the table is now sorted
+  for (auto I = Info.Matchables.begin(), E = Info.Matchables.end(); I != E;
+       ++I) {
+    for (auto J = I; J != E; ++J) {
+      assert(!(**J < **I));
+    }
+  }
+#endif // NDEBUG
+
   DEBUG_WITH_TYPE("instruction_info", {
       for (const auto &MI : Info.Matchables)
         MI->dump();
@@ -2698,6 +2861,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   Info.buildOperandMatchInfo();
 
   bool HasMnemonicFirst = AsmParser->getValueAsBit("HasMnemonicFirst");
+  bool HasOptionalOperands = Info.hasOptionalOperands();
 
   // Write the output.
 
@@ -2707,10 +2871,16 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "  // This should be included into the middle of the declaration of\n";
   OS << "  // your subclasses implementation of MCTargetAsmParser.\n";
   OS << "  uint64_t ComputeAvailableFeatures(const FeatureBitset& FB) const;\n";
-  OS << "  void convertToMCInst(unsigned Kind, MCInst &Inst, "
-     << "unsigned Opcode,\n"
-     << "                       const OperandVector "
-     << "&Operands);\n";
+  if (HasOptionalOperands) {
+    OS << "  void convertToMCInst(unsigned Kind, MCInst &Inst, "
+       << "unsigned Opcode,\n"
+       << "                       const OperandVector &Operands,\n"
+       << "                       const SmallBitVector &OptionalOperandsMask);\n";
+  } else {
+    OS << "  void convertToMCInst(unsigned Kind, MCInst &Inst, "
+       << "unsigned Opcode,\n"
+       << "                       const OperandVector &Operands);\n";
+  }
   OS << "  void convertToMapAndConstraints(unsigned Kind,\n                ";
   OS << "           const OperandVector &Operands) override;\n";
   if (HasMnemonicFirst)
@@ -2744,7 +2914,6 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   emitOperandDiagnosticTypes(Info, OS);
   OS << "#endif // GET_OPERAND_DIAGNOSTIC_TYPES\n\n";
 
-
   OS << "\n#ifdef GET_REGISTER_MATCHER\n";
   OS << "#undef GET_REGISTER_MATCHER\n\n";
 
@@ -2755,6 +2924,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   // This should be omitted for Mips target
   if (AsmParser->getValueAsBit("ShouldEmitMatchRegisterName"))
     emitMatchRegisterName(Target, AsmParser, OS);
+
+  if (AsmParser->getValueAsBit("ShouldEmitMatchRegisterAltName"))
+    emitMatchRegisterAltName(Target, AsmParser, OS);
 
   OS << "#endif // GET_REGISTER_MATCHER\n\n";
 
@@ -2775,7 +2947,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   // Generate the convertToMCInst function to convert operands into an MCInst.
   // Also, generate the convertToMapAndConstraints function for MS-style inline
   // assembly.  The latter doesn't actually generate a MCInst.
-  emitConvertFuncs(Target, ClassName, Info.Matchables, HasMnemonicFirst, OS);
+  emitConvertFuncs(Target, ClassName, Info.Matchables, HasMnemonicFirst,
+                   HasOptionalOperands, OS);
 
   // Emit the enumeration for classes which participate in matching.
   emitMatchClassEnumeration(Target, Info.Classes, OS);
@@ -2791,7 +2964,6 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   // Emit the available features compute function.
   emitComputeAvailableFeatures(Info, OS);
-
 
   StringToOffsetTable StringTable;
 
@@ -2958,6 +3130,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "  bool HadMatchOtherThanPredicate = false;\n";
   OS << "  unsigned RetCode = Match_InvalidOperand;\n";
   OS << "  uint64_t MissingFeatures = ~0ULL;\n";
+  if (HasOptionalOperands) {
+    OS << "  SmallBitVector OptionalOperandsMask(" << MaxNumOperands << ");\n";
+  }
   OS << "  // Set ErrorInfo to the operand that mismatches if it is\n";
   OS << "  // wrong for all instances of the instruction.\n";
   OS << "  ErrorInfo = ~0ULL;\n";
@@ -3002,36 +3177,55 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   // Emit check that the subclasses match.
   OS << "    bool OperandsValid = true;\n";
-  OS << "    for (unsigned i = " << (HasMnemonicFirst ? "0" : "SIndex")
-     << "; i != " << MaxNumOperands << "; ++i) {\n";
-  OS << "      auto Formal = static_cast<MatchClassKind>(it->Classes[i]);\n";
-  OS << "      if (i" << (HasMnemonicFirst ? "+1" : "")
-     << " >= Operands.size()) {\n";
-  OS << "        OperandsValid = (Formal == " <<"InvalidMatchClass);\n";
-  OS << "        if (!OperandsValid) ErrorInfo = i"
-     << (HasMnemonicFirst ? "+1" : "") << ";\n";
+  if (HasOptionalOperands) {
+    OS << "    OptionalOperandsMask.reset(0, " << MaxNumOperands << ");\n";
+  }
+  OS << "    for (unsigned FormalIdx = " << (HasMnemonicFirst ? "0" : "SIndex")
+     << ", ActualIdx = " << (HasMnemonicFirst ? "1" : "SIndex")
+     << "; FormalIdx != " << MaxNumOperands << "; ++FormalIdx) {\n";
+  OS << "      auto Formal = "
+     << "static_cast<MatchClassKind>(it->Classes[FormalIdx]);\n";
+  OS << "      if (ActualIdx >= Operands.size()) {\n";
+  OS << "        OperandsValid = (Formal == " <<"InvalidMatchClass) || "
+                                 "isSubclass(Formal, OptionalMatchClass);\n";
+  OS << "        if (!OperandsValid) ErrorInfo = ActualIdx;\n";
+  if (HasOptionalOperands) {
+    OS << "        OptionalOperandsMask.set(FormalIdx, " << MaxNumOperands
+       << ");\n";
+  }
   OS << "        break;\n";
   OS << "      }\n";
-  OS << "      MCParsedAsmOperand &Actual = *Operands[i"
-     << (HasMnemonicFirst ? "+1" : "") << "];\n";
+  OS << "      MCParsedAsmOperand &Actual = *Operands[ActualIdx];\n";
   OS << "      unsigned Diag = validateOperandClass(Actual, Formal);\n";
-  OS << "      if (Diag == Match_Success)\n";
+  OS << "      if (Diag == Match_Success) {\n";
+  OS << "        ++ActualIdx;\n";
   OS << "        continue;\n";
+  OS << "      }\n";
   OS << "      // If the generic handler indicates an invalid operand\n";
   OS << "      // failure, check for a special case.\n";
   OS << "      if (Diag == Match_InvalidOperand) {\n";
   OS << "        Diag = validateTargetOperandClass(Actual, Formal);\n";
-  OS << "        if (Diag == Match_Success)\n";
+  OS << "        if (Diag == Match_Success) {\n";
+  OS << "          ++ActualIdx;\n";
   OS << "          continue;\n";
+  OS << "        }\n";
+  OS << "      }\n";
+  OS << "      // If current formal operand wasn't matched and it is optional\n"
+     << "      // then try to match next formal operand\n";
+  OS << "      if (Diag == Match_InvalidOperand "
+     << "&& isSubclass(Formal, OptionalMatchClass)) {\n";
+  if (HasOptionalOperands) {
+    OS << "        OptionalOperandsMask.set(FormalIdx);\n";
+  }
+  OS << "        continue;\n";
   OS << "      }\n";
   OS << "      // If this operand is broken for all of the instances of this\n";
   OS << "      // mnemonic, keep track of it so we can report loc info.\n";
   OS << "      // If we already had a match that only failed due to a\n";
   OS << "      // target predicate, that diagnostic is preferred.\n";
   OS << "      if (!HadMatchOtherThanPredicate &&\n";
-  OS << "          (it == MnemonicRange.first || ErrorInfo <= i"
-     << (HasMnemonicFirst ? "+1" : "") << ")) {\n";
-  OS << "        ErrorInfo = i" << (HasMnemonicFirst ? "+1" : "") << ";\n";
+  OS << "          (it == MnemonicRange.first || ErrorInfo <= ActualIdx)) {\n";
+  OS << "        ErrorInfo = ActualIdx;\n";
   OS << "        // InvalidOperand is the default. Prefer specificity.\n";
   OS << "        if (Diag != Match_InvalidOperand)\n";
   OS << "          RetCode = Diag;\n";
@@ -3056,20 +3250,40 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "    }\n";
   OS << "\n";
   OS << "    Inst.clear();\n\n";
+  OS << "    Inst.setOpcode(it->Opcode);\n";
+  // Verify the instruction with the target-specific match predicate function.
+  OS << "    // We have a potential match but have not rendered the operands.\n"
+     << "    // Check the target predicate to handle any context sensitive\n"
+        "    // constraints.\n"
+     << "    // For example, Ties that are referenced multiple times must be\n"
+        "    // checked here to ensure the input is the same for each match\n"
+        "    // constraints. If we leave it any later the ties will have been\n"
+        "    // canonicalized\n"
+     << "    unsigned MatchResult;\n"
+     << "    if ((MatchResult = checkEarlyTargetMatchPredicate(Inst, "
+        "Operands)) != Match_Success) {\n"
+     << "      Inst.clear();\n"
+     << "      RetCode = MatchResult;\n"
+     << "      HadMatchOtherThanPredicate = true;\n"
+     << "      continue;\n"
+     << "    }\n\n";
   OS << "    if (matchingInlineAsm) {\n";
-  OS << "      Inst.setOpcode(it->Opcode);\n";
   OS << "      convertToMapAndConstraints(it->ConvertFn, Operands);\n";
   OS << "      return Match_Success;\n";
   OS << "    }\n\n";
   OS << "    // We have selected a definite instruction, convert the parsed\n"
      << "    // operands into the appropriate MCInst.\n";
-  OS << "    convertToMCInst(it->ConvertFn, Inst, it->Opcode, Operands);\n";
+  if (HasOptionalOperands) {
+    OS << "    convertToMCInst(it->ConvertFn, Inst, it->Opcode, Operands,\n"
+       << "                    OptionalOperandsMask);\n";
+  } else {
+    OS << "    convertToMCInst(it->ConvertFn, Inst, it->Opcode, Operands);\n";
+  }
   OS << "\n";
 
   // Verify the instruction with the target-specific match predicate function.
   OS << "    // We have a potential match. Check the target predicate to\n"
      << "    // handle any context sensitive constraints.\n"
-     << "    unsigned MatchResult;\n"
      << "    if ((MatchResult = checkTargetMatchPredicate(Inst)) !="
      << " Match_Success) {\n"
      << "      Inst.clear();\n"
@@ -3118,4 +3332,4 @@ void EmitAsmMatcher(RecordKeeper &RK, raw_ostream &OS) {
   AsmMatcherEmitter(RK).run(OS);
 }
 
-} // End llvm namespace
+} // end namespace llvm

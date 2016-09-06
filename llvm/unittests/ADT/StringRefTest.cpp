@@ -322,6 +322,22 @@ TEST(StringRefTest, StartsWithLower) {
   EXPECT_FALSE(Str.startswith_lower("hi"));
 }
 
+TEST(StringRefTest, ConsumeFront) {
+  StringRef Str("hello");
+  EXPECT_TRUE(Str.consume_front(""));
+  EXPECT_EQ("hello", Str);
+  EXPECT_TRUE(Str.consume_front("he"));
+  EXPECT_EQ("llo", Str);
+  EXPECT_FALSE(Str.consume_front("lloworld"));
+  EXPECT_EQ("llo", Str);
+  EXPECT_FALSE(Str.consume_front("lol"));
+  EXPECT_EQ("llo", Str);
+  EXPECT_TRUE(Str.consume_front("llo"));
+  EXPECT_EQ("", Str);
+  EXPECT_FALSE(Str.consume_front("o"));
+  EXPECT_TRUE(Str.consume_front(""));
+}
+
 TEST(StringRefTest, EndsWith) {
   StringRef Str("hello");
   EXPECT_TRUE(Str.endswith(""));
@@ -339,6 +355,22 @@ TEST(StringRefTest, EndsWithLower) {
   EXPECT_TRUE(Str.endswith_lower("ELlo"));
   EXPECT_FALSE(Str.endswith_lower("helloworld"));
   EXPECT_FALSE(Str.endswith_lower("hi"));
+}
+
+TEST(StringRefTest, ConsumeBack) {
+  StringRef Str("hello");
+  EXPECT_TRUE(Str.consume_back(""));
+  EXPECT_EQ("hello", Str);
+  EXPECT_TRUE(Str.consume_back("lo"));
+  EXPECT_EQ("hel", Str);
+  EXPECT_FALSE(Str.consume_back("helhel"));
+  EXPECT_EQ("hel", Str);
+  EXPECT_FALSE(Str.consume_back("hle"));
+  EXPECT_EQ("hel", Str);
+  EXPECT_TRUE(Str.consume_back("hel"));
+  EXPECT_EQ("", Str);
+  EXPECT_FALSE(Str.consume_back("h"));
+  EXPECT_TRUE(Str.consume_back(""));
 }
 
 TEST(StringRefTest, Find) {
@@ -589,6 +621,15 @@ TEST(StringRefTest, joinStrings) {
 
 TEST(StringRefTest, AllocatorCopy) {
   BumpPtrAllocator Alloc;
+  // First test empty strings.  We don't want these to allocate anything on the
+  // allocator.
+  StringRef StrEmpty = "";
+  StringRef StrEmptyc = StrEmpty.copy(Alloc);
+  EXPECT_TRUE(StrEmpty.equals(StrEmptyc));
+  EXPECT_EQ(StrEmptyc.data(), nullptr);
+  EXPECT_EQ(StrEmptyc.size(), 0u);
+  EXPECT_EQ(Alloc.getTotalMemory(), 0u);
+
   StringRef Str1 = "hello";
   StringRef Str2 = "bye";
   StringRef Str1c = Str1.copy(Alloc);

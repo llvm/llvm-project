@@ -36,9 +36,8 @@ invoke.cont44:                                    ; preds = %if.end
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 168984) (llvm/trunk 168983)", isOptimized: true, emissionKind: 0, file: !6, subprograms: !1)
-!1 = !{!2}
-!2 = distinct !DISubprogram(name: "test", isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 1, file: !6, scope: !5, type: !7)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 168984) (llvm/trunk 168983)", isOptimized: true, emissionKind: FullDebug, file: !6)
+!2 = distinct !DISubprogram(name: "test", isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 1, file: !6, scope: !5, type: !7)
 !3 = !DILocalVariable(name: "callback", line: 214, scope: !2, type: !4)
 !4 = !DICompositeType(tag: DW_TAG_structure_type, name: "btCompoundLeafCallback", line: 90, size: 64, align: 64, file: !6)
 !5 = !DIFile(filename: "MultiSource/Benchmarks/Bullet/btCompoundCollisionAlgorithm.cpp", directory: "MultiSource/Benchmarks/Bullet")

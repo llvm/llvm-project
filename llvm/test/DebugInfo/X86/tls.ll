@@ -111,11 +111,10 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !llvm.module.flags = !{!15, !16}
 !llvm.ident = !{!17}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, splitDebugFilename: "-.dwo", emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !12, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5 ", isOptimized: false, splitDebugFilename: "-.dwo", emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !12, imports: !2)
 !1 = !DIFile(filename: "tls.cpp", directory: "/tmp/dbginfo")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "func<&glbl>", linkageName: "_Z4funcIXadL_Z4glblEEEiv", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 5, file: !1, scope: !5, type: !6, templateParams: !9, variables: !2)
+!4 = distinct !DISubprogram(name: "func<&glbl>", linkageName: "_Z4funcIXadL_Z4glblEEEiv", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 5, file: !1, scope: !5, type: !6, templateParams: !9, variables: !2)
 !5 = !DIFile(filename: "tls.cpp", directory: "/tmp/dbginfo")
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8}

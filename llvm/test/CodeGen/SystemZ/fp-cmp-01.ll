@@ -9,7 +9,7 @@ declare float @foo()
 define i64 @f1(i64 %a, i64 %b, float %f1, float %f2) {
 ; CHECK-LABEL: f1:
 ; CHECK: cebr %f0, %f2
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %cond = fcmp oeq float %f1, %f2
@@ -21,7 +21,7 @@ define i64 @f1(i64 %a, i64 %b, float %f1, float %f2) {
 define i64 @f2(i64 %a, i64 %b, float %f1, float *%ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f2 = load float , float *%ptr
@@ -34,7 +34,7 @@ define i64 @f2(i64 %a, i64 %b, float %f1, float *%ptr) {
 define i64 @f3(i64 %a, i64 %b, float %f1, float *%base) {
 ; CHECK-LABEL: f3:
 ; CHECK: ceb %f0, 4092(%r4)
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%base, i64 1023
@@ -50,7 +50,7 @@ define i64 @f4(i64 %a, i64 %b, float %f1, float *%base) {
 ; CHECK-LABEL: f4:
 ; CHECK: aghi %r4, 4096
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%base, i64 1024
@@ -65,7 +65,7 @@ define i64 @f5(i64 %a, i64 %b, float %f1, float *%base) {
 ; CHECK-LABEL: f5:
 ; CHECK: aghi %r4, -4
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %ptr = getelementptr float, float *%base, i64 -1
@@ -80,7 +80,7 @@ define i64 @f6(i64 %a, i64 %b, float %f1, float *%base, i64 %index) {
 ; CHECK-LABEL: f6:
 ; CHECK: sllg %r1, %r5, 2
 ; CHECK: ceb %f0, 400(%r1,%r4)
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %ptr1 = getelementptr float, float *%base, i64 %index
@@ -153,7 +153,7 @@ define float @f7(float *%ptr0) {
 define i64 @f8(i64 %a, i64 %b, float %f) {
 ; CHECK-LABEL: f8:
 ; CHECK: ltebr %f0, %f0
-; CHECK-NEXT: je
+; CHECK-NEXT: ber %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %cond = fcmp oeq float %f, 0.0
@@ -166,7 +166,7 @@ define i64 @f8(i64 %a, i64 %b, float %f) {
 define i64 @f9(i64 %a, i64 %b, float %f2, float *%ptr) {
 ; CHECK-LABEL: f9:
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: je {{\.L.*}}
+; CHECK-NEXT: ber %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f1 = load float , float *%ptr
@@ -179,7 +179,7 @@ define i64 @f9(i64 %a, i64 %b, float %f2, float *%ptr) {
 define i64 @f10(i64 %a, i64 %b, float %f2, float *%ptr) {
 ; CHECK-LABEL: f10:
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: jlh {{\.L.*}}
+; CHECK-NEXT: blhr %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f1 = load float , float *%ptr
@@ -192,7 +192,7 @@ define i64 @f10(i64 %a, i64 %b, float %f2, float *%ptr) {
 define i64 @f11(i64 %a, i64 %b, float %f2, float *%ptr) {
 ; CHECK-LABEL: f11:
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: jh {{\.L.*}}
+; CHECK-NEXT: bhr %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f1 = load float , float *%ptr
@@ -205,7 +205,7 @@ define i64 @f11(i64 %a, i64 %b, float %f2, float *%ptr) {
 define i64 @f12(i64 %a, i64 %b, float %f2, float *%ptr) {
 ; CHECK-LABEL: f12:
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: jhe {{\.L.*}}
+; CHECK-NEXT: bher %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f1 = load float , float *%ptr
@@ -218,7 +218,7 @@ define i64 @f12(i64 %a, i64 %b, float %f2, float *%ptr) {
 define i64 @f13(i64 %a, i64 %b, float %f2, float *%ptr) {
 ; CHECK-LABEL: f13:
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: jle {{\.L.*}}
+; CHECK-NEXT: bler %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f1 = load float , float *%ptr
@@ -231,7 +231,7 @@ define i64 @f13(i64 %a, i64 %b, float %f2, float *%ptr) {
 define i64 @f14(i64 %a, i64 %b, float %f2, float *%ptr) {
 ; CHECK-LABEL: f14:
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: jl {{\.L.*}}
+; CHECK-NEXT: blr %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f1 = load float , float *%ptr
@@ -244,7 +244,7 @@ define i64 @f14(i64 %a, i64 %b, float %f2, float *%ptr) {
 define i64 @f15(i64 %a, i64 %b, float %f2, float *%ptr) {
 ; CHECK-LABEL: f15:
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: jnlh {{\.L.*}}
+; CHECK-NEXT: bnlhr %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f1 = load float , float *%ptr
@@ -257,7 +257,7 @@ define i64 @f15(i64 %a, i64 %b, float %f2, float *%ptr) {
 define i64 @f16(i64 %a, i64 %b, float %f2, float *%ptr) {
 ; CHECK-LABEL: f16:
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: jne {{\.L.*}}
+; CHECK-NEXT: bner %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f1 = load float , float *%ptr
@@ -270,7 +270,7 @@ define i64 @f16(i64 %a, i64 %b, float %f2, float *%ptr) {
 define i64 @f17(i64 %a, i64 %b, float %f2, float *%ptr) {
 ; CHECK-LABEL: f17:
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: jnle {{\.L.*}}
+; CHECK-NEXT: bnler %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f1 = load float , float *%ptr
@@ -283,7 +283,7 @@ define i64 @f17(i64 %a, i64 %b, float %f2, float *%ptr) {
 define i64 @f18(i64 %a, i64 %b, float %f2, float *%ptr) {
 ; CHECK-LABEL: f18:
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: jnl {{\.L.*}}
+; CHECK-NEXT: bnlr %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f1 = load float , float *%ptr
@@ -296,7 +296,7 @@ define i64 @f18(i64 %a, i64 %b, float %f2, float *%ptr) {
 define i64 @f19(i64 %a, i64 %b, float %f2, float *%ptr) {
 ; CHECK-LABEL: f19:
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: jnh {{\.L.*}}
+; CHECK-NEXT: bnhr %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f1 = load float , float *%ptr
@@ -309,7 +309,7 @@ define i64 @f19(i64 %a, i64 %b, float %f2, float *%ptr) {
 define i64 @f20(i64 %a, i64 %b, float %f2, float *%ptr) {
 ; CHECK-LABEL: f20:
 ; CHECK: ceb %f0, 0(%r4)
-; CHECK-NEXT: jnhe {{\.L.*}}
+; CHECK-NEXT: bnher %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f1 = load float , float *%ptr

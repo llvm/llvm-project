@@ -15,8 +15,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-mcexpr"
 
-const NVPTXFloatMCExpr*
-NVPTXFloatMCExpr::create(VariantKind Kind, APFloat Flt, MCContext &Ctx) {
+const NVPTXFloatMCExpr *
+NVPTXFloatMCExpr::create(VariantKind Kind, const APFloat &Flt, MCContext &Ctx) {
   return new (Ctx) NVPTXFloatMCExpr(Kind, Flt);
 }
 

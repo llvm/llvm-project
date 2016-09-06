@@ -13,7 +13,7 @@ void wsrp_1(void *v) {
 }
 
 void wsr64_1(unsigned long v) {
-  __builtin_arm_wsr64("sysreg", v); //expected-error {{invalid special register for builtin}}
+  __builtin_arm_wsr64("sysreg", v);
 }
 
 unsigned rsr_1() {
@@ -25,7 +25,7 @@ void *rsrp_1() {
 }
 
 unsigned long rsr64_1() {
-  return __builtin_arm_rsr64("sysreg"); //expected-error {{invalid special register for builtin}}
+  return __builtin_arm_rsr64("sysreg");
 }
 
 void wsr_2(unsigned v) {

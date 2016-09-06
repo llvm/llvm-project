@@ -47,7 +47,6 @@ entry:
 ; WIN64: .seh_endproc
 
 
-; Checks stack push
 define i32 @foo3(i32 %f_arg, i32 %e_arg, i32 %d_arg, i32 %c_arg, i32 %b_arg, i32 %a_arg) uwtable {
 entry:
   %a = alloca i32
@@ -83,14 +82,11 @@ entry:
 }
 ; WIN64-LABEL: foo3:
 ; WIN64: .seh_proc foo3
-; WIN64: pushq %rsi
-; WIN64: .seh_pushreg 6
 ; NORM:  subq $24, %rsp
 ; ATOM:  leaq -24(%rsp), %rsp
 ; WIN64: .seh_stackalloc 24
 ; WIN64: .seh_endprologue
 ; WIN64: addq $24, %rsp
-; WIN64: popq %rsi
 ; WIN64: ret
 ; WIN64: .seh_endproc
 

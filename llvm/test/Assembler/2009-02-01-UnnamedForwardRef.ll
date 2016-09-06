@@ -3,5 +3,5 @@
 ; PR3372
 
 @X = global i32* @0
-global i32 4
+@0 = global i32 4
 

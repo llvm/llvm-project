@@ -23,6 +23,7 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSymbolMachO.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -70,6 +71,7 @@ public:
 
   void ChangeSection(MCSection *Sect, const MCExpr *Subsect) override;
   void EmitLabel(MCSymbol *Symbol) override;
+  void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void EmitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol) override;
   void EmitAssemblerFlag(MCAssemblerFlag Flag) override;
   void EmitLinkerOptions(ArrayRef<std::string> Options) override;
@@ -198,9 +200,20 @@ void MCMachOStreamer::EmitLabel(MCSymbol *Symbol) {
   cast<MCSymbolMachO>(Symbol)->clearReferenceType();
 }
 
+void MCMachOStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
+  MCValue Res;
+
+  if (Value->evaluateAsRelocatable(Res, nullptr, nullptr)) {
+    if (const MCSymbolRefExpr *SymAExpr = Res.getSymA()) {
+      const MCSymbol &SymA = SymAExpr->getSymbol();
+      if (!Res.getSymB() && (SymA.getName() == "" || Res.getConstant() != 0))
+        cast<MCSymbolMachO>(Symbol)->setAltEntry();
+    }
+  }
+  MCObjectStreamer::EmitAssignment(Symbol, Value);
+}
+
 void MCMachOStreamer::EmitDataRegion(DataRegionData::KindTy Kind) {
-  if (!getAssembler().getBackend().hasDataInCodeSupport())
-    return;
   // Create a temporary label to mark the start of the data region.
   MCSymbol *Start = getContext().createTempSymbol();
   EmitLabel(Start);
@@ -211,8 +224,6 @@ void MCMachOStreamer::EmitDataRegion(DataRegionData::KindTy Kind) {
 }
 
 void MCMachOStreamer::EmitDataRegionEnd() {
-  if (!getAssembler().getBackend().hasDataInCodeSupport())
-    return;
   std::vector<DataRegionData> &Regions = getAssembler().getDataRegions();
   assert(!Regions.empty() && "Mismatched .end_data_region!");
   DataRegionData &Data = Regions.back();
@@ -431,7 +442,6 @@ void MCMachOStreamer::EmitZerofill(MCSection *Section, MCSymbol *Symbol,
 void MCMachOStreamer::EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                      uint64_t Size, unsigned ByteAlignment) {
   EmitZerofill(Section, Symbol, Size, ByteAlignment);
-  return;
 }
 
 void MCMachOStreamer::EmitInstToData(const MCInst &Inst,

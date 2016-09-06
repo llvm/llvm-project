@@ -179,7 +179,6 @@ static bool isZeroLengthArray(Type *Ty) {
 
 bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
   Module *M = GV->getParent();
-  LLVMContext &Ctx = M->getContext();
   if (!GV->isThreadLocal())
     return false;
 
@@ -210,11 +209,8 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
     Function *GetID = Intrinsic::getDeclaration(GV->getParent(),
                                                 Intrinsic::xcore_getid);
     Value *ThreadID = Builder.CreateCall(GetID, {});
-    SmallVector<Value *, 2> Indices;
-    Indices.push_back(Constant::getNullValue(Type::getInt64Ty(Ctx)));
-    Indices.push_back(ThreadID);
-    Value *Addr =
-        Builder.CreateInBoundsGEP(NewGV->getValueType(), NewGV, Indices);
+    Value *Addr = Builder.CreateInBoundsGEP(NewGV->getValueType(), NewGV,
+                                            {Builder.getInt64(0), ThreadID});
     U->replaceUsesOfWith(GV, Addr);
   }
 

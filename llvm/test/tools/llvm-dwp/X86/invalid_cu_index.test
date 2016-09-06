@@ -1,0 +1,3 @@
+RUN: not llvm-dwp %p/../Inputs/invalid_cu_index/x.dwp -o %t 2>&1 | FileCheck %s
+
+CHECK: error: Failed to parse cu_index

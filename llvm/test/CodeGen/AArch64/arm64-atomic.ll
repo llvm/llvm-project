@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -asm-verbose=false -verify-machineinstrs -mcpu=cyclone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -asm-verbose=false -verify-machineinstrs -mcpu=cyclone | FileCheck %s
 
 define i32 @val_compare_and_swap(i32* %p, i32 %cmp, i32 %new) #0 {
 ; CHECK-LABEL: val_compare_and_swap:
@@ -103,7 +103,7 @@ define i64 @fetch_and_nand_64(i64* %p) #0 {
 
 define i32 @fetch_and_or(i32* %p) #0 {
 ; CHECK-LABEL: fetch_and_or:
-; CHECK: movz   [[OLDVAL_REG:w[0-9]+]], #0x5
+; CHECK: mov   [[OLDVAL_REG:w[0-9]+]], #5
 ; CHECK: [[TRYBB:.?LBB[0-9_]+]]:
 ; CHECK: ldaxr   w[[DEST_REG:[0-9]+]], [x0]
 ; CHECK: orr    [[SCRATCH2_REG:w[0-9]+]], w[[DEST_REG]], [[OLDVAL_REG]]

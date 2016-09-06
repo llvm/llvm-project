@@ -19,7 +19,9 @@ void test(int *List, int Length) {
 
 // CHECK: #pragma clang loop interleave(disable)
 // CHECK-NEXT: #pragma clang loop vectorize(enable)
+// CHECK-NEXT: #pragma clang loop distribute(disable)
 
+#pragma clang loop distribute(disable)
 #pragma clang loop vectorize(enable)
 #pragma clang loop interleave(disable)
 // CHECK-NEXT: while (i - 1 < Length)
@@ -30,7 +32,9 @@ void test(int *List, int Length) {
 
 // CHECK: #pragma clang loop interleave(enable)
 // CHECK-NEXT: #pragma clang loop vectorize(disable)
+// CHECK-NEXT: #pragma clang loop distribute(enable)
 
+#pragma clang loop distribute(enable)
 #pragma clang loop vectorize(disable)
 #pragma clang loop interleave(enable)
 // CHECK-NEXT: while (i - 2 < Length)

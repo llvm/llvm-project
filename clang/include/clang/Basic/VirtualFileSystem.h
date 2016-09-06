@@ -20,6 +20,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include <utility>
 
 namespace llvm {
 class MemoryBuffer;
@@ -90,6 +91,13 @@ public:
   virtual ~File();
   /// \brief Get the status of the file.
   virtual llvm::ErrorOr<Status> status() = 0;
+  /// \brief Get the name of the file
+  virtual llvm::ErrorOr<std::string> getName() {
+    if (auto Status = status())
+      return Status->getName().str();
+    else
+      return Status.getError();
+  }
   /// \brief Get the contents of the file as a \p MemoryBuffer.
   virtual llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBuffer(const Twine &Name, int64_t FileSize = -1,
@@ -116,7 +124,8 @@ class directory_iterator {
   std::shared_ptr<detail::DirIterImpl> Impl; // Input iterator semantics on copy
 
 public:
-  directory_iterator(std::shared_ptr<detail::DirIterImpl> I) : Impl(I) {
+  directory_iterator(std::shared_ptr<detail::DirIterImpl> I)
+      : Impl(std::move(I)) {
     assert(Impl.get() != nullptr && "requires non-null implementation");
     if (!Impl->CurrentEntry.isStatusKnown())
       Impl.reset(); // Normalize the end iterator to Impl == nullptr.
@@ -175,6 +184,11 @@ public:
   }
   bool operator!=(const recursive_directory_iterator &RHS) const {
     return !(*this == RHS);
+  }
+  /// \brief Gets the current level. Starting path is at level 0.
+  int level() const {
+    assert(State->size() && "Cannot get level without any iteration state");
+    return State->size()-1;
   }
 };
 
@@ -310,6 +324,7 @@ llvm::sys::fs::UniqueID getNextVirtualUniqueID();
 IntrusiveRefCntPtr<FileSystem>
 getVFSFromYAML(std::unique_ptr<llvm::MemoryBuffer> Buffer,
                llvm::SourceMgr::DiagHandlerTy DiagHandler,
+               StringRef YAMLFilePath,
                void *DiagContext = nullptr,
                IntrusiveRefCntPtr<FileSystem> ExternalFS = getRealFileSystem());
 
@@ -323,6 +338,10 @@ struct YAMLVFSEntry {
 class YAMLVFSWriter {
   std::vector<YAMLVFSEntry> Mappings;
   Optional<bool> IsCaseSensitive;
+  Optional<bool> IsOverlayRelative;
+  Optional<bool> UseExternalNames;
+  Optional<bool> IgnoreNonExistentContents;
+  std::string OverlayDir;
 
 public:
   YAMLVFSWriter() {}
@@ -330,6 +349,17 @@ public:
   void setCaseSensitivity(bool CaseSensitive) {
     IsCaseSensitive = CaseSensitive;
   }
+  void setUseExternalNames(bool UseExtNames) {
+    UseExternalNames = UseExtNames;
+  }
+  void setIgnoreNonExistentContents(bool IgnoreContents) {
+    IgnoreNonExistentContents = IgnoreContents;
+  }
+  void setOverlayDir(StringRef OverlayDirectory) {
+    IsOverlayRelative = true;
+    OverlayDir.assign(OverlayDirectory.str());
+  }
+
   void write(llvm::raw_ostream &OS);
 };
 

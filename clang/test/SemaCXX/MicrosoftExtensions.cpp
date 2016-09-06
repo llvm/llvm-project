@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify -fms-extensions -fexceptions -fcxx-exceptions
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify -fms-extensions -fexceptions -fcxx-exceptions -DTEST1
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -Wmicrosoft -Wc++11-extensions -Wno-long-long -verify -fexceptions -fcxx-exceptions -DTEST2
 
+#if TEST1
 
 // Microsoft doesn't validate exception specification.
 namespace microsoft_exception_spec {
@@ -80,7 +82,73 @@ struct M {
 // __unaligned handling
 typedef char __unaligned *aligned_type;
 typedef struct UnalignedTag { int f; } __unaligned *aligned_type2;
+typedef char __unaligned aligned_type3;
 
+struct aligned_type4 {
+  int i;
+};
+
+__unaligned int aligned_type4::*p1_aligned_type4 = &aligned_type4::i;
+int aligned_type4::* __unaligned p2_aligned_type4 = &aligned_type4::i;
+__unaligned int aligned_type4::* __unaligned p3_aligned_type4 = &aligned_type4::i;
+void (aligned_type4::*__unaligned p4_aligned_type4)();
+
+// Check that __unaligned qualifier can be used for overloading
+void foo_unaligned(int *arg) {}
+void foo_unaligned(__unaligned int *arg) {}
+void foo_unaligned(int arg) {} // expected-note {{previous definition is here}}
+void foo_unaligned(__unaligned int arg) {} // expected-error {{redefinition of 'foo_unaligned'}}
+class A_unaligned {};
+class B_unaligned : public A_unaligned {};
+int foo_unaligned(__unaligned A_unaligned *arg) { return 0; }
+void *foo_unaligned(B_unaligned *arg) { return 0; }
+
+void test_unaligned() {
+  int *p1 = 0;
+  foo_unaligned(p1);
+
+  __unaligned int *p2 = 0;
+  foo_unaligned(p2);
+
+  __unaligned B_unaligned *p3 = 0;
+  int p4 = foo_unaligned(p3);
+
+  B_unaligned *p5 = p3; // expected-error {{cannot initialize a variable of type 'B_unaligned *' with an lvalue of type '__unaligned B_unaligned *'}}
+
+  __unaligned B_unaligned *p6 = p3;
+
+  p1_aligned_type4 = p2_aligned_type4;
+  p2_aligned_type4 = p1_aligned_type4; // expected-error {{assigning to 'int aligned_type4::*' from incompatible type '__unaligned int aligned_type4::*'}}
+  p3_aligned_type4 = p1_aligned_type4;
+
+  __unaligned int a[10];
+  int *b = a; // expected-error {{cannot initialize a variable of type 'int *' with an lvalue of type '__unaligned int [10]'}}
+}
+
+// Test from PR27367
+// We should accept assignment of an __unaligned pointer to a non-__unaligned
+// pointer to void
+typedef struct _ITEMIDLIST { int i; } ITEMIDLIST;
+typedef ITEMIDLIST __unaligned *LPITEMIDLIST;
+extern "C" __declspec(dllimport) void __stdcall CoTaskMemFree(void* pv);
+__inline void FreeIDListArray(LPITEMIDLIST *ppidls) {
+  CoTaskMemFree(*ppidls);
+  __unaligned int *x = 0;
+  void *y = x;
+}
+
+// Test from PR27666
+// We should accept type conversion of __unaligned to non-__unaligned references
+typedef struct in_addr {
+public:
+  in_addr(in_addr &a) {} // expected-note {{candidate constructor not viable: no known conversion from '__unaligned IN_ADDR *' (aka '__unaligned in_addr *') to 'in_addr &' for 1st argument; dereference the argument with *}}
+  in_addr(in_addr *a) {} // expected-note {{candidate constructor not viable: 1st argument ('__unaligned IN_ADDR *' (aka '__unaligned in_addr *')) would lose __unaligned qualifier}}
+} IN_ADDR;
+
+void f(IN_ADDR __unaligned *a) {
+  IN_ADDR local_addr = *a;
+  IN_ADDR local_addr2 = a; // expected-error {{no viable conversion from '__unaligned IN_ADDR *' (aka '__unaligned in_addr *') to 'IN_ADDR' (aka 'in_addr')}}
+}
 
 template<typename T> void h1(T (__stdcall M::* const )()) { }
 
@@ -420,3 +488,15 @@ struct S {
 
 int S::fn() { return 0; } // expected-warning {{is missing exception specification}}
 }
+
+#elif TEST2
+
+// Check that __unaligned is not recognized if MS extensions are not enabled
+typedef char __unaligned *aligned_type; // expected-error {{expected ';' after top level declarator}}
+
+#else
+
+#error Unknown test mode
+
+#endif
+

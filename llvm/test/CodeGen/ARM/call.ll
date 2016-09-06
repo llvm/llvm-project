@@ -12,7 +12,7 @@
 declare void @g(i32, i32, i32, i32)
 
 define void @f() {
-; CHECKELF: PLT
+; CHECKELF: bl g
         call void @g( i32 1, i32 2, i32 3, i32 4 )
         ret void
 }

@@ -25,7 +25,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstring>
-#include <string>
 
 using namespace clang;
 using namespace SrcMgr;
@@ -1160,7 +1159,8 @@ unsigned SourceManager::getColumnNumber(FileID FID, unsigned FilePos,
 
 // isInvalid - Return the result of calling loc.isInvalid(), and
 // if Invalid is not null, set its value to same.
-static bool isInvalid(SourceLocation Loc, bool *Invalid) {
+template<typename LocType>
+static bool isInvalid(LocType Loc, bool *Invalid) {
   bool MyInvalid = Loc.isInvalid();
   if (Invalid)
     *Invalid = MyInvalid;
@@ -1183,8 +1183,9 @@ unsigned SourceManager::getExpansionColumnNumber(SourceLocation Loc,
 
 unsigned SourceManager::getPresumedColumnNumber(SourceLocation Loc,
                                                 bool *Invalid) const {
-  if (isInvalid(Loc, Invalid)) return 0;
-  return getPresumedLoc(Loc).getColumn();
+  PresumedLoc PLoc = getPresumedLoc(Loc);
+  if (isInvalid(PLoc, Invalid)) return 0;
+  return PLoc.getColumn();
 }
 
 #ifdef __SSE2__
@@ -1258,15 +1259,19 @@ FoundSpecialChar:
 
     if (Buf[0] == '\n' || Buf[0] == '\r') {
       // If this is \n\r or \r\n, skip both characters.
-      if ((Buf[1] == '\n' || Buf[1] == '\r') && Buf[0] != Buf[1])
-        ++Offs, ++Buf;
-      ++Offs, ++Buf;
+      if ((Buf[1] == '\n' || Buf[1] == '\r') && Buf[0] != Buf[1]) {
+        ++Offs;
+        ++Buf;
+      }
+      ++Offs;
+      ++Buf;
       LineOffsets.push_back(Offs);
     } else {
       // Otherwise, this is a null.  If end of file, exit.
       if (Buf == End) break;
       // Otherwise, skip the null.
-      ++Offs, ++Buf;
+      ++Offs;
+      ++Buf;
     }
   }
 
@@ -1388,8 +1393,9 @@ unsigned SourceManager::getExpansionLineNumber(SourceLocation Loc,
 }
 unsigned SourceManager::getPresumedLineNumber(SourceLocation Loc,
                                               bool *Invalid) const {
-  if (isInvalid(Loc, Invalid)) return 0;
-  return getPresumedLoc(Loc).getLine();
+  PresumedLoc PLoc = getPresumedLoc(Loc);
+  if (isInvalid(PLoc, Invalid)) return 0;
+  return PLoc.getLine();
 }
 
 /// getFileCharacteristic - return the file characteristic of the specified
@@ -2089,10 +2095,10 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
 
   // Clear the lookup cache, it depends on a common location.
   IsBeforeInTUCache.clear();
-  llvm::MemoryBuffer *LBuf = getBuffer(LOffs.first);
-  llvm::MemoryBuffer *RBuf = getBuffer(ROffs.first);
-  bool LIsBuiltins = strcmp("<built-in>", LBuf->getBufferIdentifier()) == 0;
-  bool RIsBuiltins = strcmp("<built-in>", RBuf->getBufferIdentifier()) == 0;
+  const char *LB = getBuffer(LOffs.first)->getBufferIdentifier();
+  const char *RB = getBuffer(ROffs.first)->getBufferIdentifier();
+  bool LIsBuiltins = strcmp("<built-in>", LB) == 0;
+  bool RIsBuiltins = strcmp("<built-in>", RB) == 0;
   // Sort built-in before non-built-in.
   if (LIsBuiltins || RIsBuiltins) {
     if (LIsBuiltins != RIsBuiltins)
@@ -2101,14 +2107,22 @@ bool SourceManager::isBeforeInTranslationUnit(SourceLocation LHS,
     // lower IDs come first.
     return LOffs.first < ROffs.first;
   }
-  bool LIsAsm = strcmp("<inline asm>", LBuf->getBufferIdentifier()) == 0;
-  bool RIsAsm = strcmp("<inline asm>", RBuf->getBufferIdentifier()) == 0;
+  bool LIsAsm = strcmp("<inline asm>", LB) == 0;
+  bool RIsAsm = strcmp("<inline asm>", RB) == 0;
   // Sort assembler after built-ins, but before the rest.
   if (LIsAsm || RIsAsm) {
     if (LIsAsm != RIsAsm)
       return RIsAsm;
     assert(LOffs.first == ROffs.first);
     return false;
+  }
+  bool LIsScratch = strcmp("<scratch space>", LB) == 0;
+  bool RIsScratch = strcmp("<scratch space>", RB) == 0;
+  // Sort scratch after inline asm, but before the rest.
+  if (LIsScratch || RIsScratch) {
+    if (LIsScratch != RIsScratch)
+      return LIsScratch;
+    return LOffs.second < ROffs.second;
   }
   llvm_unreachable("Unsortable locations found");
 }

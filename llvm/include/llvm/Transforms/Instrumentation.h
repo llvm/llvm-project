@@ -80,9 +80,10 @@ ModulePass *createGCOVProfilerPass(const GCOVOptions &Options =
                                    GCOVOptions::getDefault());
 
 // PGO Instrumention
-ModulePass *createPGOInstrumentationGenPass();
+ModulePass *createPGOInstrumentationGenLegacyPass();
 ModulePass *
-createPGOInstrumentationUsePass(StringRef Filename = StringRef(""));
+createPGOInstrumentationUseLegacyPass(StringRef Filename = StringRef(""));
+ModulePass *createPGOIndirectCallPromotionLegacyPass(bool InLTO = false);
 
 /// Options for the frontend instrumentation based profiling pass.
 struct InstrProfOptions {
@@ -96,12 +97,13 @@ struct InstrProfOptions {
 };
 
 /// Insert frontend instrumentation based profiling.
-ModulePass *createInstrProfilingPass(
+ModulePass *createInstrProfilingLegacyPass(
     const InstrProfOptions &Options = InstrProfOptions());
 
 // Insert AddressSanitizer (address sanity checking) instrumentation
 FunctionPass *createAddressSanitizerFunctionPass(bool CompileKernel = false,
-                                                 bool Recover = false);
+                                                 bool Recover = false,
+                                                 bool UseAfterScope = false);
 ModulePass *createAddressSanitizerModulePass(bool CompileKernel = false,
                                              bool Recover = false);
 
@@ -116,11 +118,25 @@ ModulePass *createDataFlowSanitizerPass(
     const std::vector<std::string> &ABIListFiles = std::vector<std::string>(),
     void *(*getArgTLS)() = nullptr, void *(*getRetValTLS)() = nullptr);
 
+// Options for EfficiencySanitizer sub-tools.
+struct EfficiencySanitizerOptions {
+  EfficiencySanitizerOptions() : ToolType(ESAN_None) {}
+  enum Type {
+    ESAN_None = 0,
+    ESAN_CacheFrag,
+    ESAN_WorkingSet,
+  } ToolType;
+};
+
+// Insert EfficiencySanitizer instrumentation.
+ModulePass *createEfficiencySanitizerPass(
+    const EfficiencySanitizerOptions &Options = EfficiencySanitizerOptions());
+
 // Options for sanitizer coverage instrumentation.
 struct SanitizerCoverageOptions {
   SanitizerCoverageOptions()
       : CoverageType(SCK_None), IndirectCalls(false), TraceBB(false),
-        TraceCmp(false), Use8bitCounters(false) {}
+        TraceCmp(false), Use8bitCounters(false), TracePC(false) {}
 
   enum Type {
     SCK_None = 0,
@@ -132,6 +148,7 @@ struct SanitizerCoverageOptions {
   bool TraceBB;
   bool TraceCmp;
   bool Use8bitCounters;
+  bool TracePC;
 };
 
 // Insert SanitizerCoverage instrumentation.
@@ -149,10 +166,6 @@ inline ModulePass *createDataFlowSanitizerPassForJIT(
 // BoundsChecking - This pass instruments the code to perform run-time bounds
 // checking on loads, stores, and other memory intrinsics.
 FunctionPass *createBoundsCheckingPass();
-
-/// \brief This pass splits the stack into a safe stack and an unsafe stack to
-/// protect against stack-based overflow vulnerabilities.
-FunctionPass *createSafeStackPass(const TargetMachine *TM = nullptr);
 
 /// \brief Calculate what to divide by to scale counts.
 ///

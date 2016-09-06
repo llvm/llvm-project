@@ -32,7 +32,8 @@ define float @test_block_addr([8 x float], [1 x float] %in) {
 
 define void @test_block_addr_callee() {
 ; CHECK-LABEL: test_block_addr_callee:
-; CHECK: str {{[a-z0-9]+}}, [sp, #-16]!
+; CHECK: sub sp, sp, #32
+; CHECK: str {{[a-z0-9]+}}, [sp, #16]
 ; CHECK: bl test_block_addr
   %val = insertvalue [1 x float] undef, float 0.0, 0
   call float @test_block_addr([8 x float] undef, [1 x float] %val)

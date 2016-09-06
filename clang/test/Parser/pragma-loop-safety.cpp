@@ -16,6 +16,7 @@ void test(int *List, int Length) {
 /* expected-error {{expected ')'}} */ #pragma clang loop interleave(assume_safety
 
 /* expected-error {{invalid argument; expected 'enable', 'full' or 'disable'}} */ #pragma clang loop unroll(assume_safety)
+/* expected-error {{invalid argument; expected 'enable' or 'disable'}} */ #pragma clang loop distribute(assume_safety)
 
 /* expected-error {{invalid argument; expected 'enable', 'assume_safety' or 'disable'}} */ #pragma clang loop vectorize(badidentifier)
 /* expected-error {{invalid argument; expected 'enable', 'assume_safety' or 'disable'}} */ #pragma clang loop interleave(badidentifier)

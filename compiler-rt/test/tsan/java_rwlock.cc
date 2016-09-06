@@ -29,7 +29,7 @@ int main() {
   barrier_wait(&barrier);
   pthread_join(th, 0);
   __tsan_java_free(jheap, kBlockSize);
-  printf("DONE\n");
+  fprintf(stderr, "DONE\n");
   return __tsan_java_fini();
 }
 

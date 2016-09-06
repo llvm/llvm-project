@@ -18,7 +18,7 @@
 
 /* Returns: convert a to a double, rounding toward even. */
 
-/* Assumption: double is a IEEE 64 bit floating point type 
+/* Assumption: double is a IEEE 64 bit floating point type
  *             tu_int is a 128 bit integral type
  */
 

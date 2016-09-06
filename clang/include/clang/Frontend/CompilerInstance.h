@@ -11,11 +11,12 @@
 #define LLVM_CLANG_FRONTEND_COMPILERINSTANCE_H_
 
 #include "clang/AST/ASTConsumer.h"
-#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -35,7 +36,6 @@ class TimerGroup;
 
 namespace clang {
 class ASTContext;
-class ASTConsumer;
 class ASTReader;
 class CodeCompleteConsumer;
 class DiagnosticsEngine;
@@ -155,15 +155,10 @@ class CompilerInstance : public ModuleLoader {
   struct OutputFile {
     std::string Filename;
     std::string TempFilename;
-    std::unique_ptr<raw_ostream> OS;
 
-    OutputFile(std::string filename, std::string tempFilename,
-               std::unique_ptr<raw_ostream> OS)
-        : Filename(std::move(filename)), TempFilename(std::move(tempFilename)),
-          OS(std::move(OS)) {}
-    OutputFile(OutputFile &&O)
-        : Filename(std::move(O.Filename)),
-          TempFilename(std::move(O.TempFilename)), OS(std::move(O.OS)) {}
+    OutputFile(std::string filename, std::string tempFilename)
+        : Filename(std::move(filename)), TempFilename(std::move(tempFilename)) {
+    }
   };
 
   /// If the output doesn't support seeking (terminal, pipe). we switch
@@ -387,7 +382,7 @@ public:
   /// \note Most clients should use setFileManager, which will implicitly reset
   /// the virtual file system to the one contained in the file manager.
   void setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS) {
-    VirtualFileSystem = FS;
+    VirtualFileSystem = std::move(FS);
   }
 
   /// }
@@ -584,8 +579,8 @@ public:
   /// \param OutFile - The output file info.
   void addOutputFile(OutputFile &&OutFile);
 
-  /// clearOutputFiles - Clear the output file list, destroying the contained
-  /// output streams.
+  /// clearOutputFiles - Clear the output file list. The underlying output
+  /// streams must have been closed beforehand.
   ///
   /// \param EraseFiles - If true, attempt to erase the files from disk.
   void clearOutputFiles(bool EraseFiles);
@@ -692,19 +687,18 @@ public:
   /// atomically replace the target output on success).
   ///
   /// \return - Null on error.
-  raw_pwrite_stream *createDefaultOutputFile(bool Binary = true,
-                                             StringRef BaseInput = "",
-                                             StringRef Extension = "");
+  std::unique_ptr<raw_pwrite_stream>
+  createDefaultOutputFile(bool Binary = true, StringRef BaseInput = "",
+                          StringRef Extension = "");
 
   /// Create a new output file and add it to the list of tracked output files,
   /// optionally deriving the output path name.
   ///
   /// \return - Null on error.
-  raw_pwrite_stream *createOutputFile(StringRef OutputPath, bool Binary,
-                                      bool RemoveFileOnSignal,
-                                      StringRef BaseInput, StringRef Extension,
-                                      bool UseTemporary,
-                                      bool CreateMissingDirectories = false);
+  std::unique_ptr<raw_pwrite_stream>
+  createOutputFile(StringRef OutputPath, bool Binary, bool RemoveFileOnSignal,
+                   StringRef BaseInput, StringRef Extension, bool UseTemporary,
+                   bool CreateMissingDirectories = false);
 
   /// Create a new output file, optionally deriving the output path name.
   ///
@@ -738,7 +732,7 @@ public:
                    bool CreateMissingDirectories, std::string *ResultPathName,
                    std::string *TempPathName);
 
-  llvm::raw_null_ostream *createNullOutputFile();
+  std::unique_ptr<raw_pwrite_stream> createNullOutputFile();
 
   /// }
   /// @name Initialization Utility Methods
@@ -755,10 +749,12 @@ public:
   ///
   /// \return True on success.
   static bool InitializeSourceManager(const FrontendInputFile &Input,
-                DiagnosticsEngine &Diags,
-                FileManager &FileMgr,
-                SourceManager &SourceMgr,
-                const FrontendOptions &Opts);
+                                      DiagnosticsEngine &Diags,
+                                      FileManager &FileMgr,
+                                      SourceManager &SourceMgr,
+                                      HeaderSearch *HS,
+                                      DependencyOutputOptions &DepOpts,
+                                      const FrontendOptions &Opts);
 
   /// }
 

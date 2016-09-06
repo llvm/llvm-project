@@ -1,6 +1,8 @@
-# RUN: yaml2obj -format=elf %s > %t.o
+# RUN: yaml2obj %s > %t.o
 # RUN: llvm-readobj -s -file-headers %t.o | FileCheck %s
 
+# CHECK: Format: ELF64-amdgpu-hsacobj
+# CHECK: Arch: amdgcn
 # CHECK:  Machine: EM_AMDGPU (0xE0)
 # CHECK: Sections [
 # CHECK: Section {
@@ -12,12 +14,13 @@
 # CHECK: SHF_AMDGPU_HSA_READONLY (0x200000)
 # CHECK: }
 
----
+--- !ELF
 FileHeader:
   Class:   ELFCLASS64
   Data:    ELFDATA2LSB
   Type:    ET_REL
   Machine: EM_AMDGPU
+  OSABI:   ELFOSABI_AMDGPU_HSA
 
 Sections:
   - Name:  .shf_amdgpu

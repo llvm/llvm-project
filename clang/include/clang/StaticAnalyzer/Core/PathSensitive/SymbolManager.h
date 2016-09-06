@@ -58,6 +58,7 @@ public:
   }
 
   void dumpToStream(raw_ostream &os) const override;
+  const MemRegion *getOriginRegion() const override { return getRegion(); }
 
   QualType getType() const override;
 
@@ -127,6 +128,7 @@ public:
   QualType getType() const override;
 
   void dumpToStream(raw_ostream &os) const override;
+  const MemRegion *getOriginRegion() const override { return getRegion(); }
 
   static void Profile(llvm::FoldingSetNodeID& profile, SymbolRef parent,
                       const TypedValueRegion *r) {

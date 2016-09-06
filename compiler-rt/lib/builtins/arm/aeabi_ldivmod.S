@@ -29,3 +29,6 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_ldivmod)
         add     sp, sp, #16
         pop     {r11, pc}
 END_COMPILERRT_FUNCTION(__aeabi_ldivmod)
+
+NO_EXEC_STACK_DIRECTIVE
+

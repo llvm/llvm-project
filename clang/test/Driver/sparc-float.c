@@ -18,7 +18,25 @@
 // RUN: %clang -c %s -### -o %t.o 2>&1 \
 // RUN:     -target sparc-linux-gnu -msoft-float \
 // RUN:   | FileCheck --check-prefix=CHECK-SOFT %s
-// CHECK-SOFT: error: unsupported option '-msoft-float'
+// CHECK-SOFT: "-target-feature" "+soft-float"
+//
+// -mfloat-abi=soft
+// RUN: %clang -c %s -### -o %t.o 2>&1 \
+// RUN:     -target sparc-linux-gnu -mfloat-abi=soft \
+// RUN:   | FileCheck --check-prefix=CHECK-FLOATABISOFT %s
+// CHECK-FLOATABISOFT: "-target-feature" "+soft-float"
+//
+// -mfloat-abi=hard
+// RUN: %clang -c %s -### -o %t.o 2>&1 \
+// RUN:     -target sparc-linux-gnu -mfloat-abi=hard \
+// RUN:   | FileCheck --check-prefix=CHECK-FLOATABIHARD %s
+// CHECK-FLOATABIHARD-NOT: "-target-feature" "+soft-float"
+//
+// check invalid -mfloat-abi
+// RUN: %clang -c %s -### -o %t.o 2>&1 \
+// RUN:     -target sparc-linux-gnu -mfloat-abi=x \
+// RUN:   | FileCheck --check-prefix=CHECK-ERRMSG %s
+// CHECK-ERRMSG: error: invalid float ABI '-mfloat-abi=x'
 //
 // Default sparc64
 // RUN: %clang -c %s -### -o %t.o 2>&1 \
@@ -37,4 +55,22 @@
 // RUN: %clang -c %s -### -o %t.o 2>&1 \
 // RUN:     -target sparc64-linux-gnu -msoft-float \
 // RUN:   | FileCheck --check-prefix=CHECK-SOFT-SPARC64 %s
-// CHECK-SOFT-SPARC64: error: unsupported option '-msoft-float'
+// CHECK-SOFT-SPARC64: "-target-feature" "+soft-float"
+//
+// -mfloat-abi=soft
+// RUN: %clang -c %s -### -o %t.o 2>&1 \
+// RUN:     -target sparc64-linux-gnu -mfloat-abi=soft \
+// RUN:   | FileCheck --check-prefix=CHECK-FLOATABISOFT64 %s
+// CHECK-FLOATABISOFT64: "-target-feature" "+soft-float"
+//
+// -mfloat-abi=hard
+// RUN: %clang -c %s -### -o %t.o 2>&1 \
+// RUN:     -target sparc64-linux-gnu -mfloat-abi=hard \
+// RUN:   | FileCheck --check-prefix=CHECK-FLOATABIHARD64 %s
+// CHECK-FLOATABIHARD64-NOT: "-target-feature" "+soft-float"
+//
+// check invalid -mfloat-abi
+// RUN: %clang -c %s -### -o %t.o 2>&1 \
+// RUN:     -target sparc64-linux-gnu -mfloat-abi=x \
+// RUN:   | FileCheck --check-prefix=CHECK-ERRMSG64 %s
+// CHECK-ERRMSG64: error: invalid float ABI '-mfloat-abi=x'

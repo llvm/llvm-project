@@ -37,10 +37,9 @@ declare void @test(i32, i8**)
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!21}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 173515)", isOptimized: true, emissionKind: 0, file: !20, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 173515)", isOptimized: true, emissionKind: FullDebug, file: !20, enums: !2, retainedTypes: !2, globals: !2)
 !2 = !{}
-!3 = !{!5}
-!5 = distinct !DISubprogram(name: "main", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 4, file: !20, scope: null, type: !7, variables: !2)
+!5 = distinct !DISubprogram(name: "main", line: 3, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 4, file: !20, scope: null, type: !7, variables: !2)
 !6 = !DIFile(filename: "main.cpp", directory: "/private/tmp")
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9, !9, !10}

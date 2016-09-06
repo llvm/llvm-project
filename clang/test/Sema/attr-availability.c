@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -D WARN_PARTIAL -Wpartial-availability -triple x86_64-apple-darwin9 -fsyntax-only -fblocks -verify %s
 // 
 
-void f0() __attribute__((availability(macosx,introduced=10.4,deprecated=10.2))); // expected-warning{{feature cannot be deprecated in OS X version 10.2 before it was introduced in version 10.4; attribute ignored}}
+void f0() __attribute__((availability(macosx,introduced=10.4,deprecated=10.2))); // expected-warning{{feature cannot be deprecated in macOS version 10.2 before it was introduced in version 10.4; attribute ignored}}
 void f1() __attribute__((availability(ios,obsoleted=2.1,deprecated=3.0)));  // expected-warning{{feature cannot be obsoleted in iOS version 2.1 before it was deprecated in version 3.0; attribute ignored}}
 void f2() __attribute__((availability(ios,introduced=2.1,deprecated=2.1)));
 
@@ -26,11 +26,11 @@ enum __attribute__((availability(macosx,introduced=10.8))) PartialEnum {
 };
 
 void test_10095131() {
-  ATSFontGetName("Hello"); // expected-warning {{'ATSFontGetName' is deprecated: first deprecated in OS X 9.0 - use CTFontCopyFullName}}
-  ATSFontGetPostScriptName(100); // expected-error {{'ATSFontGetPostScriptName' is unavailable: obsoleted in OS X 9.0 - use ATSFontGetFullPostScriptName}}
+  ATSFontGetName("Hello"); // expected-warning {{'ATSFontGetName' is deprecated: first deprecated in macOS 9.0 - use CTFontCopyFullName}}
+  ATSFontGetPostScriptName(100); // expected-error {{'ATSFontGetPostScriptName' is unavailable: obsoleted in macOS 9.0 - use ATSFontGetFullPostScriptName}}
 
 #if defined(WARN_PARTIAL)
-  // expected-warning@+2 {{is partial: introduced in OS X 10.8}} expected-note@+2 {{explicitly redeclare 'PartiallyAvailable' to silence this warning}}
+  // expected-warning@+2 {{is only available on macOS 10.8 or newer}} expected-note@+2 {{enclose 'PartiallyAvailable' in an @available check to silence this warning}}
 #endif
   PartiallyAvailable();
 }
@@ -79,22 +79,6 @@ void f8() {
 
 extern int x2 __attribute__((availability(macosx,introduced=10.2))); // expected-note {{previous attribute is here}}
 extern int x2 __attribute__((availability(macosx,introduced=10.5))); // expected-warning {{availability does not match previous declaration}}
-
-
-
-#if __has_feature(attribute_availability_swift)
-# warning "okay"
-// expected-warning@-1{{okay}}
-#else
-# error "Missing __has_feature"
-#endif
-
-
-extern int noSwiftGlobal1 __attribute__((availability(swift, unavailable)));
-extern int noSwiftGlobal1 __attribute__((availability(macosx, introduced=10.1))); // okay
-extern int noSwiftGlobal1 __attribute__((availability(swift, unavailable, message="and this one has a message"))); // okay
-
-extern int noSwiftGlobal2 __attribute__((availability(swift, introduced=5))); // expected-warning{{only 'unavailable' is supported for Swift availability}}
 
 enum Original {
   OriginalDeprecated __attribute__((availability(macosx, deprecated=10.2))), // expected-note + {{'OriginalDeprecated' has been explicitly marked deprecated here}}

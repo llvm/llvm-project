@@ -45,10 +45,12 @@ approximately 3GB.
 
 Software
 --------
-You will need Visual Studio 2013 or higher.
+You will need Visual Studio 2013 or higher, with the latest Update installed. 
 
 You will also need the `CMake <http://www.cmake.org/>`_ build system since it
-generates the project files you will use to build with.
+generates the project files you will use to build with. CMake 2.8.12.2 is the
+minimum required version for building with Visual Studio, though the latest
+version of CMake is recommended.
 
 If you would like to run the LLVM tests you will need `Python
 <http://www.python.org/>`_. Version 2.7 and newer are known to work. You will
@@ -91,6 +93,10 @@ Here's the short story for getting up and running quickly with LLVM:
      using LLVM.  Another important option is ``LLVM_TARGETS_TO_BUILD``,
      which controls the LLVM target architectures that are included on the
      build.
+   * If CMake complains that it cannot find the compiler, make sure that
+     you have the Visual Studio C++ Tools installed, not just Visual Studio
+     itself (trying to create a C++ project in Visual Studio will generally
+     download the C++ tools if they haven't already been).
    * See the :doc:`LLVM CMake guide <CMake>` for detailed information about
      how to configure the LLVM build.
    * CMake generates project files for all build types. To select a specific

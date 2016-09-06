@@ -1,8 +1,8 @@
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=g5 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=g5 | FileCheck %s
 
 ; CHECK:      .section	.opd,"aw",@progbits
 ; CHECK-NEXT: test1:
-; CHECK-NEXT:	.align 3
+; CHECK-NEXT:	.p2align 3
 ; CHECK-NEXT:	.quad .L[[BEGIN:.*]]
 ; CHECK-NEXT:	.quad .TOC.@tocbase
 ; CHECK-NEXT:   .quad 0

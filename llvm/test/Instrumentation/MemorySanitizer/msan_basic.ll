@@ -4,7 +4,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: @llvm.global_ctors {{.*}} @msan.module_ctor
+; CHECK: @llvm.global_ctors {{.*}} { i32 0, void ()* @msan.module_ctor, i8* null }
 
 ; Check the presence and the linkage type of __msan_track_origins and
 ; other interface symbols.
@@ -631,7 +631,7 @@ declare void @llvm.x86.sse.storeu.ps(i8*, <4 x float>) nounwind
 ; CHECK-NOT: br
 ; CHECK-NOT: = or
 ; CHECK: store <4 x i32> {{.*}} align 1
-; CHECK: call void @llvm.x86.sse.storeu.ps
+; CHECK: store <4 x float> %{{.*}}, <4 x float>* %{{.*}}, align 1{{$}}
 ; CHECK: ret void
 
 
@@ -914,8 +914,7 @@ entry:
 ; the third struct goes to the overflow area byval
 
 ; CHECK-LABEL: @VAArgStruct
-; undef
-; CHECK: store i32 -1, i32* {{.*}}@__msan_va_arg_tls {{.*}}, align 8
+; undef not stored to __msan_va_arg_tls - it's a fixed argument
 ; first struct through general purpose registers
 ; CHECK: store i64 {{.*}}, i64* {{.*}}@__msan_va_arg_tls{{.*}}, i64 8){{.*}}, align 8
 ; CHECK: store i64 {{.*}}, i64* {{.*}}@__msan_va_arg_tls{{.*}}, i64 16){{.*}}, align 8
@@ -981,5 +980,5 @@ define i8* @MismatchingCallMustTailCall(i32 %a) sanitize_memory {
 ; CHECK-NEXT: ret i8*
 
 
-; CHECK-LABEL: define internal void @msan.module_ctor
+; CHECK-LABEL: define internal void @msan.module_ctor() {
 ; CHECK: call void @__msan_init()

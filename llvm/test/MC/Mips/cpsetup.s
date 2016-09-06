@@ -1,23 +1,22 @@
-# RUN: llvm-mc -triple mips64-unknown-unknown -target-abi o32 -filetype=obj -o - %s | \
-# RUN:   llvm-objdump -d -r -arch=mips64 - | \
-# RUN:     FileCheck -check-prefix=ALL -check-prefix=O32 %s
+# RUN: llvm-mc -triple mips-unknown-linux -target-abi o32 -filetype=obj -o - %s | \
+# RUN:   llvm-objdump -d -r - | FileCheck -check-prefixes=ALL,O32 %s
 
-# RUN: llvm-mc -triple mips64-unknown-unknown -target-abi o32 %s | \
-# RUN:   FileCheck -check-prefix=ALL -check-prefix=ASM %s
+# RUN: llvm-mc -triple mips-unknown-unknown -target-abi o32 %s | \
+# RUN:   FileCheck -check-prefixes=ALL,ASM,ASM-O32 %s
 
-# RUN: llvm-mc -triple mips64-unknown-unknown -target-abi n32 -filetype=obj -o - %s | \
-# RUN:   llvm-objdump -d -r -t -arch=mips64 - | \
-# RUN:     FileCheck -check-prefix=ALL -check-prefix=NXX -check-prefix=N32 %s
+# RUN: llvm-mc -triple mips64-unknown-linux -target-abi n32 -filetype=obj -o - %s | \
+# RUN:   llvm-objdump -d -r - | \
+# RUN:   FileCheck -check-prefixes=ALL,NXX,N32 %s
 
 # RUN: llvm-mc -triple mips64-unknown-unknown -target-abi n32 %s | \
-# RUN:   FileCheck -check-prefix=ALL -check-prefix=ASM %s
+# RUN:   FileCheck -check-prefixes=ALL,ASM,ASM-N32 %s
 
-# RUN: llvm-mc -triple mips64-unknown-unknown %s -filetype=obj -o - | \
-# RUN:   llvm-objdump -d -r -t -arch=mips64 - | \
-# RUN:     FileCheck -check-prefix=ALL -check-prefix=NXX -check-prefix=N64 %s
+# RUN: llvm-mc -triple mips64-unknown-linux %s -filetype=obj -o - | \
+# RUN:   llvm-objdump -d -r - | \
+# RUN:   FileCheck -check-prefixes=ALL,NXX,N64 %s
 
 # RUN: llvm-mc -triple mips64-unknown-unknown %s | \
-# RUN:   FileCheck -check-prefix=ALL -check-prefix=ASM %s
+# RUN:   FileCheck -check-prefixes=ALL,ASM,ASM-N64 %s
 
         .text
         .option pic2
@@ -31,16 +30,13 @@ t1:
 
 # O32-NOT: __cerror
 
-# FIXME: Direct object emission for N32 is still under development.
-# N32 doesn't allow 3 operations to be specified in the same relocation
-# record like N64 does.
-
 # NXX-NEXT: sd       $gp, 8($sp)
 # NXX-NEXT: lui      $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
+# N32-NEXT: R_MIPS_HI16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
 # NXX-NEXT: addiu    $gp, $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
-# N32-NEXT: addu     $gp, $gp, $25
+# N32-NEXT: R_MIPS_LO16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
 # N64-NEXT: daddu    $gp, $gp, $25
 
 # ASM-NEXT: .cpsetup $25, 8, __cerror
@@ -62,16 +58,13 @@ t2:
 
 # O32-NOT: __cerror
 
-# FIXME: Direct object emission for N32 is still under development.
-# N32 doesn't allow 3 operations to be specified in the same relocation
-# record like N64 does.
-
 # NXX-NEXT: move     $2, $gp
 # NXX-NEXT: lui      $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
+# N32-NEXT: R_MIPS_HI16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
 # NXX-NEXT: addiu    $gp, $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
-# N32-NEXT: addu     $gp, $gp, $25
+# N32-NEXT: R_MIPS_LO16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
 # N64-NEXT: daddu    $gp, $gp, $25
 
 # ASM-NEXT: .cpsetup $25, $2, __cerror
@@ -101,23 +94,21 @@ t3:
 # O32-NEXT:   nop
 # O32-NEXT:   sub $3, $3, $2
 
-# FIXME: Direct object emission for N32 is still under development.
-# N32 doesn't allow 3 operations to be specified in the same relocation
-# record like N64 does.
-
-# NXX: $tmp0:
 # NXX-NEXT: move     $2, $gp
 # NXX-NEXT: lui      $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  $tmp0
+# N32-NEXT: {{^ *0+}}38: R_MIPS_HI16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: {{^ *0+}}40: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16 .text
 # NXX-NEXT: addiu    $gp, $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  $tmp0
-# N32-NEXT: addu     $gp, $gp, $25
+# N32-NEXT: {{^ *0+}}3c: R_MIPS_LO16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: {{^ *0+}}44: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16 .text
 # N64-NEXT: daddu    $gp, $gp, $25
 # NXX-NEXT: nop
 # NXX-NEXT: sub $3, $3, $2
 
-# ASM: $tmp0:
-# ASM-NEXT: .cpsetup $25, $2, $tmp0
+# ASM-O32: [[LABEL:\$tmp0]]:
+# ASM-N32: [[LABEL:\.Ltmp0]]:
+# ASM-N64: [[LABEL:\.Ltmp0]]:
+# ASM-NEXT: .cpsetup $25, $2, [[LABEL]]
 
 # Ensure we have at least one instruction between labels so that the labels
 # we're matching aren't removed.
@@ -158,24 +149,46 @@ t5:
 
 # O32-NOT: __cerror
 
-# FIXME: Direct object emission for N32 is still under development.
-# N32 doesn't allow 3 operations to be specified in the same relocation
-# record like N64 does.
-
 # NXX-NEXT: sd       $gp, 8($sp)
 # NXX-NEXT: lui      $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
+# N32-NEXT: R_MIPS_HI16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
 # NXX-NEXT: addiu    $gp, $gp, 0
-# NXX-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
-# N32-NEXT: addu     $gp, $gp, $25
+# N32-NEXT: R_MIPS_LO16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
 # N64-NEXT: daddu    $gp, $gp, $25
 
 # ASM-NEXT: .cpsetup $25, 8, __cerror
 
 # ALL-NEXT: nop
 
-# NXX-LABEL: SYMBOL TABLE:
+t1b:
+IMM_8 = 8
+        .cpsetup $25, IMM_8, __cerror
+        nop
+        .cpreturn
+        nop
 
-# For .cpsetup with local labels, we need to check if $tmp0 is in the symbol
-# table:
-# NXX: .text  00000000 $tmp0
+# ALL-LABEL: t1b:
+# ASM-NEXT: IMM_8 = 8
+
+# O32-NOT: __cerror
+
+# NXX-NEXT: sd       $gp, 8($sp)
+# NXX-NEXT: lui      $gp, 0
+# N32-NEXT: R_MIPS_HI16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
+# NXX-NEXT: addiu    $gp, $gp, 0
+# N32-NEXT: R_MIPS_LO16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
+# N64-NEXT: daddu    $gp, $gp, $25
+
+# ASM-NEXT: .cpsetup $25, 8, __cerror
+
+# ALL-NEXT: nop
+
+# ASM-NEXT: .cpreturn
+# NXX-NEXT: ld $gp, 8($sp)
+
+# ALL-NEXT: nop
+

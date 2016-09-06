@@ -292,7 +292,7 @@ static const CXXRecordDecl *getCXXRecordType(const MemRegion *MR) {
   return nullptr;
 }
 
-SVal StoreManager::evalDynamicCast(SVal Base, QualType TargetType,
+SVal StoreManager::attemptDownCast(SVal Base, QualType TargetType,
                                    bool &Failed) {
   Failed = false;
 

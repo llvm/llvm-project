@@ -24,6 +24,7 @@
 #define LLVM_LIB_TRANSFORMS_OBJCARC_DEPENDENCYANALYSIS_H
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/ObjCARCInstKind.h"
 
 namespace llvm {
   class BasicBlock;

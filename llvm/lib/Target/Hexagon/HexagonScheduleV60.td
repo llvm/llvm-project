@@ -167,16 +167,6 @@ def HexagonItinerariesV60 :
         InstrItinData<ST_tc_ld_SLOT0    , [InstrStage<3, [SLOT0]>]>,
         InstrItinData<ST_tc_st_SLOT0    , [InstrStage<1, [SLOT0]>]>,
 
-        // Subinsn
-        InstrItinData<SUBINSN_tc_2early_SLOT0, [InstrStage<2, [SLOT0]>]>,
-        InstrItinData<SUBINSN_tc_3stall_SLOT0, [InstrStage<3, [SLOT0]>]>,
-        InstrItinData<SUBINSN_tc_ld_SLOT0    , [InstrStage<3, [SLOT0]>]>,
-        InstrItinData<SUBINSN_tc_1_SLOT01    , [InstrStage<1, [SLOT0, SLOT1]>]>,
-        InstrItinData<SUBINSN_tc_2early_SLOT01,
-                                               [InstrStage<2, [SLOT0, SLOT1]>]>,
-        InstrItinData<SUBINSN_tc_ld_SLOT01   , [InstrStage<3, [SLOT0, SLOT1]>]>,
-        InstrItinData<SUBINSN_tc_st_SLOT01   , [InstrStage<1, [SLOT0, SLOT1]>]>,
-
         // S
         InstrItinData<S_2op_tc_1_SLOT23     , [InstrStage<1, [SLOT2, SLOT3]>]>,
         InstrItinData<S_2op_tc_2_SLOT23     , [InstrStage<2, [SLOT2, SLOT3]>]>,
@@ -303,6 +293,7 @@ def HexagonModelV60 : SchedMachineModel {
   let IssueWidth = 4;
   let Itineraries = HexagonItinerariesV60;
   let LoadLatency = 1;
+  let CompleteModel = 0;
 }
 
 //===----------------------------------------------------------------------===//

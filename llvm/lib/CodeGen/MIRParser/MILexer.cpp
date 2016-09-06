@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MILexer.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
@@ -20,6 +21,9 @@
 using namespace llvm;
 
 namespace {
+
+typedef function_ref<void(StringRef::iterator Loc, const Twine &)>
+    ErrorCallbackType;
 
 /// This class provides a way to iterate and get characters from the source
 /// string.
@@ -133,9 +137,7 @@ static std::string unescapeQuotedString(StringRef Value) {
 }
 
 /// Lex a string constant using the following regular expression: \"[^\"]*\"
-static Cursor lexStringConstant(
-    Cursor C,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor lexStringConstant(Cursor C, ErrorCallbackType ErrorCallback) {
   assert(C.peek() == '"');
   for (C.advance(); C.peek() != '"'; C.advance()) {
     if (C.isEOF() || isNewlineChar(C.peek())) {
@@ -149,9 +151,8 @@ static Cursor lexStringConstant(
   return C;
 }
 
-static Cursor lexName(
-    Cursor C, MIToken &Token, MIToken::TokenKind Type, unsigned PrefixLength,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor lexName(Cursor C, MIToken &Token, MIToken::TokenKind Type,
+                      unsigned PrefixLength, ErrorCallbackType ErrorCallback) {
   auto Range = C;
   C.advance(PrefixLength);
   if (C.peek() == '"') {
@@ -172,14 +173,20 @@ static Cursor lexName(
   return C;
 }
 
-static Cursor maybeLexIntegerType(Cursor C, MIToken &Token) {
-  if (C.peek() != 'i' || !isdigit(C.peek(1)))
+static Cursor maybeLexIntegerOrScalarType(Cursor C, MIToken &Token) {
+  if ((C.peek() != 'i' && C.peek() != 's' && C.peek() != 'p') ||
+      !isdigit(C.peek(1)))
     return None;
+  char Kind = C.peek();
   auto Range = C;
-  C.advance(); // Skip 'i'
+  C.advance(); // Skip 'i', 's', or 'p'
   while (isdigit(C.peek()))
     C.advance();
-  Token.reset(MIToken::IntegerType, Range.upto(C));
+
+  Token.reset(Kind == 'i'
+                  ? MIToken::IntegerType
+                  : (Kind == 's' ? MIToken::ScalarType : MIToken::PointerType),
+              Range.upto(C));
   return C;
 }
 
@@ -198,12 +205,13 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("tied-def", MIToken::kw_tied_def)
       .Case("frame-setup", MIToken::kw_frame_setup)
       .Case("debug-location", MIToken::kw_debug_location)
-      .Case(".cfi_same_value", MIToken::kw_cfi_same_value)
-      .Case(".cfi_offset", MIToken::kw_cfi_offset)
-      .Case(".cfi_def_cfa_register", MIToken::kw_cfi_def_cfa_register)
-      .Case(".cfi_def_cfa_offset", MIToken::kw_cfi_def_cfa_offset)
-      .Case(".cfi_def_cfa", MIToken::kw_cfi_def_cfa)
+      .Case("same_value", MIToken::kw_cfi_same_value)
+      .Case("offset", MIToken::kw_cfi_offset)
+      .Case("def_cfa_register", MIToken::kw_cfi_def_cfa_register)
+      .Case("def_cfa_offset", MIToken::kw_cfi_def_cfa_offset)
+      .Case("def_cfa", MIToken::kw_cfi_def_cfa)
       .Case("blockaddress", MIToken::kw_blockaddress)
+      .Case("intrinsic", MIToken::kw_intrinsic)
       .Case("target-index", MIToken::kw_target_index)
       .Case("half", MIToken::kw_half)
       .Case("float", MIToken::kw_float)
@@ -230,7 +238,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
 }
 
 static Cursor maybeLexIdentifier(Cursor C, MIToken &Token) {
-  if (!isalpha(C.peek()) && C.peek() != '_' && C.peek() != '.')
+  if (!isalpha(C.peek()) && C.peek() != '_')
     return None;
   auto Range = C;
   while (isIdentifierChar(C.peek()))
@@ -241,9 +249,8 @@ static Cursor maybeLexIdentifier(Cursor C, MIToken &Token) {
   return C;
 }
 
-static Cursor maybeLexMachineBasicBlock(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexMachineBasicBlock(Cursor C, MIToken &Token,
+                                        ErrorCallbackType ErrorCallback) {
   bool IsReference = C.remaining().startswith("%bb.");
   if (!IsReference && !C.remaining().startswith("bb."))
     return None;
@@ -326,9 +333,17 @@ static Cursor maybeLexConstantPoolItem(Cursor C, MIToken &Token) {
   return maybeLexIndex(C, Token, "%const.", MIToken::ConstantPoolItem);
 }
 
-static Cursor maybeLexIRBlock(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexSubRegisterIndex(Cursor C, MIToken &Token,
+                                       ErrorCallbackType ErrorCallback) {
+  const StringRef Rule = "%subreg.";
+  if (!C.remaining().startswith(Rule))
+    return None;
+  return lexName(C, Token, MIToken::SubRegisterIndex, Rule.size(),
+                 ErrorCallback);
+}
+
+static Cursor maybeLexIRBlock(Cursor C, MIToken &Token,
+                              ErrorCallbackType ErrorCallback) {
   const StringRef Rule = "%ir-block.";
   if (!C.remaining().startswith(Rule))
     return None;
@@ -337,9 +352,8 @@ static Cursor maybeLexIRBlock(
   return lexName(C, Token, MIToken::NamedIRBlock, Rule.size(), ErrorCallback);
 }
 
-static Cursor maybeLexIRValue(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexIRValue(Cursor C, MIToken &Token,
+                              ErrorCallbackType ErrorCallback) {
   const StringRef Rule = "%ir.";
   if (!C.remaining().startswith(Rule))
     return None;
@@ -359,6 +373,11 @@ static Cursor lexVirtualRegister(Cursor C, MIToken &Token) {
   return C;
 }
 
+/// Returns true for a character allowed in a register name.
+static bool isRegisterChar(char C) {
+  return isIdentifierChar(C) && C != '.';
+}
+
 static Cursor maybeLexRegister(Cursor C, MIToken &Token) {
   if (C.peek() != '%')
     return None;
@@ -366,16 +385,15 @@ static Cursor maybeLexRegister(Cursor C, MIToken &Token) {
     return lexVirtualRegister(C, Token);
   auto Range = C;
   C.advance(); // Skip '%'
-  while (isIdentifierChar(C.peek()))
+  while (isRegisterChar(C.peek()))
     C.advance();
   Token.reset(MIToken::NamedRegister, Range.upto(C))
       .setStringValue(Range.upto(C).drop_front(1)); // Drop the '%'
   return C;
 }
 
-static Cursor maybeLexGlobalValue(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexGlobalValue(Cursor C, MIToken &Token,
+                                  ErrorCallbackType ErrorCallback) {
   if (C.peek() != '@')
     return None;
   if (!isdigit(C.peek(1)))
@@ -391,9 +409,8 @@ static Cursor maybeLexGlobalValue(
   return C;
 }
 
-static Cursor maybeLexExternalSymbol(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexExternalSymbol(Cursor C, MIToken &Token,
+                                     ErrorCallbackType ErrorCallback) {
   if (C.peek() != '$')
     return None;
   return lexName(C, Token, MIToken::ExternalSymbol, /*PrefixLength=*/1,
@@ -456,9 +473,8 @@ static MIToken::TokenKind getMetadataKeywordKind(StringRef Identifier) {
       .Default(MIToken::Error);
 }
 
-static Cursor maybeLexExlaim(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexExlaim(Cursor C, MIToken &Token,
+                             ErrorCallbackType ErrorCallback) {
   if (C.peek() != '!')
     return None;
   auto Range = C;
@@ -481,6 +497,8 @@ static MIToken::TokenKind symbolToken(char C) {
   switch (C) {
   case ',':
     return MIToken::comma;
+  case '.':
+    return MIToken::dot;
   case '=':
     return MIToken::equal;
   case ':':
@@ -497,6 +515,10 @@ static MIToken::TokenKind symbolToken(char C) {
     return MIToken::plus;
   case '-':
     return MIToken::minus;
+  case '<':
+    return MIToken::less;
+  case '>':
+    return MIToken::greater;
   default:
     return MIToken::Error;
   }
@@ -527,9 +549,8 @@ static Cursor maybeLexNewline(Cursor C, MIToken &Token) {
   return C;
 }
 
-static Cursor maybeLexEscapedIRValue(
-    Cursor C, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+static Cursor maybeLexEscapedIRValue(Cursor C, MIToken &Token,
+                                     ErrorCallbackType ErrorCallback) {
   if (C.peek() != '`')
     return None;
   auto Range = C;
@@ -551,16 +572,15 @@ static Cursor maybeLexEscapedIRValue(
   return C;
 }
 
-StringRef llvm::lexMIToken(
-    StringRef Source, MIToken &Token,
-    function_ref<void(StringRef::iterator Loc, const Twine &)> ErrorCallback) {
+StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
+                           ErrorCallbackType ErrorCallback) {
   auto C = skipComment(skipWhitespace(Cursor(Source)));
   if (C.isEOF()) {
     Token.reset(MIToken::Eof, C.remaining());
     return C.remaining();
   }
 
-  if (Cursor R = maybeLexIntegerType(C, Token))
+  if (Cursor R = maybeLexIntegerOrScalarType(C, Token))
     return R.remaining();
   if (Cursor R = maybeLexMachineBasicBlock(C, Token, ErrorCallback))
     return R.remaining();
@@ -573,6 +593,8 @@ StringRef llvm::lexMIToken(
   if (Cursor R = maybeLexFixedStackObject(C, Token))
     return R.remaining();
   if (Cursor R = maybeLexConstantPoolItem(C, Token))
+    return R.remaining();
+  if (Cursor R = maybeLexSubRegisterIndex(C, Token, ErrorCallback))
     return R.remaining();
   if (Cursor R = maybeLexIRBlock(C, Token, ErrorCallback))
     return R.remaining();

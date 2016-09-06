@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fprofile-instr-generate -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name casts.c %s | FileCheck %s
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -main-file-name casts.c %s | FileCheck %s
 
 int main() {                                                   // CHECK: File 0, [[@LINE]]:12 -> [[@LINE+4]]:2 = #0
                                                                // CHECK-NEXT: File 0, [[@LINE+1]]:41 -> [[@LINE+1]]:54 = #1

@@ -1,0 +1,13 @@
+!<arch>
+foo.c           1444941645  124   0     100644  17        `
+void foo(void){}
+
+#1/1234         1469564779  124   0     100644  126       `
+1234567890123456Xhello.c#include <stdio.h>
+#include <stdlib.h>
+int
+main()
+{
+	printf("Hello World\n");
+	return EXIT_SUCCESS;
+}

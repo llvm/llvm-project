@@ -13,6 +13,8 @@ void i() {
   h<u8'2'>();
 }
 
+char j = '\xFF';
+
 // CHECK: char c = u8'1';
 // CHECK-NEXT: char d = '1';
 // CHECK-NEXT: char e = U'1';
@@ -22,3 +24,4 @@ void i() {
 // CHECK: template <char c = u8'1'>
 
 // CHECK: h<u8'2'>();
+// CHECK: char j = '\xff';

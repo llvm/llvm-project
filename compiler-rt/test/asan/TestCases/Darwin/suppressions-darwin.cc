@@ -4,6 +4,7 @@
 
 // Check that suppressing the interceptor by name works.
 // RUN: echo "interceptor_name:memmove" > %t.supp
+// RUN: echo "interceptor_name:memcpy" >> %t.supp
 // RUN: %env_asan_opts=suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 
 // Check that suppressing by interceptor name works even without the symbolizer

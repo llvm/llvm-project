@@ -139,7 +139,6 @@ class MEMInst_V4<dag outs, dag ins, string asmstr, list<dag> pattern = [],
                  string cstr = "", InstrItinClass itin = V4LDST_tc_st_SLOT0>
   : MEMInst<outs, ins, asmstr, pattern, cstr, itin>;
 
-let isCodeGenOnly = 1 in
 class EXTENDERInst<dag outs, dag ins, string asmstr, list<dag> pattern = []>
   : InstHexagon<outs, ins, asmstr, pattern, "", EXTENDER_tc_1_SLOT0123,
                 TypePREFIX>, OpcodeHexagon;
@@ -151,5 +150,11 @@ class SUBInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
 
 class CJInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
               string cstr = "">
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, COMPOUND_CJ_ARCHDEPSLOT, TypeCOMPOUND>,
+    OpcodeHexagon;
+
+class CJInst_JMPSET<dag outs, dag ins, string asmstr, list<dag> pattern = [],
+              string cstr = "">
   : InstHexagon<outs, ins, asmstr, pattern, cstr, COMPOUND, TypeCOMPOUND>,
     OpcodeHexagon;
+

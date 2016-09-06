@@ -2,7 +2,8 @@
 
 declare i32 @llvm.x86.xbegin() nounwind
 declare void @llvm.x86.xend() nounwind
-declare void @llvm.x86.xabort(i8) noreturn nounwind
+declare void @llvm.x86.xabort(i8) nounwind
+declare void @f1()
 
 define i32 @test_xbegin() nounwind uwtable {
 entry:
@@ -24,7 +25,20 @@ entry:
 define void @test_xabort() nounwind uwtable {
 entry:
   tail call void @llvm.x86.xabort(i8 2)
-  unreachable
+  ret void
 ; CHECK: test_xabort
 ; CHECK: xabort $2
 }
+
+define void @f2(i32 %x) nounwind uwtable {
+entry:
+  %x.addr = alloca i32, align 4
+  store i32 %x, i32* %x.addr, align 4
+  call void @llvm.x86.xabort(i8 1)
+  call void @f1()
+  ret void
+; CHECK-LABEL: f2
+; CHECK: xabort  $1
+; CHECK: callq   f1
+}
+ 

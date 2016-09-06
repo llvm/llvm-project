@@ -11,14 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Tooling/Refactoring.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Format/Format.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Tooling/Refactoring.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_os_ostream.h"
 
@@ -30,7 +30,9 @@ RefactoringTool::RefactoringTool(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps)
     : ClangTool(Compilations, SourcePaths, PCHContainerOps) {}
 
-Replacements &RefactoringTool::getReplacements() { return Replace; }
+std::map<std::string, Replacements> &RefactoringTool::getReplacements() {
+  return FileToReplaces;
+}
 
 int RefactoringTool::runAndSave(FrontendActionFactory *ActionFactory) {
   if (int Result = run(ActionFactory)) {
@@ -54,11 +56,41 @@ int RefactoringTool::runAndSave(FrontendActionFactory *ActionFactory) {
 }
 
 bool RefactoringTool::applyAllReplacements(Rewriter &Rewrite) {
-  return tooling::applyAllReplacements(Replace, Rewrite);
+  bool Result = true;
+  for (const auto &Entry : FileToReplaces)
+    Result = tooling::applyAllReplacements(Entry.second, Rewrite) && Result;
+  return Result;
 }
 
 int RefactoringTool::saveRewrittenFiles(Rewriter &Rewrite) {
   return Rewrite.overwriteChangedFiles() ? 1 : 0;
+}
+
+bool formatAndApplyAllReplacements(
+    const std::map<std::string, Replacements> &FileToReplaces, Rewriter &Rewrite,
+    StringRef Style) {
+  SourceManager &SM = Rewrite.getSourceMgr();
+  FileManager &Files = SM.getFileManager();
+
+  bool Result = true;
+  for (const auto &FileAndReplaces : FileToReplaces) {
+    const std::string &FilePath = FileAndReplaces.first;
+    auto &CurReplaces = FileAndReplaces.second;
+
+    const FileEntry *Entry = Files.getFile(FilePath);
+    FileID ID = SM.getOrCreateFileID(Entry, SrcMgr::C_User);
+    StringRef Code = SM.getBufferData(ID);
+
+    format::FormatStyle CurStyle = format::getStyle(Style, FilePath, "LLVM");
+    auto NewReplacements =
+        format::formatReplacements(Code, CurReplaces, CurStyle);
+    if (!NewReplacements) {
+      llvm::errs() << llvm::toString(NewReplacements.takeError()) << "\n";
+      return false;
+    }
+    Result = applyAllReplacements(*NewReplacements, Rewrite) && Result;
+  }
+  return Result;
 }
 
 } // end namespace tooling

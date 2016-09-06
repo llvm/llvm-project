@@ -1,0 +1,19 @@
+; RUN: opt < %s -inline -S | FileCheck %s
+
+; CHECK-LABEL: caller
+; CHECK: call void @callee
+define void @caller(i32 %a, i1 %b) #0 {
+  call void @callee(i32 %a, i1 %b)
+  unreachable
+}
+
+define void @callee(i32 %a, i1 %b) {
+  call void asm sideeffect "", ""()
+  br i1 %b, label %bb1, label %bb2
+bb1:
+  call void asm sideeffect "", ""()
+  ret void
+bb2:
+  call void asm sideeffect "", ""()
+  ret void
+}

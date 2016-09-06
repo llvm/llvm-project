@@ -150,6 +150,14 @@ namespace PR13527 {
   Y::~Y() = default; // expected-error {{definition of explicitly defaulted}}
 }
 
+namespace PR27699 {
+  struct X {
+    X();
+  };
+  X::X() = default; // expected-note {{here}}
+  X::X() = default; // expected-error {{redefinition of 'X'}}
+}
+
 namespace PR14577 {
   template<typename T>
   struct Outer {
@@ -187,4 +195,16 @@ namespace PR15597 {
   };
   A<int> a;
   B<int> b; // expected-note {{here}}
+}
+
+namespace PR27941 {
+struct ExplicitBool {
+  ExplicitBool &operator=(bool) = default; // expected-error{{only special member functions may be defaulted}}
+  int member;
+};
+
+int fn() {
+  ExplicitBool t;
+  t = true;
+}
 }

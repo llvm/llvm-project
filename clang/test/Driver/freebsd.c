@@ -82,6 +82,7 @@
 // RUN: %clang -no-canonical-prefixes -target x86_64-pc-freebsd8 -static %s \
 // RUN:   --sysroot=%S/Inputs/multiarch_freebsd64_tree -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-STATIC %s
+// CHECK-STATIC: ld{{.*}}" "--eh-frame-hdr" "-Bstatic"
 // CHECK-STATIC: crt1.o
 // CHECK-STATIC: crtbeginT.o
 

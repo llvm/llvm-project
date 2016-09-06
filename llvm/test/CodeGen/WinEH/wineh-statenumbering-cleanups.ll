@@ -44,7 +44,6 @@ entry:
     to label %exit unwind label %cleanup.pad
 cleanup.pad:
   ; CHECK: cleanup.pad:
-  ; CHECK:   store i32 1
   ; CHECK:   invoke void @f(i32 0)
   %cleanup = cleanuppad within none []
   invoke void @f(i32 0)

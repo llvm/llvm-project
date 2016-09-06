@@ -4,13 +4,12 @@
 !llvm.module.flags = !{!0}
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 
-; Make a bunch of type references.  Note that !4 references !"0.bad" (instead
-; of !"4.bad") to test error ordering.
+; Make a bunch of type references.
 !typerefs = !{!1, !2, !3, !4}
-!1 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, baseType: !"1.good")
+!1 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, baseType: !8)
 !2 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, baseType: !"2.bad")
-!3 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, baseType: !"3.good")
-!4 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, baseType: !"0.bad")
+!3 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, baseType: !9)
+!4 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, baseType: !"4.bad")
 
 ; Add a minimal compile unit to resolve some of the type references.
 !llvm.dbg.cu = !{!5}
@@ -21,12 +20,12 @@
 !9 = !DICompositeType(tag: DW_TAG_structure_type, identifier: "3.good")
 
 ; CHECK:      assembly parsed, but does not verify
-; CHECK-NEXT: unresolved type ref
-; CHECK-NEXT: !"0.bad"
-; CHECK-NEXT: !DIDerivedType(tag: DW_TAG_pointer_type
-; CHECK-SAME:                baseType: !"0.bad"
-; CHECK-NEXT: unresolved type ref
-; CHECK-NEXT: !"2.bad"
+; CHECK-NEXT: invalid base type
 ; CHECK-NEXT: !DIDerivedType(tag: DW_TAG_pointer_type
 ; CHECK-SAME:                baseType: !"2.bad"
-; CHECK-NOT:  unresolved
+; CHECK-NEXT: !"2.bad"
+; CHECK-NEXT: invalid base type
+; CHECK-NEXT: !DIDerivedType(tag: DW_TAG_pointer_type
+; CHECK-SAME:                baseType: !"4.bad"
+; CHECK-NEXT: !"4.bad"
+; CHECK-NOT:  invalid

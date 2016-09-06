@@ -18,14 +18,14 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/CallSite.h"
-#include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Statepoint.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLowering.h"
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -101,8 +101,8 @@ class SelectionDAGBuilder {
     unsigned SDNodeOrder;
   public:
     DanglingDebugInfo() : DI(nullptr), dl(DebugLoc()), SDNodeOrder(0) { }
-    DanglingDebugInfo(const DbgValueInst *di, DebugLoc DL, unsigned SDNO) :
-      DI(di), dl(DL), SDNodeOrder(SDNO) { }
+    DanglingDebugInfo(const DbgValueInst *di, DebugLoc DL, unsigned SDNO)
+        : DI(di), dl(std::move(DL)), SDNodeOrder(SDNO) {}
     const DbgValueInst* getDI() { return DI; }
     DebugLoc getdl() { return dl; }
     unsigned getSDNodeOrder() { return SDNodeOrder; }
@@ -260,8 +260,9 @@ private:
   };
   struct JumpTableHeader {
     JumpTableHeader(APInt F, APInt L, const Value *SV, MachineBasicBlock *H,
-                    bool E = false):
-      First(F), Last(L), SValue(SV), HeaderBB(H), Emitted(E) {}
+                    bool E = false)
+        : First(std::move(F)), Last(std::move(L)), SValue(SV), HeaderBB(H),
+          Emitted(E) {}
     APInt First;
     APInt Last;
     const Value *SValue;
@@ -286,9 +287,9 @@ private:
     BitTestBlock(APInt F, APInt R, const Value *SV, unsigned Rg, MVT RgVT,
                  bool E, bool CR, MachineBasicBlock *P, MachineBasicBlock *D,
                  BitTestInfo C, BranchProbability Pr)
-        : First(F), Range(R), SValue(SV), Reg(Rg), RegVT(RgVT), Emitted(E),
-          ContiguousRange(CR), Parent(P), Default(D), Cases(std::move(C)),
-          Prob(Pr) {}
+        : First(std::move(F)), Range(std::move(R)), SValue(SV), Reg(Rg),
+          RegVT(RgVT), Emitted(E), ContiguousRange(CR), Parent(P), Default(D),
+          Cases(std::move(C)), Prob(Pr) {}
     APInt First;
     APInt Range;
     const Value *SValue;
@@ -303,12 +304,9 @@ private:
     BranchProbability DefaultProb;
   };
 
-  /// Minimum jump table density, in percent.
-  enum { MinJumpTableDensity = 40 };
-
   /// Check whether a range of clusters is dense enough for a jump table.
   bool isDense(const CaseClusterVector &Clusters, unsigned *TotalCases,
-               unsigned First, unsigned Last);
+               unsigned First, unsigned Last, unsigned MinDensity);
 
   /// Build a jump table cluster from Clusters[First..Last]. Returns false if it
   /// decides it's not a good idea.
@@ -457,7 +455,14 @@ private:
   ///
   ///     c. After we finish selecting the basic block, in FinishBasicBlock if
   ///        the StackProtectorDescriptor attached to the SelectionDAGBuilder is
-  ///        initialized, we first find a splice point in the parent basic block
+  ///        initialized, we produce the validation code with one of these
+  ///        techniques:
+  ///          1) with a call to a guard check function
+  ///          2) with inlined instrumentation
+  ///
+  ///        1) We insert a call to the check function before the terminator.
+  ///
+  ///        2) We first find a splice point in the parent basic block
   ///        before the terminator and then splice the terminator of said basic
   ///        block into the success basic block. Then we code-gen a new tail for
   ///        the parent basic block consisting of the two loads, the comparison,
@@ -467,29 +472,31 @@ private:
   ///        the same function, use the same failure basic block).
   class StackProtectorDescriptor {
   public:
-    StackProtectorDescriptor() : ParentMBB(nullptr), SuccessMBB(nullptr),
-                                 FailureMBB(nullptr), Guard(nullptr),
-                                 GuardReg(0) { }
+    StackProtectorDescriptor()
+        : ParentMBB(nullptr), SuccessMBB(nullptr), FailureMBB(nullptr) {}
 
     /// Returns true if all fields of the stack protector descriptor are
     /// initialized implying that we should/are ready to emit a stack protector.
     bool shouldEmitStackProtector() const {
-      return ParentMBB && SuccessMBB && FailureMBB && Guard;
+      return ParentMBB && SuccessMBB && FailureMBB;
+    }
+
+    bool shouldEmitFunctionBasedCheckStackProtector() const {
+      return ParentMBB && !SuccessMBB && !FailureMBB;
     }
 
     /// Initialize the stack protector descriptor structure for a new basic
     /// block.
-    void initialize(const BasicBlock *BB,
-                    MachineBasicBlock *MBB,
-                    const CallInst &StackProtCheckCall) {
+    void initialize(const BasicBlock *BB, MachineBasicBlock *MBB,
+                    bool FunctionBasedInstrumentation) {
       // Make sure we are not initialized yet.
       assert(!shouldEmitStackProtector() && "Stack Protector Descriptor is "
              "already initialized!");
       ParentMBB = MBB;
-      SuccessMBB = AddSuccessorMBB(BB, MBB, /* IsLikely */ true);
-      FailureMBB = AddSuccessorMBB(BB, MBB, /* IsLikely */ false, FailureMBB);
-      if (!Guard)
-        Guard = StackProtCheckCall.getArgOperand(0);
+      if (!FunctionBasedInstrumentation) {
+        SuccessMBB = AddSuccessorMBB(BB, MBB, /* IsLikely */ true);
+        FailureMBB = AddSuccessorMBB(BB, MBB, /* IsLikely */ false, FailureMBB);
+      }
     }
 
     /// Reset state that changes when we handle different basic blocks.
@@ -518,17 +525,11 @@ private:
     /// always the same.
     void resetPerFunctionState() {
       FailureMBB = nullptr;
-      Guard = nullptr;
-      GuardReg = 0;
     }
 
     MachineBasicBlock *getParentMBB() { return ParentMBB; }
     MachineBasicBlock *getSuccessMBB() { return SuccessMBB; }
     MachineBasicBlock *getFailureMBB() { return FailureMBB; }
-    const Value *getGuard() { return Guard; }
-
-    unsigned getGuardReg() const { return GuardReg; }
-    void setGuardReg(unsigned R) { GuardReg = R; }
 
   private:
     /// The basic block for which we are generating the stack protector.
@@ -547,13 +548,6 @@ private:
     /// This basic block visited on stack protector check failure that will
     /// contain a call to __stack_chk_fail().
     MachineBasicBlock *FailureMBB;
-
-    /// The guard variable which we will compare against the stored value in the
-    /// stack protector stack slot.
-    const Value *Guard;
-
-    /// The virtual register holding the stack guard value.
-    unsigned GuardReg;
 
     /// Add a successor machine basic block to ParentMBB. If the successor mbb
     /// has not been created yet (i.e. if SuccMBB = 0), then the machine basic
@@ -708,28 +702,88 @@ public:
   void LowerCallTo(ImmutableCallSite CS, SDValue Callee, bool IsTailCall,
                    const BasicBlock *EHPadBB = nullptr);
 
-  std::pair<SDValue, SDValue> lowerCallOperands(
-          ImmutableCallSite CS,
-          unsigned ArgIdx,
-          unsigned NumArgs,
-          SDValue Callee,
-          Type *ReturnTy,
-          const BasicBlock *EHPadBB = nullptr,
-          bool IsPatchPoint = false);
+  // Lower range metadata from 0 to N to assert zext to an integer of nearest
+  // floor power of two.
+  SDValue lowerRangeToAssertZExt(SelectionDAG &DAG, const Instruction &I,
+                                 SDValue Op);
+
+  void populateCallLoweringInfo(TargetLowering::CallLoweringInfo &CLI,
+                                ImmutableCallSite CS, unsigned ArgIdx,
+                                unsigned NumArgs, SDValue Callee,
+                                Type *ReturnTy, bool IsPatchPoint);
+
+  std::pair<SDValue, SDValue>
+  lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
+                 const BasicBlock *EHPadBB = nullptr);
 
   /// UpdateSplitBlock - When an MBB was split during scheduling, update the
   /// references that need to refer to the last resulting block.
   void UpdateSplitBlock(MachineBasicBlock *First, MachineBasicBlock *Last);
 
+  /// Describes a gc.statepoint or a gc.statepoint like thing for the purposes
+  /// of lowering into a STATEPOINT node.
+  struct StatepointLoweringInfo {
+    /// Bases[i] is the base pointer for Ptrs[i].  Together they denote the set
+    /// of gc pointers this STATEPOINT has to relocate.
+    SmallVector<const Value *, 16> Bases;
+    SmallVector<const Value *, 16> Ptrs;
+
+    /// The set of gc.relocate calls associated with this gc.statepoint.
+    SmallVector<const GCRelocateInst *, 16> GCRelocates;
+
+    /// The full list of gc arguments to the gc.statepoint being lowered.
+    ArrayRef<const Use> GCArgs;
+
+    /// The gc.statepoint instruction.
+    const Instruction *StatepointInstr = nullptr;
+
+    /// The list of gc transition arguments present in the gc.statepoint being
+    /// lowered.
+    ArrayRef<const Use> GCTransitionArgs;
+
+    /// The ID that the resulting STATEPOINT instruction has to report.
+    unsigned ID = -1;
+
+    /// Information regarding the underlying call instruction.
+    TargetLowering::CallLoweringInfo CLI;
+
+    /// The deoptimization state associated with this gc.statepoint call, if
+    /// any.
+    ArrayRef<const Use> DeoptState;
+
+    /// Flags associated with the meta arguments being lowered.
+    uint64_t StatepointFlags = -1;
+
+    /// The number of patchable bytes the call needs to get lowered into.
+    unsigned NumPatchBytes = -1;
+
+    /// The exception handling unwind destination, in case this represents an
+    /// invoke of gc.statepoint.
+    const BasicBlock *EHPadBB = nullptr;
+
+    explicit StatepointLoweringInfo(SelectionDAG &DAG) : CLI(DAG) {}
+  };
+
+  /// Lower \p SLI into a STATEPOINT instruction.
+  SDValue LowerAsSTATEPOINT(StatepointLoweringInfo &SLI);
+
   // This function is responsible for the whole statepoint lowering process.
   // It uniformly handles invoke and call statepoints.
   void LowerStatepoint(ImmutableStatepoint Statepoint,
                        const BasicBlock *EHPadBB = nullptr);
-private:
-  std::pair<SDValue, SDValue>
-  lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
-                 const BasicBlock *EHPadBB = nullptr);
 
+  void LowerCallSiteWithDeoptBundle(ImmutableCallSite CS, SDValue Callee,
+                                    const BasicBlock *EHPadBB);
+
+  void LowerDeoptimizeCall(const CallInst *CI);
+  void LowerDeoptimizingReturn();
+
+  void LowerCallSiteWithDeoptBundleImpl(ImmutableCallSite CS, SDValue Callee,
+                                        const BasicBlock *EHPadBB,
+                                        bool VarArgDisallowed,
+                                        bool ForceVoidReturnTy);
+
+private:
   // Terminator instructions.
   void visitRet(const ReturnInst &I);
   void visitBr(const BranchInst &I);
@@ -831,6 +885,7 @@ private:
   void visitPHI(const PHINode &I);
   void visitCall(const CallInst &I);
   bool visitMemCmpCall(const CallInst &I);
+  bool visitMemPCpyCall(const CallInst &I);
   bool visitMemChrCall(const CallInst &I);
   bool visitStrCpyCall(const CallInst &I, bool isStpcpy);
   bool visitStrCmpCall(const CallInst &I);
@@ -855,10 +910,9 @@ private:
   void visitPatchpoint(ImmutableCallSite CS,
                        const BasicBlock *EHPadBB = nullptr);
 
-  // These three are implemented in StatepointLowering.cpp
-  void visitStatepoint(const CallInst &I);
+  // These two are implemented in StatepointLowering.cpp
   void visitGCRelocate(const GCRelocateInst &I);
-  void visitGCResult(const CallInst &I);
+  void visitGCResult(const GCResultInst &I);
 
   void visitUserOp1(const Instruction &I) {
     llvm_unreachable("UserOp1 should not exist at instruction selection time!");
@@ -871,6 +925,8 @@ private:
                                SDValue Value, bool IsSigned);
 
   void HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB);
+
+  void emitInlineAsmError(ImmutableCallSite CS, const Twine &Message);
 
   /// EmitFuncArgumentDbgValue - If V is an function argument then create
   /// corresponding DBG_VALUE machine instruction for it now. At the end of
@@ -886,6 +942,11 @@ private:
   /// Update the DAG and DAG builder with the relevant information after
   /// a new root node has been created which could be a tail call.
   void updateDAGForMaybeTailCall(SDValue MaybeTC);
+
+  /// Return the appropriate SDDbgValue based on N.
+  SDDbgValue *getDbgValue(SDValue N, DILocalVariable *Variable,
+                          DIExpression *Expr, int64_t Offset, DebugLoc dl,
+                          unsigned DbgSDNodeOrder);
 };
 
 /// RegsForValue - This struct represents the registers (physical or virtual)
@@ -939,8 +1000,7 @@ struct RegsForValue {
   /// Chain/Flag as the input and updates them for the output Chain/Flag.
   /// If the Flag pointer is NULL, no flag is used.
   SDValue getCopyFromRegs(SelectionDAG &DAG, FunctionLoweringInfo &FuncInfo,
-                          SDLoc dl,
-                          SDValue &Chain, SDValue *Flag,
+                          const SDLoc &dl, SDValue &Chain, SDValue *Flag,
                           const Value *V = nullptr) const;
 
   /// getCopyToRegs - Emit a series of CopyToReg nodes that copies the specified
@@ -948,18 +1008,16 @@ struct RegsForValue {
   /// as the input and updates them for the output Chain/Flag.  If the Flag
   /// pointer is nullptr, no flag is used.  If V is not nullptr, then it is used
   /// in printing better diagnostic messages on error.
-  void
-  getCopyToRegs(SDValue Val, SelectionDAG &DAG, SDLoc dl, SDValue &Chain,
-                SDValue *Flag, const Value *V = nullptr,
-                ISD::NodeType PreferredExtendType = ISD::ANY_EXTEND) const;
+  void getCopyToRegs(SDValue Val, SelectionDAG &DAG, const SDLoc &dl,
+                     SDValue &Chain, SDValue *Flag, const Value *V = nullptr,
+                     ISD::NodeType PreferredExtendType = ISD::ANY_EXTEND) const;
 
   /// AddInlineAsmOperands - Add this value to the specified inlineasm node
   /// operand list.  This adds the code marker, matching input operand index
   /// (if applicable), and includes the number of values added into it.
-  void AddInlineAsmOperands(unsigned Kind,
-                            bool HasMatching, unsigned MatchingIdx, SDLoc dl,
-                            SelectionDAG &DAG,
-                            std::vector<SDValue> &Ops) const;
+  void AddInlineAsmOperands(unsigned Kind, bool HasMatching,
+                            unsigned MatchingIdx, const SDLoc &dl,
+                            SelectionDAG &DAG, std::vector<SDValue> &Ops) const;
 };
 
 } // end namespace llvm

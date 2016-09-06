@@ -7,7 +7,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 ; WidenVecRes same
 define <1 x float> @test_copysign_v1f32_v1f32(<1 x float> %a, <1 x float> %b) #0 {
 ; CHECK-LABEL: test_copysign_v1f32_v1f32:
-; CHECK-NEXT:    movi.2s v2, #0x80, lsl #24
+; CHECK-NEXT:    movi.2s v2, #128, lsl #24
 ; CHECK-NEXT:    bit.8b v0, v1, v2
 ; CHECK-NEXT:    ret
   %r = call <1 x float> @llvm.copysign.v1f32(<1 x float> %a, <1 x float> %b)
@@ -18,7 +18,7 @@ define <1 x float> @test_copysign_v1f32_v1f32(<1 x float> %a, <1 x float> %b) #0
 define <1 x float> @test_copysign_v1f32_v1f64(<1 x float> %a, <1 x double> %b) #0 {
 ; CHECK-LABEL: test_copysign_v1f32_v1f64:
 ; CHECK-NEXT:    fcvt s1, d1
-; CHECK-NEXT:    movi.4s v2, #0x80, lsl #24
+; CHECK-NEXT:    movi.4s v2, #128, lsl #24
 ; CHECK-NEXT:    bit.16b v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <1 x double> %b to <1 x float>
@@ -59,7 +59,7 @@ declare <1 x double> @llvm.copysign.v1f64(<1 x double> %a, <1 x double> %b) #0
 
 define <2 x float> @test_copysign_v2f32_v2f32(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-LABEL: test_copysign_v2f32_v2f32:
-; CHECK-NEXT:    movi.2s v2, #0x80, lsl #24
+; CHECK-NEXT:    movi.2s v2, #128, lsl #24
 ; CHECK-NEXT:    bit.8b v0, v1, v2
 ; CHECK-NEXT:    ret
   %r = call <2 x float> @llvm.copysign.v2f32(<2 x float> %a, <2 x float> %b)
@@ -69,7 +69,7 @@ define <2 x float> @test_copysign_v2f32_v2f32(<2 x float> %a, <2 x float> %b) #0
 define <2 x float> @test_copysign_v2f32_v2f64(<2 x float> %a, <2 x double> %b) #0 {
 ; CHECK-LABEL: test_copysign_v2f32_v2f64:
 ; CHECK-NEXT:    fcvtn v1.2s, v1.2d
-; CHECK-NEXT:    movi.2s v2, #0x80, lsl #24
+; CHECK-NEXT:    movi.2s v2, #128, lsl #24
 ; CHECK-NEXT:    bit.8b v0, v1, v2
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <2 x double> %b to <2 x float>
@@ -83,7 +83,7 @@ declare <2 x float> @llvm.copysign.v2f32(<2 x float> %a, <2 x float> %b) #0
 
 define <4 x float> @test_copysign_v4f32_v4f32(<4 x float> %a, <4 x float> %b) #0 {
 ; CHECK-LABEL: test_copysign_v4f32_v4f32:
-; CHECK-NEXT:    movi.4s v2, #0x80, lsl #24
+; CHECK-NEXT:    movi.4s v2, #128, lsl #24
 ; CHECK-NEXT:    bit.16b v0, v1, v2
 ; CHECK-NEXT:    ret
   %r = call <4 x float> @llvm.copysign.v4f32(<4 x float> %a, <4 x float> %b)
@@ -94,21 +94,21 @@ define <4 x float> @test_copysign_v4f32_v4f32(<4 x float> %a, <4 x float> %b) #0
 define <4 x float> @test_copysign_v4f32_v4f64(<4 x float> %a, <4 x double> %b) #0 {
 ; CHECK-LABEL: test_copysign_v4f32_v4f64:
 ; CHECK-NEXT:    mov s3, v0[1]
-; CHECK-NEXT:    mov d4, v1[1]
-; CHECK-NEXT:    movi.4s v5, #0x80, lsl #24
-; CHECK-NEXT:    fcvt s1, d1
+; CHECK-NEXT:    movi.4s v4, #128, lsl #24
+; CHECK-NEXT:    fcvt s5, d1
 ; CHECK-NEXT:    mov s6, v0[2]
 ; CHECK-NEXT:    mov s7, v0[3]
-; CHECK-NEXT:    fcvt s16, d2
-; CHECK-NEXT:    bit.16b v0, v1, v5
-; CHECK-NEXT:    bit.16b v6, v16, v5
-; CHECK-NEXT:    fcvt s1, d4
-; CHECK-NEXT:    bit.16b v3, v1, v5
+; CHECK-NEXT:    bit.16b v0, v5, v4
+; CHECK-NEXT:    fcvt s5, d2
+; CHECK-NEXT:    bit.16b v6, v5, v4
+; CHECK-NEXT:    mov d1, v1[1]
+; CHECK-NEXT:    fcvt s1, d1
+; CHECK-NEXT:    bit.16b v3, v1, v4
 ; CHECK-NEXT:    mov d1, v2[1]
 ; CHECK-NEXT:    fcvt s1, d1
 ; CHECK-NEXT:    ins.s v0[1], v3[0]
 ; CHECK-NEXT:    ins.s v0[2], v6[0]
-; CHECK-NEXT:    bit.16b v7, v1, v5
+; CHECK-NEXT:    bit.16b v7, v1, v4
 ; CHECK-NEXT:    ins.s v0[3], v7[0]
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <4 x double> %b to <4 x float>

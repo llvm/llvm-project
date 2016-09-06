@@ -18,7 +18,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 
 namespace clang {
 
@@ -124,15 +123,18 @@ public:
   SVal evalDerivedToBase(SVal Derived, QualType DerivedPtrType,
                          bool IsVirtual);
 
-  /// \brief Evaluates C++ dynamic_cast cast.
+  /// \brief Attempts to do a down cast. Used to model BaseToDerived and C++
+  ///        dynamic_cast.
   /// The callback may result in the following 3 scenarios:
   ///  - Successful cast (ex: derived is subclass of base).
   ///  - Failed cast (ex: derived is definitely not a subclass of base).
+  ///    The distinction of this case from the next one is necessary to model
+  ///    dynamic_cast. 
   ///  - We don't know (base is a symbolic region and we don't have 
   ///    enough info to determine if the cast will succeed at run time).
   /// The function returns an SVal representing the derived class; it's
   /// valid only if Failed flag is set to false.
-  SVal evalDynamicCast(SVal Base, QualType DerivedPtrType, bool &Failed);
+  SVal attemptDownCast(SVal Base, QualType DerivedPtrType, bool &Failed);
 
   const ElementRegion *GetElementZeroRegion(const MemRegion *R, QualType T);
 

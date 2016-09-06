@@ -82,16 +82,42 @@ public:
   static ConstantRange makeSatisfyingICmpRegion(CmpInst::Predicate Pred,
                                                 const ConstantRange &Other);
 
-  /// Return the largest range containing all X such that "X BinOpC C" does not
-  /// wrap (overflow).
+  /// Produce the exact range such that all values in the returned range satisfy
+  /// the given predicate with any value contained within Other. Formally, this
+  /// returns the exact answer when the superset of 'union over all y in Other
+  /// is exactly same as the subset of intersection over all y in Other.
+  /// { x : icmp op x y is true}'.
   ///
-  /// Example:
+  /// Example: Pred = ult and Other = i8 3 returns [0, 3)
+  static ConstantRange makeExactICmpRegion(CmpInst::Predicate Pred,
+                                           const APInt &Other);
+
+  /// Return the largest range containing all X such that "X BinOpC Y" is
+  /// guaranteed not to wrap (overflow) for all Y in Other.
+  ///
+  /// NB! The returned set does *not* contain **all** possible values of X for
+  /// which "X BinOpC Y" does not wrap -- some viable values of X may be
+  /// missing, so you cannot use this to contrain X's range.  E.g. in the last
+  /// example, "(-2) + 1" is both nsw and nuw (so the "X" could be -2), but (-2)
+  /// is not in the set returned.
+  ///
+  /// Examples:
   ///  typedef OverflowingBinaryOperator OBO;
-  ///  makeNoWrapRegion(Add, i8 1, OBO::NoSignedWrap) == [-128, 127)
-  ///  makeNoWrapRegion(Add, i8 1, OBO::NoUnsignedWrap) == [0, -1)
-  ///  makeNoWrapRegion(Add, i8 0, OBO::NoUnsignedWrap) == Full Set
-  static ConstantRange makeNoWrapRegion(Instruction::BinaryOps BinOp,
-                                        const APInt &C, unsigned NoWrapKind);
+  ///  #define MGNR makeGuaranteedNoWrapRegion
+  ///  MGNR(Add, [i8 1, 2), OBO::NoSignedWrap) == [-128, 127)
+  ///  MGNR(Add, [i8 1, 2), OBO::NoUnsignedWrap) == [0, -1)
+  ///  MGNR(Add, [i8 0, 1), OBO::NoUnsignedWrap) == Full Set
+  ///  MGNR(Add, [i8 1, 2), OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+  ///    == [0,INT_MAX)
+  ///  MGNR(Add, [i8 -1, 6), OBO::NoSignedWrap) == [INT_MIN+1, INT_MAX-4)
+  static ConstantRange makeGuaranteedNoWrapRegion(Instruction::BinaryOps BinOp,
+                                                  const ConstantRange &Other,
+                                                  unsigned NoWrapKind);
+
+  /// Set up \p Pred and \p RHS such that
+  /// ConstantRange::makeExactICmpRegion(Pred, RHS) == *this.  Return true if
+  /// successful.
+  bool getEquivalentICmp(CmpInst::Predicate &Pred, APInt &RHS) const;
 
   /// Return the lower value for this range.
   ///
@@ -243,6 +269,14 @@ public:
   /// Return a new range representing the possible values resulting
   /// from an unsigned maximum of a value in this range and a value in \p Other.
   ConstantRange umax(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from a signed minimum of a value in this range and a value in \p Other.
+  ConstantRange smin(const ConstantRange &Other) const;
+
+  /// Return a new range representing the possible values resulting
+  /// from an unsigned minimum of a value in this range and a value in \p Other.
+  ConstantRange umin(const ConstantRange &Other) const;
 
   /// Return a new range representing the possible values resulting
   /// from an unsigned division of a value in this range and a value in

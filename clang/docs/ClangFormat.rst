@@ -190,7 +190,7 @@ In an SVN client, you can do:
 
 .. code-block:: console
 
-  svn diff --diff-cmd=diff -x-U0 | clang-format-diff.py -i
+  svn diff --diff-cmd=diff -x -U0 | clang-format-diff.py -i
 
-The :option:`-U0` will create a diff without context lines (the script would format
+The option `-U0` will create a diff without context lines (the script would format
 those as well).

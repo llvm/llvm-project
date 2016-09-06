@@ -2096,7 +2096,7 @@ Target::GetScratchTypeSystemForLanguage (Error *error, lldb::LanguageType langua
                 {
                     if (StreamSP error_stream_sp = GetDebugger().GetAsyncErrorStream())
                     {
-                        error_stream_sp->PutCString("Shared Swift state for %s has developed fatal errors and is being discarded.\n");
+                        error_stream_sp->Printf("Shared Swift state for %s has developed fatal errors and is being discarded.\n", GetExecutableModule()->GetPlatformFileSpec().GetFilename().AsCString());
                         error_stream_sp->PutCString("REPL definitions and persistent names/types will be lost.\n");
                         error_stream_sp->Flush();
                     }
@@ -2123,6 +2123,15 @@ Target::GetScratchTypeSystemForLanguage (Error *error, lldb::LanguageType langua
                         type_system = nullptr;
                     }
                 }
+            }
+        }
+        else if (create_on_demand)
+        {
+            if (StreamSP error_stream_sp = GetDebugger().GetAsyncErrorStream())
+            {
+                error_stream_sp->Printf("Shared Swift state for %s could not be initialized.\n", GetExecutableModule()->GetPlatformFileSpec().GetFilename().AsCString());
+                error_stream_sp->PutCString("The REPL and expressions are unavailable.\n");
+                error_stream_sp->Flush();
             }
         }
     }

@@ -1,4 +1,5 @@
 ; RUN: opt < %s -basicaa -functionattrs -rpo-functionattrs -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='cgscc(function-attrs),rpo-functionattrs' -S | FileCheck %s
 
 ; CHECK: define i32 @leaf() #0
 define i32 @leaf() {
@@ -28,6 +29,13 @@ define i32 @extern() {
   ret i32 %a
 }
 declare i32 @k() readnone
+
+; CHECK: define void @intrinsic(i8* nocapture %dest, i8* nocapture readonly %src, i32 %len) {
+define void @intrinsic(i8* %dest, i8* %src, i32 %len) {
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src, i32 %len, i32 1, i1 false)
+  ret void
+}
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i32, i1)
 
 ; CHECK: define internal i32 @called_by_norecurse() #0
 define internal i32 @called_by_norecurse() {

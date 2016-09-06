@@ -28,12 +28,11 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!11, !12}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: 0, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "dwarf-test.c", directory: "test")
 !2 = !{}
-!3 = !{!4, !5}
-!4 = distinct !DISubprogram(name: "foo", scope: !0, file: !1, line: 6, type: !6, isLocal: false, isDefinition: true, scopeLine: 6, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
-!5 = distinct !DISubprogram(name: "bar", scope: !0, file: !1, line: 6, type: !15, isLocal: false, isDefinition: true, scopeLine: 6, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!4 = distinct !DISubprogram(name: "foo", scope: !0, file: !1, line: 6, type: !6, isLocal: false, isDefinition: true, scopeLine: 6, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
+!5 = distinct !DISubprogram(name: "bar", scope: !0, file: !1, line: 6, type: !15, isLocal: false, isDefinition: true, scopeLine: 6, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !6 = !DISubroutineType(types: !7)
 !7 = !{!9}
 !8 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

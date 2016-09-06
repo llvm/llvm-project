@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 < %s
+; RUN: llc -mtriple=arm64-eabi < %s
 
 
 ; Make sure large offsets aren't mistaken for valid immediate offsets.

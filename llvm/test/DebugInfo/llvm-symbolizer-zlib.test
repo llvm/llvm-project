@@ -1,7 +1,10 @@
 REQUIRES: zlib
 
-RUN: echo "%p/Inputs/dwarfdump-test-zlib.elf-x86-64 0x400559" > %t.input
-RUN: llvm-symbolizer < %t.input | FileCheck %s
+RUN: echo "%p/Inputs/dwarfdump-test-zlib.elf-x86-64 0x4005e9" > %t1.input
+RUN: llvm-symbolizer < %t1.input | FileCheck %s
+
+RUN: echo "%p/Inputs/dwarfdump-test-zlibgnu.elf-x86-64 0x4005e9" > %t2.input
+RUN: llvm-symbolizer < %t2.input | FileCheck %s
 
 CHECK: main
 CHECK-NEXT: /tmp/dbginfo{{[/\\]}}dwarfdump-test-zlib.cc:16

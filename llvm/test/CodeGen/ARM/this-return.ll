@@ -24,7 +24,7 @@ entry:
 ; CHECKELF: b B_ctor_base
 ; CHECKT2D-LABEL: C_ctor_base:
 ; CHECKT2D-NOT: mov {{r[0-9]+}}, r0
-; CHECKT2D: blx _A_ctor_base
+; CHECKT2D: bl _A_ctor_base
 ; CHECKT2D-NOT: mov r0, {{r[0-9]+}}
 ; CHECKT2D: b.w _B_ctor_base
   %0 = bitcast %struct.C* %this to %struct.A*
@@ -43,7 +43,7 @@ entry:
 ; CHECKELF-NOT: b B_ctor_base_nothisret
 ; CHECKT2D-LABEL: C_ctor_base_nothisret:
 ; CHECKT2D: mov [[SAVETHIS:r[0-9]+]], r0
-; CHECKT2D: blx _A_ctor_base_nothisret
+; CHECKT2D: bl _A_ctor_base_nothisret
 ; CHECKT2D: mov r0, [[SAVETHIS]]
 ; CHECKT2D-NOT: b.w _B_ctor_base_nothisret
   %0 = bitcast %struct.C* %this to %struct.A*
@@ -82,7 +82,7 @@ entry:
 ; CHECKELF: b B_ctor_complete
 ; CHECKT2D-LABEL: D_ctor_base:
 ; CHECKT2D-NOT: mov {{r[0-9]+}}, r0
-; CHECKT2D: blx _B_ctor_complete
+; CHECKT2D: bl _B_ctor_complete
 ; CHECKT2D-NOT: mov r0, {{r[0-9]+}}
 ; CHECKT2D: b.w _B_ctor_complete
   %b = getelementptr inbounds %struct.D, %struct.D* %this, i32 0, i32 0

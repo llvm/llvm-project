@@ -10,6 +10,7 @@
 #ifndef LLVM_MC_MCASSEMBLER_H
 #define LLVM_MC_MCASSEMBLER_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
@@ -189,6 +190,9 @@ private:
   bool relaxDwarfLineAddr(MCAsmLayout &Layout, MCDwarfLineAddrFragment &DF);
   bool relaxDwarfCallFrameFragment(MCAsmLayout &Layout,
                                    MCDwarfCallFrameFragment &DF);
+  bool relaxCVInlineLineTable(MCAsmLayout &Layout,
+                              MCCVInlineLineTableFragment &DF);
+  bool relaxCVDefRange(MCAsmLayout &Layout, MCCVDefRangeFragment &DF);
 
   /// finishLayout - Finalize a layout, including fragment lowering.
   void finishLayout(MCAsmLayout &Layout);
@@ -243,8 +247,8 @@ public:
   // concrete and require clients to pass in a target like object. The other
   // option is to make this abstract, and have targets provide concrete
   // implementations as we do with AsmParser.
-  MCAssembler(MCContext &Context_, MCAsmBackend &Backend_,
-              MCCodeEmitter &Emitter_, MCObjectWriter &Writer_);
+  MCAssembler(MCContext &Context, MCAsmBackend &Backend,
+              MCCodeEmitter &Emitter, MCObjectWriter &Writer);
   ~MCAssembler();
 
   /// Reuse an assembler instance
@@ -399,8 +403,7 @@ public:
   ArrayRef<std::string> getFileNames() { return FileNames; }
 
   void addFileName(StringRef FileName) {
-    if (std::find(FileNames.begin(), FileNames.end(), FileName) ==
-        FileNames.end())
+    if (!is_contained(FileNames, FileName))
       FileNames.push_back(FileName);
   }
 

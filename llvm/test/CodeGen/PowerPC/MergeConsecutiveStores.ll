@@ -1,4 +1,4 @@
-; RUN: llc -march=ppc32 -mtriple=powerpc-unknown-linux-gnu -mattr=+altivec < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -march=ppc32 -mtriple=powerpc-unknown-linux-gnu -mattr=+altivec < %s | FileCheck %s
 
 ;; This test ensures that MergeConsecutiveStores does not attempt to
 ;; merge stores or loads when doing so would result in unaligned

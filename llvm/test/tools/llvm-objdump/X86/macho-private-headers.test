@@ -21,6 +21,8 @@
 // RUN:     | FileCheck %s -check-prefix=FATi386
 // RUN: llvm-objdump -p -non-verbose %p/Inputs/hello.obj.macho-x86_64 \
 // RUN:     | FileCheck %s -check-prefix=NON_VERBOSE
+// RUN: llvm-objdump -p %p/Inputs/codesig.macho-x86_64 \
+// RUN:     | FileCheck %s -check-prefix=CODESIG
 
 CHECK: Mach header
 CHECK:       magic cputype cpusubtype  caps    filetype ncmds sizeofcmds      flags
@@ -537,3 +539,8 @@ NON_VERBOSE:       extreloff 0
 NON_VERBOSE:         nextrel 0
 NON_VERBOSE:       locreloff 0
 NON_VERBOSE:         nlocrel 0
+
+CODESIG:      cmd LC_CODE_SIGNATURE
+CODESIG:  cmdsize 16
+CODESIG:  dataoff 8496
+CODESIG: datasize 64

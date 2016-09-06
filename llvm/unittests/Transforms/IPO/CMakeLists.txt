@@ -5,5 +5,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(IPOTests
-  LowerBitSets.cpp
+  LowerTypeTests.cpp
+  WholeProgramDevirt.cpp
   )

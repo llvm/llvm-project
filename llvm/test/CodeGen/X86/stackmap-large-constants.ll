@@ -46,7 +46,7 @@
 ; NumLiveOuts
 ; CHECK-NEXT: 	.short	0
 
-; CHECK-NEXT: 	.align	3
+; CHECK-NEXT: 	.p2align	3
 
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 

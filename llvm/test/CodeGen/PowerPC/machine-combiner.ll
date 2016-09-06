@@ -1,5 +1,5 @@
-; RUN: llc -O3 -mcpu=pwr7 -enable-unsafe-fp-math < %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-PWR
-; RUN: llc -O3 -mcpu=a2q -enable-unsafe-fp-math < %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-QPX
+; RUN: llc -verify-machineinstrs -O3 -mcpu=pwr7 -enable-unsafe-fp-math < %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-PWR
+; RUN: llc -verify-machineinstrs -O3 -mcpu=a2q -enable-unsafe-fp-math < %s | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-QPX
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -98,6 +98,7 @@ define <4 x float> @vector_reassociate_adds1(<4 x float> %x0, <4 x float> %x1, <
 ; CHECK-PWR:       xvaddsp [[REG0:[0-9]+]], 34, 35
 ; CHECK-PWR:       xvaddsp [[REG1:[0-9]+]], 36, 37
 ; CHECK-PWR:       xvaddsp 34, [[REG0]], [[REG1]]
+; CHECK-PWR:       # kill
 ; CHECK-NEXT:  blr
 
   %t0 = fadd <4 x float> %x0, %x1
@@ -115,6 +116,7 @@ define <4 x float> @vector_reassociate_adds2(<4 x float> %x0, <4 x float> %x1, <
 ; CHECK-PWR:       xvaddsp [[REG0:[0-9]+]], 34, 35
 ; CHECK-PWR:       xvaddsp [[REG1:[0-9]+]], 36, 37
 ; CHECK-PWR:       xvaddsp 34, [[REG0]], [[REG1]]
+; CHECK-PWR:       # kill
 ; CHECK-NEXT:  blr
 
   %t0 = fadd <4 x float> %x0, %x1
@@ -132,6 +134,7 @@ define <4 x float> @vector_reassociate_adds3(<4 x float> %x0, <4 x float> %x1, <
 ; CHECK-PWR:       xvaddsp [[REG0:[0-9]+]], 34, 35
 ; CHECK-PWR:       xvaddsp [[REG1:[0-9]+]], 36, 37
 ; CHECK-PWR:       xvaddsp 34, [[REG0]], [[REG1]]
+; CHECK-PWR:       # kill
 ; CHECK-NEXT:  blr
 
   %t0 = fadd <4 x float> %x0, %x1
@@ -149,6 +152,7 @@ define <4 x float> @vector_reassociate_adds4(<4 x float> %x0, <4 x float> %x1, <
 ; CHECK-PWR:       xvaddsp [[REG0:[0-9]+]], 34, 35
 ; CHECK-PWR:       xvaddsp [[REG1:[0-9]+]], 36, 37
 ; CHECK-PWR:       xvaddsp 34, [[REG0]], [[REG1]]
+; CHECK-PWR:       # kill
 ; CHECK-NEXT:  blr
 
   %t0 = fadd <4 x float> %x0, %x1

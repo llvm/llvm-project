@@ -1,4 +1,4 @@
-//== DynamicTypePropagation.cpp -------------------------------- -*- C++ -*--=//
+//===- DynamicTypePropagation.cpp ------------------------------*- C++ -*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -97,6 +97,7 @@ class DynamicTypePropagation:
                          const ObjCObjectPointerType *To, ExplodedNode *N,
                          SymbolRef Sym, CheckerContext &C,
                          const Stmt *ReportedNode = nullptr) const;
+
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
@@ -109,7 +110,7 @@ public:
   /// This value is set to true, when the Generics checker is turned on.
   DefaultBool CheckGenerics;
 };
-}
+} // end anonymous namespace
 
 void DynamicTypePropagation::checkDeadSymbols(SymbolReaper &SR,
                                               CheckerContext &C) const {
@@ -151,7 +152,6 @@ static void recordFixedType(const MemRegion *Region, const CXXMethodDecl *MD,
   ProgramStateRef State = C.getState();
   State = setDynamicTypeInfo(State, Region, Ty, /*CanBeSubclass=*/false);
   C.addTransition(State);
-  return;
 }
 
 void DynamicTypePropagation::checkPreCall(const CallEvent &Call,
@@ -387,6 +387,14 @@ static const ObjCObjectPointerType *getMostInformativeDerivedClassImpl(
     }
     return From;
   }
+
+  if (To->getObjectType()->getSuperClassType().isNull()) {
+    // If To has no super class and From and To aren't the same then
+    // To was not actually a descendent of From. In this case the best we can
+    // do is 'From'.
+    return From;
+  }
+
   const auto *SuperOfTo =
       To->getObjectType()->getSuperClassType()->getAs<ObjCObjectType>();
   assert(SuperOfTo);
@@ -444,6 +452,23 @@ storeWhenMoreInformative(ProgramStateRef &State, SymbolRef Sym,
                          const ObjCObjectPointerType *StaticLowerBound,
                          const ObjCObjectPointerType *StaticUpperBound,
                          ASTContext &C) {
+  // TODO: The above 4 cases are not exhaustive. In particular, it is possible
+  // for Current to be incomparable with StaticLowerBound, StaticUpperBound,
+  // or both.
+  //
+  // For example, suppose Foo<T> and Bar<T> are unrelated types.
+  //
+  //  Foo<T> *f = ...
+  //  Bar<T> *b = ...
+  //
+  //  id t1 = b;
+  //  f = t1;
+  //  id t2 = f; // StaticLowerBound is Foo<T>, Current is Bar<T>
+  //
+  // We should either constrain the callers of this function so that the stated
+  // preconditions hold (and assert it) or rewrite the function to expicitly
+  // handle the additional cases.
+
   // Precondition
   assert(StaticUpperBound->isSpecialized() ||
          StaticLowerBound->isSpecialized());
@@ -772,7 +797,6 @@ void DynamicTypePropagation::checkPostObjCMessage(const ObjCMethodCall &M,
   // class. This method is provided by the runtime and available on all classes.
   if (MessageExpr->getReceiverKind() == ObjCMessageExpr::Class &&
       Sel.getAsString() == "class") {
-
     QualType ReceiverType = MessageExpr->getClassReceiver();
     const auto *ReceiverClassType = ReceiverType->getAs<ObjCObjectType>();
     QualType ReceiverClassPointerType =

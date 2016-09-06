@@ -73,7 +73,7 @@ for.end:
 ;CHECK-LABEL: @reduction_func(
 ;CHECK: load <4 x i32>
 ;CHECK: add <4 x i32>
-;CHECK: icmp sle <4 x i32>
+;CHECK: icmp slt <4 x i32>
 ;CHECK: select <4 x i1>
 ;CHECK: ret i32
 define i32 @reduction_func(i32* nocapture %A, i32 %n) nounwind uwtable readonly ssp {

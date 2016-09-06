@@ -18,9 +18,9 @@
 # OBJOUT: Section {
 # OBJOUT:     Name: .pdr
 # OBJOUT:     Type: SHT_PROGBITS (0x1)
-# OBJOUT:     Flags [ (0xB)
-# OBJOUT:       SHF_ALLOC (0x2)
-# OBJOUT:       SHF_WRITE (0x1)
+# OBJOUT:     Flags [ (0x0)
+# OBJOUT-NOT:   SHF_ALLOC (0x2)
+# OBJOUT-NOT:   SHF_WRITE (0x1)
 # OBJOUT:     ]
 # OBJOUT:     Size: 64
 # OBJOUT:     SectionData (

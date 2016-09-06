@@ -12,7 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
 using namespace llvm;
 
 /// Checks if we should import SGV as a definition, otherwise import as a
@@ -61,7 +64,12 @@ bool FunctionImportGlobalProcessing::doPromoteLocalToGlobal(
   // of the module and recorded in the summary index for use when importing
   // from that module.
   auto *GVar = dyn_cast<GlobalVariable>(SGV);
-  if (GVar && GVar->isConstant() && GVar->hasUnnamedAddr())
+  if (GVar && GVar->isConstant() && GVar->hasGlobalUnnamedAddr())
+    return false;
+
+  if (GVar && GVar->hasSection())
+    // Some sections like "__DATA,__cfstring" are "magic" and promotion is not
+    // allowed. Just disable promotion on any GVar with sections right now.
     return false;
 
   // Eventually we only need to promote functions in the exporting module that
@@ -80,7 +88,7 @@ std::string FunctionImportGlobalProcessing::getName(const GlobalValue *SGV) {
       (doPromoteLocalToGlobal(SGV) || isPerformingImport()))
     return ModuleSummaryIndex::getGlobalNameForLocal(
         SGV->getName(),
-        ImportIndex.getModuleId(SGV->getParent()->getModuleIdentifier()));
+        ImportIndex.getModuleHash(SGV->getParent()->getModuleIdentifier()));
   return SGV->getName();
 }
 
@@ -132,7 +140,7 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV) {
     // linker. The module linking caller needs to enforce this.
     assert(!doImportAsDefinition(SGV));
     // If imported as a declaration, it becomes external_weak.
-    return GlobalValue::ExternalWeakLinkage;
+    return SGV->getLinkage();
 
   case GlobalValue::WeakODRLinkage:
     // For weak_odr linkage, there is a guarantee that all copies will be
@@ -206,6 +214,14 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
 }
 
 void FunctionImportGlobalProcessing::processGlobalsForThinLTO() {
+  if (!moduleCanBeRenamedForThinLTO(M)) {
+    // We would have blocked importing from this module by suppressing index
+    // generation. We still may be able to import into this module though.
+    assert(!isPerformingImport() &&
+           "Should have blocked importing from module with local used in ASM");
+    return;
+  }
+
   for (GlobalVariable &GV : M.globals())
     processGlobalForThinLTO(GV);
   for (Function &SF : M)

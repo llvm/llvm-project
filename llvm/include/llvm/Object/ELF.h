@@ -54,13 +54,18 @@ public:
   typedef Elf_Versym_Impl<ELFT> Elf_Versym;
   typedef Elf_Hash_Impl<ELFT> Elf_Hash;
   typedef Elf_GnuHash_Impl<ELFT> Elf_GnuHash;
-  typedef iterator_range<const Elf_Dyn *> Elf_Dyn_Range;
-  typedef iterator_range<const Elf_Shdr *> Elf_Shdr_Range;
-  typedef iterator_range<const Elf_Sym *> Elf_Sym_Range;
+  typedef typename ELFT::DynRange Elf_Dyn_Range;
+  typedef typename ELFT::ShdrRange Elf_Shdr_Range;
+  typedef typename ELFT::SymRange Elf_Sym_Range;
+  typedef typename ELFT::RelRange Elf_Rel_Range;
+  typedef typename ELFT::RelaRange Elf_Rela_Range;
+  typedef typename ELFT::PhdrRange Elf_Phdr_Range;
 
   const uint8_t *base() const {
     return reinterpret_cast<const uint8_t *>(Buf.data());
   }
+
+  size_t getBufSize() const { return Buf.size(); }
 
 private:
 
@@ -104,22 +109,10 @@ public:
       Header->getDataEncoding() == ELF::ELFDATA2LSB;
   }
 
-  ErrorOr<const Elf_Dyn *> dynamic_table_begin(const Elf_Phdr *Phdr) const;
-  ErrorOr<const Elf_Dyn *> dynamic_table_end(const Elf_Phdr *Phdr) const;
-  ErrorOr<Elf_Dyn_Range> dynamic_table(const Elf_Phdr *Phdr) const {
-    ErrorOr<const Elf_Dyn *> Begin = dynamic_table_begin(Phdr);
-    if (std::error_code EC = Begin.getError())
-      return EC;
-    ErrorOr<const Elf_Dyn *> End = dynamic_table_end(Phdr);
-    if (std::error_code EC = End.getError())
-      return EC;
-    return make_range(*Begin, *End);
-  }
-
   const Elf_Shdr *section_begin() const;
   const Elf_Shdr *section_end() const;
   Elf_Shdr_Range sections() const {
-    return make_range(section_begin(), section_end());
+    return makeArrayRef(section_begin(), section_end());
   }
 
   const Elf_Sym *symbol_begin(const Elf_Shdr *Sec) const {
@@ -138,10 +131,8 @@ public:
     return symbol_begin(Sec) + Size / sizeof(Elf_Sym);
   }
   Elf_Sym_Range symbols(const Elf_Shdr *Sec) const {
-    return make_range(symbol_begin(Sec), symbol_end(Sec));
+    return makeArrayRef(symbol_begin(Sec), symbol_end(Sec));
   }
-
-  typedef iterator_range<const Elf_Rela *> Elf_Rela_Range;
 
   const Elf_Rela *rela_begin(const Elf_Shdr *sec) const {
     if (sec->sh_entsize != sizeof(Elf_Rela))
@@ -157,7 +148,7 @@ public:
   }
 
   Elf_Rela_Range relas(const Elf_Shdr *Sec) const {
-    return make_range(rela_begin(Sec), rela_end(Sec));
+    return makeArrayRef(rela_begin(Sec), rela_end(Sec));
   }
 
   const Elf_Rel *rel_begin(const Elf_Shdr *sec) const {
@@ -173,9 +164,8 @@ public:
     return rel_begin(sec) + Size / sizeof(Elf_Rel);
   }
 
-  typedef iterator_range<const Elf_Rel *> Elf_Rel_Range;
   Elf_Rel_Range rels(const Elf_Shdr *Sec) const {
-    return make_range(rel_begin(Sec), rel_end(Sec));
+    return makeArrayRef(rel_begin(Sec), rel_end(Sec));
   }
 
   /// \brief Iterate over program header table.
@@ -189,16 +179,17 @@ public:
     return program_header_begin() + Header->e_phnum;
   }
 
-  typedef iterator_range<const Elf_Phdr *> Elf_Phdr_Range;
-
   const Elf_Phdr_Range program_headers() const {
-    return make_range(program_header_begin(), program_header_end());
+    return makeArrayRef(program_header_begin(), program_header_end());
   }
 
   uint64_t getNumSections() const;
   uintX_t getStringTableIndex() const;
   uint32_t getExtendedSymbolTableIndex(const Elf_Sym *Sym,
                                        const Elf_Shdr *SymTab,
+                                       ArrayRef<Elf_Word> ShndxTable) const;
+  uint32_t getExtendedSymbolTableIndex(const Elf_Sym *Sym,
+                                       const Elf_Sym *FirstSym,
                                        ArrayRef<Elf_Word> ShndxTable) const;
   const Elf_Ehdr *getHeader() const { return Header; }
   ErrorOr<const Elf_Shdr *> getSection(const Elf_Sym *Sym,
@@ -225,8 +216,15 @@ template <class ELFT>
 uint32_t ELFFile<ELFT>::getExtendedSymbolTableIndex(
     const Elf_Sym *Sym, const Elf_Shdr *SymTab,
     ArrayRef<Elf_Word> ShndxTable) const {
+  return getExtendedSymbolTableIndex(Sym, symbol_begin(SymTab), ShndxTable);
+}
+
+template <class ELFT>
+uint32_t ELFFile<ELFT>::getExtendedSymbolTableIndex(
+    const Elf_Sym *Sym, const Elf_Sym *FirstSym,
+    ArrayRef<Elf_Word> ShndxTable) const {
   assert(Sym->st_shndx == ELF::SHN_XINDEX);
-  unsigned Index = Sym - symbol_begin(SymTab);
+  unsigned Index = Sym - FirstSym;
 
   // The size of the table was checked in getSHNDXTable.
   return ShndxTable[Index];
@@ -401,34 +399,6 @@ const typename ELFFile<ELFT>::Elf_Shdr *ELFFile<ELFT>::section_begin() const {
 template <class ELFT>
 const typename ELFFile<ELFT>::Elf_Shdr *ELFFile<ELFT>::section_end() const {
   return section_begin() + getNumSections();
-}
-
-template <class ELFT>
-ErrorOr<const typename ELFFile<ELFT>::Elf_Dyn *>
-ELFFile<ELFT>::dynamic_table_begin(const Elf_Phdr *Phdr) const {
-  if (!Phdr)
-    return nullptr;
-  assert(Phdr->p_type == ELF::PT_DYNAMIC && "Got the wrong program header");
-  uintX_t Offset = Phdr->p_offset;
-  if (Offset > Buf.size())
-    return object_error::parse_failed;
-  return reinterpret_cast<const Elf_Dyn *>(base() + Offset);
-}
-
-template <class ELFT>
-ErrorOr<const typename ELFFile<ELFT>::Elf_Dyn *>
-ELFFile<ELFT>::dynamic_table_end(const Elf_Phdr *Phdr) const {
-  if (!Phdr)
-    return nullptr;
-  assert(Phdr->p_type == ELF::PT_DYNAMIC && "Got the wrong program header");
-  uintX_t Size = Phdr->p_filesz;
-  if (Size % sizeof(Elf_Dyn))
-    return object_error::elf_invalid_dynamic_table_size;
-  // FIKME: Check for overflow?
-  uintX_t End = Phdr->p_offset + Size;
-  if (End > Buf.size())
-    return object_error::parse_failed;
-  return reinterpret_cast<const Elf_Dyn *>(base() + End);
 }
 
 template <class ELFT>

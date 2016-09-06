@@ -35,8 +35,10 @@ SECTION-NEXT:    AddressAlignment:
 SECTION-NEXT:    EntrySize: 32
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-sh_entsize.elf 2>&1 | FileCheck --check-prefix=INVALID-SYM-SIZE %s
-RUN: not llvm-readobj --dyn-symbols %p/Inputs/invalid-sh_entsize.elf 2>&1 | FileCheck --check-prefix=INVALID-SYM-SIZE %s
 INVALID-SYM-SIZE: Invalid symbol size
+
+RUN: not llvm-readobj --dyn-symbols %p/Inputs/invalid-sh_entsize.elf 2>&1 | FileCheck --check-prefix=INVALID-DYNSYM-SIZE %s
+INVALID-DYNSYM-SIZE: Invalid entity size
 
 RUN: not llvm-readobj -t %p/Inputs/invalid-section-index.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-INDEX %s
 

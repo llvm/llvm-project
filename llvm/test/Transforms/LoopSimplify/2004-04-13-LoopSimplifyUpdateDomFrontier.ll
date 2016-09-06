@@ -1,4 +1,4 @@
-; RUN: opt < %s -scalarrepl -loop-simplify -licm -disable-output -verify-dom-info -verify-loop-info
+; RUN: opt < %s -sroa -loop-simplify -licm -disable-output -verify-dom-info -verify-loop-info
 
 define void @inflate() {
 entry:

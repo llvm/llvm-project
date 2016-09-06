@@ -110,6 +110,18 @@ class TimeoutHelper(object):
             self._procs = [] # Python2 doesn't have list.clear()
             self._doneKillPass = True
 
+class ShellCommandResult(object):
+    """Captures the result of an individual command."""
+
+    def __init__(self, command, stdout, stderr, exitCode, timeoutReached,
+                 outputFiles = []):
+        self.command = command
+        self.stdout = stdout
+        self.stderr = stderr
+        self.exitCode = exitCode
+        self.timeoutReached = timeoutReached
+        self.outputFiles = list(outputFiles)
+               
 def executeShCmd(cmd, shenv, results, timeout=0):
     """
         Wrapper around _executeShCmd that handles
@@ -243,8 +255,13 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 result = subprocess.PIPE
             else:
                 if r[2] is None:
+                    redir_filename = None
                     if kAvoidDevNull and r[0] == '/dev/null':
                         r[2] = tempfile.TemporaryFile(mode=r[1])
+                    elif kIsWindows and r[0] == '/dev/tty':
+                        # Simulate /dev/tty on Windows.
+                        # "CON" is a special filename for the console.
+                        r[2] = open("CON", r[1])
                     else:
                         # Make sure relative paths are relative to the cwd.
                         redir_filename = os.path.join(cmd_shenv.cwd, r[0])
@@ -254,7 +271,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     # FIXME: Actually, this is probably an instance of PR6753.
                     if r[1] == 'a':
                         r[2].seek(0, 2)
-                    opened_files.append(r[2])
+                    opened_files.append(tuple(r) + (redir_filename,))
                 result = r[2]
             final_redirects.append(result)
 
@@ -328,7 +345,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     # need to release any handles we may have on the temporary files (important
     # on Win32, for example). Since we have already spawned the subprocess, our
     # handles have already been transferred so we do not need them anymore.
-    for f in opened_files:
+    for (name, mode, f, path) in opened_files:
         f.close()
 
     # FIXME: There is probably still deadlock potential here. Yawn.
@@ -365,15 +382,36 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         # Ensure the resulting output is always of string type.
         try:
-            out = to_string(out.decode('utf-8'))
+            if out is None:
+                out = ''
+            else:
+                out = to_string(out.decode('utf-8', errors='replace'))
         except:
             out = str(out)
         try:
-            err = to_string(err.decode('utf-8'))
+            if err is None:
+                err = ''
+            else:
+                err = to_string(err.decode('utf-8', errors='replace'))
         except:
             err = str(err)
 
-        results.append((cmd.commands[i], out, err, res, timeoutHelper.timeoutReached()))
+        # Gather the redirected output files for failed commands.
+        output_files = []
+        if res != 0:
+            for (name, mode, f, path) in sorted(opened_files):
+                if path is not None and mode in ('w', 'a'):
+                    try:
+                        with open(path, 'rb') as f:
+                            data = f.read()
+                    except:
+                        data = None
+                    if data != None:
+                        output_files.append((name, path, data))
+            
+        results.append(ShellCommandResult(
+            cmd.commands[i], out, err, res, timeoutHelper.timeoutReached(),
+            output_files))
         if cmd.pipe_err:
             # Python treats the exit code as a signed char.
             if exitCode is None:
@@ -418,16 +456,49 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
     except InternalShellError:
         e = sys.exc_info()[1]
         exitCode = 127
-        results.append((e.command, '', e.message, exitCode, False))
+        results.append(
+            ShellCommandResult(e.command, '', e.message, exitCode, False))
 
     out = err = ''
-    for i,(cmd, cmd_out, cmd_err, res, timeoutReached) in enumerate(results):
-        out += 'Command %d: %s\n' % (i, ' '.join('"%s"' % s for s in cmd.args))
-        out += 'Command %d Result: %r\n' % (i, res)
+    for i,result in enumerate(results):
+        # Write the command line run.
+        out += '$ %s\n' % (' '.join('"%s"' % s
+                                    for s in result.command.args),)
+
+        # If nothing interesting happened, move on.
+        if litConfig.maxIndividualTestTime == 0 and \
+               result.exitCode == 0 and \
+               not result.stdout.strip() and not result.stderr.strip():
+            continue
+
+        # Otherwise, something failed or was printed, show it.
+
+        # Add the command output, if redirected.
+        for (name, path, data) in result.outputFiles:
+            if data.strip():
+                out += "# redirected output from %r:\n" % (name,)
+                data = to_string(data.decode('utf-8', errors='replace'))
+                if len(data) > 1024:
+                    out += data[:1024] + "\n...\n"
+                    out += "note: data was truncated\n"
+                else:
+                    out += data
+                out += "\n"
+                    
+        if result.stdout.strip():
+            out += '# command output:\n%s\n' % (result.stdout,)
+        if result.stderr.strip():
+            out += '# command stderr:\n%s\n' % (result.stderr,)
+        if not result.stdout.strip() and not result.stderr.strip():
+            out += "note: command had no output on stdout or stderr\n"
+
+        # Show the error conditions:
+        if result.exitCode != 0:
+            out += "error: command failed with exit status: %d\n" % (
+                result.exitCode,)
         if litConfig.maxIndividualTestTime > 0:
-            out += 'Command %d Reached Timeout: %s\n\n' % (i, str(timeoutReached))
-        out += 'Command %d Output:\n%s\n\n' % (i, cmd_out)
-        out += 'Command %d Stderr:\n%s\n\n' % (i, cmd_err)
+            out += 'error: command reached timeout: %s\n' % (
+                i, str(result.timeoutReached))
 
     return out, err, exitCode, timeoutInfo
 
@@ -564,6 +635,24 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
             ('%/t', tmpBase.replace('\\', '/') + '.tmp'),
             ('%/T', tmpDir.replace('\\', '/')),
             ])
+
+    # "%:[STpst]" are paths without colons.
+    if kIsWindows:
+        substitutions.extend([
+                ('%:s', re.sub(r'^(.):', r'\1', sourcepath)),
+                ('%:S', re.sub(r'^(.):', r'\1', sourcedir)),
+                ('%:p', re.sub(r'^(.):', r'\1', sourcedir)),
+                ('%:t', re.sub(r'^(.):', r'\1', tmpBase) + '.tmp'),
+                ('%:T', re.sub(r'^(.):', r'\1', tmpDir)),
+                ])
+    else:
+        substitutions.extend([
+                ('%:s', sourcepath),
+                ('%:S', sourcedir),
+                ('%:p', sourcedir),
+                ('%:t', tmpBase + '.tmp'),
+                ('%:T', tmpDir),
+                ])
     return substitutions
 
 def applySubstitutions(script, substitutions):
@@ -594,8 +683,10 @@ def parseIntegratedTestScript(test, require_script=True):
     sourcepath = test.getSourcePath()
     script = []
     requires = []
+    requires_any = []
     unsupported = []
-    keywords = ['RUN:', 'XFAIL:', 'REQUIRES:', 'UNSUPPORTED:', 'END.']
+    keywords = ['RUN:', 'XFAIL:', 'REQUIRES:', 'REQUIRES-ANY:',
+                'UNSUPPORTED:', 'END.']
     for line_number, command_type, ln in \
             parseIntegratedTestScriptCommands(sourcepath, keywords):
         if command_type == 'RUN':
@@ -620,6 +711,8 @@ def parseIntegratedTestScript(test, require_script=True):
             test.xfails.extend([s.strip() for s in ln.split(',')])
         elif command_type == 'REQUIRES':
             requires.extend([s.strip() for s in ln.split(',')])
+        elif command_type == 'REQUIRES-ANY':
+            requires_any.extend([s.strip() for s in ln.split(',')])
         elif command_type == 'UNSUPPORTED':
             unsupported.extend([s.strip() for s in ln.split(',')])
         elif command_type == 'END':
@@ -646,6 +739,12 @@ def parseIntegratedTestScript(test, require_script=True):
         msg = ', '.join(missing_required_features)
         return lit.Test.Result(Test.UNSUPPORTED,
                                "Test requires the following features: %s" % msg)
+    requires_any_features = [f for f in requires_any
+                             if f in test.config.available_features]
+    if requires_any and not requires_any_features:
+        msg = ' ,'.join(requires_any)
+        return lit.Test.Result(Test.UNSUPPORTED,
+            "Test requires any of the following features: %s" % msg)
     unsupported_features = [f for f in unsupported
                             if f in test.config.available_features]
     if unsupported_features:

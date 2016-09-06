@@ -36,6 +36,10 @@
 #include <string.h>
 #include <stdarg.h>
 #include <sys/mman.h>
+#if SANITIZER_LINUX
+#include <sys/personality.h>
+#include <setjmp.h>
+#endif
 #include <sys/syscall.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -64,10 +68,11 @@ extern "C" void *__libc_stack_end;
 void *__libc_stack_end = 0;
 #endif
 
-namespace __tsan {
+#if SANITIZER_LINUX && defined(__aarch64__)
+void InitializeGuardPtr() __attribute__((visibility("hidden")));
+#endif
 
-static uptr g_data_start;
-static uptr g_data_end;
+namespace __tsan {
 
 #ifdef TSAN_RUNTIME_VMA
 // Runtime detected VMA size.
@@ -201,46 +206,6 @@ void InitializeShadowMemoryPlatform() {
   MapRodata();
 }
 
-static void InitDataSeg() {
-  MemoryMappingLayout proc_maps(true);
-  uptr start, end, offset;
-  char name[128];
-#if SANITIZER_FREEBSD
-  // On FreeBSD BSS is usually the last block allocated within the
-  // low range and heap is the last block allocated within the range
-  // 0x800000000-0x8ffffffff.
-  while (proc_maps.Next(&start, &end, &offset, name, ARRAY_SIZE(name),
-                        /*protection*/ 0)) {
-    DPrintf("%p-%p %p %s\n", start, end, offset, name);
-    if ((start & 0xffff00000000ULL) == 0 && (end & 0xffff00000000ULL) == 0 &&
-        name[0] == '\0') {
-      g_data_start = start;
-      g_data_end = end;
-    }
-  }
-#else
-  bool prev_is_data = false;
-  while (proc_maps.Next(&start, &end, &offset, name, ARRAY_SIZE(name),
-                        /*protection*/ 0)) {
-    DPrintf("%p-%p %p %s\n", start, end, offset, name);
-    bool is_data = offset != 0 && name[0] != 0;
-    // BSS may get merged with [heap] in /proc/self/maps. This is not very
-    // reliable.
-    bool is_bss = offset == 0 &&
-      (name[0] == 0 || internal_strcmp(name, "[heap]") == 0) && prev_is_data;
-    if (g_data_start == 0 && is_data)
-      g_data_start = start;
-    if (is_bss)
-      g_data_end = end;
-    prev_is_data = is_data;
-  }
-#endif
-  DPrintf("guessed data_start=%p data_end=%p\n",  g_data_start, g_data_end);
-  CHECK_LT(g_data_start, g_data_end);
-  CHECK_GE((uptr)&g_data_start, g_data_start);
-  CHECK_LT((uptr)&g_data_start, g_data_end);
-}
-
 #endif  // #ifndef SANITIZER_GO
 
 void InitializePlatformEarly() {
@@ -248,9 +213,9 @@ void InitializePlatformEarly() {
   vmaSize =
     (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
 #if defined(__aarch64__)
-  if (vmaSize != 39 && vmaSize != 42) {
+  if (vmaSize != 39 && vmaSize != 42 && vmaSize != 48) {
     Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
-    Printf("FATAL: Found %d - Supported 39 and 42\n", vmaSize);
+    Printf("FATAL: Found %d - Supported 39, 42 and 48\n", vmaSize);
     Die();
   }
 #elif defined(__powerpc64__)
@@ -291,6 +256,22 @@ void InitializePlatform() {
       SetAddressSpaceUnlimited();
       reexec = true;
     }
+#if SANITIZER_LINUX && defined(__aarch64__)
+    // After patch "arm64: mm: support ARCH_MMAP_RND_BITS." is introduced in
+    // linux kernel, the random gap between stack and mapped area is increased
+    // from 128M to 36G on 39-bit aarch64. As it is almost impossible to cover
+    // this big range, we should disable randomized virtual space on aarch64.
+    int old_personality = personality(0xffffffff);
+    if (old_personality != -1 && (old_personality & ADDR_NO_RANDOMIZE) == 0) {
+      VReport(1, "WARNING: Program is run with randomized virtual address "
+              "space, which wouldn't work with ThreadSanitizer.\n"
+              "Re-execing with fixed virtual address space.\n");
+      CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
+      reexec = true;
+    }
+    // Initialize the guard pointer used in {sig}{set,long}jump.
+    InitializeGuardPtr();
+#endif
     if (reexec)
       ReExec();
   }
@@ -298,12 +279,7 @@ void InitializePlatform() {
 #ifndef SANITIZER_GO
   CheckAndProtect();
   InitTlsSize();
-  InitDataSeg();
 #endif
-}
-
-bool IsGlobalVar(uptr addr) {
-  return g_data_start && addr >= g_data_start && addr < g_data_end;
 }
 
 #ifndef SANITIZER_GO

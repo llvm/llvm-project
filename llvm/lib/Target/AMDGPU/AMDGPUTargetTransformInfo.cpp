@@ -21,12 +21,14 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/CostTable.h"
 #include "llvm/Target/TargetLowering.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "AMDGPUtti"
+
 
 void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L,
                                             TTI::UnrollingPreferences &UP) {
@@ -78,9 +80,125 @@ unsigned AMDGPUTTIImpl::getRegisterBitWidth(bool Vector) {
   return Vector ? 0 : 32;
 }
 
+unsigned AMDGPUTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) {
+  switch (AddrSpace) {
+  case AMDGPUAS::GLOBAL_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS:
+  case AMDGPUAS::FLAT_ADDRESS:
+    return 128;
+  case AMDGPUAS::LOCAL_ADDRESS:
+  case AMDGPUAS::REGION_ADDRESS:
+    return 64;
+  case AMDGPUAS::PRIVATE_ADDRESS:
+    return 8 * ST->getMaxPrivateElementSize();
+  default:
+    if (ST->getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS &&
+        (AddrSpace == AMDGPUAS::PARAM_D_ADDRESS ||
+         AddrSpace == AMDGPUAS::PARAM_I_ADDRESS ||
+         (AddrSpace >= AMDGPUAS::CONSTANT_BUFFER_0 &&
+          AddrSpace <= AMDGPUAS::CONSTANT_BUFFER_15)))
+      return 128;
+    llvm_unreachable("unhandled address space");
+  }
+}
+
 unsigned AMDGPUTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   // Semi-arbitrary large amount.
   return 64;
+}
+
+int AMDGPUTTIImpl::getArithmeticInstrCost(
+    unsigned Opcode, Type *Ty, TTI::OperandValueKind Opd1Info,
+    TTI::OperandValueKind Opd2Info, TTI::OperandValueProperties Opd1PropInfo,
+    TTI::OperandValueProperties Opd2PropInfo) {
+
+  EVT OrigTy = TLI->getValueType(DL, Ty);
+  if (!OrigTy.isSimple()) {
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
+                                         Opd1PropInfo, Opd2PropInfo);
+  }
+
+  // Legalize the type.
+  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+
+  // Because we don't have any legal vector operations, but the legal types, we
+  // need to account for split vectors.
+  unsigned NElts = LT.second.isVector() ?
+    LT.second.getVectorNumElements() : 1;
+
+  MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+
+  switch (ISD) {
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA: {
+    if (SLT == MVT::i64)
+      return get64BitInstrCost() * LT.first * NElts;
+
+    // i32
+    return getFullRateInstrCost() * LT.first * NElts;
+  }
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR: {
+    if (SLT == MVT::i64){
+      // and, or and xor are typically split into 2 VALU instructions.
+      return 2 * getFullRateInstrCost() * LT.first * NElts;
+    }
+
+    return LT.first * NElts * getFullRateInstrCost();
+  }
+  case ISD::MUL: {
+    const int QuarterRateCost = getQuarterRateInstrCost();
+    if (SLT == MVT::i64) {
+      const int FullRateCost = getFullRateInstrCost();
+      return (4 * QuarterRateCost + (2 * 2) * FullRateCost) * LT.first * NElts;
+    }
+
+    // i32
+    return QuarterRateCost * NElts * LT.first;
+  }
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+    if (SLT == MVT::f64)
+      return LT.first * NElts * get64BitInstrCost();
+
+    if (SLT == MVT::f32 || SLT == MVT::f16)
+      return LT.first * NElts * getFullRateInstrCost();
+    break;
+
+  case ISD::FDIV:
+  case ISD::FREM:
+    // FIXME: frem should be handled separately. The fdiv in it is most of it,
+    // but the current lowering is also not entirely correct.
+    if (SLT == MVT::f64) {
+      int Cost = 4 * get64BitInstrCost() + 7 * getQuarterRateInstrCost();
+
+      // Add cost of workaround.
+      if (ST->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS)
+        Cost += 3 * getFullRateInstrCost();
+
+      return LT.first * Cost * NElts;
+    }
+
+    // Assuming no fp32 denormals lowering.
+    if (SLT == MVT::f32 || SLT == MVT::f16) {
+      assert(!ST->hasFP32Denormals() && "will change when supported");
+      int Cost = 7 * getFullRateInstrCost() + 1 * getQuarterRateInstrCost();
+      return LT.first * NElts * Cost;
+    }
+
+    break;
+  default:
+    break;
+  }
+
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, Opd1Info, Opd2Info,
+                                       Opd1PropInfo, Opd2PropInfo);
 }
 
 unsigned AMDGPUTTIImpl::getCFInstrCost(unsigned Opcode) {
@@ -98,6 +216,11 @@ int AMDGPUTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                       unsigned Index) {
   switch (Opcode) {
   case Instruction::ExtractElement:
+  case Instruction::InsertElement:
+    // Extracts are just reads of a subregister, so are free. Inserts are
+    // considered free because we don't want to have any cost for scalarizing
+    // operations, and we don't have to copy into a different register class.
+
     // Dynamic indexing isn't free and is best avoided.
     return Index == ~0u ? 2 : 0;
   default:
@@ -115,6 +238,9 @@ static bool isIntrinsicSourceOfDivergence(const TargetIntrinsicInfo *TII,
     // IntrinsicsAMDGPU.td
     break;
 
+  case Intrinsic::amdgcn_workitem_id_x:
+  case Intrinsic::amdgcn_workitem_id_y:
+  case Intrinsic::amdgcn_workitem_id_z:
   case Intrinsic::amdgcn_interp_p1:
   case Intrinsic::amdgcn_interp_p2:
   case Intrinsic::amdgcn_mbcnt_hi:
@@ -122,6 +248,31 @@ static bool isIntrinsicSourceOfDivergence(const TargetIntrinsicInfo *TII,
   case Intrinsic::r600_read_tidig_x:
   case Intrinsic::r600_read_tidig_y:
   case Intrinsic::r600_read_tidig_z:
+  case Intrinsic::amdgcn_image_atomic_swap:
+  case Intrinsic::amdgcn_image_atomic_add:
+  case Intrinsic::amdgcn_image_atomic_sub:
+  case Intrinsic::amdgcn_image_atomic_smin:
+  case Intrinsic::amdgcn_image_atomic_umin:
+  case Intrinsic::amdgcn_image_atomic_smax:
+  case Intrinsic::amdgcn_image_atomic_umax:
+  case Intrinsic::amdgcn_image_atomic_and:
+  case Intrinsic::amdgcn_image_atomic_or:
+  case Intrinsic::amdgcn_image_atomic_xor:
+  case Intrinsic::amdgcn_image_atomic_inc:
+  case Intrinsic::amdgcn_image_atomic_dec:
+  case Intrinsic::amdgcn_image_atomic_cmpswap:
+  case Intrinsic::amdgcn_buffer_atomic_swap:
+  case Intrinsic::amdgcn_buffer_atomic_add:
+  case Intrinsic::amdgcn_buffer_atomic_sub:
+  case Intrinsic::amdgcn_buffer_atomic_smin:
+  case Intrinsic::amdgcn_buffer_atomic_umin:
+  case Intrinsic::amdgcn_buffer_atomic_smax:
+  case Intrinsic::amdgcn_buffer_atomic_umax:
+  case Intrinsic::amdgcn_buffer_atomic_and:
+  case Intrinsic::amdgcn_buffer_atomic_or:
+  case Intrinsic::amdgcn_buffer_atomic_xor:
+  case Intrinsic::amdgcn_buffer_atomic_cmpswap:
+  case Intrinsic::amdgcn_ps_live:
     return true;
   }
 
@@ -129,18 +280,17 @@ static bool isIntrinsicSourceOfDivergence(const TargetIntrinsicInfo *TII,
   switch (TII->lookupName((const char *)Name.bytes_begin(), Name.size())) {
   default:
     return false;
-  case AMDGPUIntrinsic::SI_tid:
   case AMDGPUIntrinsic::SI_fs_interp:
+  case AMDGPUIntrinsic::SI_fs_constant:
     return true;
   }
 }
 
 static bool isArgPassedInSGPR(const Argument *A) {
   const Function *F = A->getParent();
-  unsigned ShaderType = AMDGPU::getShaderType(*F);
 
   // Arguments to compute shaders are never a source of divergence.
-  if (ShaderType == ShaderType::COMPUTE)
+  if (!AMDGPU::isShader(F->getCallingConv()))
     return true;
 
   // For non-compute shaders, SGPR inputs are marked with either inreg or byval.
@@ -168,6 +318,13 @@ bool AMDGPUTTIImpl::isSourceOfDivergence(const Value *V) const {
   // same arguments, they will always get the same result.
   if (const LoadInst *Load = dyn_cast<LoadInst>(V))
     return Load->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS;
+
+  // Atomics are divergent because they are executed sequentially: when an
+  // atomic operation refers to the same address in each thread, then each
+  // thread after the first sees the value written by the previous thread as
+  // original value.
+  if (isa<AtomicRMWInst>(V) || isa<AtomicCmpXchgInst>(V))
+    return true;
 
   if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {
     const TargetMachine &TM = getTLI()->getTargetMachine();

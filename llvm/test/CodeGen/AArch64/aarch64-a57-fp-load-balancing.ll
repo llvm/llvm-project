@@ -1,7 +1,13 @@
-; RUN: llc < %s -mcpu=cortex-a57 -aarch64-a57-fp-load-balancing-override=1 -aarch64-a57-fp-load-balancing-force-all | FileCheck %s --check-prefix CHECK --check-prefix CHECK-A57 --check-prefix CHECK-EVEN
-; RUN: llc < %s -mcpu=cortex-a57 -aarch64-a57-fp-load-balancing-override=2 -aarch64-a57-fp-load-balancing-force-all | FileCheck %s --check-prefix CHECK --check-prefix CHECK-A57 --check-prefix CHECK-ODD
-; RUN: llc < %s -mcpu=cortex-a53 -aarch64-a57-fp-load-balancing-override=1 -aarch64-a57-fp-load-balancing-force-all | FileCheck %s --check-prefix CHECK --check-prefix CHECK-A53 --check-prefix CHECK-EVEN
-; RUN: llc < %s -mcpu=cortex-a53 -aarch64-a57-fp-load-balancing-override=2 -aarch64-a57-fp-load-balancing-force-all | FileCheck %s --check-prefix CHECK --check-prefix CHECK-A53 --check-prefix CHECK-ODD
+; RUN: llc < %s -mcpu=cortex-a57 -aarch64-a57-fp-load-balancing-override=1 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-BALFP --check-prefix CHECK-EVEN
+; RUN: llc < %s -mcpu=cortex-a57 -aarch64-a57-fp-load-balancing-override=2 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-BALFP --check-prefix CHECK-ODD
+; RUN: llc < %s -mcpu=cortex-a53 -aarch64-a57-fp-load-balancing-override=1 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-A53 --check-prefix CHECK-EVEN
+; RUN: llc < %s -mcpu=cortex-a53 -aarch64-a57-fp-load-balancing-override=2 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-A53 --check-prefix CHECK-ODD
+
+; The following tests use the balance-fp-ops feature, and should be independent of
+; the target cpu.
+
+; RUN: llc < %s -mtriple=aarch64-linux-gnueabi -mattr=+balance-fp-ops -aarch64-a57-fp-load-balancing-override=1 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-EVEN --check-prefix CHECK-BALFP
+; RUN: llc < %s -mtriple=aarch64-linux-gnueabi -mattr=+balance-fp-ops  -aarch64-a57-fp-load-balancing-override=2 -aarch64-a57-fp-load-balancing-force-all -enable-misched=false -enable-post-misched=false | FileCheck %s --check-prefix CHECK --check-prefix CHECK-ODD --check-prefix CHECK-BALFP
 
 ; Test the AArch64A57FPLoadBalancing pass. This pass relies heavily on register allocation, so
 ; our test strategy is to:
@@ -75,7 +81,7 @@ entry:
 ; CHECK: fmsub [[x]]
 ; CHECK: fmadd [[y]]
 ; CHECK: fmadd [[x]]
-; CHECK-A57: stp [[x]], [[y]]
+; CHECK-BALFP: stp [[x]], [[y]]
 ; CHECK-A53-DAG: str [[x]]
 ; CHECK-A53-DAG: str [[y]]
 
@@ -170,7 +176,7 @@ declare void @g(...) #1
 ; CHECK: fmsub [[x]]
 ; CHECK: fmadd [[y]]
 ; CHECK: fmadd [[x]]
-; CHECK-A57: stp [[x]], [[y]]
+; CHECK-BALFP: stp [[x]], [[y]]
 ; CHECK-A53-DAG: str [[x]]
 ; CHECK-A53-DAG: str [[y]]
 

@@ -3,7 +3,7 @@
 ; RUN: llc < %s -relocation-model=pic -mark-data-regions -mtriple=i686-apple-darwin -asm-verbose=false \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-DATA
 ; RUN: llc < %s -relocation-model=pic -mtriple=i686-apple-darwin -asm-verbose=false \
-; RUN:   | FileCheck %s
+; RUN:   | FileCheck %s --check-prefix=CHECK-DATA
 ; RUN: llc < %s                       -mtriple=x86_64-apple-darwin | not grep 'lJTI'
 ; rdar://6971437
 ; rdar://7738756

@@ -8,7 +8,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 @a = common global [2048 x i32] zeroinitializer, align 16
 
 ;CHECK-LABEL: @example12(
-;CHECK: trunc i64
+;CHECK: %vec.ind1 = phi <4 x i32>
 ;CHECK: store <4 x i32>
 ;CHECK: ret void
 define void @example12() nounwind uwtable ssp {

@@ -463,19 +463,14 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
 }
 
 bool FlattenCFGOpt::run(BasicBlock *BB) {
-  bool Changed = false;
   assert(BB && BB->getParent() && "Block not embedded in function!");
   assert(BB->getTerminator() && "Degenerate basic block encountered!");
 
   IRBuilder<> Builder(BB);
 
-  if (FlattenParallelAndOr(BB, Builder))
+  if (FlattenParallelAndOr(BB, Builder) || MergeIfRegion(BB, Builder))
     return true;
-
-  if (MergeIfRegion(BB, Builder))
-    return true;
-
-  return Changed;
+  return false;
 }
 
 /// FlattenCFG - This function is used to flatten a CFG.  For

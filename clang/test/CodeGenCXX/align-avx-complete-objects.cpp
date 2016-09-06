@@ -13,7 +13,7 @@ volatile float TestAlign(void)
 }
 
 // CHECK: [[R:%.*]] = alloca <8 x float>, align 32
-// CHECK-NEXT:  [[CALL:%.*]] = call noalias i8* @_Znwm(i64 32)
+// CHECK-NEXT:  [[CALL:%.*]] = call i8* @_Znwm(i64 32)
 // CHECK-NEXT:  [[ZERO:%.*]] = bitcast i8* [[CALL]] to <8 x float>*
 // CHECK-NEXT:  store <8 x float>* [[ZERO]], <8 x float>** [[P:%.*]], align 8
 // CHECK-NEXT:  [[ONE:%.*]] = load <8 x float>*, <8 x float>** [[P]], align 8
@@ -42,7 +42,7 @@ volatile float TestAlign2(void)
 }
 
 // CHECK: [[R:%.*]] = alloca <8 x float>, align 32
-// CHECK-NEXT:  [[CALL:%.*]] = call noalias i8* @_Znwm(i64 32)
+// CHECK-NEXT:  [[CALL:%.*]] = call i8* @_Znwm(i64 32)
 // CHECK-NEXT:  [[ZERO:%.*]] = bitcast i8* [[CALL]] to <8 x float>*
 // CHECK-NEXT:  store <8 x float>* [[ZERO]], <8 x float>** [[P:%.*]], align 8
 // CHECK-NEXT:  [[ONE:%.*]] = load <8 x float>*, <8 x float>** [[P]], align 8

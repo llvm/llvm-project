@@ -1,0 +1,7 @@
+RUN: llvm-objdump -macho -d %p/Inputs/truncated-section.dylib.macho-x86_64 | FileCheck %s
+
+CHECK: _func:
+CHECK:     retq
+CHECK:     retq
+
+CHECK: section data ends, _func2 lies outside valid range

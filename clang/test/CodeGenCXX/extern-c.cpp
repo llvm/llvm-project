@@ -16,7 +16,22 @@ extern "C" struct d;
 // CHECK-NOT: should_not_appear
 extern "C++" int should_not_appear;
 
+// CHECK: @_ZN3foo10extern_cxxE = global
+extern "C++" int extern_cxx = 0;
+
 }
+
+// CHECK-NOT: @global_a = global
+extern "C" int global_a;
+
+// CHECK: @global_b = global
+extern "C" int global_b = 0;
+
+// CHECK-NOT: should_not_appear
+extern "C++" int should_not_appear;
+
+// CHECK: @extern_cxx = global
+extern "C++" int extern_cxx = 0;
 
 namespace test1 {
   namespace {
@@ -59,10 +74,10 @@ extern "C" {
 
   // CHECK-NOT: @unused
   // CHECK-NOT: @duplicate_internal
-  // CHECK: @internal_var = internal alias i32, i32* @_Z12internal_var
+  // CHECK: @internal_var = internal alias i32, i32* @_ZL12internal_var
   // CHECK-NOT: @unused
   // CHECK-NOT: @duplicate_internal
-  // CHECK: @internal_fn = internal alias i32 (), i32 ()* @_Z11internal_fnv
+  // CHECK: @internal_fn = internal alias i32 (), i32 ()* @_ZL11internal_fnv
   // CHECK-NOT: @unused
   // CHECK-NOT: @duplicate_internal
 }

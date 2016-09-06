@@ -10,6 +10,8 @@
 
 @local_tls_var = thread_local global i32 0
 @external_tls_var = external thread_local global i32
+@hidden_external_tls_var = external hidden thread_local global i32
+
 
 define i32 @test_local_tls() {
 ; T2-MOVT-PIC-LABEL: test_local_tls:
@@ -163,3 +165,18 @@ define i32 @test_external_tls() {
   %val = load i32, i32* @external_tls_var, align 4
   ret i32 %val
 }
+
+; Just need something to trigger an indirect reference to the var.
+define i32 @use_hidden_external_tls() {
+  %val = load i32, i32* @hidden_external_tls_var, align 4
+  ret i32 %val
+}
+
+; T2-MOVT-PIC: .section __DATA,__thread_ptr,thread_local_variable_pointers
+; T2-MOVT-PIC: .p2align 2
+; T2-MOVT-PIC: L_external_tls_var$non_lazy_ptr:
+; T2-MOVT-PIC:     .indirect_symbol _external_tls_var
+; T2-MOVT-PIC:     .long 0
+; T2-MOVT-PIC: L_hidden_external_tls_var$non_lazy_ptr:
+; T2-MOVT-PIC:     .indirect_symbol _hidden_external_tls_var
+; T2-MOVT-PIC:     .long 0

@@ -94,7 +94,7 @@ static const char *conv(ReportType typ) {
     return kSuppressionNone;
   else if (typ == ReportTypeDeadlock)
     return kSuppressionDeadlock;
-  Printf("ThreadSanitizer: unknown report type %d\n", typ),
+  Printf("ThreadSanitizer: unknown report type %d\n", typ);
   Die();
 }
 
@@ -161,8 +161,8 @@ void PrintMatchedSuppressions() {
   Printf("ThreadSanitizer: Matched %d suppressions (pid=%d):\n", hit_count,
          (int)internal_getpid());
   for (uptr i = 0; i < matched.size(); i++) {
-    Printf("%d %s:%s\n", matched[i]->hit_count, matched[i]->type,
-           matched[i]->templ);
+    Printf("%d %s:%s\n", atomic_load_relaxed(&matched[i]->hit_count),
+           matched[i]->type, matched[i]->templ);
   }
 }
 }  // namespace __tsan

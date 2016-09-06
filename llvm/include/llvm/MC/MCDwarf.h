@@ -15,20 +15,18 @@
 #ifndef LLVM_MC_MCDWARF_H
 #define LLVM_MC_MCDWARF_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCSection.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Dwarf.h"
-#include "llvm/Support/raw_ostream.h"
-#include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace llvm {
+template <typename T> class ArrayRef;
+class raw_ostream;
 class MCAsmBackend;
 class MCContext;
 class MCObjectStreamer;
@@ -72,7 +70,7 @@ class MCDwarfLoc {
 
 private: // MCContext manages these
   friend class MCContext;
-  friend class MCLineEntry;
+  friend class MCDwarfLineEntry;
   MCDwarfLoc(unsigned fileNum, unsigned line, unsigned column, unsigned flags,
              unsigned isa, unsigned discriminator)
       : FileNum(fileNum), Line(line), Column(column), Flags(flags), Isa(isa),
@@ -135,16 +133,16 @@ public:
 /// instruction is assembled and uses an address from a temporary label
 /// created at the current address in the current section and the info from
 /// the last .loc directive seen as stored in the context.
-class MCLineEntry : public MCDwarfLoc {
+class MCDwarfLineEntry : public MCDwarfLoc {
   MCSymbol *Label;
 
 private:
   // Allow the default copy constructor and assignment operator to be used
-  // for an MCLineEntry object.
+  // for an MCDwarfLineEntry object.
 
 public:
-  // Constructor to create an MCLineEntry given a symbol and the dwarf loc.
-  MCLineEntry(MCSymbol *label, const MCDwarfLoc loc)
+  // Constructor to create an MCDwarfLineEntry given a symbol and the dwarf loc.
+  MCDwarfLineEntry(MCSymbol *label, const MCDwarfLoc loc)
       : MCDwarfLoc(loc), Label(label) {}
 
   MCSymbol *getLabel() const { return Label; }
@@ -162,21 +160,21 @@ public:
 class MCLineSection {
 public:
   // \brief Add an entry to this MCLineSection's line entries.
-  void addLineEntry(const MCLineEntry &LineEntry, MCSection *Sec) {
+  void addLineEntry(const MCDwarfLineEntry &LineEntry, MCSection *Sec) {
     MCLineDivisions[Sec].push_back(LineEntry);
   }
 
-  typedef std::vector<MCLineEntry> MCLineEntryCollection;
-  typedef MCLineEntryCollection::iterator iterator;
-  typedef MCLineEntryCollection::const_iterator const_iterator;
-  typedef MapVector<MCSection *, MCLineEntryCollection> MCLineDivisionMap;
+  typedef std::vector<MCDwarfLineEntry> MCDwarfLineEntryCollection;
+  typedef MCDwarfLineEntryCollection::iterator iterator;
+  typedef MCDwarfLineEntryCollection::const_iterator const_iterator;
+  typedef MapVector<MCSection *, MCDwarfLineEntryCollection> MCLineDivisionMap;
 
 private:
-  // A collection of MCLineEntry for each section.
+  // A collection of MCDwarfLineEntry for each section.
   MCLineDivisionMap MCLineDivisions;
 
 public:
-  // Returns the collection of MCLineEntry for a given Compile Unit ID.
+  // Returns the collection of MCDwarfLineEntry for a given Compile Unit ID.
   const MCLineDivisionMap &getMCLineEntries() const {
     return MCLineDivisions;
   }

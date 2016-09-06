@@ -73,11 +73,11 @@ define void @test_mov(i32 %in32, i64 %in64) {
 ; CHECK-LABEL: test_mov:
   %val0 = add i32 %in32, 2863311530
   store i32 %val0, i32* @var32
-; CHECK: orr {{w[0-9]+}}, wzr, #0xaaaaaaaa
+; CHECK: mov {{w[0-9]+}}, #-1431655766
 
   %val1 = add i64 %in64, 11068046444225730969
   store i64 %val1, i64* @var64
-; CHECK: orr {{x[0-9]+}}, xzr, #0x9999999999999999
+; CHECK: mov {{x[0-9]+}}, #-7378697629483820647
 
   ret void
 ; CHECK: ret

@@ -72,16 +72,13 @@ void CovUpdateMapping(const char *coverage_dir, uptr caller_pc) {
   InternalScopedString text(kMaxTextSize);
 
   {
-    InternalScopedBuffer<LoadedModule> modules(kMaxNumberOfModules);
-    CHECK(modules.data());
-    int n_modules = GetListOfModules(modules.data(), kMaxNumberOfModules,
-                                     /* filter */ nullptr);
-
     text.append("%d\n", sizeof(uptr) * 8);
-    for (int i = 0; i < n_modules; ++i) {
-      const char *module_name = StripModuleName(modules[i].full_name());
-      uptr base = modules[i].base_address();
-      for (const auto &range : modules[i].ranges()) {
+    ListOfModules modules;
+    modules.init();
+    for (const LoadedModule &module : modules) {
+      const char *module_name = StripModuleName(module.full_name());
+      uptr base = module.base_address();
+      for (const auto &range : module.ranges()) {
         if (range.executable) {
           uptr start = range.beg;
           uptr end = range.end;
@@ -90,7 +87,6 @@ void CovUpdateMapping(const char *coverage_dir, uptr caller_pc) {
             cached_mapping.SetModuleRange(start, end);
         }
       }
-      modules[i].clear();
     }
   }
 

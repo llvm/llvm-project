@@ -57,10 +57,10 @@ public:
 }
 
 static std::string getOutputPath(llvm::opt::InputArgList *Args,
-                                 const llvm::NewArchiveIterator &FirstMember) {
+                                 const llvm::NewArchiveMember &FirstMember) {
   if (auto *Arg = Args->getLastArg(OPT_out))
     return Arg->getValue();
-  SmallString<128> Val = FirstMember.getNew();
+  SmallString<128> Val = StringRef(FirstMember.Buf->getBufferIdentifier());
   llvm::sys::path::replace_extension(Val, ".lib");
   return Val.str();
 }
@@ -122,20 +122,28 @@ int llvm::libDriverMain(llvm::ArrayRef<const char*> ArgsArr) {
     llvm::errs() << "ignoring unknown argument: " << Arg->getSpelling() << "\n";
 
   if (Args.filtered_begin(OPT_INPUT) == Args.filtered_end()) {
-    llvm::errs() << "no input files.\n";
-    return 1;
+    // No input files.  To match lib.exe, silently do nothing.
+    return 0;
   }
 
   std::vector<StringRef> SearchPaths = getSearchPaths(&Args, Saver);
 
-  std::vector<llvm::NewArchiveIterator> Members;
+  std::vector<llvm::NewArchiveMember> Members;
   for (auto *Arg : Args.filtered(OPT_INPUT)) {
     Optional<std::string> Path = findInputFile(Arg->getValue(), SearchPaths);
     if (!Path.hasValue()) {
       llvm::errs() << Arg->getValue() << ": no such file or directory\n";
       return 1;
     }
-    Members.emplace_back(Saver.save(*Path));
+    Expected<NewArchiveMember> MOrErr =
+        NewArchiveMember::getFile(Saver.save(*Path), /*Deterministic=*/true);
+    if (!MOrErr) {
+      handleAllErrors(MOrErr.takeError(), [&](const llvm::ErrorInfoBase &EIB) {
+        llvm::errs() << Arg->getValue() << ": " << EIB.message() << "\n";
+      });
+      return 1;
+    }
+    Members.emplace_back(std::move(*MOrErr));
   }
 
   std::pair<StringRef, std::error_code> Result =

@@ -74,13 +74,13 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!43}
 
-!0 = distinct !DISubprogram(name: "foo", line: 8, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 8, file: !1, scope: !1, type: !3, variables: !41)
+!0 = distinct !DISubprogram(name: "foo", line: 8, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 8, file: !1, scope: !1, type: !3, variables: !41)
 !1 = !DIFile(filename: "nm2.c", directory: "/private/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 125693)", isOptimized: true, emissionKind: 1, file: !42, enums: !{}, retainedTypes: !{}, subprograms: !39, globals: !40, imports:  !44)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 2.9 (trunk 125693)", isOptimized: true, emissionKind: FullDebug, file: !42, enums: !{}, retainedTypes: !{}, globals: !40, imports:  !44)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!6 = distinct !DISubprogram(name: "foobar", line: 15, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, file: !1, scope: !1, type: !7)
+!6 = distinct !DISubprogram(name: "foobar", line: 15, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !2, file: !1, scope: !1, type: !7)
 !7 = !DISubroutineType(types: !8)
 !8 = !{null}
 !9 = !DILocalVariable(name: "sp", line: 7, arg: 1, scope: !0, file: !1, type: !10)
@@ -109,7 +109,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !36 = !DILocation(line: 9, column: 3, scope: !23, inlinedAt: !32)
 !37 = !DILocation(line: 10, column: 3, scope: !23, inlinedAt: !32)
 !38 = !DILocation(line: 17, column: 1, scope: !33)
-!39 = !{!0, !6}
 !40 = !{!19}
 !41 = !{!9, !18}
 !42 = !DIFile(filename: "nm2.c", directory: "/private/tmp")

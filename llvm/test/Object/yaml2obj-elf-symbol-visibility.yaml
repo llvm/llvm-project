@@ -1,6 +1,6 @@
-# RUN: yaml2obj -format=elf %s | llvm-readobj -symbols - | \
+# RUN: yaml2obj %s | llvm-readobj -symbols - | \
 # RUN:   FileCheck --check-prefix OBJ %s
-# RUN: yaml2obj -format=elf %s | obj2yaml - | FileCheck --check-prefix YAML %s
+# RUN: yaml2obj %s | obj2yaml - | FileCheck --check-prefix YAML %s
 
 # OBJ:      Symbol {
 # OBJ:        Name: default1 (36)
@@ -26,7 +26,9 @@
 # OBJ-NEXT:   Size: 4
 # OBJ-NEXT:   Binding: Global (0x1)
 # OBJ-NEXT:   Type: Object (0x1)
-# OBJ-NEXT:   Other: 1
+# OBJ-NEXT:   Other [ (0x1)
+# OBJ-NEXT:     STV_INTERNAL
+# OBJ-NEXT:   ]
 # OBJ-NEXT:   Section: .data (0x1)
 # OBJ-NEXT: }
 # OBJ-NEXT: Symbol {
@@ -35,7 +37,9 @@
 # OBJ-NEXT:   Size: 4
 # OBJ-NEXT:   Binding: Global (0x1)
 # OBJ-NEXT:   Type: Object (0x1)
-# OBJ-NEXT:   Other: 2
+# OBJ-NEXT:   Other [ (0x2)
+# OBJ-NEXT:     STV_HIDDEN
+# OBJ-NEXT:   ]
 # OBJ-NEXT:   Section: .data (0x1)
 # OBJ-NEXT: }
 # OBJ-NEXT: Symbol {
@@ -44,7 +48,11 @@
 # OBJ-NEXT:   Size: 4
 # OBJ-NEXT:   Binding: Global (0x1)
 # OBJ-NEXT:   Type: Object (0x1)
-# OBJ-NEXT:   Other: 163
+# OBJ-NEXT:   Other [ (0xA3)
+# OBJ-NEXT:     STO_MIPS_MICROMIPS
+# OBJ-NEXT:     STO_MIPS_PIC
+# OBJ-NEXT:     STV_PROTECTED
+# OBJ-NEXT:   ]
 # OBJ-NEXT:   Section: .data (0x1)
 # OBJ-NEXT: }
 
@@ -79,7 +87,7 @@
 # YAML-NEXT:       Visibility:      STV_PROTECTED
 # YAML-NEXT:       Other:           [ STO_MIPS_PIC, STO_MIPS_MICROMIPS ]
 
----
+--- !ELF
 FileHeader:
   Class:           ELFCLASS32
   Data:            ELFDATA2LSB

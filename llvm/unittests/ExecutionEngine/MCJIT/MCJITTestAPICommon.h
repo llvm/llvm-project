@@ -15,6 +15,7 @@
 #ifndef LLVM_UNITTESTS_EXECUTIONENGINE_MCJIT_MCJITTESTAPICOMMON_H
 #define LLVM_UNITTESTS_EXECUTIONENGINE_MCJIT_MCJITTESTAPICOMMON_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -56,13 +57,11 @@ protected:
   bool ArchSupportsMCJIT() {
     Triple Host(HostTriple);
     // If ARCH is not supported, bail
-    if (std::find(SupportedArchs.begin(), SupportedArchs.end(), Host.getArch())
-        == SupportedArchs.end())
+    if (!is_contained(SupportedArchs, Host.getArch()))
       return false;
 
     // If ARCH is supported and has no specific sub-arch support
-    if (std::find(HasSubArchs.begin(), HasSubArchs.end(), Host.getArch())
-        == HasSubArchs.end())
+    if (!is_contained(HasSubArchs, Host.getArch()))
       return true;
 
     // If ARCH has sub-arch support, find it
@@ -78,12 +77,11 @@ protected:
   bool OSSupportsMCJIT() {
     Triple Host(HostTriple);
 
-    if (std::find(UnsupportedEnvironments.begin(), UnsupportedEnvironments.end(),
-                  Host.getEnvironment()) != UnsupportedEnvironments.end())
+    if (find(UnsupportedEnvironments, Host.getEnvironment()) !=
+        UnsupportedEnvironments.end())
       return false;
 
-    if (std::find(UnsupportedOSs.begin(), UnsupportedOSs.end(), Host.getOS())
-        == UnsupportedOSs.end())
+    if (!is_contained(UnsupportedOSs, Host.getOS()))
       return true;
 
     return false;

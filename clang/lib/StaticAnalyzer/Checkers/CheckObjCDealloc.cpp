@@ -98,7 +98,9 @@ class ObjCDeallocChecker
                      check::PointerEscape,
                      check::PreStmt<ReturnStmt>> {
 
-  mutable IdentifierInfo *NSObjectII, *SenTestCaseII, *Block_releaseII;
+  mutable IdentifierInfo *NSObjectII, *SenTestCaseII, *XCTestCaseII,
+      *Block_releaseII, *CIFilterII;
+
   mutable Selector DeallocSel, ReleaseSel;
 
   std::unique_ptr<BugType> MissingReleaseBugType;
@@ -169,6 +171,8 @@ private:
   void initIdentifierInfoAndSelectors(ASTContext &Ctx) const;
 
   bool classHasSeparateTeardown(const ObjCInterfaceDecl *ID) const;
+
+  bool isReleasedByCIFilterDealloc(const ObjCPropertyImplDecl *PropImpl) const;
 };
 } // End anonymous namespace.
 
@@ -311,15 +315,7 @@ void ObjCDeallocChecker::checkBeginFunction(
 /// Returns nullptr if the instance symbol cannot be found.
 const ObjCIvarRegion *
 ObjCDeallocChecker::getIvarRegionForIvarSymbol(SymbolRef IvarSym) const {
-  const MemRegion *RegionLoadedFrom = nullptr;
-  if (auto *DerivedSym = dyn_cast<SymbolDerived>(IvarSym))
-    RegionLoadedFrom = DerivedSym->getRegion();
-  else if (auto *RegionSym = dyn_cast<SymbolRegionValue>(IvarSym))
-    RegionLoadedFrom = RegionSym->getRegion();
-  else
-    return nullptr;
-
-  return dyn_cast<ObjCIvarRegion>(RegionLoadedFrom);
+  return dyn_cast_or_null<ObjCIvarRegion>(IvarSym->getOriginRegion());
 }
 
 /// Given a symbol for an ivar, return a symbol for the instance containing
@@ -529,7 +525,7 @@ void ObjCDeallocChecker::diagnoseMissingReleases(CheckerContext &C) const {
     if (SelfRegion != IvarRegion->getSuperRegion())
       continue;
 
-      const ObjCIvarDecl *IvarDecl = IvarRegion->getDecl();
+    const ObjCIvarDecl *IvarDecl = IvarRegion->getDecl();
     // Prevent an inlined call to -dealloc in a super class from warning
     // about the values the subclass's -dealloc should release.
     if (IvarDecl->getContainingInterface() !=
@@ -688,19 +684,27 @@ bool ObjCDeallocChecker::diagnoseExtraRelease(SymbolRef ReleasedValue,
 
   assert(PropDecl->getSetterKind() == ObjCPropertyDecl::Weak ||
          (PropDecl->getSetterKind() == ObjCPropertyDecl::Assign &&
-          !PropDecl->isReadOnly()));
+          !PropDecl->isReadOnly()) ||
+         isReleasedByCIFilterDealloc(PropImpl)
+         );
 
   const ObjCImplDecl *Container = getContainingObjCImpl(C.getLocationContext());
   OS << "The '" << *PropImpl->getPropertyIvarDecl()
-     << "' ivar in '" << *Container
-     << "' was synthesized for ";
+     << "' ivar in '" << *Container;
 
-  if (PropDecl->getSetterKind() == ObjCPropertyDecl::Weak)
-    OS << "a weak";
-  else
-    OS << "an assign, readwrite";
 
-  OS <<  " property but was released in 'dealloc'";
+  if (isReleasedByCIFilterDealloc(PropImpl)) {
+    OS << "' will be released by '-[CIFilter dealloc]' but also released here";
+  } else {
+    OS << "' was synthesized for ";
+
+    if (PropDecl->getSetterKind() == ObjCPropertyDecl::Weak)
+      OS << "a weak";
+    else
+      OS << "an assign, readwrite";
+
+    OS <<  " property but was released in 'dealloc'";
+  }
 
   std::unique_ptr<BugReport> BR(
       new BugReport(*ExtraReleaseBugType, OS.str(), ErrNode));
@@ -749,9 +753,9 @@ bool ObjCDeallocChecker::diagnoseMistakenDealloc(SymbolRef DeallocedValue,
   return true;
 }
 
-ObjCDeallocChecker::
-    ObjCDeallocChecker()
-    : NSObjectII(nullptr), SenTestCaseII(nullptr) {
+ObjCDeallocChecker::ObjCDeallocChecker()
+    : NSObjectII(nullptr), SenTestCaseII(nullptr), XCTestCaseII(nullptr),
+      CIFilterII(nullptr) {
 
   MissingReleaseBugType.reset(
       new BugType(this, "Missing ivar release (leak)",
@@ -773,7 +777,9 @@ void ObjCDeallocChecker::initIdentifierInfoAndSelectors(
 
   NSObjectII = &Ctx.Idents.get("NSObject");
   SenTestCaseII = &Ctx.Idents.get("SenTestCase");
+  XCTestCaseII = &Ctx.Idents.get("XCTestCase");
   Block_releaseII = &Ctx.Idents.get("_Block_release");
+  CIFilterII = &Ctx.Idents.get("CIFilter");
 
   IdentifierInfo *DeallocII = &Ctx.Idents.get("dealloc");
   IdentifierInfo *ReleaseII = &Ctx.Idents.get("release");
@@ -894,6 +900,9 @@ ReleaseRequirement ObjCDeallocChecker::getDeallocReleaseRequirement(
   // the value in their instance variables must be released in -dealloc.
   case ObjCPropertyDecl::Retain:
   case ObjCPropertyDecl::Copy:
+    if (isReleasedByCIFilterDealloc(PropImpl))
+      return ReleaseRequirement::MustNotReleaseDirectly;
+
     return ReleaseRequirement::MustRelease;
 
   case ObjCPropertyDecl::Weak:
@@ -1008,15 +1017,46 @@ bool ObjCDeallocChecker::classHasSeparateTeardown(
     if (II == NSObjectII)
       return false;
 
-    // FIXME: For now, ignore classes that subclass SenTestCase, as these don't
-    // need to implement -dealloc.  They implement tear down in another way,
-    // which we should try and catch later.
+    // FIXME: For now, ignore classes that subclass SenTestCase and XCTestCase,
+    // as these don't need to implement -dealloc.  They implement tear down in
+    // another way, which we should try and catch later.
     //  http://llvm.org/bugs/show_bug.cgi?id=3187
-    if (II == SenTestCaseII)
+    if (II == XCTestCaseII || II == SenTestCaseII)
       return true;
   }
 
   return true;
+}
+
+/// The -dealloc method in CIFilter highly unusual in that is will release
+/// instance variables belonging to its *subclasses* if the variable name
+/// starts with "input" or backs a property whose name starts with "input".
+/// Subclasses should not release these ivars in their own -dealloc method --
+/// doing so could result in an over release.
+///
+/// This method returns true if the property will be released by
+/// -[CIFilter dealloc].
+bool ObjCDeallocChecker::isReleasedByCIFilterDealloc(
+    const ObjCPropertyImplDecl *PropImpl) const {
+  assert(PropImpl->getPropertyIvarDecl());
+  StringRef PropName = PropImpl->getPropertyDecl()->getName();
+  StringRef IvarName = PropImpl->getPropertyIvarDecl()->getName();
+
+  const char *ReleasePrefix = "input";
+  if (!(PropName.startswith(ReleasePrefix) ||
+        IvarName.startswith(ReleasePrefix))) {
+    return false;
+  }
+
+  const ObjCInterfaceDecl *ID =
+      PropImpl->getPropertyIvarDecl()->getContainingInterface();
+  for ( ; ID ; ID = ID->getSuperClass()) {
+    IdentifierInfo *II = ID->getIdentifier();
+    if (II == CIFilterII)
+      return true;
+  }
+
+  return false;
 }
 
 void ento::registerObjCDeallocChecker(CheckerManager &Mgr) {

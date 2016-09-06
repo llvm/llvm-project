@@ -12,12 +12,18 @@
 #include "FuzzerInternal.h"
 #include <sstream>
 #include <iomanip>
+#include <sys/resource.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <sys/syscall.h>
 #include <cassert>
+#include <chrono>
 #include <cstring>
 #include <signal.h>
 #include <sstream>
 #include <unistd.h>
+#include <errno.h>
+#include <thread>
 
 namespace fuzzer {
 
@@ -70,32 +76,80 @@ static void AlarmHandler(int, siginfo_t *, void *) {
   Fuzzer::StaticAlarmCallback();
 }
 
-void SetTimer(int Seconds) {
-  struct itimerval T {{Seconds, 0}, {Seconds, 0}};
-  int Res = setitimer(ITIMER_REAL, &T, nullptr);
-  assert(Res == 0);
-  struct sigaction sigact;
-  memset(&sigact, 0, sizeof(sigact));
-  sigact.sa_sigaction = AlarmHandler;
-  Res = sigaction(SIGALRM, &sigact, 0);
-  assert(Res == 0);
+static void CrashHandler(int, siginfo_t *, void *) {
+  Fuzzer::StaticCrashSignalCallback();
 }
 
+static void InterruptHandler(int, siginfo_t *, void *) {
+  Fuzzer::StaticInterruptCallback();
+}
+
+static void SetSigaction(int signum,
+                         void (*callback)(int, siginfo_t *, void *)) {
+  struct sigaction sigact;
+  memset(&sigact, 0, sizeof(sigact));
+  sigact.sa_sigaction = callback;
+  if (sigaction(signum, &sigact, 0)) {
+    Printf("libFuzzer: sigaction failed with %d\n", errno);
+    exit(1);
+  }
+}
+
+void SetTimer(int Seconds) {
+  struct itimerval T {{Seconds, 0}, {Seconds, 0}};
+  if (setitimer(ITIMER_REAL, &T, nullptr)) {
+    Printf("libFuzzer: setitimer failed with %d\n", errno);
+    exit(1);
+  }
+  SetSigaction(SIGALRM, AlarmHandler);
+}
+
+void SetSigSegvHandler() { SetSigaction(SIGSEGV, CrashHandler); }
+void SetSigBusHandler() { SetSigaction(SIGBUS, CrashHandler); }
+void SetSigAbrtHandler() { SetSigaction(SIGABRT, CrashHandler); }
+void SetSigIllHandler() { SetSigaction(SIGILL, CrashHandler); }
+void SetSigFpeHandler() { SetSigaction(SIGFPE, CrashHandler); }
+void SetSigIntHandler() { SetSigaction(SIGINT, InterruptHandler); }
+void SetSigTermHandler() { SetSigaction(SIGTERM, InterruptHandler); }
+
 int NumberOfCpuCores() {
-  FILE *F = popen("nproc", "r");
-  int N = 0;
-  fscanf(F, "%d", &N);
-  fclose(F);
+  const char *CmdLine = nullptr;
+  if (LIBFUZZER_LINUX) {
+    CmdLine = "nproc";
+  } else if (LIBFUZZER_APPLE) {
+    CmdLine = "sysctl -n hw.ncpu";
+  } else {
+    assert(0 && "NumberOfCpuCores() is not implemented for your platform");
+  }
+
+  FILE *F = popen(CmdLine, "r");
+  int N = 1;
+  if (!F || fscanf(F, "%d", &N) != 1) {
+    Printf("WARNING: Failed to parse output of command \"%s\" in %s(). "
+           "Assuming CPU count of 1.\n",
+           CmdLine, __func__);
+    N = 1;
+  }
+
+  if (pclose(F)) {
+    Printf("WARNING: Executing command \"%s\" failed in %s(). "
+           "Assuming CPU count of 1.\n",
+           CmdLine, __func__);
+    N = 1;
+  }
+  if (N < 1) {
+    Printf("WARNING: Reported CPU count (%d) from command \"%s\" was invalid "
+           "in %s(). Assuming CPU count of 1.\n",
+           N, CmdLine, __func__);
+    N = 1;
+  }
   return N;
 }
 
-int ExecuteCommand(const std::string &Command) {
-  return system(Command.c_str());
-}
-
-bool ToASCII(Unit &U) {
+bool ToASCII(uint8_t *Data, size_t Size) {
   bool Changed = false;
-  for (auto &X : U) {
+  for (size_t i = 0; i < Size; i++) {
+    uint8_t &X = Data[i];
     auto NewX = X;
     NewX &= 127;
     if (!isspace(NewX) && !isprint(NewX))
@@ -106,9 +160,11 @@ bool ToASCII(Unit &U) {
   return Changed;
 }
 
-bool IsASCII(const Unit &U) {
-  for (auto X : U)
-    if (!(isprint(X) || isspace(X))) return false;
+bool IsASCII(const Unit &U) { return IsASCII(U.data(), U.size()); }
+
+bool IsASCII(const uint8_t *Data, size_t Size) {
+  for (size_t i = 0; i < Size; i++)
+    if (!(isprint(Data[i]) || isspace(Data[i]))) return false;
   return true;
 }
 
@@ -185,8 +241,11 @@ bool ParseDictionaryFile(const std::string &Text, std::vector<Unit> *Units) {
   return true;
 }
 
-int GetPid() { return getpid(); }
+void SleepSeconds(int Seconds) {
+  std::this_thread::sleep_for(std::chrono::seconds(Seconds));
+}
 
+int GetPid() { return getpid(); }
 
 std::string Base64(const Unit &U) {
   static const char Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -214,6 +273,21 @@ std::string Base64(const Unit &U) {
     Res += "=";
   }
   return Res;
+}
+
+size_t GetPeakRSSMb() {
+  struct rusage usage;
+  if (getrusage(RUSAGE_SELF, &usage))
+    return 0;
+  if (LIBFUZZER_LINUX) {
+    // ru_maxrss is in KiB
+    return usage.ru_maxrss >> 10;
+  } else if (LIBFUZZER_APPLE) {
+    // ru_maxrss is in bytes
+    return usage.ru_maxrss >> 20;
+  }
+  assert(0 && "GetPeakRSSMb() is not implemented for your platform");
+  return 0;
 }
 
 }  // namespace fuzzer

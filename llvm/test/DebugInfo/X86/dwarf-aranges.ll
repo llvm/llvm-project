@@ -62,11 +62,10 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!13, !16}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.4 ", isOptimized: false, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !8, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.4 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !8, imports: !2)
 !1 = !DIFile(filename: "test.c", directory: "/home/kayamon")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "some_code", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scopeLine: 6, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "some_code", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !0, scopeLine: 6, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "test.c", directory: "/home/kayamon")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}

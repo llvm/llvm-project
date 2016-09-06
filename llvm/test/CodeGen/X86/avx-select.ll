@@ -4,7 +4,7 @@
 define <8 x i32> @select00(i32 %a, <8 x i32> %b) nounwind {
 ; CHECK-LABEL: select00:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vxorps %ymm1, %ymm1, %ymm1
 ; CHECK-NEXT:    cmpl $255, %edi
 ; CHECK-NEXT:    je LBB0_2
 ; CHECK-NEXT:  ## BB#1:
@@ -21,7 +21,7 @@ define <8 x i32> @select00(i32 %a, <8 x i32> %b) nounwind {
 define <4 x i64> @select01(i32 %a, <4 x i64> %b) nounwind {
 ; CHECK-LABEL: select01:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vxorps %ymm1, %ymm1, %ymm1
 ; CHECK-NEXT:    cmpl $255, %edi
 ; CHECK-NEXT:    je LBB1_2
 ; CHECK-NEXT:  ## BB#1:

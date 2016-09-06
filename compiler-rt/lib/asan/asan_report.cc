@@ -13,9 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_flags.h"
+#include "asan_descriptions.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
 #include "asan_report.h"
+#include "asan_scariness_score.h"
 #include "asan_stack.h"
 #include "asan_thread.h"
 #include "sanitizer_common/sanitizer_common.h"
@@ -63,56 +65,6 @@ void AppendToErrorMessageBuffer(const char *buffer) {
   // FIXME: reallocate the buffer instead of truncating the message.
   error_message_buffer_pos += Min(remaining, length);
 }
-
-// ---------------------- Decorator ------------------------------ {{{1
-class Decorator: public __sanitizer::SanitizerCommonDecorator {
- public:
-  Decorator() : SanitizerCommonDecorator() { }
-  const char *Access()     { return Blue(); }
-  const char *EndAccess()  { return Default(); }
-  const char *Location()   { return Green(); }
-  const char *EndLocation() { return Default(); }
-  const char *Allocation()  { return Magenta(); }
-  const char *EndAllocation()  { return Default(); }
-
-  const char *ShadowByte(u8 byte) {
-    switch (byte) {
-      case kAsanHeapLeftRedzoneMagic:
-      case kAsanHeapRightRedzoneMagic:
-      case kAsanArrayCookieMagic:
-        return Red();
-      case kAsanHeapFreeMagic:
-        return Magenta();
-      case kAsanStackLeftRedzoneMagic:
-      case kAsanStackMidRedzoneMagic:
-      case kAsanStackRightRedzoneMagic:
-      case kAsanStackPartialRedzoneMagic:
-        return Red();
-      case kAsanStackAfterReturnMagic:
-        return Magenta();
-      case kAsanInitializationOrderMagic:
-        return Cyan();
-      case kAsanUserPoisonedMemoryMagic:
-      case kAsanContiguousContainerOOBMagic:
-      case kAsanAllocaLeftMagic:
-      case kAsanAllocaRightMagic:
-        return Blue();
-      case kAsanStackUseAfterScopeMagic:
-        return Magenta();
-      case kAsanGlobalRedzoneMagic:
-        return Red();
-      case kAsanInternalHeapMagic:
-        return Yellow();
-      case kAsanIntraObjectRedzone:
-        return Yellow();
-      default:
-        return Default();
-    }
-  }
-  const char *EndShadowByte() { return Default(); }
-  const char *MemoryByte() { return Magenta(); }
-  const char *EndMemoryByte() { return Default(); }
-};
 
 // ---------------------- Helper functions ----------------------- {{{1
 
@@ -233,11 +185,6 @@ static void PrintZoneForPointer(uptr ptr, uptr zone_ptr,
   }
 }
 
-static void DescribeThread(AsanThread *t) {
-  if (t)
-    DescribeThread(t->context());
-}
-
 // ---------------------- Address Descriptions ------------------- {{{1
 
 static bool IsASCII(unsigned char c) {
@@ -335,46 +282,6 @@ static bool DescribeAddressIfGlobal(uptr addr, uptr size,
   return true;
 }
 
-bool DescribeAddressIfShadow(uptr addr, AddressDescription *descr, bool print) {
-  if (AddrIsInMem(addr))
-    return false;
-  const char *area_type = nullptr;
-  if (AddrIsInShadowGap(addr)) area_type = "shadow gap";
-  else if (AddrIsInHighShadow(addr)) area_type = "high shadow";
-  else if (AddrIsInLowShadow(addr)) area_type = "low shadow";
-  if (area_type != nullptr) {
-    if (print) {
-      Printf("Address %p is located in the %s area.\n", addr, area_type);
-    } else {
-      CHECK(descr);
-      descr->region_kind = area_type;
-    }
-    return true;
-  }
-  CHECK(0 && "Address is not in memory and not in shadow?");
-  return false;
-}
-
-// Return " (thread_name) " or an empty string if the name is empty.
-const char *ThreadNameWithParenthesis(AsanThreadContext *t, char buff[],
-                                      uptr buff_len) {
-  const char *name = t->name;
-  if (name[0] == '\0') return "";
-  buff[0] = 0;
-  internal_strncat(buff, " (", 3);
-  internal_strncat(buff, name, buff_len - 4);
-  internal_strncat(buff, ")", 2);
-  return buff;
-}
-
-const char *ThreadNameWithParenthesis(u32 tid, char buff[],
-                                      uptr buff_len) {
-  if (tid == kInvalidTid) return "";
-  asanThreadRegistry().CheckLocked();
-  AsanThreadContext *t = GetThreadContextByTidLocked(tid);
-  return ThreadNameWithParenthesis(t, buff, buff_len);
-}
-
 static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
                                           uptr access_size, uptr prev_var_end,
                                           uptr next_var_beg) {
@@ -470,7 +377,7 @@ bool DescribeAddressIfStack(uptr addr, uptr access_size) {
   // previously. That's unfortunate, but I have no better solution,
   // especially given that the alloca may be from entirely different place
   // (e.g. use-after-scope, or different thread's stack).
-#if defined(__powerpc64__) && defined(__BIG_ENDIAN__)
+#if SANITIZER_PPC64V1
   // On PowerPC64 ELFv1, the address of a function actually points to a
   // three-doubleword data structure with the first field containing
   // the address of the function's code.
@@ -544,7 +451,7 @@ void DescribeHeapAddress(uptr addr, uptr access_size) {
     return;
   }
   DescribeAccessToHeapChunk(chunk, addr, access_size);
-  CHECK(chunk.AllocTid() != kInvalidTid);
+  CHECK_NE(chunk.AllocTid(), kInvalidTid);
   asanThreadRegistry().CheckLocked();
   AsanThreadContext *alloc_thread =
       GetThreadContextByTidLocked(chunk.AllocTid());
@@ -588,38 +495,6 @@ static void DescribeAddress(uptr addr, uptr access_size, const char *bug_type) {
     return;
   // Assume it is a heap address.
   DescribeHeapAddress(addr, access_size);
-}
-
-// ------------------- Thread description -------------------- {{{1
-
-void DescribeThread(AsanThreadContext *context) {
-  CHECK(context);
-  asanThreadRegistry().CheckLocked();
-  // No need to announce the main thread.
-  if (context->tid == 0 || context->announced) {
-    return;
-  }
-  context->announced = true;
-  char tname[128];
-  InternalScopedString str(1024);
-  str.append("Thread T%d%s", context->tid,
-             ThreadNameWithParenthesis(context->tid, tname, sizeof(tname)));
-  if (context->parent_tid == kInvalidTid) {
-    str.append(" created by unknown thread\n");
-    Printf("%s", str.data());
-    return;
-  }
-  str.append(
-      " created by T%d%s here:\n", context->parent_tid,
-      ThreadNameWithParenthesis(context->parent_tid, tname, sizeof(tname)));
-  Printf("%s", str.data());
-  StackDepotGet(context->stack_id).Print();
-  // Recursively described parent thread if needed.
-  if (flags()->print_full_thread_history) {
-    AsanThreadContext *parent_context =
-        GetThreadContextByTidLocked(context->parent_tid);
-    DescribeThread(parent_context);
-  }
 }
 
 // -------------------- Different kinds of reports ----------------- {{{1
@@ -735,10 +610,10 @@ class ScopedInErrorReport {
 };
 
 StaticSpinMutex ScopedInErrorReport::lock_;
-u32 ScopedInErrorReport::reporting_thread_tid_;
+u32 ScopedInErrorReport::reporting_thread_tid_ = kInvalidTid;
 
 void ReportStackOverflow(const SignalContext &sig) {
-  ScopedInErrorReport in_report;
+  ScopedInErrorReport in_report(/*report*/ nullptr, /*fatal*/ true);
   Decorator d;
   Printf("%s", d.Warning());
   Report(
@@ -747,13 +622,14 @@ void ReportStackOverflow(const SignalContext &sig) {
       (void *)sig.addr, (void *)sig.pc, (void *)sig.bp, (void *)sig.sp,
       GetCurrentTidOrInvalid());
   Printf("%s", d.EndWarning());
+  ScarinessScore::PrintSimple(10, "stack-overflow");
   GET_STACK_TRACE_SIGNAL(sig);
   stack.Print();
   ReportErrorSummary("stack-overflow", &stack);
 }
 
 void ReportDeadlySignal(const char *description, const SignalContext &sig) {
-  ScopedInErrorReport in_report(/*report*/nullptr, /*fatal*/true);
+  ScopedInErrorReport in_report(/*report*/ nullptr, /*fatal*/ true);
   Decorator d;
   Printf("%s", d.Warning());
   Report(
@@ -761,10 +637,32 @@ void ReportDeadlySignal(const char *description, const SignalContext &sig) {
       " (pc %p bp %p sp %p T%d)\n",
       description, (void *)sig.addr, (void *)sig.pc, (void *)sig.bp,
       (void *)sig.sp, GetCurrentTidOrInvalid());
-  if (sig.pc < GetPageSizeCached()) {
-    Report("Hint: pc points to the zero page.\n");
-  }
   Printf("%s", d.EndWarning());
+  ScarinessScore SS;
+  if (sig.pc < GetPageSizeCached())
+    Report("Hint: pc points to the zero page.\n");
+  if (sig.is_memory_access) {
+    const char *access_type =
+        sig.write_flag == SignalContext::WRITE
+            ? "WRITE"
+            : (sig.write_flag == SignalContext::READ ? "READ" : "UNKNOWN");
+    Report("The signal is caused by a %s memory access.\n", access_type);
+    if (sig.addr < GetPageSizeCached()) {
+      Report("Hint: address points to the zero page.\n");
+      SS.Scare(10, "null-deref");
+    } else if (sig.addr == sig.pc) {
+      SS.Scare(60, "wild-jump");
+    } else if (sig.write_flag == SignalContext::WRITE) {
+      SS.Scare(30, "wild-addr-write");
+    } else if (sig.write_flag == SignalContext::READ) {
+      SS.Scare(20, "wild-addr-read");
+    } else {
+      SS.Scare(25, "wild-addr");
+    }
+  } else {
+    SS.Scare(10, "signal");
+  }
+  SS.Print();
   GET_STACK_TRACE_SIGNAL(sig);
   stack.Print();
   MaybeDumpInstructionBytes(sig.pc);
@@ -784,13 +682,14 @@ void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack) {
          ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)));
   Printf("%s", d.EndWarning());
   CHECK_GT(free_stack->size, 0);
+  ScarinessScore::PrintSimple(42, "double-free");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
   DescribeHeapAddress(addr, 1);
   ReportErrorSummary("double-free", &stack);
 }
 
-void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
+void ReportNewDeleteSizeMismatch(uptr addr, uptr alloc_size, uptr delete_size,
                                  BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
   Decorator d;
@@ -804,8 +703,9 @@ void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
   Printf("%s  object passed to delete has wrong type:\n", d.EndWarning());
   Printf("  size of the allocated type:   %zd bytes;\n"
          "  size of the deallocated type: %zd bytes.\n",
-         asan_mz_size(reinterpret_cast<void*>(addr)), delete_size);
+         alloc_size, delete_size);
   CHECK_GT(free_stack->size, 0);
+  ScarinessScore::PrintSimple(10, "new-delete-type-mismatch");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
   DescribeHeapAddress(addr, 1);
@@ -825,6 +725,7 @@ void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack) {
          curr_tid, ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)));
   Printf("%s", d.EndWarning());
   CHECK_GT(free_stack->size, 0);
+  ScarinessScore::PrintSimple(40, "bad-free");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
   DescribeHeapAddress(addr, 1);
@@ -846,6 +747,7 @@ void ReportAllocTypeMismatch(uptr addr, BufferedStackTrace *free_stack,
         alloc_names[alloc_type], dealloc_names[dealloc_type], addr);
   Printf("%s", d.EndWarning());
   CHECK_GT(free_stack->size, 0);
+  ScarinessScore::PrintSimple(10, "alloc-dealloc-mismatch");
   GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
   stack.Print();
   DescribeHeapAddress(addr, 1);
@@ -894,6 +796,7 @@ void ReportStringFunctionMemoryRangesOverlap(const char *function,
              "memory ranges [%p,%p) and [%p, %p) overlap\n", \
              bug_type, offset1, offset1 + length1, offset2, offset2 + length2);
   Printf("%s", d.EndWarning());
+  ScarinessScore::PrintSimple(10, bug_type);
   stack->Print();
   DescribeAddress((uptr)offset1, length1, bug_type);
   DescribeAddress((uptr)offset2, length2, bug_type);
@@ -908,6 +811,7 @@ void ReportStringFunctionSizeOverflow(uptr offset, uptr size,
   Printf("%s", d.Warning());
   Report("ERROR: AddressSanitizer: %s: (size=%zd)\n", bug_type, size);
   Printf("%s", d.EndWarning());
+  ScarinessScore::PrintSimple(10, bug_type);
   stack->Print();
   DescribeAddress(offset, size, bug_type);
   ReportErrorSummary(bug_type, stack);
@@ -982,10 +886,10 @@ static INLINE void CheckForInvalidPointerPair(void *p1, void *p2) {
   uptr a2 = reinterpret_cast<uptr>(p2);
   AsanChunkView chunk1 = FindHeapChunkByAddress(a1);
   AsanChunkView chunk2 = FindHeapChunkByAddress(a2);
-  bool valid1 = chunk1.IsValid();
-  bool valid2 = chunk2.IsValid();
-  if ((valid1 != valid2) || (valid1 && valid2 && !chunk1.Eq(chunk2))) {
-    GET_CALLER_PC_BP_SP;                                              \
+  bool valid1 = chunk1.IsAllocated();
+  bool valid2 = chunk2.IsAllocated();
+  if (!valid1 || !valid2 || !chunk1.Eq(chunk2)) {
+    GET_CALLER_PC_BP_SP;
     return ReportInvalidPointerPair(pc, bp, sp, a1, a2);
   }
 }
@@ -1016,10 +920,34 @@ static bool SuppressErrorReport(uptr pc) {
   Die();
 }
 
+static void PrintContainerOverflowHint() {
+  Printf("HINT: if you don't care about these errors you may set "
+         "ASAN_OPTIONS=detect_container_overflow=0.\n"
+         "If you suspect a false positive see also: "
+         "https://github.com/google/sanitizers/wiki/"
+         "AddressSanitizerContainerOverflow.\n");
+}
+
+static bool AdjacentShadowValuesAreFullyPoisoned(u8 *s) {
+  return s[-1] > 127 && s[1] > 127;
+}
+
 void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
                         uptr access_size, u32 exp, bool fatal) {
   if (!fatal && SuppressErrorReport(pc)) return;
   ENABLE_FRAME_POINTER;
+  ScarinessScore SS;
+
+  if (access_size) {
+    if (access_size <= 9) {
+      char desr[] = "?-byte";
+      desr[0] = '0' + access_size;
+      SS.Scare(access_size + access_size / 2, desr);
+    } else if (access_size >= 10) {
+      SS.Scare(15, "multi-byte");
+    }
+    is_write ? SS.Scare(20, "write") : SS.Scare(1, "read");
+  }
 
   // Optimization experiments.
   // The experiments can be used to evaluate potential optimizations that remove
@@ -1032,6 +960,7 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
 
   // Determine the error type.
   const char *bug_descr = "unknown-crash";
+  u8 shadow_val = 0;
   if (AddrIsInMem(addr)) {
     u8 *shadow_addr = (u8*)MemToShadow(addr);
     // If we are accessing 16 bytes, look at the second shadow byte.
@@ -1040,49 +969,76 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
     // If we are in the partial right redzone, look at the next shadow byte.
     if (*shadow_addr > 0 && *shadow_addr < 128)
       shadow_addr++;
-    switch (*shadow_addr) {
+    bool far_from_bounds = false;
+    shadow_val = *shadow_addr;
+    int bug_type_score = 0;
+    // For use-after-frees reads are almost as bad as writes.
+    int read_after_free_bonus = 0;
+    switch (shadow_val) {
       case kAsanHeapLeftRedzoneMagic:
       case kAsanHeapRightRedzoneMagic:
       case kAsanArrayCookieMagic:
         bug_descr = "heap-buffer-overflow";
+        bug_type_score = 10;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
         break;
       case kAsanHeapFreeMagic:
         bug_descr = "heap-use-after-free";
+        bug_type_score = 20;
+        if (!is_write) read_after_free_bonus = 18;
         break;
       case kAsanStackLeftRedzoneMagic:
         bug_descr = "stack-buffer-underflow";
+        bug_type_score = 25;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
         break;
       case kAsanInitializationOrderMagic:
         bug_descr = "initialization-order-fiasco";
+        bug_type_score = 1;
         break;
       case kAsanStackMidRedzoneMagic:
       case kAsanStackRightRedzoneMagic:
       case kAsanStackPartialRedzoneMagic:
         bug_descr = "stack-buffer-overflow";
+        bug_type_score = 25;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
         break;
       case kAsanStackAfterReturnMagic:
         bug_descr = "stack-use-after-return";
+        bug_type_score = 30;
+        if (!is_write) read_after_free_bonus = 18;
         break;
       case kAsanUserPoisonedMemoryMagic:
         bug_descr = "use-after-poison";
+        bug_type_score = 20;
         break;
       case kAsanContiguousContainerOOBMagic:
         bug_descr = "container-overflow";
+        bug_type_score = 10;
         break;
       case kAsanStackUseAfterScopeMagic:
         bug_descr = "stack-use-after-scope";
+        bug_type_score = 10;
         break;
       case kAsanGlobalRedzoneMagic:
         bug_descr = "global-buffer-overflow";
+        bug_type_score = 10;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
         break;
       case kAsanIntraObjectRedzone:
         bug_descr = "intra-object-overflow";
+        bug_type_score = 10;
         break;
       case kAsanAllocaLeftMagic:
       case kAsanAllocaRightMagic:
         bug_descr = "dynamic-stack-buffer-overflow";
+        bug_type_score = 25;
+        far_from_bounds = AdjacentShadowValuesAreFullyPoisoned(shadow_addr);
         break;
     }
+    SS.Scare(bug_type_score + read_after_free_bonus, bug_descr);
+    if (far_from_bounds)
+      SS.Scare(10, "far-from-bounds");
   }
 
   ReportData report = { pc, sp, bp, addr, (bool)is_write, access_size,
@@ -1105,10 +1061,13 @@ void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
          ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)),
          d.EndAccess());
 
+  SS.Print();
   GET_STACK_TRACE_FATAL(pc, bp);
   stack.Print();
 
   DescribeAddress(addr, access_size, bug_descr);
+  if (shadow_val == kAsanContiguousContainerOOBMagic)
+    PrintContainerOverflowHint();
   ReportErrorSummary(bug_descr, &stack);
   PrintShadowMemoryForAddress(addr);
 }

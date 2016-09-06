@@ -8,6 +8,113 @@
 
 void foo() {}
 
+struct S1 {
+  S1(): a(0) {}
+  S1(int v) : a(v) {}
+  int a;
+  typedef int type;
+  S1& operator +(const S1&);
+  S1& operator *(const S1&);
+  S1& operator &&(const S1&);
+  S1& operator ^(const S1&);
+};
+
+template <typename T>
+class S7 : public T {
+protected:
+  T a;
+  T b[100];
+  S7() : a(0) {}
+
+public:
+  S7(typename T::type v) : a(v) {
+#pragma omp parallel private(a) private(this->a) private(T::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+#pragma omp parallel firstprivate(a) firstprivate(this->a) firstprivate(T::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+#pragma omp parallel shared(a) shared(this->a) shared(T::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+#pragma omp parallel reduction(+ : a) reduction(*: b[:])
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+  }
+  S7 &operator=(S7 &s) {
+#pragma omp parallel private(a) private(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+#pragma omp parallel firstprivate(a) firstprivate(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+#pragma omp parallel shared(a) shared(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+#pragma omp parallel reduction(&& : this->a) reduction(^: b[s.a.a])
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+    return *this;
+  }
+};
+
+// CHECK: #pragma omp parallel private(this->a) private(this->a) private(this->S1::a)
+// CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a) firstprivate(this->S1::a)
+// CHECK: #pragma omp parallel shared(this->a) shared(this->a) shared(this->S1::a)
+// CHECK: #pragma omp parallel reduction(+: this->a) reduction(*: this->b[:])
+// CHECK: #pragma omp parallel private(this->a) private(this->a) private(T::a)
+// CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a) firstprivate(T::a)
+// CHECK: #pragma omp parallel shared(this->a) shared(this->a) shared(T::a)
+// CHECK: #pragma omp parallel reduction(+: this->a) reduction(*: this->b[:])
+// CHECK: #pragma omp parallel private(this->a) private(this->a)
+// CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a)
+// CHECK: #pragma omp parallel shared(this->a) shared(this->a)
+// CHECK: #pragma omp parallel reduction(&&: this->a) reduction(^: this->b[s.a.a])
+
+class S8 : public S7<S1> {
+  S8() {}
+
+public:
+  S8(int v) : S7<S1>(v){
+#pragma omp parallel private(a) private(this->a) private(S7 < S1 > ::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+#pragma omp parallel firstprivate(a) firstprivate(this->a) firstprivate(S7 < S1 > ::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+#pragma omp parallel shared(a) shared(this->a) shared(S7 < S1 > ::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+#pragma omp parallel reduction(^ : S7 < S1 > ::a) reduction(+ : S7 < S1 > ::b[ : S7 < S1 > ::a.a])
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+  }
+  S8 &operator=(S8 &s) {
+#pragma omp parallel private(a) private(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+#pragma omp parallel firstprivate(a) firstprivate(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+#pragma omp parallel shared(a) shared(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+#pragma omp parallel reduction(* : this->a) reduction(&&:this->b[a.a:])
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+    return *this;
+  }
+};
+
+// CHECK: #pragma omp parallel private(this->a) private(this->a) private(this->S7<S1>::a)
+// CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a) firstprivate(this->S7<S1>::a)
+// CHECK: #pragma omp parallel shared(this->a) shared(this->a) shared(this->S7<S1>::a)
+// CHECK: #pragma omp parallel reduction(^: this->S7<S1>::a) reduction(+: this->S7<S1>::b[:this->S7<S1>::a.a])
+// CHECK: #pragma omp parallel private(this->a) private(this->a)
+// CHECK: #pragma omp parallel firstprivate(this->a) firstprivate(this->a)
+// CHECK: #pragma omp parallel shared(this->a) shared(this->a)
+// CHECK: #pragma omp parallel reduction(*: this->a) reduction(&&: this->b[this->a.a:])
+
 template <class T>
 struct S {
   operator T() {return T();}
@@ -119,5 +226,8 @@ void foo(const Foo<int> &arg) {
     }
   }
 }
+
+template<typename T>
+T S<T>::TS = 0;
 
 #endif

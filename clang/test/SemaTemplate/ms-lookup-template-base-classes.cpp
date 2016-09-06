@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1y -fms-compatibility -fno-spell-checking -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++1y -fms-compatibility -fno-spell-checking -fsyntax-only -verify %s
 
 
 template <class T>
@@ -572,4 +572,63 @@ decltype(check<int>()) x; // expected-error{{no matching function for call to 'c
 void h();
 template <typename T> decltype(h(T())) check2(); // expected-note{{candidate template ignored: substitution failure [with T = int]: no matching function for call to 'h'}}
 decltype(check2<int>()) y; // expected-error{{no matching function for call to 'check2'}}
+}
+
+// We also allow unqualified lookup into bases in contexts where the we know the
+// undeclared identifier *must* be a type, such as a new expression or catch
+// parameter type.
+template <typename T>
+struct UseUnqualifiedTypeNames : T {
+  void foo() {
+    void *P = new TheType; // expected-warning {{unqualified lookup}} expected-error {{no type}}
+    size_t x = __builtin_offsetof(TheType, f2); // expected-warning {{unqualified lookup}} expected-error {{no type}}
+    try {
+    } catch (TheType) { // expected-warning {{unqualified lookup}} expected-error {{no type}}
+    }
+    enum E : IntegerType { E0 = 42 }; // expected-warning {{unqualified lookup}} expected-error {{no type}}
+    _Atomic(TheType) a; // expected-warning {{unqualified lookup}} expected-error {{no type}}
+  }
+  void out_of_line();
+};
+template <typename T>
+void UseUnqualifiedTypeNames<T>::out_of_line() {
+  void *p = new TheType; // expected-warning {{unqualified lookup}} expected-error {{no type}}
+}
+struct Base {
+  typedef int IntegerType;
+  struct TheType {
+    int f1, f2;
+  };
+};
+template struct UseUnqualifiedTypeNames<Base>;
+struct BadBase { };
+template struct UseUnqualifiedTypeNames<BadBase>; // expected-note-re 2 {{in instantiation {{.*}} requested here}}
+
+namespace partial_template_lookup {
+
+class Bar;
+class Spare;
+
+template <class T, class X = Bar>
+class FooTemplated;
+
+class FooBase {
+public:
+  typedef int BaseTypedef;
+};
+
+// Partial template spec (unused)
+template <class T>
+class FooTemplated<T, Spare> {};
+
+// Partial template spec (used)
+template <class T>
+class FooTemplated<T, Bar> : public FooBase {};
+
+// Full template spec
+template <class T, class X>
+class FooTemplated : public FooTemplated<T, Bar> {
+public:
+  BaseTypedef Member; // expected-warning {{unqualified lookup}}
+};
 }

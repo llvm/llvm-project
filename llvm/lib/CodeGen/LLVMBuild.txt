@@ -16,10 +16,10 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = AsmPrinter SelectionDAG MIRParser
+subdirectories = AsmPrinter SelectionDAG MIRParser GlobalISel
 
 [component_0]
 type = Library
 name = CodeGen
 parent = Libraries
-required_libraries = Analysis BitReader BitWriter Core Instrumentation MC Scalar Support Target TransformUtils
+required_libraries = Analysis BitReader BitWriter Core Instrumentation MC ProfileData Scalar Support Target TransformUtils

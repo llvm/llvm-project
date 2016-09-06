@@ -6,6 +6,7 @@
 // generate the correct errors for functions that are only overloaded with VSX
 // (vec_cmpge, vec_cmple). Without this option, there is only one overload so
 // it is selected.
+#include <altivec.h>
 
 void dummy() { }
 signed int si;
@@ -73,10 +74,10 @@ void test1() {
 // CHECK-PPC: error: call to 'vec_abs' is ambiguous
 
   res_vd = vec_abs(vda);
-// CHECK: store <2 x i64> <i64 9223372036854775807, i64 9223372036854775807>, <2 x i64>*
-// CHECK: and <2 x i64>
-// CHECK-LE: store <2 x i64> <i64 9223372036854775807, i64 9223372036854775807>, <2 x i64>*
-// CHECK-LE: and <2 x i64>
+// CHECK: call <2 x double> @llvm.fabs.v2f64(<2 x double> %{{.*}})
+// CHECK: store <2 x double> %{{.*}}, <2 x double>* @res_vd
+// CHECK-LE: call <2 x double> @llvm.fabs.v2f64(<2 x double> %{{.*}})
+// CHECK-LE: store <2 x double> %{{.*}}, <2 x double>* @res_vd
 // CHECK-PPC: error: call to 'vec_abs' is ambiguous
 
   /* vec_add */

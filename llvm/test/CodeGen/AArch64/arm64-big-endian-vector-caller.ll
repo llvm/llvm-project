@@ -1,5 +1,5 @@
-; RUN: llc -mtriple aarch64_be < %s -aarch64-load-store-opt=false -o - | FileCheck %s
-; RUN: llc -mtriple aarch64_be < %s -aarch64-load-store-opt=false -fast-isel=true -O0 -o - | FileCheck %s
+; RUN: llc -mtriple aarch64_be < %s -aarch64-enable-ldst-opt=false -o - | FileCheck %s
+; RUN: llc -mtriple aarch64_be < %s -aarch64-enable-ldst-opt=false -fast-isel=true -O0 -o - | FileCheck %s
 
 ; Note, we split the functions in to multiple BBs below to isolate the call
 ; instruction we want to test, from fast-isel failing to select instructions

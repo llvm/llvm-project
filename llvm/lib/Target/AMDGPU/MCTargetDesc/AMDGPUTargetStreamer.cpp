@@ -312,10 +312,6 @@ AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(const amd_kernel_code_t &Header) {
 
   MCStreamer &OS = getStreamer();
   OS.PushSection();
-  // The MCObjectFileInfo that is available to the assembler is a generic
-  // implementation and not AMDGPUHSATargetObjectFile, so we can't use
-  // MCObjectFileInfo::getTextSection() here for fetching the HSATextSection.
-  OS.SwitchSection(AMDGPU::getHSATextSection(OS.getContext()));
   OS.EmitBytes(StringRef((const char*)&Header, sizeof(Header)));
   OS.PopSection();
 }

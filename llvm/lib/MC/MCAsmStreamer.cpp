@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -24,14 +23,15 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SourceMgr.h"
 #include <cctype>
 
 using namespace llvm;
@@ -46,6 +46,7 @@ class MCAsmStreamer final : public MCStreamer {
   std::unique_ptr<MCCodeEmitter> Emitter;
   std::unique_ptr<MCAsmBackend> AsmBackend;
 
+  SmallString<128> ExplicitCommentToEmit;
   SmallString<128> CommentToEmit;
   raw_svector_ostream CommentStream;
 
@@ -73,6 +74,8 @@ public:
   }
 
   inline void EmitEOL() {
+    // Dump Explicit Comments here.
+    emitExplicitComments();
     // If we don't have any comments, just emit a \n.
     if (!IsVerboseAsm) {
       OS << '\n';
@@ -111,6 +114,9 @@ public:
   }
 
   void emitRawComment(const Twine &T, bool TabPrefix = true) override;
+
+  void addExplicitComment(const Twine &T) override;
+  void emitExplicitComments() override;
 
   /// AddBlankLine - Emit a blank line to a .s file to pretty it up.
   void AddBlankLine() override {
@@ -162,6 +168,8 @@ public:
   void EmitTBSSSymbol(MCSection *Section, MCSymbol *Symbol, uint64_t Size,
                       unsigned ByteAlignment = 0) override;
 
+  void EmitBinaryData(StringRef Data) override;
+
   void EmitBytes(StringRef Data) override;
 
   void EmitValueImpl(const MCExpr *Value, unsigned Size,
@@ -177,7 +185,15 @@ public:
   void EmitGPRel32Value(const MCExpr *Value) override;
 
 
-  void EmitFill(uint64_t NumBytes, uint8_t FillValue) override;
+  void emitFill(uint64_t NumBytes, uint8_t FillValue) override;
+
+  void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                SMLoc Loc = SMLoc()) override;
+
+  void emitFill(uint64_t NumValues, int64_t Size, int64_t Expr) override;
+
+  void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
+                SMLoc Loc = SMLoc()) override;
 
   void EmitValueToAlignment(unsigned ByteAlignment, int64_t Value = 0,
                             unsigned ValueSize = 1,
@@ -198,6 +214,22 @@ public:
                              unsigned Isa, unsigned Discriminator,
                              StringRef FileName) override;
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
+
+  unsigned EmitCVFileDirective(unsigned FileNo, StringRef Filename) override;
+  void EmitCVLocDirective(unsigned FunctionId, unsigned FileNo, unsigned Line,
+                          unsigned Column, bool PrologueEnd, bool IsStmt,
+                          StringRef FileName) override;
+  void EmitCVLinetableDirective(unsigned FunctionId, const MCSymbol *FnStart,
+                                const MCSymbol *FnEnd) override;
+  void EmitCVInlineLinetableDirective(
+      unsigned PrimaryFunctionId, unsigned SourceFileId, unsigned SourceLineNum,
+      const MCSymbol *FnStartSym, const MCSymbol *FnEndSym,
+      ArrayRef<unsigned> SecondaryFunctionIds) override;
+  void EmitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      StringRef FixedSizePortion) override;
+  void EmitCVStringTableDirective() override;
+  void EmitCVFileChecksumsDirective() override;
 
   void EmitIdent(StringRef IdentString) override;
   void EmitCFISections(bool EH, bool Debug) override;
@@ -288,7 +320,7 @@ void MCAsmStreamer::EmitCommentsAndEOL() {
 }
 
 static inline int64_t truncateToSize(int64_t Value, unsigned Bytes) {
-  assert(Bytes && "Invalid size!");
+  assert(Bytes > 0 && Bytes <= 8 && "Invalid size!");
   return Value & ((uint64_t) (int64_t) -1 >> (64 - Bytes * 8));
 }
 
@@ -297,6 +329,50 @@ void MCAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
     OS << '\t';
   OS << MAI->getCommentString() << T;
   EmitEOL();
+}
+
+void MCAsmStreamer::addExplicitComment(const Twine &T) {
+  StringRef c = T.getSingleStringRef();
+  if (c.equals(StringRef(MAI->getSeparatorString())))
+    return;
+  if (c.startswith(StringRef("//"))) {
+    ExplicitCommentToEmit.append("\t");
+    ExplicitCommentToEmit.append(MAI->getCommentString());
+    // drop //
+    ExplicitCommentToEmit.append(c.slice(2, c.size()).str());
+  } else if (c.startswith(StringRef("/*"))) {
+    size_t p = 2, len = c.size() - 2;
+    // emit each line in comment as separate newline.
+    do {
+      size_t newp = std::min(len, c.find_first_of("\r\n", p));
+      ExplicitCommentToEmit.append("\t");
+      ExplicitCommentToEmit.append(MAI->getCommentString());
+      ExplicitCommentToEmit.append(c.slice(p, newp).str());
+      // If we have another line in this comment add line
+      if (newp < len)
+        ExplicitCommentToEmit.append("\n");
+      p = newp + 1;
+    } while (p < len);
+  } else if (c.startswith(StringRef(MAI->getCommentString()))) {
+    ExplicitCommentToEmit.append("\t");
+    ExplicitCommentToEmit.append(c.str());
+  } else if (c.front() == '#') {
+
+    ExplicitCommentToEmit.append("\t");
+    ExplicitCommentToEmit.append(MAI->getCommentString());
+    ExplicitCommentToEmit.append(c.slice(1, c.size()).str());
+  } else
+    assert(false && "Unexpected Assembly Comment");
+  // full line comments immediately output
+  if (c.back() == '\n')
+    emitExplicitComments();
+}
+
+void MCAsmStreamer::emitExplicitComments() {
+  StringRef Comments = ExplicitCommentToEmit;
+  if (!Comments.empty())
+    OS << Comments;
+  ExplicitCommentToEmit.clear();
 }
 
 void MCAsmStreamer::ChangeSection(MCSection *Section,
@@ -326,12 +402,11 @@ void MCAsmStreamer::EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {
 
   OS << "\t" << MCLOHDirectiveName() << " " << str << "\t";
   bool IsFirst = true;
-  for (MCLOHArgs::const_iterator It = Args.begin(), EndIt = Args.end();
-       It != EndIt; ++It) {
+  for (const MCSymbol *Arg : Args) {
     if (!IsFirst)
       OS << ", ";
     IsFirst = false;
-    (*It)->print(OS, MAI);
+    Arg->print(OS, MAI);
   }
   EmitEOL();
 }
@@ -354,7 +429,7 @@ void MCAsmStreamer::EmitLinkerOptions(ArrayRef<std::string> Options) {
          ie = Options.end(); it != ie; ++it) {
     OS << ", " << '"' << *it << '"';
   }
-  OS << "\n";
+  EmitEOL();
 }
 
 void MCAsmStreamer::EmitDataRegion(MCDataRegionType Kind) {
@@ -485,8 +560,10 @@ void MCAsmStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
 }
 
 void MCAsmStreamer::EmitSyntaxDirective() {
-  if (MAI->getAssemblerDialect() == 1)
-    OS << "\t.intel_syntax noprefix\n";
+  if (MAI->getAssemblerDialect() == 1) {
+    OS << "\t.intel_syntax noprefix";
+    EmitEOL();
+  }
   // FIXME: Currently emit unprefix'ed registers.
   // The intel_syntax directive has one optional argument 
   // with may have a value of prefix or noprefix.
@@ -538,7 +615,7 @@ void MCAsmStreamer::emitELFSize(MCSymbolELF *Symbol, const MCExpr *Value) {
   Symbol->print(OS, MAI);
   OS << ", ";
   Value->print(OS, MAI);
-  OS << '\n';
+  EmitEOL();
 }
 
 void MCAsmStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -685,6 +762,20 @@ void MCAsmStreamer::EmitBytes(StringRef Data) {
   EmitEOL();
 }
 
+void MCAsmStreamer::EmitBinaryData(StringRef Data) {
+  // This is binary data. Print it in a grid of hex bytes for readability.
+  const size_t Cols = 4;
+  for (size_t I = 0, EI = alignTo(Data.size(), Cols); I < EI; I += Cols) {
+    size_t J = I, EJ = std::min(I + Cols, Data.size());
+    assert(EJ > 0);
+    OS << MAI->getData8bitsDirective();
+    for (; J < EJ - 1; ++J)
+      OS << format("0x%02x", uint8_t(Data[J])) << ", ";
+    OS << format("0x%02x", uint8_t(Data[J]));
+    EmitEOL();
+  }
+}
+
 void MCAsmStreamer::EmitIntValue(uint64_t Value, unsigned Size) {
   EmitValue(MCConstantExpr::create(Value, getContext()), Size);
 }
@@ -779,21 +870,46 @@ void MCAsmStreamer::EmitGPRel32Value(const MCExpr *Value) {
   EmitEOL();
 }
 
-/// EmitFill - Emit NumBytes bytes worth of the value specified by
+/// emitFill - Emit NumBytes bytes worth of the value specified by
 /// FillValue.  This implements directives such as '.space'.
-void MCAsmStreamer::EmitFill(uint64_t NumBytes, uint8_t FillValue) {
+void MCAsmStreamer::emitFill(uint64_t NumBytes, uint8_t FillValue) {
   if (NumBytes == 0) return;
 
+  const MCExpr *E = MCConstantExpr::create(NumBytes, getContext());
+  emitFill(*E, FillValue);
+}
+
+void MCAsmStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                             SMLoc Loc) {
   if (const char *ZeroDirective = MAI->getZeroDirective()) {
-    OS << ZeroDirective << NumBytes;
+    // FIXME: Emit location directives
+    OS << ZeroDirective;
+    NumBytes.print(OS, MAI);
     if (FillValue != 0)
       OS << ',' << (int)FillValue;
     EmitEOL();
     return;
   }
 
-  // Emit a byte at a time.
-  MCStreamer::EmitFill(NumBytes, FillValue);
+  MCStreamer::emitFill(NumBytes, FillValue);
+}
+
+void MCAsmStreamer::emitFill(uint64_t NumValues, int64_t Size, int64_t Expr) {
+  if (NumValues == 0)
+    return;
+
+  const MCExpr *E = MCConstantExpr::create(NumValues, getContext());
+  emitFill(*E, Size, Expr);
+}
+
+void MCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
+                             int64_t Expr, SMLoc Loc) {
+  // FIXME: Emit location directives
+  OS << "\t.fill\t";
+  NumValues.print(OS, MAI);
+  OS << ", " << Size << ", 0x";
+  OS.write_hex(truncateToSize(Expr, 4));
+  EmitEOL();
 }
 
 void MCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
@@ -806,7 +922,7 @@ void MCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
     default:
       llvm_unreachable("Invalid size for machine code value!");
     case 1:
-      OS << "\t.align\t";
+      OS << "\t.p2align\t";
       break;
     case 2:
       OS << ".p2alignw ";
@@ -818,10 +934,7 @@ void MCAsmStreamer::EmitValueToAlignment(unsigned ByteAlignment, int64_t Value,
       llvm_unreachable("Unsupported alignment size!");
     }
 
-    if (MAI->getAlignmentIsInBytes())
-      OS << ByteAlignment;
-    else
-      OS << Log2_32(ByteAlignment);
+    OS << Log2_32(ByteAlignment);
 
     if (Value || MaxBytesToEmit) {
       OS << ", 0x";
@@ -956,6 +1069,105 @@ MCSymbol *MCAsmStreamer::getDwarfLineTableSymbol(unsigned CUID) {
   return MCStreamer::getDwarfLineTableSymbol(0);
 }
 
+unsigned MCAsmStreamer::EmitCVFileDirective(unsigned FileNo,
+                                            StringRef Filename) {
+  if (!getContext().getCVFile(Filename, FileNo))
+    return 0;
+
+  OS << "\t.cv_file\t" << FileNo << ' ';
+
+  PrintQuotedString(Filename, OS);
+  EmitEOL();
+
+  return FileNo;
+}
+
+void MCAsmStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
+                                       unsigned Line, unsigned Column,
+                                       bool PrologueEnd, bool IsStmt,
+                                       StringRef FileName) {
+  OS << "\t.cv_loc\t" << FunctionId << " " << FileNo << " " << Line << " "
+     << Column;
+  if (PrologueEnd)
+    OS << " prologue_end";
+
+  unsigned OldIsStmt = getContext().getCurrentCVLoc().isStmt();
+  if (IsStmt != OldIsStmt) {
+    OS << " is_stmt ";
+
+    if (IsStmt)
+      OS << "1";
+    else
+      OS << "0";
+  }
+
+  if (IsVerboseAsm) {
+    OS.PadToColumn(MAI->getCommentColumn());
+    OS << MAI->getCommentString() << ' ' << FileName << ':'
+       << Line << ':' << Column;
+  }
+  EmitEOL();
+  this->MCStreamer::EmitCVLocDirective(FunctionId, FileNo, Line, Column,
+                                       PrologueEnd, IsStmt, FileName);
+}
+
+void MCAsmStreamer::EmitCVLinetableDirective(unsigned FunctionId,
+                                             const MCSymbol *FnStart,
+                                             const MCSymbol *FnEnd) {
+  OS << "\t.cv_linetable\t" << FunctionId << ", ";
+  FnStart->print(OS, MAI);
+  OS << ", ";
+  FnEnd->print(OS, MAI);
+  EmitEOL();
+  this->MCStreamer::EmitCVLinetableDirective(FunctionId, FnStart, FnEnd);
+}
+
+void MCAsmStreamer::EmitCVInlineLinetableDirective(
+    unsigned PrimaryFunctionId, unsigned SourceFileId, unsigned SourceLineNum,
+    const MCSymbol *FnStartSym, const MCSymbol *FnEndSym,
+    ArrayRef<unsigned> SecondaryFunctionIds) {
+  OS << "\t.cv_inline_linetable\t" << PrimaryFunctionId << ' ' << SourceFileId
+     << ' ' << SourceLineNum << ' ';
+  FnStartSym->print(OS, MAI);
+  OS << ' ';
+  FnEndSym->print(OS, MAI);
+  if (!SecondaryFunctionIds.empty()) {
+    OS << " contains";
+    for (unsigned SecondaryFunctionId : SecondaryFunctionIds)
+      OS << ' ' << SecondaryFunctionId;
+  }
+  EmitEOL();
+  this->MCStreamer::EmitCVInlineLinetableDirective(
+      PrimaryFunctionId, SourceFileId, SourceLineNum, FnStartSym, FnEndSym,
+      SecondaryFunctionIds);
+}
+
+void MCAsmStreamer::EmitCVDefRangeDirective(
+    ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+    StringRef FixedSizePortion) {
+  OS << "\t.cv_def_range\t";
+  for (std::pair<const MCSymbol *, const MCSymbol *> Range : Ranges) {
+    OS << ' ';
+    Range.first->print(OS, MAI);
+    OS << ' ';
+    Range.second->print(OS, MAI);
+  }
+  OS << ", ";
+  PrintQuotedString(FixedSizePortion, OS);
+  EmitEOL();
+  this->MCStreamer::EmitCVDefRangeDirective(Ranges, FixedSizePortion);
+}
+
+void MCAsmStreamer::EmitCVStringTableDirective() {
+  OS << "\t.cv_stringtable";
+  EmitEOL();
+}
+
+void MCAsmStreamer::EmitCVFileChecksumsDirective() {
+  OS << "\t.cv_filechecksums";
+  EmitEOL();
+}
+
 void MCAsmStreamer::EmitIdent(StringRef IdentString) {
   assert(MAI->hasIdentDirective() && ".ident directive not supported");
   OS << "\t.ident\t";
@@ -1032,10 +1244,10 @@ void MCAsmStreamer::EmitCFIEscape(StringRef Values) {
 
 void MCAsmStreamer::EmitCFIGnuArgsSize(int64_t Size) {
   MCStreamer::EmitCFIGnuArgsSize(Size);
-  
+
   uint8_t Buffer[16] = { dwarf::DW_CFA_GNU_args_size };
   unsigned Len = encodeULEB128(Size, Buffer + 1) + 1;
-  
+
   PrintCFIEscape(OS, StringRef((const char *)&Buffer[0], Len));
   EmitEOL();
 }
@@ -1177,8 +1389,8 @@ void MCAsmStreamer::EmitWinEHHandlerData() {
   // We only do this so the section switch that terminates the handler
   // data block is visible.
   WinEH::FrameInfo *CurFrame = getCurrentWinFrameInfo();
-  MCSection *XData =
-      WinEH::UnwindEmitter::getXDataSection(CurFrame->Function, getContext());
+  MCSection *TextSec = &CurFrame->Function->getSection();
+  MCSection *XData = getAssociatedXDataSection(TextSec);
   SwitchSectionNoChange(XData);
 
   OS << "\t.seh_handlerdata";

@@ -10,8 +10,9 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCLabel.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -24,15 +25,21 @@
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/Support/COFF.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
-#include <map>
 
 using namespace llvm;
+
+static cl::opt<char*>
+AsSecureLogFileName("as-secure-log-file-name",
+        cl::desc("As secure log file name (initialized from "
+                 "AS_SECURE_LOG_FILE env variable)"),
+        cl::init(getenv("AS_SECURE_LOG_FILE")), cl::Hidden);
+
 
 MCContext::MCContext(const MCAsmInfo *mai, const MCRegisterInfo *mri,
                      const MCObjectFileInfo *mofi, const SourceMgr *mgr,
@@ -43,12 +50,7 @@ MCContext::MCContext(const MCAsmInfo *mai, const MCRegisterInfo *mri,
       GenDwarfForAssembly(false), GenDwarfFileNumber(0), DwarfVersion(4),
       AllowTemporaryLabels(true), DwarfCompileUnitID(0),
       AutoReset(DoAutoReset), HadError(false) {
-
-  std::error_code EC = llvm::sys::fs::current_path(CompilationDir);
-  if (EC)
-    CompilationDir.clear();
-
-  SecureLogFile = getenv("AS_SECURE_LOG_FILE");
+  SecureLogFile = AsSecureLogFileName;
   SecureLog = nullptr;
   SecureLogUsed = false;
 
@@ -90,6 +92,8 @@ void MCContext::reset() {
   DwarfCompileUnitID = 0;
   CurrentDwarfLoc = MCDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0);
 
+  CVContext.reset();
+
   MachOUniquingMap.clear();
   ELFUniquingMap.clear();
   COFFUniquingMap.clear();
@@ -126,18 +130,8 @@ MCSymbolELF *MCContext::getOrCreateSectionSymbol(const MCSectionELF &Section) {
     return Sym;
 
   StringRef Name = Section.getSectionName();
-
-  MCSymbol *&OldSym = Symbols[Name];
-  if (OldSym && OldSym->isUndefined()) {
-    Sym = cast<MCSymbolELF>(OldSym);
-    return Sym;
-  }
-
-  auto NameIter = UsedNames.insert(std::make_pair(Name, true)).first;
+  auto NameIter = UsedNames.insert(std::make_pair(Name, false)).first;
   Sym = new (&*NameIter, *this) MCSymbolELF(&*NameIter, /*isTemporary*/ false);
-
-  if (!OldSym)
-    OldSym = Sym;
 
   return Sym;
 }
@@ -194,9 +188,12 @@ MCSymbol *MCContext::createSymbol(StringRef Name, bool AlwaysAddSuffix,
       raw_svector_ostream(NewName) << NextUniqueID++;
     }
     auto NameEntry = UsedNames.insert(std::make_pair(NewName, true));
-    if (NameEntry.second) {
-      // Ok, we found a name. Have the MCSymbol object itself refer to the copy
-      // of the string that is embedded in the UsedNames entry.
+    if (NameEntry.second || !NameEntry.first->second) {
+      // Ok, we found a name.
+      // Mark it as used for a non-section symbol.
+      NameEntry.first->second = true;
+      // Have the MCSymbol object itself refer to the copy of the string that is
+      // embedded in the UsedNames entry.
       return createSymbolImpl(&*NameEntry.first, IsTemporary);
     }
     assert(IsTemporary && "Cannot rename non-temporary symbols");
@@ -312,32 +309,40 @@ void MCContext::renameELFSection(MCSectionELF *Section, StringRef Name) {
   const_cast<MCSectionELF *>(Section)->setSectionName(CachedName);
 }
 
-MCSectionELF *MCContext::createELFRelSection(StringRef Name, unsigned Type,
+MCSectionELF *MCContext::createELFRelSection(const Twine &Name, unsigned Type,
                                              unsigned Flags, unsigned EntrySize,
                                              const MCSymbolELF *Group,
                                              const MCSectionELF *Associated) {
   StringMap<bool>::iterator I;
   bool Inserted;
-  std::tie(I, Inserted) = ELFRelSecNames.insert(std::make_pair(Name, true));
+  std::tie(I, Inserted) =
+      ELFRelSecNames.insert(std::make_pair(Name.str(), true));
 
   return new (ELFAllocator.Allocate())
       MCSectionELF(I->getKey(), Type, Flags, SectionKind::getReadOnly(),
                    EntrySize, Group, true, nullptr, Associated);
 }
 
-MCSectionELF *MCContext::getELFSection(StringRef Section, unsigned Type,
+MCSectionELF *MCContext::getELFNamedSection(const Twine &Prefix,
+                                            const Twine &Suffix, unsigned Type,
+                                            unsigned Flags,
+                                            unsigned EntrySize) {
+  return getELFSection(Prefix + "." + Suffix, Type, Flags, EntrySize, Suffix);
+}
+
+MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        unsigned Flags, unsigned EntrySize,
-                                       StringRef Group, unsigned UniqueID,
+                                       const Twine &Group, unsigned UniqueID,
                                        const char *BeginSymName) {
   MCSymbolELF *GroupSym = nullptr;
-  if (!Group.empty())
+  if (!Group.isTriviallyEmpty() && !Group.str().empty())
     GroupSym = cast<MCSymbolELF>(getOrCreateSymbol(Group));
 
   return getELFSection(Section, Type, Flags, EntrySize, GroupSym, UniqueID,
                        BeginSymName, nullptr);
 }
 
-MCSectionELF *MCContext::getELFSection(StringRef Section, unsigned Type,
+MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        unsigned Flags, unsigned EntrySize,
                                        const MCSymbolELF *GroupSym,
                                        unsigned UniqueID,
@@ -348,7 +353,7 @@ MCSectionELF *MCContext::getELFSection(StringRef Section, unsigned Type,
     Group = GroupSym->getName();
   // Do the lookup, if we have a hit, return it.
   auto IterBool = ELFUniquingMap.insert(
-      std::make_pair(ELFSectionKey{Section, Group, UniqueID}, nullptr));
+      std::make_pair(ELFSectionKey{Section.str(), Group, UniqueID}, nullptr));
   auto &Entry = *IterBool.first;
   if (!IterBool.second)
     return Entry.second;
@@ -383,6 +388,7 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
                                          unsigned Characteristics,
                                          SectionKind Kind,
                                          StringRef COMDATSymName, int Selection,
+                                         unsigned UniqueID,
                                          const char *BeginSymName) {
   MCSymbol *COMDATSymbol = nullptr;
   if (!COMDATSymName.empty()) {
@@ -390,8 +396,9 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
     COMDATSymName = COMDATSymbol->getName();
   }
 
+
   // Do the lookup, if we have a hit, return it.
-  COFFSectionKey T{Section, COMDATSymName, Selection};
+  COFFSectionKey T{Section, COMDATSymName, Selection, UniqueID};
   auto IterBool = COFFUniquingMap.insert(std::make_pair(T, nullptr));
   auto Iter = IterBool.first;
   if (!IterBool.second)
@@ -413,11 +420,12 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
                                          unsigned Characteristics,
                                          SectionKind Kind,
                                          const char *BeginSymName) {
-  return getCOFFSection(Section, Characteristics, Kind, "", 0, BeginSymName);
+  return getCOFFSection(Section, Characteristics, Kind, "", 0, GenericSectionID,
+                        BeginSymName);
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section) {
-  COFFSectionKey T{Section, "", 0};
+  COFFSectionKey T{Section, "", 0, GenericSectionID};
   auto Iter = COFFUniquingMap.find(T);
   if (Iter == COFFUniquingMap.end())
     return nullptr;
@@ -425,18 +433,24 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section) {
 }
 
 MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
-                                                    const MCSymbol *KeySym) {
-  // Return the normal section if we don't have to be associative.
-  if (!KeySym)
+                                                    const MCSymbol *KeySym,
+                                                    unsigned UniqueID) {
+  // Return the normal section if we don't have to be associative or unique.
+  if (!KeySym && UniqueID == GenericSectionID)
     return Sec;
 
-  // Make an associative section with the same name and kind as the normal
-  // section.
-  unsigned Characteristics =
-      Sec->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT;
+  // If we have a key symbol, make an associative section with the same name and
+  // kind as the normal section.
+  unsigned Characteristics = Sec->getCharacteristics();
+  if (KeySym) {
+    Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
+    return getCOFFSection(Sec->getSectionName(), Characteristics,
+                          Sec->getKind(), KeySym->getName(),
+                          COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
+  }
+
   return getCOFFSection(Sec->getSectionName(), Characteristics, Sec->getKind(),
-                        KeySym->getName(),
-                        COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE);
+                        "", 0, UniqueID);
 }
 
 MCSubtargetInfo &MCContext::getSubtargetCopy(const MCSubtargetInfo &STI) {
@@ -472,6 +486,20 @@ bool MCContext::isValidDwarfFileNumber(unsigned FileNumber, unsigned CUID) {
 void MCContext::finalizeDwarfSections(MCStreamer &MCOS) {
   SectionsForRanges.remove_if(
       [&](MCSection *Sec) { return !MCOS.mayHaveInstructions(*Sec); });
+}
+
+CodeViewContext &MCContext::getCVContext() {
+  if (!CVContext.get())
+    CVContext.reset(new CodeViewContext);
+  return *CVContext.get();
+}
+
+unsigned MCContext::getCVFile(StringRef FileName, unsigned FileNumber) {
+  return getCVContext().addFile(FileNumber, FileName) ? FileNumber : 0;
+}
+
+bool MCContext::isValidCVFileNumber(unsigned FileNumber) {
+  return getCVContext().isValidFileNumber(FileNumber);
 }
 
 //===----------------------------------------------------------------------===//

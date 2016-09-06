@@ -59,6 +59,13 @@ typedef char fpregs_struct[ARM_VFPREGS_SIZE];
 #define PRINT_REG_PC(__regs)    printf ("%x\n", (unsigned) (__regs.ARM_pc))
 #define PRINT_REG_FP(__fpregs)  printf ("%x\n", (unsigned) (__fpregs + 32 * 8))
 #define __PTRACE_FPREQUEST PTRACE_GETVFPREGS
+
+#elif defined(__s390__)
+typedef _user_regs_struct   regs_struct;
+typedef _user_fpregs_struct fpregs_struct;
+#define PRINT_REG_PC(__regs)    printf ("%lx\n", (unsigned long) (__regs.psw.addr))
+#define PRINT_REG_FP(__fpregs)  printf ("%lx\n", (unsigned long) (__fpregs.fpc))
+#define ARCH_IOVEC_FOR_GETREGSET
 #endif
 
 

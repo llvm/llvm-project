@@ -27,7 +27,9 @@
 #include "sanitizer_libc.h"
 #include "sanitizer_mutex.h"
 #include "sanitizer_placement_new.h"
+#include "sanitizer_procmaps.h"
 #include "sanitizer_stacktrace.h"
+#include "sanitizer_symbolizer.h"
 
 namespace __sanitizer {
 
@@ -35,13 +37,15 @@ namespace __sanitizer {
 
 // --------------------- sanitizer_common.h
 uptr GetPageSize() {
-  // FIXME: there is an API for getting the system page size (GetSystemInfo or
-  // GetNativeSystemInfo), but if we use it here we get test failures elsewhere.
-  return 1U << 14;
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  return si.dwPageSize;
 }
 
 uptr GetMmapGranularity() {
-  return 1U << 16;  // FIXME: is this configurable?
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  return si.dwAllocationGranularity;
 }
 
 uptr GetMaxVirtualAddress() {
@@ -95,20 +99,90 @@ void UnmapOrDie(void *addr, uptr size) {
   if (!size || !addr)
     return;
 
-  if (VirtualFree(addr, size, MEM_DECOMMIT) == 0) {
-    Report("ERROR: %s failed to "
-           "deallocate 0x%zx (%zd) bytes at address %p (error code: %d)\n",
-           SanitizerToolName, size, size, addr, GetLastError());
-    CHECK("unable to unmap" && 0);
+  MEMORY_BASIC_INFORMATION mbi;
+  CHECK(VirtualQuery(addr, &mbi, sizeof(mbi)));
+
+  // MEM_RELEASE can only be used to unmap whole regions previously mapped with
+  // VirtualAlloc. So we first try MEM_RELEASE since it is better, and if that
+  // fails try MEM_DECOMMIT.
+  if (VirtualFree(addr, 0, MEM_RELEASE) == 0) {
+    if (VirtualFree(addr, size, MEM_DECOMMIT) == 0) {
+      Report("ERROR: %s failed to "
+             "deallocate 0x%zx (%zd) bytes at address %p (error code: %d)\n",
+             SanitizerToolName, size, size, addr, GetLastError());
+      CHECK("unable to unmap" && 0);
+    }
   }
+}
+
+// We want to map a chunk of address space aligned to 'alignment'.
+void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type) {
+  CHECK(IsPowerOfTwo(size));
+  CHECK(IsPowerOfTwo(alignment));
+
+  // Windows will align our allocations to at least 64K.
+  alignment = Max(alignment, GetMmapGranularity());
+
+  uptr mapped_addr =
+      (uptr)VirtualAlloc(0, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  if (!mapped_addr)
+    ReportMmapFailureAndDie(size, mem_type, "allocate aligned", GetLastError());
+
+  // If we got it right on the first try, return. Otherwise, unmap it and go to
+  // the slow path.
+  if (IsAligned(mapped_addr, alignment))
+    return (void*)mapped_addr;
+  if (VirtualFree((void *)mapped_addr, 0, MEM_RELEASE) == 0)
+    ReportMmapFailureAndDie(size, mem_type, "deallocate", GetLastError());
+
+  // If we didn't get an aligned address, overallocate, find an aligned address,
+  // unmap, and try to allocate at that aligned address.
+  int retries = 0;
+  const int kMaxRetries = 10;
+  for (; retries < kMaxRetries &&
+         (mapped_addr == 0 || !IsAligned(mapped_addr, alignment));
+       retries++) {
+    // Overallocate size + alignment bytes.
+    mapped_addr =
+        (uptr)VirtualAlloc(0, size + alignment, MEM_RESERVE, PAGE_NOACCESS);
+    if (!mapped_addr)
+      ReportMmapFailureAndDie(size, mem_type, "allocate aligned",
+                              GetLastError());
+
+    // Find the aligned address.
+    uptr aligned_addr = RoundUpTo(mapped_addr, alignment);
+
+    // Free the overallocation.
+    if (VirtualFree((void *)mapped_addr, 0, MEM_RELEASE) == 0)
+      ReportMmapFailureAndDie(size, mem_type, "deallocate", GetLastError());
+
+    // Attempt to allocate exactly the number of bytes we need at the aligned
+    // address. This may fail for a number of reasons, in which case we continue
+    // the loop.
+    mapped_addr = (uptr)VirtualAlloc((void *)aligned_addr, size,
+                                     MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  }
+
+  // Fail if we can't make this work quickly.
+  if (retries == kMaxRetries && mapped_addr == 0)
+    ReportMmapFailureAndDie(size, mem_type, "allocate aligned", GetLastError());
+
+  return (void *)mapped_addr;
 }
 
 void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
   // FIXME: is this really "NoReserve"? On Win32 this does not matter much,
   // but on Win64 it does.
-  (void)name; // unsupported
-  void *p = VirtualAlloc((LPVOID)fixed_addr, size,
-      MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  (void)name;  // unsupported
+#if !SANITIZER_GO && SANITIZER_WINDOWS64
+  // On asan/Windows64, use MEM_COMMIT would result in error
+  // 1455:ERROR_COMMITMENT_LIMIT.
+  // Asan uses exception handler to commit page on demand.
+  void *p = VirtualAlloc((LPVOID)fixed_addr, size, MEM_RESERVE, PAGE_READWRITE);
+#else
+  void *p = VirtualAlloc((LPVOID)fixed_addr, size, MEM_RESERVE | MEM_COMMIT,
+                         PAGE_READWRITE);
+#endif
   if (p == 0)
     Report("ERROR: %s failed to "
            "allocate %p (%zd) bytes at %p (error code: %d)\n",
@@ -116,8 +190,18 @@ void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
   return p;
 }
 
+// Memory space mapped by 'MmapFixedOrDie' must have been reserved by
+// 'MmapFixedNoAccess'.
 void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
-  return MmapFixedNoReserve(fixed_addr, size);
+  void *p = VirtualAlloc((LPVOID)fixed_addr, size,
+      MEM_COMMIT, PAGE_READWRITE);
+  if (p == 0) {
+    char mem_type[30];
+    internal_snprintf(mem_type, sizeof(mem_type), "memory at address 0x%zx",
+                      fixed_addr);
+    ReportMmapFailureAndDie(size, mem_type, "allocate", GetLastError());
+  }
+  return p;
 }
 
 void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
@@ -125,14 +209,23 @@ void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
   return MmapOrDie(size, mem_type);
 }
 
-void *MmapNoAccess(uptr fixed_addr, uptr size, const char *name) {
+void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name) {
   (void)name; // unsupported
   void *res = VirtualAlloc((LPVOID)fixed_addr, size,
-                           MEM_RESERVE | MEM_COMMIT, PAGE_NOACCESS);
+                           MEM_RESERVE, PAGE_NOACCESS);
   if (res == 0)
     Report("WARNING: %s failed to "
            "mprotect %p (%zd) bytes at %p (error code: %d)\n",
            SanitizerToolName, size, size, fixed_addr, GetLastError());
+  return res;
+}
+
+void *MmapNoAccess(uptr size) {
+  void *res = VirtualAlloc(nullptr, size, MEM_RESERVE, PAGE_NOACCESS);
+  if (res == 0)
+    Report("WARNING: %s failed to "
+           "mprotect %p (%zd) bytes (error code: %d)\n",
+           SanitizerToolName, size, size, GetLastError());
   return res;
 }
 
@@ -234,15 +327,15 @@ int CompareModulesBase(const void *pl, const void *pr) {
 #ifndef SANITIZER_GO
 void DumpProcessMap() {
   Report("Dumping process modules:\n");
-  InternalScopedBuffer<LoadedModule> modules(kMaxNumberOfModules);
-  uptr num_modules =
-      GetListOfModules(modules.data(), kMaxNumberOfModules, nullptr);
+  ListOfModules modules;
+  modules.init();
+  uptr num_modules = modules.size();
 
   InternalScopedBuffer<ModuleInfo> module_infos(num_modules);
   for (size_t i = 0; i < num_modules; ++i) {
     module_infos[i].filepath = modules[i].full_name();
-    module_infos[i].base_address = modules[i].base_address();
-    module_infos[i].end_address = modules[i].ranges().front()->end;
+    module_infos[i].base_address = modules[i].ranges().front()->beg;
+    module_infos[i].end_address = modules[i].ranges().back()->end;
   }
   qsort(module_infos.data(), num_modules, sizeof(ModuleInfo),
         CompareModulesBase);
@@ -317,6 +410,7 @@ void Abort() {
   internal__exit(3);
 }
 
+#ifndef SANITIZER_GO
 // Read the file to extract the ImageBase field from the PE header. If ASLR is
 // disabled and this virtual address is available, the loader will typically
 // load the image at this address. Therefore, we call it the preferred base. Any
@@ -369,9 +463,8 @@ static uptr GetPreferredBase(const char *modname) {
   return (uptr)pe_header->ImageBase;
 }
 
-#ifndef SANITIZER_GO
-uptr GetListOfModules(LoadedModule *modules, uptr max_modules,
-                      string_predicate_t filter) {
+void ListOfModules::init() {
+  clear();
   HANDLE cur_process = GetCurrentProcess();
 
   // Query the list of modules.  Start by assuming there are no more than 256
@@ -393,10 +486,8 @@ uptr GetListOfModules(LoadedModule *modules, uptr max_modules,
   }
 
   // |num_modules| is the number of modules actually present,
-  // |count| is the number of modules we return.
-  size_t nun_modules = bytes_required / sizeof(HMODULE),
-         count = 0;
-  for (size_t i = 0; i < nun_modules && count < max_modules; ++i) {
+  size_t num_modules = bytes_required / sizeof(HMODULE);
+  for (size_t i = 0; i < num_modules; ++i) {
     HMODULE handle = hmodules[i];
     MODULEINFO mi;
     if (!GetModuleInformation(cur_process, handle, &mi, sizeof(mi)))
@@ -414,9 +505,6 @@ uptr GetListOfModules(LoadedModule *modules, uptr max_modules,
                               &module_name[0], kMaxPathLength, NULL, NULL);
     module_name[module_name_len] = '\0';
 
-    if (filter && !filter(module_name))
-      continue;
-
     uptr base_address = (uptr)mi.lpBaseOfDll;
     uptr end_address = (uptr)mi.lpBaseOfDll + mi.SizeOfImage;
 
@@ -427,15 +515,13 @@ uptr GetListOfModules(LoadedModule *modules, uptr max_modules,
     uptr preferred_base = GetPreferredBase(&module_name[0]);
     uptr adjusted_base = base_address - preferred_base;
 
-    LoadedModule *cur_module = &modules[count];
-    cur_module->set(module_name, adjusted_base);
+    LoadedModule cur_module;
+    cur_module.set(module_name, adjusted_base);
     // We add the whole module as one single address range.
-    cur_module->addAddressRange(base_address, end_address, /*executable*/ true);
-    count++;
+    cur_module.addAddressRange(base_address, end_address, /*executable*/ true);
+    modules_.push_back(cur_module);
   }
   UnmapOrDie(hmodules, modules_buffer_size);
-
-  return count;
 };
 
 // We can't use atexit() directly at __asan_init time as the CRT is not fully
@@ -462,14 +548,15 @@ __declspec(allocate(".CRT$XID")) int (*__run_atexit)() = RunAtexit;
 
 // ------------------ sanitizer_libc.h
 fd_t OpenFile(const char *filename, FileAccessMode mode, error_t *last_error) {
+  // FIXME: Use the wide variants to handle Unicode filenames.
   fd_t res;
   if (mode == RdOnly) {
-    res = CreateFile(filename, GENERIC_READ,
-                     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                     nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    res = CreateFileA(filename, GENERIC_READ,
+                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                      nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
   } else if (mode == WrOnly) {
-    res = CreateFile(filename, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
-                     FILE_ATTRIBUTE_NORMAL, nullptr);
+    res = CreateFileA(filename, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+                      FILE_ATTRIBUTE_NORMAL, nullptr);
   } else {
     UNIMPLEMENTED();
   }
@@ -637,7 +724,7 @@ void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
   // FIXME: CaptureStackBackTrace might be too slow for us.
   // FIXME: Compare with StackWalk64.
   // FIXME: Look at LLVMUnhandledExceptionFilter in Signals.inc
-  size = CaptureStackBackTrace(2, Min(max_depth, kStackTraceMax),
+  size = CaptureStackBackTrace(1, Min(max_depth, kStackTraceMax),
                                (void**)trace, 0);
   if (size == 0)
     return;
@@ -652,6 +739,9 @@ void BufferedStackTrace::SlowUnwindStackWithContext(uptr pc, void *context,
   CONTEXT ctx = *(CONTEXT *)context;
   STACKFRAME64 stack_frame;
   memset(&stack_frame, 0, sizeof(stack_frame));
+
+  InitializeDbgHelpIfNeeded();
+
   size = 0;
 #if defined(_WIN64)
   int machine_type = IMAGE_FILE_MACHINE_AMD64;
@@ -700,7 +790,7 @@ void InstallDeadlySignalHandlers(SignalHandlerType handler) {
   // FIXME: Decide what to do on Windows.
 }
 
-bool IsDeadlySignal(int signum) {
+bool IsHandledDeadlySignal(int signum) {
   // FIXME: Decide what to do on Windows.
   return false;
 }
@@ -731,8 +821,8 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
 }
 
 SignalContext SignalContext::Create(void *siginfo, void *context) {
-  EXCEPTION_RECORD *exception_record = (EXCEPTION_RECORD*)siginfo;
-  CONTEXT *context_record = (CONTEXT*)context;
+  EXCEPTION_RECORD *exception_record = (EXCEPTION_RECORD *)siginfo;
+  CONTEXT *context_record = (CONTEXT *)context;
 
   uptr pc = (uptr)exception_record->ExceptionAddress;
 #ifdef _WIN64
@@ -744,7 +834,19 @@ SignalContext SignalContext::Create(void *siginfo, void *context) {
 #endif
   uptr access_addr = exception_record->ExceptionInformation[1];
 
-  return SignalContext(context, access_addr, pc, sp, bp);
+  // The contents of this array are documented at
+  // https://msdn.microsoft.com/en-us/library/windows/desktop/aa363082(v=vs.85).aspx
+  // The first element indicates read as 0, write as 1, or execute as 8.  The
+  // second element is the faulting address.
+  WriteFlag write_flag = SignalContext::UNKNOWN;
+  switch (exception_record->ExceptionInformation[0]) {
+  case 0: write_flag = SignalContext::READ; break;
+  case 1: write_flag = SignalContext::WRITE; break;
+  case 8: write_flag = SignalContext::UNKNOWN; break;
+  }
+  bool is_memory_access = write_flag != SignalContext::UNKNOWN;
+  return SignalContext(context, access_addr, pc, sp, bp, is_memory_access,
+                       write_flag);
 }
 
 uptr ReadBinaryName(/*out*/char *buf, uptr buf_len) {
@@ -770,6 +872,26 @@ char **GetArgv() {
   // FIXME: Actually implement this function.
   return 0;
 }
+
+pid_t StartSubprocess(const char *program, const char *const argv[],
+                      fd_t stdin_fd, fd_t stdout_fd, fd_t stderr_fd) {
+  // FIXME: implement on this platform
+  // Should be implemented based on
+  // SymbolizerProcess::StarAtSymbolizerSubprocess
+  // from lib/sanitizer_common/sanitizer_symbolizer_win.cc.
+  return -1;
+}
+
+bool IsProcessRunning(pid_t pid) {
+  // FIXME: implement on this platform.
+  return false;
+}
+
+int WaitForProcess(pid_t pid) { return -1; }
+
+// FIXME implement on this platform.
+void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) { }
+
 
 }  // namespace __sanitizer
 

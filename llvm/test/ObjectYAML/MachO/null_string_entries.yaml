@@ -1,0 +1,208 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !mach-o
+FileHeader:      
+  magic:           0xFEEDFACE
+  cputype:         0x00000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000002
+  ncmds:           16
+  sizeofcmds:      1160
+  flags:           0x01218085
+LoadCommands:    
+  - cmd:             LC_SEGMENT
+    cmdsize:         56
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4096
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT
+    cmdsize:         464
+    segname:         __TEXT
+    vmaddr:          4096
+    vmsize:          8192
+    fileoff:         0
+    filesize:        8192
+    maxprot:         7
+    initprot:        5
+    nsects:          6
+    flags:           0
+  - cmd:             LC_SEGMENT
+    cmdsize:         192
+    segname:         __DATA
+    vmaddr:          12288
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        4096
+    maxprot:         7
+    initprot:        3
+    nsects:          2
+    flags:           0
+  - cmd:             LC_SEGMENT
+    cmdsize:         56
+    segname:         __LINKEDIT
+    vmaddr:          16384
+    vmsize:          2296
+    fileoff:         12288
+    filesize:        2296
+    maxprot:         7
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      12288
+    rebase_size:     20
+    bind_off:        12308
+    bind_size:       104
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   12412
+    lazy_bind_size:  816
+    export_off:      13228
+    export_size:     44
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          13288
+    nsyms:           25
+    stroff:          13760
+    strsize:         824
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       1
+    iextdefsym:      1
+    nextdefsym:      1
+    iundefsym:       2
+    nundefsym:       23
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  13588
+    nindirectsyms:   43
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_LOAD_DYLINKER
+    cmdsize:         28
+    name:            12
+    PayloadString:   /usr/lib/dyld
+    ZeroPadBytes:    3
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            997B2184-D5FF-31BB-BE66-80B0D3756D06
+  - cmd:             LC_VERSION_MIN_MACOSX
+    cmdsize:         16
+    version:         658176
+    sdk:             658176
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        4800
+    stacksize:       0
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         48
+    dylib:           
+      name:            24
+      timestamp:       2
+      current_version: 7864576
+      compatibility_version: 65536
+    PayloadString:   '/usr/lib/libc++.1.dylib'
+    ZeroPadBytes:    1
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         52
+    dylib:           
+      name:            24
+      timestamp:       2
+      current_version: 80349697
+      compatibility_version: 65536
+    PayloadString:   /usr/lib/libSystem.B.dylib
+    ZeroPadBytes:    2
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         13272
+    datasize:        16
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         13288
+    datasize:        0
+LinkEditData:
+  StringTable:     
+    - ''
+    - ''
+    - ''
+    - ''
+    - __mh_execute_header
+    - __Unwind_Resume
+    - __ZNKSt3__16locale9use_facetERNS0_2idE
+    - __ZNKSt3__18ios_base6getlocEv
+    - __ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6__initEmc
+    - __ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED1Ev
+    - __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE3putEc
+    - __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE5flushEv
+    - __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentryC1ERS3_
+    - __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentryD1Ev
+    - __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEElsEm
+    - __ZNSt3__14coutE
+    - __ZNSt3__15ctypeIcE2idE
+    - __ZNSt3__16localeD1Ev
+    - __ZNSt3__18ios_base33__set_badbit_and_consider_rethrowEv
+    - __ZNSt3__18ios_base5clearEj
+    - __ZSt9terminatev
+    - ___cxa_begin_catch
+    - ___cxa_end_catch
+    - ___gxx_personality_v0
+    - _memset
+    - _strlen
+    - _strnlen
+    - dyld_stub_binder
+    - 'radr://5614542'
+    - ''
+    - ''
+    - ''
+...
+
+#CHECK: StringTable:     
+#CHECK:     - ''
+#CHECK:     - ''
+#CHECK:     - ''
+#CHECK:     - ''
+#CHECK:     - __mh_execute_header
+#CHECK:     - __Unwind_Resume
+#CHECK:     - __ZNKSt3__16locale9use_facetERNS0_2idE
+#CHECK:     - __ZNKSt3__18ios_base6getlocEv
+#CHECK:     - __ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6__initEmc
+#CHECK:     - __ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEED1Ev
+#CHECK:     - __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE3putEc
+#CHECK:     - __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE5flushEv
+#CHECK:     - __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentryC1ERS3_
+#CHECK:     - __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEE6sentryD1Ev
+#CHECK:     - __ZNSt3__113basic_ostreamIcNS_11char_traitsIcEEElsEm
+#CHECK:     - __ZNSt3__14coutE
+#CHECK:     - __ZNSt3__15ctypeIcE2idE
+#CHECK:     - __ZNSt3__16localeD1Ev
+#CHECK:     - __ZNSt3__18ios_base33__set_badbit_and_consider_rethrowEv
+#CHECK:     - __ZNSt3__18ios_base5clearEj
+#CHECK:     - __ZSt9terminatev
+#CHECK:     - ___cxa_begin_catch
+#CHECK:     - ___cxa_end_catch
+#CHECK:     - ___gxx_personality_v0
+#CHECK:     - _memset
+#CHECK:     - _strlen
+#CHECK:     - _strnlen
+#CHECK:     - dyld_stub_binder
+#CHECK:     - 'radr://5614542'
+#CHECK:     - ''
+#CHECK:     - ''
+#CHECK:     - ''

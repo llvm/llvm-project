@@ -159,9 +159,7 @@ define float @f8(float %dummy, float %val) {
 ; CHECK-LABEL: f8:
 ; CHECK: sqebr %f0, %f2
 ; CHECK: cebr %f0, %f0
-; CHECK: jo [[LABEL:\.L.*]]
-; CHECK: br %r14
-; CHECK: [[LABEL]]:
+; CHECK: bnor %r14
 ; CHECK: ler %f0, %f2
 ; CHECK: jg sqrtf@PLT
   %res = tail call float @sqrtf(float %val)

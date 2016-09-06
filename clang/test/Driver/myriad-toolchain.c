@@ -36,10 +36,10 @@
 // As such, we test only for a trailing quote in its rendering.
 // The same goes for "moviAsm".
 
-// RUN: %clang -target shave-myriad -c -### %s -isystem somewhere -Icommon -Wa,-yippee 2>&1 \
+// RUN: %clang -target shave-myriad -mcpu=myriad2.2 -c -### %s -isystem somewhere -Icommon -Wa,-yippee 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=MOVICOMPILE
-// MOVICOMPILE: moviCompile{{(.exe)?}}" "-S" "-fno-exceptions" "-mcpu=myriad2" "-DMYRIAD2" "-isystem" "somewhere" "-I" "common"
-// MOVICOMPILE: moviAsm{{(.exe)?}}" "-no6thSlotCompression" "-cv:myriad2" "-noSPrefixing" "-a"
+// MOVICOMPILE: moviCompile{{(.exe)?}}" "-S" "-fno-exceptions" "-DMYRIAD2" "-mcpu=myriad2.2" "-isystem" "somewhere" "-I" "common"
+// MOVICOMPILE: moviAsm{{(.exe)?}}" "-no6thSlotCompression" "-cv:myriad2.2" "-noSPrefixing" "-a"
 // MOVICOMPILE: "-yippee" "-i:somewhere" "-i:common" "-elf"
 
 // RUN: %clang -target shave-myriad -c -### %s -DEFINE_ME -UNDEFINE_ME 2>&1 \
@@ -58,15 +58,15 @@
 
 // RUN: %clang -target shave-myriad -c %s -o foo.o -### -MD -MF dep.d 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=MDMF
-// MDMF: "-S" "-fno-exceptions" "-mcpu=myriad2" "-DMYRIAD2" "-MD" "-MF" "dep.d" "-MT" "foo.o"
+// MDMF: "-S" "-fno-exceptions" "-DMYRIAD2" "-MD" "-MF" "dep.d" "-MT" "foo.o"
 
-// RUN: %clang -target shave-myriad -std=gnu++11 -S %s -o foo.o -### 2>&1 \
+// RUN: %clang -target shave-myriad -std=gnu++11 -mcpu=anothercpu -S %s -o foo.o -### 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=STDEQ
-// STDEQ: "-S" "-fno-exceptions" "-mcpu=myriad2" "-DMYRIAD2" "-std=gnu++11"
+// STDEQ: "-S" "-fno-exceptions" "-DMYRIAD2" "-std=gnu++11" "-mcpu=anothercpu"
 
 // RUN: %clang -target shave-myriad -E -Ifoo %s -o foo.i -### 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=PREPROCESS
-// PREPROCESS: "-E" "-mcpu=myriad2" "-DMYRIAD2" "-I" "foo"
+// PREPROCESS: "-E" "-DMYRIAD2" "-I" "foo"
 
 // RUN: %clang -target sparc-myriad -### --driver-mode=g++ %s 2>&1 | FileCheck %s --check-prefix=STDLIBCXX
 // STDLIBCXX: "-lstdc++" "-lc" "-lgcc"
@@ -77,3 +77,7 @@
 
 // RUN: %clang -### -c -g %s -target sparc-myriad 2>&1 | FileCheck -check-prefix=G_SPARC %s
 // G_SPARC: "-debug-info-kind=limited" "-dwarf-version=2"
+
+// RUN: %clang -### -c %s -target sparc-myriad-elf -fuse-init-array 2>&1 \
+// RUN: | FileCheck -check-prefix=USE-INIT-ARRAY %s
+// USE-INIT-ARRAY-NOT: argument unused

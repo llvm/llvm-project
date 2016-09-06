@@ -1,6 +1,6 @@
 // Tests for instrumentation of C++ constructors and destructors.
 //
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.11.0 -x c++ %s -o - -emit-llvm -fprofile-instr-generate | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.11.0 -x c++ %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck %s
 
 struct Foo {
   Foo() {}

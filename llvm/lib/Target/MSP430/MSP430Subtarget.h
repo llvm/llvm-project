@@ -18,8 +18,8 @@
 #include "MSP430ISelLowering.h"
 #include "MSP430InstrInfo.h"
 #include "MSP430RegisterInfo.h"
+#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Target/TargetSelectionDAGInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <string>
 
@@ -35,7 +35,7 @@ class MSP430Subtarget : public MSP430GenSubtargetInfo {
   MSP430FrameLowering FrameLowering;
   MSP430InstrInfo InstrInfo;
   MSP430TargetLowering TLInfo;
-  TargetSelectionDAGInfo TSInfo;
+  SelectionDAGTargetInfo TSInfo;
 
 public:
   /// This constructor initializes the data members to match that
@@ -60,7 +60,7 @@ public:
   const MSP430TargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
-  const TargetSelectionDAGInfo *getSelectionDAGInfo() const override {
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
   }
 };

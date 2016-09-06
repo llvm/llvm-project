@@ -1,0 +1,27 @@
+# RUN: llvm-objdump -dwarf=frames %p/Inputs/eh_frame.elf-mipsel | FileCheck %s
+
+# CHECK: .eh_frame contents:
+
+# CHECK: 00000000 00000018 ffffffff CIE
+# CHECK:   Version:               1
+# CHECK:   Augmentation:          "zPLR"
+# CHECK:   Code alignment factor: 1
+# CHECK:   Data alignment factor: -4
+# CHECK:   Return address column: 31
+# CHECK:   Augmentation data:     80 90 0B 41 00 00 0B
+
+# CHECK:   DW_CFA_def_cfa: reg29 +0
+
+# CHECK: 0000001c 00000018 00000020 FDE cie=00000020 pc=00400890...004008dc
+# CHECK:   DW_CFA_advance_loc: 4
+# CHECK:   DW_CFA_def_cfa_offset: +24
+# CHECK:   DW_CFA_advance_loc: 4
+# CHECK:   DW_CFA_offset: reg31 -4
+# CHECK:   DW_CFA_nop:
+
+# CHECK: 00000038 00000000 ffffffff CIE
+# CHECK:   Version:               0
+# CHECK:   Augmentation:          ""
+# CHECK:   Code alignment factor: 0
+# CHECK:   Data alignment factor: 0
+# CHECK:   Return address column: 0

@@ -10,7 +10,7 @@
 // This file implements RegionPass and RGPassManager. All region optimization
 // and transformation passes are derived from RegionPass. RGPassManager is
 // responsible for managing RegionPasses.
-// most of these codes are COPY from LoopPass.cpp
+// Most of this code has been COPIED from LoopPass.cpp
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/RegionPass.h"
@@ -64,9 +64,7 @@ bool RGPassManager::runOnFunction(Function &F) {
     return false;
 
   // Initialization
-  for (std::deque<Region *>::const_iterator I = RQ.begin(), E = RQ.end();
-       I != E; ++I) {
-    Region *R = *I;
+  for (Region *R : RQ) {
     for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
       RegionPass *RP = (RegionPass *)getContainedPass(Index);
       Changed |= RP->doInitialization(R, *this);

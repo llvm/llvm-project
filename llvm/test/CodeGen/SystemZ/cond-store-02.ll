@@ -9,10 +9,9 @@ declare void @foo(i16 *)
 define void @f1(i16 *%ptr, i16 %alt, i32 %limit) {
 ; CHECK-LABEL: f1:
 ; CHECK-NOT: %r2
-; CHECK: jl [[LABEL:[^ ]*]]
+; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: sth %r3, 0(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
   %orig = load i16 , i16 *%ptr
@@ -25,10 +24,9 @@ define void @f1(i16 *%ptr, i16 %alt, i32 %limit) {
 define void @f2(i16 *%ptr, i16 %alt, i32 %limit) {
 ; CHECK-LABEL: f2:
 ; CHECK-NOT: %r2
-; CHECK: jhe [[LABEL:[^ ]*]]
+; CHECK: bher %r14
 ; CHECK-NOT: %r2
 ; CHECK: sth %r3, 0(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
   %orig = load i16 , i16 *%ptr
@@ -42,10 +40,9 @@ define void @f2(i16 *%ptr, i16 %alt, i32 %limit) {
 define void @f3(i16 *%ptr, i32 %alt, i32 %limit) {
 ; CHECK-LABEL: f3:
 ; CHECK-NOT: %r2
-; CHECK: jl [[LABEL:[^ ]*]]
+; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: sth %r3, 0(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
   %orig = load i16 , i16 *%ptr
@@ -60,10 +57,9 @@ define void @f3(i16 *%ptr, i32 %alt, i32 %limit) {
 define void @f4(i16 *%ptr, i32 %alt, i32 %limit) {
 ; CHECK-LABEL: f4:
 ; CHECK-NOT: %r2
-; CHECK: jhe [[LABEL:[^ ]*]]
+; CHECK: bher %r14
 ; CHECK-NOT: %r2
 ; CHECK: sth %r3, 0(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
   %orig = load i16 , i16 *%ptr
@@ -79,10 +75,9 @@ define void @f4(i16 *%ptr, i32 %alt, i32 %limit) {
 define void @f5(i16 *%ptr, i32 %alt, i32 %limit) {
 ; CHECK-LABEL: f5:
 ; CHECK-NOT: %r2
-; CHECK: jl [[LABEL:[^ ]*]]
+; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: sth %r3, 0(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
   %orig = load i16 , i16 *%ptr
@@ -97,10 +92,9 @@ define void @f5(i16 *%ptr, i32 %alt, i32 %limit) {
 define void @f6(i16 *%ptr, i32 %alt, i32 %limit) {
 ; CHECK-LABEL: f6:
 ; CHECK-NOT: %r2
-; CHECK: jhe [[LABEL:[^ ]*]]
+; CHECK: bher %r14
 ; CHECK-NOT: %r2
 ; CHECK: sth %r3, 0(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
   %orig = load i16 , i16 *%ptr
@@ -116,10 +110,9 @@ define void @f6(i16 *%ptr, i32 %alt, i32 %limit) {
 define void @f7(i16 *%ptr, i64 %alt, i32 %limit) {
 ; CHECK-LABEL: f7:
 ; CHECK-NOT: %r2
-; CHECK: jl [[LABEL:[^ ]*]]
+; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: sth %r3, 0(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
   %orig = load i16 , i16 *%ptr
@@ -134,10 +127,9 @@ define void @f7(i16 *%ptr, i64 %alt, i32 %limit) {
 define void @f8(i16 *%ptr, i64 %alt, i32 %limit) {
 ; CHECK-LABEL: f8:
 ; CHECK-NOT: %r2
-; CHECK: jhe [[LABEL:[^ ]*]]
+; CHECK: bher %r14
 ; CHECK-NOT: %r2
 ; CHECK: sth %r3, 0(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
   %orig = load i16 , i16 *%ptr
@@ -153,10 +145,9 @@ define void @f8(i16 *%ptr, i64 %alt, i32 %limit) {
 define void @f9(i16 *%ptr, i64 %alt, i32 %limit) {
 ; CHECK-LABEL: f9:
 ; CHECK-NOT: %r2
-; CHECK: jl [[LABEL:[^ ]*]]
+; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: sth %r3, 0(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
   %orig = load i16 , i16 *%ptr
@@ -171,10 +162,9 @@ define void @f9(i16 *%ptr, i64 %alt, i32 %limit) {
 define void @f10(i16 *%ptr, i64 %alt, i32 %limit) {
 ; CHECK-LABEL: f10:
 ; CHECK-NOT: %r2
-; CHECK: jhe [[LABEL:[^ ]*]]
+; CHECK: bher %r14
 ; CHECK-NOT: %r2
 ; CHECK: sth %r3, 0(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
   %orig = load i16 , i16 *%ptr
@@ -189,10 +179,9 @@ define void @f10(i16 *%ptr, i64 %alt, i32 %limit) {
 define void @f11(i16 *%base, i16 %alt, i32 %limit) {
 ; CHECK-LABEL: f11:
 ; CHECK-NOT: %r2
-; CHECK: jl [[LABEL:[^ ]*]]
+; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: sth %r3, 4094(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%base, i64 2047
   %cond = icmp ult i32 %limit, 420
@@ -206,10 +195,9 @@ define void @f11(i16 *%base, i16 %alt, i32 %limit) {
 define void @f12(i16 *%base, i16 %alt, i32 %limit) {
 ; CHECK-LABEL: f12:
 ; CHECK-NOT: %r2
-; CHECK: jl [[LABEL:[^ ]*]]
+; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: sthy %r3, 4096(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%base, i64 2048
   %cond = icmp ult i32 %limit, 420
@@ -223,10 +211,9 @@ define void @f12(i16 *%base, i16 %alt, i32 %limit) {
 define void @f13(i16 *%base, i16 %alt, i32 %limit) {
 ; CHECK-LABEL: f13:
 ; CHECK-NOT: %r2
-; CHECK: jl [[LABEL:[^ ]*]]
+; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: sthy %r3, 524286(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%base, i64 262143
   %cond = icmp ult i32 %limit, 420
@@ -241,11 +228,10 @@ define void @f13(i16 *%base, i16 %alt, i32 %limit) {
 define void @f14(i16 *%base, i16 %alt, i32 %limit) {
 ; CHECK-LABEL: f14:
 ; CHECK-NOT: %r2
-; CHECK: jl [[LABEL:[^ ]*]]
+; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: agfi %r2, 524288
 ; CHECK: sth %r3, 0(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%base, i64 262144
   %cond = icmp ult i32 %limit, 420
@@ -259,10 +245,9 @@ define void @f14(i16 *%base, i16 %alt, i32 %limit) {
 define void @f15(i16 *%base, i16 %alt, i32 %limit) {
 ; CHECK-LABEL: f15:
 ; CHECK-NOT: %r2
-; CHECK: jl [[LABEL:[^ ]*]]
+; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: sthy %r3, -524288(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%base, i64 -262144
   %cond = icmp ult i32 %limit, 420
@@ -277,11 +262,10 @@ define void @f15(i16 *%base, i16 %alt, i32 %limit) {
 define void @f16(i16 *%base, i16 %alt, i32 %limit) {
 ; CHECK-LABEL: f16:
 ; CHECK-NOT: %r2
-; CHECK: jl [[LABEL:[^ ]*]]
+; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: agfi %r2, -524290
 ; CHECK: sth %r3, 0(%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %ptr = getelementptr i16, i16 *%base, i64 -262145
   %cond = icmp ult i32 %limit, 420
@@ -295,10 +279,9 @@ define void @f16(i16 *%base, i16 %alt, i32 %limit) {
 define void @f17(i64 %base, i64 %index, i16 %alt, i32 %limit) {
 ; CHECK-LABEL: f17:
 ; CHECK-NOT: %r2
-; CHECK: jl [[LABEL:[^ ]*]]
+; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: sthy %r4, 4096(%r3,%r2)
-; CHECK: [[LABEL]]:
 ; CHECK: br %r14
   %add1 = add i64 %base, %index
   %add2 = add i64 %add1, 4096

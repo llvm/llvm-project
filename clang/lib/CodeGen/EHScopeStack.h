@@ -89,7 +89,10 @@ enum CleanupKind : unsigned {
   InactiveCleanup = 0x4,
   InactiveEHCleanup = EHCleanup | InactiveCleanup,
   InactiveNormalCleanup = NormalCleanup | InactiveCleanup,
-  InactiveNormalAndEHCleanup = NormalAndEHCleanup | InactiveCleanup
+  InactiveNormalAndEHCleanup = NormalAndEHCleanup | InactiveCleanup,
+
+  LifetimeMarker = 0x8,
+  NormalEHLifetimeMarker = LifetimeMarker | NormalAndEHCleanup,
 };
 
 /// A stack of scopes which respond to exceptions, including cleanups
@@ -341,9 +344,7 @@ public:
   /// Determines whether the exception-scopes stack is empty.
   bool empty() const { return StartOfData == EndOfBuffer; }
 
-  bool requiresLandingPad() const {
-    return InnermostEHScope != stable_end();
-  }
+  bool requiresLandingPad() const;
 
   /// Determines whether there are any normal cleanups on the stack.
   bool hasNormalCleanups() const {

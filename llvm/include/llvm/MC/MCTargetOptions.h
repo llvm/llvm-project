@@ -14,6 +14,14 @@
 
 namespace llvm {
 
+enum class ExceptionHandling {
+  None,     /// No exception support
+  DwarfCFI, /// DWARF-like instruction based exceptions
+  SjLj,     /// setjmp/longjmp based exceptions
+  ARM,      /// ARM EHABI
+  WinEH,    /// Windows Exception Handling
+};
+
 class StringRef;
 
 class MCTargetOptions {
@@ -36,6 +44,10 @@ public:
   bool ShowMCEncoding : 1;
   bool ShowMCInst : 1;
   bool AsmVerbose : 1;
+
+  /// Preserve Comments in Assembly.
+  bool PreserveAsmComments : 1;
+
   int DwarfVersion;
   /// getABIName - If this returns a non-empty string this represents the
   /// textual name of the ABI that we want the backend to use, e.g. o32, or

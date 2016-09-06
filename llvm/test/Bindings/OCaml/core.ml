@@ -624,7 +624,7 @@ let test_users () =
 (*===-- Aliases -----------------------------------------------------------===*)
 
 let test_aliases () =
-  (* CHECK: @alias = alias i32* @aliasee
+  (* CHECK: @alias = alias i32, i32* @aliasee
    *)
   let forty_two32 = const_int i32_type 42 in
   let v = define_global "aliasee" forty_two32 m in
@@ -961,7 +961,7 @@ let test_builder () =
   group "function attribute";
   begin
       ignore (add_function_attr fn Attribute.UWTable);
-      (* CHECK: X7{{.*}}#0
+      (* CHECK: X7{{.*}}#0{{.*}}personality{{.*}}@__gxx_personality_v0
        * #0 is uwtable, defined at EOF.
        *)
       insist ([Attribute.UWTable] = function_attr fn);
@@ -1122,6 +1122,7 @@ let test_builder () =
 
     insist ((has_metadata i) = true);
     insist ((metadata i kind) = Some md);
+    insist ((get_mdnode_operands md) = [| m1; m2 |]);
 
     clear_metadata i kind;
 
@@ -1135,32 +1136,11 @@ let test_builder () =
     (* !llvm.module.flags is emitted at EOF. *)
     let n1 = const_int i32_type 1 in
     let n2 = mdstring context "Debug Info Version" in
-    let n3 = const_int i32_type 2 in
+    let n3 = const_int i32_type 3 in
     let md = mdnode context [| n1; n2; n3 |] in
     add_named_metadata_operand m "llvm.module.flags" md;
 
     insist ((get_named_metadata m "llvm.module.flags") = [| md |])
-  end;
-
-  group "dbg"; begin
-    (* CHECK: %dbg = add i32 %P1, %P2, !dbg !2
-     * !2 is metadata emitted at EOF.
-     *)
-    insist ((current_debug_location atentry) = Some (mdnode context [||]));
-
-    let m_line = const_int i32_type 2 in
-    let m_col = const_int i32_type 3 in
-    let m_scope = mdnode context [| |] in
-    let m_inlined = mdnode context [| |] in
-    let md = mdnode context [| m_line; m_col; m_scope; m_inlined |] in
-    set_current_debug_location atentry md;
-
-    insist ((current_debug_location atentry) = Some md);
-
-    let i = build_add p1 p2 "dbg" atentry in
-    insist ((has_metadata i) = true);
-
-    clear_current_debug_location atentry
   end;
 
   group "ret"; begin
@@ -1191,7 +1171,7 @@ let test_builder () =
            add_clause lp (const_array ety [| ztipkc; ztid |]);
            ignore (build_resume lp (builder_at_end context bblpad));
       end;
-      (* CHECK: landingpad{{.*}}personality{{.*}}__gxx_personality_v0
+      (* CHECK: landingpad
        * CHECK: cleanup
        * CHECK: catch{{.*}}i8**{{.*}}@_ZTIc
        * CHECK: filter{{.*}}@_ZTIPKc{{.*}}@_ZTId
@@ -1362,10 +1342,10 @@ let test_builder () =
 
     (* CHECK: %build_alloca = alloca i32
      * CHECK: %build_array_alloca = alloca i32, i32 %P2
-     * CHECK: %build_load = load volatile i32* %build_array_alloca, align 4
+     * CHECK: %build_load = load volatile i32, i32* %build_array_alloca, align 4
      * CHECK: store volatile i32 %P2, i32* %build_alloca, align 4
-     * CHECK: %build_gep = getelementptr i32* %build_array_alloca, i32 %P2
-     * CHECK: %build_in_bounds_gep = getelementptr inbounds i32* %build_array_alloca, i32 %P2
+     * CHECK: %build_gep = getelementptr i32, i32* %build_array_alloca, i32 %P2
+     * CHECK: %build_in_bounds_gep = getelementptr inbounds i32, i32* %build_array_alloca, i32 %P2
      * CHECK: %build_struct_gep = getelementptr inbounds{{.*}}%build_alloca2, i32 0, i32 1
      * CHECK: %build_atomicrmw = atomicrmw xchg i8* %p, i8 42 seq_cst
      *)
@@ -1445,7 +1425,6 @@ let test_builder () =
  * CHECK: !llvm.module.flags = !{!0}
  * CHECK: !0 = !{i32 1, !"Debug Info Version", i32 3}
  * CHECK: !1 = !{i32 1, !"metadata test"}
- * CHECK: !2 = !DILocation(line: 2, column: 3, scope: !3, inlinedAt: !3)
  *)
 
 (*===-- Pass Managers -----------------------------------------------------===*)

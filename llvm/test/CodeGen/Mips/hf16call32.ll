@@ -820,7 +820,7 @@ declare void @v_df_df(double, double) #1
 declare float @sf_v() #1
 ; stel: .section .mips16.call.fp.sf_v,"ax",@progbits
 ; stel: .ent __call_stub_fp_sf_v
-; stel: move $18, $31
+; stel: move $18, $ra
 ; stel: jal sf_v
 ; stel: mfc1 $2, $f0
 ; stel: jr $18
@@ -898,7 +898,7 @@ declare float @sf_df_df(double, double) #1
 declare double @df_v() #1
 ; stel: .section .mips16.call.fp.df_v,"ax",@progbits
 ; stel: .ent __call_stub_fp_df_v
-; stel: move $18, $31
+; stel: move $18, $ra
 ; stel: jal df_v
 ; stel: mfc1 $2, $f0
 ; stel: mfc1 $3, $f1
@@ -983,7 +983,7 @@ declare double @df_df_df(double, double) #1
 declare { float, float } @sc_v() #1
 ; stel: .section .mips16.call.fp.sc_v,"ax",@progbits
 ; stel: .ent __call_stub_fp_sc_v
-; stel: move $18, $31
+; stel: move $18, $ra
 ; stel: jal sc_v
 ; stel: mfc1 $2, $f0
 ; stel: mfc1 $3, $f2
@@ -1004,7 +1004,7 @@ declare { float, float } @sc_sf(float) #1
 declare { double, double } @dc_v() #1
 ; stel: .section .mips16.call.fp.dc_v,"ax",@progbits
 ; stel: .ent __call_stub_fp_dc_v
-; stel: move $18, $31
+; stel: move $18, $ra
 ; stel: jal dc_v
 ; stel: mfc1 $4, $f2
 ; stel: mfc1 $5, $f3

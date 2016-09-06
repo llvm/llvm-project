@@ -205,5 +205,63 @@ for.body:                                         ; preds = %for.body, %for.body
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
+; CHECK-LABEL: @add_phifail(
+; CHECK: load <16 x i8>, <16 x i8>*
+; CHECK: add nuw nsw <16 x i32>
+; CHECK: store <16 x i8>
+; Function Attrs: nounwind
+define void @add_phifail(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i32 %len) #0 {
+entry:
+  %cmp8 = icmp sgt i32 %len, 0
+  br i1 %cmp8, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  ret void
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %a_phi = phi i32 [ %conv, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
+  %0 = load i8, i8* %arrayidx
+  %conv = zext i8 %0 to i32
+  %add = add nuw nsw i32 %conv, 2
+  %conv1 = trunc i32 %add to i8
+  %arrayidx3 = getelementptr inbounds i8, i8* %q, i64 %indvars.iv
+  store i8 %conv1, i8* %arrayidx3
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %len
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: @add_phifail2(
+; CHECK: load <16 x i8>, <16 x i8>*
+; CHECK: add nuw nsw <16 x i32>
+; CHECK: store <16 x i8>
+; Function Attrs: nounwind
+define i8 @add_phifail2(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i32 %len) #0 {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  %ret = trunc i32 %a_phi to i8
+  ret i8 %ret
+
+for.body:                                         ; preds = %entry, %for.body
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
+  %a_phi = phi i32 [ %conv, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
+  %0 = load i8, i8* %arrayidx
+  %conv = zext i8 %0 to i32
+  %add = add nuw nsw i32 %conv, 2
+  %conv1 = trunc i32 %add to i8
+  %arrayidx3 = getelementptr inbounds i8, i8* %q, i64 %indvars.iv
+  store i8 %conv1, i8* %arrayidx3
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %len
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
 
 attributes #0 = { nounwind }
+

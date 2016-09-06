@@ -1,11 +1,31 @@
-; RUN: llc -march=mipsel -relocation-model=pic -enable-mips-tail-calls < %s | \
-; RUN: FileCheck %s -check-prefix=PIC32
-; RUN: llc -march=mipsel -relocation-model=static \
-; RUN: -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=STATIC32
-; RUN: llc -march=mips64el -mcpu=mips64r2 -mattr=+n64 -enable-mips-tail-calls \
-; RUN: < %s | FileCheck %s -check-prefix=N64
+; RUN: llc -march=mipsel -relocation-model=pic  \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s -check-prefix=PIC32
+; RUN: llc -march=mipsel -relocation-model=static  \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s -check-prefix=STATIC32
+; RUN: llc -march=mips64el -mcpu=mips64r2  \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s -check-prefix=N64
 ; RUN: llc -march=mipsel -mattr=mips16 -relocation-model=pic \
-; RUN: -enable-mips-tail-calls < %s | FileCheck %s -check-prefix=PIC16
+; RUN:      -verify-machineinstrs < %s | \
+; RUN:     FileCheck %s -check-prefix=PIC16
+
+; RUN: llc -march=mipsel -relocation-model=pic -mattr=+micromips < %s | \
+; RUN:     FileCheck %s -check-prefix=PIC32
+; RUN: llc -march=mipsel -relocation-model=static -mattr=+micromips \
+; RUN:     < %s | FileCheck %s -check-prefix=STATIC32
+
+; RUN: llc -march=mipsel -relocation-model=pic -mcpu=mips32r6 < %s | \
+; RUN:     FileCheck %s -check-prefix=PIC32
+; RUN: llc -march=mipsel -relocation-model=static -mcpu=mips32r6 \
+; RUN:     < %s | FileCheck %s -check-prefix=STATIC32
+; RUN: llc -march=mips64el -mcpu=mips64r6  \
+; RUN:     < %s | FileCheck %s -check-prefix=N64
+
+; RUN: llc -march=mipsel -relocation-model=pic -mcpu=mips32r6 -mattr=+micromips \
+; RUN:      < %s | FileCheck %s -check-prefix=PIC32
+; RUN: llc -march=mipsel -relocation-model=static -mcpu=mips32r6 \
+; RUN:     -mattr=+micromips < %s | FileCheck %s -check-prefix=STATIC32
+; RUN: llc -march=mips64el -mcpu=mips64r6 -mattr=+micromips < %s \
+; RUN:      | FileCheck %s -check-prefix=N64
 
 @g0 = common global i32 0, align 4
 @g1 = common global i32 0, align 4
@@ -73,13 +93,13 @@ declare i32 @callee4(i32, i32, i32, i32, i32, i32, i32, i32, i32)
 define i32 @caller5() nounwind readonly {
 entry:
 ; PIC32: .ent caller5
-; PIC32-NOT: jalr
+; PIC32-NOT: jalr $25
 ; PIC32: .end caller5
 ; STATIC32: .ent caller5
 ; STATIC32-NOT: jal
 ; STATIC32: .end caller5
 ; N64: .ent caller5
-; N64-NOT: jalr
+; N64-NOT: jalr $25
 ; N64: .end caller5
 ; PIC16: .ent caller5
 ; PIC16: jalrc
@@ -117,6 +137,19 @@ declare i32 @callee8(i32, ...)
 
 define i32 @caller8_0() nounwind {
 entry:
+; PIC32: .ent caller8_0
+; PIC32: jr
+; PIC32: .end caller8_0
+; STATIC32: .ent caller8_0
+; STATIC32: j
+; STATIC32: .end caller8_0
+; N64: .ent caller8_0
+; N64-NOT: jalr $25
+; N64: .end caller8_0
+; PIC16: .ent caller8_0
+; PIC16: jalrc
+; PIC16: .end caller8_0
+
   %call = tail call fastcc i32 @caller8_1()
   ret i32 %call
 }
@@ -130,7 +163,7 @@ entry:
 ; STATIC32: jal
 ; STATIC32: .end caller8_1
 ; N64: .ent caller8_1
-; N64-NOT: jalr
+; N64-NOT: jalr $25
 ; N64: .end caller8_1
 ; PIC16: .ent caller8_1
 ; PIC16: jalrc
@@ -148,6 +181,18 @@ declare i32 @callee9(%struct.S* byval)
 
 define i32 @caller9_0() nounwind {
 entry:
+; PIC32: .ent caller9_0
+; PIC32: jr
+; PIC32: .end caller9_0
+; STATIC32: .ent caller9_0
+; STATIC32: j
+; STATIC32: .end caller9_0
+; N64: .ent caller9_0
+; N64-NOT: jalr $25
+; N64: .end caller9_0
+; PIC16: .ent caller9_0
+; PIC16: jalrc
+; PIC16: .end caller9_0
   %call = tail call fastcc i32 @caller9_1()
   ret i32 %call
 }
@@ -176,11 +221,11 @@ declare i32 @callee10(i32, i32, i32, i32, i32, i32, i32, i32, i32)
 define i32 @caller10(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8) nounwind {
 entry:
 ; PIC32: .ent caller10
-; PIC32-NOT: jalr
+; PIC32-NOT: jalr $25
 ; STATIC32: .ent caller10
 ; STATIC32-NOT: jal
 ; N64: .ent caller10
-; N64-NOT: jalr
+; N64-NOT: jalr $25
 ; PIC16: .ent caller10
 ; PIC16: jalrc
 
@@ -235,7 +280,7 @@ entry:
 ; STATIC32: .ent caller13
 ; STATIC32-NOT: jal
 ; N64: .ent caller13
-; N64-NOT: jalr
+; N64-NOT: jalr $25
 ; PIC16: .ent caller13
 ; PIC16: jalrc
 

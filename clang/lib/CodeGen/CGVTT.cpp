@@ -44,7 +44,7 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
                                   const CXXRecordDecl *RD) {
   VTTBuilder Builder(CGM.getContext(), RD, /*GenerateDefinition=*/true);
 
-  llvm::Type *Int8PtrTy = CGM.Int8PtrTy, *Int64Ty = CGM.Int64Ty;
+  llvm::Type *Int8PtrTy = CGM.Int8PtrTy, *Int32Ty = CGM.Int32Ty;
   llvm::ArrayType *ArrayType = 
     llvm::ArrayType::get(Int8PtrTy, Builder.getVTTComponents().size());
 
@@ -75,8 +75,8 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
     }
 
      llvm::Value *Idxs[] = {
-       llvm::ConstantInt::get(Int64Ty, 0),
-       llvm::ConstantInt::get(Int64Ty, AddressPoint)
+       llvm::ConstantInt::get(Int32Ty, 0),
+       llvm::ConstantInt::get(Int32Ty, AddressPoint)
      };
 
      llvm::Constant *Init = llvm::ConstantExpr::getInBoundsGetElementPtr(
@@ -121,7 +121,7 @@ llvm::GlobalVariable *CodeGenVTables::GetAddrOfVTT(const CXXRecordDecl *RD) {
   llvm::GlobalVariable *GV =
     CGM.CreateOrReplaceCXXRuntimeVariable(Name, ArrayType, 
                                           llvm::GlobalValue::ExternalLinkage);
-  GV->setUnnamedAddr(true);
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   return GV;
 }
 

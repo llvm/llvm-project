@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin | FileCheck -check-prefix=CHECK-MACHO %s
-; RUN: llc < %s -mtriple=powerpc-apple-darwin -disable-fp-elim | FileCheck -check-prefix=CHECK-MACHO %s
-; RUN: llc < %s -mtriple=powerpc-linux-gnu | FileCheck -check-prefix=LINUX-NO-FP %s
-; RUN: llc < %s -mtriple=powerpc-linux-gnu -disable-fp-elim | FileCheck -check-prefix=LINUX-FP %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin | FileCheck -check-prefix=CHECK-MACHO %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin -disable-fp-elim | FileCheck -check-prefix=CHECK-MACHO %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-linux-gnu | FileCheck -check-prefix=LINUX-NO-FP %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-linux-gnu -disable-fp-elim | FileCheck -check-prefix=LINUX-FP %s
 
 define void @func() {
 entry:

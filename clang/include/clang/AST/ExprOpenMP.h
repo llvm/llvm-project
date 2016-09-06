@@ -85,7 +85,7 @@ public:
   void setBase(Expr *E) { SubExprs[BASE] = E; }
 
   /// \brief Return original type of the base expression for array section.
-  static QualType getBaseOriginalType(Expr *Base);
+  static QualType getBaseOriginalType(const Expr *Base);
 
   /// \brief Get lower bound of array section.
   Expr *getLowerBound() { return cast_or_null<Expr>(SubExprs[LOWER_BOUND]); }

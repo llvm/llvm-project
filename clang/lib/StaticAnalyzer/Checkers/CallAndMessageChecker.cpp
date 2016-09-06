@@ -313,7 +313,7 @@ void CallAndMessageChecker::checkPreStmt(const CallExpr *CE,
   if (L.isUndef()) {
     if (!BT_call_undef)
       BT_call_undef.reset(new BuiltinBug(
-          this, "Called function pointer is an uninitalized pointer value"));
+          this, "Called function pointer is an uninitialized pointer value"));
     emitBadCall(BT_call_undef.get(), C, Callee);
     return;
   }

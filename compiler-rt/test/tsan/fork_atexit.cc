@@ -1,5 +1,4 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %env_tsan_opts=atexit_sleep_ms=50 %run %t 2>&1 | FileCheck %s
-// UNSUPPORTED: darwin
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>

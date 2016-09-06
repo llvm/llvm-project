@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; This test just checks that the compiler doesn't crash.
@@ -7,7 +7,7 @@ declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float
 
 ; FUNC-LABEL: {{^}}v32i8_to_v8i32:
 ; SI: s_endpgm
-define void @v32i8_to_v8i32(<32 x i8> addrspace(2)* inreg) #0 {
+define amdgpu_ps void @v32i8_to_v8i32(<32 x i8> addrspace(2)* inreg) #0 {
 entry:
   %1 = load <32 x i8>, <32 x i8> addrspace(2)* %0
   %2 = bitcast <32 x i8> %1 to <8 x i32>
@@ -76,4 +76,34 @@ define void @bitcast_f64_to_v2i32(<2 x i32> addrspace(1)* %out, double addrspace
   ret void
 }
 
-attributes #0 = { "ShaderType"="0" }
+; FUNC-LABEL: {{^}}bitcast_v2i64_to_v2f64:
+define void @bitcast_v2i64_to_v2f64(i32 %cond, <2 x double> addrspace(1)* %out, <2 x i64> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x i64> %value to <2 x double>
+  br label %end
+
+end:
+  %phi = phi <2 x double> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x double> %phi, <2 x double> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}bitcast_v2f64_to_v2i64:
+define void @bitcast_v2f64_to_v2i64(i32 %cond, <2 x i64> addrspace(1)* %out, <2 x double> %value) {
+entry:
+  %cmp0 = icmp eq i32 %cond, 0
+  br i1 %cmp0, label %if, label %end
+
+if:
+  %cast = bitcast <2 x double> %value to <2 x i64>
+  br label %end
+
+end:
+  %phi = phi <2 x i64> [zeroinitializer, %entry], [%cast, %if]
+  store <2 x i64> %phi, <2 x i64> addrspace(1)* %out
+  ret void
+}

@@ -194,7 +194,7 @@ void ScopedReport::AddThread(const ThreadContext *tctx, bool suppressable) {
   ReportThread *rt = new(mem) ReportThread;
   rep_->threads.PushBack(rt);
   rt->id = tctx->tid;
-  rt->pid = tctx->os_id;
+  rt->os_id = tctx->os_id;
   rt->running = (tctx->status == ThreadStatusRunning);
   rt->name = internal_strdup(tctx->name);
   rt->parent_tid = tctx->parent_tid;
@@ -273,7 +273,7 @@ u64 ScopedReport::AddMutex(u64 id) {
   u64 uid = 0;
   u64 mid = id;
   uptr addr = SyncVar::SplitId(id, &uid);
-  SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr);
+  SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, true);
   // Check that the mutex is still alive.
   // Another mutex can be created at the same address,
   // so check uid as well.
@@ -347,12 +347,12 @@ void ScopedReport::AddLocation(uptr addr, uptr size) {
     rep_->locs.PushBack(loc);
     AddThread(tctx);
   }
+#endif
   if (ReportLocation *loc = SymbolizeData(addr)) {
     loc->suppressable = true;
     rep_->locs.PushBack(loc);
     return;
   }
-#endif
 }
 
 #ifndef SANITIZER_GO
@@ -680,6 +680,14 @@ void PrintCurrentStack(ThreadState *thr, uptr pc) {
   PrintStack(SymbolizeStack(trace));
 }
 
+// Always inlining PrintCurrentStackSlow, because LocatePcInTrace assumes
+// __sanitizer_print_stack_trace exists in the actual unwinded stack, but
+// tail-call to PrintCurrentStackSlow breaks this assumption because
+// __sanitizer_print_stack_trace disappears after tail-call.
+// However, this solution is not reliable enough, please see dvyukov's comment
+// http://reviews.llvm.org/D19148#406208
+// Also see PR27280 comment 2 and 3 for breaking examples and analysis.
+ALWAYS_INLINE
 void PrintCurrentStackSlow(uptr pc) {
 #ifndef SANITIZER_GO
   BufferedStackTrace *ptrace =

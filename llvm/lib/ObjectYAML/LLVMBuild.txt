@@ -1,0 +1,14 @@
+;===------------------------------------------------------------*- Conf -*--===;
+;
+;                     The LLVM Compiler Infrastructure
+;
+; This file is distributed under the University of Illinois Open Source
+; License. See LICENSE.TXT for details.
+;
+;===------------------------------------------------------------------------===;
+
+[component_0]
+type = Library
+name = ObjectYAML
+parent = Libraries
+required_libraries = Support

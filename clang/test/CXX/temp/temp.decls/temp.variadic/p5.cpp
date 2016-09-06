@@ -437,3 +437,35 @@ namespace PR21289 {
   template void g<>();
   template void g<1, 2, 3>();
 }
+
+template <class... Ts>
+int var_expr(Ts... ts);
+
+template <class... Ts>
+auto a_function(Ts... ts) -> decltype(var_expr(ts...));
+
+template <class T>
+using partial = decltype(a_function<int, T>);
+
+int use_partial() { partial<char> n; }
+
+namespace PR26017 {
+template <class T>
+struct Foo {};
+template <class... Ts>
+using FooAlias = Foo<void(Ts...)>;
+
+template <class... Ts>
+using FooAliasAlias = FooAlias<Ts..., Ts...>;
+
+template <class... Ts>
+void bar(const FooAlias<Ts...> &) {}
+
+int fn() {
+  FooAlias<> a;
+  bar(a);
+
+  FooAlias<int> b;
+  bar(b);
+}
+}

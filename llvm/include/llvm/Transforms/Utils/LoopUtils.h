@@ -30,20 +30,21 @@ class DominatorTree;
 class Loop;
 class LoopInfo;
 class Pass;
+class PredicatedScalarEvolution;
 class PredIteratorCache;
 class ScalarEvolution;
+class SCEV;
 class TargetLibraryInfo;
 
 /// \brief Captures loop safety information.
 /// It keep information for loop & its header may throw exception.
-struct LICMSafetyInfo {
-  bool MayThrow;           // The current loop contains an instruction which
-                           // may throw.
-  bool HeaderMayThrow;     // Same as previous, but specific to loop header
+struct LoopSafetyInfo {
+  bool MayThrow;       // The current loop contains an instruction which
+                       // may throw.
+  bool HeaderMayThrow; // Same as previous, but specific to loop header
   // Used to update funclet bundle operands.
   DenseMap<BasicBlock *, ColorVector> BlockColors;
-  LICMSafetyInfo() : MayThrow(false), HeaderMayThrow(false)
-  {}
+  LoopSafetyInfo() : MayThrow(false), HeaderMayThrow(false) {}
 };
 
 /// The RecurrenceDescriptor is used to identify recurrences variables in a
@@ -175,6 +176,13 @@ public:
   static bool isReductionPHI(PHINode *Phi, Loop *TheLoop,
                              RecurrenceDescriptor &RedDes);
 
+  /// Returns true if Phi is a first-order recurrence. A first-order recurrence
+  /// is a non-reduction recurrence relation in which the value of the
+  /// recurrence in the current loop iteration equals a value defined in the
+  /// previous iteration.
+  static bool isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
+                                     DominatorTree *DT);
+
   RecurrenceKind getRecurrenceKind() { return Kind; }
 
   MinMaxRecurrenceKind getMinMaxRecurrenceKind() { return MinMaxKind; }
@@ -255,13 +263,15 @@ public:
   enum InductionKind {
     IK_NoInduction,  ///< Not an induction variable.
     IK_IntInduction, ///< Integer induction variable. Step = C.
-    IK_PtrInduction  ///< Pointer induction var. Step = C / sizeof(elem).
+    IK_PtrInduction, ///< Pointer induction var. Step = C / sizeof(elem).
+    IK_FpInduction   ///< Floating point induction variable.
   };
 
 public:
   /// Default constructor - creates an invalid induction.
   InductionDescriptor()
-    : StartValue(nullptr), IK(IK_NoInduction), StepValue(nullptr) {}
+    : StartValue(nullptr), IK(IK_NoInduction), Step(nullptr),
+    InductionBinOp(nullptr) {}
 
   /// Get the consecutive direction. Returns:
   ///   0 - unknown or non-consecutive.
@@ -275,37 +285,93 @@ public:
   /// For pointer induction, returns StartValue[Index * StepValue].
   /// FIXME: The newly created binary instructions should contain nsw/nuw
   /// flags, which can be found from the original scalar operations.
-  Value *transform(IRBuilder<> &B, Value *Index) const;
+  Value *transform(IRBuilder<> &B, Value *Index, ScalarEvolution *SE,
+                   const DataLayout& DL) const;
 
   Value *getStartValue() const { return StartValue; }
   InductionKind getKind() const { return IK; }
-  ConstantInt *getStepValue() const { return StepValue; }
+  const SCEV *getStep() const { return Step; }
+  ConstantInt *getConstIntStepValue() const;
 
-  static bool isInductionPHI(PHINode *Phi, ScalarEvolution *SE,
-                             InductionDescriptor &D);
+  /// Returns true if \p Phi is an induction in the loop \p L. If \p Phi is an
+  /// induction, the induction descriptor \p D will contain the data describing
+  /// this induction. If by some other means the caller has a better SCEV
+  /// expression for \p Phi than the one returned by the ScalarEvolution
+  /// analysis, it can be passed through \p Expr.
+  static bool isInductionPHI(PHINode *Phi, const Loop* L, ScalarEvolution *SE,
+                             InductionDescriptor &D,
+                             const SCEV *Expr = nullptr);
+
+  /// Returns true if \p Phi is a floating point induction in the loop \p L.
+  /// If \p Phi is an induction, the induction descriptor \p D will contain 
+  /// the data describing this induction.
+  static bool isFPInductionPHI(PHINode *Phi, const Loop* L,
+                               ScalarEvolution *SE, InductionDescriptor &D);
+
+  /// Returns true if \p Phi is a loop \p L induction, in the context associated
+  /// with the run-time predicate of PSE. If \p Assume is true, this can add
+  /// further SCEV predicates to \p PSE in order to prove that \p Phi is an
+  /// induction.
+  /// If \p Phi is an induction, \p D will contain the data describing this
+  /// induction.
+  static bool isInductionPHI(PHINode *Phi, const Loop* L,
+                             PredicatedScalarEvolution &PSE,
+                             InductionDescriptor &D, bool Assume = false);
+
+  /// Returns true if the induction type is FP and the binary operator does
+  /// not have the "fast-math" property. Such operation requires a relaxed FP
+  /// mode.
+  bool hasUnsafeAlgebra() {
+    return InductionBinOp &&
+      !cast<FPMathOperator>(InductionBinOp)->hasUnsafeAlgebra();
+  }
+
+  /// Returns induction operator that does not have "fast-math" property
+  /// and requires FP unsafe mode.
+  Instruction *getUnsafeAlgebraInst() {
+    if (!InductionBinOp ||
+        cast<FPMathOperator>(InductionBinOp)->hasUnsafeAlgebra())
+      return nullptr;
+    return InductionBinOp;
+  }
+
+  /// Returns binary opcode of the induction operator.
+  Instruction::BinaryOps getInductionOpcode() const {
+    return InductionBinOp ? InductionBinOp->getOpcode() :
+      Instruction::BinaryOpsEnd;
+  }
 
 private:
   /// Private constructor - used by \c isInductionPHI.
-  InductionDescriptor(Value *Start, InductionKind K, ConstantInt *Step);
+  InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
+                      BinaryOperator *InductionBinOp = nullptr);
 
   /// Start value.
   TrackingVH<Value> StartValue;
   /// Induction kind.
   InductionKind IK;
   /// Step value.
-  ConstantInt *StepValue;
+  const SCEV *Step;
+  // Instruction that advances induction variable.
+  BinaryOperator *InductionBinOp;
 };
 
 BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    bool PreserveLCSSA);
 
-/// \brief Simplify each loop in a loop nest recursively.
+/// Ensures LCSSA form for every instruction from the Worklist in the scope of
+/// innermost containing loop.
 ///
-/// This takes a potentially un-simplified loop L (and its children) and turns
-/// it into a simplified loop nest with preheaders and single backedges. It will
-/// update \c AliasAnalysis and \c ScalarEvolution analyses if they're non-null.
-bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
-                  AssumptionCache *AC, bool PreserveLCSSA);
+/// For the given instruction which have uses outside of the loop, an LCSSA PHI
+/// node is inserted and the uses outside the loop are rewritten to use this
+/// node.
+///
+/// LoopInfo and DominatorTree are required and, since the routine makes no
+/// changes to CFG, preserved.
+///
+/// Returns true if any modifications are made.
+bool formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
+                              DominatorTree &DT, LoopInfo &LI);
 
 /// \brief Put loop into LCSSA form.
 ///
@@ -318,8 +384,7 @@ bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
 /// If ScalarEvolution is passed in, it will be preserved.
 ///
 /// Returns true if any modifications are made to the loop.
-bool formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI,
-               ScalarEvolution *SE);
+bool formLCSSA(Loop &L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution *SE);
 
 /// \brief Put a loop nest into LCSSA form.
 ///
@@ -343,7 +408,7 @@ bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
 /// It returns changed status.
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                 TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                LICMSafetyInfo *);
+                LoopSafetyInfo *);
 
 /// \brief Walk the specified region of the CFG (defined by all blocks
 /// dominated by the specified block, and that are in the current loop) in depth
@@ -354,7 +419,7 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// loop and loop safety information as arguments. It returns changed status.
 bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                  TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                 LICMSafetyInfo *);
+                 LoopSafetyInfo *);
 
 /// \brief Try to promote memory values to scalars by sinking stores out of
 /// the loop and moving loads to before the loop.  We do this by looping over
@@ -363,20 +428,45 @@ bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// insertion point vector, PredIteratorCache, LoopInfo, DominatorTree, Loop,
 /// AliasSet information for all instructions of the loop and loop safety
 /// information as arguments. It returns changed status.
-bool promoteLoopAccessesToScalars(AliasSet &, SmallVectorImpl<BasicBlock*> &,
-                                  SmallVectorImpl<Instruction*> &,
+bool promoteLoopAccessesToScalars(AliasSet &, SmallVectorImpl<BasicBlock *> &,
+                                  SmallVectorImpl<Instruction *> &,
                                   PredIteratorCache &, LoopInfo *,
-                                  DominatorTree *, Loop *, AliasSetTracker *,
-                                  LICMSafetyInfo *);
+                                  DominatorTree *, const TargetLibraryInfo *,
+                                  Loop *, AliasSetTracker *, LoopSafetyInfo *);
 
 /// \brief Computes safety information for a loop
 /// checks loop body & header for the possibility of may throw
-/// exception, it takes LICMSafetyInfo and loop as argument.
-/// Updates safety information in LICMSafetyInfo argument.
-void computeLICMSafetyInfo(LICMSafetyInfo *, Loop *);
+/// exception, it takes LoopSafetyInfo and loop as argument.
+/// Updates safety information in LoopSafetyInfo argument.
+void computeLoopSafetyInfo(LoopSafetyInfo *, Loop *);
+
+/// Returns true if the instruction in a loop is guaranteed to execute at least
+/// once.
+bool isGuaranteedToExecute(const Instruction &Inst, const DominatorTree *DT,
+                           const Loop *CurLoop,
+                           const LoopSafetyInfo *SafetyInfo);
 
 /// \brief Returns the instructions that use values defined in the loop.
 SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
+
+/// \brief Find string metadata for loop
+///
+/// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
+/// operand or null otherwise.  If the string metadata is not found return
+/// Optional's not-a-value.
+Optional<const MDOperand *> findStringMetadataForLoop(Loop *TheLoop,
+                                                      StringRef Name);
+
+/// \brief Set input string into loop metadata by keeping other values intact.
+void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
+                             unsigned V = 0);
+
+/// Helper to consistently add the set of standard passes to a loop pass's \c
+/// AnalysisUsage.
+///
+/// All loop passes should call this as part of implementing their \c
+/// getAnalysisUsage.
+void getLoopAnalysisUsage(AnalysisUsage &AU);
 }
 
 #endif

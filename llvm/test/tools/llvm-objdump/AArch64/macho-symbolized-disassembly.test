@@ -7,17 +7,16 @@ OBJ: 000000000000001c	adrp	x0, L_.str@PAGE
 OBJ: 0000000000000020	add	x0, x0, L_.str@PAGEOFF
 OBJ: 0000000000000024	bl	_printf
 
-EXE: 0000000100007f58	add	x0, x0, #4008 ; literal pool for: "Hello world
-"
+EXE: 0000000100007f58	add	x0, x0, #0xfa8 ; literal pool for: "Hello world\n"
 EXE: 0000000100007f5c	bl	0x100007f78 ; symbol stub for: _printf
 
 ObjC-OBJ: 000000000000000c	adrp	x8, L_OBJC_SELECTOR_REFERENCES_3@PAGE
 ObjC-OBJ: 0000000000000010	add	x8, x8, L_OBJC_SELECTOR_REFERENCES_3@PAGEOFF
 ObjC-OBJ:0000000000000044	bl	_objc_msgSend
 
-ObjC-EXE: 0000000100007ed0	add	x8, x8, #80 ; Objc selector ref: date
-ObjC-EXE: 0000000100007ed8	add	x9, x9, #96 ; Objc class ref: _OBJC_CLASS_$_NSDate
+ObjC-EXE: 0000000100007ed0	add	x8, x8, #0x50 ; Objc selector ref: date
+ObjC-EXE: 0000000100007ed8	add	x9, x9, #0x60 ; Objc class ref: _OBJC_CLASS_$_NSDate
 ObjC-EXE: 0000000100007f04	bl	0x100007f50 ; Objc message: +[NSObject new]
 ObjC-EXE: 0000000100007f1c	bl	0x100007f50 ; Objc message: -[x0 new]
-ObjC-EXE: 0000000100007f2c	add	x0, x0, #32 ; Objc cfstring ref: @"The current date and time is: %@"
+ObjC-EXE: 0000000100007f2c	add	x0, x0, #0x20 ; Objc cfstring ref: @"The current date and time is: %@"
 ObjC-EXE: 0000000100007f30	bl	0x100007f44 ; symbol stub for: _NSLog

@@ -27,3 +27,6 @@ DEFINE_COMPILERRT_FUNCTION(__unordsf2vfp)
 	movvc	r0, #0
 	bx	lr
 END_COMPILERRT_FUNCTION(__unordsf2vfp)
+
+NO_EXEC_STACK_DIRECTIVE
+

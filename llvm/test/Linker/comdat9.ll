@@ -11,7 +11,7 @@ define internal void @f() comdat($c) {
 ; CHECK-DAG: define internal void @f() comdat($c)
 
 $f2 = comdat largest
-define internal void @f2() comdat($f2) {
+define linkonce_odr void @f2() comdat($f2) {
   ret void
 }
 define void @f3() comdat($f2) {
@@ -19,4 +19,4 @@ define void @f3() comdat($f2) {
 }
 
 ; CHECK-DAG: $f2 = comdat largest
-; CHECK-DAG: define internal void @f2() comdat {
+; CHECK-DAG: define linkonce_odr void @f2()

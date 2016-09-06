@@ -11,29 +11,41 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
+#include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
-
 #if HAVE_DIA_SDK
 #include "llvm/DebugInfo/PDB/DIA/DIASession.h"
 #endif
+#include "llvm/DebugInfo/PDB/Raw/RawSession.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ManagedStatic.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
-PDB_ErrorCode llvm::loadDataForPDB(PDB_ReaderType Type, StringRef Path,
-                                   std::unique_ptr<IPDBSession> &Session) {
+Error llvm::pdb::loadDataForPDB(PDB_ReaderType Type, StringRef Path,
+                                std::unique_ptr<IPDBSession> &Session) {
   // Create the correct concrete instance type based on the value of Type.
+  if (Type == PDB_ReaderType::Raw)
+    return RawSession::createFromPdb(Path, Session);
+
 #if HAVE_DIA_SDK
   return DIASession::createFromPdb(Path, Session);
+#else
+  return llvm::make_error<GenericError>("DIA is not installed on the system");
 #endif
-  return PDB_ErrorCode::NoPdbImpl;
 }
 
-PDB_ErrorCode llvm::loadDataForEXE(PDB_ReaderType Type, StringRef Path,
-                                   std::unique_ptr<IPDBSession> &Session) {
+Error llvm::pdb::loadDataForEXE(PDB_ReaderType Type, StringRef Path,
+                                std::unique_ptr<IPDBSession> &Session) {
   // Create the correct concrete instance type based on the value of Type.
+  if (Type == PDB_ReaderType::Raw)
+    return RawSession::createFromExe(Path, Session);
+
 #if HAVE_DIA_SDK
   return DIASession::createFromExe(Path, Session);
+#else
+  return llvm::make_error<GenericError>("DIA is not installed on the system");
 #endif
-  return PDB_ErrorCode::NoPdbImpl;
 }

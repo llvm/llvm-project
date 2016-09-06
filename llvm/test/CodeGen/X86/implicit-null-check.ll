@@ -1,4 +1,4 @@
-; RUN: llc -O3 -mtriple=x86_64-apple-macosx -enable-implicit-null-checks < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O3 -mtriple=x86_64-apple-macosx -enable-implicit-null-checks < %s | FileCheck %s
 
 ; RUN: llc < %s -mtriple=x86_64-apple-macosx -enable-implicit-null-checks \
 ; RUN:    | llvm-mc -triple x86_64-apple-macosx -filetype=obj -o - \
@@ -12,10 +12,10 @@
 
 define i32 @imp_null_check_load(i32* %x) {
 ; CHECK-LABEL: _imp_null_check_load:
-; CHECK: Ltmp1:
+; CHECK: [[BB0_imp_null_check_load:L[^:]+]]:
 ; CHECK: movl (%rdi), %eax
 ; CHECK: retq
-; CHECK: Ltmp0:
+; CHECK: [[BB1_imp_null_check_load:LBB0_[0-9]+]]:
 ; CHECK: movl $42, %eax
 ; CHECK: retq
 
@@ -33,10 +33,10 @@ define i32 @imp_null_check_load(i32* %x) {
 
 define i32 @imp_null_check_gep_load(i32* %x) {
 ; CHECK-LABEL: _imp_null_check_gep_load:
-; CHECK: Ltmp3:
+; CHECK: [[BB0_imp_null_check_gep_load:L[^:]+]]:
 ; CHECK: movl 128(%rdi), %eax
 ; CHECK: retq
-; CHECK: Ltmp2:
+; CHECK: [[BB1_imp_null_check_gep_load:LBB1_[0-9]+]]:
 ; CHECK: movl $42, %eax
 ; CHECK: retq
 
@@ -55,11 +55,11 @@ define i32 @imp_null_check_gep_load(i32* %x) {
 
 define i32 @imp_null_check_add_result(i32* %x, i32 %p) {
 ; CHECK-LABEL: _imp_null_check_add_result:
-; CHECK: Ltmp5:
+; CHECK: [[BB0_imp_null_check_add_result:L[^:]+]]:
 ; CHECK: addl (%rdi), %esi
 ; CHECK: movl %esi, %eax
 ; CHECK: retq
-; CHECK: Ltmp4:
+; CHECK: [[BB1_imp_null_check_add_result:LBB2_[0-9]+]]:
 ; CHECK: movl $42, %eax
 ; CHECK: retq
 
@@ -78,12 +78,12 @@ define i32 @imp_null_check_add_result(i32* %x, i32 %p) {
 
 define i32 @imp_null_check_hoist_over_unrelated_load(i32* %x, i32* %y, i32* %z) {
 ; CHECK-LABEL: _imp_null_check_hoist_over_unrelated_load:
-; CHECK: Ltmp7:
+; CHECK: [[BB0_imp_null_check_hoist_over_unrelated_load:L[^:]+]]:
 ; CHECK: movl (%rdi), %eax
 ; CHECK: movl (%rsi), %ecx
 ; CHECK: movl %ecx, (%rdx)
 ; CHECK: retq
-; CHECK: Ltmp6:
+; CHECK: [[BB1_imp_null_check_hoist_over_unrelated_load:LBB3_[0-9]+]]:
 ; CHECK: movl	$42, %eax
 ; CHECK: retq
 
@@ -103,12 +103,12 @@ define i32 @imp_null_check_hoist_over_unrelated_load(i32* %x, i32* %y, i32* %z) 
 
 define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
 ; CHECK-LABEL: _imp_null_check_via_mem_comparision
-; CHECK: Ltmp9:
+; CHECK: [[BB0_imp_null_check_via_mem_comparision:L[^:]+]]:
 ; CHECK: cmpl   %esi, 4(%rdi)
 ; CHECK: jge    LBB4_2
 ; CHECK: movl   $100, %eax
 ; CHECK: retq
-; CHECK: Ltmp8:
+; CHECK: [[BB1_imp_null_check_via_mem_comparision:LBB4_[0-9]+]]:
 ; CHECK: movl   $42, %eax
 ; CHECK: retq
 ; CHECK: LBB4_2:
@@ -158,9 +158,9 @@ define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
 ; Fault[0].Type:
 ; CHECK-NEXT: .long 1
 ; Fault[0].FaultOffset:
-; CHECK-NEXT: .long Ltmp5-_imp_null_check_add_result
+; CHECK-NEXT: .long [[BB0_imp_null_check_add_result]]-_imp_null_check_add_result
 ; Fault[0].HandlerOffset:
-; CHECK-NEXT: .long Ltmp4-_imp_null_check_add_result
+; CHECK-NEXT: .long [[BB1_imp_null_check_add_result]]-_imp_null_check_add_result
 
 ; FunctionAddr:
 ; CHECK-NEXT: .quad _imp_null_check_gep_load
@@ -171,9 +171,9 @@ define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
 ; Fault[0].Type:
 ; CHECK-NEXT: .long 1
 ; Fault[0].FaultOffset:
-; CHECK-NEXT: .long Ltmp3-_imp_null_check_gep_load
+; CHECK-NEXT: .long [[BB0_imp_null_check_gep_load]]-_imp_null_check_gep_load
 ; Fault[0].HandlerOffset:
-; CHECK-NEXT: .long Ltmp2-_imp_null_check_gep_load
+; CHECK-NEXT: .long [[BB1_imp_null_check_gep_load]]-_imp_null_check_gep_load
 
 ; FunctionAddr:
 ; CHECK-NEXT: .quad _imp_null_check_hoist_over_unrelated_load
@@ -184,9 +184,9 @@ define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
 ; Fault[0].Type:
 ; CHECK-NEXT: .long 1
 ; Fault[0].FaultOffset:
-; CHECK-NEXT: .long Ltmp7-_imp_null_check_hoist_over_unrelated_load
+; CHECK-NEXT: .long [[BB0_imp_null_check_hoist_over_unrelated_load]]-_imp_null_check_hoist_over_unrelated_load
 ; Fault[0].HandlerOffset:
-; CHECK-NEXT: .long Ltmp6-_imp_null_check_hoist_over_unrelated_load
+; CHECK-NEXT: .long [[BB1_imp_null_check_hoist_over_unrelated_load]]-_imp_null_check_hoist_over_unrelated_load
 
 ; FunctionAddr:
 ; CHECK-NEXT: .quad _imp_null_check_load
@@ -197,9 +197,9 @@ define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
 ; Fault[0].Type:
 ; CHECK-NEXT: .long 1
 ; Fault[0].FaultOffset:
-; CHECK-NEXT: .long Ltmp1-_imp_null_check_load
+; CHECK-NEXT: .long [[BB0_imp_null_check_load]]-_imp_null_check_load
 ; Fault[0].HandlerOffset:
-; CHECK-NEXT: .long Ltmp0-_imp_null_check_load
+; CHECK-NEXT: .long [[BB1_imp_null_check_load]]-_imp_null_check_load
 
 ; FunctionAddr:
 ; CHECK-NEXT: .quad     _imp_null_check_via_mem_comparision
@@ -210,9 +210,9 @@ define i32 @imp_null_check_via_mem_comparision(i32* %x, i32 %val) {
 ; Fault[0].Type:
 ; CHECK-NEXT: .long   1
 ; Fault[0].FaultOffset:
-; CHECK-NEXT: .long   Ltmp9-_imp_null_check_via_mem_comparision
+; CHECK-NEXT: .long   [[BB0_imp_null_check_via_mem_comparision]]-_imp_null_check_via_mem_comparision
 ; Fault[0].HandlerOffset:
-; CHECK-NEXT: .long   Ltmp8-_imp_null_check_via_mem_comparision
+; CHECK-NEXT: .long   [[BB1_imp_null_check_via_mem_comparision]]-_imp_null_check_via_mem_comparision
 
 ; OBJDUMP: FaultMap table:
 ; OBJDUMP-NEXT: Version: 0x1

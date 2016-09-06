@@ -86,11 +86,6 @@ protected:
     /// The amount of extra storage needed by the Cleanup.
     /// Always a multiple of the scope-stack alignment.
     unsigned CleanupSize : 12;
-
-    /// The number of fixups required by enclosing scopes (not including
-    /// this one).  If this is the top cleanup scope, all the fixups
-    /// from this index onwards belong to this scope.
-    unsigned FixupDepth : 32 - 18 - NumCommonBits; // currently 12
   };
 
   class FilterBitFields {
@@ -188,6 +183,7 @@ public:
                EHScopeStack::stable_iterator enclosingEHScope)
     : EHScope(Catch, enclosingEHScope) {
     CatchBits.NumHandlers = numHandlers;
+    assert(CatchBits.NumHandlers == numHandlers && "NumHandlers overflow?");
   }
 
   unsigned getNumHandlers() const {
@@ -263,6 +259,11 @@ class LLVM_ALIGNAS(/*alignof(uint64_t)*/ 8) EHCleanupScope : public EHScope {
   };
   mutable struct ExtInfo *ExtInfo;
 
+  /// The number of fixups required by enclosing scopes (not including
+  /// this one).  If this is the top cleanup scope, all the fixups
+  /// from this index onwards belong to this scope.
+  unsigned FixupDepth;
+
   struct ExtInfo &getExtInfo() {
     if (!ExtInfo) ExtInfo = new struct ExtInfo();
     return *ExtInfo;
@@ -288,8 +289,9 @@ public:
                  unsigned cleanupSize, unsigned fixupDepth,
                  EHScopeStack::stable_iterator enclosingNormal,
                  EHScopeStack::stable_iterator enclosingEH)
-    : EHScope(EHScope::Cleanup, enclosingEH), EnclosingNormal(enclosingNormal),
-      NormalBlock(nullptr), ActiveFlag(nullptr), ExtInfo(nullptr) {
+      : EHScope(EHScope::Cleanup, enclosingEH),
+        EnclosingNormal(enclosingNormal), NormalBlock(nullptr),
+        ActiveFlag(nullptr), ExtInfo(nullptr), FixupDepth(fixupDepth) {
     CleanupBits.IsNormalCleanup = isNormal;
     CleanupBits.IsEHCleanup = isEH;
     CleanupBits.IsActive = isActive;
@@ -297,7 +299,6 @@ public:
     CleanupBits.TestFlagInNormalCleanup = false;
     CleanupBits.TestFlagInEHCleanup = false;
     CleanupBits.CleanupSize = cleanupSize;
-    CleanupBits.FixupDepth = fixupDepth;
 
     assert(CleanupBits.CleanupSize == cleanupSize && "cleanup size overflow");
   }
@@ -343,7 +344,7 @@ public:
     return CleanupBits.TestFlagInEHCleanup;
   }
 
-  unsigned getFixupDepth() const { return CleanupBits.FixupDepth; }
+  unsigned getFixupDepth() const { return FixupDepth; }
   EHScopeStack::stable_iterator getEnclosingNormalCleanup() const {
     return EnclosingNormal;
   }
@@ -451,6 +452,7 @@ public:
   EHFilterScope(unsigned numFilters)
     : EHScope(Filter, EHScopeStack::stable_end()) {
     FilterBits.NumFilters = numFilters;
+    assert(FilterBits.NumFilters == numFilters && "NumFilters overflow");
   }
 
   static size_t getSizeForNumFilters(unsigned numFilters) {

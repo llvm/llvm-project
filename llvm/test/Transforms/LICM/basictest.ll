@@ -1,4 +1,5 @@
 ; RUN: opt < %s -licm | llvm-dis
+; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,loop(licm)' < %s | llvm-dis
 
 define void @testfunc(i32 %i) {
 ; <label>:0

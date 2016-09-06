@@ -1,4 +1,4 @@
-# RUN: not yaml2obj -format=elf -o %t %s 2>&1 | FileCheck %s
+# RUN: not yaml2obj -o %t %s 2>&1 | FileCheck %s
 
 !ELF
 FileHeader:

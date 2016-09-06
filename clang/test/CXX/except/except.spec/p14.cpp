@@ -124,14 +124,20 @@ namespace InhCtor {
   template<typename T> struct Throw {
     Throw() throw(T);
   };
-  struct Derived : Base, Throw<X<3>> {
+  struct Derived1 : Base, X<5> {
+    using Base::Base;
+    int n;
+  };
+  struct Derived2 : Base, Throw<X<3>> {
+    using Base::Base;
+  };
+  struct Derived3 : Base {
     using Base::Base;
     Throw<X<4>> x;
   };
-  struct Test {
-    friend Derived::Derived(X<0>) throw(X<3>, X<4>);
-    friend Derived::Derived(X<1>) noexcept(false);
-    friend Derived::Derived(X<2>) throw(X<2>, X<3>, X<4>);
-  };
-  static_assert(!noexcept(Derived{X<5>{}}), "");
+  static_assert(noexcept(Derived1(X<0>())), "");
+  static_assert(!noexcept(Derived1(X<1>())), "");
+  static_assert(!noexcept(Derived1(X<2>())), "");
+  static_assert(!noexcept(Derived2(X<0>())), "");
+  static_assert(!noexcept(Derived3(X<0>())), "");
 }

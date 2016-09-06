@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=armv7s-apple-ios7.0.0 -relocation-model=pic -filetype=obj -o %T/foo.o %s
+# RUN: llvm-mc -triple=armv7s-apple-ios7.0.0 -filetype=obj -o %T/foo.o %s
 # RUN: llvm-rtdyld -triple=armv7s-apple-ios7.0.0 -verify -check=%s %/T/foo.o
 
         .syntax unified

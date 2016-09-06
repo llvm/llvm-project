@@ -562,6 +562,20 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
                                           isBaseVirtual);
 }
 
+/// Initialize a member of aggregate type using the given expression
+/// as an initializer.
+///
+/// The member may be an array.  If so:
+/// - the destination l-value will be a pointer of the *base* element type,
+/// - ArrayIndexVar will be a pointer to a variable containing the current
+///   index within the destination array, and
+/// - ArrayIndexes will be an array of index variables, one for each level
+///   of array nesting, which will need to be updated as appropriate for the
+///   array structure.
+///
+/// On an array, this function will invoke itself recursively.  Each time,
+/// it drills into one nesting level of the member type and sets up a
+/// loop updating the appropriate array index variable.
 static void EmitAggMemberInitializer(CodeGenFunction &CGF,
                                      LValue LHS,
                                      Expr *Init,
@@ -569,10 +583,18 @@ static void EmitAggMemberInitializer(CodeGenFunction &CGF,
                                      QualType T,
                                      ArrayRef<VarDecl *> ArrayIndexes,
                                      unsigned Index) {
+  assert(ArrayIndexVar.isValid() == (ArrayIndexes.size() != 0));
+
   if (Index == ArrayIndexes.size()) {
     LValue LV = LHS;
 
+    Optional<CodeGenFunction::RunCleanupsScope> Scope;
+
     if (ArrayIndexVar.isValid()) {
+      // When we're processing an array, the temporaries from each
+      // element's construction are destroyed immediately.
+      Scope.emplace(CGF);
+
       // If we have an array index variable, load it and use it as an offset.
       // Then, increment the value.
       llvm::Value *Dest = LHS.getPointer();
@@ -586,6 +608,19 @@ static void EmitAggMemberInitializer(CodeGenFunction &CGF,
       CharUnits EltSize = CGF.getContext().getTypeSizeInChars(T);
       CharUnits Align = LV.getAlignment().alignmentOfArrayElement(EltSize);
       LV.setAddress(Address(Dest, Align));
+
+      // Enter a partial-array EH cleanup to destroy previous members
+      // of the array if this initialization throws.
+      if (CGF.CGM.getLangOpts().Exceptions) {
+        if (auto DtorKind = T.isDestructedType()) {
+          if (CGF.needsEHCleanup(DtorKind)) {
+            CGF.pushRegularPartialArrayCleanup(LHS.getPointer(),
+                                               LV.getPointer(), T,
+                                               LV.getAlignment(),
+                                               CGF.getDestroyer(DtorKind));
+          }
+        }
+      }
     }
 
     switch (CGF.getEvaluationKind(T)) {
@@ -746,7 +781,7 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
 
   ArrayRef<VarDecl *> ArrayIndexes;
   if (MemberInit->getNumArrayIndices())
-    ArrayIndexes = MemberInit->getArrayIndexes();
+    ArrayIndexes = MemberInit->getArrayIndices();
   CGF.EmitInitializerForField(Field, LHS, MemberInit->getInit(), ArrayIndexes);
 }
 
@@ -987,7 +1022,7 @@ namespace {
     CodeGenFunction &CGF;
     SanitizerSet OldSanOpts;
   };
-}
+} // end anonymous namespace
  
 namespace {
   class FieldMemcpyizer {
@@ -1072,7 +1107,6 @@ namespace {
     const CXXRecordDecl *ClassDecl;
 
   private:
-
     void emitMemcpyIR(Address DestPtr, Address SrcPtr, CharUnits Size) {
       llvm::PointerType *DPT = DestPtr.getType();
       llvm::Type *DBP =
@@ -1088,13 +1122,12 @@ namespace {
     }
 
     void addInitialField(FieldDecl *F) {
-        FirstField = F;
-        LastField = F;
-        FirstFieldOffset = RecLayout.getFieldOffset(F->getFieldIndex());
-        LastFieldOffset = FirstFieldOffset;
-        LastAddedFieldIndex = F->getFieldIndex();
-        return;
-      }
+      FirstField = F;
+      LastField = F;
+      FirstFieldOffset = RecLayout.getFieldOffset(F->getFieldIndex());
+      LastFieldOffset = FirstFieldOffset;
+      LastAddedFieldIndex = F->getFieldIndex();
+    }
 
     void addNextField(FieldDecl *F) {
       // For the most part, the following invariant will hold:
@@ -1128,7 +1161,6 @@ namespace {
 
   class ConstructorMemcpyizer : public FieldMemcpyizer {
   private:
-
     /// Get source argument for copy constructor. Returns null if not a copy
     /// constructor.
     static const VarDecl *getTrivialCopySource(CodeGenFunction &CGF,
@@ -1233,7 +1265,6 @@ namespace {
 
   class AssignmentMemcpyizer : public FieldMemcpyizer {
   private:
-
     // Returns the memcpyable field copied by the given statement, if one
     // exists. Otherwise returns null.
     FieldDecl *getMemcpyableField(Stmt *S) {
@@ -1307,7 +1338,6 @@ namespace {
     SmallVector<Stmt*, 16> AggregatedStmts;
 
   public:
-
     AssignmentMemcpyizer(CodeGenFunction &CGF, const CXXMethodDecl *AD,
                          FunctionArgList &Args)
       : FieldMemcpyizer(CGF, AD->getParent(), Args[Args.size() - 1]),
@@ -1630,6 +1660,7 @@ namespace {
 
   struct CallDtorDeleteConditional final : EHScopeStack::Cleanup {
     llvm::Value *ShouldDeleteCondition;
+
   public:
     CallDtorDeleteConditional(llvm::Value *ShouldDeleteCondition)
         : ShouldDeleteCondition(ShouldDeleteCondition) {
@@ -1919,7 +1950,7 @@ void CodeGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
 /// \param zeroInitialize true if each element should be
 ///   zero-initialized before it is constructed
 void CodeGenFunction::EmitCXXAggrConstructorCall(
-    const CXXConstructorDecl *ctor, const ConstantArrayType *arrayType,
+    const CXXConstructorDecl *ctor, const ArrayType *arrayType,
     Address arrayBegin, const CXXConstructExpr *E, bool zeroInitialize) {
   QualType elementType;
   llvm::Value *numElements =
@@ -2052,6 +2083,62 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                                              bool ForVirtualBase,
                                              bool Delegating, Address This,
                                              const CXXConstructExpr *E) {
+  CallArgList Args;
+
+  // Push the this ptr.
+  Args.add(RValue::get(This.getPointer()), D->getThisType(getContext()));
+
+  // If this is a trivial constructor, emit a memcpy now before we lose
+  // the alignment information on the argument.
+  // FIXME: It would be better to preserve alignment information into CallArg.
+  if (isMemcpyEquivalentSpecialMember(D)) {
+    assert(E->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
+
+    const Expr *Arg = E->getArg(0);
+    QualType SrcTy = Arg->getType();
+    Address Src = EmitLValue(Arg).getAddress();
+    QualType DestTy = getContext().getTypeDeclType(D->getParent());
+    EmitAggregateCopyCtor(This, Src, DestTy, SrcTy);
+    return;
+  }
+
+  // Add the rest of the user-supplied arguments.
+  const FunctionProtoType *FPT = D->getType()->castAs<FunctionProtoType>();
+  EmitCallArgs(Args, FPT, E->arguments(), E->getConstructor());
+
+  EmitCXXConstructorCall(D, Type, ForVirtualBase, Delegating, This, Args);
+}
+
+static bool canEmitDelegateCallArgs(CodeGenFunction &CGF,
+                                    const CXXConstructorDecl *Ctor,
+                                    CXXCtorType Type, CallArgList &Args) {
+  // We can't forward a variadic call.
+  if (Ctor->isVariadic())
+    return false;
+
+  if (CGF.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
+    // If the parameters are callee-cleanup, it's not safe to forward.
+    for (auto *P : Ctor->parameters())
+      if (P->getType().isDestructedType())
+        return false;
+
+    // Likewise if they're inalloca.
+    const CGFunctionInfo &Info =
+        CGF.CGM.getTypes().arrangeCXXConstructorCall(Args, Ctor, Type, 0);
+    if (Info.usesInAlloca())
+      return false;
+  }
+
+  // Anything else should be OK.
+  return true;
+}
+
+void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
+                                             CXXCtorType Type,
+                                             bool ForVirtualBase,
+                                             bool Delegating,
+                                             Address This,
+                                             CallArgList &Args) {
   const CXXRecordDecl *ClassDecl = D->getParent();
 
   // C++11 [class.mfct.non-static]p2:
@@ -2062,7 +2149,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                 This.getPointer(), getContext().getRecordType(ClassDecl));
 
   if (D->isTrivial() && D->isDefaultConstructor()) {
-    assert(E->getNumArgs() == 0 && "trivial default ctor with args");
+    assert(Args.size() == 1 && "trivial default ctor with args");
     return;
   }
 
@@ -2070,24 +2157,24 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   // union copy constructor, we must emit a memcpy, because the AST does not
   // model that copy.
   if (isMemcpyEquivalentSpecialMember(D)) {
-    assert(E->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
+    assert(Args.size() == 2 && "unexpected argcount for trivial ctor");
 
-    const Expr *Arg = E->getArg(0);
-    QualType SrcTy = Arg->getType();
-    Address Src = EmitLValue(Arg).getAddress();
+    QualType SrcTy = D->getParamDecl(0)->getType().getNonReferenceType();
+    Address Src(Args[1].RV.getScalarVal(), getNaturalTypeAlignment(SrcTy));
     QualType DestTy = getContext().getTypeDeclType(ClassDecl);
     EmitAggregateCopyCtor(This, Src, DestTy, SrcTy);
     return;
   }
 
-  CallArgList Args;
-
-  // Push the this ptr.
-  Args.add(RValue::get(This.getPointer()), D->getThisType(getContext()));
-
-  // Add the rest of the user-supplied arguments.
-  const FunctionProtoType *FPT = D->getType()->castAs<FunctionProtoType>();
-  EmitCallArgs(Args, FPT, E->arguments(), E->getConstructor());
+  // Check whether we can actually emit the constructor before trying to do so.
+  if (auto Inherited = D->getInheritedConstructor()) {
+    if (getTypes().inheritingCtorHasParams(Inherited, Type) &&
+        !canEmitDelegateCallArgs(*this, D, Type, Args)) {
+      EmitInlinedInheritingCXXConstructorCall(D, Type, ForVirtualBase,
+                                              Delegating, Args);
+      return;
+    }
+  }
 
   // Insert any ABI-specific implicit constructor arguments.
   unsigned ExtraArgs = CGM.getCXXABI().addImplicitConstructorArgs(
@@ -2115,6 +2202,95 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
       CGM.getCXXABI().canSpeculativelyEmitVTable(ClassDecl) &&
       CGM.getCodeGenOpts().StrictVTablePointers)
     EmitVTableAssumptionLoads(ClassDecl, This);
+}
+
+void CodeGenFunction::EmitInheritedCXXConstructorCall(
+    const CXXConstructorDecl *D, bool ForVirtualBase, Address This,
+    bool InheritedFromVBase, const CXXInheritedCtorInitExpr *E) {
+  CallArgList Args;
+  CallArg ThisArg(RValue::get(This.getPointer()), D->getThisType(getContext()),
+                  /*NeedsCopy=*/false);
+
+  // Forward the parameters.
+  if (InheritedFromVBase &&
+      CGM.getTarget().getCXXABI().hasConstructorVariants()) {
+    // Nothing to do; this construction is not responsible for constructing
+    // the base class containing the inherited constructor.
+    // FIXME: Can we just pass undef's for the remaining arguments if we don't
+    // have constructor variants?
+    Args.push_back(ThisArg);
+  } else if (!CXXInheritedCtorInitExprArgs.empty()) {
+    // The inheriting constructor was inlined; just inject its arguments.
+    assert(CXXInheritedCtorInitExprArgs.size() >= D->getNumParams() &&
+           "wrong number of parameters for inherited constructor call");
+    Args = CXXInheritedCtorInitExprArgs;
+    Args[0] = ThisArg;
+  } else {
+    // The inheriting constructor was not inlined. Emit delegating arguments.
+    Args.push_back(ThisArg);
+    const auto *OuterCtor = cast<CXXConstructorDecl>(CurCodeDecl);
+    assert(OuterCtor->getNumParams() == D->getNumParams());
+    assert(!OuterCtor->isVariadic() && "should have been inlined");
+
+    for (const auto *Param : OuterCtor->parameters()) {
+      assert(getContext().hasSameUnqualifiedType(
+          OuterCtor->getParamDecl(Param->getFunctionScopeIndex())->getType(),
+          Param->getType()));
+      EmitDelegateCallArg(Args, Param, E->getLocation());
+
+      // Forward __attribute__(pass_object_size).
+      if (Param->hasAttr<PassObjectSizeAttr>()) {
+        auto *POSParam = SizeArguments[Param];
+        assert(POSParam && "missing pass_object_size value for forwarding");
+        EmitDelegateCallArg(Args, POSParam, E->getLocation());
+      }
+    }
+  }
+
+  EmitCXXConstructorCall(D, Ctor_Base, ForVirtualBase, /*Delegating*/false,
+                         This, Args);
+}
+
+void CodeGenFunction::EmitInlinedInheritingCXXConstructorCall(
+    const CXXConstructorDecl *Ctor, CXXCtorType CtorType, bool ForVirtualBase,
+    bool Delegating, CallArgList &Args) {
+  InlinedInheritingConstructorScope Scope(*this, GlobalDecl(Ctor, CtorType));
+
+  // Save the arguments to be passed to the inherited constructor.
+  CXXInheritedCtorInitExprArgs = Args;
+
+  FunctionArgList Params;
+  QualType RetType = BuildFunctionArgList(CurGD, Params);
+  FnRetTy = RetType;
+
+  // Insert any ABI-specific implicit constructor arguments.
+  CGM.getCXXABI().addImplicitConstructorArgs(*this, Ctor, CtorType,
+                                             ForVirtualBase, Delegating, Args);
+
+  // Emit a simplified prolog. We only need to emit the implicit params.
+  assert(Args.size() >= Params.size() && "too few arguments for call");
+  for (unsigned I = 0, N = Args.size(); I != N; ++I) {
+    if (I < Params.size() && isa<ImplicitParamDecl>(Params[I])) {
+      const RValue &RV = Args[I].RV;
+      assert(!RV.isComplex() && "complex indirect params not supported");
+      ParamValue Val = RV.isScalar()
+                           ? ParamValue::forDirect(RV.getScalarVal())
+                           : ParamValue::forIndirect(RV.getAggregateAddress());
+      EmitParmDecl(*Params[I], Val, I + 1);
+    }
+  }
+
+  // Create a return value slot if the ABI implementation wants one.
+  // FIXME: This is dumb, we should ask the ABI not to try to set the return
+  // value instead.
+  if (!RetType->isVoidType())
+    ReturnValue = CreateIRTemp(RetType, "retval.inhctor");
+
+  CGM.getCXXABI().EmitInstanceFunctionProlog(*this);
+  CXXThisValue = CXXABIThisValue;
+
+  // Directly emit the constructor initializers.
+  EmitCtorPrologue(Ctor, CtorType, Params);
 }
 
 void CodeGenFunction::EmitVTableAssumptionLoad(const VPtr &Vptr, Address This) {
@@ -2149,19 +2325,6 @@ void
 CodeGenFunction::EmitSynthesizedCXXCopyCtorCall(const CXXConstructorDecl *D,
                                                 Address This, Address Src,
                                                 const CXXConstructExpr *E) {
-  if (isMemcpyEquivalentSpecialMember(D)) {
-    assert(E->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
-    assert(D->isCopyOrMoveConstructor() &&
-           "trivial 1-arg ctor not a copy/move ctor");
-    EmitAggregateCopyCtor(This, Src,
-                          getContext().getTypeDeclType(D->getParent()),
-                          (*E->arg_begin())->getType());
-    return;
-  }
-  llvm::Value *Callee = CGM.getAddrOfCXXStructor(D, StructorType::Complete);
-  assert(D->isInstance() &&
-         "Trying to emit a member call expr on a static method!");
-
   const FunctionProtoType *FPT = D->getType()->castAs<FunctionProtoType>();
 
   CallArgList Args;
@@ -2179,8 +2342,7 @@ CodeGenFunction::EmitSynthesizedCXXCopyCtorCall(const CXXConstructorDecl *D,
   EmitCallArgs(Args, FPT, drop_begin(E->arguments(), 1), E->getConstructor(),
                /*ParamsToSkip*/ 1);
 
-  EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, RequiredArgs::All),
-           Callee, ReturnValueSlot(), Args, D);
+  EmitCXXConstructorCall(D, Ctor_Complete, false, false, This, Args);
 }
 
 void
@@ -2194,21 +2356,17 @@ CodeGenFunction::EmitDelegateCXXConstructorCall(const CXXConstructorDecl *Ctor,
   assert(I != E && "no parameters to constructor");
 
   // this
-  DelegateArgs.add(RValue::get(LoadCXXThis()), (*I)->getType());
+  Address This = LoadCXXThisAddress();
+  DelegateArgs.add(RValue::get(This.getPointer()), (*I)->getType());
   ++I;
 
-  // vtt
-  if (llvm::Value *VTT = GetVTTParameter(GlobalDecl(Ctor, CtorType),
-                                         /*ForVirtualBase=*/false,
-                                         /*Delegating=*/true)) {
-    QualType VoidPP = getContext().getPointerType(getContext().VoidPtrTy);
-    DelegateArgs.add(RValue::get(VTT), VoidPP);
-
-    if (CGM.getCXXABI().NeedsVTTParameter(CurGD)) {
-      assert(I != E && "cannot skip vtt parameter, already done with args");
-      assert((*I)->getType() == VoidPP && "skipping parameter not of vtt type");
-      ++I;
-    }
+  // FIXME: The location of the VTT parameter in the parameter list is
+  // specific to the Itanium ABI and shouldn't be hardcoded here.
+  if (CGM.getCXXABI().NeedsVTTParameter(CurGD)) {
+    assert(I != E && "cannot skip vtt parameter, already done with args");
+    assert((*I)->getType()->isPointerType() &&
+           "skipping parameter not of vtt type");
+    ++I;
   }
 
   // Explicit arguments.
@@ -2218,11 +2376,8 @@ CodeGenFunction::EmitDelegateCXXConstructorCall(const CXXConstructorDecl *Ctor,
     EmitDelegateCallArg(DelegateArgs, param, Loc);
   }
 
-  llvm::Value *Callee =
-      CGM.getAddrOfCXXStructor(Ctor, getFromCtorType(CtorType));
-  EmitCall(CGM.getTypes()
-               .arrangeCXXStructorDeclaration(Ctor, getFromCtorType(CtorType)),
-           Callee, ReturnValueSlot(), DelegateArgs, Ctor);
+  EmitCXXConstructorCall(Ctor, CtorType, /*ForVirtualBase=*/false,
+                         /*Delegating=*/true, This, DelegateArgs);
 }
 
 namespace {
@@ -2291,7 +2446,7 @@ namespace {
                                 /*Delegating=*/false, Addr);
     }
   };
-}
+} // end anonymous namespace
 
 void CodeGenFunction::PushDestructorCleanup(const CXXDestructorDecl *D,
                                             Address Addr) {
@@ -2489,15 +2644,35 @@ LeastDerivedClassWithSameLayout(const CXXRecordDecl *RD) {
       RD->bases_begin()->getType()->getAsCXXRecordDecl());
 }
 
-void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXMethodDecl *MD,
+void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
+                                                   llvm::Value *VTable,
+                                                   SourceLocation Loc) {
+  if (CGM.getCodeGenOpts().WholeProgramVTables &&
+      CGM.HasHiddenLTOVisibility(RD)) {
+    llvm::Metadata *MD =
+        CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
+    llvm::Value *TypeId =
+        llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
+
+    llvm::Value *CastedVTable = Builder.CreateBitCast(VTable, Int8PtrTy);
+    llvm::Value *TypeTest =
+        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::type_test),
+                           {CastedVTable, TypeId});
+    Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::assume), TypeTest);
+  }
+
+  if (SanOpts.has(SanitizerKind::CFIVCall))
+    EmitVTablePtrCheckForCall(RD, VTable, CodeGenFunction::CFITCK_VCall, Loc);
+}
+
+void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,
                                                 llvm::Value *VTable,
                                                 CFITypeCheckKind TCK,
                                                 SourceLocation Loc) {
-  const CXXRecordDecl *ClassDecl = MD->getParent();
   if (!SanOpts.has(SanitizerKind::CFICastStrict))
-    ClassDecl = LeastDerivedClassWithSameLayout(ClassDecl);
+    RD = LeastDerivedClassWithSameLayout(RD);
 
-  EmitVTablePtrCheck(ClassDecl, VTable, TCK, Loc);
+  EmitVTablePtrCheck(RD, VTable, TCK, Loc);
 }
 
 void CodeGenFunction::EmitVTablePtrCheckForCast(QualType T,
@@ -2549,7 +2724,12 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
                                          llvm::Value *VTable,
                                          CFITypeCheckKind TCK,
                                          SourceLocation Loc) {
-  if (CGM.IsCFIBlacklistedRecord(RD))
+  if (!CGM.getCodeGenOpts().SanitizeCfiCrossDso &&
+      !CGM.HasHiddenLTOVisibility(RD))
+    return;
+
+  std::string TypeName = RD->getQualifiedNameAsString();
+  if (getContext().getSanitizerBlacklist().isBlacklistedType(TypeName))
     return;
 
   SanitizerScope SanScope(this);
@@ -2567,24 +2747,18 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
   case CFITCK_UnrelatedCast:
     SSK = llvm::SanStat_CFI_UnrelatedCast;
     break;
+  case CFITCK_ICall:
+    llvm_unreachable("not expecting CFITCK_ICall");
   }
   EmitSanitizerStatReport(SSK);
 
   llvm::Metadata *MD =
       CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
-  llvm::Value *BitSetName = llvm::MetadataAsValue::get(getLLVMContext(), MD);
+  llvm::Value *TypeId = llvm::MetadataAsValue::get(getLLVMContext(), MD);
 
   llvm::Value *CastedVTable = Builder.CreateBitCast(VTable, Int8PtrTy);
-  llvm::Value *BitSetTest =
-      Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::bitset_test),
-                         {CastedVTable, BitSetName});
-
-  if (CGM.getCodeGenOpts().SanitizeCfiCrossDso) {
-    if (auto TypeId = CGM.CreateCfiIdForTypeMetadata(MD)) {
-      EmitCfiSlowPathCheck(BitSetTest, TypeId, CastedVTable);
-      return;
-    }
-  }
+  llvm::Value *TypeTest = Builder.CreateCall(
+      CGM.getIntrinsic(llvm::Intrinsic::type_test), {CastedVTable, TypeId});
 
   SanitizerMask M;
   switch (TCK) {
@@ -2600,15 +2774,70 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
   case CFITCK_UnrelatedCast:
     M = SanitizerKind::CFIUnrelatedCast;
     break;
+  case CFITCK_ICall:
+    llvm_unreachable("not expecting CFITCK_ICall");
   }
 
   llvm::Constant *StaticData[] = {
+      llvm::ConstantInt::get(Int8Ty, TCK),
       EmitCheckSourceLocation(Loc),
       EmitCheckTypeDescriptor(QualType(RD->getTypeForDecl(), 0)),
-      llvm::ConstantInt::get(Int8Ty, TCK),
   };
-  EmitCheck(std::make_pair(BitSetTest, M), "cfi_bad_type", StaticData,
-            CastedVTable);
+
+  auto CrossDsoTypeId = CGM.CreateCrossDsoCfiTypeId(MD);
+  if (CGM.getCodeGenOpts().SanitizeCfiCrossDso && CrossDsoTypeId) {
+    EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, CastedVTable, StaticData);
+    return;
+  }
+
+  if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
+    EmitTrapCheck(TypeTest);
+    return;
+  }
+
+  llvm::Value *AllVtables = llvm::MetadataAsValue::get(
+      CGM.getLLVMContext(),
+      llvm::MDString::get(CGM.getLLVMContext(), "all-vtables"));
+  llvm::Value *ValidVtable = Builder.CreateCall(
+      CGM.getIntrinsic(llvm::Intrinsic::type_test), {CastedVTable, AllVtables});
+  EmitCheck(std::make_pair(TypeTest, M), "cfi_check_fail", StaticData,
+            {CastedVTable, ValidVtable});
+}
+
+bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
+  if (!CGM.getCodeGenOpts().WholeProgramVTables ||
+      !SanOpts.has(SanitizerKind::CFIVCall) ||
+      !CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIVCall) ||
+      !CGM.HasHiddenLTOVisibility(RD))
+    return false;
+
+  std::string TypeName = RD->getQualifiedNameAsString();
+  return !getContext().getSanitizerBlacklist().isBlacklistedType(TypeName);
+}
+
+llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
+    const CXXRecordDecl *RD, llvm::Value *VTable, uint64_t VTableByteOffset) {
+  SanitizerScope SanScope(this);
+
+  EmitSanitizerStatReport(llvm::SanStat_CFI_VCall);
+
+  llvm::Metadata *MD =
+      CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
+  llvm::Value *TypeId = llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
+
+  llvm::Value *CastedVTable = Builder.CreateBitCast(VTable, Int8PtrTy);
+  llvm::Value *CheckedLoad = Builder.CreateCall(
+      CGM.getIntrinsic(llvm::Intrinsic::type_checked_load),
+      {CastedVTable, llvm::ConstantInt::get(Int32Ty, VTableByteOffset),
+       TypeId});
+  llvm::Value *CheckResult = Builder.CreateExtractValue(CheckedLoad, 1);
+
+  EmitCheck(std::make_pair(CheckResult, SanitizerKind::CFIVCall),
+            "cfi_check_fail", nullptr, nullptr);
+
+  return Builder.CreateBitCast(
+      Builder.CreateExtractValue(CheckedLoad, 0),
+      cast<llvm::PointerType>(VTable->getType())->getElementType());
 }
 
 // FIXME: Ideally Expr::IgnoreParenNoopCasts should do this, but it doesn't do
@@ -2749,7 +2978,7 @@ void CodeGenFunction::EmitLambdaBlockInvokeBody() {
   CallArgs.add(RValue::get(ThisPtr.getPointer()), ThisType);
 
   // Add the rest of the parameters.
-  for (auto param : BD->params())
+  for (auto param : BD->parameters())
     EmitDelegateCallArg(CallArgs, param, param->getLocStart());
 
   assert(!Lambda->isGenericLambda() &&
@@ -2779,7 +3008,7 @@ void CodeGenFunction::EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD) {
   CallArgs.add(RValue::get(ThisPtr), ThisType);
 
   // Add the rest of the parameters.
-  for (auto Param : MD->params())
+  for (auto Param : MD->parameters())
     EmitDelegateCallArg(CallArgs, Param, Param->getLocStart());
 
   const CXXMethodDecl *CallOp = Lambda->getLambdaCallOperator();

@@ -149,9 +149,26 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ConstantFP(SDNode *N, unsigned ResNo) {
   if (isLegalInHWReg(N->getValueType(ResNo)))
     return SDValue(N, ResNo);
   ConstantFPSDNode *CN = cast<ConstantFPSDNode>(N);
-  return DAG.getConstant(CN->getValueAPF().bitcastToAPInt(), SDLoc(CN),
-                         TLI.getTypeToTransformTo(*DAG.getContext(),
-                                                  CN->getValueType(0)));
+  // In ppcf128, the high 64 bits are always first in memory regardless
+  // of Endianness. LLVM's APFloat representation is not Endian sensitive,
+  // and so always converts into a 128-bit APInt in a non-Endian-sensitive
+  // way. However, APInt's are serialized in an Endian-sensitive fashion,
+  // so on big-Endian targets, the two doubles are output in the wrong 
+  // order. Fix this by manually flipping the order of the high 64 bits
+  // and the low 64 bits here.
+  if (DAG.getDataLayout().isBigEndian() &&
+      CN->getValueType(0).getSimpleVT() == llvm::MVT::ppcf128) {
+    uint64_t words[2] = { CN->getValueAPF().bitcastToAPInt().getRawData()[1],
+                          CN->getValueAPF().bitcastToAPInt().getRawData()[0] };
+    APInt Val(128, words);
+    return DAG.getConstant(Val, SDLoc(CN),
+                           TLI.getTypeToTransformTo(*DAG.getContext(),
+                                                    CN->getValueType(0)));
+  } else {
+    return DAG.getConstant(CN->getValueAPF().bitcastToAPInt(), SDLoc(CN),
+                           TLI.getTypeToTransformTo(*DAG.getContext(),
+                                                    CN->getValueType(0)));
+  }
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_EXTRACT_VECTOR_ELT(SDNode *N) {
@@ -614,12 +631,13 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N, unsigned ResNo) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   SDLoc dl(N);
 
+  auto MMOFlags =
+      L->getMemOperand()->getFlags() & ~MachineMemOperand::MOInvariant;
   SDValue NewL;
   if (L->getExtensionType() == ISD::NON_EXTLOAD) {
-    NewL = DAG.getLoad(L->getAddressingMode(), L->getExtensionType(),
-                       NVT, dl, L->getChain(), L->getBasePtr(), L->getOffset(),
-                       L->getPointerInfo(), NVT, L->isVolatile(),
-                       L->isNonTemporal(), false, L->getAlignment(),
+    NewL = DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), NVT, dl,
+                       L->getChain(), L->getBasePtr(), L->getOffset(),
+                       L->getPointerInfo(), NVT, L->getAlignment(), MMOFlags,
                        L->getAAInfo());
     // Legalized the chain result - switch anything that used the old chain to
     // use the new one.
@@ -629,12 +647,10 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N, unsigned ResNo) {
   }
 
   // Do a non-extending load followed by FP_EXTEND.
-  NewL = DAG.getLoad(L->getAddressingMode(), ISD::NON_EXTLOAD,
-                     L->getMemoryVT(), dl, L->getChain(),
-                     L->getBasePtr(), L->getOffset(), L->getPointerInfo(),
-                     L->getMemoryVT(), L->isVolatile(),
-                     L->isNonTemporal(), false, L->getAlignment(),
-                     L->getAAInfo());
+  NewL = DAG.getLoad(L->getAddressingMode(), ISD::NON_EXTLOAD, L->getMemoryVT(),
+                     dl, L->getChain(), L->getBasePtr(), L->getOffset(),
+                     L->getPointerInfo(), L->getMemoryVT(), L->getAlignment(),
+                     MMOFlags, L->getAAInfo());
   // Legalized the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
@@ -800,6 +816,7 @@ bool DAGTypeLegalizer::CanSkipSoftenFloatOperand(SDNode *N, unsigned OpNo) {
     case ISD::FCOPYSIGN:
     case ISD::FNEG:
     case ISD::Register:
+    case ISD::SELECT:
       return true;
   }
   return false;
@@ -1516,7 +1533,7 @@ bool DAGTypeLegalizer::ExpandFloatOperand(SDNode *N, unsigned OpNo) {
 void DAGTypeLegalizer::FloatExpandSetCCOperands(SDValue &NewLHS,
                                                 SDValue &NewRHS,
                                                 ISD::CondCode &CCCode,
-                                                SDLoc dl) {
+                                                const SDLoc &dl) {
   SDValue LHSLo, LHSHi, RHSLo, RHSHi;
   GetExpandedFloat(NewLHS, LHSLo, LHSHi);
   GetExpandedFloat(NewRHS, RHSLo, RHSHi);
@@ -1868,6 +1885,8 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     // Binary FP Operations
     case ISD::FADD:
     case ISD::FDIV:
+    case ISD::FMAXNAN:
+    case ISD::FMINNAN:
     case ISD::FMAXNUM:
     case ISD::FMINNUM:
     case ISD::FMUL:
@@ -2063,13 +2082,14 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_LOAD(SDNode *N) {
   LoadSDNode *L = cast<LoadSDNode>(N);
   EVT VT = N->getValueType(0);
 
-  // Load the value as an integer value with the same number of bits
+  // Load the value as an integer value with the same number of bits.
   EVT IVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
-  SDValue newL = DAG.getLoad(L->getAddressingMode(), L->getExtensionType(),
-                   IVT, SDLoc(N), L->getChain(), L->getBasePtr(),
-                   L->getOffset(), L->getPointerInfo(), IVT, L->isVolatile(),
-                   L->isNonTemporal(), false, L->getAlignment(),
-                   L->getAAInfo());
+  auto MMOFlags =
+      L->getMemOperand()->getFlags() & ~MachineMemOperand::MOInvariant;
+  SDValue newL = DAG.getLoad(L->getAddressingMode(), L->getExtensionType(), IVT,
+                             SDLoc(N), L->getChain(), L->getBasePtr(),
+                             L->getOffset(), L->getPointerInfo(), IVT,
+                             L->getAlignment(), MMOFlags, L->getAAInfo());
   // Legalize the chain result by replacing uses of the old value chain with the
   // new one
   ReplaceValueWith(SDValue(N, 1), newL.getValue(1));
@@ -2102,9 +2122,14 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_SELECT_CC(SDNode *N) {
 // Construct a SDNode that transforms the SINT or UINT operand to the promoted
 // float type.
 SDValue DAGTypeLegalizer::PromoteFloatRes_XINT_TO_FP(SDNode *N) {
+  SDLoc DL(N);
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  return DAG.getNode(N->getOpcode(), SDLoc(N), NVT, N->getOperand(0));
+  SDValue NV = DAG.getNode(N->getOpcode(), DL, NVT, N->getOperand(0));
+  // Round the value to the desired precision (that of the source type).
+  return DAG.getNode(
+      ISD::FP_EXTEND, DL, NVT,
+      DAG.getNode(ISD::FP_ROUND, DL, VT, NV, DAG.getIntPtrConstant(0, DL)));
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatRes_UNDEF(SDNode *N) {

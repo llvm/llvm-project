@@ -25,7 +25,7 @@ int main() {
   barrier_wait(&barrier);
   Global = 43;
   pthread_join(t, 0);
-  printf("OK\n");
+  fprintf(stderr, "OK\n");
 }
 
 // CHECK-NOT: WARNING: ThreadSanitizer: data race

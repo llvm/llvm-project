@@ -51,7 +51,7 @@ void CCState::HandleByVal(unsigned ValNo, MVT ValVT,
     Size = MinSize;
   if (MinAlign > (int)Align)
     Align = MinAlign;
-  MF.getFrameInfo()->ensureMaxAlignment(Align);
+  ensureMaxAlignment(Align);
   MF.getSubtarget().getTargetLowering()->HandleByVal(this, Size, Align);
   Size = unsigned(alignTo(Size, MinAlign));
   unsigned Offset = AllocateStack(Size, Align);
@@ -236,6 +236,7 @@ void CCState::analyzeMustTailForwardedRegisters(
   // variadic functions, so we need to assume we're not variadic so that we get
   // all the registers that might be used in a non-variadic call.
   SaveAndRestore<bool> SavedVarArg(IsVarArg, false);
+  SaveAndRestore<bool> SavedMustTail(AnalyzingMustTailForwardedRegs, true);
 
   for (MVT RegVT : RegParmTypes) {
     SmallVector<MCPhysReg, 8> RemainingRegs;
@@ -247,4 +248,40 @@ void CCState::analyzeMustTailForwardedRegisters(
       Forwards.push_back(ForwardedRegister(VReg, PReg, RegVT));
     }
   }
+}
+
+bool CCState::resultsCompatible(CallingConv::ID CalleeCC,
+                                CallingConv::ID CallerCC, MachineFunction &MF,
+                                LLVMContext &C,
+                                const SmallVectorImpl<ISD::InputArg> &Ins,
+                                CCAssignFn CalleeFn, CCAssignFn CallerFn) {
+  if (CalleeCC == CallerCC)
+    return true;
+  SmallVector<CCValAssign, 4> RVLocs1;
+  CCState CCInfo1(CalleeCC, false, MF, RVLocs1, C);
+  CCInfo1.AnalyzeCallResult(Ins, CalleeFn);
+
+  SmallVector<CCValAssign, 4> RVLocs2;
+  CCState CCInfo2(CallerCC, false, MF, RVLocs2, C);
+  CCInfo2.AnalyzeCallResult(Ins, CallerFn);
+
+  if (RVLocs1.size() != RVLocs2.size())
+    return false;
+  for (unsigned I = 0, E = RVLocs1.size(); I != E; ++I) {
+    const CCValAssign &Loc1 = RVLocs1[I];
+    const CCValAssign &Loc2 = RVLocs2[I];
+    if (Loc1.getLocInfo() != Loc2.getLocInfo())
+      return false;
+    bool RegLoc1 = Loc1.isRegLoc();
+    if (RegLoc1 != Loc2.isRegLoc())
+      return false;
+    if (RegLoc1) {
+      if (Loc1.getLocReg() != Loc2.getLocReg())
+        return false;
+    } else {
+      if (Loc1.getLocMemOffset() != Loc2.getLocMemOffset())
+        return false;
+    }
+  }
+  return true;
 }

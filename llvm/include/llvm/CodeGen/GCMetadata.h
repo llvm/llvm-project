@@ -40,6 +40,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Pass.h"
 #include <memory>
+#include <utility>
 
 namespace llvm {
 class AsmPrinter;
@@ -54,7 +55,7 @@ struct GCPoint {
   DebugLoc Loc;
 
   GCPoint(GC::PointKind K, MCSymbol *L, DebugLoc DL)
-      : Kind(K), Label(L), Loc(DL) {}
+      : Kind(K), Label(L), Loc(std::move(DL)) {}
 };
 
 /// GCRoot - Metadata for a pointer to an object managed by the garbage
@@ -120,7 +121,7 @@ public:
   /// addSafePoint - Notes the existence of a safe point. Num is the ID of the
   /// label just prior to the safe point (if the code generator is using
   /// MachineModuleInfo).
-  void addSafePoint(GC::PointKind Kind, MCSymbol *Label, DebugLoc DL) {
+  void addSafePoint(GC::PointKind Kind, MCSymbol *Label, const DebugLoc &DL) {
     SafePoints.emplace_back(Kind, Label, DL);
   }
 

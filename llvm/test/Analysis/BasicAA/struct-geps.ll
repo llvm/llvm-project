@@ -162,3 +162,12 @@ define void @test_struct_in_array(%struct2* %st, i64 %i, i64 %j, i64 %k) {
   %y = getelementptr %struct2, %struct2* %st, i32 0, i32 0, i32 1, i32 1
   ret void
 }
+
+; PR27418 - Treat GEP indices with the same value but different types the same
+; CHECK-LABEL: test_different_index_types
+; CHECK: MustAlias: i16* %tmp1, i16* %tmp2
+define void @test_different_index_types([2 x i16]* %arr) {
+  %tmp1 = getelementptr [2 x i16], [2 x i16]* %arr, i16 0, i32 1
+  %tmp2 = getelementptr [2 x i16], [2 x i16]* %arr, i16 0, i16 1
+  ret void
+}

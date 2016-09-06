@@ -26,11 +26,11 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
-#include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include <climits>
+#include <utility>
 
 using namespace clang;
 using namespace ento;
@@ -520,7 +520,7 @@ namespace {
 class StopTrackingCallback final : public SymbolVisitor {
   ProgramStateRef state;
 public:
-  StopTrackingCallback(ProgramStateRef st) : state(st) {}
+  StopTrackingCallback(ProgramStateRef st) : state(std::move(st)) {}
   ProgramStateRef getState() const { return state; }
 
   bool VisitSymbol(SymbolRef sym) override {
@@ -943,7 +943,7 @@ static bool treatUnusedNewEscaped(const CXXNewExpr *NE) {
   const CXXConstructorDecl *CtorD = ConstructE->getConstructor();
 
   // Iterate over the constructor parameters.
-  for (const auto *CtorParam : CtorD->params()) {
+  for (const auto *CtorParam : CtorD->parameters()) {
 
     QualType CtorParamPointeeT = CtorParam->getType()->getPointeeType();
     if (CtorParamPointeeT.isNull())

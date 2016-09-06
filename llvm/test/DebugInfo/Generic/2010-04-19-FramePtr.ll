@@ -1,7 +1,9 @@
-; RUN: %llc_dwarf -asm-verbose -O1 -o %t < %s
-; RUN: grep DW_AT_APPLE_omit_frame_ptr %t
-; RUN: %llc_dwarf -disable-fp-elim -asm-verbose -O1 -o %t < %s
-; RUN: grep -v DW_AT_APPLE_omit_frame_ptr %t
+; RUN: %llc_dwarf -debugger-tune=lldb -asm-verbose -O1 -o - < %s | FileCheck %s
+; RUN: %llc_dwarf -debugger-tune=gdb -asm-verbose -O1 -o - < %s | FileCheck %s --check-prefix=DISABLE
+; RUN: %llc_dwarf -disable-fp-elim -debugger-tune=lldb -asm-verbose -O1 -o - < %s | FileCheck %s --check-prefix=DISABLE
+
+; CHECK: DW_AT_APPLE_omit_frame_ptr
+; DISABLE-NOT: DW_AT_APPLE_omit_frame_ptr
 
 
 define i32 @foo() nounwind ssp !dbg !1 {
@@ -24,9 +26,9 @@ return:                                           ; preds = %entry
 !9 = !{!1}
 
 !0 = !DILocation(line: 2, scope: !1)
-!1 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scopeLine: 2, file: !10, scope: null, type: !4)
+!1 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, scopeLine: 2, file: !10, scope: null, type: !4)
 !2 = !DIFile(filename: "a.c", directory: "/tmp")
-!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: 0, file: !10, enums: !11, retainedTypes: !11, subprograms: !9, imports:  null)
+!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: FullDebug, file: !10, enums: !11, retainedTypes: !11, imports:  null)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6}
 !6 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)

@@ -12,7 +12,7 @@
 
 import Foundation
 
-let ptr = UnsafeMutablePointer<UInt8>.init(allocatingCapacity: 10)
+let ptr = UnsafeMutablePointer<UInt8>.allocate(capacity: 10)
 print(ptr)  // breakpoint
 ptr[11] = 42
 

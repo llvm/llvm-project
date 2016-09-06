@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=a2 < %s | FileCheck %s -check-prefix=FPCVT
-; RUN: llc -mcpu=ppc64 < %s | FileCheck %s -check-prefix=PPC64
+; RUN: llc -verify-machineinstrs -mcpu=a2 < %s | FileCheck %s -check-prefix=FPCVT
+; RUN: llc -verify-machineinstrs -mcpu=ppc64 < %s | FileCheck %s -check-prefix=PPC64
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 

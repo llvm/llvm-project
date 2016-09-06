@@ -5,9 +5,9 @@
 
 // Since we do code generation on a function level this needs to error out since
 // the subtarget feature won't be available.
-__m256d wombat(__m128i a) {
+__m128 wombat(__m128i a) {
   if (__builtin_cpu_supports("avx"))
-    return __builtin_ia32_cvtdq2pd256((__v4si)a); // expected-error {{'__builtin_ia32_cvtdq2pd256' needs target feature avx}}
+    return __builtin_ia32_vpermilvarps((__v4sf) {0.0f, 1.0f, 2.0f, 3.0f}, (__v4si)a); // expected-error {{'__builtin_ia32_vpermilvarps' needs target feature avx}}
   else
-    return (__m256d){0, 0, 0, 0};
+    return (__m128){0, 0};
 }

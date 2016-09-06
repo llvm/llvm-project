@@ -11,12 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Parse/Parser.h"
 #include "RAIIObjectsForParser.h"
-#include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Parse/Parser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
@@ -122,20 +121,15 @@ Parser::ParseTemplateDeclarationOrSpecialization(unsigned Context,
       return nullptr;
     }
 
-    ParamLists.push_back(
-      Actions.ActOnTemplateParameterList(CurTemplateDepthTracker.getDepth(), 
-                                         ExportLoc,
-                                         TemplateLoc, LAngleLoc,
-                                         TemplateParams, RAngleLoc));
-
+    ExprResult OptionalRequiresClauseConstraintER;
     if (!TemplateParams.empty()) {
       isSpecialization = false;
       ++CurTemplateDepthTracker;
 
       if (TryConsumeToken(tok::kw_requires)) {
-        ExprResult ER =
+        OptionalRequiresClauseConstraintER =
             Actions.CorrectDelayedTyposInExpr(ParseConstraintExpression());
-        if (!ER.isUsable()) {
+        if (!OptionalRequiresClauseConstraintER.isUsable()) {
           // Skip until the semi-colon or a '}'.
           SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
           TryConsumeToken(tok::semi);
@@ -145,7 +139,14 @@ Parser::ParseTemplateDeclarationOrSpecialization(unsigned Context,
     } else {
       LastParamListWasEmpty = true;
     }
+
+    ParamLists.push_back(Actions.ActOnTemplateParameterList(
+        CurTemplateDepthTracker.getDepth(), ExportLoc, TemplateLoc, LAngleLoc,
+        TemplateParams, RAngleLoc, OptionalRequiresClauseConstraintER.get()));
   } while (Tok.isOneOf(tok::kw_export, tok::kw_template));
+
+  unsigned NewFlags = getCurScope()->getFlags() & ~Scope::TemplateParamScope;
+  ParseScopeFlags TemplateScopeFlags(this, NewFlags, isSpecialization);
 
   // Parse the actual template declaration.
   return ParseSingleDeclarationAfterTemplate(Context,
@@ -209,11 +210,15 @@ Parser::ParseSingleDeclarationAfterTemplate(
   if (Tok.is(tok::semi)) {
     ProhibitAttributes(prefixAttrs);
     DeclEnd = ConsumeToken();
+    RecordDecl *AnonRecord = nullptr;
     Decl *Decl = Actions.ParsedFreeStandingDeclSpec(
         getCurScope(), AS, DS,
         TemplateInfo.TemplateParams ? *TemplateInfo.TemplateParams
                                     : MultiTemplateParamsArg(),
-        TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation);
+        TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation,
+        AnonRecord);
+    assert(!AnonRecord &&
+           "Anonymous unions/structs should not be valid with template");
     DS.complete(Decl);
     return Decl;
   }
@@ -280,7 +285,7 @@ Parser::ParseSingleDeclarationAfterTemplate(
         TemplateParameterLists FakedParamLists;
         FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
             0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc, None,
-            LAngleLoc));
+            LAngleLoc, nullptr));
 
         return ParseFunctionDefinition(
             DeclaratorInfo, ParsedTemplateInfo(&FakedParamLists,
@@ -631,7 +636,7 @@ Parser::ParseTemplateTemplateParameter(unsigned Depth, unsigned Position) {
     Actions.ActOnTemplateParameterList(Depth, SourceLocation(),
                                        TemplateLoc, LAngleLoc,
                                        TemplateParams,
-                                       RAngleLoc);
+                                       RAngleLoc, nullptr);
 
   // Grab a default argument (if available).
   // Per C++0x [basic.scope.pdecl]p9, we parse the default argument before
@@ -1365,7 +1370,7 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
   LPT.Toks.push_back(Tok);
-  PP.EnterTokenStream(LPT.Toks.data(), LPT.Toks.size(), true, false);
+  PP.EnterTokenStream(LPT.Toks, true);
 
   // Consume the previously pushed token.
   ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);

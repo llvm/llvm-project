@@ -18,7 +18,7 @@ bb4:                                              ; preds = %bb3
 
 bb5:                                              ; preds = %bb4, %bb1
   %tmp6 = phi i32 [ 0, %bb4 ], [ %tmp, %bb1 ]
-  %tmp7 = phi i32 [ 0, %bb4 ], [ %tmp6, %bb1 ]
+  %tmp7 = phi i32 [ 0, %bb4 ], [ %tmp, %bb1 ]
   %tmp8 = phi i32 [ 0, %bb4 ], [ %tmp, %bb1 ]
   %tmp9 = add nsw i32 %tmp2, 1
   %tmp10 = icmp eq i32 %tmp9, 0

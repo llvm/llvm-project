@@ -61,7 +61,7 @@ ThumbRegisterInfo::getPointerRegClass(const MachineFunction &MF,
 
 static void emitThumb1LoadConstPool(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator &MBBI,
-                                    DebugLoc dl, unsigned DestReg,
+                                    const DebugLoc &dl, unsigned DestReg,
                                     unsigned SubIdx, int Val,
                                     ARMCC::CondCodes Pred, unsigned PredReg,
                                     unsigned MIFlags) {
@@ -81,7 +81,7 @@ static void emitThumb1LoadConstPool(MachineBasicBlock &MBB,
 
 static void emitThumb2LoadConstPool(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator &MBBI,
-                                    DebugLoc dl, unsigned DestReg,
+                                    const DebugLoc &dl, unsigned DestReg,
                                     unsigned SubIdx, int Val,
                                     ARMCC::CondCodes Pred, unsigned PredReg,
                                     unsigned MIFlags) {
@@ -101,9 +101,9 @@ static void emitThumb2LoadConstPool(MachineBasicBlock &MBB,
 /// emitLoadConstPool - Emits a load from constpool to materialize the
 /// specified immediate.
 void ThumbRegisterInfo::emitLoadConstPool(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI, DebugLoc dl,
-    unsigned DestReg, unsigned SubIdx, int Val, ARMCC::CondCodes Pred,
-    unsigned PredReg, unsigned MIFlags) const {
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
+    const DebugLoc &dl, unsigned DestReg, unsigned SubIdx, int Val,
+    ARMCC::CondCodes Pred, unsigned PredReg, unsigned MIFlags) const {
   MachineFunction &MF = *MBB.getParent();
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   if (STI.isThumb1Only()) {
@@ -120,57 +120,55 @@ void ThumbRegisterInfo::emitLoadConstPool(
 /// a destreg = basereg + immediate in Thumb code. Materialize the immediate
 /// in a register using mov / mvn sequences or load the immediate from a
 /// constpool entry.
-static
-void emitThumbRegPlusImmInReg(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator &MBBI,
-                              DebugLoc dl,
-                              unsigned DestReg, unsigned BaseReg,
-                              int NumBytes, bool CanChangeCC,
-                              const TargetInstrInfo &TII,
-                              const ARMBaseRegisterInfo& MRI,
-                              unsigned MIFlags = MachineInstr::NoFlags) {
-    MachineFunction &MF = *MBB.getParent();
-    bool isHigh = !isARMLowRegister(DestReg) ||
-                  (BaseReg != 0 && !isARMLowRegister(BaseReg));
-    bool isSub = false;
-    // Subtract doesn't have high register version. Load the negative value
-    // if either base or dest register is a high register. Also, if do not
-    // issue sub as part of the sequence if condition register is to be
-    // preserved.
-    if (NumBytes < 0 && !isHigh && CanChangeCC) {
-      isSub = true;
-      NumBytes = -NumBytes;
-    }
-    unsigned LdReg = DestReg;
-    if (DestReg == ARM::SP)
-      assert(BaseReg == ARM::SP && "Unexpected!");
-    if (!isARMLowRegister(DestReg) && !MRI.isVirtualRegister(DestReg))
-      LdReg = MF.getRegInfo().createVirtualRegister(&ARM::tGPRRegClass);
+static void emitThumbRegPlusImmInReg(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
+    const DebugLoc &dl, unsigned DestReg, unsigned BaseReg, int NumBytes,
+    bool CanChangeCC, const TargetInstrInfo &TII,
+    const ARMBaseRegisterInfo &MRI, unsigned MIFlags = MachineInstr::NoFlags) {
+  MachineFunction &MF = *MBB.getParent();
+  bool isHigh = !isARMLowRegister(DestReg) ||
+                (BaseReg != 0 && !isARMLowRegister(BaseReg));
+  bool isSub = false;
+  // Subtract doesn't have high register version. Load the negative value
+  // if either base or dest register is a high register. Also, if do not
+  // issue sub as part of the sequence if condition register is to be
+  // preserved.
+  if (NumBytes < 0 && !isHigh && CanChangeCC) {
+    isSub = true;
+    NumBytes = -NumBytes;
+  }
+  unsigned LdReg = DestReg;
+  if (DestReg == ARM::SP)
+    assert(BaseReg == ARM::SP && "Unexpected!");
+  if (!isARMLowRegister(DestReg) && !MRI.isVirtualRegister(DestReg))
+    LdReg = MF.getRegInfo().createVirtualRegister(&ARM::tGPRRegClass);
 
-    if (NumBytes <= 255 && NumBytes >= 0 && CanChangeCC) {
-      AddDefaultT1CC(BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVi8), LdReg))
-        .addImm(NumBytes).setMIFlags(MIFlags);
-    } else if (NumBytes < 0 && NumBytes >= -255 && CanChangeCC) {
-      AddDefaultT1CC(BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVi8), LdReg))
-        .addImm(NumBytes).setMIFlags(MIFlags);
-      AddDefaultT1CC(BuildMI(MBB, MBBI, dl, TII.get(ARM::tRSB), LdReg))
-        .addReg(LdReg, RegState::Kill).setMIFlags(MIFlags);
-    } else
-      MRI.emitLoadConstPool(MBB, MBBI, dl, LdReg, 0, NumBytes,
-                            ARMCC::AL, 0, MIFlags);
+  if (NumBytes <= 255 && NumBytes >= 0 && CanChangeCC) {
+    AddDefaultT1CC(BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVi8), LdReg))
+        .addImm(NumBytes)
+        .setMIFlags(MIFlags);
+  } else if (NumBytes < 0 && NumBytes >= -255 && CanChangeCC) {
+    AddDefaultT1CC(BuildMI(MBB, MBBI, dl, TII.get(ARM::tMOVi8), LdReg))
+        .addImm(NumBytes)
+        .setMIFlags(MIFlags);
+    AddDefaultT1CC(BuildMI(MBB, MBBI, dl, TII.get(ARM::tRSB), LdReg))
+        .addReg(LdReg, RegState::Kill)
+        .setMIFlags(MIFlags);
+  } else
+    MRI.emitLoadConstPool(MBB, MBBI, dl, LdReg, 0, NumBytes, ARMCC::AL, 0,
+                          MIFlags);
 
-    // Emit add / sub.
-    int Opc = (isSub) ? ARM::tSUBrr : ((isHigh || !CanChangeCC) ? ARM::tADDhirr
-                                                                : ARM::tADDrr);
-    MachineInstrBuilder MIB =
-      BuildMI(MBB, MBBI, dl, TII.get(Opc), DestReg);
-    if (Opc != ARM::tADDhirr)
-      MIB = AddDefaultT1CC(MIB);
-    if (DestReg == ARM::SP || isSub)
-      MIB.addReg(BaseReg).addReg(LdReg, RegState::Kill);
-    else
-      MIB.addReg(LdReg).addReg(BaseReg, RegState::Kill);
-    AddDefaultPred(MIB);
+  // Emit add / sub.
+  int Opc = (isSub) ? ARM::tSUBrr
+                    : ((isHigh || !CanChangeCC) ? ARM::tADDhirr : ARM::tADDrr);
+  MachineInstrBuilder MIB = BuildMI(MBB, MBBI, dl, TII.get(Opc), DestReg);
+  if (Opc != ARM::tADDhirr)
+    MIB = AddDefaultT1CC(MIB);
+  if (DestReg == ARM::SP || isSub)
+    MIB.addReg(BaseReg).addReg(LdReg, RegState::Kill);
+  else
+    MIB.addReg(LdReg).addReg(BaseReg, RegState::Kill);
+  AddDefaultPred(MIB);
 }
 
 /// emitThumbRegPlusImmediate - Emits a series of instructions to materialize
@@ -179,10 +177,10 @@ void emitThumbRegPlusImmInReg(MachineBasicBlock &MBB,
 /// be too long. This is allowed to modify the condition flags.
 void llvm::emitThumbRegPlusImmediate(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator &MBBI,
-                                     DebugLoc dl,
-                                     unsigned DestReg, unsigned BaseReg,
-                                     int NumBytes, const TargetInstrInfo &TII,
-                                     const ARMBaseRegisterInfo& MRI,
+                                     const DebugLoc &dl, unsigned DestReg,
+                                     unsigned BaseReg, int NumBytes,
+                                     const TargetInstrInfo &TII,
+                                     const ARMBaseRegisterInfo &MRI,
                                      unsigned MIFlags) {
   bool isSub = NumBytes < 0;
   unsigned Bytes = (unsigned)NumBytes;
@@ -513,10 +511,10 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   unsigned FrameReg = ARM::SP;
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  int Offset = MF.getFrameInfo()->getObjectOffset(FrameIndex) +
-               MF.getFrameInfo()->getStackSize() + SPAdj;
+  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) +
+               MF.getFrameInfo().getStackSize() + SPAdj;
 
-  if (MF.getFrameInfo()->hasVarSizedObjects()) {
+  if (MF.getFrameInfo().hasVarSizedObjects()) {
     assert(SPAdj == 0 && STI.getFrameLowering()->hasFP(MF) && "Unexpected");
     // There are alloca()'s in this function, must reference off the frame
     // pointer or base pointer instead.
@@ -536,7 +534,7 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     assert(STI.getFrameLowering()->hasReservedCallFrame(MF) &&
            "Cannot use SP to access the emergency spill slot in "
            "functions without a reserved call frame");
-    assert(!MF.getFrameInfo()->hasVarSizedObjects() &&
+    assert(!MF.getFrameInfo().hasVarSizedObjects() &&
            "Cannot use SP to access the emergency spill slot in "
            "functions with variable sized frame objects");
   }

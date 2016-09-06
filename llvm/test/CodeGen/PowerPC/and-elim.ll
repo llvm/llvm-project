@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 | not grep rlwin
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 | not grep rlwin
 
 define void @test(i8* %P) {
 	%W = load i8, i8* %P

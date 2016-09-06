@@ -1,9 +1,9 @@
 // RUN: rm -rf %t.mcp
 // RUN: c-index-test core -print-source-symbols -- %s -I %S/Inputs/module -fmodules -fmodules-cache-path=%t.mcp | FileCheck %s
 
-// CHECK: [[@LINE+1]]:9 | module/C | ModA | Ref |
+// CHECK: [[@LINE+1]]:9 | module/C | ModA | Decl |
 @import ModA;
-// CHECK: [[@LINE+1]]:1 | module/C | ModA | Ref,Impl |
+// CHECK: [[@LINE+1]]:1 | module/C | ModA | Decl,Impl |
 #include "ModA.h"
 
 void foo() {

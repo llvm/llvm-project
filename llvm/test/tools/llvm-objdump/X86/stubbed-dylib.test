@@ -1,0 +1,5 @@
+RUN: llvm-objdump -macho -d %p/Inputs/stubbed.dylib.macho-x86_64 | FileCheck %s
+
+CHECK: (__TEXT,__text) section
+CHECK-NOT: func
+CHECK-NOT: func2

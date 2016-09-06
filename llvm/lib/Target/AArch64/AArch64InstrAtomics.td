@@ -29,7 +29,7 @@ def : Pat<(atomic_fence (imm), (imm)), (DMB (i32 0xb))>;
 class acquiring_load<PatFrag base>
   : PatFrag<(ops node:$ptr), (base node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  return isAtLeastAcquire(Ordering);
+  return isAcquireOrStronger(Ordering);
 }]>;
 
 // An atomic load operation that does not need either acquire or release
@@ -37,7 +37,7 @@ class acquiring_load<PatFrag base>
 class relaxed_load<PatFrag base>
   : PatFrag<(ops node:$ptr), (base node:$ptr), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  return !isAtLeastAcquire(Ordering);
+  return !isAcquireOrStronger(Ordering);
 }]>;
 
 // 8-bit loads
@@ -112,15 +112,16 @@ def : Pat<(relaxed_load<atomic_load_64>
 class releasing_store<PatFrag base>
   : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  assert(Ordering != AcquireRelease && "unexpected store ordering");
-  return isAtLeastRelease(Ordering);
+  assert(Ordering != AtomicOrdering::AcquireRelease &&
+         "unexpected store ordering");
+  return isReleaseOrStronger(Ordering);
 }]>;
 
 // An atomic store operation that doesn't actually need to be atomic on AArch64.
 class relaxed_store<PatFrag base>
   : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
   AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getOrdering();
-  return !isAtLeastRelease(Ordering);
+  return !isReleaseOrStronger(Ordering);
 }]>;
 
 // 8-bit stores
@@ -361,3 +362,43 @@ def : Pat<(stlxr_4 (and GPR64:$val, 0xffffffff), GPR64sp:$addr),
 // And clear exclusive.
 
 def : Pat<(int_aarch64_clrex), (CLREX 0xf)>;
+
+//===----------------------------------
+// Atomic cmpxchg for -O0
+//===----------------------------------
+
+// The fast register allocator used during -O0 inserts spills to cover any VRegs
+// live across basic block boundaries. When this happens between an LDXR and an
+// STXR it can clear the exclusive monitor, causing all cmpxchg attempts to
+// fail.
+
+// Unfortunately, this means we have to have an alternative (expanded
+// post-regalloc) path for -O0 compilations. Fortunately this path can be
+// significantly more naive than the standard expansion: we conservatively
+// assume seq_cst, strong cmpxchg and omit clrex on failure.
+
+let Constraints = "@earlyclobber $Rd,@earlyclobber $scratch",
+    mayLoad = 1, mayStore = 1 in {
+def CMP_SWAP_8 : Pseudo<(outs GPR32:$Rd, GPR32:$scratch),
+                        (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>,
+                 Sched<[WriteAtomic]>;
+
+def CMP_SWAP_16 : Pseudo<(outs GPR32:$Rd, GPR32:$scratch),
+                         (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>,
+                  Sched<[WriteAtomic]>;
+
+def CMP_SWAP_32 : Pseudo<(outs GPR32:$Rd, GPR32:$scratch),
+                         (ins GPR64:$addr, GPR32:$desired, GPR32:$new), []>,
+                  Sched<[WriteAtomic]>;
+
+def CMP_SWAP_64 : Pseudo<(outs GPR64:$Rd, GPR32:$scratch),
+                         (ins GPR64:$addr, GPR64:$desired, GPR64:$new), []>,
+                  Sched<[WriteAtomic]>;
+}
+
+let Constraints = "@earlyclobber $RdLo,@earlyclobber $RdHi,@earlyclobber $scratch",
+    mayLoad = 1, mayStore = 1 in
+def CMP_SWAP_128 : Pseudo<(outs GPR64:$RdLo, GPR64:$RdHi, GPR32:$scratch),
+                          (ins GPR64:$addr, GPR64:$desiredLo, GPR64:$desiredHi,
+                               GPR64:$newLo, GPR64:$newHi), []>,
+                   Sched<[WriteAtomic]>;

@@ -80,4 +80,15 @@ COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_begin_counters(void) { return CountersFirst; }
 COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_end_counters(void) { return CountersLast; }
+
+COMPILER_RT_VISIBILITY
+ValueProfNode *__llvm_profile_begin_vnodes(void) {
+  return 0;
+}
+COMPILER_RT_VISIBILITY
+ValueProfNode *__llvm_profile_end_vnodes(void) { return 0; }
+
+COMPILER_RT_VISIBILITY ValueProfNode *CurrentVNode = 0;
+COMPILER_RT_VISIBILITY ValueProfNode *EndVNode = 0;
+
 #endif

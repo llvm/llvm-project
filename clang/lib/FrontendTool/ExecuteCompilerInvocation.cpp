@@ -66,7 +66,9 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
          it != ie; ++it) {
       if (it->getName() == CI.getFrontendOpts().ActionName) {
         std::unique_ptr<PluginASTAction> P(it->instantiate());
-        if (!P->ParseArgs(CI, CI.getFrontendOpts().PluginArgs))
+        if ((P->getActionType() != PluginASTAction::ReplaceAction &&
+             P->getActionType() != PluginASTAction::Cmdline) ||
+            !P->ParseArgs(CI, CI.getFrontendOpts().PluginArgs[it->getName()]))
           return nullptr;
         return std::move(P);
       }
@@ -194,6 +196,18 @@ bool clang::ExecuteCompilerInvocation(CompilerInstance *Clang) {
         << Path << Error;
   }
 
+  // Check if any of the loaded plugins replaces the main AST action
+  for (FrontendPluginRegistry::iterator it = FrontendPluginRegistry::begin(),
+                                        ie = FrontendPluginRegistry::end();
+       it != ie; ++it) {
+    std::unique_ptr<PluginASTAction> P(it->instantiate());
+    if (P->getActionType() == PluginASTAction::ReplaceAction) {
+      Clang->getFrontendOpts().ProgramAction = clang::frontend::PluginAction;
+      Clang->getFrontendOpts().ActionName = it->getName();
+      break;
+    }
+  }
+
   // Honor -mllvm.
   //
   // FIXME: Remove this, one day.
@@ -214,6 +228,11 @@ bool clang::ExecuteCompilerInvocation(CompilerInstance *Clang) {
   if (Clang->getAnalyzerOpts()->ShowCheckerHelp) {
     ento::printCheckerHelp(llvm::outs(), Clang->getFrontendOpts().Plugins);
     return true;
+  }
+  if (Clang->getAnalyzerOpts()->ShowEnabledCheckerList) {
+    ento::printEnabledCheckerList(llvm::outs(),
+                                  Clang->getFrontendOpts().Plugins,
+                                  *Clang->getAnalyzerOpts());
   }
 #endif
 

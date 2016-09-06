@@ -28,9 +28,7 @@ entry:
   %shl = shl i32 1, %sub
 ; CHECK: memd(r{{[0-9]*}} ++ m{{[0-1]}}:brev)
   %1 = tail call i8* @llvm.hexagon.brev.std(i8* %0, i64 undef, i32 %shl)
-  %2 = bitcast i8* %1 to i64*
-  %3 = load i64, i64* %2, align 8, !tbaa !0
-  ret i64 %3
+  ret i64 0
 }
 
 declare i8* @llvm.hexagon.brev.std(i8*, i64, i32) nounwind
@@ -46,9 +44,7 @@ entry:
   %shl = shl i32 1, %sub
 ; CHECK: memw(r{{[0-9]*}} ++ m{{[0-1]}}:brev)
   %1 = tail call i8* @llvm.hexagon.brev.stw(i8* %0, i32 undef, i32 %shl)
-  %2 = bitcast i8* %1 to i32*
-  %3 = load i32, i32* %2, align 4, !tbaa !2
-  ret i32 %3
+  ret i32 0
 }
 
 declare i8* @llvm.hexagon.brev.stw(i8*, i32, i32) nounwind
@@ -64,9 +60,7 @@ entry:
   %shl = shl i32 1, %sub
 ; CHECK: memh(r{{[0-9]*}} ++ m{{[0-1]}}:brev)
   %1 = tail call i8* @llvm.hexagon.brev.sth(i8* %0, i32 0, i32 %shl)
-  %2 = bitcast i8* %1 to i16*
-  %3 = load i16, i16* %2, align 2, !tbaa !3
-  ret i16 %3
+  ret i16 0
 }
 
 declare i8* @llvm.hexagon.brev.sth(i8*, i32, i32) nounwind
@@ -82,9 +76,7 @@ entry:
   %shl = shl i32 1, %sub
 ; CHECK: memh(r{{[0-9]*}} ++ m{{[0-1]}}:brev){{ *}}={{ *}}r{{[0-9]*}}.h
   %1 = tail call i8* @llvm.hexagon.brev.sthhi(i8* %0, i32 0, i32 %shl)
-  %2 = bitcast i8* %1 to i16*
-  %3 = load i16, i16* %2, align 2, !tbaa !3
-  ret i16 %3
+  ret i16 0
 }
 
 declare i8* @llvm.hexagon.brev.sthhi(i8*, i32, i32) nounwind
@@ -100,8 +92,7 @@ entry:
   ; CHECK: memb(r{{[0-9]*}} ++ m{{[0-1]}}:brev)
   %shl = shl i32 1, %sub
   %1 = tail call i8* @llvm.hexagon.brev.stb(i8* %0, i32 0, i32 %shl)
-  %2 = load i8, i8* %1, align 1, !tbaa !0
-  ret i8 %2
+  ret i8 0
 }
 
 declare i8* @llvm.hexagon.brev.stb(i8*, i32, i32) nounwind

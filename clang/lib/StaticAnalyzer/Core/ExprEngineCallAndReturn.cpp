@@ -382,7 +382,6 @@ void ExprEngine::examineStackFrames(const Decl *D, const LocationContext *LCtx,
     }
     LCtx = LCtx->getParent();
   }
-
 }
 
 // The GDM component containing the dynamic dispatch bifurcation info. When
@@ -396,7 +395,8 @@ namespace {
     DynamicDispatchModeInlined = 1,
     DynamicDispatchModeConservative
   };
-}
+} // end anonymous namespace
+
 REGISTER_TRAIT_WITH_PROGRAMSTATE(DynamicDispatchBifurcationMap,
                                  CLANG_ENTO_PROGRAMSTATE_MAP(const MemRegion *,
                                                              unsigned))
@@ -428,7 +428,6 @@ bool ExprEngine::inlineCall(const CallEvent &Call, const Decl *D,
     CalleeADC->getStackFrame(ParentOfCallee, CallE,
                              currBldrCtx->getBlock(),
                              currStmtIdx);
-
 
   CallEnter Loc(CallE, CalleeSFC, CurLC);
 
@@ -766,7 +765,6 @@ static bool mayInlineDecl(AnalysisDeclContext *CalleeADC,
       if (!Opts.mayInlineCXXSharedPtrDtor())
         if (isCXXSharedPtrDtor(FD))
           return false;
-
     }
   }
 
@@ -976,13 +974,10 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
   conservativeEvalCall(Call, Bldr, Pred, NoIState);
 
   NumOfDynamicDispatchPathSplits++;
-  return;
 }
-
 
 void ExprEngine::VisitReturnStmt(const ReturnStmt *RS, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
-
   ExplodedNodeSet dstPreVisit;
   getCheckerManager().runCheckersForPreStmt(dstPreVisit, Pred, RS, *this);
 

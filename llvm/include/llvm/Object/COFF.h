@@ -15,6 +15,7 @@
 #define LLVM_OBJECT_COFF_H
 
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/DebugInfo/CodeView/CVDebugRecord.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/COFF.h"
 #include "llvm/Support/Endian.h"
@@ -161,12 +162,15 @@ struct data_directory {
   support::ulittle32_t Size;
 };
 
-struct import_directory_table_entry {
-  support::ulittle32_t ImportLookupTableRVA;
+struct debug_directory {
+  support::ulittle32_t Characteristics;
   support::ulittle32_t TimeDateStamp;
-  support::ulittle32_t ForwarderChain;
-  support::ulittle32_t NameRVA;
-  support::ulittle32_t ImportAddressTableRVA;
+  support::ulittle16_t MajorVersion;
+  support::ulittle16_t MinorVersion;
+  support::ulittle32_t Type;
+  support::ulittle32_t SizeOfData;
+  support::ulittle32_t AddressOfRawData;
+  support::ulittle32_t PointerToRawData;
 };
 
 template <typename IntTy>
@@ -414,6 +418,18 @@ struct coff_section {
     return (Characteristics & COFF::IMAGE_SCN_LNK_NRELOC_OVFL) &&
            NumberOfRelocations == UINT16_MAX;
   }
+  uint32_t getAlignment() const {
+    // The IMAGE_SCN_TYPE_NO_PAD bit is a legacy way of getting to
+    // IMAGE_SCN_ALIGN_1BYTES.
+    if (Characteristics & COFF::IMAGE_SCN_TYPE_NO_PAD)
+      return 1;
+
+    // Bit [20:24] contains section alignment. Both 0 and 1 mean alignment 1.
+    uint32_t Shift = (Characteristics >> 20) & 0xF;
+    if (Shift > 0)
+      return 1U << (Shift - 1);
+    return 1;
+  }
 };
 
 struct coff_relocation {
@@ -427,19 +443,31 @@ struct coff_aux_function_definition {
   support::ulittle32_t TotalSize;
   support::ulittle32_t PointerToLinenumber;
   support::ulittle32_t PointerToNextFunction;
+  char Unused1[2];
 };
+
+static_assert(sizeof(coff_aux_function_definition) == 18,
+              "auxiliary entry must be 18 bytes");
 
 struct coff_aux_bf_and_ef_symbol {
   char Unused1[4];
   support::ulittle16_t Linenumber;
   char Unused2[6];
   support::ulittle32_t PointerToNextFunction;
+  char Unused3[2];
 };
+
+static_assert(sizeof(coff_aux_bf_and_ef_symbol) == 18,
+              "auxiliary entry must be 18 bytes");
 
 struct coff_aux_weak_external {
   support::ulittle32_t TagIndex;
   support::ulittle32_t Characteristics;
+  char Unused1[10];
 };
+
+static_assert(sizeof(coff_aux_weak_external) == 18,
+              "auxiliary entry must be 18 bytes");
 
 struct coff_aux_section_definition {
   support::ulittle32_t Length;
@@ -458,11 +486,18 @@ struct coff_aux_section_definition {
   }
 };
 
+static_assert(sizeof(coff_aux_section_definition) == 18,
+              "auxiliary entry must be 18 bytes");
+
 struct coff_aux_clr_token {
   uint8_t              AuxType;
   uint8_t              Reserved;
   support::ulittle32_t SymbolTableIndex;
+  char                 MBZ[12];
 };
+
+static_assert(sizeof(coff_aux_clr_token) == 18,
+              "auxiliary entry must be 18 bytes");
 
 struct coff_import_header {
   support::ulittle16_t Sig1;
@@ -483,7 +518,31 @@ struct coff_import_directory_table_entry {
   support::ulittle32_t ForwarderChain;
   support::ulittle32_t NameRVA;
   support::ulittle32_t ImportAddressTableRVA;
+  bool isNull() const {
+    return ImportLookupTableRVA == 0 && TimeDateStamp == 0 &&
+           ForwarderChain == 0 && NameRVA == 0 && ImportAddressTableRVA == 0;
+  }
 };
+
+template <typename IntTy>
+struct coff_tls_directory {
+  IntTy StartAddressOfRawData;
+  IntTy EndAddressOfRawData;
+  IntTy AddressOfIndex;
+  IntTy AddressOfCallBacks;
+  support::ulittle32_t SizeOfZeroFill;
+  support::ulittle32_t Characteristics;
+  uint32_t getAlignment() const {
+    // Bit [20:24] contains section alignment.
+    uint32_t Shift = (Characteristics & 0x00F00000) >> 20;
+    if (Shift > 0)
+      return 1U << (Shift - 1);
+    return 0;
+  }
+};
+
+typedef coff_tls_directory<support::little32_t> coff_tls_directory32;
+typedef coff_tls_directory<support::little64_t> coff_tls_directory64;
 
 struct coff_load_configuration32 {
   support::ulittle32_t Characteristics;
@@ -562,13 +621,14 @@ private:
   const coff_symbol32 *SymbolTable32;
   const char *StringTable;
   uint32_t StringTableSize;
-  const import_directory_table_entry *ImportDirectory;
-  uint32_t NumberOfImportDirectory;
+  const coff_import_directory_table_entry *ImportDirectory;
   const delay_import_directory_table_entry *DelayImportDirectory;
   uint32_t NumberOfDelayImportDirectory;
   const export_directory_table_entry *ExportDirectory;
   const coff_base_reloc_block_header *BaseRelocHeader;
   const coff_base_reloc_block_header *BaseRelocEnd;
+  const debug_directory *DebugDirectoryBegin;
+  const debug_directory *DebugDirectoryEnd;
 
   std::error_code getString(uint32_t offset, StringRef &Res) const;
 
@@ -582,6 +642,7 @@ private:
   std::error_code initDelayImportTablePtr();
   std::error_code initExportTablePtr();
   std::error_code initBaseRelocPtr();
+  std::error_code initDebugDirectoryPtr();
 
 public:
   uintptr_t getSymbolTable() const {
@@ -647,13 +708,13 @@ public:
   }
 protected:
   void moveSymbolNext(DataRefImpl &Symb) const override;
-  ErrorOr<StringRef> getSymbolName(DataRefImpl Symb) const override;
-  ErrorOr<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
+  Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
+  Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
   uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override;
   uint32_t getSymbolFlags(DataRefImpl Symb) const override;
-  SymbolRef::Type getSymbolType(DataRefImpl Symb) const override;
-  ErrorOr<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
+  Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
+  Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
   void moveSectionNext(DataRefImpl &Sec) const override;
   std::error_code getSectionName(DataRefImpl Sec,
                                  StringRef &Res) const override;
@@ -662,6 +723,7 @@ protected:
   std::error_code getSectionContents(DataRefImpl Sec,
                                      StringRef &Res) const override;
   uint64_t getSectionAlignment(DataRefImpl Sec) const override;
+  bool isSectionCompressed(DataRefImpl Sec) const override;
   bool isSectionText(DataRefImpl Sec) const override;
   bool isSectionData(DataRefImpl Sec) const override;
   bool isSectionBSS(DataRefImpl Sec) const override;
@@ -693,6 +755,7 @@ public:
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
   unsigned getArch() const override;
+  SubtargetFeatures getFeatures() const override { return SubtargetFeatures(); }
 
   import_directory_iterator import_directory_begin() const;
   import_directory_iterator import_directory_end() const;
@@ -702,12 +765,21 @@ public:
   export_directory_iterator export_directory_end() const;
   base_reloc_iterator base_reloc_begin() const;
   base_reloc_iterator base_reloc_end() const;
+  const debug_directory *debug_directory_begin() const {
+    return DebugDirectoryBegin;
+  }
+  const debug_directory *debug_directory_end() const {
+    return DebugDirectoryEnd;
+  }
 
   iterator_range<import_directory_iterator> import_directories() const;
   iterator_range<delay_import_directory_iterator>
       delay_import_directories() const;
   iterator_range<export_directory_iterator> export_directories() const;
   iterator_range<base_reloc_iterator> base_relocs() const;
+  iterator_range<const debug_directory *> debug_directories() const {
+    return make_range(debug_directory_begin(), debug_directory_end());
+  }
 
   const dos_header *getDOSHeader() const {
     if (!PE32Header && !PE32PlusHeader)
@@ -776,8 +848,27 @@ public:
   uint64_t getImageBase() const;
   std::error_code getVaPtr(uint64_t VA, uintptr_t &Res) const;
   std::error_code getRvaPtr(uint32_t Rva, uintptr_t &Res) const;
+
+  /// Given an RVA base and size, returns a valid array of bytes or an error
+  /// code if the RVA and size is not contained completely within a valid
+  /// section.
+  std::error_code getRvaAndSizeAsBytes(uint32_t RVA, uint32_t Size,
+                                       ArrayRef<uint8_t> &Contents) const;
+
   std::error_code getHintName(uint32_t Rva, uint16_t &Hint,
                               StringRef &Name) const;
+
+  /// Get PDB information out of a codeview debug directory entry.
+  std::error_code getDebugPDBInfo(const debug_directory *DebugDir,
+                                  const codeview::DebugInfo *&Info,
+                                  StringRef &PDBFileName) const;
+
+  /// Get PDB information from an executable. If the information is not present,
+  /// Info will be set to nullptr and PDBFileName will be empty. An error is
+  /// returned only on corrupt object files. Convenience accessor that can be
+  /// used if the debug directory is not already handy.
+  std::error_code getDebugPDBInfo(const codeview::DebugInfo *&Info,
+                                  StringRef &PDBFileName) const;
 
   bool isRelocatableObject() const override;
   bool is64() const { return PE32PlusHeader; }
@@ -789,8 +880,8 @@ public:
 class ImportDirectoryEntryRef {
 public:
   ImportDirectoryEntryRef() : OwningObject(nullptr) {}
-  ImportDirectoryEntryRef(const import_directory_table_entry *Table, uint32_t I,
-                          const COFFObjectFile *Owner)
+  ImportDirectoryEntryRef(const coff_import_directory_table_entry *Table,
+                          uint32_t I, const COFFObjectFile *Owner)
       : ImportTable(Table), Index(I), OwningObject(Owner) {}
 
   bool operator==(const ImportDirectoryEntryRef &Other) const;
@@ -800,18 +891,19 @@ public:
   imported_symbol_iterator imported_symbol_end() const;
   iterator_range<imported_symbol_iterator> imported_symbols() const;
 
+  imported_symbol_iterator lookup_table_begin() const;
+  imported_symbol_iterator lookup_table_end() const;
+  iterator_range<imported_symbol_iterator> lookup_table_symbols() const;
+
   std::error_code getName(StringRef &Result) const;
   std::error_code getImportLookupTableRVA(uint32_t &Result) const;
   std::error_code getImportAddressTableRVA(uint32_t &Result) const;
 
   std::error_code
-  getImportTableEntry(const import_directory_table_entry *&Result) const;
-
-  std::error_code
-  getImportLookupEntry(const import_lookup_table_entry32 *&Result) const;
+  getImportTableEntry(const coff_import_directory_table_entry *&Result) const;
 
 private:
-  const import_directory_table_entry *ImportTable;
+  const coff_import_directory_table_entry *ImportTable;
   uint32_t Index;
   const COFFObjectFile *OwningObject;
 };
@@ -881,7 +973,9 @@ public:
   void moveNext();
 
   std::error_code getSymbolName(StringRef &Result) const;
+  std::error_code isOrdinal(bool &Result) const;
   std::error_code getOrdinal(uint16_t &Result) const;
+  std::error_code getHintNameRVA(uint32_t &Result) const;
 
 private:
   const import_lookup_table_entry32 *Entry32;
@@ -907,6 +1001,30 @@ private:
   const coff_base_reloc_block_header *Header;
   uint32_t Index;
   const COFFObjectFile *OwningObject;
+};
+
+// Corresponds to `_FPO_DATA` structure in the PE/COFF spec.
+struct FpoData {
+  support::ulittle32_t Offset; // ulOffStart: Offset 1st byte of function code
+  support::ulittle32_t Size;   // cbProcSize: # bytes in function
+  support::ulittle32_t NumLocals; // cdwLocals: # bytes in locals/4
+  support::ulittle16_t NumParams; // cdwParams: # bytes in params/4
+  support::ulittle16_t Attributes;
+
+  // cbProlog: # bytes in prolog
+  int getPrologSize() const { return Attributes & 0xF; }
+
+  // cbRegs: # regs saved
+  int getNumSavedRegs() const { return (Attributes >> 8) & 0x7; }
+
+  // fHasSEH: true if seh is func
+  bool hasSEH() const { return (Attributes >> 9) & 1; }
+
+  // fUseBP: true if EBP has been allocated
+  bool useBP() const { return (Attributes >> 10) & 1; }
+
+  // cbFrame: frame pointer
+  int getFP() const { return Attributes >> 14; }
 };
 
 } // end namespace object

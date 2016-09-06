@@ -1,0 +1,52 @@
+# Source file compiled:
+##include <iostream>
+# #include <typeinfo>
+#template <class A>
+#void foo(A variable) {
+#  std::cout << "foo is " << typeid(A).name() << "\n";
+#}
+#int main () {
+#  char x = 'x';
+#  int y = 1;
+#  foo(x);
+#  foo(y);
+#  return 0;
+#}
+
+RUN: llvm-readobj -g %p/Inputs/elf-groups.x86_64 \
+RUN:   | FileCheck %s
+RUN: llvm-readobj -g -elf-output-style=GNU %p/Inputs/elf-groups.x86_64 \
+RUN:   | FileCheck --check-prefix="GNU" %s
+CHECK:         Groups {
+CHECK-NEXT:      Group {
+CHECK-NEXT:        Name: .group (92)
+CHECK-NEXT:        Index: 1
+CHECK-NEXT:        Type: COMDAT (0x1)
+CHECK-NEXT:        Signature: _Z3fooIcEvT_
+CHECK-NEXT:        Section(s) in group [
+CHECK-NEXT:          .text._Z3fooIcEvT_ (10)
+CHECK-NEXT:          .rela.text._Z3fooIcEvT_ (11)
+CHECK-NEXT:        ]
+CHECK-NEXT:      }
+CHECK-NEXT:      Group {
+CHECK-NEXT:        Name: .group (92)
+CHECK-NEXT:        Index: 2
+CHECK-NEXT:        Type: COMDAT (0x1)
+CHECK-NEXT:        Signature: _Z3fooIiEvT_
+CHECK-NEXT:        Section(s) in group [
+CHECK-NEXT:          .text._Z3fooIiEvT_ (12)
+CHECK-NEXT:          .rela.text._Z3fooIiEvT_ (13)
+CHECK-NEXT:        ]
+CHECK-NEXT:      }
+
+GNU:COMDAT group section [    1] `.group' [_Z3fooIcEvT_] contains 2 sections:
+GNU-NEXT:   [Index]    Name
+GNU-NEXT:   [   10]   .text._Z3fooIcEvT_
+GNU-NEXT:   [   11]   .rela.text._Z3fooIcEvT_
+GNU:COMDAT group section [    2] `.group' [_Z3fooIiEvT_] contains 2 sections:
+GNU-NEXT:   [Index]    Name
+GNU-NEXT:   [   12]   .text._Z3fooIiEvT_
+GNU-NEXT:   [   13]   .rela.text._Z3fooIiEvT_
+GNU:COMDAT group section [    3] `.group' [_ZNKSt9type_info4nameEv] contains 1 sections:
+GNU-NEXT:   [Index]    Name
+GNU-NEXT:   [   14]   .text._ZNKSt9type_info4nameEv

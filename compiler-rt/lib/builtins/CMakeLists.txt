@@ -2,9 +2,31 @@
 # generic implementations of the core runtime library along with optimized
 # architecture-specific code in various subdirectories.
 
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  cmake_minimum_required(VERSION 3.4.3)
+
+  project(CompilerRTBuiltins C ASM)
+  set(COMPILER_RT_STANDALONE_BUILD TRUE)
+  set(COMPILER_RT_BUILTINS_STANDALONE_BUILD TRUE)
+  list(INSERT CMAKE_MODULE_PATH 0
+    "${CMAKE_SOURCE_DIR}/../../cmake"
+    "${CMAKE_SOURCE_DIR}/../../cmake/Modules")
+  include(base-config-ix)
+  include(CompilerRTUtils)
+
+  load_llvm_config()
+  construct_compiler_rt_default_triple()
+
+  if(APPLE)
+    include(CompilerRTDarwinUtils)
+  endif()
+  include(AddCompilerRT)
+endif()
+
+include(builtin-config-ix)
+
 # TODO: Need to add a mechanism for logging errors when builtin source files are
 # added to a sub-directory and not this CMakeLists file.
-
 set(GENERIC_SOURCES
   absvdi2.c
   absvsi2.c
@@ -20,8 +42,6 @@ set(GENERIC_SOURCES
   ashlti3.c
   ashrdi3.c
   ashrti3.c
-  # FIXME: atomic.c may only be compiled if host compiler understands _Atomic
-  # atomic.c
   clear_cache.c
   clzdi2.c
   clzsi2.c
@@ -30,6 +50,7 @@ set(GENERIC_SOURCES
   cmpti2.c
   comparedf2.c
   comparesf2.c
+  cpu_model.c
   ctzdi2.c
   ctzsi2.c
   ctzti2.c
@@ -143,6 +164,21 @@ set(GENERIC_SOURCES
   umodsi3.c
   umodti3.c)
 
+if(COMPILER_RT_HAS_ATOMIC_KEYWORD)
+  set(GENERIC_SOURCES
+    ${GENERIC_SOURCES}
+    atomic.c)
+endif()
+
+set(MSVC_SOURCES
+ divsc3.c
+ divdc3.c
+ divxc3.c
+ mulsc3.c
+ muldc3.c
+ mulxc3.c)
+
+
 if(APPLE)
   set(GENERIC_SOURCES
     ${GENERIC_SOURCES}
@@ -216,80 +252,27 @@ if (NOT MSVC)
       ${i386_SOURCES})
 else () # MSVC
   # Use C versions of functions when building on MSVC
-  # MSVC's assembler takes Intel syntax, not AT&T syntax
+  # MSVC's assembler takes Intel syntax, not AT&T syntax.
+  # Also use only MSVC compilable builtin implementations.
   set(x86_64_SOURCES
       x86_64/floatdidf.c
       x86_64/floatdisf.c
       x86_64/floatdixf.c
-      ${GENERIC_SOURCES})
+      ${MSVC_SOURCES})
   set(x86_64h_SOURCES ${x86_64_SOURCES})
-  set(i386_SOURCES ${GENERIC_SOURCES})
+  set(i386_SOURCES ${MSVC_SOURCES})
   set(i686_SOURCES ${i386_SOURCES})
 endif () # if (NOT MSVC)
 
 set(arm_SOURCES
-  arm/adddf3vfp.S
-  arm/addsf3vfp.S
-  arm/aeabi_cdcmp.S
-  arm/aeabi_cdcmpeq_check_nan.c
-  arm/aeabi_cfcmp.S
-  arm/aeabi_cfcmpeq_check_nan.c
-  arm/aeabi_dcmp.S
-  arm/aeabi_div0.c
-  arm/aeabi_drsub.c
-  arm/aeabi_fcmp.S
-  arm/aeabi_frsub.c
-  arm/aeabi_idivmod.S
-  arm/aeabi_ldivmod.S
-  arm/aeabi_memcmp.S
-  arm/aeabi_memcpy.S
-  arm/aeabi_memmove.S
-  arm/aeabi_memset.S
-  arm/aeabi_uidivmod.S
-  arm/aeabi_uldivmod.S
   arm/bswapdi2.S
   arm/bswapsi2.S
   arm/clzdi2.S
   arm/clzsi2.S
   arm/comparesf2.S
-  arm/divdf3vfp.S
   arm/divmodsi4.S
-  arm/divsf3vfp.S
   arm/divsi3.S
-  arm/eqdf2vfp.S
-  arm/eqsf2vfp.S
-  arm/extendsfdf2vfp.S
-  arm/fixdfsivfp.S
-  arm/fixsfsivfp.S
-  arm/fixunsdfsivfp.S
-  arm/fixunssfsivfp.S
-  arm/floatsidfvfp.S
-  arm/floatsisfvfp.S
-  arm/floatunssidfvfp.S
-  arm/floatunssisfvfp.S
-  arm/gedf2vfp.S
-  arm/gesf2vfp.S
-  arm/gtdf2vfp.S
-  arm/gtsf2vfp.S
-  arm/ledf2vfp.S
-  arm/lesf2vfp.S
-  arm/ltdf2vfp.S
-  arm/ltsf2vfp.S
   arm/modsi3.S
-  arm/muldf3vfp.S
-  arm/mulsf3vfp.S
-  arm/nedf2vfp.S
-  arm/negdf2vfp.S
-  arm/negsf2vfp.S
-  arm/nesf2vfp.S
-  arm/restore_vfp_d8_d15_regs.S
-  arm/save_vfp_d8_d15_regs.S
-  arm/subdf3vfp.S
-  arm/subsf3vfp.S
-  arm/switch16.S
-  arm/switch32.S
-  arm/switch8.S
-  arm/switchu8.S
   arm/sync_fetch_and_add_4.S
   arm/sync_fetch_and_add_8.S
   arm/sync_fetch_and_and_4.S
@@ -310,14 +293,87 @@ set(arm_SOURCES
   arm/sync_fetch_and_umin_8.S
   arm/sync_fetch_and_xor_4.S
   arm/sync_fetch_and_xor_8.S
-  arm/sync_synchronize.S
-  arm/truncdfsf2vfp.S
   arm/udivmodsi4.S
   arm/udivsi3.S
   arm/umodsi3.S
-  arm/unorddf2vfp.S
-  arm/unordsf2vfp.S
   ${GENERIC_SOURCES})
+
+set(arm_EABI_SOURCES
+  arm/aeabi_cdcmp.S
+  arm/aeabi_cdcmpeq_check_nan.c
+  arm/aeabi_cfcmp.S
+  arm/aeabi_cfcmpeq_check_nan.c
+  arm/aeabi_dcmp.S
+  arm/aeabi_div0.c
+  arm/aeabi_drsub.c
+  arm/aeabi_fcmp.S
+  arm/aeabi_frsub.c
+  arm/aeabi_idivmod.S
+  arm/aeabi_ldivmod.S
+  arm/aeabi_memcmp.S
+  arm/aeabi_memcpy.S
+  arm/aeabi_memmove.S
+  arm/aeabi_memset.S
+  arm/aeabi_uidivmod.S
+  arm/aeabi_uldivmod.S)
+set(arm_Thumb1_JT_SOURCES
+  arm/switch16.S
+  arm/switch32.S
+  arm/switch8.S
+  arm/switchu8.S)
+set(arm_Thumb1_SjLj_EH_SOURCES
+  arm/restore_vfp_d8_d15_regs.S
+  arm/save_vfp_d8_d15_regs.S)
+set(arm_Thumb1_VFPv2_SOURCES
+  arm/adddf3vfp.S
+  arm/addsf3vfp.S
+  arm/divdf3vfp.S
+  arm/divsf3vfp.S
+  arm/eqdf2vfp.S
+  arm/eqsf2vfp.S
+  arm/extendsfdf2vfp.S
+  arm/fixdfsivfp.S
+  arm/fixsfsivfp.S
+  arm/fixunsdfsivfp.S
+  arm/fixunssfsivfp.S
+  arm/floatsidfvfp.S
+  arm/floatsisfvfp.S
+  arm/floatunssidfvfp.S
+  arm/floatunssisfvfp.S
+  arm/gedf2vfp.S
+  arm/gesf2vfp.S
+  arm/gtdf2vfp.S
+  arm/gtsf2vfp.S
+  arm/ledf2vfp.S
+  arm/lesf2vfp.S
+  arm/ltdf2vfp.S
+  arm/ltsf2vfp.S
+  arm/muldf3vfp.S
+  arm/mulsf3vfp.S
+  arm/nedf2vfp.S
+  arm/negdf2vfp.S
+  arm/negsf2vfp.S
+  arm/nesf2vfp.S
+  arm/subdf3vfp.S
+  arm/subsf3vfp.S
+  arm/truncdfsf2vfp.S
+  arm/unorddf2vfp.S
+  arm/unordsf2vfp.S)
+set(arm_Thumb1_icache_SOURCES
+  arm/sync_synchronize.S)
+set(arm_Thumb1_SOURCES
+  ${arm_Thumb1_JT_SOURCES}
+  ${arm_Thumb1_SjLj_EH_SOURCES}
+  ${arm_Thumb1_VFPv2_SOURCES}
+  ${arm_Thumb1_icache_SOURCES})
+
+if(NOT WIN32)
+  # TODO the EABI sources should only be added to EABI targets
+  set(arm_SOURCES
+    ${arm_SOURCES}
+    ${arm_EABI_SOURCES}
+    ${arm_Thumb1_SOURCES})
+endif()
 
 set(aarch64_SOURCES
   comparetf2.c
@@ -341,6 +397,7 @@ set(aarch64_SOURCES
 set(armhf_SOURCES ${arm_SOURCES})
 set(armv7_SOURCES ${arm_SOURCES})
 set(armv7s_SOURCES ${arm_SOURCES})
+set(armv7k_SOURCES ${arm_SOURCES})
 set(arm64_SOURCES ${aarch64_SOURCES})
 
 # macho_embedded archs
@@ -357,13 +414,14 @@ set(wasm32_SOURCES ${GENERIC_SOURCES})
 set(wasm64_SOURCES ${GENERIC_SOURCES})
 
 add_custom_target(builtins)
+set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT Misc")
 
 if (APPLE)
   add_subdirectory(Darwin-excludes)
   add_subdirectory(macho_embedded)
   darwin_add_builtin_libraries(${BUILTIN_SUPPORTED_OS})
-elseif (NOT WIN32 OR MINGW)
-  append_string_if(COMPILER_RT_HAS_STD_C99_FLAG -std=c99 maybe_stdc99)
+else ()
+  append_string_if(COMPILER_RT_HAS_STD_C99_FLAG -std=gnu99 maybe_stdc99)
 
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
     if (CAN_TARGET_${arch})

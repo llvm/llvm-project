@@ -1,0 +1,17 @@
+RUN: grep '^ADDR:' %s | sed -s 's/ADDR: //' \
+RUN:    | llvm-symbolizer -obj="%p/Inputs/missing_pdb.exe" 2>%t.err \
+RUN:    | FileCheck %s
+RUN: FileCheck --check-prefix=ERROR %s < %t.err
+
+ADDR: 0x401000
+ADDR: 0x401001
+
+llvm-symbolizer should print one error and two unknown line info records.
+
+ERROR: LLVMSymbolizer: error reading file: PDB Error: Unable to load PDB.  Make sure the file exists and is readable.
+ERROR-NOT: error reading file
+
+CHECK: ??
+CHECK: ??:0:0
+CHECK: ??
+CHECK: ??:0:0

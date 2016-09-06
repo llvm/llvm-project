@@ -17,7 +17,6 @@
 #ifndef LLVM_ADT_STLEXTRAS_H
 #define LLVM_ADT_STLEXTRAS_H
 
-#include "llvm/Support/Compiler.h"
 #include <algorithm> // for std::all_of
 #include <cassert>
 #include <cstddef> // for std::size_t
@@ -27,7 +26,18 @@
 #include <memory>
 #include <utility> // for std::pair
 
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
+namespace detail {
+
+template <typename RangeT>
+using IterOfRange = decltype(std::begin(std::declval<RangeT>()));
+
+} // End detail namespace
 
 //===----------------------------------------------------------------------===//
 //     Extra additions to <functional>
@@ -117,7 +127,9 @@ public:
           iterator_category;
   typedef typename std::iterator_traits<RootIt>::difference_type
           difference_type;
-  typedef typename UnaryFunc::result_type value_type;
+  typedef typename std::result_of<
+            UnaryFunc(decltype(*std::declval<RootIt>()))>
+          ::type value_type;
 
   typedef void pointer;
   //typedef typename UnaryFunc::result_type *pointer;
@@ -229,6 +241,90 @@ auto reverse(
                            llvm::make_reverse_iterator(std::begin(C)))) {
   return make_range(llvm::make_reverse_iterator(std::end(C)),
                     llvm::make_reverse_iterator(std::begin(C)));
+}
+
+/// An iterator adaptor that filters the elements of given inner iterators.
+///
+/// The predicate parameter should be a callable object that accepts the wrapped
+/// iterator's reference type and returns a bool. When incrementing or
+/// decrementing the iterator, it will call the predicate on each element and
+/// skip any where it returns false.
+///
+/// \code
+///   int A[] = { 1, 2, 3, 4 };
+///   auto R = make_filter_range(A, [](int N) { return N % 2 == 1; });
+///   // R contains { 1, 3 }.
+/// \endcode
+template <typename WrappedIteratorT, typename PredicateT>
+class filter_iterator
+    : public iterator_adaptor_base<
+          filter_iterator<WrappedIteratorT, PredicateT>, WrappedIteratorT,
+          typename std::common_type<
+              std::forward_iterator_tag,
+              typename std::iterator_traits<
+                  WrappedIteratorT>::iterator_category>::type> {
+  using BaseT = iterator_adaptor_base<
+      filter_iterator<WrappedIteratorT, PredicateT>, WrappedIteratorT,
+      typename std::common_type<
+          std::forward_iterator_tag,
+          typename std::iterator_traits<WrappedIteratorT>::iterator_category>::
+          type>;
+
+  struct PayloadType {
+    WrappedIteratorT End;
+    PredicateT Pred;
+  };
+
+  Optional<PayloadType> Payload;
+
+  void findNextValid() {
+    assert(Payload && "Payload should be engaged when findNextValid is called");
+    while (this->I != Payload->End && !Payload->Pred(*this->I))
+      BaseT::operator++();
+  }
+
+  // Construct the begin iterator. The begin iterator requires to know where end
+  // is, so that it can properly stop when it hits end.
+  filter_iterator(WrappedIteratorT Begin, WrappedIteratorT End, PredicateT Pred)
+      : BaseT(std::move(Begin)),
+        Payload(PayloadType{std::move(End), std::move(Pred)}) {
+    findNextValid();
+  }
+
+  // Construct the end iterator. It's not incrementable, so Payload doesn't
+  // have to be engaged.
+  filter_iterator(WrappedIteratorT End) : BaseT(End) {}
+
+public:
+  using BaseT::operator++;
+
+  filter_iterator &operator++() {
+    BaseT::operator++();
+    findNextValid();
+    return *this;
+  }
+
+  template <typename RT, typename PT>
+  friend iterator_range<filter_iterator<detail::IterOfRange<RT>, PT>>
+  make_filter_range(RT &&, PT);
+};
+
+/// Convenience function that takes a range of elements and a predicate,
+/// and return a new filter_iterator range.
+///
+/// FIXME: Currently if RangeT && is a rvalue reference to a temporary, the
+/// lifetime of that temporary is not kept by the returned range object, and the
+/// temporary is going to be dropped on the floor after the make_iterator_range
+/// full expression that contains this function call.
+template <typename RangeT, typename PredicateT>
+iterator_range<filter_iterator<detail::IterOfRange<RangeT>, PredicateT>>
+make_filter_range(RangeT &&Range, PredicateT Pred) {
+  using FilterIteratorT =
+      filter_iterator<detail::IterOfRange<RangeT>, PredicateT>;
+  return make_range(FilterIteratorT(std::begin(std::forward<RangeT>(Range)),
+                                    std::end(std::forward<RangeT>(Range)),
+                                    std::move(Pred)),
+                    FilterIteratorT(std::end(std::forward<RangeT>(Range))));
 }
 
 //===----------------------------------------------------------------------===//
@@ -379,6 +475,14 @@ bool any_of(R &&Range, UnaryPredicate &&P) {
                      std::forward<UnaryPredicate>(P));
 }
 
+/// Provide wrappers to std::none_of which take ranges instead of having to pass
+/// begin/end explicitly.
+template <typename R, class UnaryPredicate>
+bool none_of(R &&Range, UnaryPredicate &&P) {
+  return std::none_of(Range.begin(), Range.end(),
+                      std::forward<UnaryPredicate>(P));
+}
+
 /// Provide wrappers to std::find which take ranges instead of having to pass
 /// begin/end explicitly.
 template<typename R, class T>
@@ -391,6 +495,36 @@ auto find(R &&Range, const T &val) -> decltype(Range.begin()) {
 template <typename R, class T>
 auto find_if(R &&Range, const T &Pred) -> decltype(Range.begin()) {
   return std::find_if(Range.begin(), Range.end(), Pred);
+}
+
+/// Provide wrappers to std::remove_if which take ranges instead of having to
+/// pass begin/end explicitly.
+template<typename R, class UnaryPredicate>
+auto remove_if(R &&Range, UnaryPredicate &&P) -> decltype(Range.begin()) {
+  return std::remove_if(Range.begin(), Range.end(), P);
+}
+
+/// Wrapper function around std::find to detect if an element exists
+/// in a container.
+template <typename R, typename E>
+bool is_contained(R &&Range, const E &Element) {
+  return std::find(Range.begin(), Range.end(), Element) != Range.end();
+}
+
+/// Wrapper function around std::count_if to count the number of times an
+/// element satisfying a given predicate occurs in a range.
+template <typename R, typename UnaryPredicate>
+auto count_if(R &&Range, UnaryPredicate &&P)
+    -> typename std::iterator_traits<decltype(Range.begin())>::difference_type {
+  return std::count_if(Range.begin(), Range.end(), P);
+}
+
+/// Wrapper function around std::transform to apply a function to a range and
+/// store the result elsewhere.
+template <typename R, class OutputIt, typename UnaryPredicate>
+OutputIt transform(R &&Range, OutputIt d_first, UnaryPredicate &&P) {
+  return std::transform(Range.begin(), Range.end(), d_first,
+                        std::forward<UnaryPredicate>(P));
 }
 
 //===----------------------------------------------------------------------===//

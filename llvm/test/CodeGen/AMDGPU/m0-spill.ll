@@ -5,7 +5,7 @@
 
 ; CHECK-LABEL: {{^}}main:
 ; CHECK-NOT: v_readlane_b32 m0
-define void @main(<16 x i8> addrspace(2)* inreg, <16 x i8> addrspace(2)* inreg, <32 x i8> addrspace(2)* inreg, i32 inreg) "ShaderType"="0" {
+define amdgpu_ps void @main(<16 x i8> addrspace(2)* inreg, <16 x i8> addrspace(2)* inreg, <32 x i8> addrspace(2)* inreg, i32 inreg) {
 main_body:
   %4 = call float @llvm.SI.fs.constant(i32 0, i32 0, i32 %3)
   %cmp = fcmp ueq float 0.0, %4

@@ -5,10 +5,12 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
   CodeGen
   DebugInfoDWARF
+  DebugInfoPDB
   MC
   MCDisassembler
   Object
   Support
+  Symbolize
   )
 
 add_llvm_tool(llvm-objdump
@@ -17,3 +19,7 @@ add_llvm_tool(llvm-objdump
   ELFDump.cpp
   MachODump.cpp
   )
+
+if(HAVE_LIBXAR)
+  target_link_libraries(llvm-objdump ${XAR_LIB})
+endif()

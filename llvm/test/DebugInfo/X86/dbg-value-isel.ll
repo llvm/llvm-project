@@ -81,9 +81,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!22}
 
-!0 = distinct !DISubprogram(name: "__OpenCL_nbt02_kernel", linkageName: "__OpenCL_nbt02_kernel", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !20, scope: !1, type: !3)
+!0 = distinct !DISubprogram(name: "__OpenCL_nbt02_kernel", linkageName: "__OpenCL_nbt02_kernel", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !2, file: !20, scope: !1, type: !3)
 !1 = !DIFile(filename: "OCLlLwTXZ.cl", directory: "/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "clc", isOptimized: false, emissionKind: 1, file: !20, enums: !21, retainedTypes: !21, subprograms: !19, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "clc", isOptimized: false, emissionKind: FullDebug, file: !20, enums: !21, retainedTypes: !21, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{null, !5}
 !5 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align:64, scope: !2, baseType: !6)
@@ -100,7 +100,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !16 = !DILocation(line: 7, column: 26, scope: !11)
 !17 = !DILocation(line: 9, column: 24, scope: !11)
 !18 = !DILocation(line: 10, column: 1, scope: !0)
-!19 = !{!0}
 !20 = !DIFile(filename: "OCLlLwTXZ.cl", directory: "/tmp")
 !21 = !{}
 !22 = !{i32 1, !"Debug Info Version", i32 3}

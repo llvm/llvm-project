@@ -154,7 +154,7 @@ the configuration (without a prefix: ``Auto``).
   If ``true``, horizontally aligns arguments after an open bracket.
 
   This applies to round brackets (parentheses), angle brackets and square
-  brackets. This will result in formattings like
+  brackets.
 
   Possible values:
 
@@ -165,6 +165,7 @@ the configuration (without a prefix: ``Auto``).
 
       someLongFunction(argument1,
                        argument2);
+
   * ``BAS_DontAlign`` (in configuration: ``DontAlign``)
     Don't align, instead use ``ContinuationIndentWidth``, e.g.:
 
@@ -172,6 +173,7 @@ the configuration (without a prefix: ``Auto``).
 
       someLongFunction(argument1,
           argument2);
+
   * ``BAS_AlwaysBreak`` (in configuration: ``AlwaysBreak``)
     Always break after an open bracket, if the parameters don't fit
     on a single line, e.g.:
@@ -180,6 +182,7 @@ the configuration (without a prefix: ``Auto``).
 
       someLongFunction(
           argument1, argument2);
+
 
 
 **AlignConsecutiveAssignments** (``bool``)
@@ -214,6 +217,14 @@ the configuration (without a prefix: ``Auto``).
   If ``true``, horizontally align operands of binary and ternary
   expressions.
 
+  Specifically, this aligns operands of a single expression that needs to be
+  split over multiple lines, e.g.:
+
+  .. code-block:: c++
+
+    int aaa = bbbbbbbbbbbbbbb +
+              ccccccccccccccc;
+
 **AlignTrailingComments** (``bool``)
   If ``true``, aligns trailing comments.
 
@@ -230,28 +241,31 @@ the configuration (without a prefix: ``Auto``).
   If ``true``, short case labels will be contracted to a single line.
 
 **AllowShortFunctionsOnASingleLine** (``ShortFunctionStyle``)
-  Dependent on the value, ``int f() { return 0; }`` can be put
-  on a single line.
+  Dependent on the value, ``int f() { return 0; }`` can be put on a
+  single line.
 
   Possible values:
 
   * ``SFS_None`` (in configuration: ``None``)
     Never merge functions into a single line.
+
   * ``SFS_Empty`` (in configuration: ``Empty``)
     Only merge empty functions.
+
   * ``SFS_Inline`` (in configuration: ``Inline``)
     Only merge functions defined inside a class. Implies "empty".
+
   * ``SFS_All`` (in configuration: ``All``)
     Merge all functions fitting on a single line.
 
 
+
 **AllowShortIfStatementsOnASingleLine** (``bool``)
-  If ``true``, ``if (a) return;`` can be put on a single
-  line.
+  If ``true``, ``if (a) return;`` can be put on a single line.
 
 **AllowShortLoopsOnASingleLine** (``bool``)
-  If ``true``, ``while (true) continue;`` can be put on a
-  single line.
+  If ``true``, ``while (true) continue;`` can be put on a single
+  line.
 
 **AlwaysBreakAfterDefinitionReturnType** (``DefinitionReturnTypeBreakingStyle``)
   The function definition return type breaking style to use.  This
@@ -262,10 +276,13 @@ the configuration (without a prefix: ``Auto``).
   * ``DRTBS_None`` (in configuration: ``None``)
     Break after return type automatically.
     ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+
   * ``DRTBS_All`` (in configuration: ``All``)
     Always break after the return type.
+
   * ``DRTBS_TopLevel`` (in configuration: ``TopLevel``)
     Always break after the return types of top-level functions.
+
 
 
 **AlwaysBreakAfterReturnType** (``ReturnTypeBreakingStyle``)
@@ -276,14 +293,19 @@ the configuration (without a prefix: ``Auto``).
   * ``RTBS_None`` (in configuration: ``None``)
     Break after return type automatically.
     ``PenaltyReturnTypeOnItsOwnLine`` is taken into account.
+
   * ``RTBS_All`` (in configuration: ``All``)
     Always break after the return type.
+
   * ``RTBS_TopLevel`` (in configuration: ``TopLevel``)
     Always break after the return types of top-level functions.
+
   * ``RTBS_AllDefinitions`` (in configuration: ``AllDefinitions``)
     Always break after the return type of function definitions.
+
   * ``RTBS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
     Always break after the return type of top-level definitions.
+
 
 
 **AlwaysBreakBeforeMultilineStrings** (``bool``)
@@ -295,8 +317,8 @@ the configuration (without a prefix: ``Auto``).
   ``ContinuationIndentWidth`` spaces from the start of the line.
 
 **AlwaysBreakTemplateDeclarations** (``bool``)
-  If ``true``, always break after the ``template<...>`` of a
-  template declaration.
+  If ``true``, always break after the ``template<...>`` of a template
+  declaration.
 
 **BinPackArguments** (``bool``)
   If ``false``, a function call's arguments will either be all on the
@@ -309,17 +331,17 @@ the configuration (without a prefix: ``Auto``).
 **BraceWrapping** (``BraceWrappingFlags``)
   Control of individual brace wrapping cases.
 
-  If ``BreakBeforeBraces`` is set to ``custom``, use this to specify how each
-  individual brace case should be handled. Otherwise, this is ignored.
+  If ``BreakBeforeBraces`` is set to ``BS_Custom``, use this to specify how
+  each individual brace case should be handled. Otherwise, this is ignored.
 
   Nested configuration flags:
 
   * ``bool AfterClass`` Wrap class definitions.
-  * ``bool AfterControlStatement`` Wrap control statements (if/for/while/switch/..).
+  * ``bool AfterControlStatement`` Wrap control statements (``if``/``for``/``while``/``switch``/..).
   * ``bool AfterEnum`` Wrap enum definitions.
   * ``bool AfterFunction`` Wrap function definitions.
   * ``bool AfterNamespace`` Wrap namespace definitions.
-  * ``bool AfterObjCDeclaration`` Wrap ObjC definitions (@autoreleasepool, interfaces, ..).
+  * ``bool AfterObjCDeclaration`` Wrap ObjC definitions (``@autoreleasepool``, interfaces, ..).
   * ``bool AfterStruct`` Wrap struct definitions.
   * ``bool AfterUnion`` Wrap union definitions.
   * ``bool BeforeCatch`` Wrap before ``catch``.
@@ -337,10 +359,13 @@ the configuration (without a prefix: ``Auto``).
 
   * ``BOS_None`` (in configuration: ``None``)
     Break after operators.
+
   * ``BOS_NonAssignment`` (in configuration: ``NonAssignment``)
     Break before operators that aren't assignments.
+
   * ``BOS_All`` (in configuration: ``All``)
     Break before operators.
+
 
 
 **BreakBeforeBraces** (``BraceBreakingStyle``)
@@ -350,24 +375,33 @@ the configuration (without a prefix: ``Auto``).
 
   * ``BS_Attach`` (in configuration: ``Attach``)
     Always attach braces to surrounding context.
+
   * ``BS_Linux`` (in configuration: ``Linux``)
     Like ``Attach``, but break before braces on function, namespace and
     class definitions.
+
   * ``BS_Mozilla`` (in configuration: ``Mozilla``)
     Like ``Attach``, but break before braces on enum, function, and record
     definitions.
+
   * ``BS_Stroustrup`` (in configuration: ``Stroustrup``)
-    Like ``Attach``, but break before function definitions, 'catch', and 'else'.
+    Like ``Attach``, but break before function definitions, ``catch``, and
+    ``else``.
+
   * ``BS_Allman`` (in configuration: ``Allman``)
     Always break before braces.
+
   * ``BS_GNU`` (in configuration: ``GNU``)
     Always break before braces and add an extra level of indentation to
     braces of control statements, not to those of class, function
     or other definitions.
+
   * ``BS_WebKit`` (in configuration: ``WebKit``)
     Like ``Attach``, but break before functions.
+
   * ``BS_Custom`` (in configuration: ``Custom``)
-    Configure each individual brace in ``BraceWrapping``.
+    Configure each individual brace in `BraceWrapping`.
+
 
 
 **BreakBeforeTernaryOperators** (``bool``)
@@ -376,6 +410,9 @@ the configuration (without a prefix: ``Auto``).
 **BreakConstructorInitializersBeforeComma** (``bool``)
   Always break constructor initializers before commas and align
   the commas with the colon.
+
+**BreakStringLiterals** (``bool``)
+  Allow breaking string literals when formatting.
 
 **ColumnLimit** (``unsigned``)
   The column limit.
@@ -416,7 +453,8 @@ the configuration (without a prefix: ``Auto``).
 
 **DerivePointerAlignment** (``bool``)
   If ``true``, analyze the formatted file for the most common
-  alignment of & and \*. ``PointerAlignment`` is then used only as fallback.
+  alignment of ``&`` and ``\*``. ``PointerAlignment`` is then used only as
+  fallback.
 
 **DisableFormat** (``bool``)
   Disables formatting completely.
@@ -446,30 +484,32 @@ the configuration (without a prefix: ``Auto``).
 
   In the .clang-format configuration file, this can be configured like:
 
-  .. code-block:: c++
+  .. code-block:: yaml
 
     ForEachMacros: ['RANGES_FOR', 'FOREACH']
 
   For example: BOOST_FOREACH.
 
 **IncludeCategories** (``std::vector<IncludeCategory>``)
-  Regular expressions denoting the different #include categories used
-  for ordering #includes.
+  Regular expressions denoting the different ``#include`` categories
+  used for ordering ``#includes``.
 
   These regular expressions are matched against the filename of an include
   (including the <> or "") in order. The value belonging to the first
-  matching regular expression is assigned and #includes are sorted first
+  matching regular expression is assigned and ``#includes`` are sorted first
   according to increasing category number and then alphabetically within
   each category.
 
-  If none of the regular expressions match, UINT_MAX is assigned as
-  category. The main header for a source file automatically gets category 0,
-  so that it is kept at the beginning of the #includes
-  (http://llvm.org/docs/CodingStandards.html#include-style).
+  If none of the regular expressions match, INT_MAX is assigned as
+  category. The main header for a source file automatically gets category 0.
+  so that it is generally kept at the beginning of the ``#includes``
+  (http://llvm.org/docs/CodingStandards.html#include-style). However, you
+  can also assign negative priorities if you have certain headers that
+  always need to be first.
 
   To configure this in the .clang-format file, use:
 
-  .. code-block:: c++
+  .. code-block:: yaml
 
     IncludeCategories:
       - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
@@ -478,6 +518,19 @@ the configuration (without a prefix: ``Auto``).
         Priority:        3
       - Regex:           '.\*'
         Priority:        1
+
+**IncludeIsMainRegex** (``std::string``)
+  Specify a regular expression of suffixes that are allowed in the
+  file-to-main-include mapping.
+
+  When guessing whether a #include is the "main" include (to assign
+  category 0, see above), use this regex of allowed suffixes to the header
+  stem. A partial match is done, so that:
+  - "" means "arbitrary suffix"
+  - "$" means "no suffix"
+
+  For example, if configured to "(_test)?$", then a header a.h would be seen
+  as the "main" include in both a.cc and a_test.cc.
 
 **IndentCaseLabels** (``bool``)
   Indent case labels one level from the switch statement.
@@ -492,6 +545,22 @@ the configuration (without a prefix: ``Auto``).
   Indent if a function definition or declaration is wrapped after the
   type.
 
+**JavaScriptQuotes** (``JavaScriptQuoteStyle``)
+  The JavaScriptQuoteStyle to use for JavaScript strings.
+
+  Possible values:
+
+  * ``JSQS_Leave`` (in configuration: ``Leave``)
+    Leave string quotes as they are.
+
+  * ``JSQS_Single`` (in configuration: ``Single``)
+    Always use single quotes.
+
+  * ``JSQS_Double`` (in configuration: ``Double``)
+    Always use double quotes.
+
+
+
 **KeepEmptyLinesAtTheStartOfBlocks** (``bool``)
   If true, empty lines at the start of blocks are kept.
 
@@ -502,15 +571,23 @@ the configuration (without a prefix: ``Auto``).
 
   * ``LK_None`` (in configuration: ``None``)
     Do not use.
+
   * ``LK_Cpp`` (in configuration: ``Cpp``)
     Should be used for C, C++, ObjectiveC, ObjectiveC++.
+
   * ``LK_Java`` (in configuration: ``Java``)
     Should be used for Java.
+
   * ``LK_JavaScript`` (in configuration: ``JavaScript``)
     Should be used for JavaScript.
+
   * ``LK_Proto`` (in configuration: ``Proto``)
     Should be used for Protocol Buffers
     (https://developers.google.com/protocol-buffers/).
+
+  * ``LK_TableGen`` (in configuration: ``TableGen``)
+    Should be used for TableGen code.
+
 
 
 **MacroBlockBegin** (``std::string``)
@@ -529,10 +606,13 @@ the configuration (without a prefix: ``Auto``).
 
   * ``NI_None`` (in configuration: ``None``)
     Don't indent in namespaces.
+
   * ``NI_Inner`` (in configuration: ``Inner``)
     Indent only in inner namespaces (nested in other namespaces).
+
   * ``NI_All`` (in configuration: ``All``)
     Indent in all namespaces.
+
 
 
 **ObjCBlockIndentWidth** (``unsigned``)
@@ -540,14 +620,14 @@ the configuration (without a prefix: ``Auto``).
 
 **ObjCSpaceAfterProperty** (``bool``)
   Add a space after ``@property`` in Objective-C, i.e. use
-  ``\@property (readonly)`` instead of ``\@property(readonly)``.
+  ``@property (readonly)`` instead of ``@property(readonly)``.
 
 **ObjCSpaceBeforeProtocolList** (``bool``)
   Add a space in front of an Objective-C protocol list, i.e. use
   ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
 
 **PenaltyBreakBeforeFirstCallParameter** (``unsigned``)
-  The penalty for breaking a function call after "call(".
+  The penalty for breaking a function call after ``call(``.
 
 **PenaltyBreakComment** (``unsigned``)
   The penalty for each line break introduced inside a comment.
@@ -572,14 +652,26 @@ the configuration (without a prefix: ``Auto``).
 
   * ``PAS_Left`` (in configuration: ``Left``)
     Align pointer to the left.
+
   * ``PAS_Right`` (in configuration: ``Right``)
     Align pointer to the right.
+
   * ``PAS_Middle`` (in configuration: ``Middle``)
     Align pointer in the middle.
 
 
+
+**ReflowComments** (``bool``)
+  If ``true``, clang-format will attempt to re-flow comments.
+
+**SortIncludes** (``bool``)
+  If ``true``, clang-format will sort ``#includes``.
+
 **SpaceAfterCStyleCast** (``bool``)
   If ``true``, a space may be inserted after C style casts.
+
+**SpaceAfterTemplateKeyword** (``bool``)
+  If ``true``, a space will be inserted after the 'template' keyword.
 
 **SpaceBeforeAssignmentOperators** (``bool``)
   If ``false``, spaces will be removed before assignment operators.
@@ -591,9 +683,11 @@ the configuration (without a prefix: ``Auto``).
 
   * ``SBPO_Never`` (in configuration: ``Never``)
     Never put a space before opening parentheses.
+
   * ``SBPO_ControlStatements`` (in configuration: ``ControlStatements``)
     Put a space before opening parentheses only after control statement
     keywords (``for/if/while...``).
+
   * ``SBPO_Always`` (in configuration: ``Always``)
     Always put a space before opening parentheses, except when it's
     prohibited by the syntax rules (in function-like macro definitions) or
@@ -601,19 +695,21 @@ the configuration (without a prefix: ``Auto``).
     parentheses, etc.)
 
 
+
 **SpaceInEmptyParentheses** (``bool``)
-  If ``true``, spaces may be inserted into '()'.
+  If ``true``, spaces may be inserted into ``()``.
 
 **SpacesBeforeTrailingComments** (``unsigned``)
   The number of spaces before trailing line comments
   (``//`` - comments).
 
-  This does not affect trailing block comments (``/**/`` - comments) as those
-  commonly have different usage patterns and a number of special cases.
+  This does not affect trailing block comments (``/*`` - comments) as
+  those commonly have different usage patterns and a number of special
+  cases.
 
 **SpacesInAngles** (``bool``)
-  If ``true``, spaces will be inserted after '<' and before '>' in
-  template argument lists
+  If ``true``, spaces will be inserted after ``<`` and before ``>``
+  in template argument lists.
 
 **SpacesInCStyleCastParentheses** (``bool``)
   If ``true``, spaces may be inserted into C style casts.
@@ -623,24 +719,26 @@ the configuration (without a prefix: ``Auto``).
   ObjC and Javascript array and dict literals).
 
 **SpacesInParentheses** (``bool``)
-  If ``true``, spaces will be inserted after '(' and before ')'.
+  If ``true``, spaces will be inserted after ``(`` and before ``)``.
 
 **SpacesInSquareBrackets** (``bool``)
-  If ``true``, spaces will be inserted after '[' and before ']'.
+  If ``true``, spaces will be inserted after ``[`` and before ``]``.
 
 **Standard** (``LanguageStandard``)
-  Format compatible with this standard, e.g. use
-  ``A<A<int> >`` instead of ``A<A<int>>`` for LS_Cpp03.
+  Format compatible with this standard, e.g. use ``A<A<int> >``
+  instead of ``A<A<int>>`` for ``LS_Cpp03``.
 
   Possible values:
 
   * ``LS_Cpp03`` (in configuration: ``Cpp03``)
     Use C++03-compatible syntax.
+
   * ``LS_Cpp11`` (in configuration: ``Cpp11``)
-    Use features of C++11 (e.g. ``A<A<int>>`` instead of
-    ``A<A<int> >``).
+    Use features of C++11 (e.g. ``A<A<int>>`` instead of ``A<A<int> >``).
+
   * ``LS_Auto`` (in configuration: ``Auto``)
     Automatic detection based on the input.
+
 
 
 **TabWidth** (``unsigned``)
@@ -653,11 +751,14 @@ the configuration (without a prefix: ``Auto``).
 
   * ``UT_Never`` (in configuration: ``Never``)
     Never use tab.
+
   * ``UT_ForIndentation`` (in configuration: ``ForIndentation``)
     Use tabs only for indentation.
+
   * ``UT_Always`` (in configuration: ``Always``)
     Use tabs whenever we need to fill whitespace that spans at least from
     one tab stop to the next one.
+
 
 
 .. END_FORMAT_STYLE_OPTIONS
@@ -666,7 +767,7 @@ Adding additional style options
 ===============================
 
 Each additional style option adds costs to the clang-format project. Some of
-these costs affect the clang-format developement itself, as we need to make
+these costs affect the clang-format development itself, as we need to make
 sure that any given combination of options work and that new features don't
 break any of the existing options in any way. There are also costs for end users
 as options become less discoverable and people have to think about and make a

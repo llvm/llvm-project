@@ -1,0 +1,32 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses and prints subregisters index
+# operands correctly.
+
+--- |
+
+  define zeroext i1 @t(i1 %c) {
+  entry:
+    ret i1 %c
+  }
+
+...
+---
+# CHECK-LABEL: name: t
+# CHECK: %0 = INSERT_SUBREG %edi, %al, {{[0-9]+}}
+# CHECK: %1 = EXTRACT_SUBREG %eax, {{[0-9]+}}
+# CHECK: %ax = REG_SEQUENCE %1, {{[0-9]+}}, %1, {{[0-9]+}}
+name:            t
+isSSA:           true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr8 }
+body: |
+  bb.0.entry:
+    liveins: %edi, %eax
+    %0 = INSERT_SUBREG %edi, %al, %subreg.sub_8bit
+    %1 = EXTRACT_SUBREG %eax, %subreg.sub_8bit_hi
+    %ax = REG_SEQUENCE %1, %subreg.sub_8bit, %1, %subreg.sub_8bit_hi
+    RETQ %ax
+...
+

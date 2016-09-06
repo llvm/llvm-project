@@ -88,11 +88,11 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 }
 
 ; X86-LABEL: _nested_cleanup:
-; X86: movl    $1, (%esp)
+; X86: pushl   $1
 ; X86: calll   _f
-; X86: movl    $2, (%esp)
+; X86: pushl   $2
 ; X86: calll   _f
-; X86: movl    $3, (%esp)
+; X86: pushl   $3
 ; X86: calll   _f
 
 ; X86: "?dtor$[[cleanup_inner:[0-9]+]]@?0?nested_cleanup@4HA":
@@ -163,7 +163,7 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 ; X64: retq
 
 ; X64:        .section .xdata,"dr"
-; X64-NEXT: .align  4
+; X64-NEXT: .p2align  2
 ; X64: $cppxdata$nested_cleanup:
 ; X64-NEXT: .long   429065506
 ; X64-NEXT: .long   2

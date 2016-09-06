@@ -39,6 +39,7 @@ For more information on how to configure CMake for LLVM/Clang,
 see :doc:`CMake`.
 
 The CMake options you need to add are:
+
  * ``-DCMAKE_CROSSCOMPILING=True``
  * ``-DCMAKE_INSTALL_PREFIX=<install-dir>``
  * ``-DLLVM_TABLEGEN=<path-to-host-bin>/llvm-tblgen``
@@ -46,20 +47,40 @@ The CMake options you need to add are:
  * ``-DLLVM_DEFAULT_TARGET_TRIPLE=arm-linux-gnueabihf``
  * ``-DLLVM_TARGET_ARCH=ARM``
  * ``-DLLVM_TARGETS_TO_BUILD=ARM``
- * ``-DCMAKE_CXX_FLAGS='-target armv7a-linux-gnueabihf -mcpu=cortex-a9 -I/usr/arm-linux-gnueabihf/include/c++/4.7.2/arm-linux-gnueabihf/ -I/usr/arm-linux-gnueabihf/include/ -mfloat-abi=hard -ccc-gcc-name arm-linux-gnueabihf-gcc'``
+
+If you're compiling with GCC, you can use architecture options for your target,
+and the compiler driver will detect everything that it needs:
+
+ * ``-DCMAKE_CXX_FLAGS='-march=armv7-a -mcpu=cortex-a9 -mfloat-abi=hard'``
+
+However, if you're using Clang, the driver might not be up-to-date with your
+specific Linux distribution, version or GCC layout, so you'll need to fudge.
+
+In addition to the ones above, you'll also need:
+
+ * ``'-target arm-linux-gnueabihf'`` or whatever is the triple of your cross GCC.
+ * ``'--sysroot=/usr/arm-linux-gnueabihf'``, ``'--sysroot=/opt/gcc/arm-linux-gnueabihf'``
+   or whatever is the location of your GCC's sysroot (where /lib, /bin etc are).
+ * Appropriate use of ``-I`` and ``-L``, depending on how the cross GCC is installed,
+   and where are the libraries and headers.
 
 The TableGen options are required to compile it with the host compiler,
 so you'll need to compile LLVM (or at least ``llvm-tblgen``) to your host
-platform before you start. The CXX flags define the target, cpu (which
+platform before you start. The CXX flags define the target, cpu (which in this case
 defaults to ``fpu=VFP3`` with NEON), and forcing the hard-float ABI. If you're
-using Clang as a cross-compiler, you will *also* have to set ``-ccc-gcc-name``,
+using Clang as a cross-compiler, you will *also* have to set ``--sysroot``
 to make sure it picks the correct linker.
 
+When using Clang, it's important that you choose the triple to be *identical*
+to the GCC triple and the sysroot. This will make it easier for Clang to
+find the correct tools and include headers. But that won't mean all headers and
+libraries will be found. You'll still need to use ``-I`` and ``-L`` to locate
+those extra ones, depending on your distribution.
+
 Most of the time, what you want is to have a native compiler to the
-platform itself, but not others. It might not even be feasible to
-produce x86 binaries from ARM targets, so there's no point in compiling
+platform itself, but not others. So there's rarely a point in compiling
 all back-ends. For that reason, you should also set the
-``TARGETS_TO_BUILD`` to only build the ARM back-end.
+``TARGETS_TO_BUILD`` to only build the back-end you're targeting to.
 
 You must set the ``CMAKE_INSTALL_PREFIX``, otherwise a ``ninja install``
 will copy ARM binaries to your root filesystem, which is not what you
@@ -83,14 +104,23 @@ running CMake:
    This is not a problem, since Clang/LLVM libraries are statically
    linked anyway, it shouldn't affect much.
 
-#. The ARM libraries won't be installed in your system, and possibly
-   not easily installable anyway, so you'll have to build/download
-   them separately. But the CMake prepare step, which checks for
+#. The ARM libraries won't be installed in your system.
+   But the CMake prepare step, which checks for
    dependencies, will check the *host* libraries, not the *target*
-   ones.
+   ones. Below there's a list of some dependencies, but your project could
+   have more, or this document could be outdated. You'll see the errors
+   while linking as an indication of that.
+
+   Debian based distros have a way to add ``multiarch``, which adds
+   a new architecture and allows you to install packages for those
+   systems. See https://wiki.debian.org/Multiarch/HOWTO for more info.
+
+   But not all distros will have that, and possibly not an easy way to
+   install them in any anyway, so you'll have to build/download
+   them separately.
 
    A quick way of getting the libraries is to download them from
-   a distribution repository, like Debian (http://packages.debian.org/wheezy/),
+   a distribution repository, like Debian (http://packages.debian.org/jessie/),
    and download the missing libraries. Note that the ``libXXX``
    will have the shared objects (``.so``) and the ``libXXX-dev`` will
    give you the headers and the static (``.a``) library. Just in

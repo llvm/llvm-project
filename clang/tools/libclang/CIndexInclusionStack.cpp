@@ -17,8 +17,6 @@
 #include "CXTranslationUnit.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
 static void getInclusions(const SrcMgr::SLocEntry &(SourceManager::*Getter)(unsigned, bool*) const, unsigned n,

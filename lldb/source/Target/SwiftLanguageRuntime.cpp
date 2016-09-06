@@ -1694,6 +1694,8 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType (ValueObject &in_value,
                             // --------------
                             // Metadata
                             // WitnessTable
+                            // hashable Metadata
+                            // hashable WitnessTable
                             // --------------
                             // tail allocated actual object data *
                             // }
@@ -1720,7 +1722,7 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ErrorType (ValueObject &in_value,
             MetadataPromiseSP promise_sp(GetMetadataPromise(error_descriptor.m_bridgeable_native.metadata_ptr_value,swift_ast_ctx));
             if (!promise_sp)
                 return false;
-            error_descriptor.m_bridgeable_native.metadata_location += 2*ptr_size;
+            error_descriptor.m_bridgeable_native.metadata_location += 4*ptr_size;
             if (!promise_sp->IsStaticallyDetermined())
             {
                 // figure out the actual dynamic type via the metadata at the "isa" pointer
@@ -3404,8 +3406,12 @@ SwiftLanguageRuntime::MaskMaybeBridgedPointer (lldb::addr_t addr,
     bool is_intel = false;
     bool is_32 = false;
     bool is_64 = false;
-    if (core_kind >= ArchSpec::Core::kCore_arm_first &&
-        core_kind <= ArchSpec::Core::kCore_arm_last)
+    if (core_kind == ArchSpec::Core::eCore_arm_arm64)
+    {
+        is_arm = is_64 = true;
+    }
+    else if (core_kind >= ArchSpec::Core::kCore_arm_first &&
+             core_kind <= ArchSpec::Core::kCore_arm_last)
     {
         is_arm = true;
     }
@@ -3475,7 +3481,11 @@ SwiftLanguageRuntime::MaybeMaskNonTrivialReferencePointer (lldb::addr_t addr)
     bool is_intel = false;
     bool is_32 = false;
     bool is_64 = false;
-    if (core_kind >= ArchSpec::Core::kCore_arm_first &&
+    if (core_kind == ArchSpec::Core::eCore_arm_arm64)
+    {
+        is_arm = is_64 = true;
+    }
+    else if (core_kind >= ArchSpec::Core::kCore_arm_first &&
         core_kind <= ArchSpec::Core::kCore_arm_last)
     {
         is_arm = true;

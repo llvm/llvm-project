@@ -25,13 +25,13 @@ entry:
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!28}
 
-!0 = distinct !DISubprogram(name: "foo", line: 9, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: true, scopeLine: 9, file: !27, scope: !1, type: !3, variables: !24)
+!0 = distinct !DISubprogram(name: "foo", line: 9, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !2, scopeLine: 9, file: !27, scope: !1, type: !3, variables: !24)
 !1 = !DIFile(filename: "bar.c", directory: "/tmp/")
-!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 0, file: !27, enums: !20, retainedTypes: !20, subprograms: !25, globals: !26, imports:  !20)
+!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !27, enums: !20, retainedTypes: !20, globals: !26, imports:  !20)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5, !5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!6 = distinct !DISubprogram(name: "bar", linkageName: "bar", line: 14, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, file: !27, scope: !1, type: !7)
+!6 = distinct !DISubprogram(name: "bar", linkageName: "bar", line: 14, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: true, unit: !2, file: !27, scope: !1, type: !7)
 !7 = !DISubroutineType(types: !8)
 !8 = !{!5}
 !9 = !DILocalVariable(name: "j", line: 9, arg: 1, scope: !0, file: !1, type: !5)
@@ -54,7 +54,6 @@ entry:
 !22 = !DILocation(line: 11, scope: !11, inlinedAt: !17)
 !23 = !DILocation(line: 16, scope: !18)
 !24 = !{!9, !10}
-!25 = !{!0, !6}
 !26 = !{!16}
 !27 = !DIFile(filename: "bar.c", directory: "/tmp/")
 !28 = !{i32 1, !"Debug Info Version", i32 3}

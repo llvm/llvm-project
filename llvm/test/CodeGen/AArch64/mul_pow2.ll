@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=aarch64 | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-eabi | FileCheck %s
 
 ; Convert mul x, pow2 to shift.
 ; Convert mul x, pow2 +/- 1 to shift + add/sub.

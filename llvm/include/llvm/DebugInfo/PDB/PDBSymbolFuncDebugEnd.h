@@ -17,6 +17,8 @@ namespace llvm {
 
 class raw_ostream;
 
+namespace pdb {
+
 class PDBSymbolFuncDebugEnd : public PDBSymbol {
 public:
   PDBSymbolFuncDebugEnd(const IPDBSession &PDBSession,
@@ -40,10 +42,10 @@ public:
   FORWARD_SYMBOL_METHOD(getOffset)
   FORWARD_SYMBOL_METHOD(hasOptimizedCodeDebugInfo)
   FORWARD_SYMBOL_METHOD(getRelativeVirtualAddress)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
   FORWARD_SYMBOL_METHOD(getVirtualAddress)
 };
 
 } // namespace llvm
+}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLFUNCDEBUGEND_H

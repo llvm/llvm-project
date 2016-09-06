@@ -236,7 +236,7 @@ static void PrintThread(const ReportThread *rt) {
     Printf(" '%s'", rt->name);
   char thrbuf[kThreadBufSize];
   Printf(" (tid=%zu, %s) created by %s",
-    rt->pid, rt->running ? "running" : "finished",
+    rt->os_id, rt->running ? "running" : "finished",
     thread_name(thrbuf, rt->parent_tid));
   if (rt->stack)
     Printf(" at:");
@@ -381,14 +381,39 @@ void PrintStack(const ReportStack *ent) {
 
 static void PrintMop(const ReportMop *mop, bool first) {
   Printf("\n");
-  Printf("%s by ",
+  Printf("%s at %p by ",
       (first ? (mop->write ? "Write" : "Read")
-             : (mop->write ? "Previous write" : "Previous read")));
+             : (mop->write ? "Previous write" : "Previous read")), mop->addr);
   if (mop->tid == kMainThreadId)
     Printf("main goroutine:\n");
   else
     Printf("goroutine %d:\n", mop->tid);
   PrintStack(mop->stack);
+}
+
+static void PrintLocation(const ReportLocation *loc) {
+  switch (loc->type) {
+  case ReportLocationHeap: {
+    Printf("\n");
+    Printf("Heap block of size %zu at %p allocated by ",
+        loc->heap_chunk_size, loc->heap_chunk_start);
+    if (loc->tid == kMainThreadId)
+      Printf("main goroutine:\n");
+    else
+      Printf("goroutine %d:\n", loc->tid);
+    PrintStack(loc->stack);
+    break;
+  }
+  case ReportLocationGlobal: {
+    Printf("\n");
+    Printf("Global var %s of size %zu at %p declared at %s:%zu\n",
+        loc->global.name, loc->global.size, loc->global.start,
+        loc->global.file, loc->global.line);
+    break;
+  }
+  default:
+    break;
+  }
 }
 
 static void PrintThread(const ReportThread *rt) {
@@ -406,6 +431,8 @@ void PrintReport(const ReportDesc *rep) {
     Printf("WARNING: DATA RACE");
     for (uptr i = 0; i < rep->mops.Size(); i++)
       PrintMop(rep->mops[i], i == 0);
+    for (uptr i = 0; i < rep->locs.Size(); i++)
+      PrintLocation(rep->locs[i]);
     for (uptr i = 0; i < rep->threads.Size(); i++)
       PrintThread(rep->threads[i]);
   } else if (rep->typ == ReportTypeDeadlock) {

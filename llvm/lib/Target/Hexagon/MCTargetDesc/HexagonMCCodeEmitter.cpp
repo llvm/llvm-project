@@ -88,6 +88,19 @@ void HexagonMCCodeEmitter::encodeInstruction(MCInst const &MI, raw_ostream &OS,
   return;
 }
 
+static bool RegisterMatches(unsigned Consumer, unsigned Producer,
+                            unsigned Producer2) {
+  if (Consumer == Producer)
+    return true;
+  if (Consumer == Producer2)
+    return true;
+  // Calculate if we're a single vector consumer referencing a double producer
+  if (Producer >= Hexagon::W0 && Producer <= Hexagon::W15)
+    if (Consumer >= Hexagon::V0 && Consumer <= Hexagon::V31)
+      return ((Consumer - Hexagon::V0) >> 1) == (Producer - Hexagon::W0);
+  return false;
+}
+
 /// EncodeSingleInstruction - Emit a single
 void HexagonMCCodeEmitter::EncodeSingleInstruction(
     const MCInst &MI, raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
@@ -125,8 +138,10 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
     MCOperand &MCO =
         HMB.getOperand(HexagonMCInstrInfo::getNewValueOp(MCII, HMB));
     unsigned SOffset = 0;
+    unsigned VOffset = 0;
     unsigned Register = MCO.getReg();
     unsigned Register1;
+    unsigned Register2;
     auto Instructions = HexagonMCInstrInfo::bundleInstructions(**CurrentBundle);
     auto i = Instructions.begin() + Index - 1;
     for (;; --i) {
@@ -135,11 +150,18 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
       if (HexagonMCInstrInfo::isImmext(Inst))
         continue;
       ++SOffset;
+      if (HexagonMCInstrInfo::isVector(MCII, Inst))
+        // Vector instructions don't count scalars
+        ++VOffset;
       Register1 =
           HexagonMCInstrInfo::hasNewValue(MCII, Inst)
               ? HexagonMCInstrInfo::getNewValueOperand(MCII, Inst).getReg()
               : static_cast<unsigned>(Hexagon::NoRegister);
-      if (Register != Register1)
+      Register2 =
+          HexagonMCInstrInfo::hasNewValue2(MCII, Inst)
+              ? HexagonMCInstrInfo::getNewValueOperand2(MCII, Inst).getReg()
+              : static_cast<unsigned>(Hexagon::NoRegister);
+      if (!RegisterMatches(Register, Register1, Register2))
         // This isn't the register we're looking for
         continue;
       if (!HexagonMCInstrInfo::isPredicated(MCII, Inst))
@@ -153,8 +175,11 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
         break;
     }
     // Hexagon PRM 10.11 Construct Nt from distance
-    unsigned Offset = SOffset;
+    unsigned Offset =
+        HexagonMCInstrInfo::isVector(MCII, HMB) ? VOffset : SOffset;
     Offset <<= 1;
+    Offset |=
+        HexagonMCInstrInfo::SubregisterBit(Register, Register1, Register2);
     MCO.setReg(Offset + Hexagon::R0);
   }
 
@@ -165,7 +190,6 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
       ((HMB.getOpcode() != DuplexIClass0) && (HMB.getOpcode() != A4_ext) &&
        (HMB.getOpcode() != A4_ext_b) && (HMB.getOpcode() != A4_ext_c) &&
        (HMB.getOpcode() != A4_ext_g))) {
-    // Use a A2_nop for unimplemented instructions.
     DEBUG(dbgs() << "Unimplemented inst: "
                     " `" << HexagonMCInstrInfo::getName(MCII, HMB) << "'"
                                                                       "\n");
@@ -251,7 +275,23 @@ void HexagonMCCodeEmitter::EncodeSingleInstruction(
   ++MCNumEmitted;
 }
 
-static Hexagon::Fixups getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
+namespace {
+void raise_relocation_error(unsigned bits, unsigned kind) {
+  std::string Text;
+  {
+    llvm::raw_string_ostream Stream(Text);
+    Stream << "Unrecognized relocation combination bits: " << bits
+           << " kind: " << kind;
+  }
+  report_fatal_error(Text);
+}
+}
+
+/// getFixupNoBits - Some insns are not extended and thus have no
+/// bits.  These cases require a more brute force method for determining
+/// the correct relocation.
+namespace {
+Hexagon::Fixups getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
                                       const MCOperand &MO,
                                       const MCSymbolRefExpr::VariantKind kind) {
   const MCInstrDesc &MCID = HexagonMCInstrInfo::getDesc(MCII, MI);
@@ -259,83 +299,90 @@ static Hexagon::Fixups getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
 
   if (insnType == HexagonII::TypePREFIX) {
     switch (kind) {
-    case llvm::MCSymbolRefExpr::VK_GOTOFF:
+    case MCSymbolRefExpr::VK_GOTREL:
       return Hexagon::fixup_Hexagon_GOTREL_32_6_X;
-    case llvm::MCSymbolRefExpr::VK_GOT:
+    case MCSymbolRefExpr::VK_GOT:
       return Hexagon::fixup_Hexagon_GOT_32_6_X;
-    case llvm::MCSymbolRefExpr::VK_TPREL:
+    case MCSymbolRefExpr::VK_TPREL:
       return Hexagon::fixup_Hexagon_TPREL_32_6_X;
-    case llvm::MCSymbolRefExpr::VK_DTPREL:
+    case MCSymbolRefExpr::VK_DTPREL:
       return Hexagon::fixup_Hexagon_DTPREL_32_6_X;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_GD_GOT:
+    case MCSymbolRefExpr::VK_Hexagon_GD_GOT:
       return Hexagon::fixup_Hexagon_GD_GOT_32_6_X;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_LD_GOT:
+    case MCSymbolRefExpr::VK_Hexagon_LD_GOT:
       return Hexagon::fixup_Hexagon_LD_GOT_32_6_X;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_IE:
+    case MCSymbolRefExpr::VK_Hexagon_IE:
       return Hexagon::fixup_Hexagon_IE_32_6_X;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_IE_GOT:
+    case MCSymbolRefExpr::VK_Hexagon_IE_GOT:
       return Hexagon::fixup_Hexagon_IE_GOT_32_6_X;
-    default:
+    case MCSymbolRefExpr::VK_Hexagon_PCREL:
+    case MCSymbolRefExpr::VK_None:
       if (MCID.isBranch())
         return Hexagon::fixup_Hexagon_B32_PCREL_X;
       else
         return Hexagon::fixup_Hexagon_32_6_X;
+    default:
+      raise_relocation_error(0, kind);
     }
   } else if (MCID.isBranch())
-    return (Hexagon::fixup_Hexagon_B13_PCREL);
+    return Hexagon::fixup_Hexagon_B13_PCREL;
 
   switch (MCID.getOpcode()) {
   case Hexagon::HI:
   case Hexagon::A2_tfrih:
     switch (kind) {
-    case llvm::MCSymbolRefExpr::VK_GOT:
+    case MCSymbolRefExpr::VK_GOT:
       return Hexagon::fixup_Hexagon_GOT_HI16;
-    case llvm::MCSymbolRefExpr::VK_GOTOFF:
+    case MCSymbolRefExpr::VK_GOTREL:
       return Hexagon::fixup_Hexagon_GOTREL_HI16;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_GD_GOT:
+    case MCSymbolRefExpr::VK_Hexagon_GD_GOT:
       return Hexagon::fixup_Hexagon_GD_GOT_HI16;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_LD_GOT:
+    case MCSymbolRefExpr::VK_Hexagon_LD_GOT:
       return Hexagon::fixup_Hexagon_LD_GOT_HI16;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_IE:
+    case MCSymbolRefExpr::VK_Hexagon_IE:
       return Hexagon::fixup_Hexagon_IE_HI16;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_IE_GOT:
+    case MCSymbolRefExpr::VK_Hexagon_IE_GOT:
       return Hexagon::fixup_Hexagon_IE_GOT_HI16;
-    case llvm::MCSymbolRefExpr::VK_TPREL:
+    case MCSymbolRefExpr::VK_TPREL:
       return Hexagon::fixup_Hexagon_TPREL_HI16;
-    case llvm::MCSymbolRefExpr::VK_DTPREL:
+    case MCSymbolRefExpr::VK_DTPREL:
       return Hexagon::fixup_Hexagon_DTPREL_HI16;
-    default:
+    case MCSymbolRefExpr::VK_None:
       return Hexagon::fixup_Hexagon_HI16;
+    default:
+      raise_relocation_error(0, kind);
     }
 
   case Hexagon::LO:
   case Hexagon::A2_tfril:
     switch (kind) {
-    case llvm::MCSymbolRefExpr::VK_GOT:
+    case MCSymbolRefExpr::VK_GOT:
       return Hexagon::fixup_Hexagon_GOT_LO16;
-    case llvm::MCSymbolRefExpr::VK_GOTOFF:
+    case MCSymbolRefExpr::VK_GOTREL:
       return Hexagon::fixup_Hexagon_GOTREL_LO16;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_GD_GOT:
+    case MCSymbolRefExpr::VK_Hexagon_GD_GOT:
       return Hexagon::fixup_Hexagon_GD_GOT_LO16;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_LD_GOT:
+    case MCSymbolRefExpr::VK_Hexagon_LD_GOT:
       return Hexagon::fixup_Hexagon_LD_GOT_LO16;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_IE:
+    case MCSymbolRefExpr::VK_Hexagon_IE:
       return Hexagon::fixup_Hexagon_IE_LO16;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_IE_GOT:
+    case MCSymbolRefExpr::VK_Hexagon_IE_GOT:
       return Hexagon::fixup_Hexagon_IE_GOT_LO16;
-    case llvm::MCSymbolRefExpr::VK_TPREL:
+    case MCSymbolRefExpr::VK_TPREL:
       return Hexagon::fixup_Hexagon_TPREL_LO16;
-    case llvm::MCSymbolRefExpr::VK_DTPREL:
+    case MCSymbolRefExpr::VK_DTPREL:
       return Hexagon::fixup_Hexagon_DTPREL_LO16;
-    default:
+    case MCSymbolRefExpr::VK_None:
       return Hexagon::fixup_Hexagon_LO16;
+    default:
+      raise_relocation_error(0, kind);
     }
 
   // The only relocs left should be GP relative:
   default:
     if (MCID.mayStore() || MCID.mayLoad()) {
-      for (const MCPhysReg *ImpUses = MCID.getImplicitUses();
-           ImpUses && *ImpUses; ++ImpUses) {
+      for (const MCPhysReg *ImpUses = MCID.getImplicitUses(); *ImpUses;
+           ++ImpUses) {
         if (*ImpUses != Hexagon::GP)
           continue;
         switch (HexagonMCInstrInfo::getAccessSize(MCII, MI)) {
@@ -348,14 +395,14 @@ static Hexagon::Fixups getFixupNoBits(MCInstrInfo const &MCII, const MCInst &MI,
         case HexagonII::MemAccessSize::DoubleWordAccess:
           return fixup_Hexagon_GPREL16_3;
         default:
-          llvm_unreachable("unhandled fixup");
+          raise_relocation_error(0, kind);
         }
       }
-    } else
-      llvm_unreachable("unhandled fixup");
+    }
+    raise_relocation_error(0, kind);
   }
-
-  return LastTargetFixupKind;
+  llvm_unreachable("Relocation exit not taken");
+}
 }
 
 namespace llvm {
@@ -395,23 +442,18 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
                                               const MCSubtargetInfo &STI) const
 
 {
-  int64_t Res;
-
-  if (ME->evaluateAsAbsolute(Res))
-    return Res;
-
-  MCExpr::ExprKind MK = ME->getKind();
-  if (MK == MCExpr::Constant) {
-    return cast<MCConstantExpr>(ME)->getValue();
-  }
-  if (MK == MCExpr::Binary) {
-    getExprOpValue(MI, MO, cast<MCBinaryExpr>(ME)->getLHS(), Fixups, STI);
-    getExprOpValue(MI, MO, cast<MCBinaryExpr>(ME)->getRHS(), Fixups, STI);
+  if (isa<HexagonMCExpr>(ME))
+    ME = &HexagonMCInstrInfo::getExpr(*ME);
+  int64_t Value;
+  if (ME->evaluateAsAbsolute(Value))
+    return Value;
+  assert(ME->getKind() == MCExpr::SymbolRef || ME->getKind() == MCExpr::Binary);
+  if (ME->getKind() == MCExpr::Binary) {
+    MCBinaryExpr const *Binary = cast<MCBinaryExpr>(ME);
+    getExprOpValue(MI, MO, Binary->getLHS(), Fixups, STI);
+    getExprOpValue(MI, MO, Binary->getRHS(), Fixups, STI);
     return 0;
   }
-
-  assert(MK == MCExpr::SymbolRef);
-
   Hexagon::Fixups FixupKind =
       Hexagon::Fixups(Hexagon::fixup_Hexagon_TPREL_LO16);
   const MCSymbolRefExpr *MCSRE = static_cast<const MCSymbolRefExpr *>(ME);
@@ -430,275 +472,302 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
 
   switch (bits) {
   default:
-    DEBUG(dbgs() << "unrecognized bit count of " << bits << '\n');
-    break;
-
+    raise_relocation_error(bits, kind);
   case 32:
     switch (kind) {
-    case llvm::MCSymbolRefExpr::VK_Hexagon_PCREL:
-      FixupKind = Hexagon::fixup_Hexagon_32_PCREL;
-      break;
-    case llvm::MCSymbolRefExpr::VK_GOT:
-      FixupKind = *Extended ? Hexagon::fixup_Hexagon_GOT_32_6_X
-                            : Hexagon::fixup_Hexagon_GOT_32;
-      break;
-    case llvm::MCSymbolRefExpr::VK_GOTOFF:
-      FixupKind = *Extended ? Hexagon::fixup_Hexagon_GOTREL_32_6_X
-                            : Hexagon::fixup_Hexagon_GOTREL_32;
-      break;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_GD_GOT:
-      FixupKind = *Extended ? Hexagon::fixup_Hexagon_GD_GOT_32_6_X
-                            : Hexagon::fixup_Hexagon_GD_GOT_32;
-      break;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_LD_GOT:
-      FixupKind = *Extended ? Hexagon::fixup_Hexagon_LD_GOT_32_6_X
-                            : Hexagon::fixup_Hexagon_LD_GOT_32;
-      break;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_IE:
-      FixupKind = *Extended ? Hexagon::fixup_Hexagon_IE_32_6_X
-                            : Hexagon::fixup_Hexagon_IE_32;
-      break;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_IE_GOT:
-      FixupKind = *Extended ? Hexagon::fixup_Hexagon_IE_GOT_32_6_X
-                            : Hexagon::fixup_Hexagon_IE_GOT_32;
-      break;
-    case llvm::MCSymbolRefExpr::VK_TPREL:
-      FixupKind = *Extended ? Hexagon::fixup_Hexagon_TPREL_32_6_X
-                            : Hexagon::fixup_Hexagon_TPREL_32;
-      break;
-    case llvm::MCSymbolRefExpr::VK_DTPREL:
+    case MCSymbolRefExpr::VK_DTPREL:
       FixupKind = *Extended ? Hexagon::fixup_Hexagon_DTPREL_32_6_X
                             : Hexagon::fixup_Hexagon_DTPREL_32;
       break;
-    default:
+    case MCSymbolRefExpr::VK_GOT:
+      FixupKind = *Extended ? Hexagon::fixup_Hexagon_GOT_32_6_X
+                            : Hexagon::fixup_Hexagon_GOT_32;
+      break;
+    case MCSymbolRefExpr::VK_GOTREL:
+      FixupKind = *Extended ? Hexagon::fixup_Hexagon_GOTREL_32_6_X
+                            : Hexagon::fixup_Hexagon_GOTREL_32;
+      break;
+    case MCSymbolRefExpr::VK_Hexagon_GD_GOT:
+      FixupKind = *Extended ? Hexagon::fixup_Hexagon_GD_GOT_32_6_X
+                            : Hexagon::fixup_Hexagon_GD_GOT_32;
+      break;
+    case MCSymbolRefExpr::VK_Hexagon_IE:
+      FixupKind = *Extended ? Hexagon::fixup_Hexagon_IE_32_6_X
+                            : Hexagon::fixup_Hexagon_IE_32;
+      break;
+    case MCSymbolRefExpr::VK_Hexagon_IE_GOT:
+      FixupKind = *Extended ? Hexagon::fixup_Hexagon_IE_GOT_32_6_X
+                            : Hexagon::fixup_Hexagon_IE_GOT_32;
+      break;
+    case MCSymbolRefExpr::VK_Hexagon_LD_GOT:
+      FixupKind = *Extended ? Hexagon::fixup_Hexagon_LD_GOT_32_6_X
+                            : Hexagon::fixup_Hexagon_LD_GOT_32;
+      break;
+    case MCSymbolRefExpr::VK_Hexagon_PCREL:
+      FixupKind = Hexagon::fixup_Hexagon_32_PCREL;
+      break;
+    case MCSymbolRefExpr::VK_None:
       FixupKind =
           *Extended ? Hexagon::fixup_Hexagon_32_6_X : Hexagon::fixup_Hexagon_32;
       break;
+    case MCSymbolRefExpr::VK_TPREL:
+      FixupKind = *Extended ? Hexagon::fixup_Hexagon_TPREL_32_6_X
+                            : Hexagon::fixup_Hexagon_TPREL_32;
+      break;
+    default:
+      raise_relocation_error(bits, kind);
     }
     break;
 
   case 22:
     switch (kind) {
-    case llvm::MCSymbolRefExpr::VK_Hexagon_GD_PLT:
+    case MCSymbolRefExpr::VK_Hexagon_GD_PLT:
       FixupKind = Hexagon::fixup_Hexagon_GD_PLT_B22_PCREL;
       break;
-    case llvm::MCSymbolRefExpr::VK_Hexagon_LD_PLT:
+    case MCSymbolRefExpr::VK_Hexagon_LD_PLT:
       FixupKind = Hexagon::fixup_Hexagon_LD_PLT_B22_PCREL;
       break;
-    default:
-      if (MCID.isBranch() || MCID.isCall()) {
-        FixupKind = *Extended ? Hexagon::fixup_Hexagon_B22_PCREL_X
-                              : Hexagon::fixup_Hexagon_B22_PCREL;
-      } else {
-        errs() << "unrecognized relocation, bits: " << bits << "\n";
-        errs() << "name = " << HexagonMCInstrInfo::getName(MCII, MI) << "\n";
-      }
+    case MCSymbolRefExpr::VK_None:
+      FixupKind = *Extended ? Hexagon::fixup_Hexagon_B22_PCREL_X
+                            : Hexagon::fixup_Hexagon_B22_PCREL;
       break;
+    case MCSymbolRefExpr::VK_PLT:
+      FixupKind = Hexagon::fixup_Hexagon_PLT_B22_PCREL;
+      break;
+    default:
+      raise_relocation_error(bits, kind);
     }
     break;
 
   case 16:
     if (*Extended) {
       switch (kind) {
-      default:
-        FixupKind = Hexagon::fixup_Hexagon_16_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_GOT:
-        FixupKind = Hexagon::fixup_Hexagon_GOT_16_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_GOTOFF:
-        FixupKind = Hexagon::fixup_Hexagon_GOTREL_16_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_GD_GOT:
-        FixupKind = Hexagon::fixup_Hexagon_GD_GOT_16_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_LD_GOT:
-        FixupKind = Hexagon::fixup_Hexagon_LD_GOT_16_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_IE:
-        FixupKind = Hexagon::fixup_Hexagon_IE_16_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_IE_GOT:
-        FixupKind = Hexagon::fixup_Hexagon_IE_GOT_16_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_TPREL:
-        FixupKind = Hexagon::fixup_Hexagon_TPREL_16_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         FixupKind = Hexagon::fixup_Hexagon_DTPREL_16_X;
         break;
+      case MCSymbolRefExpr::VK_GOT:
+        FixupKind = Hexagon::fixup_Hexagon_GOT_16_X;
+        break;
+      case MCSymbolRefExpr::VK_GOTREL:
+        FixupKind = Hexagon::fixup_Hexagon_GOTREL_16_X;
+        break;
+      case MCSymbolRefExpr::VK_Hexagon_GD_GOT:
+        FixupKind = Hexagon::fixup_Hexagon_GD_GOT_16_X;
+        break;
+      case MCSymbolRefExpr::VK_Hexagon_IE:
+        FixupKind = Hexagon::fixup_Hexagon_IE_16_X;
+        break;
+      case MCSymbolRefExpr::VK_Hexagon_IE_GOT:
+        FixupKind = Hexagon::fixup_Hexagon_IE_GOT_16_X;
+        break;
+      case MCSymbolRefExpr::VK_Hexagon_LD_GOT:
+        FixupKind = Hexagon::fixup_Hexagon_LD_GOT_16_X;
+        break;
+      case MCSymbolRefExpr::VK_None:
+        FixupKind = Hexagon::fixup_Hexagon_16_X;
+        break;
+      case MCSymbolRefExpr::VK_TPREL:
+        FixupKind = Hexagon::fixup_Hexagon_TPREL_16_X;
+        break;
+      default:
+        raise_relocation_error(bits, kind);
       }
     } else
       switch (kind) {
-      default:
-        errs() << "unrecognized relocation, bits " << bits << "\n";
-        errs() << "name = " << HexagonMCInstrInfo::getName(MCII, MI) << "\n";
+      case MCSymbolRefExpr::VK_None: {
+        if (HexagonMCInstrInfo::s23_2_reloc(*MO.getExpr()))
+          FixupKind = Hexagon::fixup_Hexagon_23_REG;
+        else
+          raise_relocation_error(bits, kind);
         break;
-      case llvm::MCSymbolRefExpr::VK_GOTOFF:
-        if ((MCID.getOpcode() == Hexagon::HI) ||
-            (MCID.getOpcode() == Hexagon::LO_H))
+      }
+      case MCSymbolRefExpr::VK_DTPREL:
+        FixupKind = Hexagon::fixup_Hexagon_DTPREL_16;
+        break;
+      case MCSymbolRefExpr::VK_GOTREL:
+        if (MCID.getOpcode() == Hexagon::HI)
           FixupKind = Hexagon::fixup_Hexagon_GOTREL_HI16;
         else
           FixupKind = Hexagon::fixup_Hexagon_GOTREL_LO16;
         break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_GPREL:
-        FixupKind = Hexagon::fixup_Hexagon_GPREL16_0;
-        break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_LO16:
-        FixupKind = Hexagon::fixup_Hexagon_LO16;
-        break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_HI16:
-        FixupKind = Hexagon::fixup_Hexagon_HI16;
-        break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_GD_GOT:
+      case MCSymbolRefExpr::VK_Hexagon_GD_GOT:
         FixupKind = Hexagon::fixup_Hexagon_GD_GOT_16;
         break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_LD_GOT:
-        FixupKind = Hexagon::fixup_Hexagon_LD_GOT_16;
+      case MCSymbolRefExpr::VK_Hexagon_GPREL:
+        FixupKind = Hexagon::fixup_Hexagon_GPREL16_0;
         break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_IE_GOT:
+      case MCSymbolRefExpr::VK_Hexagon_HI16:
+        FixupKind = Hexagon::fixup_Hexagon_HI16;
+        break;
+      case MCSymbolRefExpr::VK_Hexagon_IE_GOT:
         FixupKind = Hexagon::fixup_Hexagon_IE_GOT_16;
         break;
-      case llvm::MCSymbolRefExpr::VK_TPREL:
+      case MCSymbolRefExpr::VK_Hexagon_LD_GOT:
+        FixupKind = Hexagon::fixup_Hexagon_LD_GOT_16;
+        break;
+      case MCSymbolRefExpr::VK_Hexagon_LO16:
+        FixupKind = Hexagon::fixup_Hexagon_LO16;
+        break;
+      case MCSymbolRefExpr::VK_TPREL:
         FixupKind = Hexagon::fixup_Hexagon_TPREL_16;
         break;
-      case llvm::MCSymbolRefExpr::VK_DTPREL:
-        FixupKind = Hexagon::fixup_Hexagon_DTPREL_16;
-        break;
+      default:
+        raise_relocation_error(bits, kind);
       }
     break;
 
   case 15:
-    if (MCID.isBranch() || MCID.isCall())
+    switch (kind) {
+    case MCSymbolRefExpr::VK_None:
       FixupKind = *Extended ? Hexagon::fixup_Hexagon_B15_PCREL_X
                             : Hexagon::fixup_Hexagon_B15_PCREL;
+      break;
+    default:
+      raise_relocation_error(bits, kind);
+    }
     break;
 
   case 13:
-    if (MCID.isBranch())
+    switch (kind) {
+    case MCSymbolRefExpr::VK_None:
       FixupKind = Hexagon::fixup_Hexagon_B13_PCREL;
-    else {
-      errs() << "unrecognized relocation, bits " << bits << "\n";
-      errs() << "name = " << HexagonMCInstrInfo::getName(MCII, MI) << "\n";
+      break;
+    default:
+      raise_relocation_error(bits, kind);
     }
     break;
 
   case 12:
     if (*Extended)
       switch (kind) {
-      default:
-        FixupKind = Hexagon::fixup_Hexagon_12_X;
-        break;
       // There isn't a GOT_12_X, both 11_X and 16_X resolve to 6/26
-      case llvm::MCSymbolRefExpr::VK_GOT:
+      case MCSymbolRefExpr::VK_GOT:
         FixupKind = Hexagon::fixup_Hexagon_GOT_16_X;
         break;
-      case llvm::MCSymbolRefExpr::VK_GOTOFF:
+      case MCSymbolRefExpr::VK_GOTREL:
         FixupKind = Hexagon::fixup_Hexagon_GOTREL_16_X;
         break;
+      case MCSymbolRefExpr::VK_None:
+        FixupKind = Hexagon::fixup_Hexagon_12_X;
+        break;
+      default:
+        raise_relocation_error(bits, kind);
       }
-    else {
-      errs() << "unrecognized relocation, bits " << bits << "\n";
-      errs() << "name = " << HexagonMCInstrInfo::getName(MCII, MI) << "\n";
-    }
+    else
+      raise_relocation_error(bits, kind);
     break;
 
   case 11:
     if (*Extended)
       switch (kind) {
-      default:
-        FixupKind = Hexagon::fixup_Hexagon_11_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_GOT:
-        FixupKind = Hexagon::fixup_Hexagon_GOT_11_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_GOTOFF:
-        FixupKind = Hexagon::fixup_Hexagon_GOTREL_11_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_GD_GOT:
-        FixupKind = Hexagon::fixup_Hexagon_GD_GOT_11_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_LD_GOT:
-        FixupKind = Hexagon::fixup_Hexagon_LD_GOT_11_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_IE_GOT:
-        FixupKind = Hexagon::fixup_Hexagon_IE_GOT_11_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_TPREL:
-        FixupKind = Hexagon::fixup_Hexagon_TPREL_11_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         FixupKind = Hexagon::fixup_Hexagon_DTPREL_11_X;
         break;
+      case MCSymbolRefExpr::VK_GOT:
+        FixupKind = Hexagon::fixup_Hexagon_GOT_11_X;
+        break;
+      case MCSymbolRefExpr::VK_GOTREL:
+        FixupKind = Hexagon::fixup_Hexagon_GOTREL_11_X;
+        break;
+      case MCSymbolRefExpr::VK_Hexagon_GD_GOT:
+        FixupKind = Hexagon::fixup_Hexagon_GD_GOT_11_X;
+        break;
+      case MCSymbolRefExpr::VK_Hexagon_IE_GOT:
+        FixupKind = Hexagon::fixup_Hexagon_IE_GOT_11_X;
+        break;
+      case MCSymbolRefExpr::VK_Hexagon_LD_GOT:
+        FixupKind = Hexagon::fixup_Hexagon_LD_GOT_11_X;
+        break;
+      case MCSymbolRefExpr::VK_None:
+        FixupKind = Hexagon::fixup_Hexagon_11_X;
+        break;
+      case MCSymbolRefExpr::VK_TPREL:
+        FixupKind = Hexagon::fixup_Hexagon_TPREL_11_X;
+        break;
+      default:
+        raise_relocation_error(bits, kind);
       }
     else {
-      errs() << "unrecognized relocation, bits " << bits << "\n";
-      errs() << "name = " << HexagonMCInstrInfo::getName(MCII, MI) << "\n";
+      switch (kind) {
+      case MCSymbolRefExpr::VK_TPREL:
+        FixupKind = Hexagon::fixup_Hexagon_TPREL_11_X;
+        break;
+      default:
+        raise_relocation_error(bits, kind);
+      }
     }
     break;
 
   case 10:
-    if (*Extended)
-      FixupKind = Hexagon::fixup_Hexagon_10_X;
+    if (*Extended) {
+      switch (kind) {
+      case MCSymbolRefExpr::VK_None:
+        FixupKind = Hexagon::fixup_Hexagon_10_X;
+        break;
+      default:
+        raise_relocation_error(bits, kind);
+      }
+    } else
+      raise_relocation_error(bits, kind);
     break;
 
   case 9:
     if (MCID.isBranch() ||
-        (llvm::HexagonMCInstrInfo::getType(MCII, MI) == HexagonII::TypeCR))
+        (HexagonMCInstrInfo::getType(MCII, MI) == HexagonII::TypeCR))
       FixupKind = *Extended ? Hexagon::fixup_Hexagon_B9_PCREL_X
                             : Hexagon::fixup_Hexagon_B9_PCREL;
     else if (*Extended)
       FixupKind = Hexagon::fixup_Hexagon_9_X;
-    else {
-      errs() << "unrecognized relocation, bits " << bits << "\n";
-      errs() << "name = " << HexagonMCInstrInfo::getName(MCII, MI) << "\n";
-    }
+    else
+      raise_relocation_error(bits, kind);
     break;
 
   case 8:
     if (*Extended)
       FixupKind = Hexagon::fixup_Hexagon_8_X;
-    else {
-      errs() << "unrecognized relocation, bits " << bits << "\n";
-      errs() << "name = " << HexagonMCInstrInfo::getName(MCII, MI) << "\n";
-    }
+    else
+      raise_relocation_error(bits, kind);
     break;
 
   case 7:
     if (MCID.isBranch() ||
-        (llvm::HexagonMCInstrInfo::getType(MCII, MI) == HexagonII::TypeCR))
+        (HexagonMCInstrInfo::getType(MCII, MI) == HexagonII::TypeCR))
       FixupKind = *Extended ? Hexagon::fixup_Hexagon_B7_PCREL_X
                             : Hexagon::fixup_Hexagon_B7_PCREL;
     else if (*Extended)
       FixupKind = Hexagon::fixup_Hexagon_7_X;
-    else {
-      errs() << "unrecognized relocation, bits " << bits << "\n";
-      errs() << "name = " << HexagonMCInstrInfo::getName(MCII, MI) << "\n";
-    }
+    else
+      raise_relocation_error(bits, kind);
     break;
 
   case 6:
     if (*Extended) {
       switch (kind) {
-      default:
-        FixupKind = Hexagon::fixup_Hexagon_6_X;
-        break;
-      case llvm::MCSymbolRefExpr::VK_Hexagon_PCREL:
-        FixupKind = Hexagon::fixup_Hexagon_6_PCREL_X;
+      case MCSymbolRefExpr::VK_DTPREL:
+        FixupKind = Hexagon::fixup_Hexagon_DTPREL_16_X;
         break;
       // This is part of an extender, GOT_11 is a
       // Word32_U6 unsigned/truncated reloc.
-      case llvm::MCSymbolRefExpr::VK_GOT:
+      case MCSymbolRefExpr::VK_GOT:
         FixupKind = Hexagon::fixup_Hexagon_GOT_11_X;
         break;
-      case llvm::MCSymbolRefExpr::VK_GOTOFF:
+      case MCSymbolRefExpr::VK_GOTREL:
         FixupKind = Hexagon::fixup_Hexagon_GOTREL_11_X;
         break;
+      case MCSymbolRefExpr::VK_Hexagon_PCREL:
+        FixupKind = Hexagon::fixup_Hexagon_6_PCREL_X;
+        break;
+      case MCSymbolRefExpr::VK_TPREL:
+        FixupKind = Hexagon::fixup_Hexagon_TPREL_16_X;
+        break;
+      case MCSymbolRefExpr::VK_None:
+        FixupKind = Hexagon::fixup_Hexagon_6_X;
+        break;
+      default:
+        raise_relocation_error(bits, kind);
       }
-    } else {
-      errs() << "unrecognized relocation, bits " << bits << "\n";
-      errs() << "name = " << HexagonMCInstrInfo::getName(MCII, MI) << "\n";
-    }
+    } else
+      raise_relocation_error(bits, kind);
     break;
 
   case 0:
@@ -706,29 +775,39 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
     break;
   }
 
-  MCExpr const *FixupExpression = (*Addend > 0 && isPCRel(FixupKind)) ?
-    MCBinaryExpr::createAdd(MO.getExpr(),
-                            MCConstantExpr::create(*Addend, MCT), MCT) :
-    MO.getExpr();
+  MCExpr const *FixupExpression =
+      (*Addend > 0 && isPCRel(FixupKind))
+          ? MCBinaryExpr::createAdd(MO.getExpr(),
+                                    MCConstantExpr::create(*Addend, MCT), MCT)
+          : MO.getExpr();
 
-  MCFixup fixup = MCFixup::create(*Addend, FixupExpression, 
+  MCFixup fixup = MCFixup::create(*Addend, FixupExpression,
                                   MCFixupKind(FixupKind), MI.getLoc());
   Fixups.push_back(fixup);
   // All of the information is in the fixup.
-  return (0);
+  return 0;
 }
 
 unsigned
 HexagonMCCodeEmitter::getMachineOpValue(MCInst const &MI, MCOperand const &MO,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         MCSubtargetInfo const &STI) const {
-  if (MO.isReg())
-    return MCT.getRegisterInfo()->getEncodingValue(MO.getReg());
-  if (MO.isImm())
-    return static_cast<unsigned>(MO.getImm());
+  assert(!MO.isImm());
+  if (MO.isReg()) {
+    unsigned Reg = MO.getReg();
+    if (HexagonMCInstrInfo::isSubInstruction(MI))
+      return HexagonMCInstrInfo::getDuplexRegisterNumbering(Reg);
+    switch(MI.getOpcode()){
+    case Hexagon::A2_tfrrcr:
+    case Hexagon::A2_tfrcrr:
+      if(Reg == Hexagon::M0)
+        Reg = Hexagon::C6;
+      if(Reg == Hexagon::M1)
+        Reg = Hexagon::C7;
+    }
+    return MCT.getRegisterInfo()->getEncodingValue(Reg);
+  }
 
-  // MO must be an ME.
-  assert(MO.isExpr());
   return getExprOpValue(MI, MO, MO.getExpr(), Fixups, STI);
 }
 

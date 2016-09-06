@@ -50,7 +50,7 @@ static void EmitCamlGlobal(const Module &M, AsmPrinter &AP, const char *Id) {
   std::string SymName;
   SymName += "caml";
   size_t Letter = SymName.size();
-  SymName.append(MId.begin(), std::find(MId.begin(), MId.end(), '.'));
+  SymName.append(MId.begin(), find(MId, '.'));
   SymName += "__";
   SymName += Id;
 

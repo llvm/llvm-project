@@ -1,17 +1,17 @@
-; RUN: llc -march=mipsel   -mcpu=mips32              < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS32 -check-prefix=MIPS32-EL %s
-; RUN: llc -march=mips     -mcpu=mips32              < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS32 -check-prefix=MIPS32-EB %s
-; RUN: llc -march=mipsel   -mcpu=mips32r2            < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS32 -check-prefix=MIPS32-EL %s
-; RUN: llc -march=mips     -mcpu=mips32r2            < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS32 -check-prefix=MIPS32-EB %s
-; RUN: llc -march=mipsel   -mcpu=mips32r6            < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS32R6 -check-prefix=MIPS32R6-EL %s
-; RUN: llc -march=mips     -mcpu=mips32r6            < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS32R6 -check-prefix=MIPS32R6-EB %s
-; RUN: llc -march=mips64el -mcpu=mips4    -target-abi=n64 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64 -check-prefix=MIPS64-EL %s
-; RUN: llc -march=mips64   -mcpu=mips4    -target-abi=n64 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64 -check-prefix=MIPS64-EB %s
-; RUN: llc -march=mips64el -mcpu=mips64   -target-abi=n64 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64 -check-prefix=MIPS64-EL %s
-; RUN: llc -march=mips64   -mcpu=mips64   -target-abi=n64 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64 -check-prefix=MIPS64-EB %s
-; RUN: llc -march=mips64el -mcpu=mips64r2 -target-abi=n64 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64 -check-prefix=MIPS64-EL %s
-; RUN: llc -march=mips64   -mcpu=mips64r2 -target-abi=n64 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64 -check-prefix=MIPS64-EB %s
-; RUN: llc -march=mips64el -mcpu=mips64r6 -target-abi=n64 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64R6 -check-prefix=MIPS64R6-EL %s
-; RUN: llc -march=mips64   -mcpu=mips64r6 -target-abi=n64 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64R6 -check-prefix=MIPS64R6-EB %s
+; RUN: llc -march=mipsel   -mcpu=mips32              -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS32,MIPS32-EL %s
+; RUN: llc -march=mips     -mcpu=mips32              -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS32,MIPS32-EB %s
+; RUN: llc -march=mipsel   -mcpu=mips32r2            -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS32,MIPS32-EL %s
+; RUN: llc -march=mips     -mcpu=mips32r2            -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS32,MIPS32-EB %s
+; RUN: llc -march=mipsel   -mcpu=mips32r6            -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS32R6,MIPS32R6-EL %s
+; RUN: llc -march=mips     -mcpu=mips32r6            -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS32R6,MIPS32R6-EB %s
+; RUN: llc -march=mips64el -mcpu=mips4    -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64,MIPS64-EL %s
+; RUN: llc -march=mips64   -mcpu=mips4    -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64,MIPS64-EB %s
+; RUN: llc -march=mips64el -mcpu=mips64   -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64,MIPS64-EL %s
+; RUN: llc -march=mips64   -mcpu=mips64   -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64,MIPS64-EB %s
+; RUN: llc -march=mips64el -mcpu=mips64r2 -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64,MIPS64-EL %s
+; RUN: llc -march=mips64   -mcpu=mips64r2 -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64,MIPS64-EB %s
+; RUN: llc -march=mips64el -mcpu=mips64r6 -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64R6,MIPS64R6-EL %s
+; RUN: llc -march=mips64   -mcpu=mips64r6 -target-abi=n64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64R6,MIPS64R6-EB %s
 
 %struct.SLL = type { i64 }
 %struct.SI = type { i32 }

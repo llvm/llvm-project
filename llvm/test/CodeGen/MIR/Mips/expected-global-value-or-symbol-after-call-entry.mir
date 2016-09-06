@@ -1,4 +1,4 @@
-# RUN: not llc -march=mipsel -mattr=mips16 -relocation-model=pic -start-after branch-folder -stop-after branch-folder -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -march=mipsel -mattr=mips16 -relocation-model=pic -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 --- |
   define i32 @test(i32 %a) {
   entry:

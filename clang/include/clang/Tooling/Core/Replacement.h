@@ -22,6 +22,8 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -55,6 +57,11 @@ public:
   bool contains(Range RHS) const {
     return RHS.Offset >= Offset &&
            (RHS.Offset + RHS.Length) <= (Offset + Length);
+  }
+
+  /// \brief Whether this range equals to \p RHS or not.
+  bool operator==(const Range &RHS) const {
+    return Offset == RHS.getOffset() && Length == RHS.getLength();
   }
   /// @}
 
@@ -116,14 +123,13 @@ public:
   /// \brief Returns a human readable string representation.
   std::string toString() const;
 
- private:
-   void setFromSourceLocation(const SourceManager &Sources,
-                              SourceLocation Start, unsigned Length,
-                              StringRef ReplacementText);
-   void setFromSourceRange(const SourceManager &Sources,
-                           const CharSourceRange &Range,
-                           StringRef ReplacementText,
-                           const LangOptions &LangOpts);
+private:
+  void setFromSourceLocation(const SourceManager &Sources, SourceLocation Start,
+                             unsigned Length, StringRef ReplacementText);
+  void setFromSourceRange(const SourceManager &Sources,
+                          const CharSourceRange &Range,
+                          StringRef ReplacementText,
+                          const LangOptions &LangOpts);
 
   std::string FilePath;
   Range ReplacementRange;
@@ -136,9 +142,70 @@ bool operator<(const Replacement &LHS, const Replacement &RHS);
 /// \brief Equal-to operator between two Replacements.
 bool operator==(const Replacement &LHS, const Replacement &RHS);
 
-/// \brief A set of Replacements.
-/// FIXME: Change to a vector and deduplicate in the RefactoringTool.
-typedef std::set<Replacement> Replacements;
+/// \brief Maintains a set of replacements that are conflict-free.
+/// Two replacements are considered conflicts if they overlap or have the same
+/// offset (i.e. order-dependent).
+class Replacements {
+ private:
+   typedef std::set<Replacement> ReplacementsImpl;
+
+ public:
+  typedef ReplacementsImpl::const_iterator const_iterator;
+
+  Replacements() = default;
+
+  explicit Replacements(const Replacement &R) { Replaces.insert(R); }
+
+  /// \brief Adds a new replacement \p R to the current set of replacements.
+  /// \p R must have the same file path as all existing replacements.
+  /// Returns true if the replacement is successfully inserted; otherwise,
+  /// it returns an llvm::Error, i.e. there is a conflict between R and the
+  /// existing replacements or R's file path is different from the filepath of
+  /// existing replacements. Callers must explicitly check the Error returned.
+  /// This prevents users from adding order-dependent replacements. To control
+  /// the order in which order-dependent replacements are applied, use
+  /// merge({R}) with R referring to the changed code after applying all
+  /// existing replacements.
+  /// Replacements with offset UINT_MAX are special - we do not detect conflicts
+  /// for such replacements since users may add them intentionally as a special
+  /// category of replacements.
+  llvm::Error add(const Replacement &R);
+
+  /// \brief Merges \p Replaces into the current replacements. \p Replaces
+  /// refers to code after applying the current replacements.
+  Replacements merge(const Replacements &Replaces) const;
+
+  // Returns the affected ranges in the changed code.
+  std::vector<Range> getAffectedRanges() const;
+
+  // Returns the new offset in the code after replacements being applied.
+  // Note that if there is an insertion at Offset in the current replacements,
+  // \p Offset will be shifted to Offset + Length in inserted text.
+  unsigned getShiftedCodePosition(unsigned Position) const;
+
+  unsigned size() const { return Replaces.size(); }
+
+  void clear() { Replaces.clear(); }
+
+  bool empty() const { return Replaces.empty(); }
+
+  const_iterator begin() const { return Replaces.begin(); }
+
+  const_iterator end() const { return Replaces.end(); }
+
+  bool operator==(const Replacements &RHS) const {
+    return Replaces == RHS.Replaces;
+  }
+
+
+private:
+  Replacements(const_iterator Begin, const_iterator End)
+      : Replaces(Begin, End) {}
+
+  Replacements mergeReplacements(const ReplacementsImpl &Second) const;
+
+  ReplacementsImpl Replaces;
+};
 
 /// \brief Apply all replacements in \p Replaces to the Rewriter \p Rewrite.
 ///
@@ -148,41 +215,15 @@ typedef std::set<Replacement> Replacements;
 /// \returns true if all replacements apply. false otherwise.
 bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite);
 
-/// \brief Apply all replacements in \p Replaces to the Rewriter \p Rewrite.
-///
-/// Replacement applications happen independently of the success of
-/// other applications.
-///
-/// \returns true if all replacements apply. false otherwise.
-bool applyAllReplacements(const std::vector<Replacement> &Replaces,
-                          Rewriter &Rewrite);
-
 /// \brief Applies all replacements in \p Replaces to \p Code.
 ///
-/// This completely ignores the path stored in each replacement. If one or more
-/// replacements cannot be applied, this returns an empty \c string.
-std::string applyAllReplacements(StringRef Code, const Replacements &Replaces);
-
-/// \brief Calculates how a code \p Position is shifted when \p Replaces are
-/// applied.
-unsigned shiftedCodePosition(const Replacements& Replaces, unsigned Position);
-
-/// \brief Calculates how a code \p Position is shifted when \p Replaces are
-/// applied.
-///
-/// \pre Replaces[i].getOffset() <= Replaces[i+1].getOffset().
-unsigned shiftedCodePosition(const std::vector<Replacement> &Replaces,
-                             unsigned Position);
-
-/// \brief Removes duplicate Replacements and reports if Replacements conflict
-/// with one another. All Replacements are assumed to be in the same file.
-///
-/// \post Replaces[i].getOffset() <= Replaces[i+1].getOffset().
-///
-/// This function sorts \p Replaces so that conflicts can be reported simply by
-/// offset into \p Replaces and number of elements in the conflict.
-void deduplicate(std::vector<Replacement> &Replaces,
-                 std::vector<Range> &Conflicts);
+/// This completely ignores the path stored in each replacement. If all
+/// replacements are applied successfully, this returns the code with
+/// replacements applied; otherwise, an llvm::Error carrying llvm::StringError
+/// is returned (the Error message can be converted to string using
+/// `llvm::toString()` and 'std::error_code` in the `Error` should be ignored).
+llvm::Expected<std::string> applyAllReplacements(StringRef Code,
+                                                 const Replacements &Replaces);
 
 /// \brief Collection of Replacements generated from a single translation unit.
 struct TranslationUnitReplacements {
@@ -197,34 +238,22 @@ struct TranslationUnitReplacements {
   std::vector<Replacement> Replacements;
 };
 
-/// \brief Apply all replacements in \p Replaces to the Rewriter \p Rewrite.
+/// \brief Calculates the new ranges after \p Replaces are applied. These
+/// include both the original \p Ranges and the affected ranges of \p Replaces
+/// in the new code.
 ///
-/// Replacement applications happen independently of the success of
-/// other applications.
+/// \pre Replacements must be for the same file.
 ///
-/// \returns true if all replacements apply. false otherwise.
-bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite);
+/// \return The new ranges after \p Replaces are applied. The new ranges will be
+/// sorted and non-overlapping.
+std::vector<Range>
+calculateRangesAfterReplacements(const Replacements &Replaces,
+                                 const std::vector<Range> &Ranges);
 
-/// \brief Apply all replacements in \p Replaces to the Rewriter \p Rewrite.
-///
-/// Replacement applications happen independently of the success of
-/// other applications.
-///
-/// \returns true if all replacements apply. false otherwise.
-bool applyAllReplacements(const std::vector<Replacement> &Replaces,
-                          Rewriter &Rewrite);
-
-/// \brief Applies all replacements in \p Replaces to \p Code.
-///
-/// This completely ignores the path stored in each replacement. If one or more
-/// replacements cannot be applied, this returns an empty \c string.
-std::string applyAllReplacements(StringRef Code, const Replacements &Replaces);
-
-/// \brief Merges two sets of replacements with the second set referring to the
-/// code after applying the first set. Within both 'First' and 'Second',
-/// replacements must not overlap.
-Replacements mergeReplacements(const Replacements &First,
-                               const Replacements &Second);
+/// \brief Groups a random set of replacements by file path. Replacements
+/// related to the same file entry are put into the same vector.
+std::map<std::string, Replacements>
+groupReplacementsByFile(const Replacements &Replaces);
 
 template <typename Node>
 Replacement::Replacement(const SourceManager &Sources,

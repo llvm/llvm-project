@@ -80,9 +80,6 @@ static const std::pair<unsigned, unsigned> opcodeData[] = {
     std::make_pair((unsigned)V4_SS2_storewi0, 4096),
     std::make_pair((unsigned)V4_SS2_storewi1, 4352)};
 
-static std::map<unsigned, unsigned>
-    subinstOpcodeMap(std::begin(opcodeData), std::end(opcodeData));
-
 bool HexagonMCInstrInfo::isDuplexPairMatch(unsigned Ga, unsigned Gb) {
   switch (Ga) {
   case HexagonII::HSIG_None:
@@ -265,7 +262,7 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
   case Hexagon::EH_RETURN_JMPR:
 
   case Hexagon::J2_jumpr:
-  case Hexagon::JMPret:
+  case Hexagon::PS_jmpret:
     // jumpr r31
     // Actual form JMPR %PC<imp-def>, %R31<imp-use>, %R0<imp-use,internal>.
     DstReg = MCI.getOperand(0).getReg();
@@ -278,12 +275,12 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
   case Hexagon::J2_jumprf:
   case Hexagon::J2_jumprtnew:
   case Hexagon::J2_jumprfnew:
-  case Hexagon::JMPrett:
-  case Hexagon::JMPretf:
-  case Hexagon::JMPrettnew:
-  case Hexagon::JMPretfnew:
-  case Hexagon::JMPrettnewpt:
-  case Hexagon::JMPretfnewpt:
+  case Hexagon::PS_jmprett:
+  case Hexagon::PS_jmpretf:
+  case Hexagon::PS_jmprettnew:
+  case Hexagon::PS_jmpretfnew:
+  case Hexagon::PS_jmprettnewpt:
+  case Hexagon::PS_jmpretfnewpt:
     DstReg = MCI.getOperand(1).getReg();
     SrcReg = MCI.getOperand(0).getReg();
     // [if ([!]p0[.new])] jumpr r31
@@ -587,6 +584,9 @@ bool HexagonMCInstrInfo::isOrderedDuplexPair(MCInstrInfo const &MCII,
   unsigned MIaG = HexagonMCInstrInfo::getDuplexCandidateGroup(MIa),
            MIbG = HexagonMCInstrInfo::getDuplexCandidateGroup(MIb);
 
+  static std::map<unsigned, unsigned> subinstOpcodeMap(std::begin(opcodeData),
+                                                       std::end(opcodeData));
+
   // If a duplex contains 2 insns in the same group, the insns must be
   // ordered such that the numerically smaller opcode is in slot 1.
   if ((MIaG != HexagonII::HSIG_None) && (MIaG == MIbG) && bisReversable) {
@@ -811,25 +811,25 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
     break; //    none  SUBInst deallocframe
   case Hexagon::EH_RETURN_JMPR:
   case Hexagon::J2_jumpr:
-  case Hexagon::JMPret:
+  case Hexagon::PS_jmpret:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31);
     break; //    none  SUBInst jumpr r31
   case Hexagon::J2_jumprf:
-  case Hexagon::JMPretf:
+  case Hexagon::PS_jmpretf:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31_f);
     break; //    none  SUBInst if (!p0) jumpr r31
   case Hexagon::J2_jumprfnew:
-  case Hexagon::JMPretfnewpt:
-  case Hexagon::JMPretfnew:
+  case Hexagon::PS_jmpretfnewpt:
+  case Hexagon::PS_jmpretfnew:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31_fnew);
     break; //    none  SUBInst if (!p0.new) jumpr:nt r31
   case Hexagon::J2_jumprt:
-  case Hexagon::JMPrett:
+  case Hexagon::PS_jmprett:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31_t);
     break; //    none  SUBInst if (p0) jumpr r31
   case Hexagon::J2_jumprtnew:
-  case Hexagon::JMPrettnewpt:
-  case Hexagon::JMPrettnew:
+  case Hexagon::PS_jmprettnewpt:
+  case Hexagon::PS_jmprettnew:
     Result.setOpcode(Hexagon::V4_SL2_jumpr31_tnew);
     break; //    none  SUBInst if (p0.new) jumpr:nt r31
   case Hexagon::L2_loadrb_io:

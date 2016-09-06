@@ -24,9 +24,21 @@ INITIALIZE_PASS_BEGIN(MachineBranchProbabilityInfo, "machine-branch-prob",
 INITIALIZE_PASS_END(MachineBranchProbabilityInfo, "machine-branch-prob",
                     "Machine Branch Probability Analysis", false, true)
 
+cl::opt<unsigned>
+    StaticLikelyProb("static-likely-prob",
+                     cl::desc("branch probability threshold in percentage"
+                              "to be considered very likely"),
+                     cl::init(80), cl::Hidden);
+
+cl::opt<unsigned> ProfileLikelyProb(
+    "profile-likely-prob",
+    cl::desc("branch probability threshold in percentage to be considered"
+             " very likely when profile is available"),
+    cl::init(51), cl::Hidden);
+
 char MachineBranchProbabilityInfo::ID = 0;
 
-void MachineBranchProbabilityInfo::anchor() { }
+void MachineBranchProbabilityInfo::anchor() {}
 
 BranchProbability MachineBranchProbabilityInfo::getEdgeProbability(
     const MachineBasicBlock *Src,
@@ -38,15 +50,12 @@ BranchProbability MachineBranchProbabilityInfo::getEdgeProbability(
     const MachineBasicBlock *Src, const MachineBasicBlock *Dst) const {
   // This is a linear search. Try to use the const_succ_iterator version when
   // possible.
-  return getEdgeProbability(Src,
-                            std::find(Src->succ_begin(), Src->succ_end(), Dst));
+  return getEdgeProbability(Src, find(Src->successors(), Dst));
 }
 
-bool
-MachineBranchProbabilityInfo::isEdgeHot(const MachineBasicBlock *Src,
-                                        const MachineBasicBlock *Dst) const {
-  // Hot probability is at least 4/5 = 80%
-  static BranchProbability HotProb(4, 5);
+bool MachineBranchProbabilityInfo::isEdgeHot(
+    const MachineBasicBlock *Src, const MachineBasicBlock *Dst) const {
+  BranchProbability HotProb(StaticLikelyProb, 100);
   return getEdgeProbability(Src, Dst) > HotProb;
 }
 
@@ -63,7 +72,7 @@ MachineBranchProbabilityInfo::getHotSucc(MachineBasicBlock *MBB) const {
     }
   }
 
-  static BranchProbability HotProb(4, 5);
+  BranchProbability HotProb(StaticLikelyProb, 100);
   if (getEdgeProbability(MBB, MaxSucc) >= HotProb)
     return MaxSucc;
 

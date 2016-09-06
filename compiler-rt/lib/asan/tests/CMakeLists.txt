@@ -45,6 +45,10 @@ if(COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")
 else()
   list(APPEND ASAN_UNITTEST_COMMON_CFLAGS -g)
 endif()
+if(MSVC)
+  list(APPEND ASAN_UNITTEST_COMMON_CFLAGS -gcodeview)
+endif()
+list(APPEND ASAN_UNITTEST_COMMON_LINKFLAGS -g)
 
 # Use -D instead of definitions to please custom compile command.
 list(APPEND ASAN_UNITTEST_COMMON_CFLAGS
@@ -119,7 +123,11 @@ append_list_if(ANDROID atomic ASAN_UNITTEST_NOINST_LIBS)
 # options in ${ARGN}, and add it to the object list.
 macro(asan_compile obj_list source arch kind)
   get_filename_component(basename ${source} NAME)
-  set(output_obj "${obj_list}.${basename}.${arch}${kind}.o")
+  if(CMAKE_CONFIGURATION_TYPES)
+    set(output_obj "${CMAKE_CFG_INTDIR}/${obj_list}.${basename}.${arch}${kind}.o")
+  else()
+    set(output_obj "${obj_list}.${basename}.${arch}${kind}.o")
+  endif()
   get_target_flags_for_arch(${arch} TARGET_CFLAGS)
   set(COMPILE_DEPS ${ASAN_UNITTEST_HEADERS} ${ASAN_BLACKLIST_FILE})
   if(NOT COMPILER_RT_STANDALONE_BUILD)
@@ -142,11 +150,17 @@ macro(add_asan_test test_suite test_name arch kind)
   endif()
   if(TEST_WITH_TEST_RUNTIME)
     list(APPEND TEST_DEPS ${ASAN_TEST_RUNTIME})
-    if(NOT MSVC)
-      list(APPEND TEST_OBJECTS lib${ASAN_TEST_RUNTIME}.a)
+    if(CMAKE_CONFIGURATION_TYPES)
+     set(configuration_path "${CMAKE_CFG_INTDIR}/")
     else()
-      list(APPEND TEST_OBJECTS ${ASAN_TEST_RUNTIME}.lib)
+     set(configuration_path "")
     endif()
+    if(NOT MSVC)
+      set(asan_test_runtime_path ${configuration_path}lib${ASAN_TEST_RUNTIME}.a)
+    else()
+      set(asan_test_runtime_path ${configuration_path}${ASAN_TEST_RUNTIME}.lib)
+    endif()
+    list(APPEND TEST_OBJECTS ${asan_test_runtime_path})
   endif()
   add_compiler_rt_test(${test_suite} ${test_name}
                        SUBDIR ${TEST_SUBDIR}
@@ -158,15 +172,15 @@ endmacro()
 
 # Main AddressSanitizer unit tests.
 add_custom_target(AsanUnitTests)
-set_target_properties(AsanUnitTests PROPERTIES FOLDER "ASan unit tests")
+set_target_properties(AsanUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
+
 # AddressSanitizer unit tests with dynamic runtime (on platforms where it's
 # not the default).
 add_custom_target(AsanDynamicUnitTests)
-set_target_properties(AsanDynamicUnitTests
-  PROPERTIES FOLDER "ASan unit tests with dynamic runtime")
+set_target_properties(AsanDynamicUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
 # ASan benchmarks (not actively used now).
 add_custom_target(AsanBenchmarks)
-set_target_properties(AsanBenchmarks PROPERTIES FOLDER "Asan benchmarks")
+set_target_properties(AsanBenchmarks PROPERTIES FOLDER "Compiler-RT Tests")
 
 set(ASAN_NOINST_TEST_SOURCES
   ${COMPILER_RT_GTEST_SOURCE}
@@ -205,13 +219,30 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
     asan_compile(ASAN_INST_TEST_OBJECTS asan_mac_test_helpers.mm ${arch} ${kind}
                  ${ASAN_UNITTEST_INSTRUMENTED_CFLAGS} -ObjC ${ARGN})
   endif()
-  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/default")
+
+  # Create the 'default' folder where ASAN tests are produced.
+  if(CMAKE_CONFIGURATION_TYPES)
+    foreach(build_mode ${CMAKE_CONFIGURATION_TYPES})
+      file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/default/${build_mode}")
+    endforeach()
+  else()
+    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/default")
+  endif()
+
   add_asan_test(AsanUnitTests "Asan-${arch}${kind}-Test"
                 ${arch} ${kind} SUBDIR "default"
                 OBJECTS ${ASAN_INST_TEST_OBJECTS}
                 LINKFLAGS ${ASAN_UNITTEST_INSTRUMENTED_LINKFLAGS})
   if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/dynamic")
+    # Create the 'dynamic' folder where ASAN tests are produced.
+    if(CMAKE_CONFIGURATION_TYPES)
+      foreach(build_mode ${CMAKE_CONFIGURATION_TYPES})
+        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/dynamic/${build_mode}")
+      endforeach()
+    else()
+      file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/dynamic")
+    endif()
+
     add_asan_test(AsanDynamicUnitTests "Asan-${arch}${kind}-Dynamic-Test"
                   ${arch} ${kind} SUBDIR "dynamic"
                   OBJECTS ${ASAN_INST_TEST_OBJECTS}
@@ -241,7 +272,8 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
   endif()
   add_library(${ASAN_TEST_RUNTIME} STATIC ${ASAN_TEST_RUNTIME_OBJECTS})
   set_target_properties(${ASAN_TEST_RUNTIME} PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    FOLDER "Compiler-RT Runtime tests")
   # Uninstrumented tests.
   set(ASAN_NOINST_TEST_OBJECTS)
   foreach(src ${ASAN_NOINST_TEST_SOURCES})

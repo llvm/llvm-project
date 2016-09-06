@@ -15,11 +15,12 @@
 #ifndef LLVM_IRREADER_IRREADER_H
 #define LLVM_IRREADER_IRREADER_H
 
-#include "llvm/Support/MemoryBuffer.h"
-#include <string>
+#include <memory>
 
 namespace llvm {
 
+class StringRef;
+class MemoryBufferRef;
 class Module;
 class SMDiagnostic;
 class LLVMContext;

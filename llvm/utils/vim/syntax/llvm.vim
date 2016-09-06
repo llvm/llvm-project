@@ -23,7 +23,8 @@ syn match   llvmType /\<i\d\+\>/
 " The true and false tokens can be used for comparison opcodes, but it's
 " much more common for these tokens to be used for boolean constants.
 syn keyword llvmStatement add addrspacecast alloca and arcp ashr atomicrmw
-syn keyword llvmStatement bitcast br call cmpxchg eq exact extractelement
+syn keyword llvmStatement bitcast br catchpad catchswitch catchret call
+syn keyword llvmStatement cleanuppad cleanupret cmpxchg eq exact extractelement
 syn keyword llvmStatement extractvalue fadd fast fcmp fdiv fence fmul fpext
 syn keyword llvmStatement fptosi fptoui fptrunc free frem fsub getelementptr
 syn keyword llvmStatement icmp inbounds indirectbr insertelement insertvalue
@@ -36,28 +37,128 @@ syn keyword llvmStatement umax umin une uno unreachable unwind urem va_arg
 syn keyword llvmStatement xchg xor zext
 
 " Keywords.
-syn keyword llvmKeyword acq_rel acquire sanitize_address addrspace alias align
-syn keyword llvmKeyword alignstack alwaysinline appending arm_aapcs_vfpcc
-syn keyword llvmKeyword arm_aapcscc arm_apcscc asm atomic available_externally
-syn keyword llvmKeyword blockaddress byval c catch cc ccc cleanup coldcc common
-syn keyword llvmKeyword constant datalayout declare default define deplibs
-syn keyword llvmKeyword distinct dllexport dllimport except extern_weak external
-syn keyword llvmKeyword externally_initialized fastcc filter gc global hhvmcc
-syn keyword llvmKeyword hhvm_ccc hidden initialexec inlinehint inreg
-syn keyword llvmKeyword intel_ocl_bicc inteldialect internal linkonce
-syn keyword llvmKeyword linkonce_odr localdynamic localexec minsize module
-syn keyword llvmKeyword monotonic msp430_intrcc musttail naked nest
-syn keyword llvmKeyword noalias nocapture noimplicitfloat noinline nonlazybind
-syn keyword llvmKeyword noredzone noreturn nounwind optnone optsize personality
-syn keyword llvmKeyword private protected ptx_device ptx_kernel readnone
-syn keyword llvmKeyword readonly release returns_twice sanitize_thread
-syn keyword llvmKeyword sanitize_memory section seq_cst sideeffect signext
-syn keyword llvmKeyword singlethread spir_func spir_kernel sret ssp sspreq
-syn keyword llvmKeyword sspstrong tail target thread_local to triple
-syn keyword llvmKeyword unnamed_addr unordered uwtable volatile weak weak_odr
-syn keyword llvmKeyword x86_fastcallcc x86_stdcallcc x86_thiscallcc
-syn keyword llvmKeyword x86_64_sysvcc x86_64_win64cc zeroext uselistorder
-syn keyword llvmKeyword uselistorder_bb musttail
+syn keyword llvmKeyword
+      \ acq_rel
+      \ acquire
+      \ addrspace
+      \ alias
+      \ align
+      \ alignstack
+      \ alwaysinline
+      \ appending
+      \ argmemonly
+      \ arm_aapcscc
+      \ arm_aapcs_vfpcc
+      \ arm_apcscc
+      \ asm
+      \ atomic
+      \ available_externally
+      \ blockaddress
+      \ byval
+      \ c
+      \ catch
+      \ caller
+      \ cc
+      \ ccc
+      \ cleanup
+      \ coldcc
+      \ common
+      \ constant
+      \ datalayout
+      \ declare
+      \ default
+      \ define
+      \ deplibs
+      \ dereferenceable
+      \ distinct
+      \ dllexport
+      \ dllimport
+      \ except
+      \ external
+      \ externally_initialized
+      \ extern_weak
+      \ fastcc
+      \ filter
+      \ from
+      \ gc
+      \ global
+      \ hhvmcc
+      \ hhvm_ccc
+      \ hidden
+      \ initialexec
+      \ inlinehint
+      \ inreg
+      \ inteldialect
+      \ intel_ocl_bicc
+      \ internal
+      \ linkonce
+      \ linkonce_odr
+      \ localdynamic
+      \ localexec
+      \ local_unnamed_addr
+      \ minsize
+      \ module
+      \ monotonic
+      \ msp430_intrcc
+      \ musttail
+      \ naked
+      \ nest
+      \ noalias
+      \ nocapture
+      \ noimplicitfloat
+      \ noinline
+      \ nonlazybind
+      \ noredzone
+      \ noreturn
+      \ nounwind
+      \ optnone
+      \ optsize
+      \ personality
+      \ private
+      \ protected
+      \ ptx_device
+      \ ptx_kernel
+      \ readnone
+      \ readonly
+      \ release
+      \ returns_twice
+      \ sanitize_address
+      \ sanitize_memory
+      \ sanitize_thread
+      \ section
+      \ seq_cst
+      \ sideeffect
+      \ signext
+      \ singlethread
+      \ source_filename
+      \ spir_func
+      \ spir_kernel
+      \ sret
+      \ ssp
+      \ sspreq
+      \ sspstrong
+      \ swiftcc
+      \ tail
+      \ target
+      \ thread_local
+      \ to
+      \ triple
+      \ unnamed_addr
+      \ unordered
+      \ uselistorder
+      \ uselistorder_bb
+      \ uwtable
+      \ volatile
+      \ weak
+      \ weak_odr
+      \ within
+      \ writeonly
+      \ x86_64_sysvcc
+      \ x86_64_win64cc
+      \ x86_fastcallcc
+      \ x86_stdcallcc
+      \ x86_thiscallcc
+      \ zeroext
 
 " Obsolete keywords.
 syn keyword llvmError  getresult begin end
@@ -68,7 +169,7 @@ syn match   llvmNumber /-\?\<\d\+\>/
 syn match   llvmFloat  /-\?\<\d\+\.\d*\(e[+-]\d\+\)\?\>/
 syn match   llvmFloat  /\<0x\x\+\>/
 syn keyword llvmBoolean true false
-syn keyword llvmConstant zeroinitializer undef null
+syn keyword llvmConstant zeroinitializer undef null none
 syn match   llvmComment /;.*$/
 syn region  llvmString start=/"/ skip=/\\"/ end=/"/
 syn match   llvmLabel /[-a-zA-Z$._][-a-zA-Z$._0-9]*:/

@@ -11,12 +11,12 @@
 // Android uses fp128 for long double but other x86_64 targets use x86_fp80.
 
 long double dataLD = 1.0L;
-// ANDROID: @dataLD = global fp128 0xL00000000000000003FFF000000000000, align 16
-// GNU: @dataLD = global x86_fp80 0xK3FFF8000000000000000, align 16
+// ANDROID: @dataLD = local_unnamed_addr global fp128 0xL00000000000000003FFF000000000000, align 16
+// GNU: @dataLD = local_unnamed_addr global x86_fp80 0xK3FFF8000000000000000, align 16
 
 long double _Complex dataLDC = {1.0L, 1.0L};
-// ANDROID: @dataLDC = global { fp128, fp128 } { fp128 0xL00000000000000003FFF000000000000, fp128 0xL00000000000000003FFF000000000000 }, align 16
-// GNU: @dataLDC = global { x86_fp80, x86_fp80 } { x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000 }, align 16
+// ANDROID: @dataLDC = local_unnamed_addr global { fp128, fp128 } { fp128 0xL00000000000000003FFF000000000000, fp128 0xL00000000000000003FFF000000000000 }, align 16
+// GNU: @dataLDC = local_unnamed_addr global { x86_fp80, x86_fp80 } { x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000 }, align 16
 
 long double TestLD(long double x) {
   return x * x;

@@ -13,11 +13,8 @@ class Proc<string Name, ProcessorItineraries itin, list<SubtargetFeature> Featur
 //===----------------------------------------------------------------------===//
 // R600
 //===----------------------------------------------------------------------===//
-def : Proc<"",           R600_VLIW5_Itin,
-    [FeatureR600, FeatureVertexCache]>;
-
 def : Proc<"r600",       R600_VLIW5_Itin,
-    [FeatureR600 , FeatureVertexCache, FeatureWavefrontSize64]>;
+    [FeatureR600, FeatureVertexCache, FeatureWavefrontSize64]>;
 
 def : Proc<"r630",       R600_VLIW5_Itin,
     [FeatureR600, FeatureVertexCache, FeatureWavefrontSize32]>;
@@ -128,21 +125,31 @@ def : ProcessorModel<"mullins",    SIQuarterSpeedModel,
 //===----------------------------------------------------------------------===//
 
 def : ProcessorModel<"tonga",   SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureSGPRInitBug, FeatureISAVersion8_0_0]
+  [FeatureVolcanicIslands, FeatureSGPRInitBug, FeatureISAVersion8_0_0,
+   FeatureLDSBankCount32]
 >;
 
 def : ProcessorModel<"iceland", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureSGPRInitBug, FeatureISAVersion8_0_0]
+  [FeatureVolcanicIslands, FeatureSGPRInitBug, FeatureISAVersion8_0_0,
+   FeatureLDSBankCount32]
 >;
 
 def : ProcessorModel<"carrizo", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureISAVersion8_0_1]
+  [FeatureVolcanicIslands, FeatureISAVersion8_0_1, FeatureLDSBankCount32]
 >;
 
 def : ProcessorModel<"fiji", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureISAVersion8_0_3]
+  [FeatureVolcanicIslands, FeatureISAVersion8_0_3, FeatureLDSBankCount32]
 >;
 
 def : ProcessorModel<"stoney", SIQuarterSpeedModel,
-  [FeatureVolcanicIslands, FeatureISAVersion8_0_1]
+  [FeatureVolcanicIslands, FeatureISAVersion8_0_1, FeatureLDSBankCount16]
+>;
+
+def : ProcessorModel<"polaris10", SIQuarterSpeedModel,
+  [FeatureVolcanicIslands, FeatureISAVersion8_0_1, FeatureLDSBankCount32]
+>;
+
+def : ProcessorModel<"polaris11", SIQuarterSpeedModel,
+  [FeatureVolcanicIslands, FeatureISAVersion8_0_1, FeatureLDSBankCount32]
 >;

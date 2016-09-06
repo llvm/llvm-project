@@ -73,10 +73,11 @@ inline void MarkVarDeclODRUsed(VarDecl *Var,
   // Keep track of used but undefined variables.
   // FIXME: We shouldn't suppress this warning for static data members.
   if (Var->hasDefinition(SemaRef.Context) == VarDecl::DeclarationOnly &&
-    !Var->isExternallyVisible() &&
-    !(Var->isStaticDataMember() && Var->hasInit())) {
-      SourceLocation &old = SemaRef.UndefinedButUsed[Var->getCanonicalDecl()];
-      if (old.isInvalid()) old = Loc;
+      (!Var->isExternallyVisible() || Var->isInline()) &&
+      !(Var->isStaticDataMember() && Var->hasInit())) {
+    SourceLocation &old = SemaRef.UndefinedButUsed[Var->getCanonicalDecl()];
+    if (old.isInvalid())
+      old = Loc;
   }
   QualType CaptureType, DeclRefType;
   SemaRef.tryCaptureVariable(Var, Loc, Sema::TryCapture_Implicit, 
@@ -216,6 +217,9 @@ public:
   bool isAddressOfOperand() const { return CorrectionValidator->IsAddressOfOperand; }
   const CXXScopeSpec *getSS() const { return SS.get(); }
   Scope *getScope() const { return S; }
+  CorrectionCandidateCallback *getCorrectionValidator() const {
+    return CorrectionValidator.get();
+  }
 
 private:
   class NamespaceSpecifierSet {

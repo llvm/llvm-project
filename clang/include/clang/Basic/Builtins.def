@@ -67,6 +67,7 @@
 // Builtin::Context class.  Currently we have:
 //  n -> nothrow
 //  r -> noreturn
+//  U -> pure
 //  c -> const
 //  t -> signature is meaningless, use custom typechecking
 //  F -> this is a libc/libm function with a '__builtin_' prefix added.
@@ -377,6 +378,11 @@ BUILTIN(__builtin_signbit, "i.", "Fnc")
 BUILTIN(__builtin_signbitf, "if", "Fnc")
 BUILTIN(__builtin_signbitl, "iLd", "Fnc")
 
+// Special FP builtins.
+BUILTIN(__builtin_canonicalize, "dd", "nc")
+BUILTIN(__builtin_canonicalizef, "ff", "nc")
+BUILTIN(__builtin_canonicalizel, "LdLd", "nc")
+
 // Builtins for arithmetic.
 BUILTIN(__builtin_clzs , "iUs"  , "nc")
 BUILTIN(__builtin_clz  , "iUi"  , "nc")
@@ -403,6 +409,11 @@ BUILTIN(__builtin_popcountll, "iULLi", "nc")
 BUILTIN(__builtin_bswap16, "UsUs", "nc")
 BUILTIN(__builtin_bswap32, "UiUi", "nc")
 BUILTIN(__builtin_bswap64, "ULLiULLi", "nc")
+
+BUILTIN(__builtin_bitreverse8, "UcUc", "nc")
+BUILTIN(__builtin_bitreverse16, "UsUs", "nc")
+BUILTIN(__builtin_bitreverse32, "UiUi", "nc")
+BUILTIN(__builtin_bitreverse64, "ULLiULLi", "nc")
 
 // Random GCC builtins
 BUILTIN(__builtin_constant_p, "i.", "nctu")
@@ -456,6 +467,7 @@ BUILTIN(__builtin_eh_return_data_regno, "iIi", "nc")
 BUILTIN(__builtin_snprintf, "ic*zcC*.", "nFp:2:")
 BUILTIN(__builtin_vsprintf, "ic*cC*a", "nFP:1:")
 BUILTIN(__builtin_vsnprintf, "ic*zcC*a", "nFP:2:")
+BUILTIN(__builtin_thread_pointer, "v*", "nc")
 
 // GCC exception builtins
 BUILTIN(__builtin_eh_return, "vzv*", "r") // FIXME: Takes intptr_t, not size_t!
@@ -763,6 +775,22 @@ LIBBUILTIN(sscanf, "icC*RcC*R.",  "fs:1:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(vscanf, "icC*Ra",      "fS:0:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(vfscanf, "iP*RcC*Ra",  "fS:1:", "stdio.h", ALL_LANGUAGES)
 LIBBUILTIN(vsscanf, "icC*RcC*Ra", "fS:1:", "stdio.h", ALL_LANGUAGES)
+// C99 ctype.h
+LIBBUILTIN(isalnum, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isalpha, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isblank, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(iscntrl, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isdigit, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isgraph, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(islower, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isprint, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(ispunct, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isspace, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isupper, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(isxdigit, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(tolower, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+LIBBUILTIN(toupper, "ii", "fnU", "ctype.h", ALL_LANGUAGES)
+
 // C99
 // In some systems setjmp is a macro that expands to _setjmp. We undefine
 // it here to avoid having two identical LIBBUILTIN entries.
@@ -1251,6 +1279,46 @@ BUILTIN(__builtin___get_unsafe_stack_ptr, "v*", "Fn")
 // Nontemporal loads/stores builtins
 BUILTIN(__builtin_nontemporal_store, "v.", "t")
 BUILTIN(__builtin_nontemporal_load, "v.", "t")
+
+// Builtins for os_log/os_trace
+BUILTIN(__builtin_os_log_format_buffer_size, "zcC*.", "p:0:nut")
+BUILTIN(__builtin_os_log_format, "v*v*cC*.", "p:0:nt")
+// OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
+// We need the generic prototype, since the packet type could be anything.
+LANGBUILTIN(read_pipe, "i.", "tn", OCLC20_LANG)
+LANGBUILTIN(write_pipe, "i.", "tn", OCLC20_LANG)
+
+LANGBUILTIN(reserve_read_pipe, "i.", "tn", OCLC20_LANG)
+LANGBUILTIN(reserve_write_pipe, "i.", "tn", OCLC20_LANG)
+
+LANGBUILTIN(commit_write_pipe, "v.", "tn", OCLC20_LANG)
+LANGBUILTIN(commit_read_pipe, "v.", "tn", OCLC20_LANG)
+
+LANGBUILTIN(sub_group_reserve_read_pipe, "i.", "tn", OCLC20_LANG)
+LANGBUILTIN(sub_group_reserve_write_pipe, "i.", "tn", OCLC20_LANG)
+
+LANGBUILTIN(sub_group_commit_read_pipe, "v.", "tn", OCLC20_LANG)
+LANGBUILTIN(sub_group_commit_write_pipe, "v.", "tn", OCLC20_LANG)
+
+LANGBUILTIN(work_group_reserve_read_pipe, "i.", "tn", OCLC20_LANG)
+LANGBUILTIN(work_group_reserve_write_pipe, "i.", "tn", OCLC20_LANG)
+
+LANGBUILTIN(work_group_commit_read_pipe, "v.", "tn", OCLC20_LANG)
+LANGBUILTIN(work_group_commit_write_pipe, "v.", "tn", OCLC20_LANG)
+
+LANGBUILTIN(get_pipe_num_packets, "Ui.", "tn", OCLC20_LANG)
+LANGBUILTIN(get_pipe_max_packets, "Ui.", "tn", OCLC20_LANG)
+
+// OpenCL v2.0 s6.13.17 - Enqueue kernel functions.
+// Custom builtin check allows to perform special check of passed block arguments.
+LANGBUILTIN(enqueue_kernel, "i.", "tn", OCLC20_LANG)
+LANGBUILTIN(get_kernel_work_group_size, "i.", "tn", OCLC20_LANG)
+LANGBUILTIN(get_kernel_preferred_work_group_size_multiple, "i.", "tn", OCLC20_LANG)
+
+// OpenCL v2.0 s6.13.9 - Address space qualifier functions.
+LANGBUILTIN(to_global, "v*v*", "tn", OCLC20_LANG)
+LANGBUILTIN(to_local, "v*v*", "tn", OCLC20_LANG)
+LANGBUILTIN(to_private, "v*v*", "tn", OCLC20_LANG)
 
 #undef BUILTIN
 #undef LIBBUILTIN

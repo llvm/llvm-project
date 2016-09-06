@@ -56,15 +56,14 @@ public:
 char R600Packetizer::ID = 0;
 
 class R600PacketizerList : public VLIWPacketizerList {
-
 private:
   const R600InstrInfo *TII;
   const R600RegisterInfo &TRI;
   bool VLIW5;
   bool ConsideredInstUsesAlreadyWrittenVectorElement;
 
-  unsigned getSlot(const MachineInstr *MI) const {
-    return TRI.getHWRegChan(MI->getOperand(0).getReg());
+  unsigned getSlot(const MachineInstr &MI) const {
+    return TRI.getHWRegChan(MI.getOperand(0).getReg());
   }
 
   /// \returns register to PV chan mapping for bundle/single instructions that
@@ -81,11 +80,11 @@ private:
     int LastDstChan = -1;
     do {
       bool isTrans = false;
-      int BISlot = getSlot(&*BI);
+      int BISlot = getSlot(*BI);
       if (LastDstChan >= BISlot)
         isTrans = true;
       LastDstChan = BISlot;
-      if (TII->isPredicated(&*BI))
+      if (TII->isPredicated(*BI))
         continue;
       int OperandIdx = TII->getOperandIdx(BI->getOpcode(), AMDGPU::OpName::write);
       if (OperandIdx > -1 && BI->getOperand(OperandIdx).getImm() == 0)
@@ -95,7 +94,7 @@ private:
         continue;
       }
       unsigned Dst = BI->getOperand(DstIdx).getReg();
-      if (isTrans || TII->isTransOnly(&*BI)) {
+      if (isTrans || TII->isTransOnly(*BI)) {
         Result[Dst] = AMDGPU::PS;
         continue;
       }
@@ -129,7 +128,7 @@ private:
     return Result;
   }
 
-  void substitutePV(MachineInstr *MI, const DenseMap<unsigned, unsigned> &PVs)
+  void substitutePV(MachineInstr &MI, const DenseMap<unsigned, unsigned> &PVs)
       const {
     unsigned Ops[] = {
       AMDGPU::OpName::src0,
@@ -137,23 +136,23 @@ private:
       AMDGPU::OpName::src2
     };
     for (unsigned i = 0; i < 3; i++) {
-      int OperandIdx = TII->getOperandIdx(MI->getOpcode(), Ops[i]);
+      int OperandIdx = TII->getOperandIdx(MI.getOpcode(), Ops[i]);
       if (OperandIdx < 0)
         continue;
-      unsigned Src = MI->getOperand(OperandIdx).getReg();
+      unsigned Src = MI.getOperand(OperandIdx).getReg();
       const DenseMap<unsigned, unsigned>::const_iterator It = PVs.find(Src);
       if (It != PVs.end())
-        MI->getOperand(OperandIdx).setReg(It->second);
+        MI.getOperand(OperandIdx).setReg(It->second);
     }
   }
 public:
   // Ctor.
-  R600PacketizerList(MachineFunction &MF, MachineLoopInfo &MLI)
+  R600PacketizerList(MachineFunction &MF, const R600Subtarget &ST,
+                     MachineLoopInfo &MLI)
       : VLIWPacketizerList(MF, MLI, nullptr),
-        TII(static_cast<const R600InstrInfo *>(
-            MF.getSubtarget().getInstrInfo())),
+        TII(ST.getInstrInfo()),
         TRI(TII->getRegisterInfo()) {
-    VLIW5 = !MF.getSubtarget<AMDGPUSubtarget>().hasCaymanISA();
+    VLIW5 = !ST.hasCaymanISA();
   }
 
   // initPacketizerState - initialize some internal flags.
@@ -162,32 +161,30 @@ public:
   }
 
   // ignorePseudoInstruction - Ignore bundling of pseudo instructions.
-  bool ignorePseudoInstruction(const MachineInstr *MI,
+  bool ignorePseudoInstruction(const MachineInstr &MI,
                                const MachineBasicBlock *MBB) override {
     return false;
   }
 
   // isSoloInstruction - return true if instruction MI can not be packetized
   // with any other instruction, which means that MI itself is a packet.
-  bool isSoloInstruction(const MachineInstr *MI) override {
-    if (TII->isVector(*MI))
+  bool isSoloInstruction(const MachineInstr &MI) override {
+    if (TII->isVector(MI))
       return true;
-    if (!TII->isALUInstr(MI->getOpcode()))
+    if (!TII->isALUInstr(MI.getOpcode()))
       return true;
-    if (MI->getOpcode() == AMDGPU::GROUP_BARRIER)
+    if (MI.getOpcode() == AMDGPU::GROUP_BARRIER)
       return true;
     // XXX: This can be removed once the packetizer properly handles all the
     // LDS instruction group restrictions.
-    if (TII->isLDSInstr(MI->getOpcode()))
-      return true;
-    return false;
+    return TII->isLDSInstr(MI.getOpcode());
   }
 
   // isLegalToPacketizeTogether - Is it legal to packetize SUI and SUJ
   // together.
   bool isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) override {
     MachineInstr *MII = SUI->getInstr(), *MIJ = SUJ->getInstr();
-    if (getSlot(MII) == getSlot(MIJ))
+    if (getSlot(*MII) == getSlot(*MIJ))
       ConsideredInstUsesAlreadyWrittenVectorElement = true;
     // Does MII and MIJ share the same pred_sel ?
     int OpI = TII->getOperandIdx(MII->getOpcode(), AMDGPU::OpName::pred_sel),
@@ -210,14 +207,12 @@ public:
       }
     }
 
-    bool ARDef = TII->definesAddressRegister(MII) ||
-                 TII->definesAddressRegister(MIJ);
-    bool ARUse = TII->usesAddressRegister(MII) ||
-                 TII->usesAddressRegister(MIJ);
-    if (ARDef && ARUse)
-      return false;
+    bool ARDef =
+        TII->definesAddressRegister(*MII) || TII->definesAddressRegister(*MIJ);
+    bool ARUse =
+        TII->usesAddressRegister(*MII) || TII->usesAddressRegister(*MIJ);
 
-    return true;
+    return !ARDef || !ARUse;
   }
 
   // isLegalToPruneDependencies - Is it legal to prune dependece between SUI
@@ -231,7 +226,7 @@ public:
     MI->getOperand(LastOp).setImm(Bit);
   }
 
-  bool isBundlableWithCurrentPMI(MachineInstr *MI,
+  bool isBundlableWithCurrentPMI(MachineInstr &MI,
                                  const DenseMap<unsigned, unsigned> &PV,
                                  std::vector<R600InstrInfo::BankSwizzle> &BS,
                                  bool &isTransSlot) {
@@ -240,11 +235,14 @@ public:
 
     // Is the dst reg sequence legal ?
     if (!isTransSlot && !CurrentPacketMIs.empty()) {
-      if (getSlot(MI) <= getSlot(CurrentPacketMIs.back())) {
-        if (ConsideredInstUsesAlreadyWrittenVectorElement  &&
+      if (getSlot(MI) <= getSlot(*CurrentPacketMIs.back())) {
+        if (ConsideredInstUsesAlreadyWrittenVectorElement &&
             !TII->isVectorOnly(MI) && VLIW5) {
           isTransSlot = true;
-          DEBUG(dbgs() << "Considering as Trans Inst :"; MI->dump(););
+          DEBUG({
+            dbgs() << "Considering as Trans Inst :";
+            MI.dump();
+          });
         }
         else
           return false;
@@ -252,18 +250,18 @@ public:
     }
 
     // Are the Constants limitations met ?
-    CurrentPacketMIs.push_back(MI);
+    CurrentPacketMIs.push_back(&MI);
     if (!TII->fitsConstReadLimitations(CurrentPacketMIs)) {
-      DEBUG(
+      DEBUG({
         dbgs() << "Couldn't pack :\n";
-        MI->dump();
+        MI.dump();
         dbgs() << "with the following packets :\n";
         for (unsigned i = 0, e = CurrentPacketMIs.size() - 1; i < e; i++) {
           CurrentPacketMIs[i]->dump();
           dbgs() << "\n";
         }
         dbgs() << "because of Consts read limitations\n";
-      );
+      });
       CurrentPacketMIs.pop_back();
       return false;
     }
@@ -271,16 +269,16 @@ public:
     // Is there a BankSwizzle set that meet Read Port limitations ?
     if (!TII->fitsReadPortLimitations(CurrentPacketMIs,
             PV, BS, isTransSlot)) {
-      DEBUG(
+      DEBUG({
         dbgs() << "Couldn't pack :\n";
-        MI->dump();
+        MI.dump();
         dbgs() << "with the following packets :\n";
         for (unsigned i = 0, e = CurrentPacketMIs.size() - 1; i < e; i++) {
           CurrentPacketMIs[i]->dump();
           dbgs() << "\n";
         }
         dbgs() << "because of Read port limitations\n";
-      );
+      });
       CurrentPacketMIs.pop_back();
       return false;
     }
@@ -293,9 +291,9 @@ public:
     return true;
   }
 
-  MachineBasicBlock::iterator addToPacket(MachineInstr *MI) override {
+  MachineBasicBlock::iterator addToPacket(MachineInstr &MI) override {
     MachineBasicBlock::iterator FirstInBundle =
-        CurrentPacketMIs.empty() ? MI : CurrentPacketMIs.front();
+        CurrentPacketMIs.empty() ? &MI : CurrentPacketMIs.front();
     const DenseMap<unsigned, unsigned> &PV =
         getPreviousVector(FirstInBundle);
     std::vector<R600InstrInfo::BankSwizzle> BS;
@@ -308,9 +306,9 @@ public:
             AMDGPU::OpName::bank_swizzle);
         MI->getOperand(Op).setImm(BS[i]);
       }
-      unsigned Op = TII->getOperandIdx(MI->getOpcode(),
-          AMDGPU::OpName::bank_swizzle);
-      MI->getOperand(Op).setImm(BS.back());
+      unsigned Op =
+          TII->getOperandIdx(MI.getOpcode(), AMDGPU::OpName::bank_swizzle);
+      MI.getOperand(Op).setImm(BS.back());
       if (!CurrentPacketMIs.empty())
         setIsLastBit(CurrentPacketMIs.back(), 0);
       substitutePV(MI, PV);
@@ -320,7 +318,7 @@ public:
       }
       return It;
     }
-    endPacket(MI->getParent(), MI);
+    endPacket(MI.getParent(), MI);
     if (TII->isTransOnly(MI))
       return MI;
     return VLIWPacketizerList::addToPacket(MI);
@@ -328,14 +326,19 @@ public:
 };
 
 bool R600Packetizer::runOnMachineFunction(MachineFunction &Fn) {
-  const TargetInstrInfo *TII = Fn.getSubtarget().getInstrInfo();
+  const R600Subtarget &ST = Fn.getSubtarget<R600Subtarget>();
+  const R600InstrInfo *TII = ST.getInstrInfo();
+
   MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
 
   // Instantiate the packetizer.
-  R600PacketizerList Packetizer(Fn, MLI);
+  R600PacketizerList Packetizer(Fn, ST, MLI);
 
   // DFA state table should not be empty.
   assert(Packetizer.getResourceTracker() && "Empty DFA table!");
+
+  if (Packetizer.getResourceTracker()->getInstrItins()->isEmpty())
+    return false;
 
   //
   // Loop over all basic blocks and remove KILL pseudo-instructions
@@ -375,7 +378,7 @@ bool R600Packetizer::runOnMachineFunction(MachineFunction &Fn) {
       // instruction stream until we find the nearest boundary.
       MachineBasicBlock::iterator I = RegionEnd;
       for(;I != MBB->begin(); --I, --RemainingCount) {
-        if (TII->isSchedulingBoundary(&*std::prev(I), &*MBB, Fn))
+        if (TII->isSchedulingBoundary(*std::prev(I), &*MBB, Fn))
           break;
       }
       I = MBB->begin();

@@ -4,8 +4,8 @@
 //
 // You should be able to run this file through nvcc for compatibility testing.
 //
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fcuda-is-device -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wcuda-compat -verify -DEXPECT_INLINE_WARNING %s
+// RUN: %clang_cc1 -fcuda-is-device -fsyntax-only -Wcuda-compat -verify %s
 
 #include "Inputs/cuda.h"
 
@@ -47,3 +47,15 @@ __global__ __device__ void z11();  // expected-error {{attributes are not compat
 // expected-note@-1 {{conflicting attribute is here}}
 __global__ __host__ void z12();  // expected-error {{attributes are not compatible}}
 // expected-note@-1 {{conflicting attribute is here}}
+
+struct S {
+  __global__ void foo() {};  // expected-error {{must be a free function or static member function}}
+  __global__ static void bar(); // expected-warning {{kernel function 'bar' is a member function}}
+  // Although this is implicitly inline, we shouldn't warn.
+  __global__ static void baz() {}; // expected-warning {{kernel function 'baz' is a member function}}
+};
+
+__global__ static inline void foobar() {};
+#ifdef EXPECT_INLINE_WARNING
+// expected-warning@-2 {{ignored 'inline' attribute on kernel function 'foobar'}}
+#endif

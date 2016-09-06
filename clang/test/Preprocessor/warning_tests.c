@@ -12,7 +12,7 @@
 #endif
 
 // expected-error@+2 {{expected string literal in '__has_warning'}}
-// expected-error@+1 {{expected value in expression}}
+// expected-error@+1 {{missing ')'}} expected-note@+1 {{match}}
 #if __has_warning(-Wfoo)
 #endif
 
@@ -22,8 +22,7 @@
 #warning Not a valid warning flag
 #endif
 
-// expected-error@+2 {{builtin warning check macro requires a parenthesized string}}
-// expected-error@+1 {{invalid token}}
+// expected-error@+1 {{missing '(' after '__has_warning'}}
 #if __has_warning "not valid"
 #endif
 
@@ -33,7 +32,7 @@
 
 #define MY_ALIAS "-Wparentheses"
 
-// expected-error@+1 2{{expected}}
+// expected-error@+1 {{expected}}
 #if __has_warning(MY_ALIAS)
 #error Alias expansion not allowed
 #endif

@@ -1,4 +1,4 @@
-//===--- Marshallers.h - Generic matcher function marshallers -*- C++ -*-===//
+//===--- Marshallers.h - Generic matcher function marshallers ---*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -31,7 +31,6 @@ namespace clang {
 namespace ast_matchers {
 namespace dynamic {
 namespace internal {
-
 
 /// \brief Helper template class to just from argument type to the right is/get
 ///   functions in VariantValue.
@@ -91,6 +90,28 @@ public:
   }
   static attr::Kind get(const VariantValue &Value) {
     return getAttrKind(Value.getString());
+  }
+  static ArgKind getKind() {
+    return ArgKind(ArgKind::AK_String);
+  }
+};
+
+template <> struct ArgTypeTraits<clang::CastKind> {
+private:
+  static clang::CastKind getCastKind(llvm::StringRef AttrKind) {
+    return llvm::StringSwitch<clang::CastKind>(AttrKind)
+#define CAST_OPERATION(Name) .Case( #Name, CK_##Name)
+#include "clang/AST/OperationKinds.def"
+        .Default(CK_Invalid);
+  }
+
+public:
+  static bool is(const VariantValue &Value) {
+    return Value.isString() &&  
+        getCastKind(Value.getString()) != CK_Invalid;
+  }
+  static clang::CastKind get(const VariantValue &Value) {
+    return getCastKind(Value.getString());
   }
   static ArgKind getKind() {
     return ArgKind(ArgKind::AK_String);
@@ -234,7 +255,7 @@ static VariantMatcher outvalueToVariantMatcher(const DynTypedMatcher &Matcher) {
 template <typename T>
 static VariantMatcher outvalueToVariantMatcher(const T &PolyMatcher,
                                                typename T::ReturnTypes * =
-                                                   NULL) {
+                                                   nullptr) {
   std::vector<DynTypedMatcher> Matchers;
   mergePolyMatchers(PolyMatcher, Matchers, typename T::ReturnTypes());
   VariantMatcher Out = VariantMatcher::PolymorphicMatcher(std::move(Matchers));
@@ -326,8 +347,9 @@ public:
 
   template <typename ResultT, typename ArgT,
             ResultT (*F)(ArrayRef<const ArgT *>)>
-  VariadicFuncMatcherDescriptor(llvm::VariadicFunction<ResultT, ArgT, F> Func,
-                          StringRef MatcherName)
+  VariadicFuncMatcherDescriptor(
+      ast_matchers::internal::VariadicFunction<ResultT, ArgT, F> Func,
+      StringRef MatcherName)
       : Func(&variadicMatcherDescriptor<ResultT, ArgT, F>),
         MatcherName(MatcherName.str()),
         ArgsKind(ArgTypeTraits<ArgT>::getKind()) {
@@ -409,7 +431,6 @@ private:
         << Args[index].Value.getTypeAsString();                                \
     return VariantMatcher();                                                   \
   }
-
 
 /// \brief 0-arg marshaller function.
 template <typename ReturnType>
@@ -657,9 +678,9 @@ MatcherDescriptor *makeMatcherAutoMarshall(ReturnType (*Func)(ArgType1, ArgType2
 /// \brief Variadic overload.
 template <typename ResultT, typename ArgT,
           ResultT (*Func)(ArrayRef<const ArgT *>)>
-MatcherDescriptor *
-makeMatcherAutoMarshall(llvm::VariadicFunction<ResultT, ArgT, Func> VarFunc,
-                        StringRef MatcherName) {
+MatcherDescriptor *makeMatcherAutoMarshall(
+    ast_matchers::internal::VariadicFunction<ResultT, ArgT, Func> VarFunc,
+    StringRef MatcherName) {
   return new VariadicFuncMatcherDescriptor(VarFunc, MatcherName);
 }
 
@@ -708,9 +729,9 @@ makeMatcherAutoMarshall(ast_matchers::internal::VariadicOperatorMatcherFunc<
                                                MatcherName);
 }
 
-}  // namespace internal
-}  // namespace dynamic
-}  // namespace ast_matchers
-}  // namespace clang
+} // namespace internal
+} // namespace dynamic
+} // namespace ast_matchers
+} // namespace clang
 
-#endif  // LLVM_CLANG_AST_MATCHERS_DYNAMIC_MARSHALLERS_H
+#endif // LLVM_CLANG_AST_MATCHERS_DYNAMIC_MARSHALLERS_H

@@ -2,7 +2,7 @@
 // produced. This was not handled for direct object and an assertion
 // to occur. This is a variation on test case test/CodeGen/Mips/do_switch.ll
 
-// RUN: llvm-mc < %s -filetype=obj -triple=mips64-pc-linux -relocation-model=pic -mcpu=mips64 -target-abi=n64
+// RUN: llvm-mc < %s -filetype=obj -triple=mips64-pc-linux -mcpu=mips64 -target-abi=n64
 
 	.text
 	.abicalls

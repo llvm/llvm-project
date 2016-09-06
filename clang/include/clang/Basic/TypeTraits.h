@@ -74,6 +74,7 @@ namespace clang {
     BTT_IsConvertibleTo,
     BTT_IsSame,
     BTT_TypeCompatible,
+    BTT_IsAssignable,
     BTT_IsNothrowAssignable,
     BTT_IsTriviallyAssignable,
     BTT_Last = BTT_IsTriviallyAssignable,

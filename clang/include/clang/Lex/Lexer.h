@@ -410,6 +410,26 @@ public:
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts);
 
+  /// \brief Retrieve the name of the immediate macro expansion.
+  ///
+  /// This routine starts from a source location, and finds the name of the
+  /// macro responsible for its immediate expansion. It looks through any
+  /// intervening macro argument expansions to compute this. It returns a
+  /// StringRef which refers to the SourceManager-owned buffer of the source
+  /// where that macro name is spelled. Thus, the result shouldn't out-live
+  /// that SourceManager.
+  ///
+  /// This differs from Lexer::getImmediateMacroName in that any macro argument
+  /// location will result in the topmost function macro that accepted it.
+  /// e.g.
+  /// \code
+  ///   MAC1( MAC2(foo) )
+  /// \endcode
+  /// for location of 'foo' token, this function will return "MAC1" while
+  /// Lexer::getImmediateMacroName will return "MAC2".
+  static StringRef getImmediateMacroNameForDiagnostics(
+      SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts);
+
   /// \brief Compute the preamble of the given file.
   ///
   /// The preamble of a file contains the initial comments, include directives,

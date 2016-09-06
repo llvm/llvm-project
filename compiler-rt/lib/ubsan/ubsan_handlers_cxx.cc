@@ -15,6 +15,7 @@
 
 #include "ubsan_platform.h"
 #if CAN_SANITIZE_UB
+#include "ubsan_handlers.h"
 #include "ubsan_handlers_cxx.h"
 #include "ubsan_diag.h"
 #include "ubsan_type_hash.h"
@@ -54,11 +55,17 @@ static bool HandleDynamicTypeCacheMiss(
     << TypeCheckKinds[Data->TypeCheckKind] << (void*)Pointer << Data->Type;
 
   // If possible, say what type it actually points to.
-  if (!DTI.isValid())
-    Diag(Pointer, DL_Note, "object has invalid vptr")
-        << TypeName(DTI.getMostDerivedTypeName())
-        << Range(Pointer, Pointer + sizeof(uptr), "invalid vptr");
-  else if (!DTI.getOffset())
+  if (!DTI.isValid()) {
+    if (DTI.getOffset() < -VptrMaxOffsetToTop || DTI.getOffset() > VptrMaxOffsetToTop) {
+      Diag(Pointer, DL_Note, "object has a possibly invalid vptr: abs(offset to top) too big")
+          << TypeName(DTI.getMostDerivedTypeName())
+          << Range(Pointer, Pointer + sizeof(uptr), "possibly invalid vptr");
+    } else {
+      Diag(Pointer, DL_Note, "object has invalid vptr")
+          << TypeName(DTI.getMostDerivedTypeName())
+          << Range(Pointer, Pointer + sizeof(uptr), "invalid vptr");
+    }
+  } else if (!DTI.getOffset())
     Diag(Pointer, DL_Note, "object is of type %0")
         << TypeName(DTI.getMostDerivedTypeName())
         << Range(Pointer, Pointer + sizeof(uptr), "vptr for %0");
@@ -87,8 +94,9 @@ void __ubsan::__ubsan_handle_dynamic_type_cache_miss_abort(
     Die();
 }
 
-static void HandleCFIBadType(CFIBadTypeData *Data, ValueHandle Vtable,
-                             ReportOptions Opts) {
+namespace __ubsan {
+void HandleCFIBadType(CFICheckFailData *Data, ValueHandle Vtable,
+                      bool ValidVtable, ReportOptions Opts) {
   SourceLocation Loc = Data->Loc.acquire();
   ErrorType ET = ErrorType::CFIBadType;
 
@@ -96,38 +104,44 @@ static void HandleCFIBadType(CFIBadTypeData *Data, ValueHandle Vtable,
     return;
 
   ScopedReport R(Opts, Loc, ET);
-  DynamicTypeInfo DTI = getDynamicTypeInfoFromVtable((void*)Vtable);
+  DynamicTypeInfo DTI = ValidVtable
+                            ? getDynamicTypeInfoFromVtable((void *)Vtable)
+                            : DynamicTypeInfo(0, 0, 0);
 
-  static const char *TypeCheckKinds[] = {
-    "virtual call",
-    "non-virtual call",
-    "base-to-derived cast",
-    "cast to unrelated type",
-  };
+  const char *CheckKindStr;
+  switch (Data->CheckKind) {
+  case CFITCK_VCall:
+    CheckKindStr = "virtual call";
+    break;
+  case CFITCK_NVCall:
+    CheckKindStr = "non-virtual call";
+    break;
+  case CFITCK_DerivedCast:
+    CheckKindStr = "base-to-derived cast";
+    break;
+  case CFITCK_UnrelatedCast:
+    CheckKindStr = "cast to unrelated type";
+    break;
+  case CFITCK_ICall:
+    Die();
+  }
 
   Diag(Loc, DL_Error, "control flow integrity check for type %0 failed during "
                       "%1 (vtable address %2)")
-      << Data->Type << TypeCheckKinds[Data->TypeCheckKind] << (void *)Vtable;
+      << Data->Type << CheckKindStr << (void *)Vtable;
 
   // If possible, say what type it actually points to.
-  if (!DTI.isValid())
-    Diag(Vtable, DL_Note, "invalid vtable");
-  else
+  if (!DTI.isValid()) {
+    const char *module = Symbolizer::GetOrInit()->GetModuleNameForPc(Vtable);
+    if (module)
+      Diag(Vtable, DL_Note, "invalid vtable in module %0") << module;
+    else
+      Diag(Vtable, DL_Note, "invalid vtable");
+  } else {
     Diag(Vtable, DL_Note, "vtable is of type %0")
         << TypeName(DTI.getMostDerivedTypeName());
+  }
 }
+}  // namespace __ubsan
 
-void __ubsan::__ubsan_handle_cfi_bad_type(CFIBadTypeData *Data,
-                                          ValueHandle Vtable) {
-  GET_REPORT_OPTIONS(false);
-  HandleCFIBadType(Data, Vtable, Opts);
-}
-
-void __ubsan::__ubsan_handle_cfi_bad_type_abort(CFIBadTypeData *Data,
-                                                ValueHandle Vtable) {
-  GET_REPORT_OPTIONS(true);
-  HandleCFIBadType(Data, Vtable, Opts);
-  Die();
-}
-
-#endif  // CAN_SANITIZE_UB
+#endif // CAN_SANITIZE_UB

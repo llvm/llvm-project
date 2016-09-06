@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Visual Studio Native Debugging Visualizers for LLVM
+
+For Visual Studio 2013 only, put this file into 
+"%USERPROFILE%\Documents\Visual Studio 2013\Visualizers" or create a symbolic link so it updates automatically.
+
+For later versions of Visual Studio, no setup is required.
+-->
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <!-- VS2013 -->
+  <Type Name="llvm::SmallVectorImpl&lt;*&gt;" Priority="MediumLow">
+    <DisplayString Condition="(($T1*)EndX - ($T1*)BeginX) == 0">empty</DisplayString>
+    <DisplayString Condition="(($T1*)EndX - ($T1*)BeginX) != 0">{{ size={($T1*)EndX - ($T1*)BeginX} }}</DisplayString>
+    <Expand>
+      <Item Name="[size]">($T1*)EndX - ($T1*)BeginX</Item>
+      <Item Name="[capacity]">($T1*)CapacityX - ($T1*)BeginX</Item>
+      <ArrayItems>
+        <Size>($T1*)EndX - ($T1*)BeginX</Size>
+        <ValuePointer>($T1*)BeginX</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <!-- VS2015 and up -->
+  <Type Name="llvm::SmallVectorImpl&lt;*&gt;">
+    <DisplayString IncludeView ="elt0" Condition="(($T1*)EndX - ($T1*)BeginX) == 0"></DisplayString>
+    <DisplayString IncludeView ="elt0">{(($T1*)BeginX)[0]}{*this,view(elt1)}</DisplayString>
+    <DisplayString IncludeView ="elt1" Condition="(($T1*)EndX - ($T1*)BeginX) == 1"></DisplayString>
+    <DisplayString IncludeView ="elt1">, {(($T1*)BeginX)[1]}{*this,view(elt2)}</DisplayString>
+    <DisplayString IncludeView ="elt2" Condition="(($T1*)EndX - ($T1*)BeginX) == 2"></DisplayString>
+    <DisplayString IncludeView ="elt2">, {(($T1*)BeginX)[2]}{*this,view(elt3)}</DisplayString>
+    <DisplayString IncludeView ="elt3" Condition="(($T1*)EndX - ($T1*)BeginX) == 3"></DisplayString>
+    <DisplayString IncludeView ="elt3">, {(($T1*)BeginX)[2]}{*this,view(elt4)}</DisplayString>
+    <DisplayString IncludeView ="elt4" Condition="(($T1*)EndX - ($T1*)BeginX) == 4"></DisplayString>
+    <DisplayString IncludeView ="elt4">, /* {(($T1*)EndX - ($T1*)BeginX) - 4} more*/ </DisplayString>
+    <DisplayString Condition="(($T1*)EndX - ($T1*)BeginX) == 0">empty</DisplayString>
+    <DisplayString Condition="(($T1*)EndX - ($T1*)BeginX) != 0">{{{*this,view(elt0)}}}</DisplayString>
+    <Expand>
+      <Item Name="[size]">($T1*)EndX - ($T1*)BeginX</Item>
+      <Item Name="[capacity]">($T1*)CapacityX - ($T1*)BeginX</Item>
+      <ArrayItems>
+        <Size>($T1*)EndX - ($T1*)BeginX</Size>
+        <ValuePointer>($T1*)BeginX</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="llvm::ArrayRef&lt;*&gt;">
+    <DisplayString Condition="Length == 0">empty</DisplayString>
+    <DisplayString Condition="Length != 0">{{ size={Length} }}</DisplayString>
+    <Expand>
+      <Item Name="[size]">Length</Item>
+      <ArrayItems>
+        <Size>Length</Size>
+        <ValuePointer>Data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+  <Type Name="llvm::SmallString&lt;*&gt;">
+    <DisplayString>{BeginX,s}</DisplayString>
+    <StringView>BeginX,s</StringView>
+    <Expand>
+      <Item Name="[size]">(char*)EndX - (char*)BeginX</Item>
+      <Item Name="[capacity]">(char*)CapacityX - (char*)BeginX</Item>
+      <ArrayItems>
+        <Size>(char*)EndX - (char*)BeginX</Size>
+        <ValuePointer>(char*)BeginX</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::StringRef">
+    <DisplayString>{Data,[Length]s}</DisplayString>
+    <StringView>Data,[Length]s</StringView>
+    <Expand>
+      <Item Name="[size]">Length</Item>
+      <ArrayItems>
+        <Size>Length</Size>
+        <ValuePointer>Data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::PointerIntPair&lt;*,*,*,*&gt;">
+    <DisplayString>{IntMask}: {($T1)(Value &amp; PointerBitMask)} [{($T3)((Value &gt;&gt; IntShift) &amp; IntMask)}]</DisplayString>
+    <Expand>
+      <Item Name="[ptr]">($T1)(Value &amp; PointerBitMask)</Item>
+      <Item Name="[int]">($T3)((Value &gt;&gt; IntShift) &amp; IntMask)</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::PointerUnion&lt;*,*&gt;">
+    <DisplayString Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) == 0">{"$T1", s8b}: {($T1)(Val.Value &amp; Val.PointerBitMask)}</DisplayString>
+    <DisplayString Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) != 0">{"$T2", s8b}: {($T2)(Val.Value &amp; Val.PointerBitMask)}</DisplayString>
+    <Expand>
+      <ExpandedItem Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) == 0">($T1)(Val.Value &amp; Val.PointerBitMask)</ExpandedItem>
+      <ExpandedItem Condition="((Val.Value &gt;&gt; Val.IntShift) &amp; Val.IntMask) != 0">($T2)(Val.Value &amp; Val.PointerBitMask)</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::PointerUnion3&lt;*,*,*&gt;">
+    <DisplayString Condition="(Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">{"$T1", s8b}: {($T1)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &amp; 2) == 2">{"$T2", s8b}: {($T2)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &amp; 1) == 1">{"$T3", s8b}: {($T3)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <Expand>
+      <ExpandedItem Condition="(Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">($T1)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
+      <ExpandedItem Condition="(Val.Val.Value &amp; 2) == 2">($T2)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
+      <ExpandedItem Condition="(Val.Val.Value &amp; 1) == 1">($T3)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::PointerUnion4&lt;*,*,*,*&gt;">
+    <DisplayString Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">{"$T1", s8b}: {($T1)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) == 2">{"$T2", s8b}: {($T2)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 1) == 1">{"$T3", s8b}: {($T3)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <DisplayString Condition="(Val.Val.Value &amp; 3) == 3">{"$T4", s8b}: {($T4)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)}</DisplayString>
+    <Expand>
+      <ExpandedItem Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) != 2 &amp;&amp; (Val.Val.Value &amp; 1) != 1">($T1)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
+      <ExpandedItem Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 2) == 2">($T2)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
+      <ExpandedItem Condition="(Val.Val.Value &amp; 3) != 3 &amp;&amp; (Val.Val.Value &amp; 1) == 1">($T3)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
+      <ExpandedItem Condition="(Val.Val.Value &amp; 3) == 3">($T4)((Val.Val.Value &gt;&gt; 2) &lt;&lt; 2)</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::iplist&lt;*,*&gt;">
+    <DisplayString Condition="Head == 0">{{ empty }}</DisplayString>
+    <DisplayString Condition="Head != 0">{{ head={Head} }}</DisplayString>
+    <Expand>
+      <LinkedListItems>
+        <HeadPointer>Head</HeadPointer>
+        <NextPointer>Next</NextPointer>
+        <ValueNode>this</ValueNode>
+      </LinkedListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::IntrusiveRefCntPtr&lt;*&gt;">
+    <DisplayString Condition="Obj == 0">empty</DisplayString>
+    <DisplayString Condition="(Obj != 0) &amp;&amp; (Obj-&gt;ref_cnt == 1)">RefPtr [1 ref] {*Obj}</DisplayString>
+    <DisplayString Condition="(Obj != 0) &amp;&amp; (Obj-&gt;ref_cnt != 1)">RefPtr [{Obj-&gt;ref_cnt} refs] {*Obj}</DisplayString>
+    <Expand>
+      <Item Condition="Obj != 0" Name="[refs]">Obj-&gt;ref_cnt</Item>
+      <ExpandedItem Condition="Obj != 0">Obj</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::SmallPtrSet&lt;*,*&gt;">
+    <DisplayString Condition="CurArray == SmallArray">{{ [Small Mode] size={NumElements}, capacity={CurArraySize} }}</DisplayString>
+    <DisplayString Condition="CurArray != SmallArray">{{ [Big Mode] size={NumElements}, capacity={CurArraySize} }}</DisplayString>
+    <Expand>
+      <Item Name="[size]">NumElements</Item>
+      <Item Name="[capacity]">CurArraySize</Item>
+      <ArrayItems>
+        <Size>CurArraySize</Size>
+        <ValuePointer>($T1*)CurArray</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::DenseMap&lt;*,*,*&gt;">
+    <DisplayString Condition="NumEntries == 0">empty</DisplayString>
+    <DisplayString Condition="NumEntries != 0">{{ size={NumEntries}, buckets={NumBuckets} }}</DisplayString>
+    <Expand>
+      <Item Name="[size]">NumEntries</Item>
+      <Item Name="[buckets]">NumBuckets</Item>
+      <ArrayItems>
+        <Size>NumBuckets</Size>
+        <ValuePointer>Buckets</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::StringMap&lt;*,*&gt;">
+    <DisplayString>{{ size={NumItems}, buckets={NumBuckets} }}</DisplayString>
+    <Expand>
+      <Item Name="[size]">NumItems</Item>
+      <Item Name="[buckets]">NumBuckets</Item>
+      <ArrayItems>
+        <Size>NumBuckets</Size>
+        <ValuePointer>(MapEntryTy**)TheTable</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::StringMapEntry&lt;*&gt;">
+    <DisplayString Condition="StrLen == 0">empty</DisplayString>
+    <DisplayString Condition="StrLen != 0">({this+1,s}, {second})</DisplayString>
+    <Expand>
+      <Item Name="[key]">this+1,s</Item>
+      <Item Name="[value]" Condition="StrLen != 0">second</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="llvm::Triple">
+    <DisplayString>{Data}</DisplayString>
+  </Type>
+  
+  <Type Name="llvm::Optional&lt;*&gt;">
+    <DisplayString Condition="!hasVal">empty</DisplayString>
+    <DisplayString Condition="hasVal">{*(($T1 *)(unsigned char *)storage.buffer)}</DisplayString>
+    <Expand>
+      <Item Name="[underlying]" Condition="hasVal">*(($T1 *)(unsigned char *)storage.buffer)</Item>
+    </Expand>
+  </Type>
+
+
+  <!-- Since we're in MSVC, we can assume that the system is little endian.  Therefore
+       the little and native cases just require a cast.  Handle this easy case first. Use
+       a wildcard for the second template argument (the endianness), but we will use a
+       specific value of 0 later on for the big endian to give it priority for being a
+       better match.  -->
+  <Type Name="llvm::support::detail::packed_endian_specific_integral&lt;*,*,1&gt;">
+    <DisplayString>{{little endian value = {*(($T1*)(unsigned char *)Value.buffer)} }}</DisplayString>
+    <Expand>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==1">(unsigned char *)Value.buffer,1</Item>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==2">(unsigned char *)Value.buffer,2</Item>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==4">(unsigned char *)Value.buffer,4</Item>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==8">(unsigned char *)Value.buffer,8</Item>
+    </Expand>
+  </Type>
+  
+  <!-- Now handle the hard case of big endian.  We need to do the swizzling here, but
+       we need to specialize it based on the size of the value type. -->
+  <Type Name="llvm::support::detail::packed_endian_specific_integral&lt;*,0,1&gt;">
+    <DisplayString Condition="sizeof($T1)==1">{{ big endian value = {*(unsigned char *)Value.buffer} }}</DisplayString>
+    <DisplayString Condition="sizeof($T1)==2">{{ big endian value = {(($T1)(*(unsigned char *)Value.buffer) &lt;&lt; 8) 
+                                                                    | ($T1)(*((unsigned char *)Value.buffer+1))} }}</DisplayString>
+    <DisplayString Condition="sizeof($T1)==4">{{ big endian value = {(($T1)(*(unsigned char *)Value.buffer) &lt;&lt; 24) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+1)) &lt;&lt; 16) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+2)) &lt;&lt; 8) 
+                                                                    |  ($T1)(*((unsigned char *)Value.buffer+3))} }}</DisplayString>
+    <DisplayString Condition="sizeof($T1)==8">{{ big endian value = {(($T1)(*(unsigned char *)Value.buffer) &lt;&lt; 56) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+1)) &lt;&lt; 48) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+2)) &lt;&lt; 40) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+3)) &lt;&lt; 32) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+4)) &lt;&lt; 24) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+5)) &lt;&lt; 16) 
+                                                                    | (($T1)(*((unsigned char *)Value.buffer+6)) &lt;&lt; 8) 
+                                                                    |  ($T1)(*((unsigned char *)Value.buffer+7))} }}</DisplayString>
+    <Expand>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==1">(unsigned char *)Value.buffer,1</Item>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==2">(unsigned char *)Value.buffer,2</Item>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==4">(unsigned char *)Value.buffer,4</Item>
+      <Item Name="[Raw Bytes]" Condition="sizeof($T1)==8">(unsigned char *)Value.buffer,8</Item>
+    </Expand>
+  </Type>
+</AutoVisualizer>

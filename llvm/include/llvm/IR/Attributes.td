@@ -16,6 +16,10 @@ class StrBoolAttr<string S> : Attr<S>;
 /// 0 means unaligned (different from align(1)).
 def Alignment : EnumAttr<"align">;
 
+/// The result of the function is guaranteed to point to a number of bytes that
+/// we can determine if we know the value of the function's arguments.
+def AllocSize : EnumAttr<"allocsize">;
+
 /// inline=always.
 def AlwaysInline : EnumAttr<"alwaysinline">;
 
@@ -163,6 +167,9 @@ def SwiftSelf : EnumAttr<"swiftself">;
 /// Function must be in a unwind table.
 def UWTable : EnumAttr<"uwtable">;
 
+/// Function only writes to memory.
+def WriteOnly : EnumAttr<"writeonly">;
+
 /// Zero extended before/after call.
 def ZExt : EnumAttr<"zeroext">;
 
@@ -171,6 +178,7 @@ def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;
 def NoNansFPMath : StrBoolAttr<"no-nans-fp-math">;
 def UnsafeFPMath : StrBoolAttr<"unsafe-fp-math">;
+def NoJumpTables : StrBoolAttr<"no-jump-tables">;
 
 class CompatRule<string F> {
   // The name of the function called to check the attribute of the caller and
@@ -185,6 +193,7 @@ class CompatRule<string F> {
 def : CompatRule<"isEqual<SanitizeAddressAttr>">;
 def : CompatRule<"isEqual<SanitizeThreadAttr>">;
 def : CompatRule<"isEqual<SanitizeMemoryAttr>">;
+def : CompatRule<"isEqual<SafeStackAttr>">;
 
 class MergeRule<string F> {
   // The name of the function called to merge the attributes of the caller and
@@ -200,4 +209,5 @@ def : MergeRule<"setAND<NoInfsFPMathAttr>">;
 def : MergeRule<"setAND<NoNansFPMathAttr>">;
 def : MergeRule<"setAND<UnsafeFPMathAttr>">;
 def : MergeRule<"setOR<NoImplicitFloatAttr>">;
+def : MergeRule<"setOR<NoJumpTablesAttr>">;
 def : MergeRule<"adjustCallerSSPLevel">;

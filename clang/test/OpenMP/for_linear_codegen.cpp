@@ -23,6 +23,74 @@ volatile int &g1 = g;
 float f;
 char cnt;
 
+struct SS {
+  int a;
+  int b : 4;
+  int &c;
+  SS(int &d) : a(0), b(0), c(d) {
+#pragma omp parallel
+#pragma omp for linear(a, b, c)
+    for (int i = 0; i < 2; ++i)
+#ifdef LAMBDA
+      [&]() {
+        ++this->a, --b, (this)->c /= 1;
+#pragma omp parallel
+#pragma omp for linear(a, b) linear(ref(c))
+        for (int i = 0; i < 2; ++i)
+          ++(this)->a, --b, this->c /= 1;
+      }();
+#elif defined(BLOCKS)
+      ^{
+        ++a;
+        --this->b;
+        (this)->c /= 1;
+#pragma omp parallel
+#pragma omp for linear(a, b) linear(uval(c))
+        for (int i = 0; i < 2; ++i)
+          ++(this)->a, --b, this->c /= 1;
+      }();
+#else
+      ++this->a, --b, c /= 1;
+#endif
+  }
+};
+
+template <typename T>
+struct SST {
+  T a;
+  SST() : a(T()) {
+#pragma omp parallel
+#pragma omp for linear(a)
+    for (int i = 0; i < 2; ++i)
+#ifdef LAMBDA
+      [&]() {
+        [&]() {
+          ++this->a;
+#pragma omp parallel
+#pragma omp for linear(a)
+          for (int i = 0; i < 2; ++i)
+            ++(this)->a;
+        }();
+      }();
+#elif defined(BLOCKS)
+      ^{
+        ^{
+          ++a;
+#pragma omp parallel
+#pragma omp for linear(a)
+          for (int i = 0; i < 2; ++i)
+            ++(this)->a;
+        }();
+      }();
+#else
+      ++(this)->a;
+#endif
+  }
+};
+
+// CHECK: [[SS_TY:%.+]] = type { i{{[0-9]+}}, i8
+// LAMBDA: [[SS_TY:%.+]] = type { i{{[0-9]+}}, i8
+// BLOCKS: [[SS_TY:%.+]] = type { i{{[0-9]+}}, i8
 // CHECK: [[S_FLOAT_TY:%.+]] = type { float }
 // CHECK: [[S_INT_TY:%.+]] = type { i32 }
 // CHECK-DAG: [[IMPLICIT_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 66, i32 0, i32 0, i8*
@@ -31,6 +99,7 @@ char cnt;
 template <typename T>
 T tmain() {
   S<T> test;
+  SST<T> sst;
   T *pvar = &test.f;
   T &lvar = test.f;
 #pragma omp parallel
@@ -42,16 +111,75 @@ T tmain() {
 }
 
 int main() {
+  static int sivar;
+  SS ss(sivar);
 #ifdef LAMBDA
   // LAMBDA: [[G:@.+]] = global i{{[0-9]+}} 1212,
   // LAMBDA-LABEL: @main
-  // LAMBDA: call void [[OUTER_LAMBDA:@.+]](
+  // LAMBDA: alloca [[SS_TY]],
+  // LAMBDA: alloca [[CAP_TY:%.+]],
+  // LAMBDA: call void [[OUTER_LAMBDA:@.+]]([[CAP_TY]]*
   [&]() {
   // LAMBDA: define{{.*}} internal{{.*}} void [[OUTER_LAMBDA]](
   // LAMBDA: call void {{.+}} @__kmpc_fork_call({{.+}}, i32 0, {{.+}}* [[OMP_REGION:@.+]] to {{.+}})
 #pragma omp parallel
 #pragma omp for linear(g, g1:5)
   for (int i = 0; i < 2; ++i) {
+    // LAMBDA: define {{.+}} @{{.+}}([[SS_TY]]*
+    // LAMBDA: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 0
+    // LAMBDA: store i{{[0-9]+}} 0, i{{[0-9]+}}* %
+    // LAMBDA: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 1
+    // LAMBDA: store i8
+    // LAMBDA: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 2
+    // LAMBDA: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*)* [[SS_MICROTASK:@.+]] to void
+    // LAMBDA: ret
+
+    // LAMBDA: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}})
+    // LAMBDA: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 0
+    // LAMBDA-NOT: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 1
+    // LAMBDA: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 2
+    // LAMBDA: call void @__kmpc_for_static_init_4(
+    // LAMBDA-NOT: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]*
+    // LAMBDA: call{{.*}} void
+    // LAMBDA: call void @__kmpc_for_static_fini(
+    // LAMBDA: br i1
+    // LAMBDA: [[B_REF:%.+]] = getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 1
+    // LAMBDA: store i8 %{{.+}}, i8* [[B_REF]],
+    // LAMBDA: br label
+    // LAMBDA: ret void
+
+    // LAMBDA: define internal void @{{.+}}(i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}}, i32* {{.+}}, i32* {{.+}}, i32* {{.+}})
+    // LAMBDA: alloca i{{[0-9]+}},
+    // LAMBDA: alloca i{{[0-9]+}},
+    // LAMBDA: alloca i{{[0-9]+}},
+    // LAMBDA: alloca i{{[0-9]+}},
+    // LAMBDA: alloca i{{[0-9]+}},
+    // LAMBDA: alloca i{{[0-9]+}},
+    // LAMBDA: alloca i{{[0-9]+}},
+    // LAMBDA: alloca i{{[0-9]+}},
+    // LAMBDA: alloca i{{[0-9]+}},
+    // LAMBDA: [[A_PRIV:%.+]] = alloca i{{[0-9]+}},
+    // LAMBDA: [[B_PRIV:%.+]] = alloca i{{[0-9]+}},
+    // LAMBDA: [[C_PRIV:%.+]] = alloca i{{[0-9]+}},
+    // LAMBDA: store i{{[0-9]+}}* [[A_PRIV]], i{{[0-9]+}}** [[REFA:%.+]],
+    // LAMBDA: store i{{[0-9]+}}* [[C_PRIV]], i{{[0-9]+}}** [[REFC:%.+]],
+    // LAMBDA: call void @__kmpc_for_static_init_4(
+    // LAMBDA: [[A_PRIV:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[REFA]],
+    // LAMBDA-NEXT: [[A_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[A_PRIV]],
+    // LAMBDA-NEXT: [[INC:%.+]] = add nsw i{{[0-9]+}} [[A_VAL]], 1
+    // LAMBDA-NEXT: store i{{[0-9]+}} [[INC]], i{{[0-9]+}}* [[A_PRIV]],
+    // LAMBDA-NEXT: [[B_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[B_PRIV]],
+    // LAMBDA-NEXT: [[DEC:%.+]] = add nsw i{{[0-9]+}} [[B_VAL]], -1
+    // LAMBDA-NEXT: store i{{[0-9]+}} [[DEC]], i{{[0-9]+}}* [[B_PRIV]],
+    // LAMBDA-NEXT: [[C_PRIV:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[REFC]],
+    // LAMBDA-NEXT: [[C_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[C_PRIV]],
+    // LAMBDA-NEXT: [[DIV:%.+]] = sdiv i{{[0-9]+}} [[C_VAL]], 1
+    // LAMBDA-NEXT: store i{{[0-9]+}} [[DIV]], i{{[0-9]+}}* [[C_PRIV]],
+    // LAMBDA: call void @__kmpc_for_static_fini(
+    // LAMBDA: br i1
+    // LAMBDA: br label
+    // LAMBDA: ret void
+
     // LAMBDA: define{{.*}} internal{{.*}} void [[OMP_REGION]](i32* noalias %{{.+}}, i32* noalias %{{.+}})
     // LAMBDA: alloca i{{[0-9]+}},
     // LAMBDA: [[G_START_ADDR:%.+]] = alloca i{{[0-9]+}},
@@ -96,6 +224,7 @@ int main() {
 #elif defined(BLOCKS)
   // BLOCKS: [[G:@.+]] = global i{{[0-9]+}} 1212,
   // BLOCKS-LABEL: @main
+  // BLOCKS: call
   // BLOCKS: call void {{%.+}}(i8
   ^{
   // BLOCKS: define{{.*}} internal{{.*}} void {{.+}}(i8*
@@ -146,6 +275,60 @@ int main() {
   }
   }();
   return 0;
+// BLOCKS: define {{.+}} @{{.+}}([[SS_TY]]*
+// BLOCKS: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 0
+// BLOCKS: store i{{[0-9]+}} 0, i{{[0-9]+}}* %
+// BLOCKS: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 1
+// BLOCKS: store i8
+// BLOCKS: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 2
+// BLOCKS: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*)* [[SS_MICROTASK:@.+]] to void
+// BLOCKS: ret
+
+// BLOCKS: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}})
+// BLOCKS: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 0
+// BLOCKS-NOT: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 1
+// BLOCKS: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 2
+// BLOCKS: call void @__kmpc_for_static_init_4(
+// BLOCKS-NOT: getelementptr {{.*}}[[SS_TY]], [[SS_TY]]*
+// BLOCKS: call{{.*}} void
+// BLOCKS: call void @__kmpc_for_static_fini(
+// BLOCKS: br i1
+// BLOCKS: [[B_REF:%.+]] = getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 1
+// BLOCKS: store i8 %{{.+}}, i8* [[B_REF]],
+// BLOCKS: br label
+// BLOCKS: ret void
+
+// BLOCKS: define internal void @{{.+}}(i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}}, i32* {{.+}}, i32* {{.+}}, i32* {{.+}})
+// BLOCKS: alloca i{{[0-9]+}},
+// BLOCKS: alloca i{{[0-9]+}},
+// BLOCKS: alloca i{{[0-9]+}},
+// BLOCKS: alloca i{{[0-9]+}},
+// BLOCKS: alloca i{{[0-9]+}},
+// BLOCKS: alloca i{{[0-9]+}},
+// BLOCKS: alloca i{{[0-9]+}},
+// BLOCKS: alloca i{{[0-9]+}},
+// BLOCKS: alloca i{{[0-9]+}},
+// BLOCKS: [[A_PRIV:%.+]] = alloca i{{[0-9]+}},
+// BLOCKS: [[B_PRIV:%.+]] = alloca i{{[0-9]+}},
+// BLOCKS: [[C_PRIV:%.+]] = alloca i{{[0-9]+}},
+// BLOCKS: store i{{[0-9]+}}* [[A_PRIV]], i{{[0-9]+}}** [[REFA:%.+]],
+// BLOCKS: store i{{[0-9]+}}* [[C_PRIV]], i{{[0-9]+}}** [[REFC:%.+]],
+// BLOCKS: call void @__kmpc_for_static_init_4(
+// BLOCKS: [[A_PRIV:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[REFA]],
+// BLOCKS-NEXT: [[A_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[A_PRIV]],
+// BLOCKS-NEXT: [[INC:%.+]] = add nsw i{{[0-9]+}} [[A_VAL]], 1
+// BLOCKS-NEXT: store i{{[0-9]+}} [[INC]], i{{[0-9]+}}* [[A_PRIV]],
+// BLOCKS-NEXT: [[B_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[B_PRIV]],
+// BLOCKS-NEXT: [[DEC:%.+]] = add nsw i{{[0-9]+}} [[B_VAL]], -1
+// BLOCKS-NEXT: store i{{[0-9]+}} [[DEC]], i{{[0-9]+}}* [[B_PRIV]],
+// BLOCKS-NEXT: [[C_PRIV:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[REFC]],
+// BLOCKS-NEXT: [[C_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[C_PRIV]],
+// BLOCKS-NEXT: [[DIV:%.+]] = sdiv i{{[0-9]+}} [[C_VAL]], 1
+// BLOCKS-NEXT: store i{{[0-9]+}} [[DIV]], i{{[0-9]+}}* [[C_PRIV]],
+// BLOCKS: call void @__kmpc_for_static_fini(
+// BLOCKS: br i1
+// BLOCKS: br label
+// BLOCKS: ret void
 #else
   S<float> test;
   float *pvar = &test.f;
@@ -216,7 +399,51 @@ int main() {
 // CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 2, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, i32**, i32*)* [[TMAIN_MICROTASK:@.+]] to void
 // CHECK: call void [[S_INT_TY_DESTR:@.+]]([[S_INT_TY]]*
 // CHECK: ret
-//
+
+// CHECK: define {{.+}} @{{.+}}([[SS_TY]]*
+// CHECK: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 0
+// CHECK: store i{{[0-9]+}} 0, i{{[0-9]+}}* %
+// CHECK: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 1
+// CHECK: store i8
+// CHECK: getelementptr inbounds [[SS_TY]], [[SS_TY]]* %{{.+}}, i32 0, i32 2
+// CHECK: call void (%{{.+}}*, i{{[0-9]+}}, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)*, ...) @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{[0-9]+}} 1, void (i{{[0-9]+}}*, i{{[0-9]+}}*, ...)* bitcast (void (i{{[0-9]+}}*, i{{[0-9]+}}*, [[SS_TY]]*)* [[SS_MICROTASK:@.+]] to void
+// CHECK: ret
+
+// CHECK: define internal void [[SS_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, [[SS_TY]]* %{{.+}})
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: alloca i{{[0-9]+}},
+// CHECK: [[A_PRIV:%.+]] = alloca i{{[0-9]+}},
+// CHECK: [[B_PRIV:%.+]] = alloca i{{[0-9]+}},
+// CHECK: [[C_PRIV:%.+]] = alloca i{{[0-9]+}},
+// CHECK: store i{{[0-9]+}}* [[A_PRIV]], i{{[0-9]+}}** [[REFA:%.+]],
+// CHECK: store i{{[0-9]+}}* [[C_PRIV]], i{{[0-9]+}}** [[REFC:%.+]],
+// CHECK: call void @__kmpc_for_static_init_4(
+// CHECK: [[A_PRIV:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[REFA]],
+// CHECK-NEXT: [[A_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[A_PRIV]],
+// CHECK-NEXT: [[INC:%.+]] = add nsw i{{[0-9]+}} [[A_VAL]], 1
+// CHECK-NEXT: store i{{[0-9]+}} [[INC]], i{{[0-9]+}}* [[A_PRIV]],
+// CHECK-NEXT: [[B_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[B_PRIV]],
+// CHECK-NEXT: [[DEC:%.+]] = add nsw i{{[0-9]+}} [[B_VAL]], -1
+// CHECK-NEXT: store i{{[0-9]+}} [[DEC]], i{{[0-9]+}}* [[B_PRIV]],
+// CHECK-NEXT: [[C_PRIV:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[REFC]],
+// CHECK-NEXT: [[C_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[C_PRIV]],
+// CHECK-NEXT: [[DIV:%.+]] = sdiv i{{[0-9]+}} [[C_VAL]], 1
+// CHECK-NEXT: store i{{[0-9]+}} [[DIV]], i{{[0-9]+}}* [[C_PRIV]],
+// CHECK: call void @__kmpc_for_static_fini(
+// CHECK: br i1
+// CHECK: [[B_REF:%.+]] = getelementptr {{.*}}[[SS_TY]], [[SS_TY]]* %{{.*}}, i32 0, i32 1
+// CHECK: store i8 %{{.+}}, i8* [[B_REF]],
+// CHECK: br label
+// CHECK: ret void
+
 // CHECK: define internal void [[TMAIN_MICROTASK]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}}, i32** dereferenceable(8) %{{.+}}, i32* dereferenceable(4) %{{.+}})
 // CHECK: alloca i{{[0-9]+}},
 // CHECK: [[PVAR_START:%.+]] = alloca i32*,

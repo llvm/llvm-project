@@ -1,0 +1,164 @@
+# RUN: llc -mtriple thumbv7 -verify-machineinstrs -run-pass arm-ldst-opt %s -o - | FileCheck %s
+--- |
+  ; ModuleID = '/Volumes/Data/llvm/test/CodeGen/ARM/sched-it-debug-nodes.ll'
+  target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv7"
+
+  %struct.s = type opaque
+
+  ; Function Attrs: nounwind
+  define arm_aapcscc i32 @f(%struct.s* %s, i32 %u, i8* %b, i32 %n) #0 !dbg !4 {
+  entry:
+    tail call void @llvm.dbg.value(metadata %struct.s* %s, i64 0, metadata !18, metadata !27), !dbg !28
+    tail call void @llvm.dbg.value(metadata i32 %u, i64 0, metadata !19, metadata !27), !dbg !28
+    tail call void @llvm.dbg.value(metadata i8* %b, i64 0, metadata !20, metadata !27), !dbg !28
+    tail call void @llvm.dbg.value(metadata i32 %n, i64 0, metadata !21, metadata !27), !dbg !28
+    %cmp = icmp ult i32 %n, 4, !dbg !29
+    br i1 %cmp, label %return, label %if.end, !dbg !31
+
+  if.end:                                           ; preds = %entry
+    tail call arm_aapcscc void @g(%struct.s* %s, i8* %b, i32 %n) #3, !dbg !32
+    br label %return, !dbg !33
+
+  return:                                           ; preds = %if.end, %entry
+    %retval.0 = phi i32 [ 0, %if.end ], [ -1, %entry ]
+    ret i32 %retval.0, !dbg !34
+  }
+
+  declare arm_aapcscc void @g(%struct.s*, i8*, i32) #1
+
+  ; Function Attrs: nounwind readnone
+  declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
+
+  attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #2 = { nounwind readnone }
+  attributes #3 = { nounwind }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!22, !23, !24, !25}
+  !llvm.ident = !{!26}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0  (llvm/trunk 237059)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
+  !1 = !DIFile(filename: "<stdin>", directory: "/Users/compnerd/Source/llvm")
+  !2 = !{}
+  !4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 9, type: !5, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !17)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{!7, !8, !11, !12, !16}
+  !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
+  !8 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !9, size: 32, align: 32)
+  !9 = !DIDerivedType(tag: DW_TAG_typedef, name: "s", file: !1, line: 5, baseType: !10)
+  !10 = !DICompositeType(tag: DW_TAG_structure_type, name: "s", file: !1, line: 5, flags: DIFlagFwdDecl)
+  !11 = !DIBasicType(name: "unsigned int", size: 32, align: 32, encoding: DW_ATE_unsigned)
+  !12 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !13, size: 32, align: 32)
+  !13 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !14)
+  !14 = !DIDerivedType(tag: DW_TAG_typedef, name: "uint8_t", file: !1, line: 2, baseType: !15)
+  !15 = !DIBasicType(name: "unsigned char", size: 8, align: 8, encoding: DW_ATE_unsigned_char)
+  !16 = !DIDerivedType(tag: DW_TAG_typedef, name: "size_t", file: !1, line: 3, baseType: !11)
+  !17 = !{!18, !19, !20, !21}
+  !18 = !DILocalVariable(name: "s", arg: 1, scope: !4, file: !1, line: 9, type: !8)
+  !19 = !DILocalVariable(name: "u", arg: 2, scope: !4, file: !1, line: 9, type: !11)
+  !20 = !DILocalVariable(name: "b", arg: 3, scope: !4, file: !1, line: 9, type: !12)
+  !21 = !DILocalVariable(name: "n", arg: 4, scope: !4, file: !1, line: 9, type: !16)
+  !22 = !{i32 2, !"Dwarf Version", i32 4}
+  !23 = !{i32 2, !"Debug Info Version", i32 3}
+  !24 = !{i32 1, !"wchar_size", i32 4}
+  !25 = !{i32 1, !"min_enum_size", i32 4}
+  !26 = !{!"clang version 3.7.0  (llvm/trunk 237059)"}
+  !27 = !DIExpression()
+  !28 = !DILocation(line: 9, scope: !4)
+  !29 = !DILocation(line: 10, scope: !30)
+  !30 = distinct !DILexicalBlock(scope: !4, file: !1, line: 10)
+  !31 = !DILocation(line: 10, scope: !4)
+  !32 = !DILocation(line: 13, scope: !4)
+  !33 = !DILocation(line: 14, scope: !4)
+  !34 = !DILocation(line: 15, scope: !4)
+
+...
+---
+name:            f
+alignment:       1
+exposesReturnsTwice: false
+hasInlineAsm:    false
+allVRegsAllocated: true
+isSSA:           false
+tracksRegLiveness: true
+tracksSubRegLiveness: false
+liveins:
+  - { reg: '%r0' }
+  - { reg: '%r1' }
+  - { reg: '%r2' }
+  - { reg: '%r3' }
+calleeSavedRegisters: [ '%lr', '%d8', '%d9', '%d10', '%d11', '%d12', '%d13',
+                        '%d14', '%d15', '%q4', '%q5', '%q6', '%q7', '%r4',
+                        '%r5', '%r6', '%r7', '%r8', '%r9', '%r10', '%r11',
+                        '%s16', '%s17', '%s18', '%s19', '%s20', '%s21',
+                        '%s22', '%s23', '%s24', '%s25', '%s26', '%s27',
+                        '%s28', '%s29', '%s30', '%s31', '%d8_d10', '%d9_d11',
+                        '%d10_d12', '%d11_d13', '%d12_d14', '%d13_d15',
+                        '%q4_q5', '%q5_q6', '%q6_q7', '%q4_q5_q6_q7', '%r4_r5',
+                        '%r6_r7', '%r8_r9', '%r10_r11', '%d8_d9_d10', '%d9_d10_d11',
+                        '%d10_d11_d12', '%d11_d12_d13', '%d12_d13_d14',
+                        '%d13_d14_d15', '%d8_d10_d12', '%d9_d11_d13', '%d10_d12_d14',
+                        '%d11_d13_d15', '%d8_d10_d12_d14', '%d9_d11_d13_d15',
+                        '%d9_d10', '%d11_d12', '%d13_d14', '%d9_d10_d11_d12',
+                        '%d11_d12_d13_d14' ]
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       8
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+stack:
+  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, callee-saved-register: '%lr' }
+  - { id: 1, type: spill-slot, offset: -8, size: 4, alignment: 4, callee-saved-register: '%r7' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2.if.end
+    liveins: %r0, %r1, %r2, %r3, %lr, %r7
+
+    DBG_VALUE debug-use %r0, debug-use _, !18, !27, debug-location !28
+    DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
+    DBG_VALUE debug-use %r2, debug-use _, !20, !27, debug-location !28
+    DBG_VALUE debug-use %r3, debug-use _, !21, !27, debug-location !28
+    t2CMPri %r3, 4, 14, _, implicit-def %cpsr, debug-location !31
+    t2Bcc %bb.2.if.end, 2, killed %cpsr
+
+  bb.1:
+    liveins: %lr, %r7
+
+    DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
+    %r0 = t2MOVi -1, 14, _, _
+    DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
+    tBX_RET 14, _, implicit %r0, debug-location !34
+
+  bb.2.if.end:
+    liveins: %r0, %r2, %r3, %r7, %lr
+
+    %sp = frame-setup t2STMDB_UPD %sp, 14, _, killed %r7, killed %lr
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset %lr, -4
+    frame-setup CFI_INSTRUCTION offset %r7, -8
+    DBG_VALUE debug-use %r0, debug-use _, !18, !27, debug-location !28
+    DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
+    DBG_VALUE debug-use %r2, debug-use _, !20, !27, debug-location !28
+    DBG_VALUE debug-use %r3, debug-use _, !21, !27, debug-location !28
+    %r1 = COPY killed %r2, debug-location !32
+    DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
+    %r2 = COPY killed %r3, debug-location !32
+    tBL 14, _, @g, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit %r0, implicit %r1, implicit %r2, implicit-def %sp, debug-location !32
+    %r0 = t2MOVi 0, 14, _, _
+    %sp = t2LDMIA_UPD %sp, 14, _, def %r7, def %lr
+    tBX_RET 14, _, implicit %r0, debug-location !34
+# Verify that the DBG_VALUE is ignored.
+# CHECK: %sp = t2LDMIA_RET %sp, 14, _, def %r7, def %pc, implicit %r0
+
+...

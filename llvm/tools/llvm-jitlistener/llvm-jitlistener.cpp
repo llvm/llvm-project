@@ -105,8 +105,6 @@ unsigned int GetNewMethodID(void) {
 class JitEventListenerTest {
 protected:
   void InitEE(const std::string &IRFile) {
-    LLVMContext &Context = getGlobalContext();
-
     // If we have a native target, initialize it to ensure it is linked in and
     // usable by the JIT.
     InitializeNativeTarget();
@@ -181,7 +179,7 @@ InputFilename(cl::Positional, cl::desc("<input IR file>"),
 
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 

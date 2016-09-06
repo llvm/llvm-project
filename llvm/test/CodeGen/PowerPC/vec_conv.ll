@@ -1,4 +1,4 @@
-; RUN: llc -mattr=+altivec < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mattr=+altivec < %s | FileCheck %s
 
 ; Check vector float/int conversion using altivec.
 

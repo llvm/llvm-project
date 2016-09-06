@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=x86_64-unknown-freebsd -code-model=small -relocation-model=pic -filetype=obj -o %T/testsmall_x86-64.o %s
+# RUN: llvm-mc -triple=x86_64-unknown-freebsd -code-model=small -filetype=obj -o %T/testsmall_x86-64.o %s
 # RUN: llvm-rtdyld -triple=x86_64-unknown-freebsd -verify -check=%s %/T/testsmall_x86-64.o
 
 	.globl	foo

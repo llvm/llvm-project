@@ -16,7 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ELFYAML.h"
+#include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -558,13 +558,7 @@ static bool isLittleEndian(const ELFYAML::Object &Doc) {
   return Doc.Header.Data == ELFYAML::ELF_ELFDATA(ELF::ELFDATA2LSB);
 }
 
-int yaml2elf(yaml::Input &YIn, raw_ostream &Out) {
-  ELFYAML::Object Doc;
-  YIn >> Doc;
-  if (YIn.error()) {
-    errs() << "yaml2obj: Failed to parse YAML file!\n";
-    return 1;
-  }
+int yaml2elf(llvm::ELFYAML::Object &Doc, raw_ostream &Out) {
   using object::ELFType;
   typedef ELFType<support::little, true> LE64;
   typedef ELFType<support::big, true> BE64;

@@ -190,7 +190,6 @@ static void createNullLocation(CXFile *file, unsigned *line,
     *column = 0;
   if (offset)
     *offset = 0;
-  return;
 }
 
 static void createNullLocation(CXString *filename, unsigned *line,
@@ -203,7 +202,6 @@ static void createNullLocation(CXString *filename, unsigned *line,
     *column = 0;
   if (offset)
     *offset = 0;
-  return;
 }
 
 extern "C" {
@@ -235,7 +233,6 @@ void clang_getExpansionLocation(CXSourceLocation location,
                                 unsigned *line,
                                 unsigned *column,
                                 unsigned *offset) {
-  
   if (!isASTUnitSourceLocation(location)) {
     CXLoadedDiagnostic::decodeLocation(location, file, line, column, offset);
     return;
@@ -276,7 +273,6 @@ void clang_getPresumedLocation(CXSourceLocation location,
                                CXString *filename,
                                unsigned *line,
                                unsigned *column) {
-
   if (!isASTUnitSourceLocation(location)) {
     // Other SourceLocation implementations do not support presumed locations
     // at this time.
@@ -318,7 +314,6 @@ void clang_getSpellingLocation(CXSourceLocation location,
                                unsigned *line,
                                unsigned *column,
                                unsigned *offset) {
-  
   if (!isASTUnitSourceLocation(location)) {
     CXLoadedDiagnostic::decodeLocation(location, file, line,
                                            column, offset);
@@ -356,7 +351,6 @@ void clang_getFileLocation(CXSourceLocation location,
                            unsigned *line,
                            unsigned *column,
                            unsigned *offset) {
-
   if (!isASTUnitSourceLocation(location)) {
     CXLoadedDiagnostic::decodeLocation(location, file, line,
                                            column, offset);

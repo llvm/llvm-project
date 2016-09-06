@@ -18,12 +18,15 @@
 #ifndef LLVM_CODEGEN_MACHINEFUNCTION_H
 #define LLVM_CODEGEN_MACHINEFUNCTION_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ArrayRecycler.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Recycler.h"
 
 namespace llvm {
@@ -46,21 +49,12 @@ struct MachinePointerInfo;
 struct WinEHFuncInfo;
 
 template <>
+struct ilist_sentinel_traits<MachineBasicBlock>
+    : public ilist_half_embedded_sentinel_traits<MachineBasicBlock> {};
+
+template <>
 struct ilist_traits<MachineBasicBlock>
     : public ilist_default_traits<MachineBasicBlock> {
-  mutable ilist_half_node<MachineBasicBlock> Sentinel;
-public:
-  MachineBasicBlock *createSentinel() const {
-    return static_cast<MachineBasicBlock*>(&Sentinel);
-  }
-  void destroySentinel(MachineBasicBlock *) const {}
-
-  MachineBasicBlock *provideInitialHead() const { return createSentinel(); }
-  MachineBasicBlock *ensureHead(MachineBasicBlock*) const {
-    return createSentinel();
-  }
-  static void noteHead(MachineBasicBlock*, MachineBasicBlock*) {}
-
   void addNodeToList(MachineBasicBlock* MBB);
   void removeNodeFromList(MachineBasicBlock* MBB);
   void deleteNode(MachineBasicBlock *MBB);
@@ -83,6 +77,91 @@ struct MachineFunctionInfo {
   static Ty *create(BumpPtrAllocator &Allocator, MachineFunction &MF) {
     return new (Allocator.Allocate<Ty>()) Ty(MF);
   }
+};
+
+/// Properties which a MachineFunction may have at a given point in time.
+/// Each of these has checking code in the MachineVerifier, and passes can
+/// require that a property be set.
+class MachineFunctionProperties {
+  // TODO: Add MachineVerifier checks for AllVRegsAllocated
+  // TODO: Add a way to print the properties and make more useful error messages
+  // Possible TODO: Allow targets to extend this (perhaps by allowing the
+  // constructor to specify the size of the bit vector)
+  // Possible TODO: Allow requiring the negative (e.g. VRegsAllocated could be
+  // stated as the negative of "has vregs"
+
+public:
+  // The properties are stated in "positive" form; i.e. a pass could require
+  // that the property hold, but not that it does not hold.
+
+  // Property descriptions:
+  // IsSSA: True when the machine function is in SSA form and virtual registers
+  //  have a single def.
+  // TracksLiveness: True when tracking register liveness accurately.
+  //  While this property is set, register liveness information in basic block
+  //  live-in lists and machine instruction operands (e.g. kill flags, implicit
+  //  defs) is accurate. This means it can be used to change the code in ways
+  //  that affect the values in registers, for example by the register
+  //  scavenger.
+  //  When this property is clear, liveness is no longer reliable.
+  // AllVRegsAllocated: All virtual registers have been allocated; i.e. all
+  //  register operands are physical registers.
+  // Legalized: In GlobalISel: the MachineLegalizer ran and all pre-isel generic
+  //  instructions have been legalized; i.e., all instructions are now one of:
+  //   - generic and always legal (e.g., COPY)
+  //   - target-specific
+  //   - legal pre-isel generic instructions.
+  // RegBankSelected: In GlobalISel: the RegBankSelect pass ran and all generic
+  //  virtual registers have been assigned to a register bank.
+  // Selected: In GlobalISel: the InstructionSelect pass ran and all pre-isel
+  //  generic instructions have been eliminated; i.e., all instructions are now
+  //  target-specific or non-pre-isel generic instructions (e.g., COPY).
+  //  Since only pre-isel generic instructions can have generic virtual register
+  //  operands, this also means that all generic virtual registers have been
+  //  constrained to virtual registers (assigned to register classes) and that
+  //  all sizes attached to them have been eliminated.
+  enum class Property : unsigned {
+    IsSSA,
+    TracksLiveness,
+    AllVRegsAllocated,
+    Legalized,
+    RegBankSelected,
+    Selected,
+    LastProperty,
+  };
+
+  bool hasProperty(Property P) const {
+    return Properties[static_cast<unsigned>(P)];
+  }
+  MachineFunctionProperties &set(Property P) {
+    Properties.set(static_cast<unsigned>(P));
+    return *this;
+  }
+  MachineFunctionProperties &clear(Property P) {
+    Properties.reset(static_cast<unsigned>(P));
+    return *this;
+  }
+  MachineFunctionProperties &set(const MachineFunctionProperties &MFP) {
+    Properties |= MFP.Properties;
+    return *this;
+  }
+  MachineFunctionProperties &clear(const MachineFunctionProperties &MFP) {
+    Properties.reset(MFP.Properties);
+    return *this;
+  }
+  // Returns true if all properties set in V (i.e. required by a pass) are set
+  // in this.
+  bool verifyRequiredProperties(const MachineFunctionProperties &V) const {
+    return !V.Properties.test(Properties);
+  }
+
+  // Print the MachineFunctionProperties in human-readable form. If OnlySet is
+  // true, only print the properties that are set.
+  void print(raw_ostream &ROS, bool OnlySet=false) const;
+
+private:
+  BitVector Properties =
+      BitVector(static_cast<unsigned>(Property::LastProperty));
 };
 
 class MachineFunction {
@@ -146,10 +225,14 @@ class MachineFunction {
   /// the attribute itself.
   /// This is used to limit optimizations which cannot reason
   /// about the control flow of such functions.
-  bool ExposesReturnsTwice;
+  bool ExposesReturnsTwice = false;
 
   /// True if the function includes any inline assembly.
-  bool HasInlineAsm;
+  bool HasInlineAsm = false;
+
+  /// Current high-level properties of the IR of the function (e.g. is in SSA
+  /// form or whether registers have been allocated)
+  MachineFunctionProperties Properties;
 
   // Allocation management for pseudo source values.
   std::unique_ptr<PseudoSourceValueManager> PSVManager;
@@ -206,8 +289,8 @@ public:
   /// This object contains information about objects allocated on the stack
   /// frame of the current function in an abstract way.
   ///
-  MachineFrameInfo *getFrameInfo() { return FrameInfo; }
-  const MachineFrameInfo *getFrameInfo() const { return FrameInfo; }
+  MachineFrameInfo &getFrameInfo() { return *FrameInfo; }
+  const MachineFrameInfo &getFrameInfo() const { return *FrameInfo; }
 
   /// getJumpTableInfo - Return the jump table info object for the current
   /// function.  This object contains information about jump tables in the
@@ -268,6 +351,10 @@ public:
     HasInlineAsm = B;
   }
 
+  /// Get the function properties
+  const MachineFunctionProperties &getProperties() const { return Properties; }
+  MachineFunctionProperties &getProperties() { return Properties; }
+
   /// getInfo - Keep track of various per-function pieces of information for
   /// backends that would like to do so.
   ///
@@ -311,7 +398,7 @@ public:
   /// print - Print out the MachineFunction in a format suitable for debugging
   /// to the specified stream.
   ///
-  void print(raw_ostream &OS, SlotIndexes* = nullptr) const;
+  void print(raw_ostream &OS, const SlotIndexes* = nullptr) const;
 
   /// viewCFG - This function is meant for use from the debugger.  You can just
   /// say 'call F->viewCFG()' and a ghostview window should pop up from the
@@ -332,9 +419,11 @@ public:
   ///
   void dump() const;
 
-  /// verify - Run the current MachineFunction through the machine code
-  /// verifier, useful for debugger use.
-  void verify(Pass *p = nullptr, const char *Banner = nullptr) const;
+  /// Run the current MachineFunction through the machine code verifier, useful
+  /// for debugger use.
+  /// \returns true if no problems were found.
+  bool verify(Pass *p = nullptr, const char *Banner = nullptr,
+              bool AbortOnError = true) const;
 
   // Provide accessors for the MachineBasicBlock list...
   typedef BasicBlockListType::iterator iterator;
@@ -420,8 +509,7 @@ public:
   /// CreateMachineInstr - Allocate a new MachineInstr. Use this instead
   /// of `new MachineInstr'.
   ///
-  MachineInstr *CreateMachineInstr(const MCInstrDesc &MCID,
-                                   DebugLoc DL,
+  MachineInstr *CreateMachineInstr(const MCInstrDesc &MCID, const DebugLoc &DL,
                                    bool NoImp = false);
 
   /// CloneMachineInstr - Create a new MachineInstr which is a copy of the
@@ -449,8 +537,8 @@ public:
   /// MachineMemOperands are owned by the MachineFunction and need not be
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(MachinePointerInfo PtrInfo,
-                                          unsigned f, uint64_t s,
-                                          unsigned base_alignment,
+                                          MachineMemOperand::Flags f,
+                                          uint64_t s, unsigned base_alignment,
                                           const AAMDNodes &AAInfo = AAMDNodes(),
                                           const MDNode *Ranges = nullptr);
 

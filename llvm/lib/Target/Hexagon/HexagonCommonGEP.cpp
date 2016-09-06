@@ -90,8 +90,8 @@ namespace {
     virtual void getAnalysisUsage(AnalysisUsage &AU) const {
       AU.addRequired<DominatorTreeWrapperPass>();
       AU.addPreserved<DominatorTreeWrapperPass>();
-      AU.addRequired<PostDominatorTree>();
-      AU.addPreserved<PostDominatorTree>();
+      AU.addRequired<PostDominatorTreeWrapperPass>();
+      AU.addPreserved<PostDominatorTreeWrapperPass>();
       AU.addRequired<LoopInfoWrapperPass>();
       AU.addPreserved<LoopInfoWrapperPass>();
       FunctionPass::getAnalysisUsage(AU);
@@ -147,7 +147,7 @@ char HexagonCommonGEP::ID = 0;
 INITIALIZE_PASS_BEGIN(HexagonCommonGEP, "hcommgep", "Hexagon Common GEP",
       false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(HexagonCommonGEP, "hcommgep", "Hexagon Common GEP",
       false, false)
@@ -212,7 +212,6 @@ namespace {
       if (Comma)
         OS << ',';
       OS << "used";
-      Comma = true;
     }
     OS << "} ";
     if (GN.Flags & GepNode::Root)
@@ -640,8 +639,7 @@ void HexagonCommonGEP::common() {
     // Node for removal.
     Erase.insert(*I);
   }
-  NodeVect::iterator NewE = std::remove_if(Nodes.begin(), Nodes.end(),
-                                           in_set(Erase));
+  NodeVect::iterator NewE = remove_if(Nodes, in_set(Erase));
   Nodes.resize(std::distance(Nodes.begin(), NewE));
 
   DEBUG(dbgs() << "Gep nodes after post-commoning cleanup:\n" << Nodes);
@@ -1268,6 +1266,9 @@ void HexagonCommonGEP::removeDeadCode() {
 
 
 bool HexagonCommonGEP::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   // For now bail out on C++ exception handling.
   for (Function::iterator A = F.begin(), Z = F.end(); A != Z; ++A)
     for (BasicBlock::iterator I = A->begin(), E = A->end(); I != E; ++I)
@@ -1276,7 +1277,7 @@ bool HexagonCommonGEP::runOnFunction(Function &F) {
 
   Fn = &F;
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  PDT = &getAnalysis<PostDominatorTree>();
+  PDT = &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   Ctx = &F.getContext();
 
@@ -1295,7 +1296,7 @@ bool HexagonCommonGEP::runOnFunction(Function &F) {
   materialize(Loc);
   removeDeadCode();
 
-#ifdef XDEBUG
+#ifdef EXPENSIVE_CHECKS
   // Run this only when expensive checks are enabled.
   verifyFunction(F);
 #endif

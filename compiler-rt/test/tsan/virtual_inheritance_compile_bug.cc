@@ -10,6 +10,6 @@ struct DDD: CCC, BBB { DDD(); };  // NOLINT
 DDD::DDD()  { }
 int main() {
   DDD d;
-  printf("OK\n");
+  fprintf(stderr, "OK\n");
 }
 // CHECK: OK

@@ -12,8 +12,8 @@ define i32 @f1(i32 %dummy, i32 *%src, i32 %b) {
 ; CHECK: crjle %r2, %r4, [[KEEP:\..*]]
 ; CHECK: lr [[NEW]], %r4
 ; CHECK: cs %r2, [[NEW]], 0(%r3)
-; CHECK: jl [[LOOP]]
-; CHECK: br %r14
+; CHECK: ber %r14
+; CHECK: j [[LOOP]]
   %res = atomicrmw min i32 *%src, i32 %b seq_cst
   ret i32 %res
 }
@@ -27,8 +27,8 @@ define i32 @f2(i32 %dummy, i32 *%src, i32 %b) {
 ; CHECK: crjhe %r2, %r4, [[KEEP:\..*]]
 ; CHECK: lr [[NEW]], %r4
 ; CHECK: cs %r2, [[NEW]], 0(%r3)
-; CHECK: jl [[LOOP]]
-; CHECK: br %r14
+; CHECK: ber %r14
+; CHECK: j [[LOOP]]
   %res = atomicrmw max i32 *%src, i32 %b seq_cst
   ret i32 %res
 }
@@ -42,8 +42,8 @@ define i32 @f3(i32 %dummy, i32 *%src, i32 %b) {
 ; CHECK: clrjle %r2, %r4, [[KEEP:\..*]]
 ; CHECK: lr [[NEW]], %r4
 ; CHECK: cs %r2, [[NEW]], 0(%r3)
-; CHECK: jl [[LOOP]]
-; CHECK: br %r14
+; CHECK: ber %r14
+; CHECK: j [[LOOP]]
   %res = atomicrmw umin i32 *%src, i32 %b seq_cst
   ret i32 %res
 }
@@ -57,8 +57,8 @@ define i32 @f4(i32 %dummy, i32 *%src, i32 %b) {
 ; CHECK: clrjhe %r2, %r4, [[KEEP:\..*]]
 ; CHECK: lr [[NEW]], %r4
 ; CHECK: cs %r2, [[NEW]], 0(%r3)
-; CHECK: jl [[LOOP]]
-; CHECK: br %r14
+; CHECK: ber %r14
+; CHECK: j [[LOOP]]
   %res = atomicrmw umax i32 *%src, i32 %b seq_cst
   ret i32 %res
 }
@@ -68,7 +68,7 @@ define i32 @f5(i32 %dummy, i32 *%src, i32 %b) {
 ; CHECK-LABEL: f5:
 ; CHECK: l %r2, 4092(%r3)
 ; CHECK: cs %r2, {{%r[0-9]+}}, 4092(%r3)
-; CHECK: br %r14
+; CHECK: ber %r14
   %ptr = getelementptr i32, i32 *%src, i64 1023
   %res = atomicrmw min i32 *%ptr, i32 %b seq_cst
   ret i32 %res
@@ -79,7 +79,7 @@ define i32 @f6(i32 %dummy, i32 *%src, i32 %b) {
 ; CHECK-LABEL: f6:
 ; CHECK: ly %r2, 4096(%r3)
 ; CHECK: csy %r2, {{%r[0-9]+}}, 4096(%r3)
-; CHECK: br %r14
+; CHECK: ber %r14
   %ptr = getelementptr i32, i32 *%src, i64 1024
   %res = atomicrmw min i32 *%ptr, i32 %b seq_cst
   ret i32 %res
@@ -90,7 +90,7 @@ define i32 @f7(i32 %dummy, i32 *%src, i32 %b) {
 ; CHECK-LABEL: f7:
 ; CHECK: ly %r2, 524284(%r3)
 ; CHECK: csy %r2, {{%r[0-9]+}}, 524284(%r3)
-; CHECK: br %r14
+; CHECK: ber %r14
   %ptr = getelementptr i32, i32 *%src, i64 131071
   %res = atomicrmw min i32 *%ptr, i32 %b seq_cst
   ret i32 %res
@@ -102,7 +102,7 @@ define i32 @f8(i32 %dummy, i32 *%src, i32 %b) {
 ; CHECK: agfi %r3, 524288
 ; CHECK: l %r2, 0(%r3)
 ; CHECK: cs %r2, {{%r[0-9]+}}, 0(%r3)
-; CHECK: br %r14
+; CHECK: ber %r14
   %ptr = getelementptr i32, i32 *%src, i64 131072
   %res = atomicrmw min i32 *%ptr, i32 %b seq_cst
   ret i32 %res
@@ -113,7 +113,7 @@ define i32 @f9(i32 %dummy, i32 *%src, i32 %b) {
 ; CHECK-LABEL: f9:
 ; CHECK: ly %r2, -4(%r3)
 ; CHECK: csy %r2, {{%r[0-9]+}}, -4(%r3)
-; CHECK: br %r14
+; CHECK: ber %r14
   %ptr = getelementptr i32, i32 *%src, i64 -1
   %res = atomicrmw min i32 *%ptr, i32 %b seq_cst
   ret i32 %res
@@ -124,7 +124,7 @@ define i32 @f10(i32 %dummy, i32 *%src, i32 %b) {
 ; CHECK-LABEL: f10:
 ; CHECK: ly %r2, -524288(%r3)
 ; CHECK: csy %r2, {{%r[0-9]+}}, -524288(%r3)
-; CHECK: br %r14
+; CHECK: ber %r14
   %ptr = getelementptr i32, i32 *%src, i64 -131072
   %res = atomicrmw min i32 *%ptr, i32 %b seq_cst
   ret i32 %res
@@ -136,7 +136,7 @@ define i32 @f11(i32 %dummy, i32 *%src, i32 %b) {
 ; CHECK: agfi %r3, -524292
 ; CHECK: l %r2, 0(%r3)
 ; CHECK: cs %r2, {{%r[0-9]+}}, 0(%r3)
-; CHECK: br %r14
+; CHECK: ber %r14
   %ptr = getelementptr i32, i32 *%src, i64 -131073
   %res = atomicrmw min i32 *%ptr, i32 %b seq_cst
   ret i32 %res
@@ -148,7 +148,7 @@ define i32 @f12(i32 %dummy, i64 %base, i64 %index, i32 %b) {
 ; CHECK: agr %r3, %r4
 ; CHECK: l %r2, 0(%r3)
 ; CHECK: cs %r2, {{%r[0-9]+}}, 0(%r3)
-; CHECK: br %r14
+; CHECK: ber %r14
   %add = add i64 %base, %index
   %ptr = inttoptr i64 %add to i32 *
   %res = atomicrmw min i32 *%ptr, i32 %b seq_cst
@@ -165,8 +165,8 @@ define i32 @f13(i32 %dummy, i32 *%ptr) {
 ; CHECK: crjle %r2, [[LIMIT]], [[KEEP:\..*]]
 ; CHECK: lhi [[NEW]], 42
 ; CHECK: cs %r2, [[NEW]], 0(%r3)
-; CHECK: jl [[LOOP]]
-; CHECK: br %r14
+; CHECK: ber %r14
+; CHECK: j [[LOOP]]
   %res = atomicrmw min i32 *%ptr, i32 42 seq_cst
   ret i32 %res
 }

@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=x86_64-darwin-unknown                             < %s | FileCheck %s --check-prefix=CHECK --check-prefix=SDAG
 ; RUN: llc -mtriple=x86_64-darwin-unknown -fast-isel -fast-isel-abort=1 < %s | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
-
+; RUN: llc -mtriple=x86_64-darwin-unknown -mcpu=knl < %s | FileCheck %s --check-prefix=KNL
 ;
 ; Get the actual value of the overflow bit.
 ;
@@ -295,7 +295,7 @@ entry:
 define zeroext i1 @smulo.i8(i8 %v1, i8 %v2, i8* %res) {
 entry:
 ; CHECK-LABEL:   smulo.i8
-; CHECK:         movb %dil, %al
+; CHECK:         movl %edi, %eax
 ; CHECK-NEXT:    imulb %sil
 ; CHECK-NEXT:    seto %cl
   %t = call {i8, i1} @llvm.smul.with.overflow.i8(i8 %v1, i8 %v2)
@@ -345,7 +345,7 @@ entry:
 define zeroext i1 @umulo.i8(i8 %v1, i8 %v2, i8* %res) {
 entry:
 ; CHECK-LABEL:   umulo.i8
-; CHECK:         movb %dil, %al
+; CHECK:         movl %edi, %eax
 ; CHECK-NEXT:    mulb %sil
 ; CHECK-NEXT:    seto %cl
   %t = call {i8, i1} @llvm.umul.with.overflow.i8(i8 %v1, i8 %v2)
@@ -732,6 +732,26 @@ overflow:
 
 continue:
   ret i1 true
+}
+
+define i1 @bug27873(i64 %c1, i1 %c2) {
+; KNL-LABEL: bug27873:
+; KNL:       ## BB#0:
+; KNL-NEXT:    andl $1, %esi
+; KNL-NEXT:    kmovw %esi, %k0
+; KNL-NEXT:    movl $160, %ecx
+; KNL-NEXT:    movq %rdi, %rax
+; KNL-NEXT:    mulq %rcx
+; KNL-NEXT:    seto %al
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    korw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    # kill
+; KNL-NEXT:    retq
+  %mul = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %c1, i64 160)
+  %mul.overflow = extractvalue { i64, i1 } %mul, 1
+  %x1 = or i1 %c2, %mul.overflow
+  ret i1 %x1
 }
 
 declare {i8,  i1} @llvm.sadd.with.overflow.i8 (i8,  i8 ) nounwind readnone

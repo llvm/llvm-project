@@ -14,7 +14,8 @@ following types of bugs:
 
 * Out-of-bounds accesses to heap, stack and globals
 * Use-after-free
-* Use-after-return (to some extent)
+* Use-after-return (runtime flag `ASAN_OPTIONS=detect_stack_use_after_return=1`)
+* Use-after-scope (clang flag `-fsanitize-address-use-after-scope`)
 * Double-free, invalid free
 * Memory leaks (experimental)
 
@@ -231,6 +232,23 @@ problems happening in certain source files or with certain global variables.
     global:bad_init_global=init
     type:*BadInitClassSubstring*=init
     src:bad/init/files/*=init
+
+Suppressing memory leaks
+------------------------
+
+Memory leak reports produced by :doc:`LeakSanitizer` (if it is run as a part
+of AddressSanitizer) can be suppressed by a separate file passed as
+
+.. code-block:: bash
+
+    LSAN_OPTIONS=suppressions=MyLSan.supp
+
+which contains lines of the form `leak:<pattern>`. Memory leak will be
+suppressed if pattern matches any function name, source file name, or
+library name in the symbolized stack trace of the leak report. See
+`full documentation
+<https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer#suppressions>`_
+for more details.
 
 Limitations
 ===========

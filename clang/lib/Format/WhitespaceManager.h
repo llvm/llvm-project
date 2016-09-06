@@ -37,7 +37,7 @@ namespace format {
 /// There may be multiple calls to \c breakToken for a given token.
 class WhitespaceManager {
 public:
-  WhitespaceManager(SourceManager &SourceMgr, const FormatStyle &Style,
+  WhitespaceManager(const SourceManager &SourceMgr, const FormatStyle &Style,
                     bool UseCRLF)
       : SourceMgr(SourceMgr), Style(Style), UseCRLF(UseCRLF) {}
 
@@ -203,7 +203,7 @@ private:
                         unsigned Spaces, unsigned WhitespaceStartColumn);
 
   SmallVector<Change, 16> Changes;
-  SourceManager &SourceMgr;
+  const SourceManager &SourceMgr;
   tooling::Replacements Replaces;
   const FormatStyle &Style;
   bool UseCRLF;

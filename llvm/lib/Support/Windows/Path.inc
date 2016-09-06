@@ -151,6 +151,29 @@ UniqueID file_status::getUniqueID() const {
   return UniqueID(VolumeSerialNumber, FileID);
 }
 
+ErrorOr<space_info> disk_space(const Twine &Path) {
+  ULARGE_INTEGER Avail, Total, Free;
+  if (!::GetDiskFreeSpaceExA(Path.str().c_str(), &Avail, &Total, &Free))
+    return mapWindowsError(::GetLastError());
+  space_info SpaceInfo;
+  SpaceInfo.capacity =
+      (static_cast<uint64_t>(Total.HighPart) << 32) + Total.LowPart;
+  SpaceInfo.free = (static_cast<uint64_t>(Free.HighPart) << 32) + Free.LowPart;
+  SpaceInfo.available =
+      (static_cast<uint64_t>(Avail.HighPart) << 32) + Avail.LowPart;
+  return SpaceInfo;
+}
+
+TimeValue file_status::getLastAccessedTime() const {
+  ULARGE_INTEGER UI;
+  UI.LowPart = LastAccessedTimeLow;
+  UI.HighPart = LastAccessedTimeHigh;
+
+  TimeValue Ret;
+  Ret.fromWin32Time(UI.QuadPart);
+  return Ret;
+}
+
 TimeValue file_status::getLastModificationTime() const {
   ULARGE_INTEGER UI;
   UI.LowPart = LastWriteTimeLow;
@@ -255,24 +278,43 @@ std::error_code rename(const Twine &from, const Twine &to) {
 
   std::error_code ec = std::error_code();
 
-  // Retry while we see ERROR_ACCESS_DENIED.
+  // Retry while we see recoverable errors.
   // System scanners (eg. indexer) might open the source file when it is written
   // and closed.
 
-  for (int i = 0; i < 2000; i++) {
-    // Try ReplaceFile first, as it is able to associate a new data stream with
-    // the destination even if the destination file is currently open.
-    if (::ReplaceFileW(wide_to.begin(), wide_from.begin(), NULL, 0, NULL, NULL))
-      return std::error_code();
+  bool TryReplace = true;
 
-    // We get ERROR_FILE_NOT_FOUND if the destination file is missing.
-    // MoveFileEx can handle this case.
-    DWORD ReplaceError = ::GetLastError();
-    ec = mapWindowsError(ReplaceError);
-    if (ReplaceError != ERROR_ACCESS_DENIED &&
-        ReplaceError != ERROR_FILE_NOT_FOUND &&
-        ReplaceError != ERROR_SHARING_VIOLATION)
-      break;
+  for (int i = 0; i < 2000; i++) {
+    if (i > 0)
+      ::Sleep(1);
+
+    if (TryReplace) {
+      // Try ReplaceFile first, as it is able to associate a new data stream
+      // with the destination even if the destination file is currently open.
+      if (::ReplaceFileW(wide_to.data(), wide_from.data(), NULL, 0, NULL, NULL))
+        return std::error_code();
+
+      DWORD ReplaceError = ::GetLastError();
+      ec = mapWindowsError(ReplaceError);
+
+      // If ReplaceFileW returned ERROR_UNABLE_TO_MOVE_REPLACEMENT or
+      // ERROR_UNABLE_TO_MOVE_REPLACEMENT_2, retry but only use MoveFileExW().
+      if (ReplaceError == ERROR_UNABLE_TO_MOVE_REPLACEMENT ||
+          ReplaceError == ERROR_UNABLE_TO_MOVE_REPLACEMENT_2) {
+        TryReplace = false;
+        continue;
+      }
+      // If ReplaceFileW returned ERROR_UNABLE_TO_REMOVE_REPLACED, retry
+      // using ReplaceFileW().
+      if (ReplaceError == ERROR_UNABLE_TO_REMOVE_REPLACED)
+        continue;
+      // We get ERROR_FILE_NOT_FOUND if the destination file is missing.
+      // MoveFileEx can handle this case.
+      if (ReplaceError != ERROR_ACCESS_DENIED &&
+          ReplaceError != ERROR_FILE_NOT_FOUND &&
+          ReplaceError != ERROR_SHARING_VIOLATION)
+        break;
+    }
 
     if (::MoveFileExW(wide_from.begin(), wide_to.begin(),
                       MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING))
@@ -281,8 +323,6 @@ std::error_code rename(const Twine &from, const Twine &to) {
     DWORD MoveError = ::GetLastError();
     ec = mapWindowsError(MoveError);
     if (MoveError != ERROR_ACCESS_DENIED) break;
-
-    ::Sleep(1);
   }
 
   return ec;
@@ -327,13 +367,15 @@ bool can_execute(const Twine &Path) {
 
 bool equivalent(file_status A, file_status B) {
   assert(status_known(A) && status_known(B));
-  return A.FileIndexHigh      == B.FileIndexHigh &&
-         A.FileIndexLow       == B.FileIndexLow &&
-         A.FileSizeHigh       == B.FileSizeHigh &&
-         A.FileSizeLow        == B.FileSizeLow &&
-         A.LastWriteTimeHigh  == B.LastWriteTimeHigh &&
-         A.LastWriteTimeLow   == B.LastWriteTimeLow &&
-         A.VolumeSerialNumber == B.VolumeSerialNumber;
+  return A.FileIndexHigh         == B.FileIndexHigh &&
+         A.FileIndexLow          == B.FileIndexLow &&
+         A.FileSizeHigh          == B.FileSizeHigh &&
+         A.FileSizeLow           == B.FileSizeLow &&
+         A.LastAccessedTimeHigh  == B.LastAccessedTimeHigh &&
+         A.LastAccessedTimeLow   == B.LastAccessedTimeLow &&
+         A.LastWriteTimeHigh     == B.LastWriteTimeHigh &&
+         A.LastWriteTimeLow      == B.LastWriteTimeLow &&
+         A.VolumeSerialNumber    == B.VolumeSerialNumber;
 }
 
 std::error_code equivalent(const Twine &A, const Twine &B, bool &result) {
@@ -361,7 +403,7 @@ static bool isReservedName(StringRef path) {
   if (path.startswith("\\\\.\\"))
     return true;
 
-  // Then compare against the list of ancient reserved names
+  // Then compare against the list of ancient reserved names.
   for (size_t i = 0; i < array_lengthof(sReservedNames); ++i) {
     if (path.equals_lower(sReservedNames[i]))
       return true;
@@ -404,7 +446,9 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
                          ? file_type::directory_file
                          : file_type::regular_file;
     Result =
-        file_status(Type, Info.ftLastWriteTime.dwHighDateTime,
+        file_status(Type, Info.ftLastAccessTime.dwHighDateTime,
+                    Info.ftLastAccessTime.dwLowDateTime,
+                    Info.ftLastWriteTime.dwHighDateTime,
                     Info.ftLastWriteTime.dwLowDateTime,
                     Info.dwVolumeSerialNumber, Info.nFileSizeHigh,
                     Info.nFileSizeLow, Info.nFileIndexHigh, Info.nFileIndexLow);
@@ -663,7 +707,8 @@ std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
   return std::error_code();
 }
 
-std::error_code openFileForRead(const Twine &Name, int &ResultFD) {
+std::error_code openFileForRead(const Twine &Name, int &ResultFD,
+                                SmallVectorImpl<char> *RealPath) {
   SmallVector<wchar_t, 128> PathUTF16;
 
   if (std::error_code EC = widenPath(Name, PathUTF16))
@@ -690,6 +735,22 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD) {
   if (FD == -1) {
     ::CloseHandle(H);
     return mapWindowsError(ERROR_INVALID_HANDLE);
+  }
+
+  // Fetch the real name of the file, if the user asked
+  if (RealPath) {
+    RealPath->clear();
+    wchar_t RealPathUTF16[MAX_PATH];
+    DWORD CountChars =
+      ::GetFinalPathNameByHandleW(H, RealPathUTF16, MAX_PATH,
+                                  FILE_NAME_NORMALIZED);
+    if (CountChars > 0 && CountChars < MAX_PATH) {
+      // Convert the result from UTF-16 to UTF-8.
+      SmallString<MAX_PATH> RealPathUTF8;
+      if (!UTF16ToUTF8(RealPathUTF16, CountChars, RealPathUTF8))
+        RealPath->append(RealPathUTF8.data(),
+                         RealPathUTF8.data() + strlen(RealPathUTF8.data()));
+    }
   }
 
   ResultFD = FD;
@@ -751,6 +812,42 @@ std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
 
   ResultFD = FD;
   return std::error_code();
+}
+
+std::error_code getPathFromOpenFD(int FD, SmallVectorImpl<char> &ResultPath) {
+  HANDLE FileHandle = reinterpret_cast<HANDLE>(::_get_osfhandle(FD));
+  if (FileHandle == INVALID_HANDLE_VALUE)
+    return make_error_code(errc::bad_file_descriptor);
+
+  DWORD CharCount;
+  SmallVector<wchar_t, 1024> TempPath;
+  do {
+    CharCount = ::GetFinalPathNameByHandleW(FileHandle, TempPath.begin(),
+                                            TempPath.capacity(),
+                                            FILE_NAME_NORMALIZED);
+    if (CharCount < TempPath.capacity())
+      break;
+
+    // Reserve sufficient space for the path as well as the null character. Even
+    // though the API does not document that it is required, if we reserve just
+    // CharCount space, the function call will not store the resulting path and
+    // still report success.
+    TempPath.reserve(CharCount + 1);
+  } while (true);
+
+  if (CharCount == 0)
+    return mapWindowsError(::GetLastError());
+
+  TempPath.set_size(CharCount);
+
+  // On earlier Windows releases, the character count includes the terminating
+  // null.
+  if (TempPath.back() == L'\0') {
+    --CharCount;
+    TempPath.pop_back();
+  }
+
+  return windows::UTF16ToUTF8(TempPath.data(), CharCount, ResultPath);
 }
 } // end namespace fs
 
@@ -886,6 +983,7 @@ std::error_code UTF16ToCurCP(const wchar_t *utf16, size_t utf16_len,
                              llvm::SmallVectorImpl<char> &utf8) {
   return UTF16ToCodePage(CP_ACP, utf16, utf16_len, utf8);
 }
+
 } // end namespace windows
 } // end namespace sys
 } // end namespace llvm

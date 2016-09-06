@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI -check-prefix=SI-SAFE -check-prefix=FUNC %s
-; RUN: llc -enable-no-nans-fp-math -enable-unsafe-fp-math -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI-NONAN -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=SI-SAFE -check-prefix=FUNC %s
+; RUN: llc -enable-no-nans-fp-math -enable-unsafe-fp-math -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI-NONAN -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FIXME: Should replace unsafe-fp-math with no signed zeros.
@@ -18,8 +18,8 @@ define void @test_fmax_legacy_uge_f32(float addrspace(1)* %out, float addrspace(
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %cmp = fcmp uge float %a, %b
   %val = select i1 %cmp, float %a, float %b
@@ -38,8 +38,8 @@ define void @test_fmax_legacy_oge_f32(float addrspace(1)* %out, float addrspace(
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %cmp = fcmp oge float %a, %b
   %val = select i1 %cmp, float %a, float %b
@@ -58,8 +58,8 @@ define void @test_fmax_legacy_ugt_f32(float addrspace(1)* %out, float addrspace(
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %cmp = fcmp ugt float %a, %b
   %val = select i1 %cmp, float %a, float %b
@@ -78,8 +78,8 @@ define void @test_fmax_legacy_ogt_f32(float addrspace(1)* %out, float addrspace(
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %cmp = fcmp ogt float %a, %b
   %val = select i1 %cmp, float %a, float %b
@@ -142,8 +142,8 @@ define void @test_fmax_legacy_ogt_f32_multi_use(float addrspace(1)* %out0, i1 ad
   %gep.0 = getelementptr float, float addrspace(1)* %in, i32 %tid
   %gep.1 = getelementptr float, float addrspace(1)* %gep.0, i32 1
 
-  %a = load float, float addrspace(1)* %gep.0, align 4
-  %b = load float, float addrspace(1)* %gep.1, align 4
+  %a = load volatile float, float addrspace(1)* %gep.0, align 4
+  %b = load volatile float, float addrspace(1)* %gep.1, align 4
 
   %cmp = fcmp ogt float %a, %b
   %val = select i1 %cmp, float %a, float %b

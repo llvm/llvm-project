@@ -155,6 +155,7 @@ struct isPodLike<TerminatorInst::SuccIterator<T, U>> {
 
 template <> struct GraphTraits<BasicBlock*> {
   typedef BasicBlock NodeType;
+  typedef BasicBlock *NodeRef;
   typedef succ_iterator ChildIteratorType;
 
   static NodeType *getEntryNode(BasicBlock *BB) { return BB; }
@@ -168,6 +169,7 @@ template <> struct GraphTraits<BasicBlock*> {
 
 template <> struct GraphTraits<const BasicBlock*> {
   typedef const BasicBlock NodeType;
+  typedef const BasicBlock *NodeRef;
   typedef succ_const_iterator ChildIteratorType;
 
   static NodeType *getEntryNode(const BasicBlock *BB) { return BB; }
@@ -187,6 +189,7 @@ template <> struct GraphTraits<const BasicBlock*> {
 //
 template <> struct GraphTraits<Inverse<BasicBlock*> > {
   typedef BasicBlock NodeType;
+  typedef BasicBlock *NodeRef;
   typedef pred_iterator ChildIteratorType;
   static NodeType *getEntryNode(Inverse<BasicBlock *> G) { return G.Graph; }
   static inline ChildIteratorType child_begin(NodeType *N) {
@@ -199,6 +202,7 @@ template <> struct GraphTraits<Inverse<BasicBlock*> > {
 
 template <> struct GraphTraits<Inverse<const BasicBlock*> > {
   typedef const BasicBlock NodeType;
+  typedef const BasicBlock *NodeRef;
   typedef const_pred_iterator ChildIteratorType;
   static NodeType *getEntryNode(Inverse<const BasicBlock*> G) {
     return G.Graph;

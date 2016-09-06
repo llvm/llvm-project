@@ -25,6 +25,10 @@ extern "C" {
   // The special values are "stdout" and "stderr".
   SANITIZER_INTERFACE_ATTRIBUTE
   void __sanitizer_set_report_path(const char *path);
+  // Tell the tools to write their reports to the provided file descriptor
+  // (casted to void *).
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __sanitizer_set_report_fd(void *fd);
 
   typedef struct {
       int coverage_sandboxed;

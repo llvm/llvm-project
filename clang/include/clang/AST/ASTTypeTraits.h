@@ -62,7 +62,9 @@ public:
   /// \}
 
   /// \brief Returns \c true if \c this and \c Other represent the same kind.
-  bool isSame(ASTNodeKind Other) const;
+  bool isSame(ASTNodeKind Other) const {
+    return KindId != NKI_None && KindId == Other.KindId;
+  }
 
   /// \brief Returns \c true only for the default \c ASTNodeKind()
   bool isNone() const { return KindId == NKI_None; }
@@ -119,6 +121,7 @@ private:
   enum NodeKindId {
     NKI_None,
     NKI_TemplateArgument,
+    NKI_TemplateName,
     NKI_NestedNameSpecifierLoc,
     NKI_QualType,
     NKI_TypeLoc,
@@ -173,6 +176,7 @@ private:
   };
 KIND_TO_KIND_ID(CXXCtorInitializer)
 KIND_TO_KIND_ID(TemplateArgument)
+KIND_TO_KIND_ID(TemplateName)
 KIND_TO_KIND_ID(NestedNameSpecifier)
 KIND_TO_KIND_ID(NestedNameSpecifierLoc)
 KIND_TO_KIND_ID(QualType)
@@ -467,6 +471,10 @@ struct DynTypedNode::BaseConverter<
 template <>
 struct DynTypedNode::BaseConverter<
     TemplateArgument, void> : public ValueConverter<TemplateArgument> {};
+
+template <>
+struct DynTypedNode::BaseConverter<
+    TemplateName, void> : public ValueConverter<TemplateName> {};
 
 template <>
 struct DynTypedNode::BaseConverter<

@@ -1,6 +1,6 @@
 ; this should not crash the ppc backend
 
-; RUN: llc < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -march=ppc32
 
 
 define i32 @test(i32 %j.0.0.i) {

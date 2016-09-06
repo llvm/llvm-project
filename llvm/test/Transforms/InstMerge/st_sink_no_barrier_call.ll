@@ -33,7 +33,7 @@ if.else:                                          ; preds = %entry
   %p3 = getelementptr inbounds %struct.node, %struct.node* %node.017, i32 0, i32 6
   ; CHECK-NOT: store i32
   store i32 %add, i32* %p3, align 4
-  call i32 @foo(i32 5)				  ;not a barrier
+  call i32 @foo(i32 5) nounwind				  ;not a barrier
   br label %if.end
 
 ; CHECK: if.end

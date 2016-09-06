@@ -18,12 +18,12 @@ using namespace llvm;
 int ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   assert(Ty->isIntegerTy());
 
-  unsigned Bits = Ty->getPrimitiveSizeInBits();
-  if (Bits == 0 || Bits > 32)
-    return 4;
+ unsigned Bits = Ty->getPrimitiveSizeInBits();
+ if (Bits == 0 || Imm.getActiveBits() >= 64)
+   return 4;
 
-  int32_t SImmVal = Imm.getSExtValue();
-  uint32_t ZImmVal = Imm.getZExtValue();
+  int64_t SImmVal = Imm.getSExtValue();
+  uint64_t ZImmVal = Imm.getZExtValue();
   if (!ST->isThumb()) {
     if ((SImmVal >= 0 && SImmVal < 65536) ||
         (ARM_AM::getSOImmVal(ZImmVal) != -1) ||
@@ -46,6 +46,32 @@ int ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   // Load from constantpool.
   return 3;
 }
+
+
+// Constants smaller than 256 fit in the immediate field of
+// Thumb1 instructions so we return a zero cost and 1 otherwise.
+int ARMTTIImpl::getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
+                                      const APInt &Imm, Type *Ty) {
+  if (Imm.isNonNegative() && Imm.getLimitedValue() < 256)
+    return 0;
+
+  return 1;
+}
+
+int ARMTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
+                              Type *Ty) {
+  // Division by a constant can be turned into multiplication, but only if we
+  // know it's constant. So it's not so much that the immediate is cheap (it's
+  // not), but that the alternative is worse.
+  // FIXME: this is probably unneeded with GlobalISel.
+  if ((Opcode == Instruction::SDiv || Opcode == Instruction::UDiv ||
+       Opcode == Instruction::SRem || Opcode == Instruction::URem) &&
+      Idx == 1)
+    return 0;
+
+  return getIntImmCost(Imm, Ty);
+}
+
 
 int ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -244,10 +270,8 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                    unsigned Index) {
   // Penalize inserting into an D-subregister. We end up with a three times
   // lower estimated throughput on swift.
-  if (ST->isSwift() &&
-      Opcode == Instruction::InsertElement &&
-      ValTy->isVectorTy() &&
-      ValTy->getScalarSizeInBits() <= 32)
+  if (ST->hasSlowLoadDSubregister() && Opcode == Instruction::InsertElement &&
+      ValTy->isVectorTy() && ValTy->getScalarSizeInBits() <= 32)
     return 3;
 
   if ((Opcode == Instruction::InsertElement ||

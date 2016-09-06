@@ -144,6 +144,9 @@ static Value *GetPointerOperand(Value *MemI) {
 }
 
 bool PPCLoopPreIncPrep::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();

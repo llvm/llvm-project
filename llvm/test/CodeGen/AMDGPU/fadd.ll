@@ -1,6 +1,6 @@
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck %s -check-prefix=SI -check-prefix=FUNC
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s -check-prefix=SI -check-prefix=FUNC
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s -check-prefix=SI -check-prefix=FUNC
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
 
 ; FUNC-LABEL: {{^}}fadd_f32:
 ; R600: ADD {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z, KC0[2].W

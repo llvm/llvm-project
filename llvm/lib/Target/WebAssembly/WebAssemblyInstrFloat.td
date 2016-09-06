@@ -77,12 +77,12 @@ def : Pat<(setge f64:$lhs, f64:$rhs), (GE_F64 f64:$lhs, f64:$rhs)>;
 
 let Defs = [ARGUMENTS] in {
 
-def SELECT_F32 : I<(outs F32:$dst), (ins I32:$cond, F32:$lhs, F32:$rhs),
+def SELECT_F32 : I<(outs F32:$dst), (ins F32:$lhs, F32:$rhs, I32:$cond),
                    [(set F32:$dst, (select I32:$cond, F32:$lhs, F32:$rhs))],
-                   "f32.select\t$dst, $cond, $lhs, $rhs">;
-def SELECT_F64 : I<(outs F64:$dst), (ins I32:$cond, F64:$lhs, F64:$rhs),
+                   "f32.select\t$dst, $lhs, $rhs, $cond">;
+def SELECT_F64 : I<(outs F64:$dst), (ins F64:$lhs, F64:$rhs, I32:$cond),
                    [(set F64:$dst, (select I32:$cond, F64:$lhs, F64:$rhs))],
-                   "f64.select\t$dst, $cond, $lhs, $rhs">;
+                   "f64.select\t$dst, $lhs, $rhs, $cond">;
 
 } // Defs = [ARGUMENTS]
 
@@ -90,12 +90,12 @@ def SELECT_F64 : I<(outs F64:$dst), (ins I32:$cond, F64:$lhs, F64:$rhs),
 // WebAssembly's select interprets any non-zero value as true, so we can fold
 // a setne with 0 into a select.
 def : Pat<(select (i32 (setne I32:$cond, 0)), F32:$lhs, F32:$rhs),
-          (SELECT_F32 I32:$cond, F32:$lhs, F32:$rhs)>;
+          (SELECT_F32 F32:$lhs, F32:$rhs, I32:$cond)>;
 def : Pat<(select (i32 (setne I32:$cond, 0)), F64:$lhs, F64:$rhs),
-          (SELECT_F64 I32:$cond, F64:$lhs, F64:$rhs)>;
+          (SELECT_F64 F64:$lhs, F64:$rhs, I32:$cond)>;
 
 // And again, this time with seteq instead of setne and the arms reversed.
 def : Pat<(select (i32 (seteq I32:$cond, 0)), F32:$lhs, F32:$rhs),
-          (SELECT_F32 I32:$cond, F32:$rhs, F32:$lhs)>;
+          (SELECT_F32 F32:$rhs, F32:$lhs, I32:$cond)>;
 def : Pat<(select (i32 (seteq I32:$cond, 0)), F64:$lhs, F64:$rhs),
-          (SELECT_F64 I32:$cond, F64:$rhs, F64:$lhs)>;
+          (SELECT_F64 F64:$rhs, F64:$lhs, I32:$cond)>;

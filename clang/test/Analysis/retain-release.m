@@ -1247,6 +1247,26 @@ CVReturn rdar_7283567_2(CFAllocatorRef allocator, size_t width, size_t height,
               pixelBufferAttributes, pixelBufferOut) ;
 }
 
+#pragma clang arc_cf_code_audited begin
+typedef struct SomeOpaqueStruct *CMSampleBufferRef;
+CVImageBufferRef _Nonnull CMSampleBufferGetImageBuffer(CMSampleBufferRef _Nonnull sbuf);
+#pragma clang arc_cf_code_audited end
+
+CVBufferRef _Nullable CVBufferRetain(CVBufferRef _Nullable buffer);
+void CVBufferRelease(CF_CONSUMED CVBufferRef _Nullable buffer);
+
+void testCVPrefixRetain(CMSampleBufferRef sbuf) {
+  // Make sure RetainCountChecker treats CVFooRetain() as a CF-style retain.
+  CVPixelBufferRef pixelBuf = CMSampleBufferGetImageBuffer(sbuf);
+  CVBufferRetain(pixelBuf);
+  CVBufferRelease(pixelBuf); // no-warning
+
+
+  // Make sure result of CVFooRetain() is the same as its argument.
+  CVPixelBufferRef pixelBufAlias = CVBufferRetain(pixelBuf);
+  CVBufferRelease(pixelBufAlias); // no-warning
+}
+
 //===----------------------------------------------------------------------===//
 // <rdar://problem/7358899> False leak associated with 
 //  CGBitmapContextCreateWithData

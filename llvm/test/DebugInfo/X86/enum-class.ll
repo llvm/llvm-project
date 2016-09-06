@@ -8,7 +8,7 @@
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!23}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 (trunk 157269) (llvm/trunk 157264)", isOptimized: false, emissionKind: 0, file: !22, enums: !1, retainedTypes: !15, subprograms: !15, globals: !17, imports:  !15)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 (trunk 157269) (llvm/trunk 157264)", isOptimized: false, emissionKind: FullDebug, file: !22, enums: !1, retainedTypes: !15, globals: !17, imports:  !15)
 !1 = !{!3, !8, !12}
 !3 = !DICompositeType(tag: DW_TAG_enumeration_type, name: "A", line: 1, size: 32, align: 32, file: !4, baseType: !5, elements: !6)
 !4 = !DIFile(filename: "foo.cpp", directory: "/Users/echristo/tmp")

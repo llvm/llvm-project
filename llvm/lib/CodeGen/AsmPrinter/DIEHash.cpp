@@ -279,7 +279,7 @@ void DIEHash::hashLocList(const DIELocList &LocList) {
 
 // Hash an individual attribute \param Attr based on the type of attribute and
 // the form.
-void DIEHash::hashAttribute(DIEValue Value, dwarf::Tag Tag) {
+void DIEHash::hashAttribute(const DIEValue &Value, dwarf::Tag Tag) {
   dwarf::Attribute Attribute = Value.getAttribute();
 
   // Other attribute values use the letter 'A' as the marker, and the value
@@ -353,7 +353,6 @@ void DIEHash::hashAttribute(DIEValue Value, dwarf::Tag Tag) {
   case DIEValue::isExpr:
   case DIEValue::isLabel:
   case DIEValue::isDelta:
-  case DIEValue::isTypeSignature:
     llvm_unreachable("Add support for additional value types.");
   }
 }

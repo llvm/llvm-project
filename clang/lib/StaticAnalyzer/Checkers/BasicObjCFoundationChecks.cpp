@@ -132,7 +132,7 @@ namespace {
     void checkPostStmt(const ObjCArrayLiteral *AL,
                        CheckerContext &C) const;
   };
-}
+} // end anonymous namespace
 
 void NilArgChecker::warnIfNilExpr(const Expr *E,
                                   const char *Msg,
@@ -143,7 +143,6 @@ void NilArgChecker::warnIfNilExpr(const Expr *E,
     if (ExplodedNode *N = C.generateErrorNode()) {
       generateBugReport(N, Msg, E->getSourceRange(), E, C);
     }
-
   }
 }
 
@@ -530,6 +529,7 @@ namespace {
 class CFRetainReleaseChecker : public Checker< check::PreStmt<CallExpr> > {
   mutable std::unique_ptr<APIMisuse> BT;
   mutable IdentifierInfo *Retain, *Release, *MakeCollectable, *Autorelease;
+
 public:
   CFRetainReleaseChecker()
       : Retain(nullptr), Release(nullptr), MakeCollectable(nullptr),
@@ -537,7 +537,6 @@ public:
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
 };
 } // end anonymous namespace
-
 
 void CFRetainReleaseChecker::checkPreStmt(const CallExpr *CE,
                                           CheckerContext &C) const {
@@ -631,11 +630,10 @@ class ClassReleaseChecker : public Checker<check::PreObjCMessage> {
 public:
   void checkPreObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
 };
-}
+} // end anonymous namespace
 
 void ClassReleaseChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
                                               CheckerContext &C) const {
-
   if (!BT) {
     BT.reset(new APIMisuse(
         this, "message incorrectly sent to class instead of class instance"));
@@ -692,7 +690,7 @@ class VariadicMethodTypeChecker : public Checker<check::PreObjCMessage> {
 public:
   void checkPreObjCMessage(const ObjCMethodCall &msg, CheckerContext &C) const;
 };
-}
+} // end anonymous namespace
 
 /// isVariadicMessage - Returns whether the given message is a variadic message,
 /// where all arguments must be Objective-C types.
@@ -855,7 +853,7 @@ public:
                                      const CallEvent *Call,
                                      PointerEscapeKind Kind) const;
 };
-}
+} // end anonymous namespace
 
 static bool isKnownNonNilCollectionType(QualType T) {
   const ObjCObjectPointerType *PT = T->getAs<ObjCObjectPointerType>();
@@ -983,7 +981,6 @@ assumeCollectionNonEmpty(CheckerContext &C, ProgramStateRef State,
   return assumeCollectionNonEmpty(C, State, CollectionS, Assumption);
 }
 
-
 /// If the fist block edge is a back edge, we are reentering the loop.
 static bool alreadyExecutedAtLeastOneLoopIteration(const ExplodedNode *N,
                                              const ObjCForCollectionStmt *FCS) {
@@ -1080,7 +1077,6 @@ void ObjCLoopChecker::checkPostObjCMessage(const ObjCMethodCall &M,
 
     C.addTransition(State);
   }
-  return;
 }
 
 static SymbolRef getMethodReceiverIfKnownImmutable(const CallEvent *Call) {
@@ -1203,7 +1199,7 @@ public:
 
   void checkPostObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
 };
-}
+} // end anonymous namespace
 
 ProgramStateRef
 ObjCNonNilReturnValueChecker::assumeExprIsNonNull(const Expr *NonNullExpr,

@@ -15,7 +15,6 @@
 #define LLVM_CLANG_AST_REDECLARABLE_H
 
 #include "clang/AST/ExternalASTSource.h"
-#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/Casting.h"
 #include <iterator>
 

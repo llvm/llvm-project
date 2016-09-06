@@ -196,6 +196,7 @@ int main(int argc, char **argv) {
   #pragma omp for simd aligned(h)
   for (int k = 0; k < argc; ++k) ++k;
   int *pargc = &argc;
+  // expected-note@+1 {{in instantiation of function template specialization 'foomain<int *, char>' requested here}}
   foomain<int*,char>(pargc,argv);
   return 0;
 }

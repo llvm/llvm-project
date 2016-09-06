@@ -78,10 +78,9 @@ declare void @_Z8moz_freePv(i8*)
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!60}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.1 ()", isOptimized: true, emissionKind: 0, file: !59, enums: !1, retainedTypes: !1, subprograms: !3, globals: !47, imports:  !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.1 ()", isOptimized: true, emissionKind: FullDebug, file: !59, enums: !1, retainedTypes: !1, globals: !47, imports:  !1)
 !1 = !{}
-!3 = !{!5, !23, !27, !31}
-!5 = distinct !DISubprogram(name: "Release", linkageName: "_ZN17nsAutoRefCnt7ReleaseEv", line: 14, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 14, file: !6, scope: null, type: !7 , declaration: !12, variables: !20)
+!5 = distinct !DISubprogram(name: "Release", linkageName: "_ZN17nsAutoRefCnt7ReleaseEv", line: 14, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 14, file: !6, scope: null, type: !7 , declaration: !12, variables: !20)
 !6 = !DIFile(filename: "nsAutoRefCnt.ii", directory: "/Users/espindola/mozilla-central/obj-x86_64-apple-darwin11.2.0/netwerk/base/src")
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9, !10}
@@ -97,13 +96,13 @@ declare void @_Z8moz_freePv(i8*)
 !18 = !{}
 !20 = !{!22}
 !22 = !DILocalVariable(name: "this", line: 14, arg: 1, flags: DIFlagArtificial, scope: !5, file: !6, type: !10)
-!23 = distinct !DISubprogram(name: "~nsAutoRefCnt", linkageName: "_ZN17nsAutoRefCntD1Ev", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 18, file: !6, scope: null, type: !16, declaration: !15, variables: !24)
+!23 = distinct !DISubprogram(name: "~nsAutoRefCnt", linkageName: "_ZN17nsAutoRefCntD1Ev", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 18, file: !6, scope: null, type: !16, declaration: !15, variables: !24)
 !24 = !{!26}
 !26 = !DILocalVariable(name: "this", line: 18, arg: 1, flags: DIFlagArtificial, scope: !23, file: !6, type: !10)
-!27 = distinct !DISubprogram(name: "~nsAutoRefCnt", linkageName: "_ZN17nsAutoRefCntD2Ev", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 18, file: !6, scope: null, type: !16, declaration: !15, variables: !28)
+!27 = distinct !DISubprogram(name: "~nsAutoRefCnt", linkageName: "_ZN17nsAutoRefCntD2Ev", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 18, file: !6, scope: null, type: !16, declaration: !15, variables: !28)
 !28 = !{!30}
 !30 = !DILocalVariable(name: "this", line: 18, arg: 1, flags: DIFlagArtificial, scope: !27, file: !6, type: !10)
-!31 = distinct !DISubprogram(name: "operator=", linkageName: "_ZN12nsAutoRefCntaSEi", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 4, file: !6, scope: null, type: !32, declaration: !36, variables: !43)
+!31 = distinct !DISubprogram(name: "operator=", linkageName: "_ZN12nsAutoRefCntaSEi", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 4, file: !6, scope: null, type: !32, declaration: !36, variables: !43)
 !32 = !DISubroutineType(types: !33)
 !33 = !{!9, !34, !9}
 !34 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial, baseType: !35)

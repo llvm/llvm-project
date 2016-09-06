@@ -8,6 +8,18 @@ entry:
   ret i32 %0
 }
 
+;; Check tests only that the constraints are accepted without a compiler failure.
+; CHECK-LABEL: test_constraints_nro:
+%struct.anon = type { i32, i32 }
+@v = external global %struct.anon, align 4
+define void @test_constraints_nro() {
+entry:
+  %0 = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @v, i32 0, i32 0);
+  %1 = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @v, i32 0, i32 1);
+  tail call void asm sideeffect "", "nro,nro"(i32 %0, i32 %1)
+  ret void
+}
+
 ; CHECK-LABEL: test_constraint_I:
 ; CHECK:       add %o0, 1023, %o0
 define i32 @test_constraint_I(i32 %a) {

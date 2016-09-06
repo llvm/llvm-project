@@ -1,4 +1,5 @@
 ; RUN: opt -S -basicaa -licm < %s | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='loop-simplify,require<aa>,require<targetir>,require<scalar-evolution>,loop(simplify-cfg,licm)' -S < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -429,6 +430,128 @@ for.inc:                                          ; preds = %for.body, %if.then
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.inc, %entry
+  ret void
+}
+
+define void @test11(i32* noalias %a, i32* %b, i32** dereferenceable(8) %cptr, i32 %n) #0 {
+; CHECK-LABEL: @test11(
+entry:
+  %cmp11 = icmp sgt i32 %n, 0
+  br i1 %cmp11, label %for.body, label %for.end
+
+; CHECK: for.body.preheader:
+; CHECK:  %c = load i32*, i32** %cptr, !dereferenceable !0
+; CHECK:  %d = load i32, i32* %c, align 4
+
+
+for.body:                                         ; preds = %entry, %for.inc
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %cmp1 = icmp sgt i32 %0, 0
+  %c = load i32*, i32** %cptr, !dereferenceable !0
+  br i1 %cmp1, label %if.then, label %for.inc
+
+if.then:                                          ; preds = %for.body
+  %d = load i32, i32* %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
+  %e = load i32, i32* %arrayidx3, align 4
+  %mul = mul nsw i32 %e, %d
+  store i32 %mul, i32* %arrayidx, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.then
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.inc, %entry
+  ret void
+}
+
+declare void @llvm.experimental.guard(i1, ...)
+
+define void @test12(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) %c, i32 %n) #0 {
+; Prove non-null ness of %c via a guard, not a branch.
+
+; CHECK-LABEL: @test12(
+entry:
+  %not_null = icmp ne i32* %c, null
+  call void(i1, ...) @llvm.experimental.guard(i1 %not_null) [ "deopt"() ]
+  %cmp11 = icmp sgt i32 %n, 0
+  br i1 %cmp11, label %for.body, label %for.end
+
+; CHECK: for.body.preheader:
+; CHECK-NEXT:  [[VAL:%[^ ]]] = load i32, i32* %c, align 4
+; CHECK-NEXT:  br label %for.body
+
+
+for.body:                                         ; preds = %entry, %for.inc
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %cmp1 = icmp sgt i32 %0, 0
+  br i1 %cmp1, label %if.then, label %for.inc
+
+if.then:                                          ; preds = %for.body
+  %1 = load i32, i32* %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
+  %2 = load i32, i32* %arrayidx3, align 4
+  %mul = mul nsw i32 %2, %1
+  store i32 %mul, i32* %arrayidx, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.then
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.inc, %entry, %entry
+  ret void
+}
+
+define void @test13(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) %c, i32 %n) #0 {
+; Like @test12, but has a post-dominating guard, which cannot be used
+; to prove %c is nonnull at the point of the load.
+
+; CHECK-LABEL: @test13(
+entry:
+  %not_null = icmp ne i32* %c, null
+  %cmp11 = icmp sgt i32 %n, 0
+  br i1 %cmp11, label %for.body, label %for.end
+
+; CHECK: for.body.preheader:
+; CHECK-NOT:  load i32, i32* %c
+; CHECK:  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.inc
+  %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
+  %0 = load i32, i32* %arrayidx, align 4
+  %cmp1 = icmp sgt i32 %0, 0
+  br i1 %cmp1, label %if.then, label %for.inc
+
+if.then:                                          ; preds = %for.body
+; CHECK: if.then:
+; CHECK:  load i32, i32* %c
+; CHECK:  br label %for.inc
+  %1 = load i32, i32* %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
+  %2 = load i32, i32* %arrayidx3, align 4
+  %mul = mul nsw i32 %2, %1
+  store i32 %mul, i32* %arrayidx, align 4
+  br label %for.inc
+
+for.inc:                                          ; preds = %for.body, %if.then
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %lftr.wideiv = trunc i64 %indvars.iv.next to i32
+  %exitcond = icmp eq i32 %lftr.wideiv, %n
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.inc, %entry, %entry
+  call void(i1, ...) @llvm.experimental.guard(i1 %not_null) [ "deopt"() ]
   ret void
 }
 

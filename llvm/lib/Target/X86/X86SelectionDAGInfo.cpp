@@ -25,14 +25,14 @@ using namespace llvm;
 #define DEBUG_TYPE "x86-selectiondag-info"
 
 bool X86SelectionDAGInfo::isBaseRegConflictPossible(
-    SelectionDAG &DAG, ArrayRef<unsigned> ClobberSet) const {
+    SelectionDAG &DAG, ArrayRef<MCPhysReg> ClobberSet) const {
   // We cannot use TRI->hasBasePointer() until *after* we select all basic
   // blocks.  Legalization may introduce new stack temporaries with large
   // alignment requirements.  Fall back to generic code if there are any
   // dynamic stack adjustments (hopefully rare) and the base pointer would
   // conflict if we had to use it.
-  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-  if (!MFI->hasVarSizedObjects() && !MFI->hasOpaqueSPAdjustment())
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  if (!MFI.hasVarSizedObjects() && !MFI.hasOpaqueSPAdjustment())
     return false;
 
   const X86RegisterInfo *TRI = static_cast<const X86RegisterInfo *>(
@@ -45,7 +45,7 @@ bool X86SelectionDAGInfo::isBaseRegConflictPossible(
 }
 
 SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
-    SelectionDAG &DAG, SDLoc dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, unsigned Align, bool isVolatile,
     MachinePointerInfo DstPtrInfo) const {
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
@@ -54,8 +54,8 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
 
 #ifndef NDEBUG
   // If the base register might conflict with our physical registers, bail out.
-  const unsigned ClobberSet[] = {X86::RCX, X86::RAX, X86::RDI,
-                                 X86::ECX, X86::EAX, X86::EDI};
+  const MCPhysReg ClobberSet[] = {X86::RCX, X86::RAX, X86::RDI,
+                                  X86::ECX, X86::EAX, X86::EDI};
   assert(!isBaseRegConflictPossible(DAG, ClobberSet));
 #endif
 
@@ -87,8 +87,7 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
       TargetLowering::CallLoweringInfo CLI(DAG);
       CLI.setDebugLoc(dl).setChain(Chain)
         .setCallee(CallingConv::C, Type::getVoidTy(*DAG.getContext()),
-                   DAG.getExternalSymbol(bzeroEntry, IntPtr), std::move(Args),
-                   0)
+                   DAG.getExternalSymbol(bzeroEntry, IntPtr), std::move(Args))
         .setDiscardResult();
 
       std::pair<SDValue,SDValue> CallResult = TLI.LowerCallTo(CLI);
@@ -195,7 +194,7 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
 }
 
 SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
-    SelectionDAG &DAG, SDLoc dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, unsigned Align, bool isVolatile, bool AlwaysInline,
     MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   // This requires the copy size to be a constant, preferably
@@ -222,8 +221,8 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
     return SDValue();
 
   // If the base register might conflict with our physical registers, bail out.
-  const unsigned ClobberSet[] = {X86::RCX, X86::RSI, X86::RDI,
-                                 X86::ECX, X86::ESI, X86::EDI};
+  const MCPhysReg ClobberSet[] = {X86::RCX, X86::RSI, X86::RDI,
+                                  X86::ECX, X86::ESI, X86::EDI};
   if (isBaseRegConflictPossible(DAG, ClobberSet))
     return SDValue();
 

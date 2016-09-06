@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-stp-suppress=false -verify-machineinstrs -mcpu=cyclone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-enable-stp-suppress=false -verify-machineinstrs -mcpu=cyclone | FileCheck %s
 
 ; CHECK-LABEL: stp_int
 ; CHECK: stp w0, w1, [x2]
@@ -100,9 +100,9 @@ entry:
 
 ; Read of %b to compute %tmp2 shouldn't prevent formation of stp
 ; CHECK-LABEL: stp_int_rar_hazard
-; CHECK: stp w0, w1, [x2]
 ; CHECK: ldr [[REG:w[0-9]+]], [x2, #8]
-; CHECK: add w0, [[REG]], w1
+; CHECK: add w8, [[REG]], w1
+; CHECK: stp w0, w1, [x2]
 ; CHECK: ret
 define i32 @stp_int_rar_hazard(i32 %a, i32 %b, i32* nocapture %p) nounwind {
   store i32 %a, i32* %p, align 4

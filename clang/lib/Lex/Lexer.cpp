@@ -719,7 +719,9 @@ SourceLocation Lexer::AdvanceToTokenCharacter(SourceLocation TokStart,
   while (Lexer::isObviouslySimpleCharacter(*TokPtr)) {
     if (CharNo == 0)
       return TokStart.getLocWithOffset(PhysOffset);
-    ++TokPtr, --CharNo, ++PhysOffset;
+    ++TokPtr;
+    --CharNo;
+    ++PhysOffset;
   }
   
   // If we have a character that may be a trigraph or escaped newline, use a
@@ -991,6 +993,31 @@ StringRef Lexer::getImmediateMacroName(SourceLocation Loc,
   // range. This is where the macro name was spelled in order to begin
   // expanding this macro.
   Loc = SM.getSpellingLoc(Loc);
+
+  // Dig out the buffer where the macro name was spelled and the extents of the
+  // name so that we can render it into the expansion note.
+  std::pair<FileID, unsigned> ExpansionInfo = SM.getDecomposedLoc(Loc);
+  unsigned MacroTokenLength = Lexer::MeasureTokenLength(Loc, SM, LangOpts);
+  StringRef ExpansionBuffer = SM.getBufferData(ExpansionInfo.first);
+  return ExpansionBuffer.substr(ExpansionInfo.second, MacroTokenLength);
+}
+
+StringRef Lexer::getImmediateMacroNameForDiagnostics(
+    SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts) {
+  assert(Loc.isMacroID() && "Only reasonble to call this on macros");
+  // Walk past macro argument expanions.
+  while (SM.isMacroArgExpansion(Loc))
+    Loc = SM.getImmediateExpansionRange(Loc).first;
+
+  // If the macro's spelling has no FileID, then it's actually a token paste
+  // or stringization (or similar) and not a macro at all.
+  if (!SM.getFileEntryForID(SM.getFileID(SM.getSpellingLoc(Loc))))
+    return StringRef();
+
+  // Find the spelling location of the start of the non-argument expansion
+  // range. This is where the macro name was spelled in order to begin
+  // expanding this macro.
+  Loc = SM.getSpellingLoc(SM.getImmediateExpansionRange(Loc).first);
 
   // Dig out the buffer where the macro name was spelled and the extents of the
   // name so that we can render it into the expansion note.
@@ -1506,7 +1533,15 @@ FinishIdentifier:
     // preprocessor, which may macro expand it or something.
     if (II->isHandleIdentifierCase())
       return PP->HandleIdentifier(Result);
-    
+
+    if (II->getTokenID() == tok::identifier && isCodeCompletionPoint(CurPtr)
+        && II->getPPKeywordID() == tok::pp_not_keyword
+        && II->getObjCKeywordID() == tok::objc_not_keyword) {
+      // Return the code-completion token.
+      Result.setKind(tok::code_completion);
+      cutOffLexing();
+      return true;
+    }
     return true;
   }
 
@@ -1580,14 +1615,15 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
 
   // If we have a hex FP constant, continue.
   if ((C == '-' || C == '+') && (PrevCh == 'P' || PrevCh == 'p')) {
-    // Outside C99, we accept hexadecimal floating point numbers as a
+    // Outside C99 and C++17, we accept hexadecimal floating point numbers as a
     // not-quite-conforming extension. Only do so if this looks like it's
     // actually meant to be a hexfloat, and not if it has a ud-suffix.
     bool IsHexFloat = true;
     if (!LangOpts.C99) {
       if (!isHexaLiteral(BufferPtr, LangOpts))
         IsHexFloat = false;
-      else if (std::find(BufferPtr, CurPtr, '_') != CurPtr)
+      else if (!getLangOpts().CPlusPlus1z &&
+               std::find(BufferPtr, CurPtr, '_') != CurPtr)
         IsHexFloat = false;
     }
     if (IsHexFloat)
@@ -2582,7 +2618,7 @@ static const char *FindConflictEnd(const char *CurPtr, const char *BufferEnd,
                                    ConflictMarkerKind CMK) {
   const char *Terminator = CMK == CMK_Perforce ? "<<<<\n" : ">>>>>>>";
   size_t TermLen = CMK == CMK_Perforce ? 5 : 7;
-  StringRef RestOfBuffer(CurPtr+TermLen, BufferEnd-CurPtr-TermLen);
+  auto RestOfBuffer = StringRef(CurPtr, BufferEnd - CurPtr).substr(TermLen);
   size_t Pos = RestOfBuffer.find(Terminator);
   while (Pos != StringRef::npos) {
     // Must occur at start of line.
@@ -2608,8 +2644,8 @@ bool Lexer::IsStartOfConflictMarker(const char *CurPtr) {
     return false;
   
   // Check to see if we have <<<<<<< or >>>>.
-  if ((BufferEnd-CurPtr < 8 || StringRef(CurPtr, 7) != "<<<<<<<") &&
-      (BufferEnd-CurPtr < 6 || StringRef(CurPtr, 5) != ">>>> "))
+  if (!StringRef(CurPtr, BufferEnd - CurPtr).startswith("<<<<<<<") &&
+      !StringRef(CurPtr, BufferEnd - CurPtr).startswith(">>>> "))
     return false;
 
   // If we have a situation where we don't care about conflict markers, ignore
@@ -3480,6 +3516,9 @@ LexNextToken:
     if (Char == '=') {
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::caretequal;
+    } else if (LangOpts.OpenCL && Char == '^') {
+      CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
+      Kind = tok::caretcaret;
     } else {
       Kind = tok::caret;
     }

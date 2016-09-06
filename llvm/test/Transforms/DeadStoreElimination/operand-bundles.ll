@@ -29,3 +29,15 @@ define void @test2() {
   call void @foo()
   ret void
 }
+
+define void @test3() {
+  ; CHECK-LABEL: @test3(
+  %s = alloca i64
+  ; Verify that this first store is not considered killed by the second one
+  ; since it could be observed from the deopt continuation.
+  ; CHECK: store i64 1, i64* %s
+  store i64 1, i64* %s
+  call void @foo() [ "deopt"(i64* %s) ]
+  store i64 0, i64* %s
+  ret void
+}

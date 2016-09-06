@@ -13,29 +13,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-/* This code is public-domain - it is based on libcrypt
- * placed in the public domain by Wei Dai and other contributors.
- */
-
+#include "llvm/Support/Host.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/ADT/ArrayRef.h"
 using namespace llvm;
 
 #include <stdint.h>
 #include <string.h>
 
-#ifdef __BIG_ENDIAN__
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
 #define SHA_BIG_ENDIAN
-#elif defined __LITTLE_ENDIAN__
-/* override */
-#elif defined __BYTE_ORDER
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-#define SHA_BIG_ENDIAN
-#endif
-#else               // ! defined __LITTLE_ENDIAN__
-#include <endian.h> // machine/endian.h
-#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-#define SHA_BIG_ENDIAN
-#endif
 #endif
 
 /* code */
@@ -44,12 +31,18 @@ using namespace llvm;
 #define SHA1_K40 0x8f1bbcdc
 #define SHA1_K60 0xca62c1d6
 
+#define SEED_0 0x67452301
+#define SEED_1 0xefcdab89
+#define SEED_2 0x98badcfe
+#define SEED_3 0x10325476
+#define SEED_4 0xc3d2e1f0
+
 void SHA1::init() {
-  InternalState.State[0] = 0x67452301;
-  InternalState.State[1] = 0xefcdab89;
-  InternalState.State[2] = 0x98badcfe;
-  InternalState.State[3] = 0x10325476;
-  InternalState.State[4] = 0xc3d2e1f0;
+  InternalState.State[0] = SEED_0;
+  InternalState.State[1] = SEED_1;
+  InternalState.State[2] = SEED_2;
+  InternalState.State[3] = SEED_3;
+  InternalState.State[4] = SEED_4;
   InternalState.ByteCount = 0;
   InternalState.BufferOffset = 0;
 }
@@ -116,13 +109,13 @@ void SHA1::writebyte(uint8_t data) {
   addUncounted(data);
 }
 
-void SHA1::write(const char *data, size_t len) {
-  for (; len--;)
-    writebyte((uint8_t)*data++);
+void SHA1::update(ArrayRef<uint8_t> Data) {
+  for (auto &C : Data)
+    writebyte(C);
 }
 
 void SHA1::pad() {
-  // Implement SHA-1 padding (fips180-2 §5.1.1)
+  // Implement SHA-1 padding (fips180-2 5.1.1)
 
   // Pad with 0x80 followed by 0x00 until the end of the block
   addUncounted(0x80);
@@ -140,14 +133,17 @@ void SHA1::pad() {
   addUncounted(InternalState.ByteCount >> 5);
   addUncounted(InternalState.ByteCount << 3);
 }
-#include <cstdio>
-StringRef SHA1::result() {
-  auto StateToRestore = InternalState;
 
+StringRef SHA1::final() {
   // Pad to complete the last block
   pad();
 
-#ifndef SHA_BIG_ENDIAN
+#ifdef SHA_BIG_ENDIAN
+  // Just copy the current state
+  for (int i = 0; i < 5; i++) {
+    HashResult[i] = InternalState.State[i];
+  }
+#else
   // Swap byte order back
   for (int i = 0; i < 5; i++) {
     HashResult[i] = (((InternalState.State[i]) << 24) & 0xff000000) |
@@ -155,16 +151,20 @@ StringRef SHA1::result() {
                     (((InternalState.State[i]) >> 8) & 0x0000ff00) |
                     (((InternalState.State[i]) >> 24) & 0x000000ff);
   }
-#else
-  // Just copy the current state
-  for (int i = 0; i < 5; i++) {
-    HashResult[i] = InternalState.State[i];
-  }
 #endif
+
+  // Return pointer to hash (20 characters)
+  return StringRef((char *)HashResult, HASH_LENGTH);
+}
+
+StringRef SHA1::result() {
+  auto StateToRestore = InternalState;
+
+  auto Hash = final();
 
   // Restore the state
   InternalState = StateToRestore;
 
   // Return pointer to hash (20 characters)
-  return StringRef((char *)HashResult, HASH_LENGTH);
+  return Hash;
 }

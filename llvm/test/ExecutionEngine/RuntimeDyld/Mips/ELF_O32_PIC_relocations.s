@@ -1,9 +1,9 @@
-# RUN: llvm-mc -triple=mipsel-unknown-linux -relocation-model=pic -code-model=small -filetype=obj -o %T/test_ELF_O32.o %s
-# RUN: llc -mtriple=mipsel-unknown-linux -relocation-model=pic -filetype=obj -o %T/test_ELF_ExternalFunction_O32.o %S/Inputs/ExternalFunction.ll
+# RUN: llvm-mc -triple=mipsel-unknown-linux -code-model=small -filetype=obj -o %T/test_ELF_O32.o %s
+# RUN: llc -mtriple=mipsel-unknown-linux -filetype=obj -o %T/test_ELF_ExternalFunction_O32.o %S/Inputs/ExternalFunction.ll
 # RUN: llvm-rtdyld -triple=mipsel-unknown-linux -verify -map-section test_ELF_O32.o,"<common symbols>"=0x7FF8 -map-section test_ELF_O32.o,.text=0x1000 -map-section test_ELF_ExternalFunction_O32.o,.text=0x10000 -check=%s %T/test_ELF_O32.o %T/test_ELF_ExternalFunction_O32.o
 
-# RUN: llvm-mc -triple=mips-unknown-linux -relocation-model=pic -code-model=small -filetype=obj -o %T/test_ELF_O32.o %s
-# RUN: llc -mtriple=mips-unknown-linux -relocation-model=pic -filetype=obj -o %/T/test_ELF_ExternalFunction_O32.o %S/Inputs/ExternalFunction.ll
+# RUN: llvm-mc -triple=mips-unknown-linux -code-model=small -filetype=obj -o %T/test_ELF_O32.o %s
+# RUN: llc -mtriple=mips-unknown-linux -filetype=obj -o %/T/test_ELF_ExternalFunction_O32.o %S/Inputs/ExternalFunction.ll
 # RUN: llvm-rtdyld -triple=mips-unknown-linux -verify -map-section test_ELF_O32.o,"<common symbols>"=0x7FF8 -map-section test_ELF_O32.o,.text=0x1000 -map-section test_ELF_ExternalFunction_O32.o,.text=0x10000 -check=%s %T/test_ELF_O32.o %T/test_ELF_ExternalFunction_O32.o
 
         .data

@@ -191,6 +191,9 @@ private:
 public:
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(*MF.getFunction()))
+      return false;
+
     // If we don't have VSX on the subtarget, don't do anything.
     const PPCSubtarget &STI = MF.getSubtarget<PPCSubtarget>();
     if (!STI.hasVSX())
@@ -404,9 +407,9 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
       case PPC::VSPLTB:
       case PPC::VSPLTH:
       case PPC::VSPLTW:
+      case PPC::XXSPLTW:
         // Splats are lane-sensitive, but we can use special handling
-        // to adjust the source lane for the splat.  This is not yet
-        // implemented.  When it is, we need to uncomment the following:
+        // to adjust the source lane for the splat.
         SwapVector[VecIdx].IsSwappable = 1;
         SwapVector[VecIdx].SpecialHandling = SHValues::SH_SPLAT;
         break;
@@ -512,7 +515,6 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
       // permute control vectors (for shift values 1, 2, 3).  However,
       // VPERM has a more restrictive register class.
       case PPC::XXSLDWI:
-      case PPC::XXSPLTW:
         break;
       }
     }
@@ -690,6 +692,7 @@ void PPCVSXSwapRemoval::recordUnoptimizableWebs() {
       MachineInstr *MI = SwapVector[EntryIdx].VSEMI;
       unsigned UseReg = MI->getOperand(0).getReg();
       MachineInstr *DefMI = MRI->getVRegDef(UseReg);
+      unsigned DefReg = DefMI->getOperand(0).getReg();
       int DefIdx = SwapMap[DefMI];
 
       if (!SwapVector[DefIdx].IsSwap || SwapVector[DefIdx].IsLoad ||
@@ -704,6 +707,25 @@ void PPCVSXSwapRemoval::recordUnoptimizableWebs() {
         DEBUG(dbgs() << "  use " << EntryIdx << ": ");
         DEBUG(MI->dump());
         DEBUG(dbgs() << "\n");
+      }
+
+      // Ensure all uses of the register defined by DefMI feed store
+      // instructions
+      for (MachineInstr &UseMI : MRI->use_nodbg_instructions(DefReg)) {
+        int UseIdx = SwapMap[&UseMI];
+
+        if (SwapVector[UseIdx].VSEMI->getOpcode() != MI->getOpcode()) {
+          SwapVector[Repr].WebRejected = 1;
+
+          DEBUG(dbgs() <<
+                format("Web %d rejected for swap not feeding only stores\n",
+                       Repr));
+          DEBUG(dbgs() << "  def " << " : ");
+          DEBUG(DefMI->dump());
+          DEBUG(dbgs() << "  use " << UseIdx << ": ");
+          DEBUG(SwapVector[UseIdx].VSEMI->dump());
+          DEBUG(dbgs() << "\n");
+        }
       }
     }
   }
@@ -803,12 +825,21 @@ void PPCVSXSwapRemoval::handleSpecialSwappables(int EntryIdx) {
       llvm_unreachable("Unexpected splat opcode");
     case PPC::VSPLTB: NElts = 16; break;
     case PPC::VSPLTH: NElts = 8;  break;
-    case PPC::VSPLTW: NElts = 4;  break;
+    case PPC::VSPLTW:
+    case PPC::XXSPLTW: NElts = 4;  break;
     }
 
-    unsigned EltNo = MI->getOperand(1).getImm();
+    unsigned EltNo;
+    if (MI->getOpcode() == PPC::XXSPLTW)
+      EltNo = MI->getOperand(2).getImm();
+    else
+      EltNo = MI->getOperand(1).getImm();
+
     EltNo = (EltNo + NElts / 2) % NElts;
-    MI->getOperand(1).setImm(EltNo);
+    if (MI->getOpcode() == PPC::XXSPLTW)
+      MI->getOperand(2).setImm(EltNo);
+    else
+      MI->getOperand(1).setImm(EltNo);
 
     DEBUG(dbgs() << "  Into: ");
     DEBUG(MI->dump());

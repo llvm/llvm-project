@@ -28,10 +28,10 @@ protected:
     tooling::Replacements Replaces =
         reformat(Style, Code, Ranges, "<stdin>", &IncompleteFormat);
     EXPECT_FALSE(IncompleteFormat) << Code << "\n\n";
-    std::string Result = applyAllReplacements(Code, Replaces);
-    EXPECT_NE("", Result);
-    DEBUG(llvm::errs() << "\n" << Result << "\n\n");
-    return Result;
+    auto Result = applyAllReplacements(Code, Replaces);
+    EXPECT_TRUE(static_cast<bool>(Result));
+    DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
+    return *Result;
   }
 
   FormatStyle Style = getLLVMStyle();
@@ -278,6 +278,23 @@ TEST_F(FormatTestSelective, IndividualStatementsOfNestedBlocks) {
                    "  };\n"
                    "});",
                    0, 0));
+  EXPECT_EQ("SomeFunction(\n"
+            "    [] {\n"
+            "      int i;\n"
+            "      return i;\n" // Format this line.
+            "    },\n"
+            "    [] {\n"
+            "       return 2;\n" // Don't fix this.
+            "    });",
+            format("SomeFunction(\n"
+                   "    [] {\n"
+                   "      int i;\n"
+                   "       return i;\n" // Format this line.
+                   "    },\n"
+                   "    [] {\n"
+                   "       return 2;\n" // Don't fix this.
+                   "    });",
+                   40, 0));
 }
 
 TEST_F(FormatTestSelective, WrongIndent) {
@@ -493,6 +510,18 @@ TEST_F(FormatTestSelective, StopFormattingWhenLeavingScope) {
              "void g() {\n" // Make sure not to format this.
              "}",
              15, 0));
+}
+
+TEST_F(FormatTestSelective, SelectivelyRequoteJavaScript) {
+  Style = getGoogleStyle(FormatStyle::LK_JavaScript);
+  EXPECT_EQ(
+      "var x = \"a\";\n"
+      "var x = 'a';\n"
+      "var x = \"a\";",
+      format("var x = \"a\";\n"
+             "var x = \"a\";\n"
+             "var x = \"a\";",
+             20, 0));
 }
 
 } // end namespace

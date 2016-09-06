@@ -29,7 +29,10 @@ public:
     None = 0,
     OverrideFromSrc = (1 << 0),
     LinkOnlyNeeded = (1 << 1),
-    InternalizeLinkedSymbols = (1 << 2)
+    InternalizeLinkedSymbols = (1 << 2),
+    /// Don't force link referenced linkonce definitions, import declaration.
+    DontForceLinkLinkonceODR = (1 << 3)
+
   };
 
   Linker(Module &M);
@@ -41,23 +44,13 @@ public:
   /// For ThinLTO function importing/exporting the \p ModuleSummaryIndex
   /// is passed. If \p GlobalsToImport is provided, only the globals that
   /// are part of the set will be imported from the source module.
-  /// The \p ValIDToTempMDMap is populated by the linker when function
-  /// importing is performed.
   ///
   /// Returns true on error.
   bool linkInModule(std::unique_ptr<Module> Src, unsigned Flags = Flags::None,
-                    DenseSet<const GlobalValue *> *GlobalsToImport = nullptr,
-                    DenseMap<unsigned, MDNode *> *ValIDToTempMDMap = nullptr);
+                    DenseSet<const GlobalValue *> *GlobalsToImport = nullptr);
 
   static bool linkModules(Module &Dest, std::unique_ptr<Module> Src,
                           unsigned Flags = Flags::None);
-
-  /// \brief Link metadata from \p Src into the composite.
-  ///
-  /// The \p ValIDToTempMDMap sound have been populated earlier during function
-  /// importing from \p Src.
-  bool linkInMetadata(std::unique_ptr<Module> Src,
-                      DenseMap<unsigned, MDNode *> *ValIDToTempMDMap);
 };
 
 } // End llvm namespace

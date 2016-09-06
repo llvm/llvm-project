@@ -42,10 +42,14 @@
 
 #if defined(__CUDA__) && defined(__clang__)
 
+// Include some forward declares that must come before cmath.
+#include <__clang_cuda_math_forward_declares.h>
+
 // Include some standard headers to avoid CUDA headers including them
 // while some required macros (like __THROW) are in a weird state.
-#include <stdlib.h>
 #include <cmath>
+#include <cstdlib>
+#include <stdlib.h>
 
 // Preserve common macros that will be changed below by us or by CUDA
 // headers.
@@ -79,17 +83,15 @@
 // definitions from .hpp files.
 #define __DEVICE_FUNCTIONS_H__
 #define __MATH_FUNCTIONS_H__
+#define __COMMON_FUNCTIONS_H__
 
 #undef __CUDACC__
 #define __CUDABE__
 // Disables definitions of device-side runtime support stubs in
 // cuda_device_runtime_api.h
-#define __CUDADEVRT_INTERNAL__
+#include "driver_types.h"
 #include "host_config.h"
 #include "host_defines.h"
-#include "driver_types.h"
-#include "common_functions.h"
-#undef __CUDADEVRT_INTERNAL__
 
 #undef __CUDABE__
 #define __CUDACC__
@@ -100,11 +102,11 @@
 
 // CUDA headers use __nvvm_memcpy and __nvvm_memset which Clang does
 // not have at the moment. Emulate them with a builtin memcpy/memset.
-#define __nvvm_memcpy(s,d,n,a) __builtin_memcpy(s,d,n)
-#define __nvvm_memset(d,c,n,a) __builtin_memset(d,c,n)
+#define __nvvm_memcpy(s, d, n, a) __builtin_memcpy(s, d, n)
+#define __nvvm_memset(d, c, n, a) __builtin_memset(d, c, n)
 
-#include "crt/host_runtime.h"
 #include "crt/device_runtime.h"
+#include "crt/host_runtime.h"
 // device_runtime.h defines __cxa_* macros that will conflict with
 // cxxabi.h.
 // FIXME: redefine these as __device__ functions.
@@ -140,7 +142,20 @@
 #pragma push_macro("__forceinline__")
 #define __forceinline__ __device__ __inline__ __attribute__((always_inline))
 #include "device_functions.hpp"
+
+// math_function.hpp uses the __USE_FAST_MATH__ macro to determine whether we
+// get the slow-but-accurate or fast-but-inaccurate versions of functions like
+// sin and exp.  This is controlled in clang by -fcuda-approx-transcendentals.
+//
+// device_functions.hpp uses __USE_FAST_MATH__ for a different purpose (fast vs.
+// slow divides), so we need to scope our define carefully here.
+#pragma push_macro("__USE_FAST_MATH__")
+#if defined(__CLANG_CUDA_APPROX_TRANSCENDENTALS__)
+#define __USE_FAST_MATH__
+#endif
 #include "math_functions.hpp"
+#pragma pop_macro("__USE_FAST_MATH__")
+
 #include "math_functions_dbl_ptx3.hpp"
 #pragma pop_macro("__forceinline__")
 
@@ -152,21 +167,21 @@
 // Alas, additional overloads for these functions are hard to get to.
 // Considering that we only need these overloads for a few functions,
 // we can provide them here.
-static inline float rsqrt(float a) { return rsqrtf(a); }
-static inline float rcbrt(float a) { return rcbrtf(a); }
-static inline float sinpi(float a) { return sinpif(a); }
-static inline float cospi(float a) { return cospif(a); }
-static inline void sincospi(float a, float *b, float *c) {
-  return sincospi(a, b, c);
+static inline float rsqrt(float __a) { return rsqrtf(__a); }
+static inline float rcbrt(float __a) { return rcbrtf(__a); }
+static inline float sinpi(float __a) { return sinpif(__a); }
+static inline float cospi(float __a) { return cospif(__a); }
+static inline void sincospi(float __a, float *__b, float *__c) {
+  return sincospif(__a, __b, __c);
 }
-static inline float erfcinv(float a) { return erfcinvf(a); }
-static inline float normcdfinv(float a) { return normcdfinvf(a); }
-static inline float normcdf(float a) { return normcdff(a); }
-static inline float erfcx(float a) { return erfcxf(a); }
+static inline float erfcinv(float __a) { return erfcinvf(__a); }
+static inline float normcdfinv(float __a) { return normcdfinvf(__a); }
+static inline float normcdf(float __a) { return normcdff(__a); }
+static inline float erfcx(float __a) { return erfcxf(__a); }
 
 // For some reason single-argument variant is not always declared by
 // CUDA headers. Alas, device_functions.hpp included below needs it.
-static inline __device__ void __brkpt(int c) { __brkpt(); }
+static inline __device__ void __brkpt(int __c) { __brkpt(); }
 
 // Now include *.hpp with definitions of various GPU functions.  Alas,
 // a lot of thins get declared/defined with __host__ attribute which
@@ -178,17 +193,34 @@ static inline __device__ void __brkpt(int c) { __brkpt(); }
 #undef __CUDABE__
 #define __CUDACC__
 #undef __DEVICE_FUNCTIONS_HPP__
-#include "device_functions.hpp"
 #include "device_atomic_functions.hpp"
+#include "device_functions.hpp"
 #include "sm_20_atomic_functions.hpp"
-#include "sm_32_atomic_functions.hpp"
 #include "sm_20_intrinsics.hpp"
-// sm_30_intrinsics.h has declarations that use default argument, so
-// we have to include it and it will in turn include .hpp
-#include "sm_30_intrinsics.h"
-#include "sm_32_intrinsics.hpp"
+#include "sm_32_atomic_functions.hpp"
+
+// Don't include sm_30_intrinsics.h and sm_32_intrinsics.h.  These define the
+// __shfl and __ldg intrinsics using inline (volatile) asm, but we want to
+// define them using builtins so that the optimizer can reason about and across
+// these instructions.  In particular, using intrinsics for ldg gets us the
+// [addr+imm] addressing mode, which, although it doesn't actually exist in the
+// hardware, seems to generate faster machine code because ptxas can more easily
+// reason about our code.
+
 #undef __MATH_FUNCTIONS_HPP__
+
+// math_functions.hpp defines ::signbit as a __host__ __device__ function.  This
+// conflicts with libstdc++'s constexpr ::signbit, so we have to rename
+// math_function.hpp's ::signbit.  It's guarded by #undef signbit, but that's
+// conditional on __GNUC__.  :)
+#pragma push_macro("signbit")
+#pragma push_macro("__GNUC__")
+#undef __GNUC__
+#define signbit __ignored_cuda_signbit
 #include "math_functions.hpp"
+#pragma pop_macro("__GNUC__")
+#pragma pop_macro("signbit")
+
 #pragma pop_macro("__host__")
 
 #include "texture_indirect_functions.h"
@@ -200,17 +232,103 @@ static inline __device__ void __brkpt(int c) { __brkpt(); }
 // Set up compiler macros expected to be seen during compilation.
 #undef __CUDABE__
 #define __CUDACC__
-#define __NVCC__
 
-#if defined(__CUDA_ARCH__)
-// We need to emit IR declaration for non-existing __nvvm_reflect() to
-// let backend know that it should be treated as const nothrow
-// function which is what NVVMReflect pass expects to see.
-extern "C" __device__ __attribute__((const)) int __nvvm_reflect(const void *);
-static __device__ __attribute__((used)) int __nvvm_reflect_anchor() {
-  return __nvvm_reflect("NONE");
+extern "C" {
+// Device-side CUDA system calls.
+// http://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/index.html#system-calls
+// We need these declarations and wrappers for device-side
+// malloc/free/printf calls to work without relying on
+// -fcuda-disable-target-call-checks option.
+__device__ int vprintf(const char *, const char *);
+__device__ void free(void *) __attribute((nothrow));
+__device__ void *malloc(size_t) __attribute((nothrow)) __attribute__((malloc));
+__device__ void __assertfail(const char *__message, const char *__file,
+                             unsigned __line, const char *__function,
+                             size_t __charSize) __attribute__((noreturn));
+
+// In order for standard assert() macro on linux to work we need to
+// provide device-side __assert_fail()
+__device__ static inline void __assert_fail(const char *__message,
+                                            const char *__file, unsigned __line,
+                                            const char *__function) {
+  __assertfail(__message, __file, __line, __function, sizeof(char));
 }
+
+// Clang will convert printf into vprintf, but we still need
+// device-side declaration for it.
+__device__ int printf(const char *, ...);
+} // extern "C"
+
+// We also need device-side std::malloc and std::free.
+namespace std {
+__device__ static inline void free(void *__ptr) { ::free(__ptr); }
+__device__ static inline void *malloc(size_t __size) {
+  return ::malloc(__size);
+}
+} // namespace std
+
+// Out-of-line implementations from cuda_builtin_vars.h.  These need to come
+// after we've pulled in the definition of uint3 and dim3.
+
+__device__ inline __cuda_builtin_threadIdx_t::operator uint3() const {
+  uint3 ret;
+  ret.x = x;
+  ret.y = y;
+  ret.z = z;
+  return ret;
+}
+
+__device__ inline __cuda_builtin_blockIdx_t::operator uint3() const {
+  uint3 ret;
+  ret.x = x;
+  ret.y = y;
+  ret.z = z;
+  return ret;
+}
+
+__device__ inline __cuda_builtin_blockDim_t::operator dim3() const {
+  return dim3(x, y, z);
+}
+
+__device__ inline __cuda_builtin_gridDim_t::operator dim3() const {
+  return dim3(x, y, z);
+}
+
+#include <__clang_cuda_cmath.h>
+#include <__clang_cuda_intrinsics.h>
+
+// curand_mtgp32_kernel helpfully redeclares blockDim and threadIdx in host
+// mode, giving them their "proper" types of dim3 and uint3.  This is
+// incompatible with the types we give in cuda_builtin_vars.h.  As as hack,
+// force-include the header (nvcc doesn't include it by default) but redefine
+// dim3 and uint3 to our builtin types.  (Thankfully dim3 and uint3 are only
+// used here for the redeclarations of blockDim and threadIdx.)
+#pragma push_macro("dim3")
+#pragma push_macro("uint3")
+#define dim3 __cuda_builtin_blockDim_t
+#define uint3 __cuda_builtin_threadIdx_t
+#include "curand_mtgp32_kernel.h"
+#pragma pop_macro("dim3")
+#pragma pop_macro("uint3")
+#pragma pop_macro("__USE_FAST_MATH__")
+
+// Device overrides for placement new and delete.
+#pragma push_macro("CUDA_NOEXCEPT")
+#if __cplusplus >= 201103L
+#define CUDA_NOEXCEPT noexcept
+#else
+#define CUDA_NOEXCEPT
 #endif
+
+__device__ inline void *operator new(__SIZE_TYPE__, void *__ptr) CUDA_NOEXCEPT {
+  return __ptr;
+}
+__device__ inline void *operator new[](__SIZE_TYPE__, void *__ptr) CUDA_NOEXCEPT {
+  return __ptr;
+}
+__device__ inline void operator delete(void *, void *) CUDA_NOEXCEPT {}
+__device__ inline void operator delete[](void *, void *) CUDA_NOEXCEPT {}
+#pragma pop_macro("CUDA_NOEXCEPT")
 
 #endif // __CUDA__
 #endif // __CLANG_CUDA_RUNTIME_WRAPPER_H__

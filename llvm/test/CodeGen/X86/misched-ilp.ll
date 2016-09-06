@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-apple-macosx -mcpu=nocona -enable-misched -misched=ilpmax | FileCheck -check-prefix=MAX %s
-; RUN: llc < %s -mtriple=x86_64-apple-macosx -mcpu=nocona -enable-misched -misched=ilpmin | FileCheck -check-prefix=MIN %s
+; RUN: llc < %s -mtriple=x86_64-apple-macosx -mattr=+sse2 -enable-misched -misched=ilpmax | FileCheck -check-prefix=MAX %s
+; RUN: llc < %s -mtriple=x86_64-apple-macosx -mattr=+sse2 -enable-misched -misched=ilpmin | FileCheck -check-prefix=MIN %s
 ;
 ; Basic verification of the ScheduleDAGILP metric.
 ;

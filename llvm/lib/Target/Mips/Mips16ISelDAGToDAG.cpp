@@ -14,7 +14,6 @@
 #include "Mips16ISelDAGToDAG.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "Mips.h"
-#include "MipsAnalyzeImmediate.h"
 #include "MipsMachineFunction.h"
 #include "MipsRegisterInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -43,8 +42,8 @@ bool Mips16DAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   return MipsDAGToDAGISel::runOnMachineFunction(MF);
 }
 /// Select multiply instructions.
-std::pair<SDNode*, SDNode*>
-Mips16DAGToDAGISel::selectMULT(SDNode *N, unsigned Opc, SDLoc DL, EVT Ty,
+std::pair<SDNode *, SDNode *>
+Mips16DAGToDAGISel::selectMULT(SDNode *N, unsigned Opc, const SDLoc &DL, EVT Ty,
                                bool HasLo, bool HasHi) {
   SDNode *Lo = nullptr, *Hi = nullptr;
   SDNode *Mul = CurDAG->getMachineNode(Opc, DL, MVT::Glue, N->getOperand(0),
@@ -81,125 +80,60 @@ void Mips16DAGToDAGISel::initGlobalBaseReg(MachineFunction &MF) {
   V1 = RegInfo.createVirtualRegister(RC);
   V2 = RegInfo.createVirtualRegister(RC);
 
-  BuildMI(MBB, I, DL, TII.get(Mips::GotPrologue16), V0).
-    addReg(V1, RegState::Define).
-    addExternalSymbol("_gp_disp", MipsII::MO_ABS_HI).
-    addExternalSymbol("_gp_disp", MipsII::MO_ABS_LO);
+  BuildMI(MBB, I, DL, TII.get(Mips::GotPrologue16), V0)
+      .addReg(V1, RegState::Define)
+      .addExternalSymbol("_gp_disp", MipsII::MO_ABS_HI)
+      .addExternalSymbol("_gp_disp", MipsII::MO_ABS_LO);
 
   BuildMI(MBB, I, DL, TII.get(Mips::SllX16), V2).addReg(V0).addImm(16);
   BuildMI(MBB, I, DL, TII.get(Mips::AdduRxRyRz16), GlobalBaseReg)
-    .addReg(V1).addReg(V2);
-}
-
-// Insert instructions to initialize the Mips16 SP Alias register in the
-// first MBB of the function.
-//
-void Mips16DAGToDAGISel::initMips16SPAliasReg(MachineFunction &MF) {
-  MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
-
-  if (!MipsFI->mips16SPAliasRegSet())
-    return;
-
-  MachineBasicBlock &MBB = MF.front();
-  MachineBasicBlock::iterator I = MBB.begin();
-  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
-  DebugLoc DL = I != MBB.end() ? I->getDebugLoc() : DebugLoc();
-  unsigned Mips16SPAliasReg = MipsFI->getMips16SPAliasReg();
-
-  BuildMI(MBB, I, DL, TII.get(Mips::MoveR3216), Mips16SPAliasReg)
-    .addReg(Mips::SP);
+      .addReg(V1)
+      .addReg(V2);
 }
 
 void Mips16DAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
   initGlobalBaseReg(MF);
-  initMips16SPAliasReg(MF);
 }
 
-/// getMips16SPAliasReg - Output the instructions required to put the
-/// SP into a Mips16 accessible aliased register.
-SDValue Mips16DAGToDAGISel::getMips16SPAliasReg() {
-  unsigned Mips16SPAliasReg =
-    MF->getInfo<MipsFunctionInfo>()->getMips16SPAliasReg();
-  auto PtrVT = getTargetLowering()->getPointerTy(CurDAG->getDataLayout());
-  return CurDAG->getRegister(Mips16SPAliasReg, PtrVT);
-}
-
-void Mips16DAGToDAGISel::getMips16SPRefReg(SDNode *Parent, SDValue &AliasReg) {
-  auto PtrVT = getTargetLowering()->getPointerTy(CurDAG->getDataLayout());
-  SDValue AliasFPReg = CurDAG->getRegister(Mips::S0, PtrVT);
-  if (Parent) {
-    switch (Parent->getOpcode()) {
-      case ISD::LOAD: {
-        LoadSDNode *SD = dyn_cast<LoadSDNode>(Parent);
-        switch (SD->getMemoryVT().getSizeInBits()) {
-        case 8:
-        case 16:
-          AliasReg = Subtarget->getFrameLowering()->hasFP(*MF)
-                         ? AliasFPReg
-                         : getMips16SPAliasReg();
-          return;
-        }
-        break;
-      }
-      case ISD::STORE: {
-        StoreSDNode *SD = dyn_cast<StoreSDNode>(Parent);
-        switch (SD->getMemoryVT().getSizeInBits()) {
-        case 8:
-        case 16:
-          AliasReg = Subtarget->getFrameLowering()->hasFP(*MF)
-                         ? AliasFPReg
-                         : getMips16SPAliasReg();
-          return;
-        }
-        break;
-      }
-    }
-  }
-  AliasReg = CurDAG->getRegister(Mips::SP, PtrVT);
-  return;
-
-}
-
-bool Mips16DAGToDAGISel::selectAddr16(
-  SDNode *Parent, SDValue Addr, SDValue &Base, SDValue &Offset,
-  SDValue &Alias) {
+bool Mips16DAGToDAGISel::selectAddr(bool SPAllowed, SDValue Addr, SDValue &Base,
+                                    SDValue &Offset) {
   SDLoc DL(Addr);
   EVT ValTy = Addr.getValueType();
 
-  Alias = CurDAG->getTargetConstant(0, DL, ValTy);
-
   // if Address is FI, get the TargetFrameIndex.
-  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
-    Base   = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
-    Offset = CurDAG->getTargetConstant(0, DL, ValTy);
-    getMips16SPRefReg(Parent, Alias);
-    return true;
+  if (SPAllowed) {
+    if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
+      Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+      Offset = CurDAG->getTargetConstant(0, DL, ValTy);
+      return true;
+    }
   }
   // on PIC code Load GA
   if (Addr.getOpcode() == MipsISD::Wrapper) {
-    Base   = Addr.getOperand(0);
+    Base = Addr.getOperand(0);
     Offset = Addr.getOperand(1);
     return true;
   }
-  if (TM.getRelocationModel() != Reloc::PIC_) {
+  if (!TM.isPositionIndependent()) {
     if ((Addr.getOpcode() == ISD::TargetExternalSymbol ||
-        Addr.getOpcode() == ISD::TargetGlobalAddress))
+         Addr.getOpcode() == ISD::TargetGlobalAddress))
       return false;
   }
   // Addresses of the form FI+const or FI|const
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
     ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
     if (isInt<16>(CN->getSExtValue())) {
-
       // If the first operand is a FI, get the TargetFI Node
-      if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>
-                                  (Addr.getOperand(0))) {
-        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
-        getMips16SPRefReg(Parent, Alias);
+      if (SPAllowed) {
+        if (FrameIndexSDNode *FIN =
+                dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
+          Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+          Offset = CurDAG->getTargetConstant(CN->getZExtValue(), DL, ValTy);
+          return true;
+        }
       }
-      else
-        Base = Addr.getOperand(0);
 
+      Base = Addr.getOperand(0);
       Offset = CurDAG->getTargetConstant(CN->getZExtValue(), DL, ValTy);
       return true;
     }
@@ -224,25 +158,25 @@ bool Mips16DAGToDAGISel::selectAddr16(
         return true;
       }
     }
-
-    // If an indexed floating point load/store can be emitted, return false.
-    const LSBaseSDNode *LS = dyn_cast<LSBaseSDNode>(Parent);
-
-    if (LS) {
-      if (LS->getMemoryVT() == MVT::f32 && Subtarget->hasMips4_32r2())
-        return false;
-      if (LS->getMemoryVT() == MVT::f64 && Subtarget->hasMips4_32r2())
-        return false;
-    }
   }
-  Base   = Addr;
+  Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, ValTy);
   return true;
 }
 
+bool Mips16DAGToDAGISel::selectAddr16(SDValue Addr, SDValue &Base,
+                                      SDValue &Offset) {
+  return selectAddr(false, Addr, Base, Offset);
+}
+
+bool Mips16DAGToDAGISel::selectAddr16SP(SDValue Addr, SDValue &Base,
+                                        SDValue &Offset) {
+  return selectAddr(true, Addr, Base, Offset);
+}
+
 /// Select instructions not customized! Used for
 /// expanded, promoted and normal instructions
-std::pair<bool, SDNode*> Mips16DAGToDAGISel::selectNode(SDNode *Node) {
+bool Mips16DAGToDAGISel::trySelect(SDNode *Node) {
   unsigned Opcode = Node->getOpcode();
   SDLoc DL(Node);
 
@@ -253,13 +187,15 @@ std::pair<bool, SDNode*> Mips16DAGToDAGISel::selectNode(SDNode *Node) {
   EVT NodeTy = Node->getValueType(0);
   unsigned MultOpc;
 
-  switch(Opcode) {
-  default: break;
+  switch (Opcode) {
+  default:
+    break;
 
   case ISD::SUBE:
   case ISD::ADDE: {
     SDValue InFlag = Node->getOperand(2), CmpLHS;
-    unsigned Opc = InFlag.getOpcode(); (void)Opc;
+    unsigned Opc = InFlag.getOpcode();
+    (void)Opc;
     assert(((Opc == ISD::ADDC || Opc == ISD::ADDE) ||
             (Opc == ISD::SUBC || Opc == ISD::SUBE)) &&
            "(ADD|SUB)E flag operand must come from (ADD|SUB)C/E insn");
@@ -273,7 +209,7 @@ std::pair<bool, SDNode*> Mips16DAGToDAGISel::selectNode(SDNode *Node) {
       MOp = Mips::SubuRxRyRz16;
     }
 
-    SDValue Ops[] = { CmpLHS, InFlag.getOperand(1) };
+    SDValue Ops[] = {CmpLHS, InFlag.getOperand(1)};
 
     SDValue LHS = Node->getOperand(0);
     SDValue RHS = Node->getOperand(1);
@@ -283,40 +219,42 @@ std::pair<bool, SDNode*> Mips16DAGToDAGISel::selectNode(SDNode *Node) {
     unsigned Sltu_op = Mips::SltuRxRyRz16;
     SDNode *Carry = CurDAG->getMachineNode(Sltu_op, DL, VT, Ops);
     unsigned Addu_op = Mips::AdduRxRyRz16;
-    SDNode *AddCarry = CurDAG->getMachineNode(Addu_op, DL, VT,
-                                              SDValue(Carry,0), RHS);
+    SDNode *AddCarry =
+        CurDAG->getMachineNode(Addu_op, DL, VT, SDValue(Carry, 0), RHS);
 
-    SDNode *Result = CurDAG->SelectNodeTo(Node, MOp, VT, MVT::Glue, LHS,
-                                          SDValue(AddCarry,0));
-    return std::make_pair(true, Result);
+    CurDAG->SelectNodeTo(Node, MOp, VT, MVT::Glue, LHS, SDValue(AddCarry, 0));
+    return true;
   }
 
   /// Mul with two results
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI: {
     MultOpc = (Opcode == ISD::UMUL_LOHI ? Mips::MultuRxRy16 : Mips::MultRxRy16);
-    std::pair<SDNode*, SDNode*> LoHi = selectMULT(Node, MultOpc, DL, NodeTy,
-                                                  true, true);
+    std::pair<SDNode *, SDNode *> LoHi =
+        selectMULT(Node, MultOpc, DL, NodeTy, true, true);
     if (!SDValue(Node, 0).use_empty())
       ReplaceUses(SDValue(Node, 0), SDValue(LoHi.first, 0));
 
     if (!SDValue(Node, 1).use_empty())
       ReplaceUses(SDValue(Node, 1), SDValue(LoHi.second, 0));
 
-    return std::make_pair(true, nullptr);
+    CurDAG->RemoveDeadNode(Node);
+    return true;
   }
 
   case ISD::MULHS:
   case ISD::MULHU: {
     MultOpc = (Opcode == ISD::MULHU ? Mips::MultuRxRy16 : Mips::MultRxRy16);
-    SDNode *Result = selectMULT(Node, MultOpc, DL, NodeTy, false, true).second;
-    return std::make_pair(true, Result);
+    auto LoHi = selectMULT(Node, MultOpc, DL, NodeTy, false, true);
+    ReplaceNode(Node, LoHi.second);
+    return true;
   }
   }
 
-  return std::make_pair(false, nullptr);
+  return false;
 }
 
-FunctionPass *llvm::createMips16ISelDag(MipsTargetMachine &TM) {
-  return new Mips16DAGToDAGISel(TM);
+FunctionPass *llvm::createMips16ISelDag(MipsTargetMachine &TM,
+                                        CodeGenOpt::Level OptLevel) {
+  return new Mips16DAGToDAGISel(TM, OptLevel);
 }

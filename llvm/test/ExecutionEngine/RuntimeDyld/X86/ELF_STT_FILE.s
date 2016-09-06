@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple=x86_64-pc-linux -relocation-model=pic -filetype=obj -o %T/test_ELF_STT_FILE_FILE_x86-64.o %p/Inputs/ELF_STT_FILE_FILE.s
-# RUN: llvm-mc -triple=x86_64-pc-linux -relocation-model=pic -filetype=obj -o %T/test_ELF_STT_FILE_GLOBAL_x86-64.o %p/Inputs/ELF_STT_FILE_GLOBAL.s
-# RUN: llvm-mc -triple=x86_64-pc-linux -relocation-model=pic -filetype=obj -o %T/test_ELF_STT_FILE_x86-64.o %s
+# RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj -o %T/test_ELF_STT_FILE_FILE_x86-64.o %p/Inputs/ELF_STT_FILE_FILE.s
+# RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj -o %T/test_ELF_STT_FILE_GLOBAL_x86-64.o %p/Inputs/ELF_STT_FILE_GLOBAL.s
+# RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj -o %T/test_ELF_STT_FILE_x86-64.o %s
 # RUN: llvm-rtdyld -triple=x86_64-pc-linux -verify %T/test_ELF_STT_FILE_GLOBAL_x86-64.o %T/test_ELF_STT_FILE_FILE_x86-64.o %T/test_ELF_STT_FILE_x86-64.o
 
 # Test that RTDyldELF ignores STT_FILE symbols, and in particular does

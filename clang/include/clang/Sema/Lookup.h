@@ -185,6 +185,49 @@ public:
       Shadowed(false)
   {}
 
+  // FIXME: Remove these deleted methods once the default build includes
+  // -Wdeprecated.
+  LookupResult(const LookupResult &) = delete;
+  LookupResult &operator=(const LookupResult &) = delete;
+
+  LookupResult(LookupResult &&Other)
+      : ResultKind(std::move(Other.ResultKind)),
+        Ambiguity(std::move(Other.Ambiguity)), Decls(std::move(Other.Decls)),
+        Paths(std::move(Other.Paths)),
+        NamingClass(std::move(Other.NamingClass)),
+        BaseObjectType(std::move(Other.BaseObjectType)),
+        SemaPtr(std::move(Other.SemaPtr)), NameInfo(std::move(Other.NameInfo)),
+        NameContextRange(std::move(Other.NameContextRange)),
+        LookupKind(std::move(Other.LookupKind)), IDNS(std::move(Other.IDNS)),
+        Redecl(std::move(Other.Redecl)), HideTags(std::move(Other.HideTags)),
+        Diagnose(std::move(Other.Diagnose)),
+        AllowHidden(std::move(Other.AllowHidden)),
+        Shadowed(std::move(Other.Shadowed)) {
+    Other.Paths = nullptr;
+    Other.Diagnose = false;
+  }
+  LookupResult &operator=(LookupResult &&Other) {
+    ResultKind = std::move(Other.ResultKind);
+    Ambiguity = std::move(Other.Ambiguity);
+    Decls = std::move(Other.Decls);
+    Paths = std::move(Other.Paths);
+    NamingClass = std::move(Other.NamingClass);
+    BaseObjectType = std::move(Other.BaseObjectType);
+    SemaPtr = std::move(Other.SemaPtr);
+    NameInfo = std::move(Other.NameInfo);
+    NameContextRange = std::move(Other.NameContextRange);
+    LookupKind = std::move(Other.LookupKind);
+    IDNS = std::move(Other.IDNS);
+    Redecl = std::move(Other.Redecl);
+    HideTags = std::move(Other.HideTags);
+    Diagnose = std::move(Other.Diagnose);
+    AllowHidden = std::move(Other.AllowHidden);
+    Shadowed = std::move(Other.Shadowed);
+    Other.Paths = nullptr;
+    Other.Diagnose = false;
+    return *this;
+  }
+
   ~LookupResult() {
     if (Diagnose) diagnose();
     if (Paths) deletePaths(Paths);
@@ -726,7 +769,13 @@ public:
 class ADLResult {
 private:
   /// A map from canonical decls to the 'most recent' decl.
-  llvm::DenseMap<NamedDecl*, NamedDecl*> Decls;
+  llvm::MapVector<NamedDecl*, NamedDecl*> Decls;
+
+  struct select_second {
+    NamedDecl *operator()(std::pair<NamedDecl*, NamedDecl*> P) const {
+      return P.second;
+    }
+  };
 
 public:
   /// Adds a new ADL candidate to this map.
@@ -737,23 +786,11 @@ public:
     Decls.erase(cast<NamedDecl>(D->getCanonicalDecl()));
   }
 
-  class iterator
-      : public llvm::iterator_adaptor_base<
-            iterator, llvm::DenseMap<NamedDecl *, NamedDecl *>::iterator,
-            std::forward_iterator_tag, NamedDecl *> {
-    friend class ADLResult;
+  typedef llvm::mapped_iterator<decltype(Decls)::iterator, select_second>
+      iterator;
 
-    iterator(llvm::DenseMap<NamedDecl *, NamedDecl *>::iterator Iter)
-        : iterator_adaptor_base(std::move(Iter)) {}
-
-  public:
-    iterator() {}
-
-    value_type operator*() const { return I->second; }
-  };
-
-  iterator begin() { return iterator(Decls.begin()); }
-  iterator end() { return iterator(Decls.end()); }
+  iterator begin() { return iterator(Decls.begin(), select_second()); }
+  iterator end() { return iterator(Decls.end(), select_second()); }
 };
 
 }

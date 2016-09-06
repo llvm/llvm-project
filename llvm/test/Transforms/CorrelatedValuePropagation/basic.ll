@@ -199,3 +199,289 @@ out:
 next:
   ret void
 }
+
+define i1 @arg_attribute(i8* nonnull %a) {
+; CHECK-LABEL: @arg_attribute(
+; CHECK: ret i1 false
+  %cmp = icmp eq i8* %a, null
+  br label %exit
+
+exit:
+  ret i1 %cmp
+}
+
+declare nonnull i8* @return_nonnull()
+define i1 @call_attribute() {
+; CHECK-LABEL: @call_attribute(
+; CHECK: ret i1 false
+  %a = call i8* @return_nonnull()
+  %cmp = icmp eq i8* %a, null
+  br label %exit
+
+exit:
+  ret i1 %cmp
+}
+
+define i1 @umin(i32 %a, i32 %b) {
+; CHECK-LABEL: @umin(
+entry:
+  %cmp = icmp ult i32 %a, 5
+  br i1 %cmp, label %a_guard, label %out
+
+a_guard:
+  %cmp2 = icmp ult i32 %b, 20
+  br i1 %cmp2, label %b_guard, label %out
+
+b_guard:
+  %sel_cmp = icmp ult i32 %a, %b
+  %min = select i1 %sel_cmp, i32 %a, i32 %b
+  %res = icmp eq i32 %min, 7
+  br label %next
+next:
+; CHECK: next:
+; CHECK: ret i1 false
+  ret i1 %res
+out:
+  ret i1 false
+}
+
+define i1 @smin(i32 %a, i32 %b) {
+; CHECK-LABEL: @smin(
+entry:
+  %cmp = icmp ult i32 %a, 5
+  br i1 %cmp, label %a_guard, label %out
+
+a_guard:
+  %cmp2 = icmp ult i32 %b, 20
+  br i1 %cmp2, label %b_guard, label %out
+
+b_guard:
+  %sel_cmp = icmp sle i32 %a, %b
+  %min = select i1 %sel_cmp, i32 %a, i32 %b
+  %res = icmp eq i32 %min, 7
+  br label %next
+next:
+; CHECK: next:
+; CHECK: ret i1 false
+  ret i1 %res
+out:
+  ret i1 false
+}
+
+define i1 @smax(i32 %a, i32 %b) {
+; CHECK-LABEL: @smax(
+entry:
+  %cmp = icmp sgt i32 %a, 5
+  br i1 %cmp, label %a_guard, label %out
+
+a_guard:
+  %cmp2 = icmp sgt i32 %b, 20
+  br i1 %cmp2, label %b_guard, label %out
+
+b_guard:
+  %sel_cmp = icmp sge i32 %a, %b
+  %max = select i1 %sel_cmp, i32 %a, i32 %b
+  %res = icmp eq i32 %max, 7
+  br label %next
+next:
+; CHECK: next:
+; CHECK: ret i1 false
+  ret i1 %res
+out:
+  ret i1 false
+}
+
+define i1 @umax(i32 %a, i32 %b) {
+; CHECK-LABEL: @umax(
+entry:
+  %cmp = icmp sgt i32 %a, 5
+  br i1 %cmp, label %a_guard, label %out
+
+a_guard:
+  %cmp2 = icmp sgt i32 %b, 20
+  br i1 %cmp2, label %b_guard, label %out
+
+b_guard:
+  %sel_cmp = icmp uge i32 %a, %b
+  %max = select i1 %sel_cmp, i32 %a, i32 %b
+  %res = icmp eq i32 %max, 7
+  br label %next
+next:
+; CHECK: next:
+; CHECK: ret i1 false
+  ret i1 %res
+out:
+  ret i1 false
+}
+
+define i1 @clamp_low1(i32 %a) {
+; CHECK-LABEL: @clamp_low1(
+entry:
+  %cmp = icmp sge i32 %a, 5
+  br i1 %cmp, label %a_guard, label %out
+
+a_guard:
+  %sel_cmp = icmp eq i32 %a, 5
+  %add = add i32 %a, -1
+  %sel = select i1 %sel_cmp, i32 5, i32 %a
+  %res = icmp eq i32 %sel, 4
+  br label %next
+next:
+; CHECK: next:
+; CHECK: ret i1 false
+  ret i1 %res
+out:
+  ret i1 false
+}
+
+define i1 @clamp_low2(i32 %a) {
+; CHECK-LABEL: @clamp_low2(
+entry:
+  %cmp = icmp sge i32 %a, 5
+  br i1 %cmp, label %a_guard, label %out
+
+a_guard:
+  %sel_cmp = icmp ne i32 %a, 5
+  %add = add i32 %a, -1
+  %sel = select i1 %sel_cmp, i32 %a, i32 5
+  %res = icmp eq i32 %sel, 4
+  br label %next
+next:
+; CHECK: next:
+; CHECK: ret i1 false
+  ret i1 %res
+out:
+  ret i1 false
+}
+
+define i1 @clamp_high1(i32 %a) {
+; CHECK-LABEL: @clamp_high1(
+entry:
+  %cmp = icmp sle i32 %a, 5
+  br i1 %cmp, label %a_guard, label %out
+
+a_guard:
+  %sel_cmp = icmp eq i32 %a, 5
+  %add = add i32 %a, 1
+  %sel = select i1 %sel_cmp, i32 5, i32 %a
+  %res = icmp eq i32 %sel, 6
+  br label %next
+next:
+; CHECK: next:
+; CHECK: ret i1 false
+  ret i1 %res
+out:
+  ret i1 false
+}
+
+define i1 @clamp_high2(i32 %a) {
+; CHECK-LABEL: @clamp_high2(
+entry:
+  %cmp = icmp sle i32 %a, 5
+  br i1 %cmp, label %a_guard, label %out
+
+a_guard:
+  %sel_cmp = icmp ne i32 %a, 5
+  %add = add i32 %a, 1
+  %sel = select i1 %sel_cmp, i32 %a, i32 5
+  %res = icmp eq i32 %sel, 6
+  br label %next
+next:
+; CHECK: next:
+; CHECK: ret i1 false
+  ret i1 %res
+out:
+  ret i1 false
+}
+
+; Just showing arbitrary constants work, not really a clamp
+define i1 @clamp_high3(i32 %a) {
+; CHECK-LABEL: @clamp_high3(
+entry:
+  %cmp = icmp sle i32 %a, 5
+  br i1 %cmp, label %a_guard, label %out
+
+a_guard:
+  %sel_cmp = icmp ne i32 %a, 5
+  %add = add i32 %a, 100
+  %sel = select i1 %sel_cmp, i32 %a, i32 5
+  %res = icmp eq i32 %sel, 105
+  br label %next
+next:
+; CHECK: next:
+; CHECK: ret i1 false
+  ret i1 %res
+out:
+  ret i1 false
+}
+
+define i1 @zext_unknown(i8 %a) {
+; CHECK-LABEL: @zext_unknown
+; CHECK: ret i1 true
+entry:
+  %a32 = zext i8 %a to i32
+  %cmp = icmp sle i32 %a32, 256
+  br label %exit
+exit:
+  ret i1 %cmp
+}
+
+define i1 @trunc_unknown(i32 %a) {
+; CHECK-LABEL: @trunc_unknown
+; CHECK: ret i1 true
+entry:
+  %a8 = trunc i32 %a to i8
+  %a32 = sext i8 %a8 to i32
+  %cmp = icmp sle i32 %a32, 128
+  br label %exit
+exit:
+  ret i1 %cmp
+}
+
+; TODO: missed optimization
+; Make sure we exercise non-integer inputs to unary operators (i.e. crash 
+; check).
+define i1 @bitcast_unknown(float %a) {
+; CHECK-LABEL: @bitcast_unknown
+; CHECK: ret i1 %cmp
+entry:
+  %a32 = bitcast float %a to i32
+  %cmp = icmp sle i32 %a32, 128
+  br label %exit
+exit:
+  ret i1 %cmp
+}
+
+define i1 @bitcast_unknown2(i8* %p) {
+; CHECK-LABEL: @bitcast_unknown2
+; CHECK: ret i1 %cmp
+entry:
+  %p64 = ptrtoint i8* %p to i64
+  %cmp = icmp sle i64 %p64, 128
+  br label %exit
+exit:
+  ret i1 %cmp
+}
+
+
+define i1 @and_unknown(i32 %a) {
+; CHECK-LABEL: @and_unknown
+; CHECK: ret i1 true
+entry:
+  %and = and i32 %a, 128
+  %cmp = icmp sle i32 %and, 128
+  br label %exit
+exit:
+  ret i1 %cmp
+}
+
+define i1 @lshr_unknown(i32 %a) {
+; CHECK-LABEL: @lshr_unknown
+; CHECK: ret i1 true
+entry:
+  %and = lshr i32 %a, 30
+  %cmp = icmp sle i32 %and, 128
+  br label %exit
+exit:
+  ret i1 %cmp
+}

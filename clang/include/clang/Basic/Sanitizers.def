@@ -114,6 +114,13 @@ SANITIZER_GROUP("integer", Integer,
 SANITIZER("local-bounds", LocalBounds)
 SANITIZER_GROUP("bounds", Bounds, ArrayBounds | LocalBounds)
 
+// EfficiencySanitizer
+SANITIZER("efficiency-cache-frag", EfficiencyCacheFrag)
+SANITIZER("efficiency-working-set", EfficiencyWorkingSet)
+// Meta-group only used internally.
+SANITIZER_GROUP("efficiency-all", Efficiency,
+                EfficiencyCacheFrag | EfficiencyWorkingSet)
+
 // Magic group, containing all sanitizers. For example, "-fno-sanitize=all"
 // can be used to disable all the sanitizers.
 SANITIZER_GROUP("all", All, ~0ULL)

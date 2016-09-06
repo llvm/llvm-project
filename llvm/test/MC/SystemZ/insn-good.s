@@ -741,8 +741,11 @@
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 #CHECK: jh	foo                     # encoding: [0xa7,0x24,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+#CHECK: jp	foo                     # encoding: [0xa7,0x24,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 	brc	2, foo
 	jh	foo
+	jp	foo
 
 #CHECK: brc	3, foo                  # encoding: [0xa7,0x34,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
@@ -755,8 +758,11 @@
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 #CHECK: jl	foo                     # encoding: [0xa7,0x44,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+#CHECK: jm	foo                     # encoding: [0xa7,0x44,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 	brc	4, foo
 	jl	foo
+	jm	foo
 
 #CHECK: brc	5, foo                  # encoding: [0xa7,0x54,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
@@ -776,15 +782,21 @@
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 #CHECK: jne	foo                     # encoding: [0xa7,0x74,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+#CHECK: jnz	foo                     # encoding: [0xa7,0x74,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 	brc	7, foo
 	jne	foo
+	jnz	foo
 
 #CHECK: brc	8, foo                  # encoding: [0xa7,0x84,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 #CHECK: je	foo                     # encoding: [0xa7,0x84,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+#CHECK: jz	foo                     # encoding: [0xa7,0x84,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 	brc	8, foo
 	je	foo
+	jz	foo
 
 #CHECK: brc	9, foo                  # encoding: [0xa7,0x94,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
@@ -804,8 +816,11 @@
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 #CHECK: jnl	foo                     # encoding: [0xa7,0xb4,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+#CHECK: jnm	foo                     # encoding: [0xa7,0xb4,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 	brc	11, foo
 	jnl	foo
+	jnm	foo
 
 #CHECK: brc	12, foo                 # encoding: [0xa7,0xc4,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
@@ -818,8 +833,11 @@
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 #CHECK: jnh	foo                     # encoding: [0xa7,0xd4,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+#CHECK: jnp	foo                     # encoding: [0xa7,0xd4,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
 	brc	13, foo
 	jnh	foo
+	jnp	foo
 
 #CHECK: brc	14, foo                 # encoding: [0xa7,0xe4,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
@@ -991,8 +1009,11 @@
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
 #CHECK: jgh	foo                     # encoding: [0xc0,0x24,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
+#CHECK: jgp	foo                     # encoding: [0xc0,0x24,A,A,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
 	brcl	2, foo
 	jgh	foo
+	jgp	foo
 
 #CHECK: brcl	3, foo                  # encoding: [0xc0,0x34,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
@@ -1005,8 +1026,11 @@
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
 #CHECK: jgl	foo                     # encoding: [0xc0,0x44,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
+#CHECK: jgm	foo                     # encoding: [0xc0,0x44,A,A,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
 	brcl	4, foo
 	jgl	foo
+	jgm	foo
 
 #CHECK: brcl	5, foo                  # encoding: [0xc0,0x54,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
@@ -1026,15 +1050,21 @@
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
 #CHECK: jgne	foo                     # encoding: [0xc0,0x74,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
+#CHECK: jgnz	foo                     # encoding: [0xc0,0x74,A,A,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
 	brcl	7, foo
 	jgne	foo
+	jgnz	foo
 
 #CHECK: brcl	8, foo                  # encoding: [0xc0,0x84,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
 #CHECK: jge	foo                     # encoding: [0xc0,0x84,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
+#CHECK: jgz	foo                     # encoding: [0xc0,0x84,A,A,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
 	brcl	8, foo
 	jge	foo
+	jgz	foo
 
 #CHECK: brcl	9, foo                  # encoding: [0xc0,0x94,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
@@ -1054,8 +1084,11 @@
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
 #CHECK: jgnl	foo                     # encoding: [0xc0,0xb4,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
+#CHECK: jgnm	foo                     # encoding: [0xc0,0xb4,A,A,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
 	brcl	11, foo
 	jgnl	foo
+	jgnm	foo
 
 #CHECK: brcl	12, foo                 # encoding: [0xc0,0xc4,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
@@ -1068,8 +1101,11 @@
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
 #CHECK: jgnh	foo                     # encoding: [0xc0,0xd4,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
+#CHECK: jgnp	foo                     # encoding: [0xc0,0xd4,A,A,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
 	brcl	13, foo
 	jgnh	foo
+	jgnp	foo
 
 #CHECK: brcl	14, foo                 # encoding: [0xc0,0xe4,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
@@ -1244,6 +1280,92 @@
 #CHECK: brctg	%r15, .[[LAB:L.*]]	# encoding: [0xa7,0xf7,A,A]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC16DBL
 	brctg	%r15, 0
+
+#CHECK: brxh	%r0, %r2, .[[LAB:L.*]]-65536	# encoding: [0x84,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: (.[[LAB]]-65536)+2, kind: FK_390_PC16DBL
+	brxh	%r0,%r2, -0x10000
+#CHECK: brxh	%r0, %r2, .[[LAB:L.*]]-2	# encoding: [0x84,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: (.[[LAB]]-2)+2, kind: FK_390_PC16DBL
+	brxh	%r0, %r2, -2
+#CHECK: brxh	%r0, %r2, .[[LAB:L.*]]	        # encoding: [0x84,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC16DBL
+	brxh	%r0,%r2, 0
+#CHECK: brxh	%r0, %r2, .[[LAB:L.*]]+65534	# encoding: [0x84,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: (.[[LAB]]+65534)+2, kind: FK_390_PC16DBL
+	brxh	%r0,%r2, 0xfffe
+
+#CHECK: brxh	%r0, %r2, foo                   # encoding: [0x84,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+#CHECK: brxh	%r14, %r2, foo                  # encoding: [0x84,0xe2,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+#CHECK: brxh	%r15, %r2, foo                  # encoding: [0x84,0xf2,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+	brxh	%r0,%r2,foo
+	brxh	%r14,%r2,foo
+	brxh	%r15,%r2,foo
+
+#CHECK: brxh	%r0, %r2, bar+100               # encoding: [0x84,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC16DBL
+#CHECK: brxh	%r14, %r2, bar+100              # encoding: [0x84,0xe2,A,A]
+#CHECK:  fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC16DBL
+#CHECK: brxh	%r15, %r2, bar+100              # encoding: [0x84,0xf2,A,A]
+#CHECK:  fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC16DBL
+	brxh	%r0,%r2,bar+100
+	brxh	%r14,%r2,bar+100
+	brxh	%r15,%r2,bar+100
+
+#CHECK: brxh	%r0, %r2, bar@PLT               # encoding: [0x84,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: bar@PLT+2, kind: FK_390_PC16DBL
+#CHECK: brxh	%r14, %r2, bar@PLT              # encoding: [0x84,0xe2,A,A]
+#CHECK:  fixup A - offset: 2, value: bar@PLT+2, kind: FK_390_PC16DBL
+#CHECK: brxh	%r15, %r2, bar@PLT              # encoding: [0x84,0xf2,A,A]
+#CHECK:  fixup A - offset: 2, value: bar@PLT+2, kind: FK_390_PC16DBL
+	brxh	%r0,%r2,bar@PLT
+	brxh	%r14,%r2,bar@PLT
+	brxh	%r15,%r2,bar@PLT
+
+#CHECK: brxle	%r0, %r2, .[[LAB:L.*]]-65536	# encoding: [0x85,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: (.[[LAB]]-65536)+2, kind: FK_390_PC16DBL
+	brxle	%r0,%r2, -0x10000
+#CHECK: brxle	%r0, %r2, .[[LAB:L.*]]-2	# encoding: [0x85,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: (.[[LAB]]-2)+2, kind: FK_390_PC16DBL
+	brxle	%r0, %r2, -2
+#CHECK: brxle	%r0, %r2, .[[LAB:L.*]]	        # encoding: [0x85,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC16DBL
+	brxle	%r0,%r2, 0
+#CHECK: brxle	%r0, %r2, .[[LAB:L.*]]+65534	# encoding: [0x85,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: (.[[LAB]]+65534)+2, kind: FK_390_PC16DBL
+	brxle	%r0,%r2, 0xfffe
+
+#CHECK: brxle	%r0, %r2, foo                   # encoding: [0x85,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+#CHECK: brxle	%r14, %r2, foo                  # encoding: [0x85,0xe2,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+#CHECK: brxle	%r15, %r2, foo                  # encoding: [0x85,0xf2,A,A]
+#CHECK:  fixup A - offset: 2, value: foo+2, kind: FK_390_PC16DBL
+	brxle	%r0,%r2,foo
+	brxle	%r14,%r2,foo
+	brxle	%r15,%r2,foo
+
+#CHECK: brxle	%r0, %r2, bar+100               # encoding: [0x85,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC16DBL
+#CHECK: brxle	%r14, %r2, bar+100              # encoding: [0x85,0xe2,A,A]
+#CHECK:  fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC16DBL
+#CHECK: brxle	%r15, %r2, bar+100              # encoding: [0x85,0xf2,A,A]
+#CHECK:  fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC16DBL
+	brxle	%r0,%r2,bar+100
+	brxle	%r14,%r2,bar+100
+	brxle	%r15,%r2,bar+100
+
+#CHECK: brxle	%r0, %r2, bar@PLT               # encoding: [0x85,0x02,A,A]
+#CHECK:  fixup A - offset: 2, value: bar@PLT+2, kind: FK_390_PC16DBL
+#CHECK: brxle	%r14, %r2, bar@PLT              # encoding: [0x85,0xe2,A,A]
+#CHECK:  fixup A - offset: 2, value: bar@PLT+2, kind: FK_390_PC16DBL
+#CHECK: brxle	%r15, %r2, bar@PLT              # encoding: [0x85,0xf2,A,A]
+#CHECK:  fixup A - offset: 2, value: bar@PLT+2, kind: FK_390_PC16DBL
+	brxle	%r0,%r2,bar@PLT
+	brxle	%r14,%r2,bar@PLT
+	brxle	%r15,%r2,bar@PLT
 
 #CHECK: c	%r0, 0                  # encoding: [0x59,0x00,0x00,0x00]
 #CHECK: c	%r0, 4095               # encoding: [0x59,0x00,0x0f,0xff]
@@ -1637,6 +1759,86 @@
 	cghsi	4095(%r1), 42
 	cghsi	4095(%r15), 42
 
+#CHECK: cgib	%r0, 0, 0, 0            # encoding: [0xec,0x00,0x00,0x00,0x00,0xfc]
+#CHECK: cgib	%r0, -128, 0, 0         # encoding: [0xec,0x00,0x00,0x00,0x80,0xfc]
+#CHECK: cgib	%r0, 127, 0, 0          # encoding: [0xec,0x00,0x00,0x00,0x7f,0xfc]
+#CHECK: cgib	%r15, 0, 0, 0           # encoding: [0xec,0xf0,0x00,0x00,0x00,0xfc]
+#CHECK: cgib	%r7, -1, 0, 0           # encoding: [0xec,0x70,0x00,0x00,0xff,0xfc]
+#CHECK: cgib	%r0, 0, 1, 0            # encoding: [0xec,0x01,0x00,0x00,0x00,0xfc]
+#CHECK: cgib	%r0, 0, 15, 0           # encoding: [0xec,0x0f,0x00,0x00,0x00,0xfc]
+#CHECK: cgib	%r0, 0, 0, 0(%r13)      # encoding: [0xec,0x00,0xd0,0x00,0x00,0xfc]
+#CHECK: cgib	%r0, 0, 0, 4095         # encoding: [0xec,0x00,0x0f,0xff,0x00,0xfc]
+#CHECK: cgib	%r0, 0, 0, 4095(%r7)    # encoding: [0xec,0x00,0x7f,0xff,0x00,0xfc]
+	cgib	%r0, 0, 0, 0
+	cgib	%r0, -128, 0, 0
+	cgib	%r0, 127, 0, 0
+	cgib	%r15, 0, 0, 0
+	cgib	%r7, -1, 0, 0
+	cgib	%r0, 0, 1, 0
+	cgib	%r0, 0, 15, 0
+	cgib	%r0, 0, 0, 0(%r13)
+	cgib	%r0, 0, 0, 4095
+	cgib	%r0, 0, 0, 4095(%r7)
+
+#CHECK: cgibe	%r0, 0, 0               # encoding: [0xec,0x08,0x00,0x00,0x00,0xfc]
+#CHECK: cgibe	%r0, -128, 0            # encoding: [0xec,0x08,0x00,0x00,0x80,0xfc]
+#CHECK: cgibe	%r0, 127, 0             # encoding: [0xec,0x08,0x00,0x00,0x7f,0xfc]
+#CHECK: cgibe	%r15, 0, 0              # encoding: [0xec,0xf8,0x00,0x00,0x00,0xfc]
+#CHECK: cgibe	%r7, -1, 0              # encoding: [0xec,0x78,0x00,0x00,0xff,0xfc]
+#CHECK: cgibe	%r0, 0, 0(%r13)         # encoding: [0xec,0x08,0xd0,0x00,0x00,0xfc]
+#CHECK: cgibe	%r0, 0, 4095            # encoding: [0xec,0x08,0x0f,0xff,0x00,0xfc]
+#CHECK: cgibe	%r0, 0, 4095(%r7)       # encoding: [0xec,0x08,0x7f,0xff,0x00,0xfc]
+	cgibe	%r0, 0, 0
+	cgibe	%r0, -128, 0
+	cgibe	%r0, 127, 0
+	cgibe	%r15, 0, 0
+	cgibe	%r7, -1, 0
+	cgibe	%r0, 0, 0(%r13)
+	cgibe	%r0, 0, 4095
+	cgibe	%r0, 0, 4095(%r7)
+
+#CHECK: cgib	%r1, 2, 2, 3(%r4)       # encoding: [0xec,0x12,0x40,0x03,0x02,0xfc]
+#CHECK: cgibh	%r1, 2, 3(%r4)          # encoding: [0xec,0x12,0x40,0x03,0x02,0xfc]
+#CHECK: cgibnle	%r1, 2, 3(%r4)          # encoding: [0xec,0x12,0x40,0x03,0x02,0xfc]
+	cgib	%r1, 2, 2, 3(%r4)
+	cgibh	%r1, 2, 3(%r4)
+	cgibnle	%r1, 2, 3(%r4)
+
+#CHECK: cgib	%r1, 2, 4, 3(%r4)       # encoding: [0xec,0x14,0x40,0x03,0x02,0xfc]
+#CHECK: cgibl	%r1, 2, 3(%r4)          # encoding: [0xec,0x14,0x40,0x03,0x02,0xfc]
+#CHECK: cgibnhe	%r1, 2, 3(%r4)          # encoding: [0xec,0x14,0x40,0x03,0x02,0xfc]
+	cgib	%r1, 2, 4, 3(%r4)
+	cgibl	%r1, 2, 3(%r4)
+	cgibnhe	%r1, 2, 3(%r4)
+
+#CHECK: cgib	%r1, 2, 6, 3(%r4)       # encoding: [0xec,0x16,0x40,0x03,0x02,0xfc]
+#CHECK: cgiblh	%r1, 2, 3(%r4)          # encoding: [0xec,0x16,0x40,0x03,0x02,0xfc]
+#CHECK: cgibne	%r1, 2, 3(%r4)          # encoding: [0xec,0x16,0x40,0x03,0x02,0xfc]
+	cgib	%r1, 2, 6, 3(%r4)
+	cgiblh	%r1, 2, 3(%r4)
+	cgibne	%r1, 2, 3(%r4)
+
+#CHECK: cgib	%r1, 2, 8, 3(%r4)       # encoding: [0xec,0x18,0x40,0x03,0x02,0xfc]
+#CHECK: cgibe	%r1, 2, 3(%r4)          # encoding: [0xec,0x18,0x40,0x03,0x02,0xfc]
+#CHECK: cgibnlh	%r1, 2, 3(%r4)          # encoding: [0xec,0x18,0x40,0x03,0x02,0xfc]
+	cgib	%r1, 2, 8, 3(%r4)
+	cgibe	%r1, 2, 3(%r4)
+	cgibnlh	%r1, 2, 3(%r4)
+
+#CHECK: cgib	%r1, 2, 10, 3(%r4)      # encoding: [0xec,0x1a,0x40,0x03,0x02,0xfc]
+#CHECK: cgibhe	%r1, 2, 3(%r4)          # encoding: [0xec,0x1a,0x40,0x03,0x02,0xfc]
+#CHECK: cgibnl	%r1, 2, 3(%r4)          # encoding: [0xec,0x1a,0x40,0x03,0x02,0xfc]
+	cgib	%r1, 2, 10, 3(%r4)
+	cgibhe	%r1, 2, 3(%r4)
+	cgibnl	%r1, 2, 3(%r4)
+
+#CHECK: cgib	%r1, 2, 12, 3(%r4)      # encoding: [0xec,0x1c,0x40,0x03,0x02,0xfc]
+#CHECK: cgible	%r1, 2, 3(%r4)          # encoding: [0xec,0x1c,0x40,0x03,0x02,0xfc]
+#CHECK: cgibnh	%r1, 2, 3(%r4)          # encoding: [0xec,0x1c,0x40,0x03,0x02,0xfc]
+	cgib	%r1, 2, 12, 3(%r4)
+	cgible	%r1, 2, 3(%r4)
+	cgibnh	%r1, 2, 3(%r4)
+
 #CHECK: cgij	%r0, 0, 0, .[[LAB:L.*]]	# encoding: [0xec,0x00,A,A,0x00,0x7c]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC16DBL
 #CHECK: cgij	%r0, -128, 0, .[[LAB:L.*]]	# encoding: [0xec,0x00,A,A,0x80,0x7c]
@@ -1870,6 +2072,28 @@
 #CHECK:  fixup A - offset: 2, value: bar@PLT+2, kind: FK_390_PC16DBL
 	cgijnh	%r1, -66, bar@PLT
 
+#CHECK: cgit     %r0, 0, 12             # encoding: [0xec,0x00,0x00,0x00,0xc0,0x70]
+#CHECK: cgit     %r0, -1, 12            # encoding: [0xec,0x00,0xff,0xff,0xc0,0x70]
+#CHECK: cgit     %r0, -32768, 12        # encoding: [0xec,0x00,0x80,0x00,0xc0,0x70]
+#CHECK: cgit     %r0, 32767, 12         # encoding: [0xec,0x00,0x7f,0xff,0xc0,0x70]
+#CHECK: cgith    %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0x20,0x70]
+#CHECK: cgitl    %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0x40,0x70]
+#CHECK: cgite    %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0x80,0x70]
+#CHECK: cgitne   %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0x60,0x70]
+#CHECK: cgitnl   %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0xa0,0x70]
+#CHECK: cgitnh   %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0xc0,0x70]
+
+        cgit     %r0, 0, 12
+        cgit     %r0, -1, 12
+        cgit     %r0, -32768, 12
+        cgit     %r0, 32767, 12
+        cgith    %r15, 1
+        cgitl    %r15, 1
+        cgite    %r15, 1
+        cgitne   %r15, 1
+        cgitnl   %r15, 1
+        cgitnh   %r15, 1
+
 #CHECK: cgr	%r0, %r0                # encoding: [0xb9,0x20,0x00,0x00]
 #CHECK: cgr	%r0, %r15               # encoding: [0xb9,0x20,0x00,0x0f]
 #CHECK: cgr	%r15, %r0               # encoding: [0xb9,0x20,0x00,0xf0]
@@ -1879,6 +2103,82 @@
 	cgr	%r0,%r15
 	cgr	%r15,%r0
 	cgr	%r7,%r8
+
+#CHECK: cgrb	%r0, %r0, 0, 0          # encoding: [0xec,0x00,0x00,0x00,0x00,0xe4]
+#CHECK: cgrb	%r0, %r15, 0, 0         # encoding: [0xec,0x0f,0x00,0x00,0x00,0xe4]
+#CHECK: cgrb	%r15, %r0, 0, 0         # encoding: [0xec,0xf0,0x00,0x00,0x00,0xe4]
+#CHECK: cgrb	%r7, %r2, 0, 0          # encoding: [0xec,0x72,0x00,0x00,0x00,0xe4]
+#CHECK: cgrb	%r0, %r0, 1, 0          # encoding: [0xec,0x00,0x00,0x00,0x10,0xe4]
+#CHECK: cgrb	%r0, %r0, 15, 0         # encoding: [0xec,0x00,0x00,0x00,0xf0,0xe4]
+#CHECK: cgrb	%r0, %r0, 0, 0(%r13)    # encoding: [0xec,0x00,0xd0,0x00,0x00,0xe4]
+#CHECK: cgrb	%r0, %r0, 0, 4095       # encoding: [0xec,0x00,0x0f,0xff,0x00,0xe4]
+#CHECK: cgrb	%r0, %r0, 0, 4095(%r7)  # encoding: [0xec,0x00,0x7f,0xff,0x00,0xe4]
+	cgrb	%r0, %r0, 0, 0
+	cgrb	%r0, %r15, 0, 0
+	cgrb	%r15, %r0, 0, 0
+	cgrb	%r7, %r2, 0, 0
+	cgrb	%r0, %r0, 1, 0
+	cgrb	%r0, %r0, 15, 0
+	cgrb	%r0, %r0, 0, 0(%r13)
+	cgrb	%r0, %r0, 0, 4095
+	cgrb	%r0, %r0, 0, 4095(%r7)
+
+#CHECK: cgrbe	%r0, %r0, 0             # encoding: [0xec,0x00,0x00,0x00,0x80,0xe4]
+#CHECK: cgrbe	%r0, %r15, 0            # encoding: [0xec,0x0f,0x00,0x00,0x80,0xe4]
+#CHECK: cgrbe	%r15, %r0, 0            # encoding: [0xec,0xf0,0x00,0x00,0x80,0xe4]
+#CHECK: cgrbe	%r7, %r2, 0             # encoding: [0xec,0x72,0x00,0x00,0x80,0xe4]
+#CHECK: cgrbe	%r0, %r0, 0(%r13)       # encoding: [0xec,0x00,0xd0,0x00,0x80,0xe4]
+#CHECK: cgrbe	%r0, %r0, 4095          # encoding: [0xec,0x00,0x0f,0xff,0x80,0xe4]
+#CHECK: cgrbe	%r0, %r0, 4095(%r7)     # encoding: [0xec,0x00,0x7f,0xff,0x80,0xe4]
+	cgrbe	%r0, %r0, 0
+	cgrbe	%r0, %r15, 0
+	cgrbe	%r15, %r0, 0
+	cgrbe	%r7, %r2, 0
+	cgrbe	%r0, %r0, 0(%r13)
+	cgrbe	%r0, %r0, 4095
+	cgrbe	%r0, %r0, 4095(%r7)
+
+#CHECK: cgrb	%r1, %r2, 2, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x20,0xe4]
+#CHECK: cgrbh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x20,0xe4]
+#CHECK: cgrbnle	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x20,0xe4]
+	cgrb	%r1, %r2, 2, 3(%r4)
+	cgrbh	%r1, %r2, 3(%r4)
+	cgrbnle	%r1, %r2, 3(%r4)
+
+#CHECK: cgrb	%r1, %r2, 4, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x40,0xe4]
+#CHECK: cgrbl	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x40,0xe4]
+#CHECK: cgrbnhe	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x40,0xe4]
+	cgrb	%r1, %r2, 4, 3(%r4)
+	cgrbl	%r1, %r2, 3(%r4)
+	cgrbnhe	%r1, %r2, 3(%r4)
+
+#CHECK: cgrb	%r1, %r2, 6, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x60,0xe4]
+#CHECK: cgrblh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x60,0xe4]
+#CHECK: cgrbne	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x60,0xe4]
+	cgrb	%r1, %r2, 6, 3(%r4)
+	cgrblh	%r1, %r2, 3(%r4)
+	cgrbne	%r1, %r2, 3(%r4)
+
+#CHECK: cgrb	%r1, %r2, 8, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x80,0xe4]
+#CHECK: cgrbe	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x80,0xe4]
+#CHECK: cgrbnlh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x80,0xe4]
+	cgrb	%r1, %r2, 8, 3(%r4)
+	cgrbe	%r1, %r2, 3(%r4)
+	cgrbnlh	%r1, %r2, 3(%r4)
+
+#CHECK: cgrb	%r1, %r2, 10, 3(%r4)    # encoding: [0xec,0x12,0x40,0x03,0xa0,0xe4]
+#CHECK: cgrbhe	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xa0,0xe4]
+#CHECK: cgrbnl	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xa0,0xe4]
+	cgrb	%r1, %r2, 10, 3(%r4)
+	cgrbhe	%r1, %r2, 3(%r4)
+	cgrbnl	%r1, %r2, 3(%r4)
+
+#CHECK: cgrb	%r1, %r2, 12, 3(%r4)    # encoding: [0xec,0x12,0x40,0x03,0xc0,0xe4]
+#CHECK: cgrble	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xc0,0xe4]
+#CHECK: cgrbnh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xc0,0xe4]
+	cgrb	%r1, %r2, 12, 3(%r4)
+	cgrble	%r1, %r2, 3(%r4)
+	cgrbnh	%r1, %r2, 3(%r4)
 
 #CHECK: cgrj	%r0, %r0, 0, .[[LAB:L.*]]	# encoding: [0xec,0x00,A,A,0x00,0x64]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC16DBL
@@ -2147,6 +2447,28 @@
 	cgrl	%r7,frob@PLT
 	cgrl	%r8,frob@PLT
 
+#CHECK: cgrt     %r0, %r1, 12           # encoding: [0xb9,0x60,0xc0,0x01]
+#CHECK: cgrt     %r0, %r1, 12           # encoding: [0xb9,0x60,0xc0,0x01]
+#CHECK: cgrt     %r0, %r1, 12           # encoding: [0xb9,0x60,0xc0,0x01]
+#CHECK: cgrt     %r0, %r1, 12           # encoding: [0xb9,0x60,0xc0,0x01]
+#CHECK: cgrth    %r0, %r15              # encoding: [0xb9,0x60,0x20,0x0f]
+#CHECK: cgrtl    %r0, %r15              # encoding: [0xb9,0x60,0x40,0x0f]
+#CHECK: cgrte    %r0, %r15              # encoding: [0xb9,0x60,0x80,0x0f]
+#CHECK: cgrtne   %r0, %r15              # encoding: [0xb9,0x60,0x60,0x0f]
+#CHECK: cgrtnl   %r0, %r15              # encoding: [0xb9,0x60,0xa0,0x0f]
+#CHECK: cgrtnh   %r0, %r15              # encoding: [0xb9,0x60,0xc0,0x0f]
+
+        cgrt     %r0, %r1, 12
+        cgrt     %r0, %r1, 12
+        cgrt     %r0, %r1, 12
+        cgrt     %r0, %r1, 12
+        cgrth    %r0, %r15
+        cgrtl    %r0, %r15
+        cgrte    %r0, %r15
+        cgrtne   %r0, %r15
+        cgrtnl   %r0, %r15
+        cgrtnh   %r0, %r15
+
 #CHECK: cgxbr	%r0, 0, %f0             # encoding: [0xb3,0xaa,0x00,0x00]
 #CHECK: cgxbr	%r0, 0, %f13            # encoding: [0xb3,0xaa,0x00,0x0d]
 #CHECK: cgxbr	%r0, 15, %f0            # encoding: [0xb3,0xaa,0xf0,0x00]
@@ -2295,6 +2617,86 @@
 	chy	%r0, 524287(%r1,%r15)
 	chy	%r0, 524287(%r15,%r1)
 	chy	%r15, 0
+
+#CHECK: cib	%r0, 0, 0, 0            # encoding: [0xec,0x00,0x00,0x00,0x00,0xfe]
+#CHECK: cib	%r0, -128, 0, 0         # encoding: [0xec,0x00,0x00,0x00,0x80,0xfe]
+#CHECK: cib	%r0, 127, 0, 0          # encoding: [0xec,0x00,0x00,0x00,0x7f,0xfe]
+#CHECK: cib	%r15, 0, 0, 0           # encoding: [0xec,0xf0,0x00,0x00,0x00,0xfe]
+#CHECK: cib	%r7, -1, 0, 0           # encoding: [0xec,0x70,0x00,0x00,0xff,0xfe]
+#CHECK: cib	%r0, 0, 1, 0            # encoding: [0xec,0x01,0x00,0x00,0x00,0xfe]
+#CHECK: cib	%r0, 0, 15, 0           # encoding: [0xec,0x0f,0x00,0x00,0x00,0xfe]
+#CHECK: cib	%r0, 0, 0, 0(%r13)      # encoding: [0xec,0x00,0xd0,0x00,0x00,0xfe]
+#CHECK: cib	%r0, 0, 0, 4095         # encoding: [0xec,0x00,0x0f,0xff,0x00,0xfe]
+#CHECK: cib	%r0, 0, 0, 4095(%r7)    # encoding: [0xec,0x00,0x7f,0xff,0x00,0xfe]
+	cib	%r0, 0, 0, 0
+	cib	%r0, -128, 0, 0
+	cib	%r0, 127, 0, 0
+	cib	%r15, 0, 0, 0
+	cib	%r7, -1, 0, 0
+	cib	%r0, 0, 1, 0
+	cib	%r0, 0, 15, 0
+	cib	%r0, 0, 0, 0(%r13)
+	cib	%r0, 0, 0, 4095
+	cib	%r0, 0, 0, 4095(%r7)
+
+#CHECK: cibe	%r0, 0, 0               # encoding: [0xec,0x08,0x00,0x00,0x00,0xfe]
+#CHECK: cibe	%r0, -128, 0            # encoding: [0xec,0x08,0x00,0x00,0x80,0xfe]
+#CHECK: cibe	%r0, 127, 0             # encoding: [0xec,0x08,0x00,0x00,0x7f,0xfe]
+#CHECK: cibe	%r15, 0, 0              # encoding: [0xec,0xf8,0x00,0x00,0x00,0xfe]
+#CHECK: cibe	%r7, -1, 0              # encoding: [0xec,0x78,0x00,0x00,0xff,0xfe]
+#CHECK: cibe	%r0, 0, 0(%r13)         # encoding: [0xec,0x08,0xd0,0x00,0x00,0xfe]
+#CHECK: cibe	%r0, 0, 4095            # encoding: [0xec,0x08,0x0f,0xff,0x00,0xfe]
+#CHECK: cibe	%r0, 0, 4095(%r7)       # encoding: [0xec,0x08,0x7f,0xff,0x00,0xfe]
+	cibe	%r0, 0, 0
+	cibe	%r0, -128, 0
+	cibe	%r0, 127, 0
+	cibe	%r15, 0, 0
+	cibe	%r7, -1, 0
+	cibe	%r0, 0, 0(%r13)
+	cibe	%r0, 0, 4095
+	cibe	%r0, 0, 4095(%r7)
+
+#CHECK: cib	%r1, 2, 2, 3(%r4)       # encoding: [0xec,0x12,0x40,0x03,0x02,0xfe]
+#CHECK: cibh	%r1, 2, 3(%r4)          # encoding: [0xec,0x12,0x40,0x03,0x02,0xfe]
+#CHECK: cibnle	%r1, 2, 3(%r4)          # encoding: [0xec,0x12,0x40,0x03,0x02,0xfe]
+	cib	%r1, 2, 2, 3(%r4)
+	cibh	%r1, 2, 3(%r4)
+	cibnle	%r1, 2, 3(%r4)
+
+#CHECK: cib	%r1, 2, 4, 3(%r4)       # encoding: [0xec,0x14,0x40,0x03,0x02,0xfe]
+#CHECK: cibl	%r1, 2, 3(%r4)          # encoding: [0xec,0x14,0x40,0x03,0x02,0xfe]
+#CHECK: cibnhe	%r1, 2, 3(%r4)          # encoding: [0xec,0x14,0x40,0x03,0x02,0xfe]
+	cib	%r1, 2, 4, 3(%r4)
+	cibl	%r1, 2, 3(%r4)
+	cibnhe	%r1, 2, 3(%r4)
+
+#CHECK: cib	%r1, 2, 6, 3(%r4)       # encoding: [0xec,0x16,0x40,0x03,0x02,0xfe]
+#CHECK: ciblh	%r1, 2, 3(%r4)          # encoding: [0xec,0x16,0x40,0x03,0x02,0xfe]
+#CHECK: cibne	%r1, 2, 3(%r4)          # encoding: [0xec,0x16,0x40,0x03,0x02,0xfe]
+	cib	%r1, 2, 6, 3(%r4)
+	ciblh	%r1, 2, 3(%r4)
+	cibne	%r1, 2, 3(%r4)
+
+#CHECK: cib	%r1, 2, 8, 3(%r4)       # encoding: [0xec,0x18,0x40,0x03,0x02,0xfe]
+#CHECK: cibe	%r1, 2, 3(%r4)          # encoding: [0xec,0x18,0x40,0x03,0x02,0xfe]
+#CHECK: cibnlh	%r1, 2, 3(%r4)          # encoding: [0xec,0x18,0x40,0x03,0x02,0xfe]
+	cib	%r1, 2, 8, 3(%r4)
+	cibe	%r1, 2, 3(%r4)
+	cibnlh	%r1, 2, 3(%r4)
+
+#CHECK: cib	%r1, 2, 10, 3(%r4)      # encoding: [0xec,0x1a,0x40,0x03,0x02,0xfe]
+#CHECK: cibhe	%r1, 2, 3(%r4)          # encoding: [0xec,0x1a,0x40,0x03,0x02,0xfe]
+#CHECK: cibnl	%r1, 2, 3(%r4)          # encoding: [0xec,0x1a,0x40,0x03,0x02,0xfe]
+	cib	%r1, 2, 10, 3(%r4)
+	cibhe	%r1, 2, 3(%r4)
+	cibnl	%r1, 2, 3(%r4)
+
+#CHECK: cib	%r1, 2, 12, 3(%r4)      # encoding: [0xec,0x1c,0x40,0x03,0x02,0xfe]
+#CHECK: cible	%r1, 2, 3(%r4)          # encoding: [0xec,0x1c,0x40,0x03,0x02,0xfe]
+#CHECK: cibnh	%r1, 2, 3(%r4)          # encoding: [0xec,0x1c,0x40,0x03,0x02,0xfe]
+	cib	%r1, 2, 12, 3(%r4)
+	cible	%r1, 2, 3(%r4)
+	cibnh	%r1, 2, 3(%r4)
 
 #CHECK: cij	%r0, 0, 0, .[[LAB:L.*]]	# encoding: [0xec,0x00,A,A,0x00,0x7e]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC16DBL
@@ -2529,6 +2931,28 @@
 #CHECK:  fixup A - offset: 2, value: bar@PLT+2, kind: FK_390_PC16DBL
 	cijnh	%r1, -66, bar@PLT
 
+#CHECK: cit     %r0, 0, 12              # encoding: [0xec,0x00,0x00,0x00,0xc0,0x72]
+#CHECK: cit     %r0, -1, 12             # encoding: [0xec,0x00,0xff,0xff,0xc0,0x72]
+#CHECK: cit     %r0, -32768, 12         # encoding: [0xec,0x00,0x80,0x00,0xc0,0x72]
+#CHECK: cit     %r0, 32767, 12          # encoding: [0xec,0x00,0x7f,0xff,0xc0,0x72]
+#CHECK: cith    %r15, 1                 # encoding: [0xec,0xf0,0x00,0x01,0x20,0x72]
+#CHECK: citl    %r15, 1                 # encoding: [0xec,0xf0,0x00,0x01,0x40,0x72]
+#CHECK: cite    %r15, 1                 # encoding: [0xec,0xf0,0x00,0x01,0x80,0x72]
+#CHECK: citne   %r15, 1                 # encoding: [0xec,0xf0,0x00,0x01,0x60,0x72]
+#CHECK: citnl   %r15, 1                 # encoding: [0xec,0xf0,0x00,0x01,0xa0,0x72]
+#CHECK: citnh   %r15, 1                 # encoding: [0xec,0xf0,0x00,0x01,0xc0,0x72]
+
+        cit     %r0, 0, 12
+        cit     %r0, -1, 12
+        cit     %r0, -32768, 12
+        cit     %r0, 32767, 12
+        cith    %r15, 1
+        citl    %r15, 1
+        cite    %r15, 1
+        citne   %r15, 1
+        citnl   %r15, 1
+        citnh   %r15, 1
+
 #CHECK: cl	%r0, 0                  # encoding: [0x55,0x00,0x00,0x00]
 #CHECK: cl	%r0, 4095               # encoding: [0x55,0x00,0x0f,0xff]
 #CHECK: cl	%r0, 0(%r1)             # encoding: [0x55,0x00,0x10,0x00]
@@ -2594,6 +3018,26 @@
 	clfi	%r0, 0
 	clfi	%r0, (1 << 32) - 1
 	clfi	%r15, 0
+
+#CHECK: clfit     %r0, 0, 12             # encoding: [0xec,0x00,0x00,0x00,0xc0,0x73]
+#CHECK: clfit     %r0, 65535, 12         # encoding: [0xec,0x00,0xff,0xff,0xc0,0x73]
+#CHECK: clfit     %r0, 32768, 12         # encoding: [0xec,0x00,0x80,0x00,0xc0,0x73]
+#CHECK: clfith    %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0x20,0x73]
+#CHECK: clfitl    %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0x40,0x73]
+#CHECK: clfite    %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0x80,0x73]
+#CHECK: clfitne   %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0x60,0x73]
+#CHECK: clfitnl   %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0xa0,0x73]
+#CHECK: clfitnh   %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0xc0,0x73]
+
+        clfit     %r0, 0, 12
+        clfit     %r0, 65535, 12
+        clfit     %r0, 32768, 12
+        clfith    %r15, 1
+        clfitl    %r15, 1
+        clfite    %r15, 1
+        clfitne   %r15, 1
+        clfitnl   %r15, 1
+        clfitnh   %r15, 1
 
 #CHECK: clg	%r0, -524288            # encoding: [0xe3,0x00,0x00,0x00,0x80,0x21]
 #CHECK: clg	%r0, -1                 # encoding: [0xe3,0x00,0x0f,0xff,0xff,0x21]
@@ -2746,6 +3190,86 @@
 	clghsi	0(%r15), 42
 	clghsi	4095(%r1), 42
 	clghsi	4095(%r15), 42
+
+#CHECK: clgib	%r0, 0, 0, 0            # encoding: [0xec,0x00,0x00,0x00,0x00,0xfd]
+#CHECK: clgib	%r0, 128, 0, 0          # encoding: [0xec,0x00,0x00,0x00,0x80,0xfd]
+#CHECK: clgib	%r0, 127, 0, 0          # encoding: [0xec,0x00,0x00,0x00,0x7f,0xfd]
+#CHECK: clgib	%r15, 0, 0, 0           # encoding: [0xec,0xf0,0x00,0x00,0x00,0xfd]
+#CHECK: clgib	%r7, 255, 0, 0          # encoding: [0xec,0x70,0x00,0x00,0xff,0xfd]
+#CHECK: clgib	%r0, 0, 1, 0            # encoding: [0xec,0x01,0x00,0x00,0x00,0xfd]
+#CHECK: clgib	%r0, 0, 15, 0           # encoding: [0xec,0x0f,0x00,0x00,0x00,0xfd]
+#CHECK: clgib	%r0, 0, 0, 0(%r13)      # encoding: [0xec,0x00,0xd0,0x00,0x00,0xfd]
+#CHECK: clgib	%r0, 0, 0, 4095         # encoding: [0xec,0x00,0x0f,0xff,0x00,0xfd]
+#CHECK: clgib	%r0, 0, 0, 4095(%r7)    # encoding: [0xec,0x00,0x7f,0xff,0x00,0xfd]
+	clgib	%r0, 0, 0, 0
+	clgib	%r0, 128, 0, 0
+	clgib	%r0, 127, 0, 0
+	clgib	%r15, 0, 0, 0
+	clgib	%r7, 255, 0, 0
+	clgib	%r0, 0, 1, 0
+	clgib	%r0, 0, 15, 0
+	clgib	%r0, 0, 0, 0(%r13)
+	clgib	%r0, 0, 0, 4095
+	clgib	%r0, 0, 0, 4095(%r7)
+
+#CHECK: clgibe	%r0, 0, 0               # encoding: [0xec,0x08,0x00,0x00,0x00,0xfd]
+#CHECK: clgibe	%r0, 128, 0             # encoding: [0xec,0x08,0x00,0x00,0x80,0xfd]
+#CHECK: clgibe	%r0, 127, 0             # encoding: [0xec,0x08,0x00,0x00,0x7f,0xfd]
+#CHECK: clgibe	%r15, 0, 0              # encoding: [0xec,0xf8,0x00,0x00,0x00,0xfd]
+#CHECK: clgibe	%r7, 255, 0             # encoding: [0xec,0x78,0x00,0x00,0xff,0xfd]
+#CHECK: clgibe	%r0, 0, 0(%r13)         # encoding: [0xec,0x08,0xd0,0x00,0x00,0xfd]
+#CHECK: clgibe	%r0, 0, 4095            # encoding: [0xec,0x08,0x0f,0xff,0x00,0xfd]
+#CHECK: clgibe	%r0, 0, 4095(%r7)       # encoding: [0xec,0x08,0x7f,0xff,0x00,0xfd]
+	clgibe	%r0, 0, 0
+	clgibe	%r0, 128, 0
+	clgibe	%r0, 127, 0
+	clgibe	%r15, 0, 0
+	clgibe	%r7, 255, 0
+	clgibe	%r0, 0, 0(%r13)
+	clgibe	%r0, 0, 4095
+	clgibe	%r0, 0, 4095(%r7)
+
+#CHECK: clgib	%r1, 2, 2, 3(%r4)       # encoding: [0xec,0x12,0x40,0x03,0x02,0xfd]
+#CHECK: clgibh	%r1, 2, 3(%r4)          # encoding: [0xec,0x12,0x40,0x03,0x02,0xfd]
+#CHECK: clgibnle	%r1, 2, 3(%r4)  # encoding: [0xec,0x12,0x40,0x03,0x02,0xfd]
+	clgib	%r1, 2, 2, 3(%r4)
+	clgibh	%r1, 2, 3(%r4)
+	clgibnle	%r1, 2, 3(%r4)
+
+#CHECK: clgib	%r1, 2, 4, 3(%r4)       # encoding: [0xec,0x14,0x40,0x03,0x02,0xfd]
+#CHECK: clgibl	%r1, 2, 3(%r4)          # encoding: [0xec,0x14,0x40,0x03,0x02,0xfd]
+#CHECK: clgibnhe	%r1, 2, 3(%r4)  # encoding: [0xec,0x14,0x40,0x03,0x02,0xfd]
+	clgib	%r1, 2, 4, 3(%r4)
+	clgibl	%r1, 2, 3(%r4)
+	clgibnhe	%r1, 2, 3(%r4)
+
+#CHECK: clgib	%r1, 2, 6, 3(%r4)       # encoding: [0xec,0x16,0x40,0x03,0x02,0xfd]
+#CHECK: clgiblh	%r1, 2, 3(%r4)          # encoding: [0xec,0x16,0x40,0x03,0x02,0xfd]
+#CHECK: clgibne	%r1, 2, 3(%r4)          # encoding: [0xec,0x16,0x40,0x03,0x02,0xfd]
+	clgib	%r1, 2, 6, 3(%r4)
+	clgiblh	%r1, 2, 3(%r4)
+	clgibne	%r1, 2, 3(%r4)
+
+#CHECK: clgib	%r1, 2, 8, 3(%r4)       # encoding: [0xec,0x18,0x40,0x03,0x02,0xfd]
+#CHECK: clgibe	%r1, 2, 3(%r4)          # encoding: [0xec,0x18,0x40,0x03,0x02,0xfd]
+#CHECK: clgibnlh	%r1, 2, 3(%r4)  # encoding: [0xec,0x18,0x40,0x03,0x02,0xfd]
+	clgib	%r1, 2, 8, 3(%r4)
+	clgibe	%r1, 2, 3(%r4)
+	clgibnlh	%r1, 2, 3(%r4)
+
+#CHECK: clgib	%r1, 2, 10, 3(%r4)      # encoding: [0xec,0x1a,0x40,0x03,0x02,0xfd]
+#CHECK: clgibhe	%r1, 2, 3(%r4)          # encoding: [0xec,0x1a,0x40,0x03,0x02,0xfd]
+#CHECK: clgibnl	%r1, 2, 3(%r4)          # encoding: [0xec,0x1a,0x40,0x03,0x02,0xfd]
+	clgib	%r1, 2, 10, 3(%r4)
+	clgibhe	%r1, 2, 3(%r4)
+	clgibnl	%r1, 2, 3(%r4)
+
+#CHECK: clgib	%r1, 2, 12, 3(%r4)      # encoding: [0xec,0x1c,0x40,0x03,0x02,0xfd]
+#CHECK: clgible	%r1, 2, 3(%r4)          # encoding: [0xec,0x1c,0x40,0x03,0x02,0xfd]
+#CHECK: clgibnh	%r1, 2, 3(%r4)          # encoding: [0xec,0x1c,0x40,0x03,0x02,0xfd]
+	clgib	%r1, 2, 12, 3(%r4)
+	clgible	%r1, 2, 3(%r4)
+	clgibnh	%r1, 2, 3(%r4)
 
 #CHECK: clgij	%r0, 0, 0, .[[LAB:L.*]]	# encoding: [0xec,0x00,A,A,0x00,0x7d]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC16DBL
@@ -2974,6 +3498,26 @@
 #CHECK:  fixup A - offset: 2, value: bar@PLT+2, kind: FK_390_PC16DBL
 	clgijnh	%r1, 193, bar@PLT
 
+#CHECK: clgit     %r0, 0, 12             # encoding: [0xec,0x00,0x00,0x00,0xc0,0x71]
+#CHECK: clgit     %r0, 65535, 12         # encoding: [0xec,0x00,0xff,0xff,0xc0,0x71]
+#CHECK: clgit     %r0, 32768, 12         # encoding: [0xec,0x00,0x80,0x00,0xc0,0x71]
+#CHECK: clgith    %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0x20,0x71]
+#CHECK: clgitl    %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0x40,0x71]
+#CHECK: clgite    %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0x80,0x71]
+#CHECK: clgitne   %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0x60,0x71]
+#CHECK: clgitnl   %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0xa0,0x71]
+#CHECK: clgitnh   %r15, 1                # encoding: [0xec,0xf0,0x00,0x01,0xc0,0x71]
+
+        clgit     %r0, 0, 12
+        clgit     %r0, 65535, 12
+        clgit     %r0, 32768, 12
+        clgith    %r15, 1
+        clgitl    %r15, 1
+        clgite    %r15, 1
+        clgitne   %r15, 1
+        clgitnl   %r15, 1
+        clgitnh   %r15, 1
+
 #CHECK: clgr	%r0, %r0                # encoding: [0xb9,0x21,0x00,0x00]
 #CHECK: clgr	%r0, %r15               # encoding: [0xb9,0x21,0x00,0x0f]
 #CHECK: clgr	%r15, %r0               # encoding: [0xb9,0x21,0x00,0xf0]
@@ -2983,6 +3527,82 @@
 	clgr	%r0,%r15
 	clgr	%r15,%r0
 	clgr	%r7,%r8
+
+#CHECK: clgrb	%r0, %r0, 0, 0          # encoding: [0xec,0x00,0x00,0x00,0x00,0xe5]
+#CHECK: clgrb	%r0, %r15, 0, 0         # encoding: [0xec,0x0f,0x00,0x00,0x00,0xe5]
+#CHECK: clgrb	%r15, %r0, 0, 0         # encoding: [0xec,0xf0,0x00,0x00,0x00,0xe5]
+#CHECK: clgrb	%r7, %r2, 0, 0          # encoding: [0xec,0x72,0x00,0x00,0x00,0xe5]
+#CHECK: clgrb	%r0, %r0, 1, 0          # encoding: [0xec,0x00,0x00,0x00,0x10,0xe5]
+#CHECK: clgrb	%r0, %r0, 15, 0         # encoding: [0xec,0x00,0x00,0x00,0xf0,0xe5]
+#CHECK: clgrb	%r0, %r0, 0, 0(%r13)    # encoding: [0xec,0x00,0xd0,0x00,0x00,0xe5]
+#CHECK: clgrb	%r0, %r0, 0, 4095       # encoding: [0xec,0x00,0x0f,0xff,0x00,0xe5]
+#CHECK: clgrb	%r0, %r0, 0, 4095(%r7)  # encoding: [0xec,0x00,0x7f,0xff,0x00,0xe5]
+	clgrb	%r0, %r0, 0, 0
+	clgrb	%r0, %r15, 0, 0
+	clgrb	%r15, %r0, 0, 0
+	clgrb	%r7, %r2, 0, 0
+	clgrb	%r0, %r0, 1, 0
+	clgrb	%r0, %r0, 15, 0
+	clgrb	%r0, %r0, 0, 0(%r13)
+	clgrb	%r0, %r0, 0, 4095
+	clgrb	%r0, %r0, 0, 4095(%r7)
+
+#CHECK: clgrbe	%r0, %r0, 0             # encoding: [0xec,0x00,0x00,0x00,0x80,0xe5]
+#CHECK: clgrbe	%r0, %r15, 0            # encoding: [0xec,0x0f,0x00,0x00,0x80,0xe5]
+#CHECK: clgrbe	%r15, %r0, 0            # encoding: [0xec,0xf0,0x00,0x00,0x80,0xe5]
+#CHECK: clgrbe	%r7, %r2, 0             # encoding: [0xec,0x72,0x00,0x00,0x80,0xe5]
+#CHECK: clgrbe	%r0, %r0, 0(%r13)       # encoding: [0xec,0x00,0xd0,0x00,0x80,0xe5]
+#CHECK: clgrbe	%r0, %r0, 4095          # encoding: [0xec,0x00,0x0f,0xff,0x80,0xe5]
+#CHECK: clgrbe	%r0, %r0, 4095(%r7)     # encoding: [0xec,0x00,0x7f,0xff,0x80,0xe5]
+	clgrbe	%r0, %r0, 0
+	clgrbe	%r0, %r15, 0
+	clgrbe	%r15, %r0, 0
+	clgrbe	%r7, %r2, 0
+	clgrbe	%r0, %r0, 0(%r13)
+	clgrbe	%r0, %r0, 4095
+	clgrbe	%r0, %r0, 4095(%r7)
+
+#CHECK: clgrb	%r1, %r2, 2, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x20,0xe5]
+#CHECK: clgrbh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x20,0xe5]
+#CHECK: clgrbnle	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x20,0xe5]
+	clgrb	%r1, %r2, 2, 3(%r4)
+	clgrbh	%r1, %r2, 3(%r4)
+	clgrbnle	%r1, %r2, 3(%r4)
+
+#CHECK: clgrb	%r1, %r2, 4, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x40,0xe5]
+#CHECK: clgrbl	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x40,0xe5]
+#CHECK: clgrbnhe	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x40,0xe5]
+	clgrb	%r1, %r2, 4, 3(%r4)
+	clgrbl	%r1, %r2, 3(%r4)
+	clgrbnhe	%r1, %r2, 3(%r4)
+
+#CHECK: clgrb	%r1, %r2, 6, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x60,0xe5]
+#CHECK: clgrblh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x60,0xe5]
+#CHECK: clgrbne	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x60,0xe5]
+	clgrb	%r1, %r2, 6, 3(%r4)
+	clgrblh	%r1, %r2, 3(%r4)
+	clgrbne	%r1, %r2, 3(%r4)
+
+#CHECK: clgrb	%r1, %r2, 8, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x80,0xe5]
+#CHECK: clgrbe	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x80,0xe5]
+#CHECK: clgrbnlh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x80,0xe5]
+	clgrb	%r1, %r2, 8, 3(%r4)
+	clgrbe	%r1, %r2, 3(%r4)
+	clgrbnlh	%r1, %r2, 3(%r4)
+
+#CHECK: clgrb	%r1, %r2, 10, 3(%r4)    # encoding: [0xec,0x12,0x40,0x03,0xa0,0xe5]
+#CHECK: clgrbhe	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xa0,0xe5]
+#CHECK: clgrbnl	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xa0,0xe5]
+	clgrb	%r1, %r2, 10, 3(%r4)
+	clgrbhe	%r1, %r2, 3(%r4)
+	clgrbnl	%r1, %r2, 3(%r4)
+
+#CHECK: clgrb	%r1, %r2, 12, 3(%r4)    # encoding: [0xec,0x12,0x40,0x03,0xc0,0xe5]
+#CHECK: clgrble	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xc0,0xe5]
+#CHECK: clgrbnh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xc0,0xe5]
+	clgrb	%r1, %r2, 12, 3(%r4)
+	clgrble	%r1, %r2, 3(%r4)
+	clgrbnh	%r1, %r2, 3(%r4)
 
 #CHECK: clgrj	%r0, %r0, 0, .[[LAB:L.*]]	# encoding: [0xec,0x00,A,A,0x00,0x65]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC16DBL
@@ -3320,6 +3940,86 @@
 	cli	4095(%r1), 42
 	cli	4095(%r15), 42
 
+#CHECK: clib	%r0, 0, 0, 0            # encoding: [0xec,0x00,0x00,0x00,0x00,0xff]
+#CHECK: clib	%r0, 128, 0, 0          # encoding: [0xec,0x00,0x00,0x00,0x80,0xff]
+#CHECK: clib	%r0, 127, 0, 0          # encoding: [0xec,0x00,0x00,0x00,0x7f,0xff]
+#CHECK: clib	%r15, 0, 0, 0           # encoding: [0xec,0xf0,0x00,0x00,0x00,0xff]
+#CHECK: clib	%r7, 255, 0, 0          # encoding: [0xec,0x70,0x00,0x00,0xff,0xff]
+#CHECK: clib	%r0, 0, 1, 0            # encoding: [0xec,0x01,0x00,0x00,0x00,0xff]
+#CHECK: clib	%r0, 0, 15, 0           # encoding: [0xec,0x0f,0x00,0x00,0x00,0xff]
+#CHECK: clib	%r0, 0, 0, 0(%r13)      # encoding: [0xec,0x00,0xd0,0x00,0x00,0xff]
+#CHECK: clib	%r0, 0, 0, 4095         # encoding: [0xec,0x00,0x0f,0xff,0x00,0xff]
+#CHECK: clib	%r0, 0, 0, 4095(%r7)    # encoding: [0xec,0x00,0x7f,0xff,0x00,0xff]
+	clib	%r0, 0, 0, 0
+	clib	%r0, 128, 0, 0
+	clib	%r0, 127, 0, 0
+	clib	%r15, 0, 0, 0
+	clib	%r7, 255, 0, 0
+	clib	%r0, 0, 1, 0
+	clib	%r0, 0, 15, 0
+	clib	%r0, 0, 0, 0(%r13)
+	clib	%r0, 0, 0, 4095
+	clib	%r0, 0, 0, 4095(%r7)
+
+#CHECK: clibe	%r0, 0, 0               # encoding: [0xec,0x08,0x00,0x00,0x00,0xff]
+#CHECK: clibe	%r0, 128, 0             # encoding: [0xec,0x08,0x00,0x00,0x80,0xff]
+#CHECK: clibe	%r0, 127, 0             # encoding: [0xec,0x08,0x00,0x00,0x7f,0xff]
+#CHECK: clibe	%r15, 0, 0              # encoding: [0xec,0xf8,0x00,0x00,0x00,0xff]
+#CHECK: clibe	%r7, 255, 0             # encoding: [0xec,0x78,0x00,0x00,0xff,0xff]
+#CHECK: clibe	%r0, 0, 0(%r13)         # encoding: [0xec,0x08,0xd0,0x00,0x00,0xff]
+#CHECK: clibe	%r0, 0, 4095            # encoding: [0xec,0x08,0x0f,0xff,0x00,0xff]
+#CHECK: clibe	%r0, 0, 4095(%r7)       # encoding: [0xec,0x08,0x7f,0xff,0x00,0xff]
+	clibe	%r0, 0, 0
+	clibe	%r0, 128, 0
+	clibe	%r0, 127, 0
+	clibe	%r15, 0, 0
+	clibe	%r7, 255, 0
+	clibe	%r0, 0, 0(%r13)
+	clibe	%r0, 0, 4095
+	clibe	%r0, 0, 4095(%r7)
+
+#CHECK: clib	%r1, 2, 2, 3(%r4)       # encoding: [0xec,0x12,0x40,0x03,0x02,0xff]
+#CHECK: clibh	%r1, 2, 3(%r4)          # encoding: [0xec,0x12,0x40,0x03,0x02,0xff]
+#CHECK: clibnle	%r1, 2, 3(%r4)          # encoding: [0xec,0x12,0x40,0x03,0x02,0xff]
+	clib	%r1, 2, 2, 3(%r4)
+	clibh	%r1, 2, 3(%r4)
+	clibnle	%r1, 2, 3(%r4)
+
+#CHECK: clib	%r1, 2, 4, 3(%r4)       # encoding: [0xec,0x14,0x40,0x03,0x02,0xff]
+#CHECK: clibl	%r1, 2, 3(%r4)          # encoding: [0xec,0x14,0x40,0x03,0x02,0xff]
+#CHECK: clibnhe	%r1, 2, 3(%r4)          # encoding: [0xec,0x14,0x40,0x03,0x02,0xff]
+	clib	%r1, 2, 4, 3(%r4)
+	clibl	%r1, 2, 3(%r4)
+	clibnhe	%r1, 2, 3(%r4)
+
+#CHECK: clib	%r1, 2, 6, 3(%r4)       # encoding: [0xec,0x16,0x40,0x03,0x02,0xff]
+#CHECK: cliblh	%r1, 2, 3(%r4)          # encoding: [0xec,0x16,0x40,0x03,0x02,0xff]
+#CHECK: clibne	%r1, 2, 3(%r4)          # encoding: [0xec,0x16,0x40,0x03,0x02,0xff]
+	clib	%r1, 2, 6, 3(%r4)
+	cliblh	%r1, 2, 3(%r4)
+	clibne	%r1, 2, 3(%r4)
+
+#CHECK: clib	%r1, 2, 8, 3(%r4)       # encoding: [0xec,0x18,0x40,0x03,0x02,0xff]
+#CHECK: clibe	%r1, 2, 3(%r4)          # encoding: [0xec,0x18,0x40,0x03,0x02,0xff]
+#CHECK: clibnlh	%r1, 2, 3(%r4)          # encoding: [0xec,0x18,0x40,0x03,0x02,0xff]
+	clib	%r1, 2, 8, 3(%r4)
+	clibe	%r1, 2, 3(%r4)
+	clibnlh	%r1, 2, 3(%r4)
+
+#CHECK: clib	%r1, 2, 10, 3(%r4)      # encoding: [0xec,0x1a,0x40,0x03,0x02,0xff]
+#CHECK: clibhe	%r1, 2, 3(%r4)          # encoding: [0xec,0x1a,0x40,0x03,0x02,0xff]
+#CHECK: clibnl	%r1, 2, 3(%r4)          # encoding: [0xec,0x1a,0x40,0x03,0x02,0xff]
+	clib	%r1, 2, 10, 3(%r4)
+	clibhe	%r1, 2, 3(%r4)
+	clibnl	%r1, 2, 3(%r4)
+
+#CHECK: clib	%r1, 2, 12, 3(%r4)      # encoding: [0xec,0x1c,0x40,0x03,0x02,0xff]
+#CHECK: clible	%r1, 2, 3(%r4)          # encoding: [0xec,0x1c,0x40,0x03,0x02,0xff]
+#CHECK: clibnh	%r1, 2, 3(%r4)          # encoding: [0xec,0x1c,0x40,0x03,0x02,0xff]
+	clib	%r1, 2, 12, 3(%r4)
+	clible	%r1, 2, 3(%r4)
+	clibnh	%r1, 2, 3(%r4)
+
 #CHECK: clij	%r0, 0, 0, .[[LAB:L.*]]	# encoding: [0xec,0x00,A,A,0x00,0x7f]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC16DBL
 #CHECK: clij	%r0, 255, 0, .[[LAB:L.*]]	# encoding: [0xec,0x00,A,A,0xff,0x7f]
@@ -3578,6 +4278,104 @@
 	clr	%r0,%r15
 	clr	%r15,%r0
 	clr	%r7,%r8
+
+#CHECK: clrb	%r0, %r0, 0, 0          # encoding: [0xec,0x00,0x00,0x00,0x00,0xf7]
+#CHECK: clrb	%r0, %r15, 0, 0         # encoding: [0xec,0x0f,0x00,0x00,0x00,0xf7]
+#CHECK: clrb	%r15, %r0, 0, 0         # encoding: [0xec,0xf0,0x00,0x00,0x00,0xf7]
+#CHECK: clrb	%r7, %r2, 0, 0          # encoding: [0xec,0x72,0x00,0x00,0x00,0xf7]
+#CHECK: clrb	%r0, %r0, 1, 0          # encoding: [0xec,0x00,0x00,0x00,0x10,0xf7]
+#CHECK: clrb	%r0, %r0, 15, 0         # encoding: [0xec,0x00,0x00,0x00,0xf0,0xf7]
+#CHECK: clrb	%r0, %r0, 0, 0(%r13)    # encoding: [0xec,0x00,0xd0,0x00,0x00,0xf7]
+#CHECK: clrb	%r0, %r0, 0, 4095       # encoding: [0xec,0x00,0x0f,0xff,0x00,0xf7]
+#CHECK: clrb	%r0, %r0, 0, 4095(%r7)  # encoding: [0xec,0x00,0x7f,0xff,0x00,0xf7]
+	clrb	%r0, %r0, 0, 0
+	clrb	%r0, %r15, 0, 0
+	clrb	%r15, %r0, 0, 0
+	clrb	%r7, %r2, 0, 0
+	clrb	%r0, %r0, 1, 0
+	clrb	%r0, %r0, 15, 0
+	clrb	%r0, %r0, 0, 0(%r13)
+	clrb	%r0, %r0, 0, 4095
+	clrb	%r0, %r0, 0, 4095(%r7)
+
+#CHECK: clrbe	%r0, %r0, 0             # encoding: [0xec,0x00,0x00,0x00,0x80,0xf7]
+#CHECK: clrbe	%r0, %r15, 0            # encoding: [0xec,0x0f,0x00,0x00,0x80,0xf7]
+#CHECK: clrbe	%r15, %r0, 0            # encoding: [0xec,0xf0,0x00,0x00,0x80,0xf7]
+#CHECK: clrbe	%r7, %r2, 0             # encoding: [0xec,0x72,0x00,0x00,0x80,0xf7]
+#CHECK: clrbe	%r0, %r0, 0(%r13)       # encoding: [0xec,0x00,0xd0,0x00,0x80,0xf7]
+#CHECK: clrbe	%r0, %r0, 4095          # encoding: [0xec,0x00,0x0f,0xff,0x80,0xf7]
+#CHECK: clrbe	%r0, %r0, 4095(%r7)     # encoding: [0xec,0x00,0x7f,0xff,0x80,0xf7]
+	clrbe	%r0, %r0, 0
+	clrbe	%r0, %r15, 0
+	clrbe	%r15, %r0, 0
+	clrbe	%r7, %r2, 0
+	clrbe	%r0, %r0, 0(%r13)
+	clrbe	%r0, %r0, 4095
+	clrbe	%r0, %r0, 4095(%r7)
+
+#CHECK: clrb	%r1, %r2, 2, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x20,0xf7]
+#CHECK: clrbh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x20,0xf7]
+#CHECK: clrbnle	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x20,0xf7]
+	clrb	%r1, %r2, 2, 3(%r4)
+	clrbh	%r1, %r2, 3(%r4)
+	clrbnle	%r1, %r2, 3(%r4)
+
+#CHECK: clrb	%r1, %r2, 4, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x40,0xf7]
+#CHECK: clrbl	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x40,0xf7]
+#CHECK: clrbnhe	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x40,0xf7]
+	clrb	%r1, %r2, 4, 3(%r4)
+	clrbl	%r1, %r2, 3(%r4)
+	clrbnhe	%r1, %r2, 3(%r4)
+
+#CHECK: clrb	%r1, %r2, 6, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x60,0xf7]
+#CHECK: clrblh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x60,0xf7]
+#CHECK: clrbne	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x60,0xf7]
+	clrb	%r1, %r2, 6, 3(%r4)
+	clrblh	%r1, %r2, 3(%r4)
+	clrbne	%r1, %r2, 3(%r4)
+
+#CHECK: clrb	%r1, %r2, 8, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x80,0xf7]
+#CHECK: clrbe	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x80,0xf7]
+#CHECK: clrbnlh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x80,0xf7]
+	clrb	%r1, %r2, 8, 3(%r4)
+	clrbe	%r1, %r2, 3(%r4)
+	clrbnlh	%r1, %r2, 3(%r4)
+
+#CHECK: clrb	%r1, %r2, 10, 3(%r4)    # encoding: [0xec,0x12,0x40,0x03,0xa0,0xf7]
+#CHECK: clrbhe	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xa0,0xf7]
+#CHECK: clrbnl	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xa0,0xf7]
+	clrb	%r1, %r2, 10, 3(%r4)
+	clrbhe	%r1, %r2, 3(%r4)
+	clrbnl	%r1, %r2, 3(%r4)
+
+#CHECK: clrb	%r1, %r2, 12, 3(%r4)    # encoding: [0xec,0x12,0x40,0x03,0xc0,0xf7]
+#CHECK: clrble	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xc0,0xf7]
+#CHECK: clrbnh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xc0,0xf7]
+	clrb	%r1, %r2, 12, 3(%r4)
+	clrble	%r1, %r2, 3(%r4)
+	clrbnh	%r1, %r2, 3(%r4)
+
+#CHECK: clgrt     %r0, %r1, 12          # encoding: [0xb9,0x61,0xc0,0x01]
+#CHECK: clgrt     %r0, %r1, 12          # encoding: [0xb9,0x61,0xc0,0x01]
+#CHECK: clgrt     %r0, %r1, 12          # encoding: [0xb9,0x61,0xc0,0x01]
+#CHECK: clgrt     %r0, %r1, 12          # encoding: [0xb9,0x61,0xc0,0x01]
+#CHECK: clgrth    %r0, %r15             # encoding: [0xb9,0x61,0x20,0x0f]
+#CHECK: clgrtl    %r0, %r15             # encoding: [0xb9,0x61,0x40,0x0f]
+#CHECK: clgrte    %r0, %r15             # encoding: [0xb9,0x61,0x80,0x0f]
+#CHECK: clgrtne   %r0, %r15             # encoding: [0xb9,0x61,0x60,0x0f]
+#CHECK: clgrtnl   %r0, %r15             # encoding: [0xb9,0x61,0xa0,0x0f]
+#CHECK: clgrtnh   %r0, %r15             # encoding: [0xb9,0x61,0xc0,0x0f]
+
+        clgrt     %r0, %r1, 12
+        clgrt     %r0, %r1, 12
+        clgrt     %r0, %r1, 12
+        clgrt     %r0, %r1, 12
+        clgrth    %r0, %r15
+        clgrtl    %r0, %r15
+        clgrte    %r0, %r15
+        clgrtne   %r0, %r15
+        clgrtnl   %r0, %r15
+        clgrtnh   %r0, %r15
 
 #CHECK: clrj	%r0, %r0, 0, .[[LAB:L.*]]	# encoding: [0xec,0x00,A,A,0x00,0x77]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC16DBL
@@ -3846,6 +4644,28 @@
 	clrl	%r7,frob@PLT
 	clrl	%r8,frob@PLT
 
+#CHECK: clrt     %r0, %r1, 12           # encoding: [0xb9,0x73,0xc0,0x01]
+#CHECK: clrt     %r0, %r1, 12           # encoding: [0xb9,0x73,0xc0,0x01]
+#CHECK: clrt     %r0, %r1, 12           # encoding: [0xb9,0x73,0xc0,0x01]
+#CHECK: clrt     %r0, %r1, 12           # encoding: [0xb9,0x73,0xc0,0x01]
+#CHECK: clrth    %r0, %r15              # encoding: [0xb9,0x73,0x20,0x0f]
+#CHECK: clrtl    %r0, %r15              # encoding: [0xb9,0x73,0x40,0x0f]
+#CHECK: clrte    %r0, %r15              # encoding: [0xb9,0x73,0x80,0x0f]
+#CHECK: clrtne   %r0, %r15              # encoding: [0xb9,0x73,0x60,0x0f]
+#CHECK: clrtnl   %r0, %r15              # encoding: [0xb9,0x73,0xa0,0x0f]
+#CHECK: clrtnh   %r0, %r15              # encoding: [0xb9,0x73,0xc0,0x0f]
+
+        clrt     %r0, %r1, 12
+        clrt     %r0, %r1, 12
+        clrt     %r0, %r1, 12
+        clrt     %r0, %r1, 12
+        clrth    %r0, %r15
+        clrtl    %r0, %r15
+        clrte    %r0, %r15
+        clrtne   %r0, %r15
+        clrtnl   %r0, %r15
+        clrtnh   %r0, %r15
+
 #CHECK: clst	%r0, %r0                # encoding: [0xb2,0x5d,0x00,0x00]
 #CHECK: clst	%r0, %r15               # encoding: [0xb2,0x5d,0x00,0x0f]
 #CHECK: clst	%r15, %r0               # encoding: [0xb2,0x5d,0x00,0xf0]
@@ -3902,6 +4722,82 @@
 	cr	%r0,%r15
 	cr	%r15,%r0
 	cr	%r7,%r8
+
+#CHECK: crb	%r0, %r0, 0, 0          # encoding: [0xec,0x00,0x00,0x00,0x00,0xf6]
+#CHECK: crb	%r0, %r15, 0, 0         # encoding: [0xec,0x0f,0x00,0x00,0x00,0xf6]
+#CHECK: crb	%r15, %r0, 0, 0         # encoding: [0xec,0xf0,0x00,0x00,0x00,0xf6]
+#CHECK: crb	%r7, %r2, 0, 0          # encoding: [0xec,0x72,0x00,0x00,0x00,0xf6]
+#CHECK: crb	%r0, %r0, 1, 0          # encoding: [0xec,0x00,0x00,0x00,0x10,0xf6]
+#CHECK: crb	%r0, %r0, 15, 0         # encoding: [0xec,0x00,0x00,0x00,0xf0,0xf6]
+#CHECK: crb	%r0, %r0, 0, 0(%r13)    # encoding: [0xec,0x00,0xd0,0x00,0x00,0xf6]
+#CHECK: crb	%r0, %r0, 0, 4095       # encoding: [0xec,0x00,0x0f,0xff,0x00,0xf6]
+#CHECK: crb	%r0, %r0, 0, 4095(%r7)  # encoding: [0xec,0x00,0x7f,0xff,0x00,0xf6]
+	crb	%r0, %r0, 0, 0
+	crb	%r0, %r15, 0, 0
+	crb	%r15, %r0, 0, 0
+	crb	%r7, %r2, 0, 0
+	crb	%r0, %r0, 1, 0
+	crb	%r0, %r0, 15, 0
+	crb	%r0, %r0, 0, 0(%r13)
+	crb	%r0, %r0, 0, 4095
+	crb	%r0, %r0, 0, 4095(%r7)
+
+#CHECK: crbe	%r0, %r0, 0             # encoding: [0xec,0x00,0x00,0x00,0x80,0xf6]
+#CHECK: crbe	%r0, %r15, 0            # encoding: [0xec,0x0f,0x00,0x00,0x80,0xf6]
+#CHECK: crbe	%r15, %r0, 0            # encoding: [0xec,0xf0,0x00,0x00,0x80,0xf6]
+#CHECK: crbe	%r7, %r2, 0             # encoding: [0xec,0x72,0x00,0x00,0x80,0xf6]
+#CHECK: crbe	%r0, %r0, 0(%r13)       # encoding: [0xec,0x00,0xd0,0x00,0x80,0xf6]
+#CHECK: crbe	%r0, %r0, 4095          # encoding: [0xec,0x00,0x0f,0xff,0x80,0xf6]
+#CHECK: crbe	%r0, %r0, 4095(%r7)     # encoding: [0xec,0x00,0x7f,0xff,0x80,0xf6]
+	crbe	%r0, %r0, 0
+	crbe	%r0, %r15, 0
+	crbe	%r15, %r0, 0
+	crbe	%r7, %r2, 0
+	crbe	%r0, %r0, 0(%r13)
+	crbe	%r0, %r0, 4095
+	crbe	%r0, %r0, 4095(%r7)
+
+#CHECK: crb	%r1, %r2, 2, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x20,0xf6]
+#CHECK: crbh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x20,0xf6]
+#CHECK: crbnle	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x20,0xf6]
+	crb	%r1, %r2, 2, 3(%r4)
+	crbh	%r1, %r2, 3(%r4)
+	crbnle	%r1, %r2, 3(%r4)
+
+#CHECK: crb	%r1, %r2, 4, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x40,0xf6]
+#CHECK: crbl	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x40,0xf6]
+#CHECK: crbnhe	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x40,0xf6]
+	crb	%r1, %r2, 4, 3(%r4)
+	crbl	%r1, %r2, 3(%r4)
+	crbnhe	%r1, %r2, 3(%r4)
+
+#CHECK: crb	%r1, %r2, 6, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x60,0xf6]
+#CHECK: crblh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x60,0xf6]
+#CHECK: crbne	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x60,0xf6]
+	crb	%r1, %r2, 6, 3(%r4)
+	crblh	%r1, %r2, 3(%r4)
+	crbne	%r1, %r2, 3(%r4)
+
+#CHECK: crb	%r1, %r2, 8, 3(%r4)     # encoding: [0xec,0x12,0x40,0x03,0x80,0xf6]
+#CHECK: crbe	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x80,0xf6]
+#CHECK: crbnlh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0x80,0xf6]
+	crb	%r1, %r2, 8, 3(%r4)
+	crbe	%r1, %r2, 3(%r4)
+	crbnlh	%r1, %r2, 3(%r4)
+
+#CHECK: crb	%r1, %r2, 10, 3(%r4)    # encoding: [0xec,0x12,0x40,0x03,0xa0,0xf6]
+#CHECK: crbhe	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xa0,0xf6]
+#CHECK: crbnl	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xa0,0xf6]
+	crb	%r1, %r2, 10, 3(%r4)
+	crbhe	%r1, %r2, 3(%r4)
+	crbnl	%r1, %r2, 3(%r4)
+
+#CHECK: crb	%r1, %r2, 12, 3(%r4)    # encoding: [0xec,0x12,0x40,0x03,0xc0,0xf6]
+#CHECK: crble	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xc0,0xf6]
+#CHECK: crbnh	%r1, %r2, 3(%r4)        # encoding: [0xec,0x12,0x40,0x03,0xc0,0xf6]
+	crb	%r1, %r2, 12, 3(%r4)
+	crble	%r1, %r2, 3(%r4)
+	crbnh	%r1, %r2, 3(%r4)
 
 #CHECK: crj	%r0, %r0, 0, .[[LAB:L.*]]	# encoding: [0xec,0x00,A,A,0x00,0x76]
 #CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC16DBL
@@ -4169,6 +5065,28 @@
 
 	crl	%r7,frob@PLT
 	crl	%r8,frob@PLT
+
+#CHECK: crt     %r0, %r1, 12            # encoding: [0xb9,0x72,0xc0,0x01]
+#CHECK: crt     %r0, %r1, 12            # encoding: [0xb9,0x72,0xc0,0x01]
+#CHECK: crt     %r0, %r1, 12            # encoding: [0xb9,0x72,0xc0,0x01]
+#CHECK: crt     %r0, %r1, 12            # encoding: [0xb9,0x72,0xc0,0x01]
+#CHECK: crth    %r0, %r15               # encoding: [0xb9,0x72,0x20,0x0f]
+#CHECK: crtl    %r0, %r15               # encoding: [0xb9,0x72,0x40,0x0f]
+#CHECK: crte    %r0, %r15               # encoding: [0xb9,0x72,0x80,0x0f]
+#CHECK: crtne   %r0, %r15               # encoding: [0xb9,0x72,0x60,0x0f]
+#CHECK: crtnl   %r0, %r15               # encoding: [0xb9,0x72,0xa0,0x0f]
+#CHECK: crtnh   %r0, %r15               # encoding: [0xb9,0x72,0xc0,0x0f]
+
+        crt     %r0, %r1, 12
+        crt     %r0, %r1, 12
+        crt     %r0, %r1, 12
+        crt     %r0, %r1, 12
+        crth    %r0, %r15
+        crtl    %r0, %r15
+        crte    %r0, %r15
+        crtne   %r0, %r15
+        crtnl   %r0, %r15
+        crtnh   %r0, %r15
 
 #CHECK: cs	%r0, %r0, 0             # encoding: [0xba,0x00,0x00,0x00]
 #CHECK: cs	%r0, %r0, 4095          # encoding: [0xba,0x00,0x0f,0xff]
@@ -4494,6 +5412,73 @@
 	ear	%r7, %a8
 	ear	%r15, %a15
 
+#CHECK: ectg    0, 0, %r0               # encoding: [0xc8,0x01,0x00,0x00,0x00,0x00]
+#CHECK: ectg    0(%r1), 0(%r15), %r2    # encoding: [0xc8,0x21,0x10,0x00,0xf0,0x00]
+#CHECK: ectg    1(%r1), 0(%r15), %r2    # encoding: [0xc8,0x21,0x10,0x01,0xf0,0x00]
+#CHECK: ectg    4095(%r1), 0(%r15), %r2 # encoding: [0xc8,0x21,0x1f,0xff,0xf0,0x00]
+#CHECK: ectg    0(%r1), 1(%r15), %r2    # encoding: [0xc8,0x21,0x10,0x00,0xf0,0x01]
+#CHECK: ectg    0(%r1), 4095(%r15), %r2 # encoding: [0xc8,0x21,0x10,0x00,0xff,0xff]
+
+        ectg    0,0,%r0
+        ectg    0(%r1),0(%r15),%r2
+        ectg    1(%r1),0(%r15),%r2
+        ectg    4095(%r1),0(%r15),%r2
+        ectg    0(%r1),1(%r15),%r2
+        ectg    0(%r1),4095(%r15),%r2
+
+#CHECK: ex	%r0, 0                  # encoding: [0x44,0x00,0x00,0x00]
+#CHECK: ex	%r0, 4095               # encoding: [0x44,0x00,0x0f,0xff]
+#CHECK: ex	%r0, 0(%r1)             # encoding: [0x44,0x00,0x10,0x00]
+#CHECK: ex	%r0, 0(%r15)            # encoding: [0x44,0x00,0xf0,0x00]
+#CHECK: ex	%r0, 4095(%r1,%r15)     # encoding: [0x44,0x01,0xff,0xff]
+#CHECK: ex	%r0, 4095(%r15,%r1)     # encoding: [0x44,0x0f,0x1f,0xff]
+#CHECK: ex	%r15, 0                 # encoding: [0x44,0xf0,0x00,0x00]
+
+	ex	%r0, 0
+	ex	%r0, 4095
+	ex	%r0, 0(%r1)
+	ex	%r0, 0(%r15)
+	ex	%r0, 4095(%r1,%r15)
+	ex	%r0, 4095(%r15,%r1)
+	ex	%r15, 0
+
+#CHECK: exrl	%r0, .[[LAB:L.*]]-4294967296 # encoding: [0xc6,0x00,A,A,A,A]
+#CHECK:  fixup A - offset: 2, value: (.[[LAB]]-4294967296)+2, kind: FK_390_PC32DBL
+	exrl	%r0, -0x100000000
+#CHECK: exrl	%r0, .[[LAB:L.*]]-2	# encoding: [0xc6,0x00,A,A,A,A]
+#CHECK:  fixup A - offset: 2, value: (.[[LAB]]-2)+2, kind: FK_390_PC32DBL
+	exrl	%r0, -2
+#CHECK: exrl	%r0, .[[LAB:L.*]]	# encoding: [0xc6,0x00,A,A,A,A]
+#CHECK:  fixup A - offset: 2, value: .[[LAB]]+2, kind: FK_390_PC32DBL
+	exrl	%r0, 0
+#CHECK: exrl	%r0, .[[LAB:L.*]]+4294967294 # encoding: [0xc6,0x00,A,A,A,A]
+#CHECK:  fixup A - offset: 2, value: (.[[LAB]]+4294967294)+2, kind: FK_390_PC32DBL
+	exrl	%r0, 0xfffffffe
+
+#CHECK: exrl	%r0, foo                # encoding: [0xc6,0x00,A,A,A,A]
+# fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
+#CHECK: exrl	%r15, foo               # encoding: [0xc6,0xf0,A,A,A,A]
+# fixup A - offset: 2, value: foo+2, kind: FK_390_PC32DBL
+
+	exrl	%r0,foo
+	exrl	%r15,foo
+
+#CHECK: exrl	%r3, bar+100            # encoding: [0xc6,0x30,A,A,A,A]
+# fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC32DBL
+#CHECK: exrl	%r4, bar+100            # encoding: [0xc6,0x40,A,A,A,A]
+# fixup A - offset: 2, value: (bar+100)+2, kind: FK_390_PC32DBL
+
+	exrl	%r3,bar+100
+	exrl	%r4,bar+100
+
+#CHECK: exrl	%r7, frob@PLT           # encoding: [0xc6,0x70,A,A,A,A]
+# fixup A - offset: 2, value: frob@PLT+2, kind: FK_390_PC32DBL
+#CHECK: exrl	%r8, frob@PLT           # encoding: [0xc6,0x80,A,A,A,A]
+# fixup A - offset: 2, value: frob@PLT+2, kind: FK_390_PC32DBL
+
+	exrl	%r7,frob@PLT
+	exrl	%r8,frob@PLT
+
 #CHECK: fidbr	%f0, 0, %f0             # encoding: [0xb3,0x5f,0x00,0x00]
 #CHECK: fidbr	%f0, 0, %f15            # encoding: [0xb3,0x5f,0x00,0x0f]
 #CHECK: fidbr	%f0, 15, %f0            # encoding: [0xb3,0x5f,0xf0,0x00]
@@ -4555,6 +5540,66 @@
 	ic	%r0, 4095(%r1,%r15)
 	ic	%r0, 4095(%r15,%r1)
 	ic	%r15, 0
+
+#CHECK: icm	%r0, 0, 0               # encoding: [0xbf,0x00,0x00,0x00]
+#CHECK: icm	%r0, 15, 4095           # encoding: [0xbf,0x0f,0x0f,0xff]
+#CHECK: icm	%r0, 0, 0(%r1)          # encoding: [0xbf,0x00,0x10,0x00]
+#CHECK: icm	%r0, 0, 0(%r15)         # encoding: [0xbf,0x00,0xf0,0x00]
+#CHECK: icm	%r15, 15, 4095(%r1)     # encoding: [0xbf,0xff,0x1f,0xff]
+#CHECK: icm	%r0, 0, 4095(%r15)      # encoding: [0xbf,0x00,0xff,0xff]
+#CHECK: icm	%r15, 0, 0              # encoding: [0xbf,0xf0,0x00,0x00]
+
+	icm	%r0, 0, 0
+	icm	%r0, 15, 4095
+	icm	%r0, 0, 0(%r1)
+	icm	%r0, 0, 0(%r15)
+	icm	%r15, 15, 4095(%r1)
+	icm	%r0, 0, 4095(%r15)
+	icm	%r15, 0, 0
+
+#CHECK: icmh	%r0, 0, -524288            # encoding: [0xeb,0x00,0x00,0x00,0x80,0x80]
+#CHECK: icmh	%r0, 0, -1                 # encoding: [0xeb,0x00,0x0f,0xff,0xff,0x80]
+#CHECK: icmh	%r0, 15, 0                 # encoding: [0xeb,0x0f,0x00,0x00,0x00,0x80]
+#CHECK: icmh	%r0, 15, 1                 # encoding: [0xeb,0x0f,0x00,0x01,0x00,0x80]
+#CHECK: icmh	%r0, 8, 524287             # encoding: [0xeb,0x08,0x0f,0xff,0x7f,0x80]
+#CHECK: icmh	%r0, 8, 0(%r1)             # encoding: [0xeb,0x08,0x10,0x00,0x00,0x80]
+#CHECK: icmh	%r0, 4, 0(%r15)            # encoding: [0xeb,0x04,0xf0,0x00,0x00,0x80]
+#CHECK: icmh	%r0, 4, 524287(%r15)       # encoding: [0xeb,0x04,0xff,0xff,0x7f,0x80]
+#CHECK: icmh	%r0, 0, 524287(%r1)        # encoding: [0xeb,0x00,0x1f,0xff,0x7f,0x80]
+#CHECK: icmh	%r15, 0, 0                 # encoding: [0xeb,0xf0,0x00,0x00,0x00,0x80]
+
+	icmh	%r0, 0, -524288
+	icmh	%r0, 0, -1
+	icmh	%r0, 15, 0
+	icmh	%r0, 15, 1
+	icmh	%r0, 8, 524287
+	icmh	%r0, 8, 0(%r1)
+	icmh	%r0, 4, 0(%r15)
+	icmh	%r0, 4, 524287(%r15)
+	icmh	%r0, 0, 524287(%r1)
+	icmh	%r15, 0, 0
+
+#CHECK: icmy	%r0, 0, -524288            # encoding: [0xeb,0x00,0x00,0x00,0x80,0x81]
+#CHECK: icmy	%r0, 0, -1                 # encoding: [0xeb,0x00,0x0f,0xff,0xff,0x81]
+#CHECK: icmy	%r0, 15, 0                 # encoding: [0xeb,0x0f,0x00,0x00,0x00,0x81]
+#CHECK: icmy	%r0, 15, 1                 # encoding: [0xeb,0x0f,0x00,0x01,0x00,0x81]
+#CHECK: icmy	%r0, 8, 524287             # encoding: [0xeb,0x08,0x0f,0xff,0x7f,0x81]
+#CHECK: icmy	%r0, 8, 0(%r1)             # encoding: [0xeb,0x08,0x10,0x00,0x00,0x81]
+#CHECK: icmy	%r0, 4, 0(%r15)            # encoding: [0xeb,0x04,0xf0,0x00,0x00,0x81]
+#CHECK: icmy	%r0, 4, 524287(%r15)       # encoding: [0xeb,0x04,0xff,0xff,0x7f,0x81]
+#CHECK: icmy	%r0, 0, 524287(%r1)        # encoding: [0xeb,0x00,0x1f,0xff,0x7f,0x81]
+#CHECK: icmy	%r15, 0, 0                 # encoding: [0xeb,0xf0,0x00,0x00,0x00,0x81]
+
+	icmy	%r0, 0, -524288
+	icmy	%r0, 0, -1
+	icmy	%r0, 15, 0
+	icmy	%r0, 15, 1
+	icmy	%r0, 8, 524287
+	icmy	%r0, 8, 0(%r1)
+	icmy	%r0, 4, 0(%r15)
+	icmy	%r0, 4, 524287(%r15)
+	icmy	%r0, 0, 524287(%r1)
+	icmy	%r15, 0, 0
 
 #CHECK: icy	%r0, -524288            # encoding: [0xe3,0x00,0x00,0x00,0x80,0x73]
 #CHECK: icy	%r0, -1                 # encoding: [0xe3,0x00,0x0f,0xff,0xff,0x73]
@@ -5684,6 +6729,28 @@
 	llill	%r0, 0xffff
 	llill	%r15, 0
 
+#CHECK: lm	%r0, %r0, 0             # encoding: [0x98,0x00,0x00,0x00]
+#CHECK: lm	%r0, %r15, 0            # encoding: [0x98,0x0f,0x00,0x00]
+#CHECK: lm	%r14, %r15, 0           # encoding: [0x98,0xef,0x00,0x00]
+#CHECK: lm	%r15, %r15, 0           # encoding: [0x98,0xff,0x00,0x00]
+#CHECK: lm	%r0, %r0, 4095          # encoding: [0x98,0x00,0x0f,0xff]
+#CHECK: lm	%r0, %r0, 1             # encoding: [0x98,0x00,0x00,0x01]
+#CHECK: lm	%r0, %r0, 0(%r1)        # encoding: [0x98,0x00,0x10,0x00]
+#CHECK: lm	%r0, %r0, 0(%r15)       # encoding: [0x98,0x00,0xf0,0x00]
+#CHECK: lm	%r0, %r0, 4095(%r1)     # encoding: [0x98,0x00,0x1f,0xff]
+#CHECK: lm	%r0, %r0, 4095(%r15)    # encoding: [0x98,0x00,0xff,0xff]
+
+	lm	%r0,%r0,0
+	lm	%r0,%r15,0
+	lm	%r14,%r15,0
+	lm	%r15,%r15,0
+	lm	%r0,%r0,4095
+	lm	%r0,%r0,1
+	lm	%r0,%r0,0(%r1)
+	lm	%r0,%r0,0(%r15)
+	lm	%r0,%r0,4095(%r1)
+	lm	%r0,%r0,4095(%r15)
+
 #CHECK: lmg	%r0, %r0, 0             # encoding: [0xeb,0x00,0x00,0x00,0x00,0x04]
 #CHECK: lmg	%r0, %r15, 0            # encoding: [0xeb,0x0f,0x00,0x00,0x00,0x04]
 #CHECK: lmg	%r14, %r15, 0           # encoding: [0xeb,0xef,0x00,0x00,0x00,0x04]
@@ -5711,6 +6778,62 @@
 	lmg	%r0,%r0,0(%r15)
 	lmg	%r0,%r0,524287(%r1)
 	lmg	%r0,%r0,524287(%r15)
+
+#CHECK: lmh	%r0, %r0, 0             # encoding: [0xeb,0x00,0x00,0x00,0x00,0x96]
+#CHECK: lmh	%r0, %r15, 0            # encoding: [0xeb,0x0f,0x00,0x00,0x00,0x96]
+#CHECK: lmh	%r14, %r15, 0           # encoding: [0xeb,0xef,0x00,0x00,0x00,0x96]
+#CHECK: lmh	%r15, %r15, 0           # encoding: [0xeb,0xff,0x00,0x00,0x00,0x96]
+#CHECK: lmh	%r0, %r0, -524288       # encoding: [0xeb,0x00,0x00,0x00,0x80,0x96]
+#CHECK: lmh	%r0, %r0, -1            # encoding: [0xeb,0x00,0x0f,0xff,0xff,0x96]
+#CHECK: lmh	%r0, %r0, 0             # encoding: [0xeb,0x00,0x00,0x00,0x00,0x96]
+#CHECK: lmh	%r0, %r0, 1             # encoding: [0xeb,0x00,0x00,0x01,0x00,0x96]
+#CHECK: lmh	%r0, %r0, 524287        # encoding: [0xeb,0x00,0x0f,0xff,0x7f,0x96]
+#CHECK: lmh	%r0, %r0, 0(%r1)        # encoding: [0xeb,0x00,0x10,0x00,0x00,0x96]
+#CHECK: lmh	%r0, %r0, 0(%r15)       # encoding: [0xeb,0x00,0xf0,0x00,0x00,0x96]
+#CHECK: lmh	%r0, %r0, 524287(%r1)   # encoding: [0xeb,0x00,0x1f,0xff,0x7f,0x96]
+#CHECK: lmh	%r0, %r0, 524287(%r15)  # encoding: [0xeb,0x00,0xff,0xff,0x7f,0x96]
+
+	lmh	%r0,%r0,0
+	lmh	%r0,%r15,0
+	lmh	%r14,%r15,0
+	lmh	%r15,%r15,0
+	lmh	%r0,%r0,-524288
+	lmh	%r0,%r0,-1
+	lmh	%r0,%r0,0
+	lmh	%r0,%r0,1
+	lmh	%r0,%r0,524287
+	lmh	%r0,%r0,0(%r1)
+	lmh	%r0,%r0,0(%r15)
+	lmh	%r0,%r0,524287(%r1)
+	lmh	%r0,%r0,524287(%r15)
+
+#CHECK: lmy	%r0, %r0, 0             # encoding: [0xeb,0x00,0x00,0x00,0x00,0x98]
+#CHECK: lmy	%r0, %r15, 0            # encoding: [0xeb,0x0f,0x00,0x00,0x00,0x98]
+#CHECK: lmy	%r14, %r15, 0           # encoding: [0xeb,0xef,0x00,0x00,0x00,0x98]
+#CHECK: lmy	%r15, %r15, 0           # encoding: [0xeb,0xff,0x00,0x00,0x00,0x98]
+#CHECK: lmy	%r0, %r0, -524288       # encoding: [0xeb,0x00,0x00,0x00,0x80,0x98]
+#CHECK: lmy	%r0, %r0, -1            # encoding: [0xeb,0x00,0x0f,0xff,0xff,0x98]
+#CHECK: lmy	%r0, %r0, 0             # encoding: [0xeb,0x00,0x00,0x00,0x00,0x98]
+#CHECK: lmy	%r0, %r0, 1             # encoding: [0xeb,0x00,0x00,0x01,0x00,0x98]
+#CHECK: lmy	%r0, %r0, 524287        # encoding: [0xeb,0x00,0x0f,0xff,0x7f,0x98]
+#CHECK: lmy	%r0, %r0, 0(%r1)        # encoding: [0xeb,0x00,0x10,0x00,0x00,0x98]
+#CHECK: lmy	%r0, %r0, 0(%r15)       # encoding: [0xeb,0x00,0xf0,0x00,0x00,0x98]
+#CHECK: lmy	%r0, %r0, 524287(%r1)   # encoding: [0xeb,0x00,0x1f,0xff,0x7f,0x98]
+#CHECK: lmy	%r0, %r0, 524287(%r15)  # encoding: [0xeb,0x00,0xff,0xff,0x7f,0x98]
+
+	lmy	%r0,%r0,0
+	lmy	%r0,%r15,0
+	lmy	%r14,%r15,0
+	lmy	%r15,%r15,0
+	lmy	%r0,%r0,-524288
+	lmy	%r0,%r0,-1
+	lmy	%r0,%r0,0
+	lmy	%r0,%r0,1
+	lmy	%r0,%r0,524287
+	lmy	%r0,%r0,0(%r1)
+	lmy	%r0,%r0,0(%r15)
+	lmy	%r0,%r0,524287(%r1)
+	lmy	%r0,%r0,524287(%r15)
 
 #CHECK: lndbr	%f0, %f9                # encoding: [0xb3,0x11,0x00,0x09]
 #CHECK: lndbr	%f0, %f15               # encoding: [0xb3,0x11,0x00,0x0f]
@@ -5878,6 +7001,28 @@
 
 	lrl	%r7,frob@PLT
 	lrl	%r8,frob@PLT
+
+#CHECK: lrvh	%r0, -524288            # encoding: [0xe3,0x00,0x00,0x00,0x80,0x1f]
+#CHECK: lrvh	%r0, -1                 # encoding: [0xe3,0x00,0x0f,0xff,0xff,0x1f]
+#CHECK: lrvh	%r0, 0                  # encoding: [0xe3,0x00,0x00,0x00,0x00,0x1f]
+#CHECK: lrvh	%r0, 1                  # encoding: [0xe3,0x00,0x00,0x01,0x00,0x1f]
+#CHECK: lrvh	%r0, 524287             # encoding: [0xe3,0x00,0x0f,0xff,0x7f,0x1f]
+#CHECK: lrvh	%r0, 0(%r1)             # encoding: [0xe3,0x00,0x10,0x00,0x00,0x1f]
+#CHECK: lrvh	%r0, 0(%r15)            # encoding: [0xe3,0x00,0xf0,0x00,0x00,0x1f]
+#CHECK: lrvh	%r0, 524287(%r1,%r15)   # encoding: [0xe3,0x01,0xff,0xff,0x7f,0x1f]
+#CHECK: lrvh	%r0, 524287(%r15,%r1)   # encoding: [0xe3,0x0f,0x1f,0xff,0x7f,0x1f]
+#CHECK: lrvh	%r15, 0                 # encoding: [0xe3,0xf0,0x00,0x00,0x00,0x1f]
+
+	lrvh	%r0,-524288
+	lrvh	%r0,-1
+	lrvh	%r0,0
+	lrvh	%r0,1
+	lrvh	%r0,524287
+	lrvh	%r0,0(%r1)
+	lrvh	%r0,0(%r15)
+	lrvh	%r0,524287(%r1,%r15)
+	lrvh	%r0,524287(%r15,%r1)
+	lrvh	%r15,0
 
 #CHECK: lrv	%r0, -524288            # encoding: [0xe3,0x00,0x00,0x00,0x80,0x1e]
 #CHECK: lrv	%r0, -1                 # encoding: [0xe3,0x00,0x0f,0xff,0xff,0x1e]
@@ -6607,6 +7752,32 @@
 	mvc	0(256,%r1), 0
 	mvc	0(256,%r15), 0
 
+#CHECK: mvck	0(%r1), 0, %r3          # encoding: [0xd9,0x03,0x10,0x00,0x00,0x00]
+#CHECK: mvck	0(%r1), 0(%r1), %r3     # encoding: [0xd9,0x03,0x10,0x00,0x10,0x00]
+#CHECK: mvck	0(%r1), 0(%r15), %r3    # encoding: [0xd9,0x03,0x10,0x00,0xf0,0x00]
+#CHECK: mvck	0(%r1), 4095, %r3       # encoding: [0xd9,0x03,0x10,0x00,0x0f,0xff]
+#CHECK: mvck	0(%r1), 4095(%r1), %r3  # encoding: [0xd9,0x03,0x10,0x00,0x1f,0xff]
+#CHECK: mvck	0(%r1), 4095(%r15), %r3 # encoding: [0xd9,0x03,0x10,0x00,0xff,0xff]
+#CHECK: mvck	0(%r2,%r1), 0, %r3      # encoding: [0xd9,0x23,0x10,0x00,0x00,0x00]
+#CHECK: mvck	0(%r2,%r15), 0, %r3     # encoding: [0xd9,0x23,0xf0,0x00,0x00,0x00]
+#CHECK: mvck	4095(%r2,%r1), 0, %r3   # encoding: [0xd9,0x23,0x1f,0xff,0x00,0x00]
+#CHECK: mvck	4095(%r2,%r15), 0, %r3  # encoding: [0xd9,0x23,0xff,0xff,0x00,0x00]
+#CHECK: mvck	0(%r2,%r1), 0, %r3      # encoding: [0xd9,0x23,0x10,0x00,0x00,0x00]
+#CHECK: mvck	0(%r2,%r15), 0, %r3     # encoding: [0xd9,0x23,0xf0,0x00,0x00,0x00]
+
+        mvck	0(%r1), 0, %r3
+        mvck	0(%r1), 0(%r1), %r3
+        mvck	0(%r1), 0(%r15), %r3
+        mvck	0(%r1), 4095, %r3
+        mvck	0(%r1), 4095(%r1), %r3
+        mvck	0(%r1), 4095(%r15), %r3
+        mvck	0(%r2,%r1), 0, %r3
+        mvck	0(%r2,%r15), 0, %r3
+        mvck	4095(%r2,%r1), 0, %r3
+        mvck	4095(%r2,%r15), 0, %r3
+        mvck	0(%r2,%r1), 0, %r3
+        mvck	0(%r2,%r15), 0, %r3
+
 #CHECK: mvghi	0, 0                    # encoding: [0xe5,0x48,0x00,0x00,0x00,0x00]
 #CHECK: mvghi	4095, 0                 # encoding: [0xe5,0x48,0x0f,0xff,0x00,0x00]
 #CHECK: mvghi	0, -32768               # encoding: [0xe5,0x48,0x00,0x00,0x80,0x00]
@@ -6931,6 +8102,12 @@
 	niy	524287(%r1), 42
 	niy	524287(%r15), 42
 
+#CHECK: bc	0, 0                    # encoding: [0x47,0x00,0x00,0x00]
+#CHECK: bcr	0, %r7                  # encoding: [0x07,0x07]
+
+	nop	0
+	nopr	%r7
+
 #CHECK: nr	%r0, %r0                # encoding: [0x14,0x00]
 #CHECK: nr	%r0, %r15               # encoding: [0x14,0x0f]
 #CHECK: nr	%r15, %r0               # encoding: [0x14,0xf0]
@@ -7221,6 +8398,9 @@
 
 	pfdrl	7, frob@PLT
 	pfdrl	8, frob@PLT
+
+#CHECK: pr                              # encoding: [0x01,0x01]
+        pr
 
 #CHECK: risbg	%r0, %r0, 0, 0, 0       # encoding: [0xec,0x00,0x00,0x00,0x00,0x55]
 #CHECK: risbg	%r0, %r0, 0, 0, 63      # encoding: [0xec,0x00,0x00,0x00,0x3f,0x55]
@@ -7667,6 +8847,24 @@
 	slgr	%r0,%r15
 	slgr	%r15,%r0
 	slgr	%r7,%r8
+
+#CHECK: sla	%r0, 0                  # encoding: [0x8b,0x00,0x00,0x00]
+#CHECK: sla	%r7, 0                  # encoding: [0x8b,0x70,0x00,0x00]
+#CHECK: sla	%r15, 0                 # encoding: [0x8b,0xf0,0x00,0x00]
+#CHECK: sla	%r0, 4095               # encoding: [0x8b,0x00,0x0f,0xff]
+#CHECK: sla	%r0, 0(%r1)             # encoding: [0x8b,0x00,0x10,0x00]
+#CHECK: sla	%r0, 0(%r15)            # encoding: [0x8b,0x00,0xf0,0x00]
+#CHECK: sla	%r0, 4095(%r1)          # encoding: [0x8b,0x00,0x1f,0xff]
+#CHECK: sla	%r0, 4095(%r15)         # encoding: [0x8b,0x00,0xff,0xff]
+
+	sla	%r0,0
+	sla	%r7,0
+	sla	%r15,0
+	sla	%r0,4095
+	sla	%r0,0(%r1)
+	sla	%r0,0(%r15)
+	sla	%r0,4095(%r1)
+	sla	%r0,4095(%r15)
 
 #CHECK: sll	%r0, 0                  # encoding: [0x89,0x00,0x00,0x00]
 #CHECK: sll	%r7, 0                  # encoding: [0x89,0x70,0x00,0x00]
@@ -8234,6 +9432,28 @@
 	sthy	%r0, 524287(%r15,%r1)
 	sthy	%r15, 0
 
+#CHECK: stm	%r0, %r0, 0             # encoding: [0x90,0x00,0x00,0x00]
+#CHECK: stm	%r0, %r15, 0            # encoding: [0x90,0x0f,0x00,0x00]
+#CHECK: stm	%r14, %r15, 0           # encoding: [0x90,0xef,0x00,0x00]
+#CHECK: stm	%r15, %r15, 0           # encoding: [0x90,0xff,0x00,0x00]
+#CHECK: stm	%r0, %r0, 4095          # encoding: [0x90,0x00,0x0f,0xff]
+#CHECK: stm	%r0, %r0, 1             # encoding: [0x90,0x00,0x00,0x01]
+#CHECK: stm	%r0, %r0, 0(%r1)        # encoding: [0x90,0x00,0x10,0x00]
+#CHECK: stm	%r0, %r0, 0(%r15)       # encoding: [0x90,0x00,0xf0,0x00]
+#CHECK: stm	%r0, %r0, 4095(%r1)     # encoding: [0x90,0x00,0x1f,0xff]
+#CHECK: stm	%r0, %r0, 4095(%r15)    # encoding: [0x90,0x00,0xff,0xff]
+
+	stm	%r0,%r0,0
+	stm	%r0,%r15,0
+	stm	%r14,%r15,0
+	stm	%r15,%r15,0
+	stm	%r0,%r0,4095
+	stm	%r0,%r0,1
+	stm	%r0,%r0,0(%r1)
+	stm	%r0,%r0,0(%r15)
+	stm	%r0,%r0,4095(%r1)
+	stm	%r0,%r0,4095(%r15)
+
 #CHECK: stmg	%r0, %r0, 0             # encoding: [0xeb,0x00,0x00,0x00,0x00,0x24]
 #CHECK: stmg	%r0, %r15, 0            # encoding: [0xeb,0x0f,0x00,0x00,0x00,0x24]
 #CHECK: stmg	%r14, %r15, 0           # encoding: [0xeb,0xef,0x00,0x00,0x00,0x24]
@@ -8261,6 +9481,84 @@
 	stmg	%r0,%r0,0(%r15)
 	stmg	%r0,%r0,524287(%r1)
 	stmg	%r0,%r0,524287(%r15)
+
+#CHECK: stmh	%r0, %r0, 0             # encoding: [0xeb,0x00,0x00,0x00,0x00,0x26]
+#CHECK: stmh	%r0, %r15, 0            # encoding: [0xeb,0x0f,0x00,0x00,0x00,0x26]
+#CHECK: stmh	%r14, %r15, 0           # encoding: [0xeb,0xef,0x00,0x00,0x00,0x26]
+#CHECK: stmh	%r15, %r15, 0           # encoding: [0xeb,0xff,0x00,0x00,0x00,0x26]
+#CHECK: stmh	%r0, %r0, -524288       # encoding: [0xeb,0x00,0x00,0x00,0x80,0x26]
+#CHECK: stmh	%r0, %r0, -1            # encoding: [0xeb,0x00,0x0f,0xff,0xff,0x26]
+#CHECK: stmh	%r0, %r0, 0             # encoding: [0xeb,0x00,0x00,0x00,0x00,0x26]
+#CHECK: stmh	%r0, %r0, 1             # encoding: [0xeb,0x00,0x00,0x01,0x00,0x26]
+#CHECK: stmh	%r0, %r0, 524287        # encoding: [0xeb,0x00,0x0f,0xff,0x7f,0x26]
+#CHECK: stmh	%r0, %r0, 0(%r1)        # encoding: [0xeb,0x00,0x10,0x00,0x00,0x26]
+#CHECK: stmh	%r0, %r0, 0(%r15)       # encoding: [0xeb,0x00,0xf0,0x00,0x00,0x26]
+#CHECK: stmh	%r0, %r0, 524287(%r1)   # encoding: [0xeb,0x00,0x1f,0xff,0x7f,0x26]
+#CHECK: stmh	%r0, %r0, 524287(%r15)  # encoding: [0xeb,0x00,0xff,0xff,0x7f,0x26]
+
+	stmh	%r0,%r0,0
+	stmh	%r0,%r15,0
+	stmh	%r14,%r15,0
+	stmh	%r15,%r15,0
+	stmh	%r0,%r0,-524288
+	stmh	%r0,%r0,-1
+	stmh	%r0,%r0,0
+	stmh	%r0,%r0,1
+	stmh	%r0,%r0,524287
+	stmh	%r0,%r0,0(%r1)
+	stmh	%r0,%r0,0(%r15)
+	stmh	%r0,%r0,524287(%r1)
+	stmh	%r0,%r0,524287(%r15)
+
+#CHECK: stmy	%r0, %r0, 0             # encoding: [0xeb,0x00,0x00,0x00,0x00,0x90]
+#CHECK: stmy	%r0, %r15, 0            # encoding: [0xeb,0x0f,0x00,0x00,0x00,0x90]
+#CHECK: stmy	%r14, %r15, 0           # encoding: [0xeb,0xef,0x00,0x00,0x00,0x90]
+#CHECK: stmy	%r15, %r15, 0           # encoding: [0xeb,0xff,0x00,0x00,0x00,0x90]
+#CHECK: stmy	%r0, %r0, -524288       # encoding: [0xeb,0x00,0x00,0x00,0x80,0x90]
+#CHECK: stmy	%r0, %r0, -1            # encoding: [0xeb,0x00,0x0f,0xff,0xff,0x90]
+#CHECK: stmy	%r0, %r0, 0             # encoding: [0xeb,0x00,0x00,0x00,0x00,0x90]
+#CHECK: stmy	%r0, %r0, 1             # encoding: [0xeb,0x00,0x00,0x01,0x00,0x90]
+#CHECK: stmy	%r0, %r0, 524287        # encoding: [0xeb,0x00,0x0f,0xff,0x7f,0x90]
+#CHECK: stmy	%r0, %r0, 0(%r1)        # encoding: [0xeb,0x00,0x10,0x00,0x00,0x90]
+#CHECK: stmy	%r0, %r0, 0(%r15)       # encoding: [0xeb,0x00,0xf0,0x00,0x00,0x90]
+#CHECK: stmy	%r0, %r0, 524287(%r1)   # encoding: [0xeb,0x00,0x1f,0xff,0x7f,0x90]
+#CHECK: stmy	%r0, %r0, 524287(%r15)  # encoding: [0xeb,0x00,0xff,0xff,0x7f,0x90]
+
+	stmy	%r0,%r0,0
+	stmy	%r0,%r15,0
+	stmy	%r14,%r15,0
+	stmy	%r15,%r15,0
+	stmy	%r0,%r0,-524288
+	stmy	%r0,%r0,-1
+	stmy	%r0,%r0,0
+	stmy	%r0,%r0,1
+	stmy	%r0,%r0,524287
+	stmy	%r0,%r0,0(%r1)
+	stmy	%r0,%r0,0(%r15)
+	stmy	%r0,%r0,524287(%r1)
+	stmy	%r0,%r0,524287(%r15)
+
+#CHECK: strag	0, 0                    # encoding: [0xe5,0x02,0x00,0x00,0x00,0x00]
+#CHECK: strag	0(%r1), 0(%r2)          # encoding: [0xe5,0x02,0x10,0x00,0x20,0x00]
+#CHECK: strag	160(%r1), 320(%r15)     # encoding: [0xe5,0x02,0x10,0xa0,0xf1,0x40]
+#CHECK: strag	0(%r1), 4095            # encoding: [0xe5,0x02,0x10,0x00,0x0f,0xff]
+#CHECK: strag	0(%r1), 4095(%r2)       # encoding: [0xe5,0x02,0x10,0x00,0x2f,0xff]
+#CHECK: strag	0(%r1), 4095(%r15)      # encoding: [0xe5,0x02,0x10,0x00,0xff,0xff]
+#CHECK: strag	0(%r1), 0               # encoding: [0xe5,0x02,0x10,0x00,0x00,0x00]
+#CHECK: strag	0(%r15), 0              # encoding: [0xe5,0x02,0xf0,0x00,0x00,0x00]
+#CHECK: strag	4095(%r1), 0            # encoding: [0xe5,0x02,0x1f,0xff,0x00,0x00]
+#CHECK: strag	4095(%r15), 0           # encoding: [0xe5,0x02,0xff,0xff,0x00,0x00]
+
+	strag	0, 0
+	strag	0(%r1), 0(%r2)
+	strag	160(%r1), 320(%r15)
+	strag	0(%r1), 4095
+	strag	0(%r1), 4095(%r2)
+	strag	0(%r1), 4095(%r15)
+	strag	0(%r1), 0
+	strag	0(%r15), 0
+	strag	4095(%r1), 0
+	strag	4095(%r15), 0
 
 #CHECK: strl	%r0, .[[LAB:L.*]]-4294967296 # encoding: [0xc4,0x0f,A,A,A,A]
 #CHECK:  fixup A - offset: 2, value: (.[[LAB]]-4294967296)+2, kind: FK_390_PC32DBL
@@ -8298,6 +9596,28 @@
 
 	strl	%r7,frob@PLT
 	strl	%r8,frob@PLT
+
+#CHECK: strvh	%r0, -524288            # encoding: [0xe3,0x00,0x00,0x00,0x80,0x3f]
+#CHECK: strvh	%r0, -1                 # encoding: [0xe3,0x00,0x0f,0xff,0xff,0x3f]
+#CHECK: strvh	%r0, 0                  # encoding: [0xe3,0x00,0x00,0x00,0x00,0x3f]
+#CHECK: strvh	%r0, 1                  # encoding: [0xe3,0x00,0x00,0x01,0x00,0x3f]
+#CHECK: strvh	%r0, 524287             # encoding: [0xe3,0x00,0x0f,0xff,0x7f,0x3f]
+#CHECK: strvh	%r0, 0(%r1)             # encoding: [0xe3,0x00,0x10,0x00,0x00,0x3f]
+#CHECK: strvh	%r0, 0(%r15)            # encoding: [0xe3,0x00,0xf0,0x00,0x00,0x3f]
+#CHECK: strvh	%r0, 524287(%r1,%r15)   # encoding: [0xe3,0x01,0xff,0xff,0x7f,0x3f]
+#CHECK: strvh	%r0, 524287(%r15,%r1)   # encoding: [0xe3,0x0f,0x1f,0xff,0x7f,0x3f]
+#CHECK: strvh	%r15, 0                 # encoding: [0xe3,0xf0,0x00,0x00,0x00,0x3f]
+
+	strvh	%r0,-524288
+	strvh	%r0,-1
+	strvh	%r0,0
+	strvh	%r0,1
+	strvh	%r0,524287
+	strvh	%r0,0(%r1)
+	strvh	%r0,0(%r15)
+	strvh	%r0,524287(%r1,%r15)
+	strvh	%r0,524287(%r15,%r1)
+	strvh	%r15,0
 
 #CHECK: strv	%r0, -524288            # encoding: [0xe3,0x00,0x00,0x00,0x80,0x3e]
 #CHECK: strv	%r0, -1                 # encoding: [0xe3,0x00,0x0f,0xff,0xff,0x3e]
@@ -8342,6 +9662,16 @@
 	strvg	%r0,524287(%r1,%r15)
 	strvg	%r0,524287(%r15,%r1)
 	strvg	%r15,0
+
+#CHECK: svc	0			# encoding: [0x0a,0x00]
+#CHECK: svc	3			# encoding: [0x0a,0x03]
+#CHECK: svc	128			# encoding: [0x0a,0x80]
+#CHECK: svc	255			# encoding: [0x0a,0xff]
+
+	svc	0
+	svc	3
+	svc	128
+	svc	0xff
 
 #CHECK: sty	%r0, -524288            # encoding: [0xe3,0x00,0x00,0x00,0x80,0x50]
 #CHECK: sty	%r0, -1                 # encoding: [0xe3,0x00,0x0f,0xff,0xff,0x50]
@@ -8397,6 +9727,54 @@
 	sy	%r0, 524287(%r15,%r1)
 	sy	%r15, 0
 
+#CHECK: tcdb	%f0, 0                  # encoding: [0xed,0x00,0x00,0x00,0x00,0x11]
+#CHECK: tcdb	%f0, 4095               # encoding: [0xed,0x00,0x0f,0xff,0x00,0x11]
+#CHECK: tcdb	%f0, 0(%r1)             # encoding: [0xed,0x00,0x10,0x00,0x00,0x11]
+#CHECK: tcdb	%f0, 0(%r15)            # encoding: [0xed,0x00,0xf0,0x00,0x00,0x11]
+#CHECK: tcdb	%f0, 4095(%r1,%r15)     # encoding: [0xed,0x01,0xff,0xff,0x00,0x11]
+#CHECK: tcdb	%f0, 4095(%r15,%r1)     # encoding: [0xed,0x0f,0x1f,0xff,0x00,0x11]
+#CHECK: tcdb	%f15, 0                 # encoding: [0xed,0xf0,0x00,0x00,0x00,0x11]
+
+	tcdb	%f0, 0
+	tcdb	%f0, 4095
+	tcdb	%f0, 0(%r1)
+	tcdb	%f0, 0(%r15)
+	tcdb	%f0, 4095(%r1,%r15)
+	tcdb	%f0, 4095(%r15,%r1)
+	tcdb	%f15, 0
+
+#CHECK: tceb	%f0, 0                  # encoding: [0xed,0x00,0x00,0x00,0x00,0x10]
+#CHECK: tceb	%f0, 4095               # encoding: [0xed,0x00,0x0f,0xff,0x00,0x10]
+#CHECK: tceb	%f0, 0(%r1)             # encoding: [0xed,0x00,0x10,0x00,0x00,0x10]
+#CHECK: tceb	%f0, 0(%r15)            # encoding: [0xed,0x00,0xf0,0x00,0x00,0x10]
+#CHECK: tceb	%f0, 4095(%r1,%r15)     # encoding: [0xed,0x01,0xff,0xff,0x00,0x10]
+#CHECK: tceb	%f0, 4095(%r15,%r1)     # encoding: [0xed,0x0f,0x1f,0xff,0x00,0x10]
+#CHECK: tceb	%f15, 0                 # encoding: [0xed,0xf0,0x00,0x00,0x00,0x10]
+
+	tceb	%f0, 0
+	tceb	%f0, 4095
+	tceb	%f0, 0(%r1)
+	tceb	%f0, 0(%r15)
+	tceb	%f0, 4095(%r1,%r15)
+	tceb	%f0, 4095(%r15,%r1)
+	tceb	%f15, 0
+
+#CHECK: tcxb	%f0, 0                  # encoding: [0xed,0x00,0x00,0x00,0x00,0x12]
+#CHECK: tcxb	%f0, 4095               # encoding: [0xed,0x00,0x0f,0xff,0x00,0x12]
+#CHECK: tcxb	%f0, 0(%r1)             # encoding: [0xed,0x00,0x10,0x00,0x00,0x12]
+#CHECK: tcxb	%f0, 0(%r15)            # encoding: [0xed,0x00,0xf0,0x00,0x00,0x12]
+#CHECK: tcxb	%f0, 4095(%r1,%r15)     # encoding: [0xed,0x01,0xff,0xff,0x00,0x12]
+#CHECK: tcxb	%f0, 4095(%r15,%r1)     # encoding: [0xed,0x0f,0x1f,0xff,0x00,0x12]
+#CHECK: tcxb	%f13, 0                 # encoding: [0xed,0xd0,0x00,0x00,0x00,0x12]
+
+	tcxb	%f0, 0
+	tcxb	%f0, 4095
+	tcxb	%f0, 0(%r1)
+	tcxb	%f0, 0(%r15)
+	tcxb	%f0, 4095(%r1,%r15)
+	tcxb	%f0, 4095(%r15,%r1)
+	tcxb	%f13, 0
+
 #CHECK: tm	0, 0                    # encoding: [0x91,0x00,0x00,0x00]
 #CHECK: tm	4095, 0                 # encoding: [0x91,0x00,0x0f,0xff]
 #CHECK: tm	0, 255                  # encoding: [0x91,0xff,0x00,0x00]
@@ -8438,10 +9816,30 @@
 #CHECK: tmlh	%r0, 65535              # encoding: [0xa7,0x00,0xff,0xff]
 #CHECK: tmlh	%r15, 0                 # encoding: [0xa7,0xf0,0x00,0x00]
 
+	tmh	%r0, 0
+	tmh	%r0, 0x8000
+	tmh	%r0, 0xffff
+	tmh	%r15, 0
+
+#CHECK: tmlh	%r0, 0                  # encoding: [0xa7,0x00,0x00,0x00]
+#CHECK: tmlh	%r0, 32768              # encoding: [0xa7,0x00,0x80,0x00]
+#CHECK: tmlh	%r0, 65535              # encoding: [0xa7,0x00,0xff,0xff]
+#CHECK: tmlh	%r15, 0                 # encoding: [0xa7,0xf0,0x00,0x00]
+
 	tmlh	%r0, 0
 	tmlh	%r0, 0x8000
 	tmlh	%r0, 0xffff
 	tmlh	%r15, 0
+
+#CHECK: tmll	%r0, 0                  # encoding: [0xa7,0x01,0x00,0x00]
+#CHECK: tmll	%r0, 32768              # encoding: [0xa7,0x01,0x80,0x00]
+#CHECK: tmll	%r0, 65535              # encoding: [0xa7,0x01,0xff,0xff]
+#CHECK: tmll	%r15, 0                 # encoding: [0xa7,0xf1,0x00,0x00]
+
+	tml	%r0, 0
+	tml	%r0, 0x8000
+	tml	%r0, 0xffff
+	tml	%r15, 0
 
 #CHECK: tmll	%r0, 0                  # encoding: [0xa7,0x01,0x00,0x00]
 #CHECK: tmll	%r0, 32768              # encoding: [0xa7,0x01,0x80,0x00]

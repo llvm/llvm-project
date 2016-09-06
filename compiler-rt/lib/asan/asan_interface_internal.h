@@ -54,7 +54,16 @@ extern "C" {
     uptr has_dynamic_init;   // Non-zero if the global has dynamic initializer.
     __asan_global_source_location *location;  // Source location of a global,
                                               // or NULL if it is unknown.
+    uptr odr_indicator;      // The address of the ODR indicator symbol.
   };
+
+  // These functions can be called on some platforms to find globals in the same
+  // loaded image as `flag' and apply __asan_(un)register_globals to them,
+  // filtering out redundant calls.
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_register_image_globals(uptr *flag);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_unregister_image_globals(uptr *flag);
 
   // These two functions should be called by the instrumented code.
   // 'globals' is an array of structures describing 'n' globals.
@@ -150,6 +159,10 @@ extern "C" {
   // Global flag, copy of ASAN_OPTIONS=detect_stack_use_after_return
   SANITIZER_INTERFACE_ATTRIBUTE
   extern int __asan_option_detect_stack_use_after_return;
+
+// Global flag, copy of ASAN_OPTIONS=detect_stack_use_after_scope
+  SANITIZER_INTERFACE_ATTRIBUTE
+  extern int __asan_option_detect_stack_use_after_scope;
 
   SANITIZER_INTERFACE_ATTRIBUTE
   extern uptr *__asan_test_only_reported_buggy_pointer;

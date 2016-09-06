@@ -11,7 +11,7 @@
 // -----------------------------------------------------------------------------
 
 protocol Proto {
-	typealias FancyType
+	associatedtype FancyType
 	func get() -> FancyType
 }
 

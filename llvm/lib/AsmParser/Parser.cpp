@@ -78,3 +78,32 @@ Constant *llvm::parseConstantValue(StringRef Asm, SMDiagnostic &Err,
     return nullptr;
   return C;
 }
+
+Type *llvm::parseType(StringRef Asm, SMDiagnostic &Err, const Module &M,
+                      const SlotMapping *Slots) {
+  unsigned Read;
+  Type *Ty = parseTypeAtBeginning(Asm, Read, Err, M, Slots);
+  if (!Ty)
+    return nullptr;
+  if (Read != Asm.size()) {
+    SourceMgr SM;
+    std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Asm);
+    SM.AddNewSourceBuffer(std::move(Buf), SMLoc());
+    Err = SM.GetMessage(SMLoc::getFromPointer(Asm.begin() + Read),
+                        SourceMgr::DK_Error, "expected end of string");
+    return nullptr;
+  }
+  return Ty;
+}
+Type *llvm::parseTypeAtBeginning(StringRef Asm, unsigned &Read,
+                                 SMDiagnostic &Err, const Module &M,
+                                 const SlotMapping *Slots) {
+  SourceMgr SM;
+  std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Asm);
+  SM.AddNewSourceBuffer(std::move(Buf), SMLoc());
+  Type *Ty;
+  if (LLParser(Asm, SM, Err, const_cast<Module *>(&M))
+          .parseTypeAtBeginning(Ty, Read, Slots))
+    return nullptr;
+  return Ty;
+}

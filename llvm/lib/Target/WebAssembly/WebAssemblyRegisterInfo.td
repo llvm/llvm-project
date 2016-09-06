@@ -39,6 +39,8 @@ def SP64 : WebAssemblyReg<"%SP64">;
 def F32_0 : WebAssemblyReg<"%f32.0">;
 def F64_0 : WebAssemblyReg<"%f64.0">;
 
+def V128_0: WebAssemblyReg<"%v128">;
+
 // The expression stack "register". This is an opaque entity which serves to
 // order uses and defs that must remain in LIFO order.
 def EXPR_STACK : WebAssemblyReg<"STACK">;
@@ -56,3 +58,5 @@ def I32 : WebAssemblyRegClass<[i32], 32, (add FP32, SP32)>;
 def I64 : WebAssemblyRegClass<[i64], 64, (add FP64, SP64)>;
 def F32 : WebAssemblyRegClass<[f32], 32, (add F32_0)>;
 def F64 : WebAssemblyRegClass<[f64], 64, (add F64_0)>;
+def V128 : WebAssemblyRegClass<[v4f32, v4i32, v16i8, v8i16], 128, (add V128_0)>;
+

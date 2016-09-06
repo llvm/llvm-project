@@ -12,6 +12,7 @@ module Clang_AST {
   umbrella "AST"
 
   textual header "AST/BuiltinTypes.def"
+  textual header "AST/OperationKinds.def"
   textual header "AST/TypeLocNodes.def"
   textual header "AST/TypeNodes.def"
 
@@ -41,6 +42,7 @@ module Clang_Basic {
   textual header "Basic/DiagnosticOptions.def"
   textual header "Basic/LangOptions.def"
   textual header "Basic/OpenCLExtensions.def"
+  textual header "Basic/OpenCLImageTypes.def"
   textual header "Basic/OpenMPKinds.def"
   textual header "Basic/OperatorKinds.def"
   textual header "Basic/Sanitizers.def"

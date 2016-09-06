@@ -43,9 +43,11 @@ ASAN_FLAG(
     "If set, uses custom wrappers and replacements for libc string functions "
     "to find more errors.")
 ASAN_FLAG(bool, replace_intrin, true,
-          "If set, uses custom wrappers for memset/memcpy/memmove intinsics.")
+          "If set, uses custom wrappers for memset/memcpy/memmove intrinsics.")
 ASAN_FLAG(bool, detect_stack_use_after_return, false,
           "Enables stack-use-after-return checking at run-time.")
+ASAN_FLAG(bool, detect_stack_use_after_scope, true,
+          "Enables stack-use-after-scope checking at run-time.")
 ASAN_FLAG(int, min_uar_stack_size_log, 16, // We can't do smaller anyway.
           "Minimum fake stack size log.")
 ASAN_FLAG(int, max_uar_stack_size_log,
@@ -77,6 +79,8 @@ ASAN_FLAG(bool, print_stats, false,
           "Print various statistics after printing an error message or if "
           "atexit=1.")
 ASAN_FLAG(bool, print_legend, true, "Print the legend for the shadow bytes.")
+ASAN_FLAG(bool, print_scariness, false,
+          "Print the scariness score. Experimental.")
 ASAN_FLAG(bool, atexit, false,
           "If set, prints ASan exit stats even after program terminates "
           "successfully.")
@@ -104,7 +108,7 @@ ASAN_FLAG(bool, alloc_dealloc_mismatch,
           "Report errors on malloc/delete, new/free, new/delete[], etc.")
 
 ASAN_FLAG(bool, new_delete_type_mismatch, true,
-          "Report errors on mismatch betwen size of new and delete.")
+          "Report errors on mismatch between size of new and delete.")
 ASAN_FLAG(
     bool, strict_init_order, false,
     "If true, assume that dynamic initializers can never access globals from "
@@ -135,3 +139,5 @@ ASAN_FLAG(const char *, suppressions, "", "Suppressions file name.")
 ASAN_FLAG(bool, halt_on_error, true,
           "Crash the program after printing the first error report "
           "(WARNING: USE AT YOUR OWN RISK!)")
+ASAN_FLAG(bool, use_odr_indicator, false,
+          "Use special ODR indicator symbol for ODR violation detection")

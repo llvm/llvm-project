@@ -7,20 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass replaces occurrences of __nvvm_reflect("string") with an
-// integer based on -nvvm-reflect-list string=<int> option given to this pass.
-// If an undefined string value is seen in a call to __nvvm_reflect("string"),
-// a default value of 0 will be used.
+// This pass replaces occurrences of __nvvm_reflect("foo") and llvm.nvvm.reflect
+// with an integer.
+//
+// We choose the value we use by looking, in this order, at:
+//
+//  * the -nvvm-reflect-list flag, which has the format "foo=1,bar=42",
+//  * the StringMap passed to the pass's constructor, and
+//  * metadata in the module itself.
+//
+// If we see an unknown string, we replace its call with 0.
 //
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
@@ -31,11 +37,8 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#include <map>
 #include <sstream>
 #include <string>
-#include <vector>
-
 #define NVVM_REFLECT_FUNCTION "__nvvm_reflect"
 
 using namespace llvm;
@@ -45,31 +48,21 @@ using namespace llvm;
 namespace llvm { void initializeNVVMReflectPass(PassRegistry &); }
 
 namespace {
-class NVVMReflect : public ModulePass {
+class NVVMReflect : public FunctionPass {
 private:
   StringMap<int> VarMap;
-  typedef DenseMap<std::string, int>::iterator VarMapIter;
 
 public:
   static char ID;
-  NVVMReflect() : ModulePass(ID) {
-    initializeNVVMReflectPass(*PassRegistry::getPassRegistry());
-    VarMap.clear();
-  }
+  NVVMReflect() : NVVMReflect(StringMap<int>()) {}
 
   NVVMReflect(const StringMap<int> &Mapping)
-  : ModulePass(ID) {
+      : FunctionPass(ID), VarMap(Mapping) {
     initializeNVVMReflectPass(*PassRegistry::getPassRegistry());
-    for (StringMap<int>::const_iterator I = Mapping.begin(), E = Mapping.end();
-         I != E; ++I) {
-      VarMap[(*I).getKey()] = (*I).getValue();
-    }
+    setVarMap();
   }
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-  bool runOnModule(Module &) override;
+  bool runOnFunction(Function &) override;
 
 private:
   bool handleFunction(Function *ReflectFunction);
@@ -77,11 +70,8 @@ private:
 };
 }
 
-ModulePass *llvm::createNVVMReflectPass() {
-  return new NVVMReflect();
-}
-
-ModulePass *llvm::createNVVMReflectPass(const StringMap<int>& Mapping) {
+FunctionPass *llvm::createNVVMReflectPass() { return new NVVMReflect(); }
+FunctionPass *llvm::createNVVMReflectPass(const StringMap<int> &Mapping) {
   return new NVVMReflect(Mapping);
 }
 
@@ -123,30 +113,35 @@ void NVVMReflect::setVarMap() {
   }
 }
 
-bool NVVMReflect::handleFunction(Function *ReflectFunction) {
-  // Validate _reflect function
-  assert(ReflectFunction->isDeclaration() &&
-         "_reflect function should not have a body");
-  assert(ReflectFunction->getReturnType()->isIntegerTy() &&
-         "_reflect's return type should be integer");
+bool NVVMReflect::runOnFunction(Function &F) {
+  if (!NVVMReflectEnabled)
+    return false;
 
-  std::vector<Instruction *> ToRemove;
+  if (F.getName() == NVVM_REFLECT_FUNCTION) {
+    assert(F.isDeclaration() && "_reflect function should not have a body");
+    assert(F.getReturnType()->isIntegerTy() &&
+           "_reflect's return type should be integer");
+    return false;
+  }
 
-  // Go through the uses of ReflectFunction in this Function.
-  // Each of them should a CallInst with a ConstantArray argument.
-  // First validate that. If the c-string corresponding to the
-  // ConstantArray can be found successfully, see if it can be
-  // found in VarMap. If so, replace the uses of CallInst with the
-  // value found in VarMap. If not, replace the use  with value 0.
+  SmallVector<Instruction *, 4> ToRemove;
 
-  // IR for __nvvm_reflect calls differs between CUDA versions:
+  // Go through the calls in this function.  Each call to __nvvm_reflect or
+  // llvm.nvvm.reflect should be a CallInst with a ConstantArray argument.
+  // First validate that. If the c-string corresponding to the ConstantArray can
+  // be found successfully, see if it can be found in VarMap. If so, replace the
+  // uses of CallInst with the value found in VarMap. If not, replace the use
+  // with value 0.
+
+  // The IR for __nvvm_reflect calls differs between CUDA versions.
+  //
   // CUDA 6.5 and earlier uses this sequence:
   //    %ptr = tail call i8* @llvm.nvvm.ptr.constant.to.gen.p0i8.p4i8
   //        (i8 addrspace(4)* getelementptr inbounds
   //           ([8 x i8], [8 x i8] addrspace(4)* @str, i32 0, i32 0))
   //    %reflect = tail call i32 @__nvvm_reflect(i8* %ptr)
   //
-  // Value returned by Sym->getOperand(0) is a Constant with a
+  // The value returned by Sym->getOperand(0) is a Constant with a
   // ConstantDataSequential operand which can be converted to string and used
   // for lookup.
   //
@@ -157,31 +152,37 @@ bool NVVMReflect::handleFunction(Function *ReflectFunction) {
   //
   // In this case, we get a Constant with a GlobalVariable operand and we need
   // to dig deeper to find its initializer with the string we'll use for lookup.
+  for (Instruction &I : instructions(F)) {
+    CallInst *Call = dyn_cast<CallInst>(&I);
+    if (!Call)
+      continue;
+    Function *Callee = Call->getCalledFunction();
+    if (!Callee || (Callee->getName() != NVVM_REFLECT_FUNCTION &&
+                    Callee->getIntrinsicID() != Intrinsic::nvvm_reflect))
+      continue;
 
-  for (User *U : ReflectFunction->users()) {
-    assert(isa<CallInst>(U) && "Only a call instruction can use _reflect");
-    CallInst *Reflect = cast<CallInst>(U);
+    // FIXME: Improve error handling here and elsewhere in this pass.
+    assert(Call->getNumOperands() == 2 &&
+           "Wrong number of operands to __nvvm_reflect function");
 
-    assert((Reflect->getNumOperands() == 2) &&
-           "Only one operand expect for _reflect function");
-    // In cuda, we will have an extra constant-to-generic conversion of
-    // the string.
-    const Value *Str = Reflect->getArgOperand(0);
-    if (isa<CallInst>(Str)) {
-      // CUDA path
-      const CallInst *ConvCall = cast<CallInst>(Str);
+    // In cuda 6.5 and earlier, we will have an extra constant-to-generic
+    // conversion of the string.
+    const Value *Str = Call->getArgOperand(0);
+    if (const CallInst *ConvCall = dyn_cast<CallInst>(Str)) {
+      // FIXME: Add assertions about ConvCall.
       Str = ConvCall->getArgOperand(0);
     }
     assert(isa<ConstantExpr>(Str) &&
-           "Format of _reflect function not recognized");
+           "Format of __nvvm__reflect function not recognized");
     const ConstantExpr *GEP = cast<ConstantExpr>(Str);
 
     const Value *Sym = GEP->getOperand(0);
-    assert(isa<Constant>(Sym) && "Format of _reflect function not recognized");
+    assert(isa<Constant>(Sym) &&
+           "Format of __nvvm_reflect function not recognized");
 
     const Value *Operand = cast<Constant>(Sym)->getOperand(0);
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Operand)) {
-      // For CUDA-7.0 style __nvvm_reflect calls we need to find operand's
+      // For CUDA-7.0 style __nvvm_reflect calls, we need to find the operand's
       // initializer.
       assert(GV->hasInitializer() &&
              "Format of _reflect function not recognized");
@@ -194,57 +195,26 @@ bool NVVMReflect::handleFunction(Function *ReflectFunction) {
     assert(cast<ConstantDataSequential>(Operand)->isCString() &&
            "Format of _reflect function not recognized");
 
-    std::string ReflectArg =
-        cast<ConstantDataSequential>(Operand)->getAsString();
-
+    StringRef ReflectArg = cast<ConstantDataSequential>(Operand)->getAsString();
     ReflectArg = ReflectArg.substr(0, ReflectArg.size() - 1);
     DEBUG(dbgs() << "Arg of _reflect : " << ReflectArg << "\n");
 
     int ReflectVal = 0; // The default value is 0
-    if (VarMap.find(ReflectArg) != VarMap.end()) {
-      ReflectVal = VarMap[ReflectArg];
+    auto Iter = VarMap.find(ReflectArg);
+    if (Iter != VarMap.end())
+      ReflectVal = Iter->second;
+    else if (ReflectArg == "__CUDA_FTZ") {
+      // Try to pull __CUDA_FTZ from the nvvm-reflect-ftz module flag.
+      if (auto *Flag = mdconst::extract_or_null<ConstantInt>(
+              F.getParent()->getModuleFlag("nvvm-reflect-ftz")))
+        ReflectVal = Flag->getSExtValue();
     }
-    Reflect->replaceAllUsesWith(
-        ConstantInt::get(Reflect->getType(), ReflectVal));
-    ToRemove.push_back(Reflect);
-  }
-  if (ToRemove.size() == 0)
-    return false;
-
-  for (unsigned i = 0, e = ToRemove.size(); i != e; ++i)
-    ToRemove[i]->eraseFromParent();
-  return true;
-}
-
-bool NVVMReflect::runOnModule(Module &M) {
-  if (!NVVMReflectEnabled)
-    return false;
-
-  setVarMap();
-
-
-  bool Res = false;
-  std::string Name;
-  Type *Tys[1];
-  Type *I8Ty = Type::getInt8Ty(M.getContext());
-  Function *ReflectFunction;
-
-  // Check for standard overloaded versions of llvm.nvvm.reflect
-
-  for (unsigned i = 0; i != 5; ++i) {
-    Tys[0] = PointerType::get(I8Ty, i);
-    Name = Intrinsic::getName(Intrinsic::nvvm_reflect, Tys);
-    ReflectFunction = M.getFunction(Name);
-    if(ReflectFunction != 0) {
-      Res |= handleFunction(ReflectFunction);
-    }
+    Call->replaceAllUsesWith(ConstantInt::get(Call->getType(), ReflectVal));
+    ToRemove.push_back(Call);
   }
 
-  ReflectFunction = M.getFunction(NVVM_REFLECT_FUNCTION);
-  // If reflect function is not used, then there will be
-  // no entry in the module.
-  if (ReflectFunction != 0)
-    Res |= handleFunction(ReflectFunction);
+  for (Instruction *I : ToRemove)
+    I->eraseFromParent();
 
-  return Res;
+  return ToRemove.size() > 0;
 }

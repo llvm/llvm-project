@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 ; Test that the wasm-store-results pass makes users of stored values use the
 ; result of store expressions to reduce get_local/set_local traffic.
@@ -7,7 +7,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: single_block:
-; CHECK-NOT: .local
+; CHECK-NOT: local
 ; CHECK: i32.const $push{{[0-9]+}}=, 0{{$}}
 ; CHECK: i32.store $push[[STORE:[0-9]+]]=, 0($0), $pop{{[0-9]+}}{{$}}
 ; CHECK: return $pop[[STORE]]{{$}}
@@ -26,7 +26,7 @@ entry:
 @pos = global %class.Vec3 zeroinitializer, align 4
 
 ; CHECK-LABEL: foo:
-; CHECK: i32.store $discard=, pos($0), $0{{$}}
+; CHECK: i32.store $drop=, pos($pop{{[0-9]+}}), $pop{{[0-9]+}}{{$}}
 define void @foo() {
 for.body.i:
   br label %for.body5.i
@@ -44,7 +44,7 @@ for.cond.cleanup4.i:
 }
 
 ; CHECK-LABEL: bar:
-; CHECK: i32.store $discard=, pos($0), $0{{$}}
+; CHECK: i32.store $drop=, pos($pop{{[0-9]+}}), $pop{{[0-9]+}}{{$}}
 define void @bar() {
 for.body.i:
   br label %for.body5.i
@@ -58,4 +58,15 @@ for.body5.i:
 
 for.cond.cleanup4.i:
   ret void
+}
+
+; CHECK-LABEL: fi_ret:
+; CHECK: i32.store $push0=,
+; CHECK: return $pop0{{$}}
+define hidden i8* @fi_ret(i8** %addr) {
+entry:
+  %buf = alloca [27 x i8], align 16
+  %0 = getelementptr inbounds [27 x i8], [27 x i8]* %buf, i32 0, i32 0
+  store i8* %0, i8** %addr
+  ret i8* %0
 }

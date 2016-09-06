@@ -263,7 +263,192 @@ almost never be stored or mentioned directly.  They are intended solely for use
 when defining a function which should be able to efficiently accept concatenated
 strings.
 
+.. _error_apis:
+
+Error handling
+--------------
+
+Proper error handling helps us identify bugs in our code, and helps end-users
+understand errors in their tool usage. Errors fall into two broad categories:
+*programmatic* and *recoverable*, with different strategies for handling and
+reporting.
+
+Programmatic Errors
+^^^^^^^^^^^^^^^^^^^
+
+Programmatic errors are violations of program invariants or API contracts, and
+represent bugs within the program itself. Our aim is to document invariants, and
+to abort quickly at the point of failure (providing some basic diagnostic) when
+invariants are broken at runtime.
+
+The fundamental tools for handling programmatic errors are assertions and the
+llvm_unreachable function. Assertions are used to express invariant conditions,
+and should include a message describing the invariant:
+
+.. code-block:: c++
+
+  assert(isPhysReg(R) && "All virt regs should have been allocated already.");
+
+The llvm_unreachable function can be used to document areas of control flow
+that should never be entered if the program invariants hold:
+
+.. code-block:: c++
+
+  enum { Foo, Bar, Baz } X = foo();
+
+  switch (X) {
+    case Foo: /* Handle Foo */; break;
+    case Bar: /* Handle Bar */; break;
+    default:
+      llvm_unreachable("X should be Foo or Bar here");
+  }
+
+Recoverable Errors
+^^^^^^^^^^^^^^^^^^
+
+Recoverable errors represent an error in the program's environment, for example
+a resource failure (a missing file, a dropped network connection, etc.), or
+malformed input. These errors should be detected and communicated to a level of
+the program where they can be handled appropriately. Handling the error may be
+as simple as reporting the issue to the user, or it may involve attempts at
+recovery.
+
+Recoverable errors are modeled using LLVM's ``Error`` scheme. This scheme
+represents errors using function return values, similar to classic C integer
+error codes, or C++'s ``std::error_code``. However, the ``Error`` class is
+actually a lightweight wrapper for user-defined error types, allowing arbitrary
+information to be attached to describe the error. This is similar to the way C++
+exceptions allow throwing of user-defined types.
+
+Success values are created by calling ``Error::success()``:
+
+.. code-block:: c++
+
+  Error foo() {
+    // Do something.
+    // Return success.
+    return Error::success();
+  }
+
+Success values are very cheap to construct and return - they have minimal
+impact on program performance.
+
+Failure values are constructed using ``make_error<T>``, where ``T`` is any class
+that inherits from the ErrorInfo utility:
+
+.. code-block:: c++
+
+  class MyError : public ErrorInfo<MyError> {
+  public:
+    MyError(std::string Msg) : Msg(Msg) {}
+    void log(OStream &OS) const override { OS << "MyError - " << Msg; }
+    static char ID;
+  private:
+    std::string Msg;
+  };
+
+  char MyError::ID = 0; // In MyError.cpp
+
+  Error bar() {
+    if (checkErrorCondition)
+      return make_error<MyError>("Error condition detected");
+
+    // No error - proceed with bar.
+
+    // Return success value.
+    return Error::success();
+  }
+
+Error values can be implicitly converted to bool: true for error, false for
+success, enabling the following idiom:
+
+.. code-block:: c++
+
+  Error mayFail();
+
+  Error foo() {
+    if (auto Err = mayFail())
+      return Err;
+    // Success! We can proceed.
+    ...
+
+For functions that can fail but need to return a value the ``Expected<T>``
+utility can be used. Values of this type can be constructed with either a
+``T``, or a ``Error``. Expected<T> values are also implicitly convertible to
+boolean, but with the opposite convention to Error: true for success, false for
+error. If success, the ``T`` value can be accessed via the dereference operator.
+If failure, the ``Error`` value can be extracted using the ``takeError()``
+method. Idiomatic usage looks like:
+
+.. code-block:: c++
+
+  Expected<float> parseAndSquareRoot(IStream &IS) {
+    float f;
+    OS >> f;
+    if (f < 0)
+      return make_error<FloatingPointError>(...);
+    return sqrt(f);
+  }
+
+  Error foo(IStream &IS) {
+    if (auto SqrtOrErr = parseAndSquartRoot(IS)) {
+      float Sqrt = *SqrtOrErr;
+      // ...
+    } else
+      return SqrtOrErr.takeError();
+  }
+
+All Error instances, whether success or failure, must be either checked or
+moved from (via std::move or a return) before they are destructed. Accidentally
+discarding an unchecked error will cause a program abort at the point where the
+unchecked value's destructor is run, making it easy to identify and fix
+violations of this rule.
+
+Success values are considered checked once they have been tested (by invoking
+the boolean conversion operator):
+
+.. code-block:: c++
+
+  if (auto Err = canFail(...))
+    return Err; // Failure value - move error to caller.
+
+  // Safe to continue: Err was checked.
+
+In contrast, the following code will always cause an abort, regardless of the
+return value of ``foo``:
+
+.. code-block:: c++
+
+    canFail();
+    // Program will always abort here, even if canFail() returns Success, since
+    // the value is not checked.
+
+Failure values are considered checked once a handler for the error type has
+been activated:
+
+.. code-block:: c++
+
+  auto Err = canFail(...);
+  if (auto Err2 =
+       handleErrors(std::move(Err),
+         [](std::unique_ptr<MyError> M) {
+           // Try to handle 'M'. If successful, return a success value from
+           // the handler.
+           if (tryToHandle(M))
+             return Error::success();
+
+           // We failed to handle 'M' - return it from the handler.
+           // This value will be passed back from catchErrors and
+           // wind up in Err2, where it will be returned from this function.
+           return Error(std::move(M));
+         })))
+    return Err2;
+
+
 .. _function_apis:
+
+More information on Error and its related utilities can be found in the
+Error.h header file.
 
 Passing functions and other callable objects
 --------------------------------------------
@@ -295,7 +480,7 @@ The ``function_ref`` class template
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``function_ref``
-(`doxygen <http://llvm.org/doxygen/classllvm_1_1function_ref.html>`__) class
+(`doxygen <http://llvm.org/docs/doxygen/html/classllvm_1_1function__ref_3_01Ret_07Params_8_8_8_08_4.html>`__) class
 template represents a reference to a callable object, templated over the type
 of the callable. This is a good choice for passing a callback to a function,
 if you don't need to hold onto the callback after the function returns. In this
@@ -420,7 +605,7 @@ system in place to ensure that names do not conflict. If two different modules
 use the same string, they will all be turned on when the name is specified.
 This allows, for example, all debug information for instruction scheduling to be
 enabled with ``-debug-only=InstrSched``, even if the source lives in multiple
-files. The name must not include a comma (,) as that is used to seperate the
+files. The name must not include a comma (,) as that is used to separate the
 arguments of the ``-debug-only`` option.
 
 For performance reasons, -debug-only is not available in optimized build
@@ -1135,7 +1320,7 @@ llvm/ADT/StringSet.h
 ``StringSet`` is a thin wrapper around :ref:`StringMap\<char\> <dss_stringmap>`,
 and it allows efficient storage and retrieval of unique strings.
 
-Functionally analogous to ``SmallSet<StringRef>``, ``StringSet`` also suports
+Functionally analogous to ``SmallSet<StringRef>``, ``StringSet`` also supports
 iteration. (The iterator dereferences to a ``StringMapEntry<char>``, so you
 need to call ``i->getKey()`` to access the item of the StringSet.)  On the
 other hand, ``StringSet`` doesn't support range-insertion and
@@ -1696,7 +1881,7 @@ pointer from an iterator is very straight-forward.  Assuming that ``i`` is a
 
 However, the iterators you'll be working with in the LLVM framework are special:
 they will automatically convert to a ptr-to-instance type whenever they need to.
-Instead of derferencing the iterator and then taking the address of the result,
+Instead of dereferencing the iterator and then taking the address of the result,
 you can simply assign the iterator to the proper pointer type and you get the
 dereference and address-of operation as a result of the assignment (behind the
 scenes, this is a result of overloading casting mechanisms).  Thus the second
@@ -2036,7 +2221,7 @@ sequence of instructions that form a ``BasicBlock``:
     CallInst* callTwo = Builder.CreateCall(...);
     Value* result = Builder.CreateMul(callOne, callTwo);
 
-  See :doc:`tutorial/LangImpl3` for a practical use of the ``IRBuilder``.
+  See :doc:`tutorial/LangImpl03` for a practical use of the ``IRBuilder``.
 
 
 .. _schanges_deleting:
@@ -2233,11 +2418,6 @@ In practice, very few places in the API require the explicit specification of a
 determine what context they belong to by looking at their own ``Type``.  If you
 are adding new entities to LLVM IR, please try to maintain this interface
 design.
-
-For clients that do *not* require the benefits of isolation, LLVM provides a
-convenience API ``getGlobalContext()``.  This returns a global, lazily
-initialized ``LLVMContext`` that may be used in situations where isolation is
-not a concern.
 
 .. _jitthreading:
 

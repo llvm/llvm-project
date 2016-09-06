@@ -1,23 +1,23 @@
 ; First ensure that the ThinLTO handling in llvm-link and llvm-lto handles
 ; bitcode without summary sections gracefully.
-; RUN: llvm-as %s -o %t.bc
-; RUN: llvm-as %p/Inputs/funcimport.ll -o %t2.bc
+; RUN: opt %s -o %t.bc
+; RUN: opt %p/Inputs/funcimport.ll -o %t2.bc
 ; RUN: llvm-link %t.bc -summary-index=%t.bc -S
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
 ; Do setup work for all below tests: generate bitcode and combined index
-; RUN: llvm-as -module-summary %s -o %t.bc
-; RUN: llvm-as -module-summary %p/Inputs/funcimport.ll -o %t2.bc
+; RUN: opt -module-summary %s -o %t.bc
+; RUN: opt -module-summary %p/Inputs/funcimport.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
 ; Ensure statics are promoted/renamed correctly from this file (all but
 ; constant variable need promotion).
 ; RUN: llvm-link %t.bc -summary-index=%t3.thinlto.bc -S | FileCheck %s --check-prefix=EXPORTSTATIC
-; EXPORTSTATIC-DAG: @staticvar.llvm.1 = hidden global
+; EXPORTSTATIC-DAG: @staticvar.llvm.{{.*}} = hidden global
 ; EXPORTSTATIC-DAG: @staticconstvar = internal unnamed_addr constant
-; EXPORTSTATIC-DAG: @P.llvm.1 = hidden global void ()* null
-; EXPORTSTATIC-DAG: define hidden i32 @staticfunc.llvm.1
-; EXPORTSTATIC-DAG: define hidden void @staticfunc2.llvm.1
+; EXPORTSTATIC-DAG: @P.llvm.{{.*}} = hidden global void ()* null
+; EXPORTSTATIC-DAG: define hidden i32 @staticfunc.llvm.
+; EXPORTSTATIC-DAG: define hidden void @staticfunc2.llvm.
 
 ; Ensure that both weak alias to an imported function and strong alias to a
 ; non-imported function are correctly turned into declarations.
@@ -67,12 +67,12 @@
 ; Ensure that imported static variable and function references are correctly
 ; promoted and renamed (including static constant variable).
 ; RUN: llvm-link %t2.bc -summary-index=%t3.thinlto.bc -import=referencestatics:%t.bc -S | FileCheck %s --check-prefix=IMPORTSTATIC
-; IMPORTSTATIC-DAG: @staticvar.llvm.1 = external hidden global
-; IMPORTSTATIC-DAG: @staticconstvar.llvm.1 = internal unnamed_addr constant
+; IMPORTSTATIC-DAG: @staticvar.llvm.{{.*}} = external hidden global
+; IMPORTSTATIC-DAG: @staticconstvar.llvm.{{.*}} = internal unnamed_addr constant
 ; IMPORTSTATIC-DAG: define available_externally i32 @referencestatics
-; IMPORTSTATIC-DAG: %call = call i32 @staticfunc.llvm.1
-; IMPORTSTATIC-DAG: %0 = load i32, i32* @staticvar.llvm.1
-; IMPORTSTATIC-DAG: declare hidden i32 @staticfunc.llvm.1
+; IMPORTSTATIC-DAG: %call = call i32 @staticfunc.llvm.
+; IMPORTSTATIC-DAG: %0 = load i32, i32* @staticvar.llvm.
+; IMPORTSTATIC-DAG: declare hidden i32 @staticfunc.llvm.
 
 ; Ensure that imported global (external) function and variable references
 ; are handled correctly (including referenced variable imported as
@@ -89,16 +89,16 @@
 
 ; Ensure that imported static function pointer correctly promoted and renamed.
 ; RUN: llvm-link %t2.bc -summary-index=%t3.thinlto.bc -import=callfuncptr:%t.bc -S | FileCheck %s --check-prefix=IMPORTFUNCPTR
-; IMPORTFUNCPTR-DAG: @P.llvm.1 = external hidden global void ()*
+; IMPORTFUNCPTR-DAG: @P.llvm.{{.*}} = external hidden global void ()*
 ; IMPORTFUNCPTR-DAG: define available_externally void @callfuncptr
-; IMPORTFUNCPTR-DAG: %0 = load void ()*, void ()** @P.llvm.1
+; IMPORTFUNCPTR-DAG: %0 = load void ()*, void ()** @P.llvm.
 
 ; Ensure that imported weak function reference/definition handled properly.
 ; Imported weak_any definition should be skipped with warning, and imported
 ; reference should turned into an external_weak declaration.
 ; RUN: llvm-link %t2.bc -summary-index=%t3.thinlto.bc -import=callweakfunc:%t.bc -import=weakfunc:%t.bc -S 2>&1 | FileCheck %s --check-prefix=IMPORTWEAKFUNC
 ; IMPORTWEAKFUNC-DAG: Ignoring import request for weak-any function weakfunc
-; IMPORTWEAKFUNC-DAG: declare extern_weak void @weakfunc
+; IMPORTWEAKFUNC-DAG: declare void @weakfunc
 ; IMPORTWEAKFUNC-DAG: define available_externally void @callweakfunc
 ; IMPORTWEAKFUNC-NOT: @weakvar = extern_weak global i32, align 4
 

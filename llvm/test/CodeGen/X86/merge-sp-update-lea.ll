@@ -1,11 +1,11 @@
 ; RUN: llc %s -o - | FileCheck %s
 target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
-target triple = "i386-apple-macosx"
+target triple = "i386-apple-macosx10.5"
 
 ; Check that the merging of SP updates, when LEAs are involved, happen
 ; correctly.
 ; CHECK-LABEL: useLEA:
-; CHECK: calll L_realloc
+; CHECK: calll _realloc
 ; Make sure that the offset we get here is 8 + 16.
 ; We used to have 8 + 1 because we were not reading the right immediate form
 ; the LEA instruction.

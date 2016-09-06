@@ -1,0 +1,84 @@
+# RUN: llc -mtriple=aarch64-unknown -run-pass aarch64-branch-relax -aarch64-tbz-offset-bits=4 %s -o - | FileCheck %s
+--- |
+  ; ModuleID = 'test.ll'
+  source_filename = "test.ll"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown"
+
+  @ThreadLocalGlobal = external thread_local local_unnamed_addr global i32, align 8
+
+  define i32 @test_tlsdesc_callseq_length(i32 %in) {
+    %val = and i32 %in, 1
+    %tst = icmp eq i32 %val, 0
+    br i1 %tst, label %true, label %false
+
+  true:                                             ; preds = %0
+    %1 = load i32, i32* @ThreadLocalGlobal, align 8
+    ret i32 %1
+
+  false:                                            ; preds = %0
+    ret i32 0
+  }
+
+...
+---
+# CHECK-LABEL: name:{{.*}}test_tlsdesc_callseq_length
+# If the size of TLSDESC_CALLSEQ is computed correctly, that will push
+# the bb.2.false block too far away from the TBNZW, so the branch will
+# have to be relaxed (note that we're using -aarch64-tbz-offset-bits to
+# constrain the range that can be reached with the TBNZW to something smaller
+# than what TLSDESC_CALLSEQ is lowered to).
+# CHECK: TBZW killed %w0, 0, %bb.1.true
+# CHECK: B %bb.2.false
+name:            test_tlsdesc_callseq_length
+alignment:       2
+exposesReturnsTwice: false
+hasInlineAsm:    false
+allVRegsAllocated: true
+isSSA:           false
+tracksRegLiveness: false
+tracksSubRegLiveness: false
+liveins:
+  - { reg: '%w0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       16
+  offsetAdjustment: 0
+  maxAlignment:    16
+  adjustsStack:    false
+  hasCalls:        true
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+stack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '%lr' }
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.1.true, %bb.2.false
+    liveins: %w0, %lr
+
+    TBNZW killed %w0, 0, %bb.2.false
+
+  bb.1.true:
+    liveins: %lr
+
+    early-clobber %sp = frame-setup STRXpre killed %lr, %sp, -16 :: (store 8 into %stack.0)
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup CFI_INSTRUCTION offset %w30, -16
+    TLSDESC_CALLSEQ target-flags(aarch64-tls) @ThreadLocalGlobal, implicit-def dead %lr, implicit-def %x0, implicit-def dead %x1
+    %x8 = MRS 56962
+    %w0 = LDRWroX killed %x8, killed %x0, 0, 0 :: (load 4 from @ThreadLocalGlobal, align 8)
+    early-clobber %sp, %lr = LDRXpost %sp, 16 :: (load 8 from %stack.0)
+    RET killed %lr, implicit killed %w0
+
+  bb.2.false:
+    liveins: %lr
+
+    %w0 = ORRWrs %wzr, %wzr, 0
+    RET killed %lr, implicit killed %w0
+
+...

@@ -53,6 +53,7 @@ TYPE("c++",                      CXX,          PP_CXX,          "cpp",   "u")
 TYPE("objective-c++-cpp-output", PP_ObjCXX,    INVALID,         "mii",   "u")
 TYPE("objc++-cpp-output",        PP_ObjCXX_Alias, INVALID,      "mii",   "u")
 TYPE("objective-c++",            ObjCXX,       PP_ObjCXX,       "mm",    "u")
+TYPE("renderscript",             RenderScript, PP_C,            "rs",    "u")
 
 // C family input files to precompile.
 TYPE("c-header-cpp-output",      PP_CHeader,   INVALID,         "i",     "p")

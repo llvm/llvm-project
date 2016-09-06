@@ -34,8 +34,8 @@ NVPTXMCAsmInfo::NVPTXMCAsmInfo(const Triple &TheTriple) {
 
   HasSingleParameterDotFile = false;
 
-  InlineAsmStart = " inline asm";
-  InlineAsmEnd = " inline asm";
+  InlineAsmStart = " begin inline asm";
+  InlineAsmEnd = " end inline asm";
 
   SupportsDebugInformation = CompileForDebugging;
   // PTX does not allow .align on functions.

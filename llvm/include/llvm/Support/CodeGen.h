@@ -15,22 +15,25 @@
 #ifndef LLVM_SUPPORT_CODEGEN_H
 #define LLVM_SUPPORT_CODEGEN_H
 
-#include "llvm-c/TargetMachine.h"
-#include "llvm/Support/ErrorHandling.h"
-
 namespace llvm {
 
   // Relocation model types.
   namespace Reloc {
-    enum Model { Default, Static, PIC_, DynamicNoPIC };
+  enum Model { Static, PIC_, DynamicNoPIC, ROPI, RWPI, ROPI_RWPI };
   }
 
   // Code model types.
   namespace CodeModel {
+    // Sync changes with CodeGenCWrappers.h.
     enum Model { Default, JITDefault, Small, Kernel, Medium, Large };
   }
 
   namespace PICLevel {
+    // This is used to map -fpic/-fPIC.
+    enum Level { NotPIC=0, SmallPIC=1, BigPIC=2 };
+  }
+
+  namespace PIELevel {
     enum Level { Default=0, Small=1, Large=2 };
   }
 
@@ -54,42 +57,6 @@ namespace llvm {
     };
   }
 
-  // Create wrappers for C Binding types (see CBindingWrapping.h).
-  inline CodeModel::Model unwrap(LLVMCodeModel Model) {
-    switch (Model) {
-      case LLVMCodeModelDefault:
-        return CodeModel::Default;
-      case LLVMCodeModelJITDefault:
-        return CodeModel::JITDefault;
-      case LLVMCodeModelSmall:
-        return CodeModel::Small;
-      case LLVMCodeModelKernel:
-        return CodeModel::Kernel;
-      case LLVMCodeModelMedium:
-        return CodeModel::Medium;
-      case LLVMCodeModelLarge:
-        return CodeModel::Large;
-    }
-    return CodeModel::Default;
-  }
-
-  inline LLVMCodeModel wrap(CodeModel::Model Model) {
-    switch (Model) {
-      case CodeModel::Default:
-        return LLVMCodeModelDefault;
-      case CodeModel::JITDefault:
-        return LLVMCodeModelJITDefault;
-      case CodeModel::Small:
-        return LLVMCodeModelSmall;
-      case CodeModel::Kernel:
-        return LLVMCodeModelKernel;
-      case CodeModel::Medium:
-        return LLVMCodeModelMedium;
-      case CodeModel::Large:
-        return LLVMCodeModelLarge;
-    }
-    llvm_unreachable("Bad CodeModel!");
-  }
 }  // end llvm namespace
 
 #endif

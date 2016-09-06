@@ -90,7 +90,7 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind }
 
 !opencl.kernels = !{!0, !1, !2, !3, !4, !5, !6, !7, !8}
 

@@ -14,7 +14,7 @@ const char *mem_to_shadow(const char *p) {
 #if defined(__x86_64__)
   return (char *)((uintptr_t)p ^ 0x500000000000ULL);
 #elif defined (__mips64)
-  return (char *)((uintptr_t)p & ~0x4000000000ULL);
+  return (char *)((uintptr_t)p ^ 0x8000000000ULL);
 #elif defined(__powerpc64__)
 #define LINEARIZE_MEM(mem) \
   (((uintptr_t)(mem) & ~0x200000000000ULL) ^ 0x100000000000ULL)

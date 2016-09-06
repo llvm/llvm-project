@@ -68,4 +68,27 @@ TEST(StringTableBuilderTest, BasicWinCOFF) {
   EXPECT_EQ(23U, B.getOffset("river horse"));
 }
 
+TEST(StringTableBuilderTest, ELFInOrder) {
+  StringTableBuilder B(StringTableBuilder::ELF);
+  EXPECT_EQ(1U, B.add("foo"));
+  EXPECT_EQ(5U, B.add("bar"));
+  EXPECT_EQ(9U, B.add("foobar"));
+
+  B.finalizeInOrder();
+
+  std::string Expected;
+  Expected += '\x00';
+  Expected += "foo";
+  Expected += '\x00';
+  Expected += "bar";
+  Expected += '\x00';
+  Expected += "foobar";
+  Expected += '\x00';
+
+  EXPECT_EQ(Expected, B.data());
+  EXPECT_EQ(1U, B.getOffset("foo"));
+  EXPECT_EQ(5U, B.getOffset("bar"));
+  EXPECT_EQ(9U, B.getOffset("foobar"));
+}
+
 }

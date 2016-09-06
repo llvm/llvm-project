@@ -11,11 +11,12 @@
 #define LLVM_DEBUGINFO_PDB_IPDBSESSION_H
 
 #include "PDBTypes.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include <memory>
 
 namespace llvm {
-
+namespace pdb {
 class PDBSymbolCompiland;
 class PDBSymbolExe;
 
@@ -45,8 +46,26 @@ public:
 
   virtual std::unique_ptr<PDBSymbol>
   findSymbolByAddress(uint64_t Address, PDB_SymType Type) const = 0;
+
+  virtual std::unique_ptr<IPDBEnumLineNumbers>
+  findLineNumbers(const PDBSymbolCompiland &Compiland,
+                  const IPDBSourceFile &File) const = 0;
   virtual std::unique_ptr<IPDBEnumLineNumbers>
   findLineNumbersByAddress(uint64_t Address, uint32_t Length) const = 0;
+
+  virtual std::unique_ptr<IPDBEnumSourceFiles>
+  findSourceFiles(const PDBSymbolCompiland *Compiland, llvm::StringRef Pattern,
+                  PDB_NameSearchFlags Flags) const = 0;
+  virtual std::unique_ptr<IPDBSourceFile>
+  findOneSourceFile(const PDBSymbolCompiland *Compiland,
+                    llvm::StringRef Pattern,
+                    PDB_NameSearchFlags Flags) const = 0;
+  virtual std::unique_ptr<IPDBEnumChildren<PDBSymbolCompiland>>
+  findCompilandsForSourceFile(llvm::StringRef Pattern,
+                              PDB_NameSearchFlags Flags) const = 0;
+  virtual std::unique_ptr<PDBSymbolCompiland>
+  findOneCompilandForSourceFile(llvm::StringRef Pattern,
+                                PDB_NameSearchFlags Flags) const = 0;
 
   virtual std::unique_ptr<IPDBEnumSourceFiles> getAllSourceFiles() const = 0;
   virtual std::unique_ptr<IPDBEnumSourceFiles>
@@ -56,6 +75,7 @@ public:
 
   virtual std::unique_ptr<IPDBEnumDataStreams> getDebugStreams() const = 0;
 };
+}
 }
 
 #endif

@@ -186,7 +186,7 @@ problem, we have a notion of an 'owner' for a piece of the code.  The sole
 responsibility of a code owner is to ensure that a commit to their area of the
 code is appropriately reviewed, either by themself or by someone else.  The list
 of current code owners can be found in the file
-`CODE_OWNERS.TXT <http://llvm.org/viewvc/llvm-project/llvm/trunk/CODE_OWNERS.TXT?view=markup>`_
+`CODE_OWNERS.TXT <http://llvm.org/klaus/llvm/blob/master/CODE_OWNERS.TXT>`_
 in the root of the LLVM source tree.
 
 Note that code ownership is completely different than reviewers: anyone can
@@ -338,7 +338,7 @@ Obtaining Commit Access
 
 We grant commit access to contributors with a track record of submitting high
 quality patches.  If you would like commit access, please send an email to
-`Chris <mailto:sabre@nondot.org>`_ with the following information:
+`Chris <mailto:clattner@llvm.org>`_ with the following information:
 
 #. The user name you want to commit with, e.g. "hacker".
 
@@ -348,8 +348,10 @@ quality patches.  If you would like commit access, please send an email to
 #. A "password hash" of the password you want to use, e.g. "``2ACR96qjUqsyM``".
    Note that you don't ever tell us what your password is; you just give it to
    us in an encrypted form.  To get this, run "``htpasswd``" (a utility that
-   comes with apache) in crypt mode (often enabled with "``-d``"), or find a web
-   page that will do it for you.
+   comes with apache) in *crypt* mode (often enabled with "``-d``"), or find a web
+   page that will do it for you.  Note that our system does not work with MD5
+   hashes.  These are significantly longer than a crypt hash - e.g.
+   "``$apr1$vea6bBV2$Z8IFx.AfeD8LhqlZFqJer0``", we only accept the shorter crypt hash.
 
 Once you've been granted commit access, you should be able to check out an LLVM
 tree with an SVN URL of "https://username@llvm.org/..." instead of the normal
@@ -508,8 +510,7 @@ for llvm users and not imposing a big burden on llvm developers:
 * Additions and changes to the IR should be reflected in
   ``test/Bitcode/compatibility.ll``.
 
-* The bitcode format produced by a X.Y release will be readable by all
-  following X.Z releases and the (X+1).0 release.
+* The current LLVM version supports loading any bitcode since version 3.0.
 
 * After each X.Y release, ``compatibility.ll`` must be copied to
   ``compatibility-X.Y.ll``. The corresponding bitcode file should be assembled

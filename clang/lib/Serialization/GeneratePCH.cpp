@@ -12,14 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Serialization/ASTWriter.h"
-#include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaConsumer.h"
+#include "clang/Serialization/ASTWriter.h"
 #include "llvm/Bitcode/BitstreamWriter.h"
-#include <string>
 
 using namespace clang;
 
@@ -51,7 +48,10 @@ void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   // Emit the PCH file to the Buffer.
   assert(SemaPtr && "No Sema?");
   Buffer->Signature =
-      Writer.WriteAST(*SemaPtr, OutputFile, Module, isysroot, hasErrors);
+      Writer.WriteAST(*SemaPtr, OutputFile, Module, isysroot,
+                      // For serialization we are lenient if the errors were
+                      // only warn-as-error kind.
+                      PP.getDiagnostics().hasUncompilableErrorOccurred());
 
   Buffer->IsComplete = true;
 }

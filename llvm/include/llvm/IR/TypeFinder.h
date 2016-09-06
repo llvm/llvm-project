@@ -15,6 +15,8 @@
 #define LLVM_IR_TYPEFINDER_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Type.h"
 #include <vector>
 
 namespace llvm {
@@ -22,7 +24,6 @@ namespace llvm {
 class MDNode;
 class Module;
 class StructType;
-class Type;
 class Value;
 
 /// TypeFinder - Walk over a module, identifying all of the types that are

@@ -198,12 +198,15 @@ Decoder::getSectionContaining(const COFFObjectFile &COFF, uint64_t VA) {
 ErrorOr<object::SymbolRef> Decoder::getSymbol(const COFFObjectFile &COFF,
                                               uint64_t VA, bool FunctionOnly) {
   for (const auto &Symbol : COFF.symbols()) {
-    if (FunctionOnly && Symbol.getType() != SymbolRef::ST_Function)
+    Expected<SymbolRef::Type> Type = Symbol.getType();
+    if (!Type)
+      return errorToErrorCode(Type.takeError());
+    if (FunctionOnly && *Type != SymbolRef::ST_Function)
       continue;
 
-    ErrorOr<uint64_t> Address = Symbol.getAddress();
-    if (std::error_code EC = Address.getError())
-      return EC;
+    Expected<uint64_t> Address = Symbol.getAddress();
+    if (!Address)
+      return errorToErrorCode(Address.takeError());
     if (*Address == VA)
       return Symbol;
   }
@@ -247,7 +250,7 @@ bool Decoder::opcode_10Lxxxxx(const uint8_t *OC, unsigned &Offset,
   printRegisters(std::make_pair(RegisterMask, 0));
   OS << '\n';
 
-  ++Offset, ++Offset;
+  Offset += 2;
   return false;
 }
 
@@ -320,7 +323,7 @@ bool Decoder::opcode_111010xx(const uint8_t *OC, unsigned &Offset,
                            static_cast<const char *>(Prologue ? "sub" : "add"),
                            Imm);
 
-  ++Offset, ++Offset;
+  Offset += 2;
   return false;
 }
 
@@ -334,7 +337,7 @@ bool Decoder::opcode_1110110L(const uint8_t *OC, unsigned &Offset,
   printRegisters(std::make_pair(GPRMask, 0));
   OS << '\n';
 
-  ++Offset, ++Offset;
+  Offset += 2;
   return false;
 }
 
@@ -350,7 +353,7 @@ bool Decoder::opcode_11101110(const uint8_t *OC, unsigned &Offset,
       << format("0x%02x 0x%02x           ; microsoft-specific (type: %u)\n",
                 OC[Offset + 0], OC[Offset + 1], OC[Offset + 1] & 0x0f);
 
-  ++Offset, ++Offset;
+  Offset += 2;
   return false;
 }
 
@@ -366,7 +369,7 @@ bool Decoder::opcode_11101111(const uint8_t *OC, unsigned &Offset,
       << format("0x%02x 0x%02x           ; ldr.w lr, [sp], #%u\n",
                 OC[Offset + 0], OC[Offset + 1], OC[Offset + 1] << 2);
 
-  ++Offset, ++Offset;
+  Offset += 2;
   return false;
 }
 
@@ -381,7 +384,7 @@ bool Decoder::opcode_11110101(const uint8_t *OC, unsigned &Offset,
   printRegisters(std::make_pair(0, VFPMask));
   OS << '\n';
 
-  ++Offset, ++Offset;
+  Offset += 2;
   return false;
 }
 
@@ -396,7 +399,7 @@ bool Decoder::opcode_11110110(const uint8_t *OC, unsigned &Offset,
   printRegisters(std::make_pair(0, VFPMask));
   OS << '\n';
 
-  ++Offset, ++Offset;
+  Offset += 2;
   return false;
 }
 
@@ -409,7 +412,7 @@ bool Decoder::opcode_11110111(const uint8_t *OC, unsigned &Offset,
                            static_cast<const char *>(Prologue ? "sub" : "add"),
                            Imm);
 
-  ++Offset, ++Offset, ++Offset;
+  Offset += 3;
   return false;
 }
 
@@ -424,7 +427,7 @@ bool Decoder::opcode_11111000(const uint8_t *OC, unsigned &Offset,
               OC[Offset + 0], OC[Offset + 1], OC[Offset + 2], OC[Offset + 3],
               static_cast<const char *>(Prologue ? "sub" : "add"), Imm);
 
-  ++Offset, ++Offset, ++Offset, ++Offset;
+  Offset += 4;
   return false;
 }
 
@@ -437,7 +440,7 @@ bool Decoder::opcode_11111001(const uint8_t *OC, unsigned &Offset,
               OC[Offset + 0], OC[Offset + 1], OC[Offset + 2],
               static_cast<const char *>(Prologue ? "sub" : "add"), Imm);
 
-  ++Offset, ++Offset, ++Offset;
+  Offset += 3;
   return false;
 }
 
@@ -452,7 +455,7 @@ bool Decoder::opcode_11111010(const uint8_t *OC, unsigned &Offset,
               OC[Offset + 0], OC[Offset + 1], OC[Offset + 2], OC[Offset + 3],
               static_cast<const char *>(Prologue ? "sub" : "add"), Imm);
 
-  ++Offset, ++Offset, ++Offset, ++Offset;
+  Offset += 4;
   return false;
 }
 
@@ -567,9 +570,14 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
     if (!Symbol)
       Symbol = getSymbol(COFF, Address, /*FunctionOnly=*/true);
 
-    ErrorOr<StringRef> Name = Symbol->getName();
-    if (std::error_code EC = Name.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> Name = Symbol->getName();
+    if (!Name) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(Name.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
 
     ListScope EHS(SW, "ExceptionHandler");
     SW.printString("Routine", formatSymbol(*Name, Address));
@@ -601,13 +609,23 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
   StringRef FunctionName;
   uint64_t FunctionAddress;
   if (Function) {
-    ErrorOr<StringRef> FunctionNameOrErr = Function->getName();
-    if (std::error_code EC = FunctionNameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> FunctionNameOrErr = Function->getName();
+    if (!FunctionNameOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     FunctionName = *FunctionNameOrErr;
-    ErrorOr<uint64_t> FunctionAddressOrErr = Function->getAddress();
-    if (std::error_code EC = FunctionAddressOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<uint64_t> FunctionAddressOrErr = Function->getAddress();
+    if (!FunctionAddressOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(FunctionAddressOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     FunctionAddress = *FunctionAddressOrErr;
   } else {
     const pe32_header *PEHeader;
@@ -619,20 +637,33 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
   SW.printString("Function", formatSymbol(FunctionName, FunctionAddress));
 
   if (XDataRecord) {
-    ErrorOr<StringRef> Name = XDataRecord->getName();
-    if (std::error_code EC = Name.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> Name = XDataRecord->getName();
+    if (!Name) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(Name.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
 
-    ErrorOr<uint64_t> AddressOrErr = XDataRecord->getAddress();
-    if (std::error_code EC = AddressOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<uint64_t> AddressOrErr = XDataRecord->getAddress();
+    if (!AddressOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(AddressOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     uint64_t Address = *AddressOrErr;
 
     SW.printString("ExceptionRecord", formatSymbol(*Name, Address));
 
-    ErrorOr<section_iterator> SIOrErr = XDataRecord->getSection();
-    if (!SIOrErr)
+    Expected<section_iterator> SIOrErr = XDataRecord->getSection();
+    if (!SIOrErr) {
+      // TODO: Actually report errors helpfully.
+      consumeError(SIOrErr.takeError());
       return false;
+    }
     section_iterator SI = *SIOrErr;
 
     return dumpXDataRecord(COFF, *SI, FunctionAddress, Address);
@@ -668,11 +699,23 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
   StringRef FunctionName;
   uint64_t FunctionAddress;
   if (Function) {
-    ErrorOr<StringRef> FunctionNameOrErr = Function->getName();
-    if (std::error_code EC = FunctionNameOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<StringRef> FunctionNameOrErr = Function->getName();
+    if (!FunctionNameOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     FunctionName = *FunctionNameOrErr;
-    ErrorOr<uint64_t> FunctionAddressOrErr = Function->getAddress();
+    Expected<uint64_t> FunctionAddressOrErr = Function->getAddress();
+    if (!FunctionAddressOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(FunctionAddressOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     FunctionAddress = *FunctionAddressOrErr;
   } else {
     const pe32_header *PEHeader;

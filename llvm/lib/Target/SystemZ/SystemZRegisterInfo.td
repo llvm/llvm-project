@@ -121,6 +121,14 @@ defm ADDR64 : SystemZRegClass<"ADDR64", [i64], 64, (sub GR64Bit, R0D)>;
 // of a GR128.
 defm ADDR128 : SystemZRegClass<"ADDR128", [untyped], 128, (sub GR128Bit, R0Q)>;
 
+// Any type register. Used for .insn directives when we don't know what the
+// register types could be.
+defm AnyReg : SystemZRegClass<"AnyReg",
+                              [i64, f64, v8i8, v4i16, v2i32, v2f32], 64,
+                              (add (sequence "R%uD", 0, 15),
+                                   (sequence "F%uD", 0, 15),
+                                   (sequence "V%u", 0, 15))>;
+
 //===----------------------------------------------------------------------===//
 // Floating-point registers
 //===----------------------------------------------------------------------===//

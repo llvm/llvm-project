@@ -8,6 +8,7 @@
 -Dfoo9=foo9\'bar9\'zed9
 -Dfoo10=foo10\"bar10\"zed10
 -D foo11
--Dfoo12=zed12\
+-Dfoo12=zed1\
+2
 -Dfoo13='one\\two'
 -Dfoo14='c:\foo\bar.c'

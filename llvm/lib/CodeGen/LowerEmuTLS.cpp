@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
@@ -63,6 +63,9 @@ ModulePass *llvm::createLowerEmuTLSPass(const TargetMachine *TM) {
 }
 
 bool LowerEmuTLS::runOnModule(Module &M) {
+  if (skipModule(M))
+    return false;
+
   if (!TM || !TM->Options.EmulatedTLS)
     return false;
 

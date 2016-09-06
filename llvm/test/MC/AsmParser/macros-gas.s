@@ -39,10 +39,10 @@ test3 1, 2 3
 .ascii "\_a \_b \_c"
 .endm
 
-// CHECK: .ascii "1 (23) "
+// CHECK: .ascii "1 (2 3) "
 test3_prime 1, (2 3)
 
-// CHECK: .ascii "1 (23) "
+// CHECK: .ascii "1 (2 3) "
 test3_prime 1 (2 3)
 
 // CHECK: .ascii "1 2 "

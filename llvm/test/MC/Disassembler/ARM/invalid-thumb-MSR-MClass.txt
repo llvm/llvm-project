@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -disassemble %s -triple=thumbv7em 2>&1 | FileCheck --check-prefix=CHECK %s
+# RUN: not llvm-mc -disassemble %s -triple=thumbv7em 2>&1 | FileCheck %s
 # RUN: not llvm-mc -disassemble %s -triple=thumbv7m 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-V7M %s
 
 #------------------------------------------------------------------------------

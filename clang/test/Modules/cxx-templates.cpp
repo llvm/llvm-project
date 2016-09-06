@@ -1,9 +1,9 @@
 // RUN: rm -rf %t
-// RUN: not %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -std=c++11 -ast-dump-lookups | FileCheck %s --check-prefix=CHECK-GLOBAL
-// RUN: not %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -std=c++11 -ast-dump-lookups -ast-dump-filter N | FileCheck %s --check-prefix=CHECK-NAMESPACE-N
-// RUN: not %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -std=c++11 -ast-dump -ast-dump-filter SomeTemplate | FileCheck %s --check-prefix=CHECK-DUMP
-// RUN: %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -verify -std=c++11
-// RUN: %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -verify -std=c++11 -DEARLY_IMPORT
+// RUN: not %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -std=c++14 -ast-dump-lookups 2>/dev/null | FileCheck %s --check-prefix=CHECK-GLOBAL
+// RUN: not %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -std=c++14 -ast-dump-lookups -ast-dump-filter N 2>/dev/null | FileCheck %s --check-prefix=CHECK-NAMESPACE-N
+// RUN: not %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -std=c++14 -ast-dump -ast-dump-filter SomeTemplate 2>/dev/null | FileCheck %s --check-prefix=CHECK-DUMP
+// RUN: %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -verify -std=c++14
+// RUN: %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fno-modules-error-recovery -fmodules-cache-path=%t -I %S/Inputs %s -verify -std=c++14 -DEARLY_IMPORT
 
 #ifdef EARLY_IMPORT
 #include "cxx-templates-textual.h"
@@ -105,7 +105,8 @@ void g() {
 
   TemplateInstantiationVisibility<char[1]> tiv1;
   TemplateInstantiationVisibility<char[2]> tiv2;
-  TemplateInstantiationVisibility<char[3]> tiv3; // expected-error 2{{must be imported from module 'cxx_templates_b_impl'}}
+  TemplateInstantiationVisibility<char[3]> tiv3; // expected-error 5{{must be imported from module 'cxx_templates_b_impl'}}
+  // expected-note@cxx-templates-b-impl.h:10 3{{explicit specialization declared here}}
   // expected-note@cxx-templates-b-impl.h:10 2{{previous definition is here}}
   TemplateInstantiationVisibility<char[4]> tiv4;
 
@@ -170,6 +171,63 @@ void testImplicitSpecialMembers(SomeTemplate<char[1]> &a,
 
 bool testFriendInClassTemplate(Std::WithFriend<int> wfi) {
   return wfi != wfi;
+}
+
+namespace hidden_specializations {
+  // expected-note@cxx-templates-unimported.h:* 1+{{here}}
+  void test() {
+    // For functions, uses that would trigger instantiations of definitions are
+    // not allowed.
+    fn<void>(); // ok
+    fn<char>(); // ok
+    fn<int>(); // expected-error 1+{{explicit specialization of 'fn<int>' must be imported}}
+    cls<void>::nested_fn(); // expected-error 1+{{explicit specialization of 'nested_fn' must be imported}}
+    cls<void>::nested_fn_t<int>(); // expected-error 1+{{explicit specialization of 'nested_fn_t' must be imported}}
+    cls<void>::nested_fn_t<char>(); // expected-error 1+{{explicit specialization of 'nested_fn_t' must be imported}}
+
+    // For classes, uses that would trigger instantiations of definitions are
+    // not allowed.
+    cls<void> *k0; // ok
+    cls<char> *k1; // ok
+    cls<int> *k2; // ok
+    cls<int*> *k3; // ok
+    cls<void>::nested_cls *nk1; // ok
+    cls<void>::nested_cls_t<int> *nk2; // ok
+    cls<void>::nested_cls_t<char> *nk3; // ok
+    cls<int> uk1; // expected-error 1+{{explicit specialization of 'cls<int>' must be imported}} expected-error 1+{{definition of}}
+    cls<int*> uk3; // expected-error 1+{{partial specialization of 'cls<type-parameter-0-0 *>' must be imported}} expected-error 1+{{definition of}}
+    cls<char*> uk4; // expected-error 1+{{partial specialization of 'cls<type-parameter-0-0 *>' must be imported}} expected-error 1+{{definition of}}
+    cls<void>::nested_cls unk1; // expected-error 1+{{explicit specialization of 'nested_cls' must be imported}} expected-error 1+{{definition of}}
+    cls<void>::nested_cls_t<int> unk2; // expected-error 1+{{explicit specialization of 'nested_cls_t' must be imported}} expected-error 1+{{definition of}}
+    cls<void>::nested_cls_t<char> unk3; // expected-error 1+{{explicit specialization of 'nested_cls_t' must be imported}}
+
+    // For enums, uses that would trigger instantiations of definitions are not
+    // allowed.
+    cls<void>::nested_enum e; // ok
+    (void)cls<void>::nested_enum::e; // expected-error 1+{{definition of 'nested_enum' must be imported}} expected-error 1+{{declaration of 'e'}}
+
+    // For variable template specializations, no uses are allowed because
+    // specializations can change the type.
+    (void)sizeof(var<void>); // ok
+    (void)sizeof(var<char>); // ok
+    (void)sizeof(var<int>); // expected-error 1+{{explicit specialization of 'var<int>' must be imported}}
+    (void)sizeof(var<int*>); // expected-error 1+{{partial specialization of 'var<type-parameter-0-0 *>' must be imported}}
+    (void)sizeof(var<char*>); // expected-error 1+{{partial specialization of 'var<type-parameter-0-0 *>' must be imported}}
+    (void)sizeof(cls<void>::nested_var); // ok
+    (void)cls<void>::nested_var; // expected-error 1+{{explicit specialization of 'nested_var' must be imported}}
+    (void)sizeof(cls<void>::nested_var_t<int>); // expected-error 1+{{explicit specialization of 'nested_var_t' must be imported}}
+    (void)sizeof(cls<void>::nested_var_t<char>); // expected-error 1+{{explicit specialization of 'nested_var_t' must be imported}}
+  }
+
+  void cls<int>::nested_fn() {} // expected-error 1+{{explicit specialization of 'cls<int>' must be imported}} expected-error 1+{{definition of}}
+  struct cls<int>::nested_cls {}; // expected-error 1+{{explicit specialization of 'cls<int>' must be imported}} expected-error 1+{{definition of}}
+  int cls<int>::nested_var; // expected-error 1+{{explicit specialization of 'cls<int>' must be imported}} expected-error 1+{{definition of}}
+  enum cls<int>::nested_enum : int {}; // expected-error 1+{{explicit specialization of 'cls<int>' must be imported}} expected-error 1+{{definition of}}
+
+  template<typename T> void cls<T*>::nested_fn() {} // expected-error 1+{{partial specialization of 'cls<type-parameter-0-0 *>' must be imported}}
+  template<typename T> struct cls<T*>::nested_cls {}; // expected-error 1+{{partial specialization of 'cls<type-parameter-0-0 *>' must be imported}}
+  template<typename T> int cls<T*>::nested_var; // expected-error 1+{{partial specialization of 'cls<type-parameter-0-0 *>' must be imported}}
+  template<typename T> enum cls<T*>::nested_enum : int {}; // expected-error 1+{{partial specialization of 'cls<type-parameter-0-0 *>' must be imported}}
 }
 
 namespace Std {

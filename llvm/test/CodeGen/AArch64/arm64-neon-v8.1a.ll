@@ -1,6 +1,6 @@
-; RUN: llc < %s -verify-machineinstrs -march=arm64 -aarch64-neon-syntax=generic | FileCheck %s --check-prefix=CHECK-V8a
-; RUN: llc < %s -verify-machineinstrs -march=arm64 -mattr=+v8.1a -aarch64-neon-syntax=generic | FileCheck %s --check-prefix=CHECK-V81a
-; RUN: llc < %s -verify-machineinstrs -march=arm64 -mattr=+v8.1a -aarch64-neon-syntax=apple | FileCheck %s --check-prefix=CHECK-V81a-apple
+; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -aarch64-neon-syntax=generic | FileCheck %s --check-prefix=CHECK-V8a
+; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -mattr=+v8.1a -aarch64-neon-syntax=generic | FileCheck %s --check-prefix=CHECK-V81a
+; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi -mattr=+v8.1a -aarch64-neon-syntax=apple | FileCheck %s --check-prefix=CHECK-V81a-apple
 
 declare <4 x i16> @llvm.aarch64.neon.sqrdmulh.v4i16(<4 x i16>, <4 x i16>)
 declare <8 x i16> @llvm.aarch64.neon.sqrdmulh.v8i16(<8 x i16>, <8 x i16>)

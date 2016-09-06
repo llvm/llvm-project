@@ -122,5 +122,10 @@ struct test22 {
 };
 
 typedef int test23_ty __attribute((deprecated));
+// Redefining a typedef is a C11 feature.
+#if __STDC_VERSION__ <= 199901L
+// expected-note@-3 {{'test23_ty' has been explicitly marked deprecated here}}
+#else
 typedef int test23_ty; // expected-note {{'test23_ty' has been explicitly marked deprecated here}}
+#endif
 test23_ty test23_v; // expected-warning {{'test23_ty' is deprecated}}

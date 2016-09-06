@@ -4,9 +4,9 @@
 // RUN:   | FileCheck %s -check-prefix=WEBASSEMBLY64
 
 __SIZE_TYPE__ f1(void) {
-  return __builtin_wasm_memory_size();
-// WEBASSEMBLY32: call {{i.*}} @llvm.wasm.memory.size.i32()
-// WEBASSEMBLY64: call {{i.*}} @llvm.wasm.memory.size.i64()
+  return __builtin_wasm_current_memory();
+// WEBASSEMBLY32: call {{i.*}} @llvm.wasm.current.memory.i32()
+// WEBASSEMBLY64: call {{i.*}} @llvm.wasm.current.memory.i64()
 }
 
 void f2(long delta) {

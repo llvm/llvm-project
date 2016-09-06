@@ -1,5 +1,6 @@
 ; RUN: llc -O0 -fast-isel -fast-isel-abort=1 -mtriple=x86_64-unknown-unknown -mattr=+sse2 < %s | FileCheck %s --check-prefix=SSE --check-prefix=ALL
 ; RUN: llc -O0 -fast-isel -fast-isel-abort=1 -mtriple=x86_64-unknown-unknown -mattr=+avx < %s | FileCheck %s --check-prefix=AVX --check-prefix=ALL
+; RUN: llc -O0 -fast-isel -fast-isel-abort=1 -mtriple=x86_64-unknown-unknown -mattr=+avx512f < %s | FileCheck %s --check-prefix=KNL
 
 ; Verify that fast-isel knows how to select aligned/unaligned vector loads.
 ; Also verify that the selected load instruction is in the correct domain.
@@ -182,4 +183,24 @@ define <2 x double> @test_v2f64_abi_alignment(<2 x double>* %V) {
 entry:
   %0 = load <2 x double>, <2 x double>* %V
   ret <2 x double> %0
+}
+
+define <8 x i64> @test_v8i64_alignment(<8 x i64>* %V) {
+; KNL-LABEL: test_v8i64_alignment:
+; KNL:       # BB#0: # %entry
+; KNL-NEXT:    vmovdqa64 (%rdi), %zmm0
+; KNL-NEXT:    retq
+entry:
+  %0 = load <8 x i64>, <8 x i64>* %V, align 64
+  ret <8 x i64> %0
+}
+
+define <8 x i64> @test_v8i64(<8 x i64>* %V) {
+; KNL-LABEL: test_v8i64:
+; KNL:       # BB#0: # %entry
+; KNL-NEXT:    vmovdqu64 (%rdi), %zmm0
+; KNL-NEXT:    retq
+entry:
+  %0 = load <8 x i64>, <8 x i64>* %V, align 4
+  ret <8 x i64> %0
 }

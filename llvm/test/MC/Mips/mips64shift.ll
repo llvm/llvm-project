@@ -1,8 +1,8 @@
 ; RUN: llc -march=mips64el -filetype=obj -mcpu=mips64r2 -disable-mips-delay-filler %s -o - \
-; RUN: | llvm-objdump -disassemble -triple mips64el - | FileCheck %s 
+; RUN:   | llvm-objdump -disassemble - | FileCheck %s
 
 ; RUN: llc -march=mips64el -filetype=obj -mcpu=mips64r2 %s -o - \
-; RUN: | llvm-objdump -disassemble -triple mips64el - | FileCheck %s 
+; RUN:   | llvm-objdump -disassemble - | FileCheck %s
 
 define i64 @f3(i64 %a0) nounwind readnone {
 entry:

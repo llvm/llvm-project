@@ -11,6 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+def : PredicateProlog<[{
+  const SIInstrInfo *TII =
+    static_cast<const SIInstrInfo*>(SchedModel->getInstrInfo());
+  (void)TII;
+}]>;
+
 def WriteBranch : SchedWrite;
 def WriteExport : SchedWrite;
 def WriteLDS    : SchedWrite;
@@ -39,20 +45,33 @@ def Write64Bit : SchedWrite;
 // instructions and have VALU rates, but write to the SALU (i.e. VOPC
 // instructions)
 
-def SIFullSpeedModel : SchedMachineModel;
-def SIQuarterSpeedModel : SchedMachineModel;
+class SISchedMachineModel : SchedMachineModel {
+  let CompleteModel = 0;
+  let IssueWidth = 1;
+  let PostRAScheduler = 1;
+}
 
-// BufferSize = 0 means the processors are in-order.
-let BufferSize = 0 in {
+def SIFullSpeedModel : SISchedMachineModel;
+def SIQuarterSpeedModel : SISchedMachineModel;
 
 // XXX: Are the resource counts correct?
-def HWBranch : ProcResource<1>;
-def HWExport : ProcResource<7>;   // Taken from S_WAITCNT
-def HWLGKM   : ProcResource<31>;  // Taken from S_WAITCNT
-def HWSALU   : ProcResource<1>;
-def HWVMEM   : ProcResource<15>;  // Taken from S_WAITCNT
-def HWVALU   : ProcResource<1>;
-
+def HWBranch : ProcResource<1> {
+  let BufferSize = 1;
+}
+def HWExport : ProcResource<1> {
+  let BufferSize = 7; // Taken from S_WAITCNT
+}
+def HWLGKM   : ProcResource<1> {
+  let BufferSize = 31;  // Taken from S_WAITCNT
+}
+def HWSALU   : ProcResource<1> {
+  let BufferSize = 1;
+}
+def HWVMEM   : ProcResource<1> {
+  let BufferSize = 15;  // Taken from S_WAITCNT
+}
+def HWVALU   : ProcResource<1> {
+  let BufferSize = 1;
 }
 
 class HWWriteRes<SchedWrite write, list<ProcResourceKind> resources,
@@ -70,12 +89,12 @@ class HWVALUWriteRes<SchedWrite write, int latency> :
 // The latency values are 1 / (operations / cycle) / 4.
 multiclass SICommonWriteRes {
 
-  def : HWWriteRes<WriteBranch,  [HWBranch], 100>; // XXX: Guessed ???
-  def : HWWriteRes<WriteExport,  [HWExport], 100>; // XXX: Guessed ???
-  def : HWWriteRes<WriteLDS,     [HWLGKM],    32>; // 2 - 64
-  def : HWWriteRes<WriteSALU,    [HWSALU],     1>;
-  def : HWWriteRes<WriteSMEM,    [HWLGKM],    10>; // XXX: Guessed ???
-  def : HWWriteRes<WriteVMEM,    [HWVMEM],   450>; // 300 - 600
+  def : HWWriteRes<WriteBranch,  [HWBranch], 8>;
+  def : HWWriteRes<WriteExport,  [HWExport], 4>;
+  def : HWWriteRes<WriteLDS,     [HWLGKM],   5>; // Can be between 2 and 64
+  def : HWWriteRes<WriteSALU,    [HWSALU],   1>;
+  def : HWWriteRes<WriteSMEM,    [HWLGKM],   5>;
+  def : HWWriteRes<WriteVMEM,    [HWVMEM],   80>;
   def : HWWriteRes<WriteBarrier, [HWBranch], 500>; // XXX: Guessed ???
 
   def : HWVALUWriteRes<Write32Bit,         1>;
@@ -83,6 +102,12 @@ multiclass SICommonWriteRes {
   def : HWVALUWriteRes<WriteQuarterRate32, 4>;
 }
 
+def PredIsVGPR32Copy : SchedPredicate<[{TII->isVGPRCopy(*MI) && TII->getOpSize(*MI, 0) <= 32}]>;
+def PredIsVGPR64Copy : SchedPredicate<[{TII->isVGPRCopy(*MI) && TII->getOpSize(*MI, 0) > 32}]>;
+def WriteCopy : SchedWriteVariant<[
+    SchedVar<PredIsVGPR32Copy, [Write32Bit]>,
+    SchedVar<PredIsVGPR64Copy, [Write64Bit]>,
+    SchedVar<NoSchedPred, [WriteSALU]>]>;
 
 let SchedModel = SIFullSpeedModel in {
 
@@ -91,6 +116,8 @@ defm : SICommonWriteRes;
 def : HWVALUWriteRes<WriteFloatFMA,   1>;
 def : HWVALUWriteRes<WriteDouble,     4>;
 def : HWVALUWriteRes<WriteDoubleAdd,  2>;
+
+def : InstRW<[WriteCopy], (instrs COPY)>;
 
 } // End SchedModel = SIFullSpeedModel
 
@@ -101,5 +128,7 @@ defm : SICommonWriteRes;
 def : HWVALUWriteRes<WriteFloatFMA, 16>;
 def : HWVALUWriteRes<WriteDouble,   16>;
 def : HWVALUWriteRes<WriteDoubleAdd, 8>;
+
+def : InstRW<[WriteCopy], (instrs COPY)>;
 
 }  // End SchedModel = SIQuarterSpeedModel

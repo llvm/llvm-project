@@ -14,3 +14,8 @@ TEST1:
 # CHECK: .space 1
 TEST2:
         .skip 1
+
+# CHECK: TEST3
+# CHECK: .space TEST0-TEST1
+TEST3:
+        .space TEST0 - TEST1

@@ -1,7 +1,8 @@
-add_llvm_loadable_module(SampleAnalyzerPlugin MainCallChecker.cpp)
+set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/SampleAnalyzerPlugin.exports)
+add_llvm_loadable_module(SampleAnalyzerPlugin MainCallChecker.cpp PLUGIN_TOOL clang)
 
 if(LLVM_ENABLE_PLUGINS AND (WIN32 OR CYGWIN))
-  target_link_libraries(SampleAnalyzerPlugin ${cmake_2_8_12_PRIVATE}
+  target_link_libraries(SampleAnalyzerPlugin PRIVATE
     clangAnalysis
     clangAST
     clangStaticAnalyzerCore

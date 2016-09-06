@@ -73,16 +73,16 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!49}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang", isOptimized: true, emissionKind: 1, file: !47, enums: !48, retainedTypes: !48, subprograms: !40, globals: !41, imports:  !48)
-!1 = distinct !DISubprogram(name: "get1", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 5, file: !47, scope: !2, type: !3, variables: !42)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang", isOptimized: true, emissionKind: FullDebug, file: !47, enums: !48, retainedTypes: !48, globals: !41, imports:  !48)
+!1 = distinct !DISubprogram(name: "get1", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 5, file: !47, scope: !2, type: !3, variables: !42)
 !2 = !DIFile(filename: "ss3.c", directory: "/private/tmp")
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!6 = distinct !DISubprogram(name: "get2", line: 8, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 8, file: !47, scope: !2, type: !3, variables: !43)
-!7 = distinct !DISubprogram(name: "get3", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 11, file: !47, scope: !2, type: !3, variables: !44)
-!8 = distinct !DISubprogram(name: "get4", line: 14, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 14, file: !47, scope: !2, type: !3, variables: !45)
-!9 = distinct !DISubprogram(name: "get5", line: 17, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 17, file: !47, scope: !2, type: !3, variables: !46)
+!6 = distinct !DISubprogram(name: "get2", line: 8, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 8, file: !47, scope: !2, type: !3, variables: !43)
+!7 = distinct !DISubprogram(name: "get3", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 11, file: !47, scope: !2, type: !3, variables: !44)
+!8 = distinct !DISubprogram(name: "get4", line: 14, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 14, file: !47, scope: !2, type: !3, variables: !45)
+!9 = distinct !DISubprogram(name: "get5", line: 17, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 17, file: !47, scope: !2, type: !3, variables: !46)
 !10 = !DILocalVariable(name: "a", line: 5, arg: 1, scope: !1, file: !2, type: !5)
 !11 = !DILocalVariable(name: "b", line: 5, scope: !12, file: !2, type: !5)
 !12 = distinct !DILexicalBlock(line: 5, column: 19, file: !47, scope: !1)
@@ -110,7 +110,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !37 = !DILocation(line: 14, column: 32, scope: !21)
 !38 = !DILocation(line: 17, column: 16, scope: !9)
 !39 = !DILocation(line: 17, column: 32, scope: !29)
-!40 = !{!1, !6, !7, !8, !9}
 !41 = !{!25, !26}
 !42 = !{!10, !11}
 !43 = !{!13, !14}

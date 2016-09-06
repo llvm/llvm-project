@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; On Southern Islands GPUs the local address space(3) uses 32-bit pointers and
@@ -91,12 +91,12 @@ define void @infer_ptr_alignment_global_offset(float addrspace(1)* %out, i32 %ti
 
 
 @ptr = addrspace(3) global i32 addrspace(3)* undef
-@dst = addrspace(3) global [16384 x i32] undef
+@dst = addrspace(3) global [16383 x i32] undef
 
 ; FUNC-LABEL: {{^}}global_ptr:
 ; SI: ds_write_b32
 define void @global_ptr() nounwind {
-  store i32 addrspace(3)* getelementptr ([16384 x i32], [16384 x i32] addrspace(3)* @dst, i32 0, i32 16), i32 addrspace(3)* addrspace(3)* @ptr
+  store i32 addrspace(3)* getelementptr ([16383 x i32], [16383 x i32] addrspace(3)* @dst, i32 0, i32 16), i32 addrspace(3)* addrspace(3)* @ptr
   ret void
 }
 

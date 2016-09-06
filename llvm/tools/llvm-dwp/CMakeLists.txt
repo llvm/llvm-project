@@ -10,4 +10,5 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_tool(llvm-dwp
   llvm-dwp.cpp
+  DWPError.cpp
   )

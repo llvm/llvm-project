@@ -6,7 +6,7 @@
 //
 // CHECK-NO-PIC: "-mrelocation-model" "static"
 // CHECK-NO-PIC-NOT: "-pic-level"
-// CHECK-NO-PIC-NOT: "-pie-level"
+// CHECK-NO-PIC-NOT: "-pic-is-pie"
 //
 // CHECK-DYNAMIC-NO-PIC2: unsupported option '-mdynamic-no-pic'
 // CHECK-DYNAMIC-NO-PIC2: "-mrelocation-model" "dynamic-no-pic"
@@ -15,7 +15,7 @@
 // CHECK-PIC2: "-pic-level" "2"
 //
 // CHECK-PIE2: "-mrelocation-model" "pic"
-// CHECK-PIE2: "-pie-level" "2"
+// CHECK-PIE2: "-pic-is-pie"
 //
 // CHECK-NOPIC-IGNORED: using '-fPIC'
 // CHECK-NOPIC-IGNORED: "-mrelocation-model" "pic"

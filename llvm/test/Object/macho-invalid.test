@@ -5,45 +5,70 @@ RUN: llvm-objdump -private-headers %p/Inputs/macho-invalid-zero-ncmds -macho \
 RUN:      | FileCheck -check-prefix ZERO-NCMDS %s
 ZERO-NCMDS: MH_MAGIC_64 0 0 0x00 OBJECT 0 0 0x00000000
 
-RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-incomplete-load-command 2>&1 \
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-incomplete-load-command 2>&1 \
 RUN:      | FileCheck -check-prefix INCOMPLETE-LOADC %s
-INCOMPLETE-LOADC: Invalid data was encountered while parsing the file.
+INCOMPLETE-LOADC: truncated or malformed object (load command 0 extends past the end all load commands in the file)
 
-RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-too-small-load-command 2>&1 \
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-incomplete-load-command.1 2>&1 \
+RUN:      | FileCheck -check-prefix INCOMPLETE-LOADC-1 %s
+INCOMPLETE-LOADC-1: truncated or malformed object (load command 1 extends past the end all load commands in the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-too-small-load-command 2>&1 \
 RUN:      | FileCheck -check-prefix SMALL-LOADC-SIZE %s
-RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-too-small-load-command 2>&1 \
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-too-small-load-command 2>&1 \
 RUN:      | FileCheck -check-prefix SMALL-LOADC-SIZE %s
-SMALL-LOADC-SIZE: Mach-O load command with size < 8 bytes
+SMALL-LOADC-SIZE: truncated or malformed object (load commands extend past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-too-small-load-command.1 2>&1 \
+RUN:      | FileCheck -check-prefix SMALL-LOADC-SIZE-1 %s
+SMALL-LOADC-SIZE-1: truncated or malformed object (load command 1 with size less than 8 bytes)
 
 RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-too-small-segment-load-command 2>&1 \
+RUN:      | FileCheck -check-prefix MULTIPLE-NOT-4 %s
+MULTIPLE-NOT-4: truncated or malformed object (load command 0 cmdsize not a multiple of 4)
+
+RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-too-small-segment-load-command.1 2>&1 \
 RUN:      | FileCheck -check-prefix SMALL-SEGLOADC-SIZE %s
+SMALL-SEGLOADC-SIZE: truncated or malformed object (load command 0 LC_SEGMENT cmdsize too small)
+
 RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-too-small-segment-load-command 2>&1 \
-RUN:      | FileCheck -check-prefix SMALL-SEGLOADC-SIZE %s
-SMALL-SEGLOADC-SIZE: Mach-O segment load command size is too small
+RUN:      | FileCheck -check-prefix MULTIPLE-NOT-8 %s
+MULTIPLE-NOT-8: truncated or malformed object (load command 0 cmdsize not a multiple of 8)
 
 RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-no-size-for-sections 2>&1 \
 RUN:      | FileCheck -check-prefix TOO-MANY-SECTS %s
+TOO-MANY-SECTS: truncated or malformed object (load command 0 inconsistent cmdsize in LC_SEGMENT for the number of sections)
 RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-no-size-for-sections 2>&1 \
-RUN:      | FileCheck -check-prefix TOO-MANY-SECTS %s
-TOO-MANY-SECTS: Mach-O segment load command contains too many sections
+RUN:      | FileCheck -check-prefix TOO-MANY-SECTS-64 %s
+TOO-MANY-SECTS-64: truncated or malformed object (load command 0 inconsistent cmdsize in LC_SEGMENT_64 for the number of sections)
 
-RUN: not llvm-objdump -t %p/Inputs/macho-invalid-bad-symbol-index 2>&1 \
+RUN: not llvm-objdump -macho -t %p/Inputs/macho-invalid-bad-symbol-index 2>&1 \
 RUN:      | FileCheck -check-prefix BAD-SYMBOL %s
-BAD-SYMBOL: Invalid data was encountered while parsing the file.
-RUN: llvm-objdump -t %p/Inputs/macho-valid-0-nsyms 2>&1 \
+BAD-SYMBOL: truncated or malformed object (ilocalsym plus nlocalsym in LC_DYSYMTAB load command extends past the end of the symbol table)
+RUN: llvm-objdump -macho -t %p/Inputs/macho-valid-0-nsyms 2>&1 \
 RUN:      | FileCheck -check-prefix ZERO-NSYMS %s
 ZERO-NSYMS: SYMBOL TABLE
-ZERO-NSYMS-NOT: Requested symbol index is out of range
 
 RUN: not llvm-objdump -t %p/Inputs/macho-invalid-symbol-name-past-eof 2>&1 \
 RUN:      | FileCheck -check-prefix NAME-PAST-EOF %s
-NAME-PAST-EOF: error reading file: Invalid data was encountered while parsing the file.
+NAME-PAST-EOF: truncated or malformed object (bad string index: 4261412866 for symbol at index 0)
 RUN: llvm-nm -pa %p/Inputs/macho-invalid-symbol-name-past-eof 2>&1 \
 RUN:      | FileCheck -check-prefix NAME-PAST-EOF-nm-pa %s
 NAME-PAST-EOF-nm-pa: 0000000000000000 - 00 0000    SO bad string index
 RUN: llvm-nm -pax %p/Inputs/macho-invalid-symbol-name-past-eof 2>&1 \
 RUN:      | FileCheck -check-prefix NAME-PAST-EOF-nm-pax %s
 NAME-PAST-EOF-nm-pax: 0000000000000000 64 00 0000 fe000002 bad string index
+
+RUN: not llvm-objdump -t %p/Inputs/macho-bad-archive1.a 2>&1 \
+RUN:      | FileCheck -check-prefix NAME-PAST-EOF-ARCHIVE %s
+NAME-PAST-EOF-ARCHIVE: macho-bad-archive1.a(macho-invalid-symbol-name-past-eof) truncated or malformed object (bad string index: 4261412866 for symbol at index 0)
+
+RUN: not llvm-objdump -macho -arch all -t %p/Inputs/macho-universal-bad1.x86_64.i386 2>&1 \
+RUN:      | FileCheck -check-prefix NAME-PAST-EOF-FAT %s
+NAME-PAST-EOF-FAT: macho-universal-bad1.x86_64.i386 (for architecture x86_64)  truncated or malformed object (bad string index: 4261412866 for symbol at index 0)
+RUN: not llvm-objdump -macho -arch all -t %p/Inputs/macho-universal-archive-bad1.x86_64.i386 2>&1 \
+RUN:      | FileCheck -check-prefix NAME-PAST-EOF-FAT-ARCHIVE %s
+NAME-PAST-EOF-FAT-ARCHIVE: macho-universal-archive-bad1.x86_64.i386(macho-invalid-symbol-name-past-eof) (for architecture x86_64)  truncated or malformed object (bad string index: 4261412866 for symbol at index 0)
 
 RUN: llvm-nm %p/Inputs/macho-invalid-section-index-getSectionRawName 2>&1 \
 RUN:      | FileCheck -check-prefix INVALID-SECTION-IDX-SYMBOL-SEC %s
@@ -54,10 +79,66 @@ INVALID-SECTION-IDX-SYMBOL-SEC-m: 0000000100000000 (?,?) [referenced dynamically
 RUN: llvm-nm -pax %p/Inputs/macho-invalid-section-index-getSectionRawName 2>&1 \
 RUN:      | FileCheck -check-prefix INVALID-SECTION-IDX-SYMBOL-SEC-pax %s
 INVALID-SECTION-IDX-SYMBOL-SEC-pax: 0000000100000000 0f 42 0010 00000065 __mh_execute_header
+RUN: not llvm-objdump -t %p/Inputs/macho-invalid-section-index-getSectionRawName 2>&1 \
+RUN:      | FileCheck -check-prefix INVALID-SECTION-IDX-SYMBOL-SEC-objdump %s
+INVALID-SECTION-IDX-SYMBOL-SEC-objdump: truncated or malformed object (bad section index: 66 for symbol at index 8)
 
-RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-header 2>&1 | FileCheck -check-prefix INVALID-HEADER %s
-INVALID-HEADER: The file was not recognized as a valid object file.
-NOT-INVALID-HEADER: Invalid data was encountered while parsing the file.
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-header 2>&1 | FileCheck -check-prefix INVALID-HEADER %s
+INVALID-HEADER: The file was not recognized as a valid object file
 
-RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-incomplete-segment-load-command 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC %s
-INCOMPLETE-SEGMENT-LOADC: Invalid data was encountered while parsing the file
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho64-invalid-incomplete-segment-load-command 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC %s
+INCOMPLETE-SEGMENT-LOADC: truncated or malformed object (load commands extend past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-bad-archive2.a 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC-ARCHIVE %s
+INCOMPLETE-SEGMENT-LOADC-ARCHIVE: macho-bad-archive2.a(macho64-invalid-incomplete-segment-load-command) truncated or malformed object (load commands extend past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers -arch all %p/Inputs/macho-universal-bad2.x86_64.i386 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC-FAT %s
+INCOMPLETE-SEGMENT-LOADC-FAT: macho-universal-bad2.x86_64.i386 (for architecture x86_64) truncated or malformed object (load commands extend past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers -arch all %p/Inputs/macho-universal-archive-bad2.x86_64.i386 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC-FAT-ARCHIVE %s
+INCOMPLETE-SEGMENT-LOADC-FAT-ARCHIVE: macho-universal-archive-bad2.x86_64.i386(macho64-invalid-incomplete-segment-load-command) (for architecture x86_64) truncated or malformed object (load commands extend past the end of the file)
+
+RUN: not llvm-objdump -macho -universal-headers %p/Inputs/macho-invalid-fat 2>&1 | FileCheck -check-prefix INVALID-FAT %s
+INVALID-FAT: truncated or malformed fat file (fat_arch_64 structs would extend past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers -arch all %p/Inputs/macho-invalid-fat.obj.elf-x86_64 2>&1 | FileCheck -check-prefix INVALID-FAT-ELF %s
+INVALID-FAT-ELF: Mach-O universal file: {{.*}}/macho-invalid-fat.obj.elf-x86_64 for architecture x86_64 is not a Mach-O file or an archive file
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-segment-fileoff 2>&1 | FileCheck -check-prefix INVALID-SEGMENT-FILEOFF %s
+INVALID-SEGMENT-FILEOFF: macho-invalid-segment-fileoff': truncated or malformed object (load command 0 fileoff field in LC_SEGMENT extends past the end of the file)
+
+RUN: not llvm-nm %p/Inputs/macho-invalid-segment-fileoff 2>&1 | FileCheck -check-prefix INVALID-SEGMENT-FILEOFF-NM %s
+INVALID-SEGMENT-FILEOFF-NM: macho-invalid-segment-fileoff truncated or malformed object (load command 0 fileoff field in LC_SEGMENT extends past the end of the file)
+
+RUN: not llvm-size %p/Inputs/macho-invalid-segment-fileoff 2>&1 | FileCheck -check-prefix INVALID-SEGMENT-FILEOFF-SIZE %s
+INVALID-SEGMENT-FILEOFF-SIZE: macho-invalid-segment-fileoff truncated or malformed object (load command 0 fileoff field in LC_SEGMENT extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-segment-filesize 2>&1 | FileCheck -check-prefix INVALID-SEGMENT-FILESIZE %s
+INVALID-SEGMENT-FILESIZE: macho-invalid-segment-filesize': truncated or malformed object (load command 0 fileoff field plus filesize field in LC_SEGMENT extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-segment-vmsize 2>&1 | FileCheck -check-prefix INVALID-SEGMENT-VMSIZE %s
+INVALID-SEGMENT-VMSIZE: macho-invalid-segment-vmsize': truncated or malformed object (load command 0 fileoff field in LC_SEGMENT greater than vmsize field)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-offset 2>&1 | FileCheck -check-prefix INVALID-SECTION-FILEOFF %s
+INVALID-SECTION-FILEOFF: macho-invalid-section-offset': truncated or malformed object (offset field of section 0 in LC_SEGMENT command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-offset-in-headers 2>&1 | FileCheck -check-prefix INVALID-SECTION-FILEOFF-IN-HEADERS %s
+INVALID-SECTION-FILEOFF-IN-HEADERS: macho-invalid-section-offset-in-headers': truncated or malformed object (offset field of section 0 in LC_SEGMENT command 0 not past the headers of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-offset-size 2>&1 | FileCheck -check-prefix INVALID-SECTION-FILEOFF-SIZE %s
+INVALID-SECTION-FILEOFF-SIZE: macho-invalid-section-offset-size': truncated or malformed object (offset field plus size field of section 0 in LC_SEGMENT command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-size-filesize 2>&1 | FileCheck -check-prefix INVALID-SECTION-SIZE-FILESIZE %s
+INVALID-SECTION-SIZE-FILESIZE: macho-invalid-section-size-filesize': truncated or malformed object (size field of section 0 in LC_SEGMENT command 0 greater than the segment)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-addr 2>&1 | FileCheck -check-prefix INVALID-SECTION-ADDR %s
+INVALID-SECTION-ADDR: macho-invalid-section-addr': truncated or malformed object (addr field of section 0 in LC_SEGMENT command 0 less than the segment's vmaddr)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-addr-size 2>&1 | FileCheck -check-prefix INVALID-SECTION-ADDR-SIZE %s
+INVALID-SECTION-ADDR-SIZE: macho-invalid-section-addr-size': truncated or malformed object (addr field plus size of section 0 in LC_SEGMENT command 0 greater than than the segment's vmaddr plus vmsize)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-reloff 2>&1 | FileCheck -check-prefix INVALID-SECTION-RELOFF %s
+INVALID-SECTION-RELOFF: macho-invalid-section-reloff': truncated or malformed object (reloff field of section 0 in LC_SEGMENT command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-section-reloff-nrelocs 2>&1 | FileCheck -check-prefix INVALID-SECTION-RELOFF-NRELOCS %s
+INVALID-SECTION-RELOFF-NRELOCS: macho-invalid-section-reloff-nrelocs': truncated or malformed object (reloff field plus nreloc field times sizeof(struct relocation_info) of section 0 in LC_SEGMENT command 0 extends past the end of the file)

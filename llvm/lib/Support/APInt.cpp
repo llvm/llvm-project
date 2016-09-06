@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
@@ -74,7 +75,7 @@ inline static unsigned getDigit(char cdigit, uint8_t radix) {
 }
 
 
-void APInt::initSlowCase(unsigned numBits, uint64_t val, bool isSigned) {
+void APInt::initSlowCase(uint64_t val, bool isSigned) {
   pVal = getClearedMemory(getNumWords());
   pVal[0] = val;
   if (isSigned && int64_t(val) < 0)
@@ -259,6 +260,14 @@ APInt& APInt::operator+=(const APInt& RHS) {
   return clearUnusedBits();
 }
 
+APInt& APInt::operator+=(uint64_t RHS) {
+  if (isSingleWord())
+    VAL += RHS;
+  else
+    add_1(pVal, pVal, getNumWords(), RHS);
+  return clearUnusedBits();
+}
+
 /// Subtracts the integer array y from the integer array x
 /// @returns returns the borrow out.
 /// @brief Generalized subtraction of 64-bit integer arrays.
@@ -282,6 +291,14 @@ APInt& APInt::operator-=(const APInt& RHS) {
     VAL -= RHS.VAL;
   else
     sub(pVal, pVal, RHS.pVal, getNumWords());
+  return clearUnusedBits();
+}
+
+APInt& APInt::operator-=(uint64_t RHS) {
+  if (isSingleWord())
+    VAL -= RHS;
+  else
+    sub_1(pVal, getNumWords(), RHS);
   return clearUnusedBits();
 }
 
@@ -469,31 +486,8 @@ APInt APInt::operator*(const APInt& RHS) const {
   return Result;
 }
 
-APInt APInt::operator+(const APInt& RHS) const {
-  assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord())
-    return APInt(BitWidth, VAL + RHS.VAL);
-  APInt Result(BitWidth, 0);
-  add(Result.pVal, this->pVal, RHS.pVal, getNumWords());
-  Result.clearUnusedBits();
-  return Result;
-}
-
-APInt APInt::operator-(const APInt& RHS) const {
-  assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord())
-    return APInt(BitWidth, VAL - RHS.VAL);
-  APInt Result(BitWidth, 0);
-  sub(Result.pVal, this->pVal, RHS.pVal, getNumWords());
-  Result.clearUnusedBits();
-  return Result;
-}
-
 bool APInt::EqualSlowCase(const APInt& RHS) const {
-  for (unsigned I = 0, NumWords = getNumWords(); I < NumWords; ++I)
-    if (pVal[I] != RHS.pVal[I])
-      return false;
-  return true;
+  return std::equal(pVal, pVal + getNumWords(), RHS.pVal);
 }
 
 bool APInt::EqualSlowCase(uint64_t Val) const {
@@ -539,37 +533,21 @@ bool APInt::ult(const APInt& RHS) const {
 bool APInt::slt(const APInt& RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be same for comparison");
   if (isSingleWord()) {
-    int64_t lhsSext = (int64_t(VAL) << (64-BitWidth)) >> (64-BitWidth);
-    int64_t rhsSext = (int64_t(RHS.VAL) << (64-BitWidth)) >> (64-BitWidth);
+    int64_t lhsSext = SignExtend64(VAL, BitWidth);
+    int64_t rhsSext = SignExtend64(RHS.VAL, BitWidth);
     return lhsSext < rhsSext;
   }
 
-  APInt lhs(*this);
-  APInt rhs(RHS);
   bool lhsNeg = isNegative();
-  bool rhsNeg = rhs.isNegative();
-  if (lhsNeg) {
-    // Sign bit is set so perform two's complement to make it positive
-    lhs.flipAllBits();
-    ++lhs;
-  }
-  if (rhsNeg) {
-    // Sign bit is set so perform two's complement to make it positive
-    rhs.flipAllBits();
-    ++rhs;
-  }
+  bool rhsNeg = RHS.isNegative();
 
-  // Now we have unsigned values to compare so do the comparison if necessary
-  // based on the negativeness of the values.
-  if (lhsNeg)
-    if (rhsNeg)
-      return lhs.ugt(rhs);
-    else
-      return true;
-  else if (rhsNeg)
-    return false;
-  else
-    return lhs.ult(rhs);
+  // If the sign bits don't match, then (LHS < RHS) if LHS is negative
+  if (lhsNeg != rhsNeg)
+    return lhsNeg;
+
+  // Otherwise we can just use an unsigned comparision, because even negative
+  // numbers compare correctly this way if both have the same signed-ness.
+  return ult(RHS);
 }
 
 void APInt::setBit(unsigned bitPosition) {
@@ -679,30 +657,19 @@ APInt APInt::getLoBits(unsigned numBits) const {
 }
 
 unsigned APInt::countLeadingZerosSlowCase() const {
-  // Treat the most significand word differently because it might have
-  // meaningless bits set beyond the precision.
-  unsigned BitsInMSW = BitWidth % APINT_BITS_PER_WORD;
-  integerPart MSWMask;
-  if (BitsInMSW) MSWMask = (integerPart(1) << BitsInMSW) - 1;
-  else {
-    MSWMask = ~integerPart(0);
-    BitsInMSW = APINT_BITS_PER_WORD;
-  }
-
-  unsigned i = getNumWords();
-  integerPart MSW = pVal[i-1] & MSWMask;
-  if (MSW)
-    return llvm::countLeadingZeros(MSW) - (APINT_BITS_PER_WORD - BitsInMSW);
-
-  unsigned Count = BitsInMSW;
-  for (--i; i > 0u; --i) {
-    if (pVal[i-1] == 0)
+  unsigned Count = 0;
+  for (int i = getNumWords()-1; i >= 0; --i) {
+    integerPart V = pVal[i];
+    if (V == 0)
       Count += APINT_BITS_PER_WORD;
     else {
-      Count += llvm::countLeadingZeros(pVal[i-1]);
+      Count += llvm::countLeadingZeros(V);
       break;
     }
   }
+  // Adjust for unused bits in the most significant word (they are zero).
+  unsigned Mod = BitWidth % APINT_BITS_PER_WORD;
+  Count -= Mod > 0 ? APINT_BITS_PER_WORD - Mod : 0;
   return Count;
 }
 
@@ -801,6 +768,36 @@ APInt APInt::byteSwap() const {
   return Result;
 }
 
+APInt APInt::reverseBits() const {
+  switch (BitWidth) {
+  case 64:
+    return APInt(BitWidth, llvm::reverseBits<uint64_t>(VAL));
+  case 32:
+    return APInt(BitWidth, llvm::reverseBits<uint32_t>(VAL));
+  case 16:
+    return APInt(BitWidth, llvm::reverseBits<uint16_t>(VAL));
+  case 8:
+    return APInt(BitWidth, llvm::reverseBits<uint8_t>(VAL));
+  default:
+    break;
+  }
+
+  APInt Val(*this);
+  APInt Reversed(*this);
+  int S = BitWidth - 1;
+
+  const APInt One(BitWidth, 1);
+
+  for ((Val = Val.lshr(1)); Val != 0; (Val = Val.lshr(1))) {
+    Reversed <<= 1;
+    Reversed |= (Val & One);
+    --S;
+  }
+
+  Reversed <<= S;
+  return Reversed;
+}
+
 APInt llvm::APIntOps::GreatestCommonDivisor(const APInt& API1,
                                             const APInt& API2) {
   APInt A = API1, B = API2;
@@ -861,7 +858,7 @@ double APInt::roundToDouble(bool isSigned) const {
   // It is wrong to optimize getWord(0) to VAL; there might be more than one word.
   if (isSingleWord() || getActiveBits() <= APINT_BITS_PER_WORD) {
     if (isSigned) {
-      int64_t sext = (int64_t(getWord(0)) << (64-BitWidth)) >> (64-BitWidth);
+      int64_t sext = SignExtend64(getWord(0), BitWidth);
       return double(sext);
     } else
       return double(getWord(0));
@@ -1045,11 +1042,7 @@ APInt APInt::ashr(unsigned shiftAmt) const {
   if (isSingleWord()) {
     if (shiftAmt == BitWidth)
       return APInt(BitWidth, 0); // undefined
-    else {
-      unsigned SignBit = APINT_BITS_PER_WORD - BitWidth;
-      return APInt(BitWidth,
-        (((int64_t(VAL) << SignBit) >> SignBit) >> shiftAmt));
-    }
+    return APInt(BitWidth, SignExtend64(VAL, BitWidth) >> shiftAmt);
   }
 
   // If all the bits were shifted out, the result is, technically, undefined.
@@ -1645,10 +1638,8 @@ static void KnuthDiv(unsigned *u, unsigned *v, unsigned *q, unsigned* r,
   DEBUG(dbgs() << '\n');
 }
 
-void APInt::divide(const APInt LHS, unsigned lhsWords,
-                   const APInt &RHS, unsigned rhsWords,
-                   APInt *Quotient, APInt *Remainder)
-{
+void APInt::divide(const APInt &LHS, unsigned lhsWords, const APInt &RHS,
+                   unsigned rhsWords, APInt *Quotient, APInt *Remainder) {
   assert(lhsWords >= rhsWords && "Fractional result");
 
   // First, compose the values into an array of 32-bit words instead of
@@ -2255,7 +2246,7 @@ std::string APInt::toString(unsigned Radix = 10, bool Signed = true) const {
 }
 
 
-void APInt::dump() const {
+LLVM_DUMP_METHOD void APInt::dump() const {
   SmallString<40> S, U;
   this->toStringUnsigned(U);
   this->toStringSigned(S);
@@ -2712,8 +2703,10 @@ APInt::tcDivide(integerPart *lhs, const integerPart *rhs,
         break;
       shiftCount--;
       tcShiftRight(srhs, parts, 1);
-      if ((mask >>= 1) == 0)
-        mask = (integerPart) 1 << (integerPartWidth - 1), n--;
+      if ((mask >>= 1) == 0) {
+        mask = (integerPart) 1 << (integerPartWidth - 1);
+        n--;
+      }
   }
 
   return false;

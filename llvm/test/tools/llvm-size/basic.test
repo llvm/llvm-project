@@ -1,2 +1,2 @@
-RUN: llvm-size %t.blah 2>&1 | FileCheck --check-prefix=ENOENT %s
-ENOENT: {{.*}}llvm-size{{(\.EXE|\.exe)?}}: {{.*}}.blah: {{[Nn]}}o such file or directory
+RUN: not llvm-size %t.blah 2>&1 | FileCheck --check-prefix=ENOENT %s
+ENOENT: {{.*}}llvm-size{{(\.EXE|\.exe)?}}: {{.*}}basic.test.tmp.blah {{[Nn]}}o such file or directory

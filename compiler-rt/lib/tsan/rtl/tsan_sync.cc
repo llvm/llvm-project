@@ -36,7 +36,7 @@ void SyncVar::Init(ThreadState *thr, uptr pc, uptr addr, u64 uid) {
     DDMutexInit(thr, pc, this);
 }
 
-void SyncVar::Reset(ThreadState *thr) {
+void SyncVar::Reset(Processor *proc) {
   uid = 0;
   creation_stack_id = 0;
   owner_tid = kInvalidTid;
@@ -47,12 +47,12 @@ void SyncVar::Reset(ThreadState *thr) {
   is_broken = 0;
   is_linker_init = 0;
 
-  if (thr == 0) {
+  if (proc == 0) {
     CHECK_EQ(clock.size(), 0);
     CHECK_EQ(read_clock.size(), 0);
   } else {
-    clock.Reset(&thr->clock_cache);
-    read_clock.Reset(&thr->clock_cache);
+    clock.Reset(&proc->clock_cache);
+    read_clock.Reset(&proc->clock_cache);
   }
 }
 
@@ -61,7 +61,7 @@ MetaMap::MetaMap() {
 }
 
 void MetaMap::AllocBlock(ThreadState *thr, uptr pc, uptr p, uptr sz) {
-  u32 idx = block_alloc_.Alloc(&thr->block_cache);
+  u32 idx = block_alloc_.Alloc(&thr->proc()->block_cache);
   MBlock *b = block_alloc_.Map(idx);
   b->siz = sz;
   b->tid = thr->tid;
@@ -71,16 +71,16 @@ void MetaMap::AllocBlock(ThreadState *thr, uptr pc, uptr p, uptr sz) {
   *meta = idx | kFlagBlock;
 }
 
-uptr MetaMap::FreeBlock(ThreadState *thr, uptr pc, uptr p) {
+uptr MetaMap::FreeBlock(Processor *proc, uptr p) {
   MBlock* b = GetBlock(p);
   if (b == 0)
     return 0;
   uptr sz = RoundUpTo(b->siz, kMetaShadowCell);
-  FreeRange(thr, pc, p, sz);
+  FreeRange(proc, p, sz);
   return sz;
 }
 
-bool MetaMap::FreeRange(ThreadState *thr, uptr pc, uptr p, uptr sz) {
+bool MetaMap::FreeRange(Processor *proc, uptr p, uptr sz) {
   bool has_something = false;
   u32 *meta = MemToMeta(p);
   u32 *end = MemToMeta(p + sz);
@@ -96,14 +96,14 @@ bool MetaMap::FreeRange(ThreadState *thr, uptr pc, uptr p, uptr sz) {
     has_something = true;
     while (idx != 0) {
       if (idx & kFlagBlock) {
-        block_alloc_.Free(&thr->block_cache, idx & ~kFlagMask);
+        block_alloc_.Free(&proc->block_cache, idx & ~kFlagMask);
         break;
       } else if (idx & kFlagSync) {
         DCHECK(idx & kFlagSync);
         SyncVar *s = sync_alloc_.Map(idx & ~kFlagMask);
         u32 next = s->next;
-        s->Reset(thr);
-        sync_alloc_.Free(&thr->sync_cache, idx & ~kFlagMask);
+        s->Reset(proc);
+        sync_alloc_.Free(&proc->sync_cache, idx & ~kFlagMask);
         idx = next;
       } else {
         CHECK(0);
@@ -119,24 +119,30 @@ bool MetaMap::FreeRange(ThreadState *thr, uptr pc, uptr p, uptr sz) {
 // which can be huge. The function probes pages one-by-one until it finds a page
 // without meta objects, at this point it stops freeing meta objects. Because
 // thread stacks grow top-down, we do the same starting from end as well.
-void MetaMap::ResetRange(ThreadState *thr, uptr pc, uptr p, uptr sz) {
+void MetaMap::ResetRange(Processor *proc, uptr p, uptr sz) {
+  if (kGoMode) {
+    // UnmapOrDie/MmapFixedNoReserve does not work on Windows,
+    // so we do the optimization only for C/C++.
+    FreeRange(proc, p, sz);
+    return;
+  }
   const uptr kMetaRatio = kMetaShadowCell / kMetaShadowSize;
   const uptr kPageSize = GetPageSizeCached() * kMetaRatio;
   if (sz <= 4 * kPageSize) {
     // If the range is small, just do the normal free procedure.
-    FreeRange(thr, pc, p, sz);
+    FreeRange(proc, p, sz);
     return;
   }
   // First, round both ends of the range to page size.
   uptr diff = RoundUp(p, kPageSize) - p;
   if (diff != 0) {
-    FreeRange(thr, pc, p, diff);
+    FreeRange(proc, p, diff);
     p += diff;
     sz -= diff;
   }
   diff = p + sz - RoundDown(p + sz, kPageSize);
   if (diff != 0) {
-    FreeRange(thr, pc, p + sz - diff, diff);
+    FreeRange(proc, p + sz - diff, diff);
     sz -= diff;
   }
   // Now we must have a non-empty page-aligned range.
@@ -146,18 +152,21 @@ void MetaMap::ResetRange(ThreadState *thr, uptr pc, uptr p, uptr sz) {
   const uptr p0 = p;
   const uptr sz0 = sz;
   // Probe start of the range.
-  while (sz > 0) {
-    bool has_something = FreeRange(thr, pc, p, kPageSize);
+  for (uptr checked = 0; sz > 0; checked += kPageSize) {
+    bool has_something = FreeRange(proc, p, kPageSize);
     p += kPageSize;
     sz -= kPageSize;
-    if (!has_something)
+    if (!has_something && checked > (128 << 10))
       break;
   }
   // Probe end of the range.
-  while (sz > 0) {
-    bool has_something = FreeRange(thr, pc, p - kPageSize, kPageSize);
+  for (uptr checked = 0; sz > 0; checked += kPageSize) {
+    bool has_something = FreeRange(proc, p + sz - kPageSize, kPageSize);
     sz -= kPageSize;
-    if (!has_something)
+    // Stacks grow down, so sync object are most likely at the end of the region
+    // (if it is a stack). The very end of the stack is TLS and tsan increases
+    // TLS by at least 256K, so check at least 512K.
+    if (!has_something && checked > (512 << 10))
       break;
   }
   // Finally, page out the whole range (including the parts that we've just
@@ -189,8 +198,8 @@ SyncVar* MetaMap::GetOrCreateAndLock(ThreadState *thr, uptr pc,
   return GetAndLock(thr, pc, addr, write_lock, true);
 }
 
-SyncVar* MetaMap::GetIfExistsAndLock(uptr addr) {
-  return GetAndLock(0, 0, addr, true, false);
+SyncVar* MetaMap::GetIfExistsAndLock(uptr addr, bool write_lock) {
+  return GetAndLock(0, 0, addr, write_lock, false);
 }
 
 SyncVar* MetaMap::GetAndLock(ThreadState *thr, uptr pc,
@@ -210,8 +219,8 @@ SyncVar* MetaMap::GetAndLock(ThreadState *thr, uptr pc,
       SyncVar * s = sync_alloc_.Map(idx & ~kFlagMask);
       if (s->addr == addr) {
         if (myidx != 0) {
-          mys->Reset(thr);
-          sync_alloc_.Free(&thr->sync_cache, myidx);
+          mys->Reset(thr->proc());
+          sync_alloc_.Free(&thr->proc()->sync_cache, myidx);
         }
         if (write_lock)
           s->mtx.Lock();
@@ -230,7 +239,7 @@ SyncVar* MetaMap::GetAndLock(ThreadState *thr, uptr pc,
 
     if (myidx == 0) {
       const u64 uid = atomic_fetch_add(&uid_gen_, 1, memory_order_relaxed);
-      myidx = sync_alloc_.Alloc(&thr->sync_cache);
+      myidx = sync_alloc_.Alloc(&thr->proc()->sync_cache);
       mys = sync_alloc_.Map(myidx);
       mys->Init(thr, pc, addr, uid);
     }
@@ -279,9 +288,9 @@ void MetaMap::MoveMemory(uptr src, uptr dst, uptr sz) {
   }
 }
 
-void MetaMap::OnThreadIdle(ThreadState *thr) {
-  block_alloc_.FlushCache(&thr->block_cache);
-  sync_alloc_.FlushCache(&thr->sync_cache);
+void MetaMap::OnProcIdle(Processor *proc) {
+  block_alloc_.FlushCache(&proc->block_cache);
+  sync_alloc_.FlushCache(&proc->sync_cache);
 }
 
 }  // namespace __tsan

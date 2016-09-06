@@ -1,4 +1,4 @@
-# RUN: not llc -march=x86-64 -start-after branch-folder -stop-after branch-folder -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 
 --- |
 
@@ -27,9 +27,9 @@ fixedStack:
 body: |
   bb.0.entry:
     PUSH64r killed %rbx, implicit-def %rsp, implicit %rsp
-    CFI_INSTRUCTION .cfi_def_cfa_offset 16
-    ; CHECK: [[@LINE+1]]:38: expected ','
-    CFI_INSTRUCTION .cfi_offset %rbx -16
+    CFI_INSTRUCTION def_cfa_offset 16
+    ; CHECK: [[@LINE+1]]:33: expected ','
+    CFI_INSTRUCTION offset %rbx -16
     %ebx = COPY %edi, implicit-def %rbx
     %ebx = ADD32rr %ebx, killed %esi, implicit-def dead %eflags
     %ebx = ADD32rr %ebx, killed %edx, implicit-def dead %eflags

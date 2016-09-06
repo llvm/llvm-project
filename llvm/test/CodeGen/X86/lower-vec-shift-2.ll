@@ -5,8 +5,7 @@
 define <8 x i16> @test1(<8 x i16> %A, <8 x i16> %B) {
 ; SSE2-LABEL: test1:
 ; SSE2:       # BB#0: # %entry
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    movzwl %ax, %eax
+; SSE2-NEXT:    pextrw $0, %xmm1, %eax
 ; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    psllw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -62,8 +61,7 @@ entry:
 define <8 x i16> @test4(<8 x i16> %A, <8 x i16> %B) {
 ; SSE2-LABEL: test4:
 ; SSE2:       # BB#0: # %entry
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    movzwl %ax, %eax
+; SSE2-NEXT:    pextrw $0, %xmm1, %eax
 ; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    psrlw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -119,8 +117,7 @@ entry:
 define <8 x i16> @test7(<8 x i16> %A, <8 x i16> %B) {
 ; SSE2-LABEL: test7:
 ; SSE2:       # BB#0: # %entry
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    movzwl %ax, %eax
+; SSE2-NEXT:    pextrw $0, %xmm1, %eax
 ; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    psraw %xmm1, %xmm0
 ; SSE2-NEXT:    retq

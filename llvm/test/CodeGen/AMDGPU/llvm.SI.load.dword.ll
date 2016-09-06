@@ -7,14 +7,14 @@
 ; FIXME: Out of bounds immediate offset crashes
 
 ; CHECK-LABEL: {{^}}main:
-; CHECK: buffer_load_dword {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 glc slc
+; CHECK: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 glc slc
 ; CHECK: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 offen glc slc
 ; CHECK: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}, 0 idxen glc slc
 ; CHECK: buffer_load_dword {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 idxen offen glc slc
 ; CHECK: s_movk_i32 [[K:s[0-9]+]], 0x4d2 ; encoding
 ; CHECK: buffer_load_dword {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, [[K]] idxen offen offset:65535 glc slc
 
-define void @main([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <32 x i8>] addrspace(2)* byval %arg2, [2 x <16 x i8>] addrspace(2)* byval %arg3, [17 x <16 x i8>] addrspace(2)* inreg %arg4, [17 x <16 x i8>] addrspace(2)* inreg %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9) #0 {
+define amdgpu_vs void @main([17 x <16 x i8>] addrspace(2)* byval %arg, [32 x <16 x i8>] addrspace(2)* byval %arg1, [16 x <32 x i8>] addrspace(2)* byval %arg2, [2 x <16 x i8>] addrspace(2)* byval %arg3, [17 x <16 x i8>] addrspace(2)* inreg %arg4, [17 x <16 x i8>] addrspace(2)* inreg %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9) {
 main_body:
   %tmp = getelementptr [2 x <16 x i8>], [2 x <16 x i8>] addrspace(2)* %arg3, i64 0, i32 1
   %tmp10 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp, !tbaa !0
@@ -40,14 +40,13 @@ main_body:
 }
 
 ; Function Attrs: nounwind readonly
-declare i32 @llvm.SI.buffer.load.dword.i32.i32(<16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32) #1
+declare i32 @llvm.SI.buffer.load.dword.i32.i32(<16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32) #0
 
 ; Function Attrs: nounwind readonly
-declare i32 @llvm.SI.buffer.load.dword.i32.v2i32(<16 x i8>, <2 x i32>, i32, i32, i32, i32, i32, i32, i32) #1
+declare i32 @llvm.SI.buffer.load.dword.i32.v2i32(<16 x i8>, <2 x i32>, i32, i32, i32, i32, i32, i32, i32) #0
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
-attributes #0 = { "ShaderType"="1" }
-attributes #1 = { nounwind readonly }
+attributes #0 = { nounwind readonly }
 
 !0 = !{!"const", null, i32 1}

@@ -48,5 +48,38 @@ define void @f4(i64 %base) {
   ret void
 }
 
-; FIXME: at the moment the precise constraint is not passed down to
-; target code, so we must conservatively treat "R" as "Q".
+; Check that indices are allowed
+define void @f5(i64 %base, i64 %index) {
+; CHECK-LABEL: f5:
+; CHECK: blah 0(%r3,%r2)
+; CHECK: br %r14
+  %add = add i64 %base, %index
+  %addr = inttoptr i64 %add to i64 *
+  call void asm "blah $0", "=*R" (i64 *%addr)
+  ret void
+}
+
+; Check that indices and displacements are allowed simultaneously
+define void @f6(i64 %base, i64 %index) {
+; CHECK-LABEL: f6:
+; CHECK: blah 4095(%r3,%r2)
+; CHECK: br %r14
+  %add = add i64 %base, 4095
+  %addi = add i64 %add, %index
+  %addr = inttoptr i64 %addi to i64 *
+  call void asm "blah $0", "=*R" (i64 *%addr)
+  ret void
+}
+
+; Check that LAY is used if there is an index but the displacement is too large
+define void @f7(i64 %base, i64 %index) {
+; CHECK-LABEL: f7:
+; CHECK: lay %r0, 4096(%r3,%r2)
+; CHECK: blah 0(%r0)
+; CHECK: br %r14
+  %add = add i64 %base, 4096
+  %addi = add i64 %add, %index
+  %addr = inttoptr i64 %addi to i64 *
+  call void asm "blah $0", "=*R" (i64 *%addr)
+  ret void
+}

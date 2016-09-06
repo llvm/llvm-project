@@ -88,7 +88,8 @@ static Column column(StringRef Str, unsigned Width, const T &Value) {
   return Column(Str, Width).set(Value);
 }
 
-static size_t FileReportColumns[] = {25, 10, 8, 8, 10, 10};
+// Specify the default column widths.
+static size_t FileReportColumns[] = {25, 12, 18, 10, 12, 18, 10, 12, 18, 10};
 static size_t FunctionReportColumns[] = {25, 10, 8, 8, 10, 8, 8};
 
 /// \brief  Adjust column widths to fit long file paths and function names.
@@ -136,10 +137,24 @@ void CoverageReport::render(const FileCoverageSummary &File, raw_ostream &OS) {
                 File.RegionCoverage.getPercentCovered()) << '%';
   OS << format("%*u", FileReportColumns[4],
                (unsigned)File.FunctionCoverage.NumFunctions);
+  OS << format("%*u", FileReportColumns[5],
+               (unsigned)(File.FunctionCoverage.NumFunctions -
+                          File.FunctionCoverage.Executed));
   Options.colored_ostream(
       OS, determineCoveragePercentageColor(File.FunctionCoverage))
-      << format("%*.2f", FileReportColumns[5] - 1,
+      << format("%*.2f", FileReportColumns[6] - 1,
                 File.FunctionCoverage.getPercentCovered()) << '%';
+  OS << format("%*u", FileReportColumns[7],
+               (unsigned)File.LineCoverage.NumLines);
+  Options.colored_ostream(OS, File.LineCoverage.isFullyCovered()
+                                  ? raw_ostream::GREEN
+                                  : raw_ostream::RED)
+      << format("%*u", FileReportColumns[8],
+                (unsigned)File.LineCoverage.NotCovered);
+  Options.colored_ostream(OS,
+                          determineCoveragePercentageColor(File.LineCoverage))
+      << format("%*.2f", FileReportColumns[9] - 1,
+                File.LineCoverage.getPercentCovered()) << '%';
   OS << "\n";
 }
 
@@ -171,7 +186,7 @@ void CoverageReport::render(const FunctionCoverageSummary &Function,
   OS << "\n";
 }
 
-void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
+void CoverageReport::renderFunctionReports(ArrayRef<StringRef> Files,
                                            raw_ostream &OS) {
   adjustColumnWidths(Coverage.get());
   bool isFirst = true;
@@ -211,10 +226,15 @@ void CoverageReport::renderFileReports(raw_ostream &OS) {
   adjustColumnWidths(Coverage.get());
   OS << column("Filename", FileReportColumns[0])
      << column("Regions", FileReportColumns[1], Column::RightAlignment)
-     << column("Miss", FileReportColumns[2], Column::RightAlignment)
+     << column("Missed Regions", FileReportColumns[2], Column::RightAlignment)
      << column("Cover", FileReportColumns[3], Column::RightAlignment)
      << column("Functions", FileReportColumns[4], Column::RightAlignment)
-     << column("Executed", FileReportColumns[5], Column::RightAlignment)
+     << column("Missed Functions", FileReportColumns[5],
+               Column::RightAlignment)
+     << column("Executed", FileReportColumns[6], Column::RightAlignment)
+     << column("Lines", FileReportColumns[7], Column::RightAlignment)
+     << column("Missed Lines", FileReportColumns[8], Column::RightAlignment)
+     << column("Cover", FileReportColumns[9], Column::RightAlignment)
      << "\n";
   renderDivider(FileReportColumns, OS);
   OS << "\n";

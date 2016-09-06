@@ -1,18 +1,16 @@
 ; RUN: not llc -march=amdgcn -mtriple=amdgcn-unknown-amdhsa < %s 2>&1 | FileCheck %s
 
-; CHECK: error: unsupported non-compute shaders with HSA in pixel_shader
-define void @pixel_shader() #0 {
+; CHECK: in function pixel_s{{.*}}: unsupported non-compute shaders with HSA
+define amdgpu_ps void @pixel_shader() #0 {
   ret void
 }
 
-define void @vertex_shader() #1 {
+; CHECK: in function vertex_s{{.*}}: unsupported non-compute shaders with HSA
+define amdgpu_vs void @vertex_shader() #0 {
   ret void
 }
 
-define void @geometry_shader() #2 {
+; CHECK: in function geometry_s{{.*}}: unsupported non-compute shaders with HSA
+define amdgpu_gs void @geometry_shader() #0 {
   ret void
 }
-
-attributes #0 = { nounwind "ShaderType"="0" }
-attributes #1 = { nounwind "ShaderType"="1" }
-attributes #2 = { nounwind "ShaderType"="2" }

@@ -82,7 +82,7 @@ cleanup:
 ; LINUX-NEXT: Ltmp{{[0-9]+}}:
 ; LINUX-NEXT: .cfi_adjust_cfa_offset 4
 ; LINUX-NEXT: call
-; LINUX-NEXT: addl $16, %esp
+; LINUX-NEXT: addl $28, %esp
 ; LINUX: .cfi_adjust_cfa_offset -16
 ; DARWIN-NOT: .cfi_escape
 ; DARWIN-NOT: pushl

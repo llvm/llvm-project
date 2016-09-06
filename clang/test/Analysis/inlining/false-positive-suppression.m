@@ -36,3 +36,80 @@ void testNilReceiver(int coin) {
   else
     testNilReceiverHelperB([[x getObject] getPtr]);
 }
+
+// FALSE NEGATIVES (over-suppression)
+
+__attribute__((objc_root_class))
+@interface SomeClass
+-(int *)methodReturningNull;
+
+@property(readonly) int *propertyReturningNull;
+
+@property(readonly) int *synthesizedProperty;
+
+@end
+
+@interface SubOfSomeClass : SomeClass
+@end
+
+@implementation SubOfSomeClass
+@end
+
+@implementation SomeClass
+-(int *)methodReturningNull {
+  return 0;
+}
+
+-(int *)propertyReturningNull {
+  return 0;
+}
+
++(int *)classPropertyReturningNull {
+  return 0;
+}
+@end
+
+void testMethodReturningNull(SomeClass *sc) {
+  int *result = [sc methodReturningNull];
+  *result = 1;
+#ifndef SUPPRESSED
+  // expected-warning@-2 {{Dereference of null pointer}}
+#endif
+}
+
+void testPropertyReturningNull(SomeClass *sc) {
+  int *result = sc.propertyReturningNull;
+  *result = 1;
+#ifndef SUPPRESSED
+  // expected-warning@-2 {{Dereference of null pointer}}
+#endif
+}
+
+@implementation SubOfSomeClass (ForTestOfSuperProperty)
+-(void)testSuperPropertyReturningNull {
+  int *result = super.propertyReturningNull;
+  *result = 1;
+#ifndef SUPPRESSED
+  // expected-warning@-2 {{Dereference of null pointer}}
+#endif
+}
+@end
+
+void testClassPropertyReturningNull() {
+  int *result = SomeClass.classPropertyReturningNull;
+  *result = 1;
+#ifndef SUPPRESSED
+  // expected-warning@-2 {{Dereference of null pointer}}
+#endif
+}
+
+void testSynthesizedPropertyReturningNull(SomeClass *sc) {
+  if (sc.synthesizedProperty)
+    return;
+
+  int *result = sc.synthesizedProperty;
+  *result = 1;
+#ifndef SUPPRESSED
+  // expected-warning@-2 {{Dereference of null pointer}}
+#endif
+}

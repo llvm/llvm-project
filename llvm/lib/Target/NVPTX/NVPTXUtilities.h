@@ -30,8 +30,9 @@ namespace llvm {
 
 void clearAnnotationCache(const llvm::Module *);
 
-bool findOneNVVMAnnotation(const llvm::GlobalValue *, std::string, unsigned &);
-bool findAllNVVMAnnotation(const llvm::GlobalValue *, std::string,
+bool findOneNVVMAnnotation(const llvm::GlobalValue *, const std::string &,
+                           unsigned &);
+bool findAllNVVMAnnotation(const llvm::GlobalValue *, const std::string &,
                            std::vector<unsigned> &);
 
 bool isTexture(const llvm::Value &);

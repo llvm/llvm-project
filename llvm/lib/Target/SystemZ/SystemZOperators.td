@@ -79,6 +79,14 @@ def SDT_ZI32Intrinsic       : SDTypeProfile<1, 0, [SDTCisVT<0, i32>]>;
 def SDT_ZPrefetch           : SDTypeProfile<0, 2,
                                             [SDTCisVT<0, i32>,
                                              SDTCisPtrTy<1>]>;
+def SDT_ZLoadBSwap          : SDTypeProfile<1, 2,
+                                            [SDTCisInt<0>,
+                                             SDTCisPtrTy<1>,
+                                             SDTCisVT<2, OtherVT>]>;
+def SDT_ZStoreBSwap         : SDTypeProfile<0, 3,
+                                            [SDTCisInt<0>,
+                                             SDTCisPtrTy<1>,
+                                             SDTCisVT<2, OtherVT>]>;
 def SDT_ZTBegin             : SDTypeProfile<0, 2,
                                             [SDTCisPtrTy<0>,
                                              SDTCisVT<1, i32>]>;
@@ -137,6 +145,7 @@ def SDT_ZVecQuaternaryInt   : SDTypeProfile<1, 4,
                                              SDTCisSameAs<0, 2>,
                                              SDTCisSameAs<0, 3>,
                                              SDTCisVT<4, i32>]>;
+def SDT_ZTest               : SDTypeProfile<0, 2, [SDTCisVT<1, i64>]>;
 
 //===----------------------------------------------------------------------===//
 // Node definitions
@@ -188,6 +197,15 @@ def z_udivrem64         : SDNode<"SystemZISD::UDIVREM64", SDT_ZGR128Binary64>;
 
 def z_serialize         : SDNode<"SystemZISD::SERIALIZE", SDTNone,
                                  [SDNPHasChain, SDNPMayStore]>;
+def z_membarrier        : SDNode<"SystemZISD::MEMBARRIER", SDTNone,
+                                 [SDNPHasChain, SDNPSideEffect]>;
+
+def z_loadbswap        : SDNode<"SystemZISD::LRV", SDT_ZLoadBSwap,
+                                 [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def z_storebswap       : SDNode<"SystemZISD::STRV", SDT_ZStoreBSwap,
+                                 [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+def z_tdc               : SDNode<"SystemZISD::TDC", SDT_ZTest, [SDNPOutGlue]>;
 
 // Defined because the index is an i32 rather than a pointer.
 def z_vector_insert     : SDNode<"ISD::INSERT_VECTOR_ELT",
@@ -328,6 +346,17 @@ def z_vsrl              : SDNode<"ISD::SRL", SDT_ZVecBinary>;
 //===----------------------------------------------------------------------===//
 // Pattern fragments
 //===----------------------------------------------------------------------===//
+
+def z_lrvh  : PatFrag<(ops node:$addr), (z_loadbswap node:$addr, i16)>;
+def z_lrv   : PatFrag<(ops node:$addr), (z_loadbswap node:$addr, i32)>;
+def z_lrvg  : PatFrag<(ops node:$addr), (z_loadbswap node:$addr, i64)>;
+
+def z_strvh : PatFrag<(ops node:$src, node:$addr),
+                      (z_storebswap node:$src, node:$addr, i16)>;
+def z_strv  : PatFrag<(ops node:$src, node:$addr),
+                      (z_storebswap node:$src, node:$addr, i32)>;
+def z_strvg : PatFrag<(ops node:$src, node:$addr),
+                      (z_storebswap node:$src, node:$addr, i64)>;
 
 // Signed and unsigned comparisons.
 def z_scmp : PatFrag<(ops node:$a, node:$b), (z_icmp node:$a, node:$b, imm), [{

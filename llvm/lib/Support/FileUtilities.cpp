@@ -217,8 +217,10 @@ int llvm::DiffFilesWithTolerance(StringRef NameA,
   bool CompareFailed = false;
   while (1) {
     // Scan for the end of file or next difference.
-    while (F1P < File1End && F2P < File2End && *F1P == *F2P)
-      ++F1P, ++F2P;
+    while (F1P < File1End && F2P < File2End && *F1P == *F2P) {
+      ++F1P;
+      ++F2P;
+    }
 
     if (F1P >= File1End || F2P >= File2End) break;
 

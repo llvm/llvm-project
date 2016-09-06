@@ -215,6 +215,8 @@ module cxx_linkage_cache {
 
 module cxx_templates_common {
   header "cxx-templates-common.h"
+
+  explicit module unimported { header "cxx-templates-unimported.h" }
 }
 
 module cxx_templates_a {
@@ -392,4 +394,41 @@ module ElaboratedTypeStructs {
   module Structs {
     header "elaborated-type-structs.h"
   }
+}
+
+// We import a module, then declare a method with selector stringValue in
+// MethodPoolCombined1.h. In MethodPoolCombined2.h, we import another module
+// that also contains a method for selector stringValue. We make sure that
+// the method pool entry for stringValue in this module is complete.
+module MethodPoolCombined {
+  header "MethodPoolCombined1.h"
+  header "MethodPoolCombined2.h"
+}
+
+module MethodPoolString1 {
+  header "MethodPoolString1.h"
+}
+
+module MethodPoolString2 {
+  header "MethodPoolString2.h"
+}
+
+module Empty {}
+
+module MacroFabs1 {
+  header "MacroFabs1.h"
+}
+
+module DiagOutOfDate {
+  header "DiagOutOfDate.h"
+}
+
+module DebugNestedA {
+  header "DebugNestedA.h"
+  export *
+}
+
+module DebugNestedB {
+  header "DebugNestedB.h"
+  export *
 }

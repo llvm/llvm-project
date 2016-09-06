@@ -26,7 +26,7 @@ typedef NS_ERROR_ENUM(unsigned char, MyErrorEnum, MyErrorDomain) {
 struct __attribute__((ns_error_domain(MyErrorDomain))) MyStructErrorDomain {};
 
 typedef NS_ERROR_ENUM(unsigned char, MyErrorEnumInvalid, InvalidDomain) {
-	// expected-error@-1{{domain argument 'InvalidDomain' not valid top-level declaration}}
+	// expected-error@-1{{domain argument 'InvalidDomain' does not refer to global constant}}
 	MyErrFirstInvalid,
 	MyErrSecondInvalid,
 };
@@ -35,8 +35,8 @@ typedef NS_ERROR_ENUM(unsigned char, MyErrorEnumInvalid, "domain-string");
   // expected-error@-1{{domain argument must be an identifier}}
 
 int __attribute__((ns_error_domain(MyErrorDomain))) NotTagDecl;
-  // expected-error@-1{{ns_error_domain attribute only valid on enum/struct/union/class}}
+  // expected-error@-1{{ns_error_domain attribute only valid on enums, structs, and unions}}
 
 void foo() {}
 typedef NS_ERROR_ENUM(unsigned char, MyErrorEnumInvalidFunction, foo);
-  // expected-error@-1{{domain argument 'foo' not valid top-level declaration}}
+  // expected-error@-1{{domain argument 'foo' does not refer to global constant}}

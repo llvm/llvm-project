@@ -16,22 +16,42 @@
 #define LLVM_IR_IRBUILDER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFolder.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Casting.h"
+#include "llvm-c/Types.h"
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 
 namespace llvm {
+
+class APInt;
 class MDNode;
+class Module;
+class Use;
 
 /// \brief This provides the default implementation of the IRBuilder
 /// 'InsertHelper' method that is called whenever an instruction is created by
@@ -44,6 +64,23 @@ protected:
                     BasicBlock *BB, BasicBlock::iterator InsertPt) const {
     if (BB) BB->getInstList().insert(InsertPt, I);
     I->setName(Name);
+  }
+};
+
+/// Provides an 'InsertHelper' that calls a user-provided callback after
+/// performing the default insertion.
+class IRBuilderCallbackInserter : IRBuilderDefaultInserter {
+  std::function<void(Instruction *)> Callback;
+
+public:
+  IRBuilderCallbackInserter(std::function<void(Instruction *)> Callback)
+      : Callback(Callback) {}
+
+protected:
+  void InsertHelper(Instruction *I, const Twine &Name,
+                    BasicBlock *BB, BasicBlock::iterator InsertPt) const {
+    IRBuilderDefaultInserter::InsertHelper(I, Name, BB, InsertPt);
+    Callback(I);
   }
 };
 
@@ -426,6 +463,11 @@ public:
   /// If the pointer isn't i8* it will be converted.
   CallInst *CreateLifetimeEnd(Value *Ptr, ConstantInt *Size = nullptr);
 
+  /// Create a call to invariant.start intrinsic.
+  ///
+  /// If the pointer isn't i8* it will be converted.
+  CallInst *CreateInvariantStart(Value *Ptr, ConstantInt *Size = nullptr);
+
   /// \brief Create a call to Masked Load intrinsic
   CallInst *CreateMaskedLoad(Value *Ptr, unsigned Align, Value *Mask,
                              Value *PassThru = nullptr, const Twine &Name = "");
@@ -433,6 +475,16 @@ public:
   /// \brief Create a call to Masked Store intrinsic
   CallInst *CreateMaskedStore(Value *Val, Value *Ptr, unsigned Align,
                               Value *Mask);
+
+  /// \brief Create a call to Masked Gather intrinsic
+  CallInst *CreateMaskedGather(Value *Ptrs, unsigned Align,
+                               Value *Mask = nullptr,
+                               Value *PassThru = nullptr,
+                               const Twine& Name = "");
+
+  /// \brief Create a call to Masked Scatter intrinsic
+  CallInst *CreateMaskedScatter(Value *Val, Value *Ptrs, unsigned Align,
+                                Value *Mask = nullptr);
 
   /// \brief Create an assume intrinsic call that allows the optimizer to
   /// assume that the provided condition will be true.
@@ -510,9 +562,9 @@ public:
 
 private:
   /// \brief Create a call to a masked intrinsic with given Id.
-  /// Masked intrinsic has only one overloaded type - data type.
   CallInst *CreateMaskedIntrinsic(Intrinsic::ID Id, ArrayRef<Value *> Ops,
-                                  Type *DataTy, const Twine &Name = "");
+                                  ArrayRef<Type *> OverloadedTypes,
+                                  const Twine &Name = "");
 
   Value *getCastedInt8PtrValue(Value *Ptr);
 };
@@ -668,28 +720,10 @@ public:
     return Insert(IndirectBrInst::Create(Addr, NumDests));
   }
 
-  InvokeInst *CreateInvoke(Value *Callee, BasicBlock *NormalDest,
-                           BasicBlock *UnwindDest, const Twine &Name = "") {
-    return Insert(InvokeInst::Create(Callee, NormalDest, UnwindDest, None),
-                  Name);
-  }
-  InvokeInst *CreateInvoke(Value *Callee, BasicBlock *NormalDest,
-                           BasicBlock *UnwindDest, Value *Arg1,
-                           const Twine &Name = "") {
-    return Insert(InvokeInst::Create(Callee, NormalDest, UnwindDest, Arg1),
-                  Name);
-  }
-  InvokeInst *CreateInvoke3(Value *Callee, BasicBlock *NormalDest,
-                            BasicBlock *UnwindDest, Value *Arg1,
-                            Value *Arg2, Value *Arg3,
-                            const Twine &Name = "") {
-    Value *Args[] = { Arg1, Arg2, Arg3 };
-    return Insert(InvokeInst::Create(Callee, NormalDest, UnwindDest, Args),
-                  Name);
-  }
   /// \brief Create an invoke instruction.
   InvokeInst *CreateInvoke(Value *Callee, BasicBlock *NormalDest,
-                           BasicBlock *UnwindDest, ArrayRef<Value *> Args,
+                           BasicBlock *UnwindDest,
+                           ArrayRef<Value *> Args = None,
                            const Twine &Name = "") {
     return Insert(InvokeInst::Create(Callee, NormalDest, UnwindDest, Args),
                   Name);
@@ -1531,16 +1565,7 @@ public:
   }
 
   CallInst *CreateCall(Value *Callee, ArrayRef<Value *> Args = None,
-                       ArrayRef<OperandBundleDef> OpBundles = None,
                        const Twine &Name = "", MDNode *FPMathTag = nullptr) {
-    CallInst *CI = CallInst::Create(Callee, Args, OpBundles);
-    if (isa<FPMathOperator>(CI))
-      CI = cast<CallInst>(AddFPMathAttributes(CI, FPMathTag, FMF));
-    return Insert(CI, Name);
-  }
-
-  CallInst *CreateCall(Value *Callee, ArrayRef<Value *> Args,
-                       const Twine &Name, MDNode *FPMathTag = nullptr) {
     PointerType *PTy = cast<PointerType>(Callee->getType());
     FunctionType *FTy = cast<FunctionType>(PTy->getElementType());
     return CreateCall(FTy, Callee, Args, Name, FPMathTag);
@@ -1555,18 +1580,34 @@ public:
     return Insert(CI, Name);
   }
 
+  CallInst *CreateCall(Value *Callee, ArrayRef<Value *> Args,
+                       ArrayRef<OperandBundleDef> OpBundles,
+                       const Twine &Name = "", MDNode *FPMathTag = nullptr) {
+    CallInst *CI = CallInst::Create(Callee, Args, OpBundles);
+    if (isa<FPMathOperator>(CI))
+      CI = cast<CallInst>(AddFPMathAttributes(CI, FPMathTag, FMF));
+    return Insert(CI, Name);
+  }
+
   CallInst *CreateCall(Function *Callee, ArrayRef<Value *> Args,
                        const Twine &Name = "", MDNode *FPMathTag = nullptr) {
     return CreateCall(Callee->getFunctionType(), Callee, Args, Name, FPMathTag);
   }
 
   Value *CreateSelect(Value *C, Value *True, Value *False,
-                      const Twine &Name = "") {
+                      const Twine &Name = "", Instruction *MDFrom = nullptr) {
     if (Constant *CC = dyn_cast<Constant>(C))
       if (Constant *TC = dyn_cast<Constant>(True))
         if (Constant *FC = dyn_cast<Constant>(False))
           return Insert(Folder.CreateSelect(CC, TC, FC), Name);
-    return Insert(SelectInst::Create(C, True, False), Name);
+
+    SelectInst *Sel = SelectInst::Create(C, True, False);
+    if (MDFrom) {
+      MDNode *Prof = MDFrom->getMetadata(LLVMContext::MD_prof);
+      MDNode *Unpred = MDFrom->getMetadata(LLVMContext::MD_unpredictable);
+      Sel = addBranchMetadata(Sel, Prof, Unpred);
+    }
+    return Insert(Sel, Name);
   }
 
   VAArgInst *CreateVAArg(Value *List, Type *Ty, const Twine &Name = "") {
@@ -1609,13 +1650,9 @@ public:
     return Insert(new ShuffleVectorInst(V1, V2, Mask), Name);
   }
 
-  Value *CreateShuffleVector(Value *V1, Value *V2, ArrayRef<int> IntMask,
+  Value *CreateShuffleVector(Value *V1, Value *V2, ArrayRef<uint32_t> IntMask,
                              const Twine &Name = "") {
-    size_t MaskSize = IntMask.size();
-    SmallVector<Constant*, 8> MaskVec(MaskSize);
-    for (size_t i = 0; i != MaskSize; ++i)
-      MaskVec[i] = getInt32(IntMask[i]);
-    Value *Mask = ConstantVector::get(MaskVec);
+    Value *Mask = ConstantDataVector::get(Context, IntMask);
     return CreateShuffleVector(V1, V2, Mask, Name);
   }
 

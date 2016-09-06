@@ -221,7 +221,7 @@ static S1 gs1(5);
 // CHECK-DEBUG:      store i8* %0, i8** [[ARG_ADDR:%.*]],
 // CHECK-DEBUG:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK-DEBUG:      [[RES:%.*]] = bitcast i8* [[ARG]] to [[S1]]*
-// CHECK-DEBUG-NEXT: call {{.*}} [[S1_CTOR:@.+]]([[S1]]* [[RES]], {{.*}} 5)
+// CHECK-DEBUG-NEXT: call {{.*}} [[S1_CTOR:@.+]]([[S1]]* [[RES]], {{.*}} 5){{.*}}, !dbg
 // CHECK-DEBUG:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK-DEBUG:      ret i8* [[ARG]]
 // CHECK-DEBUG-NEXT: }
@@ -230,7 +230,7 @@ static S1 gs1(5);
 // CHECK-DEBUG:      store i8* %0, i8** [[ARG_ADDR:%.*]],
 // CHECK-DEBUG:      [[ARG:%.+]] = load i8*, i8** [[ARG_ADDR]]
 // CHECK-DEBUG:      [[RES:%.*]] = bitcast i8* [[ARG]] to [[S1]]*
-// CHECK-DEBUG-NEXT: call {{.*}} [[S1_DTOR:@.+]]([[S1]]* [[RES]])
+// CHECK-DEBUG-NEXT: call {{.*}} [[S1_DTOR:@.+]]([[S1]]* [[RES]]){{.*}}, !dbg
 // CHECK-DEBUG-NEXT: ret void
 // CHECK-DEBUG-NEXT: }
 // CHECK-DEBUG:      define {{.*}} [[S1_DTOR]]([[S1]]* {{.*}})
@@ -948,5 +948,5 @@ int foobar() {
 // CHECK-TLS:      call void [[ST_S4_ST_CXX_INIT]]
 // CHECK-TLS:      [[DONE_LABEL]]
 
-// CHECK-TLS:      declare {{.*}} void [[GS3_TLS_INIT]]
-// CHECK-TLS:      declare {{.*}} void [[STATIC_S_TLS_INIT]]
+// CHECK-TLS-DAG:      declare {{.*}} void [[GS3_TLS_INIT]]
+// CHECK-TLS-DAG:      declare {{.*}} void [[STATIC_S_TLS_INIT]]

@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/JamCRC.h"
+#include "llvm/ADT/ArrayRef.h"
 
 using namespace llvm;
 

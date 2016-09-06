@@ -58,10 +58,9 @@ static bool CompareSSIOffset(const StackSlotInfo& a, const StackSlotInfo& b) {
   return a.Offset < b.Offset;
 }
 
-
 static void EmitDefCfaRegister(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI, DebugLoc dl,
-                               const TargetInstrInfo &TII,
+                               MachineBasicBlock::iterator MBBI,
+                               const DebugLoc &dl, const TargetInstrInfo &TII,
                                MachineModuleInfo *MMI, unsigned DRegNum) {
   unsigned CFIIndex = MMI->addFrameInst(
       MCCFIInstruction::createDefCfaRegister(nullptr, DRegNum));
@@ -70,8 +69,8 @@ static void EmitDefCfaRegister(MachineBasicBlock &MBB,
 }
 
 static void EmitDefCfaOffset(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator MBBI, DebugLoc dl,
-                             const TargetInstrInfo &TII,
+                             MachineBasicBlock::iterator MBBI,
+                             const DebugLoc &dl, const TargetInstrInfo &TII,
                              MachineModuleInfo *MMI, int Offset) {
   unsigned CFIIndex =
       MMI->addFrameInst(MCCFIInstruction::createDefCfaOffset(nullptr, -Offset));
@@ -80,7 +79,7 @@ static void EmitDefCfaOffset(MachineBasicBlock &MBB,
 }
 
 static void EmitCfiOffset(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI, DebugLoc dl,
+                          MachineBasicBlock::iterator MBBI, const DebugLoc &dl,
                           const TargetInstrInfo &TII, MachineModuleInfo *MMI,
                           unsigned DRegNum, int Offset) {
   unsigned CFIIndex = MMI->addFrameInst(
@@ -96,7 +95,7 @@ static void EmitCfiOffset(MachineBasicBlock &MBB,
 /// \param OffsetFromTop the spill offset from the top of the frame.
 /// \param [in,out] Adjusted the current SP offset from the top of the frame.
 static void IfNeededExtSP(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI, DebugLoc dl,
+                          MachineBasicBlock::iterator MBBI, const DebugLoc &dl,
                           const TargetInstrInfo &TII, MachineModuleInfo *MMI,
                           int OffsetFromTop, int &Adjusted, int FrameSize,
                           bool emitFrameMoves) {
@@ -120,7 +119,7 @@ static void IfNeededExtSP(MachineBasicBlock &MBB,
 /// \param [in,out] RemainingAdj the current SP offset from the top of the
 /// frame.
 static void IfNeededLDAWSP(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, DebugLoc dl,
+                           MachineBasicBlock::iterator MBBI, const DebugLoc &dl,
                            const TargetInstrInfo &TII, int OffsetFromTop,
                            int &RemainingAdj) {
   while (OffsetFromTop < RemainingAdj - MaxImmU16) {
@@ -137,16 +136,16 @@ static void IfNeededLDAWSP(MachineBasicBlock &MBB,
 /// Registers are ordered according to their frame offset.
 /// As offsets are negative, the largest offsets will be first.
 static void GetSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
-                         MachineFrameInfo *MFI, XCoreFunctionInfo *XFI,
+                         MachineFrameInfo &MFI, XCoreFunctionInfo *XFI,
                          bool fetchLR, bool fetchFP) {
   if (fetchLR) {
-    int Offset = MFI->getObjectOffset(XFI->getLRSpillSlot());
+    int Offset = MFI.getObjectOffset(XFI->getLRSpillSlot());
     SpillList.push_back(StackSlotInfo(XFI->getLRSpillSlot(),
                                       Offset,
                                       XCore::LR));
   }
   if (fetchFP) {
-    int Offset = MFI->getObjectOffset(XFI->getFPSpillSlot());
+    int Offset = MFI.getObjectOffset(XFI->getFPSpillSlot());
     SpillList.push_back(StackSlotInfo(XFI->getFPSpillSlot(),
                                       Offset,
                                       FramePtr));
@@ -159,24 +158,25 @@ static void GetSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
 /// Registers are ordered according to their frame offset.
 /// As offsets are negative, the largest offsets will be first.
 static void GetEHSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
-                           MachineFrameInfo *MFI, XCoreFunctionInfo *XFI,
+                           MachineFrameInfo &MFI, XCoreFunctionInfo *XFI,
                            const Constant *PersonalityFn,
                            const TargetLowering *TL) {
   assert(XFI->hasEHSpillSlot() && "There are no EH register spill slots");
   const int *EHSlot = XFI->getEHSpillSlot();
   SpillList.push_back(
-      StackSlotInfo(EHSlot[0], MFI->getObjectOffset(EHSlot[0]),
+      StackSlotInfo(EHSlot[0], MFI.getObjectOffset(EHSlot[0]),
                     TL->getExceptionPointerRegister(PersonalityFn)));
   SpillList.push_back(
-      StackSlotInfo(EHSlot[0], MFI->getObjectOffset(EHSlot[1]),
+      StackSlotInfo(EHSlot[0], MFI.getObjectOffset(EHSlot[1]),
                     TL->getExceptionSelectorRegister(PersonalityFn)));
   std::sort(SpillList.begin(), SpillList.end(), CompareSSIOffset);
 }
 
-static MachineMemOperand *
-getFrameIndexMMO(MachineBasicBlock &MBB, int FrameIndex, unsigned flags) {
+static MachineMemOperand *getFrameIndexMMO(MachineBasicBlock &MBB,
+                                           int FrameIndex,
+                                           MachineMemOperand::Flags flags) {
   MachineFunction *MF = MBB.getParent();
-  const MachineFrameInfo &MFI = *MF->getFrameInfo();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
   MachineMemOperand *MMO = MF->getMachineMemOperand(
       MachinePointerInfo::getFixedStack(*MF, FrameIndex), flags,
       MFI.getObjectSize(FrameIndex), MFI.getObjectAlignment(FrameIndex));
@@ -187,10 +187,11 @@ getFrameIndexMMO(MachineBasicBlock &MBB, int FrameIndex, unsigned flags) {
 /// Restore clobbered registers with their spill slot value.
 /// The SP will be adjusted at the same time, thus the SpillList must be ordered
 /// with the largest (negative) offsets first.
-static void
-RestoreSpillList(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                 DebugLoc dl, const TargetInstrInfo &TII, int &RemainingAdj,
-                 SmallVectorImpl<StackSlotInfo> &SpillList) {
+static void RestoreSpillList(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator MBBI,
+                             const DebugLoc &dl, const TargetInstrInfo &TII,
+                             int &RemainingAdj,
+                             SmallVectorImpl<StackSlotInfo> &SpillList) {
   for (unsigned i = 0, e = SpillList.size(); i != e; ++i) {
     assert(SpillList[i].Offset % 4 == 0 && "Misaligned stack offset");
     assert(SpillList[i].Offset <= 0 && "Unexpected positive stack offset");
@@ -216,14 +217,14 @@ XCoreFrameLowering::XCoreFrameLowering(const XCoreSubtarget &sti)
 
 bool XCoreFrameLowering::hasFP(const MachineFunction &MF) const {
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         MF.getFrameInfo()->hasVarSizedObjects();
+         MF.getFrameInfo().hasVarSizedObjects();
 }
 
 void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
   MachineBasicBlock::iterator MBBI = MBB.begin();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineModuleInfo *MMI = &MF.getMMI();
   const MCRegisterInfo *MRI = MMI->getContext().getRegisterInfo();
   const XCoreInstrInfo &TII = *MF.getSubtarget<XCoreSubtarget>().getInstrInfo();
@@ -232,9 +233,9 @@ void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
   // to determine the end of the prologue.
   DebugLoc dl;
 
-  if (MFI->getMaxAlignment() > getStackAlignment())
+  if (MFI.getMaxAlignment() > getStackAlignment())
     report_fatal_error("emitPrologue unsupported alignment: "
-                       + Twine(MFI->getMaxAlignment()));
+                       + Twine(MFI.getMaxAlignment()));
 
   const AttributeSet &PAL = MF.getFunction()->getAttributes();
   if (PAL.hasAttrSomewhere(Attribute::Nest))
@@ -243,13 +244,13 @@ void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Work out frame sizes.
   // We will adjust the SP in stages towards the final FrameSize.
-  assert(MFI->getStackSize()%4 == 0 && "Misaligned frame size");
-  const int FrameSize = MFI->getStackSize() / 4;
+  assert(MFI.getStackSize()%4 == 0 && "Misaligned frame size");
+  const int FrameSize = MFI.getStackSize() / 4;
   int Adjusted = 0;
 
   bool saveLR = XFI->hasLRSpillSlot();
   bool UseENTSP = saveLR && FrameSize
-                  && (MFI->getObjectOffset(XFI->getLRSpillSlot()) == 0);
+                  && (MFI.getObjectOffset(XFI->getLRSpillSlot()) == 0);
   if (UseENTSP)
     saveLR = false;
   bool FP = hasFP(MF);
@@ -315,7 +316,7 @@ void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
       MachineBasicBlock::iterator Pos = SpillLabel.first;
       ++Pos;
       const CalleeSavedInfo &CSI = SpillLabel.second;
-      int Offset = MFI->getObjectOffset(CSI.getFrameIdx());
+      int Offset = MFI.getObjectOffset(CSI.getFrameIdx());
       unsigned DRegNum = MRI->getDwarfRegNum(CSI.getReg(), true);
       EmitCfiOffset(MBB, Pos, dl, TII, MMI, DRegNum, Offset);
     }
@@ -341,7 +342,7 @@ void XCoreFrameLowering::emitPrologue(MachineFunction &MF,
 
 void XCoreFrameLowering::emitEpilogue(MachineFunction &MF,
                                      MachineBasicBlock &MBB) const {
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   const XCoreInstrInfo &TII = *MF.getSubtarget<XCoreSubtarget>().getInstrInfo();
   XCoreFunctionInfo *XFI = MF.getInfo<XCoreFunctionInfo>();
@@ -350,7 +351,7 @@ void XCoreFrameLowering::emitEpilogue(MachineFunction &MF,
 
   // Work out frame sizes.
   // We will adjust the SP in stages towards the final FrameSize.
-  int RemainingAdj = MFI->getStackSize();
+  int RemainingAdj = MFI.getStackSize();
   assert(RemainingAdj%4 == 0 && "Misaligned frame size");
   RemainingAdj /= 4;
 
@@ -376,7 +377,7 @@ void XCoreFrameLowering::emitEpilogue(MachineFunction &MF,
 
   bool restoreLR = XFI->hasLRSpillSlot();
   bool UseRETSP = restoreLR && RemainingAdj
-                  && (MFI->getObjectOffset(XFI->getLRSpillSlot()) == 0);
+                  && (MFI.getObjectOffset(XFI->getLRSpillSlot()) == 0);
   if (UseRETSP)
     restoreLR = false;
   bool FP = hasFP(MF);
@@ -482,15 +483,15 @@ restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
 
 // This function eliminates ADJCALLSTACKDOWN,
 // ADJCALLSTACKUP pseudo instructions
-void XCoreFrameLowering::
-eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator I) const {
+MachineBasicBlock::iterator XCoreFrameLowering::eliminateCallFramePseudoInstr(
+    MachineFunction &MF, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator I) const {
   const XCoreInstrInfo &TII = *MF.getSubtarget<XCoreSubtarget>().getInstrInfo();
   if (!hasReservedCallFrame(MF)) {
     // Turn the adjcallstackdown instruction into 'extsp <amt>' and the
     // adjcallstackup instruction into 'ldaw sp, sp[<amt>]'
-    MachineInstr *Old = I;
-    uint64_t Amount = Old->getOperand(0).getImm();
+    MachineInstr &Old = *I;
+    uint64_t Amount = Old.getOperand(0).getImm();
     if (Amount != 0) {
       // We need to keep the stack aligned properly.  To do this, we round the
       // amount of space needed for the outgoing arguments up to the next
@@ -512,15 +513,14 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
       }
 
       MachineInstr *New;
-      if (Old->getOpcode() == XCore::ADJCALLSTACKDOWN) {
+      if (Old.getOpcode() == XCore::ADJCALLSTACKDOWN) {
         int Opcode = isU6 ? XCore::EXTSP_u6 : XCore::EXTSP_lu6;
-        New=BuildMI(MF, Old->getDebugLoc(), TII.get(Opcode))
-          .addImm(Amount);
+        New = BuildMI(MF, Old.getDebugLoc(), TII.get(Opcode)).addImm(Amount);
       } else {
-        assert(Old->getOpcode() == XCore::ADJCALLSTACKUP);
+        assert(Old.getOpcode() == XCore::ADJCALLSTACKUP);
         int Opcode = isU6 ? XCore::LDAWSP_ru6 : XCore::LDAWSP_lru6;
-        New=BuildMI(MF, Old->getDebugLoc(), TII.get(Opcode), XCore::SP)
-          .addImm(Amount);
+        New = BuildMI(MF, Old.getDebugLoc(), TII.get(Opcode), XCore::SP)
+                  .addImm(Amount);
       }
 
       // Replace the pseudo instruction with a new instruction...
@@ -528,7 +528,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     }
   }
 
-  MBB.erase(I);
+  return MBB.erase(I);
 }
 
 void XCoreFrameLowering::determineCalleeSaves(MachineFunction &MF,
@@ -542,7 +542,7 @@ void XCoreFrameLowering::determineCalleeSaves(MachineFunction &MF,
   bool LRUsed = MRI.isPhysRegModified(XCore::LR);
 
   if (!LRUsed && !MF.getFunction()->isVarArg() &&
-      MF.getFrameInfo()->estimateStackSize(MF))
+      MF.getFrameInfo().estimateStackSize(MF))
     // If we need to extend the stack it is more efficient to use entsp / retsp.
     // We force the LR to be saved so these instructions are used.
     LRUsed = true;
@@ -573,7 +573,7 @@ void XCoreFrameLowering::
 processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                     RegScavenger *RS) const {
   assert(RS && "requiresRegisterScavenging failed");
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterClass *RC = &XCore::GRRegsRegClass;
   XCoreFunctionInfo *XFI = MF.getInfo<XCoreFunctionInfo>();
   // Reserve slots close to SP or frame pointer for Scavenging spills.
@@ -581,11 +581,11 @@ processFunctionBeforeFrameFinalized(MachineFunction &MF,
   // When using SP for large frames, we may need 2 scratch registers.
   // When using FP, for large or small frames, we may need 1 scratch register.
   if (XFI->isLargeFrame(MF) || hasFP(MF))
-    RS->addScavengingFrameIndex(MFI->CreateStackObject(RC->getSize(),
-                                                       RC->getAlignment(),
-                                                       false));
+    RS->addScavengingFrameIndex(MFI.CreateStackObject(RC->getSize(),
+                                                      RC->getAlignment(),
+                                                      false));
   if (XFI->isLargeFrame(MF) && !hasFP(MF))
-    RS->addScavengingFrameIndex(MFI->CreateStackObject(RC->getSize(),
-                                                       RC->getAlignment(),
-                                                       false));
+    RS->addScavengingFrameIndex(MFI.CreateStackObject(RC->getSize(),
+                                                      RC->getAlignment(),
+                                                      false));
 }

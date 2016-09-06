@@ -3,6 +3,8 @@
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES -mllvm -dfsan-args-abi %s -o %t && %run %t
 
+// XFAIL: target-is-mips64el
+
 // Tests custom implementations of various glibc functions.
 
 #include <sanitizer/dfsan_interface.h>
@@ -536,7 +538,7 @@ void test_inet_pton() {
   int ret4 = inet_pton(AF_INET, addr4, &in4);
   assert(ret4 == 1);
   ASSERT_READ_LABEL(&in4, sizeof(in4), i_label);
-  assert(in4.s_addr == 0x0100007f);
+  assert(in4.s_addr == htonl(0x7f000001));
 
   char addr6[] = "::1";
   dfsan_set_label(j_label, addr6 + 3, 1);

@@ -503,6 +503,9 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
 
   bool HasVariants = !C.getTargetInfo().hasNoAsmVariants();
 
+  unsigned LastAsmStringToken = 0;
+  unsigned LastAsmStringOffset = 0;
+
   while (1) {
     // Done with the string?
     if (CurPtr == StrEnd) {
@@ -589,10 +592,12 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
 
       // (BeginLoc, EndLoc) represents the range of the operand we are currently
       // processing. Unlike Str, the range includes the leading '%'.
-      SourceLocation BeginLoc =
-          getAsmString()->getLocationOfByte(Percent - StrStart, SM, LO, TI);
-      SourceLocation EndLoc =
-          getAsmString()->getLocationOfByte(CurPtr - StrStart, SM, LO, TI);
+      SourceLocation BeginLoc = getAsmString()->getLocationOfByte(
+          Percent - StrStart, SM, LO, TI, &LastAsmStringToken,
+          &LastAsmStringOffset);
+      SourceLocation EndLoc = getAsmString()->getLocationOfByte(
+          CurPtr - StrStart, SM, LO, TI, &LastAsmStringToken,
+          &LastAsmStringOffset);
 
       Pieces.emplace_back(N, std::move(Str), BeginLoc, EndLoc);
       continue;
@@ -623,10 +628,12 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
 
       // (BeginLoc, EndLoc) represents the range of the operand we are currently
       // processing. Unlike Str, the range includes the leading '%'.
-      SourceLocation BeginLoc =
-          getAsmString()->getLocationOfByte(Percent - StrStart, SM, LO, TI);
-      SourceLocation EndLoc =
-          getAsmString()->getLocationOfByte(NameEnd + 1 - StrStart, SM, LO, TI);
+      SourceLocation BeginLoc = getAsmString()->getLocationOfByte(
+          Percent - StrStart, SM, LO, TI, &LastAsmStringToken,
+          &LastAsmStringOffset);
+      SourceLocation EndLoc = getAsmString()->getLocationOfByte(
+          NameEnd + 1 - StrStart, SM, LO, TI, &LastAsmStringToken,
+          &LastAsmStringOffset);
 
       Pieces.emplace_back(N, std::move(Str), BeginLoc, EndLoc);
 
@@ -756,11 +763,13 @@ void MSAsmStmt::initialize(const ASTContext &C, StringRef asmstr,
                  });
 }
 
-IfStmt::IfStmt(const ASTContext &C, SourceLocation IL, VarDecl *var, Expr *cond,
-               Stmt *then, SourceLocation EL, Stmt *elsev)
-  : Stmt(IfStmtClass), IfLoc(IL), ElseLoc(EL)
-{
+IfStmt::IfStmt(const ASTContext &C, SourceLocation IL, bool IsConstexpr,
+               Stmt *init, VarDecl *var, Expr *cond, Stmt *then,
+               SourceLocation EL, Stmt *elsev)
+    : Stmt(IfStmtClass), IfLoc(IL), ElseLoc(EL) {
+  setConstexpr(IsConstexpr);
   setConditionVariable(C, var);
+  SubExprs[INIT] = init;
   SubExprs[COND] = cond;
   SubExprs[THEN] = then;
   SubExprs[ELSE] = elsev;
@@ -783,6 +792,10 @@ void IfStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
   SourceRange VarRange = V->getSourceRange();
   SubExprs[VAR] = new (C) DeclStmt(DeclGroupRef(V), VarRange.getBegin(),
                                    VarRange.getEnd());
+}
+
+bool IfStmt::isObjCAvailabilityCheck() const {
+  return isa<ObjCAvailabilityCheckExpr>(SubExprs[COND]);
 }
 
 ForStmt::ForStmt(const ASTContext &C, Stmt *Init, Expr *Cond, VarDecl *condVar,
@@ -816,9 +829,11 @@ void ForStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
                                        VarRange.getEnd());
 }
 
-SwitchStmt::SwitchStmt(const ASTContext &C, VarDecl *Var, Expr *cond)
+SwitchStmt::SwitchStmt(const ASTContext &C, Stmt *init, VarDecl *Var,
+                       Expr *cond)
     : Stmt(SwitchStmtClass), FirstCase(nullptr, false) {
   setConditionVariable(C, Var);
+  SubExprs[INIT] = init;
   SubExprs[COND] = cond;
   SubExprs[BODY] = nullptr;
 }

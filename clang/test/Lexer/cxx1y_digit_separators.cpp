@@ -48,6 +48,9 @@ namespace floating {
   float r = 0.'0e1; // expected-error {{digit separator cannot appear at start of digit sequence}}
   float s = 0.0'e1; // expected-error {{digit separator cannot appear at end of digit sequence}}
   float t = 0.0e'1; // expected-error {{digit separator cannot appear at start of digit sequence}}
+  float u = 0x.'p1f; // expected-error {{hexadecimal floating literal requires a significand}}
+  float v = 0e'f; // expected-error {{exponent has no digits}}
+  float w = 0x0p'f; // expected-error {{exponent has no digits}}
 }
 
 #line 123'456

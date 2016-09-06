@@ -27,11 +27,10 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!13, !14}
 !llvm.ident = !{!15}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 (204220)", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5.0 (204220)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "../2.cc", directory: "/tmp/build0")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "Store", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !10)
+!4 = distinct !DISubprogram(name: "Store", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !10)
 !5 = !DIFile(filename: "../2.cc", directory: "/tmp/build0")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null, !8, !9}

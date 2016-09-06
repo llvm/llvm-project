@@ -7,8 +7,8 @@
 ; from constant/invariant memory.
 
 ; GCN-LABEL: {{^}}test_merge_store_constant_i16_invariant_global_pointer_load:
-; GCN: buffer_load_dwordx2 [[PTR:v\[[0-9]+:[0-9]+\]]],
-; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0x1c8007b
+; GCN-DAG: buffer_load_dwordx2 [[PTR:v\[[0-9]+:[0-9]+\]]],
+; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x1c8007b
 ; GCN: buffer_store_dword [[K]], [[PTR]]
 define void @test_merge_store_constant_i16_invariant_global_pointer_load(i16 addrspace(1)* addrspace(1)* dereferenceable(4096) nonnull %in) #0 {
   %ptr = load i16 addrspace(1)*, i16 addrspace(1)* addrspace(1)* %in, !invariant.load !0
@@ -21,7 +21,7 @@ define void @test_merge_store_constant_i16_invariant_global_pointer_load(i16 add
 ; GCN-LABEL: {{^}}test_merge_store_constant_i16_invariant_constant_pointer_load:
 ; GCN: s_load_dwordx2 s{{\[}}[[SPTR_LO:[0-9]+]]:[[SPTR_HI:[0-9]+]]{{\]}}
 ; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0x1c8007b
-; GCN: buffer_store_dword [[K]], s{{\[}}[[SPTR_LO]]:
+; GCN: buffer_store_dword [[K]], off, s{{\[}}[[SPTR_LO]]:
 define void @test_merge_store_constant_i16_invariant_constant_pointer_load(i16 addrspace(1)* addrspace(2)* dereferenceable(4096) nonnull %in) #0 {
   %ptr = load i16 addrspace(1)*, i16 addrspace(1)* addrspace(2)* %in, !invariant.load !0
   %ptr.1 = getelementptr i16, i16 addrspace(1)* %ptr, i64 1

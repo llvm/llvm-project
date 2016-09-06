@@ -12,6 +12,9 @@ typedef int __attribute__((vector_size(16))) int4_t;
 
 int f2(int incompletearray[]);
 
+enum Enum{i}; enum Enum elaboratedEnumType();
+struct Struct{}; struct Struct elaboratedStructType();
+
 // RUN: c-index-test -test-print-type %s | FileCheck %s
 // CHECK: FunctionDecl=f:3:6 (Definition) [type=int *(int *, char *, FooType, int *, void (*)(int))] [typekind=FunctionProto] [canonicaltype=int *(int *, char *, int, int *, void (*)(int))] [canonicaltypekind=FunctionProto] [resulttype=int *] [resulttypekind=Pointer] [args= [int *] [Pointer] [char *] [Pointer] [FooType] [Typedef] [int [5]] [ConstantArray] [void (*)(int)] [Pointer]] [isPOD=0]
 // CHECK: ParmDecl=p:3:13 (Definition) [type=int *] [typekind=Pointer] [isPOD=1] [pointeetype=int] [pointeekind=Int]
@@ -45,3 +48,8 @@ int f2(int incompletearray[]);
 // CHECK: VarDecl=x:10:38 [type=__attribute__((__vector_size__(4 * sizeof(int)))) int] [typekind=Vector] [isPOD=1]
 // CHECK: TypedefDecl=int4_t:11:46 (Definition) [type=int4_t] [typekind=Typedef] [canonicaltype=__attribute__((__vector_size__(4 * sizeof(int)))) int] [canonicaltypekind=Vector] [isPOD=1]
 // CHECK: ParmDecl=incompletearray:13:12 (Definition) [type=int []] [typekind=IncompleteArray] [isPOD=1]
+// CHECK: FunctionDecl=elaboratedEnumType:15:25 [type=enum Enum ()] [typekind=FunctionNoProto] [canonicaltype=enum Enum ()] [canonicaltypekind=FunctionNoProto] [resulttype=enum Enum] [resulttypekind=Elaborated] [isPOD=0]
+// CHECK: TypeRef=enum Enum:15:6 [type=enum Enum] [typekind=Enum] [isPOD=1]
+// CHECK: StructDecl=Struct:16:8 (Definition) [type=struct Struct] [typekind=Record] [isPOD=1]
+// CHECK: FunctionDecl=elaboratedStructType:16:32 [type=struct Struct ()] [typekind=FunctionNoProto] [canonicaltype=struct Struct ()] [canonicaltypekind=FunctionNoProto] [resulttype=struct Struct] [resulttypekind=Elaborated] [isPOD=0]
+// CHECK: TypeRef=struct Struct:16:8 [type=struct Struct] [typekind=Record] [isPOD=1]

@@ -31,3 +31,5 @@ DEFINE_COMPILERRT_PRIVATE_FUNCTION(__restore_vfp_d8_d15_regs)
 	bx      lr                      // return to prolog
 END_COMPILERRT_FUNCTION(__restore_vfp_d8_d15_regs)
 
+NO_EXEC_STACK_DIRECTIVE
+

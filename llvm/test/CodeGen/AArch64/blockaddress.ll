@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64-none-linux-gnu -aarch64-atomic-cfg-tidy=0 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -code-model=large -mtriple=aarch64-none-linux-gnu -aarch64-atomic-cfg-tidy=0 -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-LARGE %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -code-model=large -mtriple=aarch64-none-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-LARGE %s
 
 @addr = global i8* null
 

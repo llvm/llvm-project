@@ -67,3 +67,11 @@ id radar15147688() {
   x = @[ @"stuff", @"hello" "world"]; // expected-warning {{concatenated NSString literal for an NSArray expression}}
   return x;
 }
+
+enum XXXYYYZZZType { XXXYYYZZZTypeAny }; // expected-note {{'XXXYYYZZZTypeAny' declared here}}
+void foo() {
+  NSArray *array = @[
+    @(XXXYYYZZZTypeA),                 // expected-error {{use of undeclared identifier 'XXXYYYZZZTypeA'; did you mean 'XXXYYYZZZTypeAny'}}
+    @(XXXYYYZZZTypeSomethingSomething) // expected-error {{use of undeclared identifier 'XXXYYYZZZTypeSomethingSomething'}}
+  ];
+}

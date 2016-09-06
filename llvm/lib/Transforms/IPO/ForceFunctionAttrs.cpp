@@ -80,7 +80,8 @@ static void addForcedAttributes(Function &F) {
   }
 }
 
-PreservedAnalyses ForceFunctionAttrsPass::run(Module &M) {
+PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
+                                              ModuleAnalysisManager &) {
   if (ForceAttributes.empty())
     return PreservedAnalyses::all();
 

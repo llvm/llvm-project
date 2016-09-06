@@ -397,7 +397,7 @@ namespace {
                      Instruction *I, Instruction *J);
 
     bool vectorizeBB(BasicBlock &BB) {
-      if (skipOptnoneFunction(BB))
+      if (skipBasicBlock(BB))
         return false;
       if (!DT->isReachableFromEntry(&BB)) {
         DEBUG(dbgs() << "BBV: skipping unreachable " << BB.getName() <<
@@ -886,9 +886,16 @@ namespace {
       Type *DestTy = C->getDestTy();
       if (!DestTy->isSingleValueType())
         return false;
-    } else if (isa<SelectInst>(I)) {
+    } else if (SelectInst *SI = dyn_cast<SelectInst>(I)) {
       if (!Config.VectorizeSelect)
         return false;
+      // We can vectorize a select if either all operands are scalars,
+      // or all operands are vectors. Trying to "widen" a select between
+      // vectors that has a scalar condition results in a malformed select.
+      // FIXME: We could probably be smarter about this by rewriting the select
+      // with different types instead.
+      return (SI->getCondition()->getType()->isVectorTy() == 
+              SI->getTrueValue()->getType()->isVectorTy());
     } else if (isa<CmpInst>(I)) {
       if (!Config.VectorizeCmp)
         return false;
@@ -1117,16 +1124,25 @@ namespace {
       }
 
       if (IID && TTI) {
+        FastMathFlags FMFCI;
+        if (auto *FPMOCI = dyn_cast<FPMathOperator>(CI))
+          FMFCI = FPMOCI->getFastMathFlags();
+
         SmallVector<Type*, 4> Tys;
         for (unsigned i = 0, ie = CI->getNumArgOperands(); i != ie; ++i)
           Tys.push_back(CI->getArgOperand(i)->getType());
-        unsigned ICost = TTI->getIntrinsicInstrCost(IID, IT1, Tys);
+        unsigned ICost = TTI->getIntrinsicInstrCost(IID, IT1, Tys, FMFCI);
 
         Tys.clear();
         CallInst *CJ = cast<CallInst>(J);
+
+        FastMathFlags FMFCJ;
+        if (auto *FPMOCJ = dyn_cast<FPMathOperator>(CJ))
+          FMFCJ = FPMOCJ->getFastMathFlags();
+
         for (unsigned i = 0, ie = CJ->getNumArgOperands(); i != ie; ++i)
           Tys.push_back(CJ->getArgOperand(i)->getType());
-        unsigned JCost = TTI->getIntrinsicInstrCost(IID, JT1, Tys);
+        unsigned JCost = TTI->getIntrinsicInstrCost(IID, JT1, Tys, FMFCJ);
 
         Tys.clear();
         assert(CI->getNumArgOperands() == CJ->getNumArgOperands() &&
@@ -1140,8 +1156,10 @@ namespace {
                                             CJ->getArgOperand(i)->getType()));
         }
 
+        FastMathFlags FMFV = FMFCI;
+        FMFV &= FMFCJ;
         Type *RetTy = getVecTypeForPair(IT1, JT1);
-        unsigned VCost = TTI->getIntrinsicInstrCost(IID, RetTy, Tys);
+        unsigned VCost = TTI->getIntrinsicInstrCost(IID, RetTy, Tys, FMFV);
 
         if (VCost > ICost + JCost)
           return false;
@@ -1259,7 +1277,7 @@ namespace {
       bool JAfterStart = IAfterStart;
       BasicBlock::iterator J = std::next(I);
       for (unsigned ss = 0; J != E && ss <= Config.SearchLimit; ++J, ++ss) {
-        if (&*J == Start)
+        if (J == Start)
           JAfterStart = true;
 
         // Determine if J uses I, if so, exit the loop.

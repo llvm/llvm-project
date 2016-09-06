@@ -1,14 +1,17 @@
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=-f16c -asm-verbose=false \
-; RUN:   | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-LIBCALL
-; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=+f16c -asm-verbose=false \
-; RUN:    | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-F16C
-; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mattr +sse2 -asm-verbose=false \
+; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=-f16c -asm-verbose=false -fixup-byte-word-insts=1 \
+; RUN:   | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-LIBCALL -check-prefix=BWON
+; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=-f16c -asm-verbose=false -fixup-byte-word-insts=0 \
+; RUN:   | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-LIBCALL -check-prefix=BWOFF
+; RUN: llc < %s -march=x86-64 -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -mattr=+f16c -asm-verbose=false -fixup-byte-word-insts=1 \
+; RUN:    | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-F16C -check-prefix=BWON
+; RUN: llc < %s -mtriple=i686-unknown-linux-gnu -mattr +sse2 -asm-verbose=false -fixup-byte-word-insts=0  \
 ; RUN:    | FileCheck %s -check-prefix=CHECK-I686
 
 define void @test_load_store(half* %in, half* %out) {
 ; CHECK-LABEL: test_load_store:
-; CHECK: movw (%rdi), [[TMP:%[a-z0-9]+]]
-; CHECK: movw [[TMP]], (%rsi)
+; BWON:  movzwl (%rdi), %eax
+; BWOFF: movw (%rdi), %ax
+; CHECK: movw %ax, (%rsi)
   %val = load half, half* %in
   store half %val, half* %out
   ret void
@@ -16,7 +19,8 @@ define void @test_load_store(half* %in, half* %out) {
 
 define i16 @test_bitcast_from_half(half* %addr) {
 ; CHECK-LABEL: test_bitcast_from_half:
-; CHECK: movzwl (%rdi), %eax
+; BWON:  movzwl (%rdi), %eax
+; BWOFF: movw (%rdi), %ax
   %val = load half, half* %addr
   %val_int = bitcast half %val to i16
   ret i16 %val_int
@@ -153,8 +157,6 @@ define void @test_uitofp_i64(i64 %a, half* %p) #0 {
 ; CHECK-LABEL: test_uitofp_i64:
 ; CHECK-LIBCALL-NEXT: pushq [[ADDR:%[a-z0-9]+]]
 ; CHECK-LIBCALL-NEXT: movq %rsi, [[ADDR]]
-; CHECK-NEXT: movl %edi, [[REG0:%[a-z0-9]+]]
-; CHECK-NEXT: andl $1, [[REG0]]
 ; CHECK-NEXT: testq %rdi, %rdi
 ; CHECK-NEXT: js [[LABEL1:.LBB[0-9_]+]]
 
@@ -165,8 +167,10 @@ define void @test_uitofp_i64(i64 %a, half* %p) #0 {
 
 ; convert using shift+or if negative
 ; CHECK-NEXT: [[LABEL1]]:
-; CHECK-NEXT: shrq %rdi
-; CHECK-NEXT: orq %rdi, [[REG2:%[a-z0-9]+]]
+; CHECK-NEXT: movq %rdi, %rax
+; CHECK-NEXT: shrq %rax
+; CHECK-NEXT: andl $1, %edi
+; CHECK-NEXT: orq %rax, [[REG2:%[a-z0-9]+]]
 ; CHECK-LIBCALL-NEXT: cvtsi2ssq [[REG2]], [[REG3:%[a-z0-9]+]]
 ; CHECK-LIBCALL-NEXT: addss [[REG3]], [[REG1]]
 ; CHECK-F16C-NEXT: vcvtsi2ssq [[REG2]], [[REG3:%[a-z0-9]+]], [[REG3]]
@@ -273,6 +277,40 @@ define half @test_f80trunc_nodagcombine() #0 {
   %1 = call float @test_floatret()
   %2 = fptrunc float %1 to half
   ret half %2
+}
+
+; CHECK-LABEL: test_sitofp_fadd_i32:
+
+; CHECK-LIBCALL-NEXT: pushq %rbx
+; CHECK-LIBCALL-NEXT: subq $16, %rsp
+; CHECK-LIBCALL-NEXT: movl %edi, %ebx
+; CHECK-LIBCALL-NEXT: movzwl (%rsi), %edi
+; CHECK-LIBCALL-NEXT: callq __gnu_h2f_ieee
+; CHECK-LIBCALL-NEXT: movss %xmm0, 12(%rsp)
+; CHECK-LIBCALL-NEXT: cvtsi2ssl %ebx, %xmm0
+; CHECK-LIBCALL-NEXT: callq __gnu_f2h_ieee
+; CHECK-LIBCALL-NEXT: movzwl %ax, %edi
+; CHECK-LIBCALL-NEXT: callq __gnu_h2f_ieee
+; CHECK-LIBCALL-NEXT: addss 12(%rsp), %xmm0
+; CHECK-LIBCALL-NEXT: addq $16, %rsp
+; CHECK-LIBCALL-NEXT: popq %rbx
+; CHECK-LIBCALL-NEXT: retq
+
+; CHECK-F16C-NEXT: movswl (%rsi), %eax
+; CHECK-F16C-NEXT: vmovd %eax, %xmm0
+; CHECK-F16C-NEXT: vcvtph2ps %xmm0, %xmm0
+; CHECK-F16C-NEXT: vcvtsi2ssl %edi, %xmm1, %xmm1
+; CHECK-F16C-NEXT: vcvtps2ph $4, %xmm1, %xmm1
+; CHECK-F16C-NEXT: vcvtph2ps %xmm1, %xmm1
+; CHECK-F16C-NEXT: vaddss %xmm1, %xmm0, %xmm0
+; CHECK-F16C-NEXT: retq
+
+define float @test_sitofp_fadd_i32(i32 %a, half* %b) #0 {
+  %tmp0 = load half, half* %b
+  %tmp1 = sitofp i32 %a to half
+  %tmp2 = fadd half %tmp0, %tmp1
+  %tmp3 = fpext half %tmp2 to float
+  ret float %tmp3
 }
 
 attributes #0 = { nounwind }

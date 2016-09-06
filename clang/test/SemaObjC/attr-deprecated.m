@@ -235,7 +235,7 @@ expected-note {{property declared here}}
 
 id PID = 0;
 const char * func() {
-  return [PID cString]; // expected-warning {{'cString' is deprecated: first deprecated in OS X 10.4}}
+  return [PID cString]; // expected-warning {{'cString' is deprecated: first deprecated in macOS 10.4}}
 }
 
 // rdar://18960378

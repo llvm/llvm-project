@@ -31,10 +31,10 @@
 ;
 ; CHECK-LABEL: testCombineMultiplies
 ; CHECK: imull $400, [[ARG1:%[a-z]+]], [[MUL:%[a-z]+]] # imm = 0x190
-; CHECK-NEXT: leal ([[MUL]],[[ARG2:%[a-z]+]]), [[LEA:%[a-z]+]]
+; CHECK-NEXT: leal ([[ARG2:%[a-z]+]],[[MUL]]), [[LEA:%[a-z]+]]
 ; CHECK-NEXT: movl $11, {{[0-9]+}}([[LEA]],[[ARG1]],4)
-; CHECK-NEXT: movl $22, {{[0-9]+}}([[MUL]],[[ARG2]])
-; CHECK-NEXT: movl $33, {{[0-9]+}}([[MUL]],[[ARG2]])
+; CHECK-NEXT: movl $22, {{[0-9]+}}([[ARG2]],[[MUL]])
+; CHECK-NEXT: movl $33, {{[0-9]+}}([[ARG2]],[[MUL]])
 ; CHECK: retl
 ;
 
@@ -109,7 +109,7 @@ entry:
 ; CHECK-NEXT:  movdqa [[C242]], v2
 ; CHECK-NEXT:  [[C726]], v3
 ; CHECK-NEXT:  [[C11]], x
-; CHECK-NEXT:  retl 
+; CHECK-NEXT:  retl
 
 @v2 = common global <4 x i32> zeroinitializer, align 16
 @v3 = common global <4 x i32> zeroinitializer, align 16
@@ -148,7 +148,7 @@ entry:
 ; CHECK-NEXT:  movdqa [[C242]], v2
 ; CHECK-NEXT:  [[C726]], v3
 ; CHECK-NEXT:  [[C11]], x
-; CHECK-NEXT:  retl 
+; CHECK-NEXT:  retl
 ; Function Attrs: nounwind
 define void @testCombineMultiplies_non_splat(<4 x i32> %v1) {
 entry:

@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mattr=+max-private-element-size-16 < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -verify-machineinstrs -march=amdgcn -mcpu=tonga -mattr=+max-private-element-size-16 < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
 
 ; FIXME: Broken on evergreen
 ; FIXME: For some reason the 8 and 16 vectors are being stored as
@@ -9,168 +9,297 @@
 ; FIXME: Why is the constant moved into the intermediate register and
 ; not just directly into the vector component?
 
-; SI-LABEL: {{^}}insertelement_v4f32_0:
-; s_load_dwordx4 s{{[}}[[LOW_REG:[0-9]+]]:
-; v_mov_b32_e32
-; v_mov_b32_e32 [[CONSTREG:v[0-9]+]], 5.000000e+00
-; v_mov_b32_e32 v[[LOW_REG]], [[CONSTREG]]
-; buffer_store_dwordx4 v{{[}}[[LOW_REG]]:
+; GCN-LABEL: {{^}}insertelement_v4f32_0:
+; GCN: s_load_dwordx4
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 [[CONSTREG:v[0-9]+]], 0x40a00000
+; GCN-DAG: v_mov_b32_e32 v[[LOW_REG:[0-9]+]], [[CONSTREG]]
+; GCN: buffer_store_dwordx4 v{{\[}}[[LOW_REG]]:
 define void @insertelement_v4f32_0(<4 x float> addrspace(1)* %out, <4 x float> %a) nounwind {
   %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 0
   store <4 x float> %vecins, <4 x float> addrspace(1)* %out, align 16
   ret void
 }
 
-; SI-LABEL: {{^}}insertelement_v4f32_1:
+; GCN-LABEL: {{^}}insertelement_v4f32_1:
 define void @insertelement_v4f32_1(<4 x float> addrspace(1)* %out, <4 x float> %a) nounwind {
   %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 1
   store <4 x float> %vecins, <4 x float> addrspace(1)* %out, align 16
   ret void
 }
 
-; SI-LABEL: {{^}}insertelement_v4f32_2:
+; GCN-LABEL: {{^}}insertelement_v4f32_2:
 define void @insertelement_v4f32_2(<4 x float> addrspace(1)* %out, <4 x float> %a) nounwind {
   %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 2
   store <4 x float> %vecins, <4 x float> addrspace(1)* %out, align 16
   ret void
 }
 
-; SI-LABEL: {{^}}insertelement_v4f32_3:
+; GCN-LABEL: {{^}}insertelement_v4f32_3:
 define void @insertelement_v4f32_3(<4 x float> addrspace(1)* %out, <4 x float> %a) nounwind {
   %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 3
   store <4 x float> %vecins, <4 x float> addrspace(1)* %out, align 16
   ret void
 }
 
-; SI-LABEL: {{^}}insertelement_v4i32_0:
+; GCN-LABEL: {{^}}insertelement_v4i32_0:
 define void @insertelement_v4i32_0(<4 x i32> addrspace(1)* %out, <4 x i32> %a) nounwind {
   %vecins = insertelement <4 x i32> %a, i32 999, i32 0
   store <4 x i32> %vecins, <4 x i32> addrspace(1)* %out, align 16
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v2f32:
-; SI: v_mov_b32_e32 [[CONST:v[0-9]+]], 0x40a00000
-; SI: v_movreld_b32_e32 v[[LOW_RESULT_REG:[0-9]+]], [[CONST]]
-; SI: buffer_store_dwordx2 {{v\[}}[[LOW_RESULT_REG]]:
+; GCN-LABEL: {{^}}insertelement_v3f32_1:
+define void @insertelement_v3f32_1(<3 x float> addrspace(1)* %out, <3 x float> %a) nounwind {
+  %vecins = insertelement <3 x float> %a, float 5.000000e+00, i32 1
+  store <3 x float> %vecins, <3 x float> addrspace(1)* %out, align 16
+  ret void
+}
+
+; GCN-LABEL: {{^}}insertelement_v3f32_2:
+define void @insertelement_v3f32_2(<3 x float> addrspace(1)* %out, <3 x float> %a) nounwind {
+  %vecins = insertelement <3 x float> %a, float 5.000000e+00, i32 2
+  store <3 x float> %vecins, <3 x float> addrspace(1)* %out, align 16
+  ret void
+}
+
+; GCN-LABEL: {{^}}insertelement_v3f32_3:
+define void @insertelement_v3f32_3(<3 x float> addrspace(1)* %out, <3 x float> %a) nounwind {
+  %vecins = insertelement <3 x float> %a, float 5.000000e+00, i32 3
+  store <3 x float> %vecins, <3 x float> addrspace(1)* %out, align 16
+  ret void
+}
+
+; GCN-LABEL: {{^}}insertelement_to_sgpr:
+; GCN-NOT: v_readfirstlane
+define amdgpu_ps <4 x float> @insertelement_to_sgpr() nounwind {
+  %tmp = load <4 x i32>, <4 x i32> addrspace(2)* undef
+  %tmp1 = insertelement <4 x i32> %tmp, i32 0, i32 0
+  %tmp2 = call <4 x float> @llvm.SI.gather4.lz.v2i32(<2 x i32> undef, <8 x i32> undef, <4 x i32> %tmp1, i32 8, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  ret <4 x float> %tmp2
+}
+
+; GCN-LABEL: {{^}}dynamic_insertelement_v2f32:
+; GCN: v_mov_b32_e32 [[CONST:v[0-9]+]], 0x40a00000
+; GCN: v_movreld_b32_e32 v[[LOW_RESULT_REG:[0-9]+]], [[CONST]]
+; GCN: buffer_store_dwordx2 {{v\[}}[[LOW_RESULT_REG]]:
 define void @dynamic_insertelement_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %a, i32 %b) nounwind {
   %vecins = insertelement <2 x float> %a, float 5.000000e+00, i32 %b
   store <2 x float> %vecins, <2 x float> addrspace(1)* %out, align 8
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v4f32:
-; SI: v_mov_b32_e32 [[CONST:v[0-9]+]], 0x40a00000
-; SI: v_movreld_b32_e32 v[[LOW_RESULT_REG:[0-9]+]], [[CONST]]
-; SI: buffer_store_dwordx4 {{v\[}}[[LOW_RESULT_REG]]:
+; GCN-LABEL: {{^}}dynamic_insertelement_v3f32:
+; GCN: v_mov_b32_e32 [[CONST:v[0-9]+]], 0x40a00000
+; GCN: v_movreld_b32_e32 v[[LOW_RESULT_REG:[0-9]+]], [[CONST]]
+; GCN-DAG: buffer_store_dwordx2 {{v\[}}[[LOW_RESULT_REG]]:
+; GCN-DAG: buffer_store_dword v
+define void @dynamic_insertelement_v3f32(<3 x float> addrspace(1)* %out, <3 x float> %a, i32 %b) nounwind {
+  %vecins = insertelement <3 x float> %a, float 5.000000e+00, i32 %b
+  store <3 x float> %vecins, <3 x float> addrspace(1)* %out, align 16
+  ret void
+}
+
+; GCN-LABEL: {{^}}dynamic_insertelement_v4f32:
+; GCN: v_mov_b32_e32 [[CONST:v[0-9]+]], 0x40a00000
+; GCN: v_movreld_b32_e32 v[[LOW_RESULT_REG:[0-9]+]], [[CONST]]
+; GCN: buffer_store_dwordx4 {{v\[}}[[LOW_RESULT_REG]]:
 define void @dynamic_insertelement_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %a, i32 %b) nounwind {
   %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 %b
   store <4 x float> %vecins, <4 x float> addrspace(1)* %out, align 16
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v8f32:
-; SI: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
-; SI: buffer_store_dwordx4
-; SI: buffer_store_dwordx4
+; GCN-LABEL: {{^}}dynamic_insertelement_v8f32:
+; GCN: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
 define void @dynamic_insertelement_v8f32(<8 x float> addrspace(1)* %out, <8 x float> %a, i32 %b) nounwind {
   %vecins = insertelement <8 x float> %a, float 5.000000e+00, i32 %b
   store <8 x float> %vecins, <8 x float> addrspace(1)* %out, align 32
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v16f32:
-; SI: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
-; SI: buffer_store_dwordx4
-; SI: buffer_store_dwordx4
-; SI: buffer_store_dwordx4
-; SI: buffer_store_dwordx4
+; GCN-LABEL: {{^}}dynamic_insertelement_v16f32:
+; GCN: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
 define void @dynamic_insertelement_v16f32(<16 x float> addrspace(1)* %out, <16 x float> %a, i32 %b) nounwind {
   %vecins = insertelement <16 x float> %a, float 5.000000e+00, i32 %b
   store <16 x float> %vecins, <16 x float> addrspace(1)* %out, align 64
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v2i32:
-; SI: buffer_store_dwordx2
+; GCN-LABEL: {{^}}dynamic_insertelement_v2i32:
+; GCN: v_movreld_b32
+; GCN: buffer_store_dwordx2
 define void @dynamic_insertelement_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> %a, i32 %b) nounwind {
   %vecins = insertelement <2 x i32> %a, i32 5, i32 %b
   store <2 x i32> %vecins, <2 x i32> addrspace(1)* %out, align 8
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v4i32:
-; SI: buffer_store_dwordx4
-define void @dynamic_insertelement_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %a, i32 %b) nounwind {
-  %vecins = insertelement <4 x i32> %a, i32 5, i32 %b
+; GCN-LABEL: {{^}}dynamic_insertelement_v3i32:
+; GCN: v_movreld_b32_e32 v[[LOW_RESULT_REG:[0-9]+]], 5
+; GCN-DAG: buffer_store_dwordx2 {{v\[}}[[LOW_RESULT_REG]]:
+; GCN-DAG: buffer_store_dword v
+define void @dynamic_insertelement_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> %a, i32 %b) nounwind {
+  %vecins = insertelement <3 x i32> %a, i32 5, i32 %b
+  store <3 x i32> %vecins, <3 x i32> addrspace(1)* %out, align 16
+  ret void
+}
+
+; GCN-LABEL: {{^}}dynamic_insertelement_v4i32:
+; GCN: s_load_dword [[SVAL:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0x12|0x48}}
+; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[SVAL]]
+; GCN: v_movreld_b32_e32 v{{[0-9]+}}, [[VVAL]]
+; GCN: buffer_store_dwordx4
+define void @dynamic_insertelement_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %a, i32 %b, i32 %val) nounwind {
+  %vecins = insertelement <4 x i32> %a, i32 %val, i32 %b
   store <4 x i32> %vecins, <4 x i32> addrspace(1)* %out, align 16
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v8i32:
-; FIXMESI: buffer_store_dwordx4
-; FIXMESI: buffer_store_dwordx4
+; GCN-LABEL: {{^}}dynamic_insertelement_v8i32:
+; GCN: v_movreld_b32
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
 define void @dynamic_insertelement_v8i32(<8 x i32> addrspace(1)* %out, <8 x i32> %a, i32 %b) nounwind {
   %vecins = insertelement <8 x i32> %a, i32 5, i32 %b
   store <8 x i32> %vecins, <8 x i32> addrspace(1)* %out, align 32
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v16i32:
-; FIXMESI: buffer_store_dwordx4
-; FIXMESI: buffer_store_dwordx4
-; FIXMESI: buffer_store_dwordx4
-; FIXMESI: buffer_store_dwordx4
+; GCN-LABEL: {{^}}dynamic_insertelement_v16i32:
+; GCN: v_movreld_b32
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
 define void @dynamic_insertelement_v16i32(<16 x i32> addrspace(1)* %out, <16 x i32> %a, i32 %b) nounwind {
   %vecins = insertelement <16 x i32> %a, i32 5, i32 %b
   store <16 x i32> %vecins, <16 x i32> addrspace(1)* %out, align 64
   ret void
 }
 
-
-; SI-LABEL: {{^}}dynamic_insertelement_v2i16:
-; FIXMESI: buffer_store_dwordx2
+; GCN-LABEL: {{^}}dynamic_insertelement_v2i16:
 define void @dynamic_insertelement_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %a, i32 %b) nounwind {
   %vecins = insertelement <2 x i16> %a, i16 5, i32 %b
   store <2 x i16> %vecins, <2 x i16> addrspace(1)* %out, align 8
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v4i16:
-; FIXMESI: buffer_store_dwordx4
-define void @dynamic_insertelement_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %a, i32 %b) nounwind {
-  %vecins = insertelement <4 x i16> %a, i16 5, i32 %b
-  store <4 x i16> %vecins, <4 x i16> addrspace(1)* %out, align 16
+; GCN-LABEL: {{^}}dynamic_insertelement_v3i16:
+define void @dynamic_insertelement_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16> %a, i32 %b) nounwind {
+  %vecins = insertelement <3 x i16> %a, i16 5, i32 %b
+  store <3 x i16> %vecins, <3 x i16> addrspace(1)* %out, align 8
   ret void
 }
 
+; GCN-LABEL: {{^}}dynamic_insertelement_v4i16:
+; GCN: buffer_load_ushort v{{[0-9]+}}, off
+; GCN: buffer_load_ushort v{{[0-9]+}}, off
+; GCN: buffer_load_ushort v{{[0-9]+}}, off
+; GCN: buffer_load_ushort v{{[0-9]+}}, off
 
-; SI-LABEL: {{^}}dynamic_insertelement_v2i8:
-; FIXMESI: BUFFER_STORE_USHORT
+; GCN-DAG: buffer_store_short v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen offset:6
+; GCN-DAG: buffer_store_short v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen offset:4
+; GCN-DAG: buffer_store_short v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen offset:2
+; GCN-DAG: buffer_store_short v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+; GCN: buffer_store_short v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+; GCN: buffer_load_ushort
+
+; GCN: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off
+define void @dynamic_insertelement_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %a, i32 %b) nounwind {
+  %vecins = insertelement <4 x i16> %a, i16 5, i32 %b
+  store <4 x i16> %vecins, <4 x i16> addrspace(1)* %out, align 8
+  ret void
+}
+
+; GCN-LABEL: {{^}}dynamic_insertelement_v2i8:
+; GCN: buffer_load_ubyte v{{[0-9]+}}, off
+; GCN: buffer_load_ubyte v{{[0-9]+}}, off
+
+; GCN-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen offset:1
+; GCN-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+
+; GCN: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+
+; GCN: buffer_load_ubyte
+; GCN: buffer_load_ubyte
+
+; GCN: buffer_store_short v{{[0-9]+}}, off
 define void @dynamic_insertelement_v2i8(<2 x i8> addrspace(1)* %out, <2 x i8> %a, i32 %b) nounwind {
   %vecins = insertelement <2 x i8> %a, i8 5, i32 %b
   store <2 x i8> %vecins, <2 x i8> addrspace(1)* %out, align 8
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v4i8:
-; FIXMESI: buffer_store_dword
+; GCN-LABEL: {{^}}dynamic_insertelement_v3i8:
+; GCN: buffer_load_ubyte v{{[0-9]+}}, off
+; GCN: buffer_load_ubyte v{{[0-9]+}}, off
+; GCN: buffer_load_ubyte v{{[0-9]+}}, off
+
+; GCN-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen offset:2
+; GCN-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen offset:1
+; GCN-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+
+; GCN: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+
+; GCN: buffer_load_ubyte
+; GCN: buffer_load_ubyte
+; GCN: buffer_load_ubyte
+
+; GCN-DAG: buffer_store_byte v{{[0-9]+}}, off
+; GCN-DAG: buffer_store_short v{{[0-9]+}}, off
+define void @dynamic_insertelement_v3i8(<3 x i8> addrspace(1)* %out, <3 x i8> %a, i32 %b) nounwind {
+  %vecins = insertelement <3 x i8> %a, i8 5, i32 %b
+  store <3 x i8> %vecins, <3 x i8> addrspace(1)* %out, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}dynamic_insertelement_v4i8:
+; GCN: buffer_load_ubyte v{{[0-9]+}}, off
+; GCN: buffer_load_ubyte v{{[0-9]+}}, off
+; GCN: buffer_load_ubyte v{{[0-9]+}}, off
+; GCN: buffer_load_ubyte v{{[0-9]+}}, off
+
+; GCN-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen offset:3
+; GCN-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen offset:2
+; GCN-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen offset:1
+; GCN-DAG: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+
+; GCN: buffer_store_byte v{{[0-9]+}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}} offen{{$}}
+
+; GCN: buffer_load_ubyte
+; GCN: buffer_load_ubyte
+; GCN: buffer_load_ubyte
+; GCN: buffer_load_ubyte
+
+; GCN: buffer_store_dword v{{[0-9]+}}, off
 define void @dynamic_insertelement_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> %a, i32 %b) nounwind {
   %vecins = insertelement <4 x i8> %a, i8 5, i32 %b
-  store <4 x i8> %vecins, <4 x i8> addrspace(1)* %out, align 16
+  store <4 x i8> %vecins, <4 x i8> addrspace(1)* %out, align 4
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v8i8:
-; FIXMESI: buffer_store_dwordx2
+; GCN-LABEL: {{^}}dynamic_insertelement_v8i8:
 define void @dynamic_insertelement_v8i8(<8 x i8> addrspace(1)* %out, <8 x i8> %a, i32 %b) nounwind {
   %vecins = insertelement <8 x i8> %a, i8 5, i32 %b
-  store <8 x i8> %vecins, <8 x i8> addrspace(1)* %out, align 16
+  store <8 x i8> %vecins, <8 x i8> addrspace(1)* %out, align 8
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v16i8:
-; FIXMESI: buffer_store_dwordx4
+; GCN-LABEL: {{^}}dynamic_insertelement_v16i8:
 define void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %out, <16 x i8> %a, i32 %b) nounwind {
   %vecins = insertelement <16 x i8> %a, i8 5, i32 %b
   store <16 x i8> %vecins, <16 x i8> addrspace(1)* %out, align 16
@@ -179,7 +308,7 @@ define void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %out, <16 x i8>
 
 ; This test requires handling INSERT_SUBREG in SIFixSGPRCopies.  Check that
 ; the compiler doesn't crash.
-; SI-LABEL: {{^}}insert_split_bb:
+; GCN-LABEL: {{^}}insert_split_bb:
 define void @insert_split_bb(<2 x i32> addrspace(1)* %out, i32 addrspace(1)* %in, i32 %a, i32 %b) {
 entry:
   %0 = insertelement <2 x i32> undef, i32 %a, i32 0
@@ -203,75 +332,79 @@ endif:
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v2f64:
-; SI: s_load_dword [[IDX:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0x11|0x44}}{{$}}
-; SI-DAG: s_lshl_b32 [[SCALEDIDX:s[0-9]+]], [[IDX]], 1{{$}}
-; SI-DAG: v_mov_b32_e32 [[ELT0:v[0-9]+]], 0{{$}}
+; GCN-LABEL: {{^}}dynamic_insertelement_v2f64:
+; GCN-DAG: s_load_dwordx4 s{{\[}}[[A_ELT0:[0-9]+]]:[[A_ELT3:[0-9]+]]{{\]}}
+; GCN-DAG: s_load_dword [[IDX:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0x11|0x44}}{{$}}
 
-; SI: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
-; SI: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
-; SI: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
-; SI: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: s_lshl_b32 [[SCALEDIDX:s[0-9]+]], [[IDX]], 1{{$}}
 
-; SI: s_mov_b32 m0, [[SCALEDIDX]]
-; SI: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT0]]
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 [[ELT1:v[0-9]+]], 0x40200000
 
-; Increment to next element.
-; FIXME: Should be able to manipulate m0 directly instead of add and
-; copy.
+; GCN: s_mov_b32 m0, [[SCALEDIDX]]
+; GCN: v_movreld_b32_e32 v{{[0-9]+}}, 0
 
-; SI: s_or_b32 [[IDX1:s[0-9]+]], [[SCALEDIDX]], 1
-; SI-DAG: v_mov_b32_e32 [[ELT1:v[0-9]+]], 0x40200000
-; SI-DAG: s_mov_b32 m0, [[IDX1]]
-; SI: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT1]]
+; Increment to next element folded into base register, but FileCheck
+; can't do math expressions
 
-; SI: buffer_store_dwordx4
-; SI: s_endpgm
+; FIXME: Should be able to manipulate m0 directly instead of s_lshl_b32 + copy to m0
+
+; GCN: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT1]]
+
+; GCN: buffer_store_dwordx4
+; GCN: s_endpgm
 define void @dynamic_insertelement_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %a, i32 %b) nounwind {
   %vecins = insertelement <2 x double> %a, double 8.0, i32 %b
   store <2 x double> %vecins, <2 x double> addrspace(1)* %out, align 16
   ret void
 }
 
-; FIXME: Inline immediate should be folded into v_movreld_b32.
-; SI-LABEL: {{^}}dynamic_insertelement_v2i64:
+; GCN-LABEL: {{^}}dynamic_insertelement_v2i64:
 
-; SI-DAG: v_mov_b32_e32 [[ELT0:v[0-9]+]], 5{{$}}
-; SI-DAG: v_mov_b32_e32 [[ELT1:v[0-9]+]], 0{{$}}
+; GCN-DAG: v_movreld_b32_e32 v{{[0-9]+}}, 5
+; GCN-DAG: v_movreld_b32_e32 v{{[0-9]+}}, 0
 
-; SI-DAG: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT0]]
-; SI-DAG: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT1]]
-
-; SI: buffer_store_dwordx4
-; SI: s_endpgm
+; GCN: buffer_store_dwordx4
+; GCN: s_endpgm
 define void @dynamic_insertelement_v2i64(<2 x i64> addrspace(1)* %out, <2 x i64> %a, i32 %b) nounwind {
   %vecins = insertelement <2 x i64> %a, i64 5, i32 %b
   store <2 x i64> %vecins, <2 x i64> addrspace(1)* %out, align 8
   ret void
 }
 
+; GCN-LABEL: {{^}}dynamic_insertelement_v3i64:
+define void @dynamic_insertelement_v3i64(<3 x i64> addrspace(1)* %out, <3 x i64> %a, i32 %b) nounwind {
+  %vecins = insertelement <3 x i64> %a, i64 5, i32 %b
+  store <3 x i64> %vecins, <3 x i64> addrspace(1)* %out, align 32
+  ret void
+}
+
 ; FIXME: Should be able to do without stack access. The used stack
 ; space is also 2x what should be required.
 
-; SI-LABEL: {{^}}dynamic_insertelement_v4f64:
-; SI: SCRATCH_RSRC_DWORD
+; GCN-LABEL: {{^}}dynamic_insertelement_v4f64:
+; GCN: SCRATCH_RSRC_DWORD
 
 ; Stack store
-; SI-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
-; SI-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
+
+; GCN-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+; GCN-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
 
 ; Write element
-; SI: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+; GCN: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
 
 ; Stack reload
-; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
-; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
+; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
 
 ; Store result
-; SI: buffer_store_dwordx4
-; SI: buffer_store_dwordx4
-; SI: s_endpgm
-; SI: ScratchSize: 64
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
+; GCN: s_endpgm
+; GCN: ScratchSize: 64
 
 define void @dynamic_insertelement_v4f64(<4 x double> addrspace(1)* %out, <4 x double> %a, i32 %b) nounwind {
   %vecins = insertelement <4 x double> %a, double 8.0, i32 %b
@@ -279,29 +412,31 @@ define void @dynamic_insertelement_v4f64(<4 x double> addrspace(1)* %out, <4 x d
   ret void
 }
 
-; SI-LABEL: {{^}}dynamic_insertelement_v8f64:
-; SI: SCRATCH_RSRC_DWORD
+; GCN-LABEL: {{^}}dynamic_insertelement_v8f64:
+; GCN: SCRATCH_RSRC_DWORD
 
-; SI-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
-; SI-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
-; SI-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:32{{$}}
-; SI-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:48{{$}}
+; GCN-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+; GCN-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
+; GCN-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:32{{$}}
+; GCN-DAG: buffer_store_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:48{{$}}
 
-; SI: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+; GCN: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
 
-; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
-; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
-; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
-; SI-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
+; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
+; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen offset:16{{$}}
+; GCN-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen{{$}}
 
-; SI: buffer_store_dwordx4
-; SI: buffer_store_dwordx4
-; SI: buffer_store_dwordx4
-; SI: buffer_store_dwordx4
-; SI: s_endpgm
-; SI: ScratchSize: 128
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
+; GCN: buffer_store_dwordx4
+; GCN: s_endpgm
+; GCN: ScratchSize: 128
 define void @dynamic_insertelement_v8f64(<8 x double> addrspace(1)* %out, <8 x double> %a, i32 %b) nounwind {
   %vecins = insertelement <8 x double> %a, double 8.0, i32 %b
   store <8 x double> %vecins, <8 x double> addrspace(1)* %out, align 16
   ret void
 }
+
+declare <4 x float> @llvm.SI.gather4.lz.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) nounwind readnone

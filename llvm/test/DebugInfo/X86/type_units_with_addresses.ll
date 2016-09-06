@@ -112,7 +112,7 @@
 !llvm.module.flags = !{!34, !35}
 !llvm.ident = !{!36}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, splitDebugFilename: "tu.dwo", emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !2, globals: !27, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, splitDebugFilename: "tu.dwo", emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, globals: !27, imports: !2)
 !1 = !DIFile(filename: "tu.cpp", directory: "/tmp/dbginfo")
 !2 = !{}
 !3 = !{!4, !9, !12, !13, !17, !18, !19, !23, !24}
@@ -123,18 +123,18 @@
 !8 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !9 = !DICompositeType(tag: DW_TAG_structure_type, name: "S2", line: 11, size: 8, align: 8, file: !1, elements: !10, identifier: "_ZTS2S2")
 !10 = !{!11}
-!11 = !DIDerivedType(tag: DW_TAG_member, name: "s2_1", line: 12, size: 8, align: 8, file: !1, scope: !"_ZTS2S2", baseType: !"_ZTS4S2_1IXadL_Z1iEEE")
+!11 = !DIDerivedType(tag: DW_TAG_member, name: "s2_1", line: 12, size: 8, align: 8, file: !1, scope: !9, baseType: !12)
 !12 = !DICompositeType(tag: DW_TAG_structure_type, name: "S2_1<&i>", line: 9, size: 8, align: 8, file: !1, elements: !2, templateParams: !5, identifier: "_ZTS4S2_1IXadL_Z1iEEE")
 !13 = !DICompositeType(tag: DW_TAG_structure_type, name: "S3", line: 22, size: 16, align: 8, file: !1, elements: !14, identifier: "_ZTS2S3")
 !14 = !{!15, !16}
-!15 = !DIDerivedType(tag: DW_TAG_member, name: "s3_1", line: 23, size: 8, align: 8, file: !1, scope: !"_ZTS2S3", baseType: !"_ZTS4S3_1IXadL_Z1iEEE")
-!16 = !DIDerivedType(tag: DW_TAG_member, name: "s3_2", line: 24, size: 8, align: 8, offset: 8, file: !1, scope: !"_ZTS2S3", baseType: !"_ZTS4S3_2")
+!15 = !DIDerivedType(tag: DW_TAG_member, name: "s3_1", line: 23, size: 8, align: 8, file: !1, scope: !13, baseType: !17)
+!16 = !DIDerivedType(tag: DW_TAG_member, name: "s3_2", line: 24, size: 8, align: 8, offset: 8, file: !1, scope: !13, baseType: !18)
 !17 = !DICompositeType(tag: DW_TAG_structure_type, name: "S3_1<&i>", line: 18, size: 8, align: 8, file: !1, elements: !2, templateParams: !5, identifier: "_ZTS4S3_1IXadL_Z1iEEE")
 !18 = !DICompositeType(tag: DW_TAG_structure_type, name: "S3_2", line: 20, size: 8, align: 8, file: !1, elements: !2, identifier: "_ZTS4S3_2")
 !19 = !DICompositeType(tag: DW_TAG_structure_type, name: "S4", line: 34, size: 16, align: 8, file: !1, elements: !20, identifier: "_ZTS2S4")
 !20 = !{!21, !22}
-!21 = !DIDerivedType(tag: DW_TAG_member, name: "s4_1", line: 35, size: 8, align: 8, file: !1, scope: !"_ZTS2S4", baseType: !"_ZTS4S4_1")
-!22 = !DIDerivedType(tag: DW_TAG_member, name: "s4_2", line: 36, size: 8, align: 8, offset: 8, file: !1, scope: !"_ZTS2S4", baseType: !"_ZTS4S4_2IXadL_Z1iEEE")
+!21 = !DIDerivedType(tag: DW_TAG_member, name: "s4_1", line: 35, size: 8, align: 8, file: !1, scope: !19, baseType: !23)
+!22 = !DIDerivedType(tag: DW_TAG_member, name: "s4_2", line: 36, size: 8, align: 8, offset: 8, file: !1, scope: !19, baseType: !24)
 !23 = !DICompositeType(tag: DW_TAG_structure_type, name: "S4_1", line: 29, size: 8, align: 8, file: !1, elements: !2, identifier: "_ZTS4S4_1")
 !24 = !DICompositeType(tag: DW_TAG_structure_type, name: "S4_2<&i>", line: 32, size: 8, align: 8, file: !1, elements: !2, templateParams: !25, identifier: "_ZTS4S4_2IXadL_Z1iEEE")
 !25 = !{!26}
@@ -142,10 +142,10 @@
 !27 = !{!28, !30, !31, !32, !33}
 !28 = !DIGlobalVariable(name: "i", line: 1, isLocal: false, isDefinition: true, scope: null, file: !29, type: !8, variable: i32* @i)
 !29 = !DIFile(filename: "tu.cpp", directory: "/tmp/dbginfo")
-!30 = !DIGlobalVariable(name: "a", line: 6, isLocal: false, isDefinition: true, scope: null, file: !29, type: !"_ZTS2S1IXadL_Z1iEEE", variable: %struct.S1* @a)
-!31 = !DIGlobalVariable(name: "s2", line: 15, isLocal: false, isDefinition: true, scope: null, file: !29, type: !"_ZTS2S2", variable: %struct.S2* @s2)
-!32 = !DIGlobalVariable(name: "s3", line: 27, isLocal: false, isDefinition: true, scope: null, file: !29, type: !"_ZTS2S3", variable: %struct.S3* @s3)
-!33 = !DIGlobalVariable(name: "s4", line: 39, isLocal: false, isDefinition: true, scope: null, file: !29, type: !"_ZTS2S4", variable: %struct.S4* @s4)
+!30 = !DIGlobalVariable(name: "a", line: 6, isLocal: false, isDefinition: true, scope: null, file: !29, type: !4, variable: %struct.S1* @a)
+!31 = !DIGlobalVariable(name: "s2", line: 15, isLocal: false, isDefinition: true, scope: null, file: !29, type: !9, variable: %struct.S2* @s2)
+!32 = !DIGlobalVariable(name: "s3", line: 27, isLocal: false, isDefinition: true, scope: null, file: !29, type: !13, variable: %struct.S3* @s3)
+!33 = !DIGlobalVariable(name: "s4", line: 39, isLocal: false, isDefinition: true, scope: null, file: !29, type: !19, variable: %struct.S4* @s4)
 !34 = !{i32 2, !"Dwarf Version", i32 4}
 !35 = !{i32 1, !"Debug Info Version", i32 3}
 !36 = !{!"clang version 3.5.0 "}

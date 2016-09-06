@@ -368,7 +368,14 @@ bool ConstStructBuilder::Build(InitListExpr *ILE) {
 
   unsigned FieldNo = 0;
   unsigned ElementNo = 0;
-  
+
+  // Bail out if we have base classes. We could support these, but they only
+  // arise in C++1z where we will have already constant folded most interesting
+  // cases. FIXME: There are still a few more cases we can handle this way.
+  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    if (CXXRD->getNumBases())
+      return false;
+
   for (RecordDecl::field_iterator Field = RD->field_begin(),
        FieldEnd = RD->field_end(); Field != FieldEnd; ++Field, ++FieldNo) {
     // If this is a union, skip all the fields that aren't being initialized.
@@ -683,6 +690,9 @@ public:
     case CK_ConstructorConversion:
       return C;
 
+    case CK_IntToOCLSampler:
+      llvm_unreachable("global sampler variables are not generated");
+
     case CK_Dependent: llvm_unreachable("saw dependent cast!");
 
     case CK_BuiltinFnToFnPtr:
@@ -755,6 +765,12 @@ public:
     // No need for a DefaultInitExprScope: we don't handle 'this' in a
     // constant expression.
     return Visit(DIE->getExpr());
+  }
+
+  llvm::Constant *VisitExprWithCleanups(ExprWithCleanups *E) {
+    if (!E->cleanupsHaveSideEffects())
+      return Visit(E->getSubExpr());
+    return nullptr;
   }
 
   llvm::Constant *VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E) {
@@ -1124,6 +1140,13 @@ bool ConstStructBuilder::Build(ConstExprEmitter *Emitter,
   unsigned FieldNo = -1;
   unsigned ElementNo = 0;
 
+  // Bail out if we have base classes. We could support these, but they only
+  // arise in C++1z where we will have already constant folded most interesting
+  // cases. FIXME: There are still a few more cases we can handle this way.
+  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    if (CXXRD->getNumBases())
+      return false;
+
   for (FieldDecl *Field : RD->fields()) {
     ++FieldNo;
 
@@ -1300,8 +1323,14 @@ llvm::Constant *CodeGenModule::EmitConstantValue(const APValue &Value,
 
       // Convert to the appropriate type; this could be an lvalue for
       // an integer.
-      if (isa<llvm::PointerType>(DestTy))
+      if (isa<llvm::PointerType>(DestTy)) {
+        // Convert the integer to a pointer-sized integer before converting it
+        // to a pointer.
+        C = llvm::ConstantExpr::getIntegerCast(
+            C, getDataLayout().getIntPtrType(DestTy),
+            /*isSigned=*/false);
         return llvm::ConstantExpr::getIntToPtr(C, DestTy);
+      }
 
       // If the types don't match this should only be a truncate.
       if (C->getType() != DestTy)

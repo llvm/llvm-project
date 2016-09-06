@@ -9,6 +9,15 @@
 ; But we can optionally emit it second, to match newer gcc versions.
 ; RUN: opt -insert-gcov-profiling -gcov-exit-block-before-body -disable-output %t2
 ; RUN: llvm-cov gcov -n -dump %T/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-SECOND %s
+; RUN: rm  %T/return-block.gcno
+
+; By default, the return block is last.
+; RUN: opt -passes=insert-gcov-profiling -disable-output %t2
+; RUN: llvm-cov gcov -n -dump %T/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-LAST %s
+
+; But we can optionally emit it second, to match newer gcc versions.
+; RUN: opt -passes=insert-gcov-profiling -gcov-exit-block-before-body -disable-output %t2
+; RUN: llvm-cov gcov -n -dump %T/return-block.gcno 2>&1 | FileCheck -check-prefix=CHECK -check-prefix=RETURN-SECOND %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -44,11 +53,10 @@ attributes #2 = { nounwind }
 !llvm.module.flags = !{!11, !12}
 !llvm.ident = !{!13}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0 (trunk 223182)", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !8, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0 (trunk 223182)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !8, imports: !2)
 !1 = !DIFile(filename: ".../llvm/test/Transforms/GCOVProfiling/return-block.ll", directory: "")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "test", line: 5, isLocal: false, isDefinition: true, isOptimized: true, scopeLine: 5, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "test", line: 5, isLocal: false, isDefinition: true, isOptimized: true, unit: !0, scopeLine: 5, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: ".../llvm/test/Transforms/GCOVProfiling/return-block.ll", directory: "")
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}

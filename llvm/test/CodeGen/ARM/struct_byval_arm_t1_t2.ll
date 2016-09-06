@@ -7,6 +7,10 @@
 ;RUN: llc < %s -mtriple=thumbv5-none-linux-gnueabi              -verify-machineinstrs -filetype=obj | llvm-objdump -triple thumbv5-none-linux-gnueabi -disassemble - > %t
 ;RUN: cat %t | FileCheck %s --check-prefix=THUMB1
 ;RUN: cat %t | FileCheck %s --check-prefix=T1POST
+;RUN: llc < %s -mtriple=thumbv8m.base-arm-none-eabi             -verify-machineinstrs -filetype=obj | llvm-objdump -triple thumbv8m.base-arm-none-eabi -disassemble - > %t
+;RUN: cat %t | FileCheck %s --check-prefix=THUMB1
+;RUN: cat %t | FileCheck %s --check-prefix=T1POST
+;RUN: cat %t | FileCheck %s --check-prefix=V8MBASE
 
 ;This file contains auto generated tests for the lowering of passing structs
 ;byval in the arm backend. We have tests for both packed and unpacked
@@ -44,6 +48,10 @@ declare void @use_J(%struct.J* byval)
 declare void @use_K(%struct.K* byval)
 %struct.L = type  { [ 100 x i32 ], [ 3 x i8 ] }  ; 403 bytes
 declare void @use_L(%struct.L* byval)
+%struct.M = type  { [  64 x i8 ] }   ; 64 bytes
+declare void @use_M(%struct.M* byval)
+%struct.N = type  { [ 128 x i8 ] }  ; 128 bytes
+declare void @use_N(%struct.N* byval)
 
 ;ARM-LABEL:    test_A_1:
 ;THUMB2-LABEL: test_A_1:
@@ -1519,5 +1527,26 @@ declare void @use_L(%struct.L* byval)
   entry:
     %a = alloca %struct.L, align 16
     call void @use_L(%struct.L* byval align 16 %a)
+    ret void
+  }
+;V8MBASE-LABEL: test_M:
+  define void @test_M() {
+
+;V8MBASE:      ldrb    r{{[0-9]+}}, {{\[}}[[BASE:r[0-9]+]]{{\]}}
+;V8MBASE:      adds    [[BASE]], #1
+;V8MBASE-NOT:  movw
+  entry:
+    %a = alloca %struct.M, align 1
+    call void @use_M(%struct.M* byval align 1 %a)
+    ret void
+  }
+;V8MBASE-LABEL: test_N:
+  define void @test_N() {
+
+;V8MBASE:      movw    r{{[0-9]+}}, #{{[0-9]+}}
+;V8MBASE-NOT:  b       #{{[0-9]+}}
+  entry:
+    %a = alloca %struct.N, align 1
+    call void @use_N(%struct.N* byval align 1 %a)
     ret void
   }

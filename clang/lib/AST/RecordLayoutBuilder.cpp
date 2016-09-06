@@ -1558,10 +1558,13 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
 
   // But, if there's a #pragma pack in play, that takes precedent over
   // even the 'aligned' attribute, for non-zero-width bitfields.
+  unsigned MaxFieldAlignmentInBits = Context.toBits(MaxFieldAlignment);
   if (!MaxFieldAlignment.isZero() && FieldSize) {
-    unsigned MaxFieldAlignmentInBits = Context.toBits(MaxFieldAlignment);
-    FieldAlign = std::min(FieldAlign, MaxFieldAlignmentInBits);
     UnpackedFieldAlign = std::min(UnpackedFieldAlign, MaxFieldAlignmentInBits);
+    if (FieldPacked)
+      FieldAlign = UnpackedFieldAlign;
+    else
+      FieldAlign = std::min(FieldAlign, MaxFieldAlignmentInBits);
   }
 
   // But, ms_struct just ignores all of that in unions, even explicit
@@ -1600,7 +1603,10 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
         (AllowPadding &&
          (FieldOffset & (FieldAlign-1)) + FieldSize > TypeSize)) {
       FieldOffset = llvm::alignTo(FieldOffset, FieldAlign);
-    } else if (ExplicitFieldAlign) {
+    } else if (ExplicitFieldAlign &&
+               (MaxFieldAlignmentInBits == 0 ||
+                ExplicitFieldAlign <= MaxFieldAlignmentInBits) &&
+               Context.getTargetInfo().useExplicitBitFieldAlignment()) {
       // TODO: figure it out what needs to be done on targets that don't honor
       // bit-field type alignment like ARM APCS ABI.
       FieldOffset = llvm::alignTo(FieldOffset, ExplicitFieldAlign);
@@ -1612,7 +1618,10 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
          (UnpackedFieldOffset & (UnpackedFieldAlign-1)) + FieldSize > TypeSize))
       UnpackedFieldOffset =
           llvm::alignTo(UnpackedFieldOffset, UnpackedFieldAlign);
-    else if (ExplicitFieldAlign)
+    else if (ExplicitFieldAlign &&
+             (MaxFieldAlignmentInBits == 0 ||
+              ExplicitFieldAlign <= MaxFieldAlignmentInBits) &&
+             Context.getTargetInfo().useExplicitBitFieldAlignment())
       UnpackedFieldOffset =
           llvm::alignTo(UnpackedFieldOffset, ExplicitFieldAlign);
   }
@@ -2123,7 +2132,7 @@ static bool isMsLayout(const ASTContext &Context) {
 //   function pointer) and a vbptr (virtual base pointer).  They can each be
 //   shared with a, non-virtual bases. These bases need not be the same.  vfptrs
 //   always occur at offset 0.  vbptrs can occur at an arbitrary offset and are
-//   placed after the lexiographically last non-virtual base.  This placement
+//   placed after the lexicographically last non-virtual base.  This placement
 //   is always before fields but can be in the middle of the non-virtual bases
 //   due to the two-pass layout scheme for non-virtual-bases.
 // * Virtual bases sometimes require a 'vtordisp' field that is laid out before
@@ -2144,7 +2153,7 @@ static bool isMsLayout(const ASTContext &Context) {
 //   pushes all bases and fields back by the alignment imposed by those bases
 //   and fields.  This can potentially add a significant amount of padding.
 //   vbptrs are injected immediately after the last non-virtual base as
-//   lexiographically ordered in the code.  If this site isn't pointer aligned
+//   lexicographically ordered in the code.  If this site isn't pointer aligned
 //   the vbptr is placed at the next properly aligned location.  Enough padding
 //   is added to guarantee a fit.
 // * The last zero sized non-virtual base can be placed at the end of the
@@ -2219,7 +2228,8 @@ public:
   /// laid out.
   void initializeCXXLayout(const CXXRecordDecl *RD);
   void layoutNonVirtualBases(const CXXRecordDecl *RD);
-  void layoutNonVirtualBase(const CXXRecordDecl *BaseDecl,
+  void layoutNonVirtualBase(const CXXRecordDecl *RD,
+                            const CXXRecordDecl *BaseDecl,
                             const ASTRecordLayout &BaseLayout,
                             const ASTRecordLayout *&PreviousBaseLayout);
   void injectVFPtr(const CXXRecordDecl *RD);
@@ -2325,7 +2335,7 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
   if (!MaxFieldAlignment.isZero())
     Info.Alignment = std::min(Info.Alignment, MaxFieldAlignment);
   // Track zero-sized subobjects here where it's already available.
-  EndsWithZeroSizedObject = Layout.hasZeroSizedSubObject();
+  EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
   // Respect required alignment, this is necessary because we may have adjusted
   // the alignment in the case of pragam pack.  Note that the required alignment
   // doesn't actually apply to the struct alignment at this point.
@@ -2360,7 +2370,7 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
     if (auto RT =
             FD->getType()->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
       auto const &Layout = Context.getASTRecordLayout(RT->getDecl());
-      EndsWithZeroSizedObject = Layout.hasZeroSizedSubObject();
+      EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
       FieldRequiredAlignment = std::max(FieldRequiredAlignment,
                                         Layout.getRequiredAlignment());
     }
@@ -2467,7 +2477,7 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
   // out any bases that do not contain vfptrs.  We implement this as two passes
   // over the bases.  This approach guarantees that the primary base is laid out
   // first.  We use these passes to calculate some additional aggregated
-  // information about the bases, such as reqruied alignment and the presence of
+  // information about the bases, such as required alignment and the presence of
   // zero sized members.
   const ASTRecordLayout *PreviousBaseLayout = nullptr;
   // Iterate through the bases and lay out the non-virtual ones.
@@ -2479,7 +2489,7 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
       HasVBPtr = true;
       continue;
     }
-    // Check fo a base to share a VBPtr with.
+    // Check for a base to share a VBPtr with.
     if (!SharedVBPtrBase && BaseLayout.hasVBPtr()) {
       SharedVBPtrBase = BaseDecl;
       HasVBPtr = true;
@@ -2493,7 +2503,7 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
       LeadsWithZeroSizedBase = BaseLayout.leadsWithZeroSizedBase();
     }
     // Lay out the base.
-    layoutNonVirtualBase(BaseDecl, BaseLayout, PreviousBaseLayout);
+    layoutNonVirtualBase(RD, BaseDecl, BaseLayout, PreviousBaseLayout);
   }
   // Figure out if we need a fresh VFPtr for this class.
   if (!PrimaryBase && RD->isDynamicClass())
@@ -2522,7 +2532,7 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
       LeadsWithZeroSizedBase = BaseLayout.leadsWithZeroSizedBase();
     }
     // Lay out the base.
-    layoutNonVirtualBase(BaseDecl, BaseLayout, PreviousBaseLayout);
+    layoutNonVirtualBase(RD, BaseDecl, BaseLayout, PreviousBaseLayout);
     VBPtrOffset = Bases[BaseDecl] + BaseLayout.getNonVirtualSize();
   }
   // Set our VBPtroffset if we know it at this point.
@@ -2534,15 +2544,32 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
   }
 }
 
+static bool recordUsesEBO(const RecordDecl *RD) {
+  if (!isa<CXXRecordDecl>(RD))
+    return false;
+  if (RD->hasAttr<EmptyBasesAttr>())
+    return true;
+  if (auto *LVA = RD->getAttr<LayoutVersionAttr>())
+    // TODO: Double check with the next version of MSVC.
+    if (LVA->getVersion() <= LangOptions::MSVC2015)
+      return false;
+  // TODO: Some later version of MSVC will change the default behavior of the
+  // compiler to enable EBO by default.  When this happens, we will need an
+  // additional isCompatibleWithMSVC check.
+  return false;
+}
+
 void MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(
+    const CXXRecordDecl *RD,
     const CXXRecordDecl *BaseDecl,
     const ASTRecordLayout &BaseLayout,
     const ASTRecordLayout *&PreviousBaseLayout) {
   // Insert padding between two bases if the left first one is zero sized or
   // contains a zero sized subobject and the right is zero sized or one leads
   // with a zero sized base.
-  if (PreviousBaseLayout && PreviousBaseLayout->hasZeroSizedSubObject() &&
-      BaseLayout.leadsWithZeroSizedBase())
+  bool MDCUsesEBO = recordUsesEBO(RD);
+  if (PreviousBaseLayout && PreviousBaseLayout->endsWithZeroSizedObject() &&
+      BaseLayout.leadsWithZeroSizedBase() && !MDCUsesEBO)
     Size++;
   ElementInfo Info = getAdjustedElementInfo(BaseLayout);
   CharUnits BaseOffset;
@@ -2551,14 +2578,23 @@ void MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(
   bool FoundBase = false;
   if (UseExternalLayout) {
     FoundBase = External.getExternalNVBaseOffset(BaseDecl, BaseOffset);
-    if (FoundBase)
+    if (FoundBase) {
       assert(BaseOffset >= Size && "base offset already allocated");
+      Size = BaseOffset;
+    }
   }
 
-  if (!FoundBase)
-    BaseOffset = Size.alignTo(Info.Alignment);
+  if (!FoundBase) {
+    if (MDCUsesEBO && BaseDecl->isEmpty() &&
+        BaseLayout.getNonVirtualSize() == CharUnits::Zero()) {
+      BaseOffset = CharUnits::Zero();
+    } else {
+      // Otherwise, lay the base out at the end of the MDC.
+      BaseOffset = Size = Size.alignTo(Info.Alignment);
+    }
+  }
   Bases.insert(std::make_pair(BaseDecl, BaseOffset));
-  Size = BaseOffset + BaseLayout.getNonVirtualSize();
+  Size += BaseLayout.getNonVirtualSize();
   PreviousBaseLayout = &BaseLayout;
 }
 
@@ -2737,8 +2773,9 @@ void MicrosoftRecordLayoutBuilder::layoutVirtualBases(const CXXRecordDecl *RD) {
     // with a zero sized base.  The padding between virtual bases is 4
     // bytes (in both 32 and 64 bits modes) and always involves rounding up to
     // the required alignment, we don't know why.
-    if ((PreviousBaseLayout && PreviousBaseLayout->hasZeroSizedSubObject() &&
-        BaseLayout.leadsWithZeroSizedBase()) || HasVtordisp) {
+    if ((PreviousBaseLayout && PreviousBaseLayout->endsWithZeroSizedObject() &&
+         BaseLayout.leadsWithZeroSizedBase() && !recordUsesEBO(RD)) ||
+        HasVtordisp) {
       Size = Size.alignTo(VtorDispAlignment) + VtorDispSize;
       Alignment = std::max(VtorDispAlignment, Alignment);
     }
@@ -2776,8 +2813,10 @@ void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
     Size = Size.alignTo(RoundingAlignment);
   }
   if (Size.isZero()) {
-    EndsWithZeroSizedObject = true;
-    LeadsWithZeroSizedBase = true;
+    if (!recordUsesEBO(RD) || !cast<CXXRecordDecl>(RD)->isEmpty()) {
+      EndsWithZeroSizedObject = true;
+      LeadsWithZeroSizedBase = true;
+    }
     // Zero-sized structures have size equal to their alignment if a
     // __declspec(align) came into play.
     if (RequiredAlignment >= MinEmptyStructSize)
@@ -2910,8 +2949,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
       NewEntry = new (*this) ASTRecordLayout(
           *this, Builder.Size, Builder.Alignment, Builder.RequiredAlignment,
           Builder.HasOwnVFPtr, Builder.HasOwnVFPtr || Builder.PrimaryBase,
-          Builder.VBPtrOffset, Builder.NonVirtualSize,
-          Builder.FieldOffsets.data(), Builder.FieldOffsets.size(),
+          Builder.VBPtrOffset, Builder.DataSize, Builder.FieldOffsets,
           Builder.NonVirtualSize, Builder.Alignment, CharUnits::Zero(),
           Builder.PrimaryBase, false, Builder.SharedVBPtrBase,
           Builder.EndsWithZeroSizedObject, Builder.LeadsWithZeroSizedBase,
@@ -2920,8 +2958,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
       Builder.layout(D);
       NewEntry = new (*this) ASTRecordLayout(
           *this, Builder.Size, Builder.Alignment, Builder.RequiredAlignment,
-          Builder.Size, Builder.FieldOffsets.data(),
-          Builder.FieldOffsets.size());
+          Builder.Size, Builder.FieldOffsets);
     }
   } else {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
@@ -2944,9 +2981,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
           *this, Builder.getSize(), Builder.Alignment,
           /*RequiredAlignment : used by MS-ABI)*/
           Builder.Alignment, Builder.HasOwnVFPtr, RD->isDynamicClass(),
-          CharUnits::fromQuantity(-1), DataSize, Builder.FieldOffsets.data(),
-          Builder.FieldOffsets.size(), NonVirtualSize,
-          Builder.NonVirtualAlignment,
+          CharUnits::fromQuantity(-1), DataSize, Builder.FieldOffsets,
+          NonVirtualSize, Builder.NonVirtualAlignment,
           EmptySubobjects.SizeOfLargestEmptySubobject, Builder.PrimaryBase,
           Builder.PrimaryBaseIsVirtual, nullptr, false, false, Builder.Bases,
           Builder.VBases);
@@ -2957,8 +2993,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
       NewEntry = new (*this) ASTRecordLayout(
           *this, Builder.getSize(), Builder.Alignment,
           /*RequiredAlignment : used by MS-ABI)*/
-          Builder.Alignment, Builder.getSize(), Builder.FieldOffsets.data(),
-          Builder.FieldOffsets.size());
+          Builder.Alignment, Builder.getSize(), Builder.FieldOffsets);
     }
   }
 
@@ -3061,7 +3096,7 @@ ASTContext::getObjCLayout(const ObjCInterfaceDecl *D,
   // Add in synthesized ivar count if laying out an implementation.
   if (Impl) {
     unsigned SynthCount = CountNonClassIvars(D);
-    // If there aren't any sythesized ivars then reuse the interface
+    // If there aren't any synthesized ivars then reuse the interface
     // entry. Note we can't cache this because we simply free all
     // entries later; however we shouldn't look up implementations
     // frequently.
@@ -3073,13 +3108,12 @@ ASTContext::getObjCLayout(const ObjCInterfaceDecl *D,
   Builder.Layout(D);
 
   const ASTRecordLayout *NewEntry =
-    new (*this) ASTRecordLayout(*this, Builder.getSize(), 
+    new (*this) ASTRecordLayout(*this, Builder.getSize(),
                                 Builder.Alignment,
                                 /*RequiredAlignment : used by MS-ABI)*/
                                 Builder.Alignment,
                                 Builder.getDataSize(),
-                                Builder.FieldOffsets.data(),
-                                Builder.FieldOffsets.size());
+                                Builder.FieldOffsets);
 
   ObjCLayouts[Key] = NewEntry;
 

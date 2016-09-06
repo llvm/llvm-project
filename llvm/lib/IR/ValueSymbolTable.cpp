@@ -24,10 +24,10 @@ using namespace llvm;
 // Class destructor
 ValueSymbolTable::~ValueSymbolTable() {
 #ifndef NDEBUG   // Only do this in -g mode...
-  for (iterator VI = vmap.begin(), VE = vmap.end(); VI != VE; ++VI)
+  for (const auto &VI : vmap)
     dbgs() << "Value still in symbol table! Type = '"
-           << *VI->getValue()->getType() << "' Name = '"
-           << VI->getKeyData() << "'\n";
+           << *VI.getValue()->getType() << "' Name = '" << VI.getKeyData()
+           << "'\n";
   assert(vmap.empty() && "Values remain in symbol table!");
 #endif
 }
@@ -97,11 +97,11 @@ ValueName *ValueSymbolTable::createValueName(StringRef Name, Value *V) {
 
 // dump - print out the symbol table
 //
-void ValueSymbolTable::dump() const {
+LLVM_DUMP_METHOD void ValueSymbolTable::dump() const {
   //DEBUG(dbgs() << "ValueSymbolTable:\n");
-  for (const_iterator I = begin(), E = end(); I != E; ++I) {
+  for (const auto &I : *this) {
     //DEBUG(dbgs() << "  '" << I->getKeyData() << "' = ");
-    I->getValue()->dump();
+    I.getValue()->dump();
     //DEBUG(dbgs() << "\n");
   }
 }

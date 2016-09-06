@@ -1,7 +1,7 @@
 include_directories(..)
 
 set(LSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
-append_no_rtti_flag(LSAN_CFLAGS)
+append_rtti_flag(OFF LSAN_CFLAGS)
 
 set(LSAN_COMMON_SOURCES
   lsan_common.cc
@@ -17,6 +17,7 @@ set(LSAN_SOURCES
 set(LSAN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_custom_target(lsan)
+set_target_properties(lsan PROPERTIES FOLDER "Compiler-RT Misc")
 
 add_compiler_rt_object_libraries(RTLSanCommon
     OS ${SANITIZER_COMMON_SUPPORTED_OS}

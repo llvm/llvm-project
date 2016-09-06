@@ -17,12 +17,19 @@
 /// potentially also exposing the store to register stackifying. These both can
 /// reduce get_local/set_local traffic.
 ///
+/// This pass also performs this optimization for memcpy, memmove, and memset
+/// calls, since the LLVM intrinsics for these return void so they can't use the
+/// returned attribute and consequently aren't handled by the OptimizeReturned
+/// pass.
+///
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/CodeGen/LiveIntervalAnalysis.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -49,6 +56,10 @@ public:
     AU.addPreserved<MachineBlockFrequencyInfo>();
     AU.addRequired<MachineDominatorTree>();
     AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<LiveIntervals>();
+    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<LiveIntervals>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -63,17 +74,127 @@ FunctionPass *llvm::createWebAssemblyStoreResults() {
   return new WebAssemblyStoreResults();
 }
 
+// Replace uses of FromReg with ToReg if they are dominated by MI.
+static bool ReplaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
+                                 unsigned FromReg, unsigned ToReg,
+                                 const MachineRegisterInfo &MRI,
+                                 MachineDominatorTree &MDT,
+                                 LiveIntervals &LIS) {
+  bool Changed = false;
+
+  LiveInterval *FromLI = &LIS.getInterval(FromReg);
+  LiveInterval *ToLI = &LIS.getInterval(ToReg);
+
+  SlotIndex FromIdx = LIS.getInstructionIndex(MI).getRegSlot();
+  VNInfo *FromVNI = FromLI->getVNInfoAt(FromIdx);
+
+  SmallVector<SlotIndex, 4> Indices;
+
+  for (auto I = MRI.use_begin(FromReg), E = MRI.use_end(); I != E;) {
+    MachineOperand &O = *I++;
+    MachineInstr *Where = O.getParent();
+
+    // Check that MI dominates the instruction in the normal way.
+    if (&MI == Where || !MDT.dominates(&MI, Where))
+      continue;
+
+    // If this use gets a different value, skip it.
+    SlotIndex WhereIdx = LIS.getInstructionIndex(*Where);
+    VNInfo *WhereVNI = FromLI->getVNInfoAt(WhereIdx);
+    if (WhereVNI && WhereVNI != FromVNI)
+      continue;
+
+    // Make sure ToReg isn't clobbered before it gets there.
+    VNInfo *ToVNI = ToLI->getVNInfoAt(WhereIdx);
+    if (ToVNI && ToVNI != FromVNI)
+      continue;
+
+    Changed = true;
+    DEBUG(dbgs() << "Setting operand " << O << " in " << *Where << " from "
+                 << MI << "\n");
+    O.setReg(ToReg);
+
+    // If the store's def was previously dead, it is no longer.
+    if (!O.isUndef()) {
+      MI.getOperand(0).setIsDead(false);
+
+      Indices.push_back(WhereIdx.getRegSlot());
+    }
+  }
+
+  if (Changed) {
+    // Extend ToReg's liveness.
+    LIS.extendToIndices(*ToLI, Indices);
+
+    // Shrink FromReg's liveness.
+    LIS.shrinkToUses(FromLI);
+
+    // If we replaced all dominated uses, FromReg is now killed at MI.
+    if (!FromLI->liveAt(FromIdx.getDeadSlot()))
+      MI.addRegisterKilled(FromReg,
+                           MBB.getParent()->getSubtarget<WebAssemblySubtarget>()
+                                 .getRegisterInfo());
+  }
+
+  return Changed;
+}
+
+static bool optimizeStore(MachineBasicBlock &MBB, MachineInstr &MI,
+                          const MachineRegisterInfo &MRI,
+                          MachineDominatorTree &MDT,
+                          LiveIntervals &LIS) {
+  unsigned ToReg = MI.getOperand(0).getReg();
+  unsigned FromReg = MI.getOperand(WebAssembly::StoreValueOperandNo).getReg();
+  return ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT, LIS);
+}
+
+static bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
+                         const MachineRegisterInfo &MRI,
+                         MachineDominatorTree &MDT,
+                         LiveIntervals &LIS,
+                         const WebAssemblyTargetLowering &TLI,
+                         const TargetLibraryInfo &LibInfo) {
+  MachineOperand &Op1 = MI.getOperand(1);
+  if (!Op1.isSymbol())
+    return false;
+
+  StringRef Name(Op1.getSymbolName());
+  bool callReturnsInput = Name == TLI.getLibcallName(RTLIB::MEMCPY) ||
+                          Name == TLI.getLibcallName(RTLIB::MEMMOVE) ||
+                          Name == TLI.getLibcallName(RTLIB::MEMSET);
+  if (!callReturnsInput)
+    return false;
+
+  LibFunc::Func Func;
+  if (!LibInfo.getLibFunc(Name, Func))
+    return false;
+
+  unsigned FromReg = MI.getOperand(2).getReg();
+  unsigned ToReg = MI.getOperand(0).getReg();
+  if (MRI.getRegClass(FromReg) != MRI.getRegClass(ToReg))
+    report_fatal_error("Store results: call to builtin function with wrong "
+                       "signature, from/to mismatch");
+  return ReplaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT, LIS);
+}
+
 bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
   DEBUG({
     dbgs() << "********** Store Results **********\n"
            << "********** Function: " << MF.getName() << '\n';
   });
 
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineDominatorTree &MDT = getAnalysis<MachineDominatorTree>();
+  const WebAssemblyTargetLowering &TLI =
+      *MF.getSubtarget<WebAssemblySubtarget>().getTargetLowering();
+  const auto &LibInfo = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  LiveIntervals &LIS = getAnalysis<LiveIntervals>();
   bool Changed = false;
 
-  assert(MRI.isSSA() && "StoreResults depends on SSA form");
+  // We don't preserve SSA form.
+  MRI.leaveSSA();
+
+  assert(MRI.tracksLiveness() && "StoreResults expects liveness tracking");
 
   for (auto &MBB : MF) {
     DEBUG(dbgs() << "Basic Block: " << MBB.getName() << '\n');
@@ -90,33 +211,12 @@ bool WebAssemblyStoreResults::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::STORE_F64:
       case WebAssembly::STORE_I32:
       case WebAssembly::STORE_I64:
-        unsigned ToReg = MI.getOperand(0).getReg();
-        unsigned FromReg = MI.getOperand(3).getReg();
-        for (auto I = MRI.use_begin(FromReg), E = MRI.use_end(); I != E;) {
-          MachineOperand &O = *I++;
-          MachineInstr *Where = O.getParent();
-          if (Where->getOpcode() == TargetOpcode::PHI) {
-            // PHIs use their operands on their incoming CFG edges rather than
-            // in their parent blocks. Get the basic block paired with this use
-            // of FromReg and check that MI's block dominates it.
-            MachineBasicBlock *Pred =
-                Where->getOperand(&O - &Where->getOperand(0) + 1).getMBB();
-            if (!MDT.dominates(&MBB, Pred))
-              continue;
-          } else {
-            // For a non-PHI, check that MI dominates the instruction in the
-            // normal way.
-            if (&MI == Where || !MDT.dominates(&MI, Where))
-              continue;
-          }
-          Changed = true;
-          DEBUG(dbgs() << "Setting operand " << O << " in " << *Where
-                       << " from " << MI << "\n");
-          O.setReg(ToReg);
-          // If the store's def was previously dead, it is no longer. But the
-          // dead flag shouldn't be set yet.
-          assert(!MI.getOperand(0).isDead() && "Dead flag set on store result");
-        }
+        Changed |= optimizeStore(MBB, MI, MRI, MDT, LIS);
+        break;
+      case WebAssembly::CALL_I32:
+      case WebAssembly::CALL_I64:
+        Changed |= optimizeCall(MBB, MI, MRI, MDT, LIS, TLI, LibInfo);
+        break;
       }
   }
 

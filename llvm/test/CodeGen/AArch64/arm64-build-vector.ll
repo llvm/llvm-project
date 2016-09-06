@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 ; Check that building up a vector w/ only one non-zero lane initializes
 ; intelligently.
@@ -36,7 +36,7 @@ define <4 x float>  @foo(float %a, float %b, float %c, float %d) nounwind {
 
 define <8 x i16> @build_all_zero(<8 x i16> %a) #1 {
 ; CHECK-LABEL: build_all_zero:
-; CHECK: movz	w[[GREG:[0-9]+]], #0xae80
+; CHECK: mov	w[[GREG:[0-9]+]], #44672
 ; CHECK-NEXT:	fmov	s[[FREG:[0-9]+]], w[[GREG]]
 ; CHECK-NEXT:	mul.8h	v0, v0, v[[FREG]]
   %b = add <8 x i16> %a, <i16 -32768, i16 undef, i16 undef, i16 undef, i16 undef, i16 undef, i16 undef, i16 undef>

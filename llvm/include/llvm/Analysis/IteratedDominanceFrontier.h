@@ -24,17 +24,13 @@
 #ifndef LLVM_ANALYSIS_IDF_H
 #define LLVM_ANALYSIS_IDF_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Dominators.h"
 
 namespace llvm {
-
-class BasicBlock;
-template <class T> class DomTreeNodeBase;
-typedef DomTreeNodeBase<BasicBlock> DomTreeNode;
-template <class T> class DominatorTreeBase;
 
 /// \brief Determine the iterated dominance frontier, given a set of defining
 /// blocks, and optionally, a set of live-in blocks.
@@ -44,6 +40,9 @@ template <class T> class DominatorTreeBase;
 /// This algorithm is a linear time computation of Iterated Dominance Frontiers,
 /// pruned using the live-in set.
 /// By default, liveness is not used to prune the IDF computation.
+/// The template parameters should be either BasicBlock* or Inverse<BasicBlock
+/// *>, depending on if you want the forward or reverse IDF.
+template <class NodeTy>
 class IDFCalculator {
 
 public:
@@ -92,5 +91,7 @@ private:
   const SmallPtrSetImpl<BasicBlock *> *DefBlocks;
   SmallVector<BasicBlock *, 32> PHIBlocks;
 };
+typedef IDFCalculator<BasicBlock *> ForwardIDFCalculator;
+typedef IDFCalculator<Inverse<BasicBlock *>> ReverseIDFCalculator;
 }
 #endif

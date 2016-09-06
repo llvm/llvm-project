@@ -19,7 +19,6 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 using namespace clang;
@@ -124,7 +123,7 @@ static void ReportControlFlow(raw_ostream &o,
   --indent;
 
   // Output any helper text.
-  const std::string& s = P.getString();
+  const auto &s = P.getString();
   if (!s.empty()) {
     Indent(o, indent) << "<key>alternate</key>";
     EmitString(o, s) << '\n';

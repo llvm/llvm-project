@@ -1,5 +1,5 @@
 // Test that we can include header with TSan atomic interface.
-// RUN: %clang_tsan %s -o %t && %run %t | FileCheck %s
+// RUN: %clang_tsan %s -o %t && %run %t 2>&1 | FileCheck %s
 #include <sanitizer/tsan_interface_atomic.h>
 #include <stdio.h>
 
@@ -9,7 +9,7 @@ int main() {
   int res = __tsan_atomic32_load(&a, __tsan_memory_order_acquire);
   if (res == 100) {
     // CHECK: PASS
-    printf("PASS\n");
+    fprintf(stderr, "PASS\n");
     return 0;
   }
   return 1;

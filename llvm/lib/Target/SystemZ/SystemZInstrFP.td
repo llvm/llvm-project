@@ -37,6 +37,10 @@ let hasSideEffects = 0 in {
   def LER : UnaryRR <"le", 0x38,   null_frag, FP32,  FP32>;
   def LDR : UnaryRR <"ld", 0x28,   null_frag, FP64,  FP64>;
   def LXR : UnaryRRE<"lx", 0xB365, null_frag, FP128, FP128>;
+
+  // For z13 we prefer LDR over LER to avoid partial register dependencies.
+  let isCodeGenOnly = 1 in
+    def LDR32 : UnaryRR<"ld", 0x28, null_frag, FP32, FP32>;
 }
 
 // Moves between two floating-point registers that also set the condition
@@ -441,6 +445,13 @@ let Defs = [CC], CCValues = 0xF in {
 
   def CEB : CompareRXE<"ceb", 0xED09, z_fcmp, FP32, load, 4>;
   def CDB : CompareRXE<"cdb", 0xED19, z_fcmp, FP64, load, 8>;
+}
+
+// Test Data Class.
+let Defs = [CC], CCValues = 0xC in {
+  def TCEB : TestRXE<"tceb", 0xED10, z_tdc, FP32>;
+  def TCDB : TestRXE<"tcdb", 0xED11, z_tdc, FP64>;
+  def TCXB : TestRXE<"tcxb", 0xED12, z_tdc, FP128>;
 }
 
 //===----------------------------------------------------------------------===//

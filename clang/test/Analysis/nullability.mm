@@ -174,6 +174,47 @@ void testIndirectCastNilToNonnullAndPass() {
   takesNonnull(p);  // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
 }
 
+void testDirectCastNilToNonnullAndAssignToLocalInInitializer() {
+  Dummy * _Nonnull nonnullLocalWithAssignmentInInitializer = (Dummy * _Nonnull)0; // no-warning
+  (void)nonnullLocalWithAssignmentInInitializer;
+
+  // Since we've already had an invariant violation along this path,
+  // we shouldn't warn here.
+  nonnullLocalWithAssignmentInInitializer = 0;
+  (void)nonnullLocalWithAssignmentInInitializer;
+
+}
+
+void testDirectCastNilToNonnullAndAssignToLocal(Dummy * _Nonnull p) {
+  Dummy * _Nonnull nonnullLocalWithAssignment = p;
+  nonnullLocalWithAssignment = (Dummy * _Nonnull)0; // no-warning
+  (void)nonnullLocalWithAssignment;
+
+  // Since we've already had an invariant violation along this path,
+  // we shouldn't warn here.
+  nonnullLocalWithAssignment = 0;
+  (void)nonnullLocalWithAssignment;
+}
+
+void testDirectCastNilToNonnullAndAssignToParam(Dummy * _Nonnull p) {
+  p = (Dummy * _Nonnull)0; // no-warning
+}
+
+@interface ClassWithNonnullIvar : NSObject {
+  Dummy *_nonnullIvar;
+}
+@end
+
+@implementation ClassWithNonnullIvar
+-(void)testDirectCastNilToNonnullAndAssignToIvar {
+  _nonnullIvar = (Dummy * _Nonnull)0; // no-warning;
+
+  // Since we've already had an invariant violation along this path,
+  // we shouldn't warn here.
+  _nonnullIvar = 0;
+}
+@end
+
 void testIndirectNilPassToNonnull() {
   Dummy *p = 0;
   takesNonnull(p);  // expected-warning {{Null passed to a callee that requires a non-null 1st parameter}}
@@ -236,6 +277,41 @@ Dummy *_Nonnull doNotWarnWhenPreconditionIsViolated(Dummy *_Nonnull p) {
 
 void testPreconditionViolationInInlinedFunction(Dummy *p) {
   doNotWarnWhenPreconditionIsViolated(p);
+}
+
+@interface TestInlinedPreconditionViolationClass : NSObject
+@end
+
+@implementation TestInlinedPreconditionViolationClass
+-(Dummy * _Nonnull) calleeWithParam:(Dummy * _Nonnull) p2 {
+  Dummy *x = 0;
+  if (!p2) // p2 binding becomes dead at this point.
+    return x; // no-warning
+  else
+   return p2;
+}
+
+-(Dummy *)callerWithParam:(Dummy * _Nonnull) p1 {
+  return [self calleeWithParam:p1];
+}
+
+@end
+
+int * _Nonnull InlinedPreconditionViolationInFunctionCallee(int * _Nonnull p2) {
+  int *x = 0;
+  if (!p2) // p2 binding becomes dead at this point.
+    return x; // no-warning
+  else
+   return p2;
+}
+
+int * _Nonnull InlinedReturnNullOverSuppressionCallee(int * _Nonnull p2) {
+  int *result = 0;
+  return result; // no-warning; but this is an over suppression
+}
+
+int *InlinedReturnNullOverSuppressionCaller(int * _Nonnull p1) {
+  return InlinedReturnNullOverSuppressionCallee(p1);
 }
 
 void inlinedNullable(Dummy *_Nullable p) {
@@ -409,3 +485,43 @@ void callMethodInSystemHeader() {
   // expected-warning@-2{{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
   #endif
 }
+
+// Test to make sure the analyzer doesn't warn when an a nullability invariant
+// has already been found to be violated on an instance variable.
+
+@class MyInternalClass;
+@interface MyClass : NSObject {
+  MyInternalClass * _Nonnull _internal;
+}
+@end
+
+@interface MyInternalClass : NSObject {
+  @public
+  id _someIvar;
+}
+-(id _Nonnull)methodWithInternalImplementation;
+@end
+
+@interface MyClass () {
+  MyInternalClass * _Nonnull _nilledOutInternal;
+}
+@end
+
+@implementation MyClass
+-(id _Nonnull)methodWithInternalImplementation {
+  if (!_internal)
+    return nil; // no-warning
+
+  return [_internal methodWithInternalImplementation];
+}
+
+- (id _Nonnull)methodReturningIvarInImplementation; {
+  return _internal == 0 ? nil : _internal->_someIvar; // no-warning
+}
+
+-(id _Nonnull)methodWithNilledOutInternal {
+  _nilledOutInternal = (id _Nonnull)nil;
+
+  return nil; // no-warning
+}
+@end

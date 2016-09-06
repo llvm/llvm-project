@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManagers.h"
+#include "llvm/IR/OptBisect.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Timer.h"
@@ -99,7 +100,7 @@ private:
   bool RunPassOnSCC(Pass *P, CallGraphSCC &CurSCC,
                     CallGraph &CG, bool &CallGraphUpToDate,
                     bool &DevirtualizedCall);
-  bool RefreshCallGraph(CallGraphSCC &CurSCC, CallGraph &CG,
+  bool RefreshCallGraph(const CallGraphSCC &CurSCC, CallGraph &CG,
                         bool IsCheckingMode);
 };
 
@@ -174,8 +175,8 @@ bool CGPassManager::RunPassOnSCC(Pass *P, CallGraphSCC &CurSCC,
 /// a function pass like GVN optimizes away stuff feeding the indirect call.
 /// This never happens in checking mode.
 ///
-bool CGPassManager::RefreshCallGraph(CallGraphSCC &CurSCC,
-                                     CallGraph &CG, bool CheckingMode) {
+bool CGPassManager::RefreshCallGraph(const CallGraphSCC &CurSCC, CallGraph &CG,
+                                     bool CheckingMode) {
   DenseMap<Value*, CallGraphNode*> CallSites;
   
   DEBUG(dbgs() << "CGSCCPASSMGR: Refreshing SCC with " << CurSCC.size()
@@ -260,10 +261,10 @@ bool CGPassManager::RefreshCallGraph(CallGraphSCC &CurSCC,
     // Loop over all of the instructions in the function, getting the callsites.
     // Keep track of the number of direct/indirect calls added.
     unsigned NumDirectAdded = 0, NumIndirectAdded = 0;
-    
-    for (Function::iterator BB = F->begin(), E = F->end(); BB != E; ++BB)
-      for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I) {
-        CallSite CS(cast<Value>(I));
+
+    for (BasicBlock &BB : *F)
+      for (Instruction &I : BB) {
+        CallSite CS(&I);
         if (!CS) continue;
         Function *Callee = CS.getCalledFunction();
         if (Callee && Callee->isIntrinsic()) continue;
@@ -444,12 +445,12 @@ bool CGPassManager::runOnModule(Module &M) {
   // Walk the callgraph in bottom-up SCC order.
   scc_iterator<CallGraph*> CGI = scc_begin(&CG);
 
-  CallGraphSCC CurSCC(&CGI);
+  CallGraphSCC CurSCC(CG, &CGI);
   while (!CGI.isAtEnd()) {
     // Copy the current SCC and increment past it so that the pass can hack
     // on the SCC if it wants to without invalidating our iterator.
     const std::vector<CallGraphNode *> &NodeVec = *CGI;
-    CurSCC.initialize(NodeVec.data(), NodeVec.data() + NodeVec.size());
+    CurSCC.initialize(NodeVec);
     ++CGI;
 
     // At the top level, we run all the passes in this pass manager on the
@@ -631,3 +632,13 @@ Pass *CallGraphSCCPass::createPrinterPass(raw_ostream &O,
   return new PrintCallGraphPass(Banner, O);
 }
 
+bool CallGraphSCCPass::skipSCC(CallGraphSCC &SCC) const {
+  return !SCC.getCallGraph().getModule()
+              .getContext()
+              .getOptBisect()
+              .shouldRunPass(this, SCC);
+}
+
+char DummyCGSCCPass::ID = 0;
+INITIALIZE_PASS(DummyCGSCCPass, "DummyCGSCCPass", "DummyCGSCCPass", false,
+                false)

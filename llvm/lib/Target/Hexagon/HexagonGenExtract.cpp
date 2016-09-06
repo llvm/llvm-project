@@ -242,6 +242,9 @@ bool HexagonGenExtract::visitBlock(BasicBlock *B) {
 
 
 bool HexagonGenExtract::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   bool Changed;
 

@@ -1192,45 +1192,57 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
   for (const auto &Idx : SubRegIndices) {
     const auto &Composites = Idx.getComposites();
     auto &LaneTransforms = Idx.CompositionLaneMaskTransform;
-    // Go through all leaf subregisters and find the ones that compose with Idx.
-    // These make out all possible valid bits in the lane mask we want to
-    // transform. Looking only at the leafs ensure that only a single bit in
-    // the mask is set.
-    unsigned NextBit = 0;
-    for (auto &Idx2 : SubRegIndices) {
-      // Skip non-leaf subregisters.
-      if (!Idx2.getComposites().empty())
-        continue;
-      // Replicate the behaviour from the lane mask generation loop above.
-      unsigned SrcBit = NextBit;
-      unsigned SrcMask = 1u << SrcBit;
-      if (NextBit < 31)
-        ++NextBit;
-      assert(Idx2.LaneMask == SrcMask);
 
-      // Get the composed subregister if there is any.
-      auto C = Composites.find(&Idx2);
-      if (C == Composites.end())
-        continue;
-      const CodeGenSubRegIndex *Composite = C->second;
-      // The Composed subreg should be a leaf subreg too
-      assert(Composite->getComposites().empty());
+    if (Composites.empty()) {
+      // Moving from a class with no subregisters we just had a single lane:
+      // The subregister must be a leaf subregister and only occupies 1 bit.
+      // Move the bit from the class without subregisters into that position.
+      unsigned DstBit = Log2_32(Idx.LaneMask);
+      assert(Idx.LaneMask == 1u << DstBit && "Must be a leaf subregister");
+      MaskRolPair MaskRol = { 1, (uint8_t)DstBit };
+      LaneTransforms.push_back(MaskRol);
+    } else {
+      // Go through all leaf subregisters and find the ones that compose with
+      // Idx. These make out all possible valid bits in the lane mask we want to
+      // transform. Looking only at the leafs ensure that only a single bit in
+      // the mask is set.
+      unsigned NextBit = 0;
+      for (auto &Idx2 : SubRegIndices) {
+        // Skip non-leaf subregisters.
+        if (!Idx2.getComposites().empty())
+          continue;
+        // Replicate the behaviour from the lane mask generation loop above.
+        unsigned SrcBit = NextBit;
+        unsigned SrcMask = 1u << SrcBit;
+        if (NextBit < 31)
+          ++NextBit;
+        assert(Idx2.LaneMask == SrcMask);
 
-      // Create Mask+Rotate operation and merge with existing ops if possible.
-      unsigned DstBit = Log2_32(Composite->LaneMask);
-      int Shift = DstBit - SrcBit;
-      uint8_t RotateLeft = Shift >= 0 ? (uint8_t)Shift : 32+Shift;
-      for (auto &I : LaneTransforms) {
-        if (I.RotateLeft == RotateLeft) {
-          I.Mask |= SrcMask;
-          SrcMask = 0;
+        // Get the composed subregister if there is any.
+        auto C = Composites.find(&Idx2);
+        if (C == Composites.end())
+          continue;
+        const CodeGenSubRegIndex *Composite = C->second;
+        // The Composed subreg should be a leaf subreg too
+        assert(Composite->getComposites().empty());
+
+        // Create Mask+Rotate operation and merge with existing ops if possible.
+        unsigned DstBit = Log2_32(Composite->LaneMask);
+        int Shift = DstBit - SrcBit;
+        uint8_t RotateLeft = Shift >= 0 ? (uint8_t)Shift : 32+Shift;
+        for (auto &I : LaneTransforms) {
+          if (I.RotateLeft == RotateLeft) {
+            I.Mask |= SrcMask;
+            SrcMask = 0;
+          }
+        }
+        if (SrcMask != 0) {
+          MaskRolPair MaskRol = { SrcMask, RotateLeft };
+          LaneTransforms.push_back(MaskRol);
         }
       }
-      if (SrcMask != 0) {
-        MaskRolPair MaskRol = { SrcMask, RotateLeft };
-        LaneTransforms.push_back(MaskRol);
-      }
     }
+
     // Optimize if the transformation consists of one step only: Set mask to
     // 0xffffffff (including some irrelevant invalid bits) so that it should
     // merge with more entries later while compressing the table.
@@ -1267,10 +1279,10 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
       LaneMask |= SubRegIndex.LaneMask;
     }
 
-    // For classes without any subregisters set LaneMask to ~0u instead of 0.
+    // For classes without any subregisters set LaneMask to 1 instead of 0.
     // This makes it easier for client code to handle classes uniformly.
     if (LaneMask == 0)
-      LaneMask = ~0u;
+      LaneMask = 1;
 
     RegClass.LaneMask = LaneMask;
   }
@@ -1744,8 +1756,7 @@ void CodeGenRegBank::computeRegUnitSets() {
     std::vector<unsigned> RUSets;
     for (unsigned i = 0, e = RegUnitSets.size(); i != e; ++i) {
       RegUnitSet &RUSet = RegUnitSets[i];
-      if (std::find(RUSet.Units.begin(), RUSet.Units.end(), UnitIdx)
-          == RUSet.Units.end())
+      if (!is_contained(RUSet.Units, UnitIdx))
         continue;
       RUSets.push_back(i);
     }
@@ -1817,11 +1828,14 @@ void CodeGenRegBank::computeDerivedInfo() {
 
   computeRegUnitLaneMasks();
 
-  // Compute register class HasDisjunctSubRegs flag.
+  // Compute register class HasDisjunctSubRegs/CoveredBySubRegs flag.
   for (CodeGenRegisterClass &RC : RegClasses) {
     RC.HasDisjunctSubRegs = false;
-    for (const CodeGenRegister *Reg : RC.getMembers())
+    RC.CoveredBySubRegs = true;
+    for (const CodeGenRegister *Reg : RC.getMembers()) {
       RC.HasDisjunctSubRegs |= Reg->HasDisjunctSubRegs;
+      RC.CoveredBySubRegs &= Reg->CoveredBySubRegs;
+    }
   }
 
   // Get the weight of each set.

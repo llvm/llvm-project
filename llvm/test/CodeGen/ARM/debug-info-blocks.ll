@@ -111,7 +111,7 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!162}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "Apple clang version 2.1", isOptimized: false, runtimeVersion: 2, emissionKind: 1, file: !153, enums: !147, retainedTypes: !{}, subprograms: !148)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "Apple clang version 2.1", isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, file: !153, enums: !147, retainedTypes: !{})
 !1 = !DICompositeType(tag: DW_TAG_enumeration_type, line: 248, size: 32, align: 32, file: !160, scope: !0, elements: !3)
 !2 = !DIFile(filename: "header.h", directory: "/Volumes/Sandbox/llvm")
 !3 = !{!4}
@@ -134,7 +134,7 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
 !20 = !DIFile(filename: "header4.h", directory: "/Volumes/Sandbox/llvm")
 !21 = !{!22}
 !22 = !DIEnumerator(name: "Eleven", value: 0) ; [ DW_TAG_enumerator ]
-!23 = distinct !DISubprogram(name: "foobar_func_block_invoke_0", line: 609, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 609, file: !152, scope: !24, type: !25)
+!23 = distinct !DISubprogram(name: "foobar_func_block_invoke_0", line: 609, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 609, file: !152, scope: !24, type: !25)
 !24 = !DIFile(filename: "MyLibrary.m", directory: "/Volumes/Sandbox/llvm")
 !25 = !DISubroutineType(types: !26)
 !26 = !{null}
@@ -259,7 +259,6 @@ define hidden void @foobar_func_block_invoke_0(i8* %.block_descriptor, %0* %load
 !145 = !DILocation(line: 613, column: 17, scope: !142)
 !146 = !DILocation(line: 615, column: 13, scope: !142)
 !147 = !{!1, !1, !5, !5, !9, !14, !19, !19, !14, !14, !14, !19, !19, !19}
-!148 = !{!23}
 !149 = !DIFile(filename: "header3.h", directory: "/Volumes/Sandbox/llvm")
 !150 = !DIFile(filename: "Private.h", directory: "/Volumes/Sandbox/llvm")
 !151 = !DIFile(filename: "header4.h", directory: "/Volumes/Sandbox/llvm")

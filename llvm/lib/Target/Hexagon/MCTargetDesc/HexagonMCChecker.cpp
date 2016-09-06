@@ -16,7 +16,6 @@
 
 #include "HexagonBaseInfo.h"
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/CommandLine.h"
@@ -117,6 +116,11 @@ void HexagonMCChecker::init(MCInst const& MCI) {
   for (unsigned i = 0; i < MCID.getNumDefs(); ++i) {
     unsigned R = MCI.getOperand(i).getReg(),
              S = Hexagon::NoRegister;
+    // USR has subregisters (while C8 does not for technical reasons), so
+    // reset R to USR, since we know how to handle multiple defs of USR,
+    // taking into account its subregisters.
+    if (R == Hexagon::C8)
+      R = Hexagon::USR;
 
     // Note register definitions, direct ones as well as indirect side-effects.
     // Super-registers are not tracked directly, but their components.

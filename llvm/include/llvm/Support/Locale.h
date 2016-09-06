@@ -1,9 +1,9 @@
 #ifndef LLVM_SUPPORT_LOCALE_H
 #define LLVM_SUPPORT_LOCALE_H
 
-#include "llvm/ADT/StringRef.h"
-
 namespace llvm {
+class StringRef;
+
 namespace sys {
 namespace locale {
 

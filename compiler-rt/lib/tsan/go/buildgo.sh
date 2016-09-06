@@ -14,6 +14,7 @@ SRCS="
 	../rtl/tsan_rtl_mutex.cc
 	../rtl/tsan_rtl_report.cc
 	../rtl/tsan_rtl_thread.cc
+	../rtl/tsan_rtl_proc.cc
 	../rtl/tsan_stack_trace.cc
 	../rtl/tsan_stat.cc
 	../rtl/tsan_suppressions.cc
@@ -32,6 +33,7 @@ SRCS="
 	../../sanitizer_common/sanitizer_stackdepot.cc
 	../../sanitizer_common/sanitizer_stacktrace.cc
 	../../sanitizer_common/sanitizer_symbolizer.cc
+	../../sanitizer_common/sanitizer_termination.cc
 "
 
 if [ "`uname -a | grep Linux`" != "" ]; then
@@ -50,23 +52,24 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
 	"
 elif [ "`uname -a | grep FreeBSD`" != "" ]; then
-        SUFFIX="freebsd_amd64"
-        OSCFLAGS="-fno-strict-aliasing -fPIC -Werror"
-        OSLDFLAGS="-lpthread -fPIC -fpie"
-        SRCS="
-                $SRCS
-                ../rtl/tsan_platform_linux.cc
-                ../../sanitizer_common/sanitizer_posix.cc
-                ../../sanitizer_common/sanitizer_posix_libcdep.cc
-                ../../sanitizer_common/sanitizer_procmaps_common.cc
-                ../../sanitizer_common/sanitizer_procmaps_freebsd.cc
-                ../../sanitizer_common/sanitizer_linux.cc
-                ../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
-        "
+	SUFFIX="freebsd_amd64"
+	OSCFLAGS="-fno-strict-aliasing -fPIC -Werror"
+	OSLDFLAGS="-lpthread -fPIC -fpie"
+	SRCS="
+		$SRCS
+		../rtl/tsan_platform_linux.cc
+		../../sanitizer_common/sanitizer_posix.cc
+		../../sanitizer_common/sanitizer_posix_libcdep.cc
+		../../sanitizer_common/sanitizer_procmaps_common.cc
+		../../sanitizer_common/sanitizer_procmaps_freebsd.cc
+		../../sanitizer_common/sanitizer_linux.cc
+		../../sanitizer_common/sanitizer_linux_libcdep.cc
+		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
+	"
 elif [ "`uname -a | grep Darwin`" != "" ]; then
 	SUFFIX="darwin_amd64"
-	OSCFLAGS="-fPIC -Wno-unused-const-variable -Wno-unknown-warning-option"
-	OSLDFLAGS="-lpthread -fPIC -fpie"
+	OSCFLAGS="-fPIC -Wno-unused-const-variable -Wno-unknown-warning-option -mmacosx-version-min=10.7"
+	OSLDFLAGS="-lpthread -fPIC -fpie -mmacosx-version-min=10.7"
 	SRCS="
 		$SRCS
 		../rtl/tsan_platform_mac.cc
@@ -122,7 +125,7 @@ if [ "$SILENT" != "1" ]; then
 fi
 $CC $DIR/gotsan.cc -c -o $DIR/race_$SUFFIX.syso $FLAGS $CFLAGS
 
-$CC test.c $DIR/race_$SUFFIX.syso -m64 -o $DIR/test $OSLDFLAGS
+$CC $OSCFLAGS test.c $DIR/race_$SUFFIX.syso -m64 -g -o $DIR/test $OSLDFLAGS
 
 export GORACE="exitcode=0 atexit_sleep_ms=0"
 if [ "$SILENT" != "1" ]; then

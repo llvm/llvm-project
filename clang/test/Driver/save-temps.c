@@ -77,3 +77,8 @@
 // CHECK-OBJ-NOO: "-o" "save-temps.s"
 // CHECK-OBJ-NOO: "-o" "save-temps.o"
 // CHECK-OBJ-NOO: "-o" "a.out"
+
+// RUN: %clang -target i386-unknown-freebsd -save-temps -g -c %s -### 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK-SAVE-TEMPS
+// CHECK-SAVE-TEMPS: "-cc1as"
+// CHECK-SAVE-TEMPS: "-dwarf-version={{.}}"

@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 #include "clang/Serialization/Module.h"
 #include "ASTReaderInternals.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -37,8 +36,6 @@ ModuleFile::ModuleFile(ModuleKind Kind, unsigned Generation)
     LocalNumSelectors(0), SelectorOffsets(nullptr), BaseSelectorID(0),
     SelectorLookupTableData(nullptr), SelectorLookupTable(nullptr),
     LocalNumDecls(0), DeclOffsets(nullptr), BaseDeclID(0),
-    LocalNumCXXBaseSpecifiers(0), CXXBaseSpecifiersOffsets(nullptr),
-    LocalNumCXXCtorInitializers(0), CXXCtorInitializersOffsets(nullptr),
     FileSortedDecls(nullptr), NumFileSortedDecls(0),
     ObjCCategoriesMap(nullptr), LocalNumObjCCategoriesInMap(0),
     LocalNumTypes(0), TypeOffsets(nullptr), BaseTypeIndex(0)

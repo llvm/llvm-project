@@ -428,42 +428,42 @@ class Hexagon_mem_memmemsi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_ptr_ty], [llvm_ptr_ty, llvm_ptr_ty,
                            llvm_i32_ty],
-                          [IntrReadWriteArgMem]>;
+                          [IntrArgMemOnly]>;
 
 class Hexagon_mem_memsisi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_ptr_ty], [llvm_ptr_ty, llvm_i32_ty,
                            llvm_i32_ty],
-                          [IntrReadWriteArgMem]>;
+                          [IntrArgMemOnly]>;
 
 class Hexagon_mem_memdisi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_ptr_ty], [llvm_ptr_ty, llvm_i64_ty,
                            llvm_i32_ty],
-                          [IntrReadWriteArgMem]>;
+                          [IntrArgMemOnly]>;
 
 class Hexagon_mem_memmemsisi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_ptr_ty], [llvm_ptr_ty, llvm_ptr_ty,
                            llvm_i32_ty, llvm_i32_ty],
-                          [IntrReadWriteArgMem]>;
+                          [IntrArgMemOnly]>;
 
 class Hexagon_mem_memsisisi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_ptr_ty], [llvm_ptr_ty, llvm_i32_ty,
                            llvm_i32_ty, llvm_i32_ty],
-                          [IntrReadWriteArgMem]>;
+                          [IntrArgMemOnly]>;
 
 class Hexagon_mem_memdisisi_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_ptr_ty], [llvm_ptr_ty, llvm_i64_ty,
                            llvm_i32_ty, llvm_i32_ty],
-                          [IntrReadWriteArgMem]>;
+                          [IntrArgMemOnly]>;
 
 class Hexagon_v256_v256v256_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
                           [llvm_v8i32_ty], [llvm_v8i32_ty, llvm_v8i32_ty],
-                          [IntrReadWriteArgMem]>;
+                          [IntrArgMemOnly]>;
 
 //
 // Hexagon_sf_df_Intrinsic<string GCCIntSuffix>
@@ -2998,7 +2998,7 @@ Hexagon_di_di_Intrinsic<"HEXAGON_A2_tfrp">;
 // BUILTIN_INFO(HEXAGON.A2_tfrpi,DI_ftype_SI,1)
 //
 def int_hexagon_A2_tfrpi :
-Hexagon_di_di_Intrinsic<"HEXAGON_A2_tfrpi">;
+Hexagon_di_si_Intrinsic<"HEXAGON_A2_tfrpi">;
 //
 // BUILTIN_INFO(HEXAGON.A2_zxtb,SI_ftype_SI,1)
 //
@@ -4971,17 +4971,17 @@ def llvm_ptr64_ty : LLVMPointerType<llvm_i64_ty>;
 // Mark locked loads as read/write to prevent any accidental reordering.
 def int_hexagon_L2_loadw_locked :
 Hexagon_Intrinsic<"HEXAGON_L2_loadw_locked", [llvm_i32_ty], [llvm_ptr32_ty],
-      [IntrReadWriteArgMem, NoCapture<0>]>;
+      [IntrArgMemOnly, NoCapture<0>]>;
 def int_hexagon_L4_loadd_locked :
 Hexagon_Intrinsic<"HEXAGON_L4_loadd_locked", [llvm_i64_ty], [llvm_ptr64_ty],
-      [IntrReadWriteArgMem, NoCapture<0>]>;
+      [IntrArgMemOnly, NoCapture<0>]>;
 
 def int_hexagon_S2_storew_locked :
 Hexagon_Intrinsic<"HEXAGON_S2_storew_locked", [llvm_i32_ty],
-      [llvm_ptr32_ty, llvm_i32_ty], [IntrReadWriteArgMem, NoCapture<0>]>;
+      [llvm_ptr32_ty, llvm_i32_ty], [IntrArgMemOnly, NoCapture<0>]>;
 def int_hexagon_S4_stored_locked :
 Hexagon_Intrinsic<"HEXAGON_S4_stored_locked", [llvm_i32_ty],
-      [llvm_ptr64_ty, llvm_i64_ty], [IntrReadWriteArgMem, NoCapture<0>]>;
+      [llvm_ptr64_ty, llvm_i64_ty], [IntrArgMemOnly, NoCapture<0>]>;
 
 // V60
 

@@ -46,9 +46,9 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!3}
 !llvm.module.flags = !{!30}
 !0 = !DILocalVariable(name: "name", line: 8, arg: 1, scope: !1, file: !2, type: !6)
-!1 = distinct !DISubprogram(name: "vfs_addname", linkageName: "vfs_addname", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !28, scope: !2, type: !4)
+!1 = distinct !DISubprogram(name: "vfs_addname", linkageName: "vfs_addname", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, file: !28, scope: !2, type: !4)
 !2 = !DIFile(filename: "tail.c", directory: "/Users/echeng/LLVM/radars/r7927803/")
-!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 9999)", isOptimized: true, emissionKind: 0, file: !28, enums: !29, retainedTypes: !29)
+!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 9999)", isOptimized: true, emissionKind: FullDebug, file: !28, enums: !29, retainedTypes: !29)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !6, !9, !9, !9}
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, file: !28, scope: !2, baseType: !7)
@@ -61,7 +61,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !13 = !DILocation(line: 13, scope: !14)
 !14 = distinct !DILexicalBlock(line: 12, column: 0, file: !28, scope: !1)
 !15 = !DILocalVariable(name: "name", line: 17, arg: 1, scope: !16, file: !2, type: !6)
-!16 = distinct !DISubprogram(name: "add_name_internal", linkageName: "add_name_internal", line: 22, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !28, scope: !2, type: !17)
+!16 = distinct !DISubprogram(name: "add_name_internal", linkageName: "add_name_internal", line: 22, isLocal: true, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, file: !28, scope: !2, type: !17)
 !17 = !DISubroutineType(types: !18)
 !18 = !{!6, !6, !9, !9, !19, !9}
 !19 = !DIBasicType(tag: DW_TAG_base_type, name: "unsigned char", size: 8, align: 8, encoding: DW_ATE_unsigned_char)

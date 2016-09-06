@@ -1,4 +1,4 @@
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_I386
   Characteristics: [ IMAGE_FILE_LINE_NUMS_STRIPPED, IMAGE_FILE_32BIT_MACHINE ]

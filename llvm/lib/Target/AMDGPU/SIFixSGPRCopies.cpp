@@ -77,7 +77,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "sgpr-copies"
+#define DEBUG_TYPE "si-fix-sgpr-copies"
 
 namespace {
 
@@ -237,11 +237,10 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
 }
 
 bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const SIRegisterInfo *TRI =
-      static_cast<const SIRegisterInfo *>(MF.getSubtarget().getRegisterInfo());
-  const SIInstrInfo *TII =
-      static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
 
   SmallVector<MachineInstr *, 16> Worklist;
 

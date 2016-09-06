@@ -12,7 +12,7 @@
 ; GCN-NEXT: s_add_u32 s{{[0-9]+}}, s[[PC1_LO]], readonly
 ; GCN: s_addc_u32 s{{[0-9]+}}, s[[PC1_HI]], 0
 ; NOHSA: .text
-; HSA: .hsatext
+; HSA: .text
 ; GCN: readonly:
 ; GCN: readonly2:
 define void @main(i32 %index, float addrspace(1)* %out) {

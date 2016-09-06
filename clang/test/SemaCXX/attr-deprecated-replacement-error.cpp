@@ -4,8 +4,8 @@
 #error "Missing __has_feature"
 #endif
 
-int a1 [[deprecated("warning", "fixit")]]; // expected-warning{{use of the 'deprecated' attribute is a C++14 extension}} expected-error{{'deprecated' attribute takes no more than 1 argument}}
-int a2 [[deprecated("warning", 1)]]; // expected-warning{{use of the 'deprecated' attribute is a C++14 extension}} expected-error{{'deprecated' attribute takes no more than 1 argument}}
+int a1 [[deprecated("warning", "fixit")]]; // expected-error{{'deprecated' attribute takes no more than 1 argument}}
+int a2 [[deprecated("warning", 1)]]; // expected-error{{'deprecated' attribute takes no more than 1 argument}}
 
 int b1 [[gnu::deprecated("warning", "fixit")]]; // expected-error{{'deprecated' attribute takes no more than 1 argument}}
 int b2 [[gnu::deprecated("warning", 1)]]; // expected-error{{'deprecated' attribute takes no more than 1 argument}}

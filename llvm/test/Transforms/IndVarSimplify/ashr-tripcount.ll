@@ -1,5 +1,4 @@
-; RUN: opt < %s -indvars -S > %t
-; RUN: grep sext %t | count 1
+; RUN: opt < %s -indvars -S | FileCheck %s
 
 ; Indvars should be able to eliminate all of the sign extensions
 ; inside the loop.
@@ -11,6 +10,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @i_pow_2_025_tab = external constant [0 x float]		; <[0 x float]*> [#uses=1]
 
 define void @foo(i32 %gain, i32 %noOfLines, i32* %quaSpectrum, float* %iquaSpectrum, float* %pow4_3_tab_ptr) nounwind {
+; CHECK-LABEL: @foo(
+; CHECK: sext
+; CHECK-NOT: sext
 entry:
 	%t0 = icmp slt i32 %gain, 0		; <i1> [#uses=1]
 	br i1 %t0, label %bb1, label %bb2

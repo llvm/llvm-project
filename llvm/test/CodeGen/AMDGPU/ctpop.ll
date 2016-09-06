@@ -60,9 +60,9 @@ define void @v_ctpop_add_chain_i32(i32 addrspace(1)* noalias %out, i32 addrspace
 
 ; FUNC-LABEL: {{^}}v_ctpop_add_sgpr_i32:
 ; GCN: buffer_load_dword [[VAL0:v[0-9]+]],
-; GCN-NEXT: s_waitcnt
+; GCN: s_waitcnt
 ; GCN-NEXT: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL0]], s{{[0-9]+}}
-; GCN-NEXT: buffer_store_dword [[RESULT]],
+; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 define void @v_ctpop_add_sgpr_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %in0, i32 addrspace(1)* noalias %in1, i32 %sval) nounwind {
   %val0 = load i32, i32 addrspace(1)* %in0, align 4
@@ -203,8 +203,8 @@ define void @v_ctpop_i32_add_inline_constant_inv(i32 addrspace(1)* noalias %out,
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_i32_add_literal:
-; GCN: buffer_load_dword [[VAL:v[0-9]+]],
-; GCN: v_mov_b32_e32 [[LIT:v[0-9]+]], 0x1869f
+; GCN-DAG: buffer_load_dword [[VAL:v[0-9]+]],
+; GCN-DAG: v_mov_b32_e32 [[LIT:v[0-9]+]], 0x1869f
 ; SI: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAL]], [[LIT]]
 ; VI: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL]], [[LIT]]
 ; GCN: buffer_store_dword [[RESULT]],
@@ -250,8 +250,8 @@ define void @v_ctpop_i32_add_var_inv(i32 addrspace(1)* noalias %out, i32 addrspa
 }
 
 ; FUNC-LABEL: {{^}}v_ctpop_i32_add_vvar_inv:
-; GCN-DAG: buffer_load_dword [[VAL:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], {{0$}}
-; GCN-DAG: buffer_load_dword [[VAR:v[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0 offset:16
+; GCN-DAG: buffer_load_dword [[VAL:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], {{0$}}
+; GCN-DAG: buffer_load_dword [[VAR:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:16
 ; SI: v_bcnt_u32_b32_e32 [[RESULT:v[0-9]+]], [[VAL]], [[VAR]]
 ; VI: v_bcnt_u32_b32_e64 [[RESULT:v[0-9]+]], [[VAL]], [[VAR]]
 ; GCN: buffer_store_dword [[RESULT]],

@@ -283,6 +283,14 @@ module ValueKind = struct
   | Instruction of Opcode.t
 end
 
+module DiagnosticSeverity = struct
+  type t =
+  | Error
+  | Warning
+  | Remark
+  | Note
+end
+
 exception IoError of string
 
 let () = Callback.register_exception "Llvm.IoError" (IoError "")
@@ -303,6 +311,20 @@ type ('a, 'b) llpos =
 type ('a, 'b) llrev_pos =
 | At_start of 'a
 | After of 'b
+
+
+(*===-- Context error handling --------------------------------------------===*)
+module Diagnostic = struct
+  type t
+
+  external description : t -> string = "llvm_get_diagnostic_description"
+  external severity : t -> DiagnosticSeverity.t
+                    = "llvm_get_diagnostic_severity"
+end
+
+external set_diagnostic_handler
+  : llcontext -> (Diagnostic.t -> unit) option -> unit
+  = "llvm_set_diagnostic_handler"
 
 (*===-- Contexts ----------------------------------------------------------===*)
 external create_context : unit -> llcontext = "llvm_create_context"
@@ -461,6 +483,8 @@ external mdstring : llcontext -> string -> llvalue = "llvm_mdstring"
 external mdnode : llcontext -> llvalue array -> llvalue = "llvm_mdnode"
 external mdnull : llcontext -> llvalue = "llvm_mdnull"
 external get_mdstring : llvalue -> string option = "llvm_get_mdstring"
+external get_mdnode_operands : llvalue -> llvalue array
+                            = "llvm_get_mdnode_operands"
 external get_named_metadata : llmodule -> string -> llvalue array
                             = "llvm_get_namedmd"
 external add_named_metadata_operand : llmodule -> string -> llvalue -> unit

@@ -14,9 +14,9 @@
 
 namespace llvm {
 class MCInst;
-class HexagonNoExtendOperand : public MCTargetExpr {
+class HexagonMCExpr : public MCTargetExpr {
 public:
-  static HexagonNoExtendOperand *Create(MCExpr const *Expr, MCContext &Ctx);
+  static HexagonMCExpr *create(MCExpr const *Expr, MCContext &Ctx);
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
                                  const MCFixup *Fixup) const override;
@@ -25,10 +25,22 @@ public:
   void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
   static bool classof(MCExpr const *E);
   MCExpr const *getExpr() const;
+  void setMustExtend(bool Val = true);
+  bool mustExtend() const;
+  void setMustNotExtend(bool Val = true);
+  bool mustNotExtend() const;
+  void setS23_2_reloc(bool Val = true);
+  bool s23_2_reloc() const;
+  void setSignMismatch(bool Val = true);
+  bool signMismatch() const;
 
 private:
-  HexagonNoExtendOperand(MCExpr const *Expr);
+  HexagonMCExpr(MCExpr const *Expr);
   MCExpr const *Expr;
+  bool MustNotExtend;
+  bool MustExtend;
+  bool S23_2_reloc;
+  bool SignMismatch;
 };
 } // end namespace llvm
 

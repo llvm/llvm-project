@@ -11,6 +11,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 
 #include "AMDKernelCodeT.h"
+#include "llvm/IR/CallingConv.h"
 
 namespace llvm {
 
@@ -44,9 +45,13 @@ bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);
 bool isReadOnlySegment(const GlobalValue *GV);
 
-unsigned getShaderType(const Function &F);
+int getIntegerAttribute(const Function &F, StringRef Name, int Default);
+
+unsigned getMaximumWorkGroupSize(const Function &F);
 unsigned getInitialPSInputAddr(const Function &F);
 
+bool isShader(CallingConv::ID cc);
+bool isCompute(CallingConv::ID cc);
 
 bool isSI(const MCSubtargetInfo &STI);
 bool isCI(const MCSubtargetInfo &STI);

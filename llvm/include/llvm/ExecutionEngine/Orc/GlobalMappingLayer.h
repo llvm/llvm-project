@@ -15,7 +15,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_GLOBALMAPPINGLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_GLOBALMAPPINGLAYER_H
 
-#include "JITSymbol.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include <map>
 
 namespace llvm {
@@ -52,7 +52,7 @@ public:
   void removeModuleSet(ModuleSetHandleT H) { BaseLayer.removeModuleSet(H); }
 
   /// @brief Manually set the address to return for the given symbol.
-  void setGlobalMapping(const std::string &Name, TargetAddress Addr) {
+  void setGlobalMapping(const std::string &Name, JITTargetAddress Addr) {
     SymbolTable[Name] = Addr;
   }
 
@@ -99,7 +99,7 @@ public:
 
 private:
   BaseLayerT &BaseLayer;
-  std::map<std::string, TargetAddress> SymbolTable;
+  std::map<std::string, JITTargetAddress> SymbolTable;
 };
 
 } // End namespace orc.

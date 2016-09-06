@@ -33,8 +33,7 @@ class raw_pwrite_stream;
 extern Target TheWebAssemblyTarget32;
 extern Target TheWebAssemblyTarget64;
 
-MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII,
-                                              MCContext &Ctx);
+MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII);
 
 MCAsmBackend *createWebAssemblyAsmBackend(const Triple &TT);
 
@@ -45,8 +44,12 @@ namespace WebAssembly {
 enum OperandType {
   /// Basic block label in a branch construct.
   OPERAND_BASIC_BLOCK = MCOI::OPERAND_FIRST_TARGET,
-  /// Floating-point immediate.
-  OPERAND_FPIMM
+  /// 32-bit floating-point immediates.
+  OPERAND_FP32IMM,
+  /// 64-bit floating-point immediates.
+  OPERAND_FP64IMM,
+  /// p2align immediate for load and store address alignment.
+  OPERAND_P2ALIGN
 };
 
 /// WebAssembly-specific directive identifiers.
@@ -56,6 +59,7 @@ enum Directive {
   DotResult = UINT64_MAX - 1,  ///< .result
   DotLocal = UINT64_MAX - 2,   ///< .local
   DotEndFunc = UINT64_MAX - 3, ///< .endfunc
+  DotIndIdx = UINT64_MAX - 4,  /// < .indidx
 };
 
 } // end namespace WebAssembly
@@ -86,5 +90,51 @@ enum {
 
 #define GET_SUBTARGETINFO_ENUM
 #include "WebAssemblyGenSubtargetInfo.inc"
+
+namespace llvm {
+namespace WebAssembly {
+
+/// Return the default p2align value for a load or store with the given opcode.
+inline unsigned GetDefaultP2Align(unsigned Opcode) {
+  switch (Opcode) {
+  case WebAssembly::LOAD8_S_I32:
+  case WebAssembly::LOAD8_U_I32:
+  case WebAssembly::LOAD8_S_I64:
+  case WebAssembly::LOAD8_U_I64:
+  case WebAssembly::STORE8_I32:
+  case WebAssembly::STORE8_I64:
+    return 0;
+  case WebAssembly::LOAD16_S_I32:
+  case WebAssembly::LOAD16_U_I32:
+  case WebAssembly::LOAD16_S_I64:
+  case WebAssembly::LOAD16_U_I64:
+  case WebAssembly::STORE16_I32:
+  case WebAssembly::STORE16_I64:
+    return 1;
+  case WebAssembly::LOAD_I32:
+  case WebAssembly::LOAD_F32:
+  case WebAssembly::STORE_I32:
+  case WebAssembly::STORE_F32:
+  case WebAssembly::LOAD32_S_I64:
+  case WebAssembly::LOAD32_U_I64:
+  case WebAssembly::STORE32_I64:
+    return 2;
+  case WebAssembly::LOAD_I64:
+  case WebAssembly::LOAD_F64:
+  case WebAssembly::STORE_I64:
+  case WebAssembly::STORE_F64:
+    return 3;
+  default:
+    llvm_unreachable("Only loads and stores have p2align values");
+  }
+}
+
+/// The operand number of the load or store address in load/store instructions.
+static const unsigned MemOpAddressOperandNo = 2;
+/// The operand number of the stored value in a store instruction.
+static const unsigned StoreValueOperandNo = 4;
+
+} // end namespace WebAssembly
+} // end namespace llvm
 
 #endif

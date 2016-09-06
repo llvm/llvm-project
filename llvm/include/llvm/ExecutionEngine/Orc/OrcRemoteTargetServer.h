@@ -32,7 +32,7 @@ namespace remote {
 template <typename ChannelT, typename TargetT>
 class OrcRemoteTargetServer : public OrcRemoteTargetRPCAPI {
 public:
-  typedef std::function<TargetAddress(const std::string &Name)>
+  typedef std::function<JITTargetAddress(const std::string &Name)>
       SymbolLookupFtor;
 
   typedef std::function<void(uint8_t *Addr, uint32_t Size)>
@@ -45,14 +45,21 @@ public:
         EHFramesRegister(std::move(EHFramesRegister)),
         EHFramesDeregister(std::move(EHFramesDeregister)) {}
 
-  std::error_code getNextProcId(JITProcId &Id) {
-    return deserialize(Channel, Id);
-  }
+  // FIXME: Remove move/copy ops once MSVC supports synthesizing move ops.
+  OrcRemoteTargetServer(const OrcRemoteTargetServer &) = delete;
+  OrcRemoteTargetServer &operator=(const OrcRemoteTargetServer &) = delete;
 
-  std::error_code handleKnownProcedure(JITProcId Id) {
+  OrcRemoteTargetServer(OrcRemoteTargetServer &&Other)
+      : Channel(Other.Channel), SymbolLookup(std::move(Other.SymbolLookup)),
+        EHFramesRegister(std::move(Other.EHFramesRegister)),
+        EHFramesDeregister(std::move(Other.EHFramesDeregister)) {}
+
+  OrcRemoteTargetServer &operator=(OrcRemoteTargetServer &&) = delete;
+
+  Error handleKnownFunction(JITFuncId Id) {
     typedef OrcRemoteTargetServer ThisT;
 
-    DEBUG(dbgs() << "Handling known proc: " << getJITProcIdName(Id) << "\n");
+    DEBUG(dbgs() << "Handling known proc: " << getJITFuncIdName(Id) << "\n");
 
     switch (Id) {
     case CallIntVoidId:
@@ -111,27 +118,16 @@ public:
     llvm_unreachable("Unhandled JIT RPC procedure Id.");
   }
 
-  std::error_code requestCompile(TargetAddress &CompiledFnAddr,
-                                 TargetAddress TrampolineAddr) {
-    if (auto EC = call<RequestCompile>(Channel, TrampolineAddr))
-      return EC;
+  Expected<JITTargetAddress> requestCompile(JITTargetAddress TrampolineAddr) {
+    auto Listen = [&](RPCChannel &C, uint32_t Id) {
+      return handleKnownFunction(static_cast<JITFuncId>(Id));
+    };
 
-    while (1) {
-      JITProcId Id = InvalidId;
-      if (auto EC = getNextProcId(Id))
-        return EC;
+    return callSTHandling<RequestCompile>(Channel, Listen, TrampolineAddr);
+  }
 
-      switch (Id) {
-      case RequestCompileResponseId:
-        return handle<RequestCompileResponse>(Channel,
-                                              readArgs(CompiledFnAddr));
-      default:
-        if (auto EC = handleKnownProcedure(Id))
-          return EC;
-      }
-    }
-
-    llvm_unreachable("Fell through request-compile command loop.");
+  Error handleTerminateSession() {
+    return handle<TerminateSession>(Channel, []() { return Error::success(); });
   }
 
 private:
@@ -148,45 +144,43 @@ private:
         sys::Memory::releaseMappedMemory(Alloc.second);
     }
 
-    std::error_code allocate(void *&Addr, size_t Size, uint32_t Align) {
+    Error allocate(void *&Addr, size_t Size, uint32_t Align) {
       std::error_code EC;
       sys::MemoryBlock MB = sys::Memory::allocateMappedMemory(
           Size, nullptr, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
       if (EC)
-        return EC;
+        return errorCodeToError(EC);
 
       Addr = MB.base();
       assert(Allocs.find(MB.base()) == Allocs.end() && "Duplicate alloc");
       Allocs[MB.base()] = std::move(MB);
-      return std::error_code();
+      return Error::success();
     }
 
-    std::error_code setProtections(void *block, unsigned Flags) {
+    Error setProtections(void *block, unsigned Flags) {
       auto I = Allocs.find(block);
       if (I == Allocs.end())
         return orcError(OrcErrorCode::RemoteMProtectAddrUnrecognized);
-      return sys::Memory::protectMappedMemory(I->second, Flags);
+      return errorCodeToError(
+          sys::Memory::protectMappedMemory(I->second, Flags));
     }
 
   private:
     std::map<void *, sys::MemoryBlock> Allocs;
   };
 
-  static std::error_code doNothing() { return std::error_code(); }
+  static Error doNothing() { return Error::success(); }
 
-  static TargetAddress reenter(void *JITTargetAddr, void *TrampolineAddr) {
-    TargetAddress CompiledFnAddr = 0;
-
+  static JITTargetAddress reenter(void *JITTargetAddr, void *TrampolineAddr) {
     auto T = static_cast<OrcRemoteTargetServer *>(JITTargetAddr);
-    auto EC = T->requestCompile(
-        CompiledFnAddr, static_cast<TargetAddress>(
-                            reinterpret_cast<uintptr_t>(TrampolineAddr)));
-    assert(!EC && "Compile request failed");
-    (void)EC;
-    return CompiledFnAddr;
+    auto AddrOrErr = T->requestCompile(static_cast<JITTargetAddress>(
+        reinterpret_cast<uintptr_t>(TrampolineAddr)));
+    // FIXME: Allow customizable failure substitution functions.
+    assert(AddrOrErr && "Compile request failed");
+    return *AddrOrErr;
   }
 
-  std::error_code handleCallIntVoid(TargetAddress Addr) {
+  Expected<int32_t> handleCallIntVoid(JITTargetAddress Addr) {
     typedef int (*IntVoidFnTy)();
     IntVoidFnTy Fn =
         reinterpret_cast<IntVoidFnTy>(static_cast<uintptr_t>(Addr));
@@ -195,11 +189,11 @@ private:
     int Result = Fn();
     DEBUG(dbgs() << "  Result = " << Result << "\n");
 
-    return call<CallIntVoidResponse>(Channel, Result);
+    return Result;
   }
 
-  std::error_code handleCallMain(TargetAddress Addr,
-                                 std::vector<std::string> Args) {
+  Expected<int32_t> handleCallMain(JITTargetAddress Addr,
+                                   std::vector<std::string> Args) {
     typedef int (*MainFnTy)(int, const char *[]);
 
     MainFnTy Fn = reinterpret_cast<MainFnTy>(static_cast<uintptr_t>(Addr));
@@ -214,10 +208,10 @@ private:
     int Result = Fn(ArgC, ArgV.get());
     DEBUG(dbgs() << "  Result = " << Result << "\n");
 
-    return call<CallMainResponse>(Channel, Result);
+    return Result;
   }
 
-  std::error_code handleCallVoidVoid(TargetAddress Addr) {
+  Error handleCallVoidVoid(JITTargetAddress Addr) {
     typedef void (*VoidVoidFnTy)();
     VoidVoidFnTy Fn =
         reinterpret_cast<VoidVoidFnTy>(static_cast<uintptr_t>(Addr));
@@ -226,55 +220,55 @@ private:
     Fn();
     DEBUG(dbgs() << "  Complete.\n");
 
-    return call<CallVoidVoidResponse>(Channel);
+    return Error::success();
   }
 
-  std::error_code handleCreateRemoteAllocator(ResourceIdMgr::ResourceId Id) {
+  Error handleCreateRemoteAllocator(ResourceIdMgr::ResourceId Id) {
     auto I = Allocators.find(Id);
     if (I != Allocators.end())
       return orcError(OrcErrorCode::RemoteAllocatorIdAlreadyInUse);
     DEBUG(dbgs() << "  Created allocator " << Id << "\n");
     Allocators[Id] = Allocator();
-    return std::error_code();
+    return Error::success();
   }
 
-  std::error_code handleCreateIndirectStubsOwner(ResourceIdMgr::ResourceId Id) {
+  Error handleCreateIndirectStubsOwner(ResourceIdMgr::ResourceId Id) {
     auto I = IndirectStubsOwners.find(Id);
     if (I != IndirectStubsOwners.end())
       return orcError(OrcErrorCode::RemoteIndirectStubsOwnerIdAlreadyInUse);
     DEBUG(dbgs() << "  Create indirect stubs owner " << Id << "\n");
     IndirectStubsOwners[Id] = ISBlockOwnerList();
-    return std::error_code();
+    return Error::success();
   }
 
-  std::error_code handleDeregisterEHFrames(TargetAddress TAddr, uint32_t Size) {
+  Error handleDeregisterEHFrames(JITTargetAddress TAddr, uint32_t Size) {
     uint8_t *Addr = reinterpret_cast<uint8_t *>(static_cast<uintptr_t>(TAddr));
     DEBUG(dbgs() << "  Registering EH frames at " << format("0x%016x", TAddr)
                  << ", Size = " << Size << " bytes\n");
     EHFramesDeregister(Addr, Size);
-    return std::error_code();
+    return Error::success();
   }
 
-  std::error_code handleDestroyRemoteAllocator(ResourceIdMgr::ResourceId Id) {
+  Error handleDestroyRemoteAllocator(ResourceIdMgr::ResourceId Id) {
     auto I = Allocators.find(Id);
     if (I == Allocators.end())
       return orcError(OrcErrorCode::RemoteAllocatorDoesNotExist);
     Allocators.erase(I);
     DEBUG(dbgs() << "  Destroyed allocator " << Id << "\n");
-    return std::error_code();
+    return Error::success();
   }
 
-  std::error_code
-  handleDestroyIndirectStubsOwner(ResourceIdMgr::ResourceId Id) {
+  Error handleDestroyIndirectStubsOwner(ResourceIdMgr::ResourceId Id) {
     auto I = IndirectStubsOwners.find(Id);
     if (I == IndirectStubsOwners.end())
       return orcError(OrcErrorCode::RemoteIndirectStubsOwnerDoesNotExist);
     IndirectStubsOwners.erase(I);
-    return std::error_code();
+    return Error::success();
   }
 
-  std::error_code handleEmitIndirectStubs(ResourceIdMgr::ResourceId Id,
-                                          uint32_t NumStubsRequired) {
+  Expected<std::tuple<JITTargetAddress, JITTargetAddress, uint32_t>>
+  handleEmitIndirectStubs(ResourceIdMgr::ResourceId Id,
+                          uint32_t NumStubsRequired) {
     DEBUG(dbgs() << "  ISMgr " << Id << " request " << NumStubsRequired
                  << " stubs.\n");
 
@@ -283,49 +277,50 @@ private:
       return orcError(OrcErrorCode::RemoteIndirectStubsOwnerDoesNotExist);
 
     typename TargetT::IndirectStubsInfo IS;
-    if (auto EC =
+    if (auto Err =
             TargetT::emitIndirectStubsBlock(IS, NumStubsRequired, nullptr))
-      return EC;
+      return std::move(Err);
 
-    TargetAddress StubsBase =
-        static_cast<TargetAddress>(reinterpret_cast<uintptr_t>(IS.getStub(0)));
-    TargetAddress PtrsBase =
-        static_cast<TargetAddress>(reinterpret_cast<uintptr_t>(IS.getPtr(0)));
+    JITTargetAddress StubsBase =
+        static_cast<JITTargetAddress>(
+            reinterpret_cast<uintptr_t>(IS.getStub(0)));
+    JITTargetAddress PtrsBase =
+        static_cast<JITTargetAddress>(
+            reinterpret_cast<uintptr_t>(IS.getPtr(0)));
     uint32_t NumStubsEmitted = IS.getNumStubs();
 
     auto &BlockList = StubOwnerItr->second;
     BlockList.push_back(std::move(IS));
 
-    return call<EmitIndirectStubsResponse>(Channel, StubsBase, PtrsBase,
-                                           NumStubsEmitted);
+    return std::make_tuple(StubsBase, PtrsBase, NumStubsEmitted);
   }
 
-  std::error_code handleEmitResolverBlock() {
+  Error handleEmitResolverBlock() {
     std::error_code EC;
     ResolverBlock = sys::OwningMemoryBlock(sys::Memory::allocateMappedMemory(
         TargetT::ResolverCodeSize, nullptr,
         sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC));
     if (EC)
-      return EC;
+      return errorCodeToError(EC);
 
     TargetT::writeResolverCode(static_cast<uint8_t *>(ResolverBlock.base()),
                                &reenter, this);
 
-    return sys::Memory::protectMappedMemory(ResolverBlock.getMemoryBlock(),
-                                            sys::Memory::MF_READ |
-                                                sys::Memory::MF_EXEC);
+    return errorCodeToError(sys::Memory::protectMappedMemory(
+        ResolverBlock.getMemoryBlock(),
+        sys::Memory::MF_READ | sys::Memory::MF_EXEC));
   }
 
-  std::error_code handleEmitTrampolineBlock() {
+  Expected<std::tuple<JITTargetAddress, uint32_t>> handleEmitTrampolineBlock() {
     std::error_code EC;
     auto TrampolineBlock =
         sys::OwningMemoryBlock(sys::Memory::allocateMappedMemory(
             sys::Process::getPageSize(), nullptr,
             sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC));
     if (EC)
-      return EC;
+      return errorCodeToError(EC);
 
-    unsigned NumTrampolines =
+    uint32_t NumTrampolines =
         (sys::Process::getPageSize() - TargetT::PointerSize) /
         TargetT::TrampolineSize;
 
@@ -339,20 +334,22 @@ private:
 
     TrampolineBlocks.push_back(std::move(TrampolineBlock));
 
-    return call<EmitTrampolineBlockResponse>(
-        Channel,
-        static_cast<TargetAddress>(reinterpret_cast<uintptr_t>(TrampolineMem)),
-        NumTrampolines);
+    auto TrampolineBaseAddr =
+        static_cast<JITTargetAddress>(
+            reinterpret_cast<uintptr_t>(TrampolineMem));
+
+    return std::make_tuple(TrampolineBaseAddr, NumTrampolines);
   }
 
-  std::error_code handleGetSymbolAddress(const std::string &Name) {
-    TargetAddress Addr = SymbolLookup(Name);
+  Expected<JITTargetAddress> handleGetSymbolAddress(const std::string &Name) {
+    JITTargetAddress Addr = SymbolLookup(Name);
     DEBUG(dbgs() << "  Symbol '" << Name << "' =  " << format("0x%016x", Addr)
                  << "\n");
-    return call<GetSymbolAddressResponse>(Channel, Addr);
+    return Addr;
   }
 
-  std::error_code handleGetRemoteInfo() {
+  Expected<std::tuple<std::string, uint32_t, uint32_t, uint32_t, uint32_t>>
+  handleGetRemoteInfo() {
     std::string ProcessTriple = sys::getProcessTriple();
     uint32_t PointerSize = TargetT::PointerSize;
     uint32_t PageSize = sys::Process::getPageSize();
@@ -364,55 +361,54 @@ private:
                  << "    page size          = " << PageSize << "\n"
                  << "    trampoline size    = " << TrampolineSize << "\n"
                  << "    indirect stub size = " << IndirectStubSize << "\n");
-    return call<GetRemoteInfoResponse>(Channel, ProcessTriple, PointerSize,
-                                       PageSize, TrampolineSize,
-                                       IndirectStubSize);
+    return std::make_tuple(ProcessTriple, PointerSize, PageSize, TrampolineSize,
+                           IndirectStubSize);
   }
 
-  std::error_code handleReadMem(TargetAddress RSrc, uint64_t Size) {
+  Expected<std::vector<char>> handleReadMem(JITTargetAddress RSrc, uint64_t Size) {
     char *Src = reinterpret_cast<char *>(static_cast<uintptr_t>(RSrc));
 
     DEBUG(dbgs() << "  Reading " << Size << " bytes from "
                  << format("0x%016x", RSrc) << "\n");
 
-    if (auto EC = call<ReadMemResponse>(Channel))
-      return EC;
+    std::vector<char> Buffer;
+    Buffer.resize(Size);
+    for (char *P = Src; Size != 0; --Size)
+      Buffer.push_back(*P++);
 
-    if (auto EC = Channel.appendBytes(Src, Size))
-      return EC;
-
-    return Channel.send();
+    return Buffer;
   }
 
-  std::error_code handleRegisterEHFrames(TargetAddress TAddr, uint32_t Size) {
+  Error handleRegisterEHFrames(JITTargetAddress TAddr, uint32_t Size) {
     uint8_t *Addr = reinterpret_cast<uint8_t *>(static_cast<uintptr_t>(TAddr));
     DEBUG(dbgs() << "  Registering EH frames at " << format("0x%016x", TAddr)
                  << ", Size = " << Size << " bytes\n");
     EHFramesRegister(Addr, Size);
-    return std::error_code();
+    return Error::success();
   }
 
-  std::error_code handleReserveMem(ResourceIdMgr::ResourceId Id, uint64_t Size,
-                                   uint32_t Align) {
+  Expected<JITTargetAddress> handleReserveMem(ResourceIdMgr::ResourceId Id,
+                                              uint64_t Size, uint32_t Align) {
     auto I = Allocators.find(Id);
     if (I == Allocators.end())
       return orcError(OrcErrorCode::RemoteAllocatorDoesNotExist);
     auto &Allocator = I->second;
     void *LocalAllocAddr = nullptr;
-    if (auto EC = Allocator.allocate(LocalAllocAddr, Size, Align))
-      return EC;
+    if (auto Err = Allocator.allocate(LocalAllocAddr, Size, Align))
+      return std::move(Err);
 
     DEBUG(dbgs() << "  Allocator " << Id << " reserved " << LocalAllocAddr
                  << " (" << Size << " bytes, alignment " << Align << ")\n");
 
-    TargetAddress AllocAddr =
-        static_cast<TargetAddress>(reinterpret_cast<uintptr_t>(LocalAllocAddr));
+    JITTargetAddress AllocAddr =
+        static_cast<JITTargetAddress>(
+            reinterpret_cast<uintptr_t>(LocalAllocAddr));
 
-    return call<ReserveMemResponse>(Channel, AllocAddr);
+    return AllocAddr;
   }
 
-  std::error_code handleSetProtections(ResourceIdMgr::ResourceId Id,
-                                       TargetAddress Addr, uint32_t Flags) {
+  Error handleSetProtections(ResourceIdMgr::ResourceId Id, JITTargetAddress Addr,
+                             uint32_t Flags) {
     auto I = Allocators.find(Id);
     if (I == Allocators.end())
       return orcError(OrcErrorCode::RemoteAllocatorDoesNotExist);
@@ -425,20 +421,19 @@ private:
     return Allocator.setProtections(LocalAddr, Flags);
   }
 
-  std::error_code handleWriteMem(TargetAddress RDst, uint64_t Size) {
-    char *Dst = reinterpret_cast<char *>(static_cast<uintptr_t>(RDst));
-    DEBUG(dbgs() << "  Writing " << Size << " bytes to "
-                 << format("0x%016x", RDst) << "\n");
-    return Channel.readBytes(Dst, Size);
+  Error handleWriteMem(DirectBufferWriter DBW) {
+    DEBUG(dbgs() << "  Writing " << DBW.getSize() << " bytes to "
+                 << format("0x%016x", DBW.getDst()) << "\n");
+    return Error::success();
   }
 
-  std::error_code handleWritePtr(TargetAddress Addr, TargetAddress PtrVal) {
+  Error handleWritePtr(JITTargetAddress Addr, JITTargetAddress PtrVal) {
     DEBUG(dbgs() << "  Writing pointer *" << format("0x%016x", Addr) << " = "
                  << format("0x%016x", PtrVal) << "\n");
     uintptr_t *Ptr =
         reinterpret_cast<uintptr_t *>(static_cast<uintptr_t>(Addr));
     *Ptr = static_cast<uintptr_t>(PtrVal);
-    return std::error_code();
+    return Error::success();
   }
 
   ChannelT &Channel;

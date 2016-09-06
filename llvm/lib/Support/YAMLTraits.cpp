@@ -423,8 +423,29 @@ void Output::beginMapping() {
 
 bool Output::mapTag(StringRef Tag, bool Use) {
   if (Use) {
-    this->output(" ");
+    // If this tag is being written inside a sequence we should write the start
+    // of the sequence before writing the tag, otherwise the tag won't be
+    // attached to the element in the sequence, but rather the sequence itself.
+    bool SequenceElement =
+        StateStack.size() > 1 && (StateStack[StateStack.size() - 2] == inSeq ||
+          StateStack[StateStack.size() - 2] == inFlowSeq);
+    if (SequenceElement && StateStack.back() == inMapFirstKey) {
+      this->newLineCheck();
+    } else {
+      this->output(" ");
+    }
     this->output(Tag);
+    if (SequenceElement) {
+      // If we're writing the tag during the first element of a map, the tag
+      // takes the place of the first element in the sequence.
+      if (StateStack.back() == inMapFirstKey) {
+        StateStack.pop_back();
+        StateStack.push_back(inMapOtherKey);
+      }
+      // Tags inside maps in sequences should act as keys in the map from a
+      // formatting perspective, so we always want a newline in a sequence.
+      NeedsNewLine = true;
+    }
   }
   return Use;
 }

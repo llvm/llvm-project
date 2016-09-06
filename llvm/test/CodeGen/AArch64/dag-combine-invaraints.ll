@@ -24,7 +24,7 @@ main_:
   ret i32 0
 
 ; CHECK: main:
-; CHECK-DAG: movz
+; CHECK-DAG: mov
 ; CHECK-DAG: orr
 ; CHECK: csel
 }

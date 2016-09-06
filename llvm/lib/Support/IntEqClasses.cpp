@@ -37,10 +37,15 @@ unsigned IntEqClasses::join(unsigned a, unsigned b) {
   // incrementally. The larger leader will eventually be updated, joining the
   // classes.
   while (eca != ecb)
-    if (eca < ecb)
-      EC[b] = eca, b = ecb, ecb = EC[b];
-    else
-      EC[a] = ecb, a = eca, eca = EC[a];
+    if (eca < ecb) {
+      EC[b] = eca;
+      b = ecb;
+      ecb = EC[b];
+    } else {
+      EC[a] = ecb;
+      a = eca;
+      eca = EC[a];
+    }
 
   return eca;
 }

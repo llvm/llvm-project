@@ -178,6 +178,17 @@ Please refer to the `Code-Pointer Integrity <http://dslab.epfl.ch/proj/cpi/>`__
 project page for more information about the design of the SafeStack and its
 related technologies.
 
+setjmp and exception handling
+-----------------------------
+
+The `OSDI'14 paper <http://dslab.epfl.ch/pubs/cpi.pdf>`_ mentions that
+on Linux the instrumentation pass finds calls to setjmp or functions that
+may throw an exception, and inserts required instrumentation at their call
+sites. Specifically, the instrumentation pass saves the shadow stack pointer
+on the safe stack before the call site, and restores it either after the
+call to setjmp or after an exception has been caught. This is implemented
+in the function ``SafeStack::createStackRestorePoints``.
+
 Publications
 ------------
 

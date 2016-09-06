@@ -1,6 +1,4 @@
-; RUN: opt < %s -indvars -S > %t
-; RUN: grep "[%]tmp7 = icmp eq i8 -28, -28" %t
-; RUN: grep "[%]tmp8 = icmp eq i8 63, 63" %t
+; RUN: opt < %s -indvars -S | FileCheck %s
 ; PR4477
 ; Indvars should compute the exit values in loop.
 ;
@@ -16,6 +14,10 @@ target triple = "i386-pc-linux-gnu"
 @.str = internal constant [13 x i8] c"fc70a00.adb\00\00", align 1		; <[13 x i8]*> [#uses=1]
 
 define void @_ada_cc70a02() {
+; CHECK-LABEL: @_ada_cc70a02(
+; CHECK: [%]tmp7 = icmp eq i8 -28, -28
+; CHECK: [%]tmp8 = icmp eq i8 63, 63
+
 entry:
 	br label %bb1.i
 

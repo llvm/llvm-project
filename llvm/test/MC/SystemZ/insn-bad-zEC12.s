@@ -1576,3 +1576,14 @@
 #CHECK: wledb	%v0, %v0, 0, 0
 
 	wledb	%v0, %v0, 0, 0
+
+#CHECK: error: {{(instruction requires: load store on condition 2)?}}
+#CHECK: lochio %r11, 42
+        
+        lochio %r11, 42        
+
+#CHECK: error: {{(instruction requires: load store on condition 2)?}}
+#CHECK: locghio %r11, 42
+        
+        locghio %r11, 42        
+        

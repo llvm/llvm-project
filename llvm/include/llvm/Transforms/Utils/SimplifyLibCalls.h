@@ -16,11 +16,11 @@
 #define LLVM_TRANSFORMS_UTILS_SIMPLIFYLIBCALLS_H
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
+class StringRef;
 class Value;
 class CallInst;
 class DataLayout;
@@ -154,7 +154,7 @@ private:
 
   // Helper methods
   Value *emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len, IRBuilder<> &B);
-  void classifyArgUse(Value *Val, BasicBlock *BB, bool IsFloat,
+  void classifyArgUse(Value *Val, Function *F, bool IsFloat,
                       SmallVectorImpl<CallInst *> &SinCalls,
                       SmallVectorImpl<CallInst *> &CosCalls,
                       SmallVectorImpl<CallInst *> &SinCosCalls);

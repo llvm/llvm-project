@@ -191,6 +191,8 @@ ValueMapping::ValueMapping(const Module &M) {
     map(&G);
   for (const GlobalAlias &A : M.aliases())
     map(&A);
+  for (const GlobalIFunc &IF : M.ifuncs())
+    map(&IF);
   for (const Function &F : M)
     map(&F);
 
@@ -200,6 +202,8 @@ ValueMapping::ValueMapping(const Module &M) {
       map(G.getInitializer());
   for (const GlobalAlias &A : M.aliases())
     map(A.getAliasee());
+  for (const GlobalIFunc &IF : M.ifuncs())
+    map(IF.getResolver());
   for (const Function &F : M) {
     if (F.hasPrefixData())
       map(F.getPrefixData());
@@ -463,6 +467,8 @@ static void changeUseLists(Module &M, Changer changeValueUseList) {
     changeValueUseList(&G);
   for (GlobalAlias &A : M.aliases())
     changeValueUseList(&A);
+  for (GlobalIFunc &IF : M.ifuncs())
+    changeValueUseList(&IF);
   for (Function &F : M)
     changeValueUseList(&F);
 
@@ -472,6 +478,8 @@ static void changeUseLists(Module &M, Changer changeValueUseList) {
       changeValueUseList(G.getInitializer());
   for (GlobalAlias &A : M.aliases())
     changeValueUseList(A.getAliasee());
+  for (GlobalIFunc &IF : M.ifuncs())
+    changeValueUseList(IF.getResolver());
   for (Function &F : M) {
     if (F.hasPrefixData())
       changeValueUseList(F.getPrefixData());
@@ -518,14 +526,14 @@ static void reverseUseLists(Module &M) {
 }
 
 int main(int argc, char **argv) {
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::PrettyStackTraceProgram X(argc, argv);
 
   // Enable debug stream buffering.
   EnableDebugBuffering = true;
 
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
-  LLVMContext &Context = getGlobalContext();
+  LLVMContext Context;
 
   cl::ParseCommandLineOptions(argc, argv,
                               "llvm tool to verify use-list order\n");

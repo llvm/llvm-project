@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -38,7 +39,7 @@ template class llvm::LoopBase<BasicBlock, Loop>;
 template class llvm::LoopInfoBase<BasicBlock, Loop>;
 
 // Always verify loopinfo if expensive checking is enabled.
-#ifdef XDEBUG
+#ifdef EXPENSIVE_CHECKS
 static bool VerifyLoopInfo = true;
 #else
 static bool VerifyLoopInfo = false;
@@ -46,9 +47,6 @@ static bool VerifyLoopInfo = false;
 static cl::opt<bool,true>
 VerifyLoopInfoX("verify-loop-info", cl::location(VerifyLoopInfo),
                 cl::desc("Verify loop info (time consuming)"));
-
-// Loop identifier metadata name.
-static const char *const LoopMDName = "llvm.loop";
 
 //===----------------------------------------------------------------------===//
 // Loop implementation
@@ -179,9 +177,8 @@ bool Loop::isRecursivelyLCSSAForm(DominatorTree &DT) const {
   if (!isLCSSAForm(DT))
     return false;
 
-  return std::all_of(begin(), end(), [&](const Loop *L) {
-    return L->isRecursivelyLCSSAForm(DT);
-  });
+  return all_of(*this,
+                [&](const Loop *L) { return L->isRecursivelyLCSSAForm(DT); });
 }
 
 bool Loop::isLoopSimplifyForm() const {
@@ -198,23 +195,10 @@ bool Loop::isSafeToClone() const {
     if (isa<IndirectBrInst>(BB->getTerminator()))
       return false;
 
-    if (const InvokeInst *II = dyn_cast<InvokeInst>(BB->getTerminator())) {
-      if (II->cannotDuplicate())
-        return false;
-      // Return false if any loop blocks contain invokes to EH-pads other than
-      // landingpads;  we don't know how to split those edges yet.
-      auto *FirstNonPHI = II->getUnwindDest()->getFirstNonPHI();
-      if (FirstNonPHI->isEHPad() && !isa<LandingPadInst>(FirstNonPHI))
-        return false;
-    }
-    for (Instruction &I : *BB) {
-      if (const CallInst *CI = dyn_cast<CallInst>(&I)) {
-        if (CI->cannotDuplicate())
+    for (Instruction &I : *BB)
+      if (auto CS = CallSite(&I))
+        if (CS.cannotDuplicate())
           return false;
-      }
-      if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
-        return false;
-    }
   }
   return true;
 }
@@ -222,7 +206,7 @@ bool Loop::isSafeToClone() const {
 MDNode *Loop::getLoopID() const {
   MDNode *LoopID = nullptr;
   if (isLoopSimplifyForm()) {
-    LoopID = getLoopLatch()->getTerminator()->getMetadata(LoopMDName);
+    LoopID = getLoopLatch()->getTerminator()->getMetadata(LLVMContext::MD_loop);
   } else {
     // Go through each predecessor of the loop header and check the
     // terminator for the metadata.
@@ -234,7 +218,7 @@ MDNode *Loop::getLoopID() const {
       // Check if this terminator branches to the loop header.
       for (BasicBlock *Successor : TI->successors()) {
         if (Successor == H) {
-          MD = TI->getMetadata(LoopMDName);
+          MD = TI->getMetadata(LLVMContext::MD_loop);
           break;
         }
       }
@@ -259,7 +243,7 @@ void Loop::setLoopID(MDNode *LoopID) const {
   assert(LoopID->getOperand(0) == LoopID && "Loop ID should refer to itself");
 
   if (isLoopSimplifyForm()) {
-    getLoopLatch()->getTerminator()->setMetadata(LoopMDName, LoopID);
+    getLoopLatch()->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopID);
     return;
   }
 
@@ -268,7 +252,7 @@ void Loop::setLoopID(MDNode *LoopID) const {
     TerminatorInst *TI = BB->getTerminator();
     for (BasicBlock *Successor : TI->successors()) {
       if (Successor == H)
-        TI->setMetadata(LoopMDName, LoopID);
+        TI->setMetadata(LLVMContext::MD_loop, LoopID);
     }
   }
 }
@@ -312,6 +296,26 @@ bool Loop::isAnnotatedParallel() const {
     }
   }
   return true;
+}
+
+DebugLoc Loop::getStartLoc() const {
+  // If we have a debug location in the loop ID, then use it.
+  if (MDNode *LoopID = getLoopID())
+    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i)
+      if (DILocation *L = dyn_cast<DILocation>(LoopID->getOperand(i)))
+        return DebugLoc(L);
+
+  // Try the pre-header first.
+  if (BasicBlock *PHeadBB = getLoopPreheader())
+    if (DebugLoc DL = PHeadBB->getTerminator()->getDebugLoc())
+      return DL;
+
+  // If we have no pre-header or there are no instructions with debug
+  // info in it, try the header.
+  if (BasicBlock *HeadBB = getHeader())
+    return HeadBB->getTerminator()->getDebugLoc();
+
+  return DebugLoc();
 }
 
 bool Loop::hasDedicatedExits() const {
@@ -361,8 +365,7 @@ Loop::getUniqueExitBlocks(SmallVectorImpl<BasicBlock *> &ExitBlocks) const {
       // In case of multiple edges from current block to exit block, collect
       // only one edge in ExitBlocks. Use switchExitBlocks to keep track of
       // duplicate edges.
-      if (std::find(SwitchExitBlocks.begin(), SwitchExitBlocks.end(), Successor)
-          == SwitchExitBlocks.end()) {
+      if (!is_contained(SwitchExitBlocks, Successor)) {
         SwitchExitBlocks.push_back(Successor);
         ExitBlocks.push_back(Successor);
       }
@@ -379,8 +382,12 @@ BasicBlock *Loop::getUniqueExitBlock() const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void Loop::dump() const {
+LLVM_DUMP_METHOD void Loop::dump() const {
   print(dbgs());
+}
+
+LLVM_DUMP_METHOD void Loop::dumpVerbose() const {
+  print(dbgs(), /*Depth=*/ 0, /*Verbose=*/ true);
 }
 #endif
 
@@ -392,7 +399,7 @@ namespace {
 /// Find the new parent loop for all blocks within the "unloop" whose last
 /// backedges has just been removed.
 class UnloopUpdater {
-  Loop *Unloop;
+  Loop &Unloop;
   LoopInfo *LI;
 
   LoopBlocksDFS DFS;
@@ -409,7 +416,7 @@ class UnloopUpdater {
 
 public:
   UnloopUpdater(Loop *UL, LoopInfo *LInfo) :
-    Unloop(UL), LI(LInfo), DFS(UL), FoundIB(false) {}
+    Unloop(*UL), LI(LInfo), DFS(UL), FoundIB(false) {}
 
   void updateBlockParents();
 
@@ -425,26 +432,25 @@ protected:
 /// Update the parent loop for all blocks that are directly contained within the
 /// original "unloop".
 void UnloopUpdater::updateBlockParents() {
-  if (Unloop->getNumBlocks()) {
+  if (Unloop.getNumBlocks()) {
     // Perform a post order CFG traversal of all blocks within this loop,
     // propagating the nearest loop from sucessors to predecessors.
     LoopBlocksTraversal Traversal(DFS, LI);
-    for (LoopBlocksTraversal::POTIterator POI = Traversal.begin(),
-           POE = Traversal.end(); POI != POE; ++POI) {
+    for (BasicBlock *POI : Traversal) {
 
-      Loop *L = LI->getLoopFor(*POI);
-      Loop *NL = getNearestLoop(*POI, L);
+      Loop *L = LI->getLoopFor(POI);
+      Loop *NL = getNearestLoop(POI, L);
 
       if (NL != L) {
         // For reducible loops, NL is now an ancestor of Unloop.
-        assert((NL != Unloop && (!NL || NL->contains(Unloop))) &&
+        assert((NL != &Unloop && (!NL || NL->contains(&Unloop))) &&
                "uninitialized successor");
-        LI->changeLoopFor(*POI, NL);
+        LI->changeLoopFor(POI, NL);
       }
       else {
         // Or the current block is part of a subloop, in which case its parent
         // is unchanged.
-        assert((FoundIB || Unloop->contains(L)) && "uninitialized successor");
+        assert((FoundIB || Unloop.contains(L)) && "uninitialized successor");
       }
     }
   }
@@ -452,7 +458,7 @@ void UnloopUpdater::updateBlockParents() {
   // the DFS result cached by Traversal.
   bool Changed = FoundIB;
   for (unsigned NIters = 0; Changed; ++NIters) {
-    assert(NIters < Unloop->getNumBlocks() && "runaway iterative algorithm");
+    assert(NIters < Unloop.getNumBlocks() && "runaway iterative algorithm");
 
     // Iterate over the postorder list of blocks, propagating the nearest loop
     // from successors to predecessors as before.
@@ -463,7 +469,7 @@ void UnloopUpdater::updateBlockParents() {
       Loop *L = LI->getLoopFor(*POI);
       Loop *NL = getNearestLoop(*POI, L);
       if (NL != L) {
-        assert(NL != Unloop && (!NL || NL->contains(Unloop)) &&
+        assert(NL != &Unloop && (!NL || NL->contains(&Unloop)) &&
                "uninitialized successor");
         LI->changeLoopFor(*POI, NL);
         Changed = true;
@@ -476,17 +482,17 @@ void UnloopUpdater::updateBlockParents() {
 void UnloopUpdater::removeBlocksFromAncestors() {
   // Remove all unloop's blocks (including those in nested subloops) from
   // ancestors below the new parent loop.
-  for (Loop::block_iterator BI = Unloop->block_begin(),
-         BE = Unloop->block_end(); BI != BE; ++BI) {
+  for (Loop::block_iterator BI = Unloop.block_begin(),
+         BE = Unloop.block_end(); BI != BE; ++BI) {
     Loop *OuterParent = LI->getLoopFor(*BI);
-    if (Unloop->contains(OuterParent)) {
-      while (OuterParent->getParentLoop() != Unloop)
+    if (Unloop.contains(OuterParent)) {
+      while (OuterParent->getParentLoop() != &Unloop)
         OuterParent = OuterParent->getParentLoop();
       OuterParent = SubloopParents[OuterParent];
     }
     // Remove blocks from former Ancestors except Unloop itself which will be
     // deleted.
-    for (Loop *OldParent = Unloop->getParentLoop(); OldParent != OuterParent;
+    for (Loop *OldParent = Unloop.getParentLoop(); OldParent != OuterParent;
          OldParent = OldParent->getParentLoop()) {
       assert(OldParent && "new loop is not an ancestor of the original");
       OldParent->removeBlockFromLoop(*BI);
@@ -496,9 +502,9 @@ void UnloopUpdater::removeBlocksFromAncestors() {
 
 /// Update the parent loop for all subloops directly nested within unloop.
 void UnloopUpdater::updateSubloopParents() {
-  while (!Unloop->empty()) {
-    Loop *Subloop = *std::prev(Unloop->end());
-    Unloop->removeChildLoop(std::prev(Unloop->end()));
+  while (!Unloop.empty()) {
+    Loop *Subloop = *std::prev(Unloop.end());
+    Unloop.removeChildLoop(std::prev(Unloop.end()));
 
     assert(SubloopParents.count(Subloop) && "DFS failed to visit subloop");
     if (Loop *Parent = SubloopParents[Subloop])
@@ -520,16 +526,15 @@ Loop *UnloopUpdater::getNearestLoop(BasicBlock *BB, Loop *BBLoop) {
   Loop *NearLoop = BBLoop;
 
   Loop *Subloop = nullptr;
-  if (NearLoop != Unloop && Unloop->contains(NearLoop)) {
+  if (NearLoop != &Unloop && Unloop.contains(NearLoop)) {
     Subloop = NearLoop;
     // Find the subloop ancestor that is directly contained within Unloop.
-    while (Subloop->getParentLoop() != Unloop) {
+    while (Subloop->getParentLoop() != &Unloop) {
       Subloop = Subloop->getParentLoop();
       assert(Subloop && "subloop is not an ancestor of the original loop");
     }
     // Get the current nearest parent of the Subloop exits, initially Unloop.
-    NearLoop =
-      SubloopParents.insert(std::make_pair(Subloop, Unloop)).first->second;
+    NearLoop = SubloopParents.insert({Subloop, &Unloop}).first->second;
   }
 
   succ_iterator I = succ_begin(BB), E = succ_end(BB);
@@ -542,33 +547,33 @@ Loop *UnloopUpdater::getNearestLoop(BasicBlock *BB, Loop *BBLoop) {
       continue; // self loops are uninteresting
 
     Loop *L = LI->getLoopFor(*I);
-    if (L == Unloop) {
+    if (L == &Unloop) {
       // This successor has not been processed. This path must lead to an
       // irreducible backedge.
       assert((FoundIB || !DFS.hasPostorder(*I)) && "should have seen IB");
       FoundIB = true;
     }
-    if (L != Unloop && Unloop->contains(L)) {
+    if (L != &Unloop && Unloop.contains(L)) {
       // Successor is in a subloop.
       if (Subloop)
         continue; // Branching within subloops. Ignore it.
 
       // BB branches from the original into a subloop header.
-      assert(L->getParentLoop() == Unloop && "cannot skip into nested loops");
+      assert(L->getParentLoop() == &Unloop && "cannot skip into nested loops");
 
       // Get the current nearest parent of the Subloop's exits.
       L = SubloopParents[L];
       // L could be Unloop if the only exit was an irreducible backedge.
     }
-    if (L == Unloop) {
+    if (L == &Unloop) {
       continue;
     }
     // Handle critical edges from Unloop into a sibling loop.
-    if (L && !L->contains(Unloop)) {
+    if (L && !L->contains(&Unloop)) {
       L = L->getParentLoop();
     }
     // Remember the nearest parent loop among successors or subloop exits.
-    if (NearLoop == Unloop || !NearLoop || NearLoop->contains(L))
+    if (NearLoop == &Unloop || !NearLoop || NearLoop->contains(L))
       NearLoop = L;
   }
   if (Subloop) {
@@ -643,7 +648,7 @@ void LoopInfo::markAsRemoved(Loop *Unloop) {
 
 char LoopAnalysis::PassID;
 
-LoopInfo LoopAnalysis::run(Function &F, AnalysisManager<Function> *AM) {
+LoopInfo LoopAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   // FIXME: Currently we create a LoopInfo from scratch for every function.
   // This may prove to be too wasteful due to deallocating and re-allocating
   // memory each time for the underlying map and vector datastructures. At some
@@ -651,13 +656,13 @@ LoopInfo LoopAnalysis::run(Function &F, AnalysisManager<Function> *AM) {
   // objects. I don't want to add that kind of complexity until the scope of
   // the problem is better understood.
   LoopInfo LI;
-  LI.analyze(AM->getResult<DominatorTreeAnalysis>(F));
+  LI.analyze(AM.getResult<DominatorTreeAnalysis>(F));
   return LI;
 }
 
 PreservedAnalyses LoopPrinterPass::run(Function &F,
-                                       AnalysisManager<Function> *AM) {
-  AM->getResult<LoopAnalysis>(F).print(OS);
+                                       FunctionAnalysisManager &AM) {
+  AM.getResult<LoopAnalysis>(F).print(OS);
   return PreservedAnalyses::all();
 }
 
@@ -665,7 +670,7 @@ PrintLoopPass::PrintLoopPass() : OS(dbgs()) {}
 PrintLoopPass::PrintLoopPass(raw_ostream &OS, const std::string &Banner)
     : OS(OS), Banner(Banner) {}
 
-PreservedAnalyses PrintLoopPass::run(Loop &L) {
+PreservedAnalyses PrintLoopPass::run(Loop &L, AnalysisManager<Loop> &) {
   OS << Banner;
   for (auto *Block : L.blocks())
     if (Block)
@@ -709,6 +714,13 @@ void LoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 
 void LoopInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
   LI.print(OS);
+}
+
+PreservedAnalyses LoopVerifierPass::run(Function &F,
+                                        FunctionAnalysisManager &AM) {
+  LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
+  LI.verify();
+  return PreservedAnalyses::all();
 }
 
 //===----------------------------------------------------------------------===//

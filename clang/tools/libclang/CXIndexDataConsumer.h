@@ -16,7 +16,6 @@
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/DeclObjC.h"
 #include "llvm/ADT/DenseSet.h"
-#include <deque>
 
 namespace clang {
   class FileEntry;

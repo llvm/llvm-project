@@ -1,15 +1,16 @@
 // Test __sanitizer_coverage_pc_buffer().
 
-// RUN: %clangxx_asan -fsanitize-coverage=edge %s -o %t && %run %t
+// RUN: %clangxx_asan -fsanitize-coverage=edge %stdcxx11 %s -O3 -o %t && %run %t
 
 // UNSUPPORTED: android
 
 #include <assert.h>
+#include <memory>
 #include <sanitizer/coverage_interface.h>
+#include <stdint.h>
 #include <stdio.h>
 
 static volatile int sink;
-__attribute__((noinline)) void bar() { sink = 2; }
 __attribute__((noinline)) void foo() { sink = 1; }
 
 void assertNotZeroPcs(uintptr_t *buf, uintptr_t size) {
@@ -19,30 +20,30 @@ void assertNotZeroPcs(uintptr_t *buf, uintptr_t size) {
 }
 
 int main() {
-  uintptr_t *buf = NULL;
-  uintptr_t sz = __sanitizer_get_coverage_pc_buffer(&buf);
-  assertNotZeroPcs(buf, sz);
-  assert(sz);
+  uintptr_t buf_size = 1 << 20;
+  std::unique_ptr<uintptr_t[]> buf(new uintptr_t[buf_size]);
+  __sanitizer_set_coverage_pc_buffer(buf.get(), buf_size);
 
-  foo();
-  bar();
-  uintptr_t *buf1 = NULL;
-  uintptr_t sz1 = __sanitizer_get_coverage_pc_buffer(&buf1);
-  assertNotZeroPcs(buf1, sz1);
-  assert(buf1 == buf);
-  assert(sz1 > sz);
+  {
+    uintptr_t sz = __sanitizer_get_coverage_pc_buffer_pos();
+    assertNotZeroPcs(buf.get(), sz);
+    assert(sz);
+  }
 
-  bar();
-  uintptr_t *buf2 = NULL;
-  uintptr_t sz2 = __sanitizer_get_coverage_pc_buffer(&buf2);
-  assertNotZeroPcs(buf2, sz2);
-  assert(buf2 == buf);
-  assert(sz2 > sz1);
+  {
+    uintptr_t sz = __sanitizer_get_coverage_pc_buffer_pos();
+    foo();
+    uintptr_t sz1 = __sanitizer_get_coverage_pc_buffer_pos();
+    assertNotZeroPcs(buf.get(), sz1);
+    assert(sz1 > sz);
+  }
 
-  __sanitizer_reset_coverage();
-  uintptr_t *buf3 = NULL;
-  uintptr_t sz3 = __sanitizer_get_coverage_pc_buffer(&buf3);
-  assertNotZeroPcs(buf3, sz3);
-  assert(buf3 == buf);
-  assert(sz3 < sz2);
+  {
+    uintptr_t sz = __sanitizer_get_coverage_pc_buffer_pos();
+    // reset coverage to 0.
+    __sanitizer_reset_coverage();
+    uintptr_t sz1 = __sanitizer_get_coverage_pc_buffer_pos();
+    assertNotZeroPcs(buf.get(), sz1);
+    assert(sz1 < sz);
+  }
 }

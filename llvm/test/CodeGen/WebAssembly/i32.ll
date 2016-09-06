@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 ; Test that basic 32-bit integer operations assemble as expected.
 
@@ -187,4 +187,69 @@ define i32 @ctz32_zero_undef(i32 %x) {
 define i32 @popcnt32(i32 %x) {
   %a = call i32 @llvm.ctpop.i32(i32 %x)
   ret i32 %a
+}
+
+; CHECK-LABEL: eqz32:
+; CHECK-NEXT: .param i32{{$}}
+; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: i32.eqz $push0=, $0{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @eqz32(i32 %x) {
+  %a = icmp eq i32 %x, 0
+  %b = zext i1 %a to i32
+  ret i32 %b
+}
+
+; CHECK-LABEL: rotl:
+; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: i32.rotl $push0=, $0, $1
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @rotl(i32 %x, i32 %y) {
+  %z = sub i32 32, %y
+  %b = shl i32 %x, %y
+  %c = lshr i32 %x, %z
+  %d = or i32 %b, %c
+  ret i32 %d
+}
+
+; CHECK-LABEL: masked_rotl:
+; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: i32.rotl $push0=, $0, $1
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @masked_rotl(i32 %x, i32 %y) {
+  %a = and i32 %y, 31
+  %z = sub i32 32, %a
+  %b = shl i32 %x, %a
+  %c = lshr i32 %x, %z
+  %d = or i32 %b, %c
+  ret i32 %d
+}
+
+; CHECK-LABEL: rotr:
+; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: i32.rotr $push0=, $0, $1
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @rotr(i32 %x, i32 %y) {
+  %z = sub i32 32, %y
+  %b = lshr i32 %x, %y
+  %c = shl i32 %x, %z
+  %d = or i32 %b, %c
+  ret i32 %d
+}
+
+; CHECK-LABEL: masked_rotr:
+; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: i32.rotr $push0=, $0, $1
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @masked_rotr(i32 %x, i32 %y) {
+  %a = and i32 %y, 31
+  %z = sub i32 32, %a
+  %b = lshr i32 %x, %a
+  %c = shl i32 %x, %z
+  %d = or i32 %b, %c
+  ret i32 %d
 }

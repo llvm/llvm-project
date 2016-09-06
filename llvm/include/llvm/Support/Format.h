@@ -170,13 +170,13 @@ inline FormattedNumber format_hex(uint64_t N, unsigned Width,
 /// format_hex_no_prefix - Output \p N as a fixed width hexadecimal. Does not
 /// prepend '0x' to the outputted string.  If number will not fit in width,
 /// full number is still printed.  Examples:
-///   OS << format_hex_no_prefix(255, 4)              => ff
-///   OS << format_hex_no_prefix(255, 4, true)        => FF
-///   OS << format_hex_no_prefix(255, 6)              => 00ff
 ///   OS << format_hex_no_prefix(255, 2)              => ff
+///   OS << format_hex_no_prefix(255, 2, true)        => FF
+///   OS << format_hex_no_prefix(255, 4)              => 00ff
+///   OS << format_hex_no_prefix(255, 1)              => ff
 inline FormattedNumber format_hex_no_prefix(uint64_t N, unsigned Width,
                                             bool Upper = false) {
-  assert(Width <= 18 && "hex width must be <= 18");
+  assert(Width <= 16 && "hex width must be <= 16");
   return FormattedNumber(N, 0, Width, true, Upper, false);
 }
 

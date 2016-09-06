@@ -30,6 +30,9 @@
 #ifndef CONCEPTS_KEYWORD
 #define CONCEPTS_KEYWORD(X) KEYWORD(X,KEYCONCEPTS)
 #endif
+#ifndef MODULES_KEYWORD
+#define MODULES_KEYWORD(X) KEYWORD(X,KEYMODULES)
+#endif
 #ifndef TYPE_TRAIT
 #define TYPE_TRAIT(N,I,K) KEYWORD(I,K)
 #endif
@@ -219,6 +222,9 @@ PUNCTUATOR(at,                  "@")
 PUNCTUATOR(lesslessless,          "<<<")
 PUNCTUATOR(greatergreatergreater, ">>>")
 
+// CL support
+PUNCTUATOR(caretcaret,            "^^")
+
 // C99 6.4.1: Keywords.  These turn into kw_* tokens.
 // Flags allowed:
 //   KEYALL   - This is a keyword in all variants of C and C++, or it
@@ -232,6 +238,8 @@ PUNCTUATOR(greatergreatergreater, ">>>")
 //   KEYCXX11 - This is a C++ keyword introduced to C++ in C++11
 //   KEYCONCEPTS - This is a keyword if the C++ extensions for concepts
 //                 are enabled.
+//   KEYMODULES - This is a keyword if the C++ extensions for modules
+//                are enabled.
 //   KEYGNU   - This is a keyword if GNU extensions are enabled
 //   KEYMS    - This is a keyword if Microsoft extensions are enabled
 //   KEYNOMS18 - This is a keyword that must never be enabled under
@@ -363,6 +371,10 @@ KEYWORD(co_await                    , KEYCOROUTINES)
 KEYWORD(co_return                   , KEYCOROUTINES)
 KEYWORD(co_yield                    , KEYCOROUTINES)
 
+// C++ modules TS keywords
+MODULES_KEYWORD(module)
+MODULES_KEYWORD(import)
+
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(_Decimal32                  , KEYALL)
 KEYWORD(_Decimal64                  , KEYALL)
@@ -377,6 +389,7 @@ KEYWORD(__builtin_offsetof          , KEYALL)
 TYPE_TRAIT_2(__builtin_types_compatible_p, TypeCompatible, KEYNOCXX)
 KEYWORD(__builtin_va_arg            , KEYALL)
 KEYWORD(__extension__               , KEYALL)
+KEYWORD(__float128                  , KEYALL)
 KEYWORD(__imag                      , KEYALL)
 KEYWORD(__int128                    , KEYALL)
 KEYWORD(__label__                   , KEYALL)
@@ -402,6 +415,9 @@ TYPE_TRAIT_1(__is_nothrow_destructible, IsNothrowDestructible, KEYMS)
 TYPE_TRAIT_2(__is_nothrow_assignable, IsNothrowAssignable, KEYCXX)
 TYPE_TRAIT_N(__is_constructible, IsConstructible, KEYCXX)
 TYPE_TRAIT_N(__is_nothrow_constructible, IsNothrowConstructible, KEYCXX)
+
+// MSVC14.0 / VS2015 Type Traits
+TYPE_TRAIT_2(__is_assignable, IsAssignable, KEYCXX)
 
 // GNU and MS Type Traits
 TYPE_TRAIT_1(__has_nothrow_assign, HasNothrowAssign, KEYCXX)
@@ -515,6 +531,8 @@ ALIAS("read_write", __read_write    , KEYOPENCL)
 // OpenCL builtins
 KEYWORD(__builtin_astype            , KEYOPENCL)
 KEYWORD(vec_step                    , KEYOPENCL|KEYALTIVEC|KEYZVECTOR)
+#define GENERIC_IMAGE_TYPE(ImgType, Id) KEYWORD(ImgType##_t, KEYOPENCL)
+#include "clang/Basic/OpenCLImageTypes.def"
 
 // OpenMP Type Traits
 KEYWORD(__builtin_omp_required_simd_align, KEYALL)
@@ -621,6 +639,8 @@ KEYWORD(__builtin_convertvector   , KEYALL)
 ALIAS("__char16_t"   , char16_t   , KEYCXX)
 ALIAS("__char32_t"   , char32_t   , KEYCXX)
 
+KEYWORD(__builtin_available       , KEYALL)
+
 // Clang-specific keywords enabled only in testing.
 TESTING_KEYWORD(__unknown_anytype , KEYALL)
 
@@ -659,6 +679,7 @@ OBJC2_AT_KEYWORD(optional)
 OBJC2_AT_KEYWORD(synthesize)
 OBJC2_AT_KEYWORD(dynamic)
 OBJC2_AT_KEYWORD(import)
+OBJC2_AT_KEYWORD(available)
 
 // TODO: What to do about context-sensitive keywords like:
 //       bycopy/byref/in/inout/oneway/out?

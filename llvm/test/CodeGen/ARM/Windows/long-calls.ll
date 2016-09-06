@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumbv7-windows -mcpu=cortex-a9 -mattr=+long-calls -o - %s \
+; RUN: llc -mtriple=thumbv7-windows -mcpu=cortex-a9 -relocation-model pic -mattr=+long-calls -o - %s \
 ; RUN:    | FileCheck %s
 
 declare arm_aapcs_vfpcc void @callee()
@@ -12,7 +12,7 @@ entry:
 ; CHECK-LABEL: caller
 ; CHECK: ldr [[REG:r[0-9]+]], [[CPI:LCPI[_0-9]+]]
 ; CHECK: bx [[REG]]
-; CHECK: .align 2
+; CHECK: .p2align 2
 ; CHECK: [[CPI]]:
 ; CHECK: .long callee
 

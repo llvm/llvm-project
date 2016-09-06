@@ -53,17 +53,17 @@ uint8_t MipsABIFlagsSection::getCPR1SizeValue() {
 namespace llvm {
 MCStreamer &operator<<(MCStreamer &OS, MipsABIFlagsSection &ABIFlagsSection) {
   // Write out a Elf_Internal_ABIFlags_v0 struct
-  OS.EmitIntValue(ABIFlagsSection.getVersionValue(), 2);         // version
-  OS.EmitIntValue(ABIFlagsSection.getISALevelValue(), 1);        // isa_level
-  OS.EmitIntValue(ABIFlagsSection.getISARevisionValue(), 1);     // isa_rev
-  OS.EmitIntValue(ABIFlagsSection.getGPRSizeValue(), 1);         // gpr_size
-  OS.EmitIntValue(ABIFlagsSection.getCPR1SizeValue(), 1);        // cpr1_size
-  OS.EmitIntValue(ABIFlagsSection.getCPR2SizeValue(), 1);        // cpr2_size
-  OS.EmitIntValue(ABIFlagsSection.getFpABIValue(), 1);           // fp_abi
-  OS.EmitIntValue(ABIFlagsSection.getISAExtensionSetValue(), 4); // isa_ext
-  OS.EmitIntValue(ABIFlagsSection.getASESetValue(), 4);          // ases
-  OS.EmitIntValue(ABIFlagsSection.getFlags1Value(), 4);          // flags1
-  OS.EmitIntValue(ABIFlagsSection.getFlags2Value(), 4);          // flags2
+  OS.EmitIntValue(ABIFlagsSection.getVersionValue(), 2);      // version
+  OS.EmitIntValue(ABIFlagsSection.getISALevelValue(), 1);     // isa_level
+  OS.EmitIntValue(ABIFlagsSection.getISARevisionValue(), 1);  // isa_rev
+  OS.EmitIntValue(ABIFlagsSection.getGPRSizeValue(), 1);      // gpr_size
+  OS.EmitIntValue(ABIFlagsSection.getCPR1SizeValue(), 1);     // cpr1_size
+  OS.EmitIntValue(ABIFlagsSection.getCPR2SizeValue(), 1);     // cpr2_size
+  OS.EmitIntValue(ABIFlagsSection.getFpABIValue(), 1);        // fp_abi
+  OS.EmitIntValue(ABIFlagsSection.getISAExtensionValue(), 4); // isa_ext
+  OS.EmitIntValue(ABIFlagsSection.getASESetValue(), 4);       // ases
+  OS.EmitIntValue(ABIFlagsSection.getFlags1Value(), 4);       // flags1
+  OS.EmitIntValue(ABIFlagsSection.getFlags2Value(), 4);       // flags2
   return OS;
 }
 }

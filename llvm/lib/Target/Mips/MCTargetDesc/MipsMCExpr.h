@@ -18,48 +18,72 @@ namespace llvm {
 
 class MipsMCExpr : public MCTargetExpr {
 public:
-  enum VariantKind {
-    VK_Mips_None,
-    VK_Mips_LO,
-    VK_Mips_HI,
-    VK_Mips_HIGHER,
-    VK_Mips_HIGHEST
+  enum MipsExprKind {
+    MEK_None,
+    MEK_CALL_HI16,
+    MEK_CALL_LO16,
+    MEK_DTPREL_HI,
+    MEK_DTPREL_LO,
+    MEK_GOT,
+    MEK_GOTTPREL,
+    MEK_GOT_CALL,
+    MEK_GOT_DISP,
+    MEK_GOT_HI16,
+    MEK_GOT_LO16,
+    MEK_GOT_OFST,
+    MEK_GOT_PAGE,
+    MEK_GPREL,
+    MEK_HI,
+    MEK_HIGHER,
+    MEK_HIGHEST,
+    MEK_LO,
+    MEK_NEG,
+    MEK_PCREL_HI16,
+    MEK_PCREL_LO16,
+    MEK_TLSGD,
+    MEK_TLSLDM,
+    MEK_TPREL_HI,
+    MEK_TPREL_LO,
+    MEK_Special,
   };
 
 private:
-  const VariantKind Kind;
+  const MipsExprKind Kind;
   const MCExpr *Expr;
 
-  explicit MipsMCExpr(VariantKind Kind, const MCExpr *Expr)
-    : Kind(Kind), Expr(Expr) {}
+  explicit MipsMCExpr(MipsExprKind Kind, const MCExpr *Expr)
+      : Kind(Kind), Expr(Expr) {}
 
 public:
-  static bool isSupportedBinaryExpr(MCSymbolRefExpr::VariantKind VK,
-                                    const MCBinaryExpr *BE);
+  static const MipsMCExpr *create(MipsExprKind Kind, const MCExpr *Expr,
+                                  MCContext &Ctx);
+  static const MipsMCExpr *createGpOff(MipsExprKind Kind, const MCExpr *Expr,
+                                       MCContext &Ctx);
 
-  static const MipsMCExpr *create(MCSymbolRefExpr::VariantKind VK,
-                                  const MCExpr *Expr, MCContext &Ctx);
+  /// Get the kind of this expression.
+  MipsExprKind getKind() const { return Kind; }
 
-  /// getOpcode - Get the kind of this expression.
-  VariantKind getKind() const { return Kind; }
-
-  /// getSubExpr - Get the child of this expression.
+  /// Get the child of this expression.
   const MCExpr *getSubExpr() const { return Expr; }
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAsmLayout *Layout,
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
                                  const MCFixup *Fixup) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override {
     return getSubExpr()->findAssociatedFragment();
   }
 
-  // There are no TLS MipsMCExprs at the moment.
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
+  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
+  }
+
+  bool isGpOff(MipsExprKind &Kind) const;
+  bool isGpOff() const {
+    MipsExprKind Kind;
+    return isGpOff(Kind);
   }
 };
 } // end namespace llvm

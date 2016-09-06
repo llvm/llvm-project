@@ -42,6 +42,7 @@ class BinaryHolder {
   std::unique_ptr<MemoryBuffer> CurrentMemoryBuffer;
   std::vector<std::unique_ptr<object::ObjectFile>> CurrentObjectFiles;
   std::unique_ptr<object::MachOUniversalBinary> CurrentFatBinary;
+  std::string CurrentFatBinaryName;
   bool Verbose;
 
   /// Get the MemoryBufferRefs for the file specification in \p
@@ -128,8 +129,6 @@ public:
       return Err;
     return cast<ObjectFileType>(*ErrOrObj);
   }
-
-  static Triple getTriple(const object::MachOObjectFile &Obj);
 };
 }
 }

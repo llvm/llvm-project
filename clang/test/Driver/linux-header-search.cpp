@@ -64,7 +64,7 @@
 //
 // Test a very broken version of multiarch that shipped in Ubuntu 11.04.
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target i386-unknown-linux \
+// RUN:     -target i386-unknown-linux -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/ubuntu_11.04_multiarch_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-11-04 %s
@@ -80,7 +80,7 @@
 // CHECK-UBUNTU-11-04: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target x86_64-unknown-linux-gnu \
+// RUN:     -target x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/ubuntu_13.04_multiarch_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-13-04 %s
@@ -97,7 +97,7 @@
 // CHECK-UBUNTU-13-04: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target x86_64-unknown-linux-gnux32 \
+// RUN:     -target x86_64-unknown-linux-gnux32 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-14-04 %s
@@ -114,7 +114,7 @@
 // CHECK-UBUNTU-14-04: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 ///
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target arm-linux-gnueabihf \
+// RUN:     -target arm-linux-gnueabihf -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/ubuntu_13.04_multiarch_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-13-04-CROSS %s
@@ -131,7 +131,7 @@
 //
 // Test Ubuntu/Debian's new version of multiarch, with -m32.
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target x86_64-unknown-linux-gnu -m32 \
+// RUN:     -target x86_64-unknown-linux-gnu -m32 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/ubuntu_13.04_multiarch_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-13-04-M32 %s
@@ -145,7 +145,7 @@
 // Test Ubuntu/Debian's Ubuntu 14.04 config variant, with -m32
 // and an empty 4.9 directory.
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target x86_64-unknown-linux-gnu -m32 \
+// RUN:     -target x86_64-unknown-linux-gnu -m32 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-14-04-M32 %s
@@ -160,7 +160,7 @@
 // installed rather than relying on multilib. Also happens to look like an
 // actual i686 Ubuntu system.
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target x86_64-unknown-linux-gnu -m32 \
+// RUN:     -target x86_64-unknown-linux-gnu -m32 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree2 \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-14-04-I686 %s
@@ -173,7 +173,7 @@
 //
 // Test Ubuntu/Debian's Ubuntu 14.04 for powerpc64le
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target powerpc64le-unknown-linux-gnu -m32 \
+// RUN:     -target powerpc64le-unknown-linux-gnu -m32 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/ubuntu_14.04_multiarch_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-14-04-PPC64LE %s
@@ -189,7 +189,7 @@
 //
 // Thoroughly exercise the Debian multiarch environment.
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target i686-linux-gnu \
+// RUN:     -target i686-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-X86 %s
@@ -205,7 +205,7 @@
 // CHECK-DEBIAN-X86: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-DEBIAN-X86: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target x86_64-linux-gnu \
+// RUN:     -target x86_64-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-X86-64 %s
@@ -221,7 +221,7 @@
 // CHECK-DEBIAN-X86-64: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-DEBIAN-X86-64: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target powerpc-linux-gnu \
+// RUN:     -target powerpc-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-PPC %s
@@ -237,7 +237,7 @@
 // CHECK-DEBIAN-PPC: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-DEBIAN-PPC: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target powerpc64-linux-gnu \
+// RUN:     -target powerpc64-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-PPC64 %s
@@ -256,7 +256,7 @@
 // Test Gentoo's weirdness both before and after they changed it in their GCC
 // 4.6.4 release.
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target x86_64-unknown-linux-gnu \
+// RUN:     -target x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.6.2_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-6-2 %s
@@ -271,7 +271,7 @@
 // CHECK-GENTOO-4-6-2: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-6-2: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target x86_64-unknown-linux-gnu \
+// RUN:     -target x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.6.4_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-6-4 %s
@@ -285,10 +285,25 @@
 // CHECK-GENTOO-4-6-4: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
 // CHECK-GENTOO-4-6-4: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-GENTOO-4-6-4: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-unknown-linux-gnu -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_4.9.3_tree \
+// RUN:     --gcc-toolchain="" \
+// RUN:   | FileCheck --check-prefix=CHECK-GENTOO-4-9-3 %s
+// CHECK-GENTOO-4-9-3: "{{.*}}clang{{.*}}" "-cc1"
+// CHECK-GENTOO-4-9-3: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-GENTOO-4-9-3: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-GENTOO-4-9-3: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.3/include/g++-v4.9.3"
+// CHECK-GENTOO-4-9-3: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.3/include/g++-v4.9.3/x86_64-pc-linux-gnu"
+// CHECK-GENTOO-4-9-3: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-pc-linux-gnu/4.9.3/include/g++-v4.9.3/backward"
+// CHECK-GENTOO-4-9-3: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// CHECK-GENTOO-4-9-3: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
+// CHECK-GENTOO-4-9-3: "-internal-externc-isystem" "[[SYSROOT]]/include"
+// CHECK-GENTOO-4-9-3: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
 //
 // Check header search on Debian 6 / MIPS64
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target mips64-unknown-linux-gnuabi64 \
+// RUN:     -target mips64-unknown-linux-gnuabi64 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips64_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64-GNUABI %s
@@ -306,7 +321,7 @@
 //
 // Check header search on Debian 6 / MIPS64
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target mips64el-unknown-linux-gnuabi64 \
+// RUN:     -target mips64el-unknown-linux-gnuabi64 -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_6_mips64_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-GNUABI %s
@@ -324,7 +339,7 @@
 
 // Check header search on Debian 8 / Sparc
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target sparc-unknown-linux-gnu \
+// RUN:     -target sparc-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_8_sparc_multilib_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-SPARC32 %s
@@ -342,7 +357,7 @@
 
 // Check header search on Debian 8 / Sparc, with the oldstyle multilib packages
 // RUN: %clang -no-canonical-prefixes -m64 %s -### -fsyntax-only 2>&1 \
-// RUN:     -target sparc-unknown-linux-gnu \
+// RUN:     -target sparc-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_8_sparc_multilib_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-SPARC32-LIB64 %s
@@ -363,7 +378,7 @@
 
 // Check header search on Debian 8 / Sparc64
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target sparc64-unknown-linux-gnu \
+// RUN:     -target sparc64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/debian_8_sparc64_tree \
 // RUN:     --gcc-toolchain="" \
 // RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-SPARC64 %s

@@ -35,8 +35,8 @@ namespace VariableLengthArrays {
   template<typename Z> using T = int[n]; // expected-error {{variable length array declaration not allowed at file scope}}
 
   const int m = 42;
-  template<typename Z> using U = int[m]; // expected-note {{previous definition}}
-  template<typename Z> using U = int[42]; // ok
+  template<typename Z> using U = int[m];
+  template<typename Z> using U = int[42]; // expected-note {{previous definition}} 
   template<typename Z> using U = int; // expected-error {{type alias template redefinition with different types ('int' vs 'int [42]')}}
 }
 

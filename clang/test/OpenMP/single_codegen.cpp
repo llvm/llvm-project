@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -verify -fopenmp -fnoopenmp-use-tls -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fnoopenmp-use-tls -x c++ -std=c++11 -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -fnoopenmp-use-tls -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fnoopenmp-use-tls -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fnoopenmp-use-tls -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -std=c++11 -fopenmp -fnoopenmp-use-tls -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
 // RUN: %clang_cc1 -verify -fopenmp -fnoopenmp-use-tls -x c++ -std=c++11 -DARRAY -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=ARRAY %s
 // expected-no-diagnostics
 // REQUIRES: x86-registered-target
@@ -19,7 +19,9 @@ public:
 };
 
 // CHECK-DAG:   [[TEST_CLASS_TY:%.+]] = type { i{{[0-9]+}} }
-// CHECK:       [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
+// CHECK-DAG:   [[SST_TY:%.+]] = type { double }
+// CHECK-DAG:   [[SS_TY:%.+]] = type { i32, i8, i32* }
+// CHECK-DAG:   [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
 // CHECK:       [[IMPLICIT_BARRIER_SINGLE_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 322, i32 0, i32 0, i8*
 
 // CHECK:       define void [[FOO:@.+]]()
@@ -30,6 +32,39 @@ TestClass tc2[2];
 
 void foo() {}
 
+struct SS {
+  int a;
+  int b : 4;
+  int &c;
+  SS(int &d) : a(0), b(0), c(d) {
+#pragma omp parallel firstprivate(a, b, c)
+#pragma omp single copyprivate(a, this->b, (this)->c)
+    [&]() {
+      ++this->a, --b, (this)->c /= 1;
+#pragma omp parallel firstprivate(a, b, c)
+#pragma omp single copyprivate(a, this->b, (this)->c)
+      ++(this)->a, --b, this->c /= 1;
+    }();
+  }
+};
+
+template<typename T>
+struct SST {
+  T a;
+  SST() : a(T()) {
+#pragma omp parallel firstprivate(a)
+#pragma omp single copyprivate(this->a)
+    [&]() {
+      [&]() {
+        ++this->a;
+#pragma omp parallel firstprivate(a)
+#pragma omp single copyprivate((this)->a)
+        ++(this)->a;
+      }();
+    }();
+  }
+};
+
 // CHECK-LABEL: @main
 // TERM_DEBUG-LABEL: @main
 int main() {
@@ -39,6 +74,8 @@ int main() {
   char a;
   char a2[2];
   TestClass &c = tc;
+  SST<double> sst;
+  SS ss(c.a);
 
 // CHECK:       [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:@.+]])
 // CHECK-DAG:   [[DID_IT:%.+]] = alloca i32,
@@ -74,8 +111,8 @@ int main() {
 // CHECK-NEXT:  invoke void [[FOO]]()
 // CHECK:       to label {{%?}}[[CONT:.+]] unwind
 // CHECK:       [[CONT]]
-// CHECK:       store i32 1, i32* [[DID_IT]]
 // CHECK:       call void @__kmpc_end_single([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
+// CHECK:       store i32 1, i32* [[DID_IT]]
 // CHECK-NEXT:  br label {{%?}}[[EXIT]]
 // CHECK:       [[EXIT]]
 // CHECK:       [[A_PTR_REF:%.+]] = getelementptr inbounds [5 x i8*], [5 x i8*]* [[COPY_LIST]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
@@ -186,3 +223,210 @@ void array_func(int n, int a[n], St s[2]) {
 // ARRAY: store i32* %{{.+}}, i32** %{{.+}},
 // ARRAY: store %struct.St* %{{.+}}, %struct.St** %{{.+}},
 #endif
+
+// CHECK-LABEL:@_ZN2SSC2ERi(
+// CHECK: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* @{{.+}}, i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[SS_TY]]*, i64, i64, i64)* [[SS_MICROTASK:@.+]] to void
+// CHECK-NEXT: ret void
+
+// CHECK: define internal void [[SS_MICROTASK]](i32* {{[^,]+}}, i32* {{[^,]+}}, [[SS_TY]]* {{.+}}, i64 {{.+}}, i64 {{.+}}, i64 {{.+}})
+// Private a
+// CHECK: alloca i64,
+// Private b
+// CHECK: alloca i64,
+// Private c
+// CHECK: alloca i64,
+// CHECK: alloca i32*,
+// CHECK: alloca i32*,
+// CHECK: alloca i32*,
+// CHECK: alloca i32*,
+// CHECK: [[DID_IT:%.+]] = alloca i32,
+// CHECK: bitcast i64* %{{.+}} to i32*
+// CHECK: bitcast i64* %{{.+}} to i32*
+// CHECK: bitcast i64* %{{.+}} to i32*
+// CHECK: store i32 0, i32* [[DID_IT]],
+// CHECK: [[RES:%.+]] = call i32 @__kmpc_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// CHECK-NEXT: icmp ne i32 [[RES]], 0
+// CHECK-NEXT: br i1
+
+// CHECK: getelementptr inbounds [[CAP_TY:%.+]], [[CAP_TY]]* [[CAP:%.+]], i32 0, i32 0
+// CHECK: getelementptr inbounds [[CAP_TY]], [[CAP_TY]]* [[CAP]], i32 0, i32 1
+// CHECK-NEXT: load i32*, i32** %
+// CHECK-NEXT: store i32* %
+// CHECK-NEXT: getelementptr inbounds [[CAP_TY]], [[CAP_TY]]* [[CAP]], i32 0, i32 2
+// CHECK-NEXT: store i32* %
+// CHECK-NEXT: getelementptr inbounds [[CAP_TY]], [[CAP_TY]]* [[CAP]], i32 0, i32 3
+// CHECK-NEXT: load i32*, i32** %
+// CHECK-NEXT: store i32* %
+// CHECK-LABEL: invoke void @_ZZN2SSC1ERiENKUlvE_clEv(
+// CHECK-SAME: [[CAP_TY]]* [[CAP]])
+
+// CHECK: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// CHECK: store i32 1, i32* [[DID_IT]],
+// CHECK: br label
+
+// CHECK: call void @__kmpc_end_single(%{{.+}}* @{{.+}}, i32 %{{.+}})
+// CHECK: br label
+
+// CHECK: getelementptr inbounds [3 x i8*], [3 x i8*]* [[LIST:%.+]], i64 0, i64 0
+// CHECK: load i32*, i32** %
+// CHECK-NEXT: bitcast i32* %
+// CHECK-NEXT: store i8* %
+// CHECK: getelementptr inbounds [3 x i8*], [3 x i8*]* [[LIST]], i64 0, i64 1
+// CHECK-NEXT: bitcast i32* %
+// CHECK-NEXT: store i8* %
+// CHECK: getelementptr inbounds [3 x i8*], [3 x i8*]* [[LIST]], i64 0, i64 2
+// CHECK: load i32*, i32** %
+// CHECK-NEXT: bitcast i32* %
+// CHECK-NEXT: store i8* %
+// CHECK-NEXT: bitcast [3 x i8*]* [[LIST]] to i8*
+// CHECK-NEXT: load i32, i32* [[DID_IT]],
+// CHECK-NEXT: call void @__kmpc_copyprivate([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}}, i64 24, i8* %{{.+}}, void (i8*, i8*)* [[COPY_FUNC:@[^,]+]], i32 %{{.+}})
+// CHECK-NEXT: ret void
+
+// CHECK-LABEL: @_ZZN2SSC1ERiENKUlvE_clEv(
+// CHECK: getelementptr inbounds [[CAP_TY]], [[CAP_TY]]* [[CAP:%.+]], i32 0, i32 1
+// CHECK-NEXT: load i32*, i32** %
+// CHECK-NEXT: load i32, i32* %
+// CHECK-NEXT: add nsw i32 %{{.+}}, 1
+// CHECK-NEXT: store i32 %
+// CHECK-NEXT: getelementptr inbounds [[CAP_TY]], [[CAP_TY]]* [[CAP]], i32 0, i32 2
+// CHECK-NEXT: load i32*, i32** %
+// CHECK-NEXT: load i32, i32* %
+// CHECK-NEXT: add nsw i32 %{{.+}}, -1
+// CHECK-NEXT: store i32 %
+// CHECK-NEXT: getelementptr inbounds [[CAP_TY]], [[CAP_TY]]* [[CAP]], i32 0, i32 3
+// CHECK-NEXT: load i32*, i32** %
+// CHECK-NEXT: load i32, i32* %
+// CHECK-NEXT: sdiv i32 %{{.+}}, 1
+// CHECK-NEXT: store i32 %
+// CHECK-NEXT: getelementptr inbounds [[CAP_TY]], [[CAP_TY]]* [[CAP]], i32 0, i32 1
+// CHECK-NEXT: load i32*, i32** %
+// CHECK-NEXT: load i32, i32* %
+// CHECK-NEXT: bitcast i64* %
+// CHECK-NEXT: store i32 %{{.+}}, i32* %
+// CHECK-NEXT: load i64, i64* %
+// CHECK-NEXT: getelementptr inbounds [[CAP_TY]], [[CAP_TY]]* [[CAP]], i32 0, i32 2
+// CHECK-NEXT: load i32*, i32** %
+// CHECK-NEXT: load i32, i32* %
+// CHECK-NEXT: bitcast i64* %
+// CHECK-NEXT: store i32 %{{.+}}, i32* %
+// CHECK-NEXT: load i64, i64* %
+// CHECK-NEXT: getelementptr inbounds [[CAP_TY]], [[CAP_TY]]* [[CAP]], i32 0, i32 3
+// CHECK-NEXT: load i32*, i32** %
+// CHECK-NEXT: load i32, i32* %
+// CHECK-NEXT: bitcast i64* %
+// CHECK-NEXT: store i32 %{{.+}}, i32* %
+// CHECK-NEXT: load i64, i64* %
+// CHECK-NEXT: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* @{{.+}}, i32 4, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[SS_TY]]*, i64, i64, i64)* [[SS_MICROTASK1:@.+]] to void
+// CHECK-NEXT: ret void
+
+// CHECK: define internal void [[COPY_FUNC]](i8*, i8*)
+// CHECK: ret void
+
+// CHECK: define internal void [[SS_MICROTASK1]](i32* {{[^,]+}}, i32* {{[^,]+}}, [[SS_TY]]* {{.+}}, i64 {{.+}}, i64 {{.+}}, i64 {{.+}})
+// Private a
+// CHECK: alloca i64,
+// Private b
+// CHECK: alloca i64,
+// Private c
+// CHECK: alloca i64,
+// CHECK: alloca i32*,
+// CHECK: alloca i32*,
+// CHECK: alloca i32*,
+// CHECK: alloca i32*,
+// CHECK: [[DID_IT:%.+]] = alloca i32,
+// CHECK: bitcast i64* %{{.+}} to i32*
+// CHECK: bitcast i64* %{{.+}} to i32*
+// CHECK: bitcast i64* %{{.+}} to i32*
+// CHECK: [[RES:%.+]] = call i32 @__kmpc_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// CHECK-NEXT: icmp ne i32 [[RES]], 0
+// CHECK-NEXT: br i1
+
+// CHECK-NOT: getelementptr inbounds
+// CHECK: load i32*, i32** %
+// CHECK-NEXT: load i32, i32* %
+// CHECK-NEXT: add nsw i32 %{{.+}}, 1
+// CHECK-NEXT: store i32 %
+// CHECK-NOT: getelementptr inbounds
+// CHECK: load i32, i32* %
+// CHECK-NEXT: add nsw i32 %{{.+}}, -1
+// CHECK-NEXT: store i32 %
+// CHECK-NOT: getelementptr inbounds
+// CHECK: load i32*, i32** %
+// CHECK-NEXT: load i32, i32* %
+// CHECK-NEXT: sdiv i32 %{{.+}}, 1
+// CHECK-NEXT: store i32 %
+// CHECK-NEXT: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// CHECK-NEXT: store i32 1, i32* [[DID_IT]],
+// CHECK-NEXT: br label
+
+// CHECK: getelementptr inbounds [3 x i8*], [3 x i8*]* [[LIST:%.+]], i64 0, i64 0
+// CHECK: load i32*, i32** %
+// CHECK-NEXT: bitcast i32* %
+// CHECK-NEXT: store i8* %
+// CHECK: getelementptr inbounds [3 x i8*], [3 x i8*]* [[LIST]], i64 0, i64 1
+// CHECK-NEXT: bitcast i32* %
+// CHECK-NEXT: store i8* %
+// CHECK: getelementptr inbounds [3 x i8*], [3 x i8*]* [[LIST]], i64 0, i64 2
+// CHECK: load i32*, i32** %
+// CHECK-NEXT: bitcast i32* %
+// CHECK-NEXT: store i8* %
+// CHECK-NEXT: bitcast [3 x i8*]* [[LIST]] to i8*
+// CHECK-NEXT: load i32, i32* [[DID_IT]],
+// CHECK-NEXT: call void @__kmpc_copyprivate([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}}, i64 24, i8* %{{.+}}, void (i8*, i8*)* [[COPY_FUNC:@[^,]+]], i32 %{{.+}})
+// CHECK-NEXT:  ret void
+
+// CHECK: define internal void [[COPY_FUNC]](i8*, i8*)
+// CHECK: ret void
+
+// CHECK-LABEL: @_ZN3SSTIdEC2Ev
+// CHECK: getelementptr inbounds [[SST_TY]], [[SST_TY]]* %{{.+}}, i32 0, i32 0
+// CHECK-NEXT: store double 0.000000e+00, double* %
+// CHECK-NEXT: getelementptr inbounds [[SST_TY]], [[SST_TY]]* %{{.+}}, i32 0, i32 0
+// CHECK-NEXT: store double* %{{.+}}, double** %
+// CHECK-NEXT: load double*, double** %
+// CHECK-NEXT: load double, double* %
+// CHECK-NEXT: bitcast i64* %{{.+}} to double*
+// CHECK-NEXT: store double %{{.+}}, double* %
+// CHECK-NEXT: load i64, i64* %
+// CHECK-NEXT: call void ([[IDENT_T_TY]]*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call([[IDENT_T_TY]]* @{{.+}}, i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, [[SST_TY]]*, i64)* [[SST_MICROTASK:@.+]] to void
+// CHECK-NEXT: ret void
+
+// CHECK: define internal void [[SST_MICROTASK]](i32* {{[^,]+}}, i32* {{[^,]+}}, [[SST_TY]]* {{.+}}, i64 {{.+}})
+// CHECK: [[RES:%.+]] = call i32 @__kmpc_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// CHECK-NEXT: icmp ne i32 [[RES]], 0
+// CHECK-NEXT: br i1
+
+// CHECK: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 1
+// CHECK-NEXT: load double*, double** %
+// CHECK-NEXT: store double* %
+// CHECK-LABEL: invoke void @_ZZN3SSTIdEC1EvENKUlvE_clEv(
+
+// CHECK: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// CHECK-NEXT: store i32 1, i32* [[DID_IT]],
+// CHECK-NEXT: br label
+
+// CHECK: call void @__kmpc_end_single([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}})
+// CHECK-NEXT: br label
+
+// CHECK: getelementptr inbounds [1 x i8*], [1 x i8*]* [[LIST:%.+]], i64 0, i64 0
+// CHECK: load double*, double** %
+// CHECK-NEXT: bitcast double* %
+// CHECK-NEXT: store i8* %
+// CHECK-NEXT: bitcast [1 x i8*]* [[LIST]] to i8*
+// CHECK-NEXT: load i32, i32* [[DID_IT]],
+// CHECK-NEXT: call void @__kmpc_copyprivate([[IDENT_T_TY]]* @{{.+}}, i32 %{{.+}}, i64 8, i8* %{{.+}}, void (i8*, i8*)* [[COPY_FUNC:@[^,]+]], i32 %{{.+}})
+// CHECK-NEXT:  ret void
+
+// CHECK-LABEL: @_ZZN3SSTIdEC1EvENKUlvE_clEv(
+// CHECK: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 1
+// CHECK-NEXT: getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 1
+// CHECK-NEXT: load double*, double** %
+// CHECK-NEXT: store double* %
+// CHECK-LABEL: call void @_ZZZN3SSTIdEC1EvENKUlvE_clEvENKUlvE_clEv(
+// CHECK-NEXT: ret void
+
+// CHECK: define internal void [[COPY_FUNC]](i8*, i8*)
+// CHECK: ret void
+
+// CHECK-LABEL: @_ZZZN3SSTIdEC1EvENKUlvE_clEvENKUlvE_clEv(

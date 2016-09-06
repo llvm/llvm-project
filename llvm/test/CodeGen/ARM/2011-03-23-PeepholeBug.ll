@@ -18,13 +18,14 @@ bb:                                               ; preds = %bb2
   br i1 %1, label %bb3, label %bb1
 
 bb1:                                              ; preds = %bb
+; CHECK: bb1
+; CHECK: subs [[REG:r[0-9]+]], #1
   %tmp = tail call i32 @puts() nounwind
   %indvar.next = add i32 %indvar, 1
   br label %bb2
 
 bb2:                                              ; preds = %bb1, %entry
 ; CHECK: bb2
-; CHECK: subs [[REG:r[0-9]+]], #1
 ; CHECK: cmp [[REG]], #0
 ; CHECK: ble
   %indvar = phi i32 [ %indvar.next, %bb1 ], [ 0, %entry ]

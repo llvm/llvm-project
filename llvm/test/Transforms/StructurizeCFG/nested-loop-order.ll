@@ -63,17 +63,6 @@ ENDIF28:                                          ; preds = %ENDIF
   br i1 %tmp36, label %ENDLOOP, label %LOOP.outer
 }
 
-; Function Attrs: nounwind readnone
-declare <4 x float> @llvm.SI.vs.load.input(<16 x i8>, i32, i32) #1
-
-; Function Attrs: readnone
-declare float @llvm.AMDIL.clamp.(float, float, float) #2
-
-declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
-
-attributes #0 = { "ShaderType"="1" "enable-no-nans-fp-math"="true" "unsafe-fp-math"="true" }
+attributes #0 = { "enable-no-nans-fp-math"="true" "unsafe-fp-math"="true" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { readnone }
-
-!0 = !{!1, !1, i64 0, i32 1}
-!1 = !{!"const", null}

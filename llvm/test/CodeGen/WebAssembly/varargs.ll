@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -verify-machineinstrs | FileCheck %s
 
 ; Test varargs constructs.
 
@@ -8,13 +8,17 @@ target triple = "wasm32-unknown-unknown"
 ; Test va_start.
 
 ; TODO: Test va_start.
-
-;define void @start(i8** %ap, ...) {
-;entry:
-;  %0 = bitcast i8** %ap to i8*
-;  call void @llvm.va_start(i8* %0)
-;  ret void
-;}
+; CHECK-LABEL: start:
+; CHECK-NEXT: .param i32, i32
+; CHECK-NOT: __stack_pointer
+define void @start(i8** %ap, ...) {
+entry:
+  %0 = bitcast i8** %ap to i8*
+; Store the second argument (the hidden vararg buffer pointer) into ap
+; CHECK: i32.store $drop=, 0($0), $1
+  call void @llvm.va_start(i8* %0)
+  ret void
+}
 
 ; Test va_end.
 
@@ -33,7 +37,7 @@ entry:
 ; CHECK-LABEL: copy:
 ; CHECK-NEXT: .param i32, i32{{$}}
 ; CHECK-NEXT: i32.load  $push0=, 0($1){{$}}
-; CHECK-NEXT: i32.store $discard=, 0($0), $pop0{{$}}
+; CHECK-NEXT: i32.store $drop=, 0($0), $pop0{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @copy(i8** %ap, i8** %bp) {
 entry:
@@ -49,12 +53,13 @@ entry:
 ; CHECK-NEXT: .param     i32{{$}}
 ; CHECK-NEXT: .result    i32{{$}}
 ; CHECK-NEXT: .local     i32{{$}}
-; CHECK-NEXT: i32.load   $1=, 0($0){{$}}
-; CHECK-NEXT: i32.const  $push0=, 4{{$}}
-; CHECK-NEXT: i32.add    $push1=, $1, $pop0{{$}}
-; CHECK-NEXT: i32.store  $discard=, 0($0), $pop1{{$}}
-; CHECK-NEXT: i32.load   $push2=, 0($1){{$}}
-; CHECK-NEXT: return     $pop2{{$}}
+; CHECK-NEXT: i32.load   $push[[NUM0:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: tee_local  $push[[NUM1:[0-9]+]]=, $1=, $pop[[NUM0]]{{$}}
+; CHECK-NEXT: i32.const  $push[[NUM2:[0-9]+]]=, 4{{$}}
+; CHECK-NEXT: i32.add    $push[[NUM3:[0-9]+]]=, $pop[[NUM1]], $pop[[NUM2]]{{$}}
+; CHECK-NEXT: i32.store  $drop=, 0($0), $pop[[NUM3]]{{$}}
+; CHECK-NEXT: i32.load   $push[[NUM4:[0-9]+]]=, 0($1){{$}}
+; CHECK-NEXT: return     $pop[[NUM4]]{{$}}
 define i8 @arg_i8(i8** %ap) {
 entry:
   %t = va_arg i8** %ap, i8
@@ -67,16 +72,17 @@ entry:
 ; CHECK-NEXT: .param     i32{{$}}
 ; CHECK-NEXT: .result    i32{{$}}
 ; CHECK-NEXT: .local     i32{{$}}
-; CHECK-NEXT: i32.load   $push0=, 0($0){{$}}
-; CHECK-NEXT: i32.const  $push1=, 3{{$}}
-; CHECK-NEXT: i32.add    $push2=, $pop0, $pop1{{$}}
-; CHECK-NEXT: i32.const  $push3=, -4{{$}}
-; CHECK-NEXT: i32.and    $1=, $pop2, $pop3{{$}}
-; CHECK-NEXT: i32.const  $push4=, 4{{$}}
-; CHECK-NEXT: i32.add    $push5=, $1, $pop4{{$}}
-; CHECK-NEXT: i32.store  $discard=, 0($0), $pop5{{$}}
-; CHECK-NEXT: i32.load   $push6=, 0($1){{$}}
-; CHECK-NEXT: return     $pop6{{$}}
+; CHECK-NEXT: i32.load   $push[[NUM0:[0-9]+]]=, 0($0){{$}}
+; CHECK-NEXT: i32.const  $push[[NUM1:[0-9]+]]=, 3{{$}}
+; CHECK-NEXT: i32.add    $push[[NUM2:[0-9]+]]=, $pop[[NUM0]], $pop[[NUM1]]{{$}}
+; CHECK-NEXT: i32.const  $push[[NUM3:[0-9]+]]=, -4{{$}}
+; CHECK-NEXT: i32.and    $push[[NUM4:[0-9]+]]=, $pop[[NUM2]], $pop[[NUM3]]{{$}}
+; CHECK-NEXT: tee_local  $push[[NUM5:[0-9]+]]=, $1=, $pop[[NUM4]]{{$}}
+; CHECK-NEXT: i32.const  $push[[NUM6:[0-9]+]]=, 4{{$}}
+; CHECK-NEXT: i32.add    $push[[NUM7:[0-9]+]]=, $pop[[NUM5]], $pop[[NUM6]]{{$}}
+; CHECK-NEXT: i32.store  $drop=, 0($0), $pop[[NUM7]]{{$}}
+; CHECK-NEXT: i32.load   $push[[NUM8:[0-9]+]]=, 0($1){{$}}
+; CHECK-NEXT: return     $pop[[NUM8]]{{$}}
 define i32 @arg_i32(i8** %ap) {
 entry:
   %t = va_arg i8** %ap, i32
@@ -103,20 +109,43 @@ entry:
 declare void @callee(...)
 
 ; CHECK-LABEL: caller_none:
-; CHECK-NEXT: call callee@FUNCTION{{$}}
+; CHECK-NEXT: i32.const $push0=, 0
+; CHECK-NEXT: call callee@FUNCTION, $pop0
 ; CHECK-NEXT: return{{$}}
 define void @caller_none() {
   call void (...) @callee()
   ret void
 }
 
+; Test a varargs call with some actual arguments.
+; Note that the store of 2.0 is converted to an i64 store; this optimization
+; is not needed on WebAssembly, but there isn't currently a convenient hook for
+; disabling it.
+
 ; CHECK-LABEL: caller_some
+; CHECK: i32.store
+; CHECK: i64.store
 define void @caller_some() {
-  ; TODO: Fix interaction between register coalescer and reg stackifier,
-  ; or disable coalescer.
-  ;call void (...) @callee(i32 0, double 2.0)
+  call void (...) @callee(i32 0, double 2.0)
   ret void
 }
+
+; Test a va_start call in a non-entry block
+; CHECK-LABEL: startbb:
+; CHECK: .param i32, i32, i32
+define void @startbb(i1 %cond, i8** %ap, ...) {
+entry:
+  br i1 %cond, label %bb0, label %bb1
+bb0:
+  ret void
+bb1:
+  %0 = bitcast i8** %ap to i8*
+; Store the second argument (the hidden vararg buffer pointer) into ap
+; CHECK: i32.store $drop=, 0($1), $2
+  call void @llvm.va_start(i8* %0)
+  ret void
+}
+
 
 declare void @llvm.va_start(i8*)
 declare void @llvm.va_end(i8*)

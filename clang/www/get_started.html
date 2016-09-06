@@ -47,20 +47,20 @@ follows:</p>
       http://www.cmake.org/download</a></li>
   </ul>
 
-  <li>Checkout LLVM:
+  <li>Check out LLVM:
   <ul>
     <li>Change directory to where you want the llvm directory placed.</li>
     <li><tt>svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm</tt></li>
   </ul>
   </li>
-  <li>Checkout Clang:
+  <li>Check out Clang:
   <ul>
     <li><tt>cd llvm/tools</tt></li>
     <li><tt>svn co http://llvm.org/svn/llvm-project/cfe/trunk clang</tt></li>
     <li><tt>cd ../..</tt></li>
   </ul>
   </li>
-  <li>Checkout extra Clang Tools: (optional)
+  <li>Check out extra Clang tools: (optional)
   <ul>
     <li><tt>cd llvm/tools/clang/tools</tt></li>
     <li><tt>svn co http://llvm.org/svn/llvm-project/clang-tools-extra/trunk
@@ -68,7 +68,7 @@ follows:</p>
     <li><tt>cd ../../../..</tt></li>
   </ul>
   </li>
-  <li>Checkout Compiler-RT:
+  <li>Check out Compiler-RT (optional):
   <ul>
     <li><tt>cd llvm/projects</tt></li>
     <li><tt>svn co http://llvm.org/svn/llvm-project/compiler-rt/trunk
@@ -76,7 +76,7 @@ follows:</p>
     <li><tt>cd ../..</tt></li>
   </ul>
   </li>
-  <li>Checkout libcxx: (only required to build and run Compiler-RT tests on OS X, optional otherwise)
+  <li>Check out libcxx: (only required to build and run Compiler-RT tests on OS X, optional otherwise)
   <ul>
     <li><tt>cd llvm/projects</tt></li>
     <li><tt>svn co http://llvm.org/svn/llvm-project/libcxx/trunk
@@ -98,9 +98,6 @@ follows:</p>
         KDevelop3. For more details see
         <a href="http://llvm.org/docs/CMake.html">Building LLVM with CMake</a>
         page.</li>
-      <li>You can also build Clang with
-        <a href="http://llvm.org/docs/BuildingLLVMWithAutotools.html">
-        autotools</a>, but some features may be unavailable there.</li>
   </ul>
   </li>
 
@@ -112,7 +109,7 @@ follows:</p>
       scenarios, you can use the <tt>-DGCC_INSTALL_PREFIX</tt> cmake option
       to tell Clang where the gcc containing the desired libstdc++ is installed.
   </li>
-  <li>Try it out (assuming you add llvm/Debug+Asserts/bin to your path):
+  <li>Try it out (assuming you add llvm/build/bin to your path):
   <ul>
     <li><tt>clang --help</tt></li>
     <li><tt>clang file.c -fsyntax-only</tt> (check for correctness)</li>
@@ -123,17 +120,17 @@ follows:</p>
   </li>
 </ol>
 
-<p>Note that the C front-end uses LLVM, but does not depend on llvm-gcc. If you
-encounter problems with building Clang, make sure you have the latest SVN
-version of LLVM. LLVM contains support libraries for Clang that will be updated
-as well as development on Clang progresses.</p>
-  
+<p>If you encounter problems while building Clang, make sure that your LLVM
+checkout is at the same revision as your Clang checkout. LLVM's interfaces
+change over time, and mismatched revisions are not expected to work
+together.</p>
+
 <h3>Simultaneously Building Clang and LLVM:</h3>
 
 <p>Once you have checked out Clang into the llvm source tree it will build along
 with the rest of <tt>llvm</tt>. To build all of LLVM and Clang together all at
 once simply run <tt>make</tt> from the root LLVM directory.</p>
-    
+
 <p><em>Note:</em> Observe that Clang is technically part of a separate
 Subversion repository. As mentioned above, the latest Clang sources are tied to
 the latest sources in the LLVM tree. You can update your toplevel LLVM project
@@ -172,16 +169,19 @@ Visual Studio:</p>
   </ul>
   </li>
 
-  <li>Checkout LLVM:
+  <li>Check out LLVM:
   <ul>
     <li><tt>svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm</tt></li>
   </ul>
   </li>
-  <li>Checkout Clang:
+  <li>Check out Clang:
   <ul>
      <li><tt>cd llvm\tools</tt>
      <li><tt>svn co http://llvm.org/svn/llvm-project/cfe/trunk clang</tt></li>
   </ul>
+  <p><em>Note</em>:  Some Clang tests are sensitive to the line endings.  Ensure
+     that checking out the files does not convert LF line endings to CR+LF.
+     If you use git-svn, make sure your <tt>core.autocrlf</tt> setting is false.</p>
   </li>
   <li>Run CMake to generate the Visual Studio solution and project files:
   <ul>

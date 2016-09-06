@@ -16,7 +16,7 @@ entry:
           to label %unreachable unwind label %catch.dispatch
 
 ; CHECK-LABEL: test1:
-; CHECK: movq  $0, -16(%rbp)
+; CHECK: movq  $0, -8(%rbp)
 ; CHECK: callq throw
 
 catch.dispatch:                                   ; preds = %entry
@@ -33,8 +33,8 @@ catch.pad:                                        ; preds = %catch.dispatch
   unreachable
 
 ; CHECK-LABEL: "?catch$2@?0?test1@4HA"
-; CHECK: movq  $0, -16(%rbp)
-; CHECK: movq  $0, -16(%rbp)
+; CHECK: movq  $0, -8(%rbp)
+; CHECK: movq  $0, -8(%rbp)
 ; CHECK: ud2
 
 unreachable:                                      ; preds = %entry
@@ -42,7 +42,7 @@ unreachable:                                      ; preds = %entry
 }
 
 ; CHECK-LABEL: $cppxdata$test1:
-; CHECK: .long   32                      # CatchObjOffset
+; CHECK: .long   56                      # CatchObjOffset
 
 define void @test2() personality i32 (...)* @__CxxFrameHandler3 {
 entry:

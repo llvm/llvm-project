@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}fpext_f32_to_f64:
@@ -15,6 +15,16 @@ define void @fpext_f32_to_f64(double addrspace(1)* %out, float %in) {
 define void @fpext_v2f32_to_v2f64(<2 x double> addrspace(1)* %out, <2 x float> %in) {
   %result = fpext <2 x float> %in to <2 x double>
   store <2 x double> %result, <2 x double> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}fpext_v3f32_to_v3f64:
+; SI: v_cvt_f64_f32_e32
+; SI: v_cvt_f64_f32_e32
+; SI: v_cvt_f64_f32_e32
+define void @fpext_v3f32_to_v3f64(<3 x double> addrspace(1)* %out, <3 x float> %in) {
+  %result = fpext <3 x float> %in to <3 x double>
+  store <3 x double> %result, <3 x double> addrspace(1)* %out
   ret void
 }
 

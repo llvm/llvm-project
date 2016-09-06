@@ -40,36 +40,8 @@ public:
 
   const char *getPassName() const override { return "BPF Assembly Printer"; }
 
-  void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O,
-                    const char *Modifier = nullptr);
   void EmitInstruction(const MachineInstr *MI) override;
 };
-}
-
-void BPFAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
-                                 raw_ostream &O, const char *Modifier) {
-  const MachineOperand &MO = MI->getOperand(OpNum);
-
-  switch (MO.getType()) {
-  case MachineOperand::MO_Register:
-    O << BPFInstPrinter::getRegisterName(MO.getReg());
-    break;
-
-  case MachineOperand::MO_Immediate:
-    O << MO.getImm();
-    break;
-
-  case MachineOperand::MO_MachineBasicBlock:
-    O << *MO.getMBB()->getSymbol();
-    break;
-
-  case MachineOperand::MO_GlobalAddress:
-    O << *getSymbol(MO.getGlobal());
-    break;
-
-  default:
-    llvm_unreachable("<unknown operand type>");
-  }
 }
 
 void BPFAsmPrinter::EmitInstruction(const MachineInstr *MI) {

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolizableObjectFile.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Object/SymbolSize.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -119,12 +120,15 @@ std::error_code SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
                                                   uint64_t SymbolSize,
                                                   DataExtractor *OpdExtractor,
                                                   uint64_t OpdAddress) {
-  SymbolRef::Type SymbolType = Symbol.getType();
+  Expected<SymbolRef::Type> SymbolTypeOrErr = Symbol.getType();
+  if (!SymbolTypeOrErr)
+    return errorToErrorCode(SymbolTypeOrErr.takeError());
+  SymbolRef::Type SymbolType = *SymbolTypeOrErr;
   if (SymbolType != SymbolRef::ST_Function && SymbolType != SymbolRef::ST_Data)
     return std::error_code();
-  ErrorOr<uint64_t> SymbolAddressOrErr = Symbol.getAddress();
-  if (auto EC = SymbolAddressOrErr.getError())
-    return EC;
+  Expected<uint64_t> SymbolAddressOrErr = Symbol.getAddress();
+  if (!SymbolAddressOrErr)
+    return errorToErrorCode(SymbolAddressOrErr.takeError());
   uint64_t SymbolAddress = *SymbolAddressOrErr;
   if (OpdExtractor) {
     // For big-endian PowerPC64 ELF, symbols in the .opd section refer to
@@ -138,9 +142,9 @@ std::error_code SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
         OpdExtractor->isValidOffsetForAddress(OpdOffset32))
       SymbolAddress = OpdExtractor->getAddress(&OpdOffset32);
   }
-  ErrorOr<StringRef> SymbolNameOrErr = Symbol.getName();
-  if (auto EC = SymbolNameOrErr.getError())
-    return EC;
+  Expected<StringRef> SymbolNameOrErr = Symbol.getName();
+  if (!SymbolNameOrErr)
+    return errorToErrorCode(SymbolNameOrErr.takeError());
   StringRef SymbolName = *SymbolNameOrErr;
   // Mach-O symbol table names have leading underscore, skip it.
   if (Module->isMachO() && SymbolName.size() > 0 && SymbolName[0] == '_')

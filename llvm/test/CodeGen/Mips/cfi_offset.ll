@@ -1,9 +1,9 @@
-; RUN: llc -march=mips -mattr=+o32 < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-EB
-; RUN: llc -march=mipsel -mattr=+o32 < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-EL
-; RUN: llc -march=mips -mattr=+o32,+fpxx < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-EB
-; RUN: llc -march=mipsel -mattr=+o32,+fpxx < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-EL
-; RUN: llc -march=mips -mattr=+o32,+fp64 < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-EB
-; RUN: llc -march=mipsel -mattr=+o32,+fp64 < %s | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-EL
+; RUN: llc -march=mips -mattr=+o32 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-EB
+; RUN: llc -march=mipsel -mattr=+o32 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-EL
+; RUN: llc -march=mips -mattr=+o32,+fpxx < %s | FileCheck %s --check-prefixes=CHECK,CHECK-EB
+; RUN: llc -march=mipsel -mattr=+o32,+fpxx < %s | FileCheck %s --check-prefixes=CHECK,CHECK-EL
+; RUN: llc -march=mips -mattr=+o32,+fp64 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-EB
+; RUN: llc -march=mipsel -mattr=+o32,+fp64 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-EL
 
 @var = global double 0.0
 

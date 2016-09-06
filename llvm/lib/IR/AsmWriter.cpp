@@ -102,6 +102,11 @@ static OrderMap orderModule(const Module *M) {
       orderValue(A.getAliasee(), OM);
     orderValue(&A, OM);
   }
+  for (const GlobalIFunc &I : M->ifuncs()) {
+    if (!isa<GlobalValue>(I.getResolver()))
+      orderValue(I.getResolver(), OM);
+    orderValue(&I, OM);
+  }
   for (const Function &F : *M) {
     for (const Use &U : F.operands())
       if (!isa<GlobalValue>(U.get()))
@@ -249,11 +254,15 @@ static UseListOrderStack predictUseListOrder(const Module *M) {
     predictValueUseListOrder(&F, nullptr, OM, Stack);
   for (const GlobalAlias &A : M->aliases())
     predictValueUseListOrder(&A, nullptr, OM, Stack);
+  for (const GlobalIFunc &I : M->ifuncs())
+    predictValueUseListOrder(&I, nullptr, OM, Stack);
   for (const GlobalVariable &G : M->globals())
     if (G.hasInitializer())
       predictValueUseListOrder(G.getInitializer(), nullptr, OM, Stack);
   for (const GlobalAlias &A : M->aliases())
     predictValueUseListOrder(A.getAliasee(), nullptr, OM, Stack);
+  for (const GlobalIFunc &I : M->ifuncs())
+    predictValueUseListOrder(I.getResolver(), nullptr, OM, Stack);
   for (const Function &F : *M)
     for (const Use &U : F.operands())
       predictValueUseListOrder(U.get(), nullptr, OM, Stack);
@@ -307,6 +316,8 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::ARM_AAPCS:     Out << "arm_aapcscc"; break;
   case CallingConv::ARM_AAPCS_VFP: Out << "arm_aapcs_vfpcc"; break;
   case CallingConv::MSP430_INTR:   Out << "msp430_intrcc"; break;
+  case CallingConv::AVR_INTR:      Out << "avr_intrcc "; break;
+  case CallingConv::AVR_SIGNAL:    Out << "avr_signalcc "; break;
   case CallingConv::PTX_Kernel:    Out << "ptx_kernel"; break;
   case CallingConv::PTX_Device:    Out << "ptx_device"; break;
   case CallingConv::X86_64_SysV:   Out << "x86_64_sysvcc"; break;
@@ -317,6 +328,11 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::X86_INTR:      Out << "x86_intrcc"; break;
   case CallingConv::HHVM:          Out << "hhvmcc"; break;
   case CallingConv::HHVM_C:        Out << "hhvm_ccc"; break;
+  case CallingConv::AMDGPU_VS:     Out << "amdgpu_vs"; break;
+  case CallingConv::AMDGPU_GS:     Out << "amdgpu_gs"; break;
+  case CallingConv::AMDGPU_PS:     Out << "amdgpu_ps"; break;
+  case CallingConv::AMDGPU_CS:     Out << "amdgpu_cs"; break;
+  case CallingConv::AMDGPU_KERNEL: Out << "amdgpu_kernel"; break;
   }
 }
 
@@ -665,6 +681,9 @@ private:
   /// Add all of the functions arguments, basic blocks, and instructions.
   void processFunction();
 
+  /// Add the metadata directly attached to a GlobalObject.
+  void processGlobalObjectMetadata(const GlobalObject &GO);
+
   /// Add all of the metadata from a function.
   void processFunctionMetadata(const Function &F);
 
@@ -682,14 +701,25 @@ ModuleSlotTracker::ModuleSlotTracker(SlotTracker &Machine, const Module *M,
 
 ModuleSlotTracker::ModuleSlotTracker(const Module *M,
                                      bool ShouldInitializeAllMetadata)
-    : MachineStorage(M ? new SlotTracker(M, ShouldInitializeAllMetadata)
-                       : nullptr),
-      M(M), Machine(MachineStorage.get()) {}
+    : ShouldCreateStorage(M),
+      ShouldInitializeAllMetadata(ShouldInitializeAllMetadata), M(M) {}
 
 ModuleSlotTracker::~ModuleSlotTracker() {}
 
+SlotTracker *ModuleSlotTracker::getMachine() {
+  if (!ShouldCreateStorage)
+    return Machine;
+
+  ShouldCreateStorage = false;
+  MachineStorage =
+      llvm::make_unique<SlotTracker>(M, ShouldInitializeAllMetadata);
+  Machine = MachineStorage.get();
+  return Machine;
+}
+
 void ModuleSlotTracker::incorporateFunction(const Function &F) {
-  if (!Machine)
+  // Using getMachine() may lazily create the slot tracker.
+  if (!getMachine())
     return;
 
   // Nothing to do if this is the right function already.
@@ -722,6 +752,9 @@ static SlotTracker *createSlotTracker(const Value *V) {
 
   if (const GlobalAlias *GA = dyn_cast<GlobalAlias>(V))
     return new SlotTracker(GA->getParent());
+
+  if (const GlobalIFunc *GIF = dyn_cast<GlobalIFunc>(V))
+    return new SlotTracker(GIF->getParent());
 
   if (const Function *Func = dyn_cast<Function>(V))
     return new SlotTracker(Func);
@@ -769,11 +802,17 @@ void SlotTracker::processModule() {
   for (const GlobalVariable &Var : TheModule->globals()) {
     if (!Var.hasName())
       CreateModuleSlot(&Var);
+    processGlobalObjectMetadata(Var);
   }
 
   for (const GlobalAlias &A : TheModule->aliases()) {
     if (!A.hasName())
       CreateModuleSlot(&A);
+  }
+
+  for (const GlobalIFunc &I : TheModule->ifuncs()) {
+    if (!I.hasName())
+      CreateModuleSlot(&I);
   }
 
   // Add metadata used by named metadata.
@@ -847,12 +886,15 @@ void SlotTracker::processFunction() {
   ST_DEBUG("end processFunction!\n");
 }
 
-void SlotTracker::processFunctionMetadata(const Function &F) {
+void SlotTracker::processGlobalObjectMetadata(const GlobalObject &GO) {
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-  F.getAllMetadata(MDs);
+  GO.getAllMetadata(MDs);
   for (auto &MD : MDs)
     CreateMetadataSlot(MD.second);
+}
 
+void SlotTracker::processFunctionMetadata(const Function &F) {
+  processGlobalObjectMetadata(F);
   for (auto &BB : F) {
     for (auto &I : BB)
       processInstructionMetadata(I);
@@ -939,10 +981,11 @@ void SlotTracker::CreateModuleSlot(const GlobalValue *V) {
 
   ST_DEBUG("  Inserting value [" << V->getType() << "] = " << V << " slot=" <<
            DestSlot << " [");
-  // G = Global, F = Function, A = Alias, o = other
+  // G = Global, F = Function, A = Alias, I = IFunc, o = other
   ST_DEBUG((isa<GlobalVariable>(V) ? 'G' :
             (isa<Function>(V) ? 'F' :
-             (isa<GlobalAlias>(V) ? 'A' : 'o'))) << "]\n");
+             (isa<GlobalAlias>(V) ? 'A' :
+              (isa<GlobalIFunc>(V) ? 'I' : 'o')))) << "]\n");
 }
 
 /// CreateSlot - Create a new slot for the specified value if it has no name.
@@ -1402,6 +1445,7 @@ struct MDFieldPrinter {
   template <class IntTy, class Stringifier>
   void printDwarfEnum(StringRef Name, IntTy Value, Stringifier toString,
                       bool ShouldSkipZero = true);
+  void printEmissionKind(StringRef Name, DICompileUnit::DebugEmissionKind EK);
 };
 } // end namespace
 
@@ -1481,6 +1525,12 @@ void MDFieldPrinter::printDIFlags(StringRef Name, unsigned Flags) {
   if (Extra || SplitFlags.empty())
     Out << FlagsFS << Extra;
 }
+
+void MDFieldPrinter::printEmissionKind(StringRef Name,
+                                       DICompileUnit::DebugEmissionKind EK) {
+  Out << FS << Name << ": " << DICompileUnit::EmissionKindString(EK);
+}
+
 
 template <class IntTy, class Stringifier>
 void MDFieldPrinter::printDwarfEnum(StringRef Name, IntTy Value,
@@ -1609,6 +1659,7 @@ static void writeDISubroutineType(raw_ostream &Out, const DISubroutineType *N,
   Out << "!DISubroutineType(";
   MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
   Printer.printDIFlags("flags", N->getFlags());
+  Printer.printDwarfEnum("cc", N->getCC(), dwarf::ConventionString);
   Printer.printMetadata("types", N->getRawTypeArray(),
                         /* ShouldSkipNull */ false);
   Out << ")";
@@ -1639,11 +1690,9 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Printer.printInt("runtimeVersion", N->getRuntimeVersion(),
                    /* ShouldSkipZero */ false);
   Printer.printString("splitDebugFilename", N->getSplitDebugFilename());
-  Printer.printInt("emissionKind", N->getEmissionKind(),
-                   /* ShouldSkipZero */ false);
+  Printer.printEmissionKind("emissionKind", N->getEmissionKind());
   Printer.printMetadata("enums", N->getRawEnumTypes());
   Printer.printMetadata("retainedTypes", N->getRawRetainedTypes());
-  Printer.printMetadata("subprograms", N->getRawSubprograms());
   Printer.printMetadata("globals", N->getRawGlobalVariables());
   Printer.printMetadata("imports", N->getRawImportedEntities());
   Printer.printMetadata("macros", N->getRawMacros());
@@ -1668,9 +1717,13 @@ static void writeDISubprogram(raw_ostream &Out, const DISubprogram *N,
   Printer.printMetadata("containingType", N->getRawContainingType());
   Printer.printDwarfEnum("virtuality", N->getVirtuality(),
                          dwarf::VirtualityString);
-  Printer.printInt("virtualIndex", N->getVirtualIndex());
+  if (N->getVirtuality() != dwarf::DW_VIRTUALITY_none ||
+      N->getVirtualIndex() != 0)
+    Printer.printInt("virtualIndex", N->getVirtualIndex(), false);
+  Printer.printInt("thisAdjustment", N->getThisAdjustment());
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printBool("isOptimized", N->isOptimized());
+  Printer.printMetadata("unit", N->getRawUnit());
   Printer.printMetadata("templateParams", N->getRawTemplateParams());
   Printer.printMetadata("declaration", N->getRawDeclaration());
   Printer.printMetadata("variables", N->getRawVariables());
@@ -2038,7 +2091,7 @@ public:
 
   void printTypeIdentities();
   void printGlobal(const GlobalVariable *GV);
-  void printAlias(const GlobalAlias *GV);
+  void printIndirectSymbol(const GlobalIndirectSymbol *GIS);
   void printComdat(const Comdat *C);
   void printFunction(const Function *F);
   void printArgument(const Argument *FA, AttributeSet Attrs, unsigned Idx);
@@ -2074,11 +2127,8 @@ AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
   if (!TheModule)
     return;
   TypePrinter.incorporateTypes(*TheModule);
-  for (const Function &F : *TheModule)
-    if (const Comdat *C = F.getComdat())
-      Comdats.insert(C);
-  for (const GlobalVariable &GV : TheModule->globals())
-    if (const Comdat *C = GV.getComdat())
+  for (const GlobalObject &GO : TheModule->global_objects())
+    if (const Comdat *C = GO.getComdat())
       Comdats.insert(C);
 }
 
@@ -2096,7 +2146,7 @@ void AssemblyWriter::writeOperand(const Value *Operand, bool PrintType) {
 
 void AssemblyWriter::writeAtomic(AtomicOrdering Ordering,
                                  SynchronizationScope SynchScope) {
-  if (Ordering == NotAtomic)
+  if (Ordering == AtomicOrdering::NotAtomic)
     return;
 
   switch (SynchScope) {
@@ -2104,46 +2154,22 @@ void AssemblyWriter::writeAtomic(AtomicOrdering Ordering,
   case CrossThread: break;
   }
 
-  switch (Ordering) {
-  default: Out << " <bad ordering " << int(Ordering) << ">"; break;
-  case Unordered: Out << " unordered"; break;
-  case Monotonic: Out << " monotonic"; break;
-  case Acquire: Out << " acquire"; break;
-  case Release: Out << " release"; break;
-  case AcquireRelease: Out << " acq_rel"; break;
-  case SequentiallyConsistent: Out << " seq_cst"; break;
-  }
+  Out << " " << toIRString(Ordering);
 }
 
 void AssemblyWriter::writeAtomicCmpXchg(AtomicOrdering SuccessOrdering,
                                         AtomicOrdering FailureOrdering,
                                         SynchronizationScope SynchScope) {
-  assert(SuccessOrdering != NotAtomic && FailureOrdering != NotAtomic);
+  assert(SuccessOrdering != AtomicOrdering::NotAtomic &&
+         FailureOrdering != AtomicOrdering::NotAtomic);
 
   switch (SynchScope) {
   case SingleThread: Out << " singlethread"; break;
   case CrossThread: break;
   }
 
-  switch (SuccessOrdering) {
-  default: Out << " <bad ordering " << int(SuccessOrdering) << ">"; break;
-  case Unordered: Out << " unordered"; break;
-  case Monotonic: Out << " monotonic"; break;
-  case Acquire: Out << " acquire"; break;
-  case Release: Out << " release"; break;
-  case AcquireRelease: Out << " acq_rel"; break;
-  case SequentiallyConsistent: Out << " seq_cst"; break;
-  }
-
-  switch (FailureOrdering) {
-  default: Out << " <bad ordering " << int(FailureOrdering) << ">"; break;
-  case Unordered: Out << " unordered"; break;
-  case Monotonic: Out << " monotonic"; break;
-  case Acquire: Out << " acquire"; break;
-  case Release: Out << " release"; break;
-  case AcquireRelease: Out << " acq_rel"; break;
-  case SequentiallyConsistent: Out << " seq_cst"; break;
-  }
+  Out << " " << toIRString(SuccessOrdering);
+  Out << " " << toIRString(FailureOrdering);
 }
 
 void AssemblyWriter::writeParamOperand(const Value *Operand,
@@ -2212,6 +2238,12 @@ void AssemblyWriter::printModule(const Module *M) {
       M->getModuleIdentifier().find('\n') == std::string::npos)
     Out << "; ModuleID = '" << M->getModuleIdentifier() << "'\n";
 
+  if (!M->getSourceFileName().empty()) {
+    Out << "source_filename = \"";
+    PrintEscapedString(M->getSourceFileName(), Out);
+    Out << "\"\n";
+  }
+
   const std::string &DL = M->getDataLayoutStr();
   if (!DL.empty())
     Out << "target datalayout = \"" << DL << "\"\n";
@@ -2255,7 +2287,12 @@ void AssemblyWriter::printModule(const Module *M) {
   // Output all aliases.
   if (!M->alias_empty()) Out << "\n";
   for (const GlobalAlias &GA : M->aliases())
-    printAlias(&GA);
+    printIndirectSymbol(&GA);
+
+  // Output all ifuncs.
+  if (!M->ifunc_empty()) Out << "\n";
+  for (const GlobalIFunc &GI : M->ifuncs())
+    printIndirectSymbol(&GI);
 
   // Output global use-lists.
   printUseLists(nullptr);
@@ -2321,23 +2358,32 @@ void AssemblyWriter::printNamedMDNode(const NamedMDNode *NMD) {
   Out << "}\n";
 }
 
-static void PrintLinkage(GlobalValue::LinkageTypes LT,
-                         formatted_raw_ostream &Out) {
+static const char *getLinkagePrintName(GlobalValue::LinkageTypes LT) {
   switch (LT) {
-  case GlobalValue::ExternalLinkage: break;
-  case GlobalValue::PrivateLinkage:       Out << "private ";        break;
-  case GlobalValue::InternalLinkage:      Out << "internal ";       break;
-  case GlobalValue::LinkOnceAnyLinkage:   Out << "linkonce ";       break;
-  case GlobalValue::LinkOnceODRLinkage:   Out << "linkonce_odr ";   break;
-  case GlobalValue::WeakAnyLinkage:       Out << "weak ";           break;
-  case GlobalValue::WeakODRLinkage:       Out << "weak_odr ";       break;
-  case GlobalValue::CommonLinkage:        Out << "common ";         break;
-  case GlobalValue::AppendingLinkage:     Out << "appending ";      break;
-  case GlobalValue::ExternalWeakLinkage:  Out << "extern_weak ";    break;
+  case GlobalValue::ExternalLinkage:
+    return "";
+  case GlobalValue::PrivateLinkage:
+    return "private ";
+  case GlobalValue::InternalLinkage:
+    return "internal ";
+  case GlobalValue::LinkOnceAnyLinkage:
+    return "linkonce ";
+  case GlobalValue::LinkOnceODRLinkage:
+    return "linkonce_odr ";
+  case GlobalValue::WeakAnyLinkage:
+    return "weak ";
+  case GlobalValue::WeakODRLinkage:
+    return "weak_odr ";
+  case GlobalValue::CommonLinkage:
+    return "common ";
+  case GlobalValue::AppendingLinkage:
+    return "appending ";
+  case GlobalValue::ExternalWeakLinkage:
+    return "extern_weak ";
   case GlobalValue::AvailableExternallyLinkage:
-    Out << "available_externally ";
-    break;
+    return "available_externally ";
   }
+  llvm_unreachable("invalid linkage");
 }
 
 static void PrintVisibility(GlobalValue::VisibilityTypes Vis,
@@ -2378,6 +2424,18 @@ static void PrintThreadLocalModel(GlobalVariable::ThreadLocalMode TLM,
   }
 }
 
+static StringRef getUnnamedAddrEncoding(GlobalVariable::UnnamedAddr UA) {
+  switch (UA) {
+  case GlobalVariable::UnnamedAddr::None:
+    return "";
+  case GlobalVariable::UnnamedAddr::Local:
+    return "local_unnamed_addr";
+  case GlobalVariable::UnnamedAddr::Global:
+    return "unnamed_addr";
+  }
+  llvm_unreachable("Unknown UnnamedAddr");
+}
+
 static void maybePrintComdat(formatted_raw_ostream &Out,
                              const GlobalObject &GO) {
   const Comdat *C = GO.getComdat();
@@ -2406,12 +2464,13 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
   if (!GV->hasInitializer() && GV->hasExternalLinkage())
     Out << "external ";
 
-  PrintLinkage(GV->getLinkage(), Out);
+  Out << getLinkagePrintName(GV->getLinkage());
   PrintVisibility(GV->getVisibility(), Out);
   PrintDLLStorageClass(GV->getDLLStorageClass(), Out);
   PrintThreadLocalModel(GV->getThreadLocalMode(), Out);
-  if (GV->hasUnnamedAddr())
-    Out << "unnamed_addr ";
+  StringRef UA = getUnnamedAddrEncoding(GV->getUnnamedAddr());
+  if (!UA.empty())
+      Out << UA << ' ';
 
   if (unsigned AddressSpace = GV->getType()->getAddressSpace())
     Out << "addrspace(" << AddressSpace << ") ";
@@ -2433,39 +2492,49 @@ void AssemblyWriter::printGlobal(const GlobalVariable *GV) {
   if (GV->getAlignment())
     Out << ", align " << GV->getAlignment();
 
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  GV->getAllMetadata(MDs);
+  printMetadataAttachments(MDs, ", ");
+
   printInfoComment(*GV);
 }
 
-void AssemblyWriter::printAlias(const GlobalAlias *GA) {
-  if (GA->isMaterializable())
+void AssemblyWriter::printIndirectSymbol(const GlobalIndirectSymbol *GIS) {
+  if (GIS->isMaterializable())
     Out << "; Materializable\n";
 
-  WriteAsOperandInternal(Out, GA, &TypePrinter, &Machine, GA->getParent());
+  WriteAsOperandInternal(Out, GIS, &TypePrinter, &Machine, GIS->getParent());
   Out << " = ";
 
-  PrintLinkage(GA->getLinkage(), Out);
-  PrintVisibility(GA->getVisibility(), Out);
-  PrintDLLStorageClass(GA->getDLLStorageClass(), Out);
-  PrintThreadLocalModel(GA->getThreadLocalMode(), Out);
-  if (GA->hasUnnamedAddr())
-    Out << "unnamed_addr ";
+  Out << getLinkagePrintName(GIS->getLinkage());
+  PrintVisibility(GIS->getVisibility(), Out);
+  PrintDLLStorageClass(GIS->getDLLStorageClass(), Out);
+  PrintThreadLocalModel(GIS->getThreadLocalMode(), Out);
+  StringRef UA = getUnnamedAddrEncoding(GIS->getUnnamedAddr());
+  if (!UA.empty())
+      Out << UA << ' ';
 
-  Out << "alias ";
+  if (isa<GlobalAlias>(GIS))
+    Out << "alias ";
+  else if (isa<GlobalIFunc>(GIS))
+    Out << "ifunc ";
+  else
+    llvm_unreachable("Not an alias or ifunc!");
 
-  TypePrinter.print(GA->getValueType(), Out);
+  TypePrinter.print(GIS->getValueType(), Out);
 
   Out << ", ";
 
-  const Constant *Aliasee = GA->getAliasee();
+  const Constant *IS = GIS->getIndirectSymbol();
 
-  if (!Aliasee) {
-    TypePrinter.print(GA->getType(), Out);
+  if (!IS) {
+    TypePrinter.print(GIS->getType(), Out);
     Out << " <<NULL ALIASEE>>";
   } else {
-    writeOperand(Aliasee, !isa<ConstantExpr>(Aliasee));
+    writeOperand(IS, !isa<ConstantExpr>(IS));
   }
 
-  printInfoComment(*GA);
+  printInfoComment(*GIS);
   Out << '\n';
 }
 
@@ -2545,12 +2614,18 @@ void AssemblyWriter::printFunction(const Function *F) {
       Out << "; Function Attrs: " << AttrStr << '\n';
   }
 
-  if (F->isDeclaration())
-    Out << "declare ";
-  else
+  Machine.incorporateFunction(F);
+
+  if (F->isDeclaration()) {
+    Out << "declare";
+    SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+    F->getAllMetadata(MDs);
+    printMetadataAttachments(MDs, " ");
+    Out << ' ';
+  } else
     Out << "define ";
 
-  PrintLinkage(F->getLinkage(), Out);
+  Out << getLinkagePrintName(F->getLinkage());
   PrintVisibility(F->getVisibility(), Out);
   PrintDLLStorageClass(F->getDLLStorageClass(), Out);
 
@@ -2567,7 +2642,6 @@ void AssemblyWriter::printFunction(const Function *F) {
   Out << ' ';
   WriteAsOperandInternal(Out, F, &TypePrinter, &Machine, F->getParent());
   Out << '(';
-  Machine.incorporateFunction(F);
 
   // Loop over the arguments, printing them...
   if (F->isDeclaration() && !IsForDebug) {
@@ -2599,8 +2673,9 @@ void AssemblyWriter::printFunction(const Function *F) {
     Out << "...";  // Output varargs portion of signature!
   }
   Out << ')';
-  if (F->hasUnnamedAddr())
-    Out << " unnamed_addr";
+  StringRef UA = getUnnamedAddrEncoding(F->getUnnamedAddr());
+  if (!UA.empty())
+    Out << ' ' << UA;
   if (Attrs.hasAttributes(AttributeSet::FunctionIndex))
     Out << " #" << Machine.getAttributeGroupSlot(Attrs.getFnAttributes());
   if (F->hasSection()) {
@@ -2626,17 +2701,17 @@ void AssemblyWriter::printFunction(const Function *F) {
     writeOperand(F->getPersonalityFn(), /*PrintType=*/true);
   }
 
-  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-  F->getAllMetadata(MDs);
-  printMetadataAttachments(MDs, " ");
-
   if (F->isDeclaration()) {
     Out << '\n';
   } else {
+    SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+    F->getAllMetadata(MDs);
+    printMetadataAttachments(MDs, " ");
+
     Out << " {";
     // Output all of the function's basic blocks.
-    for (Function::const_iterator I = F->begin(), E = F->end(); I != E; ++I)
-      printBasicBlock(&*I);
+    for (const BasicBlock &BB : *F)
+      printBasicBlock(&BB);
 
     // Output the function's use-lists.
     printUseLists(F);
@@ -2677,7 +2752,7 @@ void AssemblyWriter::printBasicBlock(const BasicBlock *BB) {
     Out << "\n; <label>:";
     int Slot = Machine.getLocalSlot(BB);
     if (Slot != -1)
-      Out << Slot;
+      Out << Slot << ":";
     else
       Out << "<badref>";
   }
@@ -2708,8 +2783,8 @@ void AssemblyWriter::printBasicBlock(const BasicBlock *BB) {
   if (AnnotationWriter) AnnotationWriter->emitBasicBlockStartAnnot(BB, Out);
 
   // Output all of the instructions in the basic block...
-  for (BasicBlock::const_iterator I = BB->begin(), E = BB->end(); I != E; ++I) {
-    printInstructionLine(*I);
+  for (const Instruction &I : *BB) {
+    printInstructionLine(I);
   }
 
   if (AnnotationWriter) AnnotationWriter->emitBasicBlockEndAnnot(BB, Out);
@@ -3169,10 +3244,9 @@ void AssemblyWriter::writeAllAttributeGroups() {
        I != E; ++I)
     asVec[I->second] = *I;
 
-  for (std::vector<std::pair<AttributeSet, unsigned> >::iterator
-         I = asVec.begin(), E = asVec.end(); I != E; ++I)
-    Out << "attributes #" << I->second << " = { "
-        << I->first.getAsString(AttributeSet::FunctionIndex, true) << " }\n";
+  for (const auto &I : asVec)
+    Out << "attributes #" << I.second << " = { "
+        << I.first.getAsString(AttributeSet::FunctionIndex, true) << " }\n";
 }
 
 void AssemblyWriter::printUseListOrder(const UseListOrder &Order) {
@@ -3218,6 +3292,17 @@ void AssemblyWriter::printUseLists(const Function *F) {
 //                       External Interface declarations
 //===----------------------------------------------------------------------===//
 
+void Function::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
+                     bool ShouldPreserveUseListOrder,
+                     bool IsForDebug) const {
+  SlotTracker SlotTable(this->getParent());
+  formatted_raw_ostream OS(ROS);
+  AssemblyWriter W(OS, SlotTable, this->getParent(), AAW,
+                   IsForDebug,
+                   ShouldPreserveUseListOrder);
+  W.printFunction(this);
+}
+
 void Module::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                    bool ShouldPreserveUseListOrder, bool IsForDebug) const {
   SlotTracker SlotTable(this);
@@ -3231,6 +3316,22 @@ void NamedMDNode::print(raw_ostream &ROS, bool IsForDebug) const {
   SlotTracker SlotTable(getParent());
   formatted_raw_ostream OS(ROS);
   AssemblyWriter W(OS, SlotTable, getParent(), nullptr, IsForDebug);
+  W.printNamedMDNode(this);
+}
+
+void NamedMDNode::print(raw_ostream &ROS, ModuleSlotTracker &MST,
+                        bool IsForDebug) const {
+  Optional<SlotTracker> LocalST;
+  SlotTracker *SlotTable;
+  if (auto *ST = MST.getMachine())
+    SlotTable = ST;
+  else {
+    LocalST.emplace(getParent());
+    SlotTable = &*LocalST;
+  }
+
+  formatted_raw_ostream OS(ROS);
+  AssemblyWriter W(OS, *SlotTable, getParent(), nullptr, IsForDebug);
   W.printNamedMDNode(this);
 }
 
@@ -3259,9 +3360,12 @@ void Comdat::print(raw_ostream &ROS, bool /*IsForDebug*/) const {
   ROS << '\n';
 }
 
-void Type::print(raw_ostream &OS, bool /*IsForDebug*/) const {
+void Type::print(raw_ostream &OS, bool /*IsForDebug*/, bool NoDetails) const {
   TypePrinting TP;
   TP.print(const_cast<Type*>(this), OS);
+
+  if (NoDetails)
+    return;
 
   // If the type is a named struct type, print the body as well.
   if (StructType *STy = dyn_cast<StructType>(const_cast<Type*>(this)))
@@ -3319,7 +3423,7 @@ void Value::print(raw_ostream &ROS, ModuleSlotTracker &MST,
     else if (const Function *F = dyn_cast<Function>(GV))
       W.printFunction(F);
     else
-      W.printAlias(cast<GlobalAlias>(GV));
+      W.printIndirectSymbol(cast<GlobalIndirectSymbol>(GV));
   } else if (const MetadataAsValue *V = dyn_cast<MetadataAsValue>(this)) {
     V->getMetadata()->print(ROS, MST, getModuleFromVal(V));
   } else if (const Constant *C = dyn_cast<Constant>(this)) {

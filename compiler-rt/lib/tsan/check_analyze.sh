@@ -32,13 +32,7 @@ for f in write1; do
   check $f pop 2
 done
 
-for f in write2 write4; do
-  check $f rsp 1
-  check $f push 4
-  check $f pop 4
-done
-
-for f in write8; do
+for f in write2 write4 write8; do
   check $f rsp 1
   check $f push 3
   check $f pop 3

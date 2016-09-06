@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -S -emit-llvm -o - %s -finstrument-functions | FileCheck %s
+// RUN: %clang_cc1 -S -debug-info-kind=standalone -emit-llvm -o - %s -finstrument-functions | FileCheck %s
 
 // CHECK: @test1
 int test1(int x) {
-// CHECK: __cyg_profile_func_enter
-// CHECK: __cyg_profile_func_exit
+// CHECK: call void @__cyg_profile_func_enter({{.*}}, !dbg
+// CHECK: call void @__cyg_profile_func_exit({{.*}}, !dbg
 // CHECK: ret
   return x;
 }

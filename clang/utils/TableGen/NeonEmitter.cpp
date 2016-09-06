@@ -26,10 +26,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -40,6 +38,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 using namespace llvm;
 
@@ -146,9 +145,10 @@ public:
         NoManglingQ(false), Bitwidth(0), ElementBitwidth(0), NumVectors(0) {}
 
   Type(TypeSpec TS, char CharMod)
-      : TS(TS), Float(false), Signed(false), Immediate(false), Void(false),
-        Poly(false), Constant(false), Pointer(false), ScalarForMangling(false),
-        NoManglingQ(false), Bitwidth(0), ElementBitwidth(0), NumVectors(0) {
+      : TS(std::move(TS)), Float(false), Signed(false), Immediate(false),
+        Void(false), Poly(false), Constant(false), Pointer(false),
+        ScalarForMangling(false), NoManglingQ(false), Bitwidth(0),
+        ElementBitwidth(0), NumVectors(0) {
     applyModifier(CharMod);
   }
 
@@ -257,7 +257,7 @@ class Variable {
 
 public:
   Variable() : T(Type::getVoid()), N("") {}
-  Variable(Type T, std::string N) : T(T), N(N) {}
+  Variable(Type T, std::string N) : T(std::move(T)), N(std::move(N)) {}
 
   Type getType() const { return T; }
   std::string getName() const { return "__" + N; }
@@ -1195,12 +1195,12 @@ void Intrinsic::emitReverseVariable(Variable &Dest, Variable &Src) {
     emitNewLine();
 
     for (unsigned K = 0; K < Dest.getType().getNumVectors(); ++K) {
-      OS << "  " << Dest.getName() << ".val[" << utostr(K) << "] = "
+      OS << "  " << Dest.getName() << ".val[" << K << "] = "
          << "__builtin_shufflevector("
-         << Src.getName() << ".val[" << utostr(K) << "], "
-         << Src.getName() << ".val[" << utostr(K) << "]";
+         << Src.getName() << ".val[" << K << "], "
+         << Src.getName() << ".val[" << K << "]";
       for (int J = Dest.getType().getNumElements() - 1; J >= 0; --J)
-        OS << ", " << utostr(J);
+        OS << ", " << J;
       OS << ");";
       emitNewLine();
     }
@@ -1208,7 +1208,7 @@ void Intrinsic::emitReverseVariable(Variable &Dest, Variable &Src) {
     OS << "  " << Dest.getName()
        << " = __builtin_shufflevector(" << Src.getName() << ", " << Src.getName();
     for (int J = Dest.getType().getNumElements() - 1; J >= 0; --J)
-      OS << ", " << utostr(J);
+      OS << ", " << J;
     OS << ");";
     emitNewLine();
   }

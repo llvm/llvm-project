@@ -19,8 +19,8 @@ set PATH=%PATH%;c:\gnuwin32\bin
 
 set revision=%1
 set branch=trunk
-set package_version=3.9.0-r%revision%
-set clang_format_vs_version=3.9.0.%revision%
+set package_version=4.0.0-r%revision%
+set clang_format_vs_version=4.0.0.%revision%
 set build_dir=llvm_package_%revision%
 
 echo Branch: %branch%
@@ -40,9 +40,11 @@ svn.exe export -r %revision% http://llvm.org/svn/llvm-project/cfe/%branch% llvm/
 svn.exe export -r %revision% http://llvm.org/svn/llvm-project/clang-tools-extra/%branch% llvm/tools/clang/tools/extra || exit /b
 svn.exe export -r %revision% http://llvm.org/svn/llvm-project/lld/%branch% llvm/tools/lld || exit /b
 svn.exe export -r %revision% http://llvm.org/svn/llvm-project/compiler-rt/%branch% llvm/projects/compiler-rt || exit /b
+svn.exe export -r %revision% http://llvm.org/svn/llvm-project/openmp/%branch% llvm/projects/openmp || exit /b
 
 
-set cmake_flags=-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON -DLLVM_USE_CRT_RELEASE=MT -DCLANG_FORMAT_VS_VERSION=%clang_format_vs_version% -DPACKAGE_VERSION=%package_version%
+REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
+set cmake_flags=-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON -DLLVM_USE_CRT_RELEASE=MT -DCLANG_FORMAT_VS_VERSION=%clang_format_vs_version% -DPACKAGE_VERSION=%package_version% -DCMAKE_CL_SHOWINCLUDES_PREFIX="Note: including file: "
 
 REM TODO: Run all tests, including lld and compiler-rt.
 
@@ -53,8 +55,8 @@ mkdir build32_stage0
 cd build32_stage0
 cmake -GNinja %cmake_flags% ..\llvm || exit /b
 ninja all || exit /b
-ninja check || exit /b
-ninja check-clang || exit /b
+ninja check || ninja check || ninja check || exit /b
+ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
 cd..
 
 mkdir build32
@@ -63,8 +65,8 @@ set CC=..\build32_stage0\bin\clang-cl
 set CXX=..\build32_stage0\bin\clang-cl
 cmake -GNinja %cmake_flags% -DBUILD_CLANG_FORMAT_VS_PLUGIN=ON ..\llvm || exit /b
 ninja all || exit /b
-ninja check || exit /b
-ninja check-clang || exit /b
+ninja check || ninja check || ninja check || exit /b
+ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
 copy ..\llvm\tools\clang\tools\clang-format-vs\ClangFormat\bin\Release\ClangFormat.vsix ClangFormat-r%revision%.vsix
 ninja package || exit /b
 cd ..
@@ -77,8 +79,8 @@ mkdir build64_stage0
 cd build64_stage0
 cmake -GNinja %cmake_flags%  ..\llvm || exit /b
 ninja all || exit /b
-ninja check || exit /b
-ninja check-clang || exit /b
+ninja check || ninja check || ninja check || exit /b
+ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
 cd..
 
 mkdir build64
@@ -87,7 +89,7 @@ set CC=..\build64_stage0\bin\clang-cl
 set CXX=..\build64_stage0\bin\clang-cl
 cmake -GNinja %cmake_flags% ..\llvm || exit /b
 ninja all || exit /b
-ninja check || exit /b
-ninja check-clang || exit /b
+ninja check || ninja check || ninja check || exit /b
+ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
 ninja package || exit /b
 cd ..

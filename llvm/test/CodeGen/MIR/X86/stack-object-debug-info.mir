@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -start-after machine-sink -stop-after machine-sink -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses the stack object's debug info
 # correctly.
 --- |
@@ -31,12 +31,12 @@
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3}
 
-  !0 = distinct !DICompileUnit(language: DW_LANG_C89, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: 0, enums: !2, retainedTypes: !2)
+  !0 = distinct !DICompileUnit(language: DW_LANG_C89, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2)
   !1 = !DIFile(filename: "t.c", directory: "")
   !2 = !{}
   !3 = !{i32 1, !"Debug Info Version", i32 3}
   !4 = !DILocalVariable(name: "x", scope: !5, file: !1, line: 16, type: !9)
-  !5 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false)
+  !5 = distinct !DISubprogram(scope: null, isLocal: false, isDefinition: true, isOptimized: false, unit: !0)
   !6 = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
   !7 = !DIExpression()
   !8 = !DILocation(line: 0, scope: !5)

@@ -12,23 +12,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#ifndef LLVM_LIB_TARGET_R600_SIREGISTERINFO_H
-#define LLVM_LIB_TARGET_R600_SIREGISTERINFO_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
+#define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
 #include "AMDGPURegisterInfo.h"
-#include "AMDGPUSubtarget.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Support/Debug.h"
 
 namespace llvm {
 
-struct SIRegisterInfo : public AMDGPURegisterInfo {
+class SISubtarget;
+class MachineRegisterInfo;
+
+struct SIRegisterInfo final : public AMDGPURegisterInfo {
 private:
   unsigned SGPR32SetID;
   unsigned VGPR32SetID;
+  BitVector SGPRPressureSets;
+  BitVector VGPRPressureSets;
 
   void reserveRegisterTuples(BitVector &, unsigned Reg) const;
+  void classifyPressureSet(unsigned PSetID, unsigned Reg,
+                           BitVector &PressureSets) const;
 
 public:
   SIRegisterInfo();
@@ -47,13 +51,39 @@ public:
   unsigned getRegPressureSetLimit(const MachineFunction &MF,
                                   unsigned Idx) const override;
 
+
   bool requiresRegisterScavenging(const MachineFunction &Fn) const override;
+
+
+  bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;
+  bool requiresVirtualBaseRegisters(const MachineFunction &Fn) const override;
+  bool trackLivenessAfterRegAlloc(const MachineFunction &MF) const override;
+
+  int64_t getFrameIndexInstrOffset(const MachineInstr *MI,
+                                   int Idx) const override;
+
+  bool needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const override;
+
+  void materializeFrameBaseRegister(MachineBasicBlock *MBB,
+                                    unsigned BaseReg, int FrameIdx,
+                                    int64_t Offset) const override;
+
+  void resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
+                         int64_t Offset) const override;
+
+  bool isFrameOffsetLegal(const MachineInstr *MI, unsigned BaseReg,
+                          int64_t Offset) const override;
+
+  const TargetRegisterClass *getPointerRegClass(
+    const MachineFunction &MF, unsigned Kind = 0) const override;
 
   void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS) const override;
 
-  unsigned getHWRegIndex(unsigned Reg) const override;
+  unsigned getHWRegIndex(unsigned Reg) const {
+    return getEncodingValue(Reg) & 0xff;
+  }
 
   /// \brief Return the 'base' register class for this register.
   /// e.g. SGPR0 => SReg_32, VGPR => VGPR_32 SGPR0_SGPR1 -> SReg_32, etc.
@@ -70,9 +100,12 @@ public:
   }
 
   bool isSGPRReg(const MachineRegisterInfo &MRI, unsigned Reg) const {
+    const TargetRegisterClass *RC;
     if (TargetRegisterInfo::isVirtualRegister(Reg))
-      return isSGPRClass(MRI.getRegClass(Reg));
-    return getPhysRegClass(Reg);
+      RC = MRI.getRegClass(Reg);
+    else
+      RC = getPhysRegClass(Reg);
+    return isSGPRClass(RC);
   }
 
   /// \returns true if this class contains VGPR registers.
@@ -89,6 +122,10 @@ public:
   const TargetRegisterClass *getEquivalentVGPRClass(
                                           const TargetRegisterClass *SRC) const;
 
+  /// \returns A SGPR reg class with the same width as \p SRC
+  const TargetRegisterClass *getEquivalentSGPRClass(
+                                           const TargetRegisterClass *VRC) const;
+
   /// \returns The register class that is used for a sub-register of \p RC for
   /// the given \p SubIdx.  If \p SubIdx equals NoSubRegister, \p RC will
   /// be returned.
@@ -99,12 +136,6 @@ public:
                             unsigned DefSubReg,
                             const TargetRegisterClass *SrcRC,
                             unsigned SrcSubReg) const override;
-
-  /// \p Channel This is the register channel (e.g. a value from 0-16), not the
-  ///            SubReg index.
-  /// \returns The sub-register of Reg that is in Channel.
-  unsigned getPhysRegSubReg(unsigned Reg, const TargetRegisterClass *SubRC,
-                            unsigned Channel) const;
 
   /// \returns True if operands defined with this operand type can accept
   /// a literal constant (i.e. any 32-bit immediate).
@@ -117,10 +148,12 @@ public:
 
   enum PreloadedValue {
     // SGPRS:
-    PRIVATE_SEGMENT_BUFFER =  0,
+    PRIVATE_SEGMENT_BUFFER = 0,
     DISPATCH_PTR        =  1,
     QUEUE_PTR           =  2,
     KERNARG_SEGMENT_PTR =  3,
+    DISPATCH_ID         =  4,
+    FLAT_SCRATCH_INIT   =  5,
     WORKGROUP_ID_X      = 10,
     WORKGROUP_ID_Y      = 11,
     WORKGROUP_ID_Z      = 12,
@@ -143,20 +176,23 @@ public:
 
   /// \brief Give the maximum number of SGPRs that can be used by \p WaveCount
   ///        concurrent waves.
-  unsigned getNumSGPRsAllowed(AMDGPUSubtarget::Generation gen,
-                              unsigned WaveCount) const;
+  unsigned getNumSGPRsAllowed(const SISubtarget &ST, unsigned WaveCount) const;
 
   unsigned findUnusedRegister(const MachineRegisterInfo &MRI,
-                              const TargetRegisterClass *RC) const;
+                              const TargetRegisterClass *RC,
+                              const MachineFunction &MF) const;
 
   unsigned getSGPR32PressureSet() const { return SGPR32SetID; };
   unsigned getVGPR32PressureSet() const { return VGPR32SetID; };
 
+  bool isVGPR(const MachineRegisterInfo &MRI, unsigned Reg) const;
+
 private:
   void buildScratchLoadStore(MachineBasicBlock::iterator MI,
-                             unsigned LoadStoreOp, unsigned Value,
+                             unsigned LoadStoreOp, const MachineOperand *SrcDst,
                              unsigned ScratchRsrcReg, unsigned ScratchOffset,
-                             int64_t Offset, RegScavenger *RS) const;
+                             int64_t Offset,
+                             RegScavenger *RS) const;
 };
 
 } // End namespace llvm

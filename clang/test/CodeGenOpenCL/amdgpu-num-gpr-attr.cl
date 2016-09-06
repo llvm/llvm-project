@@ -5,23 +5,23 @@
 
 __attribute__((amdgpu_num_vgpr(64))) // expected-no-diagnostics
 kernel void test_num_vgpr64() {
-// CHECK: define void @test_num_vgpr64() [[ATTR_VGPR64:#[0-9]+]]
+// CHECK: define amdgpu_kernel void @test_num_vgpr64() [[ATTR_VGPR64:#[0-9]+]]
 }
 
 __attribute__((amdgpu_num_sgpr(32))) // expected-no-diagnostics
 kernel void test_num_sgpr32() {
-// CHECK: define void @test_num_sgpr32() [[ATTR_SGPR32:#[0-9]+]]
+// CHECK: define amdgpu_kernel void @test_num_sgpr32() [[ATTR_SGPR32:#[0-9]+]]
 }
 
 __attribute__((amdgpu_num_vgpr(64), amdgpu_num_sgpr(32))) // expected-no-diagnostics
 kernel void test_num_vgpr64_sgpr32() {
-// CHECK: define void @test_num_vgpr64_sgpr32() [[ATTR_VGPR64_SGPR32:#[0-9]+]]
+// CHECK: define amdgpu_kernel void @test_num_vgpr64_sgpr32() [[ATTR_VGPR64_SGPR32:#[0-9]+]]
 
 }
 
 __attribute__((amdgpu_num_sgpr(20), amdgpu_num_vgpr(40))) // expected-no-diagnostics
 kernel void test_num_sgpr20_vgpr40() {
-// CHECK: define void @test_num_sgpr20_vgpr40() [[ATTR_SGPR20_VGPR40:#[0-9]+]]
+// CHECK: define amdgpu_kernel void @test_num_sgpr20_vgpr40() [[ATTR_SGPR20_VGPR40:#[0-9]+]]
 }
 
 __attribute__((amdgpu_num_vgpr(0))) // expected-no-diagnostics
@@ -40,8 +40,8 @@ kernel void test_num_vgpr0_sgpr0() {
 // X86-NOT: "amdgpu_num_vgpr"
 // X86-NOT: "amdgpu_num_sgpr"
 
-// CHECK-DAG-NOT: "amdgpu_num_vgpr"="0"
-// CHECK-DAG-NOT: "amdgpu_num_sgpr"="0"
+// CHECK-NOT: "amdgpu_num_vgpr"="0"
+// CHECK-NOT: "amdgpu_num_sgpr"="0"
 // CHECK-DAG: attributes [[ATTR_VGPR64]] = { nounwind "amdgpu_num_vgpr"="64"
 // CHECK-DAG: attributes [[ATTR_SGPR32]] = { nounwind "amdgpu_num_sgpr"="32"
 // CHECK-DAG: attributes [[ATTR_VGPR64_SGPR32]] = { nounwind "amdgpu_num_sgpr"="32" "amdgpu_num_vgpr"="64"

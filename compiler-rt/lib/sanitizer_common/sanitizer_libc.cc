@@ -74,7 +74,7 @@ void *internal_memmove(void *dest, const void *src, uptr n) {
 
 // Semi-fast bzero for 16-aligned data. Still far from peak performance.
 void internal_bzero_aligned16(void *s, uptr n) {
-  struct S16 { u64 a, b; } ALIGNED(16);
+  struct ALIGNED(16) S16 { u64 a, b; };
   CHECK_EQ((reinterpret_cast<uptr>(s) | n) & 15, 0);
   for (S16 *p = reinterpret_cast<S16*>(s), *end = p + n / 16; p < end; p++) {
     p->a = p->b = 0;
@@ -232,6 +232,12 @@ char *internal_strstr(const char *haystack, const char *needle) {
       return const_cast<char *>(haystack) + pos;
   }
   return nullptr;
+}
+
+uptr internal_wcslen(const wchar_t *s) {
+  uptr i = 0;
+  while (s[i]) i++;
+  return i;
 }
 
 s64 internal_simple_strtoll(const char *nptr, char **endptr, int base) {

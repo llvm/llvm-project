@@ -34,6 +34,18 @@ RUN:   %p/Inputs/hello-world.elf-x86-64 | FileCheck %s --check-prefix=DYN
 // DYN-NEXT:     Symbol: __gmon_start__
 // DYN-NEXT:     Addend: 0x0
 // DYN-NEXT:   }
+// DYN-NEXT:   Relocation {
+// DYN-NEXT:     Offset: 0x4018F8
+// DYN-NEXT:     Type: R_X86_64_JUMP_SLOT (7)
+// DYN-NEXT:     Symbol: __libc_start_main
+// DYN-NEXT:     Addend: 0x0
+// DYN-NEXT:   }
+// DYN-NEXT:   Relocation {
+// DYN-NEXT:     Offset: 0x401900
+// DYN-NEXT:     Type: R_X86_64_JUMP_SLOT (7)
+// DYN-NEXT:     Symbol: puts
+// DYN-NEXT:     Addend: 0x0
+// DYN-NEXT:   }
 // DYN-NEXT: }
 
 RUN: llvm-readobj -dyn-relocations -expand-relocs \

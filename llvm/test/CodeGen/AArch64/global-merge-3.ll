@@ -1,6 +1,6 @@
-; RUN: llc %s -mtriple=aarch64-none-linux-gnu -aarch64-global-merge -global-merge-on-external -disable-post-ra -o - | FileCheck %s
-; RUN: llc %s -mtriple=aarch64-linux-gnuabi -aarch64-global-merge -global-merge-on-external -disable-post-ra -o - | FileCheck %s
-; RUN: llc %s -mtriple=aarch64-apple-ios -aarch64-global-merge -global-merge-on-external -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-APPLE-IOS
+; RUN: llc %s -mtriple=aarch64-none-linux-gnu -aarch64-enable-global-merge -global-merge-on-external -disable-post-ra -o - | FileCheck %s
+; RUN: llc %s -mtriple=aarch64-linux-gnuabi -aarch64-enable-global-merge -global-merge-on-external -disable-post-ra -o - | FileCheck %s
+; RUN: llc %s -mtriple=aarch64-apple-ios -aarch64-enable-global-merge -global-merge-on-external -disable-post-ra -o - | FileCheck %s --check-prefix=CHECK-APPLE-IOS
 
 @x = global [1000 x i32] zeroinitializer, align 1
 @y = global [1000 x i32] zeroinitializer, align 1
@@ -21,7 +21,7 @@ define void @f1(i32 %a1, i32 %a2, i32 %a3) {
 }
 
 ;CHECK:	.type	.L_MergedGlobals,@object // @_MergedGlobals
-;CHECK: .align	4
+;CHECK: .p2align	4
 ;CHECK: .L_MergedGlobals:
 ;CHECK: .size	.L_MergedGlobals, 4004
 
@@ -29,7 +29,7 @@ define void @f1(i32 %a1, i32 %a2, i32 %a3) {
 ;CHECK: .local	.L_MergedGlobals.1
 ;CHECK: .comm	.L_MergedGlobals.1,4000,16
 
-;CHECK-APPLE-IOS: .align	4
+;CHECK-APPLE-IOS: .p2align	4
 ;CHECK-APPLE-IOS:  l__MergedGlobals:
 ;CHECK-APPLE-IOS: .long 1
 ;CHECK-APPLE-IOS: .space	4000

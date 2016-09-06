@@ -38,19 +38,19 @@
 ; CHECK-DAG: [[F3:![0-9]+]] = distinct !DISubprogram(name: "f3"
 ; CHECK-DAG: [[F4:![0-9]+]] = distinct !DISubprogram(name: "f4"
 
-; CHECK: [[fcs1_f4_f3cs1_f2]] = {{.*}}, scope: [[F2]], inlinedAt: [[fcs1_f4_f3cs1:![0-9]+]])
-; CHECK: [[fcs1_f4_f3cs1]] = {{.*}}, scope: [[F3]], inlinedAt: [[fcs1_f4:![0-9]+]])
-; CHECK: [[fcs1_f4]] = {{.*}}, scope: [[F4]], inlinedAt: [[fcs1:![0-9]+]])
-; CHECK: [[fcs1]] = {{.*}}, scope: [[F]])
-; CHECK: [[fcs1_f4_f3cs2_f2]] = {{.*}}, scope: [[F2]], inlinedAt: [[fcs1_f4_f3cs2:![0-9]+]])
-; CHECK: [[fcs1_f4_f3cs2]] = {{.*}}, scope: [[F3]], inlinedAt: [[fcs1_f4]])
+; CHECK-DAG: [[fcs1_f4_f3cs1_f2]] = {{.*}}, scope: [[F2]], inlinedAt: [[fcs1_f4_f3cs1:![0-9]+]])
+; CHECK-DAG: [[fcs1_f4_f3cs1]] = {{.*}}, scope: [[F3]], inlinedAt: [[fcs1_f4:![0-9]+]])
+; CHECK-DAG: [[fcs1_f4]] = {{.*}}, scope: [[F4]], inlinedAt: [[fcs1:![0-9]+]])
+; CHECK-DAG: [[fcs1]] = {{.*}}, scope: [[F]])
+; CHECK-DAG: [[fcs1_f4_f3cs2_f2]] = {{.*}}, scope: [[F2]], inlinedAt: [[fcs1_f4_f3cs2:![0-9]+]])
+; CHECK-DAG: [[fcs1_f4_f3cs2]] = {{.*}}, scope: [[F3]], inlinedAt: [[fcs1_f4]])
 
-; CHECK: [[fcs2_f4_f3cs1_f2]] = {{.*}}, scope: [[F2]], inlinedAt: [[fcs2_f4_f3cs1:![0-9]+]])
-; CHECK: [[fcs2_f4_f3cs1]] = {{.*}}, scope: [[F3]], inlinedAt: [[fcs2_f4:![0-9]+]])
-; CHECK: [[fcs2_f4]] = {{.*}}, scope: [[F4]], inlinedAt: [[fcs2:![0-9]+]])
-; CHECK: [[fcs2]] = {{.*}}, scope: [[F]])
-; CHECK: [[fcs2_f4_f3cs2_f2]] = {{.*}}, scope: [[F2]], inlinedAt: [[fcs2_f4_f3cs2:![0-9]+]])
-; CHECK: [[fcs2_f4_f3cs2]] = {{.*}}, scope: [[F3]], inlinedAt: [[fcs2_f4]])
+; CHECK-DAG: [[fcs2_f4_f3cs1_f2]] = {{.*}}, scope: [[F2]], inlinedAt: [[fcs2_f4_f3cs1:![0-9]+]])
+; CHECK-DAG: [[fcs2_f4_f3cs1]] = {{.*}}, scope: [[F3]], inlinedAt: [[fcs2_f4:![0-9]+]])
+; CHECK-DAG: [[fcs2_f4]] = {{.*}}, scope: [[F4]], inlinedAt: [[fcs2:![0-9]+]])
+; CHECK-DAG: [[fcs2]] = {{.*}}, scope: [[F]])
+; CHECK-DAG: [[fcs2_f4_f3cs2_f2]] = {{.*}}, scope: [[F2]], inlinedAt: [[fcs2_f4_f3cs2:![0-9]+]])
+; CHECK-DAG: [[fcs2_f4_f3cs2]] = {{.*}}, scope: [[F3]], inlinedAt: [[fcs2_f4]])
 
 $_Z2f4v = comdat any
 
@@ -98,16 +98,15 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !llvm.module.flags = !{!10, !11}
 !llvm.ident = !{!12}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.7.0 (trunk 226474) (llvm/trunk 226478)", isOptimized: false, emissionKind: 2, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.7.0 (trunk 226474) (llvm/trunk 226478)", isOptimized: false, emissionKind: LineTablesOnly, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "debug-info-duplicate-calls.cpp", directory: "/tmp/dbginfo")
 !2 = !{}
-!3 = !{!4, !7, !8, !9}
-!4 = distinct !DISubprogram(name: "f", line: 13, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 13, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "f", line: 13, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 13, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "debug-info-duplicate-calls.cpp", directory: "/tmp/dbginfo")
 !6 = !DISubroutineType(types: !2)
-!7 = distinct !DISubprogram(name: "f4", line: 10, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 10, file: !1, scope: !5, type: !6, variables: !2)
-!8 = distinct !DISubprogram(name: "f3", line: 7, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 7, file: !1, scope: !5, type: !6, variables: !2)
-!9 = distinct !DISubprogram(name: "f2", line: 4, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 4, file: !1, scope: !5, type: !6, variables: !2)
+!7 = distinct !DISubprogram(name: "f4", line: 10, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 10, file: !1, scope: !5, type: !6, variables: !2)
+!8 = distinct !DISubprogram(name: "f3", line: 7, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 7, file: !1, scope: !5, type: !6, variables: !2)
+!9 = distinct !DISubprogram(name: "f2", line: 4, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 4, file: !1, scope: !5, type: !6, variables: !2)
 !10 = !{i32 2, !"Dwarf Version", i32 4}
 !11 = !{i32 2, !"Debug Info Version", i32 3}
 !12 = !{!"clang version 3.7.0 (trunk 226474) (llvm/trunk 226478)"}

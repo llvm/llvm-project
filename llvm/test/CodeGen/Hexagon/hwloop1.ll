@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon -enable-pipeliner=false < %s | FileCheck %s
 ; Check that we generate hardware loop instructions.
 
 ; Case 1 : Loop with a constant number of iterations.

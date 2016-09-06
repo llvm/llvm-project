@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -march=ppc32
 
 	%struct..0objc_object = type { %struct.objc_class* }
 	%struct.NSArray = type { %struct..0objc_object }
@@ -12,7 +12,7 @@
 	%struct.objc_selector = type opaque
 	%struct.pthread_mutex_t = type { i32, [40 x i8] }
 	%struct.pthread_rwlock_t = type { i32, [124 x i8] }
-external constant %struct.__builtin_CFString		; <%struct.__builtin_CFString*>:0 [#uses=1]
+@0 = external constant %struct.__builtin_CFString		; <%struct.__builtin_CFString*>:0 [#uses=1]
 
 define void @"-[PFTPersistentSymbols saveSymbolWithName:address:path:lineNumber:flags:owner:]"(%struct.PFTPersistentSymbols* %self, %struct.objc_selector* %_cmd, %struct.NSArray* %name, i64 %address, %struct.NSArray* %path, i32 %lineNumber, i64 %flags, %struct..0objc_object* %owner) nounwind  {
 entry:

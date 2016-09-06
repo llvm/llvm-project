@@ -98,6 +98,9 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       case MCSymbolRefExpr::VK_ARM_GOT_PREL:
         Type = ELF::R_ARM_GOT_PREL;
         break;
+      case MCSymbolRefExpr::VK_ARM_PREL31:
+        Type = ELF::R_ARM_PREL31;
+        break;
       }
       break;
     case ARM::fixup_arm_blx:
@@ -106,7 +109,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       case MCSymbolRefExpr::VK_PLT:
         Type = ELF::R_ARM_CALL;
         break;
-      case MCSymbolRefExpr::VK_ARM_TLSCALL:
+      case MCSymbolRefExpr::VK_TLSCALL:
         Type = ELF::R_ARM_TLS_CALL;
         break;
       default:
@@ -120,6 +123,8 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       Type = ELF::R_ARM_JUMP24;
       break;
     case ARM::fixup_t2_condbranch:
+      Type = ELF::R_ARM_THM_JUMP19;
+      break;
     case ARM::fixup_t2_uncondbranch:
       Type = ELF::R_ARM_THM_JUMP24;
       break;
@@ -138,7 +143,7 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
     case ARM::fixup_arm_thumb_bl:
     case ARM::fixup_arm_thumb_blx:
       switch (Modifier) {
-      case MCSymbolRefExpr::VK_ARM_TLSCALL:
+      case MCSymbolRefExpr::VK_TLSCALL:
         Type = ELF::R_ARM_THM_TLS_CALL;
         break;
       default:
@@ -210,11 +215,14 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       case MCSymbolRefExpr::VK_ARM_TLSLDO:
         Type = ELF::R_ARM_TLS_LDO32;
         break;
-      case MCSymbolRefExpr::VK_ARM_TLSCALL:
+      case MCSymbolRefExpr::VK_TLSCALL:
         Type = ELF::R_ARM_TLS_CALL;
         break;
-      case MCSymbolRefExpr::VK_ARM_TLSDESC:
+      case MCSymbolRefExpr::VK_TLSDESC:
         Type = ELF::R_ARM_TLS_GOTDESC;
+        break;
+      case MCSymbolRefExpr::VK_TLSLDM:
+        Type = ELF::R_ARM_TLS_LDM32;
         break;
       case MCSymbolRefExpr::VK_ARM_TLSDESCSEQ:
         Type = ELF::R_ARM_TLS_DESCSEQ;
@@ -234,10 +242,26 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       Type = ELF::R_ARM_JUMP24;
       break;
     case ARM::fixup_arm_movt_hi16:
-      Type = ELF::R_ARM_MOVT_ABS;
+      switch (Modifier) {
+      default: llvm_unreachable("Unsupported Modifier");
+      case MCSymbolRefExpr::VK_None:
+        Type = ELF::R_ARM_MOVT_ABS;
+        break;
+      case MCSymbolRefExpr::VK_ARM_SBREL:
+        Type = ELF:: R_ARM_MOVT_BREL;
+        break;
+      }
       break;
     case ARM::fixup_arm_movw_lo16:
-      Type = ELF::R_ARM_MOVW_ABS_NC;
+      switch (Modifier) {
+      default: llvm_unreachable("Unsupported Modifier");
+      case MCSymbolRefExpr::VK_None:
+        Type = ELF::R_ARM_MOVW_ABS_NC;
+        break;
+      case MCSymbolRefExpr::VK_ARM_SBREL:
+        Type = ELF:: R_ARM_MOVW_BREL_NC;
+        break;
+      }
       break;
     case ARM::fixup_t2_movt_hi16:
       Type = ELF::R_ARM_THM_MOVT_ABS;

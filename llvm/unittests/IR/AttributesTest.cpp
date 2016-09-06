@@ -34,6 +34,15 @@ TEST(Attributes, Uniquing) {
 TEST(Attributes, Ordering) {
   LLVMContext C;
 
+  Attribute Align4 = Attribute::get(C, Attribute::Alignment, 4);
+  Attribute Align5 = Attribute::get(C, Attribute::Alignment, 5);
+  Attribute Deref4 = Attribute::get(C, Attribute::Dereferenceable, 4);
+  Attribute Deref5 = Attribute::get(C, Attribute::Dereferenceable, 5);
+  EXPECT_TRUE(Align4 < Align5);
+  EXPECT_TRUE(Align4 < Deref4);
+  EXPECT_TRUE(Align4 < Deref5);
+  EXPECT_TRUE(Align5 < Deref4);
+
   AttributeSet ASs[] = {
     AttributeSet::get(C, 2, Attribute::ZExt),
     AttributeSet::get(C, 1, Attribute::SExt)

@@ -12,7 +12,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Lex/PreprocessingRecord.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -90,18 +89,23 @@ public:
   void VisitVarDecl(const VarDecl *D);
   void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *D);
   void VisitTemplateTemplateParmDecl(const TemplateTemplateParmDecl *D);
+
   void VisitLinkageSpecDecl(const LinkageSpecDecl *D) {
     IgnoreResults = true;
   }
+
   void VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) {
     IgnoreResults = true;
   }
+
   void VisitUsingDecl(const UsingDecl *D) {
     IgnoreResults = true;
   }
+
   void VisitUnresolvedUsingValueDecl(const UnresolvedUsingValueDecl *D) {
     IgnoreResults = true;
   }
+
   void VisitUnresolvedUsingTypenameDecl(const UnresolvedUsingTypenameDecl *D) {
     IgnoreResults = true;
   }
@@ -126,14 +130,17 @@ public:
   void GenObjCClass(StringRef cls) {
     generateUSRForObjCClass(cls, Out);
   }
+
   /// Generate a USR for an Objective-C class category.
   void GenObjCCategory(StringRef cls, StringRef cat) {
     generateUSRForObjCCategory(cls, cat, Out);
   }
+
   /// Generate a USR fragment for an Objective-C property.
-  void GenObjCProperty(StringRef prop) {
-    generateUSRForObjCProperty(prop, Out);
+  void GenObjCProperty(StringRef prop, bool isClassProp) {
+    generateUSRForObjCProperty(prop, isClassProp, Out);
   }
+
   /// Generate a USR for an Objective-C protocol.
   void GenObjCProtocol(StringRef prot) {
     generateUSRForObjCProtocol(prot, Out);
@@ -148,7 +155,6 @@ public:
   ///  the decl had no name.
   bool EmitDeclName(const NamedDecl *D);
 };
-
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -226,7 +232,7 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
   }
 
   // Mangle in type information for the arguments.
-  for (auto PD : D->params()) {
+  for (auto PD : D->parameters()) {
     Out << '#';
     VisitType(PD->getType());
   }
@@ -293,13 +299,11 @@ void USRGenerator::VisitVarDecl(const VarDecl *D) {
 void USRGenerator::VisitNonTypeTemplateParmDecl(
                                         const NonTypeTemplateParmDecl *D) {
   GenLoc(D, /*IncludeOffset=*/true);
-  return;
 }
 
 void USRGenerator::VisitTemplateTemplateParmDecl(
                                         const TemplateTemplateParmDecl *D) {
   GenLoc(D, /*IncludeOffset=*/true);
-  return;
 }
 
 void USRGenerator::VisitNamespaceDecl(const NamespaceDecl *D) {
@@ -406,7 +410,7 @@ void USRGenerator::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
     Visit(ID);
   else
     Visit(cast<Decl>(D->getDeclContext()));
-  GenObjCProperty(D->getName());
+  GenObjCProperty(D->getName(), D->isClassProperty());
 }
 
 void USRGenerator::VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D) {
@@ -515,7 +519,6 @@ void USRGenerator::VisitTypedefDecl(const TypedefDecl *D) {
 
 void USRGenerator::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
   GenLoc(D, /*IncludeOffset=*/true);
-  return;
 }
 
 bool USRGenerator::GenLoc(const Decl *D, bool IncludeOffset) {
@@ -614,24 +617,17 @@ void USRGenerator::VisitType(QualType T) {
           c = 'd'; break;
         case BuiltinType::LongDouble:
           c = 'D'; break;
+        case BuiltinType::Float128:
+          c = 'Q'; break;
         case BuiltinType::NullPtr:
           c = 'n'; break;
 #define BUILTIN_TYPE(Id, SingletonId)
 #define PLACEHOLDER_TYPE(Id, SingletonId) case BuiltinType::Id:
 #include "clang/AST/BuiltinTypes.def"
         case BuiltinType::Dependent:
-        case BuiltinType::OCLImage1d:
-        case BuiltinType::OCLImage1dArray:
-        case BuiltinType::OCLImage1dBuffer:
-        case BuiltinType::OCLImage2d:
-        case BuiltinType::OCLImage2dArray:
-        case BuiltinType::OCLImage2dDepth:
-        case BuiltinType::OCLImage2dArrayDepth:
-        case BuiltinType::OCLImage2dMSAA:
-        case BuiltinType::OCLImage2dArrayMSAA:
-        case BuiltinType::OCLImage2dMSAADepth:
-        case BuiltinType::OCLImage2dArrayMSAADepth:
-        case BuiltinType::OCLImage3d:
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+        case BuiltinType::Id:
+#include "clang/Basic/OpenCLImageTypes.def"
         case BuiltinType::OCLEvent:
         case BuiltinType::OCLClkEvent:
         case BuiltinType::OCLQueue:
@@ -867,8 +863,9 @@ void clang::index::generateUSRForObjCMethod(StringRef Sel,
   OS << (IsInstanceMethod ? "(im)" : "(cm)") << Sel;
 }
 
-void clang::index::generateUSRForObjCProperty(StringRef Prop, raw_ostream &OS) {
-  OS << "(py)" << Prop;
+void clang::index::generateUSRForObjCProperty(StringRef Prop, bool isClassProp,
+                                              raw_ostream &OS) {
+  OS << (isClassProp ? "(cpy)" : "(py)") << Prop;
 }
 
 void clang::index::generateUSRForObjCProtocol(StringRef Prot, raw_ostream &OS) {
@@ -907,4 +904,3 @@ bool clang::index::generateUSRForMacro(const MacroDefinitionRecord *MD,
   Out << MD->getName()->getName();
   return false;
 }
-

@@ -30,9 +30,13 @@ CODEGENOPT(Name, Bits, Default)
 
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
 CODEGENOPT(CompressDebugSections, 1, 0) ///< -Wa,-compress-debug-sections
-CODEGENOPT(Autolink          , 1, 1) ///< -fno-autolink
+CODEGENOPT(RelaxELFRelocations, 1, 0) ///< -Wa,--mrelax-relocations
 CODEGENOPT(AsmVerbose        , 1, 0) ///< -dA, -fverbose-asm.
+CODEGENOPT(PreserveAsmComments, 1, 1) ///< -dA, -fno-preserve-as-comments.
+CODEGENOPT(AssumeSaneOperatorNew , 1, 1) ///< implicit __attribute__((malloc)) operator new
+CODEGENOPT(Autolink          , 1, 1) ///< -fno-autolink
 CODEGENOPT(ObjCAutoRefCountExceptions , 1, 0) ///< Whether ARC should be EH-safe.
+CODEGENOPT(Backchain         , 1, 0) ///< -mbackchain
 CODEGENOPT(CoverageExtraChecksum, 1, 0) ///< Whether we need a second checksum for functions in GCNO files.
 CODEGENOPT(CoverageNoFunctionNamesInData, 1, 0) ///< Do not include function names in GCDA files.
 CODEGENOPT(CoverageExitBlockBeforeBody, 1, 0) ///< Whether to emit the exit block before the body blocks in GCNO files.
@@ -55,7 +59,7 @@ CODEGENOPT(DisableLLVMPasses , 1, 0) ///< Don't run any LLVM IR passes to get
 CODEGENOPT(DisableRedZone    , 1, 0) ///< Set when -mno-red-zone is enabled.
 CODEGENOPT(DisableTailCalls  , 1, 0) ///< Do not emit tail calls.
 CODEGENOPT(EmitDeclMetadata  , 1, 0) ///< Emit special metadata indicating what
-                                     ///< Decl* various IR entities came from. 
+                                     ///< Decl* various IR entities came from.
                                      ///< Only useful when running CodeGen as a
                                      ///< subroutine.
 CODEGENOPT(EmitGcovArcs      , 1, 0) ///< Emit coverage data files, aka. GCDA.
@@ -64,11 +68,21 @@ CODEGENOPT(EmitOpenCLArgMetadata , 1, 0) ///< Emit OpenCL kernel arg metadata.
 CODEGENOPT(EmulatedTLS       , 1, 0) ///< Set when -femulated-tls is enabled.
 /// \brief FP_CONTRACT mode (on/off/fast).
 ENUM_CODEGENOPT(FPContractMode, FPContractModeKind, 2, FPC_On)
+/// \brief Embed Bitcode mode (off/all/bitcode/marker).
+ENUM_CODEGENOPT(EmbedBitcode, EmbedBitcodeKind, 2, Embed_Off)
 CODEGENOPT(ForbidGuardVariables , 1, 0) ///< Issue errors if C++ guard variables
                                         ///< are required.
 CODEGENOPT(FunctionSections  , 1, 0) ///< Set when -ffunction-sections is enabled.
 CODEGENOPT(InstrumentFunctions , 1, 0) ///< Set when -finstrument-functions is
                                        ///< enabled.
+
+CODEGENOPT(XRayInstrumentFunctions , 1, 0) ///< Set when -fxray-instrument is
+                                           ///< enabled.
+
+///< Set the minimum number of instructions in a function to determine selective
+///< XRay instrumentation.
+VALUE_CODEGENOPT(XRayInstructionThreshold , 32, 200)
+
 CODEGENOPT(InstrumentForProfiling , 1, 0) ///< Set when -pg is enabled.
 CODEGENOPT(LessPreciseFPMAD  , 1, 0) ///< Enable less precise MAD instructions to
                                      ///< be generated.
@@ -96,16 +110,20 @@ CODEGENOPT(ReciprocalMath    , 1, 0) ///< Allow FP divisions to be reassociated.
 CODEGENOPT(NoInline          , 1, 0) ///< Set when -fno-inline is enabled.
                                      ///< Disables use of the inline keyword.
 CODEGENOPT(NoNaNsFPMath      , 1, 0) ///< Assume FP arguments, results not NaN.
+CODEGENOPT(FlushDenorm       , 1, 0) ///< Allow FP denorm numbers to be flushed to zero
+CODEGENOPT(CorrectlyRoundedDivSqrt, 1, 0) ///< -cl-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(NoZeroInitializedInBSS , 1, 0) ///< -fno-zero-initialized-in-bss.
 /// \brief Method of Objective-C dispatch to use.
-ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy) 
+ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy)
 CODEGENOPT(OmitLeafFramePointer , 1, 0) ///< Set when -momit-leaf-frame-pointer is
                                         ///< enabled.
 VALUE_CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
 VALUE_CODEGENOPT(OptimizeSize, 2, 0) ///< If -Os (==1) or -Oz (==2) is specified.
 
-CODEGENOPT(ProfileInstrGenerate , 1, 0) ///< Instrument code to generate
-                                        ///< execution counts to use with PGO.
+/// \brief Choose profile instrumenation kind or no instrumentation.
+ENUM_CODEGENOPT(ProfileInstr, ProfileInstrKind, 2, ProfileNone)
+/// \brief Choose profile kind for PGO use compilation.
+ENUM_CODEGENOPT(ProfileUse, ProfileInstrKind, 2, ProfileNone)
 CODEGENOPT(CoverageMapping , 1, 0) ///< Generate coverage mapping regions to
                                    ///< enable code coverage analysis.
 CODEGENOPT(DumpCoverageMapping , 1, 0) ///< Dump the generated coverage mapping
@@ -118,8 +136,8 @@ CODEGENOPT(RelaxAll          , 1, 0) ///< Relax all machine code instructions.
 CODEGENOPT(RelaxedAliasing   , 1, 0) ///< Set when -fno-strict-aliasing is enabled.
 CODEGENOPT(StructPathTBAA    , 1, 0) ///< Whether or not to use struct-path TBAA.
 CODEGENOPT(SaveTempLabels    , 1, 0) ///< Save temporary labels.
-CODEGENOPT(SanitizeAddressZeroBaseShadow , 1, 0) ///< Map shadow memory at zero
-                                                 ///< offset in AddressSanitizer.
+CODEGENOPT(SanitizeAddressUseAfterScope , 1, 0) ///< Enable use-after-scope detection
+                                                ///< in AddressSanitizer
 CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0) ///< Enable tracking origins in
                                              ///< MemorySanitizer
 CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0) ///< Enable use-after-delete detection
@@ -135,16 +153,17 @@ CODEGENOPT(SanitizeCoverageTraceCmp, 1, 0) ///< Enable cmp instruction tracing
                                            ///< in sanitizer coverage.
 CODEGENOPT(SanitizeCoverage8bitCounters, 1, 0) ///< Use 8-bit frequency counters
                                                ///< in sanitizer coverage.
+CODEGENOPT(SanitizeCoverageTracePC, 1, 0) ///< Enable PC tracing
+                                          ///< in sanitizer coverage.
 CODEGENOPT(SanitizeStats     , 1, 0) ///< Collect statistics for sanitizers.
 CODEGENOPT(SimplifyLibCalls  , 1, 1) ///< Set when -fbuiltin is enabled.
 CODEGENOPT(SoftFloat         , 1, 0) ///< -soft-float.
 CODEGENOPT(StrictEnums       , 1, 0) ///< Optimize based on strict enum definition.
 CODEGENOPT(StrictVTablePointers, 1, 0) ///< Optimize based on the strict vtable pointers
 CODEGENOPT(TimePasses        , 1, 0) ///< Set when -ftime-report is enabled.
-CODEGENOPT(UnitAtATime       , 1, 1) ///< Unused. For mirroring GCC optimization
-                                     ///< selection.
 CODEGENOPT(UnrollLoops       , 1, 0) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0) ///< Control whether loops are rerolled.
+CODEGENOPT(NoUseJumpTables   , 1, 0) ///< Set when -fno-jump-tables is enabled.
 CODEGENOPT(UnsafeFPMath      , 1, 0) ///< Allow unsafe floating point optzns.
 CODEGENOPT(UnwindTables      , 1, 0) ///< Emit unwind tables.
 CODEGENOPT(VectorizeBB       , 1, 0) ///< Run basic block vectorizer.
@@ -162,7 +181,7 @@ CODEGENOPT(StackRealignment  , 1, 0) ///< Control whether to force stack
                                      ///< realignment.
 CODEGENOPT(UseInitArray      , 1, 0) ///< Control whether to use .init_array or
                                      ///< .ctors.
-VALUE_CODEGENOPT(StackAlignment    , 32, 0) ///< Overrides default stack 
+VALUE_CODEGENOPT(StackAlignment    , 32, 0) ///< Overrides default stack
                                             ///< alignment, if not 0.
 VALUE_CODEGENOPT(StackProbeSize    , 32, 4096) ///< Overrides default stack
                                                ///< probe size, even if 0.
@@ -172,11 +191,18 @@ CODEGENOPT(DebugColumnInfo, 1, 0) ///< Whether or not to use column information
 CODEGENOPT(DebugTypeExtRefs, 1, 0) ///< Whether or not debug info should contain
                                    ///< external references to a PCH or module.
 
-CODEGENOPT(DebugExplicitImport, 1, 0)  ///< Whether or not debug info should 
-                                       ///< contain explicit imports for 
+CODEGENOPT(DebugExplicitImport, 1, 0)  ///< Whether or not debug info should
+                                       ///< contain explicit imports for
                                        ///< anonymous namespaces
 
 CODEGENOPT(EmitLLVMUseLists, 1, 0) ///< Control whether to serialize use-lists.
+
+CODEGENOPT(WholeProgramVTables, 1, 0) ///< Whether to apply whole-program
+                                      ///  vtable optimization.
+
+/// Whether to use public LTO visibility for entities in std and stdext
+/// namespaces. This is enabled by clang-cl's /MT and /MTd flags.
+CODEGENOPT(LTOVisibilityPublicStd, 1, 0)
 
 /// The user specified number of registers to be used for integral arguments,
 /// or 0 if unspecified.
@@ -189,7 +215,8 @@ VALUE_CODEGENOPT(SSPBufferSize, 32, 0)
 ENUM_CODEGENOPT(DebugInfo, codegenoptions::DebugInfoKind, 3, codegenoptions::NoDebugInfo)
 
 /// Tune the debug info for this debugger.
-ENUM_CODEGENOPT(DebuggerTuning, DebuggerKind, 2, DebuggerKindDefault)
+ENUM_CODEGENOPT(DebuggerTuning, llvm::DebuggerKind, 2,
+                llvm::DebuggerKind::Default)
 
 /// Dwarf version. Version zero indicates to LLVM that no DWARF should be
 /// emitted.
@@ -203,10 +230,14 @@ CODEGENOPT(EmitCodeView, 1, 0)
 ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NoInlining)
 
 // Vector functions library to use.
-ENUM_CODEGENOPT(VecLib, VectorLibrary, 1, NoLibrary)
+ENUM_CODEGENOPT(VecLib, VectorLibrary, 2, NoLibrary)
 
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
+
+/// Number of path components to strip when emitting checks. (0 == full
+/// filename)
+VALUE_CODEGENOPT(EmitCheckPathComponentsToStrip, 32, 0)
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

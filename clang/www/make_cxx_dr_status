@@ -102,10 +102,10 @@ def availability(issue):
   if status == 'unknown':
     avail = 'Unknown'
     avail_style = ' class="none"'
-  elif status == '3.9':
+  elif status == '4.0':
     avail = 'SVN'
     avail_style = ' class="svn"'
-  elif status.startswith('3.'):
+  elif re.match('^[0-9]+\.', status):
     avail = 'Clang %s' % status
     avail_style = ' class="full"'
   elif status == 'yes':

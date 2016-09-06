@@ -20,10 +20,9 @@
 // e = getelementptr ..., i64 a
 //
 // This is legal to do if the computations are marked with either nsw or nuw
-// markers.
-// Moreover, the current heuristic is simple: it does not create new sext
-// operations, i.e., it gives up when a sext would have forked (e.g., if
-// a = add i32 b, c, two sexts are required to promote the computation).
+// markers. Moreover, the current heuristic is simple: it does not create new
+// sext operations, i.e., it gives up when a sext would have forked (e.g., if a
+// = add i32 b, c, two sexts are required to promote the computation).
 //
 // FIXME: This pass may be useful for other targets too.
 // ===---------------------------------------------------------------------===//
@@ -48,10 +47,6 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-type-promotion"
 
 static cl::opt<bool>
-EnableAddressTypePromotion("aarch64-type-promotion", cl::Hidden,
-                           cl::desc("Enable the type promotion pass"),
-                           cl::init(true));
-static cl::opt<bool>
 EnableMerge("aarch64-type-promotion-merge", cl::Hidden,
             cl::desc("Enable merging of redundant sexts when one is dominating"
                      " the other."),
@@ -62,10 +57,6 @@ EnableMerge("aarch64-type-promotion-merge", cl::Hidden,
 //===----------------------------------------------------------------------===//
 //                       AArch64AddressTypePromotion
 //===----------------------------------------------------------------------===//
-
-namespace llvm {
-void initializeAArch64AddressTypePromotionPass(PassRegistry &);
-}
 
 namespace {
 class AArch64AddressTypePromotion : public FunctionPass {
@@ -207,9 +198,7 @@ bool AArch64AddressTypePromotion::shouldGetThrough(const Instruction *Inst) {
 }
 
 static bool shouldSExtOperand(const Instruction *Inst, int OpIdx) {
-  if (isa<SelectInst>(Inst) && OpIdx == 0)
-    return false;
-  return true;
+  return !(isa<SelectInst>(Inst) && OpIdx == 0);
 }
 
 bool
@@ -481,7 +470,10 @@ void AArch64AddressTypePromotion::analyzeSExtension(Instructions &SExtInsts) {
 }
 
 bool AArch64AddressTypePromotion::runOnFunction(Function &F) {
-  if (!EnableAddressTypePromotion || F.isDeclaration())
+  if (skipFunction(F))
+    return false;
+
+  if (F.isDeclaration())
     return false;
   Func = &F;
   ConsideredSExtType = Type::getInt64Ty(Func->getContext());

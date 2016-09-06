@@ -24,7 +24,7 @@
 // RUN: not diff b.points bf.points
 // RUN: rm -rf   %T/coverage-tracing
 //
-// REQUIRES: asan-64-bits
+// REQUIRES: asan-64-bits, shell
 // UNSUPPORTED: android
 
 #include <stdlib.h>

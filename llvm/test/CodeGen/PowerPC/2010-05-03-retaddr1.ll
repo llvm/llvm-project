@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=ppc32 -mtriple=powerpc-apple-darwin -mcpu=g5 | FileCheck %s
-; RUN: llc < %s -march=ppc32 -mtriple=powerpc-apple-darwin -mcpu=g5 -regalloc=basic | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mtriple=powerpc-apple-darwin -mcpu=g5 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mtriple=powerpc-apple-darwin -mcpu=g5 -regalloc=basic | FileCheck %s
 
 declare i8* @llvm.frameaddress(i32) nounwind readnone
 

@@ -46,6 +46,8 @@ autoconf/autom4te.cache
 projects/*
 !projects/*.*
 !projects/Makefile
+runtimes/*
+!runtimes/*.*
 # Clang, which is tracked independently.
 tools/clang
 # LLDB, which is tracked independently.

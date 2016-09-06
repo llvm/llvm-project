@@ -27,6 +27,7 @@
 #define LLVM_IR_VALUEMAP_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Mutex.h"
@@ -84,8 +85,11 @@ class ValueMap {
   typedef DenseMap<const Metadata *, TrackingMDRef> MDMapT;
   typedef typename Config::ExtraData ExtraData;
   MapT Map;
-  std::unique_ptr<MDMapT> MDMap;
+  Optional<MDMapT> MDMap;
   ExtraData Data;
+
+  bool MayMapMetadata = true;
+
   ValueMap(const ValueMap&) = delete;
   ValueMap& operator=(const ValueMap&) = delete;
 public:
@@ -99,11 +103,26 @@ public:
   explicit ValueMap(const ExtraData &Data, unsigned NumInitBuckets = 64)
       : Map(NumInitBuckets), Data(Data) {}
 
-  bool hasMD() const { return MDMap; }
+  bool hasMD() const { return bool(MDMap); }
   MDMapT &MD() {
     if (!MDMap)
-      MDMap.reset(new MDMapT);
+      MDMap.emplace();
     return *MDMap;
+  }
+  Optional<MDMapT> &getMDMap() { return MDMap; }
+
+  bool mayMapMetadata() const { return MayMapMetadata; }
+  void enableMapMetadata() { MayMapMetadata = true; }
+  void disableMapMetadata() { MayMapMetadata = false; }
+
+  /// Get the mapped metadata, if it's in the map.
+  Optional<Metadata *> getMappedMD(const Metadata *MD) const {
+    if (!MDMap)
+      return None;
+    auto Where = MDMap->find(MD);
+    if (Where == MDMap->end())
+      return None;
+    return Where->second.get();
   }
 
   typedef ValueMapIterator<MapT, KeyT> iterator;

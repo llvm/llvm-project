@@ -17,6 +17,10 @@
 
 #include "llvm/Config/llvm-config.h"
 
+#if defined(_MSC_VER)
+#include <sal.h>
+#endif
+
 #ifndef __has_feature
 # define __has_feature(x) 0
 #endif
@@ -27,6 +31,10 @@
 
 #ifndef __has_attribute
 # define __has_attribute(x) 0
+#endif
+
+#ifndef __has_cpp_attribute
+# define __has_cpp_attribute(x) 0
 #endif
 
 #ifndef __has_builtin
@@ -92,7 +100,7 @@
 #define LLVM_LVALUE_FUNCTION
 #endif
 
-#if __has_feature(cxx_constexpr) || defined(__GXX_EXPERIMENTAL_CXX0X__)
+#if __has_feature(cxx_constexpr) || defined(__GXX_EXPERIMENTAL_CXX0X__) || LLVM_MSC_PREREQ(1900)
 # define LLVM_CONSTEXPR constexpr
 #else
 # define LLVM_CONSTEXPR
@@ -124,6 +132,8 @@
 
 #if __has_attribute(warn_unused_result) || LLVM_GNUC_PREREQ(3, 4, 0)
 #define LLVM_ATTRIBUTE_UNUSED_RESULT __attribute__((__warn_unused_result__))
+#elif defined(_MSC_VER)
+#define LLVM_ATTRIBUTE_UNUSED_RESULT _Check_return_
 #else
 #define LLVM_ATTRIBUTE_UNUSED_RESULT
 #endif
@@ -206,6 +216,8 @@
 
 #if __has_attribute(returns_nonnull) || LLVM_GNUC_PREREQ(4, 9, 0)
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL __attribute__((returns_nonnull))
+#elif defined(_MSC_VER)
+#define LLVM_ATTRIBUTE_RETURNS_NONNULL _Ret_notnull_
 #else
 #define LLVM_ATTRIBUTE_RETURNS_NONNULL
 #endif
@@ -218,6 +230,19 @@
 #define LLVM_ATTRIBUTE_RETURNS_NOALIAS __declspec(restrict)
 #else
 #define LLVM_ATTRIBUTE_RETURNS_NOALIAS
+#endif
+
+/// LLVM_FALLTHROUGH - Mark fallthrough cases in switch statements.
+#if __has_cpp_attribute(fallthrough)
+#define LLVM_FALLTHROUGH [[fallthrough]]
+#elif !__cplusplus
+// Workaround for llvm.org/PR23435, since clang 3.6 and below emit a spurious
+// error when __has_cpp_attribute is given a scoped attribute in C mode.
+#define LLVM_FALLTHROUGH
+#elif __has_cpp_attribute(clang::fallthrough)
+#define LLVM_FALLTHROUGH [[clang::fallthrough]]
+#else
+#define LLVM_FALLTHROUGH
 #endif
 
 /// LLVM_EXTENSION - Support compilers where we have a keyword to suppress
@@ -264,6 +289,23 @@
 # define LLVM_BUILTIN_TRAP __debugbreak()
 #else
 # define LLVM_BUILTIN_TRAP *(volatile int*)0x11 = 0
+#endif
+
+/// LLVM_BUILTIN_DEBUGTRAP - On compilers which support it, expands to
+/// an expression which causes the program to break while running
+/// under a debugger.
+#if __has_builtin(__builtin_debugtrap)
+# define LLVM_BUILTIN_DEBUGTRAP __builtin_debugtrap()
+#elif defined(_MSC_VER)
+// The __debugbreak intrinsic is supported by MSVC and breaks while
+// running under the debugger, and also supports invoking a debugger
+// when the OS is configured appropriately.
+# define LLVM_BUILTIN_DEBUGTRAP __debugbreak()
+#else
+// Just continue execution when built with compilers that have no
+// support. This is a debugging aid and not intended to force the
+// program to abort if encountered.
+# define LLVM_BUILTIN_DEBUGTRAP
 #endif
 
 /// \macro LLVM_ASSUME_ALIGNED
@@ -380,12 +422,16 @@
 // Thread Sanitizer is a tool that finds races in code.
 // See http://code.google.com/p/data-race-test/wiki/DynamicAnnotations .
 // tsan detects these exact functions by name.
+#ifdef __cplusplus
 extern "C" {
+#endif
 void AnnotateHappensAfter(const char *file, int line, const volatile void *cv);
 void AnnotateHappensBefore(const char *file, int line, const volatile void *cv);
 void AnnotateIgnoreWritesBegin(const char *file, int line);
 void AnnotateIgnoreWritesEnd(const char *file, int line);
+#ifdef __cplusplus
 }
+#endif
 
 // This marker is used to define a happens-before arc. The race detector will
 // infer an arc from the begin to the end when they share the same pointer
@@ -407,6 +453,14 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 # define TsanIgnoreWritesEnd()
 #endif
 
+/// \macro LLVM_NO_SANITIZE
+/// \brief Disable a particular sanitizer for a function.
+#if __has_attribute(no_sanitize)
+#define LLVM_NO_SANITIZE(KIND) __attribute__((no_sanitize(KIND)))
+#else
+#define LLVM_NO_SANITIZE(KIND)
+#endif
+
 /// \brief Mark debug helper function definitions like dump() that should not be
 /// stripped from debug builds.
 // FIXME: Move this to a private config.h as it's not usable in public headers.
@@ -414,6 +468,19 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_USED
 #else
 #define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE
+#endif
+
+/// \macro LLVM_PRETTY_FUNCTION
+/// \brief Gets a user-friendly looking function signature for the current scope
+/// using the best available method on each platform.  The exact format of the
+/// resulting string is implementation specific and non-portable, so this should
+/// only be used, for example, for logging or diagnostics.
+#if defined(_MSC_VER)
+#define LLVM_PRETTY_FUNCTION __FUNCSIG__
+#elif defined(__GNUC__) || defined(__clang__)
+#define LLVM_PRETTY_FUNCTION __PRETTY_FUNCTION__
+#else 
+#define LLVM_PRETTY_FUNCTION __func__
 #endif
 
 /// \macro LLVM_THREAD_LOCAL

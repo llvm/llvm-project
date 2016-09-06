@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | grep sext | count 1
+; RUN: opt < %s -indvars -S | FileCheck %s
 ; ModuleID = '<stdin>'
 
 ; Provide legal integer types.
@@ -21,6 +21,9 @@ target datalayout = "n8:16:32:64"
 @llvm.used = appending global [1 x i8*] [ i8* bitcast (i16 (%struct.JPEGGlobals*)* @ExtractBufferedBlocksIgnored to i8*) ], section "llvm.metadata"		; <[1 x i8*]*> [#uses=0]
 
 define signext i16 @ExtractBufferedBlocksIgnored(%struct.JPEGGlobals* %globp)  nounwind {
+; CHECK-LABEL: @ExtractBufferedBlocksIgnored(
+; CHECK: sext
+; CHECK-NOT: sext
 entry:
 	%tmp4311 = getelementptr %struct.JPEGGlobals, %struct.JPEGGlobals* %globp, i32 0, i32 70		; <i32*> [#uses=1]
 	%tmp4412 = load i32, i32* %tmp4311, align 16		; <i32> [#uses=2]

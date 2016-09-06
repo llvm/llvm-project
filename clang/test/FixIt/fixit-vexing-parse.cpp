@@ -60,7 +60,7 @@ namespace N {
     VO m(int (*p)[4]);
 
     // Don't emit warning and fixit because direct initializer is not permitted here.
-    if (int n(int())){} // expected-error {{function type is not allowed here}} expected-error {{condition must have an initializer}}
+    if (int n(int())){} // expected-error {{function type is not allowed here}}
 
     // CHECK: fix-it:"{{.*}}":{66:8-66:10}:" = {}"
     U u(); // expected-warning {{function declaration}} expected-note {{replace parentheses with an initializer}}

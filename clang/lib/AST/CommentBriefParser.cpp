@@ -9,7 +9,6 @@
 
 #include "clang/AST/CommentBriefParser.h"
 #include "clang/AST/CommentCommandTraits.h"
-#include "llvm/ADT/StringSwitch.h"
 
 namespace clang {
 namespace comments {

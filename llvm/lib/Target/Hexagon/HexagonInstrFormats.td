@@ -342,6 +342,10 @@ class JInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
             string cstr = "", InstrItinClass itin = J_tc_2early_SLOT23>
   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeJ>, OpcodeHexagon;
 
+class JInst_CJUMP_UCJUMP<dag outs, dag ins, string asmstr, list<dag> pattern = [],
+            string cstr = "", InstrItinClass itin = J_tc_2early_CJUMP_UCJUMP_ARCHDEPSLOT>
+  : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, TypeJ>, OpcodeHexagon;
+
 // JR Instruction Class in V2/V3/V4.
 // Definition of the instruction class NOT CHANGED.
 class JRInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
@@ -412,19 +416,9 @@ class STInstPI<dag outs, dag ins, string asmstr, list<dag> pattern = [],
                string cstr = "">
   : STInst<outs, ins, asmstr, pattern, cstr>;
 
-let mayStore = 1 in
-class STInst2PI<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "">
-  : STInst<outs, ins, asmstr, pattern, cstr>;
-
 // Post increment LD Instruction.
 class LDInstPI<dag outs, dag ins, string asmstr, list<dag> pattern = [],
                string cstr = "">
-  : LDInst<outs, ins, asmstr, pattern, cstr>;
-
-let mayLoad = 1 in
-class LDInst2PI<dag outs, dag ins, string asmstr, list<dag> pattern = [],
-                string cstr = "">
   : LDInst<outs, ins, asmstr, pattern, cstr>;
 
 //===----------------------------------------------------------------------===//

@@ -55,6 +55,15 @@ struct Foo {
 typedef int Weber;
 }
 
+// MSVC accepts this, but Clang doesn't.
+namespace test_scope_spec {
+template <typename T = ns::Bar>  // expected-error {{use of undeclared identifier 'ns'}}
+struct Foo {
+  static_assert(sizeof(T) == 4, "Bar should have gotten int");
+};
+namespace ns { typedef int Bar; }
+}
+
 #ifdef __clang__
 // These are negative test cases that MSVC doesn't compile either.  Try to use
 // unique undeclared identifiers so typo correction doesn't find types declared

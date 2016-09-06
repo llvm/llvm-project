@@ -1,5 +1,5 @@
-; RUN: llc                             -aarch64-atomic-cfg-tidy=0 -verify-machineinstrs -mtriple=aarch64-apple-darwin < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -fast-isel -fast-isel-abort=1 -aarch64-atomic-cfg-tidy=0 -verify-machineinstrs -mtriple=aarch64-apple-darwin < %s | FileCheck --check-prefix=CHECK --check-prefix=FAST %s
+; RUN: llc -disable-peephole -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs -mtriple=aarch64-apple-darwin < %s | FileCheck %s
+; RUN: llc -disable-peephole -fast-isel -fast-isel-abort=1 -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs -mtriple=aarch64-apple-darwin < %s | FileCheck --check-prefix=CHECK --check-prefix=FAST %s
 
 define i32 @icmp_eq_i8(i8 zeroext %a) {
 ; CHECK-LABEL: icmp_eq_i8

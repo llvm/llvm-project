@@ -36,7 +36,7 @@ StringRef Binary::getFileName() const { return Data.getBufferIdentifier(); }
 
 MemoryBufferRef Binary::getMemoryBufferRef() const { return Data; }
 
-ErrorOr<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
+Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
                                                       LLVMContext *Context) {
   sys::fs::file_magic Type = sys::fs::identify_magic(Buffer.getBuffer());
 
@@ -69,22 +69,22 @@ ErrorOr<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
     case sys::fs::file_magic::unknown:
     case sys::fs::file_magic::windows_resource:
       // Unrecognized object file format.
-      return object_error::invalid_file_type;
+      return errorCodeToError(object_error::invalid_file_type);
   }
   llvm_unreachable("Unexpected Binary File Type");
 }
 
-ErrorOr<OwningBinary<Binary>> object::createBinary(StringRef Path) {
+Expected<OwningBinary<Binary>> object::createBinary(StringRef Path) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(Path);
   if (std::error_code EC = FileOrErr.getError())
-    return EC;
+    return errorCodeToError(EC);
   std::unique_ptr<MemoryBuffer> &Buffer = FileOrErr.get();
 
-  ErrorOr<std::unique_ptr<Binary>> BinOrErr =
+  Expected<std::unique_ptr<Binary>> BinOrErr =
       createBinary(Buffer->getMemBufferRef());
-  if (std::error_code EC = BinOrErr.getError())
-    return EC;
+  if (!BinOrErr)
+    return BinOrErr.takeError();
   std::unique_ptr<Binary> &Bin = BinOrErr.get();
 
   return OwningBinary<Binary>(std::move(Bin), std::move(Buffer));

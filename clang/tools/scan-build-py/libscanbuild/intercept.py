@@ -31,9 +31,9 @@ import argparse
 import logging
 import subprocess
 from libear import build_libear, TemporaryDirectory
-from libscanbuild import duplicate_check, tempdir, initialize_logging
 from libscanbuild import command_entry_point
-from libscanbuild.command import Action, classify_parameters
+from libscanbuild import duplicate_check, tempdir, initialize_logging
+from libscanbuild.compilation import split_command
 from libscanbuild.shell import encode, decode
 
 __all__ = ['capture', 'intercept_build_main', 'intercept_build_wrapper']
@@ -72,23 +72,23 @@ def capture(args, bin_dir):
         from the arguments. And do shell escaping on the command.
 
         To support incremental builds, it is desired to read elements from
-        an existing compilation database from a previous run. These elemets
+        an existing compilation database from a previous run. These elements
         shall be merged with the new elements. """
 
         # create entries from the current run
         current = itertools.chain.from_iterable(
             # creates a sequence of entry generators from an exec,
-            # but filter out non compiler calls before.
-            (format_entry(x) for x in commands if is_compiler_call(x)))
+            format_entry(command) for command in commands)
         # read entries from previous run
-        if 'append' in args and args.append and os.path.exists(args.cdb):
+        if 'append' in args and args.append and os.path.isfile(args.cdb):
             with open(args.cdb) as handle:
                 previous = iter(json.load(handle))
         else:
             previous = iter([])
         # filter out duplicate entries from both
         duplicate = duplicate_check(entry_hash)
-        return (entry for entry in itertools.chain(previous, current)
+        return (entry
+                for entry in itertools.chain(previous, current)
                 if os.path.exists(entry['file']) and not duplicate(entry))
 
     with TemporaryDirectory(prefix='intercept-', dir=tempdir()) as tmp_dir:
@@ -98,14 +98,14 @@ def capture(args, bin_dir):
         exit_code = subprocess.call(args.build, env=environment)
         logging.info('build finished with exit code: %d', exit_code)
         # read the intercepted exec calls
-        commands = itertools.chain.from_iterable(
+        exec_traces = itertools.chain.from_iterable(
             parse_exec_trace(os.path.join(tmp_dir, filename))
             for filename in sorted(glob.iglob(os.path.join(tmp_dir, '*.cmd'))))
         # do post processing only if that was requested
         if 'raw_entries' not in args or not args.raw_entries:
-            entries = post_processing(commands)
+            entries = post_processing(exec_traces)
         else:
-            entries = commands
+            entries = exec_traces
         # dump the compilation database
         with open(args.cdb, 'w+') as handle:
             json.dump(list(entries), handle, sort_keys=True, indent=4)
@@ -209,7 +209,7 @@ def parse_exec_trace(filename):
             }
 
 
-def format_entry(entry):
+def format_entry(exec_trace):
     """ Generate the desired fields for compilation database entries. """
 
     def abspath(cwd, name):
@@ -217,38 +217,18 @@ def format_entry(entry):
         fullname = name if os.path.isabs(name) else os.path.join(cwd, name)
         return os.path.normpath(fullname)
 
-    logging.debug('format this command: %s', entry['command'])
-    atoms = classify_parameters(entry['command'])
-    if atoms['action'] <= Action.Compile:
-        for source in atoms['files']:
-            compiler = 'c++' if atoms['c++'] else 'cc'
-            flags = atoms['compile_options']
-            flags += ['-o', atoms['output']] if atoms['output'] else []
-            flags += ['-x', atoms['language']] if 'language' in atoms else []
-            flags += [elem
-                      for arch in atoms.get('archs_seen', [])
-                      for elem in ['-arch', arch]]
-            command = [compiler, '-c'] + flags + [source]
+    logging.debug('format this command: %s', exec_trace['command'])
+    compilation = split_command(exec_trace['command'])
+    if compilation:
+        for source in compilation.files:
+            compiler = 'c++' if compilation.compiler == 'c++' else 'cc'
+            command = [compiler, '-c'] + compilation.flags + [source]
             logging.debug('formated as: %s', command)
             yield {
-                'directory': entry['directory'],
+                'directory': exec_trace['directory'],
                 'command': encode(command),
-                'file': abspath(entry['directory'], source)
+                'file': abspath(exec_trace['directory'], source)
             }
-
-
-def is_compiler_call(entry):
-    """ A predicate to decide the entry is a compiler call or not. """
-
-    patterns = [
-        re.compile(r'^([^/]*/)*intercept-c(c|\+\+)$'),
-        re.compile(r'^([^/]*/)*c(c|\+\+)$'),
-        re.compile(r'^([^/]*/)*([^-]*-)*[mg](cc|\+\+)(-\d+(\.\d+){0,2})?$'),
-        re.compile(r'^([^/]*/)*([^-]*-)*clang(\+\+)?(-\d+(\.\d+){0,2})?$'),
-        re.compile(r'^([^/]*/)*llvm-g(cc|\+\+)$'),
-    ]
-    executable = entry['command'][0]
-    return any((pattern.match(executable) for pattern in patterns))
 
 
 def is_preload_disabled(platform):

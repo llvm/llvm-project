@@ -1,4 +1,4 @@
-; RUN: llc -mtriple="powerpc64le-unknown-linux-gnu" -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple="powerpc64le-unknown-linux-gnu" -relocation-model=pic < %s | FileCheck %s
 
 @a = thread_local global i32* null, align 8
 

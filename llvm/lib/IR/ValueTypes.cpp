@@ -55,6 +55,11 @@ bool EVT::isExtendedInteger() const {
   return LLVMTy->isIntOrIntVectorTy();
 }
 
+bool EVT::isExtendedScalarInteger() const {
+  assert(isExtended() && "Type is not extended!");
+  return LLVMTy->isIntegerTy();
+}
+
 bool EVT::isExtendedVector() const {
   assert(isExtended() && "Type is not extended!");
   return LLVMTy->isVectorTy();

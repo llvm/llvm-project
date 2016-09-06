@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Werror | FileCheck %s
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Werror | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin -target-feature +ssse3 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin -target-feature +ssse3 -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 // Don't include mm_malloc.h, it's system specific.
 #define __MM_MALLOC_H
@@ -44,8 +44,8 @@ __m64 test_mm_add_pi32(__m64 a, __m64 b) {
 
 __m64 test_mm_add_si64(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_add_si64
-  // CHECK: call x86_mmx @llvm.x86.mmx.padd.q
-  return __builtin_ia32_paddq(a, b);
+  // CHECK: call x86_mmx @llvm.x86.mmx.padd.q(x86_mmx %{{.*}}, x86_mmx %{{.*}})
+  return _mm_add_si64(a, b);
 }
 
 __m64 test_mm_adds_pi8(__m64 a, __m64 b) {
@@ -217,6 +217,12 @@ __m64 test_mm_cvttps_pi32(__m128 a) {
   return _mm_cvttps_pi32(a);
 }
 
+int test_mm_extract_pi16(__m64 a) {
+  // CHECK-LABEL: test_mm_extract_pi16
+  // CHECK: call i32 @llvm.x86.mmx.pextr.w
+  return _mm_extract_pi16(a, 2);
+}
+
 __m64 test_m_from_int(int a) {
   // CHECK-LABEL: test_m_from_int
   // CHECK: insertelement <2 x i32>
@@ -263,6 +269,12 @@ __m64 test_mm_hsubs_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_hsubs_pi16
   // CHECK: call x86_mmx @llvm.x86.ssse3.phsub.sw
   return _mm_hsubs_pi16(a, b);
+}
+
+__m64 test_mm_insert_pi16(__m64 a, int d) {
+  // CHECK-LABEL: test_mm_insert_pi16
+  // CHECK: call x86_mmx @llvm.x86.mmx.pinsr.w
+  return _mm_insert_pi16(a, d, 2);
 }
 
 __m64 test_mm_madd_pi16(__m64 a, __m64 b) {
@@ -315,7 +327,7 @@ int test_mm_movemask_pi8(__m64 a) {
 
 __m64 test_mm_mul_su32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_mul_su32
-  // CHECK: call x86_mmx @llvm.x86.mmx.pmulu.dq
+  // CHECK: call x86_mmx @llvm.x86.mmx.pmulu.dq(x86_mmx %{{.*}}, x86_mmx %{{.*}})
   return _mm_mul_su32(a, b);
 }
 
@@ -525,8 +537,8 @@ __m64 test_mm_sub_pi32(__m64 a, __m64 b) {
 
 __m64 test_mm_sub_si64(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sub_si64
-  // CHECK: call x86_mmx @llvm.x86.mmx.psub.q
-  return __builtin_ia32_psubq(a, b);
+  // CHECK: call x86_mmx @llvm.x86.mmx.psub.q(x86_mmx %{{.*}}, x86_mmx %{{.*}})
+  return _mm_sub_si64(a, b);
 }
 
 __m64 test_mm_subs_pi8(__m64 a, __m64 b) {

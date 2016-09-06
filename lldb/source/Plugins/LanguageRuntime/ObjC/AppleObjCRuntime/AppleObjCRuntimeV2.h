@@ -345,7 +345,7 @@ private:
 
     bool
     UpdateISAToDescriptorMapFromMemory (RemoteNXMapTable &hash_table);
-    
+
     DescriptorMapUpdateResult
     UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table);
 

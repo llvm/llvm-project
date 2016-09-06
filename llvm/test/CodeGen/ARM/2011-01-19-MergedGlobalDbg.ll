@@ -78,16 +78,16 @@ entry:
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!49}
 
-!0 = distinct !DISubprogram(name: "get1", linkageName: "get1", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 4, file: !47, scope: !1, type: !3, variables: !42)
+!0 = distinct !DISubprogram(name: "get1", linkageName: "get1", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 4, file: !47, scope: !1, type: !3, variables: !42)
 !1 = !DIFile(filename: "foo.c", directory: "/tmp/")
-!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 2369.8)", isOptimized: true, emissionKind: 0, file: !47, enums: !48, retainedTypes: !48, subprograms: !40, globals: !41, imports:  !48)
+!2 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build 2369.8)", isOptimized: true, emissionKind: FullDebug, file: !47, enums: !48, retainedTypes: !48, globals: !41, imports:  !48)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5, !5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "_Bool", size: 8, align: 8, encoding: DW_ATE_boolean)
-!6 = distinct !DISubprogram(name: "get2", linkageName: "get2", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 7, file: !47, scope: !1, type: !3, variables: !43)
-!7 = distinct !DISubprogram(name: "get3", linkageName: "get3", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 10, file: !47, scope: !1, type: !3, variables: !44)
-!8 = distinct !DISubprogram(name: "get4", linkageName: "get4", line: 13, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 13, file: !47, scope: !1, type: !3, variables: !45)
-!9 = distinct !DISubprogram(name: "get5", linkageName: "get5", line: 16, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 16, file: !47, scope: !1, type: !3, variables: !46)
+!6 = distinct !DISubprogram(name: "get2", linkageName: "get2", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 7, file: !47, scope: !1, type: !3, variables: !43)
+!7 = distinct !DISubprogram(name: "get3", linkageName: "get3", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 10, file: !47, scope: !1, type: !3, variables: !44)
+!8 = distinct !DISubprogram(name: "get4", linkageName: "get4", line: 13, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 13, file: !47, scope: !1, type: !3, variables: !45)
+!9 = distinct !DISubprogram(name: "get5", linkageName: "get5", line: 16, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 16, file: !47, scope: !1, type: !3, variables: !46)
 !10 = !DILocalVariable(name: "a", line: 4, arg: 1, scope: !0, file: !1, type: !5)
 !11 = !DILocalVariable(name: "b", line: 4, scope: !12, file: !1, type: !5)
 !12 = distinct !DILexicalBlock(line: 4, column: 0, file: !47, scope: !0)
@@ -118,7 +118,6 @@ entry:
 !37 = !DILocation(line: 13, scope: !26)
 !38 = !DILocation(line: 16, scope: !9)
 !39 = !DILocation(line: 16, scope: !29)
-!40 = !{!0, !6, !7, !8, !9}
 !41 = !{!13, !14, !15, !16, !17}
 !42 = !{!10, !11}
 !43 = !{!18, !19}

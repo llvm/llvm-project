@@ -1,9 +1,8 @@
-; RUN: llc -march arm64 < %s -aarch64-collect-loh=false | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios3.0.0 -aarch64-enable-collect-loh=false | FileCheck %s
 ; rdar://13452552
 ; Disable the collecting of LOH so that the labels do not get in the
 ; way of the NEXT patterns.
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n32:64-S128"
-target triple = "arm64-apple-ios3.0.0"
 
 @block = common global i8* null, align 8
 

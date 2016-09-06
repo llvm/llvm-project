@@ -28,6 +28,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include <map>
 
 namespace llvm {
@@ -108,11 +109,11 @@ public:
 
   // Check if the resources occupied by a machine instruction are available
   // in the current state.
-  bool canReserveResources(llvm::MachineInstr *MI);
+  bool canReserveResources(llvm::MachineInstr &MI);
 
   // Reserve the resources occupied by a machine instruction and change the
   // current state to reflect that change.
-  void reserveResources(llvm::MachineInstr *MI);
+  void reserveResources(llvm::MachineInstr &MI);
 
   const InstrItineraryData *getInstrItins() const { return InstrItins; }
 };
@@ -156,33 +157,31 @@ public:
   DFAPacketizer *getResourceTracker() {return ResourceTracker;}
 
   // addToPacket - Add MI to the current packet.
-  virtual MachineBasicBlock::iterator addToPacket(MachineInstr *MI) {
-    MachineBasicBlock::iterator MII = MI;
-    CurrentPacketMIs.push_back(MI);
+  virtual MachineBasicBlock::iterator addToPacket(MachineInstr &MI) {
+    CurrentPacketMIs.push_back(&MI);
     ResourceTracker->reserveResources(MI);
-    return MII;
+    return MI;
   }
 
   // End the current packet and reset the state of the packetizer.
   // Overriding this function allows the target-specific packetizer
   // to perform custom finalization.
-  virtual void endPacket(MachineBasicBlock *MBB, MachineInstr *MI);
+  virtual void endPacket(MachineBasicBlock *MBB,
+                         MachineBasicBlock::iterator MI);
 
   // Perform initialization before packetizing an instruction. This
   // function is supposed to be overrided by the target dependent packetizer.
   virtual void initPacketizerState() {}
 
   // Check if the given instruction I should be ignored by the packetizer.
-  virtual bool ignorePseudoInstruction(const MachineInstr *I,
+  virtual bool ignorePseudoInstruction(const MachineInstr &I,
                                        const MachineBasicBlock *MBB) {
     return false;
   }
 
   // Return true if instruction MI can not be packetized with any other
   // instruction, which means that MI itself is a packet.
-  virtual bool isSoloInstruction(const MachineInstr *MI) {
-    return true;
-  }
+  virtual bool isSoloInstruction(const MachineInstr &MI) { return true; }
 
   // Check if the packetizer should try to add the given instruction to
   // the current packet. One reasons for which it may not be desirable
@@ -190,9 +189,7 @@ public:
   // would cause a stall.
   // If this function returns "false", the current packet will be ended,
   // and the instruction will be added to the next packet.
-  virtual bool shouldAddToPacket(const MachineInstr *MI) {
-    return true;
-  }
+  virtual bool shouldAddToPacket(const MachineInstr &MI) { return true; }
 
   // Check if it is legal to packetize SUI and SUJ together.
   virtual bool isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
@@ -203,6 +200,9 @@ public:
   virtual bool isLegalToPruneDependencies(SUnit *SUI, SUnit *SUJ) {
     return false;
   }
+
+  // Add a DAG mutation to be done before the packetization begins.
+  void addMutation(std::unique_ptr<ScheduleDAGMutation> Mutation);
 };
 
 } // namespace llvm

@@ -9,7 +9,7 @@ target triple = "aarch64_be--none-eabi"
 !llvm.module.flags = !{!8, !9}
 !llvm.ident = !{!10}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0 ", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !3, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.6.0 ", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !3, imports: !2)
 !1 = !DIFile(filename: "-", directory: "/work/validation")
 !2 = !{}
 !3 = !{!4}

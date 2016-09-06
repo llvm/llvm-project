@@ -40,6 +40,7 @@ enum AsmRewriteKind {
   AOK_Output,         // Rewrite in terms of $N.
   AOK_SizeDirective,  // Add a sizing directive (e.g., dword ptr).
   AOK_Label,          // Rewrite local labels.
+  AOK_EndOfStatement, // Add EndOfStatement (e.g., "\n\t").
   AOK_Skip            // Skip emission (e.g., offset/type operators).
 };
 
@@ -55,6 +56,7 @@ const char AsmRewritePrecedence [] = {
   3, // AOK_Output
   5, // AOK_SizeDirective
   1, // AOK_Label
+  5, // AOK_EndOfStatement
   2  // AOK_Skip
 };
 
@@ -194,6 +196,13 @@ public:
     return Match_InvalidOperand;
   }
 
+  /// Validate the instruction match against any complex target predicates
+  /// before rendering any operands to it.
+  virtual unsigned
+  checkEarlyTargetMatchPredicate(MCInst &Inst, const OperandVector &Operands) {
+    return Match_Success;
+  }
+
   /// checkTargetMatchPredicate - Validate the instruction match against
   /// any complex target predicates not expressible via match classes.
   virtual unsigned checkTargetMatchPredicate(MCInst &Inst) {
@@ -215,6 +224,16 @@ public:
   }
 
   virtual void onLabelParsed(MCSymbol *Symbol) { }
+
+  /// Ensure that all previously parsed instructions have been emitted to the
+  /// output streamer, if the target does not emit them immediately.
+  virtual void flushPendingInstructions(MCStreamer &Out) { }
+
+  virtual const MCExpr *createTargetUnaryExpr(const MCExpr *E,
+                                              AsmToken::TokenKind OperatorToken,
+                                              MCContext &Ctx) {
+    return nullptr;
+  }
 };
 
 } // End llvm namespace

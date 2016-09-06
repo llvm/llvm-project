@@ -41,19 +41,16 @@ bool GetInfoForAddressIfGlobal(uptr addr, AddressDescription *descr);
 // The following functions prints address description depending
 // on the memory type (shadow/heap/stack/global).
 void DescribeHeapAddress(uptr addr, uptr access_size);
-bool DescribeAddressIfShadow(uptr addr, AddressDescription *descr = nullptr,
-                             bool print = true);
 bool ParseFrameDescription(const char *frame_descr,
                            InternalMmapVector<StackVarDescr> *vars);
 bool DescribeAddressIfStack(uptr addr, uptr access_size);
-void DescribeThread(AsanThreadContext *context);
 
 // Different kinds of error reports.
 void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
                         uptr access_size, u32 exp, bool fatal);
 void ReportStackOverflow(const SignalContext &sig);
 void ReportDeadlySignal(const char *description, const SignalContext &sig);
-void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
+void ReportNewDeleteSizeMismatch(uptr addr, uptr alloc_size, uptr delete_size,
                                  BufferedStackTrace *free_stack);
 void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack);
 void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack);

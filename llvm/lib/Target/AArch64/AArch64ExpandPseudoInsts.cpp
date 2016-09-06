@@ -17,14 +17,11 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Support/MathExtras.h"
 using namespace llvm;
-
-namespace llvm {
-void initializeAArch64ExpandPseudoPass(PassRegistry &);
-}
 
 #define AARCH64_EXPAND_PSEUDO_NAME "AArch64 pseudo instruction expansion pass"
 
@@ -46,9 +43,18 @@ public:
 
 private:
   bool expandMBB(MachineBasicBlock &MBB);
-  bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
+  bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                MachineBasicBlock::iterator &NextMBBI);
   bool expandMOVImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                     unsigned BitSize);
+
+  bool expandCMP_SWAP(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                      unsigned LdarOp, unsigned StlrOp, unsigned CmpOp,
+                      unsigned ExtendImm, unsigned ZeroReg,
+                      MachineBasicBlock::iterator &NextMBBI);
+  bool expandCMP_SWAP_128(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          MachineBasicBlock::iterator &NextMBBI);
 };
 char AArch64ExpandPseudo::ID = 0;
 }
@@ -403,8 +409,16 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MBBI,
                                        unsigned BitSize) {
   MachineInstr &MI = *MBBI;
+  unsigned DstReg = MI.getOperand(0).getReg();
   uint64_t Imm = MI.getOperand(1).getImm();
   const unsigned Mask = 0xFFFF;
+
+  if (DstReg == AArch64::XZR || DstReg == AArch64::WZR) {
+    // Useless def, and we don't want to risk creating an invalid ORR (which
+    // would really write to sp).
+    MI.eraseFromParent();
+    return true;
+  }
 
   // Try a MOVI instruction (aka ORR-immediate with the zero register).
   uint64_t UImm = Imm << (64 - BitSize) >> (64 - BitSize);
@@ -531,7 +545,6 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
     LastShift = (TZ / 16) * 16;
   }
   unsigned Imm16 = (Imm >> Shift) & Mask;
-  unsigned DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
   MachineInstrBuilder MIB1 =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(FirstOpc))
@@ -572,10 +585,178 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
   return true;
 }
 
+static void addPostLoopLiveIns(MachineBasicBlock *MBB, LivePhysRegs &LiveRegs) {
+  for (auto I = LiveRegs.begin(); I != LiveRegs.end(); ++I)
+    MBB->addLiveIn(*I);
+}
+
+bool AArch64ExpandPseudo::expandCMP_SWAP(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned LdarOp,
+    unsigned StlrOp, unsigned CmpOp, unsigned ExtendImm, unsigned ZeroReg,
+    MachineBasicBlock::iterator &NextMBBI) {
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  MachineOperand &Dest = MI.getOperand(0);
+  unsigned StatusReg = MI.getOperand(1).getReg();
+  MachineOperand &Addr = MI.getOperand(2);
+  MachineOperand &Desired = MI.getOperand(3);
+  MachineOperand &New = MI.getOperand(4);
+
+  LivePhysRegs LiveRegs(&TII->getRegisterInfo());
+  LiveRegs.addLiveOuts(MBB);
+  for (auto I = std::prev(MBB.end()); I != MBBI; --I)
+    LiveRegs.stepBackward(*I);
+
+  MachineFunction *MF = MBB.getParent();
+  auto LoadCmpBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto StoreBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto DoneBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+
+  MF->insert(++MBB.getIterator(), LoadCmpBB);
+  MF->insert(++LoadCmpBB->getIterator(), StoreBB);
+  MF->insert(++StoreBB->getIterator(), DoneBB);
+
+  // .Lloadcmp:
+  //     ldaxr xDest, [xAddr]
+  //     cmp xDest, xDesired
+  //     b.ne .Ldone
+  LoadCmpBB->addLiveIn(Addr.getReg());
+  LoadCmpBB->addLiveIn(Dest.getReg());
+  LoadCmpBB->addLiveIn(Desired.getReg());
+  addPostLoopLiveIns(LoadCmpBB, LiveRegs);
+
+  BuildMI(LoadCmpBB, DL, TII->get(LdarOp), Dest.getReg())
+      .addReg(Addr.getReg());
+  BuildMI(LoadCmpBB, DL, TII->get(CmpOp), ZeroReg)
+      .addReg(Dest.getReg(), getKillRegState(Dest.isDead()))
+      .addOperand(Desired)
+      .addImm(ExtendImm);
+  BuildMI(LoadCmpBB, DL, TII->get(AArch64::Bcc))
+      .addImm(AArch64CC::NE)
+      .addMBB(DoneBB)
+      .addReg(AArch64::NZCV, RegState::Implicit | RegState::Kill);
+  LoadCmpBB->addSuccessor(DoneBB);
+  LoadCmpBB->addSuccessor(StoreBB);
+
+  // .Lstore:
+  //     stlxr wStatus, xNew, [xAddr]
+  //     cbnz wStatus, .Lloadcmp
+  StoreBB->addLiveIn(Addr.getReg());
+  StoreBB->addLiveIn(New.getReg());
+  addPostLoopLiveIns(StoreBB, LiveRegs);
+
+  BuildMI(StoreBB, DL, TII->get(StlrOp), StatusReg)
+      .addOperand(New)
+      .addOperand(Addr);
+  BuildMI(StoreBB, DL, TII->get(AArch64::CBNZW))
+      .addReg(StatusReg, RegState::Kill)
+      .addMBB(LoadCmpBB);
+  StoreBB->addSuccessor(LoadCmpBB);
+  StoreBB->addSuccessor(DoneBB);
+
+  DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
+  DoneBB->transferSuccessors(&MBB);
+  addPostLoopLiveIns(DoneBB, LiveRegs);
+
+  MBB.addSuccessor(LoadCmpBB);
+
+  NextMBBI = MBB.end();
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64ExpandPseudo::expandCMP_SWAP_128(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  MachineOperand &DestLo = MI.getOperand(0);
+  MachineOperand &DestHi = MI.getOperand(1);
+  unsigned StatusReg = MI.getOperand(2).getReg();
+  MachineOperand &Addr = MI.getOperand(3);
+  MachineOperand &DesiredLo = MI.getOperand(4);
+  MachineOperand &DesiredHi = MI.getOperand(5);
+  MachineOperand &NewLo = MI.getOperand(6);
+  MachineOperand &NewHi = MI.getOperand(7);
+
+  LivePhysRegs LiveRegs(&TII->getRegisterInfo());
+  LiveRegs.addLiveOuts(MBB);
+  for (auto I = std::prev(MBB.end()); I != MBBI; --I)
+    LiveRegs.stepBackward(*I);
+
+  MachineFunction *MF = MBB.getParent();
+  auto LoadCmpBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto StoreBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto DoneBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+
+  MF->insert(++MBB.getIterator(), LoadCmpBB);
+  MF->insert(++LoadCmpBB->getIterator(), StoreBB);
+  MF->insert(++StoreBB->getIterator(), DoneBB);
+
+  // .Lloadcmp:
+  //     ldaxp xDestLo, xDestHi, [xAddr]
+  //     cmp xDestLo, xDesiredLo
+  //     sbcs xDestHi, xDesiredHi
+  //     b.ne .Ldone
+  LoadCmpBB->addLiveIn(Addr.getReg());
+  LoadCmpBB->addLiveIn(DestLo.getReg());
+  LoadCmpBB->addLiveIn(DestHi.getReg());
+  LoadCmpBB->addLiveIn(DesiredLo.getReg());
+  LoadCmpBB->addLiveIn(DesiredHi.getReg());
+  addPostLoopLiveIns(LoadCmpBB, LiveRegs);
+
+  BuildMI(LoadCmpBB, DL, TII->get(AArch64::LDAXPX))
+      .addReg(DestLo.getReg(), RegState::Define)
+      .addReg(DestHi.getReg(), RegState::Define)
+      .addReg(Addr.getReg());
+  BuildMI(LoadCmpBB, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
+      .addReg(DestLo.getReg(), getKillRegState(DestLo.isDead()))
+      .addOperand(DesiredLo)
+      .addImm(0);
+  BuildMI(LoadCmpBB, DL, TII->get(AArch64::SBCSXr), AArch64::XZR)
+      .addReg(DestHi.getReg(), getKillRegState(DestHi.isDead()))
+      .addOperand(DesiredHi);
+  BuildMI(LoadCmpBB, DL, TII->get(AArch64::Bcc))
+      .addImm(AArch64CC::NE)
+      .addMBB(DoneBB)
+      .addReg(AArch64::NZCV, RegState::Implicit | RegState::Kill);
+  LoadCmpBB->addSuccessor(DoneBB);
+  LoadCmpBB->addSuccessor(StoreBB);
+
+  // .Lstore:
+  //     stlxp wStatus, xNewLo, xNewHi, [xAddr]
+  //     cbnz wStatus, .Lloadcmp
+  StoreBB->addLiveIn(Addr.getReg());
+  StoreBB->addLiveIn(NewLo.getReg());
+  StoreBB->addLiveIn(NewHi.getReg());
+  addPostLoopLiveIns(StoreBB, LiveRegs);
+  BuildMI(StoreBB, DL, TII->get(AArch64::STLXPX), StatusReg)
+      .addOperand(NewLo)
+      .addOperand(NewHi)
+      .addOperand(Addr);
+  BuildMI(StoreBB, DL, TII->get(AArch64::CBNZW))
+      .addReg(StatusReg, RegState::Kill)
+      .addMBB(LoadCmpBB);
+  StoreBB->addSuccessor(LoadCmpBB);
+  StoreBB->addSuccessor(DoneBB);
+
+  DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
+  DoneBB->transferSuccessors(&MBB);
+  addPostLoopLiveIns(DoneBB, LiveRegs);
+
+  MBB.addSuccessor(LoadCmpBB);
+
+  NextMBBI = MBB.end();
+  MI.eraseFromParent();
+  return true;
+}
+
 /// \brief If MBBI references a pseudo instruction that should be expanded here,
 /// do the expansion and return true.  Otherwise return false.
 bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MBBI) {
+                                   MachineBasicBlock::iterator MBBI,
+                                   MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
   unsigned Opcode = MI.getOpcode();
   switch (Opcode) {
@@ -717,6 +898,28 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     MI.eraseFromParent();
     return true;
   }
+  case AArch64::CMP_SWAP_8:
+    return expandCMP_SWAP(MBB, MBBI, AArch64::LDAXRB, AArch64::STLXRB,
+                          AArch64::SUBSWrx,
+                          AArch64_AM::getArithExtendImm(AArch64_AM::UXTB, 0),
+                          AArch64::WZR, NextMBBI);
+  case AArch64::CMP_SWAP_16:
+    return expandCMP_SWAP(MBB, MBBI, AArch64::LDAXRH, AArch64::STLXRH,
+                          AArch64::SUBSWrx,
+                          AArch64_AM::getArithExtendImm(AArch64_AM::UXTH, 0),
+                          AArch64::WZR, NextMBBI);
+  case AArch64::CMP_SWAP_32:
+    return expandCMP_SWAP(MBB, MBBI, AArch64::LDAXRW, AArch64::STLXRW,
+                          AArch64::SUBSWrs,
+                          AArch64_AM::getShifterImm(AArch64_AM::LSL, 0),
+                          AArch64::WZR, NextMBBI);
+  case AArch64::CMP_SWAP_64:
+    return expandCMP_SWAP(MBB, MBBI,
+                          AArch64::LDAXRX, AArch64::STLXRX, AArch64::SUBSXrs,
+                          AArch64_AM::getShifterImm(AArch64_AM::LSL, 0),
+                          AArch64::XZR, NextMBBI);
+  case AArch64::CMP_SWAP_128:
+    return expandCMP_SWAP_128(MBB, MBBI, NextMBBI);
   }
   return false;
 }
@@ -729,7 +932,7 @@ bool AArch64ExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
   while (MBBI != E) {
     MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI);
+    Modified |= expandMI(MBB, MBBI, NMBBI);
     MBBI = NMBBI;
   }
 

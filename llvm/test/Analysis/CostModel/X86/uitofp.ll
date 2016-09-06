@@ -41,10 +41,10 @@ define <8 x double> @uitofpv8i8v8double(<8 x i8> %a) {
   ; SSE2: cost of 80 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv8i8v8double
-  ; AVX1: cost of 20 {{.*}} uitofp
+  ; AVX1: cost of 5 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv8i8v8double
-  ; AVX2: cost of 20 {{.*}} uitofp
+  ; AVX2: cost of 5 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv8i8v8double
   ; AVX512F: cost of 2 {{.*}} uitofp
@@ -57,13 +57,13 @@ define <16 x double> @uitofpv16i8v16double(<16 x i8> %a) {
   ; SSE2: cost of 160 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv16i8v16double
-  ; AVX1: cost of 40 {{.*}} uitofp
+  ; AVX1: cost of 11 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv16i8v16double
-  ; AVX2: cost of 40 {{.*}} uitofp
+  ; AVX2: cost of 11 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv16i8v16double
-  ; AVX512F: cost of 44 {{.*}} uitofp
+  ; AVX512F: cost of 5 {{.*}} uitofp
   %1 = uitofp <16 x i8> %a to <16 x double>
   ret <16 x double> %1
 }
@@ -73,13 +73,13 @@ define <32 x double> @uitofpv32i8v32double(<32 x i8> %a) {
   ; SSE2: cost of 320 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv32i8v32double
-  ; AVX1: cost of 80 {{.*}} uitofp
+  ; AVX1: cost of 23 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv32i8v32double
-  ; AVX2: cost of 80 {{.*}} uitofp
+  ; AVX2: cost of 23 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv32i8v32double
-  ; AVX512F: cost of 88 {{.*}} uitofp
+  ; AVX512F: cost of 11 {{.*}} uitofp
   %1 = uitofp <32 x i8> %a to <32 x double>
   ret <32 x double> %1
 }
@@ -121,10 +121,10 @@ define <8 x double> @uitofpv8i16v8double(<8 x i16> %a) {
   ; SSE2: cost of 80 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv8i16v8double
-  ; AVX1: cost of 20 {{.*}} uitofp
+  ; AVX1: cost of 5 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv8i16v8double
-  ; AVX2: cost of 20 {{.*}} uitofp
+  ; AVX2: cost of 5 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv8i16v8double
   ; AVX512F: cost of 2 {{.*}} uitofp
@@ -137,13 +137,13 @@ define <16 x double> @uitofpv16i16v16double(<16 x i16> %a) {
   ; SSE2: cost of 160 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv16i16v16double
-  ; AVX1: cost of 40 {{.*}} uitofp
+  ; AVX1: cost of 11 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv16i16v16double
-  ; AVX2: cost of 40 {{.*}} uitofp
+  ; AVX2: cost of 11 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv16i16v16double
-  ; AVX512F: cost of 44 {{.*}} uitofp
+  ; AVX512F: cost of 5 {{.*}} uitofp
   %1 = uitofp <16 x i16> %a to <16 x double>
   ret <16 x double> %1
 }
@@ -153,13 +153,13 @@ define <32 x double> @uitofpv32i16v32double(<32 x i16> %a) {
   ; SSE2: cost of 320 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv32i16v32double
-  ; AVX1: cost of 80 {{.*}} uitofp
+  ; AVX1: cost of 23 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv32i16v32double
-  ; AVX2: cost of 80 {{.*}} uitofp
+  ; AVX2: cost of 23 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv32i16v32double
-  ; AVX512F: cost of 88 {{.*}} uitofp
+  ; AVX512F: cost of 11 {{.*}} uitofp
   %1 = uitofp <32 x i16> %a to <32 x double>
   ret <32 x double> %1
 }
@@ -169,13 +169,13 @@ define <2 x double> @uitofpv2i32v2double(<2 x i32> %a) {
   ; SSE2: cost of 20 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv2i32v2double
-  ; AVX1: cost of 4 {{.*}} uitofp
+  ; AVX1: cost of 6 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv2i32v2double
-  ; AVX2: cost of 4 {{.*}} uitofp
+  ; AVX2: cost of 6 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv2i32v2double
-  ; AVX512F: cost of 4 {{.*}} uitofp
+  ; AVX512F: cost of 1 {{.*}} uitofp
   %1 = uitofp <2 x i32> %a to <2 x double>
   ret <2 x double> %1
 }
@@ -201,10 +201,10 @@ define <8 x double> @uitofpv8i32v8double(<8 x i32> %a) {
   ; SSE2: cost of 80 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv8i32v8double
-  ; AVX1: cost of 20 {{.*}} uitofp
+  ; AVX1: cost of 13 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv8i32v8double
-  ; AVX2: cost of 20 {{.*}} uitofp
+  ; AVX2: cost of 13 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv8i32v8double
   ; AVX512F: cost of 1 {{.*}} uitofp
@@ -217,13 +217,13 @@ define <16 x double> @uitofpv16i32v16double(<16 x i32> %a) {
   ; SSE2: cost of 160 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv16i32v16double
-  ; AVX1: cost of 40 {{.*}} uitofp
+  ; AVX1: cost of 27 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv16i32v16double
-  ; AVX2: cost of 40 {{.*}} uitofp
+  ; AVX2: cost of 27 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv16i32v16double
-  ; AVX512F: cost of 44 {{.*}} uitofp
+  ; AVX512F: cost of 3 {{.*}} uitofp
   %1 = uitofp <16 x i32> %a to <16 x double>
   ret <16 x double> %1
 }
@@ -233,13 +233,13 @@ define <32 x double> @uitofpv32i32v32double(<32 x i32> %a) {
   ; SSE2: cost of 320 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv32i32v32double
-  ; AVX1: cost of 80 {{.*}} uitofp
+  ; AVX1: cost of 55 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv32i32v32double
-  ; AVX2: cost of 80 {{.*}} uitofp
+  ; AVX2: cost of 55 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv32i32v32double
-  ; AVX512F: cost of 88 {{.*}} uitofp
+  ; AVX512F: cost of 7 {{.*}} uitofp
   %1 = uitofp <32 x i32> %a to <32 x double>
   ret <32 x double> %1
 }
@@ -249,15 +249,15 @@ define <2 x double> @uitofpv2i64v2double(<2 x i64> %a) {
   ; SSE2: cost of 20 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv2i64v2double
-  ; AVX1: cost of 20 {{.*}} uitofp
+  ; AVX1: cost of 10 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv2i64v2double
-  ; AVX2: cost of 20 {{.*}} uitofp
+  ; AVX2: cost of 10 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv2i64v2double
   ; AVX512F: cost of 5 {{.*}} uitofp
   ;
-  ; AVX512DQ: uitofpv2i64v2double
+  ; AVX512DQ-LABEL: uitofpv2i64v2double
   ; AVX512DQ: cost of 1 {{.*}} uitofp
   %1 = uitofp <2 x i64> %a to <2 x double>
   ret <2 x double> %1
@@ -268,15 +268,15 @@ define <4 x double> @uitofpv4i64v4double(<4 x i64> %a) {
   ; SSE2: cost of 40 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv4i64v4double
-  ; AVX1: cost of 40 {{.*}} uitofp
+  ; AVX1: cost of 20 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv4i64v4double
-  ; AVX2: cost of 40 {{.*}} uitofp
+  ; AVX2: cost of 20 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv4i64v4double
   ; AVX512F: cost of 12 {{.*}} uitofp
   ;
-  ; AVX512DQ: uitofpv4i64v4double
+  ; AVX512DQ-LABEL: uitofpv4i64v4double
   ; AVX512DQ: cost of 1 {{.*}} uitofp
   %1 = uitofp <4 x i64> %a to <4 x double>
   ret <4 x double> %1
@@ -287,15 +287,15 @@ define <8 x double> @uitofpv8i64v8double(<8 x i64> %a) {
   ; SSE2: cost of 80 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv8i64v8double
-  ; AVX1: cost of 20 {{.*}} uitofp
+  ; AVX1: cost of 41 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv8i64v8double
-  ; AVX2: cost of 20 {{.*}} uitofp
+  ; AVX2: cost of 41 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv8i64v8double
   ; AVX512F: cost of 26 {{.*}} uitofp
   ;
-  ; AVX512DQ: uitofpv8i64v8double
+  ; AVX512DQ-LABEL: uitofpv8i64v8double
   ; AVX512DQ: cost of 1 {{.*}} uitofp
   %1 = uitofp <8 x i64> %a to <8 x double>
   ret <8 x double> %1
@@ -306,16 +306,16 @@ define <16 x double> @uitofpv16i64v16double(<16 x i64> %a) {
   ; SSE2: cost of 160 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv16i64v16double
-  ; AVX1: cost of 40 {{.*}} uitofp
+  ; AVX1: cost of 83 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv16i64v16double
-  ; AVX2: cost of 40 {{.*}} uitofp
+  ; AVX2: cost of 83 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv16i64v16double
-  ; AVX512F: cost of 44 {{.*}} uitofp
+  ; AVX512F: cost of 53 {{.*}} uitofp
   ;
-  ; AVX512DQ: uitofpv16i64v16double
-  ; AVX512DQ: cost of 44 {{.*}} uitofp
+  ; AVX512DQ-LABEL: uitofpv16i64v16double
+  ; AVX512DQ: cost of 3 {{.*}} uitofp
   %1 = uitofp <16 x i64> %a to <16 x double>
   ret <16 x double> %1
 }
@@ -325,16 +325,16 @@ define <32 x double> @uitofpv32i64v32double(<32 x i64> %a) {
   ; SSE2: cost of 320 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv32i64v32double
-  ; AVX1: cost of 80 {{.*}} uitofp
+  ; AVX1: cost of 167 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv32i64v32double
-  ; AVX2: cost of 80 {{.*}} uitofp
+  ; AVX2: cost of 167 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv32i64v32double
-  ; AVX512F: cost of 88 {{.*}} uitofp
+  ; AVX512F: cost of 107 {{.*}} uitofp
   ;
-  ; AVX512DQ: uitofpv32i64v32double
-  ; AVX512DQ: cost of 88 {{.*}} uitofp
+  ; AVX512DQ-LABEL: uitofpv32i64v32double
+  ; AVX512DQ: cost of 2 {{.*}} uitofp
   %1 = uitofp <32 x i64> %a to <32 x double>
   ret <32 x double> %1
 }
@@ -392,10 +392,10 @@ define <16 x float> @uitofpv16i8v16float(<16 x i8> %a) {
   ; SSE2: cost of 8 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv16i8v16float
-  ; AVX1: cost of 44 {{.*}} uitofp
+  ; AVX1: cost of 11 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv16i8v16float
-  ; AVX2: cost of 44 {{.*}} uitofp
+  ; AVX2: cost of 11 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv16i8v16float
   ; AVX512F: cost of 2 {{.*}} uitofp
@@ -408,13 +408,13 @@ define <32 x float> @uitofpv32i8v32float(<32 x i8> %a) {
   ; SSE2: cost of 16 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv32i8v32float
-  ; AVX1: cost of 88 {{.*}} uitofp
+  ; AVX1: cost of 23 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv32i8v32float
-  ; AVX2: cost of 88 {{.*}} uitofp
+  ; AVX2: cost of 23 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv32i8v32float
-  ; AVX512F: cost of 92 {{.*}} uitofp
+  ; AVX512F: cost of 5 {{.*}} uitofp
   %1 = uitofp <32 x i8> %a to <32 x float>
   ret <32 x float> %1
 }
@@ -472,10 +472,10 @@ define <16 x float> @uitofpv16i16v16float(<16 x i16> %a) {
   ; SSE2: cost of 30 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv16i16v16float
-  ; AVX1: cost of 44 {{.*}} uitofp
+  ; AVX1: cost of 11 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv16i16v16float
-  ; AVX2: cost of 44 {{.*}} uitofp
+  ; AVX2: cost of 11 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv16i16v16float
   ; AVX512F: cost of 2 {{.*}} uitofp
@@ -488,13 +488,13 @@ define <32 x float> @uitofpv32i16v32float(<32 x i16> %a) {
   ; SSE2: cost of 60 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv32i16v32float
-  ; AVX1: cost of 88 {{.*}} uitofp
+  ; AVX1: cost of 23 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv32i16v32float
-  ; AVX2: cost of 88 {{.*}} uitofp
+  ; AVX2: cost of 23 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv32i16v32float
-  ; AVX512F: cost of 92 {{.*}} uitofp
+  ; AVX512F: cost of 5 {{.*}} uitofp
   %1 = uitofp <32 x i16> %a to <32 x float>
   ret <32 x float> %1
 }
@@ -552,10 +552,10 @@ define <16 x float> @uitofpv16i32v16float(<16 x i32> %a) {
   ; SSE2: cost of 32 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv16i32v16float
-  ; AVX1: cost of 44 {{.*}} uitofp
+  ; AVX1: cost of 19 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv16i32v16float
-  ; AVX2: cost of 44 {{.*}} uitofp
+  ; AVX2: cost of 17 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv16i32v16float
   ; AVX512F: cost of 1 {{.*}} uitofp
@@ -568,13 +568,13 @@ define <32 x float> @uitofpv32i32v32float(<32 x i32> %a) {
   ; SSE2: cost of 64 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv32i32v32float
-  ; AVX1: cost of 88 {{.*}} uitofp
+  ; AVX1: cost of 39 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv32i32v32float
-  ; AVX2: cost of 88 {{.*}} uitofp
+  ; AVX2: cost of 35 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv32i32v32float
-  ; AVX512F: cost of 92 {{.*}} uitofp
+  ; AVX512F: cost of 3 {{.*}} uitofp
   %1 = uitofp <32 x i32> %a to <32 x float>
   ret <32 x float> %1
 }
@@ -590,7 +590,7 @@ define <2 x float> @uitofpv2i64v2float(<2 x i64> %a) {
   ; AVX2: cost of 4 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv2i64v2float
-  ; AVX512F: cost of 4 {{.*}} uitofp
+  ; AVX512F: cost of 5 {{.*}} uitofp
   %1 = uitofp <2 x i64> %a to <2 x float>
   ret <2 x float> %1
 }
@@ -616,13 +616,13 @@ define <8 x float> @uitofpv8i64v8float(<8 x i64> %a) {
   ; SSE2: cost of 60 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv8i64v8float
-  ; AVX1: cost of 22 {{.*}} uitofp
+  ; AVX1: cost of 21 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv8i64v8float
-  ; AVX2: cost of 22 {{.*}} uitofp
+  ; AVX2: cost of 21 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv8i64v8float
-  ; AVX512F: cost of 22 {{.*}} uitofp
+  ; AVX512F: cost of 26 {{.*}} uitofp
   %1 = uitofp <8 x i64> %a to <8 x float>
   ret <8 x float> %1
 }
@@ -632,13 +632,13 @@ define <16 x float> @uitofpv16i64v16float(<16 x i64> %a) {
   ; SSE2: cost of 120 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv16i64v16float
-  ; AVX1: cost of 44 {{.*}} uitofp
+  ; AVX1: cost of 43 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv16i64v16float
-  ; AVX2: cost of 44 {{.*}} uitofp
+  ; AVX2: cost of 43 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv16i64v16float
-  ; AVX512F: cost of 46 {{.*}} uitofp
+  ; AVX512F: cost of 53 {{.*}} uitofp
   %1 = uitofp <16 x i64> %a to <16 x float>
   ret <16 x float> %1
 }
@@ -648,13 +648,13 @@ define <32 x float> @uitofpv32i64v32float(<32 x i64> %a) {
   ; SSE2: cost of 240 {{.*}} uitofp
   ;
   ; AVX1-LABEL: uitofpv32i64v32float
-  ; AVX1: cost of 88 {{.*}} uitofp
+  ; AVX1: cost of 87 {{.*}} uitofp
   ;
   ; AVX2-LABEL: uitofpv32i64v32float
-  ; AVX2: cost of 88 {{.*}} uitofp
+  ; AVX2: cost of 87 {{.*}} uitofp
   ;
   ; AVX512F-LABEL: uitofpv32i64v32float
-  ; AVX512F: cost of 92 {{.*}} uitofp
+  ; AVX512F: cost of 107 {{.*}} uitofp
   %1 = uitofp <32 x i64> %a to <32 x float>
   ret <32 x float> %1
 }

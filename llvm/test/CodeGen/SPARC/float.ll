@@ -1,11 +1,13 @@
-; RUN: llc -march=sparc < %s | FileCheck %s -check-prefix=V8
+; RUN: llc -march=sparc < %s | FileCheck %s -check-prefix=V8 -check-prefix=V8-BE
+; RUN: llc -march=sparcel < %s | FileCheck %s -check-prefix=V8 -check-prefix=V8-EL
 ; RUN: llc -march=sparc -O0 < %s | FileCheck %s -check-prefix=V8-UNOPT
 ; RUN: llc -march=sparc -mattr=v9 < %s | FileCheck %s -check-prefix=V9
 ; RUN: llc -mtriple=sparc64-unknown-linux < %s | FileCheck %s -check-prefix=SPARC64
 
 ; V8-LABEL:     test_neg:
 ; V8:     call get_double
-; V8:     fnegs %f0, %f0
+; V8-BE:     fnegs %f0, %f0
+; V8-EL:     fnegs %f1, %f1
 
 ; V8-UNOPT-LABEL:     test_neg:
 ; V8-UNOPT:     fnegs
@@ -27,7 +29,8 @@ entry:
 }
 
 ; V8-LABEL:     test_abs:
-; V8:     fabss %f0, %f0
+; V8-BE:     fabss %f0, %f0
+; V8-EL:     fabss %f1, %f1
 
 ; V8-UNOPT-LABEL:     test_abs:
 ; V8-UNOPT:     fabss

@@ -34,6 +34,7 @@ class SanitizerArgs {
   bool CfiCrossDso = false;
   int AsanFieldPadding = 0;
   bool AsanSharedRuntime = false;
+  bool AsanUseAfterScope = false;
   bool LinkCXXRuntimes = false;
   bool NeedPIE = false;
   bool Stats = false;
@@ -58,6 +59,9 @@ class SanitizerArgs {
   bool needsCfiRt() const;
   bool needsCfiDiagRt() const;
   bool needsStatsRt() const { return Stats; }
+  bool needsEsanRt() const {
+    return Sanitizers.hasOneOf(SanitizerKind::Efficiency);
+  }
 
   bool requiresPIE() const;
   bool needsUnwindTables() const;

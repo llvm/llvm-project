@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o /dev/null %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
 
 # Test the extension of debug ranges from predecessors.
 # Generated from the source file LiveDebugValues.c:
@@ -33,8 +33,7 @@
 # DBG_VALUE for variable "n" is extended into BB#5 from its predecessors BB#3
 # and BB#4.
 # CHECK:      bb.5.if.end.7:
-# CHECK:      DBG_VALUE debug-use %rsi, debug-use _, !13, !20, debug-location !22
-# CHECK-NEXT: DBG_VALUE debug-use %ebx, debug-use _, !14, !20, debug-location !33
+# CHECK:        DBG_VALUE debug-use %ebx, debug-use _, !18, !19, debug-location !32
 
 
 --- |
@@ -107,11 +106,10 @@
   !llvm.module.flags = !{!17, !18}
   !llvm.ident = !{!19}
   
-  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 253049) ", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3, globals: !15)
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 253049) ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !15)
   !1 = !DIFile(filename: "LiveDebugValues.c", directory: "/home/vt/julia/test/tvvikram")
   !2 = !{}
-  !3 = !{!4}
-  !4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 6, type: !5, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, variables: !11)
+  !4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 6, type: !5, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !11)
   !5 = !DISubroutineType(types: !6)
   !6 = !{!7, !7, !8}
   !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -162,6 +160,7 @@ name:            main
 alignment:       4
 exposesReturnsTwice: false
 hasInlineAsm:    false
+allVRegsAllocated: true
 isSSA:           false
 tracksRegLiveness: true
 tracksSubRegLiveness: false
@@ -194,8 +193,8 @@ body:             |
     liveins: %edi, %rsi, %rbx
   
     frame-setup PUSH64r killed %rbx, implicit-def %rsp, implicit %rsp
-    CFI_INSTRUCTION .cfi_def_cfa_offset 16
-    CFI_INSTRUCTION .cfi_offset %rbx, -16
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset %rbx, -16
     DBG_VALUE debug-use %edi, debug-use _, !12, !20, debug-location !21
     DBG_VALUE debug-use %rsi, debug-use _, !13, !20, debug-location !22
     %eax = MOV32rr %edi

@@ -16,9 +16,8 @@
 
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclarationName.h"
-#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/AST/TemplateBase.h"
+#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
@@ -26,21 +25,19 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitcode/BitstreamWriter.h"
-#include <map>
 #include <queue>
 #include <vector>
 
 namespace llvm {
   class APFloat;
   class APInt;
-  class BitstreamWriter;
 }
 
 namespace clang {
 
+class DeclarationName;
 class ASTContext;
 class Attr;
 class NestedNameSpecifier;
@@ -90,6 +87,8 @@ public:
 
   friend class ASTDeclWriter;
   friend class ASTStmtWriter;
+  friend class ASTTypeWriter;
+  friend class ASTRecordWriter;
 private:
   /// \brief Map that provides the ID numbers of each type within the
   /// output stream, plus those deserialized from a chained PCH.
@@ -382,25 +381,6 @@ private:
   /// should serialize.
   llvm::SetVector<ObjCInterfaceDecl *> ObjCClassesWithCategories;
                     
-  struct ReplacedDeclInfo {
-    serialization::DeclID ID;
-    uint64_t Offset;
-    unsigned Loc;
-
-    ReplacedDeclInfo() : ID(0), Offset(0), Loc(0) {}
-    ReplacedDeclInfo(serialization::DeclID ID, uint64_t Offset,
-                     SourceLocation Loc)
-      : ID(ID), Offset(Offset), Loc(Loc.getRawEncoding()) {}
-  };
-
-  /// \brief Decls that have been replaced in the current dependent AST file.
-  ///
-  /// When a decl changes fundamentally after being deserialized (this shouldn't
-  /// happen, but the ObjC AST nodes are designed this way), it will be
-  /// serialized again. In this case, it is registered here, so that the reader
-  /// knows to read the updated version.
-  SmallVector<ReplacedDeclInfo, 16> ReplacedDecls;
-                 
   /// \brief The set of declarations that may have redeclaration chains that
   /// need to be serialized.
   llvm::SmallVector<const Decl *, 16> Redeclarations;
@@ -409,14 +389,6 @@ private:
   /// redeclaration chains.
   llvm::DenseMap<const Decl *, const Decl *> FirstLocalDeclCache;
                                       
-  /// \brief Statements that we've encountered while serializing a
-  /// declaration or type.
-  SmallVector<Stmt *, 16> StmtsToEmit;
-
-  /// \brief Statements collection to use for ASTWriter::AddStmt().
-  /// It will point to StmtsToEmit unless it is overriden.
-  SmallVector<Stmt *, 16> *CollectedStmts;
-
   /// \brief Mapping from SwitchCase statements to IDs.
   llvm::DenseMap<SwitchCase *, unsigned> SwitchCaseIDs;
 
@@ -434,62 +406,6 @@ private:
   /// file.
   unsigned NumVisibleDeclContexts;
 
-  /// \brief The offset of each CXXBaseSpecifier set within the AST.
-  SmallVector<uint32_t, 16> CXXBaseSpecifiersOffsets;
-
-  /// \brief The first ID number we can use for our own base specifiers.
-  serialization::CXXBaseSpecifiersID FirstCXXBaseSpecifiersID;
-
-  /// \brief The base specifiers ID that will be assigned to the next new
-  /// set of C++ base specifiers.
-  serialization::CXXBaseSpecifiersID NextCXXBaseSpecifiersID;
-
-  /// \brief A set of C++ base specifiers that is queued to be written into the
-  /// AST file.
-  struct QueuedCXXBaseSpecifiers {
-    QueuedCXXBaseSpecifiers() : ID(), Bases(), BasesEnd() { }
-
-    QueuedCXXBaseSpecifiers(serialization::CXXBaseSpecifiersID ID,
-                            CXXBaseSpecifier const *Bases,
-                            CXXBaseSpecifier const *BasesEnd)
-      : ID(ID), Bases(Bases), BasesEnd(BasesEnd) { }
-
-    serialization::CXXBaseSpecifiersID ID;
-    CXXBaseSpecifier const * Bases;
-    CXXBaseSpecifier const * BasesEnd;
-  };
-
-  /// \brief Queue of C++ base specifiers to be written to the AST file,
-  /// in the order they should be written.
-  SmallVector<QueuedCXXBaseSpecifiers, 2> CXXBaseSpecifiersToWrite;
-
-  /// \brief The offset of each CXXCtorInitializer list within the AST.
-  SmallVector<uint32_t, 16> CXXCtorInitializersOffsets;
-
-  /// \brief The first ID number we can use for our own ctor initializers.
-  serialization::CXXCtorInitializersID FirstCXXCtorInitializersID;
-
-  /// \brief The ctor initializers ID that will be assigned to the next new
-  /// list of C++ ctor initializers.
-  serialization::CXXCtorInitializersID NextCXXCtorInitializersID;
-
-  /// \brief A set of C++ ctor initializers that is queued to be written
-  /// into the AST file.
-  struct QueuedCXXCtorInitializers {
-    QueuedCXXCtorInitializers() : ID() {}
-
-    QueuedCXXCtorInitializers(serialization::CXXCtorInitializersID ID,
-                              ArrayRef<CXXCtorInitializer*> Inits)
-        : ID(ID), Inits(Inits) {}
-
-    serialization::CXXCtorInitializersID ID;
-    ArrayRef<CXXCtorInitializer*> Inits;
-  };
-
-  /// \brief Queue of C++ ctor initializers to be written to the AST file,
-  /// in the order they should be written.
-  SmallVector<QueuedCXXCtorInitializers, 2> CXXCtorInitializersToWrite;
-
   /// \brief A mapping from each known submodule to its ID number, which will
   /// be a positive integer.
   llvm::DenseMap<Module *, unsigned> SubmoduleIDs;
@@ -502,9 +418,7 @@ private:
   unsigned getSubmoduleID(Module *Mod);
 
   /// \brief Write the given subexpression to the bitstream.
-  void WriteSubStmt(Stmt *S,
-                    llvm::DenseMap<Stmt *, uint64_t> &SubStmtEntries,
-                    llvm::DenseSet<Stmt *> &ParentStmts);
+  void WriteSubStmt(Stmt *S);
 
   void WriteBlockInfoBlock();
   uint64_t WriteControlBlock(Preprocessor &PP, ASTContext &Context,
@@ -520,8 +434,6 @@ private:
                                         
   void WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
                                      bool isModule);
-  void WriteCXXBaseSpecifiersOffsets();
-  void WriteCXXCtorInitializersOffsets();
 
   unsigned TypeExtQualAbbrev;
   unsigned TypeFunctionProtoAbbrev;
@@ -542,15 +454,15 @@ private:
   void WriteReferencedSelectorsPool(Sema &SemaRef);
   void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver &IdResolver,
                             bool IsModule);
-  void WriteAttributes(ArrayRef<const Attr*> Attrs, RecordDataImpl &Record);
   void WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord);
-  void WriteDeclReplacementsBlock();
   void WriteDeclContextVisibleUpdate(const DeclContext *DC);
   void WriteFPPragmaOptions(const FPOptions &Opts);
   void WriteOpenCLExtensions(Sema &SemaRef);
   void WriteObjCCategories();
   void WriteLateParsedTemplates(Sema &SemaRef);
   void WriteOptimizePragmaOptions(Sema &SemaRef);
+  void WriteMSStructPragmaOptions(Sema &SemaRef);
+  void WriteMSPointersToMembersPragmaOptions(Sema &SemaRef);
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
 
@@ -573,7 +485,6 @@ private:
 
   void WriteDeclAbbrevs();
   void WriteDecl(ASTContext &Context, Decl *D);
-  void AddFunctionDefinition(const FunctionDecl *FD, RecordData &Record);
 
   uint64_t WriteASTCore(Sema &SemaRef,
                         StringRef isysroot, const std::string &OutputFile,
@@ -621,28 +532,8 @@ public:
   /// \brief Emit a source range.
   void AddSourceRange(SourceRange Range, RecordDataImpl &Record);
 
-  /// \brief Emit an integral value.
-  void AddAPInt(const llvm::APInt &Value, RecordDataImpl &Record);
-
-  /// \brief Emit a signed integral value.
-  void AddAPSInt(const llvm::APSInt &Value, RecordDataImpl &Record);
-
-  /// \brief Emit a floating-point value.
-  void AddAPFloat(const llvm::APFloat &Value, RecordDataImpl &Record);
-
   /// \brief Emit a reference to an identifier.
   void AddIdentifierRef(const IdentifierInfo *II, RecordDataImpl &Record);
-
-  /// \brief Emit a Selector (which is a smart pointer reference).
-  void AddSelectorRef(Selector, RecordDataImpl &Record);
-
-  /// \brief Emit a CXXTemporary.
-  void AddCXXTemporary(const CXXTemporary *Temp, RecordDataImpl &Record);
-
-  /// \brief Emit a set of C++ base specifiers to the record.
-  void AddCXXBaseSpecifiersRef(CXXBaseSpecifier const *Bases,
-                               CXXBaseSpecifier const *BasesEnd,
-                               RecordDataImpl &Record);
 
   /// \brief Get the unique number used to refer to the given selector.
   serialization::SelectorID getSelectorRef(Selector Sel);
@@ -667,29 +558,20 @@ public:
   /// \brief Determine the type ID of an already-emitted type.
   serialization::TypeID getTypeID(QualType T) const;
 
-  /// \brief Emits a reference to a declarator info.
-  void AddTypeSourceInfo(TypeSourceInfo *TInfo, RecordDataImpl &Record);
-
-  /// \brief Emits a type with source-location information.
-  void AddTypeLoc(TypeLoc TL, RecordDataImpl &Record);
-
-  /// \brief Emits a template argument location info.
-  void AddTemplateArgumentLocInfo(TemplateArgument::ArgKind Kind,
-                                  const TemplateArgumentLocInfo &Arg,
-                                  RecordDataImpl &Record);
-
-  /// \brief Emits a template argument location.
-  void AddTemplateArgumentLoc(const TemplateArgumentLoc &Arg,
-                              RecordDataImpl &Record);
-
-  /// \brief Emits an AST template argument list info.
-  void AddASTTemplateArgumentListInfo(
-                          const ASTTemplateArgumentListInfo *ASTTemplArgList,
-                          RecordDataImpl &Record);
-
   /// \brief Find the first local declaration of a given local redeclarable
   /// decl.
   const Decl *getFirstLocalDecl(const Decl *D);
+
+  /// \brief Is this a local declaration (that is, one that will be written to
+  /// our AST file)? This is the case for declarations that are neither imported
+  /// from another AST file nor predefined.
+  bool IsLocalDecl(const Decl *D) {
+    if (D->isFromASTFile())
+      return false;
+    auto I = DeclIDs.find(D);
+    return (I == DeclIDs.end() ||
+            I->second >= serialization::NUM_PREDEF_DECL_IDS);
+  };
 
   /// \brief Emit a reference to a declaration.
   void AddDeclRef(const Decl *D, RecordDataImpl &Record);
@@ -702,56 +584,7 @@ public:
   /// declaration.
   serialization::DeclID getDeclID(const Decl *D);
 
-  /// \brief Emit a declaration name.
-  void AddDeclarationName(DeclarationName Name, RecordDataImpl &Record);
-  void AddDeclarationNameLoc(const DeclarationNameLoc &DNLoc,
-                             DeclarationName Name, RecordDataImpl &Record);
-  void AddDeclarationNameInfo(const DeclarationNameInfo &NameInfo,
-                              RecordDataImpl &Record);
   unsigned getAnonymousDeclarationNumber(const NamedDecl *D);
-
-  void AddQualifierInfo(const QualifierInfo &Info, RecordDataImpl &Record);
-
-  /// \brief Emit a nested name specifier.
-  void AddNestedNameSpecifier(NestedNameSpecifier *NNS, RecordDataImpl &Record);
-
-  /// \brief Emit a nested name specifier with source-location information.
-  void AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
-                                 RecordDataImpl &Record);
-
-  /// \brief Emit a template name.
-  void AddTemplateName(TemplateName Name, RecordDataImpl &Record);
-
-  /// \brief Emit a template argument.
-  void AddTemplateArgument(const TemplateArgument &Arg, RecordDataImpl &Record);
-
-  /// \brief Emit a template parameter list.
-  void AddTemplateParameterList(const TemplateParameterList *TemplateParams,
-                                RecordDataImpl &Record);
-
-  /// \brief Emit a template argument list.
-  void AddTemplateArgumentList(const TemplateArgumentList *TemplateArgs,
-                                RecordDataImpl &Record);
-
-  /// \brief Emit a UnresolvedSet structure.
-  void AddUnresolvedSet(const ASTUnresolvedSet &Set, RecordDataImpl &Record);
-
-  /// \brief Emit a C++ base specifier.
-  void AddCXXBaseSpecifier(const CXXBaseSpecifier &Base,
-                           RecordDataImpl &Record);
-
-  /// \brief Emit the ID for a CXXCtorInitializer array and register the array
-  /// for later serialization.
-  void AddCXXCtorInitializersRef(ArrayRef<CXXCtorInitializer *> Inits,
-                                 RecordDataImpl &Record);
-
-  /// \brief Emit a CXXCtorInitializer array.
-  void AddCXXCtorInitializers(
-                             const CXXCtorInitializer * const *CtorInitializers,
-                             unsigned NumCtorInitializers,
-                             RecordDataImpl &Record);
-
-  void AddCXXDefinitionData(const CXXRecordDecl *D, RecordDataImpl &Record);
 
   /// \brief Add a string to the given record.
   void AddString(StringRef Str, RecordDataImpl &Record);
@@ -787,38 +620,6 @@ public:
   /// within the method pool/selector table.
   void SetSelectorOffset(Selector Sel, uint32_t Offset);
 
-  /// \brief Add the given statement or expression to the queue of
-  /// statements to emit.
-  ///
-  /// This routine should be used when emitting types and declarations
-  /// that have expressions as part of their formulation. Once the
-  /// type or declaration has been written, call FlushStmts() to write
-  /// the corresponding statements just after the type or
-  /// declaration.
-  void AddStmt(Stmt *S) {
-      CollectedStmts->push_back(S);
-  }
-
-  /// \brief Flush all of the statements and expressions that have
-  /// been added to the queue via AddStmt().
-  void FlushStmts();
-
-  /// \brief Flush all of the C++ base specifier sets that have been added
-  /// via \c AddCXXBaseSpecifiersRef().
-  void FlushCXXBaseSpecifiers();
-
-  /// \brief Flush all of the C++ constructor initializer lists that have been
-  /// added via \c AddCXXCtorInitializersRef().
-  void FlushCXXCtorInitializers();
-
-  /// \brief Flush all pending records that are tacked onto the end of
-  /// decl and decl update records.
-  void FlushPendingAfterDecl() {
-    FlushStmts();
-    FlushCXXBaseSpecifiers();
-    FlushCXXCtorInitializers();
-  }
-
   /// \brief Record an ID for the given switch-case statement.
   unsigned RecordSwitchCaseID(SwitchCase *S);
 
@@ -851,6 +652,7 @@ public:
   bool hasChain() const { return Chain; }
   ASTReader *getChain() const { return Chain; }
 
+private:
   // ASTDeserializationListener implementation
   void ReaderInitialized(ASTReader *Reader) override;
   void IdentifierRead(serialization::IdentID ID, IdentifierInfo *II) override;
@@ -872,14 +674,234 @@ public:
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void StaticDataMemberInstantiated(const VarDecl *D) override;
   void DefaultArgumentInstantiated(const ParmVarDecl *D) override;
+  void DefaultMemberInitializerInstantiated(const FieldDecl *D) override;
   void FunctionDefinitionInstantiated(const FunctionDecl *D) override;
   void AddedObjCCategoryToInterface(const ObjCCategoryDecl *CatD,
                                     const ObjCInterfaceDecl *IFD) override;
   void DeclarationMarkedUsed(const Decl *D) override;
   void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) override;
+  void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
+                                            const Attr *Attr) override;
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
+};
+
+/// \brief An object for streaming information to a record.
+class ASTRecordWriter {
+  ASTWriter *Writer;
+  ASTWriter::RecordDataImpl *Record;
+
+  /// \brief Statements that we've encountered while serializing a
+  /// declaration or type.
+  SmallVector<Stmt *, 16> StmtsToEmit;
+
+  /// \brief Indices of record elements that describe offsets within the
+  /// bitcode. These will be converted to offsets relative to the current
+  /// record when emitted.
+  SmallVector<unsigned, 8> OffsetIndices;
+
+  /// \brief Flush all of the statements and expressions that have
+  /// been added to the queue via AddStmt().
+  void FlushStmts();
+  void FlushSubStmts();
+
+  void PrepareToEmit(uint64_t MyOffset) {
+    // Convert offsets into relative form.
+    for (unsigned I : OffsetIndices) {
+      auto &StoredOffset = (*Record)[I];
+      assert(StoredOffset < MyOffset && "invalid offset");
+      if (StoredOffset)
+        StoredOffset = MyOffset - StoredOffset;
+    }
+    OffsetIndices.clear();
+  }
+
+public:
+  /// Construct a ASTRecordWriter that uses the default encoding scheme.
+  ASTRecordWriter(ASTWriter &Writer, ASTWriter::RecordDataImpl &Record)
+      : Writer(&Writer), Record(&Record) {}
+
+  /// Construct a ASTRecordWriter that uses the same encoding scheme as another
+  /// ASTRecordWriter.
+  ASTRecordWriter(ASTRecordWriter &Parent, ASTWriter::RecordDataImpl &Record)
+      : Writer(Parent.Writer), Record(&Record) {}
+
+  /// Copying an ASTRecordWriter is almost certainly a bug.
+  ASTRecordWriter(const ASTRecordWriter&) = delete;
+  void operator=(const ASTRecordWriter&) = delete;
+
+  /// \brief Extract the underlying record storage.
+  ASTWriter::RecordDataImpl &getRecordData() const { return *Record; }
+
+  /// \brief Minimal vector-like interface.
+  /// @{
+  void push_back(uint64_t N) { Record->push_back(N); }
+  template<typename InputIterator>
+  void append(InputIterator begin, InputIterator end) {
+    Record->append(begin, end);
+  }
+  bool empty() const { return Record->empty(); }
+  size_t size() const { return Record->size(); }
+  uint64_t &operator[](size_t N) { return (*Record)[N]; }
+  /// @}
+
+  /// \brief Emit the record to the stream, followed by its substatements, and
+  /// return its offset.
+  // FIXME: Allow record producers to suggest Abbrevs.
+  uint64_t Emit(unsigned Code, unsigned Abbrev = 0) {
+    uint64_t Offset = Writer->Stream.GetCurrentBitNo();
+    PrepareToEmit(Offset);
+    Writer->Stream.EmitRecord(Code, *Record, Abbrev);
+    FlushStmts();
+    return Offset;
+  }
+
+  /// \brief Emit the record to the stream, preceded by its substatements.
+  uint64_t EmitStmt(unsigned Code, unsigned Abbrev = 0) {
+    FlushSubStmts();
+    PrepareToEmit(Writer->Stream.GetCurrentBitNo());
+    Writer->Stream.EmitRecord(Code, *Record, Abbrev);
+    return Writer->Stream.GetCurrentBitNo();
+  }
+
+  /// \brief Add a bit offset into the record. This will be converted into an
+  /// offset relative to the current record when emitted.
+  void AddOffset(uint64_t BitOffset) {
+    OffsetIndices.push_back(Record->size());
+    Record->push_back(BitOffset);
+  }
+
+  /// \brief Add the given statement or expression to the queue of
+  /// statements to emit.
+  ///
+  /// This routine should be used when emitting types and declarations
+  /// that have expressions as part of their formulation. Once the
+  /// type or declaration has been written, Emit() will write
+  /// the corresponding statements just after the record.
+  void AddStmt(Stmt *S) {
+    StmtsToEmit.push_back(S);
+  }
+
+  /// \brief Add a definition for the given function to the queue of statements
+  /// to emit.
+  void AddFunctionDefinition(const FunctionDecl *FD);
+
+  /// \brief Emit a source location.
+  void AddSourceLocation(SourceLocation Loc) {
+    return Writer->AddSourceLocation(Loc, *Record);
+  }
+
+  /// \brief Emit a source range.
+  void AddSourceRange(SourceRange Range) {
+    return Writer->AddSourceRange(Range, *Record);
+  }
+
+  /// \brief Emit an integral value.
+  void AddAPInt(const llvm::APInt &Value);
+
+  /// \brief Emit a signed integral value.
+  void AddAPSInt(const llvm::APSInt &Value);
+
+  /// \brief Emit a floating-point value.
+  void AddAPFloat(const llvm::APFloat &Value);
+
+  /// \brief Emit a reference to an identifier.
+  void AddIdentifierRef(const IdentifierInfo *II) {
+    return Writer->AddIdentifierRef(II, *Record);
+  }
+
+  /// \brief Emit a Selector (which is a smart pointer reference).
+  void AddSelectorRef(Selector S);
+
+  /// \brief Emit a CXXTemporary.
+  void AddCXXTemporary(const CXXTemporary *Temp);
+
+  /// \brief Emit a C++ base specifier.
+  void AddCXXBaseSpecifier(const CXXBaseSpecifier &Base);
+
+  /// \brief Emit a set of C++ base specifiers.
+  void AddCXXBaseSpecifiers(ArrayRef<CXXBaseSpecifier> Bases);
+
+  /// \brief Emit a reference to a type.
+  void AddTypeRef(QualType T) {
+    return Writer->AddTypeRef(T, *Record);
+  }
+
+  /// \brief Emits a reference to a declarator info.
+  void AddTypeSourceInfo(TypeSourceInfo *TInfo);
+
+  /// \brief Emits a type with source-location information.
+  void AddTypeLoc(TypeLoc TL);
+
+  /// \brief Emits a template argument location info.
+  void AddTemplateArgumentLocInfo(TemplateArgument::ArgKind Kind,
+                                  const TemplateArgumentLocInfo &Arg);
+
+  /// \brief Emits a template argument location.
+  void AddTemplateArgumentLoc(const TemplateArgumentLoc &Arg);
+
+  /// \brief Emits an AST template argument list info.
+  void AddASTTemplateArgumentListInfo(
+      const ASTTemplateArgumentListInfo *ASTTemplArgList);
+
+  /// \brief Emit a reference to a declaration.
+  void AddDeclRef(const Decl *D) {
+    return Writer->AddDeclRef(D, *Record);
+  }
+
+  /// \brief Emit a declaration name.
+  void AddDeclarationName(DeclarationName Name);
+
+  void AddDeclarationNameLoc(const DeclarationNameLoc &DNLoc,
+                             DeclarationName Name);
+  void AddDeclarationNameInfo(const DeclarationNameInfo &NameInfo);
+
+  void AddQualifierInfo(const QualifierInfo &Info);
+
+  /// \brief Emit a nested name specifier.
+  void AddNestedNameSpecifier(NestedNameSpecifier *NNS);
+
+  /// \brief Emit a nested name specifier with source-location information.
+  void AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS);
+
+  /// \brief Emit a template name.
+  void AddTemplateName(TemplateName Name);
+
+  /// \brief Emit a template argument.
+  void AddTemplateArgument(const TemplateArgument &Arg);
+
+  /// \brief Emit a template parameter list.
+  void AddTemplateParameterList(const TemplateParameterList *TemplateParams);
+
+  /// \brief Emit a template argument list.
+  void AddTemplateArgumentList(const TemplateArgumentList *TemplateArgs);
+
+  /// \brief Emit a UnresolvedSet structure.
+  void AddUnresolvedSet(const ASTUnresolvedSet &Set);
+
+  /// \brief Emit a CXXCtorInitializer array.
+  void AddCXXCtorInitializers(ArrayRef<CXXCtorInitializer*> CtorInits);
+
+  void AddCXXDefinitionData(const CXXRecordDecl *D);
+
+  /// \brief Emit a string.
+  void AddString(StringRef Str) {
+    return Writer->AddString(Str, *Record);
+  }
+
+  /// \brief Emit a path.
+  void AddPath(StringRef Path) {
+    return Writer->AddPath(Path, *Record);
+  }
+
+  /// \brief Emit a version tuple.
+  void AddVersionTuple(const VersionTuple &Version) {
+    return Writer->AddVersionTuple(Version, *Record);
+  }
+
+  /// \brief Emit a list of attributes.
+  void AddAttributes(ArrayRef<const Attr*> Attrs);
 };
 
 /// \brief AST and semantic-analysis consumer that generates a

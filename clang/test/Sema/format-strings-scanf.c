@@ -18,7 +18,7 @@ int vfscanf(FILE * restrict, const char * restrict, va_list);
 int vsscanf(const char * restrict, const char * restrict, va_list);
 
 void test(const char *s, int *i) {
-  scanf(s, i); // expected-warning{{ormat string is not a string literal}}
+  scanf(s, i); // expected-warning{{format string is not a string literal}}
   scanf("%0d", i); // expected-warning{{zero field width in scanf format string is unused}}
   scanf("%00d", i); // expected-warning{{zero field width in scanf format string is unused}}
   scanf("%d%[asdfasdfd", i, s); // expected-warning{{no closing ']' for '%[' in scanf format string}}
@@ -170,4 +170,16 @@ void test_qualifiers(const int *cip, volatile int* vip,
   typedef const int* cip_t;
   scanf("%d", (ip_t)0); // No warning.
   scanf("%d", (cip_t)0); // expected-warning{{format specifies type 'int *' but the argument has type 'cip_t' (aka 'const int *')}}
+}
+
+void check_conditional_literal(char *s, int *i) {
+  scanf(0 ? "%s" : "%d", i); // no warning
+  scanf(1 ? "%s" : "%d", i); // expected-warning{{format specifies type 'char *'}}
+  scanf(0 ? "%d %d" : "%d", i); // no warning
+  scanf(1 ? "%d %d" : "%d", i); // expected-warning{{more '%' conversions than data arguments}}
+  scanf(0 ? "%d %d" : "%d", i, s); // expected-warning{{data argument not used}}
+  scanf(1 ? "%d %s" : "%d", i, s); // no warning
+  scanf(i ? "%d %s" : "%d", i, s); // no warning
+  scanf(i ? "%d" : "%d", i, s); // expected-warning{{data argument not used}}
+  scanf(i ? "%s" : "%d", s); // expected-warning{{format specifies type 'int *'}}
 }

@@ -589,6 +589,17 @@ entry:
 	%tmp34 = zext i1 %tmp3 to i32		; <i32> [#uses=1]
 	ret i32 %tmp34
 }
+
+//===---------------------------------------------------------------------===//
+for the following code:
+
+void foo (float *__restrict__ a, int *__restrict__ b, int n) {
+      a[n] = b[n]  * 2.321;
+}
+
+we load b[n] to GPR, then move it VSX register and convert it float. We should 
+use vsx scalar integer load instructions to avoid direct moves
+
 //===----------------------------------------------------------------------===//
 ; RUN: llvm-as < %s | llc -march=ppc32 | not grep fneg
 

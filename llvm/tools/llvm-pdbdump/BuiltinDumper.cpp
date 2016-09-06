@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 BuiltinDumper::BuiltinDumper(LinePrinter &P)
     : PDBSymDumper(false), Printer(P) {}
@@ -30,13 +31,31 @@ StringRef BuiltinDumper::getTypeName(const PDBSymbolTypeBuiltin &Symbol) {
       return "float";
     return "double";
   case PDB_BuiltinType::UInt:
-    if (Symbol.getLength() == 8)
+    switch (Symbol.getLength()) {
+    case 8:
       return "unsigned __int64";
-    return "unsigned";
+    case 4:
+      return "unsigned int";
+    case 2:
+      return "unsigned short";
+    case 1:
+      return "unsigned char";
+    default:
+      return "unsigned";
+    }
   case PDB_BuiltinType::Int:
-    if (Symbol.getLength() == 4)
+    switch (Symbol.getLength()) {
+    case 8:
+      return "__int64";
+    case 4:
       return "int";
-    return "__int64";
+    case 2:
+      return "short";
+    case 1:
+      return "char";
+    default:
+      return "int";
+    }
   case PDB_BuiltinType::Char:
     return "char";
   case PDB_BuiltinType::WCharT:

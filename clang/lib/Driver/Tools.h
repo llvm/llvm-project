@@ -57,8 +57,7 @@ private:
                                const Driver &D, const llvm::opt::ArgList &Args,
                                llvm::opt::ArgStringList &CmdArgs,
                                const InputInfo &Output,
-                               const InputInfoList &Inputs,
-                               const ToolChain *AuxToolChain) const;
+                               const InputInfoList &Inputs) const;
 
   void AddAArch64TargetArgs(const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs) const;
@@ -82,6 +81,8 @@ private:
                         llvm::opt::ArgStringList &CmdArgs) const;
   void AddHexagonTargetArgs(const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs) const;
+  void AddLanaiTargetArgs(const llvm::opt::ArgList &Args,
+                          llvm::opt::ArgStringList &CmdArgs) const;
   void AddWebAssemblyTargetArgs(const llvm::opt::ArgList &Args,
                                 llvm::opt::ArgStringList &CmdArgs) const;
 
@@ -91,7 +92,7 @@ private:
                                  llvm::opt::ArgStringList &cmdArgs,
                                  RewriteKind rewrite) const;
 
-  void AddClangCLArgs(const llvm::opt::ArgList &Args,
+  void AddClangCLArgs(const llvm::opt::ArgList &Args, types::ID InputType,
                       llvm::opt::ArgStringList &CmdArgs,
                       codegenoptions::DebugInfoKind *DebugInfoKind,
                       bool *EmitCodeView) const;
@@ -124,6 +125,8 @@ public:
       : Tool("clang::as", "clang integrated assembler", TC, RF_Full) {}
   void AddMIPSTargetArgs(const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs) const;
+  void AddX86TargetArgs(const llvm::opt::ArgList &Args,
+                        llvm::opt::ArgStringList &CmdArgs) const;
   bool hasGoodDiagnostics() const override { return true; }
   bool hasIntegratedAssembler() const override { return false; }
   bool hasIntegratedCPP() const override { return false; }
@@ -289,6 +292,7 @@ enum class FloatABI {
 };
 
 NanEncoding getSupportedNanEncoding(StringRef &CPU);
+bool hasCompactBranches(StringRef &CPU);
 void getMipsCPUAndABI(const llvm::opt::ArgList &Args,
                       const llvm::Triple &Triple, StringRef &CPUName,
                       StringRef &ABIName);
@@ -297,6 +301,7 @@ std::string getMipsABILibSuffix(const llvm::opt::ArgList &Args,
 bool hasMipsAbiArg(const llvm::opt::ArgList &Args, const char *Value);
 bool isUCLibc(const llvm::opt::ArgList &Args);
 bool isNaN2008(const llvm::opt::ArgList &Args, const llvm::Triple &Triple);
+bool isFP64ADefault(const llvm::Triple &Triple, StringRef CPUName);
 bool isFPXXDefault(const llvm::Triple &Triple, StringRef CPUName,
                    StringRef ABIName, mips::FloatABI FloatABI);
 bool shouldUseFPXX(const llvm::opt::ArgList &Args, const llvm::Triple &Triple,
@@ -680,7 +685,8 @@ public:
 
 /// Visual studio tools.
 namespace visualstudio {
-VersionTuple getMSVCVersion(const Driver *D, const llvm::Triple &Triple,
+VersionTuple getMSVCVersion(const Driver *D, const ToolChain &TC,
+                            const llvm::Triple &Triple,
                             const llvm::opt::ArgList &Args, bool IsWindowsMSVC);
 
 class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
@@ -772,6 +778,16 @@ enum class FloatABI {
 
 FloatABI getPPCFloatABI(const Driver &D, const llvm::opt::ArgList &Args);
 } // end namespace ppc
+
+namespace sparc {
+enum class FloatABI {
+  Invalid,
+  Soft,
+  Hard,
+};
+
+FloatABI getSparcFloatABI(const Driver &D, const llvm::opt::ArgList &Args);
+} // end namespace sparc
 
 namespace XCore {
 // For XCore, we do not need to instantiate tools for PreProcess, PreCompile and

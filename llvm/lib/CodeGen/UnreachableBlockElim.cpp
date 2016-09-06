@@ -20,7 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Dominators.h"
@@ -38,29 +39,7 @@
 #include "llvm/Target/TargetInstrInfo.h"
 using namespace llvm;
 
-namespace {
-  class UnreachableBlockElim : public FunctionPass {
-    bool runOnFunction(Function &F) override;
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    UnreachableBlockElim() : FunctionPass(ID) {
-      initializeUnreachableBlockElimPass(*PassRegistry::getPassRegistry());
-    }
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addPreserved<DominatorTreeWrapperPass>();
-    }
-  };
-}
-char UnreachableBlockElim::ID = 0;
-INITIALIZE_PASS(UnreachableBlockElim, "unreachableblockelim",
-                "Remove unreachable blocks from the CFG", false, false)
-
-FunctionPass *llvm::createUnreachableBlockEliminationPass() {
-  return new UnreachableBlockElim();
-}
-
-bool UnreachableBlockElim::runOnFunction(Function &F) {
+static bool eliminateUnreachableBlock(Function &F) {
   SmallPtrSet<BasicBlock*, 8> Reachable;
 
   // Mark all reachable blocks.
@@ -91,6 +70,41 @@ bool UnreachableBlockElim::runOnFunction(Function &F) {
   return !DeadBlocks.empty();
 }
 
+namespace {
+class UnreachableBlockElimLegacyPass : public FunctionPass {
+  bool runOnFunction(Function &F) override {
+    return eliminateUnreachableBlock(F);
+  }
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+  UnreachableBlockElimLegacyPass() : FunctionPass(ID) {
+    initializeUnreachableBlockElimLegacyPassPass(
+        *PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<DominatorTreeWrapperPass>();
+  }
+};
+}
+char UnreachableBlockElimLegacyPass::ID = 0;
+INITIALIZE_PASS(UnreachableBlockElimLegacyPass, "unreachableblockelim",
+                "Remove unreachable blocks from the CFG", false, false)
+
+FunctionPass *llvm::createUnreachableBlockEliminationPass() {
+  return new UnreachableBlockElimLegacyPass();
+}
+
+PreservedAnalyses UnreachableBlockElimPass::run(Function &F,
+                                                FunctionAnalysisManager &AM) {
+  bool Changed = eliminateUnreachableBlock(F);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  return PA;
+}
 
 namespace {
   class UnreachableMachineBlockElim : public MachineFunctionPass {
@@ -184,9 +198,7 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
         unsigned Input = phi->getOperand(1).getReg();
         unsigned Output = phi->getOperand(0).getReg();
 
-        MachineInstr* temp = phi;
-        ++phi;
-        temp->eraseFromParent();
+        phi++->eraseFromParent();
         ModifiedPHI = true;
 
         if (Input != Output) {

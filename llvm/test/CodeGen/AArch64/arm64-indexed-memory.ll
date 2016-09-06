@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-redzone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-redzone | FileCheck %s
 
 define void @store64(i64** nocapture %out, i64 %index, i64 %spacing) nounwind noinline ssp {
 ; CHECK-LABEL: store64:

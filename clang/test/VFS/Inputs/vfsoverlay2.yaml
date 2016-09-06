@@ -1,5 +1,6 @@
 {
   'version': 0,
+  'ignore-non-existent-contents': false,
   'roots': [
     { 'name': 'OUT_DIR', 'type': 'directory',
       'contents': [

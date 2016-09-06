@@ -270,7 +270,8 @@ void JumpScopeChecker::BuildScopeInformation(VarDecl *D,
 /// coherent VLA scope with a specified parent node.  Walk through the
 /// statements, adding any labels or gotos to LabelAndGotoScopes and recursively
 /// walking the AST as needed.
-void JumpScopeChecker::BuildScopeInformation(Stmt *S, unsigned &origParentScope) {
+void JumpScopeChecker::BuildScopeInformation(Stmt *S,
+                                             unsigned &origParentScope) {
   // If this is a statement, rather than an expression, scopes within it don't
   // propagate out into the enclosing scope.  Otherwise we have to worry
   // about block literals, which have the lifetime of their enclosing statement.
@@ -278,7 +279,7 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S, unsigned &origParentScope)
   unsigned &ParentScope = ((isa<Expr>(S) && !isa<StmtExpr>(S))
                             ? origParentScope : independentParentScope);
 
-  bool SkipFirstSubStmt = false;
+  unsigned StmtsToSkip = 0u;
 
   // If we found a label, remember that it is in ParentScope scope.
   switch (S->getStmtClass()) {
@@ -303,11 +304,15 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S, unsigned &origParentScope)
     break;
 
   case Stmt::SwitchStmtClass:
-    // Evaluate the condition variable before entering the scope of the switch
-    // statement.
+    // Evaluate the C++17 init stmt and condition variable
+    // before entering the scope of the switch statement.
+    if (Stmt *Init = cast<SwitchStmt>(S)->getInit()) {
+      BuildScopeInformation(Init, ParentScope);
+      ++StmtsToSkip;
+    }
     if (VarDecl *Var = cast<SwitchStmt>(S)->getConditionVariable()) {
       BuildScopeInformation(Var, ParentScope);
-      SkipFirstSubStmt = true;
+      ++StmtsToSkip;
     }
     // Fall through
 
@@ -318,70 +323,227 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S, unsigned &origParentScope)
     Jumps.push_back(S);
     break;
 
+  case Stmt::IfStmtClass: {
+    IfStmt *IS = cast<IfStmt>(S);
+    if (!(IS->isConstexpr() || IS->isObjCAvailabilityCheck()))
+      break;
+
+    unsigned Diag = IS->isConstexpr() ? diag::note_protected_by_constexpr_if
+                                      : diag::note_protected_by_if_available;
+
+    if (VarDecl *Var = IS->getConditionVariable())
+      BuildScopeInformation(Var, ParentScope);
+
+    // Cannot jump into the middle of the condition.
+    unsigned NewParentScope = Scopes.size();
+    Scopes.push_back(GotoScope(ParentScope, Diag, 0, IS->getLocStart()));
+    BuildScopeInformation(IS->getCond(), NewParentScope);
+
+    // Jumps into either arm of an 'if constexpr' are not allowed.
+    NewParentScope = Scopes.size();
+    Scopes.push_back(GotoScope(ParentScope, Diag, 0, IS->getLocStart()));
+    BuildScopeInformation(IS->getThen(), NewParentScope);
+    if (Stmt *Else = IS->getElse()) {
+      NewParentScope = Scopes.size();
+      Scopes.push_back(GotoScope(ParentScope, Diag, 0, IS->getLocStart()));
+      BuildScopeInformation(Else, NewParentScope);
+    }
+    return;
+  }
+
   case Stmt::CXXTryStmtClass: {
     CXXTryStmt *TS = cast<CXXTryStmt>(S);
-    unsigned newParentScope;
-    Scopes.push_back(GotoScope(ParentScope,
-                               diag::note_protected_by_cxx_try,
-                               diag::note_exits_cxx_try,
-                               TS->getSourceRange().getBegin()));
-    if (Stmt *TryBlock = TS->getTryBlock())
-      BuildScopeInformation(TryBlock, (newParentScope = Scopes.size()-1));
+    {
+      unsigned NewParentScope = Scopes.size();
+      Scopes.push_back(GotoScope(ParentScope,
+                                 diag::note_protected_by_cxx_try,
+                                 diag::note_exits_cxx_try,
+                                 TS->getSourceRange().getBegin()));
+      if (Stmt *TryBlock = TS->getTryBlock())
+        BuildScopeInformation(TryBlock, NewParentScope);
+    }
 
     // Jump from the catch into the try is not allowed either.
     for (unsigned I = 0, E = TS->getNumHandlers(); I != E; ++I) {
       CXXCatchStmt *CS = TS->getHandler(I);
+      unsigned NewParentScope = Scopes.size();
       Scopes.push_back(GotoScope(ParentScope,
                                  diag::note_protected_by_cxx_catch,
                                  diag::note_exits_cxx_catch,
                                  CS->getSourceRange().getBegin()));
-      BuildScopeInformation(CS->getHandlerBlock(),
-                            (newParentScope = Scopes.size()-1));
+      BuildScopeInformation(CS->getHandlerBlock(), NewParentScope);
     }
     return;
   }
 
   case Stmt::SEHTryStmtClass: {
     SEHTryStmt *TS = cast<SEHTryStmt>(S);
-    unsigned newParentScope;
-    Scopes.push_back(GotoScope(ParentScope,
-                               diag::note_protected_by_seh_try,
-                               diag::note_exits_seh_try,
-                               TS->getSourceRange().getBegin()));
-    if (Stmt *TryBlock = TS->getTryBlock())
-      BuildScopeInformation(TryBlock, (newParentScope = Scopes.size()-1));
+    {
+      unsigned NewParentScope = Scopes.size();
+      Scopes.push_back(GotoScope(ParentScope,
+                                 diag::note_protected_by_seh_try,
+                                 diag::note_exits_seh_try,
+                                 TS->getSourceRange().getBegin()));
+      if (Stmt *TryBlock = TS->getTryBlock())
+        BuildScopeInformation(TryBlock, NewParentScope);
+    }
 
     // Jump from __except or __finally into the __try are not allowed either.
     if (SEHExceptStmt *Except = TS->getExceptHandler()) {
+      unsigned NewParentScope = Scopes.size();
       Scopes.push_back(GotoScope(ParentScope,
                                  diag::note_protected_by_seh_except,
                                  diag::note_exits_seh_except,
                                  Except->getSourceRange().getBegin()));
-      BuildScopeInformation(Except->getBlock(),
-                            (newParentScope = Scopes.size()-1));
+      BuildScopeInformation(Except->getBlock(), NewParentScope);
     } else if (SEHFinallyStmt *Finally = TS->getFinallyHandler()) {
+      unsigned NewParentScope = Scopes.size();
       Scopes.push_back(GotoScope(ParentScope,
                                  diag::note_protected_by_seh_finally,
                                  diag::note_exits_seh_finally,
                                  Finally->getSourceRange().getBegin()));
-      BuildScopeInformation(Finally->getBlock(),
-                            (newParentScope = Scopes.size()-1));
+      BuildScopeInformation(Finally->getBlock(), NewParentScope);
     }
 
     return;
   }
+
+  case Stmt::DeclStmtClass: {
+    // If this is a declstmt with a VLA definition, it defines a scope from here
+    // to the end of the containing context.
+    DeclStmt *DS = cast<DeclStmt>(S);
+    // The decl statement creates a scope if any of the decls in it are VLAs
+    // or have the cleanup attribute.
+    for (auto *I : DS->decls())
+      BuildScopeInformation(I, origParentScope);
+    return;
+  }
+
+  case Stmt::ObjCAtTryStmtClass: {
+    // Disallow jumps into any part of an @try statement by pushing a scope and
+    // walking all sub-stmts in that scope.
+    ObjCAtTryStmt *AT = cast<ObjCAtTryStmt>(S);
+    // Recursively walk the AST for the @try part.
+    {
+      unsigned NewParentScope = Scopes.size();
+      Scopes.push_back(GotoScope(ParentScope,
+                                 diag::note_protected_by_objc_try,
+                                 diag::note_exits_objc_try,
+                                 AT->getAtTryLoc()));
+      if (Stmt *TryPart = AT->getTryBody())
+        BuildScopeInformation(TryPart, NewParentScope);
+    }
+
+    // Jump from the catch to the finally or try is not valid.
+    for (unsigned I = 0, N = AT->getNumCatchStmts(); I != N; ++I) {
+      ObjCAtCatchStmt *AC = AT->getCatchStmt(I);
+      unsigned NewParentScope = Scopes.size();
+      Scopes.push_back(GotoScope(ParentScope,
+                                 diag::note_protected_by_objc_catch,
+                                 diag::note_exits_objc_catch,
+                                 AC->getAtCatchLoc()));
+      // @catches are nested and it isn't
+      BuildScopeInformation(AC->getCatchBody(), NewParentScope);
+    }
+
+    // Jump from the finally to the try or catch is not valid.
+    if (ObjCAtFinallyStmt *AF = AT->getFinallyStmt()) {
+      unsigned NewParentScope = Scopes.size();
+      Scopes.push_back(GotoScope(ParentScope,
+                                 diag::note_protected_by_objc_finally,
+                                 diag::note_exits_objc_finally,
+                                 AF->getAtFinallyLoc()));
+      BuildScopeInformation(AF, NewParentScope);
+    }
+
+    return;
+  }
+
+  case Stmt::ObjCAtSynchronizedStmtClass: {
+    // Disallow jumps into the protected statement of an @synchronized, but
+    // allow jumps into the object expression it protects.
+    ObjCAtSynchronizedStmt *AS = cast<ObjCAtSynchronizedStmt>(S);
+    // Recursively walk the AST for the @synchronized object expr, it is
+    // evaluated in the normal scope.
+    BuildScopeInformation(AS->getSynchExpr(), ParentScope);
+
+    // Recursively walk the AST for the @synchronized part, protected by a new
+    // scope.
+    unsigned NewParentScope = Scopes.size();
+    Scopes.push_back(GotoScope(ParentScope,
+                               diag::note_protected_by_objc_synchronized,
+                               diag::note_exits_objc_synchronized,
+                               AS->getAtSynchronizedLoc()));
+    BuildScopeInformation(AS->getSynchBody(), NewParentScope);
+    return;
+  }
+
+  case Stmt::ObjCAutoreleasePoolStmtClass: {
+    // Disallow jumps into the protected statement of an @autoreleasepool.
+    ObjCAutoreleasePoolStmt *AS = cast<ObjCAutoreleasePoolStmt>(S);
+    // Recursively walk the AST for the @autoreleasepool part, protected by a
+    // new scope.
+    unsigned NewParentScope = Scopes.size();
+    Scopes.push_back(GotoScope(ParentScope,
+                               diag::note_protected_by_objc_autoreleasepool,
+                               diag::note_exits_objc_autoreleasepool,
+                               AS->getAtLoc()));
+    BuildScopeInformation(AS->getSubStmt(), NewParentScope);
+    return;
+  }
+
+  case Stmt::ExprWithCleanupsClass: {
+    // Disallow jumps past full-expressions that use blocks with
+    // non-trivial cleanups of their captures.  This is theoretically
+    // implementable but a lot of work which we haven't felt up to doing.
+    ExprWithCleanups *EWC = cast<ExprWithCleanups>(S);
+    for (unsigned i = 0, e = EWC->getNumObjects(); i != e; ++i) {
+      const BlockDecl *BDecl = EWC->getObject(i);
+      for (const auto &CI : BDecl->captures()) {
+        VarDecl *variable = CI.getVariable();
+        BuildScopeInformation(variable, BDecl, origParentScope);
+      }
+    }
+    break;
+  }
+
+  case Stmt::MaterializeTemporaryExprClass: {
+    // Disallow jumps out of scopes containing temporaries lifetime-extended to
+    // automatic storage duration.
+    MaterializeTemporaryExpr *MTE = cast<MaterializeTemporaryExpr>(S);
+    if (MTE->getStorageDuration() == SD_Automatic) {
+      SmallVector<const Expr *, 4> CommaLHS;
+      SmallVector<SubobjectAdjustment, 4> Adjustments;
+      const Expr *ExtendedObject =
+          MTE->GetTemporaryExpr()->skipRValueSubobjectAdjustments(
+              CommaLHS, Adjustments);
+      if (ExtendedObject->getType().isDestructedType()) {
+        Scopes.push_back(GotoScope(ParentScope, 0,
+                                   diag::note_exits_temporary_dtor,
+                                   ExtendedObject->getExprLoc()));
+        origParentScope = Scopes.size()-1;
+      }
+    }
+    break;
+  }
+
+  case Stmt::CaseStmtClass:
+  case Stmt::DefaultStmtClass:
+  case Stmt::LabelStmtClass:
+    LabelAndGotoScopes[S] = ParentScope;
+    break;
 
   default:
     break;
   }
 
   for (Stmt *SubStmt : S->children()) {
-    if (SkipFirstSubStmt) {
-      SkipFirstSubStmt = false;
+    if (!SubStmt)
+        continue;
+    if (StmtsToSkip) {
+      --StmtsToSkip;
       continue;
     }
-
-    if (!SubStmt) continue;
 
     // Cases, labels, and defaults aren't "scope parents".  It's also
     // important to handle these iteratively instead of recursively in
@@ -399,117 +561,6 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S, unsigned &origParentScope)
 
       LabelAndGotoScopes[SubStmt] = ParentScope;
       SubStmt = Next;
-    }
-
-    // If this is a declstmt with a VLA definition, it defines a scope from here
-    // to the end of the containing context.
-    if (DeclStmt *DS = dyn_cast<DeclStmt>(SubStmt)) {
-      // The decl statement creates a scope if any of the decls in it are VLAs
-      // or have the cleanup attribute.
-      for (auto *I : DS->decls())
-        BuildScopeInformation(I, ParentScope);
-      continue;
-    }
-    // Disallow jumps into any part of an @try statement by pushing a scope and
-    // walking all sub-stmts in that scope.
-    if (ObjCAtTryStmt *AT = dyn_cast<ObjCAtTryStmt>(SubStmt)) {
-      unsigned newParentScope;
-      // Recursively walk the AST for the @try part.
-      Scopes.push_back(GotoScope(ParentScope,
-                                 diag::note_protected_by_objc_try,
-                                 diag::note_exits_objc_try,
-                                 AT->getAtTryLoc()));
-      if (Stmt *TryPart = AT->getTryBody())
-        BuildScopeInformation(TryPart, (newParentScope = Scopes.size()-1));
-
-      // Jump from the catch to the finally or try is not valid.
-      for (unsigned I = 0, N = AT->getNumCatchStmts(); I != N; ++I) {
-        ObjCAtCatchStmt *AC = AT->getCatchStmt(I);
-        Scopes.push_back(GotoScope(ParentScope,
-                                   diag::note_protected_by_objc_catch,
-                                   diag::note_exits_objc_catch,
-                                   AC->getAtCatchLoc()));
-        // @catches are nested and it isn't
-        BuildScopeInformation(AC->getCatchBody(),
-                              (newParentScope = Scopes.size()-1));
-      }
-
-      // Jump from the finally to the try or catch is not valid.
-      if (ObjCAtFinallyStmt *AF = AT->getFinallyStmt()) {
-        Scopes.push_back(GotoScope(ParentScope,
-                                   diag::note_protected_by_objc_finally,
-                                   diag::note_exits_objc_finally,
-                                   AF->getAtFinallyLoc()));
-        BuildScopeInformation(AF, (newParentScope = Scopes.size()-1));
-      }
-
-      continue;
-    }
-
-    unsigned newParentScope;
-    // Disallow jumps into the protected statement of an @synchronized, but
-    // allow jumps into the object expression it protects.
-    if (ObjCAtSynchronizedStmt *AS =
-            dyn_cast<ObjCAtSynchronizedStmt>(SubStmt)) {
-      // Recursively walk the AST for the @synchronized object expr, it is
-      // evaluated in the normal scope.
-      BuildScopeInformation(AS->getSynchExpr(), ParentScope);
-
-      // Recursively walk the AST for the @synchronized part, protected by a new
-      // scope.
-      Scopes.push_back(GotoScope(ParentScope,
-                                 diag::note_protected_by_objc_synchronized,
-                                 diag::note_exits_objc_synchronized,
-                                 AS->getAtSynchronizedLoc()));
-      BuildScopeInformation(AS->getSynchBody(),
-                            (newParentScope = Scopes.size()-1));
-      continue;
-    }
-
-    // Disallow jumps into the protected statement of an @autoreleasepool.
-    if (ObjCAutoreleasePoolStmt *AS =
-            dyn_cast<ObjCAutoreleasePoolStmt>(SubStmt)) {
-      // Recursively walk the AST for the @autoreleasepool part, protected by a
-      // new scope.
-      Scopes.push_back(GotoScope(ParentScope,
-                                 diag::note_protected_by_objc_autoreleasepool,
-                                 diag::note_exits_objc_autoreleasepool,
-                                 AS->getAtLoc()));
-      BuildScopeInformation(AS->getSubStmt(),
-                            (newParentScope = Scopes.size() - 1));
-      continue;
-    }
-
-    // Disallow jumps past full-expressions that use blocks with
-    // non-trivial cleanups of their captures.  This is theoretically
-    // implementable but a lot of work which we haven't felt up to doing.
-    if (ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(SubStmt)) {
-      for (unsigned i = 0, e = EWC->getNumObjects(); i != e; ++i) {
-        const BlockDecl *BDecl = EWC->getObject(i);
-        for (const auto &CI : BDecl->captures()) {
-          VarDecl *variable = CI.getVariable();
-          BuildScopeInformation(variable, BDecl, ParentScope);
-        }
-      }
-    }
-
-    // Disallow jumps out of scopes containing temporaries lifetime-extended to
-    // automatic storage duration.
-    if (MaterializeTemporaryExpr *MTE =
-            dyn_cast<MaterializeTemporaryExpr>(SubStmt)) {
-      if (MTE->getStorageDuration() == SD_Automatic) {
-        SmallVector<const Expr *, 4> CommaLHS;
-        SmallVector<SubobjectAdjustment, 4> Adjustments;
-        const Expr *ExtendedObject =
-            MTE->GetTemporaryExpr()->skipRValueSubobjectAdjustments(
-                CommaLHS, Adjustments);
-        if (ExtendedObject->getType().isDestructedType()) {
-          Scopes.push_back(GotoScope(ParentScope, 0,
-                                     diag::note_exits_temporary_dtor,
-                                     ExtendedObject->getExprLoc()));
-          ParentScope = Scopes.size()-1;
-        }
-      }
     }
 
     // Recursively walk the AST.

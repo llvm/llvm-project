@@ -22,7 +22,7 @@
 
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/LEB128.h"
@@ -68,11 +68,8 @@ static bool ParseHead(const StringRef &Input, StringRef &FName,
   return true;
 }
 
-
 /// \brief Returns true if line offset \p L is legal (only has 16 bits).
-static bool isOffsetLegal(unsigned L) {
-  return (L & 0xffff) == L;
-}
+static bool isOffsetLegal(unsigned L) { return (L & 0xffff) == L; }
 
 /// \brief Parse \p Input as line sample.
 ///
@@ -180,6 +177,7 @@ std::error_code SampleProfileReaderText::read() {
       }
       Profiles[FName] = FunctionSamples();
       FunctionSamples &FProfile = Profiles[FName];
+      FProfile.setName(FName);
       MergeResult(Result, FProfile.addTotalSamples(NumSamples));
       MergeResult(Result, FProfile.addHeadSamples(NumHeadSamples));
       InlineStack.clear();
@@ -202,7 +200,8 @@ std::error_code SampleProfileReaderText::read() {
           InlineStack.pop_back();
         }
         FunctionSamples &FSamples = InlineStack.back()->functionSamplesAt(
-            CallsiteLocation(LineOffset, Discriminator, FName));
+            LineLocation(LineOffset, Discriminator));
+        FSamples.setName(FName);
         MergeResult(Result, FSamples.addTotalSamples(NumSamples));
         InlineStack.push_back(&FSamples);
       } else {
@@ -220,6 +219,8 @@ std::error_code SampleProfileReaderText::read() {
       }
     }
   }
+  if (Result == sampleprof_error::success)
+    computeSummary();
 
   return Result;
 }
@@ -351,8 +352,9 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
     if (std::error_code EC = FName.getError())
       return EC;
 
-    FunctionSamples &CalleeProfile = FProfile.functionSamplesAt(
-        CallsiteLocation(*LineOffset, *Discriminator, *FName));
+    FunctionSamples &CalleeProfile =
+        FProfile.functionSamplesAt(LineLocation(*LineOffset, *Discriminator));
+    CalleeProfile.setName(*FName);
     if (std::error_code EC = readProfile(CalleeProfile))
       return EC;
   }
@@ -372,6 +374,7 @@ std::error_code SampleProfileReaderBinary::read() {
 
     Profiles[*FName] = FunctionSamples();
     FunctionSamples &FProfile = Profiles[*FName];
+    FProfile.setName(*FName);
 
     FProfile.addHeadSamples(*NumHeadSamples);
 
@@ -400,6 +403,9 @@ std::error_code SampleProfileReaderBinary::readHeader() {
   else if (*Version != SPVersion())
     return sampleprof_error::unsupported_version;
 
+  if (std::error_code EC = readSummary())
+    return EC;
+
   // Read the name table.
   auto Size = readNumber<uint32_t>();
   if (std::error_code EC = Size.getError())
@@ -411,6 +417,62 @@ std::error_code SampleProfileReaderBinary::readHeader() {
       return EC;
     NameTable.push_back(*Name);
   }
+
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderBinary::readSummaryEntry(
+    std::vector<ProfileSummaryEntry> &Entries) {
+  auto Cutoff = readNumber<uint64_t>();
+  if (std::error_code EC = Cutoff.getError())
+    return EC;
+
+  auto MinBlockCount = readNumber<uint64_t>();
+  if (std::error_code EC = MinBlockCount.getError())
+    return EC;
+
+  auto NumBlocks = readNumber<uint64_t>();
+  if (std::error_code EC = NumBlocks.getError())
+    return EC;
+
+  Entries.emplace_back(*Cutoff, *MinBlockCount, *NumBlocks);
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderBinary::readSummary() {
+  auto TotalCount = readNumber<uint64_t>();
+  if (std::error_code EC = TotalCount.getError())
+    return EC;
+
+  auto MaxBlockCount = readNumber<uint64_t>();
+  if (std::error_code EC = MaxBlockCount.getError())
+    return EC;
+
+  auto MaxFunctionCount = readNumber<uint64_t>();
+  if (std::error_code EC = MaxFunctionCount.getError())
+    return EC;
+
+  auto NumBlocks = readNumber<uint64_t>();
+  if (std::error_code EC = NumBlocks.getError())
+    return EC;
+
+  auto NumFunctions = readNumber<uint64_t>();
+  if (std::error_code EC = NumFunctions.getError())
+    return EC;
+
+  auto NumSummaryEntries = readNumber<uint64_t>();
+  if (std::error_code EC = NumSummaryEntries.getError())
+    return EC;
+
+  std::vector<ProfileSummaryEntry> Entries;
+  for (unsigned i = 0; i < *NumSummaryEntries; i++) {
+    std::error_code EC = readSummaryEntry(Entries);
+    if (EC != sampleprof_error::success)
+      return EC;
+  }
+  Summary = llvm::make_unique<ProfileSummary>(
+      ProfileSummary::PSK_Sample, Entries, *TotalCount, *MaxBlockCount, 0,
+      *MaxFunctionCount, *NumBlocks, *NumFunctions);
 
   return sampleprof_error::success;
 }
@@ -518,6 +580,7 @@ std::error_code SampleProfileReaderGCC::readFunctionProfiles() {
     if (std::error_code EC = readOneFunctionProfile(Stack, true, 0))
       return EC;
 
+  computeSummary();
   return sampleprof_error::success;
 }
 
@@ -562,8 +625,9 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
     uint32_t LineOffset = Offset >> 16;
     uint32_t Discriminator = Offset & 0xffff;
     FProfile = &CallerProfile->functionSamplesAt(
-        CallsiteLocation(LineOffset, Discriminator, Name));
+        LineLocation(LineOffset, Discriminator));
   }
+  FProfile->setName(Name);
 
   for (uint32_t I = 0; I < NumPosCounts; ++I) {
     uint32_t Offset;
@@ -669,7 +733,7 @@ bool SampleProfileReaderGCC::hasFormat(const MemoryBuffer &Buffer) {
 ///
 /// \returns an error code indicating the status of the buffer.
 static ErrorOr<std::unique_ptr<MemoryBuffer>>
-setupMemoryBuffer(std::string Filename) {
+setupMemoryBuffer(const Twine &Filename) {
   auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(Filename);
   if (std::error_code EC = BufferOrErr.getError())
     return EC;
@@ -692,7 +756,7 @@ setupMemoryBuffer(std::string Filename) {
 ///
 /// \returns an error code indicating the status of the created reader.
 ErrorOr<std::unique_ptr<SampleProfileReader>>
-SampleProfileReader::create(StringRef Filename, LLVMContext &C) {
+SampleProfileReader::create(const Twine &Filename, LLVMContext &C) {
   auto BufferOrError = setupMemoryBuffer(Filename);
   if (std::error_code EC = BufferOrError.getError())
     return EC;
@@ -724,4 +788,15 @@ SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C) {
     return EC;
 
   return std::move(Reader);
+}
+
+// For text and GCC file formats, we compute the summary after reading the
+// profile. Binary format has the profile summary in its header.
+void SampleProfileReader::computeSummary() {
+  SampleProfileSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
+  for (const auto &I : Profiles) {
+    const FunctionSamples &Profile = I.second;
+    Builder.addRecord(Profile);
+  }
+  Summary = Builder.getSummary();
 }

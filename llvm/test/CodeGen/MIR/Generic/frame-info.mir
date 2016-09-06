@@ -1,4 +1,4 @@
-# RUN: llc -start-after machine-sink -stop-after machine-sink -o /dev/null %s | FileCheck %s
+# RUN: llc -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses machine frame info properties
 # correctly.
 

@@ -40,6 +40,8 @@ public:
     FT_DwarfFrame,
     FT_LEB,
     FT_SafeSEH,
+    FT_CVInlineLines,
+    FT_CVDefRange,
     FT_Dummy
   };
 
@@ -210,7 +212,8 @@ public:
 
   static bool classof(const MCFragment *F) {
     MCFragment::FragmentType Kind = F->getKind();
-    return Kind == MCFragment::FT_Relaxable || Kind == MCFragment::FT_Data;
+    return Kind == MCFragment::FT_Relaxable || Kind == MCFragment::FT_Data ||
+           Kind == MCFragment::FT_CVDefRange;
   }
 };
 
@@ -481,6 +484,79 @@ public:
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_SafeSEH;
+  }
+};
+
+/// Fragment representing the binary annotations produced by the
+/// .cv_inline_linetable directive.
+class MCCVInlineLineTableFragment : public MCFragment {
+  unsigned SiteFuncId;
+  unsigned StartFileId;
+  unsigned StartLineNum;
+  const MCSymbol *FnStartSym;
+  const MCSymbol *FnEndSym;
+  SmallVector<unsigned, 3> SecondaryFuncs;
+  SmallString<8> Contents;
+
+  /// CodeViewContext has the real knowledge about this format, so let it access
+  /// our members.
+  friend class CodeViewContext;
+
+public:
+  MCCVInlineLineTableFragment(unsigned SiteFuncId, unsigned StartFileId,
+                              unsigned StartLineNum, const MCSymbol *FnStartSym,
+                              const MCSymbol *FnEndSym,
+                              ArrayRef<unsigned> SecondaryFuncs,
+                              MCSection *Sec = nullptr)
+      : MCFragment(FT_CVInlineLines, false, 0, Sec), SiteFuncId(SiteFuncId),
+        StartFileId(StartFileId), StartLineNum(StartLineNum),
+        FnStartSym(FnStartSym), FnEndSym(FnEndSym),
+        SecondaryFuncs(SecondaryFuncs.begin(), SecondaryFuncs.end()) {}
+
+  /// \name Accessors
+  /// @{
+
+  const MCSymbol *getFnStartSym() const { return FnStartSym; }
+  const MCSymbol *getFnEndSym() const { return FnEndSym; }
+
+  SmallString<8> &getContents() { return Contents; }
+  const SmallString<8> &getContents() const { return Contents; }
+
+  /// @}
+
+  static bool classof(const MCFragment *F) {
+    return F->getKind() == MCFragment::FT_CVInlineLines;
+  }
+};
+
+/// Fragment representing the .cv_def_range directive.
+class MCCVDefRangeFragment : public MCEncodedFragmentWithFixups<32, 4> {
+  SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 2> Ranges;
+  SmallString<32> FixedSizePortion;
+
+  /// CodeViewContext has the real knowledge about this format, so let it access
+  /// our members.
+  friend class CodeViewContext;
+
+public:
+  MCCVDefRangeFragment(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      StringRef FixedSizePortion, MCSection *Sec = nullptr)
+      : MCEncodedFragmentWithFixups<32, 4>(FT_CVDefRange, false, Sec),
+        Ranges(Ranges.begin(), Ranges.end()),
+        FixedSizePortion(FixedSizePortion) {}
+
+  /// \name Accessors
+  /// @{
+  ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> getRanges() const {
+    return Ranges;
+  }
+
+  StringRef getFixedSizePortion() const { return FixedSizePortion; }
+  /// @}
+
+  static bool classof(const MCFragment *F) {
+    return F->getKind() == MCFragment::FT_CVDefRange;
   }
 };
 

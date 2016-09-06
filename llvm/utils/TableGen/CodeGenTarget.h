@@ -52,8 +52,8 @@ enum SDNP {
 /// record corresponds to.
 MVT::SimpleValueType getValueType(Record *Rec);
 
-std::string getName(MVT::SimpleValueType T);
-std::string getEnumName(MVT::SimpleValueType T);
+StringRef getName(MVT::SimpleValueType T);
+StringRef getEnumName(MVT::SimpleValueType T);
 
 /// getQualifiedName - Return the name of the specified record, with a
 /// namespace qualifier if the record contains one.
@@ -139,7 +139,7 @@ public:
   /// supported by the target (i.e. there are registers that directly hold it).
   bool isLegalValueType(MVT::SimpleValueType VT) const {
     ArrayRef<MVT::SimpleValueType> LegalVTs = getLegalValueTypes();
-    return std::find(LegalVTs.begin(), LegalVTs.end(), VT) != LegalVTs.end();
+    return is_contained(LegalVTs, VT);
   }
 
   CodeGenSchedModels &getSchedModels() const;

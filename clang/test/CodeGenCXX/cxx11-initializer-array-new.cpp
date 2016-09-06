@@ -7,7 +7,7 @@ struct S { S(); S(int); ~S(); int n; };
 void *p = new S[2][3]{ { 1, 2, 3 }, { 4, 5, 6 } };
 
 // CHECK-LABEL: define
-// CHECK: %[[ALLOC:.*]] = call noalias i8* @_Znam(i64 32)
+// CHECK: %[[ALLOC:.*]] = call i8* @_Znam(i64 32)
 // CHECK: %[[COOKIE:.*]] = bitcast i8* %[[ALLOC]] to i64*
 // CHECK: store i64 6, i64* %[[COOKIE]]
 // CHECK: %[[START_AS_i8:.*]] = getelementptr inbounds i8, i8* %[[ALLOC]], i64 8
@@ -50,7 +50,7 @@ void *q = new S[n][3]{ { 1, 2, 3 }, { 4, 5, 6 } };
 // CHECK: call {{.*}} @llvm.umul.with.overflow.i64(i64 %[[N:.*]], i64 12)
 // CHECK: %[[ELTS:.*]] = mul i64 %[[N]], 3
 // CHECK: call {{.*}} @llvm.uadd.with.overflow.i64(i64 %{{.*}}, i64 8)
-// CHECK: %[[ALLOC:.*]] = call noalias i8* @_Znam(i64 %{{.*}})
+// CHECK: %[[ALLOC:.*]] = call i8* @_Znam(i64 %{{.*}})
 //
 // CHECK: %[[COOKIE:.*]] = bitcast i8* %[[ALLOC]] to i64*
 // CHECK: store i64 %[[ELTS]], i64* %[[COOKIE]]
@@ -113,7 +113,7 @@ void *r = new T[n][3]{ { 1, 2, 3 }, { 4, 5, 6 } };
 // No cookie.
 // CHECK-NOT: @llvm.uadd.with.overflow
 //
-// CHECK: %[[ALLOC:.*]] = call noalias i8* @_Znam(i64 %{{.*}})
+// CHECK: %[[ALLOC:.*]] = call i8* @_Znam(i64 %{{.*}})
 //
 // CHECK: %[[START_AS_T:.*]] = bitcast i8* %[[ALLOC]] to %[[T:.*]]*
 //

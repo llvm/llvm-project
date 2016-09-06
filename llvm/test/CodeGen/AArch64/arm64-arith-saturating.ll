@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -mcpu=cyclone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -mcpu=cyclone | FileCheck %s
 
 define i32 @qadds(<4 x i32> %b, <4 x i32> %c) nounwind readnone optsize ssp {
 ; CHECK-LABEL: qadds:

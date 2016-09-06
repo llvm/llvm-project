@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -19,6 +20,7 @@ namespace {
 class HeaderIncludesCallback : public PPCallbacks {
   SourceManager &SM;
   raw_ostream *OutputFile;
+  const DependencyOutputOptions &DepOpts;
   unsigned CurrentIncludeDepth;
   bool HasProcessedPredefines;
   bool OwnsOutputFile;
@@ -28,12 +30,13 @@ class HeaderIncludesCallback : public PPCallbacks {
 
 public:
   HeaderIncludesCallback(const Preprocessor *PP, bool ShowAllHeaders_,
-                         raw_ostream *OutputFile_, bool OwnsOutputFile_,
-                         bool ShowDepth_, bool MSStyle_)
-    : SM(PP->getSourceManager()), OutputFile(OutputFile_),
-      CurrentIncludeDepth(0), HasProcessedPredefines(false),
-      OwnsOutputFile(OwnsOutputFile_), ShowAllHeaders(ShowAllHeaders_),
-      ShowDepth(ShowDepth_), MSStyle(MSStyle_) {}
+                         raw_ostream *OutputFile_,
+                         const DependencyOutputOptions &DepOpts,
+                         bool OwnsOutputFile_, bool ShowDepth_, bool MSStyle_)
+      : SM(PP->getSourceManager()), OutputFile(OutputFile_), DepOpts(DepOpts),
+        CurrentIncludeDepth(0), HasProcessedPredefines(false),
+        OwnsOutputFile(OwnsOutputFile_), ShowAllHeaders(ShowAllHeaders_),
+        ShowDepth(ShowDepth_), MSStyle(MSStyle_) {}
 
   ~HeaderIncludesCallback() override {
     if (OwnsOutputFile)
@@ -46,38 +49,37 @@ public:
 };
 }
 
-static void PrintHeaderInfo(raw_ostream *OutputFile, const char* Filename,
+static void PrintHeaderInfo(raw_ostream *OutputFile, StringRef Filename,
                             bool ShowDepth, unsigned CurrentIncludeDepth,
                             bool MSStyle) {
-    // Write to a temporary string to avoid unnecessary flushing on errs().
-    SmallString<512> Pathname(Filename);
+  // Write to a temporary string to avoid unnecessary flushing on errs().
+  SmallString<512> Pathname(Filename);
+  if (!MSStyle)
+    Lexer::Stringify(Pathname);
+
+  SmallString<256> Msg;
+  if (MSStyle)
+    Msg += "Note: including file:";
+
+  if (ShowDepth) {
+    // The main source file is at depth 1, so skip one dot.
+    for (unsigned i = 1; i != CurrentIncludeDepth; ++i)
+      Msg += MSStyle ? ' ' : '.';
+
     if (!MSStyle)
-      Lexer::Stringify(Pathname);
+      Msg += ' ';
+  }
+  Msg += Pathname;
+  Msg += '\n';
 
-    SmallString<256> Msg;
-    if (MSStyle)
-      Msg += "Note: including file:";
-
-    if (ShowDepth) {
-      // The main source file is at depth 1, so skip one dot.
-      for (unsigned i = 1; i != CurrentIncludeDepth; ++i)
-        Msg += MSStyle ? ' ' : '.';
-
-      if (!MSStyle)
-        Msg += ' ';
-    }
-    Msg += Pathname;
-    Msg += '\n';
-
-    OutputFile->write(Msg.data(), Msg.size());
-    OutputFile->flush();
+  *OutputFile << Msg;
+  OutputFile->flush();
 }
 
 void clang::AttachHeaderIncludeGen(Preprocessor &PP,
-                                   const std::vector<std::string> &ExtraHeaders,
-                                   bool ShowAllHeaders,
-                                   StringRef OutputPath, bool ShowDepth,
-                                   bool MSStyle) {
+                                   const DependencyOutputOptions &DepOpts,
+                                   bool ShowAllHeaders, StringRef OutputPath,
+                                   bool ShowDepth, bool MSStyle) {
   raw_ostream *OutputFile = MSStyle ? &llvm::outs() : &llvm::errs();
   bool OwnsOutputFile = false;
 
@@ -97,20 +99,16 @@ void clang::AttachHeaderIncludeGen(Preprocessor &PP,
     }
   }
 
-  // Print header info for extra headers, pretending they were discovered
-  // by the regular preprocessor. The primary use case is to support
-  // proper generation of Make / Ninja file dependencies for implicit includes,
-  // such as sanitizer blacklists. It's only important for cl.exe
-  // compatibility, the GNU way to generate rules is -M / -MM / -MD / -MMD.
-  for (auto Header : ExtraHeaders) {
-    PrintHeaderInfo(OutputFile, Header.c_str(), ShowDepth, 2, MSStyle);
-  }
-  PP.addPPCallbacks(llvm::make_unique<HeaderIncludesCallback>(&PP,
-                                                              ShowAllHeaders,
-                                                              OutputFile,
-                                                              OwnsOutputFile,
-                                                              ShowDepth,
-                                                              MSStyle));
+  // Print header info for extra headers, pretending they were discovered by
+  // the regular preprocessor. The primary use case is to support proper
+  // generation of Make / Ninja file dependencies for implicit includes, such
+  // as sanitizer blacklists. It's only important for cl.exe compatibility,
+  // the GNU way to generate rules is -M / -MM / -MD / -MMD.
+  for (const auto &Header : DepOpts.ExtraDeps)
+    PrintHeaderInfo(OutputFile, Header, ShowDepth, 2, MSStyle);
+  PP.addPPCallbacks(llvm::make_unique<HeaderIncludesCallback>(
+      &PP, ShowAllHeaders, OutputFile, DepOpts, OwnsOutputFile, ShowDepth,
+      MSStyle));
 }
 
 void HeaderIncludesCallback::FileChanged(SourceLocation Loc,
@@ -132,8 +130,13 @@ void HeaderIncludesCallback::FileChanged(SourceLocation Loc,
 
     // We track when we are done with the predefines by watching for the first
     // place where we drop back to a nesting depth of 1.
-    if (CurrentIncludeDepth == 1 && !HasProcessedPredefines)
+    if (CurrentIncludeDepth == 1 && !HasProcessedPredefines) {
+      if (!DepOpts.ShowIncludesPretendHeader.empty()) {
+        PrintHeaderInfo(OutputFile, DepOpts.ShowIncludesPretendHeader,
+                        ShowDepth, 2, MSStyle);
+      }
       HasProcessedPredefines = true;
+    }
 
     return;
   } else
@@ -144,11 +147,20 @@ void HeaderIncludesCallback::FileChanged(SourceLocation Loc,
   // line buffers.
   bool ShowHeader = (HasProcessedPredefines ||
                      (ShowAllHeaders && CurrentIncludeDepth > 2));
+  unsigned IncludeDepth = CurrentIncludeDepth;
+  if (!HasProcessedPredefines)
+    --IncludeDepth; // Ignore indent from <built-in>.
+  else if (!DepOpts.ShowIncludesPretendHeader.empty())
+    ++IncludeDepth; // Pretend inclusion by ShowIncludesPretendHeader.
 
   // Dump the header include information we are past the predefines buffer or
-  // are showing all headers.
-  if (ShowHeader && Reason == PPCallbacks::EnterFile) {
-    PrintHeaderInfo(OutputFile, UserLoc.getFilename(),
-                    ShowDepth, CurrentIncludeDepth, MSStyle);
+  // are showing all headers and this isn't the magic implicit <command line>
+  // header.
+  // FIXME: Identify headers in a more robust way than comparing their name to
+  // "<command line>" and "<built-in>" in a bunch of places.
+  if (ShowHeader && Reason == PPCallbacks::EnterFile &&
+      UserLoc.getFilename() != StringRef("<command line>")) {
+    PrintHeaderInfo(OutputFile, UserLoc.getFilename(), ShowDepth, IncludeDepth,
+                    MSStyle);
   }
 }

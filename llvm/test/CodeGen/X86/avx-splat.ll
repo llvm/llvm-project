@@ -15,7 +15,8 @@ entry:
 define <16 x i16> @funcB(<16 x i16> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: funcB:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[10,11,10,11,10,11,10,11,10,11,10,11,10,11,10,11]
+; CHECK-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -27,7 +28,7 @@ define <4 x i64> @funcC(i64 %q) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: funcC:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vmovq %rdi, %xmm0
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:
@@ -123,9 +124,8 @@ entry:
 define <8 x float> @funcH(<8 x float> %a) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: funcH:
 ; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,1,1,1,5,5,5,5]
+; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; CHECK-NEXT:    retq
 entry:
   %shuffle = shufflevector <8 x float> %a, <8 x float> undef, <8 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
@@ -135,8 +135,7 @@ entry:
 define <2 x double> @splat_load_2f64_11(<2 x double>* %ptr) {
 ; CHECK-LABEL: splat_load_2f64_11:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovaps (%rdi), %xmm0
-; CHECK-NEXT:    vmovhlps {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; CHECK-NEXT:    retq
   %x = load <2 x double>, <2 x double>* %ptr
   %x1 = shufflevector <2 x double> %x, <2 x double> undef, <2 x i32> <i32 1, i32 1>

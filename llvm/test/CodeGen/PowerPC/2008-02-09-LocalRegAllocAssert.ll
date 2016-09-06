@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin -regalloc=fast -optimize-regalloc=0
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin -regalloc=fast -optimize-regalloc=0
 
 define i32 @bork(i64 %foo, i64 %bar) {
 entry:

@@ -41,7 +41,7 @@ exceptional_return:
 ; CHECK: .long  .Ltmp{{[0-9]+}}-.Ltmp{{[0-9]+}}
 ; CHECK: .long  .Ltmp{{[0-9]+}}-.Lfunc_begin{{[0-9]+}}
 ; CHECK: .byte  0
-; CHECK: .align 4
+; CHECK: .p2align 4
 
 define i64 addrspace(1)* @test_result(i64 addrspace(1)* %obj,
                                       i64 addrspace(1)* %obj1)
@@ -71,7 +71,7 @@ exceptional_return:
 ; CHECK: .long .Ltmp{{[0-9]+}}-.Ltmp{{[0-9]+}}
 ; CHECK: .long .Ltmp{{[0-9]+}}-.Lfunc_begin{{[0-9]+}}
 ; CHECK: .byte 0
-; CHECK: .align 4
+; CHECK: .p2align 4
 
 define i64 addrspace(1)* @test_same_val(i1 %cond, i64 addrspace(1)* %val1, i64 addrspace(1)* %val2, i64 addrspace(1)* %val3)
   gc "statepoint-example" personality i32 ()* @"personality_function" {

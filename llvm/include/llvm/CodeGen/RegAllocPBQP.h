@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/PBQP/ReductionRules.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <set>
 
 namespace llvm {
 

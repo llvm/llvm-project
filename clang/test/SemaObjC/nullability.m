@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fblocks -Woverriding-method-mismatch -Wno-nullability-declspec %s -verify
+// RUN: %clang_cc1 -fsyntax-only -fblocks -Woverriding-method-mismatch -Wno-nullability-declspec -Wnullable-to-nonnull-conversion %s -verify
 
 __attribute__((objc_root_class))
 @interface NSFoo
@@ -229,4 +229,30 @@ void testBlockLiterals() {
   (void)(^ _Nullable id(void) { return 0; });
 
   int *x = (^ _Nullable id(void) { return 0; })(); // expected-warning{{incompatible pointer types initializing 'int *' with an expression of type 'id _Nullable'}}
+}
+
+// Check nullability of conditional expressions.
+void conditional_expr(int c) {
+  NSFoo * _Nonnull p;
+  NSFoo * _Nonnull nonnullP;
+  NSFoo * _Nullable nullableP;
+  NSFoo * _Null_unspecified unspecifiedP;
+  NSFoo *noneP;
+
+  p = c ? nonnullP : nonnullP;
+  p = c ? nonnullP : nullableP; // expected-warning{{implicit conversion from nullable pointer 'NSFoo * _Nullable' to non-nullable pointer type 'NSFoo * _Nonnull'}}
+  p = c ? nonnullP : unspecifiedP;
+  p = c ? nonnullP : noneP;
+  p = c ? nullableP : nonnullP; // expected-warning{{implicit conversion from nullable pointer 'NSFoo * _Nullable' to non-nullable pointer type 'NSFoo * _Nonnull'}}
+  p = c ? nullableP : nullableP; // expected-warning{{implicit conversion from nullable pointer 'NSFoo * _Nullable' to non-nullable pointer type 'NSFoo * _Nonnull'}}
+  p = c ? nullableP : unspecifiedP; // expected-warning{{implicit conversion from nullable pointer 'NSFoo * _Nullable' to non-nullable pointer type 'NSFoo * _Nonnull'}}
+  p = c ? nullableP : noneP; // expected-warning{{implicit conversion from nullable pointer 'NSFoo * _Nullable' to non-nullable pointer type 'NSFoo * _Nonnull'}}
+  p = c ? unspecifiedP : nonnullP;
+  p = c ? unspecifiedP : nullableP; // expected-warning{{implicit conversion from nullable pointer 'NSFoo * _Nullable' to non-nullable pointer type 'NSFoo * _Nonnull'}}
+  p = c ? unspecifiedP : unspecifiedP;
+  p = c ? unspecifiedP : noneP;
+  p = c ? noneP : nonnullP;
+  p = c ? noneP : nullableP; // expected-warning{{implicit conversion from nullable pointer 'NSFoo * _Nullable' to non-nullable pointer type 'NSFoo * _Nonnull'}}
+  p = c ? noneP : unspecifiedP;
+  p = c ? noneP : noneP;
 }

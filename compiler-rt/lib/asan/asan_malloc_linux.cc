@@ -26,52 +26,58 @@
 // ---------------------- Replacement functions ---------------- {{{1
 using namespace __asan;  // NOLINT
 
-static const uptr kCallocPoolSize = 1024;
-static uptr calloc_memory_for_dlsym[kCallocPoolSize];
+static uptr allocated_for_dlsym;
+static const uptr kDlsymAllocPoolSize = 1024;
+static uptr alloc_memory_for_dlsym[kDlsymAllocPoolSize];
 
-static bool IsInCallocPool(const void *ptr) {
-  sptr off = (sptr)ptr - (sptr)calloc_memory_for_dlsym;
-  return 0 <= off && off < (sptr)kCallocPoolSize;
+static bool IsInDlsymAllocPool(const void *ptr) {
+  uptr off = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
+  return off < sizeof(alloc_memory_for_dlsym);
+}
+
+static void *AllocateFromLocalPool(uptr size_in_bytes) {
+  uptr size_in_words = RoundUpTo(size_in_bytes, kWordSize) / kWordSize;
+  void *mem = (void*)&alloc_memory_for_dlsym[allocated_for_dlsym];
+  allocated_for_dlsym += size_in_words;
+  CHECK_LT(allocated_for_dlsym, kDlsymAllocPoolSize);
+  return mem;
 }
 
 INTERCEPTOR(void, free, void *ptr) {
   GET_STACK_TRACE_FREE;
-  if (UNLIKELY(IsInCallocPool(ptr)))
+  if (UNLIKELY(IsInDlsymAllocPool(ptr)))
     return;
   asan_free(ptr, &stack, FROM_MALLOC);
 }
 
 INTERCEPTOR(void, cfree, void *ptr) {
   GET_STACK_TRACE_FREE;
-  if (UNLIKELY(IsInCallocPool(ptr)))
+  if (UNLIKELY(IsInDlsymAllocPool(ptr)))
     return;
   asan_free(ptr, &stack, FROM_MALLOC);
 }
 
 INTERCEPTOR(void*, malloc, uptr size) {
+  if (UNLIKELY(!asan_inited))
+    // Hack: dlsym calls malloc before REAL(malloc) is retrieved from dlsym.
+    return AllocateFromLocalPool(size);
   GET_STACK_TRACE_MALLOC;
   return asan_malloc(size, &stack);
 }
 
 INTERCEPTOR(void*, calloc, uptr nmemb, uptr size) {
-  if (UNLIKELY(!asan_inited)) {
+  if (UNLIKELY(!asan_inited))
     // Hack: dlsym calls calloc before REAL(calloc) is retrieved from dlsym.
-    static uptr allocated;
-    uptr size_in_words = ((nmemb * size) + kWordSize - 1) / kWordSize;
-    void *mem = (void*)&calloc_memory_for_dlsym[allocated];
-    allocated += size_in_words;
-    CHECK(allocated < kCallocPoolSize);
-    return mem;
-  }
+    return AllocateFromLocalPool(nmemb * size);
   GET_STACK_TRACE_MALLOC;
   return asan_calloc(nmemb, size, &stack);
 }
 
 INTERCEPTOR(void*, realloc, void *ptr, uptr size) {
   GET_STACK_TRACE_MALLOC;
-  if (UNLIKELY(IsInCallocPool(ptr))) {
-    uptr offset = (uptr)ptr - (uptr)calloc_memory_for_dlsym;
-    uptr copy_size = Min(size, kCallocPoolSize - offset);
+  if (UNLIKELY(IsInDlsymAllocPool(ptr))) {
+    uptr offset = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
+    uptr copy_size = Min(size, kDlsymAllocPoolSize - offset);
     void *new_ptr = asan_malloc(size, &stack);
     internal_memcpy(new_ptr, ptr, copy_size);
     return new_ptr;

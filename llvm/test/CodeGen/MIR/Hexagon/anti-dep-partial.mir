@@ -1,0 +1,35 @@
+# RUN: llc -march=hexagon -post-RA-scheduler -run-pass post-RA-sched %s -o - | FileCheck %s
+
+--- |
+  declare void @check(i64, i32, i32, i64)
+  define void @foo() {
+    ret void
+  }
+...
+
+---
+name: foo
+tracksRegLiveness: true
+allVRegsAllocated: true
+body: |
+  bb.0:
+    successors:
+    liveins: %r0, %r1, %d1, %d2, %r16, %r17, %r19, %r22, %r23
+        %r2 = A2_add %r23, killed %r17
+        %r6 = M2_mpyi %r16, %r16
+        %r22 = M2_accii %r22, killed %r2, 2
+        %r7 = A2_tfrsi 12345678
+        %r3 = A2_tfr killed %r16
+        %d2 = A2_tfrp killed %d0
+        %r2 = L2_loadri_io %r29, 28
+        %r2 = M2_mpyi killed %r6, killed %r2
+        %r23 = S2_asr_i_r %r22, 31
+        S2_storeri_io killed %r29, 0, killed %r7
+        ; The anti-dependency on r23 between the first A2_add and the
+        ; S2_asr_i_r was causing d11 to be renamed, while r22 remained
+        ; unchanged. Check that the renaming of d11 does not happen.
+        ; CHECK: d11
+        %d0 = A2_tfrp killed %d11
+        J2_call @check, implicit-def %d0, implicit-def %d1, implicit-def %d2, implicit %d0, implicit %d1, implicit %d2
+...
+

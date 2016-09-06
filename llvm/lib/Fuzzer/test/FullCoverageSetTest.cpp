@@ -1,3 +1,6 @@
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+
 // Simple test for a fuzzer. The fuzzer must find the string "FUZZER".
 #include <cstdint>
 #include <cstdlib>

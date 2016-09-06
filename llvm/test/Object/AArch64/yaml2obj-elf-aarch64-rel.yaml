@@ -1,4 +1,4 @@
-# RUN: yaml2obj -format=elf %s > %t
+# RUN: yaml2obj %s > %t
 # RUN: obj2yaml  %t | FileCheck %s
 
 # CHECK:      - Name:            .rela.text
@@ -14,6 +14,7 @@
 # CHECK-NEXT:        Symbol:          main
 # CHECK-NEXT:        Type:            R_AARCH64_TLSGD_ADR_PREL21
 
+!ELF
 FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB

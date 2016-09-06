@@ -12,7 +12,26 @@ tablegen(LLVM AArch64GenFastISel.inc -gen-fast-isel)
 tablegen(LLVM AArch64GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM AArch64GenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM AArch64GenSystemOperands.inc -gen-searchable-tables)
+
 add_public_tablegen_target(AArch64CommonTableGen)
+
+# List of all GlobalISel files.
+set(GLOBAL_ISEL_FILES
+      AArch64CallLowering.cpp
+      AArch64InstructionSelector.cpp
+      AArch64MachineLegalizer.cpp
+      AArch64RegisterBankInfo.cpp
+      )
+
+# Add GlobalISel files to the dependencies if the user wants to build it.
+if(LLVM_BUILD_GLOBAL_ISEL)
+  set(GLOBAL_ISEL_BUILD_FILES ${GLOBAL_ISEL_FILES})
+else()
+  set(GLOBAL_ISEL_BUILD_FILES"")
+  set(LLVM_OPTIONAL_SOURCES LLVMGlobalISel ${GLOBAL_ISEL_FILES})
+endif()
+
 
 add_llvm_target(AArch64CodeGen
   AArch64A57FPLoadBalancing.cpp
@@ -29,6 +48,7 @@ add_llvm_target(AArch64CodeGen
   AArch64A53Fix835769.cpp
   AArch64FrameLowering.cpp
   AArch64ConditionOptimizer.cpp
+  AArch64RedundantCopyElimination.cpp
   AArch64ISelDAGToDAG.cpp
   AArch64ISelLowering.cpp
   AArch64InstrInfo.cpp
@@ -43,6 +63,7 @@ add_llvm_target(AArch64CodeGen
   AArch64TargetMachine.cpp
   AArch64TargetObjectFile.cpp
   AArch64TargetTransformInfo.cpp
+  ${GLOBAL_ISEL_BUILD_FILES}
 )
 
 add_dependencies(LLVMAArch64CodeGen intrinsics_gen)

@@ -1,19 +1,19 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 ; Test that basic memory operations assemble as expected with 32-bit addresses.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
-declare i32 @llvm.wasm.memory.size.i32() nounwind readonly
+declare i32 @llvm.wasm.current.memory.i32() nounwind readonly
 declare void @llvm.wasm.grow.memory.i32(i32) nounwind
 
-; CHECK-LABEL: memory_size:
+; CHECK-LABEL: current_memory:
 ; CHECK-NEXT: .result i32{{$}}
-; CHECK-NEXT: memory_size $push0={{$}}
+; CHECK-NEXT: current_memory $push0={{$}}
 ; CHECK-NEXT: return $pop0{{$}}
-define i32 @memory_size() {
-  %a = call i32 @llvm.wasm.memory.size.i32()
+define i32 @current_memory() {
+  %a = call i32 @llvm.wasm.current.memory.i32()
   ret i32 %a
 }
 

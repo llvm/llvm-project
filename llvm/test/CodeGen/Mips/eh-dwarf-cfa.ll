@@ -13,6 +13,8 @@ entry:
   %0 = call i8* @llvm.eh.dwarf.cfa(i32 0)
   ret i8* %0
 
+; CHECK-LABEL: f1:
+
 ; CHECK:        addiu   $sp, $sp, -32
 ; CHECK:        addiu   $2, $sp, 32
 }
@@ -24,10 +26,12 @@ entry:
   %0 = call i8* @llvm.eh.dwarf.cfa(i32 0)
   ret i8* %0
 
+; CHECK-LABEL: f2:
+
 ; check stack size (65536 + 8)
-; CHECK:        lui     $[[R0:[a-z0-9]+]], 65535
-; CHECK:        addiu   $[[R0]], $[[R0]], -8
-; CHECK:        addu    $sp, $sp, $[[R0]]
+; CHECK:        lui     $[[R0:[a-z0-9]+]], 1
+; CHECK:        addiu   $[[R0]], $[[R0]], 8
+; CHECK:        subu    $sp, $sp, $[[R0]]
 
 ; check return value ($sp + stack size)
 ; CHECK:        lui     $[[R1:[a-z0-9]+]], 1
@@ -46,6 +50,8 @@ entry:
   %add = add i32 %1, %3
   ret i32 %add
 
+; CHECK-LABEL: f3:
+
 ; CHECK:        addiu   $sp, $sp, -40
 
 ; check return value ($fp + stack size + $fp)
@@ -59,6 +65,8 @@ entry:
   %x = alloca [32 x i8], align 1
   %0 = call i8* @llvm.eh.dwarf.cfa(i32 0)
   ret i8* %0
+
+; CHECK-LABEL: f4:
 
 ; CHECK-MIPS64:        daddiu   $sp, $sp, -32
 ; CHECK-MIPS64:        daddiu   $2, $sp, 32

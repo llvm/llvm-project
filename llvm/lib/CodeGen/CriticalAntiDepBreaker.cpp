@@ -69,8 +69,8 @@ void CriticalAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   // Mark live-out callee-saved registers. In a return block this is
   // all callee-saved registers. In non-return this is any
   // callee-saved register that is not saved in the prolog.
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
-  BitVector Pristine = MFI->getPristineRegs(MF);
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  BitVector Pristine = MFI.getPristineRegs(MF);
   for (const MCPhysReg *I = TRI->getCalleeSavedRegs(&MF); *I; ++I) {
     if (!IsReturnBlock && !Pristine.test(*I)) continue;
     for (MCRegAliasIterator AI(*I, TRI, true); AI.isValid(); ++AI) {
@@ -87,7 +87,7 @@ void CriticalAntiDepBreaker::FinishBlock() {
   KeepRegs.reset();
 }
 
-void CriticalAntiDepBreaker::Observe(MachineInstr *MI, unsigned Count,
+void CriticalAntiDepBreaker::Observe(MachineInstr &MI, unsigned Count,
                                      unsigned InsertPosIndex) {
   // Kill instructions can define registers but are really nops, and there might
   // be a real definition earlier that needs to be paired with uses dominated by
@@ -96,7 +96,7 @@ void CriticalAntiDepBreaker::Observe(MachineInstr *MI, unsigned Count,
   // FIXME: It may be possible to remove the isKill() restriction once PR18663
   // has been properly fixed. There can be value in processing kills as seen in
   // the AggressiveAntiDepBreaker class.
-  if (MI->isDebugValue() || MI->isKill())
+  if (MI.isDebugValue() || MI.isKill())
     return;
   assert(Count < InsertPosIndex && "Instruction index out of expected range!");
 
@@ -146,7 +146,7 @@ static const SDep *CriticalPathStep(const SUnit *SU) {
   return Next;
 }
 
-void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr *MI) {
+void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr &MI) {
   // It's not safe to change register allocation for source operands of
   // instructions that have special allocation requirements. Also assume all
   // registers used in a call must not be changed (ABI).
@@ -163,21 +163,20 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr *MI) {
   // instruction which may not be executed. The second R6 def may or may not
   // re-define R6 so it's not safe to change it since the last R6 use cannot be
   // changed.
-  bool Special = MI->isCall() ||
-    MI->hasExtraSrcRegAllocReq() ||
-    TII->isPredicated(MI);
+  bool Special =
+      MI.isCall() || MI.hasExtraSrcRegAllocReq() || TII->isPredicated(MI);
 
   // Scan the register operands for this instruction and update
   // Classes and RegRefs.
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = MI->getOperand(i);
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg()) continue;
     unsigned Reg = MO.getReg();
     if (Reg == 0) continue;
     const TargetRegisterClass *NewRC = nullptr;
 
-    if (i < MI->getDesc().getNumOperands())
-      NewRC = TII->getRegClass(MI->getDesc(), i, TRI, MF);
+    if (i < MI.getDesc().getNumOperands())
+      NewRC = TII->getRegClass(MI.getDesc(), i, TRI, MF);
 
     // For now, only allow the register to be changed if its register
     // class is consistent across all uses.
@@ -212,7 +211,7 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr *MI) {
     // of a register? In the above 'xor' example, the uses of %eax are undef, so
     // earlier instructions could still replace %eax even though the 'xor'
     // itself can't be changed.
-    if (MI->isRegTiedToUseOperand(i) &&
+    if (MI.isRegTiedToUseOperand(i) &&
         Classes[Reg] == reinterpret_cast<TargetRegisterClass *>(-1)) {
       for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
            SubRegs.isValid(); ++SubRegs) {
@@ -234,18 +233,17 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr *MI) {
   }
 }
 
-void CriticalAntiDepBreaker::ScanInstruction(MachineInstr *MI,
-                                             unsigned Count) {
+void CriticalAntiDepBreaker::ScanInstruction(MachineInstr &MI, unsigned Count) {
   // Update liveness.
   // Proceeding upwards, registers that are defed but not used in this
   // instruction are now dead.
-  assert(!MI->isKill() && "Attempting to scan a kill instruction");
+  assert(!MI.isKill() && "Attempting to scan a kill instruction");
 
   if (!TII->isPredicated(MI)) {
     // Predicated defs are modeled as read + write, i.e. similar to two
     // address updates.
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI->getOperand(i);
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      MachineOperand &MO = MI.getOperand(i);
 
       if (MO.isRegMask())
         for (unsigned i = 0, e = TRI->getNumRegs(); i != e; ++i)
@@ -262,11 +260,13 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr *MI,
       if (Reg == 0) continue;
       if (!MO.isDef()) continue;
 
-      // If we've already marked this reg as unchangeable, carry on.
-      if (KeepRegs.test(Reg)) continue;
-      
       // Ignore two-addr defs.
-      if (MI->isRegTiedToUseOperand(i)) continue;
+      if (MI.isRegTiedToUseOperand(i))
+        continue;
+
+      // If we've already marked this reg as unchangeable, don't remove
+      // it or any of its subregs from KeepRegs.
+      bool Keep = KeepRegs.test(Reg);
 
       // For the reg itself and all subregs: update the def to current;
       // reset the kill state, any restrictions, and references.
@@ -274,25 +274,26 @@ void CriticalAntiDepBreaker::ScanInstruction(MachineInstr *MI,
         unsigned SubregReg = *SRI;
         DefIndices[SubregReg] = Count;
         KillIndices[SubregReg] = ~0u;
-        KeepRegs.reset(SubregReg);
         Classes[SubregReg] = nullptr;
         RegRefs.erase(SubregReg);
+        if (!Keep)
+          KeepRegs.reset(SubregReg);
       }
       // Conservatively mark super-registers as unusable.
       for (MCSuperRegIterator SR(Reg, TRI); SR.isValid(); ++SR)
         Classes[*SR] = reinterpret_cast<TargetRegisterClass *>(-1);
     }
   }
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    MachineOperand &MO = MI->getOperand(i);
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg()) continue;
     unsigned Reg = MO.getReg();
     if (Reg == 0) continue;
     if (!MO.isUse()) continue;
 
     const TargetRegisterClass *NewRC = nullptr;
-    if (i < MI->getDesc().getNumOperands())
-      NewRC = TII->getRegClass(MI->getDesc(), i, TRI, MF);
+    if (i < MI.getDesc().getNumOperands())
+      NewRC = TII->getRegClass(MI.getDesc(), i, TRI, MF);
 
     // For now, only allow the register to be changed if its register
     // class is consistent across all uses.
@@ -510,7 +511,7 @@ BreakAntiDependencies(const std::vector<SUnit>& SUnits,
   unsigned Broken = 0;
   unsigned Count = InsertPosIndex - 1;
   for (MachineBasicBlock::iterator I = End, E = Begin; I != E; --Count) {
-    MachineInstr *MI = --I;
+    MachineInstr &MI = *--I;
     // Kill instructions can define registers but are really nops, and there
     // might be a real definition earlier that needs to be paired with uses
     // dominated by this kill.
@@ -518,7 +519,7 @@ BreakAntiDependencies(const std::vector<SUnit>& SUnits,
     // FIXME: It may be possible to remove the isKill() restriction once PR18663
     // has been properly fixed. There can be value in processing kills as seen
     // in the AggressiveAntiDepBreaker class.
-    if (MI->isDebugValue() || MI->isKill())
+    if (MI.isDebugValue() || MI.isKill())
       continue;
 
     // Check if this instruction has a dependence on the critical path that
@@ -535,7 +536,7 @@ BreakAntiDependencies(const std::vector<SUnit>& SUnits,
     // edge per instruction. Note that we'd have to be able to break all of
     // the anti-dependencies in an instruction in order to be effective.
     unsigned AntiDepReg = 0;
-    if (MI == CriticalPathMI) {
+    if (&MI == CriticalPathMI) {
       if (const SDep *Edge = CriticalPathStep(CriticalPathSU)) {
         const SUnit *NextSU = Edge->getSUnit();
 
@@ -585,7 +586,7 @@ BreakAntiDependencies(const std::vector<SUnit>& SUnits,
     // If MI's defs have a special allocation requirement, don't allow
     // any def registers to be changed. Also assume all registers
     // defined in a call must not be changed (ABI).
-    if (MI->isCall() || MI->hasExtraDefRegAllocReq() || TII->isPredicated(MI))
+    if (MI.isCall() || MI.hasExtraDefRegAllocReq() || TII->isPredicated(MI))
       // If this instruction's defs have special allocation requirement, don't
       // break this anti-dependency.
       AntiDepReg = 0;
@@ -594,8 +595,8 @@ BreakAntiDependencies(const std::vector<SUnit>& SUnits,
       // is invalid.  If the instruction defines other registers,
       // save a list of them so that we don't pick a new register
       // that overlaps any of them.
-      for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-        MachineOperand &MO = MI->getOperand(i);
+      for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+        MachineOperand &MO = MI.getOperand(i);
         if (!MO.isReg()) continue;
         unsigned Reg = MO.getReg();
         if (Reg == 0) continue;
@@ -647,7 +648,7 @@ BreakAntiDependencies(const std::vector<SUnit>& SUnits,
           for (DbgValueVector::iterator DVI = DbgValues.begin(),
                  DVE = DbgValues.end(); DVI != DVE; ++DVI)
             if (DVI->second == Q->second->getParent())
-              UpdateDbgValue(DVI->first, AntiDepReg, NewReg);
+              UpdateDbgValue(*DVI->first, AntiDepReg, NewReg);
         }
 
         // We just went back in time and modified history; the

@@ -1,6 +1,6 @@
 ; Do setup work for all below tests: generate bitcode and combined index
-; RUN: llvm-as -module-summary %s -o %t.bc
-; RUN: llvm-as -module-summary %p/Inputs/thinlto_funcimport_debug.ll -o %t2.bc
+; RUN: opt -module-summary %s -o %t.bc
+; RUN: opt -module-summary %p/Inputs/thinlto_funcimport_debug.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
 ; If we import func1 and not func2 we should only link DISubprogram for func1
@@ -9,17 +9,15 @@
 ; CHECK: declare i32 @func2
 ; CHECK: define available_externally i32 @func1
 
-; Extract out the list of subprograms from each compile unit and ensure
-; that neither contains null.
-; CHECK: !{{[0-9]+}} = distinct !DICompileUnit({{.*}} subprograms: ![[SPs1:[0-9]+]]
-; CHECK-NOT: ![[SPs1]] = !{{{.*}}null{{.*}}}
-; CHECK: !{{[0-9]+}} = distinct !DICompileUnit({{.*}} subprograms: ![[SPs2:[0-9]+]]
-; CHECK-NOT: ![[SPs2]] = !{{{.*}}null{{.*}}}
+; Ensure that each subprogram points to the correct CU.
+; CHECK: ![[CU1:[0-9]+]] = distinct !DICompileUnit(
+; CHECK: ![[CU2:[0-9]+]] = distinct !DICompileUnit(
 
-; CHECK: distinct !DISubprogram(name: "func1"
+; CHECK: distinct !DISubprogram(name: "main", {{.*}}, unit: ![[CU1]]
+; CHECK: distinct !DISubprogram(name: "func1", {{.*}}, unit: ![[CU2]]
 ; CHECK-NOT: distinct !DISubprogram(name: "func2"
-; CHECK: distinct !DISubprogram(name: "func3"
-; CHECK: distinct !DISubprogram(name: "func4"
+; CHECK: distinct !DISubprogram(name: "func3", {{.*}}, unit: ![[CU2]]
+; CHECK: distinct !DISubprogram(name: "func4", {{.*}}, unit: ![[CU2]]
 
 
 ; ModuleID = 'dbg.o'
@@ -54,18 +52,17 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!14, !15}
 !llvm.ident = !{!16}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251407) (llvm/trunk 251401)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 251407) (llvm/trunk 251401)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "dbg.c", directory: ".")
 !2 = !{}
-!3 = !{!4, !11, !27, !30}
-!4 = distinct !DISubprogram(name: "func1", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, variables: !8)
+!4 = distinct !DISubprogram(name: "func1", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !8)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7, !7}
 !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !8 = !{!9, !10}
 !9 = !DILocalVariable(name: "n", arg: 1, scope: !4, file: !1, line: 1, type: !7)
 !10 = !DILocalVariable(name: "x", scope: !4, file: !1, line: 2, type: !7)
-!11 = distinct !DISubprogram(name: "func2", scope: !1, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, variables: !12)
+!11 = distinct !DISubprogram(name: "func2", scope: !1, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !12)
 !12 = !{!13}
 !13 = !DILocalVariable(name: "n", arg: 1, scope: !11, file: !1, line: 8, type: !7)
 !14 = !{i32 2, !"Dwarf Version", i32 4}
@@ -81,10 +78,10 @@ attributes #1 = { nounwind readnone }
 !24 = !DILocation(line: 8, column: 15, scope: !11)
 !25 = !DILocation(line: 9, column: 3, scope: !11)
 !26 = !DILocation(line: 9, column: 3, scope: !4)
-!27 = distinct !DISubprogram(name: "func3", scope: !1, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, variables: !28)
+!27 = distinct !DISubprogram(name: "func3", scope: !1, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !28)
 !28 = !{!29}
 !29 = !DILocalVariable(name: "n", arg: 1, scope: !30, file: !1, line: 8, type: !7)
-!30 = distinct !DISubprogram(name: "func4", scope: !1, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, variables: !31)
+!30 = distinct !DISubprogram(name: "func4", scope: !1, file: !1, line: 8, type: !5, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !31)
 !31 = !{!32}
 !32 = !DILocalVariable(name: "n", arg: 1, scope: !30, file: !1, line: 8, type: !7)
 

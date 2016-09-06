@@ -61,18 +61,18 @@ int main(int argc, char **argv) {
 
   // Build a '+Inf'.
 #if BYTE_ORDER == LITTLE_ENDIAN
-  char InfVal[] = { 0x00, 0x00, 0x80, 0x7f };
+  unsigned char InfVal[] = { 0x00, 0x00, 0x80, 0x7f };
 #else
-  char InfVal[] = { 0x7f, 0x80, 0x00, 0x00 };
+  unsigned char InfVal[] = { 0x7f, 0x80, 0x00, 0x00 };
 #endif
   float Inf;
   memcpy(&Inf, InfVal, 4);
 
   // Build a 'NaN'.
 #if BYTE_ORDER == LITTLE_ENDIAN
-  char NaNVal[] = { 0x01, 0x00, 0x80, 0x7f };
+  unsigned char NaNVal[] = { 0x01, 0x00, 0x80, 0x7f };
 #else
-  char NaNVal[] = { 0x7f, 0x80, 0x00, 0x01 };
+  unsigned char NaNVal[] = { 0x7f, 0x80, 0x00, 0x01 };
 #endif
   float NaN;
   memcpy(&NaN, NaNVal, 4);

@@ -23,10 +23,16 @@ public:
 
   void emitPrologue(MachineFunction &MF,
                     MachineBasicBlock &MBB) const override;
+  void emitEpilogue(MachineFunction &MF,
+                    MachineBasicBlock &MBB) const override;
 
   void processFunctionBeforeFrameFinalized(
     MachineFunction &MF,
     RegScavenger *RS = nullptr) const override;
+
+private:
+  /// \brief Emits debugger prologue.
+  void emitDebuggerPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const;
 };
 
 }

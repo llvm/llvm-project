@@ -11,6 +11,8 @@
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "AMDGPUSubtarget.h"
+
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -20,25 +22,14 @@ using namespace llvm;
 
 
 static bool hasOnlySGPRSpills(const SIMachineFunctionInfo *FuncInfo,
-                              const MachineFrameInfo *FrameInfo) {
-  if (!FuncInfo->hasSpilledSGPRs())
-    return false;
-
-  if (FuncInfo->hasSpilledVGPRs())
-    return false;
-
-  for (int I = FrameInfo->getObjectIndexBegin(),
-         E = FrameInfo->getObjectIndexEnd(); I != E; ++I) {
-    if (!FrameInfo->isSpillSlotObjectIndex(I))
-      return false;
-  }
-
-  return true;
+                              const MachineFrameInfo &MFI) {
+  return FuncInfo->hasSpilledSGPRs() &&
+    (!FuncInfo->hasSpilledVGPRs() && !FuncInfo->hasNonSpillStackObjects());
 }
 
 static ArrayRef<MCPhysReg> getAllSGPR128() {
-  return makeArrayRef(AMDGPU::SReg_128RegClass.begin(),
-                      AMDGPU::SReg_128RegClass.getNumRegs());
+  return makeArrayRef(AMDGPU::SGPR_128RegClass.begin(),
+                      AMDGPU::SGPR_128RegClass.getNumRegs());
 }
 
 static ArrayRef<MCPhysReg> getAllSGPRs() {
@@ -48,7 +39,13 @@ static ArrayRef<MCPhysReg> getAllSGPRs() {
 
 void SIFrameLowering::emitPrologue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
-  if (!MF.getFrameInfo()->hasStackObjects())
+  // Emit debugger prologue if "amdgpu-debugger-emit-prologue" attribute was
+  // specified.
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  if (ST.debuggerEmitPrologue())
+    emitDebuggerPrologue(MF, MBB);
+
+  if (!MF.getFrameInfo().hasStackObjects())
     return;
 
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
@@ -63,10 +60,10 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   if (hasOnlySGPRSpills(MFI, MF.getFrameInfo()))
     return;
 
-  const SIInstrInfo *TII =
-      static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = &TII->getRegisterInfo();
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineBasicBlock::iterator I = MBB.begin();
 
   // We need to insert initialization of the scratch resource descriptor.
   unsigned ScratchRsrcReg = MFI->getScratchRSrcReg();
@@ -84,6 +81,46 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
       MF, SIRegisterInfo::PRIVATE_SEGMENT_BUFFER);
   }
 
+  if (MFI->hasFlatScratchInit()) {
+    // We don't need this if we only have spills since there is no user facing
+    // scratch.
+
+    // TODO: If we know we don't have flat instructions earlier, we can omit
+    // this from the input registers.
+    //
+    // TODO: We only need to know if we access scratch space through a flat
+    // pointer. Because we only detect if flat instructions are used at all,
+    // this will be used more often than necessary on VI.
+
+    // Debug location must be unknown since the first debug location is used to
+    // determine the end of the prologue.
+    DebugLoc DL;
+
+    unsigned FlatScratchInitReg
+      = TRI->getPreloadedValue(MF, SIRegisterInfo::FLAT_SCRATCH_INIT);
+
+    MRI.addLiveIn(FlatScratchInitReg);
+    MBB.addLiveIn(FlatScratchInitReg);
+
+    // Copy the size in bytes.
+    unsigned FlatScrInitHi = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub1);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::FLAT_SCR_LO)
+      .addReg(FlatScrInitHi, RegState::Kill);
+
+    unsigned FlatScrInitLo = TRI->getSubReg(FlatScratchInitReg, AMDGPU::sub0);
+
+    // Add wave offset in bytes to private base offset.
+    // See comment in AMDKernelCodeT.h for enable_sgpr_flat_scratch_init.
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_U32), FlatScrInitLo)
+      .addReg(FlatScrInitLo)
+      .addReg(ScratchWaveOffsetReg);
+
+    // Convert offset to 256-byte units.
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_LSHR_B32), AMDGPU::FLAT_SCR_HI)
+      .addReg(FlatScrInitLo, RegState::Kill)
+      .addImm(8);
+  }
+
   // If we reserved the original input registers, we don't need to copy to the
   // reserved registers.
   if (ScratchRsrcReg == PreloadedPrivateBufferReg) {
@@ -96,7 +133,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   // We added live-ins during argument lowering, but since they were not used
   // they were deleted. We're adding the uses now, so add them back.
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   MRI.addLiveIn(PreloadedScratchWaveOffsetReg);
   MBB.addLiveIn(PreloadedScratchWaveOffsetReg);
 
@@ -137,15 +173,28 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
     if (ScratchWaveOffsetReg == TRI->reservedPrivateSegmentWaveByteOffsetReg(MF)) {
       MachineRegisterInfo &MRI = MF.getRegInfo();
-      // Skip the last 2 elements because the last one is reserved for VCC, and
-      // this is the 2nd to last element already.
       unsigned NumPreloaded = MFI->getNumPreloadedSGPRs();
-      for (MCPhysReg Reg : getAllSGPRs().drop_back(6).slice(NumPreloaded)) {
+
+      // We need to drop register from the end of the list that we cannot use
+      // for the scratch wave offset.
+      // + 2 s102 and s103 do not exist on VI.
+      // + 2 for vcc
+      // + 2 for xnack_mask
+      // + 2 for flat_scratch
+      // + 4 for registers reserved for scratch resource register
+      // + 1 for register reserved for scratch wave offset.  (By exluding this
+      //     register from the list to consider, it means that when this
+      //     register is being used for the scratch wave offset and there
+      //     are no other free SGPRs, then the value will stay in this register.
+      // ----
+      //  13
+      for (MCPhysReg Reg : getAllSGPRs().drop_back(13).slice(NumPreloaded)) {
         // Pick the first unallocated SGPR. Be careful not to pick an alias of the
         // scratch descriptor, since we haven’t added its uses yet.
         if (!MRI.isPhysRegUsed(Reg)) {
-          assert(MRI.isAllocatable(Reg) &&
-                !TRI->isSubRegisterEq(ScratchRsrcReg, Reg));
+          if (!MRI.isAllocatable(Reg) ||
+              TRI->isSubRegisterEq(ScratchRsrcReg, Reg))
+            continue;
 
           MRI.replaceRegWith(ScratchWaveOffsetReg, Reg);
           ScratchWaveOffsetReg = Reg;
@@ -160,7 +209,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   assert(!TRI->isSubRegister(ScratchRsrcReg, ScratchWaveOffsetReg));
 
   const MCInstrDesc &SMovB32 = TII->get(AMDGPU::S_MOV_B32);
-  MachineBasicBlock::iterator I = MBB.begin();
   DebugLoc DL;
 
   if (PreloadedScratchWaveOffsetReg != ScratchWaveOffsetReg) {
@@ -223,23 +271,69 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   }
 }
 
+void SIFrameLowering::emitEpilogue(MachineFunction &MF,
+                                   MachineBasicBlock &MBB) const {
+
+}
+
 void SIFrameLowering::processFunctionBeforeFrameFinalized(
   MachineFunction &MF,
   RegScavenger *RS) const {
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  if (!MFI->hasStackObjects())
+  if (!MFI.hasStackObjects())
     return;
 
-  bool MayNeedScavengingEmergencySlot = MFI->hasStackObjects();
+  bool MayNeedScavengingEmergencySlot = MFI.hasStackObjects();
 
   assert((RS || !MayNeedScavengingEmergencySlot) &&
          "RegScavenger required if spilling");
 
   if (MayNeedScavengingEmergencySlot) {
-    int ScavengeFI = MFI->CreateSpillStackObject(
+    int ScavengeFI = MFI.CreateStackObject(
       AMDGPU::SGPR_32RegClass.getSize(),
-      AMDGPU::SGPR_32RegClass.getAlignment());
+      AMDGPU::SGPR_32RegClass.getAlignment(), false);
     RS->addScavengingFrameIndex(ScavengeFI);
+  }
+}
+
+void SIFrameLowering::emitDebuggerPrologue(MachineFunction &MF,
+                                           MachineBasicBlock &MBB) const {
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *TRI = &TII->getRegisterInfo();
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  MachineBasicBlock::iterator I = MBB.begin();
+  DebugLoc DL;
+
+  // For each dimension:
+  for (unsigned i = 0; i < 3; ++i) {
+    // Get work group ID SGPR, and make it live-in again.
+    unsigned WorkGroupIDSGPR = MFI->getWorkGroupIDSGPR(i);
+    MF.getRegInfo().addLiveIn(WorkGroupIDSGPR);
+    MBB.addLiveIn(WorkGroupIDSGPR);
+
+    // Since SGPRs are spilled into VGPRs, copy work group ID SGPR to VGPR in
+    // order to spill it to scratch.
+    unsigned WorkGroupIDVGPR =
+      MF.getRegInfo().createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), WorkGroupIDVGPR)
+      .addReg(WorkGroupIDSGPR);
+
+    // Spill work group ID.
+    int WorkGroupIDObjectIdx = MFI->getDebuggerWorkGroupIDStackObjectIndex(i);
+    TII->storeRegToStackSlot(MBB, I, WorkGroupIDVGPR, false,
+      WorkGroupIDObjectIdx, &AMDGPU::VGPR_32RegClass, TRI);
+
+    // Get work item ID VGPR, and make it live-in again.
+    unsigned WorkItemIDVGPR = MFI->getWorkItemIDVGPR(i);
+    MF.getRegInfo().addLiveIn(WorkItemIDVGPR);
+    MBB.addLiveIn(WorkItemIDVGPR);
+
+    // Spill work item ID.
+    int WorkItemIDObjectIdx = MFI->getDebuggerWorkItemIDStackObjectIndex(i);
+    TII->storeRegToStackSlot(MBB, I, WorkItemIDVGPR, false,
+      WorkItemIDObjectIdx, &AMDGPU::VGPR_32RegClass, TRI);
   }
 }

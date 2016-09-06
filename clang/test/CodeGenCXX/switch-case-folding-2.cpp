@@ -18,4 +18,13 @@ int main(void) {
  return test(5);
 }
 
+void other_test() {
+  switch(0) {
+  case 0:
+    do {
+    default:;
+    } while(0);
+  }
+}
+
 // CHECK: call i32 (i8*, ...) @_Z6printfPKcz

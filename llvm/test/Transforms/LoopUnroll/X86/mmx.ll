@@ -14,9 +14,9 @@ for.body:                                         ; preds = %for.body, %entry
 
 exit:                                             ; preds = %for.body
   %ret = phi x86_mmx [ undef, %for.body ]
-  ; CHECK: %[[ret_unr:.*]] = phi x86_mmx [ undef,
-  ; CHECK: %[[ret_ph:.*]]  = phi x86_mmx [ undef,
-  ; CHECK: %[[ret:.*]] = phi x86_mmx [ %[[ret_unr]], {{.*}} ], [ %[[ret_ph]]
+  ; CHECK: %[[ret_ph:.*]] = phi x86_mmx [ undef, %entry
+  ; CHECK: %[[ret_ph1:.*]]  = phi x86_mmx [ undef,
+  ; CHECK: %[[ret:.*]] = phi x86_mmx [ %[[ret_ph]], {{.*}} ], [ %[[ret_ph1]],
   ; CHECK: ret x86_mmx %[[ret]]
   ret x86_mmx %ret
 }

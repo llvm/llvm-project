@@ -9,9 +9,24 @@ Functions:
   - Name: do_something_with_pointers
     NullabilityOfRet: O
     Nullability: [ N, O ]
+  - Name: take_pointer_and_int
+    Parameters:
+      - Position: 0
+        Nullability: N
+        NoEscape: true
+      - Position: 1
+        NoEscape: true
     
 Globals:
   - Name: global_int
     Nullability: N
   - Name: unavailable_global_int
+    Availability: none
+
+Tags:
+  - Name: unavailable_struct
+    Availability: none
+
+Typedefs:
+  - Name: unavailable_typedef
     Availability: none

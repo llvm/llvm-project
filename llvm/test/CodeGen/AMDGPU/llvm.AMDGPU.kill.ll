@@ -5,7 +5,7 @@
 ; SI-NOT: v_cmpx_le_f32
 ; SI: s_mov_b64 exec, 0
 
-define void @kill_gs_const() #0 {
+define amdgpu_gs void @kill_gs_const() {
 main_body:
   %0 = icmp ule i32 0, 3
   %1 = select i1 %0, float 1.000000e+00, float -1.000000e+00
@@ -21,7 +21,7 @@ main_body:
 ; SI: v_cmp_gt_f32_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], 0, v{{[0-9]+}}
 ; SI: v_cmpx_le_f32_e32 vcc, 0, v{{[0-9]+}}
 ; SI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1.0, [[CMP]]
-define void @kill_vcc_implicit_def([6 x <16 x i8>] addrspace(2)* byval, [17 x <16 x i8>] addrspace(2)* byval, [17 x <4 x i32>] addrspace(2)* byval, [34 x <8 x i32>] addrspace(2)* byval, float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, float, i32, float, float) #1 {
+define amdgpu_ps void @kill_vcc_implicit_def([6 x <16 x i8>] addrspace(2)* byval, [17 x <16 x i8>] addrspace(2)* byval, [17 x <4 x i32>] addrspace(2)* byval, [34 x <8 x i32>] addrspace(2)* byval, float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, float, i32, float, float) {
 entry:
   %tmp0 = fcmp olt float %13, 0.0
   call void @llvm.AMDGPU.kill(float %14)
@@ -32,8 +32,5 @@ entry:
 
 declare void @llvm.AMDGPU.kill(float)
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
-
-attributes #0 = { "ShaderType"="2" }
-attributes #1 = { "ShaderType"="0" }
 
 !0 = !{!"const", null, i32 1}

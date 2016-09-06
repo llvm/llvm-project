@@ -11,11 +11,17 @@
 #define LLVM_COV_COVERAGEVIEWOPTIONS_H
 
 #include "RenderingSupport.h"
+#include <vector>
 
 namespace llvm {
 
 /// \brief The options for displaying the code coverage information.
 struct CoverageViewOptions {
+  enum class OutputFormat {
+    Text,
+    HTML
+  };
+
   bool Debug;
   bool Colors;
   bool ShowLineNumbers;
@@ -25,12 +31,22 @@ struct CoverageViewOptions {
   bool ShowExpandedRegions;
   bool ShowFunctionInstantiations;
   bool ShowFullFilenames;
+  OutputFormat Format;
+  std::string ShowOutputDirectory;
+  std::vector<std::string> DemanglerOpts;
+  uint32_t TabSize;
 
   /// \brief Change the output's stream color if the colors are enabled.
   ColoredRawOstream colored_ostream(raw_ostream &OS,
                                     raw_ostream::Colors Color) const {
     return llvm::colored_ostream(OS, Color, Colors);
   }
+
+  /// \brief Check if an output directory has been specified.
+  bool hasOutputDirectory() const { return !ShowOutputDirectory.empty(); }
+
+  /// \brief Check if a demangler has been specified.
+  bool hasDemangler() const { return !DemanglerOpts.empty(); }
 };
 }
 

@@ -1,4 +1,6 @@
-; RUN: llc -mcpu=pwr7 -mattr=-vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=-vsx < %s | FileCheck %s
+; XFAIL: *
+
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -522,7 +524,7 @@ define void @cv13(<4 x i32> %v) #0 {
 
 ; CHECK-LABEL: @cv13
 ; CHECK-DAG: li [[REG1:[0-9]+]], 96
-; CHECK-DAG: vor [[REG2:[0-9]+]], 2, 2
+; CHECK-DAG: vor [[REG2:[0-9]+]], 3, 3
 ; CHECK: stvx [[REG2]], 1, [[REG1]]
 ; CHECK: blr
 }
@@ -533,7 +535,7 @@ define void @cv14(<4 x i32> %v) #0 {
 
 ; CHECK-LABEL: @cv14
 ; CHECK-DAG: li [[REG1:[0-9]+]], 128
-; CHECK-DAG: vor [[REG2:[0-9]+]], 2, 2
+; CHECK-DAG: vor [[REG2:[0-9]+]], 3, 3
 ; CHECK: stvx [[REG2]], 1, [[REG1]]
 ; CHECK: blr
 }

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple -mcpu=cyclone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -mcpu=cyclone | FileCheck %s
 %struct.X = type <{ i32, i64, i64 }>
 
 define void @foo1(i32* %p, i64 %val) nounwind {

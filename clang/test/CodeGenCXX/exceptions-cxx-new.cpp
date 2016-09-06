@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple i686-pc-win32 -fms-extensions -fexceptions -fcxx-exceptions -fnew-ms-eh -emit-llvm -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -fms-extensions -fexceptions -fcxx-exceptions -emit-llvm -o - -std=c++11 | FileCheck %s
 
 int f(int);
 
@@ -72,6 +72,6 @@ void test_cleanup() {
 // CHECK:   ret void
 
 // CHECK: [[TERMINATE]]
-// CHECK:   cleanuppad within none []
-// CHECK-NEXT:   call void @"\01?terminate@@YAXXZ"()
+// CHECK:   %[[CLEANUPPAD:.*]] = cleanuppad within none []
+// CHECK-NEXT:   call void @"\01?terminate@@YAXXZ"() {{.*}} [ "funclet"(token %[[CLEANUPPAD]]) ]
 

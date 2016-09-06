@@ -66,7 +66,7 @@ static float computeWeight(const MachineRegisterInfo *MRI,
   float weight = 0.0f;
   for (MachineOperand &MO : MRI->reg_nodbg_operands(VReg))
     weight += LiveIntervals::getSpillWeight(MO.isDef(), MO.isUse(), MBFI,
-                                            MO.getParent());
+                                            *MO.getParent());
   return weight;
 }
 
@@ -99,7 +99,7 @@ bool WebAssemblyRegColoring::runOnMachineFunction(MachineFunction &MF) {
     unsigned VReg = TargetRegisterInfo::index2VirtReg(i);
     if (MFI.isVRegStackified(VReg))
       continue;
-    // Skip unused registers, which can use $discard.
+    // Skip unused registers, which can use $drop.
     if (MRI->use_empty(VReg))
       continue;
 

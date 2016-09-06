@@ -49,10 +49,28 @@
 # define SANITIZER_IOSSIM  0
 #endif
 
+#if defined(__APPLE__) && TARGET_OS_IPHONE && TARGET_OS_WATCH
+# define SANITIZER_WATCHOS 1
+#else
+# define SANITIZER_WATCHOS 0
+#endif
+
+#if defined(__APPLE__) && TARGET_OS_IPHONE && TARGET_OS_TV
+# define SANITIZER_TVOS 1
+#else
+# define SANITIZER_TVOS 0
+#endif
+
 #if defined(_WIN32)
 # define SANITIZER_WINDOWS 1
 #else
 # define SANITIZER_WINDOWS 0
+#endif
+
+#if defined(_WIN64)
+# define SANITIZER_WINDOWS64 1
+#else
+# define SANITIZER_WINDOWS64 0
 #endif
 
 #if defined(__ANDROID__)
@@ -81,6 +99,69 @@
 # define SANITIZER_X32 0
 #endif
 
+#if defined(__mips__)
+# define SANITIZER_MIPS 1
+# if defined(__mips64)
+#  define SANITIZER_MIPS32 0
+#  define SANITIZER_MIPS64 1
+# else
+#  define SANITIZER_MIPS32 1
+#  define SANITIZER_MIPS64 0
+# endif
+#else
+# define SANITIZER_MIPS 0
+# define SANITIZER_MIPS32 0
+# define SANITIZER_MIPS64 0
+#endif
+
+#if defined(__s390__)
+# define SANITIZER_S390 1
+# if defined(__s390x__)
+#  define SANITIZER_S390_31 0
+#  define SANITIZER_S390_64 1
+# else
+#  define SANITIZER_S390_31 1
+#  define SANITIZER_S390_64 0
+# endif
+#else
+# define SANITIZER_S390 0
+# define SANITIZER_S390_31 0
+# define SANITIZER_S390_64 0
+#endif
+
+#if defined(__powerpc__)
+# define SANITIZER_PPC 1
+# if defined(__powerpc64__)
+#  define SANITIZER_PPC32 0
+#  define SANITIZER_PPC64 1
+// 64-bit PPC has two ABIs (v1 and v2).  The old powerpc64 target is
+// big-endian, and uses v1 ABI (known for its function descriptors),
+// while the new powerpc64le target is little-endian and uses v2.
+// In theory, you could convince gcc to compile for their evil twins
+// (eg. big-endian v2), but you won't find such combinations in the wild
+// (it'd require bootstrapping a whole system, which would be quite painful
+// - there's no target triple for that).  LLVM doesn't support them either.
+#  if _CALL_ELF == 2
+#   define SANITIZER_PPC64V1 0
+#   define SANITIZER_PPC64V2 1
+#  else
+#   define SANITIZER_PPC64V1 1
+#   define SANITIZER_PPC64V2 0
+#  endif
+# else
+#  define SANITIZER_PPC32 1
+#  define SANITIZER_PPC64 0
+#  define SANITIZER_PPC64V1 0
+#  define SANITIZER_PPC64V2 0
+# endif
+#else
+# define SANITIZER_PPC 0
+# define SANITIZER_PPC32 0
+# define SANITIZER_PPC64 0
+# define SANITIZER_PPC64V1 0
+# define SANITIZER_PPC64V2 0
+#endif
+
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
 // But in some cases (e.g. AArch64's 39-bit address space) SizeClassAllocator64
 // does not work well and we need to fallback to SizeClassAllocator32.
@@ -99,6 +180,8 @@
 // will still work but will consume more memory for TwoLevelByteMap.
 #if defined(__mips__)
 # define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 40)
+#elif defined(__aarch64__)
+# define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 48)
 #else
 # define SANITIZER_MMAP_RANGE_SIZE FIRST_32_SECOND_64(1ULL << 32, 1ULL << 47)
 #endif
@@ -148,6 +231,20 @@
 # define MSC_PREREQ(version) (_MSC_VER >= (version))
 #else
 # define MSC_PREREQ(version) 0
+#endif
+
+#if defined(__arm64__) && SANITIZER_IOS
+# define SANITIZER_NON_UNIQUE_TYPEINFO 1
+#else
+# define SANITIZER_NON_UNIQUE_TYPEINFO 0
+#endif
+
+// On linux, some architectures had an ABI transition from 64-bit long double
+// (ie. same as double) to 128-bit long double.  On those, glibc symbols
+// involving long doubles come in two versions, and we need to pass the
+// correct one to dlvsym when intercepting them.
+#if SANITIZER_LINUX && (SANITIZER_S390 || SANITIZER_PPC32 || SANITIZER_PPC64V1)
+#define SANITIZER_NLDBL_VERSION "GLIBC_2.4"
 #endif
 
 #endif // SANITIZER_PLATFORM_H

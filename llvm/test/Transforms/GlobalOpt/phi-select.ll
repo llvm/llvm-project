@@ -1,7 +1,8 @@
 ; Test that PHI nodes and select instructions do not necessarily make stuff
 ; non-constant.
 
-; RUN: opt < %s -globalopt -S | not grep global
+; RUN: opt < %s -globalopt -S | FileCheck %s
+; CHECK-NOT: global
 
 @X = internal global i32 4              ; <i32*> [#uses=2]
 @Y = internal global i32 5              ; <i32*> [#uses=2]
@@ -24,8 +25,3 @@ Cont:           ; preds = %T, %0
         %V = load i32, i32* %P               ; <i32> [#uses=1]
         ret i32 %V
 }
-
-
-
-
-

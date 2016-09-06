@@ -49,6 +49,10 @@ namespace {
       MachineFunctionPass::getAnalysisUsage(AU);
     }
     bool runOnMachineFunction(MachineFunction &MF) override;
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
 
   private:
     const HexagonInstrInfo *HII;
@@ -70,10 +74,10 @@ namespace {
       MachineOperand *SrcT, *SrcF;
       MachineInstr *Def1, *Def2;
       MuxInfo(MachineBasicBlock::iterator It, unsigned DR, unsigned PR,
-            MachineOperand *TOp, MachineOperand *FOp,
-            MachineInstr *D1, MachineInstr *D2)
-        : At(It), DefR(DR), PredR(PR), SrcT(TOp), SrcF(FOp), Def1(D1),
-          Def2(D2) {}
+              MachineOperand *TOp, MachineOperand *FOp, MachineInstr &D1,
+              MachineInstr &D2)
+          : At(It), DefR(DR), PredR(PR), SrcT(TOp), SrcF(FOp), Def1(&D1),
+            Def2(&D2) {}
     };
     typedef DenseMap<MachineInstr*,unsigned> InstrIndexMap;
     typedef DenseMap<unsigned,DefUseInfo> DefUseInfoMap;
@@ -128,7 +132,7 @@ void HexagonGenMux::getDefsUses(const MachineInstr *MI, BitVector &Defs,
       expandReg(*R++, Uses);
 
   // Look over all operands, and collect explicit defs and uses.
-  for (ConstMIOperands Mo(MI); Mo.isValid(); ++Mo) {
+  for (ConstMIOperands Mo(*MI); Mo.isValid(); ++Mo) {
     if (!Mo->isReg() || Mo->isImplicit())
       continue;
     unsigned R = Mo->getReg();
@@ -258,8 +262,8 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     MachineBasicBlock::iterator It1 = B.begin(), It2 = B.begin();
     std::advance(It1, MinX);
     std::advance(It2, MaxX);
-    MachineInstr *Def1 = It1, *Def2 = It2;
-    MachineOperand *Src1 = &Def1->getOperand(2), *Src2 = &Def2->getOperand(2);
+    MachineInstr &Def1 = *It1, &Def2 = *It2;
+    MachineOperand *Src1 = &Def1.getOperand(2), *Src2 = &Def2.getOperand(2);
     unsigned SR1 = Src1->isReg() ? Src1->getReg() : 0;
     unsigned SR2 = Src2->isReg() ? Src2->getReg() : 0;
     bool Failure = false, CanUp = true, CanDown = true;
@@ -305,6 +309,8 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
 }
 
 bool HexagonGenMux::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
   HII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   HRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   bool Changed = false;
@@ -316,4 +322,3 @@ bool HexagonGenMux::runOnMachineFunction(MachineFunction &MF) {
 FunctionPass *llvm::createHexagonGenMux() {
   return new HexagonGenMux();
 }
-

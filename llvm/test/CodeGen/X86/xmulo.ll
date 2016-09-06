@@ -9,9 +9,9 @@ declare i32 @printf(i8*, ...)
 
 define i32 @t1() nounwind {
 ; CHECK-LABEL: t1:
-; CHECK:  movl $0, 12(%esp)
-; CHECK:  movl $0, 8(%esp)
-; CHECK:  movl $72, 4(%esp)
+; CHECK:  pushl $0
+; CHECK:  pushl $0
+; CHECK:  pushl $72
 
     %1 = call {i64, i1} @llvm.umul.with.overflow.i64(i64 9, i64 8)
     %2 = extractvalue {i64, i1} %1, 0
@@ -23,9 +23,9 @@ define i32 @t1() nounwind {
 
 define i32 @t2() nounwind {
 ; CHECK-LABEL: t2:
-; CHECK:  movl $0, 12(%esp)
-; CHECK:  movl $0, 8(%esp)
-; CHECK:  movl $0, 4(%esp)
+; CHECK:  pushl $0
+; CHECK:  pushl $0
+; CHECK:  pushl $0
 
     %1 = call {i64, i1} @llvm.umul.with.overflow.i64(i64 9, i64 0)
     %2 = extractvalue {i64, i1} %1, 0
@@ -37,9 +37,9 @@ define i32 @t2() nounwind {
 
 define i32 @t3() nounwind {
 ; CHECK-LABEL: t3:
-; CHECK:  movl $1, 12(%esp)
-; CHECK:  movl $-1, 8(%esp)
-; CHECK:  movl $-9, 4(%esp)
+; CHECK:  pushl $1
+; CHECK:  pushl $-1
+; CHECK:  pushl $-9
 
     %1 = call {i64, i1} @llvm.umul.with.overflow.i64(i64 9, i64 -1)
     %2 = extractvalue {i64, i1} %1, 0

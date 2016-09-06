@@ -1,29 +1,62 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
-; RUN: llc -O0 -verify-machineinstrs < %s -mtriple=x86_64-unknown-unknown | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown-unknown -o - %s | FileCheck --check-prefix=CHECK --check-prefix=OPT %s
+; RUN: llc -O0 -verify-machineinstrs -mtriple=x86_64-unknown-unknown -o - %s | FileCheck %s
 
-; Parameter with swiftself should be allocated to r10.
-define void @check_swiftself(i32* swiftself %addr0) {
-; CHECK-LABEL: check_swiftself:
-; CHECK-O0-LABEL: check_swiftself:
+; Parameter with swiftself should be allocated to r13.
+; CHECK-LABEL: swiftself_param:
+; CHECK: movq %r13, %rax
+define i8 *@swiftself_param(i8* swiftself %addr0) {
+    ret i8 *%addr0
+}
 
-  %val0 = load volatile i32, i32* %addr0
-; CHECK: movl (%r10),
-; CHECK-O0: movl (%r10),
+; Check that r13 is used to pass a swiftself argument.
+; CHECK-LABEL: call_swiftself:
+; CHECK: movq %rdi, %r13
+; CHECK: callq {{_?}}swiftself_param
+define i8 *@call_swiftself(i8* %arg) {
+  %res = call i8 *@swiftself_param(i8* swiftself %arg)
+  ret i8 *%res
+}
+
+; r13 should be saved by the callee even if used for swiftself
+; CHECK-LABEL: swiftself_clobber:
+; CHECK: pushq %r13
+; ...
+; CHECK: popq %r13
+define i8 *@swiftself_clobber(i8* swiftself %addr0) {
+  call void asm sideeffect "nop", "~{r13}"()
+  ret i8 *%addr0
+}
+
+; Demonstrate that we do not need any movs when calling multiple functions
+; with swiftself argument.
+; CHECK-LABEL: swiftself_passthrough:
+; OPT-NOT: mov{{.*}}r13
+; OPT: callq {{_?}}swiftself_param
+; OPT-NOT: mov{{.*}}r13
+; OPT-NEXT: callq {{_?}}swiftself_param
+define void @swiftself_passthrough(i8* swiftself %addr0) {
+  call i8 *@swiftself_param(i8* swiftself %addr0)
+  call i8 *@swiftself_param(i8* swiftself %addr0)
   ret void
 }
 
-@var8_3 = global i8 0
-declare void @take_swiftself(i8* swiftself %addr0)
+; We can use a tail call if the callee swiftself is the same as the caller one.
+; CHECK-LABEL: swiftself_tail:
+; OPT: jmp {{_?}}swiftself_param
+; OPT-NOT: ret
+define i8* @swiftself_tail(i8* swiftself %addr0) {
+  call void asm sideeffect "", "~{r13}"()
+  %res = tail call i8* @swiftself_param(i8* swiftself %addr0)
+  ret i8* %res
+}
 
-define void @simple_args() {
-; CHECK-LABEL: simple_args:
-; CHECK-O0-LABEL: simple_args:
-
-  call void @take_swiftself(i8* @var8_3)
-; CHECK: movl {{.*}}, %r10d
-; CHECK: callq {{_?}}take_swiftself
-; CHECK-O0: movabsq {{.*}}, %r10
-; CHECK-O0: callq {{_?}}take_swiftself
-
-  ret void
+; We can not use a tail call if the callee swiftself is not the same as the
+; caller one.
+; CHECK-LABEL: swiftself_notail:
+; CHECK: movq %rdi, %r13
+; CHECK: callq {{_?}}swiftself_param
+; CHECK: retq
+define i8* @swiftself_notail(i8* swiftself %addr0, i8* %addr1) nounwind {
+  %res = tail call i8* @swiftself_param(i8* swiftself %addr1)
+  ret i8* %res
 }

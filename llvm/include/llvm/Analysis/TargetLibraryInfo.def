@@ -195,6 +195,11 @@ TLI_DEFINE_STRING_INTERNAL("__memmove_chk")
 /// void *__memset_chk(void *s, char v, size_t n, size_t s1size);
 TLI_DEFINE_ENUM_INTERNAL(memset_chk)
 TLI_DEFINE_STRING_INTERNAL("__memset_chk")
+
+// int __nvvm_reflect(const char *)
+TLI_DEFINE_ENUM_INTERNAL(nvvm_reflect)
+TLI_DEFINE_STRING_INTERNAL("__nvvm_reflect")
+
 /// double __sincospi_stret(double x);
 TLI_DEFINE_ENUM_INTERNAL(sincospi_stret)
 TLI_DEFINE_STRING_INTERNAL("__sincospi_stret")
@@ -729,6 +734,9 @@ TLI_DEFINE_STRING_INTERNAL("memcpy")
 /// void *memmove(void *s1, const void *s2, size_t n);
 TLI_DEFINE_ENUM_INTERNAL(memmove)
 TLI_DEFINE_STRING_INTERNAL("memmove")
+/// void *mempcpy(void *s1, const void *s2, size_t n);
+TLI_DEFINE_ENUM_INTERNAL(mempcpy)
+TLI_DEFINE_STRING_INTERNAL("mempcpy")
 // void *memrchr(const void *s, int c, size_t n);
 TLI_DEFINE_ENUM_INTERNAL(memrchr)
 TLI_DEFINE_STRING_INTERNAL("memrchr")

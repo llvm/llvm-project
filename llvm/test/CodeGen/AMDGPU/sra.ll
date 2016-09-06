@@ -216,7 +216,7 @@ define void @s_ashr_32_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 ; SI: buffer_load_dword v[[HI:[0-9]+]], {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4
 ; VI: flat_load_dword v[[HI:[0-9]+]]
 ; GCN: v_ashrrev_i32_e32 v[[SHIFT:[0-9]+]], 31, v[[HI]]
-; GCN: {{buffer|flat}}_store_dwordx2 v{{\[}}[[HI]]:[[SHIFT]]{{\]}}
+; GCN: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[HI]]:[[SHIFT]]{{\]}}
 define void @v_ashr_32_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %tid = call i32 @llvm.r600.read.tidig.x() #0
   %gep.in = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
@@ -228,11 +228,10 @@ define void @v_ashr_32_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
 }
 
 ; GCN-LABEL: {{^}}s_ashr_63_i64:
-; GCN-DAG: s_load_dword s[[HI:[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xc|0x30}}
+; GCN: s_load_dword s[[HI:[0-9]+]], {{s\[[0-9]+:[0-9]+\]}}, {{0xc|0x30}}
 ; GCN: s_ashr_i32 s[[SHIFT:[0-9]+]], s[[HI]], 31
-; GCN: s_mov_b32 s[[COPYSHIFT:[0-9]+]], s[[SHIFT]]
-; GCN: s_add_u32 {{s[0-9]+}}, s[[HI]], {{s[0-9]+}}
-; GCN: s_addc_u32 {{s[0-9]+}}, s[[COPYSHIFT]], {{s[0-9]+}}
+; GCN: s_add_u32 {{s[0-9]+}}, s[[SHIFT]], {{s[0-9]+}}
+; GCN: s_addc_u32 {{s[0-9]+}}, s[[SHIFT]], {{s[0-9]+}}
 define void @s_ashr_63_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
   %result = ashr i64 %a, 63
   %add = add i64 %result, %b
@@ -245,7 +244,7 @@ define void @s_ashr_63_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 ; VI: flat_load_dword v[[HI:[0-9]+]]
 ; GCN: v_ashrrev_i32_e32 v[[SHIFT:[0-9]+]], 31, v[[HI]]
 ; GCN: v_mov_b32_e32 v[[COPY:[0-9]+]], v[[SHIFT]]
-; GCN: {{buffer|flat}}_store_dwordx2 v{{\[}}[[SHIFT]]:[[COPY]]{{\]}}
+; GCN: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[SHIFT]]:[[COPY]]{{\]}}
 define void @v_ashr_63_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
   %tid = call i32 @llvm.r600.read.tidig.x() #0
   %gep.in = getelementptr i64, i64 addrspace(1)* %in, i32 %tid

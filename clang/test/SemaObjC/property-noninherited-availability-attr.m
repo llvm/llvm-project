@@ -20,8 +20,8 @@
 @end
 
 void test(Foo *y, Bar *x, id<myProtocol> z) {
-  y.myProperty = 0; // expected-warning {{'myProperty' is deprecated: first deprecated in OS X 10.8}}
-  (void)[y myProperty];   // expected-warning {{'myProperty' is deprecated: first deprecated in OS X 10.8}} 
+  y.myProperty = 0; // expected-warning {{'myProperty' is deprecated: first deprecated in macOS 10.8}}
+  (void)[y myProperty];   // expected-warning {{'myProperty' is deprecated: first deprecated in macOS 10.8}}
 
   x.myProperty = 1; // no-warning
   (void)[x myProperty]; // no-warning
@@ -29,5 +29,5 @@ void test(Foo *y, Bar *x, id<myProtocol> z) {
   x.myProtocolProperty = 0; // no-warning
 
   (void)[x myProtocolProperty]; // no-warning
-  (void)[z myProtocolProperty]; // expected-warning {{'myProtocolProperty' is deprecated: first deprecated in OS X 10.8}}
+  (void)[z myProtocolProperty]; // expected-warning {{'myProtocolProperty' is deprecated: first deprecated in macOS 10.8}}
 }

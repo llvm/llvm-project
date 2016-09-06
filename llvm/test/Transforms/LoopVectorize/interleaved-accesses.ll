@@ -284,18 +284,24 @@ for.body:                                         ; preds = %for.body, %entry
 }
 
 ; Check vectorization on an interleaved load group of factor 2 with 1 gap
-; (missing the load of odd elements).
+; (missing the load of odd elements). Because the vectorized loop would
+; speculatively access memory out-of-bounds, we must execute at least one
+; iteration of the scalar loop.
 
-; void even_load(int *A, int *B) {
+; void even_load_static_tc(int *A, int *B) {
 ;  for (unsigned i = 0; i < 1024; i+=2)
 ;     B[i/2] = A[i] * 2;
 ; }
 
-; CHECK-LABEL: @even_load(
-; CHECK-NOT: %wide.vec = load <8 x i32>, <8 x i32>* %{{.*}}, align 4
-; CHECK-NOT: %strided.vec = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-LABEL: @even_load_static_tc(
+; CHECK: vector.body:
+; CHECK:   %wide.vec = load <8 x i32>, <8 x i32>* %{{.*}}, align 4
+; CHECK:   %strided.vec = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK:   icmp eq i64 %index.next, 508
+; CHECK: middle.block:
+; CHECK:   br i1 false, label %for.cond.cleanup, label %scalar.ph
 
-define void @even_load(i32* noalias nocapture readonly %A, i32* noalias nocapture %B) {
+define void @even_load_static_tc(i32* noalias nocapture readonly %A, i32* noalias nocapture %B) {
 entry:
   br label %for.body
 
@@ -313,6 +319,93 @@ for.body:                                         ; preds = %for.body, %entry
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 2
   %cmp = icmp ult i64 %indvars.iv.next, 1024
   br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
+
+; Check vectorization on an interleaved load group of factor 2 with 1 gap
+; (missing the load of odd elements). Because the vectorized loop would
+; speculatively access memory out-of-bounds, we must execute at least one
+; iteration of the scalar loop.
+
+; void even_load_dynamic_tc(int *A, int *B, unsigned N) {
+;  for (unsigned i = 0; i < N; i+=2)
+;     B[i/2] = A[i] * 2;
+; }
+
+; CHECK-LABEL: @even_load_dynamic_tc(
+; CHECK: min.iters.checked:
+; CHECK:   %n.mod.vf = and i64 %[[N:[a-zA-Z0-9]+]], 3
+; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
+; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
+; CHECK:   %n.vec = sub i64 %[[N]], %[[R]]
+; CHECK: vector.body:
+; CHECK:   %wide.vec = load <8 x i32>, <8 x i32>* %{{.*}}, align 4
+; CHECK:   %strided.vec = shufflevector <8 x i32> %wide.vec, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK:   icmp eq i64 %index.next, %n.vec
+; CHECK: middle.block:
+; CHECK:   br i1 false, label %for.cond.cleanup, label %scalar.ph
+
+define void @even_load_dynamic_tc(i32* noalias nocapture readonly %A, i32* noalias nocapture %B, i64 %N) {
+entry:
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.body
+  ret void
+
+for.body:                                         ; preds = %for.body, %entry
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
+  %tmp = load i32, i32* %arrayidx, align 4
+  %mul = shl nsw i32 %tmp, 1
+  %tmp1 = lshr exact i64 %indvars.iv, 1
+  %arrayidx2 = getelementptr inbounds i32, i32* %B, i64 %tmp1
+  store i32 %mul, i32* %arrayidx2, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 2
+  %cmp = icmp ult i64 %indvars.iv.next, %N
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
+
+; Check vectorization on a reverse interleaved load group of factor 2 with 1
+; gap and a reverse interleaved store group of factor 2. The interleaved load
+; group should be removed since it has a gap and is reverse.
+
+; struct pair {
+;  int x;
+;  int y;
+; };
+;
+; void load_gap_reverse(struct pair *P1, struct pair *P2, int X) {
+;   for (int i = 1023; i >= 0; i--) {
+;     int a = X + i;
+;     int b = A[i].y - i;
+;     B[i].x = a;
+;     B[i].y = b;
+;   }
+; }
+
+; CHECK-LABEL: @load_gap_reverse(
+; CHECK-NOT: %wide.vec = load <8 x i64>, <8 x i64>* %{{.*}}, align 8
+; CHECK-NOT: %strided.vec = shufflevector <8 x i64> %wide.vec, <8 x i64> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+
+%pair = type { i64, i64 }
+define void @load_gap_reverse(%pair* noalias nocapture readonly %P1, %pair* noalias nocapture readonly %P2, i64 %X) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ 1023, %entry ], [ %i.next, %for.body ]
+  %0 = add nsw i64 %X, %i
+  %1 = getelementptr inbounds %pair, %pair* %P1, i64 %i, i32 0
+  %2 = getelementptr inbounds %pair, %pair* %P2, i64 %i, i32 1
+  %3 = load i64, i64* %2, align 8
+  %4 = sub nsw i64 %3, %i
+  store i64 %0, i64* %1, align 8
+  store i64 %4, i64* %2, align 8
+  %i.next = add nsw i64 %i, -1
+  %cond = icmp sgt i64 %i, 0
+  br i1 %cond, label %for.body, label %for.exit
+
+for.exit:
+  ret void
 }
 
 ; Check vectorization on interleaved access groups identified from mixed
@@ -460,6 +553,311 @@ for.body:                                         ; preds = %for.body, %entry
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+; Check vectorization of interleaved access groups in the presence of
+; dependences (PR27626). The following tests check that we don't reorder
+; dependent loads and stores when generating code for interleaved access
+; groups. Stores should be scalarized because the required code motion would
+; break dependences, and the remaining interleaved load groups should have
+; gaps.
+
+; PR27626_0: Ensure a strided store is not moved after a dependent (zero
+;            distance) strided load.
+
+; void PR27626_0(struct pair *p, int z, int n) {
+;   for (int i = 0; i < n; i++) {
+;     p[i].x = z;
+;     p[i].y = p[i].x;
+;   }
+; }
+
+; CHECK-LABEL: @PR27626_0(
+; CHECK: min.iters.checked:
+; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 3
+; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
+; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
+; CHECK:   %n.vec = sub nsw i64 %[[N]], %[[R]]
+; CHECK: vector.body:
+; CHECK:   %[[L1:.+]] = load <8 x i32>, <8 x i32>* {{.*}}
+; CHECK:   %[[X1:.+]] = extractelement <8 x i32> %[[L1]], i32 0
+; CHECK:   store i32 %[[X1]], {{.*}}
+; CHECK:   %[[X2:.+]] = extractelement <8 x i32> %[[L1]], i32 2
+; CHECK:   store i32 %[[X2]], {{.*}}
+; CHECK:   %[[X3:.+]] = extractelement <8 x i32> %[[L1]], i32 4
+; CHECK:   store i32 %[[X3]], {{.*}}
+; CHECK:   %[[X4:.+]] = extractelement <8 x i32> %[[L1]], i32 6
+; CHECK:   store i32 %[[X4]], {{.*}}
+
+%pair.i32 = type { i32, i32 }
+define void @PR27626_0(%pair.i32 *%p, i32 %z, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
+  %p_i.x = getelementptr inbounds %pair.i32, %pair.i32* %p, i64 %i, i32 0
+  %p_i.y = getelementptr inbounds %pair.i32, %pair.i32* %p, i64 %i, i32 1
+  store i32 %z, i32* %p_i.x, align 4
+  %0 = load i32, i32* %p_i.x, align 4
+  store i32 %0, i32 *%p_i.y, align 4
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+; PR27626_1: Ensure a strided load is not moved before a dependent (zero
+;            distance) strided store.
+
+; void PR27626_1(struct pair *p, int n) {
+;   int s = 0;
+;   for (int i = 0; i < n; i++) {
+;     p[i].y = p[i].x;
+;     s += p[i].y
+;   }
+; }
+
+; CHECK-LABEL: @PR27626_1(
+; CHECK: min.iters.checked:
+; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 3
+; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
+; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
+; CHECK:   %n.vec = sub nsw i64 %[[N]], %[[R]]
+; CHECK: vector.body:
+; CHECK:   %[[Phi:.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ {{.*}}, %vector.body ]
+; CHECK:   %[[L1:.+]] = load <8 x i32>, <8 x i32>* {{.*}}
+; CHECK:   %[[X1:.+]] = extractelement <8 x i32> %[[L1:.+]], i32 0
+; CHECK:   store i32 %[[X1:.+]], {{.*}}
+; CHECK:   %[[X2:.+]] = extractelement <8 x i32> %[[L1:.+]], i32 2
+; CHECK:   store i32 %[[X2:.+]], {{.*}}
+; CHECK:   %[[X3:.+]] = extractelement <8 x i32> %[[L1:.+]], i32 4
+; CHECK:   store i32 %[[X3:.+]], {{.*}}
+; CHECK:   %[[X4:.+]] = extractelement <8 x i32> %[[L1:.+]], i32 6
+; CHECK:   store i32 %[[X4:.+]], {{.*}}
+; CHECK:   %[[L2:.+]] = load <8 x i32>, <8 x i32>* {{.*}}
+; CHECK:   %[[S1:.+]] = shufflevector <8 x i32> %[[L2]], <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK:   add nsw <4 x i32> %[[S1]], %[[Phi]]
+
+define i32 @PR27626_1(%pair.i32 *%p, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
+  %s = phi i32 [ %2, %for.body ], [ 0, %entry ]
+  %p_i.x = getelementptr inbounds %pair.i32, %pair.i32* %p, i64 %i, i32 0
+  %p_i.y = getelementptr inbounds %pair.i32, %pair.i32* %p, i64 %i, i32 1
+  %0 = load i32, i32* %p_i.x, align 4
+  store i32 %0, i32* %p_i.y, align 4
+  %1 = load i32, i32* %p_i.y, align 4
+  %2 = add nsw i32 %1, %s
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  %3 = phi i32 [ %2, %for.body ]
+  ret i32 %3
+}
+
+; PR27626_2: Ensure a strided store is not moved after a dependent (negative
+;            distance) strided load.
+
+; void PR27626_2(struct pair *p, int z, int n) {
+;   for (int i = 0; i < n; i++) {
+;     p[i].x = z;
+;     p[i].y = p[i - 1].x;
+;   }
+; }
+
+; CHECK-LABEL: @PR27626_2(
+; CHECK: min.iters.checked:
+; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 3
+; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
+; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
+; CHECK:   %n.vec = sub nsw i64 %[[N]], %[[R]]
+; CHECK: vector.body:
+; CHECK:   %[[L1:.+]] = load <8 x i32>, <8 x i32>* {{.*}}
+; CHECK:   %[[X1:.+]] = extractelement <8 x i32> %[[L1]], i32 0
+; CHECK:   store i32 %[[X1]], {{.*}}
+; CHECK:   %[[X2:.+]] = extractelement <8 x i32> %[[L1]], i32 2
+; CHECK:   store i32 %[[X2]], {{.*}}
+; CHECK:   %[[X3:.+]] = extractelement <8 x i32> %[[L1]], i32 4
+; CHECK:   store i32 %[[X3]], {{.*}}
+; CHECK:   %[[X4:.+]] = extractelement <8 x i32> %[[L1]], i32 6
+; CHECK:   store i32 %[[X4]], {{.*}}
+
+define void @PR27626_2(%pair.i32 *%p, i64 %n, i32 %z) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
+  %i_minus_1 = add nuw nsw i64 %i, -1
+  %p_i.x = getelementptr inbounds %pair.i32, %pair.i32* %p, i64 %i, i32 0
+  %p_i_minus_1.x = getelementptr inbounds %pair.i32, %pair.i32* %p, i64 %i_minus_1, i32 0
+  %p_i.y = getelementptr inbounds %pair.i32, %pair.i32* %p, i64 %i, i32 1
+  store i32 %z, i32* %p_i.x, align 4
+  %0 = load i32, i32* %p_i_minus_1.x, align 4
+  store i32 %0, i32 *%p_i.y, align 4
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+; PR27626_3: Ensure a strided load is not moved before a dependent (negative
+;            distance) strided store.
+
+; void PR27626_3(struct pair *p, int z, int n) {
+;   for (int i = 0; i < n; i++) {
+;     p[i + 1].y = p[i].x;
+;     s += p[i].y;
+;   }
+; }
+
+; CHECK-LABEL: @PR27626_3(
+; CHECK: min.iters.checked:
+; CHECK:   %n.mod.vf = and i64 %[[N:.+]], 3
+; CHECK:   %[[IsZero:[a-zA-Z0-9]+]] = icmp eq i64 %n.mod.vf, 0
+; CHECK:   %[[R:[a-zA-Z0-9]+]] = select i1 %[[IsZero]], i64 4, i64 %n.mod.vf
+; CHECK:   %n.vec = sub nsw i64 %[[N]], %[[R]]
+; CHECK: vector.body:
+; CHECK:   %[[Phi:.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ {{.*}}, %vector.body ]
+; CHECK:   %[[L1:.+]] = load <8 x i32>, <8 x i32>* {{.*}}
+; CHECK:   %[[X1:.+]] = extractelement <8 x i32> %[[L1:.+]], i32 0
+; CHECK:   store i32 %[[X1:.+]], {{.*}}
+; CHECK:   %[[X2:.+]] = extractelement <8 x i32> %[[L1:.+]], i32 2
+; CHECK:   store i32 %[[X2:.+]], {{.*}}
+; CHECK:   %[[X3:.+]] = extractelement <8 x i32> %[[L1:.+]], i32 4
+; CHECK:   store i32 %[[X3:.+]], {{.*}}
+; CHECK:   %[[X4:.+]] = extractelement <8 x i32> %[[L1:.+]], i32 6
+; CHECK:   store i32 %[[X4:.+]], {{.*}}
+; CHECK:   %[[L2:.+]] = load <8 x i32>, <8 x i32>* {{.*}}
+; CHECK:   %[[S1:.+]] = shufflevector <8 x i32> %[[L2]], <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK:   add nsw <4 x i32> %[[S1]], %[[Phi]]
+
+define i32 @PR27626_3(%pair.i32 *%p, i64 %n, i32 %z) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
+  %s = phi i32 [ %2, %for.body ], [ 0, %entry ]
+  %i_plus_1 = add nuw nsw i64 %i, 1
+  %p_i.x = getelementptr inbounds %pair.i32, %pair.i32* %p, i64 %i, i32 0
+  %p_i.y = getelementptr inbounds %pair.i32, %pair.i32* %p, i64 %i, i32 1
+  %p_i_plus_1.y = getelementptr inbounds %pair.i32, %pair.i32* %p, i64 %i_plus_1, i32 1
+  %0 = load i32, i32* %p_i.x, align 4
+  store i32 %0, i32* %p_i_plus_1.y, align 4
+  %1 = load i32, i32* %p_i.y, align 4
+  %2 = add nsw i32 %1, %s
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  %3 = phi i32 [ %2, %for.body ]
+  ret i32 %3
+}
+
+; PR27626_4: Ensure we form an interleaved group for strided stores in the
+;            presence of a write-after-write dependence. We create a group for
+;            (2) and (3) while excluding (1).
+
+; void PR27626_4(int *a, int x, int y, int z, int n) {
+;   for (int i = 0; i < n; i += 2) {
+;     a[i] = x;      // (1)
+;     a[i] = y;      // (2)
+;     a[i + 1] = z;  // (3)
+;   }
+; }
+
+; CHECK-LABEL: @PR27626_4(
+; CHECK: vector.ph:
+; CHECK:   %[[INS_Y:.+]] = insertelement <4 x i32> undef, i32 %y, i32 0
+; CHECK:   %[[SPLAT_Y:.+]] = shufflevector <4 x i32> %[[INS_Y]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK:   %[[INS_Z:.+]] = insertelement <4 x i32> undef, i32 %z, i32 0
+; CHECK:   %[[SPLAT_Z:.+]] = shufflevector <4 x i32> %[[INS_Z]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK: vector.body:
+; CHECK:   store i32 %x, {{.*}}
+; CHECK:   store i32 %x, {{.*}}
+; CHECK:   store i32 %x, {{.*}}
+; CHECK:   store i32 %x, {{.*}}
+; CHECK:   %[[VEC:.+]] = shufflevector <4 x i32> %[[SPLAT_Y]], <4 x i32> %[[SPLAT_Z]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK:   store <8 x i32> %[[VEC]], {{.*}}
+
+define void @PR27626_4(i32 *%a, i32 %x, i32 %y, i32 %z, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ %i.next, %for.body ], [ 0, %entry ]
+  %i_plus_1 = add i64 %i, 1
+  %a_i = getelementptr inbounds i32, i32* %a, i64 %i
+  %a_i_plus_1 = getelementptr inbounds i32, i32* %a, i64 %i_plus_1
+  store i32 %x, i32* %a_i, align 4
+  store i32 %y, i32* %a_i, align 4
+  store i32 %z, i32* %a_i_plus_1, align 4
+  %i.next = add nuw nsw i64 %i, 2
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+; PR27626_5: Ensure we do not form an interleaved group for strided stores in
+;            the presence of a write-after-write dependence.
+
+; void PR27626_5(int *a, int x, int y, int z, int n) {
+;   for (int i = 3; i < n; i += 2) {
+;     a[i - 1] = x;
+;     a[i - 3] = y;
+;     a[i] = z;
+;   }
+; }
+
+; CHECK-LABEL: @PR27626_5(
+; CHECK: vector.body:
+; CHECK:   store i32 %x, {{.*}}
+; CHECK:   store i32 %x, {{.*}}
+; CHECK:   store i32 %x, {{.*}}
+; CHECK:   store i32 %x, {{.*}}
+; CHECK:   store i32 %y, {{.*}}
+; CHECK:   store i32 %y, {{.*}}
+; CHECK:   store i32 %y, {{.*}}
+; CHECK:   store i32 %y, {{.*}}
+; CHECK:   store i32 %z, {{.*}}
+; CHECK:   store i32 %z, {{.*}}
+; CHECK:   store i32 %z, {{.*}}
+; CHECK:   store i32 %z, {{.*}}
+
+define void @PR27626_5(i32 *%a, i32 %x, i32 %y, i32 %z, i64 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %i = phi i64 [ %i.next, %for.body ], [ 3, %entry ]
+  %i_minus_1 = sub i64 %i, 1
+  %i_minus_3 = sub i64 %i_minus_1, 2
+  %a_i = getelementptr inbounds i32, i32* %a, i64 %i
+  %a_i_minus_1 = getelementptr inbounds i32, i32* %a, i64 %i_minus_1
+  %a_i_minus_3 = getelementptr inbounds i32, i32* %a, i64 %i_minus_3
+  store i32 %x, i32* %a_i_minus_1, align 4
+  store i32 %y, i32* %a_i_minus_3, align 4
+  store i32 %z, i32* %a_i, align 4
+  %i.next = add nuw nsw i64 %i, 2
+  %cond = icmp slt i64 %i.next, %n
+  br i1 %cond, label %for.body, label %for.end
+
+for.end:
+  ret void
 }
 
 attributes #0 = { "unsafe-fp-math"="true" }

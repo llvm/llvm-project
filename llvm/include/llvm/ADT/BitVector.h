@@ -14,13 +14,13 @@
 #ifndef LLVM_ADT_BITVECTOR_H
 #define LLVM_ADT_BITVECTOR_H
 
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
+#include <cstdint>
 #include <cstdlib>
+#include <cstring>
 
 namespace llvm {
 
@@ -69,7 +69,7 @@ public:
     }
 
     operator bool() const {
-      return ((*WordRef) & (BitWord(1) << BitPos)) ? true : false;
+      return ((*WordRef) & (BitWord(1) << BitPos)) != 0;
     }
   };
 
@@ -105,6 +105,7 @@ public:
   BitVector(BitVector &&RHS)
     : Bits(RHS.Bits), Size(RHS.Size), Capacity(RHS.Capacity) {
     RHS.Bits = nullptr;
+    RHS.Size = RHS.Capacity = 0;
   }
 
   ~BitVector() {
@@ -454,6 +455,7 @@ public:
     Capacity = RHS.Capacity;
 
     RHS.Bits = nullptr;
+    RHS.Size = RHS.Capacity = 0;
 
     return *this;
   }
@@ -576,7 +578,7 @@ static inline size_t capacity_in_bytes(const BitVector &X) {
   return X.getMemorySize();
 }
 
-} // End llvm namespace
+} // end namespace llvm
 
 namespace std {
   /// Implement std::swap in terms of BitVector swap.
@@ -584,6 +586,6 @@ namespace std {
   swap(llvm::BitVector &LHS, llvm::BitVector &RHS) {
     LHS.swap(RHS);
   }
-}
+} // end namespace std
 
-#endif
+#endif // LLVM_ADT_BITVECTOR_H

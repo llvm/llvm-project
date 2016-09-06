@@ -1,3 +1,12 @@
+//===--- CommentLexer.cpp -------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #include "clang/AST/CommentLexer.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentDiagnostic.h"
@@ -44,7 +53,7 @@ namespace {
 #include "clang/AST/CommentHTMLTags.inc"
 #include "clang/AST/CommentHTMLNamedCharacterReferences.inc"
 
-} // unnamed namespace
+} // end anonymous namespace
 
 StringRef Lexer::resolveHTMLNamedCharacterReference(StringRef Name) const {
   // Fast path, first check a few most widely used named character references.
@@ -266,7 +275,7 @@ const char *findCCommentEnd(const char *BufferPtr, const char *BufferEnd) {
   llvm_unreachable("buffer end hit before '*/' was seen");
 }
     
-} // unnamed namespace
+} // end anonymous namespace
 
 void Lexer::formTokenWithChars(Token &Result, const char *TokEnd,
                                tok::TokenKind Kind) {
@@ -411,7 +420,6 @@ void Lexer::lexCommentText(Token &T) {
           setupAndLexHTMLEndTag(T);
         else
           formTextToken(T, TokenPtr);
-
         return;
       }
 
@@ -604,7 +612,6 @@ void Lexer::lexHTMLCharacterReference(Token &T) {
   }
   formTokenWithChars(T, TokenPtr, tok::text);
   T.setText(Resolved);
-  return;
 }
 
 void Lexer::setupAndLexHTMLStartTag(Token &T) {
@@ -848,4 +855,3 @@ StringRef Lexer::getSpelling(const Token &Tok,
 
 } // end namespace comments
 } // end namespace clang
-

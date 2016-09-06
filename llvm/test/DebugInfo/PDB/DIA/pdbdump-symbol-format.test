@@ -1,11 +1,15 @@
-; RUN: llvm-pdbdump -symbols %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=SYM_FORMAT %s
-; RUN: llvm-pdbdump -types %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=TYPES_FORMAT %s
-; RUN: llvm-pdbdump -globals %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=GLOBALS %s
+; RUN: llvm-pdbdump pretty -symbols %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=SYM_FORMAT %s
+; RUN: llvm-pdbdump pretty -types %p/../Inputs/symbolformat.pdb > %t.types
+; RUN: FileCheck --check-prefix=TYPES_FORMAT %s < %t.types
+; RUN: FileCheck --check-prefix=TYPES_1 %s < %t.types
+; RUN: FileCheck --check-prefix=TYPES_2 %s < %t.types
+; RUN: llvm-pdbdump pretty -types %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=TYPES_FORMAT %s
+; RUN: llvm-pdbdump pretty -globals %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=GLOBALS %s
 
 ; The format is func [0x<rva_start>+<prologue_length> - 0x<rva_end>-<epilogue_length>]
 ; SYM_FORMAT: ---SYMBOLS---
 ; SYM_FORMAT: symbolformat-fpo.obj
-; SYM_FORMAT-DAG: func [{{.*}}] (FPO) unsigned __cdecl fpo_func(unsigned n)
+; SYM_FORMAT-DAG: func [{{.*}}] (FPO) unsigned int __cdecl fpo_func(unsigned int n)
 ; SYM_FORMAT: symbolformat.obj
 ; SYM_FORMAT-DAG: func [{{.*}}] (EBP) int __cdecl _purecall()
 ; SYM_FORMAT-DAG: func [{{.*}}] (EBP) int __cdecl main(int argc, char** argv)
@@ -23,31 +27,34 @@
 ; TYPES_FORMAT: Typedefs
 ; TYPES_FORMAT-DAG: typedef int IntType
 ; TYPES_FORMAT-DAG: typedef class A ClassAType
-; TYPES_FORMAT: Classes
-; TYPES_FORMAT: struct A {
-; TYPES_FORMAT: public:
-; TYPES_FORMAT: virtual void PureFunc() = 0
-; TYPES_FORMAT: virtual void VirtualFunc()
-; TYPES_FORMAT: void RegularFunc()
-; TYPES_FORMAT: }
-; TYPES_FORMAT-DAG: struct MemberTest {
-; TYPES_FORMAT: data +0x00 MemberTest::NestedEnum m_nested_enum
-; TYPES_FORMAT: data +0x04 int m_typedef
-; TYPES_FORMAT: data +0x08 bool m_bool
-; TYPES_FORMAT: data +0x09 char m_char
-; TYPES_FORMAT: data +0x0a wchar_t m_wchar_t
-; TYPES_FORMAT: data +0x0c int m_int
-; TYPES_FORMAT: data +0x10 unsigned m_unsigned
-; TYPES_FORMAT: data +0x14 long m_long
-; TYPES_FORMAT: data +0x18 unsigned long m_unsigned_long
-; TYPES_FORMAT: data +0x20 __int64 m_int64
-; TYPES_FORMAT: data +0x28 unsigned __int64 m_unsigned_int64
-; TYPES_FORMAT: data +0x30 float m_float
-; TYPES_FORMAT: data +0x38 double m_double
-; TYPES_FORMAT: data +0x40 void (__cdecl *m_pfn_2_args)(int, double)
-; TYPES_FORMAT: }
+
+; TYPES_1: Classes
+; TYPES_1: struct A {
+; TYPES_1: public:
+; TYPES_1: virtual void PureFunc() = 0
+; TYPES_1: virtual void VirtualFunc()
+; TYPES_1: void RegularFunc()
+; TYPES_1: }
+
+; TYPES_2: Classes
+; TYPES_2: struct MemberTest {
+; TYPES_2: data +0x00 MemberTest::NestedEnum m_nested_enum
+; TYPES_2: data +0x04 int m_typedef
+; TYPES_2: data +0x08 bool m_bool
+; TYPES_2: data +0x09 char m_char
+; TYPES_2: data +0x0a wchar_t m_wchar_t
+; TYPES_2: data +0x0c int m_int
+; TYPES_2: data +0x10 unsigned int m_unsigned
+; TYPES_2: data +0x14 long m_long
+; TYPES_2: data +0x18 unsigned long m_unsigned_long
+; TYPES_2: data +0x20 __int64 m_int64
+; TYPES_2: data +0x28 unsigned __int64 m_unsigned_int64
+; TYPES_2: data +0x30 float m_float
+; TYPES_2: data +0x38 double m_double
+; TYPES_2: data +0x40 void (__cdecl *m_pfn_2_args)(int, double)
+; TYPES_2: }
 
 ; GLOBALS: ---GLOBALS---
-; GLOBALS-DAG: func [{{.*}}] (FPO) unsigned __cdecl fpo_func(unsigned n)
+; GLOBALS-DAG: func [{{.*}}] (FPO) unsigned int __cdecl fpo_func(unsigned int n)
 ; GLOBALS-DAG: data [{{.*}}] static void* g_global_pointer
 ; GLOBALS-DAG: data [{{.*}}] static int g_global_int

@@ -29,9 +29,9 @@ void releaser(__attribute__((ns_consumed)) id);
 releaser_t r2 = releaser; // no-warning
 
 template <typename T>
-void templateFunction(T) { } // expected-note {{candidate template ignored: could not match 'void (__strong id)' against 'void (id)'}} \
+void templateFunction(T) { } // expected-note {{candidate template ignored: could not match 'void (__strong id)' against 'void (__attribute__((ns_consumed)) id)'}} \
                              // expected-note {{candidate template ignored: failed template argument deduction}}
-releaser_t r3 = templateFunction<id>; // expected-error {{address of overloaded function 'templateFunction' does not match required type 'void (id)'}}
+releaser_t r3 = templateFunction<id>; // expected-error {{address of overloaded function 'templateFunction' does not match required type 'void (__attribute__((ns_consumed)) id)'}}
 
 template <typename T>
 void templateReleaser(__attribute__((ns_consumed)) T) { } // expected-note 2{{candidate template ignored: failed template argument deduction}}

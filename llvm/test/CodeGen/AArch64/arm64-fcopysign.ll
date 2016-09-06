@@ -5,7 +5,7 @@
 define float @test1(float %x, float %y) nounwind {
 entry:
 ; CHECK-LABEL: test1:
-; CHECK: movi.4s	v2, #0x80, lsl #24
+; CHECK: movi.4s	v2, #128, lsl #24
 ; CHECK: bit.16b	v0, v1, v2
   %0 = tail call float @copysignf(float %x, float %y) nounwind readnone
   ret float %0
@@ -37,7 +37,7 @@ define float @test4() nounwind {
 entry:
 ; CHECK-LABEL: test4:
 ; CHECK: fcvt s0, d0
-; CHECK: movi.4s v[[CONST:[0-9]+]], #0x80, lsl #24
+; CHECK: movi.4s v[[CONST:[0-9]+]], #128, lsl #24
 ; CHECK: bit.16b v{{[0-9]+}}, v0, v[[CONST]]
   %0 = tail call double (...) @bar() nounwind
   %1 = fptrunc double %0 to float

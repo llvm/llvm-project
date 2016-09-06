@@ -1,0 +1,60 @@
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# REQUIRES: global-isel
+# Test that the MIR parser parses types on generic instructions correctly.
+
+--- |
+  target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+  %type_alias = type <2 x i32>
+  %structure_alias = type { i32, i16 }
+  define void @test_vregs() {
+    ret void
+  }
+
+  define void @test_unsized() {
+    ret void
+  }
+
+...
+
+---
+name:            test_vregs
+isSSA:           true
+# CHECK:      registers:
+# CHECK-NEXT:   - { id: 0, class: _ }
+# CHECK-NEXT:   - { id: 1, class: _ }
+# CHECK-NEXT:   - { id: 2, class: _ }
+# CHECK-NEXT:   - { id: 3, class: _ }
+# CHECK-NEXT:   - { id: 4, class: _ }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+body: |
+  bb.0:
+    liveins: %edi
+    ; CHECK:      %0(32) = G_ADD s32 %edi
+    %0(32) = G_ADD s32 %edi, %edi
+    ; CHECK:      %1(64) = G_ADD <2 x s32> %edi
+    %1(64) = G_ADD <2 x s32> %edi, %edi
+    ; CHECK:      %2(64) = G_ADD s64 %edi
+    %2(64) = G_ADD s64 %edi, %edi
+    ; G_ADD is actually not a valid operand for structure type,
+    ; but that is the only one we have for now for testing.
+    ; CHECK:      %3(64) = G_ADD s64 %edi
+    %3(64) = G_ADD s64 %edi, %edi
+    ; CHECK:      %4(48) = G_ADD s48 %edi
+    %4(48) = G_ADD s48 %edi, %edi
+...
+
+---
+name:            test_unsized
+isSSA:           true
+body: |
+  bb.0:
+    successors: %bb.0
+
+    ; CHECK:      G_BR unsized %bb.0
+    G_BR unsized %bb.0
+...

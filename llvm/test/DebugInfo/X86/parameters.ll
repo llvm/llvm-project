@@ -86,11 +86,10 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!21, !33}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "pass.cpp", directory: "/tmp")
 !2 = !{}
-!3 = !{!4, !17}
-!4 = distinct !DISubprogram(name: "func", linkageName: "_ZN7pr147634funcENS_3fooE", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 6, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "func", linkageName: "_ZN7pr147634funcENS_3fooE", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 6, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DINamespace(name: "pr14763", line: 1, file: !1, scope: null)
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !8}
@@ -102,7 +101,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !13 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer, baseType: !8)
 !14 = !DIDerivedType(tag: DW_TAG_reference_type, baseType: !15)
 !15 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !8)
-!17 = distinct !DISubprogram(name: "func2", linkageName: "_ZN7pr147635func2EbNS_3fooE", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 12, file: !1, scope: !5, type: !18, variables: !2)
+!17 = distinct !DISubprogram(name: "func2", linkageName: "_ZN7pr147635func2EbNS_3fooE", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 12, file: !1, scope: !5, type: !18, variables: !2)
 !18 = !DISubroutineType(types: !19)
 !19 = !{null, !20, !8}
 !20 = !DIBasicType(tag: DW_TAG_base_type, name: "bool", size: 8, align: 8, encoding: DW_ATE_boolean)

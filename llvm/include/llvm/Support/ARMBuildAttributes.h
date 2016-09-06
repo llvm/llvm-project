@@ -67,6 +67,7 @@ enum AttrType {
   ABI_FP_16bit_format       = 38,
   MPextension_use           = 42, // recoded from 70 (ABI r2.08)
   DIV_use                   = 44,
+  DSP_extension             = 46,
   also_compatible_with      = 65,
   conformance               = 67,
   Virtualization_use        = 68,

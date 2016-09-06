@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr6 -mattr=+altivec -code-model=small < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr6 -mattr=+altivec -code-model=small < %s | FileCheck %s
 
 ; Check vector extend load expansion with altivec enabled.
 

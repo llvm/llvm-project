@@ -404,6 +404,59 @@ catch.cont:                                       ; preds = %catch
 return:                                           ; preds = %invoke.cont, %catch.cont
   ret void
 }
+; CHECK-LABEL: define i32 @f9()
+; CHECK: entry:
+; CHECK:   invoke void @"\01??1S2@@QEAA@XZ"(
+; CHECK-NOT:   cleanuppad
+; CHECK: catch.dispatch:
+; CHECK: }
+define i32 @f9() personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  %s = alloca i8, align 1
+  call void @llvm.lifetime.start(i64 1, i8* nonnull %s)
+  %bc = bitcast i8* %s to %struct.S2*
+  invoke void @"\01??1S2@@QEAA@XZ"(%struct.S2* %bc)
+          to label %try.cont unwind label %ehcleanup
+
+ehcleanup:
+  %cleanup.pad = cleanuppad within none []
+  call void @llvm.lifetime.end(i64 1, i8* nonnull %s)
+  cleanupret from %cleanup.pad unwind label %catch.dispatch
+
+catch.dispatch:
+  %catch.switch = catchswitch within none [label %catch] unwind to caller
+
+catch:
+  %catch.pad = catchpad within %catch.switch [i8* null, i32 0, i8* null]
+  catchret from %catch.pad to label %try.cont
+
+try.cont:
+  ret i32 0
+}
+
+; CHECK-LABEL: define void @f10(
+define void @f10(i32 %V) personality i32 (...)* @__CxxFrameHandler3 {
+entry:
+  invoke void @g()
+          to label %unreachable unwind label %cleanup
+; CHECK:       call void @g()
+; CHECK-NEXT:  unreachable
+
+unreachable:
+  unreachable
+
+cleanup:
+  %cp = cleanuppad within none []
+  switch i32 %V, label %cleanupret1 [
+    i32 0, label %cleanupret2
+  ]
+
+cleanupret1:
+  cleanupret from %cp unwind to caller
+
+cleanupret2:
+  cleanupret from %cp unwind to caller
+}
 
 %struct.S = type { i8 }
 %struct.S2 = type { i8 }
@@ -413,3 +466,5 @@ declare void @use_x(i32 %x)
 
 declare i32 @__CxxFrameHandler3(...)
 
+declare void @llvm.lifetime.start(i64, i8* nocapture)
+declare void @llvm.lifetime.end(i64, i8* nocapture)

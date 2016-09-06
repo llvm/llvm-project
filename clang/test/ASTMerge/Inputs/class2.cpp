@@ -1,5 +1,6 @@
 struct A {
-  int x;
+  public:
+    int x;
 };
 
 struct B : A {

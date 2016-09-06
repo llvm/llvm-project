@@ -10,26 +10,26 @@ struct Board {
   constexpr Board(const Board &O) : State(O.State), Failed(O.Failed) {}
   constexpr Board(uint64_t State, bool Failed = false) :
     State(State), Failed(Failed) {}
-  constexpr Board addQueen(int Row, int Col) {
+  constexpr Board addQueen(int Row, int Col) const {
     return Board(State | ((uint64_t)Row << (Col * 4)));
   }
-  constexpr int getQueenRow(int Col) {
+  constexpr int getQueenRow(int Col) const {
     return (State >> (Col * 4)) & 0xf;
   }
-  constexpr bool ok(int Row, int Col) {
+  constexpr bool ok(int Row, int Col) const {
     return okRecurse(Row, Col, 0);
   }
-  constexpr bool okRecurse(int Row, int Col, int CheckCol) {
+  constexpr bool okRecurse(int Row, int Col, int CheckCol) const {
     return Col == CheckCol ? true :
            getQueenRow(CheckCol) == Row ? false :
            getQueenRow(CheckCol) == Row + (Col - CheckCol) ? false :
            getQueenRow(CheckCol) == Row + (CheckCol - Col) ? false :
            okRecurse(Row, Col, CheckCol + 1);
   }
-  constexpr bool at(int Row, int Col) {
+  constexpr bool at(int Row, int Col) const {
     return getQueenRow(Col) == Row;
   }
-  constexpr bool check(const char *, int=0, int=0);
+  constexpr bool check(const char *, int=0, int=0) const;
 };
 
 constexpr Board buildBoardRecurse(int N, int Col, const Board &B);
@@ -54,7 +54,7 @@ constexpr Board buildBoard(int N) {
 
 constexpr Board q8 = buildBoard(8);
 
-constexpr bool Board::check(const char *p, int Row, int Col) {
+constexpr bool Board::check(const char *p, int Row, int Col) const {
   return
     *p == '\n' ? check(p+1, Row+1, 0) :
     *p == 'o' ? at(Row, Col) && check(p+1, Row, Col+1) :

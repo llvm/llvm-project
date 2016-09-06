@@ -101,12 +101,23 @@ define i32 @test10a(i32 %A) {
 }
 
 define i1 @test11(i8 %A, i8 %B) {
-	%C = sub i8 %A, %B
-	%cD = icmp ne i8 %C, 0
-	ret i1 %cD
 ; CHECK-LABEL: @test11(
-; CHECK: %cD = icmp ne i8 %A, %B
-; CHECK: ret i1 %cD
+; CHECK-NEXT:    [[D:%.*]] = icmp ne i8 %A, %B
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C = sub i8 %A, %B
+  %D = icmp ne i8 %C, 0
+  ret i1 %D
+}
+
+define <2 x i1> @test11vec(<2 x i8> %A, <2 x i8> %B) {
+; CHECK-LABEL: @test11vec(
+; CHECK-NEXT:    [[D:%.*]] = icmp ne <2 x i8> %A, %B
+; CHECK-NEXT:    ret <2 x i1> [[D]]
+;
+  %C = sub <2 x i8> %A, %B
+  %D = icmp ne <2 x i8> %C, zeroinitializer
+  ret <2 x i1> %D
 }
 
 define i32 @test12(i32 %A) {

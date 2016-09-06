@@ -1,7 +1,6 @@
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}v_fsub_f32:
 ; SI: v_subrev_f32_e32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
@@ -24,7 +23,7 @@ define void @s_fsub_f32(float addrspace(1)* %out, float %a, float %b) {
   ret void
 }
 
-declare float @llvm.R600.load.input(i32) readnone
+declare float @llvm.r600.load.input(i32) readnone
 
 declare void @llvm.AMDGPU.store.output(float, i32)
 

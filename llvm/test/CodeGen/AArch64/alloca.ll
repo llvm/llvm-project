@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -disable-post-ra -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=CHECK
+; RUN: llc -mtriple=aarch64-linux-gnu -disable-post-ra -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=arm64-apple-ios -disable-post-ra -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=CHECK-MACHO
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -disable-post-ra -mattr=-fp-armv8 -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-NOFP-ARM64 %s
 
 declare void @use_addr(i8*)
@@ -113,13 +114,20 @@ define void @test_variadic_alloca(i64 %n, ...) {
 
 define void @test_alloca_large_frame(i64 %n) {
 ; CHECK-LABEL: test_alloca_large_frame:
+; CHECK-MACHO-LABEL: test_alloca_large_frame:
 
 
-; CHECK: stp     x20, x19, [sp, #-32]!
+; CHECK: stp     x28, x19, [sp, #-32]!
 ; CHECK: stp     x29, x30, [sp, #16]
 ; CHECK: add     x29, sp, #16
 ; CHECK: sub     sp, sp, #1953, lsl #12
 ; CHECK: sub     sp, sp, #512
+
+; CHECK-MACHO: stp     x20, x19, [sp, #-32]!
+; CHECK-MACHO: stp     x29, x30, [sp, #16]
+; CHECK-MACHO: add     x29, sp, #16
+; CHECK-MACHO: sub     sp, sp, #1953, lsl #12
+; CHECK-MACHO: sub     sp, sp, #512
 
   %addr1 = alloca i8, i64 %n
   %addr2 = alloca i64, i64 1000000
@@ -130,7 +138,11 @@ define void @test_alloca_large_frame(i64 %n) {
 
 ; CHECK: sub     sp, x29, #16
 ; CHECK: ldp     x29, x30, [sp, #16]
-; CHECK: ldp     x20, x19, [sp], #32
+; CHECK: ldp     x28, x19, [sp], #32
+
+; CHECK-MACHO: sub     sp, x29, #16
+; CHECK-MACHO: ldp     x29, x30, [sp, #16]
+; CHECK-MACHO: ldp     x20, x19, [sp], #32
 }
 
 declare i8* @llvm.stacksave()

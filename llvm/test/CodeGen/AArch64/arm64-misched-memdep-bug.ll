@@ -9,6 +9,9 @@
 ; CHECK:   Successors:
 ; CHECK-NEXT:    val SU(5): Latency=4 Reg=%vreg2
 ; CHECK-NEXT:    ch  SU(4): Latency=0
+; CHECK: SU(3):   STRWui %WZR, %vreg0, 0; mem:ST4[%ptr1] GPR64common:%vreg0
+; CHECK:   Successors:
+; CHECK: ch  SU(4): Latency=0
 ; CHECK: SU(4):   STRWui %WZR, %vreg1, 0; mem:ST4[%ptr2] GPR64common:%vreg1
 ; CHECK: SU(5):   %W0<def> = COPY %vreg2; GPR32:%vreg2
 ; CHECK: ** ScheduleDAGMI::schedule picking next node

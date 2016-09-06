@@ -2,7 +2,7 @@
 ; which is responsible for writing mach-o relocation entries for (PIC)
 ; PowerPC objects.
 
-; RUN: llvm-mc -filetype=obj -relocation-model=pic -mcpu=g4 -triple=powerpc-apple-darwin8 %s -o - | llvm-readobj -r --expand-relocs | FileCheck -check-prefix=DARWIN-G4-DUMP %s
+; RUN: llvm-mc -filetype=obj -mcpu=g4 -triple=powerpc-apple-darwin8 %s -o - | llvm-readobj -r --expand-relocs | FileCheck -check-prefix=DARWIN-G4-DUMP %s
 
 	.machine ppc7400
 	.section	__TEXT,__textcoal_nt,coalesced,pure_instructions

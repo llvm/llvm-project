@@ -54,11 +54,23 @@ public:
 
   bool enableInterleavedAccessVectorization() { return true; }
 
+  /// Floating-point computation using ARMv8 AArch32 Advanced
+  /// SIMD instructions remains unchanged from ARMv7. Only AArch64 SIMD
+  /// is IEEE-754 compliant, but it's not covered in this target.
+  bool isFPVectorizationPotentiallyUnsafe() {
+    return !ST->isTargetDarwin();
+  }
+
   /// \name Scalar TTI Implementations
   /// @{
 
+  int getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
+                            Type *Ty);
+
   using BaseT::getIntImmCost;
   int getIntImmCost(const APInt &Imm, Type *Ty);
+
+  int getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm, Type *Ty);
 
   /// @}
 
@@ -88,10 +100,7 @@ public:
   }
 
   unsigned getMaxInterleaveFactor(unsigned VF) {
-    // These are out of order CPUs:
-    if (ST->isCortexA15() || ST->isSwift())
-      return 2;
-    return 1;
+    return ST->getMaxInterleaveFactor();
   }
 
   int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);

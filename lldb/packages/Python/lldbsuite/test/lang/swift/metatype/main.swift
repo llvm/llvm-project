@@ -16,7 +16,7 @@ protocol P {}
 func main<T>(_ x: T) {
   var s = String.self
   var c = D.self
-  var t = (1,2,"hello").dynamicType
+  var t = type(of: (1,2,"hello"))
   var p = P.self
   var f = T.self
   print("Set breakpoint here")

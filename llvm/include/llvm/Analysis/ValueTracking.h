@@ -15,17 +15,20 @@
 #ifndef LLVM_ANALYSIS_VALUETRACKING_H
 #define LLVM_ANALYSIS_VALUETRACKING_H
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {
+template <typename T> class ArrayRef;
   class APInt;
   class AddOperator;
   class AssumptionCache;
   class DataLayout;
   class DominatorTree;
+  class GEPOperator;
   class Instruction;
   class Loop;
   class LoopInfo;
@@ -33,6 +36,10 @@ namespace llvm {
   class StringRef;
   class TargetLibraryInfo;
   class Value;
+
+  namespace Intrinsic {
+  enum ID : unsigned;
+  }
 
   /// Determine which bits of V are known to be either zero or one and return
   /// them in the KnownZero/KnownOne bit sets.
@@ -42,7 +49,7 @@ namespace llvm {
   /// where V is a vector, the known zero and known one values are the
   /// same width as the vector element, and the bit is set only if it is true
   /// for all of the elements in the vector.
-  void computeKnownBits(Value *V, APInt &KnownZero, APInt &KnownOne,
+  void computeKnownBits(const Value *V, APInt &KnownZero, APInt &KnownOne,
                         const DataLayout &DL, unsigned Depth = 0,
                         AssumptionCache *AC = nullptr,
                         const Instruction *CxtI = nullptr,
@@ -53,108 +60,129 @@ namespace llvm {
   void computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
                                          APInt &KnownZero, APInt &KnownOne);
   /// Return true if LHS and RHS have no common bits set.
-  bool haveNoCommonBitsSet(Value *LHS, Value *RHS, const DataLayout &DL,
+  bool haveNoCommonBitsSet(const Value *LHS, const Value *RHS,
+                           const DataLayout &DL,
                            AssumptionCache *AC = nullptr,
                            const Instruction *CxtI = nullptr,
                            const DominatorTree *DT = nullptr);
 
-  /// ComputeSignBit - Determine whether the sign bit is known to be zero or
-  /// one.  Convenience wrapper around computeKnownBits.
-  void ComputeSignBit(Value *V, bool &KnownZero, bool &KnownOne,
+  /// Determine whether the sign bit is known to be zero or one. Convenience
+  /// wrapper around computeKnownBits.
+  void ComputeSignBit(const Value *V, bool &KnownZero, bool &KnownOne,
                       const DataLayout &DL, unsigned Depth = 0,
                       AssumptionCache *AC = nullptr,
                       const Instruction *CxtI = nullptr,
                       const DominatorTree *DT = nullptr);
 
-  /// isKnownToBeAPowerOfTwo - Return true if the given value is known to have
-  /// exactly one bit set when defined. For vectors return true if every
-  /// element is known to be a power of two when defined.  Supports values with
-  /// integer or pointer type and vectors of integers.  If 'OrZero' is set then
-  /// return true if the given value is either a power of two or zero.
-  bool isKnownToBeAPowerOfTwo(Value *V, const DataLayout &DL,
+  /// Return true if the given value is known to have exactly one bit set when
+  /// defined. For vectors return true if every element is known to be a power
+  /// of two when defined. Supports values with integer or pointer type and
+  /// vectors of integers. If 'OrZero' is set, then return true if the given
+  /// value is either a power of two or zero.
+  bool isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
                               bool OrZero = false, unsigned Depth = 0,
                               AssumptionCache *AC = nullptr,
                               const Instruction *CxtI = nullptr,
                               const DominatorTree *DT = nullptr);
 
-  /// isKnownNonZero - Return true if the given value is known to be non-zero
-  /// when defined.  For vectors return true if every element is known to be
-  /// non-zero when defined.  Supports values with integer or pointer type and
-  /// vectors of integers.
-  bool isKnownNonZero(Value *V, const DataLayout &DL, unsigned Depth = 0,
+  /// Return true if the given value is known to be non-zero when defined. For
+  /// vectors, return true if every element is known to be non-zero when
+  /// defined. Supports values with integer or pointer type and vectors of
+  /// integers.
+  bool isKnownNonZero(const Value *V, const DataLayout &DL, unsigned Depth = 0,
                       AssumptionCache *AC = nullptr,
                       const Instruction *CxtI = nullptr,
                       const DominatorTree *DT = nullptr);
 
   /// Returns true if the give value is known to be non-negative.
-  bool isKnownNonNegative(Value *V, const DataLayout &DL, unsigned Depth = 0,
+  bool isKnownNonNegative(const Value *V, const DataLayout &DL,
+                          unsigned Depth = 0,
                           AssumptionCache *AC = nullptr,
                           const Instruction *CxtI = nullptr,
                           const DominatorTree *DT = nullptr);
 
-  /// isKnownNonEqual - Return true if the given values are known to be
-  /// non-equal when defined. Supports scalar integer types only.
-  bool isKnownNonEqual(Value *V1, Value *V2, const DataLayout &DL,
+  /// Returns true if the given value is known be positive (i.e. non-negative
+  /// and non-zero).
+  bool isKnownPositive(const Value *V, const DataLayout &DL, unsigned Depth = 0,
+                       AssumptionCache *AC = nullptr,
+                       const Instruction *CxtI = nullptr,
+                       const DominatorTree *DT = nullptr);
+
+  /// Returns true if the given value is known be negative (i.e. non-positive
+  /// and non-zero).
+  bool isKnownNegative(const Value *V, const DataLayout &DL, unsigned Depth = 0,
+                       AssumptionCache *AC = nullptr,
+                       const Instruction *CxtI = nullptr,
+                       const DominatorTree *DT = nullptr);
+
+  /// Return true if the given values are known to be non-equal when defined.
+  /// Supports scalar integer types only.
+  bool isKnownNonEqual(const Value *V1, const Value *V2, const DataLayout &DL,
                       AssumptionCache *AC = nullptr,
                       const Instruction *CxtI = nullptr,
                       const DominatorTree *DT = nullptr);
 
-  /// MaskedValueIsZero - Return true if 'V & Mask' is known to be zero.  We use
-  /// this predicate to simplify operations downstream.  Mask is known to be
-  /// zero for bits that V cannot have.
+  /// Return true if 'V & Mask' is known to be zero. We use this predicate to
+  /// simplify operations downstream. Mask is known to be zero for bits that V
+  /// cannot have.
   ///
   /// This function is defined on values with integer type, values with pointer
   /// type, and vectors of integers.  In the case
   /// where V is a vector, the mask, known zero, and known one values are the
   /// same width as the vector element, and the bit is set only if it is true
   /// for all of the elements in the vector.
-  bool MaskedValueIsZero(Value *V, const APInt &Mask, const DataLayout &DL,
+  bool MaskedValueIsZero(const Value *V, const APInt &Mask,
+                         const DataLayout &DL,
                          unsigned Depth = 0, AssumptionCache *AC = nullptr,
                          const Instruction *CxtI = nullptr,
                          const DominatorTree *DT = nullptr);
 
-  /// ComputeNumSignBits - Return the number of times the sign bit of the
-  /// register is replicated into the other bits.  We know that at least 1 bit
-  /// is always equal to the sign bit (itself), but other cases can give us
-  /// information.  For example, immediately after an "ashr X, 2", we know that
-  /// the top 3 bits are all equal to each other, so we return 3.
-  ///
-  /// 'Op' must have a scalar integer type.
-  ///
-  unsigned ComputeNumSignBits(Value *Op, const DataLayout &DL,
+  /// Return the number of times the sign bit of the register is replicated into
+  /// the other bits. We know that at least 1 bit is always equal to the sign
+  /// bit (itself), but other cases can give us information. For example,
+  /// immediately after an "ashr X, 2", we know that the top 3 bits are all
+  /// equal to each other, so we return 3. For vectors, return the number of
+  /// sign bits for the vector element with the mininum number of known sign
+  /// bits.
+  unsigned ComputeNumSignBits(const Value *Op, const DataLayout &DL,
                               unsigned Depth = 0, AssumptionCache *AC = nullptr,
                               const Instruction *CxtI = nullptr,
                               const DominatorTree *DT = nullptr);
 
-  /// ComputeMultiple - This function computes the integer multiple of Base that
-  /// equals V.  If successful, it returns true and returns the multiple in
-  /// Multiple.  If unsuccessful, it returns false.  Also, if V can be
-  /// simplified to an integer, then the simplified V is returned in Val.  Look
-  /// through sext only if LookThroughSExt=true.
+  /// This function computes the integer multiple of Base that equals V. If
+  /// successful, it returns true and returns the multiple in Multiple. If
+  /// unsuccessful, it returns false. Also, if V can be simplified to an
+  /// integer, then the simplified V is returned in Val. Look through sext only
+  /// if LookThroughSExt=true.
   bool ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
                        bool LookThroughSExt = false,
                        unsigned Depth = 0);
 
-  /// CannotBeNegativeZero - Return true if we can prove that the specified FP
-  /// value is never equal to -0.0.
-  ///
-  bool CannotBeNegativeZero(const Value *V, unsigned Depth = 0);
+  /// Map a call instruction to an intrinsic ID.  Libcalls which have equivalent
+  /// intrinsics are treated as-if they were intrinsics.
+  Intrinsic::ID getIntrinsicForCallSite(ImmutableCallSite ICS,
+                                        const TargetLibraryInfo *TLI);
 
-  /// CannotBeOrderedLessThanZero - Return true if we can prove that the
-  /// specified FP value is either a NaN or never less than 0.0.
-  ///
-  bool CannotBeOrderedLessThanZero(const Value *V, unsigned Depth = 0);
+  /// Return true if we can prove that the specified FP value is never equal to
+  /// -0.0.
+  bool CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
+                            unsigned Depth = 0);
 
-  /// isBytewiseValue - If the specified value can be set by repeating the same
-  /// byte in memory, return the i8 value that it is represented with.  This is
-  /// true for all i8 values obviously, but is also true for i32 0, i32 -1,
-  /// i16 0xF0F0, double 0.0 etc.  If the value can't be handled with a repeated
-  /// byte store (e.g. i16 0x1234), return null.
+  /// Return true if we can prove that the specified FP value is either a NaN or
+  /// never less than 0.0.
+  bool CannotBeOrderedLessThanZero(const Value *V, const TargetLibraryInfo *TLI,
+                                   unsigned Depth = 0);
+
+  /// If the specified value can be set by repeating the same byte in memory,
+  /// return the i8 value that it is represented with. This is true for all i8
+  /// values obviously, but is also true for i32 0, i32 -1, i16 0xF0F0, double
+  /// 0.0 etc. If the value can't be handled with a repeated byte store (e.g.
+  /// i16 0x1234), return null.
   Value *isBytewiseValue(Value *V);
 
-  /// FindInsertedValue - Given an aggregrate and an sequence of indices, see if
-  /// the scalar value indexed is already around as a register, for example if
-  /// it were inserted directly into the aggregrate.
+  /// Given an aggregrate and an sequence of indices, see if the scalar value
+  /// indexed is already around as a register, for example if it were inserted
+  /// directly into the aggregrate.
   ///
   /// If InsertBefore is not null, this function will duplicate (modified)
   /// insertvalues when a part of a nested struct is extracted.
@@ -162,9 +190,8 @@ namespace llvm {
                            ArrayRef<unsigned> idx_range,
                            Instruction *InsertBefore = nullptr);
 
-  /// GetPointerBaseWithConstantOffset - Analyze the specified pointer to see if
-  /// it can be expressed as a base pointer plus a constant offset.  Return the
-  /// base and offset to the caller.
+  /// Analyze the specified pointer to see if it can be expressed as a base
+  /// pointer plus a constant offset. Return the base and offset to the caller.
   Value *GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
                                           const DataLayout &DL);
   static inline const Value *
@@ -174,24 +201,28 @@ namespace llvm {
                                             DL);
   }
 
-  /// getConstantStringInfo - This function computes the length of a
-  /// null-terminated C string pointed to by V.  If successful, it returns true
-  /// and returns the string in Str.  If unsuccessful, it returns false.  This
-  /// does not include the trailing nul character by default.  If TrimAtNul is
-  /// set to false, then this returns any trailing nul characters as well as any
-  /// other characters that come after it.
+  /// Returns true if the GEP is based on a pointer to a string (array of i8), 
+  /// and is indexing into this string.
+  bool isGEPBasedOnPointerToString(const GEPOperator *GEP);
+
+  /// This function computes the length of a null-terminated C string pointed to
+  /// by V. If successful, it returns true and returns the string in Str. If
+  /// unsuccessful, it returns false. This does not include the trailing null
+  /// character by default. If TrimAtNul is set to false, then this returns any
+  /// trailing null characters as well as any other characters that come after
+  /// it.
   bool getConstantStringInfo(const Value *V, StringRef &Str,
                              uint64_t Offset = 0, bool TrimAtNul = true);
 
-  /// GetStringLength - If we can compute the length of the string pointed to by
-  /// the specified pointer, return 'len+1'.  If we can't, return 0.
-  uint64_t GetStringLength(Value *V);
+  /// If we can compute the length of the string pointed to by the specified
+  /// pointer, return 'len+1'.  If we can't, return 0.
+  uint64_t GetStringLength(const Value *V);
 
-  /// GetUnderlyingObject - This method strips off any GEP address adjustments
-  /// and pointer casts from the specified value, returning the original object
-  /// being addressed.  Note that the returned value has pointer type if the
-  /// specified value does.  If the MaxLookup value is non-zero, it limits the
-  /// number of instructions to be stripped off.
+  /// This method strips off any GEP address adjustments and pointer casts from
+  /// the specified value, returning the original object being addressed. Note
+  /// that the returned value has pointer type if the specified value does. If
+  /// the MaxLookup value is non-zero, it limits the number of instructions to
+  /// be stripped off.
   Value *GetUnderlyingObject(Value *V, const DataLayout &DL,
                              unsigned MaxLookup = 6);
   static inline const Value *GetUnderlyingObject(const Value *V,
@@ -232,32 +263,11 @@ namespace llvm {
                             const DataLayout &DL, LoopInfo *LI = nullptr,
                             unsigned MaxLookup = 6);
 
-  /// onlyUsedByLifetimeMarkers - Return true if the only users of this pointer
-  /// are lifetime markers.
+  /// Return true if the only users of this pointer are lifetime markers.
   bool onlyUsedByLifetimeMarkers(const Value *V);
 
-  /// isDereferenceablePointer - Return true if this is always a dereferenceable
-  /// pointer. If the context instruction is specified perform context-sensitive
-  /// analysis and return true if the pointer is dereferenceable at the
-  /// specified instruction.
-  bool isDereferenceablePointer(const Value *V, const DataLayout &DL,
-                                const Instruction *CtxI = nullptr,
-                                const DominatorTree *DT = nullptr,
-                                const TargetLibraryInfo *TLI = nullptr);
-
-  /// Returns true if V is always a dereferenceable pointer with alignment
-  /// greater or equal than requested. If the context instruction is specified
-  /// performs context-sensitive analysis and returns true if the pointer is
-  /// dereferenceable at the specified instruction.
-  bool isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
-                                          const DataLayout &DL,
-                                          const Instruction *CtxI = nullptr,
-                                          const DominatorTree *DT = nullptr,
-                                          const TargetLibraryInfo *TLI = nullptr);
-
-  /// isSafeToSpeculativelyExecute - Return true if the instruction does not
-  /// have any effects besides calculating the result and does not have
-  /// undefined behavior.
+  /// Return true if the instruction does not have any effects besides
+  /// calculating the result and does not have undefined behavior.
   ///
   /// This method never returns true for an instruction that returns true for
   /// mayHaveSideEffects; however, this method also does some other checks in
@@ -281,8 +291,7 @@ namespace llvm {
   /// for such instructions, moving them may change the resulting value.
   bool isSafeToSpeculativelyExecute(const Value *V,
                                     const Instruction *CtxI = nullptr,
-                                    const DominatorTree *DT = nullptr,
-                                    const TargetLibraryInfo *TLI = nullptr);
+                                    const DominatorTree *DT = nullptr);
 
   /// Returns true if the result or effects of the given instructions \p I
   /// depend on or influence global memory.
@@ -294,19 +303,18 @@ namespace llvm {
   /// operands are not memory dependent.
   bool mayBeMemoryDependent(const Instruction &I);
 
-  /// isKnownNonNull - Return true if this pointer couldn't possibly be null by
-  /// its definition.  This returns true for allocas, non-extern-weak globals
-  /// and byval arguments.
-  bool isKnownNonNull(const Value *V, const TargetLibraryInfo *TLI = nullptr);
+  /// Return true if this pointer couldn't possibly be null by its definition.
+  /// This returns true for allocas, non-extern-weak globals, and byval
+  /// arguments.
+  bool isKnownNonNull(const Value *V);
 
-  /// isKnownNonNullAt - Return true if this pointer couldn't possibly be null.
-  /// If the context instruction is specified perform context-sensitive analysis
-  /// and return true if the pointer couldn't possibly be null at the specified
+  /// Return true if this pointer couldn't possibly be null. If the context
+  /// instruction is specified, perform context-sensitive analysis and return
+  /// true if the pointer couldn't possibly be null at the specified
   /// instruction.
   bool isKnownNonNullAt(const Value *V,
                         const Instruction *CtxI = nullptr,
-                        const DominatorTree *DT  = nullptr,
-                        const TargetLibraryInfo *TLI = nullptr);
+                        const DominatorTree *DT  = nullptr);
 
   /// Return true if it is valid to use the assumptions provided by an
   /// assume intrinsic, I, at the point in the control-flow identified by the
@@ -315,27 +323,35 @@ namespace llvm {
                                const DominatorTree *DT = nullptr);
 
   enum class OverflowResult { AlwaysOverflows, MayOverflow, NeverOverflows };
-  OverflowResult computeOverflowForUnsignedMul(Value *LHS, Value *RHS,
+  OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
+                                               const Value *RHS,
                                                const DataLayout &DL,
                                                AssumptionCache *AC,
                                                const Instruction *CxtI,
                                                const DominatorTree *DT);
-  OverflowResult computeOverflowForUnsignedAdd(Value *LHS, Value *RHS,
+  OverflowResult computeOverflowForUnsignedAdd(const Value *LHS,
+                                               const Value *RHS,
                                                const DataLayout &DL,
                                                AssumptionCache *AC,
                                                const Instruction *CxtI,
                                                const DominatorTree *DT);
-  OverflowResult computeOverflowForSignedAdd(Value *LHS, Value *RHS,
+  OverflowResult computeOverflowForSignedAdd(const Value *LHS, const Value *RHS,
                                              const DataLayout &DL,
                                              AssumptionCache *AC = nullptr,
                                              const Instruction *CxtI = nullptr,
                                              const DominatorTree *DT = nullptr);
   /// This version also leverages the sign bit of Add if known.
-  OverflowResult computeOverflowForSignedAdd(AddOperator *Add,
+  OverflowResult computeOverflowForSignedAdd(const AddOperator *Add,
                                              const DataLayout &DL,
                                              AssumptionCache *AC = nullptr,
                                              const Instruction *CxtI = nullptr,
                                              const DominatorTree *DT = nullptr);
+
+  /// Returns true if the arithmetic part of the \p II 's result is
+  /// used only along the paths control dependent on the computation
+  /// not overflowing, \p II being an <op>.with.overflow intrinsic.
+  bool isOverflowIntrinsicNoWrap(const IntrinsicInst *II,
+                                 const DominatorTree &DT);
 
   /// Return true if this function can prove that the instruction I will
   /// always transfer execution to one of its successors (including the next
@@ -435,24 +451,39 @@ namespace llvm {
   ///
   SelectPatternResult matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
                                          Instruction::CastOps *CastOp = nullptr);
+  static inline SelectPatternResult
+  matchSelectPattern(const Value *V, const Value *&LHS, const Value *&RHS,
+                     Instruction::CastOps *CastOp = nullptr) {
+    Value *L = const_cast<Value*>(LHS);
+    Value *R = const_cast<Value*>(RHS);
+    auto Result = matchSelectPattern(const_cast<Value*>(V), L, R);
+    LHS = L;
+    RHS = R;
+    return Result;
+  }
 
   /// Parse out a conservative ConstantRange from !range metadata.
   ///
   /// E.g. if RangeMD is !{i32 0, i32 10, i32 15, i32 20} then return [0, 20).
-  ConstantRange getConstantRangeFromMetadata(MDNode &RangeMD);
+  ConstantRange getConstantRangeFromMetadata(const MDNode &RangeMD);
 
-  /// Return true if RHS is known to be implied by LHS.  A & B must be i1
-  /// (boolean) values or a vector of such values. Note that the truth table for
-  /// implication is the same as <=u on i1 values (but not <=s!).  The truth
-  /// table for both is:
+  /// Return true if RHS is known to be implied true by LHS.  Return false if
+  /// RHS is known to be implied false by LHS.  Otherwise, return None if no
+  /// implication can be made.
+  /// A & B must be i1 (boolean) values or a vector of such values. Note that
+  /// the truth table for implication is the same as <=u on i1 values (but not
+  /// <=s!).  The truth table for both is:
   ///    | T | F (B)
   ///  T | T | F
   ///  F | T | T
   /// (A)
-  bool isImpliedCondition(Value *LHS, Value *RHS, const DataLayout &DL,
-                          unsigned Depth = 0, AssumptionCache *AC = nullptr,
-                          const Instruction *CxtI = nullptr,
-                          const DominatorTree *DT = nullptr);
+  Optional<bool> isImpliedCondition(const Value *LHS, const Value *RHS,
+                                    const DataLayout &DL,
+                                    bool InvertAPred = false,
+                                    unsigned Depth = 0,
+                                    AssumptionCache *AC = nullptr,
+                                    const Instruction *CxtI = nullptr,
+                                    const DominatorTree *DT = nullptr);
 } // end namespace llvm
 
 #endif

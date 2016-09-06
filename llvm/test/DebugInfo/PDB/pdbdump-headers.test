@@ -1,12 +1,2835 @@
-; RUN: llvm-pdbdump --dump-headers %p/Inputs/empty.pdb | FileCheck %s
+; RUN: llvm-pdbdump raw -headers -tpi-records -tpi-record-bytes -module-syms \
+; RUN:              -sym-record-bytes -publics -module-files -stream-name=/names \
+; RUN:              -stream-summary -stream-blocks -ipi-records -ipi-record-bytes \
+; RUN:              -section-contribs -section-map -section-headers -line-info \
+; RUN:              -tpi-hash -fpo -page-stats %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
+; RUN: llvm-pdbdump raw -all %p/Inputs/empty.pdb | FileCheck -check-prefix=ALL %s
+; RUN: llvm-pdbdump raw -headers -stream-name=/names -modules -module-files \
+; RUN:              %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
+; RUN: not llvm-pdbdump raw -headers %p/Inputs/bad-block-size.pdb 2>&1 | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
 
-; CHECK:      BlockSize: 4096
-; CHECK-NEXT: Unknown0: 2
-; CHECK-NEXT: NumBlocks: 25
-; CHECK-NEXT: NumDirectoryBytes: 136
-; CHECK-NEXT: Unknown1: 0
-; CHECK-NEXT: BlockMapAddr: 24
-; CHECK-NEXT: NumDirectoryBlocks: 1
-; CHECK-NEXT: BlockMapOffset: 98304
-; CHECK-NEXT: DirectoryBlocks: [23]
-; CHECK-NEXT: NumStreams: 17
+; EMPTY:      FileHeaders {
+; EMPTY-NEXT:   BlockSize: 4096
+; EMPTY-NEXT:   FreeBlockMap: 2
+; EMPTY-NEXT:   NumBlocks: 25
+; EMPTY-NEXT:   NumDirectoryBytes: 136
+; EMPTY-NEXT:   Unknown1: 0
+; EMPTY-NEXT:   BlockMapAddr: 24
+; EMPTY-NEXT:   NumDirectoryBlocks: 1
+; EMPTY-NEXT:   DirectoryBlocks: [23]
+; EMPTY-NEXT:   NumStreams: 17
+; EMPTY-NEXT: }
+; EMPTY-NEXT: Streams [
+; EMPTY-NEXT:   Stream 0: [Old MSF Directory] (40 bytes)
+; EMPTY-NEXT:   Stream 1: [PDB Stream] (118 bytes)
+; EMPTY-NEXT:   Stream 2: [TPI Stream] (5392 bytes)
+; EMPTY-NEXT:   Stream 3: [DBI Stream] (739 bytes)
+; EMPTY-NEXT:   Stream 4: [IPI Stream] (784 bytes)
+; EMPTY-NEXT:   Stream 5: [Named Stream "/LinkInfo"] (0 bytes)
+; EMPTY-NEXT:   Stream 6: [Global Symbol Hash] (556 bytes)
+; EMPTY-NEXT:   Stream 7: [Public Symbol Hash] (604 bytes)
+; EMPTY-NEXT:   Stream 8: [Public Symbol Records] (104 bytes)
+; EMPTY-NEXT:   Stream 9: [Named Stream "/src/headerblock"] (0 bytes)
+; EMPTY-NEXT:   Stream 10: [Section Header Data] (160 bytes)
+; EMPTY-NEXT:   Stream 11: [New FPO Data] (32 bytes)
+; EMPTY-NEXT:   Stream 12: [Module "d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj"] (308 bytes)
+; EMPTY-NEXT:   Stream 13: [Named Stream "/names"] (239 bytes)
+; EMPTY-NEXT:   Stream 14: [Module "* Linker *"] (520 bytes)
+; EMPTY-NEXT:   Stream 15: [TPI Hash] (308 bytes)
+; EMPTY-NEXT:   Stream 16: [IPI Hash] (68 bytes)
+; EMPTY-NEXT: ]
+; EMPTY-NEXT: Msf Free Pages: [3, 4, 5, 8, 9]
+; EMPTY-NEXT: Orphaned Pages: []
+; EMPTY-NEXT: Multiply Used Pages: []
+; EMPTY-NEXT: Use After Free Pages: []
+; EMPTY-NEXT: StreamBlocks [
+; EMPTY-NEXT:   Stream 0: [8]
+; EMPTY-NEXT:   Stream 1: [19]
+; EMPTY-NEXT:   Stream 2: [18, 17]
+; EMPTY-NEXT:   Stream 3: [14]
+; EMPTY-NEXT:   Stream 4: [20]
+; EMPTY-NEXT:   Stream 5: []
+; EMPTY-NEXT:   Stream 6: [11]
+; EMPTY-NEXT:   Stream 7: [13]
+; EMPTY-NEXT:   Stream 8: [12]
+; EMPTY-NEXT:   Stream 9: []
+; EMPTY-NEXT:   Stream 10: [10]
+; EMPTY-NEXT:   Stream 11: [15]
+; EMPTY-NEXT:   Stream 12: [6]
+; EMPTY-NEXT:   Stream 13: [16]
+; EMPTY-NEXT:   Stream 14: [7]
+; EMPTY-NEXT:   Stream 15: [21]
+; EMPTY-NEXT:   Stream 16: [22]
+; EMPTY-NEXT: ]
+; EMPTY-NEXT: PDB Stream {
+; EMPTY-NEXT:   Version: 20000404
+; EMPTY-NEXT:   Signature: 0x54E507E2
+; EMPTY-NEXT:   Age: 1
+; EMPTY-NEXT:   Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+; EMPTY-NEXT: }
+; EMPTY-NEXT: Stream '/names' {
+; EMPTY-NEXT:   Index: 13
+; EMPTY-NEXT:   Signature: 0xEFFEEFFE
+; EMPTY-NEXT:   Version: 1
+; EMPTY-NEXT:   Name Count: 4
+; EMPTY-NEXT:   Names [
+; EMPTY-NEXT:     1: d:\src\llvm\test\debuginfo\pdb\inputs\predefined c++ attributes (compiler internal)
+; EMPTY-NEXT:     86: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; EMPTY-NEXT:     134: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =
+; EMPTY-NEXT:   ]
+; EMPTY-NEXT: }
+; EMPTY-NEXT: Type Info Stream (TPI) {
+; EMPTY-NEXT:   TPI Version: 20040203
+; EMPTY-NEXT:   Record count: 75
+; EMPTY-NEXT:   Records [
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       ArgList (0x1000) {
+; EMPTY-NEXT:         TypeLeafKind: LF_ARGLIST (0x1201)
+; EMPTY-NEXT:         NumArgs: 0
+; EMPTY-NEXT:         Arguments [
+; EMPTY-NEXT:         ]
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 00000000                             |....|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       Procedure (0x1001) {
+; EMPTY-NEXT:         TypeLeafKind: LF_PROCEDURE (0x1008)
+; EMPTY-NEXT:         ReturnType: int (0x74)
+; EMPTY-NEXT:         CallingConvention: NearC (0x0)
+; EMPTY-NEXT:         FunctionOptions [ (0x0)
+; EMPTY-NEXT:         ]
+; EMPTY-NEXT:         NumParameters: 0
+; EMPTY-NEXT:         ArgListType: () (0x1000)
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 74000000 00000000 00100000           |t...........|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       FieldList (0x1002) {
+; EMPTY-NEXT:         TypeLeafKind: LF_FIELDLIST (0x1203)
+; EMPTY-NEXT:         Enumerator {
+; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
+; EMPTY-NEXT:           EnumValue: 1
+; EMPTY-NEXT:           Name: apartment
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Enumerator {
+; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
+; EMPTY-NEXT:           EnumValue: 2
+; EMPTY-NEXT:           Name: single
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Enumerator {
+; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
+; EMPTY-NEXT:           EnumValue: 3
+; EMPTY-NEXT:           Name: free
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Enumerator {
+; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
+; EMPTY-NEXT:           EnumValue: 4
+; EMPTY-NEXT:           Name: neutral
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Enumerator {
+; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
+; EMPTY-NEXT:           EnumValue: 5
+; EMPTY-NEXT:           Name: both
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 02150300 01006170 6172746D 656E7400  |......apartment.|
+; EMPTY-NEXT:         0010: 02150300 02007369 6E676C65 00F3F2F1  |......single....|
+; EMPTY-NEXT:         0020: 02150300 03006672 656500F1 02150300  |......free......|
+; EMPTY-NEXT:         0030: 04006E65 75747261 6C00F2F1 02150300  |..neutral.......|
+; EMPTY-NEXT:         0040: 0500626F 746800F1                    |..both..|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
+; EMPTY:          Hash {
+; EMPTY-NEXT:       Number of Hash Buckets: 262143
+; EMPTY-NEXT:       Hash Key Size: 4
+; EMPTY-NEXT:       Values: [205956, 163561, 59811, 208239, 16377, 247078, 194342, 254156, 194536, 167492, 185421, 119540, 261871, 198119, 48056, 251486, 134580, 148190, 113636, 53336, 55779, 220695, 198114, 148734, 81128, 60158, 217249, 174209, 159978, 249504, 141941, 238785, 6214, 94935, 151449, 135589, 73373, 96512, 254299, 17744, 239514, 173189, 130544, 204437, 238560, 144673, 115151, 197306, 256035, 101096, 231280, 52156, 48854, 170035, 177041, 102745, 16947, 183703, 98548, 35693, 171328, 203640, 139292, 49018, 43821, 202555, 165040, 215835, 142625, 52534, 44186, 103930, 110942, 17991, 213215]
+; EMPTY-NEXT:       Type Index Offsets: [{4096, 0}]
+; EMPTY-NEXT:       Hash Adjustments: []
+; EMPTY-NEXT:     }
+; EMPTY:        Type Info Stream (IPI) {
+; EMPTY-NEXT:     IPI Version: 20040203
+; EMPTY-NEXT:     Record count: 15
+; EMPTY-NEXT:     Records [
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         UdtModSourceLine (0x104B) {
+; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:           UDT: __vc_attributes::threadingAttribute (0x100B)
+; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
+; EMPTY-NEXT:           LineNumber: 481
+; EMPTY-NEXT:           Module: 1
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 0B100000 01000000 E1010000 0100F2F1  |................|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         UdtModSourceLine (0x104C) {
+; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:           UDT: __vc_attributes::event_receiverAttribute (0x1017)
+; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
+; EMPTY-NEXT:           LineNumber: 194
+; EMPTY-NEXT:           Module: 1
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 17100000 01000000 C2000000 0100F2F1  |................|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         UdtModSourceLine (0x104D) {
+; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:           UDT: __vc_attributes::aggregatableAttribute (0x1021)
+; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
+; EMPTY-NEXT:           LineNumber: 603
+; EMPTY-NEXT:           Module: 1
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 21100000 01000000 5B020000 0100F2F1  |!.......[.......|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         UdtModSourceLine (0x104E) {
+; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:           UDT: __vc_attributes::event_sourceAttribute (0x102C)
+; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
+; EMPTY-NEXT:           LineNumber: 1200
+; EMPTY-NEXT:           Module: 1
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 2C100000 01000000 B0040000 0100F2F1  |,...............|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         UdtModSourceLine (0x104F) {
+; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:           UDT: __vc_attributes::moduleAttribute (0x103A)
+; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
+; EMPTY-NEXT:           LineNumber: 540
+; EMPTY-NEXT:           Module: 1
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 3A100000 01000000 1C020000 0100F2F1  |:...............|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       {
+; EMPTY-NEXT:         UdtModSourceLine (0x1050) {
+; EMPTY-NEXT:           TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; EMPTY-NEXT:           UDT: __vc_attributes::helper_attributes::usageAttribute (0x1042)
+; EMPTY-NEXT:           SourceFile: <unknown simple type> (0x1)
+; EMPTY-NEXT:           LineNumber: 108
+; EMPTY-NEXT:           Module: 1
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         Bytes (
+; EMPTY-NEXT:           0000: 42100000 01000000 6C000000 0100F2F1  |B.......l.......|
+; EMPTY-NEXT:         )
+; EMPTY-NEXT:       }
+; EMPTY:          Hash {
+; EMPTY-NEXT:       Number of Hash Buckets: 262143
+; EMPTY-NEXT:       Hash Key Size: 4
+; EMPTY-NEXT:       Values: [7186, 7198, 7180, 7191, 7201, 7241, 7249, 80727, 154177, 75189, 253662, 193467, 222705, 186099, 257108]
+; EMPTY-NEXT:       Type Index Offsets: [{4096, 0}]
+; EMPTY-NEXT:       Hash Adjustments: []
+; EMPTY-NEXT:     }
+; EMPTY:      DBI Stream {
+; EMPTY-NEXT:   Dbi Version: 19990903
+; EMPTY-NEXT:   Age: 1
+; EMPTY-NEXT:   Incremental Linking: Yes
+; EMPTY-NEXT:   Has CTypes: No
+; EMPTY-NEXT:   Is Stripped: No
+; EMPTY-NEXT:   Machine Type: x86
+; EMPTY-NEXT:   Symbol Record Stream Index: 8
+; EMPTY-NEXT:   Public Symbol Stream Index: 7
+; EMPTY-NEXT:   Global Symbol Stream Index: 6
+; EMPTY-NEXT:   Toolchain Version: 12.0
+; EMPTY-NEXT:   mspdb120.dll version: 12.0.31101
+; EMPTY-NEXT:   Modules [
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; EMPTY-NEXT:       Debug Stream Index: 12
+; EMPTY-NEXT:       Object File Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; EMPTY-NEXT:       Num Files: 1
+; EMPTY-NEXT:       Source File Name Idx: 0
+; EMPTY-NEXT:       Pdb File Name Idx: 0
+; EMPTY-NEXT:       Line Info Byte Size: 0
+; EMPTY-NEXT:       C13 Line Info Byte Size: 88
+; EMPTY-NEXT:       Symbol Byte Size: 208
+; EMPTY-NEXT:       Type Server Index: 0
+; EMPTY-NEXT:       Has EC Info: No
+; EMPTY-NEXT:       1 Contributing Source Files [
+; EMPTY-NEXT:         d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; EMPTY-NEXT:       ]
+; EMPTY-NEXT:       Symbols [
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           ObjectName {
+; EMPTY-NEXT:             Signature: 0x0
+; EMPTY-NEXT:             ObjectName: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 643A5C73 72635C6C 6C766D5C  |....d:\src\llvm\|
+; EMPTY-NEXT:             0010: 74657374 5C446562 7567496E 666F5C50  |test\DebugInfo\P|
+; EMPTY-NEXT:             0020: 44425C49 6E707574 735C656D 7074792E  |DB\Inputs\empty.|
+; EMPTY-NEXT:             0030: 6F626A00                             |obj.|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           CompilerFlags3 {
+; EMPTY-NEXT:             Language: Cpp (0x1)
+; EMPTY-NEXT:             Flags [ (0x2000)
+; EMPTY-NEXT:               SecurityChecks (0x2000)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             Machine: Pentium3 (0x7)
+; EMPTY-NEXT:             FrontendVersion: 18.0.31101.0
+; EMPTY-NEXT:             BackendVersion: 18.0.31101.0
+; EMPTY-NEXT:             VersionName: Microsoft (R) Optimizing Compiler
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 01200000 07001200 00007D79 00001200  |. ........}y....|
+; EMPTY-NEXT:             0010: 00007D79 00004D69 63726F73 6F667420  |..}y..Microsoft |
+; EMPTY-NEXT:             0020: 28522920 4F707469 6D697A69 6E672043  |(R) Optimizing C|
+; EMPTY-NEXT:             0030: 6F6D7069 6C657200                    |ompiler.|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           ProcStart {
+; EMPTY-NEXT:             Kind: S_GPROC32 (0x1110)
+; EMPTY-NEXT:             PtrParent: 0x0
+; EMPTY-NEXT:             PtrEnd: 0xC4
+; EMPTY-NEXT:             PtrNext: 0x0
+; EMPTY-NEXT:             CodeSize: 0xA
+; EMPTY-NEXT:             DbgStart: 0x3
+; EMPTY-NEXT:             DbgEnd: 0x8
+; EMPTY-NEXT:             FunctionType: int () (0x1001)
+; EMPTY-NEXT:             Segment: 0x1
+; EMPTY-NEXT:             Flags [ (0x1)
+; EMPTY-NEXT:               HasFP (0x1)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             DisplayName: main
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 C4000000 00000000 0A000000  |................|
+; EMPTY-NEXT:             0010: 03000000 08000000 01100000 10000000  |................|
+; EMPTY-NEXT:             0020: 0100016D 61696E00                    |...main.|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           FrameProc {
+; EMPTY-NEXT:             TotalFrameBytes: 0x0
+; EMPTY-NEXT:             PaddingFrameBytes: 0x0
+; EMPTY-NEXT:             OffsetToPadding: 0x0
+; EMPTY-NEXT:             BytesOfCalleeSavedRegisters: 0x0
+; EMPTY-NEXT:             OffsetOfExceptionHandler: 0x0
+; EMPTY-NEXT:             SectionIdOfExceptionHandler: 0x0
+; EMPTY-NEXT:             Flags [ (0x128200)
+; EMPTY-NEXT:               AsynchronousExceptionHandling (0x200)
+; EMPTY-NEXT:               OptimizedForSpeed (0x100000)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 00000000 00000000 00000000  |................|
+; EMPTY-NEXT:             0010: 00000000 00000082 12000000           |............|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           BlockEnd {
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           BuildInfo {
+; EMPTY-NEXT:             BuildId: 4110
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 0E100000                             |....|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:       ]
+; EMPTY-NEXT:       LineInfo [
+; EMPTY-NEXT:         Lines {
+; EMPTY-NEXT:           FileName: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; EMPTY-NEXT:           Line {
+; EMPTY-NEXT:             Offset: 0
+; EMPTY-NEXT:             LineNumberStart: 5
+; EMPTY-NEXT:             EndDelta: 0
+; EMPTY-NEXT:             IsStatement: Yes
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Line {
+; EMPTY-NEXT:             Offset: 3
+; EMPTY-NEXT:             LineNumberStart: 6
+; EMPTY-NEXT:             EndDelta: 0
+; EMPTY-NEXT:             IsStatement: Yes
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Line {
+; EMPTY-NEXT:             Offset: 8
+; EMPTY-NEXT:             LineNumberStart: 7
+; EMPTY-NEXT:             EndDelta: 0
+; EMPTY-NEXT:             IsStatement: Yes
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         FileChecksums {
+; EMPTY-NEXT:           Checksum {
+; EMPTY-NEXT:             FileName: d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; EMPTY-NEXT:             Kind: MD5 (0x1)
+; EMPTY-NEXT:             Checksum (
+; EMPTY-NEXT:               0000: A0A5BD0D 3ECD93FC 29D19DE8 26FBF4BC  |....>...)...&...|
+; EMPTY-NEXT:             )
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:       ]
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       Name: * Linker *
+; EMPTY-NEXT:       Debug Stream Index: 14
+; EMPTY-NEXT:       Object File Name:
+; EMPTY-NEXT:       Num Files: 0
+; EMPTY-NEXT:       Source File Name Idx: 0
+; EMPTY-NEXT:       Pdb File Name Idx: 1
+; EMPTY-NEXT:       Line Info Byte Size: 0
+; EMPTY-NEXT:       C13 Line Info Byte Size: 0
+; EMPTY-NEXT:       Symbol Byte Size: 516
+; EMPTY-NEXT:       Type Server Index: 0
+; EMPTY-NEXT:       Has EC Info: No
+; EMPTY-NEXT:       0 Contributing Source Files [
+; EMPTY-NEXT:       ]
+; EMPTY-NEXT:       Symbols [
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           ObjectName {
+; EMPTY-NEXT:             Signature: 0x0
+; EMPTY-NEXT:             ObjectName: * Linker *
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 2A204C69 6E6B6572 202A0000  |....* Linker *..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           CompilerFlags3 {
+; EMPTY-NEXT:             Language: Link (0x7)
+; EMPTY-NEXT:             Flags [ (0x0)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             Machine: Intel80386 (0x3)
+; EMPTY-NEXT:             FrontendVersion: 0.0.0.0
+; EMPTY-NEXT:             BackendVersion: 12.0.31101.0
+; EMPTY-NEXT:             VersionName: Microsoft (R) LINK
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 07000000 03000000 00000000 00000C00  |................|
+; EMPTY-NEXT:             0010: 00007D79 00004D69 63726F73 6F667420  |..}y..Microsoft |
+; EMPTY-NEXT:             0020: 28522920 4C494E4B 00000000           |(R) LINK....|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           EnvBlock {
+; EMPTY-NEXT:             Reserved: 0
+; EMPTY-NEXT:             Entries [
+; EMPTY-NEXT:               cwd
+; EMPTY-NEXT:               d:\src\llvm\test\DebugInfo\PDB\Inputs
+; EMPTY-NEXT:               exe
+; EMPTY-NEXT:               C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\link.exe
+; EMPTY-NEXT:               pdb
+; EMPTY-NEXT:               d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.pdb
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00637764 00643A5C 7372635C 6C6C766D  |.cwd.d:\src\llvm|
+; EMPTY-NEXT:             0010: 5C746573 745C4465 62756749 6E666F5C  |\test\DebugInfo\|
+; EMPTY-NEXT:             0020: 5044425C 496E7075 74730065 78650043  |PDB\Inputs.exe.C|
+; EMPTY-NEXT:             0030: 3A5C5072 6F677261 6D204669 6C657320  |:\Program Files |
+; EMPTY-NEXT:             0040: 28783836 295C4D69 63726F73 6F667420  |(x86)\Microsoft |
+; EMPTY-NEXT:             0050: 56697375 616C2053 74756469 6F203132  |Visual Studio 12|
+; EMPTY-NEXT:             0060: 2E305C56 435C4249 4E5C6C69 6E6B2E65  |.0\VC\BIN\link.e|
+; EMPTY-NEXT:             0070: 78650070 64620064 3A5C7372 635C6C6C  |xe.pdb.d:\src\ll|
+; EMPTY-NEXT:             0080: 766D5C74 6573745C 44656275 67496E66  |vm\test\DebugInf|
+; EMPTY-NEXT:             0090: 6F5C5044 425C496E 70757473 5C656D70  |o\PDB\Inputs\emp|
+; EMPTY-NEXT:             00A0: 74792E70 64620000                    |ty.pdb..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Trampoline {
+; EMPTY-NEXT:             Type: TrampIncremental (0x0)
+; EMPTY-NEXT:             Size: 5
+; EMPTY-NEXT:             ThunkOff: 5
+; EMPTY-NEXT:             TargetOff: 16
+; EMPTY-NEXT:             ThunkSection: 1
+; EMPTY-NEXT:             TargetSection: 1
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000500 05000000 10000000 01000100  |................|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Section {
+; EMPTY-NEXT:             SectionNumber: 1
+; EMPTY-NEXT:             Alignment: 12
+; EMPTY-NEXT:             Reserved: 0
+; EMPTY-NEXT:             Rva: 4096
+; EMPTY-NEXT:             Length: 4122
+; EMPTY-NEXT:             Characteristics [ (0x60000020)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_CODE (0x20)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             Name: .text
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 01000C00 00100000 1A100000 20000060  |............ ..`|
+; EMPTY-NEXT:             0010: 2E746578 74000000                    |.text...|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           COFF Group {
+; EMPTY-NEXT:             Size: 4122
+; EMPTY-NEXT:             Characteristics [ (0x60000020)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_CODE (0x20)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             Offset: 0
+; EMPTY-NEXT:             Segment: 1
+; EMPTY-NEXT:             Name: .text$mn
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 1A100000 20000060 00000000 01002E74  |.... ..`.......t|
+; EMPTY-NEXT:             0010: 65787424 6D6E0000                    |ext$mn..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Section {
+; EMPTY-NEXT:             SectionNumber: 2
+; EMPTY-NEXT:             Alignment: 12
+; EMPTY-NEXT:             Reserved: 0
+; EMPTY-NEXT:             Rva: 12288
+; EMPTY-NEXT:             Length: 690
+; EMPTY-NEXT:             Characteristics [ (0x40000040)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             Name: .rdata
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 02000C00 00300000 B2020000 40000040  |.....0......@..@|
+; EMPTY-NEXT:             0010: 2E726461 74610000                    |.rdata..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           COFF Group {
+; EMPTY-NEXT:             Size: 323
+; EMPTY-NEXT:             Characteristics [ (0x40000040)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             Offset: 0
+; EMPTY-NEXT:             Segment: 2
+; EMPTY-NEXT:             Name: .rdata
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 43010000 40000040 00000000 02002E72  |C...@..@.......r|
+; EMPTY-NEXT:             0010: 64617461 00000000                    |data....|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           COFF Group {
+; EMPTY-NEXT:             Size: 0
+; EMPTY-NEXT:             Characteristics [ (0x40000040)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             Offset: 323
+; EMPTY-NEXT:             Segment: 2
+; EMPTY-NEXT:             Name: .edata
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 00000000 40000040 43010000 02002E65  |....@..@C......e|
+; EMPTY-NEXT:             0010: 64617461 00000000                    |data....|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           COFF Group {
+; EMPTY-NEXT:             Size: 366
+; EMPTY-NEXT:             Characteristics [ (0x40000040)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             Offset: 324
+; EMPTY-NEXT:             Segment: 2
+; EMPTY-NEXT:             Name: .rdata$debug
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 6E010000 40000040 44010000 02002E72  |n...@..@D......r|
+; EMPTY-NEXT:             0010: 64617461 24646562 75670000           |data$debug..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Section {
+; EMPTY-NEXT:             SectionNumber: 3
+; EMPTY-NEXT:             Alignment: 12
+; EMPTY-NEXT:             Reserved: 0
+; EMPTY-NEXT:             Rva: 16384
+; EMPTY-NEXT:             Length: 4
+; EMPTY-NEXT:             Characteristics [ (0xC0000040)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_WRITE (0x80000000)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             Name: .data
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 03000C00 00400000 04000000 400000C0  |.....@......@...|
+; EMPTY-NEXT:             0010: 2E646174 61000000                    |.data...|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           COFF Group {
+; EMPTY-NEXT:             Size: 4
+; EMPTY-NEXT:             Characteristics [ (0xC0000080)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_WRITE (0x80000000)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             Offset: 0
+; EMPTY-NEXT:             Segment: 3
+; EMPTY-NEXT:             Name: .bss
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 04000000 800000C0 00000000 03002E62  |...............b|
+; EMPTY-NEXT:             0010: 73730000                             |ss..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:         {
+; EMPTY-NEXT:           Section {
+; EMPTY-NEXT:             SectionNumber: 4
+; EMPTY-NEXT:             Alignment: 12
+; EMPTY-NEXT:             Reserved: 0
+; EMPTY-NEXT:             Rva: 20480
+; EMPTY-NEXT:             Length: 8
+; EMPTY-NEXT:             Characteristics [ (0x42000040)
+; EMPTY-NEXT:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; EMPTY-NEXT:               IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:             ]
+; EMPTY-NEXT:             Name: .reloc
+; EMPTY-NEXT:           }
+; EMPTY-NEXT:           Bytes (
+; EMPTY-NEXT:             0000: 04000C00 00500000 08000000 40000042  |.....P......@..B|
+; EMPTY-NEXT:             0010: 2E72656C 6F630000                    |.reloc..|
+; EMPTY-NEXT:           )
+; EMPTY-NEXT:         }
+; EMPTY-NEXT:       ]
+; EMPTY-NEXT:       LineInfo [
+; EMPTY-NEXT:       ]
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:   ]
+; EMPTY-NEXT: }
+; EMPTY-NEXT: Section Contributions [
+; EMPTY-NEXT:   Contribution {
+; EMPTY-NEXT:     ISect: 1
+; EMPTY-NEXT:     Off: 0
+; EMPTY-NEXT:     Size: 10
+; EMPTY-NEXT:     Characteristics [ (0x60000020)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Module {
+; EMPTY-NEXT:       Index: 1
+; EMPTY-NEXT:       Name: * Linker *
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     Data CRC: 0
+; EMPTY-NEXT:     Reloc CRC: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Contribution {
+; EMPTY-NEXT:     ISect: 1
+; EMPTY-NEXT:     Off: 16
+; EMPTY-NEXT:     Size: 10
+; EMPTY-NEXT:     Characteristics [ (0x60500020)
+; EMPTY-NEXT:       IMAGE_SCN_ALIGN_16BYTES (0x500000)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Module {
+; EMPTY-NEXT:       Index: 0
+; EMPTY-NEXT:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     Data CRC: 3617027124
+; EMPTY-NEXT:     Reloc CRC: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Contribution {
+; EMPTY-NEXT:     ISect: 2
+; EMPTY-NEXT:     Off: 0
+; EMPTY-NEXT:     Size: 56
+; EMPTY-NEXT:     Characteristics [ (0x40000040)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Module {
+; EMPTY-NEXT:       Index: 1
+; EMPTY-NEXT:       Name: * Linker *
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     Data CRC: 0
+; EMPTY-NEXT:     Reloc CRC: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Contribution {
+; EMPTY-NEXT:     ISect: 2
+; EMPTY-NEXT:     Off: 324
+; EMPTY-NEXT:     Size: 72
+; EMPTY-NEXT:     Characteristics [ (0x40300040)
+; EMPTY-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Module {
+; EMPTY-NEXT:       Index: 1
+; EMPTY-NEXT:       Name: * Linker *
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     Data CRC: 0
+; EMPTY-NEXT:     Reloc CRC: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Contribution {
+; EMPTY-NEXT:     ISect: 2
+; EMPTY-NEXT:     Off: 396
+; EMPTY-NEXT:     Size: 20
+; EMPTY-NEXT:     Characteristics [ (0x40300040)
+; EMPTY-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Module {
+; EMPTY-NEXT:       Index: 1
+; EMPTY-NEXT:       Name: * Linker *
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     Data CRC: 0
+; EMPTY-NEXT:     Reloc CRC: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Contribution {
+; EMPTY-NEXT:     ISect: 3
+; EMPTY-NEXT:     Off: 0
+; EMPTY-NEXT:     Size: 4
+; EMPTY-NEXT:     Characteristics [ (0xC0300080)
+; EMPTY-NEXT:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Module {
+; EMPTY-NEXT:       Index: 0
+; EMPTY-NEXT:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     Data CRC: 0
+; EMPTY-NEXT:     Reloc CRC: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT: ]
+; EMPTY-NEXT: Section Map [
+; EMPTY-NEXT:   Entry {
+; EMPTY-NEXT:     Flags [ (0x10D)
+; EMPTY-NEXT:       AddressIs32Bit (0x8)
+; EMPTY-NEXT:       Execute (0x4)
+; EMPTY-NEXT:       IsSelector (0x100)
+; EMPTY-NEXT:       Read (0x1)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Flags: 269
+; EMPTY-NEXT:     Ovl: 0
+; EMPTY-NEXT:     Group: 0
+; EMPTY-NEXT:     Frame: 1
+; EMPTY-NEXT:     SecName: 65535
+; EMPTY-NEXT:     ClassName: 65535
+; EMPTY-NEXT:     Offset: 0
+; EMPTY-NEXT:     SecByteLength: 4122
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Entry {
+; EMPTY-NEXT:     Flags [ (0x109)
+; EMPTY-NEXT:       AddressIs32Bit (0x8)
+; EMPTY-NEXT:       IsSelector (0x100)
+; EMPTY-NEXT:       Read (0x1)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Flags: 265
+; EMPTY-NEXT:     Ovl: 0
+; EMPTY-NEXT:     Group: 0
+; EMPTY-NEXT:     Frame: 2
+; EMPTY-NEXT:     SecName: 65535
+; EMPTY-NEXT:     ClassName: 65535
+; EMPTY-NEXT:     Offset: 0
+; EMPTY-NEXT:     SecByteLength: 690
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Entry {
+; EMPTY-NEXT:     Flags [ (0x10B)
+; EMPTY-NEXT:       AddressIs32Bit (0x8)
+; EMPTY-NEXT:       IsSelector (0x100)
+; EMPTY-NEXT:       Read (0x1)
+; EMPTY-NEXT:       Write (0x2)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Flags: 267
+; EMPTY-NEXT:     Ovl: 0
+; EMPTY-NEXT:     Group: 0
+; EMPTY-NEXT:     Frame: 3
+; EMPTY-NEXT:     SecName: 65535
+; EMPTY-NEXT:     ClassName: 65535
+; EMPTY-NEXT:     Offset: 0
+; EMPTY-NEXT:     SecByteLength: 4
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Entry {
+; EMPTY-NEXT:     Flags [ (0x109)
+; EMPTY-NEXT:       AddressIs32Bit (0x8)
+; EMPTY-NEXT:       IsSelector (0x100)
+; EMPTY-NEXT:       Read (0x1)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Flags: 265
+; EMPTY-NEXT:     Ovl: 0
+; EMPTY-NEXT:     Group: 0
+; EMPTY-NEXT:     Frame: 4
+; EMPTY-NEXT:     SecName: 65535
+; EMPTY-NEXT:     ClassName: 65535
+; EMPTY-NEXT:     Offset: 0
+; EMPTY-NEXT:     SecByteLength: 8
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   Entry {
+; EMPTY-NEXT:     Flags [ (0x208)
+; EMPTY-NEXT:       AddressIs32Bit (0x8)
+; EMPTY-NEXT:       IsAbsoluteAddress (0x200)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:     Flags: 520
+; EMPTY-NEXT:     Ovl: 0
+; EMPTY-NEXT:     Group: 0
+; EMPTY-NEXT:     Frame: 0
+; EMPTY-NEXT:     SecName: 65535
+; EMPTY-NEXT:     ClassName: 65535
+; EMPTY-NEXT:     Offset: 0
+; EMPTY-NEXT:     SecByteLength: 4294967295
+; EMPTY-NEXT:   }
+; EMPTY-NEXT: ]
+; EMPTY:      Publics Stream {
+; EMPTY-NEXT:   Stream number: 7
+; EMPTY-NEXT:   SymHash: 556
+; EMPTY-NEXT:   AddrMap: 8
+; EMPTY-NEXT:   Number of buckets: 2
+; EMPTY-NEXT:   Hash Buckets: [0, 12]
+; EMPTY-NEXT:   Address Map: [36, 0]
+; EMPTY-NEXT:   Thunk Map: [4112]
+; EMPTY-NEXT:   Section Offsets: [4096, 1]
+; EMPTY-NEXT:   Symbols [
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       PublicSym {
+; EMPTY-NEXT:         Type: 0
+; EMPTY-NEXT:         Seg: 3
+; EMPTY-NEXT:         Off: 0
+; EMPTY-NEXT:         Name: ?__purecall@@3PAXA
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 00000000 00000000 03003F5F 5F707572  |..........?__pur|
+; EMPTY-NEXT:         0010: 6563616C 6C404033 50415841 00000000  |ecall@@3PAXA....|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       PublicSym {
+; EMPTY-NEXT:         Type: 2
+; EMPTY-NEXT:         Seg: 1
+; EMPTY-NEXT:         Off: 16
+; EMPTY-NEXT:         Name: _main
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 02000000 10000000 01005F6D 61696E00  |.........._main.|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       ProcRef {
+; EMPTY-NEXT:         SumName: 0
+; EMPTY-NEXT:         SymOffset: 120
+; EMPTY-NEXT:         Mod: 1
+; EMPTY-NEXT:         Name: main
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 00000000 78000000 01006D61 696E0000  |....x.....main..|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:     {
+; EMPTY-NEXT:       DataSym {
+; EMPTY-NEXT:         Kind: S_GDATA32 (0x110D)
+; EMPTY-NEXT:         Type: void* (0x403)
+; EMPTY-NEXT:         DisplayName: __purecall
+; EMPTY-NEXT:       }
+; EMPTY-NEXT:       Bytes (
+; EMPTY-NEXT:         0000: 03040000 00000000 03005F5F 70757265  |..........__pure|
+; EMPTY-NEXT:         0010: 63616C6C 00000000                    |call....|
+; EMPTY-NEXT:       )
+; EMPTY-NEXT:     }
+; EMPTY-NEXT:   ]
+; EMPTY-NEXT: }
+; EMPTY-NEXT: Section Headers [
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Name: .text
+; EMPTY-NEXT:     Virtual Size: 4122
+; EMPTY-NEXT:     Virtual Address: 4096
+; EMPTY-NEXT:     Size of Raw Data: 4608
+; EMPTY-NEXT:     File Pointer to Raw Data: 1024
+; EMPTY-NEXT:     File Pointer to Relocations: 0
+; EMPTY-NEXT:     File Pointer to Linenumbers: 0
+; EMPTY-NEXT:     Number of Relocations: 0
+; EMPTY-NEXT:     Number of Linenumbers: 0
+; EMPTY-NEXT:     Characteristics [ (0x60000020)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Name: .rdata
+; EMPTY-NEXT:     Virtual Size: 690
+; EMPTY-NEXT:     Virtual Address: 12288
+; EMPTY-NEXT:     Size of Raw Data: 1024
+; EMPTY-NEXT:     File Pointer to Raw Data: 5632
+; EMPTY-NEXT:     File Pointer to Relocations: 0
+; EMPTY-NEXT:     File Pointer to Linenumbers: 0
+; EMPTY-NEXT:     Number of Relocations: 0
+; EMPTY-NEXT:     Number of Linenumbers: 0
+; EMPTY-NEXT:     Characteristics [ (0x40000040)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Name: .data
+; EMPTY-NEXT:     Virtual Size: 4
+; EMPTY-NEXT:     Virtual Address: 16384
+; EMPTY-NEXT:     Size of Raw Data: 0
+; EMPTY-NEXT:     File Pointer to Raw Data: 0
+; EMPTY-NEXT:     File Pointer to Relocations: 0
+; EMPTY-NEXT:     File Pointer to Linenumbers: 0
+; EMPTY-NEXT:     Number of Relocations: 0
+; EMPTY-NEXT:     Number of Linenumbers: 0
+; EMPTY-NEXT:     Characteristics [ (0xC0000040)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_WRITE (0x80000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Name: .reloc
+; EMPTY-NEXT:     Virtual Size: 8
+; EMPTY-NEXT:     Virtual Address: 20480
+; EMPTY-NEXT:     Size of Raw Data: 512
+; EMPTY-NEXT:     File Pointer to Raw Data: 6656
+; EMPTY-NEXT:     File Pointer to Relocations: 0
+; EMPTY-NEXT:     File Pointer to Linenumbers: 0
+; EMPTY-NEXT:     Number of Relocations: 0
+; EMPTY-NEXT:     Number of Linenumbers: 0
+; EMPTY-NEXT:     Characteristics [ (0x42000040)
+; EMPTY-NEXT:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; EMPTY-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+; EMPTY-NEXT:     ]
+; EMPTY-NEXT:   }
+; EMPTY-NEXT: ]
+; EMPTY:      New FPO [
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Offset: 4112
+; EMPTY-NEXT:     Size: 10
+; EMPTY-NEXT:     Number of locals: 0
+; EMPTY-NEXT:     Number of params: 0
+; EMPTY-NEXT:     Size of Prolog: 0
+; EMPTY-NEXT:     Number of Saved Registers: 0
+; EMPTY-NEXT:     Has SEH: No
+; EMPTY-NEXT:     Use BP: No
+; EMPTY-NEXT:     Frame Pointer: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT:   {
+; EMPTY-NEXT:     Offset: 0
+; EMPTY-NEXT:     Size: 134
+; EMPTY-NEXT:     Number of locals: 3
+; EMPTY-NEXT:     Number of params: 4
+; EMPTY-NEXT:     Size of Prolog: 0
+; EMPTY-NEXT:     Number of Saved Registers: 0
+; EMPTY-NEXT:     Has SEH: No
+; EMPTY-NEXT:     Use BP: No
+; EMPTY-NEXT:     Frame Pointer: 0
+; EMPTY-NEXT:   }
+; EMPTY-NEXT: ]
+
+; ALL: FileHeaders {
+; ALL:   BlockSize: 4096
+; ALL:   FreeBlockMap: 2
+; ALL:   NumBlocks: 25
+; ALL:   NumDirectoryBytes: 136
+; ALL:   Unknown1: 0
+; ALL:   BlockMapAddr: 24
+; ALL:   NumDirectoryBlocks: 1
+; ALL:   DirectoryBlocks: [23]
+; ALL:   NumStreams: 17
+; ALL: }
+; ALL: Streams [
+; ALL:   Stream 0: [Old MSF Directory] (40 bytes)
+; ALL:   Stream 1: [PDB Stream] (118 bytes)
+; ALL:   Stream 2: [TPI Stream] (5392 bytes)
+; ALL:   Stream 3: [DBI Stream] (739 bytes)
+; ALL:   Stream 4: [IPI Stream] (784 bytes)
+; ALL:   Stream 5: [Named Stream "/LinkInfo"] (0 bytes)
+; ALL:   Stream 6: [Global Symbol Hash] (556 bytes)
+; ALL:   Stream 7: [Public Symbol Hash] (604 bytes)
+; ALL:   Stream 8: [Public Symbol Records] (104 bytes)
+; ALL:   Stream 9: [Named Stream "/src/headerblock"] (0 bytes)
+; ALL:   Stream 10: [Section Header Data] (160 bytes)
+; ALL:   Stream 11: [New FPO Data] (32 bytes)
+; ALL:   Stream 12: [Module "d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj"] (308 bytes)
+; ALL:   Stream 13: [Named Stream "/names"] (239 bytes)
+; ALL:   Stream 14: [Module "* Linker *"] (520 bytes)
+; ALL:   Stream 15: [TPI Hash] (308 bytes)
+; ALL:   Stream 16: [IPI Hash] (68 bytes)
+; ALL: ]
+; ALL: Msf Free Pages: [3, 4, 5, 8, 9]
+; ALL: Orphaned Pages: []
+; ALL: Multiply Used Pages: []
+; ALL: Use After Free Pages: []
+; ALL: StreamBlocks [
+; ALL:   Stream 0: [8]
+; ALL:   Stream 1: [19]
+; ALL:   Stream 2: [18, 17]
+; ALL:   Stream 3: [14]
+; ALL:   Stream 4: [20]
+; ALL:   Stream 5: []
+; ALL:   Stream 6: [11]
+; ALL:   Stream 7: [13]
+; ALL:   Stream 8: [12]
+; ALL:   Stream 9: []
+; ALL:   Stream 10: [10]
+; ALL:   Stream 11: [15]
+; ALL:   Stream 12: [6]
+; ALL:   Stream 13: [16]
+; ALL:   Stream 14: [7]
+; ALL:   Stream 15: [21]
+; ALL:   Stream 16: [22]
+; ALL: ]
+; ALL: PDB Stream {
+; ALL:   Version: 20000404
+; ALL:   Signature: 0x54E507E2
+; ALL:   Age: 1
+; ALL:   Guid: {0B355641-86A0-A249-896F-9988FAE52FF0}
+; ALL: }
+; ALL: Type Info Stream (IPI) {
+; ALL:   IPI Version: 20040203
+; ALL:   Record count: 15
+; ALL:   Records [
+; ALL:     {
+; ALL:       UdtModSourceLine (0x104B) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UDT: __vc_attributes::threadingAttribute (0x100B)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 481
+; ALL:         Module: 1
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       UdtModSourceLine (0x104C) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UDT: __vc_attributes::event_receiverAttribute (0x1017)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 194
+; ALL:         Module: 1
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       UdtModSourceLine (0x104D) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UDT: __vc_attributes::aggregatableAttribute (0x1021)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 603
+; ALL:         Module: 1
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       UdtModSourceLine (0x104E) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UDT: __vc_attributes::event_sourceAttribute (0x102C)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 1200
+; ALL:         Module: 1
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       UdtModSourceLine (0x104F) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UDT: __vc_attributes::moduleAttribute (0x103A)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 540
+; ALL:         Module: 1
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       UdtModSourceLine (0x1050) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UDT: __vc_attributes::helper_attributes::usageAttribute (0x1042)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 108
+; ALL:         Module: 1
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       UdtModSourceLine (0x1051) {
+; ALL:         TypeLeafKind: LF_UDT_MOD_SRC_LINE (0x1607)
+; ALL:         UDT: __vc_attributes::helper_attributes::v1_alttypeAttribute (0x104A)
+; ALL:         SourceFile: <unknown simple type> (0x1)
+; ALL:         LineNumber: 96
+; ALL:         Module: 1
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringId (0x1052) {
+; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
+; ALL:         Id: 0x0
+; ALL:         StringData: d:\src\llvm\test\DebugInfo\PDB\Inputs
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringId (0x1053) {
+; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
+; ALL:         Id: 0x0
+; ALL:         StringData: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringId (0x1054) {
+; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
+; ALL:         Id: 0x0
+; ALL:         StringData: empty.cpp
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringId (0x1055) {
+; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
+; ALL:         Id: 0x0
+; ALL:         StringData: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringId (0x1056) {
+; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
+; ALL:         Id: 0x0
+; ALL:         StringData: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringList (0x1057) {
+; ALL:         TypeLeafKind: LF_SUBSTR_LIST (0x1604)
+; ALL:         NumArgs: 1
+; ALL:         Arguments [
+; ALL:           ArgType: __vc_attributes::threadingAttribute (0x100B)
+; ALL:         ]
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       StringId (0x1058) {
+; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
+; ALL:         Id: <field list> (0x100C)
+; ALL:         StringData:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       BuildInfo (0x1059) {
+; ALL:         TypeLeafKind: LF_BUILDINFO (0x1603)
+; ALL:         NumArgs: 5
+; ALL:         Arguments [
+; ALL:           ArgType: void __vc_attributes::threadingAttribute::(__vc_attributes::threadingAttribute::threading_e) (0x1007)
+; ALL:           ArgType: void __vc_attributes::threadingAttribute::() (0x1008)
+; ALL:           ArgType: 0x1009
+; ALL:           ArgType: <field list> (0x100A)
+; ALL:           ArgType: __vc_attributes::event_receiverAttribute::type_e (0x100D)
+; ALL:         ]
+; ALL:       }
+; ALL:     }
+; ALL:   ]
+; ALL: }
+; ALL: DBI Stream {
+; ALL:   Dbi Version: 19990903
+; ALL:   Age: 1
+; ALL:   Incremental Linking: Yes
+; ALL:   Has CTypes: No
+; ALL:   Is Stripped: No
+; ALL:   Machine Type: x86
+; ALL:   Symbol Record Stream Index: 8
+; ALL:   Public Symbol Stream Index: 7
+; ALL:   Global Symbol Stream Index: 6
+; ALL:   Toolchain Version: 12.0
+; ALL:   mspdb120.dll version: 12.0.31101
+; ALL:   Modules [
+; ALL:     {
+; ALL:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; ALL:       Debug Stream Index: 12
+; ALL:       Object File Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; ALL:       Num Files: 1
+; ALL:       Source File Name Idx: 0
+; ALL:       Pdb File Name Idx: 0
+; ALL:       Line Info Byte Size: 0
+; ALL:       C13 Line Info Byte Size: 88
+; ALL:       Symbol Byte Size: 208
+; ALL:       Type Server Index: 0
+; ALL:       Has EC Info: No
+; ALL:       1 Contributing Source Files [
+; ALL:         d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+; ALL:       ]
+; ALL:       Symbols [
+; ALL:         {
+; ALL:           ObjectName {
+; ALL:             Signature: 0x0
+; ALL:             ObjectName: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           CompilerFlags3 {
+; ALL:             Language: Cpp (0x1)
+; ALL:             Flags [ (0x2000)
+; ALL:               SecurityChecks (0x2000)
+; ALL:             ]
+; ALL:             Machine: Pentium3 (0x7)
+; ALL:             FrontendVersion: 18.0.31101.0
+; ALL:             BackendVersion: 18.0.31101.0
+; ALL:             VersionName: Microsoft (R) Optimizing Compiler
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           ProcStart {
+; ALL:             PtrParent: 0x0
+; ALL:             PtrEnd: 0xC4
+; ALL:             PtrNext: 0x0
+; ALL:             CodeSize: 0xA
+; ALL:             DbgStart: 0x3
+; ALL:             DbgEnd: 0x8
+; ALL:             FunctionType: int () (0x1001)
+; ALL:             Segment: 0x1
+; ALL:             Flags [ (0x1)
+; ALL:               HasFP (0x1)
+; ALL:             ]
+; ALL:             DisplayName: main
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           FrameProc {
+; ALL:             TotalFrameBytes: 0x0
+; ALL:             PaddingFrameBytes: 0x0
+; ALL:             OffsetToPadding: 0x0
+; ALL:             BytesOfCalleeSavedRegisters: 0x0
+; ALL:             OffsetOfExceptionHandler: 0x0
+; ALL:             SectionIdOfExceptionHandler: 0x0
+; ALL:             Flags [ (0x128200)
+; ALL:               AsynchronousExceptionHandling (0x200)
+; ALL:               OptimizedForSpeed (0x100000)
+; ALL:             ]
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           BlockEnd {
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           BuildInfo {
+; ALL:             BuildId: 4110
+; ALL:           }
+; ALL:         }
+; ALL:       ]
+; ALL:     }
+; ALL:     {
+; ALL:       Name: * Linker *
+; ALL:       Debug Stream Index: 14
+; ALL:       Object File Name:
+; ALL:       Num Files: 0
+; ALL:       Source File Name Idx: 0
+; ALL:       Pdb File Name Idx: 1
+; ALL:       Line Info Byte Size: 0
+; ALL:       C13 Line Info Byte Size: 0
+; ALL:       Symbol Byte Size: 516
+; ALL:       Type Server Index: 0
+; ALL:       Has EC Info: No
+; ALL:       0 Contributing Source Files [
+; ALL:       ]
+; ALL:       Symbols [
+; ALL:         {
+; ALL:           ObjectName {
+; ALL:             Signature: 0x0
+; ALL:             ObjectName: * Linker *
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           CompilerFlags3 {
+; ALL:             Language: Link (0x7)
+; ALL:             Flags [ (0x0)
+; ALL:             ]
+; ALL:             Machine: Intel80386 (0x3)
+; ALL:             FrontendVersion: 0.0.0.0
+; ALL:             BackendVersion: 12.0.31101.0
+; ALL:             VersionName: Microsoft (R) LINK
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           EnvBlock {
+; ALL:             Reserved: 0
+; ALL:             Entries [
+; ALL:               cwd
+; ALL:               d:\src\llvm\test\DebugInfo\PDB\Inputs
+; ALL:               exe
+; ALL:               C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\link.exe
+; ALL:               pdb
+; ALL:               d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.pdb
+; ALL:             ]
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           Trampoline {
+; ALL:             Type: TrampIncremental (0x0)
+; ALL:             Size: 5
+; ALL:             ThunkOff: 5
+; ALL:             TargetOff: 16
+; ALL:             ThunkSection: 1
+; ALL:             TargetSection: 1
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           Section {
+; ALL:             SectionNumber: 1
+; ALL:             Alignment: 12
+; ALL:             Reserved: 0
+; ALL:             Rva: 4096
+; ALL:             Length: 4122
+; ALL:             Characteristics [ (0x60000020)
+; ALL:               IMAGE_SCN_CNT_CODE (0x20)
+; ALL:               IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
+; ALL:             Name: .text
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           COFF Group {
+; ALL:             Size: 4122
+; ALL:             Characteristics [ (0x60000020)
+; ALL:               IMAGE_SCN_CNT_CODE (0x20)
+; ALL:               IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
+; ALL:             Offset: 0
+; ALL:             Segment: 1
+; ALL:             Name: .text$mn
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           Section {
+; ALL:             SectionNumber: 2
+; ALL:             Alignment: 12
+; ALL:             Reserved: 0
+; ALL:             Rva: 12288
+; ALL:             Length: 690
+; ALL:             Characteristics [ (0x40000040)
+; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
+; ALL:             Name: .rdata
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           COFF Group {
+; ALL:             Size: 323
+; ALL:             Characteristics [ (0x40000040)
+; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
+; ALL:             Offset: 0
+; ALL:             Segment: 2
+; ALL:             Name: .rdata
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           COFF Group {
+; ALL:             Size: 0
+; ALL:             Characteristics [ (0x40000040)
+; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
+; ALL:             Offset: 323
+; ALL:             Segment: 2
+; ALL:             Name: .edata
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           COFF Group {
+; ALL:             Size: 366
+; ALL:             Characteristics [ (0x40000040)
+; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
+; ALL:             Offset: 324
+; ALL:             Segment: 2
+; ALL:             Name: .rdata$debug
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           Section {
+; ALL:             SectionNumber: 3
+; ALL:             Alignment: 12
+; ALL:             Reserved: 0
+; ALL:             Rva: 16384
+; ALL:             Length: 4
+; ALL:             Characteristics [ (0xC0000040)
+; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:               IMAGE_SCN_MEM_WRITE (0x80000000)
+; ALL:             ]
+; ALL:             Name: .data
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           COFF Group {
+; ALL:             Size: 4
+; ALL:             Characteristics [ (0xC0000080)
+; ALL:               IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:               IMAGE_SCN_MEM_WRITE (0x80000000)
+; ALL:             ]
+; ALL:             Offset: 0
+; ALL:             Segment: 3
+; ALL:             Name: .bss
+; ALL:           }
+; ALL:         }
+; ALL:         {
+; ALL:           Section {
+; ALL:             SectionNumber: 4
+; ALL:             Alignment: 12
+; ALL:             Reserved: 0
+; ALL:             Rva: 20480
+; ALL:             Length: 8
+; ALL:             Characteristics [ (0x42000040)
+; ALL:               IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:               IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; ALL:               IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:             ]
+; ALL:             Name: .reloc
+; ALL:           }
+; ALL:         }
+; ALL:       ]
+; ALL:     }
+; ALL:   ]
+; ALL: }
+; ALL: Section Contributions [
+; ALL:   Contribution {
+; ALL:     ISect: 1
+; ALL:     Off: 0
+; ALL:     Size: 10
+; ALL:     Characteristics [ (0x60000020)
+; ALL:       IMAGE_SCN_CNT_CODE (0x20)
+; ALL:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
+; ALL:     Module {
+; ALL:       Index: 1
+; ALL:       Name: * Linker *
+; ALL:     }
+; ALL:     Data CRC: 0
+; ALL:     Reloc CRC: 0
+; ALL:   }
+; ALL:   Contribution {
+; ALL:     ISect: 1
+; ALL:     Off: 16
+; ALL:     Size: 10
+; ALL:     Characteristics [ (0x60500020)
+; ALL:       IMAGE_SCN_ALIGN_16BYTES (0x500000)
+; ALL:       IMAGE_SCN_CNT_CODE (0x20)
+; ALL:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
+; ALL:     Module {
+; ALL:       Index: 0
+; ALL:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; ALL:     }
+; ALL:     Data CRC: 3617027124
+; ALL:     Reloc CRC: 0
+; ALL:   }
+; ALL:   Contribution {
+; ALL:     ISect: 2
+; ALL:     Off: 0
+; ALL:     Size: 56
+; ALL:     Characteristics [ (0x40000040)
+; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
+; ALL:     Module {
+; ALL:       Index: 1
+; ALL:       Name: * Linker *
+; ALL:     }
+; ALL:     Data CRC: 0
+; ALL:     Reloc CRC: 0
+; ALL:   }
+; ALL:   Contribution {
+; ALL:     ISect: 2
+; ALL:     Off: 324
+; ALL:     Size: 72
+; ALL:     Characteristics [ (0x40300040)
+; ALL:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
+; ALL:     Module {
+; ALL:       Index: 1
+; ALL:       Name: * Linker *
+; ALL:     }
+; ALL:     Data CRC: 0
+; ALL:     Reloc CRC: 0
+; ALL:   }
+; ALL:   Contribution {
+; ALL:     ISect: 2
+; ALL:     Off: 396
+; ALL:     Size: 20
+; ALL:     Characteristics [ (0x40300040)
+; ALL:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
+; ALL:     Module {
+; ALL:       Index: 1
+; ALL:       Name: * Linker *
+; ALL:     }
+; ALL:     Data CRC: 0
+; ALL:     Reloc CRC: 0
+; ALL:   }
+; ALL:   Contribution {
+; ALL:     ISect: 3
+; ALL:     Off: 0
+; ALL:     Size: 4
+; ALL:     Characteristics [ (0xC0300080)
+; ALL:       IMAGE_SCN_ALIGN_4BYTES (0x300000)
+; ALL:       IMAGE_SCN_CNT_UNINITIALIZED_DATA (0x80)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:       IMAGE_SCN_MEM_WRITE (0x80000000)
+; ALL:     ]
+; ALL:     Module {
+; ALL:       Index: 0
+; ALL:       Name: d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj
+; ALL:     }
+; ALL:     Data CRC: 0
+; ALL:     Reloc CRC: 0
+; ALL:   }
+; ALL: ]
+; ALL: Section Map [
+; ALL:   Entry {
+; ALL:     Flags: 269
+; ALL:     Ovl: 0
+; ALL:     Group: 0
+; ALL:     Frame: 1
+; ALL:     SecName: 65535
+; ALL:     ClassName: 65535
+; ALL:     Offset: 0
+; ALL:     SecByteLength: 4122
+; ALL:   }
+; ALL:   Entry {
+; ALL:     Flags: 265
+; ALL:     Ovl: 0
+; ALL:     Group: 0
+; ALL:     Frame: 2
+; ALL:     SecName: 65535
+; ALL:     ClassName: 65535
+; ALL:     Offset: 0
+; ALL:     SecByteLength: 690
+; ALL:   }
+; ALL:   Entry {
+; ALL:     Flags: 267
+; ALL:     Ovl: 0
+; ALL:     Group: 0
+; ALL:     Frame: 3
+; ALL:     SecName: 65535
+; ALL:     ClassName: 65535
+; ALL:     Offset: 0
+; ALL:     SecByteLength: 4
+; ALL:   }
+; ALL:   Entry {
+; ALL:     Flags: 265
+; ALL:     Ovl: 0
+; ALL:     Group: 0
+; ALL:     Frame: 4
+; ALL:     SecName: 65535
+; ALL:     ClassName: 65535
+; ALL:     Offset: 0
+; ALL:     SecByteLength: 8
+; ALL:   }
+; ALL:   Entry {
+; ALL:     Flags: 520
+; ALL:     Ovl: 0
+; ALL:     Group: 0
+; ALL:     Frame: 0
+; ALL:     SecName: 65535
+; ALL:     ClassName: 65535
+; ALL:     Offset: 0
+; ALL:     SecByteLength: 4294967295
+; ALL:   }
+; ALL: ]
+; ALL: Publics Stream {
+; ALL:   Stream number: 7
+; ALL:   SymHash: 556
+; ALL:   AddrMap: 8
+; ALL:   Number of buckets: 2
+; ALL:   Hash Buckets: [0, 12]
+; ALL:   Address Map: [36, 0]
+; ALL:   Thunk Map: [4112]
+; ALL:   Section Offsets: [4096, 1]
+; ALL:   Symbols [
+; ALL:     {
+; ALL:       PublicSym {
+; ALL:         Type: 0
+; ALL:         Seg: 3
+; ALL:         Off: 0
+; ALL:         Name: ?__purecall@@3PAXA
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       PublicSym {
+; ALL:         Type: 2
+; ALL:         Seg: 1
+; ALL:         Off: 16
+; ALL:         Name: _main
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       ProcRef {
+; ALL:         SumName: 0
+; ALL:         SymOffset: 120
+; ALL:         Mod: 1
+; ALL:         Name: main
+; ALL:       }
+; ALL:     }
+; ALL:     {
+; ALL:       DataSym {
+; ALL:         Type: void* (0x403)
+; ALL:         DisplayName: __purecall
+; ALL:       }
+; ALL:     }
+; ALL:   ]
+; ALL: }
+; ALL: Section Headers [
+; ALL:   {
+; ALL:     Name: .text
+; ALL:     Virtual Size: 4122
+; ALL:     Virtual Address: 4096
+; ALL:     Size of Raw Data: 4608
+; ALL:     File Pointer to Raw Data: 1024
+; ALL:     File Pointer to Relocations: 0
+; ALL:     File Pointer to Linenumbers: 0
+; ALL:     Number of Relocations: 0
+; ALL:     Number of Linenumbers: 0
+; ALL:     Characteristics [ (0x60000020)
+; ALL:       IMAGE_SCN_CNT_CODE (0x20)
+; ALL:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
+; ALL:   }
+; ALL:   {
+; ALL:     Name: .rdata
+; ALL:     Virtual Size: 690
+; ALL:     Virtual Address: 12288
+; ALL:     Size of Raw Data: 1024
+; ALL:     File Pointer to Raw Data: 5632
+; ALL:     File Pointer to Relocations: 0
+; ALL:     File Pointer to Linenumbers: 0
+; ALL:     Number of Relocations: 0
+; ALL:     Number of Linenumbers: 0
+; ALL:     Characteristics [ (0x40000040)
+; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
+; ALL:   }
+; ALL:   {
+; ALL:     Name: .data
+; ALL:     Virtual Size: 4
+; ALL:     Virtual Address: 16384
+; ALL:     Size of Raw Data: 0
+; ALL:     File Pointer to Raw Data: 0
+; ALL:     File Pointer to Relocations: 0
+; ALL:     File Pointer to Linenumbers: 0
+; ALL:     Number of Relocations: 0
+; ALL:     Number of Linenumbers: 0
+; ALL:     Characteristics [ (0xC0000040)
+; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:       IMAGE_SCN_MEM_WRITE (0x80000000)
+; ALL:     ]
+; ALL:   }
+; ALL:   {
+; ALL:     Name: .reloc
+; ALL:     Virtual Size: 8
+; ALL:     Virtual Address: 20480
+; ALL:     Size of Raw Data: 512
+; ALL:     File Pointer to Raw Data: 6656
+; ALL:     File Pointer to Relocations: 0
+; ALL:     File Pointer to Linenumbers: 0
+; ALL:     Number of Relocations: 0
+; ALL:     Number of Linenumbers: 0
+; ALL:     Characteristics [ (0x42000040)
+; ALL:       IMAGE_SCN_CNT_INITIALIZED_DATA (0x40)
+; ALL:       IMAGE_SCN_MEM_DISCARDABLE (0x2000000)
+; ALL:       IMAGE_SCN_MEM_READ (0x40000000)
+; ALL:     ]
+; ALL:   }
+; ALL: ]
+
+; BIG:      FileHeaders {
+; BIG-NEXT:   BlockSize: 4096
+; BIG-NEXT:   FreeBlockMap: 2
+; BIG-NEXT:   NumBlocks: 99
+; BIG-NEXT:   NumDirectoryBytes: 616
+; BIG-NEXT:   Unknown1: 0
+; BIG-NEXT:   BlockMapAddr: 97
+; BIG-NEXT:   NumDirectoryBlocks: 1
+; BIG-NEXT:   DirectoryBlocks: [96]
+; BIG-NEXT:   NumStreams: 64
+; BIG-NEXT: }
+; BIG-NEXT: PDB Stream {
+; BIG-NEXT:   Version: 20000404
+; BIG-NEXT:   Signature: 0x571FFE67
+; BIG-NEXT:   Age: 1
+; BIG-NEXT:   Guid: {880ECC89-DF81-0B4F-839C-58CBD052E937}
+; BIG-NEXT: }
+; BIG-NEXT: Stream '/names' {
+; BIG-NEXT:   Index: 13
+; BIG-NEXT:   Signature: 0xEFFEEFFE
+; BIG-NEXT:   Version: 1
+; BIG-NEXT:   Name Count: 92
+; BIG-NEXT:   Names [
+; BIG-NEXT:     2938: f:\dd\vctools\crt\vcruntime\inc\vcruntime_startup.h
+; BIG-NEXT:     2569: f:\dd\vctools\crt\vcstartup\src\misc\checkcfg.c
+; BIG-NEXT:     261: f:\dd\vctools\langapi\include\isa_availability.h
+; BIG-NEXT:     4526: $T0 $ebp = $T2 $esp = $T1 .raSearchStart = $eip $T1 ^ = $ebp $T0 = $esp $T1 4 + =
+; BIG-NEXT:     4129: f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
+; BIG-NEXT:     4415: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 40 - ^ =  $23 $T0 44 - ^ =  $24 $T0 48 - ^ =
+; BIG-NEXT:     4921: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 16 - ^ =  $24 $T0 20 - ^ =
+; BIG-NEXT:     310: f:\dd\externalapis\windows\8.1\sdk\inc\wingdi.h
+; BIG-NEXT:     3880: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\predefined c++ types (compiler internal)
+; BIG-NEXT:     2401: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 24 - ^ =
+; BIG-NEXT:     635: f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:     5014: f:\dd\vctools\crt\vcstartup\src\utility\ucrt_stubs.cpp
+; BIG-NEXT:     157: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =
+; BIG-NEXT:     2766: f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_init.c
+; BIG-NEXT:     3196: f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
+; BIG-NEXT:     4274: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $23 $T0 4 - ^ =
+; BIG-NEXT:     5322: f:\dd\vctools\crt\vcstartup\src\defaults\default_precision.cpp
+; BIG-NEXT:     3768: f:\dd\vctools\crt\vcstartup\src\defaults\thread_locale.cpp
+; BIG-NEXT:     592: f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:     887: f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:     1898: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $20 $T0 4 - ^ =  $23 $T0 8 - ^ =
+; BIG-NEXT:     1: d:\src\llvm\test\tools\llvm-symbolizer\pdb\inputs\test.cpp
+; BIG-NEXT:     3362: f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
+; BIG-NEXT:     1692: f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:     4077: f:\dd\externalapis\unifiedcrt\inc\corecrt_startup.h
+; BIG-NEXT:     5108: f:\dd\externalapis\windows\8.1\sdk\inc\processthreadsapi.h
+; BIG-NEXT:     2353: f:\dd\vctools\crt\vcstartup\src\gs\gs_support.c
+; BIG-NEXT:     5167: f:\dd\vctools\crt\vcstartup\src\utility\utility_desktop.cpp
+; BIG-NEXT:     2881: f:\dd\vctools\crt\vcstartup\src\utility\ucrt_detection.c
+; BIG-NEXT:     3714: f:\dd\vctools\crt\vcstartup\src\defaults\new_mode.cpp
+; BIG-NEXT:     2206: f:\dd\vctools\crt\vcstartup\src\eh\i386\secchk.c
+; BIG-NEXT:     3661: f:\dd\vctools\crt\vcstartup\src\defaults\matherr.cpp
+; BIG-NEXT:     457: f:\dd\externalapis\unifiedcrt\inc\corecrt.h
+; BIG-NEXT:     3481: f:\dd\vctools\crt\vcstartup\src\defaults\env_mode.cpp
+; BIG-NEXT:     992: f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:     1791: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =
+; BIG-NEXT:     4028: f:\dd\vctools\crt\vcstartup\src\eh\tncleanup.cpp
+; BIG-NEXT:     1977: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $20 $T0 4 - ^ =  $23 $T0 8 - ^ =  $24 $T0 12 - ^ =
+; BIG-NEXT:     688: f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:     2074: f:\dd\vctools\crt\vcstartup\src\eh\i386\sehprolg4.asm
+; BIG-NEXT:     214: f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:     939: f:\dd\vctools\crt\vcstartup\src\misc\i386\cpu_disp.c
+; BIG-NEXT:     2617: f:\dd\vctools\crt\vcstartup\src\misc\guard_support.c
+; BIG-NEXT:     3827: f:\dd\vctools\crt\vcruntime\inc\vcruntime_typeinfo.h
+; BIG-NEXT:     407: f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:     2476: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 24 - ^ =  $24 $T0 28 - ^ =
+; BIG-NEXT:     4609: f:\dd\vctools\crt\vcstartup\src\utility\utility.cpp
+; BIG-NEXT:     4184: f:\dd\vctools\crt\vcruntime\inc\eh.h
+; BIG-NEXT:     5227: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 808 - ^ =  $23 $T0 812 - ^ =
+; BIG-NEXT:     1403: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\predefined c++ attributes (compiler internal)
+; BIG-NEXT:     60: d:\src\llvm\test\tools\llvm-symbolizer\pdb\inputs\predefined c++ attributes (compiler internal)
+; BIG-NEXT:     2990: f:\dd\vctools\crt\vcstartup\src\defaults\argv_mode.cpp
+; BIG-NEXT:     3045: f:\dd\vctools\crt\vcstartup\src\defaults\commit_mode.cpp
+; BIG-NEXT:     4221: f:\dd\vctools\crt\vcstartup\src\startup\exe_main.cpp
+; BIG-NEXT:     3320: f:\dd\externalapis\unifiedcrt\inc\stdio.h
+; BIG-NEXT:     3974: f:\dd\vctools\crt\vcruntime\inc\vcruntime_exception.h
+; BIG-NEXT:     1551: f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:     2711: f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_dtor.c
+; BIG-NEXT:     501: f:\dd\vctools\crt\vcruntime\inc\i386\mmintrin.h
+; BIG-NEXT:     4661: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 4 - ^ =
+; BIG-NEXT:     4735: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 28 - ^ =  $23 $T0 32 - ^ =  $24 $T0 36 - ^ =
+; BIG-NEXT:     358: f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:     1362: f:\dd\vctools\crt\vcruntime\inc\rtcapi.h
+; BIG-NEXT:     3419: f:\dd\vctools\crt\vcstartup\src\defaults\denormal_control.cpp
+; BIG-NEXT:     2255: f:\dd\vctools\crt\vcstartup\src\gs\gs_report.c
+; BIG-NEXT:     2302: f:\dd\externalapis\windows\8.1\sdk\inc\minwindef.h
+; BIG-NEXT:     3102: f:\dd\vctools\crt\vcruntime\inc\vadefs.h
+; BIG-NEXT:     2128: _TP_CALLBACK_ENVIRON_V3
+; BIG-NEXT:     4336: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $23 $T0 4 - ^ =  $24 $T0 8 - ^ =
+; BIG-NEXT:     3143: f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:     1643: f:\dd\vctools\crt\vcstartup\src\rtc\initsect.cpp
+; BIG-NEXT:     1041: f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:     2821: f:\dd\vctools\crt\vcstartup\src\utility\matherr_detection.c
+; BIG-NEXT:     3590: f:\dd\vctools\crt\vcstartup\src\defaults\invalid_parameter_handler.cpp
+; BIG-NEXT:     788: f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:     2152: f:\dd\vctools\crt\vcstartup\src\eh\i386\chandler4gs.c
+; BIG-NEXT:     5069: f:\dd\vctools\langapi\include\ehdata.h
+; BIG-NEXT:     3535: f:\dd\vctools\crt\vcstartup\src\defaults\file_mode.cpp
+; BIG-NEXT:     2670: f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:     1502: f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:     1158: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 48 - ^ =  $23 $T0 52 - ^ =
+; BIG-NEXT:     1251: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 48 - ^ =  $23 $T0 52 - ^ =  $24 $T0 56 - ^ =
+; BIG-NEXT:     1600: f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:     3247: f:\dd\vctools\crt\vcstartup\src\defaults\default_local_stdio_options.cpp
+; BIG-NEXT:     738: f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:     549: f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:     837: f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:     1836: $T0 .raSearch = $eip $T0 ^ = $esp $T0 4 + =  $20 $T0 4 - ^ =
+; BIG-NEXT:     1083: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $20 $T0 48 - ^ =
+; BIG-NEXT:     4846: $T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + =  $23 $T0 16 - ^ =
+; BIG-NEXT:     1740: f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:   ]
+; BIG-NEXT: }
+; BIG-NEXT: DBI Stream {
+; BIG-NEXT:   Dbi Version: 19990903
+; BIG-NEXT:   Age: 1
+; BIG-NEXT:   Incremental Linking: Yes
+; BIG-NEXT:   Has CTypes: No
+; BIG-NEXT:   Is Stripped: No
+; BIG-NEXT:   Machine Type: x86
+; BIG-NEXT:   Symbol Record Stream Index: 9
+; BIG-NEXT:   Public Symbol Stream Index: 8
+; BIG-NEXT:   Global Symbol Stream Index: 7
+; BIG-NEXT:   Toolchain Version: 14.0
+; BIG-NEXT:   mspdb140.dll version: 14.0.23918
+; BIG-NEXT:   Modules [
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj
+; BIG-NEXT:       Debug Stream Index: 12
+; BIG-NEXT:       Object File Name: D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 400
+; BIG-NEXT:       Symbol Byte Size: 872
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         d:\src\llvm\test\tools\llvm-symbolizer\pdb\inputs\test.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_cpu_disp_.obj
+; BIG-NEXT:       Debug Stream Index: 14
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 14
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 344
+; BIG-NEXT:       Symbol Byte Size: 720
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       14 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\misc\i386\cpu_disp.c
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_initsect_.obj
+; BIG-NEXT:       Debug Stream Index: 15
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 19
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 464
+; BIG-NEXT:       Symbol Byte Size: 464
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       19 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\rtc\initsect.cpp
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_sehprolg4_.obj
+; BIG-NEXT:       Debug Stream Index: 16
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 1
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 32
+; BIG-NEXT:       Symbol Byte Size: 444
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\i386\sehprolg4.asm
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_chandler4gs_.obj
+; BIG-NEXT:       Debug Stream Index: 17
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 14
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 344
+; BIG-NEXT:       Symbol Byte Size: 604
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       14 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\i386\chandler4gs.c
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_secchk_.obj
+; BIG-NEXT:       Debug Stream Index: 18
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 14
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 344
+; BIG-NEXT:       Symbol Byte Size: 344
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       14 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\i386\secchk.c
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_cookie.obj
+; BIG-NEXT:       Debug Stream Index: 19
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 9
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 224
+; BIG-NEXT:       Symbol Byte Size: 160
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       9 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_report.obj
+; BIG-NEXT:       Debug Stream Index: 20
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 14
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 1392
+; BIG-NEXT:       Symbol Byte Size: 1144
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       14 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\gs\gs_report.c
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_support.obj
+; BIG-NEXT:       Debug Stream Index: 21
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 10
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 432
+; BIG-NEXT:       Symbol Byte Size: 552
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       10 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\gs\gs_support.c
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\checkcfg.obj
+; BIG-NEXT:       Debug Stream Index: 22
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 14
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 392
+; BIG-NEXT:       Symbol Byte Size: 328
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       14 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\misc\checkcfg.c
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\guard_support.obj
+; BIG-NEXT:       Debug Stream Index: 23
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 10
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 352
+; BIG-NEXT:       Symbol Byte Size: 424
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       10 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\misc\guard_support.c
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\loadcfg.obj
+; BIG-NEXT:       Debug Stream Index: 24
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 9
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 224
+; BIG-NEXT:       Symbol Byte Size: 156
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       9 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_dtor.obj
+; BIG-NEXT:       Debug Stream Index: 25
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 11
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 328
+; BIG-NEXT:       Symbol Byte Size: 272
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       11 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_dtor.c
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_init.obj
+; BIG-NEXT:       Debug Stream Index: 26
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 10
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 304
+; BIG-NEXT:       Symbol Byte Size: 272
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       10 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_init.c
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr_detection.obj
+; BIG-NEXT:       Debug Stream Index: 27
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 276
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\matherr_detection.c
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_detection.obj
+; BIG-NEXT:       Debug Stream Index: 28
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 268
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\ucrt_detection.c
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\argv_mode.obj
+; BIG-NEXT:       Debug Stream Index: 29
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 260
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\argv_mode.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\commit_mode.obj
+; BIG-NEXT:       Debug Stream Index: 30
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 260
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\commit_mode.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_local_stdio_options.obj
+; BIG-NEXT:       Debug Stream Index: 31
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 24
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 760
+; BIG-NEXT:       Symbol Byte Size: 620
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       24 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\default_local_stdio_options.cpp
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdio.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vadefs.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\denormal_control.obj
+; BIG-NEXT:       Debug Stream Index: 32
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 80
+; BIG-NEXT:       Symbol Byte Size: 272
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\denormal_control.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\env_mode.obj
+; BIG-NEXT:       Debug Stream Index: 33
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 268
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\env_mode.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\file_mode.obj
+; BIG-NEXT:       Debug Stream Index: 34
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 260
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\file_mode.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\invalid_parameter_handler.obj
+; BIG-NEXT:       Debug Stream Index: 35
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 80
+; BIG-NEXT:       Symbol Byte Size: 292
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\invalid_parameter_handler.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr.obj
+; BIG-NEXT:       Debug Stream Index: 36
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 2
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 112
+; BIG-NEXT:       Symbol Byte Size: 312
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       2 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\matherr.cpp
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\new_mode.obj
+; BIG-NEXT:       Debug Stream Index: 37
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 260
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\new_mode.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\thread_locale.obj
+; BIG-NEXT:       Debug Stream Index: 38
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 88
+; BIG-NEXT:       Symbol Byte Size: 272
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\thread_locale.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\tncleanup.obj
+; BIG-NEXT:       Debug Stream Index: 39
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 21
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 624
+; BIG-NEXT:       Symbol Byte Size: 432
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       21 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\eh\tncleanup.cpp
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_typeinfo.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_exception.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\exe_main.obj
+; BIG-NEXT:       Debug Stream Index: 40
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 26
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 1668
+; BIG-NEXT:       Symbol Byte Size: 2364
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       26 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\startup\exe_main.cpp
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdio.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vadefs.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\initializers.obj
+; BIG-NEXT:       Debug Stream Index: 41
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 20
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 488
+; BIG-NEXT:       Symbol Byte Size: 196
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       20 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility.obj
+; BIG-NEXT:       Debug Stream Index: 42
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 20
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 2500
+; BIG-NEXT:       Symbol Byte Size: 6020
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       20 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\utility.cpp
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_stubs.obj
+; BIG-NEXT:       Debug Stream Index: 43
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 1
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 368
+; BIG-NEXT:       Symbol Byte Size: 988
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       1 Contributing Source Files [
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\ucrt_stubs.cpp
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility_desktop.obj
+; BIG-NEXT:       Debug Stream Index: 44
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 20
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 1240
+; BIG-NEXT:       Symbol Byte Size: 1844
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       20 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\utility\utility_desktop.cpp
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_precision.obj
+; BIG-NEXT:       Debug Stream Index: 45
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib
+; BIG-NEXT:       Num Files: 20
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 552
+; BIG-NEXT:       Symbol Byte Size: 356
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       20 Contributing Source Files [
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\string.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\src\defaults\default_precision.cpp
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\malloc.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+; BIG-NEXT:         f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\math.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\ctype.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+; BIG-NEXT:         f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+; BIG-NEXT:         f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:KERNEL32.dll
+; BIG-NEXT:       Debug Stream Index: 47
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 1616
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: KERNEL32.dll
+; BIG-NEXT:       Debug Stream Index: 46
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 208
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:VCRUNTIME140.dll
+; BIG-NEXT:       Debug Stream Index: 49
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 664
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: VCRUNTIME140.dll
+; BIG-NEXT:       Debug Stream Index: 48
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 148
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:api-ms-win-crt-stdio-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 59
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 264
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: api-ms-win-crt-stdio-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 58
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 180
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:api-ms-win-crt-runtime-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 57
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 3068
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: api-ms-win-crt-runtime-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 56
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 188
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:api-ms-win-crt-math-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 55
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 140
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: api-ms-win-crt-math-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 54
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 180
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:api-ms-win-crt-locale-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 53
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 148
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: api-ms-win-crt-locale-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 52
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 188
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: Import:api-ms-win-crt-heap-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 51
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 136
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: api-ms-win-crt-heap-l1-1-0.dll
+; BIG-NEXT:       Debug Stream Index: 50
+; BIG-NEXT:       Object File Name: C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 0
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 180
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:     {
+; BIG-NEXT:       Name: * Linker *
+; BIG-NEXT:       Debug Stream Index: 60
+; BIG-NEXT:       Object File Name:
+; BIG-NEXT:       Num Files: 0
+; BIG-NEXT:       Source File Name Idx: 0
+; BIG-NEXT:       Pdb File Name Idx: 55
+; BIG-NEXT:       Line Info Byte Size: 0
+; BIG-NEXT:       C13 Line Info Byte Size: 0
+; BIG-NEXT:       Symbol Byte Size: 3080
+; BIG-NEXT:       Type Server Index: 0
+; BIG-NEXT:       Has EC Info: No
+; BIG-NEXT:       0 Contributing Source Files [
+; BIG-NEXT:       ]
+; BIG-NEXT:     }
+; BIG-NEXT:   ]
+; BIG-NEXT: }
+
+; BAD-BLOCK-SIZE: Native PDB Error: The PDB file is corrupt. Does not contain superblock

@@ -12,13 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/BitVector.h"
-#include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Target/TargetFrameLowering.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <cstdlib>
@@ -39,7 +40,7 @@ bool TargetFrameLowering::noFramePointerElim(const MachineFunction &MF) const {
 /// is overridden for some targets.
 int TargetFrameLowering::getFrameIndexReference(const MachineFunction &MF,
                                              int FI, unsigned &FrameReg) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
 
   // By default, assume all frame indices are referenced via whatever
@@ -47,27 +48,36 @@ int TargetFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   // something different.
   FrameReg = RI->getFrameRegister(MF);
 
-  return MFI->getObjectOffset(FI) + MFI->getStackSize() -
-         getOffsetOfLocalArea() + MFI->getOffsetAdjustment();
+  return MFI.getObjectOffset(FI) + MFI.getStackSize() -
+         getOffsetOfLocalArea() + MFI.getOffsetAdjustment();
 }
 
 bool TargetFrameLowering::needsFrameIndexResolution(
     const MachineFunction &MF) const {
-  return MF.getFrameInfo()->hasStackObjects();
+  return MF.getFrameInfo().hasStackObjects();
 }
 
 void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                BitVector &SavedRegs,
                                                RegScavenger *RS) const {
-  // Get the callee saved register list...
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+
+  // Resize before the early returns. Some backends expect that
+  // SavedRegs.size() == TRI.getNumRegs() after this call even if there are no
+  // saved registers.
+  SavedRegs.resize(TRI.getNumRegs());
+
+  // When interprocedural register allocation is enabled caller saved registers
+  // are preferred over callee saved registers.
+  if (MF.getTarget().Options.EnableIPRA && isSafeForNoCSROpt(MF.getFunction()))
+    return;
+
+  // Get the callee saved register list...
   const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(&MF);
 
   // Early exit if there are no callee saved registers.
   if (!CSRegs || CSRegs[0] == 0)
     return;
-
-  SavedRegs.resize(TRI.getNumRegs());
 
   // In Naked functions we aren't going to save any registers.
   if (MF.getFunction()->hasFnAttribute(Attribute::Naked))

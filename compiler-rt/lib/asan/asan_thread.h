@@ -66,9 +66,9 @@ class AsanThread {
   thread_return_t ThreadStart(uptr os_id,
                               atomic_uintptr_t *signal_thread_is_registered);
 
-  uptr stack_top() { return stack_top_; }
-  uptr stack_bottom() { return stack_bottom_; }
-  uptr stack_size() { return stack_size_; }
+  uptr stack_top();
+  uptr stack_bottom();
+  uptr stack_size();
   uptr tls_begin() { return tls_begin_; }
   uptr tls_end() { return tls_end_; }
   DTLS *dtls() { return dtls_; }
@@ -83,9 +83,7 @@ class AsanThread {
   };
   bool GetStackFrameAccessByAddr(uptr addr, StackFrameAccess *access);
 
-  bool AddrIsInStack(uptr addr) {
-    return addr >= stack_bottom_ && addr < stack_top_;
-  }
+  bool AddrIsInStack(uptr addr);
 
   void DeleteFakeStack(int tid) {
     if (!fake_stack_) return;
@@ -95,12 +93,18 @@ class AsanThread {
     t->Destroy(tid);
   }
 
+  void StartSwitchFiber(FakeStack **fake_stack_save, uptr bottom, uptr size);
+  void FinishSwitchFiber(FakeStack *fake_stack_save);
+
   bool has_fake_stack() {
-    return (reinterpret_cast<uptr>(fake_stack_) > 1);
+    return !atomic_load(&stack_switching_, memory_order_relaxed) &&
+           (reinterpret_cast<uptr>(fake_stack_) > 1);
   }
 
   FakeStack *fake_stack() {
     if (!__asan_option_detect_stack_use_after_return)
+      return nullptr;
+    if (atomic_load(&stack_switching_, memory_order_relaxed))
       return nullptr;
     if (!has_fake_stack())
       return AsyncSignalSafeLazyInitFakeStack();
@@ -127,14 +131,24 @@ class AsanThread {
   void ClearShadowForThreadStackAndTLS();
   FakeStack *AsyncSignalSafeLazyInitFakeStack();
 
+  struct StackBounds {
+    uptr bottom;
+    uptr top;
+  };
+  StackBounds GetStackBounds() const;
+
   AsanThreadContext *context_;
   thread_callback_t start_routine_;
   void *arg_;
+
   uptr stack_top_;
   uptr stack_bottom_;
-  // stack_size_ == stack_top_ - stack_bottom_;
-  // It needs to be set in a async-signal-safe manner.
-  uptr stack_size_;
+  // these variables are used when the thread is about to switch stack
+  uptr next_stack_top_;
+  uptr next_stack_bottom_;
+  // true if switching is in progress
+  atomic_uint8_t stack_switching_;
+
   uptr tls_begin_;
   uptr tls_end_;
   DTLS *dtls_;

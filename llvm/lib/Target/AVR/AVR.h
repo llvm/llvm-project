@@ -30,9 +30,7 @@ FunctionPass *createAVRFrameAnalyzerPass();
 FunctionPass *createAVRDynAllocaSRPass();
 FunctionPass *createAVRBranchSelectionPass();
 
-/**
- * Contains the AVR backend.
- */
+/// Contains the AVR backend.
 namespace AVR {
 
 enum AddressSpace { DataMemory, ProgramMemory };

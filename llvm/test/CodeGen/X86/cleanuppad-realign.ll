@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=i686-pc-windows-msvc < %s | FileCheck --check-prefix=X86 %s
-; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck --check-prefix=X64 %s
+; RUN: llc -mtriple=i686-pc-windows-msvc -stack-symbol-ordering=0 < %s | FileCheck --check-prefix=X86 %s
+; RUN: llc -mtriple=x86_64-pc-windows-msvc -stack-symbol-ordering=0 < %s | FileCheck --check-prefix=X64 %s
 
 declare i32 @__CxxFrameHandler3(...)
 declare void @Dtor(i64* %o)

@@ -9,7 +9,7 @@
 //
 // R600 has a VLIW architecture.  On pre-cayman cards there are 5 instruction
 // slots ALU.X, ALU.Y, ALU.Z, ALU.W, and TRANS.  For cayman cards, the TRANS
-// slot has been removed. 
+// slot has been removed.
 //
 //===----------------------------------------------------------------------===//
 

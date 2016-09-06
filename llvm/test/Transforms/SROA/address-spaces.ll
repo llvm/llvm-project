@@ -66,3 +66,20 @@ for.end:
   ret void
 }
  
+%union.anon = type { i32* }
+
+@g = common global i32 0, align 4
+@l = common addrspace(3) global i32 0, align 4
+
+; Make sure an illegal bitcast isn't introduced
+define void @pr27557() {
+; CHECK-LABEL: @pr27557(
+; CHECK: %[[CAST:.*]] = bitcast i32** {{.*}} to i32 addrspace(3)**
+; CHECK: store i32 addrspace(3)* @l, i32 addrspace(3)** %[[CAST]]
+  %1 = alloca %union.anon, align 8
+  %2 = bitcast %union.anon* %1 to i32**
+  store i32* @g, i32** %2, align 8
+  %3 = bitcast %union.anon* %1 to i32 addrspace(3)**
+  store i32 addrspace(3)* @l, i32 addrspace(3)** %3, align 8
+  ret void
+}

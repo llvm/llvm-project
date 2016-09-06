@@ -1,237 +1,206 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
-// Make sure we handle target overloads correctly.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu \
-// RUN:    -fsyntax-only -fcuda-target-overloads -verify %s
-// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda \
-// RUN:    -fsyntax-only -fcuda-target-overloads -fcuda-is-device -verify %s
-
-// Check target overloads handling with disabled call target checks.
-// RUN: %clang_cc1 -DNOCHECKS -triple x86_64-unknown-linux-gnu -fsyntax-only \
-// RUN:    -fcuda-disable-target-call-checks -fcuda-target-overloads -verify %s
-// RUN: %clang_cc1 -DNOCHECKS -triple nvptx64-nvidia-cuda -fsyntax-only \
-// RUN:    -fcuda-disable-target-call-checks -fcuda-target-overloads \
-// RUN:    -fcuda-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fsyntax-only -fcuda-is-device -verify %s
 
 #include "Inputs/cuda.h"
 
-typedef int (*fp_t)(void);
-typedef void (*gp_t)(void);
+// Opaque return types used to check that we pick the right overloads.
+struct HostReturnTy {};
+struct HostReturnTy2 {};
+struct DeviceReturnTy {};
+struct DeviceReturnTy2 {};
+struct HostDeviceReturnTy {};
+struct TemplateReturnTy {};
 
-// Host and unattributed functions can't be overloaded
-__host__ int hh(void) { return 1; } // expected-note {{previous definition is here}}
-int hh(void) { return 1; } // expected-error {{redefinition of 'hh'}}
+typedef HostReturnTy (*HostFnPtr)();
+typedef DeviceReturnTy (*DeviceFnPtr)();
+typedef HostDeviceReturnTy (*HostDeviceFnPtr)();
+typedef void (*GlobalFnPtr)();  // __global__ functions must return void.
 
-// H/D overloading is OK
-__host__ int dh(void) { return 2; }
-__device__ int dh(void) { return 2; }
+// CurrentReturnTy is {HostReturnTy,DeviceReturnTy} during {host,device}
+// compilation.
+#ifdef __CUDA_ARCH__
+typedef DeviceReturnTy CurrentReturnTy;
+#else
+typedef HostReturnTy CurrentReturnTy;
+#endif
 
-// H/HD and D/HD are not allowed
-__host__ __device__ int hdh(void) { return 5; } // expected-note {{previous definition is here}}
-__host__ int hdh(void) { return 4; } // expected-error {{redefinition of 'hdh'}}
+// CurrentFnPtr is a function pointer to a {host,device} function during
+// {host,device} compilation.
+typedef CurrentReturnTy (*CurrentFnPtr)();
 
-__host__ int hhd(void) { return 4; } // expected-note {{previous definition is here}}
-__host__ __device__ int hhd(void) { return 5; } // expected-error {{redefinition of 'hhd'}}
+// Host and unattributed functions can't be overloaded.
+__host__ void hh() {} // expected-note {{previous definition is here}}
+void hh() {} // expected-error {{redefinition of 'hh'}}
+
+// H/D overloading is OK.
+__host__ HostReturnTy dh() { return HostReturnTy(); }
+__device__ DeviceReturnTy dh() { return DeviceReturnTy(); }
+
+// H/HD and D/HD are not allowed.
+__host__ __device__ int hdh() { return 0; } // expected-note {{previous definition is here}}
+__host__ int hdh() { return 0; }            // expected-error {{redefinition of 'hdh'}}
+
+__host__ int hhd() { return 0; }            // expected-note {{previous definition is here}}
+__host__ __device__ int hhd() { return 0; } // expected-error {{redefinition of 'hhd'}}
 // expected-warning@-1 {{attribute declaration must precede definition}}
 // expected-note@-3 {{previous definition is here}}
 
-__host__ __device__ int hdd(void) { return 7; } // expected-note {{previous definition is here}}
-__device__ int hdd(void) { return 6; } // expected-error {{redefinition of 'hdd'}}
+__host__ __device__ int hdd() { return 0; } // expected-note {{previous definition is here}}
+__device__ int hdd() { return 0; }          // expected-error {{redefinition of 'hdd'}}
 
-__device__ int dhd(void) { return 6; } // expected-note {{previous definition is here}}
-__host__ __device__ int dhd(void) { return 7; } // expected-error {{redefinition of 'dhd'}}
+__device__ int dhd() { return 0; }          // expected-note {{previous definition is here}}
+__host__ __device__ int dhd() { return 0; } // expected-error {{redefinition of 'dhd'}}
 // expected-warning@-1 {{attribute declaration must precede definition}}
 // expected-note@-3 {{previous definition is here}}
 
-// Same tests for extern "C" functions
-extern "C" __host__ int chh(void) {return 11;} // expected-note {{previous definition is here}}
-extern "C" int chh(void) {return 11;} // expected-error {{redefinition of 'chh'}}
+// Same tests for extern "C" functions.
+extern "C" __host__ int chh() { return 0; } // expected-note {{previous definition is here}}
+extern "C" int chh() { return 0; }          // expected-error {{redefinition of 'chh'}}
 
-// H/D overloading is OK
-extern "C" __device__ int cdh(void) {return 10;}
-extern "C" __host__ int cdh(void) {return 11;}
+// H/D overloading is OK.
+extern "C" __device__ DeviceReturnTy cdh() { return DeviceReturnTy(); }
+extern "C" __host__ HostReturnTy cdh() { return HostReturnTy(); }
 
 // H/HD and D/HD overloading is not allowed.
-extern "C" __host__ __device__ int chhd1(void) {return 12;} // expected-note {{previous definition is here}}
-extern "C" __host__ int chhd1(void) {return 13;} // expected-error {{redefinition of 'chhd1'}}
+extern "C" __host__ __device__ int chhd1() { return 0; } // expected-note {{previous definition is here}}
+extern "C" __host__ int chhd1() { return 0; }            // expected-error {{redefinition of 'chhd1'}}
 
-extern "C" __host__ int chhd2(void) {return 13;} // expected-note {{previous definition is here}}
-extern "C" __host__ __device__ int chhd2(void) {return 12;} // expected-error {{redefinition of 'chhd2'}}
+extern "C" __host__ int chhd2() { return 0; }            // expected-note {{previous definition is here}}
+extern "C" __host__ __device__ int chhd2() { return 0; } // expected-error {{redefinition of 'chhd2'}}
 // expected-warning@-1 {{attribute declaration must precede definition}}
 // expected-note@-3 {{previous definition is here}}
 
 // Helper functions to verify calling restrictions.
-__device__ int d(void) { return 8; }
-__host__ int h(void) { return 9; }
-__global__ void g(void) {}
-extern "C" __device__ int cd(void) {return 10;}
-extern "C" __host__ int ch(void) {return 11;}
+__device__ DeviceReturnTy d() { return DeviceReturnTy(); }
+// expected-note@-1 1+ {{'d' declared here}}
+// expected-note@-2 1+ {{candidate function not viable: call to __device__ function from __host__ function}}
+// expected-note@-3 0+ {{candidate function not viable: call to __device__ function from __host__ __device__ function}}
 
-__host__ void hostf(void) {
-  fp_t dp = d;
-  fp_t cdp = cd;
-#if !defined(NOCHECKS)
-  // expected-error@-3 {{reference to __device__ function 'd' in __host__ function}}
-  // expected-note@65 {{'d' declared here}}
-  // expected-error@-4 {{reference to __device__ function 'cd' in __host__ function}}
-  // expected-note@68 {{'cd' declared here}}
-#endif
-  fp_t hp = h;
-  fp_t chp = ch;
-  fp_t dhp = dh;
-  fp_t cdhp = cdh;
-  gp_t gp = g;
+__host__ HostReturnTy h() { return HostReturnTy(); }
+// expected-note@-1 1+ {{'h' declared here}}
+// expected-note@-2 1+ {{candidate function not viable: call to __host__ function from __device__ function}}
+// expected-note@-3 0+ {{candidate function not viable: call to __host__ function from __host__ __device__ function}}
+// expected-note@-4 1+ {{candidate function not viable: call to __host__ function from __global__ function}}
 
-  d();
-  cd();
-#if !defined(NOCHECKS)
-  // expected-error@-3 {{no matching function for call to 'd'}}
-  // expected-note@65 {{candidate function not viable: call to __device__ function from __host__ function}}
-  // expected-error@-4 {{no matching function for call to 'cd'}}
-  // expected-note@68 {{candidate function not viable: call to __device__ function from __host__ function}}
-#endif
-  h();
-  ch();
-  dh();
-  cdh();
+__global__ void g() {}
+// expected-note@-1 1+ {{'g' declared here}}
+// expected-note@-2 1+ {{candidate function not viable: call to __global__ function from __device__ function}}
+// expected-note@-3 0+ {{candidate function not viable: call to __global__ function from __host__ __device__ function}}
+// expected-note@-4 1+ {{candidate function not viable: call to __global__ function from __global__ function}}
+
+extern "C" __device__ DeviceReturnTy cd() { return DeviceReturnTy(); }
+// expected-note@-1 1+ {{'cd' declared here}}
+// expected-note@-2 1+ {{candidate function not viable: call to __device__ function from __host__ function}}
+// expected-note@-3 0+ {{candidate function not viable: call to __device__ function from __host__ __device__ function}}
+
+extern "C" __host__ HostReturnTy ch() { return HostReturnTy(); }
+// expected-note@-1 1+ {{'ch' declared here}}
+// expected-note@-2 1+ {{candidate function not viable: call to __host__ function from __device__ function}}
+// expected-note@-3 0+ {{candidate function not viable: call to __host__ function from __host__ __device__ function}}
+// expected-note@-4 1+ {{candidate function not viable: call to __host__ function from __global__ function}}
+
+__host__ void hostf() {
+  DeviceFnPtr fp_d = d;         // expected-error {{reference to __device__ function 'd' in __host__ function}}
+  DeviceReturnTy ret_d = d();   // expected-error {{no matching function for call to 'd'}}
+  DeviceFnPtr fp_cd = cd;       // expected-error {{reference to __device__ function 'cd' in __host__ function}}
+  DeviceReturnTy ret_cd = cd(); // expected-error {{no matching function for call to 'cd'}}
+
+  HostFnPtr fp_h = h;
+  HostReturnTy ret_h = h();
+  HostFnPtr fp_ch = ch;
+  HostReturnTy ret_ch = ch();
+
+  HostFnPtr fp_dh = dh;
+  HostReturnTy ret_dh = dh();
+  HostFnPtr fp_cdh = cdh;
+  HostReturnTy ret_cdh = cdh();
+
+  GlobalFnPtr fp_g = g;
   g(); // expected-error {{call to global function g not configured}}
-  g<<<0,0>>>();
+  g<<<0, 0>>>();
 }
 
+__device__ void devicef() {
+  DeviceFnPtr fp_d = d;
+  DeviceReturnTy ret_d = d();
+  DeviceFnPtr fp_cd = cd;
+  DeviceReturnTy ret_cd = cd();
 
-__device__ void devicef(void) {
-  fp_t dp = d;
-  fp_t cdp = cd;
-  fp_t hp = h;
-  fp_t chp = ch;
-#if !defined(NOCHECKS)
-  // expected-error@-3 {{reference to __host__ function 'h' in __device__ function}}
-  // expected-note@66 {{'h' declared here}}
-  // expected-error@-4 {{reference to __host__ function 'ch' in __device__ function}}
-  // expected-note@69 {{'ch' declared here}}
-#endif
-  fp_t dhp = dh;
-  fp_t cdhp = cdh;
-  gp_t gp = g; // expected-error {{reference to __global__ function 'g' in __device__ function}}
-               // expected-note@67 {{'g' declared here}}
+  HostFnPtr fp_h = h;         // expected-error {{reference to __host__ function 'h' in __device__ function}}
+  HostReturnTy ret_h = h();   // expected-error {{no matching function for call to 'h'}}
+  HostFnPtr fp_ch = ch;       // expected-error {{reference to __host__ function 'ch' in __device__ function}}
+  HostReturnTy ret_ch = ch(); // expected-error {{no matching function for call to 'ch'}}
 
-  d();
-  cd();
-  h();
-  ch();
-#if !defined(NOCHECKS)
-  // expected-error@-3 {{no matching function for call to 'h'}}
-  // expected-note@66 {{candidate function not viable: call to __host__ function from __device__ function}}
-  // expected-error@-4 {{no matching function for call to 'ch'}}
-  // expected-note@69 {{candidate function not viable: call to __host__ function from __device__ function}}
-#endif
-  dh();
-  cdh();
+  DeviceFnPtr fp_dh = dh;
+  DeviceReturnTy ret_dh = dh();
+  DeviceFnPtr fp_cdh = cdh;
+  DeviceReturnTy ret_cdh = cdh();
+
+  GlobalFnPtr fp_g = g; // expected-error {{reference to __global__ function 'g' in __device__ function}}
   g(); // expected-error {{no matching function for call to 'g'}}
-  // expected-note@67 {{candidate function not viable: call to __global__ function from __device__ function}}
   g<<<0,0>>>(); // expected-error {{reference to __global__ function 'g' in __device__ function}}
-  // expected-note@67 {{'g' declared here}}
 }
 
-__global__ void globalf(void) {
-  fp_t dp = d;
-  fp_t cdp = cd;
-  fp_t hp = h;
-  fp_t chp = ch;
-#if !defined(NOCHECKS)
-  // expected-error@-3 {{reference to __host__ function 'h' in __global__ function}}
-  // expected-note@66 {{'h' declared here}}
-  // expected-error@-4 {{reference to __host__ function 'ch' in __global__ function}}
-  // expected-note@69 {{'ch' declared here}}
-#endif
-  fp_t dhp = dh;
-  fp_t cdhp = cdh;
-  gp_t gp = g; // expected-error {{reference to __global__ function 'g' in __global__ function}}
-               // expected-note@67 {{'g' declared here}}
+__global__ void globalf() {
+  DeviceFnPtr fp_d = d;
+  DeviceReturnTy ret_d = d();
+  DeviceFnPtr fp_cd = cd;
+  DeviceReturnTy ret_cd = cd();
 
-  d();
-  cd();
-  h();
-  ch();
-#if !defined(NOCHECKS)
-  // expected-error@-3 {{no matching function for call to 'h'}}
-  // expected-note@66 {{candidate function not viable: call to __host__ function from __global__ function}}
-  // expected-error@-4 {{no matching function for call to 'ch'}}
-  // expected-note@69 {{candidate function not viable: call to __host__ function from __global__ function}}
-#endif
-  dh();
-  cdh();
+  HostFnPtr fp_h = h;         // expected-error {{reference to __host__ function 'h' in __global__ function}}
+  HostReturnTy ret_h = h();   // expected-error {{no matching function for call to 'h'}}
+  HostFnPtr fp_ch = ch;       // expected-error {{reference to __host__ function 'ch' in __global__ function}}
+  HostReturnTy ret_ch = ch(); // expected-error {{no matching function for call to 'ch'}}
+
+  DeviceFnPtr fp_dh = dh;
+  DeviceReturnTy ret_dh = dh();
+  DeviceFnPtr fp_cdh = cdh;
+  DeviceReturnTy ret_cdh = cdh();
+
+  GlobalFnPtr fp_g = g; // expected-error {{reference to __global__ function 'g' in __global__ function}}
   g(); // expected-error {{no matching function for call to 'g'}}
-  // expected-note@67 {{candidate function not viable: call to __global__ function from __global__ function}}
   g<<<0,0>>>(); // expected-error {{reference to __global__ function 'g' in __global__ function}}
-  // expected-note@67 {{'g' declared here}}
 }
 
-__host__ __device__ void hostdevicef(void) {
-  fp_t dp = d;
-  fp_t cdp = cd;
-  fp_t hp = h;
-  fp_t chp = ch;
-#if !defined(NOCHECKS)
-#if !defined(__CUDA_ARCH__)
-  // expected-error@-6 {{reference to __device__ function 'd' in __host__ __device__ function}}
-  // expected-note@65 {{'d' declared here}}
-  // expected-error@-7 {{reference to __device__ function 'cd' in __host__ __device__ function}}
-  // expected-note@68 {{'cd' declared here}}
-#else
-  // expected-error@-9 {{reference to __host__ function 'h' in __host__ __device__ function}}
-  // expected-note@66 {{'h' declared here}}
-  // expected-error@-10 {{reference to __host__ function 'ch' in __host__ __device__ function}}
-  // expected-note@69 {{'ch' declared here}}
-#endif
-#endif
-  fp_t dhp = dh;
-  fp_t cdhp = cdh;
-  gp_t gp = g;
+__host__ __device__ void hostdevicef() {
+  DeviceFnPtr fp_d = d;
+  DeviceReturnTy ret_d = d();
+  DeviceFnPtr fp_cd = cd;
+  DeviceReturnTy ret_cd = cd();
+
+  HostFnPtr fp_h = h;
+  HostReturnTy ret_h = h();
+  HostFnPtr fp_ch = ch;
+  HostReturnTy ret_ch = ch();
+
+  CurrentFnPtr fp_dh = dh;
+  CurrentReturnTy ret_dh = dh();
+  CurrentFnPtr fp_cdh = cdh;
+  CurrentReturnTy ret_cdh = cdh();
+
+  GlobalFnPtr fp_g = g;
 #if defined(__CUDA_ARCH__)
   // expected-error@-2 {{reference to __global__ function 'g' in __host__ __device__ function}}
-  // expected-note@67 {{'g' declared here}}
 #endif
-
-  d();
-  cd();
-  h();
-  ch();
-#if !defined(NOCHECKS)
-#if !defined(__CUDA_ARCH__)
-  // expected-error@-6 {{no matching function for call to 'd'}}
-  // expected-note@65 {{candidate function not viable: call to __device__ function from __host__ __device__ function}}
-  // expected-error@-7 {{no matching function for call to 'cd'}}
-  // expected-note@68 {{candidate function not viable: call to __device__ function from __host__ __device__ function}}
-#else
-  // expected-error@-9 {{no matching function for call to 'h'}}
-  // expected-note@66 {{candidate function not viable: call to __host__ function from __host__ __device__ function}}
-  // expected-error@-10 {{no matching function for call to 'ch'}}
-  // expected-note@69 {{candidate function not viable: call to __host__ function from __host__ __device__ function}}
-#endif
-#endif
-
-  dh();
-  cdh();
   g();
   g<<<0,0>>>();
 #if !defined(__CUDA_ARCH__)
   // expected-error@-3 {{call to global function g not configured}}
 #else
   // expected-error@-5 {{no matching function for call to 'g'}}
-  // expected-note@67 {{candidate function not viable: call to __global__ function from __host__ __device__ function}}
-  // expected-error@-6 {{reference to __global__ function 'g' in __host__ __device__ function}}
-  // expected-note@67 {{'g' declared here}}
+  // expected-error@-5 {{reference to __global__ function 'g' in __host__ __device__ function}}
 #endif  // __CUDA_ARCH__
 }
 
 // Test for address of overloaded function resolution in the global context.
-fp_t hp = h;
-fp_t chp = ch;
-fp_t dhp = dh;
-fp_t cdhp = cdh;
-gp_t gp = g;
+HostFnPtr fp_h = h;
+HostFnPtr fp_ch = ch;
+CurrentFnPtr fp_dh = dh;
+CurrentFnPtr fp_cdh = cdh;
+GlobalFnPtr fp_g = g;
 
 
 // Test overloading of destructors
@@ -315,3 +284,98 @@ struct m_hdd {
   __host__ __device__ void operator delete(void *ptr) {} // expected-note {{previous declaration is here}}
   __device__ void operator delete(void *ptr) {} // expected-error {{class member cannot be redeclared}}
 };
+
+// __global__ functions can't be overloaded based on attribute
+// difference.
+struct G {
+  friend void friend_of_g(G &arg);
+private:
+  int x;
+};
+__global__ void friend_of_g(G &arg) { int x = arg.x; } // expected-note {{previous definition is here}}
+void friend_of_g(G &arg) { int x = arg.x; } // expected-error {{redefinition of 'friend_of_g'}}
+
+// HD functions are sometimes allowed to call H or D functions -- this
+// is an artifact of the source-to-source splitting performed by nvcc
+// that we need to mimic. During device mode compilation in nvcc, host
+// functions aren't present at all, so don't participate in
+// overloading. But in clang, H and D functions are present in both
+// compilation modes. Clang normally uses the target attribute as a
+// tiebreaker between overloads with otherwise identical priority, but
+// in order to match nvcc's behavior, we sometimes need to wholly
+// discard overloads that would not be present during compilation
+// under nvcc.
+
+template <typename T> TemplateReturnTy template_vs_function(T arg) {
+  return TemplateReturnTy();
+}
+__device__ DeviceReturnTy template_vs_function(float arg) {
+  return DeviceReturnTy();
+}
+
+// Here we expect to call the templated function during host compilation, even
+// if -fcuda-disable-target-call-checks is passed, and even though C++ overload
+// rules prefer the non-templated function.
+__host__ __device__ void test_host_device_calls_template(void) {
+#ifdef __CUDA_ARCH__
+  typedef DeviceReturnTy ExpectedReturnTy;
+#else
+  typedef TemplateReturnTy ExpectedReturnTy;
+#endif
+
+  ExpectedReturnTy ret1 = template_vs_function(1.0f);
+  ExpectedReturnTy ret2 = template_vs_function(2.0);
+}
+
+// Calls from __host__ and __device__ functions should always call the
+// overloaded function that matches their mode.
+__host__ void test_host_calls_template_fn() {
+  TemplateReturnTy ret1 = template_vs_function(1.0f);
+  TemplateReturnTy ret2 = template_vs_function(2.0);
+}
+
+__device__ void test_device_calls_template_fn() {
+  DeviceReturnTy ret1 = template_vs_function(1.0f);
+  DeviceReturnTy ret2 = template_vs_function(2.0);
+}
+
+// If we have a mix of HD and H-only or D-only candidates in the overload set,
+// normal C++ overload resolution rules apply first.
+template <typename T> TemplateReturnTy template_vs_hd_function(T arg) {
+  return TemplateReturnTy();
+}
+__host__ __device__ HostDeviceReturnTy template_vs_hd_function(float arg) {
+  return HostDeviceReturnTy();
+}
+
+__host__ __device__ void test_host_device_calls_hd_template() {
+  HostDeviceReturnTy ret1 = template_vs_hd_function(1.0f);
+  TemplateReturnTy ret2 = template_vs_hd_function(1);
+}
+
+__host__ void test_host_calls_hd_template() {
+  HostDeviceReturnTy ret1 = template_vs_hd_function(1.0f);
+  TemplateReturnTy ret2 = template_vs_hd_function(1);
+}
+
+__device__ void test_device_calls_hd_template() {
+  HostDeviceReturnTy ret1 = template_vs_hd_function(1.0f);
+  // Host-only function template is not callable with strict call checks,
+  // so for device side HD function will be the only choice.
+  HostDeviceReturnTy ret2 = template_vs_hd_function(1);
+}
+
+// Check that overloads still work the same way on both host and
+// device side when the overload set contains only functions from one
+// side of compilation.
+__device__ DeviceReturnTy device_only_function(int arg) { return DeviceReturnTy(); }
+__device__ DeviceReturnTy2 device_only_function(float arg) { return DeviceReturnTy2(); }
+__host__ HostReturnTy host_only_function(int arg) { return HostReturnTy(); }
+__host__ HostReturnTy2 host_only_function(float arg) { return HostReturnTy2(); }
+
+__host__ __device__ void test_host_device_single_side_overloading() {
+  DeviceReturnTy ret1 = device_only_function(1);
+  DeviceReturnTy2 ret2 = device_only_function(1.0f);
+  HostReturnTy ret3 = host_only_function(1);
+  HostReturnTy2 ret4 = host_only_function(1.0f);
+}

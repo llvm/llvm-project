@@ -31,9 +31,10 @@ entry:
   %cmp = icmp ult i32 %len, 4
   br i1 %cmp, label %bb, label %b1
 bb:
-  %cond = select i1 %cmp, i32 %len, i32 8
-  %cmp11 = icmp eq i32 %cond, 8
-  br i1 %cmp11, label %b0, label %b1
+  %cmp2 = icmp ult i32 %0, 2
+  %cond = select i1 %cmp2, i32 %len, i32 8
+  %cmp3 = icmp eq i32 %cond, 8
+  br i1 %cmp3, label %b0, label %b1
 
 b0:
   call void @foo(i32 %len)

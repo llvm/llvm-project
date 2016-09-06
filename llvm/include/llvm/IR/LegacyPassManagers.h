@@ -14,13 +14,11 @@
 #ifndef LLVM_IR_LEGACYPASSMANAGERS_H
 #define LLVM_IR_LEGACYPASSMANAGERS_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Pass.h"
-#include <map>
 #include <vector>
 
 //===----------------------------------------------------------------------===//
@@ -93,12 +91,13 @@
 #include "llvm/Support/PrettyStackTrace.h"
 
 namespace llvm {
-  class Module;
-  class Pass;
-  class StringRef;
-  class Value;
-  class Timer;
-  class PMDataManager;
+template <typename T> class ArrayRef;
+class Module;
+class Pass;
+class StringRef;
+class Value;
+class Timer;
+class PMDataManager;
 
 // enums for debugging strings
 enum PassDebuggingString {

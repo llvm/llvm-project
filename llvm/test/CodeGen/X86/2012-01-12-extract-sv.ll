@@ -6,11 +6,10 @@ define void @endless_loop() {
 ; CHECK-NEXT:    vmovaps (%eax), %ymm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[0,1,0,1]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1,2,3,4,5,6],ymm1[7]
 ; CHECK-NEXT:    vxorps %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1,2,3,4,5,6],ymm1[7]
 ; CHECK-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    vmovaps %ymm0, (%eax)
 ; CHECK-NEXT:    vmovaps %ymm1, (%eax)

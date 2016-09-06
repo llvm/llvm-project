@@ -136,17 +136,6 @@ void PPCInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
     return;
   }
   
-  // For fast-isel, a COPY_TO_REGCLASS may survive this long.  This is
-  // used when converting a 32-bit float to a 64-bit float as part of
-  // conversion to an integer (see PPCFastISel.cpp:SelectFPToI()),
-  // as otherwise we have problems with incorrect register classes
-  // in machine instruction verification.  For now, just avoid trying
-  // to print it as such an instruction has no effect (a 32-bit float
-  // in a register is already in 64-bit form, just with lower
-  // precision).  FIXME: Is there a better solution?
-  if (MI->getOpcode() == TargetOpcode::COPY_TO_REGCLASS)
-    return;
-
   if (!printAliasInstr(MI, O))
     printInstruction(MI, O);
   printAnnotation(O, Annot);
@@ -296,6 +285,20 @@ void PPCInstPrinter::printU6ImmOperand(const MCInst *MI, unsigned OpNo,
                                        raw_ostream &O) {
   unsigned int Value = MI->getOperand(OpNo).getImm();
   assert(Value <= 63 && "Invalid u6imm argument!");
+  O << (unsigned int)Value;
+}
+
+void PPCInstPrinter::printU7ImmOperand(const MCInst *MI, unsigned OpNo,
+                                       raw_ostream &O) {
+  unsigned int Value = MI->getOperand(OpNo).getImm();
+  assert(Value <= 127 && "Invalid u7imm argument!");
+  O << (unsigned int)Value;
+}
+
+void PPCInstPrinter::printU8ImmOperand(const MCInst *MI, unsigned OpNo,
+                                       raw_ostream &O) {
+  unsigned int Value = MI->getOperand(OpNo).getImm();
+  assert(Value <= 255 && "Invalid u8imm argument!");
   O << (unsigned int)Value;
 }
 

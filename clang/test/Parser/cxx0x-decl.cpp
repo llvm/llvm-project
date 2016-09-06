@@ -17,6 +17,8 @@ auto g() -> enum E {
   return E();
 }
 
+int decltype(f())::*ptr_mem_decltype;
+
 class ExtraSemiAfterMemFn {
   // Due to a peculiarity in the C++11 grammar, a deleted or defaulted function
   // is permitted to be followed by either one or two semicolons.

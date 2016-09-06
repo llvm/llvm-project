@@ -19,22 +19,21 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
 #include <cstdlib>
+#include <deque>
 #include <list>
 #include <map>
-#include <set>
 #include <string>
 #include <vector>
-#include <deque>
 
 namespace llvm {
   class CodeGenRegBank;
+  template <typename T, typename Vector, typename Set> class SetVector;
 
   /// Used to encode a step in a register lane mask transformation.
   /// Mask the bits specified in Mask, then rotate them Rol bits to the left
@@ -311,6 +310,7 @@ namespace llvm {
     unsigned LaneMask;
     /// True if there are at least 2 subregisters which do not interfere.
     bool HasDisjunctSubRegs;
+    bool CoveredBySubRegs;
 
     // Return the Record that defined this class, or NULL if the class was
     // created by TableGen.

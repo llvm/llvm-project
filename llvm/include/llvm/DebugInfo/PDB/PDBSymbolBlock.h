@@ -11,11 +11,12 @@
 
 #include "PDBSymbol.h"
 #include "PDBTypes.h"
-#include <string>
 
 namespace llvm {
 
 class raw_ostream;
+
+namespace pdb {
 
 class PDBSymbolBlock : public PDBSymbol {
 public:
@@ -33,9 +34,9 @@ public:
   FORWARD_SYMBOL_METHOD(getLocationType)
   FORWARD_SYMBOL_METHOD(getName)
   FORWARD_SYMBOL_METHOD(getRelativeVirtualAddress)
-  FORWARD_SYMBOL_METHOD(getSymIndexId)
   FORWARD_SYMBOL_METHOD(getVirtualAddress)
 };
+}
 }
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLBLOCK_H

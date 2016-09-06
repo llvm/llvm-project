@@ -54,9 +54,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #endif
 
-#include <algorithm>
-#include <vector>
-
 using namespace llvm;
 
 #define DEBUG_TYPE "ctrloops"
@@ -169,6 +166,9 @@ FunctionPass *llvm::createPPCCTRLoopsVerify() {
 #endif // NDEBUG
 
 bool PPCCTRLoops::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
@@ -245,7 +245,7 @@ bool PPCCTRLoops::mightUseCTR(const Triple &TT, BasicBlock *BB) {
       if (Function *F = CI->getCalledFunction()) {
         // Most intrinsics don't become function calls, but some might.
         // sin, cos, exp and log are always calls.
-        unsigned Opcode;
+        unsigned Opcode = 0;
         if (F->getIntrinsicID() != Intrinsic::not_intrinsic) {
           switch (F->getIntrinsicID()) {
           default: continue;
@@ -305,6 +305,8 @@ bool PPCCTRLoops::mightUseCTR(const Triple &TT, BasicBlock *BB) {
           case Intrinsic::rint:      Opcode = ISD::FRINT;      break;
           case Intrinsic::nearbyint: Opcode = ISD::FNEARBYINT; break;
           case Intrinsic::round:     Opcode = ISD::FROUND;     break;
+          case Intrinsic::minnum:    Opcode = ISD::FMINNUM;    break;
+          case Intrinsic::maxnum:    Opcode = ISD::FMAXNUM;    break;
           }
         }
 
@@ -364,8 +366,18 @@ bool PPCCTRLoops::mightUseCTR(const Triple &TT, BasicBlock *BB) {
           case LibFunc::truncf:
           case LibFunc::truncl:
             Opcode = ISD::FTRUNC; break;
+          case LibFunc::fmin:
+          case LibFunc::fminf:
+          case LibFunc::fminl:
+            Opcode = ISD::FMINNUM; break;
+          case LibFunc::fmax:
+          case LibFunc::fmaxf:
+          case LibFunc::fmaxl:
+            Opcode = ISD::FMAXNUM; break;
           }
+        }
 
+        if (Opcode) {
           auto &DL = CI->getModule()->getDataLayout();
           MVT VTy = TLI->getSimpleValueType(DL, CI->getArgOperand(0)->getType(),
                                             true);
@@ -422,6 +434,25 @@ bool PPCCTRLoops::mightUseCTR(const Triple &TT, BasicBlock *BB) {
       if (SI->getNumCases() + 1 >= (unsigned)TLI->getMinimumJumpTableEntries())
         return true;
     }
+
+    if (TM->getSubtargetImpl(*BB->getParent())->getTargetLowering()->useSoftFloat()) {
+      switch(J->getOpcode()) {
+      case Instruction::FAdd:
+      case Instruction::FSub:
+      case Instruction::FMul:
+      case Instruction::FDiv:
+      case Instruction::FRem:
+      case Instruction::FPTrunc:
+      case Instruction::FPExt:
+      case Instruction::FPToUI:
+      case Instruction::FPToSI:
+      case Instruction::UIToFP:
+      case Instruction::SIToFP:
+      case Instruction::FCmp:
+        return true;
+      }
+    }
+
     for (Value *Operand : J->operands())
       if (memAddrUsesCTR(TM, Operand))
         return true;
@@ -587,9 +618,9 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
 }
 
 #ifndef NDEBUG
-static bool clobbersCTR(const MachineInstr *MI) {
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+static bool clobbersCTR(const MachineInstr &MI) {
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     if (MO.isReg()) {
       if (MO.isDef() && (MO.getReg() == PPC::CTR || MO.getReg() == PPC::CTR8))
         return true;
@@ -628,7 +659,7 @@ check_block:
       break;
     }
 
-    if (I != BI && clobbersCTR(I)) {
+    if (I != BI && clobbersCTR(*I)) {
       DEBUG(dbgs() << "BB#" << MBB->getNumber() << " (" <<
                       MBB->getFullName() << ") instruction " << *I <<
                       " clobbers CTR, invalidating " << "BB#" <<

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
 
 define i8* @rt0(i32 %x) nounwind readnone {
 entry:

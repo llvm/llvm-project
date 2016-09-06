@@ -2,9 +2,8 @@ add_llvm_library(LLVMOrcJIT
   ExecutionUtils.cpp
   IndirectionUtils.cpp
   NullResolver.cpp
-  OrcArchitectureSupport.cpp
+  OrcABISupport.cpp
   OrcCBindings.cpp
-  OrcCBindingsStack.cpp
   OrcError.cpp
   OrcMCJITReplacement.cpp
   OrcRemoteTargetRPCAPI.cpp

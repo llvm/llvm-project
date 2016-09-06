@@ -280,9 +280,8 @@ public:
   virtual llvm::Constant *BuildByrefLayout(CodeGen::CodeGenModule &CGM,
                                            QualType T) = 0;
 
-  virtual llvm::Constant *GetClassGlobal(const std::string &Name,
-                                         bool ForDefinition,
-                                         bool Weak) = 0;
+  virtual llvm::Constant *GetClassGlobal(StringRef Name, bool ForDefinition,
+                                         bool Weak = false, bool DLLImport = false) = 0;
 
   struct MessageSendInfo {
     const CGFunctionInfo &CallInfo;

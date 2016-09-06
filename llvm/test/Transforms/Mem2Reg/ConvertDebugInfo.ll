@@ -36,9 +36,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !llvm.module.flags = !{!14}
 
 !0 = !DILocalVariable(name: "i", line: 2, arg: 1, scope: !1, file: !2, type: !7)
-!1 = distinct !DISubprogram(name: "testfunc", linkageName: "testfunc", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scopeLine: 2, file: !12, scope: !2, type: !4)
+!1 = distinct !DISubprogram(name: "testfunc", linkageName: "testfunc", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, scopeLine: 2, file: !12, scope: !2, type: !4)
 !2 = !DIFile(filename: "testfunc.c", directory: "/tmp")
-!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 0, file: !12, enums: !13, retainedTypes: !13, subprograms: !{!1})
+!3 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !12, enums: !13, retainedTypes: !13)
 !4 = !DISubroutineType(types: !5)
 !5 = !{!6, !7, !6}
 !6 = !DIBasicType(tag: DW_TAG_base_type, name: "double", size: 64, align: 64, encoding: DW_ATE_float)

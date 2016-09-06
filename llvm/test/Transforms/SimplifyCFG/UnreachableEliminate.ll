@@ -96,3 +96,34 @@ bb2:
   store i8 2, i8* %ptr.2, align 8
   ret void
 }
+
+define i32 @test7(i1 %X) {
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  call void undef()
+  br label %else
+
+else:
+  %phi = phi i32 [ 0, %entry ], [ 1, %if ]
+  ret i32 %phi
+}
+; CHECK-LABEL: define i32 @test7(
+; CHECK-NOT: call
+; CHECK: ret i32 0
+
+define void @test8(i1 %X, void ()* %Y) {
+entry:
+  br i1 %X, label %if, label %else
+
+if:
+  br label %else
+
+else:
+  %phi = phi void ()* [ %Y, %entry ], [ null, %if ]
+  call void %phi()
+  ret void
+}
+; CHECK-LABEL: define void @test8(
+; CHECK: call void %Y(

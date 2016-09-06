@@ -29,16 +29,17 @@ type = Library
 name = HexagonCodeGen
 parent = Hexagon
 required_libraries =
- Analysis
- AsmPrinter
- CodeGen
- Core
- HexagonAsmParser
- HexagonDesc
- HexagonInfo
- MC
- SelectionDAG
- Support
- Target
- TransformUtils
+  Analysis
+  AsmPrinter
+  CodeGen
+  Core
+  HexagonAsmParser
+  HexagonDesc
+  HexagonInfo
+  MC
+  Scalar
+  SelectionDAG
+  Support
+  Target
+  TransformUtils
 add_to_library_groups = Hexagon

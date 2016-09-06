@@ -19,6 +19,6 @@ protected:
 
 Test t;
 
-// CHECK: !DIDerivedType(tag: DW_TAG_pointer_type
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "data"
+// CHECK: !DIDerivedType(tag: DW_TAG_pointer_type
 // CHECK-NOT: !DICompositeType(tag: DW_TAG_structure_type, name: "data"

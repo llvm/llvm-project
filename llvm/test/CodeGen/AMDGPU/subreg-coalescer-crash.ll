@@ -44,7 +44,7 @@ for.inc.1:                                        ; preds = %do.body.1562.prehea
 
 ; SI-LABEL: {{^}}foo:
 ; SI: s_endpgm
-define void @foo() #0 {
+define amdgpu_ps void @foo() #0 {
 bb:
   br i1 undef, label %bb2, label %bb1
 
@@ -67,7 +67,7 @@ bb7:                                              ; preds = %bb6
   br label %bb4
 
 bb9:                                              ; preds = %bb2
-  %tmp10 = call <4 x float> @llvm.SI.sample.v2i32(<2 x i32> undef, <32 x i8> undef, <16 x i8> undef, i32 2)
+  %tmp10 = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> undef, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   %tmp11 = extractelement <4 x float> %tmp10, i32 1
   %tmp12 = extractelement <4 x float> %tmp10, i32 3
   br label %bb14
@@ -98,12 +98,12 @@ bb27:                                             ; preds = %bb24
 }
 
 ; Function Attrs: nounwind readnone
-declare <4 x float> @llvm.SI.sample.v2i32(<2 x i32>, <32 x i8>, <16 x i8>, i32) #1
+declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
 
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.SI.packf16(float, float) #1
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
-attributes #0 = { "ShaderType"="0" "enable-no-nans-fp-math"="true" "unsafe-fp-math"="true" }
+attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

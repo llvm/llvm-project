@@ -230,6 +230,12 @@ def UIMM32 : SDNodeXForm<imm, [{
                                    MVT::i64);
 }]>;
 
+// Truncate an immediate to a 48-bit unsigned quantity.
+def UIMM48 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(uint64_t(N->getZExtValue()) & 0xffffffffffff,
+                                   SDLoc(N), MVT::i64);
+}]>;
+
 // Negate and then truncate an immediate to a 32-bit unsigned quantity.
 def NEGIMM32 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(uint32_t(-N->getZExtValue()), SDLoc(N),
@@ -252,6 +258,7 @@ def S16Imm : ImmediateAsmOperand<"S16Imm">;
 def U16Imm : ImmediateAsmOperand<"U16Imm">;
 def S32Imm : ImmediateAsmOperand<"S32Imm">;
 def U32Imm : ImmediateAsmOperand<"U32Imm">;
+def U48Imm : ImmediateAsmOperand<"U48Imm">;
 
 //===----------------------------------------------------------------------===//
 // i32 immediates
@@ -425,6 +432,10 @@ def imm64zx32n : Immediate<i64, [{
   return isUInt<32>(-N->getSExtValue());
 }], NEGIMM32, "U32Imm">;
 
+def imm64zx48 : Immediate<i64, [{
+  return isUInt<64>(N->getZExtValue());
+}], UIMM48, "U48Imm">;
+
 def imm64 : ImmLeaf<i64, [{}]>, Operand<i64>;
 
 //===----------------------------------------------------------------------===//
@@ -451,11 +462,11 @@ def PCRelTLS32 : PCRelTLSAsmOperand<"32">;
 // and multiplied by 2.
 def brtarget16 : PCRelOperand<OtherVT, PCRel16> {
   let EncoderMethod = "getPC16DBLEncoding";
-  let DecoderMethod = "decodePC16DBLOperand";
+  let DecoderMethod = "decodePC16DBLBranchOperand";
 }
 def brtarget32 : PCRelOperand<OtherVT, PCRel32> {
   let EncoderMethod = "getPC32DBLEncoding";
-  let DecoderMethod = "decodePC32DBLOperand";
+  let DecoderMethod = "decodePC32DBLBranchOperand";
 }
 
 // Variants of brtarget16/32 with an optional additional TLS symbol.
@@ -464,12 +475,12 @@ def tlssym : Operand<i64> { }
 def brtarget16tls : PCRelTLSOperand<OtherVT, PCRelTLS16> {
   let MIOperandInfo = (ops brtarget16:$func, tlssym:$sym);
   let EncoderMethod = "getPC16DBLTLSEncoding";
-  let DecoderMethod = "decodePC16DBLOperand";
+  let DecoderMethod = "decodePC16DBLBranchOperand";
 }
 def brtarget32tls : PCRelTLSOperand<OtherVT, PCRelTLS32> {
   let MIOperandInfo = (ops brtarget32:$func, tlssym:$sym);
   let EncoderMethod = "getPC32DBLTLSEncoding";
-  let DecoderMethod = "decodePC32DBLOperand";
+  let DecoderMethod = "decodePC32DBLBranchOperand";
 }
 
 // A PC-relative offset of a global value.  The offset is sign-extended

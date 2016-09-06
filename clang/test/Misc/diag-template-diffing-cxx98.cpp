@@ -45,5 +45,5 @@ namespace qualifiers {
     foo(bar, V);
   }
 
-  // CHECK: candidate template ignored: deduced conflicting types for parameter 'T' ('const vector<[...]>' vs. 'volatile vector<[...]>')
+  // CHECK: candidate template ignored: deduced conflicting types for parameter 'T' ('const vector<...>' vs. 'volatile vector<...>')
 }

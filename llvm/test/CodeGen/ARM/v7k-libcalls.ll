@@ -145,6 +145,15 @@ define arm_aapcs_vfpcc double @t14(double %x) {
   ret double %__exp10
 }
 
+define i16 @t15(double %x) {
+; CHECK-LABEL: t15:
+; CHECK-NOT: vmov
+; CHECK: bl ___truncdfhf2
+  %tmp0 = fptrunc double %x to half
+  %tmp1 = bitcast half %tmp0 to i16
+  ret i16 %tmp1
+}
+
 declare arm_aapcs_vfpcc double @x(double, double, double, double, double, double, double, float, double)
 declare arm_aapcs_vfpcc double @cos(double) #0
 declare arm_aapcs_vfpcc double @sin(double) #0

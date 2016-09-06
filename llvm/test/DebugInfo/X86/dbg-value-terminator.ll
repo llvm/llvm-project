@@ -114,8 +114,8 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!22}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "Apple clang version", isOptimized: true, emissionKind: 1, file: !20, enums: !21, retainedTypes: !21, subprograms: !18, imports:  null)
-!1 = distinct !DISubprogram(name: "foo", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, file: !20, scope: !2, type: !3, variables: !19)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "Apple clang version", isOptimized: true, emissionKind: FullDebug, file: !20, enums: !21, retainedTypes: !21, imports:  null)
+!1 = distinct !DISubprogram(name: "foo", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, file: !20, scope: !2, type: !3, variables: !19)
 !2 = !DIFile(filename: "a.c", directory: "/private/tmp")
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
@@ -127,7 +127,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !10 = !DILocalVariable(name: "a", line: 3, scope: !11, file: !2, type: !9)
 !11 = distinct !DILexicalBlock(line: 2, column: 25, file: !20, scope: !1)
 !12 = !DILocation(line: 2, column: 13, scope: !1)
-!18 = !{!1}
 !19 = !{!6, !7, !10}
 !20 = !DIFile(filename: "a.c", directory: "/private/tmp")
 !21 = !{}

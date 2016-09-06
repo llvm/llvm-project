@@ -10,6 +10,7 @@
 @i3 = internal thread_local global i32 15
 @i4 = hidden thread_local global i32 15
 @i5 = external hidden thread_local global i32
+@i6 = external protected thread_local global i32
 @s1 = thread_local global i16 15
 @b1 = thread_local global i8 0
 @b2 = thread_local(localexec) global i8 0
@@ -438,3 +439,17 @@ entry:
 	ret i8* @b2
 }
 
+
+define i32* @f16() {
+; X32_LINUX-LABEL: f16:
+; X32_LINUX:       movl %gs:0, %eax
+; X32_LINUX-NEXT:  leal i6@NTPOFF(%eax), %eax
+; X32_LINUX-NEXT:  ret
+
+; X64_LINUX-LABEL: f16:
+; X64_LINUX:       movq %fs:0, %rax
+; X64_LINUX-NEXT:  leaq i6@TPOFF(%rax), %rax
+; X64_LINUX-NEXT:  ret
+
+  ret i32* @i6
+}

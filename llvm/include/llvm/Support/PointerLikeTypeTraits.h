@@ -37,7 +37,8 @@ template <> struct ConstantLog2<1> : std::integral_constant<size_t, 0> {};
 }
 
 // Provide PointerLikeTypeTraits for non-cvr pointers.
-template <typename T> struct PointerLikeTypeTraits<T *> {
+template <typename T> class PointerLikeTypeTraits<T *> {
+public:
   static inline void *getAsVoidPointer(T *P) { return P; }
   static inline T *getFromVoidPointer(void *P) { return static_cast<T *>(P); }
 
@@ -46,7 +47,8 @@ template <typename T> struct PointerLikeTypeTraits<T *> {
   };
 };
 
-template <> struct PointerLikeTypeTraits<void *> {
+template <> class PointerLikeTypeTraits<void *> {
+public:
   static inline void *getAsVoidPointer(void *P) { return P; }
   static inline void *getFromVoidPointer(void *P) { return P; }
 

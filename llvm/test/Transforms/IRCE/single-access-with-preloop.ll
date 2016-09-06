@@ -1,4 +1,4 @@
-; RUN: opt -irce -S < %s | FileCheck %s
+; RUN: opt -verify-loop-info -irce -S < %s | FileCheck %s
 
 define void @single_access_with_preloop(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 %offset) {
  entry:
@@ -28,7 +28,8 @@ define void @single_access_with_preloop(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 
   ret void
 }
 
-; CHECK-LABEL: loop.preheader:
+; CHECK-LABEL: @single_access_with_preloop(
+; CHECK: loop.preheader:
 ; CHECK: [[not_safe_start:[^ ]+]] = add i32 %offset, -1
 ; CHECK: [[not_n:[^ ]+]] = sub i32 -1, %n
 ; CHECK: [[not_exit_preloop_at_cond_loclamp:[^ ]+]] = icmp sgt i32 [[not_safe_start]], [[not_n]]
@@ -47,23 +48,23 @@ define void @single_access_with_preloop(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 
 ; CHECK: [[exit_mainloop_at:[^ ]+]] = select i1 [[exit_mainloop_at_cmp]], i32 [[exit_mainloop_at_loclamp]], i32 0
 
 
-; CHECK-LABEL: in.bounds:
+; CHECK: in.bounds:
 ; CHECK: [[continue_mainloop_cond:[^ ]+]] = icmp slt i32 %idx.next, [[exit_mainloop_at]]
 ; CHECK: br i1 [[continue_mainloop_cond]], label %loop, label %main.exit.selector
 
-; CHECK-LABEL: main.exit.selector:
-; CHECK: [[mainloop_its_left:[^ ]+]] = icmp slt i32 %idx.next, %n
+; CHECK: main.exit.selector:
+; CHECK: [[mainloop_its_left:[^ ]+]] = icmp slt i32 %idx.next.lcssa, %n
 ; CHECK: br i1 [[mainloop_its_left]], label %main.pseudo.exit, label %exit.loopexit
 
-; CHECK-LABEL: in.bounds.preloop:
+; CHECK: in.bounds.preloop:
 ; CHECK: [[continue_preloop_cond:[^ ]+]] = icmp slt i32 %idx.next.preloop, [[exit_preloop_at]]
 ; CHECK: br i1 [[continue_preloop_cond]], label %loop.preloop, label %preloop.exit.selector
 
-; CHECK-LABEL: preloop.exit.selector:
-; CHECK: [[preloop_its_left:[^ ]+]] = icmp slt i32 %idx.next.preloop, %n
+; CHECK: preloop.exit.selector:
+; CHECK: [[preloop_its_left:[^ ]+]] = icmp slt i32 %idx.next.preloop.lcssa, %n
 ; CHECK: br i1 [[preloop_its_left]], label %preloop.pseudo.exit, label %exit.loopexit
 
-; CHECK-LABEL: in.bounds.postloop:
+; CHECK: in.bounds.postloop:
 ; CHECK: %next.postloop = icmp slt i32 %idx.next.postloop, %n
 ; CHECK: br i1 %next.postloop, label %loop.postloop, label %exit.loopexit
 

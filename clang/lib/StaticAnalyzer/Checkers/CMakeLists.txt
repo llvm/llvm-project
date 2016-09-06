@@ -1,8 +1,3 @@
-clang_tablegen(Checkers.inc -gen-clang-sa-checkers
-  -I ${CMAKE_CURRENT_SOURCE_DIR}/../../../include
-  SOURCE Checkers.td
-  TARGET ClangSACheckers)
-
 set(LLVM_LINK_COMPONENTS
   Support
   )
@@ -27,6 +22,8 @@ add_clang_library(clangStaticAnalyzerCheckers
   CheckerDocumentation.cpp
   ChrootChecker.cpp
   ClangCheckers.cpp
+  CloneChecker.cpp
+  CXXSelfAssignmentChecker.cpp
   DeadStoresChecker.cpp
   DebugCheckers.cpp
   DereferenceChecker.cpp
@@ -46,6 +43,9 @@ add_clang_library(clangStaticAnalyzerCheckers
   MallocChecker.cpp
   MallocOverflowSecurityChecker.cpp
   MallocSizeofChecker.cpp
+  MPI-Checker/MPIBugReporter.cpp
+  MPI-Checker/MPIChecker.cpp
+  MPI-Checker/MPIFunctionClassifier.cpp
   NSAutoreleasePoolChecker.cpp
   NSErrorChecker.cpp
   NoReturnFunctionChecker.cpp

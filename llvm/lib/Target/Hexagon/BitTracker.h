@@ -49,11 +49,14 @@ struct BitTracker {
   void put(RegisterRef RR, const RegisterCell &RC);
   void subst(RegisterRef OldRR, RegisterRef NewRR);
   bool reached(const MachineBasicBlock *B) const;
+  void visit(const MachineInstr &MI);
+
+  void print_cells(raw_ostream &OS) const;
 
 private:
-  void visitPHI(const MachineInstr *PI);
-  void visitNonBranch(const MachineInstr *MI);
-  void visitBranchesFrom(const MachineInstr *BI);
+  void visitPHI(const MachineInstr &PI);
+  void visitNonBranch(const MachineInstr &MI);
+  void visitBranchesFrom(const MachineInstr &BI);
   void visitUsesOf(unsigned Reg);
   void reset();
 
@@ -417,13 +420,13 @@ struct BitTracker::MachineEvaluator {
   // Evaluate a non-branching machine instruction, given the cell map with
   // the input values. Place the results in the Outputs map. Return "true"
   // if evaluation succeeded, "false" otherwise.
-  virtual bool evaluate(const MachineInstr *MI, const CellMapType &Inputs,
+  virtual bool evaluate(const MachineInstr &MI, const CellMapType &Inputs,
                         CellMapType &Outputs) const;
   // Evaluate a branch, given the cell map with the input values. Fill out
   // a list of all possible branch targets and indicate (through a flag)
   // whether the branch could fall-through. Return "true" if this information
   // has been successfully computed, "false" otherwise.
-  virtual bool evaluate(const MachineInstr *BI, const CellMapType &Inputs,
+  virtual bool evaluate(const MachineInstr &BI, const CellMapType &Inputs,
                         BranchTargetList &Targets, bool &FallsThru) const = 0;
 
   const TargetRegisterInfo &TRI;

@@ -9,13 +9,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "FuzzerInterface.h"
 #include "llvm-c/Disassembler.h"
 #include "llvm-c/Target.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#include "FuzzerInterface.h"
 
 using namespace llvm;
 
@@ -58,9 +57,10 @@ static cl::list<std::string>
 std::string FeaturesStr;
 
 static cl::list<std::string>
-    FuzzerArgv("fuzzer-args", cl::Positional,
+    FuzzerArgs("fuzzer-args", cl::Positional,
                cl::desc("Options to pass to the fuzzer"), cl::ZeroOrMore,
                cl::PositionalEatsArgs);
+static std::vector<char *> ModifiedArgv;
 
 int DisassembleOneInput(const uint8_t *Data, size_t Size) {
   char AssemblyText[AssemblyTextBufSize];
@@ -88,7 +88,17 @@ int DisassembleOneInput(const uint8_t *Data, size_t Size) {
   return 0;
 }
 
-int main(int argc, char **argv) {
+int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+  if (Action == AC_Assemble)
+    errs() << "error: -assemble is not implemented\n";
+  else if (Action == AC_Disassemble)
+    return DisassembleOneInput(Data, Size);
+
+  llvm_unreachable("Unknown action");
+  return 0;
+}
+
+int LLVMFuzzerInitialize(int *argc, char ***argv) {
   // The command line is unusual compared to other fuzzers due to the need to
   // specify the target. Options like -triple, -mcpu, and -mattr work like
   // their counterparts in llvm-mc, while -fuzzer-args collects options for the
@@ -112,11 +122,29 @@ int main(int argc, char **argv) {
   // individual instructions that test unique paths. Without this constraint,
   // there will be considerable redundancy in the corpus.
 
+  char **OriginalArgv = *argv;
+
   LLVMInitializeAllTargetInfos();
   LLVMInitializeAllTargetMCs();
   LLVMInitializeAllDisassemblers();
 
-  cl::ParseCommandLineOptions(argc, argv);
+  cl::ParseCommandLineOptions(*argc, OriginalArgv);
+
+  // Rebuild the argv without the arguments llvm-mc-fuzzer consumed so that
+  // the driver can parse its arguments.
+  //
+  // FuzzerArgs cannot provide the non-const pointer that OriginalArgv needs.
+  // Re-use the strings from OriginalArgv instead of copying FuzzerArg to a
+  // non-const buffer to avoid the need to clean up when the fuzzer terminates.
+  ModifiedArgv.push_back(OriginalArgv[0]);
+  for (const auto &FuzzerArg : FuzzerArgs) {
+    for (int i = 1; i < *argc; ++i) {
+      if (FuzzerArg == OriginalArgv[i])
+        ModifiedArgv.push_back(OriginalArgv[i]);
+    }
+  }
+  *argc = ModifiedArgv.size();
+  *argv = ModifiedArgv.data();
 
   // Package up features to be passed to target/subtarget
   // We have to pass it via a global since the callback doesn't
@@ -128,11 +156,5 @@ int main(int argc, char **argv) {
     FeaturesStr = Features.getString();
   }
 
-  if (Action == AC_Assemble)
-    errs() << "error: -assemble is not implemented\n";
-  else if (Action == AC_Disassemble)
-    return fuzzer::FuzzerDriver(argc, argv, DisassembleOneInput);
-
-  llvm_unreachable("Unknown action");
-  return 1;
+  return 0;
 }

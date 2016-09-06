@@ -26,6 +26,7 @@ namespace llvm {
 
 template <> struct GraphTraits<clang::Stmt*> {
   typedef clang::Stmt                       NodeType;
+  typedef clang::Stmt *                     NodeRef;
   typedef clang::Stmt::child_iterator       ChildIteratorType;
   typedef llvm::df_iterator<clang::Stmt*>   nodes_iterator;
 
@@ -53,6 +54,7 @@ template <> struct GraphTraits<clang::Stmt*> {
 
 template <> struct GraphTraits<const clang::Stmt*> {
   typedef const clang::Stmt                       NodeType;
+  typedef const clang::Stmt *                     NodeRef;
   typedef clang::Stmt::const_child_iterator       ChildIteratorType;
   typedef llvm::df_iterator<const clang::Stmt*>   nodes_iterator;
 

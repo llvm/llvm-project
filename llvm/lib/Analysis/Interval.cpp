@@ -42,17 +42,14 @@ void Interval::print(raw_ostream &OS) const {
        << "Interval Contents:\n";
 
   // Print out all of the basic blocks in the interval...
-  for (std::vector<BasicBlock*>::const_iterator I = Nodes.begin(),
-         E = Nodes.end(); I != E; ++I)
-    OS << **I << "\n";
+  for (const BasicBlock *Node : Nodes)
+    OS << *Node << "\n";
 
   OS << "Interval Predecessors:\n";
-  for (std::vector<BasicBlock*>::const_iterator I = Predecessors.begin(),
-         E = Predecessors.end(); I != E; ++I)
-    OS << **I << "\n";
+  for (const BasicBlock *Predecessor : Predecessors)
+    OS << *Predecessor << "\n";
 
   OS << "Interval Successors:\n";
-  for (std::vector<BasicBlock*>::const_iterator I = Successors.begin(),
-         E = Successors.end(); I != E; ++I)
-    OS << **I << "\n";
+  for (const BasicBlock *Successor : Successors)
+    OS << *Successor << "\n";
 }

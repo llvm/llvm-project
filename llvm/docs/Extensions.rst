@@ -43,7 +43,7 @@ The following additional relocation types are supported:
 corresponds to the COFF relocation types ``IMAGE_REL_I386_DIR32NB`` (32-bit) or
 ``IMAGE_REL_AMD64_ADDR32NB`` (64-bit).
 
-.. code-block:: gas
+.. code-block:: text
 
   .text
   fun:

@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_INLINECOST_H
 
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include <cassert>
 #include <climits>
 
@@ -23,19 +24,30 @@ class AssumptionCacheTracker;
 class CallSite;
 class DataLayout;
 class Function;
+class ProfileSummaryInfo;
 class TargetTransformInfo;
 
 namespace InlineConstants {
-  // Various magic constants used to adjust heuristics.
-  const int InstrCost = 5;
-  const int IndirectCallThreshold = 100;
-  const int CallPenalty = 25;
-  const int LastCallToStaticBonus = -15000;
-  const int ColdccPenalty = 2000;
-  const int NoreturnPenalty = 10000;
-  /// Do not inline functions which allocate this many bytes on the stack
-  /// when the caller is recursive.
-  const unsigned TotalAllocaSizeRecursiveCaller = 1024;
+// Various thresholds used by inline cost analysis.
+// Use when optsize (-Os) is specified.
+const int OptSizeThreshold = 75;
+
+// Use when minsize (-Oz) is specified.
+const int OptMinSizeThreshold = 25;
+
+// Use when -O3 is specified.
+const int OptAggressiveThreshold = 275;
+
+// Various magic constants used to adjust heuristics.
+const int InstrCost = 5;
+const int IndirectCallThreshold = 100;
+const int CallPenalty = 25;
+const int LastCallToStaticBonus = 15000;
+const int ColdccPenalty = 2000;
+const int NoreturnPenalty = 10000;
+/// Do not inline functions which allocate this many bytes on the stack
+/// when the caller is recursive.
+const unsigned TotalAllocaSizeRecursiveCaller = 1024;
 }
 
 /// \brief Represents the cost of inlining a function.
@@ -98,6 +110,52 @@ public:
   int getCostDelta() const { return Threshold - getCost(); }
 };
 
+/// Thresholds to tune inline cost analysis. The inline cost analysis decides
+/// the condition to apply a threshold and applies it. Otherwise,
+/// DefaultThreshold is used. If a threshold is Optional, it is applied only
+/// when it has a valid value. Typically, users of inline cost analysis
+/// obtain an InlineParams object through one of the \c getInlineParams methods
+/// and pass it to \c getInlineCost. Some specialized versions of inliner
+/// (such as the pre-inliner) might have custom logic to compute \c InlineParams
+/// object.
+
+struct InlineParams {
+  /// The default threshold to start with for a callee.
+  int DefaultThreshold;
+
+  /// Threshold to use for callees with inline hint.
+  Optional<int> HintThreshold;
+
+  /// Threshold to use for cold callees.
+  Optional<int> ColdThreshold;
+
+  /// Threshold to use when the caller is optimized for size.
+  Optional<int> OptSizeThreshold;
+
+  /// Threshold to use when the caller is optimized for minsize.
+  Optional<int> OptMinSizeThreshold;
+
+  /// Threshold to use when the callsite is considered hot.
+  Optional<int> HotCallSiteThreshold;
+};
+
+/// Generate the parameters to tune the inline cost analysis based only on the
+/// commandline options.
+InlineParams getInlineParams();
+
+/// Generate the parameters to tune the inline cost analysis based on command
+/// line options. If -inline-threshold option is not explicitly passed,
+/// \p Threshold is used as the default threshold.
+InlineParams getInlineParams(int Threshold);
+
+/// Generate the parameters to tune the inline cost analysis based on command
+/// line options. If -inline-threshold option is not explicitly passed,
+/// the default threshold is computed from \p OptLevel and \p SizeOptLevel.
+/// An \p OptLevel value above 3 is considered an aggressive optimization mode.
+/// \p SizeOptLevel of 1 corresponds to the the -Os flag and 2 corresponds to
+/// the -Oz flag.
+InlineParams getInlineParams(unsigned OptLevel, unsigned SizeOptLevel);
+
 /// \brief Get an InlineCost object representing the cost of inlining this
 /// callsite.
 ///
@@ -109,23 +167,22 @@ public:
 ///
 /// Also note that calling this function *dynamically* computes the cost of
 /// inlining the callsite. It is an expensive, heavyweight call.
-InlineCost getInlineCost(CallSite CS, int DefaultThreshold,
-                         TargetTransformInfo &CalleeTTI,
-                         AssumptionCacheTracker *ACT);
+InlineCost
+getInlineCost(CallSite CS, const InlineParams &Params,
+              TargetTransformInfo &CalleeTTI,
+              std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
+              ProfileSummaryInfo *PSI);
 
 /// \brief Get an InlineCost with the callee explicitly specified.
 /// This allows you to calculate the cost of inlining a function via a
 /// pointer. This behaves exactly as the version with no explicit callee
 /// parameter in all other respects.
 //
-InlineCost getInlineCost(CallSite CS, Function *Callee, int DefaultThreshold,
-                         TargetTransformInfo &CalleeTTI,
-                         AssumptionCacheTracker *ACT);
-
-int computeThresholdFromOptLevels(unsigned OptLevel, unsigned SizeOptLevel);
-
-/// \brief Return the default value of -inline-threshold.
-int getDefaultInlineThreshold();
+InlineCost
+getInlineCost(CallSite CS, Function *Callee, const InlineParams &Params,
+              TargetTransformInfo &CalleeTTI,
+              std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
+              ProfileSummaryInfo *PSI);
 
 /// \brief Minimal filter to detect invalid constructs for inlining.
 bool isInlineViable(Function &Callee);

@@ -249,29 +249,31 @@ inline RNSuccIterator<NodeType, BlockT, RegionT> succ_end(NodeType* Node) {
 // NodeT can either be region node or const region node, otherwise child_begin
 // and child_end fail.
 
-#define RegionNodeGraphTraits(NodeT, BlockT, RegionT)   \
-  template<> struct GraphTraits<NodeT*> {      \
-  typedef NodeT NodeType; \
-  typedef RNSuccIterator<NodeType, BlockT, RegionT> ChildIteratorType;  \
-  static NodeType *getEntryNode(NodeType* N) { return N; } \
-  static inline ChildIteratorType child_begin(NodeType *N) { \
-    return RNSuccIterator<NodeType, BlockT, RegionT>(N);             \
-  } \
-  static inline ChildIteratorType child_end(NodeType *N) { \
-    return RNSuccIterator<NodeType, BlockT, RegionT>(N, true);     \
-  } \
-}; \
-template<> struct GraphTraits<FlatIt<NodeT*>> {  \
-  typedef NodeT NodeType; \
-  typedef RNSuccIterator<FlatIt<NodeT>, BlockT, RegionT > ChildIteratorType;    \
-  static NodeType *getEntryNode(NodeType* N) { return N; } \
-  static inline ChildIteratorType child_begin(NodeType *N) { \
-    return RNSuccIterator<FlatIt<NodeType>, BlockT, RegionT>(N); \
-  } \
-  static inline ChildIteratorType child_end(NodeType *N) { \
-    return RNSuccIterator<FlatIt<NodeType>, BlockT, RegionT>(N, true); \
-  } \
-}
+#define RegionNodeGraphTraits(NodeT, BlockT, RegionT)                          \
+  template <> struct GraphTraits<NodeT *> {                                    \
+    typedef NodeT NodeType;                                                    \
+    typedef NodeT *NodeRef;                                                    \
+    typedef RNSuccIterator<NodeType, BlockT, RegionT> ChildIteratorType;       \
+    static NodeType *getEntryNode(NodeType *N) { return N; }                   \
+    static inline ChildIteratorType child_begin(NodeType *N) {                 \
+      return RNSuccIterator<NodeType, BlockT, RegionT>(N);                     \
+    }                                                                          \
+    static inline ChildIteratorType child_end(NodeType *N) {                   \
+      return RNSuccIterator<NodeType, BlockT, RegionT>(N, true);               \
+    }                                                                          \
+  };                                                                           \
+  template <> struct GraphTraits<FlatIt<NodeT *>> {                            \
+    typedef NodeT NodeType;                                                    \
+    typedef NodeT *NodeRef;                                                    \
+    typedef RNSuccIterator<FlatIt<NodeT>, BlockT, RegionT> ChildIteratorType;  \
+    static NodeType *getEntryNode(NodeType *N) { return N; }                   \
+    static inline ChildIteratorType child_begin(NodeType *N) {                 \
+      return RNSuccIterator<FlatIt<NodeType>, BlockT, RegionT>(N);             \
+    }                                                                          \
+    static inline ChildIteratorType child_end(NodeType *N) {                   \
+      return RNSuccIterator<FlatIt<NodeType>, BlockT, RegionT>(N, true);       \
+    }                                                                          \
+  }
 
 #define RegionGraphTraits(RegionT, NodeT) \
 template<> struct GraphTraits<RegionT*> \

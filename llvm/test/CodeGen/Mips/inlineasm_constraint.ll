@@ -1,5 +1,6 @@
 ; RUN: llc -no-integrated-as -march=mipsel < %s | \
-; RUN:     FileCheck %s -check-prefix=ALL -check-prefix=GAS
+; RUN:     FileCheck %s -check-prefixes=ALL,GAS
+; RUN: llc -march=mipsel < %s | FileCheck %s -check-prefixes=ALL,IAS
 
 define void @constraint_I() nounwind {
 ; First I with short
@@ -31,6 +32,7 @@ define void @constraint_K() nounwind {
 ; Now K with 64
 ; ALL: #APP
 ; GAS: addu ${{[0-9]+}}, ${{[0-9]+}}, 64
+; IAS: addiu ${{[0-9]+}}, ${{[0-9]+}}, 64
 ; ALL: #NO_APP	
   tail call i16 asm sideeffect "addu $0, $1, $2\0A\09 ", "=r,r,K"(i16 7, i16 64) nounwind
   ret void

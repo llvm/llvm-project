@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -enable-misched=false -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -enable-misched=false -verify-machineinstrs | FileCheck %s
 
 ; The next set of tests makes sure we can combine the second instruction into
 ; the first.

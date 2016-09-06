@@ -1,4 +1,4 @@
-; RUN: opt -S -disable-output -passes=print-cg < %s 2>&1 | FileCheck %s
+; RUN: opt -S -disable-output -passes=print-lcg < %s 2>&1 | FileCheck %s
 
 declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
@@ -8,7 +8,7 @@ define private void @f() {
 }
 
 define void @calls_statepoint(i8 addrspace(1)* %arg) gc "statepoint-example" {
-; CHECK: Call edges in function: calls_statepoint
+; CHECK: Edges in function: calls_statepoint
 ; CHECK-NEXT:  -> f
 entry:
   %cast = bitcast i8 addrspace(1)* %arg to i64 addrspace(1)*
@@ -17,7 +17,7 @@ entry:
 }
 
 define void @calls_patchpoint() {
-; CHECK:  Call edges in function: calls_patchpoint
+; CHECK:  Edges in function: calls_patchpoint
 ; CHECK-NEXT:    -> f
 entry:
   %c = bitcast void()* @f to i8*

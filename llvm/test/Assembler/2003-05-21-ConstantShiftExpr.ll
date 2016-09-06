@@ -2,4 +2,4 @@
 ; RUN: verify-uselistorder %s
 ; Test that shift instructions can be used in constant expressions.
 
-global i32 3670016
+@0 = global i32 3670016

@@ -110,13 +110,13 @@ extension SomeValues
     {
         switch self
         {
-        case Five:
+        case .Five:
             return 5
-        case Six:
+        case .Six:
             return 6
-        case Eleven:
+        case .Eleven:
             return 11
-        case AnyValue:
+        case .AnyValue:
             return 46
         }
     }
@@ -210,10 +210,10 @@ func main () -> Void
             return ConformsDirectly(arg) // Step into should stop here in closure.
     }
 
-    func doSomethingWithFunction<Result : P> (_ f: (arg : Int)->Result, _ other_value : Int) -> Result // Stopped in doSomethingWithFunctionResult decl. 
+    func doSomethingWithFunction<Result : P> (_ f: (_ arg : Int)->Result, _ other_value : Int) -> Result // Stopped in doSomethingWithFunctionResult decl. 
     {
         print("Calling doSomethingWithFunction with value \(other_value)")
-        let result = f(arg: other_value)
+        let result = f(other_value)
         result.protocol_func(other_value)
         print ("Done calling doSomethingWithFunction.")
         return result

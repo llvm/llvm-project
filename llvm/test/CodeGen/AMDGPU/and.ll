@@ -1,6 +1,6 @@
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 declare i32 @llvm.r600.read.tidig.x() #0
 
@@ -212,13 +212,15 @@ define void @s_and_32_bit_constant_i64(i64 addrspace(1)* %out, i64 %a) {
 }
 
 ; FUNC-LABEL: {{^}}s_and_multi_use_inline_imm_i64:
-; SI: s_load_dwordx2
-; SI: s_load_dwordx2
+; SI: s_load_dword [[A:s[0-9]+]]
+; SI: s_load_dword [[B:s[0-9]+]]
 ; SI: s_load_dwordx2
 ; SI: s_load_dwordx2
 ; SI-NOT: and
-; SI: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 62
-; SI: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 62
+; SI: s_lshl_b32 [[A]], [[A]], 1
+; SI: s_lshl_b32 [[B]], [[B]], 1
+; SI: s_and_b32 s{{[0-9]+}}, [[A]], 62
+; SI: s_and_b32 s{{[0-9]+}}, [[B]], 62
 ; SI-NOT: and
 ; SI: buffer_store_dwordx2
 define void @s_and_multi_use_inline_imm_i64(i64 addrspace(1)* %out, i64 %a, i64 %b, i64 %c) {
@@ -241,26 +243,6 @@ define void @v_and_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addr
   %b = load i64, i64 addrspace(1)* %bptr, align 8
   %and = and i64 %a, %b
   store i64 %and, i64 addrspace(1)* %out, align 8
-  ret void
-}
-
-; FUNC-LABEL: {{^}}v_and_i64_br:
-; SI: v_and_b32
-; SI: v_and_b32
-define void @v_and_i64_br(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr, i32 %cond) {
-entry:
-  %tmp0 = icmp eq i32 %cond, 0
-  br i1 %tmp0, label %if, label %endif
-
-if:
-  %a = load i64, i64 addrspace(1)* %aptr, align 8
-  %b = load i64, i64 addrspace(1)* %bptr, align 8
-  %and = and i64 %a, %b
-  br label %endif
-
-endif:
-  %tmp1 = phi i64 [%and, %if], [0, %entry]
-  store i64 %tmp1, i64 addrspace(1)* %out, align 8
   ret void
 }
 
@@ -302,11 +284,11 @@ define void @v_and_multi_use_constant_i64(i64 addrspace(1)* %out, i64 addrspace(
 ; SI: buffer_load_dwordx2 v{{\[}}[[LO1:[0-9]+]]:[[HI1:[0-9]+]]{{\]}}
 ; SI-NOT: and
 ; SI: v_and_b32_e32 v[[RESLO0:[0-9]+]], 63, v[[LO0]]
+; SI-NOT: and
+; SI: buffer_store_dwordx2 v{{\[}}[[RESLO0]]
 ; SI: v_and_b32_e32 v[[RESLO1:[0-9]+]], 63, v[[LO1]]
 ; SI-NOT: and
-; SI: buffer_store_dwordx2
-; SI-NOT: and
-; SI: buffer_store_dwordx2
+; SI: buffer_store_dwordx2 v{{\[}}[[RESLO1]]
 define void @v_and_multi_use_inline_imm_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %aptr) {
   %a = load volatile i64, i64 addrspace(1)* %aptr
   %b = load volatile i64, i64 addrspace(1)* %aptr
@@ -356,9 +338,10 @@ define void @s_and_inline_imm_64_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %
 }
 
 ; FUNC-LABEL: {{^}}s_and_inline_imm_64_i64_noshrink:
-; SI: s_lshl_b64 s{{\[}}[[VALLO:[0-9]+]]:{{[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 1
+; SI: s_load_dword [[A:s[0-9]+]]
+; SI: s_lshl_b32 [[A]], [[A]], 1{{$}}
 ; SI-NOT: and
-; SI: s_and_b32 s{{[0-9]+}}, s[[VALLO]], 64
+; SI: s_and_b32 s{{[0-9]+}}, [[A]], 64
 ; SI-NOT: and
 ; SI: s_add_u32
 ; SI-NEXT: s_addc_u32
@@ -503,8 +486,8 @@ define void @s_and_inline_imm_neg_4.0_i64(i64 addrspace(1)* %out, i64 addrspace(
 ; low 32-bits, which is not a valid 64-bit inline immmediate.
 
 ; FUNC-LABEL: {{^}}s_and_inline_imm_f32_4.0_i64:
-; SI: s_load_dwordx2
 ; SI: s_load_dword s
+; SI: s_load_dwordx2
 ; SI-NOT: and
 ; SI: s_and_b32 s[[K_HI:[0-9]+]], s{{[0-9]+}}, 4.0
 ; SI-NOT: and

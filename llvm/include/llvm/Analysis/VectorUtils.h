@@ -14,21 +14,23 @@
 #ifndef LLVM_TRANSFORMS_UTILS_VECTORUTILS_H
 #define LLVM_TRANSFORMS_UTILS_VECTORUTILS_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 
 namespace llvm {
 
-struct DemandedBits;
+template <typename T> class ArrayRef;
+class DemandedBits;
 class GetElementPtrInst;
 class Loop;
 class ScalarEvolution;
 class TargetTransformInfo;
 class Type;
 class Value;
+
+namespace Intrinsic {
+enum ID : unsigned;
+}
 
 /// \brief Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all
@@ -40,26 +42,11 @@ bool isTriviallyVectorizable(Intrinsic::ID ID);
 /// ctlz,cttz and powi special intrinsics whose argument is scalar.
 bool hasVectorInstrinsicScalarOpd(Intrinsic::ID ID, unsigned ScalarOpdIdx);
 
-/// \brief Identify if call has a unary float signature
-/// It returns input intrinsic ID if call has a single argument,
-/// argument type and call instruction type should be floating
-/// point type and call should only reads memory.
-/// else return not_intrinsic.
-Intrinsic::ID checkUnaryFloatSignature(const CallInst &I,
-                                       Intrinsic::ID ValidIntrinsicID);
-
-/// \brief Identify if call has a binary float signature
-/// It returns input intrinsic ID if call has two arguments,
-/// arguments type and call instruction type should be floating
-/// point type and call should only reads memory.
-/// else return not_intrinsic.
-Intrinsic::ID checkBinaryFloatSignature(const CallInst &I,
-                                        Intrinsic::ID ValidIntrinsicID);
-
 /// \brief Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
 /// its intrinsic ID, in case it does not found it return not_intrinsic.
-Intrinsic::ID getIntrinsicIDForCall(CallInst *CI, const TargetLibraryInfo *TLI);
+Intrinsic::ID getVectorIntrinsicIDForCall(const CallInst *CI,
+                                          const TargetLibraryInfo *TLI);
 
 /// \brief Find the operand of the GEP that should be checked for consecutive
 /// stores. This ignores trailing indices that have no effect on the final
@@ -126,7 +113,16 @@ MapVector<Instruction*, uint64_t>
 computeMinimumValueSizes(ArrayRef<BasicBlock*> Blocks,
                          DemandedBits &DB,
                          const TargetTransformInfo *TTI=nullptr);
-    
+
+/// Specifically, let Kinds = [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath,
+/// MD_nontemporal].  For K in Kinds, we get the MDNode for K from each of the
+/// elements of VL, compute their "intersection" (i.e., the most generic
+/// metadata value that covers all of the individual values), and set I's
+/// metadata for M equal to the intersection value.
+///
+/// This function always sets a (possibly null) value for each K in Kinds.
+Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
+
 } // llvm namespace
 
 #endif

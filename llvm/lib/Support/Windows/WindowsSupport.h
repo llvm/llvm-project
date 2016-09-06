@@ -45,7 +45,6 @@
 #include <wincrypt.h>
 #include <cassert>
 #include <string>
-#include <vector>
 
 /// Determines if the program is running on Windows 8 or newer. This
 /// reimplements one of the helpers in the Windows 8.1 SDK, which are intended
@@ -69,15 +68,15 @@ inline bool RunningWindows8OrGreater() {
                             Mask) != FALSE;
 }
 
-inline bool MakeErrMsg(std::string* ErrMsg, const std::string& prefix) {
+inline bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix) {
   if (!ErrMsg)
     return true;
   char *buffer = NULL;
   DWORD LastError = GetLastError();
-  DWORD R = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
-                          FORMAT_MESSAGE_FROM_SYSTEM |
-                          FORMAT_MESSAGE_MAX_WIDTH_MASK,
-                          NULL, LastError, 0, (LPSTR)&buffer, 1, NULL);
+  DWORD R = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                               FORMAT_MESSAGE_FROM_SYSTEM |
+                               FORMAT_MESSAGE_MAX_WIDTH_MASK,
+                           NULL, LastError, 0, (LPSTR)&buffer, 1, NULL);
   if (R)
     *ErrMsg = prefix + ": " + buffer;
   else
@@ -168,6 +167,22 @@ struct CryptContextTraits : CommonHandleTraits {
   }
 };
 
+struct RegTraits : CommonHandleTraits {
+  typedef HKEY handle_type;
+
+  static handle_type GetInvalid() {
+    return NULL;
+  }
+
+  static void Close(handle_type h) {
+    ::RegCloseKey(h);
+  }
+
+  static bool IsValid(handle_type h) {
+    return h != GetInvalid();
+  }
+};
+
 struct FindHandleTraits : CommonHandleTraits {
   static void Close(handle_type h) {
     ::FindClose(h);
@@ -179,6 +194,7 @@ struct FileHandleTraits : CommonHandleTraits {};
 typedef ScopedHandle<CommonHandleTraits> ScopedCommonHandle;
 typedef ScopedHandle<FileHandleTraits>   ScopedFileHandle;
 typedef ScopedHandle<CryptContextTraits> ScopedCryptContext;
+typedef ScopedHandle<RegTraits>          ScopedRegHandle;
 typedef ScopedHandle<FindHandleTraits>   ScopedFindHandle;
 typedef ScopedHandle<JobHandleTraits>    ScopedJobHandle;
 

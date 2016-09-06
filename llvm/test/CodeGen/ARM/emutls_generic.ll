@@ -41,7 +41,7 @@ entry:
 ; ARM_32-NOT:    __emutls_v.external_x:
 ; ARM_32:        .data{{$}}
 ; ARM_32:        .globl __emutls_v.external_y
-; ARM_32:        .align 2
+; ARM_32:        .p2align 2
 ; ARM_32-LABEL:  __emutls_v.external_y:
 ; ARM_32-NEXT:   .long 1
 ; ARM_32-NEXT:   .long 2
@@ -52,7 +52,7 @@ entry:
 ; ARM_32-NEXT:   .byte 7
 ; ARM_32:        .data{{$}}
 ; ARM_32-NOT:    .globl
-; ARM_32:        .align 2
+; ARM_32:        .p2align 2
 ; ARM_32-LABEL:  __emutls_v.internal_y:
 ; ARM_32-NEXT:   .long 8
 ; ARM_32-NEXT:   .long 16

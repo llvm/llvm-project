@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
@@ -35,7 +34,7 @@ Mips16FrameLowering::Mips16FrameLowering(const MipsSubtarget &STI)
 void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const Mips16InstrInfo &TII =
       *static_cast<const Mips16InstrInfo *>(STI.getInstrInfo());
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -44,10 +43,10 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
   // to determine the end of the prologue.
   DebugLoc dl;
 
-  uint64_t StackSize = MFI->getStackSize();
+  uint64_t StackSize = MFI.getStackSize();
 
   // No need to allocate space on the stack.
-  if (StackSize == 0 && !MFI->adjustsStack()) return;
+  if (StackSize == 0 && !MFI.adjustsStack()) return;
 
   MachineModuleInfo &MMI = MF.getMMI();
   const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
@@ -62,14 +61,14 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
   BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
       .addCFIIndex(CFIIndex);
 
-  const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
   if (CSI.size()) {
-    const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
+    const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
     for (std::vector<CalleeSavedInfo>::const_iterator I = CSI.begin(),
          E = CSI.end(); I != E; ++I) {
-      int64_t Offset = MFI->getObjectOffset(I->getFrameIdx());
+      int64_t Offset = MFI.getObjectOffset(I->getFrameIdx());
       unsigned Reg = I->getReg();
       unsigned DReg = MRI->getDwarfRegNum(Reg, true);
       unsigned CFIIndex = MMI.addFrameInst(
@@ -87,11 +86,11 @@ void Mips16FrameLowering::emitPrologue(MachineFunction &MF,
 void Mips16FrameLowering::emitEpilogue(MachineFunction &MF,
                                  MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const Mips16InstrInfo &TII =
       *static_cast<const Mips16InstrInfo *>(STI.getInstrInfo());
   DebugLoc dl = MBBI->getDebugLoc();
-  uint64_t StackSize = MFI->getStackSize();
+  uint64_t StackSize = MFI.getStackSize();
 
   if (!StackSize)
     return;
@@ -121,12 +120,12 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     // Add the callee-saved register as live-in. Do not add if the register is
     // RA and return address is taken, because it has already been added in
-    // method MipsTargetLowering::LowerRETURNADDR.
+    // method MipsTargetLowering::lowerRETURNADDR.
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
     unsigned Reg = CSI[i].getReg();
     bool IsRAAndRetAddrIsTaken = (Reg == Mips::RA)
-      && MF->getFrameInfo()->isReturnAddressTaken();
+      && MF->getFrameInfo().isReturnAddressTaken();
     if (!IsRAAndRetAddrIsTaken)
       EntryBlock->addLiveIn(Reg);
   }
@@ -150,10 +149,10 @@ bool Mips16FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
 
 bool
 Mips16FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   // Reserve call frame if the size of the maximum call frame fits into 15-bit
   // immediate field and there are no variable sized objects on the stack.
-  return isInt<15>(MFI->getMaxCallFrameSize()) && !MFI->hasVarSizedObjects();
+  return isInt<15>(MFI.getMaxCallFrameSize()) && !MFI.hasVarSizedObjects();
 }
 
 void Mips16FrameLowering::determineCalleeSaves(MachineFunction &MF,

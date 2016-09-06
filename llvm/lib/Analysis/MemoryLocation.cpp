@@ -90,23 +90,6 @@ MemoryLocation MemoryLocation::getForDest(const MemIntrinsic *MTI) {
   return MemoryLocation(MTI->getRawDest(), Size, AATags);
 }
 
-// FIXME: This code is duplicated with BasicAliasAnalysis and should be hoisted
-// to some common utility location.
-static bool isMemsetPattern16(const Function *MS,
-                              const TargetLibraryInfo &TLI) {
-  if (TLI.has(LibFunc::memset_pattern16) &&
-      MS->getName() == "memset_pattern16") {
-    FunctionType *MemsetType = MS->getFunctionType();
-    if (!MemsetType->isVarArg() && MemsetType->getNumParams() == 3 &&
-        isa<PointerType>(MemsetType->getParamType(0)) &&
-        isa<PointerType>(MemsetType->getParamType(1)) &&
-        isa<IntegerType>(MemsetType->getParamType(2)))
-      return true;
-  }
-
-  return false;
-}
-
 MemoryLocation MemoryLocation::getForArgument(ImmutableCallSite CS,
                                               unsigned ArgIdx,
                                               const TargetLibraryInfo &TLI) {
@@ -159,8 +142,9 @@ MemoryLocation MemoryLocation::getForArgument(ImmutableCallSite CS,
   // for memcpy/memset.  This is particularly important because the
   // LoopIdiomRecognizer likes to turn loops into calls to memset_pattern16
   // whenever possible.
-  if (CS.getCalledFunction() &&
-      isMemsetPattern16(CS.getCalledFunction(), TLI)) {
+  LibFunc::Func F;
+  if (CS.getCalledFunction() && TLI.getLibFunc(*CS.getCalledFunction(), F) &&
+      F == LibFunc::memset_pattern16 && TLI.has(F)) {
     assert((ArgIdx == 0 || ArgIdx == 1) &&
            "Invalid argument index for memset_pattern16");
     if (ArgIdx == 1)

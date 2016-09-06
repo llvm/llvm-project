@@ -53,7 +53,7 @@ declare void @g(i32*, i32*)
 
 
 ; CHECK: .section .cp.rodata.cst4,"aMc",@progbits,4
-; CHECK: .align  4
+; CHECK: .p2align  2
 ; CHECK: [[ARG5:.LCPI[0-9_]+]]:
 ; CHECK: .long   100003
 ; CHECK: [[INDEX0:.LCPI[0-9_]+]]:

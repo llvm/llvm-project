@@ -19,7 +19,6 @@
 #ifndef LLVM_IR_USER_H
 #define LLVM_IR_USER_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Value.h"
@@ -27,6 +26,9 @@
 #include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
+
+template <typename T> class ArrayRef;
+template <typename T> class MutableArrayRef;
 
 /// \brief Compile-time customization of User operands.
 ///

@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic -fcxx-exceptions %s
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic -fcxx-exceptions -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -pedantic -fcxx-exceptions -std=c++11 %s
+
 class C;
 class C {
 public:
@@ -69,11 +72,30 @@ public; // expected-error{{expected ':'}}
 };
 
 class F {
-    int F1 { return 1; } // expected-error{{function definition does not declare parameters}}
-    void F2 {} // expected-error{{function definition does not declare parameters}}
+    int F1 { return 1; }
+#if __cplusplus <= 199711L
+    // expected-error@-2 {{function definition does not declare parameters}}
+#else
+    // expected-error@-4 {{expected expression}}
+    // expected-error@-5 {{expected}}
+    // expected-note@-6 {{to match this '{'}}
+    // expected-error@-7 {{expected ';' after class}}
+#endif
+
+    void F2 {}
+#if __cplusplus <= 199711L
+    // expected-error@-2 {{function definition does not declare parameters}}
+#else
+    // expected-error@-4 {{variable has incomplete type 'void'}}
+    // expected-error@-5 {{expected ';' after top level declarator}}
+#endif
+
     typedef int F3() { return 0; } // expected-error{{function definition declared 'typedef'}}
     typedef void F4() {} // expected-error{{function definition declared 'typedef'}}
 };
+#if __cplusplus >= 201103L
+// expected-error@-2 {{extraneous closing brace}}
+#endif
 
 namespace ctor_error {
   class Foo {};
@@ -203,14 +225,38 @@ namespace BadFriend {
 }
 
 class PR20760_a {
-  int a = ); // expected-warning {{extension}} expected-error {{expected expression}}
-  int b = }; // expected-warning {{extension}} expected-error {{expected expression}}
-  int c = ]; // expected-warning {{extension}} expected-error {{expected expression}}
+  int a = ); // expected-error {{expected expression}}
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{in-class initialization of non-static data member is a C++11 extension}}
+#endif
+
+  int b = }; // expected-error {{expected expression}}
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{in-class initialization of non-static data member is a C++11 extension}}
+#endif
+
+  int c = ]; // expected-error {{expected expression}}
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{in-class initialization of non-static data member is a C++11 extension}}
+#endif
+
 };
 class PR20760_b {
-  int d = d); // expected-warning {{extension}} expected-error {{expected ';'}}
-  int e = d]; // expected-warning {{extension}} expected-error {{expected ';'}}
-  int f = d // expected-warning {{extension}} expected-error {{expected ';'}}
+  int d = d); // expected-error {{expected ';'}}
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{in-class initialization of non-static data member is a C++11 extension}}
+#endif
+
+  int e = d]; // expected-error {{expected ';'}}
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{in-class initialization of non-static data member is a C++11 extension}}
+#endif
+
+  int f = d // expected-error {{expected ';'}}
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{in-class initialization of non-static data member is a C++11 extension}}
+#endif
+
 };
 
 namespace PR20887 {

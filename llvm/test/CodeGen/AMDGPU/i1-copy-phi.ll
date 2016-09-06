@@ -10,9 +10,11 @@
 ; SI: s_and_saveexec_b64
 ; SI: s_xor_b64
 ; SI: s_endpgm
-define void @br_i1_phi(i32 %arg, i1 %arg1) #0 {
+define void @br_i1_phi(i32 %arg) {
 bb:
-  br i1 %arg1, label %bb2, label %bb3
+  %tidig = call i32 @llvm.r600.read.tidig.x() #0
+  %cmp = trunc i32 %tidig to i1
+  br i1 %cmp, label %bb2, label %bb3
 
 bb2:                                              ; preds = %bb
   br label %bb3
@@ -22,9 +24,14 @@ bb3:                                              ; preds = %bb2, %bb
   br i1 %tmp, label %bb4, label %bb6
 
 bb4:                                              ; preds = %bb3
-  %tmp5 = mul i32 undef, %arg
+  %val = load volatile i32, i32 addrspace(1)* undef
+  %tmp5 = mul i32 %val, %arg
   br label %bb6
 
 bb6:                                              ; preds = %bb4, %bb3
   ret void
 }
+
+declare i32 @llvm.r600.read.tidig.x() #0
+
+attributes #0 = { readnone }

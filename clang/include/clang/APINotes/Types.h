@@ -70,16 +70,20 @@ public:
   /// Whether this entity is marked unavailable in Swift.
   unsigned UnavailableInSwift : 1;
 
+  /// Whether this entity is considered "private" to a Swift overlay.
+  unsigned SwiftPrivate : 1;
+
   /// Swift name of this entity.
   std::string SwiftName;
 
-  CommonEntityInfo() : Unavailable(0), UnavailableInSwift(0) { }
+  CommonEntityInfo() : Unavailable(0), UnavailableInSwift(0), SwiftPrivate(0) { }
 
   friend bool operator==(const CommonEntityInfo &lhs,
                          const CommonEntityInfo &rhs) {
     return lhs.UnavailableMsg == rhs.UnavailableMsg &&
            lhs.Unavailable == rhs.Unavailable &&
            lhs.UnavailableInSwift == rhs.UnavailableInSwift &&
+           lhs.SwiftPrivate == rhs.SwiftPrivate &&
            lhs.SwiftName == rhs.SwiftName;
   }
 
@@ -107,17 +111,61 @@ public:
       }
     }
 
+    if (rhs.SwiftPrivate)
+      lhs.SwiftPrivate = true;
+
     if (rhs.SwiftName.length() != 0 &&
         lhs.SwiftName.length() == 0)
       lhs.SwiftName = rhs.SwiftName;
 
     return lhs;
   }
+};
 
+/// Describes API notes for types.
+class CommonTypeInfo : public CommonEntityInfo {
+  /// The Swift type to which a given type is bridged.
+  ///
+  /// Reflects the swift_bridge attribute.
+  std::string SwiftBridge;
+
+  /// The NS error domain for this type.
+  std::string NSErrorDomain;
+
+public:
+  CommonTypeInfo() : CommonEntityInfo() { }
+
+  const std::string &getSwiftBridge() const { return SwiftBridge; }
+  void setSwiftBridge(const std::string &swiftType) { SwiftBridge = swiftType; }
+
+  const std::string &getNSErrorDomain() const { return NSErrorDomain; }
+  void setNSErrorDomain(const std::string &domain) { NSErrorDomain = domain; }
+
+  friend CommonTypeInfo &operator|=(CommonTypeInfo &lhs,
+                                    const CommonTypeInfo &rhs) {
+    static_cast<CommonEntityInfo &>(lhs) |= rhs;
+    if (lhs.SwiftBridge.empty() && !rhs.SwiftBridge.empty())
+      lhs.SwiftBridge = rhs.SwiftBridge;
+    if (lhs.NSErrorDomain.empty() && !rhs.NSErrorDomain.empty())
+      lhs.NSErrorDomain = rhs.NSErrorDomain;
+    return lhs;
+  }
+
+  friend bool operator==(const CommonTypeInfo &lhs,
+                         const CommonTypeInfo &rhs) {
+    return static_cast<const CommonEntityInfo &>(lhs) == rhs &&
+      lhs.SwiftBridge == rhs.SwiftBridge &&
+      lhs.NSErrorDomain == rhs.NSErrorDomain;
+  }
+
+  friend bool operator!=(const CommonTypeInfo &lhs,
+                         const CommonTypeInfo &rhs) {
+    return !(lhs == rhs);
+  }
 };
 
 /// Describes API notes data for an Objective-C class or protocol.
-class ObjCContextInfo : public CommonEntityInfo {
+class ObjCContextInfo : public CommonTypeInfo {
   /// Whether this class has a default nullability.
   unsigned HasDefaultNullability : 1;
 
@@ -127,14 +175,9 @@ class ObjCContextInfo : public CommonEntityInfo {
   /// Whether this class has designated initializers recorded.
   unsigned HasDesignatedInits : 1;
 
-  /// The Swift type to which a given Objective-C class is bridged.
-  ///
-  /// Reflects the swift_bridge attribute.
-  std::string SwiftBridge;
-
 public:
   ObjCContextInfo()
-    : CommonEntityInfo(),
+    : CommonTypeInfo(),
       HasDefaultNullability(0),
       DefaultNullability(0),
       HasDesignatedInits(0)
@@ -167,15 +210,11 @@ public:
     DefaultNullability = 0;
   }
 
-  const std::string &getSwiftBridge() const { return SwiftBridge; }
-  void setSwiftBridge(const std::string &swiftType) { SwiftBridge = swiftType; }
-
   friend bool operator==(const ObjCContextInfo &lhs, const ObjCContextInfo &rhs) {
-    return static_cast<const CommonEntityInfo &>(lhs) == rhs &&
+    return static_cast<const CommonTypeInfo &>(lhs) == rhs &&
            lhs.HasDefaultNullability == rhs.HasDefaultNullability &&
            lhs.DefaultNullability == rhs.DefaultNullability &&
-           lhs.HasDesignatedInits == rhs.HasDesignatedInits &&
-           lhs.SwiftBridge == rhs.SwiftBridge;
+           lhs.HasDesignatedInits == rhs.HasDesignatedInits;
   }
 
   friend bool operator!=(const ObjCContextInfo &lhs, const ObjCContextInfo &rhs) {
@@ -185,7 +224,7 @@ public:
   friend ObjCContextInfo &operator|=(ObjCContextInfo &lhs,
                                      const ObjCContextInfo &rhs) {
     // Merge inherited info.
-    static_cast<CommonEntityInfo &>(lhs) |= rhs;
+    static_cast<CommonTypeInfo &>(lhs) |= rhs;
 
     // Merge nullability.
     if (!lhs.getDefaultNullability()) {
@@ -195,9 +234,6 @@ public:
     }
 
     lhs.HasDesignatedInits |= rhs.HasDesignatedInits;
-
-    if (lhs.SwiftBridge.empty() && !rhs.SwiftBridge.empty())
-      lhs.SwiftBridge = rhs.SwiftBridge;
 
     return lhs;
   }
@@ -232,7 +268,6 @@ public:
     Nullable = static_cast<unsigned>(kind);
   }
 
-
   friend bool operator==(const VariableInfo &lhs, const VariableInfo &rhs) {
     return static_cast<const CommonEntityInfo &>(lhs) == rhs &&
            lhs.NullabilityAudited == rhs.NullabilityAudited &&
@@ -243,6 +278,13 @@ public:
     return !(lhs == rhs);
   }
 
+  friend VariableInfo &operator|=(VariableInfo &lhs,
+                                  const VariableInfo &rhs) {
+    static_cast<CommonEntityInfo &>(lhs) |= rhs;
+    if (!lhs.NullabilityAudited && rhs.NullabilityAudited)
+      lhs.setNullabilityAudited(*rhs.getNullability());
+    return lhs;
+  }
 };
 
 /// Describes API notes data for an Objective-C property.
@@ -261,6 +303,34 @@ public:
     }
 
     return lhs;
+  }
+};
+
+/// Describes a function or method parameter.
+class ParamInfo : public VariableInfo {
+  /// Whether the this parameter has the 'noescape' attribute.
+  unsigned NoEscape : 1;
+
+public:
+  ParamInfo() : VariableInfo(), NoEscape(false) { }
+
+  bool isNoEscape() const { return NoEscape; }
+  void setNoEscape(bool noescape) { NoEscape = noescape; }
+
+  friend ParamInfo &operator|=(ParamInfo &lhs, const ParamInfo &rhs) {
+    static_cast<VariableInfo &>(lhs) |= rhs;
+    if (!lhs.NoEscape && rhs.NoEscape)
+      lhs.NoEscape = true;
+    return lhs;
+  }
+
+  friend bool operator==(const ParamInfo &lhs, const ParamInfo &rhs) {
+    return static_cast<const VariableInfo &>(lhs) == rhs &&
+           lhs.NoEscape == rhs.NoEscape;
+  }
+
+  friend bool operator!=(const ParamInfo &lhs, const ParamInfo &rhs) {
+    return !(lhs == rhs);
   }
 };
 
@@ -296,6 +366,9 @@ public:
   //  about the return type is stored at position 0, followed by the nullability
   //  of the parameters.
   uint64_t NullabilityPayload = 0;
+
+  /// The function parameters.
+  std::vector<ParamInfo> Params;
 
   FunctionInfo()
     : CommonEntityInfo(),
@@ -434,6 +507,29 @@ public:
 class GlobalFunctionInfo : public FunctionInfo {
 public:
   GlobalFunctionInfo() : FunctionInfo() { }
+};
+
+/// Describes API notes data for an enumerator.
+class EnumConstantInfo : public CommonEntityInfo {
+public:
+  EnumConstantInfo() : CommonEntityInfo() { }
+};
+
+/// Describes API notes data for a tag.
+class TagInfo : public CommonTypeInfo {
+public:
+  TagInfo() : CommonTypeInfo() { }
+};
+
+/// Describes API notes data for a typedef.
+class TypedefInfo : public CommonTypeInfo {
+public:
+  TypedefInfo() : CommonTypeInfo() { }
+};
+
+/// Descripts a series of options for a module
+struct ModuleOptions {
+  bool SwiftInferImportAsMember = false;
 };
 
 } // end namespace api_notes

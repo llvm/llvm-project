@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=X64
-; RUN: llc -mtriple=i686-windows-msvc < %s | FileCheck %s --check-prefix=X86
+; RUN: llc -stack-symbol-ordering=0 -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=X64
+; RUN: llc -stack-symbol-ordering=0 -mtriple=i686-windows-msvc < %s | FileCheck %s --check-prefix=X86
 
 declare void @llvm.va_start(i8*)
 declare void @llvm.va_end(i8*)

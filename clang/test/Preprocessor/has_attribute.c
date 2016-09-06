@@ -54,5 +54,5 @@ int has_no_volatile_attribute();
   int does_not_have_uuid
 #endif
 
-#if __has_cpp_attribute(selectany) // expected-error {{token is not a valid binary operator in a preprocessor subexpression}}
+#if __has_cpp_attribute(selectany) // expected-error {{function-like macro '__has_cpp_attribute' is not defined}}
 #endif

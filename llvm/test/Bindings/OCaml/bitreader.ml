@@ -12,9 +12,13 @@
 
 let context = Llvm.global_context ()
 
+let diagnostic_handler _ = ()
+
 let test x = if not x then exit 1 else ()
 
 let _ =
+  Llvm.set_diagnostic_handler context (Some diagnostic_handler);
+
   let fn = Sys.argv.(1) in
   let m = Llvm.create_module context "ocaml_test_module" in
 

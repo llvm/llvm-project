@@ -37,11 +37,10 @@ declare void @exit(i32)
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (trunk 259383) (llvm/trunk 259385)", isOptimized: true, runtimeVersion: 0, emissionKind: 2, enums: !2, subprograms: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (trunk 259383) (llvm/trunk 259385)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2)
 !1 = !DIFile(filename: "t.c", directory: "/home/majnemer/llvm/src")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: true, variables: !2)
+!4 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, isOptimized: true, unit: !0, variables: !2)
 !5 = !DISubroutineType(types: !2)
 !6 = !{i32 2, !"Dwarf Version", i32 4}
 !7 = !{i32 2, !"Debug Info Version", i32 3}

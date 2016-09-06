@@ -791,25 +791,20 @@ bool DataFlowSanitizer::runOnModule(Module &M) {
     }
   }
 
-  for (std::vector<Function *>::iterator i = FnsToInstrument.begin(),
-                                         e = FnsToInstrument.end();
-       i != e; ++i) {
-    if (!*i || (*i)->isDeclaration())
+  for (Function *i : FnsToInstrument) {
+    if (!i || i->isDeclaration())
       continue;
 
-    removeUnreachableBlocks(**i);
+    removeUnreachableBlocks(*i);
 
-    DFSanFunction DFSF(*this, *i, FnsWithNativeABI.count(*i));
+    DFSanFunction DFSF(*this, i, FnsWithNativeABI.count(i));
 
     // DFSanVisitor may create new basic blocks, which confuses df_iterator.
     // Build a copy of the list before iterating over it.
-    llvm::SmallVector<BasicBlock *, 4> BBList(
-        depth_first(&(*i)->getEntryBlock()));
+    llvm::SmallVector<BasicBlock *, 4> BBList(depth_first(&i->getEntryBlock()));
 
-    for (llvm::SmallVector<BasicBlock *, 4>::iterator i = BBList.begin(),
-                                                      e = BBList.end();
-         i != e; ++i) {
-      Instruction *Inst = &(*i)->front();
+    for (BasicBlock *i : BBList) {
+      Instruction *Inst = &i->front();
       while (1) {
         // DFSanVisitor may split the current basic block, changing the current
         // instruction's next pointer and moving the next instruction to the
@@ -1066,11 +1061,10 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
   SmallVector<Value *, 2> Objs;
   GetUnderlyingObjects(Addr, Objs, Pos->getModule()->getDataLayout());
   bool AllConstants = true;
-  for (SmallVector<Value *, 2>::iterator i = Objs.begin(), e = Objs.end();
-       i != e; ++i) {
-    if (isa<Function>(*i) || isa<BlockAddress>(*i))
+  for (Value *Obj : Objs) {
+    if (isa<Function>(Obj) || isa<BlockAddress>(Obj))
       continue;
-    if (isa<GlobalVariable>(*i) && cast<GlobalVariable>(*i)->isConstant())
+    if (isa<GlobalVariable>(Obj) && cast<GlobalVariable>(Obj)->isConstant())
       continue;
 
     AllConstants = false;
@@ -1411,10 +1405,6 @@ void DFSanVisitor::visitCallSite(CallSite CS) {
   // instrument them.
   if (F == DFSF.DFS.DFSanVarargWrapperFn)
     return;
-
-  assert(!(cast<FunctionType>(
-      CS.getCalledValue()->getType()->getPointerElementType())->isVarArg() &&
-           dyn_cast<InvokeInst>(CS.getInstruction())));
 
   IRBuilder<> IRB(CS.getInstruction());
 

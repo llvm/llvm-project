@@ -502,7 +502,7 @@ void html::HighlightMacros(Rewriter &R, FileID FID, const Preprocessor& PP) {
 
   // Enter the tokens we just lexed.  This will cause them to be macro expanded
   // but won't enter sub-files (because we removed #'s).
-  TmpPP.EnterTokenStream(&TokenStream[0], TokenStream.size(), false, false);
+  TmpPP.EnterTokenStream(TokenStream, false);
 
   TokenConcatenation ConcatInfo(TmpPP);
 

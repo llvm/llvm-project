@@ -8,7 +8,7 @@
 ; DW_OP_const8u
 ; CHECK: .byte  14
 ; The debug relocation of the address of the tls variable
-; CHECK: .quad  tls@dtprel+32768
+; CHECK: .quad  tls@DTPREL+32768
 ; DW_OP_GNU_push_tls_address
 ; CHECK: .byte  224
 
@@ -17,7 +17,7 @@
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: false, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !3, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !3, imports: !2)
 !1 = !DIFile(filename: "tls.cpp", directory: "/tmp")
 !2 = !{}
 !3 = !{!4}

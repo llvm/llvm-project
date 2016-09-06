@@ -1,21 +1,21 @@
-; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s \
-; RUN:    --check-prefix=ALL --check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32 | FileCheck %s \
-; RUN:    --check-prefix=ALL --check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s \
-; RUN:    --check-prefix=ALL --check-prefix=GP32
-; RUN: llc < %s -march=mips64 -mcpu=mips3 | FileCheck %s \
-; RUN:    --check-prefix=ALL --check-prefix=GP64 -check-prefix=N64
-; RUN: llc < %s -march=mips64 -mcpu=mips64 | FileCheck %s \
-; RUN:    --check-prefix=ALL --check-prefix=GP64 -check-prefix=N64
-; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s \
-; RUN:    --check-prefix=ALL --check-prefix=GP64 -check-prefix=N64
-; RUN: llc < %s -march=mips64 -mcpu=mips3 -target-abi n32 | FileCheck %s \
-; RUN:    --check-prefix=ALL --check-prefix=GP64 -check-prefix=N32
-; RUN: llc < %s -march=mips64 -mcpu=mips64 -target-abi n32 | FileCheck %s \
-; RUN:    --check-prefix=ALL --check-prefix=GP64 -check-prefix=N32
-; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -target-abi n32 | FileCheck %s \
-; RUN:    --check-prefix=ALL --check-prefix=GP64 -check-prefix=N32
+; RUN: llc < %s -march=mips -mcpu=mips2 -relocation-model=pic | FileCheck %s \
+; RUN:    --check-prefixes=ALL,GP32
+; RUN: llc < %s -march=mips -mcpu=mips32 -relocation-model=pic | FileCheck %s \
+; RUN:    --check-prefixes=ALL,GP32
+; RUN: llc < %s -march=mips -mcpu=mips32r6 -relocation-model=pic | FileCheck %s \
+; RUN:    --check-prefixes=ALL,GP32
+; RUN: llc < %s -march=mips64 -mcpu=mips3 -relocation-model=pic | FileCheck %s \
+; RUN:    --check-prefixes=ALL,GP64,N64
+; RUN: llc < %s -march=mips64 -mcpu=mips64 -relocation-model=pic | FileCheck %s \
+; RUN:    --check-prefixes=ALL,GP64,N64
+; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -relocation-model=pic | FileCheck %s \
+; RUN:    --check-prefixes=ALL,GP64,N64
+; RUN: llc < %s -march=mips64 -mcpu=mips3 -target-abi n32 -relocation-model=pic | FileCheck %s \
+; RUN:    --check-prefixes=ALL,GP64,N32
+; RUN: llc < %s -march=mips64 -mcpu=mips64 -target-abi n32 -relocation-model=pic | FileCheck %s \
+; RUN:    --check-prefixes=ALL,GP64,N32
+; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -target-abi n32 -relocation-model=pic | FileCheck %s \
+; RUN:    --check-prefixes=ALL,GP64,N32
 
 ; Check dynamic stack realignment in functions without variable-sized objects.
 

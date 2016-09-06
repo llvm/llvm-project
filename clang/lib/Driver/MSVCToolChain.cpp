@@ -19,8 +19,10 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include <cstdio>
 
@@ -71,6 +73,11 @@ bool MSVCToolChain::IsUnwindTablesDefault() const {
   // Emit unwind tables by default on Win64. All non-x86_32 Windows platforms
   // such as ARM and PPC actually require unwind tables, but LLVM doesn't know
   // how to generate them yet.
+
+  // Don't emit unwind tables by default for MachO targets.
+  if (getTriple().isOSBinFormatMachO())
+    return false;
+
   return getArch() == llvm::Triple::x86_64;
 }
 
@@ -89,23 +96,34 @@ bool MSVCToolChain::isPICDefaultForced() const {
 #ifdef USE_WIN32
 static bool readFullStringValue(HKEY hkey, const char *valueName,
                                 std::string &value) {
-  // FIXME: We should be using the W versions of the registry functions, but
-  // doing so requires UTF8 / UTF16 conversions similar to how we handle command
-  // line arguments.  The UTF8 conversion functions are not exposed publicly
-  // from LLVM though, so in order to do this we will probably need to create
-  // a registry abstraction in LLVMSupport that is Windows only.
+  std::wstring WideValueName;
+  if (!llvm::ConvertUTF8toWide(valueName, WideValueName))
+    return false;
+
   DWORD result = 0;
   DWORD valueSize = 0;
   DWORD type = 0;
   // First just query for the required size.
-  result = RegQueryValueEx(hkey, valueName, NULL, &type, NULL, &valueSize);
-  if (result != ERROR_SUCCESS || type != REG_SZ)
+  result = RegQueryValueExW(hkey, WideValueName.c_str(), NULL, &type, NULL,
+                            &valueSize);
+  if (result != ERROR_SUCCESS || type != REG_SZ || !valueSize)
     return false;
   std::vector<BYTE> buffer(valueSize);
-  result = RegQueryValueEx(hkey, valueName, NULL, NULL, &buffer[0], &valueSize);
-  if (result == ERROR_SUCCESS)
-    value.assign(reinterpret_cast<const char *>(buffer.data()));
-  return result;
+  result = RegQueryValueExW(hkey, WideValueName.c_str(), NULL, NULL, &buffer[0],
+                            &valueSize);
+  if (result == ERROR_SUCCESS) {
+    std::wstring WideValue(reinterpret_cast<const wchar_t *>(buffer.data()),
+                           valueSize / sizeof(wchar_t));
+    if (valueSize && WideValue.back() == L'\0') {
+        WideValue.pop_back();
+    }
+    // The destination buffer must be empty as an invariant of the conversion
+    // function; but this function is sometimes called in a loop that passes in
+    // the same buffer, however. Simply clear it out so we can overwrite it.
+    value.clear();
+    return llvm::convertWideToUTF8(WideValue, value);
+  }
+  return false;
 }
 #endif
 
@@ -141,19 +159,20 @@ static bool getSystemRegistryString(const char *keyPath, const char *valueName,
       nextKey++;
     size_t partialKeyLength = keyEnd - keyPath;
     char partialKey[256];
-    if (partialKeyLength > sizeof(partialKey))
-      partialKeyLength = sizeof(partialKey);
+    if (partialKeyLength >= sizeof(partialKey))
+      partialKeyLength = sizeof(partialKey) - 1;
     strncpy(partialKey, keyPath, partialKeyLength);
     partialKey[partialKeyLength] = '\0';
     HKEY hTopKey = NULL;
-    lResult = RegOpenKeyEx(hRootKey, partialKey, 0, KEY_READ | KEY_WOW64_32KEY,
-                           &hTopKey);
+    lResult = RegOpenKeyExA(hRootKey, partialKey, 0, KEY_READ | KEY_WOW64_32KEY,
+                            &hTopKey);
     if (lResult == ERROR_SUCCESS) {
       char keyName[256];
       double bestValue = 0.0;
       DWORD index, size = sizeof(keyName) - 1;
-      for (index = 0; RegEnumKeyEx(hTopKey, index, keyName, &size, NULL,
-          NULL, NULL, NULL) == ERROR_SUCCESS; index++) {
+      for (index = 0; RegEnumKeyExA(hTopKey, index, keyName, &size, NULL, NULL,
+                                    NULL, NULL) == ERROR_SUCCESS;
+           index++) {
         const char *sp = keyName;
         while (*sp && !isDigit(*sp))
           sp++;
@@ -172,11 +191,10 @@ static bool getSystemRegistryString(const char *keyPath, const char *valueName,
           bestName = keyName;
           // Append rest of key.
           bestName.append(nextKey);
-          lResult = RegOpenKeyEx(hTopKey, bestName.c_str(), 0,
-                                 KEY_READ | KEY_WOW64_32KEY, &hKey);
+          lResult = RegOpenKeyExA(hTopKey, bestName.c_str(), 0,
+                                  KEY_READ | KEY_WOW64_32KEY, &hKey);
           if (lResult == ERROR_SUCCESS) {
-            lResult = readFullStringValue(hKey, valueName, value);
-            if (lResult == ERROR_SUCCESS) {
+            if (readFullStringValue(hKey, valueName, value)) {
               bestValue = dvalue;
               if (phValue)
                 *phValue = bestName;
@@ -191,10 +209,9 @@ static bool getSystemRegistryString(const char *keyPath, const char *valueName,
     }
   } else {
     lResult =
-        RegOpenKeyEx(hRootKey, keyPath, 0, KEY_READ | KEY_WOW64_32KEY, &hKey);
+        RegOpenKeyExA(hRootKey, keyPath, 0, KEY_READ | KEY_WOW64_32KEY, &hKey);
     if (lResult == ERROR_SUCCESS) {
-      lResult = readFullStringValue(hKey, valueName, value);
-      if (lResult == ERROR_SUCCESS)
+      if (readFullStringValue(hKey, valueName, value))
         returnValue = true;
       if (phValue)
         phValue->clear();
@@ -402,7 +419,10 @@ bool MSVCToolChain::getVisualStudioBinariesFolder(const char *clangProgramPath,
 
         SmallString<128> FilePath(PathSegment);
         llvm::sys::path::append(FilePath, "cl.exe");
-        if (llvm::sys::fs::can_execute(FilePath.c_str()) &&
+        // Checking if cl.exe exists is a small optimization over calling
+        // can_execute, which really only checks for existence but will also do
+        // extra checks for cl.exe.exe.  These add up when walking a long path.
+        if (llvm::sys::fs::exists(FilePath.c_str()) &&
             !llvm::sys::fs::equivalent(FilePath.c_str(), clangProgramPath)) {
           // If we found it on the PATH, use it exactly as is with no
           // modifications.
@@ -452,12 +472,51 @@ bool MSVCToolChain::getVisualStudioBinariesFolder(const char *clangProgramPath,
   return true;
 }
 
+VersionTuple MSVCToolChain::getMSVCVersionFromExe() const {
+  VersionTuple Version;
+#ifdef USE_WIN32
+  std::string BinPath;
+  if (!getVisualStudioBinariesFolder("", BinPath))
+    return Version;
+  SmallString<128> ClExe(BinPath);
+  llvm::sys::path::append(ClExe, "cl.exe");
+
+  std::wstring ClExeWide;
+  if (!llvm::ConvertUTF8toWide(ClExe.c_str(), ClExeWide))
+    return Version;
+
+  const DWORD VersionSize = ::GetFileVersionInfoSizeW(ClExeWide.c_str(),
+                                                      nullptr);
+  if (VersionSize == 0)
+    return Version;
+
+  SmallVector<uint8_t, 4 * 1024> VersionBlock(VersionSize);
+  if (!::GetFileVersionInfoW(ClExeWide.c_str(), 0, VersionSize,
+                             VersionBlock.data()))
+    return Version;
+
+  VS_FIXEDFILEINFO *FileInfo = nullptr;
+  UINT FileInfoSize = 0;
+  if (!::VerQueryValueW(VersionBlock.data(), L"\\",
+                        reinterpret_cast<LPVOID *>(&FileInfo), &FileInfoSize) ||
+      FileInfoSize < sizeof(*FileInfo))
+    return Version;
+
+  const unsigned Major = (FileInfo->dwFileVersionMS >> 16) & 0xFFFF;
+  const unsigned Minor = (FileInfo->dwFileVersionMS      ) & 0xFFFF;
+  const unsigned Micro = (FileInfo->dwFileVersionLS >> 16) & 0xFFFF;
+
+  Version = VersionTuple(Major, Minor, Micro);
+#endif
+  return Version;
+}
+
 // Get Visual Studio installation directory.
 bool MSVCToolChain::getVisualStudioInstallDir(std::string &path) const {
   // First check the environment variables that vsvars32.bat sets.
-  const char *vcinstalldir = getenv("VCINSTALLDIR");
-  if (vcinstalldir) {
-    path = vcinstalldir;
+  if (llvm::Optional<std::string> VcInstallDir =
+          llvm::sys::Process::GetEnv("VCINSTALLDIR")) {
+    path = std::move(*VcInstallDir);
     path = path.substr(0, path.find("\\VC"));
     return true;
   }
@@ -483,26 +542,26 @@ bool MSVCToolChain::getVisualStudioInstallDir(std::string &path) const {
   }
 
   // Try the environment.
-  const char *vs120comntools = getenv("VS120COMNTOOLS");
-  const char *vs100comntools = getenv("VS100COMNTOOLS");
-  const char *vs90comntools = getenv("VS90COMNTOOLS");
-  const char *vs80comntools = getenv("VS80COMNTOOLS");
+  std::string vcomntools;
+  if (llvm::Optional<std::string> vs120comntools =
+          llvm::sys::Process::GetEnv("VS120COMNTOOLS"))
+    vcomntools = std::move(*vs120comntools);
+  else if (llvm::Optional<std::string> vs100comntools =
+               llvm::sys::Process::GetEnv("VS100COMNTOOLS"))
+    vcomntools = std::move(*vs100comntools);
+  else if (llvm::Optional<std::string> vs90comntools =
+               llvm::sys::Process::GetEnv("VS90COMNTOOLS"))
+    vcomntools = std::move(*vs90comntools);
+  else if (llvm::Optional<std::string> vs80comntools =
+               llvm::sys::Process::GetEnv("VS80COMNTOOLS"))
+    vcomntools = std::move(*vs80comntools);
 
-  const char *vscomntools = nullptr;
-
-  // Find any version we can
-  if (vs120comntools)
-    vscomntools = vs120comntools;
-  else if (vs100comntools)
-    vscomntools = vs100comntools;
-  else if (vs90comntools)
-    vscomntools = vs90comntools;
-  else if (vs80comntools)
-    vscomntools = vs80comntools;
-
-  if (vscomntools && *vscomntools) {
-    const char *p = strstr(vscomntools, "\\Common7\\Tools");
-    path = p ? std::string(vscomntools, p) : vscomntools;
+  // Find any version we can.
+  if (!vcomntools.empty()) {
+    size_t p = vcomntools.find("\\Common7\\Tools");
+    if (p != std::string::npos)
+      vcomntools.resize(p);
+    path = std::move(vcomntools);
     return true;
   }
   return false;
@@ -527,13 +586,18 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                   "include");
   }
 
+  // Add %INCLUDE%-like directories from the -imsvc flag.
+  for (const auto &Path : DriverArgs.getAllArgValues(options::OPT__SLASH_imsvc))
+    addSystemInclude(DriverArgs, CC1Args, Path);
+
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
   // Honor %INCLUDE%. It should know essential search paths with vcvarsall.bat.
-  if (const char *cl_include_dir = getenv("INCLUDE")) {
+  if (llvm::Optional<std::string> cl_include_dir =
+          llvm::sys::Process::GetEnv("INCLUDE")) {
     SmallVector<StringRef, 8> Dirs;
-    StringRef(cl_include_dir)
+    StringRef(*cl_include_dir)
         .split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
     for (StringRef Dir : Dirs)
       addSystemInclude(DriverArgs, CC1Args, Dir);
@@ -585,6 +649,7 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
   }
 
+#if defined(LLVM_ON_WIN32)
   // As a fallback, select default install paths.
   // FIXME: Don't guess drives and paths like this on Windows.
   const StringRef Paths[] = {
@@ -595,6 +660,7 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     "C:/Program Files/Microsoft Visual Studio 8/VC/PlatformSDK/Include"
   };
   addSystemIncludes(DriverArgs, CC1Args, Paths);
+#endif
 }
 
 void MSVCToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
@@ -609,7 +675,7 @@ MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
       ToolChain::ComputeEffectiveClangTriple(Args, InputType);
   llvm::Triple Triple(TripleStr);
   VersionTuple MSVT =
-      tools::visualstudio::getMSVCVersion(/*D=*/nullptr, Triple, Args,
+      tools::visualstudio::getMSVCVersion(/*D=*/nullptr, *this, Triple, Args,
                                           /*IsWindowsMSVC=*/true);
   if (MSVT.empty())
     return TripleStr;
@@ -659,7 +725,8 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
             DAL.AddFlagArg(A, Opts.getOption(options::OPT_fbuiltin));
             DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "2");
           }
-          if (SupportsForcingFramePointer)
+          if (SupportsForcingFramePointer &&
+              !DAL.hasArgNoClaim(options::OPT_fno_omit_frame_pointer))
             DAL.AddFlagArg(A,
                            Opts.getOption(options::OPT_fomit_frame_pointer));
           if (OptChar == '1' || OptChar == '2')
@@ -669,8 +736,20 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
       }
       break;
     case 'b':
-      if (I + 1 != E && isdigit(OptStr[I + 1]))
+      if (I + 1 != E && isdigit(OptStr[I + 1])) {
+        switch (OptStr[I + 1]) {
+        case '0':
+          DAL.AddFlagArg(A, Opts.getOption(options::OPT_fno_inline));
+          break;
+        case '1':
+          DAL.AddFlagArg(A, Opts.getOption(options::OPT_finline_hint_functions));
+          break;
+        case '2':
+          DAL.AddFlagArg(A, Opts.getOption(options::OPT_finline_functions));
+          break;
+        }
         ++I;
+      }
       break;
     case 'g':
       break;
@@ -701,6 +780,12 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
         else
           DAL.AddFlagArg(
               A, Opts.getOption(options::OPT_fno_omit_frame_pointer));
+      } else {
+        // Don't warn about /Oy- in 64-bit builds (where
+        // SupportsForcingFramePointer is false).  The flag having no effect
+        // there is a compiler-internal optimization, and people shouldn't have
+        // to special-case their build files for 64-bit clang-cl.
+        A->claim();
       }
       break;
     }
@@ -748,7 +833,12 @@ MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
       continue;
     StringRef OptStr = A->getValue();
     for (size_t I = 0, E = OptStr.size(); I != E; ++I) {
-      const char &OptChar = *(OptStr.data() + I);
+      char OptChar = OptStr[I];
+      char PrevChar = I > 0 ? OptStr[I - 1] : '0';
+      if (PrevChar == 'b') {
+        // OptChar does not expand; it's an argument to the previous char.
+        continue;
+      }
       if (OptChar == '1' || OptChar == '2' || OptChar == 'x' || OptChar == 'd')
         ExpandChar = OptStr.data() + I;
     }

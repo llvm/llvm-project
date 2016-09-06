@@ -45,3 +45,6 @@ DEFINE_COMPILERRT_FUNCTION(__bswapdi2)
     mov r1, r2  // r1 = r2 = rev(r0)
     JMP(lr)
 END_COMPILERRT_FUNCTION(__bswapdi2)
+
+NO_EXEC_STACK_DIRECTIVE
+

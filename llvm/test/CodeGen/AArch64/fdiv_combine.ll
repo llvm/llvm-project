@@ -38,7 +38,7 @@ entry:
 ; Test which should not fold due to power of 2 out of range.
 ; CHECK-LABEL: @test4
 ; CHECK: scvtf.2s v0, v0
-; CHECK: movi.2s v1, #0x50, lsl #24
+; CHECK: movi.2s v1, #80, lsl #24
 ; CHECK: fdiv.2s v0, v0, v1
 ; CHECK: ret
 define <2 x float> @test4(<2 x i32> %in) {
@@ -96,7 +96,7 @@ define <4 x float> @test8(<4 x i16> %in) {
 ; CHECK-LABEL: @test9
 ; CHECK: ucvtf.2d v0, v0
 ; CHECK: fcvtn v0.2s, v0.2d
-; CHECK: movi.2s v1, #0x40, lsl #24
+; CHECK: movi.2s v1, #64, lsl #24
 ; CHECK: fdiv.2s v0, v0, v1
 ; CHECK: ret
 define <2 x float> @test9(<2 x i64> %in) {

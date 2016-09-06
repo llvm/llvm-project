@@ -38,6 +38,7 @@ struct MIToken {
     underscore,
     colon,
     coloncolon,
+    dot,
     exclaim,
     lparen,
     rparen,
@@ -45,6 +46,8 @@ struct MIToken {
     rbrace,
     plus,
     minus,
+    less,
+    greater,
 
     // Keywords
     kw_implicit,
@@ -65,6 +68,7 @@ struct MIToken {
     kw_cfi_def_cfa_offset,
     kw_cfi_def_cfa,
     kw_blockaddress,
+    kw_intrinsic,
     kw_target_index,
     kw_half,
     kw_float,
@@ -100,6 +104,8 @@ struct MIToken {
     NamedRegister,
     MachineBasicBlockLabel,
     MachineBasicBlock,
+    PointerType,
+    ScalarType,
     StackObject,
     FixedStackObject,
     NamedGlobalValue,
@@ -116,7 +122,8 @@ struct MIToken {
     IRBlock,
     NamedIRValue,
     IRValue,
-    QuotedIRValue // `<constant value>`
+    QuotedIRValue, // `<constant value>`
+    SubRegisterIndex
   };
 
 private:

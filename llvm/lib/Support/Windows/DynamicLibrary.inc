@@ -45,7 +45,7 @@ static bool loadDebugHelp(void) {
 }
 
 static BOOL CALLBACK
-ELM_Callback(WIN32_ELMCB_PCSTR ModuleName, DWORD64 ModuleBase,
+ELM_Callback(PCSTR ModuleName, DWORD64 ModuleBase,
              ULONG ModuleSize, PVOID UserContext) {
   OpenedHandles->insert((HMODULE)ModuleBase);
   return TRUE;

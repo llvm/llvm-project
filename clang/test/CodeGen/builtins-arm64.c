@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -O3 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-unknown-linux -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
 
 void f0(void *a, void *b) {
 	__clear_cache(a,b);
@@ -7,7 +7,7 @@ void f0(void *a, void *b) {
 
 void *tp (void) {
   return __builtin_thread_pointer ();
-// CHECK: call {{.*}} @llvm.aarch64.thread.pointer()
+// CHECK: call {{.*}} @llvm.thread.pointer()
 }
 
 // CHECK: call {{.*}} @llvm.aarch64.rbit.i32(i32 %a)
@@ -50,7 +50,7 @@ void prefetch() {
 }
 
 unsigned rsr() {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = {{.*}} call i64 @llvm.read_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_register.i64(metadata ![[M0:[0-9]]])
   // CHECK-NEXT: trunc i64 [[V0]] to i32
   return __builtin_arm_rsr("1:2:3:4:5");
 }
@@ -61,7 +61,7 @@ unsigned long rsr64() {
 }
 
 void *rsrp() {
-  // CHECK: [[V0:[%A-Za-z0-9.]+]] = {{.*}} call i64 @llvm.read_register.i64(metadata ![[M0:[0-9]]])
+  // CHECK: [[V0:[%A-Za-z0-9.]+]] = call i64 @llvm.read_register.i64(metadata ![[M0:[0-9]]])
   // CHECK-NEXT: inttoptr i64 [[V0]] to i8*
   return __builtin_arm_rsrp("1:2:3:4:5");
 }

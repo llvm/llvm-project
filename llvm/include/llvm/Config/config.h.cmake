@@ -1,5 +1,3 @@
-/* include/llvm/Config/config.h.cmake corresponding to config.h.in. */
-
 #ifndef CONFIG_H
 #define CONFIG_H
 
@@ -15,14 +13,8 @@
 /* Define to enable crash overrides */
 #cmakedefine ENABLE_CRASH_OVERRIDES
 
-/* Define to disable C++ atexit */
-#cmakedefine DISABLE_LLVM_DYLIB_ATEXIT
-
 /* Define if position independent code is enabled */
 #cmakedefine ENABLE_PIC
-
-/* Define if timestamp information (e.g., __DATE__) is allowed */
-#cmakedefine ENABLE_TIMESTAMPS ${ENABLE_TIMESTAMPS}
 
 /* Define to 1 if you have the `arc4random' function. */
 #cmakedefine HAVE_DECL_ARC4RANDOM ${HAVE_DECL_ARC4RANDOM}
@@ -256,6 +248,9 @@
 /* Define if you have the shl_load function. */
 #undef HAVE_SHL_LOAD
 
+/* Define to 1 if you have the `sigaltstack' function. */
+#cmakedefine HAVE_SIGALTSTACK ${HAVE_SIGALTSTACK}
+
 /* Define to 1 if you have the `siglongjmp' function. */
 #cmakedefine HAVE_SIGLONGJMP ${HAVE_SIGLONGJMP}
 
@@ -327,6 +322,9 @@
 /* Define if the setupterm() function is supported this platform. */
 #cmakedefine HAVE_TERMINFO ${HAVE_TERMINFO}
 
+/* Define if the xar_open() function is supported this platform. */
+#cmakedefine HAVE_LIBXAR ${HAVE_LIBXAR}
+
 /* Define to 1 if you have the <termios.h> header file. */
 #cmakedefine HAVE_TERMIOS_H ${HAVE_TERMIOS_H}
 
@@ -335,6 +333,9 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #cmakedefine HAVE_UNISTD_H ${HAVE_UNISTD_H}
+
+/* Define to 1 if you have the `_Unwind_Backtrace' function. */
+#cmakedefine HAVE_UNWIND_BACKTRACE ${HAVE_UNWIND_BACKTRACE}
 
 /* Define to 1 if you have the <utime.h> header file. */
 #cmakedefine HAVE_UTIME_H ${HAVE_UTIME_H}
@@ -504,6 +505,9 @@
 /* LLVM version string */
 #define LLVM_VERSION_STRING "${PACKAGE_VERSION}"
 
+/* LLVM version information */
+#cmakedefine LLVM_VERSION_INFO "${LLVM_VERSION_INFO}"
+
 /* Define if we link Polly to the tools */
 #cmakedefine LINK_POLLY_INTO_TOOLS
 
@@ -560,9 +564,6 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 #undef TM_IN_SYS_TIME
 
-/* Type of 1st arg on ELM Callback */
-#cmakedefine WIN32_ELMCB_PCSTR ${WIN32_ELMCB_PCSTR}
-
 /* Define to `int' if <sys/types.h> does not define. */
 #undef pid_t
 
@@ -583,5 +584,7 @@
 
 /* Define to 1 if you have the `_chsize_s' function. */
 #cmakedefine HAVE__CHSIZE_S ${HAVE__CHSIZE_S}
+
+#cmakedefine HAVE_POSIX_FALLOCATE ${HAVE_POSIX_FALLOCATE}
 
 #endif

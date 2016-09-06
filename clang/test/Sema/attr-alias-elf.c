@@ -55,7 +55,7 @@ typedef int b4;
 
 void test2_bar() {}
 void test2_foo() __attribute__((weak, alias("test2_bar")));
-void test2_zed() __attribute__((alias("test2_foo"))); // expected-warning {{alias will always resolve to test2_bar even if weak definition of alias test2_foo is overridden}}
+void test2_zed() __attribute__((alias("test2_foo"))); // expected-warning {{alias will always resolve to test2_bar even if weak definition of test2_foo is overridden}}
 
 void test3_bar() { }
 void test3_foo() __attribute__((section("test"))); // expected-warning {{alias will not be in section 'test' but in the same section as the aliasee}}

@@ -27,6 +27,8 @@ class MachineMemOperand;
 class raw_ostream;
 
 raw_ostream &operator<<(raw_ostream &OS, const MachineMemOperand &MMO);
+class PseudoSourceValue;
+raw_ostream &operator<<(raw_ostream &OS, const PseudoSourceValue* PSV);
 
 /// Special value supplied for machine level alias analysis. It indicates that
 /// a memory access references the functions stack frame (e.g., a spill slot),
@@ -45,6 +47,8 @@ public:
 
 private:
   PSVKind Kind;
+  friend raw_ostream &llvm::operator<<(raw_ostream &OS,
+                                       const PseudoSourceValue* PSV);
 
   friend class MachineMemOperand; // For printCustom().
 

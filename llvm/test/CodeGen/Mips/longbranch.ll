@@ -1,13 +1,17 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s
-; RUN: llc -march=mipsel -force-mips-long-branch -O3 < %s \
+; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -march=mipsel -force-mips-long-branch -O3 -relocation-model=pic < %s \
 ; RUN:   | FileCheck %s -check-prefix=O32
-; RUN: llc -march=mips64el -mcpu=mips4 -target-abi=n64 -force-mips-long-branch -O3 \
+; RUN: llc -march=mipsel -mcpu=mips32r6 -force-mips-long-branch -O3 \
+; RUN:   -relocation-model=pic -asm-show-inst < %s | FileCheck %s -check-prefix=O32-R6
+; RUN: llc -march=mips64el -mcpu=mips4 -target-abi=n64 -force-mips-long-branch -O3 -relocation-model=pic \
 ; RUN:   < %s | FileCheck %s -check-prefix=N64
-; RUN: llc -march=mips64el -mcpu=mips64 -target-abi=n64 -force-mips-long-branch -O3 \
+; RUN: llc -march=mips64el -mcpu=mips64 -target-abi=n64 -force-mips-long-branch -O3 -relocation-model=pic \
 ; RUN:   < %s | FileCheck %s -check-prefix=N64
+; RUN: llc -march=mips64el -mcpu=mips64r6 -target-abi=n64 -force-mips-long-branch -O3 \
+; RUN:   -relocation-model=pic -asm-show-inst < %s | FileCheck %s -check-prefix=N64-R6
 ; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=micromips \
-; RUN:   -force-mips-long-branch -O3 < %s | FileCheck %s -check-prefix=MICROMIPS
-; RUN: llc -mtriple=mipsel-none-nacl -force-mips-long-branch -O3 < %s \
+; RUN:   -force-mips-long-branch -O3 -relocation-model=pic < %s | FileCheck %s -check-prefix=MICROMIPS
+; RUN: llc -mtriple=mipsel-none-nacl -force-mips-long-branch -O3 -relocation-model=pic < %s \
 ; RUN:   | FileCheck %s -check-prefix=NACL
 
 
@@ -72,34 +76,43 @@ end:
 ; O32:        jr      $ra
 ; O32:        nop
 
+; In MIPS32R6 JR is an alias to JALR with $rd=0. As everything else remains the
+; same with the O32 prefix, we use -asm-show-inst in order to make sure that
+; the opcode of the MachineInst is a JALR.
+; O32-R6:     JALR
 
 ; Check the MIPS64 version.
 
 ; N64:        lui     $[[R0:[0-9]+]], %hi(%neg(%gp_rel(test1)))
-; N64:        bnez    $4, $[[BB0:BB[0-9_]+]]
+; N64:        bnez    $4, [[BB0:\.LBB[0-9_]+]]
 ; N64:        daddu   $[[R1:[0-9]+]], $[[R0]], $25
 
 ; Check for long branch expansion:
 ; N64:           daddiu  $sp, $sp, -16
 ; N64-NEXT:      sd      $ra, 0($sp)
-; N64-NEXT:      daddiu  $1, $zero, %hi(($[[BB2:BB[0-9_]+]])-($[[BB1:BB[0-9_]+]]))
+; N64-NEXT:      daddiu  $1, $zero, %hi([[BB2:\.LBB[0-9_]+]]-[[BB1:\.LBB[0-9_]+]])
 ; N64-NEXT:      dsll    $1, $1, 16
-; N64-NEXT:      bal     $[[BB1]]
-; N64-NEXT:      daddiu  $1, $1, %lo(($[[BB2]])-($[[BB1]]))
-; N64-NEXT:  $[[BB1]]:
+; N64-NEXT:      bal     [[BB1]]
+; N64-NEXT:      daddiu  $1, $1, %lo([[BB2]]-[[BB1]])
+; N64-NEXT:  [[BB1]]:
 ; N64-NEXT:      daddu   $1, $ra, $1
 ; N64-NEXT:      ld      $ra, 0($sp)
 ; N64-NEXT:      jr      $1
 ; N64-NEXT:      daddiu  $sp, $sp, 16
 
-; N64:   $[[BB0]]:
+; N64:   [[BB0]]:
 ; N64:        daddiu  $[[GP:[0-9]+]], $[[R1]], %lo(%neg(%gp_rel(test1)))
 ; N64:        ld      $[[R2:[0-9]+]], %got_disp(x)($[[GP]])
 ; N64:        addiu   $[[R3:[0-9]+]], $zero, 1
 ; N64:        sw      $[[R3]], 0($[[R2]])
-; N64:   $[[BB2]]:
+; N64:   [[BB2]]:
 ; N64:        jr      $ra
 ; N64:        nop
+
+; In MIPS64R6 JR is an alias to JALR with $rd=0. As everything else remains the
+; same with the N64 prefix, we use -asm-show-inst in order to make sure that
+; the opcode of the MachineInst is a JALR.
+; N64-R6:     JALR64
 
 
 ; Check the microMIPS version.
@@ -155,7 +168,7 @@ end:
 ; NACL:             lw      $[[R1:[0-9]+]], %got(x)($[[GP]])
 ; NACL:             addiu   $[[R2:[0-9]+]], $zero, 1
 ; NACL:             sw      $[[R2]], 0($[[R1]])
-; NACL:             .align  4
+; NACL:             .p2align  4
 ; NACL-NEXT:   $[[BB2]]:
 ; NACL:             jr      $ra
 ; NACL:             nop

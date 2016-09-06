@@ -15,8 +15,7 @@
 #ifndef LLVM_IR_USELISTORDER_H
 #define LLVM_IR_USELISTORDER_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
+#include <cstddef>
 #include <vector>
 
 namespace llvm {

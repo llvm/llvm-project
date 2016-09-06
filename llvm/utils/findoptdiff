@@ -70,7 +70,7 @@ dis2="$llvm2/Debug/bin/llvm-dis"
 opt1="$llvm1/Debug/bin/opt"
 opt2="$llvm2/Debug/bin/opt"
 
-all_switches="-verify -lowersetjmp -simplifycfg -mem2reg -globalopt -globaldce -ipconstprop -deadargelim -instcombine -simplifycfg -prune-eh -inline -simplify-libcalls -argpromotion -tailduplicate -simplifycfg -scalarrepl -instcombine -predsimplify -condprop -tailcallelim -simplifycfg -reassociate -licm -loop-unswitch -instcombine -indvars -loop-unroll -instcombine -load-vn -gcse -sccp -instcombine -condprop -dse -dce -simplifycfg -deadtypeelim -constmerge -internalize -ipsccp -globalopt -constmerge -deadargelim -inline -prune-eh -globalopt -globaldce -argpromotion -instcombine -predsimplify -scalarrepl -globalsmodref-aa -licm -load-vn -gcse -dse -instcombine -simplifycfg -verify"
+all_switches="-verify -lowersetjmp -simplifycfg -mem2reg -globalopt -globaldce -ipconstprop -deadargelim -instcombine -simplifycfg -prune-eh -inline -simplify-libcalls -argpromotion -tailduplicate -simplifycfg -sroa -instcombine -predsimplify -condprop -tailcallelim -simplifycfg -reassociate -licm -loop-unswitch -instcombine -indvars -loop-unroll -instcombine -load-vn -gcse -sccp -instcombine -condprop -dse -dce -simplifycfg -deadtypeelim -constmerge -internalize -ipsccp -globalopt -constmerge -deadargelim -inline -prune-eh -globalopt -globaldce -argpromotion -instcombine -predsimplify -sroa -globalsmodref-aa -licm -load-vn -gcse -dse -instcombine -simplifycfg -verify"
 
 #counter=0
 function tryit {

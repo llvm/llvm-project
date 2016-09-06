@@ -25,7 +25,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
-#include <map>
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -166,17 +165,25 @@ void X86ATTInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (Op.isReg()) {
     printRegName(O, Op.getReg());
   } else if (Op.isImm()) {
-    // Print X86 immediates as signed values.
-    O << markup("<imm:") << '$' << formatImm((int64_t)Op.getImm())
-      << markup(">");
+    // Print immediates as signed values.
+    int64_t Imm = Op.getImm();
+    O << markup("<imm:") << '$' << formatImm(Imm) << markup(">");
+
+    // TODO: This should be in a helper function in the base class, so it can
+    // be used by other printers.
 
     // If there are no instruction-specific comments, add a comment clarifying
     // the hex value of the immediate operand when it isn't in the range
     // [-256,255].
-    if (CommentStream && !HasCustomInstComment &&
-        (Op.getImm() > 255 || Op.getImm() < -256))
-      *CommentStream << format("imm = 0x%" PRIX64 "\n", (uint64_t)Op.getImm());
-
+    if (CommentStream && !HasCustomInstComment && (Imm > 255 || Imm < -256)) {
+      // Don't print unnecessary hex sign bits. 
+      if (Imm == (int16_t)(Imm))
+        *CommentStream << format("imm = 0x%" PRIX16 "\n", (uint16_t)Imm);
+      else if (Imm == (int32_t)(Imm))
+        *CommentStream << format("imm = 0x%" PRIX32 "\n", (uint32_t)Imm);
+      else
+        *CommentStream << format("imm = 0x%" PRIX64 "\n", (uint64_t)Imm);
+    }
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     O << markup("<imm:") << '$';

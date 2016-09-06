@@ -11,7 +11,6 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Frontend/SerializedDiagnostics.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/MemoryBuffer.h"
 
 using namespace clang;
 using namespace clang::serialized_diags;

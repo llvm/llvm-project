@@ -111,7 +111,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
 
   if (Info.UnavailableInSwift) {
     D->addAttr(AvailabilityAttr::CreateImplicit(
-		 S.Context,
+		             S.Context,
                  &S.Context.Idents.get("swift"),
                  VersionTuple(),
                  VersionTuple(),
@@ -122,12 +122,45 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                  /*Replacement=*/StringRef()));
   }
 
+  // swift_private
+  if (Info.SwiftPrivate && !D->hasAttr<SwiftPrivateAttr>()) {
+    D->addAttr(SwiftPrivateAttr::CreateImplicit(S.Context));
+  }
+
   // swift_name
   if (!Info.SwiftName.empty() && !D->hasAttr<SwiftNameAttr>()) {
+    auto &APINoteName = S.getASTContext().Idents.get("SwiftName API Note");
+    
+    if (!S.DiagnoseSwiftName(D, Info.SwiftName, D->getLocation(),
+                             &APINoteName)) {
+      return;
+    }
     D->addAttr(SwiftNameAttr::CreateImplicit(S.Context,
-					     CopyString(S.Context,
-							Info.SwiftName)));
+                                       CopyString(S.Context, Info.SwiftName)));
   }
+}
+
+static void ProcessAPINotes(Sema &S, Decl *D,
+                            const api_notes::CommonTypeInfo &Info) {
+  // swift_bridge
+  if (!Info.getSwiftBridge().empty() &&
+      !D->getAttr<SwiftBridgeAttr>()) {
+    D->addAttr(
+      SwiftBridgeAttr::CreateImplicit(S.Context,
+                                      CopyString(S.Context,
+                                                 Info.getSwiftBridge())));
+  }
+
+  // ns_error_domain
+  if (!Info.getNSErrorDomain().empty() &&
+      !D->getAttr<NSErrorDomainAttr>()) {
+    D->addAttr(
+      NSErrorDomainAttr::CreateImplicit(
+        S.Context,
+        &S.Context.Idents.get(Info.getNSErrorDomain())));
+  }
+
+  ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info));
 }
 
 /// Process API notes for a variable or property.
@@ -142,10 +175,20 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info));
 }
 
+/// Process API notes for a parameter.
+static void ProcessAPINotes(Sema &S, ParmVarDecl *D,
+                            const api_notes::ParamInfo &Info) {
+  // noescape
+  if (Info.isNoEscape() && !D->getAttr<NoEscapeAttr>())
+    D->addAttr(NoEscapeAttr::CreateImplicit(S.Context));
+
+  // Handle common entity information.
+  ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info));
+}
+
 /// Process API notes for a global variable.
 static void ProcessAPINotes(Sema &S, VarDecl *D,
                             const api_notes::GlobalVariableInfo &Info) {
-
   // Handle common entity information.
   ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info));
 }
@@ -153,7 +196,6 @@ static void ProcessAPINotes(Sema &S, VarDecl *D,
 /// Process API notes for an Objective-C property.
 static void ProcessAPINotes(Sema &S, ObjCPropertyDecl *D,
                             const api_notes::ObjCPropertyInfo &Info) {
-
   // Handle common entity information.
   ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info));
 }
@@ -174,26 +216,31 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     D = MD;
   }
 
-  // Nullability.
+  // Nullability of return type.
   if (Info.NullabilityAudited) {
-    // Return type.
     applyNullability(S, D, Info.getReturnTypeInfo());
+  }
 
-    // Parameters.
-    unsigned NumParams;
+  // Parameters.
+  unsigned NumParams;
+  if (FD)
+    NumParams = FD->getNumParams();
+  else
+    NumParams = MD->param_size();
+  
+  for (unsigned I = 0; I != NumParams; ++I) {
+    ParmVarDecl *Param;
     if (FD)
-      NumParams = FD->getNumParams();
+      Param = FD->getParamDecl(I);
     else
-      NumParams = MD->param_size();
-
-    for (unsigned I = 0; I != NumParams; ++I) {
-      ParmVarDecl *Param;
-      if (FD)
-        Param = FD->getParamDecl(I);
-      else
-        Param = MD->param_begin()[I];
-
+      Param = MD->param_begin()[I];
+    
+    // Nullability.
+    if (Info.NullabilityAudited)
       applyNullability(S, Param, Info.getParamTypeInfo(I));
+
+    if (I < Info.Params.size()) {
+      ProcessAPINotes(S, Param, Info.Params[I]);
     }
   }
 
@@ -208,6 +255,15 @@ static void ProcessAPINotes(Sema &S, FunctionDecl *D,
   // Handle common function information.
   ProcessAPINotes(S, FunctionOrMethod(D),
                   static_cast<const api_notes::FunctionInfo &>(Info));
+}
+
+/// Process API notes for an enumerator.
+static void ProcessAPINotes(Sema &S, EnumConstantDecl *D,
+                            const api_notes::EnumConstantInfo &Info) {
+
+  // Handle common information.
+  ProcessAPINotes(S, D,
+                  static_cast<const api_notes::CommonEntityInfo &>(Info));
 }
 
 /// Process API notes for an Objective-C method.
@@ -232,26 +288,31 @@ static void ProcessAPINotes(Sema &S, ObjCMethodDecl *D,
                   static_cast<const api_notes::FunctionInfo &>(Info));
 }
 
+/// Process API notes for a tag.
+static void ProcessAPINotes(Sema &S, TagDecl *D,
+                            const api_notes::TagInfo &Info) {
+  // Handle common type information.
+  ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(Info));
+}
+
+/// Process API notes for a typedef.
+static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
+                            const api_notes::TypedefInfo &Info) {
+  // Handle common type information.
+  ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(Info));
+}
+
 /// Process API notes for an Objective-C class or protocol.
 static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
                             const api_notes::ObjCContextInfo &Info) {
 
-  // Handle common entity information.
-  ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info));
+  // Handle common type information.
+  ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(Info));
 }
 
 /// Process API notes for an Objective-C class.
 static void ProcessAPINotes(Sema &S, ObjCInterfaceDecl *D,
                             const api_notes::ObjCContextInfo &Info) {
-  // swift_bridge
-  if (!Info.getSwiftBridge().empty() &&
-      !D->getAttr<SwiftBridgeAttr>()) {
-    D->addAttr(
-      SwiftBridgeAttr::CreateImplicit(S.Context,
-                                      CopyString(S.Context,
-                                                 Info.getSwiftBridge())));
-  }
-
   // Handle information common to Objective-C classes and protocols.
   ProcessAPINotes(S, static_cast<clang::ObjCContainerDecl *>(D), Info);
 }
@@ -314,7 +375,45 @@ void Sema::ProcessAPINotes(Decl *D) {
       return;
     }
 
+    // Tags
+    if (auto Tag = dyn_cast<TagDecl>(D)) {
+      if (api_notes::APINotesReader *Reader
+            = APINotes.findAPINotes(D->getLocation())) {
+        if (auto Info = Reader->lookupTag(Tag->getName())) {
+          ::ProcessAPINotes(*this, Tag, *Info);
+        }
+      }
+
+      return;
+    }
+
+    // Typedefs
+    if (auto Typedef = dyn_cast<TypedefNameDecl>(D)) {
+      if (api_notes::APINotesReader *Reader
+            = APINotes.findAPINotes(D->getLocation())) {
+        if (auto Info = Reader->lookupTypedef(Typedef->getName())) {
+          ::ProcessAPINotes(*this, Typedef, *Info);
+        }
+      }
+
+      return;
+    }
+
     return;
+  }
+
+  // Enumerators.
+  if (D->getDeclContext()->getRedeclContext()->isFileContext()) {
+    if (auto EnumConstant = dyn_cast<EnumConstantDecl>(D)) {
+      if (api_notes::APINotesReader *Reader
+            = APINotes.findAPINotes(D->getLocation())) {
+        if (auto Info = Reader->lookupEnumConstant(EnumConstant->getName())) {
+          ::ProcessAPINotes(*this, EnumConstant, *Info);
+        }
+      }
+
+      return;
+    }
   }
 
   if (auto ObjCContainer = dyn_cast<ObjCContainerDecl>(D->getDeclContext())) {

@@ -204,6 +204,7 @@ types::ID types::lookupTypeForExtension(const char *Ext) {
            .Case("pcm", TY_ModuleFile)
            .Case("pch", TY_PCH)
            .Case("gch", TY_PCH)
+           .Case("rs", TY_RenderScript)
            .Default(TY_INVALID);
 }
 
@@ -241,7 +242,6 @@ void types::getCompilationPhases(ID Id, llvm::SmallVectorImpl<phases::ID> &P) {
   }
   assert(0 < P.size() && "Not enough phases in list");
   assert(P.size() <= phases::MaxNumberOfPhases && "Too many phases in list");
-  return;
 }
 
 ID types::lookupCXXTypeForCType(ID Id) {

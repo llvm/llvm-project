@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr6 -mattr=+altivec,+fsqrt < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr6 -mattr=+altivec,+fsqrt < %s | FileCheck %s
 
 ; Check for vector sqrt expansion using floating-point types, since altivec
 ; does not provide an fsqrt instruction for vector.

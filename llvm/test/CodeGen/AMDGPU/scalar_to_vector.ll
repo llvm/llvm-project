@@ -1,15 +1,14 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
-
+; XXX - Why the packing?
 ; FUNC-LABEL: {{^}}scalar_to_vector_v2i32:
 ; SI: buffer_load_dword [[VAL:v[0-9]+]],
-; SI: v_lshrrev_b32_e32 [[RESULT:v[0-9]+]], 16, [[VAL]]
-; SI: buffer_store_short [[RESULT]]
-; SI: buffer_store_short [[RESULT]]
-; SI: buffer_store_short [[RESULT]]
-; SI: buffer_store_short [[RESULT]]
-; SI: s_endpgm
+; SI: v_lshrrev_b32_e32 [[SHR:v[0-9]+]], 16, [[VAL]]
+; SI: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], 16, [[SHR]]
+; SI: v_or_b32_e32 v[[OR:[0-9]+]], [[SHL]], [[SHR]]
+; SI: v_mov_b32_e32 v[[COPY:[0-9]+]], v[[OR]]
+; SI: buffer_store_dwordx2 v{{\[}}[[OR]]:[[COPY]]{{\]}}
 define void @scalar_to_vector_v2i32(<4 x i16> addrspace(1)* %out, i32 addrspace(1)* %in) nounwind {
   %tmp1 = load i32, i32 addrspace(1)* %in, align 4
   %bc = bitcast i32 %tmp1 to <2 x i16>
@@ -21,11 +20,7 @@ define void @scalar_to_vector_v2i32(<4 x i16> addrspace(1)* %out, i32 addrspace(
 ; FUNC-LABEL: {{^}}scalar_to_vector_v2f32:
 ; SI: buffer_load_dword [[VAL:v[0-9]+]],
 ; SI: v_lshrrev_b32_e32 [[RESULT:v[0-9]+]], 16, [[VAL]]
-; SI: buffer_store_short [[RESULT]]
-; SI: buffer_store_short [[RESULT]]
-; SI: buffer_store_short [[RESULT]]
-; SI: buffer_store_short [[RESULT]]
-; SI: s_endpgm
+; SI: buffer_store_dwordx2
 define void @scalar_to_vector_v2f32(<4 x i16> addrspace(1)* %out, float addrspace(1)* %in) nounwind {
   %tmp1 = load float, float addrspace(1)* %in, align 4
   %bc = bitcast float %tmp1 to <2 x i16>

@@ -25,18 +25,25 @@ namespace llvm {
 class Constant;
 class MVT;
 
-/// \brief Decode a PSHUFB mask from an IR-level vector constant.
+/// Decode a PSHUFB mask from an IR-level vector constant.
 void DecodePSHUFBMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask);
 
-/// \brief Decode a VPERMILP variable mask from an IR-level vector constant.
+/// Decode a VPERMILP variable mask from an IR-level vector constant.
 void DecodeVPERMILPMask(const Constant *C, unsigned ElSize,
                         SmallVectorImpl<int> &ShuffleMask);
 
-/// \brief Decode a VPERM W/D/Q/PS/PD mask from an IR-level vector constant.
+/// Decode a VPERMILP2 variable mask from an IR-level vector constant.
+void DecodeVPERMIL2PMask(const Constant *C, unsigned MatchImm, unsigned ElSize,
+                         SmallVectorImpl<int> &ShuffleMask);
+
+/// Decode a VPPERM variable mask from an IR-level vector constant.
+void DecodeVPPERMMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask);
+
+/// Decode a VPERM W/D/Q/PS/PD mask from an IR-level vector constant.
 void DecodeVPERMVMask(const Constant *C, MVT VT,
                       SmallVectorImpl<int> &ShuffleMask);
 
-/// \brief Decode a VPERMT2 W/D/Q/PS/PD mask from an IR-level vector constant.
+/// Decode a VPERMT2 W/D/Q/PS/PD mask from an IR-level vector constant.
 void DecodeVPERMV3Mask(const Constant *C, MVT VT,
                        SmallVectorImpl<int> &ShuffleMask);
 

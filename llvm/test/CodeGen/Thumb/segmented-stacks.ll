@@ -32,7 +32,7 @@ define void @test_basic() #0 {
 
 ; Thumb-android:      pop     {r4, r5}
 
-; Thumb-android: .align 2
+; Thumb-android: .p2align 2
 ; Thumb-android: .LCPI0_0:
 ; Thumb-android-NEXT: .long __STACK_LIMIT
 

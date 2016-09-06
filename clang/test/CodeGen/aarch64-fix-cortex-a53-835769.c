@@ -23,5 +23,5 @@ int64_t f_load_madd_64(int64_t a, int64_t b, int64_t *c) {
 
 // CHECK: ldr
 // CHECK-YES-NEXT: nop
-// CHECK-NO-NEXT-NOT: nop
+// CHECK-NO-NOT: nop
 // CHECK-NEXT: madd

@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_AMDGPUISELLOWERING_H
-#define LLVM_LIB_TARGET_R600_AMDGPUISELLOWERING_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUISELLOWERING_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUISELLOWERING_H
 
 #include "llvm/Target/TargetLowering.h"
 
@@ -28,12 +28,6 @@ class AMDGPUTargetLowering : public TargetLowering {
 protected:
   const AMDGPUSubtarget *Subtarget;
 
-private:
-  SDValue LowerConstantInitializer(const Constant* Init, const GlobalValue *GV,
-                                   const SDValue &InitPtr,
-                                   SDValue Chain,
-                                   SelectionDAG &DAG) const;
-  SDValue LowerFrameIndex(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
@@ -68,18 +62,19 @@ private:
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
 protected:
+  bool shouldCombineMemoryType(EVT VT) const;
+  SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performAndCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performShlCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSraCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSrlCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performMulCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performCtlzCombine(SDLoc SL, SDValue Cond, SDValue LHS, SDValue RHS,
-                             DAGCombinerInfo &DCI) const;
+  SDValue performCtlzCombine(const SDLoc &SL, SDValue Cond, SDValue LHS,
+                             SDValue RHS, DAGCombinerInfo &DCI) const;
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
-  static EVT getEquivalentLoadRegType(LLVMContext &Context, EVT VT);
 
   virtual SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
                                      SelectionDAG &DAG) const;
@@ -90,28 +85,18 @@ protected:
   SDValue getLoHalf64(SDValue Op, SelectionDAG &DAG) const;
   SDValue getHiHalf64(SDValue Op, SelectionDAG &DAG) const;
 
-  /// \brief Split a vector load into a scalar load of each component.
-  SDValue ScalarizeVectorLoad(SDValue Op, SelectionDAG &DAG) const;
-
   /// \brief Split a vector load into 2 loads of half the vector.
   SDValue SplitVectorLoad(SDValue Op, SelectionDAG &DAG) const;
-
-  /// \brief Split a vector store into a scalar store of each component.
-  SDValue ScalarizeVectorStore(SDValue Op, SelectionDAG &DAG) const;
 
   /// \brief Split a vector store into 2 stores of half the vector.
   SDValue SplitVectorStore(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSDIVREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerUDIVREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool sign) const;
   void LowerUDIVREM64(SDValue Op, SelectionDAG &DAG,
                                     SmallVectorImpl<SDValue> &Results) const;
-  bool isHWTrueValue(SDValue Op) const;
-  bool isHWFalseValue(SDValue Op) const;
-
   /// The SelectionDAGBuilder will automatically promote function arguments
   /// with illegal types.  However, this does not work for the AMDGPU targets
   /// since the function arguments are stored in memory as these illegal types.
@@ -128,7 +113,7 @@ protected:
                      const SmallVectorImpl<ISD::OutputArg> &Outs) const;
 
 public:
-  AMDGPUTargetLowering(TargetMachine &TM, const AMDGPUSubtarget &STI);
+  AMDGPUTargetLowering(const TargetMachine &TM, const AMDGPUSubtarget &STI);
 
   bool isFAbsFree(EVT VT) const override;
   bool isFNegFree(EVT VT) const override;
@@ -150,7 +135,7 @@ public:
                              ISD::LoadExtType ExtType,
                              EVT ExtVT) const override;
 
-  bool isLoadBitCastBeneficial(EVT, EVT) const override;
+  bool isLoadBitCastBeneficial(EVT, EVT) const final;
 
   bool storeOfVectorConstantIsCheap(EVT MemVT,
                                     unsigned NumElem,
@@ -159,11 +144,10 @@ public:
   bool isCheapToSpeculateCttz() const override;
   bool isCheapToSpeculateCtlz() const override;
 
-  SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv,
-                      bool isVarArg,
+  SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      const SmallVectorImpl<SDValue> &OutVals,
-                      SDLoc DL, SelectionDAG &DAG) const override;
+                      const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
+                      SelectionDAG &DAG) const override;
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
@@ -176,19 +160,15 @@ public:
                           SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
 
-  SDValue LowerIntrinsicIABS(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerIntrinsicLRP(SDValue Op, SelectionDAG &DAG) const;
-  SDValue CombineFMinMaxLegacy(SDLoc DL,
-                               EVT VT,
-                               SDValue LHS,
-                               SDValue RHS,
-                               SDValue True,
-                               SDValue False,
-                               SDValue CC,
-                               DAGCombinerInfo &DCI) const;
+  SDValue CombineFMinMaxLegacy(const SDLoc &DL, EVT VT, SDValue LHS,
+                               SDValue RHS, SDValue True, SDValue False,
+                               SDValue CC, DAGCombinerInfo &DCI) const;
 
   const char* getTargetNodeName(unsigned Opcode) const override;
 
+  bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override {
+    return true;
+  }
   SDValue getRsqrtEstimate(SDValue Operand,
                            DAGCombinerInfo &DCI,
                            unsigned &RefinementSteps,
@@ -198,9 +178,7 @@ public:
                            unsigned &RefinementSteps) const override;
 
   virtual SDNode *PostISelFolding(MachineSDNode *N,
-                                  SelectionDAG &DAG) const {
-    return N;
-  }
+                                  SelectionDAG &DAG) const = 0;
 
   /// \brief Determine which of the bits specified in \p Mask are known to be
   /// either zero or one and return them in the \p KnownZero and \p KnownOne
@@ -223,8 +201,9 @@ public:
                                        unsigned Reg, EVT VT) const;
 
   enum ImplicitParameter {
-    GRID_DIM,
-    GRID_OFFSET
+    FIRST_IMPLICIT,
+    GRID_DIM = FIRST_IMPLICIT,
+    GRID_OFFSET,
   };
 
   /// \brief Helper function that returns the byte offset of the given
@@ -240,12 +219,16 @@ enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
   CALL,        // Function call based on a single integer
   UMUL,        // 32bit unsigned multiplication
-  RET_FLAG,
   BRANCH_COND,
   // End AMDIL ISD Opcodes
+  ENDPGM,
+  RETURN,
   DWORDADDR,
   FRACT,
   CLAMP,
+  // This is SETCC with the full mask result which is used for a compare with a 
+  // result bit per item in the wavefront.
+  SETCC,    
 
   // SIN_HW, COS_HW - f32 for SI, 1 ULP max error, valid from -100 pi to 100 pi.
   // Denormals handled on some parts.
@@ -259,6 +242,9 @@ enum NodeType : unsigned {
   FMIN3,
   SMIN3,
   UMIN3,
+  FMED3,
+  SMED3,
+  UMED3,
   URECIP,
   DIV_SCALE,
   DIV_FMAS,
@@ -269,8 +255,10 @@ enum NodeType : unsigned {
   //            For f64, max error 2^29 ULP, handles denormals.
   RCP,
   RSQ,
+  RCP_LEGACY,
   RSQ_LEGACY,
-  RSQ_CLAMPED,
+  FMUL_LEGACY,
+  RSQ_CLAMP,
   LDEXP,
   FP_CLASS,
   DOT4,
@@ -281,6 +269,7 @@ enum NodeType : unsigned {
   BFI, // (src0 & src1) | (~src0 & src2)
   BFM, // Insert a range of bits into a 32-bit word.
   FFBH_U32, // ctlz with -1 if input is zero.
+  FFBH_I32,
   MUL_U24,
   MUL_I24,
   MAD_U24,
@@ -316,10 +305,15 @@ enum NodeType : unsigned {
   INTERP_MOV,
   INTERP_P1,
   INTERP_P2,
+  PC_ADD_REL_OFFSET,
+  KILL,
   FIRST_MEM_OPCODE_NUMBER = ISD::FIRST_TARGET_MEMORY_OPCODE,
   STORE_MSKOR,
   LOAD_CONSTANT,
   TBUFFER_STORE_FORMAT,
+  ATOMIC_CMP_SWAP,
+  ATOMIC_INC,
+  ATOMIC_DEC,
   LAST_AMDGPU_ISD_NUMBER
 };
 

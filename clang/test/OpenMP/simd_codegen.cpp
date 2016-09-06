@@ -4,8 +4,10 @@
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
 // REQUIRES: x86-registered-target
 // expected-no-diagnostics
-#ifndef HEADER
-#define HEADER
+ #ifndef HEADER
+ #define HEADER
+
+// CHECK: [[SS_TY:%.+]] = type { i32 }
 
 long long get_val() { return 0; }
 double *g_ptr;
@@ -207,6 +209,7 @@ void simple(float *a, float *b, float *c, float *d) {
 // CHECK-NEXT: store i64 [[ADD7_2]], i64* [[OMP_IV7]]{{.*}}!llvm.mem.parallel_loop_access ![[SIMPLE_LOOP7_ID]]
   }
 // CHECK: [[SIMPLE_LOOP7_END]]
+// CHECK-NEXT: store i64 11, i64*
 // CHECK-NEXT: [[A_PRIV_VAL:%.+]] = load i32, i32* [[A_PRIV]],
 // CHECK-NEXT: store i32 [[A_PRIV_VAL]], i32* [[A]],
   int R;
@@ -321,7 +324,6 @@ public:
 // CHECK-LABEL: define {{.*void}} @{{.*}}iter_simple{{.*}}
 void iter_simple(IterDouble ia, IterDouble ib, IterDouble ic) {
 //
-// CHECK: store i32 0, i32* [[IT_OMP_IV:%[^,]+]]
 // Calculate number of iterations before the loop body.
 // CHECK: [[DIFF1:%.+]] = invoke {{.*}}i32 @{{.*}}IterDouble{{.*}}
 // CHECK: [[DIFF2:%.+]] = sub nsw i32 [[DIFF1]], 1
@@ -329,6 +331,7 @@ void iter_simple(IterDouble ia, IterDouble ib, IterDouble ic) {
 // CHECK-NEXT: [[DIFF4:%.+]] = sdiv i32 [[DIFF3]], 1
 // CHECK-NEXT: [[DIFF5:%.+]] = sub nsw i32 [[DIFF4]], 1
 // CHECK-NEXT: store i32 [[DIFF5]], i32* [[OMP_LAST_IT:%[^,]+]]{{.+}}
+// CHECK: store i32 0, i32* [[IT_OMP_IV:%[^,]+]]
   #pragma omp simd
 
 // CHECK: [[IV:%.+]] = load i32, i32* [[IT_OMP_IV]]{{.+}} !llvm.mem.parallel_loop_access ![[ITER_LOOP_ID:[0-9]+]]
@@ -416,9 +419,10 @@ void collapsed(float *a, float *b, float *c, float *d) {
 // CHECK: [[COLL1_END]]
   }
 // i,j,l are updated; k is not updated.
-// CHECK: store i32 3, i32* [[I:%[^,]+]]
-// CHECK-NEXT: store i32 5, i32* [[I:%[^,]+]]
-// CHECK-NEXT: store i16 9, i16* [[I:%[^,]+]]
+// CHECK: store i32 3, i32*
+// CHECK-NEXT: store i32 5, i32*
+// CHECK-NEXT: store i32 7, i32*
+// CHECK-NEXT: store i16 9, i16*
 // CHECK: ret void
 }
 
@@ -490,8 +494,10 @@ void linear(float *a) {
 
   #pragma omp simd linear(k : 3)
 // CHECK: store i64* [[VAL_ADDR]], i64** [[K_ADDR]],
+// CHECK: [[VAL_REF:%.+]] = load i64*, i64** [[K_ADDR]],
+// CHECK: store i64* [[VAL_REF]], i64** [[K_ADDR_REF:%.+]],
 // CHECK: store i32 0, i32* [[OMP_IV:%[^,]+]]
-// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR]],
+// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR_REF]],
 // CHECK: [[K0LOAD:%.+]] = load i64, i64* [[K_REF]]
 // CHECK-NEXT: store i64 [[K0LOAD]], i64* [[LIN0:%[^,]+]]
 
@@ -524,7 +530,7 @@ void linear(float *a) {
 // CHECK: [[SIMPLE_LOOP_END]]
 //
 // Update linear vars after loop, as the loop was operating on a private version.
-// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR]],
+// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR_REF]],
 // CHECK: store i64* [[K_REF]], i64** [[K_PRIV_REF:%.+]],
 // CHECK: [[LIN0_2:%.+]] = load i64, i64* [[LIN0]]
 // CHECK-NEXT: [[LIN_ADD2:%.+]] = add nsw i64 [[LIN0_2]], 27
@@ -533,8 +539,10 @@ void linear(float *a) {
 //
 
   #pragma omp simd linear(val(k) : 3)
+// CHECK: [[VAL_REF:%.+]] = load i64*, i64** [[K_ADDR]],
+// CHECK: store i64* [[VAL_REF]], i64** [[K_ADDR_REF:%.+]],
 // CHECK: store i32 0, i32* [[OMP_IV:%[^,]+]]
-// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR]],
+// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR_REF]],
 // CHECK: [[K0LOAD:%.+]] = load i64, i64* [[K_REF]]
 // CHECK-NEXT: store i64 [[K0LOAD]], i64* [[LIN0:%[^,]+]]
 
@@ -567,7 +575,7 @@ void linear(float *a) {
 // CHECK: [[SIMPLE_LOOP_END]]
 //
 // Update linear vars after loop, as the loop was operating on a private version.
-// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR]],
+// CHECK: [[K_REF:%.+]] = load i64*, i64** [[K_ADDR_REF]],
 // CHECK: store i64* [[K_REF]], i64** [[K_PRIV_REF:%.+]],
 // CHECK: [[LIN0_2:%.+]] = load i64, i64* [[LIN0]]
 // CHECK-NEXT: [[LIN_ADD2:%.+]] = add nsw i64 [[LIN0_2]], 27
@@ -632,5 +640,68 @@ void parallel_simd(float *a) {
     a[i] += bar();
 }
 // TERM_DEBUG: !{{[0-9]+}} = !DILocation(line: [[@LINE-11]],
+
+// CHECK-LABEL: S8
+// CHECK: ptrtoint [[SS_TY]]* %{{.+}} to i64
+// CHECK-NEXT: and i64 %{{.+}}, 15
+// CHECK-NEXT: icmp eq i64 %{{.+}}, 0
+// CHECK-NEXT: call void @llvm.assume(i1
+
+// CHECK: ptrtoint [[SS_TY]]* %{{.+}} to i64
+// CHECK-NEXT: and i64 %{{.+}}, 7
+// CHECK-NEXT: icmp eq i64 %{{.+}}, 0
+// CHECK-NEXT: call void @llvm.assume(i1
+
+// CHECK: ptrtoint [[SS_TY]]* %{{.+}} to i64
+// CHECK-NEXT: and i64 %{{.+}}, 15
+// CHECK-NEXT: icmp eq i64 %{{.+}}, 0
+// CHECK-NEXT: call void @llvm.assume(i1
+
+// CHECK: ptrtoint [[SS_TY]]* %{{.+}} to i64
+// CHECK-NEXT: and i64 %{{.+}}, 3
+// CHECK-NEXT: icmp eq i64 %{{.+}}, 0
+// CHECK-NEXT: call void @llvm.assume(i1
+struct SS {
+  SS(): a(0) {}
+  SS(int v) : a(v) {}
+  int a;
+  typedef int type;
+};
+
+template <typename T>
+class S7 : public T {
+protected:
+  T *a;
+  T b[2];
+  S7() : a(0) {}
+
+public:
+  S7(typename T::type &v) : a((T*)&v) {
+#pragma omp simd aligned(a)
+    for (int k = 0; k < a->a; ++k)
+      ++this->a->a;
+#pragma omp simd aligned(this->b : 8)
+    for (int k = 0; k < a->a; ++k)
+      ++a->a;
+  }
+};
+
+class S8 : private IterDouble, public S7<SS> {
+  S8() {}
+
+public:
+  S8(int v) : S7<SS>(v){
+#pragma omp parallel private(a)
+#pragma omp simd aligned(S7<SS>::a)
+    for (int k = 0; k < a->a; ++k)
+      ++this->a->a;
+#pragma omp parallel shared(b)
+#pragma omp simd aligned(this->b: 4)
+    for (int k = 0; k < a->a; ++k)
+      ++a->a;
+  }
+};
+S8 s8(0);
+
 #endif // HEADER
 

@@ -257,6 +257,7 @@ LoadSwiftFormatters (lldb::TypeCategoryImplSP swift_category_sp)
     synth_flags.SetSkipPointers(true);
     
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Bool_SummaryProvider, "Swift.Bool summary provider", ConstString("Swift.Bool"), summary_flags);
+    AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider, "_SwiftTypePreservingNSNumber summary provider", ConstString("_SwiftTypePreservingNSNumber"), summary_flags);
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::DarwinBoolean_SummaryProvider, "DarwinBoolean summary provider", ConstString("DarwinBoolean"), summary_flags);
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::UnicodeScalar_SummaryProvider, "Swift.UnicodeScalar summary provider", ConstString("Swift.UnicodeScalar"), summary_flags);
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Character_SummaryProvider, "Swift.Character summary provider", ConstString("Swift.Character"), summary_flags);
@@ -347,6 +348,7 @@ LoadFoundationValueTypesFormatters (lldb::TypeCategoryImplSP swift_category_sp)
     lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Date_SummaryProvider, "Foundation.Date summary provider", ConstString("Foundation.Date"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
     
     lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::NotificationName_SummaryProvider, "Notification.Name summary provider", ConstString("Foundation.Notification.Type.Name"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+    lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::NotificationName_SummaryProvider, "Notification.Name summary provider", ConstString("Foundation.Notification.Name"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
 
     lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::URL_SummaryProvider, "URL summary provider", ConstString("Foundation.URL"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
     
@@ -815,7 +817,7 @@ SwiftLanguage::GetTypeScavenger ()
                 if (IsValid())
                 {
                     auto as_type = m_result.GetAs<CompilerType>();
-                    auto as_decl = m_result.GetAs<swift::ValueDecl*>();
+                    auto as_decl = m_result.GetAs<swift::Decl*>();
                     
                     if (as_type.hasValue() && as_type.getValue())
                     {
@@ -829,7 +831,7 @@ SwiftLanguage::GetTypeScavenger ()
                     {
                         std::string buffer;
                         llvm::raw_string_ostream str_stream(buffer);
-                        swift::ValueDecl* decl = as_decl.getValue();
+                        swift::Decl* decl = as_decl.getValue();
                         decl->print(str_stream, SwiftASTContext::GetUserVisibleTypePrintingOptions(print_help_if_available));
                         str_stream.flush();
                         stream.Printf("%s", buffer.c_str());

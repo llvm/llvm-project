@@ -17,10 +17,8 @@
 
 #include "clang-c/Index.h"
 #include "clang/Frontend/PCHContainerOperations.h"
-#include "clang/Lex/ModuleLoader.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Path.h"
-#include <vector>
+#include "llvm/ADT/STLExtras.h"
+#include <utility>
 
 namespace llvm {
   class CrashRecoveryContext;
@@ -46,7 +44,8 @@ public:
   CIndexer(std::shared_ptr<PCHContainerOperations> PCHContainerOps =
                std::make_shared<PCHContainerOperations>())
       : OnlyLocalDecls(false), DisplayDiagnostics(false),
-        Options(CXGlobalOpt_None), PCHContainerOps(PCHContainerOps) {}
+        Options(CXGlobalOpt_None), PCHContainerOps(std::move(PCHContainerOps)) {
+  }
 
   /// \brief Whether we only want to see "local" declarations (that did not
   /// come from a previous precompiled header). If false, we want to see all

@@ -42,12 +42,12 @@ void LiveRangeCalc::reset(const MachineFunction *mf,
 
 static void createDeadDef(SlotIndexes &Indexes, VNInfo::Allocator &Alloc,
                           LiveRange &LR, const MachineOperand &MO) {
-    const MachineInstr *MI = MO.getParent();
-    SlotIndex DefIdx =
-        Indexes.getInstructionIndex(MI).getRegSlot(MO.isEarlyClobber());
+  const MachineInstr &MI = *MO.getParent();
+  SlotIndex DefIdx =
+      Indexes.getInstructionIndex(MI).getRegSlot(MO.isEarlyClobber());
 
-    // Create the def in LR. This may find an existing def.
-    LR.createDeadDef(DefIdx, Alloc);
+  // Create the def in LR. This may find an existing def.
+  LR.createDeadDef(DefIdx, Alloc);
 }
 
 void LiveRangeCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
@@ -120,13 +120,29 @@ void LiveRangeCalc::calculate(LiveInterval &LI, bool TrackSubRegs) {
       extendToUses(S, Reg, S.LaneMask);
     }
     LI.clear();
-    LI.constructMainRangeFromSubranges(*Indexes, *Alloc);
+    constructMainRangeFromSubranges(LI);
   } else {
     resetLiveOutMap();
     extendToUses(LI, Reg, ~0u);
   }
 }
 
+void LiveRangeCalc::constructMainRangeFromSubranges(LiveInterval &LI) {
+  // First create dead defs at all defs found in subranges.
+  LiveRange &MainRange = LI;
+  assert(MainRange.segments.empty() && MainRange.valnos.empty() &&
+         "Expect empty main liverange");
+
+  for (const LiveInterval::SubRange &SR : LI.subranges()) {
+    for (const VNInfo *VNI : SR.valnos) {
+      if (!VNI->isUnused() && !VNI->isPHIDef())
+        MainRange.createDeadDef(VNI->def, *Alloc);
+    }
+  }
+
+  resetLiveOutMap();
+  extendToUses(MainRange, LI.reg);
+}
 
 void LiveRangeCalc::createDeadDefs(LiveRange &LR, unsigned Reg) {
   assert(MRI && Indexes && "call reset() first");
@@ -184,7 +200,7 @@ void LiveRangeCalc::extendToUses(LiveRange &LR, unsigned Reg,
         // had an early-clobber flag.
         isEarlyClobber = MI->getOperand(DefIdx).isEarlyClobber();
       }
-      UseIdx = Indexes->getInstructionIndex(MI).getRegSlot(isEarlyClobber);
+      UseIdx = Indexes->getInstructionIndex(*MI).getRegSlot(isEarlyClobber);
     }
 
     // MI is reading Reg. We may have visited MI before if it happens to be

@@ -41,10 +41,12 @@ void MipsTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
   InitializeELF(TM.Options.UseInitArray);
 
   SmallDataSection = getContext().getELFSection(
-      ".sdata", ELF::SHT_PROGBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
+      ".sdata", ELF::SHT_PROGBITS,
+      ELF::SHF_WRITE | ELF::SHF_ALLOC | ELF::SHF_MIPS_GPREL);
 
   SmallBSSSection = getContext().getELFSection(".sbss", ELF::SHT_NOBITS,
-                                               ELF::SHF_WRITE | ELF::SHF_ALLOC);
+                                               ELF::SHF_WRITE | ELF::SHF_ALLOC |
+                                                   ELF::SHF_MIPS_GPREL);
   this->TM = &static_cast<const MipsTargetMachine &>(TM);
 }
 
@@ -138,11 +140,13 @@ bool MipsTargetObjectFile::IsConstantInSmallSection(
 }
 
 /// Return true if this constant should be placed into small data section.
-MCSection *MipsTargetObjectFile::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C) const {
+MCSection *MipsTargetObjectFile::getSectionForConstant(const DataLayout &DL,
+                                                       SectionKind Kind,
+                                                       const Constant *C,
+                                                       unsigned &Align) const {
   if (IsConstantInSmallSection(DL, C, *TM))
     return SmallDataSection;
 
   // Otherwise, we work the same as ELF.
-  return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C);
+  return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C, Align);
 }

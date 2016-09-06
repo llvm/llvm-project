@@ -16,7 +16,11 @@
 #ifndef LLVM_C_LTO_H
 #define LLVM_C_LTO_H
 
+#ifdef __cplusplus
+#include <cstddef>
+#else
 #include <stddef.h>
+#endif
 #include <sys/types.h>
 
 #ifndef __cplusplus
@@ -40,7 +44,8 @@ typedef bool lto_bool_t;
  * @{
  */
 
-#define LTO_API_VERSION 18
+#define LTO_API_VERSION 20
+
 /**
  * \since prior to LTO_API_VERSION=3
  */
@@ -105,7 +110,6 @@ extern "C" {
 extern const char*
 lto_get_version(void);
 
-
 /**
  * Returns the last error string or NULL if last operation was successful.
  *
@@ -122,7 +126,6 @@ lto_get_error_message(void);
 extern lto_bool_t
 lto_module_is_object_file(const char* path);
 
-
 /**
  * Checks if a file is a loadable object compiled for requested target.
  *
@@ -132,15 +135,22 @@ extern lto_bool_t
 lto_module_is_object_file_for_target(const char* path,
                                      const char* target_triple_prefix);
 
+/**
+ * Return true if \p Buffer contains a bitcode file with ObjC code (category
+ * or class) in it.
+ *
+ * \since LTO_API_VERSION=20
+ */
+extern lto_bool_t
+lto_module_has_objc_category(const void *mem, size_t length);
 
 /**
  * Checks if a buffer is a loadable object file.
  *
  * \since prior to LTO_API_VERSION=3
  */
-extern lto_bool_t
-lto_module_is_object_file_in_memory(const void* mem, size_t length);
-
+extern lto_bool_t lto_module_is_object_file_in_memory(const void *mem,
+                                                      size_t length);
 
 /**
  * Checks if a buffer is a loadable object compiled for requested target.
@@ -151,7 +161,6 @@ extern lto_bool_t
 lto_module_is_object_file_in_memory_for_target(const void* mem, size_t length,
                                               const char* target_triple_prefix);
 
-
 /**
  * Loads an object file from disk.
  * Returns NULL on error (check lto_get_error_message() for details).
@@ -160,7 +169,6 @@ lto_module_is_object_file_in_memory_for_target(const void* mem, size_t length,
  */
 extern lto_module_t
 lto_module_create(const char* path);
-
 
 /**
  * Loads an object file from memory.
@@ -254,7 +262,6 @@ lto_module_get_target_triple(lto_module_t mod);
 extern void
 lto_module_set_target_triple(lto_module_t mod, const char *triple);
 
-
 /**
  * Returns the number of symbols in the object module.
  *
@@ -262,7 +269,6 @@ lto_module_set_target_triple(lto_module_t mod, const char *triple);
  */
 extern unsigned int
 lto_module_get_num_symbols(lto_module_t mod);
-
 
 /**
  * Returns the name of the ith symbol in the object module.
@@ -272,7 +278,6 @@ lto_module_get_num_symbols(lto_module_t mod);
 extern const char*
 lto_module_get_symbol_name(lto_module_t mod, unsigned int index);
 
-
 /**
  * Returns the attributes of the ith symbol in the object module.
  *
@@ -280,7 +285,6 @@ lto_module_get_symbol_name(lto_module_t mod, unsigned int index);
  */
 extern lto_symbol_attributes
 lto_module_get_symbol_attribute(lto_module_t mod, unsigned int index);
-
 
 /**
  * Returns the module's linker options.
@@ -292,7 +296,6 @@ lto_module_get_symbol_attribute(lto_module_t mod, unsigned int index);
  */
 extern const char*
 lto_module_get_linkeropts(lto_module_t mod);
-
 
 /**
  * Diagnostic severity.
@@ -395,7 +398,6 @@ lto_codegen_set_module(lto_code_gen_t cg, lto_module_t mod);
 extern lto_bool_t
 lto_codegen_set_debug_model(lto_code_gen_t cg, lto_debug_model);
 
-
 /**
  * Sets which PIC code model to generated.
  * Returns true on error (check lto_get_error_message() for details).
@@ -405,7 +407,6 @@ lto_codegen_set_debug_model(lto_code_gen_t cg, lto_debug_model);
 extern lto_bool_t
 lto_codegen_set_pic_model(lto_code_gen_t cg, lto_codegen_model);
 
-
 /**
  * Sets the cpu to generate code for.
  *
@@ -413,7 +414,6 @@ lto_codegen_set_pic_model(lto_code_gen_t cg, lto_codegen_model);
  */
 extern void
 lto_codegen_set_cpu(lto_code_gen_t cg, const char *cpu);
-
 
 /**
  * Sets the location of the assembler tool to run. If not set, libLTO
@@ -552,7 +552,7 @@ lto_codegen_set_should_embed_uselists(lto_code_gen_t cg,
 
 /**
  * @}
- * @defgroup LLVMCLTO ThinLTO
+ * @defgroup LLVMCTLTO ThinLTO
  * @ingroup LLVMC
  *
  * @{
@@ -668,6 +668,7 @@ extern lto_bool_t thinlto_codegen_set_pic_model(thinlto_code_gen_t cg,
 
 /**
  * Sets the path to a directory to use as a cache storage for incremental build.
+ * Setting this activates caching.
  *
  * \since LTO_API_VERSION=18
  */
@@ -676,7 +677,8 @@ extern void thinlto_codegen_set_cache_dir(thinlto_code_gen_t cg,
 
 /**
  * Sets the cache pruning interval (in seconds). A negative value disable the
- * pruning (default).
+ * pruning. An unspecified default value will be applied, and a value of 0 will
+ * be ignored.
  *
  * \since LTO_API_VERSION=18
  */
@@ -684,10 +686,15 @@ extern void thinlto_codegen_set_cache_pruning_interval(thinlto_code_gen_t cg,
                                                        int interval);
 
 /**
- * Sets the maximum cache size, in term of percentage of the free space on the
- * the disk. Set to 100 to indicate no limit, 50 to indicate that the cache size
- * will not increase over the free space. A value over 100 will be reduced to 
- * 100.
+ * Sets the maximum cache size that can be persistent across build, in terms of
+ * percentage of the available space on the the disk. Set to 100 to indicate
+ * no limit, 50 to indicate that the cache size will not be left over half the
+ * available space. A value over 100 will be reduced to 100, a value of 0 will
+ * be ignored. An unspecified default value will be applied.
+ *
+ * The formula looks like:
+ *  AvailableSpace = FreeSpace + ExistingCacheSize
+ *  NewCacheSize = AvailableSpace * P/100
  *
  * \since LTO_API_VERSION=18
  */
@@ -695,7 +702,8 @@ extern void thinlto_codegen_set_final_cache_size_relative_to_available_space(
     thinlto_code_gen_t cg, unsigned percentage);
 
 /**
- * Sets the expiration (in seconds) for an entry in the cache.
+ * Sets the expiration (in seconds) for an entry in the cache. An unspecified
+ * default value will be applied. A value of 0 will be ignored.
  *
  * \since LTO_API_VERSION=18
  */
@@ -722,6 +730,23 @@ extern void thinlto_codegen_set_savetemps_dir(thinlto_code_gen_t cg,
  * \since LTO_API_VERSION=18
  */
 extern void thinlto_codegen_set_cpu(thinlto_code_gen_t cg, const char *cpu);
+
+/**
+ * Disable CodeGen, only run the stages till codegen and stop. The output will
+ * be bitcode.
+ *
+ * \since LTO_API_VERSION=19
+ */
+extern void thinlto_codegen_disable_codegen(thinlto_code_gen_t cg,
+                                            lto_bool_t disable);
+
+/**
+ * Perform CodeGen only: disable all other stages.
+ *
+ * \since LTO_API_VERSION=19
+ */
+extern void thinlto_codegen_set_codegen_only(thinlto_code_gen_t cg,
+                                             lto_bool_t codegen_only);
 
 /**
  * Parse -mllvm style debug options.
@@ -769,4 +794,4 @@ extern void thinlto_codegen_add_cross_referenced_symbol(thinlto_code_gen_t cg,
  * @}
  */
 
-#endif
+#endif /* LLVM_C_LTO_H */

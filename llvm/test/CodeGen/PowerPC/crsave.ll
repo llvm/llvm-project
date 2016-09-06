@@ -1,5 +1,6 @@
 ; RUN: llc -O0 -disable-fp-elim -mtriple=powerpc-unknown-linux-gnu -mcpu=g5 < %s | FileCheck %s -check-prefix=PPC32
 ; RUN: llc -O0 -mtriple=powerpc64-unknown-linux-gnu -mcpu=g5 < %s | FileCheck %s -check-prefix=PPC64
+; RUN: llc -O0 -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s -check-prefix=PPC64-ELFv2
 
 declare void @foo()
 
@@ -60,3 +61,22 @@ entry:
 ; PPC64: mtocrf 16, 12
 ; PPC64: mtocrf 8, 12
 
+; Generate mfocrf in prologue when we need to save 1 nonvolatile CR field
+define void @cloberOneNvCrField() {
+entry:
+  tail call void asm sideeffect "# clobbers", "~{cr2}"()
+  ret void
+
+; PPC64-ELFv2-LABEL: @cloberOneNvCrField
+; PPC64-ELFv2: mfocrf [[REG1:[0-9]+]], 32
+}
+
+; Generate mfcr in prologue when we need to save all nonvolatile CR field
+define void @cloberAllNvCrField() {
+entry:
+  tail call void asm sideeffect "# clobbers", "~{cr2},~{cr3},~{cr4}"()
+  ret void
+
+; PPC64-ELFv2-LABEL: @cloberAllNvCrField
+; PPC64-ELFv2: mfcr [[REG1:[0-9]+]]
+}

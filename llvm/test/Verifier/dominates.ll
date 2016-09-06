@@ -55,3 +55,16 @@ bb1:
 ; CHECK-NEXT:  %y1 = add i32 %x, 1
 ; CHECK-NEXT:  %y3 = phi i32 [ %y1, %bb0 ]
 }
+
+define void @f5() {
+entry:
+  br label %next
+
+next:
+  %y = phi i32 [ 0, %entry ]
+  %x = phi i32 [ %y, %entry ]
+  ret void
+; CHECK: Instruction does not dominate all uses!
+; CHECK-NEXT:  %y = phi i32 [ 0, %entry ]
+; CHECK-NEXT:  %x = phi i32 [ %y, %entry ]
+}

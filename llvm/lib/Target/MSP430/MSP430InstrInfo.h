@@ -52,9 +52,8 @@ public:
   ///
   const TargetRegisterInfo &getRegisterInfo() const { return RI; }
 
-  void copyPhysReg(MachineBasicBlock &MBB,
-                   MachineBasicBlock::iterator I, DebugLoc DL,
-                   unsigned DestReg, unsigned SrcReg,
+  void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                   const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
@@ -69,22 +68,21 @@ public:
                             const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
-  unsigned GetInstSizeInBytes(const MachineInstr *MI) const;
+  unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   // Branch folding goodness
   bool
   ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
-  bool isUnpredicatedTerminator(const MachineInstr *MI) const override;
-  bool AnalyzeBranch(MachineBasicBlock &MBB,
-                     MachineBasicBlock *&TBB, MachineBasicBlock *&FBB,
+  bool isUnpredicatedTerminator(const MachineInstr &MI) const override;
+  bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+                     MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify) const override;
 
   unsigned RemoveBranch(MachineBasicBlock &MBB) const override;
   unsigned InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
-                        DebugLoc DL) const override;
-
+                        const DebugLoc &DL) const override;
 };
 
 }

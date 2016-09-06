@@ -10,6 +10,8 @@
 #ifndef LLVM_LIB_TARGET_X86_ASMPARSER_X86ASMPARSERCOMMON_H
 #define LLVM_LIB_TARGET_X86_ASMPARSER_X86ASMPARSERCOMMON_H
 
+#include "llvm/Support/MathExtras.h"
+
 namespace llvm {
 
 inline bool isImmSExti16i8Value(uint64_t Value) {

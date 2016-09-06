@@ -1,0 +1,262 @@
+//===-- llvm/Target/TargetOpcodes.def - Target Indep Opcodes ------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the target independent instruction opcodes.
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+/// HANDLE_TARGET_OPCODE defines an opcode and its associated enum value.
+///
+#ifndef HANDLE_TARGET_OPCODE
+#define HANDLE_TARGET_OPCODE(OPC, NUM)
+#endif
+
+/// HANDLE_TARGET_OPCODE_MARKER defines an alternative identifier for an opcode.
+///
+#ifndef HANDLE_TARGET_OPCODE_MARKER
+#define HANDLE_TARGET_OPCODE_MARKER(IDENT, OPC)
+#endif
+
+/// Every instruction defined here must also appear in Target.td.
+///
+HANDLE_TARGET_OPCODE(PHI)
+HANDLE_TARGET_OPCODE(INLINEASM)
+HANDLE_TARGET_OPCODE(CFI_INSTRUCTION)
+HANDLE_TARGET_OPCODE(EH_LABEL)
+HANDLE_TARGET_OPCODE(GC_LABEL)
+
+/// KILL - This instruction is a noop that is used only to adjust the
+/// liveness of registers. This can be useful when dealing with
+/// sub-registers.
+HANDLE_TARGET_OPCODE(KILL)
+
+/// EXTRACT_SUBREG - This instruction takes two operands: a register
+/// that has subregisters, and a subregister index. It returns the
+/// extracted subregister value. This is commonly used to implement
+/// truncation operations on target architectures which support it.
+HANDLE_TARGET_OPCODE(EXTRACT_SUBREG)
+
+/// INSERT_SUBREG - This instruction takes three operands: a register that
+/// has subregisters, a register providing an insert value, and a
+/// subregister index. It returns the value of the first register with the
+/// value of the second register inserted. The first register is often
+/// defined by an IMPLICIT_DEF, because it is commonly used to implement
+/// anyext operations on target architectures which support it.
+HANDLE_TARGET_OPCODE(INSERT_SUBREG)
+
+/// IMPLICIT_DEF - This is the MachineInstr-level equivalent of undef.
+HANDLE_TARGET_OPCODE(IMPLICIT_DEF)
+
+/// SUBREG_TO_REG - Assert the value of bits in a super register.
+/// The result of this instruction is the value of the second operand inserted
+/// into the subregister specified by the third operand. All other bits are
+/// assumed to be equal to the bits in the immediate integer constant in the
+/// first operand. This instruction just communicates information; No code
+/// should be generated.
+/// This is typically used after an instruction where the write to a subregister
+/// implicitly cleared the bits in the super registers.
+HANDLE_TARGET_OPCODE(SUBREG_TO_REG)
+
+/// COPY_TO_REGCLASS - This instruction is a placeholder for a plain
+/// register-to-register copy into a specific register class. This is only
+/// used between instruction selection and MachineInstr creation, before
+/// virtual registers have been created for all the instructions, and it's
+/// only needed in cases where the register classes implied by the
+/// instructions are insufficient. It is emitted as a COPY MachineInstr.
+  HANDLE_TARGET_OPCODE(COPY_TO_REGCLASS)
+
+/// DBG_VALUE - a mapping of the llvm.dbg.value intrinsic
+HANDLE_TARGET_OPCODE(DBG_VALUE)
+
+/// REG_SEQUENCE - This variadic instruction is used to form a register that
+/// represents a consecutive sequence of sub-registers. It's used as a
+/// register coalescing / allocation aid and must be eliminated before code
+/// emission.
+// In SDNode form, the first operand encodes the register class created by
+// the REG_SEQUENCE, while each subsequent pair names a vreg + subreg index
+// pair.  Once it has been lowered to a MachineInstr, the regclass operand
+// is no longer present.
+/// e.g. v1027 = REG_SEQUENCE v1024, 3, v1025, 4, v1026, 5
+/// After register coalescing references of v1024 should be replace with
+/// v1027:3, v1025 with v1027:4, etc.
+  HANDLE_TARGET_OPCODE(REG_SEQUENCE)
+
+/// COPY - Target-independent register copy. This instruction can also be
+/// used to copy between subregisters of virtual registers.
+  HANDLE_TARGET_OPCODE(COPY)
+
+/// BUNDLE - This instruction represents an instruction bundle. Instructions
+/// which immediately follow a BUNDLE instruction which are marked with
+/// 'InsideBundle' flag are inside the bundle.
+HANDLE_TARGET_OPCODE(BUNDLE)
+
+/// Lifetime markers.
+HANDLE_TARGET_OPCODE(LIFETIME_START)
+HANDLE_TARGET_OPCODE(LIFETIME_END)
+
+/// A Stackmap instruction captures the location of live variables at its
+/// position in the instruction stream. It is followed by a shadow of bytes
+/// that must lie within the function and not contain another stackmap.
+HANDLE_TARGET_OPCODE(STACKMAP)
+
+/// Patchable call instruction - this instruction represents a call to a
+/// constant address, followed by a series of NOPs. It is intended to
+/// support optimizations for dynamic languages (such as javascript) that
+/// rewrite calls to runtimes with more efficient code sequences.
+/// This also implies a stack map.
+HANDLE_TARGET_OPCODE(PATCHPOINT)
+
+/// This pseudo-instruction loads the stack guard value. Targets which need
+/// to prevent the stack guard value or address from being spilled to the
+/// stack should override TargetLowering::emitLoadStackGuardNode and
+/// additionally expand this pseudo after register allocation.
+HANDLE_TARGET_OPCODE(LOAD_STACK_GUARD)
+
+/// Call instruction with associated vm state for deoptimization and list
+/// of live pointers for relocation by the garbage collector.  It is
+/// intended to support garbage collection with fully precise relocating
+/// collectors and deoptimizations in either the callee or caller.
+HANDLE_TARGET_OPCODE(STATEPOINT)
+
+/// Instruction that records the offset of a local stack allocation passed to
+/// llvm.localescape. It has two arguments: the symbol for the label and the
+/// frame index of the local stack allocation.
+HANDLE_TARGET_OPCODE(LOCAL_ESCAPE)
+
+/// Loading instruction that may page fault, bundled with associated
+/// information on how to handle such a page fault.  It is intended to support
+/// "zero cost" null checks in managed languages by allowing LLVM to fold
+/// comparisons into existing memory operations.
+HANDLE_TARGET_OPCODE(FAULTING_LOAD_OP)
+
+/// Wraps a machine instruction to add patchability constraints.  An
+/// instruction wrapped in PATCHABLE_OP has to either have a minimum
+/// size or be preceded with a nop of that size.  The first operand is
+/// an immediate denoting the minimum size of the instruction, the
+/// second operand is an immediate denoting the opcode of the original
+/// instruction.  The rest of the operands are the operands of the
+/// original instruction.
+HANDLE_TARGET_OPCODE(PATCHABLE_OP)
+
+/// This is a marker instruction which gets translated into a nop sled, useful
+/// for inserting instrumentation instructions at runtime.
+HANDLE_TARGET_OPCODE(PATCHABLE_FUNCTION_ENTER)
+
+/// Wraps a return instruction and its operands to enable adding nop sleds
+/// either before or after the return. The nop sleds are useful for inserting
+/// instrumentation instructions at runtime.
+HANDLE_TARGET_OPCODE(PATCHABLE_RET)
+
+/// The following generic opcodes are not supposed to appear after ISel.
+/// This is something we might want to relax, but for now, this is convenient
+/// to produce diagnostics.
+
+/// Generic ADD instruction. This is an integer add.
+HANDLE_TARGET_OPCODE(G_ADD)
+HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_START, G_ADD)
+
+/// Generic ADD instruction, consuming the normal operands plus a carry flag,
+/// and similarly producing the result and a carry flag.
+HANDLE_TARGET_OPCODE(G_ADDE)
+
+/// Generic SUB instruction. This is an integer sub.
+HANDLE_TARGET_OPCODE(G_SUB)
+
+// Generic multiply instruction.
+HANDLE_TARGET_OPCODE(G_MUL)
+
+/// Generic bitwise and instruction.
+HANDLE_TARGET_OPCODE(G_AND)
+
+/// Generic bitwise or instruction.
+HANDLE_TARGET_OPCODE(G_OR)
+
+/// Generic bitwise exclusive-or instruction.
+HANDLE_TARGET_OPCODE(G_XOR)
+
+
+/// Generic instruction to materialize the address of an alloca or other
+/// stack-based object.
+HANDLE_TARGET_OPCODE(G_FRAME_INDEX)
+
+/// Generic instruction to extract blocks of bits from the register given
+/// (typically a sub-register COPY after instruction selection).
+HANDLE_TARGET_OPCODE(G_EXTRACT)
+
+/// Generic instruction to paste a variable number of components together into a
+/// larger register.
+HANDLE_TARGET_OPCODE(G_SEQUENCE)
+
+/// Generic pointer to int conversion.
+HANDLE_TARGET_OPCODE(G_PTRTOINT)
+
+/// Generic int to pointer conversion.
+HANDLE_TARGET_OPCODE(G_INTTOPTR)
+
+/// Generic bitcast. The source and destination types must be different, or a
+/// COPY is the relevant instruction.
+HANDLE_TARGET_OPCODE(G_BITCAST)
+
+/// Generic load.
+HANDLE_TARGET_OPCODE(G_LOAD)
+
+/// Generic store.
+HANDLE_TARGET_OPCODE(G_STORE)
+
+/// Generic conditional branch instruction.
+HANDLE_TARGET_OPCODE(G_BRCOND)
+
+/// Generic intrinsic use (without side effects).
+HANDLE_TARGET_OPCODE(G_INTRINSIC)
+
+/// Generic intrinsic use (with side effects).
+HANDLE_TARGET_OPCODE(G_INTRINSIC_W_SIDE_EFFECTS)
+
+/// Generic extension allowing rubbish in high bits.
+HANDLE_TARGET_OPCODE(G_ANYEXTEND)
+
+/// Generic instruction to discard the high bits of a register. This differs
+/// from (G_EXTRACT val, 0) on its action on vectors: G_TRUNC will truncate
+/// each element individually, G_EXTRACT will typically discard the high
+/// elements of the vector.
+HANDLE_TARGET_OPCODE(G_TRUNC)
+
+/// Generic integer constant.
+HANDLE_TARGET_OPCODE(G_CONSTANT)
+
+// Generic sign extend
+HANDLE_TARGET_OPCODE(G_SEXT)
+
+// Generic zero extend
+HANDLE_TARGET_OPCODE(G_ZEXT)
+
+// Generic left-shift
+HANDLE_TARGET_OPCODE(G_SHL)
+
+// Generic logical right-shift
+HANDLE_TARGET_OPCODE(G_LSHR)
+
+// Generic arithmetic right-shift
+HANDLE_TARGET_OPCODE(G_ASHR)
+
+/// Generic BRANCH instruction. This is an unconditional branch.
+HANDLE_TARGET_OPCODE(G_BR)
+
+// TODO: Add more generic opcodes as we move along.
+
+/// Marker for the end of the generic opcode.
+/// This is used to check if an opcode is in the range of the
+/// generic opcodes.
+HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_END, G_BR)
+
+/// BUILTIN_OP_END - This must be the last enum value in this list.
+/// The target-specific post-isel opcode values start here.
+HANDLE_TARGET_OPCODE_MARKER(GENERIC_OP_END, PRE_ISEL_GENERIC_OPCODE_END)

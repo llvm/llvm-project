@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -start-after branch-folder -stop-after branch-folder -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses the machine memory operands
 # correctly.
 
@@ -186,6 +186,9 @@
     %0 = load i8*, i8** undef, align 8
     ret i8* %0
   }
+
+  define void @dummy0() { ret void }
+  define void @dummy1() { ret void }
 ...
 ---
 name:            test
@@ -351,7 +354,7 @@ fixedStack:
 body: |
   bb.0.entry:
     %rsp = frame-setup SUB64ri8 %rsp, 24, implicit-def dead %eflags
-    CFI_INSTRUCTION .cfi_def_cfa_offset 32
+    CFI_INSTRUCTION def_cfa_offset 32
     LD_F80m %rsp, 1, _, 32, _, implicit-def dead %fpsw
   ; CHECK: name: stack_psv
   ; CHECK: ST_FP80m %rsp, 1, _, 0, _, implicit-def dead %fpsw :: (store 10 into stack, align 16)
@@ -505,4 +508,29 @@ body: |
   ; CHECK: %rax = MOV64rm undef %rax, 1, _, 0, _ :: (load 8 from `i8** undef`)
     %rax = MOV64rm undef %rax, 1, _, 0, _ :: (load 8 from `i8** undef`)
     RETQ %rax
+...
+---
+# Test memory operand without associated value.
+# CHECK-LABEL: name: dummy0
+# CHECK: %rax = MOV64rm undef %rax, 1, _, 0, _ :: (load 8)
+name: dummy0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %rax = MOV64rm undef %rax, 1, _, 0, _ :: (load 8)
+    RETQ %rax
+...
+---
+# Test parsing of stack references in machine memory operands.
+# CHECK-LABEL: name: dummy1
+# CHECK: %rax = MOV64rm %rsp, 1, _, 0, _ :: (load 8 from %stack.0)
+name: dummy1
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    %rax = MOV64rm %rsp, 1, _, 0, _ :: (load 8 from %stack.0)
+    RETQ %rax
+
 ...

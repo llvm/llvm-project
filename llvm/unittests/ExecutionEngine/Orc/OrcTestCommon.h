@@ -22,7 +22,7 @@
 #include "llvm/IR/TypeBuilder.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/Orc/JITSymbol.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/TargetSelect.h"
 #include <memory>
 
@@ -46,12 +46,15 @@ public:
     if (TM) {
       // If we found a TargetMachine, check that it's one that Orc supports.
       const Triple& TT = TM->getTargetTriple();
-      if (TT.getArch() != Triple::x86_64 || TT.isOSWindows())
+
+      if ((TT.getArch() != Triple::x86_64 && TT.getArch() != Triple::x86) ||
+          TT.isOSWindows())
         TM = nullptr;
     }
   };
 
 protected:
+  LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;
 private:
   static bool NativeTargetInitialized;
@@ -121,11 +124,11 @@ public:
     RemoveModuleSet(H);
   }
 
-  orc::JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
+  JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
     return FindSymbol(Name, ExportedSymbolsOnly);
   }
 
-  orc::JITSymbol findSymbolIn(ModuleSetHandleT H, const std::string &Name,
+  JITSymbol findSymbolIn(ModuleSetHandleT H, const std::string &Name,
                          bool ExportedSymbolsOnly) {
     return FindSymbolIn(H, Name, ExportedSymbolsOnly);
   }

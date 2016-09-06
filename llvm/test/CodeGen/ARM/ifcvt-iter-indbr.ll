@@ -27,7 +27,7 @@ declare i8* @bar(i32, i8*, i8*)
 ; CHECK-NEXT: LBB{{[0-9_]+}}:
 ; CHECK-NEXT:  movw r0, #4567
 ; CHECK-NEXT: [[FOOCALL]]:
-; CHECK-NEXT:  blx _foo
+; CHECK-NEXT:  bl _foo
 ;
 ; CHECK-PROB: BB#0:
 ; CHECK-PROB: Successors according to CFG: BB#1({{[0-9a-fx/= ]+}}50.00%) BB#2({{[0-9a-fx/= ]+}}25.00%) BB#4({{[0-9a-fx/= ]+}}25.00%)

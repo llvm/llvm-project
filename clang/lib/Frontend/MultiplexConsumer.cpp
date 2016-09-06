@@ -120,11 +120,14 @@ public:
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void StaticDataMemberInstantiated(const VarDecl *D) override;
   void DefaultArgumentInstantiated(const ParmVarDecl *D) override;
+  void DefaultMemberInitializerInstantiated(const FieldDecl *D) override;
   void AddedObjCCategoryToInterface(const ObjCCategoryDecl *CatD,
                                     const ObjCInterfaceDecl *IFD) override;
   void FunctionDefinitionInstantiated(const FunctionDecl *D) override;
   void DeclarationMarkedUsed(const Decl *D) override;
   void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) override;
+  void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
+                                            const Attr *Attr) override;
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr, 
                               const RecordDecl *Record) override;
@@ -199,6 +202,11 @@ void MultiplexASTMutationListener::DefaultArgumentInstantiated(
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
     Listeners[i]->DefaultArgumentInstantiated(D);
 }
+void MultiplexASTMutationListener::DefaultMemberInitializerInstantiated(
+                                                           const FieldDecl *D) {
+  for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    Listeners[i]->DefaultMemberInitializerInstantiated(D);
+}
 void MultiplexASTMutationListener::AddedObjCCategoryToInterface(
                                                  const ObjCCategoryDecl *CatD,
                                                  const ObjCInterfaceDecl *IFD) {
@@ -218,6 +226,11 @@ void MultiplexASTMutationListener::DeclarationMarkedOpenMPThreadPrivate(
     const Decl *D) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
     Listeners[i]->DeclarationMarkedOpenMPThreadPrivate(D);
+}
+void MultiplexASTMutationListener::DeclarationMarkedOpenMPDeclareTarget(
+    const Decl *D, const Attr *Attr) {
+  for (auto *L : Listeners)
+    L->DeclarationMarkedOpenMPDeclareTarget(D, Attr);
 }
 void MultiplexASTMutationListener::RedefinedHiddenDefinition(const NamedDecl *D,
                                                              Module *M) {
@@ -272,9 +285,9 @@ bool MultiplexConsumer::HandleTopLevelDecl(DeclGroupRef D) {
   return Continue;
 }
 
-void MultiplexConsumer::HandleInlineMethodDefinition(CXXMethodDecl *D) {
+void MultiplexConsumer::HandleInlineFunctionDefinition(FunctionDecl *D) {
   for (auto &Consumer : Consumers)
-    Consumer->HandleInlineMethodDefinition(D);
+    Consumer->HandleInlineFunctionDefinition(D);
 }
 
 void MultiplexConsumer::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
@@ -317,24 +330,14 @@ void MultiplexConsumer::HandleImplicitImportDecl(ImportDecl *D) {
     Consumer->HandleImplicitImportDecl(D);
 }
 
-void MultiplexConsumer::HandleLinkerOption(llvm::StringRef Opts) {
-  for (auto &Consumer : Consumers)
-    Consumer->HandleLinkerOption(Opts);
-}
-
-void MultiplexConsumer::HandleDetectMismatch(llvm::StringRef Name, llvm::StringRef Value) {
-  for (auto &Consumer : Consumers)
-    Consumer->HandleDetectMismatch(Name, Value);
-}
-
-void MultiplexConsumer::HandleDependentLibrary(llvm::StringRef Lib) {
-  for (auto &Consumer : Consumers)
-    Consumer->HandleDependentLibrary(Lib);
-}
-
 void MultiplexConsumer::CompleteTentativeDefinition(VarDecl *D) {
   for (auto &Consumer : Consumers)
     Consumer->CompleteTentativeDefinition(D);
+}
+
+void MultiplexConsumer::AssignInheritanceModel(CXXRecordDecl *RD) {
+  for (auto &Consumer : Consumers)
+    Consumer->AssignInheritanceModel(RD);
 }
 
 void MultiplexConsumer::HandleVTable(CXXRecordDecl *RD) {

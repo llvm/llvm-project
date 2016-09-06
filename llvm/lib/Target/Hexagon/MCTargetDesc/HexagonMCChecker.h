@@ -15,10 +15,9 @@
 #ifndef HEXAGONMCCHECKER_H
 #define HEXAGONMCCHECKER_H
 
-#include <map>
-#include <set>
-#include <queue>
 #include "MCTargetDesc/HexagonMCShuffler.h"
+#include <queue>
+#include <set>
 
 using namespace llvm;
 

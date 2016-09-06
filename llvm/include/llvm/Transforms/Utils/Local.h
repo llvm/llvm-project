@@ -21,6 +21,7 @@
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 namespace llvm {
 
@@ -29,6 +30,7 @@ class BasicBlock;
 class Function;
 class BranchInst;
 class Instruction;
+class CallInst;
 class DbgDeclareInst;
 class StoreInst;
 class LoadInst;
@@ -50,10 +52,10 @@ template<typename T> class SmallVectorImpl;
 //  Local constant propagation.
 //
 
-/// ConstantFoldTerminator - If a terminator instruction is predicated on a
-/// constant value, convert it into an unconditional branch to the constant
-/// destination.  This is a nontrivial operation because the successors of this
-/// basic block must have their PHI nodes updated.
+/// If a terminator instruction is predicated on a constant value, convert it
+/// into an unconditional branch to the constant destination.
+/// This is a nontrivial operation because the successors of this basic block
+/// must have their PHI nodes updated.
 /// Also calls RecursivelyDeleteTriviallyDeadInstructions() on any branch/switch
 /// conditions and indirectbr addresses this might make dead if
 /// DeleteDeadConditions is true.
@@ -64,29 +66,27 @@ bool ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions = false,
 //  Local dead code elimination.
 //
 
-/// isInstructionTriviallyDead - Return true if the result produced by the
-/// instruction is not used, and the instruction has no side effects.
-///
+/// Return true if the result produced by the instruction is not used, and the
+/// instruction has no side effects.
 bool isInstructionTriviallyDead(Instruction *I,
                                 const TargetLibraryInfo *TLI = nullptr);
 
-/// RecursivelyDeleteTriviallyDeadInstructions - If the specified value is a
-/// trivially dead instruction, delete it.  If that makes any of its operands
-/// trivially dead, delete them too, recursively.  Return true if any
-/// instructions were deleted.
+/// If the specified value is a trivially dead instruction, delete it.
+/// If that makes any of its operands trivially dead, delete them too,
+/// recursively. Return true if any instructions were deleted.
 bool RecursivelyDeleteTriviallyDeadInstructions(Value *V,
                                         const TargetLibraryInfo *TLI = nullptr);
 
-/// RecursivelyDeleteDeadPHINode - If the specified value is an effectively
-/// dead PHI node, due to being a def-use chain of single-use nodes that
-/// either forms a cycle or is terminated by a trivially dead instruction,
-/// delete it.  If that makes any of its operands trivially dead, delete them
-/// too, recursively.  Return true if a change was made.
+/// If the specified value is an effectively dead PHI node, due to being a
+/// def-use chain of single-use nodes that either forms a cycle or is terminated
+/// by a trivially dead instruction, delete it. If that makes any of its
+/// operands trivially dead, delete them too, recursively. Return true if a
+/// change was made.
 bool RecursivelyDeleteDeadPHINode(PHINode *PN,
                                   const TargetLibraryInfo *TLI = nullptr);
 
-/// SimplifyInstructionsInBlock - Scan the specified basic block and try to
-/// simplify any instructions in it and recursively delete dead instructions.
+/// Scan the specified basic block and try to simplify any instructions in it
+/// and recursively delete dead instructions.
 ///
 /// This returns true if it changed the code, note that it can delete
 /// instructions in other blocks as well in this block.
@@ -97,9 +97,9 @@ bool SimplifyInstructionsInBlock(BasicBlock *BB,
 //  Control Flow Graph Restructuring.
 //
 
-/// RemovePredecessorAndSimplify - Like BasicBlock::removePredecessor, this
-/// method is called when we're about to delete Pred as a predecessor of BB.  If
-/// BB contains any PHI nodes, this drops the entries in the PHI nodes for Pred.
+/// Like BasicBlock::removePredecessor, this method is called when we're about
+/// to delete Pred as a predecessor of BB. If BB contains any PHI nodes, this
+/// drops the entries in the PHI nodes for Pred.
 ///
 /// Unlike the removePredecessor method, this attempts to simplify uses of PHI
 /// nodes that collapse into identity values.  For example, if we have:
@@ -110,74 +110,68 @@ bool SimplifyInstructionsInBlock(BasicBlock *BB,
 /// recursively fold the 'and' to 0.
 void RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred);
 
-/// MergeBasicBlockIntoOnlyPred - BB is a block with one predecessor and its
-/// predecessor is known to have one successor (BB!).  Eliminate the edge
-/// between them, moving the instructions in the predecessor into BB.  This
-/// deletes the predecessor block.
-///
+/// BB is a block with one predecessor and its predecessor is known to have one
+/// successor (BB!). Eliminate the edge between them, moving the instructions in
+/// the predecessor into BB. This deletes the predecessor block.
 void MergeBasicBlockIntoOnlyPred(BasicBlock *BB, DominatorTree *DT = nullptr);
 
-/// TryToSimplifyUncondBranchFromEmptyBlock - BB is known to contain an
-/// unconditional branch, and contains no instructions other than PHI nodes,
-/// potential debug intrinsics and the branch.  If possible, eliminate BB by
-/// rewriting all the predecessors to branch to the successor block and return
-/// true.  If we can't transform, return false.
+/// BB is known to contain an unconditional branch, and contains no instructions
+/// other than PHI nodes, potential debug intrinsics and the branch. If
+/// possible, eliminate BB by rewriting all the predecessors to branch to the
+/// successor block and return true. If we can't transform, return false.
 bool TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB);
 
-/// EliminateDuplicatePHINodes - Check for and eliminate duplicate PHI
-/// nodes in this block. This doesn't try to be clever about PHI nodes
-/// which differ only in the order of the incoming values, but instcombine
-/// orders them so it usually won't matter.
-///
+/// Check for and eliminate duplicate PHI nodes in this block. This doesn't try
+/// to be clever about PHI nodes which differ only in the order of the incoming
+/// values, but instcombine orders them so it usually won't matter.
 bool EliminateDuplicatePHINodes(BasicBlock *BB);
 
-/// SimplifyCFG - This function is used to do simplification of a CFG.  For
+/// This function is used to do simplification of a CFG.  For
 /// example, it adjusts branches to branches to eliminate the extra hop, it
 /// eliminates unreachable basic blocks, and does other "peephole" optimization
 /// of the CFG.  It returns true if a modification was made, possibly deleting
-/// the basic block that was pointed to.
-///
+/// the basic block that was pointed to. LoopHeaders is an optional input
+/// parameter, providing the set of loop header that SimplifyCFG should not
+/// eliminate.
 bool SimplifyCFG(BasicBlock *BB, const TargetTransformInfo &TTI,
-                 unsigned BonusInstThreshold, AssumptionCache *AC = nullptr);
+                 unsigned BonusInstThreshold, AssumptionCache *AC = nullptr,
+                 SmallPtrSetImpl<BasicBlock *> *LoopHeaders = nullptr);
 
-/// FlatternCFG - This function is used to flatten a CFG.  For
-/// example, it uses parallel-and and parallel-or mode to collapse
-//  if-conditions and merge if-regions with identical statements.
-///
+/// This function is used to flatten a CFG. For example, it uses parallel-and
+/// and parallel-or mode to collapse if-conditions and merge if-regions with
+/// identical statements.
 bool FlattenCFG(BasicBlock *BB, AliasAnalysis *AA = nullptr);
 
-/// FoldBranchToCommonDest - If this basic block is ONLY a setcc and a branch,
-/// and if a predecessor branches to us and one of our successors, fold the
-/// setcc into the predecessor and use logical operations to pick the right
-/// destination.
+/// If this basic block is ONLY a setcc and a branch, and if a predecessor
+/// branches to us and one of our successors, fold the setcc into the
+/// predecessor and use logical operations to pick the right destination.
 bool FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold = 1);
 
-/// DemoteRegToStack - This function takes a virtual register computed by an
-/// Instruction and replaces it with a slot in the stack frame, allocated via
-/// alloca.  This allows the CFG to be changed around without fear of
-/// invalidating the SSA information for the value.  It returns the pointer to
-/// the alloca inserted to create a stack slot for X.
-///
+/// This function takes a virtual register computed by an Instruction and
+/// replaces it with a slot in the stack frame, allocated via alloca.
+/// This allows the CFG to be changed around without fear of invalidating the
+/// SSA information for the value. It returns the pointer to the alloca inserted
+/// to create a stack slot for X.
 AllocaInst *DemoteRegToStack(Instruction &X,
                              bool VolatileLoads = false,
                              Instruction *AllocaPoint = nullptr);
 
-/// DemotePHIToStack - This function takes a virtual register computed by a phi
-/// node and replaces it with a slot in the stack frame, allocated via alloca.
-/// The phi node is deleted and it returns the pointer to the alloca inserted.
+/// This function takes a virtual register computed by a phi node and replaces
+/// it with a slot in the stack frame, allocated via alloca. The phi node is
+/// deleted and it returns the pointer to the alloca inserted.
 AllocaInst *DemotePHIToStack(PHINode *P, Instruction *AllocaPoint = nullptr);
 
-/// getOrEnforceKnownAlignment - If the specified pointer has an alignment that
-/// we can determine, return it, otherwise return 0.  If PrefAlign is specified,
-/// and it is more than the alignment of the ultimate object, see if we can
-/// increase the alignment of the ultimate object, making this check succeed.
+/// If the specified pointer has an alignment that we can determine, return it,
+/// otherwise return 0. If PrefAlign is specified, and it is more than the
+/// alignment of the ultimate object, see if we can increase the alignment of
+/// the ultimate object, making this check succeed.
 unsigned getOrEnforceKnownAlignment(Value *V, unsigned PrefAlign,
                                     const DataLayout &DL,
                                     const Instruction *CxtI = nullptr,
                                     AssumptionCache *AC = nullptr,
                                     const DominatorTree *DT = nullptr);
 
-/// getKnownAlignment - Try to infer an alignment for the specified pointer.
+/// Try to infer an alignment for the specified pointer.
 static inline unsigned getKnownAlignment(Value *V, const DataLayout &DL,
                                          const Instruction *CxtI = nullptr,
                                          AssumptionCache *AC = nullptr,
@@ -185,9 +179,9 @@ static inline unsigned getKnownAlignment(Value *V, const DataLayout &DL,
   return getOrEnforceKnownAlignment(V, 0, DL, CxtI, AC, DT);
 }
 
-/// EmitGEPOffset - Given a getelementptr instruction/constantexpr, emit the
-/// code necessary to compute the offset from the base pointer (without adding
-/// in the base pointer).  Return the result as a signed integer of intptr size.
+/// Given a getelementptr instruction/constantexpr, emit the code necessary to
+/// compute the offset from the base pointer (without adding in the base
+/// pointer). Return the result as a signed integer of intptr size.
 /// When NoAssumptions is true, no assumptions about index computation not
 /// overflowing is made.
 template <typename IRBuilderTy>
@@ -264,15 +258,14 @@ bool ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
 bool ConvertDebugDeclareToDebugValue(DbgDeclareInst *DDI,
                                      LoadInst *LI, DIBuilder &Builder);
 
-/// LowerDbgDeclare - Lowers llvm.dbg.declare intrinsics into appropriate set
-/// of llvm.dbg.value intrinsics.
+/// Lowers llvm.dbg.declare intrinsics into appropriate set of
+/// llvm.dbg.value intrinsics.
 bool LowerDbgDeclare(Function &F);
 
-/// FindAllocaDbgDeclare - Finds the llvm.dbg.declare intrinsic corresponding to
-/// an alloca, if any.
+/// Finds the llvm.dbg.declare intrinsic corresponding to an alloca, if any.
 DbgDeclareInst *FindAllocaDbgDeclare(Value *V);
 
-/// \brief Replaces llvm.dbg.declare instruction when the address it describes
+/// Replaces llvm.dbg.declare instruction when the address it describes
 /// is replaced with a new value. If Deref is true, an additional DW_OP_deref is
 /// prepended to the expression. If Offset is non-zero, a constant displacement
 /// is added to the expression (after the optional Deref). Offset can be
@@ -281,7 +274,7 @@ bool replaceDbgDeclare(Value *Address, Value *NewAddress,
                        Instruction *InsertBefore, DIBuilder &Builder,
                        bool Deref, int Offset);
 
-/// \brief Replaces llvm.dbg.declare instruction when the alloca it describes
+/// Replaces llvm.dbg.declare instruction when the alloca it describes
 /// is replaced with a new value. If Deref is true, an additional DW_OP_deref is
 /// prepended to the expression. If Offset is non-zero, a constant displacement
 /// is added to the expression (after the optional Deref). Offset can be
@@ -289,39 +282,57 @@ bool replaceDbgDeclare(Value *Address, Value *NewAddress,
 bool replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                 DIBuilder &Builder, bool Deref, int Offset = 0);
 
-/// \brief Insert an unreachable instruction before the specified
+/// Replaces multiple llvm.dbg.value instructions when the alloca it describes
+/// is replaced with a new value. If Offset is non-zero, a constant displacement
+/// is added to the expression (after the mandatory Deref). Offset can be
+/// negative. New llvm.dbg.value instructions are inserted at the locations of
+/// the instructions they replace.
+void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
+                              DIBuilder &Builder, int Offset = 0);
+
+/// Remove all instructions from a basic block other than it's terminator
+/// and any present EH pad instructions.
+unsigned removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);
+
+/// Insert an unreachable instruction before the specified
 /// instruction, making it and the rest of the code in the block dead.
-void changeToUnreachable(Instruction *I, bool UseLLVMTrap);
+unsigned changeToUnreachable(Instruction *I, bool UseLLVMTrap);
 
 /// Replace 'BB's terminator with one that does not have an unwind successor
-/// block.  Rewrites `invoke` to `call`, etc.  Updates any PHIs in unwind
+/// block. Rewrites `invoke` to `call`, etc. Updates any PHIs in unwind
 /// successor.
 ///
 /// \param BB  Block whose terminator will be replaced.  Its terminator must
 ///            have an unwind successor.
 void removeUnwindEdge(BasicBlock *BB);
 
-/// \brief Remove all blocks that can not be reached from the function's entry.
+/// Remove all blocks that can not be reached from the function's entry.
 ///
 /// Returns true if any basic block was removed.
 bool removeUnreachableBlocks(Function &F, LazyValueInfo *LVI = nullptr);
 
-/// \brief Combine the metadata of two instructions so that K can replace J
+/// Combine the metadata of two instructions so that K can replace J
 ///
 /// Metadata not listed as known via KnownIDs is removed
 void combineMetadata(Instruction *K, const Instruction *J, ArrayRef<unsigned> KnownIDs);
 
-/// \brief Replace each use of 'From' with 'To' if that use is dominated by 
+/// Combine the metadata of two instructions so that K can replace J. This
+/// specifically handles the case of CSE-like transformations.
+///
+/// Unknown metadata is removed.
+void combineMetadataForCSE(Instruction *K, const Instruction *J);
+
+/// Replace each use of 'From' with 'To' if that use is dominated by
 /// the given edge.  Returns the number of replacements made.
 unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
                                   const BasicBlockEdge &Edge);
-/// \brief Replace each use of 'From' with 'To' if that use is dominated by
-/// the given BasicBlock. Returns the number of replacements made.
+/// Replace each use of 'From' with 'To' if that use is dominated by
+/// the end of the given BasicBlock. Returns the number of replacements made.
 unsigned replaceDominatedUsesWith(Value *From, Value *To, DominatorTree &DT,
                                   const BasicBlock *BB);
 
 
-/// \brief Return true if the CallSite CS calls a gc leaf function.
+/// Return true if the CallSite CS calls a gc leaf function.
 ///
 /// A leaf function is a function that does not safepoint the thread during its
 /// execution.  During a call or invoke to such a function, the callers stack
@@ -335,7 +346,7 @@ bool callsGCLeafFunction(ImmutableCallSite CS);
 //  Intrinsic pattern matching
 //
 
-/// Try and match a bitreverse or bswap idiom.
+/// Try and match a bswap or bitreverse idiom.
 ///
 /// If an idiom is matched, an intrinsic call is inserted before \c I. Any added
 /// instructions are returned in \c InsertedInsts. They will all have been added
@@ -346,9 +357,20 @@ bool callsGCLeafFunction(ImmutableCallSite CS);
 /// to BW / 4 nodes to be searched, so is significantly faster.
 ///
 /// This function returns true on a successful match or false otherwise.
-bool recognizeBitReverseOrBSwapIdiom(
+bool recognizeBSwapOrBitReverseIdiom(
     Instruction *I, bool MatchBSwaps, bool MatchBitReversals,
     SmallVectorImpl<Instruction *> &InsertedInsts);
+
+//===----------------------------------------------------------------------===//
+//  Sanitizer utilities
+//
+
+/// Given a CallInst, check if it calls a string function known to CodeGen,
+/// and mark it with NoBuiltin if so.  To be used by sanitizers that intend
+/// to intercept string functions and want to avoid converting them to target
+/// specific instructions.
+void maybeMarkSanitizerLibraryCallNoBuiltin(CallInst *CI,
+                                            const TargetLibraryInfo *TLI);
 
 } // End llvm namespace
 

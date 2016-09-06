@@ -386,6 +386,15 @@ public:
   }
 #include "llvm/IR/Instruction.def"
 
+  static BinaryOperator *CreateWithCopiedFlags(BinaryOps Opc,
+                                               Value *V1, Value *V2,
+                                               BinaryOperator *CopyBO,
+                                               const Twine &Name = "") {
+    BinaryOperator *BO = Create(Opc, V1, V2, Name);
+    BO->copyIRFlags(CopyBO);
+    return BO;
+  }
+
   static BinaryOperator *CreateNSW(BinaryOps Opc, Value *V1, Value *V2,
                                    const Twine &Name = "") {
     BinaryOperator *BO = Create(Opc, V1, V2, Name);
@@ -525,35 +534,6 @@ public:
   /// cannot be reversed (ie, it's a Div), then return true.
   ///
   bool swapOperands();
-
-  /// Set or clear the nsw flag on this instruction, which must be an operator
-  /// which supports this flag. See LangRef.html for the meaning of this flag.
-  void setHasNoUnsignedWrap(bool b = true);
-
-  /// Set or clear the nsw flag on this instruction, which must be an operator
-  /// which supports this flag. See LangRef.html for the meaning of this flag.
-  void setHasNoSignedWrap(bool b = true);
-
-  /// Set or clear the exact flag on this instruction, which must be an operator
-  /// which supports this flag. See LangRef.html for the meaning of this flag.
-  void setIsExact(bool b = true);
-
-  /// Determine whether the no unsigned wrap flag is set.
-  bool hasNoUnsignedWrap() const;
-
-  /// Determine whether the no signed wrap flag is set.
-  bool hasNoSignedWrap() const;
-
-  /// Determine whether the exact flag is set.
-  bool isExact() const;
-
-  /// Convenience method to copy supported wrapping, exact, and fast-math flags
-  /// from V to this instruction.
-  void copyIRFlags(const Value *V);
-
-  /// Logical 'and' of any supported wrapping, exact, and fast-math flags of
-  /// V and this instruction.
-  void andIRFlags(const Value *V);
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
@@ -879,6 +859,10 @@ public:
   /// Values in the range 0-31 are reserved for FCmpInst, while values in the
   /// range 32-64 are reserved for ICmpInst. This is necessary to ensure the
   /// predicate values are not overlapping between the classes.
+  ///
+  /// Some passes (e.g. InstCombine) depend on the bit-wise characteristics of
+  /// FCMP_* values. Changing the bit patterns requires a potential change to
+  /// those passes.
   enum Predicate {
     // Opcode              U L G E    Intuitive operation
     FCMP_FALSE =  0,  ///< 0 0 0 0    Always false (always folded)
@@ -1058,6 +1042,18 @@ public:
     return isFalseWhenEqual(getPredicate());
   }
 
+  /// @brief Determine if Pred1 implies Pred2 is true when two compares have
+  /// matching operands.
+  bool isImpliedTrueByMatchingCmp(Predicate Pred2) {
+    return isImpliedTrueByMatchingCmp(getPredicate(), Pred2);
+  }
+
+  /// @brief Determine if Pred1 implies Pred2 is false when two compares have
+  /// matching operands.
+  bool isImpliedFalseByMatchingCmp(Predicate Pred2) {
+    return isImpliedFalseByMatchingCmp(getPredicate(), Pred2);
+  }
+
   /// @returns true if the predicate is unsigned, false otherwise.
   /// @brief Determine if the predicate is an unsigned operation.
   static bool isUnsigned(Predicate predicate);
@@ -1077,6 +1073,14 @@ public:
 
   /// Determine if the predicate is false when comparing a value with itself.
   static bool isFalseWhenEqual(Predicate predicate);
+
+  /// Determine if Pred1 implies Pred2 is true when two compares have matching
+  /// operands.
+  static bool isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2);
+
+  /// Determine if Pred1 implies Pred2 is false when two compares have matching
+  /// operands.
+  static bool isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2);
 
   /// @brief Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Instruction *I) {
@@ -1198,7 +1202,7 @@ struct OperandBundleUse {
 
     // Conservative answer:  no operands have any attributes.
     return false;
-  };
+  }
 
   /// \brief Return the tag of this operand bundle as a string.
   StringRef getTagName() const {
@@ -1467,7 +1471,18 @@ public:
 
     return std::equal(bundle_op_info_begin(), bundle_op_info_end(),
                       Other.bundle_op_info_begin());
-  };
+  }
+
+  /// \brief Return true if this operand bundle user contains operand bundles
+  /// with tags other than those specified in \p IDs.
+  bool hasOperandBundlesOtherThan(ArrayRef<uint32_t> IDs) const {
+    for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i) {
+      uint32_t ID = getOperandBundleAt(i).getTagID();
+      if (!is_contained(IDs, ID))
+        return true;
+    }
+    return false;
+  }
 
 protected:
   /// \brief Is the function attribute S disallowed by some operand bundle on

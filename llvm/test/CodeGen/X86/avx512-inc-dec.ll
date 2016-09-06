@@ -2,7 +2,7 @@
 
 ;CHECK-LABEL: test
 ;CHECK-NOT: dec
-;CHECK_NOT: enc
+;CHECK-NOT: enc
 ;CHECK: ret
 define i32 @test(i32 %a, i32 %b) {
  %a1 = add i32 %a, -1

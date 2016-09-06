@@ -17,9 +17,7 @@ using namespace llvm;
 using namespace dwarf;
 typedef DILineInfoSpecifier::FileLineInfoKind FileLineInfoKind;
 
-DWARFDebugLine::Prologue::Prologue() {
-  clear();
-}
+DWARFDebugLine::Prologue::Prologue() { clear(); }
 
 void DWARFDebugLine::Prologue::clear() {
   TotalLength = Version = PrologueLength = 0;
@@ -44,12 +42,12 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS) const {
      << format("     opcode_base: %u\n", OpcodeBase);
 
   for (uint32_t i = 0; i < StandardOpcodeLengths.size(); ++i)
-    OS << format("standard_opcode_lengths[%s] = %u\n", LNStandardString(i+1),
+    OS << format("standard_opcode_lengths[%s] = %u\n", LNStandardString(i + 1),
                  StandardOpcodeLengths[i]);
 
   if (!IncludeDirectories.empty())
     for (uint32_t i = 0; i < IncludeDirectories.size(); ++i)
-      OS << format("include_directories[%3u] = '", i+1)
+      OS << format("include_directories[%3u] = '", i + 1)
          << IncludeDirectories[i] << "'\n";
 
   if (!FileNames.empty()) {
@@ -57,10 +55,10 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS) const {
        << "                ---- ---------- ---------- -----------"
           "----------------\n";
     for (uint32_t i = 0; i < FileNames.size(); ++i) {
-      const FileNameEntry& fileEntry = FileNames[i];
-      OS << format("file_names[%3u] %4" PRIu64 " ", i+1, fileEntry.DirIdx)
-         << format("0x%8.8" PRIx64 " 0x%8.8" PRIx64 " ",
-                   fileEntry.ModTime, fileEntry.Length)
+      const FileNameEntry &fileEntry = FileNames[i];
+      OS << format("file_names[%3u] %4" PRIu64 " ", i + 1, fileEntry.DirIdx)
+         << format("0x%8.8" PRIx64 " 0x%8.8" PRIx64 " ", fileEntry.ModTime,
+                   fileEntry.Length)
          << fileEntry.Name << '\n';
     }
   }
@@ -82,8 +80,8 @@ bool DWARFDebugLine::Prologue::parse(DataExtractor debug_line_data,
   if (Version < 2)
     return false;
 
-  PrologueLength = debug_line_data.getUnsigned(offset_ptr,
-                                               sizeofPrologueLength());
+  PrologueLength =
+      debug_line_data.getUnsigned(offset_ptr, sizeofPrologueLength());
   const uint64_t end_prologue_offset = PrologueLength + *offset_ptr;
   MinInstLength = debug_line_data.getU8(offset_ptr);
   if (Version >= 4)
@@ -131,9 +129,7 @@ bool DWARFDebugLine::Prologue::parse(DataExtractor debug_line_data,
   return true;
 }
 
-DWARFDebugLine::Row::Row(bool default_is_stmt) {
-  reset(default_is_stmt);
-}
+DWARFDebugLine::Row::Row(bool default_is_stmt) { reset(default_is_stmt); }
 
 void DWARFDebugLine::Row::postAppend() {
   BasicBlock = false;
@@ -158,17 +154,13 @@ void DWARFDebugLine::Row::reset(bool default_is_stmt) {
 void DWARFDebugLine::Row::dump(raw_ostream &OS) const {
   OS << format("0x%16.16" PRIx64 " %6u %6u", Address, Line, Column)
      << format(" %6u %3u %13u ", File, Isa, Discriminator)
-     << (IsStmt ? " is_stmt" : "")
-     << (BasicBlock ? " basic_block" : "")
+     << (IsStmt ? " is_stmt" : "") << (BasicBlock ? " basic_block" : "")
      << (PrologueEnd ? " prologue_end" : "")
      << (EpilogueBegin ? " epilogue_begin" : "")
-     << (EndSequence ? " end_sequence" : "")
-     << '\n';
+     << (EndSequence ? " end_sequence" : "") << '\n';
 }
 
-DWARFDebugLine::Sequence::Sequence() {
-  reset();
-}
+DWARFDebugLine::Sequence::Sequence() { reset(); }
 
 void DWARFDebugLine::Sequence::reset() {
   LowPC = 0;
@@ -178,9 +170,7 @@ void DWARFDebugLine::Sequence::reset() {
   Empty = true;
 }
 
-DWARFDebugLine::LineTable::LineTable() {
-  clear();
-}
+DWARFDebugLine::LineTable::LineTable() { clear(); }
 
 void DWARFDebugLine::LineTable::dump(raw_ostream &OS) const {
   Prologue.dump(OS);
@@ -244,7 +234,7 @@ const DWARFDebugLine::LineTable *
 DWARFDebugLine::getOrParseLineTable(DataExtractor debug_line_data,
                                     uint32_t offset) {
   std::pair<LineTableIter, bool> pos =
-    LineTableMap.insert(LineTableMapTy::value_type(offset, LineTable()));
+      LineTableMap.insert(LineTableMapTy::value_type(offset, LineTable()));
   LineTable *LT = &pos.first->second;
   if (pos.second) {
     if (!LT->parse(debug_line_data, RelocMap, &offset))
@@ -266,8 +256,8 @@ bool DWARFDebugLine::LineTable::parse(DataExtractor debug_line_data,
     return false;
   }
 
-  const uint32_t end_offset = debug_line_offset + Prologue.TotalLength +
-                              Prologue.sizeofTotalLength();
+  const uint32_t end_offset =
+      debug_line_offset + Prologue.TotalLength + Prologue.sizeofTotalLength();
 
   ParsingState State(this);
 
@@ -307,9 +297,9 @@ bool DWARFDebugLine::LineTable::parse(DataExtractor debug_line_data,
           // If this address is in our relocation map, apply the relocation.
           RelocAddrMap::const_iterator AI = RMap->find(*offset_ptr);
           if (AI != RMap->end()) {
-             const std::pair<uint8_t, int64_t> &R = AI->second;
-             State.Row.Address =
-                 debug_line_data.getAddress(offset_ptr) + R.second;
+            const std::pair<uint8_t, int64_t> &R = AI->second;
+            State.Row.Address =
+                debug_line_data.getAddress(offset_ptr) + R.second;
           } else
             State.Row.Address = debug_line_data.getAddress(offset_ptr);
         }
@@ -509,6 +499,8 @@ bool DWARFDebugLine::LineTable::parse(DataExtractor debug_line_data,
       State.Row.Line += line_offset;
       State.Row.Address += addr_offset;
       State.appendRowToMatrix(*offset_ptr);
+      // Reset discriminator to 0.
+      State.Row.Discriminator = 0;
     }
   }
 
@@ -566,8 +558,8 @@ uint32_t DWARFDebugLine::LineTable::lookupAddress(uint64_t address) const {
   sequence.LowPC = address;
   SequenceIter first_seq = Sequences.begin();
   SequenceIter last_seq = Sequences.end();
-  SequenceIter seq_pos = std::lower_bound(first_seq, last_seq, sequence,
-      DWARFDebugLine::Sequence::orderByLowPC);
+  SequenceIter seq_pos = std::lower_bound(
+      first_seq, last_seq, sequence, DWARFDebugLine::Sequence::orderByLowPC);
   DWARFDebugLine::Sequence found_seq;
   if (seq_pos == last_seq) {
     found_seq = Sequences.back();
@@ -591,8 +583,8 @@ bool DWARFDebugLine::LineTable::lookupAddressRange(
   sequence.LowPC = address;
   SequenceIter first_seq = Sequences.begin();
   SequenceIter last_seq = Sequences.end();
-  SequenceIter seq_pos = std::lower_bound(first_seq, last_seq, sequence,
-      DWARFDebugLine::Sequence::orderByLowPC);
+  SequenceIter seq_pos = std::lower_bound(
+      first_seq, last_seq, sequence, DWARFDebugLine::Sequence::orderByLowPC);
   if (seq_pos == last_seq || seq_pos->LowPC != address) {
     if (seq_pos == first_seq)
       return false;
@@ -633,12 +625,16 @@ bool DWARFDebugLine::LineTable::lookupAddressRange(
 }
 
 bool
+DWARFDebugLine::LineTable::hasFileAtIndex(uint64_t FileIndex) const {
+  return FileIndex != 0 && FileIndex <= Prologue.FileNames.size();
+}
+
+bool
 DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
                                               const char *CompDir,
                                               FileLineInfoKind Kind,
                                               std::string &Result) const {
-  if (FileIndex == 0 || FileIndex > Prologue.FileNames.size() ||
-      Kind == FileLineInfoKind::None)
+  if (Kind == FileLineInfoKind::None || !hasFileAtIndex(FileIndex))
     return false;
   const FileNameEntry &Entry = Prologue.FileNames[FileIndex - 1];
   const char *FileName = Entry.Name;
@@ -669,11 +665,9 @@ DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
   return true;
 }
 
-bool
-DWARFDebugLine::LineTable::getFileLineInfoForAddress(uint64_t Address,
-                                                     const char *CompDir,
-                                                     FileLineInfoKind Kind,
-                                                     DILineInfo &Result) const {
+bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
+    uint64_t Address, const char *CompDir, FileLineInfoKind Kind,
+    DILineInfo &Result) const {
   // Get the index of row we're looking for in the line table.
   uint32_t RowIndex = lookupAddress(Address);
   if (RowIndex == -1U)

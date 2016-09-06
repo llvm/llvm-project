@@ -13,17 +13,14 @@
 
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
 #include "ModelInjector.h"
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/ParentMap.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CallGraph.h"
 #include "clang/Analysis/CodeInjector.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
@@ -36,9 +33,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistration.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -47,10 +42,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <queue>
+#include <utility>
 
 using namespace clang;
 using namespace ento;
-using llvm::SmallPtrSet;
 
 #define DEBUG_TYPE "AnalysisConsumer"
 
@@ -185,13 +180,12 @@ public:
   /// translation unit.
   FunctionSummariesTy FunctionSummaries;
 
-  AnalysisConsumer(const Preprocessor& pp,
-                   const std::string& outdir,
-                   AnalyzerOptionsRef opts,
-                   ArrayRef<std::string> plugins,
+  AnalysisConsumer(const Preprocessor &pp, const std::string &outdir,
+                   AnalyzerOptionsRef opts, ArrayRef<std::string> plugins,
                    CodeInjector *injector)
-    : RecVisitorMode(0), RecVisitorBR(nullptr), Ctx(nullptr), PP(pp),
-      OutDir(outdir), Opts(opts), Plugins(plugins), Injector(injector) {
+      : RecVisitorMode(0), RecVisitorBR(nullptr), Ctx(nullptr), PP(pp),
+        OutDir(outdir), Opts(std::move(opts)), Plugins(plugins),
+        Injector(injector) {
     DigestAnalyzerOptions();
     if (Opts->PrintStats) {
       llvm::EnableStatistics();
@@ -271,19 +265,8 @@ public:
       else
         assert(Mode == (AM_Syntax | AM_Path) && "Unexpected mode!");
 
-      llvm::errs() << ": " << Loc.getFilename();
-      if (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)) {
-        const NamedDecl *ND = cast<NamedDecl>(D);
-        llvm::errs() << ' ' << ND->getQualifiedNameAsString() << '\n';
-      }
-      else if (isa<BlockDecl>(D)) {
-        llvm::errs() << ' ' << "block(line:" << Loc.getLine() << ",col:"
-                     << Loc.getColumn() << '\n';
-      }
-      else if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
-        Selector S = MD->getSelector();
-        llvm::errs() << ' ' << S.getAsString();
-      }
+      llvm::errs() << ": " << Loc.getFilename() << ' '
+                           << getFunctionName(D) << '\n';
     }
   }
 
@@ -383,6 +366,7 @@ public:
 
 private:
   void storeTopLevelDecls(DeclGroupRef DG);
+  std::string getFunctionName(const Decl *D);
 
   /// \brief Check if we should skip (not analyze) the given function.
   AnalysisMode getModeForDecl(Decl *D, AnalysisMode Mode);
@@ -432,6 +416,13 @@ static bool shouldSkipFunction(const Decl *D,
   //   Count naming convention errors more aggressively.
   if (isa<ObjCMethodDecl>(D))
     return false;
+  // We also want to reanalyze all C++ copy and move assignment operators to
+  // separately check the two cases where 'this' aliases with the parameter and
+  // where it may not. (cplusplus.SelfAssignmentChecker)
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
+    if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())
+      return false;
+  }
 
   // Otherwise, if we visited the function before, do not reanalyze it.
   return Visited.count(D);
@@ -443,9 +434,7 @@ AnalysisConsumer::getInliningModeForFunction(const Decl *D,
   // We want to reanalyze all ObjC methods as top level to report Retain
   // Count naming convention errors more aggressively. But we should tune down
   // inlining when reanalyzing an already inlined function.
-  if (Visited.count(D)) {
-    assert(isa<ObjCMethodDecl>(D) &&
-           "We are only reanalyzing ObjCMethods.");
+  if (Visited.count(D) && isa<ObjCMethodDecl>(D)) {
     const ObjCMethodDecl *ObjCM = cast<ObjCMethodDecl>(D);
     if (ObjCM->getMethodFamily() != OMF_init)
       return ExprEngine::Inline_Minimal;
@@ -569,16 +558,64 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
 
 }
 
-static std::string getFunctionName(const Decl *D) {
-  if (const ObjCMethodDecl *ID = dyn_cast<ObjCMethodDecl>(D)) {
-    return ID->getSelector().getAsString();
+std::string AnalysisConsumer::getFunctionName(const Decl *D) {
+  std::string Str;
+  llvm::raw_string_ostream OS(Str);
+
+  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    OS << FD->getQualifiedNameAsString();
+
+    // In C++, there are overloads.
+    if (Ctx->getLangOpts().CPlusPlus) {
+      OS << '(';
+      for (const auto &P : FD->parameters()) {
+        if (P != *FD->param_begin())
+          OS << ", ";
+        OS << P->getType().getAsString();
+      }
+      OS << ')';
+    }
+
+  } else if (isa<BlockDecl>(D)) {
+    PresumedLoc Loc = Ctx->getSourceManager().getPresumedLoc(D->getLocation());
+
+    if (Loc.isValid()) {
+      OS << "block (line: " << Loc.getLine() << ", col: " << Loc.getColumn()
+         << ')';
+    }
+
+  } else if (const ObjCMethodDecl *OMD = dyn_cast<ObjCMethodDecl>(D)) {
+
+    // FIXME: copy-pasted from CGDebugInfo.cpp.
+    OS << (OMD->isInstanceMethod() ? '-' : '+') << '[';
+    const DeclContext *DC = OMD->getDeclContext();
+    if (const auto *OID = dyn_cast<ObjCImplementationDecl>(DC)) {
+      OS << OID->getName();
+    } else if (const auto *OID = dyn_cast<ObjCInterfaceDecl>(DC)) {
+      OS << OID->getName();
+    } else if (const auto *OC = dyn_cast<ObjCCategoryDecl>(DC)) {
+      if (OC->IsClassExtension()) {
+        OS << OC->getClassInterface()->getName();
+      } else {
+        OS << OC->getIdentifier()->getNameStart() << '('
+           << OC->getIdentifier()->getNameStart() << ')';
+      }
+    } else if (const auto *OCD = dyn_cast<ObjCCategoryImplDecl>(DC)) {
+      OS << ((const NamedDecl *)OCD)->getIdentifier()->getNameStart() << '('
+         << OCD->getIdentifier()->getNameStart() << ')';
+    } else if (isa<ObjCProtocolDecl>(DC)) {
+      // We can extract the type of the class from the self pointer.
+      if (ImplicitParamDecl *SelfDecl = OMD->getSelfDecl()) {
+        QualType ClassTy =
+            cast<ObjCObjectPointerType>(SelfDecl->getType())->getPointeeType();
+        ClassTy.print(OS, PrintingPolicy(LangOptions()));
+      }
+    }
+    OS << ' ' << OMD->getSelector().getAsString() << ']';
+
   }
-  if (const FunctionDecl *ND = dyn_cast<FunctionDecl>(D)) {
-    IdentifierInfo *II = ND->getIdentifier();
-    if (II)
-      return II->getName();
-  }
-  return "";
+
+  return OS.str();
 }
 
 AnalysisConsumer::AnalysisMode
@@ -799,10 +836,7 @@ UbigraphViz::~UbigraphViz() {
   std::string Ubiviz;
   if (auto Path = llvm::sys::findProgramByName("ubiviz"))
     Ubiviz = *Path;
-  std::vector<const char*> args;
-  args.push_back(Ubiviz.c_str());
-  args.push_back(Filename.c_str());
-  args.push_back(nullptr);
+  const char *args[] = {Ubiviz.c_str(), Filename.c_str(), nullptr};
 
   if (llvm::sys::ExecuteAndWait(Ubiviz, &args[0], nullptr, nullptr, 0, 0,
                                 &ErrMsg)) {

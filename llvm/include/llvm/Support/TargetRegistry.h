@@ -20,6 +20,7 @@
 #define LLVM_SUPPORT_TARGETREGISTRY_H
 
 #include "llvm-c/Disassembler.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FormattedStream.h"
@@ -33,7 +34,6 @@ class MCAsmBackend;
 class MCAsmInfo;
 class MCAsmParser;
 class MCCodeEmitter;
-class MCCodeGenInfo;
 class MCContext;
 class MCDisassembler;
 class MCInstrAnalysis;
@@ -92,10 +92,9 @@ public:
 
   typedef MCAsmInfo *(*MCAsmInfoCtorFnTy)(const MCRegisterInfo &MRI,
                                           const Triple &TT);
-  typedef MCCodeGenInfo *(*MCCodeGenInfoCtorFnTy)(const Triple &TT,
-                                                  Reloc::Model RM,
-                                                  CodeModel::Model CM,
-                                                  CodeGenOpt::Level OL);
+  typedef void (*MCAdjustCodeGenOptsFnTy)(const Triple &TT, Reloc::Model RM,
+                                          CodeModel::Model &CM);
+
   typedef MCInstrInfo *(*MCInstrInfoCtorFnTy)(void);
   typedef MCInstrAnalysis *(*MCInstrAnalysisCtorFnTy)(const MCInstrInfo *Info);
   typedef MCRegisterInfo *(*MCRegInfoCtorFnTy)(const Triple &TT);
@@ -104,8 +103,8 @@ public:
                                                       StringRef Features);
   typedef TargetMachine *(*TargetMachineCtorTy)(
       const Target &T, const Triple &TT, StringRef CPU, StringRef Features,
-      const TargetOptions &Options, Reloc::Model RM, CodeModel::Model CM,
-      CodeGenOpt::Level OL);
+      const TargetOptions &Options, Optional<Reloc::Model> RM,
+      CodeModel::Model CM, CodeGenOpt::Level OL);
   // If it weren't for layering issues (this header is in llvm/Support, but
   // depends on MC?) this should take the Streamer by value rather than rvalue
   // reference.
@@ -113,7 +112,8 @@ public:
       TargetMachine &TM, std::unique_ptr<MCStreamer> &&Streamer);
   typedef MCAsmBackend *(*MCAsmBackendCtorTy)(const Target &T,
                                               const MCRegisterInfo &MRI,
-                                              const Triple &TT, StringRef CPU);
+                                              const Triple &TT, StringRef CPU,
+                                              const MCTargetOptions &Options);
   typedef MCTargetAsmParser *(*MCAsmParserCtorTy)(
       const MCSubtargetInfo &STI, MCAsmParser &P, const MCInstrInfo &MII,
       const MCTargetOptions &Options);
@@ -177,9 +177,7 @@ private:
   /// registered.
   MCAsmInfoCtorFnTy MCAsmInfoCtorFn;
 
-  /// MCCodeGenInfoCtorFn - Constructor function for this target's
-  /// MCCodeGenInfo, if registered.
-  MCCodeGenInfoCtorFnTy MCCodeGenInfoCtorFn;
+  MCAdjustCodeGenOptsFnTy MCAdjustCodeGenOptsFn;
 
   /// MCInstrInfoCtorFn - Constructor function for this target's MCInstrInfo,
   /// if registered.
@@ -300,14 +298,10 @@ public:
     return MCAsmInfoCtorFn(MRI, Triple(TheTriple));
   }
 
-  /// createMCCodeGenInfo - Create a MCCodeGenInfo implementation.
-  ///
-  MCCodeGenInfo *createMCCodeGenInfo(StringRef TT, Reloc::Model RM,
-                                     CodeModel::Model CM,
-                                     CodeGenOpt::Level OL) const {
-    if (!MCCodeGenInfoCtorFn)
-      return nullptr;
-    return MCCodeGenInfoCtorFn(Triple(TT), RM, CM, OL);
+  void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
+                         CodeModel::Model &CM) const {
+    if (MCAdjustCodeGenOptsFn)
+      MCAdjustCodeGenOptsFn(TT, RM, CM);
   }
 
   /// createMCInstrInfo - Create a MCInstrInfo implementation.
@@ -359,8 +353,7 @@ public:
   /// host if that does not exist.
   TargetMachine *
   createTargetMachine(StringRef TT, StringRef CPU, StringRef Features,
-                      const TargetOptions &Options,
-                      Reloc::Model RM = Reloc::Default,
+                      const TargetOptions &Options, Optional<Reloc::Model> RM,
                       CodeModel::Model CM = CodeModel::Default,
                       CodeGenOpt::Level OL = CodeGenOpt::Default) const {
     if (!TargetMachineCtorFn)
@@ -373,10 +366,12 @@ public:
   ///
   /// \param TheTriple The target triple string.
   MCAsmBackend *createMCAsmBackend(const MCRegisterInfo &MRI,
-                                   StringRef TheTriple, StringRef CPU) const {
+                                   StringRef TheTriple, StringRef CPU,
+                                   const MCTargetOptions &Options)
+                                   const {
     if (!MCAsmBackendCtorFn)
       return nullptr;
-    return MCAsmBackendCtorFn(*this, MRI, Triple(TheTriple), CPU);
+    return MCAsmBackendCtorFn(*this, MRI, Triple(TheTriple), CPU, Options);
   }
 
   /// createMCAsmParser - Create a target specific assembly parser.
@@ -646,18 +641,9 @@ struct TargetRegistry {
     T.MCAsmInfoCtorFn = Fn;
   }
 
-  /// RegisterMCCodeGenInfo - Register a MCCodeGenInfo implementation for the
-  /// given target.
-  ///
-  /// Clients are responsible for ensuring that registration doesn't occur
-  /// while another thread is attempting to access the registry. Typically
-  /// this is done by initializing all targets at program startup.
-  ///
-  /// @param T - The target being registered.
-  /// @param Fn - A function to construct a MCCodeGenInfo for the target.
-  static void RegisterMCCodeGenInfo(Target &T,
-                                    Target::MCCodeGenInfoCtorFnTy Fn) {
-    T.MCCodeGenInfoCtorFn = Fn;
+  static void registerMCAdjustCodeGenOpts(Target &T,
+                                          Target::MCAdjustCodeGenOptsFnTy Fn) {
+    T.MCAdjustCodeGenOptsFn = Fn;
   }
 
   /// RegisterMCInstrInfo - Register a MCInstrInfo implementation for the
@@ -914,39 +900,9 @@ struct RegisterMCAsmInfoFn {
   }
 };
 
-/// RegisterMCCodeGenInfo - Helper template for registering a target codegen
-/// info
-/// implementation.  This invokes the static "Create" method on the class
-/// to actually do the construction.  Usage:
-///
-/// extern "C" void LLVMInitializeFooTarget() {
-///   extern Target TheFooTarget;
-///   RegisterMCCodeGenInfo<FooMCCodeGenInfo> X(TheFooTarget);
-/// }
-template <class MCCodeGenInfoImpl> struct RegisterMCCodeGenInfo {
-  RegisterMCCodeGenInfo(Target &T) {
-    TargetRegistry::RegisterMCCodeGenInfo(T, &Allocator);
-  }
-
-private:
-  static MCCodeGenInfo *Allocator(const Triple & /*TT*/, Reloc::Model /*RM*/,
-                                  CodeModel::Model /*CM*/,
-                                  CodeGenOpt::Level /*OL*/) {
-    return new MCCodeGenInfoImpl();
-  }
-};
-
-/// RegisterMCCodeGenInfoFn - Helper template for registering a target codegen
-/// info implementation.  This invokes the specified function to do the
-/// construction.  Usage:
-///
-/// extern "C" void LLVMInitializeFooTarget() {
-///   extern Target TheFooTarget;
-///   RegisterMCCodeGenInfoFn X(TheFooTarget, TheFunction);
-/// }
-struct RegisterMCCodeGenInfoFn {
-  RegisterMCCodeGenInfoFn(Target &T, Target::MCCodeGenInfoCtorFnTy Fn) {
-    TargetRegistry::RegisterMCCodeGenInfo(T, Fn);
+struct RegisterMCAdjustCodeGenOptsFn {
+  RegisterMCAdjustCodeGenOptsFn(Target &T, Target::MCAdjustCodeGenOptsFnTy Fn) {
+    TargetRegistry::registerMCAdjustCodeGenOpts(T, Fn);
   }
 };
 
@@ -1097,7 +1053,8 @@ template <class TargetMachineImpl> struct RegisterTargetMachine {
 private:
   static TargetMachine *Allocator(const Target &T, const Triple &TT,
                                   StringRef CPU, StringRef FS,
-                                  const TargetOptions &Options, Reloc::Model RM,
+                                  const TargetOptions &Options,
+                                  Optional<Reloc::Model> RM,
                                   CodeModel::Model CM, CodeGenOpt::Level OL) {
     return new TargetMachineImpl(T, TT, CPU, FS, Options, RM, CM, OL);
   }
@@ -1117,7 +1074,8 @@ template <class MCAsmBackendImpl> struct RegisterMCAsmBackend {
 
 private:
   static MCAsmBackend *Allocator(const Target &T, const MCRegisterInfo &MRI,
-                                 const Triple &TheTriple, StringRef CPU) {
+                                 const Triple &TheTriple, StringRef CPU,
+                                 const MCTargetOptions &Options) {
     return new MCAsmBackendImpl(T, MRI, TheTriple, CPU);
   }
 };

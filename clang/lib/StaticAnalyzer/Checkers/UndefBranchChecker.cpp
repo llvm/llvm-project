@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include <utility>
 
 using namespace clang;
 using namespace ento;
@@ -31,7 +32,7 @@ class UndefBranchChecker : public Checker<check::BranchCondition> {
     const LocationContext *LCtx;
 
     FindUndefExpr(ProgramStateRef S, const LocationContext *L)
-      : St(S), LCtx(L) {}
+        : St(std::move(S)), LCtx(L) {}
 
     const Expr *FindExpr(const Expr *Ex) {
       if (!MatchesCriteria(Ex))

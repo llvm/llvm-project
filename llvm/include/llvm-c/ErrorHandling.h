@@ -14,8 +14,6 @@
 #ifndef LLVM_C_ERROR_HANDLING_H
 #define LLVM_C_ERROR_HANDLING_H
 
-#include "llvm-c/Types.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

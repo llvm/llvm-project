@@ -10,9 +10,9 @@
 #ifndef LLVM_TOOLS_LLVM_READOBJ_ARMWINEHPRINTER_H
 #define LLVM_TOOLS_LLVM_READOBJ_ARMWINEHPRINTER_H
 
-#include "StreamWriter.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
 namespace ARM {
@@ -22,7 +22,7 @@ class RuntimeFunction;
 class Decoder {
   static const size_t PDataEntrySize;
 
-  StreamWriter &SW;
+  ScopedPrinter &SW;
   raw_ostream &OS;
 
   struct RingEntry {
@@ -107,7 +107,7 @@ class Decoder {
                          const object::SectionRef Section);
 
 public:
-  Decoder(StreamWriter &SW) : SW(SW), OS(SW.getOStream()) {}
+  Decoder(ScopedPrinter &SW) : SW(SW), OS(SW.getOStream()) {}
   std::error_code dumpProcedureData(const object::COFFObjectFile &COFF);
 };
 }

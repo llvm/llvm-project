@@ -130,6 +130,7 @@ public:
     SymbolMapping() = default;
   };
 
+  typedef std::pair<std::string, SymbolMapping> YAMLSymbolMapping;
   typedef StringMapEntry<SymbolMapping> DebugMapEntry;
 
   /// \brief Adds a symbol mapping to this DebugMapObject.
@@ -170,10 +171,8 @@ private:
 
   /// For YAMLIO support.
   ///@{
-  typedef std::pair<std::string, SymbolMapping> YAMLSymbolMapping;
   friend yaml::MappingTraits<dsymutil::DebugMapObject>;
   friend yaml::SequenceTraits<std::vector<std::unique_ptr<DebugMapObject>>>;
-  friend yaml::SequenceTraits<std::vector<YAMLSymbolMapping>>;
   DebugMapObject() = default;
 
 public:

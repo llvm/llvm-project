@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 ; Test that basic 64-bit integer operations assemble as expected.
 
@@ -187,4 +187,69 @@ define i64 @ctz64_zero_undef(i64 %x) {
 define i64 @popcnt64(i64 %x) {
   %a = call i64 @llvm.ctpop.i64(i64 %x)
   ret i64 %a
+}
+
+; CHECK-LABEL: eqz64:
+; CHECK-NEXT: .param i64{{$}}
+; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: i64.eqz $push0=, $0{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+define i32 @eqz64(i64 %x) {
+  %a = icmp eq i64 %x, 0
+  %b = zext i1 %a to i32
+  ret i32 %b
+}
+
+; CHECK-LABEL: rotl:
+; CHECK-NEXT: .param i64, i64{{$}}
+; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: i64.rotl $push0=, $0, $1
+; CHECK-NEXT: return $pop0{{$}}
+define i64 @rotl(i64 %x, i64 %y) {
+  %z = sub i64 64, %y
+  %b = shl i64 %x, %y
+  %c = lshr i64 %x, %z
+  %d = or i64 %b, %c
+  ret i64 %d
+}
+
+; CHECK-LABEL: masked_rotl:
+; CHECK-NEXT: .param i64, i64{{$}}
+; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: i64.rotl $push0=, $0, $1
+; CHECK-NEXT: return $pop0{{$}}
+define i64 @masked_rotl(i64 %x, i64 %y) {
+  %a = and i64 %y, 63
+  %z = sub i64 64, %a
+  %b = shl i64 %x, %a
+  %c = lshr i64 %x, %z
+  %d = or i64 %b, %c
+  ret i64 %d
+}
+
+; CHECK-LABEL: rotr:
+; CHECK-NEXT: .param i64, i64{{$}}
+; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: i64.rotr $push0=, $0, $1
+; CHECK-NEXT: return $pop0{{$}}
+define i64 @rotr(i64 %x, i64 %y) {
+  %z = sub i64 64, %y
+  %b = lshr i64 %x, %y
+  %c = shl i64 %x, %z
+  %d = or i64 %b, %c
+  ret i64 %d
+}
+
+; CHECK-LABEL: masked_rotr:
+; CHECK-NEXT: .param i64, i64{{$}}
+; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: i64.rotr $push0=, $0, $1
+; CHECK-NEXT: return $pop0{{$}}
+define i64 @masked_rotr(i64 %x, i64 %y) {
+  %a = and i64 %y, 63
+  %z = sub i64 64, %a
+  %b = lshr i64 %x, %a
+  %c = shl i64 %x, %z
+  %d = or i64 %b, %c
+  ret i64 %d
 }

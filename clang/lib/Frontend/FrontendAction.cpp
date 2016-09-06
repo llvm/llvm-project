@@ -20,19 +20,20 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Parse/ParseAST.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 using namespace clang;
 
-template class llvm::Registry<clang::PluginASTAction>;
+LLVM_INSTANTIATE_REGISTRY(FrontendPluginRegistry)
 
 namespace {
 
@@ -141,28 +142,46 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
   if (!Consumer)
     return nullptr;
 
-  if (CI.getFrontendOpts().AddPluginActions.size() == 0)
+  // If there are no registered plugins we don't need to wrap the consumer
+  if (FrontendPluginRegistry::begin() == FrontendPluginRegistry::end())
     return Consumer;
 
-  // Make sure the non-plugin consumer is first, so that plugins can't
-  // modifiy the AST.
+  // Collect the list of plugins that go before the main action (in Consumers)
+  // or after it (in AfterConsumers)
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
-  Consumers.push_back(std::move(Consumer));
-
-  for (size_t i = 0, e = CI.getFrontendOpts().AddPluginActions.size();
-       i != e; ++i) { 
-    // This is O(|plugins| * |add_plugins|), but since both numbers are
-    // way below 50 in practice, that's ok.
-    for (FrontendPluginRegistry::iterator
-        it = FrontendPluginRegistry::begin(),
-        ie = FrontendPluginRegistry::end();
-        it != ie; ++it) {
-      if (it->getName() != CI.getFrontendOpts().AddPluginActions[i])
-        continue;
-      std::unique_ptr<PluginASTAction> P = it->instantiate();
-      if (P->ParseArgs(CI, CI.getFrontendOpts().AddPluginArgs[i]))
-        Consumers.push_back(P->CreateASTConsumer(CI, InFile));
+  std::vector<std::unique_ptr<ASTConsumer>> AfterConsumers;
+  for (FrontendPluginRegistry::iterator it = FrontendPluginRegistry::begin(),
+                                        ie = FrontendPluginRegistry::end();
+       it != ie; ++it) {
+    std::unique_ptr<PluginASTAction> P = it->instantiate();
+    PluginASTAction::ActionType ActionType = P->getActionType();
+    if (ActionType == PluginASTAction::Cmdline) {
+      // This is O(|plugins| * |add_plugins|), but since both numbers are
+      // way below 50 in practice, that's ok.
+      for (size_t i = 0, e = CI.getFrontendOpts().AddPluginActions.size();
+           i != e; ++i) {
+        if (it->getName() == CI.getFrontendOpts().AddPluginActions[i]) {
+          ActionType = PluginASTAction::AddAfterMainAction;
+          break;
+        }
+      }
     }
+    if ((ActionType == PluginASTAction::AddBeforeMainAction ||
+         ActionType == PluginASTAction::AddAfterMainAction) &&
+        P->ParseArgs(CI, CI.getFrontendOpts().PluginArgs[it->getName()])) {
+      std::unique_ptr<ASTConsumer> PluginConsumer = P->CreateASTConsumer(CI, InFile);
+      if (ActionType == PluginASTAction::AddBeforeMainAction) {
+        Consumers.push_back(std::move(PluginConsumer));
+      } else {
+        AfterConsumers.push_back(std::move(PluginConsumer));
+      }
+    }
+  }
+
+  // Add to Consumers the main consumer, then all the plugins that go after it
+  Consumers.push_back(std::move(Consumer));
+  for (auto &C : AfterConsumers) {
+    Consumers.push_back(std::move(C));
   }
 
   return llvm::make_unique<MultiplexConsumer>(std::move(Consumers));

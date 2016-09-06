@@ -33,6 +33,15 @@ struct SystemZRegisterInfo : public SystemZGenRegisterInfo {
 public:
   SystemZRegisterInfo();
 
+  /// getPointerRegClass - Return the register class to use to hold pointers.
+  /// This is currently only used by LOAD_STACK_GUARD, which requires a non-%r0
+  /// register, hence ADDR64.
+  const TargetRegisterClass *
+  getPointerRegClass(const MachineFunction &MF,
+                     unsigned Kind=0) const override {
+    return &SystemZ::ADDR64BitRegClass;
+  }
+
   // Override TargetRegisterInfo.h.
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;

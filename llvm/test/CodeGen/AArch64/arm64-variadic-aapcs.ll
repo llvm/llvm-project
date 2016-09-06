@@ -32,7 +32,7 @@ define void @test_simple(i32 %n, ...) {
 ; CHECK: add [[VR_TOP:x[0-9]+]], [[VR_TOPTMP]], #128
 ; CHECK: str [[VR_TOP]], [x[[VA_LIST]], #16]
 
-; CHECK: movn [[GR_OFFS:w[0-9]+]], #0x37
+; CHECK: mov [[GR_OFFS:w[0-9]+]], #-56
 ; CHECK: str [[GR_OFFS]], [x[[VA_LIST]], #24]
 
 ; CHECK: orr [[VR_OFFS:w[0-9]+]], wzr, #0xffffff80
@@ -70,10 +70,10 @@ define void @test_fewargs(i32 %n, i32 %n1, i32 %n2, float %m, ...) {
 ; CHECK: add [[VR_TOP:x[0-9]+]], [[VR_TOPTMP]], #112
 ; CHECK: str [[VR_TOP]], [x[[VA_LIST]], #16]
 
-; CHECK: movn [[GR_OFFS:w[0-9]+]], #0x27
+; CHECK: mov [[GR_OFFS:w[0-9]+]], #-40
 ; CHECK: str [[GR_OFFS]], [x[[VA_LIST]], #24]
 
-; CHECK: movn [[VR_OFFS:w[0-9]+]], #0x6f
+; CHECK: mov [[VR_OFFS:w[0-9]+]], #-11
 ; CHECK: str [[VR_OFFS]], [x[[VA_LIST]], #28]
 
   %addr = bitcast %va_list* @var to i8*

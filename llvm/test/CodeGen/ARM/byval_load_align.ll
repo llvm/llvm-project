@@ -7,7 +7,7 @@
 ; CHECK: ldr r2, [r[[REG]], #4]
 ; CHECK: ldr r3, [r[[REG]], #8]
 ; CHECK-NOT: ldm
-; CHECK: .align	1 @ @sID
+; CHECK: .p2align	1 @ @sID
 
 %struct.ModuleID = type { [32 x i8], [32 x i8], i16 }
 

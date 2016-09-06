@@ -30,6 +30,10 @@ def TypeCodeForBits(bits):
   CheckBits(bits)
   return 'L' if bits == 64 else 'I'
 
+def TypeCodeForStruct(bits):
+  CheckBits(bits)
+  return 'Q' if bits == 64 else 'I'
+
 kMagic32SecondHalf = 0xFFFFFF32;
 kMagic64SecondHalf = 0xFFFFFF64;
 kMagicFirstHalf    = 0xC0BFFFFF;
@@ -64,7 +68,7 @@ def ReadOneFile(path):
       raise Exception('File %s is short (< 8 bytes)' % path)
     bits = ReadMagicAndReturnBitness(f, path)
     size -= 8
-    s = array.array(TypeCodeForBits(bits), f.read(size))
+    s = struct.unpack_from(TypeCodeForStruct(bits) * (size * 8 / bits), f.read(size))
   print >>sys.stderr, "%s: read %d %d-bit PCs from %s" % (prog_name, size * 8 / bits, bits, path)
   return s
 
@@ -94,8 +98,8 @@ def MergeAndPrint(files):
   if max(s) > 0xFFFFFFFF:
     bits = 64
   array.array('I', MagicForBits(bits)).tofile(sys.stdout)
-  a = array.array(TypeCodeForBits(bits), s)
-  a.tofile(sys.stdout)
+  a = struct.pack(TypeCodeForStruct(bits) * len(s), *s)
+  sys.stdout.write(a)
 
 
 def UnpackOneFile(path):
@@ -148,7 +152,7 @@ def UnpackOneRawFile(path, map_path):
     f.seek(0, 2)
     size = f.tell()
     f.seek(0, 0)
-    pcs = array.array(TypeCodeForBits(bits), f.read(size))
+    pcs = struct.unpack_from(TypeCodeForStruct(bits) * (size * 8 / bits), f.read(size))
     mem_map_pcs = [[] for i in range(0, len(mem_map))]
 
     for pc in pcs:
@@ -166,11 +170,12 @@ def UnpackOneRawFile(path, map_path):
       assert path.endswith('.sancov.raw')
       dst_path = module_path + '.' + os.path.basename(path)[:-4]
       print >> sys.stderr, "%s: writing %d PCs to %s" % (prog_name, len(pc_list), dst_path)
-      arr = array.array(TypeCodeForBits(bits))
-      arr.fromlist(sorted(pc_list))
-      with open(dst_path, 'ab') as f2:
+      sorted_pc_list = sorted(pc_list)
+      pc_buffer = struct.pack(TypeCodeForStruct(bits) * len(pc_list), *sorted_pc_list)
+      with open(dst_path, 'ab+') as f2:
         array.array('I', MagicForBits(bits)).tofile(f2)
-        arr.tofile(f2)
+        f2.seek(0, 2)
+        f2.write(pc_buffer)
 
 def RawUnpack(files):
   for f in files:

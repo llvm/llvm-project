@@ -42,3 +42,5 @@ DEFINE_COMPILERRT_PRIVATE_FUNCTION(__switch16)
 	bx      ip                      // jump to computed label
 END_COMPILERRT_FUNCTION(__switch16)
 
+NO_EXEC_STACK_DIRECTIVE
+

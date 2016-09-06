@@ -16,7 +16,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SPLITMODULE_H
 #define LLVM_TRANSFORMS_UTILS_SPLITMODULE_H
 
-#include <functional>
+#include "llvm/ADT/STLExtras.h"
 #include <memory>
 
 namespace llvm {
@@ -36,7 +36,7 @@ class StringRef;
 ///   each partition.
 void SplitModule(
     std::unique_ptr<Module> M, unsigned N,
-    std::function<void(std::unique_ptr<Module> MPart)> ModuleCallback,
+    function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback,
     bool PreserveLocals = false);
 
 } // End llvm namespace

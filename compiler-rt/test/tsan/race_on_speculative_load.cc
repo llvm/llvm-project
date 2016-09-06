@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && %run %t | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 // Regtest for https://github.com/google/sanitizers/issues/447
 // This is a correct program and tsan should not report a race.
 #include "test.h"
@@ -24,7 +24,7 @@ int main() {
   g = 1;
   barrier_wait(&barrier);
   pthread_join(t, 0);
-  printf("PASS\n");
+  fprintf(stderr, "PASS\n");
   // CHECK-NOT: ThreadSanitizer: data race
   // CHECK: PASS
 }

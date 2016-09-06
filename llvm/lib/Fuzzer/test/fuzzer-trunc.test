@@ -1,0 +1,10 @@
+# Test truncate_units option.
+RUN: rm -rf FuzzerTruncateTestCORPUS
+RUN: mkdir FuzzerTruncateTestCORPUS
+RUN: echo "01234567890123456789012345678901234567890" > FuzzerTruncateTestCORPUS/unit1
+# Simply running a fuzzer won't produce new results
+RUN:   LLVMFuzzer-EmptyTest -seed=1 -runs=100 -truncate_units=0 ./FuzzerTruncateTestCORPUS
+# Truncating would create a new unit of length 1.
+RUN:   LLVMFuzzer-EmptyTest -seed=1 -runs=0 -truncate_units=1 ./FuzzerTruncateTestCORPUS
+RUN: find FuzzerTruncateTestCORPUS/b6589fc6ab0dc82cf12099d1c2d40ab994e8410c
+RUN: rm -rf FuzzerTruncateTestCORPUS

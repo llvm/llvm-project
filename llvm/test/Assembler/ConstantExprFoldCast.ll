@@ -1,7 +1,12 @@
 ; This test checks to make sure that constant exprs fold in some simple situations
 
-; RUN: llvm-as < %s | llvm-dis | not grep cast
+; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 ; RUN: verify-uselistorder %s
+
+; CHECK-NOT: bitcast
+; CHECK-NOT: trunc
+; CHECK: addrspacecast
+; CHECK: addrspacecast
 
 @A = global i32* bitcast (i8* null to i32*)  ; Cast null -> fold
 @B = global i32** bitcast (i32** @A to i32**)   ; Cast to same type -> fold
@@ -16,6 +21,9 @@
 ; Address space cast AS0 null-> AS1 null
 @H = global i32 addrspace(1)* addrspacecast(i32* null to i32 addrspace(1)*)
 
+; Address space cast AS1 null-> AS0 null
+@I = global i32* addrspacecast(i32 addrspace(1)* null to i32*)
+
 ; Bitcast -> GEP
-@I = external global { i32 }
-@J = global i32* bitcast ({ i32 }* @I to i32*)
+@J = external global { i32 }
+@K = global i32* bitcast ({ i32 }* @J to i32*)

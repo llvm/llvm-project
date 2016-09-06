@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7
 
 define void @test1(i1 %x, i8 %x2, i8* %x3, i64 %x4) {
 entry:

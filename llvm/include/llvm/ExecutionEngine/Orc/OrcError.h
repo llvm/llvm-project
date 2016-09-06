@@ -14,6 +14,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_ORCERROR_H
 #define LLVM_EXECUTIONENGINE_ORC_ORCERROR_H
 
+#include "llvm/Support/Error.h"
 #include <system_error>
 
 namespace llvm {
@@ -26,10 +27,11 @@ enum class OrcErrorCode : int {
   RemoteMProtectAddrUnrecognized,
   RemoteIndirectStubsOwnerDoesNotExist,
   RemoteIndirectStubsOwnerIdAlreadyInUse,
-  UnexpectedRPCCall
+  UnexpectedRPCCall,
+  UnexpectedRPCResponse,
 };
 
-std::error_code orcError(OrcErrorCode ErrCode);
+Error orcError(OrcErrorCode ErrCode);
 
 } // End namespace orc.
 } // End namespace llvm.

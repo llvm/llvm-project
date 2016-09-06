@@ -7,14 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/Comment.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/CharInfo.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 namespace comments {
@@ -157,7 +156,7 @@ void DeclInfo::fill() {
   case Decl::CXXConversion: {
     const FunctionDecl *FD = cast<FunctionDecl>(CommentDecl);
     Kind = FunctionKind;
-    ParamVars = llvm::makeArrayRef(FD->param_begin(), FD->getNumParams());
+    ParamVars = FD->parameters();
     ReturnType = FD->getReturnType();
     unsigned NumLists = FD->getNumTemplateParameterLists();
     if (NumLists != 0) {
@@ -177,7 +176,7 @@ void DeclInfo::fill() {
   case Decl::ObjCMethod: {
     const ObjCMethodDecl *MD = cast<ObjCMethodDecl>(CommentDecl);
     Kind = FunctionKind;
-    ParamVars = llvm::makeArrayRef(MD->param_begin(), MD->param_size());
+    ParamVars = MD->parameters();
     ReturnType = MD->getReturnType();
     IsObjCMethod = true;
     IsInstanceMethod = MD->isInstanceMethod();
@@ -189,7 +188,7 @@ void DeclInfo::fill() {
     Kind = FunctionKind;
     TemplateKind = Template;
     const FunctionDecl *FD = FTD->getTemplatedDecl();
-    ParamVars = llvm::makeArrayRef(FD->param_begin(), FD->getNumParams());
+    ParamVars = FD->parameters();
     ReturnType = FD->getReturnType();
     TemplateParameters = FTD->getTemplateParameters();
     break;

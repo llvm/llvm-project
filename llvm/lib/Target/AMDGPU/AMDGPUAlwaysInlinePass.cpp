@@ -45,9 +45,8 @@ bool AMDGPUAlwaysInline::runOnModule(Module &M) {
 
   for (Function *F : FuncsToClone) {
     ValueToValueMapTy VMap;
-    Function *NewFunc = CloneFunction(F, VMap, false);
+    Function *NewFunc = CloneFunction(F, VMap);
     NewFunc->setLinkage(GlobalValue::InternalLinkage);
-    M.getFunctionList().push_back(NewFunc);
     F->replaceAllUsesWith(NewFunc);
   }
 

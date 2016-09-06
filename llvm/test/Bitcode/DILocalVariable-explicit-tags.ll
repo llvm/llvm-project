@@ -10,7 +10,13 @@
 
 !named = !{!0}
 
-!0 = distinct !DISubprogram(name: "foo", variables: !1)
+!llvm.module.flags = !{!6}
+!llvm.dbg.cu = !{!4}
+
+!0 = distinct !DISubprogram(name: "foo", scope: null, isLocal: false, isDefinition: true, isOptimized: false, variables: !1)
 !1 = !{!2, !3}
 !2 = !DILocalVariable(tag: DW_TAG_arg_variable, name: "param", arg: 1, scope: !0)
 !3 = !DILocalVariable(tag: DW_TAG_auto_variable, name: "auto", scope: !0)
+!4 = distinct !DICompileUnit(language: DW_LANG_C99, file: !5, subprograms: !{!0})
+!5 = !DIFile(filename: "source.c", directory: "/dir")
+!6 = !{i32 1, !"Debug Info Version", i32 3}

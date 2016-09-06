@@ -10,6 +10,3 @@ define void @f1(i64 %base) {
   call void asm "blah $0", "=*m" (i64 *%addr)
   ret void
 }
-
-; FIXME: at the moment the precise constraint is not passed down to
-; target code, so we must conservatively treat "m" as "Q".

@@ -2,11 +2,16 @@
 
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -instrprof -S | FileCheck %s --check-prefix=OTHER --check-prefix=COMMON
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -instrprof -S | FileCheck %s --check-prefix=LINUX --check-prefix=COMMON
+; RUN: opt < %s -mtriple=x86_64-apple-macosx10.10.0 -passes=instrprof -S | FileCheck %s --check-prefix=OTHER --check-prefix=COMMON
+; RUN: opt < %s -mtriple=x86_64-unknown-linux -passes=instrprof -S | FileCheck %s --check-prefix=LINUX --check-prefix=COMMON
+; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -instrprof -S | FileCheck %s --check-prefix=COFF
+; RUN: opt < %s  -mtriple=x86_64-pc-win32-coff -passes=instrprof -S | FileCheck %s --check-prefix=COFF
 
 @__profn_foo = hidden constant [3 x i8] c"foo"
 @__profn_foo_weak = weak hidden constant [8 x i8] c"foo_weak"
 @"__profn_linkage.ll:foo_internal" = internal constant [23 x i8] c"linkage.ll:foo_internal"
 @__profn_foo_inline = linkonce_odr hidden constant [10 x i8] c"foo_inline"
+@__profn_foo_extern = linkonce_odr hidden constant [10 x i8] c"foo_extern"
 
 ; COMMON: @__profc_foo = hidden global
 ; COMMON: @__profd_foo = hidden global
@@ -36,6 +41,15 @@ define linkonce_odr void @foo_inline() {
   ret void
 }
 
+; LINUX: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_cnts", comdat($__profv_foo_extern), align 8
+; LINUX: @__profd_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_data", comdat($__profv_foo_extern), align 8
+; OTHER: @__profc_foo_extern = linkonce_odr hidden global
+; OTHER: @__profd_foo_extern = linkonce_odr hidden global
+define available_externally void @foo_extern() {
+  call void @llvm.instrprof.increment(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @__profn_foo_extern, i32 0, i32 0), i64 0, i32 1, i32 0)
+  ret void
+}
+
 declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
 
 ; OTHER: @__llvm_profile_runtime = external global i32
@@ -45,5 +59,6 @@ declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
 ; OTHER:   %[[REG:.*]] = load i32, i32* @__llvm_profile_runtime
 ; OTHER:   ret i32 %[[REG]]
 ; OTHER: }
+; COFF: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} comdat {
 ; LINUX-NOT: define linkonce_odr hidden i32 @__llvm_profile_runtime_user() {{.*}} {
 ; LINUX-NOT:   %[[REG:.*]] = load i32, i32* @__llvm_profile_runtime

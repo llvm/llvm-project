@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -25,7 +24,6 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
@@ -37,7 +35,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
@@ -49,6 +46,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <set>
 #include <system_error>
 using namespace clang;
 using namespace clang::driver;
@@ -130,7 +128,7 @@ static void ApplyOneQAOverride(raw_ostream &OS,
       }
     }
   } else if (Edit[0] == 'x' || Edit[0] == 'X') {
-    std::string Option = Edit.substr(1, std::string::npos);
+    auto Option = Edit.substr(1);
     for (unsigned i = 1; i < Args.size();) {
       if (Option == Args[i]) {
         OS << "### Deleting argument " << Args[i] << '\n';
@@ -312,8 +310,9 @@ static int ExecuteCC1Tool(ArrayRef<const char *> argv, StringRef Tool) {
 }
 
 int main(int argc_, const char **argv_) {
-  llvm::sys::PrintStackTraceOnErrorSignal();
+  llvm::sys::PrintStackTraceOnErrorSignal(argv_[0]);
   llvm::PrettyStackTraceProgram X(argc_, argv_);
+  llvm::llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
   if (llvm::sys::Process::FixupStandardFileDescriptors())
     return 1;
@@ -342,18 +341,33 @@ int main(int argc_, const char **argv_) {
   // have to manually search for a --driver-mode=cl argument the hard way.
   // Finally, our -cc1 tools don't care which tokenization mode we use because
   // response files written by clang will tokenize the same way in either mode.
-  llvm::cl::TokenizerCallback Tokenizer = &llvm::cl::TokenizeGNUCommandLine;
+  bool ClangCLMode = false;
   if (TargetAndMode.second == "--driver-mode=cl" ||
       std::find_if(argv.begin(), argv.end(), [](const char *F) {
         return F && strcmp(F, "--driver-mode=cl") == 0;
       }) != argv.end()) {
-    Tokenizer = &llvm::cl::TokenizeWindowsCommandLine;
+    ClangCLMode = true;
+  }
+  enum { Default, POSIX, Windows } RSPQuoting = Default;
+  for (const char *F : argv) {
+    if (strcmp(F, "--rsp-quoting=posix") == 0)
+      RSPQuoting = POSIX;
+    else if (strcmp(F, "--rsp-quoting=windows") == 0)
+      RSPQuoting = Windows;
   }
 
   // Determines whether we want nullptr markers in argv to indicate response
-  // files end-of-lines. We only use this for the /LINK driver argument.
-  bool MarkEOLs = true;
-  if (argv.size() > 1 && StringRef(argv[1]).startswith("-cc1"))
+  // files end-of-lines. We only use this for the /LINK driver argument with
+  // clang-cl.exe on Windows.
+  bool MarkEOLs = ClangCLMode;
+
+  llvm::cl::TokenizerCallback Tokenizer;
+  if (RSPQuoting == Windows || (RSPQuoting == Default && ClangCLMode))
+    Tokenizer = &llvm::cl::TokenizeWindowsCommandLine;
+  else
+    Tokenizer = &llvm::cl::TokenizeGNUCommandLine;
+
+  if (MarkEOLs && argv.size() > 1 && StringRef(argv[1]).startswith("-cc1"))
     MarkEOLs = false;
   llvm::cl::ExpandResponseFiles(Saver, Tokenizer, argv, MarkEOLs);
 
@@ -485,8 +499,6 @@ int main(int argc_, const char **argv_) {
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
   llvm::TimerGroup::printAll(llvm::errs());
-
-  llvm::llvm_shutdown();
 
 #ifdef LLVM_ON_WIN32
   // Exit status should not be negative on Win32, unless abnormal termination.

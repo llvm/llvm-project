@@ -25,6 +25,54 @@ define void @test3(i1 %T) {
 ; CHECK-NEXT: ret void
 }
 
+; Folding branch to a common destination.
+; CHECK-LABEL: @test4_fold
+; CHECK: %cmp1 = icmp eq i32 %a, %b
+; CHECK: %cmp2 = icmp ugt i32 %a, 0
+; CHECK: %or.cond = and i1 %cmp1, %cmp2
+; CHECK: br i1 %or.cond, label %else, label %untaken
+; CHECK-NOT: taken:
+; CHECK: ret void
+define void @test4_fold(i32 %a, i32 %b) {
+  %cmp1 = icmp eq i32 %a, %b
+  br i1 %cmp1, label %taken, label %untaken
+
+taken:
+  %cmp2 = icmp ugt i32 %a, 0
+  br i1 %cmp2, label %else, label %untaken
+
+else:
+  call void @foo()
+  ret void
+
+untaken:
+  ret void
+}
+
+; Prefer a simplification based on a dominating condition rather than folding a
+; branch to a common destination.
+; CHECK-LABEL: @test4
+; CHECK-NOT: br
+; CHECK-NOT: br
+; CHECK-NOT: call
+; CHECK: ret void
+define void @test4_no_fold(i32 %a, i32 %b) {
+  %cmp1 = icmp eq i32 %a, %b
+  br i1 %cmp1, label %taken, label %untaken
+
+taken:
+  %cmp2 = icmp ugt i32 %a, %b
+  br i1 %cmp2, label %else, label %untaken
+
+else:
+  call void @foo()
+  ret void
+
+untaken:
+  ret void
+}
+
+declare void @foo()
 
 ; PR5795
 define void @test5(i32 %A) {
@@ -75,10 +123,10 @@ declare i8 @test6g(i8*)
 !0 = !{!1, !1, i64 0}
 !1 = !{!"foo"}
 !2 = !{i8 0, i8 2}
-!3 = distinct !DICompileUnit(language: DW_LANG_C99, file: !7, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !4, subprograms: !4, globals: !4)
+!3 = distinct !DICompileUnit(language: DW_LANG_C99, file: !7, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !4)
 !4 = !{}
 !5 = !DILocation(line: 23, scope: !6)
-!6 = distinct !DISubprogram(name: "foo", scope: !3, file: !7, line: 1, type: !DISubroutineType(types: !4), isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, variables: !4)
+!6 = distinct !DISubprogram(name: "foo", scope: !3, file: !7, line: 1, type: !DISubroutineType(types: !4), isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !3, variables: !4)
 !7 = !DIFile(filename: "foo.c", directory: "/")
 !8 = !{i32 2, !"Dwarf Version", i32 2}
 !9 = !{i32 2, !"Debug Info Version", i32 3}

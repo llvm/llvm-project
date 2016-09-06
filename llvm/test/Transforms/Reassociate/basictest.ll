@@ -1,4 +1,5 @@
 ; RUN: opt < %s -reassociate -gvn -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes='reassociate,gvn,instcombine' -S | FileCheck %s
 
 define i32 @test1(i32 %arg) {
   %tmp1 = sub i32 -12, %arg

@@ -12,10 +12,10 @@ void testInlineRedeclEarly() {
 
 @import templates_right;
 
-// CHECK-DAG: @list_left = global %class.List { %"struct.List<int>::node"* null, i32 8 }, align 8
-// CHECK-DAG: @list_right = global %class.List { %"struct.List<int>::node"* null, i32 12 }, align 8
-// CHECK-DAG: @_ZZ15testMixedStructvE1l = {{.*}} constant %class.List { %{{.*}}* null, i32 1 }, align 8
-// CHECK-DAG: @_ZZ15testMixedStructvE1r = {{.*}} constant %class.List { %{{.*}}* null, i32 2 }, align 8
+// CHECK-DAG: @list_left = global %[[LIST:.*]] { %[[LISTNODE:.*]]* null, i32 8 }, align 8
+// CHECK-DAG: @list_right = global %[[LIST]] { %[[LISTNODE]]* null, i32 12 }, align 8
+// CHECK-DAG: @_ZZ15testMixedStructvE1l = {{.*}} constant %[[LIST]] { %{{.*}}* null, i32 1 }, align 8
+// CHECK-DAG: @_ZZ15testMixedStructvE1r = {{.*}} constant %[[LIST]] { %{{.*}}* null, i32 2 }, align 8
 // CHECK-DAG: @_ZN29WithUndefinedStaticDataMemberIA_iE9undefinedE = external global
 
 void testTemplateClasses() {

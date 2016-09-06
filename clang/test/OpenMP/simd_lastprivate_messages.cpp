@@ -217,5 +217,5 @@ int main(int argc, char **argv) {
 #pragma omp simd lastprivate(t) // OK
   for (i = 0; i < argc; ++i)
     foo();
-  return 0;
+  return foomain(argc, argv); // expected-note {{in instantiation of function template specialization 'foomain<int, char>' requested here}}
 }

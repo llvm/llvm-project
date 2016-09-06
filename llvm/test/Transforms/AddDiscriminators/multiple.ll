@@ -1,4 +1,5 @@
 ; RUN: opt < %s -add-discriminators -S | FileCheck %s
+; RUN: opt < %s -passes=add-discriminators -S | FileCheck %s
 
 ; Discriminator support for multiple CFG paths on the same line.
 ;
@@ -47,19 +48,14 @@ if.end:                                           ; preds = %if.else, %if.then
 
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
-; We should be able to add discriminators even in the absence of llvm.dbg.cu.
-; When using sample profiles, the front end will generate line tables but it
-; does not generate llvm.dbg.cu to prevent codegen from emitting debug info
-; to the final binary.
-; !llvm.dbg.cu = !{!0}
+!llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
 !llvm.ident = !{!9}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5 (trunk 199750) (llvm/trunk 199751)", isOptimized: false, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.5 (trunk 199750) (llvm/trunk 199751)", isOptimized: false, emissionKind: NoDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "multiple.c", directory: ".")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
+!4 = distinct !DISubprogram(name: "foo", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, variables: !2)
 !5 = !DIFile(filename: "multiple.c", directory: ".")
 !6 = !DISubroutineType(types: !{null, !13})
 !13 = !DIBasicType(encoding: DW_ATE_signed, name: "int", size: 32, align: 32)

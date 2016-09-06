@@ -128,6 +128,7 @@ class EverythingUsed {
     int *use = &by_reference_;
     int test[2];
     test[as_array_index_] = 42;
+    int EverythingUsed::*ptr = &EverythingUsed::by_pointer_to_member_;
   }
 
   template<class T>
@@ -142,6 +143,7 @@ class EverythingUsed {
   int by_template_function_;
   int as_array_index_;
   int by_initializer_;
+  int by_pointer_to_member_;
 };
 
 class HasFeatureTest {

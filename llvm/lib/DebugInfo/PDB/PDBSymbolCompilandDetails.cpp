@@ -15,6 +15,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 PDBSymbolCompilandDetails::PDBSymbolCompilandDetails(
     const IPDBSession &PDBSession, std::unique_ptr<IPDBRawSymbol> Symbol)

@@ -11,8 +11,9 @@ NS_ASSUME_NONNULL_BEGIN
 typedef struct _NSZone NSZone;
 
 @protocol NSObject
-+ (id)alloc;
-- (id)init;
++ (instancetype)alloc;
+- (instancetype)init;
+- (instancetype)autorelease;
 @end
 
 @protocol NSCopying

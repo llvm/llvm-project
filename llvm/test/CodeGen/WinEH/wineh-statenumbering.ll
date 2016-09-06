@@ -28,7 +28,11 @@ entry:
   ; CHECK: entry:
   ; CHECK:   store i32 -1
   ; CHECK:   call void @g(i32 3)
+  ; CHECK-NEXT:   call void @g(i32 4)
+  ; CHECK-NEXT:   call void @g(i32 5)
   call void @g(i32 3)
+  call void @g(i32 4)
+  call void @g(i32 5)
   store i32 0, i32* %tmp, align 4
   %0 = bitcast i32* %tmp to i8*
   ; CHECK:   store i32 0
@@ -54,14 +58,22 @@ catch.3:                                          ; preds = %catch.dispatch.1
   ; CHECK: catch.3:
   ; CHECK:   store i32 3
   ; CHECK:   call void @g(i32 1)
+  ; CHECK-NEXT:   call void @g(i32 2)
+  ; CHECK-NEXT:   call void @g(i32 3)
   call void @g(i32 1)
+  call void @g(i32 2)
+  call void @g(i32 3)
   catchret from %2 to label %try.cont
 
 try.cont:                                         ; preds = %catch.3
   ; CHECK: try.cont:
   ; CHECK:   store i32 1
   ; CHECK:   call void @g(i32 2)
+  ; CHECK-NEXT:   call void @g(i32 3)
+  ; CHECK-NEXT:   call void @g(i32 4)
   call void @g(i32 2)
+  call void @g(i32 3)
+  call void @g(i32 4)
   unreachable
 
 unreachable:                                      ; preds = %catch
@@ -111,6 +123,10 @@ try.cont:                                         ; preds = %catch2
   ; CHECK: try.cont:
   ; CHECK:   store i32 1
   ; CHECK:   call void @dtor()
+  ; CHECK-NEXT:   call void @dtor()
+  ; CHECK-NEXT:   call void @dtor()
+  call void @dtor() #3 [ "funclet"(token %1) ]
+  call void @dtor() #3 [ "funclet"(token %1) ]
   call void @dtor() #3 [ "funclet"(token %1) ]
   catchret from %1 to label %try.cont4
 
@@ -120,7 +136,6 @@ try.cont4:                                        ; preds = %try.cont
 ehcleanup:                                        ; preds = %catch.dispatch1
   %4 = cleanuppad within %1 []
   ; CHECK: ehcleanup:
-  ; CHECK:   store i32 -1
   ; CHECK:   call void @dtor()
   call void @dtor() #3 [ "funclet"(token %4) ]
   cleanupret from %4 unwind to caller
@@ -132,6 +147,52 @@ unreachable1:                                     ; preds = %catch
   unreachable
 }
 
+; CHECK-LABEL: define void @required_state_store(
+define void @required_state_store(i1 zeroext %cond) personality i32 (...)* @_except_handler3 {
+entry:
+  %__exception_code = alloca i32, align 4
+  call void (...) @llvm.localescape(i32* nonnull %__exception_code)
+; CHECK:   store i32 -1
+; CHECK:   call void @g(i32 0)
+  call void @g(i32 0)
+  br i1 %cond, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+; CHECK:        store i32 0
+; CHECK-NEXT:   invoke void @g(i32 1)
+  invoke void @g(i32 1)
+          to label %if.end unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %if.then
+  %0 = catchswitch within none [label %__except.ret] unwind to caller
+
+__except.ret:                                     ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* bitcast (i32 ()* @"\01?filt$0@0@required_state_store@@" to i8*)]
+  catchret from %1 to label %if.end
+
+if.end:                                           ; preds = %if.then, %__except.ret, %entry
+; CHECK:        store i32 -1
+; CHECK-NEXT:   call void @dtor()
+  call void @dtor()
+  ret void
+}
+
+define internal i32 @"\01?filt$0@0@required_state_store@@"() {
+entry:
+  %0 = tail call i8* @llvm.frameaddress(i32 1)
+  %1 = tail call i8* @llvm.x86.seh.recoverfp(i8* bitcast (void (i1)* @required_state_store to i8*), i8* %0)
+  %2 = tail call i8* @llvm.localrecover(i8* bitcast (void (i1)* @required_state_store to i8*), i8* %1, i32 0)
+  %__exception_code = bitcast i8* %2 to i32*
+  %3 = getelementptr inbounds i8, i8* %0, i32 -20
+  %4 = bitcast i8* %3 to { i32*, i8* }**
+  %5 = load { i32*, i8* }*, { i32*, i8* }** %4, align 4
+  %6 = getelementptr inbounds { i32*, i8* }, { i32*, i8* }* %5, i32 0, i32 0
+  %7 = load i32*, i32** %6, align 4
+  %8 = load i32, i32* %7, align 4
+  store i32 %8, i32* %__exception_code, align 4
+  ret i32 1
+}
+
 declare void @g(i32) #0
 
 declare void @dtor()
@@ -139,6 +200,16 @@ declare void @dtor()
 declare x86_stdcallcc void @_CxxThrowException(i8*, %eh.ThrowInfo*)
 
 declare i32 @__CxxFrameHandler3(...)
+
+declare i8* @llvm.frameaddress(i32)
+
+declare i8* @llvm.x86.seh.recoverfp(i8*, i8*)
+
+declare i8* @llvm.localrecover(i8*, i8*, i32)
+
+declare void @llvm.localescape(...)
+
+declare i32 @_except_handler3(...)
 
 attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { noreturn }

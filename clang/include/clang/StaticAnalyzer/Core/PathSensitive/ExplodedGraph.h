@@ -28,10 +28,10 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -121,10 +121,9 @@ class ExplodedNode : public llvm::FoldingSetNode {
   NodeGroup Succs;
 
 public:
-
   explicit ExplodedNode(const ProgramPoint &loc, ProgramStateRef state,
                         bool IsSink)
-    : Location(loc), State(state), Succs(IsSink) {
+      : Location(loc), State(std::move(state)), Succs(IsSink) {
     assert(isSink() == IsSink);
   }
 
@@ -295,6 +294,14 @@ public:
                         bool IsSink = false,
                         bool* IsNew = nullptr);
 
+  /// \brief Create a node for a (Location, State) pair,
+  ///  but don't store it for deduplication later.  This
+  ///  is useful when copying an already completed
+  ///  ExplodedGraph for further processing.
+  ExplodedNode *createUncachedNode(const ProgramPoint &L,
+    ProgramStateRef State,
+    bool IsSink = false);
+
   std::unique_ptr<ExplodedGraph> MakeEmptyGraph() const {
     return llvm::make_unique<ExplodedGraph>();
   }
@@ -320,6 +327,8 @@ public:
 
   bool empty() const { return NumNodes == 0; }
   unsigned size() const { return NumNodes; }
+
+  void reserve(unsigned NodeCount) { Nodes.reserve(NodeCount); }
 
   // Iterators.
   typedef ExplodedNode                        NodeTy;
@@ -442,6 +451,7 @@ public:
 namespace llvm {
   template<> struct GraphTraits<clang::ento::ExplodedNode*> {
     typedef clang::ento::ExplodedNode NodeType;
+    typedef clang::ento::ExplodedNode *NodeRef;
     typedef NodeType::succ_iterator  ChildIteratorType;
     typedef llvm::df_iterator<NodeType*>      nodes_iterator;
 
@@ -468,6 +478,7 @@ namespace llvm {
 
   template<> struct GraphTraits<const clang::ento::ExplodedNode*> {
     typedef const clang::ento::ExplodedNode NodeType;
+    typedef const clang::ento::ExplodedNode *NodeRef;
     typedef NodeType::const_succ_iterator   ChildIteratorType;
     typedef llvm::df_iterator<NodeType*>       nodes_iterator;
 

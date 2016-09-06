@@ -77,7 +77,7 @@ int main(int, char **argv) {
     return s->k && 0;
 
   case 'f':
-    // CHECK-MEMFUN: misaligned.cpp:[[@LINE+4]]{{(:12)?}}: runtime error: member call on misaligned address [[PTR:0x[0-9a-f]*]] for type 'S', which requires 4 byte alignment
+    // CHECK-MEMFUN: misaligned.cpp:[[@LINE+4]]{{(:15)?}}: runtime error: member call on misaligned address [[PTR:0x[0-9a-f]*]] for type 'S', which requires 4 byte alignment
     // CHECK-MEMFUN-NEXT: [[PTR]]: note: pointer points here
     // CHECK-MEMFUN-NEXT: {{^ 00 00 00 01 02 03 04  05}}
     // CHECK-MEMFUN-NEXT: {{^             \^}}

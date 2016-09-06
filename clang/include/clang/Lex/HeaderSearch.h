@@ -241,8 +241,6 @@ class HeaderSearch {
   unsigned NumMultiIncludeFileOptzn;
   unsigned NumFrameworkLookups, NumSubFrameworkLookups;
 
-  const LangOptions &LangOpts;
-
   // HeaderSearch doesn't support default or copy construction.
   HeaderSearch(const HeaderSearch&) = delete;
   void operator=(const HeaderSearch&) = delete;
@@ -383,7 +381,7 @@ public:
       ArrayRef<std::pair<const FileEntry *, const DirectoryEntry *>> Includers,
       SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
-      bool SkipCache = false);
+      bool SkipCache = false, bool BuildSystemModule = false);
 
   /// \brief Look up a subframework for the specified \#include file.
   ///
@@ -582,8 +580,9 @@ private:
   /// \brief Look up the file with the specified name and determine its owning
   /// module.
   const FileEntry *
-  getFileAndSuggestModule(StringRef FileName, const DirectoryEntry *Dir,
-                          bool IsSystemHeaderDir, Module *RequestingModule,
+  getFileAndSuggestModule(StringRef FileName, SourceLocation IncludeLoc,
+                          const DirectoryEntry *Dir, bool IsSystemHeaderDir,
+                          Module *RequestingModule,
                           ModuleMap::KnownHeader *SuggestedModule);
 
 public:
@@ -634,12 +633,17 @@ public:
   /// \brief Retrieve a uniqued framework name.
   StringRef getUniqueFrameworkName(StringRef Framework);
   
+  /// \brief Suggest a path by which the specified file could be found, for
+  /// use in diagnostics to suggest a #include.
+  ///
+  /// \param IsSystem If non-null, filled in to indicate whether the suggested
+  ///        path is relative to a system header directory.
+  std::string suggestPathToFileForDiagnostics(const FileEntry *File,
+                                              bool *IsSystem = nullptr);
+
   void PrintStats();
   
   size_t getTotalMemory() const;
-
-  static std::string NormalizeDashIncludePath(StringRef File,
-                                              FileManager &FileMgr);
 
 private:
   /// \brief Describes what happened when we tried to load a module map file.

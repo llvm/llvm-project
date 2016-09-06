@@ -112,18 +112,11 @@ TargetRegisterInfo::getAllocatableClass(const TargetRegisterClass *RC) const {
   if (!RC || RC->isAllocatable())
     return RC;
 
-  const unsigned *SubClass = RC->getSubClassMask();
-  for (unsigned Base = 0, BaseE = getNumRegClasses();
-       Base < BaseE; Base += 32) {
-    unsigned Idx = Base;
-    for (unsigned Mask = *SubClass++; Mask; Mask >>= 1) {
-      unsigned Offset = countTrailingZeros(Mask);
-      const TargetRegisterClass *SubRC = getRegClass(Idx + Offset);
-      if (SubRC->isAllocatable())
-        return SubRC;
-      Mask >>= Offset;
-      Idx += Offset + 1;
-    }
+  for (BitMaskClassIterator It(RC->getSubClassMask(), *this); It.isValid();
+       ++It) {
+    const TargetRegisterClass *SubRC = getRegClass(It.getID());
+    if (SubRC->isAllocatable())
+      return SubRC;
   }
   return nullptr;
 }
@@ -361,7 +354,7 @@ TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
   // Check that Phys is in the allocation order. We shouldn't heed hints
   // from VirtReg's register class if they aren't in the allocation order. The
   // target probably has a reason for removing the register.
-  if (std::find(Order.begin(), Order.end(), Phys) == Order.end())
+  if (!is_contained(Order, Phys))
     return;
 
   // All clear, tell the register allocator to prefer this register.
@@ -374,11 +367,11 @@ bool TargetRegisterInfo::canRealignStack(const MachineFunction &MF) const {
 
 bool TargetRegisterInfo::needsStackRealignment(
     const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const Function *F = MF.getFunction();
   unsigned StackAlign = TFI->getStackAlignment();
-  bool requiresRealignment = ((MFI->getMaxAlignment() > StackAlign) ||
+  bool requiresRealignment = ((MFI.getMaxAlignment() > StackAlign) ||
                               F->hasFnAttribute(Attribute::StackAlignment));
   if (MF.getFunction()->hasFnAttribute("stackrealign") || requiresRealignment) {
     if (canRealignStack(MF))
@@ -386,6 +379,15 @@ bool TargetRegisterInfo::needsStackRealignment(
     DEBUG(dbgs() << "Can't realign function's stack: " << F->getName() << "\n");
   }
   return false;
+}
+
+bool TargetRegisterInfo::regmaskSubsetEqual(const uint32_t *mask0,
+                                            const uint32_t *mask1) const {
+  unsigned N = (getNumRegs()+31) / 32;
+  for (unsigned I = 0; I < N; ++I)
+    if ((mask0[I] & mask1[I]) != mask0[I])
+      return false;
+  return true;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

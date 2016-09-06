@@ -85,7 +85,7 @@ public:
   /// create the PCHGenerator instance returned by CreateASTConsumer.
   ///
   /// \returns true if an error occurred, false otherwise.
-  static raw_pwrite_stream *
+  static std::unique_ptr<raw_pwrite_stream>
   ComputeASTConsumerArguments(CompilerInstance &CI, StringRef InFile,
                               std::string &Sysroot, std::string &OutputFile);
 };
@@ -117,10 +117,9 @@ public:
   /// create the PCHGenerator instance returned by CreateASTConsumer.
   ///
   /// \returns true if an error occurred, false otherwise.
-  raw_pwrite_stream *ComputeASTConsumerArguments(CompilerInstance &CI,
-                                                 StringRef InFile,
-                                                 std::string &Sysroot,
-                                                 std::string &OutputFile);
+  std::unique_ptr<raw_pwrite_stream>
+  ComputeASTConsumerArguments(CompilerInstance &CI, StringRef InFile,
+                              std::string &Sysroot, std::string &OutputFile);
 };
 
 class SyntaxOnlyAction : public ASTFrontendAction {
@@ -129,6 +128,7 @@ protected:
                                                  StringRef InFile) override;
 
 public:
+  ~SyntaxOnlyAction() override;
   bool hasCodeCompletionSupport() const override { return true; }
 };
 
@@ -138,6 +138,7 @@ class DumpModuleInfoAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
+  bool BeginInvocation(CompilerInstance &CI) override;
   void ExecuteAction() override;
 
 public:

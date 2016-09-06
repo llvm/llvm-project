@@ -18,13 +18,14 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclLookups.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclVisitor.h"
+#include "clang/AST/LocInfoType.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Sema/LocInfoType.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 using namespace clang::comments;
@@ -403,6 +404,9 @@ namespace  {
     void VisitAtomicType(const AtomicType *T) {
       dumpTypeAsChild(T->getValueType());
     }
+    void VisitPipeType(const PipeType *T) {
+      dumpTypeAsChild(T->getElementType());
+    }
     void VisitAdjustedType(const AdjustedType *T) {
       dumpTypeAsChild(T->getOriginalType());
     }
@@ -424,8 +428,18 @@ namespace  {
     void VisitFunctionDecl(const FunctionDecl *D);
     void VisitFieldDecl(const FieldDecl *D);
     void VisitVarDecl(const VarDecl *D);
+    void VisitDecompositionDecl(const DecompositionDecl *D);
+    void VisitBindingDecl(const BindingDecl *D);
     void VisitFileScopeAsmDecl(const FileScopeAsmDecl *D);
     void VisitImportDecl(const ImportDecl *D);
+    void VisitPragmaCommentDecl(const PragmaCommentDecl *D);
+    void VisitPragmaDetectMismatchDecl(const PragmaDetectMismatchDecl *D);
+    void VisitCapturedDecl(const CapturedDecl *D);
+
+    // OpenMP decls
+    void VisitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D);
+    void VisitOMPDeclareReductionDecl(const OMPDeclareReductionDecl *D);
+    void VisitOMPCapturedExprDecl(const OMPCapturedExprDecl *D);
 
     // C++ Decls
     void VisitNamespaceDecl(const NamespaceDecl *D);
@@ -462,6 +476,7 @@ namespace  {
     void VisitUnresolvedUsingTypenameDecl(const UnresolvedUsingTypenameDecl *D);
     void VisitUnresolvedUsingValueDecl(const UnresolvedUsingValueDecl *D);
     void VisitUsingShadowDecl(const UsingShadowDecl *D);
+    void VisitConstructorUsingShadowDecl(const ConstructorUsingShadowDecl *D);
     void VisitLinkageSpecDecl(const LinkageSpecDecl *D);
     void VisitAccessSpecDecl(const AccessSpecDecl *D);
     void VisitFriendDecl(const FriendDecl *D);
@@ -487,6 +502,10 @@ namespace  {
     void VisitLabelStmt(const LabelStmt *Node);
     void VisitGotoStmt(const GotoStmt *Node);
     void VisitCXXCatchStmt(const CXXCatchStmt *Node);
+    void VisitCapturedStmt(const CapturedStmt *Node);
+
+    // OpenMP
+    void VisitOMPExecutableDirective(const OMPExecutableDirective *Node);
 
     // Exprs
     void VisitExpr(const Expr *Node);
@@ -697,6 +716,12 @@ void ASTDumper::dumpTypeAsChild(const Type *T) {
 }
 
 void ASTDumper::dumpBareDeclRef(const Decl *D) {
+  if (!D) {
+    ColorScope Color(*this, NullColor);
+    OS << "<<<NULL>>>";
+    return;
+  }
+
   {
     ColorScope Color(*this, DeclKindNameColor);
     OS << D->getDeclKindName();
@@ -819,8 +844,6 @@ void ASTDumper::dumpAttr(const Attr *A) {
       switch (A->getKind()) {
 #define ATTR(X) case attr::X: OS << #X; break;
 #include "clang/Basic/AttrList.inc"
-      default:
-        llvm_unreachable("unexpected attribute kind");
       }
       OS << "Attr";
     }
@@ -1140,10 +1163,8 @@ void ASTDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (!D->param_begin() && D->getNumParams())
     dumpChild([=] { OS << "<<NULL params x " << D->getNumParams() << ">>"; });
   else
-    for (FunctionDecl::param_const_iterator I = D->param_begin(),
-                                            E = D->param_end();
-         I != E; ++I)
-      dumpDecl(*I);
+    for (const ParmVarDecl *Parameter : D->parameters())
+      dumpDecl(Parameter);
 
   if (const CXXConstructorDecl *C = dyn_cast<CXXConstructorDecl>(D))
     for (CXXConstructorDecl::init_const_iterator I = C->init_begin(),
@@ -1184,6 +1205,10 @@ void ASTDumper::VisitVarDecl(const VarDecl *D) {
     OS << " __module_private__";
   if (D->isNRVOVariable())
     OS << " nrvo";
+  if (D->isInline())
+    OS << " inline";
+  if (D->isConstexpr())
+    OS << " constexpr";
   if (D->hasInit()) {
     switch (D->getInitStyle()) {
     case VarDecl::CInit: OS << " cinit"; break;
@@ -1194,12 +1219,75 @@ void ASTDumper::VisitVarDecl(const VarDecl *D) {
   }
 }
 
+void ASTDumper::VisitDecompositionDecl(const DecompositionDecl *D) {
+  VisitVarDecl(D);
+  for (auto *B : D->bindings())
+    dumpDecl(B);
+}
+
+void ASTDumper::VisitBindingDecl(const BindingDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+  if (auto *E = D->getBinding())
+    dumpStmt(E);
+}
+
 void ASTDumper::VisitFileScopeAsmDecl(const FileScopeAsmDecl *D) {
   dumpStmt(D->getAsmString());
 }
 
 void ASTDumper::VisitImportDecl(const ImportDecl *D) {
   OS << ' ' << D->getImportedModule()->getFullModuleName();
+}
+
+void ASTDumper::VisitPragmaCommentDecl(const PragmaCommentDecl *D) {
+  OS << ' ';
+  switch (D->getCommentKind()) {
+  case PCK_Unknown:  llvm_unreachable("unexpected pragma comment kind");
+  case PCK_Compiler: OS << "compiler"; break;
+  case PCK_ExeStr:   OS << "exestr"; break;
+  case PCK_Lib:      OS << "lib"; break;
+  case PCK_Linker:   OS << "linker"; break;
+  case PCK_User:     OS << "user"; break;
+  }
+  StringRef Arg = D->getArg();
+  if (!Arg.empty())
+    OS << " \"" << Arg << "\"";
+}
+
+void ASTDumper::VisitPragmaDetectMismatchDecl(
+    const PragmaDetectMismatchDecl *D) {
+  OS << " \"" << D->getName() << "\" \"" << D->getValue() << "\"";
+}
+
+void ASTDumper::VisitCapturedDecl(const CapturedDecl *D) {
+  dumpStmt(D->getBody());
+}
+
+//===----------------------------------------------------------------------===//
+// OpenMP Declarations
+//===----------------------------------------------------------------------===//
+
+void ASTDumper::VisitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
+  for (auto *E : D->varlists())
+    dumpStmt(E);
+}
+
+void ASTDumper::VisitOMPDeclareReductionDecl(const OMPDeclareReductionDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+  OS << " combiner";
+  dumpStmt(D->getCombiner());
+  if (auto *Initializer = D->getInitializer()) {
+    OS << " initializer";
+    dumpStmt(Initializer);
+  }
+}
+
+void ASTDumper::VisitOMPCapturedExprDecl(const OMPCapturedExprDecl *D) {
+  dumpName(D);
+  dumpType(D->getType());
+  dumpStmt(D->getInit());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1425,6 +1513,31 @@ void ASTDumper::VisitUsingShadowDecl(const UsingShadowDecl *D) {
     dumpTypeAsChild(TD->getTypeForDecl());
 }
 
+void ASTDumper::VisitConstructorUsingShadowDecl(
+    const ConstructorUsingShadowDecl *D) {
+  if (D->constructsVirtualBase())
+    OS << " virtual";
+
+  dumpChild([=] {
+    OS << "target ";
+    dumpBareDeclRef(D->getTargetDecl());
+  });
+
+  dumpChild([=] {
+    OS << "nominated ";
+    dumpBareDeclRef(D->getNominatedBaseClass());
+    OS << ' ';
+    dumpBareDeclRef(D->getNominatedBaseClassShadowDecl());
+  });
+
+  dumpChild([=] {
+    OS << "constructed ";
+    dumpBareDeclRef(D->getConstructedBaseClass());
+    OS << ' ';
+    dumpBareDeclRef(D->getConstructedBaseClassShadowDecl());
+  });
+}
+
 void ASTDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *D) {
   switch (D->getLanguage()) {
   case LinkageSpecDecl::lang_c: OS << " C"; break;
@@ -1484,10 +1597,8 @@ void ASTDumper::VisitObjCMethodDecl(const ObjCMethodDecl *D) {
   if (D->isThisDeclarationADefinition()) {
     dumpDeclContext(D);
   } else {
-    for (ObjCMethodDecl::param_const_iterator I = D->param_begin(),
-                                              E = D->param_end();
-         I != E; ++I)
-      dumpDecl(*I);
+    for (const ParmVarDecl *Parameter : D->parameters())
+      dumpDecl(Parameter);
   }
 
   if (D->isVariadic())
@@ -1617,7 +1728,7 @@ void ASTDumper::VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D) {
 }
 
 void ASTDumper::VisitBlockDecl(const BlockDecl *D) {
-  for (auto I : D->params())
+  for (auto I : D->parameters())
     dumpDecl(I);
 
   if (D->isVariadic())
@@ -1707,6 +1818,41 @@ void ASTDumper::VisitGotoStmt(const GotoStmt *Node) {
 void ASTDumper::VisitCXXCatchStmt(const CXXCatchStmt *Node) {
   VisitStmt(Node);
   dumpDecl(Node->getExceptionDecl());
+}
+
+void ASTDumper::VisitCapturedStmt(const CapturedStmt *Node) {
+  VisitStmt(Node);
+  dumpDecl(Node->getCapturedDecl());
+}
+
+//===----------------------------------------------------------------------===//
+//  OpenMP dumping methods.
+//===----------------------------------------------------------------------===//
+
+void ASTDumper::VisitOMPExecutableDirective(
+    const OMPExecutableDirective *Node) {
+  VisitStmt(Node);
+  for (auto *C : Node->clauses()) {
+    dumpChild([=] {
+      if (!C) {
+        ColorScope Color(*this, NullColor);
+        OS << "<<<NULL>>> OMPClause";
+        return;
+      }
+      {
+        ColorScope Color(*this, AttrColor);
+        StringRef ClauseName(getOpenMPClauseName(C->getClauseKind()));
+        OS << "OMP" << ClauseName.substr(/*Start=*/0, /*N=*/1).upper()
+           << ClauseName.drop_front() << "Clause";
+      }
+      dumpPointer(C);
+      dumpSourceRange(SourceRange(C->getLocStart(), C->getLocEnd()));
+      if (C->isImplicit())
+        OS << " <implicit>";
+      for (auto *S : C->children())
+        dumpStmt(S);
+    });
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -2078,8 +2224,10 @@ void ASTDumper::VisitObjCMessageExpr(const ObjCMessageExpr *Node) {
 
 void ASTDumper::VisitObjCBoxedExpr(const ObjCBoxedExpr *Node) {
   VisitExpr(Node);
-  OS << " selector=";
-  Node->getBoxingMethod()->getSelector().print(OS);
+  if (auto *BoxingMethod = Node->getBoxingMethod()) {
+    OS << " selector=";
+    BoxingMethod->getSelector().print(OS);
+  }
 }
 
 void ASTDumper::VisitObjCAtCatchStmt(const ObjCAtCatchStmt *Node) {

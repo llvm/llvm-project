@@ -23,7 +23,7 @@ int main() {
   pthread_create(&t[1], NULL, Blacklisted_Thread2, NULL);
   pthread_join(t[0], NULL);
   pthread_join(t[1], NULL);
-  printf("PASS\n");
+  fprintf(stderr, "PASS\n");
   return 0;
 }
 

@@ -1,5 +1,6 @@
-; Test hanlding of llvm.lifetime intrinsics.
-; RUN: opt < %s -asan -asan-module -asan-check-lifetime -asan-use-after-return=0 -S | FileCheck %s
+; Test handling of llvm.lifetime intrinsics.
+; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -S | FileCheck %s
+; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -asan-instrument-allocas=0 -S | FileCheck %s --check-prefix=CHECK-NO-DYNAMIC
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -47,8 +48,10 @@ define void @lifetime() sanitize_address {
   call void @llvm.lifetime.start(i64 40, i8* %arr.ptr)
   store volatile i8 0, i8* %arr.ptr
   ; CHECK: call void @__asan_unpoison_stack_memory(i64 %{{[^ ]+}}, i64 40)
+  ; CHECK-NO-DYNAMIC-NOT: call void @__asan_unpoison_stack_memory(i64 %{{[^ ]+}}, i64 40)
   call void @llvm.lifetime.end(i64 40, i8* %arr.ptr)
   ; CHECK: call void @__asan_poison_stack_memory(i64 %{{[^ ]+}}, i64 40)
+  ; CHECK-NO-DYNAMIC-NOT: call void @__asan_poison_stack_memory(i64 %{{[^ ]+}}, i64 40)
 
   ; One more lifetime start/end for the same variable %i.
   call void @llvm.lifetime.start(i64 4, i8* %i.ptr)
@@ -85,5 +88,46 @@ bb1:
   call void @llvm.lifetime.end(i64 8, i8* %i.phi)
   ; CHECK: __asan_poison_stack_memory
   ; CHECK: ret void
+  ret void
+}
+
+; Check that arguments of lifetime may come from getelementptr nodes.
+define void @getelementptr_args() sanitize_address{
+  ; CHECK-LABEL: define void @getelementptr_args
+entry:
+  %x = alloca [1024 x i8], align 16
+  %d = alloca i8*, align 8
+
+  %0 = getelementptr inbounds [1024 x i8], [1024 x i8]* %x, i64 0, i64 0
+  call void @llvm.lifetime.start(i64 1024, i8* %0)
+  ; CHECK: __asan_unpoison_stack_memory
+
+  store i8* %0, i8** %d, align 8
+
+  call void @llvm.lifetime.end(i64 1024, i8* %0)
+  ; CHECK: __asan_poison_stack_memory
+
+  ret void
+  ; CHECK: store i64 0
+  ; CHECK: store i64 0
+  ; CHECK: store i64 0
+  ; CHECK: store i32 0
+  ; CHECK-NEXT: __asan_unpoison_stack_memory
+}
+
+define void @zero_sized(i64 %a) #0 {
+; CHECK-LABEL: define void @zero_sized(i64 %a)
+
+entry:
+  %a.addr = alloca i64, align 8
+  %b = alloca [0 x i8], align 1
+  store i64 %a, i64* %a.addr, align 8
+  %0 = bitcast [0 x i8]* %b to i8*
+  call void @llvm.lifetime.start(i64 0, i8* %0) #2
+  ; CHECK-NOT: call void @__asan_unpoison_stack_memory
+  %1 = bitcast [0 x i8]* %b to i8*
+  call void @llvm.lifetime.end(i64 0, i8* %1) #2
+  ; CHECK-NOT: call void @__asan_poison_stack_memory
+
   ret void
 }

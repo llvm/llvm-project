@@ -16,8 +16,8 @@ define i32 @foo(i32 %guard, ...) {
 }
 
 ; First check if the variadic shadow values are saved in stack with correct
-; size (192 is total of general purpose registers size, 56, rounded to 16
-; plus total of floating-point registers size, 128).
+; size (192 is total of general purpose registers size, 64, plus total of
+; floating-point registers size, 128).
 
 ; CHECK-LABEL: @foo
 ; CHECK: [[A:%.*]] = load {{.*}} @__msan_va_arg_overflow_size_tls
@@ -31,7 +31,7 @@ define i32 @foo(i32 %guard, ...) {
 ; offset in the __msan_va_arg_tls based on va_list:__gp_off, and finally
 ; issue the memcpy.
 ; CHECK: [[GRP:%.*]] = getelementptr inbounds i8, i8* {{%.*}}, i64 {{%.*}}
-; CHECK: [[GRSIZE:%.*]] = sub i64 56, {{%.*}}
+; CHECK: [[GRSIZE:%.*]] = sub i64 64, {{%.*}}
 ; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{%.*}}, i8* [[GRP]], i64 [[GRSIZE]], i32 8, i1 false)
 
 ; Propagate the VR shadow values on for the va_list::__vr_top, adjust the 
@@ -59,17 +59,18 @@ define i32 @bar() {
 }
 
 ; Save the incoming shadow value from the arguments in the __msan_va_arg_tls
-; array.  General purpose registers are saved at positions from 0 to 56, Floating
+; array.  General purpose registers are saved at positions from 0 to 64, Floating
 ; point and SIMD are saved from 64 to 192, and the remaining from 192.
 ; CHECK-LABEL: @bar
 ; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 8
+; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 16
 ; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 64
 ; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 80
-; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 16
 ; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 24
-; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 96
 ; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 32
+; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 96
 ; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 40
 ; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 48
+; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 56
 ; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 192
 ; CHECK: store {{.*}} 8, {{.*}} @__msan_va_arg_overflow_size_tls

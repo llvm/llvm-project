@@ -1,10 +1,10 @@
-; RUN: llc -march=mips     -mcpu=mips32                 < %s | FileCheck %s -check-prefix=ALL -check-prefix=32-CMOV
-; RUN: llc -march=mips     -mcpu=mips32 -regalloc=basic < %s | FileCheck %s -check-prefix=ALL -check-prefix=32-CMOV
-; RUN: llc -march=mips     -mcpu=mips32r2               < %s | FileCheck %s -check-prefix=ALL -check-prefix=32-CMOV
-; RUN: llc -march=mips     -mcpu=mips32r6               < %s | FileCheck %s -check-prefix=ALL -check-prefix=32-CMP
-; RUN: llc -march=mips64el -mcpu=mips4                  < %s | FileCheck %s -check-prefix=ALL -check-prefix=64-CMOV
-; RUN: llc -march=mips64el -mcpu=mips64                 < %s | FileCheck %s -check-prefix=ALL -check-prefix=64-CMOV
-; RUN: llc -march=mips64el -mcpu=mips64r6               < %s | FileCheck %s -check-prefix=ALL -check-prefix=64-CMP
+; RUN: llc -march=mips     -mcpu=mips32                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
+; RUN: llc -march=mips     -mcpu=mips32 -regalloc=basic -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
+; RUN: llc -march=mips     -mcpu=mips32r2               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
+; RUN: llc -march=mips     -mcpu=mips32r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMP
+; RUN: llc -march=mips64el -mcpu=mips4                  -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
+; RUN: llc -march=mips64el -mcpu=mips64                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
+; RUN: llc -march=mips64el -mcpu=mips64r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMP
 
 @i1 = global [3 x i32] [i32 1, i32 2, i32 3], align 4
 @i3 = common global i32* null, align 4
@@ -517,17 +517,22 @@ entry:
 
 ; 64-CMOV-DAG: daddiu $[[I5:[0-9]+]], $zero, 5
 ; 64-CMOV-DAG: daddiu $[[I4:2]], $zero, 4
-; 64-CMOV-DAG: daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, 32766
-; 64-CMOV-DAG: slt $[[R0:[0-9]+]], $[[R1]], $4
-; 64-CMOV-DAG: movn $[[I4]], $[[I5]], $[[R0]]
+
+
+; 64-CMOV-DAG: lui $[[R1:[0-9]+]], 65535
+; 64-CMOV-DAG: ori $[[R2:[0-9]+]], $[[R1]], 32766
+; 64-CMOV-DAG: slt $[[R3:[0-9]+]], $[[R2]], $4
+; 64-CMOV-DAG: movn $[[I4]], $[[I5]], $[[R3]]
 
 ; 64-CMP-DAG:  daddiu $[[I5:[0-9]+]], $zero, 5
 ; 64-CMP-DAG:  daddiu $[[I4:2]], $zero, 4
-; 64-CMP-DAG:  daddiu $[[R1:[0-9]+]], ${{[0-9]+}}, 32766
-; 64-CMP-DAG:  slt $[[R0:[0-9]+]], $[[R1]], $4
+
+; 64-CMP-DAG: lui $[[R1:[0-9]+]], 65535
+; 64-CMP-DAG: ori $[[R2:[0-9]+]], $[[R1]], 32766
+; 64-CMP-DAG: slt $[[R3:[0-9]+]], $[[R2]], $4
 ; FIXME: We can do better than this by using selccz to choose between -0 and -2
-; 64-CMP-DAG:  selnez $[[T0:[0-9]+]], $[[I5]], $[[R0]]
-; 64-CMP-DAG:  seleqz $[[T1:[0-9]+]], $[[I4]], $[[R0]]
+; 64-CMP-DAG:  seleqz $[[T1:[0-9]+]], $[[I4]], $[[R3]]
+; 64-CMP-DAG:  selnez $[[T0:[0-9]+]], $[[I5]], $[[R3]]
 ; 64-CMP-DAG:  or $2, $[[T0]], $[[T1]]
 
 define i64 @slti64_3(i64 %a) {

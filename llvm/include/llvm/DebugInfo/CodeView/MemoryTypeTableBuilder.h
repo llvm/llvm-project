@@ -10,12 +10,9 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_MEMORYTYPETABLEBUILDER_H
 #define LLVM_DEBUGINFO_CODEVIEW_MEMORYTYPETABLEBUILDER_H
 
-#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/TypeTableBuilder.h"
-#include <functional>
-#include <memory>
-#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -23,46 +20,29 @@ namespace codeview {
 
 class MemoryTypeTableBuilder : public TypeTableBuilder {
 public:
-  class Record {
-  public:
-    explicit Record(llvm::StringRef RData);
-
-    const char *data() const { return Data.get(); }
-    uint16_t size() const { return Size; }
-
-  private:
-    uint16_t Size;
-    std::unique_ptr<char[]> Data;
-  };
-
-private:
-  class RecordHash : std::unary_function<llvm::StringRef, size_t> {
-  public:
-    size_t operator()(llvm::StringRef Val) const {
-      return static_cast<size_t>(llvm::hash_value(Val));
-    }
-  };
-
-public:
   MemoryTypeTableBuilder() {}
+
+  bool empty() const { return Records.empty(); }
 
   template <typename TFunc> void ForEachRecord(TFunc Func) {
     uint32_t Index = TypeIndex::FirstNonSimpleIndex;
 
-    for (const std::unique_ptr<Record> &R : Records) {
-      Func(TypeIndex(Index), R.get());
+    for (StringRef R : Records) {
+      Func(TypeIndex(Index), R);
       ++Index;
     }
   }
 
-private:
-  virtual TypeIndex writeRecord(llvm::StringRef Data) override;
+protected:
+  TypeIndex writeRecord(llvm::StringRef Data) override;
 
 private:
-  std::vector<std::unique_ptr<Record>> Records;
-  std::unordered_map<llvm::StringRef, TypeIndex, RecordHash> HashedRecords;
+  std::vector<StringRef> Records;
+  BumpPtrAllocator RecordStorage;
+  DenseMap<StringRef, TypeIndex> HashedRecords;
 };
-}
-}
 
-#endif
+} // end namespace codeview
+} // end namespace llvm
+
+#endif // LLVM_DEBUGINFO_CODEVIEW_MEMORYTYPETABLEBUILDER_H

@@ -36,15 +36,15 @@ main_body:
   %29 = extractelement <4 x float> %28, i32 3
   %30 = fcmp ogt float %25, 0.000000e+00
   %31 = select i1 %30, float %27, float %29
-  %32 = call float @llvm.AMDIL.clamp.(float %7, float 0.000000e+00, float 1.000000e+00)
-  %33 = call float @llvm.AMDIL.clamp.(float %15, float 0.000000e+00, float 1.000000e+00)
-  %34 = call float @llvm.AMDIL.clamp.(float %23, float 0.000000e+00, float 1.000000e+00)
-  %35 = call float @llvm.AMDIL.clamp.(float %31, float 0.000000e+00, float 1.000000e+00)
+  %32 = call float @llvm.AMDGPU.clamp.f32(float %7, float 0.000000e+00, float 1.000000e+00)
+  %33 = call float @llvm.AMDGPU.clamp.f32(float %15, float 0.000000e+00, float 1.000000e+00)
+  %34 = call float @llvm.AMDGPU.clamp.f32(float %23, float 0.000000e+00, float 1.000000e+00)
+  %35 = call float @llvm.AMDGPU.clamp.f32(float %31, float 0.000000e+00, float 1.000000e+00)
   %36 = insertelement <4 x float> undef, float %32, i32 0
   %37 = insertelement <4 x float> %36, float %33, i32 1
   %38 = insertelement <4 x float> %37, float %34, i32 2
   %39 = insertelement <4 x float> %38, float %35, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %39, i32 0, i32 0)
+  call void @llvm.r600.store.swizzle(<4 x float> %39, i32 0, i32 0)
   ret void
 }
 
@@ -84,17 +84,17 @@ main_body:
   %29 = extractelement <4 x float> %28, i32 2
   %30 = fcmp ogt float %25, 0.000000e+00
   %31 = select i1 %30, float %27, float %29
-  %32 = call float @llvm.AMDIL.clamp.(float %7, float 0.000000e+00, float 1.000000e+00)
-  %33 = call float @llvm.AMDIL.clamp.(float %15, float 0.000000e+00, float 1.000000e+00)
-  %34 = call float @llvm.AMDIL.clamp.(float %23, float 0.000000e+00, float 1.000000e+00)
-  %35 = call float @llvm.AMDIL.clamp.(float %31, float 0.000000e+00, float 1.000000e+00)
+  %32 = call float @llvm.AMDGPU.clamp.f32(float %7, float 0.000000e+00, float 1.000000e+00)
+  %33 = call float @llvm.AMDGPU.clamp.f32(float %15, float 0.000000e+00, float 1.000000e+00)
+  %34 = call float @llvm.AMDGPU.clamp.f32(float %23, float 0.000000e+00, float 1.000000e+00)
+  %35 = call float @llvm.AMDGPU.clamp.f32(float %31, float 0.000000e+00, float 1.000000e+00)
   %36 = insertelement <4 x float> undef, float %32, i32 0
   %37 = insertelement <4 x float> %36, float %33, i32 1
   %38 = insertelement <4 x float> %37, float %34, i32 2
   %39 = insertelement <4 x float> %38, float %35, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %39, i32 0, i32 0)
+  call void @llvm.r600.store.swizzle(<4 x float> %39, i32 0, i32 0)
   ret void
 }
 
-declare float @llvm.AMDIL.clamp.(float, float, float) readnone
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare float @llvm.AMDGPU.clamp.f32(float, float, float) readnone
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

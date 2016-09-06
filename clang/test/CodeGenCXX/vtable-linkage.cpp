@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -triple=x86_64-pc-linux -emit-llvm -o %t
 // RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -disable-llvm-optzns -O3 -emit-llvm -o %t.opt
-// RUN: FileCheck --check-prefix=CHECK %s < %t
+// RUN: FileCheck %s < %t
 // RUN: FileCheck --check-prefix=CHECK-OPT %s < %t.opt
 
 namespace {

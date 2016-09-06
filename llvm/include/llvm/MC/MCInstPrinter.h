@@ -10,11 +10,11 @@
 #ifndef LLVM_MC_MCINSTPRINTER_H
 #define LLVM_MC_MCINSTPRINTER_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Format.h"
 
 namespace llvm {
+template <typename T> class ArrayRef;
 class MCInst;
 class raw_ostream;
 class MCAsmInfo;

@@ -10,12 +10,12 @@
 #ifndef LLVM_DEBUGINFO_DWARFFORMVALUE_H
 #define LLVM_DEBUGINFO_DWARFFORMVALUE_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/DataExtractor.h"
 
 namespace llvm {
 
+template <typename T> class ArrayRef;
 class DWARFUnit;
 class raw_ostream;
 

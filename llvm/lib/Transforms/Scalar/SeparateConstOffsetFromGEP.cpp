@@ -590,9 +590,9 @@ Value *ConstantOffsetExtractor::rebuildWithoutConstOffset() {
   distributeExtsAndCloneChain(UserChain.size() - 1);
   // Remove all nullptrs (used to be s/zext) from UserChain.
   unsigned NewSize = 0;
-  for (auto I = UserChain.begin(), E = UserChain.end(); I != E; ++I) {
-    if (*I != nullptr) {
-      UserChain[NewSize] = *I;
+  for (User *I : UserChain) {
+    if (I != nullptr) {
+      UserChain[NewSize] = I;
       NewSize++;
     }
   }
@@ -824,8 +824,8 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
   // If we created a GEP with constant index, and the base is loop invariant,
   // then we swap the first one with it, so LICM can move constant GEP out
   // later.
-  GetElementPtrInst *FirstGEP = dyn_cast<GetElementPtrInst>(FirstResult);
-  GetElementPtrInst *SecondGEP = dyn_cast<GetElementPtrInst>(ResultPtr);
+  GetElementPtrInst *FirstGEP = dyn_cast_or_null<GetElementPtrInst>(FirstResult);
+  GetElementPtrInst *SecondGEP = dyn_cast_or_null<GetElementPtrInst>(ResultPtr);
   if (isSwapCandidate && isLegalToSwapOperand(FirstGEP, SecondGEP, L))
     swapGEPOperand(FirstGEP, SecondGEP);
 
@@ -911,7 +911,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
             *GEP->getParent()->getParent());
     unsigned AddrSpace = GEP->getPointerAddressSpace();
-    if (!TTI.isLegalAddressingMode(GEP->getType()->getElementType(),
+    if (!TTI.isLegalAddressingMode(GEP->getResultElementType(),
                                    /*BaseGV=*/nullptr, AccumulativeByteOffset,
                                    /*HasBaseReg=*/true, /*Scale=*/0,
                                    AddrSpace)) {
@@ -1018,7 +1018,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // unsigned.. Therefore, we cast ElementTypeSizeOfGEP to signed because it is
   // used with unsigned integers later.
   int64_t ElementTypeSizeOfGEP = static_cast<int64_t>(
-      DL->getTypeAllocSize(GEP->getType()->getElementType()));
+      DL->getTypeAllocSize(GEP->getResultElementType()));
   Type *IntPtrTy = DL->getIntPtrType(GEP->getType());
   if (AccumulativeByteOffset % ElementTypeSizeOfGEP == 0) {
     // Very likely. As long as %gep is natually aligned, the byte offset we
@@ -1064,7 +1064,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 }
 
 bool SeparateConstOffsetFromGEP::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
+  if (skipFunction(F))
     return false;
 
   if (DisableSeparateConstOffsetFromGEP)
@@ -1075,8 +1075,8 @@ bool SeparateConstOffsetFromGEP::runOnFunction(Function &F) {
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   bool Changed = false;
-  for (Function::iterator B = F.begin(), BE = F.end(); B != BE; ++B) {
-    for (BasicBlock::iterator I = B->begin(), IE = B->end(); I != IE;)
+  for (BasicBlock &B : F) {
+    for (BasicBlock::iterator I = B.begin(), IE = B.end(); I != IE;)
       if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I++))
         Changed |= splitGEP(GEP);
     // No need to split GEP ConstantExprs because all its indices are constant
@@ -1162,8 +1162,8 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Function &F) {
 }
 
 void SeparateConstOffsetFromGEP::verifyNoDeadCode(Function &F) {
-  for (auto &B : F) {
-    for (auto &I : B) {
+  for (BasicBlock &B : F) {
+    for (Instruction &I : B) {
       if (isInstructionTriviallyDead(&I)) {
         std::string ErrMessage;
         raw_string_ostream RSO(ErrMessage);

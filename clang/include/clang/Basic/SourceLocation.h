@@ -373,22 +373,22 @@ public:
   /// \brief Return the presumed filename of this location.
   ///
   /// This can be affected by \#line etc.
-  const char *getFilename() const { return Filename; }
+  const char *getFilename() const { assert(isValid()); return Filename; }
 
   /// \brief Return the presumed line number of this location.
   ///
   /// This can be affected by \#line etc.
-  unsigned getLine() const { return Line; }
+  unsigned getLine() const { assert(isValid()); return Line; }
 
   /// \brief Return the presumed column number of this location.
   ///
   /// This cannot be affected by \#line, but is packaged here for convenience.
-  unsigned getColumn() const { return Col; }
+  unsigned getColumn() const { assert(isValid()); return Col; }
 
   /// \brief Return the presumed include location of this location.
   ///
   /// This can be affected by GNU linemarker directives.
-  SourceLocation getIncludeLoc() const { return IncludeLoc; }
+  SourceLocation getIncludeLoc() const { assert(isValid()); return IncludeLoc; }
 };
 
 

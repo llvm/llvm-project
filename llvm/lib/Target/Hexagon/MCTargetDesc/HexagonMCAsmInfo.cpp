@@ -32,6 +32,7 @@ HexagonMCAsmInfo::HexagonMCAsmInfo(const Triple &TT) {
   AscizDirective = "\t.string\t";
 
   SupportsDebugInformation = true;
+  MinInstAlignment = 4;
   UsesELFSectionDirectiveForBSS  = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
 }

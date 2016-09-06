@@ -3,7 +3,7 @@
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    -shared %t.o -o %t2.o
-; RUN: llvm-dis %t2.o.opt.bc -o - | FileCheck %s
+; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s
 
 ; test that the vectorizer is run.
 ; CHECK: fadd <4 x float>

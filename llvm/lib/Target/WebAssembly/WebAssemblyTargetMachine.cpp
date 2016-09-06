@@ -20,8 +20,8 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
@@ -29,26 +29,43 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm"
 
+// Emscripten's asm.js-style exception handling
+static cl::opt<bool> EnableEmExceptionHandling(
+    "enable-emscripten-cxx-exceptions",
+    cl::desc("WebAssembly Emscripten-style exception handling"),
+    cl::init(false));
+
 extern "C" void LLVMInitializeWebAssemblyTarget() {
   // Register the target.
   RegisterTargetMachine<WebAssemblyTargetMachine> X(TheWebAssemblyTarget32);
   RegisterTargetMachine<WebAssemblyTargetMachine> Y(TheWebAssemblyTarget64);
+
+  // Register exception handling pass to opt
+  initializeWebAssemblyLowerEmscriptenExceptionsPass(
+      *PassRegistry::getPassRegistry());
 }
 
 //===----------------------------------------------------------------------===//
 // WebAssembly Lowering public interface.
 //===----------------------------------------------------------------------===//
 
+static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
+  if (!RM.hasValue())
+    return Reloc::PIC_;
+  return *RM;
+}
+
 /// Create an WebAssembly architecture model.
 ///
 WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
-    const TargetOptions &Options, Reloc::Model RM, CodeModel::Model CM,
-    CodeGenOpt::Level OL)
+    const TargetOptions &Options, Optional<Reloc::Model> RM,
+    CodeModel::Model CM, CodeGenOpt::Level OL)
     : LLVMTargetMachine(T,
                         TT.isArch64Bit() ? "e-m:e-p:64:64-i64:64-n32:64-S128"
                                          : "e-m:e-p:32:32-i64:64-n32:64-S128",
-                        TT, CPU, FS, Options, RM, CM, OL),
+                        TT, CPU, FS, Options, getEffectiveRelocModel(RM),
+                        CM, OL),
       TLOF(make_unique<WebAssemblyTargetObjectFile>()) {
   // WebAssembly type-checks expressions, but a noreturn function with a return
   // type that doesn't match the context will cause a check failure. So we lower
@@ -58,9 +75,9 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
 
   initAsmInfo();
 
-  // We need a reducible CFG, so disable some optimizations which tend to
-  // introduce irreducibility.
-  setRequiresStructuredCFG(true);
+  // Note that we don't use setRequiresStructuredCFG(true). It disables
+  // optimizations than we're ok with, and want, such as critical edge
+  // splitting and tail merging.
 }
 
 WebAssemblyTargetMachine::~WebAssemblyTargetMachine() {}
@@ -103,9 +120,8 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
-  bool addILPOpts() override;
-  void addPreRegAlloc() override;
   void addPostRegAlloc() override;
+  bool addGCPasses() override { return false; }
   void addPreEmitPass() override;
 };
 } // end anonymous namespace
@@ -140,7 +156,12 @@ void WebAssemblyPassConfig::addIRPasses() {
     addPass(createAtomicExpandPass(TM));
 
   // Optimize "returned" function attributes.
-  addPass(createWebAssemblyOptimizeReturned());
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createWebAssemblyOptimizeReturned());
+
+  // Handle exceptions.
+  if (EnableEmExceptionHandling)
+    addPass(createWebAssemblyLowerEmscriptenExceptions());
 
   TargetPassConfig::addIRPasses();
 }
@@ -153,48 +174,64 @@ bool WebAssemblyPassConfig::addInstSelector() {
   // so that we can fix up the ARGUMENT instructions before anything else
   // sees them in the wrong place.
   addPass(createWebAssemblyArgumentMove());
+  // Set the p2align operands. This information is present during ISel, however
+  // it's inconvenient to collect. Collect it now, and update the immediate
+  // operands.
+  addPass(createWebAssemblySetP2AlignOperands());
   return false;
-}
-
-bool WebAssemblyPassConfig::addILPOpts() {
-  (void)TargetPassConfig::addILPOpts();
-  return true;
-}
-
-void WebAssemblyPassConfig::addPreRegAlloc() {
-  TargetPassConfig::addPreRegAlloc();
-
-  // Prepare store instructions for register stackifying.
-  addPass(createWebAssemblyStoreResults());
 }
 
 void WebAssemblyPassConfig::addPostRegAlloc() {
   // TODO: The following CodeGen passes don't currently support code containing
   // virtual registers. Consider removing their restrictions and re-enabling
   // them.
-  //
-  // We use our own PrologEpilogInserter which is very slightly modified to
-  // tolerate virtual registers.
-  disablePass(&PrologEpilogCodeInserterID);
-  // Fails with: should be run after register allocation.
+
+  // Has no asserts of its own, but was not written to handle virtual regs.
+  disablePass(&ShrinkWrapID);
+
+  // These functions all require the AllVRegsAllocated property.
   disablePass(&MachineCopyPropagationID);
-
-  // Mark registers as representing wasm's expression stack.
-  addPass(createWebAssemblyRegStackify());
-
-  // Run the register coloring pass to reduce the total number of registers.
-  addPass(createWebAssemblyRegColoring());
+  disablePass(&PostRASchedulerID);
+  disablePass(&FuncletLayoutID);
+  disablePass(&StackMapLivenessID);
+  disablePass(&LiveDebugValuesID);
+  disablePass(&PatchableFunctionID);
 
   TargetPassConfig::addPostRegAlloc();
-
-  // Run WebAssembly's version of the PrologEpilogInserter. Target-independent
-  // PEI runs after PostRegAlloc and after ShrinkWrap. Putting it here will run
-  // PEI before ShrinkWrap but otherwise in the same position in the order.
-  addPass(createWebAssemblyPEI());
 }
 
 void WebAssemblyPassConfig::addPreEmitPass() {
   TargetPassConfig::addPreEmitPass();
+
+  // Now that we have a prologue and epilogue and all frame indices are
+  // rewritten, eliminate SP and FP. This allows them to be stackified,
+  // colored, and numbered with the rest of the registers.
+  addPass(createWebAssemblyReplacePhysRegs());
+
+  if (getOptLevel() != CodeGenOpt::None) {
+    // LiveIntervals isn't commonly run this late. Re-establish preconditions.
+    addPass(createWebAssemblyPrepareForLiveIntervals());
+
+    // Depend on LiveIntervals and perform some optimizations on it.
+    addPass(createWebAssemblyOptimizeLiveIntervals());
+
+    // Prepare store instructions for register stackifying.
+    addPass(createWebAssemblyStoreResults());
+
+    // Mark registers as representing wasm's expression stack. This is a key
+    // code-compression technique in WebAssembly. We run this pass (and
+    // StoreResults above) very late, so that it sees as much code as possible,
+    // including code emitted by PEI and expanded by late tail duplication.
+    addPass(createWebAssemblyRegStackify());
+
+    // Run the register coloring pass to reduce the total number of registers.
+    // This runs after stackification so that it doesn't consider registers
+    // that become stackified.
+    addPass(createWebAssemblyRegColoring());
+  }
+
+  // Eliminate multiple-entry loops.
+  addPass(createWebAssemblyFixIrreducibleControlFlow());
 
   // Put the CFG in structured form; insert BLOCK and LOOP markers.
   addPass(createWebAssemblyCFGStackify());
@@ -202,9 +239,10 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Lower br_unless into br_if.
   addPass(createWebAssemblyLowerBrUnless());
 
+  // Perform the very last peephole optimizations on the code.
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createWebAssemblyPeephole());
+
   // Create a mapping from LLVM CodeGen virtual registers to wasm registers.
   addPass(createWebAssemblyRegNumbering());
-
-  // Perform the very last peephole optimizations on the code.
-  addPass(createWebAssemblyPeephole());
 }

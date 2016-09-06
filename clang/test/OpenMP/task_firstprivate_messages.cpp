@@ -7,6 +7,17 @@ bool foobool(int argc) {
   return argc;
 }
 
+template <typename T>
+struct S {
+  T b;
+  S(T a, T c) {
+#pragma omp task default(none) firstprivate(a, b)
+    a = b = c; // expected-error {{variable 'c' must have explicitly specified data sharing attributes}}
+  }
+};
+
+S<int> s(3, 4); // expected-note {{in instantiation of member function 'S<int>::S' requested here}}
+
 struct S1; // expected-note {{declared here}} expected-note{{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {

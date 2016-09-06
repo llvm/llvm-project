@@ -67,13 +67,20 @@ loopexit:
 ; CHECK: [[BODY_LOC]] = !DILocation(line: 101, column: 1, scope: !{{.*}})
 
 !llvm.module.flags = !{!0, !1}
+!llvm.dbg.cu = !{!9}
 !0 = !{i32 2, !"Dwarf Version", i32 4}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 
 !2 = !{}
 !3 = !DISubroutineType(types: !2)
 !4 = !DIFile(filename: "test.cpp", directory: "/tmp")
-!5 = distinct !DISubprogram(name: "foo", scope: !4, file: !4, line: 99, type: !3, isLocal: false, isDefinition: true, scopeLine: 100, flags: DIFlagPrototyped, isOptimized: false, variables: !2)
+!5 = distinct !DISubprogram(name: "foo", scope: !4, file: !4, line: 99, type: !3, isLocal: false, isDefinition: true, scopeLine: 100, flags: DIFlagPrototyped, isOptimized: false, unit: !9, variables: !2)
 !6 = !DILocation(line: 100, column: 1, scope: !5)
 !7 = !DILocation(line: 101, column: 1, scope: !5)
 !8 = !DILocation(line: 102, column: 1, scope: !5)
+!9 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
+                             file: !10,
+                             isOptimized: true, flags: "-O2",
+                             splitDebugFilename: "abc.debug", emissionKind: 2)
+!10 = !DIFile(filename: "path/to/file", directory: "/path/to/dir")
+!11 = !{i32 2, !"Debug Info Version", i32 3}

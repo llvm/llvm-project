@@ -1,10 +1,12 @@
-# Load common config for all compiler-rt lit tests.
-lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
+@LIT_SITE_CFG_IN_HEADER@
 
 # Tool-specific config options.
 config.ubsan_lit_test_mode = "@UBSAN_LIT_TEST_MODE@"
 config.target_cflags = "@UBSAN_TEST_TARGET_CFLAGS@"
 config.target_arch = "@UBSAN_TEST_TARGET_ARCH@"
+
+# Load common config for all compiler-rt lit tests.
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
 
 # Load tool-specific config that would do the real work.
 lit_config.load_config(config, "@UBSAN_LIT_TESTS_DIR@/lit.common.cfg")

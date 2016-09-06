@@ -29,11 +29,15 @@ static std::error_code dumpObject(const ObjectFile &Obj) {
 }
 
 static std::error_code dumpInput(StringRef File) {
-  ErrorOr<OwningBinary<Binary>> BinaryOrErr = createBinary(File);
-  if (std::error_code EC = BinaryOrErr.getError())
-    return EC;
+  Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(File);
+  if (!BinaryOrErr)
+    return errorToErrorCode(BinaryOrErr.takeError());
 
   Binary &Binary = *BinaryOrErr.get().getBinary();
+  // Universal MachO is not a subclass of ObjectFile, so it needs to be handled
+  // here with the other binary types.
+  if (Binary.isMachO() || Binary.isMachOUniversalBinary())
+    return macho2yaml(outs(), Binary);
   // TODO: If this is an archive, then burst it and dump each entry
   if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary))
     return dumpObject(*Obj);
@@ -46,7 +50,7 @@ cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"),
 
 int main(int argc, char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv);
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 

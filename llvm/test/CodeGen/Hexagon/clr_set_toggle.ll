@@ -3,6 +3,7 @@
 
 define i32 @my_clrbit(i32 %x) nounwind {
 entry:
+; CHECK-LABEL: my_clrbit
 ; CHECK: r{{[0-9]+}} = clrbit(r{{[0-9]+}}, #31)
   %x.addr = alloca i32, align 4
   store i32 %x, i32* %x.addr, align 4
@@ -13,6 +14,7 @@ entry:
 
 define i64 @my_clrbit2(i64 %x) nounwind {
 entry:
+; CHECK-LABEL: my_clrbit2
 ; CHECK: r{{[0-9]+}} = clrbit(r{{[0-9]+}}, #31)
   %x.addr = alloca i64, align 8
   store i64 %x, i64* %x.addr, align 8
@@ -23,6 +25,7 @@ entry:
 
 define i64 @my_clrbit3(i64 %x) nounwind {
 entry:
+; CHECK-LABEL: my_clrbit3
 ; CHECK: r{{[0-9]+}} = clrbit(r{{[0-9]+}}, #31)
   %x.addr = alloca i64, align 8
   store i64 %x, i64* %x.addr, align 8
@@ -33,6 +36,7 @@ entry:
 
 define i32 @my_clrbit4(i32 %x) nounwind {
 entry:
+; CHECK-LABEL: my_clrbit4
 ; CHECK: r{{[0-9]+}} = clrbit(r{{[0-9]+}}, #13)
   %x.addr = alloca i32, align 4
   store i32 %x, i32* %x.addr, align 4
@@ -43,6 +47,7 @@ entry:
 
 define i64 @my_clrbit5(i64 %x) nounwind {
 entry:
+; CHECK-LABEL: my_clrbit5
 ; CHECK: r{{[0-9]+}} = clrbit(r{{[0-9]+}}, #13)
   %x.addr = alloca i64, align 8
   store i64 %x, i64* %x.addr, align 8
@@ -53,6 +58,7 @@ entry:
 
 define i64 @my_clrbit6(i64 %x) nounwind {
 entry:
+; CHECK-LABEL: my_clrbit6
 ; CHECK: r{{[0-9]+}} = clrbit(r{{[0-9]+}}, #27)
   %x.addr = alloca i64, align 8
   store i64 %x, i64* %x.addr, align 8
@@ -63,7 +69,8 @@ entry:
 
 define zeroext i16 @my_setbit(i16 zeroext %crc) nounwind {
 entry:
-; CHECK: memh(r{{[0-9]+}}+#0){{ *}}={{ *}}setbit(#15)
+; CHECK-LABEL: my_setbit
+; CHECK: memh(r{{[0-9]+}}+#{{[0-9]+}}){{ *}}={{ *}}setbit(#15)
   %crc.addr = alloca i16, align 2
   store i16 %crc, i16* %crc.addr, align 2
   %0 = load i16, i16* %crc.addr, align 2
@@ -77,6 +84,7 @@ entry:
 
 define i32 @my_setbit2(i32 %x) nounwind {
 entry:
+; CHECK-LABEL: my_setbit2
 ; CHECK: r{{[0-9]+}}{{ *}}={{ *}}setbit(r{{[0-9]+}}, #15)
   %x.addr = alloca i32, align 4
   store i32 %x, i32* %x.addr, align 4
@@ -87,6 +95,7 @@ entry:
 
 define i64 @my_setbit3(i64 %x) nounwind {
 entry:
+; CHECK-LABEL: my_setbit3
 ; CHECK: r{{[0-9]+}}{{ *}}={{ *}}setbit(r{{[0-9]+}}, #15)
   %x.addr = alloca i64, align 8
   store i64 %x, i64* %x.addr, align 8
@@ -97,6 +106,7 @@ entry:
 
 define i32 @my_setbit4(i32 %x) nounwind {
 entry:
+; CHECK-LABEL: my_setbit4
 ; CHECK: r{{[0-9]+}}{{ *}}={{ *}}setbit(r{{[0-9]+}}, #31)
   %x.addr = alloca i32, align 4
   store i32 %x, i32* %x.addr, align 4
@@ -107,6 +117,7 @@ entry:
 
 define i64 @my_setbit5(i64 %x) nounwind {
 entry:
+; CHECK-LABEL: my_setbit5
 ; CHECK: r{{[0-9]+}}{{ *}}={{ *}}setbit(r{{[0-9]+}}, #13)
   %x.addr = alloca i64, align 8
   store i64 %x, i64* %x.addr, align 8
@@ -117,6 +128,7 @@ entry:
 
 define zeroext i16 @my_togglebit(i16 zeroext %crc) nounwind {
 entry:
+; CHECK-LABEL: my_togglebit
 ; CHECK: r{{[0-9]+}} = togglebit(r{{[0-9]+}}, #15)
   %crc.addr = alloca i16, align 2
   store i16 %crc, i16* %crc.addr, align 2
@@ -131,6 +143,7 @@ entry:
 
 define i32 @my_togglebit2(i32 %x) nounwind {
 entry:
+; CHECK-LABEL: my_togglebit2
 ; CHECK: r{{[0-9]+}} = togglebit(r{{[0-9]+}}, #15)
   %x.addr = alloca i32, align 4
   store i32 %x, i32* %x.addr, align 4
@@ -141,6 +154,7 @@ entry:
 
 define i64 @my_togglebit3(i64 %x) nounwind {
 entry:
+; CHECK-LABEL: my_togglebit3
 ; CHECK: r{{[0-9]+}} = togglebit(r{{[0-9]+}}, #15)
   %x.addr = alloca i64, align 8
   store i64 %x, i64* %x.addr, align 8
@@ -151,6 +165,7 @@ entry:
 
 define i64 @my_togglebit4(i64 %x) nounwind {
 entry:
+; CHECK-LABEL: my_togglebit4
 ; CHECK: r{{[0-9]+}} = togglebit(r{{[0-9]+}}, #20)
   %x.addr = alloca i64, align 8
   store i64 %x, i64* %x.addr, align 8

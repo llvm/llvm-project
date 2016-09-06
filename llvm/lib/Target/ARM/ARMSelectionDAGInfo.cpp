@@ -21,12 +21,9 @@ using namespace llvm;
 // Emit, if possible, a specialized version of the given Libcall. Typically this
 // means selecting the appropriately aligned version, but we also convert memset
 // of 0 into memclr.
-SDValue ARMSelectionDAGInfo::
-EmitSpecializedLibcall(SelectionDAG &DAG, SDLoc dl,
-                       SDValue Chain,
-                       SDValue Dst, SDValue Src,
-                       SDValue Size, unsigned Align,
-                       RTLIB::Libcall LC) const {
+SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue Size, unsigned Align, RTLIB::Libcall LC) const {
   const ARMSubtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<ARMSubtarget>();
   const ARMTargetLowering *TLI = Subtarget.getTargetLowering();
@@ -121,21 +118,17 @@ EmitSpecializedLibcall(SelectionDAG &DAG, SDLoc dl,
            TLI->getLibcallCallingConv(LC), Type::getVoidTy(*DAG.getContext()),
            DAG.getExternalSymbol(FunctionNames[AEABILibcall][AlignVariant],
                                  TLI->getPointerTy(DAG.getDataLayout())),
-           std::move(Args), 0)
+           std::move(Args))
       .setDiscardResult();
   std::pair<SDValue,SDValue> CallResult = TLI->LowerCallTo(CLI);
   
   return CallResult.second;
 }
 
-SDValue
-ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(SelectionDAG &DAG, SDLoc dl,
-                                             SDValue Chain,
-                                             SDValue Dst, SDValue Src,
-                                             SDValue Size, unsigned Align,
-                                             bool isVolatile, bool AlwaysInline,
-                                             MachinePointerInfo DstPtrInfo,
-                                          MachinePointerInfo SrcPtrInfo) const {
+SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue Size, unsigned Align, bool isVolatile, bool AlwaysInline,
+    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   const ARMSubtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<ARMSubtarget>();
   // Do repeated 4-byte loads and stores. To be improved.
@@ -176,6 +169,12 @@ ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(SelectionDAG &DAG, SDLoc dl,
   // emit.
   unsigned NumMEMCPYs = (NumMemOps + MaxLoadsInLDM - 1) / MaxLoadsInLDM;
 
+  // Code size optimisation: do not inline memcpy if expansion results in
+  // more instructions than the libary call.
+  if (NumMEMCPYs > 1 && DAG.getMachineFunction().getFunction()->optForMinSize()) {
+    return SDValue();
+  }
+
   SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32, MVT::Other, MVT::Glue);
 
   for (unsigned I = 0; I != NumMEMCPYs; ++I) {
@@ -213,8 +212,7 @@ ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(SelectionDAG &DAG, SDLoc dl,
     Loads[i] = DAG.getLoad(VT, dl, Chain,
                            DAG.getNode(ISD::ADD, dl, MVT::i32, Src,
                                        DAG.getConstant(SrcOff, dl, MVT::i32)),
-                           SrcPtrInfo.getWithOffset(SrcOff),
-                           false, false, false, 0);
+                           SrcPtrInfo.getWithOffset(SrcOff));
     TFOps[i] = Loads[i].getValue(1);
     ++i;
     SrcOff += VTSize;
@@ -237,7 +235,7 @@ ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(SelectionDAG &DAG, SDLoc dl,
     TFOps[i] = DAG.getStore(Chain, dl, Loads[i],
                             DAG.getNode(ISD::ADD, dl, MVT::i32, Dst,
                                         DAG.getConstant(DstOff, dl, MVT::i32)),
-                            DstPtrInfo.getWithOffset(DstOff), false, false, 0);
+                            DstPtrInfo.getWithOffset(DstOff));
     ++i;
     DstOff += VTSize;
     BytesLeft -= VTSize;
@@ -246,26 +244,18 @@ ARMSelectionDAGInfo::EmitTargetCodeForMemcpy(SelectionDAG &DAG, SDLoc dl,
                      makeArrayRef(TFOps, i));
 }
 
-
-SDValue ARMSelectionDAGInfo::
-EmitTargetCodeForMemmove(SelectionDAG &DAG, SDLoc dl,
-                         SDValue Chain,
-                         SDValue Dst, SDValue Src,
-                         SDValue Size, unsigned Align,
-                         bool isVolatile,
-                         MachinePointerInfo DstPtrInfo,
-                         MachinePointerInfo SrcPtrInfo) const {
+SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemmove(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue Size, unsigned Align, bool isVolatile,
+    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
   return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size, Align,
                                 RTLIB::MEMMOVE);
 }
 
-
-SDValue ARMSelectionDAGInfo::
-EmitTargetCodeForMemset(SelectionDAG &DAG, SDLoc dl,
-                        SDValue Chain, SDValue Dst,
-                        SDValue Src, SDValue Size,
-                        unsigned Align, bool isVolatile,
-                        MachinePointerInfo DstPtrInfo) const {
+SDValue ARMSelectionDAGInfo::EmitTargetCodeForMemset(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    SDValue Size, unsigned Align, bool isVolatile,
+    MachinePointerInfo DstPtrInfo) const {
   return EmitSpecializedLibcall(DAG, dl, Chain, Dst, Src, Size, Align,
                                 RTLIB::MEMSET);
 }

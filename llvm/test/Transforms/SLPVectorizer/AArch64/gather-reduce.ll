@@ -1,4 +1,5 @@
-; RUN: opt -S -slp-vectorizer -dce -instcombine < %s | FileCheck %s
+; RUN: opt -S -slp-vectorizer -dce -instcombine < %s | FileCheck %s --check-prefix=GENERIC
+; RUN: opt -S -mcpu=kryo -slp-vectorizer -dce -instcombine < %s | FileCheck %s --check-prefix=KRYO
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -18,13 +19,13 @@ target triple = "aarch64--linux-gnu"
 ;   return sum;
 ; }
 
-; CHECK-LABEL: @gather_reduce_8x16_i32
+; GENERIC-LABEL: @gather_reduce_8x16_i32
 ;
-; CHECK: [[L:%[a-zA-Z0-9.]+]] = load <8 x i16>
-; CHECK: zext <8 x i16> [[L]] to <8 x i32>
-; CHECK: [[S:%[a-zA-Z0-9.]+]] = sub nsw <8 x i32>
-; CHECK: [[X:%[a-zA-Z0-9.]+]] = extractelement <8 x i32> [[S]]
-; CHECK: sext i32 [[X]] to i64
+; GENERIC: [[L:%[a-zA-Z0-9.]+]] = load <8 x i16>
+; GENERIC: zext <8 x i16> [[L]] to <8 x i32>
+; GENERIC: [[S:%[a-zA-Z0-9.]+]] = sub nsw <8 x i32>
+; GENERIC: [[X:%[a-zA-Z0-9.]+]] = extractelement <8 x i32> [[S]]
+; GENERIC: sext i32 [[X]] to i64
 ;
 define i32 @gather_reduce_8x16_i32(i16* nocapture readonly %a, i16* nocapture readonly %b, i16* nocapture readonly %g, i32 %n) {
 entry:
@@ -137,14 +138,13 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
 }
 
-; CHECK-LABEL: @gather_reduce_8x16_i64
+; KRYO-LABEL: @gather_reduce_8x16_i64
 ;
-; CHECK-NOT: load <8 x i16>
-;
-; FIXME: We are currently unable to vectorize the case with i64 subtraction
-;        because the zero extensions are too expensive. The solution here is to
-;        convert the i64 subtractions to i32 subtractions during vectorization.
-;        This would then match the case above.
+; KRYO: [[L:%[a-zA-Z0-9.]+]] = load <8 x i16>
+; KRYO: zext <8 x i16> [[L]] to <8 x i32>
+; KRYO: [[S:%[a-zA-Z0-9.]+]] = sub nsw <8 x i32>
+; KRYO: [[X:%[a-zA-Z0-9.]+]] = extractelement <8 x i32> [[S]]
+; KRYO: sext i32 [[X]] to i64
 ;
 define i32 @gather_reduce_8x16_i64(i16* nocapture readonly %a, i16* nocapture readonly %b, i16* nocapture readonly %g, i32 %n) {
 entry:

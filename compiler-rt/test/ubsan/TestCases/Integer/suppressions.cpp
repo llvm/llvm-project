@@ -1,10 +1,8 @@
-// XFAIL: win32
-// This test fails on Windows if the environment was set up by SetEnv.cmd from
-// the Windows SDK.  If it's set up via vcvarsall.bat, it passes.
-// FIXME: Figure out how to make this reliably pass on Windows.
-// test/asan/TestCases/suppressions-interceptor.cc will need the same fix.
-
 // RUN: %clangxx -fsanitize=integer -g0 %s -o %t
+
+// Suppression by symbol name (unsigned-integer-overflow:do_overflow below)
+// requires the compiler-rt runtime to be able to symbolize stack addresses.
+// REQUIRES: can-symbolize
 
 // Fails without any suppression.
 // RUN: %env_ubsan_opts=halt_on_error=1 not %run %t 2>&1 | FileCheck %s
@@ -36,4 +34,3 @@ int main() {
   do_overflow();
   return 0;
 }
-

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -verify %s
+// RUN: %clang_cc1 -std=c++11 -triple %itanium_abi_triple -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -std=c++11 -triple %ms_abi_triple -DMSABI -fsyntax-only -Wnon-virtual-dtor -Wdelete-non-virtual-dtor -verify %s
 class A {
 public:
@@ -423,3 +423,11 @@ void g(S s) {
   (s.~S); // expected-error{{reference to destructor must be called}}
 }
 }
+
+class Invalid {
+    ~Invalid();
+    UnknownType xx; // expected-error{{unknown type name}}
+};
+
+// The constructor definition should not have errors
+Invalid::~Invalid() {}

@@ -244,11 +244,21 @@ def LDARX : XForm_1<31,  84, (outs g8rc:$rD), (ins memrr:$ptr),
 // (EH=1 - see Power ISA 2.07 Book II 4.4.2)
 def LDARXL : XForm_1<31,  84, (outs g8rc:$rD), (ins memrr:$ptr),
                      "ldarx $rD, $ptr, 1", IIC_LdStLDARX, []>, isDOT;
+
+let hasExtraDefRegAllocReq = 1 in
+def LDAT : X_RD5_RS5_IM5<31, 614, (outs g8rc:$rD), (ins g8rc:$rA, u5imm:$FC),
+                         "ldat $rD, $rA, $FC", IIC_LdStLoad>, isPPC64,
+           Requires<[IsISA3_0]>;
 }
 
 let Defs = [CR0], mayStore = 1, hasSideEffects = 0 in
 def STDCX : XForm_1<31, 214, (outs), (ins g8rc:$rS, memrr:$dst),
                     "stdcx. $rS, $dst", IIC_LdStSTDCX, []>, isDOT;
+
+let mayStore = 1, hasSideEffects = 0 in
+def STDAT : X_RD5_RS5_IM5<31, 742, (outs), (ins g8rc:$rS, g8rc:$rA, u5imm:$FC),
+                          "stdat $rS, $rA, $FC", IIC_LdStStore>, isPPC64,
+            Requires<[IsISA3_0]>;
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [RM] in
@@ -476,8 +486,10 @@ defm ADD8  : XOForm_1r<31, 266, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                        "add", "$rT, $rA, $rB", IIC_IntSimple,
                        [(set i64:$rT, (add i64:$rA, i64:$rB))]>;
 // ADD8 has a special form: reg = ADD8(reg, sym@tls) for use by the
-// initial-exec thread-local storage model.
-def ADD8TLS  : XOForm_1<31, 266, 0, (outs g8rc:$rT), (ins g8rc:$rA, tlsreg:$rB),
+// initial-exec thread-local storage model.  We need to forbid r0 here -
+// while it works for add just fine, the linker can relax this to local-exec
+// addi, which won't work for r0.
+def ADD8TLS  : XOForm_1<31, 266, 0, (outs g8rc:$rT), (ins g8rc_nox0:$rA, tlsreg:$rB),
                         "add $rT, $rA, $rB", IIC_IntSimple,
                         [(set i64:$rT, (add i64:$rA, tglobaltlsaddr:$rB))]>;
                      
@@ -502,11 +514,11 @@ let Defs = [CARRY] in {
 def SUBFIC8: DForm_2< 8, (outs g8rc:$rD), (ins g8rc:$rA, s16imm64:$imm),
                      "subfic $rD, $rA, $imm", IIC_IntGeneral,
                      [(set i64:$rD, (subc imm64SExt16:$imm, i64:$rA))]>;
-defm SUBFC8 : XOForm_1r<31, 8, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
+}
+defm SUBFC8 : XOForm_1rc<31, 8, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                         "subfc", "$rT, $rA, $rB", IIC_IntGeneral,
                         [(set i64:$rT, (subc i64:$rB, i64:$rA))]>,
                         PPC970_DGroup_Cracked;
-}
 defm SUBF8 : XOForm_1r<31, 40, 0, (outs g8rc:$rT), (ins g8rc:$rA, g8rc:$rB),
                        "subf", "$rT, $rA, $rB", IIC_IntGeneral,
                        [(set i64:$rT, (sub i64:$rB, i64:$rA))]>;
@@ -564,6 +576,14 @@ let isCompare = 1, hasSideEffects = 0 in {
   def CMPLDI : DForm_6_ext<10, (outs crrc:$dst), (ins g8rc:$src1, u16imm64:$src2),
                            "cmpldi $dst, $src1, $src2",
                            IIC_IntCompare>, isPPC64;
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in
+  def CMPRB8 : X_BF3_L1_RS5_RS5<31, 192, (outs crbitrc:$BF),
+                                (ins u1imm:$L, g8rc:$rA, g8rc:$rB),
+                                "cmprb $BF, $L, $rA, $rB", IIC_IntCompare, []>,
+               Requires<[IsISA3_0]>;
+  def CMPEQB : X_BF3_RS5_RS5<31, 224, (outs crbitrc:$BF),
+                             (ins g8rc:$rA, g8rc:$rB), "cmpeqb $BF, $rA, $rB",
+                             IIC_IntCompare, []>, Requires<[IsISA3_0]>;
 }
 
 let hasSideEffects = 0 in {
@@ -580,6 +600,9 @@ defm SRAD : XForm_6rc<31, 794, (outs g8rc:$rA), (ins g8rc:$rS, gprc:$rB),
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 defm CNTLZW8 : XForm_11r<31,  26, (outs g8rc:$rA), (ins g8rc:$rS),
                         "cntlzw", "$rA, $rS", IIC_IntGeneral, []>;
+defm CNTTZW8 : XForm_11r<31, 538, (outs g8rc:$rA), (ins g8rc:$rS),
+                        "cnttzw", "$rA, $rS", IIC_IntGeneral, []>,
+               Requires<[IsISA3_0]>;
 
 defm EXTSB8 : XForm_11r<31, 954, (outs g8rc:$rA), (ins g8rc:$rS),
                         "extsb", "$rA, $rS", IIC_IntSimple,
@@ -613,9 +636,12 @@ defm EXTSW_32_64 : XForm_11r<31, 986, (outs g8rc:$rA), (ins gprc:$rS),
 defm SRADI  : XSForm_1rc<31, 413, (outs g8rc:$rA), (ins g8rc:$rS, u6imm:$SH),
                          "sradi", "$rA, $rS, $SH", IIC_IntRotateDI,
                          [(set i64:$rA, (sra i64:$rS, (i32 imm:$SH)))]>, isPPC64;
-defm CNTLZD : XForm_11r<31, 58, (outs g8rc:$rA), (ins g8rc:$rS),
+defm CNTLZD : XForm_11r<31,  58, (outs g8rc:$rA), (ins g8rc:$rS),
                         "cntlzd", "$rA, $rS", IIC_IntGeneral,
                         [(set i64:$rA, (ctlz i64:$rS))]>;
+defm CNTTZD : XForm_11r<31, 570, (outs g8rc:$rA), (ins g8rc:$rS),
+                        "cnttzd", "$rA, $rS", IIC_IntGeneral,
+                        [(set i64:$rA, (cttz i64:$rS))]>, Requires<[IsISA3_0]>;
 def POPCNTD : XForm_11<31, 506, (outs g8rc:$rA), (ins g8rc:$rS),
                        "popcntd $rA, $rS", IIC_IntGeneral,
                        [(set i64:$rA, (ctpop i64:$rS))]>;
@@ -905,6 +931,10 @@ def LDUX : XForm_1<31, 53, (outs g8rc:$rD, ptr_rc_nor0:$ea_result),
                    "ldux $rD, $addr", IIC_LdStLDUX,
                    []>, RegConstraint<"$addr.ptrreg = $ea_result">,
                    NoEncode<"$ea_result">, isPPC64;
+
+def LDMX : XForm_1<31, 309, (outs g8rc:$rD), (ins memrr:$src),
+                   "ldmx $rD, $src", IIC_LdStLD, []>, isPPC64,
+           Requires<[IsISA3_0]>;
 }
 }
 
@@ -1246,3 +1276,24 @@ def : Pat<(atomic_load_64 xaddr:$src),  (LDX memrr:$src)>;
 
 def : Pat<(atomic_store_64 ixaddr:$ptr, i64:$val), (STD  g8rc:$val, memrix:$ptr)>;
 def : Pat<(atomic_store_64 xaddr:$ptr,  i64:$val), (STDX g8rc:$val, memrr:$ptr)>;
+
+let Predicates = [IsISA3_0] in {
+
+class X_L1_RA5_RB5<bits<6> opcode, bits<10> xo, string opc, RegisterOperand ty,
+                   InstrItinClass itin, list<dag> pattern>
+  : X_L1_RS5_RS5<opcode, xo, (outs), (ins ty:$rA, ty:$rB, u1imm:$L),
+                 !strconcat(opc, " $rA, $rB, $L"), itin, pattern>;
+
+let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+def CP_COPY8   : X_L1_RA5_RB5<31, 774, "copy"  , g8rc, IIC_LdStCOPY, []>;
+def CP_PASTE8  : X_L1_RA5_RB5<31, 902, "paste" , g8rc, IIC_LdStPASTE, []>;
+def CP_PASTE8o : X_L1_RA5_RB5<31, 902, "paste.", g8rc, IIC_LdStPASTE, []>,isDOT;
+}
+
+// SLB Invalidate Entry Global
+def SLBIEG : XForm_26<31, 466, (outs), (ins gprc:$RS, gprc:$RB),
+                      "slbieg $RS, $RB", IIC_SprSLBIEG, []>;
+// SLB Synchronize
+def SLBSYNC : XForm_0<31, 338, (outs), (ins), "slbsync", IIC_SprSLBSYNC, []>;
+
+} // IsISA3_0

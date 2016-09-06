@@ -30,9 +30,10 @@ void NVPTXInstrInfo::anchor() {}
 
 NVPTXInstrInfo::NVPTXInstrInfo() : NVPTXGenInstrInfo(), RegInfo() {}
 
-void NVPTXInstrInfo::copyPhysReg(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, DebugLoc DL,
-    unsigned DestReg, unsigned SrcReg, bool KillSrc) const {
+void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator I,
+                                 const DebugLoc &DL, unsigned DestReg,
+                                 unsigned SrcReg, bool KillSrc) const {
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *DestRC = MRI.getRegClass(DestReg);
   const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
@@ -111,7 +112,7 @@ bool NVPTXInstrInfo::isStoreInstr(const MachineInstr &MI,
 
 bool NVPTXInstrInfo::CanTailMerge(const MachineInstr *MI) const {
   unsigned addrspace = 0;
-  if (MI->getOpcode() == NVPTX::INT_CUDA_SYNCTHREADS)
+  if (MI->getOpcode() == NVPTX::INT_BARRIER0)
     return false;
   if (isLoadInstr(*MI, addrspace))
     if (addrspace == NVPTX::PTXLdStInstCode::SHARED)
@@ -145,26 +146,28 @@ bool NVPTXInstrInfo::CanTailMerge(const MachineInstr *MI) const {
 /// Note that RemoveBranch and InsertBranch must be implemented to support
 /// cases where this method returns success.
 ///
-bool NVPTXInstrInfo::AnalyzeBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *&TBB, MachineBasicBlock *&FBB,
-    SmallVectorImpl<MachineOperand> &Cond, bool AllowModify) const {
+bool NVPTXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
+                                   MachineBasicBlock *&TBB,
+                                   MachineBasicBlock *&FBB,
+                                   SmallVectorImpl<MachineOperand> &Cond,
+                                   bool AllowModify) const {
   // If the block has no terminators, it just falls into the block after it.
   MachineBasicBlock::iterator I = MBB.end();
-  if (I == MBB.begin() || !isUnpredicatedTerminator(--I))
+  if (I == MBB.begin() || !isUnpredicatedTerminator(*--I))
     return false;
 
   // Get the last instruction in the block.
-  MachineInstr *LastInst = I;
+  MachineInstr &LastInst = *I;
 
   // If there is only one terminator instruction, process it.
-  if (I == MBB.begin() || !isUnpredicatedTerminator(--I)) {
-    if (LastInst->getOpcode() == NVPTX::GOTO) {
-      TBB = LastInst->getOperand(0).getMBB();
+  if (I == MBB.begin() || !isUnpredicatedTerminator(*--I)) {
+    if (LastInst.getOpcode() == NVPTX::GOTO) {
+      TBB = LastInst.getOperand(0).getMBB();
       return false;
-    } else if (LastInst->getOpcode() == NVPTX::CBranch) {
+    } else if (LastInst.getOpcode() == NVPTX::CBranch) {
       // Block ends with fall-through condbranch.
-      TBB = LastInst->getOperand(1).getMBB();
-      Cond.push_back(LastInst->getOperand(0));
+      TBB = LastInst.getOperand(1).getMBB();
+      Cond.push_back(LastInst.getOperand(0));
       return false;
     }
     // Otherwise, don't know what this is.
@@ -172,26 +175,26 @@ bool NVPTXInstrInfo::AnalyzeBranch(
   }
 
   // Get the instruction before it if it's a terminator.
-  MachineInstr *SecondLastInst = I;
+  MachineInstr &SecondLastInst = *I;
 
   // If there are three terminators, we don't know what sort of block this is.
-  if (SecondLastInst && I != MBB.begin() && isUnpredicatedTerminator(--I))
+  if (I != MBB.begin() && isUnpredicatedTerminator(*--I))
     return true;
 
   // If the block ends with NVPTX::GOTO and NVPTX:CBranch, handle it.
-  if (SecondLastInst->getOpcode() == NVPTX::CBranch &&
-      LastInst->getOpcode() == NVPTX::GOTO) {
-    TBB = SecondLastInst->getOperand(1).getMBB();
-    Cond.push_back(SecondLastInst->getOperand(0));
-    FBB = LastInst->getOperand(0).getMBB();
+  if (SecondLastInst.getOpcode() == NVPTX::CBranch &&
+      LastInst.getOpcode() == NVPTX::GOTO) {
+    TBB = SecondLastInst.getOperand(1).getMBB();
+    Cond.push_back(SecondLastInst.getOperand(0));
+    FBB = LastInst.getOperand(0).getMBB();
     return false;
   }
 
   // If the block ends with two NVPTX:GOTOs, handle it.  The second one is not
   // executed, so remove it.
-  if (SecondLastInst->getOpcode() == NVPTX::GOTO &&
-      LastInst->getOpcode() == NVPTX::GOTO) {
-    TBB = SecondLastInst->getOperand(0).getMBB();
+  if (SecondLastInst.getOpcode() == NVPTX::GOTO &&
+      LastInst.getOpcode() == NVPTX::GOTO) {
+    TBB = SecondLastInst.getOperand(0).getMBB();
     I = LastInst;
     if (AllowModify)
       I->eraseFromParent();
@@ -226,9 +229,11 @@ unsigned NVPTXInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
   return 2;
 }
 
-unsigned NVPTXInstrInfo::InsertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, DebugLoc DL) const {
+unsigned NVPTXInstrInfo::InsertBranch(MachineBasicBlock &MBB,
+                                      MachineBasicBlock *TBB,
+                                      MachineBasicBlock *FBB,
+                                      ArrayRef<MachineOperand> Cond,
+                                      const DebugLoc &DL) const {
   // Shouldn't be a fall through.
   assert(TBB && "InsertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 1 || Cond.size() == 0) &&

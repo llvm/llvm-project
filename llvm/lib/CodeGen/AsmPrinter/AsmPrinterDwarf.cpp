@@ -178,8 +178,7 @@ void AsmPrinter::emitDwarfStringOffset(DwarfStringPoolEntryRef S) const {
 /// EmitDwarfRegOp - Emit dwarf register operation.
 void AsmPrinter::EmitDwarfRegOp(ByteStreamer &Streamer,
                                 const MachineLocation &MLoc) const {
-  DebugLocDwarfExpression Expr(*MF->getSubtarget().getRegisterInfo(),
-                               getDwarfDebug()->getDwarfVersion(), Streamer);
+  DebugLocDwarfExpression Expr(getDwarfDebug()->getDwarfVersion(), Streamer);
   const MCRegisterInfo *MRI = MMI->getContext().getRegisterInfo();
   int Reg = MRI->getDwarfRegNum(MLoc.getReg(), false);
   if (Reg < 0) {
@@ -193,7 +192,8 @@ void AsmPrinter::EmitDwarfRegOp(ByteStreamer &Streamer,
                          "nop (could not find a dwarf register number)");
 
     // Attempt to find a valid super- or sub-register.
-    if (!Expr.AddMachineRegPiece(MLoc.getReg()))
+    if (!Expr.AddMachineRegPiece(*MF->getSubtarget().getRegisterInfo(),
+                                 MLoc.getReg()))
       Expr.EmitOp(dwarf::DW_OP_nop,
                   "nop (could not find a dwarf register number)");
     return;

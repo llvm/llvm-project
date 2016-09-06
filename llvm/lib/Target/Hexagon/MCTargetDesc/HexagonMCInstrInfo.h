@@ -75,7 +75,7 @@ MCInst createBundle();
 // Return the extender for instruction at Index or nullptr if none
 MCInst const *extenderForIndex(MCInst const &MCB, size_t Index);
 void extendIfNeeded(MCContext &Context, MCInstrInfo const &MCII, MCInst &MCB,
-                    MCInst const &MCI, bool MustExtend);
+                    MCInst const &MCI);
 
 // Create a duplex instruction given the two subinsts
 MCInst *deriveDuplex(MCContext &Context, unsigned iClass, MCInst const &inst0,
@@ -107,6 +107,9 @@ unsigned getDuplexCandidateGroup(MCInst const &MI);
 // Return a list of all possible instruction duplex combinations
 SmallVector<DuplexCandidate, 8> getDuplexPossibilties(MCInstrInfo const &MCII,
                                                       MCInst const &MCB);
+unsigned getDuplexRegisterNumbering(unsigned Reg);
+
+MCExpr const &getExpr(MCExpr const &Expr);
 
 // Return the index of the extendable operand
 unsigned short getExtendableOp(MCInstrInfo const &MCII, MCInst const &MCI);
@@ -260,7 +263,10 @@ bool isSoloAX(MCInstrInfo const &MCII, MCInst const &MCI);
 
 /// Return whether the insn can be packaged only with an A-type insn in slot #1.
 bool isSoloAin1(MCInstrInfo const &MCII, MCInst const &MCI);
+bool isSubInstruction(MCInst const &MCI);
 bool isVector(MCInstrInfo const &MCII, MCInst const &MCI);
+bool mustExtend(MCExpr const &Expr);
+bool mustNotExtend(MCExpr const &Expr);
 
 // Pad the bundle with nops to satisfy endloop requirements
 void padEndloop(MCContext &Context, MCInst &MCI);
@@ -270,16 +276,22 @@ bool prefersSlot3(MCInstrInfo const &MCII, MCInst const &MCI);
 // Replace the instructions inside MCB, represented by Candidate
 void replaceDuplex(MCContext &Context, MCInst &MCB, DuplexCandidate Candidate);
 
+bool s23_2_reloc(MCExpr const &Expr);
 // Marks a bundle as endloop0
 void setInnerLoop(MCInst &MCI);
 void setMemReorderDisabled(MCInst &MCI);
 void setMemStoreReorderEnabled(MCInst &MCI);
+void setMustExtend(MCExpr const &Expr, bool Val = true);
+void setMustNotExtend(MCExpr const &Expr, bool Val = true);
+void setS23_2_reloc(MCExpr const &Expr, bool Val = true);
 
 // Marks a bundle as endloop1
 void setOuterLoop(MCInst &MCI);
 
 // Would duplexing this instruction create a requirement to extend
 bool subInstWouldBeExtended(MCInst const &potentialDuplex);
+unsigned SubregisterBit(unsigned Consumer, unsigned Producer,
+                        unsigned Producer2);
 
 // Attempt to find and replace compound pairs
 void tryCompound(MCInstrInfo const &MCII, MCContext &Context, MCInst &MCI);

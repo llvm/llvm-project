@@ -24,6 +24,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include <utility>
 
 namespace clang {
 class ProgramPoint;
@@ -68,6 +69,9 @@ public:
   /// name regardless the number of arguments.
   CallDescription(StringRef FuncName, unsigned RequiredArgs = NoArgRequirement)
       : II(nullptr), FuncName(FuncName), RequiredArgs(RequiredArgs) {}
+
+  /// \brief Get the name of the function that this object matches.
+  StringRef getFunctionName() const { return FuncName; }
 };
 
 template<typename T = CallEvent>
@@ -162,10 +166,10 @@ protected:
   friend class CallEventManager;
 
   CallEvent(const Expr *E, ProgramStateRef state, const LocationContext *lctx)
-    : State(state), LCtx(lctx), Origin(E), RefCount(0) {}
+      : State(std::move(state)), LCtx(lctx), Origin(E), RefCount(0) {}
 
   CallEvent(const Decl *D, ProgramStateRef state, const LocationContext *lctx)
-    : State(state), LCtx(lctx), Origin(D), RefCount(0) {}
+      : State(std::move(state)), LCtx(lctx), Origin(D), RefCount(0) {}
 
   // DO NOT MAKE PUBLIC
   CallEvent(const CallEvent &Original)

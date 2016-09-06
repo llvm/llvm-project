@@ -25,13 +25,25 @@ As currently implemented, all schemes rely on link-time optimization (LTO);
 so it is required to specify ``-flto``, and the linker used must support LTO,
 for example via the `gold plugin`_.
 
-To allow the checks to be implemented efficiently, the program must be
-structured such that certain object files are compiled with CFI
+To allow the checks to be implemented efficiently, the program must
+be structured such that certain object files are compiled with CFI
 enabled, and are statically linked into the program. This may preclude
-the use of shared libraries in some cases. Experimental support for
-:ref:`cross-DSO control flow integrity <cfi-cross-dso>` exists that
-does not have these requirements. This cross-DSO support has unstable
-ABI at this time.
+the use of shared libraries in some cases.
+
+The compiler will only produce CFI checks for a class if it can infer hidden
+LTO visibility for that class. LTO visibility is a property of a class that
+is inferred from flags and attributes. For more details, see the documentation
+for :doc:`LTO visibility <LTOVisibility>`.
+
+The ``-fsanitize=cfi-{vcall,nvcall,derived-cast,unrelated-cast}`` flags
+require that a ``-fvisibility=`` flag also be specified. This is because the
+default visibility setting is ``-fvisibility=default``, which would disable
+CFI checks for classes without visibility attributes. Most users will want
+to specify ``-fvisibility=hidden``, which enables CFI checks for such classes.
+
+Experimental support for :ref:`cross-DSO control flow integrity
+<cfi-cross-dso>` exists that does not require classes to have hidden LTO
+visibility. This cross-DSO support has unstable ABI at this time.
 
 .. _gold plugin: http://llvm.org/docs/GoldPlugin.html
 
@@ -129,7 +141,8 @@ type ``void*`` or another unrelated type (which can be checked with
 The difference between these two types of casts is that the first is defined
 by the C++ standard to produce an undefined value, while the second is not
 in itself undefined behavior (it is well defined to cast the pointer back
-to its original type).
+to its original type) unless the object is uninitialized and the cast is a
+``static_cast`` (see C++14 [basic.life]p5).
 
 If a program as a matter of policy forbids the second type of cast, that
 restriction can normally be enforced. However it may in some cases be necessary
@@ -232,11 +245,6 @@ A :doc:`SanitizerSpecialCaseList` can be used to relax CFI checks for certain
 source files, functions and types using the ``src``, ``fun`` and ``type``
 entity types.
 
-In addition, if a type has a ``uuid`` attribute and the blacklist contains
-the type entry ``attr:uuid``, CFI checks are suppressed for that type. This
-allows all COM types to be easily blacklisted, which is useful as COM types
-are typically defined outside of the linked program.
-
 .. code-block:: bash
 
     # Suppress checking for code in a file.
@@ -246,8 +254,6 @@ are typically defined outside of the linked program.
     fun:*MyFooBar*
     # Ignore all types in the standard library.
     type:std::*
-    # Ignore all types with a uuid attribute.
-    type:attr:uuid
 
 .. _cfi-cross-dso:
 
@@ -258,6 +264,11 @@ Use **-f[no-]sanitize-cfi-cross-dso** to enable the cross-DSO control
 flow integrity mode, which allows all CFI schemes listed above to
 apply across DSO boundaries. As in the regular CFI, each DSO must be
 built with ``-flto``.
+
+Normally, CFI checks will only be performed for classes that have hidden LTO
+visibility. With this flag enabled, the compiler will emit cross-DSO CFI
+checks for all classes, except for those which appear in the CFI blacklist
+or which use a ``no_sanitize`` attribute.
 
 Design
 ======

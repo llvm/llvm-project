@@ -19,6 +19,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataTypes.h"
@@ -61,8 +62,10 @@ public:
   bool isUnsigned : 1;
   bool isLong : 1;          // This is *not* set for long long.
   bool isLongLong : 1;
+  bool isHalf : 1;          // 1.0h
   bool isFloat : 1;         // 1.0f
   bool isImaginary : 1;     // 1.0i
+  bool isFloat128 : 1;      // 1.0q
   uint8_t MicrosoftInteger; // Microsoft suffix extension i8, i16, i32, or i64.
 
   bool isIntegerLiteral() const {
@@ -104,8 +107,15 @@ public:
 private:
 
   void ParseNumberStartingWithZero(SourceLocation TokLoc);
+  void ParseDecimalOrOctalCommon(SourceLocation TokLoc);
 
   static bool isDigitSeparator(char C) { return C == '\''; }
+
+  /// \brief Determine whether the sequence of characters [Start, End) contains
+  /// any real digits (not digit separators).
+  bool containsDigits(const char *Start, const char *End) {
+    return Start != End && (Start + 1 != End || !isDigitSeparator(Start[0]));
+  }
 
   enum CheckSeparatorKind { CSK_BeforeDigits, CSK_AfterDigits };
 

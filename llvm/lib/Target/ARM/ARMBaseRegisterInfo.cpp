@@ -49,12 +49,9 @@ ARMBaseRegisterInfo::ARMBaseRegisterInfo()
     : ARMGenRegisterInfo(ARM::LR, 0, 0, ARM::PC), BasePtr(ARM::R6) {}
 
 static unsigned getFramePointerReg(const ARMSubtarget &STI) {
-  if (STI.isTargetMachO()) {
-    if (STI.isTargetDarwin() || STI.isThumb1Only())
-      return ARM::R7;
-    else
-      return ARM::R11;
-  } else if (STI.isTargetWindows())
+  if (STI.isTargetMachO())
+    return ARM::R7;
+  else if (STI.isTargetWindows())
     return ARM::R11;
   else // ARM EABI
     return STI.isThumb() ? ARM::R7 : ARM::R11;
@@ -63,8 +60,11 @@ static unsigned getFramePointerReg(const ARMSubtarget &STI) {
 const MCPhysReg*
 ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const ARMSubtarget &STI = MF->getSubtarget<ARMSubtarget>();
+  bool UseSplitPush = STI.splitFramePushPop();
   const MCPhysReg *RegList =
-      STI.isTargetDarwin() ? CSR_iOS_SaveList : CSR_AAPCS_SaveList;
+      STI.isTargetDarwin()
+          ? CSR_iOS_SaveList
+          : (UseSplitPush ? CSR_AAPCS_SplitPush_SaveList : CSR_AAPCS_SaveList);
 
   const Function *F = MF->getFunction();
   if (F->getCallingConv() == CallingConv::GHC) {
@@ -75,7 +75,7 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (STI.isMClass()) {
       // M-class CPUs have hardware which saves the registers needed to allow a
       // function conforming to the AAPCS to function as a handler.
-      return CSR_AAPCS_SaveList;
+      return UseSplitPush ? CSR_AAPCS_SplitPush_SaveList : CSR_AAPCS_SaveList;
     } else if (F->getFnAttribute("interrupt").getValueAsString() == "FIQ") {
       // Fast interrupt mode gives the handler a private copy of R8-R14, so less
       // need to be saved to restore user-mode state.
@@ -87,7 +87,7 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     }
   }
 
-  if (STI.isTargetDarwin() &&
+  if (STI.isTargetDarwin() && STI.getTargetLowering()->supportSwiftError() &&
       F->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return CSR_iOS_SwiftError_SaveList;
 
@@ -115,7 +115,7 @@ ARMBaseRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     // This is academic becase all GHC calls are (supposed to be) tail calls
     return CSR_NoRegs_RegMask;
 
-  if (STI.isTargetDarwin() &&
+  if (STI.isTargetDarwin() && STI.getTargetLowering()->supportSwiftError() &&
       MF.getFunction()->getAttributes().hasAttrSomewhere(Attribute::SwiftError))
     return CSR_iOS_SwiftError_RegMask;
 
@@ -289,8 +289,7 @@ ARMBaseRegisterInfo::getRegAllocationHints(unsigned VirtReg,
   }
 
   // First prefer the paired physreg.
-  if (PairedPhys &&
-      std::find(Order.begin(), Order.end(), PairedPhys) != Order.end())
+  if (PairedPhys && is_contained(Order, PairedPhys))
     Hints.push_back(PairedPhys);
 
   // Then prefer even or odd registers.
@@ -332,7 +331,7 @@ ARMBaseRegisterInfo::updateRegAllocHint(unsigned Reg, unsigned NewReg,
 }
 
 bool ARMBaseRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
 
@@ -347,14 +346,14 @@ bool ARMBaseRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // It's going to be better to use the SP or Base Pointer instead. When there
   // are variable sized objects, we can't reference off of the SP, so we
   // reserve a Base Pointer.
-  if (AFI->isThumbFunction() && MFI->hasVarSizedObjects()) {
+  if (AFI->isThumbFunction() && MFI.hasVarSizedObjects()) {
     // Conservatively estimate whether the negative offset from the frame
     // pointer will be sufficient to reach. If a function has a smallish
     // frame, it's less likely to have lots of spills and callee saved
     // space, so it's all more likely to be within range of the frame pointer.
     // If it's wrong, the scavenger will still enable access to work, it just
     // won't be optimal.
-    if (AFI->isThumb2Function() && MFI->getLocalFrameSize() < 128)
+    if (AFI->isThumb2Function() && MFI.getLocalFrameSize() < 128)
       return false;
     return true;
   }
@@ -389,10 +388,10 @@ bool ARMBaseRegisterInfo::canRealignStack(const MachineFunction &MF) const {
 
 bool ARMBaseRegisterInfo::
 cannotEliminateFrame(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
-  if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI->adjustsStack())
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI.adjustsStack())
     return true;
-  return MFI->hasVarSizedObjects() || MFI->isFrameAddressTaken()
+  return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken()
     || needsStackRealignment(MF);
 }
 
@@ -408,13 +407,10 @@ ARMBaseRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 
 /// emitLoadConstPool - Emits a load from constpool to materialize the
 /// specified immediate.
-void ARMBaseRegisterInfo::
-emitLoadConstPool(MachineBasicBlock &MBB,
-                  MachineBasicBlock::iterator &MBBI,
-                  DebugLoc dl,
-                  unsigned DestReg, unsigned SubIdx, int Val,
-                  ARMCC::CondCodes Pred,
-                  unsigned PredReg, unsigned MIFlags) const {
+void ARMBaseRegisterInfo::emitLoadConstPool(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
+    const DebugLoc &dl, unsigned DestReg, unsigned SubIdx, int Val,
+    ARMCC::CondCodes Pred, unsigned PredReg, unsigned MIFlags) const {
   MachineFunction &MF = *MBB.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   MachineConstantPool *ConstantPool = MF.getConstantPool();
@@ -539,7 +535,7 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
   // so it'll be negative.
   MachineFunction &MF = *MI->getParent()->getParent();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
 
   // Estimate an offset from the frame pointer.
@@ -554,7 +550,7 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
   // The incoming offset is relating to the SP at the start of the function,
   // but when we access the local it'll be relative to the SP after local
   // allocation, so adjust our SP-relative offset by that allocation size.
-  Offset += MFI->getLocalFrameSize();
+  Offset += MFI.getLocalFrameSize();
   // Assume that we'll have at least some spill slots allocated.
   // FIXME: This is a total SWAG number. We should run some statistics
   //        and pick a real one.
@@ -566,7 +562,7 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
   // on whether there are any local variables that would trigger it.
   unsigned StackAlign = TFI->getStackAlignment();
   if (TFI->hasFP(MF) && 
-      !((MFI->getLocalFrameMaxAlign() > StackAlign) && canRealignStack(MF))) {
+      !((MFI.getLocalFrameMaxAlign() > StackAlign) && canRealignStack(MF))) {
     if (isFrameOffsetLegal(MI, getFrameRegister(MF), FPOffset))
       return false;
   }
@@ -575,7 +571,7 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
   //        to only disallow SP relative references in the live range of
   //        the VLA(s). In practice, it's unclear how much difference that
   //        would make, but it may be worth doing.
-  if (!MFI->hasVarSizedObjects() && isFrameOffsetLegal(MI, ARM::SP, Offset))
+  if (!MFI.hasVarSizedObjects() && isFrameOffsetLegal(MI, ARM::SP, Offset))
     return false;
 
   // The offset likely isn't legal, we want to allocate a virtual base register.
@@ -733,7 +729,7 @@ ARMBaseRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     assert(TFI->hasReservedCallFrame(MF) &&
            "Cannot use SP to access the emergency spill slot in "
            "functions without a reserved call frame");
-    assert(!MF.getFrameInfo()->hasVarSizedObjects() &&
+    assert(!MF.getFrameInfo().hasVarSizedObjects() &&
            "Cannot use SP to access the emergency spill slot in "
            "functions with variable sized frame objects");
   }

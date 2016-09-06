@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 // C++03 [namespace.udecl]p4:
 //   A using-declaration used as a member-declaration shall refer to a
@@ -206,8 +207,33 @@ namespace test4 {
     using Unrelated::foo; // expected-error {{not a base class}}
     using C::foo; // legal in C++03
     using Subclass::foo; // legal in C++03
+#if __cplusplus >= 201103L
+    // expected-error@-3 {{refers to its own class}}
+    // expected-error@-3 {{refers into 'Subclass::', which is not a base class}}
+#endif
 
-    int bar(); //expected-note {{target of using declaration}}
+    int bar();
+#if __cplusplus < 201103L
+    // expected-note@-2 {{target of using declaration}}
+#endif
     using C::bar; // expected-error {{refers to its own class}}
   };
+}
+
+namespace test5 {
+  struct B;
+  struct A {
+    A(const B&);
+    B &operator=(const B&);
+  };
+  struct B : A {
+#if __cplusplus >= 201103L
+    using A::A;
+#endif
+    using A::operator=;
+  };
+  void test(B b) {
+    B b2(b);
+    b2 = b;
+  }
 }

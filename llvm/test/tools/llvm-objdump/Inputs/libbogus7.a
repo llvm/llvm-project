@@ -1,0 +1,10 @@
+!<arch>
+#1/@123$        1469564779  124   0     100644  102       `
+#include <stdio.h>
+#include <stdlib.h>
+int
+main()
+{
+	printf("Hello World\n");
+	return EXIT_SUCCESS;
+}

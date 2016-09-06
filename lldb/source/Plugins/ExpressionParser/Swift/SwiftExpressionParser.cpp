@@ -137,7 +137,7 @@ SwiftExpressionParser::SwiftExpressionParser (ExecutionContextScope *exe_scope,
     
     if (target_sp)
     {
-        m_swift_ast_context = llvm::cast<SwiftASTContext>(target_sp->GetScratchTypeSystemForLanguage(nullptr, lldb::eLanguageTypeSwift));
+        m_swift_ast_context = llvm::cast_or_null<SwiftASTContext>(target_sp->GetScratchTypeSystemForLanguage(nullptr, lldb::eLanguageTypeSwift));
     }
 }
 
@@ -909,6 +909,16 @@ CountLocals (SymbolContext &sc,
                 else
                 {
                     var_type = valobj_sp->GetCompilerType();
+                }
+                
+                if (var_type.IsValid() && !SwiftASTContext::IsFullyRealized(var_type))
+                {
+                    lldb::ValueObjectSP dynamic_valobj_sp = valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
+                    
+                    if (!dynamic_valobj_sp || dynamic_valobj_sp->GetError().Fail())
+                    {
+                        continue;
+                    }
                 }
             }
             
@@ -1950,6 +1960,8 @@ SwiftExpressionParser::RewriteExpression(DiagnosticManager &diagnostic_manager)
     if (!m_swift_ast_context)
         return false;
     
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
+
     swift::SourceManager &source_manager = m_swift_ast_context->GetSourceManager();
                                                                               
     
@@ -1965,16 +1977,54 @@ SwiftExpressionParser::RewriteExpression(DiagnosticManager &diagnostic_manager)
     for (const Diagnostic *diag : diagnostic_manager.Diagnostics())
     {
         const SwiftDiagnostic *diagnostic = llvm::dyn_cast<SwiftDiagnostic>(diag);
-        if (diagnostic && diagnostic->HasFixIts())
+        if (!(diagnostic && diagnostic->HasFixIts()))
+            continue;
+            
+        const SwiftDiagnostic::FixItList &fixits = diagnostic->FixIts();
+        std::vector<swift::CharSourceRange> source_ranges;
+        for (const swift::DiagnosticInfo::FixIt &fixit : fixits)
         {
-            const SwiftDiagnostic::FixItList &fixits = diagnostic->FixIts();
-            for (const swift::DiagnosticInfo::FixIt &fixit : fixits)
+            const swift::CharSourceRange &range = fixit.getRange();
+            swift::SourceLoc start_loc = range.getStart();
+            if (!start_loc.isValid())
             {
-                const swift::CharSourceRange &range = fixit.getRange();
-                unsigned offset = source_manager.getLocOffsetInBuffer(range.getStart(),
-                                                                      diagnostic->GetBufferID());
-                rewrite_buf.ReplaceText(offset, range.getByteLength(), fixit.getText());
+                // getLocOffsetInBuffer will assert if you pass it an invalid location, so we have to check that first.
+                if (log)
+                    log->Printf("SwiftExpressionParser::RewriteExpression: ignoring fixit since "
+                                "it contains an invalid source location: %s.", 
+                                range.str().str().c_str());
+                return false;
             }
+            
+            // ReplaceText can't handle replacing the same source range more than once, so we have to check that
+            // before we proceed:
+            if (std::find(source_ranges.begin(), source_ranges.end(), range) != source_ranges.end())
+            {
+                if (log)
+                    log->Printf("SwiftExpressionParser::RewriteExpression: ignoring fix-it since "
+                                "source range appears twice: %s.\n", 
+                                range.str().str().c_str());
+                return false;
+            }
+            else
+                source_ranges.push_back(range);
+            
+            // ReplaceText will either assert or crash if the start_loc isn't inside the buffer it is said to
+            // reside in.  That shouldn't happen, but it doesn't hurt to check before we call ReplaceText.
+
+            auto *Buffer = source_manager.getLLVMSourceMgr().getMemoryBuffer(diagnostic->GetBufferID());
+            if (!(start_loc.getOpaquePointerValue() >= Buffer->getBuffer().begin() &&
+                  start_loc.getOpaquePointerValue() <= Buffer->getBuffer().end()))
+            {
+                if (log)
+                    log->Printf("SwiftExpressionParser::RewriteExpression: ignoring fixit since "
+                                "it contains a source location not in the specified buffer: %s.", 
+                                range.str().str().c_str());
+            }
+
+            unsigned offset = source_manager.getLocOffsetInBuffer(range.getStart(),
+                                                                  diagnostic->GetBufferID());
+            rewrite_buf.ReplaceText(offset, range.getByteLength(), fixit.getText());
         }
     }
     

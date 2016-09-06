@@ -16,13 +16,29 @@
 
 using namespace llvm;
 
-StringTableBuilder::StringTableBuilder(Kind K) : K(K) {}
+StringTableBuilder::StringTableBuilder(Kind K, unsigned Alignment)
+    : K(K), Alignment(Alignment) {
+  // Account for leading bytes in table so that offsets returned from add are
+  // correct.
+  switch (K) {
+  case RAW:
+    Size = 0;
+    break;
+  case MachO:
+  case ELF:
+    Size = 1;
+    break;
+  case WinCOFF:
+    Size = 4;
+    break;
+  }
+}
 
-typedef std::pair<StringRef, size_t> StringPair;
+typedef std::pair<CachedHash<StringRef>, size_t> StringPair;
 
 // Returns the character at Pos from end of a string.
 static int charTailAt(StringPair *P, size_t Pos) {
-  StringRef S = P->first;
+  StringRef S = P->first.Val;
   if (Pos >= S.size())
     return -1;
   return (unsigned char)S[S.size() - Pos - 1];
@@ -62,13 +78,32 @@ tailcall:
 }
 
 void StringTableBuilder::finalize() {
-  std::vector<std::pair<StringRef, size_t> *> Strings;
+  finalizeStringTable(/*Optimize=*/true);
+}
+
+void StringTableBuilder::finalizeInOrder() {
+  finalizeStringTable(/*Optimize=*/false);
+}
+
+void StringTableBuilder::finalizeStringTable(bool Optimize) {
+  typedef std::pair<CachedHash<StringRef>, size_t> StringOffsetPair;
+  std::vector<StringOffsetPair *> Strings;
   Strings.reserve(StringIndexMap.size());
-  for (std::pair<StringRef, size_t> &P : StringIndexMap)
+  for (StringOffsetPair &P : StringIndexMap)
     Strings.push_back(&P);
 
-  if (!Strings.empty())
-    multikey_qsort(&Strings[0], &Strings[0] + Strings.size(), 0);
+  if (!Strings.empty()) {
+    // If we're optimizing, sort by name. If not, sort by previously assigned
+    // offset.
+    if (Optimize) {
+      multikey_qsort(&Strings[0], &Strings[0] + Strings.size(), 0);
+    } else {
+      std::sort(Strings.begin(), Strings.end(),
+                [](const StringOffsetPair *LHS, const StringOffsetPair *RHS) {
+                  return LHS->second < RHS->second;
+                });
+    }
+  }
 
   switch (K) {
   case RAW:
@@ -85,17 +120,28 @@ void StringTableBuilder::finalize() {
   }
 
   StringRef Previous;
-  for (std::pair<StringRef, size_t> *P : Strings) {
-    StringRef S = P->first;
+  for (StringOffsetPair *P : Strings) {
+    StringRef S = P->first.Val;
     if (K == WinCOFF)
       assert(S.size() > COFF::NameSize && "Short string in COFF string table!");
 
-    if (Previous.endswith(S)) {
-      P->second = StringTable.size() - S.size() - (K != RAW);
-      continue;
+    if (Optimize && Previous.endswith(S)) {
+      size_t Pos = StringTable.size() - S.size() - (K != RAW);
+      if (!(Pos & (Alignment - 1))) {
+        P->second = Pos;
+        continue;
+      }
     }
 
-    P->second = StringTable.size();
+    if (Optimize) {
+      size_t Start = alignTo(StringTable.size(), Alignment);
+      P->second = Start;
+      StringTable.append(Start - StringTable.size(), '\0');
+    } else {
+      assert(P->second == StringTable.size() &&
+             "different strtab offset after finalization");
+    }
+
     StringTable += S;
     if (K != RAW)
       StringTable += '\x00';
@@ -137,8 +183,9 @@ size_t StringTableBuilder::getOffset(StringRef S) const {
 
 size_t StringTableBuilder::add(StringRef S) {
   assert(!isFinalized());
-  auto P = StringIndexMap.insert(std::make_pair(S, Size));
+  size_t Start = alignTo(Size, Alignment);
+  auto P = StringIndexMap.insert(std::make_pair(S, Start));
   if (P.second)
-    Size += S.size() + (K != RAW);
+    Size = Start + S.size() + (K != RAW);
   return P.first->second;
 }

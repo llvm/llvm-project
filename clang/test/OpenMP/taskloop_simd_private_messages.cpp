@@ -29,7 +29,11 @@ class S4 {
   S4(); // expected-note {{implicitly declared private here}}
 
 public:
-  S4(int v) : a(v) {}
+  S4(int v) : a(v) {
+#pragma omp taskloop simd private(a) private(this->a)
+    for (int k = 0; k < v; ++k)
+      ++this->a;
+  }
 };
 class S5 {
   int a;
@@ -37,6 +41,50 @@ class S5 {
 
 public:
   S5(int v) : a(v) {}
+  S5 &operator=(S5 &s) {
+#pragma omp taskloop simd private(a) private(this->a) private(s.a) // expected-error {{expected variable name or data member of current class}}
+    for (int k = 0; k < s.a; ++k)
+      ++s.a;
+    return *this;
+  }
+};
+
+template <typename T>
+class S6 {
+public:
+  T a;
+
+  S6() : a(0) {}
+  S6(T v) : a(v) {
+#pragma omp taskloop simd private(a) private(this->a)
+    for (int k = 0; k < v; ++k)
+      ++this->a;
+  }
+  S6 &operator=(S6 &s) {
+#pragma omp taskloop simd private(a) private(this->a) private(s.a) // expected-error {{expected variable name or data member of current class}}
+    for (int k = 0; k < s.a; ++k)
+      ++s.a;
+    return *this;
+  }
+};
+
+template <typename T>
+class S7 : public T {
+  T a;
+  S7() : a(0) {}
+
+public:
+  S7(T v) : a(v) {
+#pragma omp taskloop simd private(a) private(this->a) private(T::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+  }
+  S7 &operator=(S7 &s) {
+#pragma omp taskloop simd private(a) private(this->a) private(s.a) private(s.T::a) // expected-error 2 {{expected variable name or data member of current class}}
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+    return *this;
+  }
 };
 
 S3 h;
@@ -126,6 +174,8 @@ using A::x;
 int main(int argc, char **argv) {
   S4 e(4);
   S5 g(5);
+  S6<float> s6(0.0) , s6_0(1.0);
+  S7<S6<float> > s7(0.0) , s7_0(1.0);
   int i;
   int &j = i;
 #pragma omp taskloop simd private // expected-error {{expected '(' after 'private'}}
@@ -190,6 +240,8 @@ int main(int argc, char **argv) {
   for(int k = 0; k < argc; ++k)
     si = k + 1;
 
-  return 0;
+  s6 = s6_0; // expected-note {{in instantiation of member function 'S6<float>::operator=' requested here}}
+  s7 = s7_0; // expected-note {{in instantiation of member function 'S7<S6<float> >::operator=' requested here}}
+  return foomain(argc, argv); // expected-note {{in instantiation of function template specialization 'foomain<int, char>' requested here}}
 }
 

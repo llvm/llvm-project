@@ -28,6 +28,11 @@
 // RUN: %t6 2>&1 | FileCheck --check-prefix=NCFI %s
 // RUN: %t6 x 2>&1 | FileCheck --check-prefix=NCFI %s
 
+// RUN: %clangxx_cfi_dso_diag -DSHARED_LIB %s -fPIC -shared -o %t7-so.so
+// RUN: %clangxx_cfi_dso_diag %s -o %t7 %t7-so.so
+// RUN: %t7 2>&1 | FileCheck --check-prefix=CFI-DIAG-CALL %s
+// RUN: %t7 x 2>&1 | FileCheck --check-prefix=CFI-DIAG-CALL --check-prefix=CFI-DIAG-CAST %s
+
 // Tests that the CFI mechanism crashes the program when making a virtual call
 // to an object of the wrong class but with a compatible vtable, by casting a
 // pointer to such an object and attempting to make a call through it.
@@ -71,6 +76,8 @@ int main(int argc, char *argv[]) {
 
   if (argc > 1 && argv[1][0] == 'x') {
     // Test cast. BOOM.
+    // CFI-DIAG-CAST: runtime error: control flow integrity check for type 'A' failed during cast to unrelated type
+    // CFI-DIAG-CAST-NEXT: note: vtable is of type '{{(struct )?}}B'
     a = (A*)p;
   } else {
     // Invisible to CFI. Test virtual call later.
@@ -82,6 +89,8 @@ int main(int argc, char *argv[]) {
   // NCFI: =1=
   fprintf(stderr, "=1=\n");
 
+  // CFI-DIAG-CALL: runtime error: control flow integrity check for type 'A' failed during virtual call
+  // CFI-DIAG-CALL-NEXT: note: vtable is of type '{{(struct )?}}B'
   a->f(); // UB here
 
   // CFI-NOT: =2=

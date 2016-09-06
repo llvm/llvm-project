@@ -15,7 +15,7 @@
 #define LLVM_LIB_ASMPARSER_LLPARSER_H
 
 #include "LLLexer.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Instructions.h"
@@ -148,6 +148,9 @@ namespace llvm {
 
     bool parseStandaloneConstantValue(Constant *&C, const SlotMapping *Slots);
 
+    bool parseTypeAtBeginning(Type *&Ty, unsigned &Read,
+                              const SlotMapping *Slots);
+
     LLVMContext &getContext() { return Context; }
 
   private:
@@ -223,18 +226,14 @@ namespace llvm {
 
     bool ParseTLSModel(GlobalVariable::ThreadLocalMode &TLM);
     bool ParseOptionalThreadLocal(GlobalVariable::ThreadLocalMode &TLM);
-    bool parseOptionalUnnamedAddr(bool &UnnamedAddr) {
-      return ParseOptionalToken(lltok::kw_unnamed_addr, UnnamedAddr);
-    }
+    bool ParseOptionalUnnamedAddr(GlobalVariable::UnnamedAddr &UnnamedAddr);
     bool ParseOptionalAddrSpace(unsigned &AddrSpace);
     bool ParseOptionalParamAttrs(AttrBuilder &B);
     bool ParseOptionalReturnAttrs(AttrBuilder &B);
-    bool ParseOptionalLinkage(unsigned &Linkage, bool &HasLinkage);
-    bool ParseOptionalLinkage(unsigned &Linkage) {
-      bool HasLinkage; return ParseOptionalLinkage(Linkage, HasLinkage);
-    }
-    bool ParseOptionalVisibility(unsigned &Visibility);
-    bool ParseOptionalDLLStorageClass(unsigned &DLLStorageClass);
+    bool ParseOptionalLinkage(unsigned &Linkage, bool &HasLinkage,
+                              unsigned &Visibility, unsigned &DLLStorageClass);
+    void ParseOptionalVisibility(unsigned &Visibility);
+    void ParseOptionalDLLStorageClass(unsigned &DLLStorageClass);
     bool ParseOptionalCallingConv(unsigned &CC);
     bool ParseOptionalAlignment(unsigned &Alignment);
     bool ParseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
@@ -244,7 +243,10 @@ namespace llvm {
     bool ParseOptionalStackAlignment(unsigned &Alignment);
     bool ParseOptionalCommaAlign(unsigned &Alignment, bool &AteExtraComma);
     bool ParseOptionalCommaInAlloca(bool &IsInAlloca);
-    bool ParseIndexList(SmallVectorImpl<unsigned> &Indices,bool &AteExtraComma);
+    bool parseAllocSizeArguments(unsigned &ElemSizeArg,
+                                 Optional<unsigned> &HowManyArg);
+    bool ParseIndexList(SmallVectorImpl<unsigned> &Indices,
+                        bool &AteExtraComma);
     bool ParseIndexList(SmallVectorImpl<unsigned> &Indices) {
       bool AteExtraComma;
       if (ParseIndexList(Indices, AteExtraComma)) return true;
@@ -258,6 +260,7 @@ namespace llvm {
     bool ValidateEndOfModule();
     bool ParseTargetDefinition();
     bool ParseModuleAsm();
+    bool ParseSourceFileName();
     bool ParseDepLibs();        // FIXME: Remove in 4.0.
     bool ParseUnnamedType();
     bool ParseNamedType();
@@ -270,10 +273,13 @@ namespace llvm {
     bool ParseGlobal(const std::string &Name, LocTy Loc, unsigned Linkage,
                      bool HasLinkage, unsigned Visibility,
                      unsigned DLLStorageClass,
-                     GlobalVariable::ThreadLocalMode TLM, bool UnnamedAddr);
-    bool ParseAlias(const std::string &Name, LocTy Loc, unsigned Linkage,
-                    unsigned Visibility, unsigned DLLStorageClass,
-                    GlobalVariable::ThreadLocalMode TLM, bool UnnamedAddr);
+                     GlobalVariable::ThreadLocalMode TLM,
+                     GlobalVariable::UnnamedAddr UnnamedAddr);
+    bool parseIndirectSymbol(const std::string &Name, LocTy Loc,
+                             unsigned Linkage, unsigned Visibility,
+                             unsigned DLLStorageClass,
+                             GlobalVariable::ThreadLocalMode TLM,
+                             GlobalVariable::UnnamedAddr UnnamedAddr);
     bool parseComdat();
     bool ParseStandaloneMetadata();
     bool ParseNamedMetadata();
@@ -417,6 +423,7 @@ namespace llvm {
     bool ParseMDNodeVector(SmallVectorImpl<Metadata *> &MDs);
     bool ParseMetadataAttachment(unsigned &Kind, MDNode *&MD);
     bool ParseInstructionMetadata(Instruction &Inst);
+    bool ParseGlobalObjectMetadataAttachment(GlobalObject &GO);
     bool ParseOptionalFunctionMetadata(Function &F);
 
     template <class FieldTy>

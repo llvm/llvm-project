@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OrcLazyJIT.h"
-#include "llvm/ExecutionEngine/Orc/OrcArchitectureSupport.h"
+#include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include <cstdio>
@@ -44,31 +44,6 @@ namespace {
   cl::opt<bool> OrcInlineStubs("orc-lazy-inline-stubs",
                                cl::desc("Try to inline stubs"),
                                cl::init(true), cl::Hidden);
-}
-
-std::unique_ptr<OrcLazyJIT::CompileCallbackMgr>
-OrcLazyJIT::createCompileCallbackMgr(Triple T) {
-  switch (T.getArch()) {
-    default: return nullptr;
-
-    case Triple::x86_64: {
-      typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64> CCMgrT;
-      return llvm::make_unique<CCMgrT>(0);
-    }
-  }
-}
-
-OrcLazyJIT::IndirectStubsManagerBuilder
-OrcLazyJIT::createIndirectStubsMgrBuilder(Triple T) {
-  switch (T.getArch()) {
-    default: return nullptr;
-
-    case Triple::x86_64:
-      return [](){
-        return llvm::make_unique<
-                       orc::LocalIndirectStubsManager<orc::OrcX86_64>>();
-      };
-  }
 }
 
 OrcLazyJIT::TransformFtor OrcLazyJIT::createDebugDumper() {
@@ -126,11 +101,12 @@ CodeGenOpt::Level getOptLevel();
 
 
 template <typename PtrTy>
-static PtrTy fromTargetAddress(orc::TargetAddress Addr) {
+static PtrTy fromTargetAddress(JITTargetAddress Addr) {
   return reinterpret_cast<PtrTy>(static_cast<uintptr_t>(Addr));
 }
 
-int llvm::runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]) {
+int llvm::runOrcLazyJIT(std::vector<std::unique_ptr<Module>> Ms, int ArgC,
+                        char* ArgV[]) {
   // Add the program's symbols into the JIT's search space.
   if (sys::DynamicLibrary::LoadLibraryPermanently(nullptr)) {
     errs() << "Error loading program symbols.\n";
@@ -142,8 +118,8 @@ int llvm::runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]) {
   EngineBuilder EB;
   EB.setOptLevel(getOptLevel());
   auto TM = std::unique_ptr<TargetMachine>(EB.selectTarget());
-  auto CompileCallbackMgr =
-    OrcLazyJIT::createCompileCallbackMgr(Triple(TM->getTargetTriple()));
+  Triple T(TM->getTargetTriple());
+  auto CompileCallbackMgr = orc::createLocalCompileCallbackManager(T, 0);
 
   // If we couldn't build the factory function then there must not be a callback
   // manager for this target. Bail out.
@@ -153,8 +129,7 @@ int llvm::runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]) {
     return 1;
   }
 
-  auto IndirectStubsMgrBuilder =
-    OrcLazyJIT::createIndirectStubsMgrBuilder(Triple(TM->getTargetTriple()));
+  auto IndirectStubsMgrBuilder = orc::createLocalIndirectStubsManagerBuilder(T);
 
   // If we couldn't build a stubs-manager-builder for this target then bail out.
   if (!IndirectStubsMgrBuilder) {
@@ -169,8 +144,8 @@ int llvm::runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]) {
                OrcInlineStubs);
 
   // Add the module, look up main and run it.
-  auto MainHandle = J.addModule(std::move(M));
-  auto MainSym = J.findSymbolIn(MainHandle, "main");
+  J.addModuleSet(std::move(Ms));
+  auto MainSym = J.findSymbol("main");
 
   if (!MainSym) {
     errs() << "Could not find main function.\n";
@@ -181,3 +156,4 @@ int llvm::runOrcLazyJIT(std::unique_ptr<Module> M, int ArgC, char* ArgV[]) {
   auto Main = fromTargetAddress<MainFnPtr>(MainSym.getAddress());
   return Main(ArgC, ArgV);
 }
+

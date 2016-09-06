@@ -244,7 +244,7 @@ ExprResult Sema::BuildCoawaitExpr(SourceLocation Loc, Expr *E) {
   // If the expression is a temporary, materialize it as an lvalue so that we
   // can use it multiple times.
   if (E->getValueKind() == VK_RValue)
-    E = new (Context) MaterializeTemporaryExpr(E->getType(), E, true);
+    E = CreateMaterializeTemporaryExpr(E->getType(), E, true);
 
   // Build the await_ready, await_suspend, await_resume calls.
   ReadySuspendResumeResult RSS = buildCoawaitCalls(*this, Loc, E);
@@ -311,7 +311,7 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
   // If the expression is a temporary, materialize it as an lvalue so that we
   // can use it multiple times.
   if (E->getValueKind() == VK_RValue)
-    E = new (Context) MaterializeTemporaryExpr(E->getType(), E, true);
+    E = CreateMaterializeTemporaryExpr(E->getType(), E, true);
 
   // Build the await_ready, await_suspend, await_resume calls.
   ReadySuspendResumeResult RSS = buildCoawaitCalls(*this, Loc, E);

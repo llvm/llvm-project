@@ -80,10 +80,10 @@ void test() {
 // CHECK: Punctuation: "(" [5:3 - 5:4] CStyleCastExpr=
 // CHECK: Keyword: "void" [5:4 - 5:8] CStyleCastExpr=
 // CHECK: Punctuation: ")" [5:8 - 5:9] CStyleCastExpr=
-// CHECK: Keyword: "sizeof" [5:9 - 5:15] UnexposedExpr=
-// CHECK: Punctuation: "(" [5:15 - 5:16] UnexposedExpr=
+// CHECK: Keyword: "sizeof" [5:9 - 5:15] UnaryExpr=
+// CHECK: Punctuation: "(" [5:15 - 5:16] UnaryExpr=
 // CHECK: Identifier: "T" [5:16 - 5:17] TypeRef=T:1:13
-// CHECK: Punctuation: ")" [5:17 - 5:18] UnexposedExpr=
+// CHECK: Punctuation: ")" [5:17 - 5:18] UnaryExpr=
 // CHECK: Punctuation: ";" [5:18 - 5:19] CompoundStmt=
 // CHECK: Keyword: "struct" [7:3 - 7:9] VarDecl=x:7:12 (Definition)
 // CHECK: Identifier: "X" [7:10 - 7:11] TypeRef=struct X:2:8

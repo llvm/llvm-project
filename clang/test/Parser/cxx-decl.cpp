@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -verify -fsyntax-only -triple i386-linux -pedantic-errors -fcxx-exceptions -fexceptions %s
+// RUN: %clang_cc1 -verify -fsyntax-only -triple i386-linux -pedantic-errors -fcxx-exceptions -fexceptions -std=c++98 %s
+// RUN: %clang_cc1 -verify -fsyntax-only -triple i386-linux -pedantic-errors -fcxx-exceptions -fexceptions -std=c++11 %s
 
 const char const *x10; // expected-error {{duplicate 'const' declaration specifier}}
 
@@ -46,7 +48,10 @@ class asm_class_test {
   void foo() __asm__("baz");
 };
 
-enum { fooenum = 1, }; // expected-error {{commas at the end of enumerator lists are a C++11 extension}}
+enum { fooenum = 1, };
+#if __cplusplus <= 199711L
+// expected-error@-2 {{commas at the end of enumerator lists are a C++11 extension}}
+#endif
 
 struct a {
   int Type : fooenum;
@@ -81,7 +86,11 @@ namespace Commas {
   (global5),
   *global6,
   &global7 = global1,
-  &&global8 = static_cast<int&&>(global1), // expected-error 2{{rvalue reference}}
+  &&global8 = static_cast<int&&>(global1),
+#if __cplusplus <= 199711L
+  // expected-error@-2 2{{rvalue references are a C++11 extension}}
+#endif
+
   S::a,
   global9,
   global10 = 0,
@@ -185,7 +194,13 @@ namespace PR15017 {
 }
 
 // Ensure we produce at least some diagnostic for attributes in C++98.
-[[]] struct S; // expected-error 2{{}}
+[[]] struct S;
+#if __cplusplus <= 199711L
+// expected-error@-2 {{expected expression}}
+// expected-error@-3 {{expected unqualified-id}}
+#else
+// expected-error@-5 {{an attribute list cannot appear here}}
+#endif
 
 namespace test7 {
   struct Foo {
@@ -212,14 +227,20 @@ namespace PR5066 {
   template<typename T> struct X {};
   X<int N> x; // expected-error {{type-id cannot have a name}}
 
-  using T = int (*T)(); // expected-error {{type-id cannot have a name}} expected-error {{C++11}}
+  using T = int (*T)(); // expected-error {{type-id cannot have a name}}
+#if __cplusplus <= 199711L
+  // expected-error@-2 {{alias declarations are a C++11 extensio}}
+#endif
+
 }
 
 namespace PR17255 {
 void foo() {
-  typename A::template B<>; // expected-error {{use of undeclared identifier 'A'}} \
-                            // expected-error {{expected a qualified name after 'typename'}} \
-                            // expected-error {{'template' keyword outside of a template}}
+  typename A::template B<>; // expected-error {{use of undeclared identifier 'A'}}
+#if __cplusplus <= 199711L
+  // expected-error@-2 {{'template' keyword outside of a template}}
+#endif
+  // expected-error@-4 {{expected a qualified name after 'typename'}}
 }
 }
 
@@ -236,12 +257,25 @@ namespace DuplicateFriend {
   struct A {
     friend void friend f(); // expected-warning {{duplicate 'friend' declaration specifier}}
     friend struct B friend; // expected-warning {{duplicate 'friend' declaration specifier}}
+#if __cplusplus >= 201103L
+    // expected-error@-2 {{'friend' must appear first in a non-function declaration}}
+#endif
   };
 }
 
 // PR8380
 extern ""      // expected-error {{unknown linkage language}}
-test6a { ;// expected-error {{C++ requires a type specifier for all declarations}} \
-     // expected-error {{expected ';' after top level declarator}}
+test6a { ;// expected-error {{C++ requires a type specifier for all declarations}}
+#if __cplusplus <= 199711L
+// expected-error@-2 {{expected ';' after top level declarator}}
+#else
+// expected-error@-4 {{expected expression}}
+// expected-note@-5 {{to match this}}
+#endif
   
   int test6b;
+#if __cplusplus >= 201103L
+// expected-error@+3 {{expected}}
+// expected-error@-3 {{expected ';' after top level declarator}}
+#endif
+

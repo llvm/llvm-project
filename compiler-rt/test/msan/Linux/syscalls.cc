@@ -1,6 +1,8 @@
 // RUN: %clangxx_msan -O0 %s -o %t && %run %t 2>&1
 // RUN: %clangxx_msan -O3 %s -o %t && %run %t 2>&1
 
+// XFAIL: target-is-mips64el
+
 #include <assert.h>
 #include <errno.h>
 #include <glob.h>
@@ -19,7 +21,7 @@
    sanity of their behaviour. */
 
 int main(int argc, char *argv[]) {
-  char buf[1000];
+  char buf[1000] __attribute__((aligned(8)));
   const int kTen = 10;
   const int kFortyTwo = 42;
   memset(buf, 0, sizeof(buf));
@@ -110,6 +112,18 @@ int main(int argc, char *argv[]) {
   __sanitizer_syscall_post_io_setup(0, 1, &p);
   assert(__msan_test_shadow(&p, sizeof(p)) == -1);
   assert(__msan_test_shadow(buf, sizeof(buf)) >= 32);
+
+  __msan_poison(buf, sizeof(buf));
+  __sanitizer_syscall_post_pipe(0, (int *)buf);
+  assert(__msan_test_shadow(buf, sizeof(buf)) == 2 * sizeof(int));
+
+  __msan_poison(buf, sizeof(buf));
+  __sanitizer_syscall_post_pipe2(0, (int *)buf, 0);
+  assert(__msan_test_shadow(buf, sizeof(buf)) == 2 * sizeof(int));
+
+  __msan_poison(buf, sizeof(buf));
+  __sanitizer_syscall_post_socketpair(0, 0, 0, 0, (int *)buf);
+  assert(__msan_test_shadow(buf, sizeof(buf)) == 2 * sizeof(int));
 
   return 0;
 }

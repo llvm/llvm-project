@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-eabi < %s | FileCheck %s
 
 define float @fma32(float %a, float %b, float %c) nounwind readnone ssp {
 entry:

@@ -185,9 +185,8 @@ bool BoundsChecking::runOnFunction(Function &F) {
   }
 
   bool MadeChange = false;
-  for (std::vector<Instruction*>::iterator i = WorkList.begin(),
-       e = WorkList.end(); i != e; ++i) {
-    Inst = *i;
+  for (Instruction *i : WorkList) {
+    Inst = i;
 
     Builder->SetInsertPoint(Inst);
     if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {

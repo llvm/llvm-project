@@ -170,3 +170,13 @@ entry:
 ; CHECK-LABEL: @test10(
 ; CHECK: ret i64 undef
 }
+
+@GV = external global i32
+
+define i32 @test11(i1 %tobool) {
+entry:
+  %shr4 = ashr i32 undef, zext (i1 icmp eq (i32* bitcast (i32 (i1)* @test11 to i32*), i32* @GV) to i32)
+  ret i32 %shr4
+; CHECK-LABEL: @test11(
+; CHECK: ret i32 -1
+}

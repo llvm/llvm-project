@@ -14,16 +14,14 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_INDIRECTIONUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_INDIRECTIONUTILS_H
 
-#include "JITSymbol.h"
 #include "LambdaResolver.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Transforms/Utils/ValueMapper.h"
 #include "llvm/Support/Process.h"
-#include <sstream>
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
 namespace orc {
@@ -31,37 +29,37 @@ namespace orc {
 /// @brief Target-independent base class for compile callback management.
 class JITCompileCallbackManager {
 public:
-
-  typedef std::function<TargetAddress()> CompileFtor;
+  typedef std::function<JITTargetAddress()> CompileFtor;
 
   /// @brief Handle to a newly created compile callback. Can be used to get an
   ///        IR constant representing the address of the trampoline, and to set
   ///        the compile action for the callback.
   class CompileCallbackInfo {
   public:
-    CompileCallbackInfo(TargetAddress Addr, CompileFtor &Compile)
-      : Addr(Addr), Compile(Compile) {}
+    CompileCallbackInfo(JITTargetAddress Addr, CompileFtor &Compile)
+        : Addr(Addr), Compile(Compile) {}
 
-    TargetAddress getAddress() const { return Addr; }
+    JITTargetAddress getAddress() const { return Addr; }
     void setCompileAction(CompileFtor Compile) {
       this->Compile = std::move(Compile);
     }
+
   private:
-    TargetAddress Addr;
+    JITTargetAddress Addr;
     CompileFtor &Compile;
   };
 
   /// @brief Construct a JITCompileCallbackManager.
   /// @param ErrorHandlerAddress The address of an error handler in the target
   ///                            process to be used if a compile callback fails.
-  JITCompileCallbackManager(TargetAddress ErrorHandlerAddress)
-    : ErrorHandlerAddress(ErrorHandlerAddress) {}
+  JITCompileCallbackManager(JITTargetAddress ErrorHandlerAddress)
+      : ErrorHandlerAddress(ErrorHandlerAddress) {}
 
   virtual ~JITCompileCallbackManager() {}
 
   /// @brief Execute the callback for the given trampoline id. Called by the JIT
   ///        to compile functions on demand.
-  TargetAddress executeCompileCallback(TargetAddress TrampolineAddr) {
+  JITTargetAddress executeCompileCallback(JITTargetAddress TrampolineAddr) {
     auto I = ActiveTrampolines.find(TrampolineAddr);
     // FIXME: Also raise an error in the Orc error-handler when we finally have
     //        one.
@@ -71,8 +69,10 @@ public:
     // Found a callback handler. Yank this trampoline out of the active list and
     // put it back in the available trampolines list, then try to run the
     // handler's compile and update actions.
-    // Moving the trampoline ID back to the available list first means there's at
-    // least one available trampoline if the compile action triggers a request for
+    // Moving the trampoline ID back to the available list first means there's
+    // at
+    // least one available trampoline if the compile action triggers a request
+    // for
     // a new one.
     auto Compile = std::move(I->second);
     ActiveTrampolines.erase(I);
@@ -86,13 +86,13 @@ public:
 
   /// @brief Reserve a compile callback.
   CompileCallbackInfo getCompileCallback() {
-    TargetAddress TrampolineAddr = getAvailableTrampolineAddr();
+    JITTargetAddress TrampolineAddr = getAvailableTrampolineAddr();
     auto &Compile = this->ActiveTrampolines[TrampolineAddr];
     return CompileCallbackInfo(TrampolineAddr, Compile);
   }
 
   /// @brief Get a CompileCallbackInfo for an existing callback.
-  CompileCallbackInfo getCompileCallbackInfo(TargetAddress TrampolineAddr) {
+  CompileCallbackInfo getCompileCallbackInfo(JITTargetAddress TrampolineAddr) {
     auto I = ActiveTrampolines.find(TrampolineAddr);
     assert(I != ActiveTrampolines.end() && "Not an active trampoline.");
     return CompileCallbackInfo(I->first, I->second);
@@ -103,7 +103,7 @@ public:
   ///   Note: Callbacks are auto-released after they execute. This method should
   /// only be called to manually release a callback that is not going to
   /// execute.
-  void releaseCompileCallback(TargetAddress TrampolineAddr) {
+  void releaseCompileCallback(JITTargetAddress TrampolineAddr) {
     auto I = ActiveTrampolines.find(TrampolineAddr);
     assert(I != ActiveTrampolines.end() && "Not an active trampoline.");
     ActiveTrampolines.erase(I);
@@ -111,20 +111,19 @@ public:
   }
 
 protected:
-  TargetAddress ErrorHandlerAddress;
+  JITTargetAddress ErrorHandlerAddress;
 
-  typedef std::map<TargetAddress, CompileFtor> TrampolineMapT;
+  typedef std::map<JITTargetAddress, CompileFtor> TrampolineMapT;
   TrampolineMapT ActiveTrampolines;
-  std::vector<TargetAddress> AvailableTrampolines;
+  std::vector<JITTargetAddress> AvailableTrampolines;
 
 private:
-
-  TargetAddress getAvailableTrampolineAddr() {
+  JITTargetAddress getAvailableTrampolineAddr() {
     if (this->AvailableTrampolines.empty())
       grow();
     assert(!this->AvailableTrampolines.empty() &&
            "Failed to grow available trampolines.");
-    TargetAddress TrampolineAddr = this->AvailableTrampolines.back();
+    JITTargetAddress TrampolineAddr = this->AvailableTrampolines.back();
     this->AvailableTrampolines.pop_back();
     return TrampolineAddr;
   }
@@ -139,20 +138,17 @@ private:
 template <typename TargetT>
 class LocalJITCompileCallbackManager : public JITCompileCallbackManager {
 public:
-
   /// @brief Construct a InProcessJITCompileCallbackManager.
   /// @param ErrorHandlerAddress The address of an error handler in the target
   ///                            process to be used if a compile callback fails.
-  LocalJITCompileCallbackManager(TargetAddress ErrorHandlerAddress)
-    : JITCompileCallbackManager(ErrorHandlerAddress) {
+  LocalJITCompileCallbackManager(JITTargetAddress ErrorHandlerAddress)
+      : JITCompileCallbackManager(ErrorHandlerAddress) {
 
     /// Set up the resolver block.
     std::error_code EC;
-    ResolverBlock =
-      sys::OwningMemoryBlock(
-        sys::Memory::allocateMappedMemory(TargetT::ResolverCodeSize, nullptr,
-                                          sys::Memory::MF_READ |
-                                          sys::Memory::MF_WRITE, EC));
+    ResolverBlock = sys::OwningMemoryBlock(sys::Memory::allocateMappedMemory(
+        TargetT::ResolverCodeSize, nullptr,
+        sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC));
     assert(!EC && "Failed to allocate resolver block");
 
     TargetT::writeResolverCode(static_cast<uint8_t *>(ResolverBlock.base()),
@@ -165,13 +161,12 @@ public:
   }
 
 private:
-
-  static TargetAddress reenter(void *CCMgr, void *TrampolineId) {
+  static JITTargetAddress reenter(void *CCMgr, void *TrampolineId) {
     JITCompileCallbackManager *Mgr =
-      static_cast<JITCompileCallbackManager*>(CCMgr);
+        static_cast<JITCompileCallbackManager *>(CCMgr);
     return Mgr->executeCompileCallback(
-             static_cast<TargetAddress>(
-               reinterpret_cast<uintptr_t>(TrampolineId)));
+        static_cast<JITTargetAddress>(
+            reinterpret_cast<uintptr_t>(TrampolineId)));
   }
 
   void grow() override {
@@ -179,24 +174,22 @@ private:
 
     std::error_code EC;
     auto TrampolineBlock =
-      sys::OwningMemoryBlock(
-        sys::Memory::allocateMappedMemory(sys::Process::getPageSize(), nullptr,
-                                          sys::Memory::MF_READ |
-                                          sys::Memory::MF_WRITE, EC));
+        sys::OwningMemoryBlock(sys::Memory::allocateMappedMemory(
+            sys::Process::getPageSize(), nullptr,
+            sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC));
     assert(!EC && "Failed to allocate trampoline block");
 
-
     unsigned NumTrampolines =
-      (sys::Process::getPageSize() - TargetT::PointerSize) /
+        (sys::Process::getPageSize() - TargetT::PointerSize) /
         TargetT::TrampolineSize;
 
-    uint8_t *TrampolineMem = static_cast<uint8_t*>(TrampolineBlock.base());
+    uint8_t *TrampolineMem = static_cast<uint8_t *>(TrampolineBlock.base());
     TargetT::writeTrampolines(TrampolineMem, ResolverBlock.base(),
                               NumTrampolines);
 
     for (unsigned I = 0; I < NumTrampolines; ++I)
       this->AvailableTrampolines.push_back(
-          static_cast<TargetAddress>(reinterpret_cast<uintptr_t>(
+          static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(
               TrampolineMem + (I * TargetT::TrampolineSize))));
 
     EC = sys::Memory::protectMappedMemory(TrampolineBlock.getMemoryBlock(),
@@ -214,19 +207,18 @@ private:
 /// @brief Base class for managing collections of named indirect stubs.
 class IndirectStubsManager {
 public:
-
   /// @brief Map type for initializing the manager. See init.
-  typedef StringMap<std::pair<TargetAddress, JITSymbolFlags>> StubInitsMap;
+  typedef StringMap<std::pair<JITTargetAddress, JITSymbolFlags>> StubInitsMap;
 
   virtual ~IndirectStubsManager() {}
 
   /// @brief Create a single stub with the given name, target address and flags.
-  virtual std::error_code createStub(StringRef StubName, TargetAddress StubAddr,
-                                     JITSymbolFlags StubFlags) = 0;
+  virtual Error createStub(StringRef StubName, JITTargetAddress StubAddr,
+                           JITSymbolFlags StubFlags) = 0;
 
   /// @brief Create StubInits.size() stubs with the given names, target
   ///        addresses, and flags.
-  virtual std::error_code createStubs(const StubInitsMap &StubInits) = 0;
+  virtual Error createStubs(const StubInitsMap &StubInits) = 0;
 
   /// @brief Find the stub with the given name. If ExportedStubsOnly is true,
   ///        this will only return a result if the stub's flags indicate that it
@@ -237,7 +229,8 @@ public:
   virtual JITSymbol findPointer(StringRef Name) = 0;
 
   /// @brief Change the value of the implementation pointer for the stub.
-  virtual std::error_code updatePointer(StringRef Name, TargetAddress NewAddr) = 0;
+  virtual Error updatePointer(StringRef Name, JITTargetAddress NewAddr) = 0;
+
 private:
   virtual void anchor();
 };
@@ -247,26 +240,25 @@ private:
 template <typename TargetT>
 class LocalIndirectStubsManager : public IndirectStubsManager {
 public:
-
-  std::error_code createStub(StringRef StubName, TargetAddress StubAddr,
-                             JITSymbolFlags StubFlags) override {
-    if (auto EC = reserveStubs(1))
-      return EC;
+  Error createStub(StringRef StubName, JITTargetAddress StubAddr,
+                   JITSymbolFlags StubFlags) override {
+    if (auto Err = reserveStubs(1))
+      return Err;
 
     createStubInternal(StubName, StubAddr, StubFlags);
 
-    return std::error_code();
+    return Error::success();
   }
 
-  std::error_code createStubs(const StubInitsMap &StubInits) override {
-    if (auto EC = reserveStubs(StubInits.size()))
-      return EC;
+  Error createStubs(const StubInitsMap &StubInits) override {
+    if (auto Err = reserveStubs(StubInits.size()))
+      return Err;
 
     for (auto &Entry : StubInits)
       createStubInternal(Entry.first(), Entry.second.first,
                          Entry.second.second);
 
-    return std::error_code();
+    return Error::success();
   }
 
   JITSymbol findStub(StringRef Name, bool ExportedStubsOnly) override {
@@ -277,9 +269,9 @@ public:
     void *StubAddr = IndirectStubsInfos[Key.first].getStub(Key.second);
     assert(StubAddr && "Missing stub address");
     auto StubTargetAddr =
-      static_cast<TargetAddress>(reinterpret_cast<uintptr_t>(StubAddr));
+        static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(StubAddr));
     auto StubSymbol = JITSymbol(StubTargetAddr, I->second.second);
-    if (ExportedStubsOnly && !StubSymbol.isExported())
+    if (ExportedStubsOnly && !StubSymbol.getFlags().isExported())
       return nullptr;
     return StubSymbol;
   }
@@ -292,43 +284,42 @@ public:
     void *PtrAddr = IndirectStubsInfos[Key.first].getPtr(Key.second);
     assert(PtrAddr && "Missing pointer address");
     auto PtrTargetAddr =
-      static_cast<TargetAddress>(reinterpret_cast<uintptr_t>(PtrAddr));
+        static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(PtrAddr));
     return JITSymbol(PtrTargetAddr, I->second.second);
   }
 
-  std::error_code updatePointer(StringRef Name, TargetAddress NewAddr) override {
+  Error updatePointer(StringRef Name, JITTargetAddress NewAddr) override {
     auto I = StubIndexes.find(Name);
     assert(I != StubIndexes.end() && "No stub pointer for symbol");
     auto Key = I->second.first;
     *IndirectStubsInfos[Key.first].getPtr(Key.second) =
-      reinterpret_cast<void*>(static_cast<uintptr_t>(NewAddr));
-    return std::error_code();
+        reinterpret_cast<void *>(static_cast<uintptr_t>(NewAddr));
+    return Error::success();
   }
 
 private:
-
-  std::error_code reserveStubs(unsigned NumStubs) {
+  Error reserveStubs(unsigned NumStubs) {
     if (NumStubs <= FreeStubs.size())
-      return std::error_code();
+      return Error::success();
 
     unsigned NewStubsRequired = NumStubs - FreeStubs.size();
     unsigned NewBlockId = IndirectStubsInfos.size();
     typename TargetT::IndirectStubsInfo ISI;
-    if (auto EC = TargetT::emitIndirectStubsBlock(ISI, NewStubsRequired,
-                                                  nullptr))
-      return EC;
+    if (auto Err =
+            TargetT::emitIndirectStubsBlock(ISI, NewStubsRequired, nullptr))
+      return Err;
     for (unsigned I = 0; I < ISI.getNumStubs(); ++I)
       FreeStubs.push_back(std::make_pair(NewBlockId, I));
     IndirectStubsInfos.push_back(std::move(ISI));
-    return std::error_code();
+    return Error::success();
   }
 
-  void createStubInternal(StringRef StubName, TargetAddress InitAddr,
+  void createStubInternal(StringRef StubName, JITTargetAddress InitAddr,
                           JITSymbolFlags StubFlags) {
     auto Key = FreeStubs.back();
     FreeStubs.pop_back();
     *IndirectStubsInfos[Key.first].getPtr(Key.second) =
-      reinterpret_cast<void*>(static_cast<uintptr_t>(InitAddr));
+        reinterpret_cast<void *>(static_cast<uintptr_t>(InitAddr));
     StubIndexes[StubName] = std::make_pair(Key, StubFlags);
   }
 
@@ -338,17 +329,32 @@ private:
   StringMap<std::pair<StubKey, JITSymbolFlags>> StubIndexes;
 };
 
+/// @brief Create a local compile callback manager.
+///
+/// The given target triple will determine the ABI, and the given
+/// ErrorHandlerAddress will be used by the resulting compile callback
+/// manager if a compile callback fails.
+std::unique_ptr<JITCompileCallbackManager>
+createLocalCompileCallbackManager(const Triple &T,
+                                  JITTargetAddress ErrorHandlerAddress);
+
+/// @brief Create a local indriect stubs manager builder.
+///
+/// The given target triple will determine the ABI.
+std::function<std::unique_ptr<IndirectStubsManager>()>
+createLocalIndirectStubsManagerBuilder(const Triple &T);
+
 /// @brief Build a function pointer of FunctionType with the given constant
 ///        address.
 ///
 ///   Usage example: Turn a trampoline address into a function pointer constant
 /// for use in a stub.
-Constant* createIRTypedAddress(FunctionType &FT, TargetAddress Addr);
+Constant *createIRTypedAddress(FunctionType &FT, JITTargetAddress Addr);
 
 /// @brief Create a function pointer with the given type, name, and initializer
 ///        in the given Module.
-GlobalVariable* createImplPointer(PointerType &PT, Module &M,
-                                  const Twine &Name, Constant *Initializer);
+GlobalVariable *createImplPointer(PointerType &PT, Module &M, const Twine &Name,
+                                  Constant *Initializer);
 
 /// @brief Turn a function declaration into a stub function that makes an
 ///        indirect call using the given function pointer.
@@ -373,7 +379,7 @@ void makeAllSymbolsExternallyAccessible(Module &M);
 /// modules with these utilities, all decls should be cloned (and added to a
 /// single VMap) before any bodies are moved. This will ensure that references
 /// between functions all refer to the versions in the new module.
-Function* cloneFunctionDecl(Module &Dst, const Function &F,
+Function *cloneFunctionDecl(Module &Dst, const Function &F,
                             ValueToValueMapTy *VMap = nullptr);
 
 /// @brief Move the body of function 'F' to a cloned function declaration in a
@@ -389,7 +395,7 @@ void moveFunctionBody(Function &OrigF, ValueToValueMapTy &VMap,
                       Function *NewF = nullptr);
 
 /// @brief Clone a global variable declaration into a new module.
-GlobalVariable* cloneGlobalVariableDecl(Module &Dst, const GlobalVariable &GV,
+GlobalVariable *cloneGlobalVariableDecl(Module &Dst, const GlobalVariable &GV,
                                         ValueToValueMapTy *VMap = nullptr);
 
 /// @brief Move global variable GV from its parent module to cloned global
@@ -406,7 +412,7 @@ void moveGlobalVariableInitializer(GlobalVariable &OrigGV,
                                    GlobalVariable *NewGV = nullptr);
 
 /// @brief Clone
-GlobalAlias* cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
+GlobalAlias *cloneGlobalAliasDecl(Module &Dst, const GlobalAlias &OrigA,
                                   ValueToValueMapTy &VMap);
 
 } // End namespace orc.

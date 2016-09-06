@@ -44,6 +44,9 @@ interpreted as relatively more important than a shorter run. Depending on the
 nature of the training runs it may be useful to adjust the weight given to each
 input file by using the ``-weighted-input`` option.
 
+Profiles passed in via ``-weighted-input``, ``-input-files``, or via positional
+arguments are processed once for each time they are seen.
+
 
 OPTIONS
 ^^^^^^^
@@ -59,10 +62,17 @@ OPTIONS
 
 .. option:: -weighted-input=weight,filename
 
- Specify an input file name along with a weight. The profile counts of the input
- file will be scaled (multiplied) by the supplied ``weight``, where where ``weight``
- is a decimal integer >= 1. Input files specified without using this option are
- assigned a default weight of 1. Examples are shown below.
+ Specify an input file name along with a weight. The profile counts of the
+ supplied ``filename`` will be scaled (multiplied) by the supplied
+ ``weight``, where where ``weight`` is a decimal integer >= 1.
+ Input files specified without using this option are assigned a default
+ weight of 1. Examples are shown below.
+
+.. option:: -input-files=path, -f=path
+
+  Specify a file which contains a list of files to merge. The entries in this
+  file are newline-separated. Lines starting with '#' are skipped. Entries may
+  be of the form <filename> or <weight>,<filename>.
 
 .. option:: -instr (default)
 
@@ -90,11 +100,16 @@ OPTIONS
 
  Emit the profile using GCC's gcov format (Not yet supported).
 
- .. option:: -sparse[=true|false]
+.. option:: -sparse[=true|false]
 
  Do not emit function records with 0 execution count. Can only be used in
  conjunction with -instr. Defaults to false, since it can inhibit compiler
  optimization during PGO.
+
+.. option:: -num-threads=N, -j=N
+
+ Use N threads to perform profile merging. When N=0, llvm-profdata auto-detects
+ an appropriate number of threads to use. This is the default.
 
 EXAMPLES
 ^^^^^^^^

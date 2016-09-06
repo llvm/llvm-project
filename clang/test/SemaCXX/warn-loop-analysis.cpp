@@ -260,3 +260,9 @@ void test8() {
     i--;
   }
 }
+
+int f(int);
+void test9() {
+  // Don't warn when variable is defined by the loop condition.
+  for (int i = 0; int x = f(i); ++i) {}
+}

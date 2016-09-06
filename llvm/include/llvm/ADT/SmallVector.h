@@ -184,33 +184,12 @@ protected:
     }
   }
 
-  /// Use move-assignment to move the range [I, E) onto the
-  /// objects starting with "Dest".  This is just <memory>'s
-  /// std::move, but not all stdlibs actually provide that.
-  template<typename It1, typename It2>
-  static It2 move(It1 I, It1 E, It2 Dest) {
-    for (; I != E; ++I, ++Dest)
-      *Dest = ::std::move(*I);
-    return Dest;
-  }
-
-  /// Use move-assignment to move the range
-  /// [I, E) onto the objects ending at "Dest", moving objects
-  /// in reverse order.  This is just <algorithm>'s
-  /// std::move_backward, but not all stdlibs actually provide that.
-  template<typename It1, typename It2>
-  static It2 move_backward(It1 I, It1 E, It2 Dest) {
-    while (I != E)
-      *--Dest = ::std::move(*--E);
-    return Dest;
-  }
-
   /// Move the range [I, E) into the uninitialized memory starting with "Dest",
   /// constructing elements as needed.
   template<typename It1, typename It2>
   static void uninitialized_move(It1 I, It1 E, It2 Dest) {
-    for (; I != E; ++I, ++Dest)
-      ::new ((void*) &*Dest) T(::std::move(*I));
+    std::uninitialized_copy(std::make_move_iterator(I),
+                            std::make_move_iterator(E), Dest);
   }
 
   /// Copy the range [I, E) onto the uninitialized memory starting with "Dest",
@@ -283,20 +262,6 @@ protected:
   // No need to do a destroy loop for POD's.
   static void destroy_range(T *, T *) {}
 
-  /// Use move-assignment to move the range [I, E) onto the
-  /// objects starting with "Dest".  For PODs, this is just memcpy.
-  template<typename It1, typename It2>
-  static It2 move(It1 I, It1 E, It2 Dest) {
-    return ::std::copy(I, E, Dest);
-  }
-
-  /// Use move-assignment to move the range [I, E) onto the objects ending at
-  /// "Dest", moving objects in reverse order.
-  template<typename It1, typename It2>
-  static It2 move_backward(It1 I, It1 E, It2 Dest) {
-    return ::std::copy_backward(I, E, Dest);
-  }
-
   /// Move the range [I, E) onto the uninitialized memory
   /// starting with "Dest", constructing elements into it as needed.
   template<typename It1, typename It2>
@@ -356,6 +321,7 @@ class SmallVectorImpl : public SmallVectorTemplateBase<T, isPodLike<T>::value> {
   SmallVectorImpl(const SmallVectorImpl&) = delete;
 public:
   typedef typename SuperClass::iterator iterator;
+  typedef typename SuperClass::const_iterator const_iterator;
   typedef typename SuperClass::size_type size_type;
 
 protected:
@@ -459,26 +425,33 @@ public:
     append(IL);
   }
 
-  iterator erase(iterator I) {
+  iterator erase(const_iterator CI) {
+    // Just cast away constness because this is a non-const member function.
+    iterator I = const_cast<iterator>(CI);
+
     assert(I >= this->begin() && "Iterator to erase is out of bounds.");
     assert(I < this->end() && "Erasing at past-the-end iterator.");
 
     iterator N = I;
     // Shift all elts down one.
-    this->move(I+1, this->end(), I);
+    std::move(I+1, this->end(), I);
     // Drop the last elt.
     this->pop_back();
     return(N);
   }
 
-  iterator erase(iterator S, iterator E) {
+  iterator erase(const_iterator CS, const_iterator CE) {
+    // Just cast away constness because this is a non-const member function.
+    iterator S = const_cast<iterator>(CS);
+    iterator E = const_cast<iterator>(CE);
+
     assert(S >= this->begin() && "Range to erase is out of bounds.");
     assert(S <= E && "Trying to erase invalid range.");
     assert(E <= this->end() && "Trying to erase past the end.");
 
     iterator N = S;
     // Shift all elts down.
-    iterator I = this->move(E, this->end(), S);
+    iterator I = std::move(E, this->end(), S);
     // Drop the last elts.
     this->destroy_range(I, this->end());
     this->setEnd(I);
@@ -502,7 +475,7 @@ public:
 
     ::new ((void*) this->end()) T(::std::move(this->back()));
     // Push everything else over.
-    this->move_backward(I, this->end()-1, this->end());
+    std::move_backward(I, this->end()-1, this->end());
     this->setEnd(this->end()+1);
 
     // If we just moved the element we're inserting, be sure to update
@@ -531,7 +504,7 @@ public:
     }
     ::new ((void*) this->end()) T(std::move(this->back()));
     // Push everything else over.
-    this->move_backward(I, this->end()-1, this->end());
+    std::move_backward(I, this->end()-1, this->end());
     this->setEnd(this->end()+1);
 
     // If we just moved the element we're inserting, be sure to update
@@ -572,7 +545,7 @@ public:
              std::move_iterator<iterator>(this->end()));
 
       // Copy the existing elements that get replaced.
-      this->move_backward(I, OldEnd-NumToInsert, OldEnd);
+      std::move_backward(I, OldEnd-NumToInsert, OldEnd);
 
       std::fill_n(I, NumToInsert, Elt);
       return I;
@@ -626,7 +599,7 @@ public:
              std::move_iterator<iterator>(this->end()));
 
       // Copy the existing elements that get replaced.
-      this->move_backward(I, OldEnd-NumToInsert, OldEnd);
+      std::move_backward(I, OldEnd-NumToInsert, OldEnd);
 
       std::copy(From, To, I);
       return I;
@@ -807,7 +780,7 @@ SmallVectorImpl<T> &SmallVectorImpl<T>::operator=(SmallVectorImpl<T> &&RHS) {
     // Assign common elements.
     iterator NewEnd = this->begin();
     if (RHSSize)
-      NewEnd = this->move(RHS.begin(), RHS.end(), NewEnd);
+      NewEnd = std::move(RHS.begin(), RHS.end(), NewEnd);
 
     // Destroy excess elements and trim the bounds.
     this->destroy_range(NewEnd, this->end());
@@ -831,7 +804,7 @@ SmallVectorImpl<T> &SmallVectorImpl<T>::operator=(SmallVectorImpl<T> &&RHS) {
     this->grow(RHSSize);
   } else if (CurSize) {
     // Otherwise, use assignment for the already-constructed elements.
-    this->move(RHS.begin(), RHS.begin()+CurSize, this->begin());
+    std::move(RHS.begin(), RHS.begin()+CurSize, this->begin());
   }
 
   // Move-construct the new elements in place.

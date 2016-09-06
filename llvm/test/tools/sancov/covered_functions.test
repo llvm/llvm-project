@@ -1,7 +1,7 @@
 REQUIRES: x86_64-linux
-RUN: sancov -obj %p/Inputs/test-linux_x86_64 -covered-functions %p/Inputs/test-linux_x86_64.sancov | FileCheck %s
-RUN: sancov -obj %p/Inputs/test-linux_x86_64 -covered-functions -strip_path_prefix=Inputs/ %p/Inputs/test-linux_x86_64.sancov | FileCheck --check-prefix=STRIP_PATH %s
-RUN: sancov -obj %p/Inputs/test-linux_x86_64 -demangle=0 -covered-functions %p/Inputs/test-linux_x86_64.sancov | FileCheck --check-prefix=NO_DEMANGLE %s
+RUN: sancov -covered-functions %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s
+RUN: sancov -covered-functions -strip_path_prefix=Inputs/ %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck --check-prefix=STRIP_PATH %s
+RUN: sancov -demangle=0 -covered-functions %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck --check-prefix=NO_DEMANGLE %s
 
 CHECK: Inputs{{[/\\]}}test.cpp:12 bar(std::string)
 CHECK: Inputs{{[/\\]}}test.cpp:14 main

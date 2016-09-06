@@ -25,19 +25,19 @@
 // rdar://11475360
 @interface B : A
 - (void)method; // NOTE: we expect 'method' to *not* inherit availability.
-- (void)overridden __attribute__((availability(macosx,introduced=10_4))); // expected-warning{{overriding method introduced after overridden method on OS X (10_4 vs. 10_3)}}
+- (void)overridden __attribute__((availability(macosx,introduced=10_4))); // expected-warning{{overriding method introduced after overridden method on macOS (10_4 vs. 10_3)}}
 - (void)overridden2 __attribute__((availability(macosx,introduced=10_2)));
 - (void)overridden3 __attribute__((availability(macosx,deprecated=10_4)));
-- (void)overridden4 __attribute__((availability(macosx,deprecated=10_2))); // expected-warning{{overriding method deprecated before overridden method on OS X (10_3 vs. 10_2)}}
+- (void)overridden4 __attribute__((availability(macosx,deprecated=10_2))); // expected-warning{{overriding method deprecated before overridden method on macOS (10_3 vs. 10_2)}}
 - (void)overridden5 __attribute__((availability(macosx,introduced=10_3)));
-- (void)overridden6 __attribute__((availability(macosx,unavailable))); // expected-warning{{overriding method cannot be unavailable on OS X when its overridden method is available}}
+- (void)overridden6 __attribute__((availability(macosx,unavailable))); // expected-warning{{overriding method cannot be unavailable on macOS when its overridden method is available}}
 @end
 
 void f(A *a, B *b) {
-  [a method]; // expected-warning{{'method' is deprecated: first deprecated in OS X 10.2}}
+  [a method]; // expected-warning{{'method' is deprecated: first deprecated in macOS 10.2}}
   [b method]; // no-warning
-  [a proto_method]; // expected-warning{{'proto_method' is deprecated: first deprecated in OS X 10.2}}
-  [b proto_method]; // expected-warning{{'proto_method' is deprecated: first deprecated in OS X 10.2}}
+  [a proto_method]; // expected-warning{{'proto_method' is deprecated: first deprecated in macOS 10.2}}
+  [b proto_method]; // expected-warning{{'proto_method' is deprecated: first deprecated in macOS 10.2}}
 }
 
 // Test case for <rdar://problem/11627873>.  Warn about
@@ -57,7 +57,7 @@ void f(A *a, B *b) {
 
 @implementation D
 - (void) method {
-  [super method]; // expected-warning {{'method' is deprecated: first deprecated in OS X 10.2}}
+  [super method]; // expected-warning {{'method' is deprecated: first deprecated in macOS 10.2}}
 }
 @end
 
@@ -112,9 +112,9 @@ id NSNibOwner, topNibObjects;
 @end
 
 void foo (A18804883* pa) {
-  [pa interface_method]; // expected-error {{'interface_method' is unavailable: not available on OS X}}
+  [pa interface_method]; // expected-error {{'interface_method' is unavailable: not available on macOS}}
   [pa proto_method];
-  [pa strange_method]; // expected-error {{'strange_method' is unavailable: not available on OS X}}
+  [pa strange_method]; // expected-error {{'strange_method' is unavailable: not available on macOS}}
   [pa always_available];
 }
 

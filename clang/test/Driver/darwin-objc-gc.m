@@ -1,6 +1,6 @@
 // Check that we warn, but accept, -fobjc-gc for iPhone OS.
 
-// RUN: %clang -target i386-apple-darwin9 -miphoneos-version-min=3.0 -fobjc-gc -flto -S -o %t %s 2> %t.err
+// RUN: %clang -target i386-apple-darwin9 -miphoneos-version-min=3.0 -stdlib=platform -fobjc-gc -flto -S -o %t %s 2> %t.err
 // RUN: FileCheck --check-prefix=IPHONE_OBJC_GC_LL %s < %t 
 // RUN: FileCheck --check-prefix=IPHONE_OBJC_GC_STDERR %s < %t.err
 

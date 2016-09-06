@@ -332,7 +332,7 @@ ClangExpressionParser::ClangExpressionParser (ExecutionContextScope *exe_scope,
     target_sp = exe_scope->CalculateTarget();
     if (!target_sp)
     {
-        lldb_assert(exe_scope, "Can't make an expression parser with a null target.", __FUNCTION__, __FILE__, __LINE__);
+        lldb_assert(target_sp.get(), "Can't make an expression parser with a null target.", __FUNCTION__, __FILE__, __LINE__);
         return;
     }
     
@@ -936,13 +936,18 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
     {
         Stream *error_stream = NULL;
         Target *target = exe_ctx.GetTargetPtr();
-        if (target)
-            error_stream = target->GetDebugger().GetErrorFile().get();
+        error_stream = target->GetDebugger().GetErrorFile().get();
 
-        IRForTarget ir_for_target(decl_map, m_expr.NeedsVariableResolution(), *execution_unit_sp, error_stream,
+        IRForTarget ir_for_target(decl_map, m_expr.NeedsVariableResolution(), *execution_unit_sp, *error_stream,
                                   function_name.AsCString());
 
         bool ir_can_run = ir_for_target.runOnModule(*execution_unit_sp->GetModule());
+
+        if (!ir_can_run)
+        {
+            err.SetErrorString("The expression could not be prepared to run in the target");
+            return err;
+        }
 
         Process *process = exe_ctx.GetProcessPtr();
 
@@ -960,12 +965,6 @@ ClangExpressionParser::PrepareForExecution (lldb::addr_t &func_addr,
                 err.SetErrorStringWithFormat("Can't run the expression locally: %s", interpret_error.AsCString());
                 return err;
             }
-        }
-
-        if (!ir_can_run)
-        {
-            err.SetErrorString("The expression could not be prepared to run in the target");
-            return err;
         }
 
         if (!process && execution_policy == eExecutionPolicyAlways)

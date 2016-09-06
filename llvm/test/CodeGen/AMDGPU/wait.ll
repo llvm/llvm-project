@@ -11,14 +11,14 @@
 ; DEFAULT: exp
 ; DEFAULT: s_waitcnt lgkmcnt(0)
 ; DEFAULT: s_endpgm
-define void @main(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <32 x i8> addrspace(2)* inreg %arg2, <16 x i8> addrspace(2)* inreg %arg3, <16 x i8> addrspace(2)* inreg %arg4, i32 inreg %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9, float addrspace(2)* inreg %constptr) #0 {
+define amdgpu_vs void @main(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <32 x i8> addrspace(2)* inreg %arg2, <16 x i8> addrspace(2)* inreg %arg3, <16 x i8> addrspace(2)* inreg %arg4, i32 inreg %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9, float addrspace(2)* inreg %constptr) {
 main_body:
   %tmp = getelementptr <16 x i8>, <16 x i8> addrspace(2)* %arg3, i32 0
   %tmp10 = load <16 x i8>, <16 x i8> addrspace(2)* %tmp, !tbaa !0
   %tmp11 = call <4 x float> @llvm.SI.vs.load.input(<16 x i8> %tmp10, i32 0, i32 %arg6)
   %tmp12 = extractelement <4 x float> %tmp11, i32 0
   %tmp13 = extractelement <4 x float> %tmp11, i32 1
-  call void @llvm.AMDGPU.barrier.global() #1
+  call void @llvm.amdgcn.s.barrier() #1
   %tmp14 = extractelement <4 x float> %tmp11, i32 2
 ;  %tmp15 = extractelement <4 x float> %tmp11, i32 3
   %tmp15 = load float, float addrspace(2)* %constptr, align 4 ; Force waiting for expcnt and lgkmcnt
@@ -45,8 +45,8 @@ main_body:
 ; ILPMAX: s_waitcnt vmcnt(0)
 ; ILPMAX: s_endpgm
 
-define void @main2([6 x <16 x i8>] addrspace(2)* byval, [17 x <16 x i8>] addrspace(2)* byval, [17 x <4 x i32>] addrspace(2)* byval, [34 x <8 x i32>] addrspace(2)* byval, [16 x <16 x i8>] addrspace(2)*
-byval, i32 inreg, i32 inreg, i32, i32, i32, i32) #0 {
+define amdgpu_vs void @main2([6 x <16 x i8>] addrspace(2)* byval, [17 x <16 x i8>] addrspace(2)* byval, [17 x <4 x i32>] addrspace(2)* byval, [34 x <8 x i32>] addrspace(2)* byval, [16 x <16 x i8>] addrspace(2)*
+byval, i32 inreg, i32 inreg, i32, i32, i32, i32) {
 main_body:
   %11 = getelementptr [16 x <16 x i8>], [16 x <16 x i8>] addrspace(2)* %4, i64 0, i64 0
   %12 = load <16 x i8>, <16 x i8> addrspace(2)* %11, align 16, !tbaa !0
@@ -71,14 +71,13 @@ main_body:
 
 
 ; Function Attrs: convergent nounwind
-declare void @llvm.AMDGPU.barrier.global() #1
+declare void @llvm.amdgcn.s.barrier() #1
 
 ; Function Attrs: nounwind readnone
 declare <4 x float> @llvm.SI.vs.load.input(<16 x i8>, i32, i32) #2
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
-attributes #0 = { "ShaderType"="1" }
 attributes #1 = { convergent nounwind }
 attributes #2 = { nounwind readnone }
 

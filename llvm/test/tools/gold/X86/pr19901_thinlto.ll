@@ -1,5 +1,5 @@
 ; RUN: llc %s -o %t.o -filetype=obj -relocation-model=pic
-; RUN: llvm-as -module-summary %p/Inputs/pr19901-1.ll -o %t2.o
+; RUN: opt -module-summary %p/Inputs/pr19901-1.ll -o %t2.o
 ; RUN: %gold -plugin %llvmshlibdir/LLVMgold.so \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     -shared -m elf_x86_64 -o %t.so %t2.o %t.o
@@ -11,8 +11,9 @@
 ; CHECK-NEXT:    Size:
 ; CHECK-NEXT:    Binding: Local
 ; CHECK-NEXT:    Type: Function
-; CHECK-NEXT:    Other: {{2|0}}
-; CHECK-NEXT:    Section: .text
+; CHECK-NEXT:    Other
+; CHECK-NOT:     Seciton
+; CHECK:         Section: .text
 ; CHECK-NEXT:  }
 
 target triple = "x86_64-unknown-linux-gnu"

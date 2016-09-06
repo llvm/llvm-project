@@ -178,7 +178,7 @@ IR into "t.ll" and run "``llvm-as < t.ll | opt -analyze -view-cfg``", `a
 window will pop up <../ProgrammersManual.html#viewing-graphs-while-debugging-code>`_ and you'll
 see this graph:
 
-.. figure:: LangImpl5-cfg.png
+.. figure:: LangImpl05-cfg.png
    :align: center
    :alt: Example CFG
 

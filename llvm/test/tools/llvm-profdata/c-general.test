@@ -9,7 +9,7 @@ REGENERATE: $ CFE_TESTDIR=$CFE/test/Profile
 REGENERATE: $ clang -o a.out -fprofile-instr-generate $CFE_TESTDIR/c-general.c
 REGENERATE: $ LLVM_PROFILE_FILE=$TESTDIR/Inputs/c-general.profraw ./a.out
 
-RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - | FileCheck %s -check-prefix=CHECK
+RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - | FileCheck %s
 RUN: llvm-profdata show %p/Inputs/c-general.profraw -o - --function=switches | FileCheck %s -check-prefix=SWITCHES -check-prefix=CHECK
 
 SWITCHES-LABEL: Counters:

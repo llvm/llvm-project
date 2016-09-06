@@ -1,5 +1,4 @@
-//===- unittest/ProfileData/SampleProfTest.cpp -------------------*- C++
-//-*-===//
+//===- unittest/ProfileData/SampleProfTest.cpp ------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,11 +7,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
+#include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
-
-#include <cstdarg>
+#include <algorithm>
+#include <cstdint>
+#include <limits>
+#include <memory>
+#include <string>
+#include <system_error>
+#include <vector>
 
 using namespace llvm;
 using namespace sampleprof;
@@ -28,6 +43,7 @@ namespace {
 
 struct SampleProfTest : ::testing::Test {
   std::string Data;
+  LLVMContext Context;
   std::unique_ptr<raw_ostream> OS;
   std::unique_ptr<SampleProfileWriter> Writer;
   std::unique_ptr<SampleProfileReader> Reader;
@@ -42,7 +58,7 @@ struct SampleProfTest : ::testing::Test {
   }
 
   void readProfile(std::unique_ptr<MemoryBuffer> &Profile) {
-    auto ReaderOrErr = SampleProfileReader::create(Profile, getGlobalContext());
+    auto ReaderOrErr = SampleProfileReader::create(Profile, Context);
     ASSERT_TRUE(NoError(ReaderOrErr.getError()));
     Reader = std::move(ReaderOrErr.get());
   }
@@ -52,12 +68,18 @@ struct SampleProfTest : ::testing::Test {
 
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
+    FooSamples.setName(FooName);
     FooSamples.addTotalSamples(7711);
     FooSamples.addHeadSamples(610);
     FooSamples.addBodySamples(1, 0, 610);
+    FooSamples.addBodySamples(2, 0, 600);
+    FooSamples.addBodySamples(4, 0, 60000);
+    FooSamples.addBodySamples(8, 0, 60351);
+    FooSamples.addBodySamples(10, 0, 605);
 
     StringRef BarName("_Z3bari");
     FunctionSamples BarSamples;
+    BarSamples.setName(BarName);
     BarSamples.addTotalSamples(20301);
     BarSamples.addHeadSamples(1437);
     BarSamples.addBodySamples(1, 0, 1437);
@@ -88,6 +110,53 @@ struct SampleProfTest : ::testing::Test {
     FunctionSamples &ReadBarSamples = ReadProfiles[BarName];
     ASSERT_EQ(20301u, ReadBarSamples.getTotalSamples());
     ASSERT_EQ(1437u, ReadBarSamples.getHeadSamples());
+
+    auto VerifySummary = [](ProfileSummary &Summary) mutable {
+      ASSERT_EQ(ProfileSummary::PSK_Sample, Summary.getKind());
+      ASSERT_EQ(123603u, Summary.getTotalCount());
+      ASSERT_EQ(6u, Summary.getNumCounts());
+      ASSERT_EQ(2u, Summary.getNumFunctions());
+      ASSERT_EQ(1437u, Summary.getMaxFunctionCount());
+      ASSERT_EQ(60351u, Summary.getMaxCount());
+
+      uint32_t Cutoff = 800000;
+      auto Predicate = [&Cutoff](const ProfileSummaryEntry &PE) {
+        return PE.Cutoff == Cutoff;
+      };
+      std::vector<ProfileSummaryEntry> &Details = Summary.getDetailedSummary();
+      auto EightyPerc = find_if(Details, Predicate);
+      Cutoff = 900000;
+      auto NinetyPerc = find_if(Details, Predicate);
+      Cutoff = 950000;
+      auto NinetyFivePerc = find_if(Details, Predicate);
+      Cutoff = 990000;
+      auto NinetyNinePerc = find_if(Details, Predicate);
+      ASSERT_EQ(60000u, EightyPerc->MinCount);
+      ASSERT_EQ(60000u, NinetyPerc->MinCount);
+      ASSERT_EQ(60000u, NinetyFivePerc->MinCount);
+      ASSERT_EQ(610u, NinetyNinePerc->MinCount);
+    };
+
+    ProfileSummary &Summary = Reader->getSummary();
+    VerifySummary(Summary);
+
+    // Test that conversion of summary to and from Metadata works.
+    Metadata *MD = Summary.getMD(Context);
+    ASSERT_TRUE(MD);
+    ProfileSummary *PS = ProfileSummary::getFromMD(MD);
+    ASSERT_TRUE(PS);
+    VerifySummary(*PS);
+    delete PS;
+
+    // Test that summary can be attached to and read back from module.
+    Module M("my_module", Context);
+    M.setProfileSummary(MD);
+    MD = M.getProfileSummary();
+    ASSERT_TRUE(MD);
+    PS = ProfileSummary::getFromMD(MD);
+    ASSERT_TRUE(PS);
+    VerifySummary(*PS);
+    delete PS;
   }
 };
 

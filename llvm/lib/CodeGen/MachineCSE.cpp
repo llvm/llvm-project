@@ -352,6 +352,12 @@ bool MachineCSE::isCSECandidate(MachineInstr *MI) {
       // This is a trivial form of alias analysis.
       return false;
   }
+
+  // Ignore stack guard loads, otherwise the register that holds CSEed value may
+  // be spilled and get loaded back with corrupted data.
+  if (MI->getOpcode() == TargetOpcode::LOAD_STACK_GUARD)
+    return false;
+
   return true;
 }
 
@@ -383,7 +389,7 @@ bool MachineCSE::isProfitableToCSE(unsigned CSReg, unsigned Reg,
   // Heuristics #1: Don't CSE "cheap" computation if the def is not local or in
   // an immediate predecessor. We don't want to increase register pressure and
   // end up causing other computation to be spilled.
-  if (TII->isAsCheapAsAMove(MI)) {
+  if (TII->isAsCheapAsAMove(*MI)) {
     MachineBasicBlock *CSBB = CSMI->getParent();
     MachineBasicBlock *BB = MI->getParent();
     if (CSBB != BB && !CSBB->isSuccessor(BB))
@@ -472,8 +478,7 @@ bool MachineCSE::ProcessBlock(MachineBasicBlock *MBB) {
     // Commute commutable instructions.
     bool Commuted = false;
     if (!FoundCSE && MI->isCommutable()) {
-      MachineInstr *NewMI = TII->commuteInstruction(MI);
-      if (NewMI) {
+      if (MachineInstr *NewMI = TII->commuteInstruction(*MI)) {
         Commuted = true;
         FoundCSE = VNT.count(NewMI);
         if (NewMI != MI) {
@@ -482,7 +487,7 @@ bool MachineCSE::ProcessBlock(MachineBasicBlock *MBB) {
           Changed = true;
         } else if (!FoundCSE)
           // MI was changed but it didn't help, commute it back!
-          (void)TII->commuteInstruction(MI);
+          (void)TII->commuteInstruction(*MI);
       }
     }
 
@@ -698,7 +703,7 @@ bool MachineCSE::PerformCSE(MachineDomTreeNode *Node) {
 }
 
 bool MachineCSE::runOnMachineFunction(MachineFunction &MF) {
-  if (skipOptnoneFunction(*MF.getFunction()))
+  if (skipFunction(*MF.getFunction()))
     return false;
 
   TII = MF.getSubtarget().getInstrInfo();

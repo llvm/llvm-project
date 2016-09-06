@@ -14,53 +14,50 @@
 
 // The format of this database matches clang/Basic/Builtins.def.
 
-// Builtins retained from previous PTX back-end
-BUILTIN(__builtin_ptx_read_tid_x, "i", "nc")
-BUILTIN(__builtin_ptx_read_tid_y, "i", "nc")
-BUILTIN(__builtin_ptx_read_tid_z, "i", "nc")
-BUILTIN(__builtin_ptx_read_tid_w, "i", "nc")
+// Special Registers
 
-BUILTIN(__builtin_ptx_read_ntid_x, "i", "nc")
-BUILTIN(__builtin_ptx_read_ntid_y, "i", "nc")
-BUILTIN(__builtin_ptx_read_ntid_z, "i", "nc")
-BUILTIN(__builtin_ptx_read_ntid_w, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_tid_x, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_tid_y, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_tid_z, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_tid_w, "i", "nc")
 
-BUILTIN(__builtin_ptx_read_ctaid_x, "i", "nc")
-BUILTIN(__builtin_ptx_read_ctaid_y, "i", "nc")
-BUILTIN(__builtin_ptx_read_ctaid_z, "i", "nc")
-BUILTIN(__builtin_ptx_read_ctaid_w, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_ntid_x, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_ntid_y, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_ntid_z, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_ntid_w, "i", "nc")
 
-BUILTIN(__builtin_ptx_read_nctaid_x, "i", "nc")
-BUILTIN(__builtin_ptx_read_nctaid_y, "i", "nc")
-BUILTIN(__builtin_ptx_read_nctaid_z, "i", "nc")
-BUILTIN(__builtin_ptx_read_nctaid_w, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_ctaid_x, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_ctaid_y, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_ctaid_z, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_ctaid_w, "i", "nc")
 
-BUILTIN(__builtin_ptx_read_laneid, "i", "nc")
-BUILTIN(__builtin_ptx_read_warpid, "i", "nc")
-BUILTIN(__builtin_ptx_read_nwarpid, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_nctaid_x, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_nctaid_y, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_nctaid_z, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_nctaid_w, "i", "nc")
 
-BUILTIN(__builtin_ptx_read_smid, "i", "nc")
-BUILTIN(__builtin_ptx_read_nsmid, "i", "nc")
-BUILTIN(__builtin_ptx_read_gridid, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_laneid, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_warpid, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_nwarpid, "i", "nc")
 
-BUILTIN(__builtin_ptx_read_lanemask_eq, "i", "nc")
-BUILTIN(__builtin_ptx_read_lanemask_le, "i", "nc")
-BUILTIN(__builtin_ptx_read_lanemask_lt, "i", "nc")
-BUILTIN(__builtin_ptx_read_lanemask_ge, "i", "nc")
-BUILTIN(__builtin_ptx_read_lanemask_gt, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_smid, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_nsmid, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_gridid, "i", "nc")
 
-BUILTIN(__builtin_ptx_read_clock, "i", "n")
-BUILTIN(__builtin_ptx_read_clock64, "LLi", "n")
+BUILTIN(__nvvm_read_ptx_sreg_lanemask_eq, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_lanemask_le, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_lanemask_lt, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_lanemask_ge, "i", "nc")
+BUILTIN(__nvvm_read_ptx_sreg_lanemask_gt, "i", "nc")
 
-BUILTIN(__builtin_ptx_read_pm0, "i", "n")
-BUILTIN(__builtin_ptx_read_pm1, "i", "n")
-BUILTIN(__builtin_ptx_read_pm2, "i", "n")
-BUILTIN(__builtin_ptx_read_pm3, "i", "n")
+BUILTIN(__nvvm_read_ptx_sreg_clock, "i", "n")
+BUILTIN(__nvvm_read_ptx_sreg_clock64, "LLi", "n")
 
-BUILTIN(__builtin_ptx_bar_sync, "vi", "n")
+BUILTIN(__nvvm_read_ptx_sreg_pm0, "i", "n")
+BUILTIN(__nvvm_read_ptx_sreg_pm1, "i", "n")
+BUILTIN(__nvvm_read_ptx_sreg_pm2, "i", "n")
+BUILTIN(__nvvm_read_ptx_sreg_pm3, "i", "n")
 
-
-// Builtins exposed as part of NVVM
 // MISC
 
 BUILTIN(__nvvm_clz_i, "ii", "")
@@ -397,10 +394,21 @@ BUILTIN(__nvvm_bitcast_d2ll, "LLid", "")
 // Sync
 
 BUILTIN(__syncthreads, "v", "")
-BUILTIN(__nvvm_bar0, "v", "")
 BUILTIN(__nvvm_bar0_popc, "ii", "")
 BUILTIN(__nvvm_bar0_and, "ii", "")
 BUILTIN(__nvvm_bar0_or, "ii", "")
+BUILTIN(__nvvm_bar_sync, "vi", "n")
+
+// Shuffle
+
+BUILTIN(__nvvm_shfl_down_i32, "iiii", "")
+BUILTIN(__nvvm_shfl_down_f32, "ffii", "")
+BUILTIN(__nvvm_shfl_up_i32, "iiii", "")
+BUILTIN(__nvvm_shfl_up_f32, "ffii", "")
+BUILTIN(__nvvm_shfl_bfly_i32, "iiii", "")
+BUILTIN(__nvvm_shfl_bfly_f32, "ffii", "")
+BUILTIN(__nvvm_shfl_idx_i32, "iiii", "")
+BUILTIN(__nvvm_shfl_idx_f32, "ffii", "")
 
 // Membar
 
@@ -565,5 +573,41 @@ BUILTIN(__nvvm_atom_cas_gen_ll, "LLiLLiD*LLiLLi", "n")
 // Compiler Error Warn
 BUILTIN(__nvvm_compiler_error, "vcC*4", "n")
 BUILTIN(__nvvm_compiler_warn, "vcC*4", "n")
+
+// __ldg.  This is not implemented as a builtin by nvcc.
+BUILTIN(__nvvm_ldg_c, "ccC*", "")
+BUILTIN(__nvvm_ldg_s, "ssC*", "")
+BUILTIN(__nvvm_ldg_i, "iiC*", "")
+BUILTIN(__nvvm_ldg_l, "LiLiC*", "")
+BUILTIN(__nvvm_ldg_ll, "LLiLLiC*", "")
+
+BUILTIN(__nvvm_ldg_uc, "UcUcC*", "")
+BUILTIN(__nvvm_ldg_us, "UsUsC*", "")
+BUILTIN(__nvvm_ldg_ui, "UiUiC*", "")
+BUILTIN(__nvvm_ldg_ul, "ULiULiC*", "")
+BUILTIN(__nvvm_ldg_ull, "ULLiULLiC*", "")
+
+BUILTIN(__nvvm_ldg_f, "ffC*", "")
+BUILTIN(__nvvm_ldg_d, "ddC*", "")
+
+BUILTIN(__nvvm_ldg_c2, "E2cE2cC*", "")
+BUILTIN(__nvvm_ldg_c4, "E4cE4cC*", "")
+BUILTIN(__nvvm_ldg_s2, "E2sE2sC*", "")
+BUILTIN(__nvvm_ldg_s4, "E4sE4sC*", "")
+BUILTIN(__nvvm_ldg_i2, "E2iE2iC*", "")
+BUILTIN(__nvvm_ldg_i4, "E4iE4iC*", "")
+BUILTIN(__nvvm_ldg_ll2, "E2LLiE2LLiC*", "")
+
+BUILTIN(__nvvm_ldg_uc2, "E2UcE2UcC*", "")
+BUILTIN(__nvvm_ldg_uc4, "E4UcE4UcC*", "")
+BUILTIN(__nvvm_ldg_us2, "E2UsE2UsC*", "")
+BUILTIN(__nvvm_ldg_us4, "E4UsE4UsC*", "")
+BUILTIN(__nvvm_ldg_ui2, "E2UiE2UiC*", "")
+BUILTIN(__nvvm_ldg_ui4, "E4UiE4UiC*", "")
+BUILTIN(__nvvm_ldg_ull2, "E2ULLiE2ULLiC*", "")
+
+BUILTIN(__nvvm_ldg_f2, "E2fE2fC*", "")
+BUILTIN(__nvvm_ldg_f4, "E4fE4fC*", "")
+BUILTIN(__nvvm_ldg_d2, "E2dE2dC*", "")
 
 #undef BUILTIN

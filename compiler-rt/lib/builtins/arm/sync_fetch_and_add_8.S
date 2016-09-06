@@ -22,3 +22,5 @@
 SYNC_OP_8(add_8)
 #endif
 
+NO_EXEC_STACK_DIRECTIVE
+

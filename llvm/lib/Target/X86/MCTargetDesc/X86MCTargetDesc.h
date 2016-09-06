@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 #define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCTARGETDESC_H
 
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/DataTypes.h"
 #include <string>
 
@@ -26,7 +27,7 @@ class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCRelocationInfo;
-class MCStreamer;
+class MCTargetOptions;
 class Target;
 class Triple;
 class StringRef;
@@ -56,7 +57,7 @@ std::string ParseX86Triple(const Triple &TT);
 
 unsigned getDwarfRegFlavour(const Triple &TT, bool isEH);
 
-void InitLLVM2SEHRegisterMapping(MCRegisterInfo *MRI);
+void initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI);
 
 /// Create a X86 MCSubtargetInfo instance. This is exposed so Asm parser, etc.
 /// do not need to go through TargetRegistry.
@@ -69,9 +70,11 @@ MCCodeEmitter *createX86MCCodeEmitter(const MCInstrInfo &MCII,
                                       MCContext &Ctx);
 
 MCAsmBackend *createX86_32AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                     const Triple &TT, StringRef CPU);
+                                     const Triple &TT, StringRef CPU,
+                                     const MCTargetOptions &Options);
 MCAsmBackend *createX86_64AsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                     const Triple &TT, StringRef CPU);
+                                     const Triple &TT, StringRef CPU,
+                                     const MCTargetOptions &Options);
 
 /// Construct an X86 Windows COFF machine code streamer which will generate
 /// PE/COFF format object files.

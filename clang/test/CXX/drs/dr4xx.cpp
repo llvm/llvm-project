@@ -702,8 +702,8 @@ namespace dr460 { // dr460: yes
   namespace X { namespace Q { int n; } }
   namespace Y {
     using X; // expected-error {{requires a qualified name}}
-    using dr460::X; // expected-error {{cannot refer to namespace}}
-    using X::Q; // expected-error {{cannot refer to namespace}}
+    using dr460::X; // expected-error {{cannot refer to a namespace}}
+    using X::Q; // expected-error {{cannot refer to a namespace}}
   }
 }
 
@@ -1197,12 +1197,12 @@ namespace dr496 { // dr496: no
   int check6[ __is_trivially_assignable(B, const B&) ? 1 : -1];
 }
 
-namespace dr497 { // dr497: yes
+namespace dr497 { // dr497: sup 253
   void before() {
     struct S {
       mutable int i;
     };
-    const S cs; // expected-error {{default initialization}}
+    const S cs;
     int S::*pm = &S::i;
     cs.*pm = 88; // expected-error {{not assignable}}
   }

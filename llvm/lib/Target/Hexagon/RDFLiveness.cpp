@@ -36,6 +36,7 @@
 using namespace llvm;
 using namespace rdf;
 
+namespace llvm {
 namespace rdf {
   template<>
   raw_ostream &operator<< (raw_ostream &OS, const Print<Liveness::RefMap> &P) {
@@ -52,7 +53,8 @@ namespace rdf {
     OS << " }";
     return OS;
   }
-}
+} // namespace rdf
+} // namespace llvm
 
 // The order in the returned sequence is the order of reaching defs in the
 // upward traversal: the first def is the closest to the given reference RefA,
@@ -235,7 +237,93 @@ NodeList Liveness::getAllReachingDefs(NodeAddr<RefNode*> RefA) {
 }
 
 
+NodeSet Liveness::getAllReachingDefsRec(RegisterRef RefRR,
+      NodeAddr<RefNode*> RefA, NodeSet &Visited, const NodeSet &Defs) {
+  // Collect all defined registers. Do not consider phis to be defining
+  // anything, only collect "real" definitions.
+  RegisterSet DefRRs;
+  for (const auto D : Defs) {
+    const auto DA = DFG.addr<const DefNode*>(D);
+    if (!(DA.Addr->getFlags() & NodeAttrs::PhiRef))
+      DefRRs.insert(DA.Addr->getRegRef());
+  }
+
+  auto RDs = getAllReachingDefs(RefRR, RefA, true, DefRRs);
+  if (RDs.empty())
+    return Defs;
+
+  // Make a copy of the preexisting definitions and add the newly found ones.
+  NodeSet TmpDefs = Defs;
+  for (auto R : RDs)
+    TmpDefs.insert(R.Id);
+
+  NodeSet Result = Defs;
+
+  for (NodeAddr<DefNode*> DA : RDs) {
+    Result.insert(DA.Id);
+    if (!(DA.Addr->getFlags() & NodeAttrs::PhiRef))
+      continue;
+    NodeAddr<PhiNode*> PA = DA.Addr->getOwner(DFG);
+    if (Visited.count(PA.Id))
+      continue;
+    Visited.insert(PA.Id);
+    // Go over all phi uses and get the reaching defs for each use.
+    for (auto U : PA.Addr->members_if(DFG.IsRef<NodeAttrs::Use>, DFG)) {
+      const auto &T = getAllReachingDefsRec(RefRR, U, Visited, TmpDefs);
+      Result.insert(T.begin(), T.end());
+    }
+  }
+
+  return Result;
+}
+
+
+NodeSet Liveness::getAllReachedUses(RegisterRef RefRR,
+      NodeAddr<DefNode*> DefA, const RegisterSet &DefRRs) {
+  NodeSet Uses;
+
+  // If the original register is already covered by all the intervening
+  // defs, no more uses can be reached.
+  if (RAI.covers(DefRRs, RefRR))
+    return Uses;
+
+  // Add all directly reached uses.
+  NodeId U = DefA.Addr->getReachedUse();
+  while (U != 0) {
+    auto UA = DFG.addr<UseNode*>(U);
+    auto UR = UA.Addr->getRegRef();
+    if (RAI.alias(RefRR, UR) && !RAI.covers(DefRRs, UR))
+      Uses.insert(U);
+    U = UA.Addr->getSibling();
+  }
+
+  // Traverse all reached defs.
+  for (NodeId D = DefA.Addr->getReachedDef(), NextD; D != 0; D = NextD) {
+    auto DA = DFG.addr<DefNode*>(D);
+    NextD = DA.Addr->getSibling();
+    auto DR = DA.Addr->getRegRef();
+    // If this def is already covered, it cannot reach anything new.
+    // Similarly, skip it if it is not aliased to the interesting register.
+    if (RAI.covers(DefRRs, DR) || !RAI.alias(RefRR, DR))
+      continue;
+    NodeSet T;
+    if (DA.Addr->getFlags() & NodeAttrs::Preserving) {
+      // If it is a preserving def, do not update the set of intervening defs.
+      T = getAllReachedUses(RefRR, DA, DefRRs);
+    } else {
+      RegisterSet NewDefRRs = DefRRs;
+      NewDefRRs.insert(DR);
+      T = getAllReachedUses(RefRR, DA, NewDefRRs);
+    }
+    Uses.insert(T.begin(), T.end());
+  }
+  return Uses;
+}
+
+
 void Liveness::computePhiInfo() {
+  RealUseMap.clear();
+
   NodeList Phis;
   NodeAddr<FuncNode*> FA = DFG.getFunc();
   auto Blocks = FA.Addr->members(DFG);
@@ -312,7 +400,7 @@ void Liveness::computePhiInfo() {
       for (auto I = Uses.begin(), E = Uses.end(); I != E; ) {
         auto UA = DFG.addr<UseNode*>(*I);
         NodeList RDs = getAllReachingDefs(UI->first, UA);
-        if (std::any_of(RDs.begin(), RDs.end(), HasDef))
+        if (any_of(RDs, HasDef))
           ++I;
         else
           I = Uses.erase(I);
@@ -601,7 +689,11 @@ void Liveness::resetKills(MachineBasicBlock *B) {
 
     MI->clearKillInfo();
     for (auto &Op : MI->operands()) {
-      if (!Op.isReg() || !Op.isDef())
+      // An implicit def of a super-register may not necessarily start a
+      // live range of it, since an implicit use could be used to keep parts
+      // of it live. Instead of analyzing the implicit operands, ignore
+      // implicit defs.
+      if (!Op.isReg() || !Op.isDef() || Op.isImplicit())
         continue;
       unsigned R = Op.getReg();
       if (!TargetRegisterInfo::isPhysicalRegister(R))
@@ -616,8 +708,8 @@ void Liveness::resetKills(MachineBasicBlock *B) {
       if (!TargetRegisterInfo::isPhysicalRegister(R))
         continue;
       bool IsLive = false;
-      for (MCSubRegIterator SR(R, &TRI, true); SR.isValid(); ++SR) {
-        if (!Live[*SR])
+      for (MCRegAliasIterator AR(R, &TRI, true); AR.isValid(); ++AR) {
+        if (!Live[*AR])
           continue;
         IsLive = true;
         break;

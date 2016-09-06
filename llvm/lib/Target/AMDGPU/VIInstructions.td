@@ -11,6 +11,8 @@
 
 let SIAssemblerPredicate = DisableInst, SubtargetPredicate = isVI in {
 
+let DisableSIDecoder = 1 in {
+
 //===----------------------------------------------------------------------===//
 // VOP1 Instructions
 //===----------------------------------------------------------------------===//
@@ -52,9 +54,9 @@ defm V_SUBREV_F16 : VOP2Inst <vop2<0, 0x21>, "v_subrev_f16", VOP_F16_F16_F16,
 defm V_MUL_F16 : VOP2Inst <vop2<0, 0x22>, "v_mul_f16", VOP_F16_F16_F16>;
 defm V_MAC_F16 : VOP2Inst <vop2<0, 0x23>, "v_mac_f16", VOP_F16_F16_F16>;
 } // End isCommutable = 1
-defm V_MADMK_F16 : VOP2MADK <vop2<0,0x24>, "v_madmk_f16">;
+defm V_MADMK_F16 : VOP2MADK <vop2<0,0x24>, "v_madmk_f16", VOP_MADMK>;
 let isCommutable = 1 in {
-defm V_MADAK_F16 : VOP2MADK <vop2<0,0x25>, "v_madak_f16">;
+defm V_MADAK_F16 : VOP2MADK <vop2<0,0x25>, "v_madak_f16", VOP_MADAK>;
 defm V_ADD_U16 : VOP2Inst <vop2<0,0x26>, "v_add_u16", VOP_I16_I16_I16>;
 defm V_SUB_U16 : VOP2Inst <vop2<0,0x27>, "v_sub_u16" , VOP_I16_I16_I16>;
 defm V_SUBREV_U16 : VOP2Inst <vop2<0,0x28>, "v_subrev_u16", VOP_I16_I16_I16>;
@@ -72,6 +74,16 @@ defm V_MIN_U16 : VOP2Inst <vop2<0,0x31>, "v_min_u16", VOP_I16_I16_I16>;
 defm V_MIN_I16 : VOP2Inst <vop2<0,0x32>, "v_min_i16", VOP_I16_I16_I16>;
 } // End isCommutable = 1
 defm V_LDEXP_F16 : VOP2Inst <vop2<0,0x33>, "v_ldexp_f16", VOP_F16_F16_I16>;
+
+//===----------------------------------------------------------------------===//
+// VOP3 Instructions
+//===----------------------------------------------------------------------===//
+let isCommutable = 1 in {
+    defm V_MAD_F16 : VOP3Inst <vop3<0, 0x1ea>, "v_mad_f16", VOP_F16_F16_F16_F16>;
+    defm V_MAD_U16 : VOP3Inst <vop3<0, 0x1eb>, "v_mad_u16", VOP_I16_I16_I16_I16>;
+    defm V_MAD_I16 : VOP3Inst <vop3<0, 0x1ec>, "v_mad_i16", VOP_I16_I16_I16_I16>;
+}
+} // let DisableSIDecoder = 1
 
 // Aliases to simplify matching of floating-point instructions that
 // are VOP2 on SI and VOP3 on VI.
@@ -99,6 +111,9 @@ def S_DCACHE_WB : SMEM_Inval <0x21,
 def S_DCACHE_WB_VOL : SMEM_Inval <0x23,
   "s_dcache_wb_vol", int_amdgcn_s_dcache_wb_vol>;
 
+def S_MEMREALTIME : SMEM_Ret<0x25,
+  "s_memrealtime", int_amdgcn_s_memrealtime>;
+
 } // End SIAssemblerPredicate = DisableInst, SubtargetPredicate = isVI
 
 let Predicates = [isVI] in {
@@ -107,6 +122,26 @@ let Predicates = [isVI] in {
 def : Pat <
   (SIload_constant v4i32:$sbase, IMM20bit:$offset),
   (S_BUFFER_LOAD_DWORD_IMM $sbase, (as_i32imm $offset))
+>;
+
+//===----------------------------------------------------------------------===//
+// DPP Patterns
+//===----------------------------------------------------------------------===//
+
+def : Pat <
+  (int_amdgcn_mov_dpp i32:$src, imm:$dpp_ctrl, imm:$row_mask, imm:$bank_mask,
+                      imm:$bound_ctrl),
+  (V_MOV_B32_dpp $src, (as_i32imm $dpp_ctrl), (as_i32imm $row_mask),
+                       (as_i32imm $bank_mask), (as_i1imm $bound_ctrl))
+>;
+
+//===----------------------------------------------------------------------===//
+// Misc Patterns
+//===----------------------------------------------------------------------===//
+
+def : Pat <
+  (i64 (readcyclecounter)),
+  (S_MEMREALTIME)
 >;
 
 } // End Predicates = [isVI]

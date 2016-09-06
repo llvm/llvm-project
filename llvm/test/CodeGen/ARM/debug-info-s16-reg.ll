@@ -65,14 +65,14 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!53}
 
-!0 = distinct !DISubprogram(name: "inlineprinter", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 5, file: !51, scope: !1, type: !3, variables: !48)
+!0 = distinct !DISubprogram(name: "inlineprinter", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 5, file: !51, scope: !1, type: !3, variables: !48)
 !1 = !DIFile(filename: "a.c", directory: "/private/tmp")
-!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 129915)", isOptimized: true, emissionKind: 1, file: !51, enums: !52, retainedTypes: !52, subprograms: !47, imports:  null)
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang version 3.0 (trunk 129915)", isOptimized: true, emissionKind: FullDebug, file: !51, enums: !52, retainedTypes: !52, imports:  null)
 !3 = !DISubroutineType(types: !4)
 !4 = !{!5}
 !5 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!6 = distinct !DISubprogram(name: "printer", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 12, file: !51, scope: !1, type: !3, variables: !49)
-!7 = distinct !DISubprogram(name: "main", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 18, file: !51, scope: !1, type: !3, variables: !50)
+!6 = distinct !DISubprogram(name: "printer", line: 12, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 12, file: !51, scope: !1, type: !3, variables: !49)
+!7 = distinct !DISubprogram(name: "main", line: 18, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !2, scopeLine: 18, file: !51, scope: !1, type: !3, variables: !50)
 !8 = !DILocalVariable(name: "ptr", line: 4, arg: 1, scope: !0, file: !1, type: !9)
 !9 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 32, align: 32, scope: !2, baseType: null)
 !10 = !DILocalVariable(name: "val", line: 4, arg: 2, scope: !0, file: !1, type: !11)
@@ -117,7 +117,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !44 = !DILocation(line: 6, column: 3, scope: !28, inlinedAt: !40)
 !45 = !DILocation(line: 22, column: 3, scope: !23)
 !46 = !DILocation(line: 23, column: 1, scope: !23)
-!47 = !{!0, !6, !7}
 !48 = !{!8, !10, !12}
 !49 = !{!14, !15, !16}
 !50 = !{!17, !18, !22}

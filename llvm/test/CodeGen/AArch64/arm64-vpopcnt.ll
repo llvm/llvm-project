@@ -1,5 +1,4 @@
-; RUN: llc < %s -march=arm64 -mcpu=cyclone | FileCheck %s
-target triple = "arm64-apple-ios"
+; RUN: llc < %s -mtriple=arm64-apple-ios -mcpu=cyclone | FileCheck %s
 
 ; The non-byte ones used to fail with "Cannot select"
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple -no-integrated-as -disable-post-ra | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios -aarch64-neon-syntax=apple -no-integrated-as -disable-post-ra | FileCheck %s
 
 ; rdar://9167275
 
@@ -230,5 +230,27 @@ define void @test_zero_reg(i32* %addr) {
   tail call void asm sideeffect "USE($0), USE(${1:w})", "z,z"(i32 0, i32 0) nounwind
 ; CHECK: USE(xzr), USE(wzr)
 
+  ret void
+}
+
+define <2 x float> @test_vreg_64bit(<2 x float> %in) nounwind {
+  ; CHECK-LABEL: test_vreg_64bit:
+  %1 = tail call <2 x float> asm sideeffect "fadd ${0}.2s, ${1}.2s, ${1}.2s", "={v14},w"(<2 x float> %in) nounwind
+  ; CHECK fadd v14.2s, v0.2s, v0.2s:
+  ret <2 x float> %1
+}
+
+define <4 x float> @test_vreg_128bit(<4 x float> %in) nounwind {
+  ; CHECK-LABEL: test_vreg_128bit:
+  %1 = tail call <4 x float> asm sideeffect "fadd ${0}.4s, ${1}.4s, ${1}.4s", "={v14},w"(<4 x float> %in) nounwind
+  ; CHECK fadd v14.4s, v0.4s, v0.4s:
+  ret <4 x float> %1
+}
+
+define void @test_constraint_w(i32 %a) {
+  ; CHECK: fmov [[SREG:s[0-9]+]], {{w[0-9]+}}
+  ; CHECK: sqxtn h0, [[SREG]]
+
+  tail call void asm sideeffect "sqxtn h0, ${0:s}\0A", "w"(i32 %a)
   ret void
 }

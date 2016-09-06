@@ -11,4 +11,4 @@ define void @foo() {
   ret void
 }
 
-; CHECK: declare extern_weak void @foo(){{$}}
+; CHECK: declare void @foo()

@@ -233,11 +233,11 @@ entry:
 ; block.
 
   switch i32 %x, label %sw.default [
-    i32 1, label %sw.bb
-    i32 5, label %sw.bb2
-    i32 7, label %sw.bb3
-    i32 9, label %sw.bb4
-    i32 31, label %sw.bb5
+    i32 4, label %sw.bb
+    i32 20, label %sw.bb2
+    i32 28, label %sw.bb3
+    i32 36, label %sw.bb4
+    i32 124, label %sw.bb5
   ], !prof !2
 
 sw.bb:
@@ -272,7 +272,7 @@ sw.epilog:
 ;
 ; CHECK: BB#0:
 ; BB#0 to BB#6: [10, UINT32_MAX] (15)
-; BB#0 to BB#8: [1, 5, 7, 9] (jump table) (45)
+; BB#0 to BB#8: [4, 20, 28, 36] (jump table) (45)
 ; CHECK: Successors according to CFG: BB#8({{[0-9a-fx/= ]+}}25.00%) BB#9({{[0-9a-fx/= ]+}}75.00%)
 }
 

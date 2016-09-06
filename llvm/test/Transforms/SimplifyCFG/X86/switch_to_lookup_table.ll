@@ -1306,8 +1306,8 @@ l6:
 ; Speculation depth must be limited to avoid a zero-cost instruction cycle.
 
 ; CHECK-LABEL: @PR26308(
-; CHECK:       cleanup4:
-; CHECK-NEXT:  br label %cleanup4
+; CHECK:       while.body:
+; CHECK-NEXT:  br label %while.body
 
 define i32 @PR26308(i1 %B, i64 %load) {
 entry:

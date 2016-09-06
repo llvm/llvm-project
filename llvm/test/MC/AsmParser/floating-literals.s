@@ -58,25 +58,19 @@
 .float -0x1.0p0
 
 # CHECK-ERROR: invalid hexadecimal floating-point constant: expected at least one exponent digit
-# CHECK-ERROR: unexpected token in directive
 .float 0xa.apa
 
 # CHECK-ERROR: invalid hexadecimal floating-point constant: expected at least one exponent digit
-# CHECK-ERROR: unexpected token in directive
 .double -0x1.2p+
 
 # CHECK-ERROR: invalid hexadecimal floating-point constant: expected at least one exponent digit
-# CHECK-ERROR: unexpected token in directive
 .double -0x1.2p
 
 # CHECK-ERROR: invalid hexadecimal floating-point constant: expected at least one significand digit
-# CHECK-ERROR: unexpected token in directive
 .float 0xp2
 
 # CHECK-ERROR: invalid hexadecimal floating-point constant: expected at least one significand digit
-# CHECK-ERROR: unexpected token in directive
 .float 0x.p5
 
 # CHECK-ERROR: error: invalid hexadecimal floating-point constant: expected exponent part 'p'
-# CHECK-ERROR: unexpected token in directive
 .float 0x1.2

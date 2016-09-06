@@ -1,4 +1,4 @@
-; RUN:  llc -O3 -code-model=default -relocation-model=default -mtriple=armv7l-unknown-linux-gnueabihf -mcpu=generic %s -o - | FileCheck %s
+; RUN:  llc -O3 -code-model=default -mtriple=armv7l-unknown-linux-gnueabihf -mcpu=generic %s -o - | FileCheck %s
 ; Check that we respect the existing chain between loads and stores when we
 ; legalize unaligned loads.
 ; Test case from PR24669.

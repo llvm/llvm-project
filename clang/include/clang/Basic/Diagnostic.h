@@ -173,6 +173,7 @@ private:
   bool WarningsAsErrors;         // Treat warnings like errors.
   bool EnableAllWarnings;        // Enable all warnings.
   bool ErrorsAsFatal;            // Treat errors like fatal errors.
+  bool FatalsAsError;             // Treat fatal errors like errors.
   bool SuppressSystemWarnings;   // Suppress warnings in system headers.
   bool SuppressAllDiagnostics;   // Suppress all diagnostics.
   bool ElideType;                // Elide common types of templates.
@@ -343,11 +344,10 @@ private:
   std::string FlagValue;
 
 public:
-  explicit DiagnosticsEngine(
-                      const IntrusiveRefCntPtr<DiagnosticIDs> &Diags,
-                      DiagnosticOptions *DiagOpts,
-                      DiagnosticConsumer *client = nullptr,
-                      bool ShouldOwnClient = true);
+  explicit DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> Diags,
+                             DiagnosticOptions *DiagOpts,
+                             DiagnosticConsumer *client = nullptr,
+                             bool ShouldOwnClient = true);
   ~DiagnosticsEngine();
 
   const IntrusiveRefCntPtr<DiagnosticIDs> &getDiagnosticIDs() const {
@@ -454,6 +454,12 @@ public:
   /// \brief When set to true, any error reported is made a fatal error.
   void setErrorsAsFatal(bool Val) { ErrorsAsFatal = Val; }
   bool getErrorsAsFatal() const { return ErrorsAsFatal; }
+
+  /// \brief When set to true, any fatal error reported is made an error.
+  ///
+  /// This setting takes precedence over the setErrorsAsFatal setting above.
+  void setFatalsAsError(bool Val) { FatalsAsError = Val; }
+  bool getFatalsAsError() const { return FatalsAsError; }
 
   /// \brief When set to true mask warnings that come from system headers.
   void setSuppressSystemWarnings(bool Val) { SuppressSystemWarnings = Val; }
@@ -1065,10 +1071,10 @@ inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
 // so that we only match those arguments that are (statically) DeclContexts;
 // other arguments that derive from DeclContext (e.g., RecordDecls) will not
 // match.
-template<typename T>
-inline
-typename std::enable_if<std::is_same<T, DeclContext>::value,
-                        const DiagnosticBuilder &>::type
+template <typename T>
+inline typename std::enable_if<
+    std::is_same<typename std::remove_const<T>::type, DeclContext>::value,
+    const DiagnosticBuilder &>::type
 operator<<(const DiagnosticBuilder &DB, T *DC) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(DC),
                   DiagnosticsEngine::ak_declcontext);

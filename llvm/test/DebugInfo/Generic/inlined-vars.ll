@@ -18,16 +18,15 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!27}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 (trunk 159419)", isOptimized: true, emissionKind: 0, file: !26, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports:  !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 (trunk 159419)", isOptimized: true, emissionKind: FullDebug, file: !26, enums: !2, retainedTypes: !2, globals: !2, imports:  !2)
 !1 = !{i32 0}
 !2 = !{}
-!3 = !{!5, !10}
-!5 = distinct !DISubprogram(name: "main", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 10, file: !26, scope: !6, type: !7, variables: !2)
+!5 = distinct !DISubprogram(name: "main", line: 10, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 10, file: !26, scope: !6, type: !7, variables: !2)
 !6 = !DIFile(filename: "inline-bug.cc", directory: "/tmp/dbginfo/pr13202")
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9}
 !9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!10 = distinct !DISubprogram(name: "f", linkageName: "_ZL1fi", line: 3, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 3, file: !26, scope: !6, type: !11, variables: !13)
+!10 = distinct !DISubprogram(name: "f", linkageName: "_ZL1fi", line: 3, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !26, scope: !6, type: !11, variables: !13)
 !11 = !DISubroutineType(types: !12)
 !12 = !{!9, !9}
 !13 = !{!15, !16}

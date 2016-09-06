@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=arm64-apple-ios -O2 -aarch64-collect-loh -aarch64-collect-loh-bb-only=false < %s -o - | FileCheck %s
-; RUN: llc -mtriple=arm64-linux-gnu -O2 -aarch64-collect-loh -aarch64-collect-loh-bb-only=false < %s -o - | FileCheck %s --check-prefix=CHECK-ELF
+; RUN: llc -mtriple=arm64-apple-ios -O2 -aarch64-enable-collect-loh -aarch64-collect-loh-bb-only=false < %s -o - | FileCheck %s
+; RUN: llc -mtriple=arm64-linux-gnu -O2 -aarch64-enable-collect-loh -aarch64-collect-loh-bb-only=false < %s -o - | FileCheck %s --check-prefix=CHECK-ELF
 
 ; CHECK-ELF-NOT: .loh
 ; CHECK-ELF-NOT: AdrpAdrp
@@ -613,6 +613,7 @@ define <1 x i8> @getL() {
 ; CHECK-NEXT: adrp [[ADRP_REG:x[0-9]+]], _L@GOTPAGE
 ; CHECK-NEXT: [[LDRGOT_LABEL:Lloh[0-9]+]]:
 ; CHECK-NEXT: ldr [[LDRGOT_REG:x[0-9]+]], {{\[}}[[ADRP_REG]], _L@GOTPAGEOFF]
+; CHECK-NEXT: ; kill
 ; Ultimately we should generate str b0, but right now, we match the vector
 ; variant which does not allow to fold the immediate into the store.
 ; CHECK-NEXT: st1.b { v0 }[0], {{\[}}[[LDRGOT_REG]]]
@@ -653,5 +654,26 @@ define void @uninterestingSub(i8* nocapture %row) #0 {
   store <16 x i8> %add.i.402, <16 x i8>* %tmp4, align 16
   ret void
 }
+
+@.str.89 = external unnamed_addr constant [12 x i8], align 1
+@.str.90 = external unnamed_addr constant [5 x i8], align 1
+; CHECK-LABEL: test_r274582
+define void @test_r274582() {
+entry:
+  br i1 undef, label %if.then.i, label %if.end.i
+if.then.i:
+  ret void
+if.end.i:
+; CHECK: .loh AdrpAdrp Lloh91, Lloh93
+; CHECK: .loh AdrpLdr Lloh91, Lloh92
+; CHECK: .loh AdrpLdrGot Lloh93, Lloh95
+; CHECK: .loh AdrpLdrGot Lloh94, Lloh96
+  %mul.i.i.i = fmul double undef, 1.000000e-06
+  %add.i.i.i = fadd double undef, %mul.i.i.i
+  %sub.i.i = fsub double %add.i.i.i, undef
+  call void (i8*, ...) @callee(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.89, i64 0, i64 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.90, i64 0, i64 0), double %sub.i.i)
+  unreachable
+}
+declare void @callee(i8* nocapture readonly, ...) 
 
 attributes #0 = { "target-cpu"="cyclone" }

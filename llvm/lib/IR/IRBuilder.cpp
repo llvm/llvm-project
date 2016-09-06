@@ -34,7 +34,7 @@ GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
                                           StrConstant, Name, nullptr,
                                           GlobalVariable::NotThreadLocal,
                                           AddressSpace);
-  GV->setUnnamedAddr(true);
+  GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   return GV;
 }
 
@@ -191,6 +191,26 @@ CallInst *IRBuilderBase::CreateLifetimeEnd(Value *Ptr, ConstantInt *Size) {
   return createCallHelper(TheFn, Ops, this);
 }
 
+CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
+
+  assert(isa<PointerType>(Ptr->getType()) &&
+         "invariant.start only applies to pointers.");
+  Ptr = getCastedInt8PtrValue(Ptr);
+  if (!Size)
+    Size = getInt64(-1);
+  else
+    assert(Size->getType() == getInt64Ty() &&
+           "invariant.start requires the size to be an i64");
+
+  Value *Ops[] = {Size, Ptr};
+  // Fill in the single overloaded type: memory object type.
+  Type *ObjectPtr[1] = {Ptr->getType()};
+  Module *M = BB->getParent()->getParent();
+  Value *TheFn =
+      Intrinsic::getDeclaration(M, Intrinsic::invariant_start, ObjectPtr);
+  return createCallHelper(TheFn, Ops, this);
+}
+
 CallInst *IRBuilderBase::CreateAssumption(Value *Cond) {
   assert(Cond->getType() == getInt1Ty() &&
          "an assumption condition must be of type i1");
@@ -201,50 +221,111 @@ CallInst *IRBuilderBase::CreateAssumption(Value *Cond) {
   return createCallHelper(FnAssume, Ops, this);
 }
 
-/// Create a call to a Masked Load intrinsic.
-/// Ptr      - the base pointer for the load
-/// Align    - alignment of the source location
-/// Mask     - an vector of booleans which indicates what vector lanes should
-///            be accessed in memory
-/// PassThru - a pass-through value that is used to fill the masked-off lanes
-///            of the result
-/// Name     - name of the result variable
+/// \brief Create a call to a Masked Load intrinsic.
+/// \p Ptr      - base pointer for the load
+/// \p Align    - alignment of the source location
+/// \p Mask     - vector of booleans which indicates what vector lanes should
+///               be accessed in memory
+/// \p PassThru - pass-through value that is used to fill the masked-off lanes
+///               of the result
+/// \p Name     - name of the result variable
 CallInst *IRBuilderBase::CreateMaskedLoad(Value *Ptr, unsigned Align,
                                           Value *Mask, Value *PassThru,
                                           const Twine &Name) {
-  assert(Ptr->getType()->isPointerTy() && "Ptr must be of pointer type");
-  // DataTy is the overloaded type
-  Type *DataTy = cast<PointerType>(Ptr->getType())->getElementType();
+  PointerType *PtrTy = cast<PointerType>(Ptr->getType());
+  Type *DataTy = PtrTy->getElementType();
   assert(DataTy->isVectorTy() && "Ptr should point to a vector");
   if (!PassThru)
     PassThru = UndefValue::get(DataTy);
+  Type *OverloadedTypes[] = { DataTy, PtrTy };
   Value *Ops[] = { Ptr, getInt32(Align), Mask,  PassThru};
-  return CreateMaskedIntrinsic(Intrinsic::masked_load, Ops, DataTy, Name);
+  return CreateMaskedIntrinsic(Intrinsic::masked_load, Ops,
+                               OverloadedTypes, Name);
 }
 
-/// Create a call to a Masked Store intrinsic.
-/// Val   - the data to be stored,
-/// Ptr   - the base pointer for the store
-/// Align - alignment of the destination location
-/// Mask  - an vector of booleans which indicates what vector lanes should
-///         be accessed in memory
+/// \brief Create a call to a Masked Store intrinsic.
+/// \p Val   - data to be stored,
+/// \p Ptr   - base pointer for the store
+/// \p Align - alignment of the destination location
+/// \p Mask  - vector of booleans which indicates what vector lanes should
+///            be accessed in memory
 CallInst *IRBuilderBase::CreateMaskedStore(Value *Val, Value *Ptr,
                                            unsigned Align, Value *Mask) {
+  PointerType *PtrTy = cast<PointerType>(Ptr->getType());
+  Type *DataTy = PtrTy->getElementType();
+  assert(DataTy->isVectorTy() && "Ptr should point to a vector");
+  Type *OverloadedTypes[] = { DataTy, PtrTy };
   Value *Ops[] = { Val, Ptr, getInt32(Align), Mask };
-  // Type of the data to be stored - the only one overloaded type
-  return CreateMaskedIntrinsic(Intrinsic::masked_store, Ops, Val->getType());
+  return CreateMaskedIntrinsic(Intrinsic::masked_store, Ops, OverloadedTypes);
 }
 
 /// Create a call to a Masked intrinsic, with given intrinsic Id,
-/// an array of operands - Ops, and one overloaded type - DataTy
+/// an array of operands - Ops, and an array of overloaded types -
+/// OverloadedTypes.
 CallInst *IRBuilderBase::CreateMaskedIntrinsic(Intrinsic::ID Id,
                                                ArrayRef<Value *> Ops,
-                                               Type *DataTy,
+                                               ArrayRef<Type *> OverloadedTypes,
                                                const Twine &Name) {
   Module *M = BB->getParent()->getParent();
-  Type *OverloadedTypes[] = { DataTy };
   Value *TheFn = Intrinsic::getDeclaration(M, Id, OverloadedTypes);
   return createCallHelper(TheFn, Ops, this, Name);
+}
+
+/// \brief Create a call to a Masked Gather intrinsic.
+/// \p Ptrs     - vector of pointers for loading
+/// \p Align    - alignment for one element
+/// \p Mask     - vector of booleans which indicates what vector lanes should
+///               be accessed in memory
+/// \p PassThru - pass-through value that is used to fill the masked-off lanes
+///               of the result
+/// \p Name     - name of the result variable
+CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, unsigned Align,
+                                            Value *Mask,  Value *PassThru,
+                                            const Twine& Name) {
+  auto PtrsTy = cast<VectorType>(Ptrs->getType());
+  auto PtrTy = cast<PointerType>(PtrsTy->getElementType());
+  unsigned NumElts = PtrsTy->getVectorNumElements();
+  Type *DataTy = VectorType::get(PtrTy->getElementType(), NumElts);
+
+  if (!Mask)
+    Mask = Constant::getAllOnesValue(VectorType::get(Type::getInt1Ty(Context),
+                                     NumElts));
+
+  Value * Ops[] = {Ptrs, getInt32(Align), Mask, UndefValue::get(DataTy)};
+
+  // We specify only one type when we create this intrinsic. Types of other
+  // arguments are derived from this type.
+  return CreateMaskedIntrinsic(Intrinsic::masked_gather, Ops, { DataTy }, Name);
+}
+
+/// \brief Create a call to a Masked Scatter intrinsic.
+/// \p Data  - data to be stored,
+/// \p Ptrs  - the vector of pointers, where the \p Data elements should be
+///            stored
+/// \p Align - alignment for one element
+/// \p Mask  - vector of booleans which indicates what vector lanes should
+///            be accessed in memory
+CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
+                                             unsigned Align, Value *Mask) {
+  auto PtrsTy = cast<VectorType>(Ptrs->getType());
+  auto DataTy = cast<VectorType>(Data->getType());
+  unsigned NumElts = PtrsTy->getVectorNumElements();
+
+#ifndef NDEBUG
+  auto PtrTy = cast<PointerType>(PtrsTy->getElementType());
+  assert(NumElts == DataTy->getVectorNumElements() &&
+         PtrTy->getElementType() == DataTy->getElementType() &&
+         "Incompatible pointer and data types");
+#endif
+
+  if (!Mask)
+    Mask = Constant::getAllOnesValue(VectorType::get(Type::getInt1Ty(Context),
+                                     NumElts));
+  Value * Ops[] = {Data, Ptrs, getInt32(Align), Mask};
+
+  // We specify only one type when we create this intrinsic. Types of other
+  // arguments are derived from this type.
+  return CreateMaskedIntrinsic(Intrinsic::masked_scatter, Ops, { DataTy });
 }
 
 template <typename T0, typename T1, typename T2, typename T3>

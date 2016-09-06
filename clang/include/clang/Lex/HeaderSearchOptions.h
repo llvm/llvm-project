@@ -172,6 +172,8 @@ public:
   /// Whether the module includes debug information (-gmodules).
   unsigned UseDebugInfo : 1;
 
+  unsigned ModulesValidateDiagnosticOptions : 1;
+
   HeaderSearchOptions(StringRef _Sysroot = "/")
       : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(0),
         ImplicitModuleMaps(0), ModuleMapFileHomeIsCwd(0),
@@ -181,7 +183,7 @@ public:
         UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
-        UseDebugInfo(false) {}
+        UseDebugInfo(false), ModulesValidateDiagnosticOptions(true) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.
   void AddPath(StringRef Path, frontend::IncludeDirGroup Group,

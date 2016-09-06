@@ -1,69 +1,93 @@
 // RUN: %clangxx -no-canonical-prefixes -target x86_64--netbsd \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=X86_64 %s
 // RUN: %clangxx -no-canonical-prefixes -target x86_64--netbsd7.0.0 \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=X86_64-7 %s
 // RUN: %clangxx -no-canonical-prefixes -target x86_64--netbsd6.0.0 \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=X86_64-6 %s
 // RUN: %clangxx -no-canonical-prefixes -target arm--netbsd6.0.0-eabi \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=ARM %s
 // RUN: %clangxx -no-canonical-prefixes -target arm--netbsd7.0.0-eabi \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=ARM-7 %s
 // RUN: %clangxx -no-canonical-prefixes -target aarch64--netbsd \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=AARCH64 %s
 // RUN: %clangxx -no-canonical-prefixes -target aarch64--netbsd7.0.0 \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=AARCH64-7 %s
 // RUN: %clangxx -no-canonical-prefixes -target sparc--netbsd \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=SPARC %s
+// RUN: %clangxx -no-canonical-prefixes -target sparc--netbsd6.0.0 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: | FileCheck -check-prefix=SPARC-6 %s
+// RUN: %clangxx -no-canonical-prefixes -target sparc--netbsd7.0.0 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: | FileCheck -check-prefix=SPARC-7 %s
 // RUN: %clangxx -no-canonical-prefixes -target sparc64--netbsd \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=SPARC64 %s
+// RUN: %clangxx -no-canonical-prefixes -target sparc64--netbsd6.0.0 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: | FileCheck -check-prefix=SPARC64-6 %s
+// RUN: %clangxx -no-canonical-prefixes -target sparc64--netbsd7.0.0 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: | FileCheck -check-prefix=SPARC64-7 %s
 // RUN: %clangxx -no-canonical-prefixes -target powerpc--netbsd \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=POWERPC %s
 // RUN: %clangxx -no-canonical-prefixes -target powerpc64--netbsd \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=POWERPC64 %s
 
 // RUN: %clangxx -no-canonical-prefixes -target x86_64--netbsd -static \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-X86_64 %s
 // RUN: %clangxx -no-canonical-prefixes -target x86_64--netbsd7.0.0 -static \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-X86_64-7 %s
 // RUN: %clangxx -no-canonical-prefixes -target x86_64--netbsd6.0.0 -static \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-X86_64-6 %s
 // RUN: %clangxx -no-canonical-prefixes -target arm--netbsd6.0.0-eabi -static \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-ARM %s
 // RUN: %clangxx -no-canonical-prefixes -target arm--netbsd7.0.0-eabi -static \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-ARM-7 %s
 // RUN: %clangxx -no-canonical-prefixes -target aarch64--netbsd -static \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-AARCH64 %s
 // RUN: %clangxx -no-canonical-prefixes -target aarch64--netbsd7.0.0 -static \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-AARCH64-7 %s
 // RUN: %clangxx -no-canonical-prefixes -target sparc--netbsd -static \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-SPARC %s
+// RUN: %clangxx -no-canonical-prefixes -target sparc--netbsd6.0.0 -static \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: | FileCheck -check-prefix=S-SPARC-6 %s
+// RUN: %clangxx -no-canonical-prefixes -target sparc--netbsd7.0.0 -static \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: | FileCheck -check-prefix=S-SPARC-7 %s
 // RUN: %clangxx -no-canonical-prefixes -target sparc64--netbsd -static \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-SPARC64 %s
+// RUN: %clangxx -no-canonical-prefixes -target sparc64--netbsd6.0.0 -static \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: | FileCheck -check-prefix=S-SPARC64-6 %s
+// RUN: %clangxx -no-canonical-prefixes -target sparc64--netbsd7.0.0 -static \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: | FileCheck -check-prefix=S-SPARC64-7 %s
 // RUN: %clangxx -no-canonical-prefixes -target powerpc--netbsd -static \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-POWERPC %s
 // RUN: %clangxx -no-canonical-prefixes -target powerpc64--netbsd -static \
-// RUN: --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
+// RUN: -stdlib=platform --sysroot=%S/Inputs/basic_netbsd_tree %s -### 2>&1 \
 // RUN: | FileCheck -check-prefix=S-POWERPC64 %s
 
 // X86_64: clang{{.*}}" "-cc1" "-triple" "x86_64--netbsd"
@@ -116,16 +140,46 @@
 // SPARC: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // SPARC: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
 // SPARC: "{{.*}}/usr/lib{{/|\\\\}}sparc{{/|\\\\}}crti.o"
-// SPARC: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lstdc++"
-// SPARC: "-lm" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// SPARC: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc++"
+// SPARC: "-lm" "-lc"
 // SPARC: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// SPARC-7: clang{{.*}}" "-cc1" "-triple" "sparc--netbsd7.0.0"
+// SPARC-7: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
+// SPARC-7: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
+// SPARC-7: "{{.*}}/usr/lib{{/|\\\\}}sparc{{/|\\\\}}crti.o"
+// SPARC-7: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc++"
+// SPARC-7: "-lm" "-lc"
+// SPARC-7: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// SPARC-6: clang{{.*}}" "-cc1" "-triple" "sparc--netbsd6.0.0"
+// SPARC-6: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
+// SPARC-6: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
+// SPARC-6: "{{.*}}/usr/lib{{/|\\\\}}sparc{{/|\\\\}}crti.o"
+// SPARC-6: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lstdc++"
+// SPARC-6: "-lm" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// SPARC-6: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // SPARC64: clang{{.*}}" "-cc1" "-triple" "sparc64--netbsd"
 // SPARC64: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // SPARC64: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
-// SPARC64: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lstdc++"
-// SPARC64: "-lm" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// SPARC64: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc++"
+// SPARC64: "-lm" "-lc"
 // SPARC64: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// SPARC64-7: clang{{.*}}" "-cc1" "-triple" "sparc64--netbsd7.0.0"
+// SPARC64-7: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
+// SPARC64-7: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
+// SPARC64-7: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc++"
+// SPARC64-7: "-lm" "-lc"
+// SPARC64-7: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// SPARC64-6: clang{{.*}}" "-cc1" "-triple" "sparc64--netbsd6.0.0"
+// SPARC64-6: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
+// SPARC64-6: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
+// SPARC64-6: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lstdc++"
+// SPARC64-6: "-lm" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
+// SPARC64-6: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // POWERPC: clang{{.*}}" "-cc1" "-triple" "powerpc--netbsd"
 // POWERPC: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
@@ -191,16 +245,46 @@
 // S-SPARC: ld{{.*}}" "--eh-frame-hdr" "-Bstatic"
 // S-SPARC: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
 // S-SPARC: "{{.*}}/usr/lib{{/|\\\\}}sparc{{/|\\\\}}crti.o"
-// S-SPARC: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lstdc++"
-// S-SPARC: "-lm" "-lc" "-lgcc_eh" "-lc" "-lgcc"
+// S-SPARC: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc++"
+// S-SPARC: "-lm" "-lc"
 // S-SPARC: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// S-SPARC-7: clang{{.*}}" "-cc1" "-triple" "sparc--netbsd7.0.0"
+// S-SPARC-7: ld{{.*}}" "--eh-frame-hdr" "-Bstatic"
+// S-SPARC-7: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
+// S-SPARC-7: "{{.*}}/usr/lib{{/|\\\\}}sparc{{/|\\\\}}crti.o"
+// S-SPARC-7: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc++"
+// S-SPARC-7: "-lm" "-lc"
+// S-SPARC-7: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// S-SPARC-6: clang{{.*}}" "-cc1" "-triple" "sparc--netbsd6.0.0"
+// S-SPARC-6: ld{{.*}}" "--eh-frame-hdr" "-Bstatic"
+// S-SPARC-6: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o"
+// S-SPARC-6: "{{.*}}/usr/lib{{/|\\\\}}sparc{{/|\\\\}}crti.o"
+// S-SPARC-6: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lstdc++"
+// S-SPARC-6: "-lm" "-lc" "-lgcc_eh" "-lc" "-lgcc"
+// S-SPARC-6: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // S-SPARC64: clang{{.*}}" "-cc1" "-triple" "sparc64--netbsd"
 // S-SPARC64: ld{{.*}}" "--eh-frame-hdr" "-Bstatic"
 // S-SPARC64: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
-// S-SPARC64: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lstdc++"
-// S-SPARC64: "-lm" "-lc" "-lgcc_eh" "-lc" "-lgcc"
+// S-SPARC64: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc++"
+// S-SPARC64: "-lm" "-lc"
 // S-SPARC64: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// S-SPARC64-7: clang{{.*}}" "-cc1" "-triple" "sparc64--netbsd7.0.0"
+// S-SPARC64-7: ld{{.*}}" "--eh-frame-hdr" "-Bstatic"
+// S-SPARC64-7: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
+// S-SPARC64-7: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc++"
+// S-SPARC64-7: "-lm" "-lc"
+// S-SPARC64-7: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// S-SPARC64-6: clang{{.*}}" "-cc1" "-triple" "sparc64--netbsd6.0.0"
+// S-SPARC64-6: ld{{.*}}" "--eh-frame-hdr" "-Bstatic"
+// S-SPARC64-6: "-o" "a.out" "{{.*}}/usr/lib{{/|\\\\}}crt0.o" "{{.*}}/usr/lib{{/|\\\\}}crti.o"
+// S-SPARC64-6: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lstdc++"
+// S-SPARC64-6: "-lm" "-lc" "-lgcc_eh" "-lc" "-lgcc"
+// S-SPARC64-6: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
 
 // S-POWERPC: clang{{.*}}" "-cc1" "-triple" "powerpc--netbsd"
 // S-POWERPC: ld{{.*}}" "--eh-frame-hdr" "-Bstatic"

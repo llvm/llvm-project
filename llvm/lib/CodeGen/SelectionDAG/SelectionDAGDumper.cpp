@@ -101,7 +101,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::GLOBAL_OFFSET_TABLE:        return "GLOBAL_OFFSET_TABLE";
   case ISD::RETURNADDR:                 return "RETURNADDR";
   case ISD::FRAMEADDR:                  return "FRAMEADDR";
-  case ISD::LOCAL_RECOVER:        return "LOCAL_RECOVER";
+  case ISD::LOCAL_RECOVER:              return "LOCAL_RECOVER";
   case ISD::READ_REGISTER:              return "READ_REGISTER";
   case ISD::WRITE_REGISTER:             return "WRITE_REGISTER";
   case ISD::FRAME_TO_ARGS_OFFSET:       return "FRAME_TO_ARGS_OFFSET";
@@ -202,6 +202,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FREM:                       return "frem";
   case ISD::FCOPYSIGN:                  return "fcopysign";
   case ISD::FGETSIGN:                   return "fgetsign";
+  case ISD::FCANONICALIZE:              return "fcanonicalize";
   case ISD::FPOW:                       return "fpow";
   case ISD::SMIN:                       return "smin";
   case ISD::SMAX:                       return "smax";
@@ -378,7 +379,7 @@ static Printable PrintNodeId(const SDNode &Node) {
   });
 }
 
-void SDNode::dump() const { dump(nullptr); }
+LLVM_DUMP_METHOD void SDNode::dump() const { dump(nullptr); }
 void SDNode::dump(const SelectionDAG *G) const {
   print(dbgs(), G);
   dbgs() << '\n';
@@ -590,7 +591,7 @@ static void DumpNodes(const SDNode *N, unsigned indent, const SelectionDAG *G) {
   N->dump(G);
 }
 
-void SelectionDAG::dump() const {
+LLVM_DUMP_METHOD void SelectionDAG::dump() const {
   dbgs() << "SelectionDAG has " << AllNodes.size() << " nodes:\n";
 
   for (allnodes_const_iterator I = allnodes_begin(), E = allnodes_end();

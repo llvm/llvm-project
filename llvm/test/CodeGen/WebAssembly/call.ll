@@ -1,4 +1,5 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -fast-isel -fast-isel-abort=1 | FileCheck %s
 
 ; Test that basic call operations assemble as expected.
 
@@ -120,7 +121,7 @@ define void @coldcc_tail_call_void_nullary() {
   ret void
 }
 
-; FIXME test the following:
+; TODO: test the following:
 ;  - More argument combinations.
 ;  - Tail call.
 ;  - Interesting returns (struct, multiple).

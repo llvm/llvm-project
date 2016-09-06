@@ -6,11 +6,15 @@
 .section	.note.GNU-stack2,"",%progbits
 .section	.note.GNU-,"",@progbits
 .section	-.note.GNU,"","progbits"
+.section	src/stack.c,"",@progbits
+.section	~!@$%^&*()_-+={[}]|\\:<>,"",@progbits
 
 // CHECK: Name: .note.GNU-stack
 // CHECK: Name: .note.GNU-stack2
 // CHECK: Name: .note.GNU-
 // CHECK: Name: -.note.GNU
+// CHECK: Name: src/stack.c
+// CHECK: Name: ~!@$%^&*()_-+={[}]|\\:<>
 
 // Test that the defaults are used
 

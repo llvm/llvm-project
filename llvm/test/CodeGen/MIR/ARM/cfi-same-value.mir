@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=arm-linux-unknown-gnueabi -start-after branch-folder -stop-after branch-folder -o /dev/null %s | FileCheck %s
+# RUN: llc -mtriple=arm-linux-unknown-gnueabi -run-pass none -o - %s | FileCheck %s
 
 --- |
   declare void @dummy_use(i32*, i32)
@@ -32,9 +32,9 @@ body: |
     liveins: %r11, %lr
 
     %sp = STMDB_UPD %sp, 14, _, %r4, %r5
-    CFI_INSTRUCTION .cfi_def_cfa_offset 8
-    CFI_INSTRUCTION .cfi_offset %r5, -4
-    CFI_INSTRUCTION .cfi_offset %r4, -8
+    CFI_INSTRUCTION def_cfa_offset 8
+    CFI_INSTRUCTION offset %r5, -4
+    CFI_INSTRUCTION offset %r4, -8
     %r5 = MOVr %sp, 14, _, _
     %r4 = MRC 15, 0, 13, 0, 3, 14, _
     %r4 = LDRi12 %r4, 4, 14, _
@@ -48,29 +48,29 @@ body: |
     %r4 = MOVi 48, 14, _, _
     %r5 = MOVi 0, 14, _, _
     %sp = STMDB_UPD %sp, 14, _, %lr
-    CFI_INSTRUCTION .cfi_def_cfa_offset 12
-    CFI_INSTRUCTION .cfi_offset %lr, -12
+    CFI_INSTRUCTION def_cfa_offset 12
+    CFI_INSTRUCTION offset %lr, -12
     BL $__morestack, implicit-def %lr, implicit %sp
     %sp = LDMIA_UPD %sp, 14, _, %lr
     %sp = LDMIA_UPD %sp, 14, _, %r4, %r5
-    CFI_INSTRUCTION .cfi_def_cfa_offset 0
+    CFI_INSTRUCTION def_cfa_offset 0
     BX_RET 14, _
 
   bb.2:
     liveins: %r11, %lr
 
     %sp = LDMIA_UPD %sp, 14, _, %r4, %r5
-    CFI_INSTRUCTION .cfi_def_cfa_offset 0
-  ; CHECK:      CFI_INSTRUCTION .cfi_same_value %r4
-  ; CHECK-NEXT: CFI_INSTRUCTION .cfi_same_value %r5
-    CFI_INSTRUCTION .cfi_same_value %r4
-    CFI_INSTRUCTION .cfi_same_value %r5
+    CFI_INSTRUCTION def_cfa_offset 0
+  ; CHECK:      CFI_INSTRUCTION same_value %r4
+  ; CHECK-NEXT: CFI_INSTRUCTION same_value %r5
+    CFI_INSTRUCTION same_value %r4
+    CFI_INSTRUCTION same_value %r5
     %sp = frame-setup STMDB_UPD %sp, 14, _, killed %r11, killed %lr
-    frame-setup CFI_INSTRUCTION .cfi_def_cfa_offset 8
-    frame-setup CFI_INSTRUCTION .cfi_offset %lr, -4
-    frame-setup CFI_INSTRUCTION .cfi_offset %r11, -8
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset %lr, -4
+    frame-setup CFI_INSTRUCTION offset %r11, -8
     %sp = frame-setup SUBri killed %sp, 40, 14, _, _
-    frame-setup CFI_INSTRUCTION .cfi_def_cfa_offset 48
+    frame-setup CFI_INSTRUCTION def_cfa_offset 48
     %r0 = MOVr %sp, 14, _, _
     %r1 = MOVi 10, 14, _, _
     BL @dummy_use, csr_aapcs, implicit-def dead %lr, implicit %sp, implicit %r0, implicit killed %r1, implicit-def %sp

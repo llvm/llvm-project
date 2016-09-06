@@ -1,6 +1,6 @@
 ; Test 16-bit atomic exchange.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK
+; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-SHIFT
 
 ; Check exchange with a variable.
@@ -12,23 +12,23 @@
 ;   which shift %r3 left so that %b is at the high end of the word).
 define i16 @f1(i16 *%src, i16 %b) {
 ; CHECK-LABEL: f1:
-; CHECK: sllg [[SHIFT:%r[1-9]+]], %r2, 3
-; CHECK: nill %r2, 65532
-; CHECK: l [[OLD:%r[0-9]+]], 0(%r2)
+; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
+; CHECK: sll %r2, 3
+; CHECK: l [[OLD:%r[0-9]+]], 0([[RISBG]])
 ; CHECK: [[LABEL:\.[^:]*]]:
-; CHECK: rll [[ROT:%r[0-9]+]], [[OLD]], 0([[SHIFT]])
+; CHECK: rll [[ROT:%r[0-9]+]], [[OLD]], 0(%r2)
 ; CHECK: risbg [[ROT]], %r3, 32, 47, 16
 ; CHECK: rll [[NEW:%r[0-9]+]], [[ROT]], 0({{%r[1-9]+}})
-; CHECK: cs [[OLD]], [[NEW]], 0(%r2)
+; CHECK: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK: jl [[LABEL]]
-; CHECK: rll %r2, [[OLD]], 16([[SHIFT]])
+; CHECK: rll %r2, [[OLD]], 16(%r2)
 ; CHECK: br %r14
 ;
 ; CHECK-SHIFT-LABEL: f1:
 ; CHECK-SHIFT-NOT: %r3
-; CHECK-SHIFT: sllg [[SHIFT:%r[1-9]+]], %r2, 3
+; CHECK-SHIFT: sll %r2, 3
 ; CHECK-SHIFT-NOT: %r3
-; CHECK-SHIFT: lcr [[NEGSHIFT:%r[1-9]+]], [[SHIFT]]
+; CHECK-SHIFT: lcr [[NEGSHIFT:%r[1-9]+]], %r2
 ; CHECK-SHIFT-NOT: %r3
 ; CHECK-SHIFT: rll
 ; CHECK-SHIFT-NOT: %r3

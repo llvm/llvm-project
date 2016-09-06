@@ -18,8 +18,8 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/ADT/SCCIterator.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -61,7 +61,6 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
 
   WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const MachineFrameInfo &FrameInfo = *MF.getFrameInfo();
 
   MFI.initWARegs();
 
@@ -74,8 +73,16 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
     case WebAssembly::ARGUMENT_I64:
     case WebAssembly::ARGUMENT_F32:
     case WebAssembly::ARGUMENT_F64:
-      MFI.setWAReg(MI.getOperand(0).getReg(), MI.getOperand(1).getImm());
+    case WebAssembly::ARGUMENT_v16i8:
+    case WebAssembly::ARGUMENT_v8i16:
+    case WebAssembly::ARGUMENT_v4i32:
+    case WebAssembly::ARGUMENT_v4f32: {
+      int64_t Imm = MI.getOperand(1).getImm();
+      DEBUG(dbgs() << "Arg VReg " << MI.getOperand(0).getReg() << " -> WAReg "
+                   << Imm << "\n");
+      MFI.setWAReg(MI.getOperand(0).getReg(), Imm);
       break;
+    }
     default:
       break;
     }
@@ -84,26 +91,27 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
   // Then assign regular WebAssembly registers for all remaining used
   // virtual registers. TODO: Consider sorting the registers by frequency of
   // use, to maximize usage of small immediate fields.
-  unsigned NumArgRegs = MFI.getParams().size();
   unsigned NumVRegs = MF.getRegInfo().getNumVirtRegs();
   unsigned NumStackRegs = 0;
-  unsigned CurReg = 0;
+  // Start the numbering for locals after the arg regs
+  unsigned CurReg = MFI.getParams().size();
   for (unsigned VRegIdx = 0; VRegIdx < NumVRegs; ++VRegIdx) {
     unsigned VReg = TargetRegisterInfo::index2VirtReg(VRegIdx);
-    // Handle stackified registers.
-    if (MFI.isVRegStackified(VReg)) {
-      MFI.setWAReg(VReg, INT32_MIN | NumStackRegs++);
-      continue;
-    }
     // Skip unused registers.
     if (MRI.use_empty(VReg))
       continue;
-    if (MFI.getWAReg(VReg) == WebAssemblyFunctionInfo::UnusedReg)
-      MFI.setWAReg(VReg, NumArgRegs + CurReg++);
+    // Handle stackified registers.
+    if (MFI.isVRegStackified(VReg)) {
+      DEBUG(dbgs() << "VReg " << VReg << " -> WAReg "
+                   << (INT32_MIN | NumStackRegs) << "\n");
+      MFI.setWAReg(VReg, INT32_MIN | NumStackRegs++);
+      continue;
+    }
+    if (MFI.getWAReg(VReg) == WebAssemblyFunctionInfo::UnusedReg) {
+      DEBUG(dbgs() << "VReg " << VReg << " -> WAReg " << CurReg << "\n");
+      MFI.setWAReg(VReg, CurReg++);
+    }
   }
-  // Allocate locals for used physical registers
-  if (FrameInfo.getStackSize() > 0)
-    MFI.addPReg(WebAssembly::SP32, CurReg++);
 
   return true;
 }

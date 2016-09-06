@@ -45,6 +45,11 @@ namespace {
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
+
     const char *getPassName() const override {
       return "Hexagon Hardware Loop Fixup";
     }
@@ -77,14 +82,16 @@ FunctionPass *llvm::createHexagonFixupHwLoops() {
 }
 
 /// \brief Returns true if the instruction is a hardware loop instruction.
-static bool isHardwareLoop(const MachineInstr *MI) {
-  return MI->getOpcode() == Hexagon::J2_loop0r ||
-         MI->getOpcode() == Hexagon::J2_loop0i ||
-         MI->getOpcode() == Hexagon::J2_loop1r ||
-         MI->getOpcode() == Hexagon::J2_loop1i;
+static bool isHardwareLoop(const MachineInstr &MI) {
+  return MI.getOpcode() == Hexagon::J2_loop0r ||
+         MI.getOpcode() == Hexagon::J2_loop0i ||
+         MI.getOpcode() == Hexagon::J2_loop1r ||
+         MI.getOpcode() == Hexagon::J2_loop1i;
 }
 
 bool HexagonFixupHwLoops::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
   return fixupLoopInstrs(MF);
 }
 
@@ -118,12 +125,11 @@ bool HexagonFixupHwLoops::fixupLoopInstrs(MachineFunction &MF) {
 
     BlockToInstOffset[&MBB] = InstOffset;
     for (const MachineInstr &MI : MBB)
-      InstOffset += HII->getSize(&MI);
+      InstOffset += HII->getSize(MI);
   }
 
   // Second pass - check each loop instruction to see if it needs to be
   // converted.
-  InstOffset = 0;
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     InstOffset = BlockToInstOffset[&MBB];
@@ -132,12 +138,12 @@ bool HexagonFixupHwLoops::fixupLoopInstrs(MachineFunction &MF) {
     MachineBasicBlock::iterator MII = MBB.begin();
     MachineBasicBlock::iterator MIE = MBB.end();
     while (MII != MIE) {
-      InstOffset += HII->getSize(&*MII);
+      InstOffset += HII->getSize(*MII);
       if (MII->isDebugValue()) {
         ++MII;
         continue;
       }
-      if (isHardwareLoop(MII)) {
+      if (isHardwareLoop(*MII)) {
         assert(MII->getOperand(0).isMBB() &&
                "Expect a basic block as loop operand");
         int diff = InstOffset - BlockToInstOffset[MII->getOperand(0).getMBB()];

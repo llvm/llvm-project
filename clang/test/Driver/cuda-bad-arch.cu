@@ -19,4 +19,9 @@
 // RUN: %clang -### -target x86_64-linux-gnu -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
 
+// We don't allow using NVPTX for host compilation.
+// RUN: %clang -### --cuda-host-only -target nvptx-nvidia-cuda -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix HOST_NVPTX %s
+
 // OK-NOT: error: Unsupported CUDA gpu architecture
+// HOST_NVPTX: error: unsupported use of NVPTX for host compilation.

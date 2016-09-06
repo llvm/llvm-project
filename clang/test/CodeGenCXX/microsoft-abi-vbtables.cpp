@@ -537,5 +537,5 @@ template <class> struct B : virtual A {
 
 extern template class B<int>;
 template B<int>::B();
-// CHECK-DAG: @"\01??_8?$B@H@Test30@@7B@" = external unnamed_addr constant [2 x i32]{{$}}
+// CHECK-DAG: @"\01??_8?$B@H@Test30@@7B@" = linkonce_odr unnamed_addr constant [2 x i32] [i32 0, i32 4], comdat
 }

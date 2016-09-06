@@ -44,50 +44,35 @@ static inline unsigned hexDigitValue(char C) {
   return -1U;
 }
 
-/// utohex_buffer - Emit the specified number into the buffer specified by
-/// BufferEnd, returning a pointer to the start of the string.  This can be used
-/// like this: (note that the buffer must be large enough to handle any number):
-///    char Buffer[40];
-///    printf("0x%s", utohex_buffer(X, Buffer+40));
-///
-/// This should only be used with unsigned types.
-///
-template<typename IntTy>
-static inline char *utohex_buffer(IntTy X, char *BufferEnd, bool LowerCase = false) {
-  char *BufPtr = BufferEnd;
-  *--BufPtr = 0;      // Null terminate buffer.
-  if (X == 0) {
-    *--BufPtr = '0';  // Handle special case.
-    return BufPtr;
-  }
+static inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
+  char Buffer[17];
+  char *BufPtr = std::end(Buffer);
+
+  if (X == 0) *--BufPtr = '0';
 
   while (X) {
     unsigned char Mod = static_cast<unsigned char>(X) & 15;
     *--BufPtr = hexdigit(Mod, LowerCase);
     X >>= 4;
   }
-  return BufPtr;
-}
-
-static inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
-  char Buffer[17];
-  return utohex_buffer(X, std::end(Buffer), LowerCase);
-}
-
-static inline std::string utostr_32(uint32_t X, bool isNeg = false) {
-  char Buffer[11];
-  char *BufPtr = std::end(Buffer);
-
-  if (X == 0) *--BufPtr = '0';  // Handle special case...
-
-  while (X) {
-    *--BufPtr = '0' + char(X % 10);
-    X /= 10;
-  }
-
-  if (isNeg) *--BufPtr = '-';   // Add negative sign...
 
   return std::string(BufPtr, std::end(Buffer));
+}
+
+/// Convert buffer \p Input to its hexadecimal representation.
+/// The returned string is double the size of \p Input.
+static inline std::string toHex(StringRef Input) {
+  static const char *const LUT = "0123456789ABCDEF";
+  size_t Length = Input.size();
+
+  std::string Output;
+  Output.reserve(2 * Length);
+  for (size_t i = 0; i < Length; ++i) {
+    const unsigned char c = Input[i];
+    Output.push_back(LUT[c >> 4]);
+    Output.push_back(LUT[c & 15]);
+  }
+  return Output;
 }
 
 static inline std::string utostr(uint64_t X, bool isNeg = false) {

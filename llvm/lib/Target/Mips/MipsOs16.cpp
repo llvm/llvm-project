@@ -111,22 +111,27 @@ static bool needsFP(Function &F) {
 bool MipsOs16::runOnModule(Module &M) {
   bool usingMask = Mips32FunctionMask.length() > 0;
   bool doneUsingMask = false; // this will make it stop repeating
+
   DEBUG(dbgs() << "Run on Module MipsOs16 \n" << Mips32FunctionMask << "\n");
   if (usingMask)
     DEBUG(dbgs() << "using mask \n" << Mips32FunctionMask << "\n");
+
   unsigned int functionIndex = 0;
   bool modified = false;
-  for (Module::iterator F = M.begin(), E = M.end(); F != E; ++F) {
-    if (F->isDeclaration()) continue;
-    DEBUG(dbgs() << "Working on " << F->getName() << "\n");
+
+  for (auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    DEBUG(dbgs() << "Working on " << F.getName() << "\n");
     if (usingMask) {
       if (!doneUsingMask) {
         if (functionIndex == Mips32FunctionMask.length())
           functionIndex = 0;
         switch (Mips32FunctionMask[functionIndex]) {
         case '1':
-          DEBUG(dbgs() << "mask forced mips32: " << F->getName() << "\n");
-          F->addFnAttr("nomips16");
+          DEBUG(dbgs() << "mask forced mips32: " << F.getName() << "\n");
+          F.addFnAttr("nomips16");
           break;
         case '.':
           doneUsingMask = true;
@@ -138,16 +143,17 @@ bool MipsOs16::runOnModule(Module &M) {
       }
     }
     else {
-      if (needsFP(*F)) {
-        DEBUG(dbgs() << "os16 forced mips32: " << F->getName() << "\n");
-        F->addFnAttr("nomips16");
+      if (needsFP(F)) {
+        DEBUG(dbgs() << "os16 forced mips32: " << F.getName() << "\n");
+        F.addFnAttr("nomips16");
       }
       else {
-        DEBUG(dbgs() << "os16 forced mips16: " << F->getName() << "\n");
-        F->addFnAttr("mips16");
+        DEBUG(dbgs() << "os16 forced mips16: " << F.getName() << "\n");
+        F.addFnAttr("mips16");
       }
     }
   }
+
   return modified;
 }
 

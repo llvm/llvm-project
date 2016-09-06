@@ -26,33 +26,22 @@ using namespace llvm;
 
 MCOperand ARMAsmPrinter::GetSymbolRef(const MachineOperand &MO,
                                       const MCSymbol *Symbol) {
-  const MCExpr *Expr;
-  unsigned Option = MO.getTargetFlags() & ARMII::MO_OPTION_MASK;
-  switch (Option) {
-  default: {
-    Expr = MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None,
-                                   OutContext);
-    switch (Option) {
-    default: llvm_unreachable("Unknown target flag on symbol operand");
-    case ARMII::MO_NO_FLAG:
-      break;
-    case ARMII::MO_LO16:
-      Expr = MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None,
-                                     OutContext);
-      Expr = ARMMCExpr::createLower16(Expr, OutContext);
-      break;
-    case ARMII::MO_HI16:
-      Expr = MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None,
-                                     OutContext);
-      Expr = ARMMCExpr::createUpper16(Expr, OutContext);
-      break;
-    }
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None, OutContext);
+  switch (MO.getTargetFlags() & ARMII::MO_OPTION_MASK) {
+  default:
+    llvm_unreachable("Unknown target flag on symbol operand");
+  case ARMII::MO_NO_FLAG:
     break;
-  }
-
-  case ARMII::MO_PLT:
-    Expr = MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_PLT,
-                                   OutContext);
+  case ARMII::MO_LO16:
+    Expr =
+        MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None, OutContext);
+    Expr = ARMMCExpr::createLower16(Expr, OutContext);
+    break;
+  case ARMII::MO_HI16:
+    Expr =
+        MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_None, OutContext);
+    Expr = ARMMCExpr::createUpper16(Expr, OutContext);
     break;
   }
 
@@ -89,7 +78,7 @@ bool ARMAsmPrinter::lowerOperand(const MachineOperand &MO,
     break;
   }
   case MachineOperand::MO_ExternalSymbol:
-   MCOp = GetSymbolRef(MO,
+    MCOp = GetSymbolRef(MO,
                         GetExternalSymbolSymbol(MO.getSymbolName()));
     break;
   case MachineOperand::MO_JumpTableIndex:

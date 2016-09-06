@@ -11,3 +11,16 @@ _test2:
 .att_syntax noprefix
 // CHECK: error: '.att_syntax noprefix' is not supported: registers must have a '%' prefix in .att_syntax
 	movl	$257, -4(esp)
+
+
+.intel_syntax noprefix
+
+.global arr
+.global i
+.set FOO, 2
+//CHECK-STDERR: error: cannot use base register with variable reference
+mov eax, DWORD PTR arr[ebp + 1 + (2 * 5) - 3 + 1<<1]
+//CHECK-STDERR: error: cannot use index register with variable reference
+mov eax, DWORD PTR arr[esi*4]
+//CHECK-STDERR: error: cannot use more than one symbol in memory operand
+mov eax, DWORD PTR arr[i]

@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
-; RUN: llc < %s -march=aarch64 -mattr -neon -aarch64-neon-syntax=apple | FileCheck -check-prefix=CHECK-NONEON %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-eabi -mattr -neon -aarch64-neon-syntax=apple | FileCheck -check-prefix=CHECK-NONEON %s
 
 define i32 @cnt32_advsimd(i32 %x) nounwind readnone {
   %cnt = tail call i32 @llvm.ctpop.i32(i32 %x)

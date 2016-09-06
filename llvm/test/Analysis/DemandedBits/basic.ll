@@ -1,6 +1,6 @@
 ; RUN: opt -S -demanded-bits -analyze < %s | FileCheck %s
-
-; CHECK-LABEL: 'test_mul'
+; RUN: opt -S -disable-output -passes="print<demanded-bits>" < %s 2>&1 | FileCheck %s
+ 
 ; CHECK-DAG: DemandedBits: 0xFF for   %1 = add nsw i32 %a, 5
 ; CHECK-DAG: DemandedBits: 0xFF for   %3 = trunc i32 %2 to i8
 ; CHECK-DAG: DemandedBits: 0xFF for   %2 = mul nsw i32 %1, %b

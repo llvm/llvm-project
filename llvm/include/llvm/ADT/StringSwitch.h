@@ -53,6 +53,21 @@ public:
   explicit StringSwitch(StringRef S)
   : Str(S), Result(nullptr) { }
 
+  // StringSwitch is not copyable.
+  StringSwitch(const StringSwitch &) = delete;
+  void operator=(const StringSwitch &) = delete;
+
+  StringSwitch(StringSwitch &&other) {
+    *this = std::move(other);
+  }
+  StringSwitch &operator=(StringSwitch &&other) {
+    Str = other.Str;
+    Result = other.Result;
+    return *this;
+  }
+
+  ~StringSwitch() = default;
+
   template<unsigned N>
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   StringSwitch& Case(const char (&S)[N], const T& Value) {

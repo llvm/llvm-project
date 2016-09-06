@@ -16,33 +16,46 @@
 using namespace clang;
 using namespace clang::tooling;
 
-static bool isInsideDifferentNamespaceWithSameName(const DeclContext *DeclA,
-                                                   const DeclContext *DeclB) {
+// Returns true if the context in which the type is used and the context in
+// which the type is declared are the same semantical namespace but different
+// lexical namespaces.
+static bool
+usingFromDifferentCanonicalNamespace(const DeclContext *FromContext,
+                                     const DeclContext *UseContext) {
   while (true) {
-    // Look past non-namespaces on DeclA.
-    while (DeclA && !isa<NamespaceDecl>(DeclA))
-      DeclA = DeclA->getParent();
+    // Look past non-namespaces and anonymous namespaces on FromContext.
+    // We can skip anonymous namespace because:
+    // 1. `FromContext` and `UseContext` must be in the same anonymous
+    // namespaces since referencing across anonymous namespaces is not possible.
+    // 2. If `FromContext` and `UseContext` are in the same anonymous namespace,
+    // the function will still return `false` as expected.
+    while (FromContext &&
+           (!isa<NamespaceDecl>(FromContext) ||
+            cast<NamespaceDecl>(FromContext)->isAnonymousNamespace()))
+      FromContext = FromContext->getParent();
 
-    // Look past non-namespaces on DeclB.
-    while (DeclB && !isa<NamespaceDecl>(DeclB))
-      DeclB = DeclB->getParent();
+    // Look past non-namespaces and anonymous namespaces on UseContext.
+    while (UseContext &&
+           (!isa<NamespaceDecl>(UseContext) ||
+            cast<NamespaceDecl>(UseContext)->isAnonymousNamespace()))
+      UseContext = UseContext->getParent();
 
     // We hit the root, no namespace collision.
-    if (!DeclA || !DeclB)
+    if (!FromContext || !UseContext)
       return false;
 
     // Literally the same namespace, not a collision.
-    if (DeclA == DeclB)
+    if (FromContext == UseContext)
       return false;
 
     // Now check the names. If they match we have a different namespace with the
     // same name.
-    if (cast<NamespaceDecl>(DeclA)->getDeclName() ==
-        cast<NamespaceDecl>(DeclB)->getDeclName())
+    if (cast<NamespaceDecl>(FromContext)->getDeclName() ==
+        cast<NamespaceDecl>(UseContext)->getDeclName())
       return true;
 
-    DeclA = DeclA->getParent();
-    DeclB = DeclB->getParent();
+    FromContext = FromContext->getParent();
+    UseContext = UseContext->getParent();
   }
 }
 
@@ -98,8 +111,8 @@ std::string tooling::replaceNestedName(const NestedNameSpecifier *Use,
   const bool in_global_namespace =
       isa<TranslationUnitDecl>(FromDecl->getDeclContext());
   if (class_name_only && !in_global_namespace &&
-      !isInsideDifferentNamespaceWithSameName(FromDecl->getDeclContext(),
-                                              UseContext)) {
+      !usingFromDifferentCanonicalNamespace(FromDecl->getDeclContext(),
+                                            UseContext)) {
     auto Pos = ReplacementString.rfind("::");
     return Pos != StringRef::npos ? ReplacementString.substr(Pos + 2)
                                   : ReplacementString;

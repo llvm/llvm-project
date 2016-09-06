@@ -70,37 +70,37 @@ void h() {
 
 // CHECK: define {{.*}} @_Z1iv
 void i() {
-  // CHECK: declare {{.*}} @_Z1gIiEvv() [[NUW]]
+  // CHECK: declare {{.*}} @_Z1gIiEvv() [[NUW2:#[0-9]+]]
   g<int>();
   // CHECK: declare {{.*}} @_Z1gIA2_iEvv()
   // CHECK-NOT: [[NUW]]
   g<int[2]>();
 
-  // CHECK: declare {{.*}} @_ZN1SIiE1gEv() [[NUW]]
+  // CHECK: declare {{.*}} @_ZN1SIiE1gEv() [[NUW2]]
   S<int>::g();
   // CHECK: declare {{.*}} @_ZN1SIA2_iE1gEv()
   // CHECK-NOT: [[NUW]]
   S<int[2]>::g();
 
-  // CHECK: declare {{.*}} @_Z1gIfEvv() [[NUW]]
+  // CHECK: declare {{.*}} @_Z1gIfEvv() [[NUW2]]
   void (*g1)() = &g<float>;
   // CHECK: declare {{.*}} @_Z1gIdEvv()
   // CHECK-NOT: [[NUW]]
   void (*g2)() = &g<double>;
 
-  // CHECK: declare {{.*}} @_ZN1SIfE1gEv() [[NUW]]
+  // CHECK: declare {{.*}} @_ZN1SIfE1gEv() [[NUW2]]
   void (*g3)() = &S<float>::g;
   // CHECK: declare {{.*}} @_ZN1SIdE1gEv()
   // CHECK-NOT: [[NUW]]
   void (*g4)() = &S<double>::g;
 
-  // CHECK: declare {{.*}} @_Z1gIA4_cEvv() [[NUW]]
+  // CHECK: declare {{.*}} @_Z1gIA4_cEvv() [[NUW2]]
   (void)&g<char[4]>;
   // CHECK: declare {{.*}} @_Z1gIcEvv()
   // CHECK-NOT: [[NUW]]
   (void)&g<char>;
 
-  // CHECK: declare {{.*}} @_ZN1SIA4_cE1gEv() [[NUW]]
+  // CHECK: declare {{.*}} @_ZN1SIA4_cE1gEv() [[NUW2]]
   (void)&S<char[4]>::g;
   // CHECK: declare {{.*}} @_ZN1SIcE1gEv()
   // CHECK-NOT: [[NUW]]
@@ -116,12 +116,15 @@ void j() {
   // CHECK: declare {{.*}} @_ZN6NestedIiE1fILb1EcEEvv(
   // CHECK-NOT: [[NUW]]
   Nested<int>().f<true, char>();
-  // CHECK: declare {{.*}} @_ZN6NestedIlE1fILb0ElEEvv({{.*}}) [[NUW]]
+  // CHECK: declare {{.*}} @_ZN6NestedIlE1fILb0ElEEvv({{.*}}) [[NUW2]]
   Nested<long>().f<false, long>();
 }
 
 // CHECK: attributes [[NONE]] = { {{.*}} }
 // CHECK: attributes [[NUW]] = { nounwind{{.*}} }
+// CHECK: attributes [[NUW2]] = { nounwind{{.*}} }
+
+
 
 namespace PR19190 {
 template <class T> struct DWFIterator { virtual void get() throw(int) = 0; };

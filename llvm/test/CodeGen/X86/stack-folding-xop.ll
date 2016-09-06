@@ -166,69 +166,69 @@ define <8 x i16> @stack_fold_vpcomw(<8 x i16> %a0, <8 x i16> %a1) {
 }
 declare <8 x i16> @llvm.x86.xop.vpcomw(<8 x i16>, <8 x i16>, i8) nounwind readnone
 
-define <2 x double> @stack_fold_vpermil2pd_rm(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2) {
+define <2 x double> @stack_fold_vpermil2pd_rm(<2 x double> %a0, <2 x double> %a1, <2 x i64> %a2) {
   ;CHECK-LABEL: stack_fold_vpermil2pd_rm
   ;CHECK:       vpermil2pd $0, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, i8 0)
+  %2 = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> %a0, <2 x double> %a1, <2 x i64> %a2, i8 0)
   ret <2 x double> %2
 }
-define <2 x double> @stack_fold_vpermil2pd_mr(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2) {
+define <2 x double> @stack_fold_vpermil2pd_mr(<2 x double> %a0, <2 x i64> %a1, <2 x double> %a2) {
   ;CHECK-LABEL: stack_fold_vpermil2pd_mr
   ;CHECK:       vpermil2pd $0, {{%xmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> %a0, <2 x double> %a2, <2 x double> %a1, i8 0)
+  %2 = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> %a0, <2 x double> %a2, <2 x i64> %a1, i8 0)
   ret <2 x double> %2
 }
-declare <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double>, <2 x double>, <2 x double>, i8) nounwind readnone
+declare <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double>, <2 x double>, <2 x i64>, i8) nounwind readnone
 
-define <4 x double> @stack_fold_vpermil2pd_rm_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2) {
+define <4 x double> @stack_fold_vpermil2pd_rm_ymm(<4 x double> %a0, <4 x double> %a1, <4 x i64> %a2) {
   ;CHECK-LABEL: stack_fold_vpermil2pd_rm
   ;CHECK:       vpermil2pd $0, {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}}, {{%ymm[0-9][0-9]*}}, {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2, i8 0)
+  %2 = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %a1, <4 x i64> %a2, i8 0)
   ret <4 x double> %2
 }
-define <4 x double> @stack_fold_vpermil2pd_mr_ymm(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2) {
+define <4 x double> @stack_fold_vpermil2pd_mr_ymm(<4 x double> %a0, <4 x i64> %a1, <4 x double> %a2) {
   ;CHECK-LABEL: stack_fold_vpermil2pd_mr
   ;CHECK:       vpermil2pd $0, {{%ymm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}}, {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %a2, <4 x double> %a1, i8 0)
+  %2 = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %a2, <4 x i64> %a1, i8 0)
   ret <4 x double> %2
 }
-declare <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double>, <4 x double>, <4 x double>, i8) nounwind readnone
+declare <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double>, <4 x double>, <4 x i64>, i8) nounwind readnone
 
-define <4 x float> @stack_fold_vpermil2ps_rm(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2) {
+define <4 x float> @stack_fold_vpermil2ps_rm(<4 x float> %a0, <4 x float> %a1, <4 x i32> %a2) {
   ;CHECK-LABEL: stack_fold_vpermil2ps_rm
   ;CHECK:       vpermil2ps $0, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2, i8 0)
+  %2 = call <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float> %a0, <4 x float> %a1, <4 x i32> %a2, i8 0)
   ret <4 x float> %2
 }
-define <4 x float> @stack_fold_vpermil2ps_mr(<4 x float> %a0, <4 x float> %a1, <4 x float> %a2) {
+define <4 x float> @stack_fold_vpermil2ps_mr(<4 x float> %a0, <4 x i32> %a1, <4 x float> %a2) {
   ;CHECK-LABEL: stack_fold_vpermil2ps_mr
   ;CHECK:       vpermil2ps $0, {{%xmm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 16-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float> %a0, <4 x float> %a2, <4 x float> %a1, i8 0)
+  %2 = call <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float> %a0, <4 x float> %a2, <4 x i32> %a1, i8 0)
   ret <4 x float> %2
 }
-declare <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float>, <4 x float>, <4 x float>, i8) nounwind readnone
+declare <4 x float> @llvm.x86.xop.vpermil2ps(<4 x float>, <4 x float>, <4 x i32>, i8) nounwind readnone
 
-define <8 x float> @stack_fold_vpermil2ps_rm_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2) {
+define <8 x float> @stack_fold_vpermil2ps_rm_ymm(<8 x float> %a0, <8 x float> %a1, <8 x i32> %a2) {
   ;CHECK-LABEL: stack_fold_vpermil2ps_rm
   ;CHECK:       vpermil2ps $0, {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}}, {{%ymm[0-9][0-9]*}}, {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2, i8 0)
+  %2 = call <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float> %a0, <8 x float> %a1, <8 x i32> %a2, i8 0)
   ret <8 x float> %2
 }
-define <8 x float> @stack_fold_vpermil2ps_mr_ymm(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2) {
+define <8 x float> @stack_fold_vpermil2ps_mr_ymm(<8 x float> %a0, <8 x i32> %a1, <8 x float> %a2) {
   ;CHECK-LABEL: stack_fold_vpermil2ps_mr
   ;CHECK:       vpermil2ps $0, {{%ymm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp), {{%ymm[0-9][0-9]*}}, {{%ymm[0-9][0-9]*}} {{.*#+}} 32-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float> %a0, <8 x float> %a2, <8 x float> %a1, i8 0)
+  %2 = call <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float> %a0, <8 x float> %a2, <8 x i32> %a1, i8 0)
   ret <8 x float> %2
 }
-declare <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float>, <8 x float>, <8 x float>, i8) nounwind readnone
+declare <8 x float> @llvm.x86.xop.vpermil2ps.256(<8 x float>, <8 x float>, <8 x i32>, i8) nounwind readnone
 
 define <4 x i32> @stack_fold_vphaddbd(<16 x i8> %a0) {
   ;CHECK-LABEL: stack_fold_vphaddbd

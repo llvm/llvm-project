@@ -24,3 +24,6 @@ DEFINE_COMPILERRT_FUNCTION(__fixdfsivfp)
 	vmov	r0, s15	      // move s15 to result register
 	bx	lr
 END_COMPILERRT_FUNCTION(__fixdfsivfp)
+
+NO_EXEC_STACK_DIRECTIVE
+

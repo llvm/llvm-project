@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc64-linux-gnu -mattr=+altivec | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-linux-gnu -mattr=+altivec | FileCheck %s
 
 ; CHECK: vsel_float
 define <4 x float> @vsel_float(<4 x float> %v1, <4 x float> %v2) {

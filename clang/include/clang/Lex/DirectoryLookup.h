@@ -151,6 +151,9 @@ public:
   ///
   /// \param HS The header search instance to search with.
   ///
+  /// \param IncludeLoc the source location of the #include or #import
+  /// directive.
+  ///
   /// \param SearchPath If not NULL, will be set to the search path relative
   /// to which the file was found.
   ///
@@ -172,6 +175,7 @@ public:
   /// a framework include ("Foo.h" -> "Foo/Foo.h"), set the new name to this
   /// vector and point Filename to it.
   const FileEntry *LookupFile(StringRef &Filename, HeaderSearch &HS,
+                              SourceLocation IncludeLoc,
                               SmallVectorImpl<char> *SearchPath,
                               SmallVectorImpl<char> *RelativePath,
                               Module *RequestingModule,

@@ -2,8 +2,8 @@
 // happens. "always_inline" is not enough, as Clang doesn't emit
 // llvm.lifetime intrinsics at -O0.
 //
-// RUN: %clangxx_asan -O2 -fsanitize=use-after-scope %s -o %t && not %run %t 2>&1 | FileCheck %s
-// XFAIL: *
+// RUN: %clangxx_asan -O2 -fsanitize-address-use-after-scope %s -o %t && \
+// RUN:     not %run %t 2>&1 | FileCheck %s
 
 int *arr;
 

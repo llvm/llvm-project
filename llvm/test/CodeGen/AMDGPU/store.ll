@@ -77,12 +77,31 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}store_i24:
+; SI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
+; SI-DAG: buffer_store_byte
+; SI-DAG: buffer_store_short
+define void @store_i24(i24 addrspace(1)* %out, i24 %in) {
+entry:
+  store i24 %in, i24 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}store_i25:
+; SI: s_and_b32 [[AND:s[0-9]+]], s{{[0-9]+}}, 0x1ffffff{{$}}
+; SI: v_mov_b32_e32 [[VAND:v[0-9]+]], [[AND]]
+; SI: buffer_store_dword [[VAND]]
+define void @store_i25(i25 addrspace(1)* %out, i25 %in) {
+entry:
+  store i25 %in, i25 addrspace(1)* %out
+  ret void
+}
+
 ; FUNC-LABEL: {{^}}store_v2i8:
 ; EG: MEM_RAT MSKOR
 ; EG-NOT: MEM_RAT MSKOR
 
-; SI: buffer_store_byte
-; SI: buffer_store_byte
+; SI: buffer_store_short
 define void @store_v2i8(<2 x i8> addrspace(1)* %out, <2 x i32> %in) {
 entry:
   %0 = trunc <2 x i32> %in to <2 x i8>
@@ -96,8 +115,7 @@ entry:
 
 ; CM: MEM_RAT_CACHELESS STORE_DWORD
 
-; SI: buffer_store_short
-; SI: buffer_store_short
+; SI: buffer_store_dword
 define void @store_v2i16(<2 x i16> addrspace(1)* %out, <2 x i32> %in) {
 entry:
   %0 = trunc <2 x i32> %in to <2 x i16>
@@ -110,10 +128,7 @@ entry:
 
 ; CM: MEM_RAT_CACHELESS STORE_DWORD
 
-; SI: buffer_store_byte
-; SI: buffer_store_byte
-; SI: buffer_store_byte
-; SI: buffer_store_byte
+; SI: buffer_store_dword
 define void @store_v4i8(<4 x i8> addrspace(1)* %out, <4 x i32> %in) {
 entry:
   %0 = trunc <4 x i32> %in to <4 x i8>
@@ -135,17 +150,9 @@ define void @store_f32(float addrspace(1)* %out, float %in) {
 }
 
 ; FUNC-LABEL: {{^}}store_v4i16:
-; EG: MEM_RAT MSKOR
-; EG: MEM_RAT MSKOR
-; EG: MEM_RAT MSKOR
-; EG: MEM_RAT MSKOR
-; EG-NOT: MEM_RAT MSKOR
+; MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XYZW
 
-; SI: buffer_store_short
-; SI: buffer_store_short
-; SI: buffer_store_short
-; SI: buffer_store_short
-; SI-NOT: buffer_store_byte
+; SI: buffer_store_dwordx2
 define void @store_v4i16(<4 x i16> addrspace(1)* %out, <4 x i32> %in) {
 entry:
   %0 = trunc <4 x i32> %in to <4 x i16>
@@ -239,8 +246,7 @@ define void @store_local_i16(i16 addrspace(3)* %out, i16 %in) {
 
 ; CM: LDS_WRITE
 
-; SI: ds_write_b16
-; SI: ds_write_b16
+; SI: ds_write_b32
 define void @store_local_v2i16(<2 x i16> addrspace(3)* %out, <2 x i16> %in) {
 entry:
   store <2 x i16> %in, <2 x i16> addrspace(3)* %out
@@ -252,10 +258,7 @@ entry:
 
 ; CM: LDS_WRITE
 
-; SI: ds_write_b8
-; SI: ds_write_b8
-; SI: ds_write_b8
-; SI: ds_write_b8
+; SI: ds_write_b32
 define void @store_local_v4i8(<4 x i8> addrspace(3)* %out, <4 x i8> %in) {
 entry:
   store <4 x i8> %in, <4 x i8> addrspace(3)* %out
@@ -287,8 +290,7 @@ entry:
 ; CM: LDS_WRITE
 ; CM: LDS_WRITE
 
-; SI: ds_write_b64
-; SI: ds_write_b64
+; SI: ds_write2_b64
 define void @store_local_v4i32(<4 x i32> addrspace(3)* %out, <4 x i32> %in) {
 entry:
   store <4 x i32> %in, <4 x i32> addrspace(3)* %out
@@ -358,20 +360,13 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
-
 ; When i128 was a legal type this program generated cannot select errors:
 
 ; FUNC-LABEL: {{^}}"i128-const-store":
-; FIXME: We should be able to to this with one store instruction
-; EG: STORE_RAW
-; EG: STORE_RAW
-; EG: STORE_RAW
-; EG: STORE_RAW
-; CM: STORE_DWORD
-; CM: STORE_DWORD
-; CM: STORE_DWORD
-; CM: STORE_DWORD
+; EG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XYZW, T{{[0-9]+}}.X, 1
+
+; CM: MEM_RAT_CACHELESS STORE_DWORD T{{[0-9]+}}, T{{[0-9]+}}.X
+
 ; SI: buffer_store_dwordx4
 define void @i128-const-store(i32 addrspace(1)* %out) {
 entry:
@@ -384,3 +379,5 @@ entry:
   store i32 2, i32 addrspace(1)* %arrayidx6, align 4
   ret void
 }
+
+attributes #0 = { nounwind }

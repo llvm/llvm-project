@@ -141,7 +141,10 @@ class RegisterWithSubRegs<string n, list<Register> subregs> : Register<n> {
 // of Operand's that are legal as type qualifiers in DAG patterns.  This should
 // only ever be used for defining multiclasses that are polymorphic over both
 // RegisterClass's and other Operand's.
-class DAGOperand { }
+class DAGOperand {
+  string OperandNamespace = "MCOI";
+  string DecoderMethod = "";
+}
 
 // RegisterClass - Now that all of the registers are defined, and aliases
 // between registers are defined, specify which registers belong to which
@@ -427,6 +430,11 @@ class Instruction {
   // Is this instruction a pseudo instruction for use by the assembler parser.
   bit isAsmParserOnly = 0;
 
+  // This instruction is not expected to be queried for scheduling latencies
+  // and therefore needs no scheduling information even for a complete
+  // scheduling model.
+  bit hasNoSchedulingInfo = 0;
+
   InstrItinClass Itinerary = NoItinerary;// Execution steps used for scheduling.
 
   // Scheduling information from TargetSchedule.td.
@@ -605,6 +613,22 @@ class AsmOperandClass {
   // match failure error message. By default, use a generic "invalid operand"
   // diagnostic. The target AsmParser maps these codes to text.
   string DiagnosticType = "";
+
+  /// Set to 1 if this operand is optional and not always required. Typically,
+  /// the AsmParser will emit an error when it finishes parsing an
+  /// instruction if it hasn't matched all the operands yet.  However, this
+  /// error will be suppressed if all of the remaining unmatched operands are
+  /// marked as IsOptional.
+  ///
+  /// Optional arguments must be at the end of the operand list.
+  bit IsOptional = 0;
+
+  /// The name of the method on the target specific asm parser that returns the
+  /// default operand for this optional operand. This method is only used if
+  /// IsOptional == 1. If not set, this will default to "defaultFooOperands",
+  /// where Foo is the AsmOperandClass name. The method signature should be:
+  ///   std::unique_ptr<MCParsedAsmOperand> defaultFooOperands() const;
+  string DefaultMethod = ?;
 }
 
 def ImmAsmOperand : AsmOperandClass {
@@ -618,9 +642,7 @@ class Operand<ValueType ty> : DAGOperand {
   ValueType Type = ty;
   string PrintMethod = "printOperand";
   string EncoderMethod = "";
-  string DecoderMethod = "";
   bit hasCompleteDecoder = 1;
-  string OperandNamespace = "MCOI";
   string OperandType = "OPERAND_UNKNOWN";
   dag MIOperandInfo = (ops);
 
@@ -658,7 +680,6 @@ class RegisterOperand<RegisterClass regclass, string pm = "printOperand">
   // should declare the other operand as one of its super classes.
   AsmOperandClass ParserMatchClass;
 
-  string OperandNamespace = "MCOI";
   string OperandType = "OPERAND_REGISTER";
 }
 
@@ -756,9 +777,10 @@ class InstrInfo {
 // Standard Pseudo Instructions.
 // This list must match TargetOpcodes.h and CodeGenTarget.cpp.
 // Only these instructions are allowed in the TargetOpcode namespace.
-let isCodeGenOnly = 1, isPseudo = 1, Namespace = "TargetOpcode" in {
+let isCodeGenOnly = 1, isPseudo = 1, hasNoSchedulingInfo = 1,
+    Namespace = "TargetOpcode" in {
 def PHI : Instruction {
-  let OutOperandList = (outs);
+  let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins variable_ops);
   let AsmString = "PHINODE";
 }
@@ -848,6 +870,7 @@ def COPY : Instruction {
   let AsmString = "";
   let hasSideEffects = 0;
   let isAsCheapAsAMove = 1;
+  let hasNoSchedulingInfo = 0;
 }
 def BUNDLE : Instruction {
   let OutOperandList = (outs);
@@ -912,7 +935,36 @@ def FAULTING_LOAD_OP : Instruction {
   let InOperandList = (ins variable_ops);
   let usesCustomInserter = 1;
   let mayLoad = 1;
+  let isTerminator = 1;
+  let isBranch = 1;
 }
+def PATCHABLE_OP : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins variable_ops);
+  let usesCustomInserter = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 1;
+}
+def PATCHABLE_FUNCTION_ENTER : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let AsmString = "# XRay Function Enter.";
+  let usesCustomInserter = 1;
+  let hasSideEffects = 0;
+}
+def PATCHABLE_RET : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins variable_ops);
+  let AsmString = "# XRay Function Exit.";
+  let usesCustomInserter = 1;
+  let hasSideEffects = 1;
+  let isReturn = 1;
+}
+
+// Generic opcodes used in GlobalISel.
+include "llvm/Target/GenericOpcodes.td"
+
 }
 
 //===----------------------------------------------------------------------===//
@@ -936,6 +988,14 @@ class AsmParser {
   // ShouldEmitMatchRegisterName - Set to false if the target needs a hand
   // written register name matcher
   bit ShouldEmitMatchRegisterName = 1;
+
+  // Set to true if the target needs a generated 'alternative register name'
+  // matcher.
+  //
+  // This generates a function which can be used to lookup registers from
+  // their aliases. This function will fail when called on targets where
+  // several registers share the same alias (i.e. not a 1:1 mapping).
+  bit ShouldEmitMatchRegisterAltName = 0;
 
   // HasMnemonicFirst - Set to false if target instructions don't always
   // start with a mnemonic as the first token.

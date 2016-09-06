@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=ppc32 -fp-contract=fast -mattr=-vsx | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -fp-contract=fast -mattr=+vsx -mcpu=pwr7 | FileCheck -check-prefix=CHECK-VSX %s
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -fp-contract=fast -mcpu=pwr8 | FileCheck -check-prefix=CHECK-P8 %s
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -fp-contract=fast -mcpu=pwr8 | FileCheck -check-prefix=CHECK-P8 %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -fp-contract=fast -mattr=-vsx -disable-ppc-vsx-fma-mutation=false | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -fp-contract=fast -mattr=+vsx -mcpu=pwr7 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-VSX %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -fp-contract=fast -mcpu=pwr8 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-P8 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -fp-contract=fast -mcpu=pwr8 -disable-ppc-vsx-fma-mutation=false | FileCheck -check-prefix=CHECK-P8 %s
 
 declare double @dummy1(double) #0
 declare double @dummy2(double, double) #0

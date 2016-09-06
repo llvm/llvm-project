@@ -34,7 +34,9 @@ enum NodeType : unsigned {
   DeclareRet,
   DeclareScalarRet,
   PrintCall,
+  PrintConvergentCall,
   PrintCallUni,
+  PrintConvergentCallUni,
   CallArgBegin,
   CallArg,
   LastCallArg,
@@ -475,10 +477,11 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
 
-  SDValue LowerFormalArguments(
-      SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-      const SmallVectorImpl<ISD::InputArg> &Ins, SDLoc dl, SelectionDAG &DAG,
-      SmallVectorImpl<SDValue> &InVals) const override;
+  SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
+                               bool isVarArg,
+                               const SmallVectorImpl<ISD::InputArg> &Ins,
+                               const SDLoc &dl, SelectionDAG &DAG,
+                               SmallVectorImpl<SDValue> &InVals) const override;
 
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
@@ -488,11 +491,10 @@ public:
                            unsigned retAlignment,
                            const ImmutableCallSite *CS) const;
 
-  SDValue
-  LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
-              const SmallVectorImpl<ISD::OutputArg> &Outs,
-              const SmallVectorImpl<SDValue> &OutVals, SDLoc dl,
-              SelectionDAG &DAG) const override;
+  SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
+                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
+                      SelectionDAG &DAG) const override;
 
   void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
                                     std::vector<SDValue> &Ops,

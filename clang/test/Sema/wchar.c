@@ -4,7 +4,7 @@
 typedef __WCHAR_TYPE__ wchar_t;
 
 #if defined(_WIN32) || defined(_M_IX86) || defined(__CYGWIN__) \
- || defined(_M_X64) || defined(__PS4__) || defined(SHORT_WCHAR)
+ || defined(_M_X64) || defined(__ORBIS__) || defined(SHORT_WCHAR)
   #define WCHAR_T_TYPE unsigned short
 #elif defined(__arm) || defined(__aarch64__)
   #define WCHAR_T_TYPE unsigned int

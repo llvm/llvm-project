@@ -1,4 +1,5 @@
 Name: HeaderLib
+SwiftInferImportAsMember: true
 Functions:
   - Name: custom_realloc
     NullabilityOfRet: N

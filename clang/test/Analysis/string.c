@@ -680,6 +680,18 @@ void strncat_empty() {
 #define strcmp BUILTIN(strcmp)
 int strcmp(const char * s1, const char * s2);
 
+void strcmp_check_modelling() {
+  char *x = "aa";
+  char *y = "a";
+  clang_analyzer_eval(strcmp(x, y) > 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcmp(x, y) <= 0); // expected-warning{{FALSE}}
+  clang_analyzer_eval(strcmp(x, y) > 1); // expected-warning{{UNKNOWN}}
+
+  clang_analyzer_eval(strcmp(y, x) < 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcmp(y, x) >= 0); // expected-warning{{FALSE}}
+  clang_analyzer_eval(strcmp(y, x) < -1); // expected-warning{{UNKNOWN}}
+}
+
 void strcmp_constant0() {
   clang_analyzer_eval(strcmp("123", "123") == 0); // expected-warning{{TRUE}}
 }
@@ -703,13 +715,13 @@ void strcmp_0() {
 void strcmp_1() {
   char *x = "234";
   char *y = "123";
-  clang_analyzer_eval(strcmp(x, y) == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcmp(x, y) > 0); // expected-warning{{TRUE}}
 }
 
 void strcmp_2() {
   char *x = "123";
   char *y = "234";
-  clang_analyzer_eval(strcmp(x, y) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
 void strcmp_null_0() {
@@ -727,25 +739,25 @@ void strcmp_null_1() {
 void strcmp_diff_length_0() {
   char *x = "12345";
   char *y = "234";
-  clang_analyzer_eval(strcmp(x, y) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
 void strcmp_diff_length_1() {
   char *x = "123";
   char *y = "23456";
-  clang_analyzer_eval(strcmp(x, y) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
 void strcmp_diff_length_2() {
   char *x = "12345";
   char *y = "123";
-  clang_analyzer_eval(strcmp(x, y) == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcmp(x, y) > 0); // expected-warning{{TRUE}}
 }
 
 void strcmp_diff_length_3() {
   char *x = "123";
   char *y = "12345";
-  clang_analyzer_eval(strcmp(x, y) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
 void strcmp_embedded_null () {
@@ -777,6 +789,18 @@ void strcmp_union_function_pointer_cast(union argument a) {
 #define strncmp BUILTIN(strncmp)
 int strncmp(const char *s1, const char *s2, size_t n);
 
+void strncmp_check_modelling() {
+  char *x = "aa";
+  char *y = "a";
+  clang_analyzer_eval(strncmp(x, y, 2) > 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncmp(x, y, 2) <= 0); // expected-warning{{FALSE}}
+  clang_analyzer_eval(strncmp(x, y, 2) > 1); // expected-warning{{UNKNOWN}}
+
+  clang_analyzer_eval(strncmp(y, x, 2) < 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncmp(y, x, 2) >= 0); // expected-warning{{FALSE}}
+  clang_analyzer_eval(strncmp(y, x, 2) < -1); // expected-warning{{UNKNOWN}}
+}
+
 void strncmp_constant0() {
   clang_analyzer_eval(strncmp("123", "123", 3) == 0); // expected-warning{{TRUE}}
 }
@@ -800,13 +824,13 @@ void strncmp_0() {
 void strncmp_1() {
   char *x = "234";
   char *y = "123";
-  clang_analyzer_eval(strncmp(x, y, 3) == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncmp(x, y, 3) > 0); // expected-warning{{TRUE}}
 }
 
 void strncmp_2() {
   char *x = "123";
   char *y = "234";
-  clang_analyzer_eval(strncmp(x, y, 3) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncmp(x, y, 3) < 0); // expected-warning{{TRUE}}
 }
 
 void strncmp_null_0() {
@@ -824,25 +848,25 @@ void strncmp_null_1() {
 void strncmp_diff_length_0() {
   char *x = "12345";
   char *y = "234";
-  clang_analyzer_eval(strncmp(x, y, 5) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncmp(x, y, 5) < 0); // expected-warning{{TRUE}}
 }
 
 void strncmp_diff_length_1() {
   char *x = "123";
   char *y = "23456";
-  clang_analyzer_eval(strncmp(x, y, 5) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncmp(x, y, 5) < 0); // expected-warning{{TRUE}}
 }
 
 void strncmp_diff_length_2() {
   char *x = "12345";
   char *y = "123";
-  clang_analyzer_eval(strncmp(x, y, 5) == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncmp(x, y, 5) > 0); // expected-warning{{TRUE}}
 }
 
 void strncmp_diff_length_3() {
   char *x = "123";
   char *y = "12345";
-  clang_analyzer_eval(strncmp(x, y, 5) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncmp(x, y, 5) < 0); // expected-warning{{TRUE}}
 }
 
 void strncmp_diff_length_4() {
@@ -854,13 +878,13 @@ void strncmp_diff_length_4() {
 void strncmp_diff_length_5() {
   char *x = "012";
   char *y = "12345";
-  clang_analyzer_eval(strncmp(x, y, 3) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncmp(x, y, 3) < 0); // expected-warning{{TRUE}}
 }
 
 void strncmp_diff_length_6() {
   char *x = "234";
   char *y = "12345";
-  clang_analyzer_eval(strncmp(x, y, 3) == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncmp(x, y, 3) > 0); // expected-warning{{TRUE}}
 }
 
 void strncmp_embedded_null () {
@@ -873,6 +897,18 @@ void strncmp_embedded_null () {
 
 #define strcasecmp BUILTIN(strcasecmp)
 int strcasecmp(const char *s1, const char *s2);
+
+void strcasecmp_check_modelling() {
+  char *x = "aa";
+  char *y = "a";
+  clang_analyzer_eval(strcasecmp(x, y) > 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcasecmp(x, y) <= 0); // expected-warning{{FALSE}}
+  clang_analyzer_eval(strcasecmp(x, y) > 1); // expected-warning{{UNKNOWN}}
+
+  clang_analyzer_eval(strcasecmp(y, x) < 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcasecmp(y, x) >= 0); // expected-warning{{FALSE}}
+  clang_analyzer_eval(strcasecmp(y, x) < -1); // expected-warning{{UNKNOWN}}
+}
 
 void strcasecmp_constant0() {
   clang_analyzer_eval(strcasecmp("abc", "Abc") == 0); // expected-warning{{TRUE}}
@@ -897,13 +933,13 @@ void strcasecmp_0() {
 void strcasecmp_1() {
   char *x = "Bcd";
   char *y = "abc";
-  clang_analyzer_eval(strcasecmp(x, y) == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcasecmp(x, y) > 0); // expected-warning{{TRUE}}
 }
 
 void strcasecmp_2() {
   char *x = "abc";
   char *y = "Bcd";
-  clang_analyzer_eval(strcasecmp(x, y) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcasecmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
 void strcasecmp_null_0() {
@@ -921,25 +957,25 @@ void strcasecmp_null_1() {
 void strcasecmp_diff_length_0() {
   char *x = "abcde";
   char *y = "aBd";
-  clang_analyzer_eval(strcasecmp(x, y) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcasecmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
 void strcasecmp_diff_length_1() {
   char *x = "abc";
   char *y = "aBdef";
-  clang_analyzer_eval(strcasecmp(x, y) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcasecmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
 void strcasecmp_diff_length_2() {
   char *x = "aBcDe";
   char *y = "abc";
-  clang_analyzer_eval(strcasecmp(x, y) == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcasecmp(x, y) > 0); // expected-warning{{TRUE}}
 }
 
 void strcasecmp_diff_length_3() {
   char *x = "aBc";
   char *y = "abcde";
-  clang_analyzer_eval(strcasecmp(x, y) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strcasecmp(x, y) < 0); // expected-warning{{TRUE}}
 }
 
 void strcasecmp_embedded_null () {
@@ -952,6 +988,18 @@ void strcasecmp_embedded_null () {
 
 #define strncasecmp BUILTIN(strncasecmp)
 int strncasecmp(const char *s1, const char *s2, size_t n);
+
+void strncasecmp_check_modelling() {
+  char *x = "aa";
+  char *y = "a";
+  clang_analyzer_eval(strncasecmp(x, y, 2) > 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncasecmp(x, y, 2) <= 0); // expected-warning{{FALSE}}
+  clang_analyzer_eval(strncasecmp(x, y, 2) > 1); // expected-warning{{UNKNOWN}}
+
+  clang_analyzer_eval(strncasecmp(y, x, 2) < 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncasecmp(y, x, 2) >= 0); // expected-warning{{FALSE}}
+  clang_analyzer_eval(strncasecmp(y, x, 2) < -1); // expected-warning{{UNKNOWN}}
+}
 
 void strncasecmp_constant0() {
   clang_analyzer_eval(strncasecmp("abc", "Abc", 3) == 0); // expected-warning{{TRUE}}
@@ -976,13 +1024,13 @@ void strncasecmp_0() {
 void strncasecmp_1() {
   char *x = "Bcd";
   char *y = "abc";
-  clang_analyzer_eval(strncasecmp(x, y, 3) == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncasecmp(x, y, 3) > 0); // expected-warning{{TRUE}}
 }
 
 void strncasecmp_2() {
   char *x = "abc";
   char *y = "Bcd";
-  clang_analyzer_eval(strncasecmp(x, y, 3) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncasecmp(x, y, 3) < 0); // expected-warning{{TRUE}}
 }
 
 void strncasecmp_null_0() {
@@ -1000,25 +1048,25 @@ void strncasecmp_null_1() {
 void strncasecmp_diff_length_0() {
   char *x = "abcde";
   char *y = "aBd";
-  clang_analyzer_eval(strncasecmp(x, y, 5) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncasecmp(x, y, 5) < 0); // expected-warning{{TRUE}}
 }
 
 void strncasecmp_diff_length_1() {
   char *x = "abc";
   char *y = "aBdef";
-  clang_analyzer_eval(strncasecmp(x, y, 5) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncasecmp(x, y, 5) < 0); // expected-warning{{TRUE}}
 }
 
 void strncasecmp_diff_length_2() {
   char *x = "aBcDe";
   char *y = "abc";
-  clang_analyzer_eval(strncasecmp(x, y, 5) == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncasecmp(x, y, 5) > 0); // expected-warning{{TRUE}}
 }
 
 void strncasecmp_diff_length_3() {
   char *x = "aBc";
   char *y = "abcde";
-  clang_analyzer_eval(strncasecmp(x, y, 5) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncasecmp(x, y, 5) < 0); // expected-warning{{TRUE}}
 }
 
 void strncasecmp_diff_length_4() {
@@ -1030,13 +1078,13 @@ void strncasecmp_diff_length_4() {
 void strncasecmp_diff_length_5() {
   char *x = "abcde";
   char *y = "aBd";
-  clang_analyzer_eval(strncasecmp(x, y, 3) == -1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncasecmp(x, y, 3) < 0); // expected-warning{{TRUE}}
 }
 
 void strncasecmp_diff_length_6() {
   char *x = "aBDe";
   char *y = "abc";
-  clang_analyzer_eval(strncasecmp(x, y, 3) == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strncasecmp(x, y, 3) > 0); // expected-warning{{TRUE}}
 }
 
 void strncasecmp_embedded_null () {

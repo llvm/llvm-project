@@ -6,7 +6,7 @@
 
 int main(void) {
   unsigned long long x = 0; // For 8-byte alignment.
-  uint32_t x_s = 0x12345678U;
+  char x_s[4] = {0x87, 0x65, 0x43, 0x21};
   __msan_partial_poison(&x, &x_s, sizeof(x_s));
   __msan_print_shadow(&x, sizeof(x_s));
   return 0;

@@ -107,15 +107,20 @@ void HexagonMCELFStreamer::HexagonMCEmitCommonSymbol(MCSymbol *Symbol,
         ((AccessSize == 0) || (Size == 0) || (Size > GPSize))
             ? ".bss"
             : sbss[(Log2_64(AccessSize))];
-
-    MCSection *CrntSection = getCurrentSection().first;
-    MCSection *Section = getAssembler().getContext().getELFSection(
+    MCSection &Section = *getAssembler().getContext().getELFSection(
         SectionName, ELF::SHT_NOBITS, ELF::SHF_WRITE | ELF::SHF_ALLOC);
-    SwitchSection(Section);
-    AssignFragment(Symbol, getCurrentFragment());
+    MCSectionSubPair P = getCurrentSection();
+    SwitchSection(&Section);
 
-    MCELFStreamer::EmitCommonSymbol(Symbol, Size, ByteAlignment);
-    SwitchSection(CrntSection);
+    EmitValueToAlignment(ByteAlignment, 0, 1, 0);
+    EmitLabel(Symbol);
+    EmitZeros(Size);
+
+    // Update the maximum alignment of the section if necessary.
+    if (ByteAlignment > Section.getAlignment())
+      Section.setAlignment(ByteAlignment);
+
+    SwitchSection(P.first, P.second);
   } else {
     if (ELFSymbol->declareCommon(Size, ByteAlignment))
       report_fatal_error("Symbol: " + Symbol->getName() +

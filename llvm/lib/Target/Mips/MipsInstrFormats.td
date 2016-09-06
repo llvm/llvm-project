@@ -94,10 +94,15 @@ class MipsInst<dag outs, dag ins, string asmstr, list<dag> pattern,
   //
   // Attributes specific to Mips instructions...
   //
-  bits<4> FormBits = Form.Value;
+  bits<4> FormBits     = Form.Value;
+  bit isCTI            = 0; // Any form of Control Transfer Instruction.
+                            // Required for MIPSR6
+  bit hasForbiddenSlot = 0; // Instruction has a forbidden slot.
 
   // TSFlags layout should be kept in sync with MipsInstrInfo.h.
   let TSFlags{3-0}   = FormBits;
+  let TSFlags{4}     = isCTI;
+  let TSFlags{5}     = hasForbiddenSlot;
 
   let DecoderNamespace = "Mips";
 

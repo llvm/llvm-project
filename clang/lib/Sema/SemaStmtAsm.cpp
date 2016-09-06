@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Sema/SemaInternal.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/TypeLoc.h"
@@ -21,8 +20,8 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 using namespace clang;
 using namespace sema;
@@ -623,16 +622,12 @@ bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
 
   if (!LookupName(BaseResult, getCurScope()))
     return true;
-
-  LookupResult CurrBaseResult(BaseResult);
-
+  
+  if(!BaseResult.isSingleResult())
+    return true;
+  NamedDecl *FoundDecl = BaseResult.getFoundDecl();
   for (StringRef NextMember : Members) {
-
-    if (!CurrBaseResult.isSingleResult())
-      return true;
-
     const RecordType *RT = nullptr;
-    NamedDecl *FoundDecl = CurrBaseResult.getFoundDecl();
     if (VarDecl *VD = dyn_cast<VarDecl>(FoundDecl))
       RT = VD->getType()->getAs<RecordType>();
     else if (TypedefNameDecl *TD = dyn_cast<TypedefNameDecl>(FoundDecl)) {
@@ -655,12 +650,14 @@ bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
     if (!LookupQualifiedName(FieldResult, RT->getDecl()))
       return true;
 
+    if (!FieldResult.isSingleResult())
+      return true;
+    FoundDecl = FieldResult.getFoundDecl();
+
     // FIXME: Handle IndirectFieldDecl?
-    FieldDecl *FD = dyn_cast<FieldDecl>(FieldResult.getFoundDecl());
+    FieldDecl *FD = dyn_cast<FieldDecl>(FoundDecl);
     if (!FD)
       return true;
-
-    CurrBaseResult = FieldResult;
 
     const ASTRecordLayout &RL = Context.getASTRecordLayout(RT->getDecl());
     unsigned i = FD->getFieldIndex();

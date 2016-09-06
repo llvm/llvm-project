@@ -48,7 +48,7 @@ struct Blob {
 };
 int Blob::*member_pointer;
 
-
+namespace NS { struct Type{}; } NS::Type elaboratedNamespaceType(const NS::Type t);
 
 auto autoI = 0;
 auto autoTbar = tbar<int>(0);
@@ -68,8 +68,8 @@ decltype(auto) autoInt = 5;
 // CHECK: TemplateTemplateParameter=W:8:60 (Definition) [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: Namespace=inner:14:11 (Definition) [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: StructDecl=Bar:16:8 (Definition) [type=outer::inner::Bar] [typekind=Record] [isPOD=0] [nbFields=3]
-// CHECK: CXXConstructor=Bar:17:3 (Definition) [type=void (outer::Foo<bool> *){{.*}}] [typekind=FunctionProto] [canonicaltype=void (outer::Foo<bool> *){{.*}}] [canonicaltypekind=FunctionProto] [resulttype=void] [resulttypekind=Void] [args= [outer::Foo<bool> *] [Pointer]] [isPOD=0]
-// CHECK: ParmDecl=foo:17:25 (Definition) [type=outer::Foo<bool> *] [typekind=Pointer] [canonicaltype=outer::Foo<bool> *] [canonicaltypekind=Pointer] [isPOD=1] [pointeetype=outer::Foo<bool>] [pointeekind=Unexposed]
+// CHECK: CXXConstructor=Bar:17:3 (Definition) (converting constructor) [type=void (outer::Foo<bool> *){{.*}}] [typekind=FunctionProto] [canonicaltype=void (outer::Foo<bool> *){{.*}}] [canonicaltypekind=FunctionProto] [resulttype=void] [resulttypekind=Void] [args= [outer::Foo<bool> *] [Pointer]] [isPOD=0]
+// CHECK: ParmDecl=foo:17:25 (Definition) [type=outer::Foo<bool> *] [typekind=Pointer] [canonicaltype=outer::Foo<bool> *] [canonicaltypekind=Pointer] [isPOD=1] [pointeetype=outer::Foo<bool>] [pointeekind=Elaborated]
 // CHECK: NamespaceRef=outer:1:11 [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: TemplateRef=Foo:4:8 [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: CompoundStmt= [type=] [typekind=Invalid] [isPOD=0]
@@ -127,6 +127,10 @@ decltype(auto) autoInt = 5;
 // CHECK: StructDecl=Blob:45:8 (Definition) [type=Blob] [typekind=Record] [isPOD=1] [nbFields=2]
 // CHECK: FieldDecl=i:46:7 (Definition) [type=int] [typekind=Int] [isPOD=1]
 // CHECK: VarDecl=member_pointer:49:12 (Definition) [type=int Blob::*] [typekind=MemberPointer] [isPOD=1]
+// CHECK: FunctionDecl=elaboratedNamespaceType:51:42 [type=NS::Type (const NS::Type)] [typekind=FunctionProto] [canonicaltype=NS::Type (NS::Type)] [canonicaltypekind=FunctionProto] [resulttype=NS::Type] [resulttypekind=Elaborated] [args= [const NS::Type] [Elaborated]] [isPOD=0]
+// CHECK: NamespaceRef=NS:51:11 [type=] [typekind=Invalid] [isPOD=0]
+// CHECK: TypeRef=struct NS::Type:51:23 [type=NS::Type] [typekind=Record] [isPOD=1]
+// CHECK: ParmDecl=t:51:81 (Definition) [type=const NS::Type] [typekind=Elaborated] const [canonicaltype=const NS::Type] [canonicaltypekind=Record] [isPOD=1]
 // CHECK: VarDecl=autoI:53:6 (Definition) [type=int] [typekind=Auto] [canonicaltype=int] [canonicaltypekind=Int] [isPOD=1]
 // CHECK: IntegerLiteral= [type=int] [typekind=Int] [isPOD=1]
 // CHECK: VarDecl=autoTbar:54:6 (Definition) [type=int] [typekind=Auto] [canonicaltype=int] [canonicaltypekind=Int] [isPOD=1]

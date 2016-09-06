@@ -14,6 +14,8 @@
 #ifndef LLVM_ANALYSIS_BLOCKFREQUENCYINFO_H
 #define LLVM_ANALYSIS_BLOCKFREQUENCYINFO_H
 
+#include "llvm/ADT/Optional.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include <climits>
@@ -30,12 +32,21 @@ class BlockFrequencyInfo {
   typedef BlockFrequencyInfoImpl<BasicBlock> ImplType;
   std::unique_ptr<ImplType> BFI;
 
+  void operator=(const BlockFrequencyInfo &) = delete;
+  BlockFrequencyInfo(const BlockFrequencyInfo &) = delete;
+
 public:
   BlockFrequencyInfo();
   BlockFrequencyInfo(const Function &F, const BranchProbabilityInfo &BPI,
                      const LoopInfo &LI);
+  BlockFrequencyInfo(BlockFrequencyInfo &&Arg);
+
+  BlockFrequencyInfo &operator=(BlockFrequencyInfo &&RHS);
+
+  ~BlockFrequencyInfo();
 
   const Function *getFunction() const;
+  const BranchProbabilityInfo *getBPI() const;
   void view() const;
 
   /// getblockFreq - Return block frequency. Return 0 if we don't have the
@@ -44,6 +55,16 @@ public:
   /// comparison to the other block frequencies. We do this to avoid using of
   /// floating points.
   BlockFrequency getBlockFreq(const BasicBlock *BB) const;
+
+  /// \brief Returns the estimated profile count of \p BB.
+  /// This computes the relative block frequency of \p BB and multiplies it by
+  /// the enclosing function's count (if available) and returns the value.
+  Optional<uint64_t> getBlockProfileCount(const BasicBlock *BB) const;
+
+  /// \brief Returns the estimated profile count of \p Freq.
+  /// This uses the frequency \p Freq and multiplies it by
+  /// the enclosing function's count (if available) and returns the value.
+  Optional<uint64_t> getProfileCountFromFreq(uint64_t Freq) const;
 
   // Set the frequency of the given basic block.
   void setBlockFreq(const BasicBlock *BB, uint64_t Freq);
@@ -63,6 +84,30 @@ public:
   uint64_t getEntryFreq() const;
   void releaseMemory();
   void print(raw_ostream &OS) const;
+};
+
+/// \brief Analysis pass which computes \c BlockFrequencyInfo.
+class BlockFrequencyAnalysis
+    : public AnalysisInfoMixin<BlockFrequencyAnalysis> {
+  friend AnalysisInfoMixin<BlockFrequencyAnalysis>;
+  static char PassID;
+
+public:
+  /// \brief Provide the result typedef for this analysis pass.
+  typedef BlockFrequencyInfo Result;
+
+  /// \brief Run the analysis pass over a function and produce BFI.
+  Result run(Function &F, FunctionAnalysisManager &AM);
+};
+
+/// \brief Printer pass for the \c BlockFrequencyInfo results.
+class BlockFrequencyPrinterPass
+    : public PassInfoMixin<BlockFrequencyPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit BlockFrequencyPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// \brief Legacy analysis pass which computes \c BlockFrequencyInfo.

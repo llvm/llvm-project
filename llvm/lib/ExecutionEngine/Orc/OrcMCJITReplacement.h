@@ -111,16 +111,17 @@ class OrcMCJITReplacement : public ExecutionEngine {
     std::shared_ptr<MCJITMemoryManager> ClientMM;
   };
 
-  class LinkingResolver : public RuntimeDyld::SymbolResolver {
+  class LinkingResolver : public JITSymbolResolver {
   public:
     LinkingResolver(OrcMCJITReplacement &M) : M(M) {}
 
-    RuntimeDyld::SymbolInfo findSymbol(const std::string &Name) override {
-      return M.findMangledSymbol(Name);
+    JITSymbol findSymbol(const std::string &Name) override {
+      return M.ClientResolver->findSymbol(Name);
     }
 
-    RuntimeDyld::SymbolInfo
-    findSymbolInLogicalDylib(const std::string &Name) override {
+    JITSymbol findSymbolInLogicalDylib(const std::string &Name) override {
+      if (auto Sym = M.findMangledSymbol(Name))
+        return Sym;
       return M.ClientResolver->findSymbolInLogicalDylib(Name);
     }
 
@@ -133,7 +134,7 @@ private:
   static ExecutionEngine *
   createOrcMCJITReplacement(std::string *ErrorMsg,
                             std::shared_ptr<MCJITMemoryManager> MemMgr,
-                            std::shared_ptr<RuntimeDyld::SymbolResolver> Resolver,
+                            std::shared_ptr<JITSymbolResolver> Resolver,
                             std::unique_ptr<TargetMachine> TM) {
     return new OrcMCJITReplacement(std::move(MemMgr), std::move(Resolver),
                                    std::move(TM));
@@ -146,7 +147,7 @@ public:
 
   OrcMCJITReplacement(
       std::shared_ptr<MCJITMemoryManager> MemMgr,
-      std::shared_ptr<RuntimeDyld::SymbolResolver> ClientResolver,
+      std::shared_ptr<JITSymbolResolver> ClientResolver,
       std::unique_ptr<TargetMachine> TM)
       : ExecutionEngine(TM->createDataLayout()), TM(std::move(TM)),
         MemMgr(*this, std::move(MemMgr)), Resolver(*this),
@@ -193,7 +194,7 @@ public:
     return findSymbol(Name).getAddress();
   }
 
-  RuntimeDyld::SymbolInfo findSymbol(StringRef Name) {
+  JITSymbol findSymbol(StringRef Name) {
     return findMangledSymbol(Mangle(Name));
   }
 
@@ -243,13 +244,13 @@ public:
 
 private:
 
-  RuntimeDyld::SymbolInfo findMangledSymbol(StringRef Name) {
+  JITSymbol findMangledSymbol(StringRef Name) {
     if (auto Sym = LazyEmitLayer.findSymbol(Name, false))
-      return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+      return Sym;
     if (auto Sym = ClientResolver->findSymbol(Name))
-      return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+      return Sym;
     if (auto Sym = scanArchives(Name))
-      return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
+      return Sym;
 
     return nullptr;
   }
@@ -258,15 +259,19 @@ private:
     for (object::OwningBinary<object::Archive> &OB : Archives) {
       object::Archive *A = OB.getBinary();
       // Look for our symbols in each Archive
-      object::Archive::child_iterator ChildIt = A->findSym(Name);
-      if (std::error_code EC = ChildIt->getError())
-        report_fatal_error(EC.message());
-      if (ChildIt != A->child_end()) {
+      auto OptionalChildOrErr = A->findSym(Name);
+      if (!OptionalChildOrErr)
+        report_fatal_error(OptionalChildOrErr.takeError());
+      auto &OptionalChild = *OptionalChildOrErr;
+      if (OptionalChild) {
         // FIXME: Support nested archives?
-        ErrorOr<std::unique_ptr<object::Binary>> ChildBinOrErr =
-            (*ChildIt)->getAsBinary();
-        if (ChildBinOrErr.getError())
+        Expected<std::unique_ptr<object::Binary>> ChildBinOrErr =
+            OptionalChild->getAsBinary();
+        if (!ChildBinOrErr) {
+          // TODO: Actually report errors helpfully.
+          consumeError(ChildBinOrErr.takeError());
           continue;
+        }
         std::unique_ptr<object::Binary> &ChildBin = ChildBinOrErr.get();
         if (ChildBin->isObject()) {
           std::vector<std::unique_ptr<object::ObjectFile>> ObjSet;
@@ -342,7 +347,7 @@ private:
   std::unique_ptr<TargetMachine> TM;
   MCJITReplacementMemMgr MemMgr;
   LinkingResolver Resolver;
-  std::shared_ptr<RuntimeDyld::SymbolResolver> ClientResolver;
+  std::shared_ptr<JITSymbolResolver> ClientResolver;
   Mangler Mang;
 
   NotifyObjectLoadedT NotifyObjectLoaded;

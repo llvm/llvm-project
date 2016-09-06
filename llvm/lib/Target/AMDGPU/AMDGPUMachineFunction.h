@@ -1,4 +1,4 @@
-//===-- R600MachineFunctionInfo.h - R600 Machine Function Info ----*- C++ -*-=//
+//===-- AMDGPUMachineFunctionInfo.h -------------------------------*- C++ -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,44 +6,67 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-/// \file
-//===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_AMDGPUMACHINEFUNCTION_H
-#define LLVM_LIB_TARGET_R600_AMDGPUMACHINEFUNCTION_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUMACHINEFUNCTION_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUMACHINEFUNCTION_H
 
 #include "llvm/CodeGen/MachineFunction.h"
-#include <map>
+#include "llvm/ADT/DenseMap.h"
 
 namespace llvm {
 
 class AMDGPUMachineFunction : public MachineFunctionInfo {
-  virtual void anchor();
-  unsigned ShaderType;
+  /// A map to keep track of local memory objects and their offsets within the
+  /// local memory space.
+  SmallDenseMap<const GlobalValue *, unsigned, 4> LocalMemoryObjects;
 
-public:
-  AMDGPUMachineFunction(const MachineFunction &MF);
-  /// A map to keep track of local memory objects and their offsets within
-  /// the local memory space.
-  std::map<const GlobalValue *, unsigned> LocalMemoryObjects;
+  uint64_t KernArgSize;
+  unsigned MaxKernArgAlign;
+
   /// Number of bytes in the LDS that are being used.
   unsigned LDSSize;
 
+  // FIXME: This should probably be removed.
   /// Start of implicit kernel args
   unsigned ABIArgOffset;
 
-  unsigned getShaderType() const {
-    return ShaderType;
+  bool IsKernel;
+
+public:
+  AMDGPUMachineFunction(const MachineFunction &MF);
+
+  uint64_t allocateKernArg(uint64_t Size, unsigned Align) {
+    assert(isPowerOf2_32(Align));
+    KernArgSize = alignTo(KernArgSize, Align);
+
+    uint64_t Result = KernArgSize;
+    KernArgSize += Size;
+
+    MaxKernArgAlign = std::max(Align, MaxKernArgAlign);
+    return Result;
+  }
+
+  uint64_t getKernArgSize() const {
+    return KernArgSize;
+  }
+
+  void setABIArgOffset(unsigned NewOffset) {
+    ABIArgOffset = NewOffset;
+  }
+
+  unsigned getABIArgOffset() const {
+    return ABIArgOffset;
+  }
+
+  unsigned getLDSSize() const {
+    return LDSSize;
   }
 
   bool isKernel() const {
-    // FIXME: Assume everything is a kernel until function calls are supported.
-    return true;
+    return IsKernel;
   }
 
-  unsigned ScratchSize;
-  bool IsKernel;
+  unsigned allocateLDSGlobal(const DataLayout &DL, const GlobalValue &GV);
 };
 
 }

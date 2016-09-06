@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc64
+; RUN: llc -verify-machineinstrs < %s -march=ppc64
 
 target datalayout = "E-p:64:64"
 target triple = "powerpc64-apple-darwin8"

@@ -15,9 +15,9 @@ bool b = F<int>{0} == F<int>{1};
 int x = f() + g();
 
 // expected-note@a.h:5 {{definition has no member 'e2'}}
-// expected-note@b.h:3 {{declaration of 'f' does not match}}
-// expected-note@b.h:1 {{definition has no member 'n'}}
+// expected-note@a.h:3 {{declaration of 'f' does not match}}
+// expected-note@a.h:1 {{definition has no member 'm'}}
 
 // expected-error@b.h:5 {{'E::e2' from module 'b' is not present in definition of 'E' in module 'a'}}
-// expected-error@a.h:3 {{'Y::f' from module 'a' is not present in definition of 'Y' in module 'b'}}
-// expected-error@a.h:2 {{'Y::n' from module 'a' is not present in definition of 'Y' in module 'b'}}
+// expected-error@b.h:3 {{'Y::f' from module 'b' is not present in definition of 'Y' in module 'a'}}
+// expected-error@b.h:2 {{'Y::m' from module 'b' is not present in definition of 'Y' in module 'a'}}

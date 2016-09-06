@@ -32,7 +32,7 @@ namespace llvm {
 }
 
 static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
-                              HexagonAsmPrinter &Printer) {
+                              HexagonAsmPrinter &Printer, bool MustExtend) {
   MCContext &MC = Printer.OutContext;
   const MCExpr *ME;
 
@@ -58,6 +58,21 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   case HexagonII::MO_GPREL:
     RelocationType = MCSymbolRefExpr::VK_Hexagon_GPREL;
     break;
+  case HexagonII::MO_GDGOT:
+    RelocationType = MCSymbolRefExpr::VK_Hexagon_GD_GOT;
+    break;
+  case HexagonII::MO_GDPLT:
+    RelocationType = MCSymbolRefExpr::VK_Hexagon_GD_PLT;
+    break;
+  case HexagonII::MO_IE:
+    RelocationType = MCSymbolRefExpr::VK_Hexagon_IE;
+    break;
+  case HexagonII::MO_IEGOT:
+    RelocationType = MCSymbolRefExpr::VK_Hexagon_IE_GOT;
+    break;
+  case HexagonII::MO_TPREL:
+    RelocationType = MCSymbolRefExpr::VK_TPREL;
+    break;
   }
 
   ME = MCSymbolRefExpr::create(Symbol, RelocationType, MC);
@@ -66,6 +81,8 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
     ME = MCBinaryExpr::createAdd(ME, MCConstantExpr::create(MO.getOffset(), MC),
                                  MC);
 
+  ME = HexagonMCExpr::create(ME, MC);
+  HexagonMCInstrInfo::setMustExtend(*ME, MustExtend);
   return MCOperand::createExpr(ME);
 }
 
@@ -84,13 +101,11 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
   MCI->setOpcode(MI->getOpcode());
   assert(MCI->getOpcode() == static_cast<unsigned>(MI->getOpcode()) &&
          "MCI opcode should have been set on construction");
-  bool MustExtend = false;
 
   for (unsigned i = 0, e = MI->getNumOperands(); i < e; i++) {
     const MachineOperand &MO = MI->getOperand(i);
     MCOperand MCO;
-    if (MO.getTargetFlags() & HexagonII::HMOTF_ConstExtended)
-      MustExtend = true;
+    bool MustExtend = MO.getTargetFlags() & HexagonII::HMOTF_ConstExtended;
 
     switch (MO.getType()) {
     default:
@@ -105,42 +120,51 @@ void llvm::HexagonLowerToMC(const MCInstrInfo &MCII, const MachineInstr *MI,
       APFloat Val = MO.getFPImm()->getValueAPF();
       // FP immediates are used only when setting GPRs, so they may be dealt
       // with like regular immediates from this point on.
-      MCO = MCOperand::createExpr(
-        MCConstantExpr::create(*Val.bitcastToAPInt().getRawData(),
-                               AP.OutContext));
+      auto Expr = HexagonMCExpr::create(
+          MCConstantExpr::create(*Val.bitcastToAPInt().getRawData(),
+                                 AP.OutContext),
+          AP.OutContext);
+      HexagonMCInstrInfo::setMustExtend(*Expr, MustExtend);
+      MCO = MCOperand::createExpr(Expr);
       break;
     }
-    case MachineOperand::MO_Immediate:
-      MCO = MCOperand::createExpr(
-        MCConstantExpr::create(MO.getImm(), AP.OutContext));
+    case MachineOperand::MO_Immediate: {
+      auto Expr = HexagonMCExpr::create(
+          MCConstantExpr::create(MO.getImm(), AP.OutContext), AP.OutContext);
+      HexagonMCInstrInfo::setMustExtend(*Expr, MustExtend);
+      MCO = MCOperand::createExpr(Expr);
       break;
-    case MachineOperand::MO_MachineBasicBlock:
-      MCO = MCOperand::createExpr
-              (MCSymbolRefExpr::create(MO.getMBB()->getSymbol(),
-               AP.OutContext));
+    }
+    case MachineOperand::MO_MachineBasicBlock: {
+      MCExpr const *Expr = MCSymbolRefExpr::create(MO.getMBB()->getSymbol(),
+                                                   AP.OutContext);
+      Expr = HexagonMCExpr::create(Expr, AP.OutContext);
+      HexagonMCInstrInfo::setMustExtend(*Expr, MustExtend);
+      MCO = MCOperand::createExpr(Expr);
       break;
+    }
     case MachineOperand::MO_GlobalAddress:
-      MCO = GetSymbolRef(MO, AP.getSymbol(MO.getGlobal()), AP);
+      MCO = GetSymbolRef(MO, AP.getSymbol(MO.getGlobal()), AP, MustExtend);
       break;
     case MachineOperand::MO_ExternalSymbol:
       MCO = GetSymbolRef(MO, AP.GetExternalSymbolSymbol(MO.getSymbolName()),
-                         AP);
+                         AP, MustExtend);
       break;
     case MachineOperand::MO_JumpTableIndex:
-      MCO = GetSymbolRef(MO, AP.GetJTISymbol(MO.getIndex()), AP);
+      MCO = GetSymbolRef(MO, AP.GetJTISymbol(MO.getIndex()), AP, MustExtend);
       break;
     case MachineOperand::MO_ConstantPoolIndex:
-      MCO = GetSymbolRef(MO, AP.GetCPISymbol(MO.getIndex()), AP);
+      MCO = GetSymbolRef(MO, AP.GetCPISymbol(MO.getIndex()), AP, MustExtend);
       break;
     case MachineOperand::MO_BlockAddress:
-      MCO = GetSymbolRef(MO, AP.GetBlockAddressSymbol(MO.getBlockAddress()),AP);
+      MCO = GetSymbolRef(MO, AP.GetBlockAddressSymbol(MO.getBlockAddress()), AP,
+                         MustExtend);
       break;
     }
 
     MCI->addOperand(MCO);
   }
   AP.HexagonProcessInstruction(*MCI, *MI);
-  HexagonMCInstrInfo::extendIfNeeded(AP.OutContext, MCII, MCB, *MCI,
-                                     MustExtend);
+  HexagonMCInstrInfo::extendIfNeeded(AP.OutContext, MCII, MCB, *MCI);
   MCB.addOperand(MCOperand::createInst(MCI));
 }

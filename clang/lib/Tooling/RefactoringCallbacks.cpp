@@ -40,10 +40,14 @@ ReplaceStmtWithText::ReplaceStmtWithText(StringRef FromId, StringRef ToText)
 void ReplaceStmtWithText::run(
     const ast_matchers::MatchFinder::MatchResult &Result) {
   if (const Stmt *FromMatch = Result.Nodes.getStmtAs<Stmt>(FromId)) {
-    Replace.insert(tooling::Replacement(
+    auto Err = Replace.add(tooling::Replacement(
         *Result.SourceManager,
-        CharSourceRange::getTokenRange(FromMatch->getSourceRange()),
-        ToText));
+        CharSourceRange::getTokenRange(FromMatch->getSourceRange()), ToText));
+    // FIXME: better error handling. For now, just print error message in the
+    // release version.
+    if (Err)
+      llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+    assert(!Err);
   }
 }
 
@@ -54,9 +58,15 @@ void ReplaceStmtWithStmt::run(
     const ast_matchers::MatchFinder::MatchResult &Result) {
   const Stmt *FromMatch = Result.Nodes.getStmtAs<Stmt>(FromId);
   const Stmt *ToMatch = Result.Nodes.getStmtAs<Stmt>(ToId);
-  if (FromMatch && ToMatch)
-    Replace.insert(replaceStmtWithStmt(
-        *Result.SourceManager, *FromMatch, *ToMatch));
+  if (FromMatch && ToMatch) {
+    auto Err = Replace.add(
+        replaceStmtWithStmt(*Result.SourceManager, *FromMatch, *ToMatch));
+    // FIXME: better error handling. For now, just print error message in the
+    // release version.
+    if (Err)
+      llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+    assert(!Err);
+  }
 }
 
 ReplaceIfStmtWithItsBody::ReplaceIfStmtWithItsBody(StringRef Id,
@@ -68,11 +78,23 @@ void ReplaceIfStmtWithItsBody::run(
   if (const IfStmt *Node = Result.Nodes.getStmtAs<IfStmt>(Id)) {
     const Stmt *Body = PickTrueBranch ? Node->getThen() : Node->getElse();
     if (Body) {
-      Replace.insert(replaceStmtWithStmt(*Result.SourceManager, *Node, *Body));
+      auto Err =
+          Replace.add(replaceStmtWithStmt(*Result.SourceManager, *Node, *Body));
+      // FIXME: better error handling. For now, just print error message in the
+      // release version.
+      if (Err)
+        llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+      assert(!Err);
     } else if (!PickTrueBranch) {
       // If we want to use the 'else'-branch, but it doesn't exist, delete
       // the whole 'if'.
-      Replace.insert(replaceStmtWithText(*Result.SourceManager, *Node, ""));
+      auto Err =
+          Replace.add(replaceStmtWithText(*Result.SourceManager, *Node, ""));
+      // FIXME: better error handling. For now, just print error message in the
+      // release version.
+      if (Err)
+        llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+      assert(!Err);
     }
   }
 }

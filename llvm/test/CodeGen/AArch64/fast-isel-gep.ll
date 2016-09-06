@@ -33,7 +33,7 @@ define i32* @test_array3(i32* %a) {
 
 define i32* @test_array4(i32* %a) {
 ; CHECK-LABEL: test_array4
-; CHECK:       movz [[REG:x[0-9]+]], #0x1008
+; CHECK:       mov [[REG:x[0-9]+]], #4104
 ; CHECK-NEXR:  add x0, x0, [[REG]]
   %1 = getelementptr inbounds i32, i32* %a, i64 1026
   ret i32* %1

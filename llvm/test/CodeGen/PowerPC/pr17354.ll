@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr7 -relocation-model=pic <%s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -relocation-model=pic <%s | FileCheck %s
 
 ; Test that PR17354 is fixed.  We must generate a nop following even
 ; local calls when generating code for shared libraries, to permit

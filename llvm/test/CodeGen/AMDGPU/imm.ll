@@ -23,7 +23,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}store_imm_neg_0.0_i64:
 ; CHECK-DAG: v_mov_b32_e32 v[[LO_VREG:[0-9]+]], 0{{$}}
-; CHECK-DAG: v_mov_b32_e32 v[[HI_VREG:[0-9]+]], 0x80000000
+; CHECK-DAG: v_bfrev_b32_e32 v[[HI_VREG:[0-9]+]], 1{{$}}
 ; CHECK: buffer_store_dwordx2 v{{\[}}[[LO_VREG]]:[[HI_VREG]]{{\]}}
 define void @store_imm_neg_0.0_i64(i64 addrspace(1) *%out) {
   store i64 -9223372036854775808, i64 addrspace(1) *%out
@@ -31,7 +31,7 @@ define void @store_imm_neg_0.0_i64(i64 addrspace(1) *%out) {
 }
 
 ; CHECK-LABEL: {{^}}store_inline_imm_neg_0.0_i32:
-; CHECK: v_mov_b32_e32 [[REG:v[0-9]+]], 0x80000000
+; CHECK: v_bfrev_b32_e32 [[REG:v[0-9]+]], 1{{$}}
 ; CHECK: buffer_store_dword [[REG]]
 define void @store_inline_imm_neg_0.0_i32(i32 addrspace(1)* %out) {
   store i32 -2147483648, i32 addrspace(1)* %out
@@ -47,7 +47,7 @@ define void @store_inline_imm_0.0_f32(float addrspace(1)* %out) {
 }
 
 ; CHECK-LABEL: {{^}}store_imm_neg_0.0_f32:
-; CHECK: v_mov_b32_e32 [[REG:v[0-9]+]], 0x80000000
+; CHECK: v_bfrev_b32_e32 [[REG:v[0-9]+]], 1{{$}}
 ; CHECK: buffer_store_dword [[REG]]
 define void @store_imm_neg_0.0_f32(float addrspace(1)* %out) {
   store float -0.0, float addrspace(1)* %out
@@ -322,7 +322,7 @@ define void @add_inline_imm_64_f32(float addrspace(1)* %out, float %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_0.0_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], 0, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], 0{{$}}
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_0.0_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 0.0
@@ -333,7 +333,7 @@ define void @add_inline_imm_0.0_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_0.5_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], 0.5, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], 0.5
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_0.5_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 0.5
@@ -344,7 +344,7 @@ define void @add_inline_imm_0.5_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_neg_0.5_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], -0.5, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], -0.5
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_neg_0.5_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, -0.5
@@ -355,7 +355,7 @@ define void @add_inline_imm_neg_0.5_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_1.0_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], 1.0, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], 1.0
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_1.0_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 1.0
@@ -366,7 +366,7 @@ define void @add_inline_imm_1.0_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_neg_1.0_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], -1.0, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], -1.0
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_neg_1.0_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, -1.0
@@ -377,7 +377,7 @@ define void @add_inline_imm_neg_1.0_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_2.0_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], 2.0, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], 2.0
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_2.0_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 2.0
@@ -388,7 +388,7 @@ define void @add_inline_imm_2.0_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_neg_2.0_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], -2.0, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], -2.0
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_neg_2.0_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, -2.0
@@ -399,7 +399,7 @@ define void @add_inline_imm_neg_2.0_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_4.0_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], 4.0, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], 4.0
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_4.0_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 4.0
@@ -410,7 +410,7 @@ define void @add_inline_imm_4.0_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_neg_4.0_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], -4.0, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], -4.0
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_neg_4.0_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, -4.0
@@ -422,7 +422,7 @@ define void @add_inline_imm_neg_4.0_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_1_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], 1, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], 1{{$}}
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_1_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 0x0000000000000001
@@ -433,7 +433,7 @@ define void @add_inline_imm_1_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_2_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], 2, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], 2{{$}}
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_2_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 0x0000000000000002
@@ -444,7 +444,7 @@ define void @add_inline_imm_2_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_16_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], 16, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], 16
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_16_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 0x0000000000000010
@@ -455,7 +455,7 @@ define void @add_inline_imm_16_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_neg_1_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], -1, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], -1
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_neg_1_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 0xffffffffffffffff
@@ -466,7 +466,7 @@ define void @add_inline_imm_neg_1_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_neg_2_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], -2, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], -2
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_neg_2_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 0xfffffffffffffffe
@@ -477,7 +477,7 @@ define void @add_inline_imm_neg_2_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_neg_16_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], -16, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], -16
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_neg_16_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 0xfffffffffffffff0
@@ -488,7 +488,7 @@ define void @add_inline_imm_neg_16_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_63_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], 63, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], 63
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_63_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 0x000000000000003F
@@ -499,7 +499,7 @@ define void @add_inline_imm_63_f64(double addrspace(1)* %out, double %x) {
 ; CHECK-LABEL: {{^}}add_inline_imm_64_f64:
 ; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; VI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0x2c
-; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], 64, [[VAL]]
+; CHECK: v_add_f64 [[REG:v\[[0-9]+:[0-9]+\]]], [[VAL]], 64
 ; CHECK: buffer_store_dwordx2 [[REG]]
 define void @add_inline_imm_64_f64(double addrspace(1)* %out, double %x) {
   %y = fadd double %x, 0x0000000000000040
@@ -510,7 +510,7 @@ define void @add_inline_imm_64_f64(double addrspace(1)* %out, double %x) {
 
 ; CHECK-LABEL: {{^}}store_inline_imm_0.0_f64:
 ; CHECK: v_mov_b32_e32 v[[LO_VREG:[0-9]+]], 0
-; CHECK: v_mov_b32_e32 v[[HI_VREG:[0-9]+]], 0
+; CHECK: v_mov_b32_e32 v[[HI_VREG:[0-9]+]], v[[LO_VREG]]{{$}}
 ; CHECK: buffer_store_dwordx2 v{{\[}}[[LO_VREG]]:[[HI_VREG]]{{\]}}
 define void @store_inline_imm_0.0_f64(double addrspace(1)* %out) {
   store double 0.0, double addrspace(1)* %out
@@ -520,7 +520,7 @@ define void @store_inline_imm_0.0_f64(double addrspace(1)* %out) {
 
 ; CHECK-LABEL: {{^}}store_literal_imm_neg_0.0_f64:
 ; CHECK-DAG: v_mov_b32_e32 v[[LO_VREG:[0-9]+]], 0{{$}}
-; CHECK-DAG: v_mov_b32_e32 v[[HI_VREG:[0-9]+]], 0x80000000
+; CHECK-DAG: v_bfrev_b32_e32 v[[HI_VREG:[0-9]+]], 1{{$}}
 ; CHECK: buffer_store_dwordx2 v{{\[}}[[LO_VREG]]:[[HI_VREG]]{{\]}}
 define void @store_literal_imm_neg_0.0_f64(double addrspace(1)* %out) {
   store double -0.0, double addrspace(1)* %out

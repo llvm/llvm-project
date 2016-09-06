@@ -1,0 +1,9 @@
+#ifndef ELF_RELOC
+#error "ELF_RELOC must be defined"
+#endif
+
+// No relocation
+ELF_RELOC(R_BPF_NONE,        0)
+// Map index in "maps" section to file descriptor
+// within ld_64 instruction.
+ELF_RELOC(R_BPF_MAP_FD,      1)

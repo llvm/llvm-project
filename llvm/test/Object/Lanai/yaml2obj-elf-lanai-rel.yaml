@@ -1,0 +1,67 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-readobj -r %t | FileCheck %s
+
+# CHECK:      Relocations [
+# CHECK-NEXT:   Section (2) .rel.text {
+# CHECK-NEXT:     0x0 R_LANAI_32 main 0x0
+# CHECK-NEXT:     0x4 R_LANAI_NONE - 0x0
+# CHECK-NEXT:     0x8 R_LANAI_21 - 0x0
+# CHECK-NEXT:     0xC R_LANAI_21_F - 0x0
+# CHECK-NEXT:     0x10 R_LANAI_25 - 0x0
+# CHECK-NEXT:     0x14 R_LANAI_HI16 - 0x0
+# CHECK-NEXT:     0x18 R_LANAI_LO16 - 0x0
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_LANAI
+Sections:
+  - Type:            SHT_PROGBITS
+    Name:            .text
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x04
+    Content:         0000000000000000
+  - Type:            SHT_REL
+    Name:            .rel.text
+    Link:            .symtab
+    Info:            .text
+    AddressAlign:    0x04
+    Relocations:
+      - Offset:          0x0
+        Symbol:          main
+        Type:            R_LANAI_32
+      - Offset:          0x4
+        Symbol:          a
+        Type:            R_LANAI_NONE
+      - Offset:          0x8
+        Symbol:          b
+        Type:            R_LANAI_21
+      - Offset:          0xC
+        Symbol:          c
+        Type:            R_LANAI_21_F
+      - Offset:          0x10
+        Symbol:          d
+        Type:            R_LANAI_25
+      - Offset:          0x14
+        Symbol:          e
+        Type:            R_LANAI_HI16
+      - Offset:          0x18
+        Symbol:          f
+        Type:            R_LANAI_LO16
+
+
+Symbols:
+  Local:
+    - Name:            .text
+      Type:            STT_SECTION
+      Section:         .text
+
+  Global:
+    - Name:            main
+      Type:            STT_FUNC
+      Section:         .text
+      Size:            0x08

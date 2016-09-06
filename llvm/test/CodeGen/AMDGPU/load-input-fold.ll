@@ -1,6 +1,6 @@
 ;RUN: llc < %s -march=r600 -mcpu=cayman
 
-define void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4 x float> inreg %reg2, <4 x float> inreg %reg3) #0 {
+define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4 x float> inreg %reg2, <4 x float> inreg %reg3) {
 main_body:
   %0 = extractelement <4 x float> %reg1, i32 0
   %1 = extractelement <4 x float> %reg1, i32 1
@@ -88,14 +88,14 @@ main_body:
   %83 = insertelement <4 x float> %82, float %75, i32 1
   %84 = insertelement <4 x float> %83, float %77, i32 2
   %85 = insertelement <4 x float> %84, float 0.000000e+00, i32 3
-  %86 = call float @llvm.AMDGPU.dp4(<4 x float> %81, <4 x float> %85)
+  %86 = call float @llvm.r600.dot4(<4 x float> %81, <4 x float> %85)
   %87 = insertelement <4 x float> undef, float %86, i32 0
-  call void @llvm.R600.store.swizzle(<4 x float> %87, i32 2, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %87, i32 2, i32 2)
   ret void
 }
 
 ; Function Attrs: readnone
-declare float @llvm.AMDGPU.dp4(<4 x float>, <4 x float>) #1
+declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
 
 ; Function Attrs: readonly
 declare float @fabs(float) #2
@@ -104,14 +104,13 @@ declare float @fabs(float) #2
 declare float @llvm.AMDGPU.rsq(float) #1
 
 ; Function Attrs: readnone
-declare float @llvm.AMDIL.clamp.(float, float, float) #1
+declare float @llvm.AMDGPU.clamp.f32(float, float, float) #1
 
 ; Function Attrs: nounwind readonly
 declare float @llvm.pow.f32(float, float) #3
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
-attributes #0 = { "ShaderType"="1" }
 attributes #1 = { readnone }
 attributes #2 = { readonly }
 attributes #3 = { nounwind readonly }

@@ -11,53 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-let isCodeGenOnly = 1 in {
-def HEXAGON_V6_vd0_pseudo : CVI_VA_Resource<(outs VectorRegs:$dst),
-    (ins ),
-    "$dst=#0",
-    [(set VectorRegs:$dst, (int_hexagon_V6_vd0 ))]>;
-
-def HEXAGON_V6_vd0_pseudo_128B : CVI_VA_Resource<(outs VectorRegs128B:$dst),
-    (ins ),
-    "$dst=#0",
-    [(set VectorRegs128B:$dst, (int_hexagon_V6_vd0_128B ))]>;
-}
-let isPseudo = 1 in
-def HEXAGON_V6_vassignp : CVI_VA_Resource<(outs VecDblRegs:$dst),
-    (ins VecDblRegs:$src1),
-    "$dst=vassignp_W($src1)",
-    [(set VecDblRegs:$dst, (int_hexagon_V6_vassignp VecDblRegs:$src1))]>;
-
-let isPseudo = 1 in
-def HEXAGON_V6_vassignp_128B : CVI_VA_Resource<(outs VecDblRegs128B:$dst),
-    (ins VecDblRegs128B:$src1),
-    "$dst=vassignp_W_128B($src1)",
-    [(set VecDblRegs128B:$dst, (int_hexagon_V6_vassignp_128B
-                                VecDblRegs128B:$src1))]>;
-
-let isPseudo = 1 in
-def HEXAGON_V6_lo : CVI_VA_Resource<(outs VectorRegs:$dst),
-    (ins VecDblRegs:$src1),
-    "$dst=lo_W($src1)",
-    [(set VectorRegs:$dst, (int_hexagon_V6_lo VecDblRegs:$src1))]>;
-
-let isPseudo = 1 in
-def HEXAGON_V6_hi : CVI_VA_Resource<(outs VectorRegs:$dst),
-    (ins VecDblRegs:$src1),
-    "$dst=hi_W($src1)",
-    [(set VectorRegs:$dst, (int_hexagon_V6_hi VecDblRegs:$src1))]>;
-
-let isPseudo = 1 in
-def HEXAGON_V6_lo_128B : CVI_VA_Resource<(outs VectorRegs128B:$dst),
-    (ins VecDblRegs128B:$src1),
-    "$dst=lo_W($src1)",
-    [(set VectorRegs128B:$dst, (int_hexagon_V6_lo_128B VecDblRegs128B:$src1))]>;
-
-let isPseudo = 1 in
-def HEXAGON_V6_hi_128B : CVI_VA_Resource<(outs VectorRegs128B:$dst),
-    (ins VecDblRegs128B:$src1),
-    "$dst=hi_W($src1)",
-    [(set VectorRegs128B:$dst, (int_hexagon_V6_hi_128B VecDblRegs128B:$src1))]>;
 
 let AddedComplexity = 100 in {
 def : Pat < (v16i32 (int_hexagon_V6_lo (v32i32 VecDblRegs:$src1))),
@@ -199,6 +152,16 @@ multiclass T_V_pat <InstHexagon MI, Intrinsic IntID> {
 
   def: Pat<(!cast<Intrinsic>(IntID#"_128B") VectorRegs128B:$src1),
            (!cast<InstHexagon>(MI#"_128B") VectorRegs128B:$src1)>,
+       Requires<[UseHVXDbl]>;
+}
+
+multiclass T_W_pat <InstHexagon MI, Intrinsic IntID> {
+  def: Pat<(IntID VecDblRegs:$src1),
+           (MI    VecDblRegs:$src1)>,
+       Requires<[UseHVXSgl]>;
+
+  def: Pat<(!cast<Intrinsic>(IntID#"_128B") VecDblRegs128B:$src1),
+           (!cast<InstHexagon>(MI#"_128B") VecDblRegs128B:$src1)>,
        Requires<[UseHVXDbl]>;
 }
 
@@ -493,7 +456,7 @@ multiclass T_WVVR_pat <InstHexagon MI, Intrinsic IntID> {
        Requires<[UseHVXDbl]>;
 }
 
-defm : T_WR_pat<V6_vtmpyb, int_hexagon_V6_vtmpyb>;
+defm : T_WR_pat <V6_vtmpyb, int_hexagon_V6_vtmpyb>;
 defm : T_WR_pat <V6_vtmpybus, int_hexagon_V6_vtmpybus>;
 defm : T_VR_pat <V6_vdmpyhb, int_hexagon_V6_vdmpyhb>;
 defm : T_VR_pat <V6_vrmpyub, int_hexagon_V6_vrmpyub>;
@@ -749,6 +712,10 @@ defm : T_V_pat <V6_vcl0h, int_hexagon_V6_vcl0h>;
 defm : T_V_pat <V6_vnormamtw, int_hexagon_V6_vnormamtw>;
 defm : T_V_pat <V6_vnormamth, int_hexagon_V6_vnormamth>;
 
+defm : T_W_pat <V6_lo, int_hexagon_V6_lo>;
+defm : T_W_pat <V6_hi, int_hexagon_V6_hi>;
+defm : T_W_pat <V6_vassignp, int_hexagon_V6_vassignp>;
+
 defm : T_WRI_pat <V6_vrmpybusi, int_hexagon_V6_vrmpybusi>;
 defm : T_WRI_pat <V6_vrsadubi, int_hexagon_V6_vrsadubi>;
 defm : T_WRI_pat <V6_vrmpyubi, int_hexagon_V6_vrmpyubi>;
@@ -800,7 +767,7 @@ defm : T_VQR_pat <V6_vandqrt_acc, int_hexagon_V6_vandqrt_acc>;
 defm : T_QVR_pat <V6_vandvrt_acc, int_hexagon_V6_vandvrt_acc>;
 defm : T_QR_pat <V6_vandqrt, int_hexagon_V6_vandqrt>;
 defm : T_R_pat <V6_lvsplatw, int_hexagon_V6_lvsplatw>;
-defm  : T_R_pat <V6_pred_scalar2, int_hexagon_V6_pred_scalar2>;
+defm : T_R_pat <V6_pred_scalar2, int_hexagon_V6_pred_scalar2>;
 defm : T_VR_pat <V6_vandvrt, int_hexagon_V6_vandvrt>;
 
 defm : T_VVR_pat <V6_vlutvvb, int_hexagon_V6_vlutvvb>;
@@ -829,8 +796,10 @@ def : T_PPQ_pat <S2_cabacencbin, int_hexagon_S2_cabacencbin>;
 
 def: Pat<(v64i16 (trunc v64i32:$Vdd)),
          (v64i16 (V6_vpackwh_sat_128B
-                 (v32i32 (HEXAGON_V6_hi_128B VecDblRegs128B:$Vdd)),
-                 (v32i32 (HEXAGON_V6_lo_128B VecDblRegs128B:$Vdd))))>,
+                 (v32i32 (V6_hi_128B VecDblRegs128B:$Vdd)),
+                 (v32i32 (V6_lo_128B VecDblRegs128B:$Vdd))))>,
      Requires<[UseHVXDbl]>;
 
+def: Pat<(int_hexagon_V6_vd0),      (V6_vd0)>;
+def: Pat<(int_hexagon_V6_vd0_128B), (V6_vd0_128B)>;
 

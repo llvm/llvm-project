@@ -4118,6 +4118,17 @@ class SBExpressionOptions(_object):
         """
         return _lldb.SBExpressionOptions_SetPlaygroundTransformEnabled(self, enable_playground_transform)
 
+    def GetREPLMode(self):
+        """GetREPLMode(self) -> bool"""
+        return _lldb.SBExpressionOptions_GetREPLMode(self)
+
+    def SetREPLMode(self, enable_repl = True):
+        """
+        SetREPLMode(self, bool enable_repl = True)
+        SetREPLMode(self)
+        """
+        return _lldb.SBExpressionOptions_SetREPLMode(self, enable_repl)
+
     def SetLanguage(self, *args):
         """
         SetLanguage(self, LanguageType language)

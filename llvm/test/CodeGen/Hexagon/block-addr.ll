@@ -3,7 +3,7 @@
 ; Allow combine(..##JTI..):
 ; CHECK: r{{[0-9]+}}{{.*}} = {{.*}}#.LJTI
 ; CHECK: r{{[0-9]+}} = memw(r{{[0-9]+}}{{ *}}+{{ *}}r{{[0-9]+<<#[0-9]+}})
-; CHECK: jumpr r{{[0-9]+}}
+; CHECK: jumpr:nt r{{[0-9]+}}
 
 define void @main() #0 {
 entry:

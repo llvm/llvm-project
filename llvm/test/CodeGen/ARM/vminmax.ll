@@ -291,3 +291,20 @@ declare <8 x i16> @llvm.arm.neon.vmaxu.v8i16(<8 x i16>, <8 x i16>) nounwind read
 declare <4 x i32> @llvm.arm.neon.vmaxu.v4i32(<4 x i32>, <4 x i32>) nounwind readnone
 
 declare <4 x float> @llvm.arm.neon.vmaxs.v4f32(<4 x float>, <4 x float>) nounwind readnone
+
+declare float @llvm.maxnum.f32(float %a, float %b)
+declare float @llvm.minnum.f32(float %a, float %b)
+
+define float @maxnum(float %a, float %b) {
+;CHECK-LABEL: maxnum:
+;CHECK: vmax.f32
+  %r = call nnan float @llvm.maxnum.f32(float %a, float %b)
+  ret float %r
+}
+
+define float @minnum(float %a, float %b) {
+;CHECK-LABEL: minnum:
+;CHECK: vmin.f32
+  %r = call nnan float @llvm.minnum.f32(float %a, float %b)
+  ret float %r
+}

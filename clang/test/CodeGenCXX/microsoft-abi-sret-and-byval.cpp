@@ -22,6 +22,16 @@ struct SmallWithCtor {
   int x;
 };
 
+struct Multibyte {
+  char a, b, c, d;
+};
+
+struct Packed {
+  short a;
+  int b;
+  short c;
+};
+
 struct SmallWithDtor {
   SmallWithDtor();
   ~SmallWithDtor();
@@ -102,18 +112,29 @@ Big big_return() { return Big(); }
 
 void small_arg(Small s) {}
 // LINUX-LABEL: define void @_Z9small_arg5Small(i32 %s.0)
-// WIN32: define void @"\01?small_arg@@YAXUSmall@@@Z"(%struct.Small* byval align 4 %s)
+// WIN32: define void @"\01?small_arg@@YAXUSmall@@@Z"(i32 %s.0)
 // WIN64: define void @"\01?small_arg@@YAXUSmall@@@Z"(i32 %s.coerce)
 
 void medium_arg(Medium s) {}
 // LINUX-LABEL: define void @_Z10medium_arg6Medium(i32 %s.0, i32 %s.1)
-// WIN32: define void @"\01?medium_arg@@YAXUMedium@@@Z"(%struct.Medium* byval align 4 %s)
+// WIN32: define void @"\01?medium_arg@@YAXUMedium@@@Z"(i32 %s.0, i32 %s.1)
 // WIN64: define void @"\01?medium_arg@@YAXUMedium@@@Z"(i64 %s.coerce)
 
 void small_arg_with_ctor(SmallWithCtor s) {}
 // LINUX-LABEL: define void @_Z19small_arg_with_ctor13SmallWithCtor(%struct.SmallWithCtor* byval align 4 %s)
-// WIN32: define void @"\01?small_arg_with_ctor@@YAXUSmallWithCtor@@@Z"(%struct.SmallWithCtor* byval align 4 %s)
+// WIN32: define void @"\01?small_arg_with_ctor@@YAXUSmallWithCtor@@@Z"(i32 %s.0)
 // WIN64: define void @"\01?small_arg_with_ctor@@YAXUSmallWithCtor@@@Z"(i32 %s.coerce)
+
+// FIXME: We could coerce to a series of i32s here if we wanted to.
+void multibyte_arg(Multibyte s) {}
+// LINUX-LABEL: define void @_Z13multibyte_arg9Multibyte(%struct.Multibyte* byval align 4 %s)
+// WIN32: define void @"\01?multibyte_arg@@YAXUMultibyte@@@Z"(%struct.Multibyte* byval align 4 %s)
+// WIN64: define void @"\01?multibyte_arg@@YAXUMultibyte@@@Z"(i32 %s.coerce)
+
+void packed_arg(Packed s) {}
+// LINUX-LABEL: define void @_Z10packed_arg6Packed(%struct.Packed* byval align 4 %s)
+// WIN32: define void @"\01?packed_arg@@YAXUPacked@@@Z"(%struct.Packed* byval align 4 %s)
+// WIN64: define void @"\01?packed_arg@@YAXUPacked@@@Z"(%struct.Packed* %s)
 
 // Test that dtors are invoked in the callee.
 void small_arg_with_dtor(SmallWithDtor s) {}
@@ -196,6 +217,28 @@ void big_arg(Big s) {}
 // WIN32: define void @"\01?big_arg@@YAXUBig@@@Z"(%struct.Big* byval align 4 %s)
 // WIN64: define void @"\01?big_arg@@YAXUBig@@@Z"(%struct.Big* %s)
 
+// PR27607: We would attempt to load i32 value out of the reference instead of
+// just loading the pointer from the struct during argument expansion.
+struct RefField {
+  RefField(int &x);
+  int &x;
+};
+void takes_ref_field(RefField s) {}
+// LINUX-LABEL: define void @_Z15takes_ref_field8RefField(%struct.RefField* byval align 4 %s)
+// WIN32: define void @"\01?takes_ref_field@@YAXURefField@@@Z"(i32* %s.0)
+// WIN64: define void @"\01?takes_ref_field@@YAXURefField@@@Z"(i64 %s.coerce)
+
+void pass_ref_field() {
+  int x;
+  takes_ref_field(RefField(x));
+}
+// LINUX-LABEL: define void @_Z14pass_ref_fieldv()
+// LINUX: call void @_Z15takes_ref_field8RefField(%struct.RefField* byval align 4 %{{.*}})
+// WIN32-LABEL: define void @"\01?pass_ref_field@@YAXXZ"()
+// WIN32: call void @"\01?takes_ref_field@@YAXURefField@@@Z"(i32* %{{.*}})
+// WIN64-LABEL: define void @"\01?pass_ref_field@@YAXXZ"()
+// WIN64: call void @"\01?takes_ref_field@@YAXURefField@@@Z"(i64 %{{.*}})
+
 class Class {
  public:
   Small thiscall_method_small() { return Small(); }
@@ -230,12 +273,12 @@ class Class {
 
   void thiscall_method_arg(Small s) {}
   // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE5Small(%class.Class* %this, i32 %s.0)
-  // WIN32: define {{.*}} void @"\01?thiscall_method_arg@Class@@QAEXUSmall@@@Z"(%class.Class* %this, %struct.Small* byval align 4 %s)
+  // WIN32: define {{.*}} void @"\01?thiscall_method_arg@Class@@QAEXUSmall@@@Z"(%class.Class* %this, i32 %s.0)
   // WIN64: define linkonce_odr void @"\01?thiscall_method_arg@Class@@QEAAXUSmall@@@Z"(%class.Class* %this, i32 %s.coerce)
 
   void thiscall_method_arg(SmallWithCtor s) {}
   // LINUX: define {{.*}} void @_ZN5Class19thiscall_method_argE13SmallWithCtor(%class.Class* %this, %struct.SmallWithCtor* byval align 4 %s)
-  // WIN32: define {{.*}} void @"\01?thiscall_method_arg@Class@@QAEXUSmallWithCtor@@@Z"(%class.Class* %this, %struct.SmallWithCtor* byval align 4 %s)
+  // WIN32: define {{.*}} void @"\01?thiscall_method_arg@Class@@QAEXUSmallWithCtor@@@Z"(%class.Class* %this, i32 %s.0)
   // WIN64: define linkonce_odr void @"\01?thiscall_method_arg@Class@@QEAAXUSmallWithCtor@@@Z"(%class.Class* %this, i32 %s.coerce)
 
   void thiscall_method_arg(Big s) {}

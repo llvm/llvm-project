@@ -1,4 +1,4 @@
-//===- ScalarEvolutionExpander.cpp - Scalar Evolution Analysis --*- C++ -*-===//
+//===- ScalarEvolutionExpander.cpp - Scalar Evolution Analysis ------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -95,14 +95,12 @@ static BasicBlock::iterator findInsertPointAfter(Instruction *I,
   while (isa<PHINode>(IP))
     ++IP;
 
-  while (IP->isEHPad()) {
-    if (isa<FuncletPadInst>(IP) || isa<LandingPadInst>(IP)) {
-      ++IP;
-    } else if (isa<CatchSwitchInst>(IP)) {
-      IP = MustDominate->getFirstInsertionPt();
-    } else {
-      llvm_unreachable("unexpected eh pad!");
-    }
+  if (isa<FuncletPadInst>(IP) || isa<LandingPadInst>(IP)) {
+    ++IP;
+  } else if (isa<CatchSwitchInst>(IP)) {
+    IP = MustDominate->getFirstInsertionPt();
+  } else {
+    assert(!IP->isEHPad() && "unexpected eh pad!");
   }
 
   return IP;
@@ -198,7 +196,7 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
 
   // Save the original insertion point so we can restore it when we're done.
   DebugLoc Loc = Builder.GetInsertPoint()->getDebugLoc();
-  BuilderType::InsertPointGuard Guard(Builder);
+  SCEVInsertPointGuard Guard(Builder, this);
 
   // Move the insertion point out of as many loops as we can.
   while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
@@ -525,7 +523,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
     }
 
     // Save the original insertion point so we can restore it when we're done.
-    BuilderType::InsertPointGuard Guard(Builder);
+    SCEVInsertPointGuard Guard(Builder, this);
 
     // Move the insertion point out of as many loops as we can.
     while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
@@ -544,39 +542,36 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
     return GEP;
   }
 
-  // Save the original insertion point so we can restore it when we're done.
-  BuilderType::InsertPoint SaveInsertPt = Builder.saveIP();
+  {
+    SCEVInsertPointGuard Guard(Builder, this);
 
-  // Move the insertion point out of as many loops as we can.
-  while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
-    if (!L->isLoopInvariant(V)) break;
+    // Move the insertion point out of as many loops as we can.
+    while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
+      if (!L->isLoopInvariant(V)) break;
 
-    bool AnyIndexNotLoopInvariant =
-        std::any_of(GepIndices.begin(), GepIndices.end(),
-                    [L](Value *Op) { return !L->isLoopInvariant(Op); });
+      bool AnyIndexNotLoopInvariant = any_of(
+          GepIndices, [L](Value *Op) { return !L->isLoopInvariant(Op); });
 
-    if (AnyIndexNotLoopInvariant)
-      break;
+      if (AnyIndexNotLoopInvariant)
+        break;
 
-    BasicBlock *Preheader = L->getLoopPreheader();
-    if (!Preheader) break;
+      BasicBlock *Preheader = L->getLoopPreheader();
+      if (!Preheader) break;
 
-    // Ok, move up a level.
-    Builder.SetInsertPoint(Preheader->getTerminator());
+      // Ok, move up a level.
+      Builder.SetInsertPoint(Preheader->getTerminator());
+    }
+
+    // Insert a pretty getelementptr. Note that this GEP is not marked inbounds,
+    // because ScalarEvolution may have changed the address arithmetic to
+    // compute a value which is beyond the end of the allocated object.
+    Value *Casted = V;
+    if (V->getType() != PTy)
+      Casted = InsertNoopCastOfTo(Casted, PTy);
+    Value *GEP = Builder.CreateGEP(OriginalElTy, Casted, GepIndices, "scevgep");
+    Ops.push_back(SE.getUnknown(GEP));
+    rememberInstruction(GEP);
   }
-
-  // Insert a pretty getelementptr. Note that this GEP is not marked inbounds,
-  // because ScalarEvolution may have changed the address arithmetic to
-  // compute a value which is beyond the end of the allocated object.
-  Value *Casted = V;
-  if (V->getType() != PTy)
-    Casted = InsertNoopCastOfTo(Casted, PTy);
-  Value *GEP = Builder.CreateGEP(OriginalElTy, Casted, GepIndices, "scevgep");
-  Ops.push_back(SE.getUnknown(GEP));
-  rememberInstruction(GEP);
-
-  // Restore the original insert point.
-  Builder.restoreIP(SaveInsertPt);
 
   return expand(SE.getAddExpr(Ops));
 }
@@ -907,6 +902,23 @@ Instruction *SCEVExpander::getIVIncOperand(Instruction *IncV,
   }
 }
 
+/// If the insert point of the current builder or any of the builders on the
+/// stack of saved builders has 'I' as its insert point, update it to point to
+/// the instruction after 'I'.  This is intended to be used when the instruction
+/// 'I' is being moved.  If this fixup is not done and 'I' is moved to a
+/// different block, the inconsistent insert point (with a mismatched
+/// Instruction and Block) can lead to an instruction being inserted in a block
+/// other than its parent.
+void SCEVExpander::fixupInsertPoints(Instruction *I) {
+  BasicBlock::iterator It(*I);
+  BasicBlock::iterator NewInsertPt = std::next(It);
+  if (Builder.GetInsertPoint() == It)
+    Builder.SetInsertPoint(&*NewInsertPt);
+  for (auto *InsertPtGuard : InsertPointGuards)
+    if (InsertPtGuard->GetInsertPoint() == It)
+      InsertPtGuard->SetInsertPoint(NewInsertPt);
+}
+
 /// hoistStep - Attempt to hoist a simple IV increment above InsertPos to make
 /// it available to other uses in this loop. Recursively hoist any operands,
 /// until we reach a value that dominates InsertPos.
@@ -936,6 +948,7 @@ bool SCEVExpander::hoistIVInc(Instruction *IncV, Instruction *InsertPos) {
       break;
   }
   for (auto I = IVIncs.rbegin(), E = IVIncs.rend(); I != E; ++I) {
+    fixupInsertPoints(*I);
     (*I)->moveBefore(InsertPos);
   }
   return true;
@@ -989,13 +1002,14 @@ Value *SCEVExpander::expandIVInc(PHINode *PN, Value *StepV, const Loop *L,
 
 /// \brief Hoist the addrec instruction chain rooted in the loop phi above the
 /// position. This routine assumes that this is possible (has been checked).
-static void hoistBeforePos(DominatorTree *DT, Instruction *InstToHoist,
-                           Instruction *Pos, PHINode *LoopPhi) {
+void SCEVExpander::hoistBeforePos(DominatorTree *DT, Instruction *InstToHoist,
+                                  Instruction *Pos, PHINode *LoopPhi) {
   do {
     if (DT->dominates(InstToHoist, Pos))
       break;
     // Make sure the increment is where we want it. But don't move it
     // down past a potential existing post-inc user.
+    fixupInsertPoints(InstToHoist);
     InstToHoist->moveBefore(Pos);
     Pos = InstToHoist;
     InstToHoist = cast<Instruction>(InstToHoist->getOperand(0));
@@ -1156,7 +1170,7 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
   }
 
   // Save the original insertion point so we can restore it when we're done.
-  BuilderType::InsertPointGuard Guard(Builder);
+  SCEVInsertPointGuard Guard(Builder, this);
 
   // Another AddRec may need to be recursively expanded below. For example, if
   // this AddRec is quadratic, the StepV may itself be an AddRec in this
@@ -1273,6 +1287,13 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
   if (!SE.dominates(Step, L->getHeader())) {
     PostLoopScale = Step;
     Step = SE.getConstant(Normalized->getType(), 1);
+    if (!Start->isZero()) {
+        // The normalization below assumes that Start is constant zero, so if
+        // it isn't re-associate Start to PostLoopOffset.
+        assert(!PostLoopOffset && "Start not-null but PostLoopOffset set?");
+        PostLoopOffset = Start;
+        Start = SE.getConstant(Normalized->getType(), 0);
+    }
     Normalized =
       cast<SCEVAddRecExpr>(SE.getAddRecExpr(
                              Start, Step, Normalized->getLoop(),
@@ -1321,7 +1342,7 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
       Value *StepV;
       {
         // Expand the step somewhere that dominates the loop header.
-        BuilderType::InsertPointGuard Guard(Builder);
+        SCEVInsertPointGuard Guard(Builder, this);
         StepV = expandCodeFor(Step, IntTy, &L->getHeader()->front());
       }
       Result = expandIVInc(PN, StepV, L, ExpandTy, IntTy, useSubtract);
@@ -1428,8 +1449,12 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
     }
 
     // Just do a normal add. Pre-expand the operands to suppress folding.
-    return expand(SE.getAddExpr(SE.getUnknown(expand(S->getStart())),
-                                SE.getUnknown(expand(Rest))));
+    //
+    // The LHS and RHS values are factored out of the expand call to make the
+    // output independent of the argument evaluation order.
+    const SCEV *AddExprLHS = SE.getUnknown(expand(S->getStart()));
+    const SCEV *AddExprRHS = SE.getUnknown(expand(Rest));
+    return expand(SE.getAddExpr(AddExprLHS, AddExprRHS));
   }
 
   // If we don't yet have a canonical IV, create one.
@@ -1584,8 +1609,7 @@ Value *SCEVExpander::visitUMaxExpr(const SCEVUMaxExpr *S) {
 
 Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty,
                                    Instruction *IP) {
-  assert(IP);
-  Builder.SetInsertPoint(IP);
+  setInsertPoint(IP);
   return expandCodeFor(SH, Ty);
 }
 
@@ -1600,6 +1624,41 @@ Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty) {
   return V;
 }
 
+ScalarEvolution::ValueOffsetPair
+SCEVExpander::FindValueInExprValueMap(const SCEV *S,
+                                      const Instruction *InsertPt) {
+  SetVector<ScalarEvolution::ValueOffsetPair> *Set = SE.getSCEVValues(S);
+  // If the expansion is not in CanonicalMode, and the SCEV contains any
+  // sub scAddRecExpr type SCEV, it is required to expand the SCEV literally.
+  if (CanonicalMode || !SE.containsAddRecurrence(S)) {
+    // If S is scConstant, it may be worse to reuse an existing Value.
+    if (S->getSCEVType() != scConstant && Set) {
+      // Choose a Value from the set which dominates the insertPt.
+      // insertPt should be inside the Value's parent loop so as not to break
+      // the LCSSA form.
+      for (auto const &VOPair : *Set) {
+        Value *V = VOPair.first;
+        ConstantInt *Offset = VOPair.second;
+        Instruction *EntInst = nullptr;
+        if (V && isa<Instruction>(V) && (EntInst = cast<Instruction>(V)) &&
+            S->getType() == V->getType() &&
+            EntInst->getFunction() == InsertPt->getFunction() &&
+            SE.DT.dominates(EntInst, InsertPt) &&
+            (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
+             SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
+          return {V, Offset};
+      }
+    }
+  }
+  return {nullptr, nullptr};
+}
+
+// The expansion of SCEV will either reuse a previous Value in ExprValueMap,
+// or expand the SCEV literally. Specifically, if the expansion is in LSRMode,
+// and the SCEV contains any sub scAddRecExpr type SCEV, it will be expanded
+// literally, to prevent LSR's transformed SCEV from being reverted. Otherwise,
+// the expansion will try to reuse Value from ExprValueMap, and only when it
+// fails, expand the SCEV literally.
 Value *SCEVExpander::expand(const SCEV *S) {
   // Compute an insertion point for this SCEV object. Hoist the instructions
   // as far out in the loop nest as possible.
@@ -1622,9 +1681,9 @@ Value *SCEVExpander::expand(const SCEV *S) {
       // there) so that it is guaranteed to dominate any user inside the loop.
       if (L && SE.hasComputableLoopEvolution(S, L) && !PostIncLoops.count(L))
         InsertPt = &*L->getHeader()->getFirstInsertionPt();
-      while (InsertPt != Builder.GetInsertPoint()
-             && (isInsertedInstruction(InsertPt)
-                 || isa<DbgInfoIntrinsic>(InsertPt))) {
+      while (InsertPt->getIterator() != Builder.GetInsertPoint() &&
+             (isInsertedInstruction(InsertPt) ||
+              isa<DbgInfoIntrinsic>(InsertPt))) {
         InsertPt = &*std::next(InsertPt->getIterator());
       }
       break;
@@ -1635,11 +1694,17 @@ Value *SCEVExpander::expand(const SCEV *S) {
   if (I != InsertedExpressions.end())
     return I->second;
 
-  BuilderType::InsertPointGuard Guard(Builder);
+  SCEVInsertPointGuard Guard(Builder, this);
   Builder.SetInsertPoint(InsertPt);
 
   // Expand the expression into instructions.
-  Value *V = visit(S);
+  ScalarEvolution::ValueOffsetPair VO = FindValueInExprValueMap(S, InsertPt);
+  Value *V = VO.first;
+
+  if (!V)
+    V = visit(S);
+  else if (VO.second)
+    V = Builder.CreateSub(V, VO.second);
 
   // Remember the expanded value for this SCEV at this location.
   //
@@ -1673,7 +1738,7 @@ SCEVExpander::getOrInsertCanonicalInductionVariable(const Loop *L,
                                    SE.getConstant(Ty, 1), L, SCEV::FlagAnyWrap);
 
   // Emit code for it.
-  BuilderType::InsertPointGuard Guard(Builder);
+  SCEVInsertPointGuard Guard(Builder, this);
   PHINode *V =
       cast<PHINode>(expandCodeFor(H, nullptr, &L->getHeader()->front()));
 
@@ -1742,8 +1807,8 @@ unsigned SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
     PHINode *&OrigPhiRef = ExprToIVMap[SE.getSCEV(Phi)];
     if (!OrigPhiRef) {
       OrigPhiRef = Phi;
-      if (Phi->getType()->isIntegerTy() && TTI
-          && TTI->isTruncateFree(Phi->getType(), Phis.back()->getType())) {
+      if (Phi->getType()->isIntegerTy() && TTI &&
+          TTI->isTruncateFree(Phi->getType(), Phis.back()->getType())) {
         // This phi can be freely truncated to the narrowest phi type. Map the
         // truncated expression to it so it will be reused for narrow types.
         const SCEV *TruncExpr =
@@ -1759,56 +1824,59 @@ unsigned SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
       continue;
 
     if (BasicBlock *LatchBlock = L->getLoopLatch()) {
-      Instruction *OrigInc =
-        cast<Instruction>(OrigPhiRef->getIncomingValueForBlock(LatchBlock));
+      Instruction *OrigInc = dyn_cast<Instruction>(
+          OrigPhiRef->getIncomingValueForBlock(LatchBlock));
       Instruction *IsomorphicInc =
-        cast<Instruction>(Phi->getIncomingValueForBlock(LatchBlock));
+          dyn_cast<Instruction>(Phi->getIncomingValueForBlock(LatchBlock));
 
-      // If this phi has the same width but is more canonical, replace the
-      // original with it. As part of the "more canonical" determination,
-      // respect a prior decision to use an IV chain.
-      if (OrigPhiRef->getType() == Phi->getType()
-          && !(ChainedPhis.count(Phi)
-               || isExpandedAddRecExprPHI(OrigPhiRef, OrigInc, L))
-          && (ChainedPhis.count(Phi)
-              || isExpandedAddRecExprPHI(Phi, IsomorphicInc, L))) {
-        std::swap(OrigPhiRef, Phi);
-        std::swap(OrigInc, IsomorphicInc);
-      }
-      // Replacing the congruent phi is sufficient because acyclic redundancy
-      // elimination, CSE/GVN, should handle the rest. However, once SCEV proves
-      // that a phi is congruent, it's often the head of an IV user cycle that
-      // is isomorphic with the original phi. It's worth eagerly cleaning up the
-      // common case of a single IV increment so that DeleteDeadPHIs can remove
-      // cycles that had postinc uses.
-      const SCEV *TruncExpr = SE.getTruncateOrNoop(SE.getSCEV(OrigInc),
-                                                   IsomorphicInc->getType());
-      if (OrigInc != IsomorphicInc
-          && TruncExpr == SE.getSCEV(IsomorphicInc)
-          && ((isa<PHINode>(OrigInc) && isa<PHINode>(IsomorphicInc))
-              || hoistIVInc(OrigInc, IsomorphicInc))) {
-        DEBUG_WITH_TYPE(DebugType, dbgs()
-                        << "INDVARS: Eliminated congruent iv.inc: "
-                        << *IsomorphicInc << '\n');
-        Value *NewInc = OrigInc;
-        if (OrigInc->getType() != IsomorphicInc->getType()) {
-          Instruction *IP = nullptr;
-          if (PHINode *PN = dyn_cast<PHINode>(OrigInc))
-            IP = &*PN->getParent()->getFirstInsertionPt();
-          else
-            IP = OrigInc->getNextNode();
-
-          IRBuilder<> Builder(IP);
-          Builder.SetCurrentDebugLocation(IsomorphicInc->getDebugLoc());
-          NewInc = Builder.
-            CreateTruncOrBitCast(OrigInc, IsomorphicInc->getType(), IVName);
+      if (OrigInc && IsomorphicInc) {
+        // If this phi has the same width but is more canonical, replace the
+        // original with it. As part of the "more canonical" determination,
+        // respect a prior decision to use an IV chain.
+        if (OrigPhiRef->getType() == Phi->getType() &&
+            !(ChainedPhis.count(Phi) ||
+              isExpandedAddRecExprPHI(OrigPhiRef, OrigInc, L)) &&
+            (ChainedPhis.count(Phi) ||
+             isExpandedAddRecExprPHI(Phi, IsomorphicInc, L))) {
+          std::swap(OrigPhiRef, Phi);
+          std::swap(OrigInc, IsomorphicInc);
         }
-        IsomorphicInc->replaceAllUsesWith(NewInc);
-        DeadInsts.emplace_back(IsomorphicInc);
+        // Replacing the congruent phi is sufficient because acyclic
+        // redundancy elimination, CSE/GVN, should handle the
+        // rest. However, once SCEV proves that a phi is congruent,
+        // it's often the head of an IV user cycle that is isomorphic
+        // with the original phi. It's worth eagerly cleaning up the
+        // common case of a single IV increment so that DeleteDeadPHIs
+        // can remove cycles that had postinc uses.
+        const SCEV *TruncExpr =
+            SE.getTruncateOrNoop(SE.getSCEV(OrigInc), IsomorphicInc->getType());
+        if (OrigInc != IsomorphicInc &&
+            TruncExpr == SE.getSCEV(IsomorphicInc) &&
+            SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc) &&
+            hoistIVInc(OrigInc, IsomorphicInc)) {
+          DEBUG_WITH_TYPE(DebugType,
+                          dbgs() << "INDVARS: Eliminated congruent iv.inc: "
+                                 << *IsomorphicInc << '\n');
+          Value *NewInc = OrigInc;
+          if (OrigInc->getType() != IsomorphicInc->getType()) {
+            Instruction *IP = nullptr;
+            if (PHINode *PN = dyn_cast<PHINode>(OrigInc))
+              IP = &*PN->getParent()->getFirstInsertionPt();
+            else
+              IP = OrigInc->getNextNode();
+
+            IRBuilder<> Builder(IP);
+            Builder.SetCurrentDebugLocation(IsomorphicInc->getDebugLoc());
+            NewInc = Builder.CreateTruncOrBitCast(
+                OrigInc, IsomorphicInc->getType(), IVName);
+          }
+          IsomorphicInc->replaceAllUsesWith(NewInc);
+          DeadInsts.emplace_back(IsomorphicInc);
+        }
       }
     }
-    DEBUG_WITH_TYPE(DebugType, dbgs()
-                    << "INDVARS: Eliminated congruent iv: " << *Phi << '\n');
+    DEBUG_WITH_TYPE(DebugType, dbgs() << "INDVARS: Eliminated congruent iv: "
+                                      << *Phi << '\n');
     ++NumElim;
     Value *NewIV = OrigPhiRef;
     if (OrigPhiRef->getType() != Phi->getType()) {
@@ -1822,8 +1890,18 @@ unsigned SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
   return NumElim;
 }
 
-Value *SCEVExpander::findExistingExpansion(const SCEV *S,
-                                           const Instruction *At, Loop *L) {
+Value *SCEVExpander::getExactExistingExpansion(const SCEV *S,
+                                               const Instruction *At, Loop *L) {
+  Optional<ScalarEvolution::ValueOffsetPair> VO =
+      getRelatedExistingExpansion(S, At, L);
+  if (VO && VO.getValue().second == nullptr)
+    return VO.getValue().first;
+  return nullptr;
+}
+
+Optional<ScalarEvolution::ValueOffsetPair>
+SCEVExpander::getRelatedExistingExpansion(const SCEV *S, const Instruction *At,
+                                          Loop *L) {
   using namespace llvm::PatternMatch;
 
   SmallVector<BasicBlock *, 4> ExitingBlocks;
@@ -1841,17 +1919,23 @@ Value *SCEVExpander::findExistingExpansion(const SCEV *S,
       continue;
 
     if (SE.getSCEV(LHS) == S && SE.DT.dominates(LHS, At))
-      return LHS;
+      return ScalarEvolution::ValueOffsetPair(LHS, nullptr);
 
     if (SE.getSCEV(RHS) == S && SE.DT.dominates(RHS, At))
-      return RHS;
+      return ScalarEvolution::ValueOffsetPair(RHS, nullptr);
   }
+
+  // Use expand's logic which is used for reusing a previous Value in
+  // ExprValueMap.
+  ScalarEvolution::ValueOffsetPair VO = FindValueInExprValueMap(S, At);
+  if (VO.first)
+    return VO;
 
   // There is potential to make this significantly smarter, but this simple
   // heuristic already gets some interesting cases.
 
   // Can not find suitable value.
-  return nullptr;
+  return None;
 }
 
 bool SCEVExpander::isHighCostExpansionHelper(
@@ -1860,7 +1944,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
 
   // If we can find an existing value for this scev avaliable at the point "At"
   // then consider the expression cheap.
-  if (At && findExistingExpansion(S, At, L) != nullptr)
+  if (At && getRelatedExistingExpansion(S, At, L))
     return false;
 
   // Zero/One operand expressions
@@ -1908,7 +1992,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
     // involving division. This is just a simple search heuristic.
     if (!At)
       At = &ExitingBB->back();
-    if (!findExistingExpansion(
+    if (!getRelatedExistingExpansion(
             SE.getAddExpr(S, SE.getConstant(S->getType(), 1)), At, L))
       return true;
   }
@@ -1940,6 +2024,10 @@ Value *SCEVExpander::expandCodeForPredicate(const SCEVPredicate *Pred,
     return expandUnionPredicate(cast<SCEVUnionPredicate>(Pred), IP);
   case SCEVPredicate::P_Equal:
     return expandEqualPredicate(cast<SCEVEqualPredicate>(Pred), IP);
+  case SCEVPredicate::P_Wrap: {
+    auto *AddRecPred = cast<SCEVWrapPredicate>(Pred);
+    return expandWrapPredicate(AddRecPred, IP);
+  }
   }
   llvm_unreachable("Unknown SCEV predicate type");
 }
@@ -1952,6 +2040,116 @@ Value *SCEVExpander::expandEqualPredicate(const SCEVEqualPredicate *Pred,
   Builder.SetInsertPoint(IP);
   auto *I = Builder.CreateICmpNE(Expr0, Expr1, "ident.check");
   return I;
+}
+
+Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
+                                           Instruction *Loc, bool Signed) {
+  assert(AR->isAffine() && "Cannot generate RT check for "
+                           "non-affine expression");
+
+  SCEVUnionPredicate Pred;
+  const SCEV *ExitCount =
+      SE.getPredicatedBackedgeTakenCount(AR->getLoop(), Pred);
+
+  assert(ExitCount != SE.getCouldNotCompute() && "Invalid loop count");
+
+  const SCEV *Step = AR->getStepRecurrence(SE);
+  const SCEV *Start = AR->getStart();
+
+  unsigned SrcBits = SE.getTypeSizeInBits(ExitCount->getType());
+  unsigned DstBits = SE.getTypeSizeInBits(AR->getType());
+
+  // The expression {Start,+,Step} has nusw/nssw if
+  //   Step < 0, Start - |Step| * Backedge <= Start
+  //   Step >= 0, Start + |Step| * Backedge > Start
+  // and |Step| * Backedge doesn't unsigned overflow.
+
+  IntegerType *CountTy = IntegerType::get(Loc->getContext(), SrcBits);
+  Builder.SetInsertPoint(Loc);
+  Value *TripCountVal = expandCodeFor(ExitCount, CountTy, Loc);
+
+  IntegerType *Ty =
+      IntegerType::get(Loc->getContext(), SE.getTypeSizeInBits(AR->getType()));
+
+  Value *StepValue = expandCodeFor(Step, Ty, Loc);
+  Value *NegStepValue = expandCodeFor(SE.getNegativeSCEV(Step), Ty, Loc);
+  Value *StartValue = expandCodeFor(Start, Ty, Loc);
+
+  ConstantInt *Zero =
+      ConstantInt::get(Loc->getContext(), APInt::getNullValue(DstBits));
+
+  Builder.SetInsertPoint(Loc);
+  // Compute |Step|
+  Value *StepCompare = Builder.CreateICmp(ICmpInst::ICMP_SLT, StepValue, Zero);
+  Value *AbsStep = Builder.CreateSelect(StepCompare, NegStepValue, StepValue);
+
+  // Get the backedge taken count and truncate or extended to the AR type.
+  Value *TruncTripCount = Builder.CreateZExtOrTrunc(TripCountVal, Ty);
+  auto *MulF = Intrinsic::getDeclaration(Loc->getModule(),
+                                         Intrinsic::umul_with_overflow, Ty);
+
+  // Compute |Step| * Backedge
+  CallInst *Mul = Builder.CreateCall(MulF, {AbsStep, TruncTripCount}, "mul");
+  Value *MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
+  Value *OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
+
+  // Compute:
+  //   Start + |Step| * Backedge < Start
+  //   Start - |Step| * Backedge > Start
+  Value *Add = Builder.CreateAdd(StartValue, MulV);
+  Value *Sub = Builder.CreateSub(StartValue, MulV);
+
+  Value *EndCompareGT = Builder.CreateICmp(
+      Signed ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, Sub, StartValue);
+
+  Value *EndCompareLT = Builder.CreateICmp(
+      Signed ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT, Add, StartValue);
+
+  // Select the answer based on the sign of Step.
+  Value *EndCheck =
+      Builder.CreateSelect(StepCompare, EndCompareGT, EndCompareLT);
+
+  // If the backedge taken count type is larger than the AR type,
+  // check that we don't drop any bits by truncating it. If we are
+  // droping bits, then we have overflow (unless the step is zero).
+  if (SE.getTypeSizeInBits(CountTy) > SE.getTypeSizeInBits(Ty)) {
+    auto MaxVal = APInt::getMaxValue(DstBits).zext(SrcBits);
+    auto *BackedgeCheck =
+        Builder.CreateICmp(ICmpInst::ICMP_UGT, TripCountVal,
+                           ConstantInt::get(Loc->getContext(), MaxVal));
+    BackedgeCheck = Builder.CreateAnd(
+        BackedgeCheck, Builder.CreateICmp(ICmpInst::ICMP_NE, StepValue, Zero));
+
+    EndCheck = Builder.CreateOr(EndCheck, BackedgeCheck);
+  }
+
+  EndCheck = Builder.CreateOr(EndCheck, OfMul);
+  return EndCheck;
+}
+
+Value *SCEVExpander::expandWrapPredicate(const SCEVWrapPredicate *Pred,
+                                         Instruction *IP) {
+  const auto *A = cast<SCEVAddRecExpr>(Pred->getExpr());
+  Value *NSSWCheck = nullptr, *NUSWCheck = nullptr;
+
+  // Add a check for NUSW
+  if (Pred->getFlags() & SCEVWrapPredicate::IncrementNUSW)
+    NUSWCheck = generateOverflowCheck(A, IP, false);
+
+  // Add a check for NSSW
+  if (Pred->getFlags() & SCEVWrapPredicate::IncrementNSSW)
+    NSSWCheck = generateOverflowCheck(A, IP, true);
+
+  if (NUSWCheck && NSSWCheck)
+    return Builder.CreateOr(NUSWCheck, NSSWCheck);
+
+  if (NUSWCheck)
+    return NUSWCheck;
+
+  if (NSSWCheck)
+    return NSSWCheck;
+
+  return ConstantInt::getFalse(IP->getContext());
 }
 
 Value *SCEVExpander::expandUnionPredicate(const SCEVUnionPredicate *Union,

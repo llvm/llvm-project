@@ -8,7 +8,7 @@ define void @t1() {
 ; ARM64: adrp x8, _message@PAGE
 ; ARM64: add x0, x8, _message@PAGEOFF
 ; ARM64: mov w9, wzr
-; ARM64: movz x2, #0x50
+; ARM64: mov x2, #80
 ; ARM64: uxtb w1, w9
 ; ARM64: bl _memset
   call void @llvm.memset.p0i8.i64(i8* getelementptr inbounds ([80 x i8], [80 x i8]* @message, i32 0, i32 0), i8 0, i64 80, i32 16, i1 false)
@@ -23,7 +23,7 @@ define void @t2() {
 ; ARM64: ldr x0, [x8, _temp@GOTPAGEOFF]
 ; ARM64: adrp x8, _message@PAGE
 ; ARM64: add x1, x8, _message@PAGEOFF
-; ARM64: movz x2, #0x50
+; ARM64: mov x2, #80
 ; ARM64: bl _memcpy
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* getelementptr inbounds ([80 x i8], [80 x i8]* @temp, i32 0, i32 0), i8* getelementptr inbounds ([80 x i8], [80 x i8]* @message, i32 0, i32 0), i64 80, i32 16, i1 false)
   ret void
@@ -37,7 +37,7 @@ define void @t3() {
 ; ARM64: ldr x0, [x8, _temp@GOTPAGEOFF]
 ; ARM64: adrp x8, _message@PAGE
 ; ARM64: add x1, x8, _message@PAGEOFF
-; ARM64: movz x2, #0x14
+; ARM64: mov x2, #20
 ; ARM64: bl _memmove
   call void @llvm.memmove.p0i8.p0i8.i64(i8* getelementptr inbounds ([80 x i8], [80 x i8]* @temp, i32 0, i32 0), i8* getelementptr inbounds ([80 x i8], [80 x i8]* @message, i32 0, i32 0), i64 20, i32 16, i1 false)
   ret void
@@ -137,7 +137,7 @@ define void @t8() {
 define void @test_distant_memcpy(i8* %dst) {
 ; ARM64-LABEL: test_distant_memcpy:
 ; ARM64: mov [[ARRAY:x[0-9]+]], sp
-; ARM64: movz [[OFFSET:x[0-9]+]], #0x1f40
+; ARM64: mov [[OFFSET:x[0-9]+]], #8000
 ; ARM64: add x[[ADDR:[0-9]+]], [[ARRAY]], [[OFFSET]]
 ; ARM64: ldrb [[BYTE:w[0-9]+]], [x[[ADDR]]]
 ; ARM64: strb [[BYTE]], [x0]

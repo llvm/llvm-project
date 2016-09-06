@@ -1,4 +1,4 @@
-# RUN: not llc -march=x86-64 -start-after branch-folder -stop-after branch-folder -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 # This test ensures that the MIR parser reports an error when parsing an invalid
 # constant value.
 

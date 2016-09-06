@@ -1,10 +1,10 @@
-; RUN: llc -march=mipsel -disable-mips-delay-filler < %s | \
-; RUN:     FileCheck %s -check-prefix=PIC -check-prefix=CHECK
+; RUN: llc -march=mipsel -disable-mips-delay-filler -relocation-model=pic < %s | \
+; RUN:     FileCheck %s -check-prefixes=PIC,CHECK
 ; RUN: llc -march=mipsel -relocation-model=static -disable-mips-delay-filler < \
-; RUN:     %s | FileCheck %s -check-prefix=STATIC -check-prefix=CHECK
+; RUN:     %s | FileCheck %s -check-prefixes=STATIC,CHECK
 ; RUN: llc -march=mipsel -relocation-model=static -disable-mips-delay-filler \
 ; RUN:     -mips-fix-global-base-reg=false < %s  | \
-; RUN:     FileCheck %s -check-prefix=STATICGP -check-prefix=CHECK
+; RUN:     FileCheck %s -check-prefixes=STATICGP,CHECK
 
 @t1 = thread_local global i32 0, align 4
 

@@ -21,4 +21,3 @@ end:
 }
 
 declare i32 @bar() readonly convergent
-

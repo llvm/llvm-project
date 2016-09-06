@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel < %s | FileCheck -check-prefix=CHECK-PIC %s
+; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck -check-prefix=CHECK-PIC %s
 ; RUN: llc -march=mipsel -relocation-model=static < %s | FileCheck -check-prefix=CHECK-NONPIC %s
 
 @external_gd = external thread_local global i32

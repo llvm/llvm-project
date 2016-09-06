@@ -11,6 +11,7 @@
 #define LLVM_LIB_EXECUTIONENGINE_RUNTIMEDYLD_TARGETS_RUNTIMEDYLDMACHOX86_64_H
 
 #include "../RuntimeDyldMachO.h"
+#include <string>
 
 #define DEBUG_TYPE "dyld"
 
@@ -23,14 +24,14 @@ public:
   typedef uint64_t TargetPtrT;
 
   RuntimeDyldMachOX86_64(RuntimeDyld::MemoryManager &MM,
-                         RuntimeDyld::SymbolResolver &Resolver)
+                         JITSymbolResolver &Resolver)
       : RuntimeDyldMachOCRTPBase(MM, Resolver) {}
 
   unsigned getMaxStubSize() override { return 8; }
 
   unsigned getStubAlignment() override { return 1; }
 
-  relocation_iterator
+  Expected<relocation_iterator>
   processRelocationRef(unsigned SectionID, relocation_iterator RelI,
                        const ObjectFile &BaseObjT,
                        ObjSectionToIDMap &ObjSectionToID,
@@ -49,12 +50,25 @@ public:
 
     RelocationEntry RE(getRelocationEntry(SectionID, Obj, RelI));
     RE.Addend = memcpyAddend(RE);
-    RelocationValueRef Value(
-        getRelocationValueRef(Obj, RelI, RE, ObjSectionToID));
+    RelocationValueRef Value;
+    if (auto ValueOrErr = getRelocationValueRef(Obj, RelI, RE, ObjSectionToID))
+      Value = *ValueOrErr;
+    else
+      return ValueOrErr.takeError();
 
     bool IsExtern = Obj.getPlainRelocationExternal(RelInfo);
     if (!IsExtern && RE.IsPCRel)
       makeValueAddendPCRel(Value, RelI, 1 << RE.Size);
+
+    switch (RelType) {
+    UNIMPLEMENTED_RELOC(MachO::X86_64_RELOC_TLV);
+    default:
+      if (RelType > MachO::X86_64_RELOC_TLV)
+        return make_error<RuntimeDyldError>(("MachO X86_64 relocation type " +
+                                             Twine(RelType) +
+                                             " is out of range").str());
+      break;
+    }
 
     if (RE.RelType == MachO::X86_64_RELOC_GOT ||
         RE.RelType == MachO::X86_64_RELOC_GOT_LOAD)
@@ -104,15 +118,13 @@ public:
       writeBytesUnaligned(Value, LocalAddress, 1 << RE.Size);
       break;
     }
-    case MachO::X86_64_RELOC_GOT_LOAD:
-    case MachO::X86_64_RELOC_GOT:
-    case MachO::X86_64_RELOC_TLV:
-      Error("Relocation type not implemented yet!");
     }
   }
 
-  void finalizeSection(const ObjectFile &Obj, unsigned SectionID,
-                       const SectionRef &Section) {}
+  Error finalizeSection(const ObjectFile &Obj, unsigned SectionID,
+                        const SectionRef &Section) {
+    return Error::success();
+  }
 
 private:
   void processGOTRelocation(const RelocationEntry &RE,
@@ -143,12 +155,12 @@ private:
     resolveRelocation(TargetRE, (uint64_t)Addr);
   }
 
-  relocation_iterator
+  Expected<relocation_iterator>
   processSubtractRelocation(unsigned SectionID, relocation_iterator RelI,
-                            const ObjectFile &BaseObjT,
+                            const MachOObjectFile &BaseObj,
                             ObjSectionToIDMap &ObjSectionToID) {
     const MachOObjectFile &Obj =
-        static_cast<const MachOObjectFile&>(BaseObjT);
+        static_cast<const MachOObjectFile&>(BaseObj);
     MachO::any_relocation_info RE =
         Obj.getRelocation(RelI->getRawDataRefImpl());
 
@@ -156,23 +168,60 @@ private:
     uint64_t Offset = RelI->getOffset();
     uint8_t *LocalAddress = Sections[SectionID].getAddressWithOffset(Offset);
     unsigned NumBytes = 1 << Size;
-
-    ErrorOr<StringRef> SubtrahendNameOrErr = RelI->getSymbol()->getName();
-    if (auto EC = SubtrahendNameOrErr.getError())
-      report_fatal_error(EC.message());
-    auto SubtrahendI = GlobalSymbolTable.find(*SubtrahendNameOrErr);
-    unsigned SectionBID = SubtrahendI->second.getSectionID();
-    uint64_t SectionBOffset = SubtrahendI->second.getOffset();
     int64_t Addend =
       SignExtend64(readBytesUnaligned(LocalAddress, NumBytes), NumBytes * 8);
 
+    unsigned SectionBID = ~0U;
+    uint64_t SectionBOffset = 0;
+
+    MachO::any_relocation_info RelInfo =
+      Obj.getRelocation(RelI->getRawDataRefImpl());
+
+    bool AIsExternal = BaseObj.getPlainRelocationExternal(RelInfo);
+
+    if (AIsExternal) {
+      Expected<StringRef> SubtrahendNameOrErr = RelI->getSymbol()->getName();
+      if (!SubtrahendNameOrErr)
+        return SubtrahendNameOrErr.takeError();
+      auto SubtrahendI = GlobalSymbolTable.find(*SubtrahendNameOrErr);
+      SectionBID = SubtrahendI->second.getSectionID();
+      SectionBOffset = SubtrahendI->second.getOffset();
+    } else {
+      SectionRef SecB = Obj.getAnyRelocationSection(RelInfo);
+      bool IsCode = SecB.isText();
+      Expected<unsigned> SectionBIDOrErr =
+        findOrEmitSection(Obj, SecB, IsCode, ObjSectionToID);
+      if (!SectionBIDOrErr)
+        return SectionBIDOrErr.takeError();
+      SectionBID = *SectionBIDOrErr;
+      Addend += SecB.getAddress();
+    }
+
     ++RelI;
-    ErrorOr<StringRef> MinuendNameOrErr = RelI->getSymbol()->getName();
-    if (auto EC = MinuendNameOrErr.getError())
-      report_fatal_error(EC.message());
-    auto MinuendI = GlobalSymbolTable.find(*MinuendNameOrErr);
-    unsigned SectionAID = MinuendI->second.getSectionID();
-    uint64_t SectionAOffset = MinuendI->second.getOffset();
+
+    unsigned SectionAID = ~0U;
+    uint64_t SectionAOffset = 0;
+
+    RelInfo = Obj.getRelocation(RelI->getRawDataRefImpl());
+
+    bool BIsExternal = BaseObj.getPlainRelocationExternal(RelInfo);
+    if (BIsExternal) {
+      Expected<StringRef> MinuendNameOrErr = RelI->getSymbol()->getName();
+      if (!MinuendNameOrErr)
+        return MinuendNameOrErr.takeError();
+      auto MinuendI = GlobalSymbolTable.find(*MinuendNameOrErr);
+      SectionAID = MinuendI->second.getSectionID();
+      SectionAOffset = MinuendI->second.getOffset();
+    } else {
+      SectionRef SecA = Obj.getAnyRelocationSection(RelInfo);
+      bool IsCode = SecA.isText();
+      Expected<unsigned> SectionAIDOrErr =
+        findOrEmitSection(Obj, SecA, IsCode, ObjSectionToID);
+      if (!SectionAIDOrErr)
+        return SectionAIDOrErr.takeError();
+      SectionAID = *SectionAIDOrErr;
+      Addend -= SecA.getAddress();
+    }
 
     RelocationEntry R(SectionID, Offset, MachO::X86_64_RELOC_SUBTRACTOR, (uint64_t)Addend,
                       SectionAID, SectionAOffset, SectionBID, SectionBOffset,

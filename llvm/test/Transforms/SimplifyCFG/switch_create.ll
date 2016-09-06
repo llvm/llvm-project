@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg < %s | FileCheck -check-prefix=CHECK %s
+; RUN: opt -S -simplifycfg < %s | FileCheck %s
 ; RUN: opt -S -default-data-layout="p:32:32-p1:16:16" -simplifycfg < %s | FileCheck -check-prefix=CHECK -check-prefix=DL %s
 
 declare void @foo1()
@@ -579,3 +579,82 @@ if.end29:                                         ; preds = %entry
 ; CHECK:  %or.cond = and i1 %tobool5, %tobool23
 ; CHECK:  %or.cond1 = and i1 %cmp17, %or.cond
 ; CHECK:  br i1 %or.cond1, label %if.end29, label %if.then27
+
+; Form a switch when and'ing a negated power of two
+; CHECK-LABEL: define void @test19
+; CHECK: switch i32 %arg, label %else [
+; CHECK: i32 32, label %if
+; CHECK: i32 13, label %if
+; CHECK: i32 12, label %if
+define void @test19(i32 %arg) {
+  %and = and i32 %arg, -2
+  %cmp1 = icmp eq i32 %and, 12
+  %cmp2 = icmp eq i32 %arg, 32
+  %pred = or i1 %cmp1, %cmp2
+  br i1 %pred, label %if, label %else
+
+if:
+  call void @foo1()
+  ret void
+
+else:
+  ret void
+}
+
+; Since %cmp1 is always false, a switch is never formed
+; CHECK-LABEL: define void @test20
+; CHECK-NOT: switch
+; CHECK: ret void
+define void @test20(i32 %arg) {
+  %and = and i32 %arg, -2
+  %cmp1 = icmp eq i32 %and, 13
+  %cmp2 = icmp eq i32 %arg, 32
+  %pred = or i1 %cmp1, %cmp2
+  br i1 %pred, label %if, label %else
+
+if:
+  call void @foo1()
+  ret void
+
+else:
+  ret void
+}
+
+; Form a switch when or'ing a power of two
+; CHECK-LABEL: define void @test21
+; CHECK: i32 32, label %else
+; CHECK: i32 13, label %else
+; CHECK: i32 12, label %else
+define void @test21(i32 %arg) {
+  %and = or i32 %arg, 1
+  %cmp1 = icmp ne i32 %and, 13
+  %cmp2 = icmp ne i32 %arg, 32
+  %pred = and i1 %cmp1, %cmp2
+  br i1 %pred, label %if, label %else
+
+if:
+  call void @foo1()
+  ret void
+
+else:
+  ret void
+}
+
+; Since %cmp1 is always false, a switch is never formed
+; CHECK-LABEL: define void @test22
+; CHECK-NOT: switch
+; CHECK: ret void
+define void @test22(i32 %arg) {
+  %and = or i32 %arg, 1
+  %cmp1 = icmp ne i32 %and, 12
+  %cmp2 = icmp ne i32 %arg, 32
+  %pred = and i1 %cmp1, %cmp2
+  br i1 %pred, label %if, label %else
+
+if:
+  call void @foo1()
+  ret void
+
+else:
+  ret void
+}

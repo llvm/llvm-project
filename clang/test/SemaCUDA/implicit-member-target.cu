@@ -60,13 +60,14 @@ struct A3_with_device_ctors {
 
 struct B3_with_implicit_ctors : A3_with_device_ctors {
 };
+// expected-note@-2 2{{call to __device__ function from __host__ function}}
+// expected-note@-3 {{default constructor}}
 
-// expected-note@-3 {{copy constructor of 'B3_with_implicit_ctors' is implicitly deleted}}
 
 void hostfoo3() {
   B3_with_implicit_ctors b;  // this is OK because the inferred default ctor
                              // here is __host__
-  B3_with_implicit_ctors b2 = b; // expected-error {{call to implicitly-deleted copy constructor}}
+  B3_with_implicit_ctors b2 = b; // expected-error {{no matching constructor}}
 
 }
 

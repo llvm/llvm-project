@@ -14,29 +14,29 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/TargetOptions.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/LangStandard.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
-#include "clang/Lex/HeaderSearchOptions.h"
-#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
 #include <string>
-#include <vector>
 
 namespace llvm {
+class Triple;
+
 namespace opt {
 class ArgList;
 }
 }
 
 namespace clang {
+class PreprocessorOptions;
+class HeaderSearchOptions;
+class TargetOptions;
+class LangOptions;
 class CompilerInvocation;
 class DiagnosticsEngine;
 
@@ -48,7 +48,8 @@ class DiagnosticsEngine;
 /// When errors are encountered, return false and, if Diags is non-null,
 /// report the error(s).
 bool ParseDiagnosticArgs(DiagnosticOptions &Opts, llvm::opt::ArgList &Args,
-                         DiagnosticsEngine *Diags = nullptr);
+                         DiagnosticsEngine *Diags = nullptr,
+                         bool DefaultDiagColor = true);
 
 class CompilerInvocationBase : public RefCountedBase<CompilerInvocation> {
   void operator=(const CompilerInvocationBase &) = delete;
@@ -157,8 +158,11 @@ public:
   ///
   /// \param Opts - The LangOptions object to set up.
   /// \param IK - The input language.
+  /// \param T - The target triple.
+  /// \param PPOpts - The PreprocessorOptions affected.
   /// \param LangStd - The input language standard.
   static void setLangDefaults(LangOptions &Opts, InputKind IK,
+                   const llvm::Triple &T, PreprocessorOptions &PPOpts,
                    LangStandard::Kind LangStd = LangStandard::lang_unspecified);
   
   /// \brief Retrieve a module hash string that is suitable for uniquely 

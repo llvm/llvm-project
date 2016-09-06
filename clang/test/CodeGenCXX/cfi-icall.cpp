@@ -15,9 +15,12 @@ void f(S *s) {
 
 void g() {
   void (*fp)(S *) = f;
-  // CHECK: call i1 @llvm.bitset.test(i8* {{.*}}, metadata ![[VOIDS:[0-9]+]])
+  // CHECK: call i1 @llvm.type.test(i8* {{.*}}, metadata [[VOIDS:![0-9]+]])
   fp(0);
 }
 
-// ITANIUM: !{![[VOIDS]], void (%"struct.(anonymous namespace)::S"*)* @_ZN12_GLOBAL__N_11fEPNS_1SE, i64 0}
-// MS: !{![[VOIDS]], void (%"struct.(anonymous namespace)::S"*)* @"\01?f@?A@@YAXPEAUS@?A@@@Z", i64 0}
+// ITANIUM: define internal void @_ZN12_GLOBAL__N_11fEPNS_1SE({{.*}} !type [[TS:![0-9]+]]
+// MS: define internal void @"\01?f@?A@@YAXPEAUS@?A@@@Z"({{.*}} !type [[TS:![0-9]+]]
+
+// CHECK: [[VOIDS]] = distinct !{}
+// CHECK: [[TS]] = !{i64 0, [[VOIDS]]}

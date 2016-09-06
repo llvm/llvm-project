@@ -19,7 +19,6 @@
 #define LLVM_LIB_TARGET_MIPS_MIPSINSTRINFO_H
 
 #include "Mips.h"
-#include "MipsAnalyzeImmediate.h"
 #include "MipsRegisterInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -51,7 +50,7 @@ public:
   static const MipsInstrInfo *create(MipsSubtarget &STI);
 
   /// Branch Analysis
-  bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+  bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify) const override;
@@ -60,16 +59,25 @@ public:
 
   unsigned InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
-                        DebugLoc DL) const override;
+                        const DebugLoc &DL) const override;
 
   bool
   ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 
-  BranchType AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+  BranchType analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                            MachineBasicBlock *&FBB,
                            SmallVectorImpl<MachineOperand> &Cond,
                            bool AllowModify,
-                           SmallVectorImpl<MachineInstr*> &BranchInstrs) const;
+                           SmallVectorImpl<MachineInstr *> &BranchInstrs) const;
+
+  /// Determine the opcode of a non-delay slot form for a branch if one exists.
+  unsigned getEquivalentCompactForm(const MachineBasicBlock::iterator I) const;
+
+  /// Predicate to determine if an instruction can go in a forbidden slot.
+  bool SafeInForbiddenSlot(const MachineInstr &MI) const;
+
+  /// Predicate to determine if an instruction has a forbidden slot.
+  bool HasForbiddenSlot(const MachineInstr &MI) const;
 
   /// Insert nop instruction when hazard condition is found
   void insertNoop(MachineBasicBlock &MBB,
@@ -84,7 +92,7 @@ public:
   virtual unsigned getOppositeBranchOpc(unsigned Opc) const = 0;
 
   /// Return the number of bytes of code the specified instruction may be.
-  unsigned GetInstSizeInBytes(const MachineInstr *MI) const;
+  unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI,
@@ -129,7 +137,7 @@ protected:
   bool isZeroImm(const MachineOperand &op) const;
 
   MachineMemOperand *GetMemOperand(MachineBasicBlock &MBB, int FI,
-                                   unsigned Flag) const;
+                                   MachineMemOperand::Flags Flags) const;
 
 private:
   virtual unsigned getAnalyzableBrOpc(unsigned Opc) const = 0;
@@ -138,8 +146,8 @@ private:
                      MachineBasicBlock *&BB,
                      SmallVectorImpl<MachineOperand> &Cond) const;
 
-  void BuildCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB, DebugLoc DL,
-                   ArrayRef<MachineOperand> Cond) const;
+  void BuildCondBr(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
+                   const DebugLoc &DL, ArrayRef<MachineOperand> Cond) const;
 };
 
 /// Create MipsInstrInfo objects.

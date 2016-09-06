@@ -10,7 +10,6 @@
 #include "DAGISelMatcher.h"
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenRegisters.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/TableGen/Error.h"
@@ -76,10 +75,6 @@ namespace {
     /// array of all of the recorded input nodes that have chains.
     SmallVector<unsigned, 2> MatchedChainNodes;
 
-    /// MatchedGlueResultNodes - This maintains the position in the recorded
-    /// nodes array of all of the recorded input nodes that have glue results.
-    SmallVector<unsigned, 2> MatchedGlueResultNodes;
-
     /// MatchedComplexPatterns - This maintains a list of all of the
     /// ComplexPatterns that we need to check. The second element of each pair
     /// is the recorded operand number of the input node.
@@ -121,7 +116,7 @@ namespace {
     /// If this is the first time a node with unique identifier Name has been
     /// seen, record it. Otherwise, emit a check to make sure this is the same
     /// node. Returns true if this is the first encounter.
-    bool recordUniqueNode(std::string Name);
+    bool recordUniqueNode(const std::string &Name);
 
     // Result Code Generation.
     unsigned getNamedArgumentSlot(StringRef Name) {
@@ -426,8 +421,6 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
     AddMatcher(new RecordMatcher("'" + N->getOperator()->getName() +
                                          "' glue output node",
                                  NextRecordedOperandNo));
-    // Remember all of the nodes with output glue our pattern will match.
-    MatchedGlueResultNodes.push_back(NextRecordedOperandNo++);
   }
 
   // If this node is known to have an input glue or if it *might* have an input
@@ -445,7 +438,7 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode *N,
   }
 }
 
-bool MatcherGen::recordUniqueNode(std::string Name) {
+bool MatcherGen::recordUniqueNode(const std::string &Name) {
   unsigned &VarMapEntry = VariableMap[Name];
   if (VarMapEntry == 0) {
     // If it is a named node, we must emit a 'Record' opcode.
@@ -988,11 +981,6 @@ void MatcherGen::EmitResultCode() {
 
   assert(Ops.size() >= NumSrcResults && "Didn't provide enough results");
   Ops.resize(NumSrcResults);
-
-  // If the matched pattern covers nodes which define a glue result, emit a node
-  // that tells the matcher about them so that it can update their results.
-  if (!MatchedGlueResultNodes.empty())
-    AddMatcher(new MarkGlueResultsMatcher(MatchedGlueResultNodes));
 
   AddMatcher(new CompleteMatchMatcher(Ops, Pattern));
 }

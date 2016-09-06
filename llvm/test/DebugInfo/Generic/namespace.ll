@@ -1,6 +1,6 @@
 ; REQUIRES: object-emission
 
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=Enable < %s | llvm-dwarfdump - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump - | FileCheck %s
 ; CHECK: debug_info contents
 ; CHECK: [[NS1:0x[0-9a-f]*]]:{{ *}}DW_TAG_namespace
 ; CHECK-NEXT: DW_AT_name{{.*}} = "A"
@@ -287,7 +287,7 @@ attributes #1 = { nounwind readnone }
 !llvm.module.flags = !{!57, !58}
 !llvm.ident = !{!59}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !9, globals: !30, imports: !33)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, globals: !30, imports: !33)
 !1 = !DIFile(filename: "debug-info-namespace.cpp", directory: "/tmp")
 !2 = !{}
 !3 = !{!4, !8}
@@ -296,25 +296,24 @@ attributes #1 = { nounwind readnone }
 !6 = !DINamespace(name: "B", line: 1, file: !5, scope: !7)
 !7 = !DINamespace(name: "A", line: 5, file: !1, scope: null)
 !8 = !DICompositeType(tag: DW_TAG_structure_type, name: "bar", line: 6, size: 8, align: 8, file: !5, scope: !6, elements: !2, identifier: "_ZTSN1A1B3barE")
-!9 = !{!10, !14, !17, !21, !25, !26, !27}
-!10 = distinct !DISubprogram(name: "f1", linkageName: "_ZN1A1B2f1Ev", line: 3, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 3, file: !5, scope: !6, type: !11, variables: !2)
+!10 = distinct !DISubprogram(name: "f1", linkageName: "_ZN1A1B2f1Ev", line: 3, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !11, variables: !2)
 !11 = !DISubroutineType(types: !12)
 !12 = !{!13}
 !13 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!14 = distinct !DISubprogram(name: "f1", linkageName: "_ZN1A1B2f1Ei", line: 4, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 4, file: !5, scope: !6, type: !15, variables: !2)
+!14 = distinct !DISubprogram(name: "f1", linkageName: "_ZN1A1B2f1Ei", line: 4, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 4, file: !5, scope: !6, type: !15, variables: !2)
 !15 = !DISubroutineType(types: !16)
 !16 = !{null, !13}
-!17 = distinct !DISubprogram(name: "__cxx_global_var_init", line: 20, isLocal: true, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 20, file: !5, scope: !18, type: !19, variables: !2)
+!17 = distinct !DISubprogram(name: "__cxx_global_var_init", line: 20, isLocal: true, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 20, file: !5, scope: !18, type: !19, variables: !2)
 !18 = !DIFile(filename: "foo.cpp", directory: "/tmp")
 !19 = !DISubroutineType(types: !20)
 !20 = !{null}
-!21 = distinct !DISubprogram(name: "func", linkageName: "_Z4funcb", line: 21, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 21, file: !5, scope: !18, type: !22, variables: !2)
+!21 = distinct !DISubprogram(name: "func", linkageName: "_Z4funcb", line: 21, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 21, file: !5, scope: !18, type: !22, variables: !2)
 !22 = !DISubroutineType(types: !23)
 !23 = !{!13, !24}
 !24 = !DIBasicType(tag: DW_TAG_base_type, name: "bool", size: 8, align: 8, encoding: DW_ATE_boolean)
-!25 = distinct !DISubprogram(name: "__cxx_global_var_init1", line: 44, isLocal: true, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 44, file: !5, scope: !18, type: !19, variables: !2)
-!26 = distinct !DISubprogram(name: "func_fwd", linkageName: "_ZN1A1B8func_fwdEv", line: 47, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 47, file: !5, scope: !6, type: !19, variables: !2)
-!27 = distinct !DISubprogram(name: "", linkageName: "_GLOBAL__sub_I_debug_info_namespace.cpp", isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, file: !1, scope: !28, type: !29, variables: !2)
+!25 = distinct !DISubprogram(name: "__cxx_global_var_init1", line: 44, isLocal: true, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 44, file: !5, scope: !18, type: !19, variables: !2)
+!26 = distinct !DISubprogram(name: "func_fwd", linkageName: "_ZN1A1B8func_fwdEv", line: 47, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 47, file: !5, scope: !6, type: !19, variables: !2)
+!27 = distinct !DISubprogram(name: "", linkageName: "_GLOBAL__sub_I_debug_info_namespace.cpp", isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !0, file: !1, scope: !28, type: !29, variables: !2)
 !28 = !DIFile(filename: "debug-info-namespace.cpp", directory: "/tmp")
 !29 = !DISubroutineType(types: !2)
 !30 = !{!31, !32}
@@ -328,12 +327,12 @@ attributes #1 = { nounwind readnone }
 !38 = distinct !DILexicalBlock(line: 22, column: 10, file: !5, scope: !39)
 !39 = distinct !DILexicalBlock(line: 22, column: 7, file: !5, scope: !21)
 !40 = !DIImportedEntity(tag: DW_TAG_imported_module, line: 26, scope: !21, entity: !7)
-!41 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 27, scope: !21, entity: !"_ZTSN1A1B3fooE")
-!42 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 28, scope: !21, entity: !"_ZTSN1A1B3barE")
+!41 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 27, scope: !21, entity: !4)
+!42 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 28, scope: !21, entity: !8)
 !43 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 29, scope: !21, entity: !14)
 !44 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 30, scope: !21, entity: !31)
 !45 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 31, scope: !21, entity: !46)
-!46 = !DIDerivedType(tag: DW_TAG_typedef, name: "baz", line: 7, file: !5, scope: !6, baseType: !"_ZTSN1A1B3barE")
+!46 = !DIDerivedType(tag: DW_TAG_typedef, name: "baz", line: 7, file: !5, scope: !6, baseType: !8)
 !47 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 32, name: "X", scope: !21, entity: !7)
 !48 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 33, name: "Y", scope: !21, entity: !47)
 !49 = !DIImportedEntity(tag: DW_TAG_imported_declaration, line: 34, scope: !21, entity: !50)

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-pc-gnu-linux < %s | FileCheck %s -check-prefix=CHECK
+; RUN: llc -mtriple=i686-pc-gnu-linux < %s | FileCheck %s
 ; RUN: llc -mtriple=i686-pc-gnu-linux -print-machineinstrs=expand-isel-pseudos %s -o /dev/null 2>&1 | FileCheck %s -check-prefix=CHECK-JT-PROB
 
 

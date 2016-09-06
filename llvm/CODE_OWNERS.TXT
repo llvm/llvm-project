@@ -4,7 +4,7 @@ They are also the gatekeepers for their part of LLVM, with the final word on
 what goes in or not.
 
 The list is sorted by surname and formatted to allow easy grepping and
-beautification by scripts.  The fields are: name (N), email (E), web-address
+beautification by scripts. The fields are: name (N), email (E), web-address
 (W), PGP key ID and fingerprint (P), description (D), and snail-mail address
 (S). Each entry should contain at least the (N), (E) and (D) fields.
 
@@ -12,17 +12,10 @@ N: Joe Abbey
 E: jabbey@arxan.com
 D: LLVM Bitcode (lib/Bitcode/* include/llvm/Bitcode/*)
 
-N: Owen Anderson
-E: resistor@mac.com
-D: SelectionDAG (lib/CodeGen/SelectionDAG/*)
-
-N: Rafael Avila de Espindola
-E: rafael.espindola@gmail.com
-D: Gold plugin (tools/gold/*)
-
 N: Justin Bogner
 E: mail@justinbogner.com
 D: InstrProfiling and related parts of ProfileData
+D: SelectionDAG (lib/CodeGen/SelectionDAG/*)
 
 N: Chandler Carruth
 E: chandlerc@gmail.com
@@ -35,11 +28,15 @@ D: parts of code generator not covered by someone else
 
 N: Eric Christopher
 E: echristo@gmail.com
-D: Debug Information, autotools/configure/make build, inline assembly
+D: Debug Information, inline assembly
 
 N: Greg Clayton
 E: gclayton@apple.com
 D: LLDB
+
+N: Sanjoy Das
+E: sanjoy@playingwithpointers.com
+D: IndVar Simplify, Scalar Evolution
 
 N: Marshall Clow
 E: mclow.lists@gmail.com
@@ -52,6 +49,10 @@ D: llgo
 N: Quentin Colombet
 E: qcolombet@apple.com
 D: Register allocators
+
+N: Simon Dardis
+E: simon.dardis@imgtec.com
+D: MIPS Backend (lib/Target/Mips/*)
 
 N: Duncan P. N. Exon Smith
 E: dexonsmith@apple.com
@@ -87,7 +88,11 @@ D: NVPTX Target (lib/Target/NVPTX/*)
 
 N: Lang Hames
 E: lhames@gmail.com
-D: MCJIT, RuntimeDyld and JIT event listeners
+D: MCJIT, RuntimeDyld and JIT event listeners, Orcish Warchief
+
+N: Teresa Johnson
+E: tejohnson@google.com
+D: Gold plugin (tools/gold/*)
 
 N: Galina Kistanova
 E: gkistanova@gmail.com
@@ -110,6 +115,10 @@ E: sabre@nondot.org
 W: http://nondot.org/~sabre/
 D: Everything not covered by someone else
 
+N: Robert Lytton
+E: robert@xmos.com
+D: XCore Backend
+
 N: David Majnemer
 E: david.majnemer@gmail.com
 D: IR Constant Folder, InstCombine
@@ -130,13 +139,13 @@ N: Jakob Olesen
 E: stoklund@2pi.dk
 D: TableGen
 
-N: Richard Osborne
-E: richard@xmos.com
-D: XCore Backend
-
 N: Krzysztof Parzyszek
 E: kparzysz@codeaurora.org
 D: Hexagon Backend
+
+N: Jacques Pienaar
+E: jpienaar@google.com
+D: Lanai Backend
 
 N: Paul Robinson
 E: paul_robinson@playstation.sony.com
@@ -147,12 +156,8 @@ E: mcrosier@codeaurora.org
 D: Fast-Isel
 
 N: Nadav Rotem
-E: nrotem@apple.com
+E: nadav.rotem@me.com
 D: X86 Backend, Loop Vectorizer
-
-N: Daniel Sanders
-E: daniel.sanders@imgtec.com
-D: MIPS Backend (lib/Target/Mips/*)
 
 N: Duncan Sands
 E: baldrick@free.fr
@@ -181,7 +186,7 @@ D: MemorySanitizer (LLVM part)
 
 N: Andrew Trick
 E: atrick@apple.com
-D: IndVar Simplify, Loop Strength Reduction, Instruction Scheduling
+D: Loop Strength Reduction, Instruction Scheduling
 
 N: Ulrich Weigand
 E: uweigand@de.ibm.com
@@ -190,6 +195,10 @@ D: SystemZ Backend
 N: Bill Wendling
 E: isanbard@gmail.com
 D: libLTO, IR Linker
+
+N: Hans Wennborg
+E: hans@chromium.org
+D: Release management (x.y.0 releases)
 
 N: Peter Zotov
 E: whitequark@whitequark.org

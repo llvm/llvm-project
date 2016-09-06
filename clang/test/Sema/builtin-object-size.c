@@ -52,3 +52,27 @@ void f6(void)
   __builtin___memccpy_chk (buf, b, '\0', sizeof(b), __builtin_object_size (buf, 0));
   __builtin___memccpy_chk (b, buf, '\0', sizeof(buf), __builtin_object_size (b, 0));  // expected-warning {{'__builtin___memccpy_chk' will always overflow destination buffer}}
 }
+
+int pr28314(void) {
+  struct {
+    struct InvalidField a; // expected-error{{has incomplete type}} expected-note 3{{forward declaration of 'struct InvalidField'}}
+    char b[0];
+  } *p;
+
+  struct {
+    struct InvalidField a; // expected-error{{has incomplete type}}
+    char b[1];
+  } *p2;
+
+  struct {
+    struct InvalidField a; // expected-error{{has incomplete type}}
+    char b[2];
+  } *p3;
+
+  int a = 0;
+  a += __builtin_object_size(&p->a, 0);
+  a += __builtin_object_size(p->b, 0);
+  a += __builtin_object_size(p2->b, 0);
+  a += __builtin_object_size(p3->b, 0);
+  return a;
+}

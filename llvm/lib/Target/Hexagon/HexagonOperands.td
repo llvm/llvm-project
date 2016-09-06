@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 def s32ImmOperand : AsmOperandClass { let Name = "s32Imm"; }
+def s23_2ImmOperand : AsmOperandClass { let Name = "s23_2Imm"; }
 def s8ImmOperand : AsmOperandClass { let Name = "s8Imm"; }
 def s8Imm64Operand : AsmOperandClass { let Name = "s8Imm64"; }
 def s6ImmOperand : AsmOperandClass { let Name = "s6Imm"; }
@@ -48,6 +49,7 @@ let OperandType = "OPERAND_IMMEDIATE",
     DecoderMethod = "unsignedImmDecoder" in {
   def s32Imm : Operand<i32> { let ParserMatchClass = s32ImmOperand;
                               let DecoderMethod = "s32ImmDecoder"; }
+  def s23_2Imm : Operand<i32> { let ParserMatchClass = s23_2ImmOperand; }
   def s8Imm : Operand<i32> { let ParserMatchClass = s8ImmOperand;
                              let DecoderMethod = "s8ImmDecoder"; }
   def s8Imm64 : Operand<i64>  { let ParserMatchClass = s8Imm64Operand;
@@ -345,22 +347,6 @@ def u1ImmPred32  : PatLeaf<(i32 imm), [{
   return isUInt<1>(v);
 }]>;
 
-def m5BImmPred  : PatLeaf<(i32 imm), [{
-  // m5BImmPred predicate - True if the (char) number is in range -1 .. -31
-  // and will fit in a 5 bit field when made positive, for use in memops.
-  // this is specific to the zero extending of a negative by CombineInstr
-  int8_t v = (int8_t)N->getSExtValue();
-  return (-31 <= v && v <= -1);
-}]>;
-
-def m5HImmPred  : PatLeaf<(i32 imm), [{
-  // m5HImmPred predicate - True if the (short) number is in range -1 .. -31
-  // and will fit in a 5 bit field when made positive, for use in memops.
-  // this is specific to the zero extending of a negative by CombineInstr
-  int16_t v = (int16_t)N->getSExtValue();
-  return (-31 <= v && v <= -1);
-}]>;
-
 def m5ImmPred  : PatLeaf<(i32 imm), [{
   // m5ImmPred predicate - True if the number is in range -1 .. -31
   // and will fit in a 5 bit field when made positive, for use in memops.
@@ -401,60 +387,6 @@ def Clr5ImmPred : PatLeaf<(i32 imm), [{
   // Constrain to 32 bits, and then check for single bit.
   return ImmIsSingleBit(v);
 }]>;
-
-def SetClr5ImmPred : PatLeaf<(i32 imm), [{
-  // True if the immediate is in range 0..31.
-  int32_t v = (int32_t)N->getSExtValue();
-  return (v >= 0 && v <= 31);
-}]>;
-
-def Set4ImmPred : PatLeaf<(i32 imm), [{
-  // Set4ImmPred predicate - True if the number is in the series of values:
-  // [ 2^0, 2^1, ... 2^15 ].
-  // For use in setbit immediate.
-  uint16_t v = (int16_t)N->getSExtValue();
-  // Constrain to 16 bits, and then check for single bit.
-  return ImmIsSingleBit(v);
-}]>;
-
-def Clr4ImmPred : PatLeaf<(i32 imm), [{
-  // Clr4ImmPred predicate - True if the number is in the series of
-  // bit negated values:
-  // [ 2^0, 2^1, ... 2^15 ].
-  // For use in setbit and clrbit immediate.
-  uint16_t v = ~ (int16_t)N->getSExtValue();
-  // Constrain to 16 bits, and then check for single bit.
-  return ImmIsSingleBit(v);
-}]>;
-
-def SetClr4ImmPred : PatLeaf<(i32 imm), [{
-  // True if the immediate is in the range 0..15.
-  int16_t v = (int16_t)N->getSExtValue();
-  return (v >= 0 && v <= 15);
-}]>;
-
-def Set3ImmPred : PatLeaf<(i32 imm), [{
-  // True if the number is in the series of values: [ 2^0, 2^1, ... 2^7 ].
-  // For use in setbit immediate.
-  uint8_t v = (int8_t)N->getSExtValue();
-  // Constrain to 8 bits, and then check for single bit.
-  return ImmIsSingleBit(v);
-}]>;
-
-def Clr3ImmPred : PatLeaf<(i32 imm), [{
-  // True if the number is in the series of bit negated values: [ 2^0, 2^1, ... 2^7 ].
-  // For use in setbit and clrbit immediate.
-  uint8_t v = ~ (int8_t)N->getSExtValue();
-  // Constrain to 8 bits, and then check for single bit.
-  return ImmIsSingleBit(v);
-}]>;
-
-def SetClr3ImmPred : PatLeaf<(i32 imm), [{
-  // True if the immediate is in the range  0..7.
-  int8_t v = (int8_t)N->getSExtValue();
-  return (v >= 0 && v <= 7);
-}]>;
-
 
 // Extendable immediate operands.
 def f32ExtOperand : AsmOperandClass { let Name = "f32Ext"; }

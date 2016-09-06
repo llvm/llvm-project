@@ -39,7 +39,11 @@ int main() {
 #pragma omp critical(the_name1) hint(23)
   foo();
 // CHECK:       call {{.*}}void @__kmpc_critical([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], [8 x i32]* [[THE_NAME_LOCK]])
+// CHECK:       br label
 // CHECK-NOT:   call {{.*}}void @__kmpc_end_critical(
+// CHECK:       br label
+// CHECK-NOT:   call {{.*}}void @__kmpc_end_critical(
+// CHECK:       br label
   if (a)
 #pragma omp critical(the_name)
     while (1)
@@ -60,6 +64,8 @@ void critical_ref(S &s) {
   // CHECK: [[S_REF:%.+]] = load %struct.S*, %struct.S** [[S_ADDR]],
   // CHECK: [[S_A_REF:%.+]] = getelementptr inbounds %struct.S, %struct.S* [[S_REF]], i32 0, i32 0
   ++s.a;
+  // CHECK: [[S_REF:%.+]] = load %struct.S*, %struct.S** [[S_ADDR]],
+  // CHECK: store %struct.S* [[S_REF]], %struct.S** [[S_ADDR:%.+]],
   // CHECK: call void @__kmpc_critical(
 #pragma omp critical
   // CHECK: [[S_REF:%.+]] = load %struct.S*, %struct.S** [[S_ADDR]],

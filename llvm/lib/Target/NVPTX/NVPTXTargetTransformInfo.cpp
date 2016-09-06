@@ -32,7 +32,7 @@ static bool readsThreadIndex(const IntrinsicInst *II) {
 }
 
 static bool readsLaneId(const IntrinsicInst *II) {
-  return II->getIntrinsicID() == Intrinsic::ptx_read_laneid;
+  return II->getIntrinsicID() == Intrinsic::nvvm_read_ptx_sreg_laneid;
 }
 
 // Whether the given intrinsic is an atomic instruction in PTX.

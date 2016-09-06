@@ -10,6 +10,8 @@
 // CHECK: after
 
 // XFAIL: aarch64
+// binutils 2.26 has a change that causes this test to fail on powerpc64.
+// UNSUPPORTED: powerpc64 
 
 #ifndef SHARED
 #include <stdio.h>

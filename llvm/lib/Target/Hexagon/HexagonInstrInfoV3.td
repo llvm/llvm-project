@@ -11,35 +11,36 @@
 //
 //===----------------------------------------------------------------------===//
 
-def callv3 : SDNode<"HexagonISD::CALLv3", SDT_SPCall,
+def callv3 : SDNode<"HexagonISD::CALL", SDT_SPCall,
            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 
-def callv3nr : SDNode<"HexagonISD::CALLv3nr", SDT_SPCall,
+def callv3nr : SDNode<"HexagonISD::CALLnr", SDT_SPCall,
            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 
 //===----------------------------------------------------------------------===//
 // J +
 //===----------------------------------------------------------------------===//
 // Call subroutine.
-let isCall = 1, hasSideEffects = 1, Defs = VolatileV3.Regs, isPredicable = 1,
+let isCall = 1, hasSideEffects = 1, isPredicable = 1,
     isExtended = 0, isExtendable = 1, opExtendable = 0,
     isExtentSigned = 1, opExtentBits = 24, opExtentAlign = 2 in
-class T_Call<string ExtStr>
+class T_Call<bit CSR, string ExtStr>
   : JInst<(outs), (ins calltarget:$dst),
       "call " # ExtStr # "$dst", [], "", J_tc_2early_SLOT23> {
   let BaseOpcode = "call";
   bits<24> dst;
 
+  let Defs = !if (CSR, VolatileV3.Regs, []);
   let IClass = 0b0101;
   let Inst{27-25} = 0b101;
   let Inst{24-16,13-1} = dst{23-2};
   let Inst{0} = 0b0;
 }
 
-let isCall = 1, hasSideEffects = 1, Defs = VolatileV3.Regs, isPredicated = 1,
+let isCall = 1, hasSideEffects = 1, isPredicated = 1,
     isExtended = 0, isExtendable = 1, opExtendable = 1,
     isExtentSigned = 1, opExtentBits = 17, opExtentAlign = 2 in
-class T_CallPred<bit IfTrue, string ExtStr>
+class T_CallPred<bit CSR, bit IfTrue, string ExtStr>
   : JInst<(outs), (ins PredRegs:$Pu, calltarget:$dst),
       CondStr<"$Pu", IfTrue, 0>.S # "call " # ExtStr # "$dst",
       [], "", J_tc_2early_SLOT23> {
@@ -48,6 +49,7 @@ class T_CallPred<bit IfTrue, string ExtStr>
   bits<2> Pu;
   bits<17> dst;
 
+  let Defs = !if (CSR, VolatileV3.Regs, []);
   let IClass = 0b0101;
   let Inst{27-24} = 0b1101;
   let Inst{23-22,20-16,13,7-1} = dst{16-2};
@@ -56,16 +58,21 @@ class T_CallPred<bit IfTrue, string ExtStr>
   let Inst{9-8} = Pu;
 }
 
-multiclass T_Calls<string ExtStr> {
-  def NAME : T_Call<ExtStr>;
-  def t    : T_CallPred<1, ExtStr>;
-  def f    : T_CallPred<0, ExtStr>;
+multiclass T_Calls<bit CSR, string ExtStr> {
+  def NAME : T_Call<CSR, ExtStr>;
+  def t    : T_CallPred<CSR, 1, ExtStr>;
+  def f    : T_CallPred<CSR, 0, ExtStr>;
 }
 
-defm J2_call: T_Calls<"">, PredRel;
+defm J2_call: T_Calls<1, "">, PredRel;
 
-let isCodeGenOnly = 1, isCall = 1, hasSideEffects = 1, Defs = VolatileV3.Regs in
-def CALLv3nr :  T_Call<"">, PredRel;
+let isCodeGenOnly = 1, isCall = 1, hasSideEffects = 1,
+    Defs = VolatileV3.Regs in
+def PS_call_nr : T_Call<1, "">, PredRel;
+
+let isCodeGenOnly = 1, isCall = 1, hasSideEffects = 1,
+    Defs = [PC, R31, R6, R7, P0] in
+def PS_call_stk :  T_Call<0, "">, PredRel;
 
 //===----------------------------------------------------------------------===//
 // J -
@@ -78,7 +85,7 @@ def CALLv3nr :  T_Call<"">, PredRel;
 // Call subroutine from register.
 
 let isCodeGenOnly = 1, Defs = VolatileV3.Regs in {
-  def CALLRv3nr : JUMPR_MISC_CALLR<0, 1>; // Call, no return.
+  def PS_callr_nr : JUMPR_MISC_CALLR<0, 1>; // Call, no return.
 }
 
 //===----------------------------------------------------------------------===//
@@ -170,21 +177,21 @@ let AddedComplexity = 200 in {
 //      (JMP_RegGezt (i32 IntRegs:$src1), bb:$offset)>;
 
 // Map call instruction
-def : Pat<(callv3 (i32 IntRegs:$dst)),
-      (J2_callr (i32 IntRegs:$dst))>;
+def : Pat<(callv3 I32:$dst),
+          (J2_callr I32:$dst)>;
 def : Pat<(callv3 tglobaladdr:$dst),
-      (J2_call tglobaladdr:$dst)>;
+          (J2_call tglobaladdr:$dst)>;
 def : Pat<(callv3 texternalsym:$dst),
-      (J2_call texternalsym:$dst)>;
+          (J2_call texternalsym:$dst)>;
 def : Pat<(callv3 tglobaltlsaddr:$dst),
-      (J2_call tglobaltlsaddr:$dst)>;
+          (J2_call tglobaltlsaddr:$dst)>;
 
-def : Pat<(callv3nr (i32 IntRegs:$dst)),
-      (CALLRv3nr (i32 IntRegs:$dst))>;
+def : Pat<(callv3nr I32:$dst),
+          (PS_callr_nr I32:$dst)>;
 def : Pat<(callv3nr tglobaladdr:$dst),
-      (CALLv3nr tglobaladdr:$dst)>;
+          (PS_call_nr tglobaladdr:$dst)>;
 def : Pat<(callv3nr texternalsym:$dst),
-      (CALLv3nr texternalsym:$dst)>;
+          (PS_call_nr texternalsym:$dst)>;
 
 //===----------------------------------------------------------------------===//
 // :raw form of vrcmpys:hi/lo insns

@@ -16,6 +16,7 @@
 #define LLVM_CLANG_AST_EXPRCXX_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/LambdaCapture.h"
 #include "clang/AST/TemplateBase.h"
@@ -26,9 +27,6 @@
 
 namespace clang {
 
-class CXXConstructorDecl;
-class CXXDestructorDecl;
-class CXXMethodDecl;
 class CXXTemporary;
 class MSPropertyDecl;
 class TemplateArgumentListInfo;
@@ -144,6 +142,14 @@ public:
   /// context of the CXXMethodDecl which this function is calling.
   /// FIXME: Returns 0 for member pointer call exprs.
   CXXRecordDecl *getRecordDecl() const;
+
+  SourceLocation getExprLoc() const LLVM_READONLY {
+    SourceLocation CLoc = getCallee()->getExprLoc();
+    if (CLoc.isValid())
+      return CLoc;
+
+    return getLocStart();
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXMemberCallExprClass;
@@ -778,22 +784,23 @@ public:
 class CXXUuidofExpr : public Expr {
 private:
   llvm::PointerUnion<Stmt *, TypeSourceInfo *> Operand;
+  StringRef UuidStr;
   SourceRange Range;
 
 public:
-  CXXUuidofExpr(QualType Ty, TypeSourceInfo *Operand, SourceRange R)
-    : Expr(CXXUuidofExprClass, Ty, VK_LValue, OK_Ordinary,
-           false, Operand->getType()->isDependentType(),
-           Operand->getType()->isInstantiationDependentType(),
-           Operand->getType()->containsUnexpandedParameterPack()),
-      Operand(Operand), Range(R) { }
+  CXXUuidofExpr(QualType Ty, TypeSourceInfo *Operand, StringRef UuidStr,
+                SourceRange R)
+      : Expr(CXXUuidofExprClass, Ty, VK_LValue, OK_Ordinary, false,
+             Operand->getType()->isDependentType(),
+             Operand->getType()->isInstantiationDependentType(),
+             Operand->getType()->containsUnexpandedParameterPack()),
+        Operand(Operand), UuidStr(UuidStr), Range(R) {}
 
-  CXXUuidofExpr(QualType Ty, Expr *Operand, SourceRange R)
-    : Expr(CXXUuidofExprClass, Ty, VK_LValue, OK_Ordinary,
-           false, Operand->isTypeDependent(),
-           Operand->isInstantiationDependent(),
-           Operand->containsUnexpandedParameterPack()),
-      Operand(Operand), Range(R) { }
+  CXXUuidofExpr(QualType Ty, Expr *Operand, StringRef UuidStr, SourceRange R)
+      : Expr(CXXUuidofExprClass, Ty, VK_LValue, OK_Ordinary, false,
+             Operand->isTypeDependent(), Operand->isInstantiationDependent(),
+             Operand->containsUnexpandedParameterPack()),
+        Operand(Operand), UuidStr(UuidStr), Range(R) {}
 
   CXXUuidofExpr(EmptyShell Empty, bool isExpr)
     : Expr(CXXUuidofExprClass, Empty) {
@@ -830,7 +837,8 @@ public:
     Operand = E;
   }
 
-  StringRef getUuidAsStringRef(ASTContext &Context) const;
+  void setUuidStr(StringRef US) { UuidStr = US; }
+  StringRef getUuidStr() const { return UuidStr; }
 
   SourceLocation getLocStart() const LLVM_READONLY { return Range.getBegin(); }
   SourceLocation getLocEnd() const LLVM_READONLY { return Range.getEnd(); }
@@ -840,11 +848,6 @@ public:
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXUuidofExprClass;
   }
-
-  /// Grabs __declspec(uuid()) off a type, or returns 0 if we cannot resolve to
-  /// a single GUID.
-  static const UuidAttr *GetUuidAttrOfType(QualType QT,
-                                           bool *HasMultipleGUIDsPtr = nullptr);
 
   // Iterators
   child_range children() {
@@ -1171,18 +1174,21 @@ private:
   SourceLocation Loc;
   SourceRange ParenOrBraceRange;
   unsigned NumArgs : 16;
-  bool Elidable : 1;
-  bool HadMultipleCandidates : 1;
-  bool ListInitialization : 1;
-  bool StdInitListInitialization : 1;
-  bool ZeroInitialization : 1;
+  unsigned Elidable : 1;
+  unsigned HadMultipleCandidates : 1;
+  unsigned ListInitialization : 1;
+  unsigned StdInitListInitialization : 1;
+  unsigned ZeroInitialization : 1;
   unsigned ConstructKind : 2;
   Stmt **Args;
+
+  void setConstructor(CXXConstructorDecl *C) { Constructor = C; }
 
 protected:
   CXXConstructExpr(const ASTContext &C, StmtClass SC, QualType T,
                    SourceLocation Loc,
-                   CXXConstructorDecl *d, bool elidable,
+                   CXXConstructorDecl *Ctor,
+                   bool Elidable,
                    ArrayRef<Expr *> Args,
                    bool HadMultipleCandidates,
                    bool ListInitialization,
@@ -1201,15 +1207,12 @@ protected:
 public:
   /// \brief Construct an empty C++ construction expression.
   explicit CXXConstructExpr(EmptyShell Empty)
-    : Expr(CXXConstructExprClass, Empty), Constructor(nullptr),
-      NumArgs(0), Elidable(false), HadMultipleCandidates(false),
-      ListInitialization(false), ZeroInitialization(false),
-      ConstructKind(0), Args(nullptr)
-  { }
+    : CXXConstructExpr(CXXConstructExprClass, Empty) {}
 
   static CXXConstructExpr *Create(const ASTContext &C, QualType T,
                                   SourceLocation Loc,
-                                  CXXConstructorDecl *D, bool Elidable,
+                                  CXXConstructorDecl *Ctor,
+                                  bool Elidable,
                                   ArrayRef<Expr *> Args,
                                   bool HadMultipleCandidates,
                                   bool ListInitialization,
@@ -1218,8 +1221,8 @@ public:
                                   ConstructionKind ConstructKind,
                                   SourceRange ParenOrBraceRange);
 
+  /// \brief Get the constructor that this expression will (ultimately) call.
   CXXConstructorDecl *getConstructor() const { return Constructor; }
-  void setConstructor(CXXConstructorDecl *C) { Constructor = C; }
 
   SourceLocation getLocation() const { return Loc; }
   void setLocation(SourceLocation Loc) { this->Loc = Loc; }
@@ -1315,6 +1318,73 @@ public:
   friend class ASTStmtReader;
 };
 
+/// \brief Represents a call to an inherited base class constructor from an
+/// inheriting constructor. This call implicitly forwards the arguments from
+/// the enclosing context (an inheriting constructor) to the specified inherited
+/// base class constructor.
+class CXXInheritedCtorInitExpr : public Expr {
+private:
+  CXXConstructorDecl *Constructor;
+
+  /// The location of the using declaration.
+  SourceLocation Loc;
+
+  /// Whether this is the construction of a virtual base.
+  unsigned ConstructsVirtualBase : 1;
+
+  /// Whether the constructor is inherited from a virtual base class of the
+  /// class that we construct.
+  unsigned InheritedFromVirtualBase : 1;
+
+public:
+  /// \brief Construct a C++ inheriting construction expression.
+  CXXInheritedCtorInitExpr(SourceLocation Loc, QualType T,
+                           CXXConstructorDecl *Ctor, bool ConstructsVirtualBase,
+                           bool InheritedFromVirtualBase)
+      : Expr(CXXInheritedCtorInitExprClass, T, VK_RValue, OK_Ordinary, false,
+             false, false, false),
+        Constructor(Ctor), Loc(Loc),
+        ConstructsVirtualBase(ConstructsVirtualBase),
+        InheritedFromVirtualBase(InheritedFromVirtualBase) {
+    assert(!T->isDependentType());
+  }
+
+  /// \brief Construct an empty C++ inheriting construction expression.
+  explicit CXXInheritedCtorInitExpr(EmptyShell Empty)
+      : Expr(CXXInheritedCtorInitExprClass, Empty), Constructor(nullptr),
+        ConstructsVirtualBase(false), InheritedFromVirtualBase(false) {}
+
+  /// \brief Get the constructor that this expression will call.
+  CXXConstructorDecl *getConstructor() const { return Constructor; }
+
+  /// \brief Determine whether this constructor is actually constructing
+  /// a base class (rather than a complete object).
+  bool constructsVBase() const { return ConstructsVirtualBase; }
+  CXXConstructExpr::ConstructionKind getConstructionKind() const {
+    return ConstructsVirtualBase ? CXXConstructExpr::CK_VirtualBase
+                                 : CXXConstructExpr::CK_NonVirtualBase;
+  }
+
+  /// \brief Determine whether the inherited constructor is inherited from a
+  /// virtual base of the object we construct. If so, we are not responsible
+  /// for calling the inherited constructor (the complete object constructor
+  /// does that), and so we don't need to pass any arguments.
+  bool inheritedFromVBase() const { return InheritedFromVirtualBase; }
+
+  SourceLocation getLocation() const LLVM_READONLY { return Loc; }
+  SourceLocation getLocStart() const LLVM_READONLY { return Loc; }
+  SourceLocation getLocEnd() const LLVM_READONLY { return Loc; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXInheritedCtorInitExprClass;
+  }
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  friend class ASTStmtReader;
+};
+
 /// \brief Represents an explicit C++ type conversion that uses "functional"
 /// notation (C++ [expr.type.conv]).
 ///
@@ -1385,7 +1455,8 @@ class CXXTemporaryObjectExpr : public CXXConstructExpr {
   TypeSourceInfo *Type;
 
 public:
-  CXXTemporaryObjectExpr(const ASTContext &C, CXXConstructorDecl *Cons,
+  CXXTemporaryObjectExpr(const ASTContext &C,
+                         CXXConstructorDecl *Cons,
                          TypeSourceInfo *Type,
                          ArrayRef<Expr *> Args,
                          SourceRange ParenOrBraceRange,
@@ -1754,12 +1825,12 @@ class CXXNewExpr : public Expr {
   SourceRange DirectInitRange;
 
   /// Was the usage ::new, i.e. is the global new to be used?
-  bool GlobalNew : 1;
+  unsigned GlobalNew : 1;
   /// Do we allocate an array? If so, the first SubExpr is the size expression.
-  bool Array : 1;
+  unsigned Array : 1;
   /// If this is an array allocation, does the usual deallocation
   /// function for the allocated type want to know the allocated size?
-  bool UsualArrayDeleteWantsSize : 1;
+  unsigned UsualArrayDeleteWantsSize : 1;
   /// The number of placement new arguments.
   unsigned NumPlacementArgs : 13;
   /// What kind of initializer do we have? Could be none, parens, or braces.
@@ -2358,7 +2429,7 @@ class ExpressionTraitExpr : public Expr {
   /// \brief The trait. A ExpressionTrait enum in MSVC compatible unsigned.
   unsigned ET : 31;
   /// \brief The value of the type trait. Unspecified if dependent.
-  bool Value : 1;
+  unsigned Value : 1;
 
   /// \brief The location of the type trait keyword.
   SourceLocation Loc;
@@ -2565,6 +2636,10 @@ public:
       return 0;
 
     return getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs;
+  }
+
+  ArrayRef<TemplateArgumentLoc> template_arguments() const {
+    return {getTemplateArgs(), getNumTemplateArgs()};
   }
 
   /// \brief Copies the template arguments into the given structure.
@@ -2820,6 +2895,10 @@ public:
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs;
   }
 
+  ArrayRef<TemplateArgumentLoc> template_arguments() const {
+    return {getTemplateArgs(), getNumTemplateArgs()};
+  }
+
   /// Note: getLocStart() is the start of the whole DependentScopeDeclRefExpr,
   /// and differs from getLocation().getStart().
   SourceLocation getLocStart() const LLVM_READONLY {
@@ -2868,7 +2947,8 @@ private:
   Stmt *SubExpr;
 
   ExprWithCleanups(EmptyShell, unsigned NumObjects);
-  ExprWithCleanups(Expr *SubExpr, ArrayRef<CleanupObject> Objects);
+  ExprWithCleanups(Expr *SubExpr, bool CleanupsHaveSideEffects,
+                   ArrayRef<CleanupObject> Objects);
 
   friend TrailingObjects;
   friend class ASTStmtReader;
@@ -2878,6 +2958,7 @@ public:
                                   unsigned numObjects);
 
   static ExprWithCleanups *Create(const ASTContext &C, Expr *subexpr,
+                                  bool CleanupsHaveSideEffects,
                                   ArrayRef<CleanupObject> objects);
 
   ArrayRef<CleanupObject> getObjects() const {
@@ -2894,6 +2975,9 @@ public:
 
   Expr *getSubExpr() { return cast<Expr>(SubExpr); }
   const Expr *getSubExpr() const { return cast<Expr>(SubExpr); }
+  bool cleanupsHaveSideEffects() const {
+    return ExprWithCleanupsBits.CleanupsHaveSideEffects;
+  }
 
   /// As with any mutator of the AST, be very careful
   /// when modifying an existing AST to preserve its invariants.
@@ -3228,6 +3312,10 @@ public:
       return 0;
 
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs;
+  }
+
+  ArrayRef<TemplateArgumentLoc> template_arguments() const {
+    return {getTemplateArgs(), getNumTemplateArgs()};
   }
 
   SourceLocation getLocStart() const LLVM_READONLY {
@@ -3923,6 +4011,12 @@ public:
     // within a default initializer.
     if (isa<FieldDecl>(ExtendingDecl))
       return SD_Automatic;
+    // FIXME: This only works because storage class specifiers are not allowed
+    // on decomposition declarations.
+    if (isa<BindingDecl>(ExtendingDecl))
+      return ExtendingDecl->getDeclContext()->isFunctionOrMethod()
+                 ? SD_Automatic
+                 : SD_Static;
     return cast<VarDecl>(ExtendingDecl)->getStorageDuration();
   }
 

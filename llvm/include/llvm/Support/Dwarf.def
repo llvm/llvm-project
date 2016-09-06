@@ -14,7 +14,7 @@
 // TODO: Add other DW-based macros.
 #if !(defined HANDLE_DW_TAG || defined HANDLE_DW_OP ||                         \
       defined HANDLE_DW_LANG || defined HANDLE_DW_ATE ||                       \
-      defined HANDLE_DW_VIRTUALITY)
+      defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_CC)
 #error "Missing macro definition of HANDLE_DW*"
 #endif
 
@@ -37,6 +37,11 @@
 #ifndef HANDLE_DW_VIRTUALITY
 #define HANDLE_DW_VIRTUALITY(ID, NAME)
 #endif
+
+#ifndef HANDLE_DW_CC
+#define HANDLE_DW_CC(ID, NAME)
+#endif
+
 
 HANDLE_DW_TAG(0x0001, array_type)
 HANDLE_DW_TAG(0x0002, class_type)
@@ -320,6 +325,7 @@ HANDLE_DW_LANG(0x0021, C_plus_plus_14)
 HANDLE_DW_LANG(0x0022, Fortran03)
 HANDLE_DW_LANG(0x0023, Fortran08)
 HANDLE_DW_LANG(0x8001, Mips_Assembler)
+HANDLE_DW_LANG(0x8e57, GOOGLE_RenderScript)
 HANDLE_DW_LANG(0xb000, BORLAND_Delphi)
 
 // DWARF attribute type encodings.
@@ -345,8 +351,23 @@ HANDLE_DW_VIRTUALITY(0x00, none)
 HANDLE_DW_VIRTUALITY(0x01, virtual)
 HANDLE_DW_VIRTUALITY(0x02, pure_virtual)
 
+// DWARF calling convention codes.
+HANDLE_DW_CC(0x01, normal)
+HANDLE_DW_CC(0x02, program)
+HANDLE_DW_CC(0x03, nocall)
+HANDLE_DW_CC(0x41, GNU_borland_fastcall_i386)
+HANDLE_DW_CC(0xb0, BORLAND_safecall)
+HANDLE_DW_CC(0xb1, BORLAND_stdcall)
+HANDLE_DW_CC(0xb2, BORLAND_pascal)
+HANDLE_DW_CC(0xb3, BORLAND_msfastcall)
+HANDLE_DW_CC(0xb4, BORLAND_msreturn)
+HANDLE_DW_CC(0xb5, BORLAND_thiscall)
+HANDLE_DW_CC(0xb6, BORLAND_fastcall)
+HANDLE_DW_CC(0xc0, LLVM_vectorcall)
+
 #undef HANDLE_DW_TAG
 #undef HANDLE_DW_OP
 #undef HANDLE_DW_LANG
 #undef HANDLE_DW_ATE
 #undef HANDLE_DW_VIRTUALITY
+#undef HANDLE_DW_CC

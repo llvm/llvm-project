@@ -17,12 +17,14 @@ set -e
 rev=""
 proj=""
 revert="no"
+srcdir=""
 
 usage() {
     echo "usage: `basename $0` [OPTIONS]"
     echo "  -proj PROJECT  The project to merge the result into"
     echo "  -rev NUM       The revision to merge into the project"
     echo "  -revert        Revert rather than merge the commit"
+    echo "  -srcdir        The root of the project checkout"
 }
 
 while [ $# -gt 0 ]; do
@@ -34,6 +36,10 @@ while [ $# -gt 0 ]; do
         -proj | --proj | -project | --project | -p )
             shift
             proj=$1
+            ;;
+        --srcdir | -srcdir | -s)
+            shift
+            srcdir=$1
             ;;
         -h | -help | --help )
             usage
@@ -50,6 +56,10 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+if [ -z "$srcdir" ]; then
+    srcdir="$proj.src"
+fi
 
 if [ "x$rev" = "x" -o "x$proj" = "x" ]; then
     echo "error: need to specify project and revision"
@@ -72,7 +82,7 @@ else
 fi
 svn log -c $rev http://llvm.org/svn/llvm-project/$proj/trunk >> $tempfile 2>&1
 
-cd $proj.src
+cd "$srcdir"
 echo "# Updating tree"
 svn up
 

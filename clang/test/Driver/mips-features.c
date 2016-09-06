@@ -116,6 +116,24 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NANLEGACY %s
 // CHECK-NANLEGACY: "-target-feature" "-nan2008"
 //
+// -mcompact-branches=never
+// RUN: %clang -target mips-linux-gnu -march=mips32r6 -### -c %s \
+// RUN:     -mcompact-branches=never 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CBNEVER %s
+// CHECK-CBNEVER: "-mllvm" "-mips-compact-branches=never"
+//
+// -mcompact-branches=optimal
+// RUN: %clang -target mips-linux-gnu -march=mips32r6 -### -c %s \
+// RUN:     -mcompact-branches=optimal 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CBOPTIMAL %s
+// CHECK-CBOPTIMAL: "-mllvm" "-mips-compact-branches=optimal"
+//
+// -mcompact-branches=always
+// RUN: %clang -target mips-linux-gnu -march=mips32r6 -### -c %s \
+// RUN:     -mcompact-branches=always 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CBALWAYS %s
+// CHECK-CBALWAYS: "-mllvm" "-mips-compact-branches=always"
+//
 // -mxgot
 // RUN: %clang -target mips-linux-gnu -### -c %s \
 // RUN:     -mno-xgot -mxgot 2>&1 \

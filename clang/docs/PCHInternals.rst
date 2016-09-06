@@ -15,7 +15,7 @@ Using Precompiled Headers with ``clang``
 The Clang compiler frontend, ``clang -cc1``, supports two command line options
 for generating and using PCH files.
 
-To generate PCH files using ``clang -cc1``, use the option :option:`-emit-pch`:
+To generate PCH files using ``clang -cc1``, use the option `-emit-pch`:
 
 .. code-block:: bash
 
@@ -24,7 +24,7 @@ To generate PCH files using ``clang -cc1``, use the option :option:`-emit-pch`:
 This option is transparently used by ``clang`` when generating PCH files.  The
 resulting PCH file contains the serialized form of the compiler's internal
 representation after it has completed parsing and semantic analysis.  The PCH
-file can then be used as a prefix header with the :option:`-include-pch`
+file can then be used as a prefix header with the `-include-pch`
 option:
 
 .. code-block:: bash
@@ -84,7 +84,7 @@ With this approach, the cost of using an AST file for a translation unit is
 proportional to the amount of code actually used from the AST file, rather than
 being proportional to the size of the AST file itself.
 
-When given the :option:`-print-stats` option, Clang produces statistics
+When given the `-print-stats` option, Clang produces statistics
 describing how much of the AST file was actually loaded from disk.  For a
 simple "Hello, World!" program that includes the Apple ``Cocoa.h`` header
 (which is built as a precompiled header), this option illustrates how little of

@@ -61,7 +61,15 @@ public:
   /// \name Vector TTI Implementations
   /// @{
 
-  // TODO: Implement Vector TTI for WebAssembly
+  unsigned getNumberOfRegisters(bool Vector);
+  unsigned getRegisterBitWidth(bool Vector);
+  unsigned getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty,
+      TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
+      TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
+      TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
+      TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None);
+  unsigned getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
 
   /// @}
 };

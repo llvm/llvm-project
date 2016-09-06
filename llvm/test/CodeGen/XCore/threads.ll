@@ -87,7 +87,7 @@ define i32* @f_tle() {
 ; CHECK: shl [[R0:r[0-9]]], r11, 3
 ; CHECK: ldaw [[R1:r[0-9]]], dp[tle]
 ; r0 = &tl + id*8
-; CHECK: add r0, [[R1]], [[R0]]
+; CHECK: add r0, [[R0]], [[R1]]
   ret i32* getelementptr inbounds ([2 x i32], [2 x i32]* @tle, i32 0, i32 0)
 }
 
@@ -96,7 +96,7 @@ define i32 @f_tlExpr () {
 ; CHECK: get r11, id
 ; CHECK: shl [[R0:r[0-9]]], r11, 3
 ; CHECK: ldaw [[R1:r[0-9]]], dp[tle]
-; CHECK: add [[R2:r[0-9]]], [[R1]], [[R0]]
+; CHECK: add [[R2:r[0-9]]], [[R0]], [[R1]]
 ; CHECK: add r0, [[R2]], [[R2]]
   ret i32 add(
       i32 ptrtoint( i32* getelementptr inbounds ([2 x i32], [2 x i32]* @tle, i32 0, i32 0) to i32),

@@ -26,7 +26,6 @@ namespace llvm {
   class TargetRegisterInfo;
   class MachineDominatorTree;
   class MachineDominanceFrontier;
-}
 
 namespace rdf {
   struct Liveness {
@@ -41,6 +40,10 @@ namespace rdf {
     NodeList getAllReachingDefs(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
         bool FullChain = false, const RegisterSet &DefRRs = RegisterSet());
     NodeList getAllReachingDefs(NodeAddr<RefNode*> RefA);
+    NodeSet getAllReachingDefsRec(RegisterRef RefRR, NodeAddr<RefNode*> RefA,
+        NodeSet &Visited, const NodeSet &Defs);
+    NodeSet getAllReachedUses(RegisterRef RefRR, NodeAddr<DefNode*> DefA,
+        const RegisterSet &DefRRs = RegisterSet());
 
     LiveMapType &getLiveMap() { return LiveMap; }
     const LiveMapType &getLiveMap() const { return LiveMap; }
@@ -101,6 +104,7 @@ namespace rdf {
     void traverse(MachineBasicBlock *B, RefMap &LiveIn);
     void emptify(RefMap &M);
   };
-}
+} // namespace rdf
+} // namespace llvm
 
 #endif // RDF_LIVENESS_H

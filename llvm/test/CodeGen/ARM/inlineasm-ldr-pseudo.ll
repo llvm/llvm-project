@@ -9,9 +9,9 @@
 ; CHECK: 0:       00 00 9f e5                                     ldr     r0, [pc]
 ; CHECK: 4:       0e f0 a0 e1                                     mov     pc, lr
 ; Make sure the constant pool entry comes after the return
-; CHECK: 8:       01 00 00 00
+; CHECK: 8:       78 56 34 12
 define i32 @foo() nounwind {
 entry:
-  %0 = tail call i32 asm sideeffect "ldr $0,=1", "=r"() nounwind
+  %0 = tail call i32 asm sideeffect "ldr $0,=0x12345678", "=r"() nounwind
   ret i32 %0
 }

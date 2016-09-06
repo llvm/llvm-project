@@ -82,6 +82,8 @@ entry:
   ret i32 %i1
 }
 
+%struct.S = type { i8 }
+
 ; CHECK-LABEL: test_lib_args:
 ; CHECK: movl %edx, %eax
 ; CHECK: calll __fixsfsi
@@ -91,14 +93,10 @@ define i32 @test_lib_args(float %a, float %b) #0 {
 }
 
 ; CHECK-LABEL: test_fp128:
-; CHECK: movl    (%eax), %e[[CX:..]]
-; CHECK-NEXT: movl    4(%eax), %e[[DX:..]]
-; CHECK-NEXT: movl    8(%eax), %e[[SI:..]]
-; CHECK-NEXT: movl    12(%eax), %e[[AX:..]]
-; CHECK-NEXT: movl    %e[[AX]], 12(%esp)
-; CHECK-NEXT: movl    %e[[SI]], 8(%esp)
-; CHECK-NEXT: movl    %e[[DX]], 4(%esp)
-; CHECK-NEXT: movl    %e[[CX]], (%esp)
+; CHECK:      pushl   12(%eax)
+; CHECK-NEXT: pushl   8(%eax)
+; CHECK-NEXT: pushl   4(%eax)
+; CHECK-NEXT: pushl   (%eax)
 ; CHECK-NEXT: calll   __fixtfsi
 define i32 @test_fp128(fp128* %ptr) #0 {
   %v = load fp128, fp128* %ptr
@@ -107,6 +105,51 @@ define i32 @test_fp128(fp128* %ptr) #0 {
 }
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i32, i1) #1
+
+; CHECK-LABEL: test_alignment_d:
+; CHECK-NOT: andl  {{.+}}, %esp
+define void @test_alignment_d() #0 {
+entry:
+  %d = alloca double
+  store double 2.000000e+00, double* %d
+  call void @food(double* inreg %d) 
+  ret void
+}
+
+; CHECK-LABEL: test_alignment_i:
+; CHECK-NOT: andl  {{.+}}, %esp
+define void @test_alignment_i() #0 {
+entry:
+  %i = alloca i64
+  store i64 2, i64* %i
+  call void @fooi(i64* inreg %i) 
+  ret void
+}
+
+
+; CHECK-LABEL: test_alignment_s:
+; CHECK-NOT: andl  {{.+}}, %esp
+define void @test_alignment_s() #0 {
+  %s = alloca %struct.S, align 4
+  call void @foos(%struct.S* inreg %s) 
+  ret void
+}
+
+
+; CHECK-LABEL: test_alignment_fp:
+; CHECK-NOT: andl  {{.+}}, %esp
+define void @test_alignment_fp() #0 {
+entry:
+  %f = alloca fp128
+  store fp128 0xL00000000000000004000000000000000, fp128* %f
+  call void @foofp(fp128* inreg %f)
+  ret void
+}
+
+declare void @food(double* inreg)
+declare void @fooi(i64* inreg)
+declare void @foos(%struct.S* inreg)
+declare void @foofp(fp128* inreg)
 
 attributes #0 = { nounwind "use-soft-float"="true"}
 attributes #1 = { nounwind argmemonly }

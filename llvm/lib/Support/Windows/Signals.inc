@@ -11,7 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
+#include "llvm/Support/WindowsError.h"
 #include <algorithm>
+#include <io.h>
 #include <signal.h>
 #include <stdio.h>
 
@@ -117,6 +121,12 @@ typedef DWORD64 (__stdcall *PGET_MODULE_BASE_ROUTINE64)(HANDLE hProcess,
 typedef DWORD64 (__stdcall *PTRANSLATE_ADDRESS_ROUTINE64)(HANDLE hProcess,
                       HANDLE hThread, LPADDRESS64 lpaddr);
 
+typedef BOOL(WINAPI *fpMiniDumpWriteDump)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE,
+                                          PMINIDUMP_EXCEPTION_INFORMATION,
+                                          PMINIDUMP_USER_STREAM_INFORMATION,
+                                          PMINIDUMP_CALLBACK_INFORMATION);
+static fpMiniDumpWriteDump fMiniDumpWriteDump;
+
 typedef BOOL (WINAPI *fpStackWalk64)(DWORD, HANDLE, HANDLE, LPSTACKFRAME64,
                       PVOID, PREAD_PROCESS_MEMORY_ROUTINE64,
                       PFUNCTION_TABLE_ACCESS_ROUTINE64,
@@ -154,6 +164,8 @@ static fpEnumerateLoadedModules fEnumerateLoadedModules;
 static bool load64BitDebugHelp(void) {
   HMODULE hLib = ::LoadLibraryW(L"Dbghelp.dll");
   if (hLib) {
+    fMiniDumpWriteDump = (fpMiniDumpWriteDump)
+                      ::GetProcAddress(hLib, "MiniDumpWriteDump");
     fStackWalk64 = (fpStackWalk64)
                       ::GetProcAddress(hLib, "StackWalk64");
     fSymGetModuleBase64 = (fpSymGetModuleBase64)
@@ -171,7 +183,7 @@ static bool load64BitDebugHelp(void) {
     fEnumerateLoadedModules = (fpEnumerateLoadedModules)
       ::GetProcAddress(hLib, "EnumerateLoadedModules64");
   }
-  return fStackWalk64 && fSymInitialize && fSymSetOptions;
+  return fStackWalk64 && fSymInitialize && fSymSetOptions && fMiniDumpWriteDump;
 }
 
 using namespace llvm;
@@ -193,6 +205,8 @@ static PTOP_LEVEL_EXCEPTION_FILTER OldFilter = NULL;
 // globals which this critical section addresses.
 static CRITICAL_SECTION CriticalSection;
 static bool CriticalSectionInitialized = false;
+
+static StringRef Argv0;
 
 enum {
 #if defined(_M_X64)
@@ -228,7 +242,7 @@ static bool printStackTraceWithLLVMSymbolizer(llvm::raw_ostream &OS,
       break;
   }
 
-  return printSymbolizedStackTrace(&StackTrace[0], Depth, OS);
+  return printSymbolizedStackTrace(Argv0, &StackTrace[0], Depth, OS);
 }
 
 namespace {
@@ -241,7 +255,7 @@ struct FindModuleData {
 };
 }
 
-static BOOL CALLBACK findModuleCallback(WIN32_ELMCB_PCSTR ModuleName,
+static BOOL CALLBACK findModuleCallback(PCSTR ModuleName,
                                         DWORD64 ModuleBase, ULONG ModuleSize,
                                         void *VoidData) {
   FindModuleData *Data = (FindModuleData*)VoidData;
@@ -456,7 +470,7 @@ void sys::DontRemoveFileOnSignal(StringRef Filename) {
   RegisterHandler();
 
   std::vector<std::string>::reverse_iterator I =
-  std::find(FilesToRemove->rbegin(), FilesToRemove->rend(), Filename);
+      find(reverse(*FilesToRemove), Filename);
   if (I != FilesToRemove->rend())
     FilesToRemove->erase(I.base()-1);
 
@@ -484,7 +498,13 @@ void sys::DisableSystemDialogsOnCrash() {
 
 /// PrintStackTraceOnErrorSignal - When an error signal (such as SIBABRT or
 /// SIGSEGV) is delivered to the process, print a stack trace and then exit.
-void sys::PrintStackTraceOnErrorSignal(bool DisableCrashReporting) {
+void sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
+                                       bool DisableCrashReporting) {
+  ::Argv0 = Argv0;
+
+  if (DisableCrashReporting || getenv("LLVM_DISABLE_CRASH_REPORT"))
+    Process::PreventCoreFiles();
+
   DisableSystemDialogsOnCrash();
   RegisterHandler();
   LeaveCriticalSection(&CriticalSection);
@@ -563,8 +583,208 @@ void llvm::sys::RunInterruptHandlers() {
   Cleanup();
 }
 
+/// \brief Find the Windows Registry Key for a given location.
+///
+/// \returns a valid HKEY if the location exists, else NULL.
+static HKEY FindWERKey(const llvm::Twine &RegistryLocation) {
+  HKEY Key;
+  if (ERROR_SUCCESS != ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
+                                       RegistryLocation.str().c_str(), 0,
+                                       KEY_QUERY_VALUE | KEY_READ, &Key))
+    return NULL;
+
+  return Key;
+}
+
+/// \brief Populate ResultDirectory with the value for "DumpFolder" for a given
+/// Windows Registry key.
+///
+/// \returns true if a valid value for DumpFolder exists, false otherwise.
+static bool GetDumpFolder(HKEY Key,
+                          llvm::SmallVectorImpl<char> &ResultDirectory) {
+  using llvm::sys::windows::UTF16ToUTF8;
+
+  if (!Key)
+    return false;
+
+  DWORD BufferLengthBytes = 0;
+
+  if (ERROR_SUCCESS != ::RegGetValueW(Key, 0, L"DumpFolder", REG_EXPAND_SZ,
+                                      NULL, NULL, &BufferLengthBytes))
+    return false;
+
+  SmallVector<wchar_t, MAX_PATH> Buffer(BufferLengthBytes);
+
+  if (ERROR_SUCCESS != ::RegGetValueW(Key, 0, L"DumpFolder", REG_EXPAND_SZ,
+                                      NULL, Buffer.data(), &BufferLengthBytes))
+    return false;
+
+  DWORD ExpandBufferSize = ::ExpandEnvironmentStringsW(Buffer.data(), NULL, 0);
+
+  if (!ExpandBufferSize)
+    return false;
+
+  SmallVector<wchar_t, MAX_PATH> ExpandBuffer(ExpandBufferSize);
+
+  if (ExpandBufferSize != ::ExpandEnvironmentStringsW(Buffer.data(),
+                                                      ExpandBuffer.data(),
+                                                      ExpandBufferSize))
+    return false;
+
+  if (UTF16ToUTF8(ExpandBuffer.data(), ExpandBufferSize - 1, ResultDirectory))
+    return false;
+
+  return true;
+}
+
+/// \brief Populate ResultType with a valid MINIDUMP_TYPE based on the value of
+/// "DumpType" for a given Windows Registry key.
+///
+/// According to
+/// https://msdn.microsoft.com/en-us/library/windows/desktop/bb787181(v=vs.85).aspx
+/// valid values for DumpType are:
+///   * 0: Custom dump
+///   * 1: Mini dump
+///   * 2: Full dump
+/// If "Custom dump" is specified then the "CustomDumpFlags" field is read
+/// containing a bitwise combination of MINIDUMP_TYPE values.
+///
+/// \returns true if a valid value for ResultType can be set, false otherwise.
+static bool GetDumpType(HKEY Key, MINIDUMP_TYPE &ResultType) {
+  if (!Key)
+    return false;
+
+  DWORD DumpType;
+  DWORD TypeSize = sizeof(DumpType);
+  if (ERROR_SUCCESS != ::RegGetValueW(Key, NULL, L"DumpType", RRF_RT_REG_DWORD,
+                                      NULL, &DumpType,
+                                      &TypeSize))
+    return false;
+
+  switch (DumpType) {
+  case 0: {
+    DWORD Flags = 0;
+    if (ERROR_SUCCESS != ::RegGetValueW(Key, NULL, L"CustomDumpFlags",
+                                        RRF_RT_REG_DWORD, NULL, &Flags,
+                                        &TypeSize))
+      return false;
+
+    ResultType = static_cast<MINIDUMP_TYPE>(Flags);
+    break;
+  }
+  case 1:
+    ResultType = MiniDumpNormal;
+    break;
+  case 2:
+    ResultType = MiniDumpWithFullMemory;
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+/// \brief Write a Windows dump file containing process information that can be
+/// used for post-mortem debugging.
+///
+/// \returns zero error code if a mini dump created, actual error code
+/// otherwise.
+static std::error_code WINAPI
+WriteWindowsDumpFile(PMINIDUMP_EXCEPTION_INFORMATION ExceptionInfo) {
+  using namespace llvm;
+  using namespace llvm::sys;
+
+  std::string MainExecutableName = fs::getMainExecutable(nullptr, nullptr);
+  StringRef ProgramName;
+
+  if (MainExecutableName.empty()) {
+    // If we can't get the executable filename,
+    // things are in worse shape than we realize
+    // and we should just bail out.
+    return mapWindowsError(::GetLastError());
+  }
+
+  ProgramName = path::filename(MainExecutableName.c_str());
+
+  // The Windows Registry location as specified at
+  // https://msdn.microsoft.com/en-us/library/windows/desktop/bb787181%28v=vs.85%29.aspx
+  // "Collecting User-Mode Dumps" that may optionally be set to collect crash
+  // dumps in a specified location.
+  StringRef LocalDumpsRegistryLocation =
+      "SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps";
+
+  // The key pointing to the Registry location that may contain global crash
+  // dump settings.  This will be NULL if the location can not be found.
+  ScopedRegHandle DefaultLocalDumpsKey(FindWERKey(LocalDumpsRegistryLocation));
+
+  // The key pointing to the Registry location that may contain
+  // application-specific crash dump settings.  This will be NULL if the
+  // location can not be found.
+  ScopedRegHandle AppSpecificKey(
+      FindWERKey(Twine(LocalDumpsRegistryLocation) + "\\" + ProgramName));
+
+  // Look to see if a dump type is specified in the registry; first with the
+  // app-specific key and failing that with the global key.  If none are found
+  // default to a normal dump (GetDumpType will return false either if the key
+  // is NULL or if there is no valid DumpType value at its location).
+  MINIDUMP_TYPE DumpType;
+  if (!GetDumpType(AppSpecificKey, DumpType))
+    if (!GetDumpType(DefaultLocalDumpsKey, DumpType))
+      DumpType = MiniDumpNormal;
+
+  // Look to see if a dump location is specified in the registry; first with the
+  // app-specific key and failing that with the global key.  If none are found
+  // we'll just create the dump file in the default temporary file location
+  // (GetDumpFolder will return false either if the key is NULL or if there is
+  // no valid DumpFolder value at its location).
+  bool ExplicitDumpDirectorySet = true;
+  SmallString<MAX_PATH> DumpDirectory;
+  if (!GetDumpFolder(AppSpecificKey, DumpDirectory))
+    if (!GetDumpFolder(DefaultLocalDumpsKey, DumpDirectory))
+      ExplicitDumpDirectorySet = false;
+
+  int FD;
+  SmallString<MAX_PATH> DumpPath;
+
+  if (ExplicitDumpDirectorySet) {
+    if (std::error_code EC = fs::create_directories(DumpDirectory))
+      return EC;
+    if (std::error_code EC = fs::createUniqueFile(
+            Twine(DumpDirectory) + "\\" + ProgramName + ".%%%%%%.dmp", FD,
+            DumpPath))
+      return EC;
+  } else if (std::error_code EC =
+                 fs::createTemporaryFile(ProgramName, "dmp", FD, DumpPath))
+    return EC;
+
+  // Our support functions return a file descriptor but Windows wants a handle.
+  ScopedCommonHandle FileHandle(reinterpret_cast<HANDLE>(_get_osfhandle(FD)));
+
+  if (!fMiniDumpWriteDump(::GetCurrentProcess(), ::GetCurrentProcessId(),
+                          FileHandle, DumpType, ExceptionInfo, NULL, NULL))
+    return mapWindowsError(::GetLastError());
+
+  llvm::errs() << "Wrote crash dump file \"" << DumpPath << "\"\n";
+  return std::error_code();
+}
+
 static LONG WINAPI LLVMUnhandledExceptionFilter(LPEXCEPTION_POINTERS ep) {
   Cleanup();
+
+  // We'll automatically write a Minidump file here to help diagnose
+  // the nasty sorts of crashes that aren't 100% reproducible from a set of
+  // inputs (or in the event that the user is unable or unwilling to provide a
+  // reproducible case).
+  if (!llvm::Process::AreCoreFilesPrevented()) {
+    MINIDUMP_EXCEPTION_INFORMATION ExceptionInfo;
+    ExceptionInfo.ThreadId = ::GetCurrentThreadId();
+    ExceptionInfo.ExceptionPointers = ep;
+    ExceptionInfo.ClientPointers = FALSE;
+
+    if (std::error_code EC = WriteWindowsDumpFile(&ExceptionInfo))
+      llvm::errs() << "Could not write crash dump file: " << EC.message()
+                   << "\n";
+  }
 
   // Initialize the STACKFRAME structure.
   STACKFRAME64 StackFrame = {};

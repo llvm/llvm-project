@@ -60,6 +60,11 @@ namespace llvm {
   std::string getBitcodeTargetTriple(MemoryBufferRef Buffer,
                                      LLVMContext &Context);
 
+  /// Return true if \p Buffer contains a bitcode file with ObjC code (category
+  /// or class) in it.
+  bool isBitcodeContainingObjCCategory(MemoryBufferRef Buffer,
+                                       LLVMContext &Context);
+
   /// Read the header of the specified bitcode buffer and extract just the
   /// producer string information. If successful, this returns a string. On
   /// error, this returns "".
@@ -71,28 +76,14 @@ namespace llvm {
                                                     LLVMContext &Context);
 
   /// Check if the given bitcode buffer contains a summary block.
-  bool hasGlobalValueSummary(MemoryBufferRef Buffer,
-                             DiagnosticHandlerFunction DiagnosticHandler);
+  bool
+  hasGlobalValueSummary(MemoryBufferRef Buffer,
+                        const DiagnosticHandlerFunction &DiagnosticHandler);
 
   /// Parse the specified bitcode buffer, returning the module summary index.
-  /// If IsLazy is true, parse the entire module summary into
-  /// the index. Otherwise skip the module summary section, and only create
-  /// an index object with a map from value name to the value's summary offset.
-  /// The index is used to perform lazy summary reading later.
   ErrorOr<std::unique_ptr<ModuleSummaryIndex>>
   getModuleSummaryIndex(MemoryBufferRef Buffer,
-                        DiagnosticHandlerFunction DiagnosticHandler,
-                        bool IsLazy = false);
-
-  /// This method supports lazy reading of summary data from the
-  /// combined index during function importing. When reading the combined index
-  /// file, getModuleSummaryIndex is first invoked with IsLazy=true.
-  /// Then this method is called for each value considered for importing,
-  /// to parse the summary information for the given value name into
-  /// the index.
-  std::error_code readGlobalValueSummary(
-      MemoryBufferRef Buffer, DiagnosticHandlerFunction DiagnosticHandler,
-      StringRef ValueName, std::unique_ptr<ModuleSummaryIndex> Index);
+                        const DiagnosticHandlerFunction &DiagnosticHandler);
 
   /// \brief Write the specified module to the specified raw output stream.
   ///
@@ -103,16 +94,24 @@ namespace llvm {
   /// Value in \c M.  These will be reconstructed exactly when \a M is
   /// deserialized.
   ///
-  /// If \c EmitSummaryIndex, emit the module's summary index (currently
-  /// for use in ThinLTO optimization).
+  /// If \c Index is supplied, the bitcode will contain the summary index
+  /// (currently for use in ThinLTO optimization).
+  ///
+  /// \p GenerateHash enables hashing the Module and including the hash in the
+  /// bitcode (currently for use in ThinLTO incremental build).
   void WriteBitcodeToFile(const Module *M, raw_ostream &Out,
                           bool ShouldPreserveUseListOrder = false,
-                          bool EmitSummaryIndex = false);
+                          const ModuleSummaryIndex *Index = nullptr,
+                          bool GenerateHash = false);
 
   /// Write the specified module summary index to the given raw output stream,
   /// where it will be written in a new bitcode block. This is used when
-  /// writing the combined index file for ThinLTO.
-  void WriteIndexToFile(const ModuleSummaryIndex &Index, raw_ostream &Out);
+  /// writing the combined index file for ThinLTO. When writing a subset of the
+  /// index for a distributed backend, provide the \p ModuleToSummariesForIndex
+  /// map.
+  void WriteIndexToFile(const ModuleSummaryIndex &Index, raw_ostream &Out,
+                        std::map<std::string, GVSummaryMapTy>
+                            *ModuleToSummariesForIndex = nullptr);
 
   /// isBitcodeWrapper - Return true if the given bytes are the magic bytes
   /// for an LLVM IR bitcode wrapper.
@@ -171,14 +170,15 @@ namespace llvm {
                                        const unsigned char *&BufEnd,
                                        bool VerifyBufferSize) {
     // Must contain the offset and size field!
-    if (BufEnd - BufPtr < BWH_SizeField + 4)
+    if (unsigned(BufEnd - BufPtr) < BWH_SizeField + 4)
       return true;
 
     unsigned Offset = support::endian::read32le(&BufPtr[BWH_OffsetField]);
     unsigned Size = support::endian::read32le(&BufPtr[BWH_SizeField]);
+    uint64_t BitcodeOffsetEnd = (uint64_t)Offset + (uint64_t)Size;
 
     // Verify that Offset+Size fits in the file.
-    if (VerifyBufferSize && Offset+Size > unsigned(BufEnd-BufPtr))
+    if (VerifyBufferSize && BitcodeOffsetEnd > uint64_t(BufEnd-BufPtr))
       return true;
     BufPtr += Offset;
     BufEnd = BufPtr+Size;

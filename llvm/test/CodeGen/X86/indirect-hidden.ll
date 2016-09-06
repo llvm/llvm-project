@@ -35,9 +35,9 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK: .section __IMPORT,__pointers,non_lazy_symbol_pointers
 
 ; CHECK-NOT: __DATA,__data
-; CHECK: .indirect_symbol _normal_typeid
+; CHECK: .indirect_symbol _hidden_typeid
 ; CHECK-NEXT: .long 0
 
 ; CHECK-NOT: __DATA,__data
-; CHECK: .indirect_symbol _hidden_typeid
+; CHECK: .indirect_symbol _normal_typeid
 ; CHECK-NEXT: .long 0

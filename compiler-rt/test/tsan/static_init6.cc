@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan -static-libstdc++ -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan -stdlib=libstdc++ -static-libstdc++ -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,7 +36,7 @@ int main() {
   pthread_create(&t[1], 0, Thread1, 0);
   pthread_join(t[0], 0);
   pthread_join(t[1], 0);
-  printf("PASS\n");
+  fprintf(stderr, "PASS\n");
 }
 
 // CHECK-NOT: WARNING: ThreadSanitizer: data race

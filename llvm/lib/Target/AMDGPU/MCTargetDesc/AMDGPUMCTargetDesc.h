@@ -13,11 +13,10 @@
 //===----------------------------------------------------------------------===//
 //
 
-#ifndef LLVM_LIB_TARGET_R600_MCTARGETDESC_AMDGPUMCTARGETDESC_H
-#define LLVM_LIB_TARGET_R600_MCTARGETDESC_AMDGPUMCTARGETDESC_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCTARGETDESC_H
+#define LLVM_LIB_TARGET_AMDGPU_MCTARGETDESC_AMDGPUMCTARGETDESC_H
 
 #include "llvm/Support/DataTypes.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 class MCAsmBackend;
@@ -27,10 +26,11 @@ class MCInstrInfo;
 class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
+class MCTargetOptions;
+class StringRef;
 class Target;
 class Triple;
 class raw_pwrite_stream;
-class raw_ostream;
 
 extern Target TheAMDGPUTarget;
 extern Target TheGCNTarget;
@@ -44,9 +44,11 @@ MCCodeEmitter *createSIMCCodeEmitter(const MCInstrInfo &MCII,
                                      MCContext &Ctx);
 
 MCAsmBackend *createAMDGPUAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                     const Triple &TT, StringRef CPU);
+                                     const Triple &TT, StringRef CPU,
+                                     const MCTargetOptions &Options);
 
 MCObjectWriter *createAMDGPUELFObjectWriter(bool Is64Bit,
+                                            bool HasRelocationAddend,
                                             raw_pwrite_stream &OS);
 } // End llvm namespace
 

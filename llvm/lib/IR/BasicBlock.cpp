@@ -162,6 +162,21 @@ CallInst *BasicBlock::getTerminatingMustTailCall() {
   return nullptr;
 }
 
+CallInst *BasicBlock::getTerminatingDeoptimizeCall() {
+  if (InstList.empty())
+    return nullptr;
+  auto *RI = dyn_cast<ReturnInst>(&InstList.back());
+  if (!RI || RI == &InstList.front())
+    return nullptr;
+
+  if (auto *CI = dyn_cast_or_null<CallInst>(RI->getPrevNode()))
+    if (Function *F = CI->getCalledFunction())
+      if (F->getIntrinsicID() == Intrinsic::experimental_deoptimize)
+        return CI;
+
+  return nullptr;
+}
+
 Instruction* BasicBlock::getFirstNonPHI() {
   for (Instruction &I : *this)
     if (!isa<PHINode>(I))
@@ -202,8 +217,8 @@ BasicBlock::iterator BasicBlock::getFirstInsertionPt() {
 }
 
 void BasicBlock::dropAllReferences() {
-  for(iterator I = begin(), E = end(); I != E; ++I)
-    I->dropAllReferences();
+  for (Instruction &I : *this)
+    I.dropAllReferences();
 }
 
 /// If this basic block has a single predecessor block,
@@ -361,10 +376,8 @@ BasicBlock *BasicBlock::splitBasicBlock(iterator I, const Twine &BBName) {
   assert(I != InstList.end() &&
          "Trying to get me to create degenerate basic block!");
 
-  BasicBlock *InsertBefore = std::next(Function::iterator(this))
-                               .getNodePtrUnchecked();
-  BasicBlock *New = BasicBlock::Create(getContext(), BBName,
-                                       getParent(), InsertBefore);
+  BasicBlock *New = BasicBlock::Create(getContext(), BBName, getParent(),
+                                       this->getNextNode());
 
   // Save DebugLoc of split point before invalidating iterator.
   DebugLoc Loc = I->getDebugLoc();

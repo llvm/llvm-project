@@ -17,9 +17,10 @@ struct __declspec(dllimport) U {
   virtual ~U();
 } u;
 
-// RTTI-DAG: @"\01??_7U@@6B@" = available_externally dllimport unnamed_addr constant [1 x i8*] [i8* bitcast ({{.*}} @"\01??_GU@@UAEPAXI@Z" to i8*)]
+// RTTI-DAG: [[VTABLE_U:@.*]] = private unnamed_addr constant [2 x i8*] [i8* bitcast ({{.*}} @"\01??_R4U@@6B@" to i8*), i8* bitcast ({{.*}} @"\01??_GU@@UAEPAXI@Z" to i8*)]
+// RTTI-DAG: @"\01??_SU@@6B@" = unnamed_addr alias i8*, getelementptr inbounds ([2 x i8*], [2 x i8*]* [[VTABLE_U]], i32 0, i32 1)
 
-// NO-RTTI-DAG: @"\01??_7U@@6B@" = available_externally dllimport unnamed_addr constant [1 x i8*] [i8* bitcast ({{.*}} @"\01??_GU@@UAEPAXI@Z" to i8*)]
+// NO-RTTI-DAG: @"\01??_SU@@6B@" = linkonce_odr unnamed_addr constant [1 x i8*] [i8* bitcast ({{.*}} @"\01??_GU@@UAEPAXI@Z" to i8*)]
 
 struct __declspec(dllexport) V {
   virtual ~V();
@@ -32,7 +33,7 @@ struct __declspec(dllexport) V {
 
 namespace {
 struct W {
-  virtual ~W();
+  virtual ~W() {}
 } w;
 }
 // RTTI-DAG: [[VTABLE_W:@.*]] = private unnamed_addr constant [2 x i8*] [i8* bitcast ({{.*}} @"\01??_R4W@?A@@6B@" to i8*), i8* bitcast ({{.*}} @"\01??_GW@?A@@UAEPAXI@Z" to i8*)]
@@ -48,5 +49,7 @@ template <class> struct Y : virtual X {
 
 extern template class Y<int>;
 template Y<int>::Y();
-// RTTI-DAG: @"\01??_7?$Y@H@@6B@" = external unnamed_addr constant [1 x i8*]
-// NO-RTTI-DAG: @"\01??_7?$Y@H@@6B@" = external unnamed_addr constant [1 x i8*]
+// RTTI-DAG: [[VTABLE_Y:@.*]] = private unnamed_addr constant [2 x i8*] [i8* bitcast (%rtti.CompleteObjectLocator* @"\01??_R4?$Y@H@@6B@" to i8*), i8* bitcast (i8* (%struct.Y*, i32)* @"\01??_G?$Y@H@@UAEPAXI@Z" to i8*)], comdat($"\01??_7?$Y@H@@6B@")
+// RTTI-DAG: @"\01??_7?$Y@H@@6B@" = unnamed_addr alias i8*, getelementptr inbounds ([2 x i8*], [2 x i8*]* [[VTABLE_Y]], i32 0, i32 1)
+
+// NO-RTTI-DAG: @"\01??_7?$Y@H@@6B@" = linkonce_odr unnamed_addr constant [1 x i8*] [i8* bitcast (i8* (%struct.Y*, i32)* @"\01??_G?$Y@H@@UAEPAXI@Z" to i8*)], comdat

@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 class C {
   friend class D;
@@ -21,9 +23,20 @@ class B {
   // 'A' here should refer to the declaration above.  
   friend class A;
 
-  friend C; // expected-warning {{specify 'class' to befriend}}
-  friend U; // expected-warning {{specify 'union' to befriend}}
-  friend int; // expected-warning {{non-class friend type 'int'}}
+  friend C;
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{unelaborated friend declaration is a C++11 extension; specify 'class' to befriend 'C'}}
+#endif
+
+  friend U;
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{unelaborated friend declaration is a C++11 extension; specify 'union' to befriend 'U'}}
+#endif
+
+  friend int;
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{non-class friend type 'int' is a C++11 extension}}
+#endif
 
   friend void myfunc();
 

@@ -14,6 +14,7 @@
     .na { background-color: #DDDDDD }
     span:target { background-color: #FFFFBB; outline: #DDDD55 solid thin; }
     th { background-color: #FFDDAA }
+    td { vertical-align: middle }
   </style>
 </head>
 <body>
@@ -67,8 +68,7 @@ patches are needed to make <a href="libstdc++4.4-clang0x.patch">libstdc++-4.4</a
 work with Clang in C++11 mode. Patches are also needed to make
 <a href="libstdc++4.6-clang11.patch">libstdc++-4.6</a>
 and <a href="libstdc++4.7-clang11.patch">libstdc++-4.7</a> work with Clang
-releases prior to version 3.2 in C++11 mode. <tt>thread_local</tt> support
-currently requires the C++ runtime library from g++-4.8 or later.</p>
+releases prior to version 3.2 in C++11 mode.
 
 <table width="689" border="1" cellspacing="0">
  <tr>
@@ -373,7 +373,7 @@ currently requires the C++ runtime library from g++-4.8 or later.</p>
     <tr>
       <td>Thread-local storage</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2008/n2659.htm">N2659</a></td>
-      <td class="full" align="center">Clang 3.3</td>
+      <td class="full" align="center">Clang 3.3 <a href="#n2659">(5)</a></td>
     </tr>
     <tr>
       <td>Dynamic initialization and destruction with concurrency</td>
@@ -402,7 +402,7 @@ currently requires the C++ runtime library from g++-4.8 or later.</p>
     <tr>
       <td>Extended integral types</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1988.pdf">N1988</a></td>
-      <td class="na" align="center">N/A <a href="#n1988">(5)</a></td>
+      <td class="na" align="center">N/A <a href="#n1988">(6)</a></td>
     </tr>
 </table>
 
@@ -415,7 +415,11 @@ such as Clang that does not provide garbage collection.</span><br>
 strong compare-exchanges.</span><br>
 <span id="n2664">(4): <code>memory_order_consume</code> is lowered to
 <code>memory_order_acquire</code>.</span><br>
-<span id="n1988">(5): No compiler changes are required for an implementation
+<span id="n2659">(5): <code>thread_local</code> support
+requires a C++ runtime library providing <code>__cxa_thread_atexit</code>, such
+as <a href="http://libcxxabi.llvm.org">libc++abi</a> 3.6 or later,
+or libsupc++ 4.8 or later.</span><br>
+<span id="n1988">(6): No compiler changes are required for an implementation
 such as Clang that does not provide any extended integer types.
 <code>__int128</code> is not treated as an extended integer type,
 because changing <code>intmax_t</code> would be an ABI-incompatible
@@ -501,12 +505,12 @@ Clang version in which each feature became available.</p>
     <tr>
       <td>C++ Sized Deallocation</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3778.html">N3778</a></td>
-      <td class="full" align="center">Clang 3.4 <a href="#n3778">(6)</a></td>
+      <td class="full" align="center">Clang 3.4 <a href="#n3778">(7)</a></td>
     </tr>
 </table>
 
 <p>
-<span id="n3778">(6): In Clang 3.7 and later, sized deallocation is only enabled
+<span id="n3778">(7): In Clang 3.7 and later, sized deallocation is only enabled
 if the user passes the <code>-fsized-deallocation</code> flag. The user must
 supply definitions of the sized deallocation functions, either by providing them
 explicitly or by using a C++ standard library that does. <code>libstdc++</code>
@@ -517,9 +521,9 @@ version 3.7.
 
 <h2 id="cxx17">C++1z implementation status</h2>
 
-<p>Clang has <b>highly experimental</b> support for some proposed features of
-the C++ standard following C++14,
-provisionally named C++1z.  The following table describes which C++1z features
+<p>Clang has <b>experimental</b> support for some proposed features of
+the C++ standard following C++14, provisionally named C++1z.
+The following table describes which C++1z features
 have been implemented in Clang and in which Clang version they became
 available.</p>
 
@@ -564,14 +568,18 @@ as the draft C++1z standard evolves.</p>
     <tr>
       <td>New <tt>auto</tt> rules for direct-list-initialization
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n3922.html">N3922</a></td>
-      <td class="svn" align="center">Clang 3.8 <a href="#n3922">(7)</a></td>
+      <td class="full" align="center">Clang 3.8 <a href="#n3922">(8)</a></td>
     </tr>
     <!-- Urbana papers -->
     <tr>
-      <td>Fold expressions</td>
+      <td rowspan="2">Fold expressions</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4295.html">N4295</a></td>
       <td class="full" align="center">Clang 3.6</td>
     </tr>
+      <tr> <!-- from Jacksonville -->
+        <td><a href="http://wg21.link/p0036r0">P0036R0</a></td>
+        <td class="full" align="center">Clang 3.9</td>
+      </tr>
     <tr>
       <td><tt>u8</tt> character literals</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2014/n4267.html">N4267</a></td>
@@ -596,12 +604,12 @@ as the draft C++1z standard evolves.</p>
     <tr>
       <td>Remove deprecated <tt>register</tt> storage class</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0001r1.html">P0001R1</a></td>
-      <td class="svn" align="center">Clang 3.8</td>
+      <td class="full" align="center">Clang 3.8</td>
     </tr>
     <tr>
       <td>Remove deprecated <tt>bool</tt> increment</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0002r1.html">P0002R1</a></td>
-      <td class="svn" align="center">Clang 3.8</td>
+      <td class="full" align="center">Clang 3.8</td>
     </tr>
     <tr>
       <td>Make exception specifications part of the type system</td>
@@ -613,13 +621,126 @@ as the draft C++1z standard evolves.</p>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0061.html">P0061R1</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
+    <tr>
+      <td>New specification for inheriting constructors (<a href="cxx_dr_status.html#1941">DR1941</a> et al)</td>
+      <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/p0136r1.html">P0136R1</a></td>
+      <td class="full" align="center">Clang 3.9 <a href="#p0136">(9)</a></td>
+    </tr>
+    <!-- Jacksonville papers -->
+    <tr>
+      <td><tt>[[fallthrough]]</tt> attribute</td>
+      <td><a href="http://wg21.link/p0188r1">P0188R1</a></td>
+      <td class="full" align="center">Clang 3.9</td>
+    </tr>
+    <tr>
+      <td><tt>[[nodiscard]]</tt> attribute</td>
+      <td><a href="http://wg21.link/p0189r1">P0189R1</a></td>
+      <td class="full" align="center">Clang 3.9</td>
+    </tr>
+    <tr>
+      <td><tt>[[maybe_unused]]</tt> attribute</td>
+      <td><a href="http://wg21.link/p0212r1">P0212R1</a></td>
+      <td class="full" align="center">Clang 3.9</td>
+    </tr>
+    <tr>
+      <td>Aggregate initialization of classes with base classes</td>
+      <td><a href="http://wg21.link/p0017r1">P0017R1</a></td>
+      <td class="full" align="center">Clang 3.9</td>
+    </tr>
+    <tr>
+      <td><tt>constexpr</tt> lambda expressions</td>
+      <td><a href="http://wg21.link/p0170r1">P0170R1</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Differing <tt>begin</tt> and <tt>end</tt> types in range-based <tt>for</tt></td>
+      <td><a href="http://wg21.link/p0184r0">P0184R0</a></td>
+      <td class="full" align="center">Clang 3.9</td>
+    </tr>
+    <tr>
+      <td>Lambda capture of <tt>*this</tt></td>
+      <td><a href="http://wg21.link/p0018r3">P0018R3</a></td>
+      <td class="full" align="center">Clang 3.9</td>
+    </tr>
+    <tr>
+      <td>Direct-list-initialization of <tt>enum</tt>s</td>
+      <td><a href="http://wg21.link/p0138r2">P0138R2</a></td>
+      <td class="full" align="center">Clang 3.9</td>
+    </tr>
+    <tr>
+      <td>Hexadecimal floating-point literals</td>
+      <td><a href="http://wg21.link/p0245r1">P0245R1</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <!-- Oulu papers -->
+    <tr>
+      <td>Using attribute namespaces without repetition</td>
+      <td><a href="http://wg21.link/p0028r4">P0028R4</a></td>
+      <td class="full" align="center">Clang 3.9</td>
+    </tr>
+    <tr>
+      <td>Dynamic memory allocation for over-aligned data</td>
+      <td><a href="http://wg21.link/p0035r4">P0035R4</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Template argument deduction for class templates</td>
+      <td><a href="http://wg21.link/p0091r3">P0091R3</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Non-type template parameters with <tt>auto</tt> type</td>
+      <td><a href="http://wg21.link/p0127r2">P0127R2</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Guaranteed copy elision</td>
+      <td><a href="http://wg21.link/p0135r1">P0135R1</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td rowspan=2>Stricter expression evaluation order</td>
+      <td><a href="http://wg21.link/p0145r3">P0145R3</a></td>
+      <td class="none" align="center" rowspan=2>No</td>
+    </tr>
+    <tr>
+      <td><a href="http://wg21.link/p0400r0">P0400R0</a></td>
+    </tr>
+    <tr>
+      <td>Requirement to ignore unknown attributes</td>
+      <td><a href="http://wg21.link/p0283r2">P0283R2</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td><tt>constexpr</tt> <em>if-statement</em>s</td>
+      <td><a href="http://wg21.link/p0292r2">P0292R2</a></td>
+      <td class="full" align="center">Clang 3.9</td>
+    </tr>
+    <tr>
+      <td>Inline variables</td>
+      <td><a href="http://wg21.link/p0386r2">P0386R2</a></td>
+      <td class="full" align="center">Clang 3.9</td>
+    </tr>
+    <tr>
+      <td>Structured bindings</td>
+      <td><a href="http://wg21.link/p0217r3">P0217R3</a></td>
+      <td class="partial" align="center">Partial</td>
+    </tr>
+    <tr>
+      <td>Separate variable and condition for <tt>if</tt> and <tt>switch</tt></td>
+      <td><a href="http://wg21.link/p0305r1">P0305R1</a></td>
+      <td class="full" align="center">Clang 3.9</td>
+    </tr>
 </table>
 
 <p>
-<span id="n3922">(7): This is a backwards-incompatible change that is applied to
+<span id="n3922">(8): This is a backwards-incompatible change that is applied to
 all language versions that allow type deduction from <tt>auto</tt>
 (per the request of the C++ committee).
 In Clang 3.7, a warning is emitted for all cases that would change meaning.
+</span><br>
+<span id="p0136">(9): This is the resolution to a Defect Report, so is applied
+to all language versions supporting inheriting constructors.
 </span>
 </p>
 
@@ -675,6 +796,11 @@ Clang version they became available:</p>
     <tr>
       <td>[DRAFT TS] Library Fundamentals, Version 2 (<tt>source_location</tt>)</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2015/n4529.html">N4529</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>[TS] Modules</td>
+      <td><a href="http://wg21.link/p0143r2">P0143R2</a></td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>

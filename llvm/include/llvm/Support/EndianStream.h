@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_ENDIANSTREAM_H
 #define LLVM_SUPPORT_ENDIANSTREAM_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -26,6 +27,10 @@ namespace endian {
 template <endianness endian> struct Writer {
   raw_ostream &OS;
   Writer(raw_ostream &OS) : OS(OS) {}
+  template <typename value_type> void write(ArrayRef<value_type> Vals) {
+    for (value_type V : Vals)
+      write(V);
+  }
   template <typename value_type> void write(value_type Val) {
     Val = byte_swap<value_type, endian>(Val);
     OS.write((const char *)&Val, sizeof(value_type));

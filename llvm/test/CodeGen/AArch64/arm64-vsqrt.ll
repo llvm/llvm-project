@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define <2 x float> @frecps_2s(<2 x float>* %A, <2 x float>* %B) nounwind {
 ;CHECK-LABEL: frecps_2s:

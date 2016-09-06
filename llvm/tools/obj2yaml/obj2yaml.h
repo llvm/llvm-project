@@ -21,5 +21,7 @@ std::error_code coff2yaml(llvm::raw_ostream &Out,
                           const llvm::object::COFFObjectFile &Obj);
 std::error_code elf2yaml(llvm::raw_ostream &Out,
                          const llvm::object::ObjectFile &Obj);
+std::error_code macho2yaml(llvm::raw_ostream &Out,
+                           const llvm::object::Binary &Obj);
 
 #endif

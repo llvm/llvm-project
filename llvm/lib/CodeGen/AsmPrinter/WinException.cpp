@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WinException.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -35,6 +34,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetFrameLowering.h"
+#include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetRegisterInfo.h"
@@ -125,10 +125,9 @@ void WinException::endFunction(const MachineFunction *MF) {
   if (shouldEmitPersonality || shouldEmitLSDA) {
     Asm->OutStreamer->PushSection();
 
-    // Just switch sections to the right xdata section. This use of CurrentFnSym
-    // assumes that we only emit the LSDA when ending the parent function.
-    MCSection *XData = WinEH::UnwindEmitter::getXDataSection(Asm->CurrentFnSym,
-                                                             Asm->OutContext);
+    // Just switch sections to the right xdata section.
+    MCSection *XData = Asm->OutStreamer->getAssociatedXDataSection(
+        Asm->OutStreamer->getCurrentSectionOnly());
     Asm->OutStreamer->SwitchSection(XData);
 
     // Emit the tables appropriate to the personality function in use. If we
@@ -303,8 +302,17 @@ int WinException::getFrameIndexOffset(int FrameIndex,
                                       const WinEHFuncInfo &FuncInfo) {
   const TargetFrameLowering &TFI = *Asm->MF->getSubtarget().getFrameLowering();
   unsigned UnusedReg;
-  if (Asm->MAI->usesWindowsCFI())
-    return TFI.getFrameIndexReferenceFromSP(*Asm->MF, FrameIndex, UnusedReg);
+  if (Asm->MAI->usesWindowsCFI()) {
+    int Offset =
+        TFI.getFrameIndexReferencePreferSP(*Asm->MF, FrameIndex, UnusedReg,
+                                           /*IgnoreSPUpdates*/ true);
+    assert(UnusedReg ==
+           Asm->MF->getSubtarget()
+               .getTargetLowering()
+               ->getStackPointerRegisterToSaveRestore());
+    return Offset;
+  }
+
   // For 32-bit, offsets should be relative to the end of the EH registration
   // node. For 64-bit, it's relative to SP at the end of the prologue.
   assert(FuncInfo.EHRegNodeEndOffset != INT_MAX);
@@ -793,6 +801,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
         const MCExpr *FrameAllocOffsetRef = nullptr;
         if (HT.CatchObj.FrameIndex != INT_MAX) {
           int Offset = getFrameIndexOffset(HT.CatchObj.FrameIndex, FuncInfo);
+          assert(Offset != 0 && "Illegal offset for catch object!");
           FrameAllocOffsetRef = MCConstantExpr::create(Offset, Asm->OutContext);
         } else {
           FrameAllocOffsetRef = MCConstantExpr::create(0, Asm->OutContext);
@@ -945,15 +954,42 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
     //   ScopeTableEntry ScopeRecord[];
     // };
     //
-    // Only the EHCookieOffset field appears to vary, and it appears to be the
-    // offset from the final saved SP value to the retaddr.
+    // Offsets are %ebp relative.
+    //
+    // The GS cookie is present only if the function needs stack protection.
+    // GSCookieOffset = -2 means that GS cookie is not used.
+    //
+    // The EH cookie is always present.
+    //
+    // Check is done the following way:
+    //    (ebp+CookieXOROffset) ^ [ebp+CookieOffset] == _security_cookie
+
+    // Retrieve the Guard Stack slot.
+    int GSCookieOffset = -2;
+    const MachineFrameInfo &MFI = MF->getFrameInfo();
+    if (MFI.hasStackProtectorIndex()) {
+      unsigned UnusedReg;
+      const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
+      int SSPIdx = MFI.getStackProtectorIndex();
+      GSCookieOffset = TFI->getFrameIndexReference(*MF, SSPIdx, UnusedReg);
+    }
+
+    // Retrieve the EH Guard slot.
+    // TODO(etienneb): Get rid of this value and change it for and assertion.
+    int EHCookieOffset = 9999;
+    if (FuncInfo.EHGuardFrameIndex != INT_MAX) {
+      unsigned UnusedReg;
+      const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
+      int EHGuardIdx = FuncInfo.EHGuardFrameIndex;
+      EHCookieOffset = TFI->getFrameIndexReference(*MF, EHGuardIdx, UnusedReg);
+    }
+
     AddComment("GSCookieOffset");
-    OS.EmitIntValue(-2, 4);
+    OS.EmitIntValue(GSCookieOffset, 4);
     AddComment("GSCookieXOROffset");
     OS.EmitIntValue(0, 4);
-    // FIXME: Calculate.
     AddComment("EHCookieOffset");
-    OS.EmitIntValue(9999, 4);
+    OS.EmitIntValue(EHCookieOffset, 4);
     AddComment("EHCookieXOROffset");
     OS.EmitIntValue(0, 4);
     BaseState = -2;

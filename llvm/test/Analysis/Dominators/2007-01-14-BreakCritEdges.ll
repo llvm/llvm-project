@@ -1,4 +1,5 @@
-; RUN: opt < %s -domtree -break-crit-edges -domtree -disable-output
+; RUN: opt < %s -domtree -break-crit-edges -disable-output
+; RUN: opt < %s -passes='require<domtree>,break-crit-edges' -disable-output
 ; PR1110
 
 	%struct.OggVorbis_File = type { i8*, i32, i64, i64, %struct.ogg_sync_state, i32, i64*, i64*, i32*, i64*, %struct.vorbis_info*, %struct.vorbis_comment*, i64, i32, i32, i32, double, double, %struct.ogg_stream_state, %struct.vorbis_dsp_state, %struct.vorbis_block, %struct.ov_callbacks }

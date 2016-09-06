@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -Wbind-to-temporary-copy -verify %s 
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -Wbind-to-temporary-copy -verify -std=c++98 %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -fsyntax-only -Wbind-to-temporary-copy -verify -std=c++11 %s
+
 class X { 
 public:
   operator bool();
@@ -133,7 +136,12 @@ private:
 
 A1 f() {
   // FIXME: redundant diagnostics!
-  return "Hello"; // expected-error {{calling a private constructor}} expected-warning {{an accessible copy constructor}}
+  return "Hello"; // expected-error {{calling a private constructor}}
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{an accessible copy constructor}}
+#else
+  // expected-warning@-4 {{copying parameter of type 'A1' when binding a reference to a temporary would invoke an inaccessible constructor in C++98}}
+#endif
 }
 
 namespace source_locations {
@@ -175,7 +183,13 @@ namespace crazy_declarators {
     (&operator bool())(); // expected-error {{use a typedef to declare a conversion to 'bool (&)()'}}
     *operator int();  // expected-error {{put the complete type after 'operator'}}
     // No suggestion of using a typedef here; that's not possible.
-    template<typename T> (&operator T())(); // expected-error-re {{cannot specify any part of a return type in the declaration of a conversion function{{$}}}}
+    template<typename T> (&operator T())();
+#if __cplusplus <= 199711L
+    // expected-error-re@-2 {{cannot specify any part of a return type in the declaration of a conversion function{{$}}}}
+#else
+    // expected-error-re@-4 {{cannot specify any part of a return type in the declaration of a conversion function; use an alias template to declare a conversion to 'T (&)()'{{$}}}}
+#endif
+
   };
 }
 
@@ -193,6 +207,10 @@ namespace smart_ptr {
   };
 
   struct X { // expected-note{{candidate constructor (the implicit copy constructor) not}}
+#if __cplusplus >= 201103L
+  // expected-note@-2 {{candidate constructor (the implicit move constructor) not}}
+#endif
+
     explicit X(Y);
   };
 
@@ -215,7 +233,12 @@ struct Other {
 };
 
 void test_any() {
-  Any any = Other(); // expected-error{{cannot pass object of non-POD type 'Other' through variadic constructor; call will abort at runtime}}
+  Any any = Other();
+#if __cplusplus <= 199711L
+  // expected-error@-2 {{cannot pass object of non-POD type 'Other' through variadic constructor; call will abort at runtime}}
+#else
+  // expected-error@-4 {{cannot pass object of non-trivial type 'Other' through variadic constructor; call will abort at runtime}}
+#endif
 }
 
 namespace PR7055 {

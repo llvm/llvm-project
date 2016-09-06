@@ -36,6 +36,8 @@ defm XOR : BinaryInt<xor, "xor ">;
 defm SHL : BinaryInt<shl, "shl ">;
 defm SHR_U : BinaryInt<srl, "shr_u">;
 defm SHR_S : BinaryInt<sra, "shr_s">;
+defm ROTL : BinaryInt<rotl, "rotl">;
+defm ROTR : BinaryInt<rotr, "rotr">;
 
 let isCommutable = 1 in {
 defm EQ : ComparisonInt<SETEQ, "eq  ">;
@@ -54,22 +56,29 @@ defm CLZ : UnaryInt<ctlz, "clz ">;
 defm CTZ : UnaryInt<cttz, "ctz ">;
 defm POPCNT : UnaryInt<ctpop, "popcnt">;
 
+def EQZ_I32 : I<(outs I32:$dst), (ins I32:$src),
+                [(set I32:$dst, (setcc I32:$src, 0, SETEQ))],
+                "i32.eqz \t$dst, $src">;
+def EQZ_I64 : I<(outs I32:$dst), (ins I64:$src),
+                [(set I32:$dst, (setcc I64:$src, 0, SETEQ))],
+                "i64.eqz \t$dst, $src">;
+
 } // Defs = [ARGUMENTS]
 
-// Expand the "don't care" operations to supported operations.
-def : Pat<(ctlz_zero_undef I32:$src), (CLZ_I32 I32:$src)>;
-def : Pat<(ctlz_zero_undef I64:$src), (CLZ_I64 I64:$src)>;
-def : Pat<(cttz_zero_undef I32:$src), (CTZ_I32 I32:$src)>;
-def : Pat<(cttz_zero_undef I64:$src), (CTZ_I64 I64:$src)>;
+// Optimize away an explicit mask on a rotate count.
+def : Pat<(rotl I32:$lhs, (and I32:$rhs, 31)), (ROTL_I32 I32:$lhs, I32:$rhs)>;
+def : Pat<(rotr I32:$lhs, (and I32:$rhs, 31)), (ROTR_I32 I32:$lhs, I32:$rhs)>;
+def : Pat<(rotl I64:$lhs, (and I64:$rhs, 63)), (ROTL_I64 I64:$lhs, I64:$rhs)>;
+def : Pat<(rotr I64:$lhs, (and I64:$rhs, 63)), (ROTR_I64 I64:$lhs, I64:$rhs)>;
 
 let Defs = [ARGUMENTS] in {
 
-def SELECT_I32 : I<(outs I32:$dst), (ins I32:$cond, I32:$lhs, I32:$rhs),
+def SELECT_I32 : I<(outs I32:$dst), (ins I32:$lhs, I32:$rhs, I32:$cond),
                    [(set I32:$dst, (select I32:$cond, I32:$lhs, I32:$rhs))],
-                   "i32.select\t$dst, $cond, $lhs, $rhs">;
-def SELECT_I64 : I<(outs I64:$dst), (ins I32:$cond, I64:$lhs, I64:$rhs),
+                   "i32.select\t$dst, $lhs, $rhs, $cond">;
+def SELECT_I64 : I<(outs I64:$dst), (ins I64:$lhs, I64:$rhs, I32:$cond),
                    [(set I64:$dst, (select I32:$cond, I64:$lhs, I64:$rhs))],
-                   "i64.select\t$dst, $cond, $lhs, $rhs">;
+                   "i64.select\t$dst, $lhs, $rhs, $cond">;
 
 } // Defs = [ARGUMENTS]
 
@@ -77,12 +86,12 @@ def SELECT_I64 : I<(outs I64:$dst), (ins I32:$cond, I64:$lhs, I64:$rhs),
 // WebAssembly's select interprets any non-zero value as true, so we can fold
 // a setne with 0 into a select.
 def : Pat<(select (i32 (setne I32:$cond, 0)), I32:$lhs, I32:$rhs),
-          (SELECT_I32 I32:$cond, I32:$lhs, I32:$rhs)>;
+          (SELECT_I32 I32:$lhs, I32:$rhs, I32:$cond)>;
 def : Pat<(select (i32 (setne I32:$cond, 0)), I64:$lhs, I64:$rhs),
-          (SELECT_I64 I32:$cond, I64:$lhs, I64:$rhs)>;
+          (SELECT_I64 I64:$lhs, I64:$rhs, I32:$cond)>;
 
 // And again, this time with seteq instead of setne and the arms reversed.
 def : Pat<(select (i32 (seteq I32:$cond, 0)), I32:$lhs, I32:$rhs),
-          (SELECT_I32 I32:$cond, I32:$rhs, I32:$lhs)>;
+          (SELECT_I32 I32:$rhs, I32:$lhs, I32:$cond)>;
 def : Pat<(select (i32 (seteq I32:$cond, 0)), I64:$lhs, I64:$rhs),
-          (SELECT_I64 I32:$cond, I64:$rhs, I64:$lhs)>;
+          (SELECT_I64 I64:$rhs, I64:$lhs, I32:$cond)>;

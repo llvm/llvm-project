@@ -22,6 +22,8 @@
 namespace clang {
 namespace ento {
 
+class MemRegion;
+
 /// \brief Symbolic value. These values used to capture symbolic execution of
 /// the program.
 class SymExpr : public llvm::FoldingSetNode {
@@ -76,6 +78,18 @@ public:
   static symbol_iterator symbol_end() { return symbol_iterator(); }
 
   unsigned computeComplexity() const;
+
+  /// \brief Find the region from which this symbol originates.
+  ///
+  /// Whenever the symbol was constructed to denote an unknown value of
+  /// a certain memory region, return this region. This method
+  /// allows checkers to make decisions depending on the origin of the symbol.
+  /// Symbol classes for which the origin region is known include
+  /// SymbolRegionValue which denotes the value of the region before
+  /// the beginning of the analysis, and SymbolDerived which denotes the value
+  /// of a certain memory region after its super region (a memory space or
+  /// a larger record region) is default-bound with a certain symbol.
+  virtual const MemRegion *getOriginRegion() const { return nullptr; }
 };
 
 typedef const SymExpr *SymbolRef;

@@ -92,8 +92,7 @@ namespace {
     SmallVector<MachineBasicBlock*, 8> ExitBlocks;
 
     bool isExitBlock(const MachineBasicBlock *MBB) const {
-      return std::find(ExitBlocks.begin(), ExitBlocks.end(), MBB) !=
-        ExitBlocks.end();
+      return is_contained(ExitBlocks, MBB);
     }
 
     // Track 'estimated' register pressure.
@@ -260,7 +259,7 @@ static bool LoopIsOuterMostWithPredecessor(MachineLoop *CurLoop) {
 }
 
 bool MachineLICM::runOnMachineFunction(MachineFunction &MF) {
-  if (skipOptnoneFunction(*MF.getFunction()))
+  if (skipFunction(*MF.getFunction()))
     return false;
 
   Changed = FirstInLoop = false;
@@ -268,7 +267,7 @@ bool MachineLICM::runOnMachineFunction(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   TLI = ST.getTargetLowering();
   TRI = ST.getRegisterInfo();
-  MFI = MF.getFrameInfo();
+  MFI = &MF.getFrameInfo();
   MRI = &MF.getRegInfo();
   SchedModel.init(ST.getSchedModel(), &ST, TII);
 
@@ -428,7 +427,7 @@ void MachineLICM::ProcessMI(MachineInstr *MI,
   if (Def && !RuledOut) {
     int FI = INT_MIN;
     if ((!HasNonInvariantUse && IsLICMCandidate(*MI)) ||
-        (TII->isLoadFromStackSlot(MI, FI) && MFI->isSpillSlotObjectIndex(FI)))
+        (TII->isLoadFromStackSlot(*MI, FI) && MFI->isSpillSlotObjectIndex(FI)))
       Candidates.push_back(CandidateInfo(MI, Def, FI));
   }
 }
@@ -581,14 +580,14 @@ bool MachineLICM::IsGuaranteedToExecute(MachineBasicBlock *BB) {
 }
 
 void MachineLICM::EnterScope(MachineBasicBlock *MBB) {
-  DEBUG(dbgs() << "Entering: " << MBB->getName() << '\n');
+  DEBUG(dbgs() << "Entering BB#" << MBB->getNumber() << '\n');
 
   // Remember livein register pressure.
   BackTrace.push_back(RegPressure);
 }
 
 void MachineLICM::ExitScope(MachineBasicBlock *MBB) {
-  DEBUG(dbgs() << "Exiting: " << MBB->getName() << '\n');
+  DEBUG(dbgs() << "Exiting BB#" << MBB->getNumber() << '\n');
   BackTrace.pop_back();
 }
 
@@ -764,7 +763,7 @@ void MachineLICM::InitRegPressure(MachineBasicBlock *BB) {
   if (BB->pred_size() == 1) {
     MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
     SmallVector<MachineOperand, 4> Cond;
-    if (!TII->AnalyzeBranch(*BB, TBB, FBB, Cond, false) && Cond.empty())
+    if (!TII->analyzeBranch(*BB, TBB, FBB, Cond, false) && Cond.empty())
       InitRegPressure(*BB->pred_begin());
   }
 
@@ -982,7 +981,7 @@ bool MachineLICM::HasHighOperandLatency(MachineInstr &MI,
       if (MOReg != Reg)
         continue;
 
-      if (TII->hasHighOperandLatency(SchedModel, MRI, &MI, DefIdx, &UseMI, i))
+      if (TII->hasHighOperandLatency(SchedModel, MRI, MI, DefIdx, UseMI, i))
         return true;
     }
 
@@ -996,7 +995,7 @@ bool MachineLICM::HasHighOperandLatency(MachineInstr &MI,
 /// Return true if the instruction is marked "cheap" or the operand latency
 /// between its def and a use is one or less.
 bool MachineLICM::IsCheapInstruction(MachineInstr &MI) const {
-  if (TII->isAsCheapAsAMove(&MI) || MI.isCopyLike())
+  if (TII->isAsCheapAsAMove(MI) || MI.isCopyLike())
     return true;
 
   bool isCheap = false;
@@ -1010,7 +1009,7 @@ bool MachineLICM::IsCheapInstruction(MachineInstr &MI) const {
     if (TargetRegisterInfo::isPhysicalRegister(Reg))
       continue;
 
-    if (!TII->hasLowDefLatency(SchedModel, &MI, i))
+    if (!TII->hasLowDefLatency(SchedModel, MI, i))
       return false;
     isCheap = true;
   }
@@ -1086,7 +1085,7 @@ bool MachineLICM::IsProfitableToHoist(MachineInstr &MI) {
 
   // Rematerializable instructions should always be hoisted since the register
   // allocator can just pull them down again when needed.
-  if (TII->isTriviallyReMaterializable(&MI, AA))
+  if (TII->isTriviallyReMaterializable(MI, AA))
     return true;
 
   // FIXME: If there are long latency loop-invariant instructions inside the
@@ -1139,8 +1138,7 @@ bool MachineLICM::IsProfitableToHoist(MachineInstr &MI) {
 
   // High register pressure situation, only hoist if the instruction is going
   // to be remat'ed.
-  if (!TII->isTriviallyReMaterializable(&MI, AA) &&
-      !MI.isInvariantLoad(AA)) {
+  if (!TII->isTriviallyReMaterializable(MI, AA) && !MI.isInvariantLoad(AA)) {
     DEBUG(dbgs() << "Can't remat / high reg-pressure: " << MI);
     return false;
   }
@@ -1171,17 +1169,15 @@ MachineInstr *MachineLICM::ExtractHoistableLoad(MachineInstr *MI) {
                                     &LoadRegIndex);
   if (NewOpc == 0) return nullptr;
   const MCInstrDesc &MID = TII->get(NewOpc);
-  if (MID.getNumDefs() != 1) return nullptr;
   MachineFunction &MF = *MI->getParent()->getParent();
   const TargetRegisterClass *RC = TII->getRegClass(MID, LoadRegIndex, TRI, MF);
   // Ok, we're unfolding. Create a temporary register and do the unfold.
   unsigned Reg = MRI->createVirtualRegister(RC);
 
   SmallVector<MachineInstr *, 2> NewMIs;
-  bool Success =
-    TII->unfoldMemoryOperand(MF, MI, Reg,
-                             /*UnfoldLoad=*/true, /*UnfoldStore=*/false,
-                             NewMIs);
+  bool Success = TII->unfoldMemoryOperand(MF, *MI, Reg,
+                                          /*UnfoldLoad=*/true,
+                                          /*UnfoldStore=*/false, NewMIs);
   (void)Success;
   assert(Success &&
          "unfoldMemoryOperand failed when getOpcodeAfterMemoryUnfold "
@@ -1222,7 +1218,7 @@ const MachineInstr*
 MachineLICM::LookForDuplicate(const MachineInstr *MI,
                               std::vector<const MachineInstr*> &PrevMIs) {
   for (const MachineInstr *PrevMI : PrevMIs)
-    if (TII->produceSameValue(MI, PrevMI, (PreRegAlloc ? MRI : nullptr)))
+    if (TII->produceSameValue(*MI, *PrevMI, (PreRegAlloc ? MRI : nullptr)))
       return PrevMI;
 
   return nullptr;
@@ -1317,12 +1313,10 @@ bool MachineLICM::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader) {
   // terminator instructions.
   DEBUG({
       dbgs() << "Hoisting " << *MI;
-      if (Preheader->getBasicBlock())
-        dbgs() << " to MachineBasicBlock "
-               << Preheader->getName();
       if (MI->getParent()->getBasicBlock())
-        dbgs() << " from MachineBasicBlock "
-               << MI->getParent()->getName();
+        dbgs() << " from BB#" << MI->getParent()->getNumber();
+      if (Preheader->getBasicBlock())
+        dbgs() << " to BB#" << Preheader->getNumber();
       dbgs() << "\n";
     });
 
@@ -1382,7 +1376,7 @@ MachineBasicBlock *MachineLICM::getCurPreheader() {
         return nullptr;
       }
 
-      CurPreheader = Pred->SplitCriticalEdge(CurLoop->getHeader(), this);
+      CurPreheader = Pred->SplitCriticalEdge(CurLoop->getHeader(), *this);
       if (!CurPreheader) {
         CurPreheader = reinterpret_cast<MachineBasicBlock *>(-1);
         return nullptr;

@@ -7,9 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
+#include "gtest/gtest.h"
 #include <tuple>
 using namespace llvm;
 
@@ -157,6 +158,33 @@ TEST_F(StringMapTest, SmallFullMapTest) {
   EXPECT_EQ(5, Map.lookup("funf"));
 }
 
+TEST_F(StringMapTest, CopyCtorTest) {
+  llvm::StringMap<int> Map;
+
+  Map["eins"] = 1;
+  Map["zwei"] = 2;
+  Map["drei"] = 3;
+  Map.erase("drei");
+  Map.erase("eins");
+  Map["veir"] = 4;
+  Map["funf"] = 5;
+
+  EXPECT_EQ(3u, Map.size());
+  EXPECT_EQ(0, Map.lookup("eins"));
+  EXPECT_EQ(2, Map.lookup("zwei"));
+  EXPECT_EQ(0, Map.lookup("drei"));
+  EXPECT_EQ(4, Map.lookup("veir"));
+  EXPECT_EQ(5, Map.lookup("funf"));
+
+  llvm::StringMap<int> Map2(Map);
+  EXPECT_EQ(3u, Map2.size());
+  EXPECT_EQ(0, Map2.lookup("eins"));
+  EXPECT_EQ(2, Map2.lookup("zwei"));
+  EXPECT_EQ(0, Map2.lookup("drei"));
+  EXPECT_EQ(4, Map2.lookup("veir"));
+  EXPECT_EQ(5, Map2.lookup("funf"));
+}
+
 // A more complex iteration test.
 TEST_F(StringMapTest, IterationTest) {
   bool visited[100];
@@ -231,12 +259,12 @@ TEST_F(StringMapTest, InsertRehashingPairTest) {
   // moved to a different bucket during internal rehashing. This depends on
   // the particular key, and the implementation of StringMap and HashString.
   // Changes to those might result in this test not actually checking that.
-  StringMap<uint32_t> t(1);
-  EXPECT_EQ(1u, t.getNumBuckets());
+  StringMap<uint32_t> t(0);
+  EXPECT_EQ(0u, t.getNumBuckets());
 
   StringMap<uint32_t>::iterator It =
     t.insert(std::make_pair("abcdef", 42)).first;
-  EXPECT_EQ(2u, t.getNumBuckets());
+  EXPECT_EQ(16u, t.getNumBuckets());
   EXPECT_EQ("abcdef", It->first());
   EXPECT_EQ(42u, It->second);
 }
@@ -354,6 +382,85 @@ TEST_F(StringMapTest, MoveDtor) {
   B = StringMap<Countable>();
   ASSERT_EQ(InstanceCount, 0);
   ASSERT_TRUE(B.empty());
+}
+
+namespace {
+// Simple class that counts how many moves and copy happens when growing a map
+struct CountCtorCopyAndMove {
+  static unsigned Ctor;
+  static unsigned Move;
+  static unsigned Copy;
+  int Data = 0;
+  CountCtorCopyAndMove(int Data) : Data(Data) { Ctor++; }
+  CountCtorCopyAndMove() { Ctor++; }
+
+  CountCtorCopyAndMove(const CountCtorCopyAndMove &) { Copy++; }
+  CountCtorCopyAndMove &operator=(const CountCtorCopyAndMove &) {
+    Copy++;
+    return *this;
+  }
+  CountCtorCopyAndMove(CountCtorCopyAndMove &&) { Move++; }
+  CountCtorCopyAndMove &operator=(const CountCtorCopyAndMove &&) {
+    Move++;
+    return *this;
+  }
+};
+unsigned CountCtorCopyAndMove::Copy = 0;
+unsigned CountCtorCopyAndMove::Move = 0;
+unsigned CountCtorCopyAndMove::Ctor = 0;
+
+} // anonymous namespace
+
+// Make sure creating the map with an initial size of N actually gives us enough
+// buckets to insert N items without increasing allocation size.
+TEST(StringMapCustomTest, InitialSizeTest) {
+  // 1 is an "edge value", 32 is an arbitrary power of two, and 67 is an
+  // arbitrary prime, picked without any good reason.
+  for (auto Size : {1, 32, 67}) {
+    StringMap<CountCtorCopyAndMove> Map(Size);
+    auto NumBuckets = Map.getNumBuckets();
+    CountCtorCopyAndMove::Move = 0;
+    CountCtorCopyAndMove::Copy = 0;
+    for (int i = 0; i < Size; ++i)
+      Map.insert(std::pair<std::string, CountCtorCopyAndMove>(
+          std::piecewise_construct, std::forward_as_tuple(Twine(i).str()),
+          std::forward_as_tuple(i)));
+    // After the inital move, the map will move the Elts in the Entry.
+    EXPECT_EQ((unsigned)Size * 2, CountCtorCopyAndMove::Move);
+    // We copy once the pair from the Elts vector
+    EXPECT_EQ(0u, CountCtorCopyAndMove::Copy);
+    // Check that the map didn't grow
+    EXPECT_EQ(Map.getNumBuckets(), NumBuckets);
+  }
+}
+
+TEST(StringMapCustomTest, BracketOperatorCtor) {
+  StringMap<CountCtorCopyAndMove> Map;
+  CountCtorCopyAndMove::Ctor = 0;
+  Map["abcd"];
+  EXPECT_EQ(1u, CountCtorCopyAndMove::Ctor);
+  // Test that operator[] does not create a value when it is already in the map
+  CountCtorCopyAndMove::Ctor = 0;
+  Map["abcd"];
+  EXPECT_EQ(0u, CountCtorCopyAndMove::Ctor);
+}
+
+namespace {
+struct NonMoveableNonCopyableType {
+  int Data = 0;
+  NonMoveableNonCopyableType() = default;
+  NonMoveableNonCopyableType(int Data) : Data(Data) {}
+  NonMoveableNonCopyableType(const NonMoveableNonCopyableType &) = delete;
+  NonMoveableNonCopyableType(NonMoveableNonCopyableType &&) = delete;
+};
+}
+
+// Test that we can "emplace" an element in the map without involving map/move
+TEST(StringMapCustomTest, EmplaceTest) {
+  StringMap<NonMoveableNonCopyableType> Map;
+  Map.try_emplace("abcd", 42);
+  EXPECT_EQ(1u, Map.count("abcd"));
+  EXPECT_EQ(42, Map["abcd"].Data);
 }
 
 } // end anonymous namespace

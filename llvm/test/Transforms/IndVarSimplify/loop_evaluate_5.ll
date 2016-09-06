@@ -1,10 +1,12 @@
-; RUN: opt < %s -indvars -S | grep "120, %bb2.bb3_crit_edge"
+; RUN: opt < %s -indvars -S | FileCheck %s
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64"
 target triple = "i686-pc-linux-gnu"
 
 ; Indvars should be able to compute an exit value for %tmp1.
 
 define i32 @testcase(i5 zeroext %k) nounwind readnone {
+; CHECK-LABEL: @testcase
+; CHECK: 120, %bb2.bb3_crit_edge
 entry:
 	br i1 false, label %bb3, label %bb.nph
 

@@ -62,7 +62,7 @@ public:
       : Compilations(std::move(Compilations)) {}
 
   void appendArgumentsAdjuster(ArgumentsAdjuster Adjuster) {
-    Adjusters.push_back(Adjuster);
+    Adjusters.push_back(std::move(Adjuster));
   }
 
   std::vector<CompileCommand>
@@ -118,6 +118,8 @@ CommonOptionsParser::CommonOptionsParser(
 
   Compilations.reset(FixedCompilationDatabase::loadFromCommandLine(argc, argv));
   cl::ParseCommandLineOptions(argc, argv, Overview);
+  cl::PrintOptionValues();
+
   SourcePathList = SourcePaths;
   if ((OccurrencesFlag == cl::ZeroOrMore || OccurrencesFlag == cl::Optional) &&
       SourcePathList.empty())

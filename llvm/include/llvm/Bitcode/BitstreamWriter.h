@@ -361,36 +361,17 @@ private:
         // If this record has blob data, emit it, otherwise we must have record
         // entries to encode this way.
 
-        // Emit a vbr6 to indicate the number of elements present.
         if (BlobData) {
-          EmitVBR(static_cast<uint32_t>(BlobLen), 6);
           assert(RecordIdx == Vals.size() &&
                  "Blob data and record entries specified for blob operand!");
-        } else {
-          EmitVBR(static_cast<uint32_t>(Vals.size()-RecordIdx), 6);
-        }
 
-        // Flush to a 32-bit alignment boundary.
-        FlushToWord();
-
-        // Emit each field as a literal byte.
-        if (BlobData) {
-          for (unsigned i = 0; i != BlobLen; ++i)
-            WriteByte((unsigned char)BlobData[i]);
-
-          // Know that blob data is consumed for assertion below.
+          assert(Blob.data() == BlobData && "BlobData got moved");
+          assert(Blob.size() == BlobLen && "BlobLen got changed");
+          emitBlob(Blob);
           BlobData = nullptr;
         } else {
-          for (unsigned e = Vals.size(); RecordIdx != e; ++RecordIdx) {
-            assert(isUInt<8>(Vals[RecordIdx]) &&
-                   "Value too large to emit as blob");
-            WriteByte((unsigned char)Vals[RecordIdx]);
-          }
+          emitBlob(Vals.slice(RecordIdx));
         }
-
-        // Align end to 32-bits.
-        while (GetBufferOffset() & 3)
-          WriteByte(0);
       } else {  // Single scalar field.
         assert(RecordIdx < Vals.size() && "Invalid abbrev/record");
         EmitAbbreviatedField(Op, Vals[RecordIdx]);
@@ -403,6 +384,30 @@ private:
   }
 
 public:
+  /// Emit a blob, including flushing before and tail-padding.
+  template <class UIntTy>
+  void emitBlob(ArrayRef<UIntTy> Bytes, bool ShouldEmitSize = true) {
+    // Emit a vbr6 to indicate the number of elements present.
+    if (ShouldEmitSize)
+      EmitVBR(static_cast<uint32_t>(Bytes.size()), 6);
+
+    // Flush to a 32-bit alignment boundary.
+    FlushToWord();
+
+    // Emit literal bytes.
+    for (const auto &B : Bytes) {
+      assert(isUInt<8>(B) && "Value too large to emit as byte");
+      WriteByte((unsigned char)B);
+    }
+
+    // Align end to 32-bits.
+    while (GetBufferOffset() & 3)
+      WriteByte(0);
+  }
+  void emitBlob(StringRef Bytes, bool ShouldEmitSize = true) {
+    emitBlob(makeArrayRef((const uint8_t *)Bytes.data(), Bytes.size()),
+             ShouldEmitSize);
+  }
 
   /// EmitRecord - Emit the specified record to the stream, using an abbrev if
   /// we have one to compress the output.

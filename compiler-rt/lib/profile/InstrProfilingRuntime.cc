@@ -11,7 +11,8 @@ extern "C" {
 
 #include "InstrProfiling.h"
 
-COMPILER_RT_VISIBILITY int __llvm_profile_runtime;
+/* int __llvm_profile_runtime  */
+COMPILER_RT_VISIBILITY int INSTR_PROF_PROFILE_RUNTIME_VAR;
 }
 
 namespace {

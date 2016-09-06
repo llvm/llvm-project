@@ -32,6 +32,8 @@
 using namespace clang;
 using namespace tooling;
 
+LLVM_INSTANTIATE_REGISTRY(CompilationDatabasePluginRegistry)
+
 CompilationDatabase::~CompilationDatabase() {}
 
 std::unique_ptr<CompilationDatabase>
@@ -139,9 +141,8 @@ private:
       ;
     }
 
-    for (driver::ActionList::const_iterator I = A->begin(), E = A->end();
-         I != E; ++I)
-      runImpl(*I, CollectChildren);
+    for (const driver::Action *AI : A->inputs())
+      runImpl(AI, CollectChildren);
   }
 };
 

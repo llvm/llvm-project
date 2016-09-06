@@ -1,4 +1,4 @@
-; RUN: llc -march=aarch64 < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-unknown-unknown < %s | FileCheck %s
 
 ; Following test cases check:
 ;   a / D; b / D; c / D;
@@ -6,8 +6,8 @@
 ;   recip = 1.0 / D; a * recip; b * recip; c * recip;
 define void @three_fdiv_float(float %D, float %a, float %b, float %c) #0 {
 ; CHECK-LABEL: three_fdiv_float:
-; CHECK: fdiv
-; CHECK-NEXT-NOT: fdiv
+; CHECK: fdiv s
+; CHECK-NOT: fdiv
 ; CHECK: fmul
 ; CHECK: fmul
 ; CHECK: fmul
@@ -20,8 +20,8 @@ define void @three_fdiv_float(float %D, float %a, float %b, float %c) #0 {
 
 define void @three_fdiv_double(double %D, double %a, double %b, double %c) #0 {
 ; CHECK-LABEL: three_fdiv_double:
-; CHECK: fdiv
-; CHECK-NEXT-NOT: fdiv
+; CHECK: fdiv d
+; CHECK-NOT: fdiv
 ; CHECK: fmul
 ; CHECK: fmul
 ; CHECK: fmul
@@ -34,8 +34,8 @@ define void @three_fdiv_double(double %D, double %a, double %b, double %c) #0 {
 
 define void @three_fdiv_4xfloat(<4 x float> %D, <4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
 ; CHECK-LABEL: three_fdiv_4xfloat:
-; CHECK: fdiv
-; CHECK-NEXT-NOT: fdiv
+; CHECK: fdiv v
+; CHECK-NOT: fdiv
 ; CHECK: fmul
 ; CHECK: fmul
 ; CHECK: fmul
@@ -48,8 +48,8 @@ define void @three_fdiv_4xfloat(<4 x float> %D, <4 x float> %a, <4 x float> %b, 
 
 define void @three_fdiv_2xdouble(<2 x double> %D, <2 x double> %a, <2 x double> %b, <2 x double> %c) #0 {
 ; CHECK-LABEL: three_fdiv_2xdouble:
-; CHECK: fdiv
-; CHECK-NEXT-NOT: fdiv
+; CHECK: fdiv v
+; CHECK-NOT: fdiv
 ; CHECK: fmul
 ; CHECK: fmul
 ; CHECK: fmul
@@ -64,9 +64,9 @@ define void @three_fdiv_2xdouble(<2 x double> %D, <2 x double> %a, <2 x double> 
 ; calculates a reciprocal.
 define void @two_fdiv_float(float %D, float %a, float %b) #0 {
 ; CHECK-LABEL: two_fdiv_float:
-; CHECK: fdiv
-; CHECK: fdiv
-; CHECK-NEXT-NOT: fmul
+; CHECK: fdiv s
+; CHECK: fdiv s
+; CHECK-NOT: fmul
   %div = fdiv float %a, %D
   %div1 = fdiv float %b, %D
   tail call void @foo_2f(float %div, float %div1)
@@ -75,9 +75,9 @@ define void @two_fdiv_float(float %D, float %a, float %b) #0 {
 
 define void @two_fdiv_double(double %D, double %a, double %b) #0 {
 ; CHECK-LABEL: two_fdiv_double:
-; CHECK: fdiv
-; CHECK: fdiv
-; CHECK-NEXT-NOT: fmul
+; CHECK: fdiv d
+; CHECK: fdiv d
+; CHECK-NOT: fmul
   %div = fdiv double %a, %D
   %div1 = fdiv double %b, %D
   tail call void @foo_2d(double %div, double %div1)

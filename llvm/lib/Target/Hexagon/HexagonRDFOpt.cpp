@@ -55,6 +55,11 @@ namespace {
     }
     bool runOnMachineFunction(MachineFunction &MF) override;
 
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
+
     static char ID;
 
   private:
@@ -71,6 +76,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
 INITIALIZE_PASS_END(HexagonRDFOpt, "rdfopt", "Hexagon RDF opt", false, false)
 
 
+namespace {
 struct HexagonCP : public CopyPropagation {
   HexagonCP(DataFlowGraph &G) : CopyPropagation(G) {}
   bool interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) override;
@@ -85,6 +91,7 @@ struct HexagonDCE : public DeadCodeElimination {
 
   bool run();
 };
+} // end anonymous namespace
 
 
 bool HexagonCP::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
@@ -195,11 +202,11 @@ bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
   if (!getDFG().IsCode<NodeAttrs::Stmt>(IA))
     return false;
   DataFlowGraph &DFG = getDFG();
-  MachineInstr *MI = NodeAddr<StmtNode*>(IA).Addr->getCode();
+  MachineInstr &MI = *NodeAddr<StmtNode*>(IA).Addr->getCode();
   auto &HII = static_cast<const HexagonInstrInfo&>(DFG.getTII());
   if (HII.getAddrMode(MI) != HexagonII::PostInc)
     return false;
-  unsigned Opc = MI->getOpcode();
+  unsigned Opc = MI.getOpcode();
   unsigned OpNum, NewOpc;
   switch (Opc) {
     case Hexagon::L2_loadri_pi:
@@ -233,12 +240,12 @@ bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
     return getDeadNodes().count(DA.Id);
   };
   NodeList Defs;
-  MachineOperand &Op = MI->getOperand(OpNum);
+  MachineOperand &Op = MI.getOperand(OpNum);
   for (NodeAddr<DefNode*> DA : IA.Addr->members_if(DFG.IsDef, DFG)) {
     if (&DA.Addr->getOp() != &Op)
       continue;
     Defs = DFG.getRelatedRefs(IA, DA);
-    if (!std::all_of(Defs.begin(), Defs.end(), IsDead))
+    if (!all_of(Defs, IsDead))
       return false;
     break;
   }
@@ -248,18 +255,21 @@ bool HexagonDCE::rewrite(NodeAddr<InstrNode*> IA, SetVector<NodeId> &Remove) {
     Remove.insert(D.Id);
 
   if (trace())
-    dbgs() << "Rewriting: " << *MI;
-  MI->setDesc(HII.get(NewOpc));
-  MI->getOperand(OpNum+2).setImm(0);
+    dbgs() << "Rewriting: " << MI;
+  MI.setDesc(HII.get(NewOpc));
+  MI.getOperand(OpNum+2).setImm(0);
   removeOperand(IA, OpNum);
   if (trace())
-    dbgs() << "       to: " << *MI;
+    dbgs() << "       to: " << MI;
 
   return true;
 }
 
 
 bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
   if (RDFLimit.getPosition()) {
     if (RDFCount >= RDFLimit)
       return false;
@@ -279,7 +289,10 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
   HexagonRegisterAliasInfo HAI(HRI);
   TargetOperandInfo TOI(HII);
   DataFlowGraph G(MF, HII, HRI, *MDT, MDF, HAI, TOI);
-  G.build();
+  // Dead phi nodes are necessary for copy propagation: we can add a use
+  // of a register in a block where it would need a phi node, but which
+  // was dead (and removed) during the graph build time.
+  G.build(BuildOptions::KeepDeadPhis);
 
   if (RDFDump)
     dbgs() << "Starting copy propagation on: " << MF.getName() << '\n'

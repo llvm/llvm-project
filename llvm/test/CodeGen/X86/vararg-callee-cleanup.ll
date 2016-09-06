@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-pc-windows < %s | FileCheck %s
+; RUN: llc -mtriple=i686-pc-windows -no-x86-call-frame-opt < %s | FileCheck %s
 
 target datalayout = "e-m:w-p:32:32-i64:64-f80:32-n8:16:32-S32"
 

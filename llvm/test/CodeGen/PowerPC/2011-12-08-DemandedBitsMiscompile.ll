@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=g4 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=g4 | FileCheck %s
 
 define void @test(i32* nocapture %x, i64* %xx, i32* %yp) nounwind uwtable ssp {
 entry:

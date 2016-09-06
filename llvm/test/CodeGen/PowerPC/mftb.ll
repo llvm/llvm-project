@@ -4,19 +4,19 @@
 ; should be used instead. There should no longer be a deprecated warning 
 ; message emittedfor this instruction for any CPU.
 
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 < %s 2>&1 \
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 < %s 2>&1 \
 ; RUN:    | FileCheck %s --check-prefix=CHECK-MFSPR
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s 2>&1 \
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s 2>&1 \
 ; RUN:    | FileCheck %s --check-prefix=CHECK-MFSPR
-; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu < %s 2>&1 \
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu < %s 2>&1 \
 ; RUN:    | FileCheck %s --check-prefix=CHECK-MFSPR
-; RUN: llc -mtriple=powerpc-unknown-linux-gnu  < %s 2>&1 \
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-linux-gnu  < %s 2>&1 \
 ; RUN:    | FileCheck %s --check-prefix=CHECK-MFSPR
-; RUN: llc -mtriple=powerpc-unknown-linux-gnu -mcpu=ppc < %s 2>&1 \
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-linux-gnu -mcpu=ppc < %s 2>&1 \
 ; RUN:    | FileCheck %s --check-prefix=CHECK-MFSPR
-; RUN: llc -mtriple=powerpc-unknown-linux-gnu -mcpu=601 < %s 2>&1 \
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-linux-gnu -mcpu=601 < %s 2>&1 \
 ; RUN:    | FileCheck %s --check-prefix=CHECK-MFTB
-; RUN: llc -mtriple=powerpc-unknown-linux-gnu -mcpu=pwr3 < %s 2>&1 \
+; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-linux-gnu -mcpu=pwr3 < %s 2>&1 \
 ; RUN:    | FileCheck %s --check-prefix=CHECK-MFTB
 
 ; CHECK-MFSPR-NOT: warning: deprecated

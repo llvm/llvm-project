@@ -13,7 +13,6 @@
 
 #include "ARMMCAsmInfo.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
@@ -91,6 +90,7 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
 
   PrivateGlobalPrefix = "$M";
   PrivateLabelPrefix = "$M";
+  CommentString = ";";
 }
 
 void ARMCOFFMCAsmInfoGNU::anchor() { }

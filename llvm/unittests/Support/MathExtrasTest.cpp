@@ -106,6 +106,40 @@ TEST(MathExtras, findLastSet) {
   EXPECT_EQ(5u, findLastSet(NZ64));
 }
 
+TEST(MathExtras, isIntN) {
+  EXPECT_TRUE(isIntN(16, 32767));
+  EXPECT_FALSE(isIntN(16, 32768));
+}
+
+TEST(MathExtras, isUIntN) {
+  EXPECT_TRUE(isUIntN(16, 65535));
+  EXPECT_FALSE(isUIntN(16, 65536));
+  EXPECT_TRUE(isUIntN(1, 0));
+  EXPECT_TRUE(isUIntN(6, 63));
+}
+
+TEST(MathExtras, maxIntN) {
+  EXPECT_EQ(32767, maxIntN(16));
+  EXPECT_EQ(2147483647, maxIntN(32));
+  EXPECT_EQ(std::numeric_limits<int32_t>::max(), maxIntN(32));
+  EXPECT_EQ(std::numeric_limits<int64_t>::max(), maxIntN(64));
+}
+
+TEST(MathExtras, minIntN) {
+  EXPECT_EQ(-32768LL, minIntN(16));
+  EXPECT_EQ(-64LL, minIntN(7));
+  EXPECT_EQ(std::numeric_limits<int32_t>::min(), minIntN(32));
+  EXPECT_EQ(std::numeric_limits<int64_t>::min(), minIntN(64));
+}
+
+TEST(MathExtras, maxUIntN) {
+  EXPECT_EQ(0xffffULL, maxUIntN(16));
+  EXPECT_EQ(0xffffffffULL, maxUIntN(32));
+  EXPECT_EQ(0xffffffffffffffffULL, maxUIntN(64));
+  EXPECT_EQ(1ULL, maxUIntN(1));
+  EXPECT_EQ(0x0fULL, maxUIntN(4));
+}
+
 TEST(MathExtras, reverseBits) {
   uint8_t NZ8 = 42;
   uint16_t NZ16 = 42;
@@ -163,7 +197,7 @@ TEST(MathExtras, FloatBits) {
 
 TEST(MathExtras, DoubleBits) {
   static const double kValue = 87987234.983498;
-  EXPECT_FLOAT_EQ(kValue, BitsToDouble(DoubleToBits(kValue)));
+  EXPECT_DOUBLE_EQ(kValue, BitsToDouble(DoubleToBits(kValue)));
 }
 
 TEST(MathExtras, MinAlign) {
@@ -358,4 +392,42 @@ TEST(MathExtras, SaturatingMultiplyAdd) {
   SaturatingMultiplyAddTestHelper<uint64_t>();
 }
 
+TEST(MathExtras, IsShiftedUInt) {
+  EXPECT_TRUE((isShiftedUInt<1, 0>(0)));
+  EXPECT_TRUE((isShiftedUInt<1, 0>(1)));
+  EXPECT_FALSE((isShiftedUInt<1, 0>(2)));
+  EXPECT_FALSE((isShiftedUInt<1, 0>(3)));
+  EXPECT_FALSE((isShiftedUInt<1, 0>(0x8000000000000000)));
+  EXPECT_TRUE((isShiftedUInt<1, 63>(0x8000000000000000)));
+  EXPECT_TRUE((isShiftedUInt<2, 62>(0xC000000000000000)));
+  EXPECT_FALSE((isShiftedUInt<2, 62>(0xE000000000000000)));
+
+  // 0x201 is ten bits long and has a 1 in the MSB and LSB.
+  EXPECT_TRUE((isShiftedUInt<10, 5>(uint64_t(0x201) << 5)));
+  EXPECT_FALSE((isShiftedUInt<10, 5>(uint64_t(0x201) << 4)));
+  EXPECT_FALSE((isShiftedUInt<10, 5>(uint64_t(0x201) << 6)));
 }
+
+TEST(MathExtras, IsShiftedInt) {
+  EXPECT_TRUE((isShiftedInt<1, 0>(0)));
+  EXPECT_TRUE((isShiftedInt<1, 0>(-1)));
+  EXPECT_FALSE((isShiftedInt<1, 0>(2)));
+  EXPECT_FALSE((isShiftedInt<1, 0>(3)));
+  EXPECT_FALSE((isShiftedInt<1, 0>(0x8000000000000000)));
+  EXPECT_TRUE((isShiftedInt<1, 63>(0x8000000000000000)));
+  EXPECT_TRUE((isShiftedInt<2, 62>(0xC000000000000000)));
+  EXPECT_FALSE((isShiftedInt<2, 62>(0xE000000000000000)));
+
+  // 0x201 is ten bits long and has a 1 in the MSB and LSB.
+  EXPECT_TRUE((isShiftedInt<11, 5>(int64_t(0x201) << 5)));
+  EXPECT_FALSE((isShiftedInt<11, 5>(int64_t(0x201) << 3)));
+  EXPECT_FALSE((isShiftedInt<11, 5>(int64_t(0x201) << 6)));
+  EXPECT_TRUE((isShiftedInt<11, 5>(-(int64_t(0x201) << 5))));
+  EXPECT_FALSE((isShiftedInt<11, 5>(-(int64_t(0x201) << 3))));
+  EXPECT_FALSE((isShiftedInt<11, 5>(-(int64_t(0x201) << 6))));
+
+  EXPECT_TRUE((isShiftedInt<6, 10>(-(int64_t(1) << 15))));
+  EXPECT_FALSE((isShiftedInt<6, 10>(int64_t(1) << 15)));
+}
+
+} // namespace

@@ -89,6 +89,27 @@ public:
   /// \param name The name of this global function.
   /// \param info Information about this global function.
   void addGlobalFunction(StringRef name, const GlobalFunctionInfo &info);
+
+  /// Add information about an enumerator.
+  ///
+  /// \param name The name of this enumerator.
+  /// \param info Information about this enumerator.
+  void addEnumConstant(StringRef name, const EnumConstantInfo &info);
+
+  /// Add information about a tag (struct/union/enum/C++ class).
+  ///
+  /// \param name The name of this tag.
+  /// \param info Information about this tag.
+  void addTag(StringRef name, const TagInfo &info);
+
+  /// Add information about a typedef.
+  ///
+  /// \param name The name of this typedef.
+  /// \param info Information about this typedef.
+  void addTypedef(StringRef name, const TypedefInfo &info);
+
+  /// Add module options
+  void addModuleOptions(ModuleOptions opts);
 };
 
 } // end namespace api_notes

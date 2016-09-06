@@ -41,8 +41,10 @@
 #include <vector>
 
 namespace llvm {
+  class BranchProbability;
   class CallInst;
   class CCState;
+  class CCValAssign;
   class FastISel;
   class FunctionLoweringInfo;
   class ImmutableCallSite;
@@ -52,6 +54,7 @@ namespace llvm {
   class MachineInstr;
   class MachineJumpTableInfo;
   class MachineLoop;
+  class MachineRegisterInfo;
   class Mangler;
   class MCContext;
   class MCExpr;
@@ -235,9 +238,15 @@ public:
     return false;
   }
 
-  /// Return true if sqrt(x) is as cheap or cheaper than 1 / rsqrt(x)
-  bool isFsqrtCheap() const {
-    return FsqrtIsCheap;
+  /// Return true if the target can handle a standalone remainder operation.
+  virtual bool hasStandaloneRem(EVT VT) const {
+    return true;
+  }
+
+  /// Return true if SQRT(X) shouldn't be replaced with X*RSQRT(X).
+  virtual bool isFsqrtCheap(SDValue X, SelectionDAG &DAG) const {
+    // Default behavior is to replace SQRT(X) with X*RSQRT(X).
+    return false;
   }
 
   /// Returns true if target has indicated at least one type should be bypassed.
@@ -259,16 +268,39 @@ public:
     return PredictableSelectIsExpensive;
   }
 
-  /// isLoadBitCastBeneficial() - Return true if the following transform
-  /// is beneficial.
+  /// If a branch or a select condition is skewed in one direction by more than
+  /// this factor, it is very likely to be predicted correctly.
+  virtual BranchProbability getPredictableBranchThreshold() const;
+
+  /// Return true if the following transform is beneficial:
   /// fold (conv (load x)) -> (load (conv*)x)
   /// On architectures that don't natively support some vector loads
   /// efficiently, casting the load to a smaller vector of larger types and
   /// loading is more efficient, however, this can be undone by optimizations in
   /// dag combiner.
-  virtual bool isLoadBitCastBeneficial(EVT /* Load */,
-                                       EVT /* Bitcast */) const {
+  virtual bool isLoadBitCastBeneficial(EVT LoadVT,
+                                       EVT BitcastVT) const {
+    // Don't do if we could do an indexed load on the original type, but not on
+    // the new one.
+    if (!LoadVT.isSimple() || !BitcastVT.isSimple())
+      return true;
+
+    MVT LoadMVT = LoadVT.getSimpleVT();
+
+    // Don't bother doing this if it's just going to be promoted again later, as
+    // doing so might interfere with other combines.
+    if (getOperationAction(ISD::LOAD, LoadMVT) == Promote &&
+        getTypeToPromoteTo(ISD::LOAD, LoadMVT) == BitcastVT.getSimpleVT())
+      return false;
+
     return true;
+  }
+
+  /// Return true if the following transform is beneficial:
+  /// (store (y (conv x)), y*)) -> (store x, (x*))
+  virtual bool isStoreBitCastBeneficial(EVT StoreVT, EVT BitcastVT) const {
+    // Default to the same logic as loads.
+    return isLoadBitCastBeneficial(StoreVT, BitcastVT);
   }
 
   /// Return true if it is expected to be cheaper to do a store of a non-zero
@@ -290,6 +322,19 @@ public:
     return false;
   }
 
+  /// \brief Return true if ctlz instruction is fast.
+  virtual bool isCtlzFast() const {
+    return false;
+  }
+
+  /// Return true if it is safe to transform an integer-domain bitwise operation
+  /// into the equivalent floating-point operation. This should be set to true
+  /// if the target has IEEE-754-compliant fabs/fneg operations for the input
+  /// type.
+  virtual bool hasBitPreservingFPLogic(EVT VT) const {
+    return false;
+  }
+
   /// \brief Return if the target supports combining a
   /// chain like:
   /// \code
@@ -303,6 +348,22 @@ public:
   /// \endcode
   bool isMaskAndBranchFoldingLegal() const {
     return MaskAndBranchFoldingIsLegal;
+  }
+
+  /// Return true if the target should transform:
+  /// (X & Y) == Y ---> (~X & Y) == 0
+  /// (X & Y) != Y ---> (~X & Y) != 0
+  ///
+  /// This may be profitable if the target has a bitwise and-not operation that
+  /// sets comparison flags. A target may want to limit the transformation based
+  /// on the type of Y or if Y is a constant.
+  ///
+  /// Note that the transform will not occur if Y is known to be a power-of-2
+  /// because a mask and compare of a single bit can be handled by inverting the
+  /// predicate, for example:
+  /// (X & 8) == 8 ---> (X & 8) != 0
+  virtual bool hasAndNotCompare(SDValue Y) const {
+    return false;
   }
 
   /// \brief Return true if the target wants to use the optimization that
@@ -571,6 +632,23 @@ public:
        getOperationAction(Op, VT) == Promote);
   }
 
+  /// Return true if the specified operation is legal on this target or can be
+  /// made legal with custom lowering or using promotion. This is used to help
+  /// guide high-level lowering decisions.
+  bool isOperationLegalOrCustomOrPromote(unsigned Op, EVT VT) const {
+    return (VT == MVT::Other || isTypeLegal(VT)) &&
+      (getOperationAction(Op, VT) == Legal ||
+       getOperationAction(Op, VT) == Custom ||
+       getOperationAction(Op, VT) == Promote);
+  }
+
+  /// Return true if the specified operation is illegal but has a custom lowering
+  /// on that type. This is used to help guide high-level lowering
+  /// decisions.
+  bool isOperationCustom(unsigned Op, EVT VT) const {
+    return (!isTypeLegal(VT) && getOperationAction(Op, VT) == Custom);
+  }
+
   /// Return true if the specified operation is illegal on this target or
   /// unlikely to be made legal with custom lowering. This is used to help guide
   /// high-level lowering decisions.
@@ -594,21 +672,20 @@ public:
     unsigned MemI = (unsigned) MemVT.getSimpleVT().SimpleTy;
     assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::LAST_VALUETYPE &&
            MemI < MVT::LAST_VALUETYPE && "Table isn't big enough!");
-    return LoadExtActions[ValI][MemI][ExtType];
+    unsigned Shift = 4 * ExtType;
+    return (LegalizeAction)((LoadExtActions[ValI][MemI] >> Shift) & 0xf);
   }
 
   /// Return true if the specified load with extension is legal on this target.
   bool isLoadExtLegal(unsigned ExtType, EVT ValVT, EVT MemVT) const {
-    return ValVT.isSimple() && MemVT.isSimple() &&
-      getLoadExtAction(ExtType, ValVT, MemVT) == Legal;
+    return getLoadExtAction(ExtType, ValVT, MemVT) == Legal;
   }
 
   /// Return true if the specified load with extension is legal or custom
   /// on this target.
   bool isLoadExtLegalOrCustom(unsigned ExtType, EVT ValVT, EVT MemVT) const {
-    return ValVT.isSimple() && MemVT.isSimple() &&
-      (getLoadExtAction(ExtType, ValVT, MemVT) == Legal ||
-       getLoadExtAction(ExtType, ValVT, MemVT) == Custom);
+    return getLoadExtAction(ExtType, ValVT, MemVT) == Legal ||
+           getLoadExtAction(ExtType, ValVT, MemVT) == Custom;
   }
 
   /// Return how this store with truncation should be treated: either it is
@@ -626,8 +703,15 @@ public:
   /// Return true if the specified store with truncation is legal on this
   /// target.
   bool isTruncStoreLegal(EVT ValVT, EVT MemVT) const {
-    return isTypeLegal(ValVT) && MemVT.isSimple() &&
-      getTruncStoreAction(ValVT.getSimpleVT(), MemVT.getSimpleVT()) == Legal;
+    return isTypeLegal(ValVT) && getTruncStoreAction(ValVT, MemVT) == Legal;
+  }
+
+  /// Return true if the specified store with truncation has solution on this
+  /// target.
+  bool isTruncStoreLegalOrCustom(EVT ValVT, EVT MemVT) const {
+    return isTypeLegal(ValVT) &&
+      (getTruncStoreAction(ValVT, MemVT) == Legal ||
+       getTruncStoreAction(ValVT, MemVT) == Custom);
   }
 
   /// Return how the indexed load should be treated: either it is legal, needs
@@ -672,7 +756,7 @@ public:
   LegalizeAction
   getCondCodeAction(ISD::CondCode CC, MVT VT) const {
     assert((unsigned)CC < array_lengthof(CondCodeActions) &&
-           ((unsigned)VT.SimpleTy >> 4) < array_lengthof(CondCodeActions[0]) &&
+           ((unsigned)VT.SimpleTy >> 3) < array_lengthof(CondCodeActions[0]) &&
            "Table isn't big enough!");
     // See setCondCodeAction for how this is encoded.
     uint32_t Shift = 4 * (VT.SimpleTy & 0x7);
@@ -960,6 +1044,10 @@ public:
     return 0;
   }
 
+  virtual bool needsFixedCatchObjects() const {
+    report_fatal_error("Funclet EH is not implemented for this target");
+  }
+
   /// Returns the target's jmp_buf size in bytes (if never set, the default is
   /// 200)
   unsigned getJumpBufSize() const {
@@ -992,19 +1080,26 @@ public:
     return PrefLoopAlignment;
   }
 
-  /// Return whether the DAG builder should automatically insert fences and
-  /// reduce ordering for atomics.
-  bool getInsertFencesForAtomic() const {
-    return InsertFencesForAtomic;
-  }
+  /// If the target has a standard location for the stack protector guard,
+  /// returns the address of that location. Otherwise, returns nullptr.
+  /// DEPRECATED: please override useLoadStackGuardNode and customize
+  ///             LOAD_STACK_GUARD, or customize @llvm.stackguard().
+  virtual Value *getIRStackGuard(IRBuilder<> &IRB) const;
 
-  /// Return true if the target stores stack protector cookies at a fixed offset
-  /// in some non-standard address space, and populates the address space and
-  /// offset as appropriate.
-  virtual bool getStackCookieLocation(unsigned &/*AddressSpace*/,
-                                      unsigned &/*Offset*/) const {
-    return false;
-  }
+  /// Inserts necessary declarations for SSP (stack protection) purpose.
+  /// Should be used only when getIRStackGuard returns nullptr.
+  virtual void insertSSPDeclarations(Module &M) const;
+
+  /// Return the variable that's previously inserted by insertSSPDeclarations,
+  /// if any, otherwise return nullptr. Should be used only when
+  /// getIRStackGuard returns nullptr.
+  virtual Value *getSDagStackGuard(const Module &M) const;
+
+  /// If the target has a standard stack protection check function that
+  /// performs validation and error handling, returns the function. Otherwise,
+  /// returns nullptr. Must be previously inserted by insertSSPDeclarations.
+  /// Should be used only when getIRStackGuard returns nullptr.
+  virtual Value *getSSPStackGuardCheck(const Module &M) const;
 
   /// If the target has a standard location for the unsafe stack pointer,
   /// returns the address of that location. Otherwise, returns nullptr.
@@ -1041,6 +1136,30 @@ public:
   /// \name Helpers for atomic expansion.
   /// @{
 
+  /// Returns the maximum atomic operation size (in bits) supported by
+  /// the backend. Atomic operations greater than this size (as well
+  /// as ones that are not naturally aligned), will be expanded by
+  /// AtomicExpandPass into an __atomic_* library call.
+  unsigned getMaxAtomicSizeInBitsSupported() const {
+    return MaxAtomicSizeInBitsSupported;
+  }
+
+  /// Returns the size of the smallest cmpxchg or ll/sc instruction
+  /// the backend supports.  Any smaller operations are widened in
+  /// AtomicExpandPass.
+  ///
+  /// Note that *unlike* operations above the maximum size, atomic ops
+  /// are still natively supported below the minimum; they just
+  /// require a more complex expansion.
+  unsigned getMinCmpXchgSizeInBits() const { return MinCmpXchgSizeInBits; }
+
+  /// Whether AtomicExpandPass should automatically insert fences and reduce
+  /// ordering for this atomic. This should be true for most architectures with
+  /// weak memory ordering. Defaults to false.
+  virtual bool shouldInsertFencesForAtomic(const Instruction *I) const {
+    return false;
+  }
+
   /// Perform a load-linked operation on Addr, returning a "Value *" with the
   /// corresponding pointee type. This may entail some non-trivial operations to
   /// truncate or reconstruct types that will be illegal in the backend. See
@@ -1059,12 +1178,12 @@ public:
 
   /// Inserts in the IR a target-specific intrinsic specifying a fence.
   /// It is called by AtomicExpandPass before expanding an
-  ///   AtomicRMW/AtomicCmpXchg/AtomicStore/AtomicLoad.
+  ///   AtomicRMW/AtomicCmpXchg/AtomicStore/AtomicLoad
+  ///   if shouldInsertFencesForAtomic returns true.
   /// RMW and CmpXchg set both IsStore and IsLoad to true.
   /// This function should either return a nullptr, or a pointer to an IR-level
   ///   Instruction*. Even complex fence sequences can be represented by a
   ///   single Instruction* through an intrinsic to be lowered later.
-  /// Backends with !getInsertFencesForAtomic() should keep a no-op here.
   /// Backends should override this method to produce target-specific intrinsic
   ///   for their fences.
   /// FIXME: Please note that the default implementation here in terms of
@@ -1090,10 +1209,7 @@ public:
   virtual Instruction *emitLeadingFence(IRBuilder<> &Builder,
                                         AtomicOrdering Ord, bool IsStore,
                                         bool IsLoad) const {
-    if (!getInsertFencesForAtomic())
-      return nullptr;
-
-    if (isAtLeastRelease(Ord) && IsStore)
+    if (isReleaseOrStronger(Ord) && IsStore)
       return Builder.CreateFence(Ord);
     else
       return nullptr;
@@ -1102,10 +1218,7 @@ public:
   virtual Instruction *emitTrailingFence(IRBuilder<> &Builder,
                                          AtomicOrdering Ord, bool IsStore,
                                          bool IsLoad) const {
-    if (!getInsertFencesForAtomic())
-      return nullptr;
-
-    if (isAtLeastAcquire(Ord))
+    if (isAcquireOrStronger(Ord))
       return Builder.CreateFence(Ord);
     else
       return nullptr;
@@ -1165,6 +1278,14 @@ public:
   lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *RMWI) const {
     return nullptr;
   }
+
+  /// Returns how the platform's atomic operations are extended (ZERO_EXTEND,
+  /// SIGN_EXTEND, or ANY_EXTEND).
+  virtual ISD::NodeType getExtendForAtomicOps() const {
+    return ISD::ZERO_EXTEND;
+  }
+
+  /// @}
 
   /// Returns true if we should normalize
   /// select(N0&N1, X, Y) => select(N0, select(N1, X, Y), Y) and
@@ -1266,10 +1387,6 @@ protected:
   /// control.
   void setJumpIsExpensive(bool isExpensive = true);
 
-  /// Tells the code generator that fsqrt is cheap, and should not be replaced
-  /// with an alternative sequence of instructions.
-  void setFsqrtIsCheap(bool isCheap = true) { FsqrtIsCheap = isCheap; }
-
   /// Tells the code generator that this target supports floating point
   /// exceptions and cares about preserving floating point exception behavior.
   void setHasFloatingPointExceptions(bool FPExceptions = true) {
@@ -1324,7 +1441,10 @@ protected:
                         LegalizeAction Action) {
     assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValVT.isValid() &&
            MemVT.isValid() && "Table isn't big enough!");
-    LoadExtActions[(unsigned)ValVT.SimpleTy][MemVT.SimpleTy][ExtType] = Action;
+    assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
+    unsigned Shift = 4 * ExtType;
+    LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] &= ~((uint16_t)0xF << Shift);
+    LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] |= (uint16_t)Action << Shift;
   }
 
   /// Indicate that the specified truncating store does not work with the
@@ -1386,6 +1506,13 @@ protected:
     PromoteToType[std::make_pair(Opc, OrigVT.SimpleTy)] = DestVT.SimpleTy;
   }
 
+  /// Convenience method to set an operation to Promote and specify the type
+  /// in a single call.
+  void setOperationPromotedToType(unsigned Opc, MVT OrigVT, MVT DestVT) {
+    setOperationAction(Opc, OrigVT, Promote);
+    AddPromotedToType(Opc, OrigVT, DestVT);
+  }
+
   /// Targets should invoke this method for each target independent node that
   /// they want to provide a custom DAG combiner for by implementing the
   /// PerformDAGCombine virtual method.
@@ -1430,10 +1557,17 @@ protected:
     MinStackArgumentAlignment = Align;
   }
 
-  /// Set if the DAG builder should automatically insert fences and reduce the
-  /// order of atomic memory operations to Monotonic.
-  void setInsertFencesForAtomic(bool fence) {
-    InsertFencesForAtomic = fence;
+  /// Set the maximum atomic operation size supported by the
+  /// backend. Atomic operations greater than this size (as well as
+  /// ones that are not naturally aligned), will be expanded by
+  /// AtomicExpandPass into an __atomic_* library call.
+  void setMaxAtomicSizeInBitsSupported(unsigned SizeInBits) {
+    MaxAtomicSizeInBitsSupported = SizeInBits;
+  }
+
+  // Sets the minimum cmpxchg or ll/sc size supported by the backend.
+  void setMinCmpXchgSizeInBits(unsigned SizeInBits) {
+    MinCmpXchgSizeInBits = SizeInBits;
   }
 
 public:
@@ -1778,9 +1912,6 @@ private:
   /// combined with "shift" to BitExtract instructions.
   bool HasExtractBitsInsn;
 
-  // Don't expand fsqrt with an approximation based on the inverse sqrt.
-  bool FsqrtIsCheap;
-
   /// Tells the code generator to bypass slow divide or remainder
   /// instructions. For example, BypassSlowDivWidths[32,8] tells the code
   /// generator to bypass 32-bit integer div/rem with an 8-bit unsigned integer
@@ -1845,10 +1976,13 @@ private:
   /// The preferred loop alignment.
   unsigned PrefLoopAlignment;
 
-  /// Whether the DAG builder should automatically insert fences and reduce
-  /// ordering for atomics.  (This will be set for for most architectures with
-  /// weak memory ordering.)
-  bool InsertFencesForAtomic;
+  /// Size in bits of the maximum atomics size the backend supports.
+  /// Accesses larger than this will be expanded by AtomicExpandPass.
+  unsigned MaxAtomicSizeInBitsSupported;
+
+  /// Size in bits of the minimum cmpxchg or ll/sc operation the
+  /// backend supports.
+  unsigned MinCmpXchgSizeInBits;
 
   /// If set to a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
@@ -1889,9 +2023,9 @@ private:
 
   /// For each load extension type and each value type, keep a LegalizeAction
   /// that indicates how instruction selection should deal with a load of a
-  /// specific value type and extension type.
-  LegalizeAction LoadExtActions[MVT::LAST_VALUETYPE][MVT::LAST_VALUETYPE]
-                               [ISD::LAST_LOADEXT_TYPE];
+  /// specific value type and extension type. Uses 4-bits to store the action
+  /// for each of the 4 load ext types.
+  uint16_t LoadExtActions[MVT::LAST_VALUETYPE][MVT::LAST_VALUETYPE];
 
   /// For each value type pair keep a LegalizeAction that indicates whether a
   /// truncating store of a specific value type and truncating type is legal.
@@ -2026,7 +2160,7 @@ protected:
 
   /// Replace/modify any TargetFrameIndex operands with a targte-dependent
   /// sequence of memory operands that is recognized by PrologEpilogInserter.
-  MachineBasicBlock *emitPatchPoint(MachineInstr *MI,
+  MachineBasicBlock *emitPatchPoint(MachineInstr &MI,
                                     MachineBasicBlock *MBB) const;
 };
 
@@ -2042,6 +2176,8 @@ class TargetLowering : public TargetLoweringBase {
 public:
   /// NOTE: The TargetMachine owns TLOF.
   explicit TargetLowering(const TargetMachine &TM);
+
+  bool isPositionIndependent() const;
 
   /// Returns true by value, base pointer and offset pointer and addressing mode
   /// by reference if the node's address can be legally represented as
@@ -2092,17 +2228,25 @@ public:
   bool isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
                             SDValue &Chain) const;
 
-  void softenSetCCOperands(SelectionDAG &DAG, EVT VT,
-                           SDValue &NewLHS, SDValue &NewRHS,
-                           ISD::CondCode &CCCode, SDLoc DL) const;
+  void softenSetCCOperands(SelectionDAG &DAG, EVT VT, SDValue &NewLHS,
+                           SDValue &NewRHS, ISD::CondCode &CCCode,
+                           const SDLoc &DL) const;
 
   /// Returns a pair of (return value, chain).
   /// It is an error to pass RTLIB::UNKNOWN_LIBCALL as \p LC.
   std::pair<SDValue, SDValue> makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC,
                                           EVT RetVT, ArrayRef<SDValue> Ops,
-                                          bool isSigned, SDLoc dl,
+                                          bool isSigned, const SDLoc &dl,
                                           bool doesNotReturn = false,
                                           bool isReturnValueUsed = true) const;
+
+  /// Check whether parameters to a call that are passed in callee saved
+  /// registers are the same as from the calling function.  This needs to be
+  /// checked for tail call eligibility.
+  bool parametersInCSRMatch(const MachineRegisterInfo &MRI,
+      const uint32_t *CallerPreservedMask,
+      const SmallVectorImpl<CCValAssign> &ArgLocs,
+      const SmallVectorImpl<SDValue> &OutVals) const;
 
   //===--------------------------------------------------------------------===//
   // TargetLowering Optimization Methods
@@ -2141,7 +2285,7 @@ public:
     /// uses isZExtFree and ZERO_EXTEND for the widening cast, but it could be
     /// generalized for targets with other types of implicit widening casts.
     bool ShrinkDemandedOp(SDValue Op, unsigned BitWidth, const APInt &Demanded,
-                          SDLoc dl);
+                          const SDLoc &dl);
   };
 
   /// Look at Op.  At this point, we know that only the DemandedMask bits of the
@@ -2204,14 +2348,18 @@ public:
   /// from getBooleanContents().
   bool isConstFalseVal(const SDNode *N) const;
 
+  /// Return a constant of type VT that contains a true value that respects
+  /// getBooleanContents()
+  SDValue getConstTrueVal(SelectionDAG &DAG, EVT VT, const SDLoc &DL) const;
+
   /// Return if \p N is a True value when extended to \p VT.
   bool isExtendedTrueVal(const ConstantSDNode *N, EVT VT, bool Signed) const;
 
   /// Try to simplify a setcc built with the specified operands and cc. If it is
   /// unable to simplify it, return a null SDValue.
-  SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
-                          ISD::CondCode Cond, bool foldBooleans,
-                          DAGCombinerInfo &DCI, SDLoc dl) const;
+  SDValue SimplifySetCC(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
+                        bool foldBooleans, DAGCombinerInfo &DCI,
+                        const SDLoc &dl) const;
 
   /// Returns true (and the GlobalValue and the offset) if the node is a
   /// GlobalAddress + offset.
@@ -2266,7 +2414,8 @@ public:
     return false;
   }
 
-  /// Return true if the target supports swifterror attribute.
+  /// Return true if the target supports swifterror attribute. It optimizes
+  /// loads and stores to reading and writing a specific register.
   virtual bool supportSwiftError() const {
     return false;
   }
@@ -2310,12 +2459,10 @@ public:
   /// should fill in the InVals array with legal-type argument values, and
   /// return the resulting token chain value.
   ///
-  virtual SDValue
-    LowerFormalArguments(SDValue /*Chain*/, CallingConv::ID /*CallConv*/,
-                         bool /*isVarArg*/,
-                         const SmallVectorImpl<ISD::InputArg> &/*Ins*/,
-                         SDLoc /*dl*/, SelectionDAG &/*DAG*/,
-                         SmallVectorImpl<SDValue> &/*InVals*/) const {
+  virtual SDValue LowerFormalArguments(
+      SDValue /*Chain*/, CallingConv::ID /*CallConv*/, bool /*isVarArg*/,
+      const SmallVectorImpl<ISD::InputArg> & /*Ins*/, const SDLoc & /*dl*/,
+      SelectionDAG & /*DAG*/, SmallVectorImpl<SDValue> & /*InVals*/) const {
     llvm_unreachable("Not Implemented");
   }
 
@@ -2356,6 +2503,7 @@ public:
     bool IsInReg           : 1;
     bool DoesNotReturn     : 1;
     bool IsReturnValueUsed : 1;
+    bool IsConvergent      : 1;
 
     // IsTailCall should be modified by implementations of
     // TargetLowering::LowerCall that perform tail call conversions.
@@ -2375,12 +2523,13 @@ public:
     SmallVector<SDValue, 4> InVals;
 
     CallLoweringInfo(SelectionDAG &DAG)
-      : RetTy(nullptr), RetSExt(false), RetZExt(false), IsVarArg(false),
-        IsInReg(false), DoesNotReturn(false), IsReturnValueUsed(true),
-        IsTailCall(false), NumFixedArgs(-1), CallConv(CallingConv::C),
-        DAG(DAG), CS(nullptr), IsPatchPoint(false) {}
+        : RetTy(nullptr), RetSExt(false), RetZExt(false), IsVarArg(false),
+          IsInReg(false), DoesNotReturn(false), IsReturnValueUsed(true),
+          IsConvergent(false), IsTailCall(false), NumFixedArgs(-1),
+          CallConv(CallingConv::C), DAG(DAG), CS(nullptr), IsPatchPoint(false) {
+    }
 
-    CallLoweringInfo &setDebugLoc(SDLoc dl) {
+    CallLoweringInfo &setDebugLoc(const SDLoc &dl) {
       DL = dl;
       return *this;
     }
@@ -2391,13 +2540,11 @@ public:
     }
 
     CallLoweringInfo &setCallee(CallingConv::ID CC, Type *ResultType,
-                                SDValue Target, ArgListTy &&ArgsList,
-                                unsigned FixedArgs = -1) {
+                                SDValue Target, ArgListTy &&ArgsList) {
       RetTy = ResultType;
       Callee = Target;
       CallConv = CC;
-      NumFixedArgs =
-        (FixedArgs == static_cast<unsigned>(-1) ? Args.size() : FixedArgs);
+      NumFixedArgs = Args.size();
       Args = std::move(ArgsList);
       return *this;
     }
@@ -2408,7 +2555,10 @@ public:
       RetTy = ResultType;
 
       IsInReg = Call.paramHasAttr(0, Attribute::InReg);
-      DoesNotReturn = Call.doesNotReturn();
+      DoesNotReturn =
+          Call.doesNotReturn() ||
+          (!Call.isInvoke() &&
+           isa<UnreachableInst>(Call.getInstruction()->getNextNode()));
       IsVarArg = FTy->isVarArg();
       IsReturnValueUsed = !Call.getInstruction()->use_empty();
       RetSExt = Call.paramHasAttr(0, Attribute::SExt);
@@ -2447,6 +2597,11 @@ public:
 
     CallLoweringInfo &setDiscardResult(bool Value = true) {
       IsReturnValueUsed = !Value;
+      return *this;
+    }
+
+    CallLoweringInfo &setConvergent(bool Value = true) {
+      IsConvergent = Value;
       return *this;
     }
 
@@ -2506,12 +2661,12 @@ public:
   /// This hook must be implemented to lower outgoing return values, described
   /// by the Outs array, into the specified DAG. The implementation should
   /// return the resulting token chain value.
-  virtual SDValue
-    LowerReturn(SDValue /*Chain*/, CallingConv::ID /*CallConv*/,
-                bool /*isVarArg*/,
-                const SmallVectorImpl<ISD::OutputArg> &/*Outs*/,
-                const SmallVectorImpl<SDValue> &/*OutVals*/,
-                SDLoc /*dl*/, SelectionDAG &/*DAG*/) const {
+  virtual SDValue LowerReturn(SDValue /*Chain*/, CallingConv::ID /*CallConv*/,
+                              bool /*isVarArg*/,
+                              const SmallVectorImpl<ISD::OutputArg> & /*Outs*/,
+                              const SmallVectorImpl<SDValue> & /*OutVals*/,
+                              const SDLoc & /*dl*/,
+                              SelectionDAG & /*DAG*/) const {
     llvm_unreachable("Not Implemented");
   }
 
@@ -2546,12 +2701,12 @@ public:
   }
 
   /// Return the type that should be used to zero or sign extend a
-  /// zeroext/signext integer argument or return value.  FIXME: Most C calling
-  /// convention requires the return type to be promoted, but this is not true
-  /// all the time, e.g. i1 on x86-64. It is also not necessary for non-C
-  /// calling conventions. The frontend should handle this and include all of
-  /// the necessary information.
-  virtual EVT getTypeForExtArgOrReturn(LLVMContext &Context, EVT VT,
+  /// zeroext/signext integer return value.  FIXME: Some C calling conventions
+  /// require the return type to be promoted, but this is not true all the time,
+  /// e.g. i1/i8/i16 on x86/x86_64. It is also not necessary for non-C calling
+  /// conventions. The frontend should handle this and include all of the
+  /// necessary information.
+  virtual EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
                                        ISD::NodeType /*ExtendKind*/) const {
     EVT MinVT = getRegisterType(Context, MVT::i32);
     return VT.bitsLT(MinVT) ? MinVT : VT;
@@ -2579,7 +2734,7 @@ public:
   /// which allows a CPU to reuse the result of a previous load indefinitely,
   /// even if a cache-coherent store is performed by another CPU.  The default
   /// implementation does nothing.
-  virtual SDValue prepareVolatileOrAtomicLoad(SDValue Chain, SDLoc DL,
+  virtual SDValue prepareVolatileOrAtomicLoad(SDValue Chain, const SDLoc &DL,
                                               SelectionDAG &DAG) const {
     return Chain;
   }
@@ -2852,6 +3007,25 @@ public:
   /// \returns True, if the expansion was successful, false otherwise
   bool expandFP_TO_SINT(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
 
+  /// Turn load of vector type into a load of the individual elements.
+  /// \param LD load to expand
+  /// \returns MERGE_VALUEs of the scalar loads with their chains.
+  SDValue scalarizeVectorLoad(LoadSDNode *LD, SelectionDAG &DAG) const;
+
+  // Turn a store of a vector type into stores of the individual elements.
+  /// \param ST Store with a vector value type
+  /// \returns MERGE_VALUs of the individual store chains.
+  SDValue scalarizeVectorStore(StoreSDNode *ST, SelectionDAG &DAG) const;
+
+  /// Expands an unaligned load to 2 half-size loads for an integer, and
+  /// possibly more for vectors.
+  std::pair<SDValue, SDValue> expandUnalignedLoad(LoadSDNode *LD,
+                                                  SelectionDAG &DAG) const;
+
+  /// Expands an unaligned store to 2 half-size stores for integer values, and
+  /// possibly more for vectors.
+  SDValue expandUnalignedStore(StoreSDNode *ST, SelectionDAG &DAG) const;
+
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks
   //
@@ -2865,14 +3039,14 @@ public:
   /// As long as the returned basic block is different (i.e., we created a new
   /// one), the custom inserter is free to modify the rest of \p MBB.
   virtual MachineBasicBlock *
-    EmitInstrWithCustomInserter(MachineInstr *MI, MachineBasicBlock *MBB) const;
+  EmitInstrWithCustomInserter(MachineInstr &MI, MachineBasicBlock *MBB) const;
 
   /// This method should be implemented by targets that mark instructions with
   /// the 'hasPostISelHook' flag. These instructions must be adjusted after
   /// instruction selection by target hooks.  e.g. To fill in optional defs for
   /// ARM 's' setting instructions.
-  virtual void
-  AdjustInstrPostInstrSelection(MachineInstr *MI, SDNode *Node) const;
+  virtual void AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                             SDNode *Node) const;
 
   /// If this function returns true, SelectionDAGBuilder emits a
   /// LOAD_STACK_GUARD node when it is lowering Intrinsic::stackprotector.
@@ -2883,6 +3057,17 @@ public:
   /// Lower TLS global address SDNode for target independent emulated TLS model.
   virtual SDValue LowerToTLSEmulatedModel(const GlobalAddressSDNode *GA,
                                           SelectionDAG &DAG) const;
+
+  // seteq(x, 0) -> truncate(srl(ctlz(zext(x)), log2(#bits)))
+  // If we're comparing for equality to zero and isCtlzFast is true, expose the
+  // fact that this can be implemented as a ctlz/srl pair, so that the dag
+  // combiner can fold the new nodes.
+  SDValue lowerCmpEqZeroToCtlzSrl(SDValue Op, SelectionDAG &DAG) const;
+
+private:
+  SDValue simplifySetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
+                               ISD::CondCode Cond, DAGCombinerInfo &DCI,
+                               const SDLoc &DL) const;
 };
 
 /// Given an LLVM IR type and return type attributes, compute the return value

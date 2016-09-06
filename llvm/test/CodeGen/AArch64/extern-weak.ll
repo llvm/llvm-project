@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=pic -o - %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=static -o - < %s | FileCheck --check-prefix=CHECK-STATIC %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=static -o - < %s | FileCheck --check-prefix=CHECK %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -code-model=large -o - %s | FileCheck --check-prefix=CHECK-LARGE %s
 
 declare extern_weak i32 @var()
@@ -13,11 +13,6 @@ define i32()* @foo() {
 
 ; CHECK: adrp x[[ADDRHI:[0-9]+]], :got:var
 ; CHECK: ldr x0, [x[[ADDRHI]], :got_lo12:var]
-
-; CHECK-STATIC: .LCPI0_0:
-; CHECK-STATIC-NEXT: .xword  var
-; CHECK-STATIC: adrp x[[VAR:[0-9]+]], .LCPI0_0
-; CHECK-STATIC: ldr x0, [x[[VAR]], :lo12:.LCPI0_0]
 
   ; In the large model, the usual relocations are absolute and can
   ; materialise 0.
@@ -38,11 +33,6 @@ define i32* @bar() {
 ; CHECK: ldr [[BASE:x[0-9]+]], [x[[ADDRHI]], :got_lo12:arr_var]
 ; CHECK: add x0, [[BASE]], #20
 
-; CHECK-STATIC: .LCPI1_0:
-; CHECK-STATIC-NEXT: .xword arr_var
-; CHECK-STATIC: ldr [[BASE:x[0-9]+]], [{{x[0-9]+}}, :lo12:.LCPI1_0]
-; CHECK-STATIC: add x0, [[BASE]], #20
-
   ret i32* %addr
 
   ; In the large model, the usual relocations are absolute and can
@@ -60,9 +50,6 @@ define i32* @wibble() {
 
 ; CHECK: adrp [[BASE:x[0-9]+]], defined_weak_var
 ; CHECK: add x0, [[BASE]], :lo12:defined_weak_var
-
-; CHECK-STATIC: adrp [[BASE:x[0-9]+]], defined_weak_var
-; CHECK-STATIC: add x0, [[BASE]], :lo12:defined_weak_var
 
 ; CHECK-LARGE: movz x0, #:abs_g3:defined_weak_var
 ; CHECK-LARGE: movk x0, #:abs_g2_nc:defined_weak_var

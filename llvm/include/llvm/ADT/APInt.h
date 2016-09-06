@@ -16,7 +16,6 @@
 #ifndef LLVM_ADT_APINT_H
 #define LLVM_ADT_APINT_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
@@ -31,6 +30,7 @@ class hash_code;
 class raw_ostream;
 
 template <typename T> class SmallVectorImpl;
+template <typename T> class ArrayRef;
 
 // An unsigned host type used as a single part of a multi-part
 // bignum.
@@ -39,6 +39,10 @@ typedef uint64_t integerPart;
 const unsigned int host_char_bit = 8;
 const unsigned int integerPartWidth =
     host_char_bit * static_cast<unsigned int>(sizeof(integerPart));
+
+class APInt;
+
+inline APInt operator-(APInt);
 
 //===----------------------------------------------------------------------===//
 //                              APInt Class
@@ -177,11 +181,11 @@ class APInt {
   /// provides a more convenient form of divide for internal use since KnuthDiv
   /// has specific constraints on its inputs. If those constraints are not met
   /// then it provides a simpler form of divide.
-  static void divide(const APInt LHS, unsigned lhsWords, const APInt &RHS,
+  static void divide(const APInt &LHS, unsigned lhsWords, const APInt &RHS,
                      unsigned rhsWords, APInt *Quotient, APInt *Remainder);
 
   /// out-of-line slow case for inline constructor
-  void initSlowCase(unsigned numBits, uint64_t val, bool isSigned);
+  void initSlowCase(uint64_t val, bool isSigned);
 
   /// shared code between two array constructors
   void initFromArray(ArrayRef<uint64_t> array);
@@ -239,7 +243,7 @@ public:
     if (isSingleWord())
       VAL = val;
     else
-      initSlowCase(numBits, val, isSigned);
+      initSlowCase(val, isSigned);
     clearUnusedBits();
   }
 
@@ -620,13 +624,6 @@ public:
     return Result;
   }
 
-  /// \brief Unary negation operator
-  ///
-  /// Negates *this using two's complement logic.
-  ///
-  /// \returns An APInt value representing the negation of *this.
-  APInt operator-() const { return APInt(BitWidth, 0) - (*this); }
-
   /// \brief Logical negation operator.
   ///
   /// Performs logical negation operation on this APInt.
@@ -745,6 +742,7 @@ public:
   ///
   /// \returns *this
   APInt &operator+=(const APInt &RHS);
+  APInt &operator+=(uint64_t RHS);
 
   /// \brief Subtraction assignment operator.
   ///
@@ -752,6 +750,7 @@ public:
   ///
   /// \returns *this
   APInt &operator-=(const APInt &RHS);
+  APInt &operator-=(uint64_t RHS);
 
   /// \brief Left-shift assignment function.
   ///
@@ -830,18 +829,6 @@ public:
   ///
   /// Multiplies this APInt by RHS and returns the result.
   APInt operator*(const APInt &RHS) const;
-
-  /// \brief Addition operator.
-  ///
-  /// Adds RHS to this APInt and returns the result.
-  APInt operator+(const APInt &RHS) const;
-  APInt operator+(uint64_t RHS) const { return (*this) + APInt(BitWidth, RHS); }
-
-  /// \brief Subtraction operator.
-  ///
-  /// Subtracts RHS from this APInt and returns the result.
-  APInt operator-(const APInt &RHS) const;
-  APInt operator-(uint64_t RHS) const { return (*this) - APInt(BitWidth, RHS); }
 
   /// \brief Left logical shift operator.
   ///
@@ -1451,6 +1438,10 @@ public:
   /// \returns a byte-swapped representation of this APInt Value.
   APInt LLVM_ATTRIBUTE_UNUSED_RESULT byteSwap() const;
 
+  /// \returns the value with the bit representation reversed of this APInt
+  /// Value.
+  APInt LLVM_ATTRIBUTE_UNUSED_RESULT reverseBits() const;
+
   /// \brief Converts this APInt to a double value.
   double roundToDouble(bool isSigned) const;
 
@@ -1523,7 +1514,9 @@ public:
 
   /// \returns the ceil log base 2 of this APInt.
   unsigned ceilLogBase2() const {
-    return BitWidth - (*this - 1).countLeadingZeros();
+    APInt temp(*this);
+    --temp;
+    return BitWidth - temp.countLeadingZeros();
   }
 
   /// \returns the nearest log base 2 of this APInt. Ties round up.
@@ -1741,19 +1734,76 @@ inline raw_ostream &operator<<(raw_ostream &OS, const APInt &I) {
   return OS;
 }
 
+inline APInt operator-(APInt v) {
+  v.flipAllBits();
+  ++v;
+  return v;
+}
+
+inline APInt operator+(APInt a, const APInt &b) {
+  a += b;
+  return a;
+}
+
+inline APInt operator+(const APInt &a, APInt &&b) {
+  b += a;
+  return std::move(b);
+}
+
+inline APInt operator+(APInt a, uint64_t RHS) {
+  a += RHS;
+  return a;
+}
+
+inline APInt operator+(uint64_t LHS, APInt b) {
+  b += LHS;
+  return b;
+}
+
+inline APInt operator-(APInt a, const APInt &b) {
+  a -= b;
+  return a;
+}
+
+inline APInt operator-(const APInt &a, APInt &&b) {
+  b = -std::move(b);
+  b += a;
+  return std::move(b);
+}
+
+inline APInt operator-(APInt a, uint64_t RHS) {
+  a -= RHS;
+  return a;
+}
+
+inline APInt operator-(uint64_t LHS, APInt b) {
+  b = -std::move(b);
+  b += LHS;
+  return b;
+}
+
+
 namespace APIntOps {
 
 /// \brief Determine the smaller of two APInts considered to be signed.
-inline APInt smin(const APInt &A, const APInt &B) { return A.slt(B) ? A : B; }
+inline const APInt &smin(const APInt &A, const APInt &B) {
+  return A.slt(B) ? A : B;
+}
 
 /// \brief Determine the larger of two APInts considered to be signed.
-inline APInt smax(const APInt &A, const APInt &B) { return A.sgt(B) ? A : B; }
+inline const APInt &smax(const APInt &A, const APInt &B) {
+  return A.sgt(B) ? A : B;
+}
 
 /// \brief Determine the smaller of two APInts considered to be signed.
-inline APInt umin(const APInt &A, const APInt &B) { return A.ult(B) ? A : B; }
+inline const APInt &umin(const APInt &A, const APInt &B) {
+  return A.ult(B) ? A : B;
+}
 
 /// \brief Determine the larger of two APInts considered to be unsigned.
-inline APInt umax(const APInt &A, const APInt &B) { return A.ugt(B) ? A : B; }
+inline const APInt &umax(const APInt &A, const APInt &B) {
+  return A.ugt(B) ? A : B;
+}
 
 /// \brief Check if the specified APInt has a N-bits unsigned integer value.
 inline bool isIntN(unsigned N, const APInt &APIVal) { return APIVal.isIntN(N); }
@@ -1768,6 +1818,13 @@ inline bool isSignedIntN(unsigned N, const APInt &APIVal) {
 inline bool isMask(unsigned numBits, const APInt &APIVal) {
   return numBits <= APIVal.getBitWidth() &&
          APIVal == APInt::getLowBitsSet(APIVal.getBitWidth(), numBits);
+}
+
+/// \returns true if the argument is a non-empty sequence of ones starting at
+/// the least significant bit with the remainder zero (32 bit version).
+/// Ex. isMask(0x0000FFFFU) == true.
+inline bool isMask(const APInt &Value) {
+  return (Value != 0) && ((Value + 1) & Value) == 0;
 }
 
 /// \brief Return true if the argument APInt value contains a sequence of ones

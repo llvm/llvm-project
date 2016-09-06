@@ -12,7 +12,9 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <stdio.h>
+#include <algorithm>
+#include <cassert>
+#include <cstdio>
 #ifdef HAVE_LIBEDIT
 #include <histedit.h>
 #endif
@@ -106,7 +108,9 @@ struct LineEditor::InternalData {
   FILE *Out;
 };
 
-static const char *ElGetPromptFn(EditLine *EL) {
+namespace {
+
+const char *ElGetPromptFn(EditLine *EL) {
   LineEditor::InternalData *Data;
   if (el_get(EL, EL_CLIENTDATA, &Data) == 0)
     return Data->LE->getPrompt().c_str();
@@ -117,7 +121,7 @@ static const char *ElGetPromptFn(EditLine *EL) {
 //
 // This function is really horrible. But since the alternative is to get into
 // the line editor business, here we are.
-static unsigned char ElCompletionFn(EditLine *EL, int ch) {
+unsigned char ElCompletionFn(EditLine *EL, int ch) {
   LineEditor::InternalData *Data;
   if (el_get(EL, EL_CLIENTDATA, &Data) == 0) {
     if (!Data->ContinuationOutput.empty()) {
@@ -189,6 +193,8 @@ static unsigned char ElCompletionFn(EditLine *EL, int ch) {
   }
   return CC_ERROR;
 }
+
+} // end anonymous namespace
 
 LineEditor::LineEditor(StringRef ProgName, StringRef HistoryPath, FILE *In,
                        FILE *Out, FILE *Err)
@@ -269,7 +275,7 @@ Optional<std::string> LineEditor::readLine() const {
   return std::string(Line, LineLen);
 }
 
-#else
+#else // HAVE_LIBEDIT
 
 // Simple fgets-based implementation.
 
@@ -316,4 +322,4 @@ Optional<std::string> LineEditor::readLine() const {
   return Line;
 }
 
-#endif
+#endif // HAVE_LIBEDIT

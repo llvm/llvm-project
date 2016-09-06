@@ -110,21 +110,19 @@ def CC_R600 : CallingConv<[
 
 // Calling convention for compute kernels
 def CC_AMDGPU_Kernel : CallingConv<[
-  CCCustom<"allocateStack">
+  CCCustom<"allocateKernArg">
 ]>;
 
 def CC_AMDGPU : CallingConv<[
   CCIf<"static_cast<const AMDGPUSubtarget&>"
         "(State.getMachineFunction().getSubtarget()).getGeneration() >="
           "AMDGPUSubtarget::SOUTHERN_ISLANDS && "
-        "State.getMachineFunction().getInfo<SIMachineFunctionInfo>()"
-         "->getShaderType() == ShaderType::COMPUTE",
+        "!AMDGPU::isShader(State.getCallingConv())",
        CCDelegateTo<CC_AMDGPU_Kernel>>,
   CCIf<"static_cast<const AMDGPUSubtarget&>"
         "(State.getMachineFunction().getSubtarget()).getGeneration() < "
           "AMDGPUSubtarget::SOUTHERN_ISLANDS && "
-         "State.getMachineFunction().getInfo<R600MachineFunctionInfo>()"
-          "->getShaderType() == ShaderType::COMPUTE",
+         "!AMDGPU::isShader(State.getCallingConv())",
         CCDelegateTo<CC_AMDGPU_Kernel>>,
    CCIf<"static_cast<const AMDGPUSubtarget&>"
          "(State.getMachineFunction().getSubtarget()).getGeneration() >= "

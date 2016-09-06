@@ -15,6 +15,8 @@
 #define LLVM_CODEGEN_MACHINEBASICBLOCK_H
 
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/MachineInstrBundleIterator.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -37,24 +39,17 @@ class MachineBranchProbabilityInfo;
 typedef unsigned LaneBitmask;
 
 template <>
+struct ilist_sentinel_traits<MachineInstr>
+    : public ilist_half_embedded_sentinel_traits<MachineInstr> {};
+
+template <>
 struct ilist_traits<MachineInstr> : public ilist_default_traits<MachineInstr> {
 private:
-  mutable ilist_half_node<MachineInstr> Sentinel;
-
   // this is only set by the MachineBasicBlock owning the LiveList
   friend class MachineBasicBlock;
   MachineBasicBlock* Parent;
 
 public:
-  MachineInstr *createSentinel() const {
-    return static_cast<MachineInstr*>(&Sentinel);
-  }
-  void destroySentinel(MachineInstr *) const {}
-
-  MachineInstr *provideInitialHead() const { return createSentinel(); }
-  MachineInstr *ensureHead(MachineInstr*) const { return createSentinel(); }
-  static void noteHead(MachineInstr*, MachineInstr*) {}
-
   void addNodeToList(MachineInstr* N);
   void removeNodeFromList(MachineInstr* N);
   void transferNodesFromList(ilist_traits &SrcTraits,
@@ -157,80 +152,14 @@ public:
   const MachineFunction *getParent() const { return xParent; }
   MachineFunction *getParent() { return xParent; }
 
-  /// MachineBasicBlock iterator that automatically skips over MIs that are
-  /// inside bundles (i.e. walk top level MIs only).
-  template<typename Ty, typename IterTy>
-  class bundle_iterator
-    : public std::iterator<std::bidirectional_iterator_tag, Ty, ptrdiff_t> {
-    IterTy MII;
-
-  public:
-    bundle_iterator(IterTy MI) : MII(MI) {}
-
-    bundle_iterator(Ty &MI) : MII(MI) {
-      assert(!MI.isBundledWithPred() &&
-             "It's not legal to initialize bundle_iterator with a bundled MI");
-    }
-    bundle_iterator(Ty *MI) : MII(MI) {
-      assert((!MI || !MI->isBundledWithPred()) &&
-             "It's not legal to initialize bundle_iterator with a bundled MI");
-    }
-    // Template allows conversion from const to nonconst.
-    template<class OtherTy, class OtherIterTy>
-    bundle_iterator(const bundle_iterator<OtherTy, OtherIterTy> &I)
-      : MII(I.getInstrIterator()) {}
-    bundle_iterator() : MII(nullptr) {}
-
-    Ty &operator*() const { return *MII; }
-    Ty *operator->() const { return &operator*(); }
-
-    operator Ty *() const { return MII.getNodePtrUnchecked(); }
-
-    bool operator==(const bundle_iterator &X) const {
-      return MII == X.MII;
-    }
-    bool operator!=(const bundle_iterator &X) const {
-      return !operator==(X);
-    }
-
-    // Increment and decrement operators...
-    bundle_iterator &operator--() {      // predecrement - Back up
-      do --MII;
-      while (MII->isBundledWithPred());
-      return *this;
-    }
-    bundle_iterator &operator++() {      // preincrement - Advance
-      while (MII->isBundledWithSucc())
-        ++MII;
-      ++MII;
-      return *this;
-    }
-    bundle_iterator operator--(int) {    // postdecrement operators...
-      bundle_iterator tmp = *this;
-      --*this;
-      return tmp;
-    }
-    bundle_iterator operator++(int) {    // postincrement operators...
-      bundle_iterator tmp = *this;
-      ++*this;
-      return tmp;
-    }
-
-    IterTy getInstrIterator() const {
-      return MII;
-    }
-  };
-
   typedef Instructions::iterator                                 instr_iterator;
   typedef Instructions::const_iterator                     const_instr_iterator;
   typedef std::reverse_iterator<instr_iterator>          reverse_instr_iterator;
   typedef
   std::reverse_iterator<const_instr_iterator>      const_reverse_instr_iterator;
 
-  typedef
-  bundle_iterator<MachineInstr,instr_iterator>                         iterator;
-  typedef
-  bundle_iterator<const MachineInstr,const_instr_iterator>       const_iterator;
+  typedef MachineInstrBundleIterator<MachineInstr> iterator;
+  typedef MachineInstrBundleIterator<const MachineInstr> const_iterator;
   typedef std::reverse_iterator<const_iterator>          const_reverse_iterator;
   typedef std::reverse_iterator<iterator>                      reverse_iterator;
 
@@ -256,6 +185,13 @@ public:
   const_reverse_instr_iterator instr_rbegin() const { return Insts.rbegin(); }
   reverse_instr_iterator       instr_rend  ()       { return Insts.rend();   }
   const_reverse_instr_iterator instr_rend  () const { return Insts.rend();   }
+
+  typedef iterator_range<instr_iterator> instr_range;
+  typedef iterator_range<const_instr_iterator> const_instr_range;
+  instr_range instrs() { return instr_range(instr_begin(), instr_end()); }
+  const_instr_range instrs() const {
+    return const_instr_range(instr_begin(), instr_end());
+  }
 
   iterator                begin()       { return instr_begin();  }
   const_iterator          begin() const { return instr_begin();  }
@@ -398,10 +334,6 @@ public:
   /// Indicates the block is a landing pad.  That is this basic block is entered
   /// via an exception handler.
   void setIsEHPad(bool V = true) { IsEHPad = V; }
-
-  /// If this block has a successor that is a landing pad, return it. Otherwise
-  /// return NULL.
-  const MachineBasicBlock *getLandingPadSuccessor() const;
 
   bool hasEHPadSuccessor() const;
 
@@ -563,7 +495,13 @@ public:
   ///
   /// This function updates LiveVariables, MachineDominatorTree, and
   /// MachineLoopInfo, as applicable.
-  MachineBasicBlock *SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P);
+  MachineBasicBlock *SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P);
+
+  /// Check if the edge between this block and the given successor \p
+  /// Succ, can be split. If this returns true a subsequent call to
+  /// SplitCriticalEdge is guaranteed to return a valid basic block if
+  /// no changes occured in the meantime.
+  bool canSplitCriticalEdge(const MachineBasicBlock *Succ) const;
 
   void pop_front() { Insts.pop_front(); }
   void pop_back() { Insts.pop_back(); }
@@ -729,9 +667,9 @@ public:
 
   // Debugging methods.
   void dump() const;
-  void print(raw_ostream &OS, SlotIndexes* = nullptr) const;
+  void print(raw_ostream &OS, const SlotIndexes* = nullptr) const;
   void print(raw_ostream &OS, ModuleSlotTracker &MST,
-             SlotIndexes * = nullptr) const;
+             const SlotIndexes* = nullptr) const;
 
   // Printing method used by LoopInfo.
   void printAsOperand(raw_ostream &OS, bool PrintType = true) const;
@@ -795,6 +733,7 @@ struct MBB2NumberFunctor :
 
 template <> struct GraphTraits<MachineBasicBlock *> {
   typedef MachineBasicBlock NodeType;
+  typedef MachineBasicBlock *NodeRef;
   typedef MachineBasicBlock::succ_iterator ChildIteratorType;
 
   static NodeType *getEntryNode(MachineBasicBlock *BB) { return BB; }
@@ -808,6 +747,7 @@ template <> struct GraphTraits<MachineBasicBlock *> {
 
 template <> struct GraphTraits<const MachineBasicBlock *> {
   typedef const MachineBasicBlock NodeType;
+  typedef const MachineBasicBlock *NodeRef;
   typedef MachineBasicBlock::const_succ_iterator ChildIteratorType;
 
   static NodeType *getEntryNode(const MachineBasicBlock *BB) { return BB; }
@@ -827,6 +767,7 @@ template <> struct GraphTraits<const MachineBasicBlock *> {
 //
 template <> struct GraphTraits<Inverse<MachineBasicBlock*> > {
   typedef MachineBasicBlock NodeType;
+  typedef MachineBasicBlock *NodeRef;
   typedef MachineBasicBlock::pred_iterator ChildIteratorType;
   static NodeType *getEntryNode(Inverse<MachineBasicBlock *> G) {
     return G.Graph;
@@ -841,6 +782,7 @@ template <> struct GraphTraits<Inverse<MachineBasicBlock*> > {
 
 template <> struct GraphTraits<Inverse<const MachineBasicBlock*> > {
   typedef const MachineBasicBlock NodeType;
+  typedef const MachineBasicBlock *NodeRef;
   typedef MachineBasicBlock::const_pred_iterator ChildIteratorType;
   static NodeType *getEntryNode(Inverse<const MachineBasicBlock*> G) {
     return G.Graph;

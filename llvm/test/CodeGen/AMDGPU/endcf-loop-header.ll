@@ -12,8 +12,9 @@
 ; CHECK: [[LOOP_LABEL:[0-9A-Za-z_]+]]: ; %loop{{$}}
 ; CHECK-NOT: s_or_b64 exec, exec
 ; CHECK: s_cbranch_execnz [[LOOP_LABEL]]
-define void @test(i32 addrspace(1)* %out, i32 %cond) {
+define void @test(i32 addrspace(1)* %out) {
 entry:
+  %cond = call i32 @llvm.r600.read.tidig.x() #0
   %tmp0 = icmp eq i32 %cond, 0
   br i1 %tmp0, label %if, label %loop
 
@@ -32,3 +33,7 @@ done:
   store i32 %inc, i32 addrspace(1)* %tmp3
   ret void
 }
+
+declare i32 @llvm.r600.read.tidig.x() #0
+
+attributes #0 = { readnone }

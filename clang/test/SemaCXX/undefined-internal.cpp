@@ -82,6 +82,7 @@ namespace test5 {
     static int var; // expected-warning {{variable 'test5::B<test5::(anonymous namespace)::A>::var' has internal linkage but is not defined}}
     static void foo(); // expected-warning {{function 'test5::B<test5::(anonymous namespace)::A>::foo' has internal linkage but is not defined}}
   };
+  extern template int B<A>::var;
 
   void test() {
     B<A>::var = 0; // expected-note {{used here}}

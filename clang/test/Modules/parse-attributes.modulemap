@@ -1,0 +1,12 @@
+// RUN: rm -rf %t.modules
+// RUN: not %clang_cc1 -fmodules -fmodules-cache-path=%t.modules \
+// RUN:   -fmodule-map-file=%s -I%S -include "Inputs/empty.h" \
+// RUN:   -fsyntax-only -x c++ /dev/null 2>&1 | FileCheck %s
+
+// CHECK: error: expected ']' to close attribute
+// CHECK-NOT: error: expected '{' to start module 'A'
+
+module A [system {
+  header "Inputs/empty.h"
+  private header "Inputs/empty.h"
+}

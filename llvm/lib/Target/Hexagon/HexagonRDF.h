@@ -13,7 +13,6 @@
 
 namespace llvm {
   class TargetRegisterInfo;
-}
 
 namespace rdf {
   struct HexagonRegisterAliasInfo : public RegisterAliasInfo {
@@ -22,7 +21,8 @@ namespace rdf {
     bool covers(RegisterRef RA, RegisterRef RR) const override;
     bool covers(const RegisterSet &RRs, RegisterRef RR) const override;
   };
-}
+} // namespace rdf
+} // namespace llvm
 
 #endif
 

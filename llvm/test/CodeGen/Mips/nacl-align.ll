@@ -7,8 +7,8 @@
 define void @test0() {
   ret void
 
-; CHECK:          .align  4
-; CHECK-NOT:      .align
+; CHECK:          .p2align  4
+; CHECK-NOT:      .p2align
 ; CHECK-LABEL:    test0:
 
 }
@@ -40,18 +40,18 @@ default:
 
 ; CHECK-LABEL:       test1:
 
-; CHECK:             .align  4
+; CHECK:             .p2align  4
 ; CHECK-NEXT:    ${{BB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT:        jr      $ra
 ; CHECK-NEXT:        addiu   $2, $zero, 111
 ; CHECK-NEXT:    ${{BB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT:        jr      $ra
 ; CHECK-NEXT:        addiu   $2, $zero, 555
-; CHECK-NEXT:        .align  4
+; CHECK-NEXT:        .p2align  4
 ; CHECK-NEXT:    ${{BB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT:        jr      $ra
 ; CHECK-NEXT:        addiu   $2, $zero, 222
-; CHECK-NEXT:        .align  4
+; CHECK-NEXT:        .p2align  4
 ; CHECK-NEXT:    ${{BB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT:        jr      $ra
 ; CHECK-NEXT:        addiu   $2, $zero, 333
@@ -81,12 +81,12 @@ bb2:
 ; Note that there are two consecutive labels - one temporary and one for
 ; basic block.
 
-; CHECK:             .align  4
+; CHECK:             .p2align  4
 ; CHECK-NEXT:    ${{[a-zA-Z0-9]+}}:
 ; CHECK-NEXT:    ${{BB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT:        jr      $ra
 ; CHECK-NEXT:        addiu   $2, $zero, 111
-; CHECK-NEXT:        .align  4
+; CHECK-NEXT:        .p2align  4
 ; CHECK-NEXT:    ${{[a-zA-Z0-9]+}}:
 ; CHECK-NEXT:    ${{BB[0-9]+_[0-9]+}}:
 ; CHECK-NEXT:        jr      $ra

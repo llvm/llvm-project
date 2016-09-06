@@ -1,4 +1,4 @@
-//RUN: llvm-mc  -triple=aarch64-linux-gnu %s | FileCheck %s
+//RUN: llvm-mc  -triple=aarch64-linux-gnu -print-imm-hex %s | FileCheck %s
 
 //
 // Check that large constants are converted to ldr from constant pool
@@ -8,17 +8,17 @@
 // CHECK-LABEL: f1:
 f1:
   ldr x0, =0x1234
-// CHECK: movz    x0, #0x1234
+// CHECK: mov    x0, #0x1234
   ldr w1, =0x4567
-// CHECK:  movz    w1, #0x4567
+// CHECK:  mov    w1, #0x4567
   ldr x0, =0x12340000
-// CHECK:  movz    x0, #0x1234, lsl #16
+// CHECK:  mov    x0, #0x12340000
   ldr w1, =0x45670000
-// CHECK: movz    w1, #0x4567, lsl #16
+// CHECK: mov    w1, #0x45670000
   ldr x0, =0xabc00000000
-// CHECK: movz    x0, #0xabc, lsl #32
+// CHECK: mov    x0, #0xabc00000000
   ldr x0, =0xbeef000000000000
-// CHECK: movz    x0, #0xbeef, lsl #48
+// CHECK: mov    x0, #-0x4111000000000000
 
 .section b,"ax",@progbits
 // CHECK-LABEL: f3:
@@ -128,7 +128,7 @@ f13:
   adds x0, x0, #1
   adds x0, x0, #1
   ldr w0, =0x101
-// CHECK: movz w0, #0x101
+// CHECK: mov w0, #0x101
   adds x0, x0, #1
   adds x0, x0, #1
   ldr w0, =bar
@@ -209,31 +209,31 @@ f18:
 // Constant Pools
 //
 // CHECK: .section b,"ax",@progbits
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP0]]
 // CHECK: .word 65537
 
 // CHECK: .section c,"ax",@progbits
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP1]]
 // CHECK: .word 65538
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP2]]
 // CHECK: .word 65539
 
 // CHECK: .section d,"ax",@progbits
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP3]]
 // CHECK: .word 65540
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP4]]
 // CHECK: .word 65540
 
 // CHECK: .section e,"ax",@progbits
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP5]]
 // CHECK: .word 65542
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP6]]
 // CHECK: .word 65543
 
@@ -241,79 +241,79 @@ f18:
 // CHECK-NOT: .section f,"ax",@progbits
 
 // CHECK: .section g,"ax",@progbits
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP7]]
 // CHECK: .word foo
 
 // CHECK: .section h,"ax",@progbits
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP8]]
 // CHECK: .word f5
 
 // CHECK: .section i,"ax",@progbits
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP9]]
 // CHECK: .word f12
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP10]]
 // CHECK: .word 245760
 
 // CHECK: .section j,"ax",@progbits
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP11]]
 // CHECK: .word bar
 
 // CHECK: .section k,"ax",@progbits
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP12]]
 // CHECK: .word 65544
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP13]]
 // CHECK: .word baz
 
 // CHECK: .section l,"ax",@progbits
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP14]]
 // CHECK: .word 65545
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP15]]
 // CHECK: .word bar+4
 
 // CHECK: .section m,"ax",@progbits
-// CHECK: .align 3
+// CHECK: .p2align 3
 // CHECK: .Ltmp[[TMP16]]
 // CHECK: .xword 72623859790382856
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP17]]
 // CHECK: .word bar
-// CHECK: .align 3
+// CHECK: .p2align 3
 // CHECK: .Ltmp[[TMP18]]
 // CHECK: .xword bar+16
-// CHECK: .align 3
+// CHECK: .p2align 3
 // CHECK: .Ltmp[[TMP19]]
 // CHECK: .xword 4294967297
-// CHECK: .align 3
+// CHECK: .p2align 3
 // CHECK: .Ltmp[[TMP20]]
 // CHECK: .xword -2147483649
-// CHECK: .align 3
+// CHECK: .p2align 3
 // CHECK: .Ltmp[[TMP21]]
 // CHECK: .xword 65537
 
 // CHECK: .section n,"ax",@progbits
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP22]]
 // CHECK: .word 4294967295
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP23]]
 // CHECK: .word -2147483647
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP24]]
 // CHECK: .word -1
 
 // CHECK: .section o,"ax",@progbits
-// CHECK: .align 2
+// CHECK: .p2align 2
 // CHECK: .Ltmp[[TMP25]]
 // CHECK: .word 3276900
-// CHECK: .align 3
+// CHECK: .p2align 3
 // CHECK: .Ltmp[[TMP26]]
 // CHECK: .xword 3276900

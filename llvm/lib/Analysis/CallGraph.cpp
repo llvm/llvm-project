@@ -80,11 +80,9 @@ void CallGraph::addToCallGraph(Function *F) {
     Node->addCalledFunction(CallSite(), CallsExternalNode.get());
 
   // Look for calls by this function.
-  for (Function::iterator BB = F->begin(), BBE = F->end(); BB != BBE; ++BB)
-    for (BasicBlock::iterator II = BB->begin(), IE = BB->end(); II != IE;
-         ++II) {
-      CallSite CS(cast<Value>(II));
-      if (CS) {
+  for (BasicBlock &BB : *F)
+    for (Instruction &I : BB) {
+      if (auto CS = CallSite(&I)) {
         const Function *Callee = CS.getCalledFunction();
         if (!Callee || !Intrinsic::isLeaf(Callee->getIntrinsicID()))
           // Indirect calls of intrinsics are not allowed so no need to check.
@@ -111,8 +109,8 @@ void CallGraph::print(raw_ostream &OS) const {
   SmallVector<CallGraphNode *, 16> Nodes;
   Nodes.reserve(FunctionMap.size());
 
-  for (auto I = begin(), E = end(); I != E; ++I)
-    Nodes.push_back(I->second.get());
+  for (const auto &I : *this)
+    Nodes.push_back(I.second.get());
 
   std::sort(Nodes.begin(), Nodes.end(),
             [](CallGraphNode *LHS, CallGraphNode *RHS) {
@@ -186,9 +184,9 @@ void CallGraphNode::print(raw_ostream &OS) const {
   
   OS << "<<" << this << ">>  #uses=" << getNumReferences() << '\n';
 
-  for (const_iterator I = begin(), E = end(); I != E; ++I) {
-    OS << "  CS<" << I->first << "> calls ";
-    if (Function *FI = I->second->getFunction())
+  for (const auto &I : *this) {
+    OS << "  CS<" << I.first << "> calls ";
+    if (Function *FI = I.second->getFunction())
       OS << "function '" << FI->getName() <<"'\n";
     else
       OS << "external node\n";
@@ -259,11 +257,18 @@ void CallGraphNode::replaceCallEdge(CallSite CS,
   }
 }
 
+// Provide an explicit template instantiation for the static ID.
+char CallGraphAnalysis::PassID;
+
+PreservedAnalyses CallGraphPrinterPass::run(Module &M,
+                                            ModuleAnalysisManager &AM) {
+  AM.getResult<CallGraphAnalysis>(M).print(OS);
+  return PreservedAnalyses::all();
+}
+
 //===----------------------------------------------------------------------===//
 // Out-of-line definitions of CallGraphAnalysis class members.
 //
-
-char CallGraphAnalysis::PassID;
 
 //===----------------------------------------------------------------------===//
 // Implementations of the CallGraphWrapperPass class methods.
@@ -304,3 +309,29 @@ void CallGraphWrapperPass::print(raw_ostream &OS, const Module *) const {
 
 LLVM_DUMP_METHOD
 void CallGraphWrapperPass::dump() const { print(dbgs(), nullptr); }
+
+namespace {
+struct CallGraphPrinterLegacyPass : public ModulePass {
+  static char ID; // Pass ID, replacement for typeid
+  CallGraphPrinterLegacyPass() : ModulePass(ID) {
+    initializeCallGraphPrinterLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    AU.addRequiredTransitive<CallGraphWrapperPass>();
+  }
+  bool runOnModule(Module &M) override {
+    getAnalysis<CallGraphWrapperPass>().print(errs(), &M);
+    return false;
+  }
+};
+}
+
+char CallGraphPrinterLegacyPass::ID = 0;
+
+INITIALIZE_PASS_BEGIN(CallGraphPrinterLegacyPass, "print-callgraph",
+                      "Print a call graph", true, true)
+INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
+INITIALIZE_PASS_END(CallGraphPrinterLegacyPass, "print-callgraph",
+                    "Print a call graph", true, true)

@@ -1,0 +1,46 @@
+RUN: llvm-readobj -symbols %p/Inputs/symbols-proc-specific.elf-hexagon \
+RUN:  --elf-output-style=GNU | FileCheck %s -check-prefix ELF32
+RUN: llvm-readobj -symbols %p/Inputs/relocs.obj.elf-x86_64 --elf-output-style=GNU \
+RUN:   | FileCheck %s -check-prefix ELF64
+RUN: llvm-readobj -symbols %p/Inputs/gnuhash.so.elf-x86_64 --elf-output-style=GNU \
+RUN:   | FileCheck %s -check-prefix DYN
+
+ELF32: Symbol table '.symtab' contains 5 entries:
+ELF32-NEXT:    Num:    Value  Size Type    Bind   Vis      Ndx Name
+ELF32-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT  UND
+ELF32-NEXT:      1: 00000000     0 FILE    LOCAL  DEFAULT  ABS a.c
+ELF32-NEXT:      2: 00000000    20 FUNC    GLOBAL DEFAULT    2 main
+ELF32-NEXT:      3: 00000004     4 OBJECT  GLOBAL DEFAULT PRC[0xff03] x
+ELF32-NEXT:      4: 00000000     4 OBJECT  GLOBAL DEFAULT    3 y
+
+ELF64: Symbol table '.symtab' contains 6 entries:
+ELF64-NEXT:   Num:    Value          Size Type    Bind   Vis      Ndx Name
+ELF64-NEXT:     0:  0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+ELF64-NEXT:     1:  0000000000000000     0 SECTION LOCAL  DEFAULT    1
+ELF64-NEXT:     2:  0000000000000000     0 SECTION LOCAL  DEFAULT    3
+ELF64-NEXT:     3:  0000000000000000     0 SECTION LOCAL  DEFAULT    4
+ELF64-NEXT:     4:  0000000000000000     0 NOTYPE  GLOBAL DEFAULT  UND _GLOBAL_OFFSET_TABLE_
+ELF64-NEXT:     5:  0000000000000000     0 TLS     GLOBAL DEFAULT  UND sym
+
+DYN:Symbol table '.dynsym' contains 5 entries:
+DYN-NEXT:   Num:    Value          Size Type    Bind   Vis      Ndx Name
+DYN-NEXT:     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+DYN-NEXT:     1: 00000000000001b8     0 NOTYPE  GLOBAL DEFAULT    4 foo
+DYN-NEXT:     2: 0000000000200268     0 NOTYPE  GLOBAL DEFAULT    5 _edata
+DYN-NEXT:     3: 0000000000200268     0 NOTYPE  GLOBAL DEFAULT    5 _end
+DYN-NEXT:     4: 0000000000200268     0 NOTYPE  GLOBAL DEFAULT    5 __bss_start
+
+DYN: Symbol table '.symtab' contains 12 entries:
+DYN-NEXT:   Num:    Value          Size Type    Bind   Vis      Ndx Name
+DYN-NEXT:     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND
+DYN-NEXT:     1: 00000000000000e8     0 SECTION LOCAL  DEFAULT    1
+DYN-NEXT:     2: 0000000000000120     0 SECTION LOCAL  DEFAULT    2
+DYN-NEXT:     3: 0000000000000198     0 SECTION LOCAL  DEFAULT    3
+DYN-NEXT:     4: 00000000000001b8     0 SECTION LOCAL  DEFAULT    4
+DYN-NEXT:     5: 00000000002001b8     0 SECTION LOCAL  DEFAULT    5
+DYN-NEXT:     6: 00000000002001b8     0 OBJECT  LOCAL  DEFAULT    5 _DYNAMIC
+DYN-NEXT:     7: 0000000000200268     0 OBJECT  LOCAL  DEFAULT    5 _GLOBAL_OFFSET_TABLE_
+DYN-NEXT:     8: 0000000000200268     0 NOTYPE  GLOBAL DEFAULT    5 __bss_start
+DYN-NEXT:     9: 00000000000001b8     0 NOTYPE  GLOBAL DEFAULT    4 foo
+DYN-NEXT:    10: 0000000000200268     0 NOTYPE  GLOBAL DEFAULT    5 _edata
+DYN-NEXT:    11: 0000000000200268     0 NOTYPE  GLOBAL DEFAULT    5 _end

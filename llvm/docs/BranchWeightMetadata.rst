@@ -29,7 +29,7 @@ Supported Instructions
 Metadata is only assigned to the conditional branches. There are two extra
 operands for the true and the false branch.
 
-.. code-block:: llvm
+.. code-block:: none
 
   !0 = metadata !{
     metadata !"branch_weights",
@@ -43,7 +43,7 @@ operands for the true and the false branch.
 Branch weights are assigned to every case (including the ``default`` case which
 is always case #0).
 
-.. code-block:: llvm
+.. code-block:: none
 
   !0 = metadata !{
     metadata !"branch_weights",
@@ -56,7 +56,7 @@ is always case #0).
 
 Branch weights are assigned to every destination.
 
-.. code-block:: llvm
+.. code-block:: none
 
   !0 = metadata !{
     metadata !"branch_weights",

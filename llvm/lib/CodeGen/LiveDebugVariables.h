@@ -21,12 +21,12 @@
 #ifndef LLVM_LIB_CODEGEN_LIVEDEBUGVARIABLES_H
 #define LLVM_LIB_CODEGEN_LIVEDEBUGVARIABLES_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/DebugInfo.h"
 
 namespace llvm {
 
+template <typename T> class ArrayRef;
 class LiveInterval;
 class LiveIntervals;
 class VirtRegMap;

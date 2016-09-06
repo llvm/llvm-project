@@ -105,11 +105,12 @@ return:                                           ; preds = %bb2
 
 declare void @_ZdlPv(i8*) nounwind
 
+!llvm.dbg.cu = !{!4}
 !0 = !DILocalVariable(name: "tst", line: 13, scope: !1, file: !4, type: !8)
 !1 = distinct !DILexicalBlock(line: 0, column: 0, file: !44, scope: !2)
 !2 = distinct !DILexicalBlock(line: 0, column: 0, file: !44, scope: !3)
-!3 = distinct !DISubprogram(name: "main", linkageName: "main", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scope: !4, type: !5)
-!4 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 0, file: !44, enums: !45, retainedTypes: !45)
+!3 = distinct !DISubprogram(name: "main", linkageName: "main", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !4, scope: !4, type: !5)
+!4 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !44, enums: !45, retainedTypes: !45)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!7}
 !7 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -118,7 +119,7 @@ declare void @_ZdlPv(i8*) nounwind
 !10 = !DIDerivedType(tag: DW_TAG_member, name: "_vptr$test1", line: 1, size: 64, align: 64, file: !44, scope: !8, baseType: !11)
 !11 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, file: !4, baseType: !12)
 !12 = !DIDerivedType(tag: DW_TAG_pointer_type, name: "__vtbl_ptr_type", scope: !4, baseType: !5)
-!13 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: 0, file: !46, enums: !45, retainedTypes: !45)
+!13 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: FullDebug, file: !46, enums: !45, retainedTypes: !45)
 !14 = !DISubprogram(name: "test1", line: 1, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagPrivate, isOptimized: false, scope: !8, type: !15)
 !15 = !DISubroutineType(types: !16)
 !16 = !{null, !17}
@@ -130,7 +131,7 @@ declare void @_ZdlPv(i8*) nounwind
 !22 = !DILocation(line: 13, scope: !1)
 !23 = !DILocation(line: 14, scope: !1)
 !24 = !DILocalVariable(name: "this", line: 13, arg: 1, scope: !25, file: !4, type: !26)
-!25 = distinct !DISubprogram(name: "test1", linkageName: "_ZN5test1C1Ev", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scope: !4, type: !15)
+!25 = distinct !DISubprogram(name: "test1", linkageName: "_ZN5test1C1Ev", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !4, scope: !4, type: !15)
 !26 = !DIDerivedType(tag: DW_TAG_const_type, size: 64, align: 64, flags: DIFlagArtificial, file: !4, baseType: !27)
 !27 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, file: !4, baseType: !8)
 !28 = !DILocation(line: 1, scope: !25)
@@ -138,13 +139,13 @@ declare void @_ZdlPv(i8*) nounwind
 !30 = distinct !DILexicalBlock(line: 0, column: 0, file: !44, scope: !31)
 !31 = distinct !DILexicalBlock(line: 0, column: 0, file: !44, scope: !25)
 !32 = !DILocalVariable(name: "this", line: 4, arg: 1, scope: !33, file: !4, type: !26)
-!33 = distinct !DISubprogram(name: "~test1", linkageName: "_ZN5test1D1Ev", line: 4, isLocal: false, isDefinition: true, virtuality: DW_VIRTUALITY_virtual, virtualIndex: 6, isOptimized: false, scope: !8, type: !15, containingType: !8)
+!33 = distinct !DISubprogram(name: "~test1", linkageName: "_ZN5test1D1Ev", line: 4, isLocal: false, isDefinition: true, virtuality: DW_VIRTUALITY_virtual, virtualIndex: 6, isOptimized: false, unit: !4, scope: !8, type: !15, containingType: !8)
 !34 = !DILocation(line: 4, scope: !33)
 !35 = !DILocation(line: 5, scope: !36)
 !36 = distinct !DILexicalBlock(line: 0, column: 0, file: !44, scope: !33)
 !37 = !DILocation(line: 6, scope: !36)
 !38 = !DILocalVariable(name: "this", line: 4, arg: 1, scope: !39, file: !4, type: !26)
-!39 = distinct !DISubprogram(name: "~test1", linkageName: "_ZN5test1D0Ev", line: 4, isLocal: false, isDefinition: true, virtuality: DW_VIRTUALITY_virtual, virtualIndex: 6, isOptimized: false, scope: !8, type: !15, containingType: !8)
+!39 = distinct !DISubprogram(name: "~test1", linkageName: "_ZN5test1D0Ev", line: 4, isLocal: false, isDefinition: true, virtuality: DW_VIRTUALITY_virtual, virtualIndex: 6, isOptimized: false, unit: !4, scope: !8, type: !15, containingType: !8)
 !40 = !DILocation(line: 4, scope: !39)
 !41 = !DILocation(line: 5, scope: !42)
 !42 = distinct !DILexicalBlock(line: 0, column: 0, file: !44, scope: !39)

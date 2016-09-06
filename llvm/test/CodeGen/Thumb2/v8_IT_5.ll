@@ -17,31 +17,13 @@
 
 define i32 @t(i32 %type) optsize {
 entry:
-  br i1 undef, label %if.then, label %if.else
-
-if.then:
-  unreachable
-
-if.else:
-  br i1 undef, label %if.then15, label %if.else18
-
-if.then15:
-  unreachable
-
-if.else18:
   switch i32 %type, label %if.else173 [
-    i32 3, label %if.then115
-    i32 1, label %if.then102
+    i32 13, label %if.then115
+    i32 6, label %if.then102
   ]
 
 if.then102:
-  br i1 undef, label %cond.true10.i, label %t.exit
-
-cond.true10.i:
-  br label %t.exit
-
-t.exit:
-  unreachable
+ br label %if.then115
 
 if.then115:
   br i1 undef, label %if.else163, label %if.else145
@@ -62,4 +44,3 @@ if.else173:
 }
 
 declare hidden fastcc %struct.hc* @foo(%struct.hc* nocapture, i32) nounwind optsize
-

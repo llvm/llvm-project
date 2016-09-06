@@ -1,4 +1,4 @@
-# RUN: yaml2obj -format=elf %s | llvm-readobj -sections -relocations - | FileCheck %s
+# RUN: yaml2obj %s | llvm-readobj -sections -relocations - | FileCheck %s
 
 !ELF
 FileHeader: !FileHeader

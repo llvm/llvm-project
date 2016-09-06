@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 ; Test that basic immediates assemble as expected.
 
@@ -133,6 +133,25 @@ define float @neginf_f32() {
   ret float 0xFFF0000000000000
 }
 
+; CHECK-LABEL: custom_nan_f32:
+; CHECK-NEXT: .result f32{{$}}
+; CHECK-NEXT: f32.const $push[[NUM:[0-9]+]]=, -nan:0x6bcdef{{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+define float @custom_nan_f32() {
+  ret float 0xFFFD79BDE0000000
+}
+
+; TODO: LLVM's MC layer stores f32 operands as host doubles, requiring a
+; conversion, so the bits of the NaN are not fully preserved.
+
+; CHECK-LABEL: custom_nans_f32:
+; CHECK-NEXT: .result f32{{$}}
+; CHECK-NEXT: f32.const $push[[NUM:[0-9]+]]=, -nan:0x6bcdef{{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+define float @custom_nans_f32() {
+  ret float 0xFFF579BDE0000000
+}
+
 ; CHECK-LABEL: negzero_f64:
 ; CHECK-NEXT: .result f64{{$}}
 ; CHECK-NEXT: f64.const $push[[NUM:[0-9]+]]=, -0x0p0{{$}}
@@ -195,4 +214,20 @@ define double @inf_f64() {
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define double @neginf_f64() {
   ret double 0xFFF0000000000000
+}
+
+; CHECK-LABEL: custom_nan_f64:
+; CHECK-NEXT: .result f64{{$}}
+; CHECK-NEXT: f64.const $push[[NUM:[0-9]+]]=, -nan:0xabcdef0123456{{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+define double @custom_nan_f64() {
+  ret double 0xFFFABCDEF0123456
+}
+
+; CHECK-LABEL: custom_nans_f64:
+; CHECK-NEXT: .result f64{{$}}
+; CHECK-NEXT: f64.const $push[[NUM:[0-9]+]]=, -nan:0x2bcdef0123456{{$}}
+; CHECK-NEXT: return $pop[[NUM]]{{$}}
+define double @custom_nans_f64() {
+  ret double 0xFFF2BCDEF0123456
 }

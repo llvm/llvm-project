@@ -62,6 +62,8 @@ int MCRegisterInfo::getDwarfRegNum(unsigned RegNum, bool isEH) const {
   const DwarfLLVMRegPair *M = isEH ? EHL2DwarfRegs : L2DwarfRegs;
   unsigned Size = isEH ? EHL2DwarfRegsSize : L2DwarfRegsSize;
 
+  if (!M)
+    return -1;
   DwarfLLVMRegPair Key = { RegNum, 0 };
   const DwarfLLVMRegPair *I = std::lower_bound(M, M+Size, Key);
   if (I == M+Size || I->FromReg != RegNum)
@@ -73,6 +75,8 @@ int MCRegisterInfo::getLLVMRegNum(unsigned RegNum, bool isEH) const {
   const DwarfLLVMRegPair *M = isEH ? EHDwarf2LRegs : Dwarf2LRegs;
   unsigned Size = isEH ? EHDwarf2LRegsSize : Dwarf2LRegsSize;
 
+  if (!M)
+    return -1;
   DwarfLLVMRegPair Key = { RegNum, 0 };
   const DwarfLLVMRegPair *I = std::lower_bound(M, M+Size, Key);
   assert(I != M+Size && I->FromReg == RegNum && "Invalid RegNum");
@@ -82,5 +86,14 @@ int MCRegisterInfo::getLLVMRegNum(unsigned RegNum, bool isEH) const {
 int MCRegisterInfo::getSEHRegNum(unsigned RegNum) const {
   const DenseMap<unsigned, int>::const_iterator I = L2SEHRegs.find(RegNum);
   if (I == L2SEHRegs.end()) return (int)RegNum;
+  return I->second;
+}
+
+int MCRegisterInfo::getCodeViewRegNum(unsigned RegNum) const {
+  if (L2CVRegs.empty())
+    report_fatal_error("target does not implement codeview register mapping");
+  const DenseMap<unsigned, int>::const_iterator I = L2CVRegs.find(RegNum);
+  if (I == L2CVRegs.end())
+    report_fatal_error("unknown codeview register");
   return I->second;
 }

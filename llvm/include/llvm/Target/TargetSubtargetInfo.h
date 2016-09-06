@@ -16,14 +16,20 @@
 
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CodeGen.h"
+#include <vector>
 
 namespace llvm {
 
+class CallLowering;
 class DataLayout;
+class InstructionSelector;
 class MachineFunction;
 class MachineInstr;
+class MachineLegalizer;
+class RegisterBankInfo;
 class SDep;
 class SUnit;
 class TargetFrameLowering;
@@ -32,7 +38,7 @@ class TargetLowering;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
-class TargetSelectionDAGInfo;
+class SelectionDAGTargetInfo;
 struct MachineSchedPolicy;
 template <typename T> class SmallVectorImpl;
 
@@ -71,6 +77,7 @@ public:
   // -- Pipelines and scheduling information
   // -- Stack frame information
   // -- Selection DAG lowering information
+  // -- Call lowering information
   //
   // N.B. These objects may change during compilation. It's not safe to cache
   // them between functions.
@@ -79,20 +86,37 @@ public:
     return nullptr;
   }
   virtual const TargetLowering *getTargetLowering() const { return nullptr; }
-  virtual const TargetSelectionDAGInfo *getSelectionDAGInfo() const {
+  virtual const SelectionDAGTargetInfo *getSelectionDAGInfo() const {
     return nullptr;
   }
+  virtual const CallLowering *getCallLowering() const { return nullptr; }
+
+  // FIXME: This lets targets specialize the selector by subtarget (which lets
+  // us do things like a dedicated avx512 selector).  However, we might want
+  // to also specialize selectors by MachineFunction, which would let us be
+  // aware of optsize/optnone and such.
+  virtual const InstructionSelector *getInstructionSelector() const {
+    return nullptr;
+  }
+
   /// Target can subclass this hook to select a different DAG scheduler.
   virtual RegisterScheduler::FunctionPassCtor
       getDAGScheduler(CodeGenOpt::Level) const {
     return nullptr;
   }
 
+  virtual const MachineLegalizer *getMachineLegalizer() const {
+    return nullptr;
+  }
+
   /// getRegisterInfo - If register information is available, return it.  If
-  /// not, return null.  This is kept separate from RegInfo until RegInfo has
-  /// details of graph coloring register allocation removed from it.
+  /// not, return null.
   ///
   virtual const TargetRegisterInfo *getRegisterInfo() const { return nullptr; }
+
+  /// If the information for the register banks is available, return it.
+  /// Otherwise return nullptr.
+  virtual const RegisterBankInfo *getRegBankInfo() const { return nullptr; }
 
   /// getInstrItineraryData - Returns instruction itinerary data for the target
   /// or specific subtarget.
@@ -144,7 +168,6 @@ public:
   /// scheduling heuristics (no custom MachineSchedStrategy) to make
   /// changes to the generic scheduling policy.
   virtual void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                   MachineInstr *begin, MachineInstr *end,
                                    unsigned NumRegionInstrs) const {}
 
   // \brief Perform target specific adjustments to the latency of a schedule
@@ -160,6 +183,12 @@ public:
   // are on the critical path.
   virtual void getCriticalPathRCs(RegClassVector &CriticalPathRCs) const {
     return CriticalPathRCs.clear();
+  }
+
+  // \brief Provide an ordered list of schedule DAG mutations for the post-RA
+  // scheduler.
+  virtual void getPostRAMutations(
+      std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   }
 
   // For use with PostRAScheduling: get the minimum optimization level needed

@@ -14,32 +14,38 @@ FUZZER_FLAG_INT(verbosity, 1, "Verbosity level.")
 FUZZER_FLAG_UNSIGNED(seed, 0, "Random seed. If 0, seed is generated.")
 FUZZER_FLAG_INT(runs, -1,
             "Number of individual test runs (-1 for infinite runs).")
-FUZZER_FLAG_INT(max_len, 64, "Maximum length of the test input.")
+FUZZER_FLAG_INT(max_len, 0, "Maximum length of the test input. "
+    "If 0, libFuzzer tries to guess a good value based on the corpus "
+    "and reports it. ")
 FUZZER_FLAG_INT(cross_over, 1, "If 1, cross over inputs.")
 FUZZER_FLAG_INT(mutate_depth, 5,
             "Apply this number of consecutive mutations to each input.")
 FUZZER_FLAG_INT(shuffle, 1, "Shuffle inputs at startup")
-FUZZER_FLAG_INT(
-    prefer_small_during_initial_shuffle, -1,
-    "If 1, always prefer smaller inputs during the initial corpus shuffle."
-    " If 0, never do that. If -1, do it sometimes.")
-FUZZER_FLAG_INT(exit_on_first, 0,
-            "If 1, exit after the first new interesting input is found.")
+FUZZER_FLAG_INT(prefer_small, 1,
+    "If 1, always prefer smaller inputs during the corpus shuffle.")
 FUZZER_FLAG_INT(
     timeout, 1200,
     "Timeout in seconds (if positive). "
     "If one unit runs more than this number of seconds the process will abort.")
+FUZZER_FLAG_INT(timeout_exitcode, 77,
+                "Unless abort_on_timeout is set, use this exitcode on timeout.")
+FUZZER_FLAG_INT(error_exit_code, 77, "When libFuzzer's signal handlers are in "
+  "use exit with this exitcode after catching a deadly signal.")
 FUZZER_FLAG_INT(max_total_time, 0, "If positive, indicates the maximal total "
                                    "time in seconds to run the fuzzer.")
 FUZZER_FLAG_INT(help, 0, "Print help.")
-FUZZER_FLAG_INT(save_minimized_corpus, 0, "Deprecated. Use -merge=1")
 FUZZER_FLAG_INT(merge, 0, "If 1, the 2-nd, 3-rd, etc corpora will be "
-  "merged into the 1-st corpus. Only interesting units will be taken.")
+  "merged into the 1-st corpus. Only interesting units will be taken. "
+  "This flag can be used to minimize a corpus.")
 FUZZER_FLAG_INT(use_counters, 1, "Use coverage counters")
 FUZZER_FLAG_INT(use_indir_calls, 1, "Use indirect caller-callee counters")
 FUZZER_FLAG_INT(use_traces, 0, "Experimental: use instruction traces")
 FUZZER_FLAG_INT(use_memcmp, 1,
                 "Use hints from intercepting memcmp, strcmp, etc")
+FUZZER_FLAG_INT(use_memmem, 1,
+                "Use hints from intercepting memmem, strstr, etc")
+FUZZER_FLAG_INT(use_value_profile, 0,
+                "Experimental. Use value profile to guide fuzzing.")
 FUZZER_FLAG_INT(jobs, 0, "Number of jobs to run. If jobs >= 1 we spawn"
                           " this number of jobs in separate worker processes"
                           " with stdout/stderr redirected to fuzz-JOB.log.")
@@ -49,16 +55,11 @@ FUZZER_FLAG_INT(workers, 0,
 FUZZER_FLAG_INT(reload, 1,
                 "Reload the main corpus periodically to get new units"
                 " discovered by other processes.")
-FUZZER_FLAG_STRING(sync_command, "Execute an external command "
-                                 "\"<sync_command> <test_corpus>\" "
-                                 "to synchronize the test corpus.")
-FUZZER_FLAG_INT(sync_timeout, 600, "Minimum timeout between syncs.")
 FUZZER_FLAG_INT(report_slow_units, 10,
     "Report slowest units if they run for more than this number of seconds.")
 FUZZER_FLAG_INT(only_ascii, 0,
                 "If 1, generate only ASCII (isprint+isspace) inputs.")
 FUZZER_FLAG_STRING(dict, "Experimental. Use the dictionary file.")
-FUZZER_FLAG_STRING(test_single_input, "Use specified file as test input.")
 FUZZER_FLAG_STRING(artifact_prefix, "Write fuzzing artifacts (crash, "
                                     "timeout, or slow inputs) as "
                                     "$(artifact_prefix)file")
@@ -71,4 +72,28 @@ FUZZER_FLAG_INT(drill, 0, "Experimental: fuzz using a single unit as the seed "
                           "corpus, then merge with the initial corpus")
 FUZZER_FLAG_INT(output_csv, 0, "Enable pulse output in CSV format.")
 FUZZER_FLAG_INT(print_new_cov_pcs, 0, "If 1, print out new covered pcs.")
+FUZZER_FLAG_INT(print_final_stats, 0, "If 1, print statistics at exit.")
 
+FUZZER_FLAG_INT(handle_segv, 1, "If 1, try to intercept SIGSEGV.")
+FUZZER_FLAG_INT(handle_bus, 1, "If 1, try to intercept SIGSEGV.")
+FUZZER_FLAG_INT(handle_abrt, 1, "If 1, try to intercept SIGABRT.")
+FUZZER_FLAG_INT(handle_ill, 1, "If 1, try to intercept SIGILL.")
+FUZZER_FLAG_INT(handle_fpe, 1, "If 1, try to intercept SIGFPE.")
+FUZZER_FLAG_INT(handle_int, 1, "If 1, try to intercept SIGINT.")
+FUZZER_FLAG_INT(handle_term, 1, "If 1, try to intercept SIGTERM.")
+FUZZER_FLAG_INT(close_fd_mask, 0, "If 1, close stdout at startup; "
+    "if 2, close stderr; if 3, close both. "
+    "Be careful, this will also close e.g. asan's stderr/stdout.")
+FUZZER_FLAG_INT(detect_leaks, 1, "If 1, and if LeakSanitizer is enabled "
+    "try to detect memory leaks during fuzzing (i.e. not only at shut down).")
+FUZZER_FLAG_INT(rss_limit_mb, 2048, "If non-zero, the fuzzer will exit upon"
+    "reaching this limit of RSS memory usage.")
+FUZZER_FLAG_INT(truncate_units, 0, "Try truncated units when loading corpus.")
+FUZZER_FLAG_INT(prune_corpus, 1, "Prune corpus items without new coverage when "
+                                 "loading corpus.")
+
+FUZZER_DEPRECATED_FLAG(exit_on_first)
+FUZZER_DEPRECATED_FLAG(save_minimized_corpus)
+FUZZER_DEPRECATED_FLAG(sync_command)
+FUZZER_DEPRECATED_FLAG(sync_timeout)
+FUZZER_DEPRECATED_FLAG(test_single_input)

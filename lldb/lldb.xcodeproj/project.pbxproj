@@ -6922,6 +6922,7 @@
 				2689FFC613353D7A00698AC0 /* Sources */,
 				2689FFC713353D7A00698AC0 /* Frameworks */,
 				2689FFC813353D7A00698AC0 /* Headers */,
+				94C8C91C1D6F9249000EA446 /* Check AST Context */,
 			);
 			buildRules = (
 			);
@@ -7307,6 +7308,20 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "/usr/bin/python $SRCROOT/scripts/Xcode/package-clang-headers.py $TARGET_BUILD_DIR ${LLDB_PATH_TO_LLVM_BUILD:-$LLVM_BUILD_DIR/llvm-macosx-$CURRENT_ARCH}";
+		};
+		94C8C91C1D6F9249000EA446 /* Check AST Context */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Check AST Context";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"${CONFIGURATION}\" != BuildAndIntegration ]\nthen\n  \"${SRCROOT}\"/scripts/check-ast-context.py --file \"${SRCROOT}\"/source/Symbol/SwiftASTContext.cpp --llvmbuild \"${LLDB_PATH_TO_LLVM_BUILD}\" --swiftbuild \"${LLDB_PATH_TO_SWIFT_BUILD}\" --lldbbuild \"${BUILD_DIR}\" --llvmbarch \"${LLVM_BUILD_DIR_ARCH}\" --verbose true\nfi\n";
 		};
 		9A19ACE2116563A700E0D453 /* Finish swig wrapper classes (lldb) */ = {
 			isa = PBXShellScriptBuildPhase;

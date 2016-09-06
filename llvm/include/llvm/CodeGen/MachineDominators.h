@@ -216,6 +216,8 @@ public:
 
   void releaseMemory() override;
 
+  void verifyAnalysis() const override;
+
   void print(raw_ostream &OS, const Module*) const override;
 
   /// \brief Record that the critical edge (FromBB, ToBB) has been
@@ -239,6 +241,27 @@ public:
            "A basic block inserted via edge splitting cannot appear twice");
     CriticalEdgesToSplit.push_back({FromBB, ToBB, NewBB});
   }
+
+  /// \brief Returns *false* if the other dominator tree matches this dominator
+  /// tree.
+  inline bool compare(const MachineDominatorTree &Other) const {
+    const MachineDomTreeNode *R = getRootNode();
+    const MachineDomTreeNode *OtherR = Other.getRootNode();
+
+    if (!R || !OtherR || R->getBlock() != OtherR->getBlock())
+      return true;
+
+    if (DT->compare(*Other.DT))
+      return true;
+
+    return false;
+  }
+
+  /// \brief Verify the correctness of the domtree by re-computing it.
+  ///
+  /// This should only be used for debugging as it aborts the program if the
+  /// verification fails.
+  void verifyDomTree() const;
 };
 
 //===-------------------------------------
@@ -249,6 +272,7 @@ public:
 template <class Node, class ChildIterator>
 struct MachineDomTreeGraphTraitsBase {
   typedef Node NodeType;
+  typedef Node *NodeRef;
   typedef ChildIterator ChildIteratorType;
 
   static NodeType *getEntryNode(NodeType *N) { return N; }

@@ -96,3 +96,82 @@ define void @test2(i32 %i, i32 %len, i1* %c.ptr) {
   call void @side_effect(i32 %t)
   ret void
 }
+
+; A s<= B implies A s> B is false.
+; CHECK-LABEL: @test3(
+; CHECK: entry:
+; CHECK: br i1 %cmp, label %if.end, label %if.end3
+; CHECK-NOT: br i1 %cmp1, label %if.then2, label %if.end
+; CHECK-NOT: call void @side_effect(i32 0)
+; CHECK: br label %if.end3
+; CHECK: ret void
+
+define void @test3(i32 %a, i32 %b) {
+entry:
+  %cmp = icmp sle i32 %a, %b
+  br i1 %cmp, label %if.then, label %if.end3
+
+if.then:
+  %cmp1 = icmp sgt i32 %a, %b
+  br i1 %cmp1, label %if.then2, label %if.end
+
+if.then2:
+  call void @side_effect(i32 0)
+  br label %if.end
+
+if.end:
+  br label %if.end3
+
+if.end3:
+  ret void
+}
+
+declare void @is(i1)
+
+; If A >=s B is false then A <=s B is implied true.
+; CHECK-LABEL: @test_sge_sle
+; CHECK: call void @is(i1 true)
+; CHECK-NOT: call void @is(i1 false)
+define void @test_sge_sle(i32 %a, i32 %b) {
+  %cmp1 = icmp sge i32 %a, %b
+  br i1 %cmp1, label %untaken, label %taken
+
+taken:
+  %cmp2 = icmp sle i32 %a, %b
+  br i1 %cmp2, label %istrue, label %isfalse
+
+istrue:
+  call void @is(i1 true)
+  ret void
+
+isfalse:
+  call void @is(i1 false)
+  ret void
+
+untaken:
+  ret void
+}
+
+; If A <=s B is false then A <=s B is implied false.
+; CHECK-LABEL: @test_sle_sle
+; CHECK-NOT: call void @is(i1 true)
+; CHECK: call void @is(i1 false)
+define void @test_sle_sle(i32 %a, i32 %b) {
+  %cmp1 = icmp sle i32 %a, %b
+  br i1 %cmp1, label %untaken, label %taken
+
+taken:
+  %cmp2 = icmp sle i32 %a, %b
+  br i1 %cmp2, label %istrue, label %isfalse
+
+istrue:
+  call void @is(i1 true)
+  ret void
+
+isfalse:
+  call void @is(i1 false)
+  ret void
+
+untaken:
+  ret void
+}

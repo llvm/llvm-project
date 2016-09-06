@@ -18,7 +18,6 @@
 #include "llvm/IR/Use.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -27,9 +26,13 @@ class Argument;
 class AssemblyAnnotationWriter;
 class BasicBlock;
 class Constant;
+class ConstantData;
+class ConstantAggregate;
 class DataLayout;
 class Function;
 class GlobalAlias;
+class GlobalIFunc;
+class GlobalIndirectSymbol;
 class GlobalObject;
 class GlobalValue;
 class GlobalVariable;
@@ -106,10 +109,11 @@ protected:
   enum : unsigned { NumUserOperandsBits = 28 };
   unsigned NumUserOperands : NumUserOperandsBits;
 
-  bool IsUsedByMD : 1;
-  bool HasName : 1;
-  bool HasHungOffUses : 1;
-  bool HasDescriptor : 1;
+  // Use the same type as the bitfield above so that MSVC will pack them.
+  unsigned IsUsedByMD : 1;
+  unsigned HasName : 1;
+  unsigned HasHungOffUses : 1;
+  unsigned HasDescriptor : 1;
 
 private:
   template <typename UseT> // UseT == 'Use' or 'const Use'
@@ -500,6 +504,20 @@ public:
     return const_cast<Value*>(this)->stripInBoundsOffsets();
   }
 
+  /// \brief Returns the number of bytes known to be dereferenceable for the
+  /// pointer value.
+  ///
+  /// If CanBeNull is set by this function the pointer can either be null or be
+  /// dereferenceable up to the returned number of bytes.
+  unsigned getPointerDereferenceableBytes(const DataLayout &DL,
+                                          bool &CanBeNull) const;
+
+  /// \brief Returns an alignment of the pointer value.
+  ///
+  /// Returns an alignment which is either specified explicitly, e.g. via
+  /// align attribute of a function argument, or guaranteed by DataLayout.
+  unsigned getPointerAlignment(const DataLayout &DL) const;
+
   /// \brief Translate PHI node to its predecessor from the given basic block.
   ///
   /// If this value is a PHI node with CurBB as its parent, return the value in
@@ -598,6 +616,16 @@ void Use::set(Value *V) {
   if (V) V->addUse(*this);
 }
 
+Value *Use::operator=(Value *RHS) {
+  set(RHS);
+  return RHS;
+}
+
+const Use &Use::operator=(const Use &RHS) {
+  set(RHS.Val);
+  return *this;
+}
+
 template <class Compare> void Value::sortUseList(Compare Cmp) {
   if (!UseList || !UseList->Next)
     // No need to sort 0 or 1 uses.
@@ -675,6 +703,20 @@ template <> struct isa_impl<Constant, Value> {
   }
 };
 
+template <> struct isa_impl<ConstantData, Value> {
+  static inline bool doit(const Value &Val) {
+    return Val.getValueID() >= Value::ConstantDataFirstVal &&
+           Val.getValueID() <= Value::ConstantDataLastVal;
+  }
+};
+
+template <> struct isa_impl<ConstantAggregate, Value> {
+  static inline bool doit(const Value &Val) {
+    return Val.getValueID() >= Value::ConstantAggregateFirstVal &&
+           Val.getValueID() <= Value::ConstantAggregateLastVal;
+  }
+};
+
 template <> struct isa_impl<Argument, Value> {
   static inline bool doit (const Value &Val) {
     return Val.getValueID() == Value::ArgumentVal;
@@ -717,9 +759,21 @@ template <> struct isa_impl<GlobalAlias, Value> {
   }
 };
 
+template <> struct isa_impl<GlobalIFunc, Value> {
+  static inline bool doit(const Value &Val) {
+    return Val.getValueID() == Value::GlobalIFuncVal;
+  }
+};
+
+template <> struct isa_impl<GlobalIndirectSymbol, Value> {
+  static inline bool doit(const Value &Val) {
+    return isa<GlobalAlias>(Val) || isa<GlobalIFunc>(Val);
+  }
+};
+
 template <> struct isa_impl<GlobalValue, Value> {
   static inline bool doit(const Value &Val) {
-    return isa<GlobalObject>(Val) || isa<GlobalAlias>(Val);
+    return isa<GlobalObject>(Val) || isa<GlobalIndirectSymbol>(Val);
   }
 };
 
@@ -744,8 +798,7 @@ public:
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_ISA_CONVERSION_FUNCTIONS(Value, LLVMValueRef)
 
-/* Specialized opaque value conversions.
- */
+// Specialized opaque value conversions.
 inline Value **unwrap(LLVMValueRef *Vals) {
   return reinterpret_cast<Value**>(Vals);
 }

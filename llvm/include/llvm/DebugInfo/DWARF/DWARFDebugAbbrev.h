@@ -11,7 +11,6 @@
 #define LLVM_LIB_DEBUGINFO_DWARFDEBUGABBREV_H
 
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
-#include <list>
 #include <map>
 #include <vector>
 

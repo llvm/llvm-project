@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -w -triple i386-pc-win32 -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: define i64 @f1_1()
-// CHECK-LABEL: define void @f1_2(%struct.s1* byval align 4 %a0)
+// CHECK-LABEL: define void @f1_2(i32 %a0.0, i32 %a0.1)
 struct s1 {
   int a;
   int b;
@@ -31,7 +31,7 @@ struct s4 {
 struct s4 f4_1(void) { while (1) {} }
 
 // CHECK-LABEL: define i64 @f5_1()
-// CHECK-LABEL: define void @f5_2(%struct.s5* byval align 4)
+// CHECK-LABEL: define void @f5_2(double %a0.0)
 struct s5 {
   double a;
 };
@@ -39,7 +39,7 @@ struct s5 f5_1(void) { while (1) {} }
 void f5_2(struct s5 a0) {}
 
 // CHECK-LABEL: define i32 @f6_1()
-// CHECK-LABEL: define void @f6_2(%struct.s6* byval align 4 %a0)
+// CHECK-LABEL: define void @f6_2(float %a0.0)
 struct s6 {
   float a;
 };

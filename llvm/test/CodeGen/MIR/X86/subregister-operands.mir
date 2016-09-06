@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -start-after machine-sink -stop-after machine-sink -o /dev/null %s | FileCheck %s
+# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
 # This test ensures that the MIR parser parses subregisters in register operands
 # correctly.
 
@@ -22,9 +22,9 @@ body: |
   bb.0.entry:
     liveins: %edi
     ; CHECK:      %0 = COPY %edi
-    ; CHECK-NEXT: %1 = COPY %0:sub_8bit
+    ; CHECK-NEXT: %1 = COPY %0.sub_8bit
     %0 = COPY %edi
-    %1 = COPY %0:sub_8bit
+    %1 = COPY %0.sub_8bit
     %2 = AND8ri %1, 1, implicit-def %eflags
     %al = COPY %2
     RETQ %al

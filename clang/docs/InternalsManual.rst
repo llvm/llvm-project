@@ -57,7 +57,7 @@ driver, but diagnostics can be :ref:`rendered in many different ways
 <DiagnosticClient>` depending on how the ``DiagnosticClient`` interface is
 implemented.  A representative example of a diagnostic is:
 
-.. code-block:: c++
+.. code-block:: text
 
   t.c:38:15: error: invalid operands to binary expression ('int *' and '_Complex float')
   P = (P-42) + Gamma*4;
@@ -374,7 +374,7 @@ use of a deprecated construct into something more palatable.  Here is one such
 example from the C++ front end, where we warn about the right-shift operator
 changing meaning from C++98 to C++11:
 
-.. code-block:: c++
+.. code-block:: text
 
   test.cpp:3:7: warning: use of right-shift operator ('>>') in template argument
                          will require parentheses in C++11
@@ -514,7 +514,7 @@ Clang represents most source ranges by [first, last], where "first" and "last"
 each point to the beginning of their respective tokens.  For example consider
 the ``SourceRange`` of the following statement:
 
-.. code-block:: c++
+.. code-block:: text
 
   x = foo + bar;
   ^first    ^last
@@ -837,7 +837,7 @@ typedefs.  For example, consider this code:
 The code above is illegal, and thus we expect there to be diagnostics emitted
 on the annotated lines.  In this example, we expect to get:
 
-.. code-block:: c++
+.. code-block:: text
 
   test.c:6:1: error: indirection requires pointer operand ('foo' invalid)
     *X; // error
@@ -1422,7 +1422,7 @@ pretty-printed version of the CFG to standard error.  This is especially useful
 when one is using a debugger such as gdb.  For example, here is the output of
 ``FooCFG->dump()``:
 
-.. code-block:: c++
+.. code-block:: text
 
  [ B5 (ENTRY) ]
     Predecessors (0):

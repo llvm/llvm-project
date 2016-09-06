@@ -310,6 +310,8 @@ enum {
   EM_NORC          = 218, // Nanoradio Optimized RISC
   EM_CSR_KALIMBA   = 219, // CSR Kalimba architecture family
   EM_AMDGPU        = 224, // AMD GPU architecture
+  EM_LANAI         = 244, // Lanai 32-bit processor
+  EM_BPF           = 247, // Linux kernel bpf virtual machine
 
   // A request has been made to the maintainer of the official registry for
   // such numbers for an official value for WebAssembly. As soon as one is
@@ -481,6 +483,7 @@ enum : unsigned {
   EF_MIPS_ABI        = 0x0000f000, // Mask for selecting EF_MIPS_ABI_ variant.
 
   // MIPS machine variant
+  EF_MIPS_MACH_NONE    = 0x00000000, // A standard MIPS implementation.
   EF_MIPS_MACH_3900    = 0x00810000, // Toshiba R3900
   EF_MIPS_MACH_4010    = 0x00820000, // LSI R4010
   EF_MIPS_MACH_4100    = 0x00830000, // NEC VR4100
@@ -589,6 +592,11 @@ enum {
 #include "ELFRelocs/Hexagon.def"
 };
 
+// ELF Relocation type for Lanai.
+enum {
+#include "ELFRelocs/Lanai.def"
+};
+
 // ELF Relocation types for S390/zSeries
 enum {
 #include "ELFRelocs/SystemZ.def"
@@ -602,6 +610,16 @@ enum {
 // ELF Relocation types for WebAssembly
 enum {
 #include "ELFRelocs/WebAssembly.def"
+};
+
+// ELF Relocation types for AMDGPU
+enum {
+#include "ELFRelocs/AMDGPU.def"
+};
+
+// ELF Relocation types for BPF
+enum {
+#include "ELFRelocs/BPF.def"
 };
 
 #undef ELF_RELOC
@@ -729,6 +747,9 @@ enum : unsigned {
 
   // This section holds Thread-Local Storage.
   SHF_TLS = 0x400U,
+
+  // Identifies a section containing compressed data.
+  SHF_COMPRESSED = 0x800U,
 
   // This section is excluded from the final executable or shared library.
   SHF_EXCLUDE = 0x80000000U,
@@ -1298,6 +1319,35 @@ enum {
 enum {
   VER_NEED_NONE = 0,
   VER_NEED_CURRENT = 1
+};
+
+// SHT_NOTE section types
+enum {
+  NT_GNU_BUILD_ID = 3
+};
+
+// Compressed section header for ELF32.
+struct Elf32_Chdr {
+  Elf32_Word ch_type;
+  Elf32_Word ch_size;
+  Elf32_Word ch_addralign;
+};
+
+// Compressed section header for ELF64.
+struct Elf64_Chdr {
+  Elf64_Word ch_type;
+  Elf64_Word ch_reserved;
+  Elf64_Xword ch_size;
+  Elf64_Xword ch_addralign;
+};
+
+// Legal values for ch_type field of compressed section header.
+enum {
+  ELFCOMPRESS_ZLIB = 1,            // ZLIB/DEFLATE algorithm.
+  ELFCOMPRESS_LOOS = 0x60000000,   // Start of OS-specific.
+  ELFCOMPRESS_HIOS = 0x6fffffff,   // End of OS-specific.
+  ELFCOMPRESS_LOPROC = 0x70000000, // Start of processor-specific.
+  ELFCOMPRESS_HIPROC = 0x7fffffff  // End of processor-specific.
 };
 
 } // end namespace ELF

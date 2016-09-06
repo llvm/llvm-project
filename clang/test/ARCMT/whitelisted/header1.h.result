@@ -3,3 +3,5 @@
 @property (nonatomic) int prop;
 +(instancetype)i1;
 @end
+
+typedef long NSInteger;

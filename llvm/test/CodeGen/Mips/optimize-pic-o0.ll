@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -O0 -relocation-model=pic < %s | FileCheck %s
 
 ; Function Attrs: nounwind
 define i32 @main()  {

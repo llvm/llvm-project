@@ -13,7 +13,8 @@ void kernel foo() {
   constant int L1 = 0;
   local int L2;
 
-  auto int L3 = 7; // expected-error{{OpenCL does not support the 'auto' storage class specifier}}
+  auto int L3 = 7; // expected-error{{OpenCL version 1.2 does not support the 'auto' storage class specifier}}
+  global int L4;   // expected-error{{function scope variable cannot be declared in global address space}}
 }
 
 static void kernel bar() { // expected-error{{kernel functions cannot be declared static}}
@@ -26,4 +27,6 @@ void f() {
     constant int L1 = 0; // expected-error{{non-kernel function variable cannot be declared in constant address space}}
     local int L2;        // expected-error{{non-kernel function variable cannot be declared in local address space}}
   }
+  global int L3; // expected-error{{function scope variable cannot be declared in global address space}}
+  extern constant float L4;
 }

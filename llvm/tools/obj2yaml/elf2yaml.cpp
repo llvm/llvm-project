@@ -11,7 +11,7 @@
 #include "obj2yaml.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ELFYAML.h"
+#include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -179,10 +179,10 @@ ELFDumper<ELFT>::dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
   S.Size = Sym->st_size;
   S.Other = Sym->st_other;
 
-  ErrorOr<StringRef> NameOrErr = Sym->getName(StrTable);
-  if (std::error_code EC = NameOrErr.getError())
-    return EC;
-  S.Name = NameOrErr.get();
+  Expected<StringRef> SymbolNameOrErr = Sym->getName(StrTable);
+  if (!SymbolNameOrErr)
+    return errorToErrorCode(SymbolNameOrErr.takeError());
+  S.Name = SymbolNameOrErr.get();
 
   ErrorOr<const Elf_Shdr *> ShdrOrErr = Obj.getSection(Sym, SymTab, ShndxTable);
   if (std::error_code EC = ShdrOrErr.getError())
@@ -191,7 +191,7 @@ ELFDumper<ELFT>::dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
   if (!Shdr)
     return obj2yaml_error::success;
 
-  NameOrErr = Obj.getSectionName(Shdr);
+  ErrorOr<StringRef> NameOrErr = Obj.getSectionName(Shdr);
   if (std::error_code EC = NameOrErr.getError())
     return EC;
   S.Section = NameOrErr.get();
@@ -217,9 +217,9 @@ std::error_code ELFDumper<ELFT>::dumpRelocation(const RelT *Rel,
     return EC;
   StringRef StrTab = *StrTabOrErr;
 
-  ErrorOr<StringRef> NameOrErr = Sym->getName(StrTab);
-  if (std::error_code EC = NameOrErr.getError())
-    return EC;
+  Expected<StringRef> NameOrErr = Sym->getName(StrTab);
+  if (!NameOrErr)
+    return errorToErrorCode(NameOrErr.takeError());
   R.Symbol = NameOrErr.get();
 
   return obj2yaml_error::success;
@@ -368,9 +368,9 @@ ErrorOr<ELFYAML::Group *> ELFDumper<ELFT>::dumpGroup(const Elf_Shdr *Shdr) {
   auto sectionContents = Obj.getSectionContents(Shdr);
   if (std::error_code ec = sectionContents.getError())
     return ec;
-  ErrorOr<StringRef> symbolName = symbol->getName(StrTab);
-  if (std::error_code EC = symbolName.getError())
-    return EC;
+  Expected<StringRef> symbolName = symbol->getName(StrTab);
+  if (!symbolName)
+    return errorToErrorCode(symbolName.takeError());
   S->Info = *symbolName;
   const Elf_Word *groupMembers =
       reinterpret_cast<const Elf_Word *>(sectionContents->data());

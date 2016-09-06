@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s -triple spir-unknown-unknown
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
@@ -24,7 +24,10 @@ kernel void bool_in_struct_arg(ContainsBool x) { } // expected-error{{'ContainsB
 
 typedef struct FooImage2D // expected-note{{within field of type 'FooImage2D' declared here}}
 {
-  image2d_t imageField; // expected-note{{field of illegal type 'image2d_t' declared here}}
+  // TODO: Clean up needed - we don't really need to check for image, event, etc
+  // as a note here any longer.
+  // They are diagnosed as an error for all struct fields (OpenCL v1.2 s6.9b,r).
+  image2d_t imageField; // expected-note{{field of illegal type '__read_only image2d_t' declared here}} expected-error{{the '__read_only image2d_t' type cannot be used to declare a structure or union field}}
 } FooImage2D;
 
 kernel void image_in_struct_arg(FooImage2D arg) { } // expected-error{{struct kernel parameters may not contain pointers}}

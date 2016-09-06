@@ -11,7 +11,7 @@ double foo(int N) {
   return v;
 }
 
-// CHECK: {{.*}}:18:13: remark: loop not vectorized: cannot prove it is safe to reorder memory operations; allow reordering by specifying '#pragma clang loop vectorize(enable)' before the loop. If the arrays will always be independent specify '#pragma clang loop vectorize(assume_safety)' before the loop or provide the '__restrict__' qualifier with the independent array arguments. Erroneous results will occur if these options are incorrectly applied!
+// CHECK: {{.*}}:17:3: remark: loop not vectorized: cannot prove it is safe to reorder memory operations; allow reordering by specifying '#pragma clang loop vectorize(enable)' before the loop. If the arrays will always be independent specify '#pragma clang loop vectorize(assume_safety)' before the loop or provide the '__restrict__' qualifier with the independent array arguments. Erroneous results will occur if these options are incorrectly applied!
 
 void foo2(int *dw, int *uw, int *A, int *B, int *C, int *D, int N) {
   for (int i = 0; i < N; i++) {

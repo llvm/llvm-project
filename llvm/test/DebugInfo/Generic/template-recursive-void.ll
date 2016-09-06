@@ -25,7 +25,7 @@
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!36, !37}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 (trunk 187958) (llvm/trunk 187964)", isOptimized: false, emissionKind: 0, file: !1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !3, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.4 (trunk 187958) (llvm/trunk 187964)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !3, imports: !2)
 !1 = !DIFile(filename: "debug-info-template-recursive.cpp", directory: "/usr/local/google/home/echristo/tmp")
 !2 = !{}
 !3 = !{!4}

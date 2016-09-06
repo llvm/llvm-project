@@ -16,6 +16,9 @@ declare double @llvm.powi.f64(double, i32) nounwind readonly
 declare i32 @llvm.cttz.i32(i32, i1) nounwind readnone
 declare i32 @llvm.ctlz.i32(i32, i1) nounwind readnone
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
+declare <2 x i32> @llvm.cttz.v2i32(<2 x i32>, i1) nounwind readnone
+declare <2 x i32> @llvm.ctlz.v2i32(<2 x i32>, i1) nounwind readnone
+declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>) nounwind readnone
 declare i8 @llvm.ctlz.i8(i8, i1) nounwind readnone
 declare double @llvm.cos.f64(double %Val) nounwind readonly
 declare double @llvm.sin.f64(double %Val) nounwind readonly
@@ -252,7 +255,6 @@ define %ov.result.32 @umultest5(i32 %x, i32 %y) nounwind {
 }
 
 define void @powi(double %V, double *%P) {
-entry:
   %A = tail call double @llvm.powi.f64(double %V, i32 -1) nounwind
   store volatile double %A, double* %P
 
@@ -264,53 +266,89 @@ entry:
   ret void
 ; CHECK-LABEL: @powi(
 ; CHECK: %A = fdiv double 1.0{{.*}}, %V
-; CHECK: store volatile double %A, 
-; CHECK: store volatile double 1.0 
+; CHECK: store volatile double %A,
+; CHECK: store volatile double 1.0
 ; CHECK: store volatile double %V
 }
 
 define i32 @cttz(i32 %a) {
-entry:
+; CHECK-LABEL: @cttz(
+; CHECK-NEXT:    ret i32 3
+;
   %or = or i32 %a, 8
   %and = and i32 %or, -8
   %count = tail call i32 @llvm.cttz.i32(i32 %and, i1 true) nounwind readnone
   ret i32 %count
-; CHECK-LABEL: @cttz(
-; CHECK-NEXT: entry:
-; CHECK-NEXT: ret i32 3
 }
 
 define i8 @ctlz(i8 %a) {
-entry:
+; CHECK-LABEL: @ctlz(
+; CHECK-NEXT:    ret i8 2
+;
   %or = or i8 %a, 32
   %and = and i8 %or, 63
   %count = tail call i8 @llvm.ctlz.i8(i8 %and, i1 true) nounwind readnone
   ret i8 %count
-; CHECK-LABEL: @ctlz(
-; CHECK-NEXT: entry:
-; CHECK-NEXT: ret i8 2
 }
 
 define void @cmp.simplify(i32 %a, i32 %b, i1* %c) {
-entry:
   %lz = tail call i32 @llvm.ctlz.i32(i32 %a, i1 false) nounwind readnone
   %lz.cmp = icmp eq i32 %lz, 32
   store volatile i1 %lz.cmp, i1* %c
   %tz = tail call i32 @llvm.cttz.i32(i32 %a, i1 false) nounwind readnone
   %tz.cmp = icmp ne i32 %tz, 32
   store volatile i1 %tz.cmp, i1* %c
-  %pop = tail call i32 @llvm.ctpop.i32(i32 %b) nounwind readnone
-  %pop.cmp = icmp eq i32 %pop, 0
-  store volatile i1 %pop.cmp, i1* %c
+  %pop0 = tail call i32 @llvm.ctpop.i32(i32 %b) nounwind readnone
+  %pop0.cmp = icmp eq i32 %pop0, 0
+  store volatile i1 %pop0.cmp, i1* %c
+  %pop1 = tail call i32 @llvm.ctpop.i32(i32 %b) nounwind readnone
+  %pop1.cmp = icmp eq i32 %pop1, 32
+  store volatile i1 %pop1.cmp, i1* %c
   ret void
 ; CHECK: @cmp.simplify
-; CHECK-NEXT: entry:
 ; CHECK-NEXT: %lz.cmp = icmp eq i32 %a, 0
 ; CHECK-NEXT: store volatile i1 %lz.cmp, i1* %c
 ; CHECK-NEXT: %tz.cmp = icmp ne i32 %a, 0
 ; CHECK-NEXT: store volatile i1 %tz.cmp, i1* %c
-; CHECK-NEXT: %pop.cmp = icmp eq i32 %b, 0
-; CHECK-NEXT: store volatile i1 %pop.cmp, i1* %c
+; CHECK-NEXT: %pop0.cmp = icmp eq i32 %b, 0
+; CHECK-NEXT: store volatile i1 %pop0.cmp, i1* %c
+; CHECK-NEXT: %pop1.cmp = icmp eq i32 %b, -1
+; CHECK-NEXT: store volatile i1 %pop1.cmp, i1* %c
+}
+
+define <2 x i1> @ctlz_cmp_vec(<2 x i32> %a) {
+; CHECK-LABEL: @ctlz_cmp_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> %a, zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %x = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %a, i1 false) nounwind readnone
+  %cmp = icmp eq <2 x i32> %x, <i32 32, i32 32>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @cttz_cmp_vec(<2 x i32> %a) {
+; CHECK-LABEL: @cttz_cmp_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> %a, zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %x = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %a, i1 false) nounwind readnone
+  %cmp = icmp ne <2 x i32> %x, <i32 32, i32 32>
+  ret <2 x i1> %cmp
+}
+
+define void @ctpop_cmp_vec(<2 x i32> %a, <2 x i1>* %b) {
+  %pop0 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a) nounwind readnone
+  %pop0.cmp = icmp eq <2 x i32> %pop0, zeroinitializer
+  store volatile <2 x i1> %pop0.cmp, <2 x i1>* %b
+  %pop1 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a) nounwind readnone
+  %pop1.cmp = icmp eq <2 x i32> %pop1, < i32 32, i32 32 >
+  store volatile <2 x i1> %pop1.cmp, <2 x i1>* %b
+  ret void
+; CHECK-LABEL: @ctpop_cmp_vec(
+; CHECK-NEXT: %pop0.cmp = icmp eq <2 x i32> %a, zeroinitializer
+; CHECK-NEXT: store volatile <2 x i1> %pop0.cmp, <2 x i1>* %b
+; CHECK-NEXT: %pop1.cmp = icmp eq <2 x i32> %a, <i32 -1, i32 -1>
+; CHECK-NEXT: store volatile <2 x i1> %pop1.cmp, <2 x i1>* %b
 }
 
 define i32 @cttz_simplify1a(i32 %x) nounwind readnone ssp {
@@ -334,58 +372,62 @@ define i32 @cttz_simplify1b(i32 %x) nounwind readnone ssp {
 }
 
 define i32 @ctlz_undef(i32 %Value) nounwind {
+; CHECK-LABEL: @ctlz_undef(
+; CHECK-NEXT:    ret i32 undef
+;
   %ctlz = call i32 @llvm.ctlz.i32(i32 0, i1 true)
   ret i32 %ctlz
 
-; CHECK-LABEL: @ctlz_undef(
-; CHECK-NEXT: ret i32 undef
 }
 
 define i32 @cttz_undef(i32 %Value) nounwind {
+; CHECK-LABEL: @cttz_undef(
+; CHECK-NEXT:    ret i32 undef
+;
   %cttz = call i32 @llvm.cttz.i32(i32 0, i1 true)
   ret i32 %cttz
 
-; CHECK-LABEL: @cttz_undef(
-; CHECK-NEXT: ret i32 undef
 }
 
 define i32 @ctlz_select(i32 %Value) nounwind {
+; CHECK-LABEL: @ctlz_select(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 %Value, i1 false)
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
   %tobool = icmp ne i32 %Value, 0
   %ctlz = call i32 @llvm.ctlz.i32(i32 %Value, i1 true)
   %s = select i1 %tobool, i32 %ctlz, i32 32
   ret i32 %s
 
-; CHECK-LABEL: @ctlz_select(
-; CHECK-NEXT: call i32 @llvm.ctlz.i32(i32 %Value, i1 false)
-; CHECK-NEXT: ret i32
 }
 
 define i32 @cttz_select(i32 %Value) nounwind {
+; CHECK-LABEL: @cttz_select(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.cttz.i32(i32 %Value, i1 false)
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
   %tobool = icmp ne i32 %Value, 0
   %cttz = call i32 @llvm.cttz.i32(i32 %Value, i1 true)
   %s = select i1 %tobool, i32 %cttz, i32 32
   ret i32 %s
 
-; CHECK-LABEL: @cttz_select(
-; CHECK-NEXT: call i32 @llvm.cttz.i32(i32 %Value, i1 false)
-; CHECK-NEXT: ret i32
 }
 
-; CHECK-LABEL: @overflow_div_add(
-; CHECK: ret i1 false
 define i1 @overflow_div_add(i32 %v1, i32 %v2) nounwind {
-entry:
+; CHECK-LABEL: @overflow_div_add(
+; CHECK-NEXT:    ret i1 false
+;
   %div = sdiv i32 %v1, 2
   %t = call %ov.result.32 @llvm.sadd.with.overflow.i32(i32 %div, i32 1)
   %obit = extractvalue %ov.result.32 %t, 1
   ret i1 %obit
 }
 
-; CHECK-LABEL: @overflow_div_sub(
-; CHECK: ret i1 false
 define i1 @overflow_div_sub(i32 %v1, i32 %v2) nounwind {
-entry:
   ; Check cases where the known sign bits are larger than the word size.
+; CHECK-LABEL: @overflow_div_sub(
+; CHECK-NEXT:    ret i1 false
+;
   %a = ashr i32 %v1, 18
   %div = sdiv i32 %a, 65536
   %t = call %ov.result.32 @llvm.ssub.with.overflow.i32(i32 %div, i32 1)
@@ -393,20 +435,23 @@ entry:
   ret i1 %obit
 }
 
-; CHECK-LABEL: @overflow_mod_mul(
-; CHECK: ret i1 false
 define i1 @overflow_mod_mul(i32 %v1, i32 %v2) nounwind {
-entry:
+; CHECK-LABEL: @overflow_mod_mul(
+; CHECK-NEXT:    ret i1 false
+;
   %rem = srem i32 %v1, 1000
   %t = call %ov.result.32 @llvm.smul.with.overflow.i32(i32 %rem, i32 %rem)
   %obit = extractvalue %ov.result.32 %t, 1
   ret i1 %obit
 }
 
-; CHECK-LABEL: @overflow_mod_overflow_mul(
-; CHECK-NOT: ret i1 false
 define i1 @overflow_mod_overflow_mul(i32 %v1, i32 %v2) nounwind {
-entry:
+; CHECK-LABEL: @overflow_mod_overflow_mul(
+; CHECK-NEXT:    [[REM:%.*]] = srem i32 %v1, 65537
+; CHECK-NEXT:    [[T:%.*]] = call %ov.result.32 @llvm.smul.with.overflow.i32(i32 [[REM]], i32 [[REM]])
+; CHECK-NEXT:    [[OBIT:%.*]] = extractvalue %ov.result.32 [[T]], 1
+; CHECK-NEXT:    ret i1 [[OBIT]]
+;
   %rem = srem i32 %v1, 65537
   ; This may overflow because the result of the mul operands may be greater than 16bits
   ; and the result greater than 32.
@@ -434,81 +479,88 @@ define %ov.result.32 @never_overflows_ssub_test0(i32 %a) {
 }
 
 define void @cos(double *%P) {
-entry:
+; CHECK-LABEL: @cos(
+; CHECK-NEXT:    store volatile double 1.000000e+00, double* %P, align 8
+; CHECK-NEXT:    ret void
+;
   %B = tail call double @llvm.cos.f64(double 0.0) nounwind
   store volatile double %B, double* %P
 
   ret void
-; CHECK-LABEL: @cos(
-; CHECK: store volatile double 1.000000e+00, double* %P
 }
 
 define void @sin(double *%P) {
-entry:
+; CHECK-LABEL: @sin(
+; CHECK-NEXT:    store volatile double 0.000000e+00, double* %P, align 8
+; CHECK-NEXT:    ret void
+;
   %B = tail call double @llvm.sin.f64(double 0.0) nounwind
   store volatile double %B, double* %P
 
   ret void
-; CHECK-LABEL: @sin(
-; CHECK: store volatile double 0.000000e+00, double* %P
 }
 
 define void @floor(double *%P) {
-entry:
+; CHECK-LABEL: @floor(
+; CHECK-NEXT:    store volatile double 1.000000e+00, double* %P, align 8
+; CHECK-NEXT:    store volatile double -2.000000e+00, double* %P, align 8
+; CHECK-NEXT:    ret void
+;
   %B = tail call double @llvm.floor.f64(double 1.5) nounwind
   store volatile double %B, double* %P
   %C = tail call double @llvm.floor.f64(double -1.5) nounwind
   store volatile double %C, double* %P
   ret void
-; CHECK-LABEL: @floor(
-; CHECK: store volatile double 1.000000e+00, double* %P, align 8
-; CHECK: store volatile double -2.000000e+00, double* %P, align 8
 }
 
 define void @ceil(double *%P) {
-entry:
+; CHECK-LABEL: @ceil(
+; CHECK-NEXT:    store volatile double 2.000000e+00, double* %P, align 8
+; CHECK-NEXT:    store volatile double -1.000000e+00, double* %P, align 8
+; CHECK-NEXT:    ret void
+;
   %B = tail call double @llvm.ceil.f64(double 1.5) nounwind
   store volatile double %B, double* %P
   %C = tail call double @llvm.ceil.f64(double -1.5) nounwind
   store volatile double %C, double* %P
   ret void
-; CHECK-LABEL: @ceil(
-; CHECK: store volatile double 2.000000e+00, double* %P, align 8
-; CHECK: store volatile double -1.000000e+00, double* %P, align 8
 }
 
 define void @trunc(double *%P) {
-entry:
+; CHECK-LABEL: @trunc(
+; CHECK-NEXT:    store volatile double 1.000000e+00, double* %P, align 8
+; CHECK-NEXT:    store volatile double -1.000000e+00, double* %P, align 8
+; CHECK-NEXT:    ret void
+;
   %B = tail call double @llvm.trunc.f64(double 1.5) nounwind
   store volatile double %B, double* %P
   %C = tail call double @llvm.trunc.f64(double -1.5) nounwind
   store volatile double %C, double* %P
   ret void
-; CHECK-LABEL: @trunc(
-; CHECK: store volatile double 1.000000e+00, double* %P, align 8
-; CHECK: store volatile double -1.000000e+00, double* %P, align 8
 }
 
 define void @rint(double *%P) {
-entry:
+; CHECK-LABEL: @rint(
+; CHECK-NEXT:    store volatile double 2.000000e+00, double* %P, align 8
+; CHECK-NEXT:    store volatile double -2.000000e+00, double* %P, align 8
+; CHECK-NEXT:    ret void
+;
   %B = tail call double @llvm.rint.f64(double 1.5) nounwind
   store volatile double %B, double* %P
   %C = tail call double @llvm.rint.f64(double -1.5) nounwind
   store volatile double %C, double* %P
   ret void
-; CHECK-LABEL: @rint(
-; CHECK: store volatile double 2.000000e+00, double* %P, align 8
-; CHECK: store volatile double -2.000000e+00, double* %P, align 8
 }
 
 define void @nearbyint(double *%P) {
-entry:
+; CHECK-LABEL: @nearbyint(
+; CHECK-NEXT:    store volatile double 2.000000e+00, double* %P, align 8
+; CHECK-NEXT:    store volatile double -2.000000e+00, double* %P, align 8
+; CHECK-NEXT:    ret void
+;
   %B = tail call double @llvm.nearbyint.f64(double 1.5) nounwind
   store volatile double %B, double* %P
   %C = tail call double @llvm.nearbyint.f64(double -1.5) nounwind
   store volatile double %C, double* %P
   ret void
-; CHECK-LABEL: @nearbyint(
-; CHECK: store volatile double 2.000000e+00, double* %P, align 8
-; CHECK: store volatile double -2.000000e+00, double* %P, align 8
 }

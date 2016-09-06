@@ -17,6 +17,7 @@
 
 #include <string>
 #include <vector>
+#include "clang/Basic/OpenCLOptions.h"
 
 namespace clang {
 
@@ -27,6 +28,10 @@ public:
   /// target will be selected to match the host.
   std::string Triple;
 
+  /// When compiling for the device side, contains the triple used to compile
+  /// for the host.
+  std::string HostTriple;
+
   /// If given, the name of the target CPU to generate code for.
   std::string CPU;
 
@@ -35,6 +40,9 @@ public:
 
   /// If given, the name of the target ABI to use.
   std::string ABI;
+
+  /// The EABI version to use
+  std::string EABIVersion;
 
   /// If given, the version string of the linker in use.
   std::string LinkerVersion;
@@ -45,8 +53,11 @@ public:
   /// The list of target specific features to enable or disable -- this should
   /// be a list of strings starting with by '+' or '-'.
   std::vector<std::string> Features;
-  
+
   std::vector<std::string> Reciprocals;
+
+  /// Supported OpenCL extensions and optional core features.
+  OpenCLOptions SupportedOpenCLOptions;
 };
 
 }  // end namespace clang

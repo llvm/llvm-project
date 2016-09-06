@@ -15,7 +15,6 @@
 #define LLVM_LIB_TARGET_ARM_ARMMACHINEFUNCTIONINFO_H
 
 #include "ARMSubtarget.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Target/TargetMachine.h"

@@ -5160,6 +5160,21 @@ void test3() {
 }  // end namespace  GlobalAcquiredBeforeAfterTest
 
 
+namespace LifetimeExtensionText {
+
+struct Holder {
+  virtual ~Holder() throw() {}
+  int i = 0;
+};
+
+void test() {
+  // Should not crash.
+  const auto &value = Holder().i;
+}
+
+} // end namespace LifetimeExtensionTest
+
+
 namespace LockableUnions {
 
 union LOCKABLE MutexUnion {

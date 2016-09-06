@@ -51,7 +51,7 @@ handler1:
 ; X86: calll _getint
 ; X86: calll _useints
 ; X86: movl $0, -{{[0-9]+}}(%ebp)
-; X86: movl $1, (%esp)
+; X86: pushl $1
 ; X86: calll _f
 ; X86: [[contbb:LBB0_[0-9]+]]: # %try.cont
 ; X86: popl %esi
@@ -71,7 +71,7 @@ handler1:
 ; X86: subl $16, %esp
 ; X86: addl $12, %ebp
 ; X86: movl $1, -{{[0-9]+}}(%ebp)
-; X86: movl $2, (%esp)
+; X86: pushl $2
 ; X86: calll _f
 ; X86: movl $[[restorebb]], %eax
 ; X86-NEXT: addl $16, %esp

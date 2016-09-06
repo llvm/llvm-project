@@ -8,17 +8,13 @@ LLVM Atomic Instructions and Concurrency Guide
 Introduction
 ============
 
-Historically, LLVM has not had very strong support for concurrency; some minimal
-intrinsics were provided, and ``volatile`` was used in some cases to achieve
-rough semantics in the presence of concurrency.  However, this is changing;
-there are now new instructions which are well-defined in the presence of threads
-and asynchronous signals, and the model for existing instructions has been
-clarified in the IR.
+LLVM supports instructions which are well-defined in the presence of threads and
+asynchronous signals.
 
 The atomic instructions are designed specifically to provide readable IR and
 optimized code generation for the following:
 
-* The new C++11 ``<atomic>`` header.  (`C++11 draft available here
+* The C++11 ``<atomic>`` header.  (`C++11 draft available here
   <http://www.open-std.org/jtc1/sc22/wg21/>`_.) (`C11 draft available here
   <http://www.open-std.org/jtc1/sc22/wg14/>`_.)
 
@@ -371,7 +367,7 @@ Predicates for optimizer writers to query:
   that they return true for any operation which is volatile or at least
   Monotonic.
 
-* ``isAtLeastAcquire()``/``isAtLeastRelease()``: These are predicates on
+* ``isStrongerThan`` / ``isAtLeastOrStrongerThan``: These are predicates on
   orderings. They can be useful for passes that are aware of atomics, for
   example to do DSE across a single atomic access, but not across a
   release-acquire pair (see MemoryDependencyAnalysis for an example of this)
@@ -402,7 +398,7 @@ operations:
   MemoryDependencyAnalysis (which is also used by other passes like GVN).
 
 * Folding a load: Any atomic load from a constant global can be constant-folded,
-  because it cannot be observed.  Similar reasoning allows scalarrepl with
+  because it cannot be observed.  Similar reasoning allows sroa with
   atomic loads and stores.
 
 Atomics and Codegen
@@ -417,19 +413,28 @@ The MachineMemOperand for all atomic operations is currently marked as volatile;
 this is not correct in the IR sense of volatile, but CodeGen handles anything
 marked volatile very conservatively.  This should get fixed at some point.
 
-Common architectures have some way of representing at least a pointer-sized
-lock-free ``cmpxchg``; such an operation can be used to implement all the other
-atomic operations which can be represented in IR up to that size.  Backends are
-expected to implement all those operations, but not operations which cannot be
-implemented in a lock-free manner.  It is expected that backends will give an
-error when given an operation which cannot be implemented.  (The LLVM code
-generator is not very helpful here at the moment, but hopefully that will
-change.)
+One very important property of the atomic operations is that if your backend
+supports any inline lock-free atomic operations of a given size, you should
+support *ALL* operations of that size in a lock-free manner.
+
+When the target implements atomic ``cmpxchg`` or LL/SC instructions (as most do)
+this is trivial: all the other operations can be implemented on top of those
+primitives. However, on many older CPUs (e.g. ARMv5, SparcV8, Intel 80386) there
+are atomic load and store instructions, but no ``cmpxchg`` or LL/SC. As it is
+invalid to implement ``atomic load`` using the native instruction, but
+``cmpxchg`` using a library call to a function that uses a mutex, ``atomic
+load`` must *also* expand to a library call on such architectures, so that it
+can remain atomic with regards to a simultaneous ``cmpxchg``, by using the same
+mutex.
+
+AtomicExpandPass can help with that: it will expand all atomic operations to the
+proper ``__atomic_*`` libcalls for any size above the maximum set by
+``setMaxAtomicSizeInBitsSupported`` (which defaults to 0).
 
 On x86, all atomic loads generate a ``MOV``. SequentiallyConsistent stores
 generate an ``XCHG``, other stores generate a ``MOV``. SequentiallyConsistent
 fences generate an ``MFENCE``, other fences do not cause any code to be
-generated.  cmpxchg uses the ``LOCK CMPXCHG`` instruction.  ``atomicrmw xchg``
+generated.  ``cmpxchg`` uses the ``LOCK CMPXCHG`` instruction.  ``atomicrmw xchg``
 uses ``XCHG``, ``atomicrmw add`` and ``atomicrmw sub`` use ``XADD``, and all
 other ``atomicrmw`` operations generate a loop with ``LOCK CMPXCHG``.  Depending
 on the users of the result, some ``atomicrmw`` operations can be translated into
@@ -450,10 +455,151 @@ atomic constructs. Here are some lowerings it can do:
   ``emitStoreConditional()``
 * large loads/stores -> ll-sc/cmpxchg
   by overriding ``shouldExpandAtomicStoreInIR()``/``shouldExpandAtomicLoadInIR()``
-* strong atomic accesses -> monotonic accesses + fences
-  by using ``setInsertFencesForAtomic()`` and overriding ``emitLeadingFence()``
-  and ``emitTrailingFence()``
+* strong atomic accesses -> monotonic accesses + fences by overriding
+  ``shouldInsertFencesForAtomic()``, ``emitLeadingFence()``, and
+  ``emitTrailingFence()``
 * atomic rmw -> loop with cmpxchg or load-linked/store-conditional
   by overriding ``expandAtomicRMWInIR()``
+* expansion to __atomic_* libcalls for unsupported sizes.
 
 For an example of all of these, look at the ARM backend.
+
+Libcalls: __atomic_*
+====================
+
+There are two kinds of atomic library calls that are generated by LLVM. Please
+note that both sets of library functions somewhat confusingly share the names of
+builtin functions defined by clang. Despite this, the library functions are
+not directly related to the builtins: it is *not* the case that ``__atomic_*``
+builtins lower to ``__atomic_*`` library calls and ``__sync_*`` builtins lower
+to ``__sync_*`` library calls.
+
+The first set of library functions are named ``__atomic_*``. This set has been
+"standardized" by GCC, and is described below. (See also `GCC's documentation
+<https://gcc.gnu.org/wiki/Atomic/GCCMM/LIbrary>`_)
+
+LLVM's AtomicExpandPass will translate atomic operations on data sizes above
+``MaxAtomicSizeInBitsSupported`` into calls to these functions.
+
+There are four generic functions, which can be called with data of any size or
+alignment::
+
+   void __atomic_load(size_t size, void *ptr, void *ret, int ordering)
+   void __atomic_store(size_t size, void *ptr, void *val, int ordering)
+   void __atomic_exchange(size_t size, void *ptr, void *val, void *ret, int ordering)
+   bool __atomic_compare_exchange(size_t size, void *ptr, void *expected, void *desired, int success_order, int failure_order)
+
+There are also size-specialized versions of the above functions, which can only
+be used with *naturally-aligned* pointers of the appropriate size. In the
+signatures below, "N" is one of 1, 2, 4, 8, and 16, and "iN" is the appropriate
+integer type of that size; if no such integer type exists, the specialization
+cannot be used::
+
+   iN __atomic_load_N(iN *ptr, iN val, int ordering)
+   void __atomic_store_N(iN *ptr, iN val, int ordering)
+   iN __atomic_exchange_N(iN *ptr, iN val, int ordering)
+   bool __atomic_compare_exchange_N(iN *ptr, iN *expected, iN desired, int success_order, int failure_order)
+
+Finally there are some read-modify-write functions, which are only available in
+the size-specific variants (any other sizes use a ``__atomic_compare_exchange``
+loop)::
+
+   iN __atomic_fetch_add_N(iN *ptr, iN val, int ordering)
+   iN __atomic_fetch_sub_N(iN *ptr, iN val, int ordering)
+   iN __atomic_fetch_and_N(iN *ptr, iN val, int ordering)
+   iN __atomic_fetch_or_N(iN *ptr, iN val, int ordering)
+   iN __atomic_fetch_xor_N(iN *ptr, iN val, int ordering)
+   iN __atomic_fetch_nand_N(iN *ptr, iN val, int ordering)
+
+This set of library functions have some interesting implementation requirements
+to take note of:
+
+- They support all sizes and alignments -- including those which cannot be
+  implemented natively on any existing hardware. Therefore, they will certainly
+  use mutexes in for some sizes/alignments.
+
+- As a consequence, they cannot be shipped in a statically linked
+  compiler-support library, as they have state which must be shared amongst all
+  DSOs loaded in the program. They must be provided in a shared library used by
+  all objects.
+
+- The set of atomic sizes supported lock-free must be a superset of the sizes
+  any compiler can emit. That is: if a new compiler introduces support for
+  inline-lock-free atomics of size N, the ``__atomic_*`` functions must also have a
+  lock-free implementation for size N. This is a requirement so that code
+  produced by an old compiler (which will have called the ``__atomic_*`` function)
+  interoperates with code produced by the new compiler (which will use native
+  the atomic instruction).
+
+Note that it's possible to write an entirely target-independent implementation
+of these library functions by using the compiler atomic builtins themselves to
+implement the operations on naturally-aligned pointers of supported sizes, and a
+generic mutex implementation otherwise.
+
+Libcalls: __sync_*
+==================
+
+Some targets or OS/target combinations can support lock-free atomics, but for
+various reasons, it is not practical to emit the instructions inline.
+
+There's two typical examples of this.
+
+Some CPUs support multiple instruction sets which can be swiched back and forth
+on function-call boundaries. For example, MIPS supports the MIPS16 ISA, which
+has a smaller instruction encoding than the usual MIPS32 ISA. ARM, similarly,
+has the Thumb ISA. In MIPS16 and earlier versions of Thumb, the atomic
+instructions are not encodable. However, those instructions are available via a
+function call to a function with the longer encoding.
+
+Additionally, a few OS/target pairs provide kernel-supported lock-free
+atomics. ARM/Linux is an example of this: the kernel `provides
+<https://www.kernel.org/doc/Documentation/arm/kernel_user_helpers.txt>`_ a
+function which on older CPUs contains a "magically-restartable" atomic sequence
+(which looks atomic so long as there's only one CPU), and contains actual atomic
+instructions on newer multicore models. This sort of functionality can typically
+be provided on any architecture, if all CPUs which are missing atomic
+compare-and-swap support are uniprocessor (no SMP). This is almost always the
+case. The only common architecture without that property is SPARC -- SPARCV8 SMP
+systems were common, yet it doesn't support any sort of compare-and-swap
+operation.
+
+In either of these cases, the Target in LLVM can claim support for atomics of an
+appropriate size, and then implement some subset of the operations via libcalls
+to a ``__sync_*`` function. Such functions *must* not use locks in their
+implementation, because unlike the ``__atomic_*`` routines used by
+AtomicExpandPass, these may be mixed-and-matched with native instructions by the
+target lowering.
+
+Further, these routines do not need to be shared, as they are stateless. So,
+there is no issue with having multiple copies included in one binary. Thus,
+typically these routines are implemented by the statically-linked compiler
+runtime support library.
+
+LLVM will emit a call to an appropriate ``__sync_*`` routine if the target
+ISelLowering code has set the corresponding ``ATOMIC_CMPXCHG``, ``ATOMIC_SWAP``,
+or ``ATOMIC_LOAD_*`` operation to "Expand", and if it has opted-into the
+availability of those library functions via a call to ``initSyncLibcalls()``.
+
+The full set of functions that may be called by LLVM is (for ``N`` being 1, 2,
+4, 8, or 16)::
+
+  iN __sync_val_compare_and_swap_N(iN *ptr, iN expected, iN desired)
+  iN __sync_lock_test_and_set_N(iN *ptr, iN val)
+  iN __sync_fetch_and_add_N(iN *ptr, iN val)
+  iN __sync_fetch_and_sub_N(iN *ptr, iN val)
+  iN __sync_fetch_and_and_N(iN *ptr, iN val)
+  iN __sync_fetch_and_or_N(iN *ptr, iN val)
+  iN __sync_fetch_and_xor_N(iN *ptr, iN val)
+  iN __sync_fetch_and_nand_N(iN *ptr, iN val)
+  iN __sync_fetch_and_max_N(iN *ptr, iN val)
+  iN __sync_fetch_and_umax_N(iN *ptr, iN val)
+  iN __sync_fetch_and_min_N(iN *ptr, iN val)
+  iN __sync_fetch_and_umin_N(iN *ptr, iN val)
+
+This list doesn't include any function for atomic load or store; all known
+architectures support atomic loads and stores directly (possibly by emitting a
+fence on either side of a normal load or store.)
+
+There's also, somewhat separately, the possibility to lower ``ATOMIC_FENCE`` to
+``__sync_synchronize()``. This may happen or not happen independent of all the
+above, controlled purely by ``setOperationAction(ISD::ATOMIC_FENCE, ...)``.

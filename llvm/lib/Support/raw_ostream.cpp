@@ -166,13 +166,13 @@ raw_ostream &raw_ostream::write_hex(unsigned long long N) {
   if (N == 0)
     return *this << '0';
 
-  char NumberBuffer[20];
+  char NumberBuffer[16];
   char *EndPtr = std::end(NumberBuffer);
   char *CurPtr = EndPtr;
 
   while (N) {
-    uintptr_t x = N % 16;
-    *--CurPtr = (x < 10 ? '0' + x : 'a' + x - 10);
+    unsigned char x = static_cast<unsigned char>(N) % 16;
+    *--CurPtr = hexdigit(x, /*LowerCase*/true);
     N /= 16;
   }
 
@@ -181,9 +181,7 @@ raw_ostream &raw_ostream::write_hex(unsigned long long N) {
 
 raw_ostream &raw_ostream::write_escaped(StringRef Str,
                                         bool UseHexEscapes) {
-  for (unsigned i = 0, e = Str.size(); i != e; ++i) {
-    unsigned char c = Str[i];
-
+  for (unsigned char c : Str) {
     switch (c) {
     case '\\':
       *this << '\\' << '\\';
@@ -232,7 +230,7 @@ raw_ostream &raw_ostream::operator<<(double N) {
   // On MSVCRT and compatible, output of %e is incompatible to Posix
   // by default. Number of exponent digits should be at least 2. "%+03d"
   // FIXME: Implement our formatter to here or Support/Format.h!
-#if __cplusplus >= 201103L && defined(__MINGW32__)
+#if defined(__MINGW32__)
   // FIXME: It should be generic to C++11.
   if (N == 0.0 && std::signbit(N))
     return *this << "-0.000000e+00";
@@ -422,11 +420,10 @@ raw_ostream &raw_ostream::operator<<(const FormattedNumber &FN) {
       NumberBuffer[1] = '0';
     char *EndPtr = NumberBuffer+Width;
     char *CurPtr = EndPtr;
-    const char A = FN.Upper ? 'A' : 'a';
     unsigned long long N = FN.HexValue;
     while (N) {
-      uintptr_t x = N % 16;
-      *--CurPtr = (x < 10 ? '0' + x : A + x - 10);
+      unsigned char x = static_cast<unsigned char>(N) % 16;
+      *--CurPtr = hexdigit(x, !FN.Upper);
       N /= 16;
     }
 
@@ -626,6 +623,7 @@ void raw_fd_ostream::close() {
 }
 
 uint64_t raw_fd_ostream::seek(uint64_t off) {
+  assert(SupportsSeeking && "Stream does not support seeking!");
   flush();
   pos = ::lseek(FD, off, SEEK_SET);
   if (pos == (uint64_t)-1)
@@ -718,9 +716,10 @@ bool raw_fd_ostream::has_colors() const {
 /// outs() - This returns a reference to a raw_ostream for standard output.
 /// Use it like: outs() << "foo" << "bar";
 raw_ostream &llvm::outs() {
-  // Set buffer settings to model stdout behavior.
-  // Delete the file descriptor when the program exits, forcing error
-  // detection. If you don't want this behavior, don't use outs().
+  // Set buffer settings to model stdout behavior.  Delete the file descriptor
+  // when the program exits, forcing error detection.  This means that if you
+  // ever call outs(), you can't open another raw_fd_ostream on stdout, as we'll
+  // close stdout twice and print an error the second time.
   std::error_code EC;
   static raw_fd_ostream S("-", EC, sys::fs::F_None);
   assert(!EC);

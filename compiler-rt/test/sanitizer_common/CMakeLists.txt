@@ -53,12 +53,10 @@ if(COMPILER_RT_INCLUDE_TESTS)
   list(APPEND SANITIZER_COMMON_TEST_DEPS SanitizerUnitTests)
 endif()
 
-# FIXME: Re-enable on 64-bit Windows.
-if(SANITIZER_COMMON_TESTSUITES AND
-    (NOT OS_NAME MATCHES "Windows" OR CMAKE_SIZEOF_VOID_P EQUAL 4))
+if(SANITIZER_COMMON_TESTSUITES)
   add_lit_testsuite(check-sanitizer "Running sanitizer_common tests"
     ${SANITIZER_COMMON_TESTSUITES}
     DEPENDS ${SANITIZER_COMMON_TEST_DEPS})
   set_target_properties(check-sanitizer PROPERTIES FOLDER
-                        "sanitizer_common tests")
+                        "Compiler-RT Misc")
 endif()

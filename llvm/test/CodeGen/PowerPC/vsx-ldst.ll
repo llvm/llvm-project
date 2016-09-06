@@ -1,15 +1,15 @@
-; RUN: llc -mcpu=pwr8 -mattr=+vsx -O2 -mtriple=powerpc64-unknown-linux-gnu < %s > %t
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+vsx -O2 -mtriple=powerpc64-unknown-linux-gnu < %s > %t
 ; RUN: grep lxvw4x < %t | count 3
 ; RUN: grep lxvd2x < %t | count 3
 ; RUN: grep stxvw4x < %t | count 3
 ; RUN: grep stxvd2x < %t | count 3
-; RUN: llc -mcpu=pwr8 -mattr=+vsx -O0 -fast-isel=1 -mtriple=powerpc64-unknown-linux-gnu < %s > %t
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+vsx -O0 -fast-isel=1 -mtriple=powerpc64-unknown-linux-gnu < %s > %t
 ; RUN: grep lxvw4x < %t | count 3
 ; RUN: grep lxvd2x < %t | count 3
 ; RUN: grep stxvw4x < %t | count 3
 ; RUN: grep stxvd2x < %t | count 3
 
-; RUN: llc -mcpu=pwr8 -mattr=+vsx -O2 -mtriple=powerpc64le-unknown-linux-gnu < %s > %t
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mattr=+vsx -O2 -mtriple=powerpc64le-unknown-linux-gnu < %s > %t
 ; RUN: grep lxvd2x < %t | count 6
 ; RUN: grep stxvd2x < %t | count 6
 

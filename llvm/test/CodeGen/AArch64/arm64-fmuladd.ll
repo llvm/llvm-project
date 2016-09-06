@@ -1,4 +1,4 @@
-; RUN: llc -asm-verbose=false < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define float @test_f32(float* %A, float* %B, float* %C) nounwind {
 ;CHECK-LABEL: test_f32:

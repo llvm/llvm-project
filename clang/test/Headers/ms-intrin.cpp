@@ -20,11 +20,11 @@
 
 // REQUIRES: x86-registered-target
 
-// Intrin.h needs size_t, but -ffreestanding prevents us from getting it from
+// intrin.h needs size_t, but -ffreestanding prevents us from getting it from
 // stddef.h.  Work around it with this typedef.
 typedef __SIZE_TYPE__ size_t;
 
-#include <Intrin.h>
+#include <intrin.h>
 
 // Use some C++ to make sure we closed the extern "C" brackets.
 template <typename T>
@@ -59,5 +59,9 @@ void f() {
 #ifndef _M_X64
   __readcr3();
   __writecr3(0);
+#endif
+
+#ifdef _M_ARM
+  __dmb(_ARM_BARRIER_ISHST);
 #endif
 }

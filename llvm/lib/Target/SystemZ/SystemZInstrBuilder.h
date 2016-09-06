@@ -27,9 +27,9 @@ static inline const MachineInstrBuilder &
 addFrameReference(const MachineInstrBuilder &MIB, int FI) {
   MachineInstr *MI = MIB;
   MachineFunction &MF = *MI->getParent()->getParent();
-  MachineFrameInfo *MFFrame = MF.getFrameInfo();
+  MachineFrameInfo &MFFrame = MF.getFrameInfo();
   const MCInstrDesc &MCID = MI->getDesc();
-  unsigned Flags = 0;
+  auto Flags = MachineMemOperand::MONone;
   if (MCID.mayLoad())
     Flags |= MachineMemOperand::MOLoad;
   if (MCID.mayStore())
@@ -37,7 +37,7 @@ addFrameReference(const MachineInstrBuilder &MIB, int FI) {
   int64_t Offset = 0;
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI, Offset), Flags,
-      MFFrame->getObjectSize(FI), MFFrame->getObjectAlignment(FI));
+      MFFrame.getObjectSize(FI), MFFrame.getObjectAlignment(FI));
   return MIB.addFrameIndex(FI).addImm(Offset).addReg(0).addMemOperand(MMO);
 }
 

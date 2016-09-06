@@ -43,8 +43,8 @@ def : T_FF_pat<F2_sffixupn, int_hexagon_F2_sffixupn>;
 def : T_FF_pat<F2_sffixupd, int_hexagon_F2_sffixupd>;
 def : T_F_pat <F2_sffixupr, int_hexagon_F2_sffixupr>;
 
-def: qi_CRInst_qiqi_pat<C4_fastcorner9,     int_hexagon_C4_fastcorner9>;
-def: qi_CRInst_qiqi_pat<C4_fastcorner9_not, int_hexagon_C4_fastcorner9_not>;
+def : T_Q_QQ_pat<C4_fastcorner9,     int_hexagon_C4_fastcorner9>;
+def : T_Q_QQ_pat<C4_fastcorner9_not, int_hexagon_C4_fastcorner9_not>;
 
 def : T_P_pat <S5_popcountp, int_hexagon_S5_popcountp>;
 def : T_PI_pat <S5_asrhub_sat, int_hexagon_S5_asrhub_sat>;
@@ -65,15 +65,15 @@ def : T_FFF_pat <F2_sffms_lib, int_hexagon_F2_sffms_lib>;
 def : T_FFFQ_pat <F2_sffma_sc, int_hexagon_F2_sffma_sc>;
 
 // Compare floating-point value
-def : T_FF_pat <F2_sfcmpge, int_hexagon_F2_sfcmpge>;
-def : T_FF_pat <F2_sfcmpuo, int_hexagon_F2_sfcmpuo>;
-def : T_FF_pat <F2_sfcmpeq, int_hexagon_F2_sfcmpeq>;
-def : T_FF_pat <F2_sfcmpgt, int_hexagon_F2_sfcmpgt>;
+def : T_Q_FF_pat <F2_sfcmpge, int_hexagon_F2_sfcmpge>;
+def : T_Q_FF_pat <F2_sfcmpuo, int_hexagon_F2_sfcmpuo>;
+def : T_Q_FF_pat <F2_sfcmpeq, int_hexagon_F2_sfcmpeq>;
+def : T_Q_FF_pat <F2_sfcmpgt, int_hexagon_F2_sfcmpgt>;
 
-def : T_DD_pat <F2_dfcmpeq, int_hexagon_F2_dfcmpeq>;
-def : T_DD_pat <F2_dfcmpgt, int_hexagon_F2_dfcmpgt>;
-def : T_DD_pat <F2_dfcmpge, int_hexagon_F2_dfcmpge>;
-def : T_DD_pat <F2_dfcmpuo, int_hexagon_F2_dfcmpuo>;
+def : T_Q_DD_pat <F2_dfcmpeq, int_hexagon_F2_dfcmpeq>;
+def : T_Q_DD_pat <F2_dfcmpgt, int_hexagon_F2_dfcmpgt>;
+def : T_Q_DD_pat <F2_dfcmpge, int_hexagon_F2_dfcmpge>;
+def : T_Q_DD_pat <F2_dfcmpuo, int_hexagon_F2_dfcmpuo>;
 
 // Create floating-point value
 def : T_I_pat <F2_sfimm_p, int_hexagon_F2_sfimm_p>;
@@ -81,8 +81,8 @@ def : T_I_pat <F2_sfimm_n, int_hexagon_F2_sfimm_n>;
 def : T_I_pat <F2_dfimm_p, int_hexagon_F2_dfimm_p>;
 def : T_I_pat <F2_dfimm_n, int_hexagon_F2_dfimm_n>;
 
-def : T_DI_pat <F2_dfclass, int_hexagon_F2_dfclass>;
-def : T_FI_pat <F2_sfclass, int_hexagon_F2_sfclass>;
+def : T_Q_DI_pat <F2_dfclass, int_hexagon_F2_dfclass>;
+def : T_Q_FI_pat <F2_sfclass, int_hexagon_F2_sfclass>;
 def : T_F_pat <F2_conv_sf2df, int_hexagon_F2_conv_sf2df>;
 def : T_D_pat <F2_conv_df2sf, int_hexagon_F2_conv_df2sf>;
 def : T_R_pat <F2_conv_uw2sf, int_hexagon_F2_conv_uw2sf>;

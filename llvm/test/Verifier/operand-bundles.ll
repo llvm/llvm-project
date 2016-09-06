@@ -47,3 +47,16 @@ define void @f_deopt(i32* %ptr) {
   %x = add i32 42, 1
   ret void
 }
+
+define void @f_gc_transition(i32* %ptr) {
+; CHECK: Multiple gc-transition operand bundles
+; CHECK-NEXT: call void @g() [ "gc-transition"(i32 42, i64 100, i32 %x), "gc-transition"(float 0.000000e+00, i64 100, i32 %l) ]
+; CHECK-NOT: call void @g() [ "gc-transition"(i32 42, i64 120, i32 %x) ]
+
+ entry:
+  %l = load i32, i32* %ptr
+  call void @g() [ "gc-transition"(i32 42, i64 100, i32 %x), "gc-transition"(float 0.0, i64 100, i32 %l) ]
+  call void @g() [ "gc-transition"(i32 42, i64 120) ]  ;; The verifier should not complain about this one
+  %x = add i32 42, 1
+  ret void
+}

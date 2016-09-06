@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++1z -fsyntax-only -verify %s
 
 struct pr12960 {
   int begin;
@@ -118,10 +120,15 @@ void g() {
     ;
 
   struct Differ {
-    int *begin(); // expected-note {{selected 'begin' function with iterator type 'int *'}}
-    null_t end(); // expected-note {{selected 'end' function with iterator type 'null_t'}}
+    int *begin();
+    null_t end();
   };
-  for (auto a : Differ()) // expected-error {{'begin' and 'end' must return the same type (got 'int *' and 'null_t')}}
+  for (auto a : Differ())
+#if __cplusplus <= 201402L
+    // expected-warning@-2 {{'begin' and 'end' returning different types ('int *' and 'null_t') is a C++1z extension}}
+    // expected-note@-6 {{selected 'begin' function with iterator type 'int *'}}
+    // expected-note@-6 {{selected 'end' function with iterator type 'null_t'}}
+#endif
     ;
 
   for (void f() : "error") // expected-error {{for range declaration must declare a variable}}
@@ -129,7 +136,7 @@ void g() {
 
   for (extern int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'extern'}}
   for (static int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'static'}}
-  for (register int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'register'}} expected-warning {{deprecated}}
+  for (register int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'register'}} expected-warning 0-1{{register}} expected-error 0-1{{register}}
   for (constexpr int a : X::C()) {} // OK per CWG issue #1204.
 
   for (auto u : X::NoBeginADL()) { // expected-error {{invalid range expression of type 'X::NoBeginADL'; no viable 'begin' function available}}

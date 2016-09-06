@@ -1,0 +1,42 @@
+# RUN: rm -f %S/arm64-regress-opt-cmp.s
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass peephole-opt -o - %s 2>&1 | FileCheck %s
+# CHECK: %1 = ANDWri {{.*}}
+# CHECK-NEXT: %wzr = SUBSWri {{.*}}
+--- |
+  define i32 @test01() nounwind {
+  entry:
+    %0 = select i1 true, i32 1, i32 0
+    %1 = and i32 %0, 65535
+    %2 = icmp ugt i32 %1, 0
+    br i1 %2, label %if.then, label %if.end
+
+  if.then:                                      ; preds = %entry
+    ret i32 1
+
+  if.end:                                       ; preds = %entry
+    ret i32 0
+  }
+...
+---
+name:            test01
+registers:
+  - { id: 0, class: gpr32 }
+  - { id: 1, class: gpr32common }
+body:             |
+  bb.0.entry:
+    successors: %bb.2.if.end, %bb.1.if.then
+
+    %0 = MOVi32imm 1
+    %1 = ANDWri killed %1, 15
+    %wzr = SUBSWri killed %1, 0, 0, implicit-def %nzcv
+    Bcc 9, %bb.2.if.end, implicit %nzcv
+
+  bb.1.if.then:
+    %w0 = MOVi32imm 1
+    RET_ReallyLR implicit %w0
+
+  bb.2.if.end:
+    %w0 = MOVi32imm 0
+    RET_ReallyLR implicit %w0
+
+...

@@ -49,6 +49,8 @@
 
 static const u64 kMagic64 = 0xC0BFFFFFFFFFFF64ULL;
 static const u64 kMagic32 = 0xC0BFFFFFFFFFFF32ULL;
+static const uptr kNumWordsForMagic = SANITIZER_WORDSIZE == 64 ? 1 : 2;
+static const u64 kMagic = SANITIZER_WORDSIZE == 64 ? kMagic64 : kMagic32;
 
 static atomic_uint32_t dump_once_guard;  // Ensure that CovDump runs only once.
 
@@ -107,18 +109,25 @@ class CoverageData {
   uptr Update8bitCounterBitsetAndClearCounters(u8 *bitset);
 
   uptr *data();
-  uptr size();
-  uptr *buffer() const { return pc_buffer; }
+  uptr size() const;
+
+  void SetPcBuffer(uptr* data, uptr length);
 
  private:
+  struct NamedPcRange {
+    const char *copied_module_name;
+    uptr beg, end; // elements [beg,end) in pc_array.
+  };
+
   void DirectOpen();
   void UpdateModuleNameVec(uptr caller_pc, uptr range_beg, uptr range_end);
+  void GetRangeOffsets(const NamedPcRange& r, Symbolizer* s,
+      InternalMmapVector<uptr>* offsets) const;
 
   // Maximal size pc array may ever grow.
   // We MmapNoReserve this space to ensure that the array is contiguous.
-  static const uptr kPcArrayMaxSize = FIRST_32_SECOND_64(
-      1 << (SANITIZER_ANDROID ? 24 : (SANITIZER_WINDOWS ? 27 : 26)),
-      1 << 27);
+  static const uptr kPcArrayMaxSize =
+      FIRST_32_SECOND_64(1 << (SANITIZER_ANDROID ? 24 : 26), 1 << 27);
   // The amount file mapping for the pc array is grown by.
   static const uptr kPcArrayMmapSize = 64 * 1024;
 
@@ -135,14 +144,10 @@ class CoverageData {
   fd_t pc_fd;
 
   uptr *pc_buffer;
+  uptr pc_buffer_len;
 
   // Vector of coverage guard arrays, protected by mu.
   InternalMmapVectorNoCtor<s32*> guard_array_vec;
-
-  struct NamedPcRange {
-    const char *copied_module_name;
-    uptr beg, end; // elements [beg,end) in pc_array.
-  };
 
   // Vector of module and compilation unit pc ranges.
   InternalMmapVectorNoCtor<NamedPcRange> comp_unit_name_vec;
@@ -213,9 +218,7 @@ void CoverageData::Enable() {
   }
 
   pc_buffer = nullptr;
-  if (common_flags()->coverage_pc_buffer)
-    pc_buffer = reinterpret_cast<uptr *>(MmapNoReserveOrDie(
-        sizeof(uptr) * kPcArrayMaxSize, "CovInit::pc_buffer"));
+  pc_buffer_len = 0;
 
   cc_array = reinterpret_cast<uptr **>(MmapNoReserveOrDie(
       sizeof(uptr *) * kCcArrayMaxSize, "CovInit::cc_array"));
@@ -253,10 +256,6 @@ void CoverageData::Disable() {
   if (cc_array) {
     UnmapOrDie(cc_array, sizeof(uptr *) * kCcArrayMaxSize);
     cc_array = nullptr;
-  }
-  if (pc_buffer) {
-    UnmapOrDie(pc_buffer, sizeof(uptr) * kPcArrayMaxSize);
-    pc_buffer = nullptr;
   }
   if (tr_event_array) {
     UnmapOrDie(tr_event_array,
@@ -426,7 +425,7 @@ void CoverageData::Add(uptr pc, u32 *guard) {
            atomic_load(&pc_array_size, memory_order_acquire));
   uptr counter = atomic_fetch_add(&coverage_counter, 1, memory_order_relaxed);
   pc_array[idx] = BundlePcAndCounter(pc, counter);
-  if (pc_buffer) pc_buffer[counter] = pc;
+  if (pc_buffer && counter < pc_buffer_len) pc_buffer[counter] = pc;
 }
 
 // Registers a pair caller=>callee.
@@ -525,7 +524,7 @@ uptr *CoverageData::data() {
   return pc_array;
 }
 
-uptr CoverageData::size() {
+uptr CoverageData::size() const {
   return atomic_load(&pc_array_index, memory_order_relaxed);
 }
 
@@ -755,41 +754,96 @@ void CoverageData::DumpAsBitSet() {
   }
 }
 
+
+void CoverageData::GetRangeOffsets(const NamedPcRange& r, Symbolizer* sym,
+    InternalMmapVector<uptr>* offsets) const {
+  offsets->clear();
+  for (uptr i = 0; i < kNumWordsForMagic; i++)
+    offsets->push_back(0);
+  CHECK(r.copied_module_name);
+  CHECK_LE(r.beg, r.end);
+  CHECK_LE(r.end, size());
+  for (uptr i = r.beg; i < r.end; i++) {
+    uptr pc = UnbundlePc(pc_array[i]);
+    uptr counter = UnbundleCounter(pc_array[i]);
+    if (!pc) continue; // Not visited.
+    uptr offset = 0;
+    sym->GetModuleNameAndOffsetForPC(pc, nullptr, &offset);
+    offsets->push_back(BundlePcAndCounter(offset, counter));
+  }
+
+  CHECK_GE(offsets->size(), kNumWordsForMagic);
+  SortArray(offsets->data(), offsets->size());
+  for (uptr i = 0; i < offsets->size(); i++)
+    (*offsets)[i] = UnbundlePc((*offsets)[i]);
+}
+
+static void GenerateHtmlReport(const InternalMmapVector<char *> &cov_files) {
+  if (!common_flags()->html_cov_report) {
+    return;
+  }
+  char *sancov_path = FindPathToBinary(common_flags()->sancov_path);
+  if (sancov_path == nullptr) {
+    return;
+  }
+
+  InternalMmapVector<char *> sancov_argv(cov_files.size() * 2 + 3);
+  sancov_argv.push_back(sancov_path);
+  sancov_argv.push_back(internal_strdup("-html-report"));
+  auto argv_deleter = at_scope_exit([&] {
+    for (uptr i = 0; i < sancov_argv.size(); ++i) {
+      InternalFree(sancov_argv[i]);
+    }
+  });
+
+  for (const auto &cov_file : cov_files) {
+    sancov_argv.push_back(internal_strdup(cov_file));
+  }
+
+  {
+    ListOfModules modules;
+    modules.init();
+    for (const LoadedModule &module : modules) {
+      sancov_argv.push_back(internal_strdup(module.full_name()));
+    }
+  }
+
+  InternalScopedString report_path(kMaxPathLength);
+  fd_t report_fd =
+      CovOpenFile(&report_path, false /* packed */, GetProcessName(), "html");
+  int pid = StartSubprocess(sancov_argv[0], sancov_argv.data(),
+                            kInvalidFd /* stdin */, report_fd /* std_out */);
+  if (pid > 0) {
+    int result = WaitForProcess(pid);
+    if (result == 0)
+      Printf("coverage report generated to %s\n", report_path.data());
+  }
+}
+
 void CoverageData::DumpOffsets() {
   auto sym = Symbolizer::GetOrInit();
   if (!common_flags()->coverage_pcs) return;
   CHECK_NE(sym, nullptr);
   InternalMmapVector<uptr> offsets(0);
   InternalScopedString path(kMaxPathLength);
-  for (uptr m = 0; m < module_name_vec.size(); m++) {
-    offsets.clear();
-    uptr num_words_for_magic = SANITIZER_WORDSIZE == 64 ? 1 : 2;
-    for (uptr i = 0; i < num_words_for_magic; i++)
-      offsets.push_back(0);
-    auto r = module_name_vec[m];
-    CHECK(r.copied_module_name);
-    CHECK_LE(r.beg, r.end);
-    CHECK_LE(r.end, size());
-    for (uptr i = r.beg; i < r.end; i++) {
-      uptr pc = UnbundlePc(pc_array[i]);
-      uptr counter = UnbundleCounter(pc_array[i]);
-      if (!pc) continue; // Not visited.
-      uptr offset = 0;
-      sym->GetModuleNameAndOffsetForPC(pc, nullptr, &offset);
-      offsets.push_back(BundlePcAndCounter(offset, counter));
+
+  InternalMmapVector<char *> cov_files(module_name_vec.size());
+  auto cov_files_deleter = at_scope_exit([&] {
+    for (uptr i = 0; i < cov_files.size(); ++i) {
+      InternalFree(cov_files[i]);
     }
+  });
 
-    CHECK_GE(offsets.size(), num_words_for_magic);
-    SortArray(offsets.data(), offsets.size());
-    for (uptr i = 0; i < offsets.size(); i++)
-      offsets[i] = UnbundlePc(offsets[i]);
+  for (uptr m = 0; m < module_name_vec.size(); m++) {
+    auto r = module_name_vec[m];
+    GetRangeOffsets(r, sym, &offsets);
 
-    uptr num_offsets = offsets.size() - num_words_for_magic;
+    uptr num_offsets = offsets.size() - kNumWordsForMagic;
     u64 *magic_p = reinterpret_cast<u64*>(offsets.data());
     CHECK_EQ(*magic_p, 0ULL);
     // FIXME: we may want to write 32-bit offsets even in 64-mode
     // if all the offsets are small enough.
-    *magic_p = SANITIZER_WORDSIZE == 64 ? kMagic64 : kMagic32;
+    *magic_p = kMagic;
 
     const char *module_name = StripModuleName(r.copied_module_name);
     if (cov_sandboxed) {
@@ -804,11 +858,14 @@ void CoverageData::DumpOffsets() {
       if (fd == kInvalidFd) continue;
       WriteToFile(fd, offsets.data(), offsets.size() * sizeof(offsets[0]));
       CloseFile(fd);
+      cov_files.push_back(internal_strdup(path.data()));
       VReport(1, " CovDump: %s: %zd PCs written\n", path.data(), num_offsets);
     }
   }
   if (cov_fd != kInvalidFd)
     CloseFile(cov_fd);
+
+  GenerateHtmlReport(cov_files);
 }
 
 void CoverageData::DumpAll() {
@@ -820,6 +877,11 @@ void CoverageData::DumpAll() {
   DumpTrace();
   DumpOffsets();
   DumpCallerCalleePairs();
+}
+
+void CoverageData::SetPcBuffer(uptr* data, uptr length) {
+  pc_buffer = data;
+  pc_buffer_len = length;
 }
 
 void CovPrepareForSandboxing(__sanitizer_sandbox_arguments *args) {
@@ -957,8 +1019,12 @@ uptr __sanitizer_get_coverage_guards(uptr **data) {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-uptr __sanitizer_get_coverage_pc_buffer(uptr **data) {
-  *data = coverage_data.buffer();
+void __sanitizer_set_coverage_pc_buffer(uptr *data, uptr length) {
+  coverage_data.SetPcBuffer(data, length);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+uptr __sanitizer_get_coverage_pc_buffer_pos() {
   return __sanitizer_get_total_unique_coverage();
 }
 

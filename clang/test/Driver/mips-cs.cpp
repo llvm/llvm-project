@@ -3,7 +3,7 @@
 // = Big-endian, hard float
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-linux-gnu \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-32 %s
 // CHECK-BE-HF-32: "-internal-isystem"
 // CHECK-BE-HF-32: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -31,7 +31,7 @@
 // = Big-endian, hard float, uclibc
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-linux-gnu -muclibc \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-UC-HF-32 %s
 // CHECK-BE-UC-HF-32: "-internal-isystem"
 // CHECK-BE-UC-HF-32: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -60,7 +60,7 @@
 // = Big-endian, hard float, mips16
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-linux-gnu -mips16 \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-16 %s
 // CHECK-BE-HF-16: "-internal-isystem"
 // CHECK-BE-HF-16: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -89,7 +89,7 @@
 // = Big-endian, hard float, mmicromips
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-linux-gnu -mmicromips \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-MICRO %s
 // CHECK-BE-HF-MICRO: "-internal-isystem"
 // CHECK-BE-HF-MICRO: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -118,7 +118,7 @@
 // = Big-endian, hard float, nan2008
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-linux-gnu -mnan=2008 \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-NAN %s
 // CHECK-BE-HF-NAN: "-internal-isystem"
 // CHECK-BE-HF-NAN: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -147,7 +147,7 @@
 // = Big-endian, hard float, uclibc, nan2008
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-linux-gnu -muclibc -mnan=2008 \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-UC-HF-NAN %s
 // CHECK-BE-UC-HF-NAN: "-internal-isystem"
 // CHECK-BE-UC-HF-NAN: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -176,7 +176,7 @@
 // = Big-endian, soft float
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-linux-gnu -msoft-float \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-32 %s
 // CHECK-BE-SF-32: "-internal-isystem"
 // CHECK-BE-SF-32: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -205,7 +205,7 @@
 // = Big-endian, soft float, uclibc
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-linux-gnu -muclibc -msoft-float \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-UC-SF-32 %s
 // CHECK-BE-UC-SF-32: "-internal-isystem"
 // CHECK-BE-UC-SF-32: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -234,7 +234,7 @@
 // = Big-endian, soft float, mips16
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-linux-gnu -msoft-float -mips16 \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-16 %s
 // CHECK-BE-SF-16: "-internal-isystem"
 // CHECK-BE-SF-16: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -263,7 +263,7 @@
 // = Big-endian, soft float, micromips
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips-linux-gnu -msoft-float -mmicromips \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-MICRO %s
 // CHECK-BE-SF-MICRO: "-internal-isystem"
 // CHECK-BE-SF-MICRO: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -292,7 +292,7 @@
 // = Big-endian, hard float, 64-bit
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips64-linux-gnu \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-64 %s
 // CHECK-BE-HF-64: "-internal-isystem"
 // CHECK-BE-HF-64: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -321,7 +321,7 @@
 // = Big-endian, soft float, 64-bit
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips64-linux-gnu -msoft-float \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-64 %s
 // CHECK-BE-SF-64: "-internal-isystem"
 // CHECK-BE-SF-64: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -350,7 +350,7 @@
 // = Little-endian, hard float
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mhard-float \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-32 %s
 // CHECK-EL-HF-32: "-internal-isystem"
 // CHECK-EL-HF-32: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -379,7 +379,7 @@
 // = Little-endian, hard float, uclibc
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mhard-float -muclibc \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-UC-HF-32 %s
 // CHECK-EL-UC-HF-32: "-internal-isystem"
 // CHECK-EL-UC-HF-32: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -408,7 +408,7 @@
 // = Little-endian, hard float, mips16
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mips16 \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-16 %s
 // CHECK-EL-HF-16: "-internal-isystem"
 // CHECK-EL-HF-16: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -437,7 +437,7 @@
 // = Little-endian, hard float, micromips
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mmicromips \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-MICRO %s
 // CHECK-EL-HF-MICRO: "-internal-isystem"
 // CHECK-EL-HF-MICRO: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -466,7 +466,7 @@
 // = Little-endian, hard float, nan2008
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mnan=2008 \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-NAN %s
 // CHECK-EL-HF-NAN: "-internal-isystem"
 // CHECK-EL-HF-NAN: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -495,7 +495,7 @@
 // = Little-endian, hard float, uclibc, nan2008
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -muclibc -mnan=2008 \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-UC-HF-NAN %s
 // CHECK-EL-UC-HF-NAN: "-internal-isystem"
 // CHECK-EL-UC-HF-NAN: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -524,7 +524,7 @@
 // = Little-endian, soft float
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mfloat-abi=soft \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-32 %s
 // CHECK-EL-SF-32: "-internal-isystem"
 // CHECK-EL-SF-32: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -553,7 +553,7 @@
 // = Little-endian, soft float, uclibc
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mfloat-abi=soft -muclibc \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-UC-SF-32 %s
 // CHECK-EL-UC-SF-32: "-internal-isystem"
 // CHECK-EL-UC-SF-32: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -582,7 +582,7 @@
 // = Little-endian, soft float, mips16
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mips16 -msoft-float \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-16 %s
 // CHECK-EL-SF-16: "-internal-isystem"
 // CHECK-EL-SF-16: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -611,7 +611,7 @@
 // = Little-endian, soft float, micromips
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mipsel-linux-gnu -mmicromips -msoft-float \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-MICRO %s
 // CHECK-EL-SF-MICRO: "-internal-isystem"
 // CHECK-EL-SF-MICRO: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -640,7 +640,7 @@
 // = Little-endian, hard float, 64-bit
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips64el-linux-gnu \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-64 %s
 // CHECK-EL-HF-64: "-internal-isystem"
 // CHECK-EL-HF-64: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"
@@ -669,7 +669,7 @@
 // = Little-endian, soft float, 64-bit
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=mips64el-linux-gnu -msoft-float \
-// RUN:     --gcc-toolchain=%S/Inputs/mips_cs_tree \
+// RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_cs_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-64 %s
 // CHECK-EL-SF-64: "-internal-isystem"
 // CHECK-EL-SF-64: "[[TC:[^"]+/lib/gcc/mips-linux-gnu/4.6.3]]/../../../../mips-linux-gnu/include/c++/4.6.3"

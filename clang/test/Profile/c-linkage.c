@@ -1,5 +1,5 @@
 // Check that the profiling counters and data we create have the linkage we expect
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-linkage.c %s -o - -emit-llvm -fprofile-instr-generate | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.9 -main-file-name c-linkage.c %s -o - -emit-llvm -fprofile-instrument=clang | FileCheck %s
 
 // CHECK: @__profc_foo = private global
 // CHECK: @__profd_foo = private global

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc64-apple-darwin9.5
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-apple-darwin9.5
 
 define void @__multc3({ ppc_fp128, ppc_fp128 }* noalias sret %agg.result, ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128 %d) nounwind {
 entry:

@@ -89,7 +89,11 @@ static uptr GetKernelAreaSize() {
 
 uptr GetMaxVirtualAddress() {
 #if SANITIZER_WORDSIZE == 64
-# if defined(__powerpc64__) || defined(__aarch64__)
+# if defined(__aarch64__) && SANITIZER_IOS && !SANITIZER_IOSSIM
+  // Ideally, we would derive the upper bound from MACH_VM_MAX_ADDRESS. The
+  // upper bound can change depending on the device.
+  return 0x200000000 - 1;
+# elif defined(__powerpc64__) || defined(__aarch64__)
   // On PowerPC64 we have two different address space layouts: 44- and 46-bit.
   // We somehow need to figure out which one we are using now and choose
   // one of 0x00000fffffffffffUL and 0x00003fffffffffffUL.
@@ -100,15 +104,21 @@ uptr GetMaxVirtualAddress() {
   return (1ULL << (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1)) - 1;
 # elif defined(__mips64)
   return (1ULL << 40) - 1;  // 0x000000ffffffffffUL;
+# elif defined(__s390x__)
+  return (1ULL << 53) - 1;  // 0x001fffffffffffffUL;
 # else
   return (1ULL << 47) - 1;  // 0x00007fffffffffffUL;
 # endif
 #else  // SANITIZER_WORDSIZE == 32
+# if defined(__s390__)
+  return (1ULL << 31) - 1;  // 0x7fffffff;
+# else
   uptr res = (1ULL << 32) - 1;  // 0xffffffff;
   if (!common_flags()->full_address_space)
     res -= GetKernelAreaSize();
   CHECK_LT(reinterpret_cast<uptr>(&res), res);
   return res;
+# endif
 #endif  // SANITIZER_WORDSIZE
 }
 
@@ -133,6 +143,26 @@ void UnmapOrDie(void *addr, uptr size) {
     CHECK("unable to unmap" && 0);
   }
   DecreaseTotalMmap(size);
+}
+
+// We want to map a chunk of address space aligned to 'alignment'.
+// We do it by maping a bit more and then unmaping redundant pieces.
+// We probably can do it with fewer syscalls in some OS-dependent way.
+void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type) {
+  CHECK(IsPowerOfTwo(size));
+  CHECK(IsPowerOfTwo(alignment));
+  uptr map_size = size + alignment;
+  uptr map_res = (uptr)MmapOrDie(map_size, mem_type);
+  uptr map_end = map_res + map_size;
+  uptr res = map_res;
+  if (res & (alignment - 1))  // Not aligned.
+    res = (map_res + alignment) & ~(alignment - 1);
+  uptr end = res + size;
+  if (res != map_res)
+    UnmapOrDie((void*)map_res, res - map_res);
+  if (end != map_end)
+    UnmapOrDie((void*)end, map_end - end);
+  return (void*)res;
 }
 
 void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
@@ -169,6 +199,10 @@ void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
 
 bool MprotectNoAccess(uptr addr, uptr size) {
   return 0 == internal_mprotect((void*)addr, size, PROT_NONE);
+}
+
+bool MprotectReadOnly(uptr addr, uptr size) {
+  return 0 == internal_mprotect((void *)addr, size, PROT_READ);
 }
 
 fd_t OpenFile(const char *filename, FileAccessMode mode, error_t *errno_p) {
@@ -315,10 +349,13 @@ bool GetCodeRangeForFile(const char *module, uptr *start, uptr *end) {
 }
 
 SignalContext SignalContext::Create(void *siginfo, void *context) {
-  uptr addr = (uptr)((siginfo_t*)siginfo)->si_addr;
+  auto si = (siginfo_t *)siginfo;
+  uptr addr = (uptr)si->si_addr;
   uptr pc, sp, bp;
   GetPcSpBp(context, &pc, &sp, &bp);
-  return SignalContext(context, addr, pc, sp, bp);
+  WriteFlag write_flag = GetWriteFlag(context);
+  bool is_memory_access = si->si_signo == SIGSEGV;
+  return SignalContext(context, addr, pc, sp, bp, is_memory_access, write_flag);
 }
 
 } // namespace __sanitizer

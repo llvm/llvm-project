@@ -20,7 +20,6 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/ABI.h"
-#include "llvm/ADT/SetVector.h"
 #include <utility>
 
 namespace clang {

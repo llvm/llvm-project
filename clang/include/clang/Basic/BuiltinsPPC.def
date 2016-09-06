@@ -336,6 +336,9 @@ BUILTIN(__builtin_vsx_xxleqv, "V4UiV4UiV4Ui", "")
 BUILTIN(__builtin_vsx_xvcpsgndp, "V2dV2dV2d", "")
 BUILTIN(__builtin_vsx_xvcpsgnsp, "V4fV4fV4f", "")
 
+BUILTIN(__builtin_vsx_xvabssp, "V4fV4f", "")
+BUILTIN(__builtin_vsx_xvabsdp, "V2dV2d", "")
+
 // HTM builtins
 BUILTIN(__builtin_tbegin, "UiUIi", "")
 BUILTIN(__builtin_tend, "UiUIi", "")

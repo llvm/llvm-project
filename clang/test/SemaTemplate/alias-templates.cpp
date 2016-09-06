@@ -221,3 +221,9 @@ namespace PR14858 {
   template<typename ...T, typename ...U> void h(X<T...> &) {}
   template<typename ...T, typename ...U> void h(X<U...> &) {} // ok, different
 }
+
+namespace redecl {
+  template<typename> using A = int;
+  template<typename = void> using A = int;
+  A<> a; // ok
+}

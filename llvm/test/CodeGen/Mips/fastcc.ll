@@ -1,8 +1,8 @@
-; RUN: llc  < %s -march=mipsel | FileCheck %s 
-; RUN: llc  < %s -mtriple=mipsel-none-nacl-gnu \
+; RUN: llc < %s -march=mipsel -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -mtriple=mipsel-none-nacl-gnu -relocation-model=pic \
 ; RUN:  | FileCheck %s -check-prefix=CHECK-NACL
-; RUN: llc  < %s -march=mipsel -mcpu=mips32 -mattr=+nooddspreg | FileCheck %s -check-prefix=NOODDSPREG
-; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 -mattr=+fp64,+nooddspreg | FileCheck %s -check-prefix=FP64-NOODDSPREG
+; RUN: llc < %s -march=mipsel -mcpu=mips32 -mattr=+nooddspreg -relocation-model=pic | FileCheck %s -check-prefix=NOODDSPREG
+; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -mattr=+fp64,+nooddspreg -relocation-model=pic | FileCheck %s -check-prefix=FP64-NOODDSPREG
 
 
 @gi0 = external global i32
@@ -290,7 +290,7 @@ entry:
 ; NOODDSPREG-DAG:    lwc1    $f18, 36($[[R0]])
 
 ; NOODDSPREG-DAG:    lwc1    $[[F0:f[0-9]*[02468]]], 40($[[R0]])
-; NOODDSPREG-DAG:    swc1    $[[F0]], 0($sp)
+; NOODDSPREG-DAG:    swc1    $[[F0]], 8($sp)
 
   %0 = load float, float* getelementptr ([11 x float], [11 x float]* @fa, i32 0, i32 0), align 4
   %1 = load float, float* getelementptr ([11 x float], [11 x float]* @fa, i32 0, i32 1), align 4

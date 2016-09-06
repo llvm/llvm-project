@@ -642,6 +642,40 @@ define void @test_maxnum(half* %p, half* %q) #0 {
   ret void
 }
 
+; CHECK-ALL-LABEL: test_minnan:
+; CHECK-FP16: vcvtb.f32.f16
+; CHECK-FP16: vcvtb.f32.f16
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-VFP: vmin.f32
+; CHECK-NOVFP: bl __aeabi_fcmpge
+; CHECK-FP16: vcvtb.f16.f32
+; CHECK-LIBCALL: bl __aeabi_f2h
+define void @test_minnan(half* %p) #0 {
+  %a = load half, half* %p, align 2
+  %c = fcmp ult half %a, 1.0
+  %r = select i1 %c, half %a, half 1.0
+  store half %r, half* %p
+  ret void
+}
+
+; CHECK-ALL-LABEL: test_maxnan:
+; CHECK-FP16: vcvtb.f32.f16
+; CHECK-FP16: vcvtb.f32.f16
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-LIBCALL: bl __aeabi_h2f
+; CHECK-VFP: vmax.f32
+; CHECK-NOVFP: bl __aeabi_fcmple
+; CHECK-FP16: vcvtb.f16.f32
+; CHECK-LIBCALL: bl __aeabi_f2h
+define void @test_maxnan(half* %p) #0 {
+  %a = load half, half* %p, align 2
+  %c = fcmp ugt half %a, 1.0
+  %r = select i1 %c, half %a, half 1.0
+  store half %r, half* %p
+  ret void
+}
+
 ; CHECK-FP16-LABEL: test_copysign:
 ; CHECK-FP16: vcvtb.f32.f16
 ; CHECK-FP16: vcvtb.f32.f16
@@ -887,6 +921,46 @@ define %struct.dummy @test_struct_return(%struct.dummy* %p) {
 define half @test_struct_arg(%struct.dummy %p) {
   %a = extractvalue %struct.dummy %p, 1
   ret half %a
+}
+
+; CHECK-LABEL: test_uitofp_i32_fadd:
+; CHECK-VFP-DAG: vcvt.f32.u32
+; CHECK-NOVFP-DAG: bl __aeabi_ui2f
+
+; CHECK-FP16-DAG: vcvtb.f16.f32
+; CHECK-FP16-DAG: vcvtb.f32.f16
+; CHECK-LIBCALL-DAG: bl __aeabi_h2f
+; CHECK-LIBCALL-DAG: bl __aeabi_h2f
+
+; CHECK-VFP-DAG: vadd.f32
+; CHECK-NOVFP-DAG: bl __aeabi_fadd
+
+; CHECK-FP16-DAG: vcvtb.f16.f32
+; CHECK-LIBCALL-DAG: bl __aeabi_f2h
+define half @test_uitofp_i32_fadd(i32 %a, half %b) #0 {
+  %c = uitofp i32 %a to half
+  %r = fadd half %b, %c
+  ret half %r
+}
+
+; CHECK-LABEL: test_sitofp_i32_fadd:
+; CHECK-VFP-DAG: vcvt.f32.s32
+; CHECK-NOVFP-DAG: bl __aeabi_i2f
+
+; CHECK-FP16-DAG: vcvtb.f16.f32
+; CHECK-FP16-DAG: vcvtb.f32.f16
+; CHECK-LIBCALL-DAG: bl __aeabi_h2f
+; CHECK-LIBCALL-DAG: bl __aeabi_h2f
+
+; CHECK-VFP-DAG: vadd.f32
+; CHECK-NOVFP-DAG: bl __aeabi_fadd
+
+; CHECK-FP16-DAG: vcvtb.f16.f32
+; CHECK-LIBCALL-DAG: bl __aeabi_f2h
+define half @test_sitofp_i32_fadd(i32 %a, half %b) #0 {
+  %c = sitofp i32 %a to half
+  %r = fadd half %b, %c
+  ret half %r
 }
 
 attributes #0 = { nounwind }

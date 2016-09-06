@@ -52,7 +52,7 @@ struct FakeFrame {
 // Allocate() flips the appropriate allocation flag atomically, thus achieving
 // async-signal safety.
 // This allocator does not have quarantine per se, but it tries to allocate the
-// frames in round robin fasion to maximize the delay between a deallocation
+// frames in round robin fashion to maximize the delay between a deallocation
 // and the next allocation.
 class FakeStack {
   static const uptr kMinStackFrameSizeLog = 6;  // Min frame is 64B.
@@ -69,12 +69,12 @@ class FakeStack {
 
   // stack_size_log is at least 15 (stack_size >= 32K).
   static uptr SizeRequiredForFlags(uptr stack_size_log) {
-    return 1UL << (stack_size_log + 1 - kMinStackFrameSizeLog);
+    return ((uptr)1) << (stack_size_log + 1 - kMinStackFrameSizeLog);
   }
 
   // Each size class occupies stack_size bytes.
   static uptr SizeRequiredForFrames(uptr stack_size_log) {
-    return (1ULL << stack_size_log) * kNumberOfSizeClasses;
+    return (((uptr)1) << stack_size_log) * kNumberOfSizeClasses;
   }
 
   // Number of bytes requires for the whole object.
@@ -91,20 +91,20 @@ class FakeStack {
   // and so on.
   static uptr FlagsOffset(uptr stack_size_log, uptr class_id) {
     uptr t = kNumberOfSizeClasses - 1 - class_id;
-    const uptr all_ones = (1 << (kNumberOfSizeClasses - 1)) - 1;
+    const uptr all_ones = (((uptr)1) << (kNumberOfSizeClasses - 1)) - 1;
     return ((all_ones >> t) << t) << (stack_size_log - 15);
   }
 
   static uptr NumberOfFrames(uptr stack_size_log, uptr class_id) {
-    return 1UL << (stack_size_log - kMinStackFrameSizeLog - class_id);
+    return ((uptr)1) << (stack_size_log - kMinStackFrameSizeLog - class_id);
   }
 
-  // Divide n by the numbe of frames in size class.
+  // Divide n by the number of frames in size class.
   static uptr ModuloNumberOfFrames(uptr stack_size_log, uptr class_id, uptr n) {
     return n & (NumberOfFrames(stack_size_log, class_id) - 1);
   }
 
-  // The the pointer to the flags of the given class_id.
+  // The pointer to the flags of the given class_id.
   u8 *GetFlags(uptr stack_size_log, uptr class_id) {
     return reinterpret_cast<u8 *>(this) + kFlagsOffset +
            FlagsOffset(stack_size_log, class_id);
@@ -114,7 +114,8 @@ class FakeStack {
   u8 *GetFrame(uptr stack_size_log, uptr class_id, uptr pos) {
     return reinterpret_cast<u8 *>(this) + kFlagsOffset +
            SizeRequiredForFlags(stack_size_log) +
-           (1 << stack_size_log) * class_id + BytesInSizeClass(class_id) * pos;
+           (((uptr)1) << stack_size_log) * class_id +
+           BytesInSizeClass(class_id) * pos;
   }
 
   // Allocate the fake frame.
@@ -137,7 +138,7 @@ class FakeStack {
 
   // Number of bytes in a fake frame of this size class.
   static uptr BytesInSizeClass(uptr class_id) {
-    return 1UL << (class_id + kMinStackFrameSizeLog);
+    return ((uptr)1) << (class_id + kMinStackFrameSizeLog);
   }
 
   // The fake frame is guaranteed to have a right redzone.
@@ -159,7 +160,7 @@ class FakeStack {
   static const uptr kFlagsOffset = 4096;  // This is were the flags begin.
   // Must match the number of uses of DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID
   COMPILER_CHECK(kNumberOfSizeClasses == 11);
-  static const uptr kMaxStackMallocSize = 1 << kMaxStackFrameSizeLog;
+  static const uptr kMaxStackMallocSize = ((uptr)1) << kMaxStackFrameSizeLog;
 
   uptr hint_position_[kNumberOfSizeClasses];
   uptr stack_size_log_;

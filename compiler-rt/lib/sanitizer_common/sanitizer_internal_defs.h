@@ -89,6 +89,7 @@ typedef unsigned error_t;
 typedef int fd_t;
 typedef int error_t;
 #endif
+typedef int pid_t;
 
 // WARNING: OFF_T may be different from OS type off_t, depending on the value of
 // _FILE_OFFSET_BITS. This definition of OFF_T matches the ABI of system calls
@@ -105,7 +106,12 @@ typedef u64  OFF64_T;
 #if (SANITIZER_WORDSIZE == 64) || SANITIZER_MAC
 typedef uptr operator_new_size_type;
 #else
+# if defined(__s390__) && !defined(__s390x__)
+// Special case: 31-bit s390 has unsigned long as size_t.
+typedef unsigned long operator_new_size_type;
+# else
 typedef u32 operator_new_size_type;
+# endif
 #endif
 
 
@@ -132,7 +138,7 @@ typedef u32 operator_new_size_type;
 # define THREADLOCAL   __declspec(thread)
 # define LIKELY(x) (x)
 # define UNLIKELY(x) (x)
-# define PREFETCH(x) /* _mm_prefetch(x, _MM_HINT_NTA) */
+# define PREFETCH(x) /* _mm_prefetch(x, _MM_HINT_NTA) */ (void)0
 #else  // _MSC_VER
 # define ALWAYS_INLINE inline __attribute__((always_inline))
 # define ALIAS(x) __attribute__((alias(x)))
@@ -290,12 +296,12 @@ inline void Trap() {
 }
 #else
 extern "C" void* _ReturnAddress(void);
+extern "C" void* _AddressOfReturnAddress(void);
 # pragma intrinsic(_ReturnAddress)
+# pragma intrinsic(_AddressOfReturnAddress)
 # define GET_CALLER_PC() (uptr)_ReturnAddress()
 // CaptureStackBackTrace doesn't need to know BP on Windows.
-// FIXME: This macro is still used when printing error reports though it's not
-// clear if the BP value is needed in the ASan reports on Windows.
-# define GET_CURRENT_FRAME() (uptr)0xDEADBEEF
+# define GET_CURRENT_FRAME() (((uptr)_AddressOfReturnAddress()) + sizeof(uptr))
 
 extern "C" void __ud2(void);
 # pragma intrinsic(__ud2)

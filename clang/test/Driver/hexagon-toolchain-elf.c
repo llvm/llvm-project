@@ -41,7 +41,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK012 %s
 // CHECK012: "-cc1"
-// CHECK012-DAG-NOT: "-internal-isystem"
+// CHECK012-NOT: "-internal-isystem"
 // CHECK012-DAG: "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/include"
 
 // RUN: %clangxx -### -target hexagon-unknown-elf -fno-integrated-as    \
@@ -51,8 +51,8 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK013 %s
 // CHECK013: "-cc1"
-// CHECK013-DAG-NOT: "-internal-isystem"
-// CHECK013-DAG-NOT: "-internal-externc-isystem"
+// CHECK013-NOT: "-internal-isystem"
+// CHECK013-NOT: "-internal-externc-isystem"
 
 // -----------------------------------------------------------------------------
 // Test -mcpu=<cpuname> -mv<number>
@@ -63,7 +63,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK020 %s
 // CHECK020: "-cc1" {{.*}} "-target-cpu" "hexagonv4"
-// CHECK020: "hexagon-link" {{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v4/crt0
+// CHECK020: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v4/crt0
 
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
@@ -71,7 +71,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK021 %s
 // CHECK021: "-cc1" {{.*}} "-target-cpu" "hexagonv5"
-// CHECK021: "hexagon-link" {{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v5/crt0
+// CHECK021: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v5/crt0
 
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
@@ -79,7 +79,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK022 %s
 // CHECK022: "-cc1" {{.*}} "-target-cpu" "hexagonv55"
-// CHECK022: "hexagon-link" {{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v55/crt0
+// CHECK022: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v55/crt0
 
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
@@ -87,7 +87,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK023 %s
 // CHECK023: "-cc1" {{.*}} "-target-cpu" "hexagonv60"
-// CHECK023: "hexagon-link" {{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0
+// CHECK023: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0
 
 // -----------------------------------------------------------------------------
 // Test Linker related args

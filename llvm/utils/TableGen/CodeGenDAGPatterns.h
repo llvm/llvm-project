@@ -412,8 +412,7 @@ public:
   }
   void addPredicateFn(const TreePredicateFn &Fn) {
     assert(!Fn.isAlwaysTrue() && "Empty predicate string!");
-    if (std::find(PredicateFns.begin(), PredicateFns.end(), Fn) ==
-          PredicateFns.end())
+    if (!is_contained(PredicateFns, Fn))
       PredicateFns.push_back(Fn);
   }
 
@@ -716,8 +715,8 @@ public:
 class CodeGenDAGPatterns {
   RecordKeeper &Records;
   CodeGenTarget Target;
-  std::vector<CodeGenIntrinsic> Intrinsics;
-  std::vector<CodeGenIntrinsic> TgtIntrinsics;
+  CodeGenIntrinsicTable Intrinsics;
+  CodeGenIntrinsicTable TgtIntrinsics;
 
   std::map<Record*, SDNodeInfo, LessRecordByID> SDNodes;
   std::map<Record*, std::pair<Record*, std::string>, LessRecordByID> SDNodeXForms;

@@ -150,8 +150,9 @@ multiclass SS3I_unop_rm_int_mm<bits<8> opc, string OpcodeStr,
 /// Binary MMX instructions requiring SSSE3.
 let ImmT = NoImm, Constraints = "$src1 = $dst" in {
 multiclass SS3I_binop_rm_int_mm<bits<8> opc, string OpcodeStr,
-                             Intrinsic IntId64, OpndItins itins> {
-  let isCommutable = 0 in
+                             Intrinsic IntId64, OpndItins itins,
+                             bit Commutable = 0> {
+  let isCommutable = Commutable in
   def rr64 : MMXSS38I<opc, MRMSrcReg, (outs VR64:$dst),
        (ins VR64:$src1, VR64:$src2),
         !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}"),
@@ -282,7 +283,7 @@ def MMX_MOVQ64rr_REV : MMXI<0x7F, MRMDestReg, (outs VR64:$dst), (ins VR64:$src),
 
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
 def MMX_MOVD64from64rm : MMXRI<0x7E, MRMDestMem,
-                               (outs i64mem:$dst), (ins VR64:$src),
+                               (outs), (ins i64mem:$dst, VR64:$src),
                                "movd\t{$src, $dst|$dst, $src}",
                                [], IIC_MMX_MOV_REG_MM>, Sched<[WriteStore]>;
 
@@ -418,9 +419,9 @@ defm MMX_PMULHUW : MMXI_binop_rm_int<0xE4, "pmulhuw", int_x86_mmx_pmulhu_w,
 let Predicates = [HasSSE2] in
 defm MMX_PMULUDQ : MMXI_binop_rm_int<0xF4, "pmuludq", int_x86_mmx_pmulu_dq,
                                      MMX_PMUL_ITINS, 1>;
-let isCommutable = 1 in
 defm MMX_PMULHRSW : SS3I_binop_rm_int_mm<0x0B, "pmulhrsw",
-                                     int_x86_ssse3_pmul_hr_sw, MMX_PMUL_ITINS>;
+                                     int_x86_ssse3_pmul_hr_sw,
+                                     MMX_PMUL_ITINS, 1>;
 
 // -- Miscellanea
 defm MMX_PMADDWD : MMXI_binop_rm_int<0xF5, "pmaddwd", int_x86_mmx_pmadd_wd,

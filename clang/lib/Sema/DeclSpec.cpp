@@ -15,10 +15,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/LocInfoType.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Sema/LocInfoType.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
@@ -220,11 +220,11 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
     // parameter list there (in an effort to avoid new/delete traffic).  If it
     // is already used (consider a function returning a function pointer) or too
     // small (function with too many parameters), go to the heap.
-    if (!TheDeclarator.InlineParamsUsed &&
+    if (!TheDeclarator.InlineStorageUsed &&
         NumParams <= llvm::array_lengthof(TheDeclarator.InlineParams)) {
       I.Fun.Params = TheDeclarator.InlineParams;
       I.Fun.DeleteParams = false;
-      TheDeclarator.InlineParamsUsed = true;
+      TheDeclarator.InlineStorageUsed = true;
     } else {
       I.Fun.Params = new DeclaratorChunk::ParamInfo[NumParams];
       I.Fun.DeleteParams = true;
@@ -258,6 +258,38 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
   return I;
 }
 
+void Declarator::setDecompositionBindings(
+    SourceLocation LSquareLoc,
+    ArrayRef<DecompositionDeclarator::Binding> Bindings,
+    SourceLocation RSquareLoc) {
+  assert(!hasName() && "declarator given multiple names!");
+
+  BindingGroup.LSquareLoc = LSquareLoc;
+  BindingGroup.RSquareLoc = RSquareLoc;
+  BindingGroup.NumBindings = Bindings.size();
+  Range.setEnd(RSquareLoc);
+
+  // We're now past the identifier.
+  SetIdentifier(nullptr, LSquareLoc);
+  Name.EndLocation = RSquareLoc;
+
+  // Allocate storage for bindings and stash them away.
+  if (Bindings.size()) {
+    if (!InlineStorageUsed &&
+        Bindings.size() <= llvm::array_lengthof(InlineBindings)) {
+      BindingGroup.Bindings = InlineBindings;
+      BindingGroup.DeleteBindings = false;
+      InlineStorageUsed = true;
+    } else {
+      BindingGroup.Bindings =
+          new DecompositionDeclarator::Binding[Bindings.size()];
+      BindingGroup.DeleteBindings = true;
+    }
+    std::uninitialized_copy(Bindings.begin(), Bindings.end(),
+                            BindingGroup.Bindings);
+  }
+}
+
 bool Declarator::isDeclarationOfFunction() const {
   for (unsigned i = 0, i_end = DeclTypeInfo.size(); i < i_end; ++i) {
     switch (DeclTypeInfo[i].Kind) {
@@ -289,6 +321,7 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_decimal32:
     case TST_decimal64:
     case TST_double:
+    case TST_float128:
     case TST_enum:
     case TST_error:
     case TST_float:
@@ -302,6 +335,8 @@ bool Declarator::isDeclarationOfFunction() const {
     case TST_unspecified:
     case TST_void:
     case TST_wchar:
+#define GENERIC_IMAGE_TYPE(ImgType, Id) case TST_##ImgType##_t:
+#include "clang/Basic/OpenCLImageTypes.def"
       return false;
 
     case TST_decltype_auto:
@@ -455,6 +490,7 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_half:        return "half";
   case DeclSpec::TST_float:       return "float";
   case DeclSpec::TST_double:      return "double";
+  case DeclSpec::TST_float128:    return "__float128";
   case DeclSpec::TST_bool:        return Policy.Bool ? "bool" : "_Bool";
   case DeclSpec::TST_decimal32:   return "_Decimal32";
   case DeclSpec::TST_decimal64:   return "_Decimal64";
@@ -474,6 +510,10 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_underlyingType: return "__underlying_type";
   case DeclSpec::TST_unknown_anytype: return "__unknown_anytype";
   case DeclSpec::TST_atomic: return "_Atomic";
+#define GENERIC_IMAGE_TYPE(ImgType, Id) \
+  case DeclSpec::TST_##ImgType##_t: \
+    return #ImgType "_t";
+#include "clang/Basic/OpenCLImageTypes.def"
   case DeclSpec::TST_error:       return "(error)";
   }
   llvm_unreachable("Unknown typespec!");
@@ -486,6 +526,7 @@ const char *DeclSpec::getSpecifierName(TQ T) {
   case DeclSpec::TQ_restrict:    return "restrict";
   case DeclSpec::TQ_volatile:    return "volatile";
   case DeclSpec::TQ_atomic:      return "_Atomic";
+  case DeclSpec::TQ_unaligned:   return "__unaligned";
   }
   llvm_unreachable("Unknown typespec!");
 }
@@ -787,6 +828,7 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc, const char *&PrevSpec,
   case TQ_const:    TQ_constLoc = Loc; return false;
   case TQ_restrict: TQ_restrictLoc = Loc; return false;
   case TQ_volatile: TQ_volatileLoc = Loc; return false;
+  case TQ_unaligned: TQ_unalignedLoc = Loc; return false;
   case TQ_atomic:   TQ_atomicLoc = Loc; return false;
   }
 
@@ -953,10 +995,10 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
        TypeSpecSign != TSS_unspecified ||
        TypeAltiVecVector || TypeAltiVecPixel || TypeAltiVecBool ||
        TypeQualifiers)) {
-    const unsigned NumLocs = 8;
+    const unsigned NumLocs = 9;
     SourceLocation ExtraLocs[NumLocs] = {
       TSWLoc, TSCLoc, TSSLoc, AltiVecLoc,
-      TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc
+      TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc, TQ_unalignedLoc
     };
     FixItHint Hints[NumLocs];
     SourceLocation FirstLoc;
@@ -1257,6 +1299,7 @@ bool VirtSpecifiers::SetSpecifier(Specifier VS, SourceLocation Loc,
   switch (VS) {
   default: llvm_unreachable("Unknown specifier!");
   case VS_Override: VS_overrideLoc = Loc; break;
+  case VS_GNU_Final:
   case VS_Sealed:
   case VS_Final:    VS_finalLoc = Loc; break;
   }
@@ -1269,6 +1312,7 @@ const char *VirtSpecifiers::getSpecifierName(Specifier VS) {
   default: llvm_unreachable("Unknown specifier");
   case VS_Override: return "override";
   case VS_Final: return "final";
+  case VS_GNU_Final: return "__final";
   case VS_Sealed: return "sealed";
   }
 }

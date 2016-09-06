@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "gtest/gtest.h"
@@ -386,6 +386,111 @@ TEST(YAMLIO, TestReadWriteBuiltInTypes) {
     EXPECT_EQ(map.h16,      Hex16(50000));
     EXPECT_EQ(map.h32,      Hex32(3000000000U));
     EXPECT_EQ(map.h64,      Hex64(6000000000LL));
+  }
+}
+
+//===----------------------------------------------------------------------===//
+//  Test endian-aware types
+//===----------------------------------------------------------------------===//
+
+struct EndianTypes {
+  typedef llvm::support::detail::packed_endian_specific_integral<
+      float, llvm::support::little, llvm::support::unaligned>
+      ulittle_float;
+  typedef llvm::support::detail::packed_endian_specific_integral<
+      double, llvm::support::little, llvm::support::unaligned>
+      ulittle_double;
+
+  llvm::support::ulittle64_t u64;
+  llvm::support::ulittle32_t u32;
+  llvm::support::ulittle16_t u16;
+  llvm::support::little64_t s64;
+  llvm::support::little32_t s32;
+  llvm::support::little16_t s16;
+  ulittle_float f;
+  ulittle_double d;
+};
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<EndianTypes> {
+  static void mapping(IO &io, EndianTypes &et) {
+    io.mapRequired("u64", et.u64);
+    io.mapRequired("u32", et.u32);
+    io.mapRequired("u16", et.u16);
+    io.mapRequired("s64", et.s64);
+    io.mapRequired("s32", et.s32);
+    io.mapRequired("s16", et.s16);
+    io.mapRequired("f", et.f);
+    io.mapRequired("d", et.d);
+  }
+};
+}
+}
+
+//
+// Test the reading of all endian scalar conversions
+//
+TEST(YAMLIO, TestReadEndianTypes) {
+  EndianTypes map;
+  Input yin("---\n"
+            "u64:      5000000000\n"
+            "u32:      4000000000\n"
+            "u16:      65000\n"
+            "s64:      -5000000000\n"
+            "s32:      -2000000000\n"
+            "s16:      -32000\n"
+            "f:        3.25\n"
+            "d:        -2.8625\n"
+            "...\n");
+  yin >> map;
+
+  EXPECT_FALSE(yin.error());
+  EXPECT_EQ(map.u64, 5000000000ULL);
+  EXPECT_EQ(map.u32, 4000000000U);
+  EXPECT_EQ(map.u16, 65000);
+  EXPECT_EQ(map.s64, -5000000000LL);
+  EXPECT_EQ(map.s32, -2000000000L);
+  EXPECT_EQ(map.s16, -32000);
+  EXPECT_EQ(map.f, 3.25f);
+  EXPECT_EQ(map.d, -2.8625);
+}
+
+//
+// Test writing then reading back all endian-aware scalar types
+//
+TEST(YAMLIO, TestReadWriteEndianTypes) {
+  std::string intermediate;
+  {
+    EndianTypes map;
+    map.u64 = 6000000000ULL;
+    map.u32 = 3000000000U;
+    map.u16 = 50000;
+    map.s64 = -6000000000LL;
+    map.s32 = -2000000000;
+    map.s16 = -32000;
+    map.f = 3.25f;
+    map.d = -2.8625;
+
+    llvm::raw_string_ostream ostr(intermediate);
+    Output yout(ostr);
+    yout << map;
+  }
+
+  {
+    Input yin(intermediate);
+    EndianTypes map;
+    yin >> map;
+
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(map.u64, 6000000000ULL);
+    EXPECT_EQ(map.u32, 3000000000U);
+    EXPECT_EQ(map.u16, 50000);
+    EXPECT_EQ(map.s64, -6000000000LL);
+    EXPECT_EQ(map.s32, -2000000000L);
+    EXPECT_EQ(map.s16, -32000);
+    EXPECT_EQ(map.f, 3.25f);
+    EXPECT_EQ(map.d, -2.8625);
   }
 }
 

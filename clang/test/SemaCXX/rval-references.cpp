@@ -72,23 +72,17 @@ int&& should_not_warn(int&& i) { // But GCC 4.4 does
 // Test the return dance. This also tests IsReturnCopyElidable.
 struct MoveOnly {
   MoveOnly();
-  MoveOnly(const MoveOnly&) = delete;	// expected-note {{candidate constructor}} \
-  // expected-note 3{{explicitly marked deleted here}}
-  MoveOnly(MoveOnly&&);	// expected-note {{candidate constructor}}
-  MoveOnly(int&&);	// expected-note {{candidate constructor}}
+  MoveOnly(const MoveOnly&) = delete;	// expected-note 3{{explicitly marked deleted here}}
 };
 
 MoveOnly gmo;
 MoveOnly returningNonEligible() {
-  int i;
   static MoveOnly mo;
   MoveOnly &r = mo;
   if (0) // Copy from global can't be elided
     return gmo; // expected-error {{call to deleted constructor}}
   else if (0) // Copy from local static can't be elided
     return mo; // expected-error {{call to deleted constructor}}
-  else if (0) // Copy from reference can't be elided
+  else // Copy from reference can't be elided
     return r; // expected-error {{call to deleted constructor}}
-  else // Construction from different type can't be elided
-    return i; // expected-error {{no viable conversion from returned value of type 'int' to function return type 'MoveOnly'}}
 }

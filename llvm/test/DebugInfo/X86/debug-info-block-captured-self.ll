@@ -80,13 +80,12 @@ define internal void @"__24-[Main initWithContext:]_block_invoke_2"(i8* %.block_
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!108}
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 3.3 ", isOptimized: false, runtimeVersion: 2, emissionKind: 0, file: !107, enums: !2, retainedTypes: !4, subprograms: !23, globals: !15, imports:  !15)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, producer: "clang version 3.3 ", isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, file: !107, enums: !2, retainedTypes: !4, globals: !15, imports:  !15)
 !1 = !DIFile(filename: "llvm/tools/clang/test/CodeGenObjC/debug-info-block-captured-self.m", directory: "")
 !2 = !{!3}
 !3 = !DICompositeType(tag: DW_TAG_enumeration_type, line: 20, size: 32, align: 32, file: !107, elements: !4)
 !4 = !{}
 !15 = !{}
-!23 = !{!38, !42}
 !27 = !DIDerivedType(tag: DW_TAG_typedef, name: "id", line: 31, file: !107, baseType: !28)
 !28 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !29)
 !29 = !DICompositeType(tag: DW_TAG_structure_type, name: "objc_object", file: !107, elements: !30)
@@ -95,11 +94,11 @@ define internal void @"__24-[Main initWithContext:]_block_invoke_2"(i8* %.block_
 !32 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, baseType: !33)
 !33 = !DICompositeType(tag: DW_TAG_structure_type, name: "objc_class", flags: DIFlagFwdDecl, file: !107)
 !34 = !DICompositeType(tag: DW_TAG_structure_type, name: "Main", line: 23, flags: DIFlagArtificial | DIFlagObjectPointer, runtimeLang: DW_LANG_ObjC, file: !107)
-!38 = distinct !DISubprogram(name: "__24-[Main initWithContext:]_block_invoke", line: 33, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 33, file: !1, scope: !1, type: !39, variables: !15)
+!38 = distinct !DISubprogram(name: "__24-[Main initWithContext:]_block_invoke", line: 33, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 33, file: !1, scope: !1, type: !39, variables: !15)
 !39 = !DISubroutineType(types: !40)
 !40 = !{null, !41, !27}
 !41 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: null)
-!42 = distinct !DISubprogram(name: "__24-[Main initWithContext:]_block_invoke_2", line: 35, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 35, file: !1, scope: !1, type: !39, variables: !15)
+!42 = distinct !DISubprogram(name: "__24-[Main initWithContext:]_block_invoke_2", line: 35, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 35, file: !1, scope: !1, type: !39, variables: !15)
 !84 = !DILocation(line: 33, scope: !38)
 !86 = !DILocalVariable(name: "self", line: 41, scope: !38, file: !1, type: !34)
 !87 = !DILocation(line: 41, scope: !38)

@@ -16,13 +16,14 @@
 #define LLVM_CODEGEN_FASTISEL_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Target/TargetLowering.h"
 
 namespace llvm {
+
+class MachineConstantPool;
 
 /// \brief This is a fast-path instruction selection class that generates poor
 /// code and doesn't support illegal types or non-trivial lowering, but runs
@@ -451,7 +452,7 @@ protected:
 
   /// \brief Emit an unconditional branch to the given block, unless it is the
   /// immediate (fall-through) successor, and update the CFG.
-  void fastEmitBranch(MachineBasicBlock *MBB, DebugLoc DL);
+  void fastEmitBranch(MachineBasicBlock *MBB, const DebugLoc &DL);
 
   /// Emit an unconditional branch to \p FalseMBB, obtains the branch weight
   /// and adds TrueMBB and FalseMBB to the successor list.

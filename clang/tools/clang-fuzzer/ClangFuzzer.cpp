@@ -16,6 +16,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/Option/Option.h"
 
 using namespace clang;

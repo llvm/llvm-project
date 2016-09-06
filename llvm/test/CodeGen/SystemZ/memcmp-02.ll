@@ -30,7 +30,7 @@ define i64 @f2(i8 *%src1, i8 *%src2) {
 define void @f3(i8 *%src1, i8 *%src2, i64 *%dest) {
 ; CHECK-LABEL: f3:
 ; CHECK: clc 0(3,%r2), 0(%r3)
-; CHECK-NEXT: je {{\..*}}
+; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
   %res = call i64 @memcmp(i8 *%src1, i8 *%src2, i64 3)
   %cmp = icmp eq i64 %res, 0
@@ -48,7 +48,7 @@ exit:
 define void @f4(i8 *%src1, i8 *%src2, i64 *%dest) {
 ; CHECK-LABEL: f4:
 ; CHECK: clc 0(4,%r2), 0(%r3)
-; CHECK-NEXT: jlh {{\..*}}
+; CHECK-NEXT: blhr %r14
 ; CHECK: br %r14
 entry:
   %res = call i64 @memcmp(i8 *%src1, i8 *%src2, i64 4)
@@ -67,7 +67,7 @@ exit:
 define void @f5(i8 *%src1, i8 *%src2, i64 *%dest) {
 ; CHECK-LABEL: f5:
 ; CHECK: clc 0(5,%r2), 0(%r3)
-; CHECK-NEXT: jl {{\..*}}
+; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
   %res = call i64 @memcmp(i8 *%src1, i8 *%src2, i64 5)
@@ -86,7 +86,7 @@ exit:
 define void @f6(i8 *%src1, i8 *%src2, i64 *%dest) {
 ; CHECK-LABEL: f6:
 ; CHECK: clc 0(6,%r2), 0(%r3)
-; CHECK-NEXT: jh {{\..*}}
+; CHECK-NEXT: bhr %r14
 ; CHECK: br %r14
 entry:
   %res = call i64 @memcmp(i8 *%src1, i8 *%src2, i64 6)
@@ -110,7 +110,7 @@ define i64 @f7(i8 *%src1, i8 *%src2, i64 *%dest) {
 ; CHECK: srl [[REG]], 28
 ; CHECK: rll [[REG]], [[REG]], 31
 ; CHECK: lgfr %r2, [[REG]]
-; CHECK: jl {{.L*}}
+; CHECK: blr %r14
 ; CHECK: br %r14
 entry:
   %res = call i64 @memcmp(i8 *%src1, i8 *%src2, i64 256)

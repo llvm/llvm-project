@@ -1,6 +1,6 @@
 REQUIRES: x86_64-linux
-RUN: sancov -obj %p/Inputs/test-linux_x86_64 -html-report %p/Inputs/test-linux_x86_64.sancov | FileCheck %s
+RUN: sancov -html-report %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s
 
 // It's very difficult to test html report. Do basic smoke check.
-CHECK: {{<a name=".*/Inputs/test.cpp">}}
+CHECK: {{.*/Inputs/test.cpp}}
 

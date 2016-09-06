@@ -10,7 +10,7 @@ define i32 @f() {
 entry:
 ; CHECK-LABEL: f:
 ; CHECK: ldm r[[BASE:[0-9]]],
-; CHECK-NEXT-NOT: subs r[[BASE]]
+; CHECK-NOT: subs r[[BASE]]
   %0 = load i32, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 0), align 4
   %1 = load i32, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 1), align 4
   %cmp = icmp sgt i32 %0, %1

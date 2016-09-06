@@ -89,7 +89,7 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !llvm.module.flags = !{!33, !34}
 !llvm.ident = !{!35}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 (trunk 224394) (llvm/trunk 224384)", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !9, globals: !30, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 (trunk 224394) (llvm/trunk 224384)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, globals: !30, imports: !2)
 !1 = !DIFile(filename: "template.cpp", directory: "/tmp/dbginfo")
 !2 = !{}
 !3 = !{!4, !8}
@@ -97,13 +97,12 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !5 = !{!6}
 !6 = !DITemplateTypeParameter(type: !7)
 !7 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!8 = !DICompositeType(tag: DW_TAG_structure_type, name: "nested", line: 2, size: 8, align: 8, file: !1, scope: !"_ZTS6y_implIiE", elements: !2, identifier: "_ZTSN6y_implIiE6nestedE")
-!9 = !{!10, !14, !28}
-!10 = distinct !DISubprogram(name: "__cxx_global_var_init", line: 3, isLocal: true, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 3, file: !1, scope: !11, type: !12, variables: !2)
+!8 = !DICompositeType(tag: DW_TAG_structure_type, name: "nested", line: 2, size: 8, align: 8, file: !1, scope: !4, elements: !2, identifier: "_ZTSN6y_implIiE6nestedE")
+!10 = distinct !DISubprogram(name: "__cxx_global_var_init", line: 3, isLocal: true, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 3, file: !1, scope: !11, type: !12, variables: !2)
 !11 = !DIFile(filename: "template.cpp", directory: "/tmp/dbginfo")
 !12 = !DISubroutineType(types: !13)
 !13 = !{null}
-!14 = distinct !DISubprogram(name: "func<3, &glbl, y_impl, nullptr, 1, 2>", linkageName: "_Z4funcILi3EXadL_Z4glblEE6y_implLDn0EJLi1ELi2EEEiv", line: 1, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 1, file: !1, scope: !11, type: !15, templateParams: !17, variables: !2)
+!14 = distinct !DISubprogram(name: "func<3, &glbl, y_impl, nullptr, 1, 2>", linkageName: "_Z4funcILi3EXadL_Z4glblEE6y_implLDn0EJLi1ELi2EEEiv", line: 1, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !11, type: !15, templateParams: !17, variables: !2)
 !15 = !DISubroutineType(types: !16)
 !16 = !{!7}
 !17 = !{!18, !19, !21, !22, !24}
@@ -117,11 +116,11 @@ attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointe
 !25 = !{!26, !27}
 !26 = !DITemplateValueParameter(tag: DW_TAG_template_value_parameter, type: !7, value: i32 1)
 !27 = !DITemplateValueParameter(tag: DW_TAG_template_value_parameter, type: !7, value: i32 2)
-!28 = distinct !DISubprogram(name: "", linkageName: "_GLOBAL__sub_I_template.cpp", isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, file: !1, scope: !11, type: !29, variables: !2)
+!28 = distinct !DISubprogram(name: "", linkageName: "_GLOBAL__sub_I_template.cpp", isLocal: true, isDefinition: true, flags: DIFlagArtificial, isOptimized: false, unit: !0, file: !1, scope: !11, type: !29, variables: !2)
 !29 = !DISubroutineType(types: !2)
 !30 = !{!31, !32}
 !31 = !DIGlobalVariable(name: "glbl", line: 3, isLocal: false, isDefinition: true, scope: null, file: !11, type: !7, variable: i32* @glbl)
-!32 = !DIGlobalVariable(name: "n", line: 4, isLocal: false, isDefinition: true, scope: null, file: !11, type: !"_ZTSN6y_implIiE6nestedE", variable: %"struct.y_impl<int>::nested"* @n)
+!32 = !DIGlobalVariable(name: "n", line: 4, isLocal: false, isDefinition: true, scope: null, file: !11, type: !8, variable: %"struct.y_impl<int>::nested"* @n)
 !33 = !{i32 2, !"Dwarf Version", i32 4}
 !34 = !{i32 2, !"Debug Info Version", i32 3}
 !35 = !{!"clang version 3.6.0 (trunk 224394) (llvm/trunk 224384)"}

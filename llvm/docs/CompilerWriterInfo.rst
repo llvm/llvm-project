@@ -13,25 +13,18 @@ Architecture & Platform Information for Compiler Writers
 Hardware
 ========
 
-ARM
----
+AArch64 & ARM
+-------------
 
-* `ARM documentation <http://www.arm.com/documentation/>`_ (`Processor Cores <http://www.arm.com/documentation/ARMProcessor_Cores/>`_ Cores)
+* `ARMv8-A Architecture Reference Manual <http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0487a.h/index.html>`_ (authentication required, free sign-up). This document covers both AArch64 and ARM instructions
 
-* `ABI <http://www.arm.com/products/DevTools/ABI.html>`_
+* `ARMv7-M Architecture Reference Manual` <http://infocenter.arm.com/help/topic/com.arm.doc.ddi0403e.b/index.html>`_ (authentication required, free sign-up). This covers the Thumb2-only microcontrollers
 
-* `ABI Addenda and Errata <http://infocenter.arm.com/help/topic/com.arm.doc.ihi0045d/IHI0045D_ABI_addenda.pdf>`_
-
-* `ARM C Language Extensions <http://infocenter.arm.com/help/topic/com.arm.doc.ihi0053c/IHI0053C_acle_2_0.pdf>`_
-
-AArch64
--------
-
-* `ARMv8 Architecture Reference Manual <http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0487a.h/index.html>`_
-
-* `ARMv8 Instruction Set Overview <http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.genc010197a/index.html>`_
+* `ARMv6-M Architecture Reference Manual` <http://infocenter.arm.com/help/topic/com.arm.doc.ddi0419c/index.html>_ (authentication required, free sign-up). This covers the Thumb1-only microcontrollers
 
 * `ARM C Language Extensions <http://infocenter.arm.com/help/topic/com.arm.doc.ihi0053c/IHI0053C_acle_2_0.pdf>`_
+
+* AArch32 `ABI Addenda and Errata <http://infocenter.arm.com/help/topic/com.arm.doc.ihi0045d/IHI0045D_ABI_addenda.pdf>`_
 
 Itanium (ia64)
 --------------
@@ -41,7 +34,7 @@ Itanium (ia64)
 MIPS
 ----
 
-* `MIPS Processor Architecture <http://imgtec.com/mips/mips-architectures.asp>`_
+* `MIPS Processor Architecture <https://imgtec.com/mips/architectures/>`_
 
 * `MIPS 64-bit ELF Object File Specification <http://techpubs.sgi.com/library/manuals/4000/007-4658-001/pdf/007-4658-001.pdf>`_
 
@@ -97,21 +90,10 @@ SystemZ
 X86
 ---
 
-AMD - Official manuals and docs
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 * `AMD processor manuals <http://www.amd.com/us-en/Processors/TechnicalResources/0,,30_182_739,00.html>`_
-* `X86-64 ABI <http://www.x86-64.org/documentation>`_
-
-Intel - Official manuals and docs
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 * `Intel 64 and IA-32 manuals <http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html>`_
 * `Intel Itanium documentation <http://www.intel.com/design/itanium/documentation.htm?iid=ipp_srvr_proc_itanium2+techdocs>`_
-
-Other x86-specific information
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
+* `X86 and X86-64 SysV psABI <https://github.com/hjl-tools/x86-psABI/wiki/X86-psABI>`_
 * `Calling conventions for different C++ compilers and operating systems  <http://www.agner.org/optimize/calling_conventions.pdf>`_
 
 XCore
@@ -119,6 +101,11 @@ XCore
 
 * `The XMOS XS1 Architecture (ISA) <https://www.xmos.com/en/download/public/The-XMOS-XS1-Architecture%28X7879A%29.pdf>`_
 * `Tools Development Guide (includes ABI) <https://www.xmos.com/download/public/Tools-Development-Guide%28X9114A%29.pdf>`_
+
+Hexagon
+-------
+
+* `Hexagon Programmer's Reference Manuals and Hexagon ABI Specification (registration required, free sign-up) <https://developer.qualcomm.com/software/hexagon-dsp-sdk/tools>`_
 
 Other relevant lists
 --------------------
@@ -134,6 +121,7 @@ ABI
 Linux
 -----
 
+* `Linux extensions to gabi <https://github.com/hjl-tools/linux-abi/wiki/Linux-Extensions-to-gABI>`_
 * `PowerPC 64-bit ELF ABI Supplement <http://www.linuxbase.org/spec/ELF/ppc64/>`_
 * `Procedure Call Standard for the AArch64 Architecture <http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055a/IHI0055A_aapcs64.pdf>`_
 * `ELF for the ARM Architecture <http://infocenter.arm.com/help/topic/com.arm.doc.ihi0044e/IHI0044E_aaelf.pdf>`_

@@ -426,12 +426,25 @@ public:
   typedef int difference_type;
   typedef std::random_access_iterator_tag iterator_category;
 };
-// expected-note@+2 {{candidate function not viable: no known conversion from 'Iter0' to 'GoodIter' for 2nd argument}}
+class GoodIter1 {
+public:
+  GoodIter1() {}
+  GoodIter1(const GoodIter1 &) {}
+  GoodIter1 &operator++(int) { return *this; }
+  GoodIter1 &operator=(const GoodIter1 &that) { return *this; }
+  GoodIter1 &operator+=(int x) { return *this; }
+  friend long operator-(const GoodIter1 &, const GoodIter1 &);
+  GoodIter1 &operator-(int) { return *this; }
+  bool operator<(GoodIter1 a) { return true; }
+  typedef int difference_type;
+  typedef std::random_access_iterator_tag iterator_category;
+};
+// expected-note@+2 {{candidate function not viable: no known conversion from 'const Iter0' to 'GoodIter' for 2nd argument}}
 // expected-note@+1 2 {{candidate function not viable: no known conversion from 'Iter1' to 'GoodIter' for 1st argument}}
 int operator-(GoodIter a, GoodIter b) { return 0; }
 // expected-note@+1 3 {{candidate function not viable: requires single argument 'a', but 2 arguments were provided}}
 GoodIter operator-(GoodIter a) { return a; }
-// expected-note@+2 {{candidate function not viable: no known conversion from 'Iter0' to 'int' for 2nd argument}}
+// expected-note@+2 {{candidate function not viable: no known conversion from 'const Iter0' to 'int' for 2nd argument}}
 // expected-note@+1 2 {{candidate function not viable: no known conversion from 'Iter1' to 'GoodIter' for 1st argument}}
 GoodIter operator-(GoodIter a, int v) { return GoodIter(); }
 // expected-note@+1 2 {{candidate function not viable: no known conversion from 'Iter0' to 'GoodIter' for 1st argument}}
@@ -482,7 +495,7 @@ int test_with_random_access_iterator() {
 #pragma omp for
   for (begin = GoodIter(0); begin < end; ++begin)
     ++begin;
-// expected-error@+4 {{invalid operands to binary expression ('GoodIter' and 'Iter0')}}
+// expected-error@+4 {{invalid operands to binary expression ('GoodIter' and 'const Iter0')}}
 // expected-error@+3 {{could not calculate number of iterations calling 'operator-' with upper and lower loop bounds}}
 #pragma omp parallel
 #pragma omp for
@@ -572,6 +585,10 @@ int test_with_random_access_iterator() {
 #pragma omp for
   for (Iter1 I; I < end1; ++I) {
   }
+  GoodIter1 I1, E1;
+#pragma omp for
+  for (GoodIter1 I = I1; I < E1; I++)
+    ;
   return 0;
 }
 

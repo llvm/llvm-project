@@ -73,16 +73,38 @@ define void @copyalias(%S* %src, %S* %dst) {
   ret void
 }
 
-
-; The GEP is present after the aliasing store, preventing to move the memcpy before
-; (without further analysis/transformation)
-define void @copyaliaswithproducerinbetween(%S* %src, %S* %dst) {
-; CHECK-LABEL: copyalias
-; CHECK-NEXT: [[LOAD:%[a-z0-9\.]+]] = load %S, %S* %src
-; CHECK-NOT: call
+; If the store address is computed ina complex manner, make
+; sure we lift the computation as well if needed and possible.
+define void @addrproducer(%S* %src, %S* %dst) {
+; CHECK-LABEL: addrproducer
+; CHECK: %dst2 = getelementptr %S, %S* %dst, i64 1
+; CHECK: call void @llvm.memmove.p0i8.p0i8.i64
+; CHECK-NEXT: store %S undef, %S* %dst
+; CHECK-NEXT: ret void
   %1 = load %S, %S* %src
   store %S undef, %S* %dst
   %dst2 = getelementptr %S , %S* %dst, i64 1
+  store %S %1, %S* %dst2
+  ret void
+}
+
+define void @aliasaddrproducer(%S* %src, %S* %dst, i32* %dstidptr) {
+; CHECK-LABEL: aliasaddrproducer
+  %1 = load %S, %S* %src
+  store %S undef, %S* %dst
+  %dstindex = load i32, i32* %dstidptr
+  %dst2 = getelementptr %S , %S* %dst, i32 %dstindex
+  store %S %1, %S* %dst2
+  ret void
+}
+
+define void @noaliasaddrproducer(%S* %src, %S* noalias %dst, i32* noalias %dstidptr) {
+; CHECK-LABEL: noaliasaddrproducer
+  %1 = load %S, %S* %src
+  store %S undef, %S* %src
+  %2 = load i32, i32* %dstidptr
+  %dstindex = or i32 %2, 1
+  %dst2 = getelementptr %S , %S* %dst, i32 %dstindex
   store %S %1, %S* %dst2
   ret void
 }

@@ -1,8 +1,13 @@
 // RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 %s
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s
 
 void foo() {
 }
 
+#if __cplusplus >= 201103L
+// expected-note@+2 4 {{declared here}}
+#endif
 bool foobool(int argc) {
   return argc;
 }
@@ -29,14 +34,21 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp taskloop simd safelen ((ST > 0) ? 1 + ST : 2)
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
-  // expected-error@+3 2 {{directive '#pragma omp taskloop simd' cannot contain more than one 'safelen' clause}}
-  // expected-error@+2 2 {{argument to 'safelen' clause must be a strictly positive integer value}}
-  // expected-error@+1 2 {{expression is not an integral constant expression}}
+  // expected-error@+6 2 {{directive '#pragma omp taskloop simd' cannot contain more than one 'safelen' clause}}
+  // expected-error@+5 2 {{argument to 'safelen' clause must be a strictly positive integer value}}
+  // expected-error@+4 2 {{expression is not an integral constant expression}}
+#if __cplusplus >= 201103L
+  // expected-note@+2 2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
+#endif
   #pragma omp taskloop simd safelen (foobool(argc)), safelen (true), safelen (-5)
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp taskloop simd safelen (S) // expected-error {{'S' does not refer to a value}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
-  // expected-error@+1 2 {{expression is not an integral constant expression}}
+#if __cplusplus <= 199711L
+  // expected-error@+4 2 {{expression is not an integral constant expression}}
+#else
+  // expected-error@+2 2 {{integral constant expression must have integral or unscoped enumeration type, not 'char *'}}
+#endif
   #pragma omp taskloop simd safelen (argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   #pragma omp taskloop simd safelen (4)
@@ -57,16 +69,27 @@ int main(int argc, char **argv) {
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   #pragma omp taskloop simd safelen (2+2)) // expected-warning {{extra tokens at the end of '#pragma omp taskloop simd' are ignored}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
-  #pragma omp taskloop simd safelen (foobool(1) > 0 ? 1 : 2) // expected-error {{expression is not an integral constant expression}}
+  // expected-error@+4 {{expression is not an integral constant expression}}
+#if __cplusplus >= 201103L
+  // expected-note@+2 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
+#endif
+  #pragma omp taskloop simd safelen (foobool(1) > 0 ? 1 : 2)
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
-  // expected-error@+3 {{expression is not an integral constant expression}}
+  // expected-error@+6 {{expression is not an integral constant expression}}
+#if __cplusplus >= 201103L
+  // expected-note@+4 {{non-constexpr function 'foobool' cannot be used in a constant expression}}
+#endif
   // expected-error@+2 2 {{directive '#pragma omp taskloop simd' cannot contain more than one 'safelen' clause}}
   // expected-error@+1 2 {{argument to 'safelen' clause must be a strictly positive integer value}}
   #pragma omp taskloop simd safelen (foobool(argc)), safelen (true), safelen (-5) 
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   #pragma omp taskloop simd safelen (S1) // expected-error {{'S1' does not refer to a value}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
-  // expected-error@+1 {{expression is not an integral constant expression}}
+#if __cplusplus <= 199711L
+  // expected-error@+4 {{expression is not an integral constant expression}}
+#else
+  // expected-error@+2 {{integral constant expression must have integral or unscoped enumeration type, not 'char *'}}
+#endif
   #pragma omp taskloop simd safelen (argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
   // expected-error@+3 {{statement after '#pragma omp taskloop simd' must be a for loop}}

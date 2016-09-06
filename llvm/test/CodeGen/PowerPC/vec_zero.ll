@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 -mcpu=g5 | grep vxor
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5 | grep vxor
 
 define void @foo(<4 x float>* %P) {
         %T = load <4 x float>, <4 x float>* %P               ; <<4 x float>> [#uses=1]

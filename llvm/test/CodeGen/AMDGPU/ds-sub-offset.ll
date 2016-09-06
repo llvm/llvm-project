@@ -1,7 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI %s
 
-declare void @llvm.AMDGPU.barrier.local() #2
-declare i32 @llvm.r600.read.tidig.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 @lds.obj = addrspace(3) global [256 x i32] undef, align 4
 
@@ -12,7 +11,7 @@ declare i32 @llvm.r600.read.tidig.x() #0
 ; GCN: ds_write_b32 [[BASEPTR]], [[VAL]] offset:12
 define void @write_ds_sub0_offset0_global() #0 {
 entry:
-  %x.i = call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #1
   %sub1 = sub i32 0, %x.i
   %tmp0 = getelementptr [256 x i32], [256 x i32] addrspace(3)* @lds.obj, i32 0, i32 %sub1
   %arrayidx = getelementptr inbounds i32, i32 addrspace(3)* %tmp0, i32 3
@@ -26,7 +25,7 @@ entry:
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 13
 ; GCN: ds_write_b8 [[NEG]], [[K]] offset:65535
 define void @add_x_shl_neg_to_sub_max_offset() #1 {
-  %x.i = call i32 @llvm.r600.read.tidig.x() #0
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 65535, %shl
@@ -41,7 +40,7 @@ define void @add_x_shl_neg_to_sub_max_offset() #1 {
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 13
 ; GCN: ds_write_b8 [[NEG]], [[K]]{{$}}
 define void @add_x_shl_neg_to_sub_max_offset_p1() #1 {
-  %x.i = call i32 @llvm.r600.read.tidig.x() #0
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 65536, %shl
@@ -60,7 +59,7 @@ define void @add_x_shl_neg_to_sub_max_offset_p1() #1 {
 ; GCN: ds_write_b32 [[NEG]], [[K]] offset:456{{$}}
 ; GCN: s_endpgm
 define void @add_x_shl_neg_to_sub_multi_use() #1 {
-  %x.i = call i32 @llvm.r600.read.tidig.x() #0
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add0 = add i32 123, %shl
@@ -82,7 +81,7 @@ define void @add_x_shl_neg_to_sub_multi_use() #1 {
 ; GCN: ds_write_b32 [[NEG]], [[K]] offset:123{{$}}
 ; GCN: s_endpgm
 define void @add_x_shl_neg_to_sub_multi_use_same_offset() #1 {
-  %x.i = call i32 @llvm.r600.read.tidig.x() #0
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 123, %shl
@@ -97,7 +96,7 @@ define void @add_x_shl_neg_to_sub_multi_use_same_offset() #1 {
 ; GCN-DAG: v_sub_i32_e32 [[NEG:v[0-9]+]], vcc, 0, [[SCALED]]
 ; GCN: ds_write2_b32 [[NEG]], {{v[0-9]+}}, {{v[0-9]+}} offset0:254 offset1:255
 define void @add_x_shl_neg_to_sub_misaligned_i64_max_offset() #1 {
-  %x.i = call i32 @llvm.r600.read.tidig.x() #0
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 1019, %shl
@@ -111,7 +110,7 @@ define void @add_x_shl_neg_to_sub_misaligned_i64_max_offset() #1 {
 ; GCN-DAG: v_sub_i32_e32 [[NEG:v[0-9]+]], vcc, 0x3fc, [[SCALED]]
 ; GCN: ds_write2_b32 [[NEG]], {{v[0-9]+}}, {{v[0-9]+}} offset1:1{{$}}
 define void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_p1() #1 {
-  %x.i = call i32 @llvm.r600.read.tidig.x() #0
+  %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 1020, %shl

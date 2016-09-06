@@ -8,6 +8,57 @@
 
 void foo() {}
 
+struct S1 {
+  S1(): a(0) {}
+  S1(int v) : a(v) {}
+  int a;
+  typedef int type;
+};
+
+template <typename T>
+class S7 : public T {
+protected:
+  T a;
+  S7() : a(0) {}
+
+public:
+  S7(typename T::type v) : a(v) {
+#pragma omp task private(a) private(this->a) private(T::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+  }
+  S7 &operator=(S7 &s) {
+#pragma omp task private(a) private(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+    return *this;
+  }
+};
+
+// CHECK: #pragma omp task private(this->a) private(this->a) private(this->S1::a)
+// CHECK: #pragma omp task private(this->a) private(this->a) private(T::a)
+// CHECK: #pragma omp task private(this->a) private(this->a)
+
+class S8 : public S7<S1> {
+  S8() {}
+
+public:
+  S8(int v) : S7<S1>(v){
+#pragma omp task private(a) private(this->a) private(S7<S1>::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+  }
+  S8 &operator=(S8 &s) {
+#pragma omp task private(a) private(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+    return *this;
+  }
+};
+
+// CHECK: #pragma omp task private(this->a) private(this->a) private(this->S7<S1>::a)
+// CHECK: #pragma omp task private(this->a) private(this->a)
+
 template <class T>
 struct S {
   operator T() { return T(); }
@@ -97,5 +148,8 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: foo();
   return tmain<int, 5>(b, &b) + tmain<long, 1>(x, &x);
 }
+
+extern template int S<int>::TS;
+extern template long S<long>::TS;
 
 #endif

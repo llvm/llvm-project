@@ -480,3 +480,24 @@ define i64 @f42(i1 %x) {
   %ext2 = zext i8 %ext to i64
   ret i64 %ext2
 }
+
+; Check that we get the case where a 64-bit shift is used by a 32-bit and.
+define signext i32 @f43(i64 %x) {
+; CHECK-LABEL: f43:
+; CHECK: risbg [[REG:%r[0-5]]], %r2, 32, 189, 52
+; CHECK: lgfr %r2, [[REG]]
+  %shr3 = lshr i64 %x, 12
+  %shr3.tr = trunc i64 %shr3 to i32
+  %conv = and i32 %shr3.tr, -4
+  ret i32 %conv
+}
+
+; Check that we don't get the case where the 32-bit and mask is not contiguous
+define signext i32 @f44(i64 %x) {
+; CHECK-LABEL: f44:
+; CHECK: srlg [[REG:%r[0-5]]], %r2, 12
+  %shr4 = lshr i64 %x, 12
+  %conv = trunc i64 %shr4 to i32
+  %and = and i32 %conv, 10
+  ret i32 %and
+}

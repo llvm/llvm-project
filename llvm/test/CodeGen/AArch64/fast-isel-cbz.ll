@@ -1,4 +1,4 @@
-; RUN: llc -fast-isel -fast-isel-abort=1 -aarch64-atomic-cfg-tidy=0 -verify-machineinstrs -mtriple=aarch64-apple-darwin < %s | FileCheck %s
+; RUN: llc -fast-isel -fast-isel-abort=1 -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs -mtriple=aarch64-apple-darwin < %s | FileCheck %s
 
 define i32 @icmp_eq_i1(i1 %a) {
 ; CHECK-LABEL: icmp_eq_i1

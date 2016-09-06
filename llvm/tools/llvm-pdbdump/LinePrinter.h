@@ -18,6 +18,7 @@
 #include <list>
 
 namespace llvm {
+namespace pdb {
 
 class LinePrinter {
   friend class WithColor;
@@ -87,6 +88,7 @@ private:
   void applyColor(PDB_ColorItem C);
   raw_ostream &OS;
 };
+}
 }
 
 #endif

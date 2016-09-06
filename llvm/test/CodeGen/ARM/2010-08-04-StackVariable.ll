@@ -83,7 +83,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !0 = !DISubprogram(name: "SVal", line: 11, isLocal: false, isDefinition: false, virtualIndex: 6, isOptimized: false, file: !48, scope: !1, type: !14)
 !1 = !DICompositeType(tag: DW_TAG_structure_type, name: "SVal", line: 1, size: 64, align: 64, file: !48, elements: !4)
 !2 = !DIFile(filename: "small.cc", directory: "/Users/manav/R8248330")
-!3 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: 1, file: !48, enums: !47, retainedTypes: !47, subprograms: !46, globals: !47, imports:  !47)
+!3 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: false, emissionKind: FullDebug, file: !48, enums: !47, retainedTypes: !47, globals: !47, imports:  !47)
 !4 = !{!5, !7, !0, !9}
 !5 = !DIDerivedType(tag: DW_TAG_member, name: "Data", line: 7, size: 64, align: 64, file: !48, scope: !1, baseType: !6)
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, file: !48, baseType: null)
@@ -96,11 +96,11 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !13 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !14 = !DISubroutineType(types: !15)
 !15 = !{null, !12}
-!16 = distinct !DISubprogram(name: "SVal", linkageName: "_ZN4SValC1Ev", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !48, scope: !1, type: !14)
-!17 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooi4SVal", line: 16, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !48, scope: !2, type: !18)
+!16 = distinct !DISubprogram(name: "SVal", linkageName: "_ZN4SValC1Ev", line: 11, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, file: !48, scope: !1, type: !14)
+!17 = distinct !DISubprogram(name: "foo", linkageName: "_Z3fooi4SVal", line: 16, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, file: !48, scope: !2, type: !18)
 !18 = !DISubroutineType(types: !19)
 !19 = !{!13, !13, !1}
-!20 = distinct !DISubprogram(name: "main", linkageName: "main", line: 23, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, file: !48, scope: !2, type: !21)
+!20 = distinct !DISubprogram(name: "main", linkageName: "main", line: 23, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, file: !48, scope: !2, type: !21)
 !21 = !DISubroutineType(types: !22)
 !22 = !{!13}
 !23 = !DILocalVariable(name: "i", line: 16, arg: 1, scope: !17, file: !2, type: !13)
@@ -126,7 +126,6 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !43 = !DILocation(line: 26, scope: !39)
 !44 = !DILocalVariable(name: "k", line: 26, scope: !39, file: !2, type: !13)
 !45 = !DILocation(line: 27, scope: !39)
-!46 = !{!16, !17, !20}
 !47 = !{}
 !48 = !DIFile(filename: "small.cc", directory: "/Users/manav/R8248330")
 !49 = !{i32 1, !"Debug Info Version", i32 3}

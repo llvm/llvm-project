@@ -89,3 +89,25 @@ for.inc.1:                                        ; preds = %for.body.1, %for.in
 
 ; Function Attrs: nounwind
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) #0
+
+declare void @may_exit() nounwind
+
+define void @pr28012(i32 %n) {
+; CHECK-LABEL: Classifying expressions for: @pr28012
+; CHECK: Loop %loop: backedge-taken count is -1431655751
+; CHECK: Loop %loop: max backedge-taken count is -1431655751
+; CHECK: Loop %loop: Predicated backedge-taken count is -1431655751
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
+  %iv.inc = add nsw i32 %iv, 3
+  call void @may_exit()
+  %becond = icmp ne i32 %iv.inc, 46
+  br i1 %becond, label %loop, label %leave
+
+leave:
+  ret void
+}

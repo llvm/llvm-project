@@ -14,11 +14,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetRecip.h"
-#include <map>
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -157,9 +156,10 @@ void TargetRecip::parseIndividualParams(const std::vector<std::string> &Args) {
     
     // If the precision was not specified, the double entry is also initialized.
     if (Val.back() != 'f' && Val.back() != 'd') {
-      RecipMap[Val.str() + 'd'].Enabled = !IsDisabled;
+      RecipParams &Params = RecipMap[Val.str() + 'd'];
+      Params.Enabled = !IsDisabled;
       if (!RefStepString.empty())
-        RecipMap[Val.str() + 'd'].RefinementSteps = RefSteps;
+        Params.RefinementSteps = RefSteps;
     }
   }
 }

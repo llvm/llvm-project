@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -globalopt -stats -disable-output 2>&1 | grep "1 globalopt - Number of global vars shrunk to booleans"
+; RUN: opt < %s -globalopt -stats -disable-output 2>&1 | FileCheck %s
+; CHECK: 1 globalopt - Number of global vars shrunk to booleans
 
 @Stop = internal global i32 0                     ; <i32*> [#uses=3]
 
@@ -53,13 +54,12 @@ return:                                           ; preds = %bb2
 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 
-!llvm.dbg.gv = !{!0}
-
+!llvm.dbg.cu = !{!1}
 !0 = !DIGlobalVariable(name: "Stop", line: 2, isLocal: true, isDefinition: true, scope: !1, file: !1, type: !2, variable: i32* @Stop)
-!1 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: 0, file: !20, enums: !21, retainedTypes: !21)
+!1 = distinct !DICompileUnit(language: DW_LANG_C89, producer: "4.2.1 (Based on Apple Inc. build 5658) (LLVM build)", isOptimized: true, emissionKind: FullDebug, file: !20, enums: !21, retainedTypes: !21, globals: !{!0})
 !2 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !3 = !DILocalVariable(name: "i", line: 4, arg: 1, scope: !4, file: !1, type: !2)
-!4 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scope: !1, type: !5)
+!4 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !1, scope: !1, type: !5)
 !5 = !DISubroutineType(types: !6)
 !6 = !{!2, !2}
 !7 = !DILocation(line: 5, scope: !8)
@@ -70,7 +70,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !12 = !DILocation(line: 11, scope: !8)
 !13 = !DILocation(line: 14, scope: !14)
 !14 = distinct !DILexicalBlock(line: 0, column: 0, file: !20, scope: !15)
-!15 = distinct !DISubprogram(name: "bar", linkageName: "bar", line: 13, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, scope: !1, type: !16)
+!15 = distinct !DISubprogram(name: "bar", linkageName: "bar", line: 13, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !1, scope: !1, type: !16)
 !16 = !DISubroutineType(types: !17)
 !17 = !{!2}
 !18 = !DILocation(line: 15, scope: !14)

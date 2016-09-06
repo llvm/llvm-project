@@ -77,7 +77,7 @@ unsigned TargetSchedModel::getNumMicroOps(const MachineInstr *MI,
                                           const MCSchedClassDesc *SC) const {
   if (hasInstrItineraries()) {
     int UOps = InstrItins.getNumMicroOps(MI->getDesc().getSchedClass());
-    return (UOps >= 0) ? UOps : TII->getNumMicroOps(&InstrItins, MI);
+    return (UOps >= 0) ? UOps : TII->getNumMicroOps(&InstrItins, *MI);
   }
   if (hasInstrSchedModel()) {
     if (!SC)
@@ -156,13 +156,13 @@ unsigned TargetSchedModel::computeOperandLatency(
   const MachineInstr *UseMI, unsigned UseOperIdx) const {
 
   if (!hasInstrSchedModel() && !hasInstrItineraries())
-    return TII->defaultDefLatency(SchedModel, DefMI);
+    return TII->defaultDefLatency(SchedModel, *DefMI);
 
   if (hasInstrItineraries()) {
     int OperLatency = 0;
     if (UseMI) {
-      OperLatency = TII->getOperandLatency(&InstrItins, DefMI, DefOperIdx,
-                                           UseMI, UseOperIdx);
+      OperLatency = TII->getOperandLatency(&InstrItins, *DefMI, DefOperIdx,
+                                           *UseMI, UseOperIdx);
     }
     else {
       unsigned DefClass = DefMI->getDesc().getSchedClass();
@@ -172,15 +172,15 @@ unsigned TargetSchedModel::computeOperandLatency(
       return OperLatency;
 
     // No operand latency was found.
-    unsigned InstrLatency = TII->getInstrLatency(&InstrItins, DefMI);
+    unsigned InstrLatency = TII->getInstrLatency(&InstrItins, *DefMI);
 
     // Expected latency is the max of the stage latency and itinerary props.
     // Rather than directly querying InstrItins stage latency, we call a TII
     // hook to allow subtargets to specialize latency. This hook is only
     // applicable to the InstrItins model. InstrSchedModel should model all
     // special cases without TII hooks.
-    InstrLatency = std::max(InstrLatency,
-                            TII->defaultDefLatency(SchedModel, DefMI));
+    InstrLatency =
+        std::max(InstrLatency, TII->defaultDefLatency(SchedModel, *DefMI));
     return InstrLatency;
   }
   // hasInstrSchedModel()
@@ -219,7 +219,7 @@ unsigned TargetSchedModel::computeOperandLatency(
   // FIXME: Automatically giving all implicit defs defaultDefLatency is
   // undesirable. We should only do it for defs that are known to the MC
   // desc like flags. Truly implicit defs should get 1 cycle latency.
-  return DefMI->isTransient() ? 0 : TII->defaultDefLatency(SchedModel, DefMI);
+  return DefMI->isTransient() ? 0 : TII->defaultDefLatency(SchedModel, *DefMI);
 }
 
 unsigned
@@ -254,24 +254,23 @@ TargetSchedModel::computeInstrLatency(const MachineInstr *MI,
   // Allow subtargets to compute Bundle latencies outside the machine model.
   if (hasInstrItineraries() || MI->isBundle() ||
       (!hasInstrSchedModel() && !UseDefaultDefLatency))
-    return TII->getInstrLatency(&InstrItins, MI);
+    return TII->getInstrLatency(&InstrItins, *MI);
 
   if (hasInstrSchedModel()) {
     const MCSchedClassDesc *SCDesc = resolveSchedClass(MI);
     if (SCDesc->isValid())
       return computeInstrLatency(*SCDesc);
   }
-  return TII->defaultDefLatency(SchedModel, MI);
+  return TII->defaultDefLatency(SchedModel, *MI);
 }
 
 unsigned TargetSchedModel::
 computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
                      const MachineInstr *DepMI) const {
-  if (SchedModel.MicroOpBufferSize <= 1)
+  if (!SchedModel.isOutOfOrder())
     return 1;
 
-  // MicroOpBufferSize > 1 indicates an out-of-order processor that can dispatch
-  // WAW dependencies in the same cycle.
+  // Out-of-order processor can dispatch WAW dependencies in the same cycle.
 
   // Treat predication as a data dependency for out-of-order cpus. In-order
   // cpus do not need to treat predicated writes specially.
@@ -282,7 +281,7 @@ computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
   unsigned Reg = DefMI->getOperand(DefOperIdx).getReg();
   const MachineFunction &MF = *DefMI->getParent()->getParent();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  if (!DepMI->readsRegister(Reg, TRI) && TII->isPredicated(DepMI))
+  if (!DepMI->readsRegister(Reg, TRI) && TII->isPredicated(*DepMI))
     return computeInstrLatency(DefMI);
 
   // If we have a per operand scheduling model, check if this def is writing

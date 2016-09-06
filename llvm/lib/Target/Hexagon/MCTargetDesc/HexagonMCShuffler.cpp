@@ -180,7 +180,6 @@ llvm::HexagonMCShuffle(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
     if (MCS.size() == 1) {                     // case of one duplex
       // copy the created duplex in the shuffler to the bundle
       MCS.copyTo(MCB);
-      doneShuffling = true;
       return HexagonShuffler::SHUFFLE_SUCCESS;
     }
     // try shuffle with this duplex

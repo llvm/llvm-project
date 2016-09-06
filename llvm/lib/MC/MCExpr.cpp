@@ -30,7 +30,7 @@ STATISTIC(MCExprEvaluate, "Number of MCExpr evaluations");
 }
 }
 
-void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
+void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
   switch (getKind()) {
   case MCExpr::Target:
     return cast<MCTargetExpr>(this)->printImpl(OS, MAI);
@@ -43,7 +43,8 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
     const MCSymbol &Sym = SRE.getSymbol();
     // Parenthesize names that start with $ so that they don't look like
     // absolute names.
-    bool UseParens = Sym.getName().size() && Sym.getName()[0] == '$';
+    bool UseParens =
+        !InParens && Sym.getName().size() && Sym.getName()[0] == '$';
     if (UseParens) {
       OS << '(';
       Sym.print(OS, MAI);
@@ -129,7 +130,7 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void MCExpr::dump() const {
+LLVM_DUMP_METHOD void MCExpr::dump() const {
   dbgs() << *this;
   dbgs() << '\n';
 }
@@ -178,8 +179,11 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_Invalid: return "<<invalid>>";
   case VK_None: return "<<none>>";
 
+  case VK_DTPOFF: return "DTPOFF";
+  case VK_DTPREL: return "DTPREL";
   case VK_GOT: return "GOT";
   case VK_GOTOFF: return "GOTOFF";
+  case VK_GOTREL: return "GOTREL";
   case VK_GOTPCREL: return "GOTPCREL";
   case VK_GOTTPOFF: return "GOTTPOFF";
   case VK_INDNTPOFF: return "INDNTPOFF";
@@ -190,7 +194,9 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_TLSLD: return "TLSLD";
   case VK_TLSLDM: return "TLSLDM";
   case VK_TPOFF: return "TPOFF";
-  case VK_DTPOFF: return "DTPOFF";
+  case VK_TPREL: return "TPREL";
+  case VK_TLSCALL: return "tlscall";
+  case VK_TLSDESC: return "tlsdesc";
   case VK_TLVP: return "TLVP";
   case VK_TLVPPAGE: return "TLVPPAGE";
   case VK_TLVPPAGEOFF: return "TLVPPAGEOFF";
@@ -208,8 +214,6 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_ARM_PREL31: return "prel31";
   case VK_ARM_SBREL: return "sbrel";
   case VK_ARM_TLSLDO: return "tlsldo";
-  case VK_ARM_TLSCALL: return "tlscall";
-  case VK_ARM_TLSDESC: return "tlsdesc";
   case VK_ARM_TLSDESCSEQ: return "tlsdescseq";
   case VK_PPC_LO: return "l";
   case VK_PPC_HI: return "h";
@@ -227,7 +231,6 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_PPC_TOC_HI: return "toc@h";
   case VK_PPC_TOC_HA: return "toc@ha";
   case VK_PPC_DTPMOD: return "dtpmod";
-  case VK_PPC_TPREL: return "tprel";
   case VK_PPC_TPREL_LO: return "tprel@l";
   case VK_PPC_TPREL_HI: return "tprel@h";
   case VK_PPC_TPREL_HA: return "tprel@ha";
@@ -235,7 +238,6 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_PPC_TPREL_HIGHERA: return "tprel@highera";
   case VK_PPC_TPREL_HIGHEST: return "tprel@highest";
   case VK_PPC_TPREL_HIGHESTA: return "tprel@highesta";
-  case VK_PPC_DTPREL: return "dtprel";
   case VK_PPC_DTPREL_LO: return "dtprel@l";
   case VK_PPC_DTPREL_HI: return "dtprel@h";
   case VK_PPC_DTPREL_HA: return "dtprel@ha";
@@ -263,32 +265,6 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_PPC_GOT_TLSLD_HA: return "got@tlsld@ha";
   case VK_PPC_TLSLD: return "tlsld";
   case VK_PPC_LOCAL: return "local";
-  case VK_Mips_GPREL: return "GPREL";
-  case VK_Mips_GOT_CALL: return "GOT_CALL";
-  case VK_Mips_GOT16: return "GOT16";
-  case VK_Mips_GOT: return "GOT";
-  case VK_Mips_ABS_HI: return "ABS_HI";
-  case VK_Mips_ABS_LO: return "ABS_LO";
-  case VK_Mips_TLSGD: return "TLSGD";
-  case VK_Mips_TLSLDM: return "TLSLDM";
-  case VK_Mips_DTPREL_HI: return "DTPREL_HI";
-  case VK_Mips_DTPREL_LO: return "DTPREL_LO";
-  case VK_Mips_GOTTPREL: return "GOTTPREL";
-  case VK_Mips_TPREL_HI: return "TPREL_HI";
-  case VK_Mips_TPREL_LO: return "TPREL_LO";
-  case VK_Mips_GPOFF_HI: return "GPOFF_HI";
-  case VK_Mips_GPOFF_LO: return "GPOFF_LO";
-  case VK_Mips_GOT_DISP: return "GOT_DISP";
-  case VK_Mips_GOT_PAGE: return "GOT_PAGE";
-  case VK_Mips_GOT_OFST: return "GOT_OFST";
-  case VK_Mips_HIGHER:   return "HIGHER";
-  case VK_Mips_HIGHEST:  return "HIGHEST";
-  case VK_Mips_GOT_HI16: return "GOT_HI16";
-  case VK_Mips_GOT_LO16: return "GOT_LO16";
-  case VK_Mips_CALL_HI16: return "CALL_HI16";
-  case VK_Mips_CALL_LO16: return "CALL_LO16";
-  case VK_Mips_PCREL_HI16: return "PCREL_HI16";
-  case VK_Mips_PCREL_LO16: return "PCREL_LO16";
   case VK_COFF_IMGREL32: return "IMGREL";
   case VK_Hexagon_PCREL: return "PCREL";
   case VK_Hexagon_LO16: return "LO16";
@@ -301,8 +277,6 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_Hexagon_IE: return "IE";
   case VK_Hexagon_IE_GOT: return "IEGOT";
   case VK_WebAssembly_FUNCTION: return "FUNCTION";
-  case VK_TPREL: return "tprel";
-  case VK_DTPREL: return "dtprel";
   }
   llvm_unreachable("Invalid variant kind");
 }
@@ -310,19 +284,24 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
 MCSymbolRefExpr::VariantKind
 MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
   return StringSwitch<VariantKind>(Name.lower())
+    .Case("dtprel", VK_DTPREL)
+    .Case("dtpoff", VK_DTPOFF)
     .Case("got", VK_GOT)
     .Case("gotoff", VK_GOTOFF)
+    .Case("gotrel", VK_GOTREL)
     .Case("gotpcrel", VK_GOTPCREL)
     .Case("gottpoff", VK_GOTTPOFF)
     .Case("indntpoff", VK_INDNTPOFF)
     .Case("ntpoff", VK_NTPOFF)
     .Case("gotntpoff", VK_GOTNTPOFF)
     .Case("plt", VK_PLT)
+    .Case("tlscall", VK_TLSCALL)
+    .Case("tlsdesc", VK_TLSDESC)
     .Case("tlsgd", VK_TLSGD)
     .Case("tlsld", VK_TLSLD)
     .Case("tlsldm", VK_TLSLDM)
     .Case("tpoff", VK_TPOFF)
-    .Case("dtpoff", VK_DTPOFF)
+    .Case("tprel", VK_TPREL)
     .Case("tlvp", VK_TLVP)
     .Case("tlvppage", VK_TLVPPAGE)
     .Case("tlvppageoff", VK_TLVPPAGEOFF)
@@ -351,7 +330,6 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("toc@ha", VK_PPC_TOC_HA)
     .Case("tls", VK_PPC_TLS)
     .Case("dtpmod", VK_PPC_DTPMOD)
-    .Case("tprel", VK_PPC_TPREL)
     .Case("tprel@l", VK_PPC_TPREL_LO)
     .Case("tprel@h", VK_PPC_TPREL_HI)
     .Case("tprel@ha", VK_PPC_TPREL_HA)
@@ -359,7 +337,6 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("tprel@highera", VK_PPC_TPREL_HIGHERA)
     .Case("tprel@highest", VK_PPC_TPREL_HIGHEST)
     .Case("tprel@highesta", VK_PPC_TPREL_HIGHESTA)
-    .Case("dtprel", VK_PPC_DTPREL)
     .Case("dtprel@l", VK_PPC_DTPREL_LO)
     .Case("dtprel@h", VK_PPC_DTPREL_HI)
     .Case("dtprel@ha", VK_PPC_DTPREL_HA)
@@ -397,8 +374,6 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("prel31", VK_ARM_PREL31)
     .Case("sbrel", VK_ARM_SBREL)
     .Case("tlsldo", VK_ARM_TLSLDO)
-    .Case("tlscall", VK_ARM_TLSCALL)
-    .Case("tlsdesc", VK_ARM_TLSDESC)
     .Default(VK_Invalid);
 }
 
@@ -688,8 +663,10 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       /// -(a - b + const) ==> (b - a - const)
       if (Value.getSymA() && !Value.getSymB())
         return false;
+
+      // The cast avoids undefined behavior if the constant is INT64_MIN.
       Res = MCValue::get(Value.getSymB(), Value.getSymA(),
-                         -Value.getConstant());
+                         -(uint64_t)Value.getConstant());
       break;
     case MCUnaryExpr::Not:
       if (!Value.isAbsolute())
@@ -722,9 +699,10 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         return false;
       case MCBinaryExpr::Sub:
         // Negate RHS and add.
+        // The cast avoids undefined behavior if the constant is INT64_MIN.
         return EvaluateSymbolicAdd(Asm, Layout, Addrs, InSet, LHSValue,
                                    RHSValue.getSymB(), RHSValue.getSymA(),
-                                   -RHSValue.getConstant(), Res);
+                                   -(uint64_t)RHSValue.getConstant(), Res);
 
       case MCBinaryExpr::Add:
         return EvaluateSymbolicAdd(Asm, Layout, Addrs, InSet, LHSValue,

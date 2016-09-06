@@ -60,6 +60,7 @@ DataInfo::DataInfo() {
 
 void DataInfo::Clear() {
   InternalFree(module);
+  InternalFree(file);
   InternalFree(name);
   internal_memset(this, 0, sizeof(DataInfo));
 }
@@ -96,7 +97,7 @@ const char *Symbolizer::ModuleNameOwner::GetOwnedCopy(const char *str) {
 }
 
 Symbolizer::Symbolizer(IntrusiveList<SymbolizerTool> tools)
-    : module_names_(&mu_), n_modules_(0), modules_fresh_(false), tools_(tools),
+    : module_names_(&mu_), modules_(), modules_fresh_(false), tools_(tools),
       start_hook_(0), end_hook_(0) {}
 
 Symbolizer::SymbolizerScope::SymbolizerScope(const Symbolizer *sym)

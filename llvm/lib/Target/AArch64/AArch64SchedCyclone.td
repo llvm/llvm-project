@@ -1,4 +1,4 @@
-//=- ARMSchedCyclone.td - AArch64 Cyclone Scheduling Defs ----*- tablegen -*-=//
+//=- AArch64SchedCyclone.td - Cyclone Scheduling Definitions -*- tablegen -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,6 +17,7 @@ def CycloneModel : SchedMachineModel {
   let MicroOpBufferSize = 192; // Based on the reorder buffer.
   let LoadLatency = 4; // Optimistic load latency.
   let MispredictPenalty = 16; // 14-19 cycles are typical.
+  let CompleteModel = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -107,7 +108,7 @@ def WriteX : SchedWriteRes<[]> { let Latency = 0; }
 // The move is replaced by a single nop micro-op.
 // MOVZ Rd, #0
 // AND Rd, Rzr, #imm
-def WriteZPred : SchedPredicate<[{TII->isGPRZero(MI)}]>;
+def WriteZPred : SchedPredicate<[{TII->isGPRZero(*MI)}]>;
 def WriteImmZ  : SchedWriteVariant<[
                    SchedVar<WriteZPred, [WriteX]>,
                    SchedVar<NoSchedPred, [WriteImm]>]>;
@@ -116,8 +117,8 @@ def : InstRW<[WriteImmZ], (instrs MOVZWi,MOVZXi,ANDWri,ANDXri)>;
 // Move GPR is a register rename and single nop micro-op.
 // ORR Xd, XZR, Xm
 // ADD Xd, Xn, #0
-def WriteIMovPred : SchedPredicate<[{TII->isGPRCopy(MI)}]>;
-def WriteVMovPred : SchedPredicate<[{TII->isFPRCopy(MI)}]>;
+def WriteIMovPred : SchedPredicate<[{TII->isGPRCopy(*MI)}]>;
+def WriteVMovPred : SchedPredicate<[{TII->isFPRCopy(*MI)}]>;
 def WriteMov      : SchedWriteVariant<[
                       SchedVar<WriteIMovPred, [WriteX]>,
                       SchedVar<WriteVMovPred, [WriteX]>,
@@ -726,7 +727,7 @@ def : InstRW<[WriteVLDShuffle, WriteAdr, WriteV, WriteV],
 def : InstRW<[WriteVLDShuffle, WriteVLDShuffle, WriteV],
              (instrs LD3Rv1d,LD3Rv2d)>;
 def : InstRW<[WriteVLDShuffle, WriteAdr, WriteVLDShuffle, WriteV],
-             (instrs LD3Rv2d_POST,LD3Rv2d_POST)>;
+             (instrs LD3Rv1d_POST,LD3Rv2d_POST)>;
 
 def : InstRW<[WriteVLDShuffle, WriteVLDShuffle, WriteV, WriteV],
              (instregex "LD4Fourv(8b|4h|2s)$")>;
@@ -850,6 +851,9 @@ def : InstRW<[WriteAdr, WriteVSTPairShuffle], (instregex "ST4i(8|16|32)_POST")>;
 
 def : InstRW<[WriteVSTShuffle, WriteVSTShuffle],          (instrs ST4i64)>;
 def : InstRW<[WriteAdr, WriteVSTShuffle, WriteVSTShuffle],(instrs ST4i64_POST)>;
+
+// Atomic operations are not supported.
+def : WriteRes<WriteAtomic, []> { let Unsupported = 1; }
 
 //---
 // Unused SchedRead types

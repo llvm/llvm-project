@@ -55,10 +55,12 @@ static void DummyArgToStringFn(DiagnosticsEngine::ArgumentKind AK, intptr_t QT,
   Output.append(Str.begin(), Str.end());
 }
 
-DiagnosticsEngine::DiagnosticsEngine(
-    const IntrusiveRefCntPtr<DiagnosticIDs> &diags, DiagnosticOptions *DiagOpts,
-    DiagnosticConsumer *client, bool ShouldOwnClient)
-    : Diags(diags), DiagOpts(DiagOpts), Client(nullptr), SourceMgr(nullptr) {
+DiagnosticsEngine::DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> diags,
+                                     DiagnosticOptions *DiagOpts,
+                                     DiagnosticConsumer *client,
+                                     bool ShouldOwnClient)
+    : Diags(std::move(diags)), DiagOpts(DiagOpts), Client(nullptr),
+      SourceMgr(nullptr) {
   setClient(client, ShouldOwnClient);
   ArgToStringFn = DummyArgToStringFn;
   ArgToStringCookie = nullptr;
@@ -68,6 +70,7 @@ DiagnosticsEngine::DiagnosticsEngine(
   WarningsAsErrors = false;
   EnableAllWarnings = false;
   ErrorsAsFatal = false;
+  FatalsAsError = false;
   SuppressSystemWarnings = false;
   SuppressAllDiagnostics = false;
   ElideType = true;
@@ -1007,7 +1010,7 @@ PartialDiagnostic::StorageAllocator::StorageAllocator() {
 PartialDiagnostic::StorageAllocator::~StorageAllocator() {
   // Don't assert if we are in a CrashRecovery context, as this invariant may
   // be invalidated during a crash.
-  assert((NumFreeListEntries == NumCached || 
-          llvm::CrashRecoveryContext::isRecoveringFromCrash()) && 
-         "A partial is on the lamb");
+  assert((NumFreeListEntries == NumCached ||
+          llvm::CrashRecoveryContext::isRecoveringFromCrash()) &&
+         "A partial is on the lam");
 }

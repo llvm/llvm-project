@@ -24,11 +24,11 @@ attributes #1 = { nounwind readnone }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (https://github.com/llvm-mirror/clang 89dda3855cda574f355e6defa1d77bdae5053994) (llvm/trunk 257597)", isOptimized: true, runtimeVersion: 0, emissionKind: 1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.8.0 (https://github.com/llvm-mirror/clang 89dda3855cda574f355e6defa1d77bdae5053994) (llvm/trunk 257597)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 !1 = !DIFile(filename: "none", directory: ".")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !DILocalVariable(name: "getU", scope: !4, file: !1, line: 25, type: !5)
-!4 = distinct !DISubprogram(name: "multiply64", linkageName: "_ZN4llvm13ScaledNumbers10multiply64Emm", scope: null, file: !1, line: 22, isLocal: false, isDefinition: true, scopeLine: 23, flags: DIFlagPrototyped, isOptimized: true)
+!4 = distinct !DISubprogram(name: "multiply64", linkageName: "_ZN4llvm13ScaledNumbers10multiply64Emm", scope: null, file: !1, line: 22, isLocal: false, isDefinition: true, scopeLine: 23, flags: DIFlagPrototyped, isOptimized: true, unit: !0)
 !5 = !DICompositeType(tag: DW_TAG_class_type, scope: !4, file: !1, line: 25, size: 8, align: 8)
 !6 = !DIExpression()
 !7 = !DILocation(line: 25, column: 8, scope: !4)

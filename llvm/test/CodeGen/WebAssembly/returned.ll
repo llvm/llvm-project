@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 ; Test that the "returned" attribute is optimized effectively.
 
@@ -38,7 +38,7 @@ entry:
 
 ; CHECK-LABEL: test_constant_arg:
 ; CHECK-NEXT: i32.const   $push0=, global{{$}}
-; CHECK-NEXT: {{^}} i32.call        $discard=, returns_arg@FUNCTION, $pop0{{$}}
+; CHECK-NEXT: {{^}} i32.call        $drop=, returns_arg@FUNCTION, $pop0{{$}}
 ; CHECK-NEXT: return{{$}}
 @global = external global i32
 @addr = global i32* @global

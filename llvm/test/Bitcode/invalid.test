@@ -168,11 +168,6 @@ RUN:   FileCheck --check-prefix=INVALID-ARGUMENT-TYPE %s
 
 INVALID-ARGUMENT-TYPE: Invalid function argument type
 
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-fixme-streaming-blob.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=STREAMING-BLOB %s
-
-STREAMING-BLOB: getPointer in streaming memory objects not allowed
-
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-function-comdat-id.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-FCOMDAT-ID %s
 
@@ -217,3 +212,23 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-name-with-0-byte.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NAME-WITH-0 %s
 
 NAME-WITH-0: Invalid value name
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-void-constant.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=VOID-CONSTANT-TYPE %s
+
+VOID-CONSTANT-TYPE: Invalid constant type
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-gep-no-operands.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=GEP-NO-OPERANDS %s
+
+GEP-NO-OPERANDS: Invalid gep with no operands
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-nonpointer-storeatomic.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=NONPOINTER-STOREATOMIC %s
+
+NONPOINTER-STOREATOMIC: Invalid record
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-nonpointer-atomicrmw.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=NONPOINTER-ATOMICRMW %s
+
+NONPOINTER-ATOMICRMW: Invalid record

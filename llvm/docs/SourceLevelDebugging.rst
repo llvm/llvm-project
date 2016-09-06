@@ -63,15 +63,17 @@ away during the compilation process.  This meta information provides an LLVM
 user a relationship between generated code and the original program source
 code.
 
-Currently, debug information is consumed by DwarfDebug to produce dwarf
-information used by the gdb debugger.  Other targets could use the same
-information to produce stabs or other debug forms.
+Currently, there are two backend consumers of debug info: DwarfDebug and
+CodeViewDebug. DwarfDebug produces DWARF sutable for use with GDB, LLDB, and
+other DWARF-based debuggers. :ref:`CodeViewDebug <codeview>` produces CodeView,
+the Microsoft debug info format, which is usable with Microsoft debuggers such
+as Visual Studio and WinDBG. LLVM's debug information format is mostly derived
+from and inspired by DWARF, but it is feasible to translate into other target
+debug info formats such as STABS.
 
 It would also be reasonable to use debug information to feed profiling tools
 for analysis of generated code, or, tools for reconstructing the original
 source from generated code.
-
-TODO - expound a bit more.
 
 .. _intro_debugopt:
 
@@ -197,7 +199,7 @@ value.  The first argument is the new value (wrapped as metadata).  The second
 argument is the offset in the user source variable where the new value is
 written.  The third argument is a `local variable
 <LangRef.html#dilocalvariable>`_ containing a description of the variable.  The
-third argument is a `complex expression <LangRef.html#diexpression>`_.
+fourth argument is a `complex expression <LangRef.html#diexpression>`_.
 
 Object lifetimes and scoping
 ============================
@@ -228,7 +230,7 @@ following C fragment, for example:
 
 Compiled to LLVM, this function would be represented like this:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ; Function Attrs: nounwind ssp uwtable
   define void @foo() #0 !dbg !4 {
@@ -259,7 +261,7 @@ Compiled to LLVM, this function would be represented like this:
   !llvm.module.flags = !{!7, !8, !9}
   !llvm.ident = !{!10}
 
-  !0 = !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (trunk 231150) (llvm/trunk 231154)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+  !0 = !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (trunk 231150) (llvm/trunk 231154)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
   !1 = !DIFile(filename: "/dev/stdin", directory: "/Users/dexonsmith/data/llvm/debug-info")
   !2 = !{}
   !3 = !{!4}
@@ -301,7 +303,7 @@ The first intrinsic ``%llvm.dbg.declare`` encodes debugging information for the
 variable ``X``.  The metadata ``!dbg !14`` attached to the intrinsic provides
 scope information for the variable ``X``.
 
-.. code-block:: llvm
+.. code-block:: text
 
   !14 = !DILocation(line: 2, column: 9, scope: !4)
   !4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5,
@@ -325,7 +327,7 @@ The third intrinsic ``%llvm.dbg.declare`` encodes debugging information for
 variable ``Z``.  The metadata ``!dbg !19`` attached to the intrinsic provides
 scope information for the variable ``Z``.
 
-.. code-block:: llvm
+.. code-block:: text
 
   !18 = distinct !DILexicalBlock(scope: !4, file: !1, line: 4, column: 5)
   !19 = !DILocation(line: 5, column: 11, scope: !18)
@@ -388,7 +390,7 @@ Given an integer global variable declared as follows:
 
 a C/C++ front-end would generate the following descriptors:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ;;
   ;; Define the global itself.
@@ -407,7 +409,7 @@ a C/C++ front-end would generate the following descriptors:
   !0 = !DICompileUnit(language: DW_LANG_C99, file: !1,
                       producer:
                       "clang version 3.7.0 (trunk 231150) (llvm/trunk 231154)",
-                      isOptimized: false, runtimeVersion: 0, emissionKind: 1,
+                      isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug,
                       enums: !2, retainedTypes: !2, subprograms: !2, globals:
                       !3, imports: !2)
 
@@ -454,7 +456,7 @@ Given a function declared as follows:
 
 a C/C++ front-end would generate the following descriptors:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ;;
   ;; Define the anchor for subprograms.
@@ -679,7 +681,13 @@ New DWARF Constants
 | DW_APPLE_PROPERTY_strong             | 0x400 |
 +--------------------------------------+-------+
 | DW_APPLE_PROPERTY_unsafe_unretained  | 0x800 |
-+--------------------------------+-----+-------+
++--------------------------------------+-------+
+| DW_APPLE_PROPERTY_nullability        | 0x1000|
++--------------------------------------+-------+
+| DW_APPLE_PROPERTY_null_resettable    | 0x2000|
++--------------------------------------+-------+
+| DW_APPLE_PROPERTY_class              | 0x4000|
++--------------------------------------+-------+
 
 Name Accelerator Tables
 -----------------------
@@ -1333,3 +1341,74 @@ names as follows:
 * "``.apple_namespaces``" -> "``__apple_namespac``" (16 character limit)
 * "``.apple_objc``" -> "``__apple_objc``"
 
+.. _codeview:
+
+CodeView Debug Info Format
+==========================
+
+LLVM supports emitting CodeView, the Microsoft debug info format, and this
+section describes the design and implementation of that support.
+
+Format Background
+-----------------
+
+CodeView as a format is clearly oriented around C++ debugging, and in C++, the
+majority of debug information tends to be type information. Therefore, the
+overriding design constraint of CodeView is the separation of type information
+from other "symbol" information so that type information can be efficiently
+merged across translation units. Both type information and symbol information is
+generally stored as a sequence of records, where each record begins with a
+16-bit record size and a 16-bit record kind.
+
+Type information is usually stored in the ``.debug$T`` section of the object
+file.  All other debug info, such as line info, string table, symbol info, and
+inlinee info, is stored in one or more ``.debug$S`` sections. There may only be
+one ``.debug$T`` section per object file, since all other debug info refers to
+it. If a PDB (enabled by the ``/Zi`` MSVC option) was used during compilation,
+the ``.debug$T`` section will contain only an ``LF_TYPESERVER2`` record pointing
+to the PDB. When using PDBs, symbol information appears to remain in the object
+file ``.debug$S`` sections.
+
+Type records are referred to by their index, which is the number of records in
+the stream before a given record plus ``0x1000``. Many common basic types, such
+as the basic integral types and unqualified pointers to them, are represented
+using type indices less than ``0x1000``. Such basic types are built in to
+CodeView consumers and do not require type records.
+
+Each type record may only contain type indices that are less than its own type
+index. This ensures that the graph of type stream references is acyclic. While
+the source-level type graph may contain cycles through pointer types (consider a
+linked list struct), these cycles are removed from the type stream by always
+referring to the forward declaration record of user-defined record types. Only
+"symbol" records in the ``.debug$S`` streams may refer to complete,
+non-forward-declaration type records.
+
+Working with CodeView
+---------------------
+
+These are instructions for some common tasks for developers working to improve
+LLVM's CodeView support. Most of them revolve around using the CodeView dumper
+embedded in ``llvm-readobj``.
+
+* Testing MSVC's output::
+
+    $ cl -c -Z7 foo.cpp # Use /Z7 to keep types in the object file
+    $ llvm-readobj -codeview foo.obj
+
+* Getting LLVM IR debug info out of Clang::
+
+    $ clang -g -gcodeview --target=x86_64-windows-msvc foo.cpp -S -emit-llvm
+
+  Use this to generate LLVM IR for LLVM test cases.
+
+* Generate and dump CodeView from LLVM IR metadata::
+
+    $ llc foo.ll -filetype=obj -o foo.obj
+    $ llvm-readobj -codeview foo.obj > foo.txt
+
+  Use this pattern in lit test cases and FileCheck the output of llvm-readobj
+
+Improving LLVM's CodeView support is a process of finding interesting type
+records, constructing a C++ test case that makes MSVC emit those records,
+dumping the records, understanding them, and then generating equivalent records
+in LLVM's backend.

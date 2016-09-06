@@ -1,4 +1,4 @@
-# RUN: not llc -march=x86-64 -start-after machine-sink -stop-after machine-sink -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 --- |
 
   define i32 @test(i32 %a) {

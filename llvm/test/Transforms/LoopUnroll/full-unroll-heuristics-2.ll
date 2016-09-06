@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=10  -unroll-percent-dynamic-cost-saved-threshold=50 -unroll-dynamic-cost-savings-discount=90 | FileCheck %s
+; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=1000 -unroll-threshold=10  -unroll-percent-dynamic-cost-saved-threshold=70 -unroll-dynamic-cost-savings-discount=90 | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 @unknown_global = internal unnamed_addr global [9 x i32] [i32 0, i32 -1, i32 0, i32 -1, i32 5, i32 -1, i32 0, i32 -1, i32 0], align 16
@@ -53,5 +53,37 @@ loop:                                                ; preds = %loop, %entry
 
 loop.end:                                            ; preds = %loop
   %r.lcssa = phi i32 [ %r, %loop ]
+  ret i32 %r.lcssa
+}
+
+; In this case the loaded value is used only to control branch.
+; If we missed that, we could've thought that it's unused and unrolling would
+; clean up almost entire loop. Make sure that we do not unroll such loop.
+; CHECK-LABEL: @foo3
+; CHECK: br i1 %exitcond, label %loop.end, label %loop.header
+define i32 @foo3(i32* noalias nocapture readonly %src) {
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %inc, %loop.latch ]
+  %r1  = phi i32 [ 0, %entry ], [ %r3, %loop.latch ]
+  %arrayidx = getelementptr inbounds i32, i32* %src, i64 %iv
+  %src_element = load i32, i32* %arrayidx, align 4
+  %cmp = icmp eq i32 0, %src_element
+  br i1 %cmp, label %loop.if, label %loop.latch
+
+loop.if:
+  %r2 = add i32 %r1, 1
+  br label %loop.latch
+
+loop.latch:
+  %r3 = phi i32 [%r1, %loop.header], [%r2, %loop.if]
+  %inc = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %inc, 9
+  br i1 %exitcond, label %loop.end, label %loop.header
+
+loop.end:
+  %r.lcssa = phi i32 [ %r3, %loop.latch ]
   ret i32 %r.lcssa
 }

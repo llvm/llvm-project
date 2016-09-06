@@ -1,4 +1,5 @@
-; RUN: llc < %s -march=sparcv9 -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s
+; RUN: llc < %s -march=sparcv9 -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD
+; RUN: llc < %s -march=sparcv9 -disable-sparc-delay-filler -disable-sparc-leaf-proc -mattr=soft-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT
 
 ; CHECK-LABEL: intarg:
 ; The save/restore frame is not strictly necessary here, but we would need to
@@ -54,13 +55,22 @@ define void @call_intarg(i32 %i0, i8* %i1) {
 }
 
 ; CHECK-LABEL: floatarg:
-; CHECK: save %sp, -128, %sp
-; CHECK: ld [%fp+2307], [[F:%f[0-9]+]]
-; CHECK: fstod %f1,
-; CHECK: faddd %f2,
-; CHECK: faddd %f4,
-; CHECK: faddd %f6,
-; CHECK: fadds %f31, [[F]]
+; HARD: save %sp, -128, %sp
+; HARD: ld [%fp+2307], [[F:%f[0-9]+]]
+; HARD: fstod %f1,
+; HARD: faddd %f2,
+; HARD: faddd %f4,
+; HARD: faddd %f6,
+; HARD: fadds %f31, [[F]]
+; SOFT: save %sp, -176, %sp
+; SOFT: srl %i0, 0, %o0
+; SOFT-NEXT: call __extendsfdf2
+; SOFT: mov  %o0, %i0
+; SOFT: mov  %i1, %o0
+; SOFT: mov  %i2, %o0
+; SOFT: mov  %i3, %o0
+; SOFT: ld [%fp+2299], %o0
+; SOFT: ld [%fp+2307], %o1
 define double @floatarg(float %a0,    ; %f1
                         double %a1,   ; %d2
                         double %a2,   ; %d4
@@ -92,13 +102,32 @@ define double @floatarg(float %a0,    ; %f1
 ; CHECK-LABEL: call_floatarg:
 ; CHECK: save %sp, -272, %sp
 ; Store 8 bytes in full slot.
-; CHECK: std %f2, [%sp+2311]
+; HARD: std %f2, [%sp+2311]
 ; Store 4 bytes, right-aligned in slot.
-; CHECK: st %f1, [%sp+2307]
-; CHECK: fmovd %f2, %f4
+; HARD: st %f1, [%sp+2307]
+; HARD: fmovd %f2, %f4
+; SOFT: stx %i1, [%sp+2311]
+; SOFT: stx %i0, [%sp+2303]
+; SOFT: stx %i2, [%sp+2295]
+; SOFT: stx %i2, [%sp+2287]
+; SOFT: stx %i2, [%sp+2279]
+; SOFT: stx %i2, [%sp+2271]
+; SOFT: stx %i2, [%sp+2263]
+; SOFT: stx %i2, [%sp+2255]
+; SOFT: stx %i2, [%sp+2247]
+; SOFT: stx %i2, [%sp+2239]
+; SOFT: stx %i2, [%sp+2231]
+; SOFT: stx %i2, [%sp+2223]
+; SOFT: mov  %i2, %o0
+; SOFT: mov  %i1, %o1
+; SOFT: mov  %i1, %o2
+; SOFT: mov  %i1, %o3
+; SOFT: mov  %i2, %o4
+; SOFT: mov  %i2, %o5
 ; CHECK: call floatarg
 ; CHECK-NOT: add %sp
 ; CHECK: restore
+
 define void @call_floatarg(float %f1, double %d2, float %f5, double *%p) {
   %r = call double @floatarg(float %f5, double %d2, double %d2, double %d2,
                              float %f5, float %f5,  float %f5,  float %f5,
@@ -112,9 +141,21 @@ define void @call_floatarg(float %f1, double %d2, float %f5, double *%p) {
 ; CHECK-LABEL: mixedarg:
 ; CHECK: ldx [%fp+2247]
 ; CHECK: ldx [%fp+2231]
-; CHECK: fstod %f3
-; CHECK: faddd %f6
-; CHECK: faddd %f16
+; SOFT: ldx [%fp+2239], %i0
+; HARD: fstod %f3
+; HARD: faddd %f6
+; HARD: faddd %f16
+; SOFT: mov  %o0, %i1
+; SOFT-NEXT: mov  %i3, %o0
+; SOFT-NEXT: mov  %i1, %o1
+; SOFT-NEXT: call __adddf3
+; SOFT: mov  %o0, %i1
+; SOFT-NEXT: mov  %i0, %o0
+; SOFT-NEXT: mov  %i1, %o1
+; SOFT-NEXT: call __adddf3
+; HARD: std %f0, [%i1]
+; SOFT: stx %o0, [%i5]
+
 define void @mixedarg(i8 %a0,      ; %i0
                       float %a1,   ; %f3
                       i16 %a2,     ; %i2
@@ -135,12 +176,15 @@ define void @mixedarg(i8 %a0,      ; %i0
 
 ; CHECK-LABEL: call_mixedarg:
 ; CHECK: stx %i2, [%sp+2247]
+; SOFT:  stx %i1, [%sp+2239]
 ; CHECK: stx %i0, [%sp+2223]
-; CHECK: fmovd %f2, %f6
-; CHECK: fmovd %f2, %f16
+; HARD: fmovd %f2, %f6
+; HARD: fmovd %f2, %f16
+; SOFT: mov  %i1, %o3
 ; CHECK: call mixedarg
 ; CHECK-NOT: add %sp
 ; CHECK: restore
+
 define void @call_mixedarg(i64 %i0, double %f2, i16* %i2) {
   call void @mixedarg(i8 undef,
                       float undef,
@@ -158,8 +202,10 @@ define void @call_mixedarg(i64 %i0, double %f2, i16* %i2) {
 ; The inreg attribute is used to indicate 32-bit sized struct elements that
 ; share an 8-byte slot.
 ; CHECK-LABEL: inreg_fi:
-; CHECK: fstoi %f1
-; CHECK: srlx %i0, 32, [[R:%[gilo][0-7]]]
+; SOFT: srlx %i0, 32, [[R:%[gilo][0-7]]]
+; HARD: fstoi %f1
+; SOFT: call __fixsfsi
+; HARD: srlx %i0, 32, [[R:%[gilo][0-7]]]
 ; CHECK: sub [[R]],
 define i32 @inreg_fi(i32 inreg %a0,     ; high bits of %i0
                      float inreg %a1) { ; %f1
@@ -171,8 +217,11 @@ define i32 @inreg_fi(i32 inreg %a0,     ; high bits of %i0
 ; CHECK-LABEL: call_inreg_fi:
 ; Allocate space for 6 arguments, even when only 2 are used.
 ; CHECK: save %sp, -176, %sp
-; CHECK: sllx %i1, 32, %o0
-; CHECK: fmovs %f5, %f1
+; HARD:  sllx %i1, 32, %o0
+; HARD:  fmovs %f5, %f1
+; SOFT:  srl %i2, 0, %i0
+; SOFT:  sllx %i1, 32, %i1
+; SOFT:  or %i1, %i0, %o0
 ; CHECK: call inreg_fi
 define void @call_inreg_fi(i32* %p, i32 %i1, float %f5) {
   %x = call i32 @inreg_fi(i32 %i1, float %f5)
@@ -180,7 +229,10 @@ define void @call_inreg_fi(i32* %p, i32 %i1, float %f5) {
 }
 
 ; CHECK-LABEL: inreg_ff:
-; CHECK: fsubs %f0, %f1, %f0
+; HARD: fsubs %f0, %f1, %f0
+; SOFT: srlx %i0, 32, %o0
+; SOFT: srl %i0, 0, %o1
+; SOFT: call __subsf3
 define float @inreg_ff(float inreg %a0,   ; %f0
                        float inreg %a1) { ; %f1
   %rv = fsub float %a0, %a1
@@ -188,8 +240,11 @@ define float @inreg_ff(float inreg %a0,   ; %f0
 }
 
 ; CHECK-LABEL: call_inreg_ff:
-; CHECK: fmovs %f3, %f0
-; CHECK: fmovs %f5, %f1
+; HARD: fmovs %f3, %f0
+; HARD: fmovs %f5, %f1
+; SOFT: srl %i2, 0, %i0
+; SOFT: sllx %i1, 32, %i1
+; SOFT: or %i1, %i0, %o0
 ; CHECK: call inreg_ff
 define void @call_inreg_ff(i32* %p, float %f3, float %f5) {
   %x = call float @inreg_ff(float %f3, float %f5)
@@ -197,7 +252,9 @@ define void @call_inreg_ff(i32* %p, float %f3, float %f5) {
 }
 
 ; CHECK-LABEL: inreg_if:
-; CHECK: fstoi %f0
+; HARD: fstoi %f0
+; SOFT: srlx %i0, 32, %o0
+; SOFT: call __fixsfsi
 ; CHECK: sub %i0
 define i32 @inreg_if(float inreg %a0, ; %f0
                      i32 inreg %a1) { ; low bits of %i0
@@ -207,8 +264,11 @@ define i32 @inreg_if(float inreg %a0, ; %f0
 }
 
 ; CHECK-LABEL: call_inreg_if:
-; CHECK: fmovs %f3, %f0
-; CHECK: mov %i2, %o0
+; HARD: fmovs %f3, %f0
+; HARD: mov %i2, %o0
+; SOFT: srl %i2, 0, %i0
+; SOFT: sllx %i1, 32, %i1
+; SOFT: or %i1, %i0, %o0
 ; CHECK: call inreg_if
 define void @call_inreg_if(i32* %p, float %f3, i32 %i2) {
   %x = call i32 @inreg_if(float %f3, i32 %i2)
@@ -265,7 +325,8 @@ define void @call_ret_i64_pair(i64* %i0) {
 ; This is not a C struct, the i32 member uses 8 bytes, but the float only 4.
 ; CHECK-LABEL: ret_i32_float_pair:
 ; CHECK: ld [%i2], %i0
-; CHECK: ld [%i3], %f2
+; HARD: ld [%i3], %f2
+; SOFT: ld [%i3], %i1
 define { i32, float } @ret_i32_float_pair(i32 %a0, i32 %a1,
                                           i32* %p, float* %q) {
   %r1 = load i32, i32* %p
@@ -279,7 +340,8 @@ define { i32, float } @ret_i32_float_pair(i32 %a0, i32 %a1,
 ; CHECK-LABEL: call_ret_i32_float_pair:
 ; CHECK: call ret_i32_float_pair
 ; CHECK: st %o0, [%i0]
-; CHECK: st %f2, [%i1]
+; HARD: st %f2, [%i1]
+; SOFT: st %o1, [%i1]
 define void @call_ret_i32_float_pair(i32* %i0, float* %i1) {
   %rv = call { i32, float } @ret_i32_float_pair(i32 undef, i32 undef,
                                                 i32* undef, float* undef)
@@ -293,7 +355,8 @@ define void @call_ret_i32_float_pair(i32* %i0, float* %i1) {
 ; This is a C struct, each member uses 4 bytes.
 ; CHECK-LABEL: ret_i32_float_packed:
 ; CHECK: ld [%i2], [[R:%[gilo][0-7]]]
-; CHECK: ld [%i3], %f1
+; HARD: ld [%i3], %f1
+; SOFT: ld [%i3], %i1
 ; CHECK: sllx [[R]], 32, %i0
 define inreg { i32, float } @ret_i32_float_packed(i32 %a0, i32 %a1,
                                                   i32* %p, float* %q) {
@@ -309,7 +372,8 @@ define inreg { i32, float } @ret_i32_float_packed(i32 %a0, i32 %a1,
 ; CHECK: call ret_i32_float_packed
 ; CHECK: srlx %o0, 32, [[R:%[gilo][0-7]]]
 ; CHECK: st [[R]], [%i0]
-; CHECK: st %f1, [%i1]
+; HARD: st %f1, [%i1]
+; SOFT: st %o0, [%i1]
 define void @call_ret_i32_float_packed(i32* %i0, float* %i1) {
   %rv = call { i32, float } @ret_i32_float_packed(i32 undef, i32 undef,
                                                   i32* undef, float* undef)
@@ -413,13 +477,21 @@ entry:
 declare i32 @use_buf(i32, i8*)
 
 ; CHECK-LABEL: test_fp128_args:
-; CHECK-DAG:   std %f0, [%fp+{{.+}}]
-; CHECK-DAG:   std %f2, [%fp+{{.+}}]
-; CHECK-DAG:   std %f6, [%fp+{{.+}}]
-; CHECK-DAG:   std %f4, [%fp+{{.+}}]
-; CHECK:       add %fp, [[Offset:[0-9]+]], %o0
-; CHECK:       call _Qp_add
-; CHECK:       ldd [%fp+[[Offset]]], %f0
+; HARD-DAG:   std %f0, [%fp+{{.+}}]
+; HARD-DAG:   std %f2, [%fp+{{.+}}]
+; HARD-DAG:   std %f6, [%fp+{{.+}}]
+; HARD-DAG:   std %f4, [%fp+{{.+}}]
+; HARD:       add %fp, [[Offset:[0-9]+]], %o0
+; HARD:       call _Qp_add
+; HARD:       ldd [%fp+[[Offset]]], %f0
+; SOFT-DAG:       mov  %i0, %o0
+; SOFT-DAG:       mov  %i1, %o1
+; SOFT-DAG:       mov  %i2, %o2
+; SOFT-DAG:       mov  %i3, %o3
+; SOFT:           call __addtf3
+; SOFT:           mov  %o0, %i0
+; SOFT:           mov  %o1, %i1
+
 define fp128 @test_fp128_args(fp128 %a, fp128 %b) {
 entry:
   %0 = fadd fp128 %a, %b
@@ -429,11 +501,14 @@ entry:
 declare i64 @receive_fp128(i64 %a, ...)
 
 ; CHECK-LABEL: test_fp128_variable_args:
-; CHECK-DAG:   std %f4, [%sp+[[Offset0:[0-9]+]]]
-; CHECK-DAG:   std %f6, [%sp+[[Offset1:[0-9]+]]]
-; CHECK-DAG:   ldx [%sp+[[Offset0]]], %o2
-; CHECK-DAG:   ldx [%sp+[[Offset1]]], %o3
-; CHECK:       call receive_fp128
+; HARD-DAG:   std %f4, [%sp+[[Offset0:[0-9]+]]]
+; HARD-DAG:   std %f6, [%sp+[[Offset1:[0-9]+]]]
+; HARD-DAG:   ldx [%sp+[[Offset0]]], %o2
+; HARD-DAG:   ldx [%sp+[[Offset1]]], %o3
+; SOFT-DAG:   mov  %i0, %o0
+; SOFT-DAG:   mov  %i1, %o1
+; SOFT-DAG:   mov  %i2, %o2
+; CHECK:      call receive_fp128
 define i64 @test_fp128_variable_args(i64 %a, fp128 %b) {
 entry:
   %0 = call i64 (i64, ...) @receive_fp128(i64 %a, fp128 %b)
@@ -441,14 +516,22 @@ entry:
 }
 
 ; CHECK-LABEL: test_call_libfunc:
-; CHECK:       st %f1, [%fp+[[Offset0:[0-9]+]]]
-; CHECK:       fmovs %f3, %f1
-; CHECK:       call cosf
-; CHECK:       st %f0, [%fp+[[Offset1:[0-9]+]]]
-; CHECK:       ld [%fp+[[Offset0]]], %f1
-; CHECK:       call sinf
-; CHECK:       ld [%fp+[[Offset1]]], %f1
-; CHECK:       fmuls %f1, %f0, %f0
+; HARD:   st %f1, [%fp+[[Offset0:[0-9]+]]]
+; HARD:   fmovs %f3, %f1
+; SOFT:   srl %i1, 0, %o0
+; CHECK:  call cosf
+; HARD:   st %f0, [%fp+[[Offset1:[0-9]+]]]
+; HARD:   ld [%fp+[[Offset0]]], %f1
+; SOFT:   mov  %o0, %i1
+; SOFT:   srl %i0, 0, %o0
+; CHECK:  call sinf
+; HARD:   ld [%fp+[[Offset1]]], %f1
+; HARD:   fmuls %f1, %f0, %f0
+; SOFT:   mov  %o0, %i0
+; SOFT:   mov  %i1, %o0
+; SOFT:   mov  %i0, %o1
+; SOFT:   call __mulsf3
+; SOFT:   sllx %o0, 32, %i0
 
 define inreg float @test_call_libfunc(float %arg0, float %arg1) {
 entry:
@@ -460,5 +543,3 @@ entry:
 
 declare inreg float @cosf(float %arg) readnone nounwind
 declare inreg float @sinf(float %arg) readnone nounwind
-
-

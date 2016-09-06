@@ -215,6 +215,8 @@ namespace RTLIB {
     FMAX_PPCF128,
 
     // CONVERSION
+    FPEXT_F32_PPCF128,
+    FPEXT_F64_PPCF128,
     FPEXT_F64_F128,
     FPEXT_F32_F128,
     FPEXT_F32_F64,
@@ -296,27 +298,35 @@ namespace RTLIB {
     OEQ_F32,
     OEQ_F64,
     OEQ_F128,
+    OEQ_PPCF128,
     UNE_F32,
     UNE_F64,
     UNE_F128,
+    UNE_PPCF128,
     OGE_F32,
     OGE_F64,
     OGE_F128,
+    OGE_PPCF128,
     OLT_F32,
     OLT_F64,
     OLT_F128,
+    OLT_PPCF128,
     OLE_F32,
     OLE_F64,
     OLE_F128,
+    OLE_PPCF128,
     OGT_F32,
     OGT_F64,
     OGT_F128,
+    OGT_PPCF128,
     UO_F32,
     UO_F64,
     UO_F128,
+    UO_PPCF128,
     O_F32,
     O_F64,
     O_F128,
+    O_PPCF128,
 
     // MEMORY
     MEMCPY,
@@ -326,7 +336,11 @@ namespace RTLIB {
     // EXCEPTION HANDLING
     UNWIND_RESUME,
 
-    // Family ATOMICs
+    // Note: there's two sets of atomics libcalls; see
+    // <http://llvm.org/docs/Atomics.html> for more info on the
+    // difference between them.
+
+    // Atomic '__sync_*' libcalls.
     SYNC_VAL_COMPARE_AND_SWAP_1,
     SYNC_VAL_COMPARE_AND_SWAP_2,
     SYNC_VAL_COMPARE_AND_SWAP_4,
@@ -388,8 +402,76 @@ namespace RTLIB {
     SYNC_FETCH_AND_UMIN_8,
     SYNC_FETCH_AND_UMIN_16,
 
+    // Atomic '__atomic_*' libcalls.
+    ATOMIC_LOAD,
+    ATOMIC_LOAD_1,
+    ATOMIC_LOAD_2,
+    ATOMIC_LOAD_4,
+    ATOMIC_LOAD_8,
+    ATOMIC_LOAD_16,
+
+    ATOMIC_STORE,
+    ATOMIC_STORE_1,
+    ATOMIC_STORE_2,
+    ATOMIC_STORE_4,
+    ATOMIC_STORE_8,
+    ATOMIC_STORE_16,
+
+    ATOMIC_EXCHANGE,
+    ATOMIC_EXCHANGE_1,
+    ATOMIC_EXCHANGE_2,
+    ATOMIC_EXCHANGE_4,
+    ATOMIC_EXCHANGE_8,
+    ATOMIC_EXCHANGE_16,
+
+    ATOMIC_COMPARE_EXCHANGE,
+    ATOMIC_COMPARE_EXCHANGE_1,
+    ATOMIC_COMPARE_EXCHANGE_2,
+    ATOMIC_COMPARE_EXCHANGE_4,
+    ATOMIC_COMPARE_EXCHANGE_8,
+    ATOMIC_COMPARE_EXCHANGE_16,
+
+    ATOMIC_FETCH_ADD_1,
+    ATOMIC_FETCH_ADD_2,
+    ATOMIC_FETCH_ADD_4,
+    ATOMIC_FETCH_ADD_8,
+    ATOMIC_FETCH_ADD_16,
+
+    ATOMIC_FETCH_SUB_1,
+    ATOMIC_FETCH_SUB_2,
+    ATOMIC_FETCH_SUB_4,
+    ATOMIC_FETCH_SUB_8,
+    ATOMIC_FETCH_SUB_16,
+
+    ATOMIC_FETCH_AND_1,
+    ATOMIC_FETCH_AND_2,
+    ATOMIC_FETCH_AND_4,
+    ATOMIC_FETCH_AND_8,
+    ATOMIC_FETCH_AND_16,
+
+    ATOMIC_FETCH_OR_1,
+    ATOMIC_FETCH_OR_2,
+    ATOMIC_FETCH_OR_4,
+    ATOMIC_FETCH_OR_8,
+    ATOMIC_FETCH_OR_16,
+
+    ATOMIC_FETCH_XOR_1,
+    ATOMIC_FETCH_XOR_2,
+    ATOMIC_FETCH_XOR_4,
+    ATOMIC_FETCH_XOR_8,
+    ATOMIC_FETCH_XOR_16,
+
+    ATOMIC_FETCH_NAND_1,
+    ATOMIC_FETCH_NAND_2,
+    ATOMIC_FETCH_NAND_4,
+    ATOMIC_FETCH_NAND_8,
+    ATOMIC_FETCH_NAND_16,
+
     // Stack Protector Fail.
     STACKPROTECTOR_CHECK_FAIL,
+
+    // Deoptimization.
+    DEOPTIMIZE,
 
     UNKNOWN_LIBCALL
   };
@@ -420,7 +502,7 @@ namespace RTLIB {
 
   /// Return the SYNC_FETCH_AND_* value for the given opcode and type, or
   /// UNKNOWN_LIBCALL if there is none.
-  Libcall getATOMIC(unsigned Opc, MVT VT);
+  Libcall getSYNC(unsigned Opc, MVT VT);
 }
 }
 

@@ -1,4 +1,4 @@
-; RUN: llc < %s -enable-misched -pre-RA-sched=source -scheditins=false \
+; RUN: llc -verify-machineinstrs < %s -enable-misched -pre-RA-sched=source -scheditins=false \
 ; RUN:          -disable-ifcvt-triangle-false -disable-post-ra | FileCheck %s
 ;
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"

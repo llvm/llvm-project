@@ -24,3 +24,4 @@ int main(int argc, const char *argv[]) {
     DO_SOMETHING(i); // CHECK-DAG: Expansion at line [[@LINE]], 5 -> 17
   return 0;
 }
+// RUN: llvm-cov export %S/Inputs/showExpansions.covmapping -instr-profile %S/Inputs/showExpansions.profdata 2>&1 | FileCheck %S/Inputs/showExpansions.json

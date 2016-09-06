@@ -79,4 +79,4 @@ int exported_optnone_func(int a) {
 // CHECK: attributes [[NORETURN]] = { noinline noreturn {{.*}} optnone
 
 // CHECK: attributes [[DLLIMPORT]] =
-// CHECK-SAME-NOT: optnone
+// CHECK-NOT: optnone

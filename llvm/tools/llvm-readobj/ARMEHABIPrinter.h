@@ -11,7 +11,7 @@
 #define LLVM_TOOLS_LLVM_READOBJ_ARMEHABIPRINTER_H
 
 #include "Error.h"
-#include "StreamWriter.h"
+#include "llvm-readobj.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
@@ -19,6 +19,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/type_traits.h"
 
 namespace llvm {
@@ -26,7 +27,7 @@ namespace ARM {
 namespace EHABI {
 
 class OpcodeDecoder {
-  StreamWriter &SW;
+  ScopedPrinter &SW;
   raw_ostream &OS;
 
   struct RingEntry {
@@ -63,7 +64,7 @@ class OpcodeDecoder {
   void PrintRegisters(uint32_t Mask, StringRef Prefix);
 
 public:
-  OpcodeDecoder(StreamWriter &SW) : SW(SW), OS(SW.getOStream()) {}
+  OpcodeDecoder(ScopedPrinter &SW) : SW(SW), OS(SW.getOStream()) {}
   void Decode(const uint8_t *Opcodes, off_t Offset, size_t Length);
 };
 
@@ -310,7 +311,7 @@ class PrinterContext {
   typedef typename object::ELFFile<ET>::Elf_Rel Elf_Rel;
   typedef typename object::ELFFile<ET>::Elf_Word Elf_Word;
 
-  StreamWriter &SW;
+  ScopedPrinter &SW;
   const object::ELFFile<ET> *ELF;
   const Elf_Shdr *Symtab;
   ArrayRef<Elf_Word> ShndxTable;
@@ -334,7 +335,7 @@ class PrinterContext {
   void PrintOpcodes(const uint8_t *Entry, size_t Length, off_t Offset) const;
 
 public:
-  PrinterContext(StreamWriter &SW, const object::ELFFile<ET> *ELF,
+  PrinterContext(ScopedPrinter &SW, const object::ELFFile<ET> *ELF,
                  const Elf_Shdr *Symtab)
       : SW(SW), ELF(ELF), Symtab(Symtab) {}
 
@@ -354,8 +355,15 @@ PrinterContext<ET>::FunctionAtAddress(unsigned Section,
 
   for (const Elf_Sym &Sym : ELF->symbols(Symtab))
     if (Sym.st_shndx == Section && Sym.st_value == Address &&
-        Sym.getType() == ELF::STT_FUNC)
-      return Sym.getName(StrTable);
+        Sym.getType() == ELF::STT_FUNC) {
+      auto NameOrErr = Sym.getName(StrTable);
+      if (!NameOrErr) {
+        // TODO: Actually report errors helpfully.
+        consumeError(NameOrErr.takeError());
+        return readobj_error::unknown_symbol;
+      }
+      return *NameOrErr;
+    }
   return readobj_error::unknown_symbol;
 }
 

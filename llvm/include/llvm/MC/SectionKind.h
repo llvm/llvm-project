@@ -63,6 +63,10 @@ class SectionKind {
             /// for example, vectors.
             MergeableConst16,
 
+            /// MergeableConst32 - This is a section used by 32-byte constants,
+            /// for example, vectors.
+            MergeableConst32,
+
     /// Writeable - This is the base of all segments that need to be written
     /// to during program runtime.
 
@@ -125,11 +129,12 @@ public:
 
   bool isMergeableConst() const {
     return K == MergeableConst4 || K == MergeableConst8 ||
-           K == MergeableConst16;
+           K == MergeableConst16 || K == MergeableConst32;
   }
   bool isMergeableConst4() const { return K == MergeableConst4; }
   bool isMergeableConst8() const { return K == MergeableConst8; }
   bool isMergeableConst16() const { return K == MergeableConst16; }
+  bool isMergeableConst32() const { return K == MergeableConst32; }
 
   bool isWriteable() const {
     return isThreadLocal() || isGlobalWriteableData();
@@ -180,6 +185,7 @@ public:
   static SectionKind getMergeableConst4() { return get(MergeableConst4); }
   static SectionKind getMergeableConst8() { return get(MergeableConst8); }
   static SectionKind getMergeableConst16() { return get(MergeableConst16); }
+  static SectionKind getMergeableConst32() { return get(MergeableConst32); }
   static SectionKind getThreadBSS() { return get(ThreadBSS); }
   static SectionKind getThreadData() { return get(ThreadData); }
   static SectionKind getBSS() { return get(BSS); }

@@ -25,6 +25,7 @@ namespace {
 
 class ObjectLinkingLayerExecutionTest : public testing::Test,
                                         public OrcExecutionTest {
+
 };
 
 class SectionMemoryManagerWrapper : public SectionMemoryManager {
@@ -37,14 +38,13 @@ public:
     return SectionMemoryManager::needsToReserveAllocationSpace();
   }
 
-  bool finalizeMemory(std::string *ErrMsg = 0) override {
+  bool finalizeMemory(std::string *ErrMsg = nullptr) override {
     ++FinalizationCount;
     return SectionMemoryManager::finalizeMemory(ErrMsg);
   }
 };
 
 TEST(ObjectLinkingLayerTest, TestSetProcessAllSections) {
-
   class SectionMemoryManagerWrapper : public SectionMemoryManager {
   public:
     SectionMemoryManagerWrapper(bool &DebugSeen) : DebugSeen(DebugSeen) {}
@@ -65,9 +65,10 @@ TEST(ObjectLinkingLayerTest, TestSetProcessAllSections) {
 
   ObjectLinkingLayer<> ObjLayer;
 
-  auto M = llvm::make_unique<Module>("", getGlobalContext());
+  LLVMContext Context;
+  auto M = llvm::make_unique<Module>("", Context);
   M->setTargetTriple("x86_64-unknown-linux-gnu");
-  Type *Int32Ty = IntegerType::get(getGlobalContext(), 32);
+  Type *Int32Ty = IntegerType::get(Context, 32);
   GlobalVariable *GV =
     new GlobalVariable(*M, Int32Ty, false, GlobalValue::ExternalLinkage,
                          ConstantInt::get(Int32Ty, 42), "foo");
@@ -89,10 +90,10 @@ TEST(ObjectLinkingLayerTest, TestSetProcessAllSections) {
   auto Resolver =
     createLambdaResolver(
       [](const std::string &Name) {
-        return RuntimeDyld::SymbolInfo(nullptr);
+        return JITSymbol(nullptr);
       },
       [](const std::string &Name) {
-        return RuntimeDyld::SymbolInfo(nullptr);
+        return JITSymbol(nullptr);
       });
 
   {
@@ -113,9 +114,7 @@ TEST(ObjectLinkingLayerTest, TestSetProcessAllSections) {
   }
 }
 
-
 TEST_F(ObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
-
   if (!TM)
     return;
 
@@ -134,14 +133,13 @@ TEST_F(ObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
   // instance (for Module 1) which is unsafe, as it will prevent relocation of
   // Module 2.
 
-  ModuleBuilder MB1(getGlobalContext(), "", "dummy");
+  ModuleBuilder MB1(Context, "", "dummy");
   {
     MB1.getModule()->setDataLayout(TM->createDataLayout());
     Function *BarImpl = MB1.createFunctionDecl<int32_t(void)>("bar");
-    BasicBlock *BarEntry = BasicBlock::Create(getGlobalContext(), "entry",
-                                              BarImpl);
+    BasicBlock *BarEntry = BasicBlock::Create(Context, "entry", BarImpl);
     IRBuilder<> Builder(BarEntry);
-    IntegerType *Int32Ty = IntegerType::get(getGlobalContext(), 32);
+    IntegerType *Int32Ty = IntegerType::get(Context, 32);
     Value *FourtyTwo = ConstantInt::getSigned(Int32Ty, 42);
     Builder.CreateRet(FourtyTwo);
   }
@@ -150,13 +148,12 @@ TEST_F(ObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
   std::vector<object::ObjectFile*> Obj1Set;
   Obj1Set.push_back(Obj1.getBinary());
 
-  ModuleBuilder MB2(getGlobalContext(), "", "dummy");
+  ModuleBuilder MB2(Context, "", "dummy");
   {
     MB2.getModule()->setDataLayout(TM->createDataLayout());
     Function *BarDecl = MB2.createFunctionDecl<int32_t(void)>("bar");
     Function *FooImpl = MB2.createFunctionDecl<int32_t(void)>("foo");
-    BasicBlock *FooEntry = BasicBlock::Create(getGlobalContext(), "entry",
-                                              FooImpl);
+    BasicBlock *FooEntry = BasicBlock::Create(Context, "entry", FooImpl);
     IRBuilder<> Builder(FooEntry);
     Builder.CreateRet(Builder.CreateCall(BarDecl));
   }
@@ -168,11 +165,11 @@ TEST_F(ObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
     createLambdaResolver(
       [&](const std::string &Name) {
         if (auto Sym = ObjLayer.findSymbol(Name, true))
-          return RuntimeDyld::SymbolInfo(Sym.getAddress(), Sym.getFlags());
-        return RuntimeDyld::SymbolInfo(nullptr);
+          return Sym;
+        return JITSymbol(nullptr);
       },
       [](const std::string &Name) {
-        return RuntimeDyld::SymbolInfo(nullptr);
+        return JITSymbol(nullptr);
       });
 
   SectionMemoryManagerWrapper SMMW;
@@ -187,7 +184,6 @@ TEST_F(ObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
 }
 
 TEST_F(ObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
-
   if (!TM)
     return;
 
@@ -207,14 +203,13 @@ TEST_F(ObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
   // RuntimeDyld::MemoryManager::needsToReserveAllocationSpace hook, which is
   // called once per object before any sections are allocated.
 
-  ModuleBuilder MB1(getGlobalContext(), "", "dummy");
+  ModuleBuilder MB1(Context, "", "dummy");
   {
     MB1.getModule()->setDataLayout(TM->createDataLayout());
     Function *BarImpl = MB1.createFunctionDecl<int32_t(void)>("foo");
-    BasicBlock *BarEntry = BasicBlock::Create(getGlobalContext(), "entry",
-                                              BarImpl);
+    BasicBlock *BarEntry = BasicBlock::Create(Context, "entry", BarImpl);
     IRBuilder<> Builder(BarEntry);
-    IntegerType *Int32Ty = IntegerType::get(getGlobalContext(), 32);
+    IntegerType *Int32Ty = IntegerType::get(Context, 32);
     Value *FourtyTwo = ConstantInt::getSigned(Int32Ty, 42);
     Builder.CreateRet(FourtyTwo);
   }
@@ -223,14 +218,13 @@ TEST_F(ObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
   std::vector<object::ObjectFile*> Obj1Set;
   Obj1Set.push_back(Obj1.getBinary());
 
-  ModuleBuilder MB2(getGlobalContext(), "", "dummy");
+  ModuleBuilder MB2(Context, "", "dummy");
   {
     MB2.getModule()->setDataLayout(TM->createDataLayout());
     Function *BarImpl = MB2.createFunctionDecl<int32_t(void)>("bar");
-    BasicBlock *BarEntry = BasicBlock::Create(getGlobalContext(), "entry",
-                                              BarImpl);
+    BasicBlock *BarEntry = BasicBlock::Create(Context, "entry", BarImpl);
     IRBuilder<> Builder(BarEntry);
-    IntegerType *Int32Ty = IntegerType::get(getGlobalContext(), 32);
+    IntegerType *Int32Ty = IntegerType::get(Context, 32);
     Value *Seven = ConstantInt::getSigned(Int32Ty, 7);
     Builder.CreateRet(Seven);
   }
@@ -250,4 +244,4 @@ TEST_F(ObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
          "(multiple unrelated objects loaded prior to finalization)";
 }
 
-}
+} // end anonymous namespace

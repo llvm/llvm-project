@@ -1,4 +1,4 @@
-# RUN: llc -march=x86 -run-pass machine-cp -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -march=x86 -run-pass machine-cp -verify-machineinstrs -o - %s | FileCheck %s
 
 --- |
   declare void @foo()
@@ -25,6 +25,7 @@
 # CHECK-NOT: COPY
 # CHECK-NEXT: NOOP implicit %rax, implicit %rdi
 name: copyprop_remove_kill0
+allVRegsAllocated: true
 body: |
   bb.0:
     %rax = COPY %rdi
@@ -42,6 +43,7 @@ body: |
 # CHECK-NOT: COPY
 # CHECK-NEXT: NOOP implicit %rax, implicit %rdi
 name: copyprop_remove_kill1
+allVRegsAllocated: true
 body: |
   bb.0:
     %rax = COPY %rdi
@@ -59,6 +61,7 @@ body: |
 # CHECK-NOT: COPY
 # CHECK-NEXT: NOOP implicit %rax, implicit %rdi
 name: copyprop_remove_kill2
+allVRegsAllocated: true
 body: |
   bb.0:
     %ax = COPY %di
@@ -76,6 +79,7 @@ body: |
 # CHECK-NOT: COPY
 # CHECK-NEXT: NOOP implicit %rax, implicit %rdi
 name: copyprop0
+allVRegsAllocated: true
 body: |
   bb.0:
     %rax = COPY %rdi
@@ -92,6 +96,7 @@ body: |
 # CHECK-NEXT: NOOP implicit %rax
 # CHECK-NEXT: NOOP implicit %rax, implicit %rdi
 name: copyprop1
+allVRegsAllocated: true
 body: |
   bb.0:
     %rax = COPY %rdi
@@ -108,6 +113,7 @@ body: |
 # CHECK-NOT: %rax = COPY %rdi
 # CHECK-NEXT: NOOP implicit %rax, implicit %rdi
 name: copyprop2
+allVRegsAllocated: true
 body: |
   bb.0:
     %rax = COPY %rdi
@@ -126,6 +132,7 @@ body: |
 # CHECK-NEXT: %rbp = COPY %rax
 # CHECK-NEXT: NOOP implicit %rax, implicit %rbp
 name: nocopyprop0
+allVRegsAllocated: true
 body: |
   bb.0:
     %rax = COPY %rbp
@@ -143,6 +150,7 @@ body: |
 # CHECK-NEXT: %rax = COPY %rbp
 # CHECK-NEXT: NOOP implicit %rax, implicit %rbp
 name: nocopyprop1
+allVRegsAllocated: true
 body: |
   bb.0:
     %rbp = COPY %rax
@@ -160,6 +168,7 @@ body: |
 # CHECK-NEXT: %rax = COPY %rbp
 # CHECK-NEXT: NOOP implicit %rax, implicit %rbp
 name: nocopyprop2
+allVRegsAllocated: true
 body: |
   bb.0:
     %rax = COPY %rbp
@@ -177,6 +186,7 @@ body: |
 # CHECK-NEXT: %rbp = COPY %rax
 # CHECK-NEXT: NOOP implicit %rax, implicit %rbp
 name: nocopyprop3
+allVRegsAllocated: true
 body: |
   bb.0:
     %rbp = COPY %rax
@@ -193,6 +203,7 @@ body: |
 # CHECK-NEXT: %rax = COPY %rip
 # CHECK-NEXT: NOOP implicit %rax
 name: nocopyprop4
+allVRegsAllocated: true
 body: |
   bb.0:
     %rax = COPY %rip
@@ -208,6 +219,7 @@ body: |
 # CHECK-NEXT: %rip = COPY %rax
 # CHECK-NEXT: %rip = COPY %rax
 name: nocopyprop5
+allVRegsAllocated: true
 body: |
   bb.0:
     %rip = COPY %rax

@@ -46,14 +46,14 @@ uint64_t __llvm_profile_get_size_for_buffer_internal(
 }
 
 COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer(char *Buffer) {
-  return llvmWriteProfData(llvmBufferWriter, Buffer, 0, 0);
+  return lprofWriteData(lprofBufferWriter, Buffer, 0);
 }
 
 COMPILER_RT_VISIBILITY int __llvm_profile_write_buffer_internal(
     char *Buffer, const __llvm_profile_data *DataBegin,
     const __llvm_profile_data *DataEnd, const uint64_t *CountersBegin,
     const uint64_t *CountersEnd, const char *NamesBegin, const char *NamesEnd) {
-  return llvmWriteProfDataImpl(llvmBufferWriter, Buffer, DataBegin, DataEnd,
-                               CountersBegin, CountersEnd, 0, 0, NamesBegin,
-                               NamesEnd);
+  return lprofWriteDataImpl(lprofBufferWriter, Buffer, DataBegin, DataEnd,
+                            CountersBegin, CountersEnd, 0, NamesBegin,
+                            NamesEnd);
 }

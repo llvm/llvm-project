@@ -22,21 +22,21 @@
 let isTerminator = 1, isReturn = 1, isBarrier = 1,
     hasCtrlDep = 1, FPForm = SpecialFP, SchedRW = [WriteJumpLd] in {
   def RETL   : I   <0xC3, RawFrm, (outs), (ins variable_ops),
-                    "ret{l}", [(X86retflag 0)], IIC_RET>, OpSize32,
+                    "ret{l}", [], IIC_RET>, OpSize32,
                     Requires<[Not64BitMode]>;
   def RETQ   : I   <0xC3, RawFrm, (outs), (ins variable_ops),
-                    "ret{q}", [(X86retflag 0)], IIC_RET>, OpSize32,
+                    "ret{q}", [], IIC_RET>, OpSize32,
                     Requires<[In64BitMode]>;
   def RETW   : I   <0xC3, RawFrm, (outs), (ins),
                     "ret{w}",
                     [], IIC_RET>, OpSize16;
   def RETIL  : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt, variable_ops),
                     "ret{l}\t$amt",
-                    [(X86retflag timm:$amt)], IIC_RET_IMM>, OpSize32,
+                    [], IIC_RET_IMM>, OpSize32,
                Requires<[Not64BitMode]>;
   def RETIQ  : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt, variable_ops),
                     "ret{q}\t$amt",
-                    [(X86retflag timm:$amt)], IIC_RET_IMM>, OpSize32,
+                    [], IIC_RET_IMM>, OpSize32,
                Requires<[In64BitMode]>;
   def RETIW  : Ii16<0xC2, RawFrm, (outs), (ins i16imm:$amt),
                     "ret{w}\t$amt",
@@ -64,8 +64,8 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1,
   def IRET64 : RI  <0xcf, RawFrm, (outs), (ins), "iretq", [],
                     IIC_IRET>, Requires<[In64BitMode]>;
   let isCodeGenOnly = 1 in
-  def IRET : PseudoI<(outs), (ins i16imm:$adj), [(X86iret timm:$adj)]>;
-  
+  def IRET : PseudoI<(outs), (ins i32imm:$adj), [(X86iret timm:$adj)]>;
+  def RET  : PseudoI<(outs), (ins i32imm:$adj, variable_ops), [(X86retflag timm:$adj)]>;
 }
 
 // Unconditional branches.

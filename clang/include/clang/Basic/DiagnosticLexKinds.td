@@ -175,10 +175,17 @@ def err_multichar_utf_character_literal : Error<
 def err_exponent_has_no_digits : Error<"exponent has no digits">;
 def ext_imaginary_constant : Extension<
   "imaginary constants are a GNU extension">, InGroup<GNUImaginaryConstant>;
-def err_hexconstant_requires: Error<
-  "hexadecimal floating constants require %select{an exponent|a significand}0">;
-def ext_hexconstant_invalid : Extension<
+def err_hex_constant_requires : Error<
+  "hexadecimal floating %select{constant|literal}0 requires "
+  "%select{an exponent|a significand}1">;
+def ext_hex_constant_invalid : Extension<
   "hexadecimal floating constants are a C99 feature">, InGroup<C99>;
+def ext_hex_literal_invalid : Extension<
+  "hexadecimal floating literals are a C++1z feature">, InGroup<CXX1z>;
+def warn_cxx1z_hex_literal : Warning<
+  "hexidecimal floating literals are incompatible with "
+  "C++ standards before C++1z">,
+  InGroup<CXXPre1zCompatPedantic>, DefaultIgnore;
 def ext_binary_literal : Extension<
   "binary integer literals are a GNU extension">, InGroup<GNUBinaryLiteral>;
 def ext_binary_literal_cxx14 : Extension<
@@ -267,6 +274,14 @@ def ext_missing_whitespace_after_macro_name : ExtWarn<
   "whitespace required after macro name">;
 def warn_missing_whitespace_after_macro_name : Warning<
   "whitespace recommended after macro name">;
+
+class NonportablePath  : Warning<
+  "non-portable path to file '%0'; specified path differs in case from file"
+  " name on disk">;
+def pp_nonportable_path : NonportablePath,
+  InGroup<DiagGroup<"nonportable-include-path">>;
+def pp_nonportable_system_path : NonportablePath, DefaultIgnore,
+  InGroup<DiagGroup<"nonportable-system-include-path">>;
   
 def pp_pragma_once_in_main_file : Warning<"#pragma once in main file">,
   InGroup<DiagGroup<"pragma-once-outside-header">>;
@@ -380,7 +395,7 @@ def err_pp_expected_comma_in_arg_list : Error<
 def err_pp_duplicate_name_in_arg_list : Error<
   "duplicate macro parameter name %0">;
 def err_pp_stringize_not_parameter : Error<
-  "'#' is not followed by a macro parameter">;
+  "'%select{#|#@}0' is not followed by a macro parameter">;
 def err_pp_malformed_ident : Error<"invalid #ident directive">;
 def err_pp_unterminated_conditional : Error<
   "unterminated conditional directive">;
@@ -394,6 +409,7 @@ def err_pp_expected_rparen : Error<"expected ')' in preprocessor expression">;
 def err_pp_expected_eol : Error<
   "expected end of line in preprocessor expression">;
 def err_pp_expected_after : Error<"missing %1 after %0">;
+def err_pp_nested_paren : Error<"nested parentheses not permitted in %0">;
 def err_pp_colon_without_question : Error<"':' without preceding '?'">;
 def err_pp_division_by_zero : Error<
   "division by zero in preprocessor expression">;
@@ -401,6 +417,8 @@ def err_pp_remainder_by_zero : Error<
   "remainder by zero in preprocessor expression">;
 def err_pp_expr_bad_token_binop : Error<
   "token is not a valid binary operator in a preprocessor subexpression">;
+def err_pp_expr_bad_token_lparen : Error<
+  "function-like macro %0 is not defined">;
 def err_pp_expr_bad_token_start_expr : Error<
   "invalid token at start of a preprocessor expression">;
 def err_pp_invalid_poison : Error<"can only poison identifier tokens">;
@@ -409,8 +427,6 @@ def err_pp_used_poisoned_id : Error<"attempt to use a poisoned identifier">;
 def err_feature_check_malformed : Error<
   "builtin feature check macro requires a parenthesized identifier">;
 
-def err_warning_check_malformed : Error<
-  "builtin warning check macro requires a parenthesized string">;
 def warn_has_warning_invalid_option :
    ExtWarn<"__has_warning expected option name (e.g. \"-Wundef\")">,
    InGroup<MalformedWarningCheck>;
@@ -657,6 +673,13 @@ def warn_header_guard : Warning<
   InGroup<DiagGroup<"header-guard">>;
 def note_header_guard : Note<
   "%0 is defined here; did you mean %1?">;
+
+def warn_defined_in_object_type_macro : Warning<
+  "macro expansion producing 'defined' has undefined behavior">,
+  InGroup<ExpansionToDefined>;
+def warn_defined_in_function_type_macro : Extension<
+  "macro expansion producing 'defined' has undefined behavior">,
+  InGroup<ExpansionToDefined>;
 
 let CategoryName = "Nullability Issue" in {
 

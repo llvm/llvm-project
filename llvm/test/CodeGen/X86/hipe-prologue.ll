@@ -24,8 +24,8 @@ define {i32, i32} @test_basic(i32 %hp, i32 %p) {
 
 define cc 11 {i32, i32} @test_basic_hipecc(i32 %hp, i32 %p) {
   ; X32-Linux-LABEL:       test_basic_hipecc:
-  ; X32-Linux:       leal -156(%esp), %ebx
-  ; X32-Linux-NEXT:  cmpl 76(%ebp), %ebx
+  ; X32-Linux:       leal -140(%esp), %ebx
+  ; X32-Linux-NEXT:  cmpl 120(%ebp), %ebx
   ; X32-Linux-NEXT:  jb .LBB1_1
 
   ; X32-Linux:       ret
@@ -34,8 +34,8 @@ define cc 11 {i32, i32} @test_basic_hipecc(i32 %hp, i32 %p) {
   ; X32-Linux-NEXT:  calll inc_stack_0
 
   ; X64-Linux-LABEL:       test_basic_hipecc:
-  ; X64-Linux:       leaq -232(%rsp), %r14
-  ; X64-Linux-NEXT:  cmpq 144(%rbp), %r14
+  ; X64-Linux:       leaq -184(%rsp), %r14
+  ; X64-Linux-NEXT:  cmpq 120(%rbp), %r14
   ; X64-Linux-NEXT:  jb .LBB1_1
 
   ; X64-Linux:       ret
@@ -65,3 +65,8 @@ define cc 11 {i32,i32,i32} @test_nocall_hipecc(i32 %hp,i32 %p,i32 %x,i32 %y) {
   %6 = insertvalue {i32, i32, i32} %5, i32 %p, 2
   ret {i32, i32, i32} %6
 }
+
+!hipe.literals = !{ !0, !1, !2 }
+!0 = !{ !"P_NSP_LIMIT", i32 120 }
+!1 = !{ !"X86_LEAF_WORDS", i32 24 }
+!2 = !{ !"AMD64_LEAF_WORDS", i32 18 }

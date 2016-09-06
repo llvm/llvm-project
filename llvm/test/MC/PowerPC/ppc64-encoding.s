@@ -197,6 +197,9 @@
 # CHECK-BE: ldux 2, 3, 4                    # encoding: [0x7c,0x43,0x20,0x6a]
 # CHECK-LE: ldux 2, 3, 4                    # encoding: [0x6a,0x20,0x43,0x7c]
             ldux 2, 3, 4
+# CHECK-BE: ldmx 2, 3, 4                    # encoding: [0x7c,0x43,0x22,0x6a]
+# CHECK-LE: ldmx 2, 3, 4                    # encoding: [0x6a,0x22,0x43,0x7c]
+            ldmx 2, 3, 4
 
 # Fixed-point store instructions
 
@@ -530,6 +533,24 @@
 # CHECK-BE: cmplw 2, 3, 4                   # encoding: [0x7d,0x03,0x20,0x40]
 # CHECK-LE: cmplw 2, 3, 4                   # encoding: [0x40,0x20,0x03,0x7d]
             cmpl 2, 0, 3, 4
+# CHECK-BE: cmprb 3, 1, 7, 17               # encoding: [0x7d,0xa7,0x89,0x80]
+# CHECK-LE: cmprb 3, 1, 7, 17               # encoding: [0x80,0x89,0xa7,0x7d]
+            cmprb 3, 1, 7, 17
+# CHECK-BE: cmpeqb 3, 7, 17                 # encoding: [0x7d,0x87,0x89,0xc0]
+# CHECK-LE: cmpeqb 3, 7, 17                 # encoding: [0xc0,0x89,0x87,0x7d]
+            cmpeqb 3, 7, 17
+# CHECK-BE: cnttzw 7, 17                    # encoding: [0x7e,0x27,0x04,0x34]
+# CHECK-LE: cnttzw 7, 17                    # encoding: [0x34,0x04,0x27,0x7e]
+            cnttzw 7, 17
+# CHECK-BE: cnttzw. 7, 17                   # encoding: [0x7e,0x27,0x04,0x35]
+# CHECK-LE: cnttzw. 7, 17                   # encoding: [0x35,0x04,0x27,0x7e]
+            cnttzw. 7, 17
+# CHECK-BE: cnttzd 7, 17                    # encoding: [0x7e,0x27,0x04,0x74]
+# CHECK-LE: cnttzd 7, 17                    # encoding: [0x74,0x04,0x27,0x7e]
+            cnttzd 7, 17
+# CHECK-BE: cnttzd. 7, 17                   # encoding: [0x7e,0x27,0x04,0x75]
+# CHECK-LE: cnttzd. 7, 17                   # encoding: [0x75,0x04,0x27,0x7e]
+            cnttzd. 7, 17
 
 # Fixed-point trap instructions
 
@@ -833,6 +854,9 @@
 # CHECK-BE: mfocrf 16, 8                    # encoding: [0x7e,0x10,0x80,0x26]
 # CHECK-LE: mfocrf 16, 8                    # encoding: [0x26,0x80,0x10,0x7e]
             mfocrf 16, 8
+# CHECK-BE: mcrxrx 7                        # encoding: [0x7f,0x80,0x04,0x80]
+# CHECK-LE: mcrxrx 7                        # encoding: [0x80,0x04,0x80,0x7f]
+            mcrxrx 7
 
 # Move to/from segment register
 # CHECK-BE: mtsr    12, 10                    # encoding: [0x7d,0x4c,0x01,0xa4]
@@ -848,3 +872,34 @@
 # CHECK-BE: mfsrin  10, 12                    # encoding: [0x7d,0x40,0x65,0x26]
 # CHECK-LE: mfsrin  10, 12                    # encoding: [0x26,0x65,0x40,0x7d]
             mfsrin  %r10,%r12
+
+# Copy-Paste Facility
+# CHECK-BE: copy 2, 19, 1                      # encoding: [0x7c,0x22,0x9e,0x0c]
+# CHECK-LE: copy 2, 19, 1                      # encoding: [0x0c,0x9e,0x22,0x7c]
+            copy 2, 19, 1
+# CHECK-BE: paste 17, 1, 1                     # encoding: [0x7c,0x31,0x0f,0x0c]
+# CHECK-LE: paste 17, 1, 1                     # encoding: [0x0c,0x0f,0x31,0x7c]
+            paste 17, 1, 1
+# CHECK-BE: cp_abort                           # encoding: [0x7c,0x00,0x06,0x8c]
+# CHECK-LE: cp_abort                           # encoding: [0x8c,0x06,0x00,0x7c]
+            cp_abort
+
+# Message Synchronize
+# CHECK-BE: msgsync                            # encoding: [0x7c,0x00,0x06,0xec]
+# CHECK-LE: msgsync                            # encoding: [0xec,0x06,0x00,0x7c]
+            msgsync
+
+# SLB Invalidate Entry Global
+# CHECK-BE: slbieg 6, 21                       # encoding: [0x7c,0xc0,0xab,0xa4]
+# CHECK-LE: slbieg 6, 21                       # encoding: [0xa4,0xab,0xc0,0x7c]
+            slbieg 6, 21
+
+# SLB Synchronize
+# CHECK-BE: slbsync                            # encoding: [0x7c,0x00,0x02,0xa4]
+# CHECK-LE: slbsync                            # encoding: [0xa4,0x02,0x00,0x7c]
+            slbsync
+
+# Power-Saving Mode Instruction
+# CHECK-BE: stop                               # encoding: [0x4c,0x00,0x02,0xe4]
+# CHECK-LE: stop                               # encoding: [0xe4,0x02,0x00,0x4c]
+            stop

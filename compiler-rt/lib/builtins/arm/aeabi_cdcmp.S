@@ -94,3 +94,5 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdrcmple)
         b __aeabi_cdcmple
 END_COMPILERRT_FUNCTION(__aeabi_cdrcmple)
 
+NO_EXEC_STACK_DIRECTIVE
+

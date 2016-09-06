@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -start-after machine-sink -stop-after machine-sink -o /dev/null %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -o - %s | FileCheck %s
 
 --- |
   @var = global i64 0
@@ -26,7 +26,7 @@ frameInfo:
   maxAlignment:    8
 # CHECK-LABEL: stack_local
 # CHECK: stack:
-# CHECK_NEXT: { id:0, name:local_var, offset:0, size:8, alignment:8, local-offset: -8 }
+# CHECK-NEXT: { id: 0, name: local_var, offset: 0, size: 8, alignment: 8, local-offset: -8 }
 stack:
   - { id: 0,name: local_var,offset: 0,size: 8,alignment: 8, local-offset: -8 }
 body: |

@@ -21,10 +21,10 @@ class ARMElfTargetObjectFile : public TargetLoweringObjectFileELF {
 protected:
   const MCSection *AttributesSection;
 public:
-  ARMElfTargetObjectFile() :
-    TargetLoweringObjectFileELF(),
-    AttributesSection(nullptr)
-  {}
+  ARMElfTargetObjectFile()
+      : TargetLoweringObjectFileELF(), AttributesSection(nullptr) {
+    PLTRelativeVariantKind = MCSymbolRefExpr::VK_ARM_PREL31;
+  }
 
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 

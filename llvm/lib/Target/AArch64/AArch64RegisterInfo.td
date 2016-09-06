@@ -1,4 +1,4 @@
-//=- AArch64RegisterInfo.td - Describe the AArch64 Regisers --*- tablegen -*-=//
+//=- AArch64RegisterInfo.td - Describe the AArch64 Registers -*- tablegen -*-=//
 //
 //                     The LLVM Compiler Infrastructure
 //

@@ -11,10 +11,3 @@
 // you can't define a target with no sources.
 //
 //===----------------------------------------------------------------------===//
-
-#include "llvm/Config/config.h"
-
-#if defined(DISABLE_LLVM_DYLIB_ATEXIT)
-extern "C" int __cxa_atexit();
-extern "C" int __cxa_atexit() { return 0; }
-#endif

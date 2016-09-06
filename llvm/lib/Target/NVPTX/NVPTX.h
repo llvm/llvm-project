@@ -46,16 +46,16 @@ FunctionPass *createNVPTXISelDag(NVPTXTargetMachine &TM,
 ModulePass *createNVPTXAssignValidGlobalNamesPass();
 ModulePass *createGenericToNVVMPass();
 FunctionPass *createNVPTXFavorNonGenericAddrSpacesPass();
-ModulePass *createNVVMReflectPass();
-ModulePass *createNVVMReflectPass(const StringMap<int>& Mapping);
+FunctionPass *createNVPTXInferAddressSpacesPass();
+FunctionPass *createNVVMIntrRangePass(unsigned int SmVersion);
+FunctionPass *createNVVMReflectPass();
+FunctionPass *createNVVMReflectPass(const StringMap<int> &Mapping);
 MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
 FunctionPass *createNVPTXImageOptimizerPass();
-FunctionPass *createNVPTXLowerKernelArgsPass(const NVPTXTargetMachine *TM);
+FunctionPass *createNVPTXLowerArgsPass(const NVPTXTargetMachine *TM);
 BasicBlockPass *createNVPTXLowerAllocaPass();
 MachineFunctionPass *createNVPTXPeephole();
-
-bool isImageOrSamplerVal(const Value *, const Module *);
 
 extern Target TheNVPTXTarget32;
 extern Target TheNVPTXTarget64;

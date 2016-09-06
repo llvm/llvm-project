@@ -16,22 +16,22 @@ entry:
 }
 
 ; CTOR:		.section	.ctors.65520,"aGw",@progbits,v,comdat
-; CTOR-NEXT:	.align	8
+; CTOR-NEXT:	.p2align	3
 ; CTOR-NEXT:	.quad	g
 ; CTOR-NEXT:	.section	.ctors,"aw",@progbits
-; CTOR-NEXT:	.align	8
+; CTOR-NEXT:	.p2align	3
 ; CTOR-NEXT:	.quad	f
 
 ; INIT-ARRAY:		.section	.init_array.15,"aGw",@init_array,v,comdat
-; INIT-ARRAY-NEXT:	.align	8
+; INIT-ARRAY-NEXT:	.p2align	3
 ; INIT-ARRAY-NEXT:	.quad	g
 ; INIT-ARRAY-NEXT:	.section	.init_array,"aw",@init_array
-; INIT-ARRAY-NEXT:	.align	8
+; INIT-ARRAY-NEXT:	.p2align	3
 ; INIT-ARRAY-NEXT:	.quad	f
 
 ; NACL:		.section	.init_array.15,"aGw",@init_array,v,comdat
-; NACL-NEXT:	.align	4
+; NACL-NEXT:	.p2align	2
 ; NACL-NEXT:	.long	g
 ; NACL-NEXT:	.section	.init_array,"aw",@init_array
-; NACL-NEXT:	.align	4
+; NACL-NEXT:	.p2align	2
 ; NACL-NEXT:	.long	f

@@ -11,7 +11,7 @@
 /// This header provides classes for managing passes over SCCs of the call
 /// graph. These passes form an important component of LLVM's interprocedural
 /// optimizations. Because they operate on the SCCs of the call graph, and they
-/// wtraverse the graph in post order, they can effectively do pair-wise
+/// traverse the graph in post order, they can effectively do pair-wise
 /// interprocedural optimizations for all call edges in the program. At each
 /// call site edge, the callee has already been optimized as much as is
 /// possible. This in turn allows very accurate analysis of it for IPO.
@@ -26,6 +26,7 @@
 
 namespace llvm {
 
+extern template class PassManager<LazyCallGraph::SCC>;
 /// \brief The CGSCC pass manager.
 ///
 /// See the documentation for the PassManager template for details. It runs
@@ -33,6 +34,7 @@ namespace llvm {
 /// typedef serves as a convenient way to refer to this construct.
 typedef PassManager<LazyCallGraph::SCC> CGSCCPassManager;
 
+extern template class AnalysisManager<LazyCallGraph::SCC>;
 /// \brief The CGSCC analysis manager.
 ///
 /// See the documentation for the AnalysisManager template for detail
@@ -41,147 +43,16 @@ typedef PassManager<LazyCallGraph::SCC> CGSCCPassManager;
 /// pass manager infrastructure.
 typedef AnalysisManager<LazyCallGraph::SCC> CGSCCAnalysisManager;
 
-/// \brief A module analysis which acts as a proxy for a CGSCC analysis
-/// manager.
-///
-/// This primarily proxies invalidation information from the module analysis
-/// manager and module pass manager to a CGSCC analysis manager. You should
-/// never use a CGSCC analysis manager from within (transitively) a module
-/// pass manager unless your parent module pass has received a proxy result
-/// object for it.
-class CGSCCAnalysisManagerModuleProxy {
-public:
-  class Result {
-  public:
-    explicit Result(CGSCCAnalysisManager &CGAM) : CGAM(&CGAM) {}
-    // We have to explicitly define all the special member functions because
-    // MSVC refuses to generate them.
-    Result(const Result &Arg) : CGAM(Arg.CGAM) {}
-    Result(Result &&Arg) : CGAM(std::move(Arg.CGAM)) {}
-    Result &operator=(Result RHS) {
-      std::swap(CGAM, RHS.CGAM);
-      return *this;
-    }
-    ~Result();
+extern template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
+/// A proxy from a \c CGSCCAnalysisManager to a \c Module.
+typedef InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>
+    CGSCCAnalysisManagerModuleProxy;
 
-    /// \brief Accessor for the \c CGSCCAnalysisManager.
-    CGSCCAnalysisManager &getManager() { return *CGAM; }
-
-    /// \brief Handler for invalidation of the module.
-    ///
-    /// If this analysis itself is preserved, then we assume that the call
-    /// graph of the module hasn't changed and thus we don't need to invalidate
-    /// *all* cached data associated with a \c SCC* in the \c
-    /// CGSCCAnalysisManager.
-    ///
-    /// Regardless of whether this analysis is marked as preserved, all of the
-    /// analyses in the \c CGSCCAnalysisManager are potentially invalidated
-    /// based on the set of preserved analyses.
-    bool invalidate(Module &M, const PreservedAnalyses &PA);
-
-  private:
-    CGSCCAnalysisManager *CGAM;
-  };
-
-  static void *ID() { return (void *)&PassID; }
-
-  static StringRef name() { return "CGSCCAnalysisManagerModuleProxy"; }
-
-  explicit CGSCCAnalysisManagerModuleProxy(CGSCCAnalysisManager &CGAM)
-      : CGAM(&CGAM) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  CGSCCAnalysisManagerModuleProxy(const CGSCCAnalysisManagerModuleProxy &Arg)
-      : CGAM(Arg.CGAM) {}
-  CGSCCAnalysisManagerModuleProxy(CGSCCAnalysisManagerModuleProxy &&Arg)
-      : CGAM(std::move(Arg.CGAM)) {}
-  CGSCCAnalysisManagerModuleProxy &
-  operator=(CGSCCAnalysisManagerModuleProxy RHS) {
-    std::swap(CGAM, RHS.CGAM);
-    return *this;
-  }
-
-  /// \brief Run the analysis pass and create our proxy result object.
-  ///
-  /// This doesn't do any interesting work, it is primarily used to insert our
-  /// proxy result object into the module analysis cache so that we can proxy
-  /// invalidation to the CGSCC analysis manager.
-  ///
-  /// In debug builds, it will also assert that the analysis manager is empty
-  /// as no queries should arrive at the CGSCC analysis manager prior to
-  /// this analysis being requested.
-  Result run(Module &M);
-
-private:
-  static char PassID;
-
-  CGSCCAnalysisManager *CGAM;
-};
-
-/// \brief A CGSCC analysis which acts as a proxy for a module analysis
-/// manager.
-///
-/// This primarily provides an accessor to a parent module analysis manager to
-/// CGSCC passes. Only the const interface of the module analysis manager is
-/// provided to indicate that once inside of a CGSCC analysis pass you
-/// cannot request a module analysis to actually run. Instead, the user must
-/// rely on the \c getCachedResult API.
-///
-/// This proxy *doesn't* manage the invalidation in any way. That is handled by
-/// the recursive return path of each layer of the pass manager and the
-/// returned PreservedAnalysis set.
-class ModuleAnalysisManagerCGSCCProxy {
-public:
-  /// \brief Result proxy object for \c ModuleAnalysisManagerCGSCCProxy.
-  class Result {
-  public:
-    explicit Result(const ModuleAnalysisManager &MAM) : MAM(&MAM) {}
-    // We have to explicitly define all the special member functions because
-    // MSVC refuses to generate them.
-    Result(const Result &Arg) : MAM(Arg.MAM) {}
-    Result(Result &&Arg) : MAM(std::move(Arg.MAM)) {}
-    Result &operator=(Result RHS) {
-      std::swap(MAM, RHS.MAM);
-      return *this;
-    }
-
-    const ModuleAnalysisManager &getManager() const { return *MAM; }
-
-    /// \brief Handle invalidation by ignoring it, this pass is immutable.
-    bool invalidate(LazyCallGraph::SCC &) { return false; }
-
-  private:
-    const ModuleAnalysisManager *MAM;
-  };
-
-  static void *ID() { return (void *)&PassID; }
-
-  static StringRef name() { return "ModuleAnalysisManagerCGSCCProxy"; }
-
-  ModuleAnalysisManagerCGSCCProxy(const ModuleAnalysisManager &MAM)
-      : MAM(&MAM) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  ModuleAnalysisManagerCGSCCProxy(const ModuleAnalysisManagerCGSCCProxy &Arg)
-      : MAM(Arg.MAM) {}
-  ModuleAnalysisManagerCGSCCProxy(ModuleAnalysisManagerCGSCCProxy &&Arg)
-      : MAM(std::move(Arg.MAM)) {}
-  ModuleAnalysisManagerCGSCCProxy &
-  operator=(ModuleAnalysisManagerCGSCCProxy RHS) {
-    std::swap(MAM, RHS.MAM);
-    return *this;
-  }
-
-  /// \brief Run the analysis pass and create our proxy result object.
-  /// Nothing to see here, it just forwards the \c MAM reference into the
-  /// result.
-  Result run(LazyCallGraph::SCC &) { return Result(*MAM); }
-
-private:
-  static char PassID;
-
-  const ModuleAnalysisManager *MAM;
-};
+extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
+                                                LazyCallGraph::SCC>;
+/// A proxy from a \c ModuleAnalysisManager to an \c SCC.
+typedef OuterAnalysisManagerProxy<ModuleAnalysisManager, LazyCallGraph::SCC>
+    ModuleAnalysisManagerCGSCCProxy;
 
 /// \brief The core module pass which does a post-order walk of the SCCs and
 /// runs a CGSCC pass over each one.
@@ -192,21 +63,24 @@ private:
 /// \c CGSCCAnalysisManagerModuleProxy analysis prior to running the CGSCC
 /// pass over the module to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
-template <typename CGSCCPassT> class ModuleToPostOrderCGSCCPassAdaptor {
+template <typename CGSCCPassT>
+class ModuleToPostOrderCGSCCPassAdaptor
+    : public PassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>> {
 public:
-  explicit ModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass)
-      : Pass(std::move(Pass)) {}
+  explicit ModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass, bool DebugLogging = false)
+      : Pass(std::move(Pass)), DebugLogging(DebugLogging) {}
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
   ModuleToPostOrderCGSCCPassAdaptor(
       const ModuleToPostOrderCGSCCPassAdaptor &Arg)
-      : Pass(Arg.Pass) {}
+      : Pass(Arg.Pass), DebugLogging(Arg.DebugLogging) {}
   ModuleToPostOrderCGSCCPassAdaptor(ModuleToPostOrderCGSCCPassAdaptor &&Arg)
-      : Pass(std::move(Arg.Pass)) {}
+      : Pass(std::move(Arg.Pass)), DebugLogging(Arg.DebugLogging) {}
   friend void swap(ModuleToPostOrderCGSCCPassAdaptor &LHS,
                    ModuleToPostOrderCGSCCPassAdaptor &RHS) {
     using std::swap;
     swap(LHS.Pass, RHS.Pass);
+    swap(LHS.DebugLogging, RHS.DebugLogging);
   }
   ModuleToPostOrderCGSCCPassAdaptor &
   operator=(ModuleToPostOrderCGSCCPassAdaptor RHS) {
@@ -215,33 +89,36 @@ public:
   }
 
   /// \brief Runs the CGSCC pass across every SCC in the module.
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager *AM) {
-    assert(AM && "We need analyses to compute the call graph!");
-
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
     // Setup the CGSCC analysis manager from its proxy.
     CGSCCAnalysisManager &CGAM =
-        AM->getResult<CGSCCAnalysisManagerModuleProxy>(M).getManager();
+        AM.getResult<CGSCCAnalysisManagerModuleProxy>(M).getManager();
 
     // Get the call graph for this module.
-    LazyCallGraph &CG = AM->getResult<LazyCallGraphAnalysis>(M);
+    LazyCallGraph &CG = AM.getResult<LazyCallGraphAnalysis>(M);
 
     PreservedAnalyses PA = PreservedAnalyses::all();
-    for (LazyCallGraph::SCC &C : CG.postorder_sccs()) {
-      PreservedAnalyses PassPA = Pass.run(C, &CGAM);
+    for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
+      if (DebugLogging)
+        dbgs() << "Running an SCC pass across the RefSCC: " << RC << "\n";
 
-      // We know that the CGSCC pass couldn't have invalidated any other
-      // SCC's analyses (that's the contract of a CGSCC pass), so
-      // directly handle the CGSCC analysis manager's invalidation here. We
-      // also update the preserved set of analyses to reflect that invalidated
-      // analyses are now safe to preserve.
-      // FIXME: This isn't quite correct. We need to handle the case where the
-      // pass updated the CG, particularly some child of the current SCC, and
-      // invalidate its analyses.
-      PassPA = CGAM.invalidate(C, std::move(PassPA));
+      for (LazyCallGraph::SCC &C : RC) {
+        PreservedAnalyses PassPA = Pass.run(C, CGAM);
 
-      // Then intersect the preserved set so that invalidation of module
-      // analyses will eventually occur when the module pass completes.
-      PA.intersect(std::move(PassPA));
+        // We know that the CGSCC pass couldn't have invalidated any other
+        // SCC's analyses (that's the contract of a CGSCC pass), so
+        // directly handle the CGSCC analysis manager's invalidation here. We
+        // also update the preserved set of analyses to reflect that invalidated
+        // analyses are now safe to preserve.
+        // FIXME: This isn't quite correct. We need to handle the case where the
+        // pass updated the CG, particularly some child of the current SCC, and
+        // invalidate its analyses.
+        PassPA = CGAM.invalidate(C, std::move(PassPA));
+
+        // Then intersect the preserved set so that invalidation of module
+        // analyses will eventually occur when the module pass completes.
+        PA.intersect(std::move(PassPA));
+      }
     }
 
     // By definition we preserve the proxy. This precludes *any* invalidation
@@ -252,163 +129,29 @@ public:
     return PA;
   }
 
-  static StringRef name() { return "ModuleToPostOrderCGSCCPassAdaptor"; }
-
 private:
   CGSCCPassT Pass;
+  bool DebugLogging;
 };
 
 /// \brief A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename CGSCCPassT>
 ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>
-createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass) {
-  return ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>(std::move(Pass));
+createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass, bool DebugLogging = false) {
+  return ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>(std::move(Pass), DebugLogging);
 }
 
-/// \brief A CGSCC analysis which acts as a proxy for a function analysis
-/// manager.
-///
-/// This primarily proxies invalidation information from the CGSCC analysis
-/// manager and CGSCC pass manager to a function analysis manager. You should
-/// never use a function analysis manager from within (transitively) a CGSCC
-/// pass manager unless your parent CGSCC pass has received a proxy result
-/// object for it.
-class FunctionAnalysisManagerCGSCCProxy {
-public:
-  class Result {
-  public:
-    explicit Result(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
-    // We have to explicitly define all the special member functions because
-    // MSVC refuses to generate them.
-    Result(const Result &Arg) : FAM(Arg.FAM) {}
-    Result(Result &&Arg) : FAM(std::move(Arg.FAM)) {}
-    Result &operator=(Result RHS) {
-      std::swap(FAM, RHS.FAM);
-      return *this;
-    }
-    ~Result();
+extern template class InnerAnalysisManagerProxy<FunctionAnalysisManager,
+                                                LazyCallGraph::SCC>;
+/// A proxy from a \c FunctionAnalysisManager to an \c SCC.
+typedef InnerAnalysisManagerProxy<FunctionAnalysisManager, LazyCallGraph::SCC>
+    FunctionAnalysisManagerCGSCCProxy;
 
-    /// \brief Accessor for the \c FunctionAnalysisManager.
-    FunctionAnalysisManager &getManager() { return *FAM; }
-
-    /// \brief Handler for invalidation of the SCC.
-    ///
-    /// If this analysis itself is preserved, then we assume that the set of \c
-    /// Function objects in the \c SCC hasn't changed and thus we don't need
-    /// to invalidate *all* cached data associated with a \c Function* in the \c
-    /// FunctionAnalysisManager.
-    ///
-    /// Regardless of whether this analysis is marked as preserved, all of the
-    /// analyses in the \c FunctionAnalysisManager are potentially invalidated
-    /// based on the set of preserved analyses.
-    bool invalidate(LazyCallGraph::SCC &C, const PreservedAnalyses &PA);
-
-  private:
-    FunctionAnalysisManager *FAM;
-  };
-
-  static void *ID() { return (void *)&PassID; }
-
-  static StringRef name() { return "FunctionAnalysisManagerCGSCCProxy"; }
-
-  explicit FunctionAnalysisManagerCGSCCProxy(FunctionAnalysisManager &FAM)
-      : FAM(&FAM) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  FunctionAnalysisManagerCGSCCProxy(
-      const FunctionAnalysisManagerCGSCCProxy &Arg)
-      : FAM(Arg.FAM) {}
-  FunctionAnalysisManagerCGSCCProxy(FunctionAnalysisManagerCGSCCProxy &&Arg)
-      : FAM(std::move(Arg.FAM)) {}
-  FunctionAnalysisManagerCGSCCProxy &
-  operator=(FunctionAnalysisManagerCGSCCProxy RHS) {
-    std::swap(FAM, RHS.FAM);
-    return *this;
-  }
-
-  /// \brief Run the analysis pass and create our proxy result object.
-  ///
-  /// This doesn't do any interesting work, it is primarily used to insert our
-  /// proxy result object into the module analysis cache so that we can proxy
-  /// invalidation to the function analysis manager.
-  ///
-  /// In debug builds, it will also assert that the analysis manager is empty
-  /// as no queries should arrive at the function analysis manager prior to
-  /// this analysis being requested.
-  Result run(LazyCallGraph::SCC &C);
-
-private:
-  static char PassID;
-
-  FunctionAnalysisManager *FAM;
-};
-
-/// \brief A function analysis which acts as a proxy for a CGSCC analysis
-/// manager.
-///
-/// This primarily provides an accessor to a parent CGSCC analysis manager to
-/// function passes. Only the const interface of the CGSCC analysis manager is
-/// provided to indicate that once inside of a function analysis pass you
-/// cannot request a CGSCC analysis to actually run. Instead, the user must
-/// rely on the \c getCachedResult API.
-///
-/// This proxy *doesn't* manage the invalidation in any way. That is handled by
-/// the recursive return path of each layer of the pass manager and the
-/// returned PreservedAnalysis set.
-class CGSCCAnalysisManagerFunctionProxy {
-public:
-  /// \brief Result proxy object for \c CGSCCAnalysisManagerFunctionProxy.
-  class Result {
-  public:
-    explicit Result(const CGSCCAnalysisManager &CGAM) : CGAM(&CGAM) {}
-    // We have to explicitly define all the special member functions because
-    // MSVC refuses to generate them.
-    Result(const Result &Arg) : CGAM(Arg.CGAM) {}
-    Result(Result &&Arg) : CGAM(std::move(Arg.CGAM)) {}
-    Result &operator=(Result RHS) {
-      std::swap(CGAM, RHS.CGAM);
-      return *this;
-    }
-
-    const CGSCCAnalysisManager &getManager() const { return *CGAM; }
-
-    /// \brief Handle invalidation by ignoring it, this pass is immutable.
-    bool invalidate(Function &) { return false; }
-
-  private:
-    const CGSCCAnalysisManager *CGAM;
-  };
-
-  static void *ID() { return (void *)&PassID; }
-
-  static StringRef name() { return "CGSCCAnalysisManagerFunctionProxy"; }
-
-  CGSCCAnalysisManagerFunctionProxy(const CGSCCAnalysisManager &CGAM)
-      : CGAM(&CGAM) {}
-  // We have to explicitly define all the special member functions because MSVC
-  // refuses to generate them.
-  CGSCCAnalysisManagerFunctionProxy(
-      const CGSCCAnalysisManagerFunctionProxy &Arg)
-      : CGAM(Arg.CGAM) {}
-  CGSCCAnalysisManagerFunctionProxy(CGSCCAnalysisManagerFunctionProxy &&Arg)
-      : CGAM(std::move(Arg.CGAM)) {}
-  CGSCCAnalysisManagerFunctionProxy &
-  operator=(CGSCCAnalysisManagerFunctionProxy RHS) {
-    std::swap(CGAM, RHS.CGAM);
-    return *this;
-  }
-
-  /// \brief Run the analysis pass and create our proxy result object.
-  /// Nothing to see here, it just forwards the \c CGAM reference into the
-  /// result.
-  Result run(Function &) { return Result(*CGAM); }
-
-private:
-  static char PassID;
-
-  const CGSCCAnalysisManager *CGAM;
-};
+extern template class OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
+/// A proxy from a \c CGSCCAnalysisManager to a \c Function.
+typedef OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>
+    CGSCCAnalysisManagerFunctionProxy;
 
 /// \brief Adaptor that maps from a SCC to its functions.
 ///
@@ -418,20 +161,23 @@ private:
 /// \c FunctionAnalysisManagerCGSCCProxy analysis prior to running the function
 /// pass over the SCC to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
-template <typename FunctionPassT> class CGSCCToFunctionPassAdaptor {
+template <typename FunctionPassT>
+class CGSCCToFunctionPassAdaptor
+    : public PassInfoMixin<CGSCCToFunctionPassAdaptor<FunctionPassT>> {
 public:
-  explicit CGSCCToFunctionPassAdaptor(FunctionPassT Pass)
-      : Pass(std::move(Pass)) {}
+  explicit CGSCCToFunctionPassAdaptor(FunctionPassT Pass, bool DebugLogging = false)
+      : Pass(std::move(Pass)), DebugLogging(DebugLogging) {}
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
   CGSCCToFunctionPassAdaptor(const CGSCCToFunctionPassAdaptor &Arg)
-      : Pass(Arg.Pass) {}
+      : Pass(Arg.Pass), DebugLogging(Arg.DebugLogging) {}
   CGSCCToFunctionPassAdaptor(CGSCCToFunctionPassAdaptor &&Arg)
-      : Pass(std::move(Arg.Pass)) {}
+      : Pass(std::move(Arg.Pass)), DebugLogging(Arg.DebugLogging) {}
   friend void swap(CGSCCToFunctionPassAdaptor &LHS,
                    CGSCCToFunctionPassAdaptor &RHS) {
     using std::swap;
     swap(LHS.Pass, RHS.Pass);
+    swap(LHS.DebugLogging, RHS.DebugLogging);
   }
   CGSCCToFunctionPassAdaptor &operator=(CGSCCToFunctionPassAdaptor RHS) {
     swap(*this, RHS);
@@ -439,23 +185,24 @@ public:
   }
 
   /// \brief Runs the function pass across every function in the module.
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager *AM) {
-    FunctionAnalysisManager *FAM = nullptr;
-    if (AM)
-      // Setup the function analysis manager from its proxy.
-      FAM = &AM->getResult<FunctionAnalysisManagerCGSCCProxy>(C).getManager();
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM) {
+    // Setup the function analysis manager from its proxy.
+    FunctionAnalysisManager &FAM =
+        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C).getManager();
+
+    if (DebugLogging)
+      dbgs() << "Running function passes across an SCC: " << C << "\n";
 
     PreservedAnalyses PA = PreservedAnalyses::all();
-    for (LazyCallGraph::Node *N : C) {
-      PreservedAnalyses PassPA = Pass.run(N->getFunction(), FAM);
+    for (LazyCallGraph::Node &N : C) {
+      PreservedAnalyses PassPA = Pass.run(N.getFunction(), FAM);
 
       // We know that the function pass couldn't have invalidated any other
       // function's analyses (that's the contract of a function pass), so
       // directly handle the function analysis manager's invalidation here.
       // Also, update the preserved analyses to reflect that once invalidated
       // these can again be preserved.
-      if (FAM)
-        PassPA = FAM->invalidate(N->getFunction(), std::move(PassPA));
+      PassPA = FAM.invalidate(N.getFunction(), std::move(PassPA));
 
       // Then intersect the preserved set so that invalidation of module
       // analyses will eventually occur when the module pass completes.
@@ -472,18 +219,18 @@ public:
     return PA;
   }
 
-  static StringRef name() { return "CGSCCToFunctionPassAdaptor"; }
-
 private:
   FunctionPassT Pass;
+  bool DebugLogging;
 };
 
 /// \brief A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename FunctionPassT>
 CGSCCToFunctionPassAdaptor<FunctionPassT>
-createCGSCCToFunctionPassAdaptor(FunctionPassT Pass) {
-  return CGSCCToFunctionPassAdaptor<FunctionPassT>(std::move(Pass));
+createCGSCCToFunctionPassAdaptor(FunctionPassT Pass, bool DebugLogging = false) {
+  return CGSCCToFunctionPassAdaptor<FunctionPassT>(std::move(Pass),
+                                                   DebugLogging);
 }
 }
 

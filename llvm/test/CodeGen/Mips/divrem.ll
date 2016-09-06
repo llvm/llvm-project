@@ -1,16 +1,16 @@
-; RUN: llc -march=mips   -mcpu=mips32   -verify-machineinstrs    < %s | FileCheck %s -check-prefix=ALL -check-prefix=ACC32 -check-prefix=ACC32-TRAP
-; RUN: llc -march=mips   -mcpu=mips32r2 -verify-machineinstrs    < %s | FileCheck %s -check-prefix=ALL -check-prefix=ACC32 -check-prefix=ACC32-TRAP
-; RUN: llc -march=mips   -mcpu=mips32r6 -verify-machineinstrs    < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR32 -check-prefix=GPR32-TRAP
-; RUN: llc -march=mips64 -mcpu=mips64   -verify-machineinstrs    < %s | FileCheck %s -check-prefix=ALL -check-prefix=ACC64 -check-prefix=ACC64-TRAP
-; RUN: llc -march=mips64 -mcpu=mips64r2 -verify-machineinstrs    < %s | FileCheck %s -check-prefix=ALL -check-prefix=ACC64 -check-prefix=ACC64-TRAP
-; RUN: llc -march=mips64 -mcpu=mips64r6 -verify-machineinstrs    < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR64 -check-prefix=GPR64-TRAP
+; RUN: llc -march=mips   -mcpu=mips32   -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC32,ACC32-TRAP
+; RUN: llc -march=mips   -mcpu=mips32r2 -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC32,ACC32-TRAP
+; RUN: llc -march=mips   -mcpu=mips32r6 -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR32,GPR32-TRAP
+; RUN: llc -march=mips64 -mcpu=mips64   -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,ACC64-TRAP
+; RUN: llc -march=mips64 -mcpu=mips64r2 -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,ACC64-TRAP
+; RUN: llc -march=mips64 -mcpu=mips64r6 -verify-machineinstrs    -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR64,GPR64-TRAP
 
-; RUN: llc -march=mips   -mcpu=mips32   -mno-check-zero-division < %s | FileCheck %s -check-prefix=ALL -check-prefix=ACC32 -check-prefix=NOCHECK
-; RUN: llc -march=mips   -mcpu=mips32r2 -mno-check-zero-division < %s | FileCheck %s -check-prefix=ALL -check-prefix=ACC32 -check-prefix=NOCHECK
-; RUN: llc -march=mips   -mcpu=mips32r6 -mno-check-zero-division < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR32 -check-prefix=NOCHECK
-; RUN: llc -march=mips64 -mcpu=mips64   -mno-check-zero-division < %s | FileCheck %s -check-prefix=ALL -check-prefix=ACC64 -check-prefix=NOCHECK
-; RUN: llc -march=mips64 -mcpu=mips64r2 -mno-check-zero-division < %s | FileCheck %s -check-prefix=ALL -check-prefix=ACC64 -check-prefix=NOCHECK
-; RUN: llc -march=mips64 -mcpu=mips64r6 -mno-check-zero-division < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR64 -check-prefix=NOCHECK
+; RUN: llc -march=mips   -mcpu=mips32   -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC32,NOCHECK
+; RUN: llc -march=mips   -mcpu=mips32r2 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC32,NOCHECK
+; RUN: llc -march=mips   -mcpu=mips32r6 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR32,NOCHECK
+; RUN: llc -march=mips64 -mcpu=mips64   -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,NOCHECK
+; RUN: llc -march=mips64 -mcpu=mips64r2 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,ACC64,NOCHECK
+; RUN: llc -march=mips64 -mcpu=mips64r6 -mno-check-zero-division -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,GPR64,NOCHECK
 
 ; FileCheck Prefixes:
 ;   ALL - All targets
@@ -81,7 +81,7 @@ entry:
   ret i32 %rem
 }
 
-define i32 @udiv1(i32 zeroext %a0, i32 zeroext %a1) nounwind readnone {
+define i32 @udiv1(i32 signext %a0, i32 signext %a1) nounwind readnone {
 entry:
 ; ALL-LABEL: udiv1:
 
@@ -107,7 +107,7 @@ entry:
   ret i32 %div
 }
 
-define i32 @urem1(i32 zeroext %a0, i32 zeroext %a1) nounwind readnone {
+define i32 @urem1(i32 signext %a0, i32 signext %a1) nounwind readnone {
 entry:
 ; ALL-LABEL: urem1:
 
@@ -152,20 +152,20 @@ entry:
 ; ACC64:         mfhi $[[R0:[0-9]+]]
 ; ACC64:         sw $[[R0]], 0(${{[0-9]+}})
 
-; GPR32:         mod $[[R0:[0-9]+]], $4, $5
-; GPR32-TRAP:    teq $5, $zero, 7
-; NOCHECK-NOT:   teq
-; GPR32:         sw $[[R0]], 0(${{[0-9]+}})
 ; GPR32-DAG:     div $2, $4, $5
 ; GPR32-TRAP:    teq $5, $zero, 7
-
-; GPR64:         mod $[[R0:[0-9]+]], $4, $5
-; GPR64-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
-; GPR64:         sw $[[R0]], 0(${{[0-9]+}})
+; GPR32-DAG:     mod $[[R0:[0-9]+]], $4, $5
+; GPR32-TRAP:    teq $5, $zero, 7
+; GPR32:         sw $[[R0]], 0(${{[0-9]+}})
+
 ; GPR64-DAG:     div $2, $4, $5
 ; GPR64-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
+; GPR64-DAG:     mod $[[R0:[0-9]+]], $4, $5
+; GPR64-TRAP:    teq $5, $zero, 7
+; NOCHECK-NOT:   teq
+; GPR64:         sw $[[R0]], 0(${{[0-9]+}})
 
 ; ALL: .end sdivrem1
 
@@ -175,7 +175,7 @@ entry:
   ret i32 %div
 }
 
-define i32 @udivrem1(i32 zeroext %a0, i32 zeroext %a1, i32* nocapture %r) nounwind {
+define i32 @udivrem1(i32 signext %a0, i32 signext %a1, i32* nocapture %r) nounwind {
 entry:
 ; ALL-LABEL: udivrem1:
 
@@ -193,21 +193,21 @@ entry:
 ; ACC64:         mfhi $[[R0:[0-9]+]]
 ; ACC64:         sw $[[R0]], 0(${{[0-9]+}})
 
-; GPR32:         modu $[[R0:[0-9]+]], $4, $5
-; GPR32-TRAP:    teq $5, $zero, 7
-; NOCHECK-NOT:   teq
-; GPR32:         sw $[[R0]], 0(${{[0-9]+}})
 ; GPR32-DAG:     divu $2, $4, $5
 ; GPR32-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
-
-; GPR64:         modu $[[R0:[0-9]+]], $4, $5
-; GPR64-TRAP:    teq $5, $zero, 7
+; GPR32-DAG:     modu $[[R0:[0-9]+]], $4, $5
+; GPR32-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
-; GPR64:         sw $[[R0]], 0(${{[0-9]+}})
+; GPR32:         sw $[[R0]], 0(${{[0-9]+}})
+
 ; GPR64-DAG:     divu $2, $4, $5
 ; GPR64-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
+; GPR64-DAG:     modu $[[R0:[0-9]+]], $4, $5
+; GPR64-TRAP:    teq $5, $zero, 7
+; NOCHECK-NOT:   teq
+; GPR64:         sw $[[R0]], 0(${{[0-9]+}})
 
 ; ALL: .end udivrem1
 
@@ -335,14 +335,14 @@ entry:
 ; ACC64:         mfhi $[[R0:[0-9]+]]
 ; ACC64:         sd $[[R0]], 0(${{[0-9]+}})
 
-; GPR64:         dmod $[[R0:[0-9]+]], $4, $5
-; GPR64-TRAP:    teq $5, $zero, 7
-; NOCHECK-NOT:   teq
-; GPR64:         sd $[[R0]], 0(${{[0-9]+}})
-
 ; GPR64-DAG:     ddiv $2, $4, $5
 ; GPR64-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
+
+; GPR64-DAG:     dmod $[[R0:[0-9]+]], $4, $5
+; GPR64-TRAP:    teq $5, $zero, 7
+; NOCHECK-NOT:   teq
+; GPR64:         sd $[[R0]], 0(${{[0-9]+}})
 
 ; ALL: .end sdivrem2
 
@@ -370,14 +370,14 @@ entry:
 ; ACC64:         mfhi $[[R0:[0-9]+]]
 ; ACC64:         sd $[[R0]], 0(${{[0-9]+}})
 
+; GPR64-DAG:     ddivu $2, $4, $5
+; GPR64-TRAP:    teq $5, $zero, 7
+; NOCHECK-NOT:   teq
+
 ; GPR64:         dmodu $[[R0:[0-9]+]], $4, $5
 ; GPR64-TRAP:    teq $5, $zero, 7
 ; NOCHECK-NOT:   teq
 ; GPR64:         sd $[[R0]], 0(${{[0-9]+}})
-
-; GPR64-DAG:     ddivu $2, $4, $5
-; GPR64-TRAP:    teq $5, $zero, 7
-; NOCHECK-NOT:   teq
 
 ; ALL: .end udivrem2
 

@@ -109,13 +109,13 @@ public:
       return true;
 
     SmallPtrSet<const NodeT *, 4> OtherChildren;
-    for (const_iterator I = Other->begin(), E = Other->end(); I != E; ++I) {
-      const NodeT *Nd = (*I)->getBlock();
+    for (const DomTreeNodeBase *I : *Other) {
+      const NodeT *Nd = I->getBlock();
       OtherChildren.insert(Nd);
     }
 
-    for (const_iterator I = begin(), E = end(); I != E; ++I) {
-      const NodeT *N = (*I)->getBlock();
+    for (const DomTreeNodeBase *I : *this) {
+      const NodeT *N = I->getBlock();
       if (OtherChildren.count(N) == 0)
         return true;
     }
@@ -126,7 +126,7 @@ public:
     assert(IDom && "No immediate dominator?");
     if (IDom != NewIDom) {
       typename std::vector<DomTreeNodeBase<NodeT> *>::iterator I =
-          std::find(IDom->Children.begin(), IDom->Children.end(), this);
+          find(IDom->Children, this);
       assert(I != IDom->Children.end() &&
              "Not in immediate dominator children set!");
       // I am no longer your child...
@@ -138,8 +138,9 @@ public:
     }
   }
 
-  /// getDFSNumIn/getDFSNumOut - These are an internal implementation detail, do
-  /// not call them.
+  /// getDFSNumIn/getDFSNumOut - These return the DFS visitation order for nodes
+  /// in the dominator tree. They are only guaranteed valid if
+  /// updateDFSNumbers() has been called.
   unsigned getDFSNumIn() const { return DFSNumIn; }
   unsigned getDFSNumOut() const { return DFSNumOut; }
 
@@ -348,17 +349,14 @@ public:
     if (DomTreeNodes.size() != OtherDomTreeNodes.size())
       return true;
 
-    for (typename DomTreeNodeMapType::const_iterator
-             I = this->DomTreeNodes.begin(),
-             E = this->DomTreeNodes.end();
-         I != E; ++I) {
-      NodeT *BB = I->first;
+    for (const auto &DomTreeNode : this->DomTreeNodes) {
+      NodeT *BB = DomTreeNode.first;
       typename DomTreeNodeMapType::const_iterator OI =
           OtherDomTreeNodes.find(BB);
       if (OI == OtherDomTreeNodes.end())
         return true;
 
-      DomTreeNodeBase<NodeT> &MyNd = *I->second;
+      DomTreeNodeBase<NodeT> &MyNd = *DomTreeNode.second;
       DomTreeNodeBase<NodeT> &OtherNd = *OI->second;
 
       if (MyNd.compare(&OtherNd))
@@ -453,7 +451,7 @@ public:
 
     // Compare the result of the tree walk and the dfs numbers, if expensive
     // checks are enabled.
-#ifdef XDEBUG
+#ifdef EXPENSIVE_CHECKS
     assert((!DFSInfoValid ||
             (dominatedBySlowTreeWalk(A, B) == B->DominatedBy(A))) &&
            "Tree walk disagrees with dfs numbers!");
@@ -590,7 +588,7 @@ public:
     DomTreeNodeBase<NodeT> *IDom = Node->getIDom();
     if (IDom) {
       typename std::vector<DomTreeNodeBase<NodeT> *>::iterator I =
-          std::find(IDom->Children.begin(), IDom->Children.end(), Node);
+          find(IDom->Children, Node);
       assert(I != IDom->Children.end() &&
              "Not in immediate dominator children set!");
       // I am no longer your child...

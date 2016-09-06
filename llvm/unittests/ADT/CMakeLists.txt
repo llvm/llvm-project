@@ -7,6 +7,7 @@ set(ADTSources
   APIntTest.cpp
   APSIntTest.cpp
   ArrayRefTest.cpp
+  BitmaskEnumTest.cpp
   BitVectorTest.cpp
   DAGDeltaAlgorithmTest.cpp
   DeltaAlgorithmTest.cpp
@@ -24,15 +25,18 @@ set(ADTSources
   MakeUniqueTest.cpp
   MapVectorTest.cpp
   OptionalTest.cpp
-  OptionSetTest.cpp
   PackedVectorTest.cpp
   PointerEmbeddedIntTest.cpp
   PointerIntPairTest.cpp
   PointerSumTypeTest.cpp
   PointerUnionTest.cpp
   PostOrderIteratorTest.cpp
+  PriorityWorklistTest.cpp
   RangeAdapterTest.cpp
   SCCIteratorTest.cpp
+  ScopeExitTest.cpp
+  SequenceTest.cpp
+  SetVectorTest.cpp
   SmallPtrSetTest.cpp
   SmallStringTest.cpp
   SmallVectorTest.cpp

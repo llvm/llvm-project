@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -disable-mips-delay-filler < %s | FileCheck %s 
+; RUN: llc -march=mipsel -disable-mips-delay-filler -relocation-model=pic < %s | FileCheck %s
 
 @g = external global i32
 
@@ -6,7 +6,7 @@
 ; CHECK:     jalr  $25
 ; CHECK:     nop
 ; CHECK-NOT: move  $gp
-; CHECK:     jalr  $25
+; CHECK:     jr    $25
 
 define void @f0() nounwind {
 entry:

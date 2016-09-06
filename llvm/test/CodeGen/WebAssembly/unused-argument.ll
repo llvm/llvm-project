@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 ; Make sure that argument offsets are correct even if some arguments are unused.
 
@@ -22,7 +22,7 @@ define i32 @unused_second(i32 %x, i32 %y) {
 }
 
 ; CHECK-LABEL: call_something:
-; CHECK-NEXT: {{^}} i32.call $discard=, return_something@FUNCTION{{$}}
+; CHECK-NEXT: {{^}} i32.call $drop=, return_something@FUNCTION{{$}}
 ; CHECK-NEXT: return{{$}}
 declare i32 @return_something()
 define void @call_something() {

@@ -1,4 +1,4 @@
-# RUN: not llc -march=x86-64 -start-after machine-sink -stop-after machine-sink -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 # This test ensures that an error is reported when an unknown subregister index
 # is encountered.
 
@@ -22,7 +22,7 @@ body: |
   bb.0.entry:
     %0 = COPY %edi
     ; CHECK: [[@LINE+1]]:18: use of unknown subregister index 'bit8'
-    %1 = COPY %0:bit8
+    %1 = COPY %0.bit8
     %2 = AND8ri %1, 1, implicit-def %eflags
     %al = COPY %2
     RETQ %al

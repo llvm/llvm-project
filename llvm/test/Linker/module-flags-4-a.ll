@@ -5,6 +5,6 @@
 ; CHECK: linking module flags 'bar': does not have the required value
 
 !0 = !{ i32 1, !"foo", i32 37 }
-!1 = !{ i32 1, !"bar", i32 927 }
+!1 = !{ i32 4, !"bar", i32 927 }
 
 !llvm.module.flags = !{ !0, !1 }

@@ -14,7 +14,6 @@
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "llvm/Support/Allocator.h"
 using namespace clang;
 
 DeclGroup* DeclGroup::Create(ASTContext &C, Decl **Decls, unsigned NumDecls) {

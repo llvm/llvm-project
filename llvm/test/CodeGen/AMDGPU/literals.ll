@@ -54,11 +54,11 @@ entry:
 ; CHECK-NEXT: DOT4 * T[[GPR]].W (MASKED), 1.0
 define void @inline_literal_dot4(float addrspace(1)* %out) {
 entry:
-  %0 = call float @llvm.AMDGPU.dp4(<4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>)
+  %0 = call float @llvm.r600.dot4(<4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>)
   store float %0, float addrspace(1)* %out
   ret void
 }
 
-declare float @llvm.AMDGPU.dp4(<4 x float>, <4 x float>) #1
+declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
 
 attributes #1 = { readnone }

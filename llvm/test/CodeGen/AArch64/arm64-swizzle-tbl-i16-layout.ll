@@ -4,7 +4,7 @@
 ; getting both the endianness wrong and the element indexing wrong.
 define <8 x i16> @foo(<8 x i16> %a) nounwind readnone {
 ; CHECK:	.section	__TEXT,__literal16,16byte_literals
-; CHECK:	.align	4
+; CHECK:	.p2align	4
 ; CHECK:lCPI0_0:
 ; CHECK:	.byte	0                       ; 0x0
 ; CHECK:	.byte	1                       ; 0x1
@@ -24,7 +24,7 @@ define <8 x i16> @foo(<8 x i16> %a) nounwind readnone {
 ; CHECK:	.byte	9                       ; 0x9
 ; CHECK:	.section __TEXT,__text,regular,pure_instructions
 ; CHECK:	.globl	_foo
-; CHECK:	.align	2
+; CHECK:	.p2align	2
 ; CHECK:_foo:                                   ; @foo
 ; CHECK:	adrp	[[BASE:x[0-9]+]], lCPI0_0@PAGE
 ; CHECK:	ldr	q[[REG:[0-9]+]], {{\[}}[[BASE]], lCPI0_0@PAGEOFF]

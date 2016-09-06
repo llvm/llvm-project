@@ -377,7 +377,6 @@ namespace COFF {
     uint8_t  unused[10];
   };
 
-  /// These are not documented in the spec, but are located in WinNT.h.
   enum WeakExternalCharacteristics {
     IMAGE_WEAK_EXTERN_SEARCH_NOLIBRARY = 1,
     IMAGE_WEAK_EXTERN_SEARCH_LIBRARY   = 2,
@@ -530,7 +529,7 @@ namespace COFF {
     EXCEPTION_TABLE,
     CERTIFICATE_TABLE,
     BASE_RELOCATION_TABLE,
-    DEBUG,
+    DEBUG_DIRECTORY,
     ARCHITECTURE,
     GLOBAL_PTR,
     TLS_TABLE,
@@ -599,7 +598,13 @@ namespace COFF {
     IMAGE_DEBUG_TYPE_OMAP_TO_SRC   = 7,
     IMAGE_DEBUG_TYPE_OMAP_FROM_SRC = 8,
     IMAGE_DEBUG_TYPE_BORLAND       = 9,
-    IMAGE_DEBUG_TYPE_CLSID         = 11
+    IMAGE_DEBUG_TYPE_RESERVED10    = 10,
+    IMAGE_DEBUG_TYPE_CLSID         = 11,
+    IMAGE_DEBUG_TYPE_VC_FEATURE    = 12,
+    IMAGE_DEBUG_TYPE_POGO          = 13,
+    IMAGE_DEBUG_TYPE_ILTCG         = 14,
+    IMAGE_DEBUG_TYPE_MPX           = 15,
+    IMAGE_DEBUG_TYPE_REPRO         = 16,
   };
 
   enum BaseRelocationType {
@@ -656,17 +661,7 @@ namespace COFF {
     }
   };
 
-  enum CodeViewLine : unsigned {
-    CVL_LineNumberStartBits = 24,
-    CVL_LineNumberEndDeltaBits = 7,
-    CVL_LineNumberEndDeltaMask = (1U << CVL_LineNumberEndDeltaBits) - 1,
-    CVL_MaxLineNumber = (1U << CVL_LineNumberStartBits) - 1,
-    CVL_IsStatement = 1U << 31,
-    CVL_MaxColumnNumber = UINT16_MAX,
-  };
-
   enum CodeViewIdentifiers {
-    DEBUG_LINE_TABLES_HAVE_COLUMN_RECORDS = 0x1,
     DEBUG_SECTION_MAGIC = 0x4,
   };
 

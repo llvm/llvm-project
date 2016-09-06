@@ -70,7 +70,9 @@ public:
   void handleDiag(const llvm::SMDiagnostic &diag);
 
   /// Retrieve the diagnostic handler to use with the underlying SourceMgr.
-  llvm::SourceMgr::DiagHandlerTy getDiagHandler() { return &handleDiag; }
+  llvm::SourceMgr::DiagHandlerTy getDiagHandler() {
+    return &SourceMgrAdapter::handleDiag;
+  }
 
   /// Retrieve the context to use with the diagnostic handler produced by
   /// \c getDiagHandler().

@@ -3,10 +3,16 @@ set(ASAN_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(ASAN_TESTSUITES)
 set(ASAN_DYNAMIC_TESTSUITES)
 
+# TODO(wwchrome): Re-enable Win64 asan tests when ready.
+# Disable tests for asan Win64 temporarily.
+if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(EXCLUDE_FROM_ALL TRUE)
+endif()
+
 macro(get_bits_for_arch arch bits)
   if (${arch} MATCHES "i386|i686|arm|mips|mipsel")
     set(${bits} 32)
-  elseif (${arch} MATCHES "x86_64|powerpc64|powerpc64le|aarch64|mips64|mips64el")
+  elseif (${arch} MATCHES "x86_64|powerpc64|powerpc64le|aarch64|mips64|mips64el|s390x")
     set(${bits} 64)
   else()
     message(FATAL_ERROR "Unknown target architecture: ${arch}")
@@ -94,14 +100,21 @@ if(COMPILER_RT_INCLUDE_TESTS)
   endif()
 endif()
 
+set(LIT_ARGS)
+if(ANDROID)
+  set(LIT_ARGS -j5)
+endif()
+
 add_lit_testsuite(check-asan "Running the AddressSanitizer tests"
   ${ASAN_TESTSUITES}
-  DEPENDS ${ASAN_TEST_DEPS})
-set_target_properties(check-asan PROPERTIES FOLDER "ASan tests")
+  DEPENDS ${ASAN_TEST_DEPS}
+  ARGS ${LIT_ARGS})
+set_target_properties(check-asan PROPERTIES FOLDER "Compiler-RT Misc")
 
 if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
   # Add check-dynamic-asan target. It is a part of check-all only on Windows,
   # where we want to always test both dynamic and static runtime.
+
   if(NOT OS_NAME MATCHES "Windows")
     set(EXCLUDE_FROM_ALL TRUE)
   endif()
@@ -110,8 +123,13 @@ if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
                     ${ASAN_DYNAMIC_TESTSUITES}
                     DEPENDS ${ASAN_DYNAMIC_TEST_DEPS})
   set_target_properties(check-asan-dynamic
-                        PROPERTIES FOLDER "ASan dynamic tests")
+                        PROPERTIES FOLDER "Compiler-RT Misc")
   if(NOT OS_NAME MATCHES "Windows")
     set(EXCLUDE_FROM_ALL FALSE)
   endif()
+endif()
+
+# TODO(wwchrome): Re-enable the tests for asan Win64 when ready.
+if(OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(EXCLUDE_FROM_ALL FALSE)
 endif()

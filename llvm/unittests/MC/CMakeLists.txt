@@ -9,5 +9,5 @@ add_llvm_unittest(MCTests
   Disassembler.cpp
   DwarfLineTables.cpp
   StringTableBuilderTest.cpp
-  YAMLTest.cpp
+  TargetRegistry.cpp
   )

@@ -1,3 +1,26 @@
+/*===---- module.modulemap - intrinsics module map -------------------------===
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ *===-----------------------------------------------------------------------===
+ */
+
 module _Builtin_intrinsics [system] [extern_c] {
   explicit module altivec {
     requires altivec
@@ -24,7 +47,20 @@ module _Builtin_intrinsics [system] [extern_c] {
     export *
 
     header "immintrin.h"
+    textual header "f16cintrin.h"
+    textual header "avxintrin.h"
+    textual header "avx2intrin.h"
+    textual header "avx512fintrin.h"
+    textual header "avx512erintrin.h"
+    textual header "fmaintrin.h"
+
     header "x86intrin.h"
+    textual header "bmiintrin.h"
+    textual header "bmi2intrin.h"
+    textual header "lzcntintrin.h"
+    textual header "xopintrin.h"
+    textual header "fma4intrin.h"
+    textual header "mwaitxintrin.h"
 
     explicit module mm_malloc {
       header "mm_malloc.h"
@@ -39,11 +75,8 @@ module _Builtin_intrinsics [system] [extern_c] {
       header "mmintrin.h"
     }
 
-    explicit module f16c {
-      header "f16cintrin.h"
-    }
-
     explicit module sse {
+      export mm_malloc
       export mmx
       export sse2 // note: for hackish <emmintrin.h> dependency
       header "xmmintrin.h"
@@ -79,57 +112,12 @@ module _Builtin_intrinsics [system] [extern_c] {
       header "ammintrin.h"
     }
 
-    explicit module avx {
-      export sse4_2
-      header "avxintrin.h"
-    }
-
-    explicit module avx2 {
-      export avx
-      header "avx2intrin.h"
-    }
-
-    explicit module avx512f {
-      export avx2
-      header "avx512fintrin.h"
-    }
-
-    explicit module avx512er {
-      header "avx512erintrin.h"
-    }
-
-    explicit module bmi {
-      header "bmiintrin.h"
-    }
-
-    explicit module bmi2 {
-      header "bmi2intrin.h"
-    }
-
-    explicit module fma {
-      header "fmaintrin.h"
-    }
-
-    explicit module fma4 {
-      export sse3
-      header "fma4intrin.h"
-    }
-
-    explicit module lzcnt {
-      header "lzcntintrin.h"
-    }
-
     explicit module popcnt {
       header "popcntintrin.h"
     }
 
     explicit module mm3dnow {
       header "mm3dnow.h"
-    }
-
-    explicit module xop {
-      export fma4
-      header "xopintrin.h"
     }
 
     explicit module aes_pclmul {
@@ -168,4 +156,9 @@ module _Builtin_intrinsics [system] [extern_c] {
 
 module _Builtin_stddef_max_align_t [system] [extern_c] {
   header "__stddef_max_align_t.h"
+}
+
+module opencl_c {
+  requires opencl
+  header "opencl-c.h"
 }

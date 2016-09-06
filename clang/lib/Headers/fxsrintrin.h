@@ -36,19 +36,21 @@ _fxsave(void *__p) {
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
-_fxsave64(void *__p) {
-  return __builtin_ia32_fxsave64(__p);
-}
-
-static __inline__ void __DEFAULT_FN_ATTRS
 _fxrstor(void *__p) {
   return __builtin_ia32_fxrstor(__p);
+}
+
+#ifdef __x86_64__
+static __inline__ void __DEFAULT_FN_ATTRS
+_fxsave64(void *__p) {
+  return __builtin_ia32_fxsave64(__p);
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
 _fxrstor64(void *__p) {
   return __builtin_ia32_fxrstor64(__p);
 }
+#endif
 
 #undef __DEFAULT_FN_ATTRS
 

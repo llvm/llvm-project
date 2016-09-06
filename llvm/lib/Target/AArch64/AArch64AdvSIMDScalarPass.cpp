@@ -61,10 +61,6 @@ STATISTIC(NumScalarInsnsUsed, "Number of scalar instructions used");
 STATISTIC(NumCopiesDeleted, "Number of cross-class copies deleted");
 STATISTIC(NumCopiesInserted, "Number of cross-class copies inserted");
 
-namespace llvm {
-void initializeAArch64AdvSIMDScalarPass(PassRegistry &);
-}
-
 #define AARCH64_ADVSIMD_NAME "AdvSIMD Scalar Operation Optimization"
 
 namespace {
@@ -76,12 +72,12 @@ private:
   // isProfitableToTransform - Predicate function to determine whether an
   // instruction should be transformed to its equivalent AdvSIMD scalar
   // instruction. "add Xd, Xn, Xm" ==> "add Dd, Da, Db", for example.
-  bool isProfitableToTransform(const MachineInstr *MI) const;
+  bool isProfitableToTransform(const MachineInstr &MI) const;
 
   // transformInstruction - Perform the transformation of an instruction
   // to its equivalant AdvSIMD scalar instruction. Update inputs and outputs
   // to be the correct register class, minimizing cross-class copies.
-  void transformInstruction(MachineInstr *MI);
+  void transformInstruction(MachineInstr &MI);
 
   // processMachineBasicBlock - Main optimzation loop.
   bool processMachineBasicBlock(MachineBasicBlock *MBB);
@@ -132,19 +128,19 @@ static bool isFPR64(unsigned Reg, unsigned SubReg,
 
 // getSrcFromCopy - Get the original source register for a GPR64 <--> FPR64
 // copy instruction. Return zero_reg if the instruction is not a copy.
-static unsigned getSrcFromCopy(const MachineInstr *MI,
-                               const MachineRegisterInfo *MRI,
-                               unsigned &SubReg) {
+static MachineOperand *getSrcFromCopy(MachineInstr *MI,
+                                      const MachineRegisterInfo *MRI,
+                                      unsigned &SubReg) {
   SubReg = 0;
   // The "FMOV Xd, Dn" instruction is the typical form.
   if (MI->getOpcode() == AArch64::FMOVDXr ||
       MI->getOpcode() == AArch64::FMOVXDr)
-    return MI->getOperand(1).getReg();
+    return &MI->getOperand(1);
   // A lane zero extract "UMOV.d Xd, Vn[0]" is equivalent. We shouldn't see
   // these at this stage, but it's easy to check for.
   if (MI->getOpcode() == AArch64::UMOVvi64 && MI->getOperand(2).getImm() == 0) {
     SubReg = AArch64::dsub;
-    return MI->getOperand(1).getReg();
+    return &MI->getOperand(1);
   }
   // Or just a plain COPY instruction. This can be directly to/from FPR64,
   // or it can be a dsub subreg reference to an FPR128.
@@ -152,18 +148,18 @@ static unsigned getSrcFromCopy(const MachineInstr *MI,
     if (isFPR64(MI->getOperand(0).getReg(), MI->getOperand(0).getSubReg(),
                 MRI) &&
         isGPR64(MI->getOperand(1).getReg(), MI->getOperand(1).getSubReg(), MRI))
-      return MI->getOperand(1).getReg();
+      return &MI->getOperand(1);
     if (isGPR64(MI->getOperand(0).getReg(), MI->getOperand(0).getSubReg(),
                 MRI) &&
         isFPR64(MI->getOperand(1).getReg(), MI->getOperand(1).getSubReg(),
                 MRI)) {
       SubReg = MI->getOperand(1).getSubReg();
-      return MI->getOperand(1).getReg();
+      return &MI->getOperand(1);
     }
   }
 
   // Otherwise, this is some other kind of instruction.
-  return 0;
+  return nullptr;
 }
 
 // getTransformOpcode - For any opcode for which there is an AdvSIMD equivalent
@@ -189,16 +185,16 @@ static unsigned getTransformOpcode(unsigned Opc) {
   return Opc;
 }
 
-static bool isTransformable(const MachineInstr *MI) {
-  unsigned Opc = MI->getOpcode();
+static bool isTransformable(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
   return Opc != getTransformOpcode(Opc);
 }
 
 // isProfitableToTransform - Predicate function to determine whether an
 // instruction should be transformed to its equivalent AdvSIMD scalar
 // instruction. "add Xd, Xn, Xm" ==> "add Dd, Da, Db", for example.
-bool
-AArch64AdvSIMDScalar::isProfitableToTransform(const MachineInstr *MI) const {
+bool AArch64AdvSIMDScalar::isProfitableToTransform(
+    const MachineInstr &MI) const {
   // If this instruction isn't eligible to be transformed (no SIMD equivalent),
   // early exit since that's the common case.
   if (!isTransformable(MI))
@@ -209,33 +205,33 @@ AArch64AdvSIMDScalar::isProfitableToTransform(const MachineInstr *MI) const {
   unsigned NumNewCopies = 3;
   unsigned NumRemovableCopies = 0;
 
-  unsigned OrigSrc0 = MI->getOperand(1).getReg();
-  unsigned OrigSrc1 = MI->getOperand(2).getReg();
-  unsigned Src0 = 0, SubReg0;
-  unsigned Src1 = 0, SubReg1;
+  unsigned OrigSrc0 = MI.getOperand(1).getReg();
+  unsigned OrigSrc1 = MI.getOperand(2).getReg();
+  unsigned SubReg0;
+  unsigned SubReg1;
   if (!MRI->def_empty(OrigSrc0)) {
     MachineRegisterInfo::def_instr_iterator Def =
         MRI->def_instr_begin(OrigSrc0);
     assert(std::next(Def) == MRI->def_instr_end() && "Multiple def in SSA!");
-    Src0 = getSrcFromCopy(&*Def, MRI, SubReg0);
+    MachineOperand *MOSrc0 = getSrcFromCopy(&*Def, MRI, SubReg0);
     // If the source was from a copy, we don't need to insert a new copy.
-    if (Src0)
+    if (MOSrc0)
       --NumNewCopies;
     // If there are no other users of the original source, we can delete
     // that instruction.
-    if (Src0 && MRI->hasOneNonDBGUse(OrigSrc0))
+    if (MOSrc0 && MRI->hasOneNonDBGUse(OrigSrc0))
       ++NumRemovableCopies;
   }
   if (!MRI->def_empty(OrigSrc1)) {
     MachineRegisterInfo::def_instr_iterator Def =
         MRI->def_instr_begin(OrigSrc1);
     assert(std::next(Def) == MRI->def_instr_end() && "Multiple def in SSA!");
-    Src1 = getSrcFromCopy(&*Def, MRI, SubReg1);
-    if (Src1)
+    MachineOperand *MOSrc1 = getSrcFromCopy(&*Def, MRI, SubReg1);
+    if (MOSrc1)
       --NumNewCopies;
     // If there are no other users of the original source, we can delete
     // that instruction.
-    if (Src1 && MRI->hasOneNonDBGUse(OrigSrc1))
+    if (MOSrc1 && MRI->hasOneNonDBGUse(OrigSrc1))
       ++NumRemovableCopies;
   }
 
@@ -244,14 +240,14 @@ AArch64AdvSIMDScalar::isProfitableToTransform(const MachineInstr *MI) const {
   // any of the uses is a transformable instruction, it's likely the tranforms
   // will chain, enabling us to save a copy there, too. This is an aggressive
   // heuristic that approximates the graph based cost analysis described above.
-  unsigned Dst = MI->getOperand(0).getReg();
+  unsigned Dst = MI.getOperand(0).getReg();
   bool AllUsesAreCopies = true;
   for (MachineRegisterInfo::use_instr_nodbg_iterator
            Use = MRI->use_instr_nodbg_begin(Dst),
            E = MRI->use_instr_nodbg_end();
        Use != E; ++Use) {
     unsigned SubReg;
-    if (getSrcFromCopy(&*Use, MRI, SubReg) || isTransformable(&*Use))
+    if (getSrcFromCopy(&*Use, MRI, SubReg) || isTransformable(*Use))
       ++NumRemovableCopies;
     // If the use is an INSERT_SUBREG, that's still something that can
     // directly use the FPR64, so we don't invalidate AllUsesAreCopies. It's
@@ -279,12 +275,11 @@ AArch64AdvSIMDScalar::isProfitableToTransform(const MachineInstr *MI) const {
   return TransformAll;
 }
 
-static MachineInstr *insertCopy(const TargetInstrInfo *TII, MachineInstr *MI,
+static MachineInstr *insertCopy(const TargetInstrInfo *TII, MachineInstr &MI,
                                 unsigned Dst, unsigned Src, bool IsKill) {
-  MachineInstrBuilder MIB =
-      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AArch64::COPY),
-              Dst)
-          .addReg(Src, getKillRegState(IsKill));
+  MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                    TII->get(AArch64::COPY), Dst)
+                                .addReg(Src, getKillRegState(IsKill));
   DEBUG(dbgs() << "    adding copy: " << *MIB);
   ++NumCopiesInserted;
   return MIB;
@@ -293,43 +288,56 @@ static MachineInstr *insertCopy(const TargetInstrInfo *TII, MachineInstr *MI,
 // transformInstruction - Perform the transformation of an instruction
 // to its equivalant AdvSIMD scalar instruction. Update inputs and outputs
 // to be the correct register class, minimizing cross-class copies.
-void AArch64AdvSIMDScalar::transformInstruction(MachineInstr *MI) {
-  DEBUG(dbgs() << "Scalar transform: " << *MI);
+void AArch64AdvSIMDScalar::transformInstruction(MachineInstr &MI) {
+  DEBUG(dbgs() << "Scalar transform: " << MI);
 
-  MachineBasicBlock *MBB = MI->getParent();
-  unsigned OldOpc = MI->getOpcode();
+  MachineBasicBlock *MBB = MI.getParent();
+  unsigned OldOpc = MI.getOpcode();
   unsigned NewOpc = getTransformOpcode(OldOpc);
   assert(OldOpc != NewOpc && "transform an instruction to itself?!");
 
   // Check if we need a copy for the source registers.
-  unsigned OrigSrc0 = MI->getOperand(1).getReg();
-  unsigned OrigSrc1 = MI->getOperand(2).getReg();
+  unsigned OrigSrc0 = MI.getOperand(1).getReg();
+  unsigned OrigSrc1 = MI.getOperand(2).getReg();
   unsigned Src0 = 0, SubReg0;
   unsigned Src1 = 0, SubReg1;
+  bool KillSrc0 = false, KillSrc1 = false;
   if (!MRI->def_empty(OrigSrc0)) {
     MachineRegisterInfo::def_instr_iterator Def =
         MRI->def_instr_begin(OrigSrc0);
     assert(std::next(Def) == MRI->def_instr_end() && "Multiple def in SSA!");
-    Src0 = getSrcFromCopy(&*Def, MRI, SubReg0);
+    MachineOperand *MOSrc0 = getSrcFromCopy(&*Def, MRI, SubReg0);
     // If there are no other users of the original source, we can delete
     // that instruction.
-    if (Src0 && MRI->hasOneNonDBGUse(OrigSrc0)) {
-      assert(Src0 && "Can't delete copy w/o a valid original source!");
-      Def->eraseFromParent();
-      ++NumCopiesDeleted;
+    if (MOSrc0) {
+      Src0 = MOSrc0->getReg();
+      KillSrc0 = MOSrc0->isKill();
+      // Src0 is going to be reused, thus, it cannot be killed anymore.
+      MOSrc0->setIsKill(false);
+      if (MRI->hasOneNonDBGUse(OrigSrc0)) {
+        assert(MOSrc0 && "Can't delete copy w/o a valid original source!");
+        Def->eraseFromParent();
+        ++NumCopiesDeleted;
+      }
     }
   }
   if (!MRI->def_empty(OrigSrc1)) {
     MachineRegisterInfo::def_instr_iterator Def =
         MRI->def_instr_begin(OrigSrc1);
     assert(std::next(Def) == MRI->def_instr_end() && "Multiple def in SSA!");
-    Src1 = getSrcFromCopy(&*Def, MRI, SubReg1);
+    MachineOperand *MOSrc1 = getSrcFromCopy(&*Def, MRI, SubReg1);
     // If there are no other users of the original source, we can delete
     // that instruction.
-    if (Src1 && MRI->hasOneNonDBGUse(OrigSrc1)) {
-      assert(Src1 && "Can't delete copy w/o a valid original source!");
-      Def->eraseFromParent();
-      ++NumCopiesDeleted;
+    if (MOSrc1) {
+      Src1 = MOSrc1->getReg();
+      KillSrc1 = MOSrc1->isKill();
+      // Src0 is going to be reused, thus, it cannot be killed anymore.
+      MOSrc1->setIsKill(false);
+      if (MRI->hasOneNonDBGUse(OrigSrc1)) {
+        assert(MOSrc1 && "Can't delete copy w/o a valid original source!");
+        Def->eraseFromParent();
+        ++NumCopiesDeleted;
+      }
     }
   }
   // If we weren't able to reference the original source directly, create a
@@ -337,12 +345,14 @@ void AArch64AdvSIMDScalar::transformInstruction(MachineInstr *MI) {
   if (!Src0) {
     SubReg0 = 0;
     Src0 = MRI->createVirtualRegister(&AArch64::FPR64RegClass);
-    insertCopy(TII, MI, Src0, OrigSrc0, true);
+    insertCopy(TII, MI, Src0, OrigSrc0, KillSrc0);
+    KillSrc0 = true;
   }
   if (!Src1) {
     SubReg1 = 0;
     Src1 = MRI->createVirtualRegister(&AArch64::FPR64RegClass);
-    insertCopy(TII, MI, Src1, OrigSrc1, true);
+    insertCopy(TII, MI, Src1, OrigSrc1, KillSrc1);
+    KillSrc1 = true;
   }
 
   // Create a vreg for the destination.
@@ -353,17 +363,17 @@ void AArch64AdvSIMDScalar::transformInstruction(MachineInstr *MI) {
   // For now, all of the new instructions have the same simple three-register
   // form, so no need to special case based on what instruction we're
   // building.
-  BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(NewOpc), Dst)
-      .addReg(Src0, getKillRegState(true), SubReg0)
-      .addReg(Src1, getKillRegState(true), SubReg1);
+  BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(NewOpc), Dst)
+      .addReg(Src0, getKillRegState(KillSrc0), SubReg0)
+      .addReg(Src1, getKillRegState(KillSrc1), SubReg1);
 
   // Now copy the result back out to a GPR.
   // FIXME: Try to avoid this if all uses could actually just use the FPR64
   // directly.
-  insertCopy(TII, MI, MI->getOperand(0).getReg(), Dst, true);
+  insertCopy(TII, MI, MI.getOperand(0).getReg(), Dst, true);
 
   // Erase the old instruction.
-  MI->eraseFromParent();
+  MI.eraseFromParent();
 
   ++NumScalarInsnsUsed;
 }
@@ -372,8 +382,7 @@ void AArch64AdvSIMDScalar::transformInstruction(MachineInstr *MI) {
 bool AArch64AdvSIMDScalar::processMachineBasicBlock(MachineBasicBlock *MBB) {
   bool Changed = false;
   for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;) {
-    MachineInstr *MI = I;
-    ++I;
+    MachineInstr &MI = *I++;
     if (isProfitableToTransform(MI)) {
       transformInstruction(MI);
       Changed = true;
@@ -386,6 +395,9 @@ bool AArch64AdvSIMDScalar::processMachineBasicBlock(MachineBasicBlock *MBB) {
 bool AArch64AdvSIMDScalar::runOnMachineFunction(MachineFunction &mf) {
   bool Changed = false;
   DEBUG(dbgs() << "***** AArch64AdvSIMDScalar *****\n");
+
+  if (skipFunction(*mf.getFunction()))
+    return false;
 
   MRI = &mf.getRegInfo();
   TII = mf.getSubtarget().getInstrInfo();

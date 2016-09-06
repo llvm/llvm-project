@@ -45,6 +45,7 @@ name:            mm_update_next_owner
 alignment:       4
 exposesReturnsTwice: false
 hasInlineAsm:    true
+allVRegsAllocated: true
 isSSA:           false
 tracksRegLiveness: true
 tracksSubRegLiveness: false

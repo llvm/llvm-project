@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -fdiagnostics-show-option -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fdiagnostics-show-option -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -fdiagnostics-show-option -verify -std=c++11 %s
 
 // C++98 [basic.lookup.classref]p1:
 //   In a class member access expression (5.2.5), if the . or -> token is
@@ -21,10 +23,16 @@
 
 // From PR 7247
 template<typename T>
-struct set{};  // expected-note{{lookup from the current scope refers here}}
+struct set{};
+#if __cplusplus <= 199711L
+// expected-note@-2 {{lookup from the current scope refers here}}
+#endif
 struct Value {
   template<typename T>
-  void set(T value) {}  // expected-note{{lookup in the object type 'Value' refers here}}
+  void set(T value) {}
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{lookup in the object type 'Value' refers here}}
+#endif
 
   void resolves_to_same() {
     Value v;
@@ -36,7 +44,10 @@ void resolves_to_different() {
     Value v;
     // The fact that the next line is a warning rather than an error is an
     // extension.
-    v.set<double>(3.2);  // expected-warning{{lookup of 'set' in member access expression is ambiguous; using member of 'Value'}}
+    v.set<double>(3.2);
+#if __cplusplus <= 199711L
+    // expected-warning@-2 {{lookup of 'set' in member access expression is ambiguous; using member of 'Value'}}
+#endif
   }
   {
     int set;  // Non-template.

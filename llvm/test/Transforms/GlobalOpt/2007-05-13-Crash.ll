@@ -8,7 +8,7 @@ target triple = "i686-apple-darwin8"
         %struct.__builtin_CFString = type { i32*, i32, i8*, i32 }
 @_ZZ19SFLGetVisibilityKeyvE19_kSFLLVisibilityKey = internal global %struct.__CFString* null             ; <%struct.__CFString**> [#uses=2]
 @_ZZ22SFLGetAlwaysVisibleKeyvE22_kSFLLAlwaysVisibleKey = internal global %struct.__CFString* null               ; <%struct.__CFString**> [#uses=7]
-internal constant %struct.__builtin_CFString {
+@0 = internal constant %struct.__builtin_CFString {
     i32* getelementptr ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), 
     i32 1992, 
     i8* getelementptr ([14 x i8], [14 x i8]* @.str, i32 0, i32 0), 

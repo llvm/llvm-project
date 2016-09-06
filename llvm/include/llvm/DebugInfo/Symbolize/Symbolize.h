@@ -19,6 +19,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace llvm {
 namespace symbolize {
@@ -40,7 +41,7 @@ public:
             bool RelativeAddresses = false, std::string DefaultArch = "")
         : PrintFunctions(PrintFunctions), UseSymbolTable(UseSymbolTable),
           Demangle(Demangle), RelativeAddresses(RelativeAddresses),
-          DefaultArch(DefaultArch) {}
+          DefaultArch(std::move(DefaultArch)) {}
   };
 
   LLVMSymbolizer(const Options &Opts = Options()) : Opts(Opts) {}
@@ -48,12 +49,12 @@ public:
     flush();
   }
 
-  ErrorOr<DILineInfo> symbolizeCode(const std::string &ModuleName,
-                                    uint64_t ModuleOffset);
-  ErrorOr<DIInliningInfo> symbolizeInlinedCode(const std::string &ModuleName,
-                                               uint64_t ModuleOffset);
-  ErrorOr<DIGlobal> symbolizeData(const std::string &ModuleName,
-                                  uint64_t ModuleOffset);
+  Expected<DILineInfo> symbolizeCode(const std::string &ModuleName,
+                                     uint64_t ModuleOffset);
+  Expected<DIInliningInfo> symbolizeInlinedCode(const std::string &ModuleName,
+                                                uint64_t ModuleOffset);
+  Expected<DIGlobal> symbolizeData(const std::string &ModuleName,
+                                   uint64_t ModuleOffset);
   void flush();
   static std::string DemangleName(const std::string &Name,
                                   const SymbolizableModule *ModInfo);
@@ -63,8 +64,13 @@ private:
   // corresponding debug info. These objects can be the same.
   typedef std::pair<ObjectFile*, ObjectFile*> ObjectPair;
 
-  ErrorOr<SymbolizableModule *>
+  /// Returns a SymbolizableModule or an error if loading debug info failed.
+  /// Only one attempt is made to load a module, and errors during loading are
+  /// only reported once. Subsequent calls to get module info for a module that
+  /// failed to load will return nullptr.
+  Expected<SymbolizableModule *>
   getOrCreateModuleInfo(const std::string &ModuleName);
+
   ObjectFile *lookUpDsymFile(const std::string &Path,
                              const MachOObjectFile *ExeObj,
                              const std::string &ArchName);
@@ -73,27 +79,27 @@ private:
                                     const std::string &ArchName);
 
   /// \brief Returns pair of pointers to object and debug object.
-  ErrorOr<ObjectPair> getOrCreateObjectPair(const std::string &Path,
+  Expected<ObjectPair> getOrCreateObjectPair(const std::string &Path,
                                             const std::string &ArchName);
 
   /// \brief Return a pointer to object file at specified path, for a specified
   /// architecture (e.g. if path refers to a Mach-O universal binary, only one
   /// object file from it will be returned).
-  ErrorOr<ObjectFile *> getOrCreateObject(const std::string &Path,
+  Expected<ObjectFile *> getOrCreateObject(const std::string &Path,
                                           const std::string &ArchName);
 
-  std::map<std::string, ErrorOr<std::unique_ptr<SymbolizableModule>>> Modules;
+  std::map<std::string, std::unique_ptr<SymbolizableModule>> Modules;
 
   /// \brief Contains cached results of getOrCreateObjectPair().
-  std::map<std::pair<std::string, std::string>, ErrorOr<ObjectPair>>
+  std::map<std::pair<std::string, std::string>, ObjectPair>
       ObjectPairForPathArch;
 
   /// \brief Contains parsed binary for each path, or parsing error.
-  std::map<std::string, ErrorOr<OwningBinary<Binary>>> BinaryForPath;
+  std::map<std::string, OwningBinary<Binary>> BinaryForPath;
 
   /// \brief Parsed object file for path/architecture pair, where "path" refers
   /// to Mach-O universal binary.
-  std::map<std::pair<std::string, std::string>, ErrorOr<std::unique_ptr<ObjectFile>>>
+  std::map<std::pair<std::string, std::string>, std::unique_ptr<ObjectFile>>
       ObjectForUBPathAndArch;
 
   Options Opts;

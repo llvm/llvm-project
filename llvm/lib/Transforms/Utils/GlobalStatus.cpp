@@ -20,11 +20,11 @@ using namespace llvm;
 /// and release, then return AcquireRelease.
 ///
 static AtomicOrdering strongerOrdering(AtomicOrdering X, AtomicOrdering Y) {
-  if (X == Acquire && Y == Release)
-    return AcquireRelease;
-  if (Y == Acquire && X == Release)
-    return AcquireRelease;
-  return (AtomicOrdering)std::max(X, Y);
+  if (X == AtomicOrdering::Acquire && Y == AtomicOrdering::Release)
+    return AtomicOrdering::AcquireRelease;
+  if (Y == AtomicOrdering::Acquire && X == AtomicOrdering::Release)
+    return AtomicOrdering::AcquireRelease;
+  return (AtomicOrdering)std::max((unsigned)X, (unsigned)Y);
 }
 
 /// It is safe to destroy a constant iff it is only used by constants itself.
@@ -105,7 +105,7 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
               }
             }
 
-            if (StoredVal == GV->getInitializer()) {
+            if (GV->hasInitializer() && StoredVal == GV->getInitializer()) {
               if (GS.StoredType < GlobalStatus::InitializerStored)
                 GS.StoredType = GlobalStatus::InitializerStored;
             } else if (isa<LoadInst>(StoredVal) &&
@@ -185,4 +185,4 @@ GlobalStatus::GlobalStatus()
     : IsCompared(false), IsLoaded(false), StoredType(NotStored),
       StoredOnceValue(nullptr), AccessingFunction(nullptr),
       HasMultipleAccessingFunctions(false), HasNonInstructionUser(false),
-      Ordering(NotAtomic) {}
+      Ordering(AtomicOrdering::NotAtomic) {}

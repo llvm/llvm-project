@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -indvars | grep "= icmp" | count 3
+; RUN: opt < %s -S -indvars | FileCheck %s
 ; PR4914.ll
 
 ; Indvars should be able to do range analysis and eliminate icmps.
@@ -10,6 +10,11 @@
 @0 = private constant [4 x i8] c"%d\0A\00", align 1 ; <[4 x i8]*> [#uses=1]
 
 define i32 @main() nounwind {
+; CHECK-LABEL: @main(
+; CHECK: = icmp
+; CHECK: = icmp
+; CHECK: = icmp
+; CHECK-NOT: = icmp
 bb:
   br label %bb1
 

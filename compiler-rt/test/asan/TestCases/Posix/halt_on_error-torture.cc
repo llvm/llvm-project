@@ -2,22 +2,21 @@
 //
 // RUN: %clangxx_asan -fsanitize-recover=address -pthread %s -o %t
 //
-// RUN: %env_asan_opts=halt_on_error=false:suppress_equal_pcs=false %run %t 1 10 >1.txt 2>&1
+// RUN: rm -f 1.txt
+// RUN: %env_asan_opts=halt_on_error=false:suppress_equal_pcs=false %run %t 1 10 >>1.txt 2>&1
 // RUN: FileCheck %s < 1.txt
 // RUN: [ $(grep -c 'ERROR: AddressSanitizer: use-after-poison' 1.txt) -eq 10 ]
 // RUN: FileCheck --check-prefix=CHECK-NO-COLLISION %s < 1.txt
 //
 // Collisions are unlikely but still possible so we need the ||.
-// RUN: %env_asan_opts=halt_on_error=false:suppress_equal_pcs=false %run %t 10 20 >10.txt 2>&1 || true
-// This one is racy although _very_ unlikely to fail:
-// RUN: FileCheck %s < 10.txt
-// RUN: FileCheck --check-prefix=CHECK-COLLISION %s < 1.txt || FileCheck --check-prefix=CHECK-NO-COLLISION %s < 1.txt
+// RUN: rm -f 10.txt
+// RUN: %env_asan_opts=halt_on_error=false:suppress_equal_pcs=false %run %t 10 20 >>10.txt 2>&1 || true
+// RUN: FileCheck --check-prefix=CHECK-COLLISION %s < 10.txt || FileCheck --check-prefix=CHECK-NO-COLLISION %s < 10.txt
 //
 // Collisions are unlikely but still possible so we need the ||.
-// RUN: %env_asan_opts=halt_on_error=false %run %t 10 20 >10.txt 2>&1 || true
-// This one is racy although _very_ unlikely to fail:
-// RUN: FileCheck %s < 10.txt
-// RUN: FileCheck --check-prefix=CHECK-COLLISION %s < 1.txt || FileCheck --check-prefix=CHECK-NO-COLLISION %s < 1.txt
+// RUN: rm -f 20.txt
+// RUN: %env_asan_opts=halt_on_error=false %run %t 10 20 >>20.txt 2>&1 || true
+// RUN: FileCheck --check-prefix=CHECK-COLLISION %s < 20.txt || FileCheck --check-prefix=CHECK-NO-COLLISION %s < 20.txt
 
 #include <stdio.h>
 #include <stdlib.h>

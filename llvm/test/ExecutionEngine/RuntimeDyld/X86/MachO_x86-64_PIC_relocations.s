@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -relocation-model=pic -filetype=obj -o %T/test_x86-64.o %s
+# RUN: llvm-mc -triple=x86_64-apple-macosx10.9 -filetype=obj -o %T/test_x86-64.o %s
 # RUN: llvm-rtdyld -triple=x86_64-apple-macosx10.9 -dummy-extern ds1=0xfffffffffffffffe -dummy-extern ds2=0xffffffffffffffff -verify -check=%s %/T/test_x86-64.o
 
         .section	__TEXT,__text,regular,pure_instructions
@@ -62,10 +62,25 @@ z2:
         .globl  abssym
 abssym = 0xdeadbeef
 
-	# Test subtractor relocations.
-# rtdyld-check: *{8}z3 = z4 - z5 + 4
-z3:
+# Test subtractor relocations between named symbols.
+# rtdyld-check: *{8}z3a = z4 - z5 + 4
+z3a:
         .quad  z4 - z5 + 4
+
+# Test subtractor relocations between anonymous symbols.
+# rtdyld-check: *{8}z3b = (section_addr(test_x86-64.o, _tmp3) + 4) - (section_addr(test_x86-64.o, _tmp4)) + 8
+z3b:
+        .quad  Lanondiff_1 - Lanondiff_2 + 8
+
+# Test subtractor relocations between named and anonymous symbols.
+# rtdyld-check: *{8}z3c = z4 - (section_addr(test_x86-64.o, _tmp4)) + 12
+z3c:
+        .quad  z4 - Lanondiff_2 + 12
+
+# Test subtractor relocations between anonymous and named symbols.
+# rtdyld-check: *{8}z3d = (section_addr(test_x86-64.o, _tmp3) + 4) - z4 + 16
+z3d:
+        .quad  Lanondiff_1 - z4 + 16
 
         .section        __DATA,_tmp1
 z4:
@@ -73,6 +88,15 @@ z4:
 
         .section        __DATA,_tmp2
 z5:
+        .byte 1
+
+        .section        __DATA,_tmp3
+        .long 1         # padding to make sure we handle non-zero offsets.
+Lanondiff_1:
+        .byte 1
+
+        .section        __DATA,_tmp4
+Lanondiff_2:
         .byte 1
 
 .subsections_via_symbols

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=cyclone -verify-machineinstrs -aarch64-ccmp -aarch64-stress-ccmp | FileCheck %s
+; RUN: llc < %s -mcpu=cyclone -verify-machineinstrs -aarch64-enable-ccmp -aarch64-stress-ccmp | FileCheck %s
 target triple = "arm64-apple-ios"
 
 ; CHECK: single_same

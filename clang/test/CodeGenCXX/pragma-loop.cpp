@@ -9,6 +9,7 @@ void while_test(int *List, int Length) {
 #pragma clang loop interleave_count(4)
 #pragma clang loop vectorize_width(4)
 #pragma clang loop unroll(full)
+#pragma clang loop distribute(enable)
   while (i < Length) {
     // CHECK: br label {{.*}}, !llvm.loop ![[LOOP_1:.*]]
     List[i] = i * 2;
@@ -20,7 +21,7 @@ void while_test(int *List, int Length) {
 void do_test(int *List, int Length) {
   int i = 0;
 
-#pragma clang loop vectorize_width(8) interleave_count(4) unroll(disable)
+#pragma clang loop vectorize_width(8) interleave_count(4) unroll(disable) distribute(disable)
   do {
     // CHECK: br i1 {{.*}}, label {{.*}}, label {{.*}}, !llvm.loop ![[LOOP_2:.*]]
     List[i] = i * 2;
@@ -55,7 +56,7 @@ void for_range_test() {
 
 // Verify disable pragma clang loop directive generates correct metadata
 void disable_test(int *List, int Length) {
-#pragma clang loop vectorize(disable) unroll(disable)
+#pragma clang loop vectorize(disable) unroll(disable) distribute(disable)
   for (int i = 0; i < Length; i++) {
     // CHECK: br label {{.*}}, !llvm.loop ![[LOOP_5:.*]]
     List[i] = i * 2;
@@ -157,20 +158,22 @@ void template_test(double *List, int Length) {
   for_template_constant_expression_test<double, 2, 4, 8>(List, Length);
 }
 
-// CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], ![[WIDTH_4:.*]], ![[INTERLEAVE_4:.*]], ![[INTENABLE_1:.*]], ![[UNROLL_FULL:.*]]}
+// CHECK: ![[LOOP_1]] = distinct !{![[LOOP_1]], ![[WIDTH_4:.*]], ![[INTERLEAVE_4:.*]], ![[INTENABLE_1:.*]], ![[UNROLL_FULL:.*]], ![[DISTRIBUTE_ENABLE:.*]]}
 // CHECK: ![[WIDTH_4]] = !{!"llvm.loop.vectorize.width", i32 4}
 // CHECK: ![[INTERLEAVE_4]] = !{!"llvm.loop.interleave.count", i32 4}
 // CHECK: ![[INTENABLE_1]] = !{!"llvm.loop.vectorize.enable", i1 true}
 // CHECK: ![[UNROLL_FULL]] = !{!"llvm.loop.unroll.full"}
-// CHECK: ![[LOOP_2]] = distinct !{![[LOOP_2:.*]], ![[WIDTH_8:.*]], ![[INTERLEAVE_4:.*]], ![[UNROLL_DISABLE:.*]]}
+// CHECK: ![[DISTRIBUTE_ENABLE]] = !{!"llvm.loop.distribute.enable", i1 true}
+// CHECK: ![[LOOP_2]] = distinct !{![[LOOP_2:.*]], ![[WIDTH_8:.*]], ![[INTERLEAVE_4:.*]], ![[UNROLL_DISABLE:.*]], ![[DISTRIBUTE_DISABLE:.*]]}
 // CHECK: ![[WIDTH_8]] = !{!"llvm.loop.vectorize.width", i32 8}
 // CHECK: ![[UNROLL_DISABLE]] = !{!"llvm.loop.unroll.disable"}
+// CHECK: ![[DISTRIBUTE_DISABLE]] = !{!"llvm.loop.distribute.enable", i1 false}
 // CHECK: ![[LOOP_3]] = distinct !{![[LOOP_3]], ![[INTERLEAVE_4:.*]], ![[UNROLL_8:.*]], ![[INTENABLE_1:.*]]}
 // CHECK: ![[UNROLL_8]] = !{!"llvm.loop.unroll.count", i32 8}
 // CHECK: ![[LOOP_4]] = distinct !{![[LOOP_4]], ![[WIDTH_2:.*]], ![[INTERLEAVE_2:.*]]}
 // CHECK: ![[WIDTH_2]] = !{!"llvm.loop.vectorize.width", i32 2}
 // CHECK: ![[INTERLEAVE_2]] = !{!"llvm.loop.interleave.count", i32 2}
-// CHECK: ![[LOOP_5]] = distinct !{![[LOOP_5]], ![[WIDTH_1:.*]], ![[UNROLL_DISABLE:.*]]}
+// CHECK: ![[LOOP_5]] = distinct !{![[LOOP_5]], ![[WIDTH_1:.*]], ![[UNROLL_DISABLE:.*]], ![[DISTRIBUTE_DISABLE:.*]]}
 // CHECK: ![[WIDTH_1]] = !{!"llvm.loop.vectorize.width", i32 1}
 // CHECK: ![[LOOP_6]] = distinct !{![[LOOP_6]], ![[WIDTH_2:.*]], ![[INTERLEAVE_2:.*]], ![[UNROLL_8:.*]]}
 // CHECK: ![[LOOP_7]] = distinct !{![[LOOP_7]], ![[WIDTH_5:.*]]}

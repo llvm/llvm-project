@@ -18,10 +18,13 @@
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MD5.h"
+
+static llvm::cl::opt<bool> EnableValueProfiling(
+  "enable-value-profiling", llvm::cl::ZeroOrMore,
+  llvm::cl::desc("Enable value profiling"), llvm::cl::init(false));
 
 using namespace clang;
 using namespace CodeGen;
@@ -34,12 +37,14 @@ void CodeGenPGO::setFuncName(StringRef Name,
       PGOReader ? PGOReader->getVersion() : llvm::IndexedInstrProf::Version);
 
   // If we're generating a profile, create a variable for the name.
-  if (CGM.getCodeGenOpts().ProfileInstrGenerate)
+  if (CGM.getCodeGenOpts().hasProfileClangInstr())
     FuncNameVar = llvm::createPGOFuncNameVar(CGM.getModule(), Linkage, FuncName);
 }
 
 void CodeGenPGO::setFuncName(llvm::Function *Fn) {
   setFuncName(Fn->getName(), Fn->getLinkage());
+  // Create PGOFuncName meta data.
+  llvm::createPGOFuncNameMetadata(*Fn, FuncName);
 }
 
 namespace {
@@ -406,7 +411,8 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
     RecordStmtCount(S);
     Visit(S->getLoopVarStmt());
     Visit(S->getRangeStmt());
-    Visit(S->getBeginEndStmt());
+    Visit(S->getBeginStmt());
+    Visit(S->getEndStmt());
 
     uint64_t ParentCount = CurrentCount;
     BreakContinueStack.push_back(BreakContinue());
@@ -607,7 +613,7 @@ uint64_t PGOHash::finalize() {
 
 void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
   const Decl *D = GD.getDecl();
-  bool InstrumentRegions = CGM.getCodeGenOpts().ProfileInstrGenerate;
+  bool InstrumentRegions = CGM.getCodeGenOpts().hasProfileClangInstr();
   llvm::IndexedInstrProfReader *PGOReader = CGM.getPGOReader();
   if (!InstrumentRegions && !PGOReader)
     return;
@@ -653,12 +659,18 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   FunctionHash = Walker.Hash.finalize();
 }
 
-void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
+bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {
   if (SkipCoverageMapping)
-    return;
-  // Don't map the functions inside the system headers
+    return true;
+
+  // Don't map the functions in system headers.
+  const auto &SM = CGM.getContext().getSourceManager();
   auto Loc = D->getBody()->getLocStart();
-  if (CGM.getContext().getSourceManager().isInSystemHeader(Loc))
+  return SM.isInSystemHeader(Loc);
+}
+
+void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
+  if (skipRegionMappingForDecl(D))
     return;
 
   std::string CoverageMapping;
@@ -679,11 +691,7 @@ void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
 void
 CodeGenPGO::emitEmptyCounterMapping(const Decl *D, StringRef Name,
                                     llvm::GlobalValue::LinkageTypes Linkage) {
-  if (SkipCoverageMapping)
-    return;
-  // Don't map the functions inside the system headers
-  auto Loc = D->getBody()->getLocStart();
-  if (CGM.getContext().getSourceManager().isInSystemHeader(Loc))
+  if (skipRegionMappingForDecl(D))
     return;
 
   std::string CoverageMapping;
@@ -726,7 +734,7 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
 }
 
 void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S) {
-  if (!CGM.getCodeGenOpts().ProfileInstrGenerate || !RegionCounterMap)
+  if (!CGM.getCodeGenOpts().hasProfileClangInstr() || !RegionCounterMap)
     return;
   if (!Builder.GetInsertBlock())
     return;
@@ -740,21 +748,76 @@ void CodeGenPGO::emitCounterIncrement(CGBuilderTy &Builder, const Stmt *S) {
                       Builder.getInt32(Counter)});
 }
 
+// This method either inserts a call to the profile run-time during
+// instrumentation or puts profile data into metadata for PGO use.
+void CodeGenPGO::valueProfile(CGBuilderTy &Builder, uint32_t ValueKind,
+    llvm::Instruction *ValueSite, llvm::Value *ValuePtr) {
+
+  if (!EnableValueProfiling)
+    return;
+
+  if (!ValuePtr || !ValueSite || !Builder.GetInsertBlock())
+    return;
+
+  if (isa<llvm::Constant>(ValuePtr))
+    return;
+
+  bool InstrumentValueSites = CGM.getCodeGenOpts().hasProfileClangInstr();
+  if (InstrumentValueSites && RegionCounterMap) {
+    auto BuilderInsertPoint = Builder.saveIP();
+    Builder.SetInsertPoint(ValueSite);
+    llvm::Value *Args[5] = {
+        llvm::ConstantExpr::getBitCast(FuncNameVar, Builder.getInt8PtrTy()),
+        Builder.getInt64(FunctionHash),
+        Builder.CreatePtrToInt(ValuePtr, Builder.getInt64Ty()),
+        Builder.getInt32(ValueKind),
+        Builder.getInt32(NumValueSites[ValueKind]++)
+    };
+    Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::instrprof_value_profile), Args);
+    Builder.restoreIP(BuilderInsertPoint);
+    return;
+  }
+
+  llvm::IndexedInstrProfReader *PGOReader = CGM.getPGOReader();
+  if (PGOReader && haveRegionCounts()) {
+    // We record the top most called three functions at each call site.
+    // Profile metadata contains "VP" string identifying this metadata
+    // as value profiling data, then a uint32_t value for the value profiling
+    // kind, a uint64_t value for the total number of times the call is
+    // executed, followed by the function hash and execution count (uint64_t)
+    // pairs for each function.
+    if (NumValueSites[ValueKind] >= ProfRecord->getNumValueSites(ValueKind))
+      return;
+
+    llvm::annotateValueSite(CGM.getModule(), *ValueSite, *ProfRecord,
+                            (llvm::InstrProfValueKind)ValueKind,
+                            NumValueSites[ValueKind]);
+
+    NumValueSites[ValueKind]++;
+  }
+}
+
 void CodeGenPGO::loadRegionCounts(llvm::IndexedInstrProfReader *PGOReader,
                                   bool IsInMainFile) {
   CGM.getPGOStats().addVisited(IsInMainFile);
   RegionCounts.clear();
-  if (std::error_code EC =
-          PGOReader->getFunctionCounts(FuncName, FunctionHash, RegionCounts)) {
-    if (EC == llvm::instrprof_error::unknown_function)
+  llvm::Expected<llvm::InstrProfRecord> RecordExpected =
+      PGOReader->getInstrProfRecord(FuncName, FunctionHash);
+  if (auto E = RecordExpected.takeError()) {
+    auto IPE = llvm::InstrProfError::take(std::move(E));
+    if (IPE == llvm::instrprof_error::unknown_function)
       CGM.getPGOStats().addMissing(IsInMainFile);
-    else if (EC == llvm::instrprof_error::hash_mismatch)
+    else if (IPE == llvm::instrprof_error::hash_mismatch)
       CGM.getPGOStats().addMismatched(IsInMainFile);
-    else if (EC == llvm::instrprof_error::malformed)
+    else if (IPE == llvm::instrprof_error::malformed)
       // TODO: Consider a more specific warning for this case.
       CGM.getPGOStats().addMismatched(IsInMainFile);
-    RegionCounts.clear();
+    return;
   }
+  ProfRecord =
+      llvm::make_unique<llvm::InstrProfRecord>(std::move(RecordExpected.get()));
+  RegionCounts = ProfRecord->Counts;
 }
 
 /// \brief Calculate what to divide by to scale weights.

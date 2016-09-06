@@ -8,10 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "gtest/gtest.h"
 #include <array>
-#include <ostream>
 
 using namespace llvm;
 
@@ -32,6 +32,11 @@ TEST(APIntTest, ShiftLeftByZero) {
   EXPECT_FALSE(Shl[1]);
 }
 
+TEST(APIntTest, i64_ArithmeticRightShiftNegative) {
+  const APInt neg_one(64, static_cast<uint64_t>(-1), true);
+  EXPECT_EQ(neg_one, neg_one.ashr(7));
+}
+
 TEST(APIntTest, i128_NegativeCount) {
   APInt Minus3(128, static_cast<uint64_t>(-3), true);
   EXPECT_EQ(126u, Minus3.countLeadingOnes());
@@ -47,9 +52,6 @@ TEST(APIntTest, i128_NegativeCount) {
   EXPECT_EQ(-1, Minus1.getSExtValue());
 }
 
-// XFAIL this test on FreeBSD where the system gcc-4.2.1 seems to miscompile it.
-#if defined(__llvm__) || !defined(__FreeBSD__)
-
 TEST(APIntTest, i33_Count) {
   APInt i33minus2(33, static_cast<uint64_t>(-2), true);
   EXPECT_EQ(0u, i33minus2.countLeadingZeros());
@@ -60,8 +62,6 @@ TEST(APIntTest, i33_Count) {
   EXPECT_EQ(-2, i33minus2.getSExtValue());
   EXPECT_EQ(((uint64_t)-2)&((1ull<<33) -1), i33minus2.getZExtValue());
 }
-
-#endif
 
 TEST(APIntTest, i65_Count) {
   APInt i65(65, 0, true);
@@ -386,6 +386,203 @@ TEST(APIntTest, compareWithHalfInt64Max) {
   EXPECT_TRUE(!a.sle(edgeM1));
   EXPECT_TRUE( a.sgt(edgeM1));
   EXPECT_TRUE( a.sge(edgeM1));
+}
+
+TEST(APIntTest, compareLargeIntegers) {
+  // Make sure all the combinations of signed comparisons work with big ints.
+  auto One = APInt{128, static_cast<uint64_t>(1), true};
+  auto Two = APInt{128, static_cast<uint64_t>(2), true};
+  auto MinusOne = APInt{128, static_cast<uint64_t>(-1), true};
+  auto MinusTwo = APInt{128, static_cast<uint64_t>(-2), true};
+
+  EXPECT_TRUE(!One.slt(One));
+  EXPECT_TRUE(!Two.slt(One));
+  EXPECT_TRUE(MinusOne.slt(One));
+  EXPECT_TRUE(MinusTwo.slt(One));
+
+  EXPECT_TRUE(One.slt(Two));
+  EXPECT_TRUE(!Two.slt(Two));
+  EXPECT_TRUE(MinusOne.slt(Two));
+  EXPECT_TRUE(MinusTwo.slt(Two));
+
+  EXPECT_TRUE(!One.slt(MinusOne));
+  EXPECT_TRUE(!Two.slt(MinusOne));
+  EXPECT_TRUE(!MinusOne.slt(MinusOne));
+  EXPECT_TRUE(MinusTwo.slt(MinusOne));
+
+  EXPECT_TRUE(!One.slt(MinusTwo));
+  EXPECT_TRUE(!Two.slt(MinusTwo));
+  EXPECT_TRUE(!MinusOne.slt(MinusTwo));
+  EXPECT_TRUE(!MinusTwo.slt(MinusTwo));
+}
+
+TEST(APIntTest, rvalue_arithmetic) {
+  // Test all combinations of lvalue/rvalue lhs/rhs of add/sub
+
+  // Lamdba to return an APInt by value, but also provide the raw value of the
+  // allocated data.
+  auto getRValue = [](const char *HexString, uint64_t const *&RawData) {
+    APInt V(129, HexString, 16);
+    RawData = V.getRawData();
+    return V;
+  };
+
+  APInt One(129, "1", 16);
+  APInt Two(129, "2", 16);
+  APInt Three(129, "3", 16);
+  APInt MinusOne = -One;
+
+  const uint64_t *RawDataL = nullptr;
+  const uint64_t *RawDataR = nullptr;
+
+  {
+    // 1 + 1 = 2
+    APInt AddLL = One + One;
+    EXPECT_EQ(AddLL, Two);
+
+    APInt AddLR = One + getRValue("1", RawDataR);
+    EXPECT_EQ(AddLR, Two);
+    EXPECT_EQ(AddLR.getRawData(), RawDataR);
+
+    APInt AddRL = getRValue("1", RawDataL) + One;
+    EXPECT_EQ(AddRL, Two);
+    EXPECT_EQ(AddRL.getRawData(), RawDataL);
+
+    APInt AddRR = getRValue("1", RawDataL) + getRValue("1", RawDataR);
+    EXPECT_EQ(AddRR, Two);
+    EXPECT_EQ(AddRR.getRawData(), RawDataR);
+
+    // LValue's and constants
+    APInt AddLK = One + 1;
+    EXPECT_EQ(AddLK, Two);
+
+    APInt AddKL = 1 + One;
+    EXPECT_EQ(AddKL, Two);
+
+    // RValue's and constants
+    APInt AddRK = getRValue("1", RawDataL) + 1;
+    EXPECT_EQ(AddRK, Two);
+    EXPECT_EQ(AddRK.getRawData(), RawDataL);
+
+    APInt AddKR = 1 + getRValue("1", RawDataR);
+    EXPECT_EQ(AddKR, Two);
+    EXPECT_EQ(AddKR.getRawData(), RawDataR);
+  }
+
+  {
+    // 0x0,FFFF...FFFF + 0x2 = 0x100...0001
+    APInt AllOnes(129, "0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16);
+    APInt HighOneLowOne(129, "100000000000000000000000000000001", 16);
+
+    APInt AddLL = AllOnes + Two;
+    EXPECT_EQ(AddLL, HighOneLowOne);
+
+    APInt AddLR = AllOnes + getRValue("2", RawDataR);
+    EXPECT_EQ(AddLR, HighOneLowOne);
+    EXPECT_EQ(AddLR.getRawData(), RawDataR);
+
+    APInt AddRL = getRValue("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", RawDataL) + Two;
+    EXPECT_EQ(AddRL, HighOneLowOne);
+    EXPECT_EQ(AddRL.getRawData(), RawDataL);
+
+    APInt AddRR = getRValue("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", RawDataL) +
+                  getRValue("2", RawDataR);
+    EXPECT_EQ(AddRR, HighOneLowOne);
+    EXPECT_EQ(AddRR.getRawData(), RawDataR);
+
+    // LValue's and constants
+    APInt AddLK = AllOnes + 2;
+    EXPECT_EQ(AddLK, HighOneLowOne);
+
+    APInt AddKL = 2 + AllOnes;
+    EXPECT_EQ(AddKL, HighOneLowOne);
+
+    // RValue's and constants
+    APInt AddRK = getRValue("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", RawDataL) + 2;
+    EXPECT_EQ(AddRK, HighOneLowOne);
+    EXPECT_EQ(AddRK.getRawData(), RawDataL);
+
+    APInt AddKR = 2 + getRValue("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", RawDataR);
+    EXPECT_EQ(AddKR, HighOneLowOne);
+    EXPECT_EQ(AddKR.getRawData(), RawDataR);
+  }
+
+  {
+    // 2 - 1 = 1
+    APInt SubLL = Two - One;
+    EXPECT_EQ(SubLL, One);
+
+    APInt SubLR = Two - getRValue("1", RawDataR);
+    EXPECT_EQ(SubLR, One);
+    EXPECT_EQ(SubLR.getRawData(), RawDataR);
+
+    APInt SubRL = getRValue("2", RawDataL) - One;
+    EXPECT_EQ(SubRL, One);
+    EXPECT_EQ(SubRL.getRawData(), RawDataL);
+
+    APInt SubRR = getRValue("2", RawDataL) - getRValue("1", RawDataR);
+    EXPECT_EQ(SubRR, One);
+    EXPECT_EQ(SubRR.getRawData(), RawDataR);
+
+    // LValue's and constants
+    APInt SubLK = Two - 1;
+    EXPECT_EQ(SubLK, One);
+
+    APInt SubKL = 2 - One;
+    EXPECT_EQ(SubKL, One);
+
+    // RValue's and constants
+    APInt SubRK = getRValue("2", RawDataL) - 1;
+    EXPECT_EQ(SubRK, One);
+    EXPECT_EQ(SubRK.getRawData(), RawDataL);
+
+    APInt SubKR = 2 - getRValue("1", RawDataR);
+    EXPECT_EQ(SubKR, One);
+    EXPECT_EQ(SubKR.getRawData(), RawDataR);
+  }
+
+  {
+    // 0x100...0001 - 0x0,FFFF...FFFF = 0x2
+    APInt AllOnes(129, "0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16);
+    APInt HighOneLowOne(129, "100000000000000000000000000000001", 16);
+
+    APInt SubLL = HighOneLowOne - AllOnes;
+    EXPECT_EQ(SubLL, Two);
+
+    APInt SubLR = HighOneLowOne -
+                  getRValue("0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", RawDataR);
+    EXPECT_EQ(SubLR, Two);
+    EXPECT_EQ(SubLR.getRawData(), RawDataR);
+
+    APInt SubRL = getRValue("100000000000000000000000000000001", RawDataL) -
+                  AllOnes;
+    EXPECT_EQ(SubRL, Two);
+    EXPECT_EQ(SubRL.getRawData(), RawDataL);
+
+    APInt SubRR = getRValue("100000000000000000000000000000001", RawDataL) -
+                  getRValue("0FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", RawDataR);
+    EXPECT_EQ(SubRR, Two);
+    EXPECT_EQ(SubRR.getRawData(), RawDataR);
+
+    // LValue's and constants
+    // 0x100...0001 - 0x2 = 0x0,FFFF...FFFF
+    APInt SubLK = HighOneLowOne - 2;
+    EXPECT_EQ(SubLK, AllOnes);
+
+    // 2 - (-1) = 3
+    APInt SubKL = 2 - MinusOne;
+    EXPECT_EQ(SubKL, Three);
+
+    // RValue's and constants
+    // 0x100...0001 - 0x2 = 0x0,FFFF...FFFF
+    APInt SubRK = getRValue("100000000000000000000000000000001", RawDataL) - 2;
+    EXPECT_EQ(SubRK, AllOnes);
+    EXPECT_EQ(SubRK.getRawData(), RawDataL);
+
+    APInt SubKR = 2 - getRValue("1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", RawDataR);
+    EXPECT_EQ(SubKR, Three);
+    EXPECT_EQ(SubKR.getRawData(), RawDataR);
+  }
 }
 
 
@@ -994,6 +1191,23 @@ TEST(APIntTest, IsSplat) {
   EXPECT_TRUE(E.isSplat(32));
 }
 
+TEST(APIntTest, isMask) {
+  EXPECT_FALSE(APIntOps::isMask(APInt(32, 0x01010101)));
+  EXPECT_FALSE(APIntOps::isMask(APInt(32, 0xf0000000)));
+  EXPECT_FALSE(APIntOps::isMask(APInt(32, 0xffff0000)));
+  EXPECT_FALSE(APIntOps::isMask(APInt(32, 0xff << 1)));
+
+  for (int N : { 1, 2, 3, 4, 7, 8, 16, 32, 64, 127, 128, 129, 256 }) {
+    EXPECT_FALSE(APIntOps::isMask(APInt(N, 0)));
+
+    APInt One(N, 1);
+    for (int I = 1; I <= N; ++I) {
+      APInt MaskVal = One.shl(I) - 1;
+      EXPECT_TRUE(APIntOps::isMask(MaskVal));
+    }
+  }
+}
+
 #if defined(__clang__)
 // Disable the pragma warning from versions of Clang without -Wself-move
 #pragma clang diagnostic push
@@ -1022,4 +1236,46 @@ TEST(APIntTest, SelfMoveAssignment) {
 #pragma clang diagnostic pop
 #pragma clang diagnostic pop
 #endif
+}
+
+TEST(APIntTest, reverseBits) {
+  EXPECT_EQ(1, APInt(1, 1).reverseBits());
+  EXPECT_EQ(0, APInt(1, 0).reverseBits());
+
+  EXPECT_EQ(3, APInt(2, 3).reverseBits());
+  EXPECT_EQ(3, APInt(2, 3).reverseBits());
+
+  EXPECT_EQ(0xb, APInt(4, 0xd).reverseBits());
+  EXPECT_EQ(0xd, APInt(4, 0xb).reverseBits());
+  EXPECT_EQ(0xf, APInt(4, 0xf).reverseBits());
+
+  EXPECT_EQ(0x30, APInt(7, 0x6).reverseBits());
+  EXPECT_EQ(0x5a, APInt(7, 0x2d).reverseBits());
+
+  EXPECT_EQ(0x0f, APInt(8, 0xf0).reverseBits());
+  EXPECT_EQ(0xf0, APInt(8, 0x0f).reverseBits());
+
+  EXPECT_EQ(0x0f0f, APInt(16, 0xf0f0).reverseBits());
+  EXPECT_EQ(0xf0f0, APInt(16, 0x0f0f).reverseBits());
+
+  EXPECT_EQ(0x0f0f0f0f, APInt(32, 0xf0f0f0f0).reverseBits());
+  EXPECT_EQ(0xf0f0f0f0, APInt(32, 0x0f0f0f0f).reverseBits());
+
+  EXPECT_EQ(0x402880a0 >> 1, APInt(31, 0x05011402).reverseBits());
+
+  EXPECT_EQ(0x0f0f0f0f, APInt(32, 0xf0f0f0f0).reverseBits());
+  EXPECT_EQ(0xf0f0f0f0, APInt(32, 0x0f0f0f0f).reverseBits());
+
+  EXPECT_EQ(0x0f0f0f0f0f0f0f0f, APInt(64, 0xf0f0f0f0f0f0f0f0).reverseBits());
+  EXPECT_EQ(0xf0f0f0f0f0f0f0f0, APInt(64, 0x0f0f0f0f0f0f0f0f).reverseBits());
+
+  for (unsigned N : { 1, 8, 16, 24, 31, 32, 33,
+                      63, 64, 65, 127, 128, 257, 1024 }) {
+    for (unsigned I = 0; I < N; ++I) {
+      APInt X = APInt::getOneBitSet(N, I);
+      APInt Y = APInt::getOneBitSet(N, N - (I + 1));
+      EXPECT_EQ(Y, X.reverseBits());
+      EXPECT_EQ(X, Y.reverseBits());
+    }
+  }
 }

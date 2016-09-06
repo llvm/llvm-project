@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -triple i686-pc-win32 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple i686-pc-win32 -verify -std=c++11 %s
 // PR14993
 
 namespace test1 {
@@ -60,4 +60,9 @@ namespace test11 {
   inline void foo() __attribute__((dllexport));
   inline void bar() __attribute__((dllimport));
   void test() { foo(); bar(); }
+}
+
+namespace test12 {
+  template<typename> constexpr int _S_chk(int *);
+  decltype(_S_chk<int>(nullptr)) n;
 }

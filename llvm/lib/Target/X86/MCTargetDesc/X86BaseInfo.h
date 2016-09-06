@@ -186,11 +186,6 @@ namespace X86II {
     /// dllimport linkage on windows.
     MO_DLLIMPORT,
 
-    /// MO_DARWIN_STUB - On a symbol operand "FOO", this indicates that the
-    /// reference is actually to the "FOO$stub" symbol.  This is used for calls
-    /// and jumps to external functions on Tiger and earlier.
-    MO_DARWIN_STUB,
-
     /// MO_DARWIN_NONLAZY - On a symbol operand "FOO", this indicates that the
     /// reference is actually to the "FOO$non_lazy_ptr" symbol, which is a
     /// non-PIC-base-relative reference to a non-hidden dyld lazy pointer stub.
@@ -200,12 +195,6 @@ namespace X86II {
     /// that the reference is actually to "FOO$non_lazy_ptr - PICBASE", which is
     /// a PIC-base-relative reference to a non-hidden dyld lazy pointer stub.
     MO_DARWIN_NONLAZY_PIC_BASE,
-
-    /// MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE - On a symbol operand "FOO", this
-    /// indicates that the reference is actually to "FOO$non_lazy_ptr -PICBASE",
-    /// which is a PIC-base-relative reference to a hidden dyld lazy pointer
-    /// stub.
-    MO_DARWIN_HIDDEN_NONLAZY_PIC_BASE,
 
     /// MO_TLVP - On a symbol operand this indicates that the immediate is
     /// some TLS offset.
@@ -667,7 +656,7 @@ namespace X86II {
   /// is duplicated in the MCInst (e.g. "EAX = addl EAX, [mem]") it is only
   /// counted as one operand.
   ///
-  inline int getMemoryOperandNo(uint64_t TSFlags, unsigned Opcode) {
+  inline int getMemoryOperandNo(uint64_t TSFlags) {
     bool HasVEX_4V = TSFlags & X86II::VEX_4V;
     bool HasMemOp4 = TSFlags & X86II::MemOp4;
     bool HasEVEX_K = TSFlags & X86II::EVEX_K;
@@ -734,12 +723,12 @@ namespace X86II {
   /// isX86_64ExtendedReg - Is the MachineOperand a x86-64 extended (r8 or
   /// higher) register?  e.g. r8, xmm8, xmm13, etc.
   inline bool isX86_64ExtendedReg(unsigned RegNo) {
-    if ((RegNo > X86::XMM7 && RegNo <= X86::XMM15) ||
-        (RegNo > X86::XMM23 && RegNo <= X86::XMM31) ||
-        (RegNo > X86::YMM7 && RegNo <= X86::YMM15) ||
-        (RegNo > X86::YMM23 && RegNo <= X86::YMM31) ||
-        (RegNo > X86::ZMM7 && RegNo <= X86::ZMM15) ||
-        (RegNo > X86::ZMM23 && RegNo <= X86::ZMM31))
+    if ((RegNo >= X86::XMM8 && RegNo <= X86::XMM15) ||
+        (RegNo >= X86::XMM24 && RegNo <= X86::XMM31) ||
+        (RegNo >= X86::YMM8 && RegNo <= X86::YMM15) ||
+        (RegNo >= X86::YMM24 && RegNo <= X86::YMM31) ||
+        (RegNo >= X86::ZMM8 && RegNo <= X86::ZMM15) ||
+        (RegNo >= X86::ZMM24 && RegNo <= X86::ZMM31))
       return true;
 
     switch (RegNo) {
@@ -762,9 +751,9 @@ namespace X86II {
   /// is32ExtendedReg - Is the MemoryOperand a 32 extended (zmm16 or higher)
   /// registers? e.g. zmm21, etc.
   static inline bool is32ExtendedReg(unsigned RegNo) {
-    return ((RegNo > X86::XMM15 && RegNo <= X86::XMM31) ||
-            (RegNo > X86::YMM15 && RegNo <= X86::YMM31) ||
-            (RegNo > X86::ZMM15 && RegNo <= X86::ZMM31));
+    return ((RegNo >= X86::XMM16 && RegNo <= X86::XMM31) ||
+            (RegNo >= X86::YMM16 && RegNo <= X86::YMM31) ||
+            (RegNo >= X86::ZMM16 && RegNo <= X86::ZMM31));
   }
 
 

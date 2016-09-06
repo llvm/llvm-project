@@ -16,13 +16,11 @@
 #include "CXSourceLocation.h"
 #include "CXString.h"
 
-#include "clang/Frontend/ASTUnit.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
-#include "clang/Frontend/DiagnosticRenderer.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Frontend/ASTUnit.h"
+#include "clang/Frontend/DiagnosticRenderer.h"
+#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;

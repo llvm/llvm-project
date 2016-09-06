@@ -1,8 +1,8 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
-// This test fails on powerpc64 on both VMA (44 and 46).
+// This test fails on powerpc64 big endian.
 // The Tsan report is returning wrong information about
 // the location of the race.
-// XFAIL: powerpc64
+// XFAIL: powerpc64-unknown-linux-gnu
 #include "java.h"
 
 void foobar() {
@@ -13,7 +13,7 @@ void barbaz() {
 
 void *Thread(void *p) {
   barrier_wait(&barrier);
-  __tsan_read1_pc((jptr)p, (jptr)foobar + 1);
+  __tsan_read1_pc((jptr)p, (jptr)foobar + kPCInc);
   return 0;
 }
 
@@ -26,7 +26,7 @@ int main() {
   __tsan_java_alloc(jheap, kBlockSize);
   pthread_t th;
   pthread_create(&th, 0, Thread, (void*)jheap);
-  __tsan_write1_pc((jptr)jheap, (jptr)barbaz + 1);
+  __tsan_write1_pc((jptr)jheap, (jptr)barbaz + kPCInc);
   barrier_wait(&barrier);
   pthread_join(th, 0);
   __tsan_java_free(jheap, kBlockSize);

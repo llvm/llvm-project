@@ -2,8 +2,8 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=CI %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=CI --check-prefix=GCN-HSA %s
 
-declare i32 @llvm.r600.read.tidig.x() #0
-declare i32 @llvm.r600.read.tidig.y() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
+declare i32 @llvm.amdgcn.workitem.id.y() #0
 
 ; In this test both the pointer and the offset operands to the
 ; BUFFER_LOAD instructions end up being stored in vgprs.  This
@@ -26,8 +26,8 @@ declare i32 @llvm.r600.read.tidig.y() #0
 
 define void @mubuf(i32 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
 entry:
-  %tmp = call i32 @llvm.r600.read.tidig.x()
-  %tmp1 = call i32 @llvm.r600.read.tidig.y()
+  %tmp = call i32 @llvm.amdgcn.workitem.id.x()
+  %tmp1 = call i32 @llvm.amdgcn.workitem.id.y()
   %tmp2 = sext i32 %tmp to i64
   %tmp3 = sext i32 %tmp1 to i64
   br label %loop
@@ -51,12 +51,20 @@ done:                                             ; preds = %loop
 }
 
 ; Test moving an SMRD instruction to the VALU
+; FIXME: movs can be moved before nop to reduce count
 
 ; GCN-LABEL: {{^}}smrd_valu:
-; FIXME: We should be using flat load for HSA.
-; GCN: buffer_load_dword [[OUT:v[0-9]+]]
-; GCN-NOHSA: buffer_store_dword [[OUT]]
-; GCN-HSA: flat_store_dword [[OUT]]
+; SI: s_movk_i32 [[OFFSET:s[0-9]+]], 0x2ee0
+; GCN: v_readfirstlane_b32 s[[PTR_LO:[0-9]+]], v{{[0-9]+}}
+; GCN: v_readfirstlane_b32 s[[PTR_HI:[0-9]+]], v{{[0-9]+}}
+; SI: s_nop 3
+; SI: s_load_dword [[OUT:s[0-9]+]], s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, [[OFFSET]]
+; SI: s_mov_b32
+
+; CI: s_load_dword [[OUT:s[0-9]+]], s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0xbb8
+; GCN: v_mov_b32_e32 [[V_OUT:v[0-9]+]], [[OUT]]
+; GCN-NOHSA: buffer_store_dword [[V_OUT]]
+; GCN-HSA: flat_store_dword {{.*}}, [[V_OUT]]
 define void @smrd_valu(i32 addrspace(2)* addrspace(1)* %in, i32 %a, i32 %b, i32 addrspace(1)* %out) #1 {
 entry:
   %tmp = icmp ne i32 %a, 0
@@ -87,7 +95,7 @@ endif:                                            ; preds = %else, %if
 ; GCN-HSA: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
 define void @smrd_valu2(i32 addrspace(1)* %out, [8 x i32] addrspace(2)* %in) #1 {
 entry:
-  %tmp = call i32 @llvm.r600.read.tidig.x() #0
+  %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp, 4
   %tmp2 = getelementptr [8 x i32], [8 x i32] addrspace(2)* %in, i32 %tmp, i32 4
   %tmp3 = load i32, i32 addrspace(2)* %tmp2
@@ -104,10 +112,10 @@ entry:
 ; GCN-NOHSA: v_add_i32_e32
 ; GCN-NOHSA: buffer_store_dword
 ; GCN-HSA: flat_load_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
-; GCN-HSA: flat_store_dword v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
+; GCN-HSA: flat_store_dword v[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}
 define void @smrd_valu_ci_offset(i32 addrspace(1)* %out, i32 addrspace(2)* %in, i32 %c) #1 {
 entry:
-  %tmp = call i32 @llvm.r600.read.tidig.x() #0
+  %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = getelementptr i32, i32 addrspace(2)* %in, i32 %tmp
   %tmp3 = getelementptr i32, i32 addrspace(2)* %tmp2, i32 5000
   %tmp4 = load i32, i32 addrspace(2)* %tmp3
@@ -127,7 +135,7 @@ entry:
 ; GCN-HSA: flat_load_dwordx2 v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}]
 define void @smrd_valu_ci_offset_x2(i64 addrspace(1)* %out, i64 addrspace(2)* %in, i64 %c) #1 {
 entry:
-  %tmp = call i32 @llvm.r600.read.tidig.x() #0
+  %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = getelementptr i64, i64 addrspace(2)* %in, i32 %tmp
   %tmp3 = getelementptr i64, i64 addrspace(2)* %tmp2, i32 5000
   %tmp4 = load i64, i64 addrspace(2)* %tmp3
@@ -149,7 +157,7 @@ entry:
 ; GCN-HSA: flat_load_dwordx4 v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}]
 define void @smrd_valu_ci_offset_x4(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(2)* %in, <4 x i32> %c) #1 {
 entry:
-  %tmp = call i32 @llvm.r600.read.tidig.x() #0
+  %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = getelementptr <4 x i32>, <4 x i32> addrspace(2)* %in, i32 %tmp
   %tmp3 = getelementptr <4 x i32>, <4 x i32> addrspace(2)* %tmp2, i32 1234
   %tmp4 = load <4 x i32>, <4 x i32> addrspace(2)* %tmp3
@@ -185,7 +193,7 @@ entry:
 ; GCN-HSA: flat_load_dwordx4
 define void @smrd_valu_ci_offset_x8(<8 x i32> addrspace(1)* %out, <8 x i32> addrspace(2)* %in, <8 x i32> %c) #1 {
 entry:
-  %tmp = call i32 @llvm.r600.read.tidig.x() #0
+  %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = getelementptr <8 x i32>, <8 x i32> addrspace(2)* %in, i32 %tmp
   %tmp3 = getelementptr <8 x i32>, <8 x i32> addrspace(2)* %tmp2, i32 1234
   %tmp4 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp3
@@ -196,22 +204,14 @@ entry:
 
 ; GCN-LABEL: {{^}}smrd_valu_ci_offset_x16:
 
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x13480{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x13490{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_mov_b32 [[OFFSET2:s[0-9]+]], 0x134a0{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET2]] addr64{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: s_mov_b32 [[OFFSET3:s[0-9]+]], 0x134b0{{$}}
-; GCN-NOHSA-NOT: v_add
-; GCN-NOHSA: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET3]] addr64{{$}}
+; GCN-NOHSA-DAG: s_mov_b32 [[OFFSET0:s[0-9]+]], 0x13480{{$}}
+; GCN-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET0]] addr64{{$}}
+; GCN-NOHSA-DAG: s_mov_b32 [[OFFSET1:s[0-9]+]], 0x13490{{$}}
+; GCN-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET1]] addr64{{$}}
+; GCN-NOHSA-DAG: s_mov_b32 [[OFFSET2:s[0-9]+]], 0x134a0{{$}}
+; GCN-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET2]] addr64{{$}}
+; GCN-NOHSA-DAG: s_mov_b32 [[OFFSET3:s[0-9]+]], 0x134b0{{$}}
+; GCN-NOHSA-DAG: buffer_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+:[0-9]+}}], [[OFFSET3]] addr64{{$}}
 
 ; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
 ; GCN-NOHSA: v_or_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
@@ -234,7 +234,7 @@ entry:
 ; GCN: s_endpgm
 define void @smrd_valu_ci_offset_x16(<16 x i32> addrspace(1)* %out, <16 x i32> addrspace(2)* %in, <16 x i32> %c) #1 {
 entry:
-  %tmp = call i32 @llvm.r600.read.tidig.x() #0
+  %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp2 = getelementptr <16 x i32>, <16 x i32> addrspace(2)* %in, i32 %tmp
   %tmp3 = getelementptr <16 x i32>, <16 x i32> addrspace(2)* %tmp2, i32 1234
   %tmp4 = load <16 x i32>, <16 x i32> addrspace(2)* %tmp3
@@ -248,10 +248,10 @@ entry:
 ; GCN-HSA: flat_load_dword [[MOVED:v[0-9]+]], v[{{[0-9+:[0-9]+}}]
 ; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, s{{[0-9]+}}, [[MOVED]]
 ; GCN-NOHSA: buffer_store_dword [[ADD]]
-; GCN-HSA: flat_store_dword [[ADD]]
+; GCN-HSA: flat_store_dword {{.*}}, [[ADD]]
 define void @smrd_valu2_salu_user(i32 addrspace(1)* %out, [8 x i32] addrspace(2)* %in, i32 %a) #1 {
 entry:
-  %tmp = call i32 @llvm.r600.read.tidig.x() #0
+  %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp, 4
   %tmp2 = getelementptr [8 x i32], [8 x i32] addrspace(2)* %in, i32 %tmp, i32 4
   %tmp3 = load i32, i32 addrspace(2)* %tmp2
@@ -265,7 +265,7 @@ entry:
 ; GCN-HSA flat_load_dword v{{[0-9]}}, v{{[0-9]+:[0-9]+}}
 define void @smrd_valu2_max_smrd_offset(i32 addrspace(1)* %out, [1024 x i32] addrspace(2)* %in) #1 {
 entry:
-  %tmp = call i32 @llvm.r600.read.tidig.x() #0
+  %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp, 4
   %tmp2 = getelementptr [1024 x i32], [1024 x i32] addrspace(2)* %in, i32 %tmp, i32 255
   %tmp3 = load i32, i32 addrspace(2)* %tmp2
@@ -279,7 +279,7 @@ entry:
 ; GCN-HSA: flat_load_dword v{{[0-9]}}, v[{{[0-9]+:[0-9]+}}]
 define void @smrd_valu2_mubuf_offset(i32 addrspace(1)* %out, [1024 x i32] addrspace(2)* %in) #1 {
 entry:
-  %tmp = call i32 @llvm.r600.read.tidig.x() #0
+  %tmp = call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = add i32 %tmp, 4
   %tmp2 = getelementptr [1024 x i32], [1024 x i32] addrspace(2)* %in, i32 %tmp, i32 256
   %tmp3 = load i32, i32 addrspace(2)* %tmp2
@@ -294,7 +294,7 @@ entry:
 ; GCN-HSA: flat_load_dwordx4
 define void @s_load_imm_v8i32(<8 x i32> addrspace(1)* %out, i32 addrspace(2)* nocapture readonly %in) #1 {
 entry:
-  %tmp0 = tail call i32 @llvm.r600.read.tidig.x()
+  %tmp0 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = getelementptr inbounds i32, i32 addrspace(2)* %in, i32 %tmp0
   %tmp2 = bitcast i32 addrspace(2)* %tmp1 to <8 x i32> addrspace(2)*
   %tmp3 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp2, align 4
@@ -317,7 +317,7 @@ entry:
 ; GCN-HSA: flat_load_dwordx4
 define void @s_load_imm_v8i32_salu_user(i32 addrspace(1)* %out, i32 addrspace(2)* nocapture readonly %in) #1 {
 entry:
-  %tmp0 = tail call i32 @llvm.r600.read.tidig.x()
+  %tmp0 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = getelementptr inbounds i32, i32 addrspace(2)* %in, i32 %tmp0
   %tmp2 = bitcast i32 addrspace(2)* %tmp1 to <8 x i32> addrspace(2)*
   %tmp3 = load <8 x i32>, <8 x i32> addrspace(2)* %tmp2, align 4
@@ -354,7 +354,7 @@ entry:
 ; GCN-HSA: flat_load_dwordx4
 define void @s_load_imm_v16i32(<16 x i32> addrspace(1)* %out, i32 addrspace(2)* nocapture readonly %in) #1 {
 entry:
-  %tmp0 = tail call i32 @llvm.r600.read.tidig.x() #1
+  %tmp0 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = getelementptr inbounds i32, i32 addrspace(2)* %in, i32 %tmp0
   %tmp2 = bitcast i32 addrspace(2)* %tmp1 to <16 x i32> addrspace(2)*
   %tmp3 = load <16 x i32>, <16 x i32> addrspace(2)* %tmp2, align 4
@@ -389,7 +389,7 @@ entry:
 ; GCN-HSA: flat_load_dwordx4
 define void @s_load_imm_v16i32_salu_user(i32 addrspace(1)* %out, i32 addrspace(2)* nocapture readonly %in) #1 {
 entry:
-  %tmp0 = tail call i32 @llvm.r600.read.tidig.x() #1
+  %tmp0 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = getelementptr inbounds i32, i32 addrspace(2)* %in, i32 %tmp0
   %tmp2 = bitcast i32 addrspace(2)* %tmp1 to <16 x i32> addrspace(2)*
   %tmp3 = load <16 x i32>, <16 x i32> addrspace(2)* %tmp2, align 4
@@ -428,6 +428,34 @@ entry:
   %add14 = add i32 %add13, %elt15
 
   store i32 %add14, i32 addrspace(1)* %out
+  ret void
+}
+
+; Make sure we legalize vopc operands after moving an sopc to the value.
+
+; {{^}}sopc_vopc_legalize_bug:
+; GCN: s_load_dword [[SGPR:s[0-9]+]]
+; GCN: v_cmp_le_u32_e32 vcc, [[SGPR]], v{{[0-9]+}}
+; GCN: s_and_b64 vcc, exec, vcc
+; GCN: s_cbranch_vccnz [[EXIT:[A-Z0-9_]+]]
+; GCN: v_mov_b32_e32 [[ONE:v[0-9]+]], 1
+; GCN-NOHSA: buffer_store_dword [[ONE]]
+; GCN-HSA: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[ONE]]
+; GCN; {{^}}[[EXIT]]:
+; GCN: s_endpgm
+define void @sopc_vopc_legalize_bug(i32 %cond, i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+bb3:                                              ; preds = %bb2
+  %tmp0 = bitcast i32 %cond to float
+  %tmp1 = fadd float %tmp0, 2.500000e-01
+  %tmp2 = bitcast float %tmp1 to i32
+  %tmp3 = icmp ult i32 %tmp2, %cond
+  br i1 %tmp3, label %bb6, label %bb7
+
+bb6:
+  store i32 1, i32 addrspace(1)* %out
+  br label %bb7
+
+bb7:                                              ; preds = %bb3
   ret void
 }
 

@@ -384,7 +384,7 @@ std::string BugDriver::executeProgram(const Module *Program,
 /// backend, if reference output is not provided.
 ///
 std::string BugDriver::executeProgramSafely(const Module *Program,
-                                            std::string OutputFile,
+                                            const std::string &OutputFile,
                                             std::string *Error) const {
   return executeProgram(Program, OutputFile, "", "", SafeInterpreter, Error);
 }

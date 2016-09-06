@@ -66,22 +66,15 @@ namespace llvm {
 
     bool isPoisoned() const { return (reinterpret_cast<intptr_t>(mi) & 0x1) == 0x1; }
 #endif // EXPENSIVE_CHECKS
-
   };
 
   template <>
-  struct ilist_traits<IndexListEntry> : public ilist_default_traits<IndexListEntry> {
-  private:
-    mutable ilist_half_node<IndexListEntry> Sentinel;
-  public:
-    IndexListEntry *createSentinel() const {
-      return static_cast<IndexListEntry*>(&Sentinel);
-    }
-    void destroySentinel(IndexListEntry *) const {}
+  struct ilist_sentinel_traits<IndexListEntry>
+      : public ilist_half_embedded_sentinel_traits<IndexListEntry> {};
 
-    IndexListEntry *provideInitialHead() const { return createSentinel(); }
-    IndexListEntry *ensureHead(IndexListEntry*) const { return createSentinel(); }
-    static void noteHead(IndexListEntry*, IndexListEntry*) {}
+  template <>
+  struct ilist_traits<IndexListEntry>
+      : public ilist_default_traits<IndexListEntry> {
     void deleteNode(IndexListEntry *N) {}
 
   private:
@@ -99,7 +92,7 @@ namespace llvm {
       Slot_Block,
 
       /// Early-clobber register use/def slot.  A live range defined at
-      /// Slot_EarlyCLobber interferes with normal live ranges killed at
+      /// Slot_EarlyClobber interferes with normal live ranges killed at
       /// Slot_Register.  Also used as the kill slot for live ranges tied to an
       /// early-clobber def.
       Slot_EarlyClobber,
@@ -308,7 +301,6 @@ namespace llvm {
     SlotIndex getPrevIndex() const {
       return SlotIndex(&*--listEntry()->getIterator(), getSlot());
     }
-
   };
 
   template <> struct isPodLike<SlotIndex> { static const bool value = true; };
@@ -382,7 +374,7 @@ namespace llvm {
       initializeSlotIndexesPass(*PassRegistry::getPassRegistry());
     }
 
-    ~SlotIndexes() {
+    ~SlotIndexes() override {
       // The indexList's nodes are all allocated in the BumpPtrAllocator.
       indexList.clearAndLeakNodesUnsafely();
     }
@@ -416,14 +408,14 @@ namespace llvm {
 
     /// Returns true if the given machine instr is mapped to an index,
     /// otherwise returns false.
-    bool hasIndex(const MachineInstr *instr) const {
-      return mi2iMap.count(instr);
+    bool hasIndex(const MachineInstr &instr) const {
+      return mi2iMap.count(&instr);
     }
 
     /// Returns the base index for the given instruction.
-    SlotIndex getInstructionIndex(const MachineInstr *MI) const {
+    SlotIndex getInstructionIndex(const MachineInstr &MI) const {
       // Instructions inside a bundle have the same number as the bundle itself.
-      Mi2IndexMap::const_iterator itr = mi2iMap.find(getBundleStart(MI));
+      Mi2IndexMap::const_iterator itr = mi2iMap.find(&getBundleStart(MI));
       assert(itr != mi2iMap.end() && "Instruction not found in maps.");
       return itr->second;
     }
@@ -449,15 +441,15 @@ namespace llvm {
     /// getIndexBefore - Returns the index of the last indexed instruction
     /// before MI, or the start index of its basic block.
     /// MI is not required to have an index.
-    SlotIndex getIndexBefore(const MachineInstr *MI) const {
-      const MachineBasicBlock *MBB = MI->getParent();
+    SlotIndex getIndexBefore(const MachineInstr &MI) const {
+      const MachineBasicBlock *MBB = MI.getParent();
       assert(MBB && "MI must be inserted inna basic block");
       MachineBasicBlock::const_iterator I = MI, B = MBB->begin();
       for (;;) {
         if (I == B)
           return getMBBStartIdx(MBB);
         --I;
-        Mi2IndexMap::const_iterator MapItr = mi2iMap.find(I);
+        Mi2IndexMap::const_iterator MapItr = mi2iMap.find(&*I);
         if (MapItr != mi2iMap.end())
           return MapItr->second;
       }
@@ -466,15 +458,15 @@ namespace llvm {
     /// getIndexAfter - Returns the index of the first indexed instruction
     /// after MI, or the end index of its basic block.
     /// MI is not required to have an index.
-    SlotIndex getIndexAfter(const MachineInstr *MI) const {
-      const MachineBasicBlock *MBB = MI->getParent();
+    SlotIndex getIndexAfter(const MachineInstr &MI) const {
+      const MachineBasicBlock *MBB = MI.getParent();
       assert(MBB && "MI must be inserted inna basic block");
       MachineBasicBlock::const_iterator I = MI, E = MBB->end();
       for (;;) {
         ++I;
         if (I == E)
           return getMBBEndIdx(MBB);
-        Mi2IndexMap::const_iterator MapItr = mi2iMap.find(I);
+        Mi2IndexMap::const_iterator MapItr = mi2iMap.find(&*I);
         if (MapItr != mi2iMap.end())
           return MapItr->second;
       }
@@ -579,25 +571,25 @@ namespace llvm {
     /// If Late is set and there are null indexes between mi's neighboring
     /// instructions, create the new index after the null indexes instead of
     /// before them.
-    SlotIndex insertMachineInstrInMaps(MachineInstr *mi, bool Late = false) {
-      assert(!mi->isInsideBundle() &&
+    SlotIndex insertMachineInstrInMaps(MachineInstr &MI, bool Late = false) {
+      assert(!MI.isInsideBundle() &&
              "Instructions inside bundles should use bundle start's slot.");
-      assert(mi2iMap.find(mi) == mi2iMap.end() && "Instr already indexed.");
+      assert(mi2iMap.find(&MI) == mi2iMap.end() && "Instr already indexed.");
       // Numbering DBG_VALUE instructions could cause code generation to be
       // affected by debug information.
-      assert(!mi->isDebugValue() && "Cannot number DBG_VALUE instructions.");
+      assert(!MI.isDebugValue() && "Cannot number DBG_VALUE instructions.");
 
-      assert(mi->getParent() != nullptr && "Instr must be added to function.");
+      assert(MI.getParent() != nullptr && "Instr must be added to function.");
 
-      // Get the entries where mi should be inserted.
+      // Get the entries where MI should be inserted.
       IndexList::iterator prevItr, nextItr;
       if (Late) {
-        // Insert mi's index immediately before the following instruction.
-        nextItr = getIndexAfter(mi).listEntry()->getIterator();
+        // Insert MI's index immediately before the following instruction.
+        nextItr = getIndexAfter(MI).listEntry()->getIterator();
         prevItr = std::prev(nextItr);
       } else {
-        // Insert mi's index immediately after the preceding instruction.
-        prevItr = getIndexBefore(mi).listEntry()->getIterator();
+        // Insert MI's index immediately after the preceding instruction.
+        prevItr = getIndexBefore(MI).listEntry()->getIterator();
         nextItr = std::next(prevItr);
       }
 
@@ -606,27 +598,27 @@ namespace llvm {
       unsigned dist = ((nextItr->getIndex() - prevItr->getIndex())/2) & ~3u;
       unsigned newNumber = prevItr->getIndex() + dist;
 
-      // Insert a new list entry for mi.
+      // Insert a new list entry for MI.
       IndexList::iterator newItr =
-        indexList.insert(nextItr, createEntry(mi, newNumber));
+          indexList.insert(nextItr, createEntry(&MI, newNumber));
 
       // Renumber locally if we need to.
       if (dist == 0)
         renumberIndexes(newItr);
 
       SlotIndex newIndex(&*newItr, SlotIndex::Slot_Block);
-      mi2iMap.insert(std::make_pair(mi, newIndex));
+      mi2iMap.insert(std::make_pair(&MI, newIndex));
       return newIndex;
     }
 
     /// Remove the given machine instruction from the mapping.
-    void removeMachineInstrFromMaps(MachineInstr *mi) {
+    void removeMachineInstrFromMaps(MachineInstr &MI) {
       // remove index -> MachineInstr and
       // MachineInstr -> index mappings
-      Mi2IndexMap::iterator mi2iItr = mi2iMap.find(mi);
+      Mi2IndexMap::iterator mi2iItr = mi2iMap.find(&MI);
       if (mi2iItr != mi2iMap.end()) {
         IndexListEntry *miEntry(mi2iItr->second.listEntry());
-        assert(miEntry->getInstr() == mi && "Instruction indexes broken.");
+        assert(miEntry->getInstr() == &MI && "Instruction indexes broken.");
         // FIXME: Eventually we want to actually delete these indexes.
         miEntry->setInstr(nullptr);
         mi2iMap.erase(mi2iItr);
@@ -634,18 +626,20 @@ namespace llvm {
     }
 
     /// ReplaceMachineInstrInMaps - Replacing a machine instr with a new one in
-    /// maps used by register allocator.
-    void replaceMachineInstrInMaps(MachineInstr *mi, MachineInstr *newMI) {
-      Mi2IndexMap::iterator mi2iItr = mi2iMap.find(mi);
+    /// maps used by register allocator. \returns the index where the new
+    /// instruction was inserted.
+    SlotIndex replaceMachineInstrInMaps(MachineInstr &MI, MachineInstr &NewMI) {
+      Mi2IndexMap::iterator mi2iItr = mi2iMap.find(&MI);
       if (mi2iItr == mi2iMap.end())
-        return;
+        return SlotIndex();
       SlotIndex replaceBaseIndex = mi2iItr->second;
       IndexListEntry *miEntry(replaceBaseIndex.listEntry());
-      assert(miEntry->getInstr() == mi &&
+      assert(miEntry->getInstr() == &MI &&
              "Mismatched instruction in index tables.");
-      miEntry->setInstr(newMI);
+      miEntry->setInstr(&NewMI);
       mi2iMap.erase(mi2iItr);
-      mi2iMap.insert(std::make_pair(newMI, replaceBaseIndex));
+      mi2iMap.insert(std::make_pair(&NewMI, replaceBaseIndex));
+      return replaceBaseIndex;
     }
 
     /// Add the given MachineBasicBlock into the maps.
@@ -709,15 +703,13 @@ namespace llvm {
       indexList.erase(entry);
 #endif
     }
-
   };
-
 
   // Specialize IntervalMapInfo for half-open slot index intervals.
   template <>
   struct IntervalMapInfo<SlotIndex> : IntervalMapHalfOpenInfo<SlotIndex> {
   };
 
-}
+} // end namespace llvm
 
 #endif // LLVM_CODEGEN_SLOTINDEXES_H

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc64le-unknown-unknown -mcpu=pwr8
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-unknown -mcpu=pwr8
 
 ; Ensure this does not crash
 

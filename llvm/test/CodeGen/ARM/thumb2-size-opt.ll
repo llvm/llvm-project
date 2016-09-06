@@ -82,3 +82,19 @@ entry:
   %shr = lshr i32 %a, %b
   ret i32 %shr
 }
+
+define i32 @bundled_instruction(i32* %addr, i32** %addr2, i1 %tst) minsize {
+; CHECK-LABEL: bundled_instruction:
+; CHECK: iteee	ne
+; CHECK: ldmeq	r0!, {{{r[0-9]+}}}
+  br i1 %tst, label %true, label %false
+
+true:
+  ret i32 0
+
+false:
+  %res = load i32, i32* %addr, align 4
+  %next = getelementptr i32, i32* %addr, i32 1
+  store i32* %next, i32** %addr2
+  ret i32 %res
+}

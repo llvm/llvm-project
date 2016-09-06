@@ -214,3 +214,10 @@ void test_instancetype_inherited() {
   return 0;
 }
 @end
+
+// PR27822
+@class NSString;
+namespace pr27822 { }
+@interface AXPlatformNodeCocoa
++ (NSString*)nativeRoleFromAXRole:(pr27822::UndeclaredIdentifier)role; // expected-error {{expected a type}}
+@end

@@ -10,6 +10,8 @@
 #ifndef LLVM_TOOLS_OBJ2YAML_ERROR_H
 #define LLVM_TOOLS_OBJ2YAML_ERROR_H
 
+#include "llvm/Support/Error.h"
+
 #include <system_error>
 
 namespace llvm {
@@ -19,12 +21,29 @@ enum class obj2yaml_error {
   success = 0,
   file_not_found,
   unrecognized_file_format,
-  unsupported_obj_file_format
+  unsupported_obj_file_format,
+  not_implemented
 };
 
 inline std::error_code make_error_code(obj2yaml_error e) {
   return std::error_code(static_cast<int>(e), obj2yaml_category());
 }
+
+class Obj2YamlError : public ErrorInfo<Obj2YamlError> {
+public:
+  static char ID;
+  Obj2YamlError(obj2yaml_error C) : Code(C) {}
+  Obj2YamlError(std::string ErrMsg) : ErrMsg(std::move(ErrMsg)) {}
+  Obj2YamlError(obj2yaml_error C, std::string ErrMsg)
+      : ErrMsg(std::move(ErrMsg)), Code(C) {}
+  void log(raw_ostream &OS) const override;
+  const std::string &getErrorMessage() const { return ErrMsg; }
+  std::error_code convertToErrorCode() const override;
+
+private:
+  std::string ErrMsg;
+  obj2yaml_error Code;
+};
 
 } // namespace llvm
 

@@ -63,8 +63,8 @@ struct ForceNonTrivial {
 struct ImportMembers {
   struct Nested;
 
-  // M32-DAG: define              x86_thiscallcc void @"\01?normalDef@ImportMembers@@QAEXXZ"(%struct.ImportMembers* %this)
-  // M64-DAG: define                             void @"\01?normalDef@ImportMembers@@QEAAXXZ"(%struct.ImportMembers* %this)
+  // M32-DAG: define  dllexport   x86_thiscallcc void @"\01?normalDef@ImportMembers@@QAEXXZ"(%struct.ImportMembers* %this)
+  // M64-DAG: define  dllexport                  void @"\01?normalDef@ImportMembers@@QEAAXXZ"(%struct.ImportMembers* %this)
   // M32-DAG: declare dllimport   x86_thiscallcc void @"\01?normalDecl@ImportMembers@@QAEXXZ"(%struct.ImportMembers*)
   // M64-DAG: declare dllimport                  void @"\01?normalDecl@ImportMembers@@QEAAXXZ"(%struct.ImportMembers*)
   // M32-DAG: declare dllimport   x86_thiscallcc void @"\01?normalInclass@ImportMembers@@QAEXXZ"(%struct.ImportMembers*)
@@ -95,8 +95,8 @@ struct ImportMembers {
   __declspec(dllimport)                void normalInlineDef();
   __declspec(dllimport)         inline void normalInlineDecl();
 
-  // M32-DAG: define              x86_thiscallcc void @"\01?virtualDef@ImportMembers@@UAEXXZ"(%struct.ImportMembers* %this)
-  // M64-DAG: define                             void @"\01?virtualDef@ImportMembers@@UEAAXXZ"(%struct.ImportMembers* %this)
+  // M32-DAG: define  dllexport   x86_thiscallcc void @"\01?virtualDef@ImportMembers@@UAEXXZ"(%struct.ImportMembers* %this)
+  // M64-DAG: define  dllexport                  void @"\01?virtualDef@ImportMembers@@UEAAXXZ"(%struct.ImportMembers* %this)
   // M32-DAG: declare dllimport   x86_thiscallcc void @"\01?virtualDecl@ImportMembers@@UAEXXZ"(%struct.ImportMembers*)
   // M64-DAG: declare dllimport                  void @"\01?virtualDecl@ImportMembers@@UEAAXXZ"(%struct.ImportMembers*)
   // M32-DAG: declare dllimport   x86_thiscallcc void @"\01?virtualInclass@ImportMembers@@UAEXXZ"(%struct.ImportMembers*)
@@ -127,7 +127,7 @@ struct ImportMembers {
   __declspec(dllimport) virtual        void virtualInlineDef();
   __declspec(dllimport) virtual inline void virtualInlineDecl();
 
-  // MSC-DAG: define                           void @"\01?staticDef@ImportMembers@@SAXXZ"()
+  // MSC-DAG: define  dllexport                void @"\01?staticDef@ImportMembers@@SAXXZ"()
   // MSC-DAG: declare dllimport                void @"\01?staticDecl@ImportMembers@@SAXXZ"()
   // MSC-DAG: declare dllimport                void @"\01?staticInclass@ImportMembers@@SAXXZ"()
   // MSC-DAG: declare dllimport                void @"\01?staticInlineDef@ImportMembers@@SAXXZ"()
@@ -235,8 +235,8 @@ USEMV(ImportMembers, ConstexprField)
 
 // Import individual members of a nested class.
 struct ImportMembers::Nested {
-  // M32-DAG: define              x86_thiscallcc void @"\01?normalDef@Nested@ImportMembers@@QAEXXZ"(%"struct.ImportMembers::Nested"* %this)
-  // M64-DAG: define                             void @"\01?normalDef@Nested@ImportMembers@@QEAAXXZ"(%"struct.ImportMembers::Nested"* %this)
+  // M32-DAG: define  dllexport   x86_thiscallcc void @"\01?normalDef@Nested@ImportMembers@@QAEXXZ"(%"struct.ImportMembers::Nested"* %this)
+  // M64-DAG: define  dllexport                  void @"\01?normalDef@Nested@ImportMembers@@QEAAXXZ"(%"struct.ImportMembers::Nested"* %this)
   // M32-DAG: declare dllimport   x86_thiscallcc void @"\01?normalDecl@Nested@ImportMembers@@QAEXXZ"(%"struct.ImportMembers::Nested"*)
   // M64-DAG: declare dllimport                  void @"\01?normalDecl@Nested@ImportMembers@@QEAAXXZ"(%"struct.ImportMembers::Nested"*)
   // M32-DAG: declare dllimport   x86_thiscallcc void @"\01?normalInclass@Nested@ImportMembers@@QAEXXZ"(%"struct.ImportMembers::Nested"*)
@@ -267,8 +267,8 @@ struct ImportMembers::Nested {
   __declspec(dllimport)                void normalInlineDef();
   __declspec(dllimport)         inline void normalInlineDecl();
 
-  // M32-DAG: define              x86_thiscallcc void @"\01?virtualDef@Nested@ImportMembers@@UAEXXZ"(%"struct.ImportMembers::Nested"* %this)
-  // M64-DAG: define                             void @"\01?virtualDef@Nested@ImportMembers@@UEAAXXZ"(%"struct.ImportMembers::Nested"* %this)
+  // M32-DAG: define  dllexport   x86_thiscallcc void @"\01?virtualDef@Nested@ImportMembers@@UAEXXZ"(%"struct.ImportMembers::Nested"* %this)
+  // M64-DAG: define  dllexport                  void @"\01?virtualDef@Nested@ImportMembers@@UEAAXXZ"(%"struct.ImportMembers::Nested"* %this)
   // M32-DAG: declare dllimport   x86_thiscallcc void @"\01?virtualDecl@Nested@ImportMembers@@UAEXXZ"(%"struct.ImportMembers::Nested"*)
   // M64-DAG: declare dllimport                  void @"\01?virtualDecl@Nested@ImportMembers@@UEAAXXZ"(%"struct.ImportMembers::Nested"*)
   // M32-DAG: declare dllimport   x86_thiscallcc void @"\01?virtualInclass@Nested@ImportMembers@@UAEXXZ"(%"struct.ImportMembers::Nested"*)
@@ -300,7 +300,7 @@ struct ImportMembers::Nested {
   __declspec(dllimport) virtual        void virtualInlineDef();
   __declspec(dllimport) virtual inline void virtualInlineDecl();
 
-  // MSC-DAG: define                           void @"\01?staticDef@Nested@ImportMembers@@SAXXZ"()
+  // MSC-DAG: define  dllexport                void @"\01?staticDef@Nested@ImportMembers@@SAXXZ"()
   // MSC-DAG: declare dllimport                void @"\01?staticDecl@Nested@ImportMembers@@SAXXZ"()
   // MSC-DAG: declare dllimport                void @"\01?staticInclass@Nested@ImportMembers@@SAXXZ"()
   // MSC-DAG: declare dllimport                void @"\01?staticInlineDef@Nested@ImportMembers@@SAXXZ"()
@@ -595,16 +595,16 @@ inline ImportDefaultedDefs::ImportDefaultedDefs(const ImportDefaultedDefs&) = de
 // G64-DAG: define linkonce_odr                dereferenceable({{[0-9]+}}) %struct.ImportDefaultedDefs* @_ZN19ImportDefaultedDefsaSERKS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
 inline ImportDefaultedDefs& ImportDefaultedDefs::operator=(const ImportDefaultedDefs&) = default;
 
-// M32-DAG: define x86_thiscallcc %struct.ImportDefaultedDefs* @"\01??0ImportDefaultedDefs@@QAE@$$QAU0@@Z"(%struct.ImportDefaultedDefs* returned %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
-// M64-DAG: define                %struct.ImportDefaultedDefs* @"\01??0ImportDefaultedDefs@@QEAA@$$QEAU0@@Z"(%struct.ImportDefaultedDefs* returned %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// M32-DAG: define dllexport x86_thiscallcc %struct.ImportDefaultedDefs* @"\01??0ImportDefaultedDefs@@QAE@$$QAU0@@Z"(%struct.ImportDefaultedDefs* returned %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// M64-DAG: define dllexport                %struct.ImportDefaultedDefs* @"\01??0ImportDefaultedDefs@@QEAA@$$QEAU0@@Z"(%struct.ImportDefaultedDefs* returned %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
 // G32-DAG: define x86_thiscallcc void @_ZN19ImportDefaultedDefsC1EOS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
 // G64-DAG: define                void @_ZN19ImportDefaultedDefsC1EOS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
 // G32-DAG: define x86_thiscallcc void @_ZN19ImportDefaultedDefsC2EOS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
 // G64-DAG: define                void @_ZN19ImportDefaultedDefsC2EOS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
 ImportDefaultedDefs::ImportDefaultedDefs(ImportDefaultedDefs&&) = default; // dllimport ignored
 
-// M32-DAG: define x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.ImportDefaultedDefs* @"\01??4ImportDefaultedDefs@@QAEAAU0@$$QAU0@@Z"(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
-// M64-DAG: define                dereferenceable({{[0-9]+}}) %struct.ImportDefaultedDefs* @"\01??4ImportDefaultedDefs@@QEAAAEAU0@$$QEAU0@@Z"(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// M32-DAG: define dllexport x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.ImportDefaultedDefs* @"\01??4ImportDefaultedDefs@@QAEAAU0@$$QAU0@@Z"(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
+// M64-DAG: define dllexport                dereferenceable({{[0-9]+}}) %struct.ImportDefaultedDefs* @"\01??4ImportDefaultedDefs@@QEAAAEAU0@$$QEAU0@@Z"(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
 // G32-DAG: define x86_thiscallcc dereferenceable({{[0-9]+}}) %struct.ImportDefaultedDefs* @_ZN19ImportDefaultedDefsaSEOS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
 // G64-DAG: define                dereferenceable({{[0-9]+}}) %struct.ImportDefaultedDefs* @_ZN19ImportDefaultedDefsaSEOS_(%struct.ImportDefaultedDefs* %this, %struct.ImportDefaultedDefs* dereferenceable({{[0-9]+}}))
 ImportDefaultedDefs& ImportDefaultedDefs::operator=(ImportDefaultedDefs&&) = default; // dllimport ignored

@@ -176,9 +176,9 @@ namespace test4 {
 
     // Make sure these don't crash. Better diagnostics would be nice.
     for (: {1, 2, 3}) {} // expected-error {{expected expression}} expected-error {{expected ';'}}
-    for (1 : {1, 2, 3}) {} // expected-error {{must declare a variable}} expected-warning {{result unused}}
+    for (1 : {1, 2, 3}) {} // expected-error {{must declare a variable}}
     for (+x : {1, 2, 3}) {} // expected-error {{undeclared identifier}} expected-error {{expected ';'}}
-    for (+y : {1, 2, 3}) {} // expected-error {{must declare a variable}} expected-warning {{result unused}}
+    for (+y : {1, 2, 3}) {} // expected-error {{must declare a variable}}
   }
 }
 
@@ -226,7 +226,7 @@ namespace test7 {
     // we check the alignment attribute before we perform the auto
     // deduction.
     for (d alignas(1) : arr) {} // expected-error {{requires type for loop variable}}
-    for (e [[deprecated]] : arr) { e = 0; } // expected-warning{{use of the 'deprecated' attribute is a C++14 extension}} expected-warning {{deprecated}} expected-note {{here}} expected-error {{requires type for loop variable}}
+    for (e [[deprecated]] : arr) { e = 0; } // expected-warning {{deprecated}} expected-note {{here}} expected-error {{requires type for loop variable}}
   }
 }
 

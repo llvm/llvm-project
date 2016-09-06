@@ -32,7 +32,7 @@ int main(int, char **argv) {
     // CHECK-MEMBER: null.cpp:[[@LINE+1]]:15: runtime error: member access within null pointer of type 'S'
     return s->k;
   case 'f':
-    // CHECK-MEMFUN: null.cpp:[[@LINE+1]]:12: runtime error: member call on null pointer of type 'S'
+    // CHECK-MEMFUN: null.cpp:[[@LINE+1]]:15: runtime error: member call on null pointer of type 'S'
     return s->f();
   }
 }

@@ -107,10 +107,21 @@ TEST(ASTNodeKind, UnknownKind) {
 }
 
 TEST(ASTNodeKind, Name) {
-  EXPECT_EQ("Decl", DNT<Decl>().asStringRef());
-  EXPECT_EQ("CallExpr", DNT<CallExpr>().asStringRef());
-  EXPECT_EQ("ConstantArrayType", DNT<ConstantArrayType>().asStringRef());
   EXPECT_EQ("<None>", ASTNodeKind().asStringRef());
+#define VERIFY_NAME(Node) EXPECT_EQ(#Node, DNT<Node>().asStringRef());
+  VERIFY_NAME(TemplateArgument);
+  VERIFY_NAME(NestedNameSpecifierLoc);
+  VERIFY_NAME(QualType);
+  VERIFY_NAME(TypeLoc);
+  VERIFY_NAME(CXXCtorInitializer);
+  VERIFY_NAME(NestedNameSpecifier);
+  VERIFY_NAME(Decl);
+  VERIFY_NAME(CXXRecordDecl);
+  VERIFY_NAME(Stmt);
+  VERIFY_NAME(CallExpr);
+  VERIFY_NAME(Type);
+  VERIFY_NAME(ConstantArrayType);
+#undef VERIFY_NAME
 }
 
 TEST(DynTypedNode, DeclSourceRange) {

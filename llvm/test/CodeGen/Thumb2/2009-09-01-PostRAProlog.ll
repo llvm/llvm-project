@@ -102,5 +102,3 @@ bb7:                                              ; preds = %bb5
 }
 
 declare noalias i8* @calloc(i32, i32) nounwind
-
-declare void @llvm.memset.i64(i8* nocapture, i8, i64, i32) nounwind

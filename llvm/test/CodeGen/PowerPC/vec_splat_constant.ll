@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 -mtriple=powerpc-apple-darwin -mcpu=g5 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mtriple=powerpc-apple-darwin -mcpu=g5 | FileCheck %s
 ; Formerly incorrectly inserted vsldoi (endian confusion)
 
 @baz = common global <16 x i8> zeroinitializer    ; <<16 x i8>*> [#uses=1]

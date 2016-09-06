@@ -1,6 +1,6 @@
 ; Test the ICBT instruction on POWER8
 ; Copied from the ppc64-prefetch.ll test
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s
 
 declare void @llvm.prefetch(i8*, i32, i32, i32)
 

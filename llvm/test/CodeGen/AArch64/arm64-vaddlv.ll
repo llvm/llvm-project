@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 -aarch64-neon-syntax=apple < %s | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define i64 @test_vaddlv_s32(<2 x i32> %a1) nounwind readnone {
 ; CHECK: test_vaddlv_s32

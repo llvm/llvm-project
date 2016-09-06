@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=EG %s
 ; RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck -check-prefix=GCN -check-prefix=SI %s
 ; XUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=EG %s
 
 declare i32 @llvm.r600.read.tidig.x() #0
 

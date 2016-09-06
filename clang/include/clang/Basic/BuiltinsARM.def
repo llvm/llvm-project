@@ -20,7 +20,6 @@
 
 // In libgcc
 BUILTIN(__clear_cache, "vv*v*", "i")
-BUILTIN(__builtin_thread_pointer, "v*", "")
 
 // Saturating arithmetic
 BUILTIN(__builtin_arm_qadd, "iii", "nc")
@@ -48,14 +47,26 @@ BUILTIN(__builtin_arm_vcvtr_f, "ffi", "nc")
 BUILTIN(__builtin_arm_vcvtr_d, "fdi", "nc")
 
 // Coprocessor
+BUILTIN(__builtin_arm_ldc, "vUIiUIivC*", "")
+BUILTIN(__builtin_arm_ldcl, "vUIiUIivC*", "")
+BUILTIN(__builtin_arm_ldc2, "vUIiUIivC*", "")
+BUILTIN(__builtin_arm_ldc2l, "vUIiUIivC*", "")
+
+BUILTIN(__builtin_arm_stc, "vUIiUIiv*", "")
+BUILTIN(__builtin_arm_stcl, "vUIiUIiv*", "")
+BUILTIN(__builtin_arm_stc2, "vUIiUIiv*", "")
+BUILTIN(__builtin_arm_stc2l, "vUIiUIiv*", "")
+
+BUILTIN(__builtin_arm_cdp, "vUIiUIiUIiUIiUIiUIi", "")
+BUILTIN(__builtin_arm_cdp2, "vUIiUIiUIiUIiUIiUIi", "")
 BUILTIN(__builtin_arm_mcr, "vUIiUIiUiUIiUIiUIi", "")
 BUILTIN(__builtin_arm_mcr2, "vUIiUIiUiUIiUIiUIi", "")
 BUILTIN(__builtin_arm_mrc, "UiUIiUIiUIiUIiUIi", "")
 BUILTIN(__builtin_arm_mrc2, "UiUIiUIiUIiUIiUIi", "")
-BUILTIN(__builtin_arm_cdp, "vUiUiUiUiUiUi", "")
-BUILTIN(__builtin_arm_cdp2, "vUiUiUiUiUiUi", "")
-BUILTIN(__builtin_arm_mcrr, "vUIiUIiUiUiUIi", "")
-BUILTIN(__builtin_arm_mcrr2, "vUIiUIiUiUiUIi", "")
+BUILTIN(__builtin_arm_mcrr, "vUIiUIiLLUiUIi", "")
+BUILTIN(__builtin_arm_mcrr2, "vUIiUIiLLUiUIi", "")
+BUILTIN(__builtin_arm_mrrc, "LLUiUIiUIiUIi", "")
+BUILTIN(__builtin_arm_mrrc2, "LLUiUIiUIiUIi", "")
 
 // CRC32
 BUILTIN(__builtin_arm_crc32b, "UiUiUc", "nc")

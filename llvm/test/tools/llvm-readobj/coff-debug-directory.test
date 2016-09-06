@@ -1,0 +1,34 @@
+RUN: llvm-readobj -coff-debug-directory %p/Inputs/has_pdb.exe | FileCheck %s
+
+CHECK: DebugDirectory [
+CHECK:   DebugEntry {
+CHECK:     Characteristics: 0x0
+CHECK:     TimeDateStamp: 2016-06-01 22:53:16 (0x574F675C)
+CHECK:     MajorVersion: 0x0
+CHECK:     MinorVersion: 0x0
+CHECK:     Type: CodeView (0x2)
+CHECK:     SizeOfData: 0x36
+CHECK:     AddressOfRawData: 0x5B068
+CHECK:     PointerToRawData: 0x5A268
+CHECK:     PDBInfo {
+CHECK:       PDBSignature: 0x53445352
+CHECK:       PDBGUID: (96 83 40 42 81 07 9D 40 90 1B 4A 3C 0D 4F 56 32)
+CHECK:       PDBAge: 3
+CHECK:       PDBFileName: D:\src\llvm\build\has_pdb.pdb
+CHECK:     }
+CHECK:   }
+CHECK:   DebugEntry {
+CHECK:     Characteristics: 0x0
+CHECK:     TimeDateStamp: 2016-06-01 22:53:16 (0x574F675C)
+CHECK:     MajorVersion: 0x0
+CHECK:     MinorVersion: 0x0
+CHECK:     Type: VCFeature (0xC)
+CHECK:     SizeOfData: 0x14
+CHECK:     AddressOfRawData: 0x5B0A0
+CHECK:     PointerToRawData: 0x5A2A0
+CHECK:     RawData (
+CHECK:       0000: 00000000 C1000000 C1000000 00000000  |................|
+CHECK:       0010: C0000000                             |....|
+CHECK:     )
+CHECK:   }
+CHECK: ]

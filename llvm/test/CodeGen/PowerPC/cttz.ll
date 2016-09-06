@@ -1,5 +1,5 @@
 ; Make sure this testcase does not use ctpop
-; RUN: llc < %s -march=ppc32 -mcpu=g5 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mcpu=g5 | FileCheck %s
 
 declare i32 @llvm.cttz.i32(i32, i1)
 

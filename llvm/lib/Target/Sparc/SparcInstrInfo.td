@@ -49,6 +49,18 @@ def HasVIS3 : Predicate<"Subtarget->isVIS3()">,
 // point instructions.
 def HasHardQuad : Predicate<"Subtarget->hasHardQuad()">;
 
+// HasLeonCASA - This is true when the target processor supports the CASA
+// instruction
+def HasLeonCASA : Predicate<"Subtarget->hasLeonCasa()">;
+
+// HasUMAC_SMAC - This is true when the target processor supports the
+// UMAC and SMAC instructions
+def HasUMAC_SMAC : Predicate<"Subtarget->hasUmacSmac()">;
+
+def HasNoFdivSqrtFix : Predicate<"!Subtarget->fixAllFDIVSQRT()">;
+def HasNoFmulsFix : Predicate<"!Subtarget->replaceFMULS()">;
+def HasNoFsmuldFix : Predicate<"!Subtarget->fixFSMULD()">;
+
 // UseDeprecatedInsts - This predicate is true when the target processor is a
 // V8, or when it is V9 but the V8 deprecated instructions are efficient enough
 // to use when appropriate.  In either of these cases, the instruction selector
@@ -154,6 +166,9 @@ SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDTSPtlsld :
 SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 
+def SDTSPeh_sjlj_setjmp : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisPtrTy<1>]>;
+def SDTSPeh_sjlj_longjmp: SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
+
 def SPcmpicc : SDNode<"SPISD::CMPICC", SDTSPcmpicc, [SDNPOutGlue]>;
 def SPcmpfcc : SDNode<"SPISD::CMPFCC", SDTSPcmpfcc, [SDNPOutGlue]>;
 def SPbricc : SDNode<"SPISD::BRICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
@@ -171,6 +186,13 @@ def SPxtof  : SDNode<"SPISD::XTOF", SDTSPXTOF>;
 def SPselecticc : SDNode<"SPISD::SELECT_ICC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectxcc : SDNode<"SPISD::SELECT_XCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectfcc : SDNode<"SPISD::SELECT_FCC", SDTSPselectcc, [SDNPInGlue]>;
+
+def SPsjlj_setjmp: SDNode<"SPISD::EH_SJLJ_SETJMP",
+                          SDTSPeh_sjlj_setjmp,
+                          [SDNPHasChain, SDNPSideEffect]>;
+def SPsjlj_longjmp: SDNode<"SPISD::EH_SJLJ_LONGJMP",
+                           SDTSPeh_sjlj_longjmp,
+                           [SDNPHasChain, SDNPSideEffect]>;
 
 //  These are target-independent nodes, but have target-specific formats.
 def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32> ]>;
@@ -235,12 +257,28 @@ def FCC_UL  : FCC_VAL<19>;  // Unordered or Less
 def FCC_LG  : FCC_VAL<18>;  // Less or Greater
 def FCC_NE  : FCC_VAL<17>;  // Not Equal
 def FCC_E   : FCC_VAL<25>;  // Equal
-def FCC_UE  : FCC_VAL<24>;  // Unordered or Equal
-def FCC_GE  : FCC_VAL<25>;  // Greater or Equal
-def FCC_UGE : FCC_VAL<26>;  // Unordered or Greater or Equal
-def FCC_LE  : FCC_VAL<27>;  // Less or Equal
-def FCC_ULE : FCC_VAL<28>;  // Unordered or Less or Equal
-def FCC_O   : FCC_VAL<29>;  // Ordered
+def FCC_UE  : FCC_VAL<26>;  // Unordered or Equal
+def FCC_GE  : FCC_VAL<27>;  // Greater or Equal
+def FCC_UGE : FCC_VAL<28>;  // Unordered or Greater or Equal
+def FCC_LE  : FCC_VAL<29>;  // Less or Equal
+def FCC_ULE : FCC_VAL<30>;  // Unordered or Less or Equal
+def FCC_O   : FCC_VAL<31>;  // Ordered
+
+class CPCC_VAL<int N> : PatLeaf<(i32 N)>;
+def CPCC_3   : CPCC_VAL<39>;  // 3
+def CPCC_2   : CPCC_VAL<38>;  // 2
+def CPCC_23  : CPCC_VAL<37>;  // 2 or 3
+def CPCC_1   : CPCC_VAL<36>;  // 1
+def CPCC_13  : CPCC_VAL<35>;  // 1 or 3
+def CPCC_12  : CPCC_VAL<34>;  // 1 or 2
+def CPCC_123 : CPCC_VAL<33>;  // 1 or 2 or 3
+def CPCC_0   : CPCC_VAL<41>;  // 0
+def CPCC_03  : CPCC_VAL<42>;  // 0 or 3
+def CPCC_02  : CPCC_VAL<43>;  // 0 or 2
+def CPCC_023 : CPCC_VAL<44>;  // 0 or 2 or 3
+def CPCC_01  : CPCC_VAL<45>;  // 0 or 1
+def CPCC_013 : CPCC_VAL<46>;  // 0 or 1 or 3
+def CPCC_012 : CPCC_VAL<47>;  // 0 or 1 or 2
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -248,53 +286,61 @@ def FCC_O   : FCC_VAL<29>;  // Ordered
 
 /// F3_12 multiclass - Define a normal F3_1/F3_2 pattern in one shot.
 multiclass F3_12<string OpcStr, bits<6> Op3Val, SDNode OpNode,
-                 RegisterClass RC, ValueType Ty, Operand immOp> {
+                 RegisterClass RC, ValueType Ty, Operand immOp,
+                 InstrItinClass itin = IIC_iu_instr> {
   def rr  : F3_1<2, Op3Val,
                  (outs RC:$rd), (ins RC:$rs1, RC:$rs2),
                  !strconcat(OpcStr, " $rs1, $rs2, $rd"),
-                 [(set Ty:$rd, (OpNode Ty:$rs1, Ty:$rs2))]>;
+                 [(set Ty:$rd, (OpNode Ty:$rs1, Ty:$rs2))],
+                 itin>;
   def ri  : F3_2<2, Op3Val,
                  (outs RC:$rd), (ins RC:$rs1, immOp:$simm13),
                  !strconcat(OpcStr, " $rs1, $simm13, $rd"),
-                 [(set Ty:$rd, (OpNode Ty:$rs1, (Ty simm13:$simm13)))]>;
+                 [(set Ty:$rd, (OpNode Ty:$rs1, (Ty simm13:$simm13)))],
+                 itin>;
 }
 
 /// F3_12np multiclass - Define a normal F3_1/F3_2 pattern in one shot, with no
 /// pattern.
-multiclass F3_12np<string OpcStr, bits<6> Op3Val> {
+multiclass F3_12np<string OpcStr, bits<6> Op3Val, InstrItinClass itin = IIC_iu_instr> {
   def rr  : F3_1<2, Op3Val,
                  (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
-                 !strconcat(OpcStr, " $rs1, $rs2, $rd"), []>;
+                 !strconcat(OpcStr, " $rs1, $rs2, $rd"), [],
+                 itin>;
   def ri  : F3_2<2, Op3Val,
                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13),
-                 !strconcat(OpcStr, " $rs1, $simm13, $rd"), []>;
+                 !strconcat(OpcStr, " $rs1, $simm13, $rd"), [],
+                 itin>;
 }
 
 // Load multiclass - Define both Reg+Reg/Reg+Imm patterns in one shot.
 multiclass Load<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
-           RegisterClass RC, ValueType Ty> {
+           RegisterClass RC, ValueType Ty, InstrItinClass itin = IIC_iu_instr> {
   def rr  : F3_1<3, Op3Val,
                  (outs RC:$dst), (ins MEMrr:$addr),
                  !strconcat(OpcStr, " [$addr], $dst"),
-                 [(set Ty:$dst, (OpNode ADDRrr:$addr))]>;
+                 [(set Ty:$dst, (OpNode ADDRrr:$addr))],
+                 itin>;
   def ri  : F3_2<3, Op3Val,
                  (outs RC:$dst), (ins MEMri:$addr),
                  !strconcat(OpcStr, " [$addr], $dst"),
-                 [(set Ty:$dst, (OpNode ADDRri:$addr))]>;
+                 [(set Ty:$dst, (OpNode ADDRri:$addr))],
+                 itin>;
 }
 
 // TODO: Instructions of the LoadASI class are currently asm only; hooking up
 // CodeGen's address spaces to use these is a future task.
 class LoadASI<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
-              RegisterClass RC, ValueType Ty> :
+              RegisterClass RC, ValueType Ty, InstrItinClass itin = NoItinerary> :
   F3_1_asi<3, Op3Val, (outs RC:$dst), (ins MEMrr:$addr, i8imm:$asi),
                 !strconcat(OpcStr, "a [$addr] $asi, $dst"),
                 []>;
 
 // LoadA multiclass - As above, but also define alternate address space variant
 multiclass LoadA<string OpcStr, bits<6> Op3Val, bits<6> LoadAOp3Val,
-                 SDPatternOperator OpNode, RegisterClass RC, ValueType Ty> :
-             Load<OpcStr, Op3Val, OpNode, RC, Ty> {
+                 SDPatternOperator OpNode, RegisterClass RC, ValueType Ty,
+                 InstrItinClass itin = NoItinerary> :
+             Load<OpcStr, Op3Val, OpNode, RC, Ty, itin> {
   def Arr  : LoadASI<OpcStr, LoadAOp3Val, OpNode, RC, Ty>;
 }
 
@@ -302,38 +348,43 @@ multiclass LoadA<string OpcStr, bits<6> Op3Val, bits<6> LoadAOp3Val,
 // It is unlikely that general-purpose code could make use of it.
 // CAS is preferred for sparc v9.
 def LDSTUBrr : F3_1<3, 0b001101, (outs IntRegs:$dst), (ins MEMrr:$addr),
-                  "ldstub [$addr], $dst", []>;
+                    "ldstub [$addr], $dst", []>;
 def LDSTUBri : F3_2<3, 0b001101, (outs IntRegs:$dst), (ins MEMri:$addr),
-                  "ldstub [$addr], $dst", []>;
+                    "ldstub [$addr], $dst", []>;
 def LDSTUBArr : F3_1_asi<3, 0b011101, (outs IntRegs:$dst),
                          (ins MEMrr:$addr, i8imm:$asi),
                          "ldstuba [$addr] $asi, $dst", []>;
 
 // Store multiclass - Define both Reg+Reg/Reg+Imm patterns in one shot.
 multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
-           RegisterClass RC, ValueType Ty> {
+           RegisterClass RC, ValueType Ty, InstrItinClass itin = IIC_st> {
   def rr  : F3_1<3, Op3Val,
                  (outs), (ins MEMrr:$addr, RC:$rd),
                  !strconcat(OpcStr, " $rd, [$addr]"),
-                 [(OpNode Ty:$rd, ADDRrr:$addr)]>;
+                 [(OpNode Ty:$rd, ADDRrr:$addr)],
+                 itin>;
   def ri  : F3_2<3, Op3Val,
                  (outs), (ins MEMri:$addr, RC:$rd),
                  !strconcat(OpcStr, " $rd, [$addr]"),
-                 [(OpNode Ty:$rd, ADDRri:$addr)]>;
+                 [(OpNode Ty:$rd, ADDRri:$addr)],
+                 itin>;
 }
 
 // TODO: Instructions of the StoreASI class are currently asm only; hooking up
 // CodeGen's address spaces to use these is a future task.
 class StoreASI<string OpcStr, bits<6> Op3Val,
-                  SDPatternOperator OpNode, RegisterClass RC, ValueType Ty> :
+               SDPatternOperator OpNode, RegisterClass RC, ValueType Ty,
+               InstrItinClass itin = IIC_st> :
   F3_1_asi<3, Op3Val, (outs), (ins MEMrr:$addr, RC:$rd, i8imm:$asi),
-                  !strconcat(OpcStr, "a $rd, [$addr] $asi"),
-                  []>;
+           !strconcat(OpcStr, "a $rd, [$addr] $asi"),
+           [],
+           itin>;
 
 multiclass StoreA<string OpcStr, bits<6> Op3Val, bits<6> StoreAOp3Val,
-                  SDPatternOperator OpNode, RegisterClass RC, ValueType Ty> :
+                  SDPatternOperator OpNode, RegisterClass RC, ValueType Ty,
+                  InstrItinClass itin = IIC_st> :
              Store<OpcStr, Op3Val, OpNode, RC, Ty> {
-  def Arr : StoreASI<OpcStr, StoreAOp3Val, OpNode, RC, Ty>;
+  def Arr : StoreASI<OpcStr, StoreAOp3Val, OpNode, RC, Ty, itin>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -418,6 +469,27 @@ let usesCustomInserter = 1, Uses = [FCC0] in {
             [(set f128:$dst, (SPselectfcc f128:$T, f128:$F, imm:$Cond))]>;
 }
 
+let hasSideEffects = 1, isBarrier = 1, usesCustomInserter = 1 in {
+  let Defs = [WIM] in
+  def EH_SJLJ_SETJMP32ri  : Pseudo<(outs IntRegs:$dst), (ins MEMri:$buf),
+                            "#EH_SJLJ_SETJMP32",
+                            [(set i32:$dst, (SPsjlj_setjmp ADDRri:$buf))]>,
+                            Requires<[Is32Bit]>;
+  def EH_SJLJ_SETJMP32rr  : Pseudo<(outs IntRegs:$dst), (ins MEMrr:$buf),
+                            "#EH_SJLJ_SETJMP32",
+                            [(set i32:$dst, (SPsjlj_setjmp ADDRrr:$buf))]>,
+                            Requires<[Is32Bit]>;
+  let isTerminator = 1 in
+  def EH_SJLJ_LONGJMP32ri : Pseudo<(outs), (ins MEMri:$buf),
+                            "#EH_SJLJ_LONGJMP32",
+                            [(SPsjlj_longjmp ADDRri:$buf)]>,
+                            Requires<[Is32Bit]>;
+  def EH_SJLJ_LONGJMP32rr : Pseudo<(outs), (ins MEMrr:$buf),
+                            "#EH_SJLJ_LONGJMP32",
+                            [(SPsjlj_longjmp ADDRrr:$buf)]>,
+                            Requires<[Is32Bit]>;
+}
+
 // Section B.1 - Load Integer Instructions, p. 90
 let DecoderMethod = "DecodeLoadInt" in {
   defm LDSB : LoadA<"ldsb", 0b001001, 0b011001, sextloadi8,  IntRegs, i32>;
@@ -428,16 +500,16 @@ let DecoderMethod = "DecodeLoadInt" in {
 }
 
 let DecoderMethod = "DecodeLoadIntPair" in
-  defm LDD : LoadA<"ldd", 0b000011, 0b010011, load, IntPair, v2i32>;
+  defm LDD : LoadA<"ldd", 0b000011, 0b010011, load, IntPair, v2i32, IIC_ldd>;
 
 // Section B.2 - Load Floating-point Instructions, p. 92
 let DecoderMethod = "DecodeLoadFP" in {
-  defm LDF   : Load<"ld",  0b100000, load,    FPRegs,  f32>;
-  def LDFArr : LoadASI<"ld",  0b110000, load, FPRegs,  f32>,
+  defm LDF   : Load<"ld",  0b100000, load,    FPRegs,  f32, IIC_iu_or_fpu_instr>;
+  def LDFArr : LoadASI<"ld",  0b110000, load, FPRegs,  f32, IIC_iu_or_fpu_instr>,
                 Requires<[HasV9]>;
 }
 let DecoderMethod = "DecodeLoadDFP" in {
-  defm LDDF   : Load<"ldd", 0b100011, load,    DFPRegs, f64>;
+  defm LDDF   : Load<"ldd", 0b100011, load,    DFPRegs, f64, IIC_ldd>;
   def LDDFArr : LoadASI<"ldd", 0b110011, load, DFPRegs, f64>,
                  Requires<[HasV9]>;
 }
@@ -445,13 +517,27 @@ let DecoderMethod = "DecodeLoadQFP" in
   defm LDQF  : LoadA<"ldq", 0b100010, 0b110010, load, QFPRegs, f128>,
                Requires<[HasV9, HasHardQuad]>;
 
+let DecoderMethod = "DecodeLoadCP" in 
+  defm LDC   : Load<"ld", 0b110000, load, CoprocRegs, i32>; 
+let DecoderMethod = "DecodeLoadCPPair" in 
+  defm LDDC   : Load<"ldd", 0b110011, load, CoprocPair, v2i32, IIC_ldd>;
+
+let DecoderMethod = "DecodeLoadCP", Defs = [CPSR] in {
+  let rd = 0 in {
+    def LDCSRrr : F3_1<3, 0b110001, (outs), (ins MEMrr:$addr),
+                       "ld [$addr], %csr", []>;
+    def LDCSRri : F3_2<3, 0b110001, (outs), (ins MEMri:$addr),
+                       "ld [$addr], %csr", []>;
+  }
+}
+  
 let DecoderMethod = "DecodeLoadFP" in
   let Defs = [FSR] in {
     let rd = 0 in {
       def LDFSRrr : F3_1<3, 0b100001, (outs), (ins MEMrr:$addr),
-                     "ld [$addr], %fsr", []>;
+                     "ld [$addr], %fsr", [], IIC_iu_or_fpu_instr>;
       def LDFSRri : F3_2<3, 0b100001, (outs), (ins MEMri:$addr),
-                     "ld [$addr], %fsr", []>;
+                     "ld [$addr], %fsr", [], IIC_iu_or_fpu_instr>;
     }
     let rd = 1 in {
       def LDXFSRrr : F3_1<3, 0b100001, (outs), (ins MEMrr:$addr),
@@ -469,7 +555,7 @@ let DecoderMethod = "DecodeStoreInt" in {
 }
 
 let DecoderMethod = "DecodeStoreIntPair" in
-  defm STD   : StoreA<"std", 0b000111, 0b010111, store, IntPair, v2i32>;
+  defm STD   : StoreA<"std", 0b000111, 0b010111, store, IntPair, v2i32, IIC_std>;
 
 // Section B.5 - Store Floating-point Instructions, p. 97
 let DecoderMethod = "DecodeStoreFP" in {
@@ -478,7 +564,7 @@ let DecoderMethod = "DecodeStoreFP" in {
                Requires<[HasV9]>;
 }
 let DecoderMethod = "DecodeStoreDFP" in {
-  defm STDF   : Store<"std", 0b100111, store,         DFPRegs, f64>;
+  defm STDF   : Store<"std", 0b100111, store,         DFPRegs, f64, IIC_std>;
   def STDFArr : StoreASI<"std", 0b110111, store,      DFPRegs, f64>,
                 Requires<[HasV9]>;
 }
@@ -486,21 +572,49 @@ let DecoderMethod = "DecodeStoreQFP" in
   defm STQF  : StoreA<"stq", 0b100110, 0b110110, store, QFPRegs, f128>,
                Requires<[HasV9, HasHardQuad]>;
 
-let DecoderMethod = "DecodeStoreFP" in
-  let Defs = [FSR] in {
-    let rd = 0 in {
+let DecoderMethod = "DecodeStoreCP" in 
+  defm STC   : Store<"st", 0b110100, store, CoprocRegs, i32>; 
+  
+let DecoderMethod = "DecodeStoreCPPair" in 
+  defm STDC   : Store<"std", 0b110111, store, CoprocPair, v2i32, IIC_std>;
+  
+let DecoderMethod = "DecodeStoreCP", rd = 0 in {
+  let Defs = [CPSR] in {
+    def STCSRrr : F3_1<3, 0b110101, (outs MEMrr:$addr), (ins),
+                       "st %csr, [$addr]", [], IIC_st>;
+    def STCSRri : F3_2<3, 0b110101, (outs MEMri:$addr), (ins),
+                       "st %csr, [$addr]", [], IIC_st>;
+  }
+  let Defs = [CPQ] in {
+    def STDCQrr : F3_1<3, 0b110110, (outs MEMrr:$addr), (ins),
+                       "std %cq, [$addr]", [], IIC_std>;
+    def STDCQri : F3_2<3, 0b110110, (outs MEMri:$addr), (ins),
+                       "std %cq, [$addr]", [], IIC_std>;
+  }
+}
+
+let DecoderMethod = "DecodeStoreFP" in {
+  let rd = 0 in {
+    let Defs = [FSR] in {
       def STFSRrr : F3_1<3, 0b100101, (outs MEMrr:$addr), (ins),
-                     "st %fsr, [$addr]", []>;
+                     "st %fsr, [$addr]", [], IIC_st>;
       def STFSRri : F3_2<3, 0b100101, (outs MEMri:$addr), (ins),
-                     "st %fsr, [$addr]", []>;
+                     "st %fsr, [$addr]", [], IIC_st>;
     }
-    let rd = 1 in {
-      def STXFSRrr : F3_1<3, 0b100101, (outs MEMrr:$addr), (ins),
-                     "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
-      def STXFSRri : F3_2<3, 0b100101, (outs MEMri:$addr), (ins),
-                     "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
+    let Defs = [FQ] in {
+      def STDFQrr : F3_1<3, 0b100110, (outs MEMrr:$addr), (ins),
+                     "std %fq, [$addr]", [], IIC_std>;
+      def STDFQri : F3_2<3, 0b100110, (outs MEMri:$addr), (ins),
+                     "std %fq, [$addr]", [], IIC_std>;
     }
   }
+  let rd = 1, Defs = [FSR] in {
+    def STXFSRrr : F3_1<3, 0b100101, (outs MEMrr:$addr), (ins),
+                   "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
+    def STXFSRri : F3_2<3, 0b100101, (outs MEMri:$addr), (ins),
+                   "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
+  }
+}
 
 // Section B.8 - SWAP Register with Memory Instruction
 // (Atomic swap)
@@ -524,7 +638,8 @@ let Constraints = "$val = $dst", DecoderMethod = "DecodeSWAP" in {
 def SETHIi: F2_1<0b100,
                  (outs IntRegs:$rd), (ins i32imm:$imm22),
                  "sethi $imm22, $rd",
-                 [(set i32:$rd, SETHIimm:$imm22)]>;
+                 [(set i32:$rd, SETHIimm:$imm22)],
+                 IIC_iu_instr>;
 
 // Section B.10 - NOP Instruction, p. 105
 // (It's a special case of SETHI)
@@ -619,13 +734,13 @@ let Defs = [ICC], rd = 0 in {
 
 // Section B.18 - Multiply Instructions, p. 113
 let Defs = [Y] in {
-  defm UMUL : F3_12np<"umul", 0b001010>;
-  defm SMUL : F3_12  <"smul", 0b001011, mul, IntRegs, i32, simm13Op>;
+  defm UMUL : F3_12np<"umul", 0b001010, IIC_iu_umul>;
+  defm SMUL : F3_12  <"smul", 0b001011, mul, IntRegs, i32, simm13Op, IIC_iu_smul>;
 }
 
 let Defs = [Y, ICC] in {
-  defm UMULCC : F3_12np<"umulcc", 0b011010>;
-  defm SMULCC : F3_12np<"smulcc", 0b011011>;
+  defm UMULCC : F3_12np<"umulcc", 0b011010, IIC_iu_umul>;
+  defm SMULCC : F3_12np<"smulcc", 0b011011, IIC_iu_smul>;
 }
 
 let Defs = [Y, ICC], Uses = [Y, ICC] in {
@@ -634,13 +749,13 @@ let Defs = [Y, ICC], Uses = [Y, ICC] in {
 
 // Section B.19 - Divide Instructions, p. 115
 let Uses = [Y], Defs = [Y] in {
-  defm UDIV : F3_12np<"udiv", 0b001110>;
-  defm SDIV : F3_12np<"sdiv", 0b001111>;
+  defm UDIV : F3_12np<"udiv", 0b001110, IIC_iu_div>;
+  defm SDIV : F3_12np<"sdiv", 0b001111, IIC_iu_div>;
 }
 
 let Uses = [Y], Defs = [Y, ICC] in {
-  defm UDIVCC : F3_12np<"udivcc", 0b011110>;
-  defm SDIVCC : F3_12np<"sdivcc", 0b011111>;
+  defm UDIVCC : F3_12np<"udivcc", 0b011110, IIC_iu_div>;
+  defm SDIVCC : F3_12np<"sdivcc", 0b011111, IIC_iu_div>;
 }
 
 // Section B.20 - SAVE and RESTORE, p. 117
@@ -666,26 +781,30 @@ let isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in {
 
 // conditional branch class:
 class BranchSP<dag ins, string asmstr, list<dag> pattern>
- : F2_2<0b010, 0, (outs), ins, asmstr, pattern>;
+ : F2_2<0b010, 0, (outs), ins, asmstr, pattern, IIC_iu_instr>;
 
 // conditional branch with annul class:
 class BranchSPA<dag ins, string asmstr, list<dag> pattern>
- : F2_2<0b010, 1, (outs), ins, asmstr, pattern>;
+ : F2_2<0b010, 1, (outs), ins, asmstr, pattern, IIC_iu_instr>;
 
 // Conditional branch class on %icc|%xcc with predication:
 multiclass IPredBranch<string regstr, list<dag> CCPattern> {
   def CC    : F2_3<0b001, 0, 1, (outs), (ins bprtarget:$imm19, CCOp:$cond),
-                  !strconcat("b$cond ", !strconcat(regstr, ", $imm19")),
-                   CCPattern>;
+                   !strconcat("b$cond ", !strconcat(regstr, ", $imm19")),
+                   CCPattern,
+                   IIC_iu_instr>;
   def CCA   : F2_3<0b001, 1, 1, (outs), (ins bprtarget:$imm19, CCOp:$cond),
-                  !strconcat("b$cond,a ", !strconcat(regstr, ", $imm19")),
-                   []>;
+                   !strconcat("b$cond,a ", !strconcat(regstr, ", $imm19")),
+                   [],
+                   IIC_iu_instr>;
   def CCNT  : F2_3<0b001, 0, 0, (outs), (ins bprtarget:$imm19, CCOp:$cond),
                    !strconcat("b$cond,pn ", !strconcat(regstr, ", $imm19")),
-                   []>;
+                   [],
+                   IIC_iu_instr>;
   def CCANT : F2_3<0b001, 1, 0, (outs), (ins bprtarget:$imm19, CCOp:$cond),
                    !strconcat("b$cond,a,pn ", !strconcat(regstr, ", $imm19")),
-                   []>;
+                   [],
+                   IIC_iu_instr>;
 }
 
 } // let isBranch = 1, isTerminator = 1, hasDelaySlot = 1
@@ -721,26 +840,26 @@ let isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in {
 
 // floating-point conditional branch class:
 class FPBranchSP<dag ins, string asmstr, list<dag> pattern>
- : F2_2<0b110, 0, (outs), ins, asmstr, pattern>;
+ : F2_2<0b110, 0, (outs), ins, asmstr, pattern, IIC_fpu_normal_instr>;
 
 // floating-point conditional branch with annul class:
 class FPBranchSPA<dag ins, string asmstr, list<dag> pattern>
- : F2_2<0b110, 1, (outs), ins, asmstr, pattern>;
+ : F2_2<0b110, 1, (outs), ins, asmstr, pattern, IIC_fpu_normal_instr>;
 
 // Conditional branch class on %fcc0-%fcc3 with predication:
 multiclass FPredBranch {
   def CC    : F2_3<0b101, 0, 1, (outs), (ins bprtarget:$imm19, CCOp:$cond,
                                          FCCRegs:$cc),
-                  "fb$cond $cc, $imm19", []>;
+                  "fb$cond $cc, $imm19", [], IIC_fpu_normal_instr>;
   def CCA   : F2_3<0b101, 1, 1, (outs), (ins bprtarget:$imm19, CCOp:$cond,
                                          FCCRegs:$cc),
-                  "fb$cond,a $cc, $imm19", []>;
+                  "fb$cond,a $cc, $imm19", [], IIC_fpu_normal_instr>;
   def CCNT  : F2_3<0b101, 0, 0, (outs), (ins bprtarget:$imm19, CCOp:$cond,
                                          FCCRegs:$cc),
-                  "fb$cond,pn $cc, $imm19", []>;
+                  "fb$cond,pn $cc, $imm19", [], IIC_fpu_normal_instr>;
   def CCANT : F2_3<0b101, 1, 0, (outs), (ins bprtarget:$imm19, CCOp:$cond,
                                          FCCRegs:$cc),
-                  "fb$cond,a,pn $cc, $imm19", []>;
+                  "fb$cond,a,pn $cc, $imm19", [], IIC_fpu_normal_instr>;
 }
 } // let isBranch = 1, isTerminator = 1, hasDelaySlot = 1
 
@@ -755,13 +874,33 @@ let Uses = [FCC0] in {
 let Predicates = [HasV9] in
   defm BPF : FPredBranch;
 
+// Section B.22 - Branch on Co-processor Condition Codes Instructions, p. 123
+let isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in {
 
+// co-processor conditional branch class:
+class CPBranchSP<dag ins, string asmstr, list<dag> pattern>
+ : F2_2<0b111, 0, (outs), ins, asmstr, pattern>;
+
+// co-processor conditional branch with annul class:
+class CPBranchSPA<dag ins, string asmstr, list<dag> pattern>
+ : F2_2<0b111, 1, (outs), ins, asmstr, pattern>;
+
+} // let isBranch = 1, isTerminator = 1, hasDelaySlot = 1
+
+def CBCOND  : CPBranchSP<(ins brtarget:$imm22, CCOp:$cond),
+                          "cb$cond $imm22",
+                          [(SPbrfcc bb:$imm22, imm:$cond)]>;
+def CBCONDA : CPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
+                           "cb$cond,a $imm22", []>;
+                           
 // Section B.24 - Call and Link Instruction, p. 125
 // This is the only Format 1 instruction
 let Uses = [O6],
     hasDelaySlot = 1, isCall = 1 in {
   def CALL : InstSP<(outs), (ins calltarget:$disp, variable_ops),
-                    "call $disp", []> {
+                    "call $disp",
+                    [],
+                    IIC_jmp_or_call> {
     bits<30> disp;
     let op = 1;
     let Inst{29-0} = disp;
@@ -772,11 +911,13 @@ let Uses = [O6],
     def CALLrr : F3_1<2, 0b111000,
                       (outs), (ins MEMrr:$ptr, variable_ops),
                       "call $ptr",
-                      [(call ADDRrr:$ptr)]>;
+                      [(call ADDRrr:$ptr)],
+                      IIC_jmp_or_call>;
     def CALLri : F3_2<2, 0b111000,
                       (outs), (ins MEMri:$ptr, variable_ops),
                       "call $ptr",
-                      [(call ADDRri:$ptr)]>;
+                      [(call ADDRri:$ptr)],
+                      IIC_jmp_or_call>;
   }
 }
 
@@ -785,10 +926,16 @@ let Uses = [O6],
 // JMPL Instruction.
 let isTerminator = 1, hasDelaySlot = 1, isBarrier = 1,
     DecoderMethod = "DecodeJMPL" in {
-  def JMPLrr: F3_1<2, 0b111000, (outs IntRegs:$dst), (ins MEMrr:$addr),
-                  "jmpl $addr, $dst", []>;
-  def JMPLri: F3_2<2, 0b111000, (outs IntRegs:$dst), (ins MEMri:$addr),
-                  "jmpl $addr, $dst", []>;
+  def JMPLrr: F3_1<2, 0b111000,
+                   (outs IntRegs:$dst), (ins MEMrr:$addr),
+                   "jmpl $addr, $dst",
+                   [],
+                   IIC_jmp_or_call>;
+  def JMPLri: F3_2<2, 0b111000,
+                   (outs IntRegs:$dst), (ins MEMri:$addr),
+                   "jmpl $addr, $dst",
+                   [],
+                   IIC_jmp_or_call>;
 }
 
 // Section A.3 - Synthetic Instructions, p. 85
@@ -796,36 +943,64 @@ let isTerminator = 1, hasDelaySlot = 1, isBarrier = 1,
 let isReturn = 1, isTerminator = 1, hasDelaySlot = 1, isBarrier = 1,
     isCodeGenOnly = 1 in {
   let rd = 0, rs1 = 15 in
-    def RETL: F3_2<2, 0b111000, (outs), (ins i32imm:$val),
-                   "jmp %o7+$val", [(retflag simm13:$val)]>;
+    def RETL: F3_2<2, 0b111000,
+                   (outs), (ins i32imm:$val),
+                   "jmp %o7+$val",
+                   [(retflag simm13:$val)],
+                   IIC_jmp_or_call>;
 
   let rd = 0, rs1 = 31 in
-    def RET: F3_2<2, 0b111000, (outs), (ins i32imm:$val),
-                  "jmp %i7+$val", []>;
+    def RET: F3_2<2, 0b111000,
+                  (outs), (ins i32imm:$val),
+                  "jmp %i7+$val",
+                  [],
+                  IIC_jmp_or_call>;
 }
 
 // Section B.26 - Return from Trap Instruction
 let isReturn = 1, isTerminator = 1, hasDelaySlot = 1,
      isBarrier = 1, rd = 0, DecoderMethod = "DecodeReturn" in {
-  def RETTrr : F3_1<2, 0b111001, (outs), (ins MEMrr:$addr),
-                       "rett $addr", []>;
-  def RETTri : F3_2<2, 0b111001, (outs), (ins MEMri:$addr),
-                       "rett $addr", []>;
+  def RETTrr : F3_1<2, 0b111001,
+                   (outs), (ins MEMrr:$addr),
+                   "rett $addr",
+                   [],
+                   IIC_jmp_or_call>;
+  def RETTri : F3_2<2, 0b111001,
+                    (outs), (ins MEMri:$addr),
+                    "rett $addr",
+                    [],
+                    IIC_jmp_or_call>;
 }
 
 
 // Section B.27 - Trap on Integer Condition Codes Instruction
-multiclass TRAP<string regStr> {
-  def rr : TRAPSPrr<0b111010, (outs), (ins IntRegs:$rs1, IntRegs:$rs2,
-                                       CCOp:$cond),
-              !strconcat(!strconcat("t$cond ", regStr), ", $rs1 + $rs2"), []>;
-  def ri : TRAPSPri<0b111010, (outs), (ins IntRegs:$rs1, i32imm:$imm,
-                                      CCOp:$cond),
-              !strconcat(!strconcat("t$cond ", regStr), ", $rs1 + $imm"), []>;
+// conditional branch class:
+let DecoderNamespace = "SparcV8", DecoderMethod = "DecodeTRAP", hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
+{
+  def TRAPrr : TRAPSPrr<0b111010,
+                        (outs), (ins IntRegs:$rs1, IntRegs:$rs2, CCOp:$cond),
+                        "t$cond $rs1 + $rs2",
+                        []>;
+  def TRAPri : TRAPSPri<0b111010,
+                        (outs), (ins IntRegs:$rs1, i32imm:$imm, CCOp:$cond),
+                        "t$cond $rs1 + $imm",
+                        []>;
 }
 
-let hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
+multiclass TRAP<string regStr> {
+  def rr : TRAPSPrr<0b111010,
+                    (outs), (ins IntRegs:$rs1, IntRegs:$rs2, CCOp:$cond),
+                    !strconcat(!strconcat("t$cond ", regStr), ", $rs1 + $rs2"),
+                    []>;
+  def ri : TRAPSPri<0b111010,
+                    (outs), (ins IntRegs:$rs1, i32imm:$imm, CCOp:$cond),
+                    !strconcat(!strconcat("t$cond ", regStr), ", $rs1 + $imm"),
+                    []>;
+}
+
+let DecoderNamespace = "SparcV9", DecoderMethod = "DecodeTRAP", Predicates = [HasV9], hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
   defm TICC : TRAP<"%icc">;
+
 
 let isBarrier = 1, isTerminator = 1, rd = 0b01000, rs1 = 0, simm13 = 5 in
   def TA5 : F3_2<0b10, 0b111010, (outs), (ins), "ta 5", [(trap)]>;
@@ -922,11 +1097,13 @@ let rd = 0 in {
 def FITOS : F3_3u<2, 0b110100, 0b011000100,
                  (outs FPRegs:$rd), (ins FPRegs:$rs2),
                  "fitos $rs2, $rd",
-                 [(set FPRegs:$rd, (SPitof FPRegs:$rs2))]>;
+                 [(set FPRegs:$rd, (SPitof FPRegs:$rs2))],
+                 IIC_fpu_fast_instr>;
 def FITOD : F3_3u<2, 0b110100, 0b011001000,
                  (outs DFPRegs:$rd), (ins FPRegs:$rs2),
                  "fitod $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPitof FPRegs:$rs2))]>;
+                 [(set DFPRegs:$rd, (SPitof FPRegs:$rs2))],
+                 IIC_fpu_fast_instr>;
 def FITOQ : F3_3u<2, 0b110100, 0b011001100,
                  (outs QFPRegs:$rd), (ins FPRegs:$rs2),
                  "fitoq $rs2, $rd",
@@ -937,11 +1114,13 @@ def FITOQ : F3_3u<2, 0b110100, 0b011001100,
 def FSTOI : F3_3u<2, 0b110100, 0b011010001,
                  (outs FPRegs:$rd), (ins FPRegs:$rs2),
                  "fstoi $rs2, $rd",
-                 [(set FPRegs:$rd, (SPftoi FPRegs:$rs2))]>;
+                 [(set FPRegs:$rd, (SPftoi FPRegs:$rs2))],
+                 IIC_fpu_fast_instr>;
 def FDTOI : F3_3u<2, 0b110100, 0b011010010,
                  (outs FPRegs:$rd), (ins DFPRegs:$rs2),
                  "fdtoi $rs2, $rd",
-                 [(set FPRegs:$rd, (SPftoi DFPRegs:$rs2))]>;
+                 [(set FPRegs:$rd, (SPftoi DFPRegs:$rs2))],
+                 IIC_fpu_fast_instr>;
 def FQTOI : F3_3u<2, 0b110100, 0b011010011,
                  (outs FPRegs:$rd), (ins QFPRegs:$rs2),
                  "fqtoi $rs2, $rd",
@@ -952,7 +1131,8 @@ def FQTOI : F3_3u<2, 0b110100, 0b011010011,
 def FSTOD : F3_3u<2, 0b110100, 0b011001001,
                  (outs DFPRegs:$rd), (ins FPRegs:$rs2),
                  "fstod $rs2, $rd",
-                 [(set f64:$rd, (fextend f32:$rs2))]>;
+                 [(set f64:$rd, (fextend f32:$rs2))],
+                 IIC_fpu_stod>;
 def FSTOQ : F3_3u<2, 0b110100, 0b011001101,
                  (outs QFPRegs:$rd), (ins FPRegs:$rs2),
                  "fstoq $rs2, $rd",
@@ -961,7 +1141,8 @@ def FSTOQ : F3_3u<2, 0b110100, 0b011001101,
 def FDTOS : F3_3u<2, 0b110100, 0b011000110,
                  (outs FPRegs:$rd), (ins DFPRegs:$rs2),
                  "fdtos $rs2, $rd",
-                 [(set f32:$rd, (fround f64:$rs2))]>;
+                 [(set f32:$rd, (fround f64:$rs2))],
+                 IIC_fpu_fast_instr>;
 def FDTOQ : F3_3u<2, 0b110100, 0b011001110,
                  (outs QFPRegs:$rd), (ins DFPRegs:$rs2),
                  "fdtoq $rs2, $rd",
@@ -985,22 +1166,29 @@ def FMOVS : F3_3u<2, 0b110100, 0b000000001,
 def FNEGS : F3_3u<2, 0b110100, 0b000000101,
                  (outs FPRegs:$rd), (ins FPRegs:$rs2),
                  "fnegs $rs2, $rd",
-                 [(set f32:$rd, (fneg f32:$rs2))]>;
+                 [(set f32:$rd, (fneg f32:$rs2))],
+                 IIC_fpu_negs>;
 def FABSS : F3_3u<2, 0b110100, 0b000001001,
                  (outs FPRegs:$rd), (ins FPRegs:$rs2),
                  "fabss $rs2, $rd",
-                 [(set f32:$rd, (fabs f32:$rs2))]>;
+                 [(set f32:$rd, (fabs f32:$rs2))],
+                 IIC_fpu_abs>;
 
 
 // Floating-point Square Root Instructions, p.145
+// FSQRTS generates an erratum on LEON processors, so by disabling this instruction
+// this will be promoted to use FSQRTD with doubles instead.
+let Predicates = [HasNoFdivSqrtFix] in 
 def FSQRTS : F3_3u<2, 0b110100, 0b000101001,
                   (outs FPRegs:$rd), (ins FPRegs:$rs2),
                   "fsqrts $rs2, $rd",
-                  [(set f32:$rd, (fsqrt f32:$rs2))]>;
+                  [(set f32:$rd, (fsqrt f32:$rs2))],
+                  IIC_fpu_sqrts>;
 def FSQRTD : F3_3u<2, 0b110100, 0b000101010,
                   (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                   "fsqrtd $rs2, $rd",
-                  [(set f64:$rd, (fsqrt f64:$rs2))]>;
+                  [(set f64:$rd, (fsqrt f64:$rs2))],
+                  IIC_fpu_sqrtd>;
 def FSQRTQ : F3_3u<2, 0b110100, 0b000101011,
                   (outs QFPRegs:$rd), (ins QFPRegs:$rs2),
                   "fsqrtq $rs2, $rd",
@@ -1013,11 +1201,13 @@ def FSQRTQ : F3_3u<2, 0b110100, 0b000101011,
 def FADDS  : F3_3<2, 0b110100, 0b001000001,
                   (outs FPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                   "fadds $rs1, $rs2, $rd",
-                  [(set f32:$rd, (fadd f32:$rs1, f32:$rs2))]>;
+                  [(set f32:$rd, (fadd f32:$rs1, f32:$rs2))],
+                  IIC_fpu_fast_instr>;
 def FADDD  : F3_3<2, 0b110100, 0b001000010,
                   (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
                   "faddd $rs1, $rs2, $rd",
-                  [(set f64:$rd, (fadd f64:$rs1, f64:$rs2))]>;
+                  [(set f64:$rd, (fadd f64:$rs1, f64:$rs2))],
+                  IIC_fpu_fast_instr>;
 def FADDQ  : F3_3<2, 0b110100, 0b001000011,
                   (outs QFPRegs:$rd), (ins QFPRegs:$rs1, QFPRegs:$rs2),
                   "faddq $rs1, $rs2, $rd",
@@ -1027,11 +1217,13 @@ def FADDQ  : F3_3<2, 0b110100, 0b001000011,
 def FSUBS  : F3_3<2, 0b110100, 0b001000101,
                   (outs FPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                   "fsubs $rs1, $rs2, $rd",
-                  [(set f32:$rd, (fsub f32:$rs1, f32:$rs2))]>;
+                  [(set f32:$rd, (fsub f32:$rs1, f32:$rs2))],
+                  IIC_fpu_fast_instr>;
 def FSUBD  : F3_3<2, 0b110100, 0b001000110,
                   (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
                   "fsubd $rs1, $rs2, $rd",
-                  [(set f64:$rd, (fsub f64:$rs1, f64:$rs2))]>;
+                  [(set f64:$rd, (fsub f64:$rs1, f64:$rs2))],
+                  IIC_fpu_fast_instr>;
 def FSUBQ  : F3_3<2, 0b110100, 0b001000111,
                   (outs QFPRegs:$rd), (ins QFPRegs:$rs1, QFPRegs:$rs2),
                   "fsubq $rs1, $rs2, $rd",
@@ -1040,25 +1232,32 @@ def FSUBQ  : F3_3<2, 0b110100, 0b001000111,
 
 
 // Floating-point Multiply and Divide Instructions, p. 147
+// FMULS generates an erratum on LEON processors, so by disabling this instruction
+// this will be promoted to use FMULD with doubles instead.
+let Predicates = [HasNoFmulsFix] in 
 def FMULS  : F3_3<2, 0b110100, 0b001001001,
                   (outs FPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                   "fmuls $rs1, $rs2, $rd",
-                  [(set f32:$rd, (fmul f32:$rs1, f32:$rs2))]>;
+                  [(set f32:$rd, (fmul f32:$rs1, f32:$rs2))],
+                  IIC_fpu_muls>;
 def FMULD  : F3_3<2, 0b110100, 0b001001010,
                   (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
                   "fmuld $rs1, $rs2, $rd",
-                  [(set f64:$rd, (fmul f64:$rs1, f64:$rs2))]>;
+                  [(set f64:$rd, (fmul f64:$rs1, f64:$rs2))],
+                  IIC_fpu_muld>;
 def FMULQ  : F3_3<2, 0b110100, 0b001001011,
                   (outs QFPRegs:$rd), (ins QFPRegs:$rs1, QFPRegs:$rs2),
                   "fmulq $rs1, $rs2, $rd",
                   [(set f128:$rd, (fmul f128:$rs1, f128:$rs2))]>,
                   Requires<[HasHardQuad]>;
 
+let Predicates = [HasNoFsmuldFix] in
 def FSMULD : F3_3<2, 0b110100, 0b001101001,
                   (outs DFPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                   "fsmuld $rs1, $rs2, $rd",
                   [(set f64:$rd, (fmul (fextend f32:$rs1),
-                                        (fextend f32:$rs2)))]>;
+                                        (fextend f32:$rs2)))],
+                  IIC_fpu_muld>;
 def FDMULQ : F3_3<2, 0b110100, 0b001101110,
                   (outs QFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
                   "fdmulq $rs1, $rs2, $rd",
@@ -1066,14 +1265,18 @@ def FDMULQ : F3_3<2, 0b110100, 0b001101110,
                                          (fextend f64:$rs2)))]>,
                   Requires<[HasHardQuad]>;
 
+// FDIVS generates an erratum on LEON processors, so by disabling this instruction
+// this will be promoted to use FDIVD with doubles instead.
 def FDIVS  : F3_3<2, 0b110100, 0b001001101,
                  (outs FPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                  "fdivs $rs1, $rs2, $rd",
-                 [(set f32:$rd, (fdiv f32:$rs1, f32:$rs2))]>;
+                 [(set f32:$rd, (fdiv f32:$rs1, f32:$rs2))],
+                 IIC_fpu_divs>;
 def FDIVD  : F3_3<2, 0b110100, 0b001001110,
                  (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
                  "fdivd $rs1, $rs2, $rd",
-                 [(set f64:$rd, (fdiv f64:$rs1, f64:$rs2))]>;
+                 [(set f64:$rd, (fdiv f64:$rs1, f64:$rs2))],
+                 IIC_fpu_divd>;
 def FDIVQ  : F3_3<2, 0b110100, 0b001001111,
                  (outs QFPRegs:$rd), (ins QFPRegs:$rs1, QFPRegs:$rs2),
                  "fdivq $rs1, $rs2, $rd",
@@ -1091,11 +1294,13 @@ let Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
   def FCMPS  : F3_3c<2, 0b110101, 0b001010001,
                    (outs), (ins FPRegs:$rs1, FPRegs:$rs2),
                    "fcmps $rs1, $rs2",
-                   [(SPcmpfcc f32:$rs1, f32:$rs2)]>;
+                   [(SPcmpfcc f32:$rs1, f32:$rs2)],
+                   IIC_fpu_fast_instr>;
   def FCMPD  : F3_3c<2, 0b110101, 0b001010010,
                    (outs), (ins DFPRegs:$rs1, DFPRegs:$rs2),
                    "fcmpd $rs1, $rs2",
-                   [(SPcmpfcc f64:$rs1, f64:$rs2)]>;
+                   [(SPcmpfcc f64:$rs1, f64:$rs2)],
+                   IIC_fpu_fast_instr>;
   def FCMPQ  : F3_3c<2, 0b110101, 0b001010011,
                    (outs), (ins QFPRegs:$rs1, QFPRegs:$rs2),
                    "fcmpq $rs1, $rs2",
@@ -1125,7 +1330,8 @@ let Uses = [O6], isCall = 1, hasDelaySlot = 1 in
   def TLS_CALL : InstSP<(outs),
                         (ins calltarget:$disp, TLSSym:$sym, variable_ops),
                         "call $disp, $sym",
-                        [(tlscall texternalsym:$disp, tglobaltlsaddr:$sym)]> {
+                        [(tlscall texternalsym:$disp, tglobaltlsaddr:$sym)],
+                        IIC_jmp_or_call> {
   bits<30> disp;
   let op = 1;
   let Inst{29-0} = disp;
@@ -1303,19 +1509,60 @@ let Predicates = [HasV9], hasSideEffects = 1, rd = 0, rs1 = 0b01111 in
  def MEMBARi : F3_2<2, 0b101000, (outs), (ins simm13Op:$simm13),
                     "membar $simm13", []>;
 
-// TODO: Should add a CASArr variant. In fact, the CAS instruction,
-// unlike other instructions, only comes in a form which requires an
-// ASI be provided. The ASI value hardcoded here is ASI_PRIMARY, the
-// default unprivileged ASI for SparcV9.  (Also of note: some modern
-// SparcV8 implementations provide CASA as an extension, but require
-// the use of SparcV8's default ASI, 0xA ("User Data") instead.)
+// The CAS instruction, unlike other instructions, only comes in a 
+// form which requires an ASI be provided. The ASI value hardcoded 
+// here is ASI_PRIMARY, the default unprivileged ASI for SparcV9.
 let Predicates = [HasV9], Constraints = "$swap = $rd", asi = 0b10000000 in
   def CASrr: F3_1_asi<3, 0b111100,
                 (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
                                      IntRegs:$swap),
                  "cas [$rs1], $rs2, $rd",
                  [(set i32:$rd,
-                     (atomic_cmp_swap iPTR:$rs1, i32:$rs2, i32:$swap))]>;
+                     (atomic_cmp_swap_32 iPTR:$rs1, i32:$rs2, i32:$swap))]>;
+
+
+// CASA is supported as an instruction on some LEON3 and all LEON4 processors.
+// This version can be automatically lowered from C code, selecting ASI 10
+let Predicates = [HasLeonCASA], Constraints = "$swap = $rd", asi = 0b00001010 in
+  def CASAasi10: F3_1_asi<3, 0b111100,
+                (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
+                                     IntRegs:$swap),
+                 "casa [$rs1] 10, $rs2, $rd",
+                 [(set i32:$rd,
+                     (atomic_cmp_swap_32 iPTR:$rs1, i32:$rs2, i32:$swap))]>;
+                 
+// CASA supported on some LEON3 and all LEON4 processors. Same pattern as
+// CASrr, above, but with a different ASI. This version is supported for
+// inline assembly lowering only. 
+let Predicates = [HasLeonCASA], Constraints = "$swap = $rd" in
+  def CASArr: F3_1_asi<3, 0b111100,
+                (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
+                                     IntRegs:$swap, i8imm:$asi),
+                 "casa [$rs1] $asi, $rs2, $rd", []>;
+                
+// TODO: Add DAG sequence to lower these instructions. Currently, only provided
+// as inline assembler-supported instructions. 
+let Predicates = [HasUMAC_SMAC], Defs = [Y, ASR18], Uses = [Y, ASR18] in {
+  def SMACrr :  F3_1<2, 0b111111,
+                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                   "smac $rs1, $rs2, $rd",
+                   [], IIC_smac_umac>;
+
+  def SMACri :  F3_2<2, 0b111111,
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                   "smac $rs1, $simm13, $rd",
+                   [], IIC_smac_umac>;
+                 
+  def UMACrr :  F3_1<2, 0b111110,
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2, ASRRegs:$asr18),
+                   "umac $rs1, $rs2, $rd",
+                   [], IIC_smac_umac>;
+                 
+  def UMACri :  F3_2<2, 0b111110,
+                  (outs IntRegs:$rd), (ins IntRegs:$rs1, simm13Op:$simm13, ASRRegs:$asr18),
+                   "umac $rs1, $simm13, $rd",
+                   [], IIC_smac_umac>;
+}
 
 let Defs = [ICC] in {
 defm TADDCC   : F3_12np<"taddcc",   0b100000>;
@@ -1411,13 +1658,21 @@ def : Pat<(store (i32 0), ADDRri:$dst), (STri ADDRri:$dst, (i32 G0))>;
 let Predicates = [HasNoV9] in
   def : Pat<(atomic_fence imm, imm), (STBAR)>;
 
-// atomic_load_32 addr -> load addr
-def : Pat<(i32 (atomic_load ADDRrr:$src)), (LDrr ADDRrr:$src)>;
-def : Pat<(i32 (atomic_load ADDRri:$src)), (LDri ADDRri:$src)>;
+// atomic_load addr -> load addr
+def : Pat<(i32 (atomic_load_8 ADDRrr:$src)), (LDUBrr ADDRrr:$src)>;
+def : Pat<(i32 (atomic_load_8 ADDRri:$src)), (LDUBri ADDRri:$src)>;
+def : Pat<(i32 (atomic_load_16 ADDRrr:$src)), (LDUHrr ADDRrr:$src)>;
+def : Pat<(i32 (atomic_load_16 ADDRri:$src)), (LDUHri ADDRri:$src)>;
+def : Pat<(i32 (atomic_load_32 ADDRrr:$src)), (LDrr ADDRrr:$src)>;
+def : Pat<(i32 (atomic_load_32 ADDRri:$src)), (LDri ADDRri:$src)>;
 
-// atomic_store_32 val, addr -> store val, addr
-def : Pat<(atomic_store ADDRrr:$dst, i32:$val), (STrr ADDRrr:$dst, $val)>;
-def : Pat<(atomic_store ADDRri:$dst, i32:$val), (STri ADDRri:$dst, $val)>;
+// atomic_store val, addr -> store val, addr
+def : Pat<(atomic_store_8 ADDRrr:$dst, i32:$val), (STBrr ADDRrr:$dst, $val)>;
+def : Pat<(atomic_store_8 ADDRri:$dst, i32:$val), (STBri ADDRri:$dst, $val)>;
+def : Pat<(atomic_store_16 ADDRrr:$dst, i32:$val), (STHrr ADDRrr:$dst, $val)>;
+def : Pat<(atomic_store_16 ADDRri:$dst, i32:$val), (STHri ADDRri:$dst, $val)>;
+def : Pat<(atomic_store_32 ADDRrr:$dst, i32:$val), (STrr ADDRrr:$dst, $val)>;
+def : Pat<(atomic_store_32 ADDRri:$dst, i32:$val), (STri ADDRri:$dst, $val)>;
 
 // extract_vector
 def : Pat<(extractelt (v2i32 IntPair:$Rn), 0),

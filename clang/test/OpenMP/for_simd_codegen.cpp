@@ -54,13 +54,13 @@ void simple(float *a, float *b, float *c, float *d) {
 
   long long k = get_val();
 
-  #pragma omp for simd linear(k : 3) schedule(dynamic)
+  #pragma omp for simd linear(k : 3) schedule(simd, nonmonotonic: dynamic)
 // CHECK: [[K0:%.+]] = call {{.*}}i64 @{{.*}}get_val
 // CHECK-NEXT: store i64 [[K0]], i64* [[K_VAR:%[^,]+]]
 // CHECK: [[K0LOAD:%.+]] = load i64, i64* [[K_VAR]]
 // CHECK-NEXT: store i64 [[K0LOAD]], i64* [[LIN0:%[^,]+]]
 
-// CHECK: call void @__kmpc_dispatch_init_4(%ident_t* {{.+}}, i32 %{{.+}}, i32 35, i32 0, i32 8, i32 1, i32 1)
+// CHECK: call void @__kmpc_dispatch_init_4(%ident_t* {{.+}}, i32 %{{.+}}, i32 1073741859, i32 0, i32 8, i32 1, i32 1)
 // CHECK: [[NEXT:%.+]] = call i32 @__kmpc_dispatch_next_4(%ident_t* {{.+}}, i32 %{{.+}}, i32* %{{.+}}, i32* [[LB:%.+]], i32* [[UB:%.+]], i32* %{{.+}})
 // CHECK: [[COND:%.+]] = icmp ne i32 [[NEXT]], 0
 // CHECK: br i1 [[COND]], label %[[CONT:.+]], label %[[END:.+]]
@@ -362,7 +362,7 @@ template <class T, unsigned K> T tfoo(T a) { return a + K; }
 
 template <typename T, unsigned N>
 int templ1(T a, T *z) {
-  #pragma omp for simd collapse(N)
+  #pragma omp for simd collapse(N) schedule(simd: static, N)
   for (int i = 0; i < N * 2; i++) {
     for (long long j = 0; j < (N + N + N + N); j += 2) {
       z[i + j] = a + tfoo<T, N>(i + j);
@@ -373,7 +373,7 @@ int templ1(T a, T *z) {
 
 // Instatiation templ1<float,2>
 // CHECK-LABEL: define {{.*i32}} @{{.*}}templ1{{.*}}(float {{.+}}, float* {{.+}})
-// CHECK: call void @__kmpc_for_static_init_8(%ident_t* {{[^,]+}}, i32 %{{[^,]+}}, i32 34, i32* %{{[^,]+}}, i64* [[LB:%[^,]+]], i64* [[UB:%[^,]+]], i64* [[STRIDE:%[^,]+]], i64 1, i64 1)
+// CHECK: call void @__kmpc_for_static_init_8(%ident_t* {{[^,]+}}, i32 %{{[^,]+}}, i32 45, i32* %{{[^,]+}}, i64* [[LB:%[^,]+]], i64* [[UB:%[^,]+]], i64* [[STRIDE:%[^,]+]], i64 1, i64 2)
 // CHECK: [[UB_VAL:%.+]] = load i64, i64* [[UB]],
 // CHECK: [[CMP:%.+]] = icmp sgt i64 [[UB_VAL]], 15
 // CHECK: br i1 [[CMP]], label %[[TRUE:.+]], label %[[FALSE:[^,]+]]
@@ -389,6 +389,7 @@ int templ1(T a, T *z) {
 // CHECK: store i64 [[LB_VAL]], i64* [[T1_OMP_IV:%[^,]+]],
 
 // ...
+// CHECK: icmp sle i64
 // CHECK: [[IV:%.+]] = load i64, i64* [[T1_OMP_IV]]
 // CHECK-NEXT: [[UB_VAL:%.+]] = load i64, i64* [[UB]]
 // CHECK-NEXT: [[CMP1:%.+]] = icmp sle i64 [[IV]], [[UB_VAL]]
@@ -581,9 +582,11 @@ void collapsed(float *a, float *b, float *c, float *d) {
   }
 // i,j,l are updated; k is not updated.
 // CHECK: call void @__kmpc_for_static_fini(%ident_t* {{.+}}, i32 %{{.+}})
-// CHECK-NEXT: store i32 3, i32* [[I:%[^,]+]]
-// CHECK-NEXT: store i32 5, i32* [[I:%[^,]+]]
-// CHECK-NEXT: store i16 9, i16* [[I:%[^,]+]]
+// CHECK: br i1
+// CHECK: store i32 3, i32*
+// CHECK-NEXT: store i32 5,
+// CHECK-NEXT: store i32 7,
+// CHECK-NEXT: store i16 9, i16*
 // CHECK: call void @__kmpc_barrier(%ident_t* {{.+}}, i32 %{{.+}})
 // CHECK: ret void
 }

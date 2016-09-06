@@ -58,8 +58,10 @@ def remark_fe_backend_optimization_remark_analysis_aliasing : Remark<"%0; "
     BackendInfo, InGroup<BackendOptimizationRemarkAnalysis>;
 def warn_fe_backend_optimization_failure : Warning<"%0">, BackendInfo,
     InGroup<BackendOptimizationFailure>, DefaultWarn;
-def note_fe_backend_optimization_remark_invalid_loc : Note<"could "
-  "not determine the original source location for %0:%1:%2">;
+def note_fe_backend_invalid_loc : Note<"could "
+  "not determine the original source location for %0:%1:%2">, BackendInfo;
+
+def err_fe_backend_unsupported : Error<"%0">, BackendInfo;
 
 def remark_sanitize_address_insert_extra_padding_accepted : Remark<
     "-fsanitize-address-field-padding applied to %0">, ShowInSystemHeader,
@@ -208,10 +210,6 @@ def err_test_module_file_extension_version : Error<
   "test module file extension '%0' has different version (%1.%2) than expected "
   "(%3.%4)">;
 
-def err_conflicting_module_names : Error<
-  "conflicting module names specified: '-fmodule-name=%0' and "
-  "'-fmodule-implementation-of %1'">;
-
 def err_missing_vfs_overlay_file : Error<
   "virtual filesystem overlay file '%0' not found">, DefaultFatal;
 def err_invalid_vfs_overlay : Error<
@@ -220,4 +218,7 @@ def err_invalid_vfs_overlay : Error<
 def err_no_apinotes_cache_path : Error<
   "-fapinotes was provided without -fapinotes-cache-path=<directory>">,
   DefaultFatal;
+
+def warn_option_invalid_ocl_version : Warning<
+  "OpenCL version %0 does not support the option '%1'">, InGroup<Deprecated>;
 }

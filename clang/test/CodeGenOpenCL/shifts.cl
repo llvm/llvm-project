@@ -5,7 +5,7 @@
 // bits before evaluating. Test this both for variables and constants
 // evaluated in the front-end.
 
-// OPT: @gtest1 = constant i64 2147483648
+// OPT: @gtest1 = local_unnamed_addr constant i64 2147483648
 __constant const unsigned long gtest1 = 1UL << 31;
 
 // NOOPT: @negativeShift32

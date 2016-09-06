@@ -308,11 +308,18 @@ function generate_zygote_wrapper { # from, to, asan_rt
   local _from=$1
   local _to=$2
   local _asan_rt=$3
+  if [[ PRE_L -eq 0 ]]; then
+    # LD_PRELOAD parsing is broken in N if it starts with ":". Luckily, it is
+    # unset in the system environment since L.
+    local _ld_preload=$_asan_rt
+  else
+    local _ld_preload=\$LD_PRELOAD:$_asan_rt
+  fi
   cat <<EOF >"$TMPDIR/$_from"
 #!/system/bin/sh-from-zygote
 ASAN_OPTIONS=$ASAN_OPTIONS \\
 ASAN_ACTIVATION_OPTIONS=include_if_exists=/data/local/tmp/asan.options.%b \\
-LD_PRELOAD=\$LD_PRELOAD:$_asan_rt \\
+LD_PRELOAD=$_ld_preload \\
 exec $_to \$@
 
 EOF

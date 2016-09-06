@@ -18,14 +18,13 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetInstrInfo.h"
 #include "llvm/Target/TargetRegisterInfo.h"
+using namespace llvm;
+using namespace rdf;
 
 #ifndef NDEBUG
 static cl::opt<unsigned> CpLimit("rdf-cp-limit", cl::init(0), cl::Hidden);
 static unsigned CpCount = 0;
 #endif
-
-using namespace llvm;
-using namespace rdf;
 
 bool CopyPropagation::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
   unsigned Opc = MI->getOpcode();
@@ -218,7 +217,12 @@ bool CopyPropagation::run() {
         Op.setReg(SR.Reg);
         Op.setSubReg(SR.Sub);
         DFG.unlinkUse(UA, false);
-        UA.Addr->linkToDef(UA.Id, DFG.addr<DefNode*>(RDefSR_SA));
+        if (RDefSR_SA != 0) {
+          UA.Addr->linkToDef(UA.Id, DFG.addr<DefNode*>(RDefSR_SA));
+        } else {
+          UA.Addr->setReachingDef(0);
+          UA.Addr->setSibling(0);
+        }
 
         Changed = true;
   #ifndef NDEBUG

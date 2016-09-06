@@ -26,10 +26,9 @@ define void @test1(i8 %V, i32 *%P) {
   ; CHECK-NEXT: store volatile i32 %E
   ; CHECK-NEXT: store volatile i32 %E
 
-  %G = add nuw i32 %C, %C         ;; not a CSE with E
+  %G = add nuw i32 %C, %C
   store volatile i32 %G, i32* %P
-  ; CHECK-NEXT: %G = add nuw i32 %C, %C
-  ; CHECK-NEXT: store volatile i32 %G
+  ; CHECK-NEXT: store volatile i32 %E
   ret void
 }
 
@@ -277,3 +276,17 @@ define void @dse_neg2(i32 *%P) {
   ret void
 }
 
+@c = external global i32, align 4
+declare i32 @reads_c(i32 returned)
+define void @pr28763() {
+entry:
+; CHECK-LABEL: @pr28763(
+; CHECK: store i32 0, i32* @c, align 4
+; CHECK: call i32 @reads_c(i32 0)
+; CHECK: store i32 2, i32* @c, align 4
+  %load = load i32, i32* @c, align 4
+  store i32 0, i32* @c, align 4
+  %call = call i32 @reads_c(i32 0)
+  store i32 2, i32* @c, align 4
+  ret void
+}

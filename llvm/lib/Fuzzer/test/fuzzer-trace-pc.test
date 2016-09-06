@@ -1,0 +1,7 @@
+CHECK: BINGO
+REQUIRES: linux
+RUN: not LLVMFuzzer-FourIndependentBranchesTest-TracePC      -seed=1 -runs=1000000 2>&1 | FileCheck %s
+// FIXME: The test below uses a significant amount of memory on OSX and
+// sometimes hits the 2GiB memory limit. This needs to be investigated. For now
+// only run the test on Linux.
+RUN: not LLVMFuzzer-FullCoverageSetTest-TracePC              -seed=1 -runs=10000000 2>&1 | FileCheck %s

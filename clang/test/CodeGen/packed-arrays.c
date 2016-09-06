@@ -23,32 +23,32 @@ struct __attribute__((packed)) s3 {
   unsigned int z;
 };
 
-// CHECK: @align0 = global i32 1
+// CHECK: @align0 = local_unnamed_addr global i32 1
 int align0 = __alignof(struct s0);
-// CHECK: @align1 = global i32 4
+// CHECK: @align1 = local_unnamed_addr global i32 4
 int align1 = __alignof(struct s1);
-// CHECK: @align2 = global i32 1
+// CHECK: @align2 = local_unnamed_addr global i32 1
 int align2 = __alignof(struct s2);
-// CHECK: @align3 = global i32 1
+// CHECK: @align3 = local_unnamed_addr global i32 1
 int align3 = __alignof(struct s3);
 
-// CHECK: @align0_x = global i32 1
+// CHECK: @align0_x = local_unnamed_addr global i32 1
 int align0_x = __alignof(((struct s0*) 0)->x);
 //
-// CHECK: @align1_x = global i32 1
+// CHECK: @align1_x = local_unnamed_addr global i32 1
 int align1_x = __alignof(((struct s1*) 0)->x);
-// CHECK: @align2_x = global i32 1
+// CHECK: @align2_x = local_unnamed_addr global i32 1
 int align2_x = __alignof(((struct s2*) 0)->x);
-// CHECK: @align3_x = global i32 1
+// CHECK: @align3_x = local_unnamed_addr global i32 1
 int align3_x = __alignof(((struct s3*) 0)->x);
 
-// CHECK: @align0_x0 = global i32 4
+// CHECK: @align0_x0 = local_unnamed_addr global i32 4
 int align0_x0 = __alignof(((struct s0*) 0)->x[0]);
-// CHECK: @align1_x0 = global i32 4
+// CHECK: @align1_x0 = local_unnamed_addr global i32 4
 int align1_x0 = __alignof(((struct s1*) 0)->x[0]);
-// CHECK: @align2_x0 = global i32 4
+// CHECK: @align2_x0 = local_unnamed_addr global i32 4
 int align2_x0 = __alignof(((struct s2*) 0)->x[0]);
-// CHECK: @align3_x0 = global i32 4
+// CHECK: @align3_x0 = local_unnamed_addr global i32 4
 int align3_x0 = __alignof(((struct s3*) 0)->x[0]);
 
 // CHECK-LABEL: define i32 @f0_a

@@ -41,22 +41,16 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   }
 }
 
-/// getScalarType - If this is a vector type, return the element type,
-/// otherwise return this.
 Type *Type::getScalarType() const {
   if (auto *VTy = dyn_cast<VectorType>(this))
     return VTy->getElementType();
   return const_cast<Type*>(this);
 }
 
-/// isIntegerTy - Return true if this is an IntegerType of the specified width.
 bool Type::isIntegerTy(unsigned Bitwidth) const {
   return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
 }
 
-// canLosslesslyBitCastTo - Return true if this type can be converted to
-// 'Ty' without any reinterpretation of bits.  For example, i8* to i32*.
-//
 bool Type::canLosslesslyBitCastTo(Type *Ty) const {
   // Identity cast means no change so return true
   if (this == Ty) 
@@ -126,16 +120,10 @@ unsigned Type::getPrimitiveSizeInBits() const {
   }
 }
 
-/// getScalarSizeInBits - If this is a vector type, return the
-/// getPrimitiveSizeInBits value for the element type. Otherwise return the
-/// getPrimitiveSizeInBits value for this type.
 unsigned Type::getScalarSizeInBits() const {
   return getScalarType()->getPrimitiveSizeInBits();
 }
 
-/// getFPMantissaWidth - Return the width of the mantissa of this type.  This
-/// is only valid on floating point types.  If the FP type does not
-/// have a stable mantissa (e.g. ppc long double), this method returns -1.
 int Type::getFPMantissaWidth() const {
   if (auto *VTy = dyn_cast<VectorType>(this))
     return VTy->getElementType()->getFPMantissaWidth();
@@ -149,9 +137,6 @@ int Type::getFPMantissaWidth() const {
   return -1;
 }
 
-/// isSizedDerivedType - Derived types like structures and arrays are sized
-/// iff all of the members of the type are sized as well.  Since asking for
-/// their size is relatively uncommon, move this operation out of line.
 bool Type::isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited) const {
   if (auto *ATy = dyn_cast<ArrayType>(this))
     return ATy->getElementType()->isSized(Visited);
@@ -302,7 +287,7 @@ FunctionType::FunctionType(Type *Result, ArrayRef<Type*> Params,
   NumContainedTys = Params.size() + 1; // + 1 for result type
 }
 
-// FunctionType::get - The factory function for the FunctionType class.
+// This is the factory function for the FunctionType class.
 FunctionType *FunctionType::get(Type *ReturnType,
                                 ArrayRef<Type*> Params, bool isVarArg) {
   LLVMContextImpl *pImpl = ReturnType->getContext().pImpl;
@@ -327,15 +312,11 @@ FunctionType *FunctionType::get(Type *Result, bool isVarArg) {
   return get(Result, None, isVarArg);
 }
 
-/// isValidReturnType - Return true if the specified type is valid as a return
-/// type.
 bool FunctionType::isValidReturnType(Type *RetTy) {
   return !RetTy->isFunctionTy() && !RetTy->isLabelTy() &&
   !RetTy->isMetadataTy();
 }
 
-/// isValidArgumentType - Return true if the specified type is valid as an
-/// argument type.
 bool FunctionType::isValidArgumentType(Type *ArgTy) {
   return ArgTy->isFirstClassType();
 }
@@ -552,8 +533,6 @@ bool StructType::isValidElementType(Type *ElemTy) {
          !ElemTy->isTokenTy();
 }
 
-/// isLayoutIdentical - Return true if this is layout identical to the
-/// specified struct.
 bool StructType::isLayoutIdentical(StructType *Other) const {
   if (this == Other) return true;
 
@@ -563,8 +542,6 @@ bool StructType::isLayoutIdentical(StructType *Other) const {
   return elements() == Other->elements();
 }
 
-/// getTypeByName - Return the type with the specified name, or null if there
-/// is none by that name.
 StructType *Module::getTypeByName(StringRef Name) const {
   return getContext().pImpl->NamedStructTypes.lookup(Name);
 }

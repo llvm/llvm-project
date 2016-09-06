@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -instcombine -S | FileCheck %s
+; RUN: opt < %s -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.8.0"
@@ -6,8 +6,12 @@ target triple = "x86_64-apple-macosx10.8.0"
 @array = common global [1024 x i32] zeroinitializer, align 16
 
 ;CHECK-LABEL: @array_at_plus_one(
-;CHECK: add i64 %index, 12
-;CHECK: trunc i64
+;CHECK: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+;CHECK: %vec.ind = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ %vec.ind.next, %vector.body ]
+;CHECK: %vec.ind1 = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %vector.ph ], [ %vec.ind.next2, %vector.body ]
+;CHECK: add nsw <4 x i64> %vec.ind, <i64 12, i64 12, i64 12, i64 12>
+;CHECK: %vec.ind.next = add <4 x i64> %vec.ind, <i64 4, i64 4, i64 4, i64 4>
+;CHECK: %vec.ind.next2 = add <4 x i32> %vec.ind1, <i32 4, i32 4, i32 4, i32 4>
 ;CHECK: ret i32
 define i32 @array_at_plus_one(i32 %n) nounwind uwtable ssp {
   %1 = icmp sgt i32 %n, 0

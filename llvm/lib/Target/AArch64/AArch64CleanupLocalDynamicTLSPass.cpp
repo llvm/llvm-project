@@ -33,12 +33,19 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 using namespace llvm;
 
+#define TLSCLEANUP_PASS_NAME "AArch64 Local Dynamic TLS Access Clean-up"
+
 namespace {
 struct LDTLSCleanup : public MachineFunctionPass {
   static char ID;
-  LDTLSCleanup() : MachineFunctionPass(ID) {}
+  LDTLSCleanup() : MachineFunctionPass(ID) {
+    initializeLDTLSCleanupPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(*MF.getFunction()))
+      return false;
+
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     if (AFI->getNumLocalDynamicTLSAccesses() < 2) {
       // No point folding accesses if there isn't at least two.
@@ -69,9 +76,9 @@ struct LDTLSCleanup : public MachineFunctionPass {
           break;
 
         if (TLSBaseAddrReg)
-          I = replaceTLSBaseAddrCall(I, TLSBaseAddrReg);
+          I = replaceTLSBaseAddrCall(*I, TLSBaseAddrReg);
         else
-          I = setRegister(I, &TLSBaseAddrReg);
+          I = setRegister(*I, &TLSBaseAddrReg);
         Changed = true;
         break;
       default:
@@ -89,27 +96,27 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
   // Replace the TLS_base_addr instruction I with a copy from
   // TLSBaseAddrReg, returning the new instruction.
-  MachineInstr *replaceTLSBaseAddrCall(MachineInstr *I,
+  MachineInstr *replaceTLSBaseAddrCall(MachineInstr &I,
                                        unsigned TLSBaseAddrReg) {
-    MachineFunction *MF = I->getParent()->getParent();
+    MachineFunction *MF = I.getParent()->getParent();
     const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
     // Insert a Copy from TLSBaseAddrReg to x0, which is where the rest of the
     // code sequence assumes the address will be.
-    MachineInstr *Copy = BuildMI(*I->getParent(), I, I->getDebugLoc(),
-                                 TII->get(TargetOpcode::COPY),
-                                 AArch64::X0).addReg(TLSBaseAddrReg);
+    MachineInstr *Copy = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                 TII->get(TargetOpcode::COPY), AArch64::X0)
+                             .addReg(TLSBaseAddrReg);
 
     // Erase the TLS_base_addr instruction.
-    I->eraseFromParent();
+    I.eraseFromParent();
 
     return Copy;
   }
 
   // Create a virtal register in *TLSBaseAddrReg, and populate it by
   // inserting a copy instruction after I. Returns the new instruction.
-  MachineInstr *setRegister(MachineInstr *I, unsigned *TLSBaseAddrReg) {
-    MachineFunction *MF = I->getParent()->getParent();
+  MachineInstr *setRegister(MachineInstr &I, unsigned *TLSBaseAddrReg) {
+    MachineFunction *MF = I.getParent()->getParent();
     const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
     // Create a virtual register for the TLS base address.
@@ -118,16 +125,14 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
     // Insert a copy from X0 to TLSBaseAddrReg for later.
     MachineInstr *Copy =
-        BuildMI(*I->getParent(), ++I->getIterator(), I->getDebugLoc(),
+        BuildMI(*I.getParent(), ++I.getIterator(), I.getDebugLoc(),
                 TII->get(TargetOpcode::COPY), *TLSBaseAddrReg)
             .addReg(AArch64::X0);
 
     return Copy;
   }
 
-  const char *getPassName() const override {
-    return "Local Dynamic TLS Access Clean-up";
-  }
+  const char *getPassName() const override { return TLSCLEANUP_PASS_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -136,6 +141,9 @@ struct LDTLSCleanup : public MachineFunctionPass {
   }
 };
 }
+
+INITIALIZE_PASS(LDTLSCleanup, "aarch64-local-dynamic-tls-cleanup",
+                TLSCLEANUP_PASS_NAME, false, false)
 
 char LDTLSCleanup::ID = 0;
 FunctionPass *llvm::createAArch64CleanupLocalDynamicTLSPass() {

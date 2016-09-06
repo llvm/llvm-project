@@ -103,6 +103,14 @@ TEST(LookupTest, replaceNestedName) {
   };
   Visitor.runOver(
       "namespace a { int foo(); }\nusing a::foo;\nauto f = foo();\n");
+
+  Visitor.OnCall = [&](CallExpr *Expr) {
+    EXPECT_EQ("c::bar", replaceCallExpr(Expr, "::a::c::bar"));
+  };
+  Visitor.runOver("namespace a { namespace b { void foo(); } }\n"
+                  "namespace a { namespace b { namespace {"
+                  "void f() { foo(); }"
+                  "} } }\n");
 }
 
 } // end anonymous namespace

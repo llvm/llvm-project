@@ -1,14 +1,15 @@
-// RUN: %clangxx_asan -O0 -fsanitize=use-after-scope %s -o %t && %run %t
-// XFAIL: *
+// RUN: %clangxx_asan -O1 -fsanitize-address-use-after-scope %s -o %t && %run %t
 
 #include <stdio.h>
+#include <stdlib.h>
+
+int *p[3];
 
 int main() {
-  int *p = 0;
   // Variable goes in and out of scope.
   for (int i = 0; i < 3; i++) {
-    int x = 0;
-    p = &x;
+    int x;
+    p[i] = &x;
   }
   printf("PASSED\n");
   return 0;

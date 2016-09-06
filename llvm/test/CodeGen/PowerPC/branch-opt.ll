@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 | \
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 | \
 ; RUN:   grep "b LBB.*" | count 4
 
 target datalayout = "E-p:32:32"

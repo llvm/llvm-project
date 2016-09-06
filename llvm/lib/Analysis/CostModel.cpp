@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -123,7 +124,7 @@ static bool isAlternateVectorMask(SmallVectorImpl<int> &Mask) {
 
 static TargetTransformInfo::OperandValueKind getOperandInfo(Value *V) {
   TargetTransformInfo::OperandValueKind OpInfo =
-    TargetTransformInfo::OK_AnyValue;
+      TargetTransformInfo::OK_AnyValue;
 
   // Check for a splat of a constant or for a non uniform vector of constants.
   if (isa<ConstantVector>(V) || isa<ConstantDataVector>(V)) {
@@ -131,6 +132,12 @@ static TargetTransformInfo::OperandValueKind getOperandInfo(Value *V) {
     if (cast<Constant>(V)->getSplatValue() != nullptr)
       OpInfo = TargetTransformInfo::OK_UniformConstantValue;
   }
+
+  // Check for a splat of a uniform value. This is not loop aware, so return
+  // true only for the obviously uniform cases (argument, globalvalue)
+  const Value *Splat = getSplatValue(V);
+  if (Splat && (isa<Argument>(Splat) || isa<GlobalValue>(Splat)))
+    OpInfo = TargetTransformInfo::OK_UniformValue;
 
   return OpInfo;
 }
@@ -504,8 +511,12 @@ unsigned CostModelAnalysis::getInstructionCost(const Instruction *I) const {
       for (unsigned J = 0, JE = II->getNumArgOperands(); J != JE; ++J)
         Args.push_back(II->getArgOperand(J));
 
+      FastMathFlags FMF;
+      if (auto *FPMO = dyn_cast<FPMathOperator>(II))
+        FMF = FPMO->getFastMathFlags();
+
       return TTI->getIntrinsicInstrCost(II->getIntrinsicID(), II->getType(),
-                                        Args);
+                                        Args, FMF);
     }
     return -1;
   default:
@@ -518,16 +529,15 @@ void CostModelAnalysis::print(raw_ostream &OS, const Module*) const {
   if (!F)
     return;
 
-  for (Function::iterator B = F->begin(), BE = F->end(); B != BE; ++B) {
-    for (BasicBlock::iterator it = B->begin(), e = B->end(); it != e; ++it) {
-      Instruction *Inst = &*it;
-      unsigned Cost = getInstructionCost(Inst);
+  for (BasicBlock &B : *F) {
+    for (Instruction &Inst : B) {
+      unsigned Cost = getInstructionCost(&Inst);
       if (Cost != (unsigned)-1)
         OS << "Cost Model: Found an estimated cost of " << Cost;
       else
         OS << "Cost Model: Unknown cost";
 
-      OS << " for instruction: "<< *Inst << "\n";
+      OS << " for instruction: " << Inst << "\n";
     }
   }
 }

@@ -1,4 +1,5 @@
 ; RUN: opt < %s -basicaa -globals-aa -gvn -instcombine -S -enable-unsafe-globalsmodref-alias-results | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa,globals-aa -passes="require<globals-aa>,function(gvn,instcombine)" -S -enable-unsafe-globalsmodref-alias-results | FileCheck %s
 ;
 ; Note that this test relies on an unsafe feature of GlobalsModRef. While this
 ; test is correct and safe, GMR's technique for handling this isn't generally.

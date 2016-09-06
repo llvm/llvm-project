@@ -33,6 +33,13 @@ enum Fixups {
   // fixup_t2_pcrel_10 - Equivalent to fixup_arm_pcrel_10, accounting for
   // the short-swapped encoding of Thumb2 instructions.
   fixup_t2_pcrel_10,
+  // fixup_arm_pcrel_9 - 9-bit PC relative relocation for symbol addresses
+  // used in VFP instructions where bit 0 not encoded (so it's encoded as an
+  // 8-bit immediate).
+  fixup_arm_pcrel_9,
+  // fixup_t2_pcrel_9 - Equivalent to fixup_arm_pcrel_9, accounting for
+  // the short-swapped encoding of Thumb2 instructions.
+  fixup_t2_pcrel_9,
   // fixup_thumb_adr_pcrel_10 - 10-bit PC relative relocation for symbol
   // addresses where the lower 2 bits are not encoded (so it's encoded as an
   // 8-bit immediate).
@@ -99,6 +106,9 @@ enum Fixups {
   fixup_arm_movw_lo16, // :lower16:
   fixup_t2_movt_hi16, // :upper16:
   fixup_t2_movw_lo16, // :lower16:
+
+  // fixup_arm_mod_imm - Fixup for mod_imm
+  fixup_arm_mod_imm,
 
   // Marker
   LastTargetFixupKind,

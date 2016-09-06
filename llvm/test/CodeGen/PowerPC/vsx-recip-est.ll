@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -enable-unsafe-fp-math | FileCheck %s
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -enable-unsafe-fp-math | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -enable-unsafe-fp-math | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -enable-unsafe-fp-math | FileCheck %s
 @a = global float 3.000000e+00, align 4
 @b = global float 4.000000e+00, align 4
 @c = global double 3.000000e+00, align 8

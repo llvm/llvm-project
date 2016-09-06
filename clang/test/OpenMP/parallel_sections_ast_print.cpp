@@ -141,4 +141,7 @@ int main(int argc, char **argv) {
   return tmain<int, 5>(b, &b) + tmain<long, 1>(x, &x);
 }
 
+template<typename T>
+T S<T>::TS = 0;
+
 #endif

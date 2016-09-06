@@ -91,9 +91,8 @@ public:
     /// removeKill - Delete a kill corresponding to the specified
     /// machine instruction. Returns true if there was a kill
     /// corresponding to this instruction, false otherwise.
-    bool removeKill(MachineInstr *MI) {
-      std::vector<MachineInstr*>::iterator
-        I = std::find(Kills.begin(), Kills.end(), MI);
+    bool removeKill(MachineInstr &MI) {
+      std::vector<MachineInstr *>::iterator I = find(Kills, &MI);
       if (I == Kills.end())
         return false;
       Kills.erase(I);
@@ -155,10 +154,10 @@ private:   // Intermediate data structures
   /// HandleRegMask - Call HandlePhysRegKill for all registers clobbered by Mask.
   void HandleRegMask(const MachineOperand&);
 
-  void HandlePhysRegUse(unsigned Reg, MachineInstr *MI);
+  void HandlePhysRegUse(unsigned Reg, MachineInstr &MI);
   void HandlePhysRegDef(unsigned Reg, MachineInstr *MI,
                         SmallVectorImpl<unsigned> &Defs);
-  void UpdatePhysRegDefs(MachineInstr *MI, SmallVectorImpl<unsigned> &Defs);
+  void UpdatePhysRegDefs(MachineInstr &MI, SmallVectorImpl<unsigned> &Defs);
 
   /// FindLastRefOrPartRef - Return the last reference or partial reference of
   /// the specified register.
@@ -176,7 +175,7 @@ private:   // Intermediate data structures
   /// is coming from.
   void analyzePHINodes(const MachineFunction& Fn);
 
-  void runOnInstr(MachineInstr *MI, SmallVectorImpl<unsigned> &Defs);
+  void runOnInstr(MachineInstr &MI, SmallVectorImpl<unsigned> &Defs);
 
   void runOnBlock(MachineBasicBlock *MBB, unsigned NumRegs);
 public:
@@ -185,37 +184,37 @@ public:
 
   /// RegisterDefIsDead - Return true if the specified instruction defines the
   /// specified register, but that definition is dead.
-  bool RegisterDefIsDead(MachineInstr *MI, unsigned Reg) const;
+  bool RegisterDefIsDead(MachineInstr &MI, unsigned Reg) const;
 
   //===--------------------------------------------------------------------===//
   //  API to update live variable information
 
   /// replaceKillInstruction - Update register kill info by replacing a kill
   /// instruction with a new one.
-  void replaceKillInstruction(unsigned Reg, MachineInstr *OldMI,
-                              MachineInstr *NewMI);
+  void replaceKillInstruction(unsigned Reg, MachineInstr &OldMI,
+                              MachineInstr &NewMI);
 
   /// addVirtualRegisterKilled - Add information about the fact that the
   /// specified register is killed after being used by the specified
   /// instruction. If AddIfNotFound is true, add a implicit operand if it's
   /// not found.
-  void addVirtualRegisterKilled(unsigned IncomingReg, MachineInstr *MI,
+  void addVirtualRegisterKilled(unsigned IncomingReg, MachineInstr &MI,
                                 bool AddIfNotFound = false) {
-    if (MI->addRegisterKilled(IncomingReg, TRI, AddIfNotFound))
-      getVarInfo(IncomingReg).Kills.push_back(MI); 
+    if (MI.addRegisterKilled(IncomingReg, TRI, AddIfNotFound))
+      getVarInfo(IncomingReg).Kills.push_back(&MI);
   }
 
   /// removeVirtualRegisterKilled - Remove the specified kill of the virtual
   /// register from the live variable information. Returns true if the
   /// variable was marked as killed by the specified instruction,
   /// false otherwise.
-  bool removeVirtualRegisterKilled(unsigned reg, MachineInstr *MI) {
+  bool removeVirtualRegisterKilled(unsigned reg, MachineInstr &MI) {
     if (!getVarInfo(reg).removeKill(MI))
       return false;
 
     bool Removed = false;
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI->getOperand(i);
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      MachineOperand &MO = MI.getOperand(i);
       if (MO.isReg() && MO.isKill() && MO.getReg() == reg) {
         MO.setIsKill(false);
         Removed = true;
@@ -230,28 +229,28 @@ public:
 
   /// removeVirtualRegistersKilled - Remove all killed info for the specified
   /// instruction.
-  void removeVirtualRegistersKilled(MachineInstr *MI);
+  void removeVirtualRegistersKilled(MachineInstr &MI);
 
   /// addVirtualRegisterDead - Add information about the fact that the specified
   /// register is dead after being used by the specified instruction. If
   /// AddIfNotFound is true, add a implicit operand if it's not found.
-  void addVirtualRegisterDead(unsigned IncomingReg, MachineInstr *MI,
+  void addVirtualRegisterDead(unsigned IncomingReg, MachineInstr &MI,
                               bool AddIfNotFound = false) {
-    if (MI->addRegisterDead(IncomingReg, TRI, AddIfNotFound))
-      getVarInfo(IncomingReg).Kills.push_back(MI);
+    if (MI.addRegisterDead(IncomingReg, TRI, AddIfNotFound))
+      getVarInfo(IncomingReg).Kills.push_back(&MI);
   }
 
   /// removeVirtualRegisterDead - Remove the specified kill of the virtual
   /// register from the live variable information. Returns true if the
   /// variable was marked dead at the specified instruction, false
   /// otherwise.
-  bool removeVirtualRegisterDead(unsigned reg, MachineInstr *MI) {
+  bool removeVirtualRegisterDead(unsigned reg, MachineInstr &MI) {
     if (!getVarInfo(reg).removeKill(MI))
       return false;
 
     bool Removed = false;
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI->getOperand(i);
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      MachineOperand &MO = MI.getOperand(i);
       if (MO.isReg() && MO.isDef() && MO.getReg() == reg) {
         MO.setIsDead(false);
         Removed = true;
@@ -278,9 +277,8 @@ public:
   void MarkVirtRegAliveInBlock(VarInfo& VRInfo, MachineBasicBlock* DefBlock,
                                MachineBasicBlock *BB,
                                std::vector<MachineBasicBlock*> &WorkList);
-  void HandleVirtRegDef(unsigned reg, MachineInstr *MI);
-  void HandleVirtRegUse(unsigned reg, MachineBasicBlock *MBB,
-                        MachineInstr *MI);
+  void HandleVirtRegDef(unsigned reg, MachineInstr &MI);
+  void HandleVirtRegUse(unsigned reg, MachineBasicBlock *MBB, MachineInstr &MI);
 
   bool isLiveIn(unsigned Reg, const MachineBasicBlock &MBB) {
     return getVarInfo(Reg).isLiveIn(MBB, Reg, *MRI);

@@ -13,7 +13,7 @@
 ; CHECK:          DW_AT_name {{.*}} "reserved"
 ; CHECK:          DW_AT_byte_size  {{.*}} (0x04)
 ; CHECK:          DW_AT_bit_size   {{.*}} (0x1c)
-; CHECK:          DW_AT_bit_offset {{.*}} (0x18)
+; CHECK:          DW_AT_bit_offset {{.*}} (0xfffffffffffffff8)
 ; CHECK:          DW_AT_data_member_location {{.*}}00
 target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
 target triple = "thumbv7-apple-ios"
@@ -26,7 +26,7 @@ target triple = "thumbv7-apple-ios"
 !llvm.module.flags = !{!11, !12, !13, !14, !15}
 !llvm.ident = !{!16}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (trunk 240548) (llvm/trunk 240554)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !3, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (trunk 240548) (llvm/trunk 240554)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !3, imports: !2)
 !1 = !DIFile(filename: "test.i", directory: "/")
 !2 = !{}
 !3 = !{!4}

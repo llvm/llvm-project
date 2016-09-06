@@ -1,22 +1,24 @@
-; RUN: llc -march=mips < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
-; RUN: llc -march=mipsel < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
-; RUN: llc -march=mips < %s | FileCheck --check-prefix=ALL --check-prefix=O32-INV %s
-; RUN: llc -march=mipsel < %s | FileCheck --check-prefix=ALL --check-prefix=O32-INV %s
+; RUN: llc -march=mips < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -march=mipsel < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -march=mips < %s | FileCheck --check-prefixes=ALL,O32-INV %s
+; RUN: llc -march=mipsel < %s | FileCheck --check-prefixes=ALL,O32-INV %s
 
-; RUN-TODO: llc -march=mips64 -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
-; RUN-TODO: llc -march=mips64el -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
-; RUN-TODO: llc -march=mips64 -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=ALL-INV --check-prefix=O32-INV %s
-; RUN-TODO: llc -march=mips64el -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=ALL-INV --check-prefix=O32-INV %s
+; RUN-TODO: llc -march=mips64 -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN-TODO: llc -march=mips64el -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN-TODO: llc -march=mips64 -target-abi o32 < %s | FileCheck --check-prefixes=ALL,ALL-INV,O32-INV %s
+; RUN-TODO: llc -march=mips64el -target-abi o32 < %s | FileCheck --check-prefixes=ALL,ALL-INV,O32-INV %s
 
-; RUN: llc -march=mips64 -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=N32 %s
-; RUN: llc -march=mips64el -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=N32 %s
-; RUN: llc -march=mips64 -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=ALL-INV --check-prefix=N32-INV %s
-; RUN: llc -march=mips64el -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=ALL-INV --check-prefix=N32-INV %s
+; RUN: llc -march=mips64 -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
+; RUN: llc -march=mips64el -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
+; RUN: llc -march=mips64 -target-abi n32 < %s | FileCheck --check-prefixes=ALL,ALL-INV,N32-INV %s
+; RUN: llc -march=mips64el -target-abi n32 < %s | FileCheck --check-prefixes=ALL,ALL-INV,N32-INV %s
 
-; RUN: llc -march=mips64 -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=N64 %s
-; RUN: llc -march=mips64el -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=N64 %s
-; RUN: llc -march=mips64 -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=ALL-INV --check-prefix=N64-INV %s
-; RUN: llc -march=mips64el -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=ALL-INV --check-prefix=N64-INV %s
+; RUN: llc -march=mips64 -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64 %s
+; RUN: llc -march=mips64el -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64 %s
+; RUN: llc -march=mips64 -target-abi n64 < %s | FileCheck --check-prefixes=ALL,ALL-INV,N64-INV %s
+; RUN: llc -march=mips64el -target-abi n64 < %s | FileCheck --check-prefixes=ALL,ALL-INV,N64-INV %s
+
+; RUN: llc -march=mips -mcpu=mips32r6 -mattr=micromips -filetype=obj < %s -o - | llvm-objdump -no-show-raw-insn -arch mips -mcpu=mips32r6 -mattr=micromips -d - | FileCheck --check-prefix=MM32R6 %s
 
 ; Test the the callee-saved registers are callee-saved as specified by section
 ; 2 of the MIPSpro N32 Handbook and section 3 of the SYSV ABI spec.
@@ -109,3 +111,6 @@ entry:
 ; N64-DAG:       ldc1 [[F30]], [[OFF30]]($sp)
 ; N64-DAG:       ldc1 [[F31]], [[OFF31]]($sp)
 ; N64:           addiu $sp, $sp, 64
+
+; Check the mapping between LDC164 and LDC1_64_MMR6.
+; MM32R6: ldc1

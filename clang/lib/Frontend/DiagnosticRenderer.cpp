@@ -9,7 +9,6 @@
 
 #include "clang/Frontend/DiagnosticRenderer.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Edit/Commit.h"
 #include "clang/Edit/EditedSource.h"
@@ -18,52 +17,9 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 using namespace clang;
-
-/// \brief Retrieve the name of the immediate macro expansion.
-///
-/// This routine starts from a source location, and finds the name of the macro
-/// responsible for its immediate expansion. It looks through any intervening
-/// macro argument expansions to compute this. It returns a StringRef which
-/// refers to the SourceManager-owned buffer of the source where that macro
-/// name is spelled. Thus, the result shouldn't out-live that SourceManager.
-///
-/// This differs from Lexer::getImmediateMacroName in that any macro argument
-/// location will result in the topmost function macro that accepted it.
-/// e.g.
-/// \code
-///   MAC1( MAC2(foo) )
-/// \endcode
-/// for location of 'foo' token, this function will return "MAC1" while
-/// Lexer::getImmediateMacroName will return "MAC2".
-static StringRef getImmediateMacroName(SourceLocation Loc,
-                                       const SourceManager &SM,
-                                       const LangOptions &LangOpts) {
-   assert(Loc.isMacroID() && "Only reasonble to call this on macros");
-   // Walk past macro argument expanions.
-   while (SM.isMacroArgExpansion(Loc))
-     Loc = SM.getImmediateExpansionRange(Loc).first;
-
-   // If the macro's spelling has no FileID, then it's actually a token paste
-   // or stringization (or similar) and not a macro at all.
-   if (!SM.getFileEntryForID(SM.getFileID(SM.getSpellingLoc(Loc))))
-     return StringRef();
-
-   // Find the spelling location of the start of the non-argument expansion
-   // range. This is where the macro name was spelled in order to begin
-   // expanding this macro.
-   Loc = SM.getSpellingLoc(SM.getImmediateExpansionRange(Loc).first);
-
-   // Dig out the buffer where the macro name was spelled and the extents of the
-   // name so that we can render it into the expansion note.
-   std::pair<FileID, unsigned> ExpansionInfo = SM.getDecomposedLoc(Loc);
-   unsigned MacroTokenLength = Lexer::MeasureTokenLength(Loc, SM, LangOpts);
-   StringRef ExpansionBuffer = SM.getBufferData(ExpansionInfo.first);
-   return ExpansionBuffer.substr(ExpansionInfo.second, MacroTokenLength);
-}
 
 DiagnosticRenderer::DiagnosticRenderer(const LangOptions &LangOpts,
                                        DiagnosticOptions *DiagOpts)
@@ -209,7 +165,8 @@ void DiagnosticRenderer::emitIncludeStack(SourceLocation Loc,
                                           PresumedLoc PLoc,
                                           DiagnosticsEngine::Level Level,
                                           const SourceManager &SM) {
-  SourceLocation IncludeLoc = PLoc.getIncludeLoc();
+  SourceLocation IncludeLoc =
+      PLoc.isInvalid() ? SourceLocation() : PLoc.getIncludeLoc();
 
   // Skip redundant include stacks altogether.
   if (LastIncludeLoc == IncludeLoc)
@@ -474,7 +431,8 @@ void DiagnosticRenderer::emitSingleMacroExpansion(
 
   SmallString<100> MessageStorage;
   llvm::raw_svector_ostream Message(MessageStorage);
-  StringRef MacroName = getImmediateMacroName(Loc, SM, LangOpts);
+  StringRef MacroName =
+      Lexer::getImmediateMacroNameForDiagnostics(Loc, SM, LangOpts);
   if (MacroName.empty())
     Message << "expanded from here";
   else
@@ -658,7 +616,7 @@ DiagnosticNoteRenderer::emitBuildingModuleLocation(SourceLocation Loc,
   // Generate a note indicating the include location.
   SmallString<200> MessageStorage;
   llvm::raw_svector_ostream Message(MessageStorage);
-  if (PLoc.getFilename())
+  if (PLoc.isValid())
     Message << "while building module '" << ModuleName << "' imported from "
             << PLoc.getFilename() << ':' << PLoc.getLine() << ":";
   else

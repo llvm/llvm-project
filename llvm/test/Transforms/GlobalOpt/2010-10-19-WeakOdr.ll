@@ -2,7 +2,7 @@
 
 ; PR8389: Globals with weak_odr linkage type must not be modified
 
-; CHECK: weak_odr global i32 0
+; CHECK: weak_odr local_unnamed_addr global i32 0
 
 @SomeVar = weak_odr global i32 0
 

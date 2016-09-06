@@ -1102,7 +1102,7 @@ entry:
 ; CHECK: mfvsrwz 3, [[SHL]]
 ; CHECK: extsw 3, 3
 ; CHECK-LE-LABEL: @getsi0
-; CHECK-LE: xxsldwi [[SHL:[0-9]+]], 34, 34, 2
+; CHECK-LE: xxswapd [[SHL:[0-9]+]], 34
 ; CHECK-LE: mfvsrwz 3, [[SHL]]
 ; CHECK-LE: extsw 3, 3
 }
@@ -1150,7 +1150,7 @@ entry:
   %vecext = extractelement <4 x i32> %0, i32 3
   ret i32 %vecext
 ; CHECK-LABEL: @getsi3
-; CHECK: xxsldwi [[SHL:[0-9]+]], 34, 34, 2
+; CHECK: xxswapd [[SHL:[0-9]+]], 34
 ; CHECK: mfvsrwz 3, [[SHL]]
 ; CHECK: extsw 3, 3
 ; CHECK-LE-LABEL: @getsi3
@@ -1172,7 +1172,7 @@ entry:
 ; CHECK: mfvsrwz 3, [[SHL]]
 ; CHECK: clrldi   3, 3, 32
 ; CHECK-LE-LABEL: @getui0
-; CHECK-LE: xxsldwi [[SHL:[0-9]+]], 34, 34, 2
+; CHECK-LE: xxswapd [[SHL:[0-9]+]], 34
 ; CHECK-LE: mfvsrwz 3, [[SHL]]
 ; CHECK-LE: clrldi   3, 3, 32
 }
@@ -1220,7 +1220,7 @@ entry:
   %vecext = extractelement <4 x i32> %0, i32 3
   ret i32 %vecext
 ; CHECK-LABEL: @getui3
-; CHECK: xxsldwi [[SHL:[0-9]+]], 34, 34, 2
+; CHECK: xxswapd [[SHL:[0-9]+]], 34
 ; CHECK: mfvsrwz 3, [[SHL]]
 ; CHECK: clrldi   3, 3, 32
 ; CHECK-LE-LABEL: @getui3
@@ -1380,7 +1380,7 @@ entry:
 ; CHECK: xxsldwi [[SHL:[0-9]+]], 34, 34, 1
 ; CHECK: xscvspdpn 1, [[SHL]]
 ; CHECK-LE-LABEL: @getf1
-; CHECK-LE: xxsldwi [[SHL:[0-9]+]], 34, 34, 2
+; CHECK-LE: xxswapd [[SHL:[0-9]+]], 34
 ; CHECK-LE: xscvspdpn 1, [[SHL]]
 }
 
@@ -1393,7 +1393,7 @@ entry:
   %vecext = extractelement <4 x float> %0, i32 2
   ret float %vecext
 ; CHECK-LABEL: @getf2
-; CHECK: xxsldwi [[SHL:[0-9]+]], 34, 34, 2
+; CHECK: xxswapd [[SHL:[0-9]+]], 34
 ; CHECK: xscvspdpn 1, [[SHL]]
 ; CHECK-LE-LABEL: @getf2
 ; CHECK-LE: xxsldwi [[SHL:[0-9]+]], 34, 34, 1

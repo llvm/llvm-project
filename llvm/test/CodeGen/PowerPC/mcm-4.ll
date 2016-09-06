@@ -1,7 +1,7 @@
-; RUN: llc -mcpu=pwr7 -O0 -code-model=medium -fast-isel=false -mattr=-vsx <%s | FileCheck -check-prefix=MEDIUM %s
-; RUN: llc -mcpu=pwr7 -O0 -code-model=medium -fast-isel=false -mattr=+vsx <%s | FileCheck -check-prefix=MEDIUM-VSX %s
-; RUN: llc -mcpu=pwr7 -O0 -code-model=large -fast-isel=false -mattr=-vsx <%s | FileCheck -check-prefix=LARGE %s
-; RUN: llc -mcpu=pwr7 -O0 -code-model=large -fast-isel=false -mattr=+vsx <%s | FileCheck -check-prefix=LARGE-VSX %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=medium -fast-isel=false -mattr=-vsx <%s | FileCheck -check-prefix=MEDIUM %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=medium -fast-isel=false -mattr=+vsx <%s | FileCheck -check-prefix=MEDIUM-VSX %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=large -fast-isel=false -mattr=-vsx <%s | FileCheck -check-prefix=LARGE %s
+; RUN: llc -verify-machineinstrs -mcpu=pwr7 -O0 -code-model=large -fast-isel=false -mattr=+vsx <%s | FileCheck -check-prefix=LARGE-VSX %s
 
 ; Test correct code generation for medium and large code model
 ; for loading a value from the constant pool (TOC-relative).

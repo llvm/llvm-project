@@ -154,6 +154,24 @@ Value *PHINode::hasConstantValue() const {
   return ConstantValue;
 }
 
+/// hasConstantOrUndefValue - Whether the specified PHI node always merges
+/// together the same value, assuming that undefs result in the same value as
+/// non-undefs.
+/// Unlike \ref hasConstantValue, this does not return a value because the
+/// unique non-undef incoming value need not dominate the PHI node.
+bool PHINode::hasConstantOrUndefValue() const {
+  Value *ConstantValue = nullptr;
+  for (unsigned i = 0, e = getNumIncomingValues(); i != e; ++i) {
+    Value *Incoming = getIncomingValue(i);
+    if (Incoming != this && !isa<UndefValue>(Incoming)) {
+      if (ConstantValue && ConstantValue != Incoming)
+        return false;
+      ConstantValue = Incoming;
+    }
+  }
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 //                       LandingPadInst Implementation
 //===----------------------------------------------------------------------===//
@@ -313,9 +331,22 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   return NewCI;
 }
 
-void CallInst::addAttribute(unsigned i, Attribute::AttrKind attr) {
+Value *CallInst::getReturnedArgOperand() const {
+  unsigned Index;
+
+  if (AttributeList.hasAttrSomewhere(Attribute::Returned, &Index) && Index)
+    return getArgOperand(Index-1);
+  if (const Function *F = getCalledFunction())
+    if (F->getAttributes().hasAttrSomewhere(Attribute::Returned, &Index) &&
+        Index)
+      return getArgOperand(Index-1);
+      
+  return nullptr;
+}
+
+void CallInst::addAttribute(unsigned i, Attribute::AttrKind Kind) {
   AttributeSet PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, attr);
+  PAL = PAL.addAttribute(getContext(), i, Kind);
   setAttributes(PAL);
 }
 
@@ -325,9 +356,27 @@ void CallInst::addAttribute(unsigned i, StringRef Kind, StringRef Value) {
   setAttributes(PAL);
 }
 
-void CallInst::removeAttribute(unsigned i, Attribute attr) {
+void CallInst::addAttribute(unsigned i, Attribute Attr) {
   AttributeSet PAL = getAttributes();
-  AttrBuilder B(attr);
+  PAL = PAL.addAttribute(getContext(), i, Attr);
+  setAttributes(PAL);
+}
+
+void CallInst::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
+  AttributeSet PAL = getAttributes();
+  PAL = PAL.removeAttribute(getContext(), i, Kind);
+  setAttributes(PAL);
+}
+
+void CallInst::removeAttribute(unsigned i, StringRef Kind) {
+  AttributeSet PAL = getAttributes();
+  PAL = PAL.removeAttribute(getContext(), i, Kind);
+  setAttributes(PAL);
+}
+
+void CallInst::removeAttribute(unsigned i, Attribute Attr) {
+  AttributeSet PAL = getAttributes();
+  AttrBuilder B(Attr);
   LLVMContext &Context = getContext();
   PAL = PAL.removeAttributes(Context, i,
                              AttributeSet::get(Context, i, B));
@@ -346,19 +395,26 @@ void CallInst::addDereferenceableOrNullAttr(unsigned i, uint64_t Bytes) {
   setAttributes(PAL);
 }
 
-bool CallInst::paramHasAttr(unsigned i, Attribute::AttrKind A) const {
+bool CallInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
   assert(i < (getNumArgOperands() + 1) && "Param index out of bounds!");
 
-  if (AttributeList.hasAttribute(i, A))
+  if (AttributeList.hasAttribute(i, Kind))
     return true;
   if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasAttribute(i, A);
+    return F->getAttributes().hasAttribute(i, Kind);
   return false;
 }
 
-bool CallInst::dataOperandHasImpliedAttr(unsigned i,
-                                         Attribute::AttrKind A) const {
+Attribute CallInst::getAttribute(unsigned i, Attribute::AttrKind Kind) const {
+  return getAttributes().getAttribute(i, Kind);
+}
 
+Attribute CallInst::getAttribute(unsigned i, StringRef Kind) const {
+  return getAttributes().getAttribute(i, Kind);
+}
+
+bool CallInst::dataOperandHasImpliedAttr(unsigned i,
+                                         Attribute::AttrKind Kind) const {
   // There are getNumOperands() - 1 data operands.  The last operand is the
   // callee.
   assert(i < getNumOperands() && "Data operand index out of bounds!");
@@ -368,11 +424,11 @@ bool CallInst::dataOperandHasImpliedAttr(unsigned i,
   // containing operand bundle, if the operand is a bundle operand.
 
   if (i < (getNumArgOperands() + 1))
-    return paramHasAttr(i, A);
+    return paramHasAttr(i, Kind);
 
   assert(hasOperandBundles() && i >= (getBundleOperandsStartIndex() + 1) &&
          "Must be either a call argument or an operand bundle!");
-  return bundleOperandHasAttr(i - 1, A);
+  return bundleOperandHasAttr(i - 1, Kind);
 }
 
 /// IsConstantOne - Return true only if val is constant int 1
@@ -384,16 +440,17 @@ static bool IsConstantOne(Value *val) {
 
 static Instruction *createMalloc(Instruction *InsertBefore,
                                  BasicBlock *InsertAtEnd, Type *IntPtrTy,
-                                 Type *AllocTy, Value *AllocSize, 
-                                 Value *ArraySize, Function *MallocF,
-                                 const Twine &Name) {
+                                 Type *AllocTy, Value *AllocSize,
+                                 Value *ArraySize,
+                                 ArrayRef<OperandBundleDef> OpB,
+                                 Function *MallocF, const Twine &Name) {
   assert(((!InsertBefore && InsertAtEnd) || (InsertBefore && !InsertAtEnd)) &&
          "createMalloc needs either InsertBefore or InsertAtEnd");
 
   // malloc(type) becomes: 
   //       bitcast (i8* malloc(typeSize)) to type*
   // malloc(type, arraySize) becomes:
-  //       bitcast (i8 *malloc(typeSize*arraySize)) to type*
+  //       bitcast (i8* malloc(typeSize*arraySize)) to type*
   if (!ArraySize)
     ArraySize = ConstantInt::get(IntPtrTy, 1);
   else if (ArraySize->getType() != IntPtrTy) {
@@ -426,8 +483,8 @@ static Instruction *createMalloc(Instruction *InsertBefore,
 
   assert(AllocSize->getType() == IntPtrTy && "malloc arg is wrong size");
   // Create the call to Malloc.
-  BasicBlock* BB = InsertBefore ? InsertBefore->getParent() : InsertAtEnd;
-  Module* M = BB->getParent()->getParent();
+  BasicBlock *BB = InsertBefore ? InsertBefore->getParent() : InsertAtEnd;
+  Module *M = BB->getParent()->getParent();
   Type *BPTy = Type::getInt8PtrTy(BB->getContext());
   Value *MallocFunc = MallocF;
   if (!MallocFunc)
@@ -437,13 +494,14 @@ static Instruction *createMalloc(Instruction *InsertBefore,
   CallInst *MCall = nullptr;
   Instruction *Result = nullptr;
   if (InsertBefore) {
-    MCall = CallInst::Create(MallocFunc, AllocSize, "malloccall", InsertBefore);
+    MCall = CallInst::Create(MallocFunc, AllocSize, OpB, "malloccall",
+                             InsertBefore);
     Result = MCall;
     if (Result->getType() != AllocPtrType)
       // Create a cast instruction to convert to the right type...
       Result = new BitCastInst(MCall, AllocPtrType, Name, InsertBefore);
   } else {
-    MCall = CallInst::Create(MallocFunc, AllocSize, "malloccall");
+    MCall = CallInst::Create(MallocFunc, AllocSize, OpB, "malloccall");
     Result = MCall;
     if (Result->getType() != AllocPtrType) {
       InsertAtEnd->getInstList().push_back(MCall);
@@ -470,11 +528,21 @@ static Instruction *createMalloc(Instruction *InsertBefore,
 Instruction *CallInst::CreateMalloc(Instruction *InsertBefore,
                                     Type *IntPtrTy, Type *AllocTy,
                                     Value *AllocSize, Value *ArraySize,
-                                    Function * MallocF,
+                                    Function *MallocF,
                                     const Twine &Name) {
   return createMalloc(InsertBefore, nullptr, IntPtrTy, AllocTy, AllocSize,
-                      ArraySize, MallocF, Name);
+                      ArraySize, None, MallocF, Name);
 }
+Instruction *CallInst::CreateMalloc(Instruction *InsertBefore,
+                                    Type *IntPtrTy, Type *AllocTy,
+                                    Value *AllocSize, Value *ArraySize,
+                                    ArrayRef<OperandBundleDef> OpB,
+                                    Function *MallocF,
+                                    const Twine &Name) {
+  return createMalloc(InsertBefore, nullptr, IntPtrTy, AllocTy, AllocSize,
+                      ArraySize, OpB, MallocF, Name);
+}
+
 
 /// CreateMalloc - Generate the IR for a call to malloc:
 /// 1. Compute the malloc call's argument as the specified type's size,
@@ -489,33 +557,43 @@ Instruction *CallInst::CreateMalloc(BasicBlock *InsertAtEnd,
                                     Value *AllocSize, Value *ArraySize, 
                                     Function *MallocF, const Twine &Name) {
   return createMalloc(nullptr, InsertAtEnd, IntPtrTy, AllocTy, AllocSize,
-                      ArraySize, MallocF, Name);
+                      ArraySize, None, MallocF, Name);
+}
+Instruction *CallInst::CreateMalloc(BasicBlock *InsertAtEnd,
+                                    Type *IntPtrTy, Type *AllocTy,
+                                    Value *AllocSize, Value *ArraySize,
+                                    ArrayRef<OperandBundleDef> OpB,
+                                    Function *MallocF, const Twine &Name) {
+  return createMalloc(nullptr, InsertAtEnd, IntPtrTy, AllocTy, AllocSize,
+                      ArraySize, OpB, MallocF, Name);
 }
 
-static Instruction* createFree(Value* Source, Instruction *InsertBefore,
+static Instruction *createFree(Value *Source,
+                               ArrayRef<OperandBundleDef> Bundles,
+                               Instruction *InsertBefore,
                                BasicBlock *InsertAtEnd) {
   assert(((!InsertBefore && InsertAtEnd) || (InsertBefore && !InsertAtEnd)) &&
          "createFree needs either InsertBefore or InsertAtEnd");
   assert(Source->getType()->isPointerTy() &&
          "Can not free something of nonpointer type!");
 
-  BasicBlock* BB = InsertBefore ? InsertBefore->getParent() : InsertAtEnd;
-  Module* M = BB->getParent()->getParent();
+  BasicBlock *BB = InsertBefore ? InsertBefore->getParent() : InsertAtEnd;
+  Module *M = BB->getParent()->getParent();
 
   Type *VoidTy = Type::getVoidTy(M->getContext());
   Type *IntPtrTy = Type::getInt8PtrTy(M->getContext());
   // prototype free as "void free(void*)"
   Value *FreeFunc = M->getOrInsertFunction("free", VoidTy, IntPtrTy, nullptr);
-  CallInst* Result = nullptr;
+  CallInst *Result = nullptr;
   Value *PtrCast = Source;
   if (InsertBefore) {
     if (Source->getType() != IntPtrTy)
       PtrCast = new BitCastInst(Source, IntPtrTy, "", InsertBefore);
-    Result = CallInst::Create(FreeFunc, PtrCast, "", InsertBefore);
+    Result = CallInst::Create(FreeFunc, PtrCast, Bundles, "", InsertBefore);
   } else {
     if (Source->getType() != IntPtrTy)
       PtrCast = new BitCastInst(Source, IntPtrTy, "", InsertAtEnd);
-    Result = CallInst::Create(FreeFunc, PtrCast, "");
+    Result = CallInst::Create(FreeFunc, PtrCast, Bundles, "");
   }
   Result->setTailCall();
   if (Function *F = dyn_cast<Function>(FreeFunc))
@@ -525,15 +603,27 @@ static Instruction* createFree(Value* Source, Instruction *InsertBefore,
 }
 
 /// CreateFree - Generate the IR for a call to the builtin free function.
-Instruction * CallInst::CreateFree(Value* Source, Instruction *InsertBefore) {
-  return createFree(Source, InsertBefore, nullptr);
+Instruction *CallInst::CreateFree(Value *Source, Instruction *InsertBefore) {
+  return createFree(Source, None, InsertBefore, nullptr);
+}
+Instruction *CallInst::CreateFree(Value *Source,
+                                  ArrayRef<OperandBundleDef> Bundles,
+                                  Instruction *InsertBefore) {
+  return createFree(Source, Bundles, InsertBefore, nullptr);
 }
 
 /// CreateFree - Generate the IR for a call to the builtin free function.
 /// Note: This function does not add the call to the basic block, that is the
 /// responsibility of the caller.
-Instruction* CallInst::CreateFree(Value* Source, BasicBlock *InsertAtEnd) {
-  Instruction* FreeCall = createFree(Source, nullptr, InsertAtEnd);
+Instruction *CallInst::CreateFree(Value *Source, BasicBlock *InsertAtEnd) {
+  Instruction *FreeCall = createFree(Source, None, nullptr, InsertAtEnd);
+  assert(FreeCall && "CreateFree did not create a CallInst");
+  return FreeCall;
+}
+Instruction *CallInst::CreateFree(Value *Source,
+                                  ArrayRef<OperandBundleDef> Bundles,
+                                  BasicBlock *InsertAtEnd) {
+  Instruction *FreeCall = createFree(Source, Bundles, nullptr, InsertAtEnd);
   assert(FreeCall && "CreateFree did not create a CallInst");
   return FreeCall;
 }
@@ -611,18 +701,31 @@ void InvokeInst::setSuccessorV(unsigned idx, BasicBlock *B) {
   return setSuccessor(idx, B);
 }
 
-bool InvokeInst::paramHasAttr(unsigned i, Attribute::AttrKind A) const {
+Value *InvokeInst::getReturnedArgOperand() const {
+  unsigned Index;
+
+  if (AttributeList.hasAttrSomewhere(Attribute::Returned, &Index) && Index)
+    return getArgOperand(Index-1);
+  if (const Function *F = getCalledFunction())
+    if (F->getAttributes().hasAttrSomewhere(Attribute::Returned, &Index) &&
+        Index)
+      return getArgOperand(Index-1);
+      
+  return nullptr;
+}
+
+bool InvokeInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {
   assert(i < (getNumArgOperands() + 1) && "Param index out of bounds!");
 
-  if (AttributeList.hasAttribute(i, A))
+  if (AttributeList.hasAttribute(i, Kind))
     return true;
   if (const Function *F = getCalledFunction())
-    return F->getAttributes().hasAttribute(i, A);
+    return F->getAttributes().hasAttribute(i, Kind);
   return false;
 }
 
 bool InvokeInst::dataOperandHasImpliedAttr(unsigned i,
-                                           Attribute::AttrKind A) const {
+                                           Attribute::AttrKind Kind) const {
   // There are getNumOperands() - 3 data operands.  The last three operands are
   // the callee and the two successor basic blocks.
   assert(i < (getNumOperands() - 2) && "Data operand index out of bounds!");
@@ -632,25 +735,52 @@ bool InvokeInst::dataOperandHasImpliedAttr(unsigned i,
   // containing operand bundle, if the operand is a bundle operand.
 
   if (i < (getNumArgOperands() + 1))
-    return paramHasAttr(i, A);
+    return paramHasAttr(i, Kind);
 
   assert(hasOperandBundles() && i >= (getBundleOperandsStartIndex() + 1) &&
          "Must be either an invoke argument or an operand bundle!");
-  return bundleOperandHasAttr(i - 1, A);
+  return bundleOperandHasAttr(i - 1, Kind);
 }
 
-void InvokeInst::addAttribute(unsigned i, Attribute::AttrKind attr) {
+void InvokeInst::addAttribute(unsigned i, Attribute::AttrKind Kind) {
   AttributeSet PAL = getAttributes();
-  PAL = PAL.addAttribute(getContext(), i, attr);
+  PAL = PAL.addAttribute(getContext(), i, Kind);
   setAttributes(PAL);
 }
 
-void InvokeInst::removeAttribute(unsigned i, Attribute attr) {
+void InvokeInst::addAttribute(unsigned i, Attribute Attr) {
   AttributeSet PAL = getAttributes();
-  AttrBuilder B(attr);
+  PAL = PAL.addAttribute(getContext(), i, Attr);
+  setAttributes(PAL);
+}
+
+void InvokeInst::removeAttribute(unsigned i, Attribute::AttrKind Kind) {
+  AttributeSet PAL = getAttributes();
+  PAL = PAL.removeAttribute(getContext(), i, Kind);
+  setAttributes(PAL);
+}
+
+void InvokeInst::removeAttribute(unsigned i, StringRef Kind) {
+  AttributeSet PAL = getAttributes();
+  PAL = PAL.removeAttribute(getContext(), i, Kind);
+  setAttributes(PAL);
+}
+
+void InvokeInst::removeAttribute(unsigned i, Attribute Attr) {
+  AttributeSet PAL = getAttributes();
+  AttrBuilder B(Attr);
   PAL = PAL.removeAttributes(getContext(), i,
                              AttributeSet::get(getContext(), i, B));
   setAttributes(PAL);
+}
+
+Attribute InvokeInst::getAttribute(unsigned i,
+                                   Attribute::AttrKind Kind) const {
+  return getAttributes().getAttribute(i, Kind);
+}
+
+Attribute InvokeInst::getAttribute(unsigned i, StringRef Kind) const {
+  return getAttributes().getAttribute(i, Kind);
 }
 
 void InvokeInst::addDereferenceableAttr(unsigned i, uint64_t Bytes) {
@@ -1209,13 +1339,13 @@ LoadInst::LoadInst(Value *Ptr, const Twine &Name, bool isVolatile,
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    unsigned Align, Instruction *InsertBef)
-    : LoadInst(Ty, Ptr, Name, isVolatile, Align, NotAtomic, CrossThread,
-               InsertBef) {}
+    : LoadInst(Ty, Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
+               CrossThread, InsertBef) {}
 
 LoadInst::LoadInst(Value *Ptr, const Twine &Name, bool isVolatile,
                    unsigned Align, BasicBlock *InsertAE)
-    : LoadInst(Ptr, Name, isVolatile, Align, NotAtomic, CrossThread, InsertAE) {
-}
+    : LoadInst(Ptr, Name, isVolatile, Align, AtomicOrdering::NotAtomic,
+               CrossThread, InsertAE) {}
 
 LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    unsigned Align, AtomicOrdering Order,
@@ -1247,7 +1377,7 @@ LoadInst::LoadInst(Value *Ptr, const char *Name, Instruction *InsertBef)
                      Load, Ptr, InsertBef) {
   setVolatile(false);
   setAlignment(0);
-  setAtomic(NotAtomic);
+  setAtomic(AtomicOrdering::NotAtomic);
   AssertOK();
   if (Name && Name[0]) setName(Name);
 }
@@ -1257,7 +1387,7 @@ LoadInst::LoadInst(Value *Ptr, const char *Name, BasicBlock *InsertAE)
                      Load, Ptr, InsertAE) {
   setVolatile(false);
   setAlignment(0);
-  setAtomic(NotAtomic);
+  setAtomic(AtomicOrdering::NotAtomic);
   AssertOK();
   if (Name && Name[0]) setName(Name);
 }
@@ -1268,7 +1398,7 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const char *Name, bool isVolatile,
   assert(Ty == cast<PointerType>(Ptr->getType())->getElementType());
   setVolatile(isVolatile);
   setAlignment(0);
-  setAtomic(NotAtomic);
+  setAtomic(AtomicOrdering::NotAtomic);
   AssertOK();
   if (Name && Name[0]) setName(Name);
 }
@@ -1279,7 +1409,7 @@ LoadInst::LoadInst(Value *Ptr, const char *Name, bool isVolatile,
                      Load, Ptr, InsertAE) {
   setVolatile(isVolatile);
   setAlignment(0);
-  setAtomic(NotAtomic);
+  setAtomic(AtomicOrdering::NotAtomic);
   AssertOK();
   if (Name && Name[0]) setName(Name);
 }
@@ -1324,13 +1454,13 @@ StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, unsigned Align,
                      Instruction *InsertBefore)
-    : StoreInst(val, addr, isVolatile, Align, NotAtomic, CrossThread,
-                InsertBefore) {}
+    : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
+                CrossThread, InsertBefore) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile, unsigned Align,
                      BasicBlock *InsertAtEnd)
-    : StoreInst(val, addr, isVolatile, Align, NotAtomic, CrossThread,
-                InsertAtEnd) {}
+    : StoreInst(val, addr, isVolatile, Align, AtomicOrdering::NotAtomic,
+                CrossThread, InsertAtEnd) {}
 
 StoreInst::StoreInst(Value *val, Value *addr, bool isVolatile,
                      unsigned Align, AtomicOrdering Order,
@@ -1398,13 +1528,15 @@ void AtomicCmpXchgInst::Init(Value *Ptr, Value *Cmp, Value *NewVal,
   assert(getOperand(2)->getType() ==
                  cast<PointerType>(getOperand(0)->getType())->getElementType()
          && "Ptr must be a pointer to NewVal type!");
-  assert(SuccessOrdering != NotAtomic &&
+  assert(SuccessOrdering != AtomicOrdering::NotAtomic &&
          "AtomicCmpXchg instructions must be atomic!");
-  assert(FailureOrdering != NotAtomic &&
+  assert(FailureOrdering != AtomicOrdering::NotAtomic &&
          "AtomicCmpXchg instructions must be atomic!");
-  assert(SuccessOrdering >= FailureOrdering &&
-         "AtomicCmpXchg success ordering must be at least as strong as fail");
-  assert(FailureOrdering != Release && FailureOrdering != AcquireRelease &&
+  assert(!isStrongerThan(FailureOrdering, SuccessOrdering) &&
+         "AtomicCmpXchg failure argument shall be no stronger than the success "
+         "argument");
+  assert(FailureOrdering != AtomicOrdering::Release &&
+         FailureOrdering != AtomicOrdering::AcquireRelease &&
          "AtomicCmpXchg failure ordering cannot include release semantics");
 }
 
@@ -1454,7 +1586,7 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
   assert(getOperand(1)->getType() ==
          cast<PointerType>(getOperand(0)->getType())->getElementType()
          && "Ptr must be a pointer to Val type!");
-  assert(Ordering != NotAtomic &&
+  assert(Ordering != AtomicOrdering::NotAtomic &&
          "AtomicRMW instructions must be atomic!");
 }
 
@@ -2101,7 +2233,7 @@ static inline bool isConstantAllOnes(const Value *V) {
 bool BinaryOperator::isNeg(const Value *V) {
   if (const BinaryOperator *Bop = dyn_cast<BinaryOperator>(V))
     if (Bop->getOpcode() == Instruction::Sub)
-      if (Constant* C = dyn_cast<Constant>(Bop->getOperand(0)))
+      if (Constant *C = dyn_cast<Constant>(Bop->getOperand(0)))
         return C->isNegativeZeroValue();
   return false;
 }
@@ -2109,7 +2241,7 @@ bool BinaryOperator::isNeg(const Value *V) {
 bool BinaryOperator::isFNeg(const Value *V, bool IgnoreZeroSign) {
   if (const BinaryOperator *Bop = dyn_cast<BinaryOperator>(V))
     if (Bop->getOpcode() == Instruction::FSub)
-      if (Constant* C = dyn_cast<Constant>(Bop->getOperand(0))) {
+      if (Constant *C = dyn_cast<Constant>(Bop->getOperand(0))) {
         if (!IgnoreZeroSign)
           IgnoreZeroSign = cast<Instruction>(V)->hasNoSignedZeros();
         return !IgnoreZeroSign ? C->isNegativeZeroValue() : C->isZeroValue();
@@ -2169,62 +2301,6 @@ bool BinaryOperator::swapOperands() {
   return false;
 }
 
-void BinaryOperator::setHasNoUnsignedWrap(bool b) {
-  cast<OverflowingBinaryOperator>(this)->setHasNoUnsignedWrap(b);
-}
-
-void BinaryOperator::setHasNoSignedWrap(bool b) {
-  cast<OverflowingBinaryOperator>(this)->setHasNoSignedWrap(b);
-}
-
-void BinaryOperator::setIsExact(bool b) {
-  cast<PossiblyExactOperator>(this)->setIsExact(b);
-}
-
-bool BinaryOperator::hasNoUnsignedWrap() const {
-  return cast<OverflowingBinaryOperator>(this)->hasNoUnsignedWrap();
-}
-
-bool BinaryOperator::hasNoSignedWrap() const {
-  return cast<OverflowingBinaryOperator>(this)->hasNoSignedWrap();
-}
-
-bool BinaryOperator::isExact() const {
-  return cast<PossiblyExactOperator>(this)->isExact();
-}
-
-void BinaryOperator::copyIRFlags(const Value *V) {
-  // Copy the wrapping flags.
-  if (auto *OB = dyn_cast<OverflowingBinaryOperator>(V)) {
-    setHasNoSignedWrap(OB->hasNoSignedWrap());
-    setHasNoUnsignedWrap(OB->hasNoUnsignedWrap());
-  }
-
-  // Copy the exact flag.
-  if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
-    setIsExact(PE->isExact());
-  
-  // Copy the fast-math flags.
-  if (auto *FP = dyn_cast<FPMathOperator>(V))
-    copyFastMathFlags(FP->getFastMathFlags());
-}
-
-void BinaryOperator::andIRFlags(const Value *V) {
-  if (auto *OB = dyn_cast<OverflowingBinaryOperator>(V)) {
-    setHasNoSignedWrap(hasNoSignedWrap() & OB->hasNoSignedWrap());
-    setHasNoUnsignedWrap(hasNoUnsignedWrap() & OB->hasNoUnsignedWrap());
-  }
-  
-  if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
-    setIsExact(isExact() & PE->isExact());
-  
-  if (auto *FP = dyn_cast<FPMathOperator>(V)) {
-    FastMathFlags FM = getFastMathFlags();
-    FM &= FP->getFastMathFlags();
-    copyFastMathFlags(FM);
-  }
-}
-
 
 //===----------------------------------------------------------------------===//
 //                             FPMathOperator Class
@@ -2269,8 +2345,8 @@ bool CastInst::isLosslessCast() const {
     return false;
 
   // Identity cast is always lossless
-  Type* SrcTy = getOperand(0)->getType();
-  Type* DstTy = getType();
+  Type *SrcTy = getOperand(0)->getType();
+  Type *DstTy = getType();
   if (SrcTy == DstTy)
     return true;
   
@@ -3577,6 +3653,34 @@ bool CmpInst::isFalseWhenEqual(Predicate predicate) {
   }
 }
 
+bool CmpInst::isImpliedTrueByMatchingCmp(Predicate Pred1, Predicate Pred2) {
+  // If the predicates match, then we know the first condition implies the
+  // second is true.
+  if (Pred1 == Pred2)
+    return true;
+
+  switch (Pred1) {
+  default:
+    break;
+  case ICMP_EQ:
+    // A == B implies A >=u B, A <=u B, A >=s B, and A <=s B are true.
+    return Pred2 == ICMP_UGE || Pred2 == ICMP_ULE || Pred2 == ICMP_SGE ||
+           Pred2 == ICMP_SLE;
+  case ICMP_UGT: // A >u B implies A != B and A >=u B are true.
+    return Pred2 == ICMP_NE || Pred2 == ICMP_UGE;
+  case ICMP_ULT: // A <u B implies A != B and A <=u B are true.
+    return Pred2 == ICMP_NE || Pred2 == ICMP_ULE;
+  case ICMP_SGT: // A >s B implies A != B and A >=s B are true.
+    return Pred2 == ICMP_NE || Pred2 == ICMP_SGE;
+  case ICMP_SLT: // A <s B implies A != B and A <=s B are true.
+    return Pred2 == ICMP_NE || Pred2 == ICMP_SLE;
+  }
+  return false;
+}
+
+bool CmpInst::isImpliedFalseByMatchingCmp(Predicate Pred1, Predicate Pred2) {
+  return isImpliedTrueByMatchingCmp(Pred1, getInversePredicate(Pred2));
+}
 
 //===----------------------------------------------------------------------===//
 //                        SwitchInst Implementation

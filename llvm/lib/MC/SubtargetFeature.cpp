@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
@@ -284,7 +285,7 @@ void SubtargetFeatures::print(raw_ostream &OS) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// dump - Dump feature info.
 ///
-void SubtargetFeatures::dump() const {
+LLVM_DUMP_METHOD void SubtargetFeatures::dump() const {
   print(dbgs());
 }
 #endif

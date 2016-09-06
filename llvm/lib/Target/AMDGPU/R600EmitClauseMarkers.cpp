@@ -38,8 +38,8 @@ private:
   const R600InstrInfo *TII;
   int Address;
 
-  unsigned OccupiedDwords(MachineInstr *MI) const {
-    switch (MI->getOpcode()) {
+  unsigned OccupiedDwords(MachineInstr &MI) const {
+    switch (MI.getOpcode()) {
     case AMDGPU::INTERP_PAIR_XY:
     case AMDGPU::INTERP_PAIR_ZW:
     case AMDGPU::INTERP_VEC_LOAD:
@@ -53,17 +53,17 @@ private:
 
     // These will be expanded to two ALU instructions in the
     // ExpandSpecialInstructions pass.
-    if (TII->isLDSRetInstr(MI->getOpcode()))
+    if (TII->isLDSRetInstr(MI.getOpcode()))
       return 2;
 
-    if(TII->isVector(*MI) ||
-        TII->isCubeOp(MI->getOpcode()) ||
-        TII->isReductionOp(MI->getOpcode()))
+    if (TII->isVector(MI) || TII->isCubeOp(MI.getOpcode()) ||
+        TII->isReductionOp(MI.getOpcode()))
       return 4;
 
     unsigned NumLiteral = 0;
-    for (MachineInstr::mop_iterator It = MI->operands_begin(),
-        E = MI->operands_end(); It != E; ++It) {
+    for (MachineInstr::mop_iterator It = MI.operands_begin(),
+                                    E = MI.operands_end();
+         It != E; ++It) {
       MachineOperand &MO = *It;
       if (MO.isReg() && MO.getReg() == AMDGPU::ALU_LITERAL_X)
         ++NumLiteral;
@@ -71,12 +71,12 @@ private:
     return 1 + NumLiteral;
   }
 
-  bool isALU(const MachineInstr *MI) const {
-    if (TII->isALUInstr(MI->getOpcode()))
+  bool isALU(const MachineInstr &MI) const {
+    if (TII->isALUInstr(MI.getOpcode()))
       return true;
-    if (TII->isVector(*MI) || TII->isCubeOp(MI->getOpcode()))
+    if (TII->isVector(MI) || TII->isCubeOp(MI.getOpcode()))
       return true;
-    switch (MI->getOpcode()) {
+    switch (MI.getOpcode()) {
     case AMDGPU::PRED_X:
     case AMDGPU::INTERP_PAIR_XY:
     case AMDGPU::INTERP_PAIR_ZW:
@@ -89,8 +89,8 @@ private:
     }
   }
 
-  bool IsTrivialInst(MachineInstr *MI) const {
-    switch (MI->getOpcode()) {
+  bool IsTrivialInst(MachineInstr &MI) const {
+    switch (MI.getOpcode()) {
     case AMDGPU::KILL:
     case AMDGPU::RETURN:
     case AMDGPU::IMPLICIT_DEF:
@@ -114,18 +114,20 @@ private:
         ((((Sel >> 2) - 512) & 4095) >> 5) << 1);
   }
 
-  bool SubstituteKCacheBank(MachineInstr *MI,
-      std::vector<std::pair<unsigned, unsigned> > &CachedConsts,
-      bool UpdateInstr = true) const {
+  bool
+  SubstituteKCacheBank(MachineInstr &MI,
+                       std::vector<std::pair<unsigned, unsigned>> &CachedConsts,
+                       bool UpdateInstr = true) const {
     std::vector<std::pair<unsigned, unsigned> > UsedKCache;
 
-    if (!TII->isALUInstr(MI->getOpcode()) && MI->getOpcode() != AMDGPU::DOT_4)
+    if (!TII->isALUInstr(MI.getOpcode()) && MI.getOpcode() != AMDGPU::DOT_4)
       return true;
 
-    const SmallVectorImpl<std::pair<MachineOperand *, int64_t> > &Consts =
+    const SmallVectorImpl<std::pair<MachineOperand *, int64_t>> &Consts =
         TII->getSrcs(MI);
-    assert((TII->isALUInstr(MI->getOpcode()) ||
-        MI->getOpcode() == AMDGPU::DOT_4) && "Can't assign Const");
+    assert(
+        (TII->isALUInstr(MI.getOpcode()) || MI.getOpcode() == AMDGPU::DOT_4) &&
+        "Can't assign Const");
     for (unsigned i = 0, n = Consts.size(); i < n; ++i) {
       if (Consts[i].first->getReg() != AMDGPU::ALU_CONST)
         continue;
@@ -194,9 +196,9 @@ private:
       // in the clause.
       unsigned LastUseCount = 0;
       for (MachineBasicBlock::iterator UseI = Def; UseI != BBEnd; ++UseI) {
-        AluInstCount += OccupiedDwords(UseI);
+        AluInstCount += OccupiedDwords(*UseI);
         // Make sure we won't need to end the clause due to KCache limitations.
-        if (!SubstituteKCacheBank(UseI, KCacheBanks, false))
+        if (!SubstituteKCacheBank(*UseI, KCacheBanks, false))
           return false;
 
         // We have reached the maximum instruction limit before finding the
@@ -230,9 +232,9 @@ private:
     bool PushBeforeModifier = false;
     unsigned AluInstCount = 0;
     for (MachineBasicBlock::iterator E = MBB.end(); I != E; ++I) {
-      if (IsTrivialInst(I))
+      if (IsTrivialInst(*I))
         continue;
-      if (!isALU(I))
+      if (!isALU(*I))
         break;
       if (AluInstCount > TII->getMaxAlusPerClause())
         break;
@@ -245,7 +247,7 @@ private:
         // clause as predicated alus).
         if (AluInstCount > 0)
           break;
-        if (TII->getFlagOp(I).getImm() & MO_FLAG_PUSH)
+        if (TII->getFlagOp(*I).getImm() & MO_FLAG_PUSH)
           PushBeforeModifier = true;
         AluInstCount ++;
         continue;
@@ -267,16 +269,16 @@ private:
       if (!canClauseLocalKillFitInClause(AluInstCount, KCacheBanks, I, E))
         break;
 
-      if (!SubstituteKCacheBank(I, KCacheBanks))
+      if (!SubstituteKCacheBank(*I, KCacheBanks))
         break;
-      AluInstCount += OccupiedDwords(I);
+      AluInstCount += OccupiedDwords(*I);
     }
     unsigned Opcode = PushBeforeModifier ?
         AMDGPU::CF_ALU_PUSH_BEFORE : AMDGPU::CF_ALU;
     BuildMI(MBB, ClauseHead, MBB.findDebugLoc(ClauseHead), TII->get(Opcode))
     // We don't use the ADDR field until R600ControlFlowFinalizer pass, where
     // it is safe to assume it is 0. However if we always put 0 here, the ifcvt
-    // pass may assume that identical ALU clause starter at the beginning of a 
+    // pass may assume that identical ALU clause starter at the beginning of a
     // true and false branch can be factorized which is not the case.
         .addImm(Address++) // ADDR
         .addImm(KCacheBanks.empty()?0:KCacheBanks[0].first) // KB0
@@ -298,16 +300,17 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    TII = static_cast<const R600InstrInfo *>(MF.getSubtarget().getInstrInfo());
+    const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();
+    TII = ST.getInstrInfo();
 
     for (MachineFunction::iterator BB = MF.begin(), BB_E = MF.end();
                                                     BB != BB_E; ++BB) {
       MachineBasicBlock &MBB = *BB;
       MachineBasicBlock::iterator I = MBB.begin();
-      if (I->getOpcode() == AMDGPU::CF_ALU)
+      if (I != MBB.end() && I->getOpcode() == AMDGPU::CF_ALU)
         continue; // BB was already parsed
       for (MachineBasicBlock::iterator E = MBB.end(); I != E;) {
-        if (isALU(I))
+        if (isALU(*I))
           I = MakeALUClause(MBB, I);
         else
           ++I;

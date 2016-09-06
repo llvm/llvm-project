@@ -1,0 +1,6 @@
+# RUN: not yaml2obj %s 2>&1 | FileCheck %s
+
+---
+DummyData:
+  foo:           0
+...

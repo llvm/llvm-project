@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Frontend/Utils.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Config/config.h" // C_INCLUDE_DIRS
+#include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderMap.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
@@ -25,7 +25,6 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -267,38 +266,39 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
   }
 
   case llvm::Triple::Haiku:
-    AddPath("/boot/common/include", System, false);
-    AddPath("/boot/develop/headers/os", System, false);
-    AddPath("/boot/develop/headers/os/app", System, false);
-    AddPath("/boot/develop/headers/os/arch", System, false);
-    AddPath("/boot/develop/headers/os/device", System, false);
-    AddPath("/boot/develop/headers/os/drivers", System, false);
-    AddPath("/boot/develop/headers/os/game", System, false);
-    AddPath("/boot/develop/headers/os/interface", System, false);
-    AddPath("/boot/develop/headers/os/kernel", System, false);
-    AddPath("/boot/develop/headers/os/locale", System, false);
-    AddPath("/boot/develop/headers/os/mail", System, false);
-    AddPath("/boot/develop/headers/os/media", System, false);
-    AddPath("/boot/develop/headers/os/midi", System, false);
-    AddPath("/boot/develop/headers/os/midi2", System, false);
-    AddPath("/boot/develop/headers/os/net", System, false);
-    AddPath("/boot/develop/headers/os/storage", System, false);
-    AddPath("/boot/develop/headers/os/support", System, false);
-    AddPath("/boot/develop/headers/os/translation", System, false);
-    AddPath("/boot/develop/headers/os/add-ons/graphics", System, false);
-    AddPath("/boot/develop/headers/os/add-ons/input_server", System, false);
-    AddPath("/boot/develop/headers/os/add-ons/screen_saver", System, false);
-    AddPath("/boot/develop/headers/os/add-ons/tracker", System, false);
-    AddPath("/boot/develop/headers/os/be_apps/Deskbar", System, false);
-    AddPath("/boot/develop/headers/os/be_apps/NetPositive", System, false);
-    AddPath("/boot/develop/headers/os/be_apps/Tracker", System, false);
-    AddPath("/boot/develop/headers/cpp", System, false);
-    AddPath("/boot/develop/headers/cpp/i586-pc-haiku", System, false);
-    AddPath("/boot/develop/headers/3rdparty", System, false);
-    AddPath("/boot/develop/headers/bsd", System, false);
-    AddPath("/boot/develop/headers/glibc", System, false);
-    AddPath("/boot/develop/headers/posix", System, false);
-    AddPath("/boot/develop/headers",  System, false);
+    AddPath("/boot/system/non-packaged/develop/headers", System, false);
+    AddPath("/boot/system/develop/headers/os", System, false);
+    AddPath("/boot/system/develop/headers/os/app", System, false);
+    AddPath("/boot/system/develop/headers/os/arch", System, false);
+    AddPath("/boot/system/develop/headers/os/device", System, false);
+    AddPath("/boot/system/develop/headers/os/drivers", System, false);
+    AddPath("/boot/system/develop/headers/os/game", System, false);
+    AddPath("/boot/system/develop/headers/os/interface", System, false);
+    AddPath("/boot/system/develop/headers/os/kernel", System, false);
+    AddPath("/boot/system/develop/headers/os/locale", System, false);
+    AddPath("/boot/system/develop/headers/os/mail", System, false);
+    AddPath("/boot/system/develop/headers/os/media", System, false);
+    AddPath("/boot/system/develop/headers/os/midi", System, false);
+    AddPath("/boot/system/develop/headers/os/midi2", System, false);
+    AddPath("/boot/system/develop/headers/os/net", System, false);
+    AddPath("/boot/system/develop/headers/os/opengl", System, false);
+    AddPath("/boot/system/develop/headers/os/storage", System, false);
+    AddPath("/boot/system/develop/headers/os/support", System, false);
+    AddPath("/boot/system/develop/headers/os/translation", System, false);
+    AddPath("/boot/system/develop/headers/os/add-ons/graphics", System, false);
+    AddPath("/boot/system/develop/headers/os/add-ons/input_server", System, false);
+    AddPath("/boot/system/develop/headers/os/add-ons/mail_daemon", System, false);
+    AddPath("/boot/system/develop/headers/os/add-ons/registrar", System, false);
+    AddPath("/boot/system/develop/headers/os/add-ons/screen_saver", System, false);
+    AddPath("/boot/system/develop/headers/os/add-ons/tracker", System, false);
+    AddPath("/boot/system/develop/headers/os/be_apps/Deskbar", System, false);
+    AddPath("/boot/system/develop/headers/os/be_apps/NetPositive", System, false);
+    AddPath("/boot/system/develop/headers/os/be_apps/Tracker", System, false);
+    AddPath("/boot/system/develop/headers/3rdparty", System, false);
+    AddPath("/boot/system/develop/headers/bsd", System, false);
+    AddPath("/boot/system/develop/headers/glibc", System, false);
+    AddPath("/boot/system/develop/headers/posix", System, false);
+    AddPath("/boot/system/develop/headers",  System, false);
     break;
   case llvm::Triple::RTEMS:
     break;
@@ -326,7 +326,7 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
     // <isysroot> gets prepended later in AddPath().
     std::string BaseSDKPath = "";
     if (!HasSysroot) {
-      const char *envValue = getenv("SCE_PS4_SDK_DIR");
+      const char *envValue = getenv("SCE_ORBIS_SDK_DIR");
       if (envValue)
         BaseSDKPath = envValue;
       else {

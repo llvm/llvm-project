@@ -168,6 +168,7 @@ private:
 namespace llvm {
 template <> struct GraphTraits< ::clang::DomTreeNode* > {
   typedef ::clang::DomTreeNode NodeType;
+  typedef ::clang::DomTreeNode *NodeRef;
   typedef NodeType::iterator  ChildIteratorType;
 
   static NodeType *getEntryNode(NodeType *N) {

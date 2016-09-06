@@ -3,7 +3,7 @@
 ; Uses the print-deref (+ analyze to print) pass to run
 ; isDereferenceablePointer() on many load instruction operands
 
-target datalayout = "e"
+target datalayout = "e-i32:32:64"
 
 %TypeOpaque = type opaque
 
@@ -43,7 +43,8 @@ entry:
     %load4 = load i32, i32 addrspace(1)* %relocate
 
 ; CHECK-NOT: %nparam
-    %nparam = getelementptr i32, i32 addrspace(1)* %dparam, i32 5
+    %dpa = call i32 addrspace(1)* @func1(i32 addrspace(1)* %dparam)
+    %nparam = getelementptr i32, i32 addrspace(1)* %dpa, i32 5
     %load5 = load i32, i32 addrspace(1)* %nparam
 
     ; Load from a non-dereferenceable load
@@ -133,6 +134,12 @@ entry:
     %load26 = load i32, i32* %d4_unaligned_load, align 16
     %load27 = load i32, i32* %d4_aligned_load, align 16
 
+   ; Alloca with no explicit alignment is aligned to preferred alignment of
+   ; the type (specified by datalayout string).
+; CHECK: %alloca.noalign{{.*}}(aligned)
+    %alloca.noalign = alloca i32
+    %load28 = load i32, i32* %alloca.noalign, align 8
+
     ret void
 }
 
@@ -155,6 +162,8 @@ if.end:
 
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
 declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
+
+declare i32 addrspace(1)* @func1(i32 addrspace(1)* returned) nounwind argmemonly
 
 !0 = !{i64 4}
 !1 = !{i64 2}

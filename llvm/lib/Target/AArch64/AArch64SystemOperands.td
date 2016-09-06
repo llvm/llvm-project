@@ -1,0 +1,1018 @@
+//===- AArch64SystemOperands.td ----------------------------*- tablegen -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the symbolic operands permitted for various kinds of
+// AArch64 system instruction.
+//
+//===----------------------------------------------------------------------===//
+
+include "llvm/TableGen/SearchableTable.td"
+
+//===----------------------------------------------------------------------===//
+// AT (address translate) instruction options.
+//===----------------------------------------------------------------------===//
+
+class AT<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
+         bits<3> op2> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<16> Encoding;
+  let Encoding{15-14} = op0;
+  let Encoding{13-11} = op1;
+  let Encoding{10-7} = crn;
+  let Encoding{6-3} = crm;
+  let Encoding{2-0} = op2;
+}
+
+def : AT<"S1E1R",  0b01, 0b000, 0b0111, 0b1000, 0b000>;
+def : AT<"S1E2R",  0b01, 0b100, 0b0111, 0b1000, 0b000>;
+def : AT<"S1E3R",  0b01, 0b110, 0b0111, 0b1000, 0b000>;
+def : AT<"S1E1W",  0b01, 0b000, 0b0111, 0b1000, 0b001>;
+def : AT<"S1E2W",  0b01, 0b100, 0b0111, 0b1000, 0b001>;
+def : AT<"S1E3W",  0b01, 0b110, 0b0111, 0b1000, 0b001>;
+def : AT<"S1E0R",  0b01, 0b000, 0b0111, 0b1000, 0b010>;
+def : AT<"S1E0W",  0b01, 0b000, 0b0111, 0b1000, 0b011>;
+def : AT<"S12E1R", 0b01, 0b100, 0b0111, 0b1000, 0b100>;
+def : AT<"S12E1W", 0b01, 0b100, 0b0111, 0b1000, 0b101>;
+def : AT<"S12E0R", 0b01, 0b100, 0b0111, 0b1000, 0b110>;
+def : AT<"S12E0W", 0b01, 0b100, 0b0111, 0b1000, 0b111>;
+def : AT<"S1E1RP", 0b01, 0b000, 0b0111, 0b1001, 0b000>;
+def : AT<"S1E1WP", 0b01, 0b000, 0b0111, 0b1001, 0b001>;
+
+
+//===----------------------------------------------------------------------===//
+// DMB/DSB (data barrier) instruction options.
+//===----------------------------------------------------------------------===//
+
+class DB<string name, bits<4> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<4> Encoding = encoding;
+}
+
+def : DB<"oshld", 0x1>;
+def : DB<"oshst", 0x2>;
+def : DB<"osh",   0x3>;
+def : DB<"nshld", 0x5>;
+def : DB<"nshst", 0x6>;
+def : DB<"nsh",   0x7>;
+def : DB<"ishld", 0x9>;
+def : DB<"ishst", 0xa>;
+def : DB<"ish",   0xb>;
+def : DB<"ld",    0xd>;
+def : DB<"st",    0xe>;
+def : DB<"sy",    0xf>;
+
+//===----------------------------------------------------------------------===//
+// DC (data cache maintenance) instruction options.
+//===----------------------------------------------------------------------===//
+
+class DC<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
+         bits<3> op2> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<16> Encoding;
+  let Encoding{15-14} = op0;
+  let Encoding{13-11} = op1;
+  let Encoding{10-7} = crn;
+  let Encoding{6-3} = crm;
+  let Encoding{2-0} = op2;
+}
+
+def : DC<"ZVA",   0b01, 0b011, 0b0111, 0b0100, 0b001>;
+def : DC<"IVAC",  0b01, 0b000, 0b0111, 0b0110, 0b001>;
+def : DC<"ISW",   0b01, 0b000, 0b0111, 0b0110, 0b010>;
+def : DC<"CVAC",  0b01, 0b011, 0b0111, 0b1010, 0b001>;
+def : DC<"CSW",   0b01, 0b000, 0b0111, 0b1010, 0b010>;
+def : DC<"CVAU",  0b01, 0b011, 0b0111, 0b1011, 0b001>;
+def : DC<"CIVAC", 0b01, 0b011, 0b0111, 0b1110, 0b001>;
+def : DC<"CISW",  0b01, 0b000, 0b0111, 0b1110, 0b010>;
+
+//===----------------------------------------------------------------------===//
+// IC (instruction cache maintenance) instruction options.
+//===----------------------------------------------------------------------===//
+
+class IC<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2,
+         bit needsreg> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<14> Encoding;
+  let Encoding{13-11} = op1;
+  let Encoding{10-7} = crn;
+  let Encoding{6-3} = crm;
+  let Encoding{2-0} = op2;
+  bit NeedsReg = needsreg;
+}
+
+def : IC<"IALLUIS", 0b000, 0b0111, 0b0001, 0b000, 0>;
+def : IC<"IALLU",   0b000, 0b0111, 0b0101, 0b000, 0>;
+def : IC<"IVAU",    0b000, 0b0111, 0b0001, 0b000, 1>;
+
+//===----------------------------------------------------------------------===//
+// ISB (instruction-fetch barrier) instruction options.
+//===----------------------------------------------------------------------===//
+
+class ISB<string name, bits<4> encoding> : SearchableTable{
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<4> Encoding;
+  let Encoding = encoding;
+}
+
+def : ISB<"sy", 0xf>;
+
+//===----------------------------------------------------------------------===//
+// PRFM (prefetch) instruction options.
+//===----------------------------------------------------------------------===//
+
+class PRFM<string name, bits<5> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<5> Encoding;
+  let Encoding = encoding;
+}
+
+def : PRFM<"pldl1keep", 0x00>;
+def : PRFM<"pldl1strm", 0x01>;
+def : PRFM<"pldl2keep", 0x02>;
+def : PRFM<"pldl2strm", 0x03>;
+def : PRFM<"pldl3keep", 0x04>;
+def : PRFM<"pldl3strm", 0x05>;
+def : PRFM<"plil1keep", 0x08>;
+def : PRFM<"plil1strm", 0x09>;
+def : PRFM<"plil2keep", 0x0a>;
+def : PRFM<"plil2strm", 0x0b>;
+def : PRFM<"plil3keep", 0x0c>;
+def : PRFM<"plil3strm", 0x0d>;
+def : PRFM<"pstl1keep", 0x10>;
+def : PRFM<"pstl1strm", 0x11>;
+def : PRFM<"pstl2keep", 0x12>;
+def : PRFM<"pstl2strm", 0x13>;
+def : PRFM<"pstl3keep", 0x14>;
+def : PRFM<"pstl3strm", 0x15>;
+
+//===----------------------------------------------------------------------===//
+// PState instruction options.
+//===----------------------------------------------------------------------===//
+
+class PState<string name, bits<5> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<5> Encoding;
+  let Encoding = encoding;
+  code Requires = [{ {} }];
+}
+
+def : PState<"SPSel",   0b00101>;
+def : PState<"DAIFSet", 0b11110>;
+def : PState<"DAIFClr", 0b11111>;
+// v8.1a "Privileged Access Never" extension-specific PStates
+let Requires = [{ {AArch64::HasV8_1aOps} }] in
+def : PState<"PAN",     0b00100>;
+// v8.2a "User Access Override" extension-specific PStates
+let Requires = [{ {AArch64::HasV8_2aOps} }] in
+def : PState<"UAO",     0b00011>;
+
+
+//===----------------------------------------------------------------------===//
+// PSB instruction options.
+//===----------------------------------------------------------------------===//
+
+class PSB<string name, bits<5> encoding> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<5> Encoding;
+  let Encoding = encoding;
+}
+
+def : PSB<"csync", 0x11>;
+
+//===----------------------------------------------------------------------===//
+// TLBI (translation lookaside buffer invalidate) instruction options.
+//===----------------------------------------------------------------------===//
+
+class TLBI<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
+             bits<3> op2, bit needsreg = 1> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<16> Encoding;
+  let Encoding{15-14} = op0;
+  let Encoding{13-11} = op1;
+  let Encoding{10-7} = crn;
+  let Encoding{6-3} = crm;
+  let Encoding{2-0} = op2;
+  bit NeedsReg = needsreg;
+}
+
+def : TLBI<"IPAS2E1IS",    0b01, 0b100, 0b1000, 0b0000, 0b001>;
+def : TLBI<"IPAS2LE1IS",   0b01, 0b100, 0b1000, 0b0000, 0b101>;
+def : TLBI<"VMALLE1IS",    0b01, 0b000, 0b1000, 0b0011, 0b000, 0>;
+def : TLBI<"ALLE2IS",      0b01, 0b100, 0b1000, 0b0011, 0b000, 0>;
+def : TLBI<"ALLE3IS",      0b01, 0b110, 0b1000, 0b0011, 0b000, 0>;
+def : TLBI<"VAE1IS",       0b01, 0b000, 0b1000, 0b0011, 0b001>;
+def : TLBI<"VAE2IS",       0b01, 0b100, 0b1000, 0b0011, 0b001>;
+def : TLBI<"VAE3IS",       0b01, 0b110, 0b1000, 0b0011, 0b001>;
+def : TLBI<"ASIDE1IS",     0b01, 0b000, 0b1000, 0b0011, 0b010>;
+def : TLBI<"VAAE1IS",      0b01, 0b000, 0b1000, 0b0011, 0b011>;
+def : TLBI<"ALLE1IS",      0b01, 0b100, 0b1000, 0b0011, 0b100, 0>;
+def : TLBI<"VALE1IS",      0b01, 0b000, 0b1000, 0b0011, 0b101>;
+def : TLBI<"VALE2IS",      0b01, 0b100, 0b1000, 0b0011, 0b101>;
+def : TLBI<"VALE3IS",      0b01, 0b110, 0b1000, 0b0011, 0b101>;
+def : TLBI<"VMALLS12E1IS", 0b01, 0b100, 0b1000, 0b0011, 0b110, 0>;
+def : TLBI<"VAALE1IS",     0b01, 0b000, 0b1000, 0b0011, 0b111>;
+def : TLBI<"IPAS2E1",      0b01, 0b100, 0b1000, 0b0100, 0b001>;
+def : TLBI<"IPAS2LE1",     0b01, 0b100, 0b1000, 0b0100, 0b101>;
+def : TLBI<"VMALLE1",      0b01, 0b000, 0b1000, 0b0111, 0b000, 0>;
+def : TLBI<"ALLE2",        0b01, 0b100, 0b1000, 0b0111, 0b000, 0>;
+def : TLBI<"ALLE3",        0b01, 0b110, 0b1000, 0b0111, 0b000, 0>;
+def : TLBI<"VAE1",         0b01, 0b000, 0b1000, 0b0111, 0b001>;
+def : TLBI<"VAE2",         0b01, 0b100, 0b1000, 0b0111, 0b001>;
+def : TLBI<"VAE3",         0b01, 0b110, 0b1000, 0b0111, 0b001>;
+def : TLBI<"ASIDE1",       0b01, 0b000, 0b1000, 0b0111, 0b010>;
+def : TLBI<"VAAE1",        0b01, 0b000, 0b1000, 0b0111, 0b011>;
+def : TLBI<"ALLE1",        0b01, 0b100, 0b1000, 0b0111, 0b100, 0>;
+def : TLBI<"VALE1",        0b01, 0b000, 0b1000, 0b0111, 0b101>;
+def : TLBI<"VALE2",        0b01, 0b100, 0b1000, 0b0111, 0b101>;
+def : TLBI<"VALE3",        0b01, 0b110, 0b1000, 0b0111, 0b101>;
+def : TLBI<"VMALLS12E1",   0b01, 0b100, 0b1000, 0b0111, 0b110, 0>;
+def : TLBI<"VAALE1",       0b01, 0b000, 0b1000, 0b0111, 0b111>;
+
+
+//===----------------------------------------------------------------------===//
+// MRS/MSR (system register read/write) instruction options.
+//===----------------------------------------------------------------------===//
+
+class SysReg<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
+             bits<3> op2> : SearchableTable {
+  let SearchableFields = ["Name", "Encoding"];
+  let EnumValueField = "Encoding";
+
+  string Name = name;
+  bits<16> Encoding;
+  let Encoding{15-14} = op0;
+  let Encoding{13-11} = op1;
+  let Encoding{10-7} = crn;
+  let Encoding{6-3} = crm;
+  let Encoding{2-0} = op2;
+  bit Readable = ?;
+  bit Writeable = ?;
+  code Requires = [{ {} }];
+}
+
+class RWSysReg<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
+               bits<3> op2>
+    : SysReg<name, op0, op1, crn, crm, op2> {
+  let Readable = 1;
+  let Writeable = 1;
+}
+
+class ROSysReg<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
+               bits<3> op2>
+    : SysReg<name, op0, op1, crn, crm, op2> {
+  let Readable = 1;
+  let Writeable = 0;
+}
+
+class WOSysReg<string name, bits<2> op0, bits<3> op1, bits<4> crn, bits<4> crm,
+               bits<3> op2>
+    : SysReg<name, op0, op1, crn, crm, op2> {
+  let Readable = 0;
+  let Writeable = 1;
+}
+
+//===----------------------
+// Read-only regs
+//===----------------------
+
+//                                    Op0    Op1     CRn     CRm    Op2
+def : ROSysReg<"MDCCSR_EL0",         0b10, 0b011, 0b0000, 0b0001, 0b000>;
+def : ROSysReg<"DBGDTRRX_EL0",       0b10, 0b011, 0b0000, 0b0101, 0b000>;
+def : ROSysReg<"MDRAR_EL1",          0b10, 0b000, 0b0001, 0b0000, 0b000>;
+def : ROSysReg<"OSLSR_EL1",          0b10, 0b000, 0b0001, 0b0001, 0b100>;
+def : ROSysReg<"DBGAUTHSTATUS_EL1",  0b10, 0b000, 0b0111, 0b1110, 0b110>;
+def : ROSysReg<"PMCEID0_EL0",        0b11, 0b011, 0b1001, 0b1100, 0b110>;
+def : ROSysReg<"PMCEID1_EL0",        0b11, 0b011, 0b1001, 0b1100, 0b111>;
+def : ROSysReg<"MIDR_EL1",           0b11, 0b000, 0b0000, 0b0000, 0b000>;
+def : ROSysReg<"CCSIDR_EL1",         0b11, 0b001, 0b0000, 0b0000, 0b000>;
+def : ROSysReg<"CLIDR_EL1",          0b11, 0b001, 0b0000, 0b0000, 0b001>;
+def : ROSysReg<"CTR_EL0",            0b11, 0b011, 0b0000, 0b0000, 0b001>;
+def : ROSysReg<"MPIDR_EL1",          0b11, 0b000, 0b0000, 0b0000, 0b101>;
+def : ROSysReg<"REVIDR_EL1",         0b11, 0b000, 0b0000, 0b0000, 0b110>;
+def : ROSysReg<"AIDR_EL1",           0b11, 0b001, 0b0000, 0b0000, 0b111>;
+def : ROSysReg<"DCZID_EL0",          0b11, 0b011, 0b0000, 0b0000, 0b111>;
+def : ROSysReg<"ID_PFR0_EL1",        0b11, 0b000, 0b0000, 0b0001, 0b000>;
+def : ROSysReg<"ID_PFR1_EL1",        0b11, 0b000, 0b0000, 0b0001, 0b001>;
+def : ROSysReg<"ID_DFR0_EL1",        0b11, 0b000, 0b0000, 0b0001, 0b010>;
+def : ROSysReg<"ID_AFR0_EL1",        0b11, 0b000, 0b0000, 0b0001, 0b011>;
+def : ROSysReg<"ID_MMFR0_EL1",       0b11, 0b000, 0b0000, 0b0001, 0b100>;
+def : ROSysReg<"ID_MMFR1_EL1",       0b11, 0b000, 0b0000, 0b0001, 0b101>;
+def : ROSysReg<"ID_MMFR2_EL1",       0b11, 0b000, 0b0000, 0b0001, 0b110>;
+def : ROSysReg<"ID_MMFR3_EL1",       0b11, 0b000, 0b0000, 0b0001, 0b111>;
+def : ROSysReg<"ID_ISAR0_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b000>;
+def : ROSysReg<"ID_ISAR1_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b001>;
+def : ROSysReg<"ID_ISAR2_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b010>;
+def : ROSysReg<"ID_ISAR3_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b011>;
+def : ROSysReg<"ID_ISAR4_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b100>;
+def : ROSysReg<"ID_ISAR5_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b101>;
+def : ROSysReg<"ID_AA64PFR0_EL1",     0b11, 0b000, 0b0000, 0b0100, 0b000>;
+def : ROSysReg<"ID_AA64PFR1_EL1",     0b11, 0b000, 0b0000, 0b0100, 0b001>;
+def : ROSysReg<"ID_AA64DFR0_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b000>;
+def : ROSysReg<"ID_AA64DFR1_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b001>;
+def : ROSysReg<"ID_AA64AFR0_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b100>;
+def : ROSysReg<"ID_AA64AFR1_EL1",     0b11, 0b000, 0b0000, 0b0101, 0b101>;
+def : ROSysReg<"ID_AA64ISAR0_EL1",    0b11, 0b000, 0b0000, 0b0110, 0b000>;
+def : ROSysReg<"ID_AA64ISAR1_EL1",    0b11, 0b000, 0b0000, 0b0110, 0b001>;
+def : ROSysReg<"ID_AA64MMFR0_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b000>;
+def : ROSysReg<"ID_AA64MMFR1_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b001>;
+def : ROSysReg<"ID_AA64MMFR2_EL1",    0b11, 0b000, 0b0000, 0b0111, 0b010> {
+  let Requires = [{ {AArch64::HasV8_2aOps} }];
+}
+def : ROSysReg<"MVFR0_EL1",          0b11, 0b000, 0b0000, 0b0011, 0b000>;
+def : ROSysReg<"MVFR1_EL1",          0b11, 0b000, 0b0000, 0b0011, 0b001>;
+def : ROSysReg<"MVFR2_EL1",          0b11, 0b000, 0b0000, 0b0011, 0b010>;
+def : ROSysReg<"RVBAR_EL1",          0b11, 0b000, 0b1100, 0b0000, 0b001>;
+def : ROSysReg<"RVBAR_EL2",          0b11, 0b100, 0b1100, 0b0000, 0b001>;
+def : ROSysReg<"RVBAR_EL3",          0b11, 0b110, 0b1100, 0b0000, 0b001>;
+def : ROSysReg<"ISR_EL1",            0b11, 0b000, 0b1100, 0b0001, 0b000>;
+def : ROSysReg<"CNTPCT_EL0",         0b11, 0b011, 0b1110, 0b0000, 0b001>;
+def : ROSysReg<"CNTVCT_EL0",         0b11, 0b011, 0b1110, 0b0000, 0b010>;
+def : ROSysReg<"ID_MMFR4_EL1",       0b11, 0b000, 0b0000, 0b0010, 0b110>;
+
+// Trace registers
+//                                 Op0    Op1     CRn     CRm    Op2
+def : ROSysReg<"TRCSTATR",           0b10, 0b001, 0b0000, 0b0011, 0b000>;
+def : ROSysReg<"TRCIDR8",            0b10, 0b001, 0b0000, 0b0000, 0b110>;
+def : ROSysReg<"TRCIDR9",            0b10, 0b001, 0b0000, 0b0001, 0b110>;
+def : ROSysReg<"TRCIDR10",           0b10, 0b001, 0b0000, 0b0010, 0b110>;
+def : ROSysReg<"TRCIDR11",           0b10, 0b001, 0b0000, 0b0011, 0b110>;
+def : ROSysReg<"TRCIDR12",           0b10, 0b001, 0b0000, 0b0100, 0b110>;
+def : ROSysReg<"TRCIDR13",           0b10, 0b001, 0b0000, 0b0101, 0b110>;
+def : ROSysReg<"TRCIDR0",            0b10, 0b001, 0b0000, 0b1000, 0b111>;
+def : ROSysReg<"TRCIDR1",            0b10, 0b001, 0b0000, 0b1001, 0b111>;
+def : ROSysReg<"TRCIDR2",            0b10, 0b001, 0b0000, 0b1010, 0b111>;
+def : ROSysReg<"TRCIDR3",            0b10, 0b001, 0b0000, 0b1011, 0b111>;
+def : ROSysReg<"TRCIDR4",            0b10, 0b001, 0b0000, 0b1100, 0b111>;
+def : ROSysReg<"TRCIDR5",            0b10, 0b001, 0b0000, 0b1101, 0b111>;
+def : ROSysReg<"TRCIDR6",            0b10, 0b001, 0b0000, 0b1110, 0b111>;
+def : ROSysReg<"TRCIDR7",            0b10, 0b001, 0b0000, 0b1111, 0b111>;
+def : ROSysReg<"TRCOSLSR",           0b10, 0b001, 0b0001, 0b0001, 0b100>;
+def : ROSysReg<"TRCPDSR",            0b10, 0b001, 0b0001, 0b0101, 0b100>;
+def : ROSysReg<"TRCDEVAFF0",         0b10, 0b001, 0b0111, 0b1010, 0b110>;
+def : ROSysReg<"TRCDEVAFF1",         0b10, 0b001, 0b0111, 0b1011, 0b110>;
+def : ROSysReg<"TRCLSR",             0b10, 0b001, 0b0111, 0b1101, 0b110>;
+def : ROSysReg<"TRCAUTHSTATUS",      0b10, 0b001, 0b0111, 0b1110, 0b110>;
+def : ROSysReg<"TRCDEVARCH",         0b10, 0b001, 0b0111, 0b1111, 0b110>;
+def : ROSysReg<"TRCDEVID",           0b10, 0b001, 0b0111, 0b0010, 0b111>;
+def : ROSysReg<"TRCDEVTYPE",         0b10, 0b001, 0b0111, 0b0011, 0b111>;
+def : ROSysReg<"TRCPIDR4",           0b10, 0b001, 0b0111, 0b0100, 0b111>;
+def : ROSysReg<"TRCPIDR5",           0b10, 0b001, 0b0111, 0b0101, 0b111>;
+def : ROSysReg<"TRCPIDR6",           0b10, 0b001, 0b0111, 0b0110, 0b111>;
+def : ROSysReg<"TRCPIDR7",           0b10, 0b001, 0b0111, 0b0111, 0b111>;
+def : ROSysReg<"TRCPIDR0",           0b10, 0b001, 0b0111, 0b1000, 0b111>;
+def : ROSysReg<"TRCPIDR1",           0b10, 0b001, 0b0111, 0b1001, 0b111>;
+def : ROSysReg<"TRCPIDR2",           0b10, 0b001, 0b0111, 0b1010, 0b111>;
+def : ROSysReg<"TRCPIDR3",           0b10, 0b001, 0b0111, 0b1011, 0b111>;
+def : ROSysReg<"TRCCIDR0",           0b10, 0b001, 0b0111, 0b1100, 0b111>;
+def : ROSysReg<"TRCCIDR1",           0b10, 0b001, 0b0111, 0b1101, 0b111>;
+def : ROSysReg<"TRCCIDR2",           0b10, 0b001, 0b0111, 0b1110, 0b111>;
+def : ROSysReg<"TRCCIDR3",           0b10, 0b001, 0b0111, 0b1111, 0b111>;
+
+// GICv3 registers
+//                                 Op0    Op1     CRn     CRm    Op2
+def : ROSysReg<"ICC_IAR1_EL1",       0b11, 0b000, 0b1100, 0b1100, 0b000>;
+def : ROSysReg<"ICC_IAR0_EL1",       0b11, 0b000, 0b1100, 0b1000, 0b000>;
+def : ROSysReg<"ICC_HPPIR1_EL1",     0b11, 0b000, 0b1100, 0b1100, 0b010>;
+def : ROSysReg<"ICC_HPPIR0_EL1",     0b11, 0b000, 0b1100, 0b1000, 0b010>;
+def : ROSysReg<"ICC_RPR_EL1",        0b11, 0b000, 0b1100, 0b1011, 0b011>;
+def : ROSysReg<"ICH_VTR_EL2",        0b11, 0b100, 0b1100, 0b1011, 0b001>;
+def : ROSysReg<"ICH_EISR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b011>;
+def : ROSysReg<"ICH_ELSR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b101>;
+
+// v8.1a "Limited Ordering Regions" extension-specific system register
+//                         Op0    Op1     CRn     CRm    Op2
+let Requires = [{ {AArch64::HasV8_1aOps} }] in
+def : ROSysReg<"LORID_EL1",  0b11, 0b000, 0b1010, 0b0100, 0b111>;
+
+// v8.2a "RAS extension" registers
+//                         Op0    Op1     CRn     CRm    Op2
+let Requires = [{ {AArch64::FeatureRAS} }] in {
+def : ROSysReg<"ERRIDR_EL1", 0b11, 0b000, 0b0101, 0b0011, 0b000>;
+def : ROSysReg<"ERXFR_EL1",  0b11, 0b000, 0b0101, 0b0100, 0b000>;
+}
+
+//===----------------------
+// Write-only regs
+//===----------------------
+
+//                                 Op0    Op1     CRn     CRm    Op2
+def : WOSysReg<"DBGDTRTX_EL0",       0b10, 0b011, 0b0000, 0b0101, 0b000>;
+def : WOSysReg<"OSLAR_EL1",          0b10, 0b000, 0b0001, 0b0000, 0b100>;
+def : WOSysReg<"PMSWINC_EL0",        0b11, 0b011, 0b1001, 0b1100, 0b100>;
+
+// Trace Registers
+//                                 Op0    Op1     CRn     CRm    Op2
+def : WOSysReg<"TRCOSLAR",           0b10, 0b001, 0b0001, 0b0000, 0b100>;
+def : WOSysReg<"TRCLAR",             0b10, 0b001, 0b0111, 0b1100, 0b110>;
+
+// GICv3 registers
+//                                 Op0    Op1     CRn     CRm    Op2
+def : WOSysReg<"ICC_EOIR1_EL1",      0b11, 0b000, 0b1100, 0b1100, 0b001>;
+def : WOSysReg<"ICC_EOIR0_EL1",      0b11, 0b000, 0b1100, 0b1000, 0b001>;
+def : WOSysReg<"ICC_DIR_EL1",        0b11, 0b000, 0b1100, 0b1011, 0b001>;
+def : WOSysReg<"ICC_SGI1R_EL1",      0b11, 0b000, 0b1100, 0b1011, 0b101>;
+def : WOSysReg<"ICC_ASGI1R_EL1",     0b11, 0b000, 0b1100, 0b1011, 0b110>;
+def : WOSysReg<"ICC_SGI0R_EL1",      0b11, 0b000, 0b1100, 0b1011, 0b111>;
+
+//===----------------------
+// Read-write regs
+//===----------------------
+
+//                                 Op0    Op1     CRn     CRm    Op2
+def : RWSysReg<"OSDTRRX_EL1",        0b10, 0b000, 0b0000, 0b0000, 0b010>;
+def : RWSysReg<"OSDTRTX_EL1",        0b10, 0b000, 0b0000, 0b0011, 0b010>;
+def : RWSysReg<"TEECR32_EL1",        0b10, 0b010, 0b0000, 0b0000, 0b000>;
+def : RWSysReg<"MDCCINT_EL1",        0b10, 0b000, 0b0000, 0b0010, 0b000>;
+def : RWSysReg<"MDSCR_EL1",          0b10, 0b000, 0b0000, 0b0010, 0b010>;
+def : RWSysReg<"DBGDTR_EL0",         0b10, 0b011, 0b0000, 0b0100, 0b000>;
+def : RWSysReg<"OSECCR_EL1",         0b10, 0b000, 0b0000, 0b0110, 0b010>;
+def : RWSysReg<"DBGVCR32_EL2",       0b10, 0b100, 0b0000, 0b0111, 0b000>;
+def : RWSysReg<"DBGBVR0_EL1",        0b10, 0b000, 0b0000, 0b0000, 0b100>;
+def : RWSysReg<"DBGBVR1_EL1",        0b10, 0b000, 0b0000, 0b0001, 0b100>;
+def : RWSysReg<"DBGBVR2_EL1",        0b10, 0b000, 0b0000, 0b0010, 0b100>;
+def : RWSysReg<"DBGBVR3_EL1",        0b10, 0b000, 0b0000, 0b0011, 0b100>;
+def : RWSysReg<"DBGBVR4_EL1",        0b10, 0b000, 0b0000, 0b0100, 0b100>;
+def : RWSysReg<"DBGBVR5_EL1",        0b10, 0b000, 0b0000, 0b0101, 0b100>;
+def : RWSysReg<"DBGBVR6_EL1",        0b10, 0b000, 0b0000, 0b0110, 0b100>;
+def : RWSysReg<"DBGBVR7_EL1",        0b10, 0b000, 0b0000, 0b0111, 0b100>;
+def : RWSysReg<"DBGBVR8_EL1",        0b10, 0b000, 0b0000, 0b1000, 0b100>;
+def : RWSysReg<"DBGBVR9_EL1",        0b10, 0b000, 0b0000, 0b1001, 0b100>;
+def : RWSysReg<"DBGBVR10_EL1",       0b10, 0b000, 0b0000, 0b1010, 0b100>;
+def : RWSysReg<"DBGBVR11_EL1",       0b10, 0b000, 0b0000, 0b1011, 0b100>;
+def : RWSysReg<"DBGBVR12_EL1",       0b10, 0b000, 0b0000, 0b1100, 0b100>;
+def : RWSysReg<"DBGBVR13_EL1",       0b10, 0b000, 0b0000, 0b1101, 0b100>;
+def : RWSysReg<"DBGBVR14_EL1",       0b10, 0b000, 0b0000, 0b1110, 0b100>;
+def : RWSysReg<"DBGBVR15_EL1",       0b10, 0b000, 0b0000, 0b1111, 0b100>;
+def : RWSysReg<"DBGBCR0_EL1",        0b10, 0b000, 0b0000, 0b0000, 0b101>;
+def : RWSysReg<"DBGBCR1_EL1",        0b10, 0b000, 0b0000, 0b0001, 0b101>;
+def : RWSysReg<"DBGBCR2_EL1",        0b10, 0b000, 0b0000, 0b0010, 0b101>;
+def : RWSysReg<"DBGBCR3_EL1",        0b10, 0b000, 0b0000, 0b0011, 0b101>;
+def : RWSysReg<"DBGBCR4_EL1",        0b10, 0b000, 0b0000, 0b0100, 0b101>;
+def : RWSysReg<"DBGBCR5_EL1",        0b10, 0b000, 0b0000, 0b0101, 0b101>;
+def : RWSysReg<"DBGBCR6_EL1",        0b10, 0b000, 0b0000, 0b0110, 0b101>;
+def : RWSysReg<"DBGBCR7_EL1",        0b10, 0b000, 0b0000, 0b0111, 0b101>;
+def : RWSysReg<"DBGBCR8_EL1",        0b10, 0b000, 0b0000, 0b1000, 0b101>;
+def : RWSysReg<"DBGBCR9_EL1",        0b10, 0b000, 0b0000, 0b1001, 0b101>;
+def : RWSysReg<"DBGBCR10_EL1",       0b10, 0b000, 0b0000, 0b1010, 0b101>;
+def : RWSysReg<"DBGBCR11_EL1",       0b10, 0b000, 0b0000, 0b1011, 0b101>;
+def : RWSysReg<"DBGBCR12_EL1",       0b10, 0b000, 0b0000, 0b1100, 0b101>;
+def : RWSysReg<"DBGBCR13_EL1",       0b10, 0b000, 0b0000, 0b1101, 0b101>;
+def : RWSysReg<"DBGBCR14_EL1",       0b10, 0b000, 0b0000, 0b1110, 0b101>;
+def : RWSysReg<"DBGBCR15_EL1",       0b10, 0b000, 0b0000, 0b1111, 0b101>;
+def : RWSysReg<"DBGWVR0_EL1",        0b10, 0b000, 0b0000, 0b0000, 0b110>;
+def : RWSysReg<"DBGWVR1_EL1",        0b10, 0b000, 0b0000, 0b0001, 0b110>;
+def : RWSysReg<"DBGWVR2_EL1",        0b10, 0b000, 0b0000, 0b0010, 0b110>;
+def : RWSysReg<"DBGWVR3_EL1",        0b10, 0b000, 0b0000, 0b0011, 0b110>;
+def : RWSysReg<"DBGWVR4_EL1",        0b10, 0b000, 0b0000, 0b0100, 0b110>;
+def : RWSysReg<"DBGWVR5_EL1",        0b10, 0b000, 0b0000, 0b0101, 0b110>;
+def : RWSysReg<"DBGWVR6_EL1",        0b10, 0b000, 0b0000, 0b0110, 0b110>;
+def : RWSysReg<"DBGWVR7_EL1",        0b10, 0b000, 0b0000, 0b0111, 0b110>;
+def : RWSysReg<"DBGWVR8_EL1",        0b10, 0b000, 0b0000, 0b1000, 0b110>;
+def : RWSysReg<"DBGWVR9_EL1",        0b10, 0b000, 0b0000, 0b1001, 0b110>;
+def : RWSysReg<"DBGWVR10_EL1",       0b10, 0b000, 0b0000, 0b1010, 0b110>;
+def : RWSysReg<"DBGWVR11_EL1",       0b10, 0b000, 0b0000, 0b1011, 0b110>;
+def : RWSysReg<"DBGWVR12_EL1",       0b10, 0b000, 0b0000, 0b1100, 0b110>;
+def : RWSysReg<"DBGWVR13_EL1",       0b10, 0b000, 0b0000, 0b1101, 0b110>;
+def : RWSysReg<"DBGWVR14_EL1",       0b10, 0b000, 0b0000, 0b1110, 0b110>;
+def : RWSysReg<"DBGWVR15_EL1",       0b10, 0b000, 0b0000, 0b1111, 0b110>;
+def : RWSysReg<"DBGWCR0_EL1",        0b10, 0b000, 0b0000, 0b0000, 0b111>;
+def : RWSysReg<"DBGWCR1_EL1",        0b10, 0b000, 0b0000, 0b0001, 0b111>;
+def : RWSysReg<"DBGWCR2_EL1",        0b10, 0b000, 0b0000, 0b0010, 0b111>;
+def : RWSysReg<"DBGWCR3_EL1",        0b10, 0b000, 0b0000, 0b0011, 0b111>;
+def : RWSysReg<"DBGWCR4_EL1",        0b10, 0b000, 0b0000, 0b0100, 0b111>;
+def : RWSysReg<"DBGWCR5_EL1",        0b10, 0b000, 0b0000, 0b0101, 0b111>;
+def : RWSysReg<"DBGWCR6_EL1",        0b10, 0b000, 0b0000, 0b0110, 0b111>;
+def : RWSysReg<"DBGWCR7_EL1",        0b10, 0b000, 0b0000, 0b0111, 0b111>;
+def : RWSysReg<"DBGWCR8_EL1",        0b10, 0b000, 0b0000, 0b1000, 0b111>;
+def : RWSysReg<"DBGWCR9_EL1",        0b10, 0b000, 0b0000, 0b1001, 0b111>;
+def : RWSysReg<"DBGWCR10_EL1",       0b10, 0b000, 0b0000, 0b1010, 0b111>;
+def : RWSysReg<"DBGWCR11_EL1",       0b10, 0b000, 0b0000, 0b1011, 0b111>;
+def : RWSysReg<"DBGWCR12_EL1",       0b10, 0b000, 0b0000, 0b1100, 0b111>;
+def : RWSysReg<"DBGWCR13_EL1",       0b10, 0b000, 0b0000, 0b1101, 0b111>;
+def : RWSysReg<"DBGWCR14_EL1",       0b10, 0b000, 0b0000, 0b1110, 0b111>;
+def : RWSysReg<"DBGWCR15_EL1",       0b10, 0b000, 0b0000, 0b1111, 0b111>;
+def : RWSysReg<"TEEHBR32_EL1",       0b10, 0b010, 0b0001, 0b0000, 0b000>;
+def : RWSysReg<"OSDLR_EL1",          0b10, 0b000, 0b0001, 0b0011, 0b100>;
+def : RWSysReg<"DBGPRCR_EL1",        0b10, 0b000, 0b0001, 0b0100, 0b100>;
+def : RWSysReg<"DBGCLAIMSET_EL1",    0b10, 0b000, 0b0111, 0b1000, 0b110>;
+def : RWSysReg<"DBGCLAIMCLR_EL1",    0b10, 0b000, 0b0111, 0b1001, 0b110>;
+def : RWSysReg<"CSSELR_EL1",         0b11, 0b010, 0b0000, 0b0000, 0b000>;
+def : RWSysReg<"VPIDR_EL2",          0b11, 0b100, 0b0000, 0b0000, 0b000>;
+def : RWSysReg<"VMPIDR_EL2",         0b11, 0b100, 0b0000, 0b0000, 0b101>;
+def : RWSysReg<"CPACR_EL1",          0b11, 0b000, 0b0001, 0b0000, 0b010>;
+def : RWSysReg<"SCTLR_EL1",          0b11, 0b000, 0b0001, 0b0000, 0b000>;
+def : RWSysReg<"SCTLR_EL2",          0b11, 0b100, 0b0001, 0b0000, 0b000>;
+def : RWSysReg<"SCTLR_EL3",          0b11, 0b110, 0b0001, 0b0000, 0b000>;
+def : RWSysReg<"ACTLR_EL1",          0b11, 0b000, 0b0001, 0b0000, 0b001>;
+def : RWSysReg<"ACTLR_EL2",          0b11, 0b100, 0b0001, 0b0000, 0b001>;
+def : RWSysReg<"ACTLR_EL3",          0b11, 0b110, 0b0001, 0b0000, 0b001>;
+def : RWSysReg<"HCR_EL2",            0b11, 0b100, 0b0001, 0b0001, 0b000>;
+def : RWSysReg<"SCR_EL3",            0b11, 0b110, 0b0001, 0b0001, 0b000>;
+def : RWSysReg<"MDCR_EL2",           0b11, 0b100, 0b0001, 0b0001, 0b001>;
+def : RWSysReg<"SDER32_EL3",         0b11, 0b110, 0b0001, 0b0001, 0b001>;
+def : RWSysReg<"CPTR_EL2",           0b11, 0b100, 0b0001, 0b0001, 0b010>;
+def : RWSysReg<"CPTR_EL3",           0b11, 0b110, 0b0001, 0b0001, 0b010>;
+def : RWSysReg<"HSTR_EL2",           0b11, 0b100, 0b0001, 0b0001, 0b011>;
+def : RWSysReg<"HACR_EL2",           0b11, 0b100, 0b0001, 0b0001, 0b111>;
+def : RWSysReg<"MDCR_EL3",           0b11, 0b110, 0b0001, 0b0011, 0b001>;
+def : RWSysReg<"TTBR0_EL1",          0b11, 0b000, 0b0010, 0b0000, 0b000>;
+def : RWSysReg<"TTBR0_EL2",          0b11, 0b100, 0b0010, 0b0000, 0b000>;
+def : RWSysReg<"TTBR0_EL3",          0b11, 0b110, 0b0010, 0b0000, 0b000>;
+def : RWSysReg<"TTBR1_EL1",          0b11, 0b000, 0b0010, 0b0000, 0b001>;
+def : RWSysReg<"TCR_EL1",            0b11, 0b000, 0b0010, 0b0000, 0b010>;
+def : RWSysReg<"TCR_EL2",            0b11, 0b100, 0b0010, 0b0000, 0b010>;
+def : RWSysReg<"TCR_EL3",            0b11, 0b110, 0b0010, 0b0000, 0b010>;
+def : RWSysReg<"VTTBR_EL2",          0b11, 0b100, 0b0010, 0b0001, 0b000>;
+def : RWSysReg<"VTCR_EL2",           0b11, 0b100, 0b0010, 0b0001, 0b010>;
+def : RWSysReg<"DACR32_EL2",         0b11, 0b100, 0b0011, 0b0000, 0b000>;
+def : RWSysReg<"SPSR_EL1",           0b11, 0b000, 0b0100, 0b0000, 0b000>;
+def : RWSysReg<"SPSR_EL2",           0b11, 0b100, 0b0100, 0b0000, 0b000>;
+def : RWSysReg<"SPSR_EL3",           0b11, 0b110, 0b0100, 0b0000, 0b000>;
+def : RWSysReg<"ELR_EL1",            0b11, 0b000, 0b0100, 0b0000, 0b001>;
+def : RWSysReg<"ELR_EL2",            0b11, 0b100, 0b0100, 0b0000, 0b001>;
+def : RWSysReg<"ELR_EL3",            0b11, 0b110, 0b0100, 0b0000, 0b001>;
+def : RWSysReg<"SP_EL0",             0b11, 0b000, 0b0100, 0b0001, 0b000>;
+def : RWSysReg<"SP_EL1",             0b11, 0b100, 0b0100, 0b0001, 0b000>;
+def : RWSysReg<"SP_EL2",             0b11, 0b110, 0b0100, 0b0001, 0b000>;
+def : RWSysReg<"SPSel",              0b11, 0b000, 0b0100, 0b0010, 0b000>;
+def : RWSysReg<"NZCV",               0b11, 0b011, 0b0100, 0b0010, 0b000>;
+def : RWSysReg<"DAIF",               0b11, 0b011, 0b0100, 0b0010, 0b001>;
+def : RWSysReg<"CurrentEL",          0b11, 0b000, 0b0100, 0b0010, 0b010>;
+def : RWSysReg<"SPSR_irq",           0b11, 0b100, 0b0100, 0b0011, 0b000>;
+def : RWSysReg<"SPSR_abt",           0b11, 0b100, 0b0100, 0b0011, 0b001>;
+def : RWSysReg<"SPSR_und",           0b11, 0b100, 0b0100, 0b0011, 0b010>;
+def : RWSysReg<"SPSR_fiq",           0b11, 0b100, 0b0100, 0b0011, 0b011>;
+def : RWSysReg<"FPCR",               0b11, 0b011, 0b0100, 0b0100, 0b000>;
+def : RWSysReg<"FPSR",               0b11, 0b011, 0b0100, 0b0100, 0b001>;
+def : RWSysReg<"DSPSR_EL0",          0b11, 0b011, 0b0100, 0b0101, 0b000>;
+def : RWSysReg<"DLR_EL0",            0b11, 0b011, 0b0100, 0b0101, 0b001>;
+def : RWSysReg<"IFSR32_EL2",         0b11, 0b100, 0b0101, 0b0000, 0b001>;
+def : RWSysReg<"AFSR0_EL1",          0b11, 0b000, 0b0101, 0b0001, 0b000>;
+def : RWSysReg<"AFSR0_EL2",          0b11, 0b100, 0b0101, 0b0001, 0b000>;
+def : RWSysReg<"AFSR0_EL3",          0b11, 0b110, 0b0101, 0b0001, 0b000>;
+def : RWSysReg<"AFSR1_EL1",          0b11, 0b000, 0b0101, 0b0001, 0b001>;
+def : RWSysReg<"AFSR1_EL2",          0b11, 0b100, 0b0101, 0b0001, 0b001>;
+def : RWSysReg<"AFSR1_EL3",          0b11, 0b110, 0b0101, 0b0001, 0b001>;
+def : RWSysReg<"ESR_EL1",            0b11, 0b000, 0b0101, 0b0010, 0b000>;
+def : RWSysReg<"ESR_EL2",            0b11, 0b100, 0b0101, 0b0010, 0b000>;
+def : RWSysReg<"ESR_EL3",            0b11, 0b110, 0b0101, 0b0010, 0b000>;
+def : RWSysReg<"FPEXC32_EL2",        0b11, 0b100, 0b0101, 0b0011, 0b000>;
+def : RWSysReg<"FAR_EL1",            0b11, 0b000, 0b0110, 0b0000, 0b000>;
+def : RWSysReg<"FAR_EL2",            0b11, 0b100, 0b0110, 0b0000, 0b000>;
+def : RWSysReg<"FAR_EL3",            0b11, 0b110, 0b0110, 0b0000, 0b000>;
+def : RWSysReg<"HPFAR_EL2",          0b11, 0b100, 0b0110, 0b0000, 0b100>;
+def : RWSysReg<"PAR_EL1",            0b11, 0b000, 0b0111, 0b0100, 0b000>;
+def : RWSysReg<"PMCR_EL0",           0b11, 0b011, 0b1001, 0b1100, 0b000>;
+def : RWSysReg<"PMCNTENSET_EL0",     0b11, 0b011, 0b1001, 0b1100, 0b001>;
+def : RWSysReg<"PMCNTENCLR_EL0",     0b11, 0b011, 0b1001, 0b1100, 0b010>;
+def : RWSysReg<"PMOVSCLR_EL0",       0b11, 0b011, 0b1001, 0b1100, 0b011>;
+def : RWSysReg<"PMSELR_EL0",         0b11, 0b011, 0b1001, 0b1100, 0b101>;
+def : RWSysReg<"PMCCNTR_EL0",        0b11, 0b011, 0b1001, 0b1101, 0b000>;
+def : RWSysReg<"PMXEVTYPER_EL0",     0b11, 0b011, 0b1001, 0b1101, 0b001>;
+def : RWSysReg<"PMXEVCNTR_EL0",      0b11, 0b011, 0b1001, 0b1101, 0b010>;
+def : RWSysReg<"PMUSERENR_EL0",      0b11, 0b011, 0b1001, 0b1110, 0b000>;
+def : RWSysReg<"PMINTENSET_EL1",     0b11, 0b000, 0b1001, 0b1110, 0b001>;
+def : RWSysReg<"PMINTENCLR_EL1",     0b11, 0b000, 0b1001, 0b1110, 0b010>;
+def : RWSysReg<"PMOVSSET_EL0",       0b11, 0b011, 0b1001, 0b1110, 0b011>;
+def : RWSysReg<"MAIR_EL1",           0b11, 0b000, 0b1010, 0b0010, 0b000>;
+def : RWSysReg<"MAIR_EL2",           0b11, 0b100, 0b1010, 0b0010, 0b000>;
+def : RWSysReg<"MAIR_EL3",           0b11, 0b110, 0b1010, 0b0010, 0b000>;
+def : RWSysReg<"AMAIR_EL1",          0b11, 0b000, 0b1010, 0b0011, 0b000>;
+def : RWSysReg<"AMAIR_EL2",          0b11, 0b100, 0b1010, 0b0011, 0b000>;
+def : RWSysReg<"AMAIR_EL3",          0b11, 0b110, 0b1010, 0b0011, 0b000>;
+def : RWSysReg<"VBAR_EL1",           0b11, 0b000, 0b1100, 0b0000, 0b000>;
+def : RWSysReg<"VBAR_EL2",           0b11, 0b100, 0b1100, 0b0000, 0b000>;
+def : RWSysReg<"VBAR_EL3",           0b11, 0b110, 0b1100, 0b0000, 0b000>;
+def : RWSysReg<"RMR_EL1",            0b11, 0b000, 0b1100, 0b0000, 0b010>;
+def : RWSysReg<"RMR_EL2",            0b11, 0b100, 0b1100, 0b0000, 0b010>;
+def : RWSysReg<"RMR_EL3",            0b11, 0b110, 0b1100, 0b0000, 0b010>;
+def : RWSysReg<"CONTEXTIDR_EL1",     0b11, 0b000, 0b1101, 0b0000, 0b001>;
+def : RWSysReg<"TPIDR_EL0",          0b11, 0b011, 0b1101, 0b0000, 0b010>;
+def : RWSysReg<"TPIDR_EL2",          0b11, 0b100, 0b1101, 0b0000, 0b010>;
+def : RWSysReg<"TPIDR_EL3",          0b11, 0b110, 0b1101, 0b0000, 0b010>;
+def : RWSysReg<"TPIDRRO_EL0",        0b11, 0b011, 0b1101, 0b0000, 0b011>;
+def : RWSysReg<"TPIDR_EL1",          0b11, 0b000, 0b1101, 0b0000, 0b100>;
+def : RWSysReg<"CNTFRQ_EL0",         0b11, 0b011, 0b1110, 0b0000, 0b000>;
+def : RWSysReg<"CNTVOFF_EL2",        0b11, 0b100, 0b1110, 0b0000, 0b011>;
+def : RWSysReg<"CNTKCTL_EL1",        0b11, 0b000, 0b1110, 0b0001, 0b000>;
+def : RWSysReg<"CNTHCTL_EL2",        0b11, 0b100, 0b1110, 0b0001, 0b000>;
+def : RWSysReg<"CNTP_TVAL_EL0",      0b11, 0b011, 0b1110, 0b0010, 0b000>;
+def : RWSysReg<"CNTHP_TVAL_EL2",     0b11, 0b100, 0b1110, 0b0010, 0b000>;
+def : RWSysReg<"CNTPS_TVAL_EL1",     0b11, 0b111, 0b1110, 0b0010, 0b000>;
+def : RWSysReg<"CNTP_CTL_EL0",       0b11, 0b011, 0b1110, 0b0010, 0b001>;
+def : RWSysReg<"CNTHP_CTL_EL2",      0b11, 0b100, 0b1110, 0b0010, 0b001>;
+def : RWSysReg<"CNTPS_CTL_EL1",      0b11, 0b111, 0b1110, 0b0010, 0b001>;
+def : RWSysReg<"CNTP_CVAL_EL0",      0b11, 0b011, 0b1110, 0b0010, 0b010>;
+def : RWSysReg<"CNTHP_CVAL_EL2",     0b11, 0b100, 0b1110, 0b0010, 0b010>;
+def : RWSysReg<"CNTPS_CVAL_EL1",     0b11, 0b111, 0b1110, 0b0010, 0b010>;
+def : RWSysReg<"CNTV_TVAL_EL0",      0b11, 0b011, 0b1110, 0b0011, 0b000>;
+def : RWSysReg<"CNTV_CTL_EL0",       0b11, 0b011, 0b1110, 0b0011, 0b001>;
+def : RWSysReg<"CNTV_CVAL_EL0",      0b11, 0b011, 0b1110, 0b0011, 0b010>;
+def : RWSysReg<"PMEVCNTR0_EL0",      0b11, 0b011, 0b1110, 0b1000, 0b000>;
+def : RWSysReg<"PMEVCNTR1_EL0",      0b11, 0b011, 0b1110, 0b1000, 0b001>;
+def : RWSysReg<"PMEVCNTR2_EL0",      0b11, 0b011, 0b1110, 0b1000, 0b010>;
+def : RWSysReg<"PMEVCNTR3_EL0",      0b11, 0b011, 0b1110, 0b1000, 0b011>;
+def : RWSysReg<"PMEVCNTR4_EL0",      0b11, 0b011, 0b1110, 0b1000, 0b100>;
+def : RWSysReg<"PMEVCNTR5_EL0",      0b11, 0b011, 0b1110, 0b1000, 0b101>;
+def : RWSysReg<"PMEVCNTR6_EL0",      0b11, 0b011, 0b1110, 0b1000, 0b110>;
+def : RWSysReg<"PMEVCNTR7_EL0",      0b11, 0b011, 0b1110, 0b1000, 0b111>;
+def : RWSysReg<"PMEVCNTR8_EL0",      0b11, 0b011, 0b1110, 0b1001, 0b000>;
+def : RWSysReg<"PMEVCNTR9_EL0",      0b11, 0b011, 0b1110, 0b1001, 0b001>;
+def : RWSysReg<"PMEVCNTR10_EL0",     0b11, 0b011, 0b1110, 0b1001, 0b010>;
+def : RWSysReg<"PMEVCNTR11_EL0",     0b11, 0b011, 0b1110, 0b1001, 0b011>;
+def : RWSysReg<"PMEVCNTR12_EL0",     0b11, 0b011, 0b1110, 0b1001, 0b100>;
+def : RWSysReg<"PMEVCNTR13_EL0",     0b11, 0b011, 0b1110, 0b1001, 0b101>;
+def : RWSysReg<"PMEVCNTR14_EL0",     0b11, 0b011, 0b1110, 0b1001, 0b110>;
+def : RWSysReg<"PMEVCNTR15_EL0",     0b11, 0b011, 0b1110, 0b1001, 0b111>;
+def : RWSysReg<"PMEVCNTR16_EL0",     0b11, 0b011, 0b1110, 0b1010, 0b000>;
+def : RWSysReg<"PMEVCNTR17_EL0",     0b11, 0b011, 0b1110, 0b1010, 0b001>;
+def : RWSysReg<"PMEVCNTR18_EL0",     0b11, 0b011, 0b1110, 0b1010, 0b010>;
+def : RWSysReg<"PMEVCNTR19_EL0",     0b11, 0b011, 0b1110, 0b1010, 0b011>;
+def : RWSysReg<"PMEVCNTR20_EL0",     0b11, 0b011, 0b1110, 0b1010, 0b100>;
+def : RWSysReg<"PMEVCNTR21_EL0",     0b11, 0b011, 0b1110, 0b1010, 0b101>;
+def : RWSysReg<"PMEVCNTR22_EL0",     0b11, 0b011, 0b1110, 0b1010, 0b110>;
+def : RWSysReg<"PMEVCNTR23_EL0",     0b11, 0b011, 0b1110, 0b1010, 0b111>;
+def : RWSysReg<"PMEVCNTR24_EL0",     0b11, 0b011, 0b1110, 0b1011, 0b000>;
+def : RWSysReg<"PMEVCNTR25_EL0",     0b11, 0b011, 0b1110, 0b1011, 0b001>;
+def : RWSysReg<"PMEVCNTR26_EL0",     0b11, 0b011, 0b1110, 0b1011, 0b010>;
+def : RWSysReg<"PMEVCNTR27_EL0",     0b11, 0b011, 0b1110, 0b1011, 0b011>;
+def : RWSysReg<"PMEVCNTR28_EL0",     0b11, 0b011, 0b1110, 0b1011, 0b100>;
+def : RWSysReg<"PMEVCNTR29_EL0",     0b11, 0b011, 0b1110, 0b1011, 0b101>;
+def : RWSysReg<"PMEVCNTR30_EL0",     0b11, 0b011, 0b1110, 0b1011, 0b110>;
+def : RWSysReg<"PMCCFILTR_EL0",      0b11, 0b011, 0b1110, 0b1111, 0b111>;
+def : RWSysReg<"PMEVTYPER0_EL0",     0b11, 0b011, 0b1110, 0b1100, 0b000>;
+def : RWSysReg<"PMEVTYPER1_EL0",     0b11, 0b011, 0b1110, 0b1100, 0b001>;
+def : RWSysReg<"PMEVTYPER2_EL0",     0b11, 0b011, 0b1110, 0b1100, 0b010>;
+def : RWSysReg<"PMEVTYPER3_EL0",     0b11, 0b011, 0b1110, 0b1100, 0b011>;
+def : RWSysReg<"PMEVTYPER4_EL0",     0b11, 0b011, 0b1110, 0b1100, 0b100>;
+def : RWSysReg<"PMEVTYPER5_EL0",     0b11, 0b011, 0b1110, 0b1100, 0b101>;
+def : RWSysReg<"PMEVTYPER6_EL0",     0b11, 0b011, 0b1110, 0b1100, 0b110>;
+def : RWSysReg<"PMEVTYPER7_EL0",     0b11, 0b011, 0b1110, 0b1100, 0b111>;
+def : RWSysReg<"PMEVTYPER8_EL0",     0b11, 0b011, 0b1110, 0b1101, 0b000>;
+def : RWSysReg<"PMEVTYPER9_EL0",     0b11, 0b011, 0b1110, 0b1101, 0b001>;
+def : RWSysReg<"PMEVTYPER10_EL0",    0b11, 0b011, 0b1110, 0b1101, 0b010>;
+def : RWSysReg<"PMEVTYPER11_EL0",    0b11, 0b011, 0b1110, 0b1101, 0b011>;
+def : RWSysReg<"PMEVTYPER12_EL0",    0b11, 0b011, 0b1110, 0b1101, 0b100>;
+def : RWSysReg<"PMEVTYPER13_EL0",    0b11, 0b011, 0b1110, 0b1101, 0b101>;
+def : RWSysReg<"PMEVTYPER14_EL0",    0b11, 0b011, 0b1110, 0b1101, 0b110>;
+def : RWSysReg<"PMEVTYPER15_EL0",    0b11, 0b011, 0b1110, 0b1101, 0b111>;
+def : RWSysReg<"PMEVTYPER16_EL0",    0b11, 0b011, 0b1110, 0b1110, 0b000>;
+def : RWSysReg<"PMEVTYPER17_EL0",    0b11, 0b011, 0b1110, 0b1110, 0b001>;
+def : RWSysReg<"PMEVTYPER18_EL0",    0b11, 0b011, 0b1110, 0b1110, 0b010>;
+def : RWSysReg<"PMEVTYPER19_EL0",    0b11, 0b011, 0b1110, 0b1110, 0b011>;
+def : RWSysReg<"PMEVTYPER20_EL0",    0b11, 0b011, 0b1110, 0b1110, 0b100>;
+def : RWSysReg<"PMEVTYPER21_EL0",    0b11, 0b011, 0b1110, 0b1110, 0b101>;
+def : RWSysReg<"PMEVTYPER22_EL0",    0b11, 0b011, 0b1110, 0b1110, 0b110>;
+def : RWSysReg<"PMEVTYPER23_EL0",    0b11, 0b011, 0b1110, 0b1110, 0b111>;
+def : RWSysReg<"PMEVTYPER24_EL0",    0b11, 0b011, 0b1110, 0b1111, 0b000>;
+def : RWSysReg<"PMEVTYPER25_EL0",    0b11, 0b011, 0b1110, 0b1111, 0b001>;
+def : RWSysReg<"PMEVTYPER26_EL0",    0b11, 0b011, 0b1110, 0b1111, 0b010>;
+def : RWSysReg<"PMEVTYPER27_EL0",    0b11, 0b011, 0b1110, 0b1111, 0b011>;
+def : RWSysReg<"PMEVTYPER28_EL0",    0b11, 0b011, 0b1110, 0b1111, 0b100>;
+def : RWSysReg<"PMEVTYPER29_EL0",    0b11, 0b011, 0b1110, 0b1111, 0b101>;
+def : RWSysReg<"PMEVTYPER30_EL0",    0b11, 0b011, 0b1110, 0b1111, 0b110>;
+
+// Trace registers
+//                                 Op0    Op1     CRn     CRm    Op2
+def : RWSysReg<"TRCPRGCTLR",         0b10, 0b001, 0b0000, 0b0001, 0b000>;
+def : RWSysReg<"TRCPROCSELR",        0b10, 0b001, 0b0000, 0b0010, 0b000>;
+def : RWSysReg<"TRCCONFIGR",         0b10, 0b001, 0b0000, 0b0100, 0b000>;
+def : RWSysReg<"TRCAUXCTLR",         0b10, 0b001, 0b0000, 0b0110, 0b000>;
+def : RWSysReg<"TRCEVENTCTL0R",      0b10, 0b001, 0b0000, 0b1000, 0b000>;
+def : RWSysReg<"TRCEVENTCTL1R",      0b10, 0b001, 0b0000, 0b1001, 0b000>;
+def : RWSysReg<"TRCSTALLCTLR",       0b10, 0b001, 0b0000, 0b1011, 0b000>;
+def : RWSysReg<"TRCTSCTLR",          0b10, 0b001, 0b0000, 0b1100, 0b000>;
+def : RWSysReg<"TRCSYNCPR",          0b10, 0b001, 0b0000, 0b1101, 0b000>;
+def : RWSysReg<"TRCCCCTLR",          0b10, 0b001, 0b0000, 0b1110, 0b000>;
+def : RWSysReg<"TRCBBCTLR",          0b10, 0b001, 0b0000, 0b1111, 0b000>;
+def : RWSysReg<"TRCTRACEIDR",        0b10, 0b001, 0b0000, 0b0000, 0b001>;
+def : RWSysReg<"TRCQCTLR",           0b10, 0b001, 0b0000, 0b0001, 0b001>;
+def : RWSysReg<"TRCVICTLR",          0b10, 0b001, 0b0000, 0b0000, 0b010>;
+def : RWSysReg<"TRCVIIECTLR",        0b10, 0b001, 0b0000, 0b0001, 0b010>;
+def : RWSysReg<"TRCVISSCTLR",        0b10, 0b001, 0b0000, 0b0010, 0b010>;
+def : RWSysReg<"TRCVIPCSSCTLR",      0b10, 0b001, 0b0000, 0b0011, 0b010>;
+def : RWSysReg<"TRCVDCTLR",          0b10, 0b001, 0b0000, 0b1000, 0b010>;
+def : RWSysReg<"TRCVDSACCTLR",       0b10, 0b001, 0b0000, 0b1001, 0b010>;
+def : RWSysReg<"TRCVDARCCTLR",       0b10, 0b001, 0b0000, 0b1010, 0b010>;
+def : RWSysReg<"TRCSEQEVR0",         0b10, 0b001, 0b0000, 0b0000, 0b100>;
+def : RWSysReg<"TRCSEQEVR1",         0b10, 0b001, 0b0000, 0b0001, 0b100>;
+def : RWSysReg<"TRCSEQEVR2",         0b10, 0b001, 0b0000, 0b0010, 0b100>;
+def : RWSysReg<"TRCSEQRSTEVR",       0b10, 0b001, 0b0000, 0b0110, 0b100>;
+def : RWSysReg<"TRCSEQSTR",          0b10, 0b001, 0b0000, 0b0111, 0b100>;
+def : RWSysReg<"TRCEXTINSELR",       0b10, 0b001, 0b0000, 0b1000, 0b100>;
+def : RWSysReg<"TRCCNTRLDVR0",       0b10, 0b001, 0b0000, 0b0000, 0b101>;
+def : RWSysReg<"TRCCNTRLDVR1",       0b10, 0b001, 0b0000, 0b0001, 0b101>;
+def : RWSysReg<"TRCCNTRLDVR2",       0b10, 0b001, 0b0000, 0b0010, 0b101>;
+def : RWSysReg<"TRCCNTRLDVR3",       0b10, 0b001, 0b0000, 0b0011, 0b101>;
+def : RWSysReg<"TRCCNTCTLR0",        0b10, 0b001, 0b0000, 0b0100, 0b101>;
+def : RWSysReg<"TRCCNTCTLR1",        0b10, 0b001, 0b0000, 0b0101, 0b101>;
+def : RWSysReg<"TRCCNTCTLR2",        0b10, 0b001, 0b0000, 0b0110, 0b101>;
+def : RWSysReg<"TRCCNTCTLR3",        0b10, 0b001, 0b0000, 0b0111, 0b101>;
+def : RWSysReg<"TRCCNTVR0",          0b10, 0b001, 0b0000, 0b1000, 0b101>;
+def : RWSysReg<"TRCCNTVR1",          0b10, 0b001, 0b0000, 0b1001, 0b101>;
+def : RWSysReg<"TRCCNTVR2",          0b10, 0b001, 0b0000, 0b1010, 0b101>;
+def : RWSysReg<"TRCCNTVR3",          0b10, 0b001, 0b0000, 0b1011, 0b101>;
+def : RWSysReg<"TRCIMSPEC0",         0b10, 0b001, 0b0000, 0b0000, 0b111>;
+def : RWSysReg<"TRCIMSPEC1",         0b10, 0b001, 0b0000, 0b0001, 0b111>;
+def : RWSysReg<"TRCIMSPEC2",         0b10, 0b001, 0b0000, 0b0010, 0b111>;
+def : RWSysReg<"TRCIMSPEC3",         0b10, 0b001, 0b0000, 0b0011, 0b111>;
+def : RWSysReg<"TRCIMSPEC4",         0b10, 0b001, 0b0000, 0b0100, 0b111>;
+def : RWSysReg<"TRCIMSPEC5",         0b10, 0b001, 0b0000, 0b0101, 0b111>;
+def : RWSysReg<"TRCIMSPEC6",         0b10, 0b001, 0b0000, 0b0110, 0b111>;
+def : RWSysReg<"TRCIMSPEC7",         0b10, 0b001, 0b0000, 0b0111, 0b111>;
+def : RWSysReg<"TRCRSCTLR2",         0b10, 0b001, 0b0001, 0b0010, 0b000>;
+def : RWSysReg<"TRCRSCTLR3",         0b10, 0b001, 0b0001, 0b0011, 0b000>;
+def : RWSysReg<"TRCRSCTLR4",         0b10, 0b001, 0b0001, 0b0100, 0b000>;
+def : RWSysReg<"TRCRSCTLR5",         0b10, 0b001, 0b0001, 0b0101, 0b000>;
+def : RWSysReg<"TRCRSCTLR6",         0b10, 0b001, 0b0001, 0b0110, 0b000>;
+def : RWSysReg<"TRCRSCTLR7",         0b10, 0b001, 0b0001, 0b0111, 0b000>;
+def : RWSysReg<"TRCRSCTLR8",         0b10, 0b001, 0b0001, 0b1000, 0b000>;
+def : RWSysReg<"TRCRSCTLR9",         0b10, 0b001, 0b0001, 0b1001, 0b000>;
+def : RWSysReg<"TRCRSCTLR10",        0b10, 0b001, 0b0001, 0b1010, 0b000>;
+def : RWSysReg<"TRCRSCTLR11",        0b10, 0b001, 0b0001, 0b1011, 0b000>;
+def : RWSysReg<"TRCRSCTLR12",        0b10, 0b001, 0b0001, 0b1100, 0b000>;
+def : RWSysReg<"TRCRSCTLR13",        0b10, 0b001, 0b0001, 0b1101, 0b000>;
+def : RWSysReg<"TRCRSCTLR14",        0b10, 0b001, 0b0001, 0b1110, 0b000>;
+def : RWSysReg<"TRCRSCTLR15",        0b10, 0b001, 0b0001, 0b1111, 0b000>;
+def : RWSysReg<"TRCRSCTLR16",        0b10, 0b001, 0b0001, 0b0000, 0b001>;
+def : RWSysReg<"TRCRSCTLR17",        0b10, 0b001, 0b0001, 0b0001, 0b001>;
+def : RWSysReg<"TRCRSCTLR18",        0b10, 0b001, 0b0001, 0b0010, 0b001>;
+def : RWSysReg<"TRCRSCTLR19",        0b10, 0b001, 0b0001, 0b0011, 0b001>;
+def : RWSysReg<"TRCRSCTLR20",        0b10, 0b001, 0b0001, 0b0100, 0b001>;
+def : RWSysReg<"TRCRSCTLR21",        0b10, 0b001, 0b0001, 0b0101, 0b001>;
+def : RWSysReg<"TRCRSCTLR22",        0b10, 0b001, 0b0001, 0b0110, 0b001>;
+def : RWSysReg<"TRCRSCTLR23",        0b10, 0b001, 0b0001, 0b0111, 0b001>;
+def : RWSysReg<"TRCRSCTLR24",        0b10, 0b001, 0b0001, 0b1000, 0b001>;
+def : RWSysReg<"TRCRSCTLR25",        0b10, 0b001, 0b0001, 0b1001, 0b001>;
+def : RWSysReg<"TRCRSCTLR26",        0b10, 0b001, 0b0001, 0b1010, 0b001>;
+def : RWSysReg<"TRCRSCTLR27",        0b10, 0b001, 0b0001, 0b1011, 0b001>;
+def : RWSysReg<"TRCRSCTLR28",        0b10, 0b001, 0b0001, 0b1100, 0b001>;
+def : RWSysReg<"TRCRSCTLR29",        0b10, 0b001, 0b0001, 0b1101, 0b001>;
+def : RWSysReg<"TRCRSCTLR30",        0b10, 0b001, 0b0001, 0b1110, 0b001>;
+def : RWSysReg<"TRCRSCTLR31",        0b10, 0b001, 0b0001, 0b1111, 0b001>;
+def : RWSysReg<"TRCSSCCR0",          0b10, 0b001, 0b0001, 0b0000, 0b010>;
+def : RWSysReg<"TRCSSCCR1",          0b10, 0b001, 0b0001, 0b0001, 0b010>;
+def : RWSysReg<"TRCSSCCR2",          0b10, 0b001, 0b0001, 0b0010, 0b010>;
+def : RWSysReg<"TRCSSCCR3",          0b10, 0b001, 0b0001, 0b0011, 0b010>;
+def : RWSysReg<"TRCSSCCR4",          0b10, 0b001, 0b0001, 0b0100, 0b010>;
+def : RWSysReg<"TRCSSCCR5",          0b10, 0b001, 0b0001, 0b0101, 0b010>;
+def : RWSysReg<"TRCSSCCR6",          0b10, 0b001, 0b0001, 0b0110, 0b010>;
+def : RWSysReg<"TRCSSCCR7",          0b10, 0b001, 0b0001, 0b0111, 0b010>;
+def : RWSysReg<"TRCSSCSR0",          0b10, 0b001, 0b0001, 0b1000, 0b010>;
+def : RWSysReg<"TRCSSCSR1",          0b10, 0b001, 0b0001, 0b1001, 0b010>;
+def : RWSysReg<"TRCSSCSR2",          0b10, 0b001, 0b0001, 0b1010, 0b010>;
+def : RWSysReg<"TRCSSCSR3",          0b10, 0b001, 0b0001, 0b1011, 0b010>;
+def : RWSysReg<"TRCSSCSR4",          0b10, 0b001, 0b0001, 0b1100, 0b010>;
+def : RWSysReg<"TRCSSCSR5",          0b10, 0b001, 0b0001, 0b1101, 0b010>;
+def : RWSysReg<"TRCSSCSR6",          0b10, 0b001, 0b0001, 0b1110, 0b010>;
+def : RWSysReg<"TRCSSCSR7",          0b10, 0b001, 0b0001, 0b1111, 0b010>;
+def : RWSysReg<"TRCSSPCICR0",        0b10, 0b001, 0b0001, 0b0000, 0b011>;
+def : RWSysReg<"TRCSSPCICR1",        0b10, 0b001, 0b0001, 0b0001, 0b011>;
+def : RWSysReg<"TRCSSPCICR2",        0b10, 0b001, 0b0001, 0b0010, 0b011>;
+def : RWSysReg<"TRCSSPCICR3",        0b10, 0b001, 0b0001, 0b0011, 0b011>;
+def : RWSysReg<"TRCSSPCICR4",        0b10, 0b001, 0b0001, 0b0100, 0b011>;
+def : RWSysReg<"TRCSSPCICR5",        0b10, 0b001, 0b0001, 0b0101, 0b011>;
+def : RWSysReg<"TRCSSPCICR6",        0b10, 0b001, 0b0001, 0b0110, 0b011>;
+def : RWSysReg<"TRCSSPCICR7",        0b10, 0b001, 0b0001, 0b0111, 0b011>;
+def : RWSysReg<"TRCPDCR",            0b10, 0b001, 0b0001, 0b0100, 0b100>;
+def : RWSysReg<"TRCACVR0",           0b10, 0b001, 0b0010, 0b0000, 0b000>;
+def : RWSysReg<"TRCACVR1",           0b10, 0b001, 0b0010, 0b0010, 0b000>;
+def : RWSysReg<"TRCACVR2",           0b10, 0b001, 0b0010, 0b0100, 0b000>;
+def : RWSysReg<"TRCACVR3",           0b10, 0b001, 0b0010, 0b0110, 0b000>;
+def : RWSysReg<"TRCACVR4",           0b10, 0b001, 0b0010, 0b1000, 0b000>;
+def : RWSysReg<"TRCACVR5",           0b10, 0b001, 0b0010, 0b1010, 0b000>;
+def : RWSysReg<"TRCACVR6",           0b10, 0b001, 0b0010, 0b1100, 0b000>;
+def : RWSysReg<"TRCACVR7",           0b10, 0b001, 0b0010, 0b1110, 0b000>;
+def : RWSysReg<"TRCACVR8",           0b10, 0b001, 0b0010, 0b0000, 0b001>;
+def : RWSysReg<"TRCACVR9",           0b10, 0b001, 0b0010, 0b0010, 0b001>;
+def : RWSysReg<"TRCACVR10",          0b10, 0b001, 0b0010, 0b0100, 0b001>;
+def : RWSysReg<"TRCACVR11",          0b10, 0b001, 0b0010, 0b0110, 0b001>;
+def : RWSysReg<"TRCACVR12",          0b10, 0b001, 0b0010, 0b1000, 0b001>;
+def : RWSysReg<"TRCACVR13",          0b10, 0b001, 0b0010, 0b1010, 0b001>;
+def : RWSysReg<"TRCACVR14",          0b10, 0b001, 0b0010, 0b1100, 0b001>;
+def : RWSysReg<"TRCACVR15",          0b10, 0b001, 0b0010, 0b1110, 0b001>;
+def : RWSysReg<"TRCACATR0",          0b10, 0b001, 0b0010, 0b0000, 0b010>;
+def : RWSysReg<"TRCACATR1",          0b10, 0b001, 0b0010, 0b0010, 0b010>;
+def : RWSysReg<"TRCACATR2",          0b10, 0b001, 0b0010, 0b0100, 0b010>;
+def : RWSysReg<"TRCACATR3",          0b10, 0b001, 0b0010, 0b0110, 0b010>;
+def : RWSysReg<"TRCACATR4",          0b10, 0b001, 0b0010, 0b1000, 0b010>;
+def : RWSysReg<"TRCACATR5",          0b10, 0b001, 0b0010, 0b1010, 0b010>;
+def : RWSysReg<"TRCACATR6",          0b10, 0b001, 0b0010, 0b1100, 0b010>;
+def : RWSysReg<"TRCACATR7",          0b10, 0b001, 0b0010, 0b1110, 0b010>;
+def : RWSysReg<"TRCACATR8",          0b10, 0b001, 0b0010, 0b0000, 0b011>;
+def : RWSysReg<"TRCACATR9",          0b10, 0b001, 0b0010, 0b0010, 0b011>;
+def : RWSysReg<"TRCACATR10",         0b10, 0b001, 0b0010, 0b0100, 0b011>;
+def : RWSysReg<"TRCACATR11",         0b10, 0b001, 0b0010, 0b0110, 0b011>;
+def : RWSysReg<"TRCACATR12",         0b10, 0b001, 0b0010, 0b1000, 0b011>;
+def : RWSysReg<"TRCACATR13",         0b10, 0b001, 0b0010, 0b1010, 0b011>;
+def : RWSysReg<"TRCACATR14",         0b10, 0b001, 0b0010, 0b1100, 0b011>;
+def : RWSysReg<"TRCACATR15",         0b10, 0b001, 0b0010, 0b1110, 0b011>;
+def : RWSysReg<"TRCDVCVR0",          0b10, 0b001, 0b0010, 0b0000, 0b100>;
+def : RWSysReg<"TRCDVCVR1",          0b10, 0b001, 0b0010, 0b0100, 0b100>;
+def : RWSysReg<"TRCDVCVR2",          0b10, 0b001, 0b0010, 0b1000, 0b100>;
+def : RWSysReg<"TRCDVCVR3",          0b10, 0b001, 0b0010, 0b1100, 0b100>;
+def : RWSysReg<"TRCDVCVR4",          0b10, 0b001, 0b0010, 0b0000, 0b101>;
+def : RWSysReg<"TRCDVCVR5",          0b10, 0b001, 0b0010, 0b0100, 0b101>;
+def : RWSysReg<"TRCDVCVR6",          0b10, 0b001, 0b0010, 0b1000, 0b101>;
+def : RWSysReg<"TRCDVCVR7",          0b10, 0b001, 0b0010, 0b1100, 0b101>;
+def : RWSysReg<"TRCDVCMR0",          0b10, 0b001, 0b0010, 0b0000, 0b110>;
+def : RWSysReg<"TRCDVCMR1",          0b10, 0b001, 0b0010, 0b0100, 0b110>;
+def : RWSysReg<"TRCDVCMR2",          0b10, 0b001, 0b0010, 0b1000, 0b110>;
+def : RWSysReg<"TRCDVCMR3",          0b10, 0b001, 0b0010, 0b1100, 0b110>;
+def : RWSysReg<"TRCDVCMR4",          0b10, 0b001, 0b0010, 0b0000, 0b111>;
+def : RWSysReg<"TRCDVCMR5",          0b10, 0b001, 0b0010, 0b0100, 0b111>;
+def : RWSysReg<"TRCDVCMR6",          0b10, 0b001, 0b0010, 0b1000, 0b111>;
+def : RWSysReg<"TRCDVCMR7",          0b10, 0b001, 0b0010, 0b1100, 0b111>;
+def : RWSysReg<"TRCCIDCVR0",         0b10, 0b001, 0b0011, 0b0000, 0b000>;
+def : RWSysReg<"TRCCIDCVR1",         0b10, 0b001, 0b0011, 0b0010, 0b000>;
+def : RWSysReg<"TRCCIDCVR2",         0b10, 0b001, 0b0011, 0b0100, 0b000>;
+def : RWSysReg<"TRCCIDCVR3",         0b10, 0b001, 0b0011, 0b0110, 0b000>;
+def : RWSysReg<"TRCCIDCVR4",         0b10, 0b001, 0b0011, 0b1000, 0b000>;
+def : RWSysReg<"TRCCIDCVR5",         0b10, 0b001, 0b0011, 0b1010, 0b000>;
+def : RWSysReg<"TRCCIDCVR6",         0b10, 0b001, 0b0011, 0b1100, 0b000>;
+def : RWSysReg<"TRCCIDCVR7",         0b10, 0b001, 0b0011, 0b1110, 0b000>;
+def : RWSysReg<"TRCVMIDCVR0",        0b10, 0b001, 0b0011, 0b0000, 0b001>;
+def : RWSysReg<"TRCVMIDCVR1",        0b10, 0b001, 0b0011, 0b0010, 0b001>;
+def : RWSysReg<"TRCVMIDCVR2",        0b10, 0b001, 0b0011, 0b0100, 0b001>;
+def : RWSysReg<"TRCVMIDCVR3",        0b10, 0b001, 0b0011, 0b0110, 0b001>;
+def : RWSysReg<"TRCVMIDCVR4",        0b10, 0b001, 0b0011, 0b1000, 0b001>;
+def : RWSysReg<"TRCVMIDCVR5",        0b10, 0b001, 0b0011, 0b1010, 0b001>;
+def : RWSysReg<"TRCVMIDCVR6",        0b10, 0b001, 0b0011, 0b1100, 0b001>;
+def : RWSysReg<"TRCVMIDCVR7",        0b10, 0b001, 0b0011, 0b1110, 0b001>;
+def : RWSysReg<"TRCCIDCCTLR0",       0b10, 0b001, 0b0011, 0b0000, 0b010>;
+def : RWSysReg<"TRCCIDCCTLR1",       0b10, 0b001, 0b0011, 0b0001, 0b010>;
+def : RWSysReg<"TRCVMIDCCTLR0",      0b10, 0b001, 0b0011, 0b0010, 0b010>;
+def : RWSysReg<"TRCVMIDCCTLR1",      0b10, 0b001, 0b0011, 0b0011, 0b010>;
+def : RWSysReg<"TRCITCTRL",          0b10, 0b001, 0b0111, 0b0000, 0b100>;
+def : RWSysReg<"TRCCLAIMSET",        0b10, 0b001, 0b0111, 0b1000, 0b110>;
+def : RWSysReg<"TRCCLAIMCLR",        0b10, 0b001, 0b0111, 0b1001, 0b110>;
+
+// GICv3 registers
+//                                 Op0    Op1     CRn     CRm    Op2
+def : RWSysReg<"ICC_BPR1_EL1",       0b11, 0b000, 0b1100, 0b1100, 0b011>;
+def : RWSysReg<"ICC_BPR0_EL1",       0b11, 0b000, 0b1100, 0b1000, 0b011>;
+def : RWSysReg<"ICC_PMR_EL1",        0b11, 0b000, 0b0100, 0b0110, 0b000>;
+def : RWSysReg<"ICC_CTLR_EL1",       0b11, 0b000, 0b1100, 0b1100, 0b100>;
+def : RWSysReg<"ICC_CTLR_EL3",       0b11, 0b110, 0b1100, 0b1100, 0b100>;
+def : RWSysReg<"ICC_SRE_EL1",        0b11, 0b000, 0b1100, 0b1100, 0b101>;
+def : RWSysReg<"ICC_SRE_EL2",        0b11, 0b100, 0b1100, 0b1001, 0b101>;
+def : RWSysReg<"ICC_SRE_EL3",        0b11, 0b110, 0b1100, 0b1100, 0b101>;
+def : RWSysReg<"ICC_IGRPEN0_EL1",    0b11, 0b000, 0b1100, 0b1100, 0b110>;
+def : RWSysReg<"ICC_IGRPEN1_EL1",    0b11, 0b000, 0b1100, 0b1100, 0b111>;
+def : RWSysReg<"ICC_IGRPEN1_EL3",    0b11, 0b110, 0b1100, 0b1100, 0b111>;
+def : RWSysReg<"ICC_SEIEN_EL1",      0b11, 0b000, 0b1100, 0b1101, 0b000>;
+def : RWSysReg<"ICC_AP0R0_EL1",      0b11, 0b000, 0b1100, 0b1000, 0b100>;
+def : RWSysReg<"ICC_AP0R1_EL1",      0b11, 0b000, 0b1100, 0b1000, 0b101>;
+def : RWSysReg<"ICC_AP0R2_EL1",      0b11, 0b000, 0b1100, 0b1000, 0b110>;
+def : RWSysReg<"ICC_AP0R3_EL1",      0b11, 0b000, 0b1100, 0b1000, 0b111>;
+def : RWSysReg<"ICC_AP1R0_EL1",      0b11, 0b000, 0b1100, 0b1001, 0b000>;
+def : RWSysReg<"ICC_AP1R1_EL1",      0b11, 0b000, 0b1100, 0b1001, 0b001>;
+def : RWSysReg<"ICC_AP1R2_EL1",      0b11, 0b000, 0b1100, 0b1001, 0b010>;
+def : RWSysReg<"ICC_AP1R3_EL1",      0b11, 0b000, 0b1100, 0b1001, 0b011>;
+def : RWSysReg<"ICH_AP0R0_EL2",      0b11, 0b100, 0b1100, 0b1000, 0b000>;
+def : RWSysReg<"ICH_AP0R1_EL2",      0b11, 0b100, 0b1100, 0b1000, 0b001>;
+def : RWSysReg<"ICH_AP0R2_EL2",      0b11, 0b100, 0b1100, 0b1000, 0b010>;
+def : RWSysReg<"ICH_AP0R3_EL2",      0b11, 0b100, 0b1100, 0b1000, 0b011>;
+def : RWSysReg<"ICH_AP1R0_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b000>;
+def : RWSysReg<"ICH_AP1R1_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b001>;
+def : RWSysReg<"ICH_AP1R2_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b010>;
+def : RWSysReg<"ICH_AP1R3_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b011>;
+def : RWSysReg<"ICH_HCR_EL2",        0b11, 0b100, 0b1100, 0b1011, 0b000>;
+def : RWSysReg<"ICH_MISR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b010>;
+def : RWSysReg<"ICH_VMCR_EL2",       0b11, 0b100, 0b1100, 0b1011, 0b111>;
+def : RWSysReg<"ICH_VSEIR_EL2",      0b11, 0b100, 0b1100, 0b1001, 0b100>;
+def : RWSysReg<"ICH_LR0_EL2",        0b11, 0b100, 0b1100, 0b1100, 0b000>;
+def : RWSysReg<"ICH_LR1_EL2",        0b11, 0b100, 0b1100, 0b1100, 0b001>;
+def : RWSysReg<"ICH_LR2_EL2",        0b11, 0b100, 0b1100, 0b1100, 0b010>;
+def : RWSysReg<"ICH_LR3_EL2",        0b11, 0b100, 0b1100, 0b1100, 0b011>;
+def : RWSysReg<"ICH_LR4_EL2",        0b11, 0b100, 0b1100, 0b1100, 0b100>;
+def : RWSysReg<"ICH_LR5_EL2",        0b11, 0b100, 0b1100, 0b1100, 0b101>;
+def : RWSysReg<"ICH_LR6_EL2",        0b11, 0b100, 0b1100, 0b1100, 0b110>;
+def : RWSysReg<"ICH_LR7_EL2",        0b11, 0b100, 0b1100, 0b1100, 0b111>;
+def : RWSysReg<"ICH_LR8_EL2",        0b11, 0b100, 0b1100, 0b1101, 0b000>;
+def : RWSysReg<"ICH_LR9_EL2",        0b11, 0b100, 0b1100, 0b1101, 0b001>;
+def : RWSysReg<"ICH_LR10_EL2",       0b11, 0b100, 0b1100, 0b1101, 0b010>;
+def : RWSysReg<"ICH_LR11_EL2",       0b11, 0b100, 0b1100, 0b1101, 0b011>;
+def : RWSysReg<"ICH_LR12_EL2",       0b11, 0b100, 0b1100, 0b1101, 0b100>;
+def : RWSysReg<"ICH_LR13_EL2",       0b11, 0b100, 0b1100, 0b1101, 0b101>;
+def : RWSysReg<"ICH_LR14_EL2",       0b11, 0b100, 0b1100, 0b1101, 0b110>;
+def : RWSysReg<"ICH_LR15_EL2",       0b11, 0b100, 0b1100, 0b1101, 0b111>;
+
+// v8.1a "Privileged Access Never" extension-specific system registers
+let Requires = [{ {AArch64::HasV8_1aOps} }] in
+def : RWSysReg<"PAN", 0b11, 0b000, 0b0100, 0b0010, 0b011>;
+
+// v8.1a "Limited Ordering Regions" extension-specific system registers
+//                         Op0    Op1     CRn     CRm    Op2
+let Requires = [{ {AArch64::HasV8_1aOps} }] in {
+def : RWSysReg<"LORSA_EL1",  0b11, 0b000, 0b1010, 0b0100, 0b000>;
+def : RWSysReg<"LOREA_EL1",  0b11, 0b000, 0b1010, 0b0100, 0b001>;
+def : RWSysReg<"LORN_EL1",   0b11, 0b000, 0b1010, 0b0100, 0b010>;
+def : RWSysReg<"LORC_EL1",   0b11, 0b000, 0b1010, 0b0100, 0b011>;
+}
+
+// v8.1a "Virtualization hos extensions" system registers
+//                              Op0    Op1     CRn     CRm    Op2
+let Requires = [{ {AArch64::HasV8_1aOps} }] in {
+def : RWSysReg<"TTBR1_EL2",       0b11, 0b100, 0b0010, 0b0000, 0b001>;
+def : RWSysReg<"CONTEXTIDR_EL2",  0b11, 0b100, 0b1101, 0b0000, 0b001>;
+def : RWSysReg<"CNTHV_TVAL_EL2",  0b11, 0b100, 0b1110, 0b0011, 0b000>;
+def : RWSysReg<"CNTHV_CVAL_EL2",  0b11, 0b100, 0b1110, 0b0011, 0b010>;
+def : RWSysReg<"CNTHV_CTL_EL2",   0b11, 0b100, 0b1110, 0b0011, 0b001>;
+def : RWSysReg<"SCTLR_EL12",      0b11, 0b101, 0b0001, 0b0000, 0b000>;
+def : RWSysReg<"CPACR_EL12",      0b11, 0b101, 0b0001, 0b0000, 0b010>;
+def : RWSysReg<"TTBR0_EL12",      0b11, 0b101, 0b0010, 0b0000, 0b000>;
+def : RWSysReg<"TTBR1_EL12",      0b11, 0b101, 0b0010, 0b0000, 0b001>;
+def : RWSysReg<"TCR_EL12",        0b11, 0b101, 0b0010, 0b0000, 0b010>;
+def : RWSysReg<"AFSR0_EL12",      0b11, 0b101, 0b0101, 0b0001, 0b000>;
+def : RWSysReg<"AFSR1_EL12",      0b11, 0b101, 0b0101, 0b0001, 0b001>;
+def : RWSysReg<"ESR_EL12",        0b11, 0b101, 0b0101, 0b0010, 0b000>;
+def : RWSysReg<"FAR_EL12",        0b11, 0b101, 0b0110, 0b0000, 0b000>;
+def : RWSysReg<"MAIR_EL12",       0b11, 0b101, 0b1010, 0b0010, 0b000>;
+def : RWSysReg<"AMAIR_EL12",      0b11, 0b101, 0b1010, 0b0011, 0b000>;
+def : RWSysReg<"VBAR_EL12",       0b11, 0b101, 0b1100, 0b0000, 0b000>;
+def : RWSysReg<"CONTEXTIDR_EL12", 0b11, 0b101, 0b1101, 0b0000, 0b001>;
+def : RWSysReg<"CNTKCTL_EL12",    0b11, 0b101, 0b1110, 0b0001, 0b000>;
+def : RWSysReg<"CNTP_TVAL_EL02",  0b11, 0b101, 0b1110, 0b0010, 0b000>;
+def : RWSysReg<"CNTP_CTL_EL02",   0b11, 0b101, 0b1110, 0b0010, 0b001>;
+def : RWSysReg<"CNTP_CVAL_EL02",  0b11, 0b101, 0b1110, 0b0010, 0b010>;
+def : RWSysReg<"CNTV_TVAL_EL02",  0b11, 0b101, 0b1110, 0b0011, 0b000>;
+def : RWSysReg<"CNTV_CTL_EL02",   0b11, 0b101, 0b1110, 0b0011, 0b001>;
+def : RWSysReg<"CNTV_CVAL_EL02",  0b11, 0b101, 0b1110, 0b0011, 0b010>;
+def : RWSysReg<"SPSR_EL12",       0b11, 0b101, 0b0100, 0b0000, 0b000>;
+def : RWSysReg<"ELR_EL12",        0b11, 0b101, 0b0100, 0b0000, 0b001>;
+}
+// v8.2a registers
+//                  Op0    Op1     CRn     CRm    Op2
+let Requires = [{ {AArch64::HasV8_2aOps} }] in
+def : RWSysReg<"UAO", 0b11, 0b000, 0b0100, 0b0010, 0b100>;
+
+// v8.2a "Statistical Profiling extension" registers
+//                            Op0    Op1     CRn     CRm    Op2
+let Requires = [{ {AArch64::FeatureSPE} }] in {
+def : RWSysReg<"PMBLIMITR_EL1", 0b11, 0b000, 0b1001, 0b1010, 0b000>;
+def : RWSysReg<"PMBPTR_EL1",    0b11, 0b000, 0b1001, 0b1010, 0b001>;
+def : RWSysReg<"PMBSR_EL1",     0b11, 0b000, 0b1001, 0b1010, 0b011>;
+def : RWSysReg<"PMBIDR_EL1",    0b11, 0b000, 0b1001, 0b1010, 0b111>;
+def : RWSysReg<"PMSCR_EL2",     0b11, 0b100, 0b1001, 0b1001, 0b000>;
+def : RWSysReg<"PMSCR_EL12",    0b11, 0b101, 0b1001, 0b1001, 0b000>;
+def : RWSysReg<"PMSCR_EL1",     0b11, 0b000, 0b1001, 0b1001, 0b000>;
+def : RWSysReg<"PMSICR_EL1",    0b11, 0b000, 0b1001, 0b1001, 0b010>;
+def : RWSysReg<"PMSIRR_EL1",    0b11, 0b000, 0b1001, 0b1001, 0b011>;
+def : RWSysReg<"PMSFCR_EL1",    0b11, 0b000, 0b1001, 0b1001, 0b100>;
+def : RWSysReg<"PMSEVFR_EL1",   0b11, 0b000, 0b1001, 0b1001, 0b101>;
+def : RWSysReg<"PMSLATFR_EL1",  0b11, 0b000, 0b1001, 0b1001, 0b110>;
+def : RWSysReg<"PMSIDR_EL1",    0b11, 0b000, 0b1001, 0b1001, 0b111>;
+}
+
+// v8.2a "RAS extension" registers
+//                         Op0    Op1     CRn     CRm    Op2
+let Requires = [{ {AArch64::FeatureRAS} }] in {
+def : RWSysReg<"ERRSELR_EL1",   0b11, 0b000, 0b0101, 0b0011, 0b001>;
+def : RWSysReg<"ERXCTLR_EL1",   0b11, 0b000, 0b0101, 0b0100, 0b001>;
+def : RWSysReg<"ERXSTATUS_EL1", 0b11, 0b000, 0b0101, 0b0100, 0b010>;
+def : RWSysReg<"ERXADDR_EL1",   0b11, 0b000, 0b0101, 0b0100, 0b011>;
+def : RWSysReg<"ERXMISC0_EL1",  0b11, 0b000, 0b0101, 0b0101, 0b000>;
+def : RWSysReg<"ERXMISC1_EL1",  0b11, 0b000, 0b0101, 0b0101, 0b001>;
+def : RWSysReg<"DISR_EL1",      0b11, 0b000, 0b1100, 0b0001, 0b001>;
+def : RWSysReg<"VDISR_EL2",     0b11, 0b100, 0b1100, 0b0001, 0b001>;
+def : RWSysReg<"VSESR_EL2",     0b11, 0b100, 0b0101, 0b0010, 0b011>;
+}
+
+// Cyclone specific system registers
+//                                 Op0    Op1     CRn     CRm    Op2
+let Requires = [{ {AArch64::ProcCyclone} }] in
+def : RWSysReg<"CPM_IOACC_CTL_EL3", 0b11, 0b111, 0b1111, 0b0010, 0b000>;

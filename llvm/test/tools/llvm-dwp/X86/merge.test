@@ -1,0 +1,48 @@
+RUN: llvm-dwp %p/../Inputs/merge/notypes/c.dwo %p/../Inputs/merge/notypes/ab.dwp -o %t
+RUN: llvm-dwarfdump %t | FileCheck --check-prefix=CHECK --check-prefix=NOTYP %s
+
+FIXME: For some reason, piping straight from llvm-dwp to llvm-dwarfdump doesn't behave well - looks like dwarfdump is reading/closes before dwp has finished.
+
+DWP from a DWO (c.dwo) and a DWP (ab.dwp, created from a.dwo and b.dwo)
+Make sure the entries for A and B are updated correctly when read/processed from ab.dwp
+a.cpp:
+  struct foo { };
+  foo a;
+
+b.cpp:
+  struct bar { };
+  void b(bar) {
+  }
+
+c.cpp:
+  typedef int baz;
+  baz c() {
+  }
+
+CHECK-LABEL: .debug_abbrev.dwo contents:
+CHECK-LABEL: Abbrev table for offset:
+CHECK: 0x0000[[CAOFF:.*]]
+CHECK-LABEL: Abbrev table for offset:
+CHECK: 0x0000[[AAOFF:.*]]
+CHECK-LABEL: Abbrev table for offset:
+CHECK: 0x0000[[BAOFF:.*]]
+
+CHECK: .debug_info.dwo contents:
+CHECK: [[COFF:0x[0-9a-f]*]]:
+CHECK-LABEL: Compile Unit: length = {{.*}} version = 0x0004 abbr_offset =
+CHECK:         0x[[CAOFF]] addr_size = 0x08 (next unit at [[AOFF:.*]])
+CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOC:.*]])
+CHECK: [[AOFF]]:
+CHECK-LABEL: Compile Unit: length = {{.*}} version = 0x0004 abbr_offset =
+CHECK:         0x[[AAOFF]] addr_size = 0x08 (next unit at [[BOFF:.*]])
+CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOA:.*]])
+CHECK: [[BOFF]]:
+CHECK-LABEL: Compile Unit: length = {{.*}} version = 0x0004 abbr_offset =
+CHECK:         0x[[BAOFF]] addr_size = 0x08 (next unit at [[XOFF:.*]])
+CHECK:   DW_AT_GNU_dwo_id {{.*}} ([[DWOB:.*]])
+
+CHECK-LABEL: .debug_cu_index
+CHECK:    Index  Signature INFO                      ABBREV                             LINE                     STR_OFFSETS
+CHECK-DAG:       [[DWOC]]  {{\[}}[[COFF]], [[AOFF]]) [0x0000[[CAOFF]], 0x0000[[AAOFF]]) [0x00000000, 0x00000011) [0x00000000, 0x00000018)
+CHECK-DAG:       [[DWOA]]  {{\[}}[[AOFF]], [[BOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000011, 0x00000022) [0x00000018, 0x00000028)
+CHECK-DAG:       [[DWOB]]  {{\[}}[[BOFF]], [[XOFF]]) [0x0000[[BAOFF]], 0x000000c3)      [0x00000022, 0x00000033) [0x00000028, 0x0000003c)

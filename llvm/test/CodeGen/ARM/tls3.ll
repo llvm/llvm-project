@@ -23,7 +23,7 @@ entry:
 
 ; CHECK-NOT: __emutls_t.teste
 
-; EMU:       .align 2
+; EMU:       .p2align 2
 ; EMU-LABEL: __emutls_v.teste:
 ; EMU-NEXT:  .long 8
 ; EMU-NEXT:  .long 4

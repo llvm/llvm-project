@@ -25,7 +25,8 @@ entry:
   ; CHECK-NEXT: DW_AT_location
   ; CHECK-NEXT: DW_AT_name {{.*}}"size"
   ; CHECK: .debug_loc contents:
-  ; CHECK: Location description: 70 00
+  ; Expecting the encoding for sp+12: DW_OP_breg31 0c
+  ; CHECK: Location description: 8f 0c
   ret void, !dbg !18
 }
 
@@ -44,11 +45,10 @@ attributes #3 = { nounwind optsize }
 !llvm.module.flags = !{!12, !13}
 !llvm.ident = !{!14}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 (trunk 223149) (llvm/trunk 223115)", isOptimized: true, emissionKind: 1, file: !1, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.6.0 (trunk 223149) (llvm/trunk 223115)", isOptimized: true, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
 !1 = !DIFile(filename: "<stdin>", directory: "")
 !2 = !{}
-!3 = !{!4}
-!4 = distinct !DISubprogram(name: "start", linkageName: "_Z5startv", line: 2, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: true, scopeLine: 3, file: !5, scope: !6, type: !7, variables: !9)
+!4 = distinct !DISubprogram(name: "start", linkageName: "_Z5startv", line: 2, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 3, file: !5, scope: !6, type: !7, variables: !9)
 !5 = !DIFile(filename: "test1.c", directory: "")
 !6 = !DIFile(filename: "test1.c", directory: "")
 !7 = !DISubroutineType(types: !8)

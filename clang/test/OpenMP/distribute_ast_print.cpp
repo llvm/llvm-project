@@ -8,6 +8,75 @@
 
 void foo() {}
 
+struct S {
+  S(): a(0) {}
+  S(int v) : a(v) {}
+  int a;
+  typedef int type;
+};
+
+template <typename T>
+class S7 : public T {
+protected:
+  T a;
+  S7() : a(0) {}
+
+public:
+  S7(typename T::type v) : a(v) {
+#pragma omp target
+#pragma omp teams
+#pragma omp distribute private(a) private(this->a) private(T::a)
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+  }
+  S7 &operator=(S7 &s) {
+#pragma omp target
+#pragma omp teams
+#pragma omp distribute private(a) private(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+    return *this;
+  }
+};
+
+// CHECK: #pragma omp target
+// CHECK-NEXT: #pragma omp teams
+// CHECK-NEXT: #pragma omp distribute private(this->a) private(this->a) private(this->S::a)
+// CHECK: #pragma omp target
+// CHECK-NEXT: #pragma omp teams
+// CHECK-NEXT: #pragma omp distribute private(this->a) private(this->a) private(T::a)
+// CHECK: #pragma omp target
+// CHECK-NEXT: #pragma omp teams
+// CHECK-NEXT: #pragma omp distribute private(this->a) private(this->a)
+
+class S8 : public S7<S> {
+  S8() {}
+
+public:
+  S8(int v) : S7<S>(v){
+#pragma omp target
+#pragma omp teams
+#pragma omp distribute private(a) private(this->a) private(S7<S>::a) 
+    for (int k = 0; k < a.a; ++k)
+      ++this->a.a;
+  }
+  S8 &operator=(S8 &s) {
+#pragma omp target
+#pragma omp teams
+#pragma omp distribute private(a) private(this->a)
+    for (int k = 0; k < s.a.a; ++k)
+      ++s.a.a;
+    return *this;
+  }
+};
+
+// CHECK: #pragma omp target
+// CHECK-NEXT: #pragma omp teams
+// CHECK-NEXT: #pragma omp distribute private(this->a) private(this->a) private(this->S7<S>::a)
+// CHECK: #pragma omp target
+// CHECK-NEXT: #pragma omp teams
+// CHECK-NEXT: #pragma omp distribute private(this->a) private(this->a)
+
 template <class T, int N>
 T tmain(T argc) {
   T b = argc, c, d, e, f, g;

@@ -8,7 +8,7 @@
 ; SI: ds_write2st64_b32 [[VPTR]], [[VAL]], [[VAL]] offset1:1
 ; SI: s_endpgm
 define void @simple_write2st64_one_val_f32_0_1(float addrspace(1)* %C, float addrspace(1)* %in) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr float, float addrspace(1)* %in, i32 %x.i
   %val = load float, float addrspace(1)* %in.gep, align 4
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %x.i
@@ -26,11 +26,11 @@ define void @simple_write2st64_one_val_f32_0_1(float addrspace(1)* %C, float add
 ; SI: ds_write2st64_b32 [[VPTR]], [[VAL0]], [[VAL1]] offset0:2 offset1:5
 ; SI: s_endpgm
 define void @simple_write2st64_two_val_f32_2_5(float addrspace(1)* %C, float addrspace(1)* %in) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep.0 = getelementptr float, float addrspace(1)* %in, i32 %x.i
   %in.gep.1 = getelementptr float, float addrspace(1)* %in.gep.0, i32 1
-  %val0 = load float, float addrspace(1)* %in.gep.0, align 4
-  %val1 = load float, float addrspace(1)* %in.gep.1, align 4
+  %val0 = load volatile float, float addrspace(1)* %in.gep.0, align 4
+  %val1 = load volatile float, float addrspace(1)* %in.gep.1, align 4
   %add.x.0 = add nsw i32 %x.i, 128
   %arrayidx0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 %add.x.0
   store float %val0, float addrspace(3)* %arrayidx0, align 4
@@ -47,11 +47,11 @@ define void @simple_write2st64_two_val_f32_2_5(float addrspace(1)* %C, float add
 ; SI: ds_write2st64_b32 [[VPTR]], [[VAL0]], [[VAL1]] offset1:255
 ; SI: s_endpgm
 define void @simple_write2st64_two_val_max_offset_f32(float addrspace(1)* %C, float addrspace(1)* %in, float addrspace(3)* %lds) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep.0 = getelementptr float, float addrspace(1)* %in, i32 %x.i
   %in.gep.1 = getelementptr float, float addrspace(1)* %in.gep.0, i32 1
-  %val0 = load float, float addrspace(1)* %in.gep.0, align 4
-  %val1 = load float, float addrspace(1)* %in.gep.1, align 4
+  %val0 = load volatile float, float addrspace(1)* %in.gep.0, align 4
+  %val1 = load volatile float, float addrspace(1)* %in.gep.1, align 4
   %arrayidx0 = getelementptr inbounds float, float addrspace(3)* %lds, i32 %x.i
   store float %val0, float addrspace(3)* %arrayidx0, align 4
   %add.x = add nsw i32 %x.i, 16320
@@ -67,11 +67,11 @@ define void @simple_write2st64_two_val_max_offset_f32(float addrspace(1)* %C, fl
 ; SI: ds_write2st64_b64 [[VPTR]], [[VAL0]], [[VAL1]] offset0:4 offset1:127
 ; SI: s_endpgm
 define void @simple_write2st64_two_val_max_offset_f64(double addrspace(1)* %C, double addrspace(1)* %in, double addrspace(3)* %lds) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep.0 = getelementptr double, double addrspace(1)* %in, i32 %x.i
   %in.gep.1 = getelementptr double, double addrspace(1)* %in.gep.0, i32 1
-  %val0 = load double, double addrspace(1)* %in.gep.0, align 8
-  %val1 = load double, double addrspace(1)* %in.gep.1, align 8
+  %val0 = load volatile double, double addrspace(1)* %in.gep.0, align 8
+  %val1 = load volatile double, double addrspace(1)* %in.gep.1, align 8
   %add.x.0 = add nsw i32 %x.i, 256
   %arrayidx0 = getelementptr inbounds double, double addrspace(3)* %lds, i32 %add.x.0
   store double %val0, double addrspace(3)* %arrayidx0, align 8
@@ -86,7 +86,7 @@ define void @simple_write2st64_two_val_max_offset_f64(double addrspace(1)* %C, d
 ; SI: ds_write2_b64 {{v[0-9]+}}, {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}} offset1:8
 ; SI: s_endpgm
 define void @byte_size_only_divisible_64_write2st64_f64(double addrspace(1)* %C, double addrspace(1)* %in, double addrspace(3)* %lds) #0 {
-  %x.i = tail call i32 @llvm.r600.read.tidig.x() #1
+  %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in.gep = getelementptr double, double addrspace(1)* %in, i32 %x.i
   %val = load double, double addrspace(1)* %in.gep, align 8
   %arrayidx0 = getelementptr inbounds double, double addrspace(3)* %lds, i32 %x.i
@@ -98,20 +98,11 @@ define void @byte_size_only_divisible_64_write2st64_f64(double addrspace(1)* %C,
 }
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tgid.x() #1
+declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tgid.y() #1
+declare i32 @llvm.amdgcn.workitem.id.y() #1
 
-; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tidig.x() #1
-
-; Function Attrs: nounwind readnone
-declare i32 @llvm.r600.read.tidig.y() #1
-
-; Function Attrs: convergent nounwind
-declare void @llvm.AMDGPU.barrier.local() #2
-
-attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { convergent nounwind }

@@ -140,7 +140,7 @@ define void @t9(<4 x float>* %r, <2 x i32>* %A) nounwind {
 ; X64-LABEL: t9:
 ; X64:       ## BB#0:
 ; X64-NEXT:    movapd (%rdi), %xmm0
-; X64-NEXT:    movhpd (%rsi), %xmm0
+; X64-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; X64-NEXT:    movapd %xmm0, (%rdi)
 ; X64-NEXT:    retq
 	%tmp = load <4 x float>, <4 x float>* %r
@@ -207,7 +207,7 @@ define <8 x i16> @t12(<8 x i16> %T0, <8 x i16> %T1) nounwind readnone {
 ; X64:       ## BB#0: ## %entry
 ; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X64-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; X64-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,7,6,7]
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,3,3]
 ; X64-NEXT:    retq
 entry:
 	%tmp9 = shufflevector <8 x i16> %T0, <8 x i16> %T1, <8 x i32> < i32 0, i32 1, i32 undef, i32 undef, i32 3, i32 11, i32 undef , i32 undef >
@@ -220,7 +220,7 @@ define <8 x i16> @t13(<8 x i16> %T0, <8 x i16> %T1) nounwind readnone {
 ; X64:       ## BB#0: ## %entry
 ; X64-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; X64-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[0,2,2,3,4,5,6,7]
-; X64-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,7,6,7]
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,3,3]
 ; X64-NEXT:    retq
 entry:
 	%tmp9 = shufflevector <8 x i16> %T0, <8 x i16> %T1, <8 x i32> < i32 8, i32 9, i32 undef, i32 undef, i32 11, i32 3, i32 undef , i32 undef >

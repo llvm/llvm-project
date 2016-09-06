@@ -291,6 +291,61 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) {
   return BaseT::getCastInstrCost(Opcode, Dst, Src);
 }
 
+int AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                             VectorType *VecTy,
+                                             unsigned Index) {
+
+  // Make sure we were given a valid extend opcode.
+  assert((Opcode == Instruction::SExt || Opcode == Instruction::ZExt) &&
+         "Invalid opcode");
+
+  // We are extending an element we extract from a vector, so the source type
+  // of the extend is the element type of the vector.
+  auto *Src = VecTy->getElementType();
+
+  // Sign- and zero-extends are for integer types only.
+  assert(isa<IntegerType>(Dst) && isa<IntegerType>(Src) && "Invalid type");
+
+  // Get the cost for the extract. We compute the cost (if any) for the extend
+  // below.
+  auto Cost = getVectorInstrCost(Instruction::ExtractElement, VecTy, Index);
+
+  // Legalize the types.
+  auto VecLT = TLI->getTypeLegalizationCost(DL, VecTy);
+  auto DstVT = TLI->getValueType(DL, Dst);
+  auto SrcVT = TLI->getValueType(DL, Src);
+
+  // If the resulting type is still a vector and the destination type is legal,
+  // we may get the extension for free. If not, get the default cost for the
+  // extend.
+  if (!VecLT.second.isVector() || !TLI->isTypeLegal(DstVT))
+    return Cost + getCastInstrCost(Opcode, Dst, Src);
+
+  // The destination type should be larger than the element type. If not, get
+  // the default cost for the extend.
+  if (DstVT.getSizeInBits() < SrcVT.getSizeInBits())
+    return Cost + getCastInstrCost(Opcode, Dst, Src);
+
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Opcode should be either SExt or ZExt");
+
+  // For sign-extends, we only need a smov, which performs the extension
+  // automatically.
+  case Instruction::SExt:
+    return Cost;
+
+  // For zero-extends, the extend is performed automatically by a umov unless
+  // the destination type is i64 and the element type is i8 or i16.
+  case Instruction::ZExt:
+    if (DstVT.getSizeInBits() != 64u || SrcVT.getSizeInBits() == 32u)
+      return Cost;
+  }
+
+  // If we are unable to perform the extend for free, get the default cost.
+  return Cost + getCastInstrCost(Opcode, Dst, Src);
+}
+
 int AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                        unsigned Index) {
   assert(Val->isVectorTy() && "This must be a vector type");
@@ -313,7 +368,7 @@ int AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   }
 
   // All other insert/extracts cost this much.
-  return 3;
+  return ST->getVectorInsertExtractBaseCost();
 }
 
 int AArch64TTIImpl::getArithmeticInstrCost(
@@ -472,9 +527,7 @@ int AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
 }
 
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(unsigned VF) {
-  if (ST->isCortexA57())
-    return 4;
-  return 2;
+  return ST->getMaxInterleaveFactor();
 }
 
 void AArch64TTIImpl::getUnrollingPreferences(Loop *L,
@@ -570,4 +623,20 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     break;
   }
   return true;
+}
+
+unsigned AArch64TTIImpl::getCacheLineSize() {
+  return ST->getCacheLineSize();
+}
+
+unsigned AArch64TTIImpl::getPrefetchDistance() {
+  return ST->getPrefetchDistance();
+}
+
+unsigned AArch64TTIImpl::getMinPrefetchStride() {
+  return ST->getMinPrefetchStride();
+}
+
+unsigned AArch64TTIImpl::getMaxPrefetchIterationsAhead() {
+  return ST->getMaxPrefetchIterationsAhead();
 }

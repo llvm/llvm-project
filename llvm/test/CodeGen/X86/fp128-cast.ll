@@ -1,5 +1,6 @@
-; RUN: llc < %s -O2 -mtriple=x86_64-linux-android -mattr=+mmx | FileCheck %s
-; RUN: llc < %s -O2 -mtriple=x86_64-linux-gnu -mattr=+mmx | FileCheck %s
+; RUN: llc < %s -O2 -mtriple=x86_64-linux-android -mattr=+mmx | FileCheck %s --check-prefix=X64
+; RUN: llc < %s -O2 -mtriple=x86_64-linux-gnu -mattr=+mmx | FileCheck %s --check-prefix=X64
+; RUN: llc < %s -O2 -mtriple=i686-linux-gnu -mattr=+mmx | FileCheck %s --check-prefix=X32
 
 ; Check soft floating point conversion function calls.
 
@@ -17,11 +18,17 @@ entry:
   %conv = fpext float %0 to fp128
   store fp128 %conv, fp128* @vf128, align 16
   ret void
-; CHECK-LABEL: TestFPExtF32_F128:
-; CHECK:       movss      vf32(%rip), %xmm0
-; CHECK-NEXT:  callq      __extendsftf2
-; CHECK-NEXT:  movaps     %xmm0, vf128(%rip)
-; CHECK:       retq
+; X32-LABEL: TestFPExtF32_F128:
+; X32:       flds       vf32
+; X32:       fstps
+; X32:       calll      __extendsftf2
+; X32:       retl
+;
+; X64-LABEL: TestFPExtF32_F128:
+; X64:       movss      vf32(%rip), %xmm0
+; X64-NEXT:  callq      __extendsftf2
+; X64-NEXT:  movaps     %xmm0, vf128(%rip)
+; X64:       retq
 }
 
 define void @TestFPExtF64_F128() {
@@ -30,11 +37,17 @@ entry:
   %conv = fpext double %0 to fp128
   store fp128 %conv, fp128* @vf128, align 16
   ret void
-; CHECK-LABEL: TestFPExtF64_F128:
-; CHECK:       movsd      vf64(%rip), %xmm0
-; CHECK-NEXT:  callq      __extenddftf2
-; CHECK-NEXT:  movapd     %xmm0, vf128(%rip)
-; CHECK:       ret
+; X32-LABEL: TestFPExtF64_F128:
+; X32:       fldl       vf64
+; X32:       fstpl
+; X32:       calll      __extenddftf2
+; X32:       retl
+;
+; X64-LABEL: TestFPExtF64_F128:
+; X64:       movsd      vf64(%rip), %xmm0
+; X64-NEXT:  callq      __extenddftf2
+; X64-NEXT:  movapd     %xmm0, vf128(%rip)
+; X64:       ret
 }
 
 define void @TestFPToSIF128_I32() {
@@ -43,11 +56,15 @@ entry:
   %conv = fptosi fp128 %0 to i32
   store i32 %conv, i32* @vi32, align 4
   ret void
-; CHECK-LABEL: TestFPToSIF128_I32:
-; CHECK:        movaps     vf128(%rip), %xmm0
-; CHECK-NEXT:   callq      __fixtfsi
-; CHECK-NEXT:   movl       %eax, vi32(%rip)
-; CHECK:        retq
+; X32-LABEL: TestFPToSIF128_I32:
+; X32:       calll      __fixtfsi
+; X32:       retl
+;
+; X64-LABEL: TestFPToSIF128_I32:
+; X64:        movaps     vf128(%rip), %xmm0
+; X64-NEXT:   callq      __fixtfsi
+; X64-NEXT:   movl       %eax, vi32(%rip)
+; X64:        retq
 }
 
 define void @TestFPToUIF128_U32() {
@@ -56,11 +73,15 @@ entry:
   %conv = fptoui fp128 %0 to i32
   store i32 %conv, i32* @vu32, align 4
   ret void
-; CHECK-LABEL: TestFPToUIF128_U32:
-; CHECK:        movaps     vf128(%rip), %xmm0
-; CHECK-NEXT:   callq      __fixunstfsi
-; CHECK-NEXT:   movl       %eax, vu32(%rip)
-; CHECK:        retq
+; X32-LABEL: TestFPToUIF128_U32:
+; X32:       calll      __fixunstfsi
+; X32:       retl
+;
+; X64-LABEL: TestFPToUIF128_U32:
+; X64:        movaps     vf128(%rip), %xmm0
+; X64-NEXT:   callq      __fixunstfsi
+; X64-NEXT:   movl       %eax, vu32(%rip)
+; X64:        retq
 }
 
 define void @TestFPToSIF128_I64() {
@@ -70,12 +91,16 @@ entry:
   %conv1 = sext i32 %conv to i64
   store i64 %conv1, i64* @vi64, align 8
   ret void
-; CHECK-LABEL: TestFPToSIF128_I64:
-; CHECK:       movaps      vf128(%rip), %xmm0
-; CHECK-NEXT:  callq       __fixtfsi
-; CHECK-NEXT:  cltq
-; CHECK-NEXT:  movq        %rax, vi64(%rip)
-; CHECK:       retq
+; X32-LABEL: TestFPToSIF128_I64:
+; X32:       calll      __fixtfsi
+; X32:       retl
+;
+; X64-LABEL: TestFPToSIF128_I64:
+; X64:       movaps      vf128(%rip), %xmm0
+; X64-NEXT:  callq       __fixtfsi
+; X64-NEXT:  cltq
+; X64-NEXT:  movq        %rax, vi64(%rip)
+; X64:       retq
 }
 
 define void @TestFPToUIF128_U64() {
@@ -85,12 +110,16 @@ entry:
   %conv1 = zext i32 %conv to i64
   store i64 %conv1, i64* @vu64, align 8
   ret void
-; CHECK-LABEL: TestFPToUIF128_U64:
-; CHECK:       movaps      vf128(%rip), %xmm0
-; CHECK-NEXT:  callq       __fixunstfsi
-; CHECK-NEXT:  movl        %eax, %eax
-; CHECK-NEXT:  movq        %rax, vu64(%rip)
-; CHECK:       retq
+; X32-LABEL: TestFPToUIF128_U64:
+; X32:       calll      __fixunstfsi
+; X32:       retl
+;
+; X64-LABEL: TestFPToUIF128_U64:
+; X64:       movaps      vf128(%rip), %xmm0
+; X64-NEXT:  callq       __fixunstfsi
+; X64-NEXT:  movl        %eax, %eax
+; X64-NEXT:  movq        %rax, vu64(%rip)
+; X64:       retq
 }
 
 define void @TestFPTruncF128_F32() {
@@ -99,11 +128,16 @@ entry:
   %conv = fptrunc fp128 %0 to float
   store float %conv, float* @vf32, align 4
   ret void
-; CHECK-LABEL: TestFPTruncF128_F32:
-; CHECK:       movaps      vf128(%rip), %xmm0
-; CHECK-NEXT:  callq       __trunctfsf2
-; CHECK-NEXT:  movss       %xmm0, vf32(%rip)
-; CHECK:       retq
+; X32-LABEL: TestFPTruncF128_F32:
+; X32:       calll      __trunctfsf2
+; X32:       fstps      vf32
+; X32:       retl
+;
+; X64-LABEL: TestFPTruncF128_F32:
+; X64:       movaps      vf128(%rip), %xmm0
+; X64-NEXT:  callq       __trunctfsf2
+; X64-NEXT:  movss       %xmm0, vf32(%rip)
+; X64:       retq
 }
 
 define void @TestFPTruncF128_F64() {
@@ -112,11 +146,16 @@ entry:
   %conv = fptrunc fp128 %0 to double
   store double %conv, double* @vf64, align 8
   ret void
-; CHECK-LABEL: TestFPTruncF128_F64:
-; CHECK:       movapd      vf128(%rip), %xmm0
-; CHECK-NEXT:  callq       __trunctfdf2
-; CHECK-NEXT:  movsd       %xmm0, vf64(%rip)
-; CHECK:       retq
+; X32-LABEL: TestFPTruncF128_F64:
+; X32:       calll      __trunctfdf2
+; X32:       fstpl      vf64
+; X32:       retl
+;
+; X64-LABEL: TestFPTruncF128_F64:
+; X64:       movapd      vf128(%rip), %xmm0
+; X64-NEXT:  callq       __trunctfdf2
+; X64-NEXT:  movsd       %xmm0, vf64(%rip)
+; X64:       retq
 }
 
 define void @TestSIToFPI32_F128() {
@@ -125,11 +164,15 @@ entry:
   %conv = sitofp i32 %0 to fp128
   store fp128 %conv, fp128* @vf128, align 16
   ret void
-; CHECK-LABEL: TestSIToFPI32_F128:
-; CHECK:       movl       vi32(%rip), %edi
-; CHECK-NEXT:  callq      __floatsitf
-; CHECK-NEXT:  movaps     %xmm0, vf128(%rip)
-; CHECK:       retq
+; X32-LABEL: TestSIToFPI32_F128:
+; X32:       calll      __floatsitf
+; X32:       retl
+;
+; X64-LABEL: TestSIToFPI32_F128:
+; X64:       movl       vi32(%rip), %edi
+; X64-NEXT:  callq      __floatsitf
+; X64-NEXT:  movaps     %xmm0, vf128(%rip)
+; X64:       retq
 }
 
 define void @TestUIToFPU32_F128() #2 {
@@ -138,11 +181,15 @@ entry:
   %conv = uitofp i32 %0 to fp128
   store fp128 %conv, fp128* @vf128, align 16
   ret void
-; CHECK-LABEL: TestUIToFPU32_F128:
-; CHECK:       movl       vu32(%rip), %edi
-; CHECK-NEXT:  callq      __floatunsitf
-; CHECK-NEXT:  movaps     %xmm0, vf128(%rip)
-; CHECK:       retq
+; X32-LABEL: TestUIToFPU32_F128:
+; X32:       calll      __floatunsitf
+; X32:       retl
+;
+; X64-LABEL: TestUIToFPU32_F128:
+; X64:       movl       vu32(%rip), %edi
+; X64-NEXT:  callq      __floatunsitf
+; X64-NEXT:  movaps     %xmm0, vf128(%rip)
+; X64:       retq
 }
 
 define void @TestSIToFPI64_F128(){
@@ -151,11 +198,15 @@ entry:
   %conv = sitofp i64 %0 to fp128
   store fp128 %conv, fp128* @vf128, align 16
   ret void
-; CHECK-LABEL: TestSIToFPI64_F128:
-; CHECK:       movq       vi64(%rip), %rdi
-; CHECK-NEXT:  callq      __floatditf
-; CHECK-NEXT:  movaps     %xmm0, vf128(%rip)
-; CHECK:       retq
+; X32-LABEL: TestSIToFPI64_F128:
+; X32:       calll      __floatditf
+; X32:       retl
+;
+; X64-LABEL: TestSIToFPI64_F128:
+; X64:       movq       vi64(%rip), %rdi
+; X64-NEXT:  callq      __floatditf
+; X64-NEXT:  movaps     %xmm0, vf128(%rip)
+; X64:       retq
 }
 
 define void @TestUIToFPU64_F128() #2 {
@@ -164,11 +215,15 @@ entry:
   %conv = uitofp i64 %0 to fp128
   store fp128 %conv, fp128* @vf128, align 16
   ret void
-; CHECK-LABEL: TestUIToFPU64_F128:
-; CHECK:       movq       vu64(%rip), %rdi
-; CHECK-NEXT:  callq      __floatunditf
-; CHECK-NEXT:  movaps     %xmm0, vf128(%rip)
-; CHECK:       retq
+; X32-LABEL: TestUIToFPU64_F128:
+; X32:       calll      __floatunditf
+; X32:       retl
+;
+; X64-LABEL: TestUIToFPU64_F128:
+; X64:       movq       vu64(%rip), %rdi
+; X64-NEXT:  callq      __floatunditf
+; X64-NEXT:  movaps     %xmm0, vf128(%rip)
+; X64:       retq
 }
 
 define i32 @TestConst128(fp128 %v) {
@@ -176,11 +231,16 @@ entry:
   %cmp = fcmp ogt fp128 %v, 0xL00000000000000003FFF000000000000
   %conv = zext i1 %cmp to i32
   ret i32 %conv
-; CHECK-LABEL: TestConst128:
-; CHECK:       movaps {{.*}}, %xmm1
-; CHECK-NEXT:  callq __gttf2
-; CHECK-NEXT:  test
-; CHECK:       retq
+; X32-LABEL: TestConst128:
+; X32:       calll      __gttf2
+; X32:       retl
+;
+; X64-LABEL: TestConst128:
+; X64:       movaps {{.*}}, %xmm1
+; X64-NEXT:  callq __gttf2
+; X64-NEXT:  xorl
+; X64-NEXT:  test
+; X64:       retq
 }
 
 ; C code:
@@ -207,17 +267,21 @@ entry:
   %cmp = icmp eq i32 %or, 0
   %conv = zext i1 %cmp to i32
   ret i32 %conv
-; CHECK-LABEL: TestBits128:
-; CHECK:       movaps %xmm0, %xmm1
-; CHECK-NEXT:  callq __multf3
-; CHECK-NEXT:  movaps %xmm0, (%rsp)
-; CHECK-NEXT:  movq (%rsp),
-; CHECK-NEXT:  movq %
-; CHECK-NEXT:  shrq $32,
-; CHECK:       orl
-; CHECK-NEXT:  sete %al
-; CHECK-NEXT:  movzbl %al, %eax
-; CHECK:       retq
+; X32-LABEL: TestBits128:
+; X32:       calll      __multf3
+; X32:       retl
+;
+; X64-LABEL: TestBits128:
+; X64:       movaps %xmm0, %xmm1
+; X64-NEXT:  callq __multf3
+; X64-NEXT:  movaps %xmm0, (%rsp)
+; X64-NEXT:  movq (%rsp),
+; X64-NEXT:  movq %
+; X64-NEXT:  shrq $32,
+; X64:       xorl %eax, %eax
+; X64-NEXT:  orl
+; X64-NEXT:  sete %al
+; X64:       retq
 ;
 ; If TestBits128 fails due to any llvm or clang change,
 ; please make sure the original simplified C code will
@@ -244,12 +308,19 @@ entry:
   %add = add i128 %or, 3
   %0 = bitcast i128 %add to fp128
   ret fp128 %0
-; CHECK-LABEL: TestPair128:
-; CHECK:       addq $3, %rsi
-; CHECK:       movq %rsi, -24(%rsp)
-; CHECK:       movq %rdi, -16(%rsp)
-; CHECK:       movaps -24(%rsp), %xmm0
-; CHECK-NEXT:  retq
+; X32-LABEL: TestPair128:
+; X32:       addl
+; X32-NEXT:  adcl
+; X32-NEXT:  adcl
+; X32-NEXT:  adcl
+; X32:       retl
+;
+; X64-LABEL: TestPair128:
+; X64:       addq $3, %rsi
+; X64:       movq %rsi, -24(%rsp)
+; X64:       movq %rdi, -16(%rsp)
+; X64:       movaps -24(%rsp), %xmm0
+; X64-NEXT:  retq
 }
 
 define fp128 @TestTruncCopysign(fp128 %x, i32 %n) {
@@ -266,12 +337,24 @@ if.then:                                          ; preds = %entry
 cleanup:                                          ; preds = %entry, %if.then
   %retval.0 = phi fp128 [ %conv1, %if.then ], [ %x, %entry ]
   ret fp128 %retval.0
-; CHECK-LABEL: TestTruncCopysign:
-; CHECK:       callq __trunctfdf2
-; CHECK-NEXT:  andpd {{.*}}, %xmm0
-; CHECK-NEXT:  orpd {{.*}}, %xmm0
-; CHECK-NEXT:  callq __extenddftf2
-; CHECK:       retq
+; X32-LABEL: TestTruncCopysign:
+; X32:       calll __trunctfdf2
+; X32:       fstpl
+; X32:       flds
+; X32:       flds
+; X32:       fstp
+; X32:       fldz
+; X32:       fstp
+; X32:       fstpl
+; X32:       calll __extenddftf2
+; X32:       retl
+;
+; X64-LABEL: TestTruncCopysign:
+; X64:       callq __trunctfdf2
+; X64-NEXT:  andps {{.*}}, %xmm0
+; X64-NEXT:  orps {{.*}}, %xmm0
+; X64-NEXT:  callq __extenddftf2
+; X64:       retq
 }
 
 declare double @copysign(double, double) #1

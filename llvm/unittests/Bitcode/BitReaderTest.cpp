@@ -29,10 +29,10 @@ using namespace llvm;
 
 namespace {
 
-std::unique_ptr<Module> parseAssembly(const char *Assembly) {
+std::unique_ptr<Module> parseAssembly(LLVMContext &Context,
+                                      const char *Assembly) {
   SMDiagnostic Error;
-  std::unique_ptr<Module> M =
-      parseAssemblyString(Assembly, Error, getGlobalContext());
+  std::unique_ptr<Module> M = parseAssemblyString(Assembly, Error, Context);
 
   std::string ErrMsg;
   raw_string_ostream OS(ErrMsg);
@@ -54,7 +54,7 @@ static void writeModuleToBuffer(std::unique_ptr<Module> Mod,
 static std::unique_ptr<Module> getLazyModuleFromAssembly(LLVMContext &Context,
                                                          SmallString<1024> &Mem,
                                                          const char *Assembly) {
-  writeModuleToBuffer(parseAssembly(Assembly), Mem);
+  writeModuleToBuffer(parseAssembly(Context, Assembly), Mem);
   std::unique_ptr<MemoryBuffer> Buffer =
       MemoryBuffer::getMemBuffer(Mem.str(), "test", false);
   ErrorOr<std::unique_ptr<Module>> ModuleOrErr =
@@ -82,7 +82,7 @@ public:
 static std::unique_ptr<Module>
 getStreamedModuleFromAssembly(LLVMContext &Context, SmallString<1024> &Mem,
                               const char *Assembly) {
-  writeModuleToBuffer(parseAssembly(Assembly), Mem);
+  writeModuleToBuffer(parseAssembly(Context, Assembly), Mem);
   std::unique_ptr<MemoryBuffer> Buffer =
       MemoryBuffer::getMemBuffer(Mem.str(), "test", false);
   auto Streamer = llvm::make_unique<BufferDataStreamer>(std::move(Buffer));

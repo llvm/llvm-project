@@ -11,9 +11,12 @@
 #define LLVM_TOOLS_LLVMPDBDUMP_VARIABLEDUMPER_H
 
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
+
+class StringRef;
+
+namespace pdb {
 
 class LinePrinter;
 
@@ -37,5 +40,5 @@ private:
   LinePrinter &Printer;
 };
 }
-
+}
 #endif

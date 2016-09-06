@@ -47,7 +47,17 @@ namespace {
       initializeMachineCopyPropagationPass(*PassRegistry::getPassRegistry());
     }
 
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.setPreservesCFG();
+      MachineFunctionPass::getAnalysisUsage(AU);
+    }
+
     bool runOnMachineFunction(MachineFunction &MF) override;
+
+    MachineFunctionProperties getRequiredProperties() const override {
+      return MachineFunctionProperties().set(
+          MachineFunctionProperties::Property::AllVRegsAllocated);
+    }
 
   private:
     void ClobberRegister(unsigned Reg);
@@ -200,7 +210,8 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       if (eraseIfRedundant(*MI, Def, Src) || eraseIfRedundant(*MI, Src, Def))
         continue;
 
-      // If Src is defined by a previous copy, it cannot be eliminated.
+      // If Src is defined by a previous copy, the previous copy cannot be
+      // eliminated.
       for (MCRegAliasIterator AI(Src, TRI, true); AI.isValid(); ++AI) {
         Reg2MIMap::iterator CI = CopyMap.find(*AI);
         if (CI != CopyMap.end()) {
@@ -215,7 +226,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       if (!MRI->isReserved(Def))
         MaybeDeadCopies.insert(MI);
 
-      // If 'Src' is previously source of another copy, then this earlier copy's
+      // If 'Def' is previously source of another copy, then this earlier copy's
       // source is no longer available. e.g.
       // %xmm9<def> = copy %xmm2
       // ...
@@ -234,7 +245,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
       // Remember source that's copied to Def. Once it's clobbered, then
       // it's no longer available for copy propagation.
       RegList &DestList = SrcMap[Src];
-      if (std::find(DestList.begin(), DestList.end(), Def) == DestList.end())
+      if (!is_contained(DestList, Def))
         DestList.push_back(Def);
 
       continue;
@@ -284,18 +295,28 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
     // defined registers.
     if (RegMask) {
       // Erase any MaybeDeadCopies whose destination register is clobbered.
-      for (MachineInstr *MaybeDead : MaybeDeadCopies) {
+      for (SmallSetVector<MachineInstr *, 8>::iterator DI =
+               MaybeDeadCopies.begin();
+           DI != MaybeDeadCopies.end();) {
+        MachineInstr *MaybeDead = *DI;
         unsigned Reg = MaybeDead->getOperand(0).getReg();
         assert(!MRI->isReserved(Reg));
-        if (!RegMask->clobbersPhysReg(Reg))
+
+        if (!RegMask->clobbersPhysReg(Reg)) {
+          ++DI;
           continue;
+        }
+
         DEBUG(dbgs() << "MCP: Removing copy due to regmask clobbering: ";
               MaybeDead->dump());
+
+        // erase() will return the next valid iterator pointing to the next
+        // element after the erased one.
+        DI = MaybeDeadCopies.erase(DI);
         MaybeDead->eraseFromParent();
         Changed = true;
         ++NumDeletes;
       }
-      MaybeDeadCopies.clear();
 
       removeClobberedRegsFromMap(AvailCopyMap, *RegMask);
       removeClobberedRegsFromMap(CopyMap, *RegMask);
@@ -333,7 +354,7 @@ void MachineCopyPropagation::CopyPropagateBlock(MachineBasicBlock &MBB) {
 }
 
 bool MachineCopyPropagation::runOnMachineFunction(MachineFunction &MF) {
-  if (skipOptnoneFunction(*MF.getFunction()))
+  if (skipFunction(*MF.getFunction()))
     return false;
 
   Changed = false;
@@ -347,3 +368,4 @@ bool MachineCopyPropagation::runOnMachineFunction(MachineFunction &MF) {
 
   return Changed;
 }
+

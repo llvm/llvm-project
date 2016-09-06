@@ -1,9 +1,9 @@
-; RUN: llc  < %s -march=mipsel -mcpu=mips32   | FileCheck %s -check-prefix=ALL -check-prefix=ALL-EL -check-prefix=MIPS32-EL
-; RUN: llc  < %s -march=mips   -mcpu=mips32   | FileCheck %s -check-prefix=ALL -check-prefix=ALL-EB -check-prefix=MIPS32-EB
-; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 | FileCheck %s -check-prefix=ALL -check-prefix=ALL-EL -check-prefix=MIPS32-EL
-; RUN: llc  < %s -march=mips   -mcpu=mips32r2 | FileCheck %s -check-prefix=ALL -check-prefix=ALL-EB -check-prefix=MIPS32-EB
-; RUN: llc  < %s -march=mipsel -mcpu=mips32r6 | FileCheck %s -check-prefix=ALL -check-prefix=ALL-EL -check-prefix=MIPS32R6-EL
-; RUN: llc  < %s -march=mips   -mcpu=mips32r6 | FileCheck %s -check-prefix=ALL -check-prefix=ALL-EB -check-prefix=MIPS32R6-EB
+; RUN: llc  < %s -march=mipsel -mcpu=mips32   -relocation-model=pic | FileCheck %s -check-prefixes=ALL,ALL-EL,MIPS32-EL
+; RUN: llc  < %s -march=mips   -mcpu=mips32   -relocation-model=pic | FileCheck %s -check-prefixes=ALL,ALL-EB,MIPS32-EB
+; RUN: llc  < %s -march=mipsel -mcpu=mips32r2 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,ALL-EL,MIPS32-EL
+; RUN: llc  < %s -march=mips   -mcpu=mips32r2 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,ALL-EB,MIPS32-EB
+; RUN: llc  < %s -march=mipsel -mcpu=mips32r6 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,ALL-EL,MIPS32R6-EL
+; RUN: llc  < %s -march=mips   -mcpu=mips32r6 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,ALL-EB,MIPS32R6-EB
 %struct.S2 = type { %struct.S1, %struct.S1 }
 %struct.S1 = type { i8, i8 }
 %struct.S4 = type { [7 x i8] }

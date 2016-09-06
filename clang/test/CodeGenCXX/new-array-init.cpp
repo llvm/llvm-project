@@ -14,7 +14,7 @@ void fn(int n) {
 // CHECK-LABEL: define void @_Z15const_underflowv
 void const_underflow() {
   // CHECK-NOT: icmp ult i{{32|64}} %{{[^ ]+}}, 3
-  // CHECK: call noalias i8* @_Zna{{.}}(i{{32|64}} -1)
+  // CHECK: call i8* @_Zna{{.}}(i{{32|64}} -1)
   new int[2] { 1, 2, 3 };
 }
 
@@ -37,7 +37,7 @@ void check_array_value_init() {
   struct S;
   new (int S::*[3][4][5]) ();
 
-  // CHECK: call noalias i8* @_Zna{{.}}(i{{32 240|64 480}})
+  // CHECK: call i8* @_Zna{{.}}(i{{32 240|64 480}})
   // CHECK: getelementptr inbounds i{{32|64}}, i{{32|64}}* {{.*}}, i{{32|64}} 60
 
   // CHECK: phi

@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple=hexagon -filetype=asm %s 2> %t; FileCheck %s < %t
+# RUN: not llvm-mc -triple=hexagon -filetype=asm %s 2>&1 | FileCheck %s
 
 r1:0=##0xFFFFFF7000001000
 # CHECK: rror: value -144(0xffffffffffffff70) out of range: -128-127

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mattr=-vsx -march=ppc32 | grep fnabs
+; RUN: llc -verify-machineinstrs < %s -mattr=-vsx -march=ppc32 | grep fnabs
 
 declare double @fabs(double)
 

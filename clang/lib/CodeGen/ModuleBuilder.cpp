@@ -25,7 +25,9 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include <memory>
+
 using namespace clang;
+using namespace CodeGen;
 
 namespace {
   class CodeGeneratorImpl : public CodeGenerator {
@@ -36,13 +38,21 @@ namespace {
     const CodeGenOptions CodeGenOpts;  // Intentionally copied in.
 
     unsigned HandlingTopLevelDecls;
+
+    /// Use this when emitting decls to block re-entrant decl emission. It will
+    /// emit all deferred decls on scope exit. Set EmitDeferred to false if decl
+    /// emission must be deferred longer, like at the end of a tag definition.
     struct HandlingTopLevelDeclRAII {
       CodeGeneratorImpl &Self;
-      HandlingTopLevelDeclRAII(CodeGeneratorImpl &Self) : Self(Self) {
+      bool EmitDeferred;
+      HandlingTopLevelDeclRAII(CodeGeneratorImpl &Self,
+                               bool EmitDeferred = true)
+          : Self(Self), EmitDeferred(EmitDeferred) {
         ++Self.HandlingTopLevelDecls;
       }
       ~HandlingTopLevelDeclRAII() {
-        if (--Self.HandlingTopLevelDecls == 0)
+        unsigned Level = --Self.HandlingTopLevelDecls;
+        if (Level == 0 && EmitDeferred)
           Self.EmitDeferredDecls();
       }
     };
@@ -57,7 +67,7 @@ namespace {
     SmallVector<CXXMethodDecl *, 8> DeferredInlineMethodDefinitions;
 
   public:
-    CodeGeneratorImpl(DiagnosticsEngine &diags, const std::string &ModuleName,
+    CodeGeneratorImpl(DiagnosticsEngine &diags, llvm::StringRef ModuleName,
                       const HeaderSearchOptions &HSO,
                       const PreprocessorOptions &PPO, const CodeGenOptions &CGO,
                       llvm::LLVMContext &C,
@@ -74,11 +84,19 @@ namespace {
              Diags.hasErrorOccurred());
     }
 
-    llvm::Module* GetModule() override {
+    CodeGenModule &CGM() {
+      return *Builder;
+    }
+
+    llvm::Module *GetModule() {
       return M.get();
     }
 
-    const Decl *GetDeclForMangledName(StringRef MangledName) override {
+    llvm::Module *ReleaseModule() {
+      return M.release();
+    }
+
+    const Decl *GetDeclForMangledName(StringRef MangledName) {
       GlobalDecl Result;
       if (!Builder->lookupRepresentativeDecl(MangledName, Result))
         return nullptr;
@@ -93,21 +111,23 @@ namespace {
       return D;
     }
 
-    llvm::Module *ReleaseModule() override { return M.release(); }
+    llvm::Constant *GetAddrOfGlobal(GlobalDecl global, bool isForDefinition) {
+      return Builder->GetAddrOfGlobal(global, isForDefinition);
+    }
 
     void Initialize(ASTContext &Context) override {
       Ctx = &Context;
 
       M->setTargetTriple(Ctx->getTargetInfo().getTriple().getTriple());
-      M->setDataLayout(Ctx->getTargetInfo().getDataLayoutString());
+      M->setDataLayout(Ctx->getTargetInfo().getDataLayout());
       Builder.reset(new CodeGen::CodeGenModule(Context, HeaderSearchOpts,
                                                PreprocessorOpts, CodeGenOpts,
                                                *M, Diags, CoverageInfo));
 
       for (auto &&Lib : CodeGenOpts.DependentLibraries)
-        HandleDependentLibrary(Lib);
+        Builder->AddDependentLib(Lib);
       for (auto &&Opt : CodeGenOpts.LinkerOptions)
-        HandleLinkerOption(Opt);
+        Builder->AppendLinkerOptions(Opt);
     }
 
     void HandleCXXStaticMemberVarInstantiation(VarDecl *VD) override {
@@ -143,11 +163,22 @@ namespace {
       DeferredInlineMethodDefinitions.clear();
     }
 
-    void HandleInlineMethodDefinition(CXXMethodDecl *D) override {
+    void HandleInlineFunctionDefinition(FunctionDecl *D) override {
       if (Diags.hasErrorOccurred())
         return;
 
       assert(D->doesThisDeclarationHaveABody());
+
+      // Handle friend functions.
+      if (D->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend)) {
+        if (Ctx->getTargetInfo().getCXXABI().isMicrosoft()
+            && !D->getLexicalDeclContext()->isDependentContext())
+          Builder->EmitTopLevelDecl(D);
+        return;
+      }
+
+      // Otherwise, must be a method.
+      auto MD = cast<CXXMethodDecl>(D);
 
       // We may want to emit this definition. However, that decision might be
       // based on computing the linkage, and we have to defer that in case we
@@ -157,13 +188,13 @@ namespace {
       //     void bar();
       //     void foo() { bar(); }
       //   } A;
-      DeferredInlineMethodDefinitions.push_back(D);
+      DeferredInlineMethodDefinitions.push_back(MD);
 
       // Provide some coverage mapping even for methods that aren't emitted.
       // Don't do this for templated classes though, as they may not be
       // instantiable.
-      if (!D->getParent()->getDescribedClassTemplate())
-        Builder->AddDeferredUnusedCoverageMapping(D);
+      if (!MD->getParent()->getDescribedClassTemplate())
+        Builder->AddDeferredUnusedCoverageMapping(MD);
     }
 
     /// HandleTagDeclDefinition - This callback is invoked each time a TagDecl
@@ -173,6 +204,10 @@ namespace {
     void HandleTagDeclDefinition(TagDecl *D) override {
       if (Diags.hasErrorOccurred())
         return;
+
+      // Don't allow re-entrant calls to CodeGen triggered by PCH
+      // deserialization to emit deferred decls.
+      HandlingTopLevelDeclRAII HandlingDecl(*this, /*EmitDeferred=*/false);
 
       Builder->UpdateCompletedType(D);
 
@@ -188,11 +223,24 @@ namespace {
           }
         }
       }
+      // For OpenMP emit declare reduction functions, if required.
+      if (Ctx->getLangOpts().OpenMP) {
+        for (Decl *Member : D->decls()) {
+          if (auto *DRD = dyn_cast<OMPDeclareReductionDecl>(Member)) {
+            if (Ctx->DeclMustBeEmitted(DRD))
+              Builder->EmitGlobal(DRD);
+          }
+        }
+      }
     }
 
     void HandleTagDeclRequiredDefinition(const TagDecl *D) override {
       if (Diags.hasErrorOccurred())
         return;
+
+      // Don't allow re-entrant calls to CodeGen triggered by PCH
+      // deserialization to emit deferred decls.
+      HandlingTopLevelDeclRAII HandlingDecl(*this, /*EmitDeferred=*/false);
 
       if (CodeGen::CGDebugInfo *DI = Builder->getModuleDebugInfo())
         if (const RecordDecl *RD = dyn_cast<RecordDecl>(D))
@@ -214,6 +262,13 @@ namespace {
       }
     }
 
+    void AssignInheritanceModel(CXXRecordDecl *RD) override {
+      if (Diags.hasErrorOccurred())
+        return;
+
+      Builder->RefreshTypeCacheForClass(RD);
+    }
+
     void CompleteTentativeDefinition(VarDecl *D) override {
       if (Diags.hasErrorOccurred())
         return;
@@ -227,26 +282,35 @@ namespace {
 
       Builder->EmitVTable(RD);
     }
-
-    void HandleLinkerOption(llvm::StringRef Opts) override {
-      Builder->AppendLinkerOptions(Opts);
-    }
-
-    void HandleDetectMismatch(llvm::StringRef Name,
-                              llvm::StringRef Value) override {
-      Builder->AddDetectMismatch(Name, Value);
-    }
-
-    void HandleDependentLibrary(llvm::StringRef Lib) override {
-      Builder->AddDependentLib(Lib);
-    }
   };
 }
 
 void CodeGenerator::anchor() { }
 
+CodeGenModule &CodeGenerator::CGM() {
+  return static_cast<CodeGeneratorImpl*>(this)->CGM();
+}
+
+llvm::Module *CodeGenerator::GetModule() {
+  return static_cast<CodeGeneratorImpl*>(this)->GetModule();
+}
+
+llvm::Module *CodeGenerator::ReleaseModule() {
+  return static_cast<CodeGeneratorImpl*>(this)->ReleaseModule();
+}
+
+const Decl *CodeGenerator::GetDeclForMangledName(llvm::StringRef name) {
+  return static_cast<CodeGeneratorImpl*>(this)->GetDeclForMangledName(name);
+}
+
+llvm::Constant *CodeGenerator::GetAddrOfGlobal(GlobalDecl global,
+                                               bool isForDefinition) {
+  return static_cast<CodeGeneratorImpl*>(this)
+           ->GetAddrOfGlobal(global, isForDefinition);
+}
+
 CodeGenerator *clang::CreateLLVMCodeGen(
-    DiagnosticsEngine &Diags, const std::string &ModuleName,
+    DiagnosticsEngine &Diags, llvm::StringRef ModuleName,
     const HeaderSearchOptions &HeaderSearchOpts,
     const PreprocessorOptions &PreprocessorOpts, const CodeGenOptions &CGO,
     llvm::LLVMContext &C, CoverageSourceInfo *CoverageInfo) {

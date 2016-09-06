@@ -1,4 +1,4 @@
-; RUN: llc < %s -widen-vmovs -mcpu=cortex-a8 -verify-machineinstrs -disable-block-placement | FileCheck %s
+; RUN: llc < %s -mcpu=cortex-a8 -verify-machineinstrs -disable-block-placement | FileCheck %s
 target triple = "thumbv7-apple-ios"
 
 ; The 1.0e+10 constant is loaded from the constant pool and kept in a register.

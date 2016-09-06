@@ -23,7 +23,7 @@ namespace comments {
 
 namespace {
 #include "clang/AST/CommentHTMLTagsProperties.inc"
-} // unnamed namespace
+} // end anonymous namespace
 
 Sema::Sema(llvm::BumpPtrAllocator &Allocator, const SourceManager &SourceMgr,
            DiagnosticsEngine &Diags, CommandTraits &Traits,
@@ -353,8 +353,6 @@ void Sema::actOnTParamCommandParamNameArg(TParamCommandComment *Command,
       << CorrectedName
       << FixItHint::CreateReplacement(ArgRange, CorrectedName);
   }
-
-  return;
 }
 
 void Sema::actOnTParamCommandFinish(TParamCommandComment *Command,
@@ -1002,7 +1000,7 @@ void SimpleTypoCorrector::addDecl(const NamedDecl *ND) {
     BestIndex = CurrIndex;
   }
 }
-} // unnamed namespace
+} // end anonymous namespace
 
 unsigned Sema::correctTypoInParmVarReference(
                                     StringRef Typo,
@@ -1040,7 +1038,7 @@ bool ResolveTParamReferenceHelper(
   }
   return false;
 }
-} // unnamed namespace
+} // end anonymous namespace
 
 bool Sema::resolveTParamReference(
                             StringRef Name,
@@ -1067,7 +1065,7 @@ void CorrectTypoInTParamReferenceHelper(
                                          Corrector);
   }
 }
-} // unnamed namespace
+} // end anonymous namespace
 
 StringRef Sema::correctTypoInTParamReference(
                             StringRef Typo,
@@ -1095,4 +1093,3 @@ Sema::getInlineCommandRenderKind(StringRef Name) const {
 
 } // end namespace comments
 } // end namespace clang
-

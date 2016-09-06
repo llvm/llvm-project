@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | not grep "tail call void @llvm.memcpy.i32"
+; RUN: opt < %s -inline -S | not grep "tail call void @llvm.memcpy.p0i8.p0i8.i32"
 ; PR3550
 
 define internal void @foo(i32* %p, i32* %q) {
@@ -7,8 +7,6 @@ define internal void @foo(i32* %p, i32* %q) {
 	tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* %pp, i8* %qq, i32 4, i32 1, i1 false)
 	ret void
 }
-
-declare void @llvm.memcpy.i32(i8* nocapture, i8* nocapture, i32, i32) nounwind
 
 define i32 @main() personality i32 (...)* @__gxx_personality_v0 {
 	%a = alloca i32		; <i32*> [#uses=3]

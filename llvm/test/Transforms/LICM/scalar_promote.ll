@@ -1,4 +1,5 @@
 ; RUN: opt < %s -basicaa -tbaa -licm -S | FileCheck %s
+; RUN: opt -aa-pipeline=type-based-aa,basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,loop(licm)' -S %s | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
 @X = global i32 7   ; <i32*> [#uses=4]
@@ -135,7 +136,7 @@ Loop:   ; preds = %Loop, %0
   %x2 = add i32 %x, 1   ; <i32> [#uses=1]
   store i32 %x2, i32* @X
 
-        store volatile i32* @X, i32** %P2
+        store atomic i32* @X, i32** %P2 monotonic, align 8
 
   %Next = add i32 %j, 1   ; <i32> [#uses=2]
   %cond = icmp eq i32 %Next, 0    ; <i1> [#uses=1]

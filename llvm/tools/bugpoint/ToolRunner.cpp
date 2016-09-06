@@ -21,6 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <fstream>
 #include <sstream>
+#include <utility>
 using namespace llvm;
 
 #define DEBUG_TYPE "toolrunner"
@@ -272,9 +273,9 @@ namespace {
     std::string CompilerCommand;
     std::vector<std::string> CompilerArgs;
   public:
-    CustomCompiler(
-      const std::string &CompilerCmd, std::vector<std::string> CompArgs) :
-      CompilerCommand(CompilerCmd), CompilerArgs(CompArgs) {}
+    CustomCompiler(const std::string &CompilerCmd,
+                   std::vector<std::string> CompArgs)
+        : CompilerCommand(CompilerCmd), CompilerArgs(std::move(CompArgs)) {}
 
     void compileProgram(const std::string &Bitcode,
                         std::string *Error,
@@ -333,9 +334,9 @@ namespace {
     std::string ExecutionCommand;
     std::vector<std::string> ExecutorArgs;
   public:
-    CustomExecutor(
-      const std::string &ExecutionCmd, std::vector<std::string> ExecArgs) :
-      ExecutionCommand(ExecutionCmd), ExecutorArgs(ExecArgs) {}
+    CustomExecutor(const std::string &ExecutionCmd,
+                   std::vector<std::string> ExecArgs)
+        : ExecutionCommand(ExecutionCmd), ExecutorArgs(std::move(ExecArgs)) {}
 
     int ExecuteProgram(const std::string &Bitcode,
                        const std::vector<std::string> &Args,

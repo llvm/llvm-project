@@ -1181,6 +1181,20 @@ namespace ExternConstexpr {
     constexpr int j = 0;
     constexpr int k; // expected-error {{default initialization of an object of const type}}
   }
+
+  extern const int q;
+  constexpr int g() { return q; }
+  constexpr int q = g();
+  static_assert(q == 0, "zero-initialization should precede static initialization");
+
+  extern int r; // expected-note {{here}}
+  constexpr int h() { return r; } // expected-error {{never produces a constant}} expected-note {{read of non-const}}
+
+  struct S { int n; };
+  extern const S s;
+  constexpr int x() { return s.n; }
+  constexpr S s = {x()};
+  static_assert(s.n == 0, "zero-initialization should precede static initialization");
 }
 
 namespace ComplexConstexpr {
@@ -2004,4 +2018,51 @@ namespace PR24597 {
   constexpr A g() { return f(); }
   constexpr int a = *f().p;
   constexpr int b = *g().p;
+}
+
+namespace IncompleteClass {
+  struct XX {
+    static constexpr int f(XX*) { return 1; } // expected-note {{here}}
+    friend constexpr int g(XX*) { return 2; } // expected-note {{here}}
+
+    static constexpr int i = f(static_cast<XX*>(nullptr)); // expected-error {{constexpr variable 'i' must be initialized by a constant expression}}  expected-note {{undefined function 'f' cannot be used in a constant expression}}
+    static constexpr int j = g(static_cast<XX*>(nullptr)); // expected-error {{constexpr variable 'j' must be initialized by a constant expression}}  expected-note {{undefined function 'g' cannot be used in a constant expression}}
+  };
+}
+
+namespace InheritedCtor {
+  struct A { constexpr A(int) {} };
+
+  struct B : A { int n; using A::A; }; // expected-note {{here}}
+  constexpr B b(0); // expected-error {{constant expression}} expected-note {{derived class}}
+
+  struct C : A { using A::A; struct { union { int n, m = 0; }; union { int a = 0; }; int k = 0; }; struct {}; union {}; }; // expected-warning 4{{extension}}
+  constexpr C c(0);
+
+  struct D : A {
+    using A::A; // expected-note {{here}}
+    struct { // expected-warning {{extension}}
+      union { // expected-warning {{extension}}
+        int n;
+      };
+    };
+  };
+  constexpr D d(0); // expected-error {{constant expression}} expected-note {{derived class}}
+
+  struct E : virtual A { using A::A; }; // expected-note {{here}}
+  // We wrap a function around this to avoid implicit zero-initialization
+  // happening first; the zero-initialization step would produce the same
+  // error and defeat the point of this test.
+  void f() {
+    constexpr E e(0); // expected-error {{constant expression}} expected-note {{derived class}}
+  }
+  // FIXME: This produces a note with no source location.
+  //constexpr E e(0);
+
+  struct W { constexpr W(int n) : w(n) {} int w; };
+  struct X : W { using W::W; int x = 2; };
+  struct Y : X { using X::X; int y = 3; };
+  struct Z : Y { using Y::Y; int z = 4; };
+  constexpr Z z(1);
+  static_assert(z.w == 1 && z.x == 2 && z.y == 3 && z.z == 4, "");
 }

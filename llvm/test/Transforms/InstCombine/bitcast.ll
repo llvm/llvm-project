@@ -16,6 +16,59 @@ define i32 @test1(i64 %a) {
 ; CHECK: ret i32 0
 }
 
+; Perform the bitwise logic in the source type of the operands to eliminate bitcasts.
+
+define <2 x i32> @xor_two_vector_bitcasts(<1 x i64> %a, <1 x i64> %b) {
+  %t1 = bitcast <1 x i64> %a to <2 x i32>
+  %t2 = bitcast <1 x i64> %b to <2 x i32>
+  %t3 = xor <2 x i32> %t1, %t2
+  ret <2 x i32> %t3
+
+; CHECK-LABEL: @xor_two_vector_bitcasts(
+; CHECK-NEXT:  %t31 = xor <1 x i64> %a, %b
+; CHECK-NEXT:  %t3 = bitcast <1 x i64> %t31 to <2 x i32>
+; CHECK-NEXT:  ret <2 x i32> %t3
+}
+
+; Verify that 'xor' of vector and constant is done as a vector bitwise op before the bitcast.
+
+define <2 x i32> @xor_bitcast_vec_to_vec(<1 x i64> %a) {
+  %t1 = bitcast <1 x i64> %a to <2 x i32>
+  %t2 = xor <2 x i32> <i32 1, i32 2>, %t1
+  ret <2 x i32> %t2
+
+; CHECK-LABEL: @xor_bitcast_vec_to_vec(
+; CHECK-NEXT:  %t21 = xor <1 x i64> %a, <i64 8589934593> 
+; CHECK-NEXT:  %t2 = bitcast <1 x i64> %t21 to <2 x i32>
+; CHECK-NEXT:  ret <2 x i32> %t2
+}
+
+; Verify that 'and' of integer and constant is done as a vector bitwise op before the bitcast.
+
+define i64 @and_bitcast_vec_to_int(<2 x i32> %a) {
+  %t1 = bitcast <2 x i32> %a to i64
+  %t2 = and i64 %t1, 3
+  ret i64 %t2
+
+; CHECK-LABEL: @and_bitcast_vec_to_int(
+; CHECK-NEXT:  %t21 = and <2 x i32> %a, <i32 3, i32 0>
+; CHECK-NEXT:  %t2 = bitcast <2 x i32> %t21 to i64
+; CHECK-NEXT:  ret i64 %t2
+}
+
+; Verify that 'or' of vector and constant is done as an integer bitwise op before the bitcast.
+
+define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
+  %t1 = bitcast i64 %a to <2 x i32>
+  %t2 = or <2 x i32> %t1, <i32 1, i32 2>
+  ret <2 x i32> %t2
+
+; CHECK-LABEL: @or_bitcast_int_to_vec(
+; CHECK-NEXT:  %t21 = or i64 %a, 8589934593
+; CHECK-NEXT:  %t2 = bitcast i64 %t21 to <2 x i32>
+; CHECK-NEXT:  ret <2 x i32> %t2
+}
+
 ; Optimize bitcasts that are extracting low element of vector.  This happens
 ; because of SRoA.
 ; rdar://7892780
@@ -208,4 +261,11 @@ define <2 x i64> @test7(<2 x i8*>* %arg) nounwind {
 ; CHECK: @test7
 ; CHECK: bitcast
 ; CHECK: load
+}
+
+define i8 @test8() {
+  %res = bitcast <8 x i1> <i1 true, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true> to i8
+  ret i8 %res
+; CHECK: @test8
+; CHECK: ret i8 -85
 }

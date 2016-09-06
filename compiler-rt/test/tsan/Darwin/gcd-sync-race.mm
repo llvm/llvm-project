@@ -1,5 +1,5 @@
 // RUN: %clang_tsan %s -o %t -framework Foundation
-// RUN: %deflake %run %t 2>&1
+// RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %deflake %run %t 2>&1 | FileCheck %s
 
 #import <Foundation/Foundation.h>
 
@@ -9,7 +9,7 @@ long global;
 
 int main() {
   NSLog(@"Hello world.");
-  NSLog(@"addr=%p\n", &global);
+  print_address("addr=", 1, &global);
   barrier_init(&barrier, 2);
 
   dispatch_queue_t q1 = dispatch_queue_create("my.queue1", DISPATCH_QUEUE_CONCURRENT);
@@ -40,5 +40,5 @@ int main() {
 // CHECK: Hello world.
 // CHECK: addr=[[ADDR:0x[0-9,a-f]+]]
 // CHECK: WARNING: ThreadSanitizer: data race
-// CHECK: Location is global 'global' at [[ADDR]] (global_race.cc.exe+0x{{[0-9,a-f]+}})
+// CHECK: Location is global 'global' {{(of size 8 )?}}at [[ADDR]] (gcd-sync-race.mm.tmp+0x{{[0-9,a-f]+}})
 // CHECK: Done.

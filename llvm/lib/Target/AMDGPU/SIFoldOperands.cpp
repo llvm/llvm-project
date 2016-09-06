@@ -13,12 +13,9 @@
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
-#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -44,8 +41,6 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -76,11 +71,8 @@ struct FoldCandidate {
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(SIFoldOperands, DEBUG_TYPE,
-                      "SI Fold Operands", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_END(SIFoldOperands, DEBUG_TYPE,
-                    "SI Fold Operands", false, false)
+INITIALIZE_PASS(SIFoldOperands, DEBUG_TYPE,
+                "SI Fold Operands", false, false)
 
 char SIFoldOperands::ID = 0;
 
@@ -140,7 +132,7 @@ static bool tryAddToFoldList(std::vector<FoldCandidate> &FoldList,
                              MachineInstr *MI, unsigned OpNo,
                              MachineOperand *OpToFold,
                              const SIInstrInfo *TII) {
-  if (!TII->isOperandLegal(MI, OpNo, OpToFold)) {
+  if (!TII->isOperandLegal(*MI, OpNo, OpToFold)) {
 
     // Special case for v_mac_f32_e64 if we are trying to fold into src2
     unsigned Opc = MI->getOpcode();
@@ -167,7 +159,7 @@ static bool tryAddToFoldList(std::vector<FoldCandidate> &FoldList,
     // see if this makes it possible to fold.
     unsigned CommuteIdx0 = TargetInstrInfo::CommuteAnyOperandIndex;
     unsigned CommuteIdx1 = TargetInstrInfo::CommuteAnyOperandIndex;
-    bool CanCommute = TII->findCommutedOpIndices(MI, CommuteIdx0, CommuteIdx1);
+    bool CanCommute = TII->findCommutedOpIndices(*MI, CommuteIdx0, CommuteIdx1);
 
     if (CanCommute) {
       if (CommuteIdx0 == OpNo)
@@ -185,10 +177,10 @@ static bool tryAddToFoldList(std::vector<FoldCandidate> &FoldList,
       return false;
 
     if (!CanCommute ||
-        !TII->commuteInstruction(MI, false, CommuteIdx0, CommuteIdx1))
+        !TII->commuteInstruction(*MI, false, CommuteIdx0, CommuteIdx1))
       return false;
 
-    if (!TII->isOperandLegal(MI, OpNo, OpToFold))
+    if (!TII->isOperandLegal(*MI, OpNo, OpToFold))
       return false;
   }
 
@@ -205,9 +197,21 @@ static void foldOperand(MachineOperand &OpToFold, MachineInstr *UseMI,
   const MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
 
   // FIXME: Fold operands with subregs.
-  if (UseOp.isReg() && ((UseOp.getSubReg() && OpToFold.isReg()) ||
-      UseOp.isImplicit())) {
-    return;
+  if (UseOp.isReg() && OpToFold.isReg()) {
+    if (UseOp.isImplicit() || UseOp.getSubReg() != AMDGPU::NoSubRegister)
+      return;
+
+    // Don't fold subregister extracts into tied operands, only if it is a full
+    // copy since a subregister use tied to a full register def doesn't really
+    // make sense. e.g. don't fold:
+    //
+    // %vreg1 = COPY %vreg0:sub1
+    // %vreg2<tied3> = V_MAC_F32 %vreg3, %vreg4, %vreg1<tied0>
+    //
+    //  into
+    // %vreg2<tied3> = V_MAC_F32 %vreg3, %vreg4, %vreg0:sub1<tied0>
+    if (UseOp.isTied() && OpToFold.getSubReg() != AMDGPU::NoSubRegister)
+      return;
   }
 
   bool FoldingImm = OpToFold.isImm();
@@ -301,9 +305,13 @@ static void foldOperand(MachineOperand &OpToFold, MachineInstr *UseMI,
 }
 
 bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(*MF.getFunction()))
+    return false;
+
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const SIInstrInfo *TII =
-      static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
 
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();

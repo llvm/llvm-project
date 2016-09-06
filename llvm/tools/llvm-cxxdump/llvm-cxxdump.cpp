@@ -50,6 +50,14 @@ static void error(std::error_code EC) {
   exit(1);
 }
 
+static void error(Error Err) {
+  if (Err) {
+    logAllUnhandledErrors(std::move(Err), outs(), "Error reading file: ");
+    outs().flush();
+    exit(1);
+  }
+}
+
 } // namespace llvm
 
 static void reportError(StringRef Input, StringRef Message) {
@@ -79,8 +87,8 @@ static void collectRelocatedSymbols(const ObjectFile *Obj,
       const object::symbol_iterator RelocSymI = Reloc.getSymbol();
       if (RelocSymI == Obj->symbol_end())
         continue;
-      ErrorOr<StringRef> RelocSymName = RelocSymI->getName();
-      error(RelocSymName.getError());
+      Expected<StringRef> RelocSymName = RelocSymI->getName();
+      error(errorToErrorCode(RelocSymName.takeError()));
       uint64_t Offset = Reloc.getOffset();
       if (Offset >= SymOffset && Offset < SymEnd) {
         *I = *RelocSymName;
@@ -101,8 +109,8 @@ static void collectRelocationOffsets(
       const object::symbol_iterator RelocSymI = Reloc.getSymbol();
       if (RelocSymI == Obj->symbol_end())
         continue;
-      ErrorOr<StringRef> RelocSymName = RelocSymI->getName();
-      error(RelocSymName.getError());
+      Expected<StringRef> RelocSymName = RelocSymI->getName();
+      error(errorToErrorCode(RelocSymName.takeError()));
       uint64_t Offset = Reloc.getOffset();
       if (Offset >= SymOffset && Offset < SymEnd)
         Collection[std::make_pair(SymName, Offset - SymOffset)] = *RelocSymName;
@@ -175,11 +183,11 @@ static void dumpCXXData(const ObjectFile *Obj) {
   for (auto &P : SymAddr) {
     object::SymbolRef Sym = P.first;
     uint64_t SymSize = P.second;
-    ErrorOr<StringRef> SymNameOrErr = Sym.getName();
-    error(SymNameOrErr.getError());
+    Expected<StringRef> SymNameOrErr = Sym.getName();
+    error(errorToErrorCode(SymNameOrErr.takeError()));
     StringRef SymName = *SymNameOrErr;
-    ErrorOr<object::section_iterator> SecIOrErr = Sym.getSection();
-    error(SecIOrErr.getError());
+    Expected<object::section_iterator> SecIOrErr = Sym.getSection();
+    error(errorToErrorCode(SecIOrErr.takeError()));
     object::section_iterator SecI = *SecIOrErr;
     // Skip external symbols.
     if (SecI == Obj->section_end())
@@ -190,8 +198,8 @@ static void dumpCXXData(const ObjectFile *Obj) {
       continue;
     StringRef SecContents;
     error(Sec.getContents(SecContents));
-    ErrorOr<uint64_t> SymAddressOrErr = Sym.getAddress();
-    error(SymAddressOrErr.getError());
+    Expected<uint64_t> SymAddressOrErr = Sym.getAddress();
+    error(errorToErrorCode(SymAddressOrErr.takeError()));
     uint64_t SymAddress = *SymAddressOrErr;
     uint64_t SecAddress = Sec.getAddress();
     uint64_t SecSize = Sec.getSize();
@@ -482,14 +490,19 @@ static void dumpCXXData(const ObjectFile *Obj) {
 }
 
 static void dumpArchive(const Archive *Arc) {
-  for (auto &ErrorOrChild : Arc->children()) {
-    error(ErrorOrChild.getError());
-    const Archive::Child &ArcC = *ErrorOrChild;
-    ErrorOr<std::unique_ptr<Binary>> ChildOrErr = ArcC.getAsBinary();
-    if (std::error_code EC = ChildOrErr.getError()) {
+  Error Err;
+  for (auto &ArcC : Arc->children(Err)) {
+    Expected<std::unique_ptr<Binary>> ChildOrErr = ArcC.getAsBinary();
+    if (!ChildOrErr) {
       // Ignore non-object files.
-      if (EC != object_error::invalid_file_type)
-        reportError(Arc->getFileName(), EC.message());
+      if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError())) {
+        std::string Buf;
+        raw_string_ostream OS(Buf);
+        logAllUnhandledErrors(std::move(E), OS, "");
+        OS.flush();
+        reportError(Arc->getFileName(), Buf);
+      }
+      ChildOrErr.takeError();
       continue;
     }
 
@@ -498,12 +511,14 @@ static void dumpArchive(const Archive *Arc) {
     else
       reportError(Arc->getFileName(), cxxdump_error::unrecognized_file_format);
   }
+  error(std::move(Err));
 }
 
 static void dumpInput(StringRef File) {
   // Attempt to open the binary.
-  ErrorOr<OwningBinary<Binary>> BinaryOrErr = createBinary(File);
-  if (std::error_code EC = BinaryOrErr.getError()) {
+  Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(File);
+  if (!BinaryOrErr) {
+    auto EC = errorToErrorCode(BinaryOrErr.takeError());
     reportError(File, EC);
     return;
   }
@@ -518,7 +533,7 @@ static void dumpInput(StringRef File) {
 }
 
 int main(int argc, const char *argv[]) {
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y;
 

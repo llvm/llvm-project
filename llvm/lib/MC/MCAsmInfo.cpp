@@ -31,7 +31,6 @@ MCAsmInfo::MCAsmInfo() {
   HasSubsectionsViaSymbols = false;
   HasMachoZeroFillDirective = false;
   HasMachoTBSSDirective = false;
-  HasStaticCtorDtorReferenceInStaticMode = false;
   MaxInstLength = 4;
   MinInstAlignment = 1;
   DollarIsPC = false;
@@ -107,8 +106,9 @@ MCAsmInfo::MCAsmInfo() {
   //   architecture basis.
   //   - The target subclasses for AArch64, ARM, and X86 handle these cases
   UseIntegratedAssembler = false;
+  PreserveAsmComments = true;
 
-  CompressDebugSections = false;
+  CompressDebugSections = DebugCompressionType::DCT_None;
 }
 
 MCAsmInfo::~MCAsmInfo() {

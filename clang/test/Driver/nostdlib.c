@@ -22,6 +22,10 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir -lclang_rt.builtins-i686 \
 // RUN:   | FileCheck --check-prefix=CHECK-LINUX-NOSTDLIB %s
 //
+// RUN: %clang -target x86_64-pc-windows-msvc -nostdlib --rtlib=compiler-rt -### %s 2>&1 | FileCheck %s -check-prefix CHECK-MSVC-NOSTDLIB
+// RUN: %clang -target x86_64-pc-windows-msvc --rtlib=compiler-rt -nostdlib -### %s 2>&1 | FileCheck %s -check-prefix CHECK-MSVC-NOSTDLIB
+//
 // CHECK-LINUX-NOSTDLIB: warning: argument unused during compilation: '--rtlib=compiler-rt'
 // CHECK-LINUX-NOSTDLIB: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 // CHECK-LINUX-NOSTDLIB-NOT: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.builtins-i686.a"
+// CHECK-MSVC-NOSTDLIB: warning: argument unused during compilation: '--rtlib=compiler-rt'

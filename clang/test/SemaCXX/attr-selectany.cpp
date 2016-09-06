@@ -39,7 +39,9 @@ __declspec(selectany) auto x8 = Internal(); // expected-error {{'selectany' can 
 // The D3D11 headers do something like this.  MSVC doesn't error on this at
 // all, even without the __declspec(selectany), in violation of the standard.
 // We fall back to a warning for selectany to accept headers.
-struct SomeStruct {};
+struct SomeStruct {
+  int foo;
+};
 extern const __declspec(selectany) SomeStruct some_struct; // expected-warning {{default initialization of an object of const type 'const SomeStruct' without a user-provided default constructor is a Microsoft extension}}
 
 // It should be possible to redeclare variables that were defined

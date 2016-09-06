@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 
-#ifndef LLVM_LIB_TARGET_R600_SIINSTRINFO_H
-#define LLVM_LIB_TARGET_R600_SIINSTRINFO_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_SIINSTRINFO_H
+#define LLVM_LIB_TARGET_AMDGPU_SIINSTRINFO_H
 
 #include "AMDGPUInstrInfo.h"
 #include "SIDefines.h"
@@ -22,9 +22,24 @@
 
 namespace llvm {
 
-class SIInstrInfo : public AMDGPUInstrInfo {
+class SIInstrInfo final : public AMDGPUInstrInfo {
 private:
   const SIRegisterInfo RI;
+  const SISubtarget &ST;
+
+  // The the inverse predicate should have the negative value.
+  enum BranchPredicate {
+    INVALID_BR = 0,
+    SCC_TRUE = 1,
+    SCC_FALSE = -1,
+    VCCNZ = 2,
+    VCCZ = -2,
+    EXECNZ = -3,
+    EXECZ = 3
+  };
+
+  static unsigned getBranchOpcode(BranchPredicate Cond);
+  static BranchPredicate getBranchPredicate(unsigned Opcode);
 
   unsigned buildExtractSubReg(MachineBasicBlock::iterator MI,
                               MachineRegisterInfo &MRI,
@@ -39,87 +54,89 @@ private:
                                          unsigned SubIdx,
                                          const TargetRegisterClass *SubRC) const;
 
-  void swapOperands(MachineBasicBlock::iterator Inst) const;
+  void swapOperands(MachineInstr &Inst) const;
 
   void lowerScalarAbs(SmallVectorImpl<MachineInstr *> &Worklist,
-                      MachineInstr *Inst) const;
+                      MachineInstr &Inst) const;
 
   void splitScalar64BitUnaryOp(SmallVectorImpl<MachineInstr *> &Worklist,
-                               MachineInstr *Inst, unsigned Opcode) const;
+                               MachineInstr &Inst, unsigned Opcode) const;
 
   void splitScalar64BitBinaryOp(SmallVectorImpl<MachineInstr *> &Worklist,
-                                MachineInstr *Inst, unsigned Opcode) const;
+                                MachineInstr &Inst, unsigned Opcode) const;
 
   void splitScalar64BitBCNT(SmallVectorImpl<MachineInstr *> &Worklist,
-                            MachineInstr *Inst) const;
+                            MachineInstr &Inst) const;
   void splitScalar64BitBFE(SmallVectorImpl<MachineInstr *> &Worklist,
-                           MachineInstr *Inst) const;
+                           MachineInstr &Inst) const;
 
   void addUsersToMoveToVALUWorklist(
     unsigned Reg, MachineRegisterInfo &MRI,
     SmallVectorImpl<MachineInstr *> &Worklist) const;
 
+  void
+  addSCCDefUsersToVALUWorklist(MachineInstr &SCCDefInst,
+                               SmallVectorImpl<MachineInstr *> &Worklist) const;
+
   const TargetRegisterClass *
   getDestEquivalentVGPRClass(const MachineInstr &Inst) const;
 
-  bool checkInstOffsetsDoNotOverlap(MachineInstr *MIa,
-                                    MachineInstr *MIb) const;
+  bool checkInstOffsetsDoNotOverlap(MachineInstr &MIa, MachineInstr &MIb) const;
 
-  unsigned findUsedSGPR(const MachineInstr *MI, int OpIndices[3]) const;
+  unsigned findUsedSGPR(const MachineInstr &MI, int OpIndices[3]) const;
 
 protected:
-  MachineInstr *commuteInstructionImpl(MachineInstr *MI,
-                                       bool NewMI,
+  MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
 
 public:
-  explicit SIInstrInfo(const AMDGPUSubtarget &st);
 
-  const SIRegisterInfo &getRegisterInfo() const override {
+  enum TargetOperandFlags {
+    MO_NONE = 0,
+    MO_GOTPCREL = 1
+  };
+
+  explicit SIInstrInfo(const SISubtarget &);
+
+  const SIRegisterInfo &getRegisterInfo() const {
     return RI;
   }
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr *MI,
+  bool isReallyTriviallyReMaterializable(const MachineInstr &MI,
                                          AliasAnalysis *AA) const override;
 
   bool areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
                                int64_t &Offset1,
                                int64_t &Offset2) const override;
 
-  bool getMemOpBaseRegImmOfs(MachineInstr *LdSt, unsigned &BaseReg,
-                             unsigned &Offset,
+  bool getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
+                             int64_t &Offset,
                              const TargetRegisterInfo *TRI) const final;
 
-  bool shouldClusterLoads(MachineInstr *FirstLdSt,
-                          MachineInstr *SecondLdSt,
-                          unsigned NumLoads) const final;
+  bool shouldClusterMemOps(MachineInstr &FirstLdSt, MachineInstr &SecondLdSt,
+                           unsigned NumLoads) const final;
 
-  void copyPhysReg(MachineBasicBlock &MBB,
-                   MachineBasicBlock::iterator MI, DebugLoc DL,
-                   unsigned DestReg, unsigned SrcReg,
+  void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                   const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;
 
-  unsigned calculateLDSSpillAddress(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator MI,
-                                    RegScavenger *RS,
-                                    unsigned TmpReg,
-                                    unsigned Offset,
-                                    unsigned Size) const;
+  unsigned calculateLDSSpillAddress(MachineBasicBlock &MBB, MachineInstr &MI,
+                                    RegScavenger *RS, unsigned TmpReg,
+                                    unsigned Offset, unsigned Size) const;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI,
-                           unsigned SrcReg, bool isKill, int FrameIndex,
+                           MachineBasicBlock::iterator MI, unsigned SrcReg,
+                           bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) const override;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI,
-                            unsigned DestReg, int FrameIndex,
-                            const TargetRegisterClass *RC,
+                            MachineBasicBlock::iterator MI, unsigned DestReg,
+                            int FrameIndex, const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
-  bool expandPostRAPseudo(MachineBasicBlock::iterator MI) const override;
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   // \brief Returns an opcode that can be used to move a value to a \p DstRC
   // register.  If there is no hardware instruction that can store to \p
@@ -129,27 +146,39 @@ public:
   LLVM_READONLY
   int commuteOpcode(const MachineInstr &MI) const;
 
-  bool findCommutedOpIndices(MachineInstr *MI,
-                             unsigned &SrcOpIdx1,
+  bool findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
 
-  bool areMemAccessesTriviallyDisjoint(
-    MachineInstr *MIa, MachineInstr *MIb,
-    AliasAnalysis *AA = nullptr) const override;
+  bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+                     MachineBasicBlock *&FBB,
+                     SmallVectorImpl<MachineOperand> &Cond,
+                     bool AllowModify) const override;
 
-  MachineInstr *buildMovInstr(MachineBasicBlock *MBB,
-                              MachineBasicBlock::iterator I,
-                              unsigned DstReg, unsigned SrcReg) const override;
-  bool isMov(unsigned Opcode) const override;
+  unsigned RemoveBranch(MachineBasicBlock &MBB) const override;
 
-  bool FoldImmediate(MachineInstr *UseMI, MachineInstr *DefMI,
-                     unsigned Reg, MachineRegisterInfo *MRI) const final;
+  unsigned InsertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
+                        MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
+                        const DebugLoc &DL) const override;
+
+  bool ReverseBranchCondition(
+    SmallVectorImpl<MachineOperand> &Cond) const override;
+
+  bool
+  areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
+                                  AliasAnalysis *AA = nullptr) const override;
+
+  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, unsigned Reg,
+                     MachineRegisterInfo *MRI) const final;
 
   unsigned getMachineCSELookAheadLimit() const override { return 500; }
 
   MachineInstr *convertToThreeAddress(MachineFunction::iterator &MBB,
-                                      MachineBasicBlock::iterator &MI,
+                                      MachineInstr &MI,
                                       LiveVariables *LV) const override;
+
+  bool isSchedulingBoundary(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const override;
 
   static bool isSALU(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SALU;
@@ -165,6 +194,14 @@ public:
 
   bool isVALU(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::VALU;
+  }
+
+  static bool isVMEM(const MachineInstr &MI) {
+    return isMUBUF(MI) || isMTBUF(MI) || isMIMG(MI);
+  }
+
+  bool isVMEM(uint16_t Opcode) const {
+    return isMUBUF(Opcode) || isMTBUF(Opcode) || isMIMG(Opcode);
   }
 
   static bool isSOP1(const MachineInstr &MI) {
@@ -279,6 +316,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::MIMG;
   }
 
+  static bool isGather4(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::Gather4;
+  }
+
+  bool isGather4(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::Gather4;
+  }
+
   static bool isFLAT(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::FLAT;
   }
@@ -295,6 +340,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::WQM;
   }
 
+  static bool isDisableWQM(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::DisableWQM;
+  }
+
+  bool isDisableWQM(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::DisableWQM;
+  }
+
   static bool isVGPRSpill(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::VGPRSpill;
   }
@@ -303,11 +356,41 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::VGPRSpill;
   }
 
+  static bool isDPP(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::DPP;
+  }
+
+  bool isDPP(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::DPP;
+  }
+
+  static bool isScalarUnit(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & (SIInstrFlags::SALU | SIInstrFlags::SMRD);
+  }
+
+  static bool usesVM_CNT(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::VM_CNT;
+  }
+
+  bool isVGPRCopy(const MachineInstr &MI) const {
+    assert(MI.isCopy());
+    unsigned Dest = MI.getOperand(0).getReg();
+    const MachineFunction &MF = *MI.getParent()->getParent();
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+    return !RI.isSGPRReg(MRI, Dest);
+  }
+
   bool isInlineConstant(const APInt &Imm) const;
   bool isInlineConstant(const MachineOperand &MO, unsigned OpSize) const;
   bool isLiteralConstant(const MachineOperand &MO, unsigned OpSize) const;
 
-  bool isImmOperandLegal(const MachineInstr *MI, unsigned OpNo,
+  // Returns true if this operand could potentially require a 32-bit literal
+  // operand, but not necessarily. A FrameIndex for example could resolve to an
+  // inline immediate value that will not require an additional 4-bytes; this
+  // assumes that it will.
+  bool isLiteralConstantLike(const MachineOperand &MO, unsigned OpSize) const;
+
+  bool isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
                          const MachineOperand &MO) const;
 
   /// \brief Return true if this 64-bit VALU instruction has a 32-bit encoding.
@@ -326,7 +409,7 @@ public:
   bool hasModifiersSet(const MachineInstr &MI,
                        unsigned OpName) const;
 
-  bool verifyInstruction(const MachineInstr *MI,
+  bool verifyInstruction(const MachineInstr &MI,
                          StringRef &ErrInfo) const override;
 
   static unsigned getVALUOp(const MachineInstr &MI);
@@ -374,11 +457,11 @@ public:
   ///
   /// If the operand being legalized is a register, then a COPY will be used
   /// instead of MOV.
-  void legalizeOpWithMove(MachineInstr *MI, unsigned OpIdx) const;
+  void legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const;
 
   /// \brief Check if \p MO is a legal operand if it was the \p OpIdx Operand
   /// for \p MI.
-  bool isOperandLegal(const MachineInstr *MI, unsigned OpIdx,
+  bool isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
                       const MachineOperand *MO = nullptr) const;
 
   /// \brief Check if \p MO would be a valid operand for the given operand
@@ -396,52 +479,38 @@ public:
 
   /// \brief Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
-  void legalizeOperandsVOP2(MachineRegisterInfo &MRI, MachineInstr *MI) const;
+  void legalizeOperandsVOP2(MachineRegisterInfo &MRI, MachineInstr &MI) const;
 
   /// \brief Fix operands in \p MI to satisfy constant bus requirements.
-  void legalizeOperandsVOP3(MachineRegisterInfo &MRI, MachineInstr *MI) const;
+  void legalizeOperandsVOP3(MachineRegisterInfo &MRI, MachineInstr &MI) const;
+
+  /// Copy a value from a VGPR (\p SrcReg) to SGPR.  This function can only
+  /// be used when it is know that the value in SrcReg is same across all
+  /// threads in the wave.
+  /// \returns The SGPR register that \p SrcReg was copied to.
+  unsigned readlaneVGPRToSGPR(unsigned SrcReg, MachineInstr &UseMI,
+                              MachineRegisterInfo &MRI) const;
+
+  void legalizeOperandsSMRD(MachineRegisterInfo &MRI, MachineInstr &MI) const;
 
   /// \brief Legalize all operands in this instruction.  This function may
   /// create new instruction and insert them before \p MI.
-  void legalizeOperands(MachineInstr *MI) const;
-
-  /// \brief Split an SMRD instruction into two smaller loads of half the
-  //  size storing the results in \p Lo and \p Hi.
-  void splitSMRD(MachineInstr *MI, const TargetRegisterClass *HalfRC,
-                 unsigned HalfImmOp, unsigned HalfSGPROp,
-                 MachineInstr *&Lo, MachineInstr *&Hi) const;
-
-  void moveSMRDToVALU(MachineInstr *MI, MachineRegisterInfo &MRI,
-                      SmallVectorImpl<MachineInstr *> &Worklist) const;
+  void legalizeOperands(MachineInstr &MI) const;
 
   /// \brief Replace this instruction's opcode with the equivalent VALU
   /// opcode.  This function will also move the users of \p MI to the
   /// VALU if necessary.
   void moveToVALU(MachineInstr &MI) const;
 
-  unsigned calculateIndirectAddress(unsigned RegIndex,
-                                    unsigned Channel) const override;
+  void insertWaitStates(MachineBasicBlock &MBB,MachineBasicBlock::iterator MI,
+                        int Count) const;
 
-  const TargetRegisterClass *getIndirectAddrRegClass() const override;
+  void insertNoop(MachineBasicBlock &MBB,
+                  MachineBasicBlock::iterator MI) const override;
 
-  MachineInstrBuilder buildIndirectWrite(MachineBasicBlock *MBB,
-                                         MachineBasicBlock::iterator I,
-                                         unsigned ValueReg,
-                                         unsigned Address,
-                                         unsigned OffsetReg) const override;
-
-  MachineInstrBuilder buildIndirectRead(MachineBasicBlock *MBB,
-                                        MachineBasicBlock::iterator I,
-                                        unsigned ValueReg,
-                                        unsigned Address,
-                                        unsigned OffsetReg) const override;
-  void reserveIndirectRegisters(BitVector &Reserved,
-                                const MachineFunction &MF) const;
-
-  void LoadM0(MachineInstr *MoveRel, MachineBasicBlock::iterator I,
-              unsigned SavReg, unsigned IndexReg) const;
-
-  void insertWaitStates(MachineBasicBlock::iterator MI, int Count) const;
+  /// \brief Return the number of wait states that result from executing this
+  /// instruction.
+  unsigned getNumWaitStates(const MachineInstr &MI) const;
 
   /// \brief Returns the operand named \p Op.  If \p MI does not have an
   /// operand named \c Op, this function returns nullptr.
@@ -463,8 +532,26 @@ public:
   uint64_t getDefaultRsrcDataFormat() const;
   uint64_t getScratchRsrcWords23() const;
 
-  bool isLowLatencyInstruction(const MachineInstr *MI) const;
-  bool isHighLatencyInstruction(const MachineInstr *MI) const;
+  bool isLowLatencyInstruction(const MachineInstr &MI) const;
+  bool isHighLatencyInstruction(const MachineInstr &MI) const;
+
+  /// \brief Return the descriptor of the target-specific machine instruction
+  /// that corresponds to the specified pseudo or native opcode.
+  const MCInstrDesc &getMCOpcodeFromPseudo(unsigned Opcode) const {
+    return get(pseudoToMCOpcode(Opcode));
+  }
+
+  unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
+
+  ArrayRef<std::pair<int, const char *>>
+  getSerializableTargetIndices() const override;
+
+  ScheduleHazardRecognizer *
+  CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
+                                 const ScheduleDAG *DAG) const override;
+
+  ScheduleHazardRecognizer *
+  CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const override;
 };
 
 namespace AMDGPU {
@@ -490,8 +577,9 @@ namespace AMDGPU {
   int getAtomicNoRetOp(uint16_t Opcode);
 
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
-  const uint64_t RSRC_TID_ENABLE = 1LL << 55;
-
+  const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);
+  const uint64_t RSRC_INDEX_STRIDE_SHIFT = (32 + 21);
+  const uint64_t RSRC_TID_ENABLE = UINT64_C(1) << (32 + 23);
 } // End namespace AMDGPU
 
 namespace SI {

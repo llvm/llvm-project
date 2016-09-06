@@ -714,3 +714,34 @@ int32x4_t test_toobig_hva(int n, ...) {
   struct TooBigHVA h = __builtin_va_arg(thelist, struct TooBigHVA);
   return h.d;
 }
+
+typedef __attribute__((__ext_vector_type__(3))) float float32x3_t;
+typedef struct { float32x3_t arr[4]; } HFAv3;
+
+float32x3_t test_hva_v3(int n, ...) {
+// CHECK-LABEL: define <3 x float> @test_hva_v3(i32 %n, ...)
+// CHECK: [[THELIST:%.*]] = alloca i8*
+// CHECK: [[CURLIST:%.*]] = load i8*, i8** [[THELIST]]
+
+  // HVA is not indirect, so occupies its full 16 bytes on the stack. but it
+  // must be properly aligned.
+// CHECK: [[ALIGN0:%.*]] = ptrtoint i8* [[CURLIST]] to i64
+// CHECK: [[ALIGN1:%.*]] = add i64 [[ALIGN0]], 15
+// CHECK: [[ALIGN2:%.*]] = and i64 [[ALIGN1]], -16
+// CHECK: [[ALIGNED_LIST:%.*]] = inttoptr i64 [[ALIGN2]] to i8*
+
+// CHECK: [[NEXTLIST:%.*]] = getelementptr inbounds i8, i8* [[ALIGNED_LIST]], i64 64
+// CHECK: store i8* [[NEXTLIST]], i8** [[THELIST]]
+
+// CHECK: bitcast i8* [[ALIGNED_LIST]] to %struct.HFAv3*
+  __builtin_va_list l;
+  __builtin_va_start(l, n);
+  HFAv3 r = __builtin_va_arg(l, HFAv3);
+  return r.arr[2];
+}
+
+float32x3_t test_hva_v3_call(HFAv3 *a) {
+// CHECK-LABEL: define <3 x float> @test_hva_v3_call(%struct.HFAv3* %a)
+// CHECK: call <3 x float> (i32, ...) @test_hva_v3(i32 1, [4 x <4 x float>] {{.*}})
+  return test_hva_v3(1, *a);
+}

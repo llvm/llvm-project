@@ -14,7 +14,7 @@ void f() {
   constexpr A a; // expected-error {{constant expression}} expected-note {{in call to 'A()'}}
 }
 
-constexpr B b1; // expected-error {{without a user-provided default constructor}}
+constexpr B b1; // ok
 constexpr B b2 = B(); // ok
 static_assert(b2.a.a == 1, "");
 static_assert(b2.a.b == 2, "");

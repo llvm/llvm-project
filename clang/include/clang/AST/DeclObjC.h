@@ -351,11 +351,6 @@ public:
   typedef llvm::iterator_range<param_iterator> param_range;
   typedef llvm::iterator_range<param_const_iterator> param_const_range;
 
-  param_range params() { return param_range(param_begin(), param_end()); }
-  param_const_range params() const {
-    return param_const_range(param_begin(), param_end());
-  }
-
   param_const_iterator param_begin() const {
     return param_const_iterator(getParams());
   }
@@ -1129,15 +1124,15 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
 
     /// \brief Indicates that the contents of this Objective-C class will be
     /// completed by the external AST source when required.
-    mutable bool ExternallyCompleted : 1;
+    mutable unsigned ExternallyCompleted : 1;
 
     /// \brief Indicates that the ivar cache does not yet include ivars
     /// declared in the implementation.
-    mutable bool IvarListMissingImplementation : 1;
+    mutable unsigned IvarListMissingImplementation : 1;
 
     /// Indicates that this interface decl contains at least one initializer
     /// marked with the 'objc_designated_initializer' attribute.
-    bool HasDesignatedInitializers : 1;
+    unsigned HasDesignatedInitializers : 1;
 
     enum InheritedDesignatedInitializersState {
       /// We didn't calculate whether the designated initializers should be

@@ -89,6 +89,16 @@ namespace __cxxabiv1 {
 // CHECK: @_ZTIPy = constant
 // CHECK: @_ZTIPKy = constant
 
+// __int128
+// CHECK: @_ZTIn = constant
+// CHECK: @_ZTIPn = constant
+// CHECK: @_ZTIPKn = constant
+
+// unsigned __int128
+// CHECK: @_ZTIo = constant
+// CHECK: @_ZTIPo = constant
+// CHECK: @_ZTIPKo = constant
+
 // half
 // CHECK: @_ZTIDh = constant
 // CHECK: @_ZTIPDh = constant

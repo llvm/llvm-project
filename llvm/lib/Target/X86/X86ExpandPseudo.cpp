@@ -44,9 +44,15 @@ public:
   const X86Subtarget *STI;
   const X86InstrInfo *TII;
   const X86RegisterInfo *TRI;
+  const X86MachineFunctionInfo *X86FI;
   const X86FrameLowering *X86FL;
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
 
   const char *getPassName() const override {
     return "X86 pseudo instruction expansion pass";
@@ -83,11 +89,18 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
     // Adjust stack pointer.
     int StackAdj = StackAdjust.getImm();
+    int MaxTCDelta = X86FI->getTCReturnAddrDelta();
+    int Offset = 0;
+    assert(MaxTCDelta <= 0 && "MaxTCDelta should never be positive");
 
-    if (StackAdj) {
+    // Incoporate the retaddr area.
+    Offset = StackAdj-MaxTCDelta;
+    assert(Offset >= 0 && "Offset should never be negative");
+
+    if (Offset) {
       // Check for possible merge with preceding ADD instruction.
-      StackAdj += X86FL->mergeSPUpdates(MBB, MBBI, true);
-      X86FL->emitSPUpdate(MBB, MBBI, StackAdj, /*InEpilogue=*/true);
+      Offset += X86FL->mergeSPUpdates(MBB, MBBI, true);
+      X86FL->emitSPUpdate(MBB, MBBI, Offset, /*InEpilogue=*/true);
     }
 
     // Jump to label or value in register.
@@ -121,8 +134,8 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .addReg(JumpTarget.getReg(), RegState::Kill);
     }
 
-    MachineInstr *NewMI = std::prev(MBBI);
-    NewMI->copyImplicitOps(*MBBI->getParent()->getParent(), MBBI);
+    MachineInstr &NewMI = *std::prev(MBBI);
+    NewMI.copyImplicitOps(*MBBI->getParent()->getParent(), *MBBI);
 
     // Delete the pseudo instruction TCRETURN.
     MBB.erase(MBBI);
@@ -149,6 +162,32 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     // Replace pseudo with machine iret
     BuildMI(MBB, MBBI, DL,
             TII->get(STI->is64Bit() ? X86::IRET64 : X86::IRET32));
+    MBB.erase(MBBI);
+    return true;
+  }
+  case X86::RET: {
+    // Adjust stack to erase error code
+    int64_t StackAdj = MBBI->getOperand(0).getImm();
+    MachineInstrBuilder MIB;
+    if (StackAdj == 0) {
+      MIB = BuildMI(MBB, MBBI, DL,
+                    TII->get(STI->is64Bit() ? X86::RETQ : X86::RETL));
+    } else if (isUInt<16>(StackAdj)) {
+      MIB = BuildMI(MBB, MBBI, DL,
+                    TII->get(STI->is64Bit() ? X86::RETIQ : X86::RETIL))
+                .addImm(StackAdj);
+    } else {
+      assert(!STI->is64Bit() &&
+             "shouldn't need to do this for x86_64 targets!");
+      // A ret can only handle immediates as big as 2**16-1.  If we need to pop
+      // off bytes before the return address, we must do it manually.
+      BuildMI(MBB, MBBI, DL, TII->get(X86::POP32r)).addReg(X86::ECX, RegState::Define);
+      X86FL->emitSPUpdate(MBB, MBBI, StackAdj, /*InEpilogue=*/true);
+      BuildMI(MBB, MBBI, DL, TII->get(X86::PUSH32r)).addReg(X86::ECX);
+      MIB = BuildMI(MBB, MBBI, DL, TII->get(X86::RETL));
+    }
+    for (unsigned I = 1, E = MBBI->getNumOperands(); I != E; ++I)
+      MIB.addOperand(MBBI->getOperand(I));
     MBB.erase(MBBI);
     return true;
   }
@@ -216,6 +255,7 @@ bool X86ExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   STI = &static_cast<const X86Subtarget &>(MF.getSubtarget());
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
+  X86FI = MF.getInfo<X86MachineFunctionInfo>();
   X86FL = STI->getFrameLowering();
 
   bool Modified = false;

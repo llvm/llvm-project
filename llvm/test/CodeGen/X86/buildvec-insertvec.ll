@@ -19,20 +19,11 @@ define void @foo(<3 x float> %in, <4 x i8>* nocapture %out) nounwind {
 
 ; Verify that the DAGCombiner doesn't wrongly fold a build_vector into a
 ; blend with a zero vector if the build_vector contains negative zero.
-;
-; TODO: the codegen for function 'test_negative_zero_1' is sub-optimal.
-; Ideally, we should generate a single shuffle blend operation.
 
 define <4 x float> @test_negative_zero_1(<4 x float> %A) {
 ; CHECK-LABEL: test_negative_zero_1:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movapd %xmm0, %xmm1
-; CHECK-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[1,0]
-; CHECK-NEXT:    xorps %xmm2, %xmm2
-; CHECK-NEXT:    blendps {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2],zero
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractelement <4 x float> %A, i32 0
@@ -47,11 +38,59 @@ entry:
 define <2 x double> @test_negative_zero_2(<2 x double> %A) {
 ; CHECK-LABEL: test_negative_zero_2:
 ; CHECK:       # BB#0: # %entry
-; CHECK-NEXT:    movhpd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractelement <2 x double> %A, i32 0
   %1 = insertelement <2 x double> undef, double %0, i32 0
   %2 = insertelement <2 x double> %1, double -0.0, i32 1
   ret <2 x double> %2
+}
+
+define <4 x float> @test_buildvector_v4f32_register(float %f0, float %f1, float %f2, float %f3) {
+; CHECK-LABEL: test_buildvector_v4f32_register:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
+; CHECK-NEXT:    retq
+  %ins0 = insertelement <4 x float> undef, float %f0, i32 0
+  %ins1 = insertelement <4 x float> %ins0, float %f1, i32 1
+  %ins2 = insertelement <4 x float> %ins1, float %f2, i32 2
+  %ins3 = insertelement <4 x float> %ins2, float %f3, i32 3
+  ret <4 x float> %ins3
+}
+
+define <4 x float> @test_buildvector_v4f32_load(float* %p0, float* %p1, float* %p2, float* %p3) {
+; CHECK-LABEL: test_buildvector_v4f32_load:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; CHECK-NEXT:    retq
+  %f0 = load float, float* %p0, align 4
+  %f1 = load float, float* %p1, align 4
+  %f2 = load float, float* %p2, align 4
+  %f3 = load float, float* %p3, align 4
+  %ins0 = insertelement <4 x float> undef, float %f0, i32 0
+  %ins1 = insertelement <4 x float> %ins0, float %f1, i32 1
+  %ins2 = insertelement <4 x float> %ins1, float %f2, i32 2
+  %ins3 = insertelement <4 x float> %ins2, float %f3, i32 3
+  ret <4 x float> %ins3
+}
+
+define <4 x float> @test_buildvector_v4f32_partial_load(float %f0, float %f1, float %f2, float* %p3) {
+; CHECK-LABEL: test_buildvector_v4f32_partial_load:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; CHECK-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
+; CHECK-NEXT:    retq
+  %f3 = load float, float* %p3, align 4
+  %ins0 = insertelement <4 x float> undef, float %f0, i32 0
+  %ins1 = insertelement <4 x float> %ins0, float %f1, i32 1
+  %ins2 = insertelement <4 x float> %ins1, float %f2, i32 2
+  %ins3 = insertelement <4 x float> %ins2, float %f3, i32 3
+  ret <4 x float> %ins3
 }

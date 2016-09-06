@@ -12,7 +12,7 @@ entry:
   ret void
 }
 
-; CHECK: warning: stack size limit exceeded (96) in warn
+; CHECK: warning: stack size limit exceeded (92) in warn
 define void @warn() nounwind ssp {
 entry:
   %buffer = alloca [80 x i8], align 1

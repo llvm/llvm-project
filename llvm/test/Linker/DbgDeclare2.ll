@@ -50,10 +50,9 @@ declare i32 @puts(i8*)
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!27}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 173515)", isOptimized: true, emissionKind: 0, file: !25, enums: !2, retainedTypes: !2, subprograms: !3, globals: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 173515)", isOptimized: true, emissionKind: FullDebug, file: !25, enums: !2, retainedTypes: !2, globals: !2)
 !2 = !{}
-!3 = !{!5}
-!5 = distinct !DISubprogram(name: "print_args", linkageName: "test", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 5, file: !26, scope: null, type: !7, variables: !2)
+!5 = distinct !DISubprogram(name: "print_args", linkageName: "test", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 5, file: !26, scope: null, type: !7, variables: !2)
 !6 = !DIFile(filename: "test.cpp", directory: "/private/tmp")
 !7 = !DISubroutineType(types: !8)
 !8 = !{null, !9, !10}

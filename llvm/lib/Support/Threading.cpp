@@ -16,6 +16,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/Atomic.h"
 #include "llvm/Support/Mutex.h"
+#include "llvm/Support/thread.h"
 #include <cassert>
 
 using namespace llvm;
@@ -70,6 +71,11 @@ void llvm::llvm_execute_on_thread(void (*Fn)(void*), void *UserData,
 #elif LLVM_ENABLE_THREADS!=0 && defined(LLVM_ON_WIN32)
 #include "Windows/WindowsSupport.h"
 #include <process.h>
+
+// Windows will at times define MemoryFence.
+#ifdef MemoryFence
+#undef MemoryFence
+#endif
 
 struct ThreadInfo {
   void (*func)(void*);

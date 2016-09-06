@@ -25,10 +25,10 @@ protected:
     DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
     tooling::Replacements Replaces = reformat(Style, Code, Ranges);
-    std::string Result = applyAllReplacements(Code, Replaces);
-    EXPECT_NE("", Result);
-    DEBUG(llvm::errs() << "\n" << Result << "\n\n");
-    return Result;
+    auto Result = applyAllReplacements(Code, Replaces);
+    EXPECT_TRUE(static_cast<bool>(Result));
+    DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
+    return *Result;
   }
 
   static std::string format(llvm::StringRef Code) {
@@ -74,8 +74,11 @@ TEST_F(FormatTestProto, FormatsEnums) {
                "  TYPE_B = 2;\n"
                "};");
   verifyFormat("enum Type {\n"
+               "  UNKNOWN = 0 [(some_options) = {a: aa, b: bb}];\n"
+               "};");
+  verifyFormat("enum Type {\n"
                "  UNKNOWN = 0 [(some_options) = {\n"
-               "    a: aa,\n"
+               "    a: aa,  // wrap\n"
                "    b: bb\n"
                "  }];\n"
                "};");
@@ -153,10 +156,7 @@ TEST_F(FormatTestProto, FormatsOptions) {
                "  field_a: OK\n"
                "  field_b: \"OK\"\n"
                "  field_c: \"OK\"\n"
-               "  msg_field: {\n"
-               "    field_d: 123\n"
-               "    field_e: OK\n"
-               "  }\n"
+               "  msg_field: {field_d: 123 field_e: OK}\n"
                "};");
   verifyFormat("option (MyProto.options) = {\n"
                "  field_a: OK  // Comment\n"
@@ -186,6 +186,27 @@ TEST_F(FormatTestProto, FormatsService) {
 
 TEST_F(FormatTestProto, ExtendingMessage) {
   verifyFormat("extend .foo.Bar {\n"
+               "}");
+}
+
+TEST_F(FormatTestProto, FormatsImports) {
+  verifyFormat("import \"a.proto\";\n"
+               "import \"b.proto\";\n"
+               "// comment\n"
+               "message A {\n"
+               "}");
+
+  verifyFormat("import public \"a.proto\";\n"
+               "import \"b.proto\";\n"
+               "// comment\n"
+               "message A {\n"
+               "}");
+
+  // Missing semicolons should not confuse clang-format.
+  verifyFormat("import \"a.proto\"\n"
+               "import \"b.proto\"\n"
+               "// comment\n"
+               "message A {\n"
                "}");
 }
 

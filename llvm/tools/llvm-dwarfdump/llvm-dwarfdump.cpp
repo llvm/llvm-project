@@ -29,7 +29,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstring>
-#include <list>
 #include <string>
 #include <system_error>
 
@@ -96,16 +95,17 @@ static void DumpInput(StringRef Filename) {
   error(Filename, BuffOrErr.getError());
   std::unique_ptr<MemoryBuffer> Buff = std::move(BuffOrErr.get());
 
-  ErrorOr<std::unique_ptr<Binary>> BinOrErr =
+  Expected<std::unique_ptr<Binary>> BinOrErr =
       object::createBinary(Buff->getMemBufferRef());
-  error(Filename, BinOrErr.getError());
+  if (!BinOrErr)
+    error(Filename, errorToErrorCode(BinOrErr.takeError()));
 
   if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get()))
     DumpObjectFile(*Obj, Filename);
   else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
     for (auto &ObjForArch : Fat->objects()) {
       auto MachOOrErr = ObjForArch.getAsObjectFile();
-      error(Filename, MachOOrErr.getError());
+      error(Filename, errorToErrorCode(MachOOrErr.takeError()));
       DumpObjectFile(**MachOOrErr,
                      Filename + " (" + ObjForArch.getArchTypeName() + ")");
     }
@@ -114,7 +114,7 @@ static void DumpInput(StringRef Filename) {
 /// If the input path is a .dSYM bundle (as created by the dsymutil tool),
 /// replace it with individual entries for each of the object files inside the
 /// bundle otherwise return the input path.
-static std::vector<std::string> expandBundle(std::string InputPath) {
+static std::vector<std::string> expandBundle(const std::string &InputPath) {
   std::vector<std::string> BundlePaths;
   SmallString<256> BundlePath(InputPath);
   // Manually open up the bundle to avoid introducing additional dependencies.
@@ -146,7 +146,7 @@ static std::vector<std::string> expandBundle(std::string InputPath) {
 
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
-  sys::PrintStackTraceOnErrorSignal();
+  sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   llvm_shutdown_obj Y;  // Call llvm_shutdown() on exit.
 
@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
 
   // Expand any .dSYM bundles to the individual object files contained therein.
   std::vector<std::string> Objects;
-  for (auto F : InputFilenames) {
+  for (const auto &F : InputFilenames) {
     auto Objs = expandBundle(F);
     Objects.insert(Objects.end(), Objs.begin(), Objs.end());
   }

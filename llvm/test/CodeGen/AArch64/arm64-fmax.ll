@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 -enable-no-nans-fp-math < %s | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -enable-no-nans-fp-math | FileCheck %s
 
 define double @test_direct(float %in) {
 ; CHECK-LABEL: test_direct:

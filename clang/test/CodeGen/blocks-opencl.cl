@@ -2,15 +2,16 @@
 // This used to crash due to trying to generate a bitcase from a cstring
 // in the constant address space to i8* in AS0.
 
-void dummy(float (^op)(float))
-{
+void dummy(float (^const op)(float)) {
 }
 
 // CHECK: i8 addrspace(3)* getelementptr inbounds ([9 x i8], [9 x i8] addrspace(3)* @.str, i32 0, i32 0)
 
 kernel void test_block()
 {
-  float (^X)(float) = ^(float x) { return x + 42.0f; };
+  float (^const X)(float) = ^(float x) {
+    return x + 42.0f;
+  };
   dummy(X);
 }
 

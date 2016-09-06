@@ -133,6 +133,9 @@ FLOATING_TYPE(Double, DoubleTy)
 // 'long double'
 FLOATING_TYPE(LongDouble, LongDoubleTy)
 
+// '__float128'
+FLOATING_TYPE(Float128, Float128Ty)
+
 //===- Language-specific types --------------------------------------------===//
 
 // This is the type of C++0x 'nullptr'.
@@ -153,20 +156,6 @@ BUILTIN_TYPE(ObjCClass, ObjCBuiltinClassTy)
 // The primitive Objective C 'SEL' type.  The user-visible 'SEL'
 // type is a typedef of a PointerType to this.
 BUILTIN_TYPE(ObjCSel, ObjCBuiltinSelTy)
-
-// OpenCL image types.
-BUILTIN_TYPE(OCLImage1d, OCLImage1dTy)
-BUILTIN_TYPE(OCLImage1dArray, OCLImage1dArrayTy)
-BUILTIN_TYPE(OCLImage1dBuffer, OCLImage1dBufferTy)
-BUILTIN_TYPE(OCLImage2d, OCLImage2dTy)
-BUILTIN_TYPE(OCLImage2dArray, OCLImage2dArrayTy)
-BUILTIN_TYPE(OCLImage2dDepth, OCLImage2dDepthTy)
-BUILTIN_TYPE(OCLImage2dArrayDepth, OCLImage2dArrayDepthTy)
-BUILTIN_TYPE(OCLImage2dMSAA, OCLImage2dMSAATy)
-BUILTIN_TYPE(OCLImage2dArrayMSAA, OCLImage2dArrayMSAATy)
-BUILTIN_TYPE(OCLImage2dMSAADepth, OCLImage2dMSAADepthTy)
-BUILTIN_TYPE(OCLImage2dArrayMSAADepth, OCLImage2dArrayMSAADepthTy)
-BUILTIN_TYPE(OCLImage3d, OCLImage3dTy)
 
 // OpenCL sampler_t.
 BUILTIN_TYPE(OCLSampler, OCLSamplerTy)

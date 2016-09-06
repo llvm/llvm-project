@@ -2,17 +2,17 @@
 ; RUN: llc -march=amdgcn -mcpu=carrizo < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=ALL %s
 
 ; ALL-LABEL: {{^}}large_alloca_pixel_shader:
-; GCN: s_mov_b32 s8, SCRATCH_RSRC_DWORD0
-; GCN: s_mov_b32 s9, SCRATCH_RSRC_DWORD1
-; GCN: s_mov_b32 s10, -1
-; CI: s_mov_b32 s11, 0x80f000
-; VI: s_mov_b32 s11, 0x800000
+; GCN-DAG: s_mov_b32 s8, SCRATCH_RSRC_DWORD0
+; GCN-DAG: s_mov_b32 s9, SCRATCH_RSRC_DWORD1
+; GCN-DAG: s_mov_b32 s10, -1
+; CI-DAG: s_mov_b32 s11, 0xe8f000
+; VI-DAG: s_mov_b32 s11, 0xe80000
 
-; GCN: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s1 offen
-; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s1 offen
+; GCN: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s0 offen
+; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s0 offen
 
 ; ALL: ; ScratchSize: 32772
-define void @large_alloca_pixel_shader(i32 %x, i32 %y) #1 {
+define amdgpu_ps void @large_alloca_pixel_shader(i32 %x, i32 %y) #0 {
   %large = alloca [8192 x i32], align 4
   %gep = getelementptr [8192 x i32], [8192 x i32]* %large, i32 0, i32 8191
   store volatile i32 %x, i32* %gep
@@ -23,17 +23,17 @@ define void @large_alloca_pixel_shader(i32 %x, i32 %y) #1 {
 }
 
 ; ALL-LABEL: {{^}}large_alloca_pixel_shader_inreg:
-; GCN: s_mov_b32 s8, SCRATCH_RSRC_DWORD0
-; GCN: s_mov_b32 s9, SCRATCH_RSRC_DWORD1
-; GCN: s_mov_b32 s10, -1
-; CI: s_mov_b32 s11, 0x80f000
-; VI: s_mov_b32 s11, 0x800000
+; GCN-DAG: s_mov_b32 s8, SCRATCH_RSRC_DWORD0
+; GCN-DAG: s_mov_b32 s9, SCRATCH_RSRC_DWORD1
+; GCN-DAG: s_mov_b32 s10, -1
+; CI-DAG: s_mov_b32 s11, 0xe8f000
+; VI-DAG: s_mov_b32 s11, 0xe80000
 
-; GCN: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s1 offen
-; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s1 offen
+; GCN: buffer_store_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s2 offen
+; GCN: buffer_load_dword {{v[0-9]+}}, {{v[0-9]+}}, s[8:11], s2 offen
 
 ; ALL: ; ScratchSize: 32772
-define void @large_alloca_pixel_shader_inreg(i32 inreg %x, i32 inreg %y) #1 {
+define amdgpu_ps void @large_alloca_pixel_shader_inreg(i32 inreg %x, i32 inreg %y) #0 {
   %large = alloca [8192 x i32], align 4
   %gep = getelementptr [8192 x i32], [8192 x i32]* %large, i32 0, i32 8191
   store volatile i32 %x, i32* %gep
@@ -44,4 +44,3 @@ define void @large_alloca_pixel_shader_inreg(i32 inreg %x, i32 inreg %y) #1 {
 }
 
 attributes #0 = { nounwind  }
-attributes #1 = { nounwind "ShaderType"="0" }

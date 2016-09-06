@@ -28,7 +28,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 using namespace clang;
@@ -46,7 +45,7 @@ void Decl::updateOutOfDate(IdentifierInfo &II) const {
 }
 
 #define DECL(DERIVED, BASE)                                                    \
-  static_assert(Decl::DeclObjAlignment >=                                      \
+  static_assert(llvm::AlignOf<Decl>::Alignment >=                              \
                     llvm::AlignOf<DERIVED##Decl>::Alignment,                   \
                 "Alignment sufficient after objects prepended to " #DERIVED);
 #define ABSTRACT_DECL(DECL)
@@ -56,7 +55,7 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Context,
                          unsigned ID, std::size_t Extra) {
   // Allocate an extra 8 bytes worth of storage, which ensures that the
   // resulting pointer will still be 8-byte aligned.
-  static_assert(sizeof(unsigned) * 2 >= DeclObjAlignment,
+  static_assert(sizeof(unsigned) * 2 >= llvm::AlignOf<Decl>::Alignment,
                 "Decl won't be misaligned");
   void *Start = Context.Allocate(Size + Extra + 8);
   void *Result = (char*)Start + 8;
@@ -81,7 +80,8 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Ctx,
     // Ensure required alignment of the resulting object by adding extra
     // padding at the start if required.
     size_t ExtraAlign =
-        llvm::OffsetToAlignment(sizeof(Module *), DeclObjAlignment);
+        llvm::OffsetToAlignment(sizeof(Module *),
+                                llvm::AlignOf<Decl>::Alignment);
     char *Buffer = reinterpret_cast<char *>(
         ::operator new(ExtraAlign + sizeof(Module *) + Size + Extra, Ctx));
     Buffer += ExtraAlign;
@@ -194,6 +194,17 @@ FunctionDecl *Decl::getAsFunction() {
 
 bool Decl::isTemplateDecl() const {
   return isa<TemplateDecl>(this);
+}
+
+TemplateDecl *Decl::getDescribedTemplate() const {
+  if (auto *FD = dyn_cast<FunctionDecl>(this))
+    return FD->getDescribedFunctionTemplate();
+  else if (auto *RD = dyn_cast<CXXRecordDecl>(this))
+    return RD->getDescribedClassTemplate();
+  else if (auto *VD = dyn_cast<VarDecl>(this))
+    return VD->getDescribedVarTemplate();
+
+  return nullptr;
 }
 
 const DeclContext *Decl::getParentFunctionOrMethod() const {
@@ -329,25 +340,29 @@ unsigned Decl::getMaxAlignment() const {
   return Align;
 }
 
-bool Decl::isUsed(bool CheckUsedAttr) const { 
-  if (Used)
-    return true;
-  
-  // Check for used attribute.
-  if (CheckUsedAttr && hasAttr<UsedAttr>())
+bool Decl::isUsed(bool CheckUsedAttr) const {
+  const Decl *CanonD = getCanonicalDecl();
+  if (CanonD->Used)
     return true;
 
-  return false; 
+  // Check for used attribute.
+  // Ask the most recent decl, since attributes accumulate in the redecl chain.
+  if (CheckUsedAttr && getMostRecentDecl()->hasAttr<UsedAttr>())
+    return true;
+
+  // The information may have not been deserialized yet. Force deserialization
+  // to complete the needed information.
+  return getMostRecentDecl()->getCanonicalDecl()->Used;
 }
 
 void Decl::markUsed(ASTContext &C) {
-  if (Used)
+  if (isUsed(false))
     return;
 
   if (C.getASTMutationListener())
     C.getASTMutationListener()->DeclarationMarkedUsed(this);
 
-  Used = true;
+  setIsUsed();
 }
 
 bool Decl::isReferenced() const { 
@@ -362,6 +377,18 @@ bool Decl::isReferenced() const {
   return false; 
 }
 
+bool Decl::hasDefiningAttr() const {
+  return hasAttr<AliasAttr>() || hasAttr<IFuncAttr>();
+}
+
+const Attr *Decl::getDefiningAttr() const {
+  if (AliasAttr *AA = getAttr<AliasAttr>())
+    return AA;
+  if (IFuncAttr *IFA = getAttr<IFuncAttr>())
+    return IFA;
+  return nullptr;
+}
+
 /// \brief Determine the availability of the given declaration based on
 /// the target platform.
 ///
@@ -371,16 +398,14 @@ bool Decl::isReferenced() const {
 ///
 /// FIXME: Make these strings localizable, since they end up in
 /// diagnostics.
-static AvailabilityResult
-checkAvailability(ASTContext &Context, const AvailabilityAttr *A,
-                  Optional<VersionTuple> Version, std::string *Message) {
-  VersionTuple TargetMinVersion;
-  if (Version.hasValue())
-    TargetMinVersion = Version.getValue();
-  else
-    TargetMinVersion = Context.getTargetInfo().getPlatformMinVersion();
+static AvailabilityResult CheckAvailability(ASTContext &Context,
+                                            const AvailabilityAttr *A,
+                                            std::string *Message,
+                                            VersionTuple EnclosingVersion) {
+  if (EnclosingVersion.empty())
+    EnclosingVersion = Context.getTargetInfo().getPlatformMinVersion();
 
-  if (TargetMinVersion.empty())
+  if (EnclosingVersion.empty())
     return AR_Available;
 
   // Check if this is an App Extension "platform", and if so chop off
@@ -425,7 +450,7 @@ checkAvailability(ASTContext &Context, const AvailabilityAttr *A,
 
   // Make sure that this declaration has already been introduced.
   if (!A->getIntroduced().empty() && 
-      TargetMinVersion < A->getIntroduced()) {
+      EnclosingVersion < A->getIntroduced()) {
     if (Message) {
       Message->clear();
       llvm::raw_string_ostream Out(*Message);
@@ -439,7 +464,7 @@ checkAvailability(ASTContext &Context, const AvailabilityAttr *A,
   }
 
   // Make sure that this declaration hasn't been obsoleted.
-  if (!A->getObsoleted().empty() && TargetMinVersion >= A->getObsoleted()) {
+  if (!A->getObsoleted().empty() && EnclosingVersion >= A->getObsoleted()) {
     if (Message) {
       Message->clear();
       llvm::raw_string_ostream Out(*Message);
@@ -453,7 +478,7 @@ checkAvailability(ASTContext &Context, const AvailabilityAttr *A,
   }
 
   // Make sure that this declaration hasn't been deprecated.
-  if (!A->getDeprecated().empty() && TargetMinVersion >= A->getDeprecated()) {
+  if (!A->getDeprecated().empty() && EnclosingVersion >= A->getDeprecated()) {
     if (Message) {
       Message->clear();
       llvm::raw_string_ostream Out(*Message);
@@ -470,9 +495,9 @@ checkAvailability(ASTContext &Context, const AvailabilityAttr *A,
 }
 
 AvailabilityResult Decl::getAvailability(std::string *Message,
-                                         Optional<VersionTuple> Version) const {
+                                         VersionTuple EnclosingVersion) const {
   if (auto *FTD = dyn_cast<FunctionTemplateDecl>(this))
-    return FTD->getTemplatedDecl()->getAvailability(Message, Version);
+    return FTD->getTemplatedDecl()->getAvailability(Message, EnclosingVersion);
 
   AvailabilityResult Result = AR_Available;
   std::string ResultMessage;
@@ -496,8 +521,8 @@ AvailabilityResult Decl::getAvailability(std::string *Message,
     }
 
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
-      AvailabilityResult AR = checkAvailability(getASTContext(), Availability,
-                                                Version, Message);
+      AvailabilityResult AR = CheckAvailability(getASTContext(), Availability,
+                                                Message, EnclosingVersion);
 
       if (AR == AR_Unavailable)
         return AR_Unavailable;
@@ -556,8 +581,8 @@ bool Decl::isWeakImported() const {
       return true;
 
     if (const auto *Availability = dyn_cast<AvailabilityAttr>(A)) {
-      if (checkAvailability(getASTContext(), Availability, None,
-                            nullptr) == AR_NotYetIntroduced)
+      if (CheckAvailability(getASTContext(), Availability, nullptr,
+                            VersionTuple()) == AR_NotYetIntroduced)
         return true;
     }
   }
@@ -570,10 +595,12 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case Function:
     case CXXMethod:
     case CXXConstructor:
+    case ConstructorUsingShadow:
     case CXXDestructor:
     case CXXConversion:
     case EnumConstant:
     case Var:
+    case Binding:
     case ImplicitParam:
     case ParmVar:
     case ObjCMethod:
@@ -637,6 +664,9 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case TemplateTemplateParm:
       return IDNS_Ordinary | IDNS_Tag | IDNS_Type;
 
+    case OMPDeclareReduction:
+      return IDNS_OMPReduction;
+
     // Never have names.
     case Friend:
     case FriendTemplate:
@@ -645,10 +675,13 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case FileScopeAsm:
     case StaticAssert:
     case ObjCPropertyImpl:
+    case PragmaComment:
+    case PragmaDetectMismatch:
     case Block:
     case Captured:
     case TranslationUnit:
     case ExternCContext:
+    case Decomposition:
 
     case UsingDirective:
     case BuiltinTemplate:
@@ -662,6 +695,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case ObjCCategoryImpl:
     case Import:
     case OMPThreadPrivate:
+    case OMPCapturedExpr:
     case Empty:
       // Never looked up by name.
       return 0;
@@ -964,6 +998,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::LinkageSpec:
   case Decl::Block:
   case Decl::Captured:
+  case Decl::OMPDeclareReduction:
     // There is only one DeclContext for these entities.
     return this;
 
@@ -1556,9 +1591,12 @@ void DeclContext::makeDeclVisibleInContextWithFlags(NamedDecl *D, bool Internal,
                                                     bool Recoverable) {
   assert(this == getPrimaryContext() && "expected a primary DC");
 
-  // Skip declarations within functions.
-  if (isFunctionOrMethod())
+  if (!isLookupContext()) {
+    if (isTransparentContext())
+      getParent()->getPrimaryContext()
+        ->makeDeclVisibleInContextWithFlags(D, Internal, Recoverable);
     return;
+  }
 
   // Skip declarations which should be invisible to name lookup.
   if (shouldBeHidden(D))

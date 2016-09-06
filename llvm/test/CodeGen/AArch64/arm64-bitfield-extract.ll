@@ -1,5 +1,5 @@
 ; RUN: opt -codegenprepare -mtriple=arm64-apple=ios -S -o - %s | FileCheck --check-prefix=OPT %s
-; RUN: llc < %s -march=arm64 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
 %struct.X = type { i8, i8, [2 x i8] }
 %struct.Y = type { i32, i8 }
 %struct.Z = type { i8, i8, [2 x i8], i16 }
@@ -41,7 +41,7 @@ define i32 @bar(i64 %cav1.coerce) nounwind {
 
 define void @fct1(%struct.Z* nocapture %x, %struct.A* nocapture %y) nounwind optsize ssp {
 ; CHECK-LABEL: fct1:
-; CHECK: ubfx
+; CHECK: ubfx x{{[0-9]+}}, x{{[0-9]+}}
 ; CHECK-NOT: and
 ; CHECK: ret
 
@@ -348,8 +348,8 @@ entry:
 ; CHECK-LABEL: fct16:
 ; CHECK: ldr [[REG1:w[0-9]+]],
 ; Create the constant
-; CHECK: movz [[REGCST:w[0-9]+]], #0x1a, lsl #16
-; CHECK: movk [[REGCST]], #0x8160
+; CHECK: mov [[REGCST:w[0-9]+]], #1703936
+; CHECK: movk [[REGCST]], #33120
 ; Do the masking
 ; CHECK: and [[REG2:w[0-9]+]], [[REG1]], [[REGCST]]
 ; CHECK-NEXT: bfxil [[REG2]], w1, #16, #3
@@ -377,8 +377,8 @@ entry:
 ; CHECK-LABEL: fct17:
 ; CHECK: ldr [[REG1:x[0-9]+]],
 ; Create the constant
-; CHECK: movz w[[REGCST:[0-9]+]], #0x1a, lsl #16
-; CHECK: movk w[[REGCST]], #0x8160
+; CHECK: mov w[[REGCST:[0-9]+]], #1703936
+; CHECK: movk w[[REGCST]], #33120
 ; Do the masking
 ; CHECK: and [[REG2:x[0-9]+]], [[REG1]], x[[REGCST]]
 ; CHECK-NEXT: bfxil [[REG2]], x1, #16, #3

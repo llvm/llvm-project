@@ -351,3 +351,18 @@ void test13() {
   ObjectSize0(++p);
   ObjectSize0(p++);
 }
+
+// There was a bug where variadic functions with pass_object_size would cause
+// problems in the form of failed assertions.
+void my_sprintf(char *const c __attribute__((pass_object_size(0))), ...) {}
+
+// CHECK-LABEL: define void @test14
+void test14(char *c) {
+  // CHECK: @llvm.objectsize
+  // CHECK: call void (i8*, i64, ...) @my_sprintf
+  my_sprintf(c);
+
+  // CHECK: @llvm.objectsize
+  // CHECK: call void (i8*, i64, ...) @my_sprintf
+  my_sprintf(c, 1, 2, 3);
+}

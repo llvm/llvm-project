@@ -20,7 +20,7 @@ using namespace clang;
 using namespace sema;
 
 DelayedDiagnostic
-DelayedDiagnostic::makeAvailability(Sema::AvailabilityDiagnostic AD,
+DelayedDiagnostic::makeAvailability(AvailabilityResult AD,
                                     SourceLocation Loc,
                                     const NamedDecl *D,
                                     const ObjCInterfaceDecl *UnknownObjCClass,
@@ -29,14 +29,14 @@ DelayedDiagnostic::makeAvailability(Sema::AvailabilityDiagnostic AD,
                                     bool ObjCPropertyAccess) {
   DelayedDiagnostic DD;
   switch (AD) {
-    case Sema::AD_Deprecation:
-      DD.Kind = Deprecation;
-      break;
-    case Sema::AD_Unavailable:
-      DD.Kind = Unavailable;
-      break;
-    case Sema::AD_Partial:
-      llvm_unreachable("AD_Partial diags should not be delayed");
+  case AR_Deprecated:
+    DD.Kind = Deprecation;
+    break;
+  case AR_Unavailable:
+    DD.Kind = Unavailable;
+    break;
+  default:
+    llvm_unreachable("partial diags should not be delayed");
   }
   DD.Triggered = false;
   DD.Loc = Loc;

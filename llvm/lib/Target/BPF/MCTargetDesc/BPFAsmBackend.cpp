@@ -47,7 +47,8 @@ public:
 
   bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
 
-  void relaxInstruction(const MCInst &Inst, MCInst &Res) const override {}
+  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                        MCInst &Res) const override {}
 
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
 };
@@ -95,12 +96,14 @@ MCObjectWriter *BPFAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
 
 MCAsmBackend *llvm::createBPFAsmBackend(const Target &T,
                                         const MCRegisterInfo &MRI,
-                                        const Triple &TT, StringRef CPU) {
+                                        const Triple &TT, StringRef CPU,
+                                        const MCTargetOptions&) {
   return new BPFAsmBackend(/*IsLittleEndian=*/true);
 }
 
 MCAsmBackend *llvm::createBPFbeAsmBackend(const Target &T,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU) {
+                                          const Triple &TT, StringRef CPU,
+                                          const MCTargetOptions&) {
   return new BPFAsmBackend(/*IsLittleEndian=*/false);
 }

@@ -1,5 +1,7 @@
 ; RUN: opt -mtriple i686-win32 -rewrite-symbols -rewrite-map-file %p/rewrite.map \
 ; RUN:   %s -o - | llvm-dis | FileCheck %s
+; RUN: opt -mtriple i686-win32 -passes='rewrite-symbols' -rewrite-map-file %p/rewrite.map \
+; RUN:   %s -o - | llvm-dis | FileCheck %s
 
 declare void @source_function()
 @source_variable = external global i32

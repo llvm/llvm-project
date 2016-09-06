@@ -20,7 +20,7 @@ int main() {
   pthread_create(&t, 0, Thread, 0);
   pthread_detach(t);
   barrier_wait(&barrier);
-  printf("PASS\n");
+  fprintf(stderr, "PASS\n");
   return 0;
 }
 

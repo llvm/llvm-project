@@ -52,8 +52,8 @@ public:
   /// the number of bytes to probe in RAX/EAX. Returns instruction just
   /// after the expansion.
   MachineInstr *emitStackProbe(MachineFunction &MF, MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MBBI, DebugLoc DL,
-                               bool InProlog) const;
+                               MachineBasicBlock::iterator MBBI,
+                               const DebugLoc &DL, bool InProlog) const;
 
   /// Replace a StackProbe inline-stub with the actual probe code inline.
   void inlineStackProbe(MachineFunction &MF,
@@ -61,7 +61,7 @@ public:
 
   void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MBBI,
-                                 DebugLoc DL) const;
+                                 const DebugLoc &DL) const;
 
   /// emitProlog/emitEpilog - These methods insert prolog and epilog code into
   /// the function.
@@ -80,9 +80,7 @@ public:
   bool
   assignCalleeSavedSpillSlots(MachineFunction &MF,
                               const TargetRegisterInfo *TRI,
-                              std::vector<CalleeSavedInfo> &CSI,
-                              unsigned &MinCSFrameIndex,
-                              unsigned &MaxCSFrameIndex) const override;
+                              std::vector<CalleeSavedInfo> &CSI) const override;
 
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
@@ -102,12 +100,13 @@ public:
   int getFrameIndexReference(const MachineFunction &MF, int FI,
                              unsigned &FrameReg) const override;
 
-  int getFrameIndexReferenceFromSP(const MachineFunction &MF, int FI,
-                                   unsigned &FrameReg) const override;
+  int getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
+                                     unsigned &FrameReg,
+                                     bool IgnoreSPUpdates) const override;
 
-  void eliminateCallFramePseudoInstr(MachineFunction &MF,
-                                 MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MI) const override;
+  MachineBasicBlock::iterator
+  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MI) const override;
 
   unsigned getWinEHParentFrameOffset(const MachineFunction &MF) const override;
 
@@ -129,6 +128,16 @@ public:
   /// Check that LEA can be used on SP in an epilogue sequence for \p MF.
   bool canUseLEAForSPInEpilogue(const MachineFunction &MF) const;
 
+  /// Check whether or not the given \p MBB can be used as a prologue
+  /// for the target.
+  /// The prologue will be inserted first in this basic block.
+  /// This method is used by the shrink-wrapping pass to decide if
+  /// \p MBB will be correctly handled by the target.
+  /// As soon as the target enable shrink-wrapping without overriding
+  /// this method, we assume that each basic block is a valid
+  /// prologue.
+  bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
+
   /// Check whether or not the given \p MBB can be used as a epilogue
   /// for the target.
   /// The epilogue will be inserted before the first terminator of that block.
@@ -138,6 +147,13 @@ public:
 
   /// Returns true if the target will correctly handle shrink wrapping.
   bool enableShrinkWrapping(const MachineFunction &MF) const override;
+
+  /// Order the symbols in the local stack.
+  /// We want to place the local stack objects in some sort of sensible order.
+  /// The heuristic we use is to try and pack them according to static number
+  /// of uses and size in order to minimize code size.
+  void orderFrameObjects(const MachineFunction &MF,
+                         SmallVectorImpl<int> &ObjectsToAllocate) const override;
 
   /// convertArgMovsToPushes - This method tries to convert a call sequence
   /// that uses sub and mov instructions to put the argument onto the stack
@@ -150,14 +166,14 @@ public:
 
   /// Wraps up getting a CFI index and building a MachineInstr for it.
   void BuildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                DebugLoc DL, MCCFIInstruction CFIInst) const;
+                const DebugLoc &DL, const MCCFIInstruction &CFIInst) const;
 
   /// Sets up EBP and optionally ESI based on the incoming EBP value.  Only
   /// needed for 32-bit. Used in funclet prologues and at catchret destinations.
   MachineBasicBlock::iterator
   restoreWin32EHStackPointers(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MBBI, DebugLoc DL,
-                              bool RestoreSP = false) const;
+                              MachineBasicBlock::iterator MBBI,
+                              const DebugLoc &DL, bool RestoreSP = false) const;
 
 private:
   uint64_t calculateMaxStackAlign(const MachineFunction &MF) const;
@@ -165,34 +181,35 @@ private:
   /// Emit target stack probe as a call to a helper function
   MachineInstr *emitStackProbeCall(MachineFunction &MF, MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
-                                   DebugLoc DL, bool InProlog) const;
+                                   const DebugLoc &DL, bool InProlog) const;
 
   /// Emit target stack probe as an inline sequence.
   MachineInstr *emitStackProbeInline(MachineFunction &MF,
                                      MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
-                                     DebugLoc DL, bool InProlog) const;
+                                     const DebugLoc &DL, bool InProlog) const;
 
   /// Emit a stub to later inline the target stack probe.
   MachineInstr *emitStackProbeInlineStub(MachineFunction &MF,
                                          MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MBBI,
-                                         DebugLoc DL, bool InProlog) const;
+                                         const DebugLoc &DL,
+                                         bool InProlog) const;
 
   /// Aligns the stack pointer by ANDing it with -MaxAlign.
   void BuildStackAlignAND(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                           unsigned Reg, uint64_t MaxAlign) const;
 
   /// Make small positive stack adjustments using POPs.
   bool adjustStackWithPops(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                           MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                            int Offset) const;
 
   /// Adjusts the stack pointer using LEA, SUB, or ADD.
   MachineInstrBuilder BuildStackAdjustment(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MBBI,
-                                           DebugLoc DL, int64_t Offset,
+                                           const DebugLoc &DL, int64_t Offset,
                                            bool InEpilogue) const;
 
   unsigned getPSPSlotOffsetFromSP(const MachineFunction &MF) const;

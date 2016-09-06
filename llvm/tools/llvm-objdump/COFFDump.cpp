@@ -161,13 +161,13 @@ static std::error_code
 resolveSectionAndAddress(const COFFObjectFile *Obj, const SymbolRef &Sym,
                          const coff_section *&ResolvedSection,
                          uint64_t &ResolvedAddr) {
-  ErrorOr<uint64_t> ResolvedAddrOrErr = Sym.getAddress();
-  if (std::error_code EC = ResolvedAddrOrErr.getError())
-    return EC;
+  Expected<uint64_t> ResolvedAddrOrErr = Sym.getAddress();
+  if (!ResolvedAddrOrErr)
+    return errorToErrorCode(ResolvedAddrOrErr.takeError());
   ResolvedAddr = *ResolvedAddrOrErr;
-  ErrorOr<section_iterator> Iter = Sym.getSection();
-  if (std::error_code EC = Iter.getError())
-    return EC;
+  Expected<section_iterator> Iter = Sym.getSection();
+  if (!Iter)
+    return errorToErrorCode(Iter.takeError());
   ResolvedSection = Obj->getCOFFSection(**Iter);
   return std::error_code();
 }
@@ -215,9 +215,9 @@ static std::error_code resolveSymbolName(const std::vector<RelocationRef> &Rels,
   SymbolRef Sym;
   if (std::error_code EC = resolveSymbol(Rels, Offset, Sym))
     return EC;
-  ErrorOr<StringRef> NameOrErr = Sym.getName();
-  if (std::error_code EC = NameOrErr.getError())
-    return EC;
+  Expected<StringRef> NameOrErr = Sym.getName();
+  if (!NameOrErr)
+    return errorToErrorCode(NameOrErr.takeError());
   Name = *NameOrErr;
   return std::error_code();
 }
@@ -250,6 +250,56 @@ printSEHTable(const COFFObjectFile *Obj, uint32_t TableVA, int Count) {
   for (int I = 0; I < Count; ++I)
     outs() << format(" 0x%x", P[I] + ImageBase);
   outs() << "\n\n";
+}
+
+template <typename T>
+static void printTLSDirectoryT(const coff_tls_directory<T> *TLSDir) {
+  size_t FormatWidth = sizeof(T) * 2;
+  outs() << "TLS directory:"
+         << "\n  StartAddressOfRawData: "
+         << format_hex(TLSDir->StartAddressOfRawData, FormatWidth)
+         << "\n  EndAddressOfRawData: "
+         << format_hex(TLSDir->EndAddressOfRawData, FormatWidth)
+         << "\n  AddressOfIndex: "
+         << format_hex(TLSDir->AddressOfIndex, FormatWidth)
+         << "\n  AddressOfCallBacks: "
+         << format_hex(TLSDir->AddressOfCallBacks, FormatWidth)
+         << "\n  SizeOfZeroFill: "
+         << TLSDir->SizeOfZeroFill
+         << "\n  Characteristics: "
+         << TLSDir->Characteristics
+         << "\n  Alignment: "
+         << TLSDir->getAlignment()
+         << "\n\n";
+}
+
+static void printTLSDirectory(const COFFObjectFile *Obj) {
+  const pe32_header *PE32Header;
+  error(Obj->getPE32Header(PE32Header));
+
+  const pe32plus_header *PE32PlusHeader;
+  error(Obj->getPE32PlusHeader(PE32PlusHeader));
+
+  // Skip if it's not executable.
+  if (!PE32Header && !PE32PlusHeader)
+    return;
+
+  const data_directory *DataDir;
+  error(Obj->getDataDirectory(COFF::TLS_TABLE, DataDir));
+  uintptr_t IntPtr = 0;
+  if (DataDir->RelativeVirtualAddress == 0)
+    return;
+  error(Obj->getRvaPtr(DataDir->RelativeVirtualAddress, IntPtr));
+
+  if (PE32Header) {
+    auto *TLSDir = reinterpret_cast<const coff_tls_directory32 *>(IntPtr);
+    printTLSDirectoryT(TLSDir);
+  } else {
+    auto *TLSDir = reinterpret_cast<const coff_tls_directory64 *>(IntPtr);
+    printTLSDirectoryT(TLSDir);
+  }
+
+  outs() << "\n";
 }
 
 static void printLoadConfiguration(const COFFObjectFile *Obj) {
@@ -302,11 +352,11 @@ static void printImportTables(const COFFObjectFile *Obj) {
   if (I == E)
     return;
   outs() << "The Import Tables:\n";
-  for (; I != E; I = ++I) {
-    const import_directory_table_entry *Dir;
+  for (const ImportDirectoryEntryRef &DirRef : Obj->import_directories()) {
+    const coff_import_directory_table_entry *Dir;
     StringRef Name;
-    if (I->getImportTableEntry(Dir)) return;
-    if (I->getName(Name)) return;
+    if (DirRef.getImportTableEntry(Dir)) return;
+    if (DirRef.getName(Name)) return;
 
     outs() << format("  lookup %08x time %08x fwd %08x name %08x addr %08x\n\n",
                      static_cast<uint32_t>(Dir->ImportLookupTableRVA),
@@ -316,17 +366,23 @@ static void printImportTables(const COFFObjectFile *Obj) {
                      static_cast<uint32_t>(Dir->ImportAddressTableRVA));
     outs() << "    DLL Name: " << Name << "\n";
     outs() << "    Hint/Ord  Name\n";
-    const import_lookup_table_entry32 *entry;
-    if (I->getImportLookupEntry(entry))
-      return;
-    for (; entry->Data; ++entry) {
-      if (entry->isOrdinal()) {
-        outs() << format("      % 6d\n", entry->getOrdinal());
+    for (const ImportedSymbolRef &Entry : DirRef.imported_symbols()) {
+      bool IsOrdinal;
+      if (Entry.isOrdinal(IsOrdinal))
+        return;
+      if (IsOrdinal) {
+        uint16_t Ordinal;
+        if (Entry.getOrdinal(Ordinal))
+          return;
+        outs() << format("      % 6d\n", Ordinal);
         continue;
       }
+      uint32_t HintNameRVA;
+      if (Entry.getHintNameRVA(HintNameRVA))
+        return;
       uint16_t Hint;
       StringRef Name;
-      if (Obj->getHintName(entry->getHintNameRVA(), Hint, Name))
+      if (Obj->getHintName(HintNameRVA, Hint, Name))
         return;
       outs() << format("      % 6d  ", Hint) << Name << "\n";
     }
@@ -555,6 +611,7 @@ void llvm::printCOFFUnwindInfo(const COFFObjectFile *Obj) {
 
 void llvm::printCOFFFileHeader(const object::ObjectFile *Obj) {
   const COFFObjectFile *file = dyn_cast<const COFFObjectFile>(Obj);
+  printTLSDirectory(file);
   printLoadConfiguration(file);
   printImportTables(file);
   printExportTable(file);
@@ -602,6 +659,13 @@ void llvm::printCOFFSymbolTable(const COFFObjectFile *coff) {
 
         SI = SI + Symbol->getNumberOfAuxSymbols();
         break;
+      } else if (Symbol->isWeakExternal()) {
+        const coff_aux_weak_external *awe;
+        error(coff->getAuxSymbol<coff_aux_weak_external>(SI + 1, awe));
+
+        outs() << "AUX " << format("indx %d srch %d\n",
+                                   static_cast<uint32_t>(awe->TagIndex),
+                                   static_cast<uint32_t>(awe->Characteristics));
       } else {
         outs() << "AUX Unknown\n";
       }

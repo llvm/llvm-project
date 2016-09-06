@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -E %s | FileCheck -strict-whitespace %s
+#ifdef TEST1
+// RUN: %clang_cc1 -E %s -DTEST1 | FileCheck -strict-whitespace %s
 
 #define M(x, y) #x #y
 
@@ -28,3 +29,13 @@ START_END( {a=1 , b=2;} ) /* braces are not parentheses */
 M(a COMMA b, (a, b)) 
 // CHECK: "a COMMA b" "(a, b)"
 
+#endif
+
+#ifdef TEST2
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DTEST2
+
+#define HASH #
+#define INVALID() #
+// expected-error@-1{{'#' is not followed by a macro parameter}}
+
+#endif

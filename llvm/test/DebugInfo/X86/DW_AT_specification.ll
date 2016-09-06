@@ -20,10 +20,9 @@ entry:
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!28}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.0 ()", isOptimized: false, emissionKind: 0, file: !27, enums: !1, retainedTypes: !1, subprograms: !3, globals: !18, imports:  !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.0 ()", isOptimized: false, emissionKind: FullDebug, file: !27, enums: !1, retainedTypes: !1, globals: !18, imports:  !1)
 !1 = !{}
-!3 = !{!5}
-!5 = distinct !DISubprogram(name: "bar", linkageName: "_ZN3foo3barEv", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 4, file: !6, scope: null, type: !7, declaration: !11)
+!5 = distinct !DISubprogram(name: "bar", linkageName: "_ZN3foo3barEv", line: 4, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 4, file: !6, scope: null, type: !7, declaration: !11)
 !6 = !DIFile(filename: "nsNativeAppSupportBase.ii", directory: "/Users/espindola/mozilla-central/obj-x86_64-apple-darwin11.2.0/toolkit/library")
 !7 = !DISubroutineType(types: !8)
 !8 = !{null, !9}

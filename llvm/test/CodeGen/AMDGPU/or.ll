@@ -96,7 +96,7 @@ define void @scalar_or_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 ; SI: v_or_b32_e32 v{{[0-9]}}
 define void @vector_or_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
   %loada = load i64, i64 addrspace(1)* %a, align 8
-  %loadb = load i64, i64 addrspace(1)* %a, align 8
+  %loadb = load i64, i64 addrspace(1)* %b, align 8
   %or = or i64 %loada, %loadb
   store i64 %or, i64 addrspace(1)* %out
   ret void

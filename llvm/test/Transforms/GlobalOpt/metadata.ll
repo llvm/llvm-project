@@ -28,5 +28,5 @@ declare void @llvm.foo(metadata, metadata) nounwind readnone
 ; CHECK: !named = !{![[NULL:[0-9]+]]}
 
 !0 = !{i8*** @G}
-; CHECK-DAG: ![[NULL]] = !{null}
+; CHECK-DAG: ![[NULL]] = distinct !{null}
 ; CHECK-DAG: ![[EMPTY]] = !{}

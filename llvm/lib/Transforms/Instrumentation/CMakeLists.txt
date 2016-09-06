@@ -4,12 +4,13 @@ add_llvm_library(LLVMInstrumentation
   DataFlowSanitizer.cpp
   GCOVProfiling.cpp
   MemorySanitizer.cpp
+  IndirectCallPromotion.cpp
   Instrumentation.cpp
   InstrProfiling.cpp
   PGOInstrumentation.cpp
-  SafeStack.cpp
   SanitizerCoverage.cpp
   ThreadSanitizer.cpp
+  EfficiencySanitizer.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms

@@ -1,5 +1,7 @@
 ; RUN: %lli -jit-kind=orc-mcjit -remote-mcjit -O0 -mcjit-remote-process=lli-child-target%exeext %s
 ; XFAIL: mingw32,win32
+; UNSUPPORTED: powerpc64-unknown-linux-gnu
+; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 
 @.str = private unnamed_addr constant [6 x i8] c"data1\00", align 1
 @ptr = global i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0), align 4

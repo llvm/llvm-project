@@ -28,8 +28,6 @@
 #include <algorithm>
 using namespace clang;
 
-#include "llvm/Support/raw_ostream.h"
-
 // Out-of-line destructor to provide a home for the class.
 PragmaHandler::~PragmaHandler() {
 }
@@ -354,7 +352,9 @@ void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
 /// HandlePragmaOnce - Handle \#pragma once.  OnceTok is the 'once'.
 ///
 void Preprocessor::HandlePragmaOnce(Token &OnceTok) {
-  if (isInPrimaryFile()) {
+  // Don't honor the 'once' when handling the primary source file, unless
+  // this is a prefix to a TU, which indicates we're generating a PCH file.
+  if (isInPrimaryFile() && TUKind != TU_Prefix) {
     Diag(OnceTok, diag::pp_pragma_once_in_main_file);
     return;
   }
@@ -938,13 +938,13 @@ struct PragmaDebugHandler : public PragmaHandler {
     }
 
     SourceLocation NameLoc = Tok.getLocation();
-    Token *Toks = PP.getPreprocessorAllocator().Allocate<Token>(1);
-    Toks->startToken();
-    Toks->setKind(tok::annot_pragma_captured);
-    Toks->setLocation(NameLoc);
+    MutableArrayRef<Token> Toks(
+        PP.getPreprocessorAllocator().Allocate<Token>(1), 1);
+    Toks[0].startToken();
+    Toks[0].setKind(tok::annot_pragma_captured);
+    Toks[0].setLocation(NameLoc);
 
-    PP.EnterTokenStream(Toks, 1, /*DisableMacroExpansion=*/true,
-                        /*OwnsTokens=*/false);
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
   }
 
 // Disable MSVC warning about runtime stack overflow.
@@ -1024,10 +1024,19 @@ public:
       return;
     }
 
-    if (PP.getDiagnostics().setSeverityForGroup(
-            WarningName[1] == 'W' ? diag::Flavor::WarningOrError
-                                  : diag::Flavor::Remark,
-            WarningName.substr(2), SV, DiagLoc))
+    diag::Flavor Flavor = WarningName[1] == 'W' ? diag::Flavor::WarningOrError
+                                                : diag::Flavor::Remark;
+    StringRef Group = StringRef(WarningName).substr(2);
+    bool unknownDiag = false;
+    if (Group == "everything") {
+      // Special handling for pragma clang diagnostic ... "-Weverything".
+      // There is no formal group named "everything", so there has to be a
+      // special case for it.
+      PP.getDiagnostics().setSeverityForAll(Flavor, SV, DiagLoc);
+    } else
+      unknownDiag = PP.getDiagnostics().setSeverityForGroup(Flavor, Group, SV,
+                                                            DiagLoc);
+    if (unknownDiag)
       PP.Diag(StringLoc, diag::warn_pragma_diagnostic_unknown_warning)
         << WarningName;
     else if (Callbacks)
@@ -1480,6 +1489,13 @@ void Preprocessor::RegisterBuiltinPragmas() {
     AddPragmaHandler(new PragmaIncludeAliasHandler());
     AddPragmaHandler(new PragmaRegionHandler("region"));
     AddPragmaHandler(new PragmaRegionHandler("endregion"));
+  }
+
+  // Pragmas added by plugins
+  for (PragmaHandlerRegistry::iterator it = PragmaHandlerRegistry::begin(),
+                                       ie = PragmaHandlerRegistry::end();
+       it != ie; ++it) {
+    AddPragmaHandler(it->instantiate().release());
   }
 }
 

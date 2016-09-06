@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mattr=+altivec -mattr=-vsx -mcpu=pwr7 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu -mattr=+altivec -mattr=-vsx -mcpu=pwr7 | FileCheck %s
 
 define void @VPKUHUM_xy(<16 x i8>* %A, <16 x i8>* %B) {
 entry:

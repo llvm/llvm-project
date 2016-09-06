@@ -32,7 +32,11 @@ foreach(arch ${UBSAN_TEST_ARCH})
   add_ubsan_testsuite("Standalone" ubsan ${arch})
 
   if(COMPILER_RT_HAS_ASAN AND ";${ASAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
-    add_ubsan_testsuite("AddressSanitizer" asan ${arch})
+    # TODO(wwchrome): Re-enable ubsan for asan win 64-bit when ready.
+    # Disable ubsan with AddressSanitizer tests for Windows 64-bit.
+    if(NOT OS_NAME MATCHES "Windows" OR CMAKE_SIZEOF_VOID_P EQUAL 4)
+      add_ubsan_testsuite("AddressSanitizer" asan ${arch})
+    endif()
   endif()
   if(COMPILER_RT_HAS_MSAN AND ";${MSAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
     add_ubsan_testsuite("MemorySanitizer" msan ${arch})
@@ -45,4 +49,4 @@ endforeach()
 add_lit_testsuite(check-ubsan "Running UndefinedBehaviorSanitizer tests"
   ${UBSAN_TESTSUITES}
   DEPENDS ${UBSAN_TEST_DEPS})
-set_target_properties(check-ubsan PROPERTIES FOLDER "UBSan tests")
+set_target_properties(check-ubsan PROPERTIES FOLDER "Compiler-RT Misc")

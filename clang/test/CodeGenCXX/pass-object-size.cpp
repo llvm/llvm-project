@@ -43,3 +43,40 @@ void Test() {
   (&OvlFoo)(nullptr);
 }
 }
+
+namespace delegate {
+  struct A {
+    A(void *const p __attribute__((pass_object_size(0))));
+  };
+  A::A(void *const p __attribute__((pass_object_size(0)))) {}
+  // Ensure that we forward the size through a delegating constructor call.
+  // CHECK: define void @_ZN8delegate1AC1EPvU17pass_object_size0({{[^,]*}}, i8*{{[^,]*}}, i64{{[^,]*}})
+  // CHECK: call void @_ZN8delegate1AC2EPvU17pass_object_size0({{[^,]*}}, i8*{{[^,]*}}, i64{{[^,]*}})
+}
+
+namespace variadic {
+// We had an issue where variadic member/operator calls with pass_object_size
+// would cause crashes.
+
+struct AsCtor {
+  AsCtor(const char *const c __attribute__((pass_object_size(0))), double a,
+         ...) {}
+};
+
+struct AsMember {
+  void bar(const char *const c __attribute__((pass_object_size(0))), double a,
+           ...) {}
+  void operator()(const char *const c __attribute__((pass_object_size(0))),
+                  double a, ...) {}
+};
+
+// CHECK-LABEL: define void @_ZN8variadic4testEv()
+void test() {
+  // CHECK-RE: call{{[^@]+}}@_ZN8variadic6AsCtorC1EPKcU17pass_object_size0dz
+  AsCtor("a", 1.0);
+  // CHECK-RE: call{{[^@]+}}@_ZN8variadic8AsMember3barEPKcU17pass_object_size0dz
+  AsMember{}.bar("a", 1.0);
+  // CHECK-RE: call{{[^@]+}}@_ZN8variadic8AsMemberclEPKcU17pass_object_size0dz
+  AsMember{}("a", 1.0);
+}
+}

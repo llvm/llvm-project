@@ -1236,7 +1236,7 @@ Process::HandleProcessStateChangedEvent (const EventSP &event_sp,
                                 case eStopReasonBreakpoint:
                                 case eStopReasonWatchpoint:
                                     check_for_repl_breakpoint = repl_is_enabled;
-                                    // Fall through...
+                                    LLVM_FALLTHROUGH;
                                 case eStopReasonException:
                                 case eStopReasonExec:
                                 case eStopReasonThreadExiting:
@@ -5357,7 +5357,17 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx, lldb::ThreadPlanSP &thread_pla
 {
     ExpressionResults return_value = eExpressionSetupError;
     
-    std::lock_guard<std::mutex> run_thread_plan_locker(m_run_thread_plan_lock);
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_STEP | LIBLLDB_LOG_PROCESS));
+    
+    if (!m_run_thread_plan_lock.try_lock())
+    {
+        if (log)
+            log->Printf("RunThreadPlan could not acquire the RunThreadPlan lock.");
+        diagnostic_manager.PutCString(eDiagnosticSeverityError, "RunThreadPlan could not acquire the RunThreadPlan lock.");
+        return eExpressionSetupError;
+    }
+        
+    std::lock_guard<std::mutex> run_thread_plan_locker(m_run_thread_plan_lock, std::adopt_lock_t());
 
     if (!thread_plan_sp)
     {
@@ -5446,7 +5456,6 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx, lldb::ThreadPlanSP &thread_pla
     lldb::StateType old_state = eStateInvalid;
     lldb::ThreadPlanSP stopper_base_plan_sp;
     
-    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_STEP | LIBLLDB_LOG_PROCESS));
     if (m_private_state_thread.EqualsThread(Host::GetCurrentThread()))
     {
         // Yikes, we are running on the private state thread!  So we can't wait for public events on this thread, since

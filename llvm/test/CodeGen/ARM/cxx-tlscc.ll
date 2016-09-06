@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=armv7k-apple-watchos2.0 | FileCheck %s
-; RUN: llc < %s -mtriple=armv7k-apple-watchos2.0 -enable-shrink-wrap=true | FileCheck --check-prefix=CHECK %s
+; RUN: llc < %s -mtriple=armv7k-apple-watchos2.0 -enable-shrink-wrap=true | FileCheck %s
 ; RUN: llc < %s -mtriple=armv7-apple-ios8.0 | FileCheck %s
-; RUN: llc < %s -mtriple=armv7-apple-ios8.0 -enable-shrink-wrap=true | FileCheck --check-prefix=CHECK %s
+; RUN: llc < %s -mtriple=armv7-apple-ios8.0 -enable-shrink-wrap=true | FileCheck %s
 
 ; RUN: llc < %s -mtriple=armv7k-apple-watchos2.0 -O0 | FileCheck --check-prefix=CHECK-O0 --check-prefix=WATCH-O0 %s
 ; RUN: llc < %s -mtriple=armv7-apple-ios8.0 -O0 | FileCheck --check-prefix=CHECK-O0 --check-prefix=IOS-O0 %s
@@ -123,6 +123,28 @@ define cxx_fast_tlscc void @__tls_test() {
 entry:
   store i32 0, i32* getelementptr inbounds (%class.C, %class.C* @tC, i64 0, i32 0), align 4
   %0 = tail call i32 @_tlv_atexit(void (i8*)* bitcast (%class.C* (%class.C*)* @_ZN1CD1Ev to void (i8*)*), i8* bitcast (%class.C* @tC to i8*), i8* nonnull @__dso_handle) #1
+  ret void
+}
+
+declare void @somefunc()
+define cxx_fast_tlscc void @test_ccmismatch_notail() {
+; A tail call is not possible here because somefunc does not preserve enough
+; registers.
+; CHECK-LABEL: test_ccmismatch_notail:
+; CHECK-NOT: b _somefunc
+; CHECK: bl _somefunc
+  tail call void @somefunc()
+  ret void
+}
+
+declare cxx_fast_tlscc void @some_fast_tls_func()
+define void @test_ccmismatch_tail() {
+; We can perform a tail call here because some_fast_tls_func preserves all
+; necessary registers (and more).
+; CHECK-LABEL: test_ccmismatch_tail:
+; CHECK-NOT: bl _some_fast_tls_func
+; CHECK: b _some_fast_tls_func
+  tail call cxx_fast_tlscc void @some_fast_tls_func()
   ret void
 }
 

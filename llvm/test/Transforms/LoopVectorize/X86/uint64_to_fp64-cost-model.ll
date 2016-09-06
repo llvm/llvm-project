@@ -5,8 +5,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-macosx10.8.0"
 
 
-; CHECK: cost of 20 for VF 2 For instruction:   %conv = uitofp i64 %tmp to double
-; CHECK: cost of 40 for VF 4 For instruction:   %conv = uitofp i64 %tmp to double
+; CHECK: cost of 10 for VF 2 For instruction:   %conv = uitofp i64 %tmp to double
+; CHECK: cost of 20 for VF 4 For instruction:   %conv = uitofp i64 %tmp to double
 define void @uint64_to_double_cost(i64* noalias nocapture %a, double* noalias nocapture readonly %b) nounwind {
 entry:
   br label %for.body

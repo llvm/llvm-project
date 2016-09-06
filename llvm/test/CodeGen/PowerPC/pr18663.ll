@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=ppc64 -mtriple=powerpc64-unknown-linux-gnu
-; RUN: llc < %s -march=ppc64le -mtriple=powerpc64le-unknown-linux-gnu
+; RUN: llc -verify-machineinstrs < %s -march=ppc64 -mtriple=powerpc64-unknown-linux-gnu
+; RUN: llc -verify-machineinstrs < %s -march=ppc64le -mtriple=powerpc64le-unknown-linux-gnu
 
 %class.Point.1 = type { %class.Tensor.0 }
 %class.Tensor.0 = type { [3 x double] }

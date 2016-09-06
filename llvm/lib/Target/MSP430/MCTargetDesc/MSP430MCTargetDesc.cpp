@@ -14,7 +14,6 @@
 #include "MSP430MCTargetDesc.h"
 #include "InstPrinter/MSP430InstPrinter.h"
 #include "MSP430MCAsmInfo.h"
-#include "llvm/MC/MCCodeGenInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -48,15 +47,6 @@ createMSP430MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   return createMSP430MCSubtargetInfoImpl(TT, CPU, FS);
 }
 
-static MCCodeGenInfo *createMSP430MCCodeGenInfo(const Triple &TT,
-                                                Reloc::Model RM,
-                                                CodeModel::Model CM,
-                                                CodeGenOpt::Level OL) {
-  MCCodeGenInfo *X = new MCCodeGenInfo();
-  X->initMCCodeGenInfo(RM, CM, OL);
-  return X;
-}
-
 static MCInstPrinter *createMSP430MCInstPrinter(const Triple &T,
                                                 unsigned SyntaxVariant,
                                                 const MCAsmInfo &MAI,
@@ -70,10 +60,6 @@ static MCInstPrinter *createMSP430MCInstPrinter(const Triple &T,
 extern "C" void LLVMInitializeMSP430TargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfo<MSP430MCAsmInfo> X(TheMSP430Target);
-
-  // Register the MC codegen info.
-  TargetRegistry::RegisterMCCodeGenInfo(TheMSP430Target,
-                                        createMSP430MCCodeGenInfo);
 
   // Register the MC instruction info.
   TargetRegistry::RegisterMCInstrInfo(TheMSP430Target, createMSP430MCInstrInfo);

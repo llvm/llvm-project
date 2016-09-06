@@ -51,6 +51,7 @@ char *internal_strncpy(char *dst, const char *src, uptr n);
 uptr internal_strnlen(const char *s, uptr maxlen);
 char *internal_strrchr(const char *s, int c);
 // This is O(N^2), but we are not using it in hot places.
+uptr internal_wcslen(const wchar_t *s);
 char *internal_strstr(const char *haystack, const char *needle);
 // Works only for base=10 and doesn't set errno.
 s64 internal_simple_strtoll(const char *nptr, char **endptr, int base);
@@ -61,15 +62,18 @@ int internal_snprintf(char *buffer, uptr length, const char *format, ...);
 bool mem_is_zero(const char *mem, uptr size);
 
 // I/O
-const fd_t kInvalidFd = (fd_t)-1;
-const fd_t kStdinFd = 0;
-const fd_t kStdoutFd = (fd_t)1;
-const fd_t kStderrFd = (fd_t)2;
+// Define these as macros so we can use them in linker initialized global
+// structs without dynamic initialization.
+#define kInvalidFd ((fd_t)-1)
+#define kStdinFd ((fd_t)0)
+#define kStdoutFd ((fd_t)1)
+#define kStderrFd ((fd_t)2)
 
 uptr internal_ftruncate(fd_t fd, uptr size);
 
 // OS
 void NORETURN internal__exit(int exitcode);
+unsigned int internal_sleep(unsigned int seconds);
 
 uptr internal_getpid();
 uptr internal_getppid();

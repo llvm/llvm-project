@@ -41,6 +41,9 @@ extern "C" {
 
   // Tell the tools to write their reports to "path.<pid>" instead of stderr.
   void __sanitizer_set_report_path(const char *path);
+  // Tell the tools to write their reports to the provided file descriptor
+  // (casted to void *).
+  void __sanitizer_set_report_fd(void *fd);
 
   // Notify the tools that the sandbox is going to be turned on. The reserved
   // parameter will be used in the future to hold a structure with functions
@@ -128,8 +131,45 @@ extern "C" {
                                     const void *s2, size_t n, int result);
   void __sanitizer_weak_hook_strncmp(void *called_pc, const char *s1,
                                     const char *s2, size_t n, int result);
+  void __sanitizer_weak_hook_strncasecmp(void *called_pc, const char *s1,
+                                         const char *s2, size_t n, int result);
   void __sanitizer_weak_hook_strcmp(void *called_pc, const char *s1,
                                     const char *s2, int result);
+  void __sanitizer_weak_hook_strcasecmp(void *called_pc, const char *s1,
+                                        const char *s2, int result);
+  void __sanitizer_weak_hook_strstr(void *called_pc, const char *s1,
+                                    const char *s2, char *result);
+  void __sanitizer_weak_hook_strcasestr(void *called_pc, const char *s1,
+                                        const char *s2, char *result);
+  void __sanitizer_weak_hook_memmem(void *called_pc,
+                                    const void *s1, size_t len1,
+                                    const void *s2, size_t len2, void *result);
+
+  // Prints stack traces for all live heap allocations ordered by total
+  // allocation size until `top_percent` of total live heap is shown.
+  // `top_percent` should be between 1 and 100.
+  // Experimental feature currently available only with asan on Linux/x86_64.
+  void __sanitizer_print_memory_profile(size_t top_percent);
+
+  // Fiber annotation interface.
+  // Before switching to a different stack, one must call
+  // __sanitizer_start_switch_fiber with a pointer to the bottom of the
+  // destination stack and its size. When code starts running on the new stack,
+  // it must call __sanitizer_finish_switch_fiber to finalize the switch.
+  // The start_switch function takes a void** to store the current fake stack if
+  // there is one (it is needed when detect_stack_use_after_return is enabled).
+  // When restoring a stack, this pointer must be given to the finish_switch
+  // function. In most cases, this void* can be stored on the stack just before
+  // switching.  When leaving a fiber definitely, null must be passed as first
+  // argument to the start_switch function so that the fake stack is destroyed.
+  // If you do not want support for stack use-after-return detection, you can
+  // always pass null to these two functions.
+  // Note that the fake stack mechanism is disabled during fiber switch, so if a
+  // signal callback runs during the switch, it will not benefit from the stack
+  // use-after-return detection.
+  void __sanitizer_start_switch_fiber(void **fake_stack_save,
+                                      const void *bottom, size_t size);
+  void __sanitizer_finish_switch_fiber(void *fake_stack_save);
 #ifdef __cplusplus
 }  // extern "C"
 #endif

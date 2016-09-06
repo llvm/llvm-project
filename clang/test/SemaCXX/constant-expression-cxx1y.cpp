@@ -179,12 +179,10 @@ namespace string_assign {
   static_assert(!test1(100), "");
   static_assert(!test1(101), ""); // expected-error {{constant expression}} expected-note {{in call to 'test1(101)'}}
 
-  // FIXME: We should be able to reject this before it's called
-  constexpr void f() {
+  constexpr void f() { // expected-error{{constexpr function never produces a constant expression}} expected-note@+2{{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}}
     char foo[10] = { "z" }; // expected-note {{here}}
-    foo[10] = 'x'; // expected-warning {{past the end}} expected-note {{assignment to dereferenced one-past-the-end pointer}}
+    foo[10] = 'x'; // expected-warning {{past the end}}
   }
-  constexpr int k = (f(), 0); // expected-error {{constant expression}} expected-note {{in call}}
 }
 
 namespace array_resize {
@@ -937,4 +935,25 @@ namespace EmptyClass {
   constexpr int testa = f(e1, 3);
   constexpr int testb = f(e2, 3); // expected-error {{constant expression}} expected-note {{in call}}
   constexpr int testc = f(e3, 3);
+}
+
+namespace SpeculativeEvalWrites {
+  // Ensure that we don't try to speculatively evaluate writes.
+  constexpr int f() {
+    int i = 0;
+    int a = 0;
+    // __builtin_object_size speculatively evaluates its first argument.
+    __builtin_object_size((i = 1, &a), 0);
+    return i;
+  }
+
+  static_assert(!f(), "");
+}
+
+namespace PR27989 {
+  constexpr int f(int n) {
+    int a = (n = 1, 0);
+    return n;
+  }
+  static_assert(f(0) == 1, "");
 }

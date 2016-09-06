@@ -1,6 +1,6 @@
-// RUN: %clang_profgen -O2 -o %t %s
-// RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t 1
-// RUN: env LLVM_PROFILE_FILE=%t-2.profraw %run %t
+// RUN: %clang_profgen -mllvm -vp-static-alloc=false  -O2 -o %t %s
+// RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
+// RUN: env LLVM_PROFILE_FILE=%t-2.profraw %run %t DO_NOT_INSTRUMENT
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
 // RUN: llvm-profdata merge -o %t-2.profdata %t-2.profraw
 // RUN: llvm-profdata merge -o %t-merged.profdata %t.profraw %t-2.profdata
@@ -8,11 +8,11 @@
 // RUN: llvm-profdata show --all-functions -ic-targets  %t.profdata | FileCheck  %s
 // RUN: llvm-profdata show --all-functions -ic-targets  %t-merged.profdata | FileCheck  %s
 //
-// RUN: env LLVM_PROFILE_FILE=%t-3.profraw LLVM_VP_BUFFER_SIZE=1 %run %t 1
-// RUN: env LLVM_PROFILE_FILE=%t-4.profraw LLVM_VP_BUFFER_SIZE=8 %run %t 1
-// RUN: env LLVM_PROFILE_FILE=%t-5.profraw LLVM_VP_BUFFER_SIZE=128 %run %t 1
-// RUN: env LLVM_PROFILE_FILE=%t-6.profraw LLVM_VP_BUFFER_SIZE=1024 %run %t 1
-// RUN: env LLVM_PROFILE_FILE=%t-7.profraw LLVM_VP_BUFFER_SIZE=102400 %run %t 1
+// RUN: env LLVM_PROFILE_FILE=%t-3.profraw LLVM_VP_BUFFER_SIZE=1 %run %t
+// RUN: env LLVM_PROFILE_FILE=%t-4.profraw LLVM_VP_BUFFER_SIZE=8 %run %t
+// RUN: env LLVM_PROFILE_FILE=%t-5.profraw LLVM_VP_BUFFER_SIZE=128 %run %t
+// RUN: env LLVM_PROFILE_FILE=%t-6.profraw LLVM_VP_BUFFER_SIZE=1024 %run %t
+// RUN: env LLVM_PROFILE_FILE=%t-7.profraw LLVM_VP_BUFFER_SIZE=102400 %run %t
 // RUN: llvm-profdata merge -o %t-3.profdata %t-3.profraw
 // RUN: llvm-profdata merge -o %t-4.profdata %t-4.profraw
 // RUN: llvm-profdata merge -o %t-5.profdata %t-5.profraw
@@ -80,7 +80,7 @@ int main(int argc, const char *argv[]) {
   unsigned S, NS = 0, I, V, doInstrument = 1;
   const __llvm_profile_data *Data, *DataEnd;
 
-  if (argc < 2)
+  if (argc >= 2 && !strcmp(argv[1], "DO_NOT_INSTRUMENT"))
     doInstrument = 0;
 
   for (I = 0; I < 128; I++) {
@@ -90,9 +90,12 @@ int main(int argc, const char *argv[]) {
   qsort(CallerInfos, sizeof(CallerInfos) / sizeof(CallerInfo), sizeof(CallerInfo),
         cmpaddr);
 
-  /* We will synthesis value profile data for 128 callers functions.
-   * The number of * value sites. The number values for each value site
-   * ranges from 0 to 8.  */
+  /* We will synthesis value profile data for 128 callers functions declared.
+   * The number of value sites for each caller function is recorded in
+   * the NS field of the CallerInfo object. For each value site, the number of
+   * callee values is determined by the site index (modulo 8). The frequency
+   * of each callee target synthesized is equal to V + 1, in which V is the
+   * index of the target value for the callsite. */
 
   Data = __llvm_profile_begin_data();
   DataEnd = __llvm_profile_end_data();

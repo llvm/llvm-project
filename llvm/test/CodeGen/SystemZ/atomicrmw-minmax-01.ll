@@ -1,6 +1,6 @@
 ; Test 8-bit atomic min/max operations.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK
+; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-SHIFT1
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CHECK-SHIFT2
 
@@ -14,23 +14,23 @@
 ;   independent of the other loop prologue instructions.
 define i8 @f1(i8 *%src, i8 %b) {
 ; CHECK-LABEL: f1:
-; CHECK: sllg [[SHIFT:%r[1-9]+]], %r2, 3
-; CHECK: nill %r2, 65532
-; CHECK: l [[OLD:%r[0-9]+]], 0(%r2)
+; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
+; CHECK: sll %r2, 3
+; CHECK: l [[OLD:%r[0-9]+]], 0([[RISBG]])
 ; CHECK: [[LOOP:\.[^:]*]]:
-; CHECK: rll [[ROT:%r[0-9]+]], [[OLD]], 0([[SHIFT]])
+; CHECK: rll [[ROT:%r[0-9]+]], [[OLD]], 0(%r2)
 ; CHECK: crjle [[ROT]], %r3, [[KEEP:\..*]]
 ; CHECK: risbg [[ROT]], %r3, 32, 39, 0
 ; CHECK: [[KEEP]]:
 ; CHECK: rll [[NEW:%r[0-9]+]], [[ROT]], 0({{%r[1-9]+}})
-; CHECK: cs [[OLD]], [[NEW]], 0(%r2)
+; CHECK: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK: jl [[LOOP]]
-; CHECK: rll %r2, [[OLD]], 8([[SHIFT]])
+; CHECK: rll %r2, [[OLD]], 8(%r2)
 ; CHECK: br %r14
 ;
 ; CHECK-SHIFT1-LABEL: f1:
-; CHECK-SHIFT1: sllg [[SHIFT:%r[1-9]+]], %r2, 3
-; CHECK-SHIFT1: lcr [[NEGSHIFT:%r[1-9]+]], [[SHIFT]]
+; CHECK-SHIFT1: sll %r2, 3
+; CHECK-SHIFT1: lcr [[NEGSHIFT:%r[1-9]+]], %r2
 ; CHECK-SHIFT1: rll
 ; CHECK-SHIFT1: rll {{%r[0-9]+}}, {{%r[0-9]+}}, 0([[NEGSHIFT]])
 ; CHECK-SHIFT1: rll
@@ -50,23 +50,23 @@ define i8 @f1(i8 *%src, i8 %b) {
 ; Check signed maximum.
 define i8 @f2(i8 *%src, i8 %b) {
 ; CHECK-LABEL: f2:
-; CHECK: sllg [[SHIFT:%r[1-9]+]], %r2, 3
-; CHECK: nill %r2, 65532
-; CHECK: l [[OLD:%r[0-9]+]], 0(%r2)
+; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
+; CHECK: sll %r2, 3
+; CHECK: l [[OLD:%r[0-9]+]], 0([[RISBG]])
 ; CHECK: [[LOOP:\.[^:]*]]:
-; CHECK: rll [[ROT:%r[0-9]+]], [[OLD]], 0([[SHIFT]])
+; CHECK: rll [[ROT:%r[0-9]+]], [[OLD]], 0(%r2)
 ; CHECK: crjhe [[ROT]], %r3, [[KEEP:\..*]]
 ; CHECK: risbg [[ROT]], %r3, 32, 39, 0
 ; CHECK: [[KEEP]]:
 ; CHECK: rll [[NEW:%r[0-9]+]], [[ROT]], 0({{%r[1-9]+}})
-; CHECK: cs [[OLD]], [[NEW]], 0(%r2)
+; CHECK: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK: jl [[LOOP]]
-; CHECK: rll %r2, [[OLD]], 8([[SHIFT]])
+; CHECK: rll %r2, [[OLD]], 8(%r2)
 ; CHECK: br %r14
 ;
 ; CHECK-SHIFT1-LABEL: f2:
-; CHECK-SHIFT1: sllg [[SHIFT:%r[1-9]+]], %r2, 3
-; CHECK-SHIFT1: lcr [[NEGSHIFT:%r[1-9]+]], [[SHIFT]]
+; CHECK-SHIFT1: sll %r2, 3
+; CHECK-SHIFT1: lcr [[NEGSHIFT:%r[1-9]+]], %r2
 ; CHECK-SHIFT1: rll
 ; CHECK-SHIFT1: rll {{%r[0-9]+}}, {{%r[0-9]+}}, 0([[NEGSHIFT]])
 ; CHECK-SHIFT1: rll
@@ -86,23 +86,23 @@ define i8 @f2(i8 *%src, i8 %b) {
 ; Check unsigned minimum.
 define i8 @f3(i8 *%src, i8 %b) {
 ; CHECK-LABEL: f3:
-; CHECK: sllg [[SHIFT:%r[1-9]+]], %r2, 3
-; CHECK: nill %r2, 65532
-; CHECK: l [[OLD:%r[0-9]+]], 0(%r2)
+; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
+; CHECK: sll %r2, 3
+; CHECK: l [[OLD:%r[0-9]+]], 0([[RISBG]])
 ; CHECK: [[LOOP:\.[^:]*]]:
-; CHECK: rll [[ROT:%r[0-9]+]], [[OLD]], 0([[SHIFT]])
+; CHECK: rll [[ROT:%r[0-9]+]], [[OLD]], 0(%r2)
 ; CHECK: clrjle [[ROT]], %r3, [[KEEP:\..*]]
 ; CHECK: risbg [[ROT]], %r3, 32, 39, 0
 ; CHECK: [[KEEP]]:
 ; CHECK: rll [[NEW:%r[0-9]+]], [[ROT]], 0({{%r[1-9]+}})
-; CHECK: cs [[OLD]], [[NEW]], 0(%r2)
+; CHECK: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK: jl [[LOOP]]
-; CHECK: rll %r2, [[OLD]], 8([[SHIFT]])
+; CHECK: rll %r2, [[OLD]], 8(%r2)
 ; CHECK: br %r14
 ;
 ; CHECK-SHIFT1-LABEL: f3:
-; CHECK-SHIFT1: sllg [[SHIFT:%r[1-9]+]], %r2, 3
-; CHECK-SHIFT1: lcr [[NEGSHIFT:%r[1-9]+]], [[SHIFT]]
+; CHECK-SHIFT1: sll %r2, 3
+; CHECK-SHIFT1: lcr [[NEGSHIFT:%r[1-9]+]], %r2
 ; CHECK-SHIFT1: rll
 ; CHECK-SHIFT1: rll {{%r[0-9]+}}, {{%r[0-9]+}}, 0([[NEGSHIFT]])
 ; CHECK-SHIFT1: rll
@@ -122,23 +122,23 @@ define i8 @f3(i8 *%src, i8 %b) {
 ; Check unsigned maximum.
 define i8 @f4(i8 *%src, i8 %b) {
 ; CHECK-LABEL: f4:
-; CHECK: sllg [[SHIFT:%r[1-9]+]], %r2, 3
-; CHECK: nill %r2, 65532
-; CHECK: l [[OLD:%r[0-9]+]], 0(%r2)
+; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
+; CHECK: sll %r2, 3
+; CHECK: l [[OLD:%r[0-9]+]], 0([[RISBG]])
 ; CHECK: [[LOOP:\.[^:]*]]:
-; CHECK: rll [[ROT:%r[0-9]+]], [[OLD]], 0([[SHIFT]])
+; CHECK: rll [[ROT:%r[0-9]+]], [[OLD]], 0(%r2)
 ; CHECK: clrjhe [[ROT]], %r3, [[KEEP:\..*]]
 ; CHECK: risbg [[ROT]], %r3, 32, 39, 0
 ; CHECK: [[KEEP]]:
 ; CHECK: rll [[NEW:%r[0-9]+]], [[ROT]], 0({{%r[1-9]+}})
-; CHECK: cs [[OLD]], [[NEW]], 0(%r2)
+; CHECK: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK: jl [[LOOP]]
-; CHECK: rll %r2, [[OLD]], 8([[SHIFT]])
+; CHECK: rll %r2, [[OLD]], 8(%r2)
 ; CHECK: br %r14
 ;
 ; CHECK-SHIFT1-LABEL: f4:
-; CHECK-SHIFT1: sllg [[SHIFT:%r[1-9]+]], %r2, 3
-; CHECK-SHIFT1: lcr [[NEGSHIFT:%r[1-9]+]], [[SHIFT]]
+; CHECK-SHIFT1: sll %r2, 3
+; CHECK-SHIFT1: lcr [[NEGSHIFT:%r[1-9]+]], %r2
 ; CHECK-SHIFT1: rll
 ; CHECK-SHIFT1: rll {{%r[0-9]+}}, {{%r[0-9]+}}, 0([[NEGSHIFT]])
 ; CHECK-SHIFT1: rll

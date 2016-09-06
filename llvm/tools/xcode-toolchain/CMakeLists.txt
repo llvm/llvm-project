@@ -52,21 +52,42 @@ if(NOT toolchains_match)
 endif()
 set(toolchains_dir ${CMAKE_MATCH_1})
 
-set(XcodeDefaultInfo "${toolchains_dir}/XcodeDefault.xctoolchain/ToolchainInfo.plist")
 set(LLVMToolchainDir "${CMAKE_INSTALL_PREFIX}/Toolchains/LLVM${PACKAGE_VERSION}.xctoolchain/")
 
 add_custom_command(OUTPUT ${LLVMToolchainDir}
                     COMMAND ${CMAKE_COMMAND} -E make_directory ${LLVMToolchainDir})
 
-add_custom_command(OUTPUT ${LLVMToolchainDir}/ToolchainInfo.plist
+add_custom_command(OUTPUT ${LLVMToolchainDir}/Info.plist
                   DEPENDS ${LLVMToolchainDir}
-                  COMMAND ${CMAKE_COMMAND} -E copy "${XcodeDefaultInfo}" "${LLVMToolchainDir}/ToolchainInfo.plist"
-                  COMMAND /usr/libexec/PlistBuddy -c "Set:Identifier org.llvm.${PACKAGE_VERSION}" "${LLVMToolchainDir}/ToolchainInfo.plist")
+                  COMMAND ${CMAKE_COMMAND} -E remove ${LLVMToolchainDir}/Info.plist
+                  COMMAND /usr/libexec/PlistBuddy -c "Add:CFBundleIdentifier string org.llvm.${PACKAGE_VERSION}" "${LLVMToolchainDir}/Info.plist"
+                  COMMAND /usr/libexec/PlistBuddy -c "Add:CompatibilityVersion integer 1" "${LLVMToolchainDir}/Info.plist"
+                  )
 
 add_custom_target(install-xcode-toolchain
-                  DEPENDS ${LLVMToolchainDir}/ToolchainInfo.plist
+                  DEPENDS ${LLVMToolchainDir}/Info.plist
                   COMMAND "${CMAKE_COMMAND}" --build ${CMAKE_BINARY_DIR} --target all
                   COMMAND "${CMAKE_COMMAND}"
                           -DCMAKE_INSTALL_PREFIX=${LLVMToolchainDir}/usr/
                           -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
-                  ${cmake_3_2_USES_TERMINAL})
+                  USES_TERMINAL)
+
+if(LLVM_DISTRIBUTION_COMPONENTS)
+  if(CMAKE_CONFIGURATION_TYPES)
+    message(FATAL_ERROR "LLVM_DISTRIBUTION_COMPONENTS cannot be specified with multi-configuration generators (i.e. Xcode or Visual Studio)")
+  endif()
+
+  add_custom_target(install-distribution-toolchain
+                  DEPENDS ${LLVMToolchainDir}/Info.plist distribution)
+
+  foreach(target ${LLVM_DISTRIBUTION_COMPONENTS})
+    add_custom_target(install-distribution-${target}
+                DEPENDS ${target}
+                COMMAND "${CMAKE_COMMAND}"
+                        -DCMAKE_INSTALL_COMPONENT=${target}
+                        -DCMAKE_INSTALL_PREFIX=${LLVMToolchainDir}/usr/
+                        -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+                USES_TERMINAL)
+    add_dependencies(install-distribution-toolchain install-distribution-${target})
+  endforeach()
+endif()

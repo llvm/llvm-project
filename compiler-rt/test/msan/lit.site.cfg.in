@@ -1,3 +1,10 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Tool-specific config options.
+config.name_suffix = "@MSAN_TEST_CONFIG_SUFFIX@"
+config.target_cflags = "@MSAN_TEST_TARGET_CFLAGS@"
+config.target_arch = "@MSAN_TEST_TARGET_ARCH@"
+
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
 

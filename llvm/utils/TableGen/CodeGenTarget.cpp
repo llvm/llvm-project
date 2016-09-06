@@ -39,7 +39,7 @@ MVT::SimpleValueType llvm::getValueType(Record *Rec) {
   return (MVT::SimpleValueType)Rec->getValueAsInt("Value");
 }
 
-std::string llvm::getName(MVT::SimpleValueType T) {
+StringRef llvm::getName(MVT::SimpleValueType T) {
   switch (T) {
   case MVT::Other:   return "UNKNOWN";
   case MVT::iPTR:    return "TLI.getPointerTy()";
@@ -48,7 +48,7 @@ std::string llvm::getName(MVT::SimpleValueType T) {
   }
 }
 
-std::string llvm::getEnumName(MVT::SimpleValueType T) {
+StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   switch (T) {
   case MVT::Other:    return "MVT::Other";
   case MVT::i1:       return "MVT::i1";
@@ -300,14 +300,9 @@ GetInstByName(const char *Name,
 /// \brief Return all of the instructions defined by the target, ordered by
 /// their enum value.
 void CodeGenTarget::ComputeInstrsByEnum() const {
-  // The ordering here must match the ordering in TargetOpcodes.h.
   static const char *const FixedInstrs[] = {
-      "PHI",          "INLINEASM",     "CFI_INSTRUCTION",  "EH_LABEL",
-      "GC_LABEL",     "KILL",          "EXTRACT_SUBREG",   "INSERT_SUBREG",
-      "IMPLICIT_DEF", "SUBREG_TO_REG", "COPY_TO_REGCLASS", "DBG_VALUE",
-      "REG_SEQUENCE", "COPY",          "BUNDLE",           "LIFETIME_START",
-      "LIFETIME_END", "STACKMAP",      "PATCHPOINT",       "LOAD_STACK_GUARD",
-      "STATEPOINT",   "LOCAL_ESCAPE",   "FAULTING_LOAD_OP",
+#define HANDLE_TARGET_OPCODE(OPC) #OPC,
+#include "llvm/Target/TargetOpcodes.def"
       nullptr};
   const auto &Insts = getInstructions();
   for (const char *const *p = FixedInstrs; *p; ++p) {
@@ -357,9 +352,9 @@ void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
     BitsInit *BI = R->getValueAsBitsInit("Inst");
 
     unsigned numBits = BI->getNumBits();
- 
+
     SmallVector<Init *, 16> NewBits(numBits);
- 
+
     for (unsigned bit = 0, end = numBits / 2; bit != end; ++bit) {
       unsigned bitSwapIdx = numBits - bit - 1;
       Init *OrigBit = BI->getBit(bit);
@@ -431,18 +426,29 @@ ComplexPattern::ComplexPattern(Record *R) {
 // CodeGenIntrinsic Implementation
 //===----------------------------------------------------------------------===//
 
-std::vector<CodeGenIntrinsic> llvm::LoadIntrinsics(const RecordKeeper &RC,
-                                                   bool TargetOnly) {
-  std::vector<Record*> I = RC.getAllDerivedDefinitions("Intrinsic");
+CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC,
+                                             bool TargetOnly) {
+  std::vector<Record*> Defs = RC.getAllDerivedDefinitions("Intrinsic");
 
-  std::vector<CodeGenIntrinsic> Result;
+  Intrinsics.reserve(Defs.size());
 
-  for (unsigned i = 0, e = I.size(); i != e; ++i) {
-    bool isTarget = I[i]->getValueAsBit("isTarget");
+  for (unsigned I = 0, e = Defs.size(); I != e; ++I) {
+    bool isTarget = Defs[I]->getValueAsBit("isTarget");
     if (isTarget == TargetOnly)
-      Result.push_back(CodeGenIntrinsic(I[i]));
+      Intrinsics.push_back(CodeGenIntrinsic(Defs[I]));
   }
-  return Result;
+  std::sort(Intrinsics.begin(), Intrinsics.end(),
+            [](const CodeGenIntrinsic &LHS, const CodeGenIntrinsic &RHS) {
+              return std::tie(LHS.TargetPrefix, LHS.Name) <
+                     std::tie(RHS.TargetPrefix, RHS.Name);
+            });
+  Targets.push_back({"", 0, 0});
+  for (size_t I = 0, E = Intrinsics.size(); I < E; ++I)
+    if (Intrinsics[I].TargetPrefix != Targets.back().Name) {
+      Targets.back().Count = I - Targets.back().Offset;
+      Targets.push_back({Intrinsics[I].TargetPrefix, I, 0});
+    }
+  Targets.back().Count = Intrinsics.size() - Targets.back().Offset;
 }
 
 CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
@@ -565,7 +571,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
   }
 
   // Parse the intrinsic properties.
-  ListInit *PropList = R->getValueAsListInit("Properties");
+  ListInit *PropList = R->getValueAsListInit("IntrProperties");
   for (unsigned i = 0, e = PropList->size(); i != e; ++i) {
     Record *Property = PropList->getElementAsRecord(i);
     assert(Property->isSubClassOf("IntrinsicProperty") &&
@@ -573,12 +579,12 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
 
     if (Property->getName() == "IntrNoMem")
       ModRef = NoMem;
-    else if (Property->getName() == "IntrReadArgMem")
-      ModRef = ReadArgMem;
     else if (Property->getName() == "IntrReadMem")
-      ModRef = ReadMem;
-    else if (Property->getName() == "IntrReadWriteArgMem")
-      ModRef = ReadWriteArgMem;
+      ModRef = ModRefBehavior(ModRef & ~MR_Mod);
+    else if (Property->getName() == "IntrWriteMem")
+      ModRef = ModRefBehavior(ModRef & ~MR_Ref);
+    else if (Property->getName() == "IntrArgMemOnly")
+      ModRef = ModRefBehavior(ModRef & ~MR_Anywhere);
     else if (Property->getName() == "Commutative")
       isCommutative = true;
     else if (Property->getName() == "Throws")
@@ -592,9 +598,15 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
     else if (Property->isSubClassOf("NoCapture")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
       ArgumentAttributes.push_back(std::make_pair(ArgNo, NoCapture));
+    } else if (Property->isSubClassOf("Returned")) {
+      unsigned ArgNo = Property->getValueAsInt("ArgNo");
+      ArgumentAttributes.push_back(std::make_pair(ArgNo, Returned));
     } else if (Property->isSubClassOf("ReadOnly")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
       ArgumentAttributes.push_back(std::make_pair(ArgNo, ReadOnly));
+    } else if (Property->isSubClassOf("WriteOnly")) {
+      unsigned ArgNo = Property->getValueAsInt("ArgNo");
+      ArgumentAttributes.push_back(std::make_pair(ArgNo, WriteOnly));
     } else if (Property->isSubClassOf("ReadNone")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
       ArgumentAttributes.push_back(std::make_pair(ArgNo, ReadNone));

@@ -166,12 +166,12 @@ public:
 
   /// emitLoadConstPool - Emits a load from constpool to materialize the
   /// specified immediate.
-  virtual void emitLoadConstPool(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator &MBBI,
-                                 DebugLoc dl, unsigned DestReg, unsigned SubIdx,
-                                 int Val, ARMCC::CondCodes Pred = ARMCC::AL,
-                                 unsigned PredReg = 0,
-                                 unsigned MIFlags = MachineInstr::NoFlags)const;
+  virtual void
+  emitLoadConstPool(MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
+                    const DebugLoc &dl, unsigned DestReg, unsigned SubIdx,
+                    int Val, ARMCC::CondCodes Pred = ARMCC::AL,
+                    unsigned PredReg = 0,
+                    unsigned MIFlags = MachineInstr::NoFlags) const;
 
   /// Code Generation virtual methods...
   bool requiresRegisterScavenging(const MachineFunction &MF) const override;

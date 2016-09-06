@@ -19,6 +19,7 @@
 #define LLVM_ANALYSIS_DOMINANCEFRONTIER_H
 
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/PassManager.h"
 #include <map>
 #include <set>
 
@@ -133,63 +134,24 @@ public:
   const DomSetType &calculate(const DomTreeT &DT, const DomTreeNodeT *Node);
 };
 
-class DominanceFrontier : public FunctionPass {
-  ForwardDominanceFrontierBase<BasicBlock> Base;
-
+class DominanceFrontier : public ForwardDominanceFrontierBase<BasicBlock> {
 public:
   typedef DominatorTreeBase<BasicBlock> DomTreeT;
   typedef DomTreeNodeBase<BasicBlock> DomTreeNodeT;
   typedef DominanceFrontierBase<BasicBlock>::DomSetType DomSetType;
   typedef DominanceFrontierBase<BasicBlock>::iterator iterator;
   typedef DominanceFrontierBase<BasicBlock>::const_iterator const_iterator;
+};
 
+class DominanceFrontierWrapperPass : public FunctionPass {
+  DominanceFrontier DF;
+public:
   static char ID; // Pass ID, replacement for typeid
 
-  DominanceFrontier();
+  DominanceFrontierWrapperPass();
 
-  ForwardDominanceFrontierBase<BasicBlock> &getBase() { return Base; }
-
-  inline const std::vector<BasicBlock *> &getRoots() const {
-    return Base.getRoots();
-  }
-
-  BasicBlock *getRoot() const { return Base.getRoot(); }
-
-  bool isPostDominator() const { return Base.isPostDominator(); }
-
-  iterator begin() { return Base.begin(); }
-
-  const_iterator begin() const { return Base.begin(); }
-
-  iterator end() { return Base.end(); }
-
-  const_iterator end() const { return Base.end(); }
-
-  iterator find(BasicBlock *B) { return Base.find(B); }
-
-  const_iterator find(BasicBlock *B) const { return Base.find(B); }
-
-  iterator addBasicBlock(BasicBlock *BB, const DomSetType &frontier) {
-    return Base.addBasicBlock(BB, frontier);
-  }
-
-  void removeBlock(BasicBlock *BB) { return Base.removeBlock(BB); }
-
-  void addToFrontier(iterator I, BasicBlock *Node) {
-    return Base.addToFrontier(I, Node);
-  }
-
-  void removeFromFrontier(iterator I, BasicBlock *Node) {
-    return Base.removeFromFrontier(I, Node);
-  }
-
-  bool compareDomSet(DomSetType &DS1, const DomSetType &DS2) const {
-    return Base.compareDomSet(DS1, DS2);
-  }
-
-  bool compare(DominanceFrontierBase<BasicBlock> &Other) const {
-    return Base.compare(Other);
-  }
+  DominanceFrontier &getDominanceFrontier() { return DF; }
+  const DominanceFrontier &getDominanceFrontier() const { return DF;  }
 
   void releaseMemory() override;
 
@@ -204,6 +166,30 @@ public:
 
 extern template class DominanceFrontierBase<BasicBlock>;
 extern template class ForwardDominanceFrontierBase<BasicBlock>;
+
+/// \brief Analysis pass which computes a \c DominanceFrontier.
+class DominanceFrontierAnalysis
+    : public AnalysisInfoMixin<DominanceFrontierAnalysis> {
+  friend AnalysisInfoMixin<DominanceFrontierAnalysis>;
+  static char PassID;
+
+public:
+  /// \brief Provide the result typedef for this analysis pass.
+  typedef DominanceFrontier Result;
+
+  /// \brief Run the analysis pass over a function and produce a dominator tree.
+  DominanceFrontier run(Function &F, FunctionAnalysisManager &AM);
+};
+
+/// \brief Printer pass for the \c DominanceFrontier.
+class DominanceFrontierPrinterPass
+    : public PassInfoMixin<DominanceFrontierPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit DominanceFrontierPrinterPass(raw_ostream &OS);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 
 } // End llvm namespace
 

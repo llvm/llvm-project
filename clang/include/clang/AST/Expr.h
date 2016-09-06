@@ -29,6 +29,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
 
 namespace clang {
@@ -593,6 +594,13 @@ public:
   bool EvaluateAsInt(llvm::APSInt &Result, const ASTContext &Ctx,
                      SideEffectsKind AllowSideEffects = SE_NoSideEffects) const;
 
+  /// EvaluateAsFloat - Return true if this is a constant which we can fold and
+  /// convert to a floating point value, using any crazy technique that we
+  /// want to.
+  bool
+  EvaluateAsFloat(llvm::APFloat &Result, const ASTContext &Ctx,
+                  SideEffectsKind AllowSideEffects = SE_NoSideEffects) const;
+
   /// isEvaluatable - Call EvaluateAsRValue to see if this expression can be
   /// constant folded without side-effects, but discard the result.
   bool isEvaluatable(const ASTContext &Ctx,
@@ -847,10 +855,12 @@ public:
                   ExprObjectKind OK = OK_Ordinary,
                   Expr *SourceExpr = nullptr)
     : Expr(OpaqueValueExprClass, T, VK, OK,
-           T->isDependentType(), 
+           T->isDependentType() ||
+           (SourceExpr && SourceExpr->isTypeDependent()),
            T->isDependentType() || 
            (SourceExpr && SourceExpr->isValueDependent()),
-           T->isInstantiationDependentType(),
+           T->isInstantiationDependentType() ||
+           (SourceExpr && SourceExpr->isInstantiationDependent()),
            false),
       SourceExpr(SourceExpr), Loc(Loc) {
   }
@@ -1108,6 +1118,10 @@ public:
       return 0;
 
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs;
+  }
+
+  ArrayRef<TemplateArgumentLoc> template_arguments() const {
+    return {getTemplateArgs(), getNumTemplateArgs()};
   }
 
   /// \brief Returns true if this expression refers to a function that
@@ -2479,6 +2493,10 @@ public:
       return 0;
 
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs;
+  }
+
+  ArrayRef<TemplateArgumentLoc> template_arguments() const {
+    return {getTemplateArgs(), getNumTemplateArgs()};
   }
 
   /// \brief Retrieve the member declaration name info.
@@ -3946,7 +3964,7 @@ private:
 
   /// Whether this designated initializer used the GNU deprecated
   /// syntax rather than the C99 '=' syntax.
-  bool GNUSyntax : 1;
+  unsigned GNUSyntax : 1;
 
   /// The number of designators in this initializer expression.
   unsigned NumDesignators : 15;
@@ -3960,11 +3978,10 @@ private:
   /// expression.
   Designator *Designators;
 
-
-  DesignatedInitExpr(const ASTContext &C, QualType Ty, unsigned NumDesignators,
-                     const Designator *Designators,
+  DesignatedInitExpr(const ASTContext &C, QualType Ty,
+                     llvm::ArrayRef<Designator> Designators,
                      SourceLocation EqualOrColonLoc, bool GNUSyntax,
-                     ArrayRef<Expr*> IndexExprs, Expr *Init);
+                     ArrayRef<Expr *> IndexExprs, Expr *Init);
 
   explicit DesignatedInitExpr(unsigned NumSubExprs)
     : Expr(DesignatedInitExprClass, EmptyShell()),
@@ -4124,8 +4141,7 @@ public:
   };
 
   static DesignatedInitExpr *Create(const ASTContext &C,
-                                    Designator *Designators,
-                                    unsigned NumDesignators,
+                                    llvm::ArrayRef<Designator> Designators,
                                     ArrayRef<Expr*> IndexExprs,
                                     SourceLocation EqualOrColonLoc,
                                     bool GNUSyntax, Expr *Init);
@@ -4137,48 +4153,15 @@ public:
   unsigned size() const { return NumDesignators; }
 
   // Iterator access to the designators.
-  typedef Designator *designators_iterator;
-  designators_iterator designators_begin() { return Designators; }
-  designators_iterator designators_end() {
-    return Designators + NumDesignators;
+  llvm::MutableArrayRef<Designator> designators() {
+    return {Designators, NumDesignators};
   }
 
-  typedef const Designator *const_designators_iterator;
-  const_designators_iterator designators_begin() const { return Designators; }
-  const_designators_iterator designators_end() const {
-    return Designators + NumDesignators;
+  llvm::ArrayRef<Designator> designators() const {
+    return {Designators, NumDesignators};
   }
 
-  typedef llvm::iterator_range<designators_iterator> designators_range;
-  designators_range designators() {
-    return designators_range(designators_begin(), designators_end());
-  }
-
-  typedef llvm::iterator_range<const_designators_iterator>
-          designators_const_range;
-  designators_const_range designators() const {
-    return designators_const_range(designators_begin(), designators_end());
-  }
-
-  typedef std::reverse_iterator<designators_iterator>
-          reverse_designators_iterator;
-  reverse_designators_iterator designators_rbegin() {
-    return reverse_designators_iterator(designators_end());
-  }
-  reverse_designators_iterator designators_rend() {
-    return reverse_designators_iterator(designators_begin());
-  }
-
-  typedef std::reverse_iterator<const_designators_iterator>
-          const_reverse_designators_iterator;
-  const_reverse_designators_iterator designators_rbegin() const {
-    return const_reverse_designators_iterator(designators_end());
-  }
-  const_reverse_designators_iterator designators_rend() const {
-    return const_reverse_designators_iterator(designators_begin());
-  }
-
-  Designator *getDesignator(unsigned Idx) { return &designators_begin()[Idx]; }
+  Designator *getDesignator(unsigned Idx) { return &designators()[Idx]; }
 
   void setDesignators(const ASTContext &C, const Designator *Desigs,
                       unsigned NumDesigs);
@@ -4828,16 +4811,6 @@ public:
     BI_First = 0
   };
 
-  // The ABI values for various atomic memory orderings.
-  enum AtomicOrderingKind {
-    AO_ABI_memory_order_relaxed = 0,
-    AO_ABI_memory_order_consume = 1,
-    AO_ABI_memory_order_acquire = 2,
-    AO_ABI_memory_order_release = 3,
-    AO_ABI_memory_order_acq_rel = 4,
-    AO_ABI_memory_order_seq_cst = 5
-  };
-
 private:
   enum { PTR, ORDER, VAL1, ORDER_FAIL, VAL2, WEAK, END_EXPR };
   Stmt* SubExprs[END_EXPR];
@@ -4886,9 +4859,12 @@ public:
   }
 
   AtomicOp getOp() const { return Op; }
-  unsigned getNumSubExprs() { return NumSubExprs; }
+  unsigned getNumSubExprs() const { return NumSubExprs; }
 
   Expr **getSubExprs() { return reinterpret_cast<Expr **>(SubExprs); }
+  const Expr * const *getSubExprs() const {
+    return reinterpret_cast<Expr * const *>(SubExprs);
+  }
 
   bool isVolatile() const {
     return getPtr()->getType()->getPointeeType().isVolatileQualified();

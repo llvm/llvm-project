@@ -28,7 +28,7 @@ namespace llvm {
   /// type can be represented by an MVT.
 class MVT {
   public:
-    enum SimpleValueType {
+    enum SimpleValueType : int8_t {
       // INVALID_SIMPLE_VALUE_TYPE - Simple value types less than zero are
       // considered extended value types.
       INVALID_SIMPLE_VALUE_TYPE = -1,
@@ -142,38 +142,38 @@ class MVT {
       MAX_ALLOWED_VALUETYPE = 96,
 
       // Token - A value of type llvm::TokenTy
-      token          = 249,
+      token          = 120,
 
       // Metadata - This is MDNode or MDString.
-      Metadata       = 250,
+      Metadata       = 121,
 
       // iPTRAny - An int value the size of the pointer of the current
       // target to any address space. This must only be used internal to
       // tblgen. Other than for overloading, we treat iPTRAny the same as iPTR.
-      iPTRAny        = 251,
+      iPTRAny        = 122,
 
       // vAny - A vector with any length and element size. This is used
       // for intrinsics that have overloadings based on vector types.
       // This is only for tblgen's consumption!
-      vAny           = 252,
+      vAny           = 123,
 
       // fAny - Any floating-point or vector floating-point value. This is used
       // for intrinsics that have overloadings based on floating-point types.
       // This is only for tblgen's consumption!
-      fAny           = 253,
+      fAny           = 124,
 
       // iAny - An integer or vector integer value of any bit width. This is
       // used for intrinsics that have overloadings based on integer bit widths.
       // This is only for tblgen's consumption!
-      iAny           = 254,
+      iAny           = 125,
 
       // iPTR - An int value the size of the pointer of the current
       // target.  This should only be used internal to tblgen!
-      iPTR           = 255,
+      iPTR           = 126,
 
       // Any - Any type. This is used for intrinsics that have overloadings.
       // This is only for tblgen's consumption!
-      Any            = 256
+      Any            = 127
     };
 
     SimpleValueType SimpleTy;
@@ -208,6 +208,13 @@ class MVT {
                SimpleTy <= MVT::LAST_INTEGER_VALUETYPE) ||
               (SimpleTy >= MVT::FIRST_INTEGER_VECTOR_VALUETYPE &&
                SimpleTy <= MVT::LAST_INTEGER_VECTOR_VALUETYPE));
+    }
+
+    /// isScalarInteger - Return true if this is an integer, not including
+    /// vectors.
+    bool isScalarInteger() const {
+      return (SimpleTy >= MVT::FIRST_INTEGER_VALUETYPE &&
+              SimpleTy <= MVT::LAST_INTEGER_VALUETYPE);
     }
 
     /// isVector - Return true if this is a vector value type.

@@ -65,6 +65,12 @@ protected:
   LiveRegMatrix *Matrix;
   RegisterClassInfo RegClassInfo;
 
+  /// Inst which is a def of an original reg and whose defs are already all
+  /// dead after remat is saved in DeadRemats. The deletion of such inst is
+  /// postponed till all the allocations are done, so its remat expr is
+  /// always available for the remat of all the siblings of the original reg.
+  SmallPtrSet<MachineInstr *, 32> DeadRemats;
+
   RegAllocBase()
     : TRI(nullptr), MRI(nullptr), VRM(nullptr), LIS(nullptr), Matrix(nullptr) {}
 
@@ -76,6 +82,10 @@ protected:
   // The top-level driver. The output is a VirtRegMap that us updated with
   // physical register assignments.
   void allocatePhysRegs();
+
+  // Include spiller post optimization and removing dead defs left because of
+  // rematerialization.
+  virtual void postOptimization();
 
   // Get a temporary reference to a Spiller instance.
   virtual Spiller &spiller() = 0;

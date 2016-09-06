@@ -19,6 +19,8 @@ define void @fpmath1(i32 %i, float %f, <2 x float> %g) {
 ; CHECK: fpmath accuracy not a positive number!
   %z = fadd float %f, %f, !fpmath !6
 ; CHECK: fpmath accuracy not a positive number!
+  %double.fpmath = fadd float %f, %f, !fpmath !7
+; CHECK: fpmath accuracy must have float type
   ret void
 }
 
@@ -29,3 +31,4 @@ define void @fpmath1(i32 %i, float %f, <2 x float> %g) {
 !4 = !{ float -1.0 }
 !5 = !{ float 0.0 }
 !6 = !{ float 0x7FFFFFFF00000000 }
+!7 = !{ double 1.0 }

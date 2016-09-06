@@ -55,3 +55,28 @@ void fn2() {
   f(THIS_IS_AN_ERROR, // expected-error {{use of undeclared identifier 'THIS_IS_AN_ERROR'}}
     afunction(afunction_));  // expected-error {{use of undeclared identifier 'afunction_'; did you mean 'afunction'?}}
 }
+
+int d = X ? d : L; // expected-error 2 {{use of undeclared identifier}}
+
+int fn_with_ids() { ID = ID == ID >= ID ; } // expected-error 4 {{use of undeclared identifier}}
+
+int fn_with_rs(int r) { r = TYPO + r * TYPO; } // expected-error 2 {{use of undeclared identifier}}
+
+void fn_with_unknown(int a, int b) {
+  fn_with_unknown(unknown, unknown | unknown); // expected-error 3 {{use of undeclared identifier}}
+}
+
+// Two typos in a parenthesized expression or argument list with a conditional
+// expression caused a crash in C mode.
+//
+// r272587 fixed a similar bug for binary operations. The same fix was needed for
+// conditional expressions.
+
+int g(int x, int y) {
+  return x + y;
+}
+
+int h() {
+  g(x, 5 ? z : 0); // expected-error 2 {{use of undeclared identifier}}
+  (x, 5 ? z : 0);  // expected-error 2 {{use of undeclared identifier}}
+}

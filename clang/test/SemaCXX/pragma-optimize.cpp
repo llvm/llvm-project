@@ -151,14 +151,14 @@ int yet_another_normal(int x) {
 // CHECK-DAG: attributes [[ATTRYETANOTHEROPTNONE]] = { {{.*}}noinline{{.*}}optnone{{.*}} }
 
 // Check that the other functions do NOT have optnone.
-// CHECK-DAG-NOT: attributes [[ATTRFOO]] = { {{.*}}optnone{{.*}} }
-// CHECK-DAG-NOT: attributes [[ATTRBAZ]] = { {{.*}}optnone{{.*}} }
-// CHECK-DAG-NOT: attributes [[ATTRBAX]] = { {{.*}}optnone{{.*}} }
-// CHECK-DAG-NOT: attributes [[ATTRWOMBAT]] = { {{.*}}optnone{{.*}} }
-// CHECK-DAG-NOT: attributes [[ATTRCONTAINER]] = { {{.*}}optnone{{.*}} }
-// CHECK-DAG-NOT: attributes [[ATTRTWICE]] = { {{.*}}optnone{{.*}} }
-// CHECK-DAG-NOT: attributes [[ATTRCONTAINER2]] = { {{.*}}optnone{{.*}} }
-// CHECK-DAG-NOT: attributes [[ATTRCONTAINER3]] = { {{.*}}optnone{{.*}} }
-// CHECK-DAG-NOT: attributes [[ATTRTHRICEINT]] = { {{.*}}optnone{{.*}} }
-// CHECK-DAG-NOT: attributes [[ATTRANOTHERNORMAL]] = { {{.*}}optnone{{.*}} }
-// CHECK-DAG-NOT: attributes [[ATTRYETANOTHERNORMAL]] = { {{.*}}optnone{{.*}} }
+// CHECK-NOT: attributes [[ATTRFOO]] = { {{.*}}optnone{{.*}} }
+// CHECK-NOT: attributes [[ATTRBAZ]] = { {{.*}}optnone{{.*}} }
+// CHECK-NOT: attributes [[ATTRBAX]] = { {{.*}}optnone{{.*}} }
+// CHECK-NOT: attributes [[ATTRWOMBAT]] = { {{.*}}optnone{{.*}} }
+// CHECK-NOT: attributes [[ATTRCONTAINER]] = { {{.*}}optnone{{.*}} }
+// CHECK-NOT: attributes [[ATTRTWICE]] = { {{.*}}optnone{{.*}} }
+// CHECK-NOT: attributes [[ATTRCONTAINER2]] = { {{.*}}optnone{{.*}} }
+// CHECK-NOT: attributes [[ATTRCONTAINER3]] = { {{.*}}optnone{{.*}} }
+// CHECK-NOT: attributes [[ATTRTHRICEINT]] = { {{.*}}optnone{{.*}} }
+// CHECK-NOT: attributes [[ATTRANOTHERNORMAL]] = { {{.*}}optnone{{.*}} }
+// CHECK-NOT: attributes [[ATTRYETANOTHERNORMAL]] = { {{.*}}optnone{{.*}} }

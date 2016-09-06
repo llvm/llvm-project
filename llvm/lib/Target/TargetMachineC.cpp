@@ -18,7 +18,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CodeGenCWrappers.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Host.h"
@@ -31,15 +31,6 @@
 #include <cstring>
 
 using namespace llvm;
-
-namespace llvm {
-// Friend to the TargetMachine, access legacy API that are made private in C++
-struct C_API_PRIVATE_ACCESS {
-  static const DataLayout &getDataLayout(const TargetMachine &T) {
-    return T.getDataLayout();
-  }
-};
-}
 
 static TargetMachine *unwrap(LLVMTargetMachineRef P) {
   return reinterpret_cast<TargetMachine *>(P);
@@ -68,9 +59,8 @@ LLVMTargetRef LLVMGetNextTarget(LLVMTargetRef T) {
 
 LLVMTargetRef LLVMGetTargetFromName(const char *Name) {
   StringRef NameRef = Name;
-  auto I = std::find_if(
-      TargetRegistry::targets().begin(), TargetRegistry::targets().end(),
-      [&](const Target &T) { return T.getName() == NameRef; });
+  auto I = find_if(TargetRegistry::targets(),
+                   [&](const Target &T) { return T.getName() == NameRef; });
   return I != TargetRegistry::targets().end() ? wrap(&*I) : nullptr;
 }
 
@@ -114,7 +104,7 @@ LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
         const char* Triple, const char* CPU, const char* Features,
         LLVMCodeGenOptLevel Level, LLVMRelocMode Reloc,
         LLVMCodeModel CodeModel) {
-  Reloc::Model RM;
+  Optional<Reloc::Model> RM;
   switch (Reloc){
     case LLVMRelocStatic:
       RM = Reloc::Static;
@@ -126,7 +116,6 @@ LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
       RM = Reloc::DynamicNoPIC;
       break;
     default:
-      RM = Reloc::Default;
       break;
   }
 
@@ -175,14 +164,13 @@ char* LLVMGetTargetMachineFeatureString(LLVMTargetMachineRef T) {
   return strdup(StringRep.c_str());
 }
 
-/** Deprecated: use LLVMGetDataLayout(LLVMModuleRef M) instead. */
-LLVMTargetDataRef LLVMGetTargetMachineData(LLVMTargetMachineRef T) {
-  return wrap(&C_API_PRIVATE_ACCESS::getDataLayout(*unwrap(T)));
-}
-
 void LLVMSetTargetMachineAsmVerbosity(LLVMTargetMachineRef T,
                                       LLVMBool VerboseAsm) {
   unwrap(T)->Options.MCOptions.AsmVerbose = VerboseAsm;
+}
+
+LLVMTargetDataRef LLVMCreateTargetDataLayout(LLVMTargetMachineRef T) {
+  return wrap(new DataLayout(unwrap(T)->createDataLayout()));
 }
 
 static LLVMBool LLVMTargetMachineEmit(LLVMTargetMachineRef T, LLVMModuleRef M,

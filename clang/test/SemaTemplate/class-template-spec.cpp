@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 template<typename T, typename U = int> struct A; // expected-note {{template is declared here}} \
                                                  // expected-note{{explicitly specialized}}
 
@@ -75,7 +77,10 @@ struct A<double> { }; // expected-error{{template specialization requires 'templ
 template<> struct ::A<double>;
 
 namespace N {
-  template<typename T> struct B; // expected-note 2{{explicitly specialized}}
+  template<typename T> struct B; // expected-note {{explicitly specialized}}
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{explicitly specialized}}
+#endif
 
   template<> struct ::N::B<char>; // okay
   template<> struct ::N::B<short>; // okay
@@ -86,7 +91,11 @@ namespace N {
 
 template<> struct N::B<int> { }; // okay
 
-template<> struct N::B<float> { }; // expected-warning{{C++11 extension}}
+template<> struct N::B<float> { };
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{first declaration of class template specialization of 'B' outside namespace 'N' is a C++11 extension}}
+#endif
+
 
 namespace M {
   template<> struct ::N::B<short> { }; // expected-error{{class template specialization of 'B' not in a namespace enclosing 'N'}}
@@ -142,13 +151,26 @@ namespace PR18009 {
 }
 
 namespace PR16519 {
-  template<typename T, T...N> struct integer_sequence { typedef T value_type; }; // expected-warning {{extension}}
+  template<typename T, T...N> struct integer_sequence { typedef T value_type; };
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{variadic templates are a C++11 extension}}
+#endif
 
   template<typename T> struct __make_integer_sequence;
-  template<typename T, T N> using make_integer_sequence = typename __make_integer_sequence<T>::template make<N, N % 2>::type; // expected-warning {{extension}}
+  template<typename T, T N> using make_integer_sequence = typename __make_integer_sequence<T>::template make<N, N % 2>::type;
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{alias declarations are a C++11 extension}}
+#endif
 
-  template<typename T, typename T::value_type ...Extra> struct __make_integer_sequence_impl; // expected-warning {{extension}}
-  template<typename T, T ...N, T ...Extra> struct __make_integer_sequence_impl<integer_sequence<T, N...>, Extra...> { // expected-warning 2{{extension}}
+  template<typename T, typename T::value_type ...Extra> struct __make_integer_sequence_impl;
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{variadic templates are a C++11 extension}}
+#endif
+
+  template<typename T, T ...N, T ...Extra> struct __make_integer_sequence_impl<integer_sequence<T, N...>, Extra...> {
+#if __cplusplus <= 199711L
+  // expected-warning@-2 2 {{variadic templates are a C++11 extension}}
+#endif
     typedef integer_sequence<T, N..., sizeof...(N) + N..., Extra...> type;
   };
 
@@ -160,8 +182,15 @@ namespace PR16519 {
     template<T N, typename Dummy> struct make<N, 1, Dummy> : __make_integer_sequence_impl<make_integer_sequence<T, N/2>, N - 1> {};
   };
 
-  using X = make_integer_sequence<int, 5>; // expected-warning {{extension}}
-  using X = integer_sequence<int, 0, 1, 2, 3, 4>; // expected-warning {{extension}}
+  using X = make_integer_sequence<int, 5>;
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{alias declarations are a C++11 extension}}
+#endif
+
+  using X = integer_sequence<int, 0, 1, 2, 3, 4>;
+#if __cplusplus <= 199711L
+  // expected-warning@-2 {{alias declarations are a C++11 extension}}
+#endif
 }
 
 namespace DefaultArgVsPartialSpec {

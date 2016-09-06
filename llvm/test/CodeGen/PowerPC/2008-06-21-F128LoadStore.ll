@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32
+; RUN: llc -verify-machineinstrs < %s -march=ppc32
 
 @g = external global ppc_fp128
 @h = external global ppc_fp128

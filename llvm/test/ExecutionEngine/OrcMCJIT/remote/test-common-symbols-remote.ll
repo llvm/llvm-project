@@ -1,5 +1,7 @@
 ; RUN: %lli -jit-kind=orc-mcjit -remote-mcjit -O0 -disable-lazy-compilation=false -mcjit-remote-process=lli-child-target%exeext %s
 ; XFAIL: mingw32,win32
+; UNSUPPORTED: powerpc64-unknown-linux-gnu
+; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 
 ; The intention of this test is to verify that symbols mapped to COMMON in ELF
 ; work as expected.

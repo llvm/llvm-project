@@ -3,7 +3,7 @@
 
 // Test intercept_strstr asan option
 // Disable other interceptors because strlen may be called inside strstr
-// RUN: %env_asan_opts=intercept_strstr=false:replace_str=false %run %t 2>&1
+// RUN: %env_asan_opts=intercept_strstr=false:replace_str=false:intercept_strlen=false %run %t 2>&1
 
 #include <assert.h>
 #include <string.h>

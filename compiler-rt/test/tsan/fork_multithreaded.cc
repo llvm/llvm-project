@@ -1,13 +1,12 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s -check-prefix=CHECK-DIE
 // RUN: %clangxx_tsan -O1 %s -o %t && %env_tsan_opts=die_after_fork=0 %run %t 2>&1 | FileCheck %s -check-prefix=CHECK-NODIE
-// UNSUPPORTED: darwin
 #include "test.h"
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
 static void *sleeper(void *p) {
-  sleep(10);  // not intended to exit during test
+  sleep(1000);  // not intended to exit during test
   return 0;
 }
 

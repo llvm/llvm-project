@@ -1,7 +1,8 @@
-; RUN: llc  < %s -march=mips64el -mcpu=mips64r2 -target-abi=n64 | FileCheck %s 
+; RUN: llc < %s -march=mips64el -mcpu=mips64r2 -target-abi=n64 | FileCheck %s
 
 define i64 @dext(i64 %i) nounwind readnone {
 entry:
+; CHECK-LABEL: dext:
 ; CHECK: dext ${{[0-9]+}}, ${{[0-9]+}}, 5, 10
   %shr = lshr i64 %i, 5
   %and = and i64 %shr, 1023
@@ -10,7 +11,8 @@ entry:
 
 define i64 @dextm(i64 %i) nounwind readnone {
 entry:
-; CHECK: dext ${{[0-9]+}}, ${{[0-9]+}}, 5, 34
+; CHECK-LABEL: dextm:
+; CHECK: dextm ${{[0-9]+}}, ${{[0-9]+}}, 5, 34
   %shr = lshr i64 %i, 5
   %and = and i64 %shr, 17179869183
   ret i64 %and
@@ -18,7 +20,8 @@ entry:
 
 define i64 @dextu(i64 %i) nounwind readnone {
 entry:
-; CHECK: dext ${{[0-9]+}}, ${{[0-9]+}}, 34, 6
+; CHECK-LABEL: dextu:
+; CHECK: dextu ${{[0-9]+}}, ${{[0-9]+}}, 34, 6
   %shr = lshr i64 %i, 34
   %and = and i64 %shr, 63
   ret i64 %and
@@ -26,6 +29,7 @@ entry:
 
 define i64 @dins(i64 %i, i64 %j) nounwind readnone {
 entry:
+; CHECK-LABEL: dins:
 ; CHECK: dins ${{[0-9]+}}, ${{[0-9]+}}, 8, 10
   %shl2 = shl i64 %j, 8
   %and = and i64 %shl2, 261888
@@ -36,6 +40,7 @@ entry:
 
 define i64 @dinsm(i64 %i, i64 %j) nounwind readnone {
 entry:
+; CHECK-LABEL: dinsm:
 ; CHECK: dins ${{[0-9]+}}, ${{[0-9]+}}, 10, 33
   %shl4 = shl i64 %j, 10
   %and = and i64 %shl4, 8796093021184
@@ -46,6 +51,7 @@ entry:
 
 define i64 @dinsu(i64 %i, i64 %j) nounwind readnone {
 entry:
+; CHECK-LABEL: dinsu:
 ; CHECK: dins ${{[0-9]+}}, ${{[0-9]+}}, 40, 13
   %shl4 = shl i64 %j, 40
   %and = and i64 %shl4, 9006099743113216

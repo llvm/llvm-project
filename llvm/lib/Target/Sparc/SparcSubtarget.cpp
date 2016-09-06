@@ -29,10 +29,20 @@ void SparcSubtarget::anchor() { }
 SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                                 StringRef FS) {
   IsV9 = false;
+  IsLeon = false;
   V8DeprecatedInsts = false;
   IsVIS = false;
   HasHardQuad = false;
   UsePopc = false;
+  UseSoftFloat = false;
+
+  // Leon features
+  HasLeonCasa = false;
+  HasUmacSmac = false;
+  InsertNOPLoad = false;
+  FixFSMULD = false;
+  ReplaceFMULS = false;
+  FixAllFDIVSQRT = false;
 
   // Determine default and user specified characteristics
   std::string CPUName = CPU;
@@ -50,9 +60,9 @@ SparcSubtarget &SparcSubtarget::initializeSubtargetDependencies(StringRef CPU,
 }
 
 SparcSubtarget::SparcSubtarget(const Triple &TT, const std::string &CPU,
-                               const std::string &FS, TargetMachine &TM,
+                               const std::string &FS, const TargetMachine &TM,
                                bool is64Bit)
-    : SparcGenSubtargetInfo(TT, CPU, FS), Is64Bit(is64Bit),
+    : SparcGenSubtargetInfo(TT, CPU, FS), TargetTriple(TT), Is64Bit(is64Bit),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
       FrameLowering(*this) {}
 

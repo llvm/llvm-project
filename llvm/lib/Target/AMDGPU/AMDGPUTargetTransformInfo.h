@@ -14,18 +14,18 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_R600_AMDGPUTARGETTRANSFORMINFO_H
-#define LLVM_LIB_TARGET_R600_AMDGPUTARGETTRANSFORMINFO_H
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETTRANSFORMINFO_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUTARGETTRANSFORMINFO_H
 
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/Target/TargetLowering.h"
 
 namespace llvm {
+class AMDGPUTargetLowering;
 
-class AMDGPUTTIImpl : public BasicTTIImplBase<AMDGPUTTIImpl> {
+class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
   typedef BasicTTIImplBase<AMDGPUTTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;
@@ -36,10 +36,33 @@ class AMDGPUTTIImpl : public BasicTTIImplBase<AMDGPUTTIImpl> {
   const AMDGPUSubtarget *getST() const { return ST; }
   const AMDGPUTargetLowering *getTLI() const { return TLI; }
 
+
+  static inline int getFullRateInstrCost() {
+    return TargetTransformInfo::TCC_Basic;
+  }
+
+  static inline int getHalfRateInstrCost() {
+    return 2 * TargetTransformInfo::TCC_Basic;
+  }
+
+  // TODO: The size is usually 8 bytes, but takes 4x as many cycles. Maybe
+  // should be 2 or 4.
+  static inline int getQuarterRateInstrCost() {
+    return 3 * TargetTransformInfo::TCC_Basic;
+  }
+
+   // On some parts, normal fp64 operations are half rate, and others
+   // quarter. This also applies to some integer operations.
+  inline int get64BitInstrCost() const {
+    return ST->hasHalfRate64Ops() ?
+      getHalfRateInstrCost() : getQuarterRateInstrCost();
+  }
+
 public:
-  explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const DataLayout &DL)
-      : BaseT(TM, DL), ST(TM->getSubtargetImpl()),
-        TLI(ST->getTargetLowering()) {}
+  explicit AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
+    : BaseT(TM, F.getParent()->getDataLayout()),
+      ST(TM->getSubtargetImpl(F)),
+      TLI(ST->getTargetLowering()) {}
 
   // Provide value semantics. MSVC requires that we spell all of these out.
   AMDGPUTTIImpl(const AMDGPUTTIImpl &Arg)
@@ -54,17 +77,27 @@ public:
 
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) {
     assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
-    return ST->hasBCNT(TyWidth) ? TTI::PSK_FastHardware : TTI::PSK_Software;
+    return TTI::PSK_FastHardware;
   }
 
   unsigned getNumberOfRegisters(bool Vector);
   unsigned getRegisterBitWidth(bool Vector);
+  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace);
   unsigned getMaxInterleaveFactor(unsigned VF);
+
+  int getArithmeticInstrCost(
+    unsigned Opcode, Type *Ty,
+    TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
+    TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
+    TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
+    TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None);
 
   unsigned getCFInstrCost(unsigned Opcode);
 
   int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
   bool isSourceOfDivergence(const Value *V) const;
+
+  unsigned getVectorSplitCost() { return 0; }
 };
 
 } // end namespace llvm

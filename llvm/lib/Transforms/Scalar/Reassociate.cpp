@@ -20,7 +20,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -39,26 +39,17 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
 using namespace llvm;
+using namespace reassociate;
 
 #define DEBUG_TYPE "reassociate"
 
 STATISTIC(NumChanged, "Number of insts reassociated");
 STATISTIC(NumAnnihil, "Number of expr tree annihilated");
 STATISTIC(NumFactor , "Number of multiplies factored");
-
-namespace {
-  struct ValueEntry {
-    unsigned Rank;
-    Value *Op;
-    ValueEntry(unsigned R, Value *O) : Rank(R), Op(O) {}
-  };
-  inline bool operator<(const ValueEntry &LHS, const ValueEntry &RHS) {
-    return LHS.Rank > RHS.Rank;   // Sort so that highest rank goes to start.
-  }
-}
 
 #ifndef NDEBUG
 /// Print out the expression identified in the Ops list.
@@ -75,121 +66,35 @@ static void PrintOps(Instruction *I, const SmallVectorImpl<ValueEntry> &Ops) {
 }
 #endif
 
-namespace {
-  /// \brief Utility class representing a base and exponent pair which form one
-  /// factor of some product.
-  struct Factor {
-    Value *Base;
-    unsigned Power;
+/// Utility class representing a non-constant Xor-operand. We classify
+/// non-constant Xor-Operands into two categories:
+///  C1) The operand is in the form "X & C", where C is a constant and C != ~0
+///  C2)
+///    C2.1) The operand is in the form of "X | C", where C is a non-zero
+///          constant.
+///    C2.2) Any operand E which doesn't fall into C1 and C2.1, we view this
+///          operand as "E | 0"
+class llvm::reassociate::XorOpnd {
+public:
+  XorOpnd(Value *V);
 
-    Factor(Value *Base, unsigned Power) : Base(Base), Power(Power) {}
+  bool isInvalid() const { return SymbolicPart == nullptr; }
+  bool isOrExpr() const { return isOr; }
+  Value *getValue() const { return OrigVal; }
+  Value *getSymbolicPart() const { return SymbolicPart; }
+  unsigned getSymbolicRank() const { return SymbolicRank; }
+  const APInt &getConstPart() const { return ConstPart; }
 
-    /// \brief Sort factors in descending order by their power.
-    struct PowerDescendingSorter {
-      bool operator()(const Factor &LHS, const Factor &RHS) {
-        return LHS.Power > RHS.Power;
-      }
-    };
+  void Invalidate() { SymbolicPart = OrigVal = nullptr; }
+  void setSymbolicRank(unsigned R) { SymbolicRank = R; }
 
-    /// \brief Compare factors for equal powers.
-    struct PowerEqual {
-      bool operator()(const Factor &LHS, const Factor &RHS) {
-        return LHS.Power == RHS.Power;
-      }
-    };
-  };
-  
-  /// Utility class representing a non-constant Xor-operand. We classify
-  /// non-constant Xor-Operands into two categories:
-  ///  C1) The operand is in the form "X & C", where C is a constant and C != ~0
-  ///  C2)
-  ///    C2.1) The operand is in the form of "X | C", where C is a non-zero
-  ///          constant.
-  ///    C2.2) Any operand E which doesn't fall into C1 and C2.1, we view this
-  ///          operand as "E | 0"
-  class XorOpnd {
-  public:
-    XorOpnd(Value *V);
-
-    bool isInvalid() const { return SymbolicPart == nullptr; }
-    bool isOrExpr() const { return isOr; }
-    Value *getValue() const { return OrigVal; }
-    Value *getSymbolicPart() const { return SymbolicPart; }
-    unsigned getSymbolicRank() const { return SymbolicRank; }
-    const APInt &getConstPart() const { return ConstPart; }
-
-    void Invalidate() { SymbolicPart = OrigVal = nullptr; }
-    void setSymbolicRank(unsigned R) { SymbolicRank = R; }
-
-    // Sort the XorOpnd-Pointer in ascending order of symbolic-value-rank.
-    // The purpose is twofold:
-    // 1) Cluster together the operands sharing the same symbolic-value.
-    // 2) Operand having smaller symbolic-value-rank is permuted earlier, which 
-    //   could potentially shorten crital path, and expose more loop-invariants.
-    //   Note that values' rank are basically defined in RPO order (FIXME). 
-    //   So, if Rank(X) < Rank(Y) < Rank(Z), it means X is defined earlier 
-    //   than Y which is defined earlier than Z. Permute "x | 1", "Y & 2",
-    //   "z" in the order of X-Y-Z is better than any other orders.
-    struct PtrSortFunctor {
-      bool operator()(XorOpnd * const &LHS, XorOpnd * const &RHS) {
-        return LHS->getSymbolicRank() < RHS->getSymbolicRank();
-      }
-    };
-  private:
-    Value *OrigVal;
-    Value *SymbolicPart;
-    APInt ConstPart;
-    unsigned SymbolicRank;
-    bool isOr;
-  };
-}
-
-namespace {
-  class Reassociate : public FunctionPass {
-    DenseMap<BasicBlock*, unsigned> RankMap;
-    DenseMap<AssertingVH<Value>, unsigned> ValueRankMap;
-    SetVector<AssertingVH<Instruction> > RedoInsts;
-    bool MadeChange;
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    Reassociate() : FunctionPass(ID) {
-      initializeReassociatePass(*PassRegistry::getPassRegistry());
-    }
-
-    bool runOnFunction(Function &F) override;
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      AU.addPreserved<GlobalsAAWrapperPass>();
-    }
-  private:
-    void BuildRankMap(Function &F, ReversePostOrderTraversal<Function *> &RPOT);
-
-    unsigned getRank(Value *V);
-    void canonicalizeOperands(Instruction *I);
-    void ReassociateExpression(BinaryOperator *I);
-    void RewriteExprTree(BinaryOperator *I, SmallVectorImpl<ValueEntry> &Ops);
-    Value *OptimizeExpression(BinaryOperator *I,
-                              SmallVectorImpl<ValueEntry> &Ops);
-    Value *OptimizeAdd(Instruction *I, SmallVectorImpl<ValueEntry> &Ops);
-    Value *OptimizeXor(Instruction *I, SmallVectorImpl<ValueEntry> &Ops);
-    bool CombineXorOpnd(Instruction *I, XorOpnd *Opnd1, APInt &ConstOpnd,
-                        Value *&Res);
-    bool CombineXorOpnd(Instruction *I, XorOpnd *Opnd1, XorOpnd *Opnd2,
-                        APInt &ConstOpnd, Value *&Res);
-    bool collectMultiplyFactors(SmallVectorImpl<ValueEntry> &Ops,
-                                SmallVectorImpl<Factor> &Factors);
-    Value *buildMinimalMultiplyDAG(IRBuilder<> &Builder,
-                                   SmallVectorImpl<Factor> &Factors);
-    Value *OptimizeMul(BinaryOperator *I, SmallVectorImpl<ValueEntry> &Ops);
-    Value *RemoveFactorFromExpression(Value *V, Value *Factor);
-    void EraseInst(Instruction *I);
-    void RecursivelyEraseDeadInsts(Instruction *I,
-                                   SetVector<AssertingVH<Instruction>> &Insts);
-    void OptimizeInst(Instruction *I);
-    Instruction *canonicalizeNegConstExpr(Instruction *I);
-  };
-}
+private:
+  Value *OrigVal;
+  Value *SymbolicPart;
+  APInt ConstPart;
+  unsigned SymbolicRank;
+  bool isOr;
+};
 
 XorOpnd::XorOpnd(Value *V) {
   assert(!isa<ConstantInt>(V) && "No ConstantInt");
@@ -218,13 +123,6 @@ XorOpnd::XorOpnd(Value *V) {
   isOr = true;
 }
 
-char Reassociate::ID = 0;
-INITIALIZE_PASS(Reassociate, "reassociate",
-                "Reassociate expressions", false, false)
-
-// Public interface to the Reassociate pass
-FunctionPass *llvm::createReassociatePass() { return new Reassociate(); }
-
 /// Return true if V is an instruction of the specified opcode and if it
 /// only has one use.
 static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode) {
@@ -247,8 +145,8 @@ static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode1,
   return nullptr;
 }
 
-void Reassociate::BuildRankMap(Function &F,
-                               ReversePostOrderTraversal<Function *> &RPOT) {
+void ReassociatePass::BuildRankMap(
+    Function &F, ReversePostOrderTraversal<Function *> &RPOT) {
   unsigned i = 2;
 
   // Assign distinct ranks to function arguments.
@@ -257,21 +155,19 @@ void Reassociate::BuildRankMap(Function &F,
     DEBUG(dbgs() << "Calculated Rank[" << I->getName() << "] = " << i << "\n");
   }
 
-  for (ReversePostOrderTraversal<Function*>::rpo_iterator I = RPOT.begin(),
-         E = RPOT.end(); I != E; ++I) {
-    BasicBlock *BB = *I;
+  for (BasicBlock *BB : RPOT) {
     unsigned BBRank = RankMap[BB] = ++i << 16;
 
     // Walk the basic block, adding precomputed ranks for any instructions that
     // we cannot move.  This ensures that the ranks for these instructions are
     // all different in the block.
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I)
-      if (mayBeMemoryDependent(*I))
-        ValueRankMap[&*I] = ++BBRank;
+    for (Instruction &I : *BB)
+      if (mayBeMemoryDependent(I))
+        ValueRankMap[&I] = ++BBRank;
   }
 }
 
-unsigned Reassociate::getRank(Value *V) {
+unsigned ReassociatePass::getRank(Value *V) {
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) {
     if (isa<Argument>(V)) return ValueRankMap[V];   // Function argument.
@@ -302,7 +198,7 @@ unsigned Reassociate::getRank(Value *V) {
 }
 
 // Canonicalize constants to RHS.  Otherwise, sort the operands by rank.
-void Reassociate::canonicalizeOperands(Instruction *I) {
+void ReassociatePass::canonicalizeOperands(Instruction *I) {
   assert(isa<BinaryOperator>(I) && "Expected binary operator.");
   assert(I->isCommutative() && "Expected commutative operator.");
 
@@ -712,8 +608,8 @@ static bool LinearizeExprTree(BinaryOperator *I,
 
 /// Now that the operands for this expression tree are
 /// linearized and optimized, emit them in-order.
-void Reassociate::RewriteExprTree(BinaryOperator *I,
-                                  SmallVectorImpl<ValueEntry> &Ops) {
+void ReassociatePass::RewriteExprTree(BinaryOperator *I,
+                                      SmallVectorImpl<ValueEntry> &Ops) {
   assert(Ops.size() > 1 && "Single values should be used directly!");
 
   // Since our optimizations should never increase the number of operations, the
@@ -1096,7 +992,7 @@ static Value *EmitAddTreeOfValues(Instruction *I,
 /// If V is an expression tree that is a multiplication sequence,
 /// and if this sequence contains a multiply by Factor,
 /// remove Factor from the tree and return the new tree.
-Value *Reassociate::RemoveFactorFromExpression(Value *V, Value *Factor) {
+Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
   BinaryOperator *BO = isReassociableOp(V, Instruction::Mul, Instruction::FMul);
   if (!BO)
     return nullptr;
@@ -1130,7 +1026,7 @@ Value *Reassociate::RemoveFactorFromExpression(Value *V, Value *Factor) {
         }
     } else if (ConstantFP *FC1 = dyn_cast<ConstantFP>(Factor)) {
       if (ConstantFP *FC2 = dyn_cast<ConstantFP>(Factors[i].Op)) {
-        APFloat F1(FC1->getValueAPF());
+        const APFloat &F1 = FC1->getValueAPF();
         APFloat F2(FC2->getValueAPF());
         F2.changeSign();
         if (F1.compare(F2) == APFloat::cmpEqual) {
@@ -1259,9 +1155,9 @@ static Value *createAndInstr(Instruction *InsertBefore, Value *Opnd,
 // If it was successful, true is returned, and the "R" and "C" is returned
 // via "Res" and "ConstOpnd", respectively; otherwise, false is returned,
 // and both "Res" and "ConstOpnd" remain unchanged.
-//  
-bool Reassociate::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
-                                 APInt &ConstOpnd, Value *&Res) {
+//
+bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
+                                     APInt &ConstOpnd, Value *&Res) {
   // Xor-Rule 1: (x | c1) ^ c2 = (x | c1) ^ (c1 ^ c1) ^ c2 
   //                       = ((x | c1) ^ c1) ^ (c1 ^ c2)
   //                       = (x & ~c1) ^ (c1 ^ c2)
@@ -1295,8 +1191,9 @@ bool Reassociate::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
 // via "Res" and "ConstOpnd", respectively (If the entire expression is
 // evaluated to a constant, the Res is set to NULL); otherwise, false is
 // returned, and both "Res" and "ConstOpnd" remain unchanged.
-bool Reassociate::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1, XorOpnd *Opnd2,
-                                 APInt &ConstOpnd, Value *&Res) {
+bool ReassociatePass::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1,
+                                     XorOpnd *Opnd2, APInt &ConstOpnd,
+                                     Value *&Res) {
   Value *X = Opnd1->getSymbolicPart();
   if (X != Opnd2->getSymbolicPart())
     return false;
@@ -1370,8 +1267,8 @@ bool Reassociate::CombineXorOpnd(Instruction *I, XorOpnd *Opnd1, XorOpnd *Opnd2,
 /// Optimize a series of operands to an 'xor' instruction. If it can be reduced
 /// to a single Value, it is returned, otherwise the Ops list is mutated as
 /// necessary.
-Value *Reassociate::OptimizeXor(Instruction *I,
-                                SmallVectorImpl<ValueEntry> &Ops) {
+Value *ReassociatePass::OptimizeXor(Instruction *I,
+                                    SmallVectorImpl<ValueEntry> &Ops) {
   if (Value *V = OptimizeAndOrXor(Instruction::Xor, Ops))
     return V;
       
@@ -1406,7 +1303,19 @@ Value *Reassociate::OptimizeXor(Instruction *I,
   //  the same symbolic value cluster together. For instance, the input operand
   //  sequence ("x | 123", "y & 456", "x & 789") will be sorted into:
   //  ("x | 123", "x & 789", "y & 456").
-  std::stable_sort(OpndPtrs.begin(), OpndPtrs.end(), XorOpnd::PtrSortFunctor());
+  //
+  //  The purpose is twofold:
+  //  1) Cluster together the operands sharing the same symbolic-value.
+  //  2) Operand having smaller symbolic-value-rank is permuted earlier, which
+  //     could potentially shorten crital path, and expose more loop-invariants.
+  //     Note that values' rank are basically defined in RPO order (FIXME).
+  //     So, if Rank(X) < Rank(Y) < Rank(Z), it means X is defined earlier
+  //     than Y which is defined earlier than Z. Permute "x | 1", "Y & 2",
+  //     "z" in the order of X-Y-Z is better than any other orders.
+  std::stable_sort(OpndPtrs.begin(), OpndPtrs.end(),
+                   [](XorOpnd *LHS, XorOpnd *RHS) {
+    return LHS->getSymbolicRank() < RHS->getSymbolicRank();
+  });
 
   // Step 3: Combine adjacent operands
   XorOpnd *PrevOpnd = nullptr;
@@ -1479,8 +1388,8 @@ Value *Reassociate::OptimizeXor(Instruction *I,
 /// Optimize a series of operands to an 'add' instruction.  This
 /// optimizes based on identities.  If it can be reduced to a single Value, it
 /// is returned, otherwise the Ops list is mutated as necessary.
-Value *Reassociate::OptimizeAdd(Instruction *I,
-                                SmallVectorImpl<ValueEntry> &Ops) {
+Value *ReassociatePass::OptimizeAdd(Instruction *I,
+                                    SmallVectorImpl<ValueEntry> &Ops) {
   // Scan the operand lists looking for X and -X pairs.  If we find any, we
   // can simplify expressions like X+-X == 0 and X+~X ==-1.  While we're at it,
   // scan for any
@@ -1717,8 +1626,8 @@ Value *Reassociate::OptimizeAdd(Instruction *I,
 ///   ((((x*y)*x)*y)*x) -> [(x, 3), (y, 2)]
 ///
 /// \returns Whether any factors have a power greater than one.
-bool Reassociate::collectMultiplyFactors(SmallVectorImpl<ValueEntry> &Ops,
-                                         SmallVectorImpl<Factor> &Factors) {
+bool ReassociatePass::collectMultiplyFactors(SmallVectorImpl<ValueEntry> &Ops,
+                                             SmallVectorImpl<Factor> &Factors) {
   // FIXME: Have Ops be (ValueEntry, Multiplicity) pairs, simplifying this.
   // Compute the sum of powers of simplifiable factors.
   unsigned FactorPowerSum = 0;
@@ -1764,7 +1673,10 @@ bool Reassociate::collectMultiplyFactors(SmallVectorImpl<ValueEntry> &Ops,
   // below our mininum of '4'.
   assert(FactorPowerSum >= 4);
 
-  std::stable_sort(Factors.begin(), Factors.end(), Factor::PowerDescendingSorter());
+  std::stable_sort(Factors.begin(), Factors.end(),
+                   [](const Factor &LHS, const Factor &RHS) {
+    return LHS.Power > RHS.Power;
+  });
   return true;
 }
 
@@ -1791,8 +1703,9 @@ static Value *buildMultiplyTree(IRBuilder<> &Builder,
 /// equal and the powers are sorted in decreasing order, compute the minimal
 /// DAG of multiplies to compute the final product, and return that product
 /// value.
-Value *Reassociate::buildMinimalMultiplyDAG(IRBuilder<> &Builder,
-                                            SmallVectorImpl<Factor> &Factors) {
+Value *
+ReassociatePass::buildMinimalMultiplyDAG(IRBuilder<> &Builder,
+                                         SmallVectorImpl<Factor> &Factors) {
   assert(Factors[0].Power);
   SmallVector<Value *, 4> OuterProduct;
   for (unsigned LastIdx = 0, Idx = 1, Size = Factors.size();
@@ -1823,7 +1736,9 @@ Value *Reassociate::buildMinimalMultiplyDAG(IRBuilder<> &Builder,
   // Unique factors with equal powers -- we've folded them into the first one's
   // base.
   Factors.erase(std::unique(Factors.begin(), Factors.end(),
-                            Factor::PowerEqual()),
+                            [](const Factor &LHS, const Factor &RHS) {
+                              return LHS.Power == RHS.Power;
+                            }),
                 Factors.end());
 
   // Iteratively collect the base of each factor with an add power into the
@@ -1846,8 +1761,8 @@ Value *Reassociate::buildMinimalMultiplyDAG(IRBuilder<> &Builder,
   return V;
 }
 
-Value *Reassociate::OptimizeMul(BinaryOperator *I,
-                                SmallVectorImpl<ValueEntry> &Ops) {
+Value *ReassociatePass::OptimizeMul(BinaryOperator *I,
+                                    SmallVectorImpl<ValueEntry> &Ops) {
   // We can only optimize the multiplies when there is a chain of more than
   // three, such that a balanced tree might require fewer total multiplies.
   if (Ops.size() < 4)
@@ -1870,8 +1785,8 @@ Value *Reassociate::OptimizeMul(BinaryOperator *I,
   return nullptr;
 }
 
-Value *Reassociate::OptimizeExpression(BinaryOperator *I,
-                                       SmallVectorImpl<ValueEntry> &Ops) {
+Value *ReassociatePass::OptimizeExpression(BinaryOperator *I,
+                                           SmallVectorImpl<ValueEntry> &Ops) {
   // Now that we have the linearized expression tree, try to optimize it.
   // Start by folding any constants that we found.
   Constant *Cst = nullptr;
@@ -1931,7 +1846,7 @@ Value *Reassociate::OptimizeExpression(BinaryOperator *I,
 
 // Remove dead instructions and if any operands are trivially dead add them to
 // Insts so they will be removed as well.
-void Reassociate::RecursivelyEraseDeadInsts(
+void ReassociatePass::RecursivelyEraseDeadInsts(
     Instruction *I, SetVector<AssertingVH<Instruction>> &Insts) {
   assert(isInstructionTriviallyDead(I) && "Trivially dead instructions only!");
   SmallVector<Value *, 4> Ops(I->op_begin(), I->op_end());
@@ -1946,7 +1861,7 @@ void Reassociate::RecursivelyEraseDeadInsts(
 }
 
 /// Zap the given instruction, adding interesting operands to the work list.
-void Reassociate::EraseInst(Instruction *I) {
+void ReassociatePass::EraseInst(Instruction *I) {
   assert(isInstructionTriviallyDead(I) && "Trivially dead instructions only!");
   SmallVector<Value*, 8> Ops(I->op_begin(), I->op_end());
   // Erase the dead instruction.
@@ -1970,7 +1885,7 @@ void Reassociate::EraseInst(Instruction *I) {
 // Canonicalize expressions of the following form:
 //  x + (-Constant * y) -> x - (Constant * y)
 //  x - (-Constant * y) -> x + (Constant * y)
-Instruction *Reassociate::canonicalizeNegConstExpr(Instruction *I) {
+Instruction *ReassociatePass::canonicalizeNegConstExpr(Instruction *I) {
   if (!I->hasOneUse() || I->getType()->isVectorTy())
     return nullptr;
 
@@ -2047,7 +1962,7 @@ Instruction *Reassociate::canonicalizeNegConstExpr(Instruction *I) {
 
 /// Inspect and optimize the given instruction. Note that erasing
 /// instructions is not allowed.
-void Reassociate::OptimizeInst(Instruction *I) {
+void ReassociatePass::OptimizeInst(Instruction *I) {
   // Only consider operations that we understand.
   if (!isa<BinaryOperator>(I))
     return;
@@ -2174,7 +2089,7 @@ void Reassociate::OptimizeInst(Instruction *I) {
   ReassociateExpression(BO);
 }
 
-void Reassociate::ReassociateExpression(BinaryOperator *I) {
+void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
   // First, walk the expression tree, linearizing the tree, collecting the
   // operand information.
   SmallVector<RepeatedValue, 8> Tree;
@@ -2256,10 +2171,7 @@ void Reassociate::ReassociateExpression(BinaryOperator *I) {
   RewriteExprTree(I, Ops);
 }
 
-bool Reassociate::runOnFunction(Function &F) {
-  if (skipOptnoneFunction(F))
-    return false;
-
+PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
   // Reassociate needs for each instruction to have its operands already
   // processed, so we first perform a RPOT of the basic blocks so that
   // when we process a basic block, all its dominators have been processed
@@ -2286,7 +2198,7 @@ bool Reassociate::runOnFunction(Function &F) {
         EraseInst(&*II++);
       } else {
         OptimizeInst(&*II);
-        assert(II->getParent() == BI && "Moved to a different block!");
+        assert(II->getParent() == &*BI && "Moved to a different block!");
         ++II;
       }
 
@@ -2313,5 +2225,46 @@ bool Reassociate::runOnFunction(Function &F) {
   RankMap.clear();
   ValueRankMap.clear();
 
-  return MadeChange;
+  if (MadeChange) {
+    // FIXME: This should also 'preserve the CFG'.
+    auto PA = PreservedAnalyses();
+    PA.preserve<GlobalsAA>();
+    return PA;
+  }
+
+  return PreservedAnalyses::all();
+}
+
+namespace {
+  class ReassociateLegacyPass : public FunctionPass {
+    ReassociatePass Impl;
+  public:
+    static char ID; // Pass identification, replacement for typeid
+    ReassociateLegacyPass() : FunctionPass(ID) {
+      initializeReassociateLegacyPassPass(*PassRegistry::getPassRegistry());
+    }
+
+    bool runOnFunction(Function &F) override {
+      if (skipFunction(F))
+        return false;
+
+      FunctionAnalysisManager DummyFAM;
+      auto PA = Impl.run(F, DummyFAM);
+      return !PA.areAllPreserved();
+    }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.setPreservesCFG();
+      AU.addPreserved<GlobalsAAWrapperPass>();
+    }
+  };
+}
+
+char ReassociateLegacyPass::ID = 0;
+INITIALIZE_PASS(ReassociateLegacyPass, "reassociate",
+                "Reassociate expressions", false, false)
+
+// Public interface to the Reassociate pass
+FunctionPass *llvm::createReassociatePass() {
+  return new ReassociateLegacyPass();
 }

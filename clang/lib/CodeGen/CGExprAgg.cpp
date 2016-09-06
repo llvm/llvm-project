@@ -175,6 +175,7 @@ public:
   }
   void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E);
   void VisitCXXConstructExpr(const CXXConstructExpr *E);
+  void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E);
   void VisitLambdaExpr(LambdaExpr *E);
   void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E);
   void VisitExprWithCleanups(ExprWithCleanups *E);
@@ -749,6 +750,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_BuiltinFnToFnPtr:
   case CK_ZeroToOCLEvent:
   case CK_AddressSpaceConversion:
+  case CK_IntToOCLSampler:
     llvm_unreachable("cast kind invalid for aggregate types");
   }
 }
@@ -967,12 +969,9 @@ void AggExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
   Address ArgValue = Address::invalid();
   Address ArgPtr = CGF.EmitVAArg(VE, ArgValue);
 
+  // If EmitVAArg fails, emit an error.
   if (!ArgPtr.isValid()) {
-    // If EmitVAArg fails, we fall back to the LLVM instruction.
-    llvm::Value *Val = Builder.CreateVAArg(ArgValue.getPointer(),
-                                           CGF.ConvertType(VE->getType()));
-    if (!Dest.isIgnored())
-      Builder.CreateStore(Val, Dest.getAddress());
+    CGF.ErrorUnsupported(VE, "aggregate va_arg expression");
     return;
   }
 
@@ -999,6 +998,14 @@ void
 AggExprEmitter::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   AggValueSlot Slot = EnsureSlot(E->getType());
   CGF.EmitCXXConstructExpr(E, Slot);
+}
+
+void AggExprEmitter::VisitCXXInheritedCtorInitExpr(
+    const CXXInheritedCtorInitExpr *E) {
+  AggValueSlot Slot = EnsureSlot(E->getType());
+  CGF.EmitInheritedCXXConstructorCall(
+      E->getConstructor(), E->constructsVBase(), Slot.getAddress(),
+      E->inheritedFromVBase(), E);
 }
 
 void
@@ -1174,6 +1181,38 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
   unsigned NumInitElements = E->getNumInits();
   RecordDecl *record = E->getType()->castAs<RecordType>()->getDecl();
 
+  // We'll need to enter cleanup scopes in case any of the element
+  // initializers throws an exception.
+  SmallVector<EHScopeStack::stable_iterator, 16> cleanups;
+  llvm::Instruction *cleanupDominator = nullptr;
+
+  unsigned curInitIndex = 0;
+
+  // Emit initialization of base classes.
+  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(record)) {
+    assert(E->getNumInits() >= CXXRD->getNumBases() &&
+           "missing initializer for base class");
+    for (auto &Base : CXXRD->bases()) {
+      assert(!Base.isVirtual() && "should not see vbases here");
+      auto *BaseRD = Base.getType()->getAsCXXRecordDecl();
+      Address V = CGF.GetAddressOfDirectBaseInCompleteClass(
+          Dest.getAddress(), CXXRD, BaseRD,
+          /*isBaseVirtual*/ false);
+      AggValueSlot AggSlot =
+        AggValueSlot::forAddr(V, Qualifiers(),
+                              AggValueSlot::IsDestructed,
+                              AggValueSlot::DoesNotNeedGCBarriers,
+                              AggValueSlot::IsNotAliased);
+      CGF.EmitAggExpr(E->getInit(curInitIndex++), AggSlot);
+
+      if (QualType::DestructionKind dtorKind =
+              Base.getType().isDestructedType()) {
+        CGF.pushDestroy(dtorKind, V, Base.getType());
+        cleanups.push_back(CGF.EHStack.stable_begin());
+      }
+    }
+  }
+
   // Prepare a 'this' for CXXDefaultInitExprs.
   CodeGenFunction::FieldConstructionScope FCS(CGF, Dest.getAddress());
 
@@ -1207,14 +1246,8 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
     return;
   }
 
-  // We'll need to enter cleanup scopes in case any of the member
-  // initializers throw an exception.
-  SmallVector<EHScopeStack::stable_iterator, 16> cleanups;
-  llvm::Instruction *cleanupDominator = nullptr;
-
   // Here we iterate over the fields; this makes it simpler to both
   // default-initialize fields and skip over unnamed fields.
-  unsigned curInitIndex = 0;
   for (const auto *field : record->fields()) {
     // We're done once we hit the flexible array member.
     if (field->getType()->isIncompleteArrayType())
@@ -1320,6 +1353,10 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
       CharUnits NumNonZeroBytes = CharUnits::Zero();
       
       unsigned ILEElement = 0;
+      if (auto *CXXRD = dyn_cast<CXXRecordDecl>(SD))
+        while (ILEElement != CXXRD->getNumBases())
+          NumNonZeroBytes +=
+              GetNumNonZeroBytesInInit(ILE->getInit(ILEElement++), CGF);
       for (const auto *Field : SD->fields()) {
         // We're done once we hit the flexible array member or run out of
         // InitListExpr elements.

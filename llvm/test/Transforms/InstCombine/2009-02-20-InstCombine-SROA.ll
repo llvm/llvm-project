@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -scalarrepl -S | not grep " = alloca"
+; RUN: opt < %s -instcombine -sroa -S | not grep " = alloca"
 ; rdar://6417724
 ; Instcombine shouldn't do anything to this function that prevents promoting the allocas inside it.
 

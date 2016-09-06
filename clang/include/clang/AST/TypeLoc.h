@@ -538,7 +538,7 @@ public:
   bool needsExtraLocalData() const {
     BuiltinType::Kind bk = getTypePtr()->getKind();
     return (bk >= BuiltinType::UShort && bk <= BuiltinType::UInt128)
-      || (bk >= BuiltinType::Short && bk <= BuiltinType::LongDouble)
+      || (bk >= BuiltinType::Short && bk <= BuiltinType::Float128)
       || bk == BuiltinType::UChar
       || bk == BuiltinType::SChar;
   }

@@ -13,7 +13,6 @@
 
 #include "llvm-c-test.h"
 #include "llvm-c/BitReader.h"
-#include "llvm-c/Core.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,20 +21,20 @@ static void print_usage(void) {
   fprintf(stderr, "llvm-c-test command\n\n");
   fprintf(stderr, " Commands:\n");
   fprintf(stderr, "  * --module-dump\n");
-  fprintf(stderr, "    Read bytecode from stdin - print disassembly\n\n");
+  fprintf(stderr, "    Read bitcode from stdin - print disassembly\n\n");
   fprintf(stderr, "  * --lazy-module-dump\n");
   fprintf(stderr,
-          "    Lazily read bytecode from stdin - print disassembly\n\n");
+          "    Lazily read bitcode from stdin - print disassembly\n\n");
   fprintf(stderr, "  * --new-module-dump\n");
-  fprintf(stderr, "    Read bytecode from stdin - print disassembly\n\n");
+  fprintf(stderr, "    Read bitcode from stdin - print disassembly\n\n");
   fprintf(stderr, "  * --lazy-new-module-dump\n");
   fprintf(stderr,
-          "    Lazily read bytecode from stdin - print disassembly\n\n");
+          "    Lazily read bitcode from stdin - print disassembly\n\n");
   fprintf(stderr, "  * --module-list-functions\n");
   fprintf(stderr,
-          "    Read bytecode from stdin - list summary of functions\n\n");
+          "    Read bitcode from stdin - list summary of functions\n\n");
   fprintf(stderr, "  * --module-list-globals\n");
-  fprintf(stderr, "    Read bytecode from stdin - list summary of globals\n\n");
+  fprintf(stderr, "    Read bitcode from stdin - list summary of globals\n\n");
   fprintf(stderr, "  * --targets-list\n");
   fprintf(stderr, "    List available targets\n\n");
   fprintf(stderr, "  * --object-list-sections\n");
@@ -50,6 +49,12 @@ static void print_usage(void) {
   fprintf(
       stderr,
       "    Read lines of name, rpn from stdin - print generated module\n\n");
+  fprintf(stderr, "  * --echo\n");
+  fprintf(stderr,
+          "    Read bitcode file form stdin - print it back out\n\n");
+  fprintf(stderr, "  * --test-diagnostic-handler\n");
+  fprintf(stderr,
+          "    Read bitcode file form stdin with a diagnostic handler set\n\n");
 }
 
 int main(int argc, char **argv) {
@@ -58,31 +63,35 @@ int main(int argc, char **argv) {
   LLVMInitializeCore(pr);
 
   if (argc == 2 && !strcmp(argv[1], "--lazy-new-module-dump")) {
-    return module_dump(true, true);
+    return llvm_module_dump(true, true);
   } else if (argc == 2 && !strcmp(argv[1], "--new-module-dump")) {
-    return module_dump(false, true);
+    return llvm_module_dump(false, true);
   } else if (argc == 2 && !strcmp(argv[1], "--lazy-module-dump")) {
-    return module_dump(true, false);
+    return llvm_module_dump(true, false);
   } else if (argc == 2 && !strcmp(argv[1], "--module-dump")) {
-    return module_dump(false, false);
+    return llvm_module_dump(false, false);
   } else if (argc == 2 && !strcmp(argv[1], "--module-list-functions")) {
-    return module_list_functions();
+    return llvm_module_list_functions();
   } else if (argc == 2 && !strcmp(argv[1], "--module-list-globals")) {
-    return module_list_globals();
+    return llvm_module_list_globals();
   } else if (argc == 2 && !strcmp(argv[1], "--targets-list")) {
-    return targets_list();
+    return llvm_targets_list();
   } else if (argc == 2 && !strcmp(argv[1], "--object-list-sections")) {
-    return object_list_sections();
+    return llvm_object_list_sections();
   } else if (argc == 2 && !strcmp(argv[1], "--object-list-symbols")) {
-    return object_list_symbols();
+    return llvm_object_list_symbols();
   } else if (argc == 2 && !strcmp(argv[1], "--disassemble")) {
-    return disassemble();
+    return llvm_disassemble();
   } else if (argc == 2 && !strcmp(argv[1], "--calc")) {
-    return calc();
+    return llvm_calc();
   } else if (argc == 2 && !strcmp(argv[1], "--add-named-metadata-operand")) {
-    return add_named_metadata_operand();
+    return llvm_add_named_metadata_operand();
   } else if (argc == 2 && !strcmp(argv[1], "--set-metadata")) {
-    return set_metadata();
+    return llvm_set_metadata();
+  } else if (argc == 2 && !strcmp(argv[1], "--echo")) {
+    return llvm_echo();
+  } else if (argc == 2 && !strcmp(argv[1], "--test-diagnostic-handler")) {
+    return llvm_test_diagnostic_handler();
   } else {
     print_usage();
   }

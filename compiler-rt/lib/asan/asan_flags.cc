@@ -116,7 +116,7 @@ void InitializeFlags() {
   ubsan_parser.ParseString(GetEnv("UBSAN_OPTIONS"));
 #endif
 
-  SetVerbosity(common_flags()->verbosity);
+  InitializeCommonFlags();
 
   // TODO(eugenis): dump all flags at verbosity>=2?
   if (Verbosity()) ReportUnrecognizedFlags();
@@ -158,6 +158,14 @@ void InitializeFlags() {
     const int kDefaultQuarantineSizeMb =
         (ASAN_LOW_MEMORY) ? 1UL << 6 : 1UL << 8;
     f->quarantine_size_mb = kDefaultQuarantineSizeMb;
+  }
+  if (!f->replace_str && common_flags()->intercept_strlen) {
+    Report("WARNING: strlen interceptor is enabled even though replace_str=0. "
+           "Use intercept_strlen=0 to disable it.");
+  }
+  if (!f->replace_str && common_flags()->intercept_strchr) {
+    Report("WARNING: strchr* interceptors are enabled even though "
+           "replace_str=0. Use intercept_strchr=0 to disable them.");
   }
 }
 

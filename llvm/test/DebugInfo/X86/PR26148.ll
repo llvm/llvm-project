@@ -64,11 +64,10 @@ entry:
 !llvm.module.flags = !{!22, !23, !24}
 !llvm.ident = !{!25}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (https://github.com/llvm-mirror/clang 8f258397c5afd7a708bd95770c718e81d08fb11a) (https://github.com/llvm-mirror/llvm 18481855bdfa1b4a424f81be8525db002671348d)", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3, globals: !20)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (https://github.com/llvm-mirror/clang 8f258397c5afd7a708bd95770c718e81d08fb11a) (https://github.com/llvm-mirror/llvm 18481855bdfa1b4a424f81be8525db002671348d)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !20)
 !1 = !DIFile(filename: "small.c", directory: "/Users/kfischer/Projects/clangbug")
 !2 = !{}
-!3 = !{!4, !17}
-!4 = distinct !DISubprogram(name: "fn1", scope: !1, file: !1, line: 5, type: !5, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, variables: !8)
+!4 = distinct !DISubprogram(name: "fn1", scope: !1, file: !1, line: 5, type: !5, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !8)
 !5 = !DISubroutineType(types: !6)
 !6 = !{null, !7}
 !7 = !DIBasicType(name: "short", size: 16, align: 16, encoding: DW_ATE_signed)
@@ -81,7 +80,7 @@ entry:
 !14 = !DIDerivedType(tag: DW_TAG_member, name: "f3", scope: !11, file: !1, line: 3, baseType: !15, size: 32, align: 32, offset: 32)
 !15 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !16 = !DILocalVariable(name: "c", scope: !4, file: !1, line: 6, type: !11)
-!17 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 11, type: !18, isLocal: false, isDefinition: true, scopeLine: 11, isOptimized: true, variables: !2)
+!17 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 11, type: !18, isLocal: false, isDefinition: true, scopeLine: 11, isOptimized: true, unit: !0, variables: !2)
 !18 = !DISubroutineType(types: !19)
 !19 = !{!15}
 !20 = !{!21}

@@ -17,9 +17,9 @@ struct Options : OptionSet {
 
 func main() {
   var user_option = Options(rawValue: 123456)
-  var sdk_option_exhaustive: BinarySearchingOptions = [.firstEqual, .insertionIndex]
-  var sdk_option_nonexhaustive = BinarySearchingOptions(rawValue: 257)
-  var sdk_option_nonevalid = BinarySearchingOptions(rawValue: 12)
+  var sdk_option_exhaustive: NSBinarySearchingOptions = [.firstEqual, .insertionIndex]
+  var sdk_option_nonexhaustive = NSBinarySearchingOptions(rawValue: 257)
+  var sdk_option_nonevalid = NSBinarySearchingOptions(rawValue: 12)
   print("break here and do test") //%self.expect('frame variable user_option', substrs=['rawValue = 123456'])
   //%self.expect('expression user_option', substrs=['rawValue = 123456'])
   //%self.expect('frame variable sdk_option_exhaustive', substrs=['[.firstEqual, .insertionIndex]'])

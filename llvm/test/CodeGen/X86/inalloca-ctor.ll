@@ -12,8 +12,8 @@ define void @g() {
 entry:
   %args = alloca inalloca %frame
   %c = getelementptr %frame, %frame* %args, i32 0, i32 2
-; CHECK: movl    $20, %eax
-; CHECK: calll   __chkstk
+; CHECK: pushl   %eax
+; CHECK: subl    $16, %esp
 ; CHECK: movl %esp,
   call void @Foo_ctor(%Foo* %c)
 ; CHECK: leal 12(%{{.*}}),

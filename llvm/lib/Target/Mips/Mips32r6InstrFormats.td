@@ -360,7 +360,7 @@ class SPECIAL_SDBBP_FM : MipsR6Inst {
 }
 
 // This class is ambiguous with other branches:
-//   BEQC/BNEC require that rs > rt
+//   BEQC/BNEC require that rs < rt && rs != 0
 class CMP_BRANCH_2R_OFF16_FM<OPGROUP funct> : MipsR6Inst {
   bits<5> rs;
   bits<5> rt;

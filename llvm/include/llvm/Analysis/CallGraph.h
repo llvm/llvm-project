@@ -57,6 +57,7 @@
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include <map>
@@ -294,20 +295,27 @@ private:
 /// This class implements the concept of an analysis pass used by the \c
 /// ModuleAnalysisManager to run an analysis over a module and cache the
 /// resulting data.
-class CallGraphAnalysis {
+class CallGraphAnalysis : public AnalysisInfoMixin<CallGraphAnalysis> {
+  friend AnalysisInfoMixin<CallGraphAnalysis>;
+  static char PassID;
+
 public:
   /// \brief A formulaic typedef to inform clients of the result type.
   typedef CallGraph Result;
 
-  static void *ID() { return (void *)&PassID; }
-
   /// \brief Compute the \c CallGraph for the module \c M.
   ///
   /// The real work here is done in the \c CallGraph constructor.
-  CallGraph run(Module *M) { return CallGraph(*M); }
+  CallGraph run(Module &M, ModuleAnalysisManager &) { return CallGraph(M); }
+};
 
-private:
-  static char PassID;
+/// \brief Printer pass for the \c CallGraphAnalysis results.
+class CallGraphPrinterPass : public PassInfoMixin<CallGraphPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit CallGraphPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// \brief The \c ModulePass which wraps up a \c CallGraph and the logic to
@@ -402,6 +410,7 @@ public:
 // traversals.
 template <> struct GraphTraits<CallGraphNode *> {
   typedef CallGraphNode NodeType;
+  typedef CallGraphNode *NodeRef;
 
   typedef CallGraphNode::CallRecord CGNPairTy;
   typedef std::pointer_to_unary_function<CGNPairTy, CallGraphNode *>
@@ -423,6 +432,7 @@ template <> struct GraphTraits<CallGraphNode *> {
 
 template <> struct GraphTraits<const CallGraphNode *> {
   typedef const CallGraphNode NodeType;
+  typedef const CallGraphNode *NodeRef;
 
   typedef CallGraphNode::CallRecord CGNPairTy;
   typedef std::pointer_to_unary_function<CGNPairTy, const CallGraphNode *>

@@ -27,7 +27,7 @@
 !llvm.module.flags = !{!10, !11}
 !llvm.ident = !{!12}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (http://llvm.org/git/clang.git 247b30a043eb8f39ea3708e7e995089da0a6b00f) (http://llvm.org/git/llvm.git 6ecc7365a89c771fd229bdd9ffcc178684ea1aa5)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !3, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (http://llvm.org/git/clang.git 247b30a043eb8f39ea3708e7e995089da0a6b00f) (http://llvm.org/git/llvm.git 6ecc7365a89c771fd229bdd9ffcc178684ea1aa5)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !3, imports: !2)
 !1 = !DIFile(filename: "minimal.c", directory: "/tmp")
 !2 = !{}
 !3 = !{!4}

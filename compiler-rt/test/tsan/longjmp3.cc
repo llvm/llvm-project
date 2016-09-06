@@ -1,7 +1,4 @@
-// RUN: %clang_tsan -O1 %s -o %t && %deflake %run %t | FileCheck %s
-
-// Longjmp assembly has not been implemented for mips64 yet
-// XFAIL: mips64
+// RUN: %clang_tsan -O1 %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
 
 #include <pthread.h>
 #include <stdio.h>
@@ -34,7 +31,7 @@ void mymain() {
     return;
   }
   foo(env);
-  printf("FAILED\n");
+  fprintf(stderr, "FAILED\n");
 }
 
 int main() {

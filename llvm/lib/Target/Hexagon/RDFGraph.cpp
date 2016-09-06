@@ -25,6 +25,7 @@ using namespace rdf;
 
 // Printing functions. Have them here first, so that the rest of the code
 // can use them.
+namespace llvm {
 namespace rdf {
 
 template<>
@@ -298,6 +299,7 @@ raw_ostream &operator<< (raw_ostream &OS,
 }
 
 } // namespace rdf
+} // namespace llvm
 
 // Node allocation functions.
 //
@@ -674,7 +676,7 @@ bool RegisterAliasInfo::alias(RegisterRef RA, RegisterRef RB) const {
 // unchanged across this def.
 bool TargetOperandInfo::isPreserving(const MachineInstr &In, unsigned OpNum)
       const {
-  return TII.isPredicated(&In);
+  return TII.isPredicated(In);
 }
 
 // Check if the definition of RR produces an unspecified value.
@@ -686,11 +688,17 @@ bool TargetOperandInfo::isClobbering(const MachineInstr &In, unsigned OpNum)
   return false;
 }
 
-// Check if the given instruction specifically requires 
+// Check if the given instruction specifically requires
 bool TargetOperandInfo::isFixedReg(const MachineInstr &In, unsigned OpNum)
       const {
-  if (In.isCall() || In.isReturn())
+  if (In.isCall() || In.isReturn() || In.isInlineAsm())
     return true;
+  // Check for a tail call.
+  if (In.isBranch())
+    for (auto &O : In.operands())
+      if (O.isGlobal() || O.isSymbol())
+        return true;
+
   const MCInstrDesc &D = In.getDesc();
   if (!D.getImplicitDefs() && !D.getImplicitUses())
     return false;
@@ -919,7 +927,7 @@ NodeAddr<FuncNode*> DataFlowGraph::newFunc(MachineFunction *MF) {
 }
 
 // Build the data flow graph.
-void DataFlowGraph::build() {
+void DataFlowGraph::build(unsigned Options) {
   reset();
   Func = newFunc(&MF);
 
@@ -928,6 +936,7 @@ void DataFlowGraph::build() {
 
   for (auto &B : MF) {
     auto BA = newBlock(Func, &B);
+    BlockNodes.insert(std::make_pair(&B, BA));
     for (auto &I : B) {
       if (I.isDebugValue())
         continue;
@@ -964,7 +973,8 @@ void DataFlowGraph::build() {
   linkBlockRefs(DM, EA);
 
   // Finally, remove all unused phi nodes.
-  removeUnusedPhis();
+  if (!(Options & BuildOptions::KeepDeadPhis))
+    removeUnusedPhis();
 }
 
 // For each stack in the map DefM, push the delimiter for block B on it.
@@ -1060,6 +1070,7 @@ NodeList DataFlowGraph::getRelatedRefs(NodeAddr<InstrNode*> IA,
 // Clear all information in the graph.
 void DataFlowGraph::reset() {
   Memory.clear();
+  BlockNodes.clear();
   Func = NodeAddr<FuncNode*>();
 }
 
@@ -1167,6 +1178,17 @@ NodeAddr<RefNode*> DataFlowGraph::getNextShadow(NodeAddr<InstrNode*> IA,
 void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
   auto SA = newStmt(BA, &In);
 
+  auto isCall = [] (const MachineInstr &In) -> bool {
+    if (In.isCall())
+      return true;
+    // Is tail call?
+    if (In.isBranch())
+      for (auto &Op : In.operands())
+        if (Op.isGlobal() || Op.isSymbol())
+          return true;
+    return false;
+  };
+
   // Collect a set of registers that this instruction implicitly uses
   // or defines. Implicit operands from an instruction will be ignored
   // unless they are listed here.
@@ -1178,8 +1200,8 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     while (uint16_t R = *ImpU++)
       ImpUses.insert({R, 0});
 
-  bool IsCall = In.isCall(), IsReturn = In.isReturn();
-  bool IsPredicated = TII.isPredicated(&In);
+  bool NeedsImplicit = isCall(In) || In.isInlineAsm() || In.isReturn();
+  bool IsPredicated = TII.isPredicated(In);
   unsigned NumOps = In.getNumOperands();
 
   // Avoid duplicate implicit defs. This will not detect cases of implicit
@@ -1212,7 +1234,7 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     if (!Op.isReg() || !Op.isDef() || !Op.isImplicit())
       continue;
     RegisterRef RR = { Op.getReg(), Op.getSubReg() };
-    if (!IsCall && !ImpDefs.count(RR))
+    if (!NeedsImplicit && !ImpDefs.count(RR))
       continue;
     if (DoneDefs.count(RR))
       continue;
@@ -1237,7 +1259,7 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     // instructions regardless of whether or not they appear in the instruction
     // descriptor's list.
     bool Implicit = Op.isImplicit();
-    bool TakeImplicit = IsReturn || IsCall || IsPredicated;
+    bool TakeImplicit = NeedsImplicit || IsPredicated;
     if (Implicit && !TakeImplicit && !ImpUses.count(RR))
       continue;
     uint16_t Flags = NodeAttrs::None;
@@ -1257,7 +1279,7 @@ void DataFlowGraph::buildBlockRefs(NodeAddr<BlockNode*> BA,
   assert(N);
   for (auto I : *N) {
     MachineBasicBlock *SB = I->getBlock();
-    auto SBA = Func.Addr->findBlock(SB, *this);
+    auto SBA = findBlock(SB);
     buildBlockRefs(SBA, RefM);
     const auto &SRs = RefM[SBA.Id];
     Refs.insert(SRs.begin(), SRs.end());
@@ -1309,13 +1331,13 @@ void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM, BlockRefsMap &RefM,
   // Get the register references that are reachable from this block.
   RegisterSet &Refs = RefM[BA.Id];
   for (auto DB : IDF) {
-    auto DBA = Func.Addr->findBlock(DB, *this);
+    auto DBA = findBlock(DB);
     const auto &Rs = RefM[DBA.Id];
     Refs.insert(Rs.begin(), Rs.end());
   }
 
   for (auto DB : IDF) {
-    auto DBA = Func.Addr->findBlock(DB, *this);
+    auto DBA = findBlock(DB);
     PhiM[DBA.Id].insert(Defs.begin(), Defs.end());
   }
 }
@@ -1372,7 +1394,7 @@ void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, BlockRefsMap &RefM,
   std::vector<NodeId> PredList;
   const MachineBasicBlock *MBB = BA.Addr->getCode();
   for (auto PB : MBB->predecessors()) {
-    auto B = Func.Addr->findBlock(PB, *this);
+    auto B = findBlock(PB);
     PredList.push_back(B.Id);
   }
 
@@ -1487,7 +1509,7 @@ void DataFlowGraph::linkRefUp(NodeAddr<InstrNode*> IA, NodeAddr<T> TA,
     bool PrecUp = RAI.covers(QR, RR);
     // Skip all defs that are aliased to any of the defs that we have already
     // seen. If we encounter a covering def, stop the stack traversal early.
-    if (std::any_of(Defs.begin(), Defs.end(), AliasQR)) {
+    if (any_of(Defs, AliasQR)) {
       if (PrecUp)
         break;
       continue;
@@ -1546,6 +1568,7 @@ void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, NodeAddr<BlockNode*> BA) {
   // Push block delimiters.
   markBlock(BA.Id, DefM);
 
+  assert(BA.Addr && "block node address is needed to create a data-flow link");
   // For each non-phi instruction in the block, link all the defs and uses
   // to their reaching defs. For any member of the block (including phis),
   // push the defs on the corresponding stacks.
@@ -1563,7 +1586,7 @@ void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, NodeAddr<BlockNode*> BA) {
   MachineDomTreeNode *N = MDT.getNode(BA.Addr->getCode());
   for (auto I : *N) {
     MachineBasicBlock *SB = I->getBlock();
-    auto SBA = Func.Addr->findBlock(SB, *this);
+    auto SBA = findBlock(SB);
     linkBlockRefs(DefM, SBA);
   }
 
@@ -1577,7 +1600,7 @@ void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, NodeAddr<BlockNode*> BA) {
   };
   MachineBasicBlock *MBB = BA.Addr->getCode();
   for (auto SB : MBB->successors()) {
-    auto SBA = Func.Addr->findBlock(SB, *this);
+    auto SBA = findBlock(SB);
     for (NodeAddr<InstrNode*> IA : SBA.Addr->members_if(IsPhi, *this)) {
       // Go over each phi use associated with MBB, and link it.
       for (auto U : IA.Addr->members_if(IsUseForBA, *this)) {

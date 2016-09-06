@@ -10,9 +10,7 @@
 #include "clang/Frontend/SerializedDiagnosticPrinter.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/Version.h"
 #include "clang/Frontend/DiagnosticRenderer.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/SerializedDiagnosticReader.h"
@@ -24,7 +22,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
-#include <vector>
+#include <utility>
 
 using namespace clang;
 using namespace clang::serialized_diags;
@@ -147,7 +145,7 @@ class SDiagsWriter : public DiagnosticConsumer {
 
   explicit SDiagsWriter(IntrusiveRefCntPtr<SharedState> State)
       : LangOpts(nullptr), OriginalInstance(false), MergeChildRecords(false),
-        State(State) {}
+        State(std::move(State)) {}
 
 public:
   SDiagsWriter(StringRef File, DiagnosticOptions *Diags, bool MergeChildRecords)

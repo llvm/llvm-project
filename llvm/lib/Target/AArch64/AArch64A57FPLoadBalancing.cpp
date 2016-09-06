@@ -43,7 +43,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <list>
 using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-a57-fp-load-balancing"
@@ -96,10 +95,6 @@ static bool isMla(MachineInstr *MI) {
   }
 }
 
-namespace llvm {
-static void initializeAArch64A57FPLoadBalancingPass(PassRegistry &);
-}
-
 //===----------------------------------------------------------------------===//
 
 namespace {
@@ -124,6 +119,11 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &F) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::AllVRegsAllocated);
+  }
 
   const char *getPassName() const override {
     return "A57 FP Anti-dependency breaker";
@@ -222,7 +222,7 @@ public:
   }
 
   /// Return true if MI is a member of the chain.
-  bool contains(MachineInstr *MI) { return Insts.count(MI) > 0; }
+  bool contains(MachineInstr &MI) { return Insts.count(&MI) > 0; }
 
   /// Return the number of instructions in the chain.
   unsigned size() const {
@@ -248,9 +248,10 @@ public:
   MachineInstr *getKill() const { return KillInst; }
   /// Return an instruction that can be used as an iterator for the end
   /// of the chain. This is the maximum of KillInst (if set) and LastInst.
-  MachineBasicBlock::iterator getEnd() const {
+  MachineBasicBlock::iterator end() const {
     return ++MachineBasicBlock::iterator(KillInst ? KillInst : LastInst);
   }
+  MachineBasicBlock::iterator begin() const { return getStart(); }
 
   /// Can the Kill instruction (assuming one exists) be modified?
   bool isKillImmutable() const { return KillIsImmutable; }
@@ -307,9 +308,10 @@ public:
 //===----------------------------------------------------------------------===//
 
 bool AArch64A57FPLoadBalancing::runOnMachineFunction(MachineFunction &F) {
-  // Don't do anything if this isn't an A53 or A57.
-  if (!(F.getSubtarget<AArch64Subtarget>().isCortexA53() ||
-        F.getSubtarget<AArch64Subtarget>().isCortexA57()))
+  if (skipFunction(*F.getFunction()))
+    return false;
+
+  if (!F.getSubtarget<AArch64Subtarget>().balanceFPOps())
     return false;
 
   bool Changed = false;
@@ -492,15 +494,14 @@ bool AArch64A57FPLoadBalancing::colorChainSet(std::vector<Chain*> GV,
 int AArch64A57FPLoadBalancing::scavengeRegister(Chain *G, Color C,
                                                 MachineBasicBlock &MBB) {
   RegScavenger RS;
-  RS.enterBasicBlock(&MBB);
+  RS.enterBasicBlock(MBB);
   RS.forward(MachineBasicBlock::iterator(G->getStart()));
 
   // Can we find an appropriate register that is available throughout the life
   // of the chain?
   unsigned RegClassID = G->getStart()->getDesc().OpInfo[0].RegClass;
   BitVector AvailableRegs = RS.getRegsAvailable(TRI->getRegClass(RegClassID));
-  for (MachineBasicBlock::iterator I = G->getStart(), E = G->getEnd();
-       I != E; ++I) {
+  for (MachineBasicBlock::iterator I = G->begin(), E = G->end(); I != E; ++I) {
     RS.forward(I);
     AvailableRegs &= RS.getRegsAvailable(TRI->getRegClass(RegClassID));
 
@@ -530,8 +531,7 @@ int AArch64A57FPLoadBalancing::scavengeRegister(Chain *G, Color C,
   for (auto Reg : Ord) {
     if (!AvailableRegs[Reg])
       continue;
-    if ((C == Color::Even && (Reg % 2) == 0) ||
-        (C == Color::Odd && (Reg % 2) == 1))
+    if (C == getColor(Reg))
       return Reg;
   }
 
@@ -554,16 +554,14 @@ bool AArch64A57FPLoadBalancing::colorChain(Chain *G, Color C,
   DEBUG(dbgs() << " - Scavenged register: " << TRI->getName(Reg) << "\n");
 
   std::map<unsigned, unsigned> Substs;
-  for (MachineBasicBlock::iterator I = G->getStart(), E = G->getEnd();
-       I != E; ++I) {
-    if (!G->contains(I) &&
-        (&*I != G->getKill() || G->isKillImmutable()))
+  for (MachineInstr &I : *G) {
+    if (!G->contains(I) && (&I != G->getKill() || G->isKillImmutable()))
       continue;
 
     // I is a member of G, or I is a mutable instruction that kills G.
 
     std::vector<unsigned> ToErase;
-    for (auto &U : I->operands()) {
+    for (auto &U : I.operands()) {
       if (U.isReg() && U.isUse() && Substs.find(U.getReg()) != Substs.end()) {
         unsigned OrigReg = U.getReg();
         U.setReg(Substs[OrigReg]);
@@ -583,11 +581,11 @@ bool AArch64A57FPLoadBalancing::colorChain(Chain *G, Color C,
       Substs.erase(J);
 
     // Only change the def if this isn't the last instruction.
-    if (&*I != G->getKill()) {
-      MachineOperand &MO = I->getOperand(0);
+    if (&I != G->getKill()) {
+      MachineOperand &MO = I.getOperand(0);
 
       bool Change = TransformAll || getColor(MO.getReg()) != C;
-      if (G->requiresFixup() && &*I == G->getLast())
+      if (G->requiresFixup() && &I == G->getLast())
         Change = false;
 
       if (Change) {

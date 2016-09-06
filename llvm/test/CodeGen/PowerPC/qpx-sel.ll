@@ -1,7 +1,6 @@
-; RUN: llc < %s -march=ppc64 -mcpu=a2q | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc64 -mcpu=a2q | FileCheck %s
 target triple = "powerpc64-bgq-linux"
 
-@Q = constant <4 x i1> <i1 0, i1 undef, i1 1, i1 1>, align 16
 @R = global <4 x i1> <i1 0, i1 0, i1 0, i1 0>, align 16
 
 define <4 x double> @test1(<4 x double> %a, <4 x double> %b, <4 x i1> %c) nounwind readnone {
@@ -48,9 +47,9 @@ entry:
 ; blr
 }
 
-define <4 x i1> @test4(<4 x i1> %a) nounwind {
+define <4 x i1> @test4(<4 x i1> %a, <4 x i1>* %t) nounwind {
 entry:
-  %q = load <4 x i1>, <4 x i1>* @Q, align 16
+  %q = load <4 x i1>, <4 x i1>* %t, align 16
   %v = and <4 x i1> %a, %q
   ret <4 x i1> %v
 

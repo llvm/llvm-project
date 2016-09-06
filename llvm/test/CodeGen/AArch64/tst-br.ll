@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -o - %s -mtriple=arm64-apple-ios7.0 -aarch64-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc -verify-machineinstrs -o - %s -mtriple=arm64-apple-ios7.0 -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
 
 ; We've got the usual issues with LLVM reordering blocks here. The
 ; tests are correct for the current order, but who knows when that

@@ -99,6 +99,9 @@ public:
 
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src);
 
+  int getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
+                               unsigned Index);
+
   int getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index);
 
   int getArithmeticInstrCost(
@@ -127,6 +130,14 @@ public:
   int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy, unsigned Factor,
                                  ArrayRef<unsigned> Indices, unsigned Alignment,
                                  unsigned AddressSpace);
+
+  unsigned getCacheLineSize();
+
+  unsigned getPrefetchDistance();
+
+  unsigned getMinPrefetchStride();
+
+  unsigned getMaxPrefetchIterationsAhead();
   /// @}
 };
 

@@ -5,7 +5,7 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 @array = internal addrspace(2) constant [4096 x [32 x float]] zeroinitializer, align 4
 
 ; IR-LABEL: @sum_of_array(
-; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr inbounds [4096 x [32 x float]], [4096 x [32 x float]] addrspace(2)* @array, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
+; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr [4096 x [32 x float]], [4096 x [32 x float]] addrspace(2)* @array, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
 ; IR: getelementptr inbounds float, float addrspace(2)* [[BASE_PTR]], i64 1
 ; IR: getelementptr inbounds float, float addrspace(2)* [[BASE_PTR]], i64 32
 ; IR: getelementptr inbounds float, float addrspace(2)* [[BASE_PTR]], i64 33
@@ -37,7 +37,7 @@ define void @sum_of_array(i32 %x, i32 %y, float addrspace(1)* nocapture %output)
 ; Some of the indices go over the maximum mubuf offset, so don't split them.
 
 ; IR-LABEL: @sum_of_array_over_max_mubuf_offset(
-; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr inbounds [4096 x [4 x float]], [4096 x [4 x float]] addrspace(2)* @array2, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
+; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr [4096 x [4 x float]], [4096 x [4 x float]] addrspace(2)* @array2, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
 ; IR: getelementptr inbounds float, float addrspace(2)* [[BASE_PTR]], i64 255
 ; IR: add i32 %x, 256
 ; IR: getelementptr inbounds [4096 x [4 x float]], [4096 x [4 x float]] addrspace(2)* @array2, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
@@ -70,7 +70,7 @@ define void @sum_of_array_over_max_mubuf_offset(i32 %x, i32 %y, float addrspace(
 
 ; DS instructions have a larger immediate offset, so make sure these are OK.
 ; IR-LABEL: @sum_of_lds_array_over_max_mubuf_offset(
-; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr inbounds [4096 x [4 x float]], [4096 x [4 x float]] addrspace(3)* @lds_array, i32 0, i32 %{{[a-zA-Z0-9]+}}, i32 %{{[a-zA-Z0-9]+}}
+; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr [4096 x [4 x float]], [4096 x [4 x float]] addrspace(3)* @lds_array, i32 0, i32 %{{[a-zA-Z0-9]+}}, i32 %{{[a-zA-Z0-9]+}}
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i32 255
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i32 16128
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i32 16383

@@ -39,14 +39,15 @@
 #
 # CHECK: Command Output (stdout):
 # CHECK-NEXT: --
-# CHECK-NEXT: Command 0: "printf"
-# CHECK-NEXT: Command 0 Result: 0
-# CHECK-NEXT: Command 0 Output:
+# CHECK-NEXT: $ "printf"
+# CHECK-NEXT: # command output:
 # CHECK-NEXT: line 1: failed test output on stdout
 # CHECK-NEXT: line 2: failed test output on stdout
 
 # CHECK: UNRESOLVED: shtest-format :: no-test-line.txt
 # CHECK: PASS: shtest-format :: pass.txt
+# CHECK: UNSUPPORTED: shtest-format :: requires-any-missing.txt
+# CHECK: PASS: shtest-format :: requires-any-present.txt
 # CHECK: UNSUPPORTED: shtest-format :: requires-missing.txt
 # CHECK: PASS: shtest-format :: requires-present.txt
 # CHECK: UNSUPPORTED: shtest-format :: unsupported_dir/some-test.txt
@@ -69,9 +70,9 @@
 # CHECK: shtest-format :: external_shell/fail_with_bad_encoding.txt
 # CHECK: shtest-format :: fail.txt
 
-# CHECK: Expected Passes    : 4
+# CHECK: Expected Passes    : 5
 # CHECK: Expected Failures  : 3
-# CHECK: Unsupported Tests  : 2
+# CHECK: Unsupported Tests  : 3
 # CHECK: Unresolved Tests   : 1
 # CHECK: Unexpected Passes  : 1
 # CHECK: Unexpected Failures: 3

@@ -30,163 +30,8 @@ using namespace llvm;
 // Pin the vtable to this file.
 void AMDGPUInstrInfo::anchor() {}
 
-AMDGPUInstrInfo::AMDGPUInstrInfo(const AMDGPUSubtarget &st)
-    : AMDGPUGenInstrInfo(-1, -1), ST(st) {}
-
-const AMDGPURegisterInfo &AMDGPUInstrInfo::getRegisterInfo() const {
-  return RI;
-}
-
-bool AMDGPUInstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
-                                           unsigned &SrcReg, unsigned &DstReg,
-                                           unsigned &SubIdx) const {
-// TODO: Implement this function
-  return false;
-}
-
-unsigned AMDGPUInstrInfo::isLoadFromStackSlot(const MachineInstr *MI,
-                                             int &FrameIndex) const {
-// TODO: Implement this function
-  return 0;
-}
-
-unsigned AMDGPUInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr *MI,
-                                                   int &FrameIndex) const {
-// TODO: Implement this function
-  return 0;
-}
-
-bool AMDGPUInstrInfo::hasLoadFromStackSlot(const MachineInstr *MI,
-                                          const MachineMemOperand *&MMO,
-                                          int &FrameIndex) const {
-// TODO: Implement this function
-  return false;
-}
-unsigned AMDGPUInstrInfo::isStoreFromStackSlot(const MachineInstr *MI,
-                                              int &FrameIndex) const {
-// TODO: Implement this function
-  return 0;
-}
-unsigned AMDGPUInstrInfo::isStoreFromStackSlotPostFE(const MachineInstr *MI,
-                                                    int &FrameIndex) const {
-// TODO: Implement this function
-  return 0;
-}
-bool AMDGPUInstrInfo::hasStoreFromStackSlot(const MachineInstr *MI,
-                                           const MachineMemOperand *&MMO,
-                                           int &FrameIndex) const {
-// TODO: Implement this function
-  return false;
-}
-
-MachineInstr *
-AMDGPUInstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
-                                      MachineBasicBlock::iterator &MBBI,
-                                      LiveVariables *LV) const {
-// TODO: Implement this function
-  return nullptr;
-}
-
-void
-AMDGPUInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator MI,
-                                    unsigned SrcReg, bool isKill,
-                                    int FrameIndex,
-                                    const TargetRegisterClass *RC,
-                                    const TargetRegisterInfo *TRI) const {
-  llvm_unreachable("Not Implemented");
-}
-
-void
-AMDGPUInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                     MachineBasicBlock::iterator MI,
-                                     unsigned DestReg, int FrameIndex,
-                                     const TargetRegisterClass *RC,
-                                     const TargetRegisterInfo *TRI) const {
-  llvm_unreachable("Not Implemented");
-}
-
-bool AMDGPUInstrInfo::expandPostRAPseudo (MachineBasicBlock::iterator MI) const {
-  MachineBasicBlock *MBB = MI->getParent();
-  int OffsetOpIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
-                                               AMDGPU::OpName::addr);
-   // addr is a custom operand with multiple MI operands, and only the
-   // first MI operand is given a name.
-  int RegOpIdx = OffsetOpIdx + 1;
-  int ChanOpIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
-                                             AMDGPU::OpName::chan);
-  if (isRegisterLoad(*MI)) {
-    int DstOpIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
-                                              AMDGPU::OpName::dst);
-    unsigned RegIndex = MI->getOperand(RegOpIdx).getImm();
-    unsigned Channel = MI->getOperand(ChanOpIdx).getImm();
-    unsigned Address = calculateIndirectAddress(RegIndex, Channel);
-    unsigned OffsetReg = MI->getOperand(OffsetOpIdx).getReg();
-    if (OffsetReg == AMDGPU::INDIRECT_BASE_ADDR) {
-      buildMovInstr(MBB, MI, MI->getOperand(DstOpIdx).getReg(),
-                    getIndirectAddrRegClass()->getRegister(Address));
-    } else {
-      buildIndirectRead(MBB, MI, MI->getOperand(DstOpIdx).getReg(),
-                        Address, OffsetReg);
-    }
-  } else if (isRegisterStore(*MI)) {
-    int ValOpIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
-                                              AMDGPU::OpName::val);
-    unsigned RegIndex = MI->getOperand(RegOpIdx).getImm();
-    unsigned Channel = MI->getOperand(ChanOpIdx).getImm();
-    unsigned Address = calculateIndirectAddress(RegIndex, Channel);
-    unsigned OffsetReg = MI->getOperand(OffsetOpIdx).getReg();
-    if (OffsetReg == AMDGPU::INDIRECT_BASE_ADDR) {
-      buildMovInstr(MBB, MI, getIndirectAddrRegClass()->getRegister(Address),
-                    MI->getOperand(ValOpIdx).getReg());
-    } else {
-      buildIndirectWrite(MBB, MI, MI->getOperand(ValOpIdx).getReg(),
-                         calculateIndirectAddress(RegIndex, Channel),
-                         OffsetReg);
-    }
-  } else {
-    return false;
-  }
-
-  MBB->erase(MI);
-  return true;
-}
-
-MachineInstr *AMDGPUInstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr *MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex) const {
-// TODO: Implement this function
-  return nullptr;
-}
-MachineInstr *AMDGPUInstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr *MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, MachineInstr *LoadMI) const {
-  // TODO: Implement this function
-  return nullptr;
-}
-bool
-AMDGPUInstrInfo::unfoldMemoryOperand(MachineFunction &MF, MachineInstr *MI,
-                                 unsigned Reg, bool UnfoldLoad,
-                                 bool UnfoldStore,
-                                 SmallVectorImpl<MachineInstr*> &NewMIs) const {
-  // TODO: Implement this function
-  return false;
-}
-
-bool
-AMDGPUInstrInfo::unfoldMemoryOperand(SelectionDAG &DAG, SDNode *N,
-                                    SmallVectorImpl<SDNode*> &NewNodes) const {
-  // TODO: Implement this function
-  return false;
-}
-
-unsigned
-AMDGPUInstrInfo::getOpcodeAfterMemoryUnfold(unsigned Opc,
-                                           bool UnfoldLoad, bool UnfoldStore,
-                                           unsigned *LoadRegIndex) const {
-  // TODO: Implement this function
-  return 0;
-}
+AMDGPUInstrInfo::AMDGPUInstrInfo(const AMDGPUSubtarget &ST)
+  : AMDGPUGenInstrInfo(-1, -1), ST(ST) {}
 
 bool AMDGPUInstrInfo::enableClusterLoads() const {
   return true;
@@ -214,106 +59,6 @@ bool AMDGPUInstrInfo::shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1,
   return (NumLoads <= 16 && (Offset1 - Offset0) < 64);
 }
 
-bool
-AMDGPUInstrInfo::ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond)
-  const {
-  // TODO: Implement this function
-  return true;
-}
-void AMDGPUInstrInfo::insertNoop(MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MI) const {
-  // TODO: Implement this function
-}
-
-bool AMDGPUInstrInfo::isPredicated(const MachineInstr *MI) const {
-  // TODO: Implement this function
-  return false;
-}
-
-bool AMDGPUInstrInfo::SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
-                                        ArrayRef<MachineOperand> Pred2) const {
-  // TODO: Implement this function
-  return false;
-}
-
-bool AMDGPUInstrInfo::DefinesPredicate(MachineInstr *MI,
-                                      std::vector<MachineOperand> &Pred) const {
-  // TODO: Implement this function
-  return false;
-}
-
-bool AMDGPUInstrInfo::isPredicable(MachineInstr *MI) const {
-  // TODO: Implement this function
-  return MI->getDesc().isPredicable();
-}
-
-bool
-AMDGPUInstrInfo::isSafeToMoveRegClassDefs(const TargetRegisterClass *RC) const {
-  // TODO: Implement this function
-  return true;
-}
-
-bool AMDGPUInstrInfo::isRegisterStore(const MachineInstr &MI) const {
-  return get(MI.getOpcode()).TSFlags & AMDGPU_FLAG_REGISTER_STORE;
-}
-
-bool AMDGPUInstrInfo::isRegisterLoad(const MachineInstr &MI) const {
-  return get(MI.getOpcode()).TSFlags & AMDGPU_FLAG_REGISTER_LOAD;
-}
-
-int AMDGPUInstrInfo::getIndirectIndexBegin(const MachineFunction &MF) const {
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
-  int Offset = -1;
-
-  if (MFI->getNumObjects() == 0) {
-    return -1;
-  }
-
-  if (MRI.livein_empty()) {
-    return 0;
-  }
-
-  const TargetRegisterClass *IndirectRC = getIndirectAddrRegClass();
-  for (MachineRegisterInfo::livein_iterator LI = MRI.livein_begin(),
-                                            LE = MRI.livein_end();
-                                            LI != LE; ++LI) {
-    unsigned Reg = LI->first;
-    if (TargetRegisterInfo::isVirtualRegister(Reg) ||
-        !IndirectRC->contains(Reg))
-      continue;
-
-    unsigned RegIndex;
-    unsigned RegEnd;
-    for (RegIndex = 0, RegEnd = IndirectRC->getNumRegs(); RegIndex != RegEnd;
-                                                          ++RegIndex) {
-      if (IndirectRC->getRegister(RegIndex) == Reg)
-        break;
-    }
-    Offset = std::max(Offset, (int)RegIndex);
-  }
-
-  return Offset + 1;
-}
-
-int AMDGPUInstrInfo::getIndirectIndexEnd(const MachineFunction &MF) const {
-  int Offset = 0;
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
-
-  // Variable sized objects are not supported
-  assert(!MFI->hasVarSizedObjects());
-
-  if (MFI->getNumObjects() == 0) {
-    return -1;
-  }
-
-  unsigned IgnoredFrameReg;
-  Offset = MF.getSubtarget().getFrameLowering()->getFrameIndexReference(
-      MF, -1, IgnoredFrameReg);
-
-  return getIndirectIndexBegin(MF) + Offset;
-}
-
 int AMDGPUInstrInfo::getMaskedMIMGOp(uint16_t Opcode, unsigned Channels) const {
   switch (Channels) {
   default: return Opcode;
@@ -323,35 +68,44 @@ int AMDGPUInstrInfo::getMaskedMIMGOp(uint16_t Opcode, unsigned Channels) const {
   }
 }
 
+// This must be kept in sync with the SIEncodingFamily class in SIInstrInfo.td
+enum SIEncodingFamily {
+  SI = 0,
+  VI = 1
+};
+
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
 // header files, so we need to wrap it in a function that takes unsigned
 // instead.
 namespace llvm {
 namespace AMDGPU {
 static int getMCOpcode(uint16_t Opcode, unsigned Gen) {
-  return getMCOpcodeGen(Opcode, (enum Subtarget)Gen);
+  return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
 }
 }
 }
 
-// This must be kept in sync with the SISubtarget class in SIInstrInfo.td
-enum SISubtarget {
-  SI = 0,
-  VI = 1
-};
-
-static enum SISubtarget AMDGPUSubtargetToSISubtarget(unsigned Gen) {
-  switch (Gen) {
-  default:
-    return SI;
+static SIEncodingFamily subtargetEncodingFamily(const AMDGPUSubtarget &ST) {
+  switch (ST.getGeneration()) {
+  case AMDGPUSubtarget::SOUTHERN_ISLANDS:
+  case AMDGPUSubtarget::SEA_ISLANDS:
+    return SIEncodingFamily::SI;
   case AMDGPUSubtarget::VOLCANIC_ISLANDS:
-    return VI;
+    return SIEncodingFamily::VI;
+
+  // FIXME: This should never be called for r600 GPUs.
+  case AMDGPUSubtarget::R600:
+  case AMDGPUSubtarget::R700:
+  case AMDGPUSubtarget::EVERGREEN:
+  case AMDGPUSubtarget::NORTHERN_ISLANDS:
+    return SIEncodingFamily::SI;
   }
+
+  llvm_unreachable("Unknown subtarget generation!");
 }
 
 int AMDGPUInstrInfo::pseudoToMCOpcode(int Opcode) const {
-  int MCOp = AMDGPU::getMCOpcode(
-      Opcode, AMDGPUSubtargetToSISubtarget(ST.getGeneration()));
+  int MCOp = AMDGPU::getMCOpcode(Opcode, subtargetEncodingFamily(ST));
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)
@@ -363,15 +117,4 @@ int AMDGPUInstrInfo::pseudoToMCOpcode(int Opcode) const {
     return -1;
 
   return MCOp;
-}
-
-ArrayRef<std::pair<int, const char *>>
-AMDGPUInstrInfo::getSerializableTargetIndices() const {
-  static const std::pair<int, const char *> TargetIndices[] = {
-      {AMDGPU::TI_CONSTDATA_START, "amdgpu-constdata-start"},
-      {AMDGPU::TI_SCRATCH_RSRC_DWORD0, "amdgpu-scratch-rsrc-dword0"},
-      {AMDGPU::TI_SCRATCH_RSRC_DWORD1, "amdgpu-scratch-rsrc-dword1"},
-      {AMDGPU::TI_SCRATCH_RSRC_DWORD2, "amdgpu-scratch-rsrc-dword2"},
-      {AMDGPU::TI_SCRATCH_RSRC_DWORD3, "amdgpu-scratch-rsrc-dword3"}};
-  return makeArrayRef(TargetIndices);
 }

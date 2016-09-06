@@ -3,7 +3,7 @@
 ; For some reason, the output when targetting sparc is not quite as expected.
 ; XFAIL: sparc
 
-; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=Enable < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
+; RUN: %llc_dwarf -O0 -filetype=obj -dwarf-linkage-names=All < %s | llvm-dwarfdump -debug-dump=info - | FileCheck %s
 
 ; IR generated from clang -O0 with:
 ; struct C {
@@ -123,24 +123,23 @@ attributes #2 = { nounwind readnone }
 !llvm.module.flags = !{!18, !19}
 !llvm.ident = !{!20}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: 1, file: !1, enums: !2, retainedTypes: !3, subprograms: !11, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !3, globals: !2, imports: !2)
 !1 = !DIFile(filename: "<stdin>", directory: "/tmp/dbginfo")
 !2 = !{}
 !3 = !{!4}
 !4 = !DICompositeType(tag: DW_TAG_structure_type, name: "C", line: 1, size: 8, align: 8, file: !5, elements: !6, identifier: "_ZTS1C")
 !5 = !DIFile(filename: "PR20038.cpp", directory: "/tmp/dbginfo")
 !6 = !{!7}
-!7 = !DISubprogram(name: "~C", line: 2, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 2, file: !5, scope: !"_ZTS1C", type: !8)
+!7 = !DISubprogram(name: "~C", line: 2, isLocal: false, isDefinition: false, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 2, file: !5, scope: !4, type: !8)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null, !10}
-!10 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer, baseType: !"_ZTS1C")
-!11 = !{!12, !16, !17}
-!12 = distinct !DISubprogram(name: "fun4", linkageName: "_Z4fun4v", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 5, file: !5, scope: !13, type: !14, variables: !2)
+!10 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, flags: DIFlagArtificial | DIFlagObjectPointer, baseType: !4)
+!12 = distinct !DISubprogram(name: "fun4", linkageName: "_Z4fun4v", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 5, file: !5, scope: !13, type: !14, variables: !2)
 !13 = !DIFile(filename: "PR20038.cpp", directory: "/tmp/dbginfo")
 !14 = !DISubroutineType(types: !15)
 !15 = !{null}
-!16 = distinct !DISubprogram(name: "~C", linkageName: "_ZN1CD2Ev", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 6, file: !5, scope: !"_ZTS1C", type: !8, declaration: !7, variables: !2)
-!17 = distinct !DISubprogram(name: "~C", linkageName: "_ZN1CD1Ev", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 6, file: !5, scope: !"_ZTS1C", type: !8, declaration: !7, variables: !2)
+!16 = distinct !DISubprogram(name: "~C", linkageName: "_ZN1CD2Ev", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 6, file: !5, scope: !4, type: !8, declaration: !7, variables: !2)
+!17 = distinct !DISubprogram(name: "~C", linkageName: "_ZN1CD1Ev", line: 6, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 6, file: !5, scope: !4, type: !8, declaration: !7, variables: !2)
 !18 = !{i32 2, !"Dwarf Version", i32 4}
 !19 = !{i32 2, !"Debug Info Version", i32 3}
 !20 = !{!"clang version 3.5.0 "}
@@ -153,7 +152,7 @@ attributes #2 = { nounwind readnone }
 !27 = !DILocation(line: 5, scope: !28)
 !28 = distinct !DILexicalBlock(line: 5, column: 0, file: !5, scope: !12)
 !29 = !DILocalVariable(name: "this", arg: 1, flags: DIFlagArtificial | DIFlagObjectPointer, scope: !17, type: !30)
-!30 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !"_ZTS1C")
+!30 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !4)
 !31 = !DILocation(line: 0, scope: !17, inlinedAt: !22)
 !32 = !DILocalVariable(name: "this", arg: 1, flags: DIFlagArtificial | DIFlagObjectPointer, scope: !16, type: !30)
 !33 = !DILocation(line: 0, scope: !16, inlinedAt: !21)

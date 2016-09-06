@@ -25,6 +25,8 @@ struct fltSemantics;
 class APSInt;
 class StringRef;
 
+template <typename T> class SmallVectorImpl;
+
 /// Enum that represents what fraction of the LSB truncated bits of an fp number
 /// represent.
 ///
@@ -511,19 +513,12 @@ public:
   ///   0   -> \c IEK_Zero
   ///   Inf -> \c IEK_Inf
   ///
-  friend int ilogb(const APFloat &Arg) {
-    if (Arg.isNaN())
-      return IEK_NaN;
-    if (Arg.isZero())
-      return IEK_Zero;
-    if (Arg.isInfinity())
-      return IEK_Inf;
-
-    return Arg.exponent;
-  }
+  friend int ilogb(const APFloat &Arg);
 
   /// \brief Returns: X * 2^Exp for integral exponents.
-  friend APFloat scalbn(APFloat X, int Exp);
+  friend APFloat scalbn(APFloat X, int Exp, roundingMode);
+
+  friend APFloat frexp(const APFloat &X, int &Exp, roundingMode);
 
 private:
 
@@ -579,6 +574,7 @@ private:
                          const APInt *fill);
   void makeInf(bool Neg = false);
   void makeZero(bool Neg = false);
+  void makeQuiet();
 
   /// @}
 
@@ -651,7 +647,14 @@ private:
 /// These additional declarations are required in order to compile LLVM with IBM
 /// xlC compiler.
 hash_code hash_value(const APFloat &Arg);
-APFloat scalbn(APFloat X, int Exp);
+int ilogb(const APFloat &Arg);
+APFloat scalbn(APFloat X, int Exp, APFloat::roundingMode);
+
+/// \brief Equivalent of C standard library function.
+///
+/// While the C standard says Exp is an unspecified value for infinity and nan,
+/// this returns INT_MAX for infinities, and INT_MIN for NaNs.
+APFloat frexp(const APFloat &Val, int &Exp, APFloat::roundingMode RM);
 
 /// \brief Returns the absolute value of the argument.
 inline APFloat abs(APFloat X) {

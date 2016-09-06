@@ -1,5 +1,5 @@
-; RUN: llc -march=ppc64le -mcpu=pwr8 < %s | FileCheck %s
-; RUN: llc -march=ppc64le < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -march=ppc64le -mcpu=pwr8 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -march=ppc64le < %s | FileCheck %s
 
 ; The second run of the test case is to ensure the behaviour is the same
 ; without specifying -mcpu=pwr8 as that is now the baseline for ppc64le.

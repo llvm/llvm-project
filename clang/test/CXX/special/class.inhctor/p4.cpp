@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s
+//
+// Note: [class.inhctor] was removed by P0136R1. This tests the new behavior
+// for the wording that used to be there.
 
 template<int> struct X {};
 
@@ -8,20 +11,20 @@ struct A {
 public:
   A(X<0>) {}
 protected:
-  A(X<1>) {}
+  A(X<1>) {} // expected-note 2{{declared protected here}}
 private:
-  A(X<2>) {} // expected-note {{declared private here}}
+  A(X<2>) {} // expected-note 2{{declared private here}}
   friend class FA;
 };
 
 struct B : A {
-  using A::A; // expected-error {{private constructor}} expected-note {{implicitly declared protected here}}
+  using A::A;
   friend class FB;
 };
 
 B b0{X<0>{}};
 B b1{X<1>{}}; // expected-error {{calling a protected constructor}}
-B b2{X<2>{}}; // expected-note {{first required here}}
+B b2{X<2>{}}; // expected-error {{calling a private constructor}}
 
 struct C : B {
   C(X<0> x) : B(x) {}
@@ -34,7 +37,7 @@ struct FB {
 };
 
 struct FA : A {
-  using A::A; // expected-note 2{{here}}
+  using A::A;
 };
 FA fa0{X<0>{}};
 FA fa1{X<1>{}}; // expected-error {{calling a protected constructor}}
@@ -47,7 +50,7 @@ struct G {
   template<typename T> G(T*) = delete; // expected-note {{'G<const char>' has been explicitly marked deleted here}}
 };
 struct H : G {
-  using G::G; // expected-note 2{{deleted constructor was inherited here}}
+  using G::G;
 };
 H h1(5); // expected-error {{call to deleted constructor of 'H'}}
 H h2("foo"); // expected-error {{call to deleted constructor of 'H'}}
@@ -57,15 +60,15 @@ H h2("foo"); // expected-error {{call to deleted constructor of 'H'}}
 // same signature.
 namespace DRnnnn {
   struct A {
-    constexpr A(int, float = 0) {}
-    explicit A(int, int = 0) {} // expected-note {{constructor cannot be inherited}}
+    constexpr A(int, float = 0) {} // expected-note {{candidate}}
+    explicit A(int, int = 0) {} // expected-note {{candidate}}
 
-    A(int, int, int = 0) = delete;
+    A(int, int, int = 0) = delete; // expected-note {{deleted}}
   };
   struct B : A {
-    using A::A; // expected-note {{here}}
+    using A::A; // expected-note 3{{inherited here}}
   };
 
   constexpr B b0(0, 0.0f); // ok, constexpr
-  B b1(0, 1); // expected-error {{call to deleted constructor of 'DRnnnn::B'}}
+  B b1(0, 1); // expected-error {{call to constructor of 'DRnnnn::B' is ambiguous}}
 }

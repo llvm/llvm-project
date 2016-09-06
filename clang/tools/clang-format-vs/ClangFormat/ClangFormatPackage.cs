@@ -202,9 +202,10 @@ namespace LLVM.ClangFormat
             if (start >= text.Length && text.Length > 0)
                 start = text.Length - 1;
             string path = GetDocumentParent(view);
+            string filePath = GetDocumentPath(view);
             try
             {
-                var root = XElement.Parse(RunClangFormat(text, start, length, path));
+                var root = XElement.Parse(RunClangFormat(text, start, length, path, filePath));
                 var edit = view.TextBuffer.CreateEdit();
                 foreach (XElement replacement in root.Descendants("replacement"))
                 {
@@ -237,7 +238,7 @@ namespace LLVM.ClangFormat
         /// 
         /// Formats the text range starting at offset of the given length.
         /// </summary>
-        private string RunClangFormat(string text, int offset, int length, string path)
+        private string RunClangFormat(string text, int offset, int length, string path, string filePath)
         {
             string vsixPath = Path.GetDirectoryName(
                 typeof(ClangFormatPackage).Assembly.Location);
@@ -257,6 +258,8 @@ namespace LLVM.ClangFormat
             if (GetSortIncludes())
               process.StartInfo.Arguments += " -sort-includes ";
             string assumeFilename = GetAssumeFilename();
+            if (string.IsNullOrEmpty(assumeFilename))
+                assumeFilename = filePath;
             if (!string.IsNullOrEmpty(assumeFilename))
               process.StartInfo.Arguments += " -assume-filename \"" + assumeFilename + "\"";
             process.StartInfo.CreateNoWindow = true;
@@ -352,6 +355,16 @@ namespace LLVM.ClangFormat
             if (view.TextBuffer.Properties.TryGetProperty(typeof(ITextDocument), out document))
             {
                 return Directory.GetParent(document.FilePath).ToString();
+            }
+            return null;
+        }
+
+        private string GetDocumentPath(IWpfTextView view)
+        {
+            ITextDocument document;
+            if (view.TextBuffer.Properties.TryGetProperty(typeof(ITextDocument), out document))
+            {
+                return document.FilePath;
             }
             return null;
         }

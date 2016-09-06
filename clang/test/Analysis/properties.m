@@ -247,6 +247,74 @@ void testConsistencyAssign(Person *p) {
 }
 @end
 
+// Tests for the analyzer fix that works around a Sema bug
+// where multiple methods are created for properties in class extensions that
+// are redeclared in a category method.
+// The Sema bug is tracked as <rdar://problem/25481164>.
+@interface ClassWithRedeclaredPropertyInExtensionFollowedByCategory
+@end
+
+@interface ClassWithRedeclaredPropertyInExtensionFollowedByCategory ()
+@end
+
+@interface ClassWithRedeclaredPropertyInExtensionFollowedByCategory ()
+@property (readwrite) int someProp;
+@property (readonly) int otherProp;
+@end
+
+@interface ClassWithRedeclaredPropertyInExtensionFollowedByCategory (MyCat)
+@property (readonly) int someProp;
+@property (readonly) int otherProp;
+@end
+
+@implementation ClassWithRedeclaredPropertyInExtensionFollowedByCategory
+- (void)testSynthesisForRedeclaredProperties; {
+  clang_analyzer_eval(self.someProp == self.someProp); // expected-warning{{TRUE}}
+  clang_analyzer_eval([self someProp] == self.someProp); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(self.otherProp == self.otherProp); // expected-warning{{TRUE}}
+  clang_analyzer_eval([self otherProp] == self.otherProp); // expected-warning{{TRUE}}
+}
+@end
+
+// The relative order of the extension and the category matter, so test both.
+@interface ClassWithRedeclaredPropertyInCategoryFollowedByExtension
+@end
+
+@interface ClassWithRedeclaredPropertyInCategoryFollowedByExtension ()
+@property (readwrite) int someProp;
+@end
+
+@interface ClassWithRedeclaredPropertyInCategoryFollowedByExtension (MyCat)
+@property (readonly) int someProp;
+@end
+
+@implementation ClassWithRedeclaredPropertyInCategoryFollowedByExtension
+- (void)testSynthesisForRedeclaredProperties; {
+  clang_analyzer_eval(self.someProp == self.someProp); // expected-warning{{TRUE}}
+  clang_analyzer_eval([self someProp] == self.someProp); // expected-warning{{TRUE}}
+}
+@end
+
+@interface ClassWithSynthesizedPropertyAndGetter
+@property (readonly) int someProp;
+@end
+
+@implementation ClassWithSynthesizedPropertyAndGetter
+@synthesize someProp;
+
+// Make sure that the actual getter is inlined and not a getter created
+// by BodyFarm
+- (void)testBodyFarmGetterNotUsed {
+  int i = self.someProp;
+  clang_analyzer_eval(i == 22); // expected-warning {{TRUE}}
+}
+
+-(int)someProp {
+  return 22;
+}
+@end
+
 //------
 // Setter ivar invalidation.
 //------
@@ -315,6 +383,114 @@ void testConsistencyAssign(Person *p) {
 }
 #endif
 @end
+
+//------
+// class properties
+//------
+
+int gBackingForReadWriteClassProp = 0;
+
+@interface ClassWithClassProperties
+@property(class, readonly) int readOnlyClassProp;
+
+@property(class) int readWriteClassProp;
+
+// Make sure we handle when a class and instance property have the same
+// name. Test both when instance comes first and when class comes first.
+@property(readonly) int classAndInstancePropWithSameNameOrderInstanceFirst;
+@property(class, readonly) int classAndInstancePropWithSameNameOrderInstanceFirst;
+
+@property(class, readonly) int classAndInstancePropWithSameNameOrderClassFirst;
+@property(readonly) int classAndInstancePropWithSameNameOrderClassFirst;
+
+
+@property(class, readonly) int dynamicClassProp;
+
+@end
+
+@interface ClassWithClassProperties (OtherTranslationUnit)
+@property(class, assign) id propInOtherTranslationUnit;
+@end
+
+@implementation ClassWithClassProperties
+
+@dynamic dynamicClassProp;
+
++ (int)readOnlyClassProp {
+  return 1;
+}
+
++ (int)readWriteClassProp {
+  return gBackingForReadWriteClassProp;
+}
+
++ (void)setReadWriteClassProp:(int)val {
+  gBackingForReadWriteClassProp = val;
+}
+
+- (int)classAndInstancePropWithSameNameOrderInstanceFirst {
+  return 12;
+}
+
++ (int)classAndInstancePropWithSameNameOrderInstanceFirst {
+  return 13;
+}
+
++ (int)classAndInstancePropWithSameNameOrderClassFirst {
+  return 14;
+}
+
+- (int)classAndInstancePropWithSameNameOrderClassFirst {
+  return 15;
+}
+
+- (void)testInlineClassProp {
+  clang_analyzer_eval(ClassWithClassProperties.readOnlyClassProp == 1); // expected-warning{{TRUE}}
+
+  ClassWithClassProperties.readWriteClassProp = 7;
+  clang_analyzer_eval(ClassWithClassProperties.readWriteClassProp == 7); // expected-warning{{TRUE}}
+  ClassWithClassProperties.readWriteClassProp = 8;
+  clang_analyzer_eval(ClassWithClassProperties.readWriteClassProp == 8); // expected-warning{{TRUE}}
+}
+
+- (void)testUnknownClassProp {
+  clang_analyzer_eval(ClassWithClassProperties.propInOtherTranslationUnit == ClassWithClassProperties.propInOtherTranslationUnit); // expected-warning{{UNKNOWN}}
+}
+
+- (void)testEscapeGlobalOnUnknownProp {
+  gBackingForReadWriteClassProp = 33;
+  ClassWithClassProperties.propInOtherTranslationUnit = 0;
+  clang_analyzer_eval(gBackingForReadWriteClassProp == 33); // expected-warning{{UNKNOWN}}
+}
+
+- (void)testClassAndInstancePropertyWithSameName {
+  clang_analyzer_eval(self.classAndInstancePropWithSameNameOrderInstanceFirst == 12); // expected-warning{{TRUE}}
+  clang_analyzer_eval(ClassWithClassProperties.classAndInstancePropWithSameNameOrderInstanceFirst == 13); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(ClassWithClassProperties.classAndInstancePropWithSameNameOrderClassFirst == 14); // expected-warning{{TRUE}}
+  clang_analyzer_eval(self.classAndInstancePropWithSameNameOrderClassFirst == 15); // expected-warning{{TRUE}}
+}
+
+- (void)testDynamicClassProp {
+  clang_analyzer_eval(ClassWithClassProperties.dynamicClassProp == 16); // expected-warning{{UNKNOWN}}
+}
+
+@end
+
+@interface SubclassOfClassWithClassProperties : ClassWithClassProperties
+@end
+
+@implementation SubclassOfClassWithClassProperties
++ (int)dynamicClassProp; {
+ return 16;
+}
+
+- (void)testDynamicClassProp {
+  clang_analyzer_eval(SubclassOfClassWithClassProperties.dynamicClassProp == 16); // expected-warning{{TRUE}}
+}
+
+@end
+
 
 #if !__has_feature(objc_arc)
 void testOverrelease(Person *p, int coin) {

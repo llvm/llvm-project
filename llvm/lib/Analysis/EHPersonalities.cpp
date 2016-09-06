@@ -27,13 +27,16 @@ EHPersonality llvm::classifyEHPersonality(const Value *Pers) {
   return StringSwitch<EHPersonality>(F->getName())
     .Case("__gnat_eh_personality", EHPersonality::GNU_Ada)
     .Case("__gxx_personality_v0",  EHPersonality::GNU_CXX)
+    .Case("__gxx_personality_sj0", EHPersonality::GNU_CXX_SjLj)
     .Case("__gcc_personality_v0",  EHPersonality::GNU_C)
+    .Case("__gcc_personality_sj0", EHPersonality::GNU_C_SjLj)
     .Case("__objc_personality_v0", EHPersonality::GNU_ObjC)
     .Case("_except_handler3",      EHPersonality::MSVC_X86SEH)
     .Case("_except_handler4",      EHPersonality::MSVC_X86SEH)
     .Case("__C_specific_handler",  EHPersonality::MSVC_Win64SEH)
     .Case("__CxxFrameHandler3",    EHPersonality::MSVC_CXX)
     .Case("ProcessCLRException",   EHPersonality::CoreCLR)
+    .Case("rust_eh_personality",   EHPersonality::Rust)
     .Default(EHPersonality::Unknown);
 }
 
@@ -79,7 +82,7 @@ DenseMap<BasicBlock *, ColorVector> llvm::colorEHFunclets(Function &F) {
     }
     // Note that this is a member of the given color.
     ColorVector &Colors = BlockColors[Visiting];
-    if (std::find(Colors.begin(), Colors.end(), Color) == Colors.end())
+    if (!is_contained(Colors, Color))
       Colors.push_back(Color);
     else
       continue;

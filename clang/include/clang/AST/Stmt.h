@@ -93,6 +93,13 @@ protected:
     unsigned NumStmts : 32 - NumStmtBits;
   };
 
+  class IfStmtBitfields {
+    friend class IfStmt;
+    unsigned : NumStmtBits;
+
+    unsigned IsConstexpr : 1;
+  };
+
   class ExprBitfields {
     friend class Expr;
     friend class DeclRefExpr; // computeDependence
@@ -115,6 +122,7 @@ protected:
     friend class OverloadExpr; // ctor
     friend class PseudoObjectExpr; // ctor
     friend class AtomicExpr; // ctor
+    friend class OpaqueValueExpr; // ctor
     unsigned : NumStmtBits;
 
     unsigned ValueKind : 2;
@@ -191,7 +199,10 @@ protected:
 
     unsigned : NumExprBits;
 
-    unsigned NumObjects : 32 - NumExprBits;
+    // When false, it must not have side effects.
+    unsigned CleanupsHaveSideEffects : 1;
+
+    unsigned NumObjects : 32 - 1 - NumExprBits;
   };
 
   class PseudoObjectExprBitfields {
@@ -244,6 +255,7 @@ protected:
   union {
     StmtBitfields StmtBits;
     CompoundStmtBitfields CompoundStmtBits;
+    IfStmtBitfields IfStmtBits;
     ExprBitfields ExprBits;
     CharacterLiteralBitfields CharacterLiteralBits;
     FloatingLiteralBitfields FloatingLiteralBits;
@@ -867,14 +879,15 @@ public:
 /// IfStmt - This represents an if/then/else.
 ///
 class IfStmt : public Stmt {
-  enum { VAR, COND, THEN, ELSE, END_EXPR };
+  enum { INIT, VAR, COND, THEN, ELSE, END_EXPR };
   Stmt* SubExprs[END_EXPR];
 
   SourceLocation IfLoc;
   SourceLocation ElseLoc;
 
 public:
-  IfStmt(const ASTContext &C, SourceLocation IL, VarDecl *var, Expr *cond,
+  IfStmt(const ASTContext &C, SourceLocation IL,
+         bool IsConstexpr, Stmt *init, VarDecl *var, Expr *cond,
          Stmt *then, SourceLocation EL = SourceLocation(),
          Stmt *elsev = nullptr);
 
@@ -898,6 +911,9 @@ public:
     return reinterpret_cast<DeclStmt*>(SubExprs[VAR]);
   }
 
+  Stmt *getInit() { return SubExprs[INIT]; }
+  const Stmt *getInit() const { return SubExprs[INIT]; }
+  void setInit(Stmt *S) { SubExprs[INIT] = S; }
   const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
   void setCond(Expr *E) { SubExprs[COND] = reinterpret_cast<Stmt *>(E); }
   const Stmt *getThen() const { return SubExprs[THEN]; }
@@ -913,6 +929,11 @@ public:
   void setIfLoc(SourceLocation L) { IfLoc = L; }
   SourceLocation getElseLoc() const { return ElseLoc; }
   void setElseLoc(SourceLocation L) { ElseLoc = L; }
+
+  bool isConstexpr() const { return IfStmtBits.IsConstexpr; }
+  void setConstexpr(bool C) { IfStmtBits.IsConstexpr = C; }
+
+  bool isObjCAvailabilityCheck() const;
 
   SourceLocation getLocStart() const LLVM_READONLY { return IfLoc; }
   SourceLocation getLocEnd() const LLVM_READONLY {
@@ -937,7 +958,7 @@ public:
 ///
 class SwitchStmt : public Stmt {
   SourceLocation SwitchLoc;
-  enum { VAR, COND, BODY, END_EXPR };
+  enum { INIT, VAR, COND, BODY, END_EXPR };
   Stmt* SubExprs[END_EXPR];
   // This points to a linked list of case and default statements and, if the
   // SwitchStmt is a switch on an enum value, records whether all the enum
@@ -946,7 +967,7 @@ class SwitchStmt : public Stmt {
   llvm::PointerIntPair<SwitchCase *, 1, bool> FirstCase;
 
 public:
-  SwitchStmt(const ASTContext &C, VarDecl *Var, Expr *cond);
+  SwitchStmt(const ASTContext &C, Stmt *Init, VarDecl *Var, Expr *cond);
 
   /// \brief Build a empty switch statement.
   explicit SwitchStmt(EmptyShell Empty) : Stmt(SwitchStmtClass, Empty) { }
@@ -969,6 +990,9 @@ public:
     return reinterpret_cast<DeclStmt*>(SubExprs[VAR]);
   }
 
+  Stmt *getInit() { return SubExprs[INIT]; }
+  const Stmt *getInit() const { return SubExprs[INIT]; }
+  void setInit(Stmt *S) { SubExprs[INIT] = S; }
   const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
   const Stmt *getBody() const { return SubExprs[BODY]; }
   const SwitchCase *getSwitchCaseList() const { return FirstCase.getPointer(); }

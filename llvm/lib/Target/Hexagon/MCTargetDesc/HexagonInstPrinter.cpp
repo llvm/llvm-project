@@ -79,7 +79,6 @@ void HexagonInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
   }
   if (HexagonMCInstrInfo::isOuterLoop(*MI)) {
     OS << Separator;
-    Separator = " ";
     MCInst ME;
     ME.setOpcode(Hexagon::ENDLOOP1);
     printInstruction(&ME, OS);
@@ -203,16 +202,11 @@ void HexagonInstPrinter::printPredicateOperand(MCInst const *MI, unsigned OpNo,
 
 void HexagonInstPrinter::printSymbol(MCInst const *MI, unsigned OpNo,
                                      raw_ostream &O, bool hi) const {
-  MCOperand const &MO = MI->getOperand(OpNo);
+  assert(MI->getOperand(OpNo).isImm() && "Unknown symbol operand");
 
   O << '#' << (hi ? "HI" : "LO") << '(';
-  if (MO.isImm()) {
-    O << '#';
-    printOperand(MI, OpNo, O);
-  } else {
-    printOperand(MI, OpNo, O);
-    assert("Unknown symbol operand");
-  }
+  O << '#';
+  printOperand(MI, OpNo, O);
   O << ')';
 }
 

@@ -19,7 +19,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
@@ -35,9 +34,9 @@ namespace {
     typedef RecursiveASTVisitor<ASTPrinter> base;
 
   public:
-    ASTPrinter(raw_ostream *Out = nullptr, bool Dump = false,
+    ASTPrinter(std::unique_ptr<raw_ostream> Out = nullptr, bool Dump = false,
                StringRef FilterString = "", bool DumpLookups = false)
-        : Out(Out ? *Out : llvm::outs()), Dump(Dump),
+        : Out(Out ? *Out : llvm::outs()), OwnedOut(std::move(Out)), Dump(Dump),
           FilterString(FilterString), DumpLookups(DumpLookups) {}
 
     void HandleTranslationUnit(ASTContext &Context) override {
@@ -94,6 +93,7 @@ namespace {
     }
 
     raw_ostream &Out;
+    std::unique_ptr<raw_ostream> OwnedOut;
     bool Dump;
     std::string FilterString;
     bool DumpLookups;
@@ -122,9 +122,11 @@ namespace {
   };
 } // end anonymous namespace
 
-std::unique_ptr<ASTConsumer> clang::CreateASTPrinter(raw_ostream *Out,
-                                                     StringRef FilterString) {
-  return llvm::make_unique<ASTPrinter>(Out, /*Dump=*/false, FilterString);
+std::unique_ptr<ASTConsumer>
+clang::CreateASTPrinter(std::unique_ptr<raw_ostream> Out,
+                        StringRef FilterString) {
+  return llvm::make_unique<ASTPrinter>(std::move(Out), /*Dump=*/false,
+                                       FilterString);
 }
 
 std::unique_ptr<ASTConsumer> clang::CreateASTDumper(StringRef FilterString,
@@ -268,7 +270,7 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
     // Print the parameters.
     Out << "(";
     bool PrintComma = false;
-    for (auto I : FD->params()) {
+    for (auto I : FD->parameters()) {
       if (PrintComma)
         Out << ", ";
       else
@@ -290,13 +292,12 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
     // Print the parameters.
     Out << "(";
     bool PrintComma = false;
-    for (FunctionDecl::param_const_iterator I = D->param_begin(),
-           E = D->param_end(); I != E; ++I) {
+    for (ParmVarDecl *Parameter : D->parameters()) {
       if (PrintComma)
         Out << ", ";
       else
         PrintComma = true;
-      Out << **I;
+      Out << *Parameter;
     }
     Out << ")";
 
@@ -320,13 +321,12 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
     // Print the parameters.
     Out << "(";
     bool PrintComma = false;
-    for (FunctionDecl::param_const_iterator I = D->param_begin(),
-           E = D->param_end(); I != E; ++I) {
+    for (ParmVarDecl *Parameter : D->parameters()) {
       if (PrintComma)
         Out << ", ";
       else
         PrintComma = true;
-      Out << **I;
+      Out << *Parameter;
     }
     Out << ")";
 

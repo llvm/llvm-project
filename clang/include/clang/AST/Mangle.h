@@ -17,10 +17,11 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/raw_ostream.h"
+
+namespace llvm {
+  class raw_ostream;
+}
 
 namespace clang {
   class ASTContext;
@@ -207,7 +208,8 @@ public:
                                                raw_ostream &Out) = 0;
 
   virtual void mangleCXXThrowInfo(QualType T, bool IsConst, bool IsVolatile,
-                                  uint32_t NumEntries, raw_ostream &Out) = 0;
+                                  bool IsUnaligned, uint32_t NumEntries,
+                                  raw_ostream &Out) = 0;
 
   virtual void mangleCXXCatchableTypeArray(QualType T, uint32_t NumEntries,
                                            raw_ostream &Out) = 0;

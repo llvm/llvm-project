@@ -11,9 +11,11 @@
 // for CombinedAllocator.
 //===----------------------------------------------------------------------===//
 /* Usage:
-clang++ -fno-exceptions  -g -fPIC -I. -I../include -Isanitizer \
+clang++ -std=c++11 -fno-exceptions  -g -fPIC -I. -I../include -Isanitizer \
  sanitizer_common/tests/sanitizer_allocator_testlib.cc \
- sanitizer_common/sanitizer_*.cc -shared -lpthread -o testmalloc.so
+ $(\ls sanitizer_common/sanitizer_*.cc | grep -v sanitizer_common_nolibc.cc) \
+  sanitizer_common/sanitizer_linux_x86_64.S \
+ -shared -lpthread -o testmalloc.so
 LD_PRELOAD=`pwd`/testmalloc.so /your/app
 */
 #include "sanitizer_common/sanitizer_allocator.h"
@@ -36,7 +38,8 @@ namespace {
 static const uptr kAllocatorSpace = 0x600000000000ULL;
 static const uptr kAllocatorSize  =  0x10000000000ULL;  // 1T.
 
-typedef SizeClassAllocator64<kAllocatorSpace, kAllocatorSize, 0,
+// typedef SizeClassAllocator64<kAllocatorSpace, kAllocatorSize, 0,
+typedef SizeClassAllocator64<~(uptr)0, kAllocatorSize, 0,
   CompactSizeClassMap> PrimaryAllocator;
 typedef SizeClassAllocatorLocalCache<PrimaryAllocator> AllocatorCache;
 typedef LargeMmapAllocator<> SecondaryAllocator;
@@ -57,15 +60,34 @@ static void thread_dtor(void *v) {
   allocator.SwallowCache(&cache);
 }
 
+static size_t GetRss() {
+  if (FILE *f = fopen("/proc/self/statm", "r")) {
+    size_t size = 0, rss = 0;
+    fscanf(f, "%zd %zd", &size, &rss);
+    fclose(f);
+    return rss << 12;  // rss is in pages.
+  }
+  return 0;
+}
+
+struct AtExit {
+  ~AtExit() {
+    allocator.PrintStats();
+    Printf("RSS: %zdM\n", GetRss() >> 20);
+  }
+};
+
+static AtExit at_exit;
+
 static void NOINLINE thread_init() {
   if (!global_inited) {
     global_inited = true;
-    allocator.Init();
+    allocator.Init(false /*may_return_null*/);
     pthread_key_create(&pkey, thread_dtor);
   }
   thread_inited = true;
   pthread_setspecific(pkey, (void*)1);
-  cache.Init();
+  cache.Init(nullptr);
 }
 }  // namespace
 

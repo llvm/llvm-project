@@ -50,3 +50,6 @@ DEFINE_COMPILERRT_FUNCTION(__floatundidf)
 END_COMPILERRT_FUNCTION(__floatundidf)
 
 #endif // __i386__
+
+NO_EXEC_STACK_DIRECTIVE
+

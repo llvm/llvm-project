@@ -1,5 +1,5 @@
 // RUN: %clangxx_cfi -o %t1 %s
-// RUN: %expect_crash %t1 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash_unless_devirt %t1 2>&1 | FileCheck --check-prefix=CFI %s
 
 // RUN: %clangxx_cfi -DB32 -o %t2 %s
 // RUN: %expect_crash %t2 2>&1 | FileCheck --check-prefix=CFI %s
@@ -55,7 +55,10 @@ int main() {
   // CFI-DIAG-NEXT: note: invalid vtable
   a->f();
 
-  // CFI-NOT: {{^2$}}
+  // We don't check for the absence of a 2 here because under devirtualization
+  // our virtual call may be devirtualized and we will proceed with execution
+  // rather than crashing.
+
   // NCFI: {{^2$}}
   fprintf(stderr, "2\n");
 }

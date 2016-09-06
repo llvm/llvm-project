@@ -1523,13 +1523,12 @@ static DecodeStatus DecodeSystemPStateInstruction(llvm::MCInst &Inst,
   Inst.addOperand(MCOperand::createImm(pstate_field));
   Inst.addOperand(MCOperand::createImm(crm));
 
-  bool ValidNamed;
-  const AArch64Disassembler *Dis = 
+  const AArch64Disassembler *Dis =
       static_cast<const AArch64Disassembler *>(Decoder);
-  (void)AArch64PState::PStateMapper().toString(pstate_field, 
-      Dis->getSubtargetInfo().getFeatureBits(), ValidNamed);
-
-  return ValidNamed ? Success : Fail;
+  auto PState = AArch64PState::lookupPStateByEncoding(pstate_field);
+  if (PState && PState->haveFeatures(Dis->getSubtargetInfo().getFeatureBits()))
+    return Success;
+  return Fail;
 }
 
 static DecodeStatus DecodeTestAndBranch(llvm::MCInst &Inst, uint32_t insn,
@@ -1574,7 +1573,7 @@ static DecodeStatus DecodeWSeqPairsClassRegisterClass(MCInst &Inst,
                                                       unsigned RegNo,
                                                       uint64_t Addr,
                                                       const void *Decoder) {
-  return DecodeGPRSeqPairsClassRegisterClass(Inst, 
+  return DecodeGPRSeqPairsClassRegisterClass(Inst,
                                              AArch64::WSeqPairsClassRegClassID,
                                              RegNo, Addr, Decoder);
 }
@@ -1583,7 +1582,7 @@ static DecodeStatus DecodeXSeqPairsClassRegisterClass(MCInst &Inst,
                                                       unsigned RegNo,
                                                       uint64_t Addr,
                                                       const void *Decoder) {
-  return DecodeGPRSeqPairsClassRegisterClass(Inst, 
+  return DecodeGPRSeqPairsClassRegisterClass(Inst,
                                              AArch64::XSeqPairsClassRegClassID,
                                              RegNo, Addr, Decoder);
 }

@@ -341,6 +341,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_AnyPointerToBlockPointerCast:
       case CK_ObjCObjectLValueCast:
       case CK_ZeroToOCLEvent:
+      case CK_IntToOCLSampler:
       case CK_LValueBitCast: {
         // Delegate to SValBuilder to process.
         SVal V = state->getSVal(Ex, LCtx);
@@ -385,7 +386,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
           Failed = true;
         // Else, evaluate the cast.
         else
-          val = getStoreManager().evalDynamicCast(val, T, Failed);
+          val = getStoreManager().attemptDownCast(val, T, Failed);
 
         if (Failed) {
           if (T->isReferenceType()) {
@@ -411,6 +412,28 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         Bldr.generateNode(CastE, Pred, state);
         continue;
       }
+      case CK_BaseToDerived: {
+        SVal val = state->getSVal(Ex, LCtx);
+        QualType resultType = CastE->getType();
+        if (CastE->isGLValue())
+          resultType = getContext().getPointerType(resultType);
+
+        bool Failed = false;
+
+        if (!val.isConstant()) {
+          val = getStoreManager().attemptDownCast(val, T, Failed);
+        }
+
+        // Failed to cast or the result is unknown, fall back to conservative.
+        if (Failed || val.isUnknown()) {
+          val =
+            svalBuilder.conjureSymbolVal(nullptr, CastE, LCtx, resultType,
+                                         currBldrCtx->blockCount());
+        }
+        state = state->BindExpr(CastE, LCtx, val);
+        Bldr.generateNode(CastE, Pred, state);
+        continue;
+      }
       case CK_NullToMemberPointer: {
         // FIXME: For now, member pointers are represented by void *.
         SVal V = svalBuilder.makeNull();
@@ -420,7 +443,6 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       }
       // Various C++ casts that are not handled yet.
       case CK_ToUnion:
-      case CK_BaseToDerived:
       case CK_BaseToDerivedMemberPointer:
       case CK_DerivedToBaseMemberPointer:
       case CK_ReinterpretMemberPointer:

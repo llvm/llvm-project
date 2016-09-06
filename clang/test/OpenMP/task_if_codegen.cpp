@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix=CHECK %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 // REQUIRES: x86-registered-target
 // expected-no-diagnostics
 #ifndef HEADER
@@ -63,11 +63,11 @@ int tmain(T Arg) {
 // CHECK-LABEL: @main
 int main() {
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
-// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc({{[^,]+}}, i32 [[GTID]], i32 1, i64 32, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN7:[^ ]+]] to i32 (i32, i8*)*))
+// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc({{[^,]+}}, i32 [[GTID]], i32 1, i64 40, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN7:[^ ]+]] to i32 (i32, i8*)*))
 // CHECK: call i32 @__kmpc_omp_task(%{{.+}}* @{{.+}}, i32 [[GTID]], i8* [[ORIG_TASK_PTR]])
 #pragma omp task if (true)
   fn7();
-// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc({{[^,]+}}, i32 [[GTID]], i32 1, i64 32, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN8:[^ ]+]] to i32 (i32, i8*)*))
+// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc({{[^,]+}}, i32 [[GTID]], i32 1, i64 40, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN8:[^ ]+]] to i32 (i32, i8*)*))
 // CHECK: [[TASK_PTR:%.+]] = bitcast i8* [[ORIG_TASK_PTR]] to
 // CHECK: call void @__kmpc_omp_task_begin_if0(%{{.+}}* @{{.+}}, i{{.+}} [[GTID]], i8* [[ORIG_TASK_PTR]])
 // CHECK: call i32 [[CAP_FN8]](i32 [[GTID]], %{{.+}}* [[TASK_PTR]])
@@ -75,7 +75,7 @@ int main() {
 #pragma omp task if (false)
   fn8();
 
-// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc({{[^,]+}}, i32 [[GTID]], i32 1, i64 32, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN9:[^ ]+]] to i32 (i32, i8*)*))
+// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc({{[^,]+}}, i32 [[GTID]], i32 1, i64 40, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN9:[^ ]+]] to i32 (i32, i8*)*))
 // CHECK: [[TASK_PTR:%.+]] = bitcast i8* [[ORIG_TASK_PTR]] to
 // CHECK: br i1 %{{.+}}, label %[[OMP_THEN:.+]], label %[[OMP_ELSE:.+]]
 // CHECK: [[OMP_THEN]]
@@ -89,7 +89,7 @@ int main() {
 // CHECK: [[OMP_END]]
 #pragma omp task if (Arg)
   fn9();
-// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc({{[^,]+}}, i32 [[GTID]], i32 1, i64 32, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN10:[^ ]+]] to i32 (i32, i8*)*))
+// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc({{[^,]+}}, i32 [[GTID]], i32 1, i64 40, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN10:[^ ]+]] to i32 (i32, i8*)*))
 // CHECK: [[TASK_PTR:%.+]] = bitcast i8* [[ORIG_TASK_PTR]] to
 // CHECK: br i1 %{{.+}}, label %[[OMP_THEN:.+]], label %[[OMP_ELSE:.+]]
 // CHECK: [[OMP_THEN]]
@@ -126,7 +126,7 @@ int main() {
 
 // CHECK-LABEL: define {{.+}} @{{.+}}tmain
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
-// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc(%{{[^,]+}}, i32 [[GTID]], i32 1, i64 32, i64 1, i32 (i32, i8*)* bitcast (i32 (i32,  %{{[^*]+}}*)* [[CAP_FN1:[^ ]+]] to i32 (i32, i8*)*))
+// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc(%{{[^,]+}}, i32 [[GTID]], i32 1, i64 40, i64 1, i32 (i32, i8*)* bitcast (i32 (i32,  %{{[^*]+}}*)* [[CAP_FN1:[^ ]+]] to i32 (i32, i8*)*))
 // CHECK: call i32 @__kmpc_omp_task(%{{.+}}* @{{.+}}, i32 [[GTID]], i8* [[ORIG_TASK_PTR]])
 
 // CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc(
@@ -135,7 +135,7 @@ int main() {
 // CHECK: call i32 [[CAP_FN2:@.+]](i32 [[GTID]], %{{.+}}* [[TASK_PTR]])
 // CHECK: call void @__kmpc_omp_task_complete_if0(%{{.+}}* @{{.+}}, i{{.+}} [[GTID]], i8* [[ORIG_TASK_PTR]])
 
-// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc(%{{[^,]+}}, i32 [[GTID]], i32 1, i64 32, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN3:[^ ]+]] to i32 (i32, i8*)*))
+// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc(%{{[^,]+}}, i32 [[GTID]], i32 1, i64 40, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN3:[^ ]+]] to i32 (i32, i8*)*))
 // CHECK: [[TASK_PTR:%.+]] = bitcast i8* [[ORIG_TASK_PTR]] to
 // CHECK: br i1 %{{.+}}, label %[[OMP_THEN:.+]], label %[[OMP_ELSE:.+]]
 // CHECK: [[OMP_THEN]]
@@ -148,7 +148,7 @@ int main() {
 // CHECK: br label %[[OMP_END]]
 // CHECK: [[OMP_END]]
 
-// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc(%{{[^,]+}}, i32 [[GTID]], i32 1, i64 32, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN4:[^ ]+]] to i32 (i32, i8*)*))
+// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc(%{{[^,]+}}, i32 [[GTID]], i32 1, i64 40, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN4:[^ ]+]] to i32 (i32, i8*)*))
 // CHECK: [[TASK_PTR:%.+]] = bitcast i8* [[ORIG_TASK_PTR]] to
 // CHECK: br i1 %{{.+}}, label %[[OMP_THEN:.+]], label %[[OMP_ELSE:.+]]
 // CHECK: [[OMP_THEN]]
@@ -162,7 +162,7 @@ int main() {
 // CHECK: br label %[[OMP_END]]
 // CHECK: [[OMP_END]]
 
-// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc(%{{[^,]+}}, i32 [[GTID]], i32 1, i64 32, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN5:[^ ]+]] to i32 (i32, i8*)*))
+// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc(%{{[^,]+}}, i32 [[GTID]], i32 1, i64 40, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN5:[^ ]+]] to i32 (i32, i8*)*))
 // CHECK: [[TASK_PTR:%.+]] = bitcast i8* [[ORIG_TASK_PTR]] to
 // CHECK: br i1 %{{.+}}, label %[[OMP_THEN:.+]], label %[[OMP_ELSE:.+]]
 // CHECK: [[OMP_THEN]]
@@ -176,7 +176,7 @@ int main() {
 // CHECK: br label %[[OMP_END]]
 // CHECK: [[OMP_END]]
 
-// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc(%{{[^,]+}}, i32 [[GTID]], i32 1, i64 32, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN6:[^ ]+]] to i32 (i32, i8*)*))
+// CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc(%{{[^,]+}}, i32 [[GTID]], i32 1, i64 40, i64 1, i32 (i32, i8*)* bitcast (i32 (i32, %{{[^*]+}}*)* [[CAP_FN6:[^ ]+]] to i32 (i32, i8*)*))
 // CHECK: [[TASK_PTR:%.+]] = bitcast i8* [[ORIG_TASK_PTR]] to
 // CHECK: br i1 %{{.+}}, label %[[OMP_THEN:.+]], label %[[OMP_ELSE:.+]]
 // CHECK: [[OMP_THEN]]

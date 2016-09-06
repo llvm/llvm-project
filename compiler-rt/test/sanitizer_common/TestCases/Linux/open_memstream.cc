@@ -1,6 +1,6 @@
 // RUN: %clangxx -m64 -O0 -g -xc++ %s -o %t && %run %t
 // RUN: %clangxx -m64 -O3 -g -xc++ %s -o %t && %run %t
-// REQUIRES: x86_64-supported-target
+// REQUIRES: x86_64-target-arch
 
 #include <assert.h>
 #include <stdio.h>

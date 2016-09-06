@@ -19,4 +19,4 @@
 type = Library
 name = DebugInfoCodeView
 parent = DebugInfo
-required_libraries = Support
+required_libraries = Support DebugInfoMSF

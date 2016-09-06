@@ -1,7 +1,7 @@
-; RUN: llc -mattr=-vsx < %s | grep stfd | count 3
-; RUN: llc -mattr=-vsx < %s | grep stfs | count 1
-; RUN: llc -mattr=-vsx < %s | grep lfd | count 2
-; RUN: llc -mattr=-vsx < %s | grep lfs | count 2
+; RUN: llc -verify-machineinstrs -mattr=-vsx < %s | grep stfd | count 3
+; RUN: llc -verify-machineinstrs -mattr=-vsx < %s | grep stfs | count 1
+; RUN: llc -verify-machineinstrs -mattr=-vsx < %s | grep lfd | count 2
+; RUN: llc -verify-machineinstrs -mattr=-vsx < %s | grep lfs | count 2
 ; ModuleID = 'foo.c'
 target datalayout = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f128:64:128"
 target triple = "powerpc-apple-darwin8"

@@ -37,7 +37,7 @@ define i64 @stackmap_liveness(i1 %c) {
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .byte 8
 ; Align
-; CHECK-NEXT:   .align  3
+; CHECK-NEXT:   .p2align  3
   %1 = select i1 %c, i64 1, i64 2
   call anyregcc void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 1, i32 32, i8* null, i32 0)
   ret i64 %1

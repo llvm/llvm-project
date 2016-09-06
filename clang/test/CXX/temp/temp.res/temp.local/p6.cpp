@@ -5,11 +5,11 @@ namespace N {}
 template<typename T, // expected-note {{declared here}}
          typename T> struct X {}; // expected-error {{declaration of 'T' shadows template parameter}}
 
-template<typename T> struct Y { // expected-note 17{{declared here}}
+template<typename T> struct Y { // expected-note 18{{declared here}}
   template<typename T> struct A {}; // expected-error {{declaration of 'T' shadows template parameter}}
 
   struct B {
-    template<typename> struct T {}; // FIXME: desired-error {{declaration of 'T' shadows template parameter}}
+    template<typename> struct T {}; // expected-error {{declaration of 'T' shadows template parameter}}
   };
   struct C {
     template<typename> void T(); // expected-error {{declaration of 'T' shadows template parameter}}
@@ -65,11 +65,11 @@ template<typename T> struct Y { // expected-note 17{{declared here}}
   friend struct T; // expected-error {{declaration of 'T' shadows template parameter}}
 };
 
-template<int T> struct Z { // expected-note 15{{declared here}}
+template<int T> struct Z { // expected-note 16{{declared here}}
   template<typename T> struct A {}; // expected-error {{declaration of 'T' shadows template parameter}}
 
   struct B {
-    template<typename> struct T {}; // FIXME: desired-error {{declaration of 'T' shadows template parameter}}
+    template<typename> struct T {}; // expected-error {{declaration of 'T' shadows template parameter}}
   };
   struct C {
     template<typename> void T(); // expected-error {{declaration of 'T' shadows template parameter}}
@@ -129,11 +129,22 @@ void f(int T) {} // expected-error {{declaration of 'T' shadows template paramet
 
 // FIXME: These are ill-formed: a template-parameter shall not have the same name as the template name.
 namespace A {
-  template<typename T> struct T {};
+  template<typename T> struct T {};  // expected-error{{declaration of 'T' shadows template parameter}}
+                                     // expected-note@-1{{template parameter is declared here}}
 }
 namespace B {
   template<typename T> void T() {}
 }
 namespace C {
   template<typename T> int T;
+}
+
+namespace PR28023 {
+template<int V>  // expected-note{{template parameter is declared here}}
+struct A {
+  struct B {
+    template <int> friend struct V;  // expected-error{{declaration of 'V' shadows template parameter}}
+  };
+};
+A<0>::B a;
 }

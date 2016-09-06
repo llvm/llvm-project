@@ -203,7 +203,7 @@ void BranchProbability::normalizeProbabilities(ProbabilityIter Begin,
     if (Sum <= BranchProbability::getDenominator())
       return;
   }
- 
+
   if (Sum == 0) {
     BranchProbability BP(1, std::distance(Begin, End));
     std::fill(Begin, End, BP);

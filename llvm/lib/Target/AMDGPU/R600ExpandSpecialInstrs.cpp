@@ -29,7 +29,6 @@ using namespace llvm;
 namespace {
 
 class R600ExpandSpecialInstrsPass : public MachineFunctionPass {
-
 private:
   static char ID;
   const R600InstrInfo *TII;
@@ -61,12 +60,13 @@ void R600ExpandSpecialInstrsPass::SetFlagInNewMI(MachineInstr *NewMI,
   int OpIdx = TII->getOperandIdx(*OldMI, Op);
   if (OpIdx > -1) {
     uint64_t Val = OldMI->getOperand(OpIdx).getImm();
-    TII->setImmOperand(NewMI, Op, Val);
+    TII->setImmOperand(*NewMI, Op, Val);
   }
 }
 
 bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
-  TII = static_cast<const R600InstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();
+  TII = ST.getInstrInfo();
 
   const R600RegisterInfo &TRI = TII->getRegisterInfo();
 
@@ -107,91 +107,12 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
                                             MI.getOperand(0).getReg(), // dst
                                             MI.getOperand(1).getReg(), // src0
                                             AMDGPU::ZERO);             // src1
-        TII->addFlag(PredSet, 0, MO_FLAG_MASK);
+        TII->addFlag(*PredSet, 0, MO_FLAG_MASK);
         if (Flags & MO_FLAG_PUSH) {
-          TII->setImmOperand(PredSet, AMDGPU::OpName::update_exec_mask, 1);
+          TII->setImmOperand(*PredSet, AMDGPU::OpName::update_exec_mask, 1);
         } else {
-          TII->setImmOperand(PredSet, AMDGPU::OpName::update_pred, 1);
+          TII->setImmOperand(*PredSet, AMDGPU::OpName::update_pred, 1);
         }
-        MI.eraseFromParent();
-        continue;
-        }
-
-      case AMDGPU::INTERP_PAIR_XY: {
-        MachineInstr *BMI;
-        unsigned PReg = AMDGPU::R600_ArrayBaseRegClass.getRegister(
-                MI.getOperand(2).getImm());
-
-        for (unsigned Chan = 0; Chan < 4; ++Chan) {
-          unsigned DstReg;
-
-          if (Chan < 2)
-            DstReg = MI.getOperand(Chan).getReg();
-          else
-            DstReg = Chan == 2 ? AMDGPU::T0_Z : AMDGPU::T0_W;
-
-          BMI = TII->buildDefaultInstruction(MBB, I, AMDGPU::INTERP_XY,
-              DstReg, MI.getOperand(3 + (Chan % 2)).getReg(), PReg);
-
-          if (Chan > 0) {
-            BMI->bundleWithPred();
-          }
-          if (Chan >= 2)
-            TII->addFlag(BMI, 0, MO_FLAG_MASK);
-          if (Chan != 3)
-            TII->addFlag(BMI, 0, MO_FLAG_NOT_LAST);
-        }
-
-        MI.eraseFromParent();
-        continue;
-        }
-
-      case AMDGPU::INTERP_PAIR_ZW: {
-        MachineInstr *BMI;
-        unsigned PReg = AMDGPU::R600_ArrayBaseRegClass.getRegister(
-                MI.getOperand(2).getImm());
-
-        for (unsigned Chan = 0; Chan < 4; ++Chan) {
-          unsigned DstReg;
-
-          if (Chan < 2)
-            DstReg = Chan == 0 ? AMDGPU::T0_X : AMDGPU::T0_Y;
-          else
-            DstReg = MI.getOperand(Chan-2).getReg();
-
-          BMI = TII->buildDefaultInstruction(MBB, I, AMDGPU::INTERP_ZW,
-              DstReg, MI.getOperand(3 + (Chan % 2)).getReg(), PReg);
-
-          if (Chan > 0) {
-            BMI->bundleWithPred();
-          }
-          if (Chan < 2)
-            TII->addFlag(BMI, 0, MO_FLAG_MASK);
-          if (Chan != 3)
-            TII->addFlag(BMI, 0, MO_FLAG_NOT_LAST);
-        }
-
-        MI.eraseFromParent();
-        continue;
-        }
-
-      case AMDGPU::INTERP_VEC_LOAD: {
-        const R600RegisterInfo &TRI = TII->getRegisterInfo();
-        MachineInstr *BMI;
-        unsigned PReg = AMDGPU::R600_ArrayBaseRegClass.getRegister(
-                MI.getOperand(1).getImm());
-        unsigned DstReg = MI.getOperand(0).getReg();
-
-        for (unsigned Chan = 0; Chan < 4; ++Chan) {
-          BMI = TII->buildDefaultInstruction(MBB, I, AMDGPU::INTERP_LOAD_P0,
-              TRI.getSubReg(DstReg, TRI.getSubRegFromChannel(Chan)), PReg);
-          if (Chan > 0) {
-            BMI->bundleWithPred();
-          }
-          if (Chan != 3)
-            TII->addFlag(BMI, 0, MO_FLAG_NOT_LAST);
-        }
-
         MI.eraseFromParent();
         continue;
         }
@@ -212,10 +133,10 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
             BMI->bundleWithPred();
           }
           if (Mask) {
-            TII->addFlag(BMI, 0, MO_FLAG_MASK);
+            TII->addFlag(*BMI, 0, MO_FLAG_MASK);
           }
           if (Chan != 3)
-            TII->addFlag(BMI, 0, MO_FLAG_NOT_LAST);
+            TII->addFlag(*BMI, 0, MO_FLAG_NOT_LAST);
           unsigned Opcode = BMI->getOpcode();
           // While not strictly necessary from hw point of view, we force
           // all src operands of a dot4 inst to belong to the same slot.
@@ -330,10 +251,10 @@ bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
         if (Chan != 0)
           NewMI->bundleWithPred();
         if (Mask) {
-          TII->addFlag(NewMI, 0, MO_FLAG_MASK);
+          TII->addFlag(*NewMI, 0, MO_FLAG_MASK);
         }
         if (NotLast) {
-          TII->addFlag(NewMI, 0, MO_FLAG_NOT_LAST);
+          TII->addFlag(*NewMI, 0, MO_FLAG_NOT_LAST);
         }
         SetFlagInNewMI(NewMI, &MI, AMDGPU::OpName::clamp);
         SetFlagInNewMI(NewMI, &MI, AMDGPU::OpName::literal);

@@ -65,7 +65,9 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ;
 ; AVX512F-LABEL: test_uitofp_v4i32_to_v4f32:
 ; AVX512F:       # BB#0:
+; AVX512F-NEXT:    # kill
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512F-NEXT:    # kill
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_uitofp_v4i32_to_v4f32:
@@ -76,17 +78,17 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
   ret <4 x float> %tmp
 }
 
-; AVX: [[MASKCSTADDR_v8:.LCPI[0-9_]+]]:
-; AVX-NEXT: .long 65535 # 0xffff
-; AVX-NEXT: .long 65535 # 0xffff
-; AVX-NEXT: .long 65535 # 0xffff
-; AVX-NEXT: .long 65535 # 0xffff
-
 ; AVX: [[FPMASKCSTADDR_v8:.LCPI[0-9_]+]]:
 ; AVX-NEXT: .long 1199570944 # float 65536
 ; AVX-NEXT: .long 1199570944 # float 65536
 ; AVX-NEXT: .long 1199570944 # float 65536
 ; AVX-NEXT: .long 1199570944 # float 65536
+
+; AVX: [[MASKCSTADDR_v8:.LCPI[0-9_]+]]:
+; AVX-NEXT: .long 65535 # 0xffff
+; AVX-NEXT: .long 65535 # 0xffff
+; AVX-NEXT: .long 65535 # 0xffff
+; AVX-NEXT: .long 65535 # 0xffff
 
 ; AVX2: [[FPMASKCSTADDR_v8:.LCPI[0-9_]+]]:
 ; AVX2-NEXT: .long 1199570944 # float 65536
@@ -117,15 +119,15 @@ define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
 ;
 ; AVX-LABEL: test_uitofp_v8i32_to_v8f32:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vandps [[MASKCSTADDR_v8]](%rip), %ymm0, %ymm1
+; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX-NEXT:    vpsrld $16, %xmm2, %xmm2
+; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX-NEXT:    vcvtdq2ps %ymm1, %ymm1
-; AVX-NEXT:    vpsrld $16, %xmm0, %xmm2
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX-NEXT:    vmulps [[FPMASKCSTADDR_v8]](%rip), %ymm1, %ymm1
+; AVX-NEXT:    vandps [[MASKCSTADDR_v8]](%rip), %ymm0, %ymm0
 ; AVX-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; AVX-NEXT:    vmulps [[FPMASKCSTADDR_v8]](%rip), %ymm0, %ymm0
-; AVX-NEXT:    vaddps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: test_uitofp_v8i32_to_v8f32:
@@ -142,7 +144,9 @@ define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
 ;
 ; AVX512F-LABEL: test_uitofp_v8i32_to_v8f32:
 ; AVX512F:       # BB#0:
+; AVX512F-NEXT:    # kill
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512F-NEXT:    # kill
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_uitofp_v8i32_to_v8f32:

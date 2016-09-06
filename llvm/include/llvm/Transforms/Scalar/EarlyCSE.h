@@ -26,12 +26,9 @@ namespace llvm {
 /// canonicalize things as it goes. It is intended to be fast and catch obvious
 /// cases so that instcombine and other passes are more effective. It is
 /// expected that a later pass of GVN will catch the interesting/hard cases.
-class EarlyCSEPass {
-public:
-  static StringRef name() { return "EarlyCSEPass"; }
-
+struct EarlyCSEPass : PassInfoMixin<EarlyCSEPass> {
   /// \brief Run the pass over the function.
-  PreservedAnalyses run(Function &F, AnalysisManager<Function> *AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 }

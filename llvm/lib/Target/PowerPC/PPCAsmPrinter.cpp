@@ -25,7 +25,6 @@
 #include "PPCTargetMachine.h"
 #include "PPCTargetStreamer.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -50,7 +49,6 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -81,6 +79,12 @@ public:
   }
 
     MCSymbol *lookUpOrCreateTOCEntry(MCSymbol *Sym);
+
+    virtual bool doInitialization(Module &M) override {
+      if (!TOC.empty())
+        TOC.clear();
+      return AsmPrinter::doInitialization(M);
+    }
 
     void EmitInstruction(const MachineInstr *MI) override;
 
@@ -138,8 +142,6 @@ public:
 
     bool doFinalization(Module &M) override;
     void EmitStartOfAsmFile(Module &M) override;
-
-    void EmitFunctionStubs(const MachineModuleInfoMachO::SymbolListTy &Stubs);
   };
 } // end of anonymous namespace
 
@@ -195,29 +197,14 @@ void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
     MCSymbol *SymToPrint;
 
     // External or weakly linked global variables need non-lazily-resolved stubs
-    if (TM.getRelocationModel() != Reloc::Static &&
-        !GV->isStrongDefinitionForLinker()) {
-      if (!GV->hasHiddenVisibility()) {
-        SymToPrint = getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
-        MachineModuleInfoImpl::StubValueTy &StubSym =
-            MMI->getObjFileInfo<MachineModuleInfoMachO>().getGVStubEntry(
-                SymToPrint);
-        if (!StubSym.getPointer())
-          StubSym = MachineModuleInfoImpl::
-            StubValueTy(getSymbol(GV), !GV->hasInternalLinkage());
-      } else if (GV->isDeclaration() || GV->hasCommonLinkage() ||
-                 GV->hasAvailableExternallyLinkage()) {
-        SymToPrint = getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
-
-        MachineModuleInfoImpl::StubValueTy &StubSym =
-            MMI->getObjFileInfo<MachineModuleInfoMachO>().getHiddenGVStubEntry(
-                SymToPrint);
-        if (!StubSym.getPointer())
-          StubSym = MachineModuleInfoImpl::
-            StubValueTy(getSymbol(GV), !GV->hasInternalLinkage());
-      } else {
-        SymToPrint = getSymbol(GV);
-      }
+    if (Subtarget->hasLazyResolverStub(GV)) {
+      SymToPrint = getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
+      MachineModuleInfoImpl::StubValueTy &StubSym =
+          MMI->getObjFileInfo<MachineModuleInfoMachO>().getGVStubEntry(
+              SymToPrint);
+      if (!StubSym.getPointer())
+        StubSym = MachineModuleInfoImpl::StubValueTy(getSymbol(GV),
+                                                     !GV->hasInternalLinkage());
     } else {
       SymToPrint = getSymbol(GV);
     }
@@ -470,7 +457,7 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
          "GETtls[ld]ADDR[32] must read GPR3");
 
   if (!Subtarget->isPPC64() && !Subtarget->isDarwin() &&
-      TM.getRelocationModel() == Reloc::PIC_)
+      isPositionIndependent())
     Kind = MCSymbolRefExpr::VK_PLT;
   const MCSymbolRefExpr *TlsRef =
     MCSymbolRefExpr::create(TlsGetAddr, Kind, OutContext);
@@ -597,7 +584,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     else if (MO.isBlockAddress())
       MOSymbol = GetBlockAddressSymbol(MO.getBlockAddress());
 
-    if (PL == PICLevel::Small) {
+    if (PL == PICLevel::SmallPIC) {
       const MCExpr *Exp =
         MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_GOT,
                                 OutContext);
@@ -1038,10 +1025,10 @@ void PPCLinuxAsmPrinter::EmitStartOfAsmFile(Module &M) {
   }
 
   if (static_cast<const PPCTargetMachine &>(TM).isPPC64() ||
-      TM.getRelocationModel() != Reloc::PIC_)
+      !isPositionIndependent())
     return AsmPrinter::EmitStartOfAsmFile(M);
 
-  if (M.getPICLevel() == PICLevel::Small)
+  if (M.getPICLevel() == PICLevel::SmallPIC)
     return AsmPrinter::EmitStartOfAsmFile(M);
 
   OutStreamer->SwitchSection(OutContext.getELFSection(
@@ -1067,8 +1054,8 @@ void PPCLinuxAsmPrinter::EmitStartOfAsmFile(Module &M) {
 void PPCLinuxAsmPrinter::EmitFunctionEntryLabel() {
   // linux/ppc32 - Normal entry label.
   if (!Subtarget->isPPC64() &&
-      (TM.getRelocationModel() != Reloc::PIC_ ||
-       MF->getFunction()->getParent()->getPICLevel() == PICLevel::Small))
+      (!isPositionIndependent() ||
+       MF->getFunction()->getParent()->getPICLevel() == PICLevel::SmallPIC))
     return AsmPrinter::EmitFunctionEntryLabel();
 
   if (!Subtarget->isPPC64()) {
@@ -1302,8 +1289,10 @@ void PPCDarwinAsmPrinter::EmitStartOfAsmFile(Module &M) {
     "power6",
     "power6x",
     "power7",
+    // FIXME: why is power8 missing here?
     "ppc64",
-    "ppc64le"
+    "ppc64le",
+    "power9"
   };
 
   // Get the numerically largest directive.
@@ -1350,161 +1339,6 @@ void PPCDarwinAsmPrinter::EmitStartOfAsmFile(Module &M) {
   OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
 }
 
-static MCSymbol *GetLazyPtr(MCSymbol *Sym, MCContext &Ctx) {
-  // Remove $stub suffix, add $lazy_ptr.
-  StringRef NoStub = Sym->getName().substr(0, Sym->getName().size()-5);
-  return Ctx.getOrCreateSymbol(NoStub + "$lazy_ptr");
-}
-
-static MCSymbol *GetAnonSym(MCSymbol *Sym, MCContext &Ctx) {
-  // Add $tmp suffix to $stub, yielding $stub$tmp.
-  return Ctx.getOrCreateSymbol(Sym->getName() + "$tmp");
-}
-
-void PPCDarwinAsmPrinter::
-EmitFunctionStubs(const MachineModuleInfoMachO::SymbolListTy &Stubs) {
-  bool isPPC64 = getDataLayout().getPointerSizeInBits() == 64;
-
-  // Construct a local MCSubtargetInfo and shadow EmitToStreamer here.
-  // This is because the MachineFunction won't exist (but have not yet been
-  // freed) and since we're at the global level we can use the default
-  // constructed subtarget.
-  std::unique_ptr<MCSubtargetInfo> STI(TM.getTarget().createMCSubtargetInfo(
-      TM.getTargetTriple().str(), TM.getTargetCPU(),
-      TM.getTargetFeatureString()));
-  auto EmitToStreamer = [&STI] (MCStreamer &S, const MCInst &Inst) {
-    S.EmitInstruction(Inst, *STI);
-  };
-
-  const TargetLoweringObjectFileMachO &TLOFMacho =
-      static_cast<const TargetLoweringObjectFileMachO &>(getObjFileLowering());
-
-  // .lazy_symbol_pointer
-  MCSection *LSPSection = TLOFMacho.getLazySymbolPointerSection();
-
-  // Output stubs for dynamically-linked functions
-  if (TM.getRelocationModel() == Reloc::PIC_) {
-    MCSection *StubSection = OutContext.getMachOSection(
-        "__TEXT", "__picsymbolstub1",
-        MachO::S_SYMBOL_STUBS | MachO::S_ATTR_PURE_INSTRUCTIONS, 32,
-        SectionKind::getText());
-    for (unsigned i = 0, e = Stubs.size(); i != e; ++i) {
-      OutStreamer->SwitchSection(StubSection);
-      EmitAlignment(4);
-
-      MCSymbol *Stub = Stubs[i].first;
-      MCSymbol *RawSym = Stubs[i].second.getPointer();
-      MCSymbol *LazyPtr = GetLazyPtr(Stub, OutContext);
-      MCSymbol *AnonSymbol = GetAnonSym(Stub, OutContext);
-
-      OutStreamer->EmitLabel(Stub);
-      OutStreamer->EmitSymbolAttribute(RawSym, MCSA_IndirectSymbol);
-
-      const MCExpr *Anon = MCSymbolRefExpr::create(AnonSymbol, OutContext);
-      const MCExpr *LazyPtrExpr = MCSymbolRefExpr::create(LazyPtr, OutContext);
-      const MCExpr *Sub =
-        MCBinaryExpr::createSub(LazyPtrExpr, Anon, OutContext);
-
-      // mflr r0
-      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MFLR).addReg(PPC::R0));
-      // bcl 20, 31, AnonSymbol
-      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BCLalways).addExpr(Anon));
-      OutStreamer->EmitLabel(AnonSymbol);
-      // mflr r11
-      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MFLR).addReg(PPC::R11));
-      // addis r11, r11, ha16(LazyPtr - AnonSymbol)
-      const MCExpr *SubHa16 = PPCMCExpr::createHa(Sub, true, OutContext);
-      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDIS)
-        .addReg(PPC::R11)
-        .addReg(PPC::R11)
-        .addExpr(SubHa16));
-      // mtlr r0
-      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MTLR).addReg(PPC::R0));
-
-      // ldu r12, lo16(LazyPtr - AnonSymbol)(r11)
-      // lwzu r12, lo16(LazyPtr - AnonSymbol)(r11)
-      const MCExpr *SubLo16 = PPCMCExpr::createLo(Sub, true, OutContext);
-      EmitToStreamer(*OutStreamer, MCInstBuilder(isPPC64 ? PPC::LDU : PPC::LWZU)
-        .addReg(PPC::R12)
-        .addExpr(SubLo16).addExpr(SubLo16)
-        .addReg(PPC::R11));
-      // mtctr r12
-      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MTCTR).addReg(PPC::R12));
-      // bctr
-      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BCTR));
-
-      OutStreamer->SwitchSection(LSPSection);
-      OutStreamer->EmitLabel(LazyPtr);
-      OutStreamer->EmitSymbolAttribute(RawSym, MCSA_IndirectSymbol);
-
-      MCSymbol *DyldStubBindingHelper =
-        OutContext.getOrCreateSymbol(StringRef("dyld_stub_binding_helper"));
-      if (isPPC64) {
-        // .quad dyld_stub_binding_helper
-        OutStreamer->EmitSymbolValue(DyldStubBindingHelper, 8);
-      } else {
-        // .long dyld_stub_binding_helper
-        OutStreamer->EmitSymbolValue(DyldStubBindingHelper, 4);
-      }
-    }
-    OutStreamer->AddBlankLine();
-    return;
-  }
-
-  MCSection *StubSection = OutContext.getMachOSection(
-      "__TEXT", "__symbol_stub1",
-      MachO::S_SYMBOL_STUBS | MachO::S_ATTR_PURE_INSTRUCTIONS, 16,
-      SectionKind::getText());
-  for (unsigned i = 0, e = Stubs.size(); i != e; ++i) {
-    MCSymbol *Stub = Stubs[i].first;
-    MCSymbol *RawSym = Stubs[i].second.getPointer();
-    MCSymbol *LazyPtr = GetLazyPtr(Stub, OutContext);
-    const MCExpr *LazyPtrExpr = MCSymbolRefExpr::create(LazyPtr, OutContext);
-
-    OutStreamer->SwitchSection(StubSection);
-    EmitAlignment(4);
-    OutStreamer->EmitLabel(Stub);
-    OutStreamer->EmitSymbolAttribute(RawSym, MCSA_IndirectSymbol);
-
-    // lis r11, ha16(LazyPtr)
-    const MCExpr *LazyPtrHa16 =
-      PPCMCExpr::createHa(LazyPtrExpr, true, OutContext);
-    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LIS)
-      .addReg(PPC::R11)
-      .addExpr(LazyPtrHa16));
-
-    // ldu r12, lo16(LazyPtr)(r11)
-    // lwzu r12, lo16(LazyPtr)(r11)
-    const MCExpr *LazyPtrLo16 =
-      PPCMCExpr::createLo(LazyPtrExpr, true, OutContext);
-    EmitToStreamer(*OutStreamer, MCInstBuilder(isPPC64 ? PPC::LDU : PPC::LWZU)
-      .addReg(PPC::R12)
-      .addExpr(LazyPtrLo16).addExpr(LazyPtrLo16)
-      .addReg(PPC::R11));
-
-    // mtctr r12
-    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::MTCTR).addReg(PPC::R12));
-    // bctr
-    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BCTR));
-
-    OutStreamer->SwitchSection(LSPSection);
-    OutStreamer->EmitLabel(LazyPtr);
-    OutStreamer->EmitSymbolAttribute(RawSym, MCSA_IndirectSymbol);
-
-    MCSymbol *DyldStubBindingHelper =
-      OutContext.getOrCreateSymbol(StringRef("dyld_stub_binding_helper"));
-    if (isPPC64) {
-      // .quad dyld_stub_binding_helper
-      OutStreamer->EmitSymbolValue(DyldStubBindingHelper, 8);
-    } else {
-      // .long dyld_stub_binding_helper
-      OutStreamer->EmitSymbolValue(DyldStubBindingHelper, 4);
-    }
-  }
-
-  OutStreamer->AddBlankLine();
-}
-
 bool PPCDarwinAsmPrinter::doFinalization(Module &M) {
   bool isPPC64 = getDataLayout().getPointerSizeInBits() == 64;
 
@@ -1513,10 +1347,6 @@ bool PPCDarwinAsmPrinter::doFinalization(Module &M) {
       static_cast<const TargetLoweringObjectFileMachO &>(getObjFileLowering());
   MachineModuleInfoMachO &MMIMacho =
       MMI->getObjFileInfo<MachineModuleInfoMachO>();
-
-  MachineModuleInfoMachO::SymbolListTy Stubs = MMIMacho.GetFnStubList();
-  if (!Stubs.empty())
-    EmitFunctionStubs(Stubs);
 
   if (MAI->doesSupportExceptionHandling() && MMI) {
     // Add the (possibly multiple) personalities to the set of global values.
@@ -1534,7 +1364,7 @@ bool PPCDarwinAsmPrinter::doFinalization(Module &M) {
   }
 
   // Output stubs for dynamically-linked functions.
-  Stubs = MMIMacho.GetGVStubList();
+  MachineModuleInfoMachO::SymbolListTy Stubs = MMIMacho.GetGVStubList();
 
   // Output macho stubs for external and common global variables.
   if (!Stubs.empty()) {
@@ -1562,25 +1392,6 @@ bool PPCDarwinAsmPrinter::doFinalization(Module &M) {
         OutStreamer->EmitValue(MCSymbolRefExpr::create(MCSym.getPointer(),
                                                        OutContext),
                               isPPC64 ? 8 : 4/*size*/);
-    }
-
-    Stubs.clear();
-    OutStreamer->AddBlankLine();
-  }
-
-  Stubs = MMIMacho.GetHiddenGVStubList();
-  if (!Stubs.empty()) {
-    OutStreamer->SwitchSection(getObjFileLowering().getDataSection());
-    EmitAlignment(isPPC64 ? 3 : 2);
-
-    for (unsigned i = 0, e = Stubs.size(); i != e; ++i) {
-      // L_foo$stub:
-      OutStreamer->EmitLabel(Stubs[i].first);
-      //   .long _foo
-      OutStreamer->EmitValue(MCSymbolRefExpr::
-                             create(Stubs[i].second.getPointer(),
-                                    OutContext),
-                             isPPC64 ? 8 : 4/*size*/);
     }
 
     Stubs.clear();

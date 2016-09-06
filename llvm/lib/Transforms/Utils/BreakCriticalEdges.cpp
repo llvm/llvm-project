@@ -15,7 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/BreakCriticalEdges.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -23,10 +23,10 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 using namespace llvm;
 
@@ -72,15 +72,28 @@ FunctionPass *llvm::createBreakCriticalEdgesPass() {
   return new BreakCriticalEdges();
 }
 
+PreservedAnalyses BreakCriticalEdgesPass::run(Function &F,
+                                              FunctionAnalysisManager &AM) {
+  auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
+  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
+  unsigned N = SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions(DT, LI));
+  NumBroken += N;
+  if (N == 0)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  return PA;
+}
+
 //===----------------------------------------------------------------------===//
 //    Implementation of the external critical edge manipulation functions
 //===----------------------------------------------------------------------===//
 
-/// createPHIsForSplitLoopExit - When a loop exit edge is split, LCSSA form
-/// may require new PHIs in the new exit block. This function inserts the
-/// new PHIs, as needed. Preds is a list of preds inside the loop, SplitBB
-/// is the new loop exit block, and DestBB is the old loop exit, now the
-/// successor of SplitBB.
+/// When a loop exit edge is split, LCSSA form may require new PHIs in the new
+/// exit block. This function inserts the new PHIs, as needed. Preds is a list
+/// of preds inside the loop, SplitBB is the new loop exit block, and DestBB is
+/// the old loop exit, now the successor of SplitBB.
 static void createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
                                        BasicBlock *SplitBB,
                                        BasicBlock *DestBB) {
@@ -112,25 +125,9 @@ static void createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
   }
 }
 
-/// SplitCriticalEdge - If this edge is a critical edge, insert a new node to
-/// split the critical edge.  This will update DominatorTree information if it
-/// is available, thus calling this pass will not invalidate either of them.
-/// This returns the new block if the edge was split, null otherwise.
-///
-/// If MergeIdenticalEdges is true (not the default), *all* edges from TI to the
-/// specified successor will be merged into the same critical edge block.
-/// This is most commonly interesting with switch instructions, which may
-/// have many edges to any one destination.  This ensures that all edges to that
-/// dest go to one block instead of each going to a different block, but isn't
-/// the standard definition of a "critical edge".
-///
-/// It is invalid to call this function on a critical edge that starts at an
-/// IndirectBrInst.  Splitting these edges will almost always create an invalid
-/// program because the address of the new block won't be the one that is jumped
-/// to.
-///
-BasicBlock *llvm::SplitCriticalEdge(TerminatorInst *TI, unsigned SuccNum,
-                                    const CriticalEdgeSplittingOptions &Options) {
+BasicBlock *
+llvm::SplitCriticalEdge(TerminatorInst *TI, unsigned SuccNum,
+                        const CriticalEdgeSplittingOptions &Options) {
   if (!isCriticalEdge(TI, SuccNum, Options.MergeIdenticalEdges))
     return nullptr;
 

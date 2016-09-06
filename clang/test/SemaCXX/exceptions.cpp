@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 %s
 
 struct A; // expected-note 4 {{forward declaration of 'A'}}
 
@@ -135,16 +137,29 @@ namespace Decay {
   void f() throw (int*, int());
 
   template<typename T> struct C {
-    void f() throw (T); // expected-error {{pointer to incomplete type 'Decay::E' is not allowed in exception specification}}
+    void f() throw (T);
+#if __cplusplus <= 199711L
+    // expected-error@-2 {{pointer to incomplete type 'Decay::E' is not allowed in exception specification}}
+#endif
   };
   struct D {
     C<D[10]> c;
   };
-  struct E; // expected-note {{forward declaration}}
-  C<E[10]> e; // expected-note {{in instantiation of}}
+  struct E;
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{forward declaration of 'Decay::E'}}
+#endif
+
+  C<E[10]> e;
+#if __cplusplus <= 199711L
+  // expected-note@-2 {{in instantiation of template class 'Decay::C<Decay::E [10]>' requested here}}
+#endif
 }
 
-void rval_ref() throw (int &&); // expected-error {{rvalue reference type 'int &&' is not allowed in exception specification}} expected-warning {{C++11}}
+void rval_ref() throw (int &&); // expected-error {{rvalue reference type 'int &&' is not allowed in exception specification}}
+#if __cplusplus <= 199711L
+// expected-warning@-2 {{rvalue references are a C++11 extension}}
+#endif
 
 namespace HandlerInversion {
 struct B {};
@@ -250,6 +265,20 @@ void g() {
   try {
     f();
   } catch (volatile S s) { // expected-error {{calling a private constructor}}
+  }
+}
+}
+
+namespace PR28047 {
+void test1(int i) {
+  try {
+  } catch (int(*)[i]) { // expected-error{{cannot catch variably modified type}}
+  }
+}
+void test2() {
+  int i;
+  try {
+  } catch (int(*)[i]) { // expected-error{{cannot catch variably modified type}}
   }
 }
 }

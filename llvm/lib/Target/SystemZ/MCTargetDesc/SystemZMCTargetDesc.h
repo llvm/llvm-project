@@ -21,6 +21,7 @@ class MCInstrInfo;
 class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
+class MCTargetOptions;
 class StringRef;
 class Target;
 class Triple;
@@ -85,7 +86,8 @@ MCCodeEmitter *createSystemZMCCodeEmitter(const MCInstrInfo &MCII,
 
 MCAsmBackend *createSystemZMCAsmBackend(const Target &T,
                                         const MCRegisterInfo &MRI,
-                                        const Triple &TT, StringRef CPU);
+                                        const Triple &TT, StringRef CPU,
+                                        const MCTargetOptions &Options);
 
 MCObjectWriter *createSystemZObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI);
 } // end namespace llvm

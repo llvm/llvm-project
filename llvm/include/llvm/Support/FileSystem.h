@@ -29,12 +29,15 @@
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/TimeValue.h"
+#include <cassert>
+#include <cstdint>
 #include <ctime>
-#include <iterator>
 #include <stack>
 #include <string>
 #include <system_error>
@@ -140,11 +143,14 @@ class file_status
   #if defined(LLVM_ON_UNIX)
   dev_t fs_st_dev;
   ino_t fs_st_ino;
+  time_t fs_st_atime;
   time_t fs_st_mtime;
   uid_t fs_st_uid;
   gid_t fs_st_gid;
   off_t fs_st_size;
   #elif defined (LLVM_ON_WIN32)
+  uint32_t LastAccessedTimeHigh;
+  uint32_t LastAccessedTimeLow;
   uint32_t LastWriteTimeHigh;
   uint32_t LastWriteTimeLow;
   uint32_t VolumeSerialNumber;
@@ -159,43 +165,51 @@ class file_status
 
 public:
   #if defined(LLVM_ON_UNIX)
-    file_status() : fs_st_dev(0), fs_st_ino(0), fs_st_mtime(0),
+  file_status()
+      : fs_st_dev(0), fs_st_ino(0), fs_st_atime(0), fs_st_mtime(0),
         fs_st_uid(0), fs_st_gid(0), fs_st_size(0),
         Type(file_type::status_error), Perms(perms_not_known) {}
 
-    file_status(file_type Type) : fs_st_dev(0), fs_st_ino(0), fs_st_mtime(0),
+  file_status(file_type Type)
+      : fs_st_dev(0), fs_st_ino(0), fs_st_atime(0), fs_st_mtime(0),
         fs_st_uid(0), fs_st_gid(0), fs_st_size(0), Type(Type),
         Perms(perms_not_known) {}
 
-    file_status(file_type Type, perms Perms, dev_t Dev, ino_t Ino, time_t MTime,
-                uid_t UID, gid_t GID, off_t Size)
-        : fs_st_dev(Dev), fs_st_ino(Ino), fs_st_mtime(MTime), fs_st_uid(UID),
-          fs_st_gid(GID), fs_st_size(Size), Type(Type), Perms(Perms) {}
+  file_status(file_type Type, perms Perms, dev_t Dev, ino_t Ino, time_t ATime,
+              time_t MTime, uid_t UID, gid_t GID, off_t Size)
+      : fs_st_dev(Dev), fs_st_ino(Ino), fs_st_atime(ATime), fs_st_mtime(MTime),
+        fs_st_uid(UID), fs_st_gid(GID), fs_st_size(Size), Type(Type),
+        Perms(Perms) {}
   #elif defined(LLVM_ON_WIN32)
-    file_status() : LastWriteTimeHigh(0), LastWriteTimeLow(0),
-        VolumeSerialNumber(0), FileSizeHigh(0), FileSizeLow(0),
-        FileIndexHigh(0), FileIndexLow(0), Type(file_type::status_error),
+  file_status()
+      : LastAccessedTimeHigh(0), LastAccessedTimeLow(0), LastWriteTimeHigh(0),
+        LastWriteTimeLow(0), VolumeSerialNumber(0), FileSizeHigh(0),
+        FileSizeLow(0), FileIndexHigh(0), FileIndexLow(0),
+        Type(file_type::status_error), Perms(perms_not_known) {}
+
+  file_status(file_type Type)
+      : LastAccessedTimeHigh(0), LastAccessedTimeLow(0), LastWriteTimeHigh(0),
+        LastWriteTimeLow(0), VolumeSerialNumber(0), FileSizeHigh(0),
+        FileSizeLow(0), FileIndexHigh(0), FileIndexLow(0), Type(Type),
         Perms(perms_not_known) {}
 
-    file_status(file_type Type) : LastWriteTimeHigh(0), LastWriteTimeLow(0),
-        VolumeSerialNumber(0), FileSizeHigh(0), FileSizeLow(0),
-        FileIndexHigh(0), FileIndexLow(0), Type(Type),
-        Perms(perms_not_known) {}
-
-    file_status(file_type Type, uint32_t LastWriteTimeHigh,
-                uint32_t LastWriteTimeLow, uint32_t VolumeSerialNumber,
-                uint32_t FileSizeHigh, uint32_t FileSizeLow,
-                uint32_t FileIndexHigh, uint32_t FileIndexLow)
-        : LastWriteTimeHigh(LastWriteTimeHigh),
-          LastWriteTimeLow(LastWriteTimeLow),
-          VolumeSerialNumber(VolumeSerialNumber), FileSizeHigh(FileSizeHigh),
-          FileSizeLow(FileSizeLow), FileIndexHigh(FileIndexHigh),
-          FileIndexLow(FileIndexLow), Type(Type), Perms(perms_not_known) {}
+  file_status(file_type Type, uint32_t LastAccessTimeHigh,
+              uint32_t LastAccessTimeLow, uint32_t LastWriteTimeHigh,
+              uint32_t LastWriteTimeLow, uint32_t VolumeSerialNumber,
+              uint32_t FileSizeHigh, uint32_t FileSizeLow,
+              uint32_t FileIndexHigh, uint32_t FileIndexLow)
+      : LastAccessedTimeHigh(LastAccessTimeHigh), LastAccessedTimeLow(LastAccessTimeLow),
+        LastWriteTimeHigh(LastWriteTimeHigh),
+        LastWriteTimeLow(LastWriteTimeLow),
+        VolumeSerialNumber(VolumeSerialNumber), FileSizeHigh(FileSizeHigh),
+        FileSizeLow(FileSizeLow), FileIndexHigh(FileIndexHigh),
+        FileIndexLow(FileIndexLow), Type(Type), Perms(perms_not_known) {}
   #endif
 
   // getters
   file_type type() const { return Type; }
   perms permissions() const { return Perms; }
+  TimeValue getLastAccessedTime() const;
   TimeValue getLastModificationTime() const;
   UniqueID getUniqueID() const;
 
@@ -251,7 +265,7 @@ struct file_magic {
   };
 
   bool is_object() const {
-    return V == unknown ? false : true;
+    return V != unknown;
   }
 
   file_magic() : V(unknown) {}
@@ -590,6 +604,12 @@ std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
 std::error_code createUniqueDirectory(const Twine &Prefix,
                                       SmallVectorImpl<char> &ResultPath);
 
+/// @brief Fetch a path to an open file, as specified by a file descriptor
+///
+/// @param FD File descriptor to a currently open file
+/// @param ResultPath The buffer into which to write the path
+std::error_code getPathFromOpenFD(int FD, SmallVectorImpl<char> &ResultPath);
+
 enum OpenFlags : unsigned {
   F_None = 0,
 
@@ -622,7 +642,8 @@ inline OpenFlags &operator|=(OpenFlags &A, OpenFlags B) {
 std::error_code openFileForWrite(const Twine &Name, int &ResultFD,
                                  OpenFlags Flags, unsigned Mode = 0666);
 
-std::error_code openFileForRead(const Twine &Name, int &ResultFD);
+std::error_code openFileForRead(const Twine &Name, int &ResultFD,
+                                SmallVectorImpl<char> *RealPath = nullptr);
 
 /// @brief Identify the type of a binary file based on how magical it is.
 file_magic identify_magic(StringRef magic);
@@ -636,6 +657,17 @@ file_magic identify_magic(StringRef magic);
 std::error_code identify_magic(const Twine &path, file_magic &result);
 
 std::error_code getUniqueID(const Twine Path, UniqueID &Result);
+
+/// @brief Get disk space usage information.
+///
+/// Note: Users must be careful about "Time Of Check, Time Of Use" kind of bug.
+/// Note: Windows reports results according to the quota allocated to the user.
+///
+/// @param Path Input path.
+/// @returns a space_info structure filled with the capacity, free, and
+/// available space on the device \a Path is on. A platform specific error_code
+/// is returned on error.
+ErrorOr<space_info> disk_space(const Twine &Path);
 
 /// This class represents a memory mapped file. It is based on
 /// boost::iostreams::mapped_file.
@@ -739,7 +771,7 @@ namespace detail {
     intptr_t IterationHandle;
     directory_entry CurrentEntry;
   };
-}
+} // end namespace detail
 
 /// directory_iterator - Iterates through the entries in path. There is no
 /// operator++ because we need an error_code. If it's really needed we can make
@@ -801,7 +833,7 @@ namespace detail {
     uint16_t Level;
     bool HasNoPushRequest;
   };
-}
+} // end namespace detail
 
 /// recursive_directory_iterator - Same as directory_iterator except for it
 /// recurses down into child directories.
@@ -900,4 +932,4 @@ public:
 } // end namespace sys
 } // end namespace llvm
 
-#endif
+#endif // LLVM_SUPPORT_FILESYSTEM_H

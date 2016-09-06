@@ -19,6 +19,9 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/StmtVisitor.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -26,11 +29,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
-#include "clang/Lex/Lexer.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/AST/StmtVisitor.h"
 #include "llvm/Support/Unicode.h"
-#include "llvm/ADT/StringSet.h"
 
 using namespace clang;
 using namespace ento;
@@ -111,6 +110,30 @@ NonLocalizedStringChecker::NonLocalizedStringChecker() {
                        "Localizability Issue (Apple)"));
 }
 
+namespace {
+class NonLocalizedStringBRVisitor final
+    : public BugReporterVisitorImpl<NonLocalizedStringBRVisitor> {
+
+  const MemRegion *NonLocalizedString;
+  bool Satisfied;
+
+public:
+  NonLocalizedStringBRVisitor(const MemRegion *NonLocalizedString)
+      : NonLocalizedString(NonLocalizedString), Satisfied(false) {
+        assert(NonLocalizedString);
+  }
+
+  PathDiagnosticPiece *VisitNode(const ExplodedNode *Succ,
+                                 const ExplodedNode *Pred,
+                                 BugReporterContext &BRC,
+                                 BugReport &BR) override;
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    ID.Add(NonLocalizedString);
+  }
+};
+} // End anonymous namespace.
+
 #define NEW_RECEIVER(receiver)                                                 \
   llvm::DenseMap<Selector, uint8_t> &receiver##M =                             \
       UIMethods.insert({&Ctx.Idents.get(#receiver),                            \
@@ -165,6 +188,22 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   NEW_RECEIVER(NSButton)
   ADD_UNARY_METHOD(NSButton, setTitle, 0)
   ADD_UNARY_METHOD(NSButton, setAlternateTitle, 0)
+  IdentifierInfo *radioButtonWithTitleNSButton[] = {
+      &Ctx.Idents.get("radioButtonWithTitle"), &Ctx.Idents.get("target"),
+      &Ctx.Idents.get("action")};
+  ADD_METHOD(NSButton, radioButtonWithTitleNSButton, 3, 0)
+  IdentifierInfo *buttonWithTitleNSButtonImage[] = {
+      &Ctx.Idents.get("buttonWithTitle"), &Ctx.Idents.get("image"),
+      &Ctx.Idents.get("target"), &Ctx.Idents.get("action")};
+  ADD_METHOD(NSButton, buttonWithTitleNSButtonImage, 4, 0)
+  IdentifierInfo *checkboxWithTitleNSButton[] = {
+      &Ctx.Idents.get("checkboxWithTitle"), &Ctx.Idents.get("target"),
+      &Ctx.Idents.get("action")};
+  ADD_METHOD(NSButton, checkboxWithTitleNSButton, 3, 0)
+  IdentifierInfo *buttonWithTitleNSButtonTarget[] = {
+      &Ctx.Idents.get("buttonWithTitle"), &Ctx.Idents.get("target"),
+      &Ctx.Idents.get("action")};
+  ADD_METHOD(NSButton, buttonWithTitleNSButtonTarget, 3, 0)
 
   NEW_RECEIVER(NSSavePanel)
   ADD_UNARY_METHOD(NSSavePanel, setPrompt, 0)
@@ -247,6 +286,9 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(NSButtonCell, setTitle, 0)
   ADD_UNARY_METHOD(NSButtonCell, setAlternateTitle, 0)
 
+  NEW_RECEIVER(NSDatePickerCell)
+  ADD_UNARY_METHOD(NSDatePickerCell, initTextCell, 0)
+
   NEW_RECEIVER(NSSliderCell)
   ADD_UNARY_METHOD(NSSliderCell, setTitle, 0)
 
@@ -312,9 +354,6 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
   ADD_UNARY_METHOD(UIActionSheet, addButtonWithTitle, 0)
   ADD_UNARY_METHOD(UIActionSheet, setTitle, 0)
 
-  NEW_RECEIVER(NSURLSessionTask)
-  ADD_UNARY_METHOD(NSURLSessionTask, setTaskDescription, 0)
-
   NEW_RECEIVER(UIAccessibilityCustomAction)
   IdentifierInfo *initWithNameUIAccessibilityCustomAction[] = {
       &Ctx.Idents.get("initWithName"), &Ctx.Idents.get("target"),
@@ -339,6 +378,9 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
 
   NEW_RECEIVER(NSTextField)
   ADD_UNARY_METHOD(NSTextField, setPlaceholderString, 0)
+  ADD_UNARY_METHOD(NSTextField, textFieldWithString, 0)
+  ADD_UNARY_METHOD(NSTextField, wrappingLabelWithString, 0)
+  ADD_UNARY_METHOD(NSTextField, labelWithString, 0)
 
   NEW_RECEIVER(NSAttributedString)
   ADD_UNARY_METHOD(NSAttributedString, initWithString, 0)
@@ -498,9 +540,6 @@ void NonLocalizedStringChecker::initUIMethods(ASTContext &Ctx) const {
       &Ctx.Idents.get("actionWithIdentifier"), &Ctx.Idents.get("title")};
   ADD_METHOD(NSUserNotificationAction,
              actionWithIdentifierNSUserNotificationAction, 2, 1)
-
-  NEW_RECEIVER(NSURLSession)
-  ADD_UNARY_METHOD(NSURLSession, setSessionDescription, 0)
 
   NEW_RECEIVER(UITextField)
   ADD_UNARY_METHOD(UITextField, setText, 0)
@@ -676,6 +715,11 @@ void NonLocalizedStringChecker::reportLocalizationError(
     R->addRange(M.getSourceRange());
   }
   R->markInteresting(S);
+
+  const MemRegion *StringRegion = S.getAsRegion();
+  if (StringRegion)
+    R->addVisitor(llvm::make_unique<NonLocalizedStringBRVisitor>(StringRegion));
+
   C.emitReport(std::move(R));
 }
 
@@ -864,6 +908,41 @@ void NonLocalizedStringChecker::checkPostStmt(const ObjCStringLiteral *SL,
                                               CheckerContext &C) const {
   SVal sv = C.getSVal(SL);
   setNonLocalizedState(sv, C);
+}
+
+PathDiagnosticPiece *
+NonLocalizedStringBRVisitor::VisitNode(const ExplodedNode *Succ,
+                                       const ExplodedNode *Pred,
+                                       BugReporterContext &BRC, BugReport &BR) {
+  if (Satisfied)
+    return nullptr;
+
+  Optional<StmtPoint> Point = Succ->getLocation().getAs<StmtPoint>();
+  if (!Point.hasValue())
+    return nullptr;
+
+  auto *LiteralExpr = dyn_cast<ObjCStringLiteral>(Point->getStmt());
+  if (!LiteralExpr)
+    return nullptr;
+
+  ProgramStateRef State = Succ->getState();
+  SVal LiteralSVal = State->getSVal(LiteralExpr, Succ->getLocationContext());
+  if (LiteralSVal.getAsRegion() != NonLocalizedString)
+    return nullptr;
+
+  Satisfied = true;
+
+  PathDiagnosticLocation L =
+      PathDiagnosticLocation::create(*Point, BRC.getSourceManager());
+
+  if (!L.isValid() || !L.asLocation().isValid())
+    return nullptr;
+
+  auto *Piece = new PathDiagnosticEventPiece(L,
+      "Non-localized string literal here");
+  Piece->addRange(LiteralExpr->getSourceRange());
+
+  return Piece;
 }
 
 namespace {

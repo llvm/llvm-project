@@ -42,15 +42,27 @@ struct MappingDesc {
 
 #if SANITIZER_LINUX && defined(__mips64)
 
-// Everything is above 0x00e000000000.
+// MIPS64 maps:
+// - 0x0000000000-0x0200000000: Program own segments
+// - 0xa200000000-0xc000000000: PIE program segments
+// - 0xe200000000-0xffffffffff: libraries segments.
 const MappingDesc kMemoryLayout[] = {
-    {0x000000000000ULL, 0x00a000000000ULL, MappingDesc::INVALID, "invalid"},
-    {0x00a000000000ULL, 0x00c000000000ULL, MappingDesc::SHADOW, "shadow"},
-    {0x00c000000000ULL, 0x00e000000000ULL, MappingDesc::ORIGIN, "origin"},
-    {0x00e000000000ULL, 0x010000000000ULL, MappingDesc::APP, "app"}};
+    {0x000000000000ULL, 0x000200000000ULL, MappingDesc::APP, "app-1"},
+    {0x000200000000ULL, 0x002200000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x002200000000ULL, 0x004000000000ULL, MappingDesc::SHADOW, "shadow-2"},
+    {0x004000000000ULL, 0x004200000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x004200000000ULL, 0x006000000000ULL, MappingDesc::ORIGIN, "origin-2"},
+    {0x006000000000ULL, 0x006200000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x006200000000ULL, 0x008000000000ULL, MappingDesc::SHADOW, "shadow-3"},
+    {0x008000000000ULL, 0x008200000000ULL, MappingDesc::SHADOW, "shadow-1"},
+    {0x008200000000ULL, 0x00a000000000ULL, MappingDesc::ORIGIN, "origin-3"},
+    {0x00a000000000ULL, 0x00a200000000ULL, MappingDesc::ORIGIN, "origin-1"},
+    {0x00a200000000ULL, 0x00c000000000ULL, MappingDesc::APP, "app-2"},
+    {0x00c000000000ULL, 0x00e200000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x00e200000000ULL, 0x00ffffffffffULL, MappingDesc::APP, "app-3"}};
 
-#define MEM_TO_SHADOW(mem) (((uptr)(mem)) & ~0x4000000000ULL)
-#define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x002000000000)
+#define MEM_TO_SHADOW(mem) (((uptr)(mem)) ^ 0x8000000000ULL)
+#define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x2000000000ULL)
 
 #elif SANITIZER_LINUX && defined(__aarch64__)
 
@@ -107,7 +119,7 @@ const MappingDesc kMemoryLayout[] = {
 # define MEM_TO_SHADOW(mem) ((uptr)mem ^ 0x6000000000ULL)
 # define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x1000000000ULL)
 
-#elif SANITIZER_LINUX && defined(__powerpc64__)
+#elif SANITIZER_LINUX && SANITIZER_PPC64
 
 const MappingDesc kMemoryLayout[] = {
     {0x000000000000ULL, 0x000100000000ULL, MappingDesc::APP, "low memory"},
@@ -309,9 +321,21 @@ void MsanTSDDtor(void *tsd);
 
 }  // namespace __msan
 
-#define MSAN_MALLOC_HOOK(ptr, size) \
-  if (&__sanitizer_malloc_hook) __sanitizer_malloc_hook(ptr, size)
-#define MSAN_FREE_HOOK(ptr) \
-  if (&__sanitizer_free_hook) __sanitizer_free_hook(ptr)
+#define MSAN_MALLOC_HOOK(ptr, size)       \
+  do {                                    \
+    if (&__sanitizer_malloc_hook) {       \
+      UnpoisonParam(2);                   \
+      __sanitizer_malloc_hook(ptr, size); \
+    }                                     \
+    RunMallocHooks(ptr, size);            \
+  } while (false)
+#define MSAN_FREE_HOOK(ptr)       \
+  do {                            \
+    if (&__sanitizer_free_hook) { \
+      UnpoisonParam(1);           \
+      __sanitizer_free_hook(ptr); \
+    }                             \
+    RunFreeHooks(ptr);            \
+  } while (false)
 
 #endif  // MSAN_H

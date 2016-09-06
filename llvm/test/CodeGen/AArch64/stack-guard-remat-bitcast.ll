@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=arm64-apple-ios -relocation-model=pic | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios -relocation-model=pic -disable-fp-elim | FileCheck %s
 
 @__stack_chk_guard = external global i64*
 
@@ -6,10 +6,14 @@
 
 ; CHECK: adrp [[R0:x[0-9]+]], ___stack_chk_guard@GOTPAGE
 ; CHECK: ldr  [[R1:x[0-9]+]], {{\[}}[[R0]], ___stack_chk_guard@GOTPAGEOFF{{\]}}
+; Load the stack guard for the second time, just in case the previous value gets spilled.
+; CHECK: adrp [[GUARD_PAGE:x[0-9]+]], ___stack_chk_guard@GOTPAGE
 ; CHECK: ldr  [[R2:x[0-9]+]], {{\[}}[[R1]]{{\]}}
 ; CHECK: stur [[R2]], {{\[}}x29, [[SLOT0:[0-9#\-]+]]{{\]}}
 ; CHECK: ldur [[R3:x[0-9]+]], {{\[}}x29, [[SLOT0]]{{\]}}
-; CHECK: sub  [[R4:x[0-9]+]], [[R2]], [[R3]]
+; CHECK: ldr  [[GUARD_ADDR:x[0-9]+]], {{\[}}[[GUARD_PAGE]], ___stack_chk_guard@GOTPAGEOFF{{\]}}
+; CHECK: ldr  [[GUARD:x[0-9]+]], {{\[}}[[GUARD_ADDR]]{{\]}}
+; CHECK: sub  [[R4:x[0-9]+]], [[GUARD]], [[R3]]
 ; CHECK: cbnz [[R4]], LBB
 
 define i32 @test_stack_guard_remat2() {

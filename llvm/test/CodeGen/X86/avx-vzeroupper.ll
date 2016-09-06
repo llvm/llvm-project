@@ -1,4 +1,9 @@
 ; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-apple-darwin -mattr=+avx | FileCheck %s
+; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-apple-darwin -mattr=+avx,+fast-partial-ymm-write | FileCheck --check-prefix=FASTYMM %s
+; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-apple-darwin -mcpu=btver2 | FileCheck --check-prefix=BTVER2 %s
+
+; FASTYMM-NOT: vzeroupper
+; BTVER2-NOT: vzeroupper
 
 declare i32 @foo()
 declare <4 x float> @do_sse(<4 x float>)

@@ -4,7 +4,7 @@
 // RUN: %clangxx_asan %s -o %t
 
 // Intentionally don't inherit the default ASAN_OPTIONS.
-// RUN: ASAN_OPTIONS="" not %run %t 2>&1 | FileCheck %s
+// RUN: env ASAN_OPTIONS="" not %run %t 2>&1 | FileCheck %s
 // When we use lit's default ASAN_OPTIONS, we shouldn't crash either. On Linux
 // lit doesn't set ASAN_OPTIONS anyway.
 // RUN: not %run %t 2>&1 | FileCheck %s

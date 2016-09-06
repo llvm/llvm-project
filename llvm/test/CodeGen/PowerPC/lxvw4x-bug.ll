@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown < %s | FileCheck %s
 ; Function Attrs: nounwind
 define void @test() {
 entry:

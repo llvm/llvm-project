@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a53 -pre-RA-sched=source -enable-misched -verify-misched -debug-only=misched -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-linux-gnu -mcpu=cortex-a53 -pre-RA-sched=source -enable-misched -verify-misched -debug-only=misched -o - -misched-limit=2 2>&1 > /dev/null | FileCheck %s
 ;
 ; The Cortex-A53 machine model will cause the MADD instruction to be scheduled
 ; much higher than the ADD instructions in order to hide latency. When not

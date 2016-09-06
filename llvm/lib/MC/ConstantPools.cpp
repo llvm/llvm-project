@@ -25,11 +25,10 @@ void ConstantPool::emitEntries(MCStreamer &Streamer) {
   if (Entries.empty())
     return;
   Streamer.EmitDataRegion(MCDR_DataRegion);
-  for (EntryVecTy::const_iterator I = Entries.begin(), E = Entries.end();
-       I != E; ++I) {
-    Streamer.EmitCodeAlignment(I->Size); // align naturally
-    Streamer.EmitLabel(I->Label);
-    Streamer.EmitValue(I->Value, I->Size, I->Loc);
+  for (const ConstantPoolEntry &Entry : Entries) {
+    Streamer.EmitCodeAlignment(Entry.Size); // align naturally
+    Streamer.EmitLabel(Entry.Label);
+    Streamer.EmitValue(Entry.Value, Entry.Size, Entry.Loc);
   }
   Streamer.EmitDataRegion(MCDR_DataRegionEnd);
   Entries.clear();
@@ -71,11 +70,9 @@ static void emitConstantPool(MCStreamer &Streamer, MCSection *Section,
 
 void AssemblerConstantPools::emitAll(MCStreamer &Streamer) {
   // Dump contents of assembler constant pools.
-  for (ConstantPoolMapTy::iterator CPI = ConstantPools.begin(),
-                                   CPE = ConstantPools.end();
-       CPI != CPE; ++CPI) {
-    MCSection *Section = CPI->first;
-    ConstantPool &CP = CPI->second;
+  for (auto &CPI : ConstantPools) {
+    MCSection *Section = CPI.first;
+    ConstantPool &CP = CPI.second;
 
     emitConstantPool(Streamer, Section, CP);
   }

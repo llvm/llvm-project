@@ -30,7 +30,7 @@ instructions with each other. These tables are emitted in the
 ``XXXInstrInfo.inc`` file along with the functions to query them. Following
 is the definition of ``InstrMapping`` class definied in Target.td file:
 
-.. code-block:: llvm
+.. code-block:: text
 
   class InstrMapping {
     // Used to reduce search space only to the instructions using this
@@ -69,7 +69,7 @@ non-predicated form by assigning appropriate values to the ``InstrMapping``
 fields. For this relationship, non-predicated instructions are treated as key
 instruction since they are the one used to query the interface function.
 
-.. code-block:: llvm
+.. code-block:: text
 
   def getPredOpcode : InstrMapping {
     // Choose a FilterClass that is used as a base class for all the
@@ -116,7 +116,7 @@ to include relevant information in its definition. For example, consider
 following to be the current definitions of ADD, ADD_pt (true) and ADD_pf (false)
 instructions:
 
-.. code-block:: llvm
+.. code-block:: text
 
   def ADD : ALU32_rr<(outs IntRegs:$dst), (ins IntRegs:$a, IntRegs:$b),
               "$dst = add($a, $b)",
@@ -137,7 +137,7 @@ In this step, we modify these instructions to include the information
 required by the relationship model, <tt>getPredOpcode</tt>, so that they can
 be related.
 
-.. code-block:: llvm
+.. code-block:: text
 
   def ADD : PredRel, ALU32_rr<(outs IntRegs:$dst), (ins IntRegs:$a, IntRegs:$b),
               "$dst = add($a, $b)",

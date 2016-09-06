@@ -1,143 +1,55 @@
-// REQUIRES: r600-registered-target
-// RUN: %clang_cc1 -triple r600-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck %s
+// REQUIRES: amdgpu-registered-target
+// RUN: %clang_cc1 -triple r600-unknown-unknown -target-cpu cypress -S -emit-llvm -o - %s | FileCheck %s
 
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
-// CHECK-LABEL: @test_div_scale_f64
-// CHECK: call { double, i1 } @llvm.AMDGPU.div.scale.f64(double %a, double %b, i1 true)
-// CHECK-DAG: [[FLAG:%.+]] = extractvalue { double, i1 } %{{.+}}, 1
-// CHECK-DAG: [[VAL:%.+]] = extractvalue { double, i1 } %{{.+}}, 0
-// CHECK: [[FLAGEXT:%.+]] = zext i1 [[FLAG]] to i32
-// CHECK: store i32 [[FLAGEXT]]
-void test_div_scale_f64(global double* out, global int* flagout, double a, double b)
+// CHECK-LABEL: @test_recipsqrt_ieee_f32
+// CHECK: call float @llvm.r600.recipsqrt.ieee.f32
+void test_recipsqrt_ieee_f32(global float* out, float a)
 {
-  bool flag;
-  *out = __builtin_amdgpu_div_scale(a, b, true, &flag);
-  *flagout = flag;
+  *out = __builtin_r600_recipsqrt_ieeef(a);
 }
 
-// CHECK-LABEL: @test_div_scale_f32
-// CHECK: call { float, i1 } @llvm.AMDGPU.div.scale.f32(float %a, float %b, i1 true)
-// CHECK-DAG: [[FLAG:%.+]] = extractvalue { float, i1 } %{{.+}}, 1
-// CHECK-DAG: [[VAL:%.+]] = extractvalue { float, i1 } %{{.+}}, 0
-// CHECK: [[FLAGEXT:%.+]] = zext i1 [[FLAG]] to i32
-// CHECK: store i32 [[FLAGEXT]]
-void test_div_scale_f32(global float* out, global int* flagout, float a, float b)
+#if cl_khr_fp64
+// XCHECK-LABEL: @test_recipsqrt_ieee_f64
+// XCHECK: call double @llvm.r600.recipsqrt.ieee.f64
+void test_recipsqrt_ieee_f64(global double* out, double a)
 {
-  bool flag;
-  *out = __builtin_amdgpu_div_scalef(a, b, true, &flag);
-  *flagout = flag;
+  *out = __builtin_r600_recipsqrt_ieee(a);
+}
+#endif
+
+// CHECK-LABEL: @test_implicitarg_ptr
+// CHECK: call i8 addrspace(7)* @llvm.r600.implicitarg.ptr()
+void test_implicitarg_ptr(__attribute__((address_space(7))) unsigned char ** out)
+{
+  *out = __builtin_r600_implicitarg_ptr();
 }
 
-// CHECK-LABEL: @test_div_fmas_f32
-// CHECK: call float @llvm.AMDGPU.div.fmas.f32
-void test_div_fmas_f32(global float* out, float a, float b, float c, int d)
+// CHECK-LABEL: @test_get_group_id(
+// CHECK: tail call i32 @llvm.r600.read.tgid.x()
+// CHECK: tail call i32 @llvm.r600.read.tgid.y()
+// CHECK: tail call i32 @llvm.r600.read.tgid.z()
+void test_get_group_id(int d, global int *out)
 {
-  *out = __builtin_amdgpu_div_fmasf(a, b, c, d);
+	switch (d) {
+	case 0: *out = __builtin_r600_read_tgid_x(); break;
+	case 1: *out = __builtin_r600_read_tgid_y(); break;
+	case 2: *out = __builtin_r600_read_tgid_z(); break;
+	default: *out = 0;
+	}
 }
 
-// CHECK-LABEL: @test_div_fmas_f64
-// CHECK: call double @llvm.AMDGPU.div.fmas.f64
-void test_div_fmas_f64(global double* out, double a, double b, double c, int d)
+// CHECK-LABEL: @test_get_local_id(
+// CHECK: tail call i32 @llvm.r600.read.tidig.x(), !range [[WI_RANGE:![0-9]*]]
+// CHECK: tail call i32 @llvm.r600.read.tidig.y(), !range [[WI_RANGE]]
+// CHECK: tail call i32 @llvm.r600.read.tidig.z(), !range [[WI_RANGE]]
+void test_get_local_id(int d, global int *out)
 {
-  *out = __builtin_amdgpu_div_fmas(a, b, c, d);
+	switch (d) {
+	case 0: *out = __builtin_r600_read_tidig_x(); break;
+	case 1: *out = __builtin_r600_read_tidig_y(); break;
+	case 2: *out = __builtin_r600_read_tidig_z(); break;
+	default: *out = 0;
+	}
 }
 
-// CHECK-LABEL: @test_div_fixup_f32
-// CHECK: call float @llvm.AMDGPU.div.fixup.f32
-void test_div_fixup_f32(global float* out, float a, float b, float c)
-{
-  *out = __builtin_amdgpu_div_fixupf(a, b, c);
-}
-
-// CHECK-LABEL: @test_div_fixup_f64
-// CHECK: call double @llvm.AMDGPU.div.fixup.f64
-void test_div_fixup_f64(global double* out, double a, double b, double c)
-{
-  *out = __builtin_amdgpu_div_fixup(a, b, c);
-}
-
-// CHECK-LABEL: @test_trig_preop_f32
-// CHECK: call float @llvm.AMDGPU.trig.preop.f32
-void test_trig_preop_f32(global float* out, float a, int b)
-{
-  *out = __builtin_amdgpu_trig_preopf(a, b);
-}
-
-// CHECK-LABEL: @test_trig_preop_f64
-// CHECK: call double @llvm.AMDGPU.trig.preop.f64
-void test_trig_preop_f64(global double* out, double a, int b)
-{
-  *out = __builtin_amdgpu_trig_preop(a, b);
-}
-
-// CHECK-LABEL: @test_rcp_f32
-// CHECK: call float @llvm.AMDGPU.rcp.f32
-void test_rcp_f32(global float* out, float a)
-{
-  *out = __builtin_amdgpu_rcpf(a);
-}
-
-// CHECK-LABEL: @test_rcp_f64
-// CHECK: call double @llvm.AMDGPU.rcp.f64
-void test_rcp_f64(global double* out, double a)
-{
-  *out = __builtin_amdgpu_rcp(a);
-}
-
-// CHECK-LABEL: @test_rsq_f32
-// CHECK: call float @llvm.AMDGPU.rsq.f32
-void test_rsq_f32(global float* out, float a)
-{
-  *out = __builtin_amdgpu_rsqf(a);
-}
-
-// CHECK-LABEL: @test_rsq_f64
-// CHECK: call double @llvm.AMDGPU.rsq.f64
-void test_rsq_f64(global double* out, double a)
-{
-  *out = __builtin_amdgpu_rsq(a);
-}
-
-// CHECK-LABEL: @test_rsq_clamped_f32
-// CHECK: call float @llvm.AMDGPU.rsq.clamped.f32
-void test_rsq_clamped_f32(global float* out, float a)
-{
-  *out = __builtin_amdgpu_rsq_clampedf(a);
-}
-
-// CHECK-LABEL: @test_rsq_clamped_f64
-// CHECK: call double @llvm.AMDGPU.rsq.clamped.f64
-void test_rsq_clamped_f64(global double* out, double a)
-{
-  *out = __builtin_amdgpu_rsq_clamped(a);
-}
-
-// CHECK-LABEL: @test_ldexp_f32
-// CHECK: call float @llvm.AMDGPU.ldexp.f32
-void test_ldexp_f32(global float* out, float a, int b)
-{
-  *out = __builtin_amdgpu_ldexpf(a, b);
-}
-
-// CHECK-LABEL: @test_ldexp_f64
-// CHECK: call double @llvm.AMDGPU.ldexp.f64
-void test_ldexp_f64(global double* out, double a, int b)
-{
-  *out = __builtin_amdgpu_ldexp(a, b);
-}
-
-// CHECK-LABEL: @test_class_f32
-// CHECK: call i1 @llvm.AMDGPU.class.f32
-void test_class_f32(global float* out, float a, int b)
-{
-  *out = __builtin_amdgpu_classf(a, b);
-}
-
-// CHECK-LABEL: @test_class_f64
-// CHECK: call i1 @llvm.AMDGPU.class.f64
-void test_class_f64(global double* out, double a, int b)
-{
-  *out = __builtin_amdgpu_class(a, b);
-}
+// CHECK-DAG: [[WI_RANGE]] = !{i32 0, i32 1024}

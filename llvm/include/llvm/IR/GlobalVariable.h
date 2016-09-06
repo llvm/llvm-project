@@ -65,6 +65,8 @@ public:
                  bool isExternallyInitialized = false);
 
   ~GlobalVariable() override {
+    dropAllReferences();
+
     // FIXME: needed by operator delete
     setGlobalVariableNumOperands(1);
   }
@@ -94,9 +96,9 @@ public:
   /// unique.
   inline bool hasDefinitiveInitializer() const {
     return hasInitializer() &&
-      // The initializer of a global variable with weak linkage may change at
-      // link time.
-      !mayBeOverridden() &&
+      // The initializer of a global variable may change to something arbitrary
+      // at link time.
+      !isInterposable() &&
       // The initializer of a global variable with the externally_initialized
       // marker may change at runtime before C++ initializers are evaluated.
       !isExternallyInitialized();
@@ -158,6 +160,10 @@ public:
   /// and deletes it.
   ///
   void eraseFromParent() override;
+
+  /// Drop all references in preparation to destroy the GlobalVariable. This
+  /// drops not only the reference to the initializer but also to any metadata.
+  void dropAllReferences();
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static inline bool classof(const Value *V) {

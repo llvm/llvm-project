@@ -21,14 +21,22 @@
 #define LLVM_ANALYSIS_CONSTANTFOLDING_H
 
 namespace llvm {
+class APInt;
+template <typename T> class ArrayRef;
 class Constant;
 class ConstantExpr;
-class Instruction;
+class ConstantVector;
 class DataLayout;
-class TargetLibraryInfo;
 class Function;
+class GlobalValue;
+class Instruction;
+class TargetLibraryInfo;
 class Type;
-template <typename T> class ArrayRef;
+
+/// If this constant is a constant offset from a global, return the global and
+/// the constant. Because of constantexprs, this function is recursive.
+bool IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV, APInt &Offset,
+                                const DataLayout &DL);
 
 /// ConstantFoldInstruction - Try to constant fold the specified instruction.
 /// If successful, the constant result is returned, if not, null is returned.
@@ -38,11 +46,11 @@ template <typename T> class ArrayRef;
 Constant *ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
                                   const TargetLibraryInfo *TLI = nullptr);
 
-/// ConstantFoldConstantExpression - Attempt to fold the constant expression
-/// using the specified DataLayout.  If successful, the constant result is
-/// result is returned, if not, null is returned.
-Constant *
-ConstantFoldConstantExpression(const ConstantExpr *CE, const DataLayout &DL,
+/// ConstantFoldConstant - Attempt to fold the constant using the
+/// specified DataLayout.
+/// If successful, the constant result is result is returned, if not,
+/// null is returned.
+Constant *ConstantFoldConstant(const Constant *C, const DataLayout &DL,
                                const TargetLibraryInfo *TLI = nullptr);
 
 /// ConstantFoldInstOperands - Attempt to constant fold an instruction with the
@@ -51,8 +59,7 @@ ConstantFoldConstantExpression(const ConstantExpr *CE, const DataLayout &DL,
 /// fold instructions like loads and stores, which have no constant expression
 /// form.
 ///
-Constant *ConstantFoldInstOperands(unsigned Opcode, Type *DestTy,
-                                   ArrayRef<Constant *> Ops,
+Constant *ConstantFoldInstOperands(Instruction *I, ArrayRef<Constant *> Ops,
                                    const DataLayout &DL,
                                    const TargetLibraryInfo *TLI = nullptr);
 
@@ -64,6 +71,17 @@ Constant *
 ConstantFoldCompareInstOperands(unsigned Predicate, Constant *LHS,
                                 Constant *RHS, const DataLayout &DL,
                                 const TargetLibraryInfo *TLI = nullptr);
+
+/// \brief Attempt to constant fold a binary operation with the specified
+/// operands.  If it fails, it returns a constant expression of the specified
+/// operands.
+Constant *ConstantFoldBinaryOpOperands(unsigned Opcode, Constant *LHS,
+                                       Constant *RHS, const DataLayout &DL);
+
+/// \brief Attempt to constant fold a cast with the specified operand.  If it
+/// fails, it returns a constant expression of the specified operand.
+Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C, Type *DestTy,
+                                  const DataLayout &DL);
 
 /// ConstantFoldInsertValueInstruction - Attempt to constant fold an insertvalue
 /// instruction with the specified operands and indices.  The constant result is
@@ -85,7 +103,7 @@ Constant *ConstantFoldExtractElementInstruction(Constant *Val, Constant *Idx);
 /// ConstantFoldLoadFromConstPtr - Return the value that a load from C would
 /// produce if it is constant and determinable.  If this is not determinable,
 /// return null.
-Constant *ConstantFoldLoadFromConstPtr(Constant *C, const DataLayout &DL);
+Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, const DataLayout &DL);
 
 /// ConstantFoldLoadThroughGEPConstantExpr - Given a constant and a
 /// getelementptr constantexpr, return the constant value being addressed by the

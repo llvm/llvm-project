@@ -15,12 +15,12 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_DWARFCOMPILEUNIT_H
 
 #include "DwarfUnit.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/Support/Dwarf.h"
 
 namespace llvm {
 
+class StringRef;
 class AsmPrinter;
 class DIE;
 class DwarfDebug;
@@ -29,6 +29,12 @@ class MCSymbol;
 class LexicalScope;
 
 class DwarfCompileUnit : public DwarfUnit {
+  /// A numeric ID unique among all CUs in the module
+  unsigned UniqueID;
+
+  /// Offset of the UnitDie from beginning of debug info section.
+  unsigned DebugInfoOffset = 0;
+
   /// The attribute index of DW_AT_stmt_list in the compile unit DIE, avoiding
   /// the need to search for it in applyStmtList.
   DIE::value_iterator StmtListValue;
@@ -38,6 +44,9 @@ class DwarfCompileUnit : public DwarfUnit {
 
   /// The start of the unit within its section.
   MCSymbol *LabelBegin;
+
+  /// The start of the unit macro info within macro section.
+  MCSymbol *MacroLabelBegin;
 
   typedef llvm::SmallVector<const MDNode *, 8> ImportedEntityList;
   typedef llvm::DenseMap<const MDNode *, ImportedEntityList>
@@ -74,6 +83,10 @@ public:
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
                    DwarfDebug *DW, DwarfFile *DWU);
 
+  unsigned getUniqueID() const { return UniqueID; }
+  unsigned getDebugInfoOffset() const { return DebugInfoOffset; }
+  void setDebugInfoOffset(unsigned DbgInfoOff) { DebugInfoOffset = DbgInfoOff; }
+
   DwarfCompileUnit *getSkeleton() const {
     return Skeleton;
   }
@@ -105,7 +118,14 @@ public:
   unsigned getOrCreateSourceID(StringRef FileName, StringRef DirName) override;
 
   void addImportedEntity(const DIImportedEntity* IE) {
-    ImportedEntities[IE->getScope()].push_back(IE);
+    DIScope *Scope = IE->getScope();
+    assert(Scope && "Invalid Scope encoding!");
+    if (!isa<DILocalScope>(Scope))
+      // No need to add imported enities that are not local declaration.
+      return;
+
+    auto *LocalScope = cast<DILocalScope>(Scope)->getNonLexicalBlockFileScope();
+    ImportedEntities[LocalScope].push_back(IE);
   }
 
   /// addRange - Add an address range to the list of ranges for this unit.
@@ -167,8 +187,6 @@ public:
 
   void finishSubprogramDefinition(const DISubprogram *SP);
 
-  void collectDeadVariables(const DISubprogram *SP);
-
   /// Set the skeleton unit associated with this unit.
   void setSkeleton(DwarfCompileUnit &Skel) { Skeleton = &Skel; }
 
@@ -187,6 +205,10 @@ public:
   MCSymbol *getLabelBegin() const {
     assert(Section);
     return LabelBegin;
+  }
+
+  MCSymbol *getMacroLabelBegin() const {
+    return MacroLabelBegin;
   }
 
   /// Add a new global name to the compile unit.

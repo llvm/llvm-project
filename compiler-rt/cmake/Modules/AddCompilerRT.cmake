@@ -1,6 +1,27 @@
-include(AddLLVM)
 include(ExternalProject)
 include(CompilerRTUtils)
+
+function(set_target_output_directories target output_dir)
+  # For RUNTIME_OUTPUT_DIRECTORY variable, Multi-configuration generators
+  # append a per-configuration subdirectory to the specified directory.
+  # To avoid the appended folder, the configuration specific variable must be
+  # set 'RUNTIME_OUTPUT_DIRECTORY_${CONF}':
+  # RUNTIME_OUTPUT_DIRECTORY_DEBUG, RUNTIME_OUTPUT_DIRECTORY_RELEASE, ...
+  if(CMAKE_CONFIGURATION_TYPES)
+    foreach(build_mode ${CMAKE_CONFIGURATION_TYPES})
+      string(TOUPPER "${build_mode}" CONFIG_SUFFIX)
+      set_target_properties("${target}" PROPERTIES
+          "ARCHIVE_OUTPUT_DIRECTORY_${CONFIG_SUFFIX}" ${output_dir}
+          "LIBRARY_OUTPUT_DIRECTORY_${CONFIG_SUFFIX}" ${output_dir}
+          "RUNTIME_OUTPUT_DIRECTORY_${CONFIG_SUFFIX}" ${output_dir})
+    endforeach()
+  else()
+    set_target_properties("${target}" PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY ${output_dir}
+        LIBRARY_OUTPUT_DIRECTORY ${output_dir}
+        RUNTIME_OUTPUT_DIRECTORY ${output_dir})
+  endif()
+endfunction()
 
 # Tries to add an "object library" target for a given list of OSs and/or
 # architectures with name "<name>.<arch>" for non-Darwin platforms if
@@ -19,7 +40,7 @@ function(add_compiler_rt_object_libraries name)
       set(libname "${name}.${os}")
       set(libnames ${libnames} ${libname})
       set(extra_cflags_${libname} ${DARWIN_${os}_CFLAGS})
-      list_union(LIB_ARCHS_${libname} DARWIN_${os}_ARCHS LIB_ARCHS)
+      list_intersect(LIB_ARCHS_${libname} DARWIN_${os}_ARCHS LIB_ARCHS)
     endforeach()
   else()
     foreach(arch ${LIB_ARCHS})
@@ -32,13 +53,14 @@ function(add_compiler_rt_object_libraries name)
       endif()
     endforeach()
   endif()
-  
+
   foreach(libname ${libnames})
     add_library(${libname} OBJECT ${LIB_SOURCES})
     set_target_compile_flags(${libname}
       ${CMAKE_CXX_FLAGS} ${extra_cflags_${libname}} ${LIB_CFLAGS})
     set_property(TARGET ${libname} APPEND PROPERTY
       COMPILE_DEFINITIONS ${LIB_DEFS})
+    set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Libraries")
     if(APPLE)
       set_target_properties(${libname} PROPERTIES
         OSX_ARCHITECTURES "${LIB_ARCHS_${libname}}")
@@ -87,7 +109,7 @@ function(add_compiler_rt_runtime name type)
         set(libname "${name}_${os}_dynamic")
         set(extra_linkflags_${libname} ${DARWIN_${os}_LINKFLAGS} ${LIB_LINKFLAGS})
       endif()
-      list_union(LIB_ARCHS_${libname} DARWIN_${os}_ARCHS LIB_ARCHS)
+      list_intersect(LIB_ARCHS_${libname} DARWIN_${os}_ARCHS LIB_ARCHS)
       if(LIB_ARCHS_${libname})
         list(APPEND libnames ${libname})
         set(extra_cflags_${libname} ${DARWIN_${os}_CFLAGS} ${LIB_CFLAGS})
@@ -107,7 +129,8 @@ function(add_compiler_rt_runtime name type)
         set(output_name_${libname} ${libname}${COMPILER_RT_OS_SUFFIX})
       else()
         set(libname "${name}-dynamic-${arch}")
-        set(extra_linkflags_${libname} ${TARGET_${arch}_CFLAGS} ${LIB_CFLAGS} ${LIB_LINKFLAGS})
+        set(extra_cflags_${libname} ${TARGET_${arch}_CFLAGS} ${LIB_CFLAGS})
+        set(extra_linkflags_${libname} ${TARGET_${arch}_LINKFLAGS} ${LIB_LINKFLAGS})
         if(WIN32)
           set(output_name_${libname} ${name}_dynamic-${arch}${COMPILER_RT_OS_SUFFIX})
         else()
@@ -126,21 +149,42 @@ function(add_compiler_rt_runtime name type)
   endif()
 
   if(LIB_PARENT_TARGET)
-    set(COMPONENT_OPTION COMPONENT ${LIB_PARENT_TARGET})
+    # If the parent targets aren't created we should create them
+    if(NOT TARGET ${LIB_PARENT_TARGET})
+      add_custom_target(${LIB_PARENT_TARGET})
+    endif()
+    if(NOT TARGET install-${LIB_PARENT_TARGET})
+      # The parent install target specifies the parent component to scrape up
+      # anything not installed by the individual install targets, and to handle
+      # installation when running the multi-configuration generators.
+      add_custom_target(install-${LIB_PARENT_TARGET}
+                        DEPENDS ${LIB_PARENT_TARGET}
+                        COMMAND "${CMAKE_COMMAND}"
+                                -DCMAKE_INSTALL_COMPONENT=${LIB_PARENT_TARGET}
+                                -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      set_target_properties(install-${LIB_PARENT_TARGET} PROPERTIES
+                            FOLDER "Compiler-RT Misc")
+    endif()
   endif()
 
   foreach(libname ${libnames})
+    # If you are using a multi-configuration generator we don't generate
+    # per-library install rules, so we fall back to the parent target COMPONENT
+    if(CMAKE_CONFIGURATION_TYPES AND LIB_PARENT_TARGET)
+      set(COMPONENT_OPTION COMPONENT ${LIB_PARENT_TARGET})
+    else()
+      set(COMPONENT_OPTION COMPONENT ${libname})
+    endif()
+
     add_library(${libname} ${type} ${sources_${libname}})
     set_target_compile_flags(${libname} ${extra_cflags_${libname}})
     set_target_link_flags(${libname} ${extra_linkflags_${libname}})
-    set_property(TARGET ${libname} APPEND PROPERTY 
+    set_property(TARGET ${libname} APPEND PROPERTY
                 COMPILE_DEFINITIONS ${LIB_DEFS})
-    set_target_properties(${libname} PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
-        LIBRARY_OUTPUT_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
-        RUNTIME_OUTPUT_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR})
+    set_target_output_directories(${libname} ${COMPILER_RT_LIBRARY_OUTPUT_DIR})
     set_target_properties(${libname} PROPERTIES
         OUTPUT_NAME ${output_name_${libname}})
+    set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Runtime")
     if(LIB_LINK_LIBS AND ${type} STREQUAL "SHARED")
       target_link_libraries(${libname} ${LIB_LINK_LIBS})
     endif()
@@ -151,6 +195,21 @@ function(add_compiler_rt_runtime name type)
               ${COMPONENT_OPTION}
       RUNTIME DESTINATION ${COMPILER_RT_LIBRARY_INSTALL_DIR}
               ${COMPONENT_OPTION})
+
+    # We only want to generate per-library install targets if you aren't using
+    # an IDE because the extra targets get cluttered in IDEs.
+    if(NOT CMAKE_CONFIGURATION_TYPES)
+      add_custom_target(install-${libname}
+                        DEPENDS ${libname}
+                        COMMAND "${CMAKE_COMMAND}"
+                                -DCMAKE_INSTALL_COMPONENT=${libname}
+                                -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      # If you have a parent target specified, we bind the new install target
+      # to the parent install target.
+      if(LIB_PARENT_TARGET)
+        add_dependencies(install-${LIB_PARENT_TARGET} install-${libname})
+      endif()
+    endif()
     if(APPLE)
       set_target_properties(${libname} PROPERTIES
       OSX_ARCHITECTURES "${LIB_ARCHS_${libname}}")
@@ -212,14 +271,18 @@ endif()
 #                      LINK_FLAGS <link flags>)
 macro(add_compiler_rt_test test_suite test_name)
   cmake_parse_arguments(TEST "" "SUBDIR" "OBJECTS;DEPS;LINK_FLAGS" "" ${ARGN})
+  set(output_bin ${CMAKE_CURRENT_BINARY_DIR})
   if(TEST_SUBDIR)
-    set(output_bin "${CMAKE_CURRENT_BINARY_DIR}/${TEST_SUBDIR}/${test_name}")
-  else()
-    set(output_bin "${CMAKE_CURRENT_BINARY_DIR}/${test_name}")
+    set(output_bin "${output_bin}/${TEST_SUBDIR}")
   endif()
+  if(CMAKE_CONFIGURATION_TYPES)
+    set(output_bin "${output_bin}/${CMAKE_CFG_INTDIR}")
+  endif()
+  set(output_bin "${output_bin}/${test_name}")
   if(MSVC)
     set(output_bin "${output_bin}.exe")
   endif()
+
   # Use host compiler in a standalone build, and just-built Clang otherwise.
   if(NOT COMPILER_RT_STANDALONE_BUILD)
     list(APPEND TEST_DEPS clang)
@@ -239,11 +302,13 @@ macro(add_compiler_rt_test test_suite test_name)
             -o "${output_bin}"
             ${TEST_LINK_FLAGS}
     DEPENDS ${TEST_DEPS})
+  set_target_properties(${test_name} PROPERTIES FOLDER "Compiler-RT Tests")
+
   # Make the test suite depend on the binary.
   add_dependencies(${test_suite} ${test_name})
 endmacro()
 
-macro(add_compiler_rt_resource_file target_name file_name)
+macro(add_compiler_rt_resource_file target_name file_name component)
   set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/${file_name}")
   set(dst_file "${COMPILER_RT_OUTPUT_DIR}/${file_name}")
   add_custom_command(OUTPUT ${dst_file}
@@ -252,7 +317,12 @@ macro(add_compiler_rt_resource_file target_name file_name)
     COMMENT "Copying ${file_name}...")
   add_custom_target(${target_name} DEPENDS ${dst_file})
   # Install in Clang resource directory.
-  install(FILES ${file_name} DESTINATION ${COMPILER_RT_INSTALL_PATH})
+  install(FILES ${file_name}
+    DESTINATION ${COMPILER_RT_INSTALL_PATH}
+    COMPONENT ${component})
+  add_dependencies(${component} ${target_name})
+
+  set_target_properties(${target_name} PROPERTIES FOLDER "Compiler-RT Misc")
 endmacro()
 
 macro(add_compiler_rt_script name)
@@ -293,11 +363,12 @@ macro(add_custom_libcxx name prefix)
     SOURCE_DIR ${COMPILER_RT_LIBCXX_PATH}
     CMAKE_ARGS -DCMAKE_MAKE_PROGRAM:STRING=${CMAKE_MAKE_PROGRAM}
                -DCMAKE_C_COMPILER=${COMPILER_RT_TEST_COMPILER}
-               -DCMAKE_CXX_COMPILER=${COMPILER_RT_TEST_COMPILER}
+               -DCMAKE_CXX_COMPILER=${COMPILER_RT_TEST_CXX_COMPILER}
                -DCMAKE_C_FLAGS=${LIBCXX_CFLAGS}
                -DCMAKE_CXX_FLAGS=${LIBCXX_CFLAGS}
                -DCMAKE_BUILD_TYPE=Release
                -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+               -DLLVM_PATH=${LLVM_MAIN_SRC_DIR}
     LOG_BUILD 1
     LOG_CONFIGURE 1
     LOG_INSTALL 1
@@ -323,6 +394,10 @@ function(rt_externalize_debuginfo name)
     return()
   endif()
 
+  if(NOT COMPILER_RT_EXTERNALIZE_DEBUGINFO_SKIP_STRIP)
+    set(strip_command COMMAND xcrun strip -Sl $<TARGET_FILE:${name}>)
+  endif()
+
   if(APPLE)
     if(CMAKE_CXX_FLAGS MATCHES "-flto"
       OR CMAKE_CXX_FLAGS_${uppercase_CMAKE_BUILD_TYPE} MATCHES "-flto")
@@ -333,7 +408,7 @@ function(rt_externalize_debuginfo name)
     endif()
     add_custom_command(TARGET ${name} POST_BUILD
       COMMAND xcrun dsymutil $<TARGET_FILE:${name}>
-      COMMAND xcrun strip -Sl $<TARGET_FILE:${name}>)
+      ${strip_command})
   else()
     message(FATAL_ERROR "COMPILER_RT_EXTERNALIZE_DEBUGINFO isn't implemented for non-darwin platforms!")
   endif()

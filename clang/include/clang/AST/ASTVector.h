@@ -20,7 +20,6 @@
 
 #include "clang/AST/AttrIterator.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/type_traits.h"
 #include <algorithm>
 #include <cstring>

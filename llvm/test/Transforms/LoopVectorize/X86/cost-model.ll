@@ -39,3 +39,44 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret void
 }
+
+; This function uses a stride that is generally too big to benefit from vectorization without
+; really good support for a gather load. We were not computing an accurate cost for the 
+; vectorization and subsequent scalarization of the pointer induction variables.
+
+define float @PR27826(float* nocapture readonly %a, float* nocapture readonly %b, i32 %n) {
+; CHECK-LABEL: @PR27826(
+; CHECK-NOT:   <4 x float> 
+; CHECK-NOT:   <8 x float> 
+; CHECK:       ret float %s.0.lcssa
+
+entry:
+  %cmp = icmp sgt i32 %n, 0
+  br i1 %cmp, label %preheader, label %for.end
+
+preheader:
+  %t0 = sext i32 %n to i64
+  br label %for
+
+for:
+  %indvars.iv = phi i64 [ 0, %preheader ], [ %indvars.iv.next, %for ]
+  %s.02 = phi float [ 0.0, %preheader ], [ %add4, %for ]
+  %arrayidx = getelementptr inbounds float, float* %a, i64 %indvars.iv
+  %t1 = load float, float* %arrayidx, align 4
+  %arrayidx3 = getelementptr inbounds float, float* %b, i64 %indvars.iv
+  %t2 = load float, float* %arrayidx3, align 4
+  %add = fadd fast float %t1, %s.02
+  %add4 = fadd fast float %add, %t2
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 8
+  %cmp1 = icmp slt i64 %indvars.iv.next, %t0
+  br i1 %cmp1, label %for, label %loopexit
+
+loopexit:
+  %add4.lcssa = phi float [ %add4, %for ]
+  br label %for.end
+
+for.end:
+  %s.0.lcssa = phi float [ 0.0, %entry ], [ %add4.lcssa, %loopexit ]
+  ret float %s.0.lcssa
+}
+

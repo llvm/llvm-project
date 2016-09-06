@@ -1,7 +1,7 @@
 ; RUN: llc < %s -march=mipsel -mcpu=mips32 -O0 -relocation-model=pic \
-; RUN:      -fast-isel-abort=1 | FileCheck %s
+; RUN:      -fast-isel-abort=3 | FileCheck %s
 ; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -O0 -relocation-model=pic \
-; RUN:      -fast-isel-abort=1 | FileCheck %s
+; RUN:      -fast-isel-abort=3 | FileCheck %s
 
 @sj = global i32 200000, align 4
 @sk = global i32 -47, align 4
@@ -22,7 +22,7 @@ define void @divs() {
   ; CHECK-DAG:    lw      $[[J:[0-9]+]], 0($[[J_ADDR]])
   ; CHECK-DAG:    lw      $[[K:[0-9]+]], 0($[[K_ADDR]])
   ; CHECK-DAG:    div     $zero, $[[J]], $[[K]]
-  ; CHECK_DAG:    teq     $[[K]], $zero, 7
+  ; CHECK-DAG:    teq     $[[K]], $zero, 7
   ; CHECK-DAG:    mflo    $[[RESULT:[0-9]+]]
   ; CHECK:        sw      $[[RESULT]], 0($[[I_ADDR]])
   %1 = load i32, i32* @sj, align 4
@@ -44,7 +44,7 @@ define void @divu() {
   ; CHECK-DAG:        lw      $[[J:[0-9]+]], 0($[[J_ADDR]])
   ; CHECK-DAG:        lw      $[[K:[0-9]+]], 0($[[K_ADDR]])
   ; CHECK-DAG:        divu    $zero, $[[J]], $[[K]]
-  ; CHECK_DAG:        teq     $[[K]], $zero, 7
+  ; CHECK-DAG:        teq     $[[K]], $zero, 7
   ; CHECK-DAG:        mflo    $[[RESULT:[0-9]+]]
   ; CHECK:            sw      $[[RESULT]], 0($[[I_ADDR]])
   %1 = load i32, i32* @uj, align 4

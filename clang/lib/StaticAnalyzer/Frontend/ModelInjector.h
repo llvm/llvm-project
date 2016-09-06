@@ -25,11 +25,7 @@
 #define LLVM_CLANG_SA_FRONTEND_MODELINJECTOR_H
 
 #include "clang/Analysis/CodeInjector.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
-#include <map>
-#include <memory>
-#include <vector>
 
 namespace clang {
 

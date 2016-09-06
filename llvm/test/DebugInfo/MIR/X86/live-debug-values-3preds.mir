@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o /dev/null %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
 
 # Test the extension of debug ranges from 3 predecessors.
 # Generated from the source file LiveDebugValues-3preds.c:
@@ -27,10 +27,10 @@
 # DBG_VALUE for variables "x", "y" and "z" are extended into BB#9 from its
 # predecessors BB#0, BB#2 and BB#8.
 # CHECK:      bb.9.for.end:
-# CHECK:      DBG_VALUE debug-use %edx, debug-use _, !11, !17, debug-location !21
-# CHECK-NEXT: DBG_VALUE debug-use %esi, debug-use _, !10, !17, debug-location !19
-# CHECK-NEXT: DBG_VALUE debug-use %edi, debug-use _, !9, !17, debug-location !18
-
+# CHECK-DAG:  DBG_VALUE debug-use %edi, debug-use _, !11, !16, debug-location !17
+# CHECK-DAG:  DBG_VALUE debug-use %edx, debug-use _, !13, !16, debug-location !20
+# CHECK-DAG:  DBG_VALUE debug-use %esi, debug-use _, !12, !16, debug-location !18
+# CHECK:      RET
 
 --- |
   ; ModuleID = 'live-debug-values-3preds.ll'
@@ -101,11 +101,10 @@
   !llvm.module.flags = !{!14, !15}
   !llvm.ident = !{!16}
   
-  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 253049) ", isOptimized: true, runtimeVersion: 0, emissionKind: 1, enums: !2, subprograms: !3)
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (trunk 253049) ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
   !1 = !DIFile(filename: "LiveDebugValues-3preds.c", directory: "/home/vt/julia/test/tvvikram")
   !2 = !{}
-  !3 = !{!4}
-  !4 = distinct !DISubprogram(name: "add", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, variables: !8)
+  !4 = distinct !DISubprogram(name: "add", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !8)
   !5 = !DISubroutineType(types: !6)
   !6 = !{!7, !7, !7, !7, !7}
   !7 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
@@ -159,6 +158,7 @@ name:            add
 alignment:       4
 exposesReturnsTwice: false
 hasInlineAsm:    false
+allVRegsAllocated: true
 isSSA:           false
 tracksRegLiveness: true
 tracksSubRegLiveness: false

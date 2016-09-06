@@ -28,6 +28,7 @@
 #include "llvm/Support/Format.h"
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 ClassDefinitionDumper::ClassDefinitionDumper(LinePrinter &P)
     : PDBSymDumper(true), Printer(P) {}
@@ -84,7 +85,7 @@ void ClassDefinitionDumper::start(const PDBSymbolTypeUDT &Class) {
     auto &AccessGroup = Groups.find((int)Access)->second;
 
     if (auto Func = dyn_cast<PDBSymbolFunc>(Child.get())) {
-      if (Func->isCompilerGenerated() && opts::ExcludeCompilerGenerated)
+      if (Func->isCompilerGenerated() && opts::pretty::ExcludeCompilerGenerated)
         continue;
       if (Func->getLength() == 0 && !Func->isPureVirtual() &&
           !Func->isIntroVirtualFunction())

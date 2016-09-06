@@ -15,17 +15,17 @@ void foo (const char *c) {
   str.assign(c, str);
 }
 
-// CHECK: [[BS:.*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "basic_string<char>"
+// CHECK: [[P:![0-9]*]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[CON:![0-9]*]]
+// CHECK: [[CON]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[CH:![0-9]*]]
+// CHECK: [[CH]] = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
+// CHECK: [[BS:.*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "basic_string<char>"
 // CHECK-SAME:                         line: 4
 // CHECK-SAME:                         size: 8, align: 8
 // CHECK: [[TYPE:![0-9]*]] = !DISubroutineType(types: [[ARGS:.*]])
-// CHECK: [[ARGS]] = !{!{{.*}}, !{{.*}}, [[P:![0-9]*]], [[R:.*]]}
-// CHECK: [[P]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[CON:![0-9]*]]
-// CHECK: [[CON]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[CH:![0-9]*]]
-// CHECK: [[CH]] = !DIBasicType(name: "char", size: 8, align: 8, encoding: DW_ATE_signed_char)
+// CHECK: [[ARGS]] = !{!{{.*}}, !{{.*}}, [[P]], [[R:.*]]}
 
 // CHECK: [[R]] = !DIDerivedType(tag: DW_TAG_reference_type, baseType: [[CON2:![0-9]*]]
-// CHECK: [[CON2]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: !"_ZTS12basic_stringIcE"
+// CHECK: [[CON2]] = !DIDerivedType(tag: DW_TAG_const_type, baseType: [[BS]]
 // CHECK: !DISubprogram(name: "assign"
 // CHECK-SAME:          line: 7
 // CHECK-SAME:          scopeLine: 8

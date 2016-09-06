@@ -1,8 +1,6 @@
 // RUN: %clangxx_msan -O0 %s -o %t && %run %t
-//
-// AArch64 shows fails with uninitialized bytes in __interceptor_strcmp from
-// dlfcn/dlerror.c:107 (glibc).
-// XFAIL: aarch64
+
+// XFAIL: target-is-mips64el
 
 #include <assert.h>
 #include <dlfcn.h>

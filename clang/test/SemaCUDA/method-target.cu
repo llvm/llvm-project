@@ -6,7 +6,7 @@
 // Test 1: host method called from device function
 
 struct S1 {
-  void method() {}
+  void method() {} // expected-note {{'method' declared here}}
 };
 
 __device__ void foo1(S1& s) {
@@ -29,7 +29,7 @@ __device__ void foo2(S2& s, int i, float f) {
 // Test 3: device method called from host function
 
 struct S3 {
-  __device__ void method() {}
+  __device__ void method() {} // expected-note {{'method' declared here}};
 };
 
 void foo3(S3& s) {
@@ -44,7 +44,7 @@ struct S4 {
 };
 
 __host__ __device__ void foo4(S4& s) {
-  s.method(); // expected-error {{reference to __device__ function 'method' in __host__ __device__ function}}
+  s.method();
 }
 
 //------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ __device__ void foo5(S5& s, S5& t) {
 // Test 6: call method through pointer
 
 struct S6 {
-  void method() {}
+  void method() {} // expected-note {{'method' declared here}};
 };
 
 __device__ void foo6(S6* s) {

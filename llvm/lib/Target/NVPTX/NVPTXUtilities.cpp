@@ -99,7 +99,7 @@ static void cacheAnnotationFromMD(const Module *m, const GlobalValue *gv) {
   }
 }
 
-bool llvm::findOneNVVMAnnotation(const GlobalValue *gv, std::string prop,
+bool llvm::findOneNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
                                  unsigned &retval) {
   MutexGuard Guard(Lock);
   const Module *m = gv->getParent();
@@ -113,7 +113,7 @@ bool llvm::findOneNVVMAnnotation(const GlobalValue *gv, std::string prop,
   return true;
 }
 
-bool llvm::findAllNVVMAnnotation(const GlobalValue *gv, std::string prop,
+bool llvm::findAllNVVMAnnotation(const GlobalValue *gv, const std::string &prop,
                                  std::vector<unsigned> &retval) {
   MutexGuard Guard(Lock);
   const Module *m = gv->getParent();
@@ -169,7 +169,7 @@ bool llvm::isSampler(const llvm::Value &val) {
     if (llvm::findAllNVVMAnnotation(
             func, llvm::PropertyAnnotationNames[llvm::PROPERTY_ISSAMPLER],
             annot)) {
-      if (std::find(annot.begin(), annot.end(), arg->getArgNo()) != annot.end())
+      if (is_contained(annot, arg->getArgNo()))
         return true;
     }
   }
@@ -184,7 +184,7 @@ bool llvm::isImageReadOnly(const llvm::Value &val) {
                                     llvm::PropertyAnnotationNames[
                                         llvm::PROPERTY_ISREADONLY_IMAGE_PARAM],
                                     annot)) {
-      if (std::find(annot.begin(), annot.end(), arg->getArgNo()) != annot.end())
+      if (is_contained(annot, arg->getArgNo()))
         return true;
     }
   }
@@ -199,7 +199,7 @@ bool llvm::isImageWriteOnly(const llvm::Value &val) {
                                     llvm::PropertyAnnotationNames[
                                         llvm::PROPERTY_ISWRITEONLY_IMAGE_PARAM],
                                     annot)) {
-      if (std::find(annot.begin(), annot.end(), arg->getArgNo()) != annot.end())
+      if (is_contained(annot, arg->getArgNo()))
         return true;
     }
   }
@@ -214,7 +214,7 @@ bool llvm::isImageReadWrite(const llvm::Value &val) {
                                     llvm::PropertyAnnotationNames[
                                         llvm::PROPERTY_ISREADWRITE_IMAGE_PARAM],
                                     annot)) {
-      if (std::find(annot.begin(), annot.end(), arg->getArgNo()) != annot.end())
+      if (is_contained(annot, arg->getArgNo()))
         return true;
     }
   }

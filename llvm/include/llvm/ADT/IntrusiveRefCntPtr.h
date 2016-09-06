@@ -104,10 +104,10 @@ protected:
   ThreadSafeRefCountedBase() : RefCount(0) {}
 
 public:
-  void Retain() const { ++RefCount; }
+  void Retain() const { RefCount.fetch_add(1, std::memory_order_relaxed); }
 
   void Release() const {
-    int NewRefCount = --RefCount;
+    int NewRefCount = RefCount.fetch_sub(1, std::memory_order_acq_rel) - 1;
     assert(NewRefCount >= 0 && "Reference count was already zero.");
     if (NewRefCount == 0)
       delete static_cast<const Derived*>(this);

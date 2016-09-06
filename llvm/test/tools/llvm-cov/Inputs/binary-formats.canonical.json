@@ -1,0 +1,38 @@
+// Metadata section
+// CHECK: {"version":"1.0.0","type":"llvm.coverage.json.export","data":[
+
+// Open Export
+// CHECK-SAME: {"object":"{{[^"]+}}","files":[
+
+// File Object
+// CHECK-SAME: {"filename":"{{[^"]+}}binary-formats.c",
+// CHECK-SAME: "segments":[
+// CHECK-SAME: [4,40,100,1,1],[4,42,0,0,0]],
+// CHECK-SAME: "expansions":[],
+
+// Verify the Summary Section for the first file
+// CHECK-SAME: "summary":{
+// CHECK-SAME: "lines":{"count":1,"covered":1,"percent":100,"noncode":0},
+// CHECK-SAME: "functions":{"count":1,"covered":1,"percent":100},
+// CHECK-SAME: "regions":{"count":1,"covered":1,"notcovered":0,"percent":100}}}
+
+// Close Files Array
+// CHECK-SAME: ],
+
+// Functions List
+// CHECK-SAME: "functions":[
+// CHECK-SAME: {"name":"main","count":100,"regions":[
+// CHECK-SAME: [4,40,4,42,100,0,0,0]
+// CHECK-SAME: ],
+// CHECK-SAME: "filenames":["{{[^"]+}}binary-formats.c"]
+// CHECK-SAME: }],
+
+
+// Full Export Summary
+// CHECK-SAME: "totals":{
+// CHECK-SAME: "lines":{"count":1,"covered":1,"percent":100,"noncode":0},
+// CHECK-SAME: "functions":{"count":1,"covered":1,"percent":100},
+// CHECK-SAME: "regions":{"count":1,"covered":1,"notcovered":0,"percent":100}}
+
+// Close the export object, data array, and root object
+// CHECK-SAME: }]}

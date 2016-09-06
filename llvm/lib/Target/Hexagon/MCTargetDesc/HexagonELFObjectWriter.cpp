@@ -11,6 +11,7 @@
 #include "MCTargetDesc/HexagonFixupKinds.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -39,20 +40,60 @@ HexagonELFObjectWriter::HexagonELFObjectWriter(uint8_t OSABI, StringRef C)
       CPU(C) {}
 
 unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
-                                              MCValue const & /*Target*/,
+                                              MCValue const &Target,
                                               MCFixup const &Fixup,
                                               bool IsPCRel) const {
+  MCSymbolRefExpr::VariantKind Variant = Target.getAccessVariant();
   switch ((unsigned)Fixup.getKind()) {
   default:
-    DEBUG(dbgs() << "unrecognized relocation " << Fixup.getKind() << "\n");
-    llvm_unreachable("Unimplemented Fixup kind!");
-    return ELF::R_HEX_NONE;
+    report_fatal_error("Unrecognized relocation type");
+    break;
   case FK_Data_4:
-    return (IsPCRel) ? ELF::R_HEX_32_PCREL : ELF::R_HEX_32;
+    switch(Variant) {
+    case MCSymbolRefExpr::VariantKind::VK_DTPREL:
+      return ELF::R_HEX_DTPREL_32;
+    case MCSymbolRefExpr::VariantKind::VK_GOT:
+      return ELF::R_HEX_GOT_32;
+    case MCSymbolRefExpr::VariantKind::VK_GOTREL:
+      return ELF::R_HEX_GOTREL_32;
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_GD_GOT:
+      return ELF::R_HEX_GD_GOT_32;
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_IE:
+      return ELF::R_HEX_IE_32;
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_IE_GOT:
+      return ELF::R_HEX_IE_GOT_32;
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_LD_GOT:
+      return ELF::R_HEX_LD_GOT_32;
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_PCREL:
+      return ELF::R_HEX_32_PCREL;
+    case MCSymbolRefExpr::VariantKind::VK_TPREL:
+      return ELF::R_HEX_TPREL_32;
+    case MCSymbolRefExpr::VariantKind::VK_None:
+      return IsPCRel ? ELF::R_HEX_32_PCREL : ELF::R_HEX_32;
+    default:
+      report_fatal_error("Unrecognized variant type");
+    };
   case FK_PCRel_4:
     return ELF::R_HEX_32_PCREL;
   case FK_Data_2:
-    return ELF::R_HEX_16;
+    switch(Variant) {
+    case MCSymbolRefExpr::VariantKind::VK_DTPREL:
+      return ELF::R_HEX_DTPREL_16;
+    case MCSymbolRefExpr::VariantKind::VK_GOT:
+      return ELF::R_HEX_GOT_16;
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_GD_GOT:
+      return ELF::R_HEX_GD_GOT_16;
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_IE_GOT:
+      return ELF::R_HEX_IE_GOT_16;
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_LD_GOT:
+      return ELF::R_HEX_LD_GOT_16;
+    case MCSymbolRefExpr::VariantKind::VK_TPREL:
+      return ELF::R_HEX_TPREL_16;
+    case MCSymbolRefExpr::VariantKind::VK_None:
+      return ELF::R_HEX_16;
+    default:
+      report_fatal_error("Unrecognized variant type");
+    };
   case FK_Data_1:
     return ELF::R_HEX_8;
   case fixup_Hexagon_B22_PCREL:
@@ -241,6 +282,8 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_HEX_TPREL_16_X;
   case fixup_Hexagon_TPREL_11_X:
     return ELF::R_HEX_TPREL_11_X;
+  case fixup_Hexagon_23_REG:
+    return ELF::R_HEX_23_REG;
   }
 }
 

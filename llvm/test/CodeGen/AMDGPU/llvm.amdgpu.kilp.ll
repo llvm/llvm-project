@@ -3,7 +3,7 @@
 
 ; SI-LABEL: {{^}}kilp_gs_const:
 ; SI: s_mov_b64 exec, 0
-define void @kilp_gs_const() #0 {
+define amdgpu_gs void @kilp_gs_const() {
 main_body:
   %0 = icmp ule i32 0, 3
   %1 = select i1 %0, float 1.000000e+00, float -1.000000e+00
@@ -15,7 +15,5 @@ main_body:
 }
 
 declare void @llvm.AMDGPU.kilp(float)
-
-attributes #0 = { "ShaderType"="2" }
 
 !0 = !{!"const", null, i32 1}

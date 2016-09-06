@@ -1,4 +1,4 @@
-; RUN: llc -O3 -aarch64-gep-opt=true  -print-after=codegenprepare -mcpu=cortex-a53 < %s >%t 2>&1 && FileCheck <%t %s
+; RUN: llc -O3 -aarch64-enable-gep-opt=true  -print-after=codegenprepare -mcpu=cortex-a53 < %s >%t 2>&1 && FileCheck <%t %s
 ; REQUIRES: asserts
 target triple = "aarch64--linux-android"
 

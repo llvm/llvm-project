@@ -6,10 +6,9 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
 
 ; -disable-verify should disable verification from the optimization pipeline.
-; CHECK: Pass Arguments: -verify -internalize
+; CHECK: Pass Arguments:
 ; CHECK-NOT: -verify
 
-; VERIFY: Pass Arguments: -verify -internalize
 ; VERIFY: Pass Arguments: {{.*}} -verify {{.*}} -verify
 
 define void @f() {

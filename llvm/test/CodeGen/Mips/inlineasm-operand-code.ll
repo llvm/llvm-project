@@ -1,9 +1,15 @@
 ; Positive test for inline register constraints
 ;
-; RUN: llc -no-integrated-as -march=mipsel < %s | \
-; RUN:     FileCheck -check-prefix=ALL -check-prefix=LE32 -check-prefix=GAS %s
-; RUN: llc -no-integrated-as -march=mips < %s | \
-; RUN:     FileCheck -check-prefix=ALL -check-prefix=BE32 -check-prefix=GAS %s
+; RUN: llc -no-integrated-as -march=mipsel -relocation-model=pic < %s | \
+; RUN:     FileCheck -check-prefixes=ALL,LE32,GAS %s
+; RUN: llc -no-integrated-as -march=mips -relocation-model=pic < %s | \
+; RUN:     FileCheck -check-prefixes=ALL,BE32,GAS %s
+
+; IAS might not print in the same way since it parses the assembly.
+; RUN: llc -march=mipsel -relocation-model=pic < %s | \
+; RUN:     FileCheck -check-prefixes=ALL,LE32,IAS %s
+; RUN: llc -march=mips -relocation-model=pic < %s | \
+; RUN:     FileCheck -check-prefixes=ALL,BE32,IAS %s
 
 %union.u_tag = type { i64 }
 %struct.anon = type { i32, i32 }
@@ -15,6 +21,7 @@ entry:
 ; ALL-LABEL: constraint_X:
 ; ALL:           #APP
 ; GAS:           addiu ${{[0-9]+}}, ${{[0-9]+}}, 0xfffffffffffffffd
+; IAS:           addiu ${{[0-9]+}}, ${{[0-9]+}}, -3
 ; ALL:           #NO_APP
   tail call i32 asm sideeffect "addiu $0, $1, ${2:X}", "=r,r,I"(i32 7, i32 -3) ;
   ret i32 0
@@ -26,6 +33,9 @@ entry:
 ; ALL-LABEL: constraint_x:
 ; ALL: #APP
 ; GAS: addiu ${{[0-9]+}}, ${{[0-9]+}}, 0xfffd
+; This is _also_ -3 because uimm16 values are silently coerced to simm16 when
+; it would otherwise fail to match.
+; IAS: addiu ${{[0-9]+}}, ${{[0-9]+}}, -3
 ; ALL: #NO_APP
   tail call i32 asm sideeffect "addiu $0, $1, ${2:x}", "=r,r,I"(i32 7, i32 -3) ;
   ret i32 0
@@ -54,39 +64,66 @@ entry:
 }
 
 ; z with -3
-define i32 @constraint_z() nounwind {
+define void @constraint_z_0() nounwind {
 entry:
-; ALL-LABEL: constraint_z:
+; ALL-LABEL: constraint_z_0:
 ; ALL:    #APP
 ; ALL:    addiu ${{[0-9]+}}, ${{[0-9]+}}, -3
 ; ALL:    #NO_APP
   tail call i32 asm sideeffect "addiu $0, $1, ${2:z}", "=r,r,I"(i32 7, i32 -3) ;
+  ret void
+}
 
 ; z with 0
+define void @constraint_z_1() nounwind {
+entry:
+; ALL-LABEL: constraint_z_1:
 ; ALL:    #APP
-; GAS:    addiu ${{[0-9]+}}, ${{[0-9]+}}, $0
+; GAS:    addu ${{[0-9]+}}, ${{[0-9]+}}, $0
+; IAS:    move ${{[0-9]+}}, ${{[0-9]+}}
 ; ALL:    #NO_APP
-  tail call i32 asm sideeffect "addiu $0, $1, ${2:z}", "=r,r,I"(i32 7, i32 0) nounwind
+  tail call i32 asm sideeffect "addu $0, $1, ${2:z}", "=r,r,I"(i32 7, i32 0) nounwind
+  ret void
+}
 
 ; z with non-zero and the "r"(register) and "J"(integer zero) constraints
+define void @constraint_z_2() nounwind {
+entry:
+; ALL-LABEL: constraint_z_2:
 ; ALL:    #APP
 ; ALL:    mtc0 ${{[1-9][0-9]?}}, ${{[0-9]+}}
 ; ALL:    #NO_APP
   call void asm sideeffect "mtc0 ${0:z}, $$12", "Jr"(i32 7) nounwind
+  ret void
+}
 
 ; z with zero and the "r"(register) and "J"(integer zero) constraints
+define void @constraint_z_3() nounwind {
+entry:
+; ALL-LABEL: constraint_z_3:
 ; ALL:    #APP
-; ALL:    mtc0 $0, ${{[0-9]+}}
+; GAS:    mtc0 $0, ${{[0-9]+}}
+; IAS:    mtc0 $zero, ${{[0-9]+}}, 0
 ; ALL:    #NO_APP
   call void asm sideeffect "mtc0 ${0:z}, $$12", "Jr"(i32 0) nounwind
+  ret void
+}
 
 ; z with non-zero and just the "r"(register) constraint
+define void @constraint_z_4() nounwind {
+entry:
+; ALL-LABEL: constraint_z_4:
 ; ALL:    #APP
 ; ALL:    mtc0 ${{[1-9][0-9]?}}, ${{[0-9]+}}
 ; ALL:    #NO_APP
   call void asm sideeffect "mtc0 ${0:z}, $$12", "r"(i32 7) nounwind
+  ret void
+}
 
 ; z with zero and just the "r"(register) constraint
+define void @constraint_z_5() nounwind {
+entry:
+; ALL-LABEL: constraint_z_5:
 ; FIXME: Check for $0, instead of other registers.
 ;        We should be using $0 directly in this case, not real registers.
 ;        When the materialization of 0 gets fixed, this test will fail.
@@ -94,7 +131,7 @@ entry:
 ; ALL:    mtc0 ${{[1-9][0-9]?}}, ${{[0-9]+}}
 ; ALL:    #NO_APP
   call void asm sideeffect "mtc0 ${0:z}, $$12", "r"(i32 0) nounwind
-  ret i32 0
+  ret void
 }
 
 ; A long long in 32 bit mode (use to assert)

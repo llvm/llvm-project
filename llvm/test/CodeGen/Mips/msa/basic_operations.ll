@@ -1,9 +1,21 @@
-; RUN: llc -march=mips -mattr=+msa,+fp64 < %s | FileCheck -check-prefix=ALL -check-prefix=O32 -check-prefix=MIPS32 -check-prefix=ALL-BE %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64 < %s | FileCheck -check-prefix=ALL -check-prefix=O32 -check-prefix=MIPS32 -check-prefix=ALL-LE %s
-; RUN: llc -march=mips64 -target-abi n32 -mattr=+msa,+fp64 < %s | FileCheck -check-prefix=ALL -check-prefix=N32 -check-prefix=MIPS64 -check-prefix=ALL-BE %s
-; RUN: llc -march=mips64el -target-abi n32 -mattr=+msa,+fp64 < %s | FileCheck -check-prefix=ALL -check-prefix=N32 -check-prefix=MIPS64 -check-prefix=ALL-LE %s
-; RUN: llc -march=mips64 -mattr=+msa,+fp64 < %s | FileCheck -check-prefix=ALL -check-prefix=N64 -check-prefix=MIPS64 -check-prefix=ALL-BE %s
-; RUN: llc -march=mips64el -mattr=+msa,+fp64 < %s | FileCheck -check-prefix=ALL -check-prefix=N64 -check-prefix=MIPS64 -check-prefix=ALL-LE %s
+; RUN: llc -march=mips -mattr=+msa,+fp64 -relocation-model=pic \
+; RUN:   -verify-machineinstrs < %s | \
+; RUN:   FileCheck -check-prefixes=ALL,O32,MIPS32,ALL-BE %s
+; RUN: llc -march=mipsel -mattr=+msa,+fp64 -relocation-model=pic \
+; RUN:   -verify-machineinstrs < %s | \
+; RUN:   FileCheck -check-prefixes=ALL,O32,MIPS32,ALL-LE %s
+; RUN: llc -march=mips64 -target-abi n32 -mattr=+msa,+fp64 \
+; RUN:   -relocation-model=pic -verify-machineinstrs < %s | \
+; RUN:   FileCheck -check-prefixes=ALL,N32,MIPS64,ALL-BE %s
+; RUN: llc -march=mips64el -target-abi n32 -mattr=+msa,+fp64 \
+; RUN:   -relocation-model=pic -verify-machineinstrs < %s | \
+; RUN:   FileCheck -check-prefixes=ALL,N32,MIPS64,ALL-LE %s
+; RUN: llc -march=mips64 -mattr=+msa,+fp64 -relocation-model=pic \
+; RUN:   -verify-machineinstrs < %s | \
+; RUN:   FileCheck -check-prefixes=ALL,N64,MIPS64,ALL-BE %s
+; RUN: llc -march=mips64el -mattr=+msa,+fp64 -relocation-model=pic \
+; RUN:   -verify-machineinstrs < %s | \
+; RUN:   FileCheck -check-prefixes=ALL,N64,MIPS64,ALL-LE %s
 
 @v4i8 = global <4 x i8> <i8 0, i8 0, i8 0, i8 0>
 @v16i8 = global <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
@@ -24,14 +36,14 @@ define void @const_v16i8() nounwind {
 
   store volatile <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 31>, <16 x i8>*@v16i8
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.b  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   store volatile <16 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6>, <16 x i8>*@v16i8
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.b  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   store volatile <16 x i8> <i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0>, <16 x i8>*@v16i8
@@ -47,8 +59,8 @@ define void @const_v16i8() nounwind {
 
   store volatile <16 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, <16 x i8>*@v16i8
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.b  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   ret void
@@ -65,8 +77,8 @@ define void @const_v8i16() nounwind {
 
   store volatile <8 x i16> <i16 1, i16 1, i16 1, i16 2, i16 1, i16 1, i16 1, i16 31>, <8 x i16>*@v8i16
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.h  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   store volatile <8 x i16> <i16 1028, i16 1028, i16 1028, i16 1028, i16 1028, i16 1028, i16 1028, i16 1028>, <8 x i16>*@v8i16
@@ -81,8 +93,8 @@ define void @const_v8i16() nounwind {
 
   store volatile <8 x i16> <i16 1, i16 2, i16 3, i16 4, i16 1, i16 2, i16 3, i16 4>, <8 x i16>*@v8i16
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.h  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   ret void
@@ -99,8 +111,8 @@ define void @const_v4i32() nounwind {
 
   store volatile <4 x i32> <i32 1, i32 1, i32 1, i32 31>, <4 x i32>*@v4i32
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.w  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   store volatile <4 x i32> <i32 16843009, i32 16843009, i32 16843009, i32 16843009>, <4 x i32>*@v4i32
@@ -111,14 +123,14 @@ define void @const_v4i32() nounwind {
 
   store volatile <4 x i32> <i32 1, i32 2, i32 1, i32 2>, <4 x i32>*@v4i32
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.w  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   store volatile <4 x i32> <i32 3, i32 4, i32 5, i32 6>, <4 x i32>*@v4i32
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.w  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   ret void
@@ -144,15 +156,15 @@ define void @const_v2i64() nounwind {
 
   store volatile <2 x i64> <i64 1, i64 31>, <2 x i64>*@v2i64
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; MIPS32: ld.w [[R1:\$w[0-9]+]], 0([[G_PTR]])
   ; MIPS64: ld.d [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   store volatile <2 x i64> <i64 3, i64 4>, <2 x i64>*@v2i64
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; MIPS32: ld.w  [[R1:\$w[0-9]+]], 0([[G_PTR]])
   ; MIPS64: ld.d  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 

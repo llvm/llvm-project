@@ -1,7 +1,7 @@
 # RUN: llvm-nm -P %p/Inputs/hello.obj.macho-x86_64 | FileCheck %s
 
-# CHECK: EH_frame0 s 104 0
-# CHECK: L_.str s 59 0
+# CHECK: EH_frame0 s 68 0
+# CHECK: L_.str s 3b 0
 # CHECK: _main T 0 0
-# CHECK: _main.eh S 128 0
+# CHECK: _main.eh S 80 0
 # CHECK: _printf U 0 0

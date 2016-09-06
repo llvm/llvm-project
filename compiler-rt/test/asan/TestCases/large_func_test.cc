@@ -49,5 +49,5 @@ int main(int argc, char **argv) {
   // CHECK-Linux: {{    #0 0x.* in operator new.*}}
   // CHECK-Darwin: {{    #0 0x.* in .*_Zna.*}}
   // CHECK: {{    #1 0x.* in main .*large_func_test.cc:}}[[@LINE-7]]
-  delete x;
+  delete[] x;
 }

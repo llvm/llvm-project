@@ -1,4 +1,4 @@
-; RUN: llc -O0 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 < %s | FileCheck %s
 
 ; Verify that a constant with an initializer that may turn into a dynamic
 ; relocation is not placed in .rodata, but rather in .data.rel.ro.

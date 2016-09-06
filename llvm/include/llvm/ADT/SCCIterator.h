@@ -37,23 +37,22 @@ namespace llvm {
 /// build up a vector of nodes in a particular SCC. Note that it is a forward
 /// iterator and thus you cannot backtrack or re-visit nodes.
 template <class GraphT, class GT = GraphTraits<GraphT>>
-class scc_iterator
-    : public iterator_facade_base<
-          scc_iterator<GraphT, GT>, std::forward_iterator_tag,
-          const std::vector<typename GT::NodeType *>, ptrdiff_t> {
-  typedef typename GT::NodeType NodeType;
+class scc_iterator : public iterator_facade_base<
+                         scc_iterator<GraphT, GT>, std::forward_iterator_tag,
+                         const std::vector<typename GT::NodeRef>, ptrdiff_t> {
+  typedef typename GT::NodeRef NodeRef;
   typedef typename GT::ChildIteratorType ChildItTy;
-  typedef std::vector<NodeType *> SccTy;
+  typedef std::vector<NodeRef> SccTy;
   typedef typename scc_iterator::reference reference;
 
   /// Element of VisitStack during DFS.
   struct StackElement {
-    NodeType *Node;       ///< The current node pointer.
+    NodeRef Node;         ///< The current node pointer.
     ChildItTy NextChild;  ///< The next child, modified inplace during DFS.
     unsigned MinVisited;  ///< Minimum uplink value of all children of Node.
 
-    StackElement(NodeType *Node, const ChildItTy &Child, unsigned Min)
-      : Node(Node), NextChild(Child), MinVisited(Min) {}
+    StackElement(NodeRef Node, const ChildItTy &Child, unsigned Min)
+        : Node(Node), NextChild(Child), MinVisited(Min) {}
 
     bool operator==(const StackElement &Other) const {
       return Node == Other.Node &&
@@ -67,10 +66,10 @@ class scc_iterator
   ///
   /// nodeVisitNumbers are per-node visit numbers, also used as DFS flags.
   unsigned visitNum;
-  DenseMap<NodeType *, unsigned> nodeVisitNumbers;
+  DenseMap<NodeRef, unsigned> nodeVisitNumbers;
 
   /// Stack holding nodes of the SCC.
-  std::vector<NodeType *> SCCNodeStack;
+  std::vector<NodeRef> SCCNodeStack;
 
   /// The current SCC, retrieved using operator*().
   SccTy CurrentSCC;
@@ -80,7 +79,7 @@ class scc_iterator
   std::vector<StackElement> VisitStack;
 
   /// A single "visit" within the non-recursive DFS traversal.
-  void DFSVisitOne(NodeType *N);
+  void DFSVisitOne(NodeRef N);
 
   /// The stack-based DFS traversal; defined below.
   void DFSVisitChildren();
@@ -88,7 +87,7 @@ class scc_iterator
   /// Compute the next SCC using the DFS traversal.
   void GetNextSCC();
 
-  scc_iterator(NodeType *entryN) : visitNum(0) {
+  scc_iterator(NodeRef entryN) : visitNum(0) {
     DFSVisitOne(entryN);
     GetNextSCC();
   }
@@ -131,7 +130,7 @@ public:
 
   /// This informs the \c scc_iterator that the specified \c Old node
   /// has been deleted, and \c New is to be used in its place.
-  void ReplaceNode(NodeType *Old, NodeType *New) {
+  void ReplaceNode(NodeRef Old, NodeRef New) {
     assert(nodeVisitNumbers.count(Old) && "Old not in scc_iterator?");
     nodeVisitNumbers[New] = nodeVisitNumbers[Old];
     nodeVisitNumbers.erase(Old);
@@ -139,7 +138,7 @@ public:
 };
 
 template <class GraphT, class GT>
-void scc_iterator<GraphT, GT>::DFSVisitOne(NodeType *N) {
+void scc_iterator<GraphT, GT>::DFSVisitOne(NodeRef N) {
   ++visitNum;
   nodeVisitNumbers[N] = visitNum;
   SCCNodeStack.push_back(N);
@@ -155,8 +154,8 @@ void scc_iterator<GraphT, GT>::DFSVisitChildren() {
   assert(!VisitStack.empty());
   while (VisitStack.back().NextChild != GT::child_end(VisitStack.back().Node)) {
     // TOS has at least one more child so continue DFS
-    NodeType *childN = *VisitStack.back().NextChild++;
-    typename DenseMap<NodeType *, unsigned>::iterator Visited =
+    NodeRef childN = *VisitStack.back().NextChild++;
+    typename DenseMap<NodeRef, unsigned>::iterator Visited =
         nodeVisitNumbers.find(childN);
     if (Visited == nodeVisitNumbers.end()) {
       // this node has never been seen.
@@ -176,7 +175,7 @@ template <class GraphT, class GT> void scc_iterator<GraphT, GT>::GetNextSCC() {
     DFSVisitChildren();
 
     // Pop the leaf on top of the VisitStack.
-    NodeType *visitingN = VisitStack.back().Node;
+    NodeRef visitingN = VisitStack.back().Node;
     unsigned minVisitNum = VisitStack.back().MinVisited;
     assert(VisitStack.back().NextChild == GT::child_end(visitingN));
     VisitStack.pop_back();
@@ -212,7 +211,7 @@ bool scc_iterator<GraphT, GT>::hasLoop() const {
     assert(!CurrentSCC.empty() && "Dereferencing END SCC iterator!");
     if (CurrentSCC.size() > 1)
       return true;
-    NodeType *N = CurrentSCC.front();
+    NodeRef N = CurrentSCC.front();
     for (ChildItTy CI = GT::child_begin(N), CE = GT::child_end(N); CI != CE;
          ++CI)
       if (*CI == N)

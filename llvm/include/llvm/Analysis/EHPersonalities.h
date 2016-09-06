@@ -23,12 +23,15 @@ enum class EHPersonality {
   Unknown,
   GNU_Ada,
   GNU_C,
+  GNU_C_SjLj,
   GNU_CXX,
+  GNU_CXX_SjLj,
   GNU_ObjC,
   MSVC_X86SEH,
   MSVC_Win64SEH,
   MSVC_CXX,
-  CoreCLR
+  CoreCLR,
+  Rust
 };
 
 /// \brief See if the given exception handling personality function is one

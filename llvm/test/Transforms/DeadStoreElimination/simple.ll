@@ -1,4 +1,5 @@
 ; RUN: opt < %s -basicaa -dse -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes=dse -S | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
@@ -497,3 +498,26 @@ bb3:
   ret i32 0
 }
 
+; Don't remove redundant store: unknown_func could unwind
+; CHECK-LABEL: @test34(
+; CHECK: store i32 1
+; CHECK: store i32 0
+; CHECK: ret
+define void @test34(i32* noalias %p) {
+  store i32 1, i32* %p
+  call void @unknown_func()
+  store i32 0, i32* %p
+  ret void
+}
+
+; Remove redundant store even with an unwinding function in the same block
+; CHECK-LABEL: @test35(
+; CHECK: call void @unknown_func
+; CHECK-NEXT: store i32 0
+; CHECK-NEXT: ret void
+define void @test35(i32* noalias %p) {
+  call void @unknown_func()
+  store i32 1, i32* %p
+  store i32 0, i32* %p
+  ret void
+}

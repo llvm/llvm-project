@@ -4,10 +4,10 @@
 ; CHECK-LABEL: {{^}}main:
 ; CHECK: s_mov_b32 m0, 0
 ; CHECK-NOT: s_mov_b32 m0
-; CHECK: s_sendmsg Gs(emit stream 0)
-; CHECK: s_sendmsg Gs(cut stream 1)
-; CHECK: s_sendmsg Gs(emit-cut stream 2)
-; CHECK: s_sendmsg Gs_done(nop)
+; CHECK: s_sendmsg sendmsg(MSG_GS, GS_OP_EMIT, 0)
+; CHECK: s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 1)
+; CHECK: s_sendmsg sendmsg(MSG_GS, GS_OP_EMIT_CUT, 2)
+; CHECK: s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP)
 
 define void @main() {
 main_body:

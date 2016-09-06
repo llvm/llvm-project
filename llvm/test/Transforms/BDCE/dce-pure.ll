@@ -1,4 +1,5 @@
 ; RUN: opt -bdce -S < %s | FileCheck %s
+; RUN: opt -passes=bdce -S < %s | FileCheck %s
 
 declare i32 @strlen(i8*) readonly nounwind
 

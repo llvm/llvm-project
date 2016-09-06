@@ -11,15 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm-readobj.h"
 #include "Error.h"
 #include "ObjDumper.h"
 #include "StackMapPrinter.h"
-#include "StreamWriter.h"
+#include "llvm-readobj.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
 using namespace object;
@@ -28,9 +28,8 @@ namespace {
 
 class MachODumper : public ObjDumper {
 public:
-  MachODumper(const MachOObjectFile *Obj, StreamWriter& Writer)
-    : ObjDumper(Writer)
-    , Obj(Obj) { }
+  MachODumper(const MachOObjectFile *Obj, ScopedPrinter &Writer)
+      : ObjDumper(Writer), Obj(Obj) {}
 
   void printFileHeaders() override;
   void printSections() override;
@@ -69,7 +68,7 @@ private:
 namespace llvm {
 
 std::error_code createMachODumper(const object::ObjectFile *Obj,
-                                  StreamWriter &Writer,
+                                  ScopedPrinter &Writer,
                                   std::unique_ptr<ObjDumper> &Result) {
   const MachOObjectFile *MachOObj = dyn_cast<MachOObjectFile>(Obj);
   if (!MachOObj)
@@ -239,7 +238,8 @@ static const EnumEntry<unsigned> MachOSymbolFlags[] = {
   { "ReferencedDynamically", 0x10 },
   { "NoDeadStrip",           0x20 },
   { "WeakRef",               0x40 },
-  { "WeakDef",               0x80 }
+  { "WeakDef",               0x80 },
+  { "AltEntry",             0x200 },
 };
 
 static const EnumEntry<unsigned> MachOSymbolTypes[] = {
@@ -540,8 +540,9 @@ void MachODumper::printRelocation(const MachOObjectFile *Obj,
   if (IsExtern) {
     symbol_iterator Symbol = Reloc.getSymbol();
     if (Symbol != Obj->symbol_end()) {
-      ErrorOr<StringRef> TargetNameOrErr = Symbol->getName();
-      error(TargetNameOrErr.getError());
+      Expected<StringRef> TargetNameOrErr = Symbol->getName();
+      if (!TargetNameOrErr)
+        error(errorToErrorCode(TargetNameOrErr.takeError()));
       TargetName = *TargetNameOrErr;
     }
   } else if (!IsScattered) {
@@ -604,15 +605,19 @@ void MachODumper::printDynamicSymbols() {
 
 void MachODumper::printSymbol(const SymbolRef &Symbol) {
   StringRef SymbolName;
-  if (ErrorOr<StringRef> SymbolNameOrErr = Symbol.getName())
+  Expected<StringRef> SymbolNameOrErr = Symbol.getName();
+  if (!SymbolNameOrErr) {
+    // TODO: Actually report errors helpfully.
+    consumeError(SymbolNameOrErr.takeError());
+  } else
     SymbolName = *SymbolNameOrErr;
 
   MachOSymbol MOSymbol;
   getSymbol(Obj, Symbol.getRawDataRefImpl(), MOSymbol);
 
   StringRef SectionName = "";
-  ErrorOr<section_iterator> SecIOrErr = Symbol.getSection();
-  error(SecIOrErr.getError());
+  Expected<section_iterator> SecIOrErr = Symbol.getSection();
+  error(errorToErrorCode(SecIOrErr.takeError()));
   section_iterator SecI = *SecIOrErr;
   if (SecI != Obj->section_end())
     error(SecI->getName(SectionName));

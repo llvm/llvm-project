@@ -69,7 +69,7 @@
 !llvm.module.flags = !{!17, !18, !19}
 !llvm.ident = !{!20}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (trunk 231548) (llvm/trunk 231547)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2, retainedTypes: !2, subprograms: !2, globals: !3, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.7.0 (trunk 231548) (llvm/trunk 231547)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, globals: !3, imports: !2)
 !1 = !DIFile(filename: "hash-collisions.c", directory: "/tmp")
 !2 = !{}
 !3 = !{!4, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16}

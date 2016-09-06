@@ -19,7 +19,7 @@ using namespace coverage;
 
 FunctionCoverageSummary
 FunctionCoverageSummary::get(const coverage::FunctionRecord &Function) {
-  // Compute the region coverage
+  // Compute the region coverage.
   size_t NumCodeRegions = 0, CoveredRegions = 0;
   for (auto &CR : Function.CountedRegions) {
     if (CR.Kind != CounterMappingRegion::CodeRegion)

@@ -105,13 +105,9 @@ SparcRegisterInfo::getPointerRegClass(const MachineFunction &MF,
   return Subtarget.is64Bit() ? &SP::I64RegsRegClass : &SP::IntRegsRegClass;
 }
 
-static void replaceFI(MachineFunction &MF,
-                      MachineBasicBlock::iterator II,
-                      MachineInstr &MI,
-                      DebugLoc dl,
-                      unsigned FIOperandNum, int Offset,
-                      unsigned FramePtr)
-{
+static void replaceFI(MachineFunction &MF, MachineBasicBlock::iterator II,
+                      MachineInstr &MI, const DebugLoc &dl,
+                      unsigned FIOperandNum, int Offset, unsigned FramePtr) {
   // Replace frame index with a frame pointer reference.
   if (Offset >= -4096 && Offset <= 4095) {
     // If the offset is small enough to fit in the immediate field, directly

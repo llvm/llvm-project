@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=i386-apple-darwin8 -mattr=+sse2  | FileCheck %s --check-prefix=X32
+; RUN: llc < %s -mtriple=i386-apple-darwin9 -mattr=+sse2  | FileCheck %s --check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+sse2 | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=-sse3 | FileCheck %s --check-prefix=X64_BAD
 
@@ -8,7 +8,7 @@
 define double @foo(double %a) nounwind readonly ssp {
 entry:
 ; X32-LABEL: foo:
-; X32: jmp L_sin$stub
+; X32: jmp _sin
 
 ; X64-LABEL: foo:
 ; X64: jmp _sin
@@ -18,7 +18,7 @@ entry:
 
 define float @bar(float %a) nounwind readonly ssp {
 ; X32-LABEL: bar:
-; X32: jmp L_sinf$stub
+; X32: jmp _sinf
 
 ; X64-LABEL: bar:
 ; X64: jmp _sinf
@@ -27,10 +27,6 @@ entry:
   ret float %0
 }
 
-; X32-LABEL: L_sin$stub:
-; X32-NEXT:   .indirect_symbol        _sin
-; X32-LABEL: L_sinf$stub:
-; X32-NEXT:   .indirect_symbol        _sinf
 
 declare float @sinf(float) nounwind readonly
 

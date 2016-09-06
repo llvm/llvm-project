@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 < %s | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
 
 @var32 = global i32 0
 

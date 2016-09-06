@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 -aarch64-neon-syntax=apple -asm-verbose=false < %s | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
 
 define signext i8 @test_vminv_s8(<8 x i8> %a1) {
 ; CHECK: test_vminv_s8

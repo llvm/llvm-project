@@ -17,6 +17,8 @@
 #define LLVM_IR_INTRINSICS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include <string>
 
 namespace llvm {
@@ -68,6 +70,13 @@ namespace Intrinsic {
   /// intrinsic, Tys must provide exactly one type for each overloaded type in
   /// the intrinsic.
   Function *getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys = None);
+
+  /// Looks up Name in NameTable via binary search. NameTable must be sorted
+  /// and all entries must start with "llvm.".  If NameTable contains an exact
+  /// match for Name or a prefix of Name followed by a dot, its index in
+  /// NameTable is returned. Otherwise, -1 is returned.
+  int lookupLLVMIntrinsicByName(ArrayRef<const char *> NameTable,
+                                StringRef Name);
 
   /// Map a GCC builtin name to an intrinsic ID.
   ID getIntrinsicForGCCBuiltin(const char *Prefix, const char *BuiltinName);
@@ -125,6 +134,25 @@ namespace Intrinsic {
   /// Return the IIT table descriptor for the specified intrinsic into an array
   /// of IITDescriptors.
   void getIntrinsicInfoTableEntries(ID id, SmallVectorImpl<IITDescriptor> &T);
+
+  /// Match the specified type (which comes from an intrinsic argument or return
+  /// value) with the type constraints specified by the .td file. If the given
+  /// type is an overloaded type it is pushed to the ArgTys vector.
+  ///
+  /// Returns false if the given type matches with the constraints, true
+  /// otherwise.
+  bool matchIntrinsicType(Type *Ty, ArrayRef<IITDescriptor> &Infos,
+                          SmallVectorImpl<Type*> &ArgTys);
+
+  /// Verify if the intrinsic has variable arguments. This method is intended to
+  /// be called after all the fixed arguments have been matched first.
+  ///
+  /// This method returns true on error.
+  bool matchIntrinsicVarArg(bool isVarArg, ArrayRef<IITDescriptor> &Infos);
+
+  // Checks if the intrinsic name matches with its signature and if not
+  // returns the declaration with the same signature and remangled name.
+  llvm::Optional<Function*> remangleIntrinsicFunction(Function *F);
 
 } // End Intrinsic namespace
 

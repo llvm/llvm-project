@@ -45,7 +45,7 @@ components:
    ``include/llvm/CodeGen/``. At this level, concepts like "constant pool
    entries" and "jump tables" are explicitly exposed.
 
-3. Classes and algorithms used to represent code as the object file level, the
+3. Classes and algorithms used to represent code at the object file level, the
    `MC Layer`_.  These classes represent assembly level constructs like labels,
    sections, and instructions.  At this level, concepts like "constant pool
    entries" and "jump tables" don't exist.
@@ -386,32 +386,27 @@ functions make it easy to build arbitrary machine instructions.  Usage of the
 .. code-block:: c++
 
   // Create a 'DestReg = mov 42' (rendered in X86 assembly as 'mov DestReg, 42')
-  // instruction.  The '1' specifies how many operands will be added.
-  MachineInstr *MI = BuildMI(X86::MOV32ri, 1, DestReg).addImm(42);
-
-  // Create the same instr, but insert it at the end of a basic block.
+  // instruction and insert it at the end of the given MachineBasicBlock.
+  const TargetInstrInfo &TII = ...
   MachineBasicBlock &MBB = ...
-  BuildMI(MBB, X86::MOV32ri, 1, DestReg).addImm(42);
+  DebugLoc DL;
+  MachineInstr *MI = BuildMI(MBB, DL, TII.get(X86::MOV32ri), DestReg).addImm(42);
 
   // Create the same instr, but insert it before a specified iterator point.
   MachineBasicBlock::iterator MBBI = ...
-  BuildMI(MBB, MBBI, X86::MOV32ri, 1, DestReg).addImm(42);
+  BuildMI(MBB, MBBI, DL, TII.get(X86::MOV32ri), DestReg).addImm(42);
 
   // Create a 'cmp Reg, 0' instruction, no destination reg.
-  MI = BuildMI(X86::CMP32ri, 2).addReg(Reg).addImm(0);
+  MI = BuildMI(MBB, DL, TII.get(X86::CMP32ri8)).addReg(Reg).addImm(42);
 
   // Create an 'sahf' instruction which takes no operands and stores nothing.
-  MI = BuildMI(X86::SAHF, 0);
+  MI = BuildMI(MBB, DL, TII.get(X86::SAHF));
 
   // Create a self looping branch instruction.
-  BuildMI(MBB, X86::JNE, 1).addMBB(&MBB);
+  BuildMI(MBB, DL, TII.get(X86::JNE)).addMBB(&MBB);
 
-The key thing to remember with the ``BuildMI`` functions is that you have to
-specify the number of operands that the machine instruction will take.  This
-allows for efficient memory allocation.  You also need to specify if operands
-default to be uses of values, not definitions.  If you need to add a definition
-operand (other than the optional destination register), you must explicitly mark
-it as such:
+If you need to add a definition operand (other than the optional destination
+register), you must explicitly mark it as such:
 
 .. code-block:: c++
 
@@ -441,7 +436,7 @@ For example, consider this simple LLVM example:
 The X86 instruction selector might produce this machine code for the ``div`` and
 ``ret``:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ;; Start of div
   %EAX = mov %reg1024           ;; Copy X (in reg1024) into EAX
@@ -458,7 +453,7 @@ By the end of code generation, the register allocator would coalesce the
 registers and delete the resultant identity moves producing the following
 code:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ;; X is in EAX, Y is in ECX
   mov %EAX, %EDX
@@ -632,7 +627,7 @@ directives through MCStreamer.
 
 On the implementation side of MCStreamer, there are two major implementations:
 one for writing out a .s file (MCAsmStreamer), and one for writing out a .o
-file (MCObjectStreamer).  MCAsmStreamer is a straight-forward implementation
+file (MCObjectStreamer).  MCAsmStreamer is a straightforward implementation
 that prints out a directive for each method (e.g. ``EmitValue -> .byte``), but
 MCObjectStreamer implements a full assembler.
 
@@ -970,7 +965,7 @@ target code.  For example, consider the following LLVM fragment:
 
 This LLVM code corresponds to a SelectionDAG that looks basically like this:
 
-.. code-block:: llvm
+.. code-block:: text
 
   (fadd:f32 (fmul:f32 (fadd:f32 W, X), Y), Z)
 
@@ -1771,13 +1766,11 @@ table that summarizes what features are supported by each target.
 Target Feature Matrix
 ---------------------
 
-Note that this table does not include the C backend or Cpp backends, since they
-do not use the target independent code generator infrastructure.  It also
-doesn't list features that are not supported fully by any target yet.  It
-considers a feature to be supported if at least one subtarget supports it.  A
-feature being supported means that it is useful and works for most cases, it
-does not indicate that there are zero known bugs in the implementation.  Here is
-the key:
+Note that this table does not list features that are not supported fully by any
+target yet.  It considers a feature to be supported if at least one subtarget
+supports it.  A feature being supported means that it is useful and works for
+most cases, it does not indicate that there are zero known bugs in the
+implementation.  Here is the key:
 
 :raw-html:`<table border="1" cellspacing="0">`
 :raw-html:`<tr>`
@@ -2197,9 +2190,9 @@ prefix byte on an instruction causes the instruction's memory access to go to
 the specified segment.  LLVM address space 0 is the default address space, which
 includes the stack, and any unqualified memory accesses in a program.  Address
 spaces 1-255 are currently reserved for user-defined code.  The GS-segment is
-represented by address space 256, while the FS-segment is represented by address
-space 257. Other x86 segments have yet to be allocated address space
-numbers.
+represented by address space 256, the FS-segment is represented by address space
+257, and the SS-segment is represented by address space 258. Other x86 segments
+have yet to be allocated address space numbers.
 
 While these address spaces may seem similar to TLS via the ``thread_local``
 keyword, and often use the same underlying hardware, there are some fundamental
@@ -2645,3 +2638,59 @@ of a program is limited to 4K instructions:  this ensures fast termination and
 a limited number of kernel function calls.  Prior to running an eBPF program,
 a verifier performs static analysis to prevent loops in the code and
 to ensure valid register usage and operand types.
+
+The AMDGPU backend
+------------------
+
+The AMDGPU code generator lives in the lib/Target/AMDGPU directory, and is an
+open source native AMD GCN ISA code generator.
+
+Target triples supported
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following are the known target triples that are supported by the AMDGPU
+backend.
+
+* **amdgcn--** --- AMD GCN GPUs (AMDGPU.7.0.0+)
+* **amdgcn--amdhsa** --- AMD GCN GPUs (AMDGPU.7.0.0+) with HSA support
+* **r600--** --- AMD GPUs HD2XXX-HD6XXX
+
+Relocations
+^^^^^^^^^^^
+
+Supported relocatable fields are:
+
+* **word32** --- This specifies a 32-bit field occupying 4 bytes with arbitrary
+  byte alignment. These values use the same byte order as other word values in
+  the AMD GPU architecture
+* **word64** --- This specifies a 64-bit field occupying 8 bytes with arbitrary
+  byte alignment. These values use the same byte order as other word values in
+  the AMD GPU architecture
+
+Following notations are used for specifying relocation calculations:
+
+* **A** --- Represents the addend used to compute the value of the relocatable
+  field
+* **G** --- Represents the offset into the global offset table at which the
+  relocation entry’s symbol will reside during execution.
+* **GOT** --- Represents the address of the global offset table.
+* **P** --- Represents the place (section offset or address) of the storage unit
+  being relocated (computed using ``r_offset``)
+* **S** --- Represents the value of the symbol whose index resides in the
+  relocation entry
+
+AMDGPU Backend generates *Elf64_Rela* relocation records with the following
+supported relocation types:
+
+  =====================  =====  ==========  ====================
+  Relocation type        Value  Field       Calculation
+  =====================  =====  ==========  ====================
+  ``R_AMDGPU_NONE``      0      ``none``    ``none``
+  ``R_AMDGPU_ABS32_LO``  1      ``word32``  (S + A) & 0xFFFFFFFF
+  ``R_AMDGPU_ABS32_HI``  2      ``word32``  (S + A) >> 32
+  ``R_AMDGPU_ABS64``     3      ``word64``  S + A
+  ``R_AMDGPU_REL32``     4      ``word32``  S + A - P
+  ``R_AMDGPU_REL64``     5      ``word64``  S + A - P
+  ``R_AMDGPU_ABS32``     6      ``word32``  S + A
+  ``R_AMDGPU_GOTPCREL``  7      ``word32``  G + GOT + A - P
+  =====================  =====  ==========  ====================

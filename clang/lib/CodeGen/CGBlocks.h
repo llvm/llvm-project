@@ -25,10 +25,8 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/IR/Module.h"
 
 namespace llvm {
-class Module;
 class Constant;
 class Function;
 class GlobalValue;
@@ -40,10 +38,8 @@ class LLVMContext;
 }
 
 namespace clang {
-
 namespace CodeGen {
 
-class CodeGenModule;
 class CGBlockInfo;
 
 // Flags stored in __block variables.

@@ -1,7 +1,7 @@
 ; Check the vecpopcnt* instructions that were added in P8
 ; In addition, check the conversions to/from the v2i64 VMX register that was also added in P8.
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s
-; RUN: llc -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 -mattr=-vsx < %s | FileCheck %s
 
 declare <16 x i8> @llvm.ctpop.v16i8(<16 x i8>) nounwind readnone
 declare <8 x i16> @llvm.ctpop.v8i16(<8 x i16>) nounwind readnone

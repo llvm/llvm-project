@@ -1,5 +1,5 @@
-; RUN: llc -march=ppc64 -mcpu=pwr7 -O2 -relocation-model=pic < %s | FileCheck %s
-; RUN: llc -march=ppc64 -mcpu=pwr7 -O2 -relocation-model=pic < %s | grep "__tls_get_addr" | count 1
+; RUN: llc -verify-machineinstrs -march=ppc64 -mcpu=pwr7 -O2 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -march=ppc64 -mcpu=pwr7 -O2 -relocation-model=pic < %s | grep "__tls_get_addr" | count 1
 
 ; This test was derived from LLVM's own
 ; PrettyStackTraceEntry::~PrettyStackTraceEntry().  It demonstrates an

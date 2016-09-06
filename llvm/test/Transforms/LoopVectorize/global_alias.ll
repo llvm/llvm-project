@@ -12,7 +12,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @PA = external global i32*
 
 
-;; === First, the tests that should always vectorize, wither statically or by adding run-time checks ===
+;; === First, the tests that should always vectorize, whether statically or by adding run-time checks ===
 
 
 ; /// Different objects, positive induction, constant distance

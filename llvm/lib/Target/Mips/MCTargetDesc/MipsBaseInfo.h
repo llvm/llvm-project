@@ -33,9 +33,8 @@ namespace MipsII {
 
     MO_NO_FLAG,
 
-    /// MO_GOT16 - Represents the offset into the global offset table at which
+    /// MO_GOT - Represents the offset into the global offset table at which
     /// the address the relocation entry symbol resides during execution.
-    MO_GOT16,
     MO_GOT,
 
     /// MO_GOT_CALL - Represents the offset into the global offset table at
@@ -117,7 +116,12 @@ namespace MipsII {
     /// FrmOther - This form is for instructions that have no specific format.
     FrmOther = 6,
 
-    FormMask = 15
+    FormMask = 15,
+    /// IsCTI - Instruction is a Control Transfer Instruction.
+    IsCTI = 1 << 4,
+    /// HasForbiddenSlot - Instruction has a forbidden slot.
+    HasForbiddenSlot = 1 << 5
+
   };
 }
 }

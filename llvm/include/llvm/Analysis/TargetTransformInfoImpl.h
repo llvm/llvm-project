@@ -102,8 +102,8 @@ public:
     }
   }
 
-  unsigned getGEPCost(Type *PointeeType, const Value *Ptr,
-                      ArrayRef<const Value *> Operands) {
+  int getGEPCost(Type *PointeeType, const Value *Ptr,
+                 ArrayRef<const Value *> Operands) {
     // In the basic model, we just assume that all-constant GEPs will be folded
     // into their uses via addressing modes.
     for (unsigned Idx = 0, Size = Operands.size(); Idx != Size; ++Idx)
@@ -128,6 +128,8 @@ public:
     return TTI::TCC_Basic * (NumArgs + 1);
   }
 
+  unsigned getInliningThresholdMultiplier() { return 1; }
+
   unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
                             ArrayRef<Type *> ParamTys) {
     switch (IID) {
@@ -150,6 +152,15 @@ public:
     case Intrinsic::var_annotation:
     case Intrinsic::experimental_gc_result:
     case Intrinsic::experimental_gc_relocate:
+    case Intrinsic::coro_alloc:
+    case Intrinsic::coro_begin:
+    case Intrinsic::coro_free:
+    case Intrinsic::coro_end:
+    case Intrinsic::coro_frame:
+    case Intrinsic::coro_size:
+    case Intrinsic::coro_suspend:
+    case Intrinsic::coro_param:
+    case Intrinsic::coro_subfn_addr:
       // These intrinsics don't actually represent code after lowering.
       return TTI::TCC_Free;
     }
@@ -240,6 +251,14 @@ public:
 
   bool enableInterleavedAccessVectorization() { return false; }
 
+  bool isFPVectorizationPotentiallyUnsafe() { return false; }
+
+  bool allowsMisalignedMemoryAccesses(LLVMContext &Context,
+                                      unsigned BitWidth,
+                                      unsigned AddressSpace,
+                                      unsigned Alignment,
+                                      bool *Fast) { return false; }
+
   TTI::PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) {
     return TTI::PSK_Software;
   }
@@ -247,6 +266,11 @@ public:
   bool haveFastSqrt(Type *Ty) { return false; }
 
   unsigned getFPOpCost(Type *Ty) { return TargetTransformInfo::TCC_Basic; }
+
+  int getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
+                            Type *Ty) {
+    return 0;
+  }
 
   unsigned getIntImmCost(const APInt &Imm, Type *Ty) { return TTI::TCC_Basic; }
 
@@ -264,7 +288,15 @@ public:
 
   unsigned getRegisterBitWidth(bool Vector) { return 32; }
 
+  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) { return 128; }
+
   unsigned getCacheLineSize() { return 0; }
+
+  unsigned getPrefetchDistance() { return 0; }
+
+  unsigned getMinPrefetchStride() { return 1; }
+
+  unsigned getMaxPrefetchIterationsAhead() { return UINT_MAX; }
 
   unsigned getMaxInterleaveFactor(unsigned VF) { return 1; }
 
@@ -282,6 +314,11 @@ public:
   }
 
   unsigned getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src) { return 1; }
+
+  unsigned getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                    VectorType *VecTy, unsigned Index) {
+    return 1;
+  }
 
   unsigned getCFInstrCost(unsigned Opcode) { return 1; }
 
@@ -318,11 +355,11 @@ public:
   }
 
   unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                 ArrayRef<Type *> Tys) {
+                                 ArrayRef<Type *> Tys, FastMathFlags FMF) {
     return 1;
   }
   unsigned getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
-                                 ArrayRef<Value *> Args) {
+                                 ArrayRef<Value *> Args, FastMathFlags FMF) {
     return 1;
   }
 
@@ -406,8 +443,8 @@ public:
 
   using BaseT::getGEPCost;
 
-  unsigned getGEPCost(Type *PointeeType, const Value *Ptr,
-                      ArrayRef<const Value *> Operands) {
+  int getGEPCost(Type *PointeeType, const Value *Ptr,
+                 ArrayRef<const Value *> Operands) {
     const GlobalValue *BaseGV = nullptr;
     if (Ptr != nullptr) {
       // TODO: will remove this when pointers have an opaque type.
@@ -423,7 +460,7 @@ public:
     // Assumes the address space is 0 when Ptr is nullptr.
     unsigned AS =
         (Ptr == nullptr ? 0 : Ptr->getType()->getPointerAddressSpace());
-    auto GTI = gep_type_begin(PointerType::get(PointeeType, AS), Operands);
+    auto GTI = gep_type_begin(PointeeType, AS, Operands);
     for (auto I = Operands.begin(); I != Operands.end(); ++I, ++GTI) {
       // We assume that the cost of Scalar GEP with constant index and the
       // cost of Vector GEP with splat constant index are the same.

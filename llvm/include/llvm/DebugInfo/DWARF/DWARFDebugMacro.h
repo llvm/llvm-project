@@ -11,7 +11,6 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFDEBUGMACRO_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Dwarf.h"
 

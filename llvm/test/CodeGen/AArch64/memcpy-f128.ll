@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=aarch64 -mtriple=aarch64-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-linux-gnu | FileCheck %s
 
 %structA = type { i128 }
 @stubA = internal unnamed_addr constant %structA zeroinitializer, align 8

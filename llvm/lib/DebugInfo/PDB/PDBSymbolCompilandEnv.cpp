@@ -16,14 +16,17 @@
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::pdb;
 
 PDBSymbolCompilandEnv::PDBSymbolCompilandEnv(
     const IPDBSession &PDBSession, std::unique_ptr<IPDBRawSymbol> Symbol)
     : PDBSymbol(PDBSession, std::move(Symbol)) {}
 
 std::string PDBSymbolCompilandEnv::getValue() const {
-  // call RawSymbol->getValue() and convert the result to an std::string.
-  return std::string();
+  Variant Value = RawSymbol->getValue();
+  if (Value.Type != PDB_VariantType::String)
+    return std::string();
+  return std::string(Value.Value.String);
 }
 
 void PDBSymbolCompilandEnv::dump(PDBSymDumper &Dumper) const {

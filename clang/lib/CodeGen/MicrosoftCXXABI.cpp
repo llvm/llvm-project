@@ -98,7 +98,7 @@ public:
     const VBTableGlobals &VBGlobals = enumerateVBTables(RD);
     for (const VPtrInfo *VBT : *VBGlobals.VBTables) {
       const ASTRecordLayout &SubobjectLayout =
-          Context.getASTRecordLayout(VBT->BaseWithVPtr);
+          Context.getASTRecordLayout(VBT->IntroducingObject);
       CharUnits Offs = VBT->NonVirtualOffset;
       Offs += SubobjectLayout.getVBPtrOffset();
       if (VBT->getVBaseWithVPtr())
@@ -254,8 +254,8 @@ public:
                           CXXDtorType Type, bool ForVirtualBase,
                           bool Delegating, Address This) override;
 
-  void emitVTableBitSetEntries(VPtrInfo *Info, const CXXRecordDecl *RD,
-                               llvm::GlobalVariable *VTable);
+  void emitVTableTypeMetadata(VPtrInfo *Info, const CXXRecordDecl *RD,
+                              llvm::GlobalVariable *VTable);
 
   void emitVTableDefinitions(CodeGenVTables &CGVT,
                              const CXXRecordDecl *RD) override;
@@ -551,7 +551,7 @@ private:
     return  llvm::Constant::getAllOnesValue(CGM.IntTy);
   }
 
-  CharUnits getVirtualFunctionPrologueThisAdjustment(GlobalDecl GD);
+  CharUnits getVirtualFunctionPrologueThisAdjustment(GlobalDecl GD) override;
 
   void
   GetNullMemberPointerFields(const MemberPointerType *MPT,
@@ -942,7 +942,6 @@ MicrosoftCXXABI::performBaseAdjustment(CodeGenFunction &CGF, Address Value,
   llvm::Value *Offset =
     GetVirtualBaseClassOffset(CGF, Value, SrcDecl, PolymorphicBase);
   llvm::Value *Ptr = CGF.Builder.CreateInBoundsGEP(Value.getPointer(), Offset);
-  Offset = CGF.Builder.CreateTrunc(Offset, CGF.Int32Ty);
   CharUnits VBaseAlign =
     CGF.CGM.getVBaseAlignment(Value.getAlignment(), SrcDecl, PolymorphicBase);
   return std::make_pair(Address(Ptr, VBaseAlign), Offset);
@@ -976,8 +975,8 @@ llvm::Value *MicrosoftCXXABI::EmitTypeid(CodeGenFunction &CGF,
                                          QualType SrcRecordTy,
                                          Address ThisPtr,
                                          llvm::Type *StdTypeInfoPtrTy) {
-  llvm::Value *Offset;
-  std::tie(ThisPtr, Offset) = performBaseAdjustment(CGF, ThisPtr, SrcRecordTy);
+  std::tie(ThisPtr, std::ignore) =
+      performBaseAdjustment(CGF, ThisPtr, SrcRecordTy);
   auto Typeid = emitRTtypeidCall(CGF, ThisPtr.getPointer()).getInstruction();
   return CGF.Builder.CreateBitCast(Typeid, StdTypeInfoPtrTy);
 }
@@ -1002,6 +1001,7 @@ llvm::Value *MicrosoftCXXABI::EmitDynamicCastCall(
   llvm::Value *Offset;
   std::tie(This, Offset) = performBaseAdjustment(CGF, This, SrcRecordTy);
   llvm::Value *ThisPtr = This.getPointer();
+  Offset = CGF.Builder.CreateTrunc(Offset, CGF.Int32Ty);
 
   // PVOID __RTDynamicCast(
   //   PVOID inptr,
@@ -1025,8 +1025,7 @@ llvm::Value *
 MicrosoftCXXABI::EmitDynamicCastToVoid(CodeGenFunction &CGF, Address Value,
                                        QualType SrcRecordTy,
                                        QualType DestTy) {
-  llvm::Value *Offset;
-  std::tie(Value, Offset) = performBaseAdjustment(CGF, Value, SrcRecordTy);
+  std::tie(Value, std::ignore) = performBaseAdjustment(CGF, Value, SrcRecordTy);
 
   // PVOID __RTCastToVoid(
   //   PVOID inptr)
@@ -1152,16 +1151,14 @@ void MicrosoftCXXABI::initializeHiddenVirtualInheritanceMembers(
 
     llvm::Value *VBaseOffset =
         GetVirtualBaseClassOffset(CGF, getThisAddress(CGF), RD, I->first);
-    // FIXME: it doesn't look right that we SExt in GetVirtualBaseClassOffset()
-    // just to Trunc back immediately.
-    VBaseOffset = Builder.CreateTruncOrBitCast(VBaseOffset, CGF.Int32Ty);
     uint64_t ConstantVBaseOffset =
         Layout.getVBaseClassOffset(I->first).getQuantity();
 
     // vtorDisp_for_vbase = vbptr[vbase_idx] - offsetof(RD, vbase).
     llvm::Value *VtorDispValue = Builder.CreateSub(
-        VBaseOffset, llvm::ConstantInt::get(CGM.Int32Ty, ConstantVBaseOffset),
+        VBaseOffset, llvm::ConstantInt::get(CGM.PtrDiffTy, ConstantVBaseOffset),
         "vtordisp.value");
+    VtorDispValue = Builder.CreateTruncOrBitCast(VtorDispValue, CGF.Int32Ty);
 
     if (!Int8This)
       Int8This = Builder.CreateBitCast(getThisValue(CGF),
@@ -1214,7 +1211,7 @@ void MicrosoftCXXABI::EmitVBPtrStores(CodeGenFunction &CGF,
     const VPtrInfo *VBT = (*VBGlobals.VBTables)[I];
     llvm::GlobalVariable *GV = VBGlobals.Globals[I];
     const ASTRecordLayout &SubobjectLayout =
-        Context.getASTRecordLayout(VBT->BaseWithVPtr);
+        Context.getASTRecordLayout(VBT->IntroducingObject);
     CharUnits Offs = VBT->NonVirtualOffset;
     Offs += SubobjectLayout.getVBPtrOffset();
     if (VBT->getVBaseWithVPtr())
@@ -1223,7 +1220,7 @@ void MicrosoftCXXABI::EmitVBPtrStores(CodeGenFunction &CGF,
     llvm::Value *GVPtr =
         CGF.Builder.CreateConstInBoundsGEP2_32(GV->getValueType(), GV, 0, 0);
     VBPtr = CGF.Builder.CreateElementBitCast(VBPtr, GVPtr->getType(),
-                                      "vbptr." + VBT->ReusingBase->getName());
+                                      "vbptr." + VBT->ObjectWithVPtr->getName());
     CGF.Builder.CreateStore(GVPtr, VBPtr);
   }
 }
@@ -1420,6 +1417,10 @@ llvm::Value *MicrosoftCXXABI::adjustThisParameterInVirtualFunctionPrologue(
 }
 
 void MicrosoftCXXABI::EmitInstanceFunctionProlog(CodeGenFunction &CGF) {
+  // Naked functions have no prolog.
+  if (CGF.CurFuncDecl && CGF.CurFuncDecl->hasAttr<NakedAttr>())
+    return;
+
   EmitThisParam(CGF);
 
   /// If this is a function that the ABI specifies returns 'this', initialize
@@ -1467,16 +1468,18 @@ unsigned MicrosoftCXXABI::addImplicitConstructorArgs(
 
   // Add the 'most_derived' argument second if we are variadic or last if not.
   const FunctionProtoType *FPT = D->getType()->castAs<FunctionProtoType>();
-  llvm::Value *MostDerivedArg =
-      llvm::ConstantInt::get(CGM.Int32Ty, Type == Ctor_Complete);
-  RValue RV = RValue::get(MostDerivedArg);
-  if (MostDerivedArg) {
-    if (FPT->isVariadic())
-      Args.insert(Args.begin() + 1,
-                  CallArg(RV, getContext().IntTy, /*needscopy=*/false));
-    else
-      Args.add(RV, getContext().IntTy);
+  llvm::Value *MostDerivedArg;
+  if (Delegating) {
+    MostDerivedArg = getStructorImplicitParamValue(CGF);
+  } else {
+    MostDerivedArg = llvm::ConstantInt::get(CGM.Int32Ty, Type == Ctor_Complete);
   }
+  RValue RV = RValue::get(MostDerivedArg);
+  if (FPT->isVariadic())
+    Args.insert(Args.begin() + 1,
+                CallArg(RV, getContext().IntTy, /*needscopy=*/false));
+  else
+    Args.add(RV, getContext().IntTy);
 
   return 1;  // Added one arg.
 }
@@ -1494,23 +1497,17 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
                                                     This, false);
   }
 
-  CGF.EmitCXXStructorCall(DD, Callee, ReturnValueSlot(), This.getPointer(),
-                          /*ImplicitParam=*/nullptr,
-                          /*ImplicitParamTy=*/QualType(), nullptr,
-                          getFromDtorType(Type));
+  CGF.EmitCXXDestructorCall(DD, Callee, This.getPointer(),
+                            /*ImplicitParam=*/nullptr,
+                            /*ImplicitParamTy=*/QualType(), nullptr,
+                            getFromDtorType(Type));
 }
 
-void MicrosoftCXXABI::emitVTableBitSetEntries(VPtrInfo *Info,
-                                              const CXXRecordDecl *RD,
-                                              llvm::GlobalVariable *VTable) {
-  if (!getContext().getLangOpts().Sanitize.has(SanitizerKind::CFIVCall) &&
-      !getContext().getLangOpts().Sanitize.has(SanitizerKind::CFINVCall) &&
-      !getContext().getLangOpts().Sanitize.has(SanitizerKind::CFIDerivedCast) &&
-      !getContext().getLangOpts().Sanitize.has(SanitizerKind::CFIUnrelatedCast))
+void MicrosoftCXXABI::emitVTableTypeMetadata(VPtrInfo *Info,
+                                             const CXXRecordDecl *RD,
+                                             llvm::GlobalVariable *VTable) {
+  if (!CGM.getCodeGenOpts().PrepareForLTO)
     return;
-
-  llvm::NamedMDNode *BitsetsMD =
-      CGM.getModule().getOrInsertNamedMetadata("llvm.bitsets");
 
   // The location of the first virtual function pointer in the virtual table,
   // aka the "address point" on Itanium. This is at offset 0 if RTTI is
@@ -1521,22 +1518,20 @@ void MicrosoftCXXABI::emitVTableBitSetEntries(VPtrInfo *Info,
                 getContext().getTargetInfo().getPointerWidth(0))
           : CharUnits::Zero();
 
-  if (Info->PathToBaseWithVPtr.empty()) {
-    if (!CGM.IsCFIBlacklistedRecord(RD))
-      CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint, RD);
+  if (Info->PathToIntroducingObject.empty()) {
+    CGM.AddVTableTypeMetadata(VTable, AddressPoint, RD);
     return;
   }
 
   // Add a bitset entry for the least derived base belonging to this vftable.
-  if (!CGM.IsCFIBlacklistedRecord(Info->PathToBaseWithVPtr.back()))
-    CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint,
-                                Info->PathToBaseWithVPtr.back());
+  CGM.AddVTableTypeMetadata(VTable, AddressPoint,
+                            Info->PathToIntroducingObject.back());
 
   // Add a bitset entry for each derived class that is laid out at the same
   // offset as the least derived base.
-  for (unsigned I = Info->PathToBaseWithVPtr.size() - 1; I != 0; --I) {
-    const CXXRecordDecl *DerivedRD = Info->PathToBaseWithVPtr[I - 1];
-    const CXXRecordDecl *BaseRD = Info->PathToBaseWithVPtr[I];
+  for (unsigned I = Info->PathToIntroducingObject.size() - 1; I != 0; --I) {
+    const CXXRecordDecl *DerivedRD = Info->PathToIntroducingObject[I - 1];
+    const CXXRecordDecl *BaseRD = Info->PathToIntroducingObject[I];
 
     const ASTRecordLayout &Layout =
         getContext().getASTRecordLayout(DerivedRD);
@@ -1548,13 +1543,12 @@ void MicrosoftCXXABI::emitVTableBitSetEntries(VPtrInfo *Info,
       Offset = VBI->second.VBaseOffset;
     if (!Offset.isZero())
       return;
-    if (!CGM.IsCFIBlacklistedRecord(DerivedRD))
-      CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint, DerivedRD);
+    CGM.AddVTableTypeMetadata(VTable, AddressPoint, DerivedRD);
   }
 
   // Finally do the same for the most derived class.
-  if (Info->FullOffsetInMDC.isZero() && !CGM.IsCFIBlacklistedRecord(RD))
-    CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint, RD);
+  if (Info->FullOffsetInMDC.isZero())
+    CGM.AddVTableTypeMetadata(VTable, AddressPoint, RD);
 }
 
 void MicrosoftCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
@@ -1567,12 +1561,14 @@ void MicrosoftCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
     if (VTable->hasInitializer())
       continue;
 
-    llvm::Constant *RTTI = getContext().getLangOpts().RTTIData
-                               ? getMSCompleteObjectLocator(RD, Info)
-                               : nullptr;
-
     const VTableLayout &VTLayout =
       VFTContext.getVFTableLayout(RD, Info->FullOffsetInMDC);
+
+    llvm::Constant *RTTI = nullptr;
+    if (any_of(VTLayout.vtable_components(),
+               [](const VTableComponent &VTC) { return VTC.isRTTIKind(); }))
+      RTTI = getMSCompleteObjectLocator(RD, Info);
+
     llvm::Constant *Init = CGVT.CreateVTableInitializer(
         RD, VTLayout.vtable_component_begin(),
         VTLayout.getNumVTableComponents(), VTLayout.vtable_thunk_begin(),
@@ -1580,7 +1576,7 @@ void MicrosoftCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
 
     VTable->setInitializer(Init);
 
-    emitVTableBitSetEntries(Info, RD, VTable);
+    emitVTableTypeMetadata(Info, RD, VTable);
   }
 }
 
@@ -1671,7 +1667,16 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   SmallString<256> VFTableName;
   mangleVFTableName(getMangleContext(), RD, VFPtr, VFTableName);
 
-  llvm::GlobalValue::LinkageTypes VFTableLinkage = CGM.getVTableLinkage(RD);
+  // Classes marked __declspec(dllimport) need vftables generated on the
+  // import-side in order to support features like constexpr.  No other
+  // translation unit relies on the emission of the local vftable, translation
+  // units are expected to generate them as needed.
+  //
+  // Because of this unique behavior, we maintain this logic here instead of
+  // getVTableLinkage.
+  llvm::GlobalValue::LinkageTypes VFTableLinkage =
+      RD->hasAttr<DLLImportAttr>() ? llvm::GlobalValue::LinkOnceODRLinkage
+                                   : CGM.getVTableLinkage(RD);
   bool VFTableComesFromAnotherTU =
       llvm::GlobalValue::isAvailableExternallyLinkage(VFTableLinkage) ||
       llvm::GlobalValue::isExternalLinkage(VFTableLinkage);
@@ -1705,7 +1710,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   VTable = new llvm::GlobalVariable(CGM.getModule(), VTableType,
                                     /*isConstant=*/true, VTableLinkage,
                                     /*Initializer=*/nullptr, VTableName);
-  VTable->setUnnamedAddr(true);
+  VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Comdat *C = nullptr;
   if (!VFTableComesFromAnotherTU &&
@@ -1733,7 +1738,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
                                         /*AddressSpace=*/0, VFTableLinkage,
                                         VFTableName.str(), VTableGEP,
                                         &CGM.getModule());
-    VFTable->setUnnamedAddr(true);
+    VFTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   } else {
     // We don't need a GlobalAlias to be a symbol for the VTable if we won't
     // be referencing any RTTI data.
@@ -1744,9 +1749,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   if (C)
     VTable->setComdat(C);
 
-  if (RD->hasAttr<DLLImportAttr>())
-    VFTable->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
-  else if (RD->hasAttr<DLLExportAttr>())
+  if (RD->hasAttr<DLLExportAttr>())
     VFTable->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
 
   VFTablesMap[ID] = VFTable;
@@ -1813,13 +1816,20 @@ llvm::Value *MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
   MicrosoftVTableContext::MethodVFTableLocation ML =
       CGM.getMicrosoftVTableContext().getMethodVFTableLocation(GD);
-  if (CGF.SanOpts.has(SanitizerKind::CFIVCall))
-    CGF.EmitVTablePtrCheck(getClassAtVTableLocation(getContext(), GD, ML),
-                           VTable, CodeGenFunction::CFITCK_VCall, Loc);
 
-  llvm::Value *VFuncPtr =
-      Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");
-  return Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
+  if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
+    return CGF.EmitVTableTypeCheckedLoad(
+        getClassAtVTableLocation(getContext(), GD, ML), VTable,
+        ML.Index * CGM.getContext().getTargetInfo().getPointerWidth(0) / 8);
+  } else {
+    if (CGM.getCodeGenOpts().PrepareForLTO)
+      CGF.EmitTypeMetadataCodeForVCall(
+          getClassAtVTableLocation(getContext(), GD, ML), VTable, Loc);
+
+    llvm::Value *VFuncPtr =
+        Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");
+    return Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
+  }
 }
 
 llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
@@ -1843,10 +1853,9 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
       DtorType == Dtor_Deleting);
 
   This = adjustThisArgumentForVirtualFunctionCall(CGF, GD, This, true);
-  RValue RV = CGF.EmitCXXStructorCall(Dtor, Callee, ReturnValueSlot(),
-                                      This.getPointer(),
-                                      ImplicitParam, Context.IntTy, CE,
-                                      StructorType::Deleting);
+  RValue RV =
+      CGF.EmitCXXDestructorCall(Dtor, Callee, This.getPointer(), ImplicitParam,
+                                Context.IntTy, CE, StructorType::Deleting);
   return RV.getScalarVal();
 }
 
@@ -1916,7 +1925,7 @@ llvm::Function *MicrosoftCXXABI::EmitVirtualMemPtrThunk(
   ThunkFn->addFnAttr("thunk");
 
   // These thunks can be compared, so they are not unnamed.
-  ThunkFn->setUnnamedAddr(false);
+  ThunkFn->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);
 
   // Start codegen.
   CodeGenFunction CGF(CGM);
@@ -1967,13 +1976,13 @@ MicrosoftCXXABI::getAddrOfVBTable(const VPtrInfo &VBT, const CXXRecordDecl *RD,
   StringRef Name = OutName.str();
 
   llvm::ArrayType *VBTableType =
-      llvm::ArrayType::get(CGM.IntTy, 1 + VBT.ReusingBase->getNumVBases());
+      llvm::ArrayType::get(CGM.IntTy, 1 + VBT.ObjectWithVPtr->getNumVBases());
 
   assert(!CGM.getModule().getNamedGlobal(Name) &&
          "vbtable with this name already exists: mangling bug?");
   llvm::GlobalVariable *GV =
       CGM.CreateOrReplaceCXXRuntimeVariable(Name, VBTableType, Linkage);
-  GV->setUnnamedAddr(true);
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   if (RD->hasAttr<DLLImportAttr>())
     GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
@@ -1989,24 +1998,24 @@ MicrosoftCXXABI::getAddrOfVBTable(const VPtrInfo &VBT, const CXXRecordDecl *RD,
 void MicrosoftCXXABI::emitVBTableDefinition(const VPtrInfo &VBT,
                                             const CXXRecordDecl *RD,
                                             llvm::GlobalVariable *GV) const {
-  const CXXRecordDecl *ReusingBase = VBT.ReusingBase;
+  const CXXRecordDecl *ObjectWithVPtr = VBT.ObjectWithVPtr;
 
-  assert(RD->getNumVBases() && ReusingBase->getNumVBases() &&
+  assert(RD->getNumVBases() && ObjectWithVPtr->getNumVBases() &&
          "should only emit vbtables for classes with vbtables");
 
   const ASTRecordLayout &BaseLayout =
-      getContext().getASTRecordLayout(VBT.BaseWithVPtr);
+      getContext().getASTRecordLayout(VBT.IntroducingObject);
   const ASTRecordLayout &DerivedLayout = getContext().getASTRecordLayout(RD);
 
-  SmallVector<llvm::Constant *, 4> Offsets(1 + ReusingBase->getNumVBases(),
+  SmallVector<llvm::Constant *, 4> Offsets(1 + ObjectWithVPtr->getNumVBases(),
                                            nullptr);
 
-  // The offset from ReusingBase's vbptr to itself always leads.
+  // The offset from ObjectWithVPtr's vbptr to itself always leads.
   CharUnits VBPtrOffset = BaseLayout.getVBPtrOffset();
   Offsets[0] = llvm::ConstantInt::get(CGM.IntTy, -VBPtrOffset.getQuantity());
 
   MicrosoftVTableContext &Context = CGM.getMicrosoftVTableContext();
-  for (const auto &I : ReusingBase->vbases()) {
+  for (const auto &I : ObjectWithVPtr->vbases()) {
     const CXXRecordDecl *VBase = I.getType()->getAsCXXRecordDecl();
     CharUnits Offset = DerivedLayout.getVBaseClassOffset(VBase);
     assert(!Offset.isNegative());
@@ -2018,7 +2027,7 @@ void MicrosoftCXXABI::emitVBTableDefinition(const VPtrInfo &VBT,
           DerivedLayout.getVBaseClassOffset(VBT.getVBaseWithVPtr());
     Offset -= CompleteVBPtrOffset;
 
-    unsigned VBIndex = Context.getVBTableIndex(ReusingBase, VBase);
+    unsigned VBIndex = Context.getVBTableIndex(ObjectWithVPtr, VBase);
     assert(Offsets[VBIndex] == nullptr && "The same vbindex seen twice?");
     Offsets[VBIndex] = llvm::ConstantInt::get(CGM.IntTy, Offset.getQuantity());
   }
@@ -2030,6 +2039,9 @@ void MicrosoftCXXABI::emitVBTableDefinition(const VPtrInfo &VBT,
     llvm::ArrayType::get(CGM.IntTy, Offsets.size());
   llvm::Constant *Init = llvm::ConstantArray::get(VBTableType, Offsets);
   GV->setInitializer(Init);
+
+  if (RD->hasAttr<DLLImportAttr>())
+    GV->setLinkage(llvm::GlobalVariable::AvailableExternallyLinkage);
 }
 
 llvm::Value *MicrosoftCXXABI::performThisAdjustment(CodeGenFunction &CGF,
@@ -2302,7 +2314,7 @@ struct ResetGuardBit final : EHScopeStack::Cleanup {
     CGBuilderTy &Builder = CGF.Builder;
     llvm::LoadInst *LI = Builder.CreateLoad(Guard);
     llvm::ConstantInt *Mask =
-        llvm::ConstantInt::get(CGF.IntTy, ~(1U << GuardNum));
+        llvm::ConstantInt::get(CGF.IntTy, ~(1ULL << GuardNum));
     Builder.CreateStore(Builder.CreateAnd(LI, Mask), Guard);
   }
 };
@@ -2415,7 +2427,7 @@ void MicrosoftCXXABI::EmitGuardedInit(CodeGenFunction &CGF, const VarDecl &D,
     // }
 
     // Test our bit from the guard variable.
-    llvm::ConstantInt *Bit = llvm::ConstantInt::get(GuardTy, 1U << GuardNum);
+    llvm::ConstantInt *Bit = llvm::ConstantInt::get(GuardTy, 1ULL << GuardNum);
     llvm::LoadInst *LI = Builder.CreateLoad(GuardAddr);
     llvm::Value *IsInitialized =
         Builder.CreateICmpNE(Builder.CreateAnd(LI, Bit), Zero);
@@ -3631,7 +3643,8 @@ MSRTTIBuilder::getCompleteObjectLocator(const VPtrInfo *Info) {
 }
 
 static QualType decomposeTypeForEH(ASTContext &Context, QualType T,
-                                   bool &IsConst, bool &IsVolatile) {
+                                   bool &IsConst, bool &IsVolatile,
+                                   bool &IsUnaligned) {
   T = Context.getExceptionObjectType(T);
 
   // C++14 [except.handle]p3:
@@ -3641,10 +3654,12 @@ static QualType decomposeTypeForEH(ASTContext &Context, QualType T,
   //         - a qualification conversion
   IsConst = false;
   IsVolatile = false;
+  IsUnaligned = false;
   QualType PointeeType = T->getPointeeType();
   if (!PointeeType.isNull()) {
     IsConst = PointeeType.isConstQualified();
     IsVolatile = PointeeType.isVolatileQualified();
+    IsUnaligned = PointeeType.getQualifiers().hasUnaligned();
   }
 
   // Member pointer types like "const int A::*" are represented by having RTTI
@@ -3667,8 +3682,9 @@ MicrosoftCXXABI::getAddrOfCXXCatchHandlerType(QualType Type,
   // TypeDescriptors for exceptions never have qualified pointer types,
   // qualifiers are stored seperately in order to support qualification
   // conversions.
-  bool IsConst, IsVolatile;
-  Type = decomposeTypeForEH(getContext(), Type, IsConst, IsVolatile);
+  bool IsConst, IsVolatile, IsUnaligned;
+  Type =
+      decomposeTypeForEH(getContext(), Type, IsConst, IsVolatile, IsUnaligned);
 
   bool IsReference = CatchHandlerType->isReferenceType();
 
@@ -3677,6 +3693,8 @@ MicrosoftCXXABI::getAddrOfCXXCatchHandlerType(QualType Type,
     Flags |= 1;
   if (IsVolatile)
     Flags |= 2;
+  if (IsUnaligned)
+    Flags |= 4;
   if (IsReference)
     Flags |= 8;
 
@@ -3961,7 +3979,7 @@ llvm::Constant *MicrosoftCXXABI::getCatchableType(QualType T,
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), CTType, /*Constant=*/true, getLinkageForRTTI(T),
       llvm::ConstantStruct::get(CTType, Fields), MangledName);
-  GV->setUnnamedAddr(true);
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   GV->setSection(".xdata");
   if (GV->isWeakForLinker())
     GV->setComdat(CGM.getModule().getOrInsertComdat(GV->getName()));
@@ -4079,7 +4097,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getCatchableTypeArray(QualType T) {
   CTA = new llvm::GlobalVariable(
       CGM.getModule(), CTAType, /*Constant=*/true, getLinkageForRTTI(T),
       llvm::ConstantStruct::get(CTAType, Fields), MangledName);
-  CTA->setUnnamedAddr(true);
+  CTA->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   CTA->setSection(".xdata");
   if (CTA->isWeakForLinker())
     CTA->setComdat(CGM.getModule().getOrInsertComdat(CTA->getName()));
@@ -4087,8 +4105,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getCatchableTypeArray(QualType T) {
 }
 
 llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
-  bool IsConst, IsVolatile;
-  T = decomposeTypeForEH(getContext(), T, IsConst, IsVolatile);
+  bool IsConst, IsVolatile, IsUnaligned;
+  T = decomposeTypeForEH(getContext(), T, IsConst, IsVolatile, IsUnaligned);
 
   // The CatchableTypeArray enumerates the various (CV-unqualified) types that
   // the exception object may be caught as.
@@ -4104,8 +4122,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
   SmallString<256> MangledName;
   {
     llvm::raw_svector_ostream Out(MangledName);
-    getMangleContext().mangleCXXThrowInfo(T, IsConst, IsVolatile, NumEntries,
-                                          Out);
+    getMangleContext().mangleCXXThrowInfo(T, IsConst, IsVolatile, IsUnaligned,
+                                          NumEntries, Out);
   }
 
   // Reuse a previously generated ThrowInfo if we have generated an appropriate
@@ -4121,6 +4139,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
     Flags |= 1;
   if (IsVolatile)
     Flags |= 2;
+  if (IsUnaligned)
+    Flags |= 4;
 
   // The cleanup-function (a destructor) must be called when the exception
   // object's lifetime ends.
@@ -4146,7 +4166,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), TIType, /*Constant=*/true, getLinkageForRTTI(T),
       llvm::ConstantStruct::get(TIType, Fields), StringRef(MangledName));
-  GV->setUnnamedAddr(true);
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   GV->setSection(".xdata");
   if (GV->isWeakForLinker())
     GV->setComdat(CGM.getModule().getOrInsertComdat(GV->getName()));

@@ -16,6 +16,7 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "llvm-c/Analysis.h"
+#include "llvm-c/Core.h"
 #include "caml/alloc.h"
 #include "caml/mlvalues.h"
 #include "caml/memory.h"

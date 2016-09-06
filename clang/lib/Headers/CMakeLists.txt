@@ -3,22 +3,32 @@ set(files
   altivec.h
   ammintrin.h
   arm_acle.h
+  armintr.h
   avx2intrin.h
   avx512bwintrin.h
   avx512cdintrin.h
+  avx512dqintrin.h
   avx512erintrin.h
   avx512fintrin.h
+  avx512ifmaintrin.h
+  avx512ifmavlintrin.h
+  avx512pfintrin.h
+  avx512vbmiintrin.h
+  avx512vbmivlintrin.h
   avx512vlbwintrin.h
-  avx512vlintrin.h
-  avx512dqintrin.h
+  avx512vlcdintrin.h
   avx512vldqintrin.h
-  pkuintrin.h
+  avx512vlintrin.h
   avxintrin.h
   bmi2intrin.h
   bmiintrin.h
+  __clang_cuda_cmath.h
+  __clang_cuda_intrinsics.h
+  __clang_cuda_math_forward_declares.h
   __clang_cuda_runtime_wrapper.h
   cpuid.h
   cuda_builtin_vars.h
+  clflushoptintrin.h
   emmintrin.h
   f16cintrin.h
   float.h
@@ -29,7 +39,7 @@ set(files
   htmxlintrin.h
   ia32intrin.h
   immintrin.h
-  Intrin.h
+  intrin.h
   inttypes.h
   iso646.h
   limits.h
@@ -38,7 +48,10 @@ set(files
   mmintrin.h
   mm_malloc.h
   module.modulemap
+  mwaitxintrin.h
   nmmintrin.h
+  opencl-c.h
+  pkuintrin.h
   pmmintrin.h
   popcntintrin.h
   prfchwintrin.h
@@ -62,15 +75,15 @@ set(files
   vadefs.h
   varargs.h
   vecintrin.h
-  __wmmintrin_aes.h
   wmmintrin.h
+  __wmmintrin_aes.h
   __wmmintrin_pclmul.h
   x86intrin.h
   xmmintrin.h
   xopintrin.h
+  xsavecintrin.h
   xsaveintrin.h
   xsaveoptintrin.h
-  xsavecintrin.h
   xsavesintrin.h
   xtestintrin.h
   )

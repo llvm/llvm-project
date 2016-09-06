@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck --check-prefix=EG --check-prefix=FUNC %s
-; RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck --check-prefix=SI --check-prefix=FUNC %s
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefix=SI --check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ;FUNC-LABEL: {{^}}test1:
 ;EG: ADD_INT {{[* ]*}}T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
@@ -123,12 +123,11 @@ entry:
 ; SI: s_add_u32
 ; SI: s_addc_u32
 
-; EG: MEM_RAT_CACHELESS STORE_RAW [[LO:T[0-9]+\.[XYZW]]]
-; EG: MEM_RAT_CACHELESS STORE_RAW [[HI:T[0-9]+\.[XYZW]]]
-; EG-DAG: ADD_INT {{[* ]*}}[[LO]]
+; EG: MEM_RAT_CACHELESS STORE_RAW [[LO:T[0-9]+\.XY]]
+; EG-DAG: ADD_INT {{[* ]*}}
 ; EG-DAG: ADDC_UINT
 ; EG-DAG: ADD_INT
-; EG-DAG: ADD_INT {{[* ]*}}[[HI]]
+; EG-DAG: ADD_INT {{[* ]*}}
 ; EG-NOT: SUB
 define void @add64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
 entry:
@@ -145,12 +144,11 @@ entry:
 ; FUNC-LABEL: {{^}}add64_sgpr_vgpr:
 ; SI-NOT: v_addc_u32_e32 s
 
-; EG: MEM_RAT_CACHELESS STORE_RAW [[LO:T[0-9]+\.[XYZW]]]
-; EG: MEM_RAT_CACHELESS STORE_RAW [[HI:T[0-9]+\.[XYZW]]]
-; EG-DAG: ADD_INT {{[* ]*}}[[LO]]
+; EG: MEM_RAT_CACHELESS STORE_RAW [[LO:T[0-9]+\.XY]]
+; EG-DAG: ADD_INT {{[* ]*}}
 ; EG-DAG: ADDC_UINT
 ; EG-DAG: ADD_INT
-; EG-DAG: ADD_INT {{[* ]*}}[[HI]]
+; EG-DAG: ADD_INT {{[* ]*}}
 ; EG-NOT: SUB
 define void @add64_sgpr_vgpr(i64 addrspace(1)* %out, i64 %a, i64 addrspace(1)* %in) {
 entry:
@@ -165,12 +163,11 @@ entry:
 ; SI: s_add_u32
 ; SI: s_addc_u32
 
-; EG: MEM_RAT_CACHELESS STORE_RAW [[LO:T[0-9]+\.[XYZW]]]
-; EG: MEM_RAT_CACHELESS STORE_RAW [[HI:T[0-9]+\.[XYZW]]]
-; EG-DAG: ADD_INT {{[* ]*}}[[LO]]
+; EG: MEM_RAT_CACHELESS STORE_RAW [[LO:T[0-9]+\.XY]]
+; EG-DAG: ADD_INT {{[* ]*}}
 ; EG-DAG: ADDC_UINT
 ; EG-DAG: ADD_INT
-; EG-DAG: ADD_INT {{[* ]*}}[[HI]]
+; EG-DAG: ADD_INT {{[* ]*}}
 ; EG-NOT: SUB
 define void @add64_in_branch(i64 addrspace(1)* %out, i64 addrspace(1)* %in, i64 %a, i64 %b, i64 %c) {
 entry:

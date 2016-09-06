@@ -158,3 +158,14 @@ namespace LocalExternVar {
 
   int array[sizeof(test::private_struct)]; // expected-error {{private}}
 }
+
+namespace ThisLambdaIsNotMyFriend {
+  class A {
+    friend class D;
+    static void foo(); // expected-note {{here}}
+  };
+  template <class T> void foo() {
+    []() { A::foo(); }(); // expected-error {{private}}
+  }
+  void bar() { foo<void>(); }
+}

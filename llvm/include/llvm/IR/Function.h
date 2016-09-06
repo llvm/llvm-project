@@ -19,7 +19,6 @@
 #define LLVM_IR_FUNCTION_H
 
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -30,6 +29,7 @@
 
 namespace llvm {
 
+template <typename T> class Optional;
 class FunctionType;
 class LLVMContext;
 class DISubprogram;
@@ -72,13 +72,8 @@ private:
   /// Bits from GlobalObject::GlobalObjectSubclassData.
   enum {
     /// Whether this function is materializable.
-    IsMaterializableBit = 1 << 0,
-    HasMetadataHashEntryBit = 1 << 1
+    IsMaterializableBit = 0,
   };
-  void setGlobalObjectBit(unsigned Mask, bool Value) {
-    setGlobalObjectSubClassData((~Mask & getGlobalObjectSubClassData()) |
-                                (Value ? Mask : 0u));
-  }
 
   friend class SymbolTableListTraits<Function>;
 
@@ -88,9 +83,12 @@ private:
   /// built on demand, so that the list isn't allocated until the first client
   /// needs it.  The hasLazyArguments predicate returns true if the arg list
   /// hasn't been set up yet.
+public:
   bool hasLazyArguments() const {
     return getSubclassDataFromValue() & (1<<0);
   }
+
+private:
   void CheckLazyArguments() const {
     if (hasLazyArguments())
       BuildLazyArguments();
@@ -141,6 +139,8 @@ public:
   Intrinsic::ID getIntrinsicID() const LLVM_READONLY { return IntID; }
   bool isIntrinsic() const { return getName().startswith("llvm."); }
 
+  static Intrinsic::ID lookupIntrinsicID(StringRef Name);
+
   /// \brief Recalculate the ID for this function if it is an Intrinsic defined
   /// in llvm/Intrinsics.h.  Sets the intrinsic ID to Intrinsic::not_intrinsic
   /// if the name of this function does not match an intrinsic in that header.
@@ -165,7 +165,7 @@ public:
   AttributeSet getAttributes() const { return AttributeSets; }
 
   /// @brief Set the attribute list for this Function.
-  void setAttributes(AttributeSet attrs) { AttributeSets = attrs; }
+  void setAttributes(AttributeSet Attrs) { AttributeSets = Attrs; }
 
   /// @brief Add function attributes to this function.
   void addFnAttr(Attribute::AttrKind N) {
@@ -174,9 +174,9 @@ public:
   }
 
   /// @brief Remove function attributes from this function.
-  void removeFnAttr(Attribute::AttrKind N) {
+  void removeFnAttr(Attribute::AttrKind Kind) {
     setAttributes(AttributeSets.removeAttribute(
-        getContext(), AttributeSet::FunctionIndex, N));
+        getContext(), AttributeSet::FunctionIndex, Kind));
   }
 
   /// @brief Add function attributes to this function.
@@ -189,6 +189,12 @@ public:
     setAttributes(
       AttributeSets.addAttribute(getContext(),
                                  AttributeSet::FunctionIndex, Kind, Value));
+  }
+
+  /// @brief Remove function attribute from this function.
+  void removeFnAttr(StringRef Kind) {
+    setAttributes(AttributeSets.removeAttribute(
+        getContext(), AttributeSet::FunctionIndex, Kind));
   }
 
   /// Set the entry count for this function.
@@ -207,12 +213,10 @@ public:
 
   /// @brief Return the attribute for the given attribute kind.
   Attribute getFnAttribute(Attribute::AttrKind Kind) const {
-    if (!hasFnAttribute(Kind))
-      return Attribute();
-    return AttributeSets.getAttribute(AttributeSet::FunctionIndex, Kind);
+    return getAttribute(AttributeSet::FunctionIndex, Kind);
   }
   Attribute getFnAttribute(StringRef Kind) const {
-    return AttributeSets.getAttribute(AttributeSet::FunctionIndex, Kind);
+    return getAttribute(AttributeSet::FunctionIndex, Kind);
   }
 
   /// \brief Return the stack alignment for the function.
@@ -228,17 +232,39 @@ public:
     return getSubclassDataFromValue() & (1<<14);
   }
   const std::string &getGC() const;
-  void setGC(const std::string Str);
+  void setGC(std::string Str);
   void clearGC();
 
   /// @brief adds the attribute to the list of attributes.
-  void addAttribute(unsigned i, Attribute::AttrKind attr);
+  void addAttribute(unsigned i, Attribute::AttrKind Kind);
+
+  /// @brief adds the attribute to the list of attributes.
+  void addAttribute(unsigned i, Attribute Attr);
 
   /// @brief adds the attributes to the list of attributes.
-  void addAttributes(unsigned i, AttributeSet attrs);
+  void addAttributes(unsigned i, AttributeSet Attrs);
+
+  /// @brief removes the attribute from the list of attributes.
+  void removeAttribute(unsigned i, Attribute::AttrKind Kind);
+
+  /// @brief removes the attribute from the list of attributes.
+  void removeAttribute(unsigned i, StringRef Kind);
 
   /// @brief removes the attributes from the list of attributes.
-  void removeAttributes(unsigned i, AttributeSet attr);
+  void removeAttributes(unsigned i, AttributeSet Attrs);
+
+  /// @brief check if an attributes is in the list of attributes.
+  bool hasAttribute(unsigned i, Attribute::AttrKind Kind) const {
+    return getAttributes().hasAttribute(i, Kind);
+  }
+
+  Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const {
+    return AttributeSets.getAttribute(i, Kind);
+  }
+
+  Attribute getAttribute(unsigned i, StringRef Kind) const {
+    return AttributeSets.getAttribute(i, Kind);
+  }
 
   /// @brief adds the dereferenceable attribute to the list of attributes.
   void addDereferenceableAttr(unsigned i, uint64_t Bytes);
@@ -280,6 +306,14 @@ public:
     addFnAttr(Attribute::ReadOnly);
   }
 
+  /// @brief Determine if the function does not access or only writes memory.
+  bool doesNotReadMemory() const {
+    return doesNotAccessMemory() || hasFnAttribute(Attribute::WriteOnly);
+  }
+  void setDoesNotReadMemory() {
+    addFnAttr(Attribute::WriteOnly);
+  }
+
   /// @brief Determine if the call can access memmory only using pointers based
   /// on its arguments.
   bool onlyAccessesArgMemory() const {
@@ -315,8 +349,7 @@ public:
 
   /// @brief Determine if the function cannot unwind.
   bool doesNotThrow() const {
-    return AttributeSets.hasAttribute(AttributeSet::FunctionIndex,
-                                      Attribute::NoUnwind);
+    return hasFnAttribute(Attribute::NoUnwind);
   }
   void setDoesNotThrow() {
     addFnAttr(Attribute::NoUnwind);
@@ -324,8 +357,7 @@ public:
 
   /// @brief Determine if the call cannot be duplicated.
   bool cannotDuplicate() const {
-    return AttributeSets.hasAttribute(AttributeSet::FunctionIndex,
-                                      Attribute::NoDuplicate);
+    return hasFnAttribute(Attribute::NoDuplicate);
   }
   void setCannotDuplicate() {
     addFnAttr(Attribute::NoDuplicate);
@@ -333,18 +365,19 @@ public:
 
   /// @brief Determine if the call is convergent.
   bool isConvergent() const {
-    return AttributeSets.hasAttribute(AttributeSet::FunctionIndex,
-                                      Attribute::Convergent);
+    return hasFnAttribute(Attribute::Convergent);
   }
   void setConvergent() {
     addFnAttr(Attribute::Convergent);
+  }
+  void setNotConvergent() {
+    removeFnAttr(Attribute::Convergent);
   }
 
   /// Determine if the function is known not to recurse, directly or
   /// indirectly.
   bool doesNotRecurse() const {
-    return AttributeSets.hasAttribute(AttributeSet::FunctionIndex,
-                                      Attribute::NoRecurse);
+    return hasFnAttribute(Attribute::NoRecurse);
   }
   void setDoesNotRecurse() {
     addFnAttr(Attribute::NoRecurse);
@@ -353,8 +386,7 @@ public:
   /// @brief True if the ABI mandates (or the user requested) that this
   /// function be in a unwind table.
   bool hasUWTable() const {
-    return AttributeSets.hasAttribute(AttributeSet::FunctionIndex,
-                                      Attribute::UWTable);
+    return hasFnAttribute(Attribute::UWTable);
   }
   void setHasUWTable() {
     addFnAttr(Attribute::UWTable);
@@ -407,7 +439,7 @@ public:
   }
 
   /// Optimize this function for minimum size (-Oz).
-  bool optForMinSize() const { return hasFnAttribute(Attribute::MinSize); };
+  bool optForMinSize() const { return hasFnAttribute(Attribute::MinSize); }
 
   /// Optimize this function for size (-Os) or minimum size (-Oz).
   bool optForSize() const {
@@ -435,6 +467,12 @@ public:
   /// and deletes it.
   ///
   void eraseFromParent() override;
+
+  /// Steal arguments from another function.
+  ///
+  /// Drop this function's arguments and splice in the ones from \c Src.
+  /// Requires that this has no function body.
+  void stealArgumentListFrom(Function &Src);
 
   /// Get the underlying elements of the Function... the basic block list is
   /// empty for external functions.
@@ -543,6 +581,12 @@ public:
   Constant *getPrologueData() const;
   void setPrologueData(Constant *PrologueData);
 
+  /// Print the function to an output stream with an optional
+  /// AssemblyAnnotationWriter.
+  void print(raw_ostream &OS, AssemblyAnnotationWriter *AAW = nullptr,
+             bool ShouldPreserveUseListOrder = false,
+             bool IsForDebug = false) const;
+
   /// viewCFG - This function is meant for use from the debugger.  You can just
   /// say 'call F->viewCFG()' and a ghostview window should pop up from the
   /// program, displaying the CFG of the current function with the code for each
@@ -593,35 +637,6 @@ public:
   /// setjmp or other function that gcc recognizes as "returning twice".
   bool callsFunctionThatReturnsTwice() const;
 
-  /// \brief Check if this has any metadata.
-  bool hasMetadata() const { return hasMetadataHashEntry(); }
-
-  /// \brief Get the current metadata attachment, if any.
-  ///
-  /// Returns \c nullptr if such an attachment is missing.
-  /// @{
-  MDNode *getMetadata(unsigned KindID) const;
-  MDNode *getMetadata(StringRef Kind) const;
-  /// @}
-
-  /// \brief Set a particular kind of metadata attachment.
-  ///
-  /// Sets the given attachment to \c MD, erasing it if \c MD is \c nullptr or
-  /// replacing it if it already exists.
-  /// @{
-  void setMetadata(unsigned KindID, MDNode *MD);
-  void setMetadata(StringRef Kind, MDNode *MD);
-  /// @}
-
-  /// \brief Get all current metadata attachments.
-  void
-  getAllMetadata(SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs) const;
-
-  /// \brief Drop metadata not in the given list.
-  ///
-  /// Drop all metadata from \c this not included in \c KnownIDs.
-  void dropUnknownMetadata(ArrayRef<unsigned> KnownIDs);
-
   /// \brief Set the attached subprogram.
   ///
   /// Calls \a setMetadata() with \a LLVMContext::MD_dbg.
@@ -643,15 +658,6 @@ private:
     Value::setValueSubclassData(D);
   }
   void setValueSubclassDataBit(unsigned Bit, bool On);
-
-  bool hasMetadataHashEntry() const {
-    return getGlobalObjectSubClassData() & HasMetadataHashEntryBit;
-  }
-  void setHasMetadataHashEntry(bool HasEntry) {
-    setGlobalObjectBit(HasMetadataHashEntryBit, HasEntry);
-  }
-
-  void clearMetadata();
 };
 
 template <>

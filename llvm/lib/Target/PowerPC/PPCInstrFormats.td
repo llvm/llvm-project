@@ -360,6 +360,21 @@ class DSForm_1<bits<6> opcode, bits<2> xo, dag OOL, dag IOL, string asmstr,
   let Inst{30-31} = xo;
 }
 
+// DQ-Form: [PO T RA DQ TX XO] or [PO S RA DQ SX XO]
+class DQ_RD6_RS5_DQ12<bits<6> opcode, bits<3> xo, dag OOL, dag IOL,
+                      string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<6>  XT;
+  bits<17> DS_RA;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = XT{4-0};
+  let Inst{11-15} = DS_RA{16-12};  // Register #
+  let Inst{16-27} = DS_RA{11-0};   // Displacement.
+  let Inst{28}    = XT{5};
+  let Inst{29-31} = xo;
+}
 
 // 1.7.6 X-Form
 class XForm_base_r3xo<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr, 
@@ -747,6 +762,107 @@ class XForm_htm3<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
   let Inst{31}    = RC;
 }
 
+// [PO RT RA RB XO /]
+class X_BF3_L1_RS5_RS5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                       string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<3> BF;
+  bits<1> L;
+  bits<5> RA;
+  bits<5> RB;
+
+  let Pattern = pattern;
+
+  let Inst{6-8}   = BF;
+  let Inst{9}     = 0;
+  let Inst{10}    = L;
+  let Inst{11-15} = RA;
+  let Inst{16-20} = RB;
+  let Inst{21-30} = xo;
+  let Inst{31}    = 0;
+}
+
+// Same as XForm_17 but with GPR's and new naming convention
+class X_BF3_RS5_RS5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                    string asmstr, InstrItinClass itin, list<dag> pattern>
+         : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<3> BF;
+  bits<5> RA;
+  bits<5> RB;
+
+  let Pattern = pattern;
+
+  let Inst{6-8}   = BF;
+  let Inst{9-10}  = 0;
+  let Inst{11-15} = RA;
+  let Inst{16-20} = RB;
+  let Inst{21-30} = xo;
+  let Inst{31}    = 0;
+}
+
+// e.g. [PO VRT XO VRB XO /] or [PO VRT XO VRB XO RO]
+class X_RD5_XO5_RS5<bits<6> opcode, bits<5> xo2, bits<10> xo, dag OOL, dag IOL,
+                    string asmstr, InstrItinClass itin, list<dag> pattern>
+  : XForm_base_r3xo<opcode, xo, OOL, IOL, asmstr, itin, pattern> {
+  let A = xo2;
+}
+
+class X_BF3_DCMX7_RS5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                      string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<3> BF;
+  bits<7> DCMX;
+  bits<5> VB;
+
+  let Pattern = pattern;
+
+  let Inst{6-8}  = BF;
+  let Inst{9-15} = DCMX;
+  let Inst{16-20} = VB;
+  let Inst{21-30} = xo;
+  let Inst{31}    = 0;
+}
+
+class X_RD6_IMM8<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                 string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<6> XT;
+  bits<8> IMM8;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = XT{4-0};
+  let Inst{11-12} = 0;
+  let Inst{13-20} = IMM8;
+  let Inst{21-30} = xo;
+  let Inst{31}    = XT{5};
+}
+
+// XForm_base_r3xo for instructions such as P9 atomics where we don't want
+// to specify an SDAG pattern for matching.
+class X_RD5_RS5_IM5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                    string asmstr, InstrItinClass itin>
+  : XForm_base_r3xo<opcode, xo, OOL, IOL, asmstr, itin, []> {
+}
+
+class X_BF3<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+            InstrItinClass itin>
+  : XForm_17<opcode, xo, OOL, IOL, asmstr, itin> {
+  let FRA = 0;
+  let FRB = 0;
+}
+
+// [PO /// L RA RB XO /]
+class X_L1_RS5_RS5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                   string asmstr, InstrItinClass itin, list<dag> pattern>
+  : XForm_16<opcode, xo, OOL, IOL, asmstr, itin> {
+  let BF = 0;
+  let Pattern = pattern;
+
+  bit RC = 0;
+  let Inst{31} = RC;
+}
+
 // XX*-Form (VSX)
 class XX1Form<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr, 
               InstrItinClass itin, list<dag> pattern>
@@ -816,6 +932,95 @@ class XX2Form_2<bits<6> opcode, bits<9> xo, dag OOL, dag IOL, string asmstr,
   let Inst{14-15} = D;
   let Inst{16-20} = XB{4-0};
   let Inst{21-29} = xo;
+  let Inst{30}    = XB{5};
+  let Inst{31}    = XT{5};
+}
+
+class XX2_RD6_UIM5_RS6<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
+                       string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<6> XT;
+  bits<6> XB;
+  bits<5> UIM5;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = XT{4-0};
+  let Inst{11-15} = UIM5;
+  let Inst{16-20} = XB{4-0};
+  let Inst{21-29} = xo;
+  let Inst{30}    = XB{5};
+  let Inst{31}    = XT{5};
+}
+
+// [PO T XO B XO BX /]
+class XX2_RD5_XO5_RS6<bits<6> opcode, bits<5> xo2, bits<9> xo, dag OOL, dag IOL,
+                       string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<5> RT;
+  bits<6> XB;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = RT;
+  let Inst{11-15} = xo2;
+  let Inst{16-20} = XB{4-0};
+  let Inst{21-29} = xo;
+  let Inst{30}    = XB{5};
+  let Inst{31}    = 0;
+}
+
+// [PO T XO B XO BX TX]
+class XX2_RD6_XO5_RS6<bits<6> opcode, bits<5> xo2, bits<9> xo, dag OOL, dag IOL,
+                      string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<6> XT;
+  bits<6> XB;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = XT{4-0};
+  let Inst{11-15} = xo2;
+  let Inst{16-20} = XB{4-0};
+  let Inst{21-29} = xo;
+  let Inst{30}    = XB{5};
+  let Inst{31}    = XT{5};
+}
+
+class XX2_BF3_DCMX7_RS6<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
+                      string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<3> BF;
+  bits<7> DCMX;
+  bits<6> XB;
+
+  let Pattern = pattern;
+
+  let Inst{6-8}  = BF;
+  let Inst{9-15} = DCMX;
+  let Inst{16-20} = XB{4-0};
+  let Inst{21-29} = xo;
+  let Inst{30}    = XB{5};
+  let Inst{31}    = 0;
+}
+
+class XX2_RD6_DCMX7_RS6<bits<6> opcode, bits<4> xo1, bits<3> xo2,
+                        dag OOL, dag IOL, string asmstr, InstrItinClass itin,
+                        list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<6> XT;
+  bits<7> DCMX;
+  bits<6> XB;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = XT{4-0};
+  let Inst{11-15} = DCMX{4-0};
+  let Inst{16-20} = XB{4-0};
+  let Inst{21-24} = xo1;
+  let Inst{25}    = DCMX{5};
+  let Inst{26-28} = xo2;
+  let Inst{29}    = DCMX{6};
   let Inst{30}    = XB{5};
   let Inst{31}    = XT{5};
 }
@@ -1571,6 +1776,21 @@ class VXForm_5<bits<11> xo, dag OOL, dag IOL, string asmstr,
   let Inst{21-31} = xo;
 }
 
+// e.g. [PO VRT EO VRB XO]
+class VXForm_RD5_XO5_RS5<bits<11> xo, bits<5> eo, dag OOL, dag IOL,
+                         string asmstr, InstrItinClass itin, list<dag> pattern>
+    : I<4, OOL, IOL, asmstr, itin> {
+  bits<5> RD;
+  bits<5> VB;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = RD;
+  let Inst{11-15} = eo;
+  let Inst{16-20} = VB;
+  let Inst{21-31} = xo;
+}
+
 /// VXForm_CR - VX crypto instructions with "VRT, VRA, ST, SIX"
 class VXForm_CR<bits<11> xo, dag OOL, dag IOL, string asmstr,
                InstrItinClass itin, list<dag> pattern>
@@ -1620,6 +1840,44 @@ class VXRForm_1<bits<10> xo, dag OOL, dag IOL, string asmstr,
   let Inst{16-20} = VB;
   let Inst{21}    = RC;
   let Inst{22-31} = xo;
+}
+
+// VX-Form: [PO VRT EO VRB 1 PS XO]
+class VX_RD5_EO5_RS5_PS1_XO9<bits<5> eo, bits<9> xo,
+                             dag OOL, dag IOL, string asmstr,
+                             InstrItinClass itin, list<dag> pattern>
+  : I<4, OOL, IOL, asmstr, itin> {
+  bits<5> VD;
+  bits<5> VB;
+  bit PS;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = VD;
+  let Inst{11-15} = eo;
+  let Inst{16-20} = VB;
+  let Inst{21}    = 1;
+  let Inst{22}    = PS;
+  let Inst{23-31} = xo;
+}
+
+// VX-Form: [PO VRT VRA VRB 1 PS XO] or [PO VRT VRA VRB 1 / XO]
+class VX_RD5_RSp5_PS1_XO9<bits<9> xo, dag OOL, dag IOL, string asmstr,
+                          InstrItinClass itin, list<dag> pattern>
+  : I<4, OOL, IOL, asmstr, itin> {
+  bits<5> VD;
+  bits<5> VA;
+  bits<5> VB;
+  bit PS;
+
+  let Pattern = pattern;
+
+  let Inst{6-10}  = VD;
+  let Inst{11-15} = VA;
+  let Inst{16-20} = VB;
+  let Inst{21}    = 1;
+  let Inst{22}    = PS;
+  let Inst{23-31} = xo;
 }
 
 // Z23-Form (used by QPX)

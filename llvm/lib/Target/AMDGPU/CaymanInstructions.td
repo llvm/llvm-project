@@ -51,7 +51,6 @@ def : RsqPat<RECIPSQRT_IEEE_cm, f32>;
 def : POW_Common <LOG_IEEE_cm, EXP_IEEE_cm, MUL>;
 
 defm DIV_cm : DIV_Common<RECIP_IEEE_cm>;
-defm : Expand24UBitOps<MULLO_UINT_cm, ADD_INT>;
 
 // RECIP_UINT emulation for Cayman
 // The multiplication scales from [0,1] to the unsigned integer range
@@ -86,14 +85,13 @@ def RAT_STORE_TYPED_cm: CF_MEM_RAT_STORE_TYPED<0> {
   let eop = 0; // This bit is not used on Cayman.
 }
 
-class VTX_READ_cm <string name, bits<8> buffer_id, dag outs, list<dag> pattern>
-    : VTX_WORD0_cm, VTX_READ<name, buffer_id, outs, pattern> {
+class VTX_READ_cm <string name, dag outs>
+    : VTX_WORD0_cm, VTX_READ<name, outs, []> {
 
   // Static fields
   let VC_INST = 0;
   let FETCH_TYPE = 2;
   let FETCH_WHOLE_QUAD = 0;
-  let BUFFER_ID = buffer_id;
   let SRC_REL = 0;
   // XXX: We can infer this field based on the SRC_GPR.  This would allow us
   // to store vertex addresses in any channel, not just X.
@@ -106,9 +104,9 @@ class VTX_READ_cm <string name, bits<8> buffer_id, dag outs, list<dag> pattern>
   let Inst{31-0} = Word0;
 }
 
-class VTX_READ_8_cm <bits<8> buffer_id, list<dag> pattern>
-    : VTX_READ_cm <"VTX_READ_8 $dst_gpr, $src_gpr", buffer_id,
-                   (outs R600_TReg32_X:$dst_gpr), pattern> {
+def VTX_READ_8_cm
+    : VTX_READ_cm <"VTX_READ_8 $dst_gpr, $src_gpr",
+                   (outs R600_TReg32_X:$dst_gpr)> {
 
   let DST_SEL_X = 0;
   let DST_SEL_Y = 7;   // Masked
@@ -117,9 +115,9 @@ class VTX_READ_8_cm <bits<8> buffer_id, list<dag> pattern>
   let DATA_FORMAT = 1; // FMT_8
 }
 
-class VTX_READ_16_cm <bits<8> buffer_id, list<dag> pattern>
-    : VTX_READ_cm <"VTX_READ_16 $dst_gpr, $src_gpr", buffer_id,
-                   (outs R600_TReg32_X:$dst_gpr), pattern> {
+def VTX_READ_16_cm
+    : VTX_READ_cm <"VTX_READ_16 $dst_gpr, $src_gpr",
+                   (outs R600_TReg32_X:$dst_gpr)> {
   let DST_SEL_X = 0;
   let DST_SEL_Y = 7;   // Masked
   let DST_SEL_Z = 7;   // Masked
@@ -128,9 +126,9 @@ class VTX_READ_16_cm <bits<8> buffer_id, list<dag> pattern>
 
 }
 
-class VTX_READ_32_cm <bits<8> buffer_id, list<dag> pattern>
-    : VTX_READ_cm <"VTX_READ_32 $dst_gpr, $src_gpr", buffer_id,
-                   (outs R600_TReg32_X:$dst_gpr), pattern> {
+def VTX_READ_32_cm
+    : VTX_READ_cm <"VTX_READ_32 $dst_gpr, $src_gpr",
+                   (outs R600_TReg32_X:$dst_gpr)> {
 
   let DST_SEL_X        = 0;
   let DST_SEL_Y        = 7;   // Masked
@@ -148,9 +146,9 @@ class VTX_READ_32_cm <bits<8> buffer_id, list<dag> pattern>
   let Constraints = "$src_gpr.ptr = $dst_gpr";
 }
 
-class VTX_READ_64_cm <bits<8> buffer_id, list<dag> pattern>
-    : VTX_READ_cm <"VTX_READ_64 $dst_gpr, $src_gpr", buffer_id,
-                   (outs R600_Reg64:$dst_gpr), pattern> {
+def VTX_READ_64_cm
+    : VTX_READ_cm <"VTX_READ_64 $dst_gpr.XY, $src_gpr",
+                   (outs R600_Reg64:$dst_gpr)> {
 
   let DST_SEL_X        = 0;
   let DST_SEL_Y        = 1;
@@ -159,9 +157,9 @@ class VTX_READ_64_cm <bits<8> buffer_id, list<dag> pattern>
   let DATA_FORMAT      = 0x1D; // COLOR_32_32
 }
 
-class VTX_READ_128_cm <bits<8> buffer_id, list<dag> pattern>
-    : VTX_READ_cm <"VTX_READ_128 $dst_gpr.XYZW, $src_gpr", buffer_id,
-                   (outs R600_Reg128:$dst_gpr), pattern> {
+def VTX_READ_128_cm
+    : VTX_READ_cm <"VTX_READ_128 $dst_gpr.XYZW, $src_gpr",
+                   (outs R600_Reg128:$dst_gpr)> {
 
   let DST_SEL_X        =  0;
   let DST_SEL_Y        =  1;
@@ -178,53 +176,44 @@ class VTX_READ_128_cm <bits<8> buffer_id, list<dag> pattern>
 //===----------------------------------------------------------------------===//
 // VTX Read from parameter memory space
 //===----------------------------------------------------------------------===//
-def VTX_READ_PARAM_8_cm : VTX_READ_8_cm <0,
-  [(set i32:$dst_gpr, (load_param_exti8 ADDRVTX_READ:$src_gpr))]
->;
+def : Pat<(i32:$dst_gpr (vtx_id3_az_extloadi8 ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_8_cm MEMxi:$src_gpr, 3)>;
+def : Pat<(i32:$dst_gpr (vtx_id3_az_extloadi16 ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_16_cm MEMxi:$src_gpr, 3)>;
+def : Pat<(i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_32_cm MEMxi:$src_gpr, 3)>;
+def : Pat<(v2i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_64_cm MEMxi:$src_gpr, 3)>;
+def : Pat<(v4i32:$dst_gpr (vtx_id3_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_128_cm MEMxi:$src_gpr, 3)>;
 
-def VTX_READ_PARAM_16_cm : VTX_READ_16_cm <0,
-  [(set i32:$dst_gpr, (load_param_exti16 ADDRVTX_READ:$src_gpr))]
->;
-
-def VTX_READ_PARAM_32_cm : VTX_READ_32_cm <0,
-  [(set i32:$dst_gpr, (load_param ADDRVTX_READ:$src_gpr))]
->;
-
-def VTX_READ_PARAM_64_cm : VTX_READ_64_cm <0,
-  [(set v2i32:$dst_gpr, (load_param ADDRVTX_READ:$src_gpr))]
->;
-
-def VTX_READ_PARAM_128_cm : VTX_READ_128_cm <0,
-  [(set v4i32:$dst_gpr, (load_param ADDRVTX_READ:$src_gpr))]
->;
+//===----------------------------------------------------------------------===//
+// VTX Read from constant memory space
+//===----------------------------------------------------------------------===//
+def : Pat<(i32:$dst_gpr (vtx_id2_az_extloadi8 ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_8_cm MEMxi:$src_gpr, 2)>;
+def : Pat<(i32:$dst_gpr (vtx_id2_az_extloadi16 ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_16_cm MEMxi:$src_gpr, 2)>;
+def : Pat<(i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_32_cm MEMxi:$src_gpr, 2)>;
+def : Pat<(v2i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_64_cm MEMxi:$src_gpr, 2)>;
+def : Pat<(v4i32:$dst_gpr (vtx_id2_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_128_cm MEMxi:$src_gpr, 2)>;
 
 //===----------------------------------------------------------------------===//
 // VTX Read from global memory space
 //===----------------------------------------------------------------------===//
-
-// 8-bit reads
-def VTX_READ_GLOBAL_8_cm : VTX_READ_8_cm <1,
-  [(set i32:$dst_gpr, (az_extloadi8_global ADDRVTX_READ:$src_gpr))]
->;
-
-def VTX_READ_GLOBAL_16_cm : VTX_READ_16_cm <1,
-  [(set i32:$dst_gpr, (az_extloadi16_global ADDRVTX_READ:$src_gpr))]
->;
-
-// 32-bit reads
-def VTX_READ_GLOBAL_32_cm : VTX_READ_32_cm <1,
-  [(set i32:$dst_gpr, (global_load ADDRVTX_READ:$src_gpr))]
->;
-
-// 64-bit reads
-def VTX_READ_GLOBAL_64_cm : VTX_READ_64_cm <1,
-  [(set v2i32:$dst_gpr, (global_load ADDRVTX_READ:$src_gpr))]
->;
-
-// 128-bit reads
-def VTX_READ_GLOBAL_128_cm : VTX_READ_128_cm <1,
-  [(set v4i32:$dst_gpr, (global_load ADDRVTX_READ:$src_gpr))]
->;
+def : Pat<(i32:$dst_gpr (vtx_id1_az_extloadi8 ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_8_cm MEMxi:$src_gpr, 1)>;
+def : Pat<(i32:$dst_gpr (vtx_id1_az_extloadi16 ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_16_cm MEMxi:$src_gpr, 1)>;
+def : Pat<(i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_32_cm MEMxi:$src_gpr, 1)>;
+def : Pat<(v2i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_64_cm MEMxi:$src_gpr, 1)>;
+def : Pat<(v4i32:$dst_gpr (vtx_id1_load ADDRVTX_READ:$src_gpr)),
+          (VTX_READ_128_cm MEMxi:$src_gpr, 1)>;
 
 } // End isCayman
 

@@ -16,6 +16,8 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/OptBisect.h"
+#include "llvm/Support/ManagedStatic.h"
 #include <algorithm>
 using namespace llvm;
 
@@ -43,29 +45,10 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
   DiagnosticHandler = nullptr;
   DiagnosticContext = nullptr;
   RespectDiagnosticFilters = false;
+  DiagnosticHotnessRequested = false;
   YieldCallback = nullptr;
   YieldOpaqueHandle = nullptr;
   NamedStructTypesUniqueID = 0;
-}
-
-namespace {
-struct DropReferences {
-  // Takes the value_type of a ConstantUniqueMap's internal map, whose 'second'
-  // is a Constant*.
-  template <typename PairT> void operator()(const PairT &P) {
-    P.second->dropAllReferences();
-  }
-};
-
-// Temporary - drops pair.first instead of second.
-struct DropFirst {
-  // Takes the value_type of a ConstantUniqueMap's internal map, whose 'second'
-  // is a Constant*.
-  template<typename PairT>
-  void operator()(const PairT &P) {
-    P.first->dropAllReferences();
-  }
-};
 }
 
 LLVMContextImpl::~LLVMContextImpl() {
@@ -99,14 +82,14 @@ LLVMContextImpl::~LLVMContextImpl() {
 #include "llvm/IR/Metadata.def"
 
   // Free the constants.
-  std::for_each(ExprConstants.map_begin(), ExprConstants.map_end(),
-                DropFirst());
-  std::for_each(ArrayConstants.map_begin(), ArrayConstants.map_end(),
-                DropFirst());
-  std::for_each(StructConstants.map_begin(), StructConstants.map_end(),
-                DropFirst());
-  std::for_each(VectorConstants.map_begin(), VectorConstants.map_end(),
-                DropFirst());
+  for (auto *I : ExprConstants)
+    I->dropAllReferences();
+  for (auto *I : ArrayConstants)
+    I->dropAllReferences();
+  for (auto *I : StructConstants)
+    I->dropAllReferences();
+  for (auto *I : VectorConstants)
+    I->dropAllReferences();
   ExprConstants.freeConstants();
   ArrayConstants.freeConstants();
   StructConstants.freeConstants();
@@ -117,10 +100,9 @@ LLVMContextImpl::~LLVMContextImpl() {
   InlineAsms.freeConstants();
   DeleteContainerSeconds(IntConstants);
   DeleteContainerSeconds(FPConstants);
-  
-  for (StringMap<ConstantDataSequential*>::iterator I = CDSConstants.begin(),
-       E = CDSConstants.end(); I != E; ++I)
-    delete I->second;
+
+  for (auto &CDSConstant : CDSConstants)
+    delete CDSConstant.second;
   CDSConstants.clear();
 
   // Destroy attributes.
@@ -158,9 +140,6 @@ LLVMContextImpl::~LLVMContextImpl() {
   // Destroy ValuesAsMetadata.
   for (auto &Pair : ValuesAsMetadata)
     delete Pair.second;
-
-  // Destroy MDStrings.
-  MDStringCache.clear();
 }
 
 void LLVMContextImpl::dropTriviallyDeadConstantArrays() {
@@ -168,10 +147,8 @@ void LLVMContextImpl::dropTriviallyDeadConstantArrays() {
   do {
     Changed = false;
 
-    for (auto I = ArrayConstants.map_begin(), E = ArrayConstants.map_end();
-         I != E; ) {
-      auto *C = I->first;
-      I++;
+    for (auto I = ArrayConstants.begin(), E = ArrayConstants.end(); I != E;) {
+      auto *C = *I++;
       if (C->use_empty()) {
         Changed = true;
         C->destroyConstant();
@@ -257,3 +234,19 @@ void GetElementPtrConstantExpr::anchor() { }
 
 void CompareConstantExpr::anchor() { }
 
+/// Singleton instance of the OptBisect class.
+///
+/// This singleton is accessed via the LLVMContext::getOptBisect() function.  It
+/// provides a mechanism to disable passes and individual optimizations at
+/// compile time based on a command line option (-opt-bisect-limit) in order to
+/// perform a bisecting search for optimization-related problems.
+///
+/// Even if multiple LLVMContext objects are created, they will all return the
+/// same instance of OptBisect in order to provide a single bisect count.  Any
+/// code that uses the OptBisect object should be serialized when bisection is
+/// enabled in order to enable a consistent bisect count.
+static ManagedStatic<OptBisect> OptBisector;
+
+OptBisect &LLVMContextImpl::getOptBisect() {
+  return *OptBisector;
+}

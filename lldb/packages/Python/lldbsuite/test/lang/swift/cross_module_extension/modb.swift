@@ -16,7 +16,7 @@ extension S {
     var v = 3
   }
 
-  private func f() -> Int {
+  fileprivate func f() -> Int {
     let a = A()
     return a.v // break here
   }

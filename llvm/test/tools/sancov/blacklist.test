@@ -1,5 +1,10 @@
 REQUIRES: x86_64-linux
-RUN: sancov -obj %p/Inputs/test-linux_x86_64 -covered-functions -blacklist %p/Inputs/blacklist.txt %p/Inputs/test-linux_x86_64.sancov | FileCheck %s
+RUN: sancov -covered-functions -blacklist %p/Inputs/fun_blacklist.txt %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.0.sancov | FileCheck %s
+RUN: sancov -covered-functions -blacklist %p/Inputs/src_blacklist.txt %p/Inputs/test-linux_x86_64 %p/Inputs/test-linux_x86_64.1.sancov | FileCheck --check-prefix=CHECK1 %s
 
 CHECK-NOT: Inputs{{[/\\]}}test.cpp:12 bar(std::string)
 CHECK: Inputs{{[/\\]}}test.cpp:14 main
+
+CHECK1-NOT: foo
+CHECK1: Inputs{{[/\\]}}test.cpp:12 bar(std::string)
+CHECK1: Inputs{{[/\\]}}test.cpp:14 main

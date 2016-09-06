@@ -16,7 +16,6 @@
 
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCSection.h"
-#include <vector>
 
 namespace llvm {
 /// Represents a section in PTX PTX does not have sections. We create this class

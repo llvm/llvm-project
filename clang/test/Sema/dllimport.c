@@ -4,12 +4,18 @@
 // RUN: %clang_cc1 -triple x86_64-mingw32 -fsyntax-only -fms-extensions -verify -std=c99 -DGNU %s
 
 // Invalid usage.
-__declspec(dllimport) typedef int typedef1; // expected-warning{{'dllimport' attribute only applies to variables and functions}}
-typedef __declspec(dllimport) int typedef2; // expected-warning{{'dllimport' attribute only applies to variables and functions}}
-typedef int __declspec(dllimport) typedef3; // expected-warning{{'dllimport' attribute only applies to variables and functions}}
-typedef __declspec(dllimport) void (*FunTy)(); // expected-warning{{'dllimport' attribute only applies to variables and functions}}
-enum __declspec(dllimport) Enum { EnumVal }; // expected-warning{{'dllimport' attribute only applies to variables and functions}}
-struct __declspec(dllimport) Record {}; // expected-warning{{'dllimport' attribute only applies to variables and functions}}
+__declspec(dllimport) typedef int typedef1;
+// expected-warning@-1{{'dllimport' attribute only applies to variables and functions}}
+typedef __declspec(dllimport) int typedef2;
+// expected-warning@-1{{'dllimport' attribute only applies to variables and functions}}
+typedef int __declspec(dllimport) typedef3;
+// expected-warning@-1{{'dllimport' attribute only applies to variables and functions}}
+typedef __declspec(dllimport) void (*FunTy)();
+// expected-warning@-1{{'dllimport' attribute only applies to variables and functions}}
+enum __declspec(dllimport) Enum { EnumVal };
+// expected-warning@-1{{'dllimport' attribute only applies to variables and functions}}
+struct __declspec(dllimport) Record {};
+// expected-warning@-1{{'dllimport' attribute only applies to variables and functions}}
 
 
 
@@ -34,17 +40,49 @@ __declspec(dllimport) int GlobalInit1 = 1; // expected-error{{definition of dlli
 int __declspec(dllimport) GlobalInit2 = 1; // expected-error{{definition of dllimport data}}
 
 // Declare, then reject definition.
-__declspec(dllimport) extern int ExternGlobalDeclInit; // expected-note{{previous declaration is here}} expected-note{{previous attribute is here}}
-int ExternGlobalDeclInit = 1; // expected-warning{{'ExternGlobalDeclInit' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
+#ifdef GNU
+// expected-note@+2{{previous attribute is here}}
+#endif
+__declspec(dllimport) extern int ExternGlobalDeclInit; // expected-note{{previous declaration is here}}
+#ifdef MS
+// expected-warning@+4{{'ExternGlobalDeclInit' redeclared without 'dllimport' attribute: 'dllexport' attribute added}}
+#else
+// expected-warning@+2{{'ExternGlobalDeclInit' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
+#endif
+int ExternGlobalDeclInit = 1;
 
-__declspec(dllimport) int GlobalDeclInit; // expected-note{{previous declaration is here}} expected-note{{previous attribute is here}}
-int GlobalDeclInit = 1; // expected-warning{{'GlobalDeclInit' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
+#ifdef GNU
+// expected-note@+2{{previous attribute is here}}
+#endif
+__declspec(dllimport) int GlobalDeclInit; // expected-note{{previous declaration is here}}
+#ifdef MS
+// expected-warning@+4{{'GlobalDeclInit' redeclared without 'dllimport' attribute: 'dllexport' attribute added}}
+#else
+// expected-warning@+2{{'GlobalDeclInit' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
+#endif
+int GlobalDeclInit = 1;
 
-int *__attribute__((dllimport)) GlobalDeclChunkAttrInit; // expected-note{{previous declaration is here}} expected-note{{previous attribute is here}}
-int *GlobalDeclChunkAttrInit = 0; // expected-warning{{'GlobalDeclChunkAttrInit' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
+#ifdef GNU
+// expected-note@+2{{previous attribute is here}}
+#endif
+int *__attribute__((dllimport)) GlobalDeclChunkAttrInit; // expected-note{{previous declaration is here}}
+#ifdef MS
+// expected-warning@+4{{'GlobalDeclChunkAttrInit' redeclared without 'dllimport' attribute: 'dllexport' attribute added}}
+#else
+// expected-warning@+2{{'GlobalDeclChunkAttrInit' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
+#endif
+int *GlobalDeclChunkAttrInit = 0;
 
-int GlobalDeclAttrInit __attribute__((dllimport)); // expected-note{{previous declaration is here}} expected-note{{previous attribute is here}}
-int GlobalDeclAttrInit = 1; // expected-warning{{'GlobalDeclAttrInit' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
+#ifdef GNU
+// expected-note@+2{{previous attribute is here}}
+#endif
+int GlobalDeclAttrInit __attribute__((dllimport)); // expected-note{{previous declaration is here}}
+#ifdef MS
+// expected-warning@+4{{'GlobalDeclAttrInit' redeclared without 'dllimport' attribute: 'dllexport' attribute added}}
+#else
+// expected-warning@+2{{'GlobalDeclAttrInit' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
+#endif
+int GlobalDeclAttrInit = 1;
 
 // Redeclarations
 __declspec(dllimport) extern int GlobalRedecl1;
@@ -59,8 +97,7 @@ int *__attribute__((dllimport)) GlobalRedecl2b;
 int GlobalRedecl2c __attribute__((dllimport));
 int GlobalRedecl2c __attribute__((dllimport));
 
-// NB: MSVC issues a warning and makes GlobalRedecl3 dllexport. We follow GCC
-// and drop the dllimport with a warning.
+// We follow GCC and drop the dllimport with a warning.
 __declspec(dllimport) extern int GlobalRedecl3; // expected-note{{previous declaration is here}} expected-note{{previous attribute is here}}
                       extern int GlobalRedecl3; // expected-warning{{'GlobalRedecl3' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
 
@@ -133,13 +170,20 @@ inline void __attribute__((dllimport)) inlineFunc2() {}
 __declspec(dllimport) void redecl1();
 __declspec(dllimport) void redecl1();
 
-// NB: MSVC issues a warning and makes redecl2/redecl3 dllexport. We follow GCC
-// and drop the dllimport with a warning.
 __declspec(dllimport) void redecl2(); // expected-note{{previous declaration is here}} expected-note{{previous attribute is here}}
                       void redecl2(); // expected-warning{{'redecl2' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
 
-__declspec(dllimport) void redecl3(); // expected-note{{previous declaration is here}} expected-note{{previous attribute is here}}
-                      void redecl3() {} // expected-warning{{'redecl3' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
+#ifdef GNU
+                      // expected-note@+2{{previous attribute is here}}
+#endif
+                      __declspec(dllimport) void redecl3(); // expected-note{{previous declaration is here}}
+                      // NB: Both MSVC and Clang issue a warning and make redecl3 dllexport.
+#ifdef MS
+                      // expected-warning@+4{{'redecl3' redeclared without 'dllimport' attribute: 'dllexport' attribute added}}
+#else
+                      // expected-warning@+2{{'redecl3' redeclared without 'dllimport' attribute: previous 'dllimport' ignored}}
+#endif
+                      void redecl3() {}
 
                       void redecl4(); // expected-note{{previous declaration is here}}
 void useRedecl4() { redecl4(); }

@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
 ModuleFileExtension::~ModuleFileExtension() { }

@@ -13,9 +13,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/Symbolize/DIPrinter.h"
-
+#include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
+#include <string>
 
 namespace llvm {
 namespace symbolize {
@@ -26,7 +36,7 @@ static const char kDILineInfoBadString[] = "<invalid>";
 static const char kBadString[] = "??";
 
 // Prints source code around in the FileName the Line.
-void DIPrinter::printContext(std::string FileName, int64_t Line) {
+void DIPrinter::printContext(const std::string &FileName, int64_t Line) {
   if (PrintSourceContext <= 0)
     return;
 
@@ -61,7 +71,7 @@ void DIPrinter::print(const DILineInfo &Info, bool Inlined) {
     if (FunctionName == kDILineInfoBadString)
       FunctionName = kBadString;
 
-    StringRef Delimiter = (PrintPretty == true) ? " at " : "\n";
+    StringRef Delimiter = PrintPretty ? " at " : "\n";
     StringRef Prefix = (PrintPretty && Inlined) ? " (inlined by) " : "";
     OS << Prefix << FunctionName << Delimiter;
   }
@@ -97,5 +107,5 @@ DIPrinter &DIPrinter::operator<<(const DIGlobal &Global) {
   return *this;
 }
 
-}
-}
+} // end namespace symbolize
+} // end namespace llvm

@@ -6,6 +6,8 @@ RUN: llvm-objdump %p/Inputs/macho-universal.x86_64.i386 -universal-headers -m \
 RUN: | FileCheck %s -check-prefix FAT
 RUN: llvm-objdump %p/Inputs/macho-universal.x86_64.i386 -universal-headers -m \
 RUN: -non-verbose | FileCheck %s -check-prefix NON-VERBOSE
+RUN: llvm-objdump %p/Inputs/macho-universal64.x86_64.i386 -universal-headers \
+RUN: -m | FileCheck %s -check-prefix FAT-64
 
 UEXE-all: macho-universal.x86_64.i386 (architecture x86_64):
 UEXE-all: (__TEXT,__text) section
@@ -62,3 +64,7 @@ NON-VERBOSE:     capabilities 0x0
 NON-VERBOSE:     offset 12288
 NON-VERBOSE:     size 4336
 NON-VERBOSE:     align 2^12 (4096)
+
+FAT-64: Fat headers
+FAT-64: fat_magic FAT_MAGIC_64
+FAT-64: nfat_arch 2

@@ -1,14 +1,38 @@
 // Check passing Mips ABI options to the backend.
 //
 // RUN: %clang -target mips-linux-gnu -### -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=MIPS-DEF %s
-// MIPS-DEF: "-target-cpu" "mips32r2"
-// MIPS-DEF: "-target-abi" "o32"
+// RUN:   | FileCheck -check-prefix=MIPS32R2-O32 %s
+// RUN: %clang -target mips64-linux-gnu -mips32r2 -mabi=32 -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS32R2-O32 %s
+// MIPS32R2-O32: "-target-cpu" "mips32r2"
+// MIPS32R2-O32: "-target-abi" "o32"
+//
+// FIXME: This is a valid combination of options but we reject it at the moment
+//        because the backend can't handle it.
+// RUN: not %clang -target mips-linux-gnu -c %s \
+// RUN:        -march=mips64r2 -mabi=32 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64R2-O32 %s
+// MIPS64R2-O32: error: ABI 'o32' is not supported on CPU 'mips64r2'
 //
 // RUN: %clang -target mips64-linux-gnu -### -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=MIPS64-DEF %s
-// MIPS64-DEF: "-target-cpu" "mips64r2"
-// MIPS64-DEF: "-target-abi" "n64"
+// RUN:   | FileCheck -check-prefix=MIPS64R2-N64 %s
+// RUN: %clang -target mips-img-linux-gnu -mips64r2 -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64R2-N64 %s
+// RUN: %clang -target mips-mti-linux-gnu -mips64r2 -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64R2-N64 %s
+// RUN: %clang -target mips-linux-gnu -mips64r2 -mabi=64 -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64R2-N64 %s
+// MIPS64R2-N64: "-target-cpu" "mips64r2"
+// MIPS64R2-N64: "-target-abi" "n64"
+//
+// RUN: %clang -target mips64-linux-gnu -### -mips64r3 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64R3-N64 %s
+// RUN: %clang -target mips-img-linux-gnu -mips64r3 -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64R3-N64 %s
+// RUN: %clang -target mips-mti-linux-gnu -mips64r3 -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS64R3-N64 %s
+// MIPS64R3-N64: "-target-cpu" "mips64r3"
+// MIPS64R3-N64: "-target-abi" "n64"
 //
 // RUN: %clang -target mips-linux-gnu -### -c %s \
 // RUN:        -mabi=32 2>&1 \
@@ -44,12 +68,6 @@
 // RUN:        -mabi=o64 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-ABI-O64 %s
 // MIPS-ABI-O64: error: unknown target ABI 'o64'
-//
-// RUN: %clang -target mips-linux-gnu -### -c %s \
-// RUN:        -mabi=eabi 2>&1 \
-// RUN:   | FileCheck -check-prefix=MIPS-ABI-EABI %s
-// MIPS-ABI-EABI: "-target-cpu" "mips32r2"
-// MIPS-ABI-EABI: "-target-abi" "eabi"
 //
 // RUN: not %clang -target mips-linux-gnu -c %s \
 // RUN:        -mabi=unknown 2>&1 \
@@ -104,6 +122,11 @@
 // MIPS-ARCH-P5600: "-target-cpu" "p5600"
 // MIPS-ARCH-P5600: "-target-abi" "o32"
 //
+// RUN: not %clang -target mips-linux-gnu -c %s \
+// RUN:        -march=p5600 -mabi=64 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS-ARCH-P5600-N64 %s
+// MIPS-ARCH-P5600-N64: error: ABI 'n64' is not supported on CPU 'p5600'
+//
 // RUN: %clang -target mips-linux-gnu -### -c %s \
 // RUN:        -march=mips64 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-ARCH-3264 %s
@@ -131,7 +154,7 @@
 // RUN: not %clang -target mips64-linux-gnu -c %s \
 // RUN:        -march=mips32 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-ARCH-6432 %s
-// MIPS-ARCH-6432: error: unknown target CPU 'mips32'
+// MIPS-ARCH-6432: error: ABI 'n64' is not supported on CPU 'mips32'
 //
 // RUN: not %clang -target mips-linux-gnu -c %s \
 // RUN:        -march=unknown 2>&1 \

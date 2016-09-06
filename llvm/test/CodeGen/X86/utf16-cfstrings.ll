@@ -9,7 +9,7 @@
 @_unnamed_cfstring_ = private constant %struct.NSConstantString { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 2000, i8* bitcast ([5 x i16]* @.str to i8*), i64 4 }, section "__DATA,__cfstring"
 
 ; CHECK:         .section      __TEXT,__ustring
-; CHECK-NEXT:    .align        1
+; CHECK-NEXT:    .p2align        1
 ; CHECK-NEXT: _.str:
 ; CHECK-NEXT:    .short  252     ## 0xfc
 ; CHECK-NEXT:    .short  98      ## 0x62

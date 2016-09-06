@@ -17,3 +17,6 @@
 #define and_4(rD, rN, rM)  and rD, rN, rM
 
 SYNC_OP_4(and_4)
+
+NO_EXEC_STACK_DIRECTIVE
+

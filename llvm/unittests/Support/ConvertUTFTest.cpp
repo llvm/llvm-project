@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Format.h"
 #include "gtest/gtest.h"
 #include <string>
@@ -59,7 +60,7 @@ TEST(ConvertUTFTest, OddLengthInput) {
 
 TEST(ConvertUTFTest, Empty) {
   std::string Result;
-  bool Success = convertUTF16ToUTF8String(None, Result);
+  bool Success = convertUTF16ToUTF8String(llvm::ArrayRef<char>(None), Result);
   EXPECT_TRUE(Success);
   EXPECT_TRUE(Result.empty());
 }
@@ -78,6 +79,41 @@ TEST(ConvertUTFTest, HasUTF16BOM) {
   EXPECT_FALSE(HasBOM);
   HasBOM = hasUTF16ByteOrderMark(makeArrayRef("\xfe", 1));
   EXPECT_FALSE(HasBOM);
+}
+
+TEST(ConvertUTFTest, UTF16WrappersForConvertUTF16ToUTF8String) {
+  // Src is the look of disapproval.
+  static const char Src[] = "\xff\xfe\xa0\x0c_\x00\xa0\x0c";
+  ArrayRef<UTF16> SrcRef = makeArrayRef((const UTF16 *)Src, 4);
+  std::string Result;
+  bool Success = convertUTF16ToUTF8String(SrcRef, Result);
+  EXPECT_TRUE(Success);
+  std::string Expected("\xe0\xb2\xa0_\xe0\xb2\xa0");
+  EXPECT_EQ(Expected, Result);
+}
+
+TEST(ConvertUTFTest, ConvertUTF8toWide) {
+  // Src is the look of disapproval.
+  static const char Src[] = "\xe0\xb2\xa0_\xe0\xb2\xa0";
+  std::wstring Result;
+  bool Success = ConvertUTF8toWide((const char*)Src, Result);
+  EXPECT_TRUE(Success);
+  std::wstring Expected(L"\x0ca0_\x0ca0");
+  EXPECT_EQ(Expected, Result);
+  Result.clear();
+  Success = ConvertUTF8toWide(StringRef(Src, 7), Result);
+  EXPECT_TRUE(Success);
+  EXPECT_EQ(Expected, Result);
+}
+
+TEST(ConvertUTFTest, convertWideToUTF8) {
+  // Src is the look of disapproval.
+  static const wchar_t Src[] = L"\x0ca0_\x0ca0";
+  std::string Result;
+  bool Success = convertWideToUTF8(Src, Result);
+  EXPECT_TRUE(Success);
+  std::string Expected("\xe0\xb2\xa0_\xe0\xb2\xa0");
+  EXPECT_EQ(Expected, Result);
 }
 
 struct ConvertUTFResultContainer {

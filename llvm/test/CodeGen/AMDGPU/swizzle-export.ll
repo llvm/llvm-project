@@ -6,7 +6,7 @@
 ;EG: EXPORT T{{[0-9]+}}.XXWX
 ;EG: EXPORT T{{[0-9]+}}.XXXW
 
-define void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) #0 {
+define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
 main_body:
   %0 = extractelement <4 x float> %reg1, i32 0
   %1 = extractelement <4 x float> %reg1, i32 1
@@ -68,27 +68,27 @@ main_body:
   %57 = insertelement <4 x float> %56, float %1, i32 1
   %58 = insertelement <4 x float> %57, float %2, i32 2
   %59 = insertelement <4 x float> %58, float %3, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %59, i32 60, i32 1)
+  call void @llvm.r600.store.swizzle(<4 x float> %59, i32 60, i32 1)
   %60 = insertelement <4 x float> undef, float %10, i32 0
   %61 = insertelement <4 x float> %60, float %13, i32 1
   %62 = insertelement <4 x float> %61, float %16, i32 2
   %63 = insertelement <4 x float> %62, float %19, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %63, i32 0, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %63, i32 0, i32 2)
   %64 = insertelement <4 x float> undef, float %22, i32 0
   %65 = insertelement <4 x float> %64, float %25, i32 1
   %66 = insertelement <4 x float> %65, float %28, i32 2
   %67 = insertelement <4 x float> %66, float %31, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %67, i32 1, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %67, i32 1, i32 2)
   %68 = insertelement <4 x float> undef, float %34, i32 0
   %69 = insertelement <4 x float> %68, float %37, i32 1
   %70 = insertelement <4 x float> %69, float %40, i32 2
   %71 = insertelement <4 x float> %70, float %43, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %71, i32 2, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %71, i32 2, i32 2)
   %72 = insertelement <4 x float> undef, float %46, i32 0
   %73 = insertelement <4 x float> %72, float %49, i32 1
   %74 = insertelement <4 x float> %73, float %52, i32 2
   %75 = insertelement <4 x float> %74, float %55, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %75, i32 3, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %75, i32 3, i32 2)
   ret void
 }
 
@@ -96,7 +96,7 @@ main_body:
 ; EG: T{{[0-9]+}}.XY__
 ; EG: T{{[0-9]+}}.ZXY0
 
-define void @main2(<4 x float> inreg %reg0, <4 x float> inreg %reg1) #0 {
+define amdgpu_vs void @main2(<4 x float> inreg %reg0, <4 x float> inreg %reg1) {
 main_body:
   %0 = extractelement <4 x float> %reg1, i32 0
   %1 = extractelement <4 x float> %reg1, i32 1
@@ -111,19 +111,18 @@ main_body:
   %10 = extractelement <4 x float> %9, i32 1
   %11 = insertelement <4 x float> undef, float %2, i32 0
   %12 = insertelement <4 x float> %11, float %3, i32 1
-  call void @llvm.R600.store.swizzle(<4 x float> %12, i32 60, i32 1)
+  call void @llvm.r600.store.swizzle(<4 x float> %12, i32 60, i32 1)
   %13 = insertelement <4 x float> undef, float %6, i32 0
   %14 = insertelement <4 x float> %13, float %8, i32 1
   %15 = insertelement <4 x float> %14, float %10, i32 2
   %16 = insertelement <4 x float> %15, float 0.000000e+00, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %16, i32 0, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %16, i32 0, i32 2)
   ret void
 }
 
 ; Function Attrs: nounwind readonly
 declare float @llvm.cos.f32(float) #1
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
-attributes #0 = { "ShaderType"="1" }
 attributes #1 = { nounwind readonly }

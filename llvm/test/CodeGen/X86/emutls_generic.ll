@@ -57,7 +57,7 @@ entry:
 ; X86_32-NOT:    __emutls_v.external_x:
 ; X86_32:        .data{{$}}
 ; X86_32:        .globl __emutls_v.external_y
-; X86_32:        .align 4
+; X86_32:        .p2align 2
 ; X86_32-LABEL:  __emutls_v.external_y:
 ; X86_32-NEXT:   .long 1
 ; X86_32-NEXT:   .long 2
@@ -68,7 +68,7 @@ entry:
 ; X86_32-NEXT:   .byte 7
 ; X86_32:        .data{{$}}
 ; X86_32-NOT:    .globl
-; X86_32:        .align 4
+; X86_32:        .p2align 2
 ; X86_32-LABEL:  __emutls_v.internal_y:
 ; X86_32-NEXT:   .long 8
 ; X86_32-NEXT:   .long 16
@@ -88,7 +88,7 @@ entry:
 ; X86_64-NOT:    __emutls_t.external_x
 ; X86_64-NOT:    __emutls_v.external_x:
 ; X86_64:        .globl __emutls_v.external_y
-; X86_64:        .align 8
+; X86_64:        .p2align 3
 ; X86_64-LABEL:  __emutls_v.external_y:
 ; X86_64-NEXT:   .quad 1
 ; X86_64-NEXT:   .quad 2
@@ -100,7 +100,7 @@ entry:
 ; X86_64-NEXT:   .byte 7
 ; X86_64:        .data{{$}}
 ; X86_64-NOT:    .globl
-; X86_64:        .align 8
+; X86_64:        .p2align 3
 ; X86_64-LABEL:  __emutls_v.internal_y:
 ; X86_64-NEXT:   .quad 8
 ; X86_64-NEXT:   .quad 16

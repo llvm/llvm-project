@@ -27,10 +27,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!29}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.1 (trunk 152691) (llvm/trunk 152692)", isOptimized: false, emissionKind: 0, file: !28, enums: !1, retainedTypes: !1, subprograms: !3, globals: !18, imports:  !1)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.1 (trunk 152691) (llvm/trunk 152692)", isOptimized: false, emissionKind: FullDebug, file: !28, enums: !1, retainedTypes: !1, globals: !18, imports:  !1)
 !1 = !{}
-!3 = !{!5}
-!5 = distinct !DISubprogram(name: "a", linkageName: "_ZN1A1aEi", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, scopeLine: 5, file: !6, scope: null, type: !7, declaration: !13)
+!5 = distinct !DISubprogram(name: "a", linkageName: "_ZN1A1aEi", line: 5, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 5, file: !6, scope: null, type: !7, declaration: !13)
 !6 = !DIFile(filename: "foo.cpp", directory: "/Users/echristo")
 !7 = !DISubroutineType(types: !8)
 !8 = !{!9, !10, !9}

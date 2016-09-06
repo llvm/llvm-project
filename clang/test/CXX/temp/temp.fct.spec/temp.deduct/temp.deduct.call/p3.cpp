@@ -146,3 +146,30 @@ namespace PR9233 {
   }
 
 }
+
+namespace PR27155 {
+
+struct B {};
+
+template<class T, int i> struct D : T {};
+template<class T> void Foo(D<T, 1>);
+
+int fn() {
+  D<D<B, 1>, 0> f;
+  Foo(f);
+}
+
+}
+
+namespace PR28195 {
+
+template<int N> struct B {};
+struct D : B<0>, B<1> {};
+
+template<int N> int callee(B<N>); // expected-note{{failed template argument deduction}}
+
+int caller() {
+  callee(D()); // expected-error{{no matching function}}
+}
+
+}

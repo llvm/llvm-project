@@ -9,9 +9,9 @@ void __vectorcall v2(char a, char b) {}
 // CHECK: define x86_vectorcallcc void @"\01v2@@8"(i8 inreg signext %a, i8 inreg signext %b)
 // X64: define x86_vectorcallcc void @"\01v2@@16"(i8 %a, i8 %b)
 
-struct Small { int a; };
+struct Small { int x; };
 void __vectorcall v3(int a, struct Small b, int c) {}
-// CHECK: define x86_vectorcallcc void @"\01v3@@12"(i32 inreg %a, %struct.Small* byval align 4 %b, i32 inreg %c)
+// CHECK: define x86_vectorcallcc void @"\01v3@@12"(i32 inreg %a, i32 %b.0, i32 inreg %c)
 // X64: define x86_vectorcallcc void @"\01v3@@24"(i32 %a, i32 %b.coerce, i32 %c)
 
 struct Large { int a[5]; };

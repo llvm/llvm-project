@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ppc32 -mtriple=powerpc-apple-darwin8 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -march=ppc32 -mtriple=powerpc-apple-darwin8 | FileCheck %s
 
 define i32 @test(i32 %x) nounwind {
 ; CHECK-LABEL: @test

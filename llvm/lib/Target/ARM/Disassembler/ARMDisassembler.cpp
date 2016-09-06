@@ -210,6 +210,8 @@ static DecodeStatus DecodeArmMOVTWInstruction(MCInst &Inst, unsigned Insn,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeSMLAInstruction(MCInst &Inst, unsigned Insn,
                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeHINTInstruction(MCInst &Inst, unsigned Insn,
+                               uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeCPSInstruction(MCInst &Inst, unsigned Insn,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeTSTInstruction(MCInst &Inst, unsigned Insn,
@@ -221,6 +223,8 @@ static DecodeStatus DecodeT2CPSInstruction(MCInst &Inst, unsigned Insn,
 static DecodeStatus DecodeAddrModeImm12Operand(MCInst &Inst, unsigned Val,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeAddrMode5Operand(MCInst &Inst, unsigned Val,
+                               uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeAddrMode5FP16Operand(MCInst &Inst, unsigned Val,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeAddrMode7Operand(MCInst &Inst, unsigned Val,
                                uint64_t Address, const void *Decoder);
@@ -391,8 +395,8 @@ static DecodeStatus DecodeT2ShifterImmOperand(MCInst &Inst, unsigned Val,
 
 static DecodeStatus DecodeLDR(MCInst &Inst, unsigned Val,
                                 uint64_t Address, const void *Decoder);
-static DecodeStatus DecodeMRRC2(llvm::MCInst &Inst, unsigned Val,
-                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecoderForMRRC2AndMCRR2(llvm::MCInst &Inst, unsigned Val,
+                                            uint64_t Address, const void *Decoder);
 #include "ARMGenDisassemblerTables.inc"
 
 static MCDisassembler *createARMDisassembler(const Target &T,
@@ -590,6 +594,8 @@ MCDisassembler::DecodeStatus
 ThumbDisassembler::AddThumbPredicate(MCInst &MI) const {
   MCDisassembler::DecodeStatus S = Success;
 
+  const FeatureBitset &FeatureBits = getSubtargetInfo().getFeatureBits();
+
   // A few instructions actually have predicates encoded in them.  Don't
   // try to overwrite it if we're seeing one of those.
   switch (MI.getOpcode()) {
@@ -609,6 +615,10 @@ ThumbDisassembler::AddThumbPredicate(MCInst &MI) const {
         S = SoftFail;
       else
         return Success;
+      break;
+    case ARM::t2HINT:
+      if (MI.getOperand(0).getImm() == 0x10 && (FeatureBits[ARM::FeatureRAS]) != 0)
+        S = SoftFail;
       break;
     case ARM::tB:
     case ARM::t2B:
@@ -1941,6 +1951,29 @@ static DecodeStatus DecodeMemMultipleWritebackInstruction(MCInst &Inst,
   return S;
 }
 
+// Check for UNPREDICTABLE predicated ESB instruction
+static DecodeStatus DecodeHINTInstruction(MCInst &Inst, unsigned Insn,
+                                 uint64_t Address, const void *Decoder) {
+  unsigned pred = fieldFromInstruction(Insn, 28, 4);
+  unsigned imm8 = fieldFromInstruction(Insn, 0, 8);
+  const MCDisassembler *Dis = static_cast<const MCDisassembler*>(Decoder);
+  const FeatureBitset &FeatureBits = Dis->getSubtargetInfo().getFeatureBits();
+
+  DecodeStatus S = MCDisassembler::Success;
+
+  Inst.addOperand(MCOperand::createImm(imm8));
+
+  if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  // ESB is unpredictable if pred != AL. Without the RAS extension, it is a NOP,
+  // so all predicates should be allowed.
+  if (imm8 == 0x10 && pred != 0xe && ((FeatureBits[ARM::FeatureRAS]) != 0))
+    S = MCDisassembler::SoftFail;
+
+  return S;
+}
+
 static DecodeStatus DecodeCPSInstruction(MCInst &Inst, unsigned Insn,
                                  uint64_t Address, const void *Decoder) {
   unsigned imod = fieldFromInstruction(Insn, 18, 2);
@@ -2183,6 +2216,7 @@ static DecodeStatus DecodeAddrMode5Operand(MCInst &Inst, unsigned Val,
   DecodeStatus S = MCDisassembler::Success;
 
   unsigned Rn = fieldFromInstruction(Val, 9, 4);
+  // U == 1 to add imm, 0 to subtract it.
   unsigned U = fieldFromInstruction(Val, 8, 1);
   unsigned imm = fieldFromInstruction(Val, 0, 8);
 
@@ -2193,6 +2227,26 @@ static DecodeStatus DecodeAddrMode5Operand(MCInst &Inst, unsigned Val,
     Inst.addOperand(MCOperand::createImm(ARM_AM::getAM5Opc(ARM_AM::add, imm)));
   else
     Inst.addOperand(MCOperand::createImm(ARM_AM::getAM5Opc(ARM_AM::sub, imm)));
+
+  return S;
+}
+
+static DecodeStatus DecodeAddrMode5FP16Operand(MCInst &Inst, unsigned Val,
+                                   uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
+
+  unsigned Rn = fieldFromInstruction(Val, 9, 4);
+  // U == 1 to add imm, 0 to subtract it.
+  unsigned U = fieldFromInstruction(Val, 8, 1);
+  unsigned imm = fieldFromInstruction(Val, 0, 8);
+
+  if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
+    return MCDisassembler::Fail;
+
+  if (U)
+    Inst.addOperand(MCOperand::createImm(ARM_AM::getAM5FP16Opc(ARM_AM::add, imm)));
+  else
+    Inst.addOperand(MCOperand::createImm(ARM_AM::getAM5FP16Opc(ARM_AM::sub, imm)));
 
   return S;
 }
@@ -4096,6 +4150,24 @@ static DecodeStatus DecodeMSRMask(MCInst &Inst, unsigned Val,
         // Values basepri, basepri_max and faultmask are only valid for v7m.
         return MCDisassembler::Fail;
       break;
+    case 0x8a: // msplim_ns
+    case 0x8b: // psplim_ns
+    case 0x91: // basepri_ns
+    case 0x92: // basepri_max_ns
+    case 0x93: // faultmask_ns
+      if (!(FeatureBits[ARM::HasV8MMainlineOps]))
+        return MCDisassembler::Fail;
+      // fall through
+    case 10:   // msplim
+    case 11:   // psplim
+    case 0x88: // msp_ns
+    case 0x89: // psp_ns
+    case 0x90: // primask_ns
+    case 0x94: // control_ns
+    case 0x98: // sp_ns
+      if (!(FeatureBits[ARM::Feature8MSecExt]))
+        return MCDisassembler::Fail;
+      break;
     default:
       return MCDisassembler::Fail;
     }
@@ -5193,8 +5265,8 @@ static DecodeStatus DecodeLDR(MCInst &Inst, unsigned Val,
   return S;
 }
 
-static DecodeStatus DecodeMRRC2(llvm::MCInst &Inst, unsigned Val,
-                                uint64_t Address, const void *Decoder) {
+static DecodeStatus DecoderForMRRC2AndMCRR2(llvm::MCInst &Inst, unsigned Val,
+                                            uint64_t Address, const void *Decoder) {
 
   DecodeStatus S = MCDisassembler::Success;
 
@@ -5210,12 +5282,30 @@ static DecodeStatus DecodeMRRC2(llvm::MCInst &Inst, unsigned Val,
   if (Rt == Rt2)
     S = MCDisassembler::SoftFail;
 
+  // We have to check if the instruction is MRRC2
+  // or MCRR2 when constructing the operands for
+  // Inst. Reason is because MRRC2 stores to two
+  // registers so it's tablegen desc has has two
+  // outputs whereas MCRR doesn't store to any
+  // registers so all of it's operands are listed
+  // as inputs, therefore the operand order for
+  // MRRC2 needs to be [Rt, Rt2, cop, opc1, CRm]
+  // and MCRR2 operand order is [cop, opc1, Rt, Rt2, CRm]
+
+  if (Inst.getOpcode() == ARM::MRRC2) {
+    if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt, Address, Decoder)))
+      return MCDisassembler::Fail;
+    if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt2, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
   Inst.addOperand(MCOperand::createImm(cop));
   Inst.addOperand(MCOperand::createImm(opc1));
-  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt, Address, Decoder)))
-    return MCDisassembler::Fail;
-  if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt2, Address, Decoder)))
-    return MCDisassembler::Fail;
+  if (Inst.getOpcode() == ARM::MCRR2) {
+    if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt, Address, Decoder)))
+      return MCDisassembler::Fail;
+    if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rt2, Address, Decoder)))
+      return MCDisassembler::Fail;
+  }
   Inst.addOperand(MCOperand::createImm(CRm));
 
   return S;

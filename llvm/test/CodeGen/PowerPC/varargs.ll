@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=powerpc-apple-darwin | FileCheck -check-prefix=P32 %s
-; RUN: llc < %s -mtriple=powerpc64-apple-darwin | FileCheck -check-prefix=P64 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin | FileCheck -check-prefix=P32 %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-apple-darwin | FileCheck -check-prefix=P64 %s
 
 ; PR8327
 define i8* @test1(i8** %foo) nounwind {

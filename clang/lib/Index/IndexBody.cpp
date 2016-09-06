@@ -147,13 +147,10 @@ public:
   }
 
   bool VisitDesignatedInitExpr(DesignatedInitExpr *E) {
-    for (DesignatedInitExpr::reverse_designators_iterator
-           D = E->designators_rbegin(), DEnd = E->designators_rend();
-           D != DEnd; ++D) {
-      if (D->isFieldDesignator())
-        return IndexCtx.handleReference(D->getField(), D->getFieldLoc(),
-                                        Parent, ParentDC, SymbolRoleSet(),
-                                        {}, E);
+    for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {
+      if (D.isFieldDesignator() && D.getField())
+        return IndexCtx.handleReference(D.getField(), D.getFieldLoc(), Parent,
+                                        ParentDC, SymbolRoleSet(), {}, E);
     }
     return true;
   }
@@ -311,11 +308,9 @@ public:
       bool shouldWalkTypesOfTypeLocs() const { return false; }
 
       bool VisitDesignatedInitExpr(DesignatedInitExpr *E) {
-        for (DesignatedInitExpr::reverse_designators_iterator
-               D = E->designators_rbegin(), DEnd = E->designators_rend();
-               D != DEnd; ++D) {
-          if (D->isFieldDesignator())
-            return IndexCtx.handleReference(D->getField(), D->getFieldLoc(),
+        for (DesignatedInitExpr::Designator &D : llvm::reverse(E->designators())) {
+          if (D.isFieldDesignator())
+            return IndexCtx.handleReference(D.getField(), D.getFieldLoc(),
                                             Parent, ParentDC, SymbolRoleSet(),
                                             {}, E);
         }

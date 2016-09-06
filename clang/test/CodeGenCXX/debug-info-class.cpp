@@ -90,6 +90,15 @@ int main(int argc, char **argv) {
 // CHECK: invoke {{.+}} @_ZN1BD1Ev(%class.B* %b)
 // CHECK-NEXT: unwind label %{{.+}}, !dbg ![[EXCEPTLOC:.*]]
 // CHECK: store i32 0, i32* %{{.+}}, !dbg ![[RETLOC:.*]]
+
+// CHECK: [[F:![0-9]*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "F"
+// CHECK-SAME:                             DIFlagFwdDecl
+// CHECK-SAME:                             identifier: "_ZTS1F"
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "I"
+// CHECK-NOT:              DIFlagFwdDecl
+// CHECK-SAME:             ){{$}}
+
+// CHECK: ![[INT:[0-9]+]] = !DIBasicType(name: "int"
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "bar"
 // CHECK: !DICompositeType(tag: DW_TAG_union_type, name: "baz"
@@ -99,12 +108,10 @@ int main(int argc, char **argv) {
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "_vptr$B",
 // CHECK-SAME:           DIFlagArtificial
 
-// CHECK: ![[INT:[0-9]+]] = !DIBasicType(name: "int"
-
-// CHECK: [[C:![0-9]*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "C",
+// CHECK: [[C:![0-9]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "C",
 // CHECK-NOT:                              DIFlagFwdDecl
 // CHECK-SAME:                             elements: [[C_MEM:![0-9]*]]
-// CHECK-SAME:                             vtableHolder: !"_ZTS1C"
+// CHECK-SAME:                             vtableHolder: [[C]]
 // CHECK-SAME:                             identifier: "_ZTS1C"
 // CHECK: [[C_MEM]] = !{[[C_VPTR:![0-9]*]], [[C_S:![0-9]*]], [[C_DTOR:![0-9]*]]}
 // CHECK: [[C_VPTR]] = !DIDerivedType(tag: DW_TAG_member, name: "_vptr$C"
@@ -114,39 +121,33 @@ int main(int argc, char **argv) {
 // CHECK-SAME:                     DIFlagStaticMember
 // CHECK: [[C_DTOR]] = !DISubprogram(name: "~C"
 
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "D"
+// CHECK: [[D:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "D"
 // CHECK-SAME:             DIFlagFwdDecl
 // CHECK-SAME:             identifier: "_ZTS1D"
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "E"
 // CHECK-SAME:             DIFlagFwdDecl
 // CHECK-SAME:             identifier: "_ZTS1E"
-// CHECK: [[F:![0-9]*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "F"
-// CHECK-SAME:                             DIFlagFwdDecl
-// CHECK-SAME:                             identifier: "_ZTS1F"
+
+// CHECK: !DISubprogram(name: "func",{{.*}} scope: [[D]]
+// CHECK-SAME:          isDefinition: true
+// CHECK-SAME:          declaration: [[D_FUNC_DECL:![0-9]*]]
+// CHECK: [[D_FUNC_DECL]] = !DISubprogram(name: "func",{{.*}} scope: [[D]]
+// CHECK-SAME:                            isDefinition: false
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "inner",{{.*}} line: 50
+// CHECK-NOT: DIFlagFwdDecl
+// CHECK-SAME: elements: [[G_INNER_MEM:![0-9]*]]
+// CHECK-SAME: identifier: "_ZTSN1G5innerE"
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "G"
 // CHECK-SAME:             DIFlagFwdDecl
 // CHECK-SAME:             identifier: "_ZTS1G"
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "inner"
-// CHECK: line: 50
-// CHECK-NOT: DIFlagFwdDecl
-// CHECK-SAME: elements: [[G_INNER_MEM:![0-9]*]]
-// CHECK-SAME: identifier: "_ZTSN1G5innerE"
 // CHECK: [[G_INNER_MEM]] = !{[[G_INNER_I:![0-9]*]]}
 // CHECK: [[G_INNER_I]] = !DIDerivedType(tag: DW_TAG_member, name: "j"
 // CHECK-SAME:                           baseType: ![[INT]]
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "A"
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "HdrSize"
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "I"
-// CHECK-NOT:              DIFlagFwdDecl
-// CHECK-SAME:             ){{$}}
 //
-// CHECK: !DISubprogram(name: "func",{{.*}} scope: !"_ZTS1D"
-// CHECK-SAME:          isDefinition: true
-// CHECK-SAME:          declaration: [[D_FUNC_DECL:![0-9]*]]
-// CHECK: [[D_FUNC_DECL]] = !DISubprogram(name: "func",{{.*}} scope: !"_ZTS1D"
-// CHECK-SAME:                            isDefinition: false
-
 // CHECK: ![[EXCEPTLOC]] = !DILocation(line: 84,
 // CHECK: ![[RETLOC]] = !DILocation(line: 83,
