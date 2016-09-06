@@ -111,6 +111,7 @@ namespace process_linux {
             uint32_t num_gpr_registers;
             uint32_t num_fpr_registers;
             uint32_t num_avx_registers;
+            uint32_t num_mpx_registers;
 
             uint32_t last_gpr;
             uint32_t first_fpr;
@@ -124,6 +125,10 @@ namespace process_linux {
             uint32_t last_xmm;
             uint32_t first_ymm;
             uint32_t last_ymm;
+            uint32_t first_mpxr;
+            uint32_t last_mpxr;
+            uint32_t first_mpxc;
+            uint32_t last_mpxc;
 
             uint32_t first_dr;
             uint32_t gpr_flags;
@@ -134,6 +139,7 @@ namespace process_linux {
         FPR m_fpr;
         IOVEC m_iovec;
         YMM m_ymm_set;
+        MPX m_mpx_set;
         RegInfo m_reg_info;
         uint64_t m_gpr_x86_64[k_num_gpr_registers_x86_64];
         uint32_t m_fctrl_offset_in_userarea;
@@ -160,7 +166,16 @@ namespace process_linux {
         CopyYMMtoXSTATE(uint32_t reg, lldb::ByteOrder byte_order);
 
         bool
-        IsAVX (uint32_t reg_index) const;
+        CopyXSTATEtoMPX(uint32_t reg);
+
+        bool
+        CopyMPXtoXSTATE(uint32_t reg);
+
+        bool
+        IsAVX(uint32_t reg_index) const;
+
+        bool
+        IsMPX(uint32_t reg_index) const;
     };
 
 } // namespace process_linux

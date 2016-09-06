@@ -84,7 +84,10 @@ public:
 
     const lldb_private::RegisterInfo *
     GetRegisterInfoArray(uint32_t &count) override;
-
+    
+    bool
+    GetPointerReturnRegister (const char *&name) override;
+    
     //------------------------------------------------------------------
     // Static Functions
     //------------------------------------------------------------------

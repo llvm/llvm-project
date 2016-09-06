@@ -59,7 +59,6 @@ class TestGdbRemoteExitCode(GdbRemoteTestCaseBase):
         self.start_inferior()
 
     @llgs_test
-    @expectedFailureAll(bugnumber="llvm.org/pr30271")
     def test_start_inferior_llgs(self):
         self.init_llgs_test()
         self.build()
@@ -119,7 +118,6 @@ class TestGdbRemoteExitCode(GdbRemoteTestCaseBase):
         self.inferior_exit_42()
 
     @llgs_test
-    @expectedFailureAll(bugnumber="llvm.org/pr30271")
     def test_inferior_exit_42_llgs(self):
         self.init_llgs_test()
         self.build()

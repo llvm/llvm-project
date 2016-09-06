@@ -12,6 +12,9 @@ set(POLLY_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
 set(POLLY_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/..")
 set(LLVM_SHLIBEXT "${CMAKE_SHARED_MODULE_SUFFIX}")
 
+add_custom_target(check-polly)
+set_target_properties(check-polly PROPERTIES FOLDER "Polly")
+
 if (NOT DEFINED LLVM_MAIN_SRC_DIR)
 
   # We are building polly out of tree, adjust the settings.
@@ -67,7 +70,7 @@ if (NOT DEFINED LLVM_MAIN_SRC_DIR)
       set_target_properties(polly-test-${testdir} PROPERTIES FOLDER "Polly")
     endforeach()
 
-    add_custom_target(check-polly
+    add_custom_target(check-polly-tests
       COMMAND ${LLVM_LIT}
                   --param polly_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
                   --param polly_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
@@ -76,7 +79,8 @@ if (NOT DEFINED LLVM_MAIN_SRC_DIR)
                   ${CMAKE_CURRENT_BINARY_DIR}
                   DEPENDS ${POLLY_TEST_DEPS}
                   COMMENT "Running Polly regression/unit tests")
-    set_target_properties(check-polly PROPERTIES FOLDER "Polly")
+    set_target_properties(check-polly-tests PROPERTIES FOLDER "Polly")
+    add_dependencies(check-polly check-polly-tests)
 
     if (POLLY_GTEST_AVAIL)
       configure_file(
@@ -113,14 +117,14 @@ else (NOT DEFINED LLVM_MAIN_SRC_DIR)
     ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
 
   # Run regression and unit tests
-  add_lit_testsuite(check-polly "Running polly regression tests"
+  add_lit_testsuite(check-polly-tests "Running polly regression tests"
     ${CMAKE_CURRENT_BINARY_DIR}
     PARAMS polly_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
            polly_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
     DEPENDS ${POLLY_TEST_DEPS}
     )
-
-  set_target_properties(check-polly PROPERTIES FOLDER "Polly")
+  set_target_properties(check-polly-tests PROPERTIES FOLDER "Polly")
+  add_dependencies(check-polly check-polly-tests)
 
   if (POLLY_GTEST_AVAIL)
     configure_lit_site_cfg(

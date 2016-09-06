@@ -182,6 +182,37 @@ public:
     
     uint32_t
     GetData (DataExtractor &data);
+    
+    struct Operand
+    {
+        enum class Type {
+            Invalid = 0,
+            Register,
+            Immediate,
+            Dereference,
+            Sum,
+            Product
+        } m_type = Type::Invalid;
+        std::vector<const Operand> m_children;
+        lldb::addr_t m_immediate = 0;
+        ConstString m_register;
+        bool m_negative = false;
+        bool m_clobbered = false;
+        
+        bool IsValid() { return m_type != Type::Invalid; }
+    };
+    
+    virtual bool
+    ParseOperands (llvm::SmallVectorImpl<Operand> &operands)
+    {
+        return false;
+    }
+    
+    virtual bool
+    IsCall ()
+    {
+        return false;
+    }
 
 protected:
     Address m_address; // The section offset address of this instruction

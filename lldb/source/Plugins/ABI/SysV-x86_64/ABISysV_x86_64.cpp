@@ -95,7 +95,11 @@ enum dwarf_regnums
     dwarf_ymm12,
     dwarf_ymm13,
     dwarf_ymm14,
-    dwarf_ymm15
+    dwarf_ymm15,
+    dwarf_bnd0 = 126,
+    dwarf_bnd1,
+    dwarf_bnd2,
+    dwarf_bnd3
 };
 
 static RegisterInfo g_register_infos[] = 
@@ -174,7 +178,13 @@ static RegisterInfo g_register_infos[] =
     { "ymm12" , nullptr,32,  0, eEncodingVector, eFormatVectorOfUInt8, {     dwarf_ymm12     ,     dwarf_ymm12     , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr, nullptr, 0 },
     { "ymm13" , nullptr,32,  0, eEncodingVector, eFormatVectorOfUInt8, {     dwarf_ymm13     ,     dwarf_ymm13     , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr, nullptr, 0 },
     { "ymm14" , nullptr,32,  0, eEncodingVector, eFormatVectorOfUInt8, {     dwarf_ymm14     ,     dwarf_ymm14     , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr, nullptr, 0 },
-    { "ymm15" , nullptr,32,  0, eEncodingVector, eFormatVectorOfUInt8, {     dwarf_ymm15     ,     dwarf_ymm15     , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr, nullptr, 0 }
+    { "ymm15" , nullptr,32,  0, eEncodingVector, eFormatVectorOfUInt8, {     dwarf_ymm15     ,     dwarf_ymm15     , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr, nullptr, 0 },
+    { "bnd0"  , nullptr,16,  0, eEncodingVector, eFormatVectorOfUInt64,{     dwarf_bnd0      ,     dwarf_bnd0      , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr, nullptr, 0 },
+    { "bnd1"  , nullptr,16,  0, eEncodingVector, eFormatVectorOfUInt64,{     dwarf_bnd1      ,     dwarf_bnd1      , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr, nullptr, 0 },
+    { "bnd2"  , nullptr,16,  0, eEncodingVector, eFormatVectorOfUInt64,{     dwarf_bnd2      ,     dwarf_bnd2      , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr, nullptr, 0 },
+    { "bnd3"  , nullptr,16,  0, eEncodingVector, eFormatVectorOfUInt64,{     dwarf_bnd3      ,     dwarf_bnd3      , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr, nullptr, 0 },
+    { "bndcfgu", nullptr,8,  0, eEncodingVector, eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM , LLDB_INVALID_REGNUM , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr, nullptr, 0 },
+    { "bndstatus", nullptr,8,  0, eEncodingVector, eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM , LLDB_INVALID_REGNUM , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, nullptr, nullptr, nullptr, 0 }
 };
 
 static const uint32_t k_num_register_infos = llvm::array_lengthof(g_register_infos);
@@ -199,6 +209,13 @@ ABISysV_x86_64::GetRegisterInfoArray (uint32_t &count)
     }
     count = k_num_register_infos;
     return g_register_infos;
+}
+
+bool
+ABISysV_x86_64::GetPointerReturnRegister (const char *&name)
+{
+    name = "rax";
+    return true;
 }
 
 size_t
