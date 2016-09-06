@@ -865,7 +865,7 @@ define <4 x double> @test16(double* %base, <4 x i32> %ind, <4 x i1> %mask, <4 x 
 ; KNL_32-NEXT:    vinserti64x4 $0, %ymm1, %zmm3, %zmm1
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vpmovsxdq %ymm0, %zmm0
-; KNL_32-NEXT:    vpsllvq {{\.LCPI.*}}, %zmm1, %zmm1
+; KNL_32-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL_32-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL_32-NEXT:    vgatherqpd (%eax,%zmm0,8), %zmm2 {%k1}
 ; KNL_32-NEXT:    vmovapd %ymm2, %ymm0
@@ -915,7 +915,7 @@ define <2 x double> @test17(double* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x 
 ; KNL_32-NEXT:    vpxord %zmm3, %zmm3, %zmm3
 ; KNL_32-NEXT:    vinserti32x4 $0, %xmm1, %zmm3, %zmm1
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL_32-NEXT:    vpsllvq {{\.LCPI.*}}, %zmm1, %zmm1
+; KNL_32-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL_32-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL_32-NEXT:    vgatherqpd (%eax,%zmm0,8), %zmm2 {%k1}
 ; KNL_32-NEXT:    vmovapd %xmm2, %xmm0
@@ -1020,7 +1020,7 @@ define void @test19(<4 x double>%a1, double* %ptr, <4 x i1>%mask, <4 x i64> %ind
 ; KNL_32-NEXT:    vpxord %zmm3, %zmm3, %zmm3
 ; KNL_32-NEXT:    vinserti64x4 $0, %ymm1, %zmm3, %zmm1
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL_32-NEXT:    vpsllvq {{\.LCPI.*}}, %zmm1, %zmm1
+; KNL_32-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL_32-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL_32-NEXT:    vscatterqpd %zmm0, (%eax,%zmm2,8) {%k1}
 ; KNL_32-NEXT:    retl
@@ -1117,7 +1117,7 @@ define void @test21(<2 x i32>%a1, <2 x i32*> %ptr, <2 x i1>%mask) {
 ; KNL_32-NEXT:    vpxord %zmm3, %zmm3, %zmm3
 ; KNL_32-NEXT:    vinserti32x4 $0, %xmm2, %zmm3, %zmm2
 ; KNL_32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; KNL_32-NEXT:    vpsllvq {{\.LCPI.*}}, %zmm2, %zmm2
+; KNL_32-NEXT:    vpsllq $63, %zmm2, %zmm2
 ; KNL_32-NEXT:    vptestmq %zmm2, %zmm2, %k1
 ; KNL_32-NEXT:    vpscatterqd %ymm0, (,%zmm1) {%k1}
 ; KNL_32-NEXT:    retl
@@ -1236,7 +1236,7 @@ define <2 x i32> @test23(i32* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i32> %
 ; KNL_32-NEXT:    vpxord %zmm3, %zmm3, %zmm3
 ; KNL_32-NEXT:    vinserti32x4 $0, %xmm1, %zmm3, %zmm1
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL_32-NEXT:    vpsllvq {{\.LCPI.*}}, %zmm1, %zmm1
+; KNL_32-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL_32-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL_32-NEXT:    vpgatherqq (%eax,%zmm0,8), %zmm2 {%k1}
 ; KNL_32-NEXT:    vmovdqa %xmm2, %xmm0
@@ -1280,7 +1280,7 @@ define <2 x i32> @test24(i32* %base, <2 x i32> %ind) {
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vpxord %zmm1, %zmm1, %zmm1
 ; KNL_32-NEXT:    vinserti32x4 $0, {{\.LCPI.*}}, %zmm1, %zmm1
-; KNL_32-NEXT:    vpsllvq {{\.LCPI.*}}, %zmm1, %zmm1
+; KNL_32-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL_32-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL_32-NEXT:    vpgatherqq (%eax,%zmm0,8), %zmm1 {%k1}
 ; KNL_32-NEXT:    vmovdqa %xmm1, %xmm0
@@ -1327,7 +1327,7 @@ define <2 x i64> @test25(i64* %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i64> %
 ; KNL_32-NEXT:    vpxord %zmm3, %zmm3, %zmm3
 ; KNL_32-NEXT:    vinserti32x4 $0, %xmm1, %zmm3, %zmm1
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL_32-NEXT:    vpsllvq {{\.LCPI.*}}, %zmm1, %zmm1
+; KNL_32-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL_32-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL_32-NEXT:    vpgatherqq (%eax,%zmm0,8), %zmm2 {%k1}
 ; KNL_32-NEXT:    vmovdqa %xmm2, %xmm0
@@ -1374,7 +1374,7 @@ define <2 x i64> @test26(i64* %base, <2 x i32> %ind, <2 x i64> %src0) {
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; KNL_32-NEXT:    vinserti32x4 $0, {{\.LCPI.*}}, %zmm2, %zmm2
-; KNL_32-NEXT:    vpsllvq {{\.LCPI.*}}, %zmm2, %zmm2
+; KNL_32-NEXT:    vpsllq $63, %zmm2, %zmm2
 ; KNL_32-NEXT:    vptestmq %zmm2, %zmm2, %k1
 ; KNL_32-NEXT:    vpgatherqq (%eax,%zmm0,8), %zmm1 {%k1}
 ; KNL_32-NEXT:    vmovdqa %xmm1, %xmm0
@@ -1465,7 +1465,7 @@ define void @test28(<2 x i32>%a1, <2 x i32*> %ptr) {
 ; KNL_32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; KNL_32-NEXT:    vpxord %zmm2, %zmm2, %zmm2
 ; KNL_32-NEXT:    vinserti32x4 $0, {{\.LCPI.*}}, %zmm2, %zmm2
-; KNL_32-NEXT:    vpsllvq {{\.LCPI.*}}, %zmm2, %zmm2
+; KNL_32-NEXT:    vpsllq $63, %zmm2, %zmm2
 ; KNL_32-NEXT:    vptestmq %zmm2, %zmm2, %k1
 ; KNL_32-NEXT:    vpscatterqd %ymm0, (,%zmm1) {%k1}
 ; KNL_32-NEXT:    retl
