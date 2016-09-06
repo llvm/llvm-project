@@ -433,7 +433,7 @@ protected:
     uint16_t IsInvariant : 1;
     uint16_t Ordering : 4;   // enum AtomicOrdering
   };
-  enum { NumMemSDNodeBits = NumSDNodeBits + 8 };
+  enum { NumMemSDNodeBits = NumSDNodeBits + 7 };
 
   class LSBaseSDNodeBitfields {
     friend class LSBaseSDNode;
@@ -1074,9 +1074,8 @@ protected:
   /// Memory reference information.
   MachineMemOperand *MMO;
 
-  /// The synchronization scope of this atomic operation. Not quite enough room
-  /// in SubclassData for everything, so synchronization scope gets its own
-  /// field.
+  /// The synchronization scope of this memory operation. Not quite enough room
+  /// in SubclassData for everything, so synch scope gets its own field.
   SynchronizationScope SynchScope;
 
 public:
@@ -1111,12 +1110,12 @@ public:
   bool isNonTemporal() const { return MemSDNodeBits.IsNonTemporal; }
   bool isInvariant() const { return MemSDNodeBits.IsInvariant; }
 
-  /// Returns the ordering of this atomic operation.
+  /// Returns the atomic ordering requirements for this memory operation.
   AtomicOrdering getOrdering() const {
     return static_cast<AtomicOrdering>(MemSDNodeBits.Ordering);
   }
 
-  /// Returns the synchronization scope of this atomic operation.
+  /// Returns the synchronization scope for this memory operation.
   SynchronizationScope getSynchScope() const {
     return SynchScope;
   }
@@ -1192,9 +1191,9 @@ public:
 
 /// This is an SDNode representing atomic operations.
 class AtomicSDNode : public MemSDNode {
-  /// For cmpxchg operations, the ordering requirements when a store does not
-  /// occur. Not quite enough room in SubclassData for everything, so failure
-  /// gets its own field.
+  /// For cmpxchg atomic operations, the atomic ordering requirements when store
+  /// does not occur. Not quite enough room in SubclassData for everything, so
+  /// failure ordering gets its own field.
   AtomicOrdering FailureOrdering;
 
   void InitAtomic(AtomicOrdering SuccessOrdering,
@@ -1218,14 +1217,14 @@ public:
   const SDValue &getBasePtr() const { return getOperand(1); }
   const SDValue &getVal() const { return getOperand(2); }
 
-  /// For cmpxchg operations, returns the ordering requirements when store
-  /// occurs.
+  /// For cmpxchg atomic operations, returns the atomic ordering requirements
+  /// when store occurs.
   AtomicOrdering getSuccessOrdering() const {
     return getOrdering();
   }
 
-  /// For cmpxchg operations, returns the ordering requirements when store does
-  /// not occur.
+  /// For cmpxchg atomic operations, returns the atomic ordering requirements
+  /// when store does not occur.
   AtomicOrdering getFailureOrdering() const {
     return FailureOrdering;
   }
