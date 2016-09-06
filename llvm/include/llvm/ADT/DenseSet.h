@@ -168,12 +168,11 @@ public:
   template <typename LookupKeyT>
   std::pair<iterator, bool> insert_as(const ValueT &V,
                                       const LookupKeyT &LookupKey) {
-    return insert_as(ValueT(V), LookupKey);
+    return TheMap.insert_as({V, detail::DenseSetEmpty()}, LookupKey);
   }
   template <typename LookupKeyT>
   std::pair<iterator, bool> insert_as(ValueT &&V, const LookupKeyT &LookupKey) {
-    detail::DenseSetEmpty Empty;
-    return TheMap.insert_as(std::make_pair(std::move(V), Empty), LookupKey);
+    return TheMap.insert_as({std::move(V), detail::DenseSetEmpty()}, LookupKey);
   }
 
   // Range insertion of values.

@@ -1566,7 +1566,6 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo (StringExtractorGDBRemote
         case eFormatVectorOfSInt32:  response.PutCString ("format:vector-sint32;"); break;
         case eFormatVectorOfUInt32:  response.PutCString ("format:vector-uint32;"); break;
         case eFormatVectorOfFloat32: response.PutCString ("format:vector-float32;"); break;
-        case eFormatVectorOfUInt64:  response.PutCString ("format:vector-uint64;"); break;
         case eFormatVectorOfUInt128: response.PutCString ("format:vector-uint128;"); break;
         default: break;
     };

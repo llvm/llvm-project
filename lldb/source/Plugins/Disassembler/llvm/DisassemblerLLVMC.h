@@ -55,6 +55,7 @@ class DisassemblerLLVMC : public lldb_private::Disassembler
         void     SetStyle (bool use_hex_immed, HexImmediateStyle hex_style);
         bool     CanBranch (llvm::MCInst &mc_inst);
         bool     HasDelaySlot (llvm::MCInst &mc_inst);
+        bool     IsCall (llvm::MCInst &mc_inst);
         bool     IsValid()
         {
             return m_is_valid;

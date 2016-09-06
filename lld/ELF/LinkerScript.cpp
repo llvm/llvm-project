@@ -621,8 +621,9 @@ private:
   void readVersionScriptCommand();
 
   SymbolAssignment *readAssignment(StringRef Name);
+  std::vector<uint8_t> readFill();
   OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
-  std::vector<uint8_t> readOutputSectionFiller();
+  std::vector<uint8_t> readOutputSectionFiller(StringRef Tok);
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
   Regex readFilePatterns();
@@ -980,6 +981,14 @@ Expr ScriptParser::readAssert() {
   };
 }
 
+std::vector<uint8_t> ScriptParser::readFill() {
+  expect("(");
+  std::vector<uint8_t> V = readOutputSectionFiller(next());
+  expect(")");
+  expect(";");
+  return V;
+}
+
 OutputSectionCommand *
 ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd = new OutputSectionCommand(OutSec);
@@ -1009,6 +1018,8 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
     StringRef Tok = next();
     if (SymbolAssignment *Assignment = readProvideOrAssignment(Tok))
       Cmd->Commands.emplace_back(Assignment);
+    else if (Tok == "FILL")
+      Cmd->Filler = readFill();
     else if (Tok == "SORT")
       readSort();
     else if (peek() == "(")
@@ -1017,7 +1028,8 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
       setError("unknown command " + Tok);
   }
   Cmd->Phdrs = readOutputSectionPhdrs();
-  Cmd->Filler = readOutputSectionFiller();
+  if (peek().startswith("="))
+    Cmd->Filler = readOutputSectionFiller(next().drop_front());
   return Cmd;
 }
 
@@ -1028,13 +1040,9 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 // hexstrings as blobs of arbitrary sizes, while ld.gold handles them
 // as 32-bit big-endian values. We will do the same as ld.gold does
 // because it's simpler than what ld.bfd does.
-std::vector<uint8_t> ScriptParser::readOutputSectionFiller() {
-  if (!peek().startswith("="))
-    return {};
-
-  StringRef Tok = next();
+std::vector<uint8_t> ScriptParser::readOutputSectionFiller(StringRef Tok) {
   uint32_t V;
-  if (Tok.substr(1).getAsInteger(0, V)) {
+  if (Tok.getAsInteger(0, V)) {
     setError("invalid filler expression: " + Tok);
     return {};
   }

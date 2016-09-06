@@ -283,8 +283,9 @@ static bool needsPlt(RelExpr Expr) {
 // True if this expression is of the form Sym - X, where X is a position in the
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr Expr) {
-  return Expr == R_PC || Expr == R_GOTREL || Expr == R_PAGE_PC ||
-         Expr == R_RELAX_GOT_PC || Expr == R_THUNK_PC || Expr == R_THUNK_PLT_PC;
+  return Expr == R_PC || Expr == R_GOTREL || Expr == R_GOTREL_FROM_END ||
+         Expr == R_PAGE_PC || Expr == R_RELAX_GOT_PC || Expr == R_THUNK_PC ||
+         Expr == R_THUNK_PLT_PC;
 }
 
 template <class ELFT>

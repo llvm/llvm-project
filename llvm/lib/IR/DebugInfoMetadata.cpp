@@ -65,29 +65,28 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                    Storage, Context.pImpl->DILocations);
 }
 
-unsigned DINode::getFlag(StringRef Flag) {
-  return StringSwitch<unsigned>(Flag)
+DINode::DIFlags DINode::getFlag(StringRef Flag) {
+  return StringSwitch<DIFlags>(Flag)
 #define HANDLE_DI_FLAG(ID, NAME) .Case("DIFlag" #NAME, Flag##NAME)
 #include "llvm/IR/DebugInfoFlags.def"
-      .Default(0);
+      .Default(DINode::FlagZero);
 }
 
-const char *DINode::getFlagString(unsigned Flag) {
+const char *DINode::getFlagString(DIFlags Flag) {
   switch (Flag) {
-  default:
-    return "";
 #define HANDLE_DI_FLAG(ID, NAME)                                               \
   case Flag##NAME:                                                             \
     return "DIFlag" #NAME;
 #include "llvm/IR/DebugInfoFlags.def"
   }
+  return "";
 }
 
-unsigned DINode::splitFlags(unsigned Flags,
-                            SmallVectorImpl<unsigned> &SplitFlags) {
+DINode::DIFlags DINode::splitFlags(DIFlags Flags,
+                                   SmallVectorImpl<DIFlags> &SplitFlags) {
   // Accessibility and member pointer flags need to be specially handled, since
   // they're packed together.
-  if (unsigned A = Flags & FlagAccessibility) {
+  if (DIFlags A = Flags & FlagAccessibility) {
     if (A == FlagPrivate)
       SplitFlags.push_back(FlagPrivate);
     else if (A == FlagProtected)
@@ -96,7 +95,7 @@ unsigned DINode::splitFlags(unsigned Flags,
       SplitFlags.push_back(FlagPublic);
     Flags &= ~A;
   }
-  if (unsigned R = Flags & FlagPtrToMemberRep) {
+  if (DIFlags R = Flags & FlagPtrToMemberRep) {
     if (R == FlagSingleInheritance)
       SplitFlags.push_back(FlagSingleInheritance);
     else if (R == FlagMultipleInheritance)
@@ -107,12 +106,11 @@ unsigned DINode::splitFlags(unsigned Flags,
   }
 
 #define HANDLE_DI_FLAG(ID, NAME)                                               \
-  if (unsigned Bit = Flags & ID) {                                             \
+  if (DIFlags Bit = Flags & Flag##NAME) {                                      \
     SplitFlags.push_back(Bit);                                                 \
     Flags &= ~Bit;                                                             \
   }
 #include "llvm/IR/DebugInfoFlags.def"
-
   return Flags;
 }
 
@@ -242,7 +240,7 @@ DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
 DIDerivedType *DIDerivedType::getImpl(
     LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
     unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
-    uint64_t AlignInBits, uint64_t OffsetInBits, unsigned Flags,
+    uint64_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
     Metadata *ExtraData, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIDerivedType,
@@ -257,7 +255,7 @@ DIDerivedType *DIDerivedType::getImpl(
 DICompositeType *DICompositeType::getImpl(
     LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
     unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
-    uint64_t AlignInBits, uint64_t OffsetInBits, unsigned Flags,
+    uint64_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
     Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
     Metadata *TemplateParams, MDString *Identifier, StorageType Storage,
     bool ShouldCreate) {
@@ -279,7 +277,7 @@ DICompositeType *DICompositeType::buildODRType(
     LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
     uint64_t SizeInBits, uint64_t AlignInBits, uint64_t OffsetInBits,
-    unsigned Flags, Metadata *Elements, unsigned RuntimeLang,
+    DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
     Metadata *VTableHolder, Metadata *TemplateParams) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
@@ -313,7 +311,7 @@ DICompositeType *DICompositeType::getODRType(
     LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
     uint64_t SizeInBits, uint64_t AlignInBits, uint64_t OffsetInBits,
-    unsigned Flags, Metadata *Elements, unsigned RuntimeLang,
+    DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
     Metadata *VTableHolder, Metadata *TemplateParams) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
@@ -335,9 +333,8 @@ DICompositeType *DICompositeType::getODRTypeIfExists(LLVMContext &Context,
   return Context.pImpl->DITypeMap->lookup(&Identifier);
 }
 
-DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context,
-                                            unsigned Flags, uint8_t CC,
-                                            Metadata *TypeArray,
+DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,
+                                            uint8_t CC, Metadata *TypeArray,
                                             StorageType Storage,
                                             bool ShouldCreate) {
   DEFINE_GETIMPL_LOOKUP(DISubroutineType, (Flags, CC, TypeArray));
@@ -414,7 +411,7 @@ DISubprogram *DISubprogram::getImpl(
     MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
     bool IsLocalToUnit, bool IsDefinition, unsigned ScopeLine,
     Metadata *ContainingType, unsigned Virtuality, unsigned VirtualIndex,
-    int ThisAdjustment, unsigned Flags, bool IsOptimized, Metadata *Unit,
+    int ThisAdjustment, DIFlags Flags, bool IsOptimized, Metadata *Unit,
     Metadata *TemplateParams, Metadata *Declaration, Metadata *Variables,
     StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
@@ -529,7 +526,7 @@ DIGlobalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
 DILocalVariable *DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope,
                                           MDString *Name, Metadata *File,
                                           unsigned Line, Metadata *Type,
-                                          unsigned Arg, unsigned Flags,
+                                          unsigned Arg, DIFlags Flags,
                                           StorageType Storage,
                                           bool ShouldCreate) {
   // 64K ought to be enough for any frontend.

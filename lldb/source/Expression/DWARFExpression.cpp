@@ -30,6 +30,8 @@
 #include "lldb/Host/Endian.h"
 #include "lldb/Host/Host.h"
 
+#include "lldb/Symbol/Function.h"
+
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -3336,3 +3338,149 @@ DWARFExpression::PrintDWARFLocationList(Stream &s,
         offset += loc_length;
     }
 }
+
+bool
+DWARFExpression::GetOpAndEndOffsets(StackFrame &frame, lldb::offset_t &op_offset, lldb::offset_t &end_offset)
+{
+    SymbolContext sc = frame.GetSymbolContext(eSymbolContextFunction);
+    if (!sc.function)
+    {
+        return false;
+    }
+
+    addr_t loclist_base_file_addr = sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+    if (loclist_base_file_addr == LLDB_INVALID_ADDRESS)
+    {
+        return false;
+    }
+    
+    addr_t pc_file_addr = frame.GetFrameCodeAddress().GetFileAddress();
+    lldb::offset_t opcodes_offset, opcodes_length;
+    if (!GetLocation(loclist_base_file_addr, pc_file_addr, opcodes_offset, opcodes_length))
+    {
+        return false;
+    }
+    
+    if (opcodes_length == 0)
+    {
+        return false;
+    }
+    
+    op_offset = opcodes_offset;
+    end_offset = opcodes_offset + opcodes_length;
+    return true;
+}
+
+bool
+DWARFExpression::IsRegister(StackFrame &frame,
+                            const RegisterInfo *&register_info)
+{
+    lldb::offset_t op_offset;
+    lldb::offset_t end_offset;
+    if (!GetOpAndEndOffsets(frame, op_offset, end_offset))
+    {
+        return false;
+    }
+
+    if (!m_data.ValidOffset(op_offset) || op_offset >= end_offset)
+    {
+        return false;
+    }
+    
+    RegisterContextSP reg_ctx_sp = frame.GetRegisterContext();
+    if (!reg_ctx_sp)
+    {
+        return false;
+    }
+    
+    DataExtractor opcodes = m_data;
+    uint8_t opcode = opcodes.GetU8(&op_offset);
+    
+    if (opcode >= DW_OP_reg0 && opcode <= DW_OP_breg31)
+    {
+        register_info = reg_ctx_sp->GetRegisterInfo(m_reg_kind, opcode - DW_OP_reg0);
+        return register_info != nullptr;
+    }
+    switch (opcode)
+    {
+        default:
+            return false;
+        case DW_OP_regx:
+        {
+            uint32_t reg_num = m_data.GetULEB128(&op_offset);
+            register_info = reg_ctx_sp->GetRegisterInfo(m_reg_kind, reg_num);
+            return register_info != nullptr;
+        }
+    }
+}
+
+bool
+DWARFExpression::IsDereferenceOfRegister(StackFrame &frame,
+                                         const RegisterInfo *&register_info,
+                                         int64_t &offset)
+{
+    lldb::offset_t op_offset;
+    lldb::offset_t end_offset;
+    if (!GetOpAndEndOffsets(frame, op_offset, end_offset))
+    {
+        return false;
+    }
+    
+    if (!m_data.ValidOffset(op_offset) || op_offset >= end_offset)
+    {
+        return false;
+    }
+    
+    RegisterContextSP reg_ctx_sp = frame.GetRegisterContext();
+    if (!reg_ctx_sp)
+    {
+        return false;
+    }
+    
+    DataExtractor opcodes = m_data;
+    uint8_t opcode = opcodes.GetU8(&op_offset);
+
+    switch (opcode)
+    {
+    default:
+        return false;
+    case DW_OP_bregx:
+        {
+            uint32_t reg_num = static_cast<uint32_t>(opcodes.GetULEB128(&op_offset));
+            int64_t breg_offset = opcodes.GetSLEB128(&op_offset);
+
+            const RegisterInfo *reg_info = reg_ctx_sp->GetRegisterInfo(m_reg_kind, reg_num);
+            if (!reg_info)
+            {
+                return false;
+            }
+            
+            register_info = reg_info;
+            offset = breg_offset;
+            return true;
+        }
+    case DW_OP_fbreg:
+        {
+            int64_t fbreg_offset = opcodes.GetSLEB128(&op_offset);
+
+            DWARFExpression *dwarf_expression = frame.GetFrameBaseExpression(nullptr);
+            
+            if (!dwarf_expression)
+            {
+                return false;
+            }
+            
+            const RegisterInfo *fbr_info;
+            
+            if (!dwarf_expression->IsRegister(frame, fbr_info))
+            {
+                return false;
+            }
+            
+            register_info = fbr_info;
+            offset = fbreg_offset;
+            return true;
+        }
+    }
+}
+

@@ -55,27 +55,28 @@ TEST(DINodeTest, getFlagString) {
             DINode::getFlagString(DINode::FlagPublic | DINode::FlagVector));
   EXPECT_EQ(StringRef(), DINode::getFlagString(DINode::FlagFwdDecl |
                                                DINode::FlagArtificial));
-  EXPECT_EQ(StringRef(), DINode::getFlagString(0xffff));
+  EXPECT_EQ(StringRef(),
+            DINode::getFlagString(static_cast<DINode::DIFlags>(0xffff)));
 }
 
 TEST(DINodeTest, splitFlags) {
 // Some valid flags.
 #define CHECK_SPLIT(FLAGS, VECTOR, REMAINDER)                                  \
   {                                                                            \
-    SmallVector<unsigned, 8> V;                                                \
+    SmallVector<DINode::DIFlags, 8> V;                                         \
     EXPECT_EQ(REMAINDER, DINode::splitFlags(FLAGS, V));                        \
     EXPECT_TRUE(makeArrayRef(V).equals(VECTOR));                               \
   }
-  CHECK_SPLIT(DINode::FlagPublic, {DINode::FlagPublic}, 0u);
-  CHECK_SPLIT(DINode::FlagProtected, {DINode::FlagProtected}, 0u);
-  CHECK_SPLIT(DINode::FlagPrivate, {DINode::FlagPrivate}, 0u);
-  CHECK_SPLIT(DINode::FlagVector, {DINode::FlagVector}, 0u);
-  CHECK_SPLIT(DINode::FlagRValueReference, {DINode::FlagRValueReference}, 0u);
-  unsigned Flags[] = {DINode::FlagFwdDecl, DINode::FlagVector};
-  CHECK_SPLIT(DINode::FlagFwdDecl | DINode::FlagVector, Flags, 0u);
-  CHECK_SPLIT(0x200000u, {}, 0x200000u);
-  CHECK_SPLIT(0x200000u | DINode::FlagVector, {DINode::FlagVector}, 0x200000u);
-  CHECK_SPLIT(0x200000u | DINode::FlagNoReturn, {DINode::FlagNoReturn}, 0x200000u);
+  CHECK_SPLIT(DINode::FlagPublic, {DINode::FlagPublic}, DINode::FlagZero);
+  CHECK_SPLIT(DINode::FlagProtected, {DINode::FlagProtected}, DINode::FlagZero);
+  CHECK_SPLIT(DINode::FlagPrivate, {DINode::FlagPrivate}, DINode::FlagZero);
+  CHECK_SPLIT(DINode::FlagVector, {DINode::FlagVector}, DINode::FlagZero);
+  CHECK_SPLIT(DINode::FlagRValueReference, {DINode::FlagRValueReference},
+              DINode::FlagZero);
+  DINode::DIFlags Flags[] = {DINode::FlagFwdDecl, DINode::FlagVector};
+  CHECK_SPLIT(DINode::FlagFwdDecl | DINode::FlagVector, Flags,
+              DINode::FlagZero);
+  CHECK_SPLIT(DINode::FlagZero, {}, DINode::FlagZero);
 #undef CHECK_SPLIT
 }
 

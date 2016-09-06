@@ -1219,3 +1219,49 @@ StopInfo::GetExpressionVariable(StopInfoSP &stop_info_sp)
     else
         return ExpressionVariableSP();
 }
+
+lldb::ValueObjectSP
+StopInfo::GetCrashingDereference (StopInfoSP &stop_info_sp, lldb::addr_t *crashing_address)
+{
+    if (!stop_info_sp)
+    {
+        return ValueObjectSP();
+    }
+    
+    const char *description = stop_info_sp->GetDescription();
+    if (!description)
+    {
+        return ValueObjectSP();
+    }
+    
+    ThreadSP thread_sp = stop_info_sp->GetThread();
+    if (!thread_sp)
+    {
+        return ValueObjectSP();
+    }
+    
+    StackFrameSP frame_sp = thread_sp->GetSelectedFrame();
+    
+    if (!frame_sp)
+    {
+        return ValueObjectSP();
+    }
+
+    const char address_string[] = "address=";
+    
+    const char *address_loc = strstr(description, address_string);
+    if (!address_loc)
+    {
+        return ValueObjectSP();
+    }
+    
+    address_loc += (sizeof(address_string) - 1);
+    
+    uint64_t address = strtoull(address_loc, 0, 0);
+    if (crashing_address)
+    {
+        *crashing_address = address;
+    }
+    
+    return frame_sp->GuessValueForAddress(address);
+}

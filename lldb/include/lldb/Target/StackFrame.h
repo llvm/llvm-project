@@ -218,6 +218,21 @@ public:
     //------------------------------------------------------------------
     bool
     GetFrameBaseValue(Scalar &value, Error *error_ptr);
+    
+    //------------------------------------------------------------------
+    /// Get the DWARFExpression corresponding to the Canonical Frame Address.
+    ///
+    /// Often a register (bp), but sometimes a register + offset.
+    ///
+    /// @param [out] error_ptr
+    ///   If there is an error determining the CFA address, this may contain a
+    ///   string explaining the failure.
+    ///
+    /// @return
+    ///   Returns the corresponding DWARF expression, or NULL.
+    //------------------------------------------------------------------
+    DWARFExpression *
+    GetFrameBaseExpression(Error *error_ptr);
 
     //------------------------------------------------------------------
     /// Get the current lexical scope block for this StackFrame, if possible.
@@ -485,6 +500,37 @@ public:
     GuessLanguage ();
     
     //------------------------------------------------------------------
+    /// Attempt to econstruct the ValueObject for a given raw address touched by
+    /// the current instruction.  The ExpressionPath should indicate how to get
+    /// to this value using "frame variable."
+    ///
+    /// @params [in] addr
+    ///   The raw address.
+    ///
+    /// @return
+    ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
+    //------------------------------------------------------------------
+    lldb::ValueObjectSP
+    GuessValueForAddress(lldb::addr_t addr);
+    
+    //------------------------------------------------------------------
+    /// Attempt to reconstruct the ValueObject for the address contained in a
+    /// given register plus an offset.  The ExpressionPath should indicate how to
+    /// get to this value using "frame variable."
+    ///
+    /// @params [in] reg
+    ///   The name of the register.
+    ///
+    /// @params [in] offset
+    ///   The offset from the register.  Particularly important for sp...
+    ///
+    /// @return
+    ///   The ValueObject if found.  If valid, it has a valid ExpressionPath.
+    //------------------------------------------------------------------
+    lldb::ValueObjectSP
+    GuessValueForRegisterAndOffset(ConstString reg, int64_t offset);
+    
+    //------------------------------------------------------------------
     // lldb::ExecutionContextScope pure virtual functions
     //------------------------------------------------------------------
     lldb::TargetSP
@@ -501,7 +547,7 @@ public:
 
     void
     CalculateExecutionContext(ExecutionContext &exe_ctx) override;
-
+    
 protected:
     friend class StackFrameList;
 
@@ -516,7 +562,7 @@ protected:
 
     bool
     HasCachedData () const;
-    
+        
 private:
     //------------------------------------------------------------------
     // For StackFrame only

@@ -575,6 +575,9 @@ bool ARMBaseInstrInfo::isPredicable(MachineInstr &MI) const {
   if (!MI.isPredicable())
     return false;
 
+  if (MI.isBundle())
+    return false;
+
   if (!isEligibleForITBlock(&MI))
     return false;
 

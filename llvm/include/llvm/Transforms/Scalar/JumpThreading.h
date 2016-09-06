@@ -134,6 +134,8 @@ private:
                               const char *Suffix);
   void UpdateBlockFreqAndEdgeWeight(BasicBlock *PredBB, BasicBlock *BB,
                                     BasicBlock *NewBB, BasicBlock *SuccBB);
+  /// Check if the block has profile metadata for its outgoing edges.
+  bool doesBlockHaveProfileData(BasicBlock *BB);
 };
 
 } // end namespace llvm

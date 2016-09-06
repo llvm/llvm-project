@@ -4,6 +4,7 @@
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-a8 | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=DP -check-prefix=VFP4-ALL -check-prefix=VFP4-DP
 
 define float @add_f(float %a, float %b) {
+
 entry:
 ; CHECK-LABEL: add_f:
 ; NONE: bl __aeabi_fadd
@@ -83,7 +84,7 @@ define float @rem_f(float %a, float %b) {
 entry:
 ; CHECK-LABEL: rem_f:
 ; NONE: bl fmodf
-; HARD: b fmodf
+; HARD: bl fmodf
   %0 = frem float %a, %b
   ret float %0
 }
@@ -92,7 +93,7 @@ define double @rem_d(double %a, double %b) {
 entry:
 ; CHECK-LABEL: rem_d:
 ; NONE: bl fmod
-; HARD: b fmod
+; HARD: bl fmod
   %0 = frem double %a, %b
   ret double %0
 }
