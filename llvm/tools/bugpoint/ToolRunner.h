@@ -19,7 +19,7 @@
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SystemUtils.h"
 #include <exception>
@@ -59,20 +59,19 @@ public:
   /// option specifies optional native shared objects that can be loaded into
   /// the program for execution.
   ///
-  int ExecuteProgram(
+  Expected<int> ExecuteProgram(
       const std::string &ProgramFile, const std::vector<std::string> &Args,
       FileType fileType, const std::string &InputFile,
-      const std::string &OutputFile, std::string *Error = nullptr,
+      const std::string &OutputFile,
       const std::vector<std::string> &CCArgs = std::vector<std::string>(),
       unsigned Timeout = 0, unsigned MemoryLimit = 0);
 
   /// MakeSharedObject - This compiles the specified file (which is either a .c
   /// file or a .s file) into a shared object.
   ///
-  int MakeSharedObject(const std::string &InputFile, FileType fileType,
-                       std::string &OutputFile,
-                       const std::vector<std::string> &ArgsForCC,
-                       std::string &Error);
+  Error MakeSharedObject(const std::string &InputFile, FileType fileType,
+                         std::string &OutputFile,
+                         const std::vector<std::string> &ArgsForCC);
 };
 
 //===---------------------------------------------------------------------===//
@@ -111,30 +110,31 @@ public:
   /// compileProgram - Compile the specified program from bitcode to executable
   /// code.  This does not produce any output, it is only used when debugging
   /// the code generator.  It returns false if the code generator fails.
-  virtual void compileProgram(const std::string &Bitcode, std::string *Error,
-                              unsigned Timeout = 0, unsigned MemoryLimit = 0) {}
+  virtual Error compileProgram(const std::string &Bitcode, unsigned Timeout = 0,
+                               unsigned MemoryLimit = 0) {
+    return Error::success();
+  }
 
-  /// OutputCode - Compile the specified program from bitcode to code
-  /// understood by the CC driver (either C or asm).  If the code generator
-  /// fails, it sets Error, otherwise, this function returns the type of code
-  /// emitted.
-  virtual CC::FileType OutputCode(const std::string &Bitcode,
-                                  std::string &OutFile, std::string &Error,
-                                  unsigned Timeout = 0,
-                                  unsigned MemoryLimit = 0) {
-    Error = "OutputCode not supported by this AbstractInterpreter!";
-    return CC::AsmFile;
+  /// Compile the specified program from bitcode to code understood by the CC
+  /// driver (either C or asm).  Returns an error if the code generator fails,,
+  /// otherwise, the type of code emitted.
+  virtual Expected<CC::FileType> OutputCode(const std::string &Bitcode,
+                                            std::string &OutFile,
+                                            unsigned Timeout = 0,
+                                            unsigned MemoryLimit = 0) {
+    return make_error<StringError>(
+        "OutputCode not supported by this AbstractInterpreter!",
+        inconvertibleErrorCode());
   }
 
   /// ExecuteProgram - Run the specified bitcode file, emitting output to the
   /// specified filename.  This sets RetVal to the exit code of the program or
-  /// returns false if a problem was encountered that prevented execution of
+  /// returns an Error if a problem was encountered that prevented execution of
   /// the program.
   ///
-  virtual int ExecuteProgram(
+  virtual Expected<int> ExecuteProgram(
       const std::string &Bitcode, const std::vector<std::string> &Args,
       const std::string &InputFile, const std::string &OutputFile,
-      std::string *Error,
       const std::vector<std::string> &CCArgs = std::vector<std::string>(),
       const std::vector<std::string> &SharedLibs = std::vector<std::string>(),
       unsigned Timeout = 0, unsigned MemoryLimit = 0) = 0;
@@ -163,24 +163,19 @@ public:
   /// compileProgram - Compile the specified program from bitcode to executable
   /// code.  This does not produce any output, it is only used when debugging
   /// the code generator.  Returns false if the code generator fails.
-  void compileProgram(const std::string &Bitcode, std::string *Error,
-                      unsigned Timeout = 0, unsigned MemoryLimit = 0) override;
+  Error compileProgram(const std::string &Bitcode, unsigned Timeout = 0,
+                       unsigned MemoryLimit = 0) override;
 
-  int ExecuteProgram(
+  Expected<int> ExecuteProgram(
       const std::string &Bitcode, const std::vector<std::string> &Args,
       const std::string &InputFile, const std::string &OutputFile,
-      std::string *Error,
       const std::vector<std::string> &CCArgs = std::vector<std::string>(),
       const std::vector<std::string> &SharedLibs = std::vector<std::string>(),
       unsigned Timeout = 0, unsigned MemoryLimit = 0) override;
 
-  /// OutputCode - Compile the specified program from bitcode to code
-  /// understood by the CC driver (either C or asm).  If the code generator
-  /// fails, it sets Error, otherwise, this function returns the type of code
-  /// emitted.
-  CC::FileType OutputCode(const std::string &Bitcode, std::string &OutFile,
-                          std::string &Error, unsigned Timeout = 0,
-                          unsigned MemoryLimit = 0) override;
+  Expected<CC::FileType> OutputCode(const std::string &Bitcode,
+                                    std::string &OutFile, unsigned Timeout = 0,
+                                    unsigned MemoryLimit = 0) override;
 };
 
 } // End llvm namespace

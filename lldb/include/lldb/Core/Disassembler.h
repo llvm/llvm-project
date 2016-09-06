@@ -193,7 +193,7 @@ public:
             Sum,
             Product
         } m_type = Type::Invalid;
-        std::vector<const Operand> m_children;
+        std::vector<Operand> m_children;
         lldb::addr_t m_immediate = 0;
         ConstString m_register;
         bool m_negative = false;

@@ -1,9 +1,1 @@
 BasedOnStyle: LLVM
-IndentWidth:     4
-ColumnLimit:     120
-BreakBeforeBraces: Allman
-AlwaysBreakAfterReturnType: All
-AllowShortFunctionsOnASingleLine: Inline
-ConstructorInitializerAllOnOneLineOrOnePerLine: true
-IndentCaseLabels: true
-AccessModifierOffset: -4

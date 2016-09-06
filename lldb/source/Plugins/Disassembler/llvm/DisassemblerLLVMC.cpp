@@ -25,6 +25,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 // Other libraries and framework includes
 #include "DisassemblerLLVMC.h"
@@ -595,7 +596,7 @@ public:
                     }
                     else
                     {
-                        ret.m_immediate = std::stoull(str, nullptr, 0);
+                        ret.m_immediate = strtoull(str.c_str(), nullptr, 0);
                         return std::make_pair(ret, osi);
                     }
                 case 'x':
@@ -629,7 +630,7 @@ public:
             ++osi;
         }
         
-        ret.m_immediate = std::stoull(str, nullptr, 0);
+        ret.m_immediate = strtoull(str.c_str(), nullptr, 0);
         return std::make_pair(ret, osi);
     }
 
@@ -880,7 +881,7 @@ public:
             {
                 s.PutCString("-");
             }
-            s.PutCString(std::to_string(op.m_immediate).c_str());
+            s.PutCString(llvm::to_string(op.m_immediate).c_str());
             break;
         case Operand::Type::Invalid:
             s.PutCString("Invalid");

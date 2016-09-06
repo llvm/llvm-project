@@ -393,7 +393,7 @@ int main(int argc_, const char **argv_) {
 
   // Handle CL and _CL_ which permits additional command line options to be
   // prepended or appended.
-  if (Tokenizer == &llvm::cl::TokenizeWindowsCommandLine) {
+  if (ClangCLMode) {
     // Arguments in "CL" are prepended.
     llvm::Optional<std::string> OptCL = llvm::sys::Process::GetEnv("CL");
     if (OptCL.hasValue()) {

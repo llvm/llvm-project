@@ -34,11 +34,11 @@ const auto &getDeviceValue =
 class StreamTest : public ::testing::Test {
 public:
   StreamTest()
-      : Device(&PDevice),
-        Stream(llvm::make_unique<se::PlatformStreamHandle>(&PDevice)),
-        HostA5{0, 1, 2, 3, 4}, HostB5{5, 6, 7, 8, 9},
-        HostA7{10, 11, 12, 13, 14, 15, 16}, HostB7{17, 18, 19, 20, 21, 22, 23},
-        Host5{24, 25, 26, 27, 28}, Host7{29, 30, 31, 32, 33, 34, 35},
+      : DummyPlatformStream(1), Device(&PDevice),
+        Stream(&PDevice, &DummyPlatformStream), HostA5{0, 1, 2, 3, 4},
+        HostB5{5, 6, 7, 8, 9}, HostA7{10, 11, 12, 13, 14, 15, 16},
+        HostB7{17, 18, 19, 20, 21, 22, 23}, Host5{24, 25, 26, 27, 28},
+        Host7{29, 30, 31, 32, 33, 34, 35},
         DeviceA5(getOrDie(Device.allocateDeviceMemory<int>(5))),
         DeviceB5(getOrDie(Device.allocateDeviceMemory<int>(5))),
         DeviceA7(getOrDie(Device.allocateDeviceMemory<int>(7))),
@@ -50,6 +50,8 @@ public:
   }
 
 protected:
+  int DummyPlatformStream; // Mimicking a platform where the platform stream
+                           // handle is just a stream number.
   se::test::SimpleHostPlatformDevice PDevice;
   se::Device Device;
   se::Stream Stream;

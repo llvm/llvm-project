@@ -3750,6 +3750,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       // Trivial extraction.
       if (VT.getSimpleVT() == N1.getSimpleValueType())
         return N1;
+
+      // EXTRACT_SUBVECTOR of INSERT_SUBVECTOR is often created
+      // during shuffle legalization.
+      if (N1.getOpcode() == ISD::INSERT_SUBVECTOR && N2 == N1.getOperand(2) &&
+          VT == N1.getOperand(1).getValueType())
+        return N1.getOperand(1);
     }
     break;
   }

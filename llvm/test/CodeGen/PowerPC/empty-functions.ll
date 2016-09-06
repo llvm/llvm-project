@@ -31,8 +31,8 @@ entry:
 ; LINUX-FP-NEXT: {{^}}.L[[BEGIN:.*]]:{{$}}
 ; LINUX-FP-NEXT: .cfi_startproc
 ; LINUX-FP-NEXT: {{^}}#
-; LINUX-FP-NEXT: stw 31, -4(1)
 ; LINUX-FP-NEXT: stwu 1, -16(1)
+; LINUX-FP-NEXT: stw 31, 12(1)
 ; LINUX-FP-NEXT: {{^}}.L{{.*}}:{{$}}
 ; LINUX-FP-NEXT:  .cfi_def_cfa_offset 16
 ; LINUX-FP-NEXT: {{^}}.L{{.*}}:{{$}}

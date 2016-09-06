@@ -15,7 +15,8 @@ entry:
 ; LARGE-BSS:       [[POFF:\.L[0-9]+\$poff]]:
 ; LARGE-BSS-NEXT:    .long .LTOC-[[PB:\.L[0-9]+\$pb]]
 ; LARGE-BSS-NEXT:  foo:
-; LARGE-BSS:         stw 30, -8(1)
+; LARGE-BSS:         stwu 1, -32(1)
+; LARGE-BSS:         stw 30, 24(1)
 ; LARGE-BSS:         bl [[PB]]
 ; LARGE-BSS-NEXT:  [[PB]]:
 ; LARGE-BSS:         mflr 30

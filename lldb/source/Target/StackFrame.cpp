@@ -1564,7 +1564,7 @@ namespace
     ValueObjectSP
     GetValueForOffset(StackFrame &frame, ValueObjectSP &parent, int64_t offset)
     {
-        if (offset < 0 || offset >= parent->GetByteSize())
+        if (offset < 0 || uint64_t(offset) >= parent->GetByteSize())
         {
             return ValueObjectSP();
         }

@@ -106,18 +106,6 @@ namespace lldb_private
         lldb_ymm7_i386,
         k_last_avx_i386 = lldb_ymm7_i386,
 
-        k_first_mpxr_i386,
-        lldb_bnd0_i386 = k_first_mpxr_i386,
-        lldb_bnd1_i386,
-        lldb_bnd2_i386,
-        lldb_bnd3_i386,
-        k_last_mpxr = lldb_bnd3_i386,
-
-        k_first_mpxc_i386,
-        lldb_bndcfgu_i386 = k_first_mpxc_i386,
-        lldb_bndstatus_i386,
-        k_last_mpxc_i386 = lldb_bndstatus_i386,
-
         lldb_dr0_i386,
         lldb_dr1_i386,
         lldb_dr2_i386,
@@ -131,8 +119,7 @@ namespace lldb_private
         k_num_gpr_registers_i386 = k_last_gpr_i386 - k_first_gpr_i386 + 1,
         k_num_fpr_registers_i386 = k_last_fpr_i386 - k_first_fpr_i386 + 1,
         k_num_avx_registers_i386 = k_last_avx_i386 - k_first_avx_i386 + 1,
-        k_num_mpx_registers_i386 = k_last_mpxc_i386 - k_first_mpxr_i386 + 1,
-        k_num_user_registers_i386 = k_num_gpr_registers_i386 + k_num_fpr_registers_i386 + k_num_avx_registers_i386 + k_num_mpx_registers_i386,
+        k_num_user_registers_i386 = k_num_gpr_registers_i386 + k_num_fpr_registers_i386 + k_num_avx_registers_i386,
     };
 
     //---------------------------------------------------------------------------
@@ -287,18 +274,6 @@ namespace lldb_private
         lldb_ymm15_x86_64,
         k_last_avx_x86_64 = lldb_ymm15_x86_64,
 
-        k_first_mpxr_x86_64,
-        lldb_bnd0_x86_64 = k_first_mpxr_x86_64,
-        lldb_bnd1_x86_64,
-        lldb_bnd2_x86_64,
-        lldb_bnd3_x86_64,
-        k_last_mpxr_x86_64 = lldb_bnd3_x86_64,
-
-        k_first_mpxc_x86_64,
-        lldb_bndcfgu_x86_64 = k_first_mpxc_x86_64,
-        lldb_bndstatus_x86_64,
-        k_last_mpxc_x86_64 = lldb_bndstatus_x86_64,
-
         lldb_dr0_x86_64,
         lldb_dr1_x86_64,
         lldb_dr2_x86_64,
@@ -312,8 +287,7 @@ namespace lldb_private
         k_num_gpr_registers_x86_64 = k_last_gpr_x86_64 - k_first_gpr_x86_64 + 1,
         k_num_fpr_registers_x86_64 = k_last_fpr_x86_64 - k_first_fpr_x86_64 + 1,
         k_num_avx_registers_x86_64 = k_last_avx_x86_64 - k_first_avx_x86_64 + 1,
-        k_num_mpx_registers_x86_64 = k_last_mpxc_x86_64 - k_first_mpxr_x86_64 + 1,
-        k_num_user_registers_x86_64 = k_num_gpr_registers_x86_64 + k_num_fpr_registers_x86_64 + k_num_avx_registers_x86_64 + k_num_mpx_registers_x86_64,
+        k_num_user_registers_x86_64 = k_num_gpr_registers_x86_64 + k_num_fpr_registers_x86_64 + k_num_avx_registers_x86_64,
     };
 
 }

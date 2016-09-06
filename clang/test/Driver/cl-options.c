@@ -493,6 +493,8 @@
 // RUN: env CL="/Gy" _CL_="/Gy- -- %s" %clang_cl -### 2>&1 | FileCheck -check-prefix=ENV-_CL_ %s
 // ENV-_CL_-NOT: "-ffunction-sections"
 
+// RUN: env CL="%s" _CL_="%s" not %clang --rsp-quoting=windows -c
+
 // Accept "core" clang options.
 // (/Zs is for syntax-only, -Werror makes it fail hard on unknown options)
 // RUN: %clang_cl \

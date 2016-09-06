@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
+#include <cstdio>
 #include <fcntl.h>
 #include <mutex>
 #include <sys/stat.h>

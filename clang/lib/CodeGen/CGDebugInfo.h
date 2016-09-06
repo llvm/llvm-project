@@ -518,7 +518,7 @@ private:
                                 StringRef &Name, StringRef &LinkageName,
                                 llvm::DIScope *&FDContext,
                                 llvm::DINodeArray &TParamsArray,
-                                unsigned &Flags);
+                                llvm::DINode::DIFlags &Flags);
 
   /// Collect various properties of a VarDecl.
   void collectVarDeclProps(const VarDecl *VD, llvm::DIFile *&Unit,

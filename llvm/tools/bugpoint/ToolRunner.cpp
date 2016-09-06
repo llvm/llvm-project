@@ -105,9 +105,8 @@ static int RunProgramRemotelyWithTimeout(StringRef RemoteClientPath,
   return ReturnCode;
 }
 
-static std::string ProcessFailure(StringRef ProgPath, const char **Args,
-                                  unsigned Timeout = 0,
-                                  unsigned MemoryLimit = 0) {
+static Error ProcessFailure(StringRef ProgPath, const char **Args,
+                            unsigned Timeout = 0, unsigned MemoryLimit = 0) {
   std::ostringstream OS;
   OS << "\nError running tool:\n ";
   for (const char **Arg = Args; *Arg; ++Arg)
@@ -137,7 +136,7 @@ static std::string ProcessFailure(StringRef ProgPath, const char **Args,
   }
 
   sys::fs::remove(ErrorFilename.c_str());
-  return OS.str();
+  return make_error<StringError>(OS.str(), inconvertibleErrorCode());
 }
 
 //===---------------------------------------------------------------------===//
@@ -156,22 +155,22 @@ public:
     }
   }
 
-  int ExecuteProgram(
+  Expected<int> ExecuteProgram(
       const std::string &Bitcode, const std::vector<std::string> &Args,
       const std::string &InputFile, const std::string &OutputFile,
-      std::string *Error, const std::vector<std::string> &CCArgs,
+      const std::vector<std::string> &CCArgs,
       const std::vector<std::string> &SharedLibs = std::vector<std::string>(),
       unsigned Timeout = 0, unsigned MemoryLimit = 0) override;
 };
 }
 
-int LLI::ExecuteProgram(const std::string &Bitcode,
-                        const std::vector<std::string> &Args,
-                        const std::string &InputFile,
-                        const std::string &OutputFile, std::string *Error,
-                        const std::vector<std::string> &CCArgs,
-                        const std::vector<std::string> &SharedLibs,
-                        unsigned Timeout, unsigned MemoryLimit) {
+Expected<int> LLI::ExecuteProgram(const std::string &Bitcode,
+                                  const std::vector<std::string> &Args,
+                                  const std::string &InputFile,
+                                  const std::string &OutputFile,
+                                  const std::vector<std::string> &CCArgs,
+                                  const std::vector<std::string> &SharedLibs,
+                                  unsigned Timeout, unsigned MemoryLimit) {
   std::vector<const char *> LLIArgs;
   LLIArgs.push_back(LLIPath.c_str());
   LLIArgs.push_back("-force-interpreter=true");
@@ -200,7 +199,7 @@ int LLI::ExecuteProgram(const std::string &Bitcode,
         << " " << LLIArgs[i];
         errs() << "\n";);
   return RunProgramWithTimeout(LLIPath, &LLIArgs[0], InputFile, OutputFile,
-                               OutputFile, Timeout, MemoryLimit, Error);
+                               OutputFile, Timeout, MemoryLimit);
 }
 
 void AbstractInterpreter::anchor() {}
@@ -267,25 +266,24 @@ public:
                  std::vector<std::string> CompArgs)
       : CompilerCommand(CompilerCmd), CompilerArgs(std::move(CompArgs)) {}
 
-  void compileProgram(const std::string &Bitcode, std::string *Error,
-                      unsigned Timeout = 0, unsigned MemoryLimit = 0) override;
+  Error compileProgram(const std::string &Bitcode, unsigned Timeout = 0,
+                       unsigned MemoryLimit = 0) override;
 
-  int ExecuteProgram(
+  Expected<int> ExecuteProgram(
       const std::string &Bitcode, const std::vector<std::string> &Args,
       const std::string &InputFile, const std::string &OutputFile,
-      std::string *Error,
       const std::vector<std::string> &CCArgs = std::vector<std::string>(),
       const std::vector<std::string> &SharedLibs = std::vector<std::string>(),
       unsigned Timeout = 0, unsigned MemoryLimit = 0) override {
-    *Error = "Execution not supported with -compile-custom";
-    return -1;
+    return make_error<StringError>(
+        "Execution not supported with -compile-custom",
+        inconvertibleErrorCode());
   }
 };
 }
 
-void CustomCompiler::compileProgram(const std::string &Bitcode,
-                                    std::string *Error, unsigned Timeout,
-                                    unsigned MemoryLimit) {
+Error CustomCompiler::compileProgram(const std::string &Bitcode,
+                                     unsigned Timeout, unsigned MemoryLimit) {
 
   std::vector<const char *> ProgramArgs;
   ProgramArgs.push_back(CompilerCommand.c_str());
@@ -300,9 +298,10 @@ void CustomCompiler::compileProgram(const std::string &Bitcode,
     ProgramArgs.push_back(CompilerArgs[i].c_str());
 
   if (RunProgramWithTimeout(CompilerCommand, &ProgramArgs[0], "", "", "",
-                            Timeout, MemoryLimit, Error))
-    *Error =
-        ProcessFailure(CompilerCommand, &ProgramArgs[0], Timeout, MemoryLimit);
+                            Timeout, MemoryLimit))
+    return ProcessFailure(CompilerCommand, &ProgramArgs[0], Timeout,
+                          MemoryLimit);
+  return Error::success();
 }
 
 //===---------------------------------------------------------------------===//
@@ -321,23 +320,21 @@ public:
                  std::vector<std::string> ExecArgs)
       : ExecutionCommand(ExecutionCmd), ExecutorArgs(std::move(ExecArgs)) {}
 
-  int ExecuteProgram(
+  Expected<int> ExecuteProgram(
       const std::string &Bitcode, const std::vector<std::string> &Args,
       const std::string &InputFile, const std::string &OutputFile,
-      std::string *Error, const std::vector<std::string> &CCArgs,
+      const std::vector<std::string> &CCArgs,
       const std::vector<std::string> &SharedLibs = std::vector<std::string>(),
       unsigned Timeout = 0, unsigned MemoryLimit = 0) override;
 };
 }
 
-int CustomExecutor::ExecuteProgram(const std::string &Bitcode,
-                                   const std::vector<std::string> &Args,
-                                   const std::string &InputFile,
-                                   const std::string &OutputFile,
-                                   std::string *Error,
-                                   const std::vector<std::string> &CCArgs,
-                                   const std::vector<std::string> &SharedLibs,
-                                   unsigned Timeout, unsigned MemoryLimit) {
+Expected<int> CustomExecutor::ExecuteProgram(
+    const std::string &Bitcode, const std::vector<std::string> &Args,
+    const std::string &InputFile, const std::string &OutputFile,
+    const std::vector<std::string> &CCArgs,
+    const std::vector<std::string> &SharedLibs, unsigned Timeout,
+    unsigned MemoryLimit) {
 
   std::vector<const char *> ProgramArgs;
   ProgramArgs.push_back(ExecutionCommand.c_str());
@@ -352,8 +349,7 @@ int CustomExecutor::ExecuteProgram(const std::string &Bitcode,
     ProgramArgs.push_back(Args[i].c_str());
 
   return RunProgramWithTimeout(ExecutionCommand, &ProgramArgs[0], InputFile,
-                               OutputFile, OutputFile, Timeout, MemoryLimit,
-                               Error);
+                               OutputFile, OutputFile, Timeout, MemoryLimit);
 }
 
 // Tokenize the CommandLine to the command and the args to allow
@@ -429,9 +425,9 @@ AbstractInterpreter::createCustomExecutor(std::string &Message,
 //===----------------------------------------------------------------------===//
 // LLC Implementation of AbstractIntepreter interface
 //
-CC::FileType LLC::OutputCode(const std::string &Bitcode,
-                             std::string &OutputAsmFile, std::string &Error,
-                             unsigned Timeout, unsigned MemoryLimit) {
+Expected<CC::FileType> LLC::OutputCode(const std::string &Bitcode,
+                                       std::string &OutputAsmFile,
+                                       unsigned Timeout, unsigned MemoryLimit) {
   const char *Suffix = (UseIntegratedAssembler ? ".llc.o" : ".llc.s");
 
   SmallString<128> UniqueFile;
@@ -466,36 +462,42 @@ CC::FileType LLC::OutputCode(const std::string &Bitcode,
         errs() << "\n";);
   if (RunProgramWithTimeout(LLCPath, &LLCArgs[0], "", "", "", Timeout,
                             MemoryLimit))
-    Error = ProcessFailure(LLCPath, &LLCArgs[0], Timeout, MemoryLimit);
+    return ProcessFailure(LLCPath, &LLCArgs[0], Timeout, MemoryLimit);
   return UseIntegratedAssembler ? CC::ObjectFile : CC::AsmFile;
 }
 
-void LLC::compileProgram(const std::string &Bitcode, std::string *Error,
-                         unsigned Timeout, unsigned MemoryLimit) {
+Error LLC::compileProgram(const std::string &Bitcode, unsigned Timeout,
+                          unsigned MemoryLimit) {
   std::string OutputAsmFile;
-  OutputCode(Bitcode, OutputAsmFile, *Error, Timeout, MemoryLimit);
+  Expected<CC::FileType> Result =
+      OutputCode(Bitcode, OutputAsmFile, Timeout, MemoryLimit);
   sys::fs::remove(OutputAsmFile);
+  if (Error E = Result.takeError())
+    return E;
+  return Error::success();
 }
 
-int LLC::ExecuteProgram(const std::string &Bitcode,
-                        const std::vector<std::string> &Args,
-                        const std::string &InputFile,
-                        const std::string &OutputFile, std::string *Error,
-                        const std::vector<std::string> &ArgsForCC,
-                        const std::vector<std::string> &SharedLibs,
-                        unsigned Timeout, unsigned MemoryLimit) {
+Expected<int> LLC::ExecuteProgram(const std::string &Bitcode,
+                                  const std::vector<std::string> &Args,
+                                  const std::string &InputFile,
+                                  const std::string &OutputFile,
+                                  const std::vector<std::string> &ArgsForCC,
+                                  const std::vector<std::string> &SharedLibs,
+                                  unsigned Timeout, unsigned MemoryLimit) {
 
   std::string OutputAsmFile;
-  CC::FileType FileKind =
-      OutputCode(Bitcode, OutputAsmFile, *Error, Timeout, MemoryLimit);
+  Expected<CC::FileType> FileKind =
+      OutputCode(Bitcode, OutputAsmFile, Timeout, MemoryLimit);
   FileRemover OutFileRemover(OutputAsmFile, !SaveTemps);
+  if (Error E = FileKind.takeError())
+    return std::move(E);
 
   std::vector<std::string> CCArgs(ArgsForCC);
   CCArgs.insert(CCArgs.end(), SharedLibs.begin(), SharedLibs.end());
 
   // Assuming LLC worked, compile the result with CC and run it.
-  return cc->ExecuteProgram(OutputAsmFile, Args, FileKind, InputFile,
-                            OutputFile, Error, CCArgs, Timeout, MemoryLimit);
+  return cc->ExecuteProgram(OutputAsmFile, Args, *FileKind, InputFile,
+                            OutputFile, CCArgs, Timeout, MemoryLimit);
 }
 
 /// createLLC - Try to find the LLC executable
@@ -537,23 +539,22 @@ public:
     }
   }
 
-  int ExecuteProgram(
+  Expected<int> ExecuteProgram(
       const std::string &Bitcode, const std::vector<std::string> &Args,
       const std::string &InputFile, const std::string &OutputFile,
-      std::string *Error,
       const std::vector<std::string> &CCArgs = std::vector<std::string>(),
       const std::vector<std::string> &SharedLibs = std::vector<std::string>(),
       unsigned Timeout = 0, unsigned MemoryLimit = 0) override;
 };
 }
 
-int JIT::ExecuteProgram(const std::string &Bitcode,
-                        const std::vector<std::string> &Args,
-                        const std::string &InputFile,
-                        const std::string &OutputFile, std::string *Error,
-                        const std::vector<std::string> &CCArgs,
-                        const std::vector<std::string> &SharedLibs,
-                        unsigned Timeout, unsigned MemoryLimit) {
+Expected<int> JIT::ExecuteProgram(const std::string &Bitcode,
+                                  const std::vector<std::string> &Args,
+                                  const std::string &InputFile,
+                                  const std::string &OutputFile,
+                                  const std::vector<std::string> &CCArgs,
+                                  const std::vector<std::string> &SharedLibs,
+                                  unsigned Timeout, unsigned MemoryLimit) {
   // Construct a vector of parameters, incorporating those from the command-line
   std::vector<const char *> JITArgs;
   JITArgs.push_back(LLIPath.c_str());
@@ -581,7 +582,7 @@ int JIT::ExecuteProgram(const std::string &Bitcode,
         errs() << "\n";);
   DEBUG(errs() << "\nSending output to " << OutputFile << "\n");
   return RunProgramWithTimeout(LLIPath, &JITArgs[0], InputFile, OutputFile,
-                               OutputFile, Timeout, MemoryLimit, Error);
+                               OutputFile, Timeout, MemoryLimit);
 }
 
 /// createJIT - Try to find the LLI executable
@@ -618,12 +619,13 @@ static bool IsARMArchitecture(std::vector<const char *> Args) {
   return false;
 }
 
-int CC::ExecuteProgram(const std::string &ProgramFile,
-                       const std::vector<std::string> &Args, FileType fileType,
-                       const std::string &InputFile,
-                       const std::string &OutputFile, std::string *Error,
-                       const std::vector<std::string> &ArgsForCC,
-                       unsigned Timeout, unsigned MemoryLimit) {
+Expected<int> CC::ExecuteProgram(const std::string &ProgramFile,
+                                 const std::vector<std::string> &Args,
+                                 FileType fileType,
+                                 const std::string &InputFile,
+                                 const std::string &OutputFile,
+                                 const std::vector<std::string> &ArgsForCC,
+                                 unsigned Timeout, unsigned MemoryLimit) {
   std::vector<const char *> CCArgs;
 
   CCArgs.push_back(CCPath.c_str());
@@ -690,10 +692,8 @@ int CC::ExecuteProgram(const std::string &ProgramFile,
         for (unsigned i = 0, e = CCArgs.size() - 1; i != e; ++i) errs()
         << " " << CCArgs[i];
         errs() << "\n";);
-  if (RunProgramWithTimeout(CCPath, &CCArgs[0], "", "", "")) {
-    *Error = ProcessFailure(CCPath, &CCArgs[0]);
-    return -1;
-  }
+  if (RunProgramWithTimeout(CCPath, &CCArgs[0], "", "", ""))
+    return ProcessFailure(CCPath, &CCArgs[0]);
 
   std::vector<const char *> ProgramArgs;
 
@@ -745,16 +745,16 @@ int CC::ExecuteProgram(const std::string &ProgramFile,
 
   if (RemoteClientPath.empty()) {
     DEBUG(errs() << "<run locally>");
+    std::string Error;
     int ExitCode = RunProgramWithTimeout(OutputBinary.str(), &ProgramArgs[0],
                                          InputFile, OutputFile, OutputFile,
-                                         Timeout, MemoryLimit, Error);
+                                         Timeout, MemoryLimit, &Error);
     // Treat a signal (usually SIGSEGV) or timeout as part of the program output
     // so that crash-causing miscompilation is handled seamlessly.
     if (ExitCode < -1) {
       std::ofstream outFile(OutputFile.c_str(), std::ios_base::app);
-      outFile << *Error << '\n';
+      outFile << Error << '\n';
       outFile.close();
-      Error->clear();
     }
     return ExitCode;
   } else {
@@ -766,10 +766,9 @@ int CC::ExecuteProgram(const std::string &ProgramFile,
   }
 }
 
-int CC::MakeSharedObject(const std::string &InputFile, FileType fileType,
-                         std::string &OutputFile,
-                         const std::vector<std::string> &ArgsForCC,
-                         std::string &Error) {
+Error CC::MakeSharedObject(const std::string &InputFile, FileType fileType,
+                           std::string &OutputFile,
+                           const std::vector<std::string> &ArgsForCC) {
   SmallString<128> UniqueFilename;
   std::error_code EC = sys::fs::createUniqueFile(
       InputFile + "-%%%%%%%" + LTDL_SHLIB_EXT, UniqueFilename);
@@ -838,11 +837,9 @@ int CC::MakeSharedObject(const std::string &InputFile, FileType fileType,
         for (unsigned i = 0, e = CCArgs.size() - 1; i != e; ++i) errs()
         << " " << CCArgs[i];
         errs() << "\n";);
-  if (RunProgramWithTimeout(CCPath, &CCArgs[0], "", "", "")) {
-    Error = ProcessFailure(CCPath, &CCArgs[0]);
-    return 1;
-  }
-  return 0;
+  if (RunProgramWithTimeout(CCPath, &CCArgs[0], "", "", ""))
+    return ProcessFailure(CCPath, &CCArgs[0]);
+  return Error::success();;
 }
 
 /// create - Try to find the CC executable

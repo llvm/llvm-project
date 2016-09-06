@@ -218,7 +218,7 @@ protected:
 
         const bool qualify_cxx_base_classes = false;
 
-        DumpValueObjectOptions::DeclPrintingHelper helper = [&valobj_sp](ConstString type,
+        DumpValueObjectOptions::DeclPrintingHelper helper = [&valobj_sp, qualify_cxx_base_classes](ConstString type,
                                                                          ConstString var,
                                                                          const DumpValueObjectOptions &opts,
                                                                          Stream &stream) -> bool {

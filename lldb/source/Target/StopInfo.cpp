@@ -1257,7 +1257,7 @@ StopInfo::GetCrashingDereference (StopInfoSP &stop_info_sp, lldb::addr_t *crashi
     
     address_loc += (sizeof(address_string) - 1);
     
-    uint64_t address = std::stoull(address_loc, 0, 0);
+    uint64_t address = strtoull(address_loc, 0, 0);
     if (crashing_address)
     {
         *crashing_address = address;

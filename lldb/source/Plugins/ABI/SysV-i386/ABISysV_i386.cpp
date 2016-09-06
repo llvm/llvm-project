@@ -104,12 +104,7 @@ enum dwarf_regnums
     dwarf_mm4,
     dwarf_mm5,
     dwarf_mm6,
-    dwarf_mm7,
-
-    dwarf_bnd0 = 101,
-    dwarf_bnd1,
-    dwarf_bnd2,
-    dwarf_bnd3
+    dwarf_mm7
 };
 
 static RegisterInfo g_register_infos[] =
@@ -164,13 +159,7 @@ static RegisterInfo g_register_infos[] =
     { "ymm4"  , nullptr,   32,  0, eEncodingVector, eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM ,     dwarf_ymm4          , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },      nullptr, nullptr, nullptr, 0},
     { "ymm5"  , nullptr,   32,  0, eEncodingVector, eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM ,     dwarf_ymm5          , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },      nullptr, nullptr, nullptr, 0},
     { "ymm6"  , nullptr,   32,  0, eEncodingVector, eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM ,     dwarf_ymm6          , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },      nullptr, nullptr, nullptr, 0},
-    { "ymm7"  , nullptr,   32,  0, eEncodingVector, eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM ,     dwarf_ymm7          , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },      nullptr, nullptr, nullptr, 0},
-    { "bnd0"  , nullptr,   16,  0, eEncodingVector, eFormatVectorOfUInt64,{     dwarf_bnd0      ,     dwarf_bnd0          , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },      nullptr, nullptr, nullptr, 0},
-    { "bnd1"  , nullptr,   16,  0, eEncodingVector, eFormatVectorOfUInt64,{     dwarf_bnd1      ,     dwarf_bnd1          , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },      nullptr, nullptr, nullptr, 0},
-    { "bnd2"  , nullptr,   16,  0, eEncodingVector, eFormatVectorOfUInt64,{     dwarf_bnd2      ,     dwarf_bnd2          , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },      nullptr, nullptr, nullptr, 0},
-    { "bnd3"  , nullptr,   16,  0, eEncodingVector, eFormatVectorOfUInt64,{     dwarf_bnd3      ,     dwarf_bnd3          , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },      nullptr, nullptr, nullptr, 0},
-    { "bndcfgu", nullptr,   8,  0, eEncodingVector, eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM , LLDB_INVALID_REGNUM     , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },      nullptr, nullptr, nullptr, 0},
-    { "bndstatus", nullptr, 8,  0, eEncodingVector, eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM , LLDB_INVALID_REGNUM     , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },      nullptr, nullptr, nullptr, 0}
+    { "ymm7"  , nullptr,   32,  0, eEncodingVector, eFormatVectorOfUInt8, { LLDB_INVALID_REGNUM ,     dwarf_ymm7          , LLDB_INVALID_REGNUM       , LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM },      nullptr, nullptr, nullptr, 0}
 };
 
 static const uint32_t k_num_register_infos = llvm::array_lengthof(g_register_infos);

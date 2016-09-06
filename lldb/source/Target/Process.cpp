@@ -1259,7 +1259,7 @@ Process::HandleProcessStateChangedEvent (const EventSP &event_sp,
                                 const ValueObject::GetExpressionPathFormat format = ValueObject::GetExpressionPathFormat::eGetExpressionPathFormatHonorPointers;
                                 stream->PutCString("Likely cause: ");
                                 valobj_sp->GetExpressionPath(*stream, qualify_cxx_base_classes, format);
-                                stream->Printf(" accessed 0x%llx\n", crashing_address);
+                                stream->Printf(" accessed 0x%" PRIx64 "\n", crashing_address);
                             }
                         }
                     }
