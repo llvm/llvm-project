@@ -59,10 +59,13 @@ namespace streamexecutor {
 /// of a stream once it is in an error state.
 class Stream {
 public:
-  explicit Stream(std::unique_ptr<PlatformStreamHandle> PStream);
+  Stream(PlatformDevice *D, const void *PlatformStreamHandle);
 
-  Stream(Stream &&Other) = default;
-  Stream &operator=(Stream &&Other) = default;
+  Stream(const Stream &Other) = delete;
+  Stream &operator=(const Stream &Other) = delete;
+
+  Stream(Stream &&Other);
+  Stream &operator=(Stream &&Other);
 
   ~Stream();
 
@@ -88,7 +91,7 @@ public:
   //
   // Returns the result of getStatus() after the Stream work completes.
   Error blockHostUntilDone() {
-    setError(PDevice->blockHostUntilDone(ThePlatformStream.get()));
+    setError(PDevice->blockHostUntilDone(PlatformStreamHandle));
     return getStatus();
   }
 
@@ -105,7 +108,7 @@ public:
                      const ParameterTs &... Arguments) {
     auto ArgumentArray =
         make_kernel_argument_pack<ParameterTs...>(Arguments...);
-    setError(PDevice->launch(ThePlatformStream.get(), BlockSize, GridSize,
+    setError(PDevice->launch(PlatformStreamHandle, BlockSize, GridSize,
                              K.getPlatformHandle(), ArgumentArray));
     return *this;
   }
@@ -136,7 +139,7 @@ public:
       setError("copying too many elements, " + llvm::Twine(ElementCount) +
                ", to a host array of element count " + llvm::Twine(Dst.size()));
     else
-      setError(PDevice->copyD2H(ThePlatformStream.get(),
+      setError(PDevice->copyD2H(PlatformStreamHandle,
                                 Src.getBaseMemory().getHandle(),
                                 Src.getElementOffset() * sizeof(T), Dst.data(),
                                 0, ElementCount * sizeof(T)));
@@ -196,10 +199,9 @@ public:
                ", to a device array of element count " +
                llvm::Twine(Dst.getElementCount()));
     else
-      setError(PDevice->copyH2D(ThePlatformStream.get(), Src.data(), 0,
-                                Dst.getBaseMemory().getHandle(),
-                                Dst.getElementOffset() * sizeof(T),
-                                ElementCount * sizeof(T)));
+      setError(PDevice->copyH2D(
+          PlatformStreamHandle, Src.data(), 0, Dst.getBaseMemory().getHandle(),
+          Dst.getElementOffset() * sizeof(T), ElementCount * sizeof(T)));
     return *this;
   }
 
@@ -254,7 +256,7 @@ public:
                llvm::Twine(Dst.getElementCount()));
     else
       setError(PDevice->copyD2D(
-          ThePlatformStream.get(), Src.getBaseMemory().getHandle(),
+          PlatformStreamHandle, Src.getBaseMemory().getHandle(),
           Src.getElementOffset() * sizeof(T), Dst.getBaseMemory().getHandle(),
           Dst.getElementOffset() * sizeof(T), ElementCount * sizeof(T)));
     return *this;
@@ -342,7 +344,7 @@ private:
   PlatformDevice *PDevice;
 
   /// The platform-specific stream handle for this instance.
-  std::unique_ptr<PlatformStreamHandle> ThePlatformStream;
+  const void *PlatformStreamHandle;
 
   /// Mutex that guards the error state flags.
   std::unique_ptr<llvm::sys::RWMutex> ErrorMessageMutex;
@@ -350,9 +352,6 @@ private:
   /// First error message for an operation in this stream or empty if there have
   /// been no errors.
   llvm::Optional<std::string> ErrorMessage;
-
-  Stream(const Stream &) = delete;
-  void operator=(const Stream &) = delete;
 };
 
 } // namespace streamexecutor

@@ -146,11 +146,11 @@ bool BugDriver::addSources(const std::vector<std::string> &Filenames) {
 /// run - The top level method that is invoked after all of the instance
 /// variables are set up from command line arguments.
 ///
-bool BugDriver::run(std::string &ErrMsg) {
+Error BugDriver::run() {
   if (run_find_bugs) {
     // Rearrange the passes and apply them to the program. Repeat this process
     // until the user kills the program or we find a bug.
-    return runManyPasses(PassesToRun, ErrMsg);
+    return runManyPasses(PassesToRun);
   }
 
   // If we're not running as a child, the first thing that we must do is
@@ -167,16 +167,14 @@ bool BugDriver::run(std::string &ErrMsg) {
   }
 
   // Set up the execution environment, selecting a method to run LLVM bitcode.
-  if (initializeExecutionEnvironment())
-    return true;
+  if (Error E = initializeExecutionEnvironment())
+    return E;
 
   // Test to see if we have a code generator crash.
   outs() << "Running the code generator to test for a crash: ";
-  std::string Error;
-  compileProgram(Program, &Error);
-  if (!Error.empty()) {
-    outs() << Error;
-    return debugCodeGeneratorCrash(ErrMsg);
+  if (Error E = compileProgram(Program)) {
+    outs() << toString(std::move(E));
+    return debugCodeGeneratorCrash();
   }
   outs() << '\n';
 
@@ -187,8 +185,9 @@ bool BugDriver::run(std::string &ErrMsg) {
   bool CreatedOutput = false;
   if (ReferenceOutputFile.empty()) {
     outs() << "Generating reference output from raw program: ";
-    if (!createReferenceFile(Program)) {
-      return debugCodeGeneratorCrash(ErrMsg);
+    if (Error E = createReferenceFile(Program)) {
+      errs() << toString(std::move(E));
+      return debugCodeGeneratorCrash();
     }
     CreatedOutput = true;
   }
@@ -202,29 +201,27 @@ bool BugDriver::run(std::string &ErrMsg) {
   // matches, then we assume there is a miscompilation bug and try to
   // diagnose it.
   outs() << "*** Checking the code generator...\n";
-  bool Diff = diffProgram(Program, "", "", false, &Error);
-  if (!Error.empty()) {
-    errs() << Error;
-    return debugCodeGeneratorCrash(ErrMsg);
+  Expected<bool> Diff = diffProgram(Program, "", "", false);
+  if (Error E = Diff.takeError()) {
+    errs() << toString(std::move(E));
+    return debugCodeGeneratorCrash();
   }
-  if (!Diff) {
+  if (!*Diff) {
     outs() << "\n*** Output matches: Debugging miscompilation!\n";
-    debugMiscompilation(&Error);
-    if (!Error.empty()) {
-      errs() << Error;
-      return debugCodeGeneratorCrash(ErrMsg);
+    if (Error E = debugMiscompilation()) {
+      errs() << toString(std::move(E));
+      return debugCodeGeneratorCrash();
     }
-    return false;
+    return Error::success();
   }
 
   outs() << "\n*** Input program does not match reference diff!\n";
   outs() << "Debugging code generator problem!\n";
-  bool Failure = debugCodeGenerator(&Error);
-  if (!Error.empty()) {
-    errs() << Error;
-    return debugCodeGeneratorCrash(ErrMsg);
+  if (Error E = debugCodeGenerator()) {
+    errs() << toString(std::move(E));
+    return debugCodeGeneratorCrash();
   }
-  return Failure;
+  return Error::success();
 }
 
 void llvm::PrintFunctionList(const std::vector<Function *> &Funcs) {

@@ -16,8 +16,6 @@
 
 namespace streamexecutor {
 
-PlatformStreamHandle::~PlatformStreamHandle() = default;
-
 PlatformDevice::~PlatformDevice() = default;
 
 } // namespace streamexecutor

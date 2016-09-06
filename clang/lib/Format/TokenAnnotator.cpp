@@ -2158,6 +2158,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
                                                 tok::r_square, tok::r_brace) ||
                                    Left.Tok.isLiteral()))
       return false;
+    if (Left.is(tok::exclaim) && Right.is(Keywords.kw_as))
+      return true; // "x! as string"
   } else if (Style.Language == FormatStyle::LK_Java) {
     if (Left.is(tok::r_square) && Right.is(tok::l_brace))
       return true;
@@ -2381,7 +2383,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                       Keywords.kw_implements))
       return true;
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
-    if (Left.is(tok::kw_return))
+    const FormatToken *NonComment = Right.getPreviousNonComment();
+    if (Left.isOneOf(tok::kw_return, tok::kw_continue, tok::kw_break,
+                     tok::kw_throw) ||
+        (NonComment &&
+         NonComment->isOneOf(tok::kw_return, tok::kw_continue, tok::kw_break,
+                             tok::kw_throw)))
       return false; // Otherwise a semicolon is inserted.
     if (Left.is(TT_JsFatArrow) && Right.is(tok::l_brace))
       return false;

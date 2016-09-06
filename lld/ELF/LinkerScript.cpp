@@ -981,6 +981,10 @@ Expr ScriptParser::readAssert() {
   };
 }
 
+// Reads a FILL(expr) command. We handle the FILL command as an
+// alias for =fillexp section attribute, which is different from
+// what GNU linkers do.
+// https://sourceware.org/binutils/docs/ld/Output-Section-Data.html
 std::vector<uint8_t> ScriptParser::readFill() {
   expect("(");
   std::vector<uint8_t> V = readOutputSectionFiller(next());

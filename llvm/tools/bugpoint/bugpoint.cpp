@@ -197,11 +197,9 @@ int main(int argc, char **argv) {
   sys::Process::PreventCoreFiles();
 #endif
 
-  std::string Error;
-  bool Failure = D.run(Error);
-  if (!Error.empty()) {
-    errs() << Error;
+  if (Error E = D.run()) {
+    errs() << toString(std::move(E));
     return 1;
   }
-  return Failure;
+  return 0;
 }
