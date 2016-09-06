@@ -22,20 +22,21 @@ namespace llvm {
 /// \brief Displays the code coverage report.
 class CoverageReport {
   const CoverageViewOptions &Options;
-  std::unique_ptr<coverage::CoverageMapping> Coverage;
+  const coverage::CoverageMapping &Coverage;
 
   void render(const FileCoverageSummary &File, raw_ostream &OS);
   void render(const FunctionCoverageSummary &Function, raw_ostream &OS);
 
 public:
   CoverageReport(const CoverageViewOptions &Options,
-                 std::unique_ptr<coverage::CoverageMapping> Coverage)
-      : Options(Options), Coverage(std::move(Coverage)) {}
+                 const coverage::CoverageMapping &Coverage)
+      : Options(Options), Coverage(Coverage) {}
 
   void renderFunctionReports(ArrayRef<StringRef> Files, raw_ostream &OS);
 
   void renderFileReports(raw_ostream &OS);
 };
-}
+
+} // end namespace llvm
 
 #endif // LLVM_COV_COVERAGEREPORT_H
