@@ -37,7 +37,7 @@ class ConstantRange;
 class DataLayout;
 class LLVMContext;
 
-/// Prededined synchronization scopes.
+/// Predefined synchronization scopes.
 enum SynchronizationScope : unsigned {
   /// Synchronized with respect to signal handlers executing in the same thread.
   SingleThread = 0,

@@ -75,6 +75,10 @@ extern char &SILowerControlFlowID;
 void initializeSIInsertSkipsPass(PassRegistry &);
 extern char &SIInsertSkipsPassID;
 
+ModulePass *createAMDConvertAtomicLibCallsPass();
+void initializeAMDConvertAtomicLibCallsPass(PassRegistry &);
+extern char &AMDConvertAtomicLibCallsID;
+
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca(const TargetMachine *TM = nullptr);
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
