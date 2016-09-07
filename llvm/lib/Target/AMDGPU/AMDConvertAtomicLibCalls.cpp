@@ -163,7 +163,7 @@ static bool isOCLAtomicInit(StringRef FuncName) {
 }
 
 static AtomicOrdering MemoryOrderSpir2LLVM(Value *SpirMemOrd) {
-  typedef enum memory_order {
+  enum memory_order {
     memory_order_relaxed = 0,
     memory_order_acquire,
     memory_order_release,

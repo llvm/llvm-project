@@ -50,7 +50,7 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
-  void addPreLinkPasses(PassManagerBase & PM);
+  void addPreLinkPasses(PassManagerBase & PM) override;
 };
 
 //===----------------------------------------------------------------------===//
