@@ -15,6 +15,7 @@
 #ifndef ESAN_SHADOW_H
 #define ESAN_SHADOW_H
 
+#include "esan.h"
 #include <sanitizer_common/sanitizer_platform.h>
 
 #if SANITIZER_WORDSIZE != 64
@@ -23,7 +24,13 @@
 
 namespace __esan {
 
-#if SANITIZER_LINUX && defined(__x86_64__)
+struct ApplicationRegion {
+  uptr Start;
+  uptr End;
+  bool ShadowMergedWithPrev;
+};
+
+#if SANITIZER_LINUX && defined(__x86_64__) 
 // Linux x86_64
 //
 // Application memory falls into these 5 regions (ignoring the corner case
@@ -89,12 +96,6 @@ namespace __esan {
 // [0x000015ff'ff601000, 0x00001600'00000000]
 // [0x000015ff'ff600000, 0x000015ff'ff601000]
 
-struct ApplicationRegion {
-  uptr Start;
-  uptr End;
-  bool ShadowMergedWithPrev;
-};
-
 static const struct ApplicationRegion AppRegions[] = {
   {0x0000000000000000ull, 0x0000010000000000u, false},
   {0x0000550000000000u,   0x0000570000000000u, false},
@@ -105,6 +106,52 @@ static const struct ApplicationRegion AppRegions[] = {
   {0x00007fffff601000u,   0x0000800000000000u, true},
   {0xffffffffff600000u,   0xffffffffff601000u, true},
 };
+
+#elif SANITIZER_LINUX && SANITIZER_MIPS64
+
+// Application memory falls into these 3 regions
+//
+// [0x00000001'00000000, 0x00000002'00000000) non-PIE + heap
+// [0x000000aa'00000000, 0x000000ab'00000000) PIE
+// [0x000000ff'00000000, 0x000000ff'ffffffff) libraries + stack
+//
+// This formula translates from application memory to shadow memory:
+//
+//   shadow(app) = ((app & 0x00000f'ffffffff) + offset) >> scale
+//
+// Where the offset for 1:1 is 0x000013'00000000.  For other scales, the
+// offset is shifted left by the scale, except for scales of 1 and 2 where
+// it must be tweaked in order to pass the double-shadow test
+// (see the "shadow(shadow)" comments below):
+//   scale == 0: 0x000013'00000000
+//   scale == 1: 0x000022'00000000
+//   scale == 2: 0x000044'00000000
+//   scale >= 3: (0x000013'00000000 << scale)
+//
+// The resulting shadow memory regions for a 0 scaling are:
+//
+// [0x00000014'00000000, 0x00000015'00000000)
+// [0x0000001d'00000000, 0x0000001e'00000000)
+// [0x00000022'00000000, 0x00000022'ffffffff)
+//
+// We also want to ensure that a wild access by the application into the shadow
+// regions will not corrupt our own shadow memory. shadow(shadow) ends up
+// disjoint from shadow(app):
+//
+// [0x00000017'00000000, 0x00000018'00000000)
+// [0x00000020'00000000, 0x00000021'00000000)
+// [0x00000015'00000000, 0x00000015'ffffffff]
+
+static const struct ApplicationRegion AppRegions[] = {
+  {0x0100000000u, 0x0200000000u, false},
+  {0xaa00000000u, 0xab00000000u, false},
+  {0xff00000000u, 0xffffffffffu, false},
+};
+
+#else
+#error Platform not supported
+#endif
+
 static const u32 NumAppRegions = sizeof(AppRegions)/sizeof(AppRegions[0]);
 
 // See the comment above: we do not currently support a stack size rlimit
@@ -113,29 +160,58 @@ static const uptr MaxStackSize = (1ULL << 40) - 4096;
 
 class ShadowMapping {
 public:
-  static const uptr Mask = 0x00000fffffffffffu;
+
   // The scale and offset vary by tool.
   uptr Scale;
   uptr Offset;
+
+  // TODO(sagar.thakur): Try to hardcode the mask as done in the compiler
+  // instrumentation to reduce the runtime cost of appToShadow.
+  struct ShadowMemoryMask40 { 
+    static const uptr Mask = 0x0000000fffffffffu;
+  };
+
+  struct ShadowMemoryMask47 {
+    static const uptr Mask = 0x00000fffffffffffu;
+  };
+
+  const uptr OffsetArray40[3] = {
+    0x0000001300000000u,
+    0x0000002200000000u,
+    0x0000004400000000u,
+  };
+
+  const uptr OffsetArray47[3] = {
+    0x0000130000000000u,
+    0x0000220000000000u,
+    0x0000440000000000u,
+  };
+
   void initialize(uptr ShadowScale) {
-    static const uptr OffsetArray[3] = {
-        0x0000130000000000u,
-        0x0000220000000000u,
-        0x0000440000000000u,
-    };
     Scale = ShadowScale;
-    if (Scale <= 2)
-      Offset = OffsetArray[Scale];
-    else
-      Offset = OffsetArray[0] << Scale;
+    switch (VmaSize) {
+      case 40: {
+        if (Scale <= 2)
+          Offset = OffsetArray40[Scale];
+        else
+          Offset = OffsetArray40[0] << Scale;
+      }
+      break;
+      case 47: {
+        if (Scale <= 2)
+          Offset = OffsetArray47[Scale];
+        else
+          Offset = OffsetArray47[0] << Scale;
+      }
+      break;
+      default: {
+        Printf("ERROR: %d-bit virtual memory address size not supported\n", VmaSize);
+        Die();
+      }
+    }
   }
 };
 extern ShadowMapping Mapping;
-#else
-// We'll want to use templatized functions over the ShadowMapping once
-// we support more platforms.
-#error Platform not supported
-#endif
 
 static inline bool getAppRegion(u32 i, uptr *Start, uptr *End) {
   if (i >= NumAppRegions)
@@ -154,9 +230,21 @@ bool isAppMem(uptr Mem) {
   return false;
 }
 
+template<typename Params>
+uptr appToShadowImpl(uptr App) {
+  return (((App & Params::Mask) + Mapping.Offset) >> Mapping.Scale);
+}
+
 ALWAYS_INLINE
 uptr appToShadow(uptr App) {
-  return (((App & ShadowMapping::Mask) + Mapping.Offset) >> Mapping.Scale);
+  switch (VmaSize) {
+    case 40: return appToShadowImpl<ShadowMapping::ShadowMemoryMask40>(App);
+    case 47: return appToShadowImpl<ShadowMapping::ShadowMemoryMask47>(App);
+    default: {
+      Printf("ERROR: %d-bit virtual memory address size not supported\n", VmaSize);
+      Die();
+    }
+  }
 }
 
 static inline bool getShadowRegion(u32 i, uptr *Start, uptr *End) {

@@ -16,7 +16,6 @@
 #include <future>
 
 #include "GDBRemoteTestUtils.h"
-#include "gtest/gtest.h"
 
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
 #include "lldb/Core/DataBuffer.h"
