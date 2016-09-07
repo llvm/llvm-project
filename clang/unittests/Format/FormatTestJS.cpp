@@ -686,7 +686,9 @@ TEST_F(FormatTestJS, WrapRespectsAutomaticSemicolonInsertion) {
   // would change due to automatic semicolon insertion.
   // See http://www.ecma-international.org/ecma-262/5.1/#sec-7.9.1.
   verifyFormat("return aaaaa;", getGoogleJSStyleWithColumns(10));
+  verifyFormat("return /* hello! */ aaaaa;", getGoogleJSStyleWithColumns(10));
   verifyFormat("continue aaaaa;", getGoogleJSStyleWithColumns(10));
+  verifyFormat("continue /* hello! */ aaaaa;", getGoogleJSStyleWithColumns(10));
   verifyFormat("break aaaaa;", getGoogleJSStyleWithColumns(10));
   verifyFormat("throw aaaaa;", getGoogleJSStyleWithColumns(10));
   verifyFormat("aaaaaaaaa++;", getGoogleJSStyleWithColumns(10));
@@ -1234,6 +1236,7 @@ TEST_F(FormatTestJS, CastSyntax) {
   verifyFormat("x = x as [a, b];");
   verifyFormat("x = x as {a: string};");
   verifyFormat("x = x as (string);");
+  verifyFormat("x = x! as (string);");
 }
 
 TEST_F(FormatTestJS, TypeArguments) {

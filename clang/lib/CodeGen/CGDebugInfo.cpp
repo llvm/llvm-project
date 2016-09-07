@@ -495,14 +495,14 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 
     auto *ISATy = DBuilder.createPointerType(ClassTy, Size);
 
-    ObjTy =
-        DBuilder.createStructType(TheCU, "objc_object", getOrCreateMainFile(),
-                                  0, 0, 0, 0, nullptr, llvm::DINodeArray());
+    ObjTy = DBuilder.createStructType(
+        TheCU, "objc_object", getOrCreateMainFile(), 0, 0, 0,
+        llvm::DINode::FlagZero, nullptr, llvm::DINodeArray());
 
     DBuilder.replaceArrays(
-        ObjTy,
-        DBuilder.getOrCreateArray(&*DBuilder.createMemberType(
-            ObjTy, "isa", getOrCreateMainFile(), 0, Size, 0, 0, 0, ISATy)));
+        ObjTy, DBuilder.getOrCreateArray(&*DBuilder.createMemberType(
+                   ObjTy, "isa", getOrCreateMainFile(), 0, Size, 0, 0,
+                   llvm::DINode::FlagZero, ISATy)));
     return ObjTy;
   }
   case BuiltinType::ObjCSel: {
@@ -787,7 +787,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
   Elements = DBuilder.getOrCreateArray(EltTys);
   EltTys.clear();
 
-  unsigned Flags = llvm::DINode::FlagAppleBlock;
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagAppleBlock;
   unsigned LineNo = 0;
 
   auto *EltTy =
@@ -811,9 +811,9 @@ llvm::DIType *CGDebugInfo::CreateType(const BlockPointerType *Ty,
   FType = CGM.getContext().getPointerType(CGM.getContext().VoidTy);
   FieldSize = CGM.getContext().getTypeSize(Ty);
   FieldAlign = CGM.getContext().getTypeAlign(Ty);
-  EltTys.push_back(DBuilder.createMemberType(Unit, "__descriptor", nullptr, LineNo,
-                                             FieldSize, FieldAlign, FieldOffset,
-                                             0, DescTy));
+  EltTys.push_back(DBuilder.createMemberType(
+      Unit, "__descriptor", nullptr, LineNo, FieldSize, FieldAlign, FieldOffset,
+      llvm::DINode::FlagZero, DescTy));
 
   FieldOffset += FieldSize;
   Elements = DBuilder.getOrCreateArray(EltTys);
@@ -917,14 +917,15 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
   }
 
   llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
-  return DBuilder.createSubroutineType(EltTypeArray, 0,
+  return DBuilder.createSubroutineType(EltTypeArray, llvm::DINode::FlagZero,
                                        getDwarfCC(Ty->getCallConv()));
 }
 
 /// Convert an AccessSpecifier into the corresponding DINode flag.
 /// As an optimization, return 0 if the access specifier equals the
 /// default for the containing type.
-static unsigned getAccessFlag(AccessSpecifier Access, const RecordDecl *RD) {
+static llvm::DINode::DIFlags getAccessFlag(AccessSpecifier Access,
+                                           const RecordDecl *RD) {
   AccessSpecifier Default = clang::AS_none;
   if (RD && RD->isClass())
     Default = clang::AS_private;
@@ -932,7 +933,7 @@ static unsigned getAccessFlag(AccessSpecifier Access, const RecordDecl *RD) {
     Default = clang::AS_public;
 
   if (Access == Default)
-    return 0;
+    return llvm::DINode::FlagZero;
 
   switch (Access) {
   case clang::AS_private:
@@ -942,7 +943,7 @@ static unsigned getAccessFlag(AccessSpecifier Access, const RecordDecl *RD) {
   case clang::AS_public:
     return llvm::DINode::FlagPublic;
   case clang::AS_none:
-    return 0;
+    return llvm::DINode::FlagZero;
   }
   llvm_unreachable("unexpected access enumerator");
 }
@@ -968,7 +969,7 @@ llvm::DIType *CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
   uint64_t StorageOffsetInBits =
       CGM.getContext().toBits(BitFieldInfo.StorageOffset);
   uint64_t OffsetInBits = StorageOffsetInBits + BitFieldInfo.Offset;
-  unsigned Flags = getAccessFlag(BitFieldDecl->getAccess(), RD);
+  llvm::DINode::DIFlags Flags = getAccessFlag(BitFieldDecl->getAccess(), RD);
   return DBuilder.createBitFieldMemberType(
       RecordTy, Name, File, Line, SizeInBits, AlignInBits, OffsetInBits,
       StorageOffsetInBits, Flags, DebugType);
@@ -993,7 +994,7 @@ CGDebugInfo::createFieldType(StringRef name, QualType type, SourceLocation loc,
     AlignInBits = TI.Align;
   }
 
-  unsigned flags = getAccessFlag(AS, RD);
+  llvm::DINode::DIFlags flags = getAccessFlag(AS, RD);
   return DBuilder.createMemberType(scope, name, file, line, SizeInBits,
                                    AlignInBits, offsetInBits, flags, debugType);
 }
@@ -1060,7 +1061,7 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
     }
   }
 
-  unsigned Flags = getAccessFlag(Var->getAccess(), RD);
+  llvm::DINode::DIFlags Flags = getAccessFlag(Var->getAccess(), RD);
   llvm::DIDerivedType *GV = DBuilder.createStaticMemberType(
       RecordTy, VName, VUnit, LineNumber, VTy, Flags, C);
   StaticDataMemberCache[Var->getCanonicalDecl()].reset(GV);
@@ -1203,7 +1204,7 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
 
   llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
 
-  unsigned Flags = 0;
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   if (Func->getExtProtoInfo().RefQualifier == RQ_LValue)
     Flags |= llvm::DINode::FlagLValueReference;
   if (Func->getExtProtoInfo().RefQualifier == RQ_RValue)
@@ -1254,7 +1255,7 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
   llvm::DIType *ContainingType = nullptr;
   unsigned Virtuality = 0;
   unsigned VIndex = 0;
-  unsigned Flags = 0;
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   int ThisAdjustment = 0;
 
   if (Method->isVirtual()) {
@@ -1367,7 +1368,7 @@ void CGDebugInfo::CollectCXXBases(const CXXRecordDecl *RD, llvm::DIFile *Unit,
                                   llvm::DIType *RecordTy) {
   const ASTRecordLayout &RL = CGM.getContext().getASTRecordLayout(RD);
   for (const auto &BI : RD->bases()) {
-    unsigned BFlags = 0;
+    llvm::DINode::DIFlags BFlags = llvm::DINode::FlagZero;
     uint64_t BaseOffset;
 
     const auto *Base =
@@ -1952,7 +1953,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
   uint64_t Size = CGM.getContext().getTypeSize(Ty);
   uint64_t Align = CGM.getContext().getTypeAlign(Ty);
 
-  unsigned Flags = 0;
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   if (ID->getImplementation())
     Flags |= llvm::DINode::FlagObjcClassComplete;
 
@@ -1978,7 +1979,8 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
     if (!SClassTy)
       return nullptr;
 
-    llvm::DIType *InhTag = DBuilder.createInheritance(RealDecl, SClassTy, 0, 0);
+    llvm::DIType *InhTag = DBuilder.createInheritance(RealDecl, SClassTy, 0,
+                                                      llvm::DINode::FlagZero);
     EltTys.push_back(InhTag);
   }
 
@@ -2060,7 +2062,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
       FieldOffset = RL.getFieldOffset(FieldNo);
     }
 
-    unsigned Flags = 0;
+    llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
     if (Field->getAccessControl() == ObjCIvarDecl::Protected)
       Flags = llvm::DINode::FlagProtected;
     else if (Field->getAccessControl() == ObjCIvarDecl::Private)
@@ -2191,7 +2193,7 @@ llvm::DIType *CGDebugInfo::CreateType(const RValueReferenceType *Ty,
 
 llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
                                       llvm::DIFile *U) {
-  unsigned Flags = 0;
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   uint64_t Size = 0;
 
   if (!Ty->isIncompleteType()) {
@@ -2591,8 +2593,8 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
   SmallString<256> FullName = getUniqueTagTypeName(Ty, CGM, TheCU);
 
   llvm::DICompositeType *RealDecl = DBuilder.createReplaceableCompositeType(
-      getTagForRecord(RD), RDName, RDContext, DefUnit, Line, 0, Size, Align, 0,
-      FullName);
+      getTagForRecord(RD), RDName, RDContext, DefUnit, Line, 0, Size, Align,
+      llvm::DINode::FlagZero, FullName);
 
   // Elements of composite types usually have back to the type, creating
   // uniquing cycles.  Distinct nodes are more efficient.
@@ -2656,8 +2658,9 @@ llvm::DIType *CGDebugInfo::CreateMemberType(llvm::DIFile *Unit, QualType FType,
   llvm::DIType *FieldTy = CGDebugInfo::getOrCreateType(FType, Unit);
   uint64_t FieldSize = CGM.getContext().getTypeSize(FType);
   unsigned FieldAlign = CGM.getContext().getTypeAlign(FType);
-  llvm::DIType *Ty = DBuilder.createMemberType(Unit, Name, Unit, 0, FieldSize,
-                                               FieldAlign, *Offset, 0, FieldTy);
+  llvm::DIType *Ty =
+      DBuilder.createMemberType(Unit, Name, Unit, 0, FieldSize, FieldAlign,
+                                *Offset, llvm::DINode::FlagZero, FieldTy);
   *Offset += FieldSize;
   return Ty;
 }
@@ -2667,7 +2670,7 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
                                            StringRef &LinkageName,
                                            llvm::DIScope *&FDContext,
                                            llvm::DINodeArray &TParamsArray,
-                                           unsigned &Flags) {
+                                           llvm::DINode::DIFlags &Flags) {
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
   Name = getFunctionName(FD);
   // Use mangled name as linkage name for C/C++ functions.
@@ -2751,7 +2754,7 @@ llvm::DISubprogram *
 CGDebugInfo::getFunctionForwardDeclaration(const FunctionDecl *FD) {
   llvm::DINodeArray TParamsArray;
   StringRef Name, LinkageName;
-  unsigned Flags = 0;
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   SourceLocation Loc = FD->getLocation();
   llvm::DIFile *Unit = getOrCreateFile(Loc);
   llvm::DIScope *DContext = Unit;
@@ -2905,7 +2908,8 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
       Elts.push_back(DBuilder.createUnspecifiedParameter());
 
     llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(Elts);
-    return DBuilder.createSubroutineType(EltTypeArray, 0, getDwarfCC(CC));
+    return DBuilder.createSubroutineType(EltTypeArray, llvm::DINode::FlagZero,
+                                         getDwarfCC(CC));
   }
 
   // Handle variadic function types; they need an additional
@@ -2919,7 +2923,8 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
           EltTys.push_back(getOrCreateType(ParamType, F));
       EltTys.push_back(DBuilder.createUnspecifiedParameter());
       llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
-      return DBuilder.createSubroutineType(EltTypeArray, 0, getDwarfCC(CC));
+      return DBuilder.createSubroutineType(EltTypeArray, llvm::DINode::FlagZero,
+                                           getDwarfCC(CC));
     }
 
   return cast<llvm::DISubroutineType>(getOrCreateType(FnType, F));
@@ -2937,7 +2942,7 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   const Decl *D = GD.getDecl();
   bool HasDecl = (D != nullptr);
 
-  unsigned Flags = 0;
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   llvm::DIFile *Unit = getOrCreateFile(Loc);
   llvm::DIScope *FDContext = Unit;
   llvm::DINodeArray TParamsArray;
@@ -3010,7 +3015,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   if (!D)
     return;
 
-  unsigned Flags = 0;
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   llvm::DIFile *Unit = getOrCreateFile(Loc);
   llvm::DIScope *FDContext = getDeclContextDescriptor(D);
   llvm::DINodeArray TParamsArray;
@@ -3167,13 +3172,14 @@ llvm::DIType *CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
 
   *XOffset = FieldOffset;
   FieldTy = DBuilder.createMemberType(Unit, VD->getName(), Unit, 0, FieldSize,
-                                      FieldAlign, FieldOffset, 0, FieldTy);
+                                      FieldAlign, FieldOffset,
+                                      llvm::DINode::FlagZero, FieldTy);
   EltTys.push_back(FieldTy);
   FieldOffset += FieldSize;
 
   llvm::DINodeArray Elements = DBuilder.getOrCreateArray(EltTys);
 
-  unsigned Flags = llvm::DINode::FlagBlockByrefStruct;
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagBlockByrefStruct;
 
   return DBuilder.createStructType(Unit, "", Unit, 0, FieldOffset, 0, Flags,
                                    nullptr, Elements);
@@ -3213,7 +3219,7 @@ void CGDebugInfo::EmitDeclare(const VarDecl *VD, llvm::Value *Storage,
     Column = getColumnNumber(VD->getLocation());
   }
   SmallVector<int64_t, 9> Expr;
-  unsigned Flags = 0;
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   if (VD->isImplicit())
     Flags |= llvm::DINode::FlagArtificial;
   // If this is the first argument and it is implicit then
@@ -3514,9 +3520,9 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
       uint64_t xoffset;
       fieldType = EmitTypeForVarWithBlocksAttr(variable, &xoffset);
       fieldType = DBuilder.createPointerType(fieldType, PtrInfo.Width);
-      fieldType =
-          DBuilder.createMemberType(tunit, name, tunit, line, PtrInfo.Width,
-                                    PtrInfo.Align, offsetInBits, 0, fieldType);
+      fieldType = DBuilder.createMemberType(
+          tunit, name, tunit, line, PtrInfo.Width, PtrInfo.Align, offsetInBits,
+          llvm::DINode::FlagZero, fieldType);
     } else {
       fieldType = createFieldType(name, variable->getType(), loc, AS_public,
                                   offsetInBits, tunit, tunit);
@@ -3530,14 +3536,15 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
 
   llvm::DINodeArray fieldsArray = DBuilder.getOrCreateArray(fields);
 
-  llvm::DIType *type = DBuilder.createStructType(
-      tunit, typeName.str(), tunit, line,
-      CGM.getContext().toBits(block.BlockSize),
-      CGM.getContext().toBits(block.BlockAlign), 0, nullptr, fieldsArray);
+  llvm::DIType *type =
+      DBuilder.createStructType(tunit, typeName.str(), tunit, line,
+                                CGM.getContext().toBits(block.BlockSize),
+                                CGM.getContext().toBits(block.BlockAlign),
+                                llvm::DINode::FlagZero, nullptr, fieldsArray);
   type = DBuilder.createPointerType(type, CGM.PointerWidthInBits);
 
   // Get overall information about the block.
-  unsigned flags = llvm::DINode::FlagArtificial;
+  llvm::DINode::DIFlags flags = llvm::DINode::FlagArtificial;
   auto *scope = cast<llvm::DILocalScope>(LexicalBlockStack.back());
 
   // Create the descriptor for the parameter.
