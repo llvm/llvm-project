@@ -5619,6 +5619,7 @@ let Predicates = [HasAVX512] in {
   def rr : AVX512<opc, MRMSrcReg, (outs _DstRC.RC:$dst), (ins _SrcRC.FRC:$src),
               !strconcat(asm,"\t{$src, $dst|$dst, $src}"),
               [(set _DstRC.RC:$dst, (OpNode _SrcRC.FRC:$src))]>, EVEX;
+  let hasSideEffects = 0 in
   def rb : AVX512<opc, MRMSrcReg, (outs _DstRC.RC:$dst), (ins _SrcRC.FRC:$src),
                 !strconcat(asm,"\t{{sae}, $src, $dst|$dst, $src, {sae}}"),
                 []>, EVEX, EVEX_B;

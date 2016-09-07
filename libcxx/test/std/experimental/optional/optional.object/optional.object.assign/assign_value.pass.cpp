@@ -20,7 +20,7 @@
 using std::experimental::optional;
 
 struct AllowConstAssign {
-  AllowConstAssign() = default;
+  AllowConstAssign() {}
   AllowConstAssign(AllowConstAssign const&) {}
   AllowConstAssign const& operator=(AllowConstAssign const&) const {
       return *this;
