@@ -62,10 +62,30 @@ struct ErrorDoubleFree : ErrorBase {
   void Print();
 };
 
+struct ErrorNewDeleteSizeMismatch : ErrorBase {
+  u32 tid;
+  HeapAddressDescription addr_description;
+  uptr delete_size;
+  // ErrorNewDeleteSizeMismatch doesn't own the stack trace.
+  BufferedStackTrace *free_stack;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorNewDeleteSizeMismatch() = default;
+  ErrorNewDeleteSizeMismatch(uptr addr, u32 tid_, uptr delete_size_,
+                             BufferedStackTrace *stack)
+      : tid(tid_), delete_size(delete_size_), free_stack(stack) {
+    GetHeapAddressInformation(addr, 1, &addr_description);
+    scariness.Clear();
+    scariness.Scare(10, "new-delete-type-mismatch");
+  }
+  void Print();
+};
+
 enum ErrorKind {
   kErrorKindInvalid = 0,
   kErrorKindStackOverflow,
   kErrorKindDoubleFree,
+  kErrorKindNewDeleteSizeMismatch,
 };
 
 struct ErrorDescription {
@@ -78,6 +98,7 @@ struct ErrorDescription {
   union {
     ErrorStackOverflow stack_overflow;
     ErrorDoubleFree double_free;
+    ErrorNewDeleteSizeMismatch new_delete_size_mismatch;
   };
   ErrorDescription() { internal_memset(this, 0, sizeof(*this)); }
   ErrorDescription(const ErrorStackOverflow &e)  // NOLINT
@@ -86,6 +107,9 @@ struct ErrorDescription {
   ErrorDescription(const ErrorDoubleFree &e)  // NOLINT
       : kind(kErrorKindDoubleFree),
         double_free(e) {}
+  ErrorDescription(const ErrorNewDeleteSizeMismatch &e)  // NOLINT
+      : kind(kErrorKindNewDeleteSizeMismatch),
+        new_delete_size_mismatch(e) {}
 
   bool IsValid() { return kind != kErrorKindInvalid; }
   void Print() {
@@ -95,6 +119,9 @@ struct ErrorDescription {
         return;
       case kErrorKindDoubleFree:
         double_free.Print();
+        return;
+      case kErrorKindNewDeleteSizeMismatch:
+        new_delete_size_mismatch.Print();
         return;
       case kErrorKindInvalid:
         CHECK(0);
