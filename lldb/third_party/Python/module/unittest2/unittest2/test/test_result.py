@@ -42,6 +42,7 @@ class Test_TestResult(unittest2.TestCase):
     # implementation simply increments the instance's testsRun counter."
     def test_startTest(self):
         class Foo(unittest2.TestCase):
+
             def test_1(self):
                 pass
 
@@ -63,6 +64,7 @@ class Test_TestResult(unittest2.TestCase):
     # the outcome. The default implementation does nothing."
     def test_stopTest(self):
         class Foo(unittest2.TestCase):
+
             def test_1(self):
                 pass
 
@@ -114,6 +116,7 @@ class Test_TestResult(unittest2.TestCase):
     # of sys.exc_info() results."
     def test_addSuccess(self):
         class Foo(unittest2.TestCase):
+
             def test_1(self):
                 pass
 
@@ -153,6 +156,7 @@ class Test_TestResult(unittest2.TestCase):
     # of sys.exc_info() results."
     def test_addFailure(self):
         class Foo(unittest2.TestCase):
+
             def test_1(self):
                 pass
 
@@ -201,6 +205,7 @@ class Test_TestResult(unittest2.TestCase):
     # of sys.exc_info() results."
     def test_addError(self):
         class Foo(unittest2.TestCase):
+
             def test_1(self):
                 pass
 
@@ -229,18 +234,18 @@ class Test_TestResult(unittest2.TestCase):
     def testGetDescriptionWithoutDocstring(self):
         result = unittest2.TextTestResult(None, True, 1)
         self.assertEqual(
-                result.getDescription(self),
-                'testGetDescriptionWithoutDocstring (' + __name__ +
-                '.Test_TestResult)')
+            result.getDescription(self),
+            'testGetDescriptionWithoutDocstring (' + __name__ +
+            '.Test_TestResult)')
 
     def testGetDescriptionWithOneLineDocstring(self):
         """Tests getDescription() for a method with a docstring."""
         result = unittest2.TextTestResult(None, True, 1)
         self.assertEqual(
-                result.getDescription(self),
-               ('testGetDescriptionWithOneLineDocstring '
-                '(' + __name__ + '.Test_TestResult)\n'
-                'Tests getDescription() for a method with a docstring.'))
+            result.getDescription(self),
+            ('testGetDescriptionWithOneLineDocstring '
+             '(' + __name__ + '.Test_TestResult)\n'
+             'Tests getDescription() for a method with a docstring.'))
 
     def testGetDescriptionWithMultiLineDocstring(self):
         """Tests getDescription() for a method with a longer docstring.
@@ -248,19 +253,20 @@ class Test_TestResult(unittest2.TestCase):
         """
         result = unittest2.TextTestResult(None, True, 1)
         self.assertEqual(
-                result.getDescription(self),
-               ('testGetDescriptionWithMultiLineDocstring '
-                '(' + __name__ + '.Test_TestResult)\n'
-                'Tests getDescription() for a method with a longer '
-                'docstring.'))
+            result.getDescription(self),
+            ('testGetDescriptionWithMultiLineDocstring '
+             '(' + __name__ + '.Test_TestResult)\n'
+             'Tests getDescription() for a method with a longer '
+             'docstring.'))
 
     def testStackFrameTrimming(self):
         class Frame(object):
+
             class tb_frame(object):
                 f_globals = {}
         result = unittest2.TestResult()
         self.assertFalse(result._is_relevant_tb_level(Frame))
-        
+
         Frame.tb_frame.f_globals['__unittest'] = True
         self.assertTrue(result._is_relevant_tb_level(Frame))
 
@@ -286,6 +292,7 @@ class Test_TestResult(unittest2.TestCase):
     def testFailFastSetByRunner(self):
         runner = unittest2.TextTestRunner(stream=StringIO(), failfast=True)
         self.testRan = False
+
         def test(result):
             self.testRan = True
             self.assertTrue(result.failfast)
@@ -306,65 +313,64 @@ class TestOutputBuffering(unittest2.TestCase):
     def testBufferOutputOff(self):
         real_out = self._real_out
         real_err = self._real_err
-        
+
         result = unittest2.TestResult()
         self.assertFalse(result.buffer)
-    
+
         self.assertIs(real_out, sys.stdout)
         self.assertIs(real_err, sys.stderr)
-        
+
         result.startTest(self)
-        
+
         self.assertIs(real_out, sys.stdout)
         self.assertIs(real_err, sys.stderr)
 
     def testBufferOutputStartTestAddSuccess(self):
         real_out = self._real_out
         real_err = self._real_err
-        
+
         result = unittest2.TestResult()
         self.assertFalse(result.buffer)
-        
+
         result.buffer = True
-    
+
         self.assertIs(real_out, sys.stdout)
         self.assertIs(real_err, sys.stderr)
-        
+
         result.startTest(self)
-        
+
         self.assertIsNot(real_out, sys.stdout)
         self.assertIsNot(real_err, sys.stderr)
         self.assertIsInstance(sys.stdout, StringIO)
         self.assertIsInstance(sys.stderr, StringIO)
         self.assertIsNot(sys.stdout, sys.stderr)
-        
+
         out_stream = sys.stdout
         err_stream = sys.stderr
-        
+
         result._original_stdout = StringIO()
         result._original_stderr = StringIO()
-        
+
         print('foo')
         print('bar', file=sys.stderr)
-        
+
         self.assertEqual(out_stream.getvalue(), 'foo\n')
         self.assertEqual(err_stream.getvalue(), 'bar\n')
-        
+
         self.assertEqual(result._original_stdout.getvalue(), '')
         self.assertEqual(result._original_stderr.getvalue(), '')
-        
+
         result.addSuccess(self)
         result.stopTest(self)
-        
+
         self.assertIs(sys.stdout, result._original_stdout)
         self.assertIs(sys.stderr, result._original_stderr)
-        
+
         self.assertEqual(result._original_stdout.getvalue(), '')
         self.assertEqual(result._original_stderr.getvalue(), '')
-        
+
         self.assertEqual(out_stream.getvalue(), '')
         self.assertEqual(err_stream.getvalue(), '')
-        
 
     def getStartedResult(self):
         result = unittest2.TestResult()
@@ -374,26 +380,26 @@ class TestOutputBuffering(unittest2.TestCase):
 
     def testBufferOutputAddErrorOrFailure(self):
         for message_attr, add_attr, include_error in [
-            ('errors', 'addError', True), 
+            ('errors', 'addError', True),
             ('failures', 'addFailure', False),
-            ('errors', 'addError', True), 
+            ('errors', 'addError', True),
             ('failures', 'addFailure', False)
         ]:
             result = self.getStartedResult()
             result._original_stderr = StringIO()
             result._original_stdout = StringIO()
-            
+
             print('foo')
             if include_error:
                 print('bar', file=sys.stderr)
-            
+
             addFunction = getattr(result, add_attr)
             addFunction(self, (None, None, None))
             result.stopTest(self)
-            
+
             result_list = getattr(result, message_attr)
             self.assertEqual(len(result_list), 1)
-            
+
             test, message = result_list[0]
             expectedOutMessage = textwrap.dedent("""
                 Stdout:
@@ -405,14 +411,18 @@ class TestOutputBuffering(unittest2.TestCase):
                 Stderr:
                 bar
             """)
-            expectedFullMessage = 'None\n%s%s' % (expectedOutMessage, expectedErrMessage)
+            expectedFullMessage = 'None\n%s%s' % (
+                expectedOutMessage, expectedErrMessage)
 
             self.assertIs(test, self)
-            self.assertEqual(result._original_stdout.getvalue(), expectedOutMessage)
-            self.assertEqual(result._original_stderr.getvalue(), expectedErrMessage)
+            self.assertEqual(
+                result._original_stdout.getvalue(),
+                expectedOutMessage)
+            self.assertEqual(
+                result._original_stderr.getvalue(),
+                expectedErrMessage)
             self.assertMultiLineEqual(message, expectedFullMessage)
-        
-        
+
 
 if __name__ == '__main__':
     unittest2.main()

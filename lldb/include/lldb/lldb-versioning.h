@@ -1,4 +1,5 @@
-//===-- lldb-versioning.h ----------------------------------------*- C++ -*-===//
+//===-- lldb-versioning.h ----------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,64 +20,87 @@
 /*
   API versioning
  ---------------------------------
- 
+
  The LLDB API is versioned independently of the LLDB source base
  Our API version numbers are composed of a major and a minor number
 
- The major number means a complete and stable revision of the API. Major numbers are compatibility breakers
- (i.e. when we change the API major number, there is no promise of compatibility with the previous major version
+ The major number means a complete and stable revision of the API. Major numbers
+ are compatibility breakers
+ (i.e. when we change the API major number, there is no promise of compatibility
+ with the previous major version
   and we are free to remove and/or change any APIs)
- Minor numbers are a work-in-progress evolution of the API. APIs will not be removed or changed across minor versions
- (minors do not break compatibility). However, we can deprecate APIs in minor versions or add new APIs in minor versions
- A deprecated API is supposedly going to be removed in the next major version and will generate a warning if used
- APIs we add in minor versions will not be removed (at least until the following major) but they might theoretically be deprecated
+ Minor numbers are a work-in-progress evolution of the API. APIs will not be
+ removed or changed across minor versions
+ (minors do not break compatibility). However, we can deprecate APIs in minor
+ versions or add new APIs in minor versions
+ A deprecated API is supposedly going to be removed in the next major version
+ and will generate a warning if used
+ APIs we add in minor versions will not be removed (at least until the following
+ major) but they might theoretically be deprecated
  in a following minor version
- Users are discouraged from using the LLDB version number to test for API features and should instead use the API version checking
+ Users are discouraged from using the LLDB version number to test for API
+ features and should instead use the API version checking
  as discussed below
- 
+
   API version checking
  ---------------------------------
- 
+
  You can (optionally) sign into an API version checking feature
  To do so you need to define three macros:
  LLDB_API_CHECK_VERSIONING - define to any value (or no value)
- LLDB_API_MAJOR_VERSION_WANTED - which major version of the LLDB API you are targeting
- LLDB_API_MINOR_VERSION_WANTED - which minor version of the LLDB API you are targeting
- 
+ LLDB_API_MAJOR_VERSION_WANTED - which major version of the LLDB API you are
+ targeting
+ LLDB_API_MINOR_VERSION_WANTED - which minor version of the LLDB API you are
+ targeting
+
  If these macros exist - LLDB will enable version checking of the public API
- 
- If LLDB_API_MAJOR_VERSION is not equal to LLDB_API_MAJOR_VERSION_WANTED we will immediately halt your compilation with an error
- This is by design, since we do not make any promise of compatibility across major versions - if you really want to test your luck, disable the versioning altogether
- 
- If the major version test passes, you have signed up for a specific minor version of the API
- Whenever we add or deprecate an API in a minor version, we will mark it with either
+
+ If LLDB_API_MAJOR_VERSION is not equal to LLDB_API_MAJOR_VERSION_WANTED we will
+ immediately halt your compilation with an error
+ This is by design, since we do not make any promise of compatibility across
+ major versions - if you really want to test your luck, disable the versioning
+ altogether
+
+ If the major version test passes, you have signed up for a specific minor
+ version of the API
+ Whenever we add or deprecate an API in a minor version, we will mark it with
+ either
  LLDB_API_NEW_IN_DOT_x - this API is new in LLDB .x
  LLDB_API_DEPRECATED_IN_DOT_x - this API is deprecated as of .x
- 
+
  If you are using an API new in DOT_x
-  if LLDB_API_MINOR_VERSION_WANTED >= x then all is well, else you will get a compilation error
-   This is meant to prevent you from using APIs that are newer than whatever LLDB you want to target
+  if LLDB_API_MINOR_VERSION_WANTED >= x then all is well, else you will get a
+ compilation error
+   This is meant to prevent you from using APIs that are newer than whatever
+ LLDB you want to target
 
  If you are using an API deprecated in DOT_x
-  if LLDB_API_MINOR_VERSION_WANTED >= x then you will get a compilation warning, else all is well
-  This is meant to let you know that you are using an API that is deprecated and might go away
- 
+  if LLDB_API_MINOR_VERSION_WANTED >= x then you will get a compilation warning,
+ else all is well
+  This is meant to let you know that you are using an API that is deprecated and
+ might go away
+
   Caveats
  ---------------------------------
- 
- Version checking only works on clang on OSX - you will get an error if you try to enable it on any other OS/compiler
- If you want to enable version checking on other platforms, you will need to define appropriate implementations for
- LLDB_API_IMPL_DEPRECATED and LLDB_API_IMPL_TOONEW and any other infrastructure your compiler needs for this purpose
- 
+
+ Version checking only works on clang on OSX - you will get an error if you try
+ to enable it on any other OS/compiler
+ If you want to enable version checking on other platforms, you will need to
+ define appropriate implementations for
+ LLDB_API_IMPL_DEPRECATED and LLDB_API_IMPL_TOONEW and any other infrastructure
+ your compiler needs for this purpose
+
  We have no deprecation-as-error mode
- 
+
  There is no support for API versioning in Python
- 
- We reserve to use macros whose names begin with LLDB_API_ and you should not use them in your source code as they might conflict
+
+ We reserve to use macros whose names begin with LLDB_API_ and you should not
+ use them in your source code as they might conflict
  with present or future macro names we are using to implement versioning
 */
 
-// if you want the version checking to work on other OS/compiler, define appropriate IMPL_DEPRECATED/IMPL_TOONEW
+// if you want the version checking to work on other OS/compiler, define
+// appropriate IMPL_DEPRECATED/IMPL_TOONEW
 // and define LLDB_API_CHECK_VERSIONING_WORKS when you are ready to go live
 #if defined(__APPLE__) && defined(__clang__)
 #define LLDB_API_IMPL_DEPRECATED __attribute__((deprecated))
@@ -84,18 +108,26 @@
 #define LLDB_API_CHECK_VERSIONING_WORKS
 #endif
 
-#if defined(LLDB_API_CHECK_VERSIONING) && !defined(LLDB_API_CHECK_VERSIONING_WORKS)
-#error "API version checking will not work here - please disable or create and submit patches to lldb-versioning.h"
+#if defined(LLDB_API_CHECK_VERSIONING) &&                                      \
+    !defined(LLDB_API_CHECK_VERSIONING_WORKS)
+#error                                                                         \
+    "API version checking will not work here - please disable or create and submit patches to lldb-versioning.h"
 #endif
 
-#if defined(LLDB_API_CHECK_VERSIONING_WORKS) && (!defined(LLDB_API_IMPL_DEPRECATED) || !defined(LLDB_API_IMPL_TOONEW))
-#error "LLDB_API_CHECK_VERSIONING_WORKS needs LLDB_API_IMPL_DEPRECATED and LLDB_API_IMPL_TOONEW to be defined"
+#if defined(LLDB_API_CHECK_VERSIONING_WORKS) &&                                \
+    (!defined(LLDB_API_IMPL_DEPRECATED) || !defined(LLDB_API_IMPL_TOONEW))
+#error                                                                         \
+    "LLDB_API_CHECK_VERSIONING_WORKS needs LLDB_API_IMPL_DEPRECATED and LLDB_API_IMPL_TOONEW to be defined"
 #endif
 
-#if defined(LLDB_API_CHECK_VERSIONING) && defined(LLDB_API_MAJOR_VERSION_WANTED) && defined(LLDB_API_MINOR_VERSION_WANTED)
+#if defined(LLDB_API_CHECK_VERSIONING) &&                                      \
+    defined(LLDB_API_MAJOR_VERSION_WANTED) &&                                  \
+    defined(LLDB_API_MINOR_VERSION_WANTED)
 
-#if defined (LLDB_API_MAJOR_VERSION) && (LLDB_API_MAJOR_VERSION != LLDB_API_MAJOR_VERSION_WANTED)
-#error "Cannot link using this LLDB version - public API versions are incompatible"
+#if defined(LLDB_API_MAJOR_VERSION) &&                                         \
+    (LLDB_API_MAJOR_VERSION != LLDB_API_MAJOR_VERSION_WANTED)
+#error                                                                         \
+    "Cannot link using this LLDB version - public API versions are incompatible"
 #endif
 
 #define LLDB_API_MINOR_VERSION_DOT_0 0
@@ -205,7 +237,6 @@
 #define LLDB_API_NEW_IN_DOT_0
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_0
 #define LLDB_API_DEPRECATED_IN_DOT_0 LLDB_API_IMPL_DEPRECATED
 #else
@@ -216,7 +247,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_1
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_1
 #define LLDB_API_DEPRECATED_IN_DOT_1 LLDB_API_IMPL_DEPRECATED
@@ -229,7 +259,6 @@
 #define LLDB_API_NEW_IN_DOT_2
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_2
 #define LLDB_API_DEPRECATED_IN_DOT_2 LLDB_API_IMPL_DEPRECATED
 #else
@@ -240,7 +269,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_3
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_3
 #define LLDB_API_DEPRECATED_IN_DOT_3 LLDB_API_IMPL_DEPRECATED
@@ -253,7 +281,6 @@
 #define LLDB_API_NEW_IN_DOT_4
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_4
 #define LLDB_API_DEPRECATED_IN_DOT_4 LLDB_API_IMPL_DEPRECATED
 #else
@@ -264,7 +291,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_5
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_5
 #define LLDB_API_DEPRECATED_IN_DOT_5 LLDB_API_IMPL_DEPRECATED
@@ -277,7 +303,6 @@
 #define LLDB_API_NEW_IN_DOT_6
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_6
 #define LLDB_API_DEPRECATED_IN_DOT_6 LLDB_API_IMPL_DEPRECATED
 #else
@@ -288,7 +313,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_7
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_7
 #define LLDB_API_DEPRECATED_IN_DOT_7 LLDB_API_IMPL_DEPRECATED
@@ -301,7 +325,6 @@
 #define LLDB_API_NEW_IN_DOT_8
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_8
 #define LLDB_API_DEPRECATED_IN_DOT_8 LLDB_API_IMPL_DEPRECATED
 #else
@@ -312,7 +335,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_9
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_9
 #define LLDB_API_DEPRECATED_IN_DOT_9 LLDB_API_IMPL_DEPRECATED
@@ -325,7 +347,6 @@
 #define LLDB_API_NEW_IN_DOT_10
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_10
 #define LLDB_API_DEPRECATED_IN_DOT_10 LLDB_API_IMPL_DEPRECATED
 #else
@@ -336,7 +357,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_11
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_11
 #define LLDB_API_DEPRECATED_IN_DOT_11 LLDB_API_IMPL_DEPRECATED
@@ -349,7 +369,6 @@
 #define LLDB_API_NEW_IN_DOT_12
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_12
 #define LLDB_API_DEPRECATED_IN_DOT_12 LLDB_API_IMPL_DEPRECATED
 #else
@@ -360,7 +379,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_13
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_13
 #define LLDB_API_DEPRECATED_IN_DOT_13 LLDB_API_IMPL_DEPRECATED
@@ -373,7 +391,6 @@
 #define LLDB_API_NEW_IN_DOT_14
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_14
 #define LLDB_API_DEPRECATED_IN_DOT_14 LLDB_API_IMPL_DEPRECATED
 #else
@@ -384,7 +401,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_15
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_15
 #define LLDB_API_DEPRECATED_IN_DOT_15 LLDB_API_IMPL_DEPRECATED
@@ -397,7 +413,6 @@
 #define LLDB_API_NEW_IN_DOT_16
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_16
 #define LLDB_API_DEPRECATED_IN_DOT_16 LLDB_API_IMPL_DEPRECATED
 #else
@@ -408,7 +423,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_17
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_17
 #define LLDB_API_DEPRECATED_IN_DOT_17 LLDB_API_IMPL_DEPRECATED
@@ -421,7 +435,6 @@
 #define LLDB_API_NEW_IN_DOT_18
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_18
 #define LLDB_API_DEPRECATED_IN_DOT_18 LLDB_API_IMPL_DEPRECATED
 #else
@@ -432,7 +445,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_19
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_19
 #define LLDB_API_DEPRECATED_IN_DOT_19 LLDB_API_IMPL_DEPRECATED
@@ -445,7 +457,6 @@
 #define LLDB_API_NEW_IN_DOT_20
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_20
 #define LLDB_API_DEPRECATED_IN_DOT_20 LLDB_API_IMPL_DEPRECATED
 #else
@@ -456,7 +467,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_21
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_21
 #define LLDB_API_DEPRECATED_IN_DOT_21 LLDB_API_IMPL_DEPRECATED
@@ -469,7 +479,6 @@
 #define LLDB_API_NEW_IN_DOT_22
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_22
 #define LLDB_API_DEPRECATED_IN_DOT_22 LLDB_API_IMPL_DEPRECATED
 #else
@@ -480,7 +489,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_23
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_23
 #define LLDB_API_DEPRECATED_IN_DOT_23 LLDB_API_IMPL_DEPRECATED
@@ -493,7 +501,6 @@
 #define LLDB_API_NEW_IN_DOT_24
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_24
 #define LLDB_API_DEPRECATED_IN_DOT_24 LLDB_API_IMPL_DEPRECATED
 #else
@@ -504,7 +511,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_25
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_25
 #define LLDB_API_DEPRECATED_IN_DOT_25 LLDB_API_IMPL_DEPRECATED
@@ -517,7 +523,6 @@
 #define LLDB_API_NEW_IN_DOT_26
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_26
 #define LLDB_API_DEPRECATED_IN_DOT_26 LLDB_API_IMPL_DEPRECATED
 #else
@@ -528,7 +533,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_27
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_27
 #define LLDB_API_DEPRECATED_IN_DOT_27 LLDB_API_IMPL_DEPRECATED
@@ -541,7 +545,6 @@
 #define LLDB_API_NEW_IN_DOT_28
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_28
 #define LLDB_API_DEPRECATED_IN_DOT_28 LLDB_API_IMPL_DEPRECATED
 #else
@@ -552,7 +555,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_29
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_29
 #define LLDB_API_DEPRECATED_IN_DOT_29 LLDB_API_IMPL_DEPRECATED
@@ -565,7 +567,6 @@
 #define LLDB_API_NEW_IN_DOT_30
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_30
 #define LLDB_API_DEPRECATED_IN_DOT_30 LLDB_API_IMPL_DEPRECATED
 #else
@@ -576,7 +577,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_31
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_31
 #define LLDB_API_DEPRECATED_IN_DOT_31 LLDB_API_IMPL_DEPRECATED
@@ -589,7 +589,6 @@
 #define LLDB_API_NEW_IN_DOT_32
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_32
 #define LLDB_API_DEPRECATED_IN_DOT_32 LLDB_API_IMPL_DEPRECATED
 #else
@@ -600,7 +599,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_33
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_33
 #define LLDB_API_DEPRECATED_IN_DOT_33 LLDB_API_IMPL_DEPRECATED
@@ -613,7 +611,6 @@
 #define LLDB_API_NEW_IN_DOT_34
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_34
 #define LLDB_API_DEPRECATED_IN_DOT_34 LLDB_API_IMPL_DEPRECATED
 #else
@@ -624,7 +621,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_35
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_35
 #define LLDB_API_DEPRECATED_IN_DOT_35 LLDB_API_IMPL_DEPRECATED
@@ -637,7 +633,6 @@
 #define LLDB_API_NEW_IN_DOT_36
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_36
 #define LLDB_API_DEPRECATED_IN_DOT_36 LLDB_API_IMPL_DEPRECATED
 #else
@@ -648,7 +643,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_37
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_37
 #define LLDB_API_DEPRECATED_IN_DOT_37 LLDB_API_IMPL_DEPRECATED
@@ -661,7 +655,6 @@
 #define LLDB_API_NEW_IN_DOT_38
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_38
 #define LLDB_API_DEPRECATED_IN_DOT_38 LLDB_API_IMPL_DEPRECATED
 #else
@@ -672,7 +665,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_39
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_39
 #define LLDB_API_DEPRECATED_IN_DOT_39 LLDB_API_IMPL_DEPRECATED
@@ -685,7 +677,6 @@
 #define LLDB_API_NEW_IN_DOT_40
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_40
 #define LLDB_API_DEPRECATED_IN_DOT_40 LLDB_API_IMPL_DEPRECATED
 #else
@@ -696,7 +687,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_41
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_41
 #define LLDB_API_DEPRECATED_IN_DOT_41 LLDB_API_IMPL_DEPRECATED
@@ -709,7 +699,6 @@
 #define LLDB_API_NEW_IN_DOT_42
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_42
 #define LLDB_API_DEPRECATED_IN_DOT_42 LLDB_API_IMPL_DEPRECATED
 #else
@@ -720,7 +709,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_43
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_43
 #define LLDB_API_DEPRECATED_IN_DOT_43 LLDB_API_IMPL_DEPRECATED
@@ -733,7 +721,6 @@
 #define LLDB_API_NEW_IN_DOT_44
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_44
 #define LLDB_API_DEPRECATED_IN_DOT_44 LLDB_API_IMPL_DEPRECATED
 #else
@@ -744,7 +731,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_45
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_45
 #define LLDB_API_DEPRECATED_IN_DOT_45 LLDB_API_IMPL_DEPRECATED
@@ -757,7 +743,6 @@
 #define LLDB_API_NEW_IN_DOT_46
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_46
 #define LLDB_API_DEPRECATED_IN_DOT_46 LLDB_API_IMPL_DEPRECATED
 #else
@@ -768,7 +753,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_47
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_47
 #define LLDB_API_DEPRECATED_IN_DOT_47 LLDB_API_IMPL_DEPRECATED
@@ -781,7 +765,6 @@
 #define LLDB_API_NEW_IN_DOT_48
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_48
 #define LLDB_API_DEPRECATED_IN_DOT_48 LLDB_API_IMPL_DEPRECATED
 #else
@@ -792,7 +775,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_49
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_49
 #define LLDB_API_DEPRECATED_IN_DOT_49 LLDB_API_IMPL_DEPRECATED
@@ -805,7 +787,6 @@
 #define LLDB_API_NEW_IN_DOT_50
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_50
 #define LLDB_API_DEPRECATED_IN_DOT_50 LLDB_API_IMPL_DEPRECATED
 #else
@@ -816,7 +797,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_51
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_51
 #define LLDB_API_DEPRECATED_IN_DOT_51 LLDB_API_IMPL_DEPRECATED
@@ -829,7 +809,6 @@
 #define LLDB_API_NEW_IN_DOT_52
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_52
 #define LLDB_API_DEPRECATED_IN_DOT_52 LLDB_API_IMPL_DEPRECATED
 #else
@@ -840,7 +819,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_53
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_53
 #define LLDB_API_DEPRECATED_IN_DOT_53 LLDB_API_IMPL_DEPRECATED
@@ -853,7 +831,6 @@
 #define LLDB_API_NEW_IN_DOT_54
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_54
 #define LLDB_API_DEPRECATED_IN_DOT_54 LLDB_API_IMPL_DEPRECATED
 #else
@@ -864,7 +841,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_55
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_55
 #define LLDB_API_DEPRECATED_IN_DOT_55 LLDB_API_IMPL_DEPRECATED
@@ -877,7 +853,6 @@
 #define LLDB_API_NEW_IN_DOT_56
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_56
 #define LLDB_API_DEPRECATED_IN_DOT_56 LLDB_API_IMPL_DEPRECATED
 #else
@@ -888,7 +863,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_57
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_57
 #define LLDB_API_DEPRECATED_IN_DOT_57 LLDB_API_IMPL_DEPRECATED
@@ -901,7 +875,6 @@
 #define LLDB_API_NEW_IN_DOT_58
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_58
 #define LLDB_API_DEPRECATED_IN_DOT_58 LLDB_API_IMPL_DEPRECATED
 #else
@@ -912,7 +885,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_59
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_59
 #define LLDB_API_DEPRECATED_IN_DOT_59 LLDB_API_IMPL_DEPRECATED
@@ -925,7 +897,6 @@
 #define LLDB_API_NEW_IN_DOT_60
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_60
 #define LLDB_API_DEPRECATED_IN_DOT_60 LLDB_API_IMPL_DEPRECATED
 #else
@@ -936,7 +907,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_61
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_61
 #define LLDB_API_DEPRECATED_IN_DOT_61 LLDB_API_IMPL_DEPRECATED
@@ -949,7 +919,6 @@
 #define LLDB_API_NEW_IN_DOT_62
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_62
 #define LLDB_API_DEPRECATED_IN_DOT_62 LLDB_API_IMPL_DEPRECATED
 #else
@@ -960,7 +929,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_63
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_63
 #define LLDB_API_DEPRECATED_IN_DOT_63 LLDB_API_IMPL_DEPRECATED
@@ -973,7 +941,6 @@
 #define LLDB_API_NEW_IN_DOT_64
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_64
 #define LLDB_API_DEPRECATED_IN_DOT_64 LLDB_API_IMPL_DEPRECATED
 #else
@@ -984,7 +951,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_65
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_65
 #define LLDB_API_DEPRECATED_IN_DOT_65 LLDB_API_IMPL_DEPRECATED
@@ -997,7 +963,6 @@
 #define LLDB_API_NEW_IN_DOT_66
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_66
 #define LLDB_API_DEPRECATED_IN_DOT_66 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1008,7 +973,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_67
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_67
 #define LLDB_API_DEPRECATED_IN_DOT_67 LLDB_API_IMPL_DEPRECATED
@@ -1021,7 +985,6 @@
 #define LLDB_API_NEW_IN_DOT_68
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_68
 #define LLDB_API_DEPRECATED_IN_DOT_68 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1032,7 +995,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_69
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_69
 #define LLDB_API_DEPRECATED_IN_DOT_69 LLDB_API_IMPL_DEPRECATED
@@ -1045,7 +1007,6 @@
 #define LLDB_API_NEW_IN_DOT_70
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_70
 #define LLDB_API_DEPRECATED_IN_DOT_70 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1056,7 +1017,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_71
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_71
 #define LLDB_API_DEPRECATED_IN_DOT_71 LLDB_API_IMPL_DEPRECATED
@@ -1069,7 +1029,6 @@
 #define LLDB_API_NEW_IN_DOT_72
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_72
 #define LLDB_API_DEPRECATED_IN_DOT_72 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1080,7 +1039,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_73
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_73
 #define LLDB_API_DEPRECATED_IN_DOT_73 LLDB_API_IMPL_DEPRECATED
@@ -1093,7 +1051,6 @@
 #define LLDB_API_NEW_IN_DOT_74
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_74
 #define LLDB_API_DEPRECATED_IN_DOT_74 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1104,7 +1061,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_75
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_75
 #define LLDB_API_DEPRECATED_IN_DOT_75 LLDB_API_IMPL_DEPRECATED
@@ -1117,7 +1073,6 @@
 #define LLDB_API_NEW_IN_DOT_76
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_76
 #define LLDB_API_DEPRECATED_IN_DOT_76 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1128,7 +1083,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_77
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_77
 #define LLDB_API_DEPRECATED_IN_DOT_77 LLDB_API_IMPL_DEPRECATED
@@ -1141,7 +1095,6 @@
 #define LLDB_API_NEW_IN_DOT_78
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_78
 #define LLDB_API_DEPRECATED_IN_DOT_78 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1152,7 +1105,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_79
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_79
 #define LLDB_API_DEPRECATED_IN_DOT_79 LLDB_API_IMPL_DEPRECATED
@@ -1165,7 +1117,6 @@
 #define LLDB_API_NEW_IN_DOT_80
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_80
 #define LLDB_API_DEPRECATED_IN_DOT_80 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1176,7 +1127,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_81
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_81
 #define LLDB_API_DEPRECATED_IN_DOT_81 LLDB_API_IMPL_DEPRECATED
@@ -1189,7 +1139,6 @@
 #define LLDB_API_NEW_IN_DOT_82
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_82
 #define LLDB_API_DEPRECATED_IN_DOT_82 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1200,7 +1149,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_83
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_83
 #define LLDB_API_DEPRECATED_IN_DOT_83 LLDB_API_IMPL_DEPRECATED
@@ -1213,7 +1161,6 @@
 #define LLDB_API_NEW_IN_DOT_84
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_84
 #define LLDB_API_DEPRECATED_IN_DOT_84 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1224,7 +1171,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_85
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_85
 #define LLDB_API_DEPRECATED_IN_DOT_85 LLDB_API_IMPL_DEPRECATED
@@ -1237,7 +1183,6 @@
 #define LLDB_API_NEW_IN_DOT_86
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_86
 #define LLDB_API_DEPRECATED_IN_DOT_86 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1248,7 +1193,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_87
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_87
 #define LLDB_API_DEPRECATED_IN_DOT_87 LLDB_API_IMPL_DEPRECATED
@@ -1261,7 +1205,6 @@
 #define LLDB_API_NEW_IN_DOT_88
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_88
 #define LLDB_API_DEPRECATED_IN_DOT_88 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1272,7 +1215,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_89
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_89
 #define LLDB_API_DEPRECATED_IN_DOT_89 LLDB_API_IMPL_DEPRECATED
@@ -1285,7 +1227,6 @@
 #define LLDB_API_NEW_IN_DOT_90
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_90
 #define LLDB_API_DEPRECATED_IN_DOT_90 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1296,7 +1237,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_91
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_91
 #define LLDB_API_DEPRECATED_IN_DOT_91 LLDB_API_IMPL_DEPRECATED
@@ -1309,7 +1249,6 @@
 #define LLDB_API_NEW_IN_DOT_92
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_92
 #define LLDB_API_DEPRECATED_IN_DOT_92 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1320,7 +1259,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_93
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_93
 #define LLDB_API_DEPRECATED_IN_DOT_93 LLDB_API_IMPL_DEPRECATED
@@ -1333,7 +1271,6 @@
 #define LLDB_API_NEW_IN_DOT_94
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_94
 #define LLDB_API_DEPRECATED_IN_DOT_94 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1344,7 +1281,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_95
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_95
 #define LLDB_API_DEPRECATED_IN_DOT_95 LLDB_API_IMPL_DEPRECATED
@@ -1357,7 +1293,6 @@
 #define LLDB_API_NEW_IN_DOT_96
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_96
 #define LLDB_API_DEPRECATED_IN_DOT_96 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1368,7 +1303,6 @@
 #else
 #define LLDB_API_NEW_IN_DOT_97
 #endif
-
 
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_97
 #define LLDB_API_DEPRECATED_IN_DOT_97 LLDB_API_IMPL_DEPRECATED
@@ -1381,7 +1315,6 @@
 #define LLDB_API_NEW_IN_DOT_98
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_98
 #define LLDB_API_DEPRECATED_IN_DOT_98 LLDB_API_IMPL_DEPRECATED
 #else
@@ -1393,14 +1326,16 @@
 #define LLDB_API_NEW_IN_DOT_99
 #endif
 
-
 #if LLDB_API_MINOR_VERSION_WANTED >= LLDB_API_MINOR_VERSION_DOT_99
 #define LLDB_API_DEPRECATED_IN_DOT_99 LLDB_API_IMPL_DEPRECATED
 #else
 #define LLDB_API_DEPRECATED_IN_DOT_99
 #endif
 
-#else // defined(LLDB_CHECK_API_VERSIONING) && defined(LLDB_API_MAJOR_VERSION_WANTED) && defined(LLDB_API_MINOR_VERSION_WANTED) && defined (LLDB_API_MAJOR_VERSION)
+#else // defined(LLDB_CHECK_API_VERSIONING) &&
+      // defined(LLDB_API_MAJOR_VERSION_WANTED) &&
+      // defined(LLDB_API_MINOR_VERSION_WANTED) && defined
+      // (LLDB_API_MAJOR_VERSION)
 
 #define LLDB_API_NEW_IN_DOT_0
 #define LLDB_API_DEPRECATED_IN_DOT_0
@@ -1602,6 +1537,9 @@
 #define LLDB_API_DEPRECATED_IN_DOT_98
 #define LLDB_API_NEW_IN_DOT_99
 #define LLDB_API_DEPRECATED_IN_DOT_99
-#endif // defined(LLDB_CHECK_API_VERSIONING) && defined(LLDB_API_MAJOR_VERSION_WANTED) && defined(LLDB_API_MINOR_VERSION_WANTED) && defined (LLDB_API_MAJOR_VERSION)
+#endif // defined(LLDB_CHECK_API_VERSIONING) &&
+       // defined(LLDB_API_MAJOR_VERSION_WANTED) &&
+       // defined(LLDB_API_MINOR_VERSION_WANTED) && defined
+       // (LLDB_API_MAJOR_VERSION)
 
 #endif // LLDB_lldb_versioning_h_

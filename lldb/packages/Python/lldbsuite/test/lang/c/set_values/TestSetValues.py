@@ -3,12 +3,13 @@
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class SetValuesTestCase(TestBase):
 
@@ -31,81 +32,111 @@ class SetValuesTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Set breakpoints on several places to set program variables.
-        lldbutil.run_break_set_by_file_and_line (self, "main.c", self.line1, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line1, num_expected_locations=1, loc_exact=True)
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.c", self.line2, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line2, num_expected_locations=1, loc_exact=True)
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.c", self.line3, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line3, num_expected_locations=1, loc_exact=True)
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.c", self.line4, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line4, num_expected_locations=1, loc_exact=True)
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.c", self.line5, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line5, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-            substrs = [' resolved, hit count = 1'])
+                    substrs=[' resolved, hit count = 1'])
 
         # main.c:15
-        # Check that 'frame variable --show-types' displays the correct data type and value.
-        self.expect("frame variable --show-types", VARIABLES_DISPLAYED_CORRECTLY,
-            startstr = "(char) i = 'a'")
+        # Check that 'frame variable --show-types' displays the correct data
+        # type and value.
+        self.expect(
+            "frame variable --show-types",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            startstr="(char) i = 'a'")
 
         # Now set variable 'i' and check that it is correctly displayed.
         self.runCmd("expression i = 'b'")
-        self.expect("frame variable --show-types", VARIABLES_DISPLAYED_CORRECTLY,
-            startstr = "(char) i = 'b'")
+        self.expect(
+            "frame variable --show-types",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            startstr="(char) i = 'b'")
 
         self.runCmd("continue")
 
         # main.c:36
-        # Check that 'frame variable --show-types' displays the correct data type and value.
-        self.expect("frame variable --show-types", VARIABLES_DISPLAYED_CORRECTLY,
-            patterns = ["\((short unsigned int|unsigned short)\) i = 33"])
+        # Check that 'frame variable --show-types' displays the correct data
+        # type and value.
+        self.expect(
+            "frame variable --show-types",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            patterns=["\((short unsigned int|unsigned short)\) i = 33"])
 
         # Now set variable 'i' and check that it is correctly displayed.
         self.runCmd("expression i = 333")
-        self.expect("frame variable --show-types", VARIABLES_DISPLAYED_CORRECTLY,
-            patterns = ["\((short unsigned int|unsigned short)\) i = 333"])
+        self.expect(
+            "frame variable --show-types",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            patterns=["\((short unsigned int|unsigned short)\) i = 333"])
 
         self.runCmd("continue")
 
         # main.c:57
-        # Check that 'frame variable --show-types' displays the correct data type and value.
-        self.expect("frame variable --show-types", VARIABLES_DISPLAYED_CORRECTLY,
-            startstr = "(long) i = 33")
+        # Check that 'frame variable --show-types' displays the correct data
+        # type and value.
+        self.expect(
+            "frame variable --show-types",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            startstr="(long) i = 33")
 
         # Now set variable 'i' and check that it is correctly displayed.
         self.runCmd("expression i = 33333")
-        self.expect("frame variable --show-types", VARIABLES_DISPLAYED_CORRECTLY,
-            startstr = "(long) i = 33333")
+        self.expect(
+            "frame variable --show-types",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            startstr="(long) i = 33333")
 
         self.runCmd("continue")
 
         # main.c:78
-        # Check that 'frame variable --show-types' displays the correct data type and value.
-        self.expect("frame variable --show-types", VARIABLES_DISPLAYED_CORRECTLY,
-            startstr = "(double) i = 2.25")
+        # Check that 'frame variable --show-types' displays the correct data
+        # type and value.
+        self.expect(
+            "frame variable --show-types",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            startstr="(double) i = 2.25")
 
         # Now set variable 'i' and check that it is correctly displayed.
         self.runCmd("expression i = 1.5")
-        self.expect("frame variable --show-types", VARIABLES_DISPLAYED_CORRECTLY,
-            startstr = "(double) i = 1.5")
+        self.expect(
+            "frame variable --show-types",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            startstr="(double) i = 1.5")
 
         self.runCmd("continue")
 
         # main.c:85
-        # Check that 'frame variable --show-types' displays the correct data type and value.
-        self.expect("frame variable --show-types", VARIABLES_DISPLAYED_CORRECTLY,
-            startstr = "(long double) i = 2.25")
+        # Check that 'frame variable --show-types' displays the correct data
+        # type and value.
+        self.expect(
+            "frame variable --show-types",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            startstr="(long double) i = 2.25")
 
         # Now set variable 'i' and check that it is correctly displayed.
         self.runCmd("expression i = 1.5")
-        self.expect("frame variable --show-types", VARIABLES_DISPLAYED_CORRECTLY,
-            startstr = "(long double) i = 1.5")
+        self.expect(
+            "frame variable --show-types",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            startstr="(long double) i = 1.5")

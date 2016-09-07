@@ -3,14 +3,15 @@
 from __future__ import print_function
 
 
-
-import os, sys
+import os
+import sys
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbbench import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import configuration
 from lldbsuite.test import lldbutil
+
 
 class ExpressionEvaluationCase(BenchBase):
 
@@ -19,11 +20,14 @@ class ExpressionEvaluationCase(BenchBase):
     def setUp(self):
         BenchBase.setUp(self)
         self.source = 'main.cpp'
-        self.line_to_break = line_number(self.source, '// Set breakpoint here.')
+        self.line_to_break = line_number(
+            self.source, '// Set breakpoint here.')
         self.count = 25
 
     @benchmarks_test
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_expr_cmd(self):
         """Test lldb's expression commands and collect statistics."""
         self.build()
@@ -45,7 +49,9 @@ class ExpressionEvaluationCase(BenchBase):
         self.stopwatch.reset()
         for i in range(count):
             # So that the child gets torn down after the test.
-            self.child = pexpect.spawn('%s %s %s' % (lldbtest_config.lldbExec, self.lldbOption, exe))
+            self.child = pexpect.spawn(
+                '%s %s %s' %
+                (lldbtest_config.lldbExec, self.lldbOption, exe))
             child = self.child
 
             # Turn on logging for what the child sends back.
@@ -53,7 +59,9 @@ class ExpressionEvaluationCase(BenchBase):
                 child.logfile_read = sys.stdout
 
             child.expect_exact(prompt)
-            child.sendline('breakpoint set -f %s -l %d' % (self.source, self.line_to_break))
+            child.sendline(
+                'breakpoint set -f %s -l %d' %
+                (self.source, self.line_to_break))
             child.expect_exact(prompt)
             child.sendline('run')
             child.expect_exact(prompt)

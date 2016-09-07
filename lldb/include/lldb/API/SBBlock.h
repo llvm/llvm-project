@@ -17,106 +17,79 @@
 
 namespace lldb {
 
-class LLDB_API SBBlock
-{
+class LLDB_API SBBlock {
 public:
+  SBBlock();
 
-    SBBlock ();
+  SBBlock(const lldb::SBBlock &rhs);
 
-    SBBlock (const lldb::SBBlock &rhs);
+  ~SBBlock();
 
-    ~SBBlock ();
+  const lldb::SBBlock &operator=(const lldb::SBBlock &rhs);
 
-    const lldb::SBBlock &
-    operator = (const lldb::SBBlock &rhs);
+  bool IsInlined() const;
 
-    bool
-    IsInlined () const;
+  bool IsValid() const;
 
-    bool
-    IsValid () const;
+  const char *GetInlinedName() const;
 
-    const char *
-    GetInlinedName () const;
+  lldb::SBFileSpec GetInlinedCallSiteFile() const;
 
-    lldb::SBFileSpec
-    GetInlinedCallSiteFile () const;
+  uint32_t GetInlinedCallSiteLine() const;
 
-    uint32_t 
-    GetInlinedCallSiteLine () const;
+  uint32_t GetInlinedCallSiteColumn() const;
 
-    uint32_t
-    GetInlinedCallSiteColumn () const;
+  lldb::SBBlock GetParent();
 
-    lldb::SBBlock
-    GetParent ();
-    
-    lldb::SBBlock
-    GetSibling ();
-    
-    lldb::SBBlock
-    GetFirstChild ();
+  lldb::SBBlock GetSibling();
 
-    uint32_t
-    GetNumRanges ();
+  lldb::SBBlock GetFirstChild();
 
-    lldb::SBAddress
-    GetRangeStartAddress (uint32_t idx);
+  uint32_t GetNumRanges();
 
-    lldb::SBAddress
-    GetRangeEndAddress (uint32_t idx);
+  lldb::SBAddress GetRangeStartAddress(uint32_t idx);
 
-    uint32_t
-    GetRangeIndexForBlockAddress (lldb::SBAddress block_addr);
+  lldb::SBAddress GetRangeEndAddress(uint32_t idx);
 
-    lldb::SBValueList
-    GetVariables (lldb::SBFrame& frame,
-                  bool arguments,
-                  bool locals,
-                  bool statics,
-                  lldb::DynamicValueType use_dynamic);
-    
-    lldb::SBValueList
-    GetVariables (lldb::SBTarget& target,
-                  bool arguments,
-                  bool locals,
-                  bool statics);
-    //------------------------------------------------------------------
-    /// Get the inlined block that contains this block.
-    ///
-    /// @return
-    ///     If this block is inlined, it will return this block, else 
-    ///     parent blocks will be searched to see if any contain this 
-    ///     block and are themselves inlined. An invalid SBBlock will 
-    ///     be returned if this block nor any parent blocks are inlined
-    ///     function blocks.
-    //------------------------------------------------------------------
-    lldb::SBBlock
-    GetContainingInlinedBlock ();
+  uint32_t GetRangeIndexForBlockAddress(lldb::SBAddress block_addr);
 
-    bool
-    GetDescription (lldb::SBStream &description);
+  lldb::SBValueList GetVariables(lldb::SBFrame &frame, bool arguments,
+                                 bool locals, bool statics,
+                                 lldb::DynamicValueType use_dynamic);
+
+  lldb::SBValueList GetVariables(lldb::SBTarget &target, bool arguments,
+                                 bool locals, bool statics);
+  //------------------------------------------------------------------
+  /// Get the inlined block that contains this block.
+  ///
+  /// @return
+  ///     If this block is inlined, it will return this block, else
+  ///     parent blocks will be searched to see if any contain this
+  ///     block and are themselves inlined. An invalid SBBlock will
+  ///     be returned if this block nor any parent blocks are inlined
+  ///     function blocks.
+  //------------------------------------------------------------------
+  lldb::SBBlock GetContainingInlinedBlock();
+
+  bool GetDescription(lldb::SBStream &description);
 
 private:
-    friend class SBAddress;
-    friend class SBFrame;
-    friend class SBFunction;
-    friend class SBSymbolContext;
+  friend class SBAddress;
+  friend class SBFrame;
+  friend class SBFunction;
+  friend class SBSymbolContext;
 
-    lldb_private::Block *
-    GetPtr ();
+  lldb_private::Block *GetPtr();
 
-    void
-    SetPtr (lldb_private::Block *lldb_object_ptr);
+  void SetPtr(lldb_private::Block *lldb_object_ptr);
 
-    SBBlock (lldb_private::Block *lldb_object_ptr);
+  SBBlock(lldb_private::Block *lldb_object_ptr);
 
-    void
-    AppendVariables (bool can_create, bool get_parent_variables, lldb_private::VariableList *var_list);
+  void AppendVariables(bool can_create, bool get_parent_variables,
+                       lldb_private::VariableList *var_list);
 
-    lldb_private::Block *m_opaque_ptr;
+  lldb_private::Block *m_opaque_ptr;
 };
-
 
 } // namespace lldb
 

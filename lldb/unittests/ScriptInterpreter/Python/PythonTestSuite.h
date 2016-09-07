@@ -11,16 +11,12 @@
 
 using namespace lldb_private;
 
-class PythonTestSuite : public testing::Test
-{
+class PythonTestSuite : public testing::Test {
 public:
-    void
-    SetUp() override;
+  void SetUp() override;
 
-    void
-    TearDown() override;
+  void TearDown() override;
 
 private:
-    PyGILState_STATE m_gil_state;
+  PyGILState_STATE m_gil_state;
 };
-

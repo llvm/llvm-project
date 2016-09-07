@@ -9,10 +9,10 @@
 
 #pragma once
 
-namespace MICmnCommands
-{
+namespace MICmnCommands {
 
-//++ ============================================================================
+//++
+//============================================================================
 // Details: MI Command are instantiated and registered automatically with the
 //          Command Factory
 //--

@@ -10,8 +10,7 @@
 #ifndef lldb_Host_HostNativeThreadForward_h_
 #define lldb_Host_HostNativeThreadForward_h_
 
-namespace lldb_private
-{
+namespace lldb_private {
 #if defined(_WIN32)
 class HostThreadWindows;
 typedef HostThreadWindows HostNativeThread;

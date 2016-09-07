@@ -10,38 +10,33 @@
 #ifndef liblldb_NativeWatchpointList_h_
 #define liblldb_NativeWatchpointList_h_
 
-#include "lldb/lldb-private-forward.h"
 #include "lldb/Core/Error.h"
+#include "lldb/lldb-private-forward.h"
 
 #include <map>
 
-namespace lldb_private
-{
-    struct NativeWatchpoint
-    {
-        lldb::addr_t m_addr;
-        size_t m_size;
-        uint32_t m_watch_flags;
-        bool m_hardware;
-    };
+namespace lldb_private {
+struct NativeWatchpoint {
+  lldb::addr_t m_addr;
+  size_t m_size;
+  uint32_t m_watch_flags;
+  bool m_hardware;
+};
 
-    class NativeWatchpointList
-    {
-    public:
-        Error
-        Add (lldb::addr_t addr, size_t size, uint32_t watch_flags, bool hardware);
+class NativeWatchpointList {
+public:
+  Error Add(lldb::addr_t addr, size_t size, uint32_t watch_flags,
+            bool hardware);
 
-        Error
-        Remove (lldb::addr_t addr);
+  Error Remove(lldb::addr_t addr);
 
-        using WatchpointMap = std::map<lldb::addr_t, NativeWatchpoint>;
+  using WatchpointMap = std::map<lldb::addr_t, NativeWatchpoint>;
 
-        const WatchpointMap&
-        GetWatchpointMap () const;
+  const WatchpointMap &GetWatchpointMap() const;
 
-    private:
-        WatchpointMap m_watchpoints;
-    };
+private:
+  WatchpointMap m_watchpoints;
+};
 }
 
 #endif // ifndef liblldb_NativeWatchpointList_h_

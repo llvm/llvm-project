@@ -262,7 +262,7 @@ namespace PR6757 {
   struct Foo2 { };
 
   struct Foo3 {
-    Foo3();
+    Foo3(); // expected-note{{requires 0 arguments}}
     Foo3(Foo3&); // expected-note{{would lose const qualifier}}
   };
 

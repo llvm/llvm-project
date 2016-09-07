@@ -3,12 +3,12 @@
 from __future__ import print_function
 
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class CommandInterpreterAPICase(TestBase):
 
@@ -72,4 +72,4 @@ class CommandInterpreterAPICase(TestBase):
                       lldbutil.state_type_to_str(process.GetState()))
 
         if self.TraceOn():
-            lldbutil.print_stacktraces(process)        
+            lldbutil.print_stacktraces(process)

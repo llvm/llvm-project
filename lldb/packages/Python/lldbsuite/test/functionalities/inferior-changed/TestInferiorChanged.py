@@ -3,13 +3,14 @@
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import configuration
 from lldbsuite.test import lldbutil
+
 
 class ChangedInferiorTestCase(TestBase):
 
@@ -47,12 +48,12 @@ class ChangedInferiorTestCase(TestBase):
 
         # We should have one crashing thread
         self.assertEqual(
-                len(lldbutil.get_crashed_threads(self, self.dbg.GetSelectedTarget().GetProcess())),
-                1,
-                STOPPED_DUE_TO_EXC_BAD_ACCESS)
+            len(lldbutil.get_crashed_threads(self, self.dbg.GetSelectedTarget().GetProcess())),
+            1,
+            STOPPED_DUE_TO_EXC_BAD_ACCESS)
 
         # And it should report the correct line number.
-        self.expect("thread backtrace all", substrs = ['main.c:%d' % self.line1])
+        self.expect("thread backtrace all", substrs=['main.c:%d' % self.line1])
 
     def inferior_not_crashing(self):
         """Test lldb reloads the inferior after it was changed during the session."""
@@ -61,22 +62,23 @@ class ChangedInferiorTestCase(TestBase):
         self.runCmd("process status")
 
         self.assertNotEqual(
-                len(lldbutil.get_crashed_threads(self, self.dbg.GetSelectedTarget().GetProcess())),
-                1,
-                "Inferior changed, but lldb did not perform a reload")
+            len(lldbutil.get_crashed_threads(self, self.dbg.GetSelectedTarget().GetProcess())),
+            1,
+            "Inferior changed, but lldb did not perform a reload")
 
         # Break inside the main.
-        lldbutil.run_break_set_by_file_and_line (self, "main2.c", self.line2, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main2.c", self.line2, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         self.runCmd("frame variable int_ptr")
         self.expect("frame variable *int_ptr",
-            substrs = ['= 7'])
+                    substrs=['= 7'])
         self.expect("expression *int_ptr",
-            substrs = ['= 7'])
+                    substrs=['= 7'])

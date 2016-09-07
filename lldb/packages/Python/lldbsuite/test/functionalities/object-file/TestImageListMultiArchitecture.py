@@ -7,7 +7,6 @@ foreign-architecture object files.
 from __future__ import print_function
 
 
-
 import os.path
 import re
 
@@ -15,6 +14,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class TestImageListMultiArchitecture(TestBase):
 
@@ -35,7 +35,11 @@ class TestImageListMultiArchitecture(TestBase):
         }
 
         for image_name in images:
-            file_name = os.path.abspath(os.path.join(os.path.dirname(__file__), "bin", image_name))
+            file_name = os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "bin",
+                    image_name))
             expected_triple_and_arch_regex = images[image_name]
 
             self.runCmd("file {}".format(file_name))

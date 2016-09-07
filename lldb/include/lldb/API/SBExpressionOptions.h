@@ -16,133 +16,100 @@
 
 namespace lldb {
 
-
-class LLDB_API SBExpressionOptions
-{
+class LLDB_API SBExpressionOptions {
 public:
-    SBExpressionOptions();
+  SBExpressionOptions();
 
-    SBExpressionOptions (const lldb::SBExpressionOptions &rhs);
-    
-    ~SBExpressionOptions();
+  SBExpressionOptions(const lldb::SBExpressionOptions &rhs);
 
-    const SBExpressionOptions &
-    operator = (const lldb::SBExpressionOptions &rhs);
+  ~SBExpressionOptions();
 
-    bool
-    GetCoerceResultToId () const;
-    
-    void
-    SetCoerceResultToId (bool coerce = true);
-    
-    bool
-    GetUnwindOnError () const;
-    
-    void
-    SetUnwindOnError (bool unwind = true);
-    
-    bool
-    GetIgnoreBreakpoints () const;
-    
-    void
-    SetIgnoreBreakpoints (bool ignore = true);
-    
-    lldb::DynamicValueType
-    GetFetchDynamicValue () const;
-    
-    void
-    SetFetchDynamicValue (lldb::DynamicValueType dynamic = lldb::eDynamicCanRunTarget);
-    
-    uint32_t
-    GetTimeoutInMicroSeconds () const;
-    
-    // Set the timeout for the expression, 0 means wait forever.
-    void
-    SetTimeoutInMicroSeconds (uint32_t timeout = 0);
-    
-    uint32_t
-    GetOneThreadTimeoutInMicroSeconds () const;
-    
-    // Set the timeout for running on one thread, 0 means use the default behavior.
-    // If you set this higher than the overall timeout, you'll get an error when you
-    // try to run the expression.
-    void
-    SetOneThreadTimeoutInMicroSeconds (uint32_t timeout = 0);
-    
-    bool
-    GetTryAllThreads () const;
-    
-    void
-    SetTryAllThreads (bool run_others = true);
-    
-    bool
-    GetStopOthers() const;
-    
-    void
-    SetStopOthers(bool stop_others = true);
+  const SBExpressionOptions &operator=(const lldb::SBExpressionOptions &rhs);
 
-    bool
-    GetTrapExceptions () const;
-    
-    void
-    SetTrapExceptions (bool trap_exceptions = true);
-    
-    void
-    SetLanguage (lldb::LanguageType language);
+  bool GetCoerceResultToId() const;
 
-    void
-    SetCancelCallback (lldb::ExpressionCancelCallback callback, void *baton);
+  void SetCoerceResultToId(bool coerce = true);
 
-    bool
-    GetGenerateDebugInfo ();
-    
-    void
-    SetGenerateDebugInfo (bool b = true);
-    
-    bool
-    GetSuppressPersistentResult ();
-    
-    void
-    SetSuppressPersistentResult (bool b = false);
+  bool GetUnwindOnError() const;
 
-    const char *
-    GetPrefix () const;
+  void SetUnwindOnError(bool unwind = true);
 
-    void
-    SetPrefix (const char *prefix);
-    
-    void
-    SetAutoApplyFixIts(bool b = true);
-    
-    bool
-    GetAutoApplyFixIts();
-    
-    bool
-    GetTopLevel ();
+  bool GetIgnoreBreakpoints() const;
 
-    void
-    SetTopLevel (bool b = true);
+  void SetIgnoreBreakpoints(bool ignore = true);
 
+  lldb::DynamicValueType GetFetchDynamicValue() const;
+
+  void SetFetchDynamicValue(
+      lldb::DynamicValueType dynamic = lldb::eDynamicCanRunTarget);
+
+  uint32_t GetTimeoutInMicroSeconds() const;
+
+  // Set the timeout for the expression, 0 means wait forever.
+  void SetTimeoutInMicroSeconds(uint32_t timeout = 0);
+
+  uint32_t GetOneThreadTimeoutInMicroSeconds() const;
+
+  // Set the timeout for running on one thread, 0 means use the default
+  // behavior.
+  // If you set this higher than the overall timeout, you'll get an error when
+  // you
+  // try to run the expression.
+  void SetOneThreadTimeoutInMicroSeconds(uint32_t timeout = 0);
+
+  bool GetTryAllThreads() const;
+
+  void SetTryAllThreads(bool run_others = true);
+
+  bool GetStopOthers() const;
+
+  void SetStopOthers(bool stop_others = true);
+
+  bool GetTrapExceptions() const;
+
+  void SetTrapExceptions(bool trap_exceptions = true);
+
+  void SetLanguage(lldb::LanguageType language);
+
+  void SetCancelCallback(lldb::ExpressionCancelCallback callback, void *baton);
+
+  bool GetGenerateDebugInfo();
+
+  void SetGenerateDebugInfo(bool b = true);
+
+  bool GetSuppressPersistentResult();
+
+  void SetSuppressPersistentResult(bool b = false);
+
+  const char *GetPrefix() const;
+
+  void SetPrefix(const char *prefix);
+
+  void SetAutoApplyFixIts(bool b = true);
+
+  bool GetAutoApplyFixIts();
+
+  bool GetTopLevel();
+
+  void SetTopLevel(bool b = true);
 
 protected:
+  SBExpressionOptions(
+      lldb_private::EvaluateExpressionOptions &expression_options);
 
-    SBExpressionOptions (lldb_private::EvaluateExpressionOptions &expression_options);
+  lldb_private::EvaluateExpressionOptions *get() const;
 
-    lldb_private::EvaluateExpressionOptions *
-    get () const;
+  lldb_private::EvaluateExpressionOptions &ref() const;
 
-    lldb_private::EvaluateExpressionOptions &
-    ref () const;
-
-    friend class SBFrame;
-    friend class SBValue;
-    friend class SBTarget;
+  friend class SBFrame;
+  friend class SBValue;
+  friend class SBTarget;
 
 private:
-    // This auto_pointer is made in the constructor and is always valid.
-    mutable std::unique_ptr<lldb_private::EvaluateExpressionOptions> m_opaque_ap;
+  // This auto_pointer is made in the constructor and is always valid.
+  mutable std::unique_ptr<lldb_private::EvaluateExpressionOptions> m_opaque_ap;
 };
 
 } // namespace lldb
 
-#endif  // LLDB_SBExpressionOptions_h_
+#endif // LLDB_SBExpressionOptions_h_

@@ -15,35 +15,28 @@
 
 namespace lldb_private {
 
-class LockFileWindows : public LockFileBase
-{
+class LockFileWindows : public LockFileBase {
 public:
-    explicit LockFileWindows (int fd);
-    ~LockFileWindows ();
+  explicit LockFileWindows(int fd);
+  ~LockFileWindows();
 
 protected:
-    Error
-    DoWriteLock (const uint64_t start, const uint64_t len) override;
+  Error DoWriteLock(const uint64_t start, const uint64_t len) override;
 
-    Error
-    DoTryWriteLock (const uint64_t start, const uint64_t len) override;
+  Error DoTryWriteLock(const uint64_t start, const uint64_t len) override;
 
-    Error
-    DoReadLock (const uint64_t start, const uint64_t len) override;
+  Error DoReadLock(const uint64_t start, const uint64_t len) override;
 
-    Error
-    DoTryReadLock (const uint64_t start, const uint64_t len) override;
+  Error DoTryReadLock(const uint64_t start, const uint64_t len) override;
 
-    Error
-    DoUnlock () override;
+  Error DoUnlock() override;
 
-    bool
-    IsValidFile () const override;
+  bool IsValidFile() const override;
 
 private:
-    HANDLE m_file;
+  HANDLE m_file;
 };
 
-}  // namespace lldb_private
+} // namespace lldb_private
 
-#endif  // liblldb_Host_posix_LockFileWindows_h_
+#endif // liblldb_Host_posix_LockFileWindows_h_

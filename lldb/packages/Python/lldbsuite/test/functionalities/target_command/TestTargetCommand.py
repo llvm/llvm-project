@@ -5,12 +5,12 @@ Test some target commands: create, list, select, variable.
 from __future__ import print_function
 
 
-
 import lldb
 import sys
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class targetCommandTestCase(TestBase):
 
@@ -80,17 +80,19 @@ class targetCommandTestCase(TestBase):
                     # We will start from (index + 1) ....
                     base = int(match.group(1), 10) + 1
                     #print("base is:", base)
-                    break;
+                    break
 
         self.runCmd("target create " + exe_a, CURRENT_EXECUTABLE_SET)
         self.runCmd("run", RUN_SUCCEEDED)
 
         self.runCmd("target create " + exe_b, CURRENT_EXECUTABLE_SET)
-        lldbutil.run_break_set_by_file_and_line (self, 'b.c', self.line_b, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, 'b.c', self.line_b, num_expected_locations=1, loc_exact=True)
         self.runCmd("run", RUN_SUCCEEDED)
 
         self.runCmd("target create " + exe_c, CURRENT_EXECUTABLE_SET)
-        lldbutil.run_break_set_by_file_and_line (self, 'c.c', self.line_c, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, 'c.c', self.line_c, num_expected_locations=1, loc_exact=True)
         self.runCmd("run", RUN_SUCCEEDED)
 
         self.runCmd("target list")
@@ -100,13 +102,13 @@ class targetCommandTestCase(TestBase):
 
         self.runCmd("target select %d" % (base + 2))
         self.expect("thread backtrace", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['c.c:%d' % self.line_c,
-                       'stop reason = breakpoint'])
+                    substrs=['c.c:%d' % self.line_c,
+                             'stop reason = breakpoint'])
 
         self.runCmd("target select %d" % (base + 1))
         self.expect("thread backtrace", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['b.c:%d' % self.line_b,
-                       'stop reason = breakpoint'])
+                    substrs=['b.c:%d' % self.line_b,
+                             'stop reason = breakpoint'])
 
         self.runCmd("target list")
 
@@ -114,89 +116,160 @@ class targetCommandTestCase(TestBase):
         """Exercise 'target variable' command before and after starting the inferior."""
         self.runCmd("file " + exe_name, CURRENT_EXECUTABLE_SET)
 
-        self.expect("target variable my_global_char", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ["my_global_char", "'X'"])
-        self.expect("target variable my_global_str", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['my_global_str', '"abc"'])
-        self.expect("target variable my_static_int", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['my_static_int', '228'])
+        self.expect(
+            "target variable my_global_char",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                "my_global_char",
+                "'X'"])
+        self.expect(
+            "target variable my_global_str",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                'my_global_str',
+                '"abc"'])
+        self.expect(
+            "target variable my_static_int",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                'my_static_int',
+                '228'])
         self.expect("target variable my_global_str_ptr", matching=False,
-                    substrs = ['"abc"'])
+                    substrs=['"abc"'])
         self.expect("target variable *my_global_str_ptr", matching=True,
-                    substrs = ['"abc"'])
-        self.expect("target variable *my_global_str", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs = ['a'])
+                    substrs=['"abc"'])
+        self.expect(
+            "target variable *my_global_str",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=['a'])
 
         self.runCmd("b main")
         self.runCmd("run")
-        
-        self.expect("target variable my_global_str", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs = ['my_global_str', '"abc"'])
-        self.expect("target variable my_static_int", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs = ['my_static_int', '228'])
+
+        self.expect(
+            "target variable my_global_str",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                'my_global_str',
+                '"abc"'])
+        self.expect(
+            "target variable my_static_int",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                'my_static_int',
+                '228'])
         self.expect("target variable my_global_str_ptr", matching=False,
-                    substrs = ['"abc"'])
+                    substrs=['"abc"'])
         self.expect("target variable *my_global_str_ptr", matching=True,
-                    substrs = ['"abc"'])
-        self.expect("target variable *my_global_str", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs = ['a'])
-        self.expect("target variable my_global_char", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs = ["my_global_char", "'X'"])
+                    substrs=['"abc"'])
+        self.expect(
+            "target variable *my_global_str",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=['a'])
+        self.expect(
+            "target variable my_global_char",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                "my_global_char",
+                "'X'"])
 
         self.runCmd("c")
 
         # rdar://problem/9763907
         # 'target variable' command fails if the target program has been run
-        self.expect("target variable my_global_str", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['my_global_str', '"abc"'])
-        self.expect("target variable my_static_int", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['my_static_int', '228'])
+        self.expect(
+            "target variable my_global_str",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                'my_global_str',
+                '"abc"'])
+        self.expect(
+            "target variable my_static_int",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                'my_static_int',
+                '228'])
         self.expect("target variable my_global_str_ptr", matching=False,
-                    substrs = ['"abc"'])
+                    substrs=['"abc"'])
         self.expect("target variable *my_global_str_ptr", matching=True,
-                    substrs = ['"abc"'])
-        self.expect("target variable *my_global_str", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs = ['a'])
-        self.expect("target variable my_global_char", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs = ["my_global_char", "'X'"])
+                    substrs=['"abc"'])
+        self.expect(
+            "target variable *my_global_str",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=['a'])
+        self.expect(
+            "target variable my_global_char",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                "my_global_char",
+                "'X'"])
 
     def do_target_variable_command_no_fail(self, exe_name):
         """Exercise 'target variable' command before and after starting the inferior."""
         self.runCmd("file " + exe_name, CURRENT_EXECUTABLE_SET)
 
-        self.expect("target variable my_global_char", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ["my_global_char", "'X'"])
-        self.expect("target variable my_global_str", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['my_global_str', '"abc"'])
-        self.expect("target variable my_static_int", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['my_static_int', '228'])
+        self.expect(
+            "target variable my_global_char",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                "my_global_char",
+                "'X'"])
+        self.expect(
+            "target variable my_global_str",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                'my_global_str',
+                '"abc"'])
+        self.expect(
+            "target variable my_static_int",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                'my_static_int',
+                '228'])
         self.expect("target variable my_global_str_ptr", matching=False,
-                    substrs = ['"abc"'])
+                    substrs=['"abc"'])
         self.expect("target variable *my_global_str_ptr", matching=True,
-                    substrs = ['"abc"'])
-        self.expect("target variable *my_global_str", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs = ['a'])
+                    substrs=['"abc"'])
+        self.expect(
+            "target variable *my_global_str",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=['a'])
 
         self.runCmd("b main")
         self.runCmd("run")
-        
-        # New feature: you don't need to specify the variable(s) to 'target vaiable'.
-        # It will find all the global and static variables in the current compile unit.
-        self.expect("target variable",
-            substrs = ['my_global_char',
-                       'my_global_str',
-                       'my_global_str_ptr',
-                       'my_static_int'])
 
-        self.expect("target variable my_global_str", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs = ['my_global_str', '"abc"'])
-        self.expect("target variable my_static_int", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs = ['my_static_int', '228'])
+        # New feature: you don't need to specify the variable(s) to 'target vaiable'.
+        # It will find all the global and static variables in the current
+        # compile unit.
+        self.expect("target variable",
+                    substrs=['my_global_char',
+                             'my_global_str',
+                             'my_global_str_ptr',
+                             'my_static_int'])
+
+        self.expect(
+            "target variable my_global_str",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                'my_global_str',
+                '"abc"'])
+        self.expect(
+            "target variable my_static_int",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                'my_static_int',
+                '228'])
         self.expect("target variable my_global_str_ptr", matching=False,
-                    substrs = ['"abc"'])
+                    substrs=['"abc"'])
         self.expect("target variable *my_global_str_ptr", matching=True,
-                    substrs = ['"abc"'])
-        self.expect("target variable *my_global_str", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs = ['a'])
-        self.expect("target variable my_global_char", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs = ["my_global_char", "'X'"])
+                    substrs=['"abc"'])
+        self.expect(
+            "target variable *my_global_str",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=['a'])
+        self.expect(
+            "target variable my_global_char",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                "my_global_char",
+                "'X'"])

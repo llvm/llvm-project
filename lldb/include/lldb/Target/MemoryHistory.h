@@ -1,4 +1,5 @@
-//===-- MemoryHistory.h ---------------------------------------------------*- C++ -*-===//
+//===-- MemoryHistory.h ---------------------------------------------------*-
+//C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,27 +17,22 @@
 
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Core/PluginInterface.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-types.h"
-#include "lldb/Core/PluginInterface.h"
 
 namespace lldb_private {
-    
+
 typedef std::vector<lldb::ThreadSP> HistoryThreads;
-    
-class MemoryHistory :
-    public std::enable_shared_from_this<MemoryHistory>,
-    public PluginInterface
-{
+
+class MemoryHistory : public std::enable_shared_from_this<MemoryHistory>,
+                      public PluginInterface {
 public:
+  static lldb::MemoryHistorySP FindPlugin(const lldb::ProcessSP process);
 
-    static lldb::MemoryHistorySP
-    FindPlugin (const lldb::ProcessSP process);
-
-    virtual HistoryThreads
-    GetHistoryThreads(lldb::addr_t address) = 0;
+  virtual HistoryThreads GetHistoryThreads(lldb::addr_t address) = 0;
 };
-    
+
 } // namespace lldb_private
 
-#endif  // liblldb_MemoryHistory_h_
+#endif // liblldb_MemoryHistory_h_

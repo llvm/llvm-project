@@ -5,11 +5,12 @@ Test number of threads.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
+
 
 class ThreadExitTestCase(TestBase):
 
@@ -31,17 +32,28 @@ class ThreadExitTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint with 1 location.
-        bp1_id = lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
-        bp2_id = lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_2, num_expected_locations=1)
-        bp3_id = lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_3, num_expected_locations=1)
-        bp4_id = lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_4, num_expected_locations=1)
+        bp1_id = lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_1, num_expected_locations=1)
+        bp2_id = lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_2, num_expected_locations=1)
+        bp3_id = lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_3, num_expected_locations=1)
+        bp4_id = lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_4, num_expected_locations=1)
 
         # The breakpoint list should show 1 locations.
-        self.expect("breakpoint list -f", "Breakpoint location shown correctly",
-            substrs = ["1: file = 'main.cpp', line = %d, exact_match = 0, locations = 1" % self.break_1,
-                       "2: file = 'main.cpp', line = %d, exact_match = 0, locations = 1" % self.break_2,
-                       "3: file = 'main.cpp', line = %d, exact_match = 0, locations = 1" % self.break_3,
-                       "4: file = 'main.cpp', line = %d, exact_match = 0, locations = 1" % self.break_4])
+        self.expect(
+            "breakpoint list -f",
+            "Breakpoint location shown correctly",
+            substrs=[
+                "1: file = 'main.cpp', line = %d, exact_match = 0, locations = 1" %
+                self.break_1,
+                "2: file = 'main.cpp', line = %d, exact_match = 0, locations = 1" %
+                self.break_2,
+                "3: file = 'main.cpp', line = %d, exact_match = 0, locations = 1" %
+                self.break_3,
+                "4: file = 'main.cpp', line = %d, exact_match = 0, locations = 1" %
+                self.break_4])
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
@@ -49,39 +61,59 @@ class ThreadExitTestCase(TestBase):
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
 
-        stopped_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(process, bp1_id)
-        self.assertIsNotNone(stopped_thread, "Process is not stopped at breakpoint 1")
+        stopped_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(
+            process, bp1_id)
+        self.assertIsNotNone(stopped_thread,
+                             "Process is not stopped at breakpoint 1")
 
         # Get the number of threads
         num_threads = process.GetNumThreads()
-        self.assertGreaterEqual(num_threads, 2, 'Number of expected threads and actual threads do not match at breakpoint 1.')
+        self.assertGreaterEqual(
+            num_threads,
+            2,
+            'Number of expected threads and actual threads do not match at breakpoint 1.')
 
         # Run to the second breakpoint
         self.runCmd("continue")
-        stopped_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(process, bp2_id)
-        self.assertIsNotNone(stopped_thread, "Process is not stopped at breakpoint 2")
+        stopped_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(
+            process, bp2_id)
+        self.assertIsNotNone(stopped_thread,
+                             "Process is not stopped at breakpoint 2")
 
         # Update the number of threads
         new_num_threads = process.GetNumThreads()
-        self.assertEqual(new_num_threads, num_threads+1, 'Number of expected threads did not increase by 1 at bp 2.')
+        self.assertEqual(
+            new_num_threads,
+            num_threads + 1,
+            'Number of expected threads did not increase by 1 at bp 2.')
 
         # Run to the third breakpoint
         self.runCmd("continue")
-        stopped_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(process, bp3_id)
-        self.assertIsNotNone(stopped_thread, "Process is not stopped at breakpoint 3")
+        stopped_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(
+            process, bp3_id)
+        self.assertIsNotNone(stopped_thread,
+                             "Process is not stopped at breakpoint 3")
 
         # Update the number of threads
         new_num_threads = process.GetNumThreads()
-        self.assertEqual(new_num_threads, num_threads, 'Number of expected threads is not equal to original number of threads at bp 3.')
+        self.assertEqual(
+            new_num_threads,
+            num_threads,
+            'Number of expected threads is not equal to original number of threads at bp 3.')
 
         # Run to the fourth breakpoint
         self.runCmd("continue")
-        stopped_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(process, bp4_id)
-        self.assertIsNotNone(stopped_thread, "Process is not stopped at breakpoint 4")
+        stopped_thread = lldbutil.get_one_thread_stopped_at_breakpoint_id(
+            process, bp4_id)
+        self.assertIsNotNone(stopped_thread,
+                             "Process is not stopped at breakpoint 4")
 
         # Update the number of threads
         new_num_threads = process.GetNumThreads()
-        self.assertEqual(new_num_threads, num_threads-1, 'Number of expected threads did not decrease by 1 at bp 4.')
+        self.assertEqual(
+            new_num_threads,
+            num_threads - 1,
+            'Number of expected threads did not decrease by 1 at bp 4.')
 
         # Run to completion
         self.runCmd("continue")

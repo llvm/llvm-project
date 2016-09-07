@@ -25,58 +25,42 @@
 /// @class POSIXStopInfo
 /// @brief Simple base class for all POSIX-specific StopInfo objects.
 ///
-class POSIXStopInfo
-    : public lldb_private::StopInfo
-{
+class POSIXStopInfo : public lldb_private::StopInfo {
 public:
-    POSIXStopInfo(lldb_private::Thread &thread, uint32_t status)
-        : StopInfo(thread, status)
-        { }
+  POSIXStopInfo(lldb_private::Thread &thread, uint32_t status)
+      : StopInfo(thread, status) {}
 };
 
 //===----------------------------------------------------------------------===//
 /// @class POSIXLimboStopInfo
 /// @brief Represents the stop state of a process ready to exit.
 ///
-class POSIXLimboStopInfo
-    : public POSIXStopInfo
-{
+class POSIXLimboStopInfo : public POSIXStopInfo {
 public:
-    POSIXLimboStopInfo(FreeBSDThread &thread)
-        : POSIXStopInfo(thread, 0)
-        { }
+  POSIXLimboStopInfo(FreeBSDThread &thread) : POSIXStopInfo(thread, 0) {}
 
-    ~POSIXLimboStopInfo();
+  ~POSIXLimboStopInfo();
 
-    lldb::StopReason
-    GetStopReason() const;
+  lldb::StopReason GetStopReason() const;
 
-    const char *
-    GetDescription();
+  const char *GetDescription();
 
-    bool
-    ShouldStop(lldb_private::Event *event_ptr);
+  bool ShouldStop(lldb_private::Event *event_ptr);
 
-    bool
-    ShouldNotify(lldb_private::Event *event_ptr);
+  bool ShouldNotify(lldb_private::Event *event_ptr);
 };
-
 
 //===----------------------------------------------------------------------===//
 /// @class POSIXCrashStopInfo
 /// @brief Represents the stop state of process that is ready to crash.
 ///
-class POSIXCrashStopInfo
-    : public POSIXStopInfo
-{
+class POSIXCrashStopInfo : public POSIXStopInfo {
 public:
-    POSIXCrashStopInfo(FreeBSDThread &thread, uint32_t status,
-                       CrashReason reason,
-                       lldb::addr_t fault_addr);
-    ~POSIXCrashStopInfo();
+  POSIXCrashStopInfo(FreeBSDThread &thread, uint32_t status, CrashReason reason,
+                     lldb::addr_t fault_addr);
+  ~POSIXCrashStopInfo();
 
-    lldb::StopReason
-    GetStopReason() const;
+  lldb::StopReason GetStopReason() const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -84,27 +68,19 @@ public:
 /// @brief Represents the stop state of process when a new thread is spawned.
 ///
 
-class POSIXNewThreadStopInfo
-    : public POSIXStopInfo
-{
+class POSIXNewThreadStopInfo : public POSIXStopInfo {
 public:
-    POSIXNewThreadStopInfo (FreeBSDThread &thread)
-        : POSIXStopInfo (thread, 0)
-        { }
+  POSIXNewThreadStopInfo(FreeBSDThread &thread) : POSIXStopInfo(thread, 0) {}
 
-    ~POSIXNewThreadStopInfo();
+  ~POSIXNewThreadStopInfo();
 
-    lldb::StopReason
-    GetStopReason() const;
+  lldb::StopReason GetStopReason() const;
 
-    const char *
-    GetDescription();
+  const char *GetDescription();
 
-    bool
-    ShouldStop(lldb_private::Event *event_ptr);
+  bool ShouldStop(lldb_private::Event *event_ptr);
 
-    bool
-    ShouldNotify(lldb_private::Event *event_ptr);
+  bool ShouldNotify(lldb_private::Event *event_ptr);
 };
 
 #endif

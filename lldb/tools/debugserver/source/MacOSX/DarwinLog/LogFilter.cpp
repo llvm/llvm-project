@@ -9,6 +9,4 @@
 
 #include "LogFilter.h"
 
-LogFilter::~LogFilter()
-{
-}
+LogFilter::~LogFilter() {}

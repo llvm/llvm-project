@@ -7,14 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef liblldb_UnwindTable_h
 #define liblldb_UnwindTable_h
 
 #include <map>
 #include <mutex>
 
-#include "lldb/lldb-private.h" 
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -22,62 +21,61 @@ namespace lldb_private {
 // The UnwindTable is populated with FuncUnwinders objects lazily during
 // the debug session.
 
-class UnwindTable
-{
+class UnwindTable {
 public:
-    UnwindTable(ObjectFile& objfile);
-    ~UnwindTable();
+  UnwindTable(ObjectFile &objfile);
+  ~UnwindTable();
 
-    lldb_private::DWARFCallFrameInfo *
-    GetEHFrameInfo ();
+  lldb_private::DWARFCallFrameInfo *GetEHFrameInfo();
 
-    lldb_private::CompactUnwindInfo *
-    GetCompactUnwindInfo ();
+  lldb_private::CompactUnwindInfo *GetCompactUnwindInfo();
 
-    ArmUnwindInfo *
-    GetArmUnwindInfo ();
+  ArmUnwindInfo *GetArmUnwindInfo();
 
-    lldb::FuncUnwindersSP
-    GetFuncUnwindersContainingAddress (const Address& addr, SymbolContext &sc);
+  lldb::FuncUnwindersSP GetFuncUnwindersContainingAddress(const Address &addr,
+                                                          SymbolContext &sc);
 
-    bool
-    GetAllowAssemblyEmulationUnwindPlans ();
+  bool GetAllowAssemblyEmulationUnwindPlans();
 
-// Normally when we create a new FuncUnwinders object we track it in this UnwindTable so it can
-// be reused later.  But for the target modules show-unwind we want to create brand new 
-// UnwindPlans for the function of interest - so ignore any existing FuncUnwinders for that
-// function and don't add this new one to our UnwindTable.
-// This FuncUnwinders object does have a reference to the UnwindTable but the lifetime of this
-// uncached FuncUnwinders is expected to be short so in practice this will not be a problem.
-    lldb::FuncUnwindersSP
-    GetUncachedFuncUnwindersContainingAddress (const Address& addr, SymbolContext &sc);
+  // Normally when we create a new FuncUnwinders object we track it in this
+  // UnwindTable so it can
+  // be reused later.  But for the target modules show-unwind we want to create
+  // brand new
+  // UnwindPlans for the function of interest - so ignore any existing
+  // FuncUnwinders for that
+  // function and don't add this new one to our UnwindTable.
+  // This FuncUnwinders object does have a reference to the UnwindTable but the
+  // lifetime of this
+  // uncached FuncUnwinders is expected to be short so in practice this will not
+  // be a problem.
+  lldb::FuncUnwindersSP
+  GetUncachedFuncUnwindersContainingAddress(const Address &addr,
+                                            SymbolContext &sc);
 
-    bool
-    GetArchitecture (lldb_private::ArchSpec &arch);
+  bool GetArchitecture(lldb_private::ArchSpec &arch);
 
 private:
-    void
-    Dump (Stream &s);
-    
-    void Initialize ();
+  void Dump(Stream &s);
 
-    typedef std::map<lldb::addr_t, lldb::FuncUnwindersSP> collection;
-    typedef collection::iterator iterator;
-    typedef collection::const_iterator const_iterator;
+  void Initialize();
 
-    ObjectFile&         m_object_file;
-    collection          m_unwinds;
+  typedef std::map<lldb::addr_t, lldb::FuncUnwindersSP> collection;
+  typedef collection::iterator iterator;
+  typedef collection::const_iterator const_iterator;
 
-    bool                m_initialized;  // delay some initialization until ObjectFile is set up
-    std::mutex m_mutex;
+  ObjectFile &m_object_file;
+  collection m_unwinds;
 
-    std::unique_ptr<DWARFCallFrameInfo> m_eh_frame_up;
-    std::unique_ptr<CompactUnwindInfo>  m_compact_unwind_up;
-    std::unique_ptr<ArmUnwindInfo>      m_arm_unwind_up;
+  bool m_initialized; // delay some initialization until ObjectFile is set up
+  std::mutex m_mutex;
 
-    DISALLOW_COPY_AND_ASSIGN (UnwindTable);
+  std::unique_ptr<DWARFCallFrameInfo> m_eh_frame_up;
+  std::unique_ptr<CompactUnwindInfo> m_compact_unwind_up;
+  std::unique_ptr<ArmUnwindInfo> m_arm_unwind_up;
+
+  DISALLOW_COPY_AND_ASSIGN(UnwindTable);
 };
 
 } // namespace lldb_private
 
-#endif  // liblldb_UnwindTable_h
+#endif // liblldb_UnwindTable_h

@@ -26,48 +26,40 @@
 namespace lldb_private {
 namespace platform_android {
 
-class PlatformAndroidRemoteGDBServer : public platform_gdb_server::PlatformRemoteGDBServer
-{
+class PlatformAndroidRemoteGDBServer
+    : public platform_gdb_server::PlatformRemoteGDBServer {
 public:
-    PlatformAndroidRemoteGDBServer();
+  PlatformAndroidRemoteGDBServer();
 
-    ~PlatformAndroidRemoteGDBServer() override;
+  ~PlatformAndroidRemoteGDBServer() override;
 
-    Error
-    ConnectRemote (Args& args) override;
+  Error ConnectRemote(Args &args) override;
 
-    Error
-    DisconnectRemote () override;
+  Error DisconnectRemote() override;
 
-    lldb::ProcessSP
-    ConnectProcess (const char* connect_url,
-                    const char* plugin_name,
-                    lldb_private::Debugger &debugger,
-                    lldb_private::Target *target,
-                    lldb_private::Error &error) override;
+  lldb::ProcessSP ConnectProcess(const char *connect_url,
+                                 const char *plugin_name,
+                                 lldb_private::Debugger &debugger,
+                                 lldb_private::Target *target,
+                                 lldb_private::Error &error) override;
 
 protected:
-    std::string m_device_id;
-    std::map<lldb::pid_t, uint16_t> m_port_forwards;
-    llvm::Optional<AdbClient::UnixSocketNamespace> m_socket_namespace;
+  std::string m_device_id;
+  std::map<lldb::pid_t, uint16_t> m_port_forwards;
+  llvm::Optional<AdbClient::UnixSocketNamespace> m_socket_namespace;
 
-    bool
-    LaunchGDBServer (lldb::pid_t &pid, std::string &connect_url) override;
+  bool LaunchGDBServer(lldb::pid_t &pid, std::string &connect_url) override;
 
-    bool
-    KillSpawnedProcess (lldb::pid_t pid) override;
+  bool KillSpawnedProcess(lldb::pid_t pid) override;
 
-    void
-    DeleteForwardPort (lldb::pid_t pid);
+  void DeleteForwardPort(lldb::pid_t pid);
 
-    Error
-    MakeConnectURL(const lldb::pid_t pid,
-                   const uint16_t remote_port,
-                   const char* remote_socket_name,
-                   std::string& connect_url);
+  Error MakeConnectURL(const lldb::pid_t pid, const uint16_t remote_port,
+                       const char *remote_socket_name,
+                       std::string &connect_url);
 
 private:
-    DISALLOW_COPY_AND_ASSIGN (PlatformAndroidRemoteGDBServer);
+  DISALLOW_COPY_AND_ASSIGN(PlatformAndroidRemoteGDBServer);
 };
 
 } // namespace platform_android

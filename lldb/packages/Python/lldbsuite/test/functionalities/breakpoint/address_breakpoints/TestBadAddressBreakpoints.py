@@ -5,18 +5,19 @@ Test that breakpoints set on a bad address say they are bad.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
+
 class BadAddressBreakpointTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def test_bad_address_breakpoints (self):
+    def test_bad_address_breakpoints(self):
         """Test that breakpoints set on a bad address say they are bad."""
         self.build()
         self.address_breakpoints()
@@ -34,7 +35,8 @@ class BadAddressBreakpointTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Now create a breakpoint on main.c by name 'c'.
-        breakpoint = target.BreakpointCreateBySourceRegex("Set a breakpoint here", lldb.SBFileSpec("main.c"))
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            "Set a breakpoint here", lldb.SBFileSpec("main.c"))
         self.assertTrue(breakpoint and
                         breakpoint.GetNumLocations() == 1,
                         VALID_BREAKPOINT)
@@ -47,16 +49,18 @@ class BadAddressBreakpointTestCase(TestBase):
                         VALID_BREAKPOINT_LOCATION)
 
         launch_info = lldb.SBLaunchInfo(None)
-        
+
         error = lldb.SBError()
 
-        process = target.Launch (launch_info, error)
+        process = target.Launch(launch_info, error)
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Did we hit our breakpoint?
-        from lldbsuite.test.lldbutil import get_threads_stopped_at_breakpoint 
-        threads = get_threads_stopped_at_breakpoint (process, breakpoint)
-        self.assertTrue(len(threads) == 1, "There should be a thread stopped at our breakpoint")
+        from lldbsuite.test.lldbutil import get_threads_stopped_at_breakpoint
+        threads = get_threads_stopped_at_breakpoint(process, breakpoint)
+        self.assertTrue(
+            len(threads) == 1,
+            "There should be a thread stopped at our breakpoint")
 
         # The hit count for the breakpoint should be 1.
         self.assertTrue(breakpoint.GetHitCount() == 1)
@@ -72,6 +76,5 @@ class BadAddressBreakpointTestCase(TestBase):
             for bp_loc in bkpt:
                 self.assertTrue(bp_loc.IsResolved() == False)
         else:
-            self.fail("Could not find an illegal address at which to set a bad breakpoint.")
-            
-            
+            self.fail(
+                "Could not find an illegal address at which to set a bad breakpoint.")

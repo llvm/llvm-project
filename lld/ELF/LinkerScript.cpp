@@ -162,7 +162,7 @@ static bool checkConstraint(uint64_t Flags, ConstraintKind Kind) {
   bool RO = (Kind == ConstraintKind::ReadOnly);
   bool RW = (Kind == ConstraintKind::ReadWrite);
   bool Writable = Flags & SHF_WRITE;
-  return !((RO && Writable) || (RW && !Writable));
+  return !(RO && Writable) && !(RW && !Writable);
 }
 
 template <class ELFT>
@@ -621,8 +621,9 @@ private:
   void readVersionScriptCommand();
 
   SymbolAssignment *readAssignment(StringRef Name);
+  std::vector<uint8_t> readFill();
   OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
-  std::vector<uint8_t> readOutputSectionFiller();
+  std::vector<uint8_t> readOutputSectionFiller(StringRef Tok);
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
   Regex readFilePatterns();
@@ -980,6 +981,18 @@ Expr ScriptParser::readAssert() {
   };
 }
 
+// Reads a FILL(expr) command. We handle the FILL command as an
+// alias for =fillexp section attribute, which is different from
+// what GNU linkers do.
+// https://sourceware.org/binutils/docs/ld/Output-Section-Data.html
+std::vector<uint8_t> ScriptParser::readFill() {
+  expect("(");
+  std::vector<uint8_t> V = readOutputSectionFiller(next());
+  expect(")");
+  expect(";");
+  return V;
+}
+
 OutputSectionCommand *
 ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd = new OutputSectionCommand(OutSec);
@@ -1009,6 +1022,8 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
     StringRef Tok = next();
     if (SymbolAssignment *Assignment = readProvideOrAssignment(Tok))
       Cmd->Commands.emplace_back(Assignment);
+    else if (Tok == "FILL")
+      Cmd->Filler = readFill();
     else if (Tok == "SORT")
       readSort();
     else if (peek() == "(")
@@ -1017,7 +1032,8 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
       setError("unknown command " + Tok);
   }
   Cmd->Phdrs = readOutputSectionPhdrs();
-  Cmd->Filler = readOutputSectionFiller();
+  if (peek().startswith("="))
+    Cmd->Filler = readOutputSectionFiller(next().drop_front());
   return Cmd;
 }
 
@@ -1028,13 +1044,9 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 // hexstrings as blobs of arbitrary sizes, while ld.gold handles them
 // as 32-bit big-endian values. We will do the same as ld.gold does
 // because it's simpler than what ld.bfd does.
-std::vector<uint8_t> ScriptParser::readOutputSectionFiller() {
-  if (!peek().startswith("="))
-    return {};
-
-  StringRef Tok = next();
+std::vector<uint8_t> ScriptParser::readOutputSectionFiller(StringRef Tok) {
   uint32_t V;
-  if (Tok.substr(1).getAsInteger(0, V)) {
+  if (Tok.getAsInteger(0, V)) {
     setError("invalid filler expression: " + Tok);
     return {};
   }

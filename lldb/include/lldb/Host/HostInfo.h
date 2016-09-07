@@ -59,8 +59,7 @@
 #define HOST_INFO_TYPE HostInfoPosix
 #endif
 
-namespace lldb_private
-{
+namespace lldb_private {
 typedef HOST_INFO_TYPE HostInfo;
 }
 

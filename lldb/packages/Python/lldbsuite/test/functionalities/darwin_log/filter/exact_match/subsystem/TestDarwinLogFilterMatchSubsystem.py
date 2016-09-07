@@ -60,27 +60,32 @@ class TestDarwinLogFilterMatchSubsystem(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we only accept
         # that subsystem.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 0) and
-                        (self.child.match.group(1) == "sub2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 0) and (
+                self.child.match.group(1) == "sub2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_reject_subsystem_partial_match(self):
         """Test that fall-through reject, doesn't accept match subsystem via partial-match."""
         self.do_test(
             ["--no-match-accepts false",
-             "--filter \"accept subsystem match org.llvm.lldb.test.sub2\"",  # Fully match second message subsystem.
+             # Fully match second message subsystem.
+             "--filter \"accept subsystem match org.llvm.lldb.test.sub2\"",
              "--filter \"accept subsystem match sub1\""]                     # Only partially match first subsystem.
         )
 
         # We should only see the second log message as we only accept
         # that subsystem.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 0) and
-                        (self.child.match.group(1) == "sub2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 0) and (
+                self.child.match.group(1) == "sub2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_reject_subsystem_full_match(self):
@@ -93,10 +98,12 @@ class TestDarwinLogFilterMatchSubsystem(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we rejected the first
         # via subsystem rejection.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 0) and
-                        (self.child.match.group(1) == "sub2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 0) and (
+                self.child.match.group(1) == "sub2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_accept_subsystem_second_rule(self):
@@ -112,7 +119,9 @@ class TestDarwinLogFilterMatchSubsystem(darwin_log.DarwinLogTestBase):
         # the first filter doesn't match any, and the second filter matches
         # the subsystem of the second log message.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 0) and
-                        (self.child.match.group(1) == "sub2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 0) and (
+                self.child.match.group(1) == "sub2"),
+            "first log line should not be present, second log line "
+            "should be")

@@ -5,18 +5,19 @@ Test address breakpoints set with shared library of SBAddress work correctly.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
+
 class AddressBreakpointTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def test_address_breakpoints (self):
+    def test_address_breakpoints(self):
         """Test address breakpoints set with shared library of SBAddress work correctly."""
         self.build()
         self.address_breakpoints()
@@ -34,7 +35,8 @@ class AddressBreakpointTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Now create a breakpoint on main.c by name 'c'.
-        breakpoint = target.BreakpointCreateBySourceRegex("Set a breakpoint here", lldb.SBFileSpec("main.c"))
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            "Set a breakpoint here", lldb.SBFileSpec("main.c"))
         self.assertTrue(breakpoint and
                         breakpoint.GetNumLocations() == 1,
                         VALID_BREAKPOINT)
@@ -48,7 +50,7 @@ class AddressBreakpointTestCase(TestBase):
 
         # Next get the address from the location, and create an address breakpoint using
         # that address:
-        
+
         address = location.GetAddress()
         target.BreakpointDelete(breakpoint.GetID())
 
@@ -61,16 +63,18 @@ class AddressBreakpointTestCase(TestBase):
         flags = launch_info.GetLaunchFlags()
         flags &= ~lldb.eLaunchFlagDisableASLR
         launch_info.SetLaunchFlags(flags)
-        
+
         error = lldb.SBError()
 
-        process = target.Launch (launch_info, error)
+        process = target.Launch(launch_info, error)
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Did we hit our breakpoint?
-        from lldbsuite.test.lldbutil import get_threads_stopped_at_breakpoint 
-        threads = get_threads_stopped_at_breakpoint (process, breakpoint)
-        self.assertTrue(len(threads) == 1, "There should be a thread stopped at our breakpoint")
+        from lldbsuite.test.lldbutil import get_threads_stopped_at_breakpoint
+        threads = get_threads_stopped_at_breakpoint(process, breakpoint)
+        self.assertTrue(
+            len(threads) == 1,
+            "There should be a thread stopped at our breakpoint")
 
         # The hit count for the breakpoint should be 1.
         self.assertTrue(breakpoint.GetHitCount() == 1)
@@ -82,10 +86,12 @@ class AddressBreakpointTestCase(TestBase):
         launch_info.SetLaunchFlags(flags)
 
         process = target.Launch(launch_info, error)
-        self.assertTrue (process, PROCESS_IS_VALID)
+        self.assertTrue(process, PROCESS_IS_VALID)
 
-        thread = get_threads_stopped_at_breakpoint (process, breakpoint)
-        self.assertTrue(len(threads) == 1, "There should be a thread stopped at our breakpoint")
+        thread = get_threads_stopped_at_breakpoint(process, breakpoint)
+        self.assertTrue(
+            len(threads) == 1,
+            "There should be a thread stopped at our breakpoint")
 
         # The hit count for the breakpoint should now be 2.
         self.assertTrue(breakpoint.GetHitCount() == 2)

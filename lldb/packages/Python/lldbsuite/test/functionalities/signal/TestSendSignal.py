@@ -3,8 +3,9 @@
 from __future__ import print_function
 
 
-
-import os, time, signal
+import os
+import time
+import signal
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -21,8 +22,10 @@ class SendSignalTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.c', 'Put breakpoint here')
 
-    @expectedFailureAll(oslist=['freebsd'], bugnumber="llvm.org/pr23318: does not report running state")
-    @skipIfWindows # Windows does not support signals
+    @expectedFailureAll(
+        oslist=['freebsd'],
+        bugnumber="llvm.org/pr23318: does not report running state")
+    @skipIfWindows  # Windows does not support signals
     def test_with_run_command(self):
         """Test that lldb command 'process signal SIGUSR1' sends a signal to the inferior process."""
         self.build()
@@ -57,14 +60,17 @@ class SendSignalTestCase(TestBase):
 
         self.runCmd("process handle -n False -p True -s True SIGUSR1")
 
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         self.assertTrue(thread.IsValid(), "We hit the first breakpoint.")
 
         # After resuming the process, send it a SIGUSR1 signal.
 
         self.setAsync(True)
 
-        self.assertTrue(process_listener.IsValid(), "Got a good process listener")
+        self.assertTrue(
+            process_listener.IsValid(),
+            "Got a good process listener")
 
         # Disable our breakpoint, we don't want to hit it anymore...
         breakpoint.SetEnabled(False)
@@ -88,9 +94,12 @@ class SendSignalTestCase(TestBase):
         self.assertTrue(len(threads) == 1, "One thread stopped for a signal.")
         thread = threads[0]
 
-        self.assertTrue(thread.GetStopReasonDataCount() >= 1, "There was data in the event.")
-        self.assertTrue(thread.GetStopReasonDataAtIndex(0) == lldbutil.get_signal_number('SIGUSR1'),
-                "The stop signal was SIGUSR1")
+        self.assertTrue(
+            thread.GetStopReasonDataCount() >= 1,
+            "There was data in the event.")
+        self.assertTrue(
+            thread.GetStopReasonDataAtIndex(0) == lldbutil.get_signal_number('SIGUSR1'),
+            "The stop signal was SIGUSR1")
 
     def match_state(self, process_listener, expected_state):
         num_seconds = 5

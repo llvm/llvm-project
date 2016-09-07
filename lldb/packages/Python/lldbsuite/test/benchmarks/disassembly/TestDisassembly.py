@@ -3,17 +3,19 @@
 from __future__ import print_function
 
 
-
-import os, sys
+import os
+import sys
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbbench import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
 
 class DisassembleDriverMainLoop(BenchBase):
 
@@ -42,7 +44,9 @@ class DisassembleDriverMainLoop(BenchBase):
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_run_lldb_then_gdb(self):
         """Test disassembly on a large function with lldb vs. gdb."""
         print()
@@ -54,11 +58,13 @@ class DisassembleDriverMainLoop(BenchBase):
         print("lldb benchmark:", self.stopwatch)
         self.run_gdb_disassembly(self.exe, self.function, self.count)
         print("gdb benchmark:", self.stopwatch)
-        print("lldb_avg/gdb_avg: %f" % (self.lldb_avg/self.gdb_avg))
+        print("lldb_avg/gdb_avg: %f" % (self.lldb_avg / self.gdb_avg))
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_run_gdb_then_lldb(self):
         """Test disassembly on a large function with lldb vs. gdb."""
         print()
@@ -70,7 +76,7 @@ class DisassembleDriverMainLoop(BenchBase):
         print("gdb benchmark:", self.stopwatch)
         self.run_lldb_disassembly(self.exe, self.function, self.count)
         print("lldb benchmark:", self.stopwatch)
-        print("lldb_avg/gdb_avg: %f" % (self.lldb_avg/self.gdb_avg))
+        print("lldb_avg/gdb_avg: %f" % (self.lldb_avg / self.gdb_avg))
 
     def run_lldb_disassembly(self, exe, function, count):
         import pexpect
@@ -79,7 +85,9 @@ class DisassembleDriverMainLoop(BenchBase):
         prompt = self.child_prompt
 
         # So that the child gets torn down after the test.
-        self.child = pexpect.spawn('%s %s %s' % (lldbtest_config.lldbExec, self.lldbOption, exe))
+        self.child = pexpect.spawn(
+            '%s %s %s' %
+            (lldbtest_config.lldbExec, self.lldbOption, exe))
         child = self.child
 
         # Turn on logging for what the child sends back.

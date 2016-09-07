@@ -1,15 +1,15 @@
 #!/usr/bin/python
 
 #----------------------------------------------------------------------
-# This module will enable GDB remote packet logging when the 
+# This module will enable GDB remote packet logging when the
 # 'start_gdb_log' command is called with a filename to log to. When the
-# 'stop_gdb_log' command is called, it will disable the logging and 
+# 'stop_gdb_log' command is called, it will disable the logging and
 # print out statistics about how long commands took to execute and also
 # will primnt ou
 # Be sure to add the python path that points to the LLDB shared library.
 #
 # To use this in the embedded python interpreter using "lldb" just
-# import it with the full path using the "command script import" 
+# import it with the full path using the "command script import"
 # command. This can be done from the LLDB command line:
 #   (lldb) command script import /path/to/gdbremote.py
 # Or it can be added to your ~/.lldbinit file so this module is always
@@ -23,13 +23,16 @@ import shlex
 import re
 import tempfile
 
+
 def start_gdb_log(debugger, command, result, dict):
-    '''Start logging GDB remote packets by enabling logging with timestamps and 
+    '''Start logging GDB remote packets by enabling logging with timestamps and
     thread safe logging. Follow a call to this function with a call to "stop_gdb_log"
     in order to dump out the commands.'''
     global log_file
     if log_file:
-        result.PutCString ('error: logging is already in progress with file "%s"', log_file)
+        result.PutCString(
+            'error: logging is already in progress with file "%s"',
+            log_file)
     else:
         args_len = len(args)
         if args_len == 0:
@@ -38,36 +41,52 @@ def start_gdb_log(debugger, command, result, dict):
             log_file = args[0]
 
         if log_file:
-            debugger.HandleCommand('log enable --threadsafe --timestamp --file "%s" gdb-remote packets' % log_file);
-            result.PutCString ("GDB packet logging enable with log file '%s'\nUse the 'stop_gdb_log' command to stop logging and show packet statistics." % log_file)
+            debugger.HandleCommand(
+                'log enable --threadsafe --timestamp --file "%s" gdb-remote packets' %
+                log_file)
+            result.PutCString(
+                "GDB packet logging enable with log file '%s'\nUse the 'stop_gdb_log' command to stop logging and show packet statistics." %
+                log_file)
             return
 
-        result.PutCString ('error: invalid log file path')
-    result.PutCString (usage)
+        result.PutCString('error: invalid log file path')
+    result.PutCString(usage)
+
 
 def parse_time_log(debugger, command, result, dict):
-    # Any commands whose names might be followed by more valid C identifier 
+    # Any commands whose names might be followed by more valid C identifier
     # characters must be listed here
     command_args = shlex.split(command)
-    parse_time_log_args (command_args)
+    parse_time_log_args(command_args)
+
 
 def parse_time_log_args(command_args):
     usage = "usage: parse_time_log [options] [<LOGFILEPATH>]"
-    description='''Parse a log file that contains timestamps and convert the timestamps to delta times between log lines.'''
-    parser = optparse.OptionParser(description=description, prog='parse_time_log',usage=usage)
-    parser.add_option('-v', '--verbose', action='store_true', dest='verbose', help='display verbose debug info', default=False)
+    description = '''Parse a log file that contains timestamps and convert the timestamps to delta times between log lines.'''
+    parser = optparse.OptionParser(
+        description=description,
+        prog='parse_time_log',
+        usage=usage)
+    parser.add_option(
+        '-v',
+        '--verbose',
+        action='store_true',
+        dest='verbose',
+        help='display verbose debug info',
+        default=False)
     try:
         (options, args) = parser.parse_args(command_args)
     except:
         return
     for log_file in args:
-        parse_log_file (log_file, options)
+        parse_log_file(log_file, options)
+
 
 def parse_log_file(file, options):
     '''Parse a log file that was contains timestamps. These logs are typically
     generated using:
     (lldb) log enable --threadsafe --timestamp --file <FILE> ....
-    
+
     This log file will contain timestamps and this function will then normalize
     those packets to be relative to the first value timestamp that is found and
     show delta times between log lines and also keep track of how long it takes
@@ -86,9 +105,9 @@ def parse_log_file(file, options):
     file = open(file)
     lines = file.read().splitlines()
     for line in lines:
-        match = timestamp_regex.match (line)
+        match = timestamp_regex.match(line)
         if match:
-            curr_time = float (match.group(2))
+            curr_time = float(match.group(2))
             delta = 0.0
             if base_time:
                 delta = curr_time - last_time
@@ -99,17 +118,17 @@ def parse_log_file(file, options):
             last_time = curr_time
         else:
             print line
-                    
-    
-    
+
+
 if __name__ == '__main__':
     import sys
-    parse_time_log_args (sys.argv[1:])
+    parse_time_log_args(sys.argv[1:])
 
 else:
     import lldb
-    if lldb.debugger:    
+    if lldb.debugger:
         # This initializer is being run from LLDB in the embedded command interpreter
         # Add any commands contained in this module to LLDB
-        lldb.debugger.HandleCommand('command script add -f delta.parse_time_log parse_time_log')
+        lldb.debugger.HandleCommand(
+            'command script add -f delta.parse_time_log parse_time_log')
         print 'The "parse_time_log" command is now installed and ready for use, type "parse_time_log --help" for more information'

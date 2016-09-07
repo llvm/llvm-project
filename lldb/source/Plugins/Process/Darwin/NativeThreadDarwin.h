@@ -21,8 +21,8 @@
 #include <string>
 
 // LLDB includes
-#include "lldb/lldb-private-forward.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
+#include "lldb/lldb-private-forward.h"
 
 #include "MachException.h"
 
@@ -34,168 +34,130 @@ using NativeProcessDarwinSP = std::shared_ptr<NativeProcessDarwin>;
 
 class NativeThreadListDarwin;
 
-class NativeThreadDarwin : public NativeThreadProtocol
-{
-    friend class NativeProcessDarwin;
-    friend class NativeThreadListDarwin;
+class NativeThreadDarwin : public NativeThreadProtocol {
+  friend class NativeProcessDarwin;
+  friend class NativeThreadListDarwin;
 
 public:
+  static uint64_t
+  GetGloballyUniqueThreadIDForMachPortID(::thread_t mach_port_id);
 
-    static uint64_t
-    GetGloballyUniqueThreadIDForMachPortID(::thread_t mach_port_id);
+  NativeThreadDarwin(NativeProcessDarwin *process, bool is_64_bit,
+                     lldb::tid_t unique_thread_id = 0,
+                     ::thread_t mach_thread_port = 0);
 
-    NativeThreadDarwin(NativeProcessDarwin *process, bool is_64_bit,
-                       lldb::tid_t unique_thread_id = 0,
-                       ::thread_t mach_thread_port = 0);
+  // -----------------------------------------------------------------
+  // NativeThreadProtocol Interface
+  // -----------------------------------------------------------------
+  std::string GetName() override;
 
-    // -----------------------------------------------------------------
-    // NativeThreadProtocol Interface
-    // -----------------------------------------------------------------
-    std::string
-    GetName() override;
+  lldb::StateType GetState() override;
 
-    lldb::StateType
-    GetState () override;
+  bool GetStopReason(ThreadStopInfo &stop_info,
+                     std::string &description) override;
 
-    bool
-    GetStopReason(ThreadStopInfo &stop_info,
-                  std::string& description) override;
+  NativeRegisterContextSP GetRegisterContext() override;
 
-    NativeRegisterContextSP
-    GetRegisterContext() override;
+  Error SetWatchpoint(lldb::addr_t addr, size_t size, uint32_t watch_flags,
+                      bool hardware) override;
 
-    Error
-    SetWatchpoint(lldb::addr_t addr, size_t size,
-                  uint32_t watch_flags, bool hardware) override;
+  Error RemoveWatchpoint(lldb::addr_t addr) override;
 
-    Error
-    RemoveWatchpoint(lldb::addr_t addr) override;
-
-    // -----------------------------------------------------------------
-    // New methods that are fine for others to call.
-    // -----------------------------------------------------------------
-    void
-    Dump(Stream &stream) const;
+  // -----------------------------------------------------------------
+  // New methods that are fine for others to call.
+  // -----------------------------------------------------------------
+  void Dump(Stream &stream) const;
 
 private:
-    // -----------------------------------------------------------------
-    // Interface for friend classes
-    // -----------------------------------------------------------------
+  // -----------------------------------------------------------------
+  // Interface for friend classes
+  // -----------------------------------------------------------------
 
-    /// Resumes the thread.  If @p signo is anything but
-    /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
-    Error
-    Resume(uint32_t signo);
+  /// Resumes the thread.  If @p signo is anything but
+  /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
+  Error Resume(uint32_t signo);
 
-    /// Single steps the thread.  If @p signo is anything but
-    /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
-    Error
-    SingleStep(uint32_t signo);
+  /// Single steps the thread.  If @p signo is anything but
+  /// LLDB_INVALID_SIGNAL_NUMBER, deliver that signal to the thread.
+  Error SingleStep(uint32_t signo);
 
-    bool
-    NotifyException(MachException::Data &exc);
+  bool NotifyException(MachException::Data &exc);
 
-    bool
-    ShouldStop(bool &step_more) const;
+  bool ShouldStop(bool &step_more) const;
 
-    void
-    ThreadDidStop();
+  void ThreadDidStop();
 
-    void
-    SetStoppedBySignal(uint32_t signo, const siginfo_t *info = nullptr);
+  void SetStoppedBySignal(uint32_t signo, const siginfo_t *info = nullptr);
 
-    /// Return true if the thread is stopped.
-    /// If stopped by a signal, indicate the signo in the signo
-    /// argument.  Otherwise, return LLDB_INVALID_SIGNAL_NUMBER.
-    bool
-    IsStopped (int *signo);
+  /// Return true if the thread is stopped.
+  /// If stopped by a signal, indicate the signo in the signo
+  /// argument.  Otherwise, return LLDB_INVALID_SIGNAL_NUMBER.
+  bool IsStopped(int *signo);
 
-    const struct thread_basic_info *
-    GetBasicInfo() const;
+  const struct thread_basic_info *GetBasicInfo() const;
 
-    static bool
-    GetBasicInfo(::thread_t thread, struct thread_basic_info *basicInfoPtr);
+  static bool GetBasicInfo(::thread_t thread,
+                           struct thread_basic_info *basicInfoPtr);
 
-    bool
-    IsUserReady() const;
+  bool IsUserReady() const;
 
-    void
-    SetStoppedByExec ();
+  void SetStoppedByExec();
 
-    void
-    SetStoppedByBreakpoint ();
+  void SetStoppedByBreakpoint();
 
-    void
-    SetStoppedByWatchpoint (uint32_t wp_index);
+  void SetStoppedByWatchpoint(uint32_t wp_index);
 
-    bool
-    IsStoppedAtBreakpoint ();
+  bool IsStoppedAtBreakpoint();
 
-    bool
-    IsStoppedAtWatchpoint ();
+  bool IsStoppedAtWatchpoint();
 
-    void
-    SetStoppedByTrace ();
+  void SetStoppedByTrace();
 
-    void
-    SetStoppedWithNoReason ();
+  void SetStoppedWithNoReason();
 
-    void
-    SetExited ();
+  void SetExited();
 
-    Error
-    RequestStop ();
+  Error RequestStop();
 
-    // -------------------------------------------------------------------------
-    /// Return the mach thread port number for this thread.
-    ///
-    /// @return
-    ///     The mach port number for this thread.  Returns NULL_THREAD
-    ///     when the thread is invalid.
-    // -------------------------------------------------------------------------
-    thread_t
-    GetMachPortNumber() const
-    {
-        return m_mach_thread_port;
-    }
+  // -------------------------------------------------------------------------
+  /// Return the mach thread port number for this thread.
+  ///
+  /// @return
+  ///     The mach port number for this thread.  Returns NULL_THREAD
+  ///     when the thread is invalid.
+  // -------------------------------------------------------------------------
+  thread_t GetMachPortNumber() const { return m_mach_thread_port; }
 
-    static bool
-    MachPortNumberIsValid(::thread_t thread);
+  static bool MachPortNumberIsValid(::thread_t thread);
 
-    // ---------------------------------------------------------------------
-    // Private interface
-    // ---------------------------------------------------------------------
-    bool
-    GetIdentifierInfo();
+  // ---------------------------------------------------------------------
+  // Private interface
+  // ---------------------------------------------------------------------
+  bool GetIdentifierInfo();
 
-    void
-    MaybeLogStateChange (lldb::StateType new_state);
+  void MaybeLogStateChange(lldb::StateType new_state);
 
-    NativeProcessDarwinSP
-    GetNativeProcessDarwinSP();
+  NativeProcessDarwinSP GetNativeProcessDarwinSP();
 
-    void
-    SetStopped();
+  void SetStopped();
 
-    inline void
-    MaybePrepareSingleStepWorkaround();
+  inline void MaybePrepareSingleStepWorkaround();
 
-    inline void
-    MaybeCleanupSingleStepWorkaround();
+  inline void MaybeCleanupSingleStepWorkaround();
 
-    // -----------------------------------------------------------------
-    // Member Variables
-    // -----------------------------------------------------------------
+  // -----------------------------------------------------------------
+  // Member Variables
+  // -----------------------------------------------------------------
 
-    // The mach thread port for the thread.
-    ::thread_t  m_mach_thread_port;
+  // The mach thread port for the thread.
+  ::thread_t m_mach_thread_port;
 
-    // The most recently-retrieved thread basic info.
-    mutable ::thread_basic_info m_basic_info;
+  // The most recently-retrieved thread basic info.
+  mutable ::thread_basic_info m_basic_info;
 
-    struct proc_threadinfo  m_proc_threadinfo;
+  struct proc_threadinfo m_proc_threadinfo;
 
-    thread_identifier_info_data_t   m_ident_info;
+  thread_identifier_info_data_t m_ident_info;
 
 #if 0
     lldb::StateType m_state;

@@ -20,59 +20,48 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void
-OptionValueFormat::DumpValue (const ExecutionContext *exe_ctx, Stream &strm, uint32_t dump_mask)
-{
+void OptionValueFormat::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
+                                  uint32_t dump_mask) {
+  if (dump_mask & eDumpOptionType)
+    strm.Printf("(%s)", GetTypeAsCString());
+  if (dump_mask & eDumpOptionValue) {
     if (dump_mask & eDumpOptionType)
-        strm.Printf ("(%s)", GetTypeAsCString ());
-    if (dump_mask & eDumpOptionValue)
-    {
-        if (dump_mask & eDumpOptionType)
-            strm.PutCString (" = ");
-        strm.PutCString (FormatManager::GetFormatAsCString (m_current_value));
+      strm.PutCString(" = ");
+    strm.PutCString(FormatManager::GetFormatAsCString(m_current_value));
+  }
+}
+
+Error OptionValueFormat::SetValueFromString(llvm::StringRef value,
+                                            VarSetOperationType op) {
+  Error error;
+  switch (op) {
+  case eVarSetOperationClear:
+    Clear();
+    NotifyValueChanged();
+    break;
+
+  case eVarSetOperationReplace:
+  case eVarSetOperationAssign: {
+    Format new_format;
+    error = Args::StringToFormat(value.str().c_str(), new_format, nullptr);
+    if (error.Success()) {
+      m_value_was_set = true;
+      m_current_value = new_format;
+      NotifyValueChanged();
     }
+  } break;
+
+  case eVarSetOperationInsertBefore:
+  case eVarSetOperationInsertAfter:
+  case eVarSetOperationRemove:
+  case eVarSetOperationAppend:
+  case eVarSetOperationInvalid:
+    error = OptionValue::SetValueFromString(value, op);
+    break;
+  }
+  return error;
 }
 
-Error
-OptionValueFormat::SetValueFromString (llvm::StringRef value, VarSetOperationType op)
-{
-    Error error;
-    switch (op)
-    {
-    case eVarSetOperationClear:
-        Clear();
-        NotifyValueChanged();
-        break;
-        
-    case eVarSetOperationReplace:
-    case eVarSetOperationAssign:
-        {
-            Format new_format;
-            error = Args::StringToFormat (value.str().c_str(), new_format, nullptr);
-            if (error.Success())
-            {
-                m_value_was_set = true;
-                m_current_value = new_format;
-                NotifyValueChanged();
-            }
-        }
-        break;
-        
-    case eVarSetOperationInsertBefore:
-    case eVarSetOperationInsertAfter:
-    case eVarSetOperationRemove:
-    case eVarSetOperationAppend:
-    case eVarSetOperationInvalid:
-        error = OptionValue::SetValueFromString (value, op);
-        break;
-    }
-    return error;
+lldb::OptionValueSP OptionValueFormat::DeepCopy() const {
+  return OptionValueSP(new OptionValueFormat(*this));
 }
-
-
-lldb::OptionValueSP
-OptionValueFormat::DeepCopy () const
-{
-    return OptionValueSP(new OptionValueFormat(*this));
-}
-

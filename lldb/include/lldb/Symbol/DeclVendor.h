@@ -15,59 +15,50 @@
 #include <vector>
 
 namespace lldb_private {
-    
+
 //----------------------------------------------------------------------
 // The Decl vendor class is intended as a generic interface to search
 // for named declarations that are not necessarily backed by a specific
 // symbol file.
 //----------------------------------------------------------------------
-class DeclVendor
-{
+class DeclVendor {
 public:
-    //------------------------------------------------------------------
-    // Constructors and Destructors
-    //------------------------------------------------------------------
-    DeclVendor()
-    {
-    }
-    
-    virtual
-    ~DeclVendor()
-    {
-    }
-    
-    //------------------------------------------------------------------
-    /// Look up the set of Decls that the DeclVendor currently knows about
-    /// matching a given name.
-    ///
-    /// @param[in] name
-    ///     The name to look for.
-    ///
-    /// @param[in] append
-    ///     If true, FindDecls will clear "decls" when it starts.
-    ///
-    /// @param[in] max_matches
-    ///     The maximum number of Decls to return.  UINT32_MAX means "as
-    ///     many as possible."
-    ///
-    /// @return
-    ///     The number of Decls added to decls; will not exceed
-    ///     max_matches.
-    //------------------------------------------------------------------
-    virtual uint32_t
-    FindDecls (const ConstString &name,
-               bool append,
-               uint32_t max_matches,
-               std::vector <clang::NamedDecl*> &decls) = 0;
-    
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  DeclVendor() {}
+
+  virtual ~DeclVendor() {}
+
+  //------------------------------------------------------------------
+  /// Look up the set of Decls that the DeclVendor currently knows about
+  /// matching a given name.
+  ///
+  /// @param[in] name
+  ///     The name to look for.
+  ///
+  /// @param[in] append
+  ///     If true, FindDecls will clear "decls" when it starts.
+  ///
+  /// @param[in] max_matches
+  ///     The maximum number of Decls to return.  UINT32_MAX means "as
+  ///     many as possible."
+  ///
+  /// @return
+  ///     The number of Decls added to decls; will not exceed
+  ///     max_matches.
+  //------------------------------------------------------------------
+  virtual uint32_t FindDecls(const ConstString &name, bool append,
+                             uint32_t max_matches,
+                             std::vector<clang::NamedDecl *> &decls) = 0;
+
 private:
-    //------------------------------------------------------------------
-    // For DeclVendor only
-    //------------------------------------------------------------------
-    DISALLOW_COPY_AND_ASSIGN (DeclVendor);
+  //------------------------------------------------------------------
+  // For DeclVendor only
+  //------------------------------------------------------------------
+  DISALLOW_COPY_AND_ASSIGN(DeclVendor);
 };
-    
-    
+
 } // namespace lldb_private
 
 #endif

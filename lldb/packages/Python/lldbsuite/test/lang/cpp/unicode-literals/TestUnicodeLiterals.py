@@ -6,8 +6,8 @@ Test that the expression parser returns proper Unicode strings.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -26,23 +26,30 @@ from lldbsuite.test import lldbutil
 #  [5] = e\0\0\0
 #}
 
+
 class UnicodeLiteralsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_expr1(self):
         """Test that the expression parser returns proper Unicode strings."""
         self.build()
         self.rdar12991846(expr=1)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_expr2(self):
         """Test that the expression parser returns proper Unicode strings."""
         self.build()
         self.rdar12991846(expr=2)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_expr3(self):
         """Test that the expression parser returns proper Unicode strings."""
         self.build()
@@ -53,12 +60,14 @@ class UnicodeLiteralsTestCase(TestBase):
         TestBase.setUp(self)
         # Find the line number to break for main.cpp.
         self.source = 'main.cpp'
-        self.line = line_number(self.source, '// Set break point at this line.')
+        self.line = line_number(
+            self.source, '// Set break point at this line.')
 
     def rdar12991846(self, expr=None):
         """Test that the expression parser returns proper Unicode strings."""
         if self.getArchitecture() in ['i386']:
-            self.skipTest("Skipping because this test is known to crash on i386")
+            self.skipTest(
+                "Skipping because this test is known to crash on i386")
 
         exe = os.path.join(os.getcwd(), "a.out")
 
@@ -67,16 +76,20 @@ class UnicodeLiteralsTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Break on the struct declration statement in main.cpp.
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line)
+        lldbutil.run_break_set_by_file_and_line(self, "main.cpp", self.line)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         if not process:
             self.fail("SBTarget.Launch() failed")
 
-        if expr == 1: self.expect('expression L"hello"', substrs = ['hello'])
+        if expr == 1:
+            self.expect('expression L"hello"', substrs=['hello'])
 
-        if expr == 2: self.expect('expression u"hello"', substrs = ['hello'])
+        if expr == 2:
+            self.expect('expression u"hello"', substrs=['hello'])
 
-        if expr == 3: self.expect('expression U"hello"', substrs = ['hello'])
+        if expr == 3:
+            self.expect('expression U"hello"', substrs=['hello'])

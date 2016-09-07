@@ -16,46 +16,33 @@ class MemoryRegionInfoListImpl;
 
 namespace lldb {
 
-class LLDB_API SBMemoryRegionInfoList
-{
+class LLDB_API SBMemoryRegionInfoList {
 public:
+  SBMemoryRegionInfoList();
 
-    SBMemoryRegionInfoList ();
+  SBMemoryRegionInfoList(const lldb::SBMemoryRegionInfoList &rhs);
 
-    SBMemoryRegionInfoList (const lldb::SBMemoryRegionInfoList &rhs);
+  const SBMemoryRegionInfoList &operator=(const SBMemoryRegionInfoList &rhs);
 
-    const SBMemoryRegionInfoList &
-    operator = (const SBMemoryRegionInfoList &rhs);
+  ~SBMemoryRegionInfoList();
 
-    ~SBMemoryRegionInfoList ();
+  uint32_t GetSize() const;
 
-    uint32_t
-    GetSize () const;
+  bool GetMemoryRegionAtIndex(uint32_t idx, SBMemoryRegionInfo &region_info);
 
-    bool
-    GetMemoryRegionAtIndex (uint32_t idx, SBMemoryRegionInfo &region_info);
+  void Append(lldb::SBMemoryRegionInfo &region);
 
-    void
-    Append (lldb::SBMemoryRegionInfo &region);
+  void Append(lldb::SBMemoryRegionInfoList &region_list);
 
-    void
-    Append (lldb::SBMemoryRegionInfoList &region_list);
-
-    void
-    Clear ();
+  void Clear();
 
 protected:
+  const MemoryRegionInfoListImpl *operator->() const;
 
-    const MemoryRegionInfoListImpl *
-    operator->() const;
-
-    const MemoryRegionInfoListImpl &
-    operator*() const;
+  const MemoryRegionInfoListImpl &operator*() const;
 
 private:
-
-    std::unique_ptr<MemoryRegionInfoListImpl> m_opaque_ap;
-
+  std::unique_ptr<MemoryRegionInfoListImpl> m_opaque_ap;
 };
 
 } // namespace lldb

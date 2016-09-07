@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
 #include "lldb/Utility/PseudoTerminal.h"
+#include "lldb/Host/Config.h"
 
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #if defined(TIOCSCTTY)
 #include <sys/ioctl.h>
 #endif
@@ -29,11 +29,8 @@ using namespace lldb_utility;
 //----------------------------------------------------------------------
 // PseudoTerminal constructor
 //----------------------------------------------------------------------
-PseudoTerminal::PseudoTerminal () :
-    m_master_fd(invalid_fd),
-    m_slave_fd(invalid_fd)
-{
-}
+PseudoTerminal::PseudoTerminal()
+    : m_master_fd(invalid_fd), m_slave_fd(invalid_fd) {}
 
 //----------------------------------------------------------------------
 // Destructor
@@ -43,40 +40,33 @@ PseudoTerminal::PseudoTerminal () :
 // ReleaseMasterFileDescriptor() or the ReleaseSaveFileDescriptor()
 // member functions.
 //----------------------------------------------------------------------
-PseudoTerminal::~PseudoTerminal ()
-{
-    CloseMasterFileDescriptor();
-    CloseSlaveFileDescriptor();
+PseudoTerminal::~PseudoTerminal() {
+  CloseMasterFileDescriptor();
+  CloseSlaveFileDescriptor();
 }
 
 //----------------------------------------------------------------------
 // Close the master file descriptor if it is valid.
 //----------------------------------------------------------------------
-void
-PseudoTerminal::CloseMasterFileDescriptor ()
-{
-    if (m_master_fd >= 0)
-    {
-    // Don't call 'close' on m_master_fd for Windows as a dummy implementation of
-    // posix_openpt above always gives it a 0 value.
+void PseudoTerminal::CloseMasterFileDescriptor() {
+  if (m_master_fd >= 0) {
+// Don't call 'close' on m_master_fd for Windows as a dummy implementation of
+// posix_openpt above always gives it a 0 value.
 #ifndef _WIN32
-        ::close (m_master_fd);
+    ::close(m_master_fd);
 #endif
-        m_master_fd = invalid_fd;
-    }
+    m_master_fd = invalid_fd;
+  }
 }
 
 //----------------------------------------------------------------------
 // Close the slave file descriptor if it is valid.
 //----------------------------------------------------------------------
-void
-PseudoTerminal::CloseSlaveFileDescriptor ()
-{
-    if (m_slave_fd >= 0)
-    {
-        ::close (m_slave_fd);
-        m_slave_fd = invalid_fd;
-    }
+void PseudoTerminal::CloseSlaveFileDescriptor() {
+  if (m_slave_fd >= 0) {
+    ::close(m_slave_fd);
+    m_slave_fd = invalid_fd;
+  }
 }
 
 //----------------------------------------------------------------------
@@ -93,40 +83,36 @@ PseudoTerminal::CloseSlaveFileDescriptor ()
 // RETURNS:
 //  Zero when successful, non-zero indicating an error occurred.
 //----------------------------------------------------------------------
-bool
-PseudoTerminal::OpenFirstAvailableMaster (int oflag, char *error_str, size_t error_len)
-{
+bool PseudoTerminal::OpenFirstAvailableMaster(int oflag, char *error_str,
+                                              size_t error_len) {
+  if (error_str)
+    error_str[0] = '\0';
+
+  // Open the master side of a pseudo terminal
+  m_master_fd = ::posix_openpt(oflag);
+  if (m_master_fd < 0) {
     if (error_str)
-        error_str[0] = '\0';
+      ::strerror_r(errno, error_str, error_len);
+    return false;
+  }
 
-    // Open the master side of a pseudo terminal
-    m_master_fd = ::posix_openpt (oflag);
-    if (m_master_fd < 0)
-    {
-        if (error_str)
-            ::strerror_r (errno, error_str, error_len);
-        return false;
-    }
+  // Grant access to the slave pseudo terminal
+  if (::grantpt(m_master_fd) < 0) {
+    if (error_str)
+      ::strerror_r(errno, error_str, error_len);
+    CloseMasterFileDescriptor();
+    return false;
+  }
 
-    // Grant access to the slave pseudo terminal
-    if (::grantpt (m_master_fd) < 0)
-    {
-        if (error_str)
-            ::strerror_r (errno, error_str, error_len);
-        CloseMasterFileDescriptor ();
-        return false;
-    }
+  // Clear the lock flag on the slave pseudo terminal
+  if (::unlockpt(m_master_fd) < 0) {
+    if (error_str)
+      ::strerror_r(errno, error_str, error_len);
+    CloseMasterFileDescriptor();
+    return false;
+  }
 
-    // Clear the lock flag on the slave pseudo terminal
-    if (::unlockpt (m_master_fd) < 0)
-    {
-        if (error_str)
-            ::strerror_r (errno, error_str, error_len);
-        CloseMasterFileDescriptor ();
-        return false;
-    }
-
-    return true;
+  return true;
 }
 
 //----------------------------------------------------------------------
@@ -140,33 +126,28 @@ PseudoTerminal::OpenFirstAvailableMaster (int oflag, char *error_str, size_t err
 // RETURNS:
 //  Zero when successful, non-zero indicating an error occurred.
 //----------------------------------------------------------------------
-bool
-PseudoTerminal::OpenSlave (int oflag, char *error_str, size_t error_len)
-{
+bool PseudoTerminal::OpenSlave(int oflag, char *error_str, size_t error_len) {
+  if (error_str)
+    error_str[0] = '\0';
+
+  CloseSlaveFileDescriptor();
+
+  // Open the master side of a pseudo terminal
+  const char *slave_name = GetSlaveName(error_str, error_len);
+
+  if (slave_name == nullptr)
+    return false;
+
+  m_slave_fd = ::open(slave_name, oflag);
+
+  if (m_slave_fd < 0) {
     if (error_str)
-        error_str[0] = '\0';
+      ::strerror_r(errno, error_str, error_len);
+    return false;
+  }
 
-    CloseSlaveFileDescriptor();
-
-    // Open the master side of a pseudo terminal
-    const char *slave_name = GetSlaveName (error_str, error_len);
-
-    if (slave_name == nullptr)
-        return false;
-
-    m_slave_fd = ::open (slave_name, oflag);
-
-    if (m_slave_fd < 0)
-    {
-        if (error_str)
-            ::strerror_r (errno, error_str, error_len);
-        return false;
-    }
-
-    return true;
+  return true;
 }
-
-
 
 //----------------------------------------------------------------------
 // Get the name of the slave pseudo terminal. A master pseudo terminal
@@ -179,26 +160,24 @@ PseudoTerminal::OpenSlave (int oflag, char *error_str, size_t error_len)
 //  that comes from static memory, so a copy of the string should be
 //  made as subsequent calls can change this value.
 //----------------------------------------------------------------------
-const char*
-PseudoTerminal::GetSlaveName (char *error_str, size_t error_len) const
-{
+const char *PseudoTerminal::GetSlaveName(char *error_str,
+                                         size_t error_len) const {
+  if (error_str)
+    error_str[0] = '\0';
+
+  if (m_master_fd < 0) {
     if (error_str)
-        error_str[0] = '\0';
+      ::snprintf(error_str, error_len, "%s",
+                 "master file descriptor is invalid");
+    return nullptr;
+  }
+  const char *slave_name = ::ptsname(m_master_fd);
 
-    if (m_master_fd < 0)
-    {
-        if (error_str)
-            ::snprintf (error_str, error_len, "%s", "master file descriptor is invalid");
-        return nullptr;
-    }
-    const char *slave_name = ::ptsname (m_master_fd);
+  if (error_str && slave_name == nullptr)
+    ::strerror_r(errno, error_str, error_len);
 
-    if (error_str && slave_name == nullptr)
-        ::strerror_r (errno, error_str, error_len);
-
-    return slave_name;
+  return slave_name;
 }
-
 
 //----------------------------------------------------------------------
 // Fork a child process and have its stdio routed to a pseudo terminal.
@@ -221,74 +200,62 @@ PseudoTerminal::GetSlaveName (char *error_str, size_t error_len) const
 //  in the parent process: the pid of the child, or -1 if fork fails
 //  in the child process: zero
 //----------------------------------------------------------------------
-lldb::pid_t
-PseudoTerminal::Fork (char *error_str, size_t error_len)
-{
-    if (error_str)
-        error_str[0] = '\0';
-    pid_t pid = LLDB_INVALID_PROCESS_ID;
+lldb::pid_t PseudoTerminal::Fork(char *error_str, size_t error_len) {
+  if (error_str)
+    error_str[0] = '\0';
+  pid_t pid = LLDB_INVALID_PROCESS_ID;
 #if !defined(LLDB_DISABLE_POSIX)
-    int flags = O_RDWR;
-    flags |= O_CLOEXEC;
-    if (OpenFirstAvailableMaster (flags, error_str, error_len))
-    {
-        // Successfully opened our master pseudo terminal
+  int flags = O_RDWR;
+  flags |= O_CLOEXEC;
+  if (OpenFirstAvailableMaster(flags, error_str, error_len)) {
+    // Successfully opened our master pseudo terminal
 
-        pid = ::fork ();
-        if (pid < 0)
-        {
-            // Fork failed
-            if (error_str)
-            ::strerror_r (errno, error_str, error_len);
-        }
-        else if (pid == 0)
-        {
-            // Child Process
-            ::setsid();
+    pid = ::fork();
+    if (pid < 0) {
+      // Fork failed
+      if (error_str)
+        ::strerror_r(errno, error_str, error_len);
+    } else if (pid == 0) {
+      // Child Process
+      ::setsid();
 
-            if (OpenSlave (O_RDWR, error_str, error_len))
-            {
-                // Successfully opened slave
+      if (OpenSlave(O_RDWR, error_str, error_len)) {
+        // Successfully opened slave
 
-                // Master FD should have O_CLOEXEC set, but let's close it just in case...
-                CloseMasterFileDescriptor ();
+        // Master FD should have O_CLOEXEC set, but let's close it just in
+        // case...
+        CloseMasterFileDescriptor();
 
 #if defined(TIOCSCTTY)
-                // Acquire the controlling terminal
-                if (::ioctl (m_slave_fd, TIOCSCTTY, (char *)0) < 0)
-                {
-                    if (error_str)
-                        ::strerror_r (errno, error_str, error_len);
-                }
+        // Acquire the controlling terminal
+        if (::ioctl(m_slave_fd, TIOCSCTTY, (char *)0) < 0) {
+          if (error_str)
+            ::strerror_r(errno, error_str, error_len);
+        }
 #endif
-                // Duplicate all stdio file descriptors to the slave pseudo terminal
-                if (::dup2 (m_slave_fd, STDIN_FILENO) != STDIN_FILENO)
-                {
-                    if (error_str && !error_str[0])
-                        ::strerror_r (errno, error_str, error_len);
-                }
-
-                if (::dup2 (m_slave_fd, STDOUT_FILENO) != STDOUT_FILENO)
-                {
-                    if (error_str && !error_str[0])
-                        ::strerror_r (errno, error_str, error_len);
-                }
-
-                if (::dup2 (m_slave_fd, STDERR_FILENO) != STDERR_FILENO)
-                {
-                    if (error_str && !error_str[0])
-                        ::strerror_r (errno, error_str, error_len);
-                }
-            }
+        // Duplicate all stdio file descriptors to the slave pseudo terminal
+        if (::dup2(m_slave_fd, STDIN_FILENO) != STDIN_FILENO) {
+          if (error_str && !error_str[0])
+            ::strerror_r(errno, error_str, error_len);
         }
-        else
-        {
-            // Parent Process
-            // Do nothing and let the pid get returned!
+
+        if (::dup2(m_slave_fd, STDOUT_FILENO) != STDOUT_FILENO) {
+          if (error_str && !error_str[0])
+            ::strerror_r(errno, error_str, error_len);
         }
+
+        if (::dup2(m_slave_fd, STDERR_FILENO) != STDERR_FILENO) {
+          if (error_str && !error_str[0])
+            ::strerror_r(errno, error_str, error_len);
+        }
+      }
+    } else {
+      // Parent Process
+      // Do nothing and let the pid get returned!
     }
+  }
 #endif
-    return pid;
+  return pid;
 }
 
 //----------------------------------------------------------------------
@@ -300,11 +267,7 @@ PseudoTerminal::Fork (char *error_str, size_t error_len)
 // Returns the master file descriptor, or -1 if the master file
 // descriptor is not currently valid.
 //----------------------------------------------------------------------
-int
-PseudoTerminal::GetMasterFileDescriptor () const
-{
-    return m_master_fd;
-}
+int PseudoTerminal::GetMasterFileDescriptor() const { return m_master_fd; }
 
 //----------------------------------------------------------------------
 // The slave file descriptor accessor.
@@ -312,11 +275,7 @@ PseudoTerminal::GetMasterFileDescriptor () const
 // Returns the slave file descriptor, or -1 if the slave file
 // descriptor is not currently valid.
 //----------------------------------------------------------------------
-int
-PseudoTerminal::GetSlaveFileDescriptor () const
-{
-    return m_slave_fd;
-}
+int PseudoTerminal::GetSlaveFileDescriptor() const { return m_slave_fd; }
 
 //----------------------------------------------------------------------
 // Release ownership of the master pseudo terminal file descriptor
@@ -324,15 +283,13 @@ PseudoTerminal::GetSlaveFileDescriptor () const
 // master file descriptor if the ownership isn't released using this
 // call and the master file descriptor has been opened.
 //----------------------------------------------------------------------
-int
-PseudoTerminal::ReleaseMasterFileDescriptor ()
-{
-    // Release ownership of the master pseudo terminal file
-    // descriptor without closing it. (the destructor for this
-    // class will close it otherwise!)
-    int fd = m_master_fd;
-    m_master_fd = invalid_fd;
-    return fd;
+int PseudoTerminal::ReleaseMasterFileDescriptor() {
+  // Release ownership of the master pseudo terminal file
+  // descriptor without closing it. (the destructor for this
+  // class will close it otherwise!)
+  int fd = m_master_fd;
+  m_master_fd = invalid_fd;
+  return fd;
 }
 
 //----------------------------------------------------------------------
@@ -341,14 +298,11 @@ PseudoTerminal::ReleaseMasterFileDescriptor ()
 // slave file descriptor if the ownership isn't released using this
 // call and the slave file descriptor has been opened.
 //----------------------------------------------------------------------
-int
-PseudoTerminal::ReleaseSlaveFileDescriptor ()
-{
-    // Release ownership of the slave pseudo terminal file
-    // descriptor without closing it (the destructor for this
-    // class will close it otherwise!)
-    int fd = m_slave_fd;
-    m_slave_fd = invalid_fd;
-    return fd;
+int PseudoTerminal::ReleaseSlaveFileDescriptor() {
+  // Release ownership of the slave pseudo terminal file
+  // descriptor without closing it (the destructor for this
+  // class will close it otherwise!)
+  int fd = m_slave_fd;
+  m_slave_fd = invalid_fd;
+  return fd;
 }
-

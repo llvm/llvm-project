@@ -33,6 +33,7 @@ DOTRC_BASE_FILENAME = ".syncsourcerc"
 
 class Configuration(object):
     """Provides chaining configuration lookup."""
+
     def __init__(self, rcdata_configs):
         self.__rcdata_configs = rcdata_configs
 

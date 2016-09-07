@@ -22,7 +22,8 @@
 #
 
 # System modules
-import sys, re
+import sys
+import re
 if sys.version_info.major >= 3:
     import io as StringIO
 else:
@@ -45,7 +46,7 @@ else:
 
 #
 # Version string
-# 
+#
 version_line = "swig_version = %s"
 
 #
@@ -59,6 +60,7 @@ doxygen_comment_start = re.compile("^\s*(/// ?)")
 # The demarcation point for turning on/off residue removal state.
 # When bracketed by the lines, the CLEANUP_DOCSTRING state (see below) is ON.
 toggle_docstring_cleanup_line = '        """'
+
 
 def char_to_str_xform(line):
     """This transforms the 'char', i.e, 'char *' to 'str', Python string."""
@@ -74,7 +76,9 @@ def char_to_str_xform(line):
 #
 TWO_SPACES = ' ' * 2
 EIGHT_SPACES = ' ' * 8
-one_liner_docstring_pattern = re.compile('^(%s|%s)""".*"""$' % (TWO_SPACES, EIGHT_SPACES))
+one_liner_docstring_pattern = re.compile(
+    '^(%s|%s)""".*"""$' %
+    (TWO_SPACES, EIGHT_SPACES))
 
 #
 # lldb_helpers and lldb_iter() should appear before our first SB* class definition.
@@ -226,47 +230,48 @@ symbol_in_section_iter_def = '''
 #
 # This dictionary defines a mapping from classname to (getsize, getelem) tuple.
 #
-d = { 'SBBreakpoint':  ('GetNumLocations',   'GetLocationAtIndex'),
-      'SBCompileUnit': ('GetNumLineEntries', 'GetLineEntryAtIndex'),
-      'SBDebugger':    ('GetNumTargets',     'GetTargetAtIndex'),
-      'SBModule':      ('GetNumSymbols',     'GetSymbolAtIndex'),
-      'SBProcess':     ('GetNumThreads',     'GetThreadAtIndex'),
-      'SBSection':     ('GetNumSubSections', 'GetSubSectionAtIndex'),
-      'SBThread':      ('GetNumFrames',      'GetFrameAtIndex'),
+d = {'SBBreakpoint': ('GetNumLocations', 'GetLocationAtIndex'),
+     'SBCompileUnit': ('GetNumLineEntries', 'GetLineEntryAtIndex'),
+     'SBDebugger': ('GetNumTargets', 'GetTargetAtIndex'),
+     'SBModule': ('GetNumSymbols', 'GetSymbolAtIndex'),
+     'SBProcess': ('GetNumThreads', 'GetThreadAtIndex'),
+     'SBSection': ('GetNumSubSections', 'GetSubSectionAtIndex'),
+     'SBThread': ('GetNumFrames', 'GetFrameAtIndex'),
 
-      'SBInstructionList':   ('GetSize', 'GetInstructionAtIndex'),
-      'SBStringList':        ('GetSize', 'GetStringAtIndex',),
-      'SBSymbolContextList': ('GetSize', 'GetContextAtIndex'),
-      'SBTypeList':          ('GetSize', 'GetTypeAtIndex'),
-      'SBValueList':         ('GetSize', 'GetValueAtIndex'),
+     'SBInstructionList': ('GetSize', 'GetInstructionAtIndex'),
+     'SBStringList': ('GetSize', 'GetStringAtIndex',),
+     'SBSymbolContextList': ('GetSize', 'GetContextAtIndex'),
+     'SBTypeList': ('GetSize', 'GetTypeAtIndex'),
+     'SBValueList': ('GetSize', 'GetValueAtIndex'),
 
-      'SBType':  ('GetNumberChildren', 'GetChildAtIndex'),
-      'SBValue': ('GetNumChildren',    'GetChildAtIndex'),
+     'SBType': ('GetNumberChildren', 'GetChildAtIndex'),
+     'SBValue': ('GetNumChildren', 'GetChildAtIndex'),
 
-      # SBTarget needs special processing, see below.
-      'SBTarget': {'module':     ('GetNumModules', 'GetModuleAtIndex'),
-                   'breakpoint': ('GetNumBreakpoints', 'GetBreakpointAtIndex'),
-                   'watchpoint': ('GetNumWatchpoints', 'GetWatchpointAtIndex')
-                   },
+     # SBTarget needs special processing, see below.
+     'SBTarget': {'module': ('GetNumModules', 'GetModuleAtIndex'),
+                  'breakpoint': ('GetNumBreakpoints', 'GetBreakpointAtIndex'),
+                  'watchpoint': ('GetNumWatchpoints', 'GetWatchpointAtIndex')
+                  },
 
-      # SBModule has an additional section_iter(), see below.
-      'SBModule-section': ('GetNumSections', 'GetSectionAtIndex'),
-      # And compile_unit_iter().
-      'SBModule-compile-unit': ('GetNumCompileUnits', 'GetCompileUnitAtIndex'),
-      # As well as symbol_in_section_iter().
-      'SBModule-symbol-in-section': symbol_in_section_iter_def
-      }
+     # SBModule has an additional section_iter(), see below.
+     'SBModule-section': ('GetNumSections', 'GetSectionAtIndex'),
+     # And compile_unit_iter().
+     'SBModule-compile-unit': ('GetNumCompileUnits', 'GetCompileUnitAtIndex'),
+     # As well as symbol_in_section_iter().
+     'SBModule-symbol-in-section': symbol_in_section_iter_def
+     }
 
 #
 # This dictionary defines a mapping from classname to equality method name(s).
 #
-e = { 'SBAddress':            ['GetFileAddress', 'GetModule'],
-      'SBBreakpoint':         ['GetID'],
-      'SBWatchpoint':         ['GetID'],
-      'SBFileSpec':           ['GetFilename', 'GetDirectory'],
-      'SBModule':             ['GetFileSpec', 'GetUUIDString'],
-      'SBType':               ['GetByteSize', 'GetName']
-      }
+e = {'SBAddress': ['GetFileAddress', 'GetModule'],
+     'SBBreakpoint': ['GetID'],
+     'SBWatchpoint': ['GetID'],
+     'SBFileSpec': ['GetFilename', 'GetDirectory'],
+     'SBModule': ['GetFileSpec', 'GetUUIDString'],
+     'SBType': ['GetByteSize', 'GetName']
+     }
+
 
 def list_to_frag(list):
     """Transform a list to equality program fragment.
@@ -284,30 +289,37 @@ def list_to_frag(list):
         frag.write("self.{0}() == other.{0}()".format(list[i]))
     return frag.getvalue()
 
+
 class NewContent(StringIO.StringIO):
     """Simple facade to keep track of the previous line to be committed."""
+
     def __init__(self):
         StringIO.StringIO.__init__(self)
         self.prev_line = None
+
     def add_line(self, a_line):
         """Add a line to the content, if there is a previous line, commit it."""
-        if self.prev_line != None:
+        if self.prev_line is not None:
             self.write(self.prev_line + "\n")
         self.prev_line = a_line
+
     def del_line(self):
         """Forget about the previous line, do not commit it."""
         self.prev_line = None
+
     def del_blank_line(self):
         """Forget about the previous line if it is a blank line."""
-        if self.prev_line != None and not self.prev_line.strip():
+        if self.prev_line is not None and not self.prev_line.strip():
             self.prev_line = None
+
     def finish(self):
         """Call this when you're finished with populating content."""
-        if self.prev_line != None:
+        if self.prev_line is not None:
             self.write(self.prev_line + "\n")
         self.prev_line = None
 
-# The new content will have the iteration protocol defined for our lldb objects.
+# The new content will have the iteration protocol defined for our lldb
+# objects.
 new_content = NewContent()
 
 with open(output_name, 'r') as f_in:
@@ -333,7 +345,7 @@ DEFINING_EQUALITY = 4
 CLEANUP_DOCSTRING = 8
 
 # The lldb_iter_def only needs to be inserted once.
-lldb_iter_defined = False;
+lldb_iter_defined = False
 
 # Our FSM begins its life in the NORMAL state, and transitions to the
 # DEFINING_ITERATOR and/or DEFINING_EQUALITY state whenever it encounters the
@@ -361,7 +373,7 @@ for line in content.splitlines():
     #
     # If '        """' is the sole line, prepare to transition to the
     # CLEANUP_DOCSTRING state or out of it.
-    
+
     if line == toggle_docstring_cleanup_line:
         if state & CLEANUP_DOCSTRING:
             # Special handling of the trailing blank line right before the '"""'
@@ -379,7 +391,8 @@ for line in content.splitlines():
                 v = match.group(1)
                 swig_version_tuple = tuple(map(int, (v.split("."))))
         elif not line.startswith('#'):
-            # This is the first non-comment line after the header.  Inject the version
+            # This is the first non-comment line after the header.  Inject the
+            # version
             new_line = version_line % str(swig_version_tuple)
             new_content.add_line(new_line)
             state = NORMAL
@@ -424,11 +437,13 @@ for line in content.splitlines():
                     new_content.add_line(eq_def % (cls, list_to_frag(e[cls])))
                     new_content.add_line(ne_def)
 
-            # SBModule has extra SBSection, SBCompileUnit iterators and symbol_in_section_iter()!
+            # SBModule has extra SBSection, SBCompileUnit iterators and
+            # symbol_in_section_iter()!
             if cls == "SBModule":
-                new_content.add_line(section_iter % d[cls+'-section'])
-                new_content.add_line(compile_unit_iter % d[cls+'-compile-unit'])
-                new_content.add_line(d[cls+'-symbol-in-section'])
+                new_content.add_line(section_iter % d[cls + '-section'])
+                new_content.add_line(compile_unit_iter %
+                                     d[cls + '-compile-unit'])
+                new_content.add_line(d[cls + '-symbol-in-section'])
 
             # This special purpose iterator is for SBValue only!!!
             if cls == "SBValue":
@@ -483,4 +498,3 @@ target = SBTarget()
 process = SBProcess()
 thread = SBThread()
 frame = SBFrame()''')
-

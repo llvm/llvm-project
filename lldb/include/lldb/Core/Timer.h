@@ -20,8 +20,8 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-private.h"
 #include "lldb/Host/TimeValue.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -37,120 +37,93 @@ namespace lldb_private {
 /// in a scope.
 //----------------------------------------------------------------------
 
-class Timer
-{
+class Timer {
 public:
-    //--------------------------------------------------------------
-    /// Default constructor.
-    //--------------------------------------------------------------
-    Timer(const char *category, const char *format, ...)  __attribute__ ((format (printf, 3, 4)));
+  //--------------------------------------------------------------
+  /// Default constructor.
+  //--------------------------------------------------------------
+  Timer(const char *category, const char *format, ...)
+      __attribute__((format(printf, 3, 4)));
 
-    //--------------------------------------------------------------
-    /// Destructor
-    //--------------------------------------------------------------
-    ~Timer();
+  //--------------------------------------------------------------
+  /// Destructor
+  //--------------------------------------------------------------
+  ~Timer();
 
-    void
-    Dump ();
+  void Dump();
 
-    static void
-    SetDisplayDepth (uint32_t depth);
-    
-    static void
-    SetQuiet (bool value);
+  static void SetDisplayDepth(uint32_t depth);
 
-    static void
-    DumpCategoryTimes (Stream *s);
+  static void SetQuiet(bool value);
 
-    static void
-    ResetCategoryTimes ();
+  static void DumpCategoryTimes(Stream *s);
+
+  static void ResetCategoryTimes();
 
 protected:
-    void
-    ChildStarted (const TimeValue& time);
+  void ChildStarted(const TimeValue &time);
 
-    void
-    ChildStopped (const TimeValue& time);
+  void ChildStopped(const TimeValue &time);
 
-    uint64_t
-    GetTotalElapsedNanoSeconds();
+  uint64_t GetTotalElapsedNanoSeconds();
 
-    uint64_t
-    GetTimerElapsedNanoSeconds();
+  uint64_t GetTimerElapsedNanoSeconds();
 
-    const char *m_category;
-    TimeValue m_total_start;
-    TimeValue m_timer_start;
-    uint64_t m_total_ticks; // Total running time for this timer including when other timers below this are running
-    uint64_t m_timer_ticks; // Ticks for this timer that do not include when other timers below this one are running
+  const char *m_category;
+  TimeValue m_total_start;
+  TimeValue m_timer_start;
+  uint64_t m_total_ticks; // Total running time for this timer including when
+                          // other timers below this are running
+  uint64_t m_timer_ticks; // Ticks for this timer that do not include when other
+                          // timers below this one are running
 
-    static std::atomic<bool> g_quiet;
-    static std::atomic<unsigned> g_display_depth;
+  static std::atomic<bool> g_quiet;
+  static std::atomic<unsigned> g_display_depth;
 
 private:
-    Timer();
-    DISALLOW_COPY_AND_ASSIGN (Timer);
+  Timer();
+  DISALLOW_COPY_AND_ASSIGN(Timer);
 };
-    
-class IntervalTimer
-{
+
+class IntervalTimer {
 public:
-    IntervalTimer() :
-        m_start (TimeValue::Now())
-    {
-    }
+  IntervalTimer() : m_start(TimeValue::Now()) {}
 
-    ~IntervalTimer() = default;
+  ~IntervalTimer() = default;
 
-    uint64_t
-    GetElapsedNanoSeconds() const
-    {
-        return TimeValue::Now() - m_start;
+  uint64_t GetElapsedNanoSeconds() const { return TimeValue::Now() - m_start; }
+
+  void Reset() { m_start = TimeValue::Now(); }
+
+  int PrintfElapsed(const char *format, ...)
+      __attribute__((format(printf, 2, 3))) {
+    TimeValue now(TimeValue::Now());
+    const uint64_t elapsed_nsec = now - m_start;
+    const char *unit = nullptr;
+    float elapsed_value;
+    if (elapsed_nsec < 1000) {
+      unit = "ns";
+      elapsed_value = (float)elapsed_nsec;
+    } else if (elapsed_nsec < 1000000) {
+      unit = "us";
+      elapsed_value = (float)elapsed_nsec / 1000.0f;
+    } else if (elapsed_nsec < 1000000000) {
+      unit = "ms";
+      elapsed_value = (float)elapsed_nsec / 1000000.0f;
+    } else {
+      unit = "sec";
+      elapsed_value = (float)elapsed_nsec / 1000000000.0f;
     }
-    
-    void
-    Reset ()
-    {
-        m_start = TimeValue::Now();
-    }
-    
-    int
-    PrintfElapsed (const char *format, ...)  __attribute__ ((format (printf, 2, 3)))
-    {
-        TimeValue now (TimeValue::Now());
-        const uint64_t elapsed_nsec = now - m_start;
-        const char *unit = nullptr;
-        float elapsed_value;
-        if (elapsed_nsec < 1000)
-        {
-            unit = "ns";
-            elapsed_value = (float)elapsed_nsec;
-        }
-        else if (elapsed_nsec < 1000000)
-        {
-            unit = "us";
-            elapsed_value = (float)elapsed_nsec/1000.0f;
-        }
-        else if (elapsed_nsec < 1000000000)
-        {
-            unit = "ms";
-            elapsed_value = (float)elapsed_nsec/1000000.0f;
-        }
-        else
-        {
-            unit = "sec";
-            elapsed_value = (float)elapsed_nsec/1000000000.0f;
-        }
-        int result = printf ("%3.2f %s: ", elapsed_value, unit);
-        va_list args;
-        va_start (args, format);
-        result += vprintf (format, args);
-        va_end (args);
-        return result;
-    }
+    int result = printf("%3.2f %s: ", elapsed_value, unit);
+    va_list args;
+    va_start(args, format);
+    result += vprintf(format, args);
+    va_end(args);
+    return result;
+  }
 
 protected:
-    TimeValue m_start;
+  TimeValue m_start;
 };
 
 } // namespace lldb_private

@@ -27,6 +27,7 @@ from test_runner import process_control
 
 
 class TestInferiorDriver(process_control.ProcessDriver):
+
     def __init__(self, soft_terminate_timeout=None):
         super(TestInferiorDriver, self).__init__(
             soft_terminate_timeout=soft_terminate_timeout)
@@ -58,6 +59,7 @@ class TestInferiorDriver(process_control.ProcessDriver):
 
 
 class ProcessControlTests(unittest.TestCase):
+
     @classmethod
     def _suppress_soft_terminate(cls, command):
         # Do the right thing for your platform here.
@@ -79,7 +81,8 @@ class ProcessControlTests(unittest.TestCase):
         # Base command.
         script_name = "{}/inferior.py".format(os.path.dirname(__file__))
         if not os.path.exists(script_name):
-            raise Exception("test inferior python script not found: {}".format(script_name))
+            raise Exception(
+                "test inferior python script not found: {}".format(script_name))
         command = ([sys.executable, script_name])
 
         if ignore_soft_terminate:
@@ -97,6 +100,7 @@ class ProcessControlTests(unittest.TestCase):
 
 class ProcessControlNoTimeoutTests(ProcessControlTests):
     """Tests the process_control module."""
+
     def test_run_completes(self):
         """Test that running completes and gets expected stdout/stderr."""
         driver = TestInferiorDriver()
@@ -115,6 +119,7 @@ class ProcessControlNoTimeoutTests(ProcessControlTests):
 
 
 class ProcessControlTimeoutTests(ProcessControlTests):
+
     def test_run_completes(self):
         """Test that running completes and gets expected return code."""
         driver = TestInferiorDriver()
@@ -124,7 +129,7 @@ class ProcessControlTimeoutTests(ProcessControlTests):
             "{}s".format(timeout_seconds),
             False)
         self.assertTrue(
-            driver.completed_event.wait(2*timeout_seconds),
+            driver.completed_event.wait(2 * timeout_seconds),
             "process failed to complete")
         self.assertEqual(driver.returncode, 0)
 
@@ -141,13 +146,13 @@ class ProcessControlTimeoutTests(ProcessControlTests):
             # Sleep twice as long as the timeout interval.  This
             # should force a timeout.
             self.inferior_command(
-                options="--sleep {}".format(timeout_seconds*2)),
+                options="--sleep {}".format(timeout_seconds * 2)),
             "{}s".format(timeout_seconds),
             with_core)
 
         # We should complete, albeit with a timeout.
         self.assertTrue(
-            driver.completed_event.wait(2*timeout_seconds),
+            driver.completed_event.wait(2 * timeout_seconds),
             "process failed to complete")
 
         # Ensure we received a timeout.

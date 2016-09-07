@@ -5,7 +5,6 @@ Test symbol table access for main.m.
 from __future__ import print_function
 
 
-
 import os
 import time
 
@@ -13,6 +12,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 @skipUnlessDarwin
 class FoundationSymtabTestCase(TestBase):
@@ -23,7 +23,8 @@ class FoundationSymtabTestCase(TestBase):
                     '-[MyString dealloc]',
                     '-[MyString description]',
                     '-[MyString descriptionPauses]',     # synthesized property
-                    '-[MyString setDescriptionPauses:]', # synthesized property
+                    # synthesized property
+                    '-[MyString setDescriptionPauses:]',
                     'Test_Selector',
                     'Test_NSString',
                     'Test_MyString',
@@ -42,7 +43,8 @@ class FoundationSymtabTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         #
         # Exercise Python APIs to access the symbol table entries.

@@ -3,14 +3,15 @@
 from __future__ import print_function
 
 
-
-import os, sys
+import os
+import sys
 import lldb
 from lldbsuite.test.lldbbench import BenchBase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import configuration
 from lldbsuite.test import lldbutil
+
 
 class RepeatedExprsCase(BenchBase):
 
@@ -19,13 +20,16 @@ class RepeatedExprsCase(BenchBase):
     def setUp(self):
         BenchBase.setUp(self)
         self.source = 'main.cpp'
-        self.line_to_break = line_number(self.source, '// Set breakpoint here.')
+        self.line_to_break = line_number(
+            self.source, '// Set breakpoint here.')
         self.lldb_avg = None
         self.gdb_avg = None
         self.count = 100
 
     @benchmarks_test
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_compare_lldb_to_gdb(self):
         """Test repeated expressions with lldb vs. gdb."""
         self.build()
@@ -36,7 +40,7 @@ class RepeatedExprsCase(BenchBase):
         print("lldb benchmark:", self.stopwatch)
         self.run_gdb_repeated_exprs(self.exe_name, self.count)
         print("gdb benchmark:", self.stopwatch)
-        print("lldb_avg/gdb_avg: %f" % (self.lldb_avg/self.gdb_avg))
+        print("lldb_avg/gdb_avg: %f" % (self.lldb_avg / self.gdb_avg))
 
     def run_lldb_repeated_exprs(self, exe_name, count):
         import pexpect
@@ -47,7 +51,9 @@ class RepeatedExprsCase(BenchBase):
         prompt = self.child_prompt
 
         # So that the child gets torn down after the test.
-        self.child = pexpect.spawn('%s %s %s' % (lldbtest_config.lldbExec, self.lldbOption, exe))
+        self.child = pexpect.spawn(
+            '%s %s %s' %
+            (lldbtest_config.lldbExec, self.lldbOption, exe))
         child = self.child
 
         # Turn on logging for what the child sends back.
@@ -55,7 +61,9 @@ class RepeatedExprsCase(BenchBase):
             child.logfile_read = sys.stdout
 
         child.expect_exact(prompt)
-        child.sendline('breakpoint set -f %s -l %d' % (self.source, self.line_to_break))
+        child.sendline(
+            'breakpoint set -f %s -l %d' %
+            (self.source, self.line_to_break))
         child.expect_exact(prompt)
         child.sendline('run')
         child.expect_exact(prompt)
@@ -71,7 +79,7 @@ class RepeatedExprsCase(BenchBase):
                 child.sendline(expr_cmd2)
                 child.expect_exact(prompt)
             child.sendline('process continue')
-            child.expect_exact(prompt)        
+            child.expect_exact(prompt)
 
         child.sendline('quit')
         try:
@@ -117,7 +125,7 @@ class RepeatedExprsCase(BenchBase):
                 child.sendline(expr_cmd2)
                 child.expect_exact(prompt)
             child.sendline('continue')
-            child.expect_exact(prompt)        
+            child.expect_exact(prompt)
 
         child.sendline('quit')
         child.expect_exact('The program is running.  Exit anyway?')

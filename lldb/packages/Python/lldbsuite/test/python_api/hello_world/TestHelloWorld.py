@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 
-
 import os
 import sys
 import time
@@ -13,10 +12,11 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class HelloWorldTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-    
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -58,7 +58,8 @@ class HelloWorldTestCase(TestBase):
         # rdar://problem/8364687
         # SBTarget.Launch() issue (or is there some race condition)?
 
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         # The following isn't needed anymore, rdar://8364687 is fixed.
         #
         # Apply some dances after LaunchProcess() in order to break at "main".
@@ -68,7 +69,8 @@ class HelloWorldTestCase(TestBase):
         process = target.GetProcess()
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
 
         # The breakpoint should have a hit count of 1.
@@ -100,8 +102,8 @@ class HelloWorldTestCase(TestBase):
         import lldbsuite.test.lldbutil as lldbutil
         stacktraces = lldbutil.print_stacktraces(process, string_buffer=True)
         self.expect(stacktraces, exe=False,
-            substrs = ['main.c:%d' % self.line2,
-                       '(int)argc=3'])
+                    substrs=['main.c:%d' % self.line2,
+                             '(int)argc=3'])
 
     @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24600")
@@ -121,7 +123,8 @@ class HelloWorldTestCase(TestBase):
 
         listener = lldb.SBListener("my.attach.listener")
         error = lldb.SBError()
-        # Pass 'False' since we don't want to wait for new instance of "hello_world" to be launched.
+        # Pass 'False' since we don't want to wait for new instance of
+        # "hello_world" to be launched.
         name = os.path.basename(self.exe)
 
         # While we're at it, make sure that passing a None as the process name
@@ -135,12 +138,14 @@ class HelloWorldTestCase(TestBase):
         self.assertTrue(error.Success() and process, PROCESS_IS_VALID)
 
         # Verify that after attach, our selected target indeed matches name.
-        self.expect(self.dbg.GetSelectedTarget().GetExecutable().GetFilename(), exe=False,
-            startstr = name)
+        self.expect(
+            self.dbg.GetSelectedTarget().GetExecutable().GetFilename(),
+            exe=False,
+            startstr=name)
 
         # Let's check the stack traces of the attached process.
         import lldbsuite.test.lldbutil as lldbutil
         stacktraces = lldbutil.print_stacktraces(process, string_buffer=True)
         self.expect(stacktraces, exe=False,
-            substrs = ['main.c:%d' % self.line2,
-                       '(int)argc=3'])
+                    substrs=['main.c:%d' % self.line2,
+                             '(int)argc=3'])

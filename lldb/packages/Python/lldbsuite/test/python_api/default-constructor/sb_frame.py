@@ -5,6 +5,7 @@ Fuzz tests an object after the default construction to make sure it does not cra
 import sys
 import lldb
 
+
 def fuzz_obj(obj):
     obj.GetFrameID()
     obj.GetPC()
@@ -32,6 +33,9 @@ def fuzz_obj(obj):
     obj.FindVariable("my_var")
     obj.FindVariable("my_var", lldb.eDynamicCanRunTarget)
     obj.FindValue("your_var", lldb.eValueTypeVariableGlobal)
-    obj.FindValue("your_var", lldb.eValueTypeVariableStatic, lldb.eDynamicCanRunTarget)
+    obj.FindValue(
+        "your_var",
+        lldb.eValueTypeVariableStatic,
+        lldb.eDynamicCanRunTarget)
     obj.GetDescription(lldb.SBStream())
     obj.Clear()

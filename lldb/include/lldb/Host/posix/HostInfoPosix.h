@@ -13,33 +13,30 @@
 #include "lldb/Host/FileSpec.h"
 #include "lldb/Host/HostInfoBase.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class HostInfoPosix : public HostInfoBase
-{
-    friend class HostInfoBase;
+class HostInfoPosix : public HostInfoBase {
+  friend class HostInfoBase;
 
-  public:
-    static size_t GetPageSize();
-    static bool GetHostname(std::string &s);
-    static const char *LookupUserName(uint32_t uid, std::string &user_name);
-    static const char *LookupGroupName(uint32_t gid, std::string &group_name);
+public:
+  static size_t GetPageSize();
+  static bool GetHostname(std::string &s);
+  static const char *LookupUserName(uint32_t uid, std::string &user_name);
+  static const char *LookupGroupName(uint32_t gid, std::string &group_name);
 
-    static uint32_t GetUserID();
-    static uint32_t GetGroupID();
-    static uint32_t GetEffectiveUserID();
-    static uint32_t GetEffectiveGroupID();
+  static uint32_t GetUserID();
+  static uint32_t GetGroupID();
+  static uint32_t GetEffectiveUserID();
+  static uint32_t GetEffectiveGroupID();
 
-    static FileSpec GetDefaultShell();
+  static FileSpec GetDefaultShell();
 
-    static bool
-    GetEnvironmentVar(const std::string &var_name, std::string &var);
+  static bool GetEnvironmentVar(const std::string &var_name, std::string &var);
 
 protected:
-    static bool ComputeSupportExeDirectory(FileSpec &file_spec);
-    static bool ComputeHeaderDirectory(FileSpec &file_spec);
-    static bool ComputePythonDirectory(FileSpec &file_spec);
+  static bool ComputeSupportExeDirectory(FileSpec &file_spec);
+  static bool ComputeHeaderDirectory(FileSpec &file_spec);
+  static bool ComputePythonDirectory(FileSpec &file_spec);
 };
 }
 

@@ -12,14 +12,12 @@
 
 #include "lldb/Host/ProcessLauncher.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class ProcessLauncherLinux : public ProcessLauncher
-{
+class ProcessLauncherLinux : public ProcessLauncher {
 public:
-    virtual HostProcess
-    LaunchProcess(const ProcessLaunchInfo &launch_info, Error &error);
+  virtual HostProcess LaunchProcess(const ProcessLaunchInfo &launch_info,
+                                    Error &error);
 };
 
 } // end of namespace lldb_private

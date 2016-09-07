@@ -5,12 +5,13 @@ Test the lldb disassemble command on each call frame when stopped on C's ctor.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class IterateFrameAndDisassembleTestCase(TestBase):
 
@@ -47,7 +48,8 @@ class IterateFrameAndDisassembleTestCase(TestBase):
         # disassemble it.
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
         depth = thread.GetNumFrames()
         for i in range(depth - 1):
@@ -62,7 +64,8 @@ class IterateFrameAndDisassembleTestCase(TestBase):
                 insts = function.GetInstructions(target)
                 for inst in insts:
                     # We could simply do 'print inst' to print out the disassembly.
-                    # But we want to print to stdout only if self.TraceOn() is True.
+                    # But we want to print to stdout only if self.TraceOn() is
+                    # True.
                     disasm = str(inst)
                     if self.TraceOn():
                         print(disasm)
@@ -79,14 +82,15 @@ class IterateFrameAndDisassembleTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break on the ctor function of class C.
-        bpno = lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line, num_expected_locations=-1)
+        bpno = lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.line, num_expected_locations=-1)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint %d.'%(bpno)])
+                    substrs=['stopped',
+                             'stop reason = breakpoint %d.' % (bpno)])
 
         # This test was failing because we fail to put the C:: in front of constructore.
         # We should maybe make another testcase to cover that specifically, but we shouldn't

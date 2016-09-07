@@ -61,6 +61,9 @@ public:
 #include <exception>
 #include <cstddef>
 #include <cstdint>
+#ifdef _LIBCPP_NO_EXCEPTIONS
+#include <cstdlib>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

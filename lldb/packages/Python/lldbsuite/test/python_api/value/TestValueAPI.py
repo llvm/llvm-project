@@ -13,6 +13,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class ValueAPITestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -43,13 +44,17 @@ class ValueAPITestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Get Frame #0.
         self.assertTrue(process.GetState() == lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), "There should be a thread stopped due to breakpoint condition")
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint condition")
         frame0 = thread.GetFrameAtIndex(0)
 
         # Get global variable 'days_of_week'.
@@ -93,10 +98,11 @@ class ValueAPITestCase(TestBase):
         self.DebugSBValue(pointed)
 
         # While we are at it, verify that 'my_int_ptr' points to 'g_my_int'.
-        symbol = target.ResolveLoadAddress(int(pointed.GetLocation(), 0)).GetSymbol()
+        symbol = target.ResolveLoadAddress(
+            int(pointed.GetLocation(), 0)).GetSymbol()
         self.assertTrue(symbol)
         self.expect(symbol.GetName(), exe=False,
-            startstr = 'g_my_int')
+                    startstr='g_my_int')
 
         # Get variable 'str_ptr'.
         value = frame0.FindVariable('str_ptr')
@@ -119,7 +125,7 @@ class ValueAPITestCase(TestBase):
         self.DebugSBValue(child)
 
         self.expect(child.GetSummary(), exe=False,
-            substrs = ['Friday'])
+                    substrs=['Friday'])
 
         # Now try to get at the same variable using GetValueForExpressionPath().
         # These two SBValue objects should have the same value.
@@ -132,14 +138,31 @@ class ValueAPITestCase(TestBase):
         val_i = target.EvaluateExpression('i')
         val_s = target.EvaluateExpression('s')
         val_a = target.EvaluateExpression('a')
-        self.assertTrue(val_s.GetChildMemberWithName('a').AddressOf(), VALID_VARIABLE)
-        self.assertTrue(val_a.Cast(val_i.GetType()).AddressOf(), VALID_VARIABLE)
+        self.assertTrue(
+            val_s.GetChildMemberWithName('a').AddressOf(),
+            VALID_VARIABLE)
+        self.assertTrue(
+            val_a.Cast(
+                val_i.GetType()).AddressOf(),
+            VALID_VARIABLE)
 
-        self.assertTrue(int(lldb.value(frame0.FindVariable('uinthex'))) == 3768803088, 'uinthex == 3768803088')
-        self.assertTrue(int(lldb.value(frame0.FindVariable('sinthex'))) == -526164208, 'sinthex == -526164208')
+        self.assertTrue(int(lldb.value(frame0.FindVariable('uinthex')))
+                        == 3768803088, 'uinthex == 3768803088')
+        self.assertTrue(int(lldb.value(frame0.FindVariable('sinthex')))
+                        == -526164208, 'sinthex == -526164208')
 
-        self.assertTrue(frame0.FindVariable('uinthex').GetValueAsUnsigned() == 3768803088, 'unsigned uinthex == 3768803088')
-        self.assertTrue(frame0.FindVariable('sinthex').GetValueAsUnsigned() == 3768803088, 'unsigned sinthex == 3768803088')
+        self.assertTrue(
+            frame0.FindVariable('uinthex').GetValueAsUnsigned() == 3768803088,
+            'unsigned uinthex == 3768803088')
+        self.assertTrue(
+            frame0.FindVariable('sinthex').GetValueAsUnsigned() == 3768803088,
+            'unsigned sinthex == 3768803088')
 
-        self.assertTrue(frame0.FindVariable('uinthex').GetValueAsSigned() == -526164208, 'signed uinthex == -526164208')
-        self.assertTrue(frame0.FindVariable('sinthex').GetValueAsSigned() == -526164208, 'signed sinthex == -526164208')
+        self.assertTrue(
+            frame0.FindVariable('uinthex').GetValueAsSigned() == -
+            526164208,
+            'signed uinthex == -526164208')
+        self.assertTrue(
+            frame0.FindVariable('sinthex').GetValueAsSigned() == -
+            526164208,
+            'signed sinthex == -526164208')

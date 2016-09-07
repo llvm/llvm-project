@@ -939,6 +939,7 @@ public:
   VersionTuple getPlatformMinVersion() const { return PlatformMinVersion; }
 
   bool isBigEndian() const { return BigEndian; }
+  bool isLittleEndian() const { return !BigEndian; }
 
   enum CallingConvMethodType {
     CCMT_Unknown,

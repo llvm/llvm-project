@@ -76,7 +76,8 @@ def create_results_formatter(config):
         # we lose the test result info.
         read_bytes = sock.recv(1)
         if read_bytes is None or (len(read_bytes) < 1) or (read_bytes != b'*'):
-            raise Exception("listening socket did not respond with ack byte: response={}".format(read_bytes))
+            raise Exception(
+                "listening socket did not respond with ack byte: response={}".format(read_bytes))
 
         return sock, lambda: socket_closer(sock)
 

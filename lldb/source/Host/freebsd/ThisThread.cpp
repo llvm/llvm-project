@@ -7,33 +7,29 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/HostNativeThread.h"
 #include "lldb/Host/ThisThread.h"
+#include "lldb/Host/HostNativeThread.h"
 
 #include "llvm/ADT/SmallVector.h"
 
 #include <pthread.h>
-#if defined (__FreeBSD__)
+#if defined(__FreeBSD__)
 #include <pthread_np.h>
 #endif
 
 using namespace lldb_private;
 
-void
-ThisThread::SetName(llvm::StringRef name)
-{
-#if defined (__FreeBSD__) // Kfreebsd does not have a simple alternative
-    ::pthread_set_name_np(::pthread_self(), name.data());
+void ThisThread::SetName(llvm::StringRef name) {
+#if defined(__FreeBSD__) // Kfreebsd does not have a simple alternative
+  ::pthread_set_name_np(::pthread_self(), name.data());
 #endif
 }
 
-void
-ThisThread::GetName(llvm::SmallVectorImpl<char> &name)
-{
-#if defined (__FreeBSD__)
-    HostNativeThread::GetName(::pthread_getthreadid_np(), name);
+void ThisThread::GetName(llvm::SmallVectorImpl<char> &name) {
+#if defined(__FreeBSD__)
+  HostNativeThread::GetName(::pthread_getthreadid_np(), name);
 #else
-// Kfreebsd
-    HostNativeThread::GetName((unsigned)pthread_self(), name);
+  // Kfreebsd
+  HostNativeThread::GetName((unsigned)pthread_self(), name);
 #endif
 }

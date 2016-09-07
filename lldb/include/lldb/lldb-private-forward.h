@@ -14,27 +14,30 @@
 
 #include <memory>
 
-namespace lldb_private
-{
-    // ---------------------------------------------------------------
-    // Class forward decls.
-    // ---------------------------------------------------------------
-    class NativeBreakpoint;
-    class NativeBreakpointList;
-    class NativeProcessProtocol;
-    class NativeRegisterContext;
-    class NativeThreadProtocol;
-    class ResumeActionList;
-    class UnixSignals;
+namespace lldb_private {
+// ---------------------------------------------------------------
+// Class forward decls.
+// ---------------------------------------------------------------
+class NativeBreakpoint;
+class NativeBreakpointList;
+class NativeProcessProtocol;
+class NativeRegisterContext;
+class NativeThreadProtocol;
+class ResumeActionList;
+class UnixSignals;
 
-    // ---------------------------------------------------------------
-    // SP/WP decls.
-    // ---------------------------------------------------------------
-    typedef std::shared_ptr<NativeBreakpoint> NativeBreakpointSP;
-    typedef std::shared_ptr<lldb_private::NativeProcessProtocol> NativeProcessProtocolSP;
-    typedef std::weak_ptr<lldb_private::NativeProcessProtocol> NativeProcessProtocolWP;
-    typedef std::shared_ptr<lldb_private::NativeRegisterContext> NativeRegisterContextSP;
-    typedef std::shared_ptr<lldb_private::NativeThreadProtocol> NativeThreadProtocolSP;
+// ---------------------------------------------------------------
+// SP/WP decls.
+// ---------------------------------------------------------------
+typedef std::shared_ptr<NativeBreakpoint> NativeBreakpointSP;
+typedef std::shared_ptr<lldb_private::NativeProcessProtocol>
+    NativeProcessProtocolSP;
+typedef std::weak_ptr<lldb_private::NativeProcessProtocol>
+    NativeProcessProtocolWP;
+typedef std::shared_ptr<lldb_private::NativeRegisterContext>
+    NativeRegisterContextSP;
+typedef std::shared_ptr<lldb_private::NativeThreadProtocol>
+    NativeThreadProtocolSP;
 }
 
 #endif // #if defined(__cplusplus)

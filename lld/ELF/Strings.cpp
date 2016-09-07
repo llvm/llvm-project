@@ -13,11 +13,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
+#include "llvm/Demangle/Demangle.h"
 #include <algorithm>
-
-#ifdef HAVE_CXXABI_H
-#include <cxxabi.h>
-#endif
 
 using namespace llvm;
 using namespace lld;
@@ -86,9 +83,6 @@ bool elf::isValidCIdentifier(StringRef S) {
 
 // Returns the demangled C++ symbol name for Name.
 std::string elf::demangle(StringRef Name) {
-#if !defined(HAVE_CXXABI_H)
-  return Name;
-#else
   // __cxa_demangle can be used to demangle strings other than symbol
   // names which do not necessarily start with "_Z". Name can be
   // either a C or C++ symbol. Don't call __cxa_demangle if the name
@@ -97,12 +91,10 @@ std::string elf::demangle(StringRef Name) {
   if (!Name.startswith("_Z"))
     return Name;
 
-  char *Buf =
-      abi::__cxa_demangle(Name.str().c_str(), nullptr, nullptr, nullptr);
+  char *Buf = itaniumDemangle(Name.str().c_str(), nullptr, nullptr, nullptr);
   if (!Buf)
     return Name;
   std::string S(Buf);
   free(Buf);
   return S;
-#endif
 }

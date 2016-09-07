@@ -5,12 +5,13 @@ Make sure that ivars of Objective-C++ classes are visible in LLDB.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class ObjCXXTestCase(TestBase):
 
@@ -26,9 +27,10 @@ class ObjCXXTestCase(TestBase):
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_source_regexp (self, 'breakpoint 1', num_expected_locations=1) 
+        lldbutil.run_break_set_by_source_regexp(
+            self, 'breakpoint 1', num_expected_locations=1)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         self.expect("expr f->f", "Found ivar in class",
-            substrs = ["= 3"])
+                    substrs=["= 3"])

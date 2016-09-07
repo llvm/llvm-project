@@ -2,6 +2,7 @@
 # Provides a with-style resource handler for optionally-None resources
 # ====================================================================
 
+
 class optional_with(object):
     # pylint: disable=too-few-public-methods
     # This is a wrapper - it is not meant to provide any extra methods.
@@ -39,6 +40,7 @@ class optional_with(object):
     forget the try/finally using optional_with(), since
     the with syntax can be used.
     """
+
     def __init__(self, wrapped_object):
         self.wrapped_object = wrapped_object
 

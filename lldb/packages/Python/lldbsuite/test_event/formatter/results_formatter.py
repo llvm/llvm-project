@@ -341,7 +341,8 @@ class ResultsFormatter(object):
                     # started test for the given worker index.
                     status = test_event["status"]
                     self.result_status_counts[status] += 1
-                    # Clear the most recently started test for the related worker.
+                    # Clear the most recently started test for the related
+                    # worker.
                     worker_index = test_event.get("worker_index", None)
                     if worker_index is not None:
                         self.started_tests_by_worker.pop(worker_index, None)
@@ -688,7 +689,7 @@ class ResultsFormatter(object):
              # prevent buildbots from thinking it is an issue when scanning
              # for TIMEOUT.
              "Expected Timeout", True, "EXPECTED TIME-OUT"]
-            ]
+        ]
 
         # Partition all the events by test result status
         result_events_by_status = self._partition_results_by_status(

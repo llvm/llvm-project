@@ -30,6 +30,7 @@ from . import remote
 default_ip = "127.0.0.1"
 default_port = 8537
 
+
 def add_subparser_args(parser):
     """Returns options processed from the provided command line.
 
@@ -41,9 +42,11 @@ def add_subparser_args(parser):
     # searches for a copy of swig located on the physical machine.  If
     # used with 1 argument, the argument is the path to a swig executable.
     class FindLocalSwigAction(argparse.Action):
+
         def __init__(self, option_strings, dest, **kwargs):
             super(FindLocalSwigAction, self).__init__(
                 option_strings, dest, nargs='?', **kwargs)
+
         def __call__(self, parser, namespace, values, option_string=None):
             swig_exe = None
             if values is None:
@@ -58,18 +61,20 @@ def add_subparser_args(parser):
     # of the form `ip_address[:port]`.  If the port is unspecified, the
     # default port is used.
     class RemoteIpAction(argparse.Action):
+
         def __init__(self, option_strings, dest, **kwargs):
             super(RemoteIpAction, self).__init__(
                 option_strings, dest, nargs='?', **kwargs)
+
         def __call__(self, parser, namespace, values, option_string=None):
             ip_port = None
             if values is None:
                 ip_port = (default_ip, default_port)
             else:
                 result = values.split(':')
-                if len(result)==1:
+                if len(result) == 1:
                     ip_port = (result[0], default_port)
-                elif len(result)==2:
+                elif len(result) == 2:
                     ip_port = (result[0], int(result[1]))
                 else:
                     raise ValueError("Invalid connection string")
@@ -108,6 +113,7 @@ def add_subparser_args(parser):
         action="append",
         help="Specifies the language to generate bindings for")
 
+
 def finalize_subparser_options(options):
     if options.languages is None:
         options.languages = ['python']
@@ -118,6 +124,7 @@ def finalize_subparser_options(options):
 
     return options
 
+
 def establish_remote_connection(ip_port):
     logging.debug("Creating socket...")
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -126,6 +133,7 @@ def establish_remote_connection(ip_port):
     s.connect(ip_port)
     logging.info("Connection established...")
     return s
+
 
 def transmit_request(connection, packed_input):
     logging.info("Sending {} bytes of compressed data."
@@ -138,27 +146,28 @@ def transmit_request(connection, packed_input):
     response = sockutil.recvall(connection, response_len)
     return response
 
+
 def handle_response(options, connection, response):
     logging.debug("Received {} byte response.".format(len(response)))
     logging.debug("Creating output directory {}"
-                    .format(options.target_dir))
+                  .format(options.target_dir))
     os.makedirs(options.target_dir, exist_ok=True)
 
     logging.info("Unpacking response archive into {}"
-                    .format(options.target_dir))
+                 .format(options.target_dir))
     local.unpack_archive(options.target_dir, response)
     response_file_path = os.path.normpath(
         os.path.join(options.target_dir, "swig_output.json"))
     if not os.path.isfile(response_file_path):
         logging.error("Response file '{}' does not exist."
-                        .format(response_file_path))
+                      .format(response_file_path))
         return
     try:
         response = remote.deserialize_response_status(
             io.open(response_file_path))
         if response[0] != 0:
             logging.error("An error occurred during generation.  Status={}"
-                            .format(response[0]))
+                          .format(response[0]))
             logging.error(response[1])
         else:
             logging.info("SWIG generation successful.")
@@ -166,6 +175,7 @@ def handle_response(options, connection, response):
                 logging.info(response[1])
     finally:
         os.unlink(response_file_path)
+
 
 def run(options):
     if options.remote is None:
@@ -193,7 +203,8 @@ def run(options):
                       ("scripts/Python", ".swig"),
                       ("scripts/interface", ".i")]
             zip_data = io.BytesIO()
-            packed_input = local.pack_archive(zip_data, options.src_root, inputs)
+            packed_input = local.pack_archive(
+                zip_data, options.src_root, inputs)
             logging.info("(null) -> config.json")
             packed_input.writestr("config.json", config)
             packed_input.close()

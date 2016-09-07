@@ -15,44 +15,36 @@
 using namespace clang;
 using namespace lldb_private;
 
-bool
-ClangUtil::IsClangType(const CompilerType &ct)
-{
-    if (llvm::dyn_cast_or_null<ClangASTContext>(ct.GetTypeSystem()) == nullptr)
-        return false;
+bool ClangUtil::IsClangType(const CompilerType &ct) {
+  if (llvm::dyn_cast_or_null<ClangASTContext>(ct.GetTypeSystem()) == nullptr)
+    return false;
 
-    if (!ct.GetOpaqueQualType())
-        return false;
+  if (!ct.GetOpaqueQualType())
+    return false;
 
-    return true;
+  return true;
 }
 
-QualType
-ClangUtil::GetQualType(const CompilerType &ct)
-{
-    // Make sure we have a clang type before making a clang::QualType
-    if (!IsClangType(ct))
-        return QualType();
+QualType ClangUtil::GetQualType(const CompilerType &ct) {
+  // Make sure we have a clang type before making a clang::QualType
+  if (!IsClangType(ct))
+    return QualType();
 
-    return QualType::getFromOpaquePtr(ct.GetOpaqueQualType());
+  return QualType::getFromOpaquePtr(ct.GetOpaqueQualType());
 }
 
-QualType
-ClangUtil::GetCanonicalQualType(const CompilerType &ct)
-{
-    if (!IsClangType(ct))
-        return QualType();
+QualType ClangUtil::GetCanonicalQualType(const CompilerType &ct) {
+  if (!IsClangType(ct))
+    return QualType();
 
-    return GetQualType(ct).getCanonicalType();
+  return GetQualType(ct).getCanonicalType();
 }
 
-CompilerType
-ClangUtil::RemoveFastQualifiers(const CompilerType &ct)
-{
-    if (!IsClangType(ct))
-        return ct;
+CompilerType ClangUtil::RemoveFastQualifiers(const CompilerType &ct) {
+  if (!IsClangType(ct))
+    return ct;
 
-    QualType qual_type(GetQualType(ct));
-    qual_type.removeLocalFastQualifiers();
-    return CompilerType(ct.GetTypeSystem(), qual_type.getAsOpaquePtr());
+  QualType qual_type(GetQualType(ct));
+  qual_type.removeLocalFastQualifiers();
+  return CompilerType(ct.GetTypeSystem(), qual_type.getAsOpaquePtr());
 }

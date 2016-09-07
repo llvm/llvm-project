@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple spir-unknown-unknown -cl-kernel-arg-info | FileCheck %s -check-prefix ARGINFO
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -o - -triple spir-unknown-unknown -cl-kernel-arg-info | FileCheck %s -check-prefix ARGINFO
 
 kernel void foo(__global int * restrict X, const int Y, 
                 volatile int anotherArg, __constant float * restrict Z) {
@@ -14,7 +14,7 @@ kernel void foo(__global int * restrict X, const int Y,
 // CHECK-NOT: !kernel_arg_name
 // ARGINFO: !kernel_arg_name ![[MD15:[0-9]+]]
 
-kernel void foo2(read_only image1d_t img1, image2d_t img2, write_only image2d_array_t img3) {
+kernel void foo2(read_only image1d_t img1, image2d_t img2, write_only image2d_array_t img3, read_write image1d_t img4) {
 }
 // CHECK: define spir_kernel void @foo2{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD21:[0-9]+]]
@@ -65,11 +65,11 @@ kernel void foo5(myImage img1, write_only image1d_t img2) {
 // CHECK: ![[MD13]] = !{!"int*", !"int", !"int", !"float*"}
 // CHECK: ![[MD14]] = !{!"restrict", !"const", !"volatile", !"restrict const"}
 // ARGINFO: ![[MD15]] = !{!"X", !"Y", !"anotherArg", !"Z"}
-// CHECK: ![[MD21]] = !{i32 1, i32 1, i32 1}
-// CHECK: ![[MD22]] = !{!"read_only", !"read_only", !"write_only"}
-// CHECK: ![[MD23]] = !{!"__read_only image1d_t", !"__read_only image2d_t", !"__write_only image2d_array_t"}
-// CHECK: ![[MD24]] = !{!"", !"", !""}
-// ARGINFO: ![[MD25]] = !{!"img1", !"img2", !"img3"}
+// CHECK: ![[MD21]] = !{i32 1, i32 1, i32 1, i32 1}
+// CHECK: ![[MD22]] = !{!"read_only", !"read_only", !"write_only", !"read_write"}
+// CHECK: ![[MD23]] = !{!"image1d_t", !"image2d_t", !"image2d_array_t", !"image1d_t"}
+// CHECK: ![[MD24]] = !{!"", !"", !"", !""}
+// ARGINFO: ![[MD25]] = !{!"img1", !"img2", !"img3", !"img4"}
 // CHECK: ![[MD31]] = !{i32 1}
 // CHECK: ![[MD32]] = !{!"none"}
 // CHECK: ![[MD33]] = !{!"half*"}
@@ -82,7 +82,7 @@ kernel void foo5(myImage img1, write_only image1d_t img2) {
 // CHECK: ![[MD45]] = !{!"", !""}
 // ARGINFO: ![[MD46]] = !{!"X", !"Y"}
 // CHECK: ![[MD51]] = !{!"read_only", !"write_only"}
-// CHECK: ![[MD52]] = !{!"myImage", !"__write_only image1d_t"}
-// CHECK: ![[MD53]] = !{!"__read_only image1d_t", !"__write_only image1d_t"}
+// CHECK: ![[MD52]] = !{!"myImage", !"image1d_t"}
+// CHECK: ![[MD53]] = !{!"image1d_t", !"image1d_t"}
 // ARGINFO: ![[MD54]] = !{!"img1", !"img2"}
 

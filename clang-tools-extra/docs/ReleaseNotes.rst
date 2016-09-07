@@ -10,17 +10,17 @@ Written by the `LLVM Team <http://llvm.org/>`_
 
 .. warning::
 
-   These are in-progress notes for the upcoming Clang 4.0.0 release. You may
-   prefer the `Clang 3.8 Release Notes
-   <http://llvm.org/releases/3.8.0/tools/clang/docs/ReleaseNotes.html>`_.
+   These are in-progress notes for the upcoming Extra Clang Tools 4.0 release.
+   You may prefer the `Extra Clang Tools 3.9 Release Notes
+   <http://llvm.org/releases/3.9.0/tools/clang/tools/extra/docs/ReleaseNotes.html>`_.
 
 Introduction
 ============
 
 This document contains the release notes for the Extra Clang Tools, part of the
-Clang release 4.0.0.  Here we describe the status of the Extra Clang Tools in some
-detail, including major improvements from the previous release and new feature
-work.  All LLVM releases may be downloaded from the `LLVM releases web
+Clang release 4.0.0. Here we describe the status of the Extra Clang Tools in
+some detail, including major improvements from the previous release and new
+feature work. All LLVM releases may be downloaded from the `LLVM releases web
 site <http://llvm.org/releases/>`_.
 
 For more information about Clang or LLVM, including information about

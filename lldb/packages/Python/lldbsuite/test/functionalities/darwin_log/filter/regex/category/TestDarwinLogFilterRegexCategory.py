@@ -60,10 +60,12 @@ class TestDarwinLogFilterRegexCategory(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we only accept
         # that category.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_accept_category_partial_match(self):
@@ -76,10 +78,12 @@ class TestDarwinLogFilterRegexCategory(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we only accept
         # that category.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_reject_category_full_match(self):
@@ -92,10 +96,12 @@ class TestDarwinLogFilterRegexCategory(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we rejected the first
         # via category rejection.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_reject_category_partial_match(self):
@@ -108,10 +114,12 @@ class TestDarwinLogFilterRegexCategory(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we rejected the first
         # via category rejection.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_accept_category_second_rule(self):
@@ -127,7 +135,9 @@ class TestDarwinLogFilterRegexCategory(darwin_log.DarwinLogTestBase):
         # the first filter doesn't match any, and the second filter matches
         # the category of the second log message.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")

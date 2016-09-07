@@ -196,4 +196,13 @@ int main()
 	s_long.assign(s_long.begin() + 30, s_long.end());
 	assert(s_long == "nsectetur/");
 	}
+
+	{ // test assigning a different type
+    typedef std::string S;
+	const uint8_t p[] = "ABCD";
+
+	S s;
+	s.assign(p, p + 4);
+	assert(s == "ABCD");
+	}
 }

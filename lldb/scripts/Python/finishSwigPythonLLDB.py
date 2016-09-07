@@ -73,6 +73,7 @@ strErrMsgUnexpected = "Unexpected error: %s"
 strMsgCopySixPy = "Copying six.py from '%s' to '%s'"
 strErrMsgCopySixPyFailed = "Unable to copy '%s' to '%s'"
 
+
 def is_debug_interpreter():
     return hasattr(sys, 'gettotalrefcount')
 
@@ -84,8 +85,11 @@ def is_debug_interpreter():
 #           Str - Error description on task failure.
 # Throws:   None.
 #--
+
+
 def macosx_copy_file_for_heap(vDictArgs, vstrFrameworkPythonDir):
-    dbg = utilsDebug.CDebugFnVerbose("Python script macosx_copy_file_for_heap()")
+    dbg = utilsDebug.CDebugFnVerbose(
+        "Python script macosx_copy_file_for_heap()")
     bOk = True
     strMsg = ""
 
@@ -101,9 +105,21 @@ def macosx_copy_file_for_heap(vDictArgs, vstrFrameworkPythonDir):
     os.makedirs(strHeapDir)
 
     strRoot = os.path.normpath(vDictArgs["--srcRoot"])
-    strSrc = os.path.join(strRoot, "examples", "darwin", "heap_find", "heap", "heap_find.cpp")
+    strSrc = os.path.join(
+        strRoot,
+        "examples",
+        "darwin",
+        "heap_find",
+        "heap",
+        "heap_find.cpp")
     shutil.copy(strSrc, strHeapDir)
-    strSrc = os.path.join(strRoot, "examples", "darwin", "heap_find", "heap", "Makefile")
+    strSrc = os.path.join(
+        strRoot,
+        "examples",
+        "darwin",
+        "heap_find",
+        "heap",
+        "Makefile")
     shutil.copy(strSrc, strHeapDir)
 
     return (bOk, strMsg)
@@ -118,7 +134,13 @@ def macosx_copy_file_for_heap(vDictArgs, vstrFrameworkPythonDir):
 #           Str - Error description on task failure.
 # Throws:   None.
 #--
-def create_py_pkg(vDictArgs, vstrFrameworkPythonDir, vstrPkgDir, vListPkgFiles):
+
+
+def create_py_pkg(
+        vDictArgs,
+        vstrFrameworkPythonDir,
+        vstrPkgDir,
+        vListPkgFiles):
     dbg = utilsDebug.CDebugFnVerbose("Python script create_py_pkg()")
     dbg.dump_object("Package file(s):", vListPkgFiles)
     bDbg = "-d" in vDictArgs
@@ -161,7 +183,7 @@ def create_py_pkg(vDictArgs, vstrFrameworkPythonDir, vstrPkgDir, vListPkgFiles):
             strBaseName = os.path.basename(strPkgFile)
             nPos = strBaseName.find(".")
             if nPos != -1:
-                strBaseName = strBaseName[0 : nPos]
+                strBaseName = strBaseName[0: nPos]
             strPyScript += "%s\"%s\"" % (strDelimiter, strBaseName)
             strDelimiter = ","
     strPyScript += "]\n"
@@ -186,8 +208,14 @@ def create_py_pkg(vDictArgs, vstrFrameworkPythonDir, vstrPkgDir, vListPkgFiles):
 #           Str - Error description on task failure.
 # Throws:   None.
 #--
-def copy_lldbpy_file_to_lldb_pkg_dir(vDictArgs, vstrFrameworkPythonDir, vstrCfgBldDir):
-    dbg = utilsDebug.CDebugFnVerbose("Python script copy_lldbpy_file_to_lldb_pkg_dir()")
+
+
+def copy_lldbpy_file_to_lldb_pkg_dir(
+        vDictArgs,
+        vstrFrameworkPythonDir,
+        vstrCfgBldDir):
+    dbg = utilsDebug.CDebugFnVerbose(
+        "Python script copy_lldbpy_file_to_lldb_pkg_dir()")
     bOk = True
     bDbg = "-d" in vDictArgs
     strMsg = ""
@@ -207,7 +235,8 @@ def copy_lldbpy_file_to_lldb_pkg_dir(vDictArgs, vstrFrameworkPythonDir, vstrCfgB
         shutil.copyfile(strSrc, strDst)
     except IOError as e:
         bOk = False
-        strMsg = "I/O error(%d): %s %s" % (e.errno, e.strerror, strErrMsgCpLldbpy)
+        strMsg = "I/O error(%d): %s %s" % (e.errno,
+                                           e.strerror, strErrMsgCpLldbpy)
         if e.errno == 2:
             strMsg += " Src:'%s' Dst:'%s'" % (strSrc, strDst)
     except:
@@ -224,6 +253,8 @@ def copy_lldbpy_file_to_lldb_pkg_dir(vDictArgs, vstrFrameworkPythonDir, vstrCfgB
 #           Str - Error description on task failure.
 # Throws:   None.
 #--
+
+
 def make_symlink_windows(vstrSrcPath, vstrTargetPath):
     print(("Making symlink from %s to %s" % (vstrSrcPath, vstrTargetPath)))
     dbg = utilsDebug.CDebugFnVerbose("Python script make_symlink_windows()")
@@ -238,13 +269,16 @@ def make_symlink_windows(vstrSrcPath, vstrTargetPath):
         # re-create the link.  This can happen if you run this script once (creating a link)
         # and then delete the source file (so that a brand new file gets created the next time
         # you compile and link), and then re-run this script, so that both the target hardlink
-        # and the source file exist, but the target refers to an old copy of the source.
-        if (target_stat.st_ino == src_stat.st_ino) and (target_stat.st_dev == src_stat.st_dev):
+        # and the source file exist, but the target refers to an old copy of
+        # the source.
+        if (target_stat.st_ino == src_stat.st_ino) and (
+                target_stat.st_dev == src_stat.st_dev):
             return (bOk, strErrMsg)
 
         os.remove(vstrTargetPath)
     except:
-        # If the target file don't exist, ignore this exception, we will link it shortly.
+        # If the target file don't exist, ignore this exception, we will link
+        # it shortly.
         pass
 
     try:
@@ -256,8 +290,10 @@ def make_symlink_windows(vstrSrcPath, vstrTargetPath):
     except Exception as e:
         if e.errno != 17:
             bOk = False
-            strErrMsg = "WinError(%d): %s %s" % (e.errno, e.strerror, strErrMsgMakeSymlink)
-            strErrMsg += " Src:'%s' Target:'%s'" % (vstrSrcPath, vstrTargetPath)
+            strErrMsg = "WinError(%d): %s %s" % (
+                e.errno, e.strerror, strErrMsgMakeSymlink)
+            strErrMsg += " Src:'%s' Target:'%s'" % (
+                vstrSrcPath, vstrTargetPath)
 
     return (bOk, strErrMsg)
 
@@ -269,8 +305,11 @@ def make_symlink_windows(vstrSrcPath, vstrTargetPath):
 #           Str - Error description on task failure.
 # Throws:   None.
 #--
+
+
 def make_symlink_other_platforms(vstrSrcPath, vstrTargetPath):
-    dbg = utilsDebug.CDebugFnVerbose("Python script make_symlink_other_platforms()")
+    dbg = utilsDebug.CDebugFnVerbose(
+        "Python script make_symlink_other_platforms()")
     bOk = True
     strErrMsg = ""
 
@@ -278,13 +317,15 @@ def make_symlink_other_platforms(vstrSrcPath, vstrTargetPath):
         os.symlink(vstrSrcPath, vstrTargetPath)
     except OSError as e:
         bOk = False
-        strErrMsg = "OSError(%d): %s %s" % (e.errno, e.strerror, strErrMsgMakeSymlink)
+        strErrMsg = "OSError(%d): %s %s" % (
+            e.errno, e.strerror, strErrMsgMakeSymlink)
         strErrMsg += " Src:'%s' Target:'%s'" % (vstrSrcPath, vstrTargetPath)
     except:
         bOk = False
         strErrMsg = strErrMsgUnexpected % sys.exec_info()[0]
 
     return (bOk, strErrMsg)
+
 
 def make_symlink_native(vDictArgs, strSrc, strTarget):
     eOSType = utilsOsType.determine_os_type()
@@ -323,7 +364,13 @@ def make_symlink_native(vDictArgs, strSrc, strTarget):
 #           Str - Error description on task failure.
 # Throws:   None.
 #--
-def make_symlink(vDictArgs, vstrFrameworkPythonDir, vstrSrcFile, vstrTargetFile):
+
+
+def make_symlink(
+        vDictArgs,
+        vstrFrameworkPythonDir,
+        vstrSrcFile,
+        vstrTargetFile):
     dbg = utilsDebug.CDebugFnVerbose("Python script make_symlink()")
     bOk = True
     strErrMsg = ""
@@ -363,7 +410,11 @@ def make_symlink(vDictArgs, vstrFrameworkPythonDir, vstrSrcFile, vstrTargetFile)
 #           Str - Error description on task failure.
 # Throws:   None.
 #--
-def make_symlink_liblldb(vDictArgs, vstrFrameworkPythonDir, vstrLiblldbFileName, vstrLldbLibDir):
+def make_symlink_liblldb(
+        vDictArgs,
+        vstrFrameworkPythonDir,
+        vstrLiblldbFileName,
+        vstrLldbLibDir):
     dbg = utilsDebug.CDebugFnVerbose("Python script make_symlink_liblldb()")
     bOk = True
     strErrMsg = ""
@@ -395,7 +446,8 @@ def make_symlink_liblldb(vDictArgs, vstrFrameworkPythonDir, vstrLiblldbFileName,
                 strLibFileExtn = ".so"
             strSrc = os.path.join(vstrLldbLibDir, "liblldb" + strLibFileExtn)
 
-    bOk, strErrMsg = make_symlink(vDictArgs, vstrFrameworkPythonDir, strSrc, strTarget)
+    bOk, strErrMsg = make_symlink(
+        vDictArgs, vstrFrameworkPythonDir, strSrc, strTarget)
 
     return (bOk, strErrMsg)
 
@@ -408,8 +460,14 @@ def make_symlink_liblldb(vDictArgs, vstrFrameworkPythonDir, vstrLiblldbFileName,
 #           Str - Error description on task failure.
 # Throws:   None.
 #--
-def make_symlink_darwin_debug(vDictArgs, vstrFrameworkPythonDir, vstrDarwinDebugFileName):
-    dbg = utilsDebug.CDebugFnVerbose("Python script make_symlink_darwin_debug()")
+
+
+def make_symlink_darwin_debug(
+        vDictArgs,
+        vstrFrameworkPythonDir,
+        vstrDarwinDebugFileName):
+    dbg = utilsDebug.CDebugFnVerbose(
+        "Python script make_symlink_darwin_debug()")
     bOk = True
     strErrMsg = ""
     strTarget = vstrDarwinDebugFileName
@@ -421,7 +479,8 @@ def make_symlink_darwin_debug(vDictArgs, vstrFrameworkPythonDir, vstrDarwinDebug
     else:
         strSrc = os.path.join("bin", "lldb-launcher")
 
-    bOk, strErrMsg = make_symlink(vDictArgs, vstrFrameworkPythonDir, strSrc, strTarget)
+    bOk, strErrMsg = make_symlink(
+        vDictArgs, vstrFrameworkPythonDir, strSrc, strTarget)
 
     return (bOk, strErrMsg)
 
@@ -434,8 +493,14 @@ def make_symlink_darwin_debug(vDictArgs, vstrFrameworkPythonDir, vstrDarwinDebug
 #           Str - Error description on task failure.
 # Throws:   None.
 #--
-def make_symlink_lldb_argdumper(vDictArgs, vstrFrameworkPythonDir, vstrArgdumperFileName):
-    dbg = utilsDebug.CDebugFnVerbose("Python script make_symlink_lldb_argdumper()")
+
+
+def make_symlink_lldb_argdumper(
+        vDictArgs,
+        vstrFrameworkPythonDir,
+        vstrArgdumperFileName):
+    dbg = utilsDebug.CDebugFnVerbose(
+        "Python script make_symlink_lldb_argdumper()")
     bOk = True
     strErrMsg = ""
     strTarget = vstrArgdumperFileName
@@ -454,7 +519,8 @@ def make_symlink_lldb_argdumper(vDictArgs, vstrFrameworkPythonDir, vstrArgdumper
             strExeFileExtn = ".exe"
         strSrc = os.path.join("bin", "lldb-argdumper" + strExeFileExtn)
 
-    bOk, strErrMsg = make_symlink(vDictArgs, vstrFrameworkPythonDir, strSrc, strTarget)
+    bOk, strErrMsg = make_symlink(
+        vDictArgs, vstrFrameworkPythonDir, strSrc, strTarget)
 
     return (bOk, strErrMsg)
 
@@ -468,6 +534,8 @@ def make_symlink_lldb_argdumper(vDictArgs, vstrFrameworkPythonDir, vstrArgdumper
 #           strErrMsg - Error description on task failure.
 # Throws:   None.
 #--
+
+
 def create_symlinks(vDictArgs, vstrFrameworkPythonDir, vstrLldbLibDir):
     dbg = utilsDebug.CDebugFnVerbose("Python script create_symlinks()")
     bOk = True
@@ -498,6 +566,7 @@ def create_symlinks(vDictArgs, vstrFrameworkPythonDir, vstrLldbLibDir):
 
     return (bOk, strErrMsg)
 
+
 def copy_six(vDictArgs, vstrFrameworkPythonDir):
     dbg = utilsDebug.CDebugFnVerbose("Python script copy_six()")
     bDbg = "-d" in vDictArgs
@@ -505,7 +574,13 @@ def copy_six(vDictArgs, vstrFrameworkPythonDir):
     strMsg = ""
     site_packages_dir = os.path.dirname(vstrFrameworkPythonDir)
     six_module_filename = "six.py"
-    src_file = os.path.join(vDictArgs['--srcRoot'], "third_party", "Python", "module", "six", six_module_filename)
+    src_file = os.path.join(
+        vDictArgs['--srcRoot'],
+        "third_party",
+        "Python",
+        "module",
+        "six",
+        six_module_filename)
     src_file = os.path.normpath(src_file)
     target = os.path.join(site_packages_dir, six_module_filename)
 
@@ -528,8 +603,11 @@ def copy_six(vDictArgs, vstrFrameworkPythonDir):
 #           Str - Error description on task failure.
 # Throws:   None.
 #--
+
+
 def find_or_create_python_dir(vDictArgs, vstrFrameworkPythonDir):
-    dbg = utilsDebug.CDebugFnVerbose("Python script find_or_create_python_dir()")
+    dbg = utilsDebug.CDebugFnVerbose(
+        "Python script find_or_create_python_dir()")
     bOk = True
     strMsg = ""
     bDbg = "-d" in vDictArgs
@@ -546,8 +624,8 @@ def find_or_create_python_dir(vDictArgs, vstrFrameworkPythonDir):
         os.makedirs(vstrFrameworkPythonDir)
     except OSError as exception:
         bOk = False
-        strMsg = strErrMsgCreateFrmWkPyDirFailed % (vstrFrameworkPythonDir,
-                                                    os.strerror(exception.errno))
+        strMsg = strErrMsgCreateFrmWkPyDirFailed % (
+            vstrFrameworkPythonDir, os.strerror(exception.errno))
 
     return (bOk, strMsg)
 
@@ -561,6 +639,8 @@ def find_or_create_python_dir(vDictArgs, vstrFrameworkPythonDir):
 #           strErrMsg - Error description on task failure.
 # Throws:   None.
 #--
+
+
 def get_config_build_dir(vDictArgs, vstrFrameworkPythonDir):
     dbg = utilsDebug.CDebugFnVerbose("Python script get_config_build_dir()")
     bOk = True
@@ -584,8 +664,11 @@ def get_config_build_dir(vDictArgs, vstrFrameworkPythonDir):
 #           strErrMsg - Error description on task failure.
 # Throws:   None.
 #--
+
+
 def get_framework_python_dir_windows(vDictArgs):
-    dbg = utilsDebug.CDebugFnVerbose("Python script get_framework_python_dir_windows()")
+    dbg = utilsDebug.CDebugFnVerbose(
+        "Python script get_framework_python_dir_windows()")
     bOk = True
     strWkDir = ""
     strErrMsg = ""
@@ -601,7 +684,9 @@ def get_framework_python_dir_windows(vDictArgs):
 
     bHaveArgCmakeBuildConfiguration = "--cmakeBuildConfiguration" in vDictArgs
     if bHaveArgCmakeBuildConfiguration:
-        strPythonInstallDir = os.path.join(strPythonInstallDir, vDictArgs["--cmakeBuildConfiguration"])
+        strPythonInstallDir = os.path.join(
+            strPythonInstallDir,
+            vDictArgs["--cmakeBuildConfiguration"])
 
     if strPythonInstallDir.__len__() != 0:
         strWkDir = get_python_lib(True, False, strPythonInstallDir)
@@ -620,8 +705,11 @@ def get_framework_python_dir_windows(vDictArgs):
 #           strErrMsg - Error description on task failure.
 # Throws:   None.
 #--
+
+
 def get_framework_python_dir_other_platforms(vDictArgs):
-    dbg = utilsDebug.CDebugFnVerbose("Python script get_framework_python_dir_other_platform()")
+    dbg = utilsDebug.CDebugFnVerbose(
+        "Python script get_framework_python_dir_other_platform()")
     bOk = True
     strWkDir = ""
     strErrMsg = ""
@@ -658,8 +746,11 @@ def get_framework_python_dir_other_platforms(vDictArgs):
 #           strErrMsg - Error description on task failure.
 # Throws:   None.
 #--
+
+
 def get_framework_python_dir(vDictArgs):
-    dbg = utilsDebug.CDebugFnVerbose("Python script get_framework_python_dir()")
+    dbg = utilsDebug.CDebugFnVerbose(
+        "Python script get_framework_python_dir()")
     bOk = True
     strWkDir = ""
     strErrMsg = ""
@@ -671,7 +762,8 @@ def get_framework_python_dir(vDictArgs):
     elif eOSType == utilsOsType.EnumOsType.Windows:
         bOk, strWkDir, strErrMsg = get_framework_python_dir_windows(vDictArgs)
     else:
-        bOk, strWkDir, strErrMsg = get_framework_python_dir_other_platforms(vDictArgs)
+        bOk, strWkDir, strErrMsg = get_framework_python_dir_other_platforms(
+            vDictArgs)
 
     return (bOk, strWkDir, strErrMsg)
 
@@ -683,6 +775,8 @@ def get_framework_python_dir(vDictArgs):
 #           strErrMsg - Error description on task failure.
 # Throws:   None.
 #--
+
+
 def get_liblldb_dir(vDictArgs):
     dbg = utilsDebug.CDebugFnVerbose("Python script get_liblldb_dir()")
     bOk = True
@@ -731,6 +825,8 @@ def get_liblldb_dir(vDictArgs):
     --------------------------------------------------------------------------
 
 """
+
+
 def main(vDictArgs):
     dbg = utilsDebug.CDebugFnVerbose("Python script main()")
     bOk = True
@@ -748,7 +844,8 @@ def main(vDictArgs):
     bOk, strFrameworkPythonDir, strMsg = get_framework_python_dir(vDictArgs)
 
     if bOk:
-        bOk, strCfgBldDir, strMsg = get_config_build_dir(vDictArgs, strFrameworkPythonDir)
+        bOk, strCfgBldDir, strMsg = get_config_build_dir(
+            vDictArgs, strFrameworkPythonDir)
     if bOk and bDbg:
         print((strMsgPyFileLocatedHere % strFrameworkPythonDir))
         print((strMsgConfigBuildDir % strCfgBldDir))
@@ -757,10 +854,12 @@ def main(vDictArgs):
         bOk, strLldbLibDir, strMsg = get_liblldb_dir(vDictArgs)
 
     if bOk:
-        bOk, strMsg = find_or_create_python_dir(vDictArgs, strFrameworkPythonDir)
+        bOk, strMsg = find_or_create_python_dir(
+            vDictArgs, strFrameworkPythonDir)
 
     if bOk:
-        bOk, strMsg = create_symlinks(vDictArgs, strFrameworkPythonDir, strLldbLibDir)
+        bOk, strMsg = create_symlinks(
+            vDictArgs, strFrameworkPythonDir, strLldbLibDir)
 
     if bOk:
         bOk, strMsg = copy_six(vDictArgs, strFrameworkPythonDir)
@@ -772,52 +871,100 @@ def main(vDictArgs):
     strRoot = os.path.normpath(vDictArgs["--srcRoot"])
     if bOk:
         # lldb
-        listPkgFiles = [os.path.join(strRoot, "source", "Interpreter", "embedded_interpreter.py")]
-        bOk, strMsg = create_py_pkg(vDictArgs, strFrameworkPythonDir, "", listPkgFiles)
+        listPkgFiles = [
+            os.path.join(
+                strRoot,
+                "source",
+                "Interpreter",
+                "embedded_interpreter.py")]
+        bOk, strMsg = create_py_pkg(
+            vDictArgs, strFrameworkPythonDir, "", listPkgFiles)
 
     if bOk:
         # lldb/formatters/cpp
-        listPkgFiles = [os.path.join(strRoot, "examples", "synthetic", "gnu_libstdcpp.py"),
-                        os.path.join(strRoot, "examples", "synthetic", "libcxx.py")]
-        bOk, strMsg = create_py_pkg(vDictArgs, strFrameworkPythonDir, "/formatters/cpp", listPkgFiles)
+        listPkgFiles = [
+            os.path.join(
+                strRoot,
+                "examples",
+                "synthetic",
+                "gnu_libstdcpp.py"),
+            os.path.join(
+                strRoot,
+                "examples",
+                "synthetic",
+                "libcxx.py")]
+        bOk, strMsg = create_py_pkg(
+            vDictArgs, strFrameworkPythonDir, "/formatters/cpp", listPkgFiles)
 
     if bOk:
         # Make an empty __init__.py in lldb/runtime as this is required for
         # Python to recognize lldb.runtime as a valid package (and hence,
         # lldb.runtime.objc as a valid contained package)
         listPkgFiles = []
-        bOk, strMsg = create_py_pkg(vDictArgs, strFrameworkPythonDir, "/runtime", listPkgFiles)
+        bOk, strMsg = create_py_pkg(
+            vDictArgs, strFrameworkPythonDir, "/runtime", listPkgFiles)
 
     if bOk:
         # lldb/formatters
         # Having these files copied here ensure that lldb/formatters is a
         # valid package itself
-        listPkgFiles = [os.path.join(strRoot, "examples", "summaries", "cocoa", "cache.py"),
-                        os.path.join(strRoot, "examples", "summaries", "synth.py"),
-                        os.path.join(strRoot, "examples", "summaries", "cocoa", "metrics.py"),
-                        os.path.join(strRoot, "examples", "summaries", "cocoa", "attrib_fromdict.py"),
-                        os.path.join(strRoot, "examples", "summaries", "cocoa", "Logger.py")]
-        bOk, strMsg = create_py_pkg(vDictArgs, strFrameworkPythonDir, "/formatters", listPkgFiles)
+        listPkgFiles = [
+            os.path.join(
+                strRoot, "examples", "summaries", "cocoa", "cache.py"), os.path.join(
+                strRoot, "examples", "summaries", "synth.py"), os.path.join(
+                strRoot, "examples", "summaries", "cocoa", "metrics.py"), os.path.join(
+                    strRoot, "examples", "summaries", "cocoa", "attrib_fromdict.py"), os.path.join(
+                        strRoot, "examples", "summaries", "cocoa", "Logger.py")]
+        bOk, strMsg = create_py_pkg(
+            vDictArgs, strFrameworkPythonDir, "/formatters", listPkgFiles)
 
     if bOk:
         # lldb/utils
-        listPkgFiles = [os.path.join(strRoot, "examples", "python", "symbolication.py")]
-        bOk, strMsg = create_py_pkg(vDictArgs, strFrameworkPythonDir, "/utils", listPkgFiles)
+        listPkgFiles = [
+            os.path.join(
+                strRoot,
+                "examples",
+                "python",
+                "symbolication.py")]
+        bOk, strMsg = create_py_pkg(
+            vDictArgs, strFrameworkPythonDir, "/utils", listPkgFiles)
 
     if bOk and (eOSType == utilsOsType.EnumOsType.Darwin):
         # lldb/macosx
-        listPkgFiles = [os.path.join(strRoot, "examples", "python", "crashlog.py"),
-                        os.path.join(strRoot, "examples", "darwin", "heap_find", "heap.py")]
-        bOk, strMsg = create_py_pkg(vDictArgs, strFrameworkPythonDir, "/macosx", listPkgFiles)
+        listPkgFiles = [
+            os.path.join(
+                strRoot,
+                "examples",
+                "python",
+                "crashlog.py"),
+            os.path.join(
+                strRoot,
+                "examples",
+                "darwin",
+                "heap_find",
+                "heap.py")]
+        bOk, strMsg = create_py_pkg(
+            vDictArgs, strFrameworkPythonDir, "/macosx", listPkgFiles)
 
     if bOk and (eOSType == utilsOsType.EnumOsType.Darwin):
         # lldb/diagnose
-        listPkgFiles = [os.path.join(strRoot, "examples", "python", "diagnose_unwind.py"),
-                        os.path.join(strRoot, "examples", "python", "diagnose_nsstring.py")]
-        bOk, strMsg = create_py_pkg(vDictArgs, strFrameworkPythonDir, "/diagnose", listPkgFiles)
+        listPkgFiles = [
+            os.path.join(
+                strRoot,
+                "examples",
+                "python",
+                "diagnose_unwind.py"),
+            os.path.join(
+                strRoot,
+                "examples",
+                "python",
+                "diagnose_nsstring.py")]
+        bOk, strMsg = create_py_pkg(
+            vDictArgs, strFrameworkPythonDir, "/diagnose", listPkgFiles)
 
     if bOk:
-        bOk, strMsg = macosx_copy_file_for_heap(vDictArgs, strFrameworkPythonDir)
+        bOk, strMsg = macosx_copy_file_for_heap(
+            vDictArgs, strFrameworkPythonDir)
 
     if bOk:
         return (0, strMsg)
@@ -834,4 +981,3 @@ def main(vDictArgs):
 # function directly
 if __name__ == "__main__":
     print("Script cannot be called directly, called by finishSwigWrapperClasses.py")
-

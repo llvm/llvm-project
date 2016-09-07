@@ -10,120 +10,85 @@
 #ifndef liblldb_CompilerDecl_h_
 #define liblldb_CompilerDecl_h_
 
-#include "lldb/lldb-private.h"
 #include "lldb/Core/ConstString.h"
 #include "lldb/Symbol/CompilerType.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
-class CompilerDecl
-{
+class CompilerDecl {
 public:
-    //----------------------------------------------------------------------
-    // Constructors and Destructors
-    //----------------------------------------------------------------------
-    CompilerDecl () :
-        m_type_system  (nullptr),
-        m_opaque_decl (nullptr)
-    {
-    }
+  //----------------------------------------------------------------------
+  // Constructors and Destructors
+  //----------------------------------------------------------------------
+  CompilerDecl() : m_type_system(nullptr), m_opaque_decl(nullptr) {}
 
-    CompilerDecl (TypeSystem *type_system, void *decl) :
-        m_type_system (type_system),
-        m_opaque_decl (decl)
-    {
-    }
+  CompilerDecl(TypeSystem *type_system, void *decl)
+      : m_type_system(type_system), m_opaque_decl(decl) {}
 
-    ~CompilerDecl ()
-    {
-    }
+  ~CompilerDecl() {}
 
-    //----------------------------------------------------------------------
-    // Tests
-    //----------------------------------------------------------------------
+  //----------------------------------------------------------------------
+  // Tests
+  //----------------------------------------------------------------------
 
-    explicit operator bool () const
-    {
-        return IsValid ();
-    }
-    
-    bool
-    operator < (const CompilerDecl &rhs) const
-    {
-        if (m_type_system == rhs.m_type_system)
-            return m_opaque_decl < rhs.m_opaque_decl;
-        return m_type_system < rhs.m_type_system;
-    }
+  explicit operator bool() const { return IsValid(); }
 
-    bool
-    IsValid () const
-    {
-        return m_type_system != nullptr && m_opaque_decl != nullptr;
-    }
+  bool operator<(const CompilerDecl &rhs) const {
+    if (m_type_system == rhs.m_type_system)
+      return m_opaque_decl < rhs.m_opaque_decl;
+    return m_type_system < rhs.m_type_system;
+  }
 
-    bool
-    IsClang () const;
+  bool IsValid() const {
+    return m_type_system != nullptr && m_opaque_decl != nullptr;
+  }
 
-    //----------------------------------------------------------------------
-    // Accessors
-    //----------------------------------------------------------------------
-    
-    TypeSystem *
-    GetTypeSystem() const
-    {
-        return m_type_system;
-    }
-    
-    void *
-    GetOpaqueDecl() const
-    {
-        return m_opaque_decl;
-    }
+  bool IsClang() const;
 
-    void
-    SetDecl (TypeSystem* type_system, void* decl)
-    {
-        m_type_system = type_system;
-        m_opaque_decl = decl;
-    }
+  //----------------------------------------------------------------------
+  // Accessors
+  //----------------------------------------------------------------------
 
-    void
-    Clear()
-    {
-        m_type_system = nullptr;
-        m_opaque_decl = nullptr;
-    }
+  TypeSystem *GetTypeSystem() const { return m_type_system; }
 
-    ConstString
-    GetName () const;
+  void *GetOpaqueDecl() const { return m_opaque_decl; }
 
-    ConstString
-    GetMangledName () const;
+  void SetDecl(TypeSystem *type_system, void *decl) {
+    m_type_system = type_system;
+    m_opaque_decl = decl;
+  }
 
-    CompilerDeclContext
-    GetDeclContext() const;
+  void Clear() {
+    m_type_system = nullptr;
+    m_opaque_decl = nullptr;
+  }
 
-    // If this decl represents a function, return the return type
-    CompilerType
-    GetFunctionReturnType() const;
+  ConstString GetName() const;
 
-    // If this decl represents a function, return the number of arguments for the function
-    size_t
-    GetNumFunctionArguments() const;
+  ConstString GetMangledName() const;
 
-    // If this decl represents a function, return the argument type given a zero based argument index
-    CompilerType
-    GetFunctionArgumentType (size_t arg_idx) const;
+  CompilerDeclContext GetDeclContext() const;
+
+  // If this decl represents a function, return the return type
+  CompilerType GetFunctionReturnType() const;
+
+  // If this decl represents a function, return the number of arguments for the
+  // function
+  size_t GetNumFunctionArguments() const;
+
+  // If this decl represents a function, return the argument type given a zero
+  // based argument index
+  CompilerType GetFunctionArgumentType(size_t arg_idx) const;
 
 private:
-    TypeSystem *m_type_system;
-    void *m_opaque_decl;
+  TypeSystem *m_type_system;
+  void *m_opaque_decl;
 };
-    
-bool operator == (const CompilerDecl &lhs, const CompilerDecl &rhs);
-bool operator != (const CompilerDecl &lhs, const CompilerDecl &rhs);
 
-    
+bool operator==(const CompilerDecl &lhs, const CompilerDecl &rhs);
+bool operator!=(const CompilerDecl &lhs, const CompilerDecl &rhs);
+
 } // namespace lldb_private
 
 #endif // #ifndef liblldb_CompilerDecl_h_

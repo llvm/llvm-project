@@ -30,7 +30,7 @@ class DebuggerAPITestCase(TestBase):
         self.dbg.GetInternalVariableValue(None, None)
         # FIXME (filcab): We must first allow for the swig bindings to know if
         # a Python callback is set. (Check python-typemaps.swig)
-        #self.dbg.SetLoggingCallback(None)
+        # self.dbg.SetLoggingCallback(None)
         self.dbg.SetPrompt(None)
         self.dbg.SetCurrentPlatform(None)
         self.dbg.SetCurrentPlatformSDKRoot(None)

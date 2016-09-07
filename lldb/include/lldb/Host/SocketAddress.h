@@ -19,9 +19,9 @@
 #include <ws2tcpip.h>
 typedef ADDRESS_FAMILY sa_family_t;
 #else
-#include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
 #endif
 
 #if defined(__FreeBSD__)
@@ -35,243 +35,180 @@ typedef ADDRESS_FAMILY sa_family_t;
 
 namespace lldb_private {
 
-class SocketAddress
-{
+class SocketAddress {
 public:
-    //------------------------------------------------------------------
-    // Constructors and Destructors
-    //------------------------------------------------------------------
-    SocketAddress ();
-    SocketAddress (const struct sockaddr &s);
-    SocketAddress (const struct sockaddr_in &s);
-    SocketAddress (const struct sockaddr_in6 &s);
-    SocketAddress (const struct sockaddr_storage &s);
-    SocketAddress (const SocketAddress& rhs);
-    ~SocketAddress ();
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  SocketAddress();
+  SocketAddress(const struct sockaddr &s);
+  SocketAddress(const struct sockaddr_in &s);
+  SocketAddress(const struct sockaddr_in6 &s);
+  SocketAddress(const struct sockaddr_storage &s);
+  SocketAddress(const SocketAddress &rhs);
+  ~SocketAddress();
 
-    //------------------------------------------------------------------
-    // Operators
-    //------------------------------------------------------------------
-    const SocketAddress&
-    operator=(const SocketAddress& rhs);
+  //------------------------------------------------------------------
+  // Operators
+  //------------------------------------------------------------------
+  const SocketAddress &operator=(const SocketAddress &rhs);
 
-    const SocketAddress&
-    operator=(const struct addrinfo *addr_info);
+  const SocketAddress &operator=(const struct addrinfo *addr_info);
 
-    const SocketAddress&
-    operator=(const struct sockaddr &s);
+  const SocketAddress &operator=(const struct sockaddr &s);
 
-    const SocketAddress&
-    operator=(const struct sockaddr_in &s);
+  const SocketAddress &operator=(const struct sockaddr_in &s);
 
-    const SocketAddress&
-    operator=(const struct sockaddr_in6 &s);
+  const SocketAddress &operator=(const struct sockaddr_in6 &s);
 
-    const SocketAddress&
-    operator=(const struct sockaddr_storage &s);
-    
-    //------------------------------------------------------------------
-    // Clear the contents of this socket address
-    //------------------------------------------------------------------
-    void
-    Clear ();
+  const SocketAddress &operator=(const struct sockaddr_storage &s);
 
-    //------------------------------------------------------------------
-    // Get the length for the current socket address family
-    //------------------------------------------------------------------
-    socklen_t
-    GetLength () const;
+  //------------------------------------------------------------------
+  // Clear the contents of this socket address
+  //------------------------------------------------------------------
+  void Clear();
 
-    //------------------------------------------------------------------
-    // Get the max length for the largest socket address supported.
-    //------------------------------------------------------------------
-    static socklen_t
-    GetMaxLength ();
+  //------------------------------------------------------------------
+  // Get the length for the current socket address family
+  //------------------------------------------------------------------
+  socklen_t GetLength() const;
 
-    //------------------------------------------------------------------
-    // Get the socket address family 
-    //------------------------------------------------------------------
-    sa_family_t
-    GetFamily () const;
+  //------------------------------------------------------------------
+  // Get the max length for the largest socket address supported.
+  //------------------------------------------------------------------
+  static socklen_t GetMaxLength();
 
-    //------------------------------------------------------------------
-    // Set the socket address family 
-    //------------------------------------------------------------------
-    void
-    SetFamily (sa_family_t family);
+  //------------------------------------------------------------------
+  // Get the socket address family
+  //------------------------------------------------------------------
+  sa_family_t GetFamily() const;
 
-    //------------------------------------------------------------------
-    // Get the address
-    //------------------------------------------------------------------
-    std::string
-    GetIPAddress () const;
+  //------------------------------------------------------------------
+  // Set the socket address family
+  //------------------------------------------------------------------
+  void SetFamily(sa_family_t family);
 
-    //------------------------------------------------------------------
-    // Get the port if the socket address for the family has a port
-    //------------------------------------------------------------------
-    uint16_t
-    GetPort () const;
+  //------------------------------------------------------------------
+  // Get the address
+  //------------------------------------------------------------------
+  std::string GetIPAddress() const;
 
-    //------------------------------------------------------------------
-    // Set the port if the socket address for the family has a port. 
-    // The family must be set correctly prior to calling this function.
-    //------------------------------------------------------------------
-    bool
-    SetPort (uint16_t port);
+  //------------------------------------------------------------------
+  // Get the port if the socket address for the family has a port
+  //------------------------------------------------------------------
+  uint16_t GetPort() const;
 
-    //------------------------------------------------------------------
-    // Set the socket address according to the first match from a call
-    // to getaddrinfo() (or equivalent functions for systems that don't
-    // have getaddrinfo(). If "addr_info_ptr" is not NULL, it will get
-    // filled in with the match that was used to populate this socket
-    // address.
-    //------------------------------------------------------------------
-    bool
-    getaddrinfo (const char *host,          // Hostname ("foo.bar.com" or "foo" or IP address string ("123.234.12.1" or "2001:0db8:85a3:0000:0000:8a2e:0370:7334")
-                 const char *service,       // Protocol name ("tcp", "http", etc) or a raw port number string ("81")
-                 int ai_family = PF_UNSPEC,
-                 int ai_socktype = 0,
-                 int ai_protocol = 0,
-                 int ai_flags = 0);
+  //------------------------------------------------------------------
+  // Set the port if the socket address for the family has a port.
+  // The family must be set correctly prior to calling this function.
+  //------------------------------------------------------------------
+  bool SetPort(uint16_t port);
 
-    //------------------------------------------------------------------
-    // Quick way to set the SocketAddress to localhost given the family.
-    // Returns true if successful, false if "family" doesn't support 
-    // localhost or if "family" is not supported by this class.
-    //------------------------------------------------------------------
-    bool
-    SetToLocalhost (sa_family_t family, 
-                    uint16_t port);
+  //------------------------------------------------------------------
+  // Set the socket address according to the first match from a call
+  // to getaddrinfo() (or equivalent functions for systems that don't
+  // have getaddrinfo(). If "addr_info_ptr" is not NULL, it will get
+  // filled in with the match that was used to populate this socket
+  // address.
+  //------------------------------------------------------------------
+  bool
+  getaddrinfo(const char *host,    // Hostname ("foo.bar.com" or "foo" or IP
+                                   // address string ("123.234.12.1" or
+                                   // "2001:0db8:85a3:0000:0000:8a2e:0370:7334")
+              const char *service, // Protocol name ("tcp", "http", etc) or a
+                                   // raw port number string ("81")
+              int ai_family = PF_UNSPEC, int ai_socktype = 0,
+              int ai_protocol = 0, int ai_flags = 0);
 
-    bool
-    SetToAnyAddress (sa_family_t family,
-                     uint16_t port);
+  //------------------------------------------------------------------
+  // Quick way to set the SocketAddress to localhost given the family.
+  // Returns true if successful, false if "family" doesn't support
+  // localhost or if "family" is not supported by this class.
+  //------------------------------------------------------------------
+  bool SetToLocalhost(sa_family_t family, uint16_t port);
 
-    //------------------------------------------------------------------
-    // Returns true if there is a valid socket address in this object.
-    //------------------------------------------------------------------
-    bool
-    IsValid () const;
+  bool SetToAnyAddress(sa_family_t family, uint16_t port);
 
-    //------------------------------------------------------------------
-    // Direct access to all of the sockaddr structures
-    //------------------------------------------------------------------
-    struct sockaddr &
-    sockaddr ()
-    {
-        return m_socket_addr.sa;
-    }
+  //------------------------------------------------------------------
+  // Returns true if there is a valid socket address in this object.
+  //------------------------------------------------------------------
+  bool IsValid() const;
 
-    const struct sockaddr &
-    sockaddr () const
-    {
-        return m_socket_addr.sa;
-    }
-    
-    struct sockaddr_in &
-    sockaddr_in ()
-    {
-        return m_socket_addr.sa_ipv4;
-    }
-    
-    const struct sockaddr_in &
-    sockaddr_in () const
-    {
-        return m_socket_addr.sa_ipv4;
-    }
-    
-    struct sockaddr_in6 &
-    sockaddr_in6 ()
-    {
-        return m_socket_addr.sa_ipv6;
-    }
-    
-    const struct sockaddr_in6 &
-    sockaddr_in6 () const
-    {
-        return m_socket_addr.sa_ipv6;
-    }
-    
-    struct sockaddr_storage &
-    sockaddr_storage ()
-    {
-        return m_socket_addr.sa_storage;
-    }
+  //------------------------------------------------------------------
+  // Direct access to all of the sockaddr structures
+  //------------------------------------------------------------------
+  struct sockaddr &sockaddr() {
+    return m_socket_addr.sa;
+  }
 
-    
-    const struct sockaddr_storage &
-    sockaddr_storage () const
-    {
-        return m_socket_addr.sa_storage;
-    }
-    
-    
-    //------------------------------------------------------------------
-    // Conversion operators to allow getting the contents of this class
-    // as a pointer to the appropriate structure. This allows an instance
-    // of this class to be used in calls that take one of the sockaddr
-    // structure variants without having to manually use the correct
-    // accessor function.
-    //------------------------------------------------------------------
-    
-    operator struct sockaddr * ()
-    {
-        return &m_socket_addr.sa;
-    }
-    
-    operator const struct sockaddr * () const
-    {
-        return &m_socket_addr.sa;
-    }
+  const struct sockaddr &sockaddr() const { return m_socket_addr.sa; }
 
-    operator struct sockaddr_in * ()
-    {
-        return &m_socket_addr.sa_ipv4;
-    }
-    
-    operator const struct sockaddr_in * () const
-    {
-        return &m_socket_addr.sa_ipv4;
-    }
+  struct sockaddr_in &sockaddr_in() {
+    return m_socket_addr.sa_ipv4;
+  }
 
-    operator struct sockaddr_in6 * ()
-    {
-        return &m_socket_addr.sa_ipv6;
-    }
-    
-    operator const struct sockaddr_in6 * () const
-    {
-        return &m_socket_addr.sa_ipv6;
-    }
+  const struct sockaddr_in &sockaddr_in() const {
+    return m_socket_addr.sa_ipv4;
+  }
 
-    operator const struct sockaddr_storage * () const
-    {
-        return &m_socket_addr.sa_storage;
-    }
+  struct sockaddr_in6 &sockaddr_in6() {
+    return m_socket_addr.sa_ipv6;
+  }
 
-    operator struct sockaddr_storage * ()
-    {
-        return &m_socket_addr.sa_storage;
-    }
+  const struct sockaddr_in6 &sockaddr_in6() const {
+    return m_socket_addr.sa_ipv6;
+  }
 
-    
+  struct sockaddr_storage &sockaddr_storage() {
+    return m_socket_addr.sa_storage;
+  }
+
+  const struct sockaddr_storage &sockaddr_storage() const {
+    return m_socket_addr.sa_storage;
+  }
+
+  //------------------------------------------------------------------
+  // Conversion operators to allow getting the contents of this class
+  // as a pointer to the appropriate structure. This allows an instance
+  // of this class to be used in calls that take one of the sockaddr
+  // structure variants without having to manually use the correct
+  // accessor function.
+  //------------------------------------------------------------------
+
+  operator struct sockaddr *() { return &m_socket_addr.sa; }
+
+  operator const struct sockaddr *() const { return &m_socket_addr.sa; }
+
+  operator struct sockaddr_in *() { return &m_socket_addr.sa_ipv4; }
+
+  operator const struct sockaddr_in *() const { return &m_socket_addr.sa_ipv4; }
+
+  operator struct sockaddr_in6 *() { return &m_socket_addr.sa_ipv6; }
+
+  operator const struct sockaddr_in6 *() const {
+    return &m_socket_addr.sa_ipv6;
+  }
+
+  operator const struct sockaddr_storage *() const {
+    return &m_socket_addr.sa_storage;
+  }
+
+  operator struct sockaddr_storage *() { return &m_socket_addr.sa_storage; }
+
 protected:
-    typedef union sockaddr_tag
-    {
-        struct sockaddr         sa;
-        struct sockaddr_in      sa_ipv4;
-        struct sockaddr_in6     sa_ipv6;
-        struct sockaddr_storage sa_storage;
-    } sockaddr_t;
+  typedef union sockaddr_tag {
+    struct sockaddr sa;
+    struct sockaddr_in sa_ipv4;
+    struct sockaddr_in6 sa_ipv6;
+    struct sockaddr_storage sa_storage;
+  } sockaddr_t;
 
-    //------------------------------------------------------------------
-    // Classes that inherit from SocketAddress can see and modify these
-    //------------------------------------------------------------------
-    sockaddr_t m_socket_addr;
+  //------------------------------------------------------------------
+  // Classes that inherit from SocketAddress can see and modify these
+  //------------------------------------------------------------------
+  sockaddr_t m_socket_addr;
 };
-
 
 } // namespace lldb_private
 
-
-#endif  // liblldb_SocketAddress_h_
+#endif // liblldb_SocketAddress_h_

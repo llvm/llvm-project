@@ -5,12 +5,13 @@ Test the lldb disassemble command on lib stdc++.
 from __future__ import print_function
 
 
-
 import unittest2
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
+
 
 class StdCXXDisassembleTestCase(TestBase):
 
@@ -24,7 +25,9 @@ class StdCXXDisassembleTestCase(TestBase):
 
     # rdar://problem/8504895
     # Crash while doing 'disassemble -n "-[NSNumber descriptionWithLocale:]"
-    @unittest2.skipIf(TestBase.skipLongRunningTest(), "Skip this long running test")
+    @unittest2.skipIf(
+        TestBase.skipLongRunningTest(),
+        "Skip this long running test")
     def test_stdcxx_disasm(self):
         """Do 'disassemble' on each and every 'Code' symbol entry from the std c++ lib."""
         self.build()
@@ -36,7 +39,8 @@ class StdCXXDisassembleTestCase(TestBase):
         # is this a problem with clang generated debug info?
         #
         # Break on line 13 of main.cpp.
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
@@ -46,12 +50,13 @@ class StdCXXDisassembleTestCase(TestBase):
 
         # The process should be in a 'stopped' state.
         self.expect(str(process), STOPPED_DUE_TO_BREAKPOINT, exe=False,
-            substrs = ["a.out",
-                       "stopped"])
+                    substrs=["a.out",
+                             "stopped"])
 
         # Disassemble the functions on the call stack.
         self.runCmd("thread backtrace")
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
         depth = thread.GetNumFrames()
         for i in range(depth - 1):
@@ -65,7 +70,8 @@ class StdCXXDisassembleTestCase(TestBase):
         for i in range(target.GetNumModules()):
             module = target.GetModuleAtIndex(i)
             fs = module.GetFileSpec()
-            if (fs.GetFilename().startswith("libstdc++") or fs.GetFilename().startswith("libc++")):
+            if (fs.GetFilename().startswith("libstdc++")
+                    or fs.GetFilename().startswith("libc++")):
                 lib_stdcxx = str(fs)
                 break
 
@@ -73,7 +79,7 @@ class StdCXXDisassembleTestCase(TestBase):
         # module is the corresponding SBModule.
 
         self.expect(lib_stdcxx, "Libraray StdC++ is located", exe=False,
-            substrs = ["lib"])
+                    substrs=["lib"])
 
         self.runCmd("image dump symtab '%s'" % lib_stdcxx)
         raw_output = self.res.GetOutput()

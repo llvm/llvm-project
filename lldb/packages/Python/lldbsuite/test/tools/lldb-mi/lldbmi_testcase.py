@@ -5,8 +5,8 @@ Base class for lldb-mi test cases.
 from __future__ import print_function
 
 
-
 from lldbsuite.test.lldbtest import *
+
 
 class MiTestCaseBase(Base):
 
@@ -43,7 +43,7 @@ class MiTestCaseBase(Base):
         self.child.setecho(True)
         self.child.logfile_read = open(self.mylog, "w")
         # wait until lldb-mi has started up and is ready to go
-        self.expect(self.child_prompt, exactly = True)
+        self.expect(self.child_prompt, exactly=True)
 
     def runCmd(self, cmd):
         self.child.sendline(cmd)

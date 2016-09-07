@@ -18,7 +18,4 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void
-Baton::GetDescription (Stream *s, lldb::DescriptionLevel level) const
-{
-}
+void Baton::GetDescription(Stream *s, lldb::DescriptionLevel level) const {}

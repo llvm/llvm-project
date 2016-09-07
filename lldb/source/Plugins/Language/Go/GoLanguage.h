@@ -18,47 +18,44 @@
 #include "llvm/ADT/StringRef.h"
 
 // Project includes
-#include "lldb/lldb-private.h"
 #include "lldb/Core/ConstString.h"
 #include "lldb/Target/Language.h"
+#include "lldb/lldb-private.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class GoLanguage : public Language
-{
-  public:
-    GoLanguage() = default;
+class GoLanguage : public Language {
+public:
+  GoLanguage() = default;
 
-    ~GoLanguage() override = default;
+  ~GoLanguage() override = default;
 
-    lldb::LanguageType
-    GetLanguageType() const override
-    {
-        return lldb::eLanguageTypeGo;
-    }
+  lldb::LanguageType GetLanguageType() const override {
+    return lldb::eLanguageTypeGo;
+  }
 
-    HardcodedFormatters::HardcodedSummaryFinder GetHardcodedSummaries() override;
+  HardcodedFormatters::HardcodedSummaryFinder GetHardcodedSummaries() override;
 
-    HardcodedFormatters::HardcodedSyntheticFinder GetHardcodedSynthetics() override;
+  HardcodedFormatters::HardcodedSyntheticFinder
+  GetHardcodedSynthetics() override;
 
-    //------------------------------------------------------------------
-    // Static Functions
-    //------------------------------------------------------------------
-    static void Initialize();
+  //------------------------------------------------------------------
+  // Static Functions
+  //------------------------------------------------------------------
+  static void Initialize();
 
-    static void Terminate();
+  static void Terminate();
 
-    static lldb_private::Language *CreateInstance(lldb::LanguageType language);
+  static lldb_private::Language *CreateInstance(lldb::LanguageType language);
 
-    static lldb_private::ConstString GetPluginNameStatic();
+  static lldb_private::ConstString GetPluginNameStatic();
 
-    //------------------------------------------------------------------
-    // PluginInterface protocol
-    //------------------------------------------------------------------
-    ConstString GetPluginName() override;
+  //------------------------------------------------------------------
+  // PluginInterface protocol
+  //------------------------------------------------------------------
+  ConstString GetPluginName() override;
 
-    uint32_t GetPluginVersion() override;
+  uint32_t GetPluginVersion() override;
 };
 
 } // namespace lldb_private

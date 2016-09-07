@@ -10,6 +10,7 @@ import re
 import sys
 from optparse import OptionParser
 
+
 def setupSysPath():
     """
     Add LLDB.framework/Resources/Python and the test dir to the sys.path.
@@ -24,7 +25,7 @@ def setupSysPath():
     base = os.path.abspath(os.path.join(scriptPath, os.pardir, os.pardir))
 
     # This is for the goodies in the test directory under base.
-    sys.path.append(os.path.join(base,'test'))
+    sys.path.append(os.path.join(base, 'test'))
 
     # These are for xcode build directories.
     xcode3_build_dir = ['build']
@@ -34,12 +35,18 @@ def setupSysPath():
     bai = ['BuildAndIntegration']
     python_resource_dir = ['LLDB.framework', 'Resources', 'Python']
 
-    dbgPath  = os.path.join(base, *(xcode3_build_dir + dbg + python_resource_dir))
-    dbgPath2 = os.path.join(base, *(xcode4_build_dir + dbg + python_resource_dir))
-    relPath  = os.path.join(base, *(xcode3_build_dir + rel + python_resource_dir))
-    relPath2 = os.path.join(base, *(xcode4_build_dir + rel + python_resource_dir))
-    baiPath  = os.path.join(base, *(xcode3_build_dir + bai + python_resource_dir))
-    baiPath2 = os.path.join(base, *(xcode4_build_dir + bai + python_resource_dir))
+    dbgPath = os.path.join(
+        base, *(xcode3_build_dir + dbg + python_resource_dir))
+    dbgPath2 = os.path.join(
+        base, *(xcode4_build_dir + dbg + python_resource_dir))
+    relPath = os.path.join(
+        base, *(xcode3_build_dir + rel + python_resource_dir))
+    relPath2 = os.path.join(
+        base, *(xcode4_build_dir + rel + python_resource_dir))
+    baiPath = os.path.join(
+        base, *(xcode3_build_dir + bai + python_resource_dir))
+    baiPath2 = os.path.join(
+        base, *(xcode4_build_dir + bai + python_resource_dir))
 
     lldbPath = None
     if os.path.isfile(os.path.join(dbgPath, 'lldb.py')):
@@ -62,7 +69,7 @@ def setupSysPath():
 
     # This is to locate the lldb.py module.  Insert it right after sys.path[0].
     sys.path[1:1] = [lldbPath]
-    #print "sys.path:", sys.path
+    # print "sys.path:", sys.path
 
 
 def run_command(ci, cmd, res, echo=True):
@@ -77,16 +84,19 @@ def run_command(ci, cmd, res, echo=True):
             print "run command failed!"
             print "run_command error:", res.GetError()
 
+
 def do_lldb_disassembly(lldb_commands, exe, disassemble_options, num_symbols,
                         symbols_to_disassemble,
                         re_symbol_pattern,
                         quiet_disassembly):
-    import lldb, atexit, re
+    import lldb
+    import atexit
+    import re
 
     # Create the debugger instance now.
     dbg = lldb.SBDebugger.Create()
     if not dbg:
-            raise Exception('Invalid debugger instance')
+        raise Exception('Invalid debugger instance')
 
     # Register an exit callback.
     atexit.register(lambda: lldb.SBDebugger.Terminate())
@@ -102,7 +112,8 @@ def do_lldb_disassembly(lldb_commands, exe, disassemble_options, num_symbols,
     # And the associated result object.
     res = lldb.SBCommandReturnObject()
 
-    # See if there any extra command(s) to execute before we issue the file command.
+    # See if there any extra command(s) to execute before we issue the file
+    # command.
     for cmd in lldb_commands:
         run_command(ci, cmd, res, not quiet_disassembly)
 
@@ -141,7 +152,8 @@ def do_lldb_disassembly(lldb_commands, exe, disassemble_options, num_symbols,
                         return
                     # If a regexp symbol pattern is supplied, consult it.
                     if re_symbol_pattern:
-                        # If the pattern does not match, look for the next symbol.
+                        # If the pattern does not match, look for the next
+                        # symbol.
                         if not pattern.match(s.GetName()):
                             continue
 
@@ -162,7 +174,12 @@ def do_lldb_disassembly(lldb_commands, exe, disassemble_options, num_symbols,
                         stream.Clear()
 
     # Disassembly time.
-    for symbol in symbol_iter(num_symbols, symbols_to_disassemble, re_symbol_pattern, target, not quiet_disassembly):
+    for symbol in symbol_iter(
+            num_symbols,
+            symbols_to_disassemble,
+            re_symbol_pattern,
+            target,
+            not quiet_disassembly):
         cmd = "disassemble %s '%s'" % (disassemble_options, symbol)
         run_command(ci, cmd, res, not quiet_disassembly)
 
@@ -171,42 +188,74 @@ def main():
     # This is to set up the Python path to include the pexpect-2.4 dir.
     # Remember to update this when/if things change.
     scriptPath = sys.path[0]
-    sys.path.append(os.path.join(scriptPath, os.pardir, os.pardir, 'test', 'pexpect-2.4'))
+    sys.path.append(
+        os.path.join(
+            scriptPath,
+            os.pardir,
+            os.pardir,
+            'test',
+            'pexpect-2.4'))
 
     parser = OptionParser(usage="""\
 Run lldb to disassemble all the available functions for an executable image.
 
 Usage: %prog [options]
 """)
-    parser.add_option('-C', '--lldb-command',
-                      type='string', action='append', metavar='COMMAND',
-                      default=[], dest='lldb_commands',
-                      help='Command(s) lldb executes after starting up (can be empty)')
-    parser.add_option('-e', '--executable',
-                      type='string', action='store',
-                      dest='executable',
-                      help="""Mandatory: the executable to do disassembly on.""")
-    parser.add_option('-o', '--options',
-                      type='string', action='store',
-                      dest='disassemble_options',
-                      help="""Mandatory: the options passed to lldb's 'disassemble' command.""")
-    parser.add_option('-q', '--quiet-disassembly',
-                      action='store_true', default=False,
-                      dest='quiet_disassembly',
-                      help="""The symbol(s) to invoke lldb's 'disassemble' command on, if specified.""")
-    parser.add_option('-n', '--num-symbols',
-                      type='int', action='store', default=-1,
-                      dest='num_symbols',
-                      help="""The number of symbols to disassemble, if specified.""")
-    parser.add_option('-p', '--symbol_pattern',
-                      type='string', action='store',
-                      dest='re_symbol_pattern',
-                      help="""The regular expression of symbols to invoke lldb's 'disassemble' command.""")
-    parser.add_option('-s', '--symbol',
-                      type='string', action='append', metavar='SYMBOL', default=[],
-                      dest='symbols_to_disassemble',
-                      help="""The symbol(s) to invoke lldb's 'disassemble' command on, if specified.""")
-    
+    parser.add_option(
+        '-C',
+        '--lldb-command',
+        type='string',
+        action='append',
+        metavar='COMMAND',
+        default=[],
+        dest='lldb_commands',
+        help='Command(s) lldb executes after starting up (can be empty)')
+    parser.add_option(
+        '-e',
+        '--executable',
+        type='string',
+        action='store',
+        dest='executable',
+        help="""Mandatory: the executable to do disassembly on.""")
+    parser.add_option(
+        '-o',
+        '--options',
+        type='string',
+        action='store',
+        dest='disassemble_options',
+        help="""Mandatory: the options passed to lldb's 'disassemble' command.""")
+    parser.add_option(
+        '-q',
+        '--quiet-disassembly',
+        action='store_true',
+        default=False,
+        dest='quiet_disassembly',
+        help="""The symbol(s) to invoke lldb's 'disassemble' command on, if specified.""")
+    parser.add_option(
+        '-n',
+        '--num-symbols',
+        type='int',
+        action='store',
+        default=-1,
+        dest='num_symbols',
+        help="""The number of symbols to disassemble, if specified.""")
+    parser.add_option(
+        '-p',
+        '--symbol_pattern',
+        type='string',
+        action='store',
+        dest='re_symbol_pattern',
+        help="""The regular expression of symbols to invoke lldb's 'disassemble' command.""")
+    parser.add_option(
+        '-s',
+        '--symbol',
+        type='string',
+        action='append',
+        metavar='SYMBOL',
+        default=[],
+        dest='symbols_to_disassemble',
+        help="""The symbol(s) to invoke lldb's 'disassemble' command on, if specified.""")
+
     opts, args = parser.parse_args()
 
     lldb_commands = opts.lldb_commands

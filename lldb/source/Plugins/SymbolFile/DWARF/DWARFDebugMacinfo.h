@@ -12,18 +12,15 @@
 
 #include "SymbolFileDWARF.h"
 
-class DWARFDebugMacinfo
-{
+class DWARFDebugMacinfo {
 public:
-    DWARFDebugMacinfo();
+  DWARFDebugMacinfo();
 
-    ~DWARFDebugMacinfo();
+  ~DWARFDebugMacinfo();
 
-    static void
-    Dump (lldb_private::Stream *s,
-          const lldb_private::DWARFDataExtractor& macinfo_data,
-          lldb::offset_t offset = LLDB_INVALID_OFFSET);
+  static void Dump(lldb_private::Stream *s,
+                   const lldb_private::DWARFDataExtractor &macinfo_data,
+                   lldb::offset_t offset = LLDB_INVALID_OFFSET);
 };
 
-
-#endif  // SymbolFileDWARF_DWARFDebugMacinfo_h_
+#endif // SymbolFileDWARF_DWARFDebugMacinfo_h_

@@ -13,18 +13,17 @@
 #include "lldb/Host/ProcessLauncher.h"
 #include "lldb/Host/windows/windows.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
 class ProcessLaunchInfo;
 
-class ProcessLauncherWindows : public ProcessLauncher
-{
-  public:
-    virtual HostProcess LaunchProcess(const ProcessLaunchInfo &launch_info, Error &error);
+class ProcessLauncherWindows : public ProcessLauncher {
+public:
+  virtual HostProcess LaunchProcess(const ProcessLaunchInfo &launch_info,
+                                    Error &error);
 
-  protected:
-    HANDLE GetStdioHandle(const ProcessLaunchInfo &launch_info, int fd);
+protected:
+  HANDLE GetStdioHandle(const ProcessLaunchInfo &launch_info, int fd);
 };
 }
 

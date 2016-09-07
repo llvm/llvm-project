@@ -12,7 +12,7 @@ add_library(
     KernelSpec.cpp
     PackedKernelArgumentArray.cpp
     Platform.cpp
-    PlatformInterfaces.cpp
+    PlatformDevice.cpp
     PlatformManager.cpp
     Stream.cpp)
 target_link_libraries(streamexecutor ${llvm_libs})

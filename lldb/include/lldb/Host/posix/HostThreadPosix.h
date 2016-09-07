@@ -12,22 +12,20 @@
 
 #include "lldb/Host/HostNativeThreadBase.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class HostThreadPosix : public HostNativeThreadBase
-{
-    DISALLOW_COPY_AND_ASSIGN(HostThreadPosix);
+class HostThreadPosix : public HostNativeThreadBase {
+  DISALLOW_COPY_AND_ASSIGN(HostThreadPosix);
 
-  public:
-    HostThreadPosix();
-    HostThreadPosix(lldb::thread_t thread);
-    ~HostThreadPosix() override;
+public:
+  HostThreadPosix();
+  HostThreadPosix(lldb::thread_t thread);
+  ~HostThreadPosix() override;
 
-    Error Join(lldb::thread_result_t *result) override;
-    Error Cancel() override;
+  Error Join(lldb::thread_result_t *result) override;
+  Error Cancel() override;
 
-    Error Detach();
+  Error Detach();
 };
 
 } // namespace lldb_private

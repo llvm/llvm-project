@@ -1,0 +1,4 @@
+DisableFormat: true
+
+# Disabling formatting doesn't implicitly disable include sorting
+SortIncludes: false

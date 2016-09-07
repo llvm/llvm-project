@@ -28,6 +28,7 @@ import sys      # Provide system information
 #--
 if sys.version_info.major >= 3:
     from enum import Enum
+
     class EnumOsType(Enum):
         Unknown = 0
         Darwin = 1
@@ -43,13 +44,15 @@ else:
                   "Linux",
                   "NetBSD",
                   "Windows"]
+
         class __metaclass__(type):
-#++---------------------------------------------------------------------------
-# Details:  Fn acts as an enumeration.
-# Args:     vName - (R) Enumeration to match.
-# Returns:  Int - Matching enumeration/index.
-# Throws:   None.
-#--
+            #++----------------------------------------------------------------
+            # Details:  Fn acts as an enumeration.
+            # Args:     vName - (R) Enumeration to match.
+            # Returns:  Int - Matching enumeration/index.
+            # Throws:   None.
+            #--
+
             def __getattr__(cls, vName):
                 return cls.values.index(vName)
 
@@ -72,6 +75,8 @@ else:
 # Returns:  EnumOsType - The OS type being used ATM.
 # Throws:   None.
 #--
+
+
 def determine_os_type():
     eOSType = EnumOsType.Unknown
 

@@ -5,12 +5,13 @@ Test "print object" where another thread blocks the print object from making pro
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 @skipUnlessDarwin
 class PrintObjTestCase(TestBase):
@@ -47,14 +48,16 @@ class PrintObjTestCase(TestBase):
         self.runCmd("breakpoint list")
 
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         self.runCmd("thread backtrace all")
 
         # Let's get the current stopped thread.  We'd like to switch to the
         # other thread to issue our 'po lock_me' command.
         import lldbsuite.test.lldbutil as lldbutil
-        this_thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        this_thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         self.assertTrue(this_thread)
 
         # Find the other thread.  The iteration protocol of SBProcess and the
@@ -65,7 +68,8 @@ class PrintObjTestCase(TestBase):
                 other_thread = t
                 break
 
-        # Set the other thread as the selected thread to issue our 'po' command.other
+        # Set the other thread as the selected thread to issue our 'po'
+        # command.other
         self.assertTrue(other_thread)
         process.SetSelectedThread(other_thread)
         if self.TraceOn():
@@ -86,4 +90,4 @@ class PrintObjTestCase(TestBase):
                 break
 
         self.expect("po lock_me", OBJECT_PRINTED_CORRECTLY,
-            substrs = ['I am pretty special.'])
+                    substrs=['I am pretty special.'])

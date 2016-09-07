@@ -1,8 +1,10 @@
-import lldb, re
+import lldb
+import re
 
-def parse_linespec (linespec, frame, result):
+
+def parse_linespec(linespec, frame, result):
     """Handles a subset of GDB-style linespecs.  Specifically:
-       
+
        number           - A line in the current file
        +offset          - The line /offset/ lines after this line
        -offset          - The line /offset/ lines before this line
@@ -21,65 +23,73 @@ def parse_linespec (linespec, frame, result):
 
     if (not matched):
         mo = re.match("^([0-9]+)$", linespec)
-        if (mo != None):
+        if (mo is not None):
             matched = True
-            #print "Matched <linenum>"
+            # print "Matched <linenum>"
             line_number = int(mo.group(1))
             line_entry = frame.GetLineEntry()
             if not line_entry.IsValid():
-                result.AppendMessage("Specified a line in the current file, but the current frame doesn't have line table information.")
+                result.AppendMessage(
+                    "Specified a line in the current file, but the current frame doesn't have line table information.")
                 return
-            breakpoint = target.BreakpointCreateByLocation (line_entry.GetFileSpec(), line_number)
+            breakpoint = target.BreakpointCreateByLocation(
+                line_entry.GetFileSpec(), line_number)
 
     if (not matched):
         mo = re.match("^\+([0-9]+)$", linespec)
-        if (mo != None):
+        if (mo is not None):
             matched = True
-            #print "Matched +<count>"
+            # print "Matched +<count>"
             line_number = int(mo.group(1))
             line_entry = frame.GetLineEntry()
             if not line_entry.IsValid():
-                result.AppendMessage("Specified a line in the current file, but the current frame doesn't have line table information.")
+                result.AppendMessage(
+                    "Specified a line in the current file, but the current frame doesn't have line table information.")
                 return
-            breakpoint = target.BreakpointCreateByLocation(line_entry.GetFileSpec(), (line_entry.GetLine() + line_number))
-     
+            breakpoint = target.BreakpointCreateByLocation(
+                line_entry.GetFileSpec(), (line_entry.GetLine() + line_number))
+
     if (not matched):
         mo = re.match("^\-([0-9]+)$", linespec)
-        if (mo != None):
+        if (mo is not None):
             matched = True
-            #print "Matched -<count>"
+            # print "Matched -<count>"
             line_number = int(mo.group(1))
             line_entry = frame.GetLineEntry()
             if not line_entry.IsValid():
-                result.AppendMessage("Specified a line in the current file, but the current frame doesn't have line table information.")
+                result.AppendMessage(
+                    "Specified a line in the current file, but the current frame doesn't have line table information.")
                 return
-            breakpoint = target.BreakpointCreateByLocation(line_entry.GetFileSpec(), (line_entry.GetLine() - line_number))
+            breakpoint = target.BreakpointCreateByLocation(
+                line_entry.GetFileSpec(), (line_entry.GetLine() - line_number))
 
     if (not matched):
         mo = re.match("^(.*):([0-9]+)$", linespec)
-        if (mo != None):
+        if (mo is not None):
             matched = True
-            #print "Matched <filename>:<linenum>"
+            # print "Matched <filename>:<linenum>"
             file_name = mo.group(1)
             line_number = int(mo.group(2))
-            breakpoint = target.BreakpointCreateByLocation(file_name, line_number)
+            breakpoint = target.BreakpointCreateByLocation(
+                file_name, line_number)
 
     if (not matched):
         mo = re.match("\*((0x)?([0-9a-f]+))$", linespec)
-        if (mo != None):
+        if (mo is not None):
             matched = True
-            #print "Matched <address-expression>"
+            # print "Matched <address-expression>"
             address = long(mo.group(1), base=0)
             breakpoint = target.BreakpointCreateByAddress(address)
 
     if (not matched):
-        #print "Trying <function-name>"
+        # print "Trying <function-name>"
         breakpoint = target.BreakpointCreateByName(linespec)
 
     num_locations = breakpoint.GetNumLocations()
 
     if (num_locations == 0):
-        result.AppendMessage("The line specification provided doesn't resolve to any addresses.")
+        result.AppendMessage(
+            "The line specification provided doesn't resolve to any addresses.")
 
     addr_list = []
 
@@ -90,6 +100,7 @@ def parse_linespec (linespec, frame, result):
     target.BreakpointDelete(breakpoint.GetID())
 
     return addr_list
+
 
 def usage_string():
     return """   Sets the program counter to a specific address.
@@ -106,7 +117,8 @@ Command Options Usage:
 
 <location-id> serves to disambiguate when multiple locations could be meant."""
 
-def jump (debugger, command, result, internal_dict):
+
+def jump(debugger, command, result, internal_dict):
     if (command == ""):
         result.AppendMessage(usage_string())
 
@@ -151,17 +163,28 @@ def jump (debugger, command, result, internal_dict):
             if (desired_index >= 0) and (desired_index < len(addresses)):
                 desired_address = addresses[desired_index]
             else:
-                result.AppendMessage("Desired index " + args[1] + " is not one of the options.")
+                result.AppendMessage(
+                    "Desired index " +
+                    args[1] +
+                    " is not one of the options.")
                 return
         else:
             index = 0
-            result.AppendMessage("The specified location resolves to multiple targets.");
+            result.AppendMessage(
+                "The specified location resolves to multiple targets.")
             for address in addresses:
                 stream.Clear()
                 address.GetDescription(stream)
-                result.AppendMessage("  Location ID " + str(index) + ": " + stream.GetData())
+                result.AppendMessage(
+                    "  Location ID " +
+                    str(index) +
+                    ": " +
+                    stream.GetData())
                 index = index + 1
-            result.AppendMessage("Please type 'jump " + command + " <location-id>' to choose one.")
+            result.AppendMessage(
+                "Please type 'jump " +
+                command +
+                " <location-id>' to choose one.")
             return
 
     frame.SetPC(desired_address.GetLoadAddress(target))

@@ -6,6 +6,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestCppScopes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -23,25 +24,32 @@ class TestCppScopes(TestBase):
         # Get the path of the executable
         cwd = os.getcwd()
         exe_file = "a.out"
-        exe_path  = os.path.join(cwd, exe_file)
+        exe_path = os.path.join(cwd, exe_file)
 
         # Load the executable
         target = self.dbg.CreateTarget(exe_path)
         self.assertTrue(target.IsValid(), VALID_TARGET)
 
         # Break on main function
-        main_breakpoint = target.BreakpointCreateBySourceRegex("// break here", src_file_spec)
-        self.assertTrue(main_breakpoint.IsValid() and main_breakpoint.GetNumLocations() >= 1, VALID_BREAKPOINT)
+        main_breakpoint = target.BreakpointCreateBySourceRegex(
+            "// break here", src_file_spec)
+        self.assertTrue(
+            main_breakpoint.IsValid() and main_breakpoint.GetNumLocations() >= 1,
+            VALID_BREAKPOINT)
 
         # Launch the process
         args = None
         env = None
-        process = target.LaunchSimple(args, env, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            args, env, self.get_process_working_directory())
         self.assertTrue(process.IsValid(), PROCESS_IS_VALID)
 
         # Get the thread of the process
-        self.assertTrue(process.GetState() == lldb.eStateStopped, PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(
+            process.GetState() == lldb.eStateStopped,
+            PROCESS_STOPPED)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
 
         # Get current fream of the thread at the breakpoint
         frame = thread.GetSelectedFrame()
@@ -57,12 +65,18 @@ class TestCppScopes(TestBase):
             'a': 4444
         }
 
-        self.assertTrue(global_variables.GetSize() == 4, "target variable returns all variables")
+        self.assertTrue(
+            global_variables.GetSize() == 4,
+            "target variable returns all variables")
         for variable in global_variables:
             name = variable.GetName()
-            self.assertTrue(name in global_variables_assert, "target variable returns wrong variable " + name)
+            self.assertTrue(
+                name in global_variables_assert,
+                "target variable returns wrong variable " + name)
 
         for name in global_variables_assert:
             value = frame.EvaluateExpression(name)
             assert_value = global_variables_assert[name]
-            self.assertTrue(value.IsValid() and value.GetValueAsSigned() == assert_value, name + " = " + str(assert_value))
+            self.assertTrue(
+                value.IsValid() and value.GetValueAsSigned() == assert_value,
+                name + " = " + str(assert_value))

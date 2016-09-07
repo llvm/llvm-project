@@ -5,12 +5,13 @@ Test that an alias can reference other aliases without crashing.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
+
 
 class NestedAliasTestCase(TestBase):
 
@@ -29,17 +30,18 @@ class NestedAliasTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break in main() aftre the variables are assigned values.
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped', 'stop reason = breakpoint'])
+                    substrs=['stopped', 'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-            substrs = [' resolved, hit count = 1'])
+                    substrs=[' resolved, hit count = 1'])
 
         # This is the function to remove the custom aliases in order to have a
         # clean slate for the next test case.
@@ -54,15 +56,38 @@ class NestedAliasTestCase(TestBase):
 
         self.runCmd('command alias read memory read -f A')
         self.runCmd('command alias rd read -c 3')
-        
-        self.expect('memory read -f A -c 3 `&my_ptr[0]`', substrs=['deadbeef', 'main.cpp:', 'feedbeef'])
-        self.expect('rd `&my_ptr[0]`', substrs=['deadbeef', 'main.cpp:', 'feedbeef'])
 
-        self.expect('memory read -f A -c 3 `&my_ptr[0]`', substrs=['deadfeed'], matching=False)
+        self.expect(
+            'memory read -f A -c 3 `&my_ptr[0]`',
+            substrs=[
+                'deadbeef',
+                'main.cpp:',
+                'feedbeef'])
+        self.expect(
+            'rd `&my_ptr[0]`',
+            substrs=[
+                'deadbeef',
+                'main.cpp:',
+                'feedbeef'])
+
+        self.expect(
+            'memory read -f A -c 3 `&my_ptr[0]`',
+            substrs=['deadfeed'],
+            matching=False)
         self.expect('rd `&my_ptr[0]`', substrs=['deadfeed'], matching=False)
 
         self.runCmd('command alias fo frame variable -O --')
         self.runCmd('command alias foself fo self')
-        
-        self.expect('help foself', substrs=['--show-all-children', '--raw-output'], matching=False)
-        self.expect('help foself', substrs=['Show variables for the current', 'stack frame.'], matching=True)
+
+        self.expect(
+            'help foself',
+            substrs=[
+                '--show-all-children',
+                '--raw-output'],
+            matching=False)
+        self.expect(
+            'help foself',
+            substrs=[
+                'Show variables for the current',
+                'stack frame.'],
+            matching=True)

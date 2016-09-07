@@ -14,6 +14,7 @@ import subprocess
 _COMMON_SYNC_OPTS = "-avzh --delete"
 _COMMON_EXCLUDE_OPTS = "--exclude=DerivedData --exclude=.svn --exclude=.git --exclude=llvm-build/Release+Asserts"
 
+
 def normalize_configuration(config_text):
     if not config_text:
         return "debug"
@@ -24,6 +25,7 @@ def normalize_configuration(config_text):
     else:
         raise Exception("unknown configuration specified: %s" % config_text)
 
+
 def parse_args():
     DEFAULT_REMOTE_ROOT_DIR = "/mnt/ssd/work/macosx.sync"
     DEFAULT_REMOTE_HOSTNAME = "tfiala2.mtv.corp.google.com"
@@ -33,9 +35,13 @@ def parse_args():
     parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
 
     parser.add_argument(
-        "--configuration", "-c",
+        "--configuration",
+        "-c",
         help="specify configuration (Debug, Release)",
-        default=normalize_configuration(os.environ.get('CONFIGURATION', 'Debug')))
+        default=normalize_configuration(
+            os.environ.get(
+                'CONFIGURATION',
+                'Debug')))
     parser.add_argument(
         "--debug", "-d",
         action="store_true",
@@ -60,11 +66,16 @@ def parse_args():
         "--user", "-u", help="specify the user name for the remote system",
         default=getpass.getuser())
     parser.add_argument(
-        "--xcode-action", "-x", help="$(ACTION) from Xcode", nargs='?', default=None)
+        "--xcode-action",
+        "-x",
+        help="$(ACTION) from Xcode",
+        nargs='?',
+        default=None)
 
     command_line_args = sys.argv[1:]
     if os.path.exists(OPTIONS_FILENAME):
-        # Prepend the file so that command line args override the file contents.
+        # Prepend the file so that command line args override the file
+        # contents.
         command_line_args.insert(0, "@%s" % OPTIONS_FILENAME)
 
     return parser.parse_args(command_line_args)
@@ -102,7 +113,8 @@ def init_with_args(args):
             "local lldb root needs to be called 'lldb' but was {} instead"
             .format(os.path.basename(args.local_lldb_dir)))
 
-    args.lldb_dir_relative_regex = re.compile("%s/llvm/tools/lldb/" % args.remote_dir)
+    args.lldb_dir_relative_regex = re.compile(
+        "%s/llvm/tools/lldb/" % args.remote_dir)
     args.llvm_dir_relative_regex = re.compile("%s/" % args.remote_dir)
 
     print("Xcode action:", args.xcode_action)
@@ -117,6 +129,7 @@ def init_with_args(args):
         return False
 
     return True
+
 
 def sync_llvm(args):
     commandline = ["rsync"]
@@ -138,9 +151,8 @@ def sync_lldb(args):
     commandline.extend(_COMMON_EXCLUDE_OPTS.split())
     commandline.append("--exclude=/lldb/llvm")
     commandline.extend(["-e", "ssh -p {}".format(args.port)])
-    commandline.extend([
-        args.local_lldb_dir,
-        "%s@%s:%s/llvm/tools" % (args.user, args.remote_address, args.remote_dir)])
+    commandline.extend([args.local_lldb_dir, "%s@%s:%s/llvm/tools" %
+                        (args.user, args.remote_address, args.remote_dir)])
     if args.debug:
         print("going to execute lldb sync: {}".format(commandline))
     return subprocess.call(commandline)
@@ -174,7 +186,7 @@ def build_cmake_command(args):
         "-DCMAKE_BUILD_TYPE=%s" % build_type_name,
         "-Wno-dev",
         os.path.join("..", "llvm")
-        ]
+    ]
 
     return command_line
 
@@ -187,7 +199,7 @@ def maybe_configure(args):
         "cd", args.remote_dir, "&&",
         "mkdir", "-p", args.remote_build_dir, "&&",
         "cd", args.remote_build_dir, "&&"
-        ]
+    ]
     commandline.extend(build_cmake_command(args))
 
     if args.debug:
@@ -243,7 +255,7 @@ def run_remote_build_command(args, build_command_list):
                     print(display_line, file=sys.stderr)
 
         proc_retval = proc.poll()
-        if proc_retval != None:
+        if proc_retval is not None:
             # Process stopped.  Drain output before finishing up.
 
             # Drain stdout.

@@ -15,38 +15,30 @@
 
 namespace lldb {
 
-    class SBStructuredData
-    {
-    public:
+class SBStructuredData {
+public:
+  SBStructuredData();
 
-        SBStructuredData();
+  SBStructuredData(const lldb::SBStructuredData &rhs);
 
-        SBStructuredData(const lldb::SBStructuredData &rhs);
+  SBStructuredData(const lldb::EventSP &event_sp);
 
-        SBStructuredData(const lldb::EventSP &event_sp);
+  ~SBStructuredData();
 
-        ~SBStructuredData();
+  lldb::SBStructuredData &operator=(const lldb::SBStructuredData &rhs);
 
-        lldb::SBStructuredData &
-        operator =(const lldb::SBStructuredData &rhs);
+  bool IsValid() const;
 
-        bool
-        IsValid() const;
+  void Clear();
 
-        void
-        Clear();
+  lldb::SBError GetAsJSON(lldb::SBStream &stream) const;
 
-        lldb::SBError
-        GetAsJSON(lldb::SBStream &stream) const;
+  lldb::SBError GetDescription(lldb::SBStream &stream) const;
 
-        lldb::SBError
-        GetDescription(lldb::SBStream &stream) const;
-
-    private:
-
-        class Impl;
-        std::unique_ptr<Impl> m_impl_up;
-    };
+private:
+  class Impl;
+  std::unique_ptr<Impl> m_impl_up;
+};
 }
 
 #endif /* SBStructuredData_h */
