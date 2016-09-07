@@ -17,83 +17,65 @@
 using namespace lldb;
 using namespace lldb_private;
 
-OptionGroupFile::OptionGroupFile (uint32_t usage_mask,
-                                  bool required,
-                                  const char *long_option, 
-                                  int short_option,
-                                  uint32_t completion_type,
-                                  lldb::CommandArgumentType argument_type,
-                                  const char *usage_text) :
-    m_file ()
-{
-    m_option_definition.usage_mask = usage_mask;
-    m_option_definition.required = required;
-    m_option_definition.long_option = long_option;
-    m_option_definition.short_option = short_option;
-    m_option_definition.validator = nullptr;
-    m_option_definition.option_has_arg = OptionParser::eRequiredArgument;
-    m_option_definition.enum_values = nullptr;
-    m_option_definition.completion_type = completion_type;
-    m_option_definition.argument_type = argument_type;
-    m_option_definition.usage_text = usage_text;
+OptionGroupFile::OptionGroupFile(uint32_t usage_mask, bool required,
+                                 const char *long_option, int short_option,
+                                 uint32_t completion_type,
+                                 lldb::CommandArgumentType argument_type,
+                                 const char *usage_text)
+    : m_file() {
+  m_option_definition.usage_mask = usage_mask;
+  m_option_definition.required = required;
+  m_option_definition.long_option = long_option;
+  m_option_definition.short_option = short_option;
+  m_option_definition.validator = nullptr;
+  m_option_definition.option_has_arg = OptionParser::eRequiredArgument;
+  m_option_definition.enum_values = nullptr;
+  m_option_definition.completion_type = completion_type;
+  m_option_definition.argument_type = argument_type;
+  m_option_definition.usage_text = usage_text;
 }
 
-OptionGroupFile::~OptionGroupFile ()
-{
+OptionGroupFile::~OptionGroupFile() {}
+
+Error OptionGroupFile::SetOptionValue(uint32_t option_idx,
+                                      const char *option_arg,
+                                      ExecutionContext *execution_context) {
+  Error error(m_file.SetValueFromString(option_arg));
+  return error;
 }
 
-Error
-OptionGroupFile::SetOptionValue(uint32_t option_idx,
-                                const char *option_arg,
-                                ExecutionContext *execution_context)
-{
-    Error error (m_file.SetValueFromString (option_arg));
-    return error;
+void OptionGroupFile::OptionParsingStarting(
+    ExecutionContext *execution_context) {
+  m_file.Clear();
 }
 
-void
-OptionGroupFile::OptionParsingStarting(ExecutionContext *execution_context)
-{
-    m_file.Clear();
+OptionGroupFileList::OptionGroupFileList(
+    uint32_t usage_mask, bool required, const char *long_option,
+    int short_option, uint32_t completion_type,
+    lldb::CommandArgumentType argument_type, const char *usage_text)
+    : m_file_list() {
+  m_option_definition.usage_mask = usage_mask;
+  m_option_definition.required = required;
+  m_option_definition.long_option = long_option;
+  m_option_definition.short_option = short_option;
+  m_option_definition.validator = nullptr;
+  m_option_definition.option_has_arg = OptionParser::eRequiredArgument;
+  m_option_definition.enum_values = nullptr;
+  m_option_definition.completion_type = completion_type;
+  m_option_definition.argument_type = argument_type;
+  m_option_definition.usage_text = usage_text;
 }
 
+OptionGroupFileList::~OptionGroupFileList() {}
 
-OptionGroupFileList::OptionGroupFileList (uint32_t usage_mask,
-                                          bool required,
-                                          const char *long_option, 
-                                          int short_option,
-                                          uint32_t completion_type,
-                                          lldb::CommandArgumentType argument_type,
-                                          const char *usage_text) :
-    m_file_list ()
-{
-    m_option_definition.usage_mask = usage_mask;
-    m_option_definition.required = required;
-    m_option_definition.long_option = long_option;
-    m_option_definition.short_option = short_option;
-    m_option_definition.validator = nullptr;
-    m_option_definition.option_has_arg = OptionParser::eRequiredArgument;
-    m_option_definition.enum_values = nullptr;
-    m_option_definition.completion_type = completion_type;
-    m_option_definition.argument_type = argument_type;
-    m_option_definition.usage_text = usage_text;
+Error OptionGroupFileList::SetOptionValue(uint32_t option_idx,
+                                          const char *option_arg,
+                                          ExecutionContext *execution_context) {
+  Error error(m_file_list.SetValueFromString(option_arg));
+  return error;
 }
 
-OptionGroupFileList::~OptionGroupFileList ()
-{
-}
-
-Error
-OptionGroupFileList::SetOptionValue(uint32_t option_idx,
-                                    const char *option_arg,
-                                    ExecutionContext *execution_context)
-{
-    Error error (m_file_list.SetValueFromString (option_arg));
-    return error;
-}
-
-void
-OptionGroupFileList::OptionParsingStarting(ExecutionContext *execution_context)
-{
-    m_file_list.Clear();
+void OptionGroupFileList::OptionParsingStarting(
+    ExecutionContext *execution_context) {
+  m_file_list.Clear();
 }

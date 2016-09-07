@@ -20,15 +20,17 @@ import os
 import unittest2
 
 
-def check_for_idx(child,idx):
-    return child.GetValue() == str(idx+1)
+def check_for_idx(child, idx):
+    return child.GetValue() == str(idx + 1)
 
-def check_for_C(child,idx):
+
+def check_for_C(child, idx):
     if child.GetTypeName() == "a.C":
         if child.GetNumChildren() == 1:
             if child.GetChildAtIndex(0).GetName() == "m_counter":
                 return True
     return False
+
 
 class TestSwiftNestedArray(TestBase):
 

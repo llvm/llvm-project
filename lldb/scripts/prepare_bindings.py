@@ -154,8 +154,8 @@ def process_args(args):
     parser.add_argument(
         "--target-platform",
         help=(
-              "Specifies the platform we are building for."
-              "Should be the same as what platform.system() returns."))
+            "Specifies the platform we are building for."
+            "Should be the same as what platform.system() returns."))
 
     group = parser.add_argument_group("static binding usage")
     group.add_argument(
@@ -255,7 +255,10 @@ def find_swig_executable(options, must_exist):
                 paths_to_check)
             sys.exit(-6)
         else:
-            logging.info("%s not found in paths %s", exe_basename, paths_to_check)
+            logging.info(
+                "%s not found in paths %s",
+                exe_basename,
+                paths_to_check)
     else:
         logging.info("found swig executable: %s", options.swig_executable)
 

@@ -6,11 +6,12 @@ should compile and link with the LLDB framework."""
 from __future__ import print_function
 
 
-
-import os, re
+import os
+import re
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class SBDirCheckerCase(TestBase):
 
@@ -30,7 +31,8 @@ class SBDirCheckerCase(TestBase):
         if not (self.platformIsDarwin() and self.getArchitecture() == "x86_64"):
             self.skipTest("This test is only for LLDB.framework built 64-bit")
         if self.getArchitecture() == "i386":
-            self.skipTest("LLDB is 64-bit and cannot be linked to 32-bit test program.")
+            self.skipTest(
+                "LLDB is 64-bit and cannot be linked to 32-bit test program.")
 
         # Generate main.cpp, build it, and execute.
         self.generate_main_cpp()
@@ -43,7 +45,8 @@ class SBDirCheckerCase(TestBase):
         with open(temp, 'r') as f:
             content = f.read()
 
-        public_api_dir = os.path.join(os.environ["LLDB_SRC"], "include", "lldb", "API")
+        public_api_dir = os.path.join(
+            os.environ["LLDB_SRC"], "include", "lldb", "API")
 
         # Look under the include/lldb/API directory and add #include statements
         # for all the SB API headers.
@@ -51,10 +54,11 @@ class SBDirCheckerCase(TestBase):
         # For different platforms, the include statement can vary.
         if self.platformIsDarwin():
             include_stmt = "'#include <%s>' % os.path.join('LLDB', header)"
-        if self.getPlatform() == "freebsd" or self.getPlatform() == "linux" or os.environ.get('LLDB_BUILD_TYPE') == 'Makefile':
+        if self.getPlatform() == "freebsd" or self.getPlatform(
+        ) == "linux" or os.environ.get('LLDB_BUILD_TYPE') == 'Makefile':
             include_stmt = "'#include <%s>' % os.path.join(public_api_dir, header)"
-        list = [eval(include_stmt) for header in public_headers if (header.startswith("SB") and
-                                                                    header.endswith(".h"))]
+        list = [eval(include_stmt) for header in public_headers if (
+            header.startswith("SB") and header.endswith(".h"))]
         includes = '\n'.join(list)
         new_content = content.replace('%include_SB_APIs%', includes)
         src = os.path.join(os.getcwd(), self.source)
@@ -69,21 +73,27 @@ class SBDirCheckerCase(TestBase):
         exe = os.path.join(os.getcwd(), exe_name)
         self.runCmd("file %s" % exe, CURRENT_EXECUTABLE_SET)
 
-        self.line_to_break = line_number(self.source, '// Set breakpoint here.')
+        self.line_to_break = line_number(
+            self.source, '// Set breakpoint here.')
 
-        env_cmd = "settings set target.env-vars %s=%s" %(self.dylibPath, self.getLLDBLibraryEnvVal())
+        env_cmd = "settings set target.env-vars %s=%s" % (
+            self.dylibPath, self.getLLDBLibraryEnvVal())
         if self.TraceOn():
             print("Set environment to: ", env_cmd)
         self.runCmd(env_cmd)
-        self.addTearDownHook(lambda: self.dbg.HandleCommand("settings remove target.env-vars %s" % self.dylibPath))
+        self.addTearDownHook(
+            lambda: self.dbg.HandleCommand(
+                "settings remove target.env-vars %s" %
+                self.dylibPath))
 
-        lldbutil.run_break_set_by_file_and_line (self, self.source, self.line_to_break, num_expected_locations = -1)
+        lldbutil.run_break_set_by_file_and_line(
+            self, self.source, self.line_to_break, num_expected_locations=-1)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         self.runCmd('frame variable')

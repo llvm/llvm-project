@@ -17,20 +17,22 @@ from . import configuration
 from . import lldbutil
 from .decorators import *
 
+
 def source_type(filename):
     _, extension = os.path.splitext(filename)
     return {
-        '.c' : 'C_SOURCES',
-        '.cpp' : 'CXX_SOURCES',
-        '.cxx' : 'CXX_SOURCES',
-        '.cc' : 'CXX_SOURCES',
-        '.m' : 'OBJC_SOURCES',
-        '.mm' : 'OBJCXX_SOURCES',
-        '.swift' : 'SWIFT_SOURCES'
+        '.c': 'C_SOURCES',
+        '.cpp': 'CXX_SOURCES',
+        '.cxx': 'CXX_SOURCES',
+        '.cc': 'CXX_SOURCES',
+        '.m': 'OBJC_SOURCES',
+        '.mm': 'OBJCXX_SOURCES',
+        '.swift': 'SWIFT_SOURCES'
     }.get(extension, None)
 
 
 class CommandParser:
+
     def __init__(self):
         self.breakpoints = []
 
@@ -51,27 +53,31 @@ class CommandParser:
             file_handle = open(source_file)
             lines = file_handle.readlines()
             line_number = 0
-            current_breakpoint = None # non-NULL means we're looking through whitespace to find additional commands
+            # non-NULL means we're looking through whitespace to find
+            # additional commands
+            current_breakpoint = None
             for line in lines:
-                line_number = line_number + 1 # 1-based, so we do this first
+                line_number = line_number + 1  # 1-based, so we do this first
                 (command, new_breakpoint) = self.parse_one_command(line)
 
                 if new_breakpoint:
                     current_breakpoint = None
 
-                if command != None:
-                    if current_breakpoint == None:
+                if command is not None:
+                    if current_breakpoint is None:
                         current_breakpoint = {}
                         current_breakpoint['file_name'] = source_file
                         current_breakpoint['line_number'] = line_number
                         current_breakpoint['command'] = command
                         self.breakpoints.append(current_breakpoint)
                     else:
-                        current_breakpoint['command'] = current_breakpoint['command'] + "\n" + command
+                        current_breakpoint['command'] = current_breakpoint[
+                            'command'] + "\n" + command
 
     def set_breakpoints(self, target):
         for breakpoint in self.breakpoints:
-            breakpoint['breakpoint'] = target.BreakpointCreateByLocation(breakpoint['file_name'], breakpoint['line_number'])
+            breakpoint['breakpoint'] = target.BreakpointCreateByLocation(
+                breakpoint['file_name'], breakpoint['line_number'])
 
     def handle_breakpoint(self, test, breakpoint_id):
         for breakpoint in self.breakpoints:
@@ -79,12 +85,14 @@ class CommandParser:
                 test.execute_user_command(breakpoint['command'])
                 return
 
+
 class InlineTest(TestBase):
     # Internal implementation
 
     def getRerunArgs(self):
         # The -N option says to NOT run a if it matches the option argument, so
-        # if we are using dSYM we say to NOT run dwarf (-N dwarf) and vice versa.
+        # if we are using dSYM we say to NOT run dwarf (-N dwarf) and vice
+        # versa.
         if self.using_dsym is None:
             # The test was skipped altogether.
             return ""
@@ -109,7 +117,8 @@ class InlineTest(TestBase):
 
         makefile = open("Makefile", 'w+')
 
-        level = os.sep.join([".."] * len(self.mydir.split(os.sep))) + os.sep + "make"
+        level = os.sep.join(
+            [".."] * len(self.mydir.split(os.sep))) + os.sep + "make"
 
         makefile.write("LEVEL = " + level + "\n")
 
@@ -117,8 +126,10 @@ class InlineTest(TestBase):
             line = t + " := " + " ".join(categories[t])
             makefile.write(line + "\n")
 
-        if ('OBJCXX_SOURCES' in list(categories.keys())) or ('OBJC_SOURCES' in list(categories.keys())):
-            makefile.write("LDFLAGS = $(CFLAGS) -lobjc -framework Foundation\n")
+        if ('OBJCXX_SOURCES' in list(categories.keys())) or (
+                'OBJC_SOURCES' in list(categories.keys())):
+            makefile.write(
+                "LDFLAGS = $(CFLAGS) -lobjc -framework Foundation\n")
 
         if ('CXX_SOURCES' in list(categories.keys())):
             makefile.write("CXXFLAGS += -std=c++11\n")
@@ -159,7 +170,7 @@ class InlineTest(TestBase):
     def do_test(self):
         exe_name = "a.out"
         exe = os.path.join(os.getcwd(), exe_name)
-        source_files = [ f for f in os.listdir(os.getcwd()) if source_type(f) ]
+        source_files = [f for f in os.listdir(os.getcwd()) if source_type(f)]
         target = self.dbg.CreateTarget(exe)
 
         parser = CommandParser()
@@ -169,17 +180,17 @@ class InlineTest(TestBase):
         process = target.LaunchSimple(None, None, os.getcwd())
 
         while lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint):
-            thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-            breakpoint_id = thread.GetStopReasonDataAtIndex (0)
+            thread = lldbutil.get_stopped_thread(
+                process, lldb.eStopReasonBreakpoint)
+            breakpoint_id = thread.GetStopReasonDataAtIndex(0)
             parser.handle_breakpoint(self, breakpoint_id)
             process.Continue()
 
-
     # Utilities for testcases
 
-    def check_expression (self, expression, expected_result, use_summary = True):
-        value = self.frame().EvaluateExpression (expression)
-        self.assertTrue(value.IsValid(), expression+"returned a valid value")
+    def check_expression(self, expression, expected_result, use_summary=True):
+        value = self.frame().EvaluateExpression(expression)
+        self.assertTrue(value.IsValid(), expression + "returned a valid value")
         if self.TraceOn():
             print(value.GetSummary())
             print(value.GetValue())
@@ -187,12 +198,14 @@ class InlineTest(TestBase):
             answer = value.GetSummary()
         else:
             answer = value.GetValue()
-        report_str = "%s expected: %s got: %s"%(expression, expected_result, answer)
+        report_str = "%s expected: %s got: %s" % (
+            expression, expected_result, answer)
         self.assertTrue(answer == expected_result, report_str)
+
 
 def ApplyDecoratorsToFunction(func, decorators):
     tmp = func
-    if type(decorators) == list:
+    if isinstance(decorators, list):
         for decorator in decorators:
             tmp = decorator(tmp)
     elif hasattr(decorators, '__call__'):
@@ -217,20 +230,27 @@ def MakeInlineTest(__file, __globals, decorators=None):
     test.name = test_name
 
     target_platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
-    if test_categories.is_supported_on_platform("dsym", target_platform, configuration.compilers):
-        test.test_with_dsym = ApplyDecoratorsToFunction(test._InlineTest__test_with_dsym, decorators)
-    if test_categories.is_supported_on_platform("dwarf", target_platform, configuration.compilers):
-        test.test_with_dwarf = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwarf, decorators)
-    if test_categories.is_supported_on_platform("dwo", target_platform, configuration.compilers):
-        test.test_with_dwo = ApplyDecoratorsToFunction(test._InlineTest__test_with_dwo, decorators)
-    if test_categories.is_supported_on_platform("gmodules", target_platform, configuration.compilers):
-        test.test_with_gmodules = ApplyDecoratorsToFunction(test._InlineTest__test_with_gmodules, decorators)
+    if test_categories.is_supported_on_platform(
+            "dsym", target_platform, configuration.compilers):
+        test.test_with_dsym = ApplyDecoratorsToFunction(
+            test._InlineTest__test_with_dsym, decorators)
+    if test_categories.is_supported_on_platform(
+            "dwarf", target_platform, configuration.compilers):
+        test.test_with_dwarf = ApplyDecoratorsToFunction(
+            test._InlineTest__test_with_dwarf, decorators)
+    if test_categories.is_supported_on_platform(
+            "dwo", target_platform, configuration.compilers):
+        test.test_with_dwo = ApplyDecoratorsToFunction(
+            test._InlineTest__test_with_dwo, decorators)
+    if test_categories.is_supported_on_platform(
+            "gmodules", target_platform, configuration.compilers):
+        test.test_with_gmodules = ApplyDecoratorsToFunction(
+            test._InlineTest__test_with_gmodules, decorators)
 
     # Add the test case to the globals, and hide InlineTest
-    __globals.update({test_name : test})
+    __globals.update({test_name: test})
 
     # Keep track of the original test filename so we report it
     # correctly in test results.
     test.test_filename = __file
     return test
-

@@ -11,22 +11,28 @@
 # ------------------------------------------------------------------------------
 """This test verifies that the REPL can validly do subclass."""
 
-import os, time
+import os
+import time
 import unittest2
 import lldb
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
 from lldbsuite.test import decorators
 
+
 class REPLSubclassingTestCase (REPLTest):
 
     mydir = REPLTest.compute_mydir(__file__)
 
-    @decorators.expectedFailureAll(oslist=["macosx"], bugnumber="rdar://26768714")
+    @decorators.expectedFailureAll(
+        oslist=["macosx"],
+        bugnumber="rdar://26768714")
     def doTest(self):
         self.command('class A {init(a: Int) {}}')
-        self.command('class B : A {let x: Int; init() { x = 10; super.init(a: x) } }')
+        self.command(
+            'class B : A {let x: Int; init() { x = 10; super.init(a: x) } }')
         self.command('print(B().x)', patterns=['10'])
-        self.command('extension B : CustomStringConvertible { var description:String { return "class B is a subclass of class A"} }')
-        self.command('print(B())', patterns=['class B is a subclass of class A'])
-
-
+        self.command(
+            'extension B : CustomStringConvertible { var description:String { return "class B is a subclass of class A"} }')
+        self.command(
+            'print(B())',
+            patterns=['class B is a subclass of class A'])

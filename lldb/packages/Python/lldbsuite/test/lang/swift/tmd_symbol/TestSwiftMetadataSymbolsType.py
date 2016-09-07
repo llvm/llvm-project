@@ -33,7 +33,7 @@ class TestSwiftMetadataSymbol(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
         """Test that metadata symbols are properly resolved as such"""
@@ -45,7 +45,8 @@ class TestSwiftMetadataSymbol(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('Set breakpoint here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -54,19 +55,26 @@ class TestSwiftMetadataSymbol(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
-        symbols = target.FindSymbols("_TMSd",lldb.eSymbolTypeMetadata)
-        self.assertTrue(symbols.GetSize() > 0, "no metadata symbol named _TMSd found")
+        symbols = target.FindSymbols("_TMSd", lldb.eSymbolTypeMetadata)
+        self.assertTrue(
+            symbols.GetSize() > 0,
+            "no metadata symbol named _TMSd found")
         symbol = symbols.GetContextAtIndex(0).GetSymbol()
-        self.assertTrue(symbol.IsValid(), "no valid metadata symbol named _TMSd found")
+        self.assertTrue(
+            symbol.IsValid(),
+            "no valid metadata symbol named _TMSd found")
         addr = symbol.GetStartAddress().GetLoadAddress(target)
-        self.assertTrue(addr != 0 and addr != 0xFFFFFFFFFFFFFFFF, "no symbol named _TMSd with a sensible value found")
+        self.assertTrue(
+            addr != 0 and addr != 0xFFFFFFFFFFFFFFFF,
+            "no symbol named _TMSd with a sensible value found")
 
 if __name__ == '__main__':
     import atexit

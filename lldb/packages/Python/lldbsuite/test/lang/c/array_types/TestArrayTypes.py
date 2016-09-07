@@ -3,12 +3,13 @@
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class ArrayTypesTestCase(TestBase):
 
@@ -26,7 +27,8 @@ class ArrayTypesTestCase(TestBase):
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.c", self.line, num_expected_locations=1, loc_exact=False)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line, num_expected_locations=1, loc_exact=False)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
@@ -39,35 +41,45 @@ class ArrayTypesTestCase(TestBase):
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-            substrs = ['resolved, hit count = 1'])
+                    substrs=['resolved, hit count = 1'])
 
         # Issue 'variable list' command on several array-type variables.
 
-        self.expect("frame variable --show-types strings", VARIABLES_DISPLAYED_CORRECTLY,
-            startstr = '(char *[4])',
-            substrs = ['(char *) [0]',
-                       '(char *) [1]',
-                       '(char *) [2]',
-                       '(char *) [3]',
-                       'Hello',
-                       'Hola',
-                       'Bonjour',
-                       'Guten Tag'])
+        self.expect(
+            "frame variable --show-types strings",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            startstr='(char *[4])',
+            substrs=[
+                '(char *) [0]',
+                '(char *) [1]',
+                '(char *) [2]',
+                '(char *) [3]',
+                'Hello',
+                'Hola',
+                'Bonjour',
+                'Guten Tag'])
 
-        self.expect("frame variable --show-types --raw -- char_16", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['(char) [0]',
-                       '(char) [15]'])
+        self.expect(
+            "frame variable --show-types --raw -- char_16",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                '(char) [0]',
+                '(char) [15]'])
 
-        self.expect("frame variable --show-types ushort_matrix", VARIABLES_DISPLAYED_CORRECTLY,
-            startstr = '(unsigned short [2][3])')
+        self.expect(
+            "frame variable --show-types ushort_matrix",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            startstr='(unsigned short [2][3])')
 
-        self.expect("frame variable --show-types long_6", VARIABLES_DISPLAYED_CORRECTLY,
-            startstr = '(long [6])')
+        self.expect(
+            "frame variable --show-types long_6",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            startstr='(long [6])')
 
     @add_test_categories(['pyapi'])
     def test_and_python_api(self):
@@ -84,24 +96,30 @@ class ArrayTypesTestCase(TestBase):
         # Sanity check the print representation of breakpoint.
         bp = str(breakpoint)
         self.expect(bp, msg="Breakpoint looks good", exe=False,
-            substrs = ["file = 'main.c'",
-                       "line = %d" % self.line,
-                       "locations = 1"])
-        self.expect(bp, msg="Breakpoint is not resolved as yet", exe=False, matching=False,
-            substrs = ["resolved = 1"])
+                    substrs=["file = 'main.c'",
+                             "line = %d" % self.line,
+                             "locations = 1"])
+        self.expect(
+            bp,
+            msg="Breakpoint is not resolved as yet",
+            exe=False,
+            matching=False,
+            substrs=["resolved = 1"])
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Sanity check the print representation of process.
         proc = str(process)
         self.expect(proc, msg="Process looks good", exe=False,
-            substrs = ["state = stopped",
-                       "executable = a.out"])
+                    substrs=["state = stopped",
+                              "executable = a.out"])
 
         # The stop reason of the thread should be breakpoint.
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
 
         # Sanity check the print representation of thread.
@@ -114,8 +132,11 @@ class ArrayTypesTestCase(TestBase):
             tidstr = "tid = %u" % thread.GetThreadID()
         else:
             tidstr = "tid = 0x%4.4x" % thread.GetThreadID()
-        self.expect(thr, "Thread looks good with stop reason = breakpoint", exe=False,
-            substrs = [tidstr])
+        self.expect(
+            thr,
+            "Thread looks good with stop reason = breakpoint",
+            exe=False,
+            substrs=[tidstr])
 
         # The breakpoint should have a hit count of 1.
         self.assertEqual(breakpoint.GetHitCount(), 1, BREAKPOINT_HIT_ONCE)
@@ -123,24 +144,33 @@ class ArrayTypesTestCase(TestBase):
         # The breakpoint should be resolved by now.
         bp = str(breakpoint)
         self.expect(bp, "Breakpoint looks good and is resolved", exe=False,
-            substrs = ["file = 'main.c'",
-                       "line = %d" % self.line,
-                       "locations = 1"])
+                    substrs=["file = 'main.c'",
+                             "line = %d" % self.line,
+                             "locations = 1"])
 
         # Sanity check the print representation of frame.
         frame = thread.GetFrameAtIndex(0)
         frm = str(frame)
-        self.expect(frm,
-                    "Frame looks good with correct index %d" % frame.GetFrameID(),
-                    exe=False,
-            substrs = ["#%d" % frame.GetFrameID()])
+        self.expect(
+            frm,
+            "Frame looks good with correct index %d" %
+            frame.GetFrameID(),
+            exe=False,
+            substrs=[
+                "#%d" %
+                frame.GetFrameID()])
 
         # Lookup the "strings" string array variable and sanity check its print
         # representation.
         variable = frame.FindVariable("strings")
         var = str(variable)
-        self.expect(var, "Variable for 'strings' looks good with correct name", exe=False,
-            substrs = ["%s" % variable.GetName()])
+        self.expect(
+            var,
+            "Variable for 'strings' looks good with correct name",
+            exe=False,
+            substrs=[
+                "%s" %
+                variable.GetName()])
         self.DebugSBValue(variable)
         self.assertTrue(variable.GetNumChildren() == 4,
                         "Variable 'strings' should have 4 children")
@@ -186,9 +216,11 @@ class ArrayTypesTestCase(TestBase):
         # Last, check that "long_6" has a value type of eValueTypeVariableLocal
         # and "argc" has eValueTypeVariableArgument.
         from lldbsuite.test.lldbutil import value_type_to_str
-        self.assertTrue(variable.GetValueType() == lldb.eValueTypeVariableLocal,
-                        "Variable 'long_6' should have '%s' value type." %
-                        value_type_to_str(lldb.eValueTypeVariableLocal))
+        self.assertTrue(
+            variable.GetValueType() == lldb.eValueTypeVariableLocal,
+            "Variable 'long_6' should have '%s' value type." %
+            value_type_to_str(
+                lldb.eValueTypeVariableLocal))
         argc = frame.FindVariable("argc")
         self.DebugSBValue(argc)
         self.assertTrue(argc.GetValueType() == lldb.eValueTypeVariableArgument,

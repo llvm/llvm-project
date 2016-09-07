@@ -43,9 +43,10 @@ class TestExpressionErrors(TestBase):
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
     def continue_by_pattern(self, pattern):
-        bkpt = self.target.BreakpointCreateBySourceRegex(pattern, self.main_source_spec)
+        bkpt = self.target.BreakpointCreateBySourceRegex(
+            pattern, self.main_source_spec)
         self.assertTrue(bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
-        self.continue_to_bkpt (self.process, bkpt)
+        self.continue_to_bkpt(self.process, bkpt)
         self.target.BreakpointDelete(bkpt.GetID())
 
     def do_test(self):
@@ -59,8 +60,11 @@ class TestExpressionErrors(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        global_scope_bkpt = target.BreakpointCreateBySourceRegex('Set a breakpoint here to run expressions', self.main_source_spec)
-        self.assertTrue(global_scope_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
+        global_scope_bkpt = target.BreakpointCreateBySourceRegex(
+            'Set a breakpoint here to run expressions', self.main_source_spec)
+        self.assertTrue(
+            global_scope_bkpt.GetNumLocations() > 0,
+            VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
@@ -69,7 +73,8 @@ class TestExpressionErrors(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, global_scope_bkpt)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, global_scope_bkpt)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -80,19 +85,35 @@ class TestExpressionErrors(TestBase):
         options.SetFetchDynamicValue(lldb.eDynamicCanRunTarget)
 
         # FIXME: pull the "try" back out when we fix <rdar://problem/21949031>
-        enum_value = self.frame.EvaluateExpression ("IThrowEnumOver10(101)", options)
+        enum_value = self.frame.EvaluateExpression(
+            "IThrowEnumOver10(101)", options)
         self.assertTrue(enum_value.IsValid(), "Got a valid enum value.")
-        self.assertTrue(enum_value.GetError().Success(), "Got error %s getting enum value"%(enum_value.GetError().GetCString()))
-        self.assertTrue(enum_value.GetValue() == "ImportantError", "Expected 'ImportantError', got %s"%(enum_value.GetValue()))
+        self.assertTrue(
+            enum_value.GetError().Success(),
+            "Got error %s getting enum value" %
+            (enum_value.GetError().GetCString()))
+        self.assertTrue(
+            enum_value.GetValue() == "ImportantError",
+            "Expected 'ImportantError', got %s" %
+            (enum_value.GetValue()))
 
-        object_value = self.frame.EvaluateExpression("IThrowObjectOver10(101)", options)
+        object_value = self.frame.EvaluateExpression(
+            "IThrowObjectOver10(101)", options)
         self.assertTrue(object_value.IsValid(), "Got a valid object value.")
-        self.assertTrue(object_value.GetError().Success(), "Got error %s getting object value"%(object_value.GetError().GetCString()))
+        self.assertTrue(
+            object_value.GetError().Success(),
+            "Got error %s getting object value" %
+            (object_value.GetError().GetCString()))
 
         message = object_value.GetChildMemberWithName("m_message")
         self.assertTrue(message.IsValid(), "Found some m_message child.")
-        self.assertTrue(message.GetError().Success(), "No errors fetching m_message value")
-        self.assertTrue(message.GetSummary() == '"Over 100"', "Expected 'Over 100', got %s"%(message.GetSummary()))
+        self.assertTrue(
+            message.GetError().Success(),
+            "No errors fetching m_message value")
+        self.assertTrue(
+            message.GetSummary() == '"Over 100"',
+            "Expected 'Over 100', got %s" %
+            (message.GetSummary()))
 
 if __name__ == '__main__':
     import atexit

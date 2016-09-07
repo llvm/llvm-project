@@ -14,334 +14,277 @@
 // C++ Includes
 #include <condition_variable>
 #include <mutex>
-#include <string>
 #include <queue>
+#include <string>
 #include <vector>
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-public.h"
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Listener.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/Predicate.h"
 #include "lldb/Host/TimeValue.h"
 #include "lldb/Interpreter/Args.h"
+#include "lldb/lldb-public.h"
 
 #include "Utility/StringExtractorGDBRemote.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {
 
-typedef enum
-{
-    eStoppointInvalid = -1,
-    eBreakpointSoftware = 0,
-    eBreakpointHardware,
-    eWatchpointWrite,
-    eWatchpointRead,
-    eWatchpointReadWrite
+typedef enum {
+  eStoppointInvalid = -1,
+  eBreakpointSoftware = 0,
+  eBreakpointHardware,
+  eWatchpointWrite,
+  eWatchpointRead,
+  eWatchpointReadWrite
 } GDBStoppointType;
 
-enum class CompressionType
-{
-    None = 0,       // no compression
-    ZlibDeflate,    // zlib's deflate compression scheme, requires zlib or Apple's libcompression
-    LZFSE,          // an Apple compression scheme, requires Apple's libcompression
-    LZ4,            // lz compression - called "lz4 raw" in libcompression terms, compat with https://code.google.com/p/lz4/
-    LZMA,           // Lempel–Ziv–Markov chain algorithm
+enum class CompressionType {
+  None = 0,    // no compression
+  ZlibDeflate, // zlib's deflate compression scheme, requires zlib or Apple's
+               // libcompression
+  LZFSE,       // an Apple compression scheme, requires Apple's libcompression
+  LZ4, // lz compression - called "lz4 raw" in libcompression terms, compat with
+       // https://code.google.com/p/lz4/
+  LZMA, // Lempel–Ziv–Markov chain algorithm
 };
 
 class ProcessGDBRemote;
 
-class GDBRemoteCommunication : public Communication
-{
+class GDBRemoteCommunication : public Communication {
 public:
-    enum
-    {
-        eBroadcastBitRunPacketSent = kLoUserBroadcastBit,
-        eBroadcastBitGdbReadThreadGotNotify = kLoUserBroadcastBit << 1 // Sent when we received a notify packet.
-    };
+  enum {
+    eBroadcastBitRunPacketSent = kLoUserBroadcastBit,
+    eBroadcastBitGdbReadThreadGotNotify =
+        kLoUserBroadcastBit << 1 // Sent when we received a notify packet.
+  };
 
-    enum class PacketType
-    {
-        Invalid = 0,
-        Standard,
-        Notify
-    };
+  enum class PacketType { Invalid = 0, Standard, Notify };
 
-    enum class PacketResult
-    {
-        Success = 0,        // Success
-        ErrorSendFailed,    // Error sending the packet
-        ErrorSendAck,       // Didn't get an ack back after sending a packet
-        ErrorReplyFailed,   // Error getting the reply
-        ErrorReplyTimeout,  // Timed out waiting for reply
-        ErrorReplyInvalid,  // Got a reply but it wasn't valid for the packet that was sent
-        ErrorReplyAck,      // Sending reply ack failed
-        ErrorDisconnected,  // We were disconnected
-        ErrorNoSequenceLock // We couldn't get the sequence lock for a multi-packet request
-    };
+  enum class PacketResult {
+    Success = 0,        // Success
+    ErrorSendFailed,    // Error sending the packet
+    ErrorSendAck,       // Didn't get an ack back after sending a packet
+    ErrorReplyFailed,   // Error getting the reply
+    ErrorReplyTimeout,  // Timed out waiting for reply
+    ErrorReplyInvalid,  // Got a reply but it wasn't valid for the packet that
+                        // was sent
+    ErrorReplyAck,      // Sending reply ack failed
+    ErrorDisconnected,  // We were disconnected
+    ErrorNoSequenceLock // We couldn't get the sequence lock for a multi-packet
+                        // request
+  };
 
-    // Class to change the timeout for a given scope and restore it to the original value when the
-    // created ScopedTimeout object got out of scope
-    class ScopedTimeout
-    {
-    public:
-        ScopedTimeout (GDBRemoteCommunication& gdb_comm, uint32_t timeout);
-        ~ScopedTimeout ();
+  // Class to change the timeout for a given scope and restore it to the
+  // original value when the
+  // created ScopedTimeout object got out of scope
+  class ScopedTimeout {
+  public:
+    ScopedTimeout(GDBRemoteCommunication &gdb_comm, uint32_t timeout);
+    ~ScopedTimeout();
 
-    private:
-        GDBRemoteCommunication& m_gdb_comm;
-        uint32_t m_saved_timeout;
-    };
+  private:
+    GDBRemoteCommunication &m_gdb_comm;
+    uint32_t m_saved_timeout;
+  };
 
-    GDBRemoteCommunication(const char *comm_name, 
-                           const char *listener_name);
+  GDBRemoteCommunication(const char *comm_name, const char *listener_name);
 
-    ~GDBRemoteCommunication() override;
+  ~GDBRemoteCommunication() override;
 
-    PacketResult
-    GetAck ();
+  PacketResult GetAck();
 
-    size_t
-    SendAck ();
+  size_t SendAck();
 
-    size_t
-    SendNack ();
+  size_t SendNack();
 
-    char
-    CalculcateChecksum (llvm::StringRef payload);
+  char CalculcateChecksum(llvm::StringRef payload);
 
-    PacketType
-    CheckForPacket (const uint8_t *src, 
-                    size_t src_len, 
-                    StringExtractorGDBRemote &packet);
+  PacketType CheckForPacket(const uint8_t *src, size_t src_len,
+                            StringExtractorGDBRemote &packet);
 
-    bool
-    GetSendAcks ()
-    {
-        return m_send_acks;
-    }
+  bool GetSendAcks() { return m_send_acks; }
 
-    //------------------------------------------------------------------
-    // Set the global packet timeout.
-    //
-    // For clients, this is the timeout that gets used when sending
-    // packets and waiting for responses. For servers, this might not
-    // get used, and if it doesn't this should be moved to the
-    // GDBRemoteCommunicationClient.
-    //------------------------------------------------------------------
-    uint32_t 
-    SetPacketTimeout (uint32_t packet_timeout)
-    {
-        const uint32_t old_packet_timeout = m_packet_timeout;
-        m_packet_timeout = packet_timeout;
-        return old_packet_timeout;
-    }
+  //------------------------------------------------------------------
+  // Set the global packet timeout.
+  //
+  // For clients, this is the timeout that gets used when sending
+  // packets and waiting for responses. For servers, this might not
+  // get used, and if it doesn't this should be moved to the
+  // GDBRemoteCommunicationClient.
+  //------------------------------------------------------------------
+  uint32_t SetPacketTimeout(uint32_t packet_timeout) {
+    const uint32_t old_packet_timeout = m_packet_timeout;
+    m_packet_timeout = packet_timeout;
+    return old_packet_timeout;
+  }
 
-    uint32_t
-    GetPacketTimeoutInMicroSeconds () const
-    {
-        return m_packet_timeout * TimeValue::MicroSecPerSec;
-    }
+  uint32_t GetPacketTimeoutInMicroSeconds() const {
+    return m_packet_timeout * TimeValue::MicroSecPerSec;
+  }
 
-    //------------------------------------------------------------------
-    // Start a debugserver instance on the current host using the
-    // supplied connection URL.
-    //------------------------------------------------------------------
-    Error
-    StartDebugserverProcess(const char *url,
-                            Platform *platform, // If non nullptr, then check with the platform for the GDB server binary if it can't be located
-                            ProcessLaunchInfo &launch_info,
-                            uint16_t *port,
-                            const Args *inferior_args,
-                            int pass_comm_fd); // Communication file descriptor to pass during fork/exec to avoid having to connect/accept
+  //------------------------------------------------------------------
+  // Start a debugserver instance on the current host using the
+  // supplied connection URL.
+  //------------------------------------------------------------------
+  Error StartDebugserverProcess(
+      const char *url,
+      Platform *platform, // If non nullptr, then check with the platform for
+                          // the GDB server binary if it can't be located
+      ProcessLaunchInfo &launch_info, uint16_t *port, const Args *inferior_args,
+      int pass_comm_fd); // Communication file descriptor to pass during
+                         // fork/exec to avoid having to connect/accept
 
-    void
-    DumpHistory(Stream &strm);
-    
+  void DumpHistory(Stream &strm);
+
 protected:
-    class History
-    {
-    public:
-        enum PacketType
-        {
-            ePacketTypeInvalid = 0,
-            ePacketTypeSend,
-            ePacketTypeRecv
-        };
-
-        struct Entry
-        {
-            Entry() :
-                packet(),
-                type (ePacketTypeInvalid),
-                bytes_transmitted (0),
-                packet_idx (0),
-                tid (LLDB_INVALID_THREAD_ID)
-            {
-            }
-            
-            void
-            Clear ()
-            {
-                packet.clear();
-                type = ePacketTypeInvalid;
-                bytes_transmitted = 0;
-                packet_idx = 0;
-                tid = LLDB_INVALID_THREAD_ID;
-            }
-            std::string packet;
-            PacketType type;
-            uint32_t bytes_transmitted;
-            uint32_t packet_idx;
-            lldb::tid_t tid;
-        };
-
-        History (uint32_t size);
-        
-        ~History ();
-
-        // For single char packets for ack, nack and /x03
-        void
-        AddPacket (char packet_char,
-                   PacketType type,
-                   uint32_t bytes_transmitted);
-
-        void
-        AddPacket (const std::string &src,
-                   uint32_t src_len,
-                   PacketType type,
-                   uint32_t bytes_transmitted);
-        
-        void
-        Dump (Stream &strm) const;
-
-        void
-        Dump (Log *log) const;
-
-        bool
-        DidDumpToLog () const
-        {
-            return m_dumped_to_log;
-        }
-    
-    protected:
-        uint32_t
-        GetFirstSavedPacketIndex () const
-        {
-            if (m_total_packet_count < m_packets.size())
-                return 0;
-            else
-                return m_curr_idx + 1;
-        }
-
-        uint32_t
-        GetNumPacketsInHistory () const
-        {
-            if (m_total_packet_count < m_packets.size())
-                return m_total_packet_count;
-            else
-                return (uint32_t)m_packets.size();
-        }
-
-        uint32_t
-        GetNextIndex()
-        {
-            ++m_total_packet_count;
-            const uint32_t idx = m_curr_idx;
-            m_curr_idx = NormalizeIndex(idx + 1);
-            return idx;
-        }
-
-        uint32_t
-        NormalizeIndex (uint32_t i) const
-        {
-            return i % m_packets.size();
-        }
-
-        std::vector<Entry> m_packets;
-        uint32_t m_curr_idx;
-        uint32_t m_total_packet_count;
-        mutable bool m_dumped_to_log;
+  class History {
+  public:
+    enum PacketType {
+      ePacketTypeInvalid = 0,
+      ePacketTypeSend,
+      ePacketTypeRecv
     };
 
-    uint32_t m_packet_timeout;
-    uint32_t m_echo_number;
-    LazyBool m_supports_qEcho;
-    History m_history;
-    bool m_send_acks;
-    bool m_is_platform; // Set to true if this class represents a platform,
-                        // false if this class represents a debug session for
-                        // a single process
-    
-    CompressionType m_compression_type;
+    struct Entry {
+      Entry()
+          : packet(), type(ePacketTypeInvalid), bytes_transmitted(0),
+            packet_idx(0), tid(LLDB_INVALID_THREAD_ID) {}
 
-    PacketResult
-    SendPacketNoLock (llvm::StringRef payload);
+      void Clear() {
+        packet.clear();
+        type = ePacketTypeInvalid;
+        bytes_transmitted = 0;
+        packet_idx = 0;
+        tid = LLDB_INVALID_THREAD_ID;
+      }
+      std::string packet;
+      PacketType type;
+      uint32_t bytes_transmitted;
+      uint32_t packet_idx;
+      lldb::tid_t tid;
+    };
 
-    PacketResult
-    ReadPacket (StringExtractorGDBRemote &response, uint32_t timeout_usec, bool sync_on_timeout);
+    History(uint32_t size);
 
-    // Pop a packet from the queue in a thread safe manner
-    PacketResult
-    PopPacketFromQueue (StringExtractorGDBRemote &response, uint32_t timeout_usec);
+    ~History();
 
-    PacketResult
-    WaitForPacketWithTimeoutMicroSecondsNoLock (StringExtractorGDBRemote &response, 
-                                                uint32_t timeout_usec,
-                                                bool sync_on_timeout);
+    // For single char packets for ack, nack and /x03
+    void AddPacket(char packet_char, PacketType type,
+                   uint32_t bytes_transmitted);
 
-    bool
-    CompressionIsEnabled ()
-    {
-        return m_compression_type != CompressionType::None;
+    void AddPacket(const std::string &src, uint32_t src_len, PacketType type,
+                   uint32_t bytes_transmitted);
+
+    void Dump(Stream &strm) const;
+
+    void Dump(Log *log) const;
+
+    bool DidDumpToLog() const { return m_dumped_to_log; }
+
+  protected:
+    uint32_t GetFirstSavedPacketIndex() const {
+      if (m_total_packet_count < m_packets.size())
+        return 0;
+      else
+        return m_curr_idx + 1;
     }
 
-    // If compression is enabled, decompress the packet in m_bytes and update
-    // m_bytes with the uncompressed version.
-    // Returns 'true' packet was decompressed and m_bytes is the now-decompressed text.
-    // Returns 'false' if unable to decompress or if the checksum was invalid.
-    //
-    // NB: Once the packet has been decompressed, checksum cannot be computed based
-    // on m_bytes.  The checksum was for the compressed packet.
-    bool
-    DecompressPacket ();
+    uint32_t GetNumPacketsInHistory() const {
+      if (m_total_packet_count < m_packets.size())
+        return m_total_packet_count;
+      else
+        return (uint32_t)m_packets.size();
+    }
 
-    Error
-    StartListenThread (const char *hostname = "127.0.0.1", uint16_t port = 0);
+    uint32_t GetNextIndex() {
+      ++m_total_packet_count;
+      const uint32_t idx = m_curr_idx;
+      m_curr_idx = NormalizeIndex(idx + 1);
+      return idx;
+    }
 
-    bool
-    JoinListenThread ();
+    uint32_t NormalizeIndex(uint32_t i) const { return i % m_packets.size(); }
 
-    static lldb::thread_result_t
-    ListenThread (lldb::thread_arg_t arg);
+    std::vector<Entry> m_packets;
+    uint32_t m_curr_idx;
+    uint32_t m_total_packet_count;
+    mutable bool m_dumped_to_log;
+  };
 
-    // GDB-Remote read thread
-    //  . this thread constantly tries to read from the communication
-    //    class and stores all packets received in a queue.  The usual
-    //    threads read requests simply pop packets off the queue in the
-    //    usual order.
-    //    This setup allows us to intercept and handle async packets, such
-    //    as the notify packet.
+  uint32_t m_packet_timeout;
+  uint32_t m_echo_number;
+  LazyBool m_supports_qEcho;
+  History m_history;
+  bool m_send_acks;
+  bool m_is_platform; // Set to true if this class represents a platform,
+                      // false if this class represents a debug session for
+                      // a single process
 
-    // This method is defined as part of communication.h
-    // when the read thread gets any bytes it will pass them on to this function
-    void AppendBytesToCache(const uint8_t * bytes,
-                            size_t len,
-                            bool broadcast,
-                            lldb::ConnectionStatus status) override;
+  CompressionType m_compression_type;
+
+  PacketResult SendPacketNoLock(llvm::StringRef payload);
+
+  PacketResult ReadPacket(StringExtractorGDBRemote &response,
+                          uint32_t timeout_usec, bool sync_on_timeout);
+
+  // Pop a packet from the queue in a thread safe manner
+  PacketResult PopPacketFromQueue(StringExtractorGDBRemote &response,
+                                  uint32_t timeout_usec);
+
+  PacketResult
+  WaitForPacketWithTimeoutMicroSecondsNoLock(StringExtractorGDBRemote &response,
+                                             uint32_t timeout_usec,
+                                             bool sync_on_timeout);
+
+  bool CompressionIsEnabled() {
+    return m_compression_type != CompressionType::None;
+  }
+
+  // If compression is enabled, decompress the packet in m_bytes and update
+  // m_bytes with the uncompressed version.
+  // Returns 'true' packet was decompressed and m_bytes is the now-decompressed
+  // text.
+  // Returns 'false' if unable to decompress or if the checksum was invalid.
+  //
+  // NB: Once the packet has been decompressed, checksum cannot be computed
+  // based
+  // on m_bytes.  The checksum was for the compressed packet.
+  bool DecompressPacket();
+
+  Error StartListenThread(const char *hostname = "127.0.0.1",
+                          uint16_t port = 0);
+
+  bool JoinListenThread();
+
+  static lldb::thread_result_t ListenThread(lldb::thread_arg_t arg);
+
+  // GDB-Remote read thread
+  //  . this thread constantly tries to read from the communication
+  //    class and stores all packets received in a queue.  The usual
+  //    threads read requests simply pop packets off the queue in the
+  //    usual order.
+  //    This setup allows us to intercept and handle async packets, such
+  //    as the notify packet.
+
+  // This method is defined as part of communication.h
+  // when the read thread gets any bytes it will pass them on to this function
+  void AppendBytesToCache(const uint8_t *bytes, size_t len, bool broadcast,
+                          lldb::ConnectionStatus status) override;
 
 private:
-    std::queue<StringExtractorGDBRemote> m_packet_queue; // The packet queue
-    std::mutex m_packet_queue_mutex;                     // Mutex for accessing queue
-    std::condition_variable m_condition_queue_not_empty; // Condition variable to wait for packets
+  std::queue<StringExtractorGDBRemote> m_packet_queue; // The packet queue
+  std::mutex m_packet_queue_mutex; // Mutex for accessing queue
+  std::condition_variable
+      m_condition_queue_not_empty; // Condition variable to wait for packets
 
-    HostThread m_listen_thread;
-    std::string m_listen_url;
+  HostThread m_listen_thread;
+  std::string m_listen_url;
 
-    DISALLOW_COPY_AND_ASSIGN (GDBRemoteCommunication);
+  DISALLOW_COPY_AND_ASSIGN(GDBRemoteCommunication);
 };
 
 } // namespace process_gdb_remote

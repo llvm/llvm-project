@@ -13,7 +13,6 @@
 #ifndef liblldb_SwiftSILManipulator_h
 #define liblldb_SwiftSILManipulator_h
 
-
 #include "SwiftExpressionParser.h"
 
 #include "lldb/lldb-types.h"
@@ -21,30 +20,27 @@
 #include "swift/SIL/SILLocation.h"
 #include "swift/SIL/SILValue.h"
 
-namespace swift
-{
-    class SILBuilder;
+namespace swift {
+class SILBuilder;
 };
 
-namespace lldb_private
-{
+namespace lldb_private {
 
 class CompilerType;
 class Log;
-    
-class SwiftSILManipulator
-{
-public:
-    SwiftSILManipulator (swift::SILBuilder &builder);
-    
-    swift::SILValue emitLValueForVariable(swift::VarDecl *var,
-                                          SwiftExpressionParser::SILVariableInfo &info);
-protected:
-    swift::SILBuilder                  &m_builder;
-    Log                                *m_log;
-};
-    
-}
 
+class SwiftSILManipulator {
+public:
+  SwiftSILManipulator(swift::SILBuilder &builder);
+
+  swift::SILValue
+  emitLValueForVariable(swift::VarDecl *var,
+                        SwiftExpressionParser::SILVariableInfo &info);
+
+protected:
+  swift::SILBuilder &m_builder;
+  Log *m_log;
+};
+}
 
 #endif

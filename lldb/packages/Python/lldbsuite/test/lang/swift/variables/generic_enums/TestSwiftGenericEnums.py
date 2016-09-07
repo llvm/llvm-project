@@ -34,25 +34,31 @@ class TestSwiftGenericEnumTypes(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    def get_variable(self,name):
-        var = self.frame.FindVariable(name).GetDynamicValue(lldb.eDynamicCanRunTarget)
+    def get_variable(self, name):
+        var = self.frame.FindVariable(
+            name).GetDynamicValue(lldb.eDynamicCanRunTarget)
         var.SetPreferSyntheticValue(True)
         return var
 
     # using Ints as keys should practically guarantee that key and index match
     # that makes the test case logic much much easier
-    def check_dictionary_entry(self,var,index,key_summary,value_summary):
+    def check_dictionary_entry(self, var, index, key_summary, value_summary):
         self.assertTrue(var.GetChildAtIndex(index).IsValid(), "invalid item")
-        self.assertTrue(var.GetChildAtIndex(index).GetChildMemberWithName("key").IsValid(), "invalid key child")
-        self.assertTrue(var.GetChildAtIndex(index).GetChildMemberWithName("value").IsValid(), "invalid key child")
-        self.assertTrue(var.GetChildAtIndex(index).GetChildMemberWithName("key").GetSummary() == key_summary, "invalid key summary")
-        self.assertTrue(var.GetChildAtIndex(index).GetChildMemberWithName("value").GetSummary() == value_summary, "invalid value summary")
+        self.assertTrue(var.GetChildAtIndex(index).GetChildMemberWithName(
+            "key").IsValid(), "invalid key child")
+        self.assertTrue(var.GetChildAtIndex(index).GetChildMemberWithName(
+            "value").IsValid(), "invalid key child")
+        self.assertTrue(var.GetChildAtIndex(index).GetChildMemberWithName(
+            "key").GetSummary() == key_summary, "invalid key summary")
+        self.assertTrue(var.GetChildAtIndex(index).GetChildMemberWithName(
+            "value").GetSummary() == value_summary, "invalid value summary")
 
-    def keep_going(self,process,breakpoint):
+    def keep_going(self, process, breakpoint):
         process.Continue()
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -69,8 +75,10 @@ class TestSwiftGenericEnumTypes(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint1 = target.BreakpointCreateBySourceRegex('// Set first breakpoint here.', self.main_source_spec)
-        breakpoint2 = target.BreakpointCreateBySourceRegex('// Set second breakpoint here.', self.main_source_spec)
+        breakpoint1 = target.BreakpointCreateBySourceRegex(
+            '// Set first breakpoint here.', self.main_source_spec)
+        breakpoint2 = target.BreakpointCreateBySourceRegex(
+            '// Set second breakpoint here.', self.main_source_spec)
         self.assertTrue(breakpoint1.GetNumLocations() > 0, VALID_BREAKPOINT)
         self.assertTrue(breakpoint2.GetNumLocations() > 0, VALID_BREAKPOINT)
 
@@ -80,7 +88,8 @@ class TestSwiftGenericEnumTypes(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint1)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint1)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -96,13 +105,19 @@ class TestSwiftGenericEnumTypes(TestBase):
         self.addTearDownHook(cleanup)
 
         enumvar = self.get_variable("myOptionalU").GetStaticValue()
-        self.assertTrue(enumvar.GetValue() is None, "static type has a value when it shouldn't")
+        self.assertTrue(enumvar.GetValue() is None,
+                        "static type has a value when it shouldn't")
         enumvar = enumvar.GetDynamicValue(lldb.eDynamicCanRunTarget)
-        self.assertTrue(enumvar.GetValue() == "Some", "dynamic type's value should be Some")
-        self.assertTrue(enumvar.GetSummary() == "3", "Some's summary should be 3")
+        self.assertTrue(
+            enumvar.GetValue() == "Some",
+            "dynamic type's value should be Some")
+        self.assertTrue(
+            enumvar.GetSummary() == "3",
+            "Some's summary should be 3")
 
         self.runCmd("continue")
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint2)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint2)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -110,7 +125,12 @@ class TestSwiftGenericEnumTypes(TestBase):
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
         value = self.get_variable("value")
-        lldbutil.check_variable (self, value, use_dynamic = True, summary = '"Now with Content"', typename = 'String?')
+        lldbutil.check_variable(
+            self,
+            value,
+            use_dynamic=True,
+            summary='"Now with Content"',
+            typename='String?')
 
 if __name__ == '__main__':
     import atexit

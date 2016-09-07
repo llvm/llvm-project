@@ -15,6 +15,7 @@ import sys
 # Third party modules
 import six
 
+
 def _encoded_read(old_read, encoding):
     def impl(size):
         result = old_read(size)
@@ -24,6 +25,7 @@ def _encoded_read(old_read, encoding):
             result = result.encode(encoding)
         return result
     return impl
+
 
 def _encoded_write(old_write, encoding):
     def impl(s):
@@ -45,9 +47,24 @@ Create a Text I/O file object that can be written to with either unicode strings
 under Python 2 and Python 3, and automatically encodes and decodes as necessary to return the
 native string type for the current Python version
 '''
-def open(file, encoding, mode='r', buffering=-1, errors=None, newline=None, closefd=True):
-    wrapped_file = io.open(file, mode=mode, buffering=buffering, encoding=encoding,
-                           errors=errors, newline=newline, closefd=closefd)
+
+
+def open(
+        file,
+        encoding,
+        mode='r',
+        buffering=-1,
+        errors=None,
+        newline=None,
+        closefd=True):
+    wrapped_file = io.open(
+        file,
+        mode=mode,
+        buffering=buffering,
+        encoding=encoding,
+        errors=errors,
+        newline=newline,
+        closefd=closefd)
     new_read = _encoded_read(getattr(wrapped_file, 'read'), encoding)
     new_write = _encoded_write(getattr(wrapped_file, 'write'), encoding)
     setattr(wrapped_file, 'read', new_read)

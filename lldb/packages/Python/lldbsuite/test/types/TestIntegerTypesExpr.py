@@ -13,6 +13,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class IntegerTypesExprTestCase(AbstractBase.GenericTester):
 
     mydir = AbstractBase.GenericTester.compute_mydir(__file__)
@@ -22,7 +23,8 @@ class IntegerTypesExprTestCase(AbstractBase.GenericTester):
         AbstractBase.GenericTester.setUp(self)
         # disable "There is a running process, kill it and restart?" prompt
         self.runCmd("settings set auto-confirm true")
-        self.addTearDownHook(lambda: self.runCmd("settings clear auto-confirm"))
+        self.addTearDownHook(
+            lambda: self.runCmd("settings clear auto-confirm"))
 
     def test_char_type(self):
         """Test that char-type variable expressions are evaluated correctly."""
@@ -35,12 +37,14 @@ class IntegerTypesExprTestCase(AbstractBase.GenericTester):
 
     def test_unsigned_char_type(self):
         """Test that 'unsigned_char'-type variable expressions are evaluated correctly."""
-        self.build_and_run_expr('unsigned_char.cpp', set(['unsigned', 'char']), qd=True)
+        self.build_and_run_expr('unsigned_char.cpp', set(
+            ['unsigned', 'char']), qd=True)
 
     @skipUnlessDarwin
     def test_unsigned_char_type_from_block(self):
         """Test that 'unsigned char'-type variables are displayed correctly from a block."""
-        self.build_and_run_expr('unsigned_char.cpp', set(['unsigned', 'char']), bc=True, qd=True)
+        self.build_and_run_expr('unsigned_char.cpp', set(
+            ['unsigned', 'char']), bc=True, qd=True)
 
     def test_short_type(self):
         """Test that short-type variable expressions are evaluated correctly."""
@@ -53,12 +57,14 @@ class IntegerTypesExprTestCase(AbstractBase.GenericTester):
 
     def test_unsigned_short_type(self):
         """Test that 'unsigned_short'-type variable expressions are evaluated correctly."""
-        self.build_and_run_expr('unsigned_short.cpp', set(['unsigned', 'short']))
+        self.build_and_run_expr('unsigned_short.cpp',
+                                set(['unsigned', 'short']))
 
     @skipUnlessDarwin
     def test_unsigned_short_type_from_block(self):
         """Test that 'unsigned short'-type variables are displayed correctly from a block."""
-        self.build_and_run_expr('unsigned_short.cpp', set(['unsigned', 'short']), bc=True)
+        self.build_and_run_expr('unsigned_short.cpp', set(
+            ['unsigned', 'short']), bc=True)
 
     def test_int_type(self):
         """Test that int-type variable expressions are evaluated correctly."""
@@ -76,7 +82,8 @@ class IntegerTypesExprTestCase(AbstractBase.GenericTester):
     @skipUnlessDarwin
     def test_unsigned_int_type_from_block(self):
         """Test that 'unsigned int'-type variables are displayed correctly from a block."""
-        self.build_and_run_expr('unsigned_int.cpp', set(['unsigned', 'int']), bc=True)
+        self.build_and_run_expr(
+            'unsigned_int.cpp', set(['unsigned', 'int']), bc=True)
 
     def test_long_type(self):
         """Test that long-type variable expressions are evaluated correctly."""
@@ -94,7 +101,8 @@ class IntegerTypesExprTestCase(AbstractBase.GenericTester):
     @skipUnlessDarwin
     def test_unsigned_long_type_from_block(self):
         """Test that 'unsigned_long'-type variables are displayed correctly from a block."""
-        self.build_and_run_expr('unsigned_long.cpp', set(['unsigned', 'long']), bc=True)
+        self.build_and_run_expr('unsigned_long.cpp', set(
+            ['unsigned', 'long']), bc=True)
 
     def test_long_long_type(self):
         """Test that 'long long'-type variable expressions are evaluated correctly."""
@@ -107,9 +115,11 @@ class IntegerTypesExprTestCase(AbstractBase.GenericTester):
 
     def test_unsigned_long_long_type(self):
         """Test that 'unsigned long long'-type variable expressions are evaluated correctly."""
-        self.build_and_run_expr('unsigned_long_long.cpp', set(['unsigned', 'long long']))
+        self.build_and_run_expr('unsigned_long_long.cpp',
+                                set(['unsigned', 'long long']))
 
     @skipUnlessDarwin
     def test_unsigned_long_long_type_from_block(self):
         """Test that 'unsigned_long_long'-type variables are displayed correctly from a block."""
-        self.build_and_run_expr('unsigned_long_long.cpp', set(['unsigned', 'long long']), bc=True)
+        self.build_and_run_expr('unsigned_long_long.cpp', set(
+            ['unsigned', 'long long']), bc=True)

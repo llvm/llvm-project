@@ -16,14 +16,12 @@
 namespace lldb_private {
 
 /// FreeBSD specific set of Unix signals.
-class FreeBSDSignals : public UnixSignals
-{
+class FreeBSDSignals : public UnixSignals {
 public:
-    FreeBSDSignals();
+  FreeBSDSignals();
 
 private:
-    void
-    Reset() override;
+  void Reset() override;
 };
 
 } // namespace lldb_private

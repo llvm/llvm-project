@@ -5,7 +5,6 @@ Use lldb Python SBValue.WatchPointee() API to create a watchpoint for write of '
 from __future__ import print_function
 
 
-
 import os
 import re
 import time
@@ -14,6 +13,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class SetWatchlocationAPITestCase(TestBase):
 
@@ -25,13 +25,17 @@ class SetWatchlocationAPITestCase(TestBase):
         # Our simple source filename.
         self.source = 'main.cpp'
         # Find the line number to break inside main().
-        self.line = line_number(self.source, '// Set break point at this line.')
+        self.line = line_number(
+            self.source, '// Set break point at this line.')
         # This is for verifying that watch location works.
-        self.violating_func = "do_bad_thing_with_location";
+        self.violating_func = "do_bad_thing_with_location"
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    # Watchpoints not supported
+    @expectedFailureAndroid(archs=['arm', 'aarch64'])
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     def test_watch_location(self):
         """Exercise SBValue.WatchPointee() API to set a watchpoint."""
         self.build()
@@ -48,22 +52,25 @@ class SetWatchlocationAPITestCase(TestBase):
                         VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
         self.assertTrue(process.GetState() == lldb.eStateStopped,
                         PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         frame0 = thread.GetFrameAtIndex(0)
 
         value = frame0.FindValue('g_char_ptr',
                                  lldb.eValueTypeVariableGlobal)
-        pointee = value.CreateValueFromAddress("pointee",
-                                               value.GetValueAsUnsigned(0),
-                                               value.GetType().GetPointeeType())
+        pointee = value.CreateValueFromAddress(
+            "pointee",
+            value.GetValueAsUnsigned(0),
+            value.GetType().GetPointeeType())
         # Watch for write to *g_char_ptr.
-        error = lldb.SBError();
+        error = lldb.SBError()
         watchpoint = value.WatchPointee(True, False, True, error)
         self.assertTrue(value and watchpoint,
                         "Successfully found the pointer and set a watchpoint")
@@ -76,18 +83,25 @@ class SetWatchlocationAPITestCase(TestBase):
 
         print(watchpoint)
 
-        # Continue.  Expect the program to stop due to the variable being written to.
+        # Continue.  Expect the program to stop due to the variable being
+        # written to.
         process.Continue()
 
         if (self.TraceOn()):
             lldbutil.print_stacktraces(process)
 
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonWatchpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonWatchpoint)
         self.assertTrue(thread, "The thread stopped due to watchpoint")
         self.DebugSBValue(value)
         self.DebugSBValue(pointee)
 
-        self.expect(lldbutil.print_stacktrace(thread, string_buffer=True), exe=False,
-            substrs = [self.violating_func])
+        self.expect(
+            lldbutil.print_stacktrace(
+                thread,
+                string_buffer=True),
+            exe=False,
+            substrs=[
+                self.violating_func])
 
         # This finishes our test.

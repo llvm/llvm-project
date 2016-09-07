@@ -14,7 +14,6 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/API/SBDefines.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBAttachInfo.h"
 #include "lldb/API/SBBlock.h"
@@ -28,6 +27,7 @@
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBExecutionContext.h"
@@ -77,4 +77,4 @@
 #include "lldb/API/SBVariablesOptions.h"
 #include "lldb/API/SBWatchpoint.h"
 
-#endif  // LLDB_LLDB_h_
+#endif // LLDB_LLDB_h_

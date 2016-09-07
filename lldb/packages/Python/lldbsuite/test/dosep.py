@@ -104,6 +104,7 @@ def setup_global_variables(
         global GET_WORKER_INDEX
         GET_WORKER_INDEX = get_worker_index_use_pid
 
+
 def report_test_failure(name, command, output, timeout):
     global output_lock
     with output_lock:
@@ -152,14 +153,15 @@ def parse_test_results(output):
                                result, re.MULTILINE)
         error_count = re.search("^RESULT:.*([0-9]+) errors",
                                 result, re.MULTILINE)
-        unexpected_success_count = re.search("^RESULT:.*([0-9]+) unexpected successes",
-                                             result, re.MULTILINE)
+        unexpected_success_count = re.search(
+            "^RESULT:.*([0-9]+) unexpected successes", result, re.MULTILINE)
         if pass_count is not None:
             passes = passes + int(pass_count.group(1))
         if fail_count is not None:
             failures = failures + int(fail_count.group(1))
         if unexpected_success_count is not None:
-            unexpected_successes = unexpected_successes + int(unexpected_success_count.group(1))
+            unexpected_successes = unexpected_successes + \
+                int(unexpected_success_count.group(1))
         if error_count is not None:
             failures = failures + int(error_count.group(1))
     return passes, failures, unexpected_successes
@@ -167,6 +169,7 @@ def parse_test_results(output):
 
 class DoTestProcessDriver(process_control.ProcessDriver):
     """Drives the dotest.py inferior process and handles bookkeeping."""
+
     def __init__(self, output_file, output_file_lock, pid_events, file_name,
                  soft_terminate_timeout):
         super(DoTestProcessDriver, self).__init__(
@@ -210,7 +213,11 @@ class DoTestProcessDriver(process_control.ProcessDriver):
             # only stderr does.
             report_test_pass(self.file_name, output[1])
         else:
-            report_test_failure(self.file_name, command, output[1], was_timeout)
+            report_test_failure(
+                self.file_name,
+                command,
+                output[1],
+                was_timeout)
 
         # Save off the results for the caller.
         self.results = (
@@ -642,8 +649,13 @@ def initialize_global_vars_common(num_threads, test_work_items):
     test_counter = multiprocessing.Value('i', 0)
     test_name_len = multiprocessing.Value('i', 0)
     if not (RESULTS_FORMATTER and RESULTS_FORMATTER.is_using_terminal()):
-        print("Testing: %d test suites, %d thread%s" % (
-            total_tests, num_threads, (num_threads > 1) * "s"), file=sys.stderr)
+        print(
+            "Testing: %d test suites, %d thread%s" %
+            (total_tests,
+             num_threads,
+             (num_threads > 1) *
+                "s"),
+            file=sys.stderr)
     update_progress()
 
 
@@ -677,7 +689,6 @@ def initialize_global_vars_threading(num_threads, test_work_items):
             if thread_id not in index_map:
                 index_map[thread_id] = len(index_map)
             return index_map[thread_id]
-
 
     global GET_WORKER_INDEX
     GET_WORKER_INDEX = get_worker_index_threading
@@ -1086,6 +1097,7 @@ def inprocess_exec_test_runner(test_work_items):
 
     return test_results
 
+
 def walk_and_invoke(test_files, dotest_argv, num_workers, test_runner_func):
     """Invokes the test runner on each test file specified by test_files.
 
@@ -1290,7 +1302,7 @@ def _remove_option(
                 removal_count = 2
             else:
                 removal_count = 1
-            del args[index:index+removal_count]
+            del args[index:index + removal_count]
             return True
         except ValueError:
             # Thanks to argparse not handling options with known arguments
@@ -1528,7 +1540,8 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
     if test_subdir and len(test_subdir) > 0:
         test_subdir = os.path.join(test_directory, test_subdir)
         if not os.path.isdir(test_subdir):
-          print('specified test subdirectory {} is not a valid directory\n'.format(test_subdir))
+            print(
+                'specified test subdirectory {} is not a valid directory\n'.format(test_subdir))
     else:
         test_subdir = test_directory
 
@@ -1674,7 +1687,9 @@ def main(num_threads, test_subdir, test_runner_name, results_formatter):
             unexpected_successes.sort()
             print("\nUnexpected Successes (%d)" % len(unexpected_successes))
             for u in unexpected_successes:
-                print("UNEXPECTED SUCCESS: LLDB (suite) :: %s (%s)" % (u, system_info))
+                print(
+                    "UNEXPECTED SUCCESS: LLDB (suite) :: %s (%s)" %
+                    (u, system_info))
 
     sys.exit(exit_code)
 

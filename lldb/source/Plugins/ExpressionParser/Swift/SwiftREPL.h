@@ -13,88 +13,70 @@
 #ifndef liblldb_SwiftREPL_h_
 #define liblldb_SwiftREPL_h_
 
-#include "lldb/lldb-public.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Expression/REPL.h"
+#include "lldb/lldb-public.h"
 
 #include <string>
 #include <vector>
 
-namespace lldb_private
-{
-    
+namespace lldb_private {
+
 class IRExecutionUnit;
 
 //----------------------------------------------------------------------
 /// @class SwiftREPL SwiftREPL.h "lldb/Expression/SwiftREPL.h"
 /// @brief Encapsulates a swift REPL session.
 //----------------------------------------------------------------------
-class SwiftREPL : public REPL
-{
+class SwiftREPL : public REPL {
 public:
-    SwiftREPL (Target &target);
-    ~SwiftREPL();
-    
-    static void
-    Initialize ();
-    
-    static void
-    Terminate ();
-    
+  SwiftREPL(Target &target);
+  ~SwiftREPL();
+
+  static void Initialize();
+
+  static void Terminate();
+
 protected:
-    static lldb::REPLSP
-    CreateInstance (Error &error, lldb::LanguageType language, Debugger *debugger, Target *target, const char *repl_options);
-    
-    static void
-    EnumerateSupportedLanguages (std::set<lldb::LanguageType> &languages);
+  static lldb::REPLSP CreateInstance(Error &error, lldb::LanguageType language,
+                                     Debugger *debugger, Target *target,
+                                     const char *repl_options);
 
-    
-    Error
-    DoInitialization () override;
+  static void
+  EnumerateSupportedLanguages(std::set<lldb::LanguageType> &languages);
 
-    ConstString
-    GetSourceFileBasename () override;
-    
-    const char *
-    GetAutoIndentCharacters () override
-    {
-        return "}:";
-    }
-    
-    bool
-    SourceIsComplete (const std::string &source) override;
-    
-    lldb::offset_t
-    GetDesiredIndentation (const StringList &lines,
-                           int cursor_position,
-                           int tab_size) override;
-    
-    lldb::LanguageType
-    GetLanguage () override;
-    
-    bool
-    PrintOneVariable (Debugger &debugger,
-                      lldb::StreamFileSP &output_sp,
-                      lldb::ValueObjectSP &valobj_sp,
-                      ExpressionVariable *var = nullptr) override;
+  Error DoInitialization() override;
 
-    int
-    CompleteCode(const std::string &current_code,
-                 StringList &matches) override;
+  ConstString GetSourceFileBasename() override;
+
+  const char *GetAutoIndentCharacters() override { return "}:"; }
+
+  bool SourceIsComplete(const std::string &source) override;
+
+  lldb::offset_t GetDesiredIndentation(const StringList &lines,
+                                       int cursor_position,
+                                       int tab_size) override;
+
+  lldb::LanguageType GetLanguage() override;
+
+  bool PrintOneVariable(Debugger &debugger, lldb::StreamFileSP &output_sp,
+                        lldb::ValueObjectSP &valobj_sp,
+                        ExpressionVariable *var = nullptr) override;
+
+  int CompleteCode(const std::string &current_code,
+                   StringList &matches) override;
+
 public:
-    //------------------------------------------------------------------
-    // llvm casting support
-    //------------------------------------------------------------------
-    static bool classof(const REPL *repl)
-    {
-        return repl->getKind() == LLVMCastKind::eKindSwift;
-    }
+  //------------------------------------------------------------------
+  // llvm casting support
+  //------------------------------------------------------------------
+  static bool classof(const REPL *repl) {
+    return repl->getKind() == LLVMCastKind::eKindSwift;
+  }
+
 private:
-    
-    
-    lldb::SwiftASTContextSP m_swift_ast_sp;
+  lldb::SwiftASTContextSP m_swift_ast_sp;
 };
-    
 }
 
-#endif  // liblldb_SwiftREPL_h_
+#endif // liblldb_SwiftREPL_h_

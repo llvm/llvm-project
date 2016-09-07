@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Mangled.h"
 #include "SwiftMetatype.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
@@ -24,33 +24,28 @@ using namespace lldb_private;
 using namespace lldb_private::formatters;
 using namespace lldb_private::formatters::swift;
 
-bool
-lldb_private::formatters::swift::SwiftMetatype_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options)
-{
-    lldb::addr_t metadata_ptr = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-    if (metadata_ptr == LLDB_INVALID_ADDRESS || metadata_ptr == 0)
-    {
-        CompilerType compiler_metatype_type(valobj.GetCompilerType());
-        CompilerType instancetype(compiler_metatype_type.GetInstanceType());
-        const char* ptr = instancetype.GetDisplayTypeName().AsCString(nullptr);
-        if (ptr && *ptr)
-        {
-            stream.Printf("%s", ptr);
-            return true;
-        }
+bool lldb_private::formatters::swift::SwiftMetatype_SummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  lldb::addr_t metadata_ptr = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+  if (metadata_ptr == LLDB_INVALID_ADDRESS || metadata_ptr == 0) {
+    CompilerType compiler_metatype_type(valobj.GetCompilerType());
+    CompilerType instancetype(compiler_metatype_type.GetInstanceType());
+    const char *ptr = instancetype.GetDisplayTypeName().AsCString(nullptr);
+    if (ptr && *ptr) {
+      stream.Printf("%s", ptr);
+      return true;
     }
-    else
-    {
-        auto swift_runtime = valobj.GetProcessSP()->GetSwiftLanguageRuntime();
-        if (!swift_runtime)
-            return false;
-        SwiftLanguageRuntime::MetadataPromiseSP metadata_promise_sp = swift_runtime->GetMetadataPromise(metadata_ptr);
-        if (CompilerType resolved_type = metadata_promise_sp->FulfillTypePromise())
-        {
-            stream.Printf("%s", resolved_type.GetDisplayTypeName().AsCString());
-            return true;
-        }
+  } else {
+    auto swift_runtime = valobj.GetProcessSP()->GetSwiftLanguageRuntime();
+    if (!swift_runtime)
+      return false;
+    SwiftLanguageRuntime::MetadataPromiseSP metadata_promise_sp =
+        swift_runtime->GetMetadataPromise(metadata_ptr);
+    if (CompilerType resolved_type =
+            metadata_promise_sp->FulfillTypePromise()) {
+      stream.Printf("%s", resolved_type.GetDisplayTypeName().AsCString());
+      return true;
     }
-    return false;
+  }
+  return false;
 }
-

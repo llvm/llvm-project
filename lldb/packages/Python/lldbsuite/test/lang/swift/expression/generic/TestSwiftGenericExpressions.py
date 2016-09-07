@@ -43,7 +43,7 @@ class TestSwiftGenericExpressions(lldbtest.TestBase):
 
     def check_expression(self, expression, expected_result, use_summary=True):
         value = self.frame.EvaluateExpression(expression)
-        self.assertTrue(value.IsValid(), expression+"returned a valid value")
+        self.assertTrue(value.IsValid(), expression + "returned a valid value")
 
         self.assertTrue(value.GetError().Success(), "expression failed")
         if self.TraceOn():

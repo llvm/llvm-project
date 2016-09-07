@@ -45,7 +45,8 @@ class TestSwiftMetatype(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('Set breakpoint here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -54,7 +55,8 @@ class TestSwiftMetatype(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]

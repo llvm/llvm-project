@@ -12,11 +12,11 @@
 
 #include <vector>
 
-#include "lldb/lldb-private.h"
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
+#include "lldb/lldb-private.h"
 #include "llvm/ADT/DenseSet.h"
 
 namespace lldb_private {
@@ -31,220 +31,164 @@ namespace lldb_private {
 // objects) to provide the information and only parse as deep as needed
 // in order to provide the information that is requested.
 //----------------------------------------------------------------------
-class SymbolVendor :
-    public ModuleChild,
-    public PluginInterface
-{
+class SymbolVendor : public ModuleChild, public PluginInterface {
 public:
-    static SymbolVendor*
-    FindPlugin (const lldb::ModuleSP &module_sp,
-                Stream *feedback_strm);
+  static SymbolVendor *FindPlugin(const lldb::ModuleSP &module_sp,
+                                  Stream *feedback_strm);
 
-    //------------------------------------------------------------------
-    // Constructors and Destructors
-    //------------------------------------------------------------------
-    SymbolVendor(const lldb::ModuleSP &module_sp);
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  SymbolVendor(const lldb::ModuleSP &module_sp);
 
-    ~SymbolVendor() override;
+  ~SymbolVendor() override;
 
-    void
-    AddSymbolFileRepresentation(const lldb::ObjectFileSP &objfile_sp);
+  void AddSymbolFileRepresentation(const lldb::ObjectFileSP &objfile_sp);
 
-    virtual void
-    Dump(Stream *s);
+  virtual void Dump(Stream *s);
 
-    virtual lldb::LanguageType
-    ParseCompileUnitLanguage (const SymbolContext& sc);
-    
-    virtual size_t
-    ParseCompileUnitFunctions (const SymbolContext& sc);
+  virtual lldb::LanguageType ParseCompileUnitLanguage(const SymbolContext &sc);
 
-    virtual bool
-    ParseCompileUnitLineTable (const SymbolContext& sc);
+  virtual size_t ParseCompileUnitFunctions(const SymbolContext &sc);
 
-    virtual bool
-    ParseCompileUnitDebugMacros (const SymbolContext& sc);
+  virtual bool ParseCompileUnitLineTable(const SymbolContext &sc);
 
-    virtual bool
-    ParseCompileUnitSupportFiles (const SymbolContext& sc,
-                                  FileSpecList& support_files);
+  virtual bool ParseCompileUnitDebugMacros(const SymbolContext &sc);
 
-    virtual bool
-    ParseCompileUnitIsOptimized(const SymbolContext &sc);
+  virtual bool ParseCompileUnitSupportFiles(const SymbolContext &sc,
+                                            FileSpecList &support_files);
 
-    virtual bool
-    ParseImportedModules (const SymbolContext &sc,
-                          std::vector<ConstString> &imported_modules);
+  virtual bool ParseCompileUnitIsOptimized(const SymbolContext &sc);
 
-    virtual size_t
-    ParseFunctionBlocks (const SymbolContext& sc);
+  virtual bool ParseImportedModules(const SymbolContext &sc,
+                                    std::vector<ConstString> &imported_modules);
 
-    virtual size_t
-    ParseTypes (const SymbolContext& sc);
+  virtual size_t ParseFunctionBlocks(const SymbolContext &sc);
 
-    virtual size_t
-    ParseVariablesForContext (const SymbolContext& sc);
+  virtual size_t ParseTypes(const SymbolContext &sc);
 
-    virtual Type*
-    ResolveTypeUID(lldb::user_id_t type_uid);
+  virtual size_t ParseVariablesForContext(const SymbolContext &sc);
 
-    virtual uint32_t
-    ResolveSymbolContext (const Address& so_addr,
-                          uint32_t resolve_scope,
-                          SymbolContext& sc);
+  virtual Type *ResolveTypeUID(lldb::user_id_t type_uid);
 
-    virtual uint32_t
-    ResolveSymbolContext (const FileSpec& file_spec,
-                          uint32_t line,
-                          bool check_inlines,
-                          uint32_t resolve_scope,
-                          SymbolContextList& sc_list);
+  virtual uint32_t ResolveSymbolContext(const Address &so_addr,
+                                        uint32_t resolve_scope,
+                                        SymbolContext &sc);
 
-    virtual size_t
-    FindGlobalVariables (const ConstString &name,
-                         const CompilerDeclContext *parent_decl_ctx,
-                         bool append,
-                         size_t max_matches,
-                         VariableList& variables);
+  virtual uint32_t ResolveSymbolContext(const FileSpec &file_spec,
+                                        uint32_t line, bool check_inlines,
+                                        uint32_t resolve_scope,
+                                        SymbolContextList &sc_list);
 
-    virtual size_t
-    FindGlobalVariables (const RegularExpression& regex,
-                         bool append,
-                         size_t max_matches,
-                         VariableList& variables);
+  virtual size_t FindGlobalVariables(const ConstString &name,
+                                     const CompilerDeclContext *parent_decl_ctx,
+                                     bool append, size_t max_matches,
+                                     VariableList &variables);
 
-    virtual size_t
-    FindFunctions (const ConstString &name,
-                   const CompilerDeclContext *parent_decl_ctx,
-                   uint32_t name_type_mask,
-                   bool include_inlines,
-                   bool append,
-                   SymbolContextList& sc_list);
+  virtual size_t FindGlobalVariables(const RegularExpression &regex,
+                                     bool append, size_t max_matches,
+                                     VariableList &variables);
 
-    virtual size_t
-    FindFunctions (const RegularExpression& regex,
-                   bool include_inlines,
-                   bool append,
-                   SymbolContextList& sc_list);
+  virtual size_t FindFunctions(const ConstString &name,
+                               const CompilerDeclContext *parent_decl_ctx,
+                               uint32_t name_type_mask, bool include_inlines,
+                               bool append, SymbolContextList &sc_list);
 
-    virtual size_t
-    FindTypes (const SymbolContext& sc, 
-               const ConstString &name,
-               const CompilerDeclContext *parent_decl_ctx, 
-               bool append, 
-               size_t max_matches,
-               llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
-               TypeMap& types);
+  virtual size_t FindFunctions(const RegularExpression &regex,
+                               bool include_inlines, bool append,
+                               SymbolContextList &sc_list);
 
-    virtual size_t
-    FindTypes (const std::vector<CompilerContext> &context, bool append, TypeMap& types);
+  virtual size_t
+  FindTypes(const SymbolContext &sc, const ConstString &name,
+            const CompilerDeclContext *parent_decl_ctx, bool append,
+            size_t max_matches,
+            llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
+            TypeMap &types);
 
-    virtual CompilerDeclContext
-    FindNamespace (const SymbolContext& sc, 
-                   const ConstString &name,
-                   const CompilerDeclContext *parent_decl_ctx);
-    
-    virtual size_t
-    GetNumCompileUnits();
+  virtual size_t FindTypes(const std::vector<CompilerContext> &context,
+                           bool append, TypeMap &types);
 
-    virtual bool
-    SetCompileUnitAtIndex (size_t cu_idx,
-                           const lldb::CompUnitSP &cu_sp);
+  virtual CompilerDeclContext
+  FindNamespace(const SymbolContext &sc, const ConstString &name,
+                const CompilerDeclContext *parent_decl_ctx);
 
-    virtual lldb::CompUnitSP
-    GetCompileUnitAtIndex(size_t idx);
+  virtual size_t GetNumCompileUnits();
 
-    TypeList&
-    GetTypeList()
-    {
-        return m_type_list;
-    }
+  virtual bool SetCompileUnitAtIndex(size_t cu_idx,
+                                     const lldb::CompUnitSP &cu_sp);
 
-    const TypeList&
-    GetTypeList() const
-    {
-        return m_type_list;
-    }
+  virtual lldb::CompUnitSP GetCompileUnitAtIndex(size_t idx);
 
-    virtual size_t
-    GetTypes (SymbolContextScope *sc_scope,
-              uint32_t type_mask,
-              TypeList &type_list);
+  TypeList &GetTypeList() { return m_type_list; }
 
-    SymbolFile *
-    GetSymbolFile()
-    {
-        return m_sym_file_ap.get();
-    }
+  const TypeList &GetTypeList() const { return m_type_list; }
 
-    FileSpec
-    GetMainFileSpec() const;
+  virtual size_t GetTypes(SymbolContextScope *sc_scope, uint32_t type_mask,
+                          TypeList &type_list);
 
-    // Get module unified section list symbol table.
-    virtual Symtab *
-    GetSymtab ();
+  SymbolFile *GetSymbolFile() { return m_sym_file_ap.get(); }
 
-    // Clear module unified section list symbol table.
-    virtual void
-    ClearSymtab ();
-    
-    bool
-    GetCompileOption(const char *option, std::string &value, CompileUnit *cu = nullptr);
-    
-    int
-    GetCompileOptions(const char *option, std::vector<std::string> &values, CompileUnit *cu = nullptr);
+  FileSpec GetMainFileSpec() const;
 
-    void
-    GetLoadedModules(lldb::LanguageType language, FileSpecList &modules);
-    
-    //------------------------------------------------------------------
-    /// Notify the SymbolVendor that the file addresses in the Sections
-    /// for this module have been changed.
-    //------------------------------------------------------------------
-    virtual void
-    SectionFileAddressesChanged ();
+  // Get module unified section list symbol table.
+  virtual Symtab *GetSymtab();
 
-    //------------------------------------------------------------------
-    // PluginInterface protocol
-    //------------------------------------------------------------------
-    ConstString
-    GetPluginName() override;
+  // Clear module unified section list symbol table.
+  virtual void ClearSymtab();
 
-    uint32_t
-    GetPluginVersion() override;
+  bool GetCompileOption(const char *option, std::string &value,
+                        CompileUnit *cu = nullptr);
 
-    virtual bool
-    SetLimitSourceFileRange (const FileSpec &file,
-                             uint32_t first_line,
-                             uint32_t last_line);
+  int GetCompileOptions(const char *option, std::vector<std::string> &values,
+                        CompileUnit *cu = nullptr);
 
-    virtual bool
-    SymbolContextShouldBeExcluded (const SymbolContext &sc, uint32_t actual_line);
+  void GetLoadedModules(lldb::LanguageType language, FileSpecList &modules);
 
-    virtual lldb::DataBufferSP
-    GetASTData (lldb::LanguageType language);
+  //------------------------------------------------------------------
+  /// Notify the SymbolVendor that the file addresses in the Sections
+  /// for this module have been changed.
+  //------------------------------------------------------------------
+  virtual void SectionFileAddressesChanged();
 
-    virtual bool
-    ForceInlineSourceFileCheck ();
+  //------------------------------------------------------------------
+  // PluginInterface protocol
+  //------------------------------------------------------------------
+  ConstString GetPluginName() override;
+
+  uint32_t GetPluginVersion() override;
+
+  virtual bool SetLimitSourceFileRange(const FileSpec &file,
+                                       uint32_t first_line, uint32_t last_line);
+
+  virtual bool SymbolContextShouldBeExcluded(const SymbolContext &sc,
+                                             uint32_t actual_line);
+
+  virtual lldb::DataBufferSP GetASTData(lldb::LanguageType language);
+
+  virtual bool ForceInlineSourceFileCheck();
 
 protected:
-    //------------------------------------------------------------------
-    // Classes that inherit from SymbolVendor can see and modify these
-    //------------------------------------------------------------------
-    typedef std::vector<lldb::CompUnitSP> CompileUnits;
-    typedef CompileUnits::iterator CompileUnitIter;
-    typedef CompileUnits::const_iterator CompileUnitConstIter;
+  //------------------------------------------------------------------
+  // Classes that inherit from SymbolVendor can see and modify these
+  //------------------------------------------------------------------
+  typedef std::vector<lldb::CompUnitSP> CompileUnits;
+  typedef CompileUnits::iterator CompileUnitIter;
+  typedef CompileUnits::const_iterator CompileUnitConstIter;
 
-    TypeList m_type_list; // Uniqued types for all parsers owned by this module
-    CompileUnits m_compile_units; // The current compile units
-    lldb::ObjectFileSP m_objfile_sp;    // Keep a reference to the object file in case it isn't the same as the module object file (debug symbols in a separate file)
-    std::unique_ptr<SymbolFile> m_sym_file_ap; // A single symbol file. Subclasses can add more of these if needed.
+  TypeList m_type_list; // Uniqued types for all parsers owned by this module
+  CompileUnits m_compile_units;    // The current compile units
+  lldb::ObjectFileSP m_objfile_sp; // Keep a reference to the object file in
+                                   // case it isn't the same as the module
+                                   // object file (debug symbols in a separate
+                                   // file)
+  std::unique_ptr<SymbolFile> m_sym_file_ap; // A single symbol file. Subclasses
+                                             // can add more of these if needed.
 
 private:
-    //------------------------------------------------------------------
-    // For SymbolVendor only
-    //------------------------------------------------------------------
-    DISALLOW_COPY_AND_ASSIGN (SymbolVendor);
+  //------------------------------------------------------------------
+  // For SymbolVendor only
+  //------------------------------------------------------------------
+  DISALLOW_COPY_AND_ASSIGN(SymbolVendor);
 };
 
 } // namespace lldb_private

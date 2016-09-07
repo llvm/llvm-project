@@ -16,94 +16,73 @@ namespace lldb {
 
 class LLDB_API SBError {
 public:
-    SBError ();
+  SBError();
 
-    SBError (const lldb::SBError &rhs);
+  SBError(const lldb::SBError &rhs);
 
-    ~SBError();
+  ~SBError();
 
-    const SBError &
-    operator =(const lldb::SBError &rhs);
+  const SBError &operator=(const lldb::SBError &rhs);
 
-    const char *
-    GetCString () const;
+  const char *GetCString() const;
 
-    void
-    Clear ();
+  void Clear();
 
-    bool
-    Fail () const;
+  bool Fail() const;
 
-    bool
-    Success () const;
+  bool Success() const;
 
-    uint32_t
-    GetError () const;
+  uint32_t GetError() const;
 
-    lldb::ErrorType
-    GetType () const;
+  lldb::ErrorType GetType() const;
 
-    void
-    SetError (uint32_t err, lldb::ErrorType type);
+  void SetError(uint32_t err, lldb::ErrorType type);
 
-    void
-    SetErrorToErrno ();
+  void SetErrorToErrno();
 
-    void
-    SetErrorToGenericError ();
+  void SetErrorToGenericError();
 
-    void
-    SetErrorString (const char *err_str);
+  void SetErrorString(const char *err_str);
 
-    int
-    SetErrorStringWithFormat (const char *format, ...) __attribute__ ((format (printf, 2, 3)));
+  int SetErrorStringWithFormat(const char *format, ...)
+      __attribute__((format(printf, 2, 3)));
 
-    bool
-    IsValid () const;
+  bool IsValid() const;
 
-    bool
-    GetDescription (lldb::SBStream &description);
+  bool GetDescription(lldb::SBStream &description);
 
 protected:
+  friend class SBCommandReturnObject;
+  friend class SBData;
+  friend class SBDebugger;
+  friend class SBCommunication;
+  friend class SBHostOS;
+  friend class SBModule;
+  friend class SBPlatform;
+  friend class SBProcess;
+  friend class SBStructuredData;
+  friend class SBThread;
+  friend class SBTarget;
+  friend class SBValue;
+  friend class SBWatchpoint;
+  friend class SBBreakpoint;
+  friend class SBBreakpointLocation;
 
-    friend class SBCommandReturnObject;
-    friend class SBData;
-    friend class SBDebugger;
-    friend class SBCommunication;
-    friend class SBHostOS;
-    friend class SBModule;
-    friend class SBPlatform;
-    friend class SBProcess;
-    friend class SBStructuredData;
-    friend class SBThread;
-    friend class SBTarget;
-    friend class SBValue;
-    friend class SBWatchpoint;
-    friend class SBBreakpoint;
-    friend class SBBreakpointLocation;
+  lldb_private::Error *get();
 
-    lldb_private::Error *
-    get();
+  lldb_private::Error *operator->();
 
-    lldb_private::Error *
-    operator->();
+  const lldb_private::Error &operator*() const;
 
-    const lldb_private::Error &
-    operator*() const;
+  lldb_private::Error &ref();
 
-    lldb_private::Error &
-    ref();
-
-    void
-    SetError (const lldb_private::Error &lldb_error);
+  void SetError(const lldb_private::Error &lldb_error);
 
 private:
-    std::unique_ptr<lldb_private::Error> m_opaque_ap;
+  std::unique_ptr<lldb_private::Error> m_opaque_ap;
 
-    void
-    CreateIfNeeded ();
+  void CreateIfNeeded();
 };
-
 
 } // namespace lldb
 

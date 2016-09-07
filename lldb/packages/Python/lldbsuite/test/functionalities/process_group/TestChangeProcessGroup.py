@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -21,8 +20,8 @@ class ChangeProcessGroupTestCase(TestBase):
         # Find the line number to break for main.c.
         self.line = line_number('main.c', '// Set breakpoint here')
 
-    @skipIfFreeBSD # Times out on FreeBSD llvm.org/pr23731
-    @skipIfWindows # setpgid call does not exist on Windows
+    @skipIfFreeBSD  # Times out on FreeBSD llvm.org/pr23731
+    @skipIfWindows  # setpgid call does not exist on Windows
     @expectedFailureAndroid("http://llvm.org/pr23762", api_levels=[16])
     def test_setpgid(self):
         self.build()
@@ -30,8 +29,11 @@ class ChangeProcessGroupTestCase(TestBase):
 
         # Use a file as a synchronization point between test and inferior.
         pid_file_path = lldbutil.append_to_process_working_directory(
-                "pid_file_%d" % (int(time.time())))
-        self.addTearDownHook(lambda: self.run_platform_command("rm %s" % (pid_file_path)))
+            "pid_file_%d" % (int(time.time())))
+        self.addTearDownHook(
+            lambda: self.run_platform_command(
+                "rm %s" %
+                (pid_file_path)))
 
         popen = self.spawnSubprocess(exe, [pid_file_path])
         self.addTearDownHook(self.cleanupSubprocesses)
@@ -57,19 +59,20 @@ class ChangeProcessGroupTestCase(TestBase):
         self.assertTrue(error.Success() and process, PROCESS_IS_VALID)
 
         # set a breakpoint just before the setpgid() call
-        lldbutil.run_break_set_by_file_and_line(self, 'main.c', self.line, num_expected_locations=-1)
+        lldbutil.run_break_set_by_file_and_line(
+            self, 'main.c', self.line, num_expected_locations=-1)
 
         thread = process.GetSelectedThread()
 
         # release the child from its loop
         value = thread.GetSelectedFrame().EvaluateExpression("release_child_flag = 1")
-        self.assertTrue(value.IsValid() and value.GetValueAsUnsigned(0) == 1);
+        self.assertTrue(value.IsValid() and value.GetValueAsUnsigned(0) == 1)
         process.Continue()
 
         # make sure the child's process group id is different from its pid
         value = thread.GetSelectedFrame().EvaluateExpression("(int)getpgid(0)")
         self.assertTrue(value.IsValid())
-        self.assertNotEqual(value.GetValueAsUnsigned(0), int(pid));
+        self.assertNotEqual(value.GetValueAsUnsigned(0), int(pid))
 
         # step over the setpgid() call
         thread.StepOver()
@@ -79,7 +82,7 @@ class ChangeProcessGroupTestCase(TestBase):
         # this also checks that we are still in full control of the child
         value = thread.GetSelectedFrame().EvaluateExpression("(int)getpgid(0)")
         self.assertTrue(value.IsValid())
-        self.assertEqual(value.GetValueAsUnsigned(0), int(pid));
+        self.assertEqual(value.GetValueAsUnsigned(0), int(pid))
 
         # run to completion
         process.Continue()

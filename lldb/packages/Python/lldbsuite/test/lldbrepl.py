@@ -21,10 +21,11 @@ import re
 from lldbsuite.test.decorators import no_debug_info_test, skipIfLinux
 from lldbsuite.test.decorators import swiftTest
 
+
 class REPLTest(PExpectTest):
-    
+
     mydir = TestBase.compute_mydir(__file__)
-    
+
     @swiftTest
     @no_debug_info_test
     def testREPL(self):
@@ -32,7 +33,7 @@ class REPLTest(PExpectTest):
         self.prompt = re.compile('\\d+>')
         # launch the REPL..
         try:
-            self.launch(timeout = 30)
+            self.launch(timeout=30)
             # and double check that it's there
             self.expect('Welcome to.*Swift')
             self.expect('Type :help for assistance')
@@ -52,13 +53,20 @@ class REPLTest(PExpectTest):
         PExpectTest.setUp(self)
 
     def launchArgs(self):
-        return '-x "--repl=-enable-objc-interop -sdk %s"' % (swift.getSwiftSDKRoot())
+        return '-x "--repl=-enable-objc-interop -sdk %s"' % (
+            swift.getSwiftSDKRoot())
 
     # run a REPL command and wait for the prompt
-    def command(self, command, patterns=None, timeout=None, exact=None, prompt_sync=True):
+    def command(
+            self,
+            command,
+            patterns=None,
+            timeout=None,
+            exact=None,
+            prompt_sync=True):
         self.sendline(command)
         if patterns is not None:
-            if type(patterns) is list:
+            if isinstance(patterns, list):
                 self.expectall(patterns, timeout, exact=exact)
             else:
                 self.expect(patterns, timeout, exact=exact)
@@ -69,10 +77,12 @@ class REPLTest(PExpectTest):
     def promptSync(self, timeout=None):
         self.expect(patterns=[self.prompt], timeout=timeout)
 
+
 def load_tests(x, y, z):
     tests = []
     for test in y:
         testcase = test._tests[0]
-        if type(testcase) is REPLTest: continue
+        if isinstance(testcase, REPLTest):
+            continue
         tests.append(test)
     return tests

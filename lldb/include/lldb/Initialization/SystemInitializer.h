@@ -10,16 +10,14 @@
 #ifndef LLDB_INITIALIZATION_SYSTEM_INITIALIZER_H
 #define LLDB_INITIALIZATION_SYSTEM_INITIALIZER_H
 
-namespace lldb_private
-{
-class SystemInitializer
-{
-  public:
-    SystemInitializer();
-    virtual ~SystemInitializer();
+namespace lldb_private {
+class SystemInitializer {
+public:
+  SystemInitializer();
+  virtual ~SystemInitializer();
 
-    virtual void Initialize() = 0;
-    virtual void Terminate() = 0;
+  virtual void Initialize() = 0;
+  virtual void Terminate() = 0;
 };
 }
 

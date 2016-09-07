@@ -23,15 +23,14 @@ namespace lldb_private {
 // CommandObjectPlatform
 //-------------------------------------------------------------------------
 
-class CommandObjectPlatform : public CommandObjectMultiword
-{
+class CommandObjectPlatform : public CommandObjectMultiword {
 public:
-    CommandObjectPlatform(CommandInterpreter &interpreter);
+  CommandObjectPlatform(CommandInterpreter &interpreter);
 
-    ~CommandObjectPlatform() override;
+  ~CommandObjectPlatform() override;
 
 private:
-    DISALLOW_COPY_AND_ASSIGN (CommandObjectPlatform);
+  DISALLOW_COPY_AND_ASSIGN(CommandObjectPlatform);
 };
 
 } // namespace lldb_private

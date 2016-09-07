@@ -16,8 +16,8 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Interpreter/CommandObjectMultiword.h"
-#include "lldb/Interpreter/Options.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
+#include "lldb/Interpreter/Options.h"
 
 namespace lldb_private {
 
@@ -25,15 +25,14 @@ namespace lldb_private {
 // CommandObjectMultiwordWatchpoint
 //-------------------------------------------------------------------------
 
-class CommandObjectMultiwordWatchpoint : public CommandObjectMultiword
-{
+class CommandObjectMultiwordWatchpoint : public CommandObjectMultiword {
 public:
-    CommandObjectMultiwordWatchpoint (CommandInterpreter &interpreter);
+  CommandObjectMultiwordWatchpoint(CommandInterpreter &interpreter);
 
-    ~CommandObjectMultiwordWatchpoint() override;
+  ~CommandObjectMultiwordWatchpoint() override;
 
-    static bool
-    VerifyWatchpointIDs(Target *target, Args &args, std::vector<uint32_t> &wp_ids);
+  static bool VerifyWatchpointIDs(Target *target, Args &args,
+                                  std::vector<uint32_t> &wp_ids);
 };
 
 } // namespace lldb_private

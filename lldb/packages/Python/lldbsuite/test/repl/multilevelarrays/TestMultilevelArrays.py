@@ -11,10 +11,12 @@
 # ------------------------------------------------------------------------------
 """Test that nested Arrays work in the REPL."""
 
-import os, time
+import os
+import time
 import unittest2
 import lldb
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
+
 
 class REPLNestedArrayTestCase (REPLTest):
 
@@ -22,20 +24,20 @@ class REPLNestedArrayTestCase (REPLTest):
 
     def doTest(self):
         self.command('[[1,2,3,4],[1,2,3],[1,2],[],[1]]', patterns=[
-        '\\$R0: \\[\\[Int]] = 5 values {',
-        '\\[0] = 4 values {',
-        '\\[0] = 1',
-        '\\[1] = 2',
-        '\\[2] = 3',
-        '\\[3] = 4',
-        '\\[1] = 3 values {',
-        '\\[0] = 1',
-        '\\[1] = 2',
-        '\\[2] = 3',
-        '\\[2] = 2 values {',
-        '\\[0] = 1',
-        '\\[1] = 2',
-        '\\[3] = 0 values',
-        '\\[4] = 1 value {',
-        '\\[0] = 1'
+            '\\$R0: \\[\\[Int]] = 5 values {',
+            '\\[0] = 4 values {',
+            '\\[0] = 1',
+            '\\[1] = 2',
+            '\\[2] = 3',
+            '\\[3] = 4',
+            '\\[1] = 3 values {',
+            '\\[0] = 1',
+            '\\[1] = 2',
+            '\\[2] = 3',
+            '\\[2] = 2 values {',
+            '\\[0] = 1',
+            '\\[1] = 2',
+            '\\[3] = 0 values',
+            '\\[4] = 1 value {',
+            '\\[0] = 1'
         ])

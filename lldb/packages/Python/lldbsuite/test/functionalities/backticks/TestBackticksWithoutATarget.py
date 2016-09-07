@@ -5,12 +5,13 @@ Test that backticks without a target should work (not infinite looping).
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class BackticksWithNoTargetTestCase(TestBase):
 
@@ -20,4 +21,4 @@ class BackticksWithNoTargetTestCase(TestBase):
     def test_backticks_no_target(self):
         """A simple test of backticks without a target."""
         self.expect("print `1+2-3`",
-            substrs = [' = 0'])
+                    substrs=[' = 0'])

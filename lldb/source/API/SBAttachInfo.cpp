@@ -16,243 +16,152 @@
 using namespace lldb;
 using namespace lldb_private;
 
+SBAttachInfo::SBAttachInfo() : m_opaque_sp(new ProcessAttachInfo()) {}
 
-SBAttachInfo::SBAttachInfo () :
-    m_opaque_sp (new ProcessAttachInfo())
-{
+SBAttachInfo::SBAttachInfo(lldb::pid_t pid)
+    : m_opaque_sp(new ProcessAttachInfo()) {
+  m_opaque_sp->SetProcessID(pid);
 }
 
-SBAttachInfo::SBAttachInfo (lldb::pid_t pid) :
-    m_opaque_sp (new ProcessAttachInfo())
-{
-    m_opaque_sp->SetProcessID (pid);
+SBAttachInfo::SBAttachInfo(const char *path, bool wait_for)
+    : m_opaque_sp(new ProcessAttachInfo()) {
+  if (path && path[0])
+    m_opaque_sp->GetExecutableFile().SetFile(path, false);
+  m_opaque_sp->SetWaitForLaunch(wait_for);
 }
 
-SBAttachInfo::SBAttachInfo (const char *path, bool wait_for) :
-    m_opaque_sp (new ProcessAttachInfo())
-{
-    if (path && path[0])
-        m_opaque_sp->GetExecutableFile().SetFile(path, false);
-    m_opaque_sp->SetWaitForLaunch (wait_for);
+SBAttachInfo::SBAttachInfo(const char *path, bool wait_for, bool async)
+    : m_opaque_sp(new ProcessAttachInfo()) {
+  if (path && path[0])
+    m_opaque_sp->GetExecutableFile().SetFile(path, false);
+  m_opaque_sp->SetWaitForLaunch(wait_for);
+  m_opaque_sp->SetAsync(async);
 }
 
-SBAttachInfo::SBAttachInfo (const char *path, bool wait_for, bool async) :
-    m_opaque_sp (new ProcessAttachInfo())
-{
-    if (path && path[0])
-        m_opaque_sp->GetExecutableFile().SetFile(path, false);
-    m_opaque_sp->SetWaitForLaunch (wait_for);
-    m_opaque_sp->SetAsync(async);
+SBAttachInfo::SBAttachInfo(const SBAttachInfo &rhs)
+    : m_opaque_sp(new ProcessAttachInfo()) {
+  *m_opaque_sp = *rhs.m_opaque_sp;
 }
 
-SBAttachInfo::SBAttachInfo (const SBAttachInfo &rhs) :
-    m_opaque_sp (new ProcessAttachInfo())
-{
+SBAttachInfo::~SBAttachInfo() {}
+
+lldb_private::ProcessAttachInfo &SBAttachInfo::ref() { return *m_opaque_sp; }
+
+SBAttachInfo &SBAttachInfo::operator=(const SBAttachInfo &rhs) {
+  if (this != &rhs)
     *m_opaque_sp = *rhs.m_opaque_sp;
+  return *this;
 }
 
-SBAttachInfo::~SBAttachInfo()
-{
+lldb::pid_t SBAttachInfo::GetProcessID() { return m_opaque_sp->GetProcessID(); }
+
+void SBAttachInfo::SetProcessID(lldb::pid_t pid) {
+  m_opaque_sp->SetProcessID(pid);
 }
 
-lldb_private::ProcessAttachInfo &
-SBAttachInfo::ref ()
-{
-    return *m_opaque_sp;
+uint32_t SBAttachInfo::GetResumeCount() {
+  return m_opaque_sp->GetResumeCount();
 }
 
-SBAttachInfo &
-SBAttachInfo::operator = (const SBAttachInfo &rhs)
-{
-    if (this != &rhs)
-        *m_opaque_sp = *rhs.m_opaque_sp;
-    return *this;
+void SBAttachInfo::SetResumeCount(uint32_t c) {
+  m_opaque_sp->SetResumeCount(c);
 }
 
-lldb::pid_t
-SBAttachInfo::GetProcessID ()
-{
-    return m_opaque_sp->GetProcessID();
+const char *SBAttachInfo::GetProcessPluginName() {
+  return m_opaque_sp->GetProcessPluginName();
 }
 
-void
-SBAttachInfo::SetProcessID (lldb::pid_t pid)
-{
-    m_opaque_sp->SetProcessID (pid);
+void SBAttachInfo::SetProcessPluginName(const char *plugin_name) {
+  return m_opaque_sp->SetProcessPluginName(plugin_name);
 }
 
-
-uint32_t
-SBAttachInfo::GetResumeCount ()
-{
-    return m_opaque_sp->GetResumeCount();
+void SBAttachInfo::SetExecutable(const char *path) {
+  if (path && path[0])
+    m_opaque_sp->GetExecutableFile().SetFile(path, false);
+  else
+    m_opaque_sp->GetExecutableFile().Clear();
 }
 
-void
-SBAttachInfo::SetResumeCount (uint32_t c)
-{
-    m_opaque_sp->SetResumeCount (c);
+void SBAttachInfo::SetExecutable(SBFileSpec exe_file) {
+  if (exe_file.IsValid())
+    m_opaque_sp->GetExecutableFile() = exe_file.ref();
+  else
+    m_opaque_sp->GetExecutableFile().Clear();
 }
 
-const char *
-SBAttachInfo::GetProcessPluginName ()
-{
-    return m_opaque_sp->GetProcessPluginName();
+bool SBAttachInfo::GetWaitForLaunch() {
+  return m_opaque_sp->GetWaitForLaunch();
 }
 
-void
-SBAttachInfo::SetProcessPluginName (const char *plugin_name)
-{
-    return m_opaque_sp->SetProcessPluginName (plugin_name);
+void SBAttachInfo::SetWaitForLaunch(bool b) {
+  m_opaque_sp->SetWaitForLaunch(b);
 }
 
-void
-SBAttachInfo::SetExecutable (const char *path)
-{
-    if (path && path[0])
-        m_opaque_sp->GetExecutableFile().SetFile(path, false);
-    else
-        m_opaque_sp->GetExecutableFile().Clear();
+void SBAttachInfo::SetWaitForLaunch(bool b, bool async) {
+  m_opaque_sp->SetWaitForLaunch(b);
+  m_opaque_sp->SetAsync(async);
 }
 
-void
-SBAttachInfo::SetExecutable (SBFileSpec exe_file)
-{
-    if (exe_file.IsValid())
-        m_opaque_sp->GetExecutableFile() = exe_file.ref();
-    else
-        m_opaque_sp->GetExecutableFile().Clear();
+bool SBAttachInfo::GetIgnoreExisting() {
+  return m_opaque_sp->GetIgnoreExisting();
 }
 
-bool
-SBAttachInfo::GetWaitForLaunch ()
-{
-    return m_opaque_sp->GetWaitForLaunch();
+void SBAttachInfo::SetIgnoreExisting(bool b) {
+  m_opaque_sp->SetIgnoreExisting(b);
 }
 
-void
-SBAttachInfo::SetWaitForLaunch (bool b)
-{
-    m_opaque_sp->SetWaitForLaunch (b);
+uint32_t SBAttachInfo::GetUserID() { return m_opaque_sp->GetUserID(); }
+
+uint32_t SBAttachInfo::GetGroupID() { return m_opaque_sp->GetGroupID(); }
+
+bool SBAttachInfo::UserIDIsValid() { return m_opaque_sp->UserIDIsValid(); }
+
+bool SBAttachInfo::GroupIDIsValid() { return m_opaque_sp->GroupIDIsValid(); }
+
+void SBAttachInfo::SetUserID(uint32_t uid) { m_opaque_sp->SetUserID(uid); }
+
+void SBAttachInfo::SetGroupID(uint32_t gid) { m_opaque_sp->SetGroupID(gid); }
+
+uint32_t SBAttachInfo::GetEffectiveUserID() {
+  return m_opaque_sp->GetEffectiveUserID();
 }
 
-void
-SBAttachInfo::SetWaitForLaunch (bool b, bool async)
-{
-    m_opaque_sp->SetWaitForLaunch (b);
-    m_opaque_sp->SetAsync(async);
+uint32_t SBAttachInfo::GetEffectiveGroupID() {
+  return m_opaque_sp->GetEffectiveGroupID();
 }
 
-bool
-SBAttachInfo::GetIgnoreExisting ()
-{
-    return m_opaque_sp->GetIgnoreExisting();
+bool SBAttachInfo::EffectiveUserIDIsValid() {
+  return m_opaque_sp->EffectiveUserIDIsValid();
 }
 
-void
-SBAttachInfo::SetIgnoreExisting (bool b)
-{
-    m_opaque_sp->SetIgnoreExisting (b);
+bool SBAttachInfo::EffectiveGroupIDIsValid() {
+  return m_opaque_sp->EffectiveGroupIDIsValid();
 }
 
-uint32_t
-SBAttachInfo::GetUserID()
-{
-    return m_opaque_sp->GetUserID();
+void SBAttachInfo::SetEffectiveUserID(uint32_t uid) {
+  m_opaque_sp->SetEffectiveUserID(uid);
 }
 
-uint32_t
-SBAttachInfo::GetGroupID()
-{
-    return m_opaque_sp->GetGroupID();
+void SBAttachInfo::SetEffectiveGroupID(uint32_t gid) {
+  m_opaque_sp->SetEffectiveGroupID(gid);
 }
 
-bool
-SBAttachInfo::UserIDIsValid ()
-{
-    return m_opaque_sp->UserIDIsValid();
+lldb::pid_t SBAttachInfo::GetParentProcessID() {
+  return m_opaque_sp->GetParentProcessID();
 }
 
-bool
-SBAttachInfo::GroupIDIsValid ()
-{
-    return m_opaque_sp->GroupIDIsValid();
+void SBAttachInfo::SetParentProcessID(lldb::pid_t pid) {
+  m_opaque_sp->SetParentProcessID(pid);
 }
 
-void
-SBAttachInfo::SetUserID (uint32_t uid)
-{
-    m_opaque_sp->SetUserID (uid);
+bool SBAttachInfo::ParentProcessIDIsValid() {
+  return m_opaque_sp->ParentProcessIDIsValid();
 }
 
-void
-SBAttachInfo::SetGroupID (uint32_t gid)
-{
-    m_opaque_sp->SetGroupID (gid);
+SBListener SBAttachInfo::GetListener() {
+  return SBListener(m_opaque_sp->GetListener());
 }
 
-uint32_t
-SBAttachInfo::GetEffectiveUserID()
-{
-    return m_opaque_sp->GetEffectiveUserID();
-}
-
-uint32_t
-SBAttachInfo::GetEffectiveGroupID()
-{
-    return m_opaque_sp->GetEffectiveGroupID();
-}
-
-bool
-SBAttachInfo::EffectiveUserIDIsValid ()
-{
-    return m_opaque_sp->EffectiveUserIDIsValid();
-}
-
-bool
-SBAttachInfo::EffectiveGroupIDIsValid ()
-{
-    return m_opaque_sp->EffectiveGroupIDIsValid ();
-}
-
-void
-SBAttachInfo::SetEffectiveUserID (uint32_t uid)
-{
-    m_opaque_sp->SetEffectiveUserID(uid);
-}
-
-void
-SBAttachInfo::SetEffectiveGroupID (uint32_t gid)
-{
-    m_opaque_sp->SetEffectiveGroupID(gid);
-}
-
-lldb::pid_t
-SBAttachInfo::GetParentProcessID ()
-{
-    return m_opaque_sp->GetParentProcessID();
-}
-
-void
-SBAttachInfo::SetParentProcessID (lldb::pid_t pid)
-{
-    m_opaque_sp->SetParentProcessID (pid);
-}
-
-bool
-SBAttachInfo::ParentProcessIDIsValid()
-{
-    return m_opaque_sp->ParentProcessIDIsValid();
-}
-
-SBListener
-SBAttachInfo::GetListener ()
-{
-    return SBListener(m_opaque_sp->GetListener());
-}
-
-void
-SBAttachInfo::SetListener (SBListener &listener)
-{
-    m_opaque_sp->SetListener(listener.GetSP());
+void SBAttachInfo::SetListener(SBListener &listener) {
+  m_opaque_sp->SetListener(listener.GetSP());
 }

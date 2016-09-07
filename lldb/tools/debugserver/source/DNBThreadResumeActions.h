@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef __DNBThreadResumeActions_h__
 #define __DNBThreadResumeActions_h__
 
@@ -19,84 +18,49 @@
 
 #include "DNBDefs.h"
 
-
-class DNBThreadResumeActions
-{
+class DNBThreadResumeActions {
 public:
-    DNBThreadResumeActions ();
+  DNBThreadResumeActions();
 
-    DNBThreadResumeActions (nub_state_t default_action, int signal);
+  DNBThreadResumeActions(nub_state_t default_action, int signal);
 
-    DNBThreadResumeActions (const DNBThreadResumeAction *actions, size_t num_actions);
+  DNBThreadResumeActions(const DNBThreadResumeAction *actions,
+                         size_t num_actions);
 
-    bool
-    IsEmpty() const
-    {
-        return m_actions.empty();
-    }
+  bool IsEmpty() const { return m_actions.empty(); }
 
-    void
-    Append (const DNBThreadResumeAction &action);
+  void Append(const DNBThreadResumeAction &action);
 
-    void
-    AppendAction (nub_thread_t tid,
-                  nub_state_t state,
-                  int signal = 0,
-                  nub_addr_t addr = INVALID_NUB_ADDRESS);
+  void AppendAction(nub_thread_t tid, nub_state_t state, int signal = 0,
+                    nub_addr_t addr = INVALID_NUB_ADDRESS);
 
-    void
-    AppendResumeAll ()
-    {
-        AppendAction (INVALID_NUB_THREAD, eStateRunning);
-    }
+  void AppendResumeAll() { AppendAction(INVALID_NUB_THREAD, eStateRunning); }
 
-    void
-    AppendSuspendAll ()
-    {
-        AppendAction (INVALID_NUB_THREAD, eStateStopped);
-    }
+  void AppendSuspendAll() { AppendAction(INVALID_NUB_THREAD, eStateStopped); }
 
-    void
-    AppendStepAll ()
-    {
-        AppendAction (INVALID_NUB_THREAD, eStateStepping);
-    }
+  void AppendStepAll() { AppendAction(INVALID_NUB_THREAD, eStateStepping); }
 
-    const DNBThreadResumeAction *
-    GetActionForThread (nub_thread_t tid, bool default_ok) const;
+  const DNBThreadResumeAction *GetActionForThread(nub_thread_t tid,
+                                                  bool default_ok) const;
 
-    size_t
-    NumActionsWithState (nub_state_t state) const;
+  size_t NumActionsWithState(nub_state_t state) const;
 
-    bool
-    SetDefaultThreadActionIfNeeded (nub_state_t action, int signal);
+  bool SetDefaultThreadActionIfNeeded(nub_state_t action, int signal);
 
-    void
-    SetSignalHandledForThread (nub_thread_t tid) const;
+  void SetSignalHandledForThread(nub_thread_t tid) const;
 
-    const DNBThreadResumeAction *
-    GetFirst() const
-    {
-        return m_actions.data();
-    }
+  const DNBThreadResumeAction *GetFirst() const { return m_actions.data(); }
 
-    size_t
-    GetSize () const
-    {
-        return m_actions.size();
-    }
-    
-    void
-    Clear()
-    {
-        m_actions.clear();
-        m_signal_handled.clear();
-    }
+  size_t GetSize() const { return m_actions.size(); }
+
+  void Clear() {
+    m_actions.clear();
+    m_signal_handled.clear();
+  }
 
 protected:
-    std::vector<DNBThreadResumeAction> m_actions;
-    mutable std::vector<bool> m_signal_handled;
+  std::vector<DNBThreadResumeAction> m_actions;
+  mutable std::vector<bool> m_signal_handled;
 };
 
-
-#endif    // #ifndef __DNBThreadResumeActions_h__
+#endif // #ifndef __DNBThreadResumeActions_h__

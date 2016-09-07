@@ -1,11 +1,11 @@
 from __future__ import print_function
 
 
-
 import gdbremote_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
     """Test QSaveRegisterState/QRestoreRegisterState support."""
@@ -15,7 +15,8 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
     def grp_register_save_restore_works(self, with_suffix):
         # Start up the process, use thread suffix, grab main thread id.
         inferior_args = ["message:main entered", "sleep:5"]
-        procs = self.prep_debug_monitor_and_inferior(inferior_args=inferior_args)
+        procs = self.prep_debug_monitor_and_inferior(
+            inferior_args=inferior_args)
 
         self.add_process_info_collection_packets()
         self.add_register_info_collection_packets()
@@ -26,8 +27,9 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
             # Start the inferior...
             "read packet: $c#63",
             # ... match output....
-            { "type":"output_match", "regex":self.maybe_strict_output_regex(r"message:main entered\r\n") },
-            ], True)
+            {"type": "output_match", "regex": self.maybe_strict_output_regex(
+                r"message:main entered\r\n")},
+        ], True)
         # ... then interrupt.
         self.add_interrupt_packets()
 
@@ -44,8 +46,10 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(reg_infos)
         self.add_lldb_register_index(reg_infos)
 
-        # Pull out the register infos that we think we can bit flip successfully.
-        gpr_reg_infos = [reg_info for reg_info in reg_infos if self.is_bit_flippable_register(reg_info)]
+        # Pull out the register infos that we think we can bit flip
+        # successfully.
+        gpr_reg_infos = [
+            reg_info for reg_info in reg_infos if self.is_bit_flippable_register(reg_info)]
         self.assertTrue(len(gpr_reg_infos) > 0)
 
         # Gather thread info.
@@ -71,15 +75,18 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
         # print("saved register state id: {}".format(state_id))
 
         # Remember initial register values.
-        initial_reg_values = self.read_register_values(gpr_reg_infos, endian, thread_id=thread_id)
+        initial_reg_values = self.read_register_values(
+            gpr_reg_infos, endian, thread_id=thread_id)
         # print("initial_reg_values: {}".format(initial_reg_values))
 
         # Flip gpr register values.
-        (successful_writes, failed_writes) = self.flip_all_bits_in_each_register_value(gpr_reg_infos, endian, thread_id=thread_id)
+        (successful_writes, failed_writes) = self.flip_all_bits_in_each_register_value(
+            gpr_reg_infos, endian, thread_id=thread_id)
         # print("successful writes: {}, failed writes: {}".format(successful_writes, failed_writes))
         self.assertTrue(successful_writes > 0)
 
-        flipped_reg_values = self.read_register_values(gpr_reg_infos, endian, thread_id=thread_id)
+        flipped_reg_values = self.read_register_values(
+            gpr_reg_infos, endian, thread_id=thread_id)
         # print("flipped_reg_values: {}".format(flipped_reg_values))
 
         # Restore register values.
@@ -90,7 +97,8 @@ class TestGdbRemoteRegisterState(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(context)
 
         # Verify registers match initial register values.
-        final_reg_values = self.read_register_values(gpr_reg_infos, endian, thread_id=thread_id)
+        final_reg_values = self.read_register_values(
+            gpr_reg_infos, endian, thread_id=thread_id)
         # print("final_reg_values: {}".format(final_reg_values))
         self.assertIsNotNone(final_reg_values)
         self.assertEqual(final_reg_values, initial_reg_values)

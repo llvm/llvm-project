@@ -23,13 +23,14 @@ import time
 import unittest2
 
 
-def execute_command (command):
+def execute_command(command):
     # print '%% %s' % (command)
-    (exit_status, output) = commands.getstatusoutput (command)
+    (exit_status, output) = commands.getstatusoutput(command)
     # if output:
     #     print output
     # print 'status = %u' % (exit_status)
     return exit_status
+
 
 class TestResilience(TestBase):
 
@@ -53,13 +54,20 @@ class TestResilience(TestBase):
         execute_command("ln -sf main." + exe_flavor + ".dSYM main.dSYM")
 
         execute_command("ln -sf libmod." + exe_flavor + ".dylib libmod.dylib")
-        execute_command("ln -sf libmod." + exe_flavor + ".dylib.dSYM libmod.dylib.dSYM")
+        execute_command(
+            "ln -sf libmod." +
+            exe_flavor +
+            ".dylib.dSYM libmod.dylib.dSYM")
 
         execute_command("ln -sf mod." + exe_flavor + ".swiftdoc mod.swiftdoc")
-        execute_command("ln -sf mod." + exe_flavor + ".swiftmodule mod.swiftmodule")
+        execute_command(
+            "ln -sf mod." +
+            exe_flavor +
+            ".swiftmodule mod.swiftmodule")
 
     def cleanupSymlinks(self):
-        execute_command("rm main main.dSYM libmod.dylib libmod.dylib.dSYM mod.swiftdoc mod.swiftmodule")
+        execute_command(
+            "rm main main.dSYM libmod.dylib libmod.dylib.dSYM mod.swiftdoc mod.swiftmodule")
 
     def doTestWithFlavor(self, exe_flavor, mod_flavor):
         self.createSymlinks(exe_flavor, mod_flavor)
@@ -80,7 +88,8 @@ class TestResilience(TestBase):
         process = target.LaunchSimple(None, None, os.getcwd())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -90,12 +99,15 @@ class TestResilience(TestBase):
         # Try 'frame variable'
         var = self.frame.FindVariable("s")
         child = var.GetChildMemberWithName("a")
-        lldbutil.check_variable(self,child,False,value="1")
+        lldbutil.check_variable(self, child, False, value="1")
 
         # Try the expression parser
-        self.expect("expr s.a", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["1"])
-        self.expect("expr fA(s)", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["1"])
-        
+        self.expect("expr s.a", DATA_TYPES_DISPLAYED_CORRECTLY, substrs=["1"])
+        self.expect(
+            "expr fA(s)",
+            DATA_TYPES_DISPLAYED_CORRECTLY,
+            substrs=["1"])
+
         process.Kill()
 
         self.cleanupSymlinks()

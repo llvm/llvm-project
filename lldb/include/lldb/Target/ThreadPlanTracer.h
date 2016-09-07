@@ -1,4 +1,5 @@
-//===-- ThreadPlanTracer.h --------------------------------------------*- C++ -*-===//
+//===-- ThreadPlanTracer.h --------------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,111 +15,88 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-private.h"
 #include "lldb/Core/RegisterValue.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
-class ThreadPlanTracer
-{
-friend class ThreadPlan;
+class ThreadPlanTracer {
+  friend class ThreadPlan;
 
 public:
-    typedef enum ThreadPlanTracerStyle
-    {
-        eLocation = 0,
-        eStateChange,
-        eCheckFrames,
-        ePython
-    } ThreadPlanTracerStyle;
+  typedef enum ThreadPlanTracerStyle {
+    eLocation = 0,
+    eStateChange,
+    eCheckFrames,
+    ePython
+  } ThreadPlanTracerStyle;
 
-    ThreadPlanTracer (Thread &thread, lldb::StreamSP &stream_sp);    
-    ThreadPlanTracer (Thread &thread);
-        
-    virtual ~ThreadPlanTracer() = default;
-    
-    virtual void TracingStarted ()
-    {
-    }
-    
-    virtual void TracingEnded ()
-    {
-    }
-    
-    bool
-    EnableTracing(bool value)
-    {
-        bool old_value = m_enabled;
-        m_enabled = value;
-        if (old_value == false && value == true)
-            TracingStarted();
-        else if (old_value == true && value == false)
-            TracingEnded();
-            
-        return old_value;
-    }
-    
-    bool
-    TracingEnabled()
-    {
-        return m_enabled;
-    }
-    
-    bool
-    EnableSingleStep (bool value)
-    {
-        bool old_value = m_single_step;
-        m_single_step = value;
-        return old_value;
-    }
-    
-    bool 
-    SingleStepEnabled ()
-    {
-        return m_single_step;
-    }
+  ThreadPlanTracer(Thread &thread, lldb::StreamSP &stream_sp);
+  ThreadPlanTracer(Thread &thread);
+
+  virtual ~ThreadPlanTracer() = default;
+
+  virtual void TracingStarted() {}
+
+  virtual void TracingEnded() {}
+
+  bool EnableTracing(bool value) {
+    bool old_value = m_enabled;
+    m_enabled = value;
+    if (old_value == false && value == true)
+      TracingStarted();
+    else if (old_value == true && value == false)
+      TracingEnded();
+
+    return old_value;
+  }
+
+  bool TracingEnabled() { return m_enabled; }
+
+  bool EnableSingleStep(bool value) {
+    bool old_value = m_single_step;
+    m_single_step = value;
+    return old_value;
+  }
+
+  bool SingleStepEnabled() { return m_single_step; }
 
 protected:
-    Thread &m_thread;
+  Thread &m_thread;
 
-    Stream *
-    GetLogStream ();
-    
-    virtual void Log();
-    
+  Stream *GetLogStream();
+
+  virtual void Log();
+
 private:
-    bool
-    TracerExplainsStop ();
-        
-    bool m_single_step;
-    bool m_enabled;
-    lldb::StreamSP m_stream_sp;
+  bool TracerExplainsStop();
+
+  bool m_single_step;
+  bool m_enabled;
+  lldb::StreamSP m_stream_sp;
 };
-    
-class ThreadPlanAssemblyTracer : public ThreadPlanTracer
-{
-public:
-    ThreadPlanAssemblyTracer (Thread &thread, lldb::StreamSP &stream_sp);    
-    ThreadPlanAssemblyTracer (Thread &thread);    
-    ~ThreadPlanAssemblyTracer() override;
 
-    void TracingStarted() override;
-    void TracingEnded() override;
-    void Log() override;
+class ThreadPlanAssemblyTracer : public ThreadPlanTracer {
+public:
+  ThreadPlanAssemblyTracer(Thread &thread, lldb::StreamSP &stream_sp);
+  ThreadPlanAssemblyTracer(Thread &thread);
+  ~ThreadPlanAssemblyTracer() override;
+
+  void TracingStarted() override;
+  void TracingEnded() override;
+  void Log() override;
 
 private:
-    Disassembler *
-    GetDisassembler ();
+  Disassembler *GetDisassembler();
 
-    TypeFromUser
-    GetIntPointerType();
+  TypeFromUser GetIntPointerType();
 
-    lldb::DisassemblerSP    m_disassembler_sp;
-    TypeFromUser            m_intptr_type;
-    std::vector<RegisterValue> m_register_values;
-    lldb::DataBufferSP      m_buffer_sp;
+  lldb::DisassemblerSP m_disassembler_sp;
+  TypeFromUser m_intptr_type;
+  std::vector<RegisterValue> m_register_values;
+  lldb::DataBufferSP m_buffer_sp;
 };
 
 } // namespace lldb_private

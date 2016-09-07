@@ -1,4 +1,5 @@
 class Protocol(object):
+
     def __init__(self, options, config):
         self.options = options
         self.config = config

@@ -12,16 +12,12 @@
 
 #include "llvm/IR/Module.h"
 
-namespace lldb_private
-{
-namespace lldb_renderscript
-{
+namespace lldb_private {
+namespace lldb_renderscript {
 
-bool
-fixupX86FunctionCalls(llvm::Module &module);
+bool fixupX86FunctionCalls(llvm::Module &module);
 
-bool
-fixupX86_64FunctionCalls(llvm::Module &module);
+bool fixupX86_64FunctionCalls(llvm::Module &module);
 }
 }
 #endif

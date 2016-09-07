@@ -23,106 +23,78 @@ namespace lldb_private {
 // CommandObjectHelp
 //-------------------------------------------------------------------------
 
-class CommandObjectHelp : public CommandObjectParsed
-{
+class CommandObjectHelp : public CommandObjectParsed {
 public:
+  CommandObjectHelp(CommandInterpreter &interpreter);
 
-    CommandObjectHelp (CommandInterpreter &interpreter);
+  ~CommandObjectHelp() override;
 
-    ~CommandObjectHelp() override;
+  int HandleCompletion(Args &input, int &cursor_index,
+                       int &cursor_char_position, int match_start_point,
+                       int max_return_elements, bool &word_complete,
+                       StringList &matches) override;
 
-    int
-    HandleCompletion(Args &input,
-		     int &cursor_index,
-		     int &cursor_char_position,
-		     int match_start_point,
-		     int max_return_elements,
-		     bool &word_complete,
-		     StringList &matches) override;
-    
-    static void
-    GenerateAdditionalHelpAvenuesMessage (Stream *s,
-                                          const char* command,
-                                          const char* prefix = nullptr,
-                                          const char* subcommand = nullptr,
-                                          bool include_apropos = true,
-                                          bool include_type_lookup = true);
-    
-    class CommandOptions : public Options
-    {
-    public:
-        
-        CommandOptions() :
-        Options()
-        {
-        }
-        
-        ~CommandOptions() override {}
-        
-        Error
-        SetOptionValue(uint32_t option_idx, const char *option_arg,
-                       ExecutionContext *execution_context) override
-        {
-            Error error;
-            const int short_option = m_getopt_table[option_idx].val;
-            
-            switch (short_option)
-            {
-                case 'a':
-                    m_show_aliases = false;
-                    break;
-                case 'u':
-                    m_show_user_defined = false;
-                    break;
-                case 'h':
-                    m_show_hidden = true;
-                    break;
-                default:
-                    error.SetErrorStringWithFormat ("unrecognized option '%c'", short_option);
-                    break;
-            }
-            
-            return error;
-        }
-        
-        void
-        OptionParsingStarting(ExecutionContext *execution_context) override
-        {
-            m_show_aliases = true;
-            m_show_user_defined = true;
-            m_show_hidden = false;
-        }
-        
-        const OptionDefinition*
-        GetDefinitions() override
-        {
-            return g_option_table;
-        }
-        
-        // Options table: Required for subclasses of Options.
-        
-        static OptionDefinition g_option_table[];
-        
-        // Instance variables to hold the values for command options.
-        
-        bool m_show_aliases;
-        bool m_show_user_defined;
-        bool m_show_hidden;
-    };
-    
-    Options *
-    GetOptions() override
-    {
-        return &m_options;
+  static void GenerateAdditionalHelpAvenuesMessage(
+      Stream *s, const char *command, const char *prefix = nullptr,
+      const char *subcommand = nullptr, bool include_apropos = true,
+      bool include_type_lookup = true);
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() : Options() {}
+
+    ~CommandOptions() override {}
+
+    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'a':
+        m_show_aliases = false;
+        break;
+      case 'u':
+        m_show_user_defined = false;
+        break;
+      case 'h':
+        m_show_hidden = true;
+        break;
+      default:
+        error.SetErrorStringWithFormat("unrecognized option '%c'",
+                                       short_option);
+        break;
+      }
+
+      return error;
     }
-    
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_show_aliases = true;
+      m_show_user_defined = true;
+      m_show_hidden = false;
+    }
+
+    const OptionDefinition *GetDefinitions() override { return g_option_table; }
+
+    // Options table: Required for subclasses of Options.
+
+    static OptionDefinition g_option_table[];
+
+    // Instance variables to hold the values for command options.
+
+    bool m_show_aliases;
+    bool m_show_user_defined;
+    bool m_show_hidden;
+  };
+
+  Options *GetOptions() override { return &m_options; }
+
 protected:
-    bool
-    DoExecute(Args& command,
-	      CommandReturnObject &result) override;
-    
+  bool DoExecute(Args &command, CommandReturnObject &result) override;
+
 private:
-    CommandOptions m_options;
+  CommandOptions m_options;
 };
 
 } // namespace lldb_private

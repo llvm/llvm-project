@@ -29,8 +29,8 @@ import sys
 import lldbbuild
 
 if len(sys.argv) != 3:
-     print "usage: " + sys.argv[0] + " TARGET_DIR LLVM_BUILD_DIR"
-     sys.exit(1)
+    print "usage: " + sys.argv[0] + " TARGET_DIR LLVM_BUILD_DIR"
+    sys.exit(1)
 
 if os.environ['LLVM_CONFIGURATION'] == 'BuildAndIntegration':
     print "Not copying Swift resources in B&I"
@@ -45,16 +45,16 @@ swift_build_dir = lldbbuild.expected_package_build_path_for("swift")
 
 if not os.path.isdir(target_dir):
     print target_dir + " doesn't exist"
-    sys.exit(1) 
+    sys.exit(1)
 
 if not os.path.isdir(swift_build_dir):
-    swift_build_dir = re.sub ("-macosx-", "-iphoneos-", swift_build_dir)
+    swift_build_dir = re.sub("-macosx-", "-iphoneos-", swift_build_dir)
 
 if not os.path.isdir(swift_build_dir):
-    swift_build_dir = re.sub ("-iphoneos-", "-appletvos-", swift_build_dir)
+    swift_build_dir = re.sub("-iphoneos-", "-appletvos-", swift_build_dir)
 
 if not os.path.isdir(swift_build_dir):
-    swift_build_dir = re.sub ("-appletvos-", "-watchos-", swift_build_dir)
+    swift_build_dir = re.sub("-appletvos-", "-watchos-", swift_build_dir)
 
 if not os.path.isdir(swift_build_dir):
     print swift_build_dir + " doesn't exist"
@@ -84,4 +84,7 @@ swift_resources = os.path.join(resources, "Swift")
 if os.path.isdir(swift_resources):
     shutil.rmtree(swift_resources)
 
-shutil.copytree(swift_dir, swift_resources, ignore=shutil.ignore_patterns("install-tmp"))
+shutil.copytree(
+    swift_dir,
+    swift_resources,
+    ignore=shutil.ignore_patterns("install-tmp"))

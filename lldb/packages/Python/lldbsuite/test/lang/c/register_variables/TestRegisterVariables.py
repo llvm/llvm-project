@@ -2,7 +2,8 @@
 
 from __future__ import print_function
 
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
@@ -15,6 +16,8 @@ from lldbsuite.test import lldbutil
 # Return:
 #   True if the value has a readable value and is in a register
 #   False otherwise
+
+
 def is_variable_in_register(frame, var_name):
     # Ensure we can lookup the variable.
     var = frame.FindVariable(var_name)
@@ -90,10 +93,12 @@ class RegisterVariableTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-
     @expectedFailureAll(compiler="clang", compiler_version=['<', '3.5'])
     @expectedFailureAll(oslist=["macosx"], bugnumber="rdar://26050265")
-    @expectedFailureAll(compiler="gcc", compiler_version=['>=', '4.8.2'], archs=["i386", "x86_64"])
+    @expectedFailureAll(
+        compiler="gcc", compiler_version=[
+            '>=', '4.8.2'], archs=[
+            "i386", "x86_64"])
     @expectedFailureAll(oslist=["linux"], bugnumber="bugs.swift.org/SR-2140")
     def test_and_run_command(self):
         """Test expressions on register values."""
@@ -110,7 +115,8 @@ class RegisterVariableTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the main.
-        lldbutil.run_break_set_by_source_regexp(self, "break", num_expected_locations=3)
+        lldbutil.run_break_set_by_source_regexp(
+            self, "break", num_expected_locations=3)
 
         ####################
         # First breakpoint
@@ -119,24 +125,25 @@ class RegisterVariableTestCase(TestBase):
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-            substrs = [' resolved, hit count = 1'])
+                    substrs=[' resolved, hit count = 1'])
 
         # Try some variables that should be visible
-        frame = self.dbg.GetSelectedTarget().GetProcess().GetSelectedThread().GetSelectedFrame()
+        frame = self.dbg.GetSelectedTarget().GetProcess(
+        ).GetSelectedThread().GetSelectedFrame()
         if is_variable_in_register(frame, 'a'):
             register_variables_count += 1
             self.expect("expr a", VARIABLES_DISPLAYED_CORRECTLY,
-                patterns = [re_expr_equals('int', 2)])
+                        patterns=[re_expr_equals('int', 2)])
 
         if is_struct_pointer_in_register(frame, 'b'):
             register_variables_count += 1
             self.expect("expr b->m1", VARIABLES_DISPLAYED_CORRECTLY,
-                patterns = [re_expr_equals('int', 3)])
+                        patterns=[re_expr_equals('int', 3)])
 
         #####################
         # Second breakpoint
@@ -145,24 +152,25 @@ class RegisterVariableTestCase(TestBase):
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-            substrs = [' resolved, hit count = 1'])
+                    substrs=[' resolved, hit count = 1'])
 
         # Try some variables that should be visible
-        frame = self.dbg.GetSelectedTarget().GetProcess().GetSelectedThread().GetSelectedFrame()
+        frame = self.dbg.GetSelectedTarget().GetProcess(
+        ).GetSelectedThread().GetSelectedFrame()
         if is_struct_pointer_in_register(frame, 'b'):
             register_variables_count += 1
             self.expect("expr b->m2", VARIABLES_DISPLAYED_CORRECTLY,
-                patterns = [re_expr_equals('int', 5)])
+                        patterns=[re_expr_equals('int', 5)])
 
         if is_variable_in_register(frame, 'c'):
             register_variables_count += 1
             self.expect("expr c", VARIABLES_DISPLAYED_CORRECTLY,
-                patterns = [re_expr_equals('int', 5)])
+                        patterns=[re_expr_equals('int', 5)])
 
         #####################
         # Third breakpoint
@@ -171,22 +179,25 @@ class RegisterVariableTestCase(TestBase):
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-            substrs = [' resolved, hit count = 1'])
+                    substrs=[' resolved, hit count = 1'])
 
         # Try some variables that should be visible
-        frame = self.dbg.GetSelectedTarget().GetProcess().GetSelectedThread().GetSelectedFrame()
+        frame = self.dbg.GetSelectedTarget().GetProcess(
+        ).GetSelectedThread().GetSelectedFrame()
         if is_variable_in_register(frame, 'f'):
             register_variables_count += 1
             self.expect("expr f", VARIABLES_DISPLAYED_CORRECTLY,
-                patterns = [re_expr_equals('float', '3.1')])
+                        patterns=[re_expr_equals('float', '3.1')])
 
         # Validate that we verified at least one register variable
-        self.assertTrue(register_variables_count > 0, "expected to verify at least one variable in a register")
+        self.assertTrue(
+            register_variables_count > 0,
+            "expected to verify at least one variable in a register")
         # print("executed {} expressions with values in registers".format(register_variables_count))
 
         self.runCmd("kill")

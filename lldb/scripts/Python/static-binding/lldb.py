@@ -31,13 +31,14 @@ o SBLineEntry: Specifies an association with a contiguous range of instructions
 """
 
 from sys import version_info
-if version_info >= (2,6,0):
+if version_info >= (2, 6, 0):
     def swig_import_helper():
         from os.path import dirname
         import imp
         fp = None
         try:
-            fp, pathname, description = imp.find_module('_lldb', [dirname(__file__)])
+            fp, pathname, description = imp.find_module(
+                '_lldb', [dirname(__file__)])
         except ImportError:
             import _lldb
             return _lldb
@@ -55,39 +56,52 @@ del version_info
 try:
     _swig_property = property
 except NameError:
-    pass # Python < 2.2 doesn't have 'property'.
-def _swig_setattr_nondynamic(self,class_type,name,value,static=1):
-    if (name == "thisown"): return self.this.own(value)
+    pass  # Python < 2.2 doesn't have 'property'.
+
+
+def _swig_setattr_nondynamic(self, class_type, name, value, static=1):
+    if (name == "thisown"):
+        return self.this.own(value)
     if (name == "this"):
         if type(value).__name__ == 'SwigPyObject':
             self.__dict__[name] = value
             return
-    method = class_type.__swig_setmethods__.get(name,None)
-    if method: return method(self,value)
-    if (not static) or hasattr(self,name):
+    method = class_type.__swig_setmethods__.get(name, None)
+    if method:
+        return method(self, value)
+    if (not static) or hasattr(self, name):
         self.__dict__[name] = value
     else:
         raise AttributeError("You cannot add attributes to %s" % self)
 
-def _swig_setattr(self,class_type,name,value):
-    return _swig_setattr_nondynamic(self,class_type,name,value,0)
 
-def _swig_getattr(self,class_type,name):
-    if (name == "thisown"): return self.this.own()
-    method = class_type.__swig_getmethods__.get(name,None)
-    if method: return method(self)
+def _swig_setattr(self, class_type, name, value):
+    return _swig_setattr_nondynamic(self, class_type, name, value, 0)
+
+
+def _swig_getattr(self, class_type, name):
+    if (name == "thisown"):
+        return self.this.own()
+    method = class_type.__swig_getmethods__.get(name, None)
+    if method:
+        return method(self)
     raise AttributeError(name)
 
+
 def _swig_repr(self):
-    try: strthis = "proxy of " + self.this.__repr__()
-    except: strthis = ""
-    return "<%s.%s; %s >" % (self.__class__.__module__, self.__class__.__name__, strthis,)
+    try:
+        strthis = "proxy of " + self.this.__repr__()
+    except:
+        strthis = ""
+    return "<%s.%s; %s >" % (self.__class__.__module__,
+                             self.__class__.__name__, strthis,)
 
 try:
     _object = object
     _newclass = 1
 except AttributeError:
-    class _object : pass
+    class _object:
+        pass
     _newclass = 0
 
 
@@ -755,6 +769,8 @@ eTypeSummaryUncapped = _lldb.eTypeSummaryUncapped
 # ==================================
 # Helper function for SBModule class
 # ==================================
+
+
 def in_range(symbol, section):
     """Test whether a symbol is within the range of a section."""
     symSA = symbol.GetStartAddress().GetFileAddress()
@@ -793,6 +809,7 @@ def lldb_iter(obj, getsize, getelem):
 # len(): __len__.
 # ==============================================================================
 
+
 class SBAddress(_object):
     """
     A section + offset based address class.
@@ -828,13 +845,18 @@ class SBAddress(_object):
     See docstring of SBFunction for example usage of SBAddress.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBAddress, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBAddress, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBAddress, name)
     __repr__ = _swig_repr
-    def __eq__(self, other): return isinstance(other, SBAddress) and self.GetFileAddress() == other.GetFileAddress() and self.GetModule() == other.GetModule()
+
+    def __eq__(self, other): return isinstance(other, SBAddress) and self.GetFileAddress(
+    ) == other.GetFileAddress() and self.GetModule() == other.GetModule()
+
     def __ne__(self, other): return not self.__eq__(other)
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBAddress
         __init__(self, SBAddress rhs) -> SBAddress
@@ -844,11 +866,15 @@ class SBAddress(_object):
         Create an address by resolving a load address using the supplied target.
         """
         this = _lldb.new_SBAddress(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBAddress
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBAddress_IsValid(self)
@@ -901,8 +927,8 @@ class SBAddress(_object):
         An address might refer to code or data from an existing module, or it
         might refer to something on the stack or heap. The following functions
         will only return valid values if the address has been resolved to a code
-        or data address using 'void SBAddress::SetLoadAddress(...)' or 
-        'lldb::SBAddress SBTarget::ResolveLoadAddress (...)'. 
+        or data address using 'void SBAddress::SetLoadAddress(...)' or
+        'lldb::SBAddress SBTarget::ResolveLoadAddress (...)'.
         """
         return _lldb.SBAddress_GetSymbolContext(self, *args)
 
@@ -911,8 +937,8 @@ class SBAddress(_object):
         GetModule(self) -> SBModule
 
         GetModule() and the following grab individual objects for a given address and
-        are less efficient if you want more than one symbol related objects. 
-        Use one of the following when you want multiple debug symbol related 
+        are less efficient if you want more than one symbol related objects.
+        Use one of the following when you want multiple debug symbol related
         objects for an address:
            lldb::SBSymbolContext SBAddress::GetSymbolContext (uint32_t resolve_scope);
            lldb::SBSymbolContext SBTarget::ResolveSymbolContextForAddress (const SBAddress &addr, uint32_t resolve_scope);
@@ -941,20 +967,20 @@ class SBAddress(_object):
         """GetLineEntry(self) -> SBLineEntry"""
         return _lldb.SBAddress_GetLineEntry(self)
 
-    def __get_load_addr_property__ (self):
+    def __get_load_addr_property__(self):
         '''Get the load address for a lldb.SBAddress using the current target.'''
-        return self.GetLoadAddress (target)
+        return self.GetLoadAddress(target)
 
-    def __set_load_addr_property__ (self, load_addr):
+    def __set_load_addr_property__(self, load_addr):
         '''Set the load address for a lldb.SBAddress using the current target.'''
-        return self.SetLoadAddress (load_addr, target)
+        return self.SetLoadAddress(load_addr, target)
 
     def __int__(self):
         '''Convert an address to a load address if there is a process and that process is alive, or to a file address otherwise.'''
         if process.is_alive:
-            return self.GetLoadAddress (target)
+            return self.GetLoadAddress(target)
         else:
-            return self.GetFileAddress ()
+            return self.GetFileAddress()
 
     def __oct__(self):
         '''Convert the address to an octal string'''
@@ -965,36 +991,75 @@ class SBAddress(_object):
         return '0x%x' % int(self)
 
     __swig_getmethods__["module"] = GetModule
-    if _newclass: module = property(GetModule, None, doc='''A read only property that returns an lldb object that represents the module (lldb.SBModule) that this address resides within.''')
+    if _newclass:
+        module = property(
+            GetModule,
+            None,
+            doc='''A read only property that returns an lldb object that represents the module (lldb.SBModule) that this address resides within.''')
 
     __swig_getmethods__["compile_unit"] = GetCompileUnit
-    if _newclass: compile_unit = property(GetCompileUnit, None, doc='''A read only property that returns an lldb object that represents the compile unit (lldb.SBCompileUnit) that this address resides within.''')
+    if _newclass:
+        compile_unit = property(
+            GetCompileUnit,
+            None,
+            doc='''A read only property that returns an lldb object that represents the compile unit (lldb.SBCompileUnit) that this address resides within.''')
 
     __swig_getmethods__["line_entry"] = GetLineEntry
-    if _newclass: line_entry = property(GetLineEntry, None, doc='''A read only property that returns an lldb object that represents the line entry (lldb.SBLineEntry) that this address resides within.''')
+    if _newclass:
+        line_entry = property(
+            GetLineEntry,
+            None,
+            doc='''A read only property that returns an lldb object that represents the line entry (lldb.SBLineEntry) that this address resides within.''')
 
     __swig_getmethods__["function"] = GetFunction
-    if _newclass: function = property(GetFunction, None, doc='''A read only property that returns an lldb object that represents the function (lldb.SBFunction) that this address resides within.''')
+    if _newclass:
+        function = property(
+            GetFunction,
+            None,
+            doc='''A read only property that returns an lldb object that represents the function (lldb.SBFunction) that this address resides within.''')
 
     __swig_getmethods__["block"] = GetBlock
-    if _newclass: block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the block (lldb.SBBlock) that this address resides within.''')
+    if _newclass:
+        block = property(
+            GetBlock,
+            None,
+            doc='''A read only property that returns an lldb object that represents the block (lldb.SBBlock) that this address resides within.''')
 
     __swig_getmethods__["symbol"] = GetSymbol
-    if _newclass: symbol = property(GetSymbol, None, doc='''A read only property that returns an lldb object that represents the symbol (lldb.SBSymbol) that this address resides within.''')
+    if _newclass:
+        symbol = property(
+            GetSymbol,
+            None,
+            doc='''A read only property that returns an lldb object that represents the symbol (lldb.SBSymbol) that this address resides within.''')
 
     __swig_getmethods__["offset"] = GetOffset
-    if _newclass: offset = property(GetOffset, None, doc='''A read only property that returns the section offset in bytes as an integer.''')
+    if _newclass:
+        offset = property(
+            GetOffset,
+            None,
+            doc='''A read only property that returns the section offset in bytes as an integer.''')
 
     __swig_getmethods__["section"] = GetSection
-    if _newclass: section = property(GetSection, None, doc='''A read only property that returns an lldb object that represents the section (lldb.SBSection) that this address resides within.''')
+    if _newclass:
+        section = property(
+            GetSection,
+            None,
+            doc='''A read only property that returns an lldb object that represents the section (lldb.SBSection) that this address resides within.''')
 
     __swig_getmethods__["file_addr"] = GetFileAddress
-    if _newclass: file_addr = property(GetFileAddress, None, doc='''A read only property that returns file address for the section as an integer. This is the address that represents the address as it is found in the object file that defines it.''')
+    if _newclass:
+        file_addr = property(
+            GetFileAddress,
+            None,
+            doc='''A read only property that returns file address for the section as an integer. This is the address that represents the address as it is found in the object file that defines it.''')
 
     __swig_getmethods__["load_addr"] = __get_load_addr_property__
     __swig_setmethods__["load_addr"] = __set_load_addr_property__
-    if _newclass: load_addr = property(__get_load_addr_property__, __set_load_addr_property__, doc='''A read/write property that gets/sets the SBAddress using load address. The setter resolves SBAddress using the SBTarget from lldb.target so this property can ONLY be used in the interactive script interpreter (i.e. under the lldb script command) and not in Python based commands, or breakpoint commands.''')
-
+    if _newclass:
+        load_addr = property(
+            __get_load_addr_property__,
+            __set_load_addr_property__,
+            doc='''A read/write property that gets/sets the SBAddress using load address. The setter resolves SBAddress using the SBTarget from lldb.target so this property can ONLY be used in the interactive script interpreter (i.e. under the lldb script command) and not in Python based commands, or breakpoint commands.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -1003,14 +1068,17 @@ class SBAddress(_object):
 SBAddress_swigregister = _lldb.SBAddress_swigregister
 SBAddress_swigregister(SBAddress)
 
+
 class SBAttachInfo(_object):
     """Proxy of C++ lldb::SBAttachInfo class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBAttachInfo, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBAttachInfo, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBAttachInfo, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBAttachInfo
         __init__(self, pid_t pid) -> SBAttachInfo
@@ -1019,8 +1087,11 @@ class SBAttachInfo(_object):
         __init__(self, SBAttachInfo rhs) -> SBAttachInfo
         """
         this = _lldb.new_SBAttachInfo(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
+
     def GetProcessID(self):
         """GetProcessID(self) -> pid_t"""
         return _lldb.SBAttachInfo_GetProcessID(self)
@@ -1140,27 +1211,33 @@ class SBAttachInfo(_object):
         return _lldb.SBAttachInfo_SetListener(self, *args)
 
     __swig_destroy__ = _lldb.delete_SBAttachInfo
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
 SBAttachInfo_swigregister = _lldb.SBAttachInfo_swigregister
 SBAttachInfo_swigregister(SBAttachInfo)
+
 
 class SBBlock(_object):
     """Represents a lexical block. SBFunction contains SBBlock(s)."""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBBlock, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBBlock, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBBlock, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBBlock
         __init__(self, SBBlock rhs) -> SBBlock
         """
         this = _lldb.new_SBBlock(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBBlock
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def IsInlined(self):
         """
         IsInlined(self) -> bool
@@ -1170,6 +1247,7 @@ class SBBlock(_object):
         return _lldb.SBBlock_IsInlined(self)
 
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBBlock_IsValid(self)
@@ -1264,7 +1342,7 @@ class SBBlock(_object):
 
     def GetVariables(self, *args):
         """
-        GetVariables(self, SBFrame frame, bool arguments, bool locals, bool statics, 
+        GetVariables(self, SBFrame frame, bool arguments, bool locals, bool statics,
             DynamicValueType use_dynamic) -> SBValueList
         GetVariables(self, SBTarget target, bool arguments, bool locals, bool statics) -> SBValueList
         """
@@ -1272,11 +1350,14 @@ class SBBlock(_object):
 
     def get_range_at_index(self, idx):
         if idx < self.GetNumRanges():
-            return [self.GetRangeStartAddress(idx), self.GetRangeEndAddress(idx)]
+            return [
+                self.GetRangeStartAddress(idx),
+                self.GetRangeEndAddress(idx)]
         return []
 
     class ranges_access(object):
         '''A helper object that will lazily hand out an array of lldb.SBAddress that represent address ranges for a block.'''
+
         def __init__(self, sbblock):
             self.sbblock = sbblock
 
@@ -1287,57 +1368,99 @@ class SBBlock(_object):
 
         def __getitem__(self, key):
             count = len(self)
-            if type(key) is int:
-                return self.sbblock.get_range_at_index (key);
+            if isinstance(key, int):
+                return self.sbblock.get_range_at_index(key)
             if isinstance(key, SBAddress):
-                range_idx = self.sbblock.GetRangeIndexForBlockAddress(key);
+                range_idx = self.sbblock.GetRangeIndexForBlockAddress(key)
                 if range_idx < len(self):
-                    return [self.sbblock.GetRangeStartAddress(range_idx), self.sbblock.GetRangeEndAddress(range_idx)]
+                    return [
+                        self.sbblock.GetRangeStartAddress(range_idx),
+                        self.sbblock.GetRangeEndAddress(range_idx)]
             else:
                 print("error: unsupported item type: %s" % type(key))
             return None
 
     def get_ranges_access_object(self):
         '''An accessor function that returns a ranges_access() object which allows lazy block address ranges access.'''
-        return self.ranges_access (self)
+        return self.ranges_access(self)
 
     def get_ranges_array(self):
         '''An accessor function that returns an array object that contains all ranges in this block object.'''
         if not hasattr(self, 'ranges_array'):
             self.ranges_array = []
             for idx in range(self.num_ranges):
-                self.ranges_array.append ([self.GetRangeStartAddress(idx), self.GetRangeEndAddress(idx)])
+                self.ranges_array.append(
+                    [self.GetRangeStartAddress(idx), self.GetRangeEndAddress(idx)])
         return self.ranges_array
 
     def get_call_site(self):
-        return declaration(self.GetInlinedCallSiteFile(), self.GetInlinedCallSiteLine(), self.GetInlinedCallSiteColumn())
+        return declaration(
+            self.GetInlinedCallSiteFile(),
+            self.GetInlinedCallSiteLine(),
+            self.GetInlinedCallSiteColumn())
 
     __swig_getmethods__["parent"] = GetParent
-    if _newclass: parent = property(GetParent, None, doc='''A read only property that returns the same result as GetParent().''')
+    if _newclass:
+        parent = property(
+            GetParent,
+            None,
+            doc='''A read only property that returns the same result as GetParent().''')
 
     __swig_getmethods__["first_child"] = GetFirstChild
-    if _newclass: first_child = property(GetFirstChild, None, doc='''A read only property that returns the same result as GetFirstChild().''')
+    if _newclass:
+        first_child = property(
+            GetFirstChild,
+            None,
+            doc='''A read only property that returns the same result as GetFirstChild().''')
 
     __swig_getmethods__["call_site"] = get_call_site
-    if _newclass: call_site = property(get_call_site, None, doc='''A read only property that returns a lldb.declaration object that contains the inlined call site file, line and column.''')
+    if _newclass:
+        call_site = property(
+            get_call_site,
+            None,
+            doc='''A read only property that returns a lldb.declaration object that contains the inlined call site file, line and column.''')
 
     __swig_getmethods__["sibling"] = GetSibling
-    if _newclass: sibling = property(GetSibling, None, doc='''A read only property that returns the same result as GetSibling().''')
+    if _newclass:
+        sibling = property(
+            GetSibling,
+            None,
+            doc='''A read only property that returns the same result as GetSibling().''')
 
     __swig_getmethods__["name"] = GetInlinedName
-    if _newclass: name = property(GetInlinedName, None, doc='''A read only property that returns the same result as GetInlinedName().''')
+    if _newclass:
+        name = property(
+            GetInlinedName,
+            None,
+            doc='''A read only property that returns the same result as GetInlinedName().''')
 
     __swig_getmethods__["inlined_block"] = GetContainingInlinedBlock
-    if _newclass: inlined_block = property(GetContainingInlinedBlock, None, doc='''A read only property that returns the same result as GetContainingInlinedBlock().''')
+    if _newclass:
+        inlined_block = property(
+            GetContainingInlinedBlock,
+            None,
+            doc='''A read only property that returns the same result as GetContainingInlinedBlock().''')
 
     __swig_getmethods__["range"] = get_ranges_access_object
-    if _newclass: range = property(get_ranges_access_object, None, doc='''A read only property that allows item access to the address ranges for a block by integer (range = block.range[0]) and by lldb.SBAdddress (find the range that contains the specified lldb.SBAddress like "pc_range = lldb.frame.block.range[frame.addr]").''')
+    if _newclass:
+        range = property(
+            get_ranges_access_object,
+            None,
+            doc='''A read only property that allows item access to the address ranges for a block by integer (range = block.range[0]) and by lldb.SBAdddress (find the range that contains the specified lldb.SBAddress like "pc_range = lldb.frame.block.range[frame.addr]").''')
 
     __swig_getmethods__["ranges"] = get_ranges_array
-    if _newclass: ranges = property(get_ranges_array, None, doc='''A read only property that returns a list() object that contains all of the address ranges for the block.''')
+    if _newclass:
+        ranges = property(
+            get_ranges_array,
+            None,
+            doc='''A read only property that returns a list() object that contains all of the address ranges for the block.''')
 
     __swig_getmethods__["num_ranges"] = GetNumRanges
-    if _newclass: num_ranges = property(GetNumRanges, None, doc='''A read only property that returns the same result as GetNumRanges().''')
+    if _newclass:
+        num_ranges = property(
+            GetNumRanges,
+            None,
+            doc='''A read only property that returns the same result as GetNumRanges().''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -1345,6 +1468,7 @@ class SBBlock(_object):
 
 SBBlock_swigregister = _lldb.SBBlock_swigregister
 SBBlock_swigregister(SBBlock)
+
 
 class SBBreakpoint(_object):
     """
@@ -1416,29 +1540,41 @@ class SBBreakpoint(_object):
     to compare two breakpoints for equality.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBBreakpoint, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBBreakpoint, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBBreakpoint, name)
     __repr__ = _swig_repr
-    def __iter__(self): return lldb_iter(self, 'GetNumLocations', 'GetLocationAtIndex')
+
+    def __iter__(self): return lldb_iter(
+        self, 'GetNumLocations', 'GetLocationAtIndex')
+
     def __len__(self): return self.GetNumLocations()
-    def __eq__(self, other): return isinstance(other, SBBreakpoint) and self.GetID() == other.GetID()
+
+    def __eq__(self, other): return isinstance(
+        other, SBBreakpoint) and self.GetID() == other.GetID()
+
     def __ne__(self, other): return not self.__eq__(other)
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBBreakpoint
         __init__(self, SBBreakpoint rhs) -> SBBreakpoint
         """
         this = _lldb.new_SBBreakpoint(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBBreakpoint
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetID(self):
         """GetID(self) -> break_id_t"""
         return _lldb.SBBreakpoint_GetID(self)
 
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBBreakpoint_IsValid(self)
@@ -1559,7 +1695,7 @@ class SBBreakpoint(_object):
         The body will be wrapped in a function, which be passed two arguments:
         'frame' - which holds the bottom-most SBFrame of the thread that hit the breakpoint
         'bpno'  - which is the SBBreakpointLocation to which the callback was attached.
-        
+
         The error parameter is currently ignored, but will at some point hold the Python
         compilation diagnostics.
         Returns true if the body compiles successfully, false if not.
@@ -1606,85 +1742,123 @@ class SBBreakpoint(_object):
         """EventIsBreakpointEvent(SBEvent event) -> bool"""
         return _lldb.SBBreakpoint_EventIsBreakpointEvent(*args)
 
-    if _newclass:EventIsBreakpointEvent = staticmethod(EventIsBreakpointEvent)
-    __swig_getmethods__["EventIsBreakpointEvent"] = lambda x: EventIsBreakpointEvent
+    if _newclass:
+        EventIsBreakpointEvent = staticmethod(EventIsBreakpointEvent)
+    __swig_getmethods__[
+        "EventIsBreakpointEvent"] = lambda x: EventIsBreakpointEvent
+
     def GetBreakpointEventTypeFromEvent(*args):
         """GetBreakpointEventTypeFromEvent(SBEvent event) -> BreakpointEventType"""
         return _lldb.SBBreakpoint_GetBreakpointEventTypeFromEvent(*args)
 
-    if _newclass:GetBreakpointEventTypeFromEvent = staticmethod(GetBreakpointEventTypeFromEvent)
-    __swig_getmethods__["GetBreakpointEventTypeFromEvent"] = lambda x: GetBreakpointEventTypeFromEvent
+    if _newclass:
+        GetBreakpointEventTypeFromEvent = staticmethod(
+            GetBreakpointEventTypeFromEvent)
+    __swig_getmethods__[
+        "GetBreakpointEventTypeFromEvent"] = lambda x: GetBreakpointEventTypeFromEvent
+
     def GetBreakpointFromEvent(*args):
         """GetBreakpointFromEvent(SBEvent event) -> SBBreakpoint"""
         return _lldb.SBBreakpoint_GetBreakpointFromEvent(*args)
 
-    if _newclass:GetBreakpointFromEvent = staticmethod(GetBreakpointFromEvent)
-    __swig_getmethods__["GetBreakpointFromEvent"] = lambda x: GetBreakpointFromEvent
+    if _newclass:
+        GetBreakpointFromEvent = staticmethod(GetBreakpointFromEvent)
+    __swig_getmethods__[
+        "GetBreakpointFromEvent"] = lambda x: GetBreakpointFromEvent
+
     def GetBreakpointLocationAtIndexFromEvent(*args):
         """GetBreakpointLocationAtIndexFromEvent(SBEvent event, uint32_t loc_idx) -> SBBreakpointLocation"""
         return _lldb.SBBreakpoint_GetBreakpointLocationAtIndexFromEvent(*args)
 
-    if _newclass:GetBreakpointLocationAtIndexFromEvent = staticmethod(GetBreakpointLocationAtIndexFromEvent)
-    __swig_getmethods__["GetBreakpointLocationAtIndexFromEvent"] = lambda x: GetBreakpointLocationAtIndexFromEvent
+    if _newclass:
+        GetBreakpointLocationAtIndexFromEvent = staticmethod(
+            GetBreakpointLocationAtIndexFromEvent)
+    __swig_getmethods__[
+        "GetBreakpointLocationAtIndexFromEvent"] = lambda x: GetBreakpointLocationAtIndexFromEvent
+
     def GetNumBreakpointLocationsFromEvent(*args):
         """GetNumBreakpointLocationsFromEvent(SBEvent event_sp) -> uint32_t"""
         return _lldb.SBBreakpoint_GetNumBreakpointLocationsFromEvent(*args)
 
-    if _newclass:GetNumBreakpointLocationsFromEvent = staticmethod(GetNumBreakpointLocationsFromEvent)
-    __swig_getmethods__["GetNumBreakpointLocationsFromEvent"] = lambda x: GetNumBreakpointLocationsFromEvent
+    if _newclass:
+        GetNumBreakpointLocationsFromEvent = staticmethod(
+            GetNumBreakpointLocationsFromEvent)
+    __swig_getmethods__[
+        "GetNumBreakpointLocationsFromEvent"] = lambda x: GetNumBreakpointLocationsFromEvent
     __swig_getmethods__["id"] = GetID
-    if _newclass: id = property(GetID, None, doc='''A read only property that returns the ID of this breakpoint.''')
-        
+    if _newclass:
+        id = property(
+            GetID,
+            None,
+            doc='''A read only property that returns the ID of this breakpoint.''')
+
     __swig_getmethods__["enabled"] = IsEnabled
     __swig_setmethods__["enabled"] = SetEnabled
-    if _newclass: enabled = property(IsEnabled, SetEnabled, doc='''A read/write property that configures whether this breakpoint is enabled or not.''')
+    if _newclass:
+        enabled = property(
+            IsEnabled,
+            SetEnabled,
+            doc='''A read/write property that configures whether this breakpoint is enabled or not.''')
 
     __swig_getmethods__["one_shot"] = IsOneShot
     __swig_setmethods__["one_shot"] = SetOneShot
-    if _newclass: one_shot = property(IsOneShot, SetOneShot, doc='''A read/write property that configures whether this breakpoint is one-shot (deleted when hit) or not.''')
-        
-    __swig_getmethods__["num_locations"] = GetNumLocations
-    if _newclass: num_locations = property(GetNumLocations, None, doc='''A read only property that returns the count of locations of this breakpoint.''')
+    if _newclass:
+        one_shot = property(
+            IsOneShot,
+            SetOneShot,
+            doc='''A read/write property that configures whether this breakpoint is one-shot (deleted when hit) or not.''')
 
+    __swig_getmethods__["num_locations"] = GetNumLocations
+    if _newclass:
+        num_locations = property(
+            GetNumLocations,
+            None,
+            doc='''A read only property that returns the count of locations of this breakpoint.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBBreakpoint___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBBreakpoint_swigregister = _lldb.SBBreakpoint_swigregister
 SBBreakpoint_swigregister(SBBreakpoint)
 
+
 def SBBreakpoint_EventIsBreakpointEvent(*args):
-  """SBBreakpoint_EventIsBreakpointEvent(SBEvent event) -> bool"""
-  return _lldb.SBBreakpoint_EventIsBreakpointEvent(*args)
+    """SBBreakpoint_EventIsBreakpointEvent(SBEvent event) -> bool"""
+    return _lldb.SBBreakpoint_EventIsBreakpointEvent(*args)
+
 
 def SBBreakpoint_GetBreakpointEventTypeFromEvent(*args):
-  """SBBreakpoint_GetBreakpointEventTypeFromEvent(SBEvent event) -> BreakpointEventType"""
-  return _lldb.SBBreakpoint_GetBreakpointEventTypeFromEvent(*args)
+    """SBBreakpoint_GetBreakpointEventTypeFromEvent(SBEvent event) -> BreakpointEventType"""
+    return _lldb.SBBreakpoint_GetBreakpointEventTypeFromEvent(*args)
+
 
 def SBBreakpoint_GetBreakpointFromEvent(*args):
-  """SBBreakpoint_GetBreakpointFromEvent(SBEvent event) -> SBBreakpoint"""
-  return _lldb.SBBreakpoint_GetBreakpointFromEvent(*args)
+    """SBBreakpoint_GetBreakpointFromEvent(SBEvent event) -> SBBreakpoint"""
+    return _lldb.SBBreakpoint_GetBreakpointFromEvent(*args)
+
 
 def SBBreakpoint_GetBreakpointLocationAtIndexFromEvent(*args):
-  """SBBreakpoint_GetBreakpointLocationAtIndexFromEvent(SBEvent event, uint32_t loc_idx) -> SBBreakpointLocation"""
-  return _lldb.SBBreakpoint_GetBreakpointLocationAtIndexFromEvent(*args)
+    """SBBreakpoint_GetBreakpointLocationAtIndexFromEvent(SBEvent event, uint32_t loc_idx) -> SBBreakpointLocation"""
+    return _lldb.SBBreakpoint_GetBreakpointLocationAtIndexFromEvent(*args)
+
 
 def SBBreakpoint_GetNumBreakpointLocationsFromEvent(*args):
-  """SBBreakpoint_GetNumBreakpointLocationsFromEvent(SBEvent event_sp) -> uint32_t"""
-  return _lldb.SBBreakpoint_GetNumBreakpointLocationsFromEvent(*args)
+    """SBBreakpoint_GetNumBreakpointLocationsFromEvent(SBEvent event_sp) -> uint32_t"""
+    return _lldb.SBBreakpoint_GetNumBreakpointLocationsFromEvent(*args)
+
 
 class SBBreakpointLocation(_object):
     """
@@ -1698,25 +1872,32 @@ class SBBreakpointLocation(_object):
     for retrieval of an SBBreakpointLocation from an SBBreakpoint.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBBreakpointLocation, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBBreakpointLocation, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBBreakpointLocation, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBBreakpointLocation, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBBreakpointLocation
         __init__(self, SBBreakpointLocation rhs) -> SBBreakpointLocation
         """
         this = _lldb.new_SBBreakpointLocation(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBBreakpointLocation
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetID(self):
         """GetID(self) -> break_id_t"""
         return _lldb.SBBreakpointLocation_GetID(self)
 
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBBreakpointLocation_IsValid(self)
@@ -1768,7 +1949,8 @@ class SBBreakpointLocation(_object):
 
         Set the callback to the given Python function name.
         """
-        return _lldb.SBBreakpointLocation_SetScriptCallbackFunction(self, *args)
+        return _lldb.SBBreakpointLocation_SetScriptCallbackFunction(
+            self, *args)
 
     def SetScriptCallbackBody(self, *args):
         """
@@ -1778,7 +1960,7 @@ class SBBreakpointLocation(_object):
         The body will be wrapped in a function, which be passed two arguments:
         'frame' - which holds the bottom-most SBFrame of the thread that hit the breakpoint
         'bpno'  - which is the SBBreakpointLocation to which the callback was attached.
-        
+
         The error parameter is currently ignored, but will at some point hold the Python
         compilation diagnostics.
         Returns true if the body compiles successfully, false if not.
@@ -1836,6 +2018,7 @@ class SBBreakpointLocation(_object):
 SBBreakpointLocation_swigregister = _lldb.SBBreakpointLocation_swigregister
 SBBreakpointLocation_swigregister(SBBreakpointLocation)
 
+
 class SBBroadcaster(_object):
     """
     Represents an entity which can broadcast events. A default broadcaster is
@@ -1849,22 +2032,28 @@ class SBBroadcaster(_object):
     See also SBEvent for example usage of interacting with a broadcaster.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBBroadcaster, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBBroadcaster, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBBroadcaster, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBBroadcaster
         __init__(self, str name) -> SBBroadcaster
         __init__(self, SBBroadcaster rhs) -> SBBroadcaster
         """
         this = _lldb.new_SBBroadcaster(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBBroadcaster
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBBroadcaster_IsValid(self)
@@ -1919,19 +2108,20 @@ class SBBroadcaster(_object):
         return _lldb.SBBroadcaster___ne__(self, *args)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBBroadcaster_swigregister = _lldb.SBBroadcaster_swigregister
 SBBroadcaster_swigregister(SBBroadcaster)
+
 
 class SBCommandInterpreterRunOptions(_object):
     """
@@ -1948,24 +2138,31 @@ class SBCommandInterpreterRunOptions(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBCommandInterpreterRunOptions, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBCommandInterpreterRunOptions, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBCommandInterpreterRunOptions, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBCommandInterpreterRunOptions, name)
     __repr__ = _swig_repr
-    def __init__(self): 
+
+    def __init__(self):
         """__init__(self) -> SBCommandInterpreterRunOptions"""
         this = _lldb.new_SBCommandInterpreterRunOptions()
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBCommandInterpreterRunOptions
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetStopOnContinue(self):
         """GetStopOnContinue(self) -> bool"""
         return _lldb.SBCommandInterpreterRunOptions_GetStopOnContinue(self)
 
     def SetStopOnContinue(self, *args):
         """SetStopOnContinue(self, bool arg0)"""
-        return _lldb.SBCommandInterpreterRunOptions_SetStopOnContinue(self, *args)
+        return _lldb.SBCommandInterpreterRunOptions_SetStopOnContinue(
+            self, *args)
 
     def GetStopOnError(self):
         """GetStopOnError(self) -> bool"""
@@ -1989,7 +2186,8 @@ class SBCommandInterpreterRunOptions(_object):
 
     def SetEchoCommands(self, *args):
         """SetEchoCommands(self, bool arg0)"""
-        return _lldb.SBCommandInterpreterRunOptions_SetEchoCommands(self, *args)
+        return _lldb.SBCommandInterpreterRunOptions_SetEchoCommands(
+            self, *args)
 
     def GetPrintResults(self):
         """GetPrintResults(self) -> bool"""
@@ -1997,7 +2195,8 @@ class SBCommandInterpreterRunOptions(_object):
 
     def SetPrintResults(self, *args):
         """SetPrintResults(self, bool arg0)"""
-        return _lldb.SBCommandInterpreterRunOptions_SetPrintResults(self, *args)
+        return _lldb.SBCommandInterpreterRunOptions_SetPrintResults(
+            self, *args)
 
     def GetAddToHistory(self):
         """GetAddToHistory(self) -> bool"""
@@ -2005,10 +2204,12 @@ class SBCommandInterpreterRunOptions(_object):
 
     def SetAddToHistory(self, *args):
         """SetAddToHistory(self, bool arg0)"""
-        return _lldb.SBCommandInterpreterRunOptions_SetAddToHistory(self, *args)
+        return _lldb.SBCommandInterpreterRunOptions_SetAddToHistory(
+            self, *args)
 
 SBCommandInterpreterRunOptions_swigregister = _lldb.SBCommandInterpreterRunOptions_swigregister
 SBCommandInterpreterRunOptions_swigregister(SBCommandInterpreterRunOptions)
+
 
 class SBCommandInterpreter(_object):
     """
@@ -2057,48 +2258,68 @@ class SBCommandInterpreter(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBCommandInterpreter, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBCommandInterpreter, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBCommandInterpreter, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBCommandInterpreter, name)
     __repr__ = _swig_repr
     eBroadcastBitThreadShouldExit = _lldb.SBCommandInterpreter_eBroadcastBitThreadShouldExit
     eBroadcastBitResetPrompt = _lldb.SBCommandInterpreter_eBroadcastBitResetPrompt
     eBroadcastBitQuitCommandReceived = _lldb.SBCommandInterpreter_eBroadcastBitQuitCommandReceived
     eBroadcastBitAsynchronousOutputData = _lldb.SBCommandInterpreter_eBroadcastBitAsynchronousOutputData
     eBroadcastBitAsynchronousErrorData = _lldb.SBCommandInterpreter_eBroadcastBitAsynchronousErrorData
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """__init__(self, SBCommandInterpreter rhs) -> SBCommandInterpreter"""
         this = _lldb.new_SBCommandInterpreter(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBCommandInterpreter
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetArgumentTypeAsCString(*args):
         """GetArgumentTypeAsCString(CommandArgumentType arg_type) -> str"""
         return _lldb.SBCommandInterpreter_GetArgumentTypeAsCString(*args)
 
-    if _newclass:GetArgumentTypeAsCString = staticmethod(GetArgumentTypeAsCString)
-    __swig_getmethods__["GetArgumentTypeAsCString"] = lambda x: GetArgumentTypeAsCString
+    if _newclass:
+        GetArgumentTypeAsCString = staticmethod(GetArgumentTypeAsCString)
+    __swig_getmethods__[
+        "GetArgumentTypeAsCString"] = lambda x: GetArgumentTypeAsCString
+
     def GetArgumentDescriptionAsCString(*args):
         """GetArgumentDescriptionAsCString(CommandArgumentType arg_type) -> str"""
-        return _lldb.SBCommandInterpreter_GetArgumentDescriptionAsCString(*args)
+        return _lldb.SBCommandInterpreter_GetArgumentDescriptionAsCString(
+            *args)
 
-    if _newclass:GetArgumentDescriptionAsCString = staticmethod(GetArgumentDescriptionAsCString)
-    __swig_getmethods__["GetArgumentDescriptionAsCString"] = lambda x: GetArgumentDescriptionAsCString
+    if _newclass:
+        GetArgumentDescriptionAsCString = staticmethod(
+            GetArgumentDescriptionAsCString)
+    __swig_getmethods__[
+        "GetArgumentDescriptionAsCString"] = lambda x: GetArgumentDescriptionAsCString
+
     def EventIsCommandInterpreterEvent(*args):
         """EventIsCommandInterpreterEvent(SBEvent event) -> bool"""
         return _lldb.SBCommandInterpreter_EventIsCommandInterpreterEvent(*args)
 
-    if _newclass:EventIsCommandInterpreterEvent = staticmethod(EventIsCommandInterpreterEvent)
-    __swig_getmethods__["EventIsCommandInterpreterEvent"] = lambda x: EventIsCommandInterpreterEvent
+    if _newclass:
+        EventIsCommandInterpreterEvent = staticmethod(
+            EventIsCommandInterpreterEvent)
+    __swig_getmethods__[
+        "EventIsCommandInterpreterEvent"] = lambda x: EventIsCommandInterpreterEvent
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBCommandInterpreter_IsValid(self)
 
     def GetIOHandlerControlSequence(self, *args):
         """GetIOHandlerControlSequence(self, str ch) -> str"""
-        return _lldb.SBCommandInterpreter_GetIOHandlerControlSequence(self, *args)
+        return _lldb.SBCommandInterpreter_GetIOHandlerControlSequence(
+            self, *args)
 
     def GetPromptOnQuit(self):
         """GetPromptOnQuit(self) -> bool"""
@@ -2128,8 +2349,10 @@ class SBCommandInterpreter(_object):
         """GetBroadcasterClass() -> str"""
         return _lldb.SBCommandInterpreter_GetBroadcasterClass()
 
-    if _newclass:GetBroadcasterClass = staticmethod(GetBroadcasterClass)
+    if _newclass:
+        GetBroadcasterClass = staticmethod(GetBroadcasterClass)
     __swig_getmethods__["GetBroadcasterClass"] = lambda x: GetBroadcasterClass
+
     def HasCommands(self):
         """HasCommands(self) -> bool"""
         return _lldb.SBCommandInterpreter_HasCommands(self)
@@ -2152,17 +2375,19 @@ class SBCommandInterpreter(_object):
 
     def SourceInitFileInHomeDirectory(self, *args):
         """SourceInitFileInHomeDirectory(self, SBCommandReturnObject result)"""
-        return _lldb.SBCommandInterpreter_SourceInitFileInHomeDirectory(self, *args)
+        return _lldb.SBCommandInterpreter_SourceInitFileInHomeDirectory(
+            self, *args)
 
     def SourceInitFileInCurrentWorkingDirectory(self, *args):
         """SourceInitFileInCurrentWorkingDirectory(self, SBCommandReturnObject result)"""
-        return _lldb.SBCommandInterpreter_SourceInitFileInCurrentWorkingDirectory(self, *args)
+        return _lldb.SBCommandInterpreter_SourceInitFileInCurrentWorkingDirectory(
+            self, *args)
 
     def HandleCommand(self, *args):
         """
         HandleCommand(self, str command_line, SBCommandReturnObject result, bool add_to_history = False) -> ReturnStatus
         HandleCommand(self, str command_line, SBCommandReturnObject result) -> ReturnStatus
-        HandleCommand(self, str command_line, SBExecutionContext exe_ctx, SBCommandReturnObject result, 
+        HandleCommand(self, str command_line, SBExecutionContext exe_ctx, SBCommandReturnObject result,
             bool add_to_history = False) -> ReturnStatus
         HandleCommand(self, str command_line, SBExecutionContext exe_ctx, SBCommandReturnObject result) -> ReturnStatus
         """
@@ -2170,14 +2395,14 @@ class SBCommandInterpreter(_object):
 
     def HandleCommandsFromFile(self, *args):
         """
-        HandleCommandsFromFile(self, SBFileSpec file, SBExecutionContext override_context, 
+        HandleCommandsFromFile(self, SBFileSpec file, SBExecutionContext override_context,
             SBCommandInterpreterRunOptions options, SBCommandReturnObject result)
         """
         return _lldb.SBCommandInterpreter_HandleCommandsFromFile(self, *args)
 
     def HandleCompletion(self, *args):
         """
-        HandleCompletion(self, str current_line, uint32_t cursor_pos, int match_start_point, 
+        HandleCompletion(self, str current_line, uint32_t cursor_pos, int match_start_point,
             int max_return_elements, SBStringList matches) -> int
         """
         return _lldb.SBCommandInterpreter_HandleCompletion(self, *args)
@@ -2189,21 +2414,26 @@ class SBCommandInterpreter(_object):
 SBCommandInterpreter_swigregister = _lldb.SBCommandInterpreter_swigregister
 SBCommandInterpreter_swigregister(SBCommandInterpreter)
 
+
 def SBCommandInterpreter_GetArgumentTypeAsCString(*args):
-  """SBCommandInterpreter_GetArgumentTypeAsCString(CommandArgumentType arg_type) -> str"""
-  return _lldb.SBCommandInterpreter_GetArgumentTypeAsCString(*args)
+    """SBCommandInterpreter_GetArgumentTypeAsCString(CommandArgumentType arg_type) -> str"""
+    return _lldb.SBCommandInterpreter_GetArgumentTypeAsCString(*args)
+
 
 def SBCommandInterpreter_GetArgumentDescriptionAsCString(*args):
-  """SBCommandInterpreter_GetArgumentDescriptionAsCString(CommandArgumentType arg_type) -> str"""
-  return _lldb.SBCommandInterpreter_GetArgumentDescriptionAsCString(*args)
+    """SBCommandInterpreter_GetArgumentDescriptionAsCString(CommandArgumentType arg_type) -> str"""
+    return _lldb.SBCommandInterpreter_GetArgumentDescriptionAsCString(*args)
+
 
 def SBCommandInterpreter_EventIsCommandInterpreterEvent(*args):
-  """SBCommandInterpreter_EventIsCommandInterpreterEvent(SBEvent event) -> bool"""
-  return _lldb.SBCommandInterpreter_EventIsCommandInterpreterEvent(*args)
+    """SBCommandInterpreter_EventIsCommandInterpreterEvent(SBEvent event) -> bool"""
+    return _lldb.SBCommandInterpreter_EventIsCommandInterpreterEvent(*args)
+
 
 def SBCommandInterpreter_GetBroadcasterClass():
-  """SBCommandInterpreter_GetBroadcasterClass() -> str"""
-  return _lldb.SBCommandInterpreter_GetBroadcasterClass()
+    """SBCommandInterpreter_GetBroadcasterClass() -> str"""
+    return _lldb.SBCommandInterpreter_GetBroadcasterClass()
+
 
 class SBCommandReturnObject(_object):
     """
@@ -2214,21 +2444,28 @@ class SBCommandReturnObject(_object):
     See SBCommandInterpreter for example usage of SBCommandReturnObject.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBCommandReturnObject, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBCommandReturnObject, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBCommandReturnObject, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBCommandReturnObject, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBCommandReturnObject
         __init__(self, SBCommandReturnObject rhs) -> SBCommandReturnObject
         """
         this = _lldb.new_SBCommandReturnObject(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBCommandReturnObject
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBCommandReturnObject_IsValid(self)
@@ -2334,10 +2571,12 @@ class SBCommandReturnObject(_object):
 SBCommandReturnObject_swigregister = _lldb.SBCommandReturnObject_swigregister
 SBCommandReturnObject_swigregister(SBCommandReturnObject)
 
+
 class SBCommunication(_object):
     """Proxy of C++ lldb::SBCommunication class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBCommunication, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBCommunication, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBCommunication, name)
     __repr__ = _swig_repr
@@ -2347,17 +2586,22 @@ class SBCommunication(_object):
     eBroadcastBitReadThreadShouldExit = _lldb.SBCommunication_eBroadcastBitReadThreadShouldExit
     eBroadcastBitPacketAvailable = _lldb.SBCommunication_eBroadcastBitPacketAvailable
     eAllEventBits = _lldb.SBCommunication_eAllEventBits
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBCommunication
         __init__(self, str broadcaster_name) -> SBCommunication
         """
         this = _lldb.new_SBCommunication(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBCommunication
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBCommunication_IsValid(self)
@@ -2370,8 +2614,10 @@ class SBCommunication(_object):
         """GetBroadcasterClass() -> str"""
         return _lldb.SBCommunication_GetBroadcasterClass()
 
-    if _newclass:GetBroadcasterClass = staticmethod(GetBroadcasterClass)
+    if _newclass:
+        GetBroadcasterClass = staticmethod(GetBroadcasterClass)
     __swig_getmethods__["GetBroadcasterClass"] = lambda x: GetBroadcasterClass
+
     def AdoptFileDesriptor(self, *args):
         """AdoptFileDesriptor(self, int fd, bool owns_fd) -> ConnectionStatus"""
         return _lldb.SBCommunication_AdoptFileDesriptor(self, *args)
@@ -2418,14 +2664,17 @@ class SBCommunication(_object):
 
     def SetReadThreadBytesReceivedCallback(self, *args):
         """SetReadThreadBytesReceivedCallback(self, ReadThreadBytesReceived callback, void callback_baton) -> bool"""
-        return _lldb.SBCommunication_SetReadThreadBytesReceivedCallback(self, *args)
+        return _lldb.SBCommunication_SetReadThreadBytesReceivedCallback(
+            self, *args)
 
 SBCommunication_swigregister = _lldb.SBCommunication_swigregister
 SBCommunication_swigregister(SBCommunication)
 
+
 def SBCommunication_GetBroadcasterClass():
-  """SBCommunication_GetBroadcasterClass() -> str"""
-  return _lldb.SBCommunication_GetBroadcasterClass()
+    """SBCommunication_GetBroadcasterClass() -> str"""
+    return _lldb.SBCommunication_GetBroadcasterClass()
+
 
 class SBCompileUnit(_object):
     """
@@ -2464,23 +2713,32 @@ class SBCompileUnit(_object):
     See also SBSymbolContext and SBLineEntry
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBCompileUnit, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBCompileUnit, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBCompileUnit, name)
     __repr__ = _swig_repr
-    def __iter__(self): return lldb_iter(self, 'GetNumLineEntries', 'GetLineEntryAtIndex')
+
+    def __iter__(self): return lldb_iter(
+        self, 'GetNumLineEntries', 'GetLineEntryAtIndex')
+
     def __len__(self): return self.GetNumLineEntries()
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBCompileUnit
         __init__(self, SBCompileUnit rhs) -> SBCompileUnit
         """
         this = _lldb.new_SBCompileUnit(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBCompileUnit
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBCompileUnit_IsValid(self)
@@ -2500,7 +2758,7 @@ class SBCompileUnit(_object):
     def FindLineEntryIndex(self, *args):
         """
         FindLineEntryIndex(self, uint32_t start_idx, uint32_t line, SBFileSpec inline_file_spec) -> uint32_t
-        FindLineEntryIndex(self, uint32_t start_idx, uint32_t line, SBFileSpec inline_file_spec, 
+        FindLineEntryIndex(self, uint32_t start_idx, uint32_t line, SBFileSpec inline_file_spec,
             bool exact) -> uint32_t
         """
         return _lldb.SBCompileUnit_FindLineEntryIndex(self, *args)
@@ -2524,7 +2782,7 @@ class SBCompileUnit(_object):
 
         Get all types matching type_mask from debug info in this
         compile unit.
-        
+
         @param[in] type_mask
            A bitfield that consists of one or more bits logically OR'ed
            together from the lldb::TypeClass enumeration. This allows
@@ -2532,7 +2790,7 @@ class SBCompileUnit(_object):
            and union types. Passing in lldb::eTypeClassAny will return
            all types found in the debug information for this compile
            unit.
-        
+
         @return
            A list of types in this compile unit that match type_mask
         """
@@ -2555,47 +2813,61 @@ class SBCompileUnit(_object):
         return _lldb.SBCompileUnit___ne__(self, *args)
 
     __swig_getmethods__["file"] = GetFileSpec
-    if _newclass: file = property(GetFileSpec, None, doc='''A read only property that returns the same result an lldb object that represents the source file (lldb.SBFileSpec) for the compile unit.''')
+    if _newclass:
+        file = property(
+            GetFileSpec,
+            None,
+            doc='''A read only property that returns the same result an lldb object that represents the source file (lldb.SBFileSpec) for the compile unit.''')
 
     __swig_getmethods__["num_line_entries"] = GetNumLineEntries
-    if _newclass: num_line_entries = property(GetNumLineEntries, None, doc='''A read only property that returns the number of line entries in a compile unit as an integer.''')
+    if _newclass:
+        num_line_entries = property(
+            GetNumLineEntries,
+            None,
+            doc='''A read only property that returns the number of line entries in a compile unit as an integer.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBCompileUnit___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBCompileUnit_swigregister = _lldb.SBCompileUnit_swigregister
 SBCompileUnit_swigregister(SBCompileUnit)
 
+
 class SBData(_object):
     """Proxy of C++ lldb::SBData class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBData, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBData, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBData, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBData
         __init__(self, SBData rhs) -> SBData
         """
         this = _lldb.new_SBData(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBData
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetAddressByteSize(self):
         """GetAddressByteSize(self) -> uint8_t"""
         return _lldb.SBData_GetAddressByteSize(self)
@@ -2609,6 +2881,7 @@ class SBData(_object):
         return _lldb.SBData_Clear(self)
 
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBData_IsValid(self)
@@ -2697,38 +2970,56 @@ class SBData(_object):
         """CreateDataFromCString(ByteOrder endian, uint32_t addr_byte_size, str data) -> SBData"""
         return _lldb.SBData_CreateDataFromCString(*args)
 
-    if _newclass:CreateDataFromCString = staticmethod(CreateDataFromCString)
-    __swig_getmethods__["CreateDataFromCString"] = lambda x: CreateDataFromCString
+    if _newclass:
+        CreateDataFromCString = staticmethod(CreateDataFromCString)
+    __swig_getmethods__[
+        "CreateDataFromCString"] = lambda x: CreateDataFromCString
+
     def CreateDataFromUInt64Array(*args):
         """CreateDataFromUInt64Array(ByteOrder endian, uint32_t addr_byte_size, uint64_t array) -> SBData"""
         return _lldb.SBData_CreateDataFromUInt64Array(*args)
 
-    if _newclass:CreateDataFromUInt64Array = staticmethod(CreateDataFromUInt64Array)
-    __swig_getmethods__["CreateDataFromUInt64Array"] = lambda x: CreateDataFromUInt64Array
+    if _newclass:
+        CreateDataFromUInt64Array = staticmethod(CreateDataFromUInt64Array)
+    __swig_getmethods__[
+        "CreateDataFromUInt64Array"] = lambda x: CreateDataFromUInt64Array
+
     def CreateDataFromUInt32Array(*args):
         """CreateDataFromUInt32Array(ByteOrder endian, uint32_t addr_byte_size, uint32_t array) -> SBData"""
         return _lldb.SBData_CreateDataFromUInt32Array(*args)
 
-    if _newclass:CreateDataFromUInt32Array = staticmethod(CreateDataFromUInt32Array)
-    __swig_getmethods__["CreateDataFromUInt32Array"] = lambda x: CreateDataFromUInt32Array
+    if _newclass:
+        CreateDataFromUInt32Array = staticmethod(CreateDataFromUInt32Array)
+    __swig_getmethods__[
+        "CreateDataFromUInt32Array"] = lambda x: CreateDataFromUInt32Array
+
     def CreateDataFromSInt64Array(*args):
         """CreateDataFromSInt64Array(ByteOrder endian, uint32_t addr_byte_size, int64_t array) -> SBData"""
         return _lldb.SBData_CreateDataFromSInt64Array(*args)
 
-    if _newclass:CreateDataFromSInt64Array = staticmethod(CreateDataFromSInt64Array)
-    __swig_getmethods__["CreateDataFromSInt64Array"] = lambda x: CreateDataFromSInt64Array
+    if _newclass:
+        CreateDataFromSInt64Array = staticmethod(CreateDataFromSInt64Array)
+    __swig_getmethods__[
+        "CreateDataFromSInt64Array"] = lambda x: CreateDataFromSInt64Array
+
     def CreateDataFromSInt32Array(*args):
         """CreateDataFromSInt32Array(ByteOrder endian, uint32_t addr_byte_size, int32_t array) -> SBData"""
         return _lldb.SBData_CreateDataFromSInt32Array(*args)
 
-    if _newclass:CreateDataFromSInt32Array = staticmethod(CreateDataFromSInt32Array)
-    __swig_getmethods__["CreateDataFromSInt32Array"] = lambda x: CreateDataFromSInt32Array
+    if _newclass:
+        CreateDataFromSInt32Array = staticmethod(CreateDataFromSInt32Array)
+    __swig_getmethods__[
+        "CreateDataFromSInt32Array"] = lambda x: CreateDataFromSInt32Array
+
     def CreateDataFromDoubleArray(*args):
         """CreateDataFromDoubleArray(ByteOrder endian, uint32_t addr_byte_size, double array) -> SBData"""
         return _lldb.SBData_CreateDataFromDoubleArray(*args)
 
-    if _newclass:CreateDataFromDoubleArray = staticmethod(CreateDataFromDoubleArray)
-    __swig_getmethods__["CreateDataFromDoubleArray"] = lambda x: CreateDataFromDoubleArray
+    if _newclass:
+        CreateDataFromDoubleArray = staticmethod(CreateDataFromDoubleArray)
+    __swig_getmethods__[
+        "CreateDataFromDoubleArray"] = lambda x: CreateDataFromDoubleArray
+
     def SetDataFromCString(self, *args):
         """SetDataFromCString(self, str data) -> bool"""
         return _lldb.SBData_SetDataFromCString(self, *args)
@@ -2754,32 +3045,44 @@ class SBData(_object):
         return _lldb.SBData_SetDataFromDoubleArray(self, *args)
 
     class read_data_helper:
+
         def __init__(self, sbdata, readerfunc, item_size):
             self.sbdata = sbdata
             self.readerfunc = readerfunc
             self.item_size = item_size
-        def __getitem__(self,key):
-            if isinstance(key,slice):
+
+        def __getitem__(self, key):
+            if isinstance(key, slice):
                 list = []
                 for x in range(*key.indices(self.__len__())):
                     list.append(self.__getitem__(x))
                 return list
-            if not (isinstance(key,six.integer_types)):
+            if not (isinstance(key, six.integer_types)):
                 raise TypeError('must be int')
-            key = key * self.item_size # SBData uses byte-based indexes, but we want to use itemsize-based indexes here
+            # SBData uses byte-based indexes, but we want to use itemsize-based
+            # indexes here
+            key = key * self.item_size
             error = SBError()
-            my_data = self.readerfunc(self.sbdata,error,key)
+            my_data = self.readerfunc(self.sbdata, error, key)
             if error.Fail():
                 raise IndexError(error.GetCString())
             else:
                 return my_data
+
         def __len__(self):
-            return int(self.sbdata.GetByteSize()/self.item_size)
+            return int(self.sbdata.GetByteSize() / self.item_size)
+
         def all(self):
             return self[0:len(self)]
 
     @classmethod
-    def CreateDataFromInt (cls, value, size = None, target = None, ptr_size = None, endian = None):
+    def CreateDataFromInt(
+            cls,
+            value,
+            size=None,
+            target=None,
+            ptr_size=None,
+            endian=None):
         import sys
         lldbmodule = sys.modules[cls.__module__]
         lldbdict = lldbmodule.__dict__
@@ -2787,19 +3090,19 @@ class SBData(_object):
             lldbtarget = lldbdict['target']
         else:
             lldbtarget = None
-        if target == None and lldbtarget != None and lldbtarget.IsValid():
+        if target is None and lldbtarget is not None and lldbtarget.IsValid():
             target = lldbtarget
-        if ptr_size == None:
+        if ptr_size is None:
             if target and target.IsValid():
                 ptr_size = target.addr_size
             else:
                 ptr_size = 8
-        if endian == None:
+        if endian is None:
             if target and target.IsValid():
                 endian = target.byte_order
             else:
                 endian = lldbdict['eByteOrderLittle']
-        if size == None:
+        if size is None:
             if value > 2147483647:
                 size = 8
             elif value < -2147483648:
@@ -2810,17 +3113,21 @@ class SBData(_object):
                 size = 4
         if size == 4:
             if value < 0:
-                return SBData().CreateDataFromSInt32Array(endian, ptr_size, [value])
-            return SBData().CreateDataFromUInt32Array(endian, ptr_size, [value])
+                return SBData().CreateDataFromSInt32Array(
+                    endian, ptr_size, [value])
+            return SBData().CreateDataFromUInt32Array(
+                endian, ptr_size, [value])
         if size == 8:
             if value < 0:
-                return SBData().CreateDataFromSInt64Array(endian, ptr_size, [value])
-            return SBData().CreateDataFromUInt64Array(endian, ptr_size, [value])
+                return SBData().CreateDataFromSInt64Array(
+                    endian, ptr_size, [value])
+            return SBData().CreateDataFromUInt64Array(
+                endian, ptr_size, [value])
         return None
 
     def _make_helper(self, sbdata, getfunc, itemsize):
         return self.read_data_helper(sbdata, getfunc, itemsize)
-        
+
     def _make_helper_uint8(self):
         return self._make_helper(self, SBData.GetUnsignedInt8, 1)
 
@@ -2856,99 +3163,185 @@ class SBData(_object):
 
     def _read_all_uint16(self):
         return self._make_helper_uint16().all()
-        
+
     def _read_all_uint32(self):
         return self._make_helper_uint32().all()
-        
+
     def _read_all_uint64(self):
         return self._make_helper_uint64().all()
-        
+
     def _read_all_sint8(self):
         return self._make_helper_sint8().all()
-        
+
     def _read_all_sint16(self):
         return self._make_helper_sint16().all()
-        
+
     def _read_all_sint32(self):
         return self._make_helper_sint32().all()
-        
+
     def _read_all_sint64(self):
         return self._make_helper_sint64().all()
-        
+
     def _read_all_float(self):
         return self._make_helper_float().all()
-        
+
     def _read_all_double(self):
         return self._make_helper_double().all()
 
     __swig_getmethods__["uint8"] = _make_helper_uint8
-    if _newclass: uint8 = property(_make_helper_uint8, None, doc='''A read only property that returns an array-like object out of which you can read uint8 values.''')
+    if _newclass:
+        uint8 = property(
+            _make_helper_uint8,
+            None,
+            doc='''A read only property that returns an array-like object out of which you can read uint8 values.''')
 
     __swig_getmethods__["uint16"] = _make_helper_uint16
-    if _newclass: uint16 = property(_make_helper_uint16, None, doc='''A read only property that returns an array-like object out of which you can read uint16 values.''')
+    if _newclass:
+        uint16 = property(
+            _make_helper_uint16,
+            None,
+            doc='''A read only property that returns an array-like object out of which you can read uint16 values.''')
 
     __swig_getmethods__["uint32"] = _make_helper_uint32
-    if _newclass: uint32 = property(_make_helper_uint32, None, doc='''A read only property that returns an array-like object out of which you can read uint32 values.''')
+    if _newclass:
+        uint32 = property(
+            _make_helper_uint32,
+            None,
+            doc='''A read only property that returns an array-like object out of which you can read uint32 values.''')
 
     __swig_getmethods__["uint64"] = _make_helper_uint64
-    if _newclass: uint64 = property(_make_helper_uint64, None, doc='''A read only property that returns an array-like object out of which you can read uint64 values.''')
+    if _newclass:
+        uint64 = property(
+            _make_helper_uint64,
+            None,
+            doc='''A read only property that returns an array-like object out of which you can read uint64 values.''')
 
     __swig_getmethods__["sint8"] = _make_helper_sint8
-    if _newclass: sint8 = property(_make_helper_sint8, None, doc='''A read only property that returns an array-like object out of which you can read sint8 values.''')
+    if _newclass:
+        sint8 = property(
+            _make_helper_sint8,
+            None,
+            doc='''A read only property that returns an array-like object out of which you can read sint8 values.''')
 
     __swig_getmethods__["sint16"] = _make_helper_sint16
-    if _newclass: sint16 = property(_make_helper_sint16, None, doc='''A read only property that returns an array-like object out of which you can read sint16 values.''')
+    if _newclass:
+        sint16 = property(
+            _make_helper_sint16,
+            None,
+            doc='''A read only property that returns an array-like object out of which you can read sint16 values.''')
 
     __swig_getmethods__["sint32"] = _make_helper_sint32
-    if _newclass: sint32 = property(_make_helper_sint32, None, doc='''A read only property that returns an array-like object out of which you can read sint32 values.''')
+    if _newclass:
+        sint32 = property(
+            _make_helper_sint32,
+            None,
+            doc='''A read only property that returns an array-like object out of which you can read sint32 values.''')
 
     __swig_getmethods__["sint64"] = _make_helper_sint64
-    if _newclass: sint64 = property(_make_helper_sint64, None, doc='''A read only property that returns an array-like object out of which you can read sint64 values.''')
+    if _newclass:
+        sint64 = property(
+            _make_helper_sint64,
+            None,
+            doc='''A read only property that returns an array-like object out of which you can read sint64 values.''')
 
     __swig_getmethods__["float"] = _make_helper_float
-    if _newclass: float = property(_make_helper_float, None, doc='''A read only property that returns an array-like object out of which you can read float values.''')
+    if _newclass:
+        float = property(
+            _make_helper_float,
+            None,
+            doc='''A read only property that returns an array-like object out of which you can read float values.''')
 
     __swig_getmethods__["double"] = _make_helper_double
-    if _newclass: double = property(_make_helper_double, None, doc='''A read only property that returns an array-like object out of which you can read double values.''')
-              
+    if _newclass:
+        double = property(
+            _make_helper_double,
+            None,
+            doc='''A read only property that returns an array-like object out of which you can read double values.''')
+
     __swig_getmethods__["uint8s"] = _read_all_uint8
-    if _newclass: uint8s = property(_read_all_uint8, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint8 values.''')
+    if _newclass:
+        uint8s = property(
+            _read_all_uint8,
+            None,
+            doc='''A read only property that returns an array with all the contents of this SBData represented as uint8 values.''')
 
     __swig_getmethods__["uint16s"] = _read_all_uint16
-    if _newclass: uint16s = property(_read_all_uint16, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint16 values.''')
+    if _newclass:
+        uint16s = property(
+            _read_all_uint16,
+            None,
+            doc='''A read only property that returns an array with all the contents of this SBData represented as uint16 values.''')
 
     __swig_getmethods__["uint32s"] = _read_all_uint32
-    if _newclass: uint32s = property(_read_all_uint32, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint32 values.''')
+    if _newclass:
+        uint32s = property(
+            _read_all_uint32,
+            None,
+            doc='''A read only property that returns an array with all the contents of this SBData represented as uint32 values.''')
 
     __swig_getmethods__["uint64s"] = _read_all_uint64
-    if _newclass: uint64s = property(_read_all_uint64, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint64 values.''')
+    if _newclass:
+        uint64s = property(
+            _read_all_uint64,
+            None,
+            doc='''A read only property that returns an array with all the contents of this SBData represented as uint64 values.''')
 
     __swig_getmethods__["sint8s"] = _read_all_sint8
-    if _newclass: sint8s = property(_read_all_sint8, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint8 values.''')
+    if _newclass:
+        sint8s = property(
+            _read_all_sint8,
+            None,
+            doc='''A read only property that returns an array with all the contents of this SBData represented as sint8 values.''')
 
     __swig_getmethods__["sint16s"] = _read_all_sint16
-    if _newclass: sint16s = property(_read_all_sint16, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint16 values.''')
+    if _newclass:
+        sint16s = property(
+            _read_all_sint16,
+            None,
+            doc='''A read only property that returns an array with all the contents of this SBData represented as sint16 values.''')
 
     __swig_getmethods__["sint32s"] = _read_all_sint32
-    if _newclass: sint32s = property(_read_all_sint32, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint32 values.''')
+    if _newclass:
+        sint32s = property(
+            _read_all_sint32,
+            None,
+            doc='''A read only property that returns an array with all the contents of this SBData represented as sint32 values.''')
 
     __swig_getmethods__["sint64s"] = _read_all_sint64
-    if _newclass: sint64s = property(_read_all_sint64, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint64 values.''')
+    if _newclass:
+        sint64s = property(
+            _read_all_sint64,
+            None,
+            doc='''A read only property that returns an array with all the contents of this SBData represented as sint64 values.''')
 
     __swig_getmethods__["floats"] = _read_all_float
-    if _newclass: floats = property(_read_all_float, None, doc='''A read only property that returns an array with all the contents of this SBData represented as float values.''')
+    if _newclass:
+        floats = property(
+            _read_all_float,
+            None,
+            doc='''A read only property that returns an array with all the contents of this SBData represented as float values.''')
 
     __swig_getmethods__["doubles"] = _read_all_double
-    if _newclass: doubles = property(_read_all_double, None, doc='''A read only property that returns an array with all the contents of this SBData represented as double values.''')
-              
+    if _newclass:
+        doubles = property(
+            _read_all_double,
+            None,
+            doc='''A read only property that returns an array with all the contents of this SBData represented as double values.''')
 
     __swig_getmethods__["byte_order"] = GetByteOrder
     __swig_setmethods__["byte_order"] = SetByteOrder
-    if _newclass: byte_order = property(GetByteOrder, SetByteOrder, doc='''A read/write property getting and setting the endianness of this SBData (data.byte_order = lldb.eByteOrderLittle).''')
+    if _newclass:
+        byte_order = property(
+            GetByteOrder,
+            SetByteOrder,
+            doc='''A read/write property getting and setting the endianness of this SBData (data.byte_order = lldb.eByteOrderLittle).''')
 
     __swig_getmethods__["size"] = GetByteSize
-    if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns the size the same result as GetByteSize().''')
-
+    if _newclass:
+        size = property(
+            GetByteSize,
+            None,
+            doc='''A read only property that returns the size the same result as GetByteSize().''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -2957,29 +3350,36 @@ class SBData(_object):
 SBData_swigregister = _lldb.SBData_swigregister
 SBData_swigregister(SBData)
 
+
 def SBData_CreateDataFromCString(*args):
-  """SBData_CreateDataFromCString(ByteOrder endian, uint32_t addr_byte_size, str data) -> SBData"""
-  return _lldb.SBData_CreateDataFromCString(*args)
+    """SBData_CreateDataFromCString(ByteOrder endian, uint32_t addr_byte_size, str data) -> SBData"""
+    return _lldb.SBData_CreateDataFromCString(*args)
+
 
 def SBData_CreateDataFromUInt64Array(*args):
-  """SBData_CreateDataFromUInt64Array(ByteOrder endian, uint32_t addr_byte_size, uint64_t array) -> SBData"""
-  return _lldb.SBData_CreateDataFromUInt64Array(*args)
+    """SBData_CreateDataFromUInt64Array(ByteOrder endian, uint32_t addr_byte_size, uint64_t array) -> SBData"""
+    return _lldb.SBData_CreateDataFromUInt64Array(*args)
+
 
 def SBData_CreateDataFromUInt32Array(*args):
-  """SBData_CreateDataFromUInt32Array(ByteOrder endian, uint32_t addr_byte_size, uint32_t array) -> SBData"""
-  return _lldb.SBData_CreateDataFromUInt32Array(*args)
+    """SBData_CreateDataFromUInt32Array(ByteOrder endian, uint32_t addr_byte_size, uint32_t array) -> SBData"""
+    return _lldb.SBData_CreateDataFromUInt32Array(*args)
+
 
 def SBData_CreateDataFromSInt64Array(*args):
-  """SBData_CreateDataFromSInt64Array(ByteOrder endian, uint32_t addr_byte_size, int64_t array) -> SBData"""
-  return _lldb.SBData_CreateDataFromSInt64Array(*args)
+    """SBData_CreateDataFromSInt64Array(ByteOrder endian, uint32_t addr_byte_size, int64_t array) -> SBData"""
+    return _lldb.SBData_CreateDataFromSInt64Array(*args)
+
 
 def SBData_CreateDataFromSInt32Array(*args):
-  """SBData_CreateDataFromSInt32Array(ByteOrder endian, uint32_t addr_byte_size, int32_t array) -> SBData"""
-  return _lldb.SBData_CreateDataFromSInt32Array(*args)
+    """SBData_CreateDataFromSInt32Array(ByteOrder endian, uint32_t addr_byte_size, int32_t array) -> SBData"""
+    return _lldb.SBData_CreateDataFromSInt32Array(*args)
+
 
 def SBData_CreateDataFromDoubleArray(*args):
-  """SBData_CreateDataFromDoubleArray(ByteOrder endian, uint32_t addr_byte_size, double array) -> SBData"""
-  return _lldb.SBData_CreateDataFromDoubleArray(*args)
+    """SBData_CreateDataFromDoubleArray(ByteOrder endian, uint32_t addr_byte_size, double array) -> SBData"""
+    return _lldb.SBData_CreateDataFromDoubleArray(*args)
+
 
 class SBDebugger(_object):
     """
@@ -3001,7 +3401,7 @@ class SBDebugger(_object):
     # Create a new debugger instance
     debugger = lldb.SBDebugger.Create()
 
-    # When we step or continue, don't return from the function until the process 
+    # When we step or continue, don't return from the function until the process
     # stops. We do this by setting the async mode to false.
     debugger.SetAsync (False)
 
@@ -3019,7 +3419,7 @@ class SBDebugger(_object):
         # Launch the process. Since we specified synchronous mode, we won't return
         # from this function until we hit the breakpoint at main
         process = target.LaunchSimple (None, None, os.getcwd())
-        
+
         # Make sure the launch went ok
         if process:
             # Print some simple process info
@@ -3092,22 +3492,28 @@ class SBDebugger(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBDebugger, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBDebugger, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBDebugger, name)
     __repr__ = _swig_repr
+
     def Initialize():
         """Initialize()"""
         return _lldb.SBDebugger_Initialize()
 
-    if _newclass:Initialize = staticmethod(Initialize)
+    if _newclass:
+        Initialize = staticmethod(Initialize)
     __swig_getmethods__["Initialize"] = lambda x: Initialize
+
     def Terminate():
         """Terminate()"""
         return _lldb.SBDebugger_Terminate()
 
-    if _newclass:Terminate = staticmethod(Terminate)
+    if _newclass:
+        Terminate = staticmethod(Terminate)
     __swig_getmethods__["Terminate"] = lambda x: Terminate
+
     def Create(*args):
         """
         Create() -> SBDebugger
@@ -3116,33 +3522,47 @@ class SBDebugger(_object):
         """
         return _lldb.SBDebugger_Create(*args)
 
-    if _newclass:Create = staticmethod(Create)
+    if _newclass:
+        Create = staticmethod(Create)
     __swig_getmethods__["Create"] = lambda x: Create
+
     def Destroy(*args):
         """Destroy(SBDebugger debugger)"""
         return _lldb.SBDebugger_Destroy(*args)
 
-    if _newclass:Destroy = staticmethod(Destroy)
+    if _newclass:
+        Destroy = staticmethod(Destroy)
     __swig_getmethods__["Destroy"] = lambda x: Destroy
+
     def MemoryPressureDetected():
         """MemoryPressureDetected()"""
         return _lldb.SBDebugger_MemoryPressureDetected()
 
-    if _newclass:MemoryPressureDetected = staticmethod(MemoryPressureDetected)
-    __swig_getmethods__["MemoryPressureDetected"] = lambda x: MemoryPressureDetected
-    def __iter__(self): return lldb_iter(self, 'GetNumTargets', 'GetTargetAtIndex')
+    if _newclass:
+        MemoryPressureDetected = staticmethod(MemoryPressureDetected)
+    __swig_getmethods__[
+        "MemoryPressureDetected"] = lambda x: MemoryPressureDetected
+
+    def __iter__(self): return lldb_iter(
+        self, 'GetNumTargets', 'GetTargetAtIndex')
+
     def __len__(self): return self.GetNumTargets()
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBDebugger
         __init__(self, SBDebugger rhs) -> SBDebugger
         """
         this = _lldb.new_SBDebugger(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBDebugger
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBDebugger_IsValid(self)
@@ -3205,7 +3625,8 @@ class SBDebugger(_object):
 
     def CreateTargetWithFileAndTargetTriple(self, *args):
         """CreateTargetWithFileAndTargetTriple(self, str filename, str target_triple) -> SBTarget"""
-        return _lldb.SBDebugger_CreateTargetWithFileAndTargetTriple(self, *args)
+        return _lldb.SBDebugger_CreateTargetWithFileAndTargetTriple(
+            self, *args)
 
     def CreateTargetWithFileAndArch(self, *args):
         """CreateTargetWithFileAndArch(self, str filename, str archname) -> SBTarget"""
@@ -3213,7 +3634,7 @@ class SBDebugger(_object):
 
     def CreateTarget(self, *args):
         """
-        CreateTarget(self, str filename, str target_triple, str platform_name, 
+        CreateTarget(self, str filename, str target_triple, str platform_name,
             bool add_dependent_modules, SBError sb_error) -> SBTarget
         CreateTarget(self, str filename) -> SBTarget
         """
@@ -3295,14 +3716,20 @@ class SBDebugger(_object):
         """GetDefaultArchitecture(str arch_name, size_t arch_name_len) -> bool"""
         return _lldb.SBDebugger_GetDefaultArchitecture(*args)
 
-    if _newclass:GetDefaultArchitecture = staticmethod(GetDefaultArchitecture)
-    __swig_getmethods__["GetDefaultArchitecture"] = lambda x: GetDefaultArchitecture
+    if _newclass:
+        GetDefaultArchitecture = staticmethod(GetDefaultArchitecture)
+    __swig_getmethods__[
+        "GetDefaultArchitecture"] = lambda x: GetDefaultArchitecture
+
     def SetDefaultArchitecture(*args):
         """SetDefaultArchitecture(str arch_name) -> bool"""
         return _lldb.SBDebugger_SetDefaultArchitecture(*args)
 
-    if _newclass:SetDefaultArchitecture = staticmethod(SetDefaultArchitecture)
-    __swig_getmethods__["SetDefaultArchitecture"] = lambda x: SetDefaultArchitecture
+    if _newclass:
+        SetDefaultArchitecture = staticmethod(SetDefaultArchitecture)
+    __swig_getmethods__[
+        "SetDefaultArchitecture"] = lambda x: SetDefaultArchitecture
+
     def GetScriptingLanguage(self, *args):
         """GetScriptingLanguage(self, str script_language_name) -> ScriptLanguage"""
         return _lldb.SBDebugger_GetScriptingLanguage(self, *args)
@@ -3311,26 +3738,34 @@ class SBDebugger(_object):
         """GetVersionString() -> str"""
         return _lldb.SBDebugger_GetVersionString()
 
-    if _newclass:GetVersionString = staticmethod(GetVersionString)
+    if _newclass:
+        GetVersionString = staticmethod(GetVersionString)
     __swig_getmethods__["GetVersionString"] = lambda x: GetVersionString
+
     def StateAsCString(*args):
         """StateAsCString(StateType state) -> str"""
         return _lldb.SBDebugger_StateAsCString(*args)
 
-    if _newclass:StateAsCString = staticmethod(StateAsCString)
+    if _newclass:
+        StateAsCString = staticmethod(StateAsCString)
     __swig_getmethods__["StateAsCString"] = lambda x: StateAsCString
+
     def StateIsRunningState(*args):
         """StateIsRunningState(StateType state) -> bool"""
         return _lldb.SBDebugger_StateIsRunningState(*args)
 
-    if _newclass:StateIsRunningState = staticmethod(StateIsRunningState)
+    if _newclass:
+        StateIsRunningState = staticmethod(StateIsRunningState)
     __swig_getmethods__["StateIsRunningState"] = lambda x: StateIsRunningState
+
     def StateIsStoppedState(*args):
         """StateIsStoppedState(StateType state) -> bool"""
         return _lldb.SBDebugger_StateIsStoppedState(*args)
 
-    if _newclass:StateIsStoppedState = staticmethod(StateIsStoppedState)
+    if _newclass:
+        StateIsStoppedState = staticmethod(StateIsStoppedState)
     __swig_getmethods__["StateIsStoppedState"] = lambda x: StateIsStoppedState
+
     def EnableLog(self, *args):
         """EnableLog(self, str channel, str types) -> bool"""
         return _lldb.SBDebugger_EnableLog(self, *args)
@@ -3359,20 +3794,27 @@ class SBDebugger(_object):
         """FindDebuggerWithID(int id) -> SBDebugger"""
         return _lldb.SBDebugger_FindDebuggerWithID(*args)
 
-    if _newclass:FindDebuggerWithID = staticmethod(FindDebuggerWithID)
+    if _newclass:
+        FindDebuggerWithID = staticmethod(FindDebuggerWithID)
     __swig_getmethods__["FindDebuggerWithID"] = lambda x: FindDebuggerWithID
+
     def SetInternalVariable(*args):
         """SetInternalVariable(str var_name, str value, str debugger_instance_name) -> SBError"""
         return _lldb.SBDebugger_SetInternalVariable(*args)
 
-    if _newclass:SetInternalVariable = staticmethod(SetInternalVariable)
+    if _newclass:
+        SetInternalVariable = staticmethod(SetInternalVariable)
     __swig_getmethods__["SetInternalVariable"] = lambda x: SetInternalVariable
+
     def GetInternalVariableValue(*args):
         """GetInternalVariableValue(str var_name, str debugger_instance_name) -> SBStringList"""
         return _lldb.SBDebugger_GetInternalVariableValue(*args)
 
-    if _newclass:GetInternalVariableValue = staticmethod(GetInternalVariableValue)
-    __swig_getmethods__["GetInternalVariableValue"] = lambda x: GetInternalVariableValue
+    if _newclass:
+        GetInternalVariableValue = staticmethod(GetInternalVariableValue)
+    __swig_getmethods__[
+        "GetInternalVariableValue"] = lambda x: GetInternalVariableValue
+
     def GetDescription(self, *args):
         """GetDescription(self, SBStream description) -> bool"""
         return _lldb.SBDebugger_GetDescription(self, *args)
@@ -3458,8 +3900,8 @@ class SBDebugger(_object):
 
     def RunCommandInterpreter(self, *args):
         """
-        RunCommandInterpreter(self, bool auto_handle_events, bool spawn_thread, SBCommandInterpreterRunOptions options, 
-            int num_errors, 
+        RunCommandInterpreter(self, bool auto_handle_events, bool spawn_thread, SBCommandInterpreterRunOptions options,
+            int num_errors,
             bool quit_requested, bool stopped_for_crash)
         """
         return _lldb.SBDebugger_RunCommandInterpreter(self, *args)
@@ -3475,84 +3917,105 @@ class SBDebugger(_object):
 SBDebugger_swigregister = _lldb.SBDebugger_swigregister
 SBDebugger_swigregister(SBDebugger)
 
+
 def SBDebugger_Initialize():
-  """SBDebugger_Initialize()"""
-  return _lldb.SBDebugger_Initialize()
+    """SBDebugger_Initialize()"""
+    return _lldb.SBDebugger_Initialize()
+
 
 def SBDebugger_Terminate():
-  """SBDebugger_Terminate()"""
-  return _lldb.SBDebugger_Terminate()
+    """SBDebugger_Terminate()"""
+    return _lldb.SBDebugger_Terminate()
+
 
 def SBDebugger_Create(*args):
-  """
-    Create() -> SBDebugger
-    Create(bool source_init_files) -> SBDebugger
-    SBDebugger_Create(bool source_init_files, LogOutputCallback log_callback) -> SBDebugger
     """
-  return _lldb.SBDebugger_Create(*args)
+      Create() -> SBDebugger
+      Create(bool source_init_files) -> SBDebugger
+      SBDebugger_Create(bool source_init_files, LogOutputCallback log_callback) -> SBDebugger
+      """
+    return _lldb.SBDebugger_Create(*args)
+
 
 def SBDebugger_Destroy(*args):
-  """SBDebugger_Destroy(SBDebugger debugger)"""
-  return _lldb.SBDebugger_Destroy(*args)
+    """SBDebugger_Destroy(SBDebugger debugger)"""
+    return _lldb.SBDebugger_Destroy(*args)
+
 
 def SBDebugger_MemoryPressureDetected():
-  """SBDebugger_MemoryPressureDetected()"""
-  return _lldb.SBDebugger_MemoryPressureDetected()
+    """SBDebugger_MemoryPressureDetected()"""
+    return _lldb.SBDebugger_MemoryPressureDetected()
+
 
 def SBDebugger_GetDefaultArchitecture(*args):
-  """SBDebugger_GetDefaultArchitecture(str arch_name, size_t arch_name_len) -> bool"""
-  return _lldb.SBDebugger_GetDefaultArchitecture(*args)
+    """SBDebugger_GetDefaultArchitecture(str arch_name, size_t arch_name_len) -> bool"""
+    return _lldb.SBDebugger_GetDefaultArchitecture(*args)
+
 
 def SBDebugger_SetDefaultArchitecture(*args):
-  """SBDebugger_SetDefaultArchitecture(str arch_name) -> bool"""
-  return _lldb.SBDebugger_SetDefaultArchitecture(*args)
+    """SBDebugger_SetDefaultArchitecture(str arch_name) -> bool"""
+    return _lldb.SBDebugger_SetDefaultArchitecture(*args)
+
 
 def SBDebugger_GetVersionString():
-  """SBDebugger_GetVersionString() -> str"""
-  return _lldb.SBDebugger_GetVersionString()
+    """SBDebugger_GetVersionString() -> str"""
+    return _lldb.SBDebugger_GetVersionString()
+
 
 def SBDebugger_StateAsCString(*args):
-  """SBDebugger_StateAsCString(StateType state) -> str"""
-  return _lldb.SBDebugger_StateAsCString(*args)
+    """SBDebugger_StateAsCString(StateType state) -> str"""
+    return _lldb.SBDebugger_StateAsCString(*args)
+
 
 def SBDebugger_StateIsRunningState(*args):
-  """SBDebugger_StateIsRunningState(StateType state) -> bool"""
-  return _lldb.SBDebugger_StateIsRunningState(*args)
+    """SBDebugger_StateIsRunningState(StateType state) -> bool"""
+    return _lldb.SBDebugger_StateIsRunningState(*args)
+
 
 def SBDebugger_StateIsStoppedState(*args):
-  """SBDebugger_StateIsStoppedState(StateType state) -> bool"""
-  return _lldb.SBDebugger_StateIsStoppedState(*args)
+    """SBDebugger_StateIsStoppedState(StateType state) -> bool"""
+    return _lldb.SBDebugger_StateIsStoppedState(*args)
+
 
 def SBDebugger_FindDebuggerWithID(*args):
-  """SBDebugger_FindDebuggerWithID(int id) -> SBDebugger"""
-  return _lldb.SBDebugger_FindDebuggerWithID(*args)
+    """SBDebugger_FindDebuggerWithID(int id) -> SBDebugger"""
+    return _lldb.SBDebugger_FindDebuggerWithID(*args)
+
 
 def SBDebugger_SetInternalVariable(*args):
-  """SBDebugger_SetInternalVariable(str var_name, str value, str debugger_instance_name) -> SBError"""
-  return _lldb.SBDebugger_SetInternalVariable(*args)
+    """SBDebugger_SetInternalVariable(str var_name, str value, str debugger_instance_name) -> SBError"""
+    return _lldb.SBDebugger_SetInternalVariable(*args)
+
 
 def SBDebugger_GetInternalVariableValue(*args):
-  """SBDebugger_GetInternalVariableValue(str var_name, str debugger_instance_name) -> SBStringList"""
-  return _lldb.SBDebugger_GetInternalVariableValue(*args)
+    """SBDebugger_GetInternalVariableValue(str var_name, str debugger_instance_name) -> SBStringList"""
+    return _lldb.SBDebugger_GetInternalVariableValue(*args)
+
 
 class SBDeclaration(_object):
     """Specifies an association with a line and column for a variable."""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBDeclaration, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBDeclaration, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBDeclaration, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBDeclaration
         __init__(self, SBDeclaration rhs) -> SBDeclaration
         """
         this = _lldb.new_SBDeclaration(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBDeclaration
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBDeclaration_IsValid(self)
@@ -3594,32 +4057,45 @@ class SBDeclaration(_object):
         return _lldb.SBDeclaration___ne__(self, *args)
 
     __swig_getmethods__["file"] = GetFileSpec
-    if _newclass: file = property(GetFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this line entry.''')
+    if _newclass:
+        file = property(
+            GetFileSpec,
+            None,
+            doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this line entry.''')
 
     __swig_getmethods__["line"] = GetLine
-    if _newclass: line = property(GetLine, None, doc='''A read only property that returns the 1 based line number for this line entry, a return value of zero indicates that no line information is available.''')
+    if _newclass:
+        line = property(
+            GetLine,
+            None,
+            doc='''A read only property that returns the 1 based line number for this line entry, a return value of zero indicates that no line information is available.''')
 
     __swig_getmethods__["column"] = GetColumn
-    if _newclass: column = property(GetColumn, None, doc='''A read only property that returns the 1 based column number for this line entry, a return value of zero indicates that no column information is available.''')
+    if _newclass:
+        column = property(
+            GetColumn,
+            None,
+            doc='''A read only property that returns the 1 based column number for this line entry, a return value of zero indicates that no column information is available.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBDeclaration___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBDeclaration_swigregister = _lldb.SBDeclaration_swigregister
 SBDeclaration_swigregister(SBDeclaration)
+
 
 class SBError(_object):
     """
@@ -3671,20 +4147,25 @@ class SBError(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBError, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBError, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBError, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBError
         __init__(self, SBError rhs) -> SBError
         """
         this = _lldb.new_SBError(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBError
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetCString(self):
         """GetCString(self) -> str"""
         return _lldb.SBError_GetCString(self)
@@ -3727,7 +4208,7 @@ class SBError(_object):
 
     def SetErrorStringWithFormat(self, *args):
         """
-        SetErrorStringWithFormat(self, str format, str arg1 = None, str arg2 = None, str str = None, 
+        SetErrorStringWithFormat(self, str format, str arg1 = None, str arg2 = None, str str = None,
             str VARARGS_SENTINEL = None) -> int
         SetErrorStringWithFormat(self, str format, str arg1 = None, str arg2 = None, str str = None) -> int
         SetErrorStringWithFormat(self, str format, str arg1 = None, str str = None) -> int
@@ -3737,6 +4218,7 @@ class SBError(_object):
         return _lldb.SBError_SetErrorStringWithFormat(self, *args)
 
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBError_IsValid(self)
@@ -3746,20 +4228,39 @@ class SBError(_object):
         return _lldb.SBError_GetDescription(self, *args)
 
     __swig_getmethods__["value"] = GetError
-    if _newclass: value = property(GetError, None, doc='''A read only property that returns the same result as GetError().''')
+    if _newclass:
+        value = property(
+            GetError,
+            None,
+            doc='''A read only property that returns the same result as GetError().''')
 
     __swig_getmethods__["fail"] = Fail
-    if _newclass: fail = property(Fail, None, doc='''A read only property that returns the same result as Fail().''')
+    if _newclass:
+        fail = property(
+            Fail,
+            None,
+            doc='''A read only property that returns the same result as Fail().''')
 
     __swig_getmethods__["success"] = Success
-    if _newclass: success = property(Success, None, doc='''A read only property that returns the same result as Success().''')
+    if _newclass:
+        success = property(
+            Success,
+            None,
+            doc='''A read only property that returns the same result as Success().''')
 
     __swig_getmethods__["description"] = GetCString
-    if _newclass: description = property(GetCString, None, doc='''A read only property that returns the same result as GetCString().''')
+    if _newclass:
+        description = property(
+            GetCString,
+            None,
+            doc='''A read only property that returns the same result as GetCString().''')
 
     __swig_getmethods__["type"] = GetType
-    if _newclass: type = property(GetType, None, doc='''A read only property that returns the same result as GetType().''')
-
+    if _newclass:
+        type = property(
+            GetType,
+            None,
+            doc='''A read only property that returns the same result as GetType().''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -3767,6 +4268,7 @@ class SBError(_object):
 
 SBError_swigregister = _lldb.SBError_swigregister
 SBError_swigregister(SBError)
+
 
 class SBEvent(_object):
     """
@@ -3868,22 +4370,28 @@ class SBEvent(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBEvent, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBEvent, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBEvent, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBEvent
         __init__(self, SBEvent rhs) -> SBEvent
         __init__(self, int type, str data) -> SBEvent (make an event that contains a C string)
         """
         this = _lldb.new_SBEvent(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBEvent
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBEvent_IsValid(self)
@@ -3916,8 +4424,10 @@ class SBEvent(_object):
         """GetCStringFromEvent(SBEvent event) -> str"""
         return _lldb.SBEvent_GetCStringFromEvent(*args)
 
-    if _newclass:GetCStringFromEvent = staticmethod(GetCStringFromEvent)
+    if _newclass:
+        GetCStringFromEvent = staticmethod(GetCStringFromEvent)
     __swig_getmethods__["GetCStringFromEvent"] = lambda x: GetCStringFromEvent
+
     def GetDescription(self, *args):
         """GetDescription(self, SBStream description) -> bool"""
         return _lldb.SBEvent_GetDescription(self, *args)
@@ -3925,18 +4435,23 @@ class SBEvent(_object):
 SBEvent_swigregister = _lldb.SBEvent_swigregister
 SBEvent_swigregister(SBEvent)
 
+
 def SBEvent_GetCStringFromEvent(*args):
-  """SBEvent_GetCStringFromEvent(SBEvent event) -> str"""
-  return _lldb.SBEvent_GetCStringFromEvent(*args)
+    """SBEvent_GetCStringFromEvent(SBEvent event) -> str"""
+    return _lldb.SBEvent_GetCStringFromEvent(*args)
+
 
 class SBExecutionContext(_object):
     """Proxy of C++ lldb::SBExecutionContext class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBExecutionContext, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBExecutionContext, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBExecutionContext, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBExecutionContext, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBExecutionContext
         __init__(self, SBExecutionContext rhs) -> SBExecutionContext
@@ -3946,10 +4461,13 @@ class SBExecutionContext(_object):
         __init__(self, SBFrame frame) -> SBExecutionContext
         """
         this = _lldb.new_SBExecutionContext(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBExecutionContext
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetTarget(self):
         """GetTarget(self) -> SBTarget"""
         return _lldb.SBExecutionContext_GetTarget(self)
@@ -3967,42 +4485,65 @@ class SBExecutionContext(_object):
         return _lldb.SBExecutionContext_GetFrame(self)
 
     __swig_getmethods__["target"] = GetTarget
-    if _newclass: target = property(GetTarget, None, doc='''A read only property that returns the same result as GetTarget().''')
+    if _newclass:
+        target = property(
+            GetTarget,
+            None,
+            doc='''A read only property that returns the same result as GetTarget().''')
 
     __swig_getmethods__["process"] = GetProcess
-    if _newclass: process = property(GetProcess, None, doc='''A read only property that returns the same result as GetProcess().''')
+    if _newclass:
+        process = property(
+            GetProcess,
+            None,
+            doc='''A read only property that returns the same result as GetProcess().''')
 
     __swig_getmethods__["thread"] = GetThread
-    if _newclass: thread = property(GetThread, None, doc='''A read only property that returns the same result as GetThread().''')
-        
+    if _newclass:
+        thread = property(
+            GetThread,
+            None,
+            doc='''A read only property that returns the same result as GetThread().''')
+
     __swig_getmethods__["frame"] = GetFrame
-    if _newclass: frame = property(GetFrame, None, doc='''A read only property that returns the same result as GetFrame().''')
+    if _newclass:
+        frame = property(
+            GetFrame,
+            None,
+            doc='''A read only property that returns the same result as GetFrame().''')
 
 SBExecutionContext_swigregister = _lldb.SBExecutionContext_swigregister
 SBExecutionContext_swigregister(SBExecutionContext)
 
+
 class SBExpressionOptions(_object):
     """A container for options to use when evaluating expressions."""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBExpressionOptions, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBExpressionOptions, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBExpressionOptions, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBExpressionOptions, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBExpressionOptions
         __init__(self, SBExpressionOptions rhs) -> SBExpressionOptions
         """
         this = _lldb.new_SBExpressionOptions(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBExpressionOptions
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetCoerceResultToId(self):
         """GetCoerceResultToId(self) -> bool"""
         return _lldb.SBExpressionOptions_GetCoerceResultToId(self)
 
-    def SetCoerceResultToId(self, coerce = True):
+    def SetCoerceResultToId(self, coerce=True):
         """
         SetCoerceResultToId(self, bool coerce = True)
         SetCoerceResultToId(self)
@@ -4015,7 +4556,7 @@ class SBExpressionOptions(_object):
         """GetUnwindOnError(self) -> bool"""
         return _lldb.SBExpressionOptions_GetUnwindOnError(self)
 
-    def SetUnwindOnError(self, unwind = True):
+    def SetUnwindOnError(self, unwind=True):
         """
         SetUnwindOnError(self, bool unwind = True)
         SetUnwindOnError(self)
@@ -4028,7 +4569,7 @@ class SBExpressionOptions(_object):
         """GetIgnoreBreakpoints(self) -> bool"""
         return _lldb.SBExpressionOptions_GetIgnoreBreakpoints(self)
 
-    def SetIgnoreBreakpoints(self, ignore = True):
+    def SetIgnoreBreakpoints(self, ignore=True):
         """
         SetIgnoreBreakpoints(self, bool ignore = True)
         SetIgnoreBreakpoints(self)
@@ -4052,31 +4593,34 @@ class SBExpressionOptions(_object):
         """GetTimeoutInMicroSeconds(self) -> uint32_t"""
         return _lldb.SBExpressionOptions_GetTimeoutInMicroSeconds(self)
 
-    def SetTimeoutInMicroSeconds(self, timeout = 0):
+    def SetTimeoutInMicroSeconds(self, timeout=0):
         """
         SetTimeoutInMicroSeconds(self, uint32_t timeout = 0)
         SetTimeoutInMicroSeconds(self)
 
         Sets the timeout in microseconds to run the expression for. If try all threads is set to true and the expression doesn't complete within the specified timeout, all threads will be resumed for the same timeout to see if the expresson will finish.
         """
-        return _lldb.SBExpressionOptions_SetTimeoutInMicroSeconds(self, timeout)
+        return _lldb.SBExpressionOptions_SetTimeoutInMicroSeconds(
+            self, timeout)
 
     def GetOneThreadTimeoutInMicroSeconds(self):
         """GetOneThreadTimeoutInMicroSeconds(self) -> uint32_t"""
-        return _lldb.SBExpressionOptions_GetOneThreadTimeoutInMicroSeconds(self)
+        return _lldb.SBExpressionOptions_GetOneThreadTimeoutInMicroSeconds(
+            self)
 
-    def SetOneThreadTimeoutInMicroSeconds(self, timeout = 0):
+    def SetOneThreadTimeoutInMicroSeconds(self, timeout=0):
         """
         SetOneThreadTimeoutInMicroSeconds(self, uint32_t timeout = 0)
         SetOneThreadTimeoutInMicroSeconds(self)
         """
-        return _lldb.SBExpressionOptions_SetOneThreadTimeoutInMicroSeconds(self, timeout)
+        return _lldb.SBExpressionOptions_SetOneThreadTimeoutInMicroSeconds(
+            self, timeout)
 
     def GetTryAllThreads(self):
         """GetTryAllThreads(self) -> bool"""
         return _lldb.SBExpressionOptions_GetTryAllThreads(self)
 
-    def SetTryAllThreads(self, run_others = True):
+    def SetTryAllThreads(self, run_others=True):
         """
         SetTryAllThreads(self, bool run_others = True)
         SetTryAllThreads(self)
@@ -4089,7 +4633,7 @@ class SBExpressionOptions(_object):
         """GetStopOthers(self) -> bool"""
         return _lldb.SBExpressionOptions_GetStopOthers(self)
 
-    def SetStopOthers(self, stop_others = True):
+    def SetStopOthers(self, stop_others=True):
         """
         SetStopOthers(self, bool stop_others = True)
         SetStopOthers(self)
@@ -4100,29 +4644,31 @@ class SBExpressionOptions(_object):
         """GetTrapExceptions(self) -> bool"""
         return _lldb.SBExpressionOptions_GetTrapExceptions(self)
 
-    def SetTrapExceptions(self, trap_exceptions = True):
+    def SetTrapExceptions(self, trap_exceptions=True):
         """
         SetTrapExceptions(self, bool trap_exceptions = True)
         SetTrapExceptions(self)
         """
-        return _lldb.SBExpressionOptions_SetTrapExceptions(self, trap_exceptions)
+        return _lldb.SBExpressionOptions_SetTrapExceptions(
+            self, trap_exceptions)
 
     def GetPlaygroundTransformEnabled(self):
         """GetPlaygroundTransformEnabled(self) -> bool"""
         return _lldb.SBExpressionOptions_GetPlaygroundTransformEnabled(self)
 
-    def SetPlaygroundTransformEnabled(self, enable_playground_transform = True):
+    def SetPlaygroundTransformEnabled(self, enable_playground_transform=True):
         """
         SetPlaygroundTransformEnabled(self, bool enable_playground_transform = True)
         SetPlaygroundTransformEnabled(self)
         """
-        return _lldb.SBExpressionOptions_SetPlaygroundTransformEnabled(self, enable_playground_transform)
+        return _lldb.SBExpressionOptions_SetPlaygroundTransformEnabled(
+            self, enable_playground_transform)
 
     def GetREPLMode(self):
         """GetREPLMode(self) -> bool"""
         return _lldb.SBExpressionOptions_GetREPLMode(self)
 
-    def SetREPLMode(self, enable_repl = True):
+    def SetREPLMode(self, enable_repl=True):
         """
         SetREPLMode(self, bool enable_repl = True)
         SetREPLMode(self)
@@ -4141,7 +4687,7 @@ class SBExpressionOptions(_object):
         """GetGenerateDebugInfo(self) -> bool"""
         return _lldb.SBExpressionOptions_GetGenerateDebugInfo(self)
 
-    def SetGenerateDebugInfo(self, b = True):
+    def SetGenerateDebugInfo(self, b=True):
         """
         SetGenerateDebugInfo(self, bool b = True)
         SetGenerateDebugInfo(self)
@@ -4154,7 +4700,7 @@ class SBExpressionOptions(_object):
         """GetSuppressPersistentResult(self) -> bool"""
         return _lldb.SBExpressionOptions_GetSuppressPersistentResult(self)
 
-    def SetSuppressPersistentResult(self, b = False):
+    def SetSuppressPersistentResult(self, b=False):
         """
         SetSuppressPersistentResult(self, bool b = False)
         SetSuppressPersistentResult(self)
@@ -4179,7 +4725,7 @@ class SBExpressionOptions(_object):
         """
         return _lldb.SBExpressionOptions_SetPrefix(self, *args)
 
-    def SetAutoApplyFixIts(self, b = True):
+    def SetAutoApplyFixIts(self, b=True):
         """
         SetAutoApplyFixIts(self, bool b = True)
         SetAutoApplyFixIts(self)
@@ -4200,7 +4746,7 @@ class SBExpressionOptions(_object):
         """GetTopLevel(self) -> bool"""
         return _lldb.SBExpressionOptions_GetTopLevel(self)
 
-    def SetTopLevel(self, b = True):
+    def SetTopLevel(self, b=True):
         """
         SetTopLevel(self, bool b = True)
         SetTopLevel(self)
@@ -4209,6 +4755,7 @@ class SBExpressionOptions(_object):
 
 SBExpressionOptions_swigregister = _lldb.SBExpressionOptions_swigregister
 SBExpressionOptions_swigregister(SBExpressionOptions)
+
 
 class SBFileSpec(_object):
     """
@@ -4234,13 +4781,18 @@ class SBFileSpec(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBFileSpec, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBFileSpec, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBFileSpec, name)
     __repr__ = _swig_repr
-    def __eq__(self, other): return isinstance(other, SBFileSpec) and self.GetFilename() == other.GetFilename() and self.GetDirectory() == other.GetDirectory()
+
+    def __eq__(self, other): return isinstance(other, SBFileSpec) and self.GetFilename(
+    ) == other.GetFilename() and self.GetDirectory() == other.GetDirectory()
+
     def __ne__(self, other): return not self.__eq__(other)
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBFileSpec
         __init__(self, SBFileSpec rhs) -> SBFileSpec
@@ -4248,11 +4800,15 @@ class SBFileSpec(_object):
         __init__(self, str path, bool resolve) -> SBFileSpec
         """
         this = _lldb.new_SBFileSpec(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBFileSpec
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBFileSpec_IsValid(self)
@@ -4289,8 +4845,10 @@ class SBFileSpec(_object):
         """ResolvePath(str src_path, str dst_path, size_t dst_len) -> int"""
         return _lldb.SBFileSpec_ResolvePath(*args)
 
-    if _newclass:ResolvePath = staticmethod(ResolvePath)
+    if _newclass:
+        ResolvePath = staticmethod(ResolvePath)
     __swig_getmethods__["ResolvePath"] = lambda x: ResolvePath
+
     def GetDescription(self, *args):
         """GetDescription(self, SBStream description) -> bool"""
         return _lldb.SBFileSpec_GetDescription(self, *args)
@@ -4311,16 +4869,32 @@ class SBFileSpec(_object):
         return None
 
     __swig_getmethods__["fullpath"] = __get_fullpath__
-    if _newclass: fullpath = property(__get_fullpath__, None, doc='''A read only property that returns the fullpath as a python string.''')
+    if _newclass:
+        fullpath = property(
+            __get_fullpath__,
+            None,
+            doc='''A read only property that returns the fullpath as a python string.''')
 
     __swig_getmethods__["basename"] = GetFilename
-    if _newclass: basename = property(GetFilename, None, doc='''A read only property that returns the path basename as a python string.''')
+    if _newclass:
+        basename = property(
+            GetFilename,
+            None,
+            doc='''A read only property that returns the path basename as a python string.''')
 
     __swig_getmethods__["dirname"] = GetDirectory
-    if _newclass: dirname = property(GetDirectory, None, doc='''A read only property that returns the path directory name as a python string.''')
+    if _newclass:
+        dirname = property(
+            GetDirectory,
+            None,
+            doc='''A read only property that returns the path directory name as a python string.''')
 
     __swig_getmethods__["exists"] = Exists
-    if _newclass: exists = property(Exists, None, doc='''A read only property that returns a boolean value that indicates if the file exists.''')
+    if _newclass:
+        exists = property(
+            Exists,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if the file exists.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -4329,27 +4903,34 @@ class SBFileSpec(_object):
 SBFileSpec_swigregister = _lldb.SBFileSpec_swigregister
 SBFileSpec_swigregister(SBFileSpec)
 
+
 def SBFileSpec_ResolvePath(*args):
-  """SBFileSpec_ResolvePath(str src_path, str dst_path, size_t dst_len) -> int"""
-  return _lldb.SBFileSpec_ResolvePath(*args)
+    """SBFileSpec_ResolvePath(str src_path, str dst_path, size_t dst_len) -> int"""
+    return _lldb.SBFileSpec_ResolvePath(*args)
+
 
 class SBFileSpecList(_object):
     """Proxy of C++ lldb::SBFileSpecList class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBFileSpecList, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBFileSpecList, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBFileSpecList, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBFileSpecList
         __init__(self, SBFileSpecList rhs) -> SBFileSpecList
         """
         this = _lldb.new_SBFileSpecList(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBFileSpecList
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetSize(self):
         """GetSize(self) -> uint32_t"""
         return _lldb.SBFileSpecList_GetSize(self)
@@ -4380,6 +4961,7 @@ class SBFileSpecList(_object):
 
 SBFileSpecList_swigregister = _lldb.SBFileSpecList_swigregister
 SBFileSpecList_swigregister(SBFileSpecList)
+
 
 class SBFrame(_object):
     """
@@ -4419,25 +5001,31 @@ class SBFrame(_object):
     See also SBThread.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBFrame, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBFrame, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBFrame, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBFrame
         __init__(self, SBFrame rhs) -> SBFrame
         """
         this = _lldb.new_SBFrame(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBFrame
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def IsEqual(self, *args):
         """IsEqual(self, SBFrame rhs) -> bool"""
         return _lldb.SBFrame_IsEqual(self, *args)
 
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBFrame_IsValid(self)
@@ -4503,7 +5091,7 @@ class SBFrame(_object):
         GetBlock(self) -> SBBlock
 
         Gets the deepest block that contains the frame PC.
-        
+
         See also GetFrameBlock().
         """
         return _lldb.SBFrame_GetBlock(self)
@@ -4522,13 +5110,13 @@ class SBFrame(_object):
         just looking at the SBFunction or SBSymbol for a frame isn't enough.
         This function will return the appropriate function, symbol or inlined
         function name for the frame.
-        
+
         This function returns:
         - the name of the inlined function (if there is one)
         - the name of the concrete function (if there is one)
         - the name of the symbol (if there is one)
         - NULL
-        
+
         See also IsInlined().
         """
         return _lldb.SBFrame_GetFunctionName(self, *args)
@@ -4539,7 +5127,7 @@ class SBFrame(_object):
         IsInlined(self) -> bool
 
         Return true if this frame represents an inlined function.
-        
+
         See also GetFunctionName().
         """
         return _lldb.SBFrame_IsInlined(self, *args)
@@ -4564,10 +5152,10 @@ class SBFrame(_object):
         of this is it will return the block that contains all of the variables
         for a stack frame. Inlined functions are represented as SBBlock objects
         that have inlined function information: the name of the inlined function,
-        where it was called from. The block that is returned will be the first 
+        where it was called from. The block that is returned will be the first
         block at or above the block for the PC (SBFrame::GetBlock()) that defines
         the scope of the frame. When a function contains no inlined functions,
-        this will be the top most lexical block that defines the function. 
+        this will be the top most lexical block that defines the function.
         When a function has inlined functions and the PC is currently
         in one of those inlined functions, this method will return the inlined
         block that defines this frame. If the PC isn't currently in an inlined
@@ -4594,7 +5182,7 @@ class SBFrame(_object):
     def GetVariables(self, *args):
         """
         GetVariables(self, bool arguments, bool locals, bool statics, bool in_scope_only) -> SBValueList
-        GetVariables(self, bool arguments, bool locals, bool statics, bool in_scope_only, 
+        GetVariables(self, bool arguments, bool locals, bool statics, bool in_scope_only,
             DynamicValueType use_dynamic) -> SBValueList
         GetVariables(self, SBVariablesOptions options) -> SBValueList
 
@@ -4626,8 +5214,8 @@ class SBFrame(_object):
         GetValueForVariablePath(self, str var_path) -> SBValue
         GetValueForVariablePath(self, str var_path, DynamicValueType use_dynamic) -> SBValue
 
-        Get a lldb.SBValue for a variable path. 
-        
+        Get a lldb.SBValue for a variable path.
+
         Variable paths can include access to pointer or instance members:
             rect_ptr->origin.y
             pt.x
@@ -4640,7 +5228,7 @@ class SBFrame(_object):
         Array accesses and treating pointers as arrays:
             int_array[1]
             pt_ptr[22].x
-        
+
         Unlike EvaluateExpression() which returns lldb.SBValue objects
         with constant copies of the values at the time of evaluation,
         the result of this function is a value that will continue to
@@ -4656,7 +5244,7 @@ class SBFrame(_object):
 
         Find variables, register sets, registers, or persistent variables using
         the frame as the scope.
-        
+
         The version that doesn't supply a 'use_dynamic' value will use the
         target's default.
         """
@@ -4667,7 +5255,7 @@ class SBFrame(_object):
         return _lldb.SBFrame_GetDescription(self, *args)
 
     def get_all_variables(self):
-        return self.GetVariables(True,True,True,True)
+        return self.GetVariables(True, True, True, True)
 
     def get_parent_frame(self):
         parent_idx = self.idx + 1
@@ -4677,32 +5265,34 @@ class SBFrame(_object):
             return SBFrame()
 
     def get_arguments(self):
-        return self.GetVariables(True,False,False,False)
+        return self.GetVariables(True, False, False, False)
 
     def get_locals(self):
-        return self.GetVariables(False,True,False,False)
+        return self.GetVariables(False, True, False, False)
 
     def get_statics(self):
-        return self.GetVariables(False,False,True,False)
+        return self.GetVariables(False, False, True, False)
 
     def var(self, var_expr_path):
-        '''Calls through to lldb.SBFrame.GetValueForVariablePath() and returns 
+        '''Calls through to lldb.SBFrame.GetValueForVariablePath() and returns
         a value that represents the variable expression path'''
         return self.GetValueForVariablePath(var_expr_path)
 
     def get_registers_access(self):
         class registers_access(object):
             '''A helper object that exposes a flattened view of registers, masking away the notion of register sets for easy scripting.'''
+
             def __init__(self, regs):
                 self.regs = regs
 
             def __getitem__(self, key):
-                if type(key) is str:
-                    for i in range(0,len(self.regs)):
+                if isinstance(key, str):
+                    for i in range(0, len(self.regs)):
                         rs = self.regs[i]
-                        for j in range (0,rs.num_children):
+                        for j in range(0, rs.num_children):
                             reg = rs.GetChildAtIndex(j)
-                            if reg.name == key: return reg
+                            if reg.name == key:
+                                return reg
                 else:
                     return lldb.SBValue()
 
@@ -4710,83 +5300,183 @@ class SBFrame(_object):
 
     __swig_getmethods__["pc"] = GetPC
     __swig_setmethods__["pc"] = SetPC
-    if _newclass: pc = property(GetPC, SetPC)
+    if _newclass:
+        pc = property(GetPC, SetPC)
 
     __swig_getmethods__["addr"] = GetPCAddress
-    if _newclass: addr = property(GetPCAddress, None, doc='''A read only property that returns the program counter (PC) as a section offset address (lldb.SBAddress).''')
+    if _newclass:
+        addr = property(
+            GetPCAddress,
+            None,
+            doc='''A read only property that returns the program counter (PC) as a section offset address (lldb.SBAddress).''')
 
     __swig_getmethods__["fp"] = GetFP
-    if _newclass: fp = property(GetFP, None, doc='''A read only property that returns the frame pointer (FP) as an unsigned integer.''')
+    if _newclass:
+        fp = property(
+            GetFP,
+            None,
+            doc='''A read only property that returns the frame pointer (FP) as an unsigned integer.''')
 
     __swig_getmethods__["sp"] = GetSP
-    if _newclass: sp = property(GetSP, None, doc='''A read only property that returns the stack pointer (SP) as an unsigned integer.''')
+    if _newclass:
+        sp = property(
+            GetSP,
+            None,
+            doc='''A read only property that returns the stack pointer (SP) as an unsigned integer.''')
 
     __swig_getmethods__["module"] = GetModule
-    if _newclass: module = property(GetModule, None, doc='''A read only property that returns an lldb object that represents the module (lldb.SBModule) for this stack frame.''')
+    if _newclass:
+        module = property(
+            GetModule,
+            None,
+            doc='''A read only property that returns an lldb object that represents the module (lldb.SBModule) for this stack frame.''')
 
     __swig_getmethods__["compile_unit"] = GetCompileUnit
-    if _newclass: compile_unit = property(GetCompileUnit, None, doc='''A read only property that returns an lldb object that represents the compile unit (lldb.SBCompileUnit) for this stack frame.''')
+    if _newclass:
+        compile_unit = property(
+            GetCompileUnit,
+            None,
+            doc='''A read only property that returns an lldb object that represents the compile unit (lldb.SBCompileUnit) for this stack frame.''')
 
     __swig_getmethods__["function"] = GetFunction
-    if _newclass: function = property(GetFunction, None, doc='''A read only property that returns an lldb object that represents the function (lldb.SBFunction) for this stack frame.''')
+    if _newclass:
+        function = property(
+            GetFunction,
+            None,
+            doc='''A read only property that returns an lldb object that represents the function (lldb.SBFunction) for this stack frame.''')
 
     __swig_getmethods__["symbol"] = GetSymbol
-    if _newclass: symbol = property(GetSymbol, None, doc='''A read only property that returns an lldb object that represents the symbol (lldb.SBSymbol) for this stack frame.''')
+    if _newclass:
+        symbol = property(
+            GetSymbol,
+            None,
+            doc='''A read only property that returns an lldb object that represents the symbol (lldb.SBSymbol) for this stack frame.''')
 
     __swig_getmethods__["block"] = GetBlock
-    if _newclass: block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the block (lldb.SBBlock) for this stack frame.''')
+    if _newclass:
+        block = property(
+            GetBlock,
+            None,
+            doc='''A read only property that returns an lldb object that represents the block (lldb.SBBlock) for this stack frame.''')
 
     __swig_getmethods__["is_inlined"] = IsInlined
-    if _newclass: is_inlined = property(IsInlined, None, doc='''A read only property that returns an boolean that indicates if the block frame is an inlined function.''')
+    if _newclass:
+        is_inlined = property(
+            IsInlined,
+            None,
+            doc='''A read only property that returns an boolean that indicates if the block frame is an inlined function.''')
 
     __swig_getmethods__["name"] = GetFunctionName
-    if _newclass: name = property(GetFunctionName, None, doc='''A read only property that retuns the name for the function that this frame represents. Inlined stack frame might have a concrete function that differs from the name of the inlined function (a named lldb.SBBlock).''')
+    if _newclass:
+        name = property(
+            GetFunctionName,
+            None,
+            doc='''A read only property that retuns the name for the function that this frame represents. Inlined stack frame might have a concrete function that differs from the name of the inlined function (a named lldb.SBBlock).''')
 
     __swig_getmethods__["line_entry"] = GetLineEntry
-    if _newclass: line_entry = property(GetLineEntry, None, doc='''A read only property that returns an lldb object that represents the line table entry (lldb.SBLineEntry) for this stack frame.''')
+    if _newclass:
+        line_entry = property(
+            GetLineEntry,
+            None,
+            doc='''A read only property that returns an lldb object that represents the line table entry (lldb.SBLineEntry) for this stack frame.''')
 
     __swig_getmethods__["thread"] = GetThread
-    if _newclass: thread = property(GetThread, None, doc='''A read only property that returns an lldb object that represents the thread (lldb.SBThread) for this stack frame.''')
+    if _newclass:
+        thread = property(
+            GetThread,
+            None,
+            doc='''A read only property that returns an lldb object that represents the thread (lldb.SBThread) for this stack frame.''')
 
     __swig_getmethods__["disassembly"] = Disassemble
-    if _newclass: disassembly = property(Disassemble, None, doc='''A read only property that returns the disassembly for this stack frame as a python string.''')
+    if _newclass:
+        disassembly = property(
+            Disassemble,
+            None,
+            doc='''A read only property that returns the disassembly for this stack frame as a python string.''')
 
     __swig_getmethods__["idx"] = GetFrameID
-    if _newclass: idx = property(GetFrameID, None, doc='''A read only property that returns the zero based stack frame index.''')
+    if _newclass:
+        idx = property(
+            GetFrameID,
+            None,
+            doc='''A read only property that returns the zero based stack frame index.''')
 
     __swig_getmethods__["variables"] = get_all_variables
-    if _newclass: variables = property(get_all_variables, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the variables in this stack frame.''')
+    if _newclass:
+        variables = property(
+            get_all_variables,
+            None,
+            doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the variables in this stack frame.''')
 
     __swig_getmethods__["vars"] = get_all_variables
-    if _newclass: vars = property(get_all_variables, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the variables in this stack frame.''')
+    if _newclass:
+        vars = property(
+            get_all_variables,
+            None,
+            doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the variables in this stack frame.''')
 
     __swig_getmethods__["locals"] = get_locals
-    if _newclass: locals = property(get_locals, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the local variables in this stack frame.''')
+    if _newclass:
+        locals = property(
+            get_locals,
+            None,
+            doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the local variables in this stack frame.''')
 
     __swig_getmethods__["args"] = get_arguments
-    if _newclass: args = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
+    if _newclass:
+        args = property(
+            get_arguments,
+            None,
+            doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
 
     __swig_getmethods__["arguments"] = get_arguments
-    if _newclass: arguments = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
+    if _newclass:
+        arguments = property(
+            get_arguments,
+            None,
+            doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
 
     __swig_getmethods__["statics"] = get_statics
-    if _newclass: statics = property(get_statics, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the static variables in this stack frame.''')
+    if _newclass:
+        statics = property(
+            get_statics,
+            None,
+            doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the static variables in this stack frame.''')
 
     __swig_getmethods__["registers"] = GetRegisters
-    if _newclass: registers = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
+    if _newclass:
+        registers = property(
+            GetRegisters,
+            None,
+            doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
 
     __swig_getmethods__["regs"] = GetRegisters
-    if _newclass: regs = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
+    if _newclass:
+        regs = property(
+            GetRegisters,
+            None,
+            doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
 
     __swig_getmethods__["register"] = get_registers_access
-    if _newclass: register = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame.''')
+    if _newclass:
+        register = property(
+            get_registers_access,
+            None,
+            doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame.''')
 
     __swig_getmethods__["reg"] = get_registers_access
-    if _newclass: reg = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame''')
+    if _newclass:
+        reg = property(
+            get_registers_access,
+            None,
+            doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame''')
 
     __swig_getmethods__["parent"] = get_parent_frame
-    if _newclass: parent = property(get_parent_frame, None, doc='''A read only property that returns the parent (caller) frame of the current frame.''')
-
+    if _newclass:
+        parent = property(
+            get_parent_frame,
+            None,
+            doc='''A read only property that returns the parent (caller) frame of the current frame.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -4794,6 +5484,7 @@ class SBFrame(_object):
 
 SBFrame_swigregister = _lldb.SBFrame_swigregister
 SBFrame_swigregister(SBFrame)
+
 
 class SBFunction(_object):
     """
@@ -4832,21 +5523,27 @@ class SBFunction(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBFunction, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBFunction, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBFunction, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBFunction
         __init__(self, SBFunction rhs) -> SBFunction
         """
         this = _lldb.new_SBFunction(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBFunction
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBFunction_IsValid(self)
@@ -4905,7 +5602,7 @@ class SBFunction(_object):
         Returns true if the function was compiled with optimization.
         Optimization, in this case, is meant to indicate that the debugger
         experience may be confusing for the user -- variables optimized away,
-        stepping jumping between source lines -- and the driver may want to 
+        stepping jumping between source lines -- and the driver may want to
         provide some guidance to the user about this.
         Returns false if unoptimized, or unknown.
         """
@@ -4923,177 +5620,249 @@ class SBFunction(_object):
         """__ne__(self, SBFunction rhs) -> bool"""
         return _lldb.SBFunction___ne__(self, *args)
 
-    def get_instructions_from_current_target (self):
-        return self.GetInstructions (target)
+    def get_instructions_from_current_target(self):
+        return self.GetInstructions(target)
 
     __swig_getmethods__["addr"] = GetStartAddress
-    if _newclass: addr = property(GetStartAddress, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this function.''')
+    if _newclass:
+        addr = property(
+            GetStartAddress,
+            None,
+            doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this function.''')
 
     __swig_getmethods__["end_addr"] = GetEndAddress
-    if _newclass: end_addr = property(GetEndAddress, None, doc='''A read only property that returns an lldb object that represents the end address (lldb.SBAddress) for this function.''')
-            
+    if _newclass:
+        end_addr = property(
+            GetEndAddress,
+            None,
+            doc='''A read only property that returns an lldb object that represents the end address (lldb.SBAddress) for this function.''')
+
     __swig_getmethods__["block"] = GetBlock
-    if _newclass: block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the top level lexical block (lldb.SBBlock) for this function.''')
+    if _newclass:
+        block = property(
+            GetBlock,
+            None,
+            doc='''A read only property that returns an lldb object that represents the top level lexical block (lldb.SBBlock) for this function.''')
 
     __swig_getmethods__["instructions"] = get_instructions_from_current_target
-    if _newclass: instructions = property(get_instructions_from_current_target, None, doc='''A read only property that returns an lldb object that represents the instructions (lldb.SBInstructionList) for this function.''')
+    if _newclass:
+        instructions = property(
+            get_instructions_from_current_target,
+            None,
+            doc='''A read only property that returns an lldb object that represents the instructions (lldb.SBInstructionList) for this function.''')
 
     __swig_getmethods__["mangled"] = GetMangledName
-    if _newclass: mangled = property(GetMangledName, None, doc='''A read only property that returns the mangled (linkage) name for this function as a string.''')
+    if _newclass:
+        mangled = property(
+            GetMangledName,
+            None,
+            doc='''A read only property that returns the mangled (linkage) name for this function as a string.''')
 
     __swig_getmethods__["name"] = GetName
-    if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this function as a string.''')
+    if _newclass:
+        name = property(
+            GetName,
+            None,
+            doc='''A read only property that returns the name for this function as a string.''')
 
     __swig_getmethods__["prologue_size"] = GetPrologueByteSize
-    if _newclass: prologue_size = property(GetPrologueByteSize, None, doc='''A read only property that returns the size in bytes of the prologue instructions as an unsigned integer.''')
+    if _newclass:
+        prologue_size = property(
+            GetPrologueByteSize,
+            None,
+            doc='''A read only property that returns the size in bytes of the prologue instructions as an unsigned integer.''')
 
     __swig_getmethods__["type"] = GetType
-    if _newclass: type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the return type (lldb.SBType) for this function.''')
+    if _newclass:
+        type = property(
+            GetType,
+            None,
+            doc='''A read only property that returns an lldb object that represents the return type (lldb.SBType) for this function.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBFunction___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBFunction_swigregister = _lldb.SBFunction_swigregister
 SBFunction_swigregister(SBFunction)
 
+
 class SBHostOS(_object):
     """Proxy of C++ lldb::SBHostOS class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBHostOS, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBHostOS, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBHostOS, name)
     __repr__ = _swig_repr
+
     def GetProgramFileSpec():
         """GetProgramFileSpec() -> SBFileSpec"""
         return _lldb.SBHostOS_GetProgramFileSpec()
 
-    if _newclass:GetProgramFileSpec = staticmethod(GetProgramFileSpec)
+    if _newclass:
+        GetProgramFileSpec = staticmethod(GetProgramFileSpec)
     __swig_getmethods__["GetProgramFileSpec"] = lambda x: GetProgramFileSpec
+
     def GetLLDBPythonPath():
         """GetLLDBPythonPath() -> SBFileSpec"""
         return _lldb.SBHostOS_GetLLDBPythonPath()
 
-    if _newclass:GetLLDBPythonPath = staticmethod(GetLLDBPythonPath)
+    if _newclass:
+        GetLLDBPythonPath = staticmethod(GetLLDBPythonPath)
     __swig_getmethods__["GetLLDBPythonPath"] = lambda x: GetLLDBPythonPath
+
     def GetLLDBPath(*args):
         """GetLLDBPath(PathType path_type) -> SBFileSpec"""
         return _lldb.SBHostOS_GetLLDBPath(*args)
 
-    if _newclass:GetLLDBPath = staticmethod(GetLLDBPath)
+    if _newclass:
+        GetLLDBPath = staticmethod(GetLLDBPath)
     __swig_getmethods__["GetLLDBPath"] = lambda x: GetLLDBPath
+
     def GetUserHomeDirectory():
         """GetUserHomeDirectory() -> SBFileSpec"""
         return _lldb.SBHostOS_GetUserHomeDirectory()
 
-    if _newclass:GetUserHomeDirectory = staticmethod(GetUserHomeDirectory)
-    __swig_getmethods__["GetUserHomeDirectory"] = lambda x: GetUserHomeDirectory
+    if _newclass:
+        GetUserHomeDirectory = staticmethod(GetUserHomeDirectory)
+    __swig_getmethods__[
+        "GetUserHomeDirectory"] = lambda x: GetUserHomeDirectory
+
     def ThreadCreated(*args):
         """ThreadCreated(str name)"""
         return _lldb.SBHostOS_ThreadCreated(*args)
 
-    if _newclass:ThreadCreated = staticmethod(ThreadCreated)
+    if _newclass:
+        ThreadCreated = staticmethod(ThreadCreated)
     __swig_getmethods__["ThreadCreated"] = lambda x: ThreadCreated
+
     def ThreadCreate(*args):
         """ThreadCreate(str name, thread_func_t arg1, void thread_arg, SBError err) -> thread_t"""
         return _lldb.SBHostOS_ThreadCreate(*args)
 
-    if _newclass:ThreadCreate = staticmethod(ThreadCreate)
+    if _newclass:
+        ThreadCreate = staticmethod(ThreadCreate)
     __swig_getmethods__["ThreadCreate"] = lambda x: ThreadCreate
+
     def ThreadCancel(*args):
         """ThreadCancel(thread_t thread, SBError err) -> bool"""
         return _lldb.SBHostOS_ThreadCancel(*args)
 
-    if _newclass:ThreadCancel = staticmethod(ThreadCancel)
+    if _newclass:
+        ThreadCancel = staticmethod(ThreadCancel)
     __swig_getmethods__["ThreadCancel"] = lambda x: ThreadCancel
+
     def ThreadDetach(*args):
         """ThreadDetach(thread_t thread, SBError err) -> bool"""
         return _lldb.SBHostOS_ThreadDetach(*args)
 
-    if _newclass:ThreadDetach = staticmethod(ThreadDetach)
+    if _newclass:
+        ThreadDetach = staticmethod(ThreadDetach)
     __swig_getmethods__["ThreadDetach"] = lambda x: ThreadDetach
+
     def ThreadJoin(*args):
         """ThreadJoin(thread_t thread, thread_result_t result, SBError err) -> bool"""
         return _lldb.SBHostOS_ThreadJoin(*args)
 
-    if _newclass:ThreadJoin = staticmethod(ThreadJoin)
+    if _newclass:
+        ThreadJoin = staticmethod(ThreadJoin)
     __swig_getmethods__["ThreadJoin"] = lambda x: ThreadJoin
-    def __init__(self): 
+
+    def __init__(self):
         """__init__(self) -> SBHostOS"""
         this = _lldb.new_SBHostOS()
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBHostOS
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
 SBHostOS_swigregister = _lldb.SBHostOS_swigregister
 SBHostOS_swigregister(SBHostOS)
 
+
 def SBHostOS_GetProgramFileSpec():
-  """SBHostOS_GetProgramFileSpec() -> SBFileSpec"""
-  return _lldb.SBHostOS_GetProgramFileSpec()
+    """SBHostOS_GetProgramFileSpec() -> SBFileSpec"""
+    return _lldb.SBHostOS_GetProgramFileSpec()
+
 
 def SBHostOS_GetLLDBPythonPath():
-  """SBHostOS_GetLLDBPythonPath() -> SBFileSpec"""
-  return _lldb.SBHostOS_GetLLDBPythonPath()
+    """SBHostOS_GetLLDBPythonPath() -> SBFileSpec"""
+    return _lldb.SBHostOS_GetLLDBPythonPath()
+
 
 def SBHostOS_GetLLDBPath(*args):
-  """SBHostOS_GetLLDBPath(PathType path_type) -> SBFileSpec"""
-  return _lldb.SBHostOS_GetLLDBPath(*args)
+    """SBHostOS_GetLLDBPath(PathType path_type) -> SBFileSpec"""
+    return _lldb.SBHostOS_GetLLDBPath(*args)
+
 
 def SBHostOS_GetUserHomeDirectory():
-  """SBHostOS_GetUserHomeDirectory() -> SBFileSpec"""
-  return _lldb.SBHostOS_GetUserHomeDirectory()
+    """SBHostOS_GetUserHomeDirectory() -> SBFileSpec"""
+    return _lldb.SBHostOS_GetUserHomeDirectory()
+
 
 def SBHostOS_ThreadCreated(*args):
-  """SBHostOS_ThreadCreated(str name)"""
-  return _lldb.SBHostOS_ThreadCreated(*args)
+    """SBHostOS_ThreadCreated(str name)"""
+    return _lldb.SBHostOS_ThreadCreated(*args)
+
 
 def SBHostOS_ThreadCreate(*args):
-  """SBHostOS_ThreadCreate(str name, thread_func_t arg1, void thread_arg, SBError err) -> thread_t"""
-  return _lldb.SBHostOS_ThreadCreate(*args)
+    """SBHostOS_ThreadCreate(str name, thread_func_t arg1, void thread_arg, SBError err) -> thread_t"""
+    return _lldb.SBHostOS_ThreadCreate(*args)
+
 
 def SBHostOS_ThreadCancel(*args):
-  """SBHostOS_ThreadCancel(thread_t thread, SBError err) -> bool"""
-  return _lldb.SBHostOS_ThreadCancel(*args)
+    """SBHostOS_ThreadCancel(thread_t thread, SBError err) -> bool"""
+    return _lldb.SBHostOS_ThreadCancel(*args)
+
 
 def SBHostOS_ThreadDetach(*args):
-  """SBHostOS_ThreadDetach(thread_t thread, SBError err) -> bool"""
-  return _lldb.SBHostOS_ThreadDetach(*args)
+    """SBHostOS_ThreadDetach(thread_t thread, SBError err) -> bool"""
+    return _lldb.SBHostOS_ThreadDetach(*args)
+
 
 def SBHostOS_ThreadJoin(*args):
-  """SBHostOS_ThreadJoin(thread_t thread, thread_result_t result, SBError err) -> bool"""
-  return _lldb.SBHostOS_ThreadJoin(*args)
+    """SBHostOS_ThreadJoin(thread_t thread, thread_result_t result, SBError err) -> bool"""
+    return _lldb.SBHostOS_ThreadJoin(*args)
+
 
 class SBInstruction(_object):
     """Proxy of C++ lldb::SBInstruction class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBInstruction, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBInstruction, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBInstruction, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBInstruction
         __init__(self, SBInstruction rhs) -> SBInstruction
         """
         this = _lldb.new_SBInstruction(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBInstruction
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBInstruction_IsValid(self)
@@ -5154,34 +5923,62 @@ class SBInstruction(_object):
         """TestEmulation(self, SBStream output_stream, str test_file) -> bool"""
         return _lldb.SBInstruction_TestEmulation(self, *args)
 
-    def __mnemonic_property__ (self):
-        return self.GetMnemonic (target)
-    def __operands_property__ (self):
-        return self.GetOperands (target)
-    def __comment_property__ (self):
-        return self.GetComment (target)
-    def __file_addr_property__ (self):
-        return self.GetAddress ().GetFileAddress()
-    def __load_adrr_property__ (self):
-        return self.GetComment (target)
+    def __mnemonic_property__(self):
+        return self.GetMnemonic(target)
+
+    def __operands_property__(self):
+        return self.GetOperands(target)
+
+    def __comment_property__(self):
+        return self.GetComment(target)
+
+    def __file_addr_property__(self):
+        return self.GetAddress().GetFileAddress()
+
+    def __load_adrr_property__(self):
+        return self.GetComment(target)
 
     __swig_getmethods__["mnemonic"] = __mnemonic_property__
-    if _newclass: mnemonic = property(__mnemonic_property__, None, doc='''A read only property that returns the mnemonic for this instruction as a string.''')
+    if _newclass:
+        mnemonic = property(
+            __mnemonic_property__,
+            None,
+            doc='''A read only property that returns the mnemonic for this instruction as a string.''')
 
     __swig_getmethods__["operands"] = __operands_property__
-    if _newclass: operands = property(__operands_property__, None, doc='''A read only property that returns the operands for this instruction as a string.''')
+    if _newclass:
+        operands = property(
+            __operands_property__,
+            None,
+            doc='''A read only property that returns the operands for this instruction as a string.''')
 
     __swig_getmethods__["comment"] = __comment_property__
-    if _newclass: comment = property(__comment_property__, None, doc='''A read only property that returns the comment for this instruction as a string.''')
+    if _newclass:
+        comment = property(
+            __comment_property__,
+            None,
+            doc='''A read only property that returns the comment for this instruction as a string.''')
 
     __swig_getmethods__["addr"] = GetAddress
-    if _newclass: addr = property(GetAddress, None, doc='''A read only property that returns an lldb object that represents the address (lldb.SBAddress) for this instruction.''')
+    if _newclass:
+        addr = property(
+            GetAddress,
+            None,
+            doc='''A read only property that returns an lldb object that represents the address (lldb.SBAddress) for this instruction.''')
 
     __swig_getmethods__["size"] = GetByteSize
-    if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes for this instruction as an integer.''')
+    if _newclass:
+        size = property(
+            GetByteSize,
+            None,
+            doc='''A read only property that returns the size in bytes for this instruction as an integer.''')
 
     __swig_getmethods__["is_branch"] = DoesBranch
-    if _newclass: is_branch = property(DoesBranch, None, doc='''A read only property that returns a boolean value that indicates if this instruction is a branch instruction.''')
+    if _newclass:
+        is_branch = property(
+            DoesBranch,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if this instruction is a branch instruction.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -5189,6 +5986,7 @@ class SBInstruction(_object):
 
 SBInstruction_swigregister = _lldb.SBInstruction_swigregister
 SBInstruction_swigregister(SBInstruction)
+
 
 class SBInstructionList(_object):
     """
@@ -5206,23 +6004,33 @@ class SBInstructionList(_object):
     the machine instructions in assembly format.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBInstructionList, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBInstructionList, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBInstructionList, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBInstructionList, name)
     __repr__ = _swig_repr
-    def __iter__(self): return lldb_iter(self, 'GetSize', 'GetInstructionAtIndex')
+
+    def __iter__(self): return lldb_iter(
+        self, 'GetSize', 'GetInstructionAtIndex')
+
     def __len__(self): return self.GetSize()
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBInstructionList
         __init__(self, SBInstructionList rhs) -> SBInstructionList
         """
         this = _lldb.new_SBInstructionList(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBInstructionList
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBInstructionList_IsValid(self)
@@ -5253,7 +6061,8 @@ class SBInstructionList(_object):
 
     def DumpEmulationForAllInstructions(self, *args):
         """DumpEmulationForAllInstructions(self, str triple) -> bool"""
-        return _lldb.SBInstructionList_DumpEmulationForAllInstructions(self, *args)
+        return _lldb.SBInstructionList_DumpEmulationForAllInstructions(
+            self, *args)
 
     def __len__(self):
         '''Access len of the instruction list.'''
@@ -5261,11 +6070,11 @@ class SBInstructionList(_object):
 
     def __getitem__(self, key):
         '''Access instructions by integer index for array access or by lldb.SBAddress to find an instruction that matches a section offset address object.'''
-        if type(key) is int:
+        if isinstance(key, int):
             # Find an instruction by index
             if key < len(self):
                 return self.GetInstructionAtIndex(key)
-        elif type(key) is SBAddress:
+        elif isinstance(key, SBAddress):
             # Find an instruction using a lldb.SBAddress object
             lookup_file_addr = key.file_addr
             closest_inst = None
@@ -5278,7 +6087,7 @@ class SBInstructionList(_object):
                     return closest_inst
                 else:
                     closest_inst = inst
-        return None        
+        return None
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -5287,55 +6096,75 @@ class SBInstructionList(_object):
 SBInstructionList_swigregister = _lldb.SBInstructionList_swigregister
 SBInstructionList_swigregister(SBInstructionList)
 
+
 class SBLanguageRuntime(_object):
     """Proxy of C++ lldb::SBLanguageRuntime class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBLanguageRuntime, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBLanguageRuntime, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBLanguageRuntime, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBLanguageRuntime, name)
     __repr__ = _swig_repr
+
     def GetLanguageTypeFromString(*args):
         """GetLanguageTypeFromString(str string) -> LanguageType"""
         return _lldb.SBLanguageRuntime_GetLanguageTypeFromString(*args)
 
-    if _newclass:GetLanguageTypeFromString = staticmethod(GetLanguageTypeFromString)
-    __swig_getmethods__["GetLanguageTypeFromString"] = lambda x: GetLanguageTypeFromString
+    if _newclass:
+        GetLanguageTypeFromString = staticmethod(GetLanguageTypeFromString)
+    __swig_getmethods__[
+        "GetLanguageTypeFromString"] = lambda x: GetLanguageTypeFromString
+
     def GetNameForLanguageType(*args):
         """GetNameForLanguageType(LanguageType language) -> str"""
         return _lldb.SBLanguageRuntime_GetNameForLanguageType(*args)
 
-    if _newclass:GetNameForLanguageType = staticmethod(GetNameForLanguageType)
-    __swig_getmethods__["GetNameForLanguageType"] = lambda x: GetNameForLanguageType
-    def __init__(self): 
+    if _newclass:
+        GetNameForLanguageType = staticmethod(GetNameForLanguageType)
+    __swig_getmethods__[
+        "GetNameForLanguageType"] = lambda x: GetNameForLanguageType
+
+    def __init__(self):
         """__init__(self) -> SBLanguageRuntime"""
         this = _lldb.new_SBLanguageRuntime()
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBLanguageRuntime
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
 SBLanguageRuntime_swigregister = _lldb.SBLanguageRuntime_swigregister
 SBLanguageRuntime_swigregister(SBLanguageRuntime)
 
+
 def SBLanguageRuntime_GetLanguageTypeFromString(*args):
-  """SBLanguageRuntime_GetLanguageTypeFromString(str string) -> LanguageType"""
-  return _lldb.SBLanguageRuntime_GetLanguageTypeFromString(*args)
+    """SBLanguageRuntime_GetLanguageTypeFromString(str string) -> LanguageType"""
+    return _lldb.SBLanguageRuntime_GetLanguageTypeFromString(*args)
+
 
 def SBLanguageRuntime_GetNameForLanguageType(*args):
-  """SBLanguageRuntime_GetNameForLanguageType(LanguageType language) -> str"""
-  return _lldb.SBLanguageRuntime_GetNameForLanguageType(*args)
+    """SBLanguageRuntime_GetNameForLanguageType(LanguageType language) -> str"""
+    return _lldb.SBLanguageRuntime_GetNameForLanguageType(*args)
+
 
 class SBLaunchInfo(_object):
     """Proxy of C++ lldb::SBLaunchInfo class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBLaunchInfo, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBLaunchInfo, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBLaunchInfo, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """__init__(self, list argv) -> SBLaunchInfo"""
         this = _lldb.new_SBLaunchInfo(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
+
     def GetProcessID(self):
         """GetProcessID(self) -> pid_t"""
         return _lldb.SBLaunchInfo_GetProcessID(self)
@@ -5489,9 +6318,10 @@ class SBLaunchInfo(_object):
         return _lldb.SBLaunchInfo_SetDetachOnError(self, *args)
 
     __swig_destroy__ = _lldb.delete_SBLaunchInfo
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
 SBLaunchInfo_swigregister = _lldb.SBLaunchInfo_swigregister
 SBLaunchInfo_swigregister(SBLaunchInfo)
+
 
 class SBLineEntry(_object):
     """
@@ -5523,20 +6353,25 @@ class SBLineEntry(_object):
     See also SBCompileUnit.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBLineEntry, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBLineEntry, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBLineEntry, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBLineEntry
         __init__(self, SBLineEntry rhs) -> SBLineEntry
         """
         this = _lldb.new_SBLineEntry(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBLineEntry
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetStartAddress(self):
         """GetStartAddress(self) -> SBAddress"""
         return _lldb.SBLineEntry_GetStartAddress(self)
@@ -5546,6 +6381,7 @@ class SBLineEntry(_object):
         return _lldb.SBLineEntry_GetEndAddress(self)
 
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBLineEntry_IsValid(self)
@@ -5587,39 +6423,59 @@ class SBLineEntry(_object):
         return _lldb.SBLineEntry___ne__(self, *args)
 
     __swig_getmethods__["file"] = GetFileSpec
-    if _newclass: file = property(GetFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this line entry.''')
+    if _newclass:
+        file = property(
+            GetFileSpec,
+            None,
+            doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this line entry.''')
 
     __swig_getmethods__["line"] = GetLine
-    if _newclass: line = property(GetLine, None, doc='''A read only property that returns the 1 based line number for this line entry, a return value of zero indicates that no line information is available.''')
+    if _newclass:
+        line = property(
+            GetLine,
+            None,
+            doc='''A read only property that returns the 1 based line number for this line entry, a return value of zero indicates that no line information is available.''')
 
     __swig_getmethods__["column"] = GetColumn
-    if _newclass: column = property(GetColumn, None, doc='''A read only property that returns the 1 based column number for this line entry, a return value of zero indicates that no column information is available.''')
+    if _newclass:
+        column = property(
+            GetColumn,
+            None,
+            doc='''A read only property that returns the 1 based column number for this line entry, a return value of zero indicates that no column information is available.''')
 
     __swig_getmethods__["addr"] = GetStartAddress
-    if _newclass: addr = property(GetStartAddress, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this line entry.''')
+    if _newclass:
+        addr = property(
+            GetStartAddress,
+            None,
+            doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this line entry.''')
 
     __swig_getmethods__["end_addr"] = GetEndAddress
-    if _newclass: end_addr = property(GetEndAddress, None, doc='''A read only property that returns an lldb object that represents the end address (lldb.SBAddress) for this line entry.''')
-
+    if _newclass:
+        end_addr = property(
+            GetEndAddress,
+            None,
+            doc='''A read only property that returns an lldb object that represents the end address (lldb.SBAddress) for this line entry.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBLineEntry___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBLineEntry_swigregister = _lldb.SBLineEntry_swigregister
 SBLineEntry_swigregister(SBLineEntry)
+
 
 class SBListener(_object):
     """
@@ -5628,21 +6484,26 @@ class SBListener(_object):
     See aslo SBEvent for example usage of creating and adding a listener.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBListener, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBListener, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBListener, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBListener
         __init__(self, str name) -> SBListener
         __init__(self, SBListener rhs) -> SBListener
         """
         this = _lldb.new_SBListener(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBListener
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def AddEvent(self, *args):
         """AddEvent(self, SBEvent event)"""
         return _lldb.SBListener_AddEvent(self, *args)
@@ -5652,6 +6513,7 @@ class SBListener(_object):
         return _lldb.SBListener_Clear(self)
 
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBListener_IsValid(self)
@@ -5682,7 +6544,7 @@ class SBListener(_object):
 
     def WaitForEventForBroadcasterWithType(self, *args):
         """
-        WaitForEventForBroadcasterWithType(self, uint32_t num_seconds, SBBroadcaster broadcaster, uint32_t event_type_mask, 
+        WaitForEventForBroadcasterWithType(self, uint32_t num_seconds, SBBroadcaster broadcaster, uint32_t event_type_mask,
             SBEvent sb_event) -> bool
         """
         return _lldb.SBListener_WaitForEventForBroadcasterWithType(self, *args)
@@ -5697,10 +6559,11 @@ class SBListener(_object):
 
     def PeekAtNextEventForBroadcasterWithType(self, *args):
         """
-        PeekAtNextEventForBroadcasterWithType(self, SBBroadcaster broadcaster, uint32_t event_type_mask, 
+        PeekAtNextEventForBroadcasterWithType(self, SBBroadcaster broadcaster, uint32_t event_type_mask,
             SBEvent sb_event) -> bool
         """
-        return _lldb.SBListener_PeekAtNextEventForBroadcasterWithType(self, *args)
+        return _lldb.SBListener_PeekAtNextEventForBroadcasterWithType(
+            self, *args)
 
     def GetNextEvent(self, *args):
         """GetNextEvent(self, SBEvent sb_event) -> bool"""
@@ -5712,7 +6575,7 @@ class SBListener(_object):
 
     def GetNextEventForBroadcasterWithType(self, *args):
         """
-        GetNextEventForBroadcasterWithType(self, SBBroadcaster broadcaster, uint32_t event_type_mask, 
+        GetNextEventForBroadcasterWithType(self, SBBroadcaster broadcaster, uint32_t event_type_mask,
             SBEvent sb_event) -> bool
         """
         return _lldb.SBListener_GetNextEventForBroadcasterWithType(self, *args)
@@ -5724,23 +6587,30 @@ class SBListener(_object):
 SBListener_swigregister = _lldb.SBListener_swigregister
 SBListener_swigregister(SBListener)
 
+
 class SBMemoryRegionInfo(_object):
     """API clients can get information about memory regions in processes."""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBMemoryRegionInfo, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBMemoryRegionInfo, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBMemoryRegionInfo, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBMemoryRegionInfo, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBMemoryRegionInfo
         __init__(self, SBMemoryRegionInfo rhs) -> SBMemoryRegionInfo
         """
         this = _lldb.new_SBMemoryRegionInfo(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBMemoryRegionInfo
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def Clear(self):
         """Clear(self)"""
         return _lldb.SBMemoryRegionInfo_Clear(self)
@@ -5788,23 +6658,30 @@ class SBMemoryRegionInfo(_object):
 SBMemoryRegionInfo_swigregister = _lldb.SBMemoryRegionInfo_swigregister
 SBMemoryRegionInfo_swigregister(SBMemoryRegionInfo)
 
+
 class SBMemoryRegionInfoList(_object):
     """Proxy of C++ lldb::SBMemoryRegionInfoList class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBMemoryRegionInfoList, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBMemoryRegionInfoList, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBMemoryRegionInfoList, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBMemoryRegionInfoList, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBMemoryRegionInfoList
         __init__(self, SBMemoryRegionInfoList rhs) -> SBMemoryRegionInfoList
         """
         this = _lldb.new_SBMemoryRegionInfoList(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBMemoryRegionInfoList
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetSize(self):
         """GetSize(self) -> uint32_t"""
         return _lldb.SBMemoryRegionInfoList_GetSize(self)
@@ -5826,6 +6703,7 @@ class SBMemoryRegionInfoList(_object):
 
 SBMemoryRegionInfoList_swigregister = _lldb.SBMemoryRegionInfoList_swigregister
 SBMemoryRegionInfoList_swigregister(SBMemoryRegionInfoList)
+
 
 class SBModule(_object):
     """
@@ -5910,16 +6788,27 @@ class SBModule(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBModule, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBModule, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBModule, name)
     __repr__ = _swig_repr
-    def __iter__(self): return lldb_iter(self, 'GetNumSymbols', 'GetSymbolAtIndex')
+
+    def __iter__(self): return lldb_iter(
+        self, 'GetNumSymbols', 'GetSymbolAtIndex')
+
     def __len__(self): return self.GetNumSymbols()
-    def __eq__(self, other): return isinstance(other, SBModule) and self.GetFileSpec() == other.GetFileSpec() and self.GetUUIDString() == other.GetUUIDString()
+
+    def __eq__(self, other): return isinstance(other, SBModule) and self.GetFileSpec(
+    ) == other.GetFileSpec() and self.GetUUIDString() == other.GetUUIDString()
+
     def __ne__(self, other): return not self.__eq__(other)
-    def section_iter(self): return lldb_iter(self, 'GetNumSections', 'GetSectionAtIndex')
-    def compile_unit_iter(self): return lldb_iter(self, 'GetNumCompileUnits', 'GetCompileUnitAtIndex')
+
+    def section_iter(self): return lldb_iter(
+        self, 'GetNumSections', 'GetSectionAtIndex')
+
+    def compile_unit_iter(self): return lldb_iter(
+        self, 'GetNumCompileUnits', 'GetCompileUnitAtIndex')
 
     def symbol_in_section_iter(self, section):
         """Given a module and its contained section, returns an iterator on the
@@ -5928,7 +6817,7 @@ class SBModule(_object):
             if in_range(sym, section):
                 yield sym
 
-    def __init__(self, *args): 
+    def __init__(self, *args):
         """
         __init__(self) -> SBModule
         __init__(self, SBModule rhs) -> SBModule
@@ -5936,11 +6825,15 @@ class SBModule(_object):
         __init__(self, SBProcess process, addr_t header_addr) -> SBModule
         """
         this = _lldb.new_SBModule(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBModule
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBModule_IsValid(self)
@@ -5954,11 +6847,11 @@ class SBModule(_object):
         GetFileSpec(self) -> SBFileSpec
 
         Get const accessor for the module file specification.
-        
+
         This function returns the file for the module on the host system
-        that is running LLDB. This can differ from the path on the 
+        that is running LLDB. This can differ from the path on the
         platform since we might be doing remote debugging.
-        
+
         @return
             A const reference to the file specification object.
         """
@@ -5969,16 +6862,16 @@ class SBModule(_object):
         GetPlatformFileSpec(self) -> SBFileSpec
 
         Get accessor for the module platform file specification.
-        
+
         Platform file refers to the path of the module as it is known on
-        the remote system on which it is being debugged. For local 
+        the remote system on which it is being debugged. For local
         debugging this is always the same as Module::GetFileSpec(). But
         remote debugging might mention a file '/usr/lib/liba.dylib'
         which might be locally downloaded and cached. In this case the
         platform file could be something like:
         '/tmp/lldb/platform-cache/remote.host.computer/usr/lib/liba.dylib'
         The file could also be cached in a local developer kit directory.
-        
+
         @return
             A const reference to the file specification object.
         """
@@ -6064,17 +6957,17 @@ class SBModule(_object):
         FindFunctions(self, str name) -> SBSymbolContextList
 
         Find functions by name.
-        
+
         @param[in] name
             The name of the function we are looking for.
-        
+
         @param[in] name_type_mask
             A logical OR of one or more FunctionNameType enum bits that
             indicate what kind of names should be used when doing the
             lookup. Bits include fully qualified names, base names,
-            C++ methods, or ObjC selectors. 
+            C++ methods, or ObjC selectors.
             See FunctionNameType for more details.
-        
+
         @return
             A symbol context list that gets filled in with all of the
             matches.
@@ -6104,14 +6997,14 @@ class SBModule(_object):
 
         Get all types matching type_mask from debug info in this
         module.
-        
+
         @param[in] type_mask
             A bitfield that consists of one or more bits logically OR'ed
             together from the lldb::TypeClass enumeration. This allows
             you to request only structure types, or only class, struct
             and union types. Passing in lldb::eTypeClassAny will return
             all types found in the debug information for this module.
-        
+
         @return
             A list of types in this module that match type_mask
         """
@@ -6122,17 +7015,17 @@ class SBModule(_object):
         FindGlobalVariables(self, SBTarget target, str name, uint32_t max_matches) -> SBValueList
 
         Find global and static variables by name.
-        
+
         @param[in] target
             A valid SBTarget instance representing the debuggee.
-        
+
         @param[in] name
             The name of the global or static variable we are looking
             for.
-        
+
         @param[in] max_matches
             Allow the number of matches to be limited to max_matches.
-        
+
         @return
             A list of matched variables in an SBValueList.
         """
@@ -6143,14 +7036,14 @@ class SBModule(_object):
         FindFirstGlobalVariable(self, SBTarget target, str name) -> SBValue
 
         Find the first global (or static) variable by name.
-        
+
         @param[in] target
             A valid SBTarget instance representing the debuggee.
-        
+
         @param[in] name
             The name of the global or static variable we are looking
             for.
-        
+
         @return
             An SBValue that gets filled in with the found variable (if any).
         """
@@ -6195,6 +7088,7 @@ class SBModule(_object):
     class symbols_access(object):
         re_compile_type = type(re.compile('.'))
         '''A helper object that will lazily hand out lldb.SBSymbol objects for a module when supplied an index, name, or regular expression.'''
+
         def __init__(self, sbmodule):
             self.sbmodule = sbmodule
 
@@ -6205,10 +7099,10 @@ class SBModule(_object):
 
         def __getitem__(self, key):
             count = len(self)
-            if type(key) is int:
+            if isinstance(key, int):
                 if key < count:
                     return self.sbmodule.GetSymbolAtIndex(key)
-            elif type(key) is str:
+            elif isinstance(key, str):
                 matches = []
                 sc_list = self.sbmodule.FindSymbols(key)
                 for sc in sc_list:
@@ -6240,11 +7134,11 @@ class SBModule(_object):
 
     def get_symbols_access_object(self):
         '''An accessor function that returns a symbols_access() object which allows lazy symbol access from a lldb.SBModule object.'''
-        return self.symbols_access (self)
+        return self.symbols_access(self)
 
-    def get_compile_units_access_object (self):
+    def get_compile_units_access_object(self):
         '''An accessor function that returns a compile_units_access() object which allows lazy compile unit access from a lldb.SBModule object.'''
-        return self.compile_units_access (self)
+        return self.compile_units_access(self)
 
     def get_symbols_array(self):
         '''An accessor function that returns a list() that contains all symbols in a lldb.SBModule object.'''
@@ -6256,6 +7150,7 @@ class SBModule(_object):
     class sections_access(object):
         re_compile_type = type(re.compile('.'))
         '''A helper object that will lazily hand out lldb.SBSection objects for a module when supplied an index, name, or regular expression.'''
+
         def __init__(self, sbmodule):
             self.sbmodule = sbmodule
 
@@ -6266,10 +7161,10 @@ class SBModule(_object):
 
         def __getitem__(self, key):
             count = len(self)
-            if type(key) is int:
+            if isinstance(key, int):
                 if key < count:
                     return self.sbmodule.GetSectionAtIndex(key)
-            elif type(key) is str:
+            elif isinstance(key, str):
                 for idx in range(count):
                     section = self.sbmodule.GetSectionAtIndex(idx)
                     if section.name == key:
@@ -6291,6 +7186,7 @@ class SBModule(_object):
     class compile_units_access(object):
         re_compile_type = type(re.compile('.'))
         '''A helper object that will lazily hand out lldb.SBCompileUnit objects for a module when supplied an index, full or partial path, or regular expression.'''
+
         def __init__(self, sbmodule):
             self.sbmodule = sbmodule
 
@@ -6301,10 +7197,10 @@ class SBModule(_object):
 
         def __getitem__(self, key):
             count = len(self)
-            if type(key) is int:
+            if isinstance(key, int):
                 if key < count:
                     return self.sbmodule.GetCompileUnitAtIndex(key)
-            elif type(key) is str:
+            elif isinstance(key, str):
                 is_full_path = key[0] == '/'
                 for idx in range(count):
                     comp_unit = self.sbmodule.GetCompileUnitAtIndex(idx)
@@ -6330,7 +7226,7 @@ class SBModule(_object):
 
     def get_sections_access_object(self):
         '''An accessor function that returns a sections_access() object which allows lazy section array access.'''
-        return self.sections_access (self)
+        return self.sections_access(self)
 
     def get_sections_array(self):
         '''An accessor function that returns an array object that contains all sections in this module object.'''
@@ -6345,92 +7241,155 @@ class SBModule(_object):
         if not hasattr(self, 'compile_units_array'):
             self.compile_units_array = []
             for idx in range(self.GetNumCompileUnits()):
-                self.compile_units_array.append(self.GetCompileUnitAtIndex(idx))
+                self.compile_units_array.append(
+                    self.GetCompileUnitAtIndex(idx))
         return self.compile_units_array
 
     __swig_getmethods__["symbols"] = get_symbols_array
-    if _newclass: symbols = property(get_symbols_array, None, doc='''A read only property that returns a list() of lldb.SBSymbol objects contained in this module.''')
+    if _newclass:
+        symbols = property(
+            get_symbols_array,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBSymbol objects contained in this module.''')
 
     __swig_getmethods__["symbol"] = get_symbols_access_object
-    if _newclass: symbol = property(get_symbols_access_object, None, doc='''A read only property that can be used to access symbols by index ("symbol = module.symbol[0]"), name ("symbols = module.symbol['main']"), or using a regular expression ("symbols = module.symbol[re.compile(...)]"). The return value is a single lldb.SBSymbol object for array access, and a list() of lldb.SBSymbol objects for name and regular expression access''')
+    if _newclass:
+        symbol = property(
+            get_symbols_access_object,
+            None,
+            doc='''A read only property that can be used to access symbols by index ("symbol = module.symbol[0]"), name ("symbols = module.symbol['main']"), or using a regular expression ("symbols = module.symbol[re.compile(...)]"). The return value is a single lldb.SBSymbol object for array access, and a list() of lldb.SBSymbol objects for name and regular expression access''')
 
     __swig_getmethods__["sections"] = get_sections_array
-    if _newclass: sections = property(get_sections_array, None, doc='''A read only property that returns a list() of lldb.SBSection objects contained in this module.''')
+    if _newclass:
+        sections = property(
+            get_sections_array,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBSection objects contained in this module.''')
 
     __swig_getmethods__["compile_units"] = get_compile_units_array
-    if _newclass: compile_units = property(get_compile_units_array, None, doc='''A read only property that returns a list() of lldb.SBCompileUnit objects contained in this module.''')
+    if _newclass:
+        compile_units = property(
+            get_compile_units_array,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBCompileUnit objects contained in this module.''')
 
     __swig_getmethods__["section"] = get_sections_access_object
-    if _newclass: section = property(get_sections_access_object, None, doc='''A read only property that can be used to access symbols by index ("section = module.section[0]"), name ("sections = module.section[\'main\']"), or using a regular expression ("sections = module.section[re.compile(...)]"). The return value is a single lldb.SBSection object for array access, and a list() of lldb.SBSection objects for name and regular expression access''')
+    if _newclass:
+        section = property(
+            get_sections_access_object,
+            None,
+            doc='''A read only property that can be used to access symbols by index ("section = module.section[0]"), name ("sections = module.section[\'main\']"), or using a regular expression ("sections = module.section[re.compile(...)]"). The return value is a single lldb.SBSection object for array access, and a list() of lldb.SBSection objects for name and regular expression access''')
 
     __swig_getmethods__["compile_unit"] = get_compile_units_access_object
-    if _newclass: section = property(get_sections_access_object, None, doc='''A read only property that can be used to access compile units by index ("compile_unit = module.compile_unit[0]"), name ("compile_unit = module.compile_unit[\'main.cpp\']"), or using a regular expression ("compile_unit = module.compile_unit[re.compile(...)]"). The return value is a single lldb.SBCompileUnit object for array access or by full or partial path, and a list() of lldb.SBCompileUnit objects regular expressions.''')
+    if _newclass:
+        section = property(
+            get_sections_access_object,
+            None,
+            doc='''A read only property that can be used to access compile units by index ("compile_unit = module.compile_unit[0]"), name ("compile_unit = module.compile_unit[\'main.cpp\']"), or using a regular expression ("compile_unit = module.compile_unit[re.compile(...)]"). The return value is a single lldb.SBCompileUnit object for array access or by full or partial path, and a list() of lldb.SBCompileUnit objects regular expressions.''')
 
     def get_uuid(self):
-        return uuid.UUID (self.GetUUIDString())
+        return uuid.UUID(self.GetUUIDString())
 
     __swig_getmethods__["uuid"] = get_uuid
-    if _newclass: uuid = property(get_uuid, None, doc='''A read only property that returns a standard python uuid.UUID object that represents the UUID of this module.''')
+    if _newclass:
+        uuid = property(
+            get_uuid,
+            None,
+            doc='''A read only property that returns a standard python uuid.UUID object that represents the UUID of this module.''')
 
     __swig_getmethods__["file"] = GetFileSpec
-    if _newclass: file = property(GetFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this object file for this module as it is represented where it is being debugged.''')
+    if _newclass:
+        file = property(
+            GetFileSpec,
+            None,
+            doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this object file for this module as it is represented where it is being debugged.''')
 
     __swig_getmethods__["platform_file"] = GetPlatformFileSpec
-    if _newclass: platform_file = property(GetPlatformFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this object file for this module as it is represented on the current host system.''')
+    if _newclass:
+        platform_file = property(
+            GetPlatformFileSpec,
+            None,
+            doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this object file for this module as it is represented on the current host system.''')
 
     __swig_getmethods__["byte_order"] = GetByteOrder
-    if _newclass: byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this module.''')
+    if _newclass:
+        byte_order = property(
+            GetByteOrder,
+            None,
+            doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this module.''')
 
     __swig_getmethods__["addr_size"] = GetAddressByteSize
-    if _newclass: addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this module.''')
+    if _newclass:
+        addr_size = property(
+            GetAddressByteSize,
+            None,
+            doc='''A read only property that returns the size in bytes of an address for this module.''')
 
     __swig_getmethods__["triple"] = GetTriple
-    if _newclass: triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this module.''')
+    if _newclass:
+        triple = property(
+            GetTriple,
+            None,
+            doc='''A read only property that returns the target triple (arch-vendor-os) for this module.''')
 
     __swig_getmethods__["num_symbols"] = GetNumSymbols
-    if _newclass: num_symbols = property(GetNumSymbols, None, doc='''A read only property that returns number of symbols in the module symbol table as an integer.''')
+    if _newclass:
+        num_symbols = property(
+            GetNumSymbols,
+            None,
+            doc='''A read only property that returns number of symbols in the module symbol table as an integer.''')
 
     __swig_getmethods__["num_sections"] = GetNumSections
-    if _newclass: num_sections = property(GetNumSections, None, doc='''A read only property that returns number of sections in the module as an integer.''')
-
+    if _newclass:
+        num_sections = property(
+            GetNumSections,
+            None,
+            doc='''A read only property that returns number of sections in the module as an integer.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBModule___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBModule_swigregister = _lldb.SBModule_swigregister
 SBModule_swigregister(SBModule)
 
+
 class SBModuleSpec(_object):
     """Proxy of C++ lldb::SBModuleSpec class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBModuleSpec, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBModuleSpec, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBModuleSpec, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBModuleSpec
         __init__(self, SBModuleSpec rhs) -> SBModuleSpec
         """
         this = _lldb.new_SBModuleSpec(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBModuleSpec
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBModuleSpec_IsValid(self)
@@ -6502,29 +7461,39 @@ class SBModuleSpec(_object):
 SBModuleSpec_swigregister = _lldb.SBModuleSpec_swigregister
 SBModuleSpec_swigregister(SBModuleSpec)
 
+
 class SBModuleSpecList(_object):
     """Proxy of C++ lldb::SBModuleSpecList class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBModuleSpecList, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBModuleSpecList, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBModuleSpecList, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBModuleSpecList, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBModuleSpecList
         __init__(self, SBModuleSpecList rhs) -> SBModuleSpecList
         """
         this = _lldb.new_SBModuleSpecList(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBModuleSpecList
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetModuleSpecifications(*args):
         """GetModuleSpecifications(str path) -> SBModuleSpecList"""
         return _lldb.SBModuleSpecList_GetModuleSpecifications(*args)
 
-    if _newclass:GetModuleSpecifications = staticmethod(GetModuleSpecifications)
-    __swig_getmethods__["GetModuleSpecifications"] = lambda x: GetModuleSpecifications
+    if _newclass:
+        GetModuleSpecifications = staticmethod(GetModuleSpecifications)
+    __swig_getmethods__[
+        "GetModuleSpecifications"] = lambda x: GetModuleSpecifications
+
     def Append(self, *args):
         """
         Append(self, SBModuleSpec spec)
@@ -6559,27 +7528,35 @@ class SBModuleSpecList(_object):
 SBModuleSpecList_swigregister = _lldb.SBModuleSpecList_swigregister
 SBModuleSpecList_swigregister(SBModuleSpecList)
 
+
 def SBModuleSpecList_GetModuleSpecifications(*args):
-  """SBModuleSpecList_GetModuleSpecifications(str path) -> SBModuleSpecList"""
-  return _lldb.SBModuleSpecList_GetModuleSpecifications(*args)
+    """SBModuleSpecList_GetModuleSpecifications(str path) -> SBModuleSpecList"""
+    return _lldb.SBModuleSpecList_GetModuleSpecifications(*args)
+
 
 class SBPlatformConnectOptions(_object):
     """Proxy of C++ lldb::SBPlatformConnectOptions class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBPlatformConnectOptions, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBPlatformConnectOptions, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBPlatformConnectOptions, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBPlatformConnectOptions, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self, str url) -> SBPlatformConnectOptions
         __init__(self, SBPlatformConnectOptions rhs) -> SBPlatformConnectOptions
         """
         this = _lldb.new_SBPlatformConnectOptions(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBPlatformConnectOptions
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetURL(self):
         """GetURL(self) -> str"""
         return _lldb.SBPlatformConnectOptions_GetURL(self)
@@ -6606,28 +7583,36 @@ class SBPlatformConnectOptions(_object):
 
     def SetLocalCacheDirectory(self, *args):
         """SetLocalCacheDirectory(self, str path)"""
-        return _lldb.SBPlatformConnectOptions_SetLocalCacheDirectory(self, *args)
+        return _lldb.SBPlatformConnectOptions_SetLocalCacheDirectory(
+            self, *args)
 
 SBPlatformConnectOptions_swigregister = _lldb.SBPlatformConnectOptions_swigregister
 SBPlatformConnectOptions_swigregister(SBPlatformConnectOptions)
 
+
 class SBPlatformShellCommand(_object):
     """Proxy of C++ lldb::SBPlatformShellCommand class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBPlatformShellCommand, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBPlatformShellCommand, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBPlatformShellCommand, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBPlatformShellCommand, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self, str shell_command) -> SBPlatformShellCommand
         __init__(self, SBPlatformShellCommand rhs) -> SBPlatformShellCommand
         """
         this = _lldb.new_SBPlatformShellCommand(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBPlatformShellCommand
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def Clear(self):
         """Clear(self)"""
         return _lldb.SBPlatformShellCommand_Clear(self)
@@ -6671,6 +7656,7 @@ class SBPlatformShellCommand(_object):
 SBPlatformShellCommand_swigregister = _lldb.SBPlatformShellCommand_swigregister
 SBPlatformShellCommand_swigregister(SBPlatformShellCommand)
 
+
 class SBPlatform(_object):
     """
     A class that represents a platform that can represent the current host or a remote host debug platform.
@@ -6680,7 +7666,7 @@ class SBPlatform(_object):
     to remotely launch and attach to processes, upload/download files,
     create directories, run remote shell commands, find locally cached
     versions of files from the remote system, and much more.
-             
+
     SBPlatform objects can be created and then used to connect to a remote
     platform which allows the SBPlatform to be used to get a list of the
     current processes on the remote host, attach to one of those processes,
@@ -6695,21 +7681,27 @@ class SBPlatform(_object):
     a suitable platform will be found automatically.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBPlatform, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBPlatform, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBPlatform, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBPlatform
         __init__(self, str arg0) -> SBPlatform
         """
         this = _lldb.new_SBPlatform(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBPlatform
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBPlatform_IsValid(self)
@@ -6816,6 +7808,7 @@ class SBPlatform(_object):
 SBPlatform_swigregister = _lldb.SBPlatform_swigregister
 SBPlatform_swigregister(SBPlatform)
 
+
 class SBProcess(_object):
     """
     Represents the process associated with the target program.
@@ -6841,7 +7834,8 @@ class SBProcess(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBProcess, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBProcess, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBProcess, name)
     __repr__ = _swig_repr
@@ -6851,24 +7845,34 @@ class SBProcess(_object):
     eBroadcastBitSTDERR = _lldb.SBProcess_eBroadcastBitSTDERR
     eBroadcastBitProfileData = _lldb.SBProcess_eBroadcastBitProfileData
     eBroadcastBitStructuredData = _lldb.SBProcess_eBroadcastBitStructuredData
-    def __iter__(self): return lldb_iter(self, 'GetNumThreads', 'GetThreadAtIndex')
+
+    def __iter__(self): return lldb_iter(
+        self, 'GetNumThreads', 'GetThreadAtIndex')
+
     def __len__(self): return self.GetNumThreads()
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBProcess
         __init__(self, SBProcess rhs) -> SBProcess
         """
         this = _lldb.new_SBProcess(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBProcess
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetBroadcasterClassName():
         """GetBroadcasterClassName() -> str"""
         return _lldb.SBProcess_GetBroadcasterClassName()
 
-    if _newclass:GetBroadcasterClassName = staticmethod(GetBroadcasterClassName)
-    __swig_getmethods__["GetBroadcasterClassName"] = lambda x: GetBroadcasterClassName
+    if _newclass:
+        GetBroadcasterClassName = staticmethod(GetBroadcasterClassName)
+    __swig_getmethods__[
+        "GetBroadcasterClassName"] = lambda x: GetBroadcasterClassName
+
     def GetPluginName(self):
         """GetPluginName(self) -> str"""
         return _lldb.SBProcess_GetPluginName(self)
@@ -6882,6 +7886,7 @@ class SBProcess(_object):
         return _lldb.SBProcess_Clear(self)
 
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBProcess_IsValid(self)
@@ -6941,9 +7946,9 @@ class SBProcess(_object):
 
     def RemoteLaunch(self, *args):
         """
-        RemoteLaunch(self, list argv, list envp, str stdin_path, str stdout_path, 
-            str stderr_path, str working_directory, 
-            uint32_t launch_flags, bool stop_at_entry, 
+        RemoteLaunch(self, list argv, list envp, str stdin_path, str stdout_path,
+            str stderr_path, str working_directory,
+            uint32_t launch_flags, bool stop_at_entry,
             SBError error) -> bool
 
         See SBTarget.Launch for argument description and usage.
@@ -7072,7 +8077,7 @@ class SBProcess(_object):
         """GetUnixSignals(self) -> SBUnixSignals"""
         return _lldb.SBProcess_GetUnixSignals(self)
 
-    def GetStopID(self, include_expression_stops = False):
+    def GetStopID(self, include_expression_stops=False):
         """
         GetStopID(self, bool include_expression_stops = False) -> uint32_t
         GetStopID(self) -> uint32_t
@@ -7120,7 +8125,7 @@ class SBProcess(_object):
         It returns a python string of the exact length, or truncates the string if
         the maximum stracter limit is reached. Example:
 
-        # Read a C string of at most 256 bytes from address '0x1000' 
+        # Read a C string of at most 256 bytes from address '0x1000'
         error = lldb.SBError()
         cstring = process.ReadCStringFromMemory(0x1000, 256, error)
         if error.Success():
@@ -7132,7 +8137,7 @@ class SBProcess(_object):
 
     def ReadUnsignedFromMemory(self, *args):
         """
-        Reads an unsigned integer from memory given a byte size and an address. 
+        Reads an unsigned integer from memory given a byte size and an address.
         Returns the unsigned integer that was read. Example:
 
         # Read a 4 byte unsigned integer from address 0x1000
@@ -7165,56 +8170,82 @@ class SBProcess(_object):
         """GetStateFromEvent(SBEvent event) -> StateType"""
         return _lldb.SBProcess_GetStateFromEvent(*args)
 
-    if _newclass:GetStateFromEvent = staticmethod(GetStateFromEvent)
+    if _newclass:
+        GetStateFromEvent = staticmethod(GetStateFromEvent)
     __swig_getmethods__["GetStateFromEvent"] = lambda x: GetStateFromEvent
+
     def GetRestartedFromEvent(*args):
         """GetRestartedFromEvent(SBEvent event) -> bool"""
         return _lldb.SBProcess_GetRestartedFromEvent(*args)
 
-    if _newclass:GetRestartedFromEvent = staticmethod(GetRestartedFromEvent)
-    __swig_getmethods__["GetRestartedFromEvent"] = lambda x: GetRestartedFromEvent
+    if _newclass:
+        GetRestartedFromEvent = staticmethod(GetRestartedFromEvent)
+    __swig_getmethods__[
+        "GetRestartedFromEvent"] = lambda x: GetRestartedFromEvent
+
     def GetNumRestartedReasonsFromEvent(*args):
         """GetNumRestartedReasonsFromEvent(SBEvent event) -> size_t"""
         return _lldb.SBProcess_GetNumRestartedReasonsFromEvent(*args)
 
-    if _newclass:GetNumRestartedReasonsFromEvent = staticmethod(GetNumRestartedReasonsFromEvent)
-    __swig_getmethods__["GetNumRestartedReasonsFromEvent"] = lambda x: GetNumRestartedReasonsFromEvent
+    if _newclass:
+        GetNumRestartedReasonsFromEvent = staticmethod(
+            GetNumRestartedReasonsFromEvent)
+    __swig_getmethods__[
+        "GetNumRestartedReasonsFromEvent"] = lambda x: GetNumRestartedReasonsFromEvent
+
     def GetRestartedReasonAtIndexFromEvent(*args):
         """GetRestartedReasonAtIndexFromEvent(SBEvent event, size_t idx) -> str"""
         return _lldb.SBProcess_GetRestartedReasonAtIndexFromEvent(*args)
 
-    if _newclass:GetRestartedReasonAtIndexFromEvent = staticmethod(GetRestartedReasonAtIndexFromEvent)
-    __swig_getmethods__["GetRestartedReasonAtIndexFromEvent"] = lambda x: GetRestartedReasonAtIndexFromEvent
+    if _newclass:
+        GetRestartedReasonAtIndexFromEvent = staticmethod(
+            GetRestartedReasonAtIndexFromEvent)
+    __swig_getmethods__[
+        "GetRestartedReasonAtIndexFromEvent"] = lambda x: GetRestartedReasonAtIndexFromEvent
+
     def GetProcessFromEvent(*args):
         """GetProcessFromEvent(SBEvent event) -> SBProcess"""
         return _lldb.SBProcess_GetProcessFromEvent(*args)
 
-    if _newclass:GetProcessFromEvent = staticmethod(GetProcessFromEvent)
+    if _newclass:
+        GetProcessFromEvent = staticmethod(GetProcessFromEvent)
     __swig_getmethods__["GetProcessFromEvent"] = lambda x: GetProcessFromEvent
+
     def GetInterruptedFromEvent(*args):
         """GetInterruptedFromEvent(SBEvent event) -> bool"""
         return _lldb.SBProcess_GetInterruptedFromEvent(*args)
 
-    if _newclass:GetInterruptedFromEvent = staticmethod(GetInterruptedFromEvent)
-    __swig_getmethods__["GetInterruptedFromEvent"] = lambda x: GetInterruptedFromEvent
+    if _newclass:
+        GetInterruptedFromEvent = staticmethod(GetInterruptedFromEvent)
+    __swig_getmethods__[
+        "GetInterruptedFromEvent"] = lambda x: GetInterruptedFromEvent
+
     def GetStructuredDataFromEvent(*args):
         """GetStructuredDataFromEvent(SBEvent event) -> SBStructuredData"""
         return _lldb.SBProcess_GetStructuredDataFromEvent(*args)
 
-    if _newclass:GetStructuredDataFromEvent = staticmethod(GetStructuredDataFromEvent)
-    __swig_getmethods__["GetStructuredDataFromEvent"] = lambda x: GetStructuredDataFromEvent
+    if _newclass:
+        GetStructuredDataFromEvent = staticmethod(GetStructuredDataFromEvent)
+    __swig_getmethods__[
+        "GetStructuredDataFromEvent"] = lambda x: GetStructuredDataFromEvent
+
     def EventIsProcessEvent(*args):
         """EventIsProcessEvent(SBEvent event) -> bool"""
         return _lldb.SBProcess_EventIsProcessEvent(*args)
 
-    if _newclass:EventIsProcessEvent = staticmethod(EventIsProcessEvent)
+    if _newclass:
+        EventIsProcessEvent = staticmethod(EventIsProcessEvent)
     __swig_getmethods__["EventIsProcessEvent"] = lambda x: EventIsProcessEvent
+
     def EventIsStructuredDataEvent(*args):
         """EventIsStructuredDataEvent(SBEvent event) -> bool"""
         return _lldb.SBProcess_EventIsStructuredDataEvent(*args)
 
-    if _newclass:EventIsStructuredDataEvent = staticmethod(EventIsStructuredDataEvent)
-    __swig_getmethods__["EventIsStructuredDataEvent"] = lambda x: EventIsStructuredDataEvent
+    if _newclass:
+        EventIsStructuredDataEvent = staticmethod(EventIsStructuredDataEvent)
+    __swig_getmethods__[
+        "EventIsStructuredDataEvent"] = lambda x: EventIsStructuredDataEvent
+
     def GetBroadcaster(self):
         """GetBroadcaster(self) -> SBBroadcaster"""
         return _lldb.SBProcess_GetBroadcaster(self)
@@ -7245,14 +8276,14 @@ class SBProcess(_object):
         this process can support as a uint32_t.
         When the process is stopped and you have an SBThread, lldb may be
         able to show a backtrace of when that thread was originally created,
-        or the work item was enqueued to it (in the case of a libdispatch 
+        or the work item was enqueued to it (in the case of a libdispatch
         queue).
         """
         return _lldb.SBProcess_GetNumExtendedBacktraceTypes(self)
 
     def GetExtendedBacktraceTypeAtIndex(self, *args):
         """
-        Takes an index argument, returns the name of one of the thread-origin 
+        Takes an index argument, returns the name of one of the thread-origin
         extended backtrace methods as a str.
         """
         return _lldb.SBProcess_GetExtendedBacktraceTypeAtIndex(self, *args)
@@ -7280,13 +8311,13 @@ class SBProcess(_object):
     def __get_is_alive__(self):
         '''Returns "True" if the process is currently alive, "False" otherwise'''
         s = self.GetState()
-        if (s == eStateAttaching or 
-            s == eStateLaunching or 
-            s == eStateStopped or 
-            s == eStateRunning or 
-            s == eStateStepping or 
-            s == eStateCrashed or 
-            s == eStateSuspended):
+        if (s == eStateAttaching or
+            s == eStateLaunching or
+            s == eStateStopped or
+            s == eStateRunning or
+            s == eStateStepping or
+            s == eStateCrashed or
+                s == eStateSuspended):
             return True
         return False
 
@@ -7306,6 +8337,7 @@ class SBProcess(_object):
 
     class threads_access(object):
         '''A helper object that will lazily hand out thread for a process when supplied an index.'''
+
         def __init__(self, sbprocess):
             self.sbprocess = sbprocess
 
@@ -7315,13 +8347,13 @@ class SBProcess(_object):
             return 0
 
         def __getitem__(self, key):
-            if type(key) is int and key < len(self):
+            if isinstance(key, int) and key < len(self):
                 return self.sbprocess.GetThreadAtIndex(key)
             return None
 
     def get_threads_access_object(self):
         '''An accessor function that returns a modules_access() object which allows lazy thread access from a lldb.SBProcess object.'''
-        return self.threads_access (self)
+        return self.threads_access(self)
 
     def get_process_thread_list(self):
         '''An accessor function that returns a list() that contains all threads in a lldb.SBProcess object.'''
@@ -7332,44 +8364,96 @@ class SBProcess(_object):
         return threads
 
     __swig_getmethods__["threads"] = get_process_thread_list
-    if _newclass: threads = property(get_process_thread_list, None, doc='''A read only property that returns a list() of lldb.SBThread objects for this process.''')
+    if _newclass:
+        threads = property(
+            get_process_thread_list,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBThread objects for this process.''')
 
     __swig_getmethods__["thread"] = get_threads_access_object
-    if _newclass: thread = property(get_threads_access_object, None, doc='''A read only property that returns an object that can access threads by thread index (thread = lldb.process.thread[12]).''')
+    if _newclass:
+        thread = property(
+            get_threads_access_object,
+            None,
+            doc='''A read only property that returns an object that can access threads by thread index (thread = lldb.process.thread[12]).''')
 
     __swig_getmethods__["is_alive"] = __get_is_alive__
-    if _newclass: is_alive = property(__get_is_alive__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently alive.''')
+    if _newclass:
+        is_alive = property(
+            __get_is_alive__,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if this process is currently alive.''')
 
     __swig_getmethods__["is_running"] = __get_is_running__
-    if _newclass: is_running = property(__get_is_running__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently running.''')
+    if _newclass:
+        is_running = property(
+            __get_is_running__,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if this process is currently running.''')
 
     __swig_getmethods__["is_stopped"] = __get_is_stopped__
-    if _newclass: is_stopped = property(__get_is_stopped__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently stopped.''')
+    if _newclass:
+        is_stopped = property(
+            __get_is_stopped__,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if this process is currently stopped.''')
 
     __swig_getmethods__["id"] = GetProcessID
-    if _newclass: id = property(GetProcessID, None, doc='''A read only property that returns the process ID as an integer.''')
+    if _newclass:
+        id = property(
+            GetProcessID,
+            None,
+            doc='''A read only property that returns the process ID as an integer.''')
 
     __swig_getmethods__["target"] = GetTarget
-    if _newclass: target = property(GetTarget, None, doc='''A read only property that an lldb object that represents the target (lldb.SBTarget) that owns this process.''')
+    if _newclass:
+        target = property(
+            GetTarget,
+            None,
+            doc='''A read only property that an lldb object that represents the target (lldb.SBTarget) that owns this process.''')
 
     __swig_getmethods__["num_threads"] = GetNumThreads
-    if _newclass: num_threads = property(GetNumThreads, None, doc='''A read only property that returns the number of threads in this process as an integer.''')
+    if _newclass:
+        num_threads = property(
+            GetNumThreads,
+            None,
+            doc='''A read only property that returns the number of threads in this process as an integer.''')
 
     __swig_getmethods__["selected_thread"] = GetSelectedThread
     __swig_setmethods__["selected_thread"] = SetSelectedThread
-    if _newclass: selected_thread = property(GetSelectedThread, SetSelectedThread, doc='''A read/write property that gets/sets the currently selected thread in this process. The getter returns a lldb.SBThread object and the setter takes an lldb.SBThread object.''')
+    if _newclass:
+        selected_thread = property(
+            GetSelectedThread,
+            SetSelectedThread,
+            doc='''A read/write property that gets/sets the currently selected thread in this process. The getter returns a lldb.SBThread object and the setter takes an lldb.SBThread object.''')
 
     __swig_getmethods__["state"] = GetState
-    if _newclass: state = property(GetState, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eState") that represents the current state of this process (running, stopped, exited, etc.).''')
+    if _newclass:
+        state = property(
+            GetState,
+            None,
+            doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eState") that represents the current state of this process (running, stopped, exited, etc.).''')
 
     __swig_getmethods__["exit_state"] = GetExitStatus
-    if _newclass: exit_state = property(GetExitStatus, None, doc='''A read only property that returns an exit status as an integer of this process when the process state is lldb.eStateExited.''')
+    if _newclass:
+        exit_state = property(
+            GetExitStatus,
+            None,
+            doc='''A read only property that returns an exit status as an integer of this process when the process state is lldb.eStateExited.''')
 
     __swig_getmethods__["exit_description"] = GetExitDescription
-    if _newclass: exit_description = property(GetExitDescription, None, doc='''A read only property that returns an exit description as a string of this process when the process state is lldb.eStateExited.''')
+    if _newclass:
+        exit_description = property(
+            GetExitDescription,
+            None,
+            doc='''A read only property that returns an exit description as a string of this process when the process state is lldb.eStateExited.''')
 
     __swig_getmethods__["broadcaster"] = GetBroadcaster
-    if _newclass: broadcaster = property(GetBroadcaster, None, doc='''A read only property that an lldb object that represents the broadcaster (lldb.SBBroadcaster) for this process.''')
+    if _newclass:
+        broadcaster = property(
+            GetBroadcaster,
+            None,
+            doc='''A read only property that an lldb object that represents the broadcaster (lldb.SBBroadcaster) for this process.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -7378,64 +8462,81 @@ class SBProcess(_object):
 SBProcess_swigregister = _lldb.SBProcess_swigregister
 SBProcess_swigregister(SBProcess)
 
+
 def SBProcess_GetBroadcasterClassName():
-  """SBProcess_GetBroadcasterClassName() -> str"""
-  return _lldb.SBProcess_GetBroadcasterClassName()
+    """SBProcess_GetBroadcasterClassName() -> str"""
+    return _lldb.SBProcess_GetBroadcasterClassName()
+
 
 def SBProcess_GetStateFromEvent(*args):
-  """SBProcess_GetStateFromEvent(SBEvent event) -> StateType"""
-  return _lldb.SBProcess_GetStateFromEvent(*args)
+    """SBProcess_GetStateFromEvent(SBEvent event) -> StateType"""
+    return _lldb.SBProcess_GetStateFromEvent(*args)
+
 
 def SBProcess_GetRestartedFromEvent(*args):
-  """SBProcess_GetRestartedFromEvent(SBEvent event) -> bool"""
-  return _lldb.SBProcess_GetRestartedFromEvent(*args)
+    """SBProcess_GetRestartedFromEvent(SBEvent event) -> bool"""
+    return _lldb.SBProcess_GetRestartedFromEvent(*args)
+
 
 def SBProcess_GetNumRestartedReasonsFromEvent(*args):
-  """SBProcess_GetNumRestartedReasonsFromEvent(SBEvent event) -> size_t"""
-  return _lldb.SBProcess_GetNumRestartedReasonsFromEvent(*args)
+    """SBProcess_GetNumRestartedReasonsFromEvent(SBEvent event) -> size_t"""
+    return _lldb.SBProcess_GetNumRestartedReasonsFromEvent(*args)
+
 
 def SBProcess_GetRestartedReasonAtIndexFromEvent(*args):
-  """SBProcess_GetRestartedReasonAtIndexFromEvent(SBEvent event, size_t idx) -> str"""
-  return _lldb.SBProcess_GetRestartedReasonAtIndexFromEvent(*args)
+    """SBProcess_GetRestartedReasonAtIndexFromEvent(SBEvent event, size_t idx) -> str"""
+    return _lldb.SBProcess_GetRestartedReasonAtIndexFromEvent(*args)
+
 
 def SBProcess_GetProcessFromEvent(*args):
-  """SBProcess_GetProcessFromEvent(SBEvent event) -> SBProcess"""
-  return _lldb.SBProcess_GetProcessFromEvent(*args)
+    """SBProcess_GetProcessFromEvent(SBEvent event) -> SBProcess"""
+    return _lldb.SBProcess_GetProcessFromEvent(*args)
+
 
 def SBProcess_GetInterruptedFromEvent(*args):
-  """SBProcess_GetInterruptedFromEvent(SBEvent event) -> bool"""
-  return _lldb.SBProcess_GetInterruptedFromEvent(*args)
+    """SBProcess_GetInterruptedFromEvent(SBEvent event) -> bool"""
+    return _lldb.SBProcess_GetInterruptedFromEvent(*args)
+
 
 def SBProcess_GetStructuredDataFromEvent(*args):
-  """SBProcess_GetStructuredDataFromEvent(SBEvent event) -> SBStructuredData"""
-  return _lldb.SBProcess_GetStructuredDataFromEvent(*args)
+    """SBProcess_GetStructuredDataFromEvent(SBEvent event) -> SBStructuredData"""
+    return _lldb.SBProcess_GetStructuredDataFromEvent(*args)
+
 
 def SBProcess_EventIsProcessEvent(*args):
-  """SBProcess_EventIsProcessEvent(SBEvent event) -> bool"""
-  return _lldb.SBProcess_EventIsProcessEvent(*args)
+    """SBProcess_EventIsProcessEvent(SBEvent event) -> bool"""
+    return _lldb.SBProcess_EventIsProcessEvent(*args)
+
 
 def SBProcess_EventIsStructuredDataEvent(*args):
-  """SBProcess_EventIsStructuredDataEvent(SBEvent event) -> bool"""
-  return _lldb.SBProcess_EventIsStructuredDataEvent(*args)
+    """SBProcess_EventIsStructuredDataEvent(SBEvent event) -> bool"""
+    return _lldb.SBProcess_EventIsStructuredDataEvent(*args)
+
 
 class SBQueue(_object):
     """Proxy of C++ lldb::SBQueue class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBQueue, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBQueue, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBQueue, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBQueue
         __init__(self, QueueSP queue_sp) -> SBQueue
         """
         this = _lldb.new_SBQueue(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBQueue
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBQueue_IsValid(self)
@@ -7463,7 +8564,7 @@ class SBQueue(_object):
 
     def GetKind(self):
         """
-        Returns an lldb::QueueKind enumerated value (e.g. eQueueKindUnknown, 
+        Returns an lldb::QueueKind enumerated value (e.g. eQueueKindUnknown,
         eQueueKindSerial, eQueueKindConcurrent) describing the type of this
         queue.
         """
@@ -7496,24 +8597,31 @@ class SBQueue(_object):
 SBQueue_swigregister = _lldb.SBQueue_swigregister
 SBQueue_swigregister(SBQueue)
 
+
 class SBQueueItem(_object):
     """Proxy of C++ lldb::SBQueueItem class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBQueueItem, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBQueueItem, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBQueueItem, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBQueueItem
         __init__(self, QueueItemSP queue_item_sp) -> SBQueueItem
         """
         this = _lldb.new_SBQueueItem(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBQueueItem
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBQueueItem_IsValid(self)
@@ -7549,6 +8657,7 @@ class SBQueueItem(_object):
 SBQueueItem_swigregister = _lldb.SBQueueItem_swigregister
 SBQueueItem_swigregister(SBQueueItem)
 
+
 class SBSection(_object):
     """
     Represents an executable image section.
@@ -7578,23 +8687,32 @@ class SBSection(_object):
     See also SBModule.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBSection, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBSection, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBSection, name)
     __repr__ = _swig_repr
-    def __iter__(self): return lldb_iter(self, 'GetNumSubSections', 'GetSubSectionAtIndex')
+
+    def __iter__(self): return lldb_iter(
+        self, 'GetNumSubSections', 'GetSubSectionAtIndex')
+
     def __len__(self): return self.GetNumSubSections()
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBSection
         __init__(self, SBSection rhs) -> SBSection
         """
         this = _lldb.new_SBSection(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBSection
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBSection_IsValid(self)
@@ -7656,9 +8774,9 @@ class SBSection(_object):
 
         Return the size of a target's byte represented by this section
         in numbers of host bytes. Note that certain architectures have
-        varying minimum addressable unit (i.e. byte) size for their 
+        varying minimum addressable unit (i.e. byte) size for their
         CODE or DATA buses.
-        
+
         @return
             The number of host (8-bit) bytes needed to hold a target byte
         """
@@ -7680,51 +8798,87 @@ class SBSection(_object):
         return SBAddress(self, 0)
 
     __swig_getmethods__["name"] = GetName
-    if _newclass: name = property(GetName, None, doc='''A read only property that returns the name of this section as a string.''')
+    if _newclass:
+        name = property(
+            GetName,
+            None,
+            doc='''A read only property that returns the name of this section as a string.''')
 
     __swig_getmethods__["addr"] = get_addr
-    if _newclass: addr = property(get_addr, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this section.''')
+    if _newclass:
+        addr = property(
+            get_addr,
+            None,
+            doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this section.''')
 
     __swig_getmethods__["file_addr"] = GetFileAddress
-    if _newclass: file_addr = property(GetFileAddress, None, doc='''A read only property that returns an integer that represents the starting "file" address for this section, or the address of the section in the object file in which it is defined.''')
+    if _newclass:
+        file_addr = property(
+            GetFileAddress,
+            None,
+            doc='''A read only property that returns an integer that represents the starting "file" address for this section, or the address of the section in the object file in which it is defined.''')
 
     __swig_getmethods__["size"] = GetByteSize
-    if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this section as an integer.''')
+    if _newclass:
+        size = property(
+            GetByteSize,
+            None,
+            doc='''A read only property that returns the size in bytes of this section as an integer.''')
 
     __swig_getmethods__["file_offset"] = GetFileOffset
-    if _newclass: file_offset = property(GetFileOffset, None, doc='''A read only property that returns the file offset in bytes of this section as an integer.''')
+    if _newclass:
+        file_offset = property(
+            GetFileOffset,
+            None,
+            doc='''A read only property that returns the file offset in bytes of this section as an integer.''')
 
     __swig_getmethods__["file_size"] = GetFileByteSize
-    if _newclass: file_size = property(GetFileByteSize, None, doc='''A read only property that returns the file size in bytes of this section as an integer.''')
+    if _newclass:
+        file_size = property(
+            GetFileByteSize,
+            None,
+            doc='''A read only property that returns the file size in bytes of this section as an integer.''')
 
     __swig_getmethods__["data"] = GetSectionData
-    if _newclass: data = property(GetSectionData, None, doc='''A read only property that returns an lldb object that represents the bytes for this section (lldb.SBData) for this section.''')
+    if _newclass:
+        data = property(
+            GetSectionData,
+            None,
+            doc='''A read only property that returns an lldb object that represents the bytes for this section (lldb.SBData) for this section.''')
 
     __swig_getmethods__["type"] = GetSectionType
-    if _newclass: type = property(GetSectionType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eSectionType") that represents the type of this section (code, data, etc.).''')
+    if _newclass:
+        type = property(
+            GetSectionType,
+            None,
+            doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eSectionType") that represents the type of this section (code, data, etc.).''')
 
     __swig_getmethods__["target_byte_size"] = GetTargetByteSize
-    if _newclass: target_byte_size = property(GetTargetByteSize, None, doc='''A read only property that returns the size of a target byte represented by this section as a number of host bytes.''')
-
+    if _newclass:
+        target_byte_size = property(
+            GetTargetByteSize,
+            None,
+            doc='''A read only property that returns the size of a target byte represented by this section as a number of host bytes.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBSection___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBSection_swigregister = _lldb.SBSection_swigregister
 SBSection_swigregister(SBSection)
+
 
 class SBSourceManager(_object):
     """
@@ -7744,7 +8898,7 @@ class SBSourceManager(_object):
                                                          '=>', # prefix for current line
                                                          stream)
 
-            #    2    
+            #    2
             #    3    int main(int argc, char const *argv[]) {
             # => 4        printf('Hello world.\n'); // Set break point at this line.
             #    5        return 0;
@@ -7755,27 +8909,34 @@ class SBSourceManager(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBSourceManager, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBSourceManager, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBSourceManager, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """__init__(self, SBSourceManager rhs) -> SBSourceManager"""
         this = _lldb.new_SBSourceManager(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBSourceManager
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def DisplaySourceLinesWithLineNumbers(self, *args):
         """
-        DisplaySourceLinesWithLineNumbers(self, SBFileSpec file, uint32_t line, uint32_t context_before, 
-            uint32_t context_after, str current_line_cstr, 
+        DisplaySourceLinesWithLineNumbers(self, SBFileSpec file, uint32_t line, uint32_t context_before,
+            uint32_t context_after, str current_line_cstr,
             SBStream s) -> size_t
         """
-        return _lldb.SBSourceManager_DisplaySourceLinesWithLineNumbers(self, *args)
+        return _lldb.SBSourceManager_DisplaySourceLinesWithLineNumbers(
+            self, *args)
 
 SBSourceManager_swigregister = _lldb.SBSourceManager_swigregister
 SBSourceManager_swigregister(SBSourceManager)
+
 
 class SBStream(_object):
     """
@@ -7796,7 +8957,7 @@ class SBStream(_object):
                                                          '=>', # prefix for current line
                                                          stream)
 
-            #    2    
+            #    2
             #    3    int main(int argc, char const *argv[]) {
             # => 4        printf('Hello world.\n'); // Set break point at this line.
             #    5        return 0;
@@ -7807,18 +8968,24 @@ class SBStream(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBStream, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBStream, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBStream, name)
     __repr__ = _swig_repr
-    def __init__(self): 
+
+    def __init__(self):
         """__init__(self) -> SBStream"""
         this = _lldb.new_SBStream()
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBStream
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBStream_IsValid(self)
@@ -7837,7 +9004,7 @@ class SBStream(_object):
         GetSize(self) -> size_t
 
         If this stream is not redirected to a file, it will maintain a local
-        cache for the stream output whose length can be accessed using this 
+        cache for the stream output whose length can be accessed using this
         accessor.
         """
         return _lldb.SBStream_GetSize(self)
@@ -7879,26 +9046,35 @@ class SBStream(_object):
 SBStream_swigregister = _lldb.SBStream_swigregister
 SBStream_swigregister(SBStream)
 
+
 class SBStringList(_object):
     """Proxy of C++ lldb::SBStringList class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBStringList, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBStringList, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBStringList, name)
     __repr__ = _swig_repr
+
     def __iter__(self): return lldb_iter(self, 'GetSize', 'GetStringAtIndex')
+
     def __len__(self): return self.GetSize()
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBStringList
         __init__(self, SBStringList rhs) -> SBStringList
         """
         this = _lldb.new_SBStringList(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBStringList
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBStringList_IsValid(self)
@@ -7929,6 +9105,7 @@ class SBStringList(_object):
 SBStringList_swigregister = _lldb.SBStringList_swigregister
 SBStringList_swigregister(SBStringList)
 
+
 class SBStructuredData(_object):
     """
     A class representing a StructuredData event.
@@ -7937,22 +9114,29 @@ class SBStructuredData(_object):
                   features.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBStructuredData, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBStructuredData, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBStructuredData, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBStructuredData, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBStructuredData
         __init__(self, SBStructuredData rhs) -> SBStructuredData
         __init__(self, EventSP event_sp) -> SBStructuredData
         """
         this = _lldb.new_SBStructuredData(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBStructuredData
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBStructuredData_IsValid(self)
@@ -7972,6 +9156,7 @@ class SBStructuredData(_object):
 SBStructuredData_swigregister = _lldb.SBStructuredData_swigregister
 SBStructuredData_swigregister(SBStructuredData)
 
+
 class SBSymbol(_object):
     """
     Represents the symbol possibly associated with a stack frame.
@@ -7980,21 +9165,27 @@ class SBSymbol(_object):
     See also SBModule and SBFrame.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBSymbol, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBSymbol, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBSymbol, name)
     __repr__ = _swig_repr
     __swig_destroy__ = _lldb.delete_SBSymbol
-    __del__ = lambda self : None;
-    def __init__(self, *args): 
+    __del__ = lambda self: None
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBSymbol
         __init__(self, SBSymbol rhs) -> SBSymbol
         """
         this = _lldb.new_SBSymbol(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBSymbol_IsValid(self)
@@ -8054,56 +9245,91 @@ class SBSymbol(_object):
         """__ne__(self, SBSymbol rhs) -> bool"""
         return _lldb.SBSymbol___ne__(self, *args)
 
-    def get_instructions_from_current_target (self):
-        return self.GetInstructions (target)
+    def get_instructions_from_current_target(self):
+        return self.GetInstructions(target)
 
     __swig_getmethods__["name"] = GetName
-    if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this symbol as a string.''')
+    if _newclass:
+        name = property(
+            GetName,
+            None,
+            doc='''A read only property that returns the name for this symbol as a string.''')
 
     __swig_getmethods__["mangled"] = GetMangledName
-    if _newclass: mangled = property(GetMangledName, None, doc='''A read only property that returns the mangled (linkage) name for this symbol as a string.''')
+    if _newclass:
+        mangled = property(
+            GetMangledName,
+            None,
+            doc='''A read only property that returns the mangled (linkage) name for this symbol as a string.''')
 
     __swig_getmethods__["type"] = GetType
-    if _newclass: type = property(GetType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eSymbolType") that represents the type of this symbol.''')
+    if _newclass:
+        type = property(
+            GetType,
+            None,
+            doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eSymbolType") that represents the type of this symbol.''')
 
     __swig_getmethods__["addr"] = GetStartAddress
-    if _newclass: addr = property(GetStartAddress, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this symbol.''')
+    if _newclass:
+        addr = property(
+            GetStartAddress,
+            None,
+            doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this symbol.''')
 
     __swig_getmethods__["end_addr"] = GetEndAddress
-    if _newclass: end_addr = property(GetEndAddress, None, doc='''A read only property that returns an lldb object that represents the end address (lldb.SBAddress) for this symbol.''')
+    if _newclass:
+        end_addr = property(
+            GetEndAddress,
+            None,
+            doc='''A read only property that returns an lldb object that represents the end address (lldb.SBAddress) for this symbol.''')
 
     __swig_getmethods__["prologue_size"] = GetPrologueByteSize
-    if _newclass: prologue_size = property(GetPrologueByteSize, None, doc='''A read only property that returns the size in bytes of the prologue instructions as an unsigned integer.''')
+    if _newclass:
+        prologue_size = property(
+            GetPrologueByteSize,
+            None,
+            doc='''A read only property that returns the size in bytes of the prologue instructions as an unsigned integer.''')
 
     __swig_getmethods__["instructions"] = get_instructions_from_current_target
-    if _newclass: instructions = property(get_instructions_from_current_target, None, doc='''A read only property that returns an lldb object that represents the instructions (lldb.SBInstructionList) for this symbol.''')
+    if _newclass:
+        instructions = property(
+            get_instructions_from_current_target,
+            None,
+            doc='''A read only property that returns an lldb object that represents the instructions (lldb.SBInstructionList) for this symbol.''')
 
     __swig_getmethods__["external"] = IsExternal
-    if _newclass: external = property(IsExternal, None, doc='''A read only property that returns a boolean value that indicates if this symbol is externally visiable (exported) from the module that contains it.''')
+    if _newclass:
+        external = property(
+            IsExternal,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if this symbol is externally visiable (exported) from the module that contains it.''')
 
     __swig_getmethods__["synthetic"] = IsSynthetic
-    if _newclass: synthetic = property(IsSynthetic, None, doc='''A read only property that returns a boolean value that indicates if this symbol was synthetically created from information in module that contains it.''')
-
-
+    if _newclass:
+        synthetic = property(
+            IsSynthetic,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if this symbol was synthetically created from information in module that contains it.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBSymbol___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBSymbol_swigregister = _lldb.SBSymbol_swigregister
 SBSymbol_swigregister(SBSymbol)
+
 
 class SBSymbolContext(_object):
     """
@@ -8144,21 +9370,27 @@ class SBSymbolContext(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBSymbolContext, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBSymbolContext, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBSymbolContext, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBSymbolContext
         __init__(self, SBSymbolContext rhs) -> SBSymbolContext
         """
         this = _lldb.new_SBSymbolContext(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBSymbolContext
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBSymbolContext_IsValid(self)
@@ -8221,27 +9453,51 @@ class SBSymbolContext(_object):
 
     __swig_getmethods__["module"] = GetModule
     __swig_setmethods__["module"] = SetModule
-    if _newclass: module = property(GetModule, SetModule, doc='''A read/write property that allows the getting/setting of the module (lldb.SBModule) in this symbol context.''')
+    if _newclass:
+        module = property(
+            GetModule,
+            SetModule,
+            doc='''A read/write property that allows the getting/setting of the module (lldb.SBModule) in this symbol context.''')
 
     __swig_getmethods__["compile_unit"] = GetCompileUnit
     __swig_setmethods__["compile_unit"] = SetCompileUnit
-    if _newclass: compile_unit = property(GetCompileUnit, SetCompileUnit, doc='''A read/write property that allows the getting/setting of the compile unit (lldb.SBCompileUnit) in this symbol context.''')
+    if _newclass:
+        compile_unit = property(
+            GetCompileUnit,
+            SetCompileUnit,
+            doc='''A read/write property that allows the getting/setting of the compile unit (lldb.SBCompileUnit) in this symbol context.''')
 
     __swig_getmethods__["function"] = GetFunction
     __swig_setmethods__["function"] = SetFunction
-    if _newclass: function = property(GetFunction, SetFunction, doc='''A read/write property that allows the getting/setting of the function (lldb.SBFunction) in this symbol context.''')
+    if _newclass:
+        function = property(
+            GetFunction,
+            SetFunction,
+            doc='''A read/write property that allows the getting/setting of the function (lldb.SBFunction) in this symbol context.''')
 
     __swig_getmethods__["block"] = GetBlock
     __swig_setmethods__["block"] = SetBlock
-    if _newclass: block = property(GetBlock, SetBlock, doc='''A read/write property that allows the getting/setting of the block (lldb.SBBlock) in this symbol context.''')
-        
+    if _newclass:
+        block = property(
+            GetBlock,
+            SetBlock,
+            doc='''A read/write property that allows the getting/setting of the block (lldb.SBBlock) in this symbol context.''')
+
     __swig_getmethods__["symbol"] = GetSymbol
     __swig_setmethods__["symbol"] = SetSymbol
-    if _newclass: symbol = property(GetSymbol, SetSymbol, doc='''A read/write property that allows the getting/setting of the symbol (lldb.SBSymbol) in this symbol context.''')
+    if _newclass:
+        symbol = property(
+            GetSymbol,
+            SetSymbol,
+            doc='''A read/write property that allows the getting/setting of the symbol (lldb.SBSymbol) in this symbol context.''')
 
     __swig_getmethods__["line_entry"] = GetLineEntry
     __swig_setmethods__["line_entry"] = SetLineEntry
-    if _newclass: line_entry = property(GetLineEntry, SetLineEntry, doc='''A read/write property that allows the getting/setting of the line entry (lldb.SBLineEntry) in this symbol context.''')
+    if _newclass:
+        line_entry = property(
+            GetLineEntry,
+            SetLineEntry,
+            doc='''A read/write property that allows the getting/setting of the line entry (lldb.SBLineEntry) in this symbol context.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -8249,6 +9505,7 @@ class SBSymbolContext(_object):
 
 SBSymbolContext_swigregister = _lldb.SBSymbolContext_swigregister
 SBSymbolContext_swigregister(SBSymbolContext)
+
 
 class SBSymbolContextList(_object):
     """
@@ -8270,27 +9527,36 @@ class SBSymbolContextList(_object):
 
             for sc in list:
                 self.assertTrue(sc.GetModule().GetFileSpec().GetFilename() == exe_name)
-                self.assertTrue(sc.GetSymbol().GetName() == 'c')                
+                self.assertTrue(sc.GetSymbol().GetName() == 'c')
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBSymbolContextList, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBSymbolContextList, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBSymbolContextList, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBSymbolContextList, name)
     __repr__ = _swig_repr
+
     def __iter__(self): return lldb_iter(self, 'GetSize', 'GetContextAtIndex')
+
     def __len__(self): return self.GetSize()
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBSymbolContextList
         __init__(self, SBSymbolContextList rhs) -> SBSymbolContextList
         """
         this = _lldb.new_SBSymbolContextList(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBSymbolContextList
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBSymbolContextList_IsValid(self)
@@ -8323,7 +9589,7 @@ class SBSymbolContextList(_object):
 
     def __getitem__(self, key):
         count = len(self)
-        if type(key) is int:
+        if isinstance(key, int):
             if key < count:
                 return self.GetContextAtIndex(key)
             else:
@@ -8337,7 +9603,7 @@ class SBSymbolContextList(_object):
             if obj:
                 a.append(obj)
         return a
-        
+
     def get_compile_unit_array(self):
         a = []
         for i in range(len(self)):
@@ -8345,6 +9611,7 @@ class SBSymbolContextList(_object):
             if obj:
                 a.append(obj)
         return a
+
     def get_function_array(self):
         a = []
         for i in range(len(self)):
@@ -8352,6 +9619,7 @@ class SBSymbolContextList(_object):
             if obj:
                 a.append(obj)
         return a
+
     def get_block_array(self):
         a = []
         for i in range(len(self)):
@@ -8359,6 +9627,7 @@ class SBSymbolContextList(_object):
             if obj:
                 a.append(obj)
         return a
+
     def get_symbol_array(self):
         a = []
         for i in range(len(self)):
@@ -8366,6 +9635,7 @@ class SBSymbolContextList(_object):
             if obj:
                 a.append(obj)
         return a
+
     def get_line_entry_array(self):
         a = []
         for i in range(len(self)):
@@ -8374,22 +9644,46 @@ class SBSymbolContextList(_object):
                 a.append(obj)
         return a
     __swig_getmethods__["modules"] = get_module_array
-    if _newclass: modules = property(get_module_array, None, doc='''Returns a list() of lldb.SBModule objects, one for each module in each SBSymbolContext object in this list.''')
+    if _newclass:
+        modules = property(
+            get_module_array,
+            None,
+            doc='''Returns a list() of lldb.SBModule objects, one for each module in each SBSymbolContext object in this list.''')
 
     __swig_getmethods__["compile_units"] = get_compile_unit_array
-    if _newclass: compile_units = property(get_compile_unit_array, None, doc='''Returns a list() of lldb.SBCompileUnit objects, one for each compile unit in each SBSymbolContext object in this list.''')
+    if _newclass:
+        compile_units = property(
+            get_compile_unit_array,
+            None,
+            doc='''Returns a list() of lldb.SBCompileUnit objects, one for each compile unit in each SBSymbolContext object in this list.''')
 
     __swig_getmethods__["functions"] = get_function_array
-    if _newclass: functions = property(get_function_array, None, doc='''Returns a list() of lldb.SBFunction objects, one for each function in each SBSymbolContext object in this list.''')
+    if _newclass:
+        functions = property(
+            get_function_array,
+            None,
+            doc='''Returns a list() of lldb.SBFunction objects, one for each function in each SBSymbolContext object in this list.''')
 
     __swig_getmethods__["blocks"] = get_block_array
-    if _newclass: blocks = property(get_block_array, None, doc='''Returns a list() of lldb.SBBlock objects, one for each block in each SBSymbolContext object in this list.''')
+    if _newclass:
+        blocks = property(
+            get_block_array,
+            None,
+            doc='''Returns a list() of lldb.SBBlock objects, one for each block in each SBSymbolContext object in this list.''')
 
     __swig_getmethods__["line_entries"] = get_line_entry_array
-    if _newclass: line_entries = property(get_line_entry_array, None, doc='''Returns a list() of lldb.SBLineEntry objects, one for each line entry in each SBSymbolContext object in this list.''')
+    if _newclass:
+        line_entries = property(
+            get_line_entry_array,
+            None,
+            doc='''Returns a list() of lldb.SBLineEntry objects, one for each line entry in each SBSymbolContext object in this list.''')
 
     __swig_getmethods__["symbols"] = get_symbol_array
-    if _newclass: symbols = property(get_symbol_array, None, doc='''Returns a list() of lldb.SBSymbol objects, one for each symbol in each SBSymbolContext object in this list.''')
+    if _newclass:
+        symbols = property(
+            get_symbol_array,
+            None,
+            doc='''Returns a list() of lldb.SBSymbol objects, one for each symbol in each SBSymbolContext object in this list.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -8397,6 +9691,7 @@ class SBSymbolContextList(_object):
 
 SBSymbolContextList_swigregister = _lldb.SBSymbolContextList_swigregister
 SBSymbolContextList_swigregister(SBSymbolContextList)
+
 
 class SBTarget(_object):
     """
@@ -8438,7 +9733,8 @@ class SBTarget(_object):
         hw_index = 0  hit_count = 2     ignore_count = 0
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBTarget, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBTarget, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBTarget, name)
     __repr__ = _swig_repr
@@ -8447,26 +9743,40 @@ class SBTarget(_object):
     eBroadcastBitModulesUnloaded = _lldb.SBTarget_eBroadcastBitModulesUnloaded
     eBroadcastBitWatchpointChanged = _lldb.SBTarget_eBroadcastBitWatchpointChanged
     eBroadcastBitSymbolsLoaded = _lldb.SBTarget_eBroadcastBitSymbolsLoaded
-    def module_iter(self): return lldb_iter(self, 'GetNumModules', 'GetModuleAtIndex')
-    def breakpoint_iter(self): return lldb_iter(self, 'GetNumBreakpoints', 'GetBreakpointAtIndex')
-    def watchpoint_iter(self): return lldb_iter(self, 'GetNumWatchpoints', 'GetWatchpointAtIndex')
-    def __init__(self, *args): 
+
+    def module_iter(self): return lldb_iter(
+        self, 'GetNumModules', 'GetModuleAtIndex')
+
+    def breakpoint_iter(self): return lldb_iter(
+        self, 'GetNumBreakpoints', 'GetBreakpointAtIndex')
+
+    def watchpoint_iter(self): return lldb_iter(
+        self, 'GetNumWatchpoints', 'GetWatchpointAtIndex')
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBTarget
         __init__(self, SBTarget rhs) -> SBTarget
         """
         this = _lldb.new_SBTarget(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBTarget
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetBroadcasterClassName():
         """GetBroadcasterClassName() -> str"""
         return _lldb.SBTarget_GetBroadcasterClassName()
 
-    if _newclass:GetBroadcasterClassName = staticmethod(GetBroadcasterClassName)
-    __swig_getmethods__["GetBroadcasterClassName"] = lambda x: GetBroadcasterClassName
+    if _newclass:
+        GetBroadcasterClassName = staticmethod(GetBroadcasterClassName)
+    __swig_getmethods__[
+        "GetBroadcasterClassName"] = lambda x: GetBroadcasterClassName
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBTarget_IsValid(self)
@@ -8475,26 +9785,36 @@ class SBTarget(_object):
         """EventIsTargetEvent(SBEvent event) -> bool"""
         return _lldb.SBTarget_EventIsTargetEvent(*args)
 
-    if _newclass:EventIsTargetEvent = staticmethod(EventIsTargetEvent)
+    if _newclass:
+        EventIsTargetEvent = staticmethod(EventIsTargetEvent)
     __swig_getmethods__["EventIsTargetEvent"] = lambda x: EventIsTargetEvent
+
     def GetTargetFromEvent(*args):
         """GetTargetFromEvent(SBEvent event) -> SBTarget"""
         return _lldb.SBTarget_GetTargetFromEvent(*args)
 
-    if _newclass:GetTargetFromEvent = staticmethod(GetTargetFromEvent)
+    if _newclass:
+        GetTargetFromEvent = staticmethod(GetTargetFromEvent)
     __swig_getmethods__["GetTargetFromEvent"] = lambda x: GetTargetFromEvent
+
     def GetNumModulesFromEvent(*args):
         """GetNumModulesFromEvent(SBEvent event) -> uint32_t"""
         return _lldb.SBTarget_GetNumModulesFromEvent(*args)
 
-    if _newclass:GetNumModulesFromEvent = staticmethod(GetNumModulesFromEvent)
-    __swig_getmethods__["GetNumModulesFromEvent"] = lambda x: GetNumModulesFromEvent
+    if _newclass:
+        GetNumModulesFromEvent = staticmethod(GetNumModulesFromEvent)
+    __swig_getmethods__[
+        "GetNumModulesFromEvent"] = lambda x: GetNumModulesFromEvent
+
     def GetModuleAtIndexFromEvent(*args):
         """GetModuleAtIndexFromEvent(uint32_t idx, SBEvent event) -> SBModule"""
         return _lldb.SBTarget_GetModuleAtIndexFromEvent(*args)
 
-    if _newclass:GetModuleAtIndexFromEvent = staticmethod(GetModuleAtIndexFromEvent)
-    __swig_getmethods__["GetModuleAtIndexFromEvent"] = lambda x: GetModuleAtIndexFromEvent
+    if _newclass:
+        GetModuleAtIndexFromEvent = staticmethod(GetModuleAtIndexFromEvent)
+    __swig_getmethods__[
+        "GetModuleAtIndexFromEvent"] = lambda x: GetModuleAtIndexFromEvent
+
     def GetProcess(self):
         """GetProcess(self) -> SBProcess"""
         return _lldb.SBTarget_GetProcess(self)
@@ -8504,10 +9824,10 @@ class SBTarget(_object):
         GetPlatform(self) -> SBPlatform
 
         Return the platform object associated with the target.
-        
+
         After return, the platform object should be checked for
         validity.
-        
+
         @return
             A platform object.
         """
@@ -8518,14 +9838,14 @@ class SBTarget(_object):
         Install(self) -> SBError
 
         Install any binaries that need to be installed.
-        
+
         This function does nothing when debugging on the host system.
         When connected to remote platforms, the target's main executable
         and any modules that have their install path set will be
         installed on the remote platform. If the main executable doesn't
         have an install location set, it will be installed in the remote
         platform's working directory.
-        
+
         @return
             An error describing anything that went wrong during
             installation.
@@ -8537,27 +9857,27 @@ class SBTarget(_object):
         LaunchSimple(self, list argv, list envp, str working_directory) -> SBProcess
 
         Launch a new process with sensible defaults.
-        
+
         @param[in] argv
             The argument array.
-        
+
         @param[in] envp
             The environment array.
-        
+
         @param[in] working_directory
             The working directory to have the child process run in
-        
+
         Default: listener
             Set to the target's debugger (SBTarget::GetDebugger())
-        
+
         Default: launch_flags
             Empty launch flags
-        
+
         Default: stdin_path
         Default: stdout_path
         Default: stderr_path
             A pseudo terminal will be used.
-        
+
         @return
              A process object for the newly created process.
 
@@ -8572,64 +9892,64 @@ class SBTarget(_object):
 
     def Launch(self, *args):
         """
-        Launch(self, SBListener listener, list argv, list envp, str stdin_path, 
-            str stdout_path, str stderr_path, 
-            str working_directory, uint32_t launch_flags, 
+        Launch(self, SBListener listener, list argv, list envp, str stdin_path,
+            str stdout_path, str stderr_path,
+            str working_directory, uint32_t launch_flags,
             bool stop_at_entry, SBError error) -> SBProcess
         Launch(self, SBLaunchInfo launch_info, SBError error) -> SBProcess
 
         Launch a new process.
-        
+
         Launch a new process by spawning a new process using the
         target object's executable module's file as the file to launch.
         Arguments are given in argv, and the environment variables
         are in envp. Standard input and output files can be
         optionally re-directed to stdin_path, stdout_path, and
         stderr_path.
-        
+
         @param[in] listener
             An optional listener that will receive all process events.
             If listener is valid then listener will listen to all
             process events. If not valid, then this target's debugger
-            (SBTarget::GetDebugger()) will listen to all process events. 
-        
+            (SBTarget::GetDebugger()) will listen to all process events.
+
         @param[in] argv
             The argument array.
-        
+
         @param[in] envp
             The environment array.
-        
+
         @param[in] launch_flags
             Flags to modify the launch (@see lldb::LaunchFlags)
-        
+
         @param[in] stdin_path
             The path to use when re-directing the STDIN of the new
             process. If all stdXX_path arguments are NULL, a pseudo
             terminal will be used.
-        
+
         @param[in] stdout_path
             The path to use when re-directing the STDOUT of the new
             process. If all stdXX_path arguments are NULL, a pseudo
             terminal will be used.
-        
+
         @param[in] stderr_path
             The path to use when re-directing the STDERR of the new
             process. If all stdXX_path arguments are NULL, a pseudo
             terminal will be used.
-        
+
         @param[in] working_directory
             The working directory to have the child process run in
-        
+
         @param[in] launch_flags
-            Some launch options specified by logical OR'ing 
+            Some launch options specified by logical OR'ing
             lldb::LaunchFlags enumeration values together.
-        
+
         @param[in] stop_at_entry
             If false do not stop the inferior at the entry point.
-        
+
         @param[out]
             An error object. Contains the reason if there is some failure.
-        
+
         @return
              A process object for the newly created process.
 
@@ -8654,10 +9974,10 @@ class SBTarget(_object):
         LoadCore(self, str core_file) -> SBProcess
 
         Load a core file
-        
+
         @param[in] core_file
             File path of the core dump.
-        
+
         @return
              A process object for the newly created core file.
 
@@ -8678,19 +9998,19 @@ class SBTarget(_object):
         AttachToProcessWithID(self, SBListener listener, pid_t pid, SBError error) -> SBProcess
 
         Attach to process with pid.
-        
+
         @param[in] listener
             An optional listener that will receive all process events.
             If listener is valid then listener will listen to all
             process events. If not valid, then this target's debugger
             (SBTarget::GetDebugger()) will listen to all process events.
-        
+
         @param[in] pid
             The process ID to attach to.
-        
+
         @param[out]
             An error explaining what went wrong if attach fails.
-        
+
         @return
              A process object for the attached process.
         """
@@ -8701,22 +10021,22 @@ class SBTarget(_object):
         AttachToProcessWithName(self, SBListener listener, str name, bool wait_for, SBError error) -> SBProcess
 
         Attach to process with name.
-        
+
         @param[in] listener
             An optional listener that will receive all process events.
             If listener is valid then listener will listen to all
             process events. If not valid, then this target's debugger
             (SBTarget::GetDebugger()) will listen to all process events.
-        
+
         @param[in] name
             Basename of process to attach to.
-        
+
         @param[in] wait_for
             If true wait for a new instance of 'name' to be launched.
-        
+
         @param[out]
             An error explaining what went wrong if attach fails.
-        
+
         @return
              A process object for the attached process.
         """
@@ -8727,22 +10047,22 @@ class SBTarget(_object):
         ConnectRemote(self, SBListener listener, str url, str plugin_name, SBError error) -> SBProcess
 
         Connect to a remote debug server with url.
-        
+
         @param[in] listener
             An optional listener that will receive all process events.
             If listener is valid then listener will listen to all
             process events. If not valid, then this target's debugger
             (SBTarget::GetDebugger()) will listen to all process events.
-        
+
         @param[in] url
             The url to connect to, e.g., 'connect://localhost:12345'.
-        
+
         @param[in] plugin_name
             The plugin name to be used; can be NULL.
-        
+
         @param[out]
             An error explaining what went wrong if the connect fails.
-        
+
         @return
              A process object for the connected process.
         """
@@ -8798,7 +10118,7 @@ class SBTarget(_object):
         GetDataByteSize(self) -> uint32_t
 
         Architecture data byte width accessor
-        
+
         @return
         The size in 8-bit (host) bytes of a minimum addressable
         unit from the Architecture's data bus
@@ -8810,7 +10130,7 @@ class SBTarget(_object):
         GetCodeByteSize(self) -> uint32_t
 
         Architecture code byte width accessor
-        
+
         @return
         The size in 8-bit (host) bytes of a minimum addressable
         unit from the Architecture's code bus
@@ -8839,19 +10159,19 @@ class SBTarget(_object):
         FindFunctions(self, str name) -> SBSymbolContextList
 
         Find functions by name.
-        
+
         @param[in] name
             The name of the function we are looking for.
-        
+
         @param[in] name_type_mask
             A logical OR of one or more FunctionNameType enum bits that
             indicate what kind of names should be used when doing the
             lookup. Bits include fully qualified names, base names,
-            C++ methods, or ObjC selectors. 
+            C++ methods, or ObjC selectors.
             See FunctionNameType for more details.
-        
+
         @return
-            A lldb::SBSymbolContextList that gets filled in with all of 
+            A lldb::SBSymbolContextList that gets filled in with all of
             the symbol contexts for all the matches.
         """
         return _lldb.SBTarget_FindFunctions(self, *args)
@@ -8877,11 +10197,11 @@ class SBTarget(_object):
         FindFirstGlobalVariable(self, str name) -> SBValue
 
         Find the first global (or static) variable by name.
-        
+
         @param[in] name
             The name of the global or static variable we are looking
             for.
-        
+
         @return
             An SBValue that gets filled in with the found variable (if any).
         """
@@ -8893,14 +10213,14 @@ class SBTarget(_object):
         FindGlobalVariables(self, str name, uint32_t max_matches, MatchType matchtype) -> SBValueList
 
         Find global and static variables by name.
-        
+
         @param[in] name
             The name of the global or static variable we are looking
             for.
-        
+
         @param[in] max_matches
             Allow the number of matches to be limited to max_matches.
-        
+
         @return
             A list of matched variables in an SBValueList.
         """
@@ -8919,9 +10239,9 @@ class SBTarget(_object):
         ResolveFileAddress(self, addr_t file_addr) -> SBAddress
 
         Resolve a current file address into a section offset address.
-        
+
         @param[in] file_addr
-        
+
         @return
             An SBAddress which will be valid if...
         """
@@ -8943,24 +10263,24 @@ class SBTarget(_object):
         """
         ReadMemory(self, SBAddress addr, void buf, SBError error) -> size_t
 
-        Read target memory. If a target process is running then memory  
+        Read target memory. If a target process is running then memory
         is read from here. Otherwise the memory is read from the object
         files. For a target whose bytes are sized as a multiple of host
         bytes, the data read back will preserve the target's byte order.
-        
+
         @param[in] addr
-            A target address to read from. 
-        
+            A target address to read from.
+
         @param[out] buf
-            The buffer to read memory into. 
-        
+            The buffer to read memory into.
+
         @param[in] size
             The maximum number of host bytes to read in the buffer passed
             into this call
-        
+
         @param[out] error
             Error information is written here if the memory read fails.
-        
+
         @return
             The amount of data read in host bytes.
         """
@@ -8978,23 +10298,23 @@ class SBTarget(_object):
         """
         BreakpointCreateByName(self, str symbol_name, str module_name = None) -> SBBreakpoint
         BreakpointCreateByName(self, str symbol_name) -> SBBreakpoint
-        BreakpointCreateByName(self, str symbol_name, uint32_t func_name_type, SBFileSpecList module_list, 
+        BreakpointCreateByName(self, str symbol_name, uint32_t func_name_type, SBFileSpecList module_list,
             SBFileSpecList comp_unit_list) -> SBBreakpoint
-        BreakpointCreateByName(self, str symbol_name, uint32_t func_name_type, LanguageType symbol_language, 
-            SBFileSpecList module_list, 
+        BreakpointCreateByName(self, str symbol_name, uint32_t func_name_type, LanguageType symbol_language,
+            SBFileSpecList module_list,
             SBFileSpecList comp_unit_list) -> SBBreakpoint
         """
         return _lldb.SBTarget_BreakpointCreateByName(self, *args)
 
     def BreakpointCreateByNames(self, *args):
         """
-        BreakpointCreateByNames(self, str symbol_name, uint32_t name_type_mask, SBFileSpecList module_list, 
+        BreakpointCreateByNames(self, str symbol_name, uint32_t name_type_mask, SBFileSpecList module_list,
             SBFileSpecList comp_unit_list) -> SBBreakpoint
-        BreakpointCreateByNames(self, str symbol_name, uint32_t name_type_mask, LanguageType symbol_language, 
-            SBFileSpecList module_list, 
+        BreakpointCreateByNames(self, str symbol_name, uint32_t name_type_mask, LanguageType symbol_language,
+            SBFileSpecList module_list,
             SBFileSpecList comp_unit_list) -> SBBreakpoint
-        BreakpointCreateByNames(self, str symbol_name, uint32_t name_type_mask, LanguageType symbol_language, 
-            addr_t offset, SBFileSpecList module_list, 
+        BreakpointCreateByNames(self, str symbol_name, uint32_t name_type_mask, LanguageType symbol_language,
+            addr_t offset, SBFileSpecList module_list,
             SBFileSpecList comp_unit_list) -> SBBreakpoint
         """
         return _lldb.SBTarget_BreakpointCreateByNames(self, *args)
@@ -9003,7 +10323,7 @@ class SBTarget(_object):
         """
         BreakpointCreateByRegex(self, str symbol_name_regex, str module_name = None) -> SBBreakpoint
         BreakpointCreateByRegex(self, str symbol_name_regex) -> SBBreakpoint
-        BreakpointCreateByRegex(self, str symbol_name_regex, LanguageType symbol_language, 
+        BreakpointCreateByRegex(self, str symbol_name_regex, LanguageType symbol_language,
             SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint
         """
         return _lldb.SBTarget_BreakpointCreateByRegex(self, *args)
@@ -9013,7 +10333,7 @@ class SBTarget(_object):
         BreakpointCreateBySourceRegex(self, str source_regex, SBFileSpec source_file, str module_name = None) -> SBBreakpoint
         BreakpointCreateBySourceRegex(self, str source_regex, SBFileSpec source_file) -> SBBreakpoint
         BreakpointCreateBySourceRegex(self, str source_regex, SBFileSpecList module_list, SBFileSpecList file_list) -> SBBreakpoint
-        BreakpointCreateBySourceRegex(self, str source_regex, SBFileSpecList module_list, SBFileSpecList source_file, 
+        BreakpointCreateBySourceRegex(self, str source_regex, SBFileSpecList module_list, SBFileSpecList source_file,
             SBStringList func_names) -> SBBreakpoint
         """
         return _lldb.SBTarget_BreakpointCreateBySourceRegex(self, *args)
@@ -9021,7 +10341,7 @@ class SBTarget(_object):
     def BreakpointCreateForException(self, *args):
         """
         BreakpointCreateForException(self, LanguageType language, bool catch_bp, bool throw_bp) -> SBBreakpoint
-        BreakpointCreateForException(self, LanguageType language, bool catch_bp, bool throw_bp, 
+        BreakpointCreateForException(self, LanguageType language, bool catch_bp, bool throw_bp,
             SBStringList extra_args) -> SBBreakpoint
         """
         return _lldb.SBTarget_BreakpointCreateForException(self, *args)
@@ -9103,16 +10423,16 @@ class SBTarget(_object):
         CreateValueFromAddress(self, str name, SBAddress addr, SBType type) -> SBValue
 
         Create an SBValue with the given name by treating the memory starting at addr as an entity of type.
-        
+
         @param[in] name
             The name of the resultant SBValue
-        
+
         @param[in] addr
             The address of the start of the memory region to be used.
-        
+
         @param[in] type
             The type to use to interpret the memory starting at addr.
-        
+
         @return
             An SBValue of the given type, may be invalid if there was an error reading
             the underlying memory.
@@ -9208,6 +10528,7 @@ class SBTarget(_object):
 
     class modules_access(object):
         '''A helper object that will lazily hand out lldb.SBModule objects for a target when supplied an index, or by full or partial path.'''
+
         def __init__(self, sbtarget):
             self.sbtarget = sbtarget
 
@@ -9218,10 +10539,10 @@ class SBTarget(_object):
 
         def __getitem__(self, key):
             num_modules = self.sbtarget.GetNumModules()
-            if type(key) is int:
+            if isinstance(key, int):
                 if key < num_modules:
                     return self.sbtarget.GetModuleAtIndex(key)
-            elif type(key) is str:
+            elif isinstance(key, str):
                 if key.find('/') == -1:
                     for idx in range(num_modules):
                         module = self.sbtarget.GetModuleAtIndex(idx)
@@ -9242,12 +10563,12 @@ class SBTarget(_object):
                                 return module
                 except:
                     return None
-            elif type(key) is uuid.UUID:
+            elif isinstance(key, uuid.UUID):
                 for idx in range(num_modules):
                     module = self.sbtarget.GetModuleAtIndex(idx)
                     if module.uuid == key:
                         return module
-            elif type(key) is re.SRE_Pattern:
+            elif isinstance(key, re.SRE_Pattern):
                 matching_modules = []
                 for idx in range(num_modules):
                     module = self.sbtarget.GetModuleAtIndex(idx)
@@ -9261,7 +10582,7 @@ class SBTarget(_object):
 
     def get_modules_access_object(self):
         '''An accessor function that returns a modules_access() object which allows lazy module access from a lldb.SBTarget object.'''
-        return self.modules_access (self)
+        return self.modules_access(self)
 
     def get_modules_array(self):
         '''An accessor function that returns a list() that contains all modules in a lldb.SBTarget object.'''
@@ -9271,85 +10592,147 @@ class SBTarget(_object):
         return modules
 
     __swig_getmethods__["modules"] = get_modules_array
-    if _newclass: modules = property(get_modules_array, None, doc='''A read only property that returns a list() of lldb.SBModule objects contained in this target. This list is a list all modules that the target currently is tracking (the main executable and all dependent shared libraries).''')
+    if _newclass:
+        modules = property(
+            get_modules_array,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBModule objects contained in this target. This list is a list all modules that the target currently is tracking (the main executable and all dependent shared libraries).''')
 
     __swig_getmethods__["module"] = get_modules_access_object
-    if _newclass: module = property(get_modules_access_object, None, doc=r'''A read only property that returns an object that implements python operator overloading with the square brackets().\n    target.module[<int>] allows array access to any modules.\n    target.module[<str>] allows access to modules by basename, full path, or uuid string value.\n    target.module[uuid.UUID()] allows module access by UUID.\n    target.module[re] allows module access using a regular expression that matches the module full path.''')
+    if _newclass:
+        module = property(
+            get_modules_access_object,
+            None,
+            doc=r'''A read only property that returns an object that implements python operator overloading with the square brackets().\n    target.module[<int>] allows array access to any modules.\n    target.module[<str>] allows access to modules by basename, full path, or uuid string value.\n    target.module[uuid.UUID()] allows module access by UUID.\n    target.module[re] allows module access using a regular expression that matches the module full path.''')
 
     __swig_getmethods__["process"] = GetProcess
-    if _newclass: process = property(GetProcess, None, doc='''A read only property that returns an lldb object that represents the process (lldb.SBProcess) that this target owns.''')
+    if _newclass:
+        process = property(
+            GetProcess,
+            None,
+            doc='''A read only property that returns an lldb object that represents the process (lldb.SBProcess) that this target owns.''')
 
     __swig_getmethods__["executable"] = GetExecutable
-    if _newclass: executable = property(GetExecutable, None, doc='''A read only property that returns an lldb object that represents the main executable module (lldb.SBModule) for this target.''')
+    if _newclass:
+        executable = property(
+            GetExecutable,
+            None,
+            doc='''A read only property that returns an lldb object that represents the main executable module (lldb.SBModule) for this target.''')
 
     __swig_getmethods__["debugger"] = GetDebugger
-    if _newclass: debugger = property(GetDebugger, None, doc='''A read only property that returns an lldb object that represents the debugger (lldb.SBDebugger) that owns this target.''')
+    if _newclass:
+        debugger = property(
+            GetDebugger,
+            None,
+            doc='''A read only property that returns an lldb object that represents the debugger (lldb.SBDebugger) that owns this target.''')
 
     __swig_getmethods__["num_breakpoints"] = GetNumBreakpoints
-    if _newclass: num_breakpoints = property(GetNumBreakpoints, None, doc='''A read only property that returns the number of breakpoints that this target has as an integer.''')
+    if _newclass:
+        num_breakpoints = property(
+            GetNumBreakpoints,
+            None,
+            doc='''A read only property that returns the number of breakpoints that this target has as an integer.''')
 
     __swig_getmethods__["num_watchpoints"] = GetNumWatchpoints
-    if _newclass: num_watchpoints = property(GetNumWatchpoints, None, doc='''A read only property that returns the number of watchpoints that this target has as an integer.''')
+    if _newclass:
+        num_watchpoints = property(
+            GetNumWatchpoints,
+            None,
+            doc='''A read only property that returns the number of watchpoints that this target has as an integer.''')
 
     __swig_getmethods__["broadcaster"] = GetBroadcaster
-    if _newclass: broadcaster = property(GetBroadcaster, None, doc='''A read only property that an lldb object that represents the broadcaster (lldb.SBBroadcaster) for this target.''')
+    if _newclass:
+        broadcaster = property(
+            GetBroadcaster,
+            None,
+            doc='''A read only property that an lldb object that represents the broadcaster (lldb.SBBroadcaster) for this target.''')
 
     __swig_getmethods__["byte_order"] = GetByteOrder
-    if _newclass: byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this target.''')
+    if _newclass:
+        byte_order = property(
+            GetByteOrder,
+            None,
+            doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this target.''')
 
     __swig_getmethods__["addr_size"] = GetAddressByteSize
-    if _newclass: addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this target.''')
+    if _newclass:
+        addr_size = property(
+            GetAddressByteSize,
+            None,
+            doc='''A read only property that returns the size in bytes of an address for this target.''')
 
     __swig_getmethods__["triple"] = GetTriple
-    if _newclass: triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this target as a string.''')
+    if _newclass:
+        triple = property(
+            GetTriple,
+            None,
+            doc='''A read only property that returns the target triple (arch-vendor-os) for this target as a string.''')
 
     __swig_getmethods__["data_byte_size"] = GetDataByteSize
-    if _newclass: data_byte_size = property(GetDataByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the data address space for this target.''')
+    if _newclass:
+        data_byte_size = property(
+            GetDataByteSize,
+            None,
+            doc='''A read only property that returns the size in host bytes of a byte in the data address space for this target.''')
 
     __swig_getmethods__["code_byte_size"] = GetCodeByteSize
-    if _newclass: code_byte_size = property(GetCodeByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the code address space for this target.''')
+    if _newclass:
+        code_byte_size = property(
+            GetCodeByteSize,
+            None,
+            doc='''A read only property that returns the size in host bytes of a byte in the code address space for this target.''')
 
     __swig_getmethods__["platform"] = GetPlatform
-    if _newclass: platform = property(GetPlatform, None, doc='''A read only property that returns the platform associated with with this target.''')
+    if _newclass:
+        platform = property(
+            GetPlatform,
+            None,
+            doc='''A read only property that returns the platform associated with with this target.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBTarget___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBTarget_swigregister = _lldb.SBTarget_swigregister
 SBTarget_swigregister(SBTarget)
 
+
 def SBTarget_GetBroadcasterClassName():
-  """SBTarget_GetBroadcasterClassName() -> str"""
-  return _lldb.SBTarget_GetBroadcasterClassName()
+    """SBTarget_GetBroadcasterClassName() -> str"""
+    return _lldb.SBTarget_GetBroadcasterClassName()
+
 
 def SBTarget_EventIsTargetEvent(*args):
-  """SBTarget_EventIsTargetEvent(SBEvent event) -> bool"""
-  return _lldb.SBTarget_EventIsTargetEvent(*args)
+    """SBTarget_EventIsTargetEvent(SBEvent event) -> bool"""
+    return _lldb.SBTarget_EventIsTargetEvent(*args)
+
 
 def SBTarget_GetTargetFromEvent(*args):
-  """SBTarget_GetTargetFromEvent(SBEvent event) -> SBTarget"""
-  return _lldb.SBTarget_GetTargetFromEvent(*args)
+    """SBTarget_GetTargetFromEvent(SBEvent event) -> SBTarget"""
+    return _lldb.SBTarget_GetTargetFromEvent(*args)
+
 
 def SBTarget_GetNumModulesFromEvent(*args):
-  """SBTarget_GetNumModulesFromEvent(SBEvent event) -> uint32_t"""
-  return _lldb.SBTarget_GetNumModulesFromEvent(*args)
+    """SBTarget_GetNumModulesFromEvent(SBEvent event) -> uint32_t"""
+    return _lldb.SBTarget_GetNumModulesFromEvent(*args)
+
 
 def SBTarget_GetModuleAtIndexFromEvent(*args):
-  """SBTarget_GetModuleAtIndexFromEvent(uint32_t idx, SBEvent event) -> SBModule"""
-  return _lldb.SBTarget_GetModuleAtIndexFromEvent(*args)
+    """SBTarget_GetModuleAtIndexFromEvent(uint32_t idx, SBEvent event) -> SBModule"""
+    return _lldb.SBTarget_GetModuleAtIndexFromEvent(*args)
+
 
 class SBThread(_object):
     """
@@ -9382,7 +10765,8 @@ class SBThread(_object):
     See also SBProcess and SBFrame.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBThread, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBThread, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBThread, name)
     __repr__ = _swig_repr
@@ -9391,43 +10775,61 @@ class SBThread(_object):
     eBroadcastBitThreadResumed = _lldb.SBThread_eBroadcastBitThreadResumed
     eBroadcastBitSelectedFrameChanged = _lldb.SBThread_eBroadcastBitSelectedFrameChanged
     eBroadcastBitThreadSelected = _lldb.SBThread_eBroadcastBitThreadSelected
-    def __iter__(self): return lldb_iter(self, 'GetNumFrames', 'GetFrameAtIndex')
+
+    def __iter__(self): return lldb_iter(
+        self, 'GetNumFrames', 'GetFrameAtIndex')
+
     def __len__(self): return self.GetNumFrames()
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBThread
         __init__(self, SBThread thread) -> SBThread
         """
         this = _lldb.new_SBThread(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBThread
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def GetBroadcasterClassName():
         """GetBroadcasterClassName() -> str"""
         return _lldb.SBThread_GetBroadcasterClassName()
 
-    if _newclass:GetBroadcasterClassName = staticmethod(GetBroadcasterClassName)
-    __swig_getmethods__["GetBroadcasterClassName"] = lambda x: GetBroadcasterClassName
+    if _newclass:
+        GetBroadcasterClassName = staticmethod(GetBroadcasterClassName)
+    __swig_getmethods__[
+        "GetBroadcasterClassName"] = lambda x: GetBroadcasterClassName
+
     def EventIsThreadEvent(*args):
         """EventIsThreadEvent(SBEvent event) -> bool"""
         return _lldb.SBThread_EventIsThreadEvent(*args)
 
-    if _newclass:EventIsThreadEvent = staticmethod(EventIsThreadEvent)
+    if _newclass:
+        EventIsThreadEvent = staticmethod(EventIsThreadEvent)
     __swig_getmethods__["EventIsThreadEvent"] = lambda x: EventIsThreadEvent
+
     def GetStackFrameFromEvent(*args):
         """GetStackFrameFromEvent(SBEvent event) -> SBFrame"""
         return _lldb.SBThread_GetStackFrameFromEvent(*args)
 
-    if _newclass:GetStackFrameFromEvent = staticmethod(GetStackFrameFromEvent)
-    __swig_getmethods__["GetStackFrameFromEvent"] = lambda x: GetStackFrameFromEvent
+    if _newclass:
+        GetStackFrameFromEvent = staticmethod(GetStackFrameFromEvent)
+    __swig_getmethods__[
+        "GetStackFrameFromEvent"] = lambda x: GetStackFrameFromEvent
+
     def GetThreadFromEvent(*args):
         """GetThreadFromEvent(SBEvent event) -> SBThread"""
         return _lldb.SBThread_GetThreadFromEvent(*args)
 
-    if _newclass:GetThreadFromEvent = staticmethod(GetThreadFromEvent)
+    if _newclass:
+        GetThreadFromEvent = staticmethod(GetThreadFromEvent)
     __swig_getmethods__["GetThreadFromEvent"] = lambda x: GetThreadFromEvent
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBThread_IsValid(self)
@@ -9454,11 +10856,11 @@ class SBThread(_object):
         GetStopReasonDataAtIndex(self, uint32_t idx) -> uint64_t
 
         Get information associated with a stop reason.
-        
-        Breakpoint stop reasons will have data that consists of pairs of 
+
+        Breakpoint stop reasons will have data that consists of pairs of
         breakpoint IDs followed by the breakpoint location IDs (they always come
         in pairs).
-        
+
         Stop Reason              Count Data Type
         ======================== ===== =========================================
         eStopReasonNone          0
@@ -9554,7 +10956,7 @@ class SBThread(_object):
 
     def GetInfoItemByPathAsString(self, *args):
         """
-        Takes a path string and a SBStream reference as parameters, returns a bool.  
+        Takes a path string and a SBStream reference as parameters, returns a bool.
         Collects the thread's 'info' dictionary from the remote system, uses the path
         argument to descend into the dictionary to an item of interest, and prints
         it into the SBStream in a natural format.  Return bool is to indicate if
@@ -9591,7 +10993,7 @@ class SBThread(_object):
             Step  the current thread from the current source line to the line given by end_line, stopping if
             the thread steps into the function given by target_name.  If target_name is None, then stepping will stop
             in any of the places we would normally stop.
-            
+
 
             Step  the current thread from the current source line to the line given by end_line, stopping if
             the thread steps into the function given by target_name.  If target_name is None, then stepping will stop
@@ -9653,19 +11055,19 @@ class SBThread(_object):
         LLDB currently supports process centric debugging which means when any
         thread in a process stops, all other threads are stopped. The Suspend()
         call here tells our process to suspend a thread and not let it run when
-        the other threads in a process are allowed to run. So when 
+        the other threads in a process are allowed to run. So when
         SBProcess::Continue() is called, any threads that aren't suspended will
-        be allowed to run. If any of the SBThread functions for stepping are 
+        be allowed to run. If any of the SBThread functions for stepping are
         called (StepOver, StepInto, StepOut, StepInstruction, RunToAddres), the
         thread will now be allowed to run and these functions will simply return.
-        
+
         Eventually we plan to add support for thread centric debugging where
         each thread is controlled individually and each thread would broadcast
         its state, but we haven't implemented this yet.
-        
+
         Likewise the SBThread::Resume() call will again allow the thread to run
         when the process is continued.
-        
+
         Suspend() and Resume() functions are not currently reference counted, if
         anyone has the need for them to be reference counted, please let us
         know.
@@ -9723,7 +11125,7 @@ class SBThread(_object):
     def GetExtendedBacktraceThread(self, *args):
         """
         Given an argument of str to specify the type of thread-origin extended
-        backtrace to retrieve, query whether the origin of this thread is 
+        backtrace to retrieve, query whether the origin of this thread is
         available.  An SBThread is retured; SBThread.IsValid will return true
         if an extended backtrace was available.  The returned SBThread is not
         a part of the SBProcess' thread list and it cannot be manipulated like
@@ -9737,7 +11139,7 @@ class SBThread(_object):
         """
         Takes no arguments, returns a uint32_t.
         If this SBThread is an ExtendedBacktrace thread, get the IndexID of the
-        original thread that this ExtendedBacktrace thread represents, if 
+        original thread that this ExtendedBacktrace thread represents, if
         available.  The thread that was running this backtrace in the past may
         not have been registered with lldb's thread index (if it was created,
         did its work, and was destroyed without lldb ever stopping execution).
@@ -9757,6 +11159,7 @@ class SBThread(_object):
 
     class frames_access(object):
         '''A helper object that will lazily hand out frames for a thread when supplied an index.'''
+
         def __init__(self, sbthread):
             self.sbthread = sbthread
 
@@ -9764,15 +11167,15 @@ class SBThread(_object):
             if self.sbthread:
                 return int(self.sbthread.GetNumFrames())
             return 0
-        
+
         def __getitem__(self, key):
-            if type(key) is int and key < self.sbthread.GetNumFrames():
+            if isinstance(key, int) and key < self.sbthread.GetNumFrames():
                 return self.sbthread.GetFrameAtIndex(key)
             return None
 
     def get_frames_access_object(self):
         '''An accessor function that returns a frames_access() object which allows lazy frame access from a lldb.SBThread object.'''
-        return self.frames_access (self)
+        return self.frames_access(self)
 
     def get_thread_frames(self):
         '''An accessor function that returns a list() that contains all frames in a lldb.SBThread object.'''
@@ -9782,97 +11185,161 @@ class SBThread(_object):
         return frames
 
     __swig_getmethods__["id"] = GetThreadID
-    if _newclass: id = property(GetThreadID, None, doc='''A read only property that returns the thread ID as an integer.''')
+    if _newclass:
+        id = property(
+            GetThreadID,
+            None,
+            doc='''A read only property that returns the thread ID as an integer.''')
 
     __swig_getmethods__["idx"] = GetIndexID
-    if _newclass: idx = property(GetIndexID, None, doc='''A read only property that returns the thread index ID as an integer. Thread index ID values start at 1 and increment as threads come and go and can be used to uniquely identify threads.''')
+    if _newclass:
+        idx = property(
+            GetIndexID,
+            None,
+            doc='''A read only property that returns the thread index ID as an integer. Thread index ID values start at 1 and increment as threads come and go and can be used to uniquely identify threads.''')
 
     __swig_getmethods__["return_value"] = GetStopReturnValue
-    if _newclass: return_value = property(GetStopReturnValue, None, doc='''A read only property that returns an lldb object that represents the return value from the last stop (lldb.SBValue) if we just stopped due to stepping out of a function.''')
+    if _newclass:
+        return_value = property(
+            GetStopReturnValue,
+            None,
+            doc='''A read only property that returns an lldb object that represents the return value from the last stop (lldb.SBValue) if we just stopped due to stepping out of a function.''')
 
     __swig_getmethods__["process"] = GetProcess
-    if _newclass: process = property(GetProcess, None, doc='''A read only property that returns an lldb object that represents the process (lldb.SBProcess) that owns this thread.''')
+    if _newclass:
+        process = property(
+            GetProcess,
+            None,
+            doc='''A read only property that returns an lldb object that represents the process (lldb.SBProcess) that owns this thread.''')
 
     __swig_getmethods__["num_frames"] = GetNumFrames
-    if _newclass: num_frames = property(GetNumFrames, None, doc='''A read only property that returns the number of stack frames in this thread as an integer.''')
+    if _newclass:
+        num_frames = property(
+            GetNumFrames,
+            None,
+            doc='''A read only property that returns the number of stack frames in this thread as an integer.''')
 
     __swig_getmethods__["frames"] = get_thread_frames
-    if _newclass: frames = property(get_thread_frames, None, doc='''A read only property that returns a list() of lldb.SBFrame objects for all frames in this thread.''')
+    if _newclass:
+        frames = property(
+            get_thread_frames,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBFrame objects for all frames in this thread.''')
 
     __swig_getmethods__["frame"] = get_frames_access_object
-    if _newclass: frame = property(get_frames_access_object, None, doc='''A read only property that returns an object that can be used to access frames as an array ("frame_12 = lldb.thread.frame[12]").''')
+    if _newclass:
+        frame = property(
+            get_frames_access_object,
+            None,
+            doc='''A read only property that returns an object that can be used to access frames as an array ("frame_12 = lldb.thread.frame[12]").''')
 
     __swig_getmethods__["name"] = GetName
-    if _newclass: name = property(GetName, None, doc='''A read only property that returns the name of this thread as a string.''')
+    if _newclass:
+        name = property(
+            GetName,
+            None,
+            doc='''A read only property that returns the name of this thread as a string.''')
 
     __swig_getmethods__["queue"] = GetQueueName
-    if _newclass: queue = property(GetQueueName, None, doc='''A read only property that returns the dispatch queue name of this thread as a string.''')
+    if _newclass:
+        queue = property(
+            GetQueueName,
+            None,
+            doc='''A read only property that returns the dispatch queue name of this thread as a string.''')
 
     __swig_getmethods__["queue_id"] = GetQueueID
-    if _newclass: queue_id = property(GetQueueID, None, doc='''A read only property that returns the dispatch queue id of this thread as an integer.''')
+    if _newclass:
+        queue_id = property(
+            GetQueueID,
+            None,
+            doc='''A read only property that returns the dispatch queue id of this thread as an integer.''')
 
     __swig_getmethods__["stop_reason"] = GetStopReason
-    if _newclass: stop_reason = property(GetStopReason, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eStopReason") that represents the reason this thread stopped.''')
+    if _newclass:
+        stop_reason = property(
+            GetStopReason,
+            None,
+            doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eStopReason") that represents the reason this thread stopped.''')
 
     __swig_getmethods__["is_suspended"] = IsSuspended
-    if _newclass: is_suspended = property(IsSuspended, None, doc='''A read only property that returns a boolean value that indicates if this thread is suspended.''')
+    if _newclass:
+        is_suspended = property(
+            IsSuspended,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if this thread is suspended.''')
 
     __swig_getmethods__["is_stopped"] = IsStopped
-    if _newclass: is_stopped = property(IsStopped, None, doc='''A read only property that returns a boolean value that indicates if this thread is stopped but not exited.''')
+    if _newclass:
+        is_stopped = property(
+            IsStopped,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if this thread is stopped but not exited.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBThread___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBThread_swigregister = _lldb.SBThread_swigregister
 SBThread_swigregister(SBThread)
 
+
 def SBThread_GetBroadcasterClassName():
-  """SBThread_GetBroadcasterClassName() -> str"""
-  return _lldb.SBThread_GetBroadcasterClassName()
+    """SBThread_GetBroadcasterClassName() -> str"""
+    return _lldb.SBThread_GetBroadcasterClassName()
+
 
 def SBThread_EventIsThreadEvent(*args):
-  """SBThread_EventIsThreadEvent(SBEvent event) -> bool"""
-  return _lldb.SBThread_EventIsThreadEvent(*args)
+    """SBThread_EventIsThreadEvent(SBEvent event) -> bool"""
+    return _lldb.SBThread_EventIsThreadEvent(*args)
+
 
 def SBThread_GetStackFrameFromEvent(*args):
-  """SBThread_GetStackFrameFromEvent(SBEvent event) -> SBFrame"""
-  return _lldb.SBThread_GetStackFrameFromEvent(*args)
+    """SBThread_GetStackFrameFromEvent(SBEvent event) -> SBFrame"""
+    return _lldb.SBThread_GetStackFrameFromEvent(*args)
+
 
 def SBThread_GetThreadFromEvent(*args):
-  """SBThread_GetThreadFromEvent(SBEvent event) -> SBThread"""
-  return _lldb.SBThread_GetThreadFromEvent(*args)
+    """SBThread_GetThreadFromEvent(SBEvent event) -> SBThread"""
+    return _lldb.SBThread_GetThreadFromEvent(*args)
+
 
 class SBThreadCollection(_object):
     """Represents a collection of SBThread objects."""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBThreadCollection, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBThreadCollection, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBThreadCollection, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBThreadCollection, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBThreadCollection
         __init__(self, SBThreadCollection rhs) -> SBThreadCollection
         """
         this = _lldb.new_SBThreadCollection(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBThreadCollection
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBThreadCollection_IsValid(self)
@@ -9888,14 +11355,17 @@ class SBThreadCollection(_object):
 SBThreadCollection_swigregister = _lldb.SBThreadCollection_swigregister
 SBThreadCollection_swigregister(SBThreadCollection)
 
+
 class SBThreadPlan(_object):
     """Proxy of C++ lldb::SBThreadPlan class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBThreadPlan, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBThreadPlan, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBThreadPlan, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBThreadPlan
         __init__(self, SBThreadPlan threadPlan) -> SBThreadPlan
@@ -9903,10 +11373,13 @@ class SBThreadPlan(_object):
         __init__(self, SBThread thread, str class_name) -> SBThreadPlan
         """
         this = _lldb.new_SBThreadPlan(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBThreadPlan
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def Clear(self):
         """Clear(self)"""
         return _lldb.SBThreadPlan_Clear(self)
@@ -9944,6 +11417,7 @@ class SBThreadPlan(_object):
         return _lldb.SBThreadPlan_IsPlanStale(self)
 
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self, *args):
         """
         IsValid(self) -> bool
@@ -9973,27 +11447,34 @@ class SBThreadPlan(_object):
 SBThreadPlan_swigregister = _lldb.SBThreadPlan_swigregister
 SBThreadPlan_swigregister(SBThreadPlan)
 
+
 class SBTypeMember(_object):
     """
     Represents a member of a type in lldb.
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBTypeMember, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBTypeMember, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBTypeMember, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBTypeMember
         __init__(self, SBTypeMember rhs) -> SBTypeMember
         """
         this = _lldb.new_SBTypeMember(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBTypeMember
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBTypeMember_IsValid(self)
@@ -10023,23 +11504,46 @@ class SBTypeMember(_object):
         return _lldb.SBTypeMember_GetBitfieldSizeInBits(self)
 
     __swig_getmethods__["name"] = GetName
-    if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this member as a string.''')
+    if _newclass:
+        name = property(
+            GetName,
+            None,
+            doc='''A read only property that returns the name for this member as a string.''')
 
     __swig_getmethods__["type"] = GetType
-    if _newclass: type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this member.''')
+    if _newclass:
+        type = property(
+            GetType,
+            None,
+            doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this member.''')
 
     __swig_getmethods__["byte_offset"] = GetOffsetInBytes
-    if _newclass: byte_offset = property(GetOffsetInBytes, None, doc='''A read only property that returns offset in bytes for this member as an integer.''')
+    if _newclass:
+        byte_offset = property(
+            GetOffsetInBytes,
+            None,
+            doc='''A read only property that returns offset in bytes for this member as an integer.''')
 
     __swig_getmethods__["bit_offset"] = GetOffsetInBits
-    if _newclass: bit_offset = property(GetOffsetInBits, None, doc='''A read only property that returns offset in bits for this member as an integer.''')
+    if _newclass:
+        bit_offset = property(
+            GetOffsetInBits,
+            None,
+            doc='''A read only property that returns offset in bits for this member as an integer.''')
 
     __swig_getmethods__["is_bitfield"] = IsBitfield
-    if _newclass: is_bitfield = property(IsBitfield, None, doc='''A read only property that returns true if this member is a bitfield.''')
+    if _newclass:
+        is_bitfield = property(
+            IsBitfield,
+            None,
+            doc='''A read only property that returns true if this member is a bitfield.''')
 
     __swig_getmethods__["bitfield_bit_size"] = GetBitfieldSizeInBits
-    if _newclass: bitfield_bit_size = property(GetBitfieldSizeInBits, None, doc='''A read only property that returns the bitfield size in bits for this member as an integer, or zero if this member is not a bitfield.''')
-
+    if _newclass:
+        bitfield_bit_size = property(
+            GetBitfieldSizeInBits,
+            None,
+            doc='''A read only property that returns the bitfield size in bits for this member as an integer, or zero if this member is not a bitfield.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -10048,24 +11552,32 @@ class SBTypeMember(_object):
 SBTypeMember_swigregister = _lldb.SBTypeMember_swigregister
 SBTypeMember_swigregister(SBTypeMember)
 
+
 class SBTypeMemberFunction(_object):
     """Proxy of C++ lldb::SBTypeMemberFunction class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBTypeMemberFunction, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBTypeMemberFunction, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBTypeMemberFunction, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBTypeMemberFunction, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBTypeMemberFunction
         __init__(self, SBTypeMemberFunction rhs) -> SBTypeMemberFunction
         """
         this = _lldb.new_SBTypeMemberFunction(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBTypeMemberFunction
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBTypeMemberFunction_IsValid(self)
@@ -10112,6 +11624,7 @@ class SBTypeMemberFunction(_object):
 
 SBTypeMemberFunction_swigregister = _lldb.SBTypeMemberFunction_swigregister
 SBTypeMemberFunction_swigregister(SBTypeMemberFunction)
+
 
 class SBType(_object):
     """
@@ -10189,25 +11702,37 @@ class SBType(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBType, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBType, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBType, name)
     __repr__ = _swig_repr
-    def __iter__(self): return lldb_iter(self, 'GetNumberChildren', 'GetChildAtIndex')
+
+    def __iter__(self): return lldb_iter(
+        self, 'GetNumberChildren', 'GetChildAtIndex')
+
     def __len__(self): return self.GetNumberChildren()
-    def __eq__(self, other): return isinstance(other, SBType) and self.GetByteSize() == other.GetByteSize() and self.GetName() == other.GetName()
+
+    def __eq__(self, other): return isinstance(other, SBType) and self.GetByteSize(
+    ) == other.GetByteSize() and self.GetName() == other.GetName()
+
     def __ne__(self, other): return not self.__eq__(other)
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBType
         __init__(self, SBType rhs) -> SBType
         """
         this = _lldb.new_SBType(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBType
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBType_IsValid(self)
@@ -10375,42 +11900,90 @@ class SBType(_object):
                 template_args.append(self.GetTemplateArgumentType(i))
             return template_args
         return None
-        
+
     __swig_getmethods__["name"] = GetName
-    if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this type as a string.''')
+    if _newclass:
+        name = property(
+            GetName,
+            None,
+            doc='''A read only property that returns the name for this type as a string.''')
 
     __swig_getmethods__["size"] = GetByteSize
-    if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns size in bytes for this type as an integer.''')
+    if _newclass:
+        size = property(
+            GetByteSize,
+            None,
+            doc='''A read only property that returns size in bytes for this type as an integer.''')
 
     __swig_getmethods__["is_pointer"] = IsPointerType
-    if _newclass: is_pointer = property(IsPointerType, None, doc='''A read only property that returns a boolean value that indicates if this type is a pointer type.''')
+    if _newclass:
+        is_pointer = property(
+            IsPointerType,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if this type is a pointer type.''')
 
     __swig_getmethods__["is_reference"] = IsReferenceType
-    if _newclass: is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a reference type.''')
+    if _newclass:
+        is_reference = property(
+            IsReferenceType,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if this type is a reference type.''')
 
     __swig_getmethods__["is_function"] = IsFunctionType
-    if _newclass: is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a function type.''')
+    if _newclass:
+        is_reference = property(
+            IsReferenceType,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if this type is a function type.''')
 
     __swig_getmethods__["num_fields"] = GetNumberOfFields
-    if _newclass: num_fields = property(GetNumberOfFields, None, doc='''A read only property that returns number of fields in this type as an integer.''')
+    if _newclass:
+        num_fields = property(
+            GetNumberOfFields,
+            None,
+            doc='''A read only property that returns number of fields in this type as an integer.''')
 
     __swig_getmethods__["num_bases"] = GetNumberOfDirectBaseClasses
-    if _newclass: num_bases = property(GetNumberOfDirectBaseClasses, None, doc='''A read only property that returns number of direct base classes in this type as an integer.''')
+    if _newclass:
+        num_bases = property(
+            GetNumberOfDirectBaseClasses,
+            None,
+            doc='''A read only property that returns number of direct base classes in this type as an integer.''')
 
     __swig_getmethods__["num_vbases"] = GetNumberOfVirtualBaseClasses
-    if _newclass: num_vbases = property(GetNumberOfVirtualBaseClasses, None, doc='''A read only property that returns number of virtual base classes in this type as an integer.''')
+    if _newclass:
+        num_vbases = property(
+            GetNumberOfVirtualBaseClasses,
+            None,
+            doc='''A read only property that returns number of virtual base classes in this type as an integer.''')
 
     __swig_getmethods__["num_template_args"] = GetNumberOfTemplateArguments
-    if _newclass: num_template_args = property(GetNumberOfTemplateArguments, None, doc='''A read only property that returns number of template arguments in this type as an integer.''')
+    if _newclass:
+        num_template_args = property(
+            GetNumberOfTemplateArguments,
+            None,
+            doc='''A read only property that returns number of template arguments in this type as an integer.''')
 
     __swig_getmethods__["template_args"] = template_arg_array
-    if _newclass: template_args = property(template_arg_array, None, doc='''A read only property that returns a list() of lldb.SBType objects that represent all template arguments in this type.''')
+    if _newclass:
+        template_args = property(
+            template_arg_array,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBType objects that represent all template arguments in this type.''')
 
     __swig_getmethods__["type"] = GetTypeClass
-    if _newclass: type = property(GetTypeClass, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eTypeClass") that represents a classification for this type.''')
+    if _newclass:
+        type = property(
+            GetTypeClass,
+            None,
+            doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eTypeClass") that represents a classification for this type.''')
 
     __swig_getmethods__["is_complete"] = IsTypeComplete
-    if _newclass: is_complete = property(IsTypeComplete, None, doc='''A read only property that returns a boolean value that indicates if this type is a complete type (True) or a forward declaration (False).''')
+    if _newclass:
+        is_complete = property(
+            IsTypeComplete,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if this type is a complete type (True) or a forward declaration (False).''')
 
     def get_bases_array(self):
         '''An accessor function that returns a list() that contains all direct base classes in a lldb.SBType object.'''
@@ -10476,24 +12049,44 @@ class SBType(_object):
         enum_members_list = []
         sb_enum_members = self.GetEnumMembers()
         for idx in range(sb_enum_members.GetSize()):
-            enum_members_list.append(sb_enum_members.GetTypeEnumMemberAtIndex(idx))
+            enum_members_list.append(
+                sb_enum_members.GetTypeEnumMemberAtIndex(idx))
         return enum_members_list
 
     __swig_getmethods__["bases"] = get_bases_array
-    if _newclass: bases = property(get_bases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the direct base classes for this type.''')
+    if _newclass:
+        bases = property(
+            get_bases_array,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the direct base classes for this type.''')
 
     __swig_getmethods__["vbases"] = get_vbases_array
-    if _newclass: vbases = property(get_vbases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the virtual base classes for this type.''')
+    if _newclass:
+        vbases = property(
+            get_vbases_array,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the virtual base classes for this type.''')
 
     __swig_getmethods__["fields"] = get_fields_array
-    if _newclass: fields = property(get_fields_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the fields for this type.''')
+    if _newclass:
+        fields = property(
+            get_fields_array,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the fields for this type.''')
 
     __swig_getmethods__["members"] = get_members_array
-    if _newclass: members = property(get_members_array, None, doc='''A read only property that returns a list() of all lldb.SBTypeMember objects that represent all of the base classes, virtual base classes and fields for this type in ascending bit offset order.''')
+    if _newclass:
+        members = property(
+            get_members_array,
+            None,
+            doc='''A read only property that returns a list() of all lldb.SBTypeMember objects that represent all of the base classes, virtual base classes and fields for this type in ascending bit offset order.''')
 
     __swig_getmethods__["enum_members"] = get_enum_members_array
-    if _newclass: enum_members = property(get_enum_members_array, None, doc='''A read only property that returns a list() of all lldb.SBTypeEnumMember objects that represent the enum members for this type.''')
-
+    if _newclass:
+        enum_members = property(
+            get_enum_members_array,
+            None,
+            doc='''A read only property that returns a list() of all lldb.SBTypeEnumMember objects that represent the enum members for this type.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -10501,6 +12094,7 @@ class SBType(_object):
 
 SBType_swigregister = _lldb.SBType_swigregister
 SBType_swigregister(SBType)
+
 
 class SBTypeList(_object):
     """
@@ -10536,18 +12130,26 @@ class SBTypeList(_object):
 
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBTypeList, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBTypeList, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBTypeList, name)
     __repr__ = _swig_repr
+
     def __iter__(self): return lldb_iter(self, 'GetSize', 'GetTypeAtIndex')
+
     def __len__(self): return self.GetSize()
-    def __init__(self): 
+
+    def __init__(self):
         """__init__(self) -> SBTypeList"""
         this = _lldb.new_SBTypeList()
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBTypeList_IsValid(self)
@@ -10565,31 +12167,38 @@ class SBTypeList(_object):
         return _lldb.SBTypeList_GetSize(self)
 
     __swig_destroy__ = _lldb.delete_SBTypeList
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
 SBTypeList_swigregister = _lldb.SBTypeList_swigregister
 SBTypeList_swigregister(SBTypeList)
+
 
 class SBTypeCategory(_object):
     """
     Represents a category that can contain formatters for types.
-        
+
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBTypeCategory, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBTypeCategory, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBTypeCategory, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBTypeCategory
         __init__(self, SBTypeCategory rhs) -> SBTypeCategory
         """
         this = _lldb.new_SBTypeCategory(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBTypeCategory
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBTypeCategory_IsValid(self)
@@ -10640,19 +12249,23 @@ class SBTypeCategory(_object):
 
     def GetTypeNameSpecifierForFilterAtIndex(self, *args):
         """GetTypeNameSpecifierForFilterAtIndex(self, uint32_t arg0) -> SBTypeNameSpecifier"""
-        return _lldb.SBTypeCategory_GetTypeNameSpecifierForFilterAtIndex(self, *args)
+        return _lldb.SBTypeCategory_GetTypeNameSpecifierForFilterAtIndex(
+            self, *args)
 
     def GetTypeNameSpecifierForFormatAtIndex(self, *args):
         """GetTypeNameSpecifierForFormatAtIndex(self, uint32_t arg0) -> SBTypeNameSpecifier"""
-        return _lldb.SBTypeCategory_GetTypeNameSpecifierForFormatAtIndex(self, *args)
+        return _lldb.SBTypeCategory_GetTypeNameSpecifierForFormatAtIndex(
+            self, *args)
 
     def GetTypeNameSpecifierForSummaryAtIndex(self, *args):
         """GetTypeNameSpecifierForSummaryAtIndex(self, uint32_t arg0) -> SBTypeNameSpecifier"""
-        return _lldb.SBTypeCategory_GetTypeNameSpecifierForSummaryAtIndex(self, *args)
+        return _lldb.SBTypeCategory_GetTypeNameSpecifierForSummaryAtIndex(
+            self, *args)
 
     def GetTypeNameSpecifierForSyntheticAtIndex(self, *args):
         """GetTypeNameSpecifierForSyntheticAtIndex(self, uint32_t arg0) -> SBTypeNameSpecifier"""
-        return _lldb.SBTypeCategory_GetTypeNameSpecifierForSyntheticAtIndex(self, *args)
+        return _lldb.SBTypeCategory_GetTypeNameSpecifierForSyntheticAtIndex(
+            self, *args)
 
     def GetFilterForType(self, *args):
         """GetFilterForType(self, SBTypeNameSpecifier arg0) -> SBTypeFilter"""
@@ -10720,13 +12333,18 @@ class SBTypeCategory(_object):
 
     class formatters_access_class(object):
         '''A helper object that will lazily hand out formatters for a specific category.'''
-        def __init__(self, sbcategory, get_count_function, get_at_index_function, get_by_name_function):
+
+        def __init__(
+                self,
+                sbcategory,
+                get_count_function,
+                get_at_index_function,
+                get_by_name_function):
             self.sbcategory = sbcategory
             self.get_count_function = get_count_function
             self.get_at_index_function = get_at_index_function
             self.get_by_name_function = get_by_name_function
             self.regex_type = type(re.compile('.'))
-
 
         def __len__(self):
             if self.sbcategory and self.get_count_function:
@@ -10735,20 +12353,27 @@ class SBTypeCategory(_object):
 
         def __getitem__(self, key):
             num_items = len(self)
-            if type(key) is int:
+            if isinstance(key, int):
                 if key < num_items:
-                    return self.get_at_index_function(self.sbcategory,key)
-            elif type(key) is str:
-                return self.get_by_name_function(self.sbcategory,SBTypeNameSpecifier(key))
-            elif isinstance(key,self.regex_type):
-                return self.get_by_name_function(self.sbcategory,SBTypeNameSpecifier(key.pattern,True))
+                    return self.get_at_index_function(self.sbcategory, key)
+            elif isinstance(key, str):
+                return self.get_by_name_function(
+                    self.sbcategory, SBTypeNameSpecifier(key))
+            elif isinstance(key, self.regex_type):
+                return self.get_by_name_function(
+                    self.sbcategory, SBTypeNameSpecifier(
+                        key.pattern, True))
             else:
                 print("error: unsupported item type: %s" % type(key))
             return None
 
     def get_formats_access_object(self):
         '''An accessor function that returns an accessor object which allows lazy format access from a lldb.SBTypeCategory object.'''
-        return self.formatters_access_class (self,self.__class__.GetNumFormats,self.__class__.GetFormatAtIndex,self.__class__.GetFormatForType)
+        return self.formatters_access_class(
+            self,
+            self.__class__.GetNumFormats,
+            self.__class__.GetFormatAtIndex,
+            self.__class__.GetFormatForType)
 
     def get_formats_array(self):
         '''An accessor function that returns a list() that contains all formats in a lldb.SBCategory object.'''
@@ -10759,7 +12384,11 @@ class SBTypeCategory(_object):
 
     def get_summaries_access_object(self):
         '''An accessor function that returns an accessor object which allows lazy summary access from a lldb.SBTypeCategory object.'''
-        return self.formatters_access_class (self,self.__class__.GetNumSummaries,self.__class__.GetSummaryAtIndex,self.__class__.GetSummaryForType)
+        return self.formatters_access_class(
+            self,
+            self.__class__.GetNumSummaries,
+            self.__class__.GetSummaryAtIndex,
+            self.__class__.GetSummaryForType)
 
     def get_summaries_array(self):
         '''An accessor function that returns a list() that contains all summaries in a lldb.SBCategory object.'''
@@ -10770,7 +12399,11 @@ class SBTypeCategory(_object):
 
     def get_synthetics_access_object(self):
         '''An accessor function that returns an accessor object which allows lazy synthetic children provider access from a lldb.SBTypeCategory object.'''
-        return self.formatters_access_class (self,self.__class__.GetNumSynthetics,self.__class__.GetSyntheticAtIndex,self.__class__.GetSyntheticForType)
+        return self.formatters_access_class(
+            self,
+            self.__class__.GetNumSynthetics,
+            self.__class__.GetSyntheticAtIndex,
+            self.__class__.GetSyntheticForType)
 
     def get_synthetics_array(self):
         '''An accessor function that returns a list() that contains all synthetic children providers in a lldb.SBCategory object.'''
@@ -10781,7 +12414,11 @@ class SBTypeCategory(_object):
 
     def get_filters_access_object(self):
         '''An accessor function that returns an accessor object which allows lazy filter access from a lldb.SBTypeCategory object.'''
-        return self.formatters_access_class (self,self.__class__.GetNumFilters,self.__class__.GetFilterAtIndex,self.__class__.GetFilterForType)
+        return self.formatters_access_class(
+            self,
+            self.__class__.GetNumFilters,
+            self.__class__.GetFilterAtIndex,
+            self.__class__.GetFilterForType)
 
     def get_filters_array(self):
         '''An accessor function that returns a list() that contains all filters in a lldb.SBCategory object.'''
@@ -10791,44 +12428,82 @@ class SBTypeCategory(_object):
         return filters
 
     __swig_getmethods__["formats"] = get_formats_array
-    if _newclass: formats = property(get_formats_array, None, doc='''A read only property that returns a list() of lldb.SBTypeFormat objects contained in this category''')
+    if _newclass:
+        formats = property(
+            get_formats_array,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBTypeFormat objects contained in this category''')
 
     __swig_getmethods__["format"] = get_formats_access_object
-    if _newclass: format = property(get_formats_access_object, None, doc=r'''A read only property that returns an object that you can use to look for formats by index or type name.''')
+    if _newclass:
+        format = property(
+            get_formats_access_object,
+            None,
+            doc=r'''A read only property that returns an object that you can use to look for formats by index or type name.''')
 
     __swig_getmethods__["summaries"] = get_summaries_array
-    if _newclass: summaries = property(get_summaries_array, None, doc='''A read only property that returns a list() of lldb.SBTypeSummary objects contained in this category''')
+    if _newclass:
+        summaries = property(
+            get_summaries_array,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBTypeSummary objects contained in this category''')
 
     __swig_getmethods__["summary"] = get_summaries_access_object
-    if _newclass: summary = property(get_summaries_access_object, None, doc=r'''A read only property that returns an object that you can use to look for summaries by index or type name or regular expression.''')
+    if _newclass:
+        summary = property(
+            get_summaries_access_object,
+            None,
+            doc=r'''A read only property that returns an object that you can use to look for summaries by index or type name or regular expression.''')
 
     __swig_getmethods__["filters"] = get_filters_array
-    if _newclass: filters = property(get_filters_array, None, doc='''A read only property that returns a list() of lldb.SBTypeFilter objects contained in this category''')
+    if _newclass:
+        filters = property(
+            get_filters_array,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBTypeFilter objects contained in this category''')
 
     __swig_getmethods__["filter"] = get_filters_access_object
-    if _newclass: filter = property(get_filters_access_object, None, doc=r'''A read only property that returns an object that you can use to look for filters by index or type name or regular expression.''')
+    if _newclass:
+        filter = property(
+            get_filters_access_object,
+            None,
+            doc=r'''A read only property that returns an object that you can use to look for filters by index or type name or regular expression.''')
 
     __swig_getmethods__["synthetics"] = get_synthetics_array
-    if _newclass: synthetics = property(get_synthetics_array, None, doc='''A read only property that returns a list() of lldb.SBTypeSynthetic objects contained in this category''')
+    if _newclass:
+        synthetics = property(
+            get_synthetics_array,
+            None,
+            doc='''A read only property that returns a list() of lldb.SBTypeSynthetic objects contained in this category''')
 
     __swig_getmethods__["synthetic"] = get_synthetics_access_object
-    if _newclass: synthetic = property(get_synthetics_access_object, None, doc=r'''A read only property that returns an object that you can use to look for synthetic children provider by index or type name or regular expression.''')
+    if _newclass:
+        synthetic = property(
+            get_synthetics_access_object,
+            None,
+            doc=r'''A read only property that returns an object that you can use to look for synthetic children provider by index or type name or regular expression.''')
 
     __swig_getmethods__["num_formats"] = GetNumFormats
-    if _newclass: num_formats = property(GetNumFormats, None)
+    if _newclass:
+        num_formats = property(GetNumFormats, None)
     __swig_getmethods__["num_summaries"] = GetNumSummaries
-    if _newclass: num_summaries = property(GetNumSummaries, None)
+    if _newclass:
+        num_summaries = property(GetNumSummaries, None)
     __swig_getmethods__["num_filters"] = GetNumFilters
-    if _newclass: num_filters = property(GetNumFilters, None)
+    if _newclass:
+        num_filters = property(GetNumFilters, None)
     __swig_getmethods__["num_synthetics"] = GetNumSynthetics
-    if _newclass: num_synthetics = property(GetNumSynthetics, None)
+    if _newclass:
+        num_synthetics = property(GetNumSynthetics, None)
 
     __swig_getmethods__["name"] = GetName
-    if _newclass: name = property(GetName, None)
+    if _newclass:
+        name = property(GetName, None)
 
     __swig_getmethods__["enabled"] = GetEnabled
     __swig_setmethods__["enabled"] = SetEnabled
-    if _newclass: enabled = property(GetEnabled, SetEnabled)
+    if _newclass:
+        enabled = property(GetEnabled, SetEnabled)
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -10837,24 +12512,32 @@ class SBTypeCategory(_object):
 SBTypeCategory_swigregister = _lldb.SBTypeCategory_swigregister
 SBTypeCategory_swigregister(SBTypeCategory)
 
+
 class SBTypeEnumMember(_object):
     """Represents a member of an enum in lldb."""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBTypeEnumMember, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBTypeEnumMember, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBTypeEnumMember, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBTypeEnumMember, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBTypeEnumMember
         __init__(self, SBTypeEnumMember rhs) -> SBTypeEnumMember
         """
         this = _lldb.new_SBTypeEnumMember(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBTypeEnumMember
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBTypeEnumMember_IsValid(self)
@@ -10880,16 +12563,32 @@ class SBTypeEnumMember(_object):
         return _lldb.SBTypeEnumMember_GetDescription(self, *args)
 
     __swig_getmethods__["name"] = GetName
-    if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this enum member as a string.''')
+    if _newclass:
+        name = property(
+            GetName,
+            None,
+            doc='''A read only property that returns the name for this enum member as a string.''')
 
     __swig_getmethods__["type"] = GetType
-    if _newclass: type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this enum member.''')
+    if _newclass:
+        type = property(
+            GetType,
+            None,
+            doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this enum member.''')
 
     __swig_getmethods__["signed"] = GetValueAsSigned
-    if _newclass: signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this enum member as a signed integer.''')
+    if _newclass:
+        signed = property(
+            GetValueAsSigned,
+            None,
+            doc='''A read only property that returns the value of this enum member as a signed integer.''')
 
     __swig_getmethods__["unsigned"] = GetValueAsUnsigned
-    if _newclass: unsigned = property(GetValueAsUnsigned, None, doc='''A read only property that returns the value of this enum member as a unsigned integer.''')
+    if _newclass:
+        unsigned = property(
+            GetValueAsUnsigned,
+            None,
+            doc='''A read only property that returns the value of this enum member as a unsigned integer.''')
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -10898,24 +12597,32 @@ class SBTypeEnumMember(_object):
 SBTypeEnumMember_swigregister = _lldb.SBTypeEnumMember_swigregister
 SBTypeEnumMember_swigregister(SBTypeEnumMember)
 
+
 class SBTypeEnumMemberList(_object):
     """Represents a list of SBTypeEnumMembers."""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBTypeEnumMemberList, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBTypeEnumMemberList, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBTypeEnumMemberList, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBTypeEnumMemberList, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBTypeEnumMemberList
         __init__(self, SBTypeEnumMemberList rhs) -> SBTypeEnumMemberList
         """
         this = _lldb.new_SBTypeEnumMemberList(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBTypeEnumMemberList
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBTypeEnumMemberList_IsValid(self)
@@ -10935,28 +12642,35 @@ class SBTypeEnumMemberList(_object):
 SBTypeEnumMemberList_swigregister = _lldb.SBTypeEnumMemberList_swigregister
 SBTypeEnumMemberList_swigregister(SBTypeEnumMemberList)
 
+
 class SBTypeFilter(_object):
     """
     Represents a filter that can be associated to one or more types.
-        
+
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBTypeFilter, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBTypeFilter, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBTypeFilter, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBTypeFilter
         __init__(self, uint32_t options) -> SBTypeFilter
         __init__(self, SBTypeFilter rhs) -> SBTypeFilter
         """
         this = _lldb.new_SBTypeFilter(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBTypeFilter
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBTypeFilter_IsValid(self)
@@ -11007,41 +12721,46 @@ class SBTypeFilter(_object):
 
     __swig_getmethods__["options"] = GetOptions
     __swig_setmethods__["options"] = SetOptions
-    if _newclass: options = property(GetOptions, SetOptions)
+    if _newclass:
+        options = property(GetOptions, SetOptions)
 
     __swig_getmethods__["count"] = GetNumberOfExpressionPaths
-    if _newclass: count = property(GetNumberOfExpressionPaths, None)
+    if _newclass:
+        count = property(GetNumberOfExpressionPaths, None)
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBTypeFilter___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBTypeFilter_swigregister = _lldb.SBTypeFilter_swigregister
 SBTypeFilter_swigregister(SBTypeFilter)
 
+
 class SBTypeFormat(_object):
     """
     Represents a format that can be associated to one or more types.
-                 
+
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBTypeFormat, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBTypeFormat, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBTypeFormat, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBTypeFormat
         __init__(self, Format format, uint32_t options = 0) -> SBTypeFormat
@@ -11051,11 +12770,15 @@ class SBTypeFormat(_object):
         __init__(self, SBTypeFormat rhs) -> SBTypeFormat
         """
         this = _lldb.new_SBTypeFormat(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBTypeFormat
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBTypeFormat_IsValid(self)
@@ -11102,11 +12825,13 @@ class SBTypeFormat(_object):
 
     __swig_getmethods__["format"] = GetFormat
     __swig_setmethods__["format"] = SetFormat
-    if _newclass: format = property(GetFormat, SetFormat)
+    if _newclass:
+        format = property(GetFormat, SetFormat)
 
     __swig_getmethods__["options"] = GetOptions
     __swig_setmethods__["options"] = SetOptions
-    if _newclass: options = property(GetOptions, SetOptions)            
+    if _newclass:
+        options = property(GetOptions, SetOptions)
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -11115,17 +12840,21 @@ class SBTypeFormat(_object):
 SBTypeFormat_swigregister = _lldb.SBTypeFormat_swigregister
 SBTypeFormat_swigregister(SBTypeFormat)
 
+
 class SBTypeNameSpecifier(_object):
     """
     Represents a general way to provide a type name to LLDB APIs.
-        
+
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBTypeNameSpecifier, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBTypeNameSpecifier, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBTypeNameSpecifier, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBTypeNameSpecifier, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBTypeNameSpecifier
         __init__(self, str name, bool is_regex = False) -> SBTypeNameSpecifier
@@ -11134,11 +12863,15 @@ class SBTypeNameSpecifier(_object):
         __init__(self, SBTypeNameSpecifier rhs) -> SBTypeNameSpecifier
         """
         this = _lldb.new_SBTypeNameSpecifier(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBTypeNameSpecifier
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBTypeNameSpecifier_IsValid(self)
@@ -11172,48 +12905,58 @@ class SBTypeNameSpecifier(_object):
         return _lldb.SBTypeNameSpecifier___ne__(self, *args)
 
     __swig_getmethods__["name"] = GetName
-    if _newclass: name = property(GetName, None)
+    if _newclass:
+        name = property(GetName, None)
 
     __swig_getmethods__["is_regex"] = IsRegex
-    if _newclass: is_regex = property(IsRegex, None)
+    if _newclass:
+        is_regex = property(IsRegex, None)
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBTypeNameSpecifier___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBTypeNameSpecifier_swigregister = _lldb.SBTypeNameSpecifier_swigregister
 SBTypeNameSpecifier_swigregister(SBTypeNameSpecifier)
 
+
 class SBTypeSummaryOptions(_object):
     """Proxy of C++ lldb::SBTypeSummaryOptions class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBTypeSummaryOptions, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBTypeSummaryOptions, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBTypeSummaryOptions, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBTypeSummaryOptions, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBTypeSummaryOptions
         __init__(self, SBTypeSummaryOptions rhs) -> SBTypeSummaryOptions
         """
         this = _lldb.new_SBTypeSummaryOptions(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBTypeSummaryOptions
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBTypeSummaryOptions_IsValid(self)
@@ -11237,16 +12980,19 @@ class SBTypeSummaryOptions(_object):
 SBTypeSummaryOptions_swigregister = _lldb.SBTypeSummaryOptions_swigregister
 SBTypeSummaryOptions_swigregister(SBTypeSummaryOptions)
 
+
 class SBTypeSummary(_object):
     """
     Represents a summary that can be associated to one or more types.
-        
+
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBTypeSummary, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBTypeSummary, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBTypeSummary, name)
     __repr__ = _swig_repr
+
     def CreateWithSummaryString(*args):
         """
         CreateWithSummaryString(str data, uint32_t options = 0) -> SBTypeSummary
@@ -11254,8 +13000,11 @@ class SBTypeSummary(_object):
         """
         return _lldb.SBTypeSummary_CreateWithSummaryString(*args)
 
-    if _newclass:CreateWithSummaryString = staticmethod(CreateWithSummaryString)
-    __swig_getmethods__["CreateWithSummaryString"] = lambda x: CreateWithSummaryString
+    if _newclass:
+        CreateWithSummaryString = staticmethod(CreateWithSummaryString)
+    __swig_getmethods__[
+        "CreateWithSummaryString"] = lambda x: CreateWithSummaryString
+
     def CreateWithFunctionName(*args):
         """
         CreateWithFunctionName(str data, uint32_t options = 0) -> SBTypeSummary
@@ -11263,8 +13012,11 @@ class SBTypeSummary(_object):
         """
         return _lldb.SBTypeSummary_CreateWithFunctionName(*args)
 
-    if _newclass:CreateWithFunctionName = staticmethod(CreateWithFunctionName)
-    __swig_getmethods__["CreateWithFunctionName"] = lambda x: CreateWithFunctionName
+    if _newclass:
+        CreateWithFunctionName = staticmethod(CreateWithFunctionName)
+    __swig_getmethods__[
+        "CreateWithFunctionName"] = lambda x: CreateWithFunctionName
+
     def CreateWithScriptCode(*args):
         """
         CreateWithScriptCode(str data, uint32_t options = 0) -> SBTypeSummary
@@ -11272,19 +13024,26 @@ class SBTypeSummary(_object):
         """
         return _lldb.SBTypeSummary_CreateWithScriptCode(*args)
 
-    if _newclass:CreateWithScriptCode = staticmethod(CreateWithScriptCode)
-    __swig_getmethods__["CreateWithScriptCode"] = lambda x: CreateWithScriptCode
-    def __init__(self, *args): 
+    if _newclass:
+        CreateWithScriptCode = staticmethod(CreateWithScriptCode)
+    __swig_getmethods__[
+        "CreateWithScriptCode"] = lambda x: CreateWithScriptCode
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBTypeSummary
         __init__(self, SBTypeSummary rhs) -> SBTypeSummary
         """
         this = _lldb.new_SBTypeSummary(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBTypeSummary
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBTypeSummary_IsValid(self)
@@ -11343,70 +13102,81 @@ class SBTypeSummary(_object):
 
     __swig_getmethods__["options"] = GetOptions
     __swig_setmethods__["options"] = SetOptions
-    if _newclass: options = property(GetOptions, SetOptions)
+    if _newclass:
+        options = property(GetOptions, SetOptions)
 
     __swig_getmethods__["is_summary_string"] = IsSummaryString
-    if _newclass: is_summary_string = property(IsSummaryString, None)
+    if _newclass:
+        is_summary_string = property(IsSummaryString, None)
 
     __swig_getmethods__["is_function_name"] = IsFunctionName
-    if _newclass: is_function_name = property(IsFunctionName, None)
+    if _newclass:
+        is_function_name = property(IsFunctionName, None)
 
     __swig_getmethods__["is_function_name"] = IsFunctionCode
-    if _newclass: is_function_name = property(IsFunctionCode, None)
+    if _newclass:
+        is_function_name = property(IsFunctionCode, None)
 
     __swig_getmethods__["summary_data"] = GetData
-    if _newclass: summary_data = property(GetData, None)
+    if _newclass:
+        summary_data = property(GetData, None)
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBTypeSummary___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBTypeSummary_swigregister = _lldb.SBTypeSummary_swigregister
 SBTypeSummary_swigregister(SBTypeSummary)
 
+
 def SBTypeSummary_CreateWithSummaryString(*args):
-  """
-    CreateWithSummaryString(char data, uint32_t options = 0) -> SBTypeSummary
-    SBTypeSummary_CreateWithSummaryString(char data) -> SBTypeSummary
     """
-  return _lldb.SBTypeSummary_CreateWithSummaryString(*args)
+      CreateWithSummaryString(char data, uint32_t options = 0) -> SBTypeSummary
+      SBTypeSummary_CreateWithSummaryString(char data) -> SBTypeSummary
+      """
+    return _lldb.SBTypeSummary_CreateWithSummaryString(*args)
+
 
 def SBTypeSummary_CreateWithFunctionName(*args):
-  """
-    CreateWithFunctionName(char data, uint32_t options = 0) -> SBTypeSummary
-    SBTypeSummary_CreateWithFunctionName(char data) -> SBTypeSummary
     """
-  return _lldb.SBTypeSummary_CreateWithFunctionName(*args)
+      CreateWithFunctionName(char data, uint32_t options = 0) -> SBTypeSummary
+      SBTypeSummary_CreateWithFunctionName(char data) -> SBTypeSummary
+      """
+    return _lldb.SBTypeSummary_CreateWithFunctionName(*args)
+
 
 def SBTypeSummary_CreateWithScriptCode(*args):
-  """
-    CreateWithScriptCode(char data, uint32_t options = 0) -> SBTypeSummary
-    SBTypeSummary_CreateWithScriptCode(char data) -> SBTypeSummary
     """
-  return _lldb.SBTypeSummary_CreateWithScriptCode(*args)
+      CreateWithScriptCode(char data, uint32_t options = 0) -> SBTypeSummary
+      SBTypeSummary_CreateWithScriptCode(char data) -> SBTypeSummary
+      """
+    return _lldb.SBTypeSummary_CreateWithScriptCode(*args)
+
 
 class SBTypeSynthetic(_object):
     """
     Represents a summary that can be associated to one or more types.
-        
+
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBTypeSynthetic, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBTypeSynthetic, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBTypeSynthetic, name)
     __repr__ = _swig_repr
+
     def CreateWithClassName(*args):
         """
         CreateWithClassName(str data, uint32_t options = 0) -> SBTypeSynthetic
@@ -11414,8 +13184,10 @@ class SBTypeSynthetic(_object):
         """
         return _lldb.SBTypeSynthetic_CreateWithClassName(*args)
 
-    if _newclass:CreateWithClassName = staticmethod(CreateWithClassName)
+    if _newclass:
+        CreateWithClassName = staticmethod(CreateWithClassName)
     __swig_getmethods__["CreateWithClassName"] = lambda x: CreateWithClassName
+
     def CreateWithScriptCode(*args):
         """
         CreateWithScriptCode(str data, uint32_t options = 0) -> SBTypeSynthetic
@@ -11423,19 +13195,26 @@ class SBTypeSynthetic(_object):
         """
         return _lldb.SBTypeSynthetic_CreateWithScriptCode(*args)
 
-    if _newclass:CreateWithScriptCode = staticmethod(CreateWithScriptCode)
-    __swig_getmethods__["CreateWithScriptCode"] = lambda x: CreateWithScriptCode
-    def __init__(self, *args): 
+    if _newclass:
+        CreateWithScriptCode = staticmethod(CreateWithScriptCode)
+    __swig_getmethods__[
+        "CreateWithScriptCode"] = lambda x: CreateWithScriptCode
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBTypeSynthetic
         __init__(self, SBTypeSynthetic rhs) -> SBTypeSynthetic
         """
         this = _lldb.new_SBTypeSynthetic(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBTypeSynthetic
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBTypeSynthetic_IsValid(self)
@@ -11482,46 +13261,52 @@ class SBTypeSynthetic(_object):
 
     __swig_getmethods__["options"] = GetOptions
     __swig_setmethods__["options"] = SetOptions
-    if _newclass: options = property(GetOptions, SetOptions)
+    if _newclass:
+        options = property(GetOptions, SetOptions)
 
     __swig_getmethods__["contains_code"] = IsClassCode
-    if _newclass: contains_code = property(IsClassCode, None)
+    if _newclass:
+        contains_code = property(IsClassCode, None)
 
     __swig_getmethods__["synthetic_data"] = GetData
-    if _newclass: synthetic_data = property(GetData, None)
+    if _newclass:
+        synthetic_data = property(GetData, None)
 
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBTypeSynthetic___str__(self)
 
     def __eq__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return False 
-        
-        return getattr(_lldb,self.__class__.__name__+"___eq__")(self, rhs)
-        
+        if not isinstance(rhs, type(self)):
+            return False
+
+        return getattr(_lldb, self.__class__.__name__ + "___eq__")(self, rhs)
+
     def __ne__(self, rhs):
-        if not isinstance(rhs, type(self)): 
-            return True 
-        
-        return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
+        if not isinstance(rhs, type(self)):
+            return True
+
+        return getattr(_lldb, self.__class__.__name__ + "___ne__")(self, rhs)
 
 SBTypeSynthetic_swigregister = _lldb.SBTypeSynthetic_swigregister
 SBTypeSynthetic_swigregister(SBTypeSynthetic)
 
+
 def SBTypeSynthetic_CreateWithClassName(*args):
-  """
-    CreateWithClassName(char data, uint32_t options = 0) -> SBTypeSynthetic
-    SBTypeSynthetic_CreateWithClassName(char data) -> SBTypeSynthetic
     """
-  return _lldb.SBTypeSynthetic_CreateWithClassName(*args)
+      CreateWithClassName(char data, uint32_t options = 0) -> SBTypeSynthetic
+      SBTypeSynthetic_CreateWithClassName(char data) -> SBTypeSynthetic
+      """
+    return _lldb.SBTypeSynthetic_CreateWithClassName(*args)
+
 
 def SBTypeSynthetic_CreateWithScriptCode(*args):
-  """
-    CreateWithScriptCode(char data, uint32_t options = 0) -> SBTypeSynthetic
-    SBTypeSynthetic_CreateWithScriptCode(char data) -> SBTypeSynthetic
     """
-  return _lldb.SBTypeSynthetic_CreateWithScriptCode(*args)
+      CreateWithScriptCode(char data, uint32_t options = 0) -> SBTypeSynthetic
+      SBTypeSynthetic_CreateWithScriptCode(char data) -> SBTypeSynthetic
+      """
+    return _lldb.SBTypeSynthetic_CreateWithScriptCode(*args)
+
 
 class SBValue(_object):
     """
@@ -11571,11 +13356,15 @@ class SBValue(_object):
     linked list.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBValue, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBValue, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBValue, name)
     __repr__ = _swig_repr
-    def __iter__(self): return lldb_iter(self, 'GetNumChildren', 'GetChildAtIndex')
+
+    def __iter__(self): return lldb_iter(
+        self, 'GetNumChildren', 'GetChildAtIndex')
+
     def __len__(self): return self.GetNumChildren()
 
     def __eol_test__(val):
@@ -11623,7 +13412,8 @@ class SBValue(_object):
         item = self
         visited = set()
         try:
-            while not end_of_list_test(item) and not item.GetValueAsUnsigned() in visited:
+            while not end_of_list_test(
+                    item) and not item.GetValueAsUnsigned() in visited:
                 visited.add(item.GetValueAsUnsigned())
                 yield item
                 # Prepare for the next iteration.
@@ -11634,17 +13424,21 @@ class SBValue(_object):
 
         return
 
-    def __init__(self, *args): 
+    def __init__(self, *args):
         """
         __init__(self) -> SBValue
         __init__(self, SBValue rhs) -> SBValue
         """
         this = _lldb.new_SBValue(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBValue
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBValue_IsValid(self)
@@ -11811,56 +13605,56 @@ class SBValue(_object):
         GetChildAtIndex(self, uint32_t idx, DynamicValueType use_dynamic, bool can_create_synthetic) -> SBValue
 
         Get a child value by index from a value.
-        
+
         Structs, unions, classes, arrays and pointers have child
-        values that can be access by index. 
-        
+        values that can be access by index.
+
         Structs and unions access child members using a zero based index
         for each child member. For
-        
-        Classes reserve the first indexes for base classes that have 
+
+        Classes reserve the first indexes for base classes that have
         members (empty base classes are omitted), and all members of the
-        current class will then follow the base classes. 
-        
+        current class will then follow the base classes.
+
         Pointers differ depending on what they point to. If the pointer
         points to a simple type, the child at index zero
-        is the only child value available, unless synthetic_allowed 
+        is the only child value available, unless synthetic_allowed
         is true, in which case the pointer will be used as an array
-        and can create 'synthetic' child values using positive or 
-        negative indexes. If the pointer points to an aggregate type 
-        (an array, class, union, struct), then the pointee is 
+        and can create 'synthetic' child values using positive or
+        negative indexes. If the pointer points to an aggregate type
+        (an array, class, union, struct), then the pointee is
         transparently skipped and any children are going to be the indexes
         of the child values within the aggregate type. For example if
         we have a 'Point' type and we have a SBValue that contains a
         pointer to a 'Point' type, then the child at index zero will be
         the 'x' member, and the child at index 1 will be the 'y' member
         (the child at index zero won't be a 'Point' instance).
-        
+
         If you actually need an SBValue that represents the type pointed
         to by a SBValue for which GetType().IsPointeeType() returns true,
         regardless of the pointee type, you can do that with the SBValue.Dereference
         method (or the equivalent deref property).
-        
+
         Arrays have a preset number of children that can be accessed by
         index and will returns invalid child values for indexes that are
         out of bounds unless the synthetic_allowed is true. In this
-        case the array can create 'synthetic' child values for indexes 
-        that aren't in the array bounds using positive or negative 
+        case the array can create 'synthetic' child values for indexes
+        that aren't in the array bounds using positive or negative
         indexes.
-        
+
         @param[in] idx
             The index of the child value to get
-        
+
         @param[in] use_dynamic
             An enumeration that specifies whether to get dynamic values,
             and also if the target can be run to figure out the dynamic
             type of the child value.
-        
+
         @param[in] synthetic_allowed
             If true, then allow child values to be created by index
             for pointers and arrays for indexes that normally wouldn't
             be allowed.
-        
+
         @return
             A new SBValue object that represents the child member value.
         """
@@ -11898,13 +13692,13 @@ class SBValue(_object):
         GetIndexOfChildWithName(self, str name) -> uint32_t
 
         Returns the child member index.
-        
+
         Matches children of this object only and will match base classes and
         member names if this is a clang typed object.
-        
+
         @param[in] name
             The name of the child value to get
-        
+
         @return
             An index to the child member value.
         """
@@ -11916,18 +13710,18 @@ class SBValue(_object):
         GetChildMemberWithName(self, str name, DynamicValueType use_dynamic) -> SBValue
 
         Returns the child member value.
-        
+
         Matches child members of this object and child members of any base
         classes.
-        
+
         @param[in] name
             The name of the child value to get
-        
+
         @param[in] use_dynamic
             An enumeration that specifies whether to get dynamic values,
             and also if the target can be run to figure out the dynamic
             type of the child value.
-        
+
         @return
             A new SBValue object that represents the child member value.
         """
@@ -12014,28 +13808,28 @@ class SBValue(_object):
         """GetDescription(self, SBStream description) -> bool"""
         return _lldb.SBValue_GetDescription(self, *args)
 
-    def GetPointeeData(self, item_idx = 0, item_count = 1):
+    def GetPointeeData(self, item_idx=0, item_count=1):
         """
         GetPointeeData(self, uint32_t item_idx = 0, uint32_t item_count = 1) -> SBData
         GetPointeeData(self, uint32_t item_idx = 0) -> SBData
         GetPointeeData(self) -> SBData
 
            Get an SBData wrapping what this SBValue points to.
-           
+
            This method will dereference the current SBValue, if its
            data type is a T* or T[], and extract item_count elements
-           of type T from it, copying their contents in an SBData. 
-           
+           of type T from it, copying their contents in an SBData.
+
            @param[in] item_idx
                The index of the first item to retrieve. For an array
                this is equivalent to array[item_idx], for a pointer
                to *(pointer + item_idx). In either case, the measurement
                unit for item_idx is the sizeof(T) rather than the byte
-           
+
            @param[in] item_count
                How many items should be copied into the output. By default
                only one item is copied, but more can be asked for.
-           
+
            @return
                An SBData with the contents of the copied items, on success.
                An empty SBData otherwise.
@@ -12047,10 +13841,10 @@ class SBValue(_object):
         GetData(self) -> SBData
 
            Get an SBData wrapping the contents of this SBValue.
-           
+
            This method will read the contents of this object in memory
-           and copy them into an SBData for future use. 
-           
+           and copy them into an SBData for future use.
+
            @return
                An SBData with the contents of this SBValue, on success.
                An empty SBData otherwise.
@@ -12082,97 +13876,202 @@ class SBValue(_object):
         """
         return _lldb.SBValue_GetExpressionPath(self, *args)
 
-    def __get_dynamic__ (self):
+    def __get_dynamic__(self):
         '''Helper function for the "SBValue.dynamic" property.'''
-        return self.GetDynamicValue (eDynamicCanRunTarget)
+        return self.GetDynamicValue(eDynamicCanRunTarget)
 
     __swig_getmethods__["name"] = GetName
-    if _newclass: name = property(GetName, None, doc='''A read only property that returns the name of this value as a string.''')
+    if _newclass:
+        name = property(
+            GetName,
+            None,
+            doc='''A read only property that returns the name of this value as a string.''')
 
     __swig_getmethods__["type"] = GetType
-    if _newclass: type = property(GetType, None, doc='''A read only property that returns a lldb.SBType object that represents the type for this value.''')
+    if _newclass:
+        type = property(
+            GetType,
+            None,
+            doc='''A read only property that returns a lldb.SBType object that represents the type for this value.''')
 
     __swig_getmethods__["size"] = GetByteSize
-    if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this value.''')
+    if _newclass:
+        size = property(
+            GetByteSize,
+            None,
+            doc='''A read only property that returns the size in bytes of this value.''')
 
     __swig_getmethods__["is_in_scope"] = IsInScope
-    if _newclass: is_in_scope = property(IsInScope, None, doc='''A read only property that returns a boolean value that indicates whether this value is currently lexically in scope.''')
+    if _newclass:
+        is_in_scope = property(
+            IsInScope,
+            None,
+            doc='''A read only property that returns a boolean value that indicates whether this value is currently lexically in scope.''')
 
     __swig_getmethods__["format"] = GetFormat
     __swig_setmethods__["format"] = SetFormat
-    if _newclass: format = property(GetName, SetFormat, doc='''A read/write property that gets/sets the format used for lldb.SBValue().GetValue() for this value. See enumerations that start with "lldb.eFormat".''')
+    if _newclass:
+        format = property(
+            GetName,
+            SetFormat,
+            doc='''A read/write property that gets/sets the format used for lldb.SBValue().GetValue() for this value. See enumerations that start with "lldb.eFormat".''')
 
     __swig_getmethods__["value"] = GetValue
     __swig_setmethods__["value"] = SetValueFromCString
-    if _newclass: value = property(GetValue, SetValueFromCString, doc='''A read/write property that gets/sets value from a string.''')
+    if _newclass:
+        value = property(
+            GetValue,
+            SetValueFromCString,
+            doc='''A read/write property that gets/sets value from a string.''')
 
     __swig_getmethods__["value_type"] = GetValueType
-    if _newclass: value_type = property(GetValueType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eValueType") that represents the type of this value (local, argument, global, register, etc.).''')
+    if _newclass:
+        value_type = property(
+            GetValueType,
+            None,
+            doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eValueType") that represents the type of this value (local, argument, global, register, etc.).''')
 
     __swig_getmethods__["changed"] = GetValueDidChange
-    if _newclass: changed = property(GetValueDidChange, None, doc='''A read only property that returns a boolean value that indicates if this value has changed since it was last updated.''')
+    if _newclass:
+        changed = property(
+            GetValueDidChange,
+            None,
+            doc='''A read only property that returns a boolean value that indicates if this value has changed since it was last updated.''')
 
     __swig_getmethods__["data"] = GetData
-    if _newclass: data = property(GetData, None, doc='''A read only property that returns an lldb object (lldb.SBData) that represents the bytes that make up the value for this object.''')
+    if _newclass:
+        data = property(
+            GetData,
+            None,
+            doc='''A read only property that returns an lldb object (lldb.SBData) that represents the bytes that make up the value for this object.''')
 
     __swig_getmethods__["load_addr"] = GetLoadAddress
-    if _newclass: load_addr = property(GetLoadAddress, None, doc='''A read only property that returns the load address of this value as an integer.''')
+    if _newclass:
+        load_addr = property(
+            GetLoadAddress,
+            None,
+            doc='''A read only property that returns the load address of this value as an integer.''')
 
     __swig_getmethods__["addr"] = GetAddress
-    if _newclass: addr = property(GetAddress, None, doc='''A read only property that returns an lldb.SBAddress that represents the address of this value if it is in memory.''')
+    if _newclass:
+        addr = property(
+            GetAddress,
+            None,
+            doc='''A read only property that returns an lldb.SBAddress that represents the address of this value if it is in memory.''')
 
     __swig_getmethods__["deref"] = Dereference
-    if _newclass: deref = property(Dereference, None, doc='''A read only property that returns an lldb.SBValue that is created by dereferencing this value.''')
+    if _newclass:
+        deref = property(
+            Dereference,
+            None,
+            doc='''A read only property that returns an lldb.SBValue that is created by dereferencing this value.''')
 
     __swig_getmethods__["address_of"] = AddressOf
-    if _newclass: address_of = property(AddressOf, None, doc='''A read only property that returns an lldb.SBValue that represents the address-of this value.''')
+    if _newclass:
+        address_of = property(
+            AddressOf,
+            None,
+            doc='''A read only property that returns an lldb.SBValue that represents the address-of this value.''')
 
     __swig_getmethods__["error"] = GetError
-    if _newclass: error = property(GetError, None, doc='''A read only property that returns the lldb.SBError that represents the error from the last time the variable value was calculated.''')
+    if _newclass:
+        error = property(
+            GetError,
+            None,
+            doc='''A read only property that returns the lldb.SBError that represents the error from the last time the variable value was calculated.''')
 
     __swig_getmethods__["summary"] = GetSummary
-    if _newclass: summary = property(GetSummary, None, doc='''A read only property that returns the summary for this value as a string''')
+    if _newclass:
+        summary = property(
+            GetSummary,
+            None,
+            doc='''A read only property that returns the summary for this value as a string''')
 
     __swig_getmethods__["description"] = GetObjectDescription
-    if _newclass: description = property(GetObjectDescription, None, doc='''A read only property that returns the language-specific description of this value as a string''')
+    if _newclass:
+        description = property(
+            GetObjectDescription,
+            None,
+            doc='''A read only property that returns the language-specific description of this value as a string''')
 
     __swig_getmethods__["dynamic"] = __get_dynamic__
-    if _newclass: dynamic = property(__get_dynamic__, None, doc='''A read only property that returns an lldb.SBValue that is created by finding the dynamic type of this value.''')
+    if _newclass:
+        dynamic = property(
+            __get_dynamic__,
+            None,
+            doc='''A read only property that returns an lldb.SBValue that is created by finding the dynamic type of this value.''')
 
     __swig_getmethods__["location"] = GetLocation
-    if _newclass: location = property(GetLocation, None, doc='''A read only property that returns the location of this value as a string.''')
+    if _newclass:
+        location = property(
+            GetLocation,
+            None,
+            doc='''A read only property that returns the location of this value as a string.''')
 
     __swig_getmethods__["target"] = GetTarget
-    if _newclass: target = property(GetTarget, None, doc='''A read only property that returns the lldb.SBTarget that this value is associated with.''')
+    if _newclass:
+        target = property(
+            GetTarget,
+            None,
+            doc='''A read only property that returns the lldb.SBTarget that this value is associated with.''')
 
     __swig_getmethods__["process"] = GetProcess
-    if _newclass: process = property(GetProcess, None, doc='''A read only property that returns the lldb.SBProcess that this value is associated with, the returned value might be invalid and should be tested.''')
+    if _newclass:
+        process = property(
+            GetProcess,
+            None,
+            doc='''A read only property that returns the lldb.SBProcess that this value is associated with, the returned value might be invalid and should be tested.''')
 
     __swig_getmethods__["thread"] = GetThread
-    if _newclass: thread = property(GetThread, None, doc='''A read only property that returns the lldb.SBThread that this value is associated with, the returned value might be invalid and should be tested.''')
+    if _newclass:
+        thread = property(
+            GetThread,
+            None,
+            doc='''A read only property that returns the lldb.SBThread that this value is associated with, the returned value might be invalid and should be tested.''')
 
     __swig_getmethods__["frame"] = GetFrame
-    if _newclass: frame = property(GetFrame, None, doc='''A read only property that returns the lldb.SBFrame that this value is associated with, the returned value might be invalid and should be tested.''')
+    if _newclass:
+        frame = property(
+            GetFrame,
+            None,
+            doc='''A read only property that returns the lldb.SBFrame that this value is associated with, the returned value might be invalid and should be tested.''')
 
     __swig_getmethods__["num_children"] = GetNumChildren
-    if _newclass: num_children = property(GetNumChildren, None, doc='''A read only property that returns the number of child lldb.SBValues that this value has.''')
+    if _newclass:
+        num_children = property(
+            GetNumChildren,
+            None,
+            doc='''A read only property that returns the number of child lldb.SBValues that this value has.''')
 
     __swig_getmethods__["unsigned"] = GetValueAsUnsigned
-    if _newclass: unsigned = property(GetValueAsUnsigned, None, doc='''A read only property that returns the value of this SBValue as an usigned integer.''')
+    if _newclass:
+        unsigned = property(
+            GetValueAsUnsigned,
+            None,
+            doc='''A read only property that returns the value of this SBValue as an usigned integer.''')
 
     __swig_getmethods__["signed"] = GetValueAsSigned
-    if _newclass: signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this SBValue as a signed integer.''')
+    if _newclass:
+        signed = property(
+            GetValueAsSigned,
+            None,
+            doc='''A read only property that returns the value of this SBValue as a signed integer.''')
 
     def get_expr_path(self):
         s = SBStream()
-        self.GetExpressionPath (s)
+        self.GetExpressionPath(s)
         return s.GetData()
 
     __swig_getmethods__["path"] = get_expr_path
-    if _newclass: path = property(get_expr_path, None, doc='''A read only property that returns the expression path that one can use to reach this value in an expression.''')
+    if _newclass:
+        path = property(
+            get_expr_path,
+            None,
+            doc='''A read only property that returns the expression path that one can use to reach this value in an expression.''')
 
     def synthetic_child_from_expression(self, name, expr, options=None):
-        if options is None: options = lldb.SBExpressionOptions()
+        if options is None:
+            options = lldb.SBExpressionOptions()
         child = self.CreateValueFromExpression(name, expr, options)
         child.SetSyntheticChildrenGenerated(True)
         return child
@@ -12181,12 +14080,11 @@ class SBValue(_object):
         child = self.CreateValueFromData(name, data, type)
         child.SetSyntheticChildrenGenerated(True)
         return child
-            
+
     def synthetic_child_from_address(self, name, addr, type):
         child = self.CreateValueFromAddress(name, addr, type)
         child.SetSyntheticChildrenGenerated(True)
         return child
-
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -12194,6 +14092,7 @@ class SBValue(_object):
 
 SBValue_swigregister = _lldb.SBValue_swigregister
 SBValue_swigregister(SBValue)
+
 
 class SBValueList(_object):
     """
@@ -12254,23 +14153,31 @@ class SBValueList(_object):
         return get_registers(frame, 'exception state')
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBValueList, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBValueList, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBValueList, name)
     __repr__ = _swig_repr
+
     def __iter__(self): return lldb_iter(self, 'GetSize', 'GetValueAtIndex')
+
     def __len__(self): return self.GetSize()
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBValueList
         __init__(self, SBValueList rhs) -> SBValueList
         """
         this = _lldb.new_SBValueList(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBValueList
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBValueList_IsValid(self)
@@ -12310,13 +14217,13 @@ class SBValueList(_object):
         #------------------------------------------------------------
         # Access with "int" to get Nth item in the list
         #------------------------------------------------------------
-        if type(key) is int:
+        if isinstance(key, int):
             if key < count:
                 return self.GetValueAtIndex(key)
         #------------------------------------------------------------
         # Access with "str" to get values by name
         #------------------------------------------------------------
-        elif type(key) is str:
+        elif isinstance(key, str):
             matches = []
             for idx in range(count):
                 value = self.GetValueAtIndex(idx)
@@ -12335,7 +14242,6 @@ class SBValueList(_object):
                     matches.append(value)
             return matches
 
-
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBValueList___str__(self)
@@ -12343,24 +14249,32 @@ class SBValueList(_object):
 SBValueList_swigregister = _lldb.SBValueList_swigregister
 SBValueList_swigregister(SBValueList)
 
+
 class SBVariablesOptions(_object):
     """Proxy of C++ lldb::SBVariablesOptions class"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBVariablesOptions, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBVariablesOptions, name, value)
     __swig_getmethods__ = {}
-    __getattr__ = lambda self, name: _swig_getattr(self, SBVariablesOptions, name)
+    __getattr__ = lambda self, name: _swig_getattr(
+        self, SBVariablesOptions, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBVariablesOptions
         __init__(self, SBVariablesOptions options) -> SBVariablesOptions
         """
         this = _lldb.new_SBVariablesOptions(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBVariablesOptions
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBVariablesOptions_IsValid(self)
@@ -12403,7 +14317,8 @@ class SBVariablesOptions(_object):
 
     def SetIncludeRuntimeSupportValues(self, *args):
         """SetIncludeRuntimeSupportValues(self, bool arg0)"""
-        return _lldb.SBVariablesOptions_SetIncludeRuntimeSupportValues(self, *args)
+        return _lldb.SBVariablesOptions_SetIncludeRuntimeSupportValues(
+            self, *args)
 
     def GetUseDynamic(self):
         """GetUseDynamic(self) -> DynamicValueType"""
@@ -12416,6 +14331,7 @@ class SBVariablesOptions(_object):
 SBVariablesOptions_swigregister = _lldb.SBVariablesOptions_swigregister
 SBVariablesOptions_swigregister(SBVariablesOptions)
 
+
 class SBWatchpoint(_object):
     """
     Represents an instance of watchpoint for a specific target program.
@@ -12427,23 +14343,32 @@ class SBWatchpoint(_object):
     watchpoints of the target.
     """
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBWatchpoint, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBWatchpoint, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBWatchpoint, name)
     __repr__ = _swig_repr
-    def __eq__(self, other): return isinstance(other, SBWatchpoint) and self.GetID() == other.GetID()
+
+    def __eq__(self, other): return isinstance(
+        other, SBWatchpoint) and self.GetID() == other.GetID()
+
     def __ne__(self, other): return not self.__eq__(other)
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBWatchpoint
         __init__(self, SBWatchpoint rhs) -> SBWatchpoint
         """
         this = _lldb.new_SBWatchpoint(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBWatchpoint
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBWatchpoint_IsValid(self)
@@ -12516,20 +14441,30 @@ class SBWatchpoint(_object):
         """EventIsWatchpointEvent(SBEvent event) -> bool"""
         return _lldb.SBWatchpoint_EventIsWatchpointEvent(*args)
 
-    if _newclass:EventIsWatchpointEvent = staticmethod(EventIsWatchpointEvent)
-    __swig_getmethods__["EventIsWatchpointEvent"] = lambda x: EventIsWatchpointEvent
+    if _newclass:
+        EventIsWatchpointEvent = staticmethod(EventIsWatchpointEvent)
+    __swig_getmethods__[
+        "EventIsWatchpointEvent"] = lambda x: EventIsWatchpointEvent
+
     def GetWatchpointEventTypeFromEvent(*args):
         """GetWatchpointEventTypeFromEvent(SBEvent event) -> WatchpointEventType"""
         return _lldb.SBWatchpoint_GetWatchpointEventTypeFromEvent(*args)
 
-    if _newclass:GetWatchpointEventTypeFromEvent = staticmethod(GetWatchpointEventTypeFromEvent)
-    __swig_getmethods__["GetWatchpointEventTypeFromEvent"] = lambda x: GetWatchpointEventTypeFromEvent
+    if _newclass:
+        GetWatchpointEventTypeFromEvent = staticmethod(
+            GetWatchpointEventTypeFromEvent)
+    __swig_getmethods__[
+        "GetWatchpointEventTypeFromEvent"] = lambda x: GetWatchpointEventTypeFromEvent
+
     def GetWatchpointFromEvent(*args):
         """GetWatchpointFromEvent(SBEvent event) -> SBWatchpoint"""
         return _lldb.SBWatchpoint_GetWatchpointFromEvent(*args)
 
-    if _newclass:GetWatchpointFromEvent = staticmethod(GetWatchpointFromEvent)
-    __swig_getmethods__["GetWatchpointFromEvent"] = lambda x: GetWatchpointFromEvent
+    if _newclass:
+        GetWatchpointFromEvent = staticmethod(GetWatchpointFromEvent)
+    __swig_getmethods__[
+        "GetWatchpointFromEvent"] = lambda x: GetWatchpointFromEvent
+
     def __str__(self):
         """__str__(self) -> PyObject"""
         return _lldb.SBWatchpoint___str__(self)
@@ -12537,40 +14472,50 @@ class SBWatchpoint(_object):
 SBWatchpoint_swigregister = _lldb.SBWatchpoint_swigregister
 SBWatchpoint_swigregister(SBWatchpoint)
 
+
 def SBWatchpoint_EventIsWatchpointEvent(*args):
-  """SBWatchpoint_EventIsWatchpointEvent(SBEvent event) -> bool"""
-  return _lldb.SBWatchpoint_EventIsWatchpointEvent(*args)
+    """SBWatchpoint_EventIsWatchpointEvent(SBEvent event) -> bool"""
+    return _lldb.SBWatchpoint_EventIsWatchpointEvent(*args)
+
 
 def SBWatchpoint_GetWatchpointEventTypeFromEvent(*args):
-  """SBWatchpoint_GetWatchpointEventTypeFromEvent(SBEvent event) -> WatchpointEventType"""
-  return _lldb.SBWatchpoint_GetWatchpointEventTypeFromEvent(*args)
+    """SBWatchpoint_GetWatchpointEventTypeFromEvent(SBEvent event) -> WatchpointEventType"""
+    return _lldb.SBWatchpoint_GetWatchpointEventTypeFromEvent(*args)
+
 
 def SBWatchpoint_GetWatchpointFromEvent(*args):
-  """SBWatchpoint_GetWatchpointFromEvent(SBEvent event) -> SBWatchpoint"""
-  return _lldb.SBWatchpoint_GetWatchpointFromEvent(*args)
+    """SBWatchpoint_GetWatchpointFromEvent(SBEvent event) -> SBWatchpoint"""
+    return _lldb.SBWatchpoint_GetWatchpointFromEvent(*args)
+
 
 class SBUnixSignals(_object):
     """Allows you to manipulate LLDB's signal disposition"""
     __swig_setmethods__ = {}
-    __setattr__ = lambda self, name, value: _swig_setattr(self, SBUnixSignals, name, value)
+    __setattr__ = lambda self, name, value: _swig_setattr(
+        self, SBUnixSignals, name, value)
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBUnixSignals, name)
     __repr__ = _swig_repr
-    def __init__(self, *args): 
+
+    def __init__(self, *args):
         """
         __init__(self) -> SBUnixSignals
         __init__(self, SBUnixSignals rhs) -> SBUnixSignals
         """
         this = _lldb.new_SBUnixSignals(*args)
-        try: self.this.append(this)
-        except: self.this = this
+        try:
+            self.this.append(this)
+        except:
+            self.this = this
     __swig_destroy__ = _lldb.delete_SBUnixSignals
-    __del__ = lambda self : None;
+    __del__ = lambda self: None
+
     def Clear(self):
         """Clear(self)"""
         return _lldb.SBUnixSignals_Clear(self)
 
     def __nonzero__(self): return self.IsValid()
+
     def IsValid(self):
         """IsValid(self) -> bool"""
         return _lldb.SBUnixSignals_IsValid(self)
@@ -12622,10 +14567,15 @@ class SBUnixSignals(_object):
         return signals
 
     __swig_getmethods__["signals"] = get_unix_signals_list
-    if _newclass: threads = property(get_unix_signals_list, None, doc='''A read only property that returns a list() of valid signal numbers for this platform.''')
+    if _newclass:
+        threads = property(
+            get_unix_signals_list,
+            None,
+            doc='''A read only property that returns a list() of valid signal numbers for this platform.''')
 
 SBUnixSignals_swigregister = _lldb.SBUnixSignals_swigregister
 SBUnixSignals_swigregister(SBUnixSignals)
+
 
 def command(*args, **kwargs):
     import lldb
@@ -12635,54 +14585,63 @@ def command(*args, **kwargs):
     class obj(object):
         """The object that tracks adding the command to LLDB one time and handles
             calling the function on subsequent calls."""
-        def __init__(self, function, command_name, doc = None):
+
+        def __init__(self, function, command_name, doc=None):
             if doc:
                 function.__doc__ = doc
-            command = "command script add -f %s.%s %s" % (function.__module__, function.__name__, command_name)
+            command = "command script add -f %s.%s %s" % (
+                function.__module__, function.__name__, command_name)
             lldb.debugger.HandleCommand(command)
             self.function = function
+
         def __call__(self, debugger, command, exe_ctx, result, dict):
             if len(inspect.getargspec(self.function).args) == 5:
                 self.function(debugger, command, exe_ctx, result, dict)
             else:
                 self.function(debugger, command, result, dict)
+
     def callable(function):
         """Creates a callable object that gets used."""
         f = obj(function, *args, **kwargs)
         return f.__call__
     return callable
 
+
 class declaration(object):
     '''A class that represents a source declaration location with file, line and column.'''
+
     def __init__(self, file, line, col):
         self.file = file
         self.line = line
         self.col = col
 
+
 class value_iter(object):
+
     def __iter__(self):
         return self
-    
+
     def next(self):
         if self.index >= self.length:
             raise StopIteration()
         child_sbvalue = self.sbvalue.GetChildAtIndex(self.index)
         self.index += 1
         return value(child_sbvalue)
-        
-    def __init__(self,value):
+
+    def __init__(self, value):
         self.index = 0
         self.sbvalue = value
-        if type(self.sbvalue) is value:
+        if isinstance(self.sbvalue, value):
             self.sbvalue = self.sbvalue.sbvalue
         self.length = self.sbvalue.GetNumChildren()
+
 
 class value(object):
     '''A class designed to wrap lldb.SBValue() objects so the resulting object
     can be used as a variable would be in code. So if you have a Point structure
     variable in your code in the current frame named "pt", you can initialize an instance
     of this class with it:
-    
+
     pt = lldb.value(lldb.frame.FindVariable("pt"))
     print pt
     print pt.x
@@ -12691,6 +14650,7 @@ class value(object):
     pt = lldb.value(lldb.frame.FindVariable("rectangle_array"))
     print rectangle_array[12]
     print rectangle_array[5].origin.x'''
+
     def __init__(self, sbvalue):
         self.sbvalue = sbvalue
 
@@ -12702,10 +14662,13 @@ class value(object):
 
     def __getitem__(self, key):
         # Allow array access if this value has children...
-        if type(key) is value:
+        if isinstance(key, value):
             key = int(key)
-        if type(key) is int:
-            child_sbvalue = (self.sbvalue.GetValueForExpressionPath("[%i]" % key))
+        if isinstance(key, int):
+            child_sbvalue = (
+                self.sbvalue.GetValueForExpressionPath(
+                    "[%i]" %
+                    key))
             if child_sbvalue and child_sbvalue.IsValid():
                 return value(child_sbvalue)
             raise IndexError("Index '%d' is out of range" % key)
@@ -12715,152 +14678,154 @@ class value(object):
         return value_iter(self.sbvalue)
 
     def __getattr__(self, name):
-        child_sbvalue = self.sbvalue.GetChildMemberWithName (name)
+        child_sbvalue = self.sbvalue.GetChildMemberWithName(name)
         if child_sbvalue and child_sbvalue.IsValid():
             return value(child_sbvalue)
         raise AttributeError("Attribute '%s' is not defined" % name)
 
     def __add__(self, other):
         return int(self) + int(other)
-        
+
     def __sub__(self, other):
         return int(self) - int(other)
-        
+
     def __mul__(self, other):
         return int(self) * int(other)
-        
+
     def __floordiv__(self, other):
         return int(self) // int(other)
-        
+
     def __mod__(self, other):
         return int(self) % int(other)
-        
+
     def __divmod__(self, other):
         return int(self) % int(other)
-        
+
     def __pow__(self, other):
         return int(self) ** int(other)
-        
+
     def __lshift__(self, other):
         return int(self) << int(other)
-        
+
     def __rshift__(self, other):
         return int(self) >> int(other)
-        
+
     def __and__(self, other):
         return int(self) & int(other)
-        
+
     def __xor__(self, other):
         return int(self) ^ int(other)
-        
+
     def __or__(self, other):
         return int(self) | int(other)
-        
+
     def __div__(self, other):
         return int(self) / int(other)
-        
+
     def __truediv__(self, other):
         return int(self) / int(other)
-        
+
     def __iadd__(self, other):
         result = self.__add__(other)
-        self.sbvalue.SetValueFromCString (str(result))
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __isub__(self, other):
         result = self.__sub__(other)
-        self.sbvalue.SetValueFromCString (str(result))
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __imul__(self, other):
         result = self.__mul__(other)
-        self.sbvalue.SetValueFromCString (str(result))
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __idiv__(self, other):
         result = self.__div__(other)
-        self.sbvalue.SetValueFromCString (str(result))
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __itruediv__(self, other):
         result = self.__truediv__(other)
-        self.sbvalue.SetValueFromCString (str(result))
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __ifloordiv__(self, other):
-        result =  self.__floordiv__(self, other)
-        self.sbvalue.SetValueFromCString (str(result))
+        result = self.__floordiv__(self, other)
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __imod__(self, other):
-        result =  self.__and__(self, other)
-        self.sbvalue.SetValueFromCString (str(result))
+        result = self.__and__(self, other)
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __ipow__(self, other):
         result = self.__pow__(self, other)
-        self.sbvalue.SetValueFromCString (str(result))
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __ipow__(self, other, modulo):
         result = self.__pow__(self, other, modulo)
-        self.sbvalue.SetValueFromCString (str(result))
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __ilshift__(self, other):
         result = self.__lshift__(other)
-        self.sbvalue.SetValueFromCString (str(result))
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __irshift__(self, other):
-        result =  self.__rshift__(other)
-        self.sbvalue.SetValueFromCString (str(result))
+        result = self.__rshift__(other)
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __iand__(self, other):
-        result =  self.__and__(self, other)
-        self.sbvalue.SetValueFromCString (str(result))
+        result = self.__and__(self, other)
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __ixor__(self, other):
-        result =  self.__xor__(self, other)
-        self.sbvalue.SetValueFromCString (str(result))
+        result = self.__xor__(self, other)
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __ior__(self, other):
-        result =  self.__ior__(self, other)
-        self.sbvalue.SetValueFromCString (str(result))
+        result = self.__ior__(self, other)
+        self.sbvalue.SetValueFromCString(str(result))
         return result
-        
+
     def __neg__(self):
         return -int(self)
-        
+
     def __pos__(self):
         return +int(self)
-        
+
     def __abs__(self):
         return abs(int(self))
-        
+
     def __invert__(self):
         return ~int(self)
-        
+
     def __complex__(self):
-        return complex (int(self))
-        
+        return complex(int(self))
+
     def __int__(self):
-        is_num,is_sign = is_numeric_type(self.sbvalue.GetType().GetCanonicalType().GetBasicType())
-        if is_num and not is_sign: return self.sbvalue.GetValueAsUnsigned()
+        is_num, is_sign = is_numeric_type(
+            self.sbvalue.GetType().GetCanonicalType().GetBasicType())
+        if is_num and not is_sign:
+            return self.sbvalue.GetValueAsUnsigned()
         return self.sbvalue.GetValueAsSigned()
 
     def __long__(self):
         return self.__int__()
 
     def __float__(self):
-        return float (self.sbvalue.GetValueAsSigned())
-        
+        return float(self.sbvalue.GetValueAsSigned())
+
     def __oct__(self):
         return '0%o' % self.sbvalue.GetValueAsUnsigned()
-        
+
     def __hex__(self):
         return '0x%x' % self.sbvalue.GetValueAsUnsigned()
 
@@ -12868,36 +14833,40 @@ class value(object):
         return self.sbvalue.GetNumChildren()
 
     def __eq__(self, other):
-        if type(other) is int:
-                return int(self) == other
-        elif type(other) is str:
-                return str(self) == other
-        elif type(other) is value:
-                self_err = SBError()
-                other_err = SBError()
-                self_val = self.sbvalue.GetValueAsUnsigned(self_err)
-                if self_err.fail:
-                        raise ValueError("unable to extract value of self")
-                other_val = other.sbvalue.GetValueAsUnsigned(other_err)
-                if other_err.fail:
-                        raise ValueError("unable to extract value of other")
-                return self_val == other_val
-        raise TypeError("Unknown type %s, No equality operation defined." % str(type(other)))
+        if isinstance(other, int):
+            return int(self) == other
+        elif isinstance(other, str):
+            return str(self) == other
+        elif isinstance(other, value):
+            self_err = SBError()
+            other_err = SBError()
+            self_val = self.sbvalue.GetValueAsUnsigned(self_err)
+            if self_err.fail:
+                raise ValueError("unable to extract value of self")
+            other_val = other.sbvalue.GetValueAsUnsigned(other_err)
+            if other_err.fail:
+                raise ValueError("unable to extract value of other")
+            return self_val == other_val
+        raise TypeError(
+            "Unknown type %s, No equality operation defined." % str(
+                type(other)))
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
+
 class SBSyntheticValueProvider(object):
-    def __init__(self,valobj):
+
+    def __init__(self, valobj):
         pass
 
     def num_children(self):
         return 0
 
-    def get_child_index(self,name):
+    def get_child_index(self, name):
         return None
 
-    def get_child_at_index(self,idx):
+    def get_child_at_index(self, idx):
         return None
 
     def update(self):
@@ -12907,47 +14876,76 @@ class SBSyntheticValueProvider(object):
         return False
 
 
-
 # given an lldb.SBBasicType it returns a tuple
 # (is_numeric, is_signed)
 # the value of is_signed is undefined if is_numeric == false
 def is_numeric_type(basic_type):
-    if basic_type == eBasicTypeInvalid: return (False,False)
-    if basic_type == eBasicTypeVoid: return (False,False)
-    if basic_type == eBasicTypeChar: return (True,False)
-    if basic_type == eBasicTypeSignedChar: return (True,True)
-    if basic_type == eBasicTypeUnsignedChar: return (True,False)
-    if basic_type == eBasicTypeWChar: return (True,False)
-    if basic_type == eBasicTypeSignedWChar: return (True,True)
-    if basic_type == eBasicTypeUnsignedWChar: return (True,False)
-    if basic_type == eBasicTypeChar16: return (True,False)
-    if basic_type == eBasicTypeChar32: return (True,False)
-    if basic_type == eBasicTypeShort: return (True,True)
-    if basic_type == eBasicTypeUnsignedShort: return (True,False)
-    if basic_type == eBasicTypeInt: return (True,True)
-    if basic_type == eBasicTypeUnsignedInt: return (True,False)
-    if basic_type == eBasicTypeLong: return (True,True)
-    if basic_type == eBasicTypeUnsignedLong: return (True,False)
-    if basic_type == eBasicTypeLongLong: return (True,True)
-    if basic_type == eBasicTypeUnsignedLongLong: return (True,False)
-    if basic_type == eBasicTypeInt128: return (True,True)
-    if basic_type == eBasicTypeUnsignedInt128: return (True,False)
-    if basic_type == eBasicTypeBool: return (False,False)
-    if basic_type == eBasicTypeHalf: return (True,True)
-    if basic_type == eBasicTypeFloat: return (True,True)
-    if basic_type == eBasicTypeDouble: return (True,True)
-    if basic_type == eBasicTypeLongDouble: return (True,True)
-    if basic_type == eBasicTypeFloatComplex: return (True,True)
-    if basic_type == eBasicTypeDoubleComplex: return (True,True)
-    if basic_type == eBasicTypeLongDoubleComplex: return (True,True)
-    if basic_type == eBasicTypeObjCID: return (False,False)
-    if basic_type == eBasicTypeObjCClass: return (False,False)
-    if basic_type == eBasicTypeObjCSel: return (False,False)
-    if basic_type == eBasicTypeNullPtr: return (False,False)
-    #if basic_type == eBasicTypeOther:
-    return (False,False)
-
-
+    if basic_type == eBasicTypeInvalid:
+        return (False, False)
+    if basic_type == eBasicTypeVoid:
+        return (False, False)
+    if basic_type == eBasicTypeChar:
+        return (True, False)
+    if basic_type == eBasicTypeSignedChar:
+        return (True, True)
+    if basic_type == eBasicTypeUnsignedChar:
+        return (True, False)
+    if basic_type == eBasicTypeWChar:
+        return (True, False)
+    if basic_type == eBasicTypeSignedWChar:
+        return (True, True)
+    if basic_type == eBasicTypeUnsignedWChar:
+        return (True, False)
+    if basic_type == eBasicTypeChar16:
+        return (True, False)
+    if basic_type == eBasicTypeChar32:
+        return (True, False)
+    if basic_type == eBasicTypeShort:
+        return (True, True)
+    if basic_type == eBasicTypeUnsignedShort:
+        return (True, False)
+    if basic_type == eBasicTypeInt:
+        return (True, True)
+    if basic_type == eBasicTypeUnsignedInt:
+        return (True, False)
+    if basic_type == eBasicTypeLong:
+        return (True, True)
+    if basic_type == eBasicTypeUnsignedLong:
+        return (True, False)
+    if basic_type == eBasicTypeLongLong:
+        return (True, True)
+    if basic_type == eBasicTypeUnsignedLongLong:
+        return (True, False)
+    if basic_type == eBasicTypeInt128:
+        return (True, True)
+    if basic_type == eBasicTypeUnsignedInt128:
+        return (True, False)
+    if basic_type == eBasicTypeBool:
+        return (False, False)
+    if basic_type == eBasicTypeHalf:
+        return (True, True)
+    if basic_type == eBasicTypeFloat:
+        return (True, True)
+    if basic_type == eBasicTypeDouble:
+        return (True, True)
+    if basic_type == eBasicTypeLongDouble:
+        return (True, True)
+    if basic_type == eBasicTypeFloatComplex:
+        return (True, True)
+    if basic_type == eBasicTypeDoubleComplex:
+        return (True, True)
+    if basic_type == eBasicTypeLongDoubleComplex:
+        return (True, True)
+    if basic_type == eBasicTypeObjCID:
+        return (False, False)
+    if basic_type == eBasicTypeObjCClass:
+        return (False, False)
+    if basic_type == eBasicTypeObjCSel:
+        return (False, False)
+    if basic_type == eBasicTypeNullPtr:
+        return (False, False)
+    # if basic_type == eBasicTypeOther:
+    return (False, False)
 
 
 debugger_unique_id = 0

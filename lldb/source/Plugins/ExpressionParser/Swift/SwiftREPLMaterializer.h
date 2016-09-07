@@ -10,50 +10,43 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef liblldb_SwiftREPLMaterializer_h
 #define liblldb_SwiftREPLMaterializer_h
 
 #include "lldb/Expression/Materializer.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class SwiftREPLMaterializer : public Materializer
-{
+class SwiftREPLMaterializer : public Materializer {
 public:
-    SwiftREPLMaterializer () : Materializer (eKindSwiftREPL) { }
-    
-    uint32_t AddREPLResultVariable (const CompilerType &type,
-                                    swift::ValueDecl *decl,
-                                    PersistentVariableDelegate *delegate,
-                                    Error &err);
-    
-    uint32_t AddPersistentVariable (lldb::ExpressionVariableSP &persistent_variable_sp,
-                                    PersistentVariableDelegate *delegate,
-                                    Error &err) override;
-    
-    void RegisterExecutionUnit (IRExecutionUnit *execution_unit)
-    {
-        m_execution_unit = execution_unit;
-    }
-    
-    IRExecutionUnit *GetExecutionUnit ()
-    {
-        return m_execution_unit;
-    }
-    
-    //------------------------------------------------------------------
-    // llvm casting support
-    //------------------------------------------------------------------
-    static bool classof(const Materializer *m)
-    {
-        return m->getKind() == Materializer::eKindSwiftREPL;
-    }
+  SwiftREPLMaterializer() : Materializer(eKindSwiftREPL) {}
+
+  uint32_t AddREPLResultVariable(const CompilerType &type,
+                                 swift::ValueDecl *decl,
+                                 PersistentVariableDelegate *delegate,
+                                 Error &err);
+
+  uint32_t
+  AddPersistentVariable(lldb::ExpressionVariableSP &persistent_variable_sp,
+                        PersistentVariableDelegate *delegate,
+                        Error &err) override;
+
+  void RegisterExecutionUnit(IRExecutionUnit *execution_unit) {
+    m_execution_unit = execution_unit;
+  }
+
+  IRExecutionUnit *GetExecutionUnit() { return m_execution_unit; }
+
+  //------------------------------------------------------------------
+  // llvm casting support
+  //------------------------------------------------------------------
+  static bool classof(const Materializer *m) {
+    return m->getKind() == Materializer::eKindSwiftREPL;
+  }
+
 private:
-    IRExecutionUnit *m_execution_unit;
+  IRExecutionUnit *m_execution_unit;
 };
-    
 }
 
 #endif /* SwiftREPLMaterializer_h */

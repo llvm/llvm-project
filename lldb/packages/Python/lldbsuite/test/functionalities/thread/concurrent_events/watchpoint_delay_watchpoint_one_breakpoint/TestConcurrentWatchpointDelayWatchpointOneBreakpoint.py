@@ -12,14 +12,13 @@ class ConcurrentWatchpointDelayWatchpointOneBreakpoint(ConcurrentEventsBase):
 
     mydir = ConcurrentEventsBase.compute_mydir(__file__)
 
-    @skipIfFreeBSD # timing out on buildbot
+    @skipIfFreeBSD  # timing out on buildbot
     @skipIfRemoteDueToDeadlock
-    @expectedFailureAll(triple = '^mips') # Atomic sequences are not supported yet for MIPS in LLDB.
+    # Atomic sequences are not supported yet for MIPS in LLDB.
+    @expectedFailureAll(triple='^mips')
     def test_watchpoint_delay_watchpoint_one_breakpoint(self):
         """Test two threads that trigger a watchpoint (one with a 1 second delay) and one breakpoint thread. """
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_watchpoint_threads=1,
                                num_delay_watchpoint_threads=1,
                                num_breakpoint_threads=1)
-
-

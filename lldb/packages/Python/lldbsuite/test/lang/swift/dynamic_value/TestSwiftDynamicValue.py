@@ -35,20 +35,59 @@ class SwiftDynamicValueTest(TestBase):
     def dynamic_val_commands(self):
         """Tests that dynamic values work correctly for Swift"""
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
-        lldbutil.run_break_set_by_source_regexp(self, "// Set a breakpoint here")
+        lldbutil.run_break_set_by_source_regexp(
+            self, "// Set a breakpoint here")
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
-        self.expect("frame variable", substrs = ["AWrapperClass) aWrapper","SomeClass) anItem = ", "x = ", "Base<Int>) aBase = 0x", "v = 449493530"])
-        self.expect("frame variable -d run --show-types", substrs = ["AWrapperClass) aWrapper","YetAnotherClass) anItem = ", "x = ", "y = ", "z = ", "Derived<Int>) aBase = 0x", "Base<Int>)",".Base = {", "v = 449493530", "q = 3735928559"])
+        self.expect(
+            "frame variable",
+            substrs=[
+                "AWrapperClass) aWrapper",
+                "SomeClass) anItem = ",
+                "x = ",
+                "Base<Int>) aBase = 0x",
+                "v = 449493530"])
+        self.expect(
+            "frame variable -d run --show-types",
+            substrs=[
+                "AWrapperClass) aWrapper",
+                "YetAnotherClass) anItem = ",
+                "x = ",
+                "y = ",
+                "z = ",
+                "Derived<Int>) aBase = 0x",
+                "Base<Int>)",
+                ".Base = {",
+                "v = 449493530",
+                "q = 3735928559"])
         self.runCmd("continue")
-        self.expect("frame variable", substrs = ["AWrapperClass) aWrapper","SomeClass) anItem = ", "x = ", "Base<Int>) aBase = 0x", "v = 449493530"])
-        self.expect("frame variable -d run --show-types", substrs = ["AWrapperClass) aWrapper","YetAnotherClass) anItem = ", "x = ", "y = ", "z = ", "Derived<Int>) aBase = 0x", "Base<Int>)",".Base = {", "v = 449493530", "q = 3735928559"])
+        self.expect(
+            "frame variable",
+            substrs=[
+                "AWrapperClass) aWrapper",
+                "SomeClass) anItem = ",
+                "x = ",
+                "Base<Int>) aBase = 0x",
+                "v = 449493530"])
+        self.expect(
+            "frame variable -d run --show-types",
+            substrs=[
+                "AWrapperClass) aWrapper",
+                "YetAnotherClass) anItem = ",
+                "x = ",
+                "y = ",
+                "z = ",
+                "Derived<Int>) aBase = 0x",
+                "Base<Int>)",
+                ".Base = {",
+                "v = 449493530",
+                "q = 3735928559"])
 
 if __name__ == '__main__':
     import atexit

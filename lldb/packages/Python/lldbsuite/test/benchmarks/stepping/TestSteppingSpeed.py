@@ -2,7 +2,8 @@
 
 from __future__ import print_function
 
-import os, sys
+import os
+import sys
 import lldb
 from lldbsuite.test import configuration
 from lldbsuite.test import lldbtest_config
@@ -10,6 +11,7 @@ from lldbsuite.test.lldbbench import *
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class SteppingSpeedBench(BenchBase):
 
@@ -26,7 +28,9 @@ class SteppingSpeedBench(BenchBase):
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_run_lldb_steppings(self):
         """Test lldb steppings on a large executable."""
         print()
@@ -40,7 +44,9 @@ class SteppingSpeedBench(BenchBase):
         prompt = self.child_prompt
 
         # So that the child gets torn down after the test.
-        self.child = pexpect.spawn('%s %s %s' % (lldbtest_config.lldbExec, self.lldbOption, exe))
+        self.child = pexpect.spawn(
+            '%s %s %s' %
+            (lldbtest_config.lldbExec, self.lldbOption, exe))
         child = self.child
 
         # Turn on logging for what the child sends back.
@@ -58,7 +64,7 @@ class SteppingSpeedBench(BenchBase):
         for i in range(count):
             with self.stopwatch:
                 # Disassemble the function.
-                child.sendline('next') # Aka 'thread step-over'.
+                child.sendline('next')  # Aka 'thread step-over'.
                 child.expect_exact(prompt)
 
         child.sendline('quit')

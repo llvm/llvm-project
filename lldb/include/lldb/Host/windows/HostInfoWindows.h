@@ -10,51 +10,39 @@
 #ifndef lldb_Host_windows_HostInfoWindows_h_
 #define lldb_Host_windows_HostInfoWindows_h_
 
-#include "lldb/Host/HostInfoBase.h"
 #include "lldb/Host/FileSpec.h"
+#include "lldb/Host/HostInfoBase.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class HostInfoWindows : public HostInfoBase
-{
-    friend class HostInfoBase;
+class HostInfoWindows : public HostInfoBase {
+  friend class HostInfoBase;
 
-  private:
-    // Static class, unconstructable.
-    HostInfoWindows();
-    ~HostInfoWindows();
+private:
+  // Static class, unconstructable.
+  HostInfoWindows();
+  ~HostInfoWindows();
 
-  public:
-      static void
-      Initialize();
-      static void
-      Terminate();
+public:
+  static void Initialize();
+  static void Terminate();
 
-      static size_t
-      GetPageSize();
+  static size_t GetPageSize();
 
-      static bool
-      GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update);
-      static bool
-      GetOSBuildString(std::string &s);
-      static bool
-      GetOSKernelDescription(std::string &s);
-      static bool
-      GetHostname(std::string &s);
-      static FileSpec
-      GetProgramFileSpec();
-      static FileSpec
-      GetDefaultShell();
+  static bool GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update);
+  static bool GetOSBuildString(std::string &s);
+  static bool GetOSKernelDescription(std::string &s);
+  static bool GetHostname(std::string &s);
+  static FileSpec GetProgramFileSpec();
+  static FileSpec GetDefaultShell();
 
-      static bool
-      GetEnvironmentVar(const std::string &var_name, std::string &var);
+  static bool GetEnvironmentVar(const std::string &var_name, std::string &var);
 
-  protected:
-    static bool ComputePythonDirectory(FileSpec &file_spec);
+protected:
+  static bool ComputePythonDirectory(FileSpec &file_spec);
 
-  private:
-    static FileSpec m_program_filespec;
+private:
+  static FileSpec m_program_filespec;
 };
 }
 

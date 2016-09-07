@@ -5,25 +5,28 @@ Use lldb Python API to disassemble raw machine code bytes
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class Disassemble_VST1_64(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipTestIfFn(lambda : True, "llvm.org/pr24575: all tests get ERRORs in dotest.py after this")
+    @skipTestIfFn(
+        lambda: True,
+        "llvm.org/pr24575: all tests get ERRORs in dotest.py after this")
     @add_test_categories(['pyapi'])
     @no_debug_info_test
     def test_disassemble_invalid_vst_1_64_raw_data(self):
         """Test disassembling invalid vst1.64 raw bytes with the API."""
         # Create a target from the debugger.
-        target = self.dbg.CreateTargetWithFileAndTargetTriple ("", "thumbv7")
+        target = self.dbg.CreateTargetWithFileAndTargetTriple("", "thumbv7")
         self.assertTrue(target, VALID_TARGET)
 
         raw_bytes = bytearray([0xf0, 0xb5, 0x03, 0xaf,
@@ -55,5 +58,5 @@ class Disassemble_VST1_64(TestBase):
             print()
             print("Raw bytes:    ", [hex(x) for x in raw_bytes])
             print("Disassembled%s" % str(inst))
- 
-        self.assertTrue (inst.GetMnemonic(target) == "vst1.64")
+
+        self.assertTrue(inst.GetMnemonic(target) == "vst1.64")

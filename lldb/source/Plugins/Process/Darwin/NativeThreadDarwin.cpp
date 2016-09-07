@@ -21,117 +21,94 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_darwin;
 
-uint64_t
-NativeThreadDarwin::GetGloballyUniqueThreadIDForMachPortID(
-                                                        ::thread_t mach_port_id)
-{
-    thread_identifier_info_data_t tident;
-    mach_msg_type_number_t tident_count = THREAD_IDENTIFIER_INFO_COUNT;
+uint64_t NativeThreadDarwin::GetGloballyUniqueThreadIDForMachPortID(
+    ::thread_t mach_port_id) {
+  thread_identifier_info_data_t tident;
+  mach_msg_type_number_t tident_count = THREAD_IDENTIFIER_INFO_COUNT;
 
-    auto mach_err = ::thread_info(mach_port_id, THREAD_IDENTIFIER_INFO,
-                                  (thread_info_t) &tident, &tident_count);
-    if (mach_err != KERN_SUCCESS)
-    {
-        // When we fail to get thread info for the supposed port, assume it is
-        // really a globally unique thread id already, or return the best thing
-        // we can, which is the thread port.
-        return mach_port_id;
-    }
-    return tident.thread_id;
+  auto mach_err = ::thread_info(mach_port_id, THREAD_IDENTIFIER_INFO,
+                                (thread_info_t)&tident, &tident_count);
+  if (mach_err != KERN_SUCCESS) {
+    // When we fail to get thread info for the supposed port, assume it is
+    // really a globally unique thread id already, or return the best thing
+    // we can, which is the thread port.
+    return mach_port_id;
+  }
+  return tident.thread_id;
 }
 
 NativeThreadDarwin::NativeThreadDarwin(NativeProcessDarwin *process,
                                        bool is_64_bit,
                                        lldb::tid_t unique_thread_id,
-                                       ::thread_t mach_thread_port) :
-    NativeThreadProtocol(process, unique_thread_id),
-    m_mach_thread_port(mach_thread_port),
-    m_basic_info(),
-    m_proc_threadinfo()
-{
+                                       ::thread_t mach_thread_port)
+    : NativeThreadProtocol(process, unique_thread_id),
+      m_mach_thread_port(mach_thread_port), m_basic_info(),
+      m_proc_threadinfo() {}
+
+bool NativeThreadDarwin::GetIdentifierInfo() {
+  // Don't try to get the thread info once and cache it for the life of the
+  // thread.  It changes over time, for instance
+  // if the thread name changes, then the thread_handle also changes...  So you
+  // have to refetch it every time.
+  mach_msg_type_number_t count = THREAD_IDENTIFIER_INFO_COUNT;
+  kern_return_t kret = ::thread_info(m_mach_thread_port, THREAD_IDENTIFIER_INFO,
+                                     (thread_info_t)&m_ident_info, &count);
+  return kret == KERN_SUCCESS;
+
+  return false;
 }
 
-bool
-NativeThreadDarwin::GetIdentifierInfo()
-{
-    // Don't try to get the thread info once and cache it for the life of the thread.  It changes over time, for instance
-    // if the thread name changes, then the thread_handle also changes...  So you have to refetch it every time.
-    mach_msg_type_number_t count = THREAD_IDENTIFIER_INFO_COUNT;
-    kern_return_t kret = ::thread_info(m_mach_thread_port,
-                                       THREAD_IDENTIFIER_INFO,
-                                       (thread_info_t) &m_ident_info, &count);
-    return kret == KERN_SUCCESS;
+std::string NativeThreadDarwin::GetName() {
+  std::string name;
 
-    return false;
-}
-
-std::string
-NativeThreadDarwin::GetName()
-{
-    std::string name;
-
-    if (GetIdentifierInfo())
-    {
-        auto process_sp = GetProcess();
-        if (!process_sp)
-        {
-            name = "<unavailable>";
-            return name;
-        }
-
-        int len = ::proc_pidinfo(process_sp->GetID(), PROC_PIDTHREADINFO,
-                                 m_ident_info.thread_handle, &m_proc_threadinfo,
-                                 sizeof(m_proc_threadinfo));
-
-        if (len && m_proc_threadinfo.pth_name[0])
-            name = m_proc_threadinfo.pth_name;
+  if (GetIdentifierInfo()) {
+    auto process_sp = GetProcess();
+    if (!process_sp) {
+      name = "<unavailable>";
+      return name;
     }
-    return name;
+
+    int len = ::proc_pidinfo(process_sp->GetID(), PROC_PIDTHREADINFO,
+                             m_ident_info.thread_handle, &m_proc_threadinfo,
+                             sizeof(m_proc_threadinfo));
+
+    if (len && m_proc_threadinfo.pth_name[0])
+      name = m_proc_threadinfo.pth_name;
+  }
+  return name;
 }
 
-lldb::StateType
-NativeThreadDarwin::GetState()
-{
-    // TODO implement
-    return eStateInvalid;
+lldb::StateType NativeThreadDarwin::GetState() {
+  // TODO implement
+  return eStateInvalid;
 }
 
-bool
-NativeThreadDarwin::GetStopReason(ThreadStopInfo &stop_info,
-                                  std::string& description)
-{
-    // TODO implement
-    return false;
+bool NativeThreadDarwin::GetStopReason(ThreadStopInfo &stop_info,
+                                       std::string &description) {
+  // TODO implement
+  return false;
 }
 
-NativeRegisterContextSP
-NativeThreadDarwin::GetRegisterContext()
-{
-    // TODO implement
-    return NativeRegisterContextSP();
+NativeRegisterContextSP NativeThreadDarwin::GetRegisterContext() {
+  // TODO implement
+  return NativeRegisterContextSP();
 }
 
-Error
-NativeThreadDarwin::SetWatchpoint(lldb::addr_t addr, size_t size,
-                                  uint32_t watch_flags, bool hardware)
-{
-    Error error;
-    error.SetErrorString("not yet implemented");
-    return error;
+Error NativeThreadDarwin::SetWatchpoint(lldb::addr_t addr, size_t size,
+                                        uint32_t watch_flags, bool hardware) {
+  Error error;
+  error.SetErrorString("not yet implemented");
+  return error;
 }
 
-Error
-NativeThreadDarwin::RemoveWatchpoint(lldb::addr_t addr)
-{
-    Error error;
-    error.SetErrorString("not yet implemented");
-    return error;
+Error NativeThreadDarwin::RemoveWatchpoint(lldb::addr_t addr) {
+  Error error;
+  error.SetErrorString("not yet implemented");
+  return error;
 }
 
-void
-NativeThreadDarwin::Dump(Stream &stream) const
-{
-    // This is what we really want once we have the thread class wired up.
+void NativeThreadDarwin::Dump(Stream &stream) const {
+// This is what we really want once we have the thread class wired up.
 #if 0
     DNBLogThreaded("[%3u] #%3u tid: 0x%8.8" PRIx64 ", pc: 0x%16.16" PRIx64 ", sp: 0x%16.16" PRIx64 ", user: %d.%6.6d, system: %d.%6.6d, cpu: %2d, policy: %2d, run_state: %2d (%s), flags: %2d, suspend_count: %2d (current %2d), sleep_time: %d",
                    index,
@@ -150,16 +127,14 @@ NativeThreadDarwin::Dump(Stream &stream) const
                    m_basic_info.sleep_time);
 
 #else
-    // Here's all we have right now.
-    stream.Printf("tid: 0x%8.8" PRIx64 ", thread port: 0x%4.4x",
-                  GetID(), m_mach_thread_port);
+  // Here's all we have right now.
+  stream.Printf("tid: 0x%8.8" PRIx64 ", thread port: 0x%4.4x", GetID(),
+                m_mach_thread_port);
 #endif
 }
 
-bool
-NativeThreadDarwin::NotifyException(MachException::Data &exc)
-{
-    // TODO implement this.
+bool NativeThreadDarwin::NotifyException(MachException::Data &exc) {
+// TODO implement this.
 #if 0
     // Allow the arch specific protocol to process (MachException::Data &)exc
     // first before possible reassignment of m_stop_exception with exc.
@@ -182,15 +157,13 @@ NativeThreadDarwin::NotifyException(MachException::Data &exc)
 
     return handled;
 #else
-    // Pretend we handled it.
-    return true;
+  // Pretend we handled it.
+  return true;
 #endif
 }
 
-bool
-NativeThreadDarwin::ShouldStop(bool &step_more) const
-{
-    // TODO: implement this
+bool NativeThreadDarwin::ShouldStop(bool &step_more) const {
+// TODO: implement this
 #if 0
     // See if this thread is at a breakpoint?
     DNBBreakpoint *bp = CurrentBreakpoint();
@@ -229,14 +202,12 @@ NativeThreadDarwin::ShouldStop(bool &step_more) const
     }
     return false;
 #else
-    return false;
+  return false;
 #endif
 }
 
-void
-NativeThreadDarwin::ThreadDidStop()
-{
-    // TODO implement this.
+void NativeThreadDarwin::ThreadDidStop() {
+// TODO implement this.
 #if 0
     // This thread has existed prior to resuming under debug nub control,
     // and has just been stopped. Do any cleanup that needs to be done
@@ -267,58 +238,47 @@ NativeThreadDarwin::ThreadDidStop()
 #endif
 }
 
-bool
-NativeThreadDarwin::MachPortNumberIsValid(::thread_t thread)
-{
-    return thread != (::thread_t)(0);
+bool NativeThreadDarwin::MachPortNumberIsValid(::thread_t thread) {
+  return thread != (::thread_t)(0);
 }
 
-const struct thread_basic_info *
-NativeThreadDarwin::GetBasicInfo() const
-{
-    if (GetBasicInfo(m_mach_thread_port, &m_basic_info))
-        return &m_basic_info;
-    return NULL;
+const struct thread_basic_info *NativeThreadDarwin::GetBasicInfo() const {
+  if (GetBasicInfo(m_mach_thread_port, &m_basic_info))
+    return &m_basic_info;
+  return NULL;
 }
 
-bool
-NativeThreadDarwin::GetBasicInfo(::thread_t thread,
-                                 struct thread_basic_info *basicInfoPtr)
-{
-    if (MachPortNumberIsValid(thread))
-    {
-        unsigned int info_count = THREAD_BASIC_INFO_COUNT;
-        kern_return_t err = ::thread_info (thread, THREAD_BASIC_INFO, (thread_info_t) basicInfoPtr, &info_count);
-        if (err == KERN_SUCCESS)
-            return true;
-    }
-    ::memset (basicInfoPtr, 0, sizeof (struct thread_basic_info));
-    return false;
+bool NativeThreadDarwin::GetBasicInfo(::thread_t thread,
+                                      struct thread_basic_info *basicInfoPtr) {
+  if (MachPortNumberIsValid(thread)) {
+    unsigned int info_count = THREAD_BASIC_INFO_COUNT;
+    kern_return_t err = ::thread_info(thread, THREAD_BASIC_INFO,
+                                      (thread_info_t)basicInfoPtr, &info_count);
+    if (err == KERN_SUCCESS)
+      return true;
+  }
+  ::memset(basicInfoPtr, 0, sizeof(struct thread_basic_info));
+  return false;
 }
 
-bool
-NativeThreadDarwin::IsUserReady() const
-{
-    if (m_basic_info.run_state == 0)
-        GetBasicInfo();
+bool NativeThreadDarwin::IsUserReady() const {
+  if (m_basic_info.run_state == 0)
+    GetBasicInfo();
 
-    switch (m_basic_info.run_state)
-    {
-        default:
-        case TH_STATE_UNINTERRUPTIBLE:
-            break;
+  switch (m_basic_info.run_state) {
+  default:
+  case TH_STATE_UNINTERRUPTIBLE:
+    break;
 
-        case TH_STATE_RUNNING:
-        case TH_STATE_STOPPED:
-        case TH_STATE_WAITING:
-        case TH_STATE_HALTED:
-            return true;
-    }
-    return false;
+  case TH_STATE_RUNNING:
+  case TH_STATE_STOPPED:
+  case TH_STATE_WAITING:
+  case TH_STATE_HALTED:
+    return true;
+  }
+  return false;
 }
 
-NativeProcessDarwinSP
-NativeThreadDarwin::GetNativeProcessDarwinSP()
-{
-    return std::static_pointer_cast<NativeProcessDarwin>(GetProcess());
+NativeProcessDarwinSP NativeThreadDarwin::GetNativeProcessDarwinSP() {
+  return std::static_pointer_cast<NativeProcessDarwin>(GetProcess());
 }

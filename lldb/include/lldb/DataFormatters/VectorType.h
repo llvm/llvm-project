@@ -13,16 +13,13 @@
 #include "lldb/lldb-forward.h"
 
 namespace lldb_private {
-    namespace formatters
-    {
-        bool
-        VectorTypeSummaryProvider (ValueObject&,
-                                   Stream&,
-                                   const TypeSummaryOptions&);
+namespace formatters {
+bool VectorTypeSummaryProvider(ValueObject &, Stream &,
+                               const TypeSummaryOptions &);
 
-        SyntheticChildrenFrontEnd*
-        VectorTypeSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP);
-    } // namespace formatters
+SyntheticChildrenFrontEnd *
+VectorTypeSyntheticFrontEndCreator(CXXSyntheticChildren *, lldb::ValueObjectSP);
+} // namespace formatters
 } // namespace lldb_private
 
 #endif // liblldb_VectorType_h_

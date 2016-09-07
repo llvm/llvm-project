@@ -9,9 +9,11 @@ import os
 import sys
 from optparse import OptionParser
 
+
 def is_exe(fpath):
     """Check whether fpath is an executable."""
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
 
 def which(program):
     """Find the full path to a program, or return None."""
@@ -26,10 +28,12 @@ def which(program):
                 return exe_file
     return None
 
+
 def llvm_mc_loop(mc, mc_options):
     contents = []
     fname = 'mc-input.txt'
-    sys.stdout.write("Enter your input to llvm-mc.  A line starting with 'END' terminates the current batch of input.\n")
+    sys.stdout.write(
+        "Enter your input to llvm-mc.  A line starting with 'END' terminates the current batch of input.\n")
     sys.stdout.write("Enter 'quit' or Ctrl-D to quit the program.\n")
     while True:
         sys.stdout.write("> ")
@@ -54,11 +58,18 @@ def llvm_mc_loop(mc, mc_options):
             # Keep accumulating our input.
             contents.append(next)
 
+
 def main():
     # This is to set up the Python path to include the pexpect-2.4 dir.
     # Remember to update this when/if things change.
     scriptPath = sys.path[0]
-    sys.path.append(os.path.join(scriptPath, os.pardir, os.pardir, 'test', 'pexpect-2.4'))
+    sys.path.append(
+        os.path.join(
+            scriptPath,
+            os.pardir,
+            os.pardir,
+            'test',
+            'pexpect-2.4'))
 
     parser = OptionParser(usage="""\
 Do llvm-mc interactively within a shell-like environment.  A batch of input is
@@ -74,10 +85,13 @@ Usage: %prog [options]
                       help="""The llvm-mc executable full path, if specified.
                       Otherwise, it must be present in your PATH environment.""")
 
-    parser.add_option('-o', '--options',
-                      type='string', action='store',
-                      dest='llvm_mc_options',
-                      help="""The options passed to 'llvm-mc' command if specified.""")
+    parser.add_option(
+        '-o',
+        '--options',
+        type='string',
+        action='store',
+        dest='llvm_mc_options',
+        help="""The options passed to 'llvm-mc' command if specified.""")
 
     opts, args = parser.parse_args()
 

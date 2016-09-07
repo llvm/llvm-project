@@ -12,7 +12,6 @@
 
 #include "SwiftExpressionVariable.h"
 
-#include "clang/AST/ASTContext.h"
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Stream.h"
@@ -20,32 +19,34 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
+#include "clang/AST/ASTContext.h"
 
 using namespace lldb_private;
 
-SwiftExpressionVariable::SwiftExpressionVariable(ExecutionContextScope *exe_scope, lldb::ByteOrder byte_order, uint32_t addr_byte_size) :
-    ExpressionVariable(LLVMCastKind::eKindSwift)
-{
-    m_swift_flags = EVSNone;
-    m_frozen_sp = ValueObjectConstResult::Create (exe_scope, byte_order, addr_byte_size);
+SwiftExpressionVariable::SwiftExpressionVariable(
+    ExecutionContextScope *exe_scope, lldb::ByteOrder byte_order,
+    uint32_t addr_byte_size)
+    : ExpressionVariable(LLVMCastKind::eKindSwift) {
+  m_swift_flags = EVSNone;
+  m_frozen_sp =
+      ValueObjectConstResult::Create(exe_scope, byte_order, addr_byte_size);
 }
 
-SwiftExpressionVariable::SwiftExpressionVariable (const lldb::ValueObjectSP &valobj_sp) :
-    ExpressionVariable(LLVMCastKind::eKindSwift)
-{
-    m_swift_flags = EVSNone;
-    m_frozen_sp = valobj_sp;
+SwiftExpressionVariable::SwiftExpressionVariable(
+    const lldb::ValueObjectSP &valobj_sp)
+    : ExpressionVariable(LLVMCastKind::eKindSwift) {
+  m_swift_flags = EVSNone;
+  m_frozen_sp = valobj_sp;
 }
 
-SwiftExpressionVariable::SwiftExpressionVariable(ExecutionContextScope *exe_scope,
-                                                 const ConstString &name,
-                                                 const TypeFromUser &type,
-                                                 lldb::ByteOrder byte_order,
-                                                 uint32_t addr_byte_size) :
-    ExpressionVariable(LLVMCastKind::eKindSwift)
-{
-    m_swift_flags = EVSNone;
-    m_frozen_sp = ValueObjectConstResult::Create (exe_scope, byte_order, addr_byte_size);
-    SetName (name);
-    SetCompilerType (type);
+SwiftExpressionVariable::SwiftExpressionVariable(
+    ExecutionContextScope *exe_scope, const ConstString &name,
+    const TypeFromUser &type, lldb::ByteOrder byte_order,
+    uint32_t addr_byte_size)
+    : ExpressionVariable(LLVMCastKind::eKindSwift) {
+  m_swift_flags = EVSNone;
+  m_frozen_sp =
+      ValueObjectConstResult::Create(exe_scope, byte_order, addr_byte_size);
+  SetName(name);
+  SetCompilerType(type);
 }

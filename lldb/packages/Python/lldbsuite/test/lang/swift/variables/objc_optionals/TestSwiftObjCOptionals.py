@@ -80,9 +80,17 @@ class TestSwiftObjCOptionalType(TestBase):
     def do_check_api(self):
         """Check formatting for T? and T! when T is an ObjC type"""
         optColor_Some = self.frame.FindVariable("optColor_Some")
-        lldbutil.check_variable(self, optColor_Some, use_dynamic=False, num_children=1)
+        lldbutil.check_variable(
+            self,
+            optColor_Some,
+            use_dynamic=False,
+            num_children=1)
         uoptColor_Some = self.frame.FindVariable("uoptColor_Some")
-        lldbutil.check_variable(self, uoptColor_Some, use_dynamic=False, num_children=1)
+        lldbutil.check_variable(
+            self,
+            uoptColor_Some,
+            use_dynamic=False,
+            num_children=1)
 
 if __name__ == '__main__':
     import atexit

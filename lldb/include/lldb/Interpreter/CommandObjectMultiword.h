@@ -22,183 +22,124 @@ namespace lldb_private {
 // CommandObjectMultiword
 //-------------------------------------------------------------------------
 
-class CommandObjectMultiword : public CommandObject
-{
-// These two want to iterate over the subcommand dictionary.
-friend class CommandInterpreter;
-friend class CommandObjectSyntax;
+class CommandObjectMultiword : public CommandObject {
+  // These two want to iterate over the subcommand dictionary.
+  friend class CommandInterpreter;
+  friend class CommandObjectSyntax;
+
 public:
-    CommandObjectMultiword(CommandInterpreter &interpreter,
-                           const char *name,
-                           const char *help = nullptr,
-                           const char *syntax = nullptr,
-                           uint32_t flags = 0);
-    
-    ~CommandObjectMultiword() override;
+  CommandObjectMultiword(CommandInterpreter &interpreter, const char *name,
+                         const char *help = nullptr,
+                         const char *syntax = nullptr, uint32_t flags = 0);
 
-    bool
-    IsMultiwordObject() override
-    {
-        return true;
-    }
-    
-    CommandObjectMultiword*
-    GetAsMultiwordCommand () override
-    {
-        return this;
-    }
+  ~CommandObjectMultiword() override;
 
-    bool
-    LoadSubCommand(const char *cmd_name,
-                   const lldb::CommandObjectSP& command_obj) override;
+  bool IsMultiwordObject() override { return true; }
 
-    void
-    GenerateHelpText(Stream &output_stream) override;
+  CommandObjectMultiword *GetAsMultiwordCommand() override { return this; }
 
-    lldb::CommandObjectSP
-    GetSubcommandSP(const char *sub_cmd, StringList *matches = nullptr) override;
+  bool LoadSubCommand(const char *cmd_name,
+                      const lldb::CommandObjectSP &command_obj) override;
 
-    CommandObject *
-    GetSubcommandObject(const char *sub_cmd, StringList *matches = nullptr) override;
+  void GenerateHelpText(Stream &output_stream) override;
 
-    void
-    AproposAllSubCommands(const char *prefix,
-                          const char *search_word,
-                          StringList &commands_found,
-                          StringList &commands_help) override;
+  lldb::CommandObjectSP GetSubcommandSP(const char *sub_cmd,
+                                        StringList *matches = nullptr) override;
 
-    bool
-    WantsRawCommandString() override
-    {
-        return false;
-    }
+  CommandObject *GetSubcommandObject(const char *sub_cmd,
+                                     StringList *matches = nullptr) override;
 
-    int
-    HandleCompletion(Args &input,
-                     int &cursor_index,
-                     int &cursor_char_position,
-                     int match_start_point,
-                     int max_return_elements,
-                     bool &word_complete,
-                     StringList &matches) override;
+  void AproposAllSubCommands(const char *prefix, const char *search_word,
+                             StringList &commands_found,
+                             StringList &commands_help) override;
 
-    const char *
-    GetRepeatCommand (Args &current_command_args, uint32_t index) override;
+  bool WantsRawCommandString() override { return false; }
 
-    bool
-    Execute(const char *args_string,
-            CommandReturnObject &result) override;
-    
-    bool
-    IsRemovable() const override
-    {
-        return m_can_be_removed;
-    }
-    
-    void
-    SetRemovable (bool removable)
-    {
-        m_can_be_removed = removable;
-    }
-    
+  int HandleCompletion(Args &input, int &cursor_index,
+                       int &cursor_char_position, int match_start_point,
+                       int max_return_elements, bool &word_complete,
+                       StringList &matches) override;
+
+  const char *GetRepeatCommand(Args &current_command_args,
+                               uint32_t index) override;
+
+  bool Execute(const char *args_string, CommandReturnObject &result) override;
+
+  bool IsRemovable() const override { return m_can_be_removed; }
+
+  void SetRemovable(bool removable) { m_can_be_removed = removable; }
+
 protected:
-    CommandObject::CommandMap&
-    GetSubcommandDictionary ()
-    {
-        return m_subcommand_dict;
-    }
+  CommandObject::CommandMap &GetSubcommandDictionary() {
+    return m_subcommand_dict;
+  }
 
-    CommandObject::CommandMap m_subcommand_dict;
-    bool m_can_be_removed;
+  CommandObject::CommandMap m_subcommand_dict;
+  bool m_can_be_removed;
 };
-    
-class CommandObjectProxy : public CommandObject
-{
+
+class CommandObjectProxy : public CommandObject {
 public:
-    CommandObjectProxy(CommandInterpreter &interpreter,
-                       const char *name,
-                       const char *help = nullptr,
-                       const char *syntax = nullptr,
-                       uint32_t flags = 0);
-    
-    ~CommandObjectProxy() override;
-    
-    // Subclasses must provide a command object that will be transparently
-    // used for this object.
-    virtual CommandObject *
-    GetProxyCommandObject() = 0;
+  CommandObjectProxy(CommandInterpreter &interpreter, const char *name,
+                     const char *help = nullptr, const char *syntax = nullptr,
+                     uint32_t flags = 0);
 
-    const char *
-    GetHelpLong() override;
-    
-    bool
-    IsRemovable() const override;
+  ~CommandObjectProxy() override;
 
-    bool
-    IsMultiwordObject() override;
-    
-    CommandObjectMultiword*
-    GetAsMultiwordCommand () override;
-    
-    void
-    GenerateHelpText (Stream &result) override;
-    
-    lldb::CommandObjectSP
-    GetSubcommandSP(const char *sub_cmd, StringList *matches = nullptr) override;
-    
-    CommandObject *
-    GetSubcommandObject(const char *sub_cmd, StringList *matches = nullptr) override;
-    
-    void
-    AproposAllSubCommands(const char *prefix,
-                          const char *search_word,
-                          StringList &commands_found,
-                          StringList &commands_help) override;
+  // Subclasses must provide a command object that will be transparently
+  // used for this object.
+  virtual CommandObject *GetProxyCommandObject() = 0;
 
-    bool
-    LoadSubCommand(const char *cmd_name,
-                   const lldb::CommandObjectSP& command_obj) override;
-    
-    bool
-    WantsRawCommandString() override;
-    
-    bool
-    WantsCompletion() override;
-    
-    Options *
-    GetOptions() override;
+  const char *GetHelpLong() override;
 
-    int
-    HandleCompletion(Args &input,
-                     int &cursor_index,
-                     int &cursor_char_position,
-                     int match_start_point,
-                     int max_return_elements,
-                     bool &word_complete,
-                     StringList &matches) override;
+  bool IsRemovable() const override;
 
-    int
-    HandleArgumentCompletion(Args &input,
-                             int &cursor_index,
-                             int &cursor_char_position,
-                             OptionElementVector &opt_element_vector,
-                             int match_start_point,
-                             int max_return_elements,
-                             bool &word_complete,
-                             StringList &matches) override;
+  bool IsMultiwordObject() override;
 
-    const char *
-    GetRepeatCommand(Args &current_command_args,
-                     uint32_t index) override;
+  CommandObjectMultiword *GetAsMultiwordCommand() override;
 
-    bool
-    Execute(const char *args_string,
-            CommandReturnObject &result) override;
+  void GenerateHelpText(Stream &result) override;
+
+  lldb::CommandObjectSP GetSubcommandSP(const char *sub_cmd,
+                                        StringList *matches = nullptr) override;
+
+  CommandObject *GetSubcommandObject(const char *sub_cmd,
+                                     StringList *matches = nullptr) override;
+
+  void AproposAllSubCommands(const char *prefix, const char *search_word,
+                             StringList &commands_found,
+                             StringList &commands_help) override;
+
+  bool LoadSubCommand(const char *cmd_name,
+                      const lldb::CommandObjectSP &command_obj) override;
+
+  bool WantsRawCommandString() override;
+
+  bool WantsCompletion() override;
+
+  Options *GetOptions() override;
+
+  int HandleCompletion(Args &input, int &cursor_index,
+                       int &cursor_char_position, int match_start_point,
+                       int max_return_elements, bool &word_complete,
+                       StringList &matches) override;
+
+  int HandleArgumentCompletion(Args &input, int &cursor_index,
+                               int &cursor_char_position,
+                               OptionElementVector &opt_element_vector,
+                               int match_start_point, int max_return_elements,
+                               bool &word_complete,
+                               StringList &matches) override;
+
+  const char *GetRepeatCommand(Args &current_command_args,
+                               uint32_t index) override;
+
+  bool Execute(const char *args_string, CommandReturnObject &result) override;
 
 protected:
-    // These two want to iterate over the subcommand dictionary.
-    friend class CommandInterpreter;
-    friend class CommandObjectSyntax;
+  // These two want to iterate over the subcommand dictionary.
+  friend class CommandInterpreter;
+  friend class CommandObjectSyntax;
 };
 
 } // namespace lldb_private

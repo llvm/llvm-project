@@ -47,13 +47,15 @@ class TestObjCIVarDiscovery(TestBase):
                           "for the inferior")
 
     @decorators.skipUnlessDarwin
-    @decorators.expectedFailureAll(bugnumber="Cannot find complete type from dSYM")
+    @decorators.expectedFailureAll(
+        bugnumber="Cannot find complete type from dSYM")
     def test_dbg(self):
         if self.getArchitecture() == 'x86_64':
             execute_command("make exec")
             self.do_test(True)
         else:
-            self.skipTest("This test requires x86_64 as the architecture for the inferior")
+            self.skipTest(
+                "This test requires x86_64 as the architecture for the inferior")
 
     def prepare_value(self, value):
         value.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
@@ -121,21 +123,31 @@ class TestObjCIVarDiscovery(TestBase):
         self.assertTrue(m_pair_A.GetValueAsUnsigned() == 1, "m_pair.A != 1")
         self.assertTrue(m_pair_B.GetValueAsUnsigned() == 2, "m_pair.B != 2")
 
-        m_derived = self.prepare_value(myclass.GetChildMemberWithName("m_base"))
+        m_derived = self.prepare_value(
+            myclass.GetChildMemberWithName("m_base"))
 
         m_derivedX = m_derived.GetChildMemberWithName("m_DerivedX")
 
-        self.assertTrue(m_derivedX.GetValueAsUnsigned() == 1, "m_DerivedX != 1")
+        self.assertTrue(
+            m_derivedX.GetValueAsUnsigned() == 1,
+            "m_DerivedX != 1")
 
-        m_numbers = self.prepare_value(myclass.GetChildMemberWithName("m_myclass_numbers"))
+        m_numbers = self.prepare_value(
+            myclass.GetChildMemberWithName("m_myclass_numbers"))
 
-        self.assertTrue(m_numbers.GetSummary() == '"3 values"', "m_myclass_numbers != 3 values")
+        self.assertTrue(
+            m_numbers.GetSummary() == '"3 values"',
+            "m_myclass_numbers != 3 values")
 
         m_subclass_ivar = mysubclass.GetChildMemberWithName("m_subclass_ivar")
-        self.assertTrue(m_subclass_ivar.GetValueAsUnsigned() == 42, "m_subclass_ivar != 42")
+        self.assertTrue(
+            m_subclass_ivar.GetValueAsUnsigned() == 42,
+            "m_subclass_ivar != 42")
 
         m_mysubclass_s = mysubclass.GetChildMemberWithName("m_mysubclass_s")
-        self.assertTrue(m_mysubclass_s.GetSummary() == '"an NSString here"', 'm_subclass_s != "an NSString here"')
+        self.assertTrue(
+            m_mysubclass_s.GetSummary() == '"an NSString here"',
+            'm_subclass_s != "an NSString here"')
 
         m_mysubclass_r = mysubclass.GetChildMemberWithName("m_mysubclass_r")
         self.assertTrue(

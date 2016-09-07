@@ -5,24 +5,25 @@ Test lldb data formatter subsystem.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class LibcxxSetDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(compiler="gcc")
-    @skipIfWindows # libc++ not ported to Windows yet
+    @skipIfWindows  # libc++ not ported to Windows yet
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
-        
+
 #        bkpt = self.target().FindBreakpointByID(lldbutil.run_break_set_by_source_regexp (self, "Set break point at this line."))
 
         self.runCmd("run", RUN_SUCCEEDED)

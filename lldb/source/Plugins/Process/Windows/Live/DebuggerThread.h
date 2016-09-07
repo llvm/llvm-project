@@ -19,8 +19,7 @@
 #include "lldb/Host/Predicate.h"
 #include "lldb/Host/windows/windows.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
 //----------------------------------------------------------------------
 // DebuggerThread
@@ -28,72 +27,76 @@ namespace lldb_private
 // Debugs a single process, notifying listeners as appropriate when interesting
 // things occur.
 //----------------------------------------------------------------------
-class DebuggerThread : public std::enable_shared_from_this<DebuggerThread>
-{
-  public:
-    DebuggerThread(DebugDelegateSP debug_delegate);
-    virtual ~DebuggerThread();
+class DebuggerThread : public std::enable_shared_from_this<DebuggerThread> {
+public:
+  DebuggerThread(DebugDelegateSP debug_delegate);
+  virtual ~DebuggerThread();
 
-    Error DebugLaunch(const ProcessLaunchInfo &launch_info);
-    Error DebugAttach(lldb::pid_t pid, const ProcessAttachInfo &attach_info);
+  Error DebugLaunch(const ProcessLaunchInfo &launch_info);
+  Error DebugAttach(lldb::pid_t pid, const ProcessAttachInfo &attach_info);
 
-    HostProcess
-    GetProcess() const
-    {
-        return m_process;
-    }
-    HostThread
-    GetMainThread() const
-    {
-        return m_main_thread;
-    }
-    std::weak_ptr<ExceptionRecord>
-    GetActiveException()
-    {
-        return m_active_exception;
-    }
+  HostProcess GetProcess() const { return m_process; }
+  HostThread GetMainThread() const { return m_main_thread; }
+  std::weak_ptr<ExceptionRecord> GetActiveException() {
+    return m_active_exception;
+  }
 
-    Error StopDebugging(bool terminate);
+  Error StopDebugging(bool terminate);
 
-    void ContinueAsyncException(ExceptionResult result);
+  void ContinueAsyncException(ExceptionResult result);
 
-  private:
-    void FreeProcessHandles();
-    void DebugLoop();
-    ExceptionResult HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info, DWORD thread_id);
-    DWORD HandleCreateThreadEvent(const CREATE_THREAD_DEBUG_INFO &info, DWORD thread_id);
-    DWORD HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info, DWORD thread_id);
-    DWORD HandleExitThreadEvent(const EXIT_THREAD_DEBUG_INFO &info, DWORD thread_id);
-    DWORD HandleExitProcessEvent(const EXIT_PROCESS_DEBUG_INFO &info, DWORD thread_id);
-    DWORD HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info, DWORD thread_id);
-    DWORD HandleUnloadDllEvent(const UNLOAD_DLL_DEBUG_INFO &info, DWORD thread_id);
-    DWORD HandleODSEvent(const OUTPUT_DEBUG_STRING_INFO &info, DWORD thread_id);
-    DWORD HandleRipEvent(const RIP_INFO &info, DWORD thread_id);
+private:
+  void FreeProcessHandles();
+  void DebugLoop();
+  ExceptionResult HandleExceptionEvent(const EXCEPTION_DEBUG_INFO &info,
+                                       DWORD thread_id);
+  DWORD HandleCreateThreadEvent(const CREATE_THREAD_DEBUG_INFO &info,
+                                DWORD thread_id);
+  DWORD HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,
+                                 DWORD thread_id);
+  DWORD HandleExitThreadEvent(const EXIT_THREAD_DEBUG_INFO &info,
+                              DWORD thread_id);
+  DWORD HandleExitProcessEvent(const EXIT_PROCESS_DEBUG_INFO &info,
+                               DWORD thread_id);
+  DWORD HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info, DWORD thread_id);
+  DWORD HandleUnloadDllEvent(const UNLOAD_DLL_DEBUG_INFO &info,
+                             DWORD thread_id);
+  DWORD HandleODSEvent(const OUTPUT_DEBUG_STRING_INFO &info, DWORD thread_id);
+  DWORD HandleRipEvent(const RIP_INFO &info, DWORD thread_id);
 
-    DebugDelegateSP m_debug_delegate;
+  DebugDelegateSP m_debug_delegate;
 
-    HostProcess m_process;    // The process being debugged.
-    HostThread m_main_thread; // The main thread of the inferior.
-    HANDLE m_image_file;      // The image file of the process being debugged.
+  HostProcess m_process;    // The process being debugged.
+  HostThread m_main_thread; // The main thread of the inferior.
+  HANDLE m_image_file;      // The image file of the process being debugged.
 
-    ExceptionRecordSP m_active_exception; // The current exception waiting to be handled
+  ExceptionRecordSP
+      m_active_exception; // The current exception waiting to be handled
 
-    Predicate<ExceptionResult> m_exception_pred; // A predicate which gets signalled when an exception
-                                                 // is finished processing and the debug loop can be
-                                                 // continued.
+  Predicate<ExceptionResult>
+      m_exception_pred; // A predicate which gets signalled when an exception
+                        // is finished processing and the debug loop can be
+                        // continued.
 
-    HANDLE m_debugging_ended_event; // An event which gets signalled by the debugger thread when it
-                                    // exits the debugger loop and is detached from the inferior.
+  HANDLE m_debugging_ended_event; // An event which gets signalled by the
+                                  // debugger thread when it
+  // exits the debugger loop and is detached from the inferior.
 
-    std::atomic<DWORD> m_pid_to_detach;  // Signals the loop to detach from the process (specified by pid).
-    std::atomic<bool> m_is_shutting_down;   // Signals the debug loop to stop processing certain types of
-                                            // events that block shutdown.
-    bool m_detached;  // Indicates we've detached from the inferior process and the debug loop can exit.
+  std::atomic<DWORD> m_pid_to_detach;   // Signals the loop to detach from the
+                                        // process (specified by pid).
+  std::atomic<bool> m_is_shutting_down; // Signals the debug loop to stop
+                                        // processing certain types of
+                                        // events that block shutdown.
+  bool m_detached; // Indicates we've detached from the inferior process and the
+                   // debug loop can exit.
 
-    static lldb::thread_result_t DebuggerThreadLaunchRoutine(void *data);
-    lldb::thread_result_t DebuggerThreadLaunchRoutine(const ProcessLaunchInfo &launch_info);
-    static lldb::thread_result_t DebuggerThreadAttachRoutine(void *data);
-    lldb::thread_result_t DebuggerThreadAttachRoutine(lldb::pid_t pid, const ProcessAttachInfo &launch_info);
+  static lldb::thread_result_t DebuggerThreadLaunchRoutine(void *data);
+  lldb::thread_result_t
+  DebuggerThreadLaunchRoutine(const ProcessLaunchInfo &launch_info);
+  static lldb::thread_result_t DebuggerThreadAttachRoutine(void *data);
+  lldb::thread_result_t
+  DebuggerThreadAttachRoutine(lldb::pid_t pid,
+                              const ProcessAttachInfo &launch_info);
 };
 }
 

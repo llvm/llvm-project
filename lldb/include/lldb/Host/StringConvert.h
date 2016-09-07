@@ -19,7 +19,7 @@
 // Project includes
 
 namespace lldb_private {
-    
+
 namespace StringConvert {
 
 //----------------------------------------------------------------------
@@ -27,20 +27,20 @@ namespace StringConvert {
 /// @brief Utility classes for converting strings into Integers
 //----------------------------------------------------------------------
 
-int32_t
-ToSInt32 (const char *s, int32_t fail_value = 0, int base = 0, bool *success_ptr = nullptr);
+int32_t ToSInt32(const char *s, int32_t fail_value = 0, int base = 0,
+                 bool *success_ptr = nullptr);
 
-uint32_t
-ToUInt32 (const char *s, uint32_t fail_value = 0, int base = 0, bool *success_ptr = nullptr);
+uint32_t ToUInt32(const char *s, uint32_t fail_value = 0, int base = 0,
+                  bool *success_ptr = nullptr);
 
-int64_t
-ToSInt64 (const char *s, int64_t fail_value = 0, int base = 0, bool *success_ptr = nullptr);
+int64_t ToSInt64(const char *s, int64_t fail_value = 0, int base = 0,
+                 bool *success_ptr = nullptr);
 
-uint64_t
-ToUInt64 (const char *s, uint64_t fail_value = 0, int base = 0, bool *success_ptr = nullptr);
+uint64_t ToUInt64(const char *s, uint64_t fail_value = 0, int base = 0,
+                  bool *success_ptr = nullptr);
 
-double
-ToDouble (const char *s, double fail_value = 0.0, bool *success_ptr = nullptr);
+double ToDouble(const char *s, double fail_value = 0.0,
+                bool *success_ptr = nullptr);
 } // namespace StringConvert
 } // namespace lldb_private
 

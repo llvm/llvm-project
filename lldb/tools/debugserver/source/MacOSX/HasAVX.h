@@ -10,18 +10,18 @@
 #ifndef HasAVX_h
 #define HasAVX_h
 
-#if defined (__i386__) || defined (__x86_64__)
+#if defined(__i386__) || defined(__x86_64__)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int HasAVX ();
+int HasAVX();
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif
-    
+
 #endif

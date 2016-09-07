@@ -16,8 +16,7 @@
 
 #include "lldb/lldb-forward.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
 class ProcessWindowsLive;
 typedef std::shared_ptr<ProcessWindowsLive> ProcessWindowsLiveSP;
@@ -26,9 +25,11 @@ typedef std::shared_ptr<ProcessWindowsLive> ProcessWindowsLiveSP;
 // LocalDebugDelegate
 //
 // LocalDebugDelegate creates a connection between a ProcessWindowsLive and the
-// debug driver.  This serves to decouple ProcessWindowsLive from the debug driver.
+// debug driver.  This serves to decouple ProcessWindowsLive from the debug
+// driver.
 // It would be possible to get a similar decoupling by just having
-// ProcessWindowsLive implement this interface directly.  There are two reasons why
+// ProcessWindowsLive implement this interface directly.  There are two reasons
+// why
 // we don't do this:
 //
 // 1) In the future when we add support for local debugging through LLGS, and we
@@ -42,26 +43,26 @@ typedef std::shared_ptr<ProcessWindowsLive> ProcessWindowsLiveSP;
 //    driver), so this adapter serves as a way to transparently hold the
 //    ProcessSP while still keeping it decoupled from the driver.
 //----------------------------------------------------------------------
-class LocalDebugDelegate : public IDebugDelegate
-{
-  public:
-    explicit LocalDebugDelegate(lldb::ProcessWP process);
+class LocalDebugDelegate : public IDebugDelegate {
+public:
+  explicit LocalDebugDelegate(lldb::ProcessWP process);
 
-    void OnExitProcess(uint32_t exit_code) override;
-    void OnDebuggerConnected(lldb::addr_t image_base) override;
-    ExceptionResult OnDebugException(bool first_chance, const ExceptionRecord &record) override;
-    void OnCreateThread(const HostThread &thread) override;
-    void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) override;
-    void OnLoadDll(const lldb_private::ModuleSpec &module_spec, lldb::addr_t module_addr) override;
-    void OnUnloadDll(lldb::addr_t module_addr) override;
-    void OnDebugString(const std::string &message) override;
-    void OnDebuggerError(const Error &error, uint32_t type) override;
+  void OnExitProcess(uint32_t exit_code) override;
+  void OnDebuggerConnected(lldb::addr_t image_base) override;
+  ExceptionResult OnDebugException(bool first_chance,
+                                   const ExceptionRecord &record) override;
+  void OnCreateThread(const HostThread &thread) override;
+  void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) override;
+  void OnLoadDll(const lldb_private::ModuleSpec &module_spec,
+                 lldb::addr_t module_addr) override;
+  void OnUnloadDll(lldb::addr_t module_addr) override;
+  void OnDebugString(const std::string &message) override;
+  void OnDebuggerError(const Error &error, uint32_t type) override;
 
-  private:
-    ProcessWindowsLiveSP
-    GetProcessPointer();
+private:
+  ProcessWindowsLiveSP GetProcessPointer();
 
-    lldb::ProcessWP m_process;
+  lldb::ProcessWP m_process;
 };
 }
 

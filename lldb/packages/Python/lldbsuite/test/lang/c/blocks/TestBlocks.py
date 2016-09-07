@@ -3,13 +3,14 @@
 from __future__ import print_function
 
 
-
 import unittest2
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
+
 
 class BlocksTestCase(TestBase):
 
@@ -32,38 +33,46 @@ class BlocksTestCase(TestBase):
 
         # Break inside the foo function which takes a bar_ptr argument.
         for line in self.lines:
-            lldbutil.run_break_set_by_file_and_line (self, "main.c", line, num_expected_locations=1, loc_exact=True)
+            lldbutil.run_break_set_by_file_and_line(
+                self, "main.c", line, num_expected_locations=1, loc_exact=True)
 
         self.wait_for_breakpoint()
-    
+
     @skipUnlessDarwin
     def test_expr(self):
         self.launch_common()
 
         self.expect("expression a + b", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ["= 7"])
+                    substrs=["= 7"])
 
         self.expect("expression c", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ["= 1"])
+                    substrs=["= 1"])
 
         self.wait_for_breakpoint()
 
         # This should display correctly.
         self.expect("expression (int)neg (-12)", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ["= 12"])
+                    substrs=["= 12"])
 
     @skipUnlessDarwin
     def test_define(self):
         self.launch_common()
 
-        self.runCmd("expression int (^$add)(int, int) = ^int(int a, int b) { return a + b; };")
-        self.expect("expression $add(2,3)", VARIABLES_DISPLAYED_CORRECTLY, substrs = [" = 5"])
+        self.runCmd(
+            "expression int (^$add)(int, int) = ^int(int a, int b) { return a + b; };")
+        self.expect(
+            "expression $add(2,3)",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[" = 5"])
 
         self.runCmd("expression int $a = 3")
-        self.expect("expression int (^$addA)(int) = ^int(int b) { return $a + b; };", "Proper error is reported on capture", error=True)
-    
+        self.expect(
+            "expression int (^$addA)(int) = ^int(int b) { return $a + b; };",
+            "Proper error is reported on capture",
+            error=True)
+
     def wait_for_breakpoint(self):
-        if self.is_started == False:
+        if not self.is_started:
             self.is_started = True
             self.runCmd("process launch", RUN_SUCCEEDED)
         else:
@@ -71,5 +80,5 @@ class BlocksTestCase(TestBase):
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])

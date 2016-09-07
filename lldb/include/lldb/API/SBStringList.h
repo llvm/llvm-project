@@ -14,59 +14,44 @@
 
 namespace lldb {
 
-class LLDB_API SBStringList
-{
+class LLDB_API SBStringList {
 public:
+  SBStringList();
 
-    SBStringList ();
+  SBStringList(const lldb::SBStringList &rhs);
 
-    SBStringList (const lldb::SBStringList &rhs);
-    
-    const SBStringList &
-    operator = (const SBStringList &rhs);
+  const SBStringList &operator=(const SBStringList &rhs);
 
-    ~SBStringList ();
+  ~SBStringList();
 
-    bool
-    IsValid() const;
+  bool IsValid() const;
 
-    void
-    AppendString (const char *str);
+  void AppendString(const char *str);
 
-    void
-    AppendList (const char **strv, int strc);
+  void AppendList(const char **strv, int strc);
 
-    void
-    AppendList (const lldb::SBStringList &strings);
+  void AppendList(const lldb::SBStringList &strings);
 
-    uint32_t
-    GetSize () const;
+  uint32_t GetSize() const;
 
-    const char *
-    GetStringAtIndex (size_t idx);
+  const char *GetStringAtIndex(size_t idx);
 
-    const char *
-    GetStringAtIndex (size_t idx) const;
+  const char *GetStringAtIndex(size_t idx) const;
 
-    void
-    Clear ();
+  void Clear();
 
 protected:
-    friend class SBCommandInterpreter;
-    friend class SBDebugger;
+  friend class SBCommandInterpreter;
+  friend class SBDebugger;
 
-    SBStringList (const lldb_private::StringList *lldb_strings);
+  SBStringList(const lldb_private::StringList *lldb_strings);
 
-    const lldb_private::StringList *
-    operator->() const;
+  const lldb_private::StringList *operator->() const;
 
-    const lldb_private::StringList &
-    operator*() const;
+  const lldb_private::StringList &operator*() const;
 
 private:
-
-    std::unique_ptr<lldb_private::StringList> m_opaque_ap;
-
+  std::unique_ptr<lldb_private::StringList> m_opaque_ap;
 };
 
 } // namespace lldb

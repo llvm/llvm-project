@@ -33,7 +33,7 @@ class TestSwiftGlobals(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
         """Check that we can examine module globals in the expression parser"""
@@ -45,10 +45,12 @@ class TestSwiftGlobals(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        outer_bkpt = target.BreakpointCreateBySourceRegex('Set top_level breakpoint here', self.main_source_spec)
+        outer_bkpt = target.BreakpointCreateBySourceRegex(
+            'Set top_level breakpoint here', self.main_source_spec)
         self.assertTrue(outer_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
-        function_bkpt = target.BreakpointCreateBySourceRegex('Set function breakpoint here', self.main_source_spec)
+        function_bkpt = target.BreakpointCreateBySourceRegex(
+            'Set function breakpoint here', self.main_source_spec)
         self.assertTrue(function_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -63,7 +65,8 @@ class TestSwiftGlobals(TestBase):
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
 
-        # All the variables should be uninitialized at this point.  Maybe sure they look that way:
+        # All the variables should be uninitialized at this point.  Maybe sure
+        # they look that way:
         frame = self.thread.frames[0]
         options = lldb.SBExpressionOptions()
         options.SetFetchDynamicValue(lldb.eDynamicCanRunTarget)
@@ -73,22 +76,31 @@ class TestSwiftGlobals(TestBase):
         # Examine the variables before initialization:
 
         g_counter = frame.EvaluateExpression("g_counter", options)
-        self.assertTrue(g_counter.IsValid(), "g_counter returned a valid value object.")
+        self.assertTrue(
+            g_counter.IsValid(),
+            "g_counter returned a valid value object.")
         value = g_counter.GetValueAsSigned(error)
         self.assertTrue(error.Success(), "Got a value for g_counter")
-        self.assertTrue(value == 0, "g_counter value is the uninitialized one.")
+        self.assertTrue(
+            value == 0,
+            "g_counter value is the uninitialized one.")
 
         foo_var = frame.EvaluateExpression("my_foo", options)
-        self.assertTrue(foo_var.IsValid(), "foo_var returned a valid value object.")
+        self.assertTrue(
+            foo_var.IsValid(),
+            "foo_var returned a valid value object.")
         value = foo_var.GetValueAsUnsigned(error)
         self.assertTrue(error.Success(), "foo_var has a value.")
         self.assertTrue(value == 0, "foo_var is null before initialization.")
 
         my_large_dude = frame.EvaluateExpression("my_large_dude", options)
-        self.assertTrue(my_large_dude.IsValid(), "my_large_dude returned a valid value object.")
+        self.assertTrue(my_large_dude.IsValid(),
+                        "my_large_dude returned a valid value object.")
         value = my_large_dude.GetValue()
         self.assertTrue(error.Success(), "Got a value for my_large_dude")
-        self.assertTrue(value == None, "my_large_dude value is the uninitialized one.")
+        self.assertTrue(
+            value is None,
+            "my_large_dude value is the uninitialized one.")
 
         # Now proceed to the breakpoint in our main function, make sure we can
         # still read these variables and they now have the right values.
@@ -100,13 +112,17 @@ class TestSwiftGlobals(TestBase):
         # Examine the variables before initialization:
 
         g_counter = frame.EvaluateExpression("g_counter", options)
-        self.assertTrue(g_counter.IsValid(), "g_counter returned a valid value object.")
+        self.assertTrue(
+            g_counter.IsValid(),
+            "g_counter returned a valid value object.")
         value = g_counter.GetValueAsSigned(error)
         self.assertTrue(error.Success(), "Got a value for g_counter")
         self.assertTrue(value == 2, "g_counter value should be 2.")
 
         foo_var = frame.EvaluateExpression("my_foo", options)
-        self.assertTrue(foo_var.IsValid(), "foo_var returned a valid value object.")
+        self.assertTrue(
+            foo_var.IsValid(),
+            "foo_var returned a valid value object.")
         foo_var_x = foo_var.GetChildMemberWithName("x")
         self.assertTrue(foo_var_x.IsValid(), "Got value object for foo_var.x")
         value = foo_var_x.GetValueAsUnsigned(error)
@@ -114,12 +130,17 @@ class TestSwiftGlobals(TestBase):
         self.assertTrue(value == 1, "foo_var is null before initialization.")
 
         my_large_dude = frame.EvaluateExpression("my_large_dude", options)
-        self.assertTrue(my_large_dude.IsValid(), "my_large_dude returned a valid value object.")
+        self.assertTrue(my_large_dude.IsValid(),
+                        "my_large_dude returned a valid value object.")
         my_large_dude_y = my_large_dude.GetChildMemberWithName("y")
-        self.assertTrue(my_large_dude_y.IsValid(), "Got value object for my_large_dude.y")
+        self.assertTrue(
+            my_large_dude_y.IsValid(),
+            "Got value object for my_large_dude.y")
         value = my_large_dude_y.GetValueAsUnsigned(error)
         self.assertTrue(error.Success(), "Got a value for my_large_dude.y")
-        self.assertTrue(value == 20, "my_large_dude value is the uninitialized one.")
+        self.assertTrue(
+            value == 20,
+            "my_large_dude value is the uninitialized one.")
 
 if __name__ == '__main__':
     import atexit

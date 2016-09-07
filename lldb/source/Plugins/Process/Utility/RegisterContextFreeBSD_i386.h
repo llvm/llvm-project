@@ -12,20 +12,15 @@
 
 #include "RegisterInfoInterface.h"
 
-class RegisterContextFreeBSD_i386
-  : public lldb_private::RegisterInfoInterface
-{
+class RegisterContextFreeBSD_i386 : public lldb_private::RegisterInfoInterface {
 public:
-    RegisterContextFreeBSD_i386(const lldb_private::ArchSpec &target_arch);
+  RegisterContextFreeBSD_i386(const lldb_private::ArchSpec &target_arch);
 
-    size_t
-    GetGPRSize() const override;
+  size_t GetGPRSize() const override;
 
-    const lldb_private::RegisterInfo *
-    GetRegisterInfo() const override;
+  const lldb_private::RegisterInfo *GetRegisterInfo() const override;
 
-    uint32_t
-    GetRegisterCount () const override;
+  uint32_t GetRegisterCount() const override;
 };
 
 #endif

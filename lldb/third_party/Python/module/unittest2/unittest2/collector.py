@@ -2,6 +2,7 @@ import os
 import sys
 from unittest2.loader import defaultTestLoader
 
+
 def collector():
     # import __main__ triggers code re-execution
     __main__ = sys.modules['__main__']

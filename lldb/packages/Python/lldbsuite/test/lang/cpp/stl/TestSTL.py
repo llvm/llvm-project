@@ -5,13 +5,14 @@ Test some expressions involving STL data types.
 from __future__ import print_function
 
 
-
 import unittest2
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class STLTestCase(TestBase):
 
@@ -22,7 +23,8 @@ class STLTestCase(TestBase):
         TestBase.setUp(self)
         # Find the line number to break inside main().
         self.source = 'main.cpp'
-        self.line = line_number(self.source, '// Set break point at this line.')
+        self.line = line_number(
+            self.source, '// Set break point at this line.')
 
     @expectedFailureAll(bugnumber="rdar://problem/10400981")
     def test(self):
@@ -32,42 +34,46 @@ class STLTestCase(TestBase):
 
         # The following two lines, if uncommented, will enable loggings.
         #self.ci.HandleCommand("log enable -f /tmp/lldb.log lldb default", res)
-        #self.assertTrue(res.Succeeded())
+        # self.assertTrue(res.Succeeded())
 
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # rdar://problem/8543077
         # test/stl: clang built binaries results in the breakpoint locations = 3,
         # is this a problem with clang generated debug info?
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # Stop at 'std::string hello_world ("Hello World!");'.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['main.cpp:%d' % self.line,
-                       'stop reason = breakpoint'])
+                    substrs=['main.cpp:%d' % self.line,
+                             'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-            substrs = [' resolved, hit count = 1'])
+                    substrs=[' resolved, hit count = 1'])
 
         # Now try some expressions....
 
-        self.runCmd('expr for (int i = 0; i < hello_world.length(); ++i) { (void)printf("%c\\n", hello_world[i]); }')
+        self.runCmd(
+            'expr for (int i = 0; i < hello_world.length(); ++i) { (void)printf("%c\\n", hello_world[i]); }')
 
         # rdar://problem/10373783
         # rdar://problem/10400981
         self.expect('expr associative_array.size()',
-            substrs = [' = 3'])
+                    substrs=[' = 3'])
         self.expect('expr associative_array.count(hello_world)',
-            substrs = [' = 1'])
+                    substrs=[' = 1'])
         self.expect('expr associative_array[hello_world]',
-            substrs = [' = 1'])
+                    substrs=[' = 1'])
         self.expect('expr associative_array["hello"]',
-            substrs = [' = 2'])
+                    substrs=[' = 2'])
 
-    @expectedFailureAll(compiler="icc", bugnumber="ICC (13.1, 14-beta) do not emit DW_TAG_template_type_parameter.")
+    @expectedFailureAll(
+        compiler="icc",
+        bugnumber="ICC (13.1, 14-beta) do not emit DW_TAG_template_type_parameter.")
     @add_test_categories(['pyapi'])
     def test_SBType_template_aspects(self):
         """Test APIs for getting template arguments from an SBType."""
@@ -83,13 +89,17 @@ class STLTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Get Frame #0.
         self.assertTrue(process.GetState() == lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), "There should be a thread stopped due to breakpoint condition")
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint condition")
         frame0 = thread.GetFrameAtIndex(0)
 
         # Get the type for variable 'associative_array'.
@@ -102,8 +112,9 @@ class STLTestCase(TestBase):
         num_template_args = map_type.GetNumberOfTemplateArguments()
         self.assertTrue(num_template_args > 0)
 
-        # We expect the template arguments to contain at least 'string' and 'int'.
-        expected_types = { 'string': False, 'int': False }
+        # We expect the template arguments to contain at least 'string' and
+        # 'int'.
+        expected_types = {'string': False, 'int': False}
         for i in range(num_template_args):
             t = map_type.GetTemplateArgumentType(i)
             self.DebugSBType(t)

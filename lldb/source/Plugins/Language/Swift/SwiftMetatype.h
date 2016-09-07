@@ -16,17 +16,13 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
-namespace lldb_private
-{
-    namespace formatters
-    {
-        namespace swift
-        {
-            bool
-            SwiftMetatype_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
-        }
-    }
+namespace lldb_private {
+namespace formatters {
+namespace swift {
+bool SwiftMetatype_SummaryProvider(ValueObject &valobj, Stream &stream,
+                                   const TypeSummaryOptions &options);
+}
+}
 }
 
-#endif  // liblldb_SwiftMetatype_h_
-
+#endif // liblldb_SwiftMetatype_h_

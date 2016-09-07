@@ -1,4 +1,5 @@
-//===-- lldb-python.h --------------------------------------------*- C++ -*-===//
+//===-- lldb-python.h --------------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,14 +11,16 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H
 
-// Python.h needs to be included before any system headers in order to avoid redefinition of macros
+// Python.h needs to be included before any system headers in order to avoid
+// redefinition of macros
 
 #ifdef LLDB_DISABLE_PYTHON
 // Python is disabled in this build
 #else
 #include "llvm/Support/Compiler.h"
 #if defined(LLVM_ON_WIN32)
-// If anyone #includes Host/PosixApi.h later, it will try to typedef pid_t.  We need to ensure
+// If anyone #includes Host/PosixApi.h later, it will try to typedef pid_t.  We
+// need to ensure
 // this doesn't happen.
 #define NO_PID_T
 #endif

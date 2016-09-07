@@ -18,13 +18,11 @@
 
 namespace lldb_private {
 
-class CommandObjectMultiwordThread : public CommandObjectMultiword
-{
+class CommandObjectMultiwordThread : public CommandObjectMultiword {
 public:
+  CommandObjectMultiwordThread(CommandInterpreter &interpreter);
 
-    CommandObjectMultiwordThread (CommandInterpreter &interpreter);
-
-    ~CommandObjectMultiwordThread() override;
+  ~CommandObjectMultiwordThread() override;
 };
 
 } // namespace lldb_private

@@ -18,4 +18,3 @@ log_success = False
 
 # path to the lldb command line executable tool
 lldbExec = None
-

@@ -44,7 +44,8 @@ class TestSwiftBacktracePrinting(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('break here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.

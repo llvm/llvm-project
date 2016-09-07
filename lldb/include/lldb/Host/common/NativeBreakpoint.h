@@ -12,55 +12,45 @@
 
 #include "lldb/lldb-types.h"
 
-namespace lldb_private
-{
-    class NativeBreakpointList;
+namespace lldb_private {
+class NativeBreakpointList;
 
-    class NativeBreakpoint
-    {
-        friend class NativeBreakpointList;
+class NativeBreakpoint {
+  friend class NativeBreakpointList;
 
-    public:
-        // The assumption is that derived breakpoints are enabled when created.
-        NativeBreakpoint (lldb::addr_t addr);
+public:
+  // The assumption is that derived breakpoints are enabled when created.
+  NativeBreakpoint(lldb::addr_t addr);
 
-        virtual
-        ~NativeBreakpoint ();
+  virtual ~NativeBreakpoint();
 
-        Error
-        Enable ();
+  Error Enable();
 
-        Error
-        Disable ();
+  Error Disable();
 
-        lldb::addr_t
-        GetAddress () const { return m_addr; }
+  lldb::addr_t GetAddress() const { return m_addr; }
 
-        bool
-        IsEnabled () const { return m_enabled; }
+  bool IsEnabled() const { return m_enabled; }
 
-        virtual bool
-        IsSoftwareBreakpoint () const = 0;
+  virtual bool IsSoftwareBreakpoint() const = 0;
 
-    protected:
-        const lldb::addr_t m_addr;
-        int32_t m_ref_count;
+protected:
+  const lldb::addr_t m_addr;
+  int32_t m_ref_count;
 
-        virtual Error
-        DoEnable () = 0;
+  virtual Error DoEnable() = 0;
 
-        virtual Error
-        DoDisable () = 0;
+  virtual Error DoDisable() = 0;
 
-    private:
-        bool m_enabled;
+private:
+  bool m_enabled;
 
-        // -----------------------------------------------------------
-        // interface for NativeBreakpointList
-        // -----------------------------------------------------------
-        void AddRef ();
-        int32_t DecRef ();
-    };
+  // -----------------------------------------------------------
+  // interface for NativeBreakpointList
+  // -----------------------------------------------------------
+  void AddRef();
+  int32_t DecRef();
+};
 }
 
 #endif // ifndef liblldb_NativeBreakpoint_h_

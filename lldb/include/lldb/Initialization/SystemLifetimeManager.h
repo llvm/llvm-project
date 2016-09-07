@@ -15,28 +15,26 @@
 #include <memory>
 #include <mutex>
 
-namespace lldb_private
-{
+namespace lldb_private {
 class SystemInitializer;
 
-class SystemLifetimeManager
-{
-  public:
-    SystemLifetimeManager();
-    ~SystemLifetimeManager();
+class SystemLifetimeManager {
+public:
+  SystemLifetimeManager();
+  ~SystemLifetimeManager();
 
-    void Initialize(std::unique_ptr<SystemInitializer> initializer, LoadPluginCallbackType plugin_callback);
-    void Terminate();
+  void Initialize(std::unique_ptr<SystemInitializer> initializer,
+                  LoadPluginCallbackType plugin_callback);
+  void Terminate();
 
-  private:
-      std::recursive_mutex m_mutex;
-      std::unique_ptr<SystemInitializer> m_initializer;
-      bool m_initialized;
+private:
+  std::recursive_mutex m_mutex;
+  std::unique_ptr<SystemInitializer> m_initializer;
+  bool m_initialized;
 
-      // Noncopyable.
-      SystemLifetimeManager(const SystemLifetimeManager &other) = delete;
-      SystemLifetimeManager &
-      operator=(const SystemLifetimeManager &other) = delete;
+  // Noncopyable.
+  SystemLifetimeManager(const SystemLifetimeManager &other) = delete;
+  SystemLifetimeManager &operator=(const SystemLifetimeManager &other) = delete;
 };
 }
 

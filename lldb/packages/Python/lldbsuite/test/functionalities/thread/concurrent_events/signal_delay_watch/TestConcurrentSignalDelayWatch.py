@@ -12,13 +12,13 @@ class ConcurrentSignalDelayWatch(ConcurrentEventsBase):
 
     mydir = ConcurrentEventsBase.compute_mydir(__file__)
 
-    @skipIfFreeBSD # timing out on buildbot
+    @skipIfFreeBSD  # timing out on buildbot
     @skipIfRemoteDueToDeadlock
-    @expectedFailureAll(triple = '^mips') # Atomic sequences are not supported yet for MIPS in LLDB.
+    # Atomic sequences are not supported yet for MIPS in LLDB.
+    @expectedFailureAll(triple='^mips')
     def test_signal_delay_watch(self):
         """Test a (1 second delay) watchpoint and a signal in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
-        self.do_thread_actions(num_signal_threads=1, num_delay_watchpoint_threads=1)
-
-
-
+        self.do_thread_actions(
+            num_signal_threads=1,
+            num_delay_watchpoint_threads=1)

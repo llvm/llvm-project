@@ -12,13 +12,9 @@
 
 #include "DNBDefs.h"
 
-class OsLogger
-{
+class OsLogger {
 public:
-
-    static DNBCallbackLog
-    GetLogFunction();
-
+  static DNBCallbackLog GetLogFunction();
 };
 
 #endif /* OsLogger_h */

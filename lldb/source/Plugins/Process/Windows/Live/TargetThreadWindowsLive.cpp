@@ -16,9 +16,9 @@
 #include "lldb/Host/windows/windows.h"
 #include "lldb/Target/RegisterContext.h"
 
-#include "TargetThreadWindowsLive.h"
 #include "ProcessWindows.h"
 #include "ProcessWindowsLog.h"
+#include "TargetThreadWindowsLive.h"
 #include "UnwindLLDB.h"
 
 #if defined(_WIN64)
@@ -30,118 +30,95 @@
 using namespace lldb;
 using namespace lldb_private;
 
-TargetThreadWindowsLive::TargetThreadWindowsLive(ProcessWindows &process, const HostThread &thread)
-    : TargetThreadWindows(process, thread)
-    , m_host_thread(thread)
-{
+TargetThreadWindowsLive::TargetThreadWindowsLive(ProcessWindows &process,
+                                                 const HostThread &thread)
+    : TargetThreadWindows(process, thread), m_host_thread(thread) {}
+
+TargetThreadWindowsLive::~TargetThreadWindowsLive() { DestroyThread(); }
+
+void TargetThreadWindowsLive::RefreshStateAfterStop() {
+  ::SuspendThread(m_host_thread.GetNativeThread().GetSystemHandle());
+  SetState(eStateStopped);
+  GetRegisterContext()->InvalidateIfNeeded(false);
 }
 
-TargetThreadWindowsLive::~TargetThreadWindowsLive()
-{
-    DestroyThread();
-}
+void TargetThreadWindowsLive::WillResume(lldb::StateType resume_state) {}
 
-void
-TargetThreadWindowsLive::RefreshStateAfterStop()
-{
-    ::SuspendThread(m_host_thread.GetNativeThread().GetSystemHandle());
-    SetState(eStateStopped);
-    GetRegisterContext()->InvalidateIfNeeded(false);
-}
+void TargetThreadWindowsLive::DidStop() {}
 
-void
-TargetThreadWindowsLive::WillResume(lldb::StateType resume_state)
-{
-}
+RegisterContextSP TargetThreadWindowsLive::GetRegisterContext() {
+  if (!m_reg_context_sp)
+    m_reg_context_sp = CreateRegisterContextForFrameIndex(0);
 
-void
-TargetThreadWindowsLive::DidStop()
-{
+  return m_reg_context_sp;
 }
 
 RegisterContextSP
-TargetThreadWindowsLive::GetRegisterContext()
-{
-    if (!m_reg_context_sp)
-        m_reg_context_sp = CreateRegisterContextForFrameIndex(0);
-
-    return m_reg_context_sp;
+TargetThreadWindowsLive::CreateRegisterContextForFrame(StackFrame *frame) {
+  return CreateRegisterContextForFrameIndex(frame->GetConcreteFrameIndex());
 }
 
 RegisterContextSP
-TargetThreadWindowsLive::CreateRegisterContextForFrame(StackFrame *frame)
-{
-    return CreateRegisterContextForFrameIndex(frame->GetConcreteFrameIndex());
-}
-
-RegisterContextSP
-TargetThreadWindowsLive::CreateRegisterContextForFrameIndex(uint32_t idx)
-{
-    if (!m_reg_context_sp)
-    {
-        ArchSpec arch = HostInfo::GetArchitecture();
-        switch (arch.GetMachine())
-        {
-            case llvm::Triple::x86:
+TargetThreadWindowsLive::CreateRegisterContextForFrameIndex(uint32_t idx) {
+  if (!m_reg_context_sp) {
+    ArchSpec arch = HostInfo::GetArchitecture();
+    switch (arch.GetMachine()) {
+    case llvm::Triple::x86:
 #if defined(_WIN64)
-                // FIXME: This is a Wow64 process, create a RegisterContextWindows_Wow64
+// FIXME: This is a Wow64 process, create a RegisterContextWindows_Wow64
 #else
-                m_reg_context_sp.reset(new RegisterContextWindowsLive_x86(*this, idx));
+      m_reg_context_sp.reset(new RegisterContextWindowsLive_x86(*this, idx));
 #endif
-                break;
-            case llvm::Triple::x86_64:
+      break;
+    case llvm::Triple::x86_64:
 #if defined(_WIN64)
-                m_reg_context_sp.reset(new RegisterContextWindowsLive_x64(*this, idx));
+      m_reg_context_sp.reset(new RegisterContextWindowsLive_x64(*this, idx));
 #else
-                // LLDB is 32-bit, but the target process is 64-bit.  We probably can't debug this.
+// LLDB is 32-bit, but the target process is 64-bit.  We probably can't debug
+// this.
 #endif
-            default:
-                break;
-        }
+    default:
+      break;
     }
-    return m_reg_context_sp;
+  }
+  return m_reg_context_sp;
 }
 
-bool
-TargetThreadWindowsLive::CalculateStopInfo()
-{
-    SetStopInfo(m_stop_info_sp);
+bool TargetThreadWindowsLive::CalculateStopInfo() {
+  SetStopInfo(m_stop_info_sp);
+  return true;
+}
+
+Unwind *TargetThreadWindowsLive::GetUnwinder() {
+  // FIXME: Implement an unwinder based on the Windows unwinder exposed through
+  // DIA SDK.
+  if (m_unwinder_ap.get() == NULL)
+    m_unwinder_ap.reset(new UnwindLLDB(*this));
+  return m_unwinder_ap.get();
+}
+
+bool TargetThreadWindowsLive::DoResume() {
+  StateType resume_state = GetTemporaryResumeState();
+  StateType current_state = GetState();
+  if (resume_state == current_state)
     return true;
-}
 
-Unwind *
-TargetThreadWindowsLive::GetUnwinder()
-{
-    // FIXME: Implement an unwinder based on the Windows unwinder exposed through DIA SDK.
-    if (m_unwinder_ap.get() == NULL)
-        m_unwinder_ap.reset(new UnwindLLDB(*this));
-    return m_unwinder_ap.get();
-}
+  if (resume_state == eStateStepping) {
+    uint32_t flags_index =
+        GetRegisterContext()->ConvertRegisterKindToRegisterNumber(
+            eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
+    uint64_t flags_value =
+        GetRegisterContext()->ReadRegisterAsUnsigned(flags_index, 0);
+    flags_value |= 0x100; // Set the trap flag on the CPU
+    GetRegisterContext()->WriteRegisterFromUnsigned(flags_index, flags_value);
+  }
 
-bool
-TargetThreadWindowsLive::DoResume()
-{
-    StateType resume_state = GetTemporaryResumeState();
-    StateType current_state = GetState();
-    if (resume_state == current_state)
-        return true;
-
-    if (resume_state == eStateStepping)
-    {
-        uint32_t flags_index = GetRegisterContext()->ConvertRegisterKindToRegisterNumber(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
-        uint64_t flags_value = GetRegisterContext()->ReadRegisterAsUnsigned(flags_index, 0);
-        flags_value |= 0x100; // Set the trap flag on the CPU
-        GetRegisterContext()->WriteRegisterFromUnsigned(flags_index, flags_value);
-    }
-
-    if (resume_state == eStateStepping || resume_state == eStateRunning)
-    {
-        DWORD previous_suspend_count = 0;
-        HANDLE thread_handle = m_host_thread.GetNativeThread().GetSystemHandle();
-        do
-        {
-            previous_suspend_count = ::ResumeThread(thread_handle);
-        } while (previous_suspend_count > 0);
-    }
-    return true;
+  if (resume_state == eStateStepping || resume_state == eStateRunning) {
+    DWORD previous_suspend_count = 0;
+    HANDLE thread_handle = m_host_thread.GetNativeThread().GetSystemHandle();
+    do {
+      previous_suspend_count = ::ResumeThread(thread_handle);
+    } while (previous_suspend_count > 0);
+  }
+  return true;
 }

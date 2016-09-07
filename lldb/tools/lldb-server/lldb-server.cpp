@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Initialization/SystemLifetimeManager.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
+#include "lldb/Initialization/SystemLifetimeManager.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -17,66 +17,57 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static llvm::ManagedStatic<lldb_private::SystemLifetimeManager> g_debugger_lifetime;
+static llvm::ManagedStatic<lldb_private::SystemLifetimeManager>
+    g_debugger_lifetime;
 
-static void
-display_usage (const char *progname)
-{
-    fprintf(stderr, "Usage:\n"
-            "  %s v[ersion]\n"
-            "  %s g[dbserver] [options]\n"
-            "  %s p[latform] [options]\n"
-            "Invoke subcommand for additional help\n", progname, progname, progname);
-    exit(0);
+static void display_usage(const char *progname) {
+  fprintf(stderr, "Usage:\n"
+                  "  %s v[ersion]\n"
+                  "  %s g[dbserver] [options]\n"
+                  "  %s p[latform] [options]\n"
+                  "Invoke subcommand for additional help\n",
+          progname, progname, progname);
+  exit(0);
 }
 
 // Forward declarations of subcommand main methods.
-int main_gdbserver (int argc, char *argv[]);
-int main_platform (int argc, char *argv[]);
+int main_gdbserver(int argc, char *argv[]);
+int main_platform(int argc, char *argv[]);
 
-static void
-initialize ()
-{
-    g_debugger_lifetime->Initialize(llvm::make_unique<lldb_private::SystemInitializerCommon>(), nullptr);
+static void initialize() {
+  g_debugger_lifetime->Initialize(
+      llvm::make_unique<lldb_private::SystemInitializerCommon>(), nullptr);
 }
 
-static void
-terminate ()
-{
-    g_debugger_lifetime->Terminate();
-}
+static void terminate() { g_debugger_lifetime->Terminate(); }
 
 //----------------------------------------------------------------------
 // main
 //----------------------------------------------------------------------
-int
-main (int argc, char *argv[])
-{
-    int option_error = 0;
-    const char *progname = argv[0];
-    if (argc < 2)
-    {
-        display_usage(progname);
-        exit(option_error);
-    }
+int main(int argc, char *argv[]) {
+  int option_error = 0;
+  const char *progname = argv[0];
+  if (argc < 2) {
+    display_usage(progname);
+    exit(option_error);
+  }
 
-    switch (argv[1][0])
-    {
-        case 'g':
-            initialize();
-            main_gdbserver(argc, argv);
-            terminate();
-            break;
-        case 'p':
-            initialize();
-            main_platform(argc, argv);
-            terminate();
-            break;
-        case 'v':
-            fprintf(stderr, "%s\n", lldb_private::GetVersion());
-            break;
-        default:
-            display_usage(progname);
-            exit(option_error);
-    }
+  switch (argv[1][0]) {
+  case 'g':
+    initialize();
+    main_gdbserver(argc, argv);
+    terminate();
+    break;
+  case 'p':
+    initialize();
+    main_platform(argc, argv);
+    terminate();
+    break;
+  case 'v':
+    fprintf(stderr, "%s\n", lldb_private::GetVersion());
+    break;
+  default:
+    display_usage(progname);
+    exit(option_error);
+  }
 }

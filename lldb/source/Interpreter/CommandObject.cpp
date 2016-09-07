@@ -9,12 +9,12 @@
 
 #include "lldb/Interpreter/CommandObject.h"
 
-#include <string>
-#include <sstream>
 #include <map>
+#include <sstream>
+#include <string>
 
-#include <stdlib.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/ArchSpec.h"
@@ -22,9 +22,9 @@
 
 // These are for the Sourcename completers.
 // FIXME: Make a separate file for the completers.
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/DataFormatters/FormatManager.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 
@@ -40,1079 +40,1012 @@ using namespace lldb_private;
 // CommandObject
 //-------------------------------------------------------------------------
 
-CommandObject::CommandObject 
-(
-    CommandInterpreter &interpreter, 
-    const char *name, 
-    const char *help, 
-    const char *syntax, 
-    uint32_t flags
-) :
-    m_interpreter (interpreter),
-    m_cmd_name (name ? name : ""),
-    m_cmd_help_short (),
-    m_cmd_help_long (),
-    m_cmd_syntax (),
-    m_flags (flags),
-    m_arguments(),
-    m_deprecated_command_override_callback (nullptr),
-    m_command_override_callback (nullptr),
-    m_command_override_baton (nullptr)
-{
-    if (help && help[0])
-        m_cmd_help_short = help;
-    if (syntax && syntax[0])
-        m_cmd_syntax = syntax;
+CommandObject::CommandObject(CommandInterpreter &interpreter, const char *name,
+                             const char *help, const char *syntax,
+                             uint32_t flags)
+    : m_interpreter(interpreter), m_cmd_name(name ? name : ""),
+      m_cmd_help_short(), m_cmd_help_long(), m_cmd_syntax(), m_flags(flags),
+      m_arguments(), m_deprecated_command_override_callback(nullptr),
+      m_command_override_callback(nullptr), m_command_override_baton(nullptr) {
+  if (help && help[0])
+    m_cmd_help_short = help;
+  if (syntax && syntax[0])
+    m_cmd_syntax = syntax;
 }
 
-CommandObject::~CommandObject ()
-{
-}
+CommandObject::~CommandObject() {}
 
-const char *
-CommandObject::GetHelp ()
-{
-    return m_cmd_help_short.c_str();
-}
+const char *CommandObject::GetHelp() { return m_cmd_help_short.c_str(); }
 
-const char *
-CommandObject::GetHelpLong ()
-{
-    return m_cmd_help_long.c_str();
-}
+const char *CommandObject::GetHelpLong() { return m_cmd_help_long.c_str(); }
 
-const char *
-CommandObject::GetSyntax ()
-{
-    if (m_cmd_syntax.length() == 0)
-    {
-        StreamString syntax_str;
-        syntax_str.Printf ("%s", GetCommandName());
-        if (!IsDashDashCommand() && GetOptions() != nullptr)
-            syntax_str.Printf (" <cmd-options>");
-        if (m_arguments.size() > 0)
-        {
-            syntax_str.Printf (" ");
-            if (!IsDashDashCommand() && WantsRawCommandString() && GetOptions() && GetOptions()->NumCommandOptions())
-                syntax_str.Printf("-- ");
-            GetFormattedCommandArguments (syntax_str);
-        }
-        m_cmd_syntax = syntax_str.GetData ();
+const char *CommandObject::GetSyntax() {
+  if (m_cmd_syntax.length() == 0) {
+    StreamString syntax_str;
+    syntax_str.Printf("%s", GetCommandName());
+    if (!IsDashDashCommand() && GetOptions() != nullptr)
+      syntax_str.Printf(" <cmd-options>");
+    if (m_arguments.size() > 0) {
+      syntax_str.Printf(" ");
+      if (!IsDashDashCommand() && WantsRawCommandString() && GetOptions() &&
+          GetOptions()->NumCommandOptions())
+        syntax_str.Printf("-- ");
+      GetFormattedCommandArguments(syntax_str);
     }
+    m_cmd_syntax = syntax_str.GetData();
+  }
 
-    return m_cmd_syntax.c_str();
+  return m_cmd_syntax.c_str();
 }
 
-const char *
-CommandObject::GetCommandName ()
-{
-    return m_cmd_name.c_str();
+const char *CommandObject::GetCommandName() { return m_cmd_name.c_str(); }
+
+void CommandObject::SetCommandName(const char *name) { m_cmd_name = name; }
+
+void CommandObject::SetHelp(const char *cstr) {
+  if (cstr)
+    m_cmd_help_short = cstr;
+  else
+    m_cmd_help_short.assign("");
 }
 
-void
-CommandObject::SetCommandName (const char *name)
-{
-    m_cmd_name = name;
+void CommandObject::SetHelpLong(const char *cstr) {
+  if (cstr)
+    m_cmd_help_long = cstr;
+  else
+    m_cmd_help_long.assign("");
 }
 
-void
-CommandObject::SetHelp (const char *cstr)
-{
-    if (cstr)
-        m_cmd_help_short = cstr;
-    else
-        m_cmd_help_short.assign("");
+void CommandObject::SetSyntax(const char *cstr) { m_cmd_syntax = cstr; }
+
+Options *CommandObject::GetOptions() {
+  // By default commands don't have options unless this virtual function
+  // is overridden by base classes.
+  return nullptr;
 }
 
-void
-CommandObject::SetHelpLong (const char *cstr)
-{
-    if (cstr)
-        m_cmd_help_long = cstr;
-    else
-        m_cmd_help_long.assign("");
-}
+bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
+  // See if the subclass has options?
+  Options *options = GetOptions();
+  if (options != nullptr) {
+    Error error;
 
-void
-CommandObject::SetSyntax (const char *cstr)
-{
-    m_cmd_syntax = cstr;
-}
+    auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
+    options->NotifyOptionParsingStarting(&exe_ctx);
 
-Options *
-CommandObject::GetOptions ()
-{
-    // By default commands don't have options unless this virtual function
-    // is overridden by base classes.
-    return nullptr;
-}
+    // ParseOptions calls getopt_long_only, which always skips the zero'th item
+    // in the array and starts at position 1,
+    // so we need to push a dummy value into position zero.
+    args.Unshift("dummy_string");
+    const bool require_validation = true;
+    error = args.ParseOptions(*options, &exe_ctx,
+                              GetCommandInterpreter().GetPlatform(true),
+                              require_validation);
 
-bool
-CommandObject::ParseOptions
-(
-    Args& args,
-    CommandReturnObject &result
-)
-{
-    // See if the subclass has options?
-    Options *options = GetOptions();
-    if (options != nullptr)
-    {
-        Error error;
+    // The "dummy_string" will have already been removed by ParseOptions,
+    // so no need to remove it.
 
-        auto exe_ctx = GetCommandInterpreter().GetExecutionContext();
-        options->NotifyOptionParsingStarting(&exe_ctx);
+    if (error.Success())
+      error = options->NotifyOptionParsingFinished(&exe_ctx);
 
-        // ParseOptions calls getopt_long_only, which always skips the zero'th item in the array and starts at position 1,
-        // so we need to push a dummy value into position zero.
-        args.Unshift("dummy_string");
-        const bool require_validation = true;
-        error = args.ParseOptions(*options, &exe_ctx,
-                                  GetCommandInterpreter().GetPlatform(true),
-                                  require_validation);
-
-        // The "dummy_string" will have already been removed by ParseOptions,
-        // so no need to remove it.
-
-        if (error.Success())
-            error = options->NotifyOptionParsingFinished(&exe_ctx);
-
-        if (error.Success())
-        {
-            if (options->VerifyOptions (result))
-                return true;
-        }
-        else
-        {
-            const char *error_cstr = error.AsCString();
-            if (error_cstr)
-            {
-                // We got an error string, lets use that
-                result.AppendError(error_cstr);
-            }
-            else
-            {
-                // No error string, output the usage information into result
-                options->GenerateOptionUsage(result.GetErrorStream(), this,
-                                             GetCommandInterpreter()
-                                                .GetDebugger()
-                                                .GetTerminalWidth());
-            }
-        }
-        result.SetStatus (eReturnStatusFailed);
-        return false;
+    if (error.Success()) {
+      if (options->VerifyOptions(result))
+        return true;
+    } else {
+      const char *error_cstr = error.AsCString();
+      if (error_cstr) {
+        // We got an error string, lets use that
+        result.AppendError(error_cstr);
+      } else {
+        // No error string, output the usage information into result
+        options->GenerateOptionUsage(
+            result.GetErrorStream(), this,
+            GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+      }
     }
-    return true;
+    result.SetStatus(eReturnStatusFailed);
+    return false;
+  }
+  return true;
 }
 
-
-
-bool
-CommandObject::CheckRequirements (CommandReturnObject &result)
-{
+bool CommandObject::CheckRequirements(CommandReturnObject &result) {
 #ifdef LLDB_CONFIGURATION_DEBUG
-    // Nothing should be stored in m_exe_ctx between running commands as m_exe_ctx
-    // has shared pointers to the target, process, thread and frame and we don't
-    // want any CommandObject instances to keep any of these objects around
-    // longer than for a single command. Every command should call
-    // CommandObject::Cleanup() after it has completed
-    assert (m_exe_ctx.GetTargetPtr() == NULL);
-    assert (m_exe_ctx.GetProcessPtr() == NULL);
-    assert (m_exe_ctx.GetThreadPtr() == NULL);
-    assert (m_exe_ctx.GetFramePtr() == NULL);
+  // Nothing should be stored in m_exe_ctx between running commands as m_exe_ctx
+  // has shared pointers to the target, process, thread and frame and we don't
+  // want any CommandObject instances to keep any of these objects around
+  // longer than for a single command. Every command should call
+  // CommandObject::Cleanup() after it has completed
+  assert(m_exe_ctx.GetTargetPtr() == NULL);
+  assert(m_exe_ctx.GetProcessPtr() == NULL);
+  assert(m_exe_ctx.GetThreadPtr() == NULL);
+  assert(m_exe_ctx.GetFramePtr() == NULL);
 #endif
 
-    // Lock down the interpreter's execution context prior to running the
-    // command so we guarantee the selected target, process, thread and frame
-    // can't go away during the execution
-    m_exe_ctx = m_interpreter.GetExecutionContext();
+  // Lock down the interpreter's execution context prior to running the
+  // command so we guarantee the selected target, process, thread and frame
+  // can't go away during the execution
+  m_exe_ctx = m_interpreter.GetExecutionContext();
 
-    const uint32_t flags = GetFlags().Get();
-    if (flags & (eCommandRequiresTarget   |
-                 eCommandRequiresProcess  |
-                 eCommandRequiresThread   |
-                 eCommandRequiresFrame    |
-                 eCommandTryTargetAPILock ))
-    {
+  const uint32_t flags = GetFlags().Get();
+  if (flags & (eCommandRequiresTarget | eCommandRequiresProcess |
+               eCommandRequiresThread | eCommandRequiresFrame |
+               eCommandTryTargetAPILock)) {
 
-        if ((flags & eCommandRequiresTarget) && !m_exe_ctx.HasTargetScope())
-        {
-            result.AppendError (GetInvalidTargetDescription());
-            return false;
-        }
-
-        if ((flags & eCommandRequiresProcess) && !m_exe_ctx.HasProcessScope())
-        {
-            if (!m_exe_ctx.HasTargetScope())
-                result.AppendError (GetInvalidTargetDescription());
-            else
-                result.AppendError (GetInvalidProcessDescription());
-            return false;
-        }
-        
-        if ((flags & eCommandRequiresThread) && !m_exe_ctx.HasThreadScope())
-        {
-            if (!m_exe_ctx.HasTargetScope())
-                result.AppendError (GetInvalidTargetDescription());
-            else if (!m_exe_ctx.HasProcessScope())
-                result.AppendError (GetInvalidProcessDescription());
-            else 
-                result.AppendError (GetInvalidThreadDescription());
-            return false;
-        }
-        
-        if ((flags & eCommandRequiresFrame) && !m_exe_ctx.HasFrameScope())
-        {
-            if (!m_exe_ctx.HasTargetScope())
-                result.AppendError (GetInvalidTargetDescription());
-            else if (!m_exe_ctx.HasProcessScope())
-                result.AppendError (GetInvalidProcessDescription());
-            else if (!m_exe_ctx.HasThreadScope())
-                result.AppendError (GetInvalidThreadDescription());
-            else
-                result.AppendError (GetInvalidFrameDescription());
-            return false;
-        }
-        
-        if ((flags & eCommandRequiresRegContext) && (m_exe_ctx.GetRegisterContext() == nullptr))
-        {
-            result.AppendError (GetInvalidRegContextDescription());
-            return false;
-        }
-
-        if (flags & eCommandTryTargetAPILock)
-        {
-            Target *target = m_exe_ctx.GetTargetPtr();
-            if (target)
-                m_api_locker = std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
-        }
+    if ((flags & eCommandRequiresTarget) && !m_exe_ctx.HasTargetScope()) {
+      result.AppendError(GetInvalidTargetDescription());
+      return false;
     }
 
-    if (GetFlags().AnySet (eCommandProcessMustBeLaunched | eCommandProcessMustBePaused))
-    {
-        Process *process = m_interpreter.GetExecutionContext().GetProcessPtr();
-        if (process == nullptr)
-        {
-            // A process that is not running is considered paused.
-            if (GetFlags().Test(eCommandProcessMustBeLaunched))
-            {
-                result.AppendError ("Process must exist.");
-                result.SetStatus (eReturnStatusFailed);
-                return false;
-            }
-        }
-        else
-        {
-            StateType state = process->GetState();
-            switch (state)
-            {
-            case eStateInvalid:
-            case eStateSuspended:
-            case eStateCrashed:
-            case eStateStopped:
-                break;
-            
-            case eStateConnected:
-            case eStateAttaching:
-            case eStateLaunching:
-            case eStateDetached:
-            case eStateExited:
-            case eStateUnloaded:
-                if (GetFlags().Test(eCommandProcessMustBeLaunched))
-                {
-                    result.AppendError ("Process must be launched.");
-                    result.SetStatus (eReturnStatusFailed);
-                    return false;
-                }
-                break;
-
-            case eStateRunning:
-            case eStateStepping:
-                if (GetFlags().Test(eCommandProcessMustBePaused))
-                {
-                    result.AppendError ("Process is running.  Use 'process interrupt' to pause execution.");
-                    result.SetStatus (eReturnStatusFailed);
-                    return false;
-                }
-            }
-        }
+    if ((flags & eCommandRequiresProcess) && !m_exe_ctx.HasProcessScope()) {
+      if (!m_exe_ctx.HasTargetScope())
+        result.AppendError(GetInvalidTargetDescription());
+      else
+        result.AppendError(GetInvalidProcessDescription());
+      return false;
     }
-    return true;
+
+    if ((flags & eCommandRequiresThread) && !m_exe_ctx.HasThreadScope()) {
+      if (!m_exe_ctx.HasTargetScope())
+        result.AppendError(GetInvalidTargetDescription());
+      else if (!m_exe_ctx.HasProcessScope())
+        result.AppendError(GetInvalidProcessDescription());
+      else
+        result.AppendError(GetInvalidThreadDescription());
+      return false;
+    }
+
+    if ((flags & eCommandRequiresFrame) && !m_exe_ctx.HasFrameScope()) {
+      if (!m_exe_ctx.HasTargetScope())
+        result.AppendError(GetInvalidTargetDescription());
+      else if (!m_exe_ctx.HasProcessScope())
+        result.AppendError(GetInvalidProcessDescription());
+      else if (!m_exe_ctx.HasThreadScope())
+        result.AppendError(GetInvalidThreadDescription());
+      else
+        result.AppendError(GetInvalidFrameDescription());
+      return false;
+    }
+
+    if ((flags & eCommandRequiresRegContext) &&
+        (m_exe_ctx.GetRegisterContext() == nullptr)) {
+      result.AppendError(GetInvalidRegContextDescription());
+      return false;
+    }
+
+    if (flags & eCommandTryTargetAPILock) {
+      Target *target = m_exe_ctx.GetTargetPtr();
+      if (target)
+        m_api_locker =
+            std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
+    }
+  }
+
+  if (GetFlags().AnySet(eCommandProcessMustBeLaunched |
+                        eCommandProcessMustBePaused)) {
+    Process *process = m_interpreter.GetExecutionContext().GetProcessPtr();
+    if (process == nullptr) {
+      // A process that is not running is considered paused.
+      if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
+        result.AppendError("Process must exist.");
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+    } else {
+      StateType state = process->GetState();
+      switch (state) {
+      case eStateInvalid:
+      case eStateSuspended:
+      case eStateCrashed:
+      case eStateStopped:
+        break;
+
+      case eStateConnected:
+      case eStateAttaching:
+      case eStateLaunching:
+      case eStateDetached:
+      case eStateExited:
+      case eStateUnloaded:
+        if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
+          result.AppendError("Process must be launched.");
+          result.SetStatus(eReturnStatusFailed);
+          return false;
+        }
+        break;
+
+      case eStateRunning:
+      case eStateStepping:
+        if (GetFlags().Test(eCommandProcessMustBePaused)) {
+          result.AppendError("Process is running.  Use 'process interrupt' to "
+                             "pause execution.");
+          result.SetStatus(eReturnStatusFailed);
+          return false;
+        }
+      }
+    }
+  }
+  return true;
 }
 
-void
-CommandObject::Cleanup ()
-{
-    m_exe_ctx.Clear();
-    if (m_api_locker.owns_lock())
-        m_api_locker.unlock();
+void CommandObject::Cleanup() {
+  m_exe_ctx.Clear();
+  if (m_api_locker.owns_lock())
+    m_api_locker.unlock();
 }
 
-int
-CommandObject::HandleCompletion
-(
-    Args &input,
-    int &cursor_index,
-    int &cursor_char_position,
-    int match_start_point,
-    int max_return_elements,
-    bool &word_complete,
-    StringList &matches
-)
-{
-    // Default implementation of WantsCompletion() is !WantsRawCommandString().
-    // Subclasses who want raw command string but desire, for example,
-    // argument completion should override WantsCompletion() to return true,
-    // instead.
-    if (WantsRawCommandString() && !WantsCompletion())
-    {
-        // FIXME: Abstract telling the completion to insert the completion character.
-        matches.Clear();
-        return -1;
+int CommandObject::HandleCompletion(Args &input, int &cursor_index,
+                                    int &cursor_char_position,
+                                    int match_start_point,
+                                    int max_return_elements,
+                                    bool &word_complete, StringList &matches) {
+  // Default implementation of WantsCompletion() is !WantsRawCommandString().
+  // Subclasses who want raw command string but desire, for example,
+  // argument completion should override WantsCompletion() to return true,
+  // instead.
+  if (WantsRawCommandString() && !WantsCompletion()) {
+    // FIXME: Abstract telling the completion to insert the completion
+    // character.
+    matches.Clear();
+    return -1;
+  } else {
+    // Can we do anything generic with the options?
+    Options *cur_options = GetOptions();
+    CommandReturnObject result;
+    OptionElementVector opt_element_vector;
+
+    if (cur_options != nullptr) {
+      // Re-insert the dummy command name string which will have been
+      // stripped off:
+      input.Unshift("dummy-string");
+      cursor_index++;
+
+      // I stick an element on the end of the input, because if the last element
+      // is
+      // option that requires an argument, getopt_long_only will freak out.
+
+      input.AppendArgument("<FAKE-VALUE>");
+
+      input.ParseArgsForCompletion(*cur_options, opt_element_vector,
+                                   cursor_index);
+
+      input.DeleteArgumentAtIndex(input.GetArgumentCount() - 1);
+
+      bool handled_by_options;
+      handled_by_options = cur_options->HandleOptionCompletion(
+          input, opt_element_vector, cursor_index, cursor_char_position,
+          match_start_point, max_return_elements, GetCommandInterpreter(),
+          word_complete, matches);
+      if (handled_by_options)
+        return matches.GetSize();
     }
-    else
-    {
-        // Can we do anything generic with the options?
-        Options *cur_options = GetOptions();
-        CommandReturnObject result;
-        OptionElementVector opt_element_vector;
 
-        if (cur_options != nullptr)
-        {
-            // Re-insert the dummy command name string which will have been
-            // stripped off:
-            input.Unshift ("dummy-string");
-            cursor_index++;
-
-
-            // I stick an element on the end of the input, because if the last element is
-            // option that requires an argument, getopt_long_only will freak out.
-
-            input.AppendArgument ("<FAKE-VALUE>");
-
-            input.ParseArgsForCompletion (*cur_options, opt_element_vector, cursor_index);
-
-            input.DeleteArgumentAtIndex(input.GetArgumentCount() - 1);
-
-            bool handled_by_options;
-            handled_by_options = cur_options->HandleOptionCompletion (input,
-                                                                      opt_element_vector,
-                                                                      cursor_index,
-                                                                      cursor_char_position,
-                                                                      match_start_point,
-                                                                      max_return_elements,
-                                                                      GetCommandInterpreter(),
-                                                                      word_complete,
-                                                                      matches);
-            if (handled_by_options)
-                return matches.GetSize();
-        }
-
-        // If we got here, the last word is not an option or an option argument.
-        return HandleArgumentCompletion (input,
-                                         cursor_index,
-                                         cursor_char_position,
-                                         opt_element_vector,
-                                         match_start_point,
-                                         max_return_elements,
-                                         word_complete,
-                                         matches);
-    }
+    // If we got here, the last word is not an option or an option argument.
+    return HandleArgumentCompletion(
+        input, cursor_index, cursor_char_position, opt_element_vector,
+        match_start_point, max_return_elements, word_complete, matches);
+  }
 }
 
-bool
-CommandObject::HelpTextContainsWord (const char *search_word,
-                                     bool search_short_help,
-                                     bool search_long_help,
-                                     bool search_syntax,
-                                     bool search_options)
-{
-    std::string options_usage_help;
+bool CommandObject::HelpTextContainsWord(const char *search_word,
+                                         bool search_short_help,
+                                         bool search_long_help,
+                                         bool search_syntax,
+                                         bool search_options) {
+  std::string options_usage_help;
 
-    bool found_word = false;
+  bool found_word = false;
 
-    const char *short_help = GetHelp();
-    const char *long_help = GetHelpLong();
-    const char *syntax_help = GetSyntax();
-    
-    if (search_short_help && short_help && strcasestr (short_help, search_word))
+  const char *short_help = GetHelp();
+  const char *long_help = GetHelpLong();
+  const char *syntax_help = GetSyntax();
+
+  if (search_short_help && short_help && strcasestr(short_help, search_word))
+    found_word = true;
+  else if (search_long_help && long_help && strcasestr(long_help, search_word))
+    found_word = true;
+  else if (search_syntax && syntax_help && strcasestr(syntax_help, search_word))
+    found_word = true;
+
+  if (!found_word && search_options && GetOptions() != nullptr) {
+    StreamString usage_help;
+    GetOptions()->GenerateOptionUsage(
+        usage_help, this,
+        GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+    if (usage_help.GetSize() > 0) {
+      const char *usage_text = usage_help.GetData();
+      if (strcasestr(usage_text, search_word))
         found_word = true;
-    else if (search_long_help && long_help && strcasestr (long_help, search_word))
-        found_word = true;
-    else if (search_syntax && syntax_help && strcasestr (syntax_help, search_word))
-        found_word = true;
-
-    if (!found_word
-        && search_options
-        && GetOptions() != nullptr)
-    {
-        StreamString usage_help;
-        GetOptions()->GenerateOptionUsage(usage_help, this,
-                                          GetCommandInterpreter()
-                                            .GetDebugger().GetTerminalWidth());
-        if (usage_help.GetSize() > 0)
-        {
-            const char *usage_text = usage_help.GetData();
-            if (strcasestr (usage_text, search_word))
-              found_word = true;
-        }
     }
+  }
 
-    return found_word;
+  return found_word;
 }
 
-int
-CommandObject::GetNumArgumentEntries  ()
-{
-    return m_arguments.size();
-}
+int CommandObject::GetNumArgumentEntries() { return m_arguments.size(); }
 
 CommandObject::CommandArgumentEntry *
-CommandObject::GetArgumentEntryAtIndex (int idx)
-{
-    if (static_cast<size_t>(idx) < m_arguments.size())
-        return &(m_arguments[idx]);
+CommandObject::GetArgumentEntryAtIndex(int idx) {
+  if (static_cast<size_t>(idx) < m_arguments.size())
+    return &(m_arguments[idx]);
 
-    return nullptr;
+  return nullptr;
 }
 
 const CommandObject::ArgumentTableEntry *
-CommandObject::FindArgumentDataByType (CommandArgumentType arg_type)
-{
-    const ArgumentTableEntry *table = CommandObject::GetArgumentTable();
+CommandObject::FindArgumentDataByType(CommandArgumentType arg_type) {
+  const ArgumentTableEntry *table = CommandObject::GetArgumentTable();
 
-    for (int i = 0; i < eArgTypeLastArg; ++i)
-        if (table[i].arg_type == arg_type)
-            return &(table[i]);
+  for (int i = 0; i < eArgTypeLastArg; ++i)
+    if (table[i].arg_type == arg_type)
+      return &(table[i]);
 
-    return nullptr;
+  return nullptr;
 }
 
-void
-CommandObject::GetArgumentHelp (Stream &str, CommandArgumentType arg_type, CommandInterpreter &interpreter)
-{
-    const ArgumentTableEntry* table = CommandObject::GetArgumentTable();
-    const ArgumentTableEntry *entry = &(table[arg_type]);
-    
-    // The table is *supposed* to be kept in arg_type order, but someone *could* have messed it up...
+void CommandObject::GetArgumentHelp(Stream &str, CommandArgumentType arg_type,
+                                    CommandInterpreter &interpreter) {
+  const ArgumentTableEntry *table = CommandObject::GetArgumentTable();
+  const ArgumentTableEntry *entry = &(table[arg_type]);
 
-    if (entry->arg_type != arg_type)
-        entry = CommandObject::FindArgumentDataByType (arg_type);
+  // The table is *supposed* to be kept in arg_type order, but someone *could*
+  // have messed it up...
 
-    if (!entry)
-        return;
+  if (entry->arg_type != arg_type)
+    entry = CommandObject::FindArgumentDataByType(arg_type);
 
-    StreamString name_str;
-    name_str.Printf ("<%s>", entry->arg_name);
+  if (!entry)
+    return;
 
-    if (entry->help_function)
-    {
-        const char* help_text = entry->help_function();
-        if (!entry->help_function.self_formatting)
-        {
-            interpreter.OutputFormattedHelpText (str, name_str.GetData(), "--", help_text,
-                                                 name_str.GetSize());
-        }
-        else
-        {
-            interpreter.OutputHelpText(str, name_str.GetData(), "--", help_text,
-                                       name_str.GetSize());
-        }
+  StreamString name_str;
+  name_str.Printf("<%s>", entry->arg_name);
+
+  if (entry->help_function) {
+    const char *help_text = entry->help_function();
+    if (!entry->help_function.self_formatting) {
+      interpreter.OutputFormattedHelpText(str, name_str.GetData(), "--",
+                                          help_text, name_str.GetSize());
+    } else {
+      interpreter.OutputHelpText(str, name_str.GetData(), "--", help_text,
+                                 name_str.GetSize());
     }
-    else
-        interpreter.OutputFormattedHelpText (str, name_str.GetData(), "--", entry->help_text, name_str.GetSize());
+  } else
+    interpreter.OutputFormattedHelpText(str, name_str.GetData(), "--",
+                                        entry->help_text, name_str.GetSize());
 }
 
-const char *
-CommandObject::GetArgumentName (CommandArgumentType arg_type)
-{
-    const ArgumentTableEntry *entry = &(CommandObject::GetArgumentTable()[arg_type]);
+const char *CommandObject::GetArgumentName(CommandArgumentType arg_type) {
+  const ArgumentTableEntry *entry =
+      &(CommandObject::GetArgumentTable()[arg_type]);
 
-    // The table is *supposed* to be kept in arg_type order, but someone *could* have messed it up...
+  // The table is *supposed* to be kept in arg_type order, but someone *could*
+  // have messed it up...
 
-    if (entry->arg_type != arg_type)
-        entry = CommandObject::FindArgumentDataByType (arg_type);
+  if (entry->arg_type != arg_type)
+    entry = CommandObject::FindArgumentDataByType(arg_type);
 
-    if (entry)
-        return entry->arg_name;
+  if (entry)
+    return entry->arg_name;
 
-    StreamString str;
-    str << "Arg name for type (" << arg_type << ") not in arg table!";
-    return str.GetData();
+  StreamString str;
+  str << "Arg name for type (" << arg_type << ") not in arg table!";
+  return str.GetData();
 }
 
-bool
-CommandObject::IsPairType (ArgumentRepetitionType arg_repeat_type)
-{
-    if ((arg_repeat_type == eArgRepeatPairPlain)
-        ||  (arg_repeat_type == eArgRepeatPairOptional)
-        ||  (arg_repeat_type == eArgRepeatPairPlus)
-        ||  (arg_repeat_type == eArgRepeatPairStar)
-        ||  (arg_repeat_type == eArgRepeatPairRange)
-        ||  (arg_repeat_type == eArgRepeatPairRangeOptional))
-        return true;
+bool CommandObject::IsPairType(ArgumentRepetitionType arg_repeat_type) {
+  if ((arg_repeat_type == eArgRepeatPairPlain) ||
+      (arg_repeat_type == eArgRepeatPairOptional) ||
+      (arg_repeat_type == eArgRepeatPairPlus) ||
+      (arg_repeat_type == eArgRepeatPairStar) ||
+      (arg_repeat_type == eArgRepeatPairRange) ||
+      (arg_repeat_type == eArgRepeatPairRangeOptional))
+    return true;
 
-    return false;
+  return false;
 }
 
 static CommandObject::CommandArgumentEntry
-OptSetFiltered(uint32_t opt_set_mask, CommandObject::CommandArgumentEntry &cmd_arg_entry)
-{
-    CommandObject::CommandArgumentEntry ret_val;
-    for (unsigned i = 0; i < cmd_arg_entry.size(); ++i)
-        if (opt_set_mask & cmd_arg_entry[i].arg_opt_set_association)
-            ret_val.push_back(cmd_arg_entry[i]);
-    return ret_val;
+OptSetFiltered(uint32_t opt_set_mask,
+               CommandObject::CommandArgumentEntry &cmd_arg_entry) {
+  CommandObject::CommandArgumentEntry ret_val;
+  for (unsigned i = 0; i < cmd_arg_entry.size(); ++i)
+    if (opt_set_mask & cmd_arg_entry[i].arg_opt_set_association)
+      ret_val.push_back(cmd_arg_entry[i]);
+  return ret_val;
 }
 
 // Default parameter value of opt_set_mask is LLDB_OPT_SET_ALL, which means take
 // all the argument data into account.  On rare cases where some argument sticks
 // with certain option sets, this function returns the option set filtered args.
-void
-CommandObject::GetFormattedCommandArguments (Stream &str, uint32_t opt_set_mask)
-{
-    int num_args = m_arguments.size();
-    for (int i = 0; i < num_args; ++i)
-    {
-        if (i > 0)
-            str.Printf (" ");
-        CommandArgumentEntry arg_entry =
-            opt_set_mask == LLDB_OPT_SET_ALL ? m_arguments[i]
-                                             : OptSetFiltered(opt_set_mask, m_arguments[i]);
-        int num_alternatives = arg_entry.size();
+void CommandObject::GetFormattedCommandArguments(Stream &str,
+                                                 uint32_t opt_set_mask) {
+  int num_args = m_arguments.size();
+  for (int i = 0; i < num_args; ++i) {
+    if (i > 0)
+      str.Printf(" ");
+    CommandArgumentEntry arg_entry =
+        opt_set_mask == LLDB_OPT_SET_ALL
+            ? m_arguments[i]
+            : OptSetFiltered(opt_set_mask, m_arguments[i]);
+    int num_alternatives = arg_entry.size();
 
-        if ((num_alternatives == 2)
-            && IsPairType (arg_entry[0].arg_repetition))
-        {
-            const char *first_name = GetArgumentName (arg_entry[0].arg_type);
-            const char *second_name = GetArgumentName (arg_entry[1].arg_type);
-            switch (arg_entry[0].arg_repetition)
-            {
-                case eArgRepeatPairPlain:
-                    str.Printf ("<%s> <%s>", first_name, second_name);
-                    break;
-                case eArgRepeatPairOptional:
-                    str.Printf ("[<%s> <%s>]", first_name, second_name);
-                    break;
-                case eArgRepeatPairPlus:
-                    str.Printf ("<%s> <%s> [<%s> <%s> [...]]", first_name, second_name, first_name, second_name);
-                    break;
-                case eArgRepeatPairStar:
-                    str.Printf ("[<%s> <%s> [<%s> <%s> [...]]]", first_name, second_name, first_name, second_name);
-                    break;
-                case eArgRepeatPairRange:
-                    str.Printf ("<%s_1> <%s_1> ... <%s_n> <%s_n>", first_name, second_name, first_name, second_name);
-                    break;
-                case eArgRepeatPairRangeOptional:
-                    str.Printf ("[<%s_1> <%s_1> ... <%s_n> <%s_n>]", first_name, second_name, first_name, second_name);
-                    break;
-                // Explicitly test for all the rest of the cases, so if new types get added we will notice the
-                // missing case statement(s).
-                case eArgRepeatPlain:
-                case eArgRepeatOptional:
-                case eArgRepeatPlus:
-                case eArgRepeatStar:
-                case eArgRepeatRange:
-                    // These should not be reached, as they should fail the IsPairType test above.
-                    break;
-            }
-        }
-        else
-        {
-            StreamString names;
-            for (int j = 0; j < num_alternatives; ++j)
-            {
-                if (j > 0)
-                    names.Printf (" | ");
-                names.Printf ("%s", GetArgumentName (arg_entry[j].arg_type));
-            }
-            switch (arg_entry[0].arg_repetition)
-            {
-                case eArgRepeatPlain:
-                    str.Printf ("<%s>", names.GetData());
-                    break;
-                case eArgRepeatPlus:
-                    str.Printf ("<%s> [<%s> [...]]", names.GetData(), names.GetData());
-                    break;
-                case eArgRepeatStar:
-                    str.Printf ("[<%s> [<%s> [...]]]", names.GetData(), names.GetData());
-                    break;
-                case eArgRepeatOptional:
-                    str.Printf ("[<%s>]", names.GetData());
-                    break;
-                case eArgRepeatRange:
-                    str.Printf ("<%s_1> .. <%s_n>", names.GetData(), names.GetData());
-                    break;
-                // Explicitly test for all the rest of the cases, so if new types get added we will notice the
-                // missing case statement(s).
-                case eArgRepeatPairPlain:
-                case eArgRepeatPairOptional:
-                case eArgRepeatPairPlus:
-                case eArgRepeatPairStar:
-                case eArgRepeatPairRange:
-                case eArgRepeatPairRangeOptional:
-                    // These should not be hit, as they should pass the IsPairType test above, and control should
-                    // have gone into the other branch of the if statement.
-                    break;
-            }
-        }
+    if ((num_alternatives == 2) && IsPairType(arg_entry[0].arg_repetition)) {
+      const char *first_name = GetArgumentName(arg_entry[0].arg_type);
+      const char *second_name = GetArgumentName(arg_entry[1].arg_type);
+      switch (arg_entry[0].arg_repetition) {
+      case eArgRepeatPairPlain:
+        str.Printf("<%s> <%s>", first_name, second_name);
+        break;
+      case eArgRepeatPairOptional:
+        str.Printf("[<%s> <%s>]", first_name, second_name);
+        break;
+      case eArgRepeatPairPlus:
+        str.Printf("<%s> <%s> [<%s> <%s> [...]]", first_name, second_name,
+                   first_name, second_name);
+        break;
+      case eArgRepeatPairStar:
+        str.Printf("[<%s> <%s> [<%s> <%s> [...]]]", first_name, second_name,
+                   first_name, second_name);
+        break;
+      case eArgRepeatPairRange:
+        str.Printf("<%s_1> <%s_1> ... <%s_n> <%s_n>", first_name, second_name,
+                   first_name, second_name);
+        break;
+      case eArgRepeatPairRangeOptional:
+        str.Printf("[<%s_1> <%s_1> ... <%s_n> <%s_n>]", first_name, second_name,
+                   first_name, second_name);
+        break;
+      // Explicitly test for all the rest of the cases, so if new types get
+      // added we will notice the
+      // missing case statement(s).
+      case eArgRepeatPlain:
+      case eArgRepeatOptional:
+      case eArgRepeatPlus:
+      case eArgRepeatStar:
+      case eArgRepeatRange:
+        // These should not be reached, as they should fail the IsPairType test
+        // above.
+        break;
+      }
+    } else {
+      StreamString names;
+      for (int j = 0; j < num_alternatives; ++j) {
+        if (j > 0)
+          names.Printf(" | ");
+        names.Printf("%s", GetArgumentName(arg_entry[j].arg_type));
+      }
+      switch (arg_entry[0].arg_repetition) {
+      case eArgRepeatPlain:
+        str.Printf("<%s>", names.GetData());
+        break;
+      case eArgRepeatPlus:
+        str.Printf("<%s> [<%s> [...]]", names.GetData(), names.GetData());
+        break;
+      case eArgRepeatStar:
+        str.Printf("[<%s> [<%s> [...]]]", names.GetData(), names.GetData());
+        break;
+      case eArgRepeatOptional:
+        str.Printf("[<%s>]", names.GetData());
+        break;
+      case eArgRepeatRange:
+        str.Printf("<%s_1> .. <%s_n>", names.GetData(), names.GetData());
+        break;
+      // Explicitly test for all the rest of the cases, so if new types get
+      // added we will notice the
+      // missing case statement(s).
+      case eArgRepeatPairPlain:
+      case eArgRepeatPairOptional:
+      case eArgRepeatPairPlus:
+      case eArgRepeatPairStar:
+      case eArgRepeatPairRange:
+      case eArgRepeatPairRangeOptional:
+        // These should not be hit, as they should pass the IsPairType test
+        // above, and control should
+        // have gone into the other branch of the if statement.
+        break;
+      }
     }
+  }
 }
 
-CommandArgumentType
-CommandObject::LookupArgumentName (const char *arg_name)
-{
-    CommandArgumentType return_type = eArgTypeLastArg;
+CommandArgumentType CommandObject::LookupArgumentName(const char *arg_name) {
+  CommandArgumentType return_type = eArgTypeLastArg;
 
-    std::string arg_name_str (arg_name);
-    size_t len = arg_name_str.length();
-    if (arg_name[0] == '<'
-        && arg_name[len-1] == '>')
-        arg_name_str = arg_name_str.substr (1, len-2);
+  std::string arg_name_str(arg_name);
+  size_t len = arg_name_str.length();
+  if (arg_name[0] == '<' && arg_name[len - 1] == '>')
+    arg_name_str = arg_name_str.substr(1, len - 2);
 
-    const ArgumentTableEntry *table = GetArgumentTable();
-    for (int i = 0; i < eArgTypeLastArg; ++i)
-        if (arg_name_str.compare (table[i].arg_name) == 0)
-            return_type = g_arguments_data[i].arg_type;
+  const ArgumentTableEntry *table = GetArgumentTable();
+  for (int i = 0; i < eArgTypeLastArg; ++i)
+    if (arg_name_str.compare(table[i].arg_name) == 0)
+      return_type = g_arguments_data[i].arg_type;
 
-    return return_type;
+  return return_type;
 }
 
-static const char *
-RegisterNameHelpTextCallback ()
-{
-    return "Register names can be specified using the architecture specific names.  "
-    "They can also be specified using generic names.  Not all generic entities have "
-    "registers backing them on all architectures.  When they don't the generic name "
-    "will return an error.\n"
-    "The generic names defined in lldb are:\n"
-    "\n"
-    "pc       - program counter register\n"
-    "ra       - return address register\n"
-    "fp       - frame pointer register\n"
-    "sp       - stack pointer register\n"
-    "flags    - the flags register\n"
-    "arg{1-6} - integer argument passing registers.\n";
+static const char *RegisterNameHelpTextCallback() {
+  return "Register names can be specified using the architecture specific "
+         "names.  "
+         "They can also be specified using generic names.  Not all generic "
+         "entities have "
+         "registers backing them on all architectures.  When they don't the "
+         "generic name "
+         "will return an error.\n"
+         "The generic names defined in lldb are:\n"
+         "\n"
+         "pc       - program counter register\n"
+         "ra       - return address register\n"
+         "fp       - frame pointer register\n"
+         "sp       - stack pointer register\n"
+         "flags    - the flags register\n"
+         "arg{1-6} - integer argument passing registers.\n";
 }
 
-static const char *
-BreakpointIDHelpTextCallback ()
-{
-    return "Breakpoints are identified using major and minor numbers; the major "
-           "number corresponds to the single entity that was created with a 'breakpoint "
-           "set' command; the minor numbers correspond to all the locations that were "
-           "actually found/set based on the major breakpoint.  A full breakpoint ID might "
-           "look like 3.14, meaning the 14th location set for the 3rd breakpoint.  You "
-           "can specify all the locations of a breakpoint by just indicating the major "
-           "breakpoint number. A valid breakpoint ID consists either of just the major "
-           "number, or the major number followed by a dot and the location number (e.g. "
-           "3 or 3.2 could both be valid breakpoint IDs.)";
+static const char *BreakpointIDHelpTextCallback() {
+  return "Breakpoints are identified using major and minor numbers; the major "
+         "number corresponds to the single entity that was created with a "
+         "'breakpoint "
+         "set' command; the minor numbers correspond to all the locations that "
+         "were "
+         "actually found/set based on the major breakpoint.  A full breakpoint "
+         "ID might "
+         "look like 3.14, meaning the 14th location set for the 3rd "
+         "breakpoint.  You "
+         "can specify all the locations of a breakpoint by just indicating the "
+         "major "
+         "breakpoint number. A valid breakpoint ID consists either of just the "
+         "major "
+         "number, or the major number followed by a dot and the location "
+         "number (e.g. "
+         "3 or 3.2 could both be valid breakpoint IDs.)";
 }
 
-static const char *
-BreakpointIDRangeHelpTextCallback ()
-{
-    return "A 'breakpoint ID list' is a manner of specifying multiple breakpoints. "
-           "This can be done through several mechanisms.  The easiest way is to just "
-           "enter a space-separated list of breakpoint IDs.  To specify all the "
-           "breakpoint locations under a major breakpoint, you can use the major "
-           "breakpoint number followed by '.*', eg. '5.*' means all the locations under "
-           "breakpoint 5.  You can also indicate a range of breakpoints by using "
-           "<start-bp-id> - <end-bp-id>.  The start-bp-id and end-bp-id for a range can "
-           "be any valid breakpoint IDs.  It is not legal, however, to specify a range "
-           "using specific locations that cross major breakpoint numbers.  I.e. 3.2 - 3.7"
-           " is legal; 2 - 5 is legal; but 3.2 - 4.4 is not legal.";
+static const char *BreakpointIDRangeHelpTextCallback() {
+  return "A 'breakpoint ID list' is a manner of specifying multiple "
+         "breakpoints. "
+         "This can be done through several mechanisms.  The easiest way is to "
+         "just "
+         "enter a space-separated list of breakpoint IDs.  To specify all the "
+         "breakpoint locations under a major breakpoint, you can use the major "
+         "breakpoint number followed by '.*', eg. '5.*' means all the "
+         "locations under "
+         "breakpoint 5.  You can also indicate a range of breakpoints by using "
+         "<start-bp-id> - <end-bp-id>.  The start-bp-id and end-bp-id for a "
+         "range can "
+         "be any valid breakpoint IDs.  It is not legal, however, to specify a "
+         "range "
+         "using specific locations that cross major breakpoint numbers.  I.e. "
+         "3.2 - 3.7"
+         " is legal; 2 - 5 is legal; but 3.2 - 4.4 is not legal.";
 }
 
-static const char *
-BreakpointNameHelpTextCallback ()
-{
-    return "A name that can be added to a breakpoint when it is created, or later "
-           "on with the \"breakpoint name add\" command.  "
-           "Breakpoint names can be used to specify breakpoints in all the places breakpoint IDs "
-           "and breakpoint ID ranges can be used.  As such they provide a convenient way to group breakpoints, "
-           "and to operate on breakpoints you create without having to track the breakpoint number.  "
-           "Note, the attributes you set when using a breakpoint name in a breakpoint command don't "
-           "adhere to the name, but instead are set individually on all the breakpoints currently tagged with that "
-           "name.  Future breakpoints "
-           "tagged with that name will not pick up the attributes previously given using that name.  "
-           "In order to distinguish breakpoint names from breakpoint IDs and ranges, "
-           "names must start with a letter from a-z or A-Z and cannot contain spaces, \".\" or \"-\".  "
-           "Also, breakpoint names can only be applied to breakpoints, not to breakpoint locations.";
+static const char *BreakpointNameHelpTextCallback() {
+  return "A name that can be added to a breakpoint when it is created, or "
+         "later "
+         "on with the \"breakpoint name add\" command.  "
+         "Breakpoint names can be used to specify breakpoints in all the "
+         "places breakpoint IDs "
+         "and breakpoint ID ranges can be used.  As such they provide a "
+         "convenient way to group breakpoints, "
+         "and to operate on breakpoints you create without having to track the "
+         "breakpoint number.  "
+         "Note, the attributes you set when using a breakpoint name in a "
+         "breakpoint command don't "
+         "adhere to the name, but instead are set individually on all the "
+         "breakpoints currently tagged with that "
+         "name.  Future breakpoints "
+         "tagged with that name will not pick up the attributes previously "
+         "given using that name.  "
+         "In order to distinguish breakpoint names from breakpoint IDs and "
+         "ranges, "
+         "names must start with a letter from a-z or A-Z and cannot contain "
+         "spaces, \".\" or \"-\".  "
+         "Also, breakpoint names can only be applied to breakpoints, not to "
+         "breakpoint locations.";
 }
 
-static const char *
-GDBFormatHelpTextCallback ()
-{
-    return "A GDB format consists of a repeat count, a format letter and a size letter. "
-    "The repeat count is optional and defaults to 1. The format letter is optional "
-    "and defaults to the previous format that was used. The size letter is optional "
-    "and defaults to the previous size that was used.\n"
-    "\n"
-    "Format letters include:\n"
-    "o - octal\n"
-    "x - hexadecimal\n"
-    "d - decimal\n"
-    "u - unsigned decimal\n"
-    "t - binary\n"
-    "f - float\n"
-    "a - address\n"
-    "i - instruction\n"
-    "c - char\n"
-    "s - string\n"
-    "T - OSType\n"
-    "A - float as hex\n"
-    "\n"
-    "Size letters include:\n"
-    "b - 1 byte  (byte)\n"
-    "h - 2 bytes (halfword)\n"
-    "w - 4 bytes (word)\n"
-    "g - 8 bytes (giant)\n"
-    "\n"
-    "Example formats:\n"
-    "32xb - show 32 1 byte hexadecimal integer values\n"
-    "16xh - show 16 2 byte hexadecimal integer values\n"
-    "64   - show 64 2 byte hexadecimal integer values (format and size from the last format)\n"
-    "dw   - show 1 4 byte decimal integer value\n"
-    ;
-} 
+static const char *GDBFormatHelpTextCallback() {
+  return "A GDB format consists of a repeat count, a format letter and a size "
+         "letter. "
+         "The repeat count is optional and defaults to 1. The format letter is "
+         "optional "
+         "and defaults to the previous format that was used. The size letter "
+         "is optional "
+         "and defaults to the previous size that was used.\n"
+         "\n"
+         "Format letters include:\n"
+         "o - octal\n"
+         "x - hexadecimal\n"
+         "d - decimal\n"
+         "u - unsigned decimal\n"
+         "t - binary\n"
+         "f - float\n"
+         "a - address\n"
+         "i - instruction\n"
+         "c - char\n"
+         "s - string\n"
+         "T - OSType\n"
+         "A - float as hex\n"
+         "\n"
+         "Size letters include:\n"
+         "b - 1 byte  (byte)\n"
+         "h - 2 bytes (halfword)\n"
+         "w - 4 bytes (word)\n"
+         "g - 8 bytes (giant)\n"
+         "\n"
+         "Example formats:\n"
+         "32xb - show 32 1 byte hexadecimal integer values\n"
+         "16xh - show 16 2 byte hexadecimal integer values\n"
+         "64   - show 64 2 byte hexadecimal integer values (format and size "
+         "from the last format)\n"
+         "dw   - show 1 4 byte decimal integer value\n";
+}
 
-static const char *
-FormatHelpTextCallback ()
-{
-    
-    static char* help_text_ptr = nullptr;
-    
-    if (help_text_ptr)
-        return help_text_ptr;
-    
-    StreamString sstr;
-    sstr << "One of the format names (or one-character names) that can be used to show a variable's value:\n";
-    for (Format f = eFormatDefault; f < kNumFormats; f = Format(f+1))
-    {
-        if (f != eFormatDefault)
-            sstr.PutChar('\n');
-        
-        char format_char = FormatManager::GetFormatAsFormatChar(f);
-        if (format_char)
-            sstr.Printf("'%c' or ", format_char);
-        
-        sstr.Printf ("\"%s\"", FormatManager::GetFormatAsCString(f));
-    }
-    
-    sstr.Flush();
-    
-    std::string data = sstr.GetString();
-    
-    help_text_ptr = new char[data.length()+1];
-    
-    data.copy(help_text_ptr, data.length());
-    
+static const char *FormatHelpTextCallback() {
+
+  static char *help_text_ptr = nullptr;
+
+  if (help_text_ptr)
     return help_text_ptr;
+
+  StreamString sstr;
+  sstr << "One of the format names (or one-character names) that can be used "
+          "to show a variable's value:\n";
+  for (Format f = eFormatDefault; f < kNumFormats; f = Format(f + 1)) {
+    if (f != eFormatDefault)
+      sstr.PutChar('\n');
+
+    char format_char = FormatManager::GetFormatAsFormatChar(f);
+    if (format_char)
+      sstr.Printf("'%c' or ", format_char);
+
+    sstr.Printf("\"%s\"", FormatManager::GetFormatAsCString(f));
+  }
+
+  sstr.Flush();
+
+  std::string data = sstr.GetString();
+
+  help_text_ptr = new char[data.length() + 1];
+
+  data.copy(help_text_ptr, data.length());
+
+  return help_text_ptr;
 }
 
-static const char *
-LanguageTypeHelpTextCallback ()
-{
-    static char* help_text_ptr = nullptr;
-    
-    if (help_text_ptr)
-        return help_text_ptr;
-    
-    StreamString sstr;
-    sstr << "One of the following languages:\n";
+static const char *LanguageTypeHelpTextCallback() {
+  static char *help_text_ptr = nullptr;
 
-    Language::PrintAllLanguages(sstr, "  ", "\n");
-
-    sstr.Flush();
-    
-    std::string data = sstr.GetString();
-    
-    help_text_ptr = new char[data.length()+1];
-    
-    data.copy(help_text_ptr, data.length());
-    
+  if (help_text_ptr)
     return help_text_ptr;
+
+  StreamString sstr;
+  sstr << "One of the following languages:\n";
+
+  Language::PrintAllLanguages(sstr, "  ", "\n");
+
+  sstr.Flush();
+
+  std::string data = sstr.GetString();
+
+  help_text_ptr = new char[data.length() + 1];
+
+  data.copy(help_text_ptr, data.length());
+
+  return help_text_ptr;
 }
 
-static const char *
-SummaryStringHelpTextCallback()
-{
-    return
-        "A summary string is a way to extract information from variables in order to present them using a summary.\n"
-        "Summary strings contain static text, variables, scopes and control sequences:\n"
-        "  - Static text can be any sequence of non-special characters, i.e. anything but '{', '}', '$', or '\\'.\n"
-        "  - Variables are sequences of characters beginning with ${, ending with } and that contain symbols in the format described below.\n"
-        "  - Scopes are any sequence of text between { and }. Anything included in a scope will only appear in the output summary if there were no errors.\n"
-        "  - Control sequences are the usual C/C++ '\\a', '\\n', ..., plus '\\$', '\\{' and '\\}'.\n"
-        "A summary string works by copying static text verbatim, turning control sequences into their character counterpart, expanding variables and trying to expand scopes.\n"
-        "A variable is expanded by giving it a value other than its textual representation, and the way this is done depends on what comes after the ${ marker.\n"
-        "The most common sequence if ${var followed by an expression path, which is the text one would type to access a member of an aggregate types, given a variable of that type"
-        " (e.g. if type T has a member named x, which has a member named y, and if t is of type T, the expression path would be .x.y and the way to fit that into a summary string would be"
-        " ${var.x.y}). You can also use ${*var followed by an expression path and in that case the object referred by the path will be dereferenced before being displayed."
-        " If the object is not a pointer, doing so will cause an error. For additional details on expression paths, you can type 'help expr-path'. \n"
-        "By default, summary strings attempt to display the summary for any variable they reference, and if that fails the value. If neither can be shown, nothing is displayed."
-        "In a summary string, you can also use an array index [n], or a slice-like range [n-m]. This can have two different meanings depending on what kind of object the expression"
-        " path refers to:\n"
-        "  - if it is a scalar type (any basic type like int, float, ...) the expression is a bitfield, i.e. the bits indicated by the indexing operator are extracted out of the number"
-        " and displayed as an individual variable\n"
-        "  - if it is an array or pointer the array items indicated by the indexing operator are shown as the result of the variable. if the expression is an array, real array items are"
-        " printed; if it is a pointer, the pointer-as-array syntax is used to obtain the values (this means, the latter case can have no range checking)\n"
-        "If you are trying to display an array for which the size is known, you can also use [] instead of giving an exact range. This has the effect of showing items 0 thru size - 1.\n"
-        "Additionally, a variable can contain an (optional) format code, as in ${var.x.y%code}, where code can be any of the valid formats described in 'help format', or one of the"
-        " special symbols only allowed as part of a variable:\n"
-        "    %V: show the value of the object by default\n"
-        "    %S: show the summary of the object by default\n"
-        "    %@: show the runtime-provided object description (for Objective-C, it calls NSPrintForDebugger; for C/C++ it does nothing)\n"
-        "    %L: show the location of the object (memory address or a register name)\n"
-        "    %#: show the number of children of the object\n"
-        "    %T: show the type of the object\n"
-        "Another variable that you can use in summary strings is ${svar . This sequence works exactly like ${var, including the fact that ${*svar is an allowed sequence, but uses"
-        " the object's synthetic children provider instead of the actual objects. For instance, if you are using STL synthetic children providers, the following summary string would"
-        " count the number of actual elements stored in an std::list:\n"
-        "type summary add -s \"${svar%#}\" -x \"std::list<\"";
+static const char *SummaryStringHelpTextCallback() {
+  return "A summary string is a way to extract information from variables in "
+         "order to present them using a summary.\n"
+         "Summary strings contain static text, variables, scopes and control "
+         "sequences:\n"
+         "  - Static text can be any sequence of non-special characters, i.e. "
+         "anything but '{', '}', '$', or '\\'.\n"
+         "  - Variables are sequences of characters beginning with ${, ending "
+         "with } and that contain symbols in the format described below.\n"
+         "  - Scopes are any sequence of text between { and }. Anything "
+         "included in a scope will only appear in the output summary if there "
+         "were no errors.\n"
+         "  - Control sequences are the usual C/C++ '\\a', '\\n', ..., plus "
+         "'\\$', '\\{' and '\\}'.\n"
+         "A summary string works by copying static text verbatim, turning "
+         "control sequences into their character counterpart, expanding "
+         "variables and trying to expand scopes.\n"
+         "A variable is expanded by giving it a value other than its textual "
+         "representation, and the way this is done depends on what comes after "
+         "the ${ marker.\n"
+         "The most common sequence if ${var followed by an expression path, "
+         "which is the text one would type to access a member of an aggregate "
+         "types, given a variable of that type"
+         " (e.g. if type T has a member named x, which has a member named y, "
+         "and if t is of type T, the expression path would be .x.y and the way "
+         "to fit that into a summary string would be"
+         " ${var.x.y}). You can also use ${*var followed by an expression path "
+         "and in that case the object referred by the path will be "
+         "dereferenced before being displayed."
+         " If the object is not a pointer, doing so will cause an error. For "
+         "additional details on expression paths, you can type 'help "
+         "expr-path'. \n"
+         "By default, summary strings attempt to display the summary for any "
+         "variable they reference, and if that fails the value. If neither can "
+         "be shown, nothing is displayed."
+         "In a summary string, you can also use an array index [n], or a "
+         "slice-like range [n-m]. This can have two different meanings "
+         "depending on what kind of object the expression"
+         " path refers to:\n"
+         "  - if it is a scalar type (any basic type like int, float, ...) the "
+         "expression is a bitfield, i.e. the bits indicated by the indexing "
+         "operator are extracted out of the number"
+         " and displayed as an individual variable\n"
+         "  - if it is an array or pointer the array items indicated by the "
+         "indexing operator are shown as the result of the variable. if the "
+         "expression is an array, real array items are"
+         " printed; if it is a pointer, the pointer-as-array syntax is used to "
+         "obtain the values (this means, the latter case can have no range "
+         "checking)\n"
+         "If you are trying to display an array for which the size is known, "
+         "you can also use [] instead of giving an exact range. This has the "
+         "effect of showing items 0 thru size - 1.\n"
+         "Additionally, a variable can contain an (optional) format code, as "
+         "in ${var.x.y%code}, where code can be any of the valid formats "
+         "described in 'help format', or one of the"
+         " special symbols only allowed as part of a variable:\n"
+         "    %V: show the value of the object by default\n"
+         "    %S: show the summary of the object by default\n"
+         "    %@: show the runtime-provided object description (for "
+         "Objective-C, it calls NSPrintForDebugger; for C/C++ it does "
+         "nothing)\n"
+         "    %L: show the location of the object (memory address or a "
+         "register name)\n"
+         "    %#: show the number of children of the object\n"
+         "    %T: show the type of the object\n"
+         "Another variable that you can use in summary strings is ${svar . "
+         "This sequence works exactly like ${var, including the fact that "
+         "${*svar is an allowed sequence, but uses"
+         " the object's synthetic children provider instead of the actual "
+         "objects. For instance, if you are using STL synthetic children "
+         "providers, the following summary string would"
+         " count the number of actual elements stored in an std::list:\n"
+         "type summary add -s \"${svar%#}\" -x \"std::list<\"";
 }
 
-static const char *
-ExprPathHelpTextCallback()
-{
-    return
-    "An expression path is the sequence of symbols that is used in C/C++ to access a member variable of an aggregate object (class).\n"
-    "For instance, given a class:\n"
-    "  class foo {\n"
-    "      int a;\n"
-    "      int b; .\n"
-    "      foo* next;\n"
-    "  };\n"
-    "the expression to read item b in the item pointed to by next for foo aFoo would be aFoo.next->b.\n"
-    "Given that aFoo could just be any object of type foo, the string '.next->b' is the expression path, because it can be attached to any foo instance to achieve the effect.\n"
-    "Expression paths in LLDB include dot (.) and arrow (->) operators, and most commands using expression paths have ways to also accept the star (*) operator.\n"
-    "The meaning of these operators is the same as the usual one given to them by the C/C++ standards.\n"
-    "LLDB also has support for indexing ([ ]) in expression paths, and extends the traditional meaning of the square brackets operator to allow bitfield extraction:\n"
-    "for objects of native types (int, float, char, ...) saying '[n-m]' as an expression path (where n and m are any positive integers, e.g. [3-5]) causes LLDB to extract"
-    " bits n thru m from the value of the variable. If n == m, [n] is also allowed as a shortcut syntax. For arrays and pointers, expression paths can only contain one index"
-    " and the meaning of the operation is the same as the one defined by C/C++ (item extraction). Some commands extend bitfield-like syntax for arrays and pointers with the"
-    " meaning of array slicing (taking elements n thru m inside the array or pointed-to memory).";
+static const char *ExprPathHelpTextCallback() {
+  return "An expression path is the sequence of symbols that is used in C/C++ "
+         "to access a member variable of an aggregate object (class).\n"
+         "For instance, given a class:\n"
+         "  class foo {\n"
+         "      int a;\n"
+         "      int b; .\n"
+         "      foo* next;\n"
+         "  };\n"
+         "the expression to read item b in the item pointed to by next for foo "
+         "aFoo would be aFoo.next->b.\n"
+         "Given that aFoo could just be any object of type foo, the string "
+         "'.next->b' is the expression path, because it can be attached to any "
+         "foo instance to achieve the effect.\n"
+         "Expression paths in LLDB include dot (.) and arrow (->) operators, "
+         "and most commands using expression paths have ways to also accept "
+         "the star (*) operator.\n"
+         "The meaning of these operators is the same as the usual one given to "
+         "them by the C/C++ standards.\n"
+         "LLDB also has support for indexing ([ ]) in expression paths, and "
+         "extends the traditional meaning of the square brackets operator to "
+         "allow bitfield extraction:\n"
+         "for objects of native types (int, float, char, ...) saying '[n-m]' "
+         "as an expression path (where n and m are any positive integers, e.g. "
+         "[3-5]) causes LLDB to extract"
+         " bits n thru m from the value of the variable. If n == m, [n] is "
+         "also allowed as a shortcut syntax. For arrays and pointers, "
+         "expression paths can only contain one index"
+         " and the meaning of the operation is the same as the one defined by "
+         "C/C++ (item extraction). Some commands extend bitfield-like syntax "
+         "for arrays and pointers with the"
+         " meaning of array slicing (taking elements n thru m inside the array "
+         "or pointed-to memory).";
 }
 
-void
-CommandObject::FormatLongHelpText (Stream &output_strm, const char *long_help)
-{
-    CommandInterpreter& interpreter = GetCommandInterpreter();
-    std::stringstream lineStream (long_help);
-    std::string line;
-    while (std::getline (lineStream, line)) {
-        if (line.empty()) {
-            output_strm << "\n";
-            continue;
-        }
-        size_t result = line.find_first_not_of (" \t");
-        if (result == std::string::npos) {
-            result = 0;
-        }
-        std::string whitespace_prefix = line.substr (0, result);
-        std::string remainder = line.substr (result);
-        interpreter.OutputFormattedHelpText(output_strm, whitespace_prefix.c_str(), remainder.c_str());
+void CommandObject::FormatLongHelpText(Stream &output_strm,
+                                       const char *long_help) {
+  CommandInterpreter &interpreter = GetCommandInterpreter();
+  std::stringstream lineStream(long_help);
+  std::string line;
+  while (std::getline(lineStream, line)) {
+    if (line.empty()) {
+      output_strm << "\n";
+      continue;
     }
-}
-
-void
-CommandObject::GenerateHelpText (CommandReturnObject &result)
-{
-    GenerateHelpText(result.GetOutputStream());
-    
-    result.SetStatus (eReturnStatusSuccessFinishNoResult);
-}
-
-void
-CommandObject::GenerateHelpText (Stream &output_strm)
-{
-    CommandInterpreter& interpreter = GetCommandInterpreter();
-    if (WantsRawCommandString())
-    {
-        std::string help_text(GetHelp());
-        help_text.append("  Expects 'raw' input (see 'help raw-input'.)");
-        interpreter.OutputFormattedHelpText(output_strm, "", "", help_text.c_str(), 1);
+    size_t result = line.find_first_not_of(" \t");
+    if (result == std::string::npos) {
+      result = 0;
     }
-    else
-        interpreter.OutputFormattedHelpText(output_strm, "", "", GetHelp(), 1);
-    output_strm.Printf("\nSyntax: %s\n", GetSyntax());
-    Options *options = GetOptions();
-    if (options != nullptr)
-    {
-        options->GenerateOptionUsage(output_strm, this,
-                                     GetCommandInterpreter()
-                                        .GetDebugger().GetTerminalWidth());
-    }
-    const char *long_help = GetHelpLong();
-    if ((long_help != nullptr) && (strlen(long_help) > 0))
-    {
-        FormatLongHelpText(output_strm, long_help);
-    }
-    if (!IsDashDashCommand() && options && options->NumCommandOptions() > 0)
-    {
-        if (WantsRawCommandString() && !WantsCompletion())
-        {
-            // Emit the message about using ' -- ' between the end of the command options and the raw input
-            // conditionally, i.e., only if the command object does not want completion.
-            interpreter.OutputFormattedHelpText(
-                output_strm, "", "",
-                "\nImportant Note: Because this command takes 'raw' input, if you use any command options"
-                " you must use ' -- ' between the end of the command options and the beginning of the raw input.",
-                1);
-        }
-        else if (GetNumArgumentEntries() > 0)
-        {
-            // Also emit a warning about using "--" in case you are using a command that takes options and arguments.
-            interpreter.OutputFormattedHelpText(
-                output_strm, "", "", "\nThis command takes options and free-form arguments.  If your arguments resemble"
-                                     " option specifiers (i.e., they start with a - or --), you must use ' -- ' between"
-                                     " the end of the command options and the beginning of the arguments.",
-                1);
-        }
-    }
+    std::string whitespace_prefix = line.substr(0, result);
+    std::string remainder = line.substr(result);
+    interpreter.OutputFormattedHelpText(output_strm, whitespace_prefix.c_str(),
+                                        remainder.c_str());
+  }
 }
 
-void
-CommandObject::AddIDsArgumentData(CommandArgumentEntry &arg, CommandArgumentType ID, CommandArgumentType IDRange)
-{
-    CommandArgumentData id_arg;
-    CommandArgumentData id_range_arg;
+void CommandObject::GenerateHelpText(CommandReturnObject &result) {
+  GenerateHelpText(result.GetOutputStream());
 
-    // Create the first variant for the first (and only) argument for this command.
-    id_arg.arg_type = ID;
-    id_arg.arg_repetition = eArgRepeatOptional;
-
-    // Create the second variant for the first (and only) argument for this command.
-    id_range_arg.arg_type = IDRange;
-    id_range_arg.arg_repetition = eArgRepeatOptional;
-
-    // The first (and only) argument for this command could be either an id or an id_range.
-    // Push both variants into the entry for the first argument for this command.
-    arg.push_back(id_arg);
-    arg.push_back(id_range_arg);
+  result.SetStatus(eReturnStatusSuccessFinishNoResult);
 }
 
-const char * 
-CommandObject::GetArgumentTypeAsCString (const lldb::CommandArgumentType arg_type)
-{
-    assert(arg_type < eArgTypeLastArg && "Invalid argument type passed to GetArgumentTypeAsCString");
-    return g_arguments_data[arg_type].arg_name;
+void CommandObject::GenerateHelpText(Stream &output_strm) {
+  CommandInterpreter &interpreter = GetCommandInterpreter();
+  if (WantsRawCommandString()) {
+    std::string help_text(GetHelp());
+    help_text.append("  Expects 'raw' input (see 'help raw-input'.)");
+    interpreter.OutputFormattedHelpText(output_strm, "", "", help_text.c_str(),
+                                        1);
+  } else
+    interpreter.OutputFormattedHelpText(output_strm, "", "", GetHelp(), 1);
+  output_strm.Printf("\nSyntax: %s\n", GetSyntax());
+  Options *options = GetOptions();
+  if (options != nullptr) {
+    options->GenerateOptionUsage(
+        output_strm, this,
+        GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+  }
+  const char *long_help = GetHelpLong();
+  if ((long_help != nullptr) && (strlen(long_help) > 0)) {
+    FormatLongHelpText(output_strm, long_help);
+  }
+  if (!IsDashDashCommand() && options && options->NumCommandOptions() > 0) {
+    if (WantsRawCommandString() && !WantsCompletion()) {
+      // Emit the message about using ' -- ' between the end of the command
+      // options and the raw input
+      // conditionally, i.e., only if the command object does not want
+      // completion.
+      interpreter.OutputFormattedHelpText(
+          output_strm, "", "",
+          "\nImportant Note: Because this command takes 'raw' input, if you "
+          "use any command options"
+          " you must use ' -- ' between the end of the command options and the "
+          "beginning of the raw input.",
+          1);
+    } else if (GetNumArgumentEntries() > 0) {
+      // Also emit a warning about using "--" in case you are using a command
+      // that takes options and arguments.
+      interpreter.OutputFormattedHelpText(
+          output_strm, "", "",
+          "\nThis command takes options and free-form arguments.  If your "
+          "arguments resemble"
+          " option specifiers (i.e., they start with a - or --), you must use "
+          "' -- ' between"
+          " the end of the command options and the beginning of the arguments.",
+          1);
+    }
+  }
 }
 
-const char * 
-CommandObject::GetArgumentDescriptionAsCString (const lldb::CommandArgumentType arg_type)
-{
-    assert(arg_type < eArgTypeLastArg && "Invalid argument type passed to GetArgumentDescriptionAsCString");
-    return g_arguments_data[arg_type].help_text;
+void CommandObject::AddIDsArgumentData(CommandArgumentEntry &arg,
+                                       CommandArgumentType ID,
+                                       CommandArgumentType IDRange) {
+  CommandArgumentData id_arg;
+  CommandArgumentData id_range_arg;
+
+  // Create the first variant for the first (and only) argument for this
+  // command.
+  id_arg.arg_type = ID;
+  id_arg.arg_repetition = eArgRepeatOptional;
+
+  // Create the second variant for the first (and only) argument for this
+  // command.
+  id_range_arg.arg_type = IDRange;
+  id_range_arg.arg_repetition = eArgRepeatOptional;
+
+  // The first (and only) argument for this command could be either an id or an
+  // id_range.
+  // Push both variants into the entry for the first argument for this command.
+  arg.push_back(id_arg);
+  arg.push_back(id_range_arg);
 }
 
-Target *
-CommandObject::GetDummyTarget()
-{
-    return m_interpreter.GetDebugger().GetDummyTarget();
+const char *CommandObject::GetArgumentTypeAsCString(
+    const lldb::CommandArgumentType arg_type) {
+  assert(arg_type < eArgTypeLastArg &&
+         "Invalid argument type passed to GetArgumentTypeAsCString");
+  return g_arguments_data[arg_type].arg_name;
 }
 
-Target *
-CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy)
-{
-    return m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
+const char *CommandObject::GetArgumentDescriptionAsCString(
+    const lldb::CommandArgumentType arg_type) {
+  assert(arg_type < eArgTypeLastArg &&
+         "Invalid argument type passed to GetArgumentDescriptionAsCString");
+  return g_arguments_data[arg_type].help_text;
 }
 
-Thread *
-CommandObject::GetDefaultThread()
-{
-    Thread *thread_to_use = m_exe_ctx.GetThreadPtr();
-    if (thread_to_use)
-        return thread_to_use;
-    
-    Process *process = m_exe_ctx.GetProcessPtr();
-    if (!process)
-    {
-        Target *target = m_exe_ctx.GetTargetPtr();
-        if (!target)
-        {
-            target = m_interpreter.GetDebugger().GetSelectedTarget().get();
-        }
-        if (target)
-            process = target->GetProcessSP().get();
+Target *CommandObject::GetDummyTarget() {
+  return m_interpreter.GetDebugger().GetDummyTarget();
+}
+
+Target *CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy) {
+  return m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
+}
+
+Thread *CommandObject::GetDefaultThread() {
+  Thread *thread_to_use = m_exe_ctx.GetThreadPtr();
+  if (thread_to_use)
+    return thread_to_use;
+
+  Process *process = m_exe_ctx.GetProcessPtr();
+  if (!process) {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target) {
+      target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    }
+    if (target)
+      process = target->GetProcessSP().get();
+  }
+
+  if (process)
+    return process->GetThreadList().GetSelectedThread().get();
+  else
+    return nullptr;
+}
+
+bool CommandObjectParsed::Execute(const char *args_string,
+                                  CommandReturnObject &result) {
+  bool handled = false;
+  Args cmd_args(args_string);
+  if (HasOverrideCallback()) {
+    Args full_args(GetCommandName());
+    full_args.AppendArguments(cmd_args);
+    handled =
+        InvokeOverrideCallback(full_args.GetConstArgumentVector(), result);
+  }
+  if (!handled) {
+    for (size_t i = 0; i < cmd_args.GetArgumentCount(); ++i) {
+      const char *tmp_str = cmd_args.GetArgumentAtIndex(i);
+      if (tmp_str[0] == '`') // back-quote
+        cmd_args.ReplaceArgumentAtIndex(
+            i, m_interpreter.ProcessEmbeddedScriptCommands(tmp_str));
     }
 
-    if (process)
-        return process->GetThreadList().GetSelectedThread().get();
-    else
-        return nullptr;
+    if (CheckRequirements(result)) {
+      if (ParseOptions(cmd_args, result)) {
+        // Call the command-specific version of 'Execute', passing it the
+        // already processed arguments.
+        handled = DoExecute(cmd_args, result);
+      }
+    }
+
+    Cleanup();
+  }
+  return handled;
 }
 
-bool
-CommandObjectParsed::Execute (const char *args_string, CommandReturnObject &result)
-{
-    bool handled = false;
-    Args cmd_args (args_string);
-    if (HasOverrideCallback())
-    {
-        Args full_args (GetCommandName ());
-        full_args.AppendArguments(cmd_args);
-        handled = InvokeOverrideCallback (full_args.GetConstArgumentVector(), result);
-    }
-    if (!handled)
-    {
-        for (size_t i = 0; i < cmd_args.GetArgumentCount();  ++i)
-        {
-            const char *tmp_str = cmd_args.GetArgumentAtIndex (i);
-            if (tmp_str[0] == '`')  // back-quote
-                cmd_args.ReplaceArgumentAtIndex (i, m_interpreter.ProcessEmbeddedScriptCommands (tmp_str));
-        }
+bool CommandObjectRaw::Execute(const char *args_string,
+                               CommandReturnObject &result) {
+  bool handled = false;
+  if (HasOverrideCallback()) {
+    std::string full_command(GetCommandName());
+    full_command += ' ';
+    full_command += args_string;
+    const char *argv[2] = {nullptr, nullptr};
+    argv[0] = full_command.c_str();
+    handled = InvokeOverrideCallback(argv, result);
+  }
+  if (!handled) {
+    if (CheckRequirements(result))
+      handled = DoExecute(args_string, result);
 
-        if (CheckRequirements(result))
-        {
-            if (ParseOptions (cmd_args, result))
-            {
-                // Call the command-specific version of 'Execute', passing it the already processed arguments.
-                handled = DoExecute (cmd_args, result);
-            }
-        }
-
-        Cleanup();
-    }
-    return handled;
+    Cleanup();
+  }
+  return handled;
 }
 
-bool
-CommandObjectRaw::Execute (const char *args_string, CommandReturnObject &result)
-{
-    bool handled = false;
-    if (HasOverrideCallback())
-    {
-        std::string full_command (GetCommandName ());
-        full_command += ' ';
-        full_command += args_string;
-        const char *argv[2] = { nullptr, nullptr };
-        argv[0] = full_command.c_str();
-        handled = InvokeOverrideCallback (argv, result);
-    }
-    if (!handled)
-    {
-        if (CheckRequirements(result))
-            handled = DoExecute (args_string, result);
-        
-        Cleanup();
-    }
-    return handled;
-}
-
-static
-const char *arch_helper()
-{
-    static StreamString g_archs_help;
-    if (g_archs_help.Empty())
-    {
-        StringList archs;
-        ArchSpec::AutoComplete(nullptr, archs);
-        g_archs_help.Printf("These are the supported architecture names:\n");
-        archs.Join("\n", g_archs_help);
-    }
-    return g_archs_help.GetData();
+static const char *arch_helper() {
+  static StreamString g_archs_help;
+  if (g_archs_help.Empty()) {
+    StringList archs;
+    ArchSpec::AutoComplete(nullptr, archs);
+    g_archs_help.Printf("These are the supported architecture names:\n");
+    archs.Join("\n", g_archs_help);
+  }
+  return g_archs_help.GetData();
 }
 
 CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
@@ -1204,12 +1137,10 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
     // clang-format on
 };
 
-const CommandObject::ArgumentTableEntry*
-CommandObject::GetArgumentTable ()
-{
-    // If this assertion fires, then the table above is out of date with the CommandArgumentType enumeration
-    assert ((sizeof (CommandObject::g_arguments_data) / sizeof (CommandObject::ArgumentTableEntry)) == eArgTypeLastArg);
-    return CommandObject::g_arguments_data;
+const CommandObject::ArgumentTableEntry *CommandObject::GetArgumentTable() {
+  // If this assertion fires, then the table above is out of date with the
+  // CommandArgumentType enumeration
+  assert((sizeof(CommandObject::g_arguments_data) /
+          sizeof(CommandObject::ArgumentTableEntry)) == eArgTypeLastArg);
+  return CommandObject::g_arguments_data;
 }
-
-

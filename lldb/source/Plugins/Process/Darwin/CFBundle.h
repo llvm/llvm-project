@@ -16,28 +16,23 @@
 
 #include "CFUtils.h"
 
-class CFBundle : public CFReleaser<CFBundleRef>
-{
+class CFBundle : public CFReleaser<CFBundleRef> {
 public:
-    //------------------------------------------------------------------
-    // Constructors and Destructors
-    //------------------------------------------------------------------
-    CFBundle(const char *path = NULL);
-    CFBundle(const CFBundle& rhs);
-    CFBundle& operator=(const CFBundle& rhs);
-    virtual
-    ~CFBundle();
-    bool
-    SetPath (const char *path);
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  CFBundle(const char *path = NULL);
+  CFBundle(const CFBundle &rhs);
+  CFBundle &operator=(const CFBundle &rhs);
+  virtual ~CFBundle();
+  bool SetPath(const char *path);
 
-    CFStringRef
-    GetIdentifier () const;
+  CFStringRef GetIdentifier() const;
 
-    CFURLRef
-    CopyExecutableURL () const;
-    
+  CFURLRef CopyExecutableURL() const;
+
 protected:
-        CFReleaser<CFURLRef> m_bundle_url;
+  CFReleaser<CFURLRef> m_bundle_url;
 };
 
 #endif // #ifndef __CFBundle_h__

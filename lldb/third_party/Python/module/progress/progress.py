@@ -8,10 +8,11 @@ import six
 import sys
 import time
 
+
 class ProgressBar(object):
     """ProgressBar class holds the options of the progress bar.
     The options are:
-        start   State from which start the progress. For example, if start is 
+        start   State from which start the progress. For example, if start is
                 5 and the end is 10, the progress of this state is 50%
         end     State in which the progress has terminated.
         width   --
@@ -23,15 +24,15 @@ class ProgressBar(object):
     light_block = six.unichr(0x2591).encode("utf-8")
     solid_block = six.unichr(0x2588).encode("utf-8")
     solid_right_arrow = six.unichr(0x25BA).encode("utf-8")
-    
-    def __init__(self, 
-                 start=0, 
-                 end=10, 
-                 width=12, 
-                 fill=six.unichr(0x25C9).encode("utf-8"), 
-                 blank=six.unichr(0x25CC).encode("utf-8"), 
-                 marker=six.unichr(0x25CE).encode("utf-8"), 
-                 format='[%(fill)s%(marker)s%(blank)s] %(progress)s%%', 
+
+    def __init__(self,
+                 start=0,
+                 end=10,
+                 width=12,
+                 fill=six.unichr(0x25C9).encode("utf-8"),
+                 blank=six.unichr(0x25CC).encode("utf-8"),
+                 marker=six.unichr(0x25CE).encode("utf-8"),
+                 format='[%(fill)s%(marker)s%(blank)s] %(progress)s%%',
                  incremental=True):
         super(ProgressBar, self).__init__()
 
@@ -43,7 +44,7 @@ class ProgressBar(object):
         self.marker = marker
         self.format = format
         self.incremental = incremental
-        self.step = 100 / float(width) #fix
+        self.step = 100 / float(width)  # fix
         self.reset()
 
     def __add__(self, increment):
@@ -59,10 +60,15 @@ class ProgressBar(object):
         return self
 
     def __str__(self):
-        progressed = int(self.progress / self.step) #fix
+        progressed = int(self.progress / self.step)  # fix
         fill = progressed * self.fill
         blank = (self.width - progressed) * self.blank
-        return self.format % {'fill': fill, 'blank': blank, 'marker': self.marker, 'progress': int(self.progress)}
+        return self.format % {
+            'fill': fill,
+            'blank': blank,
+            'marker': self.marker,
+            'progress': int(
+                self.progress)}
 
     __repr__ = __str__
 
@@ -80,17 +86,28 @@ class AnimatedProgressBar(ProgressBar):
     Accepts an extra keyword argument named `stdout` (by default use sys.stdout)
     and may be any file-object to which send the progress status.
     """
-    def __init__(self, 
-                 start=0, 
-                 end=10, 
-                 width=12, 
-                 fill=six.unichr(0x25C9).encode("utf-8"), 
-                 blank=six.unichr(0x25CC).encode("utf-8"), 
-                 marker=six.unichr(0x25CE).encode("utf-8"), 
-                 format='[%(fill)s%(marker)s%(blank)s] %(progress)s%%', 
+
+    def __init__(self,
+                 start=0,
+                 end=10,
+                 width=12,
+                 fill=six.unichr(0x25C9).encode("utf-8"),
+                 blank=six.unichr(0x25CC).encode("utf-8"),
+                 marker=six.unichr(0x25CE).encode("utf-8"),
+                 format='[%(fill)s%(marker)s%(blank)s] %(progress)s%%',
                  incremental=True,
                  stdout=sys.stdout):
-        super(AnimatedProgressBar, self).__init__(start,end,width,fill,blank,marker,format,incremental)
+        super(
+            AnimatedProgressBar,
+            self).__init__(
+            start,
+            end,
+            width,
+            fill,
+            blank,
+            marker,
+            format,
+            incremental)
         self.stdout = stdout
 
     def show_progress(self):
@@ -101,25 +118,38 @@ class AnimatedProgressBar(ProgressBar):
         self.stdout.write(str(self))
         self.stdout.flush()
 
+
 class ProgressWithEvents(AnimatedProgressBar):
     """Extends AnimatedProgressBar to allow you to track a set of events that
        cause the progress to move. For instance, in a deletion progress bar, you
        can track files that were nuked and files that the user doesn't have access to
     """
-    def __init__(self, 
-                 start=0, 
-                 end=10, 
-                 width=12, 
-                 fill=six.unichr(0x25C9).encode("utf-8"), 
-                 blank=six.unichr(0x25CC).encode("utf-8"), 
-                 marker=six.unichr(0x25CE).encode("utf-8"), 
-                 format='[%(fill)s%(marker)s%(blank)s] %(progress)s%%', 
+
+    def __init__(self,
+                 start=0,
+                 end=10,
+                 width=12,
+                 fill=six.unichr(0x25C9).encode("utf-8"),
+                 blank=six.unichr(0x25CC).encode("utf-8"),
+                 marker=six.unichr(0x25CE).encode("utf-8"),
+                 format='[%(fill)s%(marker)s%(blank)s] %(progress)s%%',
                  incremental=True,
                  stdout=sys.stdout):
-        super(ProgressWithEvents, self).__init__(start,end,width,fill,blank,marker,format,incremental,stdout)
+        super(
+            ProgressWithEvents,
+            self).__init__(
+            start,
+            end,
+            width,
+            fill,
+            blank,
+            marker,
+            format,
+            incremental,
+            stdout)
         self.events = {}
 
-    def add_event(self,event):
+    def add_event(self, event):
         if event in self.events:
             self.events[event] += 1
         else:
@@ -151,4 +181,4 @@ if __name__ == '__main__':
         time.sleep(0.3)
         if p.progress == 100:
             break
-    print() #new line
+    print()  # new line

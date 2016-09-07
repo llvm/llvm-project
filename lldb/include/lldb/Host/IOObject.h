@@ -18,44 +18,39 @@
 
 namespace lldb_private {
 
-class IOObject
-{
+class IOObject {
 public:
-    typedef enum
-    {
-        eFDTypeFile,        // Other FD requiring read/write
-        eFDTypeSocket,      // Socket requiring send/recv
-    } FDType;
+  typedef enum {
+    eFDTypeFile,   // Other FD requiring read/write
+    eFDTypeSocket, // Socket requiring send/recv
+  } FDType;
 
-    // TODO: On Windows this should be a HANDLE, and wait should use
-    // WaitForMultipleObjects
-    typedef int WaitableHandle;
-    static const WaitableHandle kInvalidHandleValue;
+  // TODO: On Windows this should be a HANDLE, and wait should use
+  // WaitForMultipleObjects
+  typedef int WaitableHandle;
+  static const WaitableHandle kInvalidHandleValue;
 
-    IOObject(FDType type, bool should_close)
-        : m_fd_type(type)
-        , m_should_close_fd(should_close)
-    {
-    }
-    virtual ~IOObject() {}
+  IOObject(FDType type, bool should_close)
+      : m_fd_type(type), m_should_close_fd(should_close) {}
+  virtual ~IOObject() {}
 
-    virtual Error Read (void *buf, size_t &num_bytes) = 0;
-    virtual Error Write (const void *buf, size_t &num_bytes) = 0;
-    virtual bool IsValid() const = 0;
-    virtual Error Close() = 0;
+  virtual Error Read(void *buf, size_t &num_bytes) = 0;
+  virtual Error Write(const void *buf, size_t &num_bytes) = 0;
+  virtual bool IsValid() const = 0;
+  virtual Error Close() = 0;
 
-    FDType GetFdType() const { return m_fd_type; }
+  FDType GetFdType() const { return m_fd_type; }
 
-    virtual WaitableHandle GetWaitableHandle() = 0;
+  virtual WaitableHandle GetWaitableHandle() = 0;
 
 protected:
-    FDType m_fd_type;
-    bool m_should_close_fd; // True if this class should close the file descriptor when it goes away.
+  FDType m_fd_type;
+  bool m_should_close_fd; // True if this class should close the file descriptor
+                          // when it goes away.
 
 private:
-    DISALLOW_COPY_AND_ASSIGN (IOObject);
+  DISALLOW_COPY_AND_ASSIGN(IOObject);
 };
-
 }
 
 #endif

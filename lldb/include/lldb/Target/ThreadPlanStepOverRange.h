@@ -22,39 +22,35 @@
 namespace lldb_private {
 
 class ThreadPlanStepOverRange : public ThreadPlanStepRange,
-                                       ThreadPlanShouldStopHere
-{
+                                ThreadPlanShouldStopHere {
 public:
-    ThreadPlanStepOverRange (Thread &thread, 
-                             const AddressRange &range, 
-                             const SymbolContext &addr_context, 
-                             lldb::RunMode stop_others,
-                             LazyBool step_out_avoids_no_debug);
-                             
-    ~ThreadPlanStepOverRange() override;
+  ThreadPlanStepOverRange(Thread &thread, const AddressRange &range,
+                          const SymbolContext &addr_context,
+                          lldb::RunMode stop_others,
+                          LazyBool step_out_avoids_no_debug);
 
-    void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
-    bool ShouldStop(Event *event_ptr) override;
-    
+  ~ThreadPlanStepOverRange() override;
+
+  void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
+  bool ShouldStop(Event *event_ptr) override;
+
 protected:
-    bool DoPlanExplainsStop(Event *event_ptr) override;
-    bool DoWillResume(lldb::StateType resume_state, bool current_plan) override;
-    
-    void
-    SetFlagsToDefault() override
-    {
-        GetFlags().Set(ThreadPlanStepOverRange::s_default_flag_values);
-    }
+  bool DoPlanExplainsStop(Event *event_ptr) override;
+  bool DoWillResume(lldb::StateType resume_state, bool current_plan) override;
+
+  void SetFlagsToDefault() override {
+    GetFlags().Set(ThreadPlanStepOverRange::s_default_flag_values);
+  }
 
 private:
-    static uint32_t s_default_flag_values;
-    
-    void SetupAvoidNoDebug(LazyBool step_out_avoids_code_without_debug_info);
-    bool IsEquivalentContext(const SymbolContext &context);
+  static uint32_t s_default_flag_values;
 
-    bool m_first_resume;
+  void SetupAvoidNoDebug(LazyBool step_out_avoids_code_without_debug_info);
+  bool IsEquivalentContext(const SymbolContext &context);
 
-    DISALLOW_COPY_AND_ASSIGN (ThreadPlanStepOverRange);
+  bool m_first_resume;
+
+  DISALLOW_COPY_AND_ASSIGN(ThreadPlanStepOverRange);
 };
 
 } // namespace lldb_private

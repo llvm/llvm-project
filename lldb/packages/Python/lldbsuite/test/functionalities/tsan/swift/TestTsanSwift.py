@@ -36,7 +36,7 @@ class TsanSwiftTestCase(lldbtest.TestBase):
     def setUp(self):
         lldbtest.TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
         exe_name = "a.out"
@@ -50,17 +50,25 @@ class TsanSwiftTestCase(lldbtest.TestBase):
 
         stop_reason = self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
         if stop_reason == lldb.eStopReasonExec:
-            # On OS X 10.10 and older, we need to re-exec to enable interceptors.
+            # On OS X 10.10 and older, we need to re-exec to enable
+            # interceptors.
             self.runCmd("continue")
 
         # the stop reason of the thread should be a TSan report.
         self.expect("thread list", "A data race should be detected",
-            substrs = ['stopped', 'stop reason = Data race detected'])
+                    substrs=['stopped', 'stop reason = Data race detected'])
 
-        self.assertEqual(self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(), lldb.eStopReasonInstrumentation)
+        self.assertEqual(
+            self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(),
+            lldb.eStopReasonInstrumentation)
 
-        self.expect("thread info -s", "The extended stop info should contain the TSan provided fields",
-            substrs = ["instrumentation_class", "description", "mops"])
+        self.expect(
+            "thread info -s",
+            "The extended stop info should contain the TSan provided fields",
+            substrs=[
+                "instrumentation_class",
+                "description",
+                "mops"])
 
         output_lines = self.res.GetOutput().split('\n')
         json_line = '\n'.join(output_lines[2:])
@@ -69,4 +77,8 @@ class TsanSwiftTestCase(lldbtest.TestBase):
         self.assertEqual(data["issue_type"], "data-race")
         self.assertEqual(len(data["mops"]), 2)
         self.assertTrue(data["location_filename"].endswith("/main.swift"))
-        self.assertEqual(data["location_line"], lldbtest.line_number('main.swift', '// global variable'))
+        self.assertEqual(
+            data["location_line"],
+            lldbtest.line_number(
+                'main.swift',
+                '// global variable'))

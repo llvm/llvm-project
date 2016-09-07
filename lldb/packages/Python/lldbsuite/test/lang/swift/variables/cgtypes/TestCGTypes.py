@@ -34,7 +34,7 @@ class TestSwiftCoreGraphicsTypes(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
         """Test that we are able to properly format basic CG types"""
@@ -46,7 +46,8 @@ class TestSwiftCoreGraphicsTypes(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('Set breakpoint here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -55,7 +56,8 @@ class TestSwiftCoreGraphicsTypes(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -64,15 +66,24 @@ class TestSwiftCoreGraphicsTypes(TestBase):
 
         self.expect('frame variable f', substrs=[' = 1'])
         self.expect('frame variable p', substrs=[' = (x = 1, y = 1)'])
-        self.expect('frame variable r', substrs=[' = (origin = (x = 0, y = 0), size = (width = 0, height = 0))'])
+        self.expect('frame variable r', substrs=[
+            ' = (origin = (x = 0, y = 0), size = (width = 0, height = 0))'])
 
         self.expect('expr f', substrs=[' = 1'])
         self.expect('expr p', substrs=[' = (x = 1, y = 1)'])
-        self.expect('expr r', substrs=[' = (origin = (x = 0, y = 0), size = (width = 0, height = 0))'])
+        self.expect(
+            'expr r',
+            substrs=[' = (origin = (x = 0, y = 0), size = (width = 0, height = 0))'])
 
         self.expect('po f', substrs=['1.0'])
-        self.expect('po p', substrs=['x : 1.0','y : 1.0'])
-        self.expect('po r', substrs=['x : 0.0', 'y : 0.0', 'width : 0.0', 'height : 0.0'])
+        self.expect('po p', substrs=['x : 1.0', 'y : 1.0'])
+        self.expect(
+            'po r',
+            substrs=[
+                'x : 0.0',
+                'y : 0.0',
+                'width : 0.0',
+                'height : 0.0'])
 
 
 if __name__ == '__main__':

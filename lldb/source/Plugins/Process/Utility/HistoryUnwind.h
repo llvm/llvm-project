@@ -16,36 +16,31 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-private.h"
 #include "lldb/Target/Unwind.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
-class HistoryUnwind : public lldb_private::Unwind
-{
+class HistoryUnwind : public lldb_private::Unwind {
 public:
-    HistoryUnwind (Thread &thread, std::vector<lldb::addr_t> pcs, bool stop_id_is_valid);
+  HistoryUnwind(Thread &thread, std::vector<lldb::addr_t> pcs,
+                bool stop_id_is_valid);
 
-    ~HistoryUnwind() override;
+  ~HistoryUnwind() override;
 
 protected:
-    void
-    DoClear() override;
+  void DoClear() override;
 
-    lldb::RegisterContextSP
-    DoCreateRegisterContextForFrame(StackFrame *frame) override;
+  lldb::RegisterContextSP
+  DoCreateRegisterContextForFrame(StackFrame *frame) override;
 
-    bool
-    DoGetFrameInfoAtIndex(uint32_t frame_idx,
-                          lldb::addr_t& cfa, 
-                          lldb::addr_t& pc) override;
-    uint32_t
-    DoGetFrameCount() override;
+  bool DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
+                             lldb::addr_t &pc) override;
+  uint32_t DoGetFrameCount() override;
 
 private:
-
-    std::vector<lldb::addr_t>   m_pcs;
-    bool                        m_stop_id_is_valid;
+  std::vector<lldb::addr_t> m_pcs;
+  bool m_stop_id_is_valid;
 };
 
 } // namespace lldb_private

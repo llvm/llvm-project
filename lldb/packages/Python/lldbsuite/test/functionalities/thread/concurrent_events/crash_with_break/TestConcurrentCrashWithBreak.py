@@ -12,11 +12,10 @@ class ConcurrentCrashWithBreak(ConcurrentEventsBase):
 
     mydir = ConcurrentEventsBase.compute_mydir(__file__)
 
-    @skipIfFreeBSD # timing out on buildbot
-    @expectedFailureAll(triple = '^mips') # Atomic sequences are not supported yet for MIPS in LLDB.
+    @skipIfFreeBSD  # timing out on buildbot
+    # Atomic sequences are not supported yet for MIPS in LLDB.
+    @expectedFailureAll(triple='^mips')
     def test_crash_with_break(self):
         """ Test a thread that crashes while another thread hits a breakpoint."""
         self.build(dictionary=self.getBuildFlags())
         self.do_thread_actions(num_crash_threads=1, num_breakpoint_threads=1)
-
-

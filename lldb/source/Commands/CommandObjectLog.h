@@ -25,21 +25,20 @@ namespace lldb_private {
 // CommandObjectLog
 //-------------------------------------------------------------------------
 
-class CommandObjectLog : public CommandObjectMultiword
-{
+class CommandObjectLog : public CommandObjectMultiword {
 public:
-    //------------------------------------------------------------------
-    // Constructors and Destructors
-    //------------------------------------------------------------------
-    CommandObjectLog(CommandInterpreter &interpreter);
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  CommandObjectLog(CommandInterpreter &interpreter);
 
-    ~CommandObjectLog() override;
+  ~CommandObjectLog() override;
 
 private:
-    //------------------------------------------------------------------
-    // For CommandObjectLog only
-    //------------------------------------------------------------------
-    DISALLOW_COPY_AND_ASSIGN (CommandObjectLog);
+  //------------------------------------------------------------------
+  // For CommandObjectLog only
+  //------------------------------------------------------------------
+  DISALLOW_COPY_AND_ASSIGN(CommandObjectLog);
 };
 
 } // namespace lldb_private

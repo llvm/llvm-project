@@ -14,8 +14,8 @@
 #define _BSD_SOURCE // Required so that getopt.h defines optreset
 #endif
 
-#include <unistd.h>
 #include <getopt.h>
+#include <unistd.h>
 
 #else
 

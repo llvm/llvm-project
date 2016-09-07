@@ -46,9 +46,9 @@ class DarwinLogTestBase(lldbtest.TestBase):
         # or greater.
         version = platform.mac_ver()[0].split('.')
         if ((int(version[0]) == 10) and (int(version[1]) < 12) or
-            (int(version[0]) < 10)):
-                self.skipTest("DarwinLog tests currently require macOS 10.12+")
-                return
+                (int(version[0]) < 10)):
+            self.skipTest("DarwinLog tests currently require macOS 10.12+")
+            return
 
         self.child = None
         self.child_prompt = '(lldb) '
@@ -73,8 +73,9 @@ class DarwinLogTestBase(lldbtest.TestBase):
 
         if self.enable_process_monitor_logging:
             if platform.system() == 'Darwin':
-                self.runCmd("settings set target.process.extra-startup-command "
-                            "QSetLogging:bitmask=LOG_DARWIN_LOG;")
+                self.runCmd(
+                    "settings set target.process.extra-startup-command "
+                    "QSetLogging:bitmask=LOG_DARWIN_LOG;")
                 self.expect_prompt()
 
         # Run the enable command if we have one.
@@ -98,7 +99,8 @@ class DarwinLogTestBase(lldbtest.TestBase):
 
         # Prevent mirroring of NSLog/os_log content to stderr.  We want log
         # messages to come exclusively through our log channel.
-        self.runCmd("settings set target.env-vars IDE_DISABLED_OS_ACTIVITY_DT_MODE=1")
+        self.runCmd(
+            "settings set target.env-vars IDE_DISABLED_OS_ACTIVITY_DT_MODE=1")
         self.expect_prompt()
 
         # Run any darwin-log settings commands now, before we enable logging.
@@ -176,7 +178,7 @@ class DarwinLogTestBase(lldbtest.TestBase):
             expect_regexes = (
                 [re.compile(r"source-log-([^-]+)-(\S+)"),
                  re.compile(r"exited with status")
-                ])
+                 ])
         self.expect(expect_regexes)
 
 
@@ -193,8 +195,11 @@ class DarwinLogEventBasedTestBase(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     class EventListenerThread(threading.Thread):
+
         def __init__(self, listener, process, trace_on, max_entry_count):
-            super(DarwinLogEventBasedTestBase.EventListenerThread, self).__init__()
+            super(
+                DarwinLogEventBasedTestBase.EventListenerThread,
+                self).__init__()
             self.process = process
             self.listener = listener
             self.trace_on = trace_on
@@ -301,9 +306,9 @@ class DarwinLogEventBasedTestBase(lldbtest.TestBase):
         # or greater.
         version = platform.mac_ver()[0].split('.')
         if ((int(version[0]) == 10) and (int(version[1]) < 12) or
-            (int(version[0]) < 10)):
-                self.skipTest("DarwinLog tests currently require macOS 10.12+")
-                return
+                (int(version[0]) < 10)):
+            self.skipTest("DarwinLog tests currently require macOS 10.12+")
+            return
 
         # Source filename.
         self.source = 'main.c'
@@ -406,8 +411,8 @@ class DarwinLogEventBasedTestBase(lldbtest.TestBase):
         listener = lldb.SBListener("SBStructuredData listener")
         self.assertIsNotNone(listener)
 
-        rc = broadcaster.AddListener(listener,
-                                     lldb.SBProcess.eBroadcastBitStructuredData)
+        rc = broadcaster.AddListener(
+            listener, lldb.SBProcess.eBroadcastBitStructuredData)
         self.assertTrue(rc, "Successfully add listener to process broadcaster")
 
         # Start the listening thread to retrieve the events.

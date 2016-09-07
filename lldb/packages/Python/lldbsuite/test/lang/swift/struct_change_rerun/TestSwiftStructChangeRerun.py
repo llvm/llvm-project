@@ -81,10 +81,10 @@ class TestSwiftStructChangeRerun(TestBase):
         var_a = self.frame.EvaluateExpression("a")
         print var_a
         var_a_a = var_a.GetChildMemberWithName("a")
-        lldbutil.check_variable(self,var_a_a,False,value="12")
+        lldbutil.check_variable(self, var_a_a, False, value="12")
 
         var_a_b = var_a.GetChildMemberWithName("b")
-        lldbutil.check_variable(self,var_a_b,False,'"Hey"')
+        lldbutil.check_variable(self, var_a_b, False, '"Hey"')
 
         var_a_c = var_a.GetChildMemberWithName("c")
         self.assertFalse(var_a_c.IsValid(), "make sure a.c doesn't exist")
@@ -92,8 +92,8 @@ class TestSwiftStructChangeRerun(TestBase):
         process.Kill()
 
         print 'build with main2.swift'
-        os.unlink (self.main_source)
-        shutil.copyfile ('main2.swift', self.main_source)
+        os.unlink(self.main_source)
+        shutil.copyfile('main2.swift', self.main_source)
         if build_dsym:
             self.buildDsym()
         else:
@@ -105,7 +105,8 @@ class TestSwiftStructChangeRerun(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -115,14 +116,14 @@ class TestSwiftStructChangeRerun(TestBase):
         var_a = self.frame.EvaluateExpression("a")
         print var_a
         var_a_a = var_a.GetChildMemberWithName("a")
-        lldbutil.check_variable(self,var_a_a,False,value="12")
+        lldbutil.check_variable(self, var_a_a, False, value="12")
 
         var_a_b = var_a.GetChildMemberWithName("b")
-        lldbutil.check_variable(self,var_a_b,False,'"Hey"')
+        lldbutil.check_variable(self, var_a_b, False, '"Hey"')
 
         var_a_c = var_a.GetChildMemberWithName("c")
         self.assertTrue(var_a_c.IsValid(), "make sure a.c does exist")
-        lldbutil.check_variable(self,var_a_c,False,value='12.125')
+        lldbutil.check_variable(self, var_a_c, False, value='12.125')
 
 if __name__ == '__main__':
     import atexit

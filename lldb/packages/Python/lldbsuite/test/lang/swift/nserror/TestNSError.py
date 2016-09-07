@@ -25,7 +25,8 @@ class SwiftNSErrorTest(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.expectedFailureAll(bugnumber="https://bugs.swift.org/browse/SR-782")
+    @decorators.expectedFailureAll(
+        bugnumber="https://bugs.swift.org/browse/SR-782")
     def test_swift_nserror(self):
         """Tests that Swift displays NSError correctly"""
         self.build()

@@ -11,18 +11,28 @@
 # ------------------------------------------------------------------------------
 """Test that QuickLookObject works correctly in the REPL"""
 
-import os, time
+import os
+import time
 import unittest2
 import lldb
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
 import lldbsuite.test.lldbtest as lldbtest
+
 
 class REPLQuickLookTestCase (REPLTest):
 
     mydir = REPLTest.compute_mydir(__file__)
 
     def doTest(self):
-        self.command('PlaygroundQuickLook(reflecting: true)', patterns=['bool = true'])
-        self.command('PlaygroundQuickLook(reflecting: 1.25)', patterns=['double = 1.25'])
-        self.command('PlaygroundQuickLook(reflecting: Float(1.25))', patterns=['float = 1.25'])
-        self.command('PlaygroundQuickLook(reflecting: "Hello")', patterns=['text = \"Hello\"'])
+        self.command(
+            'PlaygroundQuickLook(reflecting: true)',
+            patterns=['bool = true'])
+        self.command(
+            'PlaygroundQuickLook(reflecting: 1.25)',
+            patterns=['double = 1.25'])
+        self.command(
+            'PlaygroundQuickLook(reflecting: Float(1.25))',
+            patterns=['float = 1.25'])
+        self.command(
+            'PlaygroundQuickLook(reflecting: "Hello")',
+            patterns=['text = \"Hello\"'])

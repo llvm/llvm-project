@@ -12,13 +12,12 @@
 
 #include "lldb/Host/ProcessLauncher.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class ProcessLauncherPosix : public ProcessLauncher
-{
-  public:
-    HostProcess LaunchProcess(const ProcessLaunchInfo &launch_info, Error &error) override;
+class ProcessLauncherPosix : public ProcessLauncher {
+public:
+  HostProcess LaunchProcess(const ProcessLaunchInfo &launch_info,
+                            Error &error) override;
 };
 }
 

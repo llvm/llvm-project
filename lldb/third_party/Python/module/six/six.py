@@ -353,8 +353,12 @@ del attr
 
 Module_six_moves_urllib_parse._moved_attributes = _urllib_parse_moved_attributes
 
-_importer._add_module(Module_six_moves_urllib_parse(__name__ + ".moves.urllib_parse"),
-                      "moves.urllib_parse", "moves.urllib.parse")
+_importer._add_module(
+    Module_six_moves_urllib_parse(
+        __name__ +
+        ".moves.urllib_parse"),
+    "moves.urllib_parse",
+    "moves.urllib.parse")
 
 
 class Module_six_moves_urllib_error(_LazyModule):
@@ -373,8 +377,12 @@ del attr
 
 Module_six_moves_urllib_error._moved_attributes = _urllib_error_moved_attributes
 
-_importer._add_module(Module_six_moves_urllib_error(__name__ + ".moves.urllib.error"),
-                      "moves.urllib_error", "moves.urllib.error")
+_importer._add_module(
+    Module_six_moves_urllib_error(
+        __name__ +
+        ".moves.urllib.error"),
+    "moves.urllib_error",
+    "moves.urllib.error")
 
 
 class Module_six_moves_urllib_request(_LazyModule):
@@ -423,8 +431,12 @@ del attr
 
 Module_six_moves_urllib_request._moved_attributes = _urllib_request_moved_attributes
 
-_importer._add_module(Module_six_moves_urllib_request(__name__ + ".moves.urllib.request"),
-                      "moves.urllib_request", "moves.urllib.request")
+_importer._add_module(
+    Module_six_moves_urllib_request(
+        __name__ +
+        ".moves.urllib.request"),
+    "moves.urllib_request",
+    "moves.urllib.request")
 
 
 class Module_six_moves_urllib_response(_LazyModule):
@@ -444,8 +456,12 @@ del attr
 
 Module_six_moves_urllib_response._moved_attributes = _urllib_response_moved_attributes
 
-_importer._add_module(Module_six_moves_urllib_response(__name__ + ".moves.urllib.response"),
-                      "moves.urllib_response", "moves.urllib.response")
+_importer._add_module(
+    Module_six_moves_urllib_response(
+        __name__ +
+        ".moves.urllib.response"),
+    "moves.urllib_response",
+    "moves.urllib.response")
 
 
 class Module_six_moves_urllib_robotparser(_LazyModule):
@@ -462,8 +478,11 @@ del attr
 
 Module_six_moves_urllib_robotparser._moved_attributes = _urllib_robotparser_moved_attributes
 
-_importer._add_module(Module_six_moves_urllib_robotparser(__name__ + ".moves.urllib.robotparser"),
-                      "moves.urllib_robotparser", "moves.urllib.robotparser")
+_importer._add_module(
+    Module_six_moves_urllib_robotparser(
+        __name__ + ".moves.urllib.robotparser"),
+    "moves.urllib_robotparser",
+    "moves.urllib.robotparser")
 
 
 class Module_six_moves_urllib(types.ModuleType):

@@ -5,12 +5,13 @@ Test that objective-c method returning BOOL works correctly.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 @skipUnlessDarwin
 class MethodReturningBOOLTestCase(TestBase):
@@ -35,12 +36,13 @@ class MethodReturningBOOLTestCase(TestBase):
         exe = os.path.join(os.getcwd(), self.exe_name)
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.m", self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.m", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
         self.expect("process status", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = [" at %s:%d" % (self.main_source, self.line),
-                       "stop reason = breakpoint"])
+                    substrs=[" at %s:%d" % (self.main_source, self.line),
+                             "stop reason = breakpoint"])
 
         # rdar://problem/9691614
         self.runCmd('p (int)[my isValid]')

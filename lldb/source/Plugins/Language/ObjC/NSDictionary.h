@@ -1,4 +1,5 @@
-//===-- NSDictionary.h ---------------------------------------------------*- C++ -*-===//
+//===-- NSDictionary.h ---------------------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,30 +20,32 @@
 #include <map>
 
 namespace lldb_private {
-    namespace formatters
-    {
-        template<bool name_entries>
-        bool
-        NSDictionarySummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
+namespace formatters {
+template <bool name_entries>
+bool NSDictionarySummaryProvider(ValueObject &valobj, Stream &stream,
+                                 const TypeSummaryOptions &options);
 
-        extern template bool
-        NSDictionarySummaryProvider<true> (ValueObject&, Stream&, const TypeSummaryOptions&) ;
-        
-        extern template bool
-        NSDictionarySummaryProvider<false> (ValueObject&, Stream&, const TypeSummaryOptions&) ;
-        
-        SyntheticChildrenFrontEnd* NSDictionarySyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP);
-        
-        class NSDictionary_Additionals
-        {
-        public:
-            static std::map<ConstString, CXXFunctionSummaryFormat::Callback>&
-            GetAdditionalSummaries ();
-            
-            static std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback>&
-            GetAdditionalSynthetics ();
-        };
-    } // namespace formatters
+extern template bool
+NSDictionarySummaryProvider<true>(ValueObject &, Stream &,
+                                  const TypeSummaryOptions &);
+
+extern template bool
+NSDictionarySummaryProvider<false>(ValueObject &, Stream &,
+                                   const TypeSummaryOptions &);
+
+SyntheticChildrenFrontEnd *
+NSDictionarySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                     lldb::ValueObjectSP);
+
+class NSDictionary_Additionals {
+public:
+  static std::map<ConstString, CXXFunctionSummaryFormat::Callback> &
+  GetAdditionalSummaries();
+
+  static std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback> &
+  GetAdditionalSynthetics();
+};
+} // namespace formatters
 } // namespace lldb_private
 
 #endif // liblldb_NSDictionary_h_

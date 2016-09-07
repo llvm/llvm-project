@@ -5,9 +5,6 @@
 
 int bar(int n);
 
-inline int foo(int n)
-{
-    return baz(n)+1;
-}
+inline int foo(int n) { return baz(n) + 1; }
 
 #endif

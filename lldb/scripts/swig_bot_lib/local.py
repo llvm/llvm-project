@@ -26,11 +26,13 @@ import use_lldb_suite
 # Package imports
 from lldbsuite.support import fs
 
+
 class LocalConfig(object):
     src_root = None
     target_dir = None
     languages = None
     swig_executable = None
+
 
 def pack_archive(bytes_io, src_root, filters):
     logging.info("Creating input file package...")
@@ -53,9 +55,9 @@ def pack_archive(bytes_io, src_root, filters):
             candidates = [os.path.normpath(os.path.join(full_path, f))
                           for f in os.listdir(full_path)]
             actual = filter(
-                lambda f : os.path.isfile(f) and os.path.splitext(f)[1] == ext,
+                lambda f: os.path.isfile(f) and os.path.splitext(f)[1] == ext,
                 candidates)
-            return (subfolder, map(lambda f : os.path.basename(f), actual))
+            return (subfolder, map(lambda f: os.path.basename(f), actual))
         archive_entries = map(filter_func, filters)
     else:
         for (root, dirs, files) in os.walk(src_root):
@@ -77,12 +79,14 @@ def pack_archive(bytes_io, src_root, filters):
 
     return zip_file
 
+
 def unpack_archive(folder, archive_bytes):
     zip_data = io.BytesIO(archive_bytes)
     logging.debug("Opening zip archive...")
     zip_file = zipfile.ZipFile(zip_data, mode='r')
     zip_file.extractall(folder)
     zip_file.close()
+
 
 def generate(options):
     include_folder = os.path.join(options.src_root, "include")

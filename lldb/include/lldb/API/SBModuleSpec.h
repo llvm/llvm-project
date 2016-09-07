@@ -15,138 +15,109 @@
 
 namespace lldb {
 
-class LLDB_API SBModuleSpec
-{
+class LLDB_API SBModuleSpec {
 public:
+  SBModuleSpec();
 
-    SBModuleSpec ();
+  SBModuleSpec(const SBModuleSpec &rhs);
 
-    SBModuleSpec (const SBModuleSpec &rhs);
+  ~SBModuleSpec();
 
-    ~SBModuleSpec ();
+  const SBModuleSpec &operator=(const SBModuleSpec &rhs);
 
-    const SBModuleSpec &
-    operator = (const SBModuleSpec &rhs);
+  bool IsValid() const;
 
-    bool
-    IsValid () const;
+  void Clear();
 
-    void
-    Clear();
+  //------------------------------------------------------------------
+  /// Get const accessor for the module file.
+  ///
+  /// This function returns the file for the module on the host system
+  /// that is running LLDB. This can differ from the path on the
+  /// platform since we might be doing remote debugging.
+  ///
+  /// @return
+  ///     A const reference to the file specification object.
+  //------------------------------------------------------------------
+  lldb::SBFileSpec GetFileSpec();
 
-    //------------------------------------------------------------------
-    /// Get const accessor for the module file.
-    ///
-    /// This function returns the file for the module on the host system
-    /// that is running LLDB. This can differ from the path on the 
-    /// platform since we might be doing remote debugging.
-    ///
-    /// @return
-    ///     A const reference to the file specification object.
-    //------------------------------------------------------------------
-    lldb::SBFileSpec
-    GetFileSpec ();
+  void SetFileSpec(const lldb::SBFileSpec &fspec);
 
-    void
-    SetFileSpec (const lldb::SBFileSpec &fspec);
+  //------------------------------------------------------------------
+  /// Get accessor for the module platform file.
+  ///
+  /// Platform file refers to the path of the module as it is known on
+  /// the remote system on which it is being debugged. For local
+  /// debugging this is always the same as Module::GetFileSpec(). But
+  /// remote debugging might mention a file '/usr/lib/liba.dylib'
+  /// which might be locally downloaded and cached. In this case the
+  /// platform file could be something like:
+  /// '/tmp/lldb/platform-cache/remote.host.computer/usr/lib/liba.dylib'
+  /// The file could also be cached in a local developer kit directory.
+  ///
+  /// @return
+  ///     A const reference to the file specification object.
+  //------------------------------------------------------------------
+  lldb::SBFileSpec GetPlatformFileSpec();
 
-    //------------------------------------------------------------------
-    /// Get accessor for the module platform file.
-    ///
-    /// Platform file refers to the path of the module as it is known on
-    /// the remote system on which it is being debugged. For local 
-    /// debugging this is always the same as Module::GetFileSpec(). But
-    /// remote debugging might mention a file '/usr/lib/liba.dylib'
-    /// which might be locally downloaded and cached. In this case the
-    /// platform file could be something like:
-    /// '/tmp/lldb/platform-cache/remote.host.computer/usr/lib/liba.dylib'
-    /// The file could also be cached in a local developer kit directory.
-    ///
-    /// @return
-    ///     A const reference to the file specification object.
-    //------------------------------------------------------------------
-    lldb::SBFileSpec
-    GetPlatformFileSpec ();
+  void SetPlatformFileSpec(const lldb::SBFileSpec &fspec);
 
-    void
-    SetPlatformFileSpec (const lldb::SBFileSpec &fspec);
+  lldb::SBFileSpec GetSymbolFileSpec();
 
-    lldb::SBFileSpec
-    GetSymbolFileSpec ();
-    
-    void
-    SetSymbolFileSpec (const lldb::SBFileSpec &fspec);
+  void SetSymbolFileSpec(const lldb::SBFileSpec &fspec);
 
-    const char *
-    GetObjectName ();
-    
-    void
-    SetObjectName (const char *name);
+  const char *GetObjectName();
 
-    const char *
-    GetTriple ();
+  void SetObjectName(const char *name);
 
-    void
-    SetTriple (const char *triple);
+  const char *GetTriple();
 
-    const uint8_t *
-    GetUUIDBytes ();
+  void SetTriple(const char *triple);
 
-    size_t
-    GetUUIDLength ();
+  const uint8_t *GetUUIDBytes();
 
-    bool
-    SetUUIDBytes (const uint8_t *uuid, size_t uuid_len);
+  size_t GetUUIDLength();
 
-    bool
-    GetDescription (lldb::SBStream &description);
-    
+  bool SetUUIDBytes(const uint8_t *uuid, size_t uuid_len);
+
+  bool GetDescription(lldb::SBStream &description);
+
 private:
-    friend class SBModuleSpecList;
-    friend class SBModule;
-    friend class SBTarget;
+  friend class SBModuleSpecList;
+  friend class SBModule;
+  friend class SBTarget;
 
-    std::unique_ptr<lldb_private::ModuleSpec> m_opaque_ap;
+  std::unique_ptr<lldb_private::ModuleSpec> m_opaque_ap;
 };
 
-class SBModuleSpecList
-{
+class SBModuleSpecList {
 public:
-    SBModuleSpecList();
+  SBModuleSpecList();
 
-    SBModuleSpecList (const SBModuleSpecList &rhs);
+  SBModuleSpecList(const SBModuleSpecList &rhs);
 
-    ~SBModuleSpecList();
+  ~SBModuleSpecList();
 
-    SBModuleSpecList &
-    operator = (const SBModuleSpecList &rhs);
-    
-    static SBModuleSpecList
-    GetModuleSpecifications (const char *path);
-    
-    void
-    Append (const SBModuleSpec &spec);
-    
-    void
-    Append (const SBModuleSpecList &spec_list);
+  SBModuleSpecList &operator=(const SBModuleSpecList &rhs);
 
-    SBModuleSpec
-    FindFirstMatchingSpec (const SBModuleSpec &match_spec);
+  static SBModuleSpecList GetModuleSpecifications(const char *path);
 
-    SBModuleSpecList
-    FindMatchingSpecs (const SBModuleSpec &match_spec);
+  void Append(const SBModuleSpec &spec);
 
-    size_t
-    GetSize();
-    
-    SBModuleSpec
-    GetSpecAtIndex (size_t i);
+  void Append(const SBModuleSpecList &spec_list);
 
-    bool
-    GetDescription (lldb::SBStream &description);
-    
+  SBModuleSpec FindFirstMatchingSpec(const SBModuleSpec &match_spec);
+
+  SBModuleSpecList FindMatchingSpecs(const SBModuleSpec &match_spec);
+
+  size_t GetSize();
+
+  SBModuleSpec GetSpecAtIndex(size_t i);
+
+  bool GetDescription(lldb::SBStream &description);
+
 private:
-    std::unique_ptr<lldb_private::ModuleSpecList> m_opaque_ap;
+  std::unique_ptr<lldb_private::ModuleSpecList> m_opaque_ap;
 };
 
 } // namespace lldb

@@ -26,4 +26,4 @@
 #define FAR
 #define NEAR
 
-#endif  // LLDB_lldb_windows_h_
+#endif // LLDB_lldb_windows_h_

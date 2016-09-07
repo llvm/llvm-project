@@ -22,9 +22,10 @@ import os.path
 import unittest2
 
 
-def execute_command (command):
-    (exit_status, output) = commands.getstatusoutput (command)
+def execute_command(command):
+    (exit_status, output) = commands.getstatusoutput(command)
     return exit_status
+
 
 class TestUnitTests(TestBase):
 
@@ -32,7 +33,9 @@ class TestUnitTests(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.skipIf(debug_info=decorators.no_match("dsym"), bugnumber="This test only builds one way")
+    @decorators.skipIf(
+        debug_info=decorators.no_match("dsym"),
+        bugnumber="This test only builds one way")
     def test_cross_module_extension(self):
         """Test that XCTest-based unit tests work"""
         self.buildAll()
@@ -41,7 +44,7 @@ class TestUnitTests(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.XCTest_source = "XCTest.c"
-        self.XCTest_source_spec = lldb.SBFileSpec (self.XCTest_source)
+        self.XCTest_source_spec = lldb.SBFileSpec(self.XCTest_source)
 
     def buildAll(self):
         execute_command("make everything")
@@ -60,13 +63,15 @@ class TestUnitTests(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('Set breakpoint here', self.XCTest_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here', self.XCTest_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         process = target.LaunchSimple(None, None, os.getcwd())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -76,9 +81,9 @@ class TestUnitTests(TestBase):
         options = lldb.SBExpressionOptions()
         options.SetLanguage(lldb.eLanguageTypeSwift)
 
-        self.frame.EvaluateExpression ("import test", options)
+        self.frame.EvaluateExpression("import test", options)
 
-        ret = self.frame.EvaluateExpression ("doTest()", options)
+        ret = self.frame.EvaluateExpression("doTest()", options)
 
         self.assertTrue(ret.GetValueAsUnsigned() == 3)
 

@@ -33,7 +33,7 @@ class TestSwiftArchetypeResolution(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
         """Test that archetype-typed objects get resolved to their proper location in memory"""
@@ -45,7 +45,8 @@ class TestSwiftArchetypeResolution(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('break here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -54,7 +55,8 @@ class TestSwiftArchetypeResolution(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -65,68 +67,87 @@ class TestSwiftArchetypeResolution(TestBase):
         var_x.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         var_x.SetPreferSyntheticValue(True)
         self.assertTrue(var_x.GetSummary() == '"hello"', "String case fails")
-        if self.TraceOn(): self.runCmd("frame variable -d run")
+        if self.TraceOn():
+            self.runCmd("frame variable -d run")
 
         process.Continue()
         var_x = self.frame.FindVariable("x")
         var_x.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         var_x.SetPreferSyntheticValue(True)
         self.assertTrue(var_x.GetValue() == '1', "Int case fails")
-        if self.TraceOn(): self.runCmd("frame variable -d run")
+        if self.TraceOn():
+            self.runCmd("frame variable -d run")
 
         process.Continue()
         var_x = self.frame.FindVariable("x")
         var_x.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         var_x.SetPreferSyntheticValue(True)
-        self.assertTrue(var_x.GetChildMemberWithName("y").GetSummary() == '"hello"', "S.String case fails")
-        self.assertTrue(var_x.GetChildMemberWithName("x").GetValue() == '1', "S.Int case fails")
-        if self.TraceOn(): self.runCmd("frame variable -d run")
+        self.assertTrue(var_x.GetChildMemberWithName(
+            "y").GetSummary() == '"hello"', "S.String case fails")
+        self.assertTrue(var_x.GetChildMemberWithName(
+            "x").GetValue() == '1', "S.Int case fails")
+        if self.TraceOn():
+            self.runCmd("frame variable -d run")
 
         process.Continue()
         var_x = self.frame.FindVariable("x")
         var_x.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         var_x.SetPreferSyntheticValue(True)
-        self.assertTrue(var_x.GetChildMemberWithName("y").GetSummary() == '"hello"', "C.String case fails")
-        self.assertTrue(var_x.GetChildMemberWithName("x").GetValue() == '1', "C.Int case fails")
-        if self.TraceOn(): self.runCmd("frame variable -d run")
+        self.assertTrue(var_x.GetChildMemberWithName(
+            "y").GetSummary() == '"hello"', "C.String case fails")
+        self.assertTrue(var_x.GetChildMemberWithName(
+            "x").GetValue() == '1', "C.Int case fails")
+        if self.TraceOn():
+            self.runCmd("frame variable -d run")
 
         process.Continue()
         var_x = self.frame.FindVariable("x")
         var_x.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         var_x.SetPreferSyntheticValue(True)
-        self.assertTrue(var_x.GetChildMemberWithName("0").GetValue() == '1', "Tuple.0 case fails")
-        self.assertTrue(var_x.GetChildMemberWithName("1").GetValue() == '2', "Tuple.1 case fails")
-        if self.TraceOn(): self.runCmd("frame variable -d run")
+        self.assertTrue(var_x.GetChildMemberWithName(
+            "0").GetValue() == '1', "Tuple.0 case fails")
+        self.assertTrue(var_x.GetChildMemberWithName(
+            "1").GetValue() == '2', "Tuple.1 case fails")
+        if self.TraceOn():
+            self.runCmd("frame variable -d run")
 
         process.Continue()
         var_x = self.frame.FindVariable("x")
         var_x.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         var_x.SetPreferSyntheticValue(True)
         self.assertTrue(var_x.GetValue() == 'A', "E case fails")
-        if self.TraceOn(): self.runCmd("frame variable -d run")
+        if self.TraceOn():
+            self.runCmd("frame variable -d run")
 
         process.Continue()
         var_x = self.frame.FindVariable("x")
         var_x.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         var_x.SetPreferSyntheticValue(True)
-        self.assertTrue(var_x.GetChildMemberWithName("y").GetSummary() == '"hello"', "GS.String case fails")
-        self.assertTrue(var_x.GetChildMemberWithName("x").GetValue() == '1', "GS.Int case fails")
-        if self.TraceOn(): self.runCmd("frame variable -d run")
+        self.assertTrue(var_x.GetChildMemberWithName(
+            "y").GetSummary() == '"hello"', "GS.String case fails")
+        self.assertTrue(var_x.GetChildMemberWithName(
+            "x").GetValue() == '1', "GS.Int case fails")
+        if self.TraceOn():
+            self.runCmd("frame variable -d run")
 
         process.Continue()
         var_x = self.frame.FindVariable("x")
         var_x.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         var_x.SetPreferSyntheticValue(True)
-        self.assertTrue(var_x.GetChildMemberWithName("y").GetSummary() == '"hello"', "GC.String case fails")
-        self.assertTrue(var_x.GetChildMemberWithName("x").GetValue() == '1', "GC.Int case fails")
-        if self.TraceOn(): self.runCmd("frame variable -d run")
+        self.assertTrue(var_x.GetChildMemberWithName(
+            "y").GetSummary() == '"hello"', "GC.String case fails")
+        self.assertTrue(var_x.GetChildMemberWithName(
+            "x").GetValue() == '1', "GC.Int case fails")
+        if self.TraceOn():
+            self.runCmd("frame variable -d run")
 
         process.Continue()
         var_x = self.frame.FindVariable("x")
         var_x.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         var_x.SetPreferSyntheticValue(True)
         self.assertTrue(var_x.GetValue() == 'A', "GE case fails")
-        if self.TraceOn(): self.runCmd("frame variable -d run")
+        if self.TraceOn():
+            self.runCmd("frame variable -d run")
 
 if __name__ == '__main__':
     import atexit

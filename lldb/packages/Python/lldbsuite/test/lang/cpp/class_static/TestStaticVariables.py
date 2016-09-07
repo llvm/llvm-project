@@ -5,12 +5,13 @@ Test display and Python APIs on file and class static variables.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class StaticVariableTestCase(TestBase):
 
@@ -28,30 +29,42 @@ class StaticVariableTestCase(TestBase):
         self.build()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
-        # global variables are no longer displayed with the "frame variable" command. 
-        self.expect('target variable A::g_points', VARIABLES_DISPLAYED_CORRECTLY,
+        # global variables are no longer displayed with the "frame variable"
+        # command.
+        self.expect(
+            'target variable A::g_points',
+            VARIABLES_DISPLAYED_CORRECTLY,
             patterns=['\(PointType \[[1-9]*\]\) A::g_points = {.*}'])
         self.expect('target variable g_points', VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['(PointType [2]) g_points'])
+                    substrs=['(PointType [2]) g_points'])
 
         # On Mac OS X, gcc 4.2 emits the wrong debug info for A::g_points.
         # A::g_points is an array of two elements.
         if self.platformIsDarwin() or self.getPlatform() == "linux":
-            self.expect("target variable A::g_points[1].x", VARIABLES_DISPLAYED_CORRECTLY,
-                startstr = "(int) A::g_points[1].x = 11")
+            self.expect(
+                "target variable A::g_points[1].x",
+                VARIABLES_DISPLAYED_CORRECTLY,
+                startstr="(int) A::g_points[1].x = 11")
 
     @expectedFailureDarwin(9980907)
-    @expectedFailureAll(compiler=["clang", "gcc"], bugnumber="Compiler emits incomplete debug info")
-    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr20550 failing on FreeBSD-11')
+    @expectedFailureAll(
+        compiler=[
+            "clang",
+            "gcc"],
+        bugnumber="Compiler emits incomplete debug info")
+    @expectedFailureAll(
+        oslist=['freebsd'],
+        bugnumber='llvm.org/pr20550 failing on FreeBSD-11')
     @add_test_categories(['pyapi'])
     def test_with_python_api(self):
         """Test Python APIs on file and class static variables."""
@@ -65,11 +78,13 @@ class StaticVariableTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # The stop reason of the thread should be breakpoint.
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
 
         # Get the SBValue of 'A::g_points' and 'g_points'.
@@ -86,10 +101,12 @@ class StaticVariableTestCase(TestBase):
             name = val.GetName()
             self.assertTrue(name in ['g_points', 'A::g_points'])
             if name == 'g_points':
-                self.assertTrue(val.GetValueType() == lldb.eValueTypeVariableStatic)
+                self.assertTrue(
+                    val.GetValueType() == lldb.eValueTypeVariableStatic)
                 self.assertTrue(val.GetNumChildren() == 2)
             elif name == 'A::g_points':
-                self.assertTrue(val.GetValueType() == lldb.eValueTypeVariableGlobal)
+                self.assertTrue(
+                    val.GetValueType() == lldb.eValueTypeVariableGlobal)
                 self.assertTrue(val.GetNumChildren() == 2)
                 child1 = val.GetChildAtIndex(1)
                 self.DebugSBValue(child1)

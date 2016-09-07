@@ -19,17 +19,15 @@ using namespace lldb_private;
 using namespace lldb_private::formatters;
 using namespace lldb_private::formatters::swift;
 
-lldb::ValueObjectSP
-lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEnd::GetSyntheticValue ()
-{
-    return m_backend.GetChildAtIndex(0, true);
+lldb::ValueObjectSP lldb_private::formatters::swift::
+    SwiftBasicTypeSyntheticFrontEnd::GetSyntheticValue() {
+  return m_backend.GetChildAtIndex(0, true);
 }
 
-SyntheticChildrenFrontEnd*
-lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
-{
-    if (valobj_sp)
-        return new SwiftBasicTypeSyntheticFrontEnd(*valobj_sp);
-    return nullptr;
+SyntheticChildrenFrontEnd *
+lldb_private::formatters::swift::SwiftBasicTypeSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  if (valobj_sp)
+    return new SwiftBasicTypeSyntheticFrontEnd(*valobj_sp);
+  return nullptr;
 }
-

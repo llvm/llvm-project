@@ -16,55 +16,42 @@
 
 namespace lldb {
 
-class LLDB_API SBInstructionList
-{
+class LLDB_API SBInstructionList {
 public:
+  SBInstructionList();
 
-    SBInstructionList ();
+  SBInstructionList(const SBInstructionList &rhs);
 
-    SBInstructionList (const SBInstructionList &rhs);
-    
-    const SBInstructionList &
-    operator = (const SBInstructionList &rhs);
+  const SBInstructionList &operator=(const SBInstructionList &rhs);
 
-    ~SBInstructionList ();
+  ~SBInstructionList();
 
-    bool
-    IsValid () const;
+  bool IsValid() const;
 
-    size_t
-    GetSize ();
+  size_t GetSize();
 
-    lldb::SBInstruction
-    GetInstructionAtIndex (uint32_t idx);
+  lldb::SBInstruction GetInstructionAtIndex(uint32_t idx);
 
-    void
-    Clear ();
+  void Clear();
 
-    void
-    AppendInstruction (lldb::SBInstruction inst);
+  void AppendInstruction(lldb::SBInstruction inst);
 
-    void
-    Print (FILE *out);
+  void Print(FILE *out);
 
-    bool
-    GetDescription (lldb::SBStream &description);
-    
-    bool
-    DumpEmulationForAllInstructions (const char *triple);
+  bool GetDescription(lldb::SBStream &description);
+
+  bool DumpEmulationForAllInstructions(const char *triple);
 
 protected:
-    friend class SBFunction;
-    friend class SBSymbol;
-    friend class SBTarget;
-    
-    void
-    SetDisassembler (const lldb::DisassemblerSP &opaque_sp);
+  friend class SBFunction;
+  friend class SBSymbol;
+  friend class SBTarget;
 
-private:    
-    lldb::DisassemblerSP m_opaque_sp;
+  void SetDisassembler(const lldb::DisassemblerSP &opaque_sp);
+
+private:
+  lldb::DisassemblerSP m_opaque_sp;
 };
-
 
 } // namespace lldb
 

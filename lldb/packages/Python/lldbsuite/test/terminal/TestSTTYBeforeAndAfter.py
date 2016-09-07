@@ -5,12 +5,12 @@ Test that 'stty -a' displays the same output before and after running the lldb c
 from __future__ import print_function
 
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class TestSTTYBeforeAndAfter(TestBase):
 
@@ -24,13 +24,16 @@ class TestSTTYBeforeAndAfter(TestBase):
         cls.RemoveTempFile("child_send2.txt")
         cls.RemoveTempFile("child_read2.txt")
 
-    @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(
+        hostoslist=["windows"],
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @no_debug_info_test
     def test_stty_dash_a_before_and_afetr_invoking_lldb_command(self):
         """Test that 'stty -a' displays the same output before and after running the lldb command."""
         import pexpect
         if not which('expect'):
-            self.skipTest("The 'expect' program cannot be located, skip the test")
+            self.skipTest(
+                "The 'expect' program cannot be located, skip the test")
 
         # The expect prompt.
         expect_prompt = "expect[0-9.]+> "

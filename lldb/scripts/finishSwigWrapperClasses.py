@@ -34,10 +34,12 @@ import utilsOsType      # Determine the OS type this script is running on
 import utilsDebug       # Debug Python scripts
 
 # Instantiations:
-gbDbgVerbose = False           # True = Turn on script function tracing, False = off.
+# True = Turn on script function tracing, False = off.
+gbDbgVerbose = False
 gbDbgFlag = False              # Global debug mode flag, set by input parameter
-                                # --dbgFlag. True = operate in debug mode.
-gbMakeFileFlag = False         # True = yes called from makefile system, False = not.
+# --dbgFlag. True = operate in debug mode.
+# True = yes called from makefile system, False = not.
+gbMakeFileFlag = False
 
 # User facing text:
 strMsgErrorNoMain = "Program called by another Python script not allowed"
@@ -84,7 +86,7 @@ Usage:\n\
     finishSwigWrapperClasses.py --srcRoot=ADirPath --targetDir=ADirPath\n\
     --cfgBldDir=ADirPath --prefix=ADirPath --lldbLibDir=ADirPath -m -d\n\
 \n\
-" #TAG_PROGRAM_HELP_INFO
+"  # TAG_PROGRAM_HELP_INFO
 
 #++---------------------------------------------------------------------------
 # Details:  Exit the program on success. Called on program successfully done
@@ -94,6 +96,8 @@ Usage:\n\
 # Returns:  None.
 # Throws:   None.
 #--
+
+
 def program_exit_success(vnResult, vMsg):
     strMsg = ""
 
@@ -111,6 +115,8 @@ def program_exit_success(vnResult, vMsg):
 # Returns:  None.
 # Throws:   None.
 #--
+
+
 def program_exit_on_failure(vnResult, vMsg):
     print(("%s%s (%d)" % (strExitMsgError, vMsg, vnResult)))
     sys.exit(vnResult)
@@ -124,6 +130,8 @@ def program_exit_on_failure(vnResult, vMsg):
 # Returns:  None.
 # Throws:   None.
 #--
+
+
 def program_exit(vnResult, vMsg):
     if vnResult >= 0:
         program_exit_success(vnResult, vMsg)
@@ -136,6 +144,8 @@ def program_exit(vnResult, vMsg):
 # Returns:  None.
 # Throws:   None.
 #--
+
+
 def print_out_input_parameters(vDictArgs):
     for arg, val in list(vDictArgs.items()):
         strEqs = ""
@@ -153,24 +163,32 @@ def print_out_input_parameters(vDictArgs):
 #           Dict    - Map of arguments names to argument values
 # Throws:   None.
 #--
+
+
 def validate_arguments(vArgv):
     dbg = utilsDebug.CDebugFnVerbose("validate_arguments()")
     strMsg = ""
     dictArgs = {}
     nResult = 0
-    strListArgs = "hdm" # Format "hiox:" = -h -i -o -x <arg>
-    listLongArgs = ["srcRoot=", "targetDir=", "cfgBldDir=", "prefix=", "cmakeBuildConfiguration=",
-                    "lldbLibDir=", "argsFile"]
-    dictArgReq = {  "-h": "o",          # o = optional, m = mandatory
-                    "-d": "o",
-                    "-m": "o",
-                    "--srcRoot": "m",
-                    "--targetDir": "m",
-                    "--cfgBldDir": "o",
-                    "--prefix": "o",
-                    "--cmakeBuildConfiguration": "o",
-                    "--lldbLibDir": "o",
-                    "--argsFile": "o" }
+    strListArgs = "hdm"  # Format "hiox:" = -h -i -o -x <arg>
+    listLongArgs = [
+        "srcRoot=",
+        "targetDir=",
+        "cfgBldDir=",
+        "prefix=",
+        "cmakeBuildConfiguration=",
+        "lldbLibDir=",
+        "argsFile"]
+    dictArgReq = {"-h": "o",          # o = optional, m = mandatory
+                  "-d": "o",
+                  "-m": "o",
+                  "--srcRoot": "m",
+                  "--targetDir": "m",
+                  "--cfgBldDir": "o",
+                  "--prefix": "o",
+                  "--cmakeBuildConfiguration": "o",
+                  "--lldbLibDir": "o",
+                  "--argsFile": "o"}
 
     # Check for mandatory parameters
     nResult, dictArgs, strMsg = utilsArgsParse.parse(vArgv, strListArgs,
@@ -196,18 +214,24 @@ def validate_arguments(vArgv):
 #           Str     - Error message.
 # Throws:   None.
 #--
+
+
 def run_post_process(vStrScriptLang, vstrFinishFileName, vDictArgs):
     dbg = utilsDebug.CDebugFnVerbose("run_post_process()")
     nResult = 0
     strStatusMsg = ""
     strScriptFile = vstrFinishFileName % vStrScriptLang
-    strScriptFileDir = os.path.normpath(os.path.join(vDictArgs["--srcRoot"], "scripts", vStrScriptLang))
+    strScriptFileDir = os.path.normpath(
+        os.path.join(
+            vDictArgs["--srcRoot"],
+            "scripts",
+            vStrScriptLang))
     strScriptFilePath = os.path.join(strScriptFileDir, strScriptFile)
 
     # Check for the existence of the script file
     strPath = os.path.normcase(strScriptFilePath)
     bOk = os.path.exists(strPath)
-    if bOk == False:
+    if not bOk:
         strDir = os.path.normcase(strScriptFileDir)
         strStatusMsg = strScriptNotFound % (strScriptFile, strDir)
         return (-9, strStatusMsg)
@@ -221,7 +245,7 @@ def run_post_process(vStrScriptLang, vstrFinishFileName, vDictArgs):
     sys.path.append(strDir)
 
     # Execute the specific language script
-    dictArgs = vDictArgs # Remove any args not required before passing on
+    dictArgs = vDictArgs  # Remove any args not required before passing on
     strModuleName = strScriptFile[: strScriptFile.__len__() - 3]
     module = __import__(strModuleName)
     nResult, strStatusMsg = module.main(dictArgs)
@@ -242,17 +266,23 @@ def run_post_process(vStrScriptLang, vstrFinishFileName, vDictArgs):
 #           Str     - Error message.
 # Throws:   None.
 #--
+
+
 def run_post_process_for_each_script_supported(vDictArgs):
-    dbg = utilsDebug.CDebugFnVerbose("run_post_process_for_each_script_supported()")
+    dbg = utilsDebug.CDebugFnVerbose(
+        "run_post_process_for_each_script_supported()")
     nResult = 0
     strStatusMsg = ""
-    strScriptDir = os.path.normpath(os.path.join(vDictArgs["--srcRoot"], "scripts"))
+    strScriptDir = os.path.normpath(
+        os.path.join(
+            vDictArgs["--srcRoot"],
+            "scripts"))
     strFinishFileName = "finishSwig%sLLDB.py"
 
     # Check for the existence of the scripts folder
     strScriptsDir = os.path.normcase(strScriptDir)
     bOk = os.path.exists(strScriptsDir)
-    if bOk == False:
+    if not bOk:
         return (-8, strScriptDirNotFound)
 
     # Look for any script language directories to build for
@@ -263,8 +293,8 @@ def run_post_process_for_each_script_supported(vDictArgs):
         # __pycache__ is a magic directory in Python 3 that holds .pyc files
         if scriptLang != "__pycache__" and scriptLang != "swig_bot_lib":
             dbg.dump_text("Executing language script for \'%s\'" % scriptLang)
-            nResult, strStatusMsg = run_post_process(scriptLang, strFinishFileName,
-                                                     vDictArgs)
+            nResult, strStatusMsg = run_post_process(
+                scriptLang, strFinishFileName, vDictArgs)
         if nResult < 0:
             break
 
@@ -283,6 +313,8 @@ def run_post_process_for_each_script_supported(vDictArgs):
 # Returns:  None
 # Throws:   None.
 #--
+
+
 def main(vArgv):
     dbg = utilsDebug.CDebugFnVerbose("main()")
     bOk = False
@@ -317,7 +349,7 @@ def main(vArgv):
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 
-#TAG_PROGRAM_HELP_INFO
+# TAG_PROGRAM_HELP_INFO
 """ Details: Program main entry point.
 
     --------------------------------------------------------------------------

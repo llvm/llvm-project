@@ -33,7 +33,7 @@ class TestSwiftAnyObjectType(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
         """Test the AnyObject type"""
@@ -43,9 +43,10 @@ class TestSwiftAnyObjectType(TestBase):
         # Create the target
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
-        
+
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('Set breakpoint here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -54,18 +55,33 @@ class TestSwiftAnyObjectType(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
-        
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
+
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
-        
+
         var_object = self.frame.FindVariable("object")
-        lldbutil.check_variable(self,var_object,use_dynamic=False,typename="AnyObject")
-        lldbutil.check_variable(self,var_object,use_dynamic=True,typename="a.SomeClass")
-        var_object_x = var_object.GetDynamicValue(lldb.eDynamicCanRunTarget).GetChildMemberWithName("x")
-        lldbutil.check_variable(self,var_object_x,use_dynamic=False,value='12',typename="Swift.Int")
+        lldbutil.check_variable(
+            self,
+            var_object,
+            use_dynamic=False,
+            typename="AnyObject")
+        lldbutil.check_variable(
+            self,
+            var_object,
+            use_dynamic=True,
+            typename="a.SomeClass")
+        var_object_x = var_object.GetDynamicValue(
+            lldb.eDynamicCanRunTarget).GetChildMemberWithName("x")
+        lldbutil.check_variable(
+            self,
+            var_object_x,
+            use_dynamic=False,
+            value='12',
+            typename="Swift.Int")
 
 if __name__ == '__main__':
     import atexit

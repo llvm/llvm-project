@@ -11,10 +11,12 @@
 # ------------------------------------------------------------------------------
 """Test that Arrays work in the REPL."""
 
-import os, time
+import os
+import time
 import unittest2
 import lldb
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
+
 
 class REPLArrayTestCase (REPLTest):
 
@@ -25,4 +27,3 @@ class REPLArrayTestCase (REPLTest):
         self.command('$R0[0]', patterns='\\$R1: Int = 2')
         self.command('$R0[1]', patterns='\\$R2: Int = 3')
         self.command('$R0[2]', patterns='\\$R3: Int = 4')
-

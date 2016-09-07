@@ -5,18 +5,19 @@ Test that we can backtrace correctly with 'noreturn' functions on the stack
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class NoreturnUnwind(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfWindows # clang-cl does not support gcc style attributes.
-    def test (self):
+    @skipIfWindows  # clang-cl does not support gcc style attributes.
+    def test(self):
         """Test that we can backtrace correctly with 'noreturn' functions on the stack"""
         self.build()
         self.setTearDownCleanup()
@@ -25,7 +26,8 @@ class NoreturnUnwind(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         if not process:
             self.fail("SBTarget.Launch() failed")
@@ -55,22 +57,27 @@ class NoreturnUnwind(TestBase):
             self.fail("Unable to find abort() in backtrace.")
 
         func_c_frame_number = abort_frame_number + 1
-        if thread.GetFrameAtIndex (func_c_frame_number).GetFunctionName() != "func_c":
+        if thread.GetFrameAtIndex(
+                func_c_frame_number).GetFunctionName() != "func_c":
             self.fail("Did not find func_c() above abort().")
 
         # This depends on whether we see the func_b inlined function in the backtrace
         # or not.  I'm not interested in testing that aspect of the backtrace here
         # right now.
 
-        if thread.GetFrameAtIndex (func_c_frame_number + 1).GetFunctionName() == "func_b":
+        if thread.GetFrameAtIndex(
+                func_c_frame_number +
+                1).GetFunctionName() == "func_b":
             func_a_frame_number = func_c_frame_number + 2
         else:
             func_a_frame_number = func_c_frame_number + 1
 
-        if thread.GetFrameAtIndex (func_a_frame_number).GetFunctionName() != "func_a":
+        if thread.GetFrameAtIndex(
+                func_a_frame_number).GetFunctionName() != "func_a":
             self.fail("Did not find func_a() above func_c().")
 
         main_frame_number = func_a_frame_number + 1
 
-        if thread.GetFrameAtIndex (main_frame_number).GetFunctionName() != "main":
+        if thread.GetFrameAtIndex(
+                main_frame_number).GetFunctionName() != "main":
             self.fail("Did not find main() above func_a().")

@@ -20,6 +20,7 @@ import traceback
 # LLDB modules
 from . import build_exception
 
+
 class EventBuilder(object):
     """Helper class to build test result event dictionaries."""
 
@@ -95,7 +96,8 @@ class EventBuilder(object):
     def _assert_is_python_sourcefile(test_filename):
         if test_filename is not None:
             if not test_filename.endswith(".py"):
-                raise Exception("source python filename has unexpected extension: {}".format(test_filename))
+                raise Exception(
+                    "source python filename has unexpected extension: {}".format(test_filename))
         return test_filename
 
     @staticmethod
@@ -113,9 +115,11 @@ class EventBuilder(object):
         # Determine the filename for the test case.  If there is an attribute
         # for it, use it.  Otherwise, determine from the TestCase class path.
         if hasattr(test, "test_filename"):
-            test_filename = EventBuilder._assert_is_python_sourcefile(test.test_filename)
+            test_filename = EventBuilder._assert_is_python_sourcefile(
+                test.test_filename)
         else:
-            test_filename = EventBuilder._assert_is_python_sourcefile(inspect.getsourcefile(test.__class__))
+            test_filename = EventBuilder._assert_is_python_sourcefile(
+                inspect.getsourcefile(test.__class__))
 
         event = EventBuilder.bare_event(event_type)
         event.update({
@@ -352,7 +356,8 @@ class EventBuilder(object):
         event = EventBuilder.bare_event(EventBuilder.TYPE_JOB_RESULT)
         event["status"] = EventBuilder.STATUS_ERROR
         if test_filename is not None:
-            event["test_filename"] = EventBuilder._assert_is_python_sourcefile(test_filename)
+            event["test_filename"] = EventBuilder._assert_is_python_sourcefile(
+                test_filename)
         if exception is not None and "__class__" in dir(exception):
             event["issue_class"] = exception.__class__
         event["issue_message"] = exception
@@ -390,7 +395,8 @@ class EventBuilder(object):
         if exception_description is not None:
             event["exception_description"] = exception_description
         if test_filename is not None:
-            event["test_filename"] = EventBuilder._assert_is_python_sourcefile(test_filename)
+            event["test_filename"] = EventBuilder._assert_is_python_sourcefile(
+                test_filename)
         if command_line is not None:
             event["command_line"] = command_line
         return event
@@ -414,7 +420,8 @@ class EventBuilder(object):
         if worker_index is not None:
             event["worker_index"] = int(worker_index)
         if test_filename is not None:
-            event["test_filename"] = EventBuilder._assert_is_python_sourcefile(test_filename)
+            event["test_filename"] = EventBuilder._assert_is_python_sourcefile(
+                test_filename)
         if command_line is not None:
             event["command_line"] = command_line
         return event

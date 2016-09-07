@@ -11,11 +11,13 @@
 # ------------------------------------------------------------------------------
 """Test that basic integer arithmetic works in the REPL."""
 
-import os, time
+import os
+import time
 import unittest2
 import lldb
 import lldbsuite.test.decorators as decorators
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
+
 
 class REPLIntVarsTestCase (REPLTest):
 
@@ -23,11 +25,12 @@ class REPLIntVarsTestCase (REPLTest):
 
     @decorators.swiftTest
     @decorators.no_debug_info_test
-    @decorators.expectedFailureAll(oslist=["linux"], bugnumber="rdar://23081322")
+    @decorators.expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="rdar://23081322")
     def testREPL(self):
         REPLTest.testREPL(self)
 
     def doTest(self):
         self.command('3 + 2', patterns=['\\$R0: Int = 5'])
         self.command('$R0 + 5', patterns=['\\$R1: Int = 10'])
-

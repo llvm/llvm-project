@@ -24,66 +24,52 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static inline void
-WriteInt16(unsigned char* ptr, unsigned offset, uint16_t value)
-{
-    *(uint16_t *)(ptr + offset) = value;
+static inline void WriteInt16(unsigned char *ptr, unsigned offset,
+                              uint16_t value) {
+  *(uint16_t *)(ptr + offset) = value;
 }
 
-static inline void
-WriteInt32 (unsigned char* ptr, unsigned offset, uint32_t value)
-{
-    *(uint32_t *)(ptr + offset) = value;
+static inline void WriteInt32(unsigned char *ptr, unsigned offset,
+                              uint32_t value) {
+  *(uint32_t *)(ptr + offset) = value;
 }
 
-static inline void
-WriteInt64(unsigned char* ptr, unsigned offset, uint64_t value)
-{
-    *(uint64_t *)(ptr + offset) = value;
+static inline void WriteInt64(unsigned char *ptr, unsigned offset,
+                              uint64_t value) {
+  *(uint64_t *)(ptr + offset) = value;
 }
 
-static inline void
-WriteSwappedInt16(unsigned char* ptr, unsigned offset, uint16_t value)
-{
-    *(uint16_t *)(ptr + offset) = llvm::ByteSwap_16(value);
+static inline void WriteSwappedInt16(unsigned char *ptr, unsigned offset,
+                                     uint16_t value) {
+  *(uint16_t *)(ptr + offset) = llvm::ByteSwap_16(value);
 }
 
-static inline void
-WriteSwappedInt32 (unsigned char* ptr, unsigned offset, uint32_t value)
-{
-    *(uint32_t *)(ptr + offset) = llvm::ByteSwap_32(value);
+static inline void WriteSwappedInt32(unsigned char *ptr, unsigned offset,
+                                     uint32_t value) {
+  *(uint32_t *)(ptr + offset) = llvm::ByteSwap_32(value);
 }
 
-static inline void 
-WriteSwappedInt64(unsigned char* ptr, unsigned offset, uint64_t value)
-{
-    *(uint64_t *)(ptr + offset) = llvm::ByteSwap_64(value);
+static inline void WriteSwappedInt64(unsigned char *ptr, unsigned offset,
+                                     uint64_t value) {
+  *(uint64_t *)(ptr + offset) = llvm::ByteSwap_64(value);
 }
 
 //----------------------------------------------------------------------
 // Default constructor.
 //----------------------------------------------------------------------
-DataEncoder::DataEncoder () :
-    m_start(nullptr),
-    m_end(nullptr),
-    m_byte_order(endian::InlHostByteOrder()),
-    m_addr_size(sizeof(void*)),
-    m_data_sp()
-{
-}
+DataEncoder::DataEncoder()
+    : m_start(nullptr), m_end(nullptr),
+      m_byte_order(endian::InlHostByteOrder()), m_addr_size(sizeof(void *)),
+      m_data_sp() {}
 
 //----------------------------------------------------------------------
 // This constructor allows us to use data that is owned by someone else.
 // The data must stay around as long as this object is valid.
 //----------------------------------------------------------------------
-DataEncoder::DataEncoder (void* data, uint32_t length, ByteOrder endian, uint8_t addr_size) :
-    m_start     ((uint8_t*)data),
-    m_end       ((uint8_t*)data + length),
-    m_byte_order(endian),
-    m_addr_size (addr_size),
-    m_data_sp   ()
-{
-}
+DataEncoder::DataEncoder(void *data, uint32_t length, ByteOrder endian,
+                         uint8_t addr_size)
+    : m_start((uint8_t *)data), m_end((uint8_t *)data + length),
+      m_byte_order(endian), m_addr_size(addr_size), m_data_sp() {}
 
 //----------------------------------------------------------------------
 // Make a shared pointer reference to the shared data in "data_sp" and
@@ -92,14 +78,11 @@ DataEncoder::DataEncoder (void* data, uint32_t length, ByteOrder endian, uint8_t
 // as long as any DataEncoder objects exist that have a reference to
 // this data.
 //----------------------------------------------------------------------
-DataEncoder::DataEncoder (const DataBufferSP& data_sp, ByteOrder endian, uint8_t addr_size) :
-    m_start(nullptr),
-    m_end(nullptr),
-    m_byte_order(endian),
-    m_addr_size(addr_size),
-    m_data_sp()
-{
-    SetData (data_sp);
+DataEncoder::DataEncoder(const DataBufferSP &data_sp, ByteOrder endian,
+                         uint8_t addr_size)
+    : m_start(nullptr), m_end(nullptr), m_byte_order(endian),
+      m_addr_size(addr_size), m_data_sp() {
+  SetData(data_sp);
 }
 
 DataEncoder::~DataEncoder() = default;
@@ -109,37 +92,30 @@ DataEncoder::~DataEncoder() = default;
 // release any references to shared data that this object may
 // contain.
 //------------------------------------------------------------------
-void
-DataEncoder::Clear ()
-{
-    m_start = nullptr;
-    m_end = nullptr;
-    m_byte_order = endian::InlHostByteOrder();
-    m_addr_size = sizeof(void*);
-    m_data_sp.reset();
+void DataEncoder::Clear() {
+  m_start = nullptr;
+  m_end = nullptr;
+  m_byte_order = endian::InlHostByteOrder();
+  m_addr_size = sizeof(void *);
+  m_data_sp.reset();
 }
 
 //------------------------------------------------------------------
 // If this object contains shared data, this function returns the
 // offset into that shared data. Else zero is returned.
 //------------------------------------------------------------------
-size_t
-DataEncoder::GetSharedDataOffset () const
-{
-    if (m_start != nullptr)
-    {
-        const DataBuffer * data = m_data_sp.get();
-        if (data != nullptr)
-        {
-            const uint8_t * data_bytes = data->GetBytes();
-            if (data_bytes != nullptr)
-            {
-                assert(m_start >= data_bytes);
-                return m_start - data_bytes;
-            }
-        }
+size_t DataEncoder::GetSharedDataOffset() const {
+  if (m_start != nullptr) {
+    const DataBuffer *data = m_data_sp.get();
+    if (data != nullptr) {
+      const uint8_t *data_bytes = data->GetBytes();
+      if (data_bytes != nullptr) {
+        assert(m_start >= data_bytes);
+        return m_start - data_bytes;
+      }
     }
-    return 0;
+  }
+  return 0;
 }
 
 //----------------------------------------------------------------------
@@ -152,22 +128,17 @@ DataEncoder::GetSharedDataOffset () const
 // reference to that data will be released. Is SWAP is set to true,
 // any data extracted will be endian swapped.
 //----------------------------------------------------------------------
-uint32_t
-DataEncoder::SetData (void *bytes, uint32_t length, ByteOrder endian)
-{
-    m_byte_order = endian;
-    m_data_sp.reset();
-    if (bytes == nullptr || length == 0)
-    {
-        m_start = nullptr;
-        m_end = nullptr;
-    }
-    else
-    {
-        m_start = (uint8_t *)bytes;
-        m_end = m_start + length;
-    }
-    return GetByteSize();
+uint32_t DataEncoder::SetData(void *bytes, uint32_t length, ByteOrder endian) {
+  m_byte_order = endian;
+  m_data_sp.reset();
+  if (bytes == nullptr || length == 0) {
+    m_start = nullptr;
+    m_end = nullptr;
+  } else {
+    m_start = (uint8_t *)bytes;
+    m_end = m_start + length;
+  }
+  return GetByteSize();
 }
 
 //----------------------------------------------------------------------
@@ -184,38 +155,35 @@ DataEncoder::SetData (void *bytes, uint32_t length, ByteOrder endian)
 // around as long as it is needed. The address size and endian swap
 // settings will remain unchanged from their current settings.
 //----------------------------------------------------------------------
-uint32_t
-DataEncoder::SetData (const DataBufferSP& data_sp, uint32_t data_offset, uint32_t data_length)
-{
-    m_start = m_end = nullptr;
+uint32_t DataEncoder::SetData(const DataBufferSP &data_sp, uint32_t data_offset,
+                              uint32_t data_length) {
+  m_start = m_end = nullptr;
 
-    if (data_length > 0)
-    {
-        m_data_sp = data_sp;
-        if (data_sp)
-        {
-            const size_t data_size = data_sp->GetByteSize();
-            if (data_offset < data_size)
-            {
-                m_start = data_sp->GetBytes() + data_offset;
-                const size_t bytes_left = data_size - data_offset;
-                // Cap the length of we asked for too many
-                if (data_length <= bytes_left)
-                    m_end = m_start + data_length;  // We got all the bytes we wanted
-                else
-                    m_end = m_start + bytes_left;   // Not all the bytes requested were available in the shared data
-            }
-        }
+  if (data_length > 0) {
+    m_data_sp = data_sp;
+    if (data_sp) {
+      const size_t data_size = data_sp->GetByteSize();
+      if (data_offset < data_size) {
+        m_start = data_sp->GetBytes() + data_offset;
+        const size_t bytes_left = data_size - data_offset;
+        // Cap the length of we asked for too many
+        if (data_length <= bytes_left)
+          m_end = m_start + data_length; // We got all the bytes we wanted
+        else
+          m_end = m_start + bytes_left; // Not all the bytes requested were
+                                        // available in the shared data
+      }
     }
+  }
 
-    uint32_t new_size = GetByteSize();
+  uint32_t new_size = GetByteSize();
 
-    // Don't hold a shared pointer to the data buffer if we don't share
-    // any valid bytes in the shared buffer.
-    if (new_size == 0)
-        m_data_sp.reset();
+  // Don't hold a shared pointer to the data buffer if we don't share
+  // any valid bytes in the shared buffer.
+  if (new_size == 0)
+    m_data_sp.reset();
 
-    return new_size;
+  return new_size;
 }
 
 //----------------------------------------------------------------------
@@ -224,60 +192,48 @@ DataEncoder::SetData (const DataBufferSP& data_sp, uint32_t data_offset, uint32_
 //
 // RETURNS the byte that was extracted, or zero on failure.
 //----------------------------------------------------------------------
-uint32_t
-DataEncoder::PutU8 (uint32_t offset, uint8_t value)
-{
-    if (ValidOffset(offset))
-    {
-        m_start[offset] = value;
-        return offset + 1;
-    }
-    return UINT32_MAX;
+uint32_t DataEncoder::PutU8(uint32_t offset, uint8_t value) {
+  if (ValidOffset(offset)) {
+    m_start[offset] = value;
+    return offset + 1;
+  }
+  return UINT32_MAX;
 }
 
-uint32_t
-DataEncoder::PutU16 (uint32_t offset, uint16_t value)
-{
-    if (ValidOffsetForDataOfSize(offset, sizeof(value)))
-    {
-        if (m_byte_order != endian::InlHostByteOrder())
-            WriteSwappedInt16 (m_start, offset, value);
-        else
-            WriteInt16 (m_start, offset, value);
+uint32_t DataEncoder::PutU16(uint32_t offset, uint16_t value) {
+  if (ValidOffsetForDataOfSize(offset, sizeof(value))) {
+    if (m_byte_order != endian::InlHostByteOrder())
+      WriteSwappedInt16(m_start, offset, value);
+    else
+      WriteInt16(m_start, offset, value);
 
-        return offset + sizeof (value);
-    }
-    return UINT32_MAX;
+    return offset + sizeof(value);
+  }
+  return UINT32_MAX;
 }
 
-uint32_t
-DataEncoder::PutU32 (uint32_t offset, uint32_t value)
-{
-    if (ValidOffsetForDataOfSize(offset, sizeof(value)))
-    {
-        if (m_byte_order != endian::InlHostByteOrder())
-            WriteSwappedInt32 (m_start, offset, value);
-        else
-            WriteInt32 (m_start, offset, value);
-        
-        return offset + sizeof (value);
-    }
-    return UINT32_MAX;
+uint32_t DataEncoder::PutU32(uint32_t offset, uint32_t value) {
+  if (ValidOffsetForDataOfSize(offset, sizeof(value))) {
+    if (m_byte_order != endian::InlHostByteOrder())
+      WriteSwappedInt32(m_start, offset, value);
+    else
+      WriteInt32(m_start, offset, value);
+
+    return offset + sizeof(value);
+  }
+  return UINT32_MAX;
 }
 
-uint32_t
-DataEncoder::PutU64 (uint32_t offset, uint64_t value)
-{
-    if (ValidOffsetForDataOfSize(offset, sizeof(value)))
-    {
-        if (m_byte_order != endian::InlHostByteOrder())
-            WriteSwappedInt64 (m_start, offset, value);
-        else
-            WriteInt64 (m_start, offset, value);
-        
-        return offset + sizeof (value);
-    }
-    return UINT32_MAX;
+uint32_t DataEncoder::PutU64(uint32_t offset, uint64_t value) {
+  if (ValidOffsetForDataOfSize(offset, sizeof(value))) {
+    if (m_byte_order != endian::InlHostByteOrder())
+      WriteSwappedInt64(m_start, offset, value);
+    else
+      WriteInt64(m_start, offset, value);
+
+    return offset + sizeof(value);
+  }
+  return UINT32_MAX;
 }
 
 //----------------------------------------------------------------------
@@ -290,46 +246,42 @@ DataEncoder::PutU64 (uint32_t offset, uint64_t value)
 //
 // RETURNS the integer value that was extracted, or zero on failure.
 //----------------------------------------------------------------------
-uint32_t
-DataEncoder::PutMaxU64 (uint32_t offset, uint32_t byte_size, uint64_t value)
-{
-    switch (byte_size)
-    {
-    case 1: return PutU8 (offset, value);
-    case 2: return PutU16(offset, value);
-    case 4: return PutU32(offset, value);
-    case 8: return PutU64(offset, value);
-    default:
-        assert(!"GetMax64 unhandled case!");
-        break;
-    }
-    return UINT32_MAX;
+uint32_t DataEncoder::PutMaxU64(uint32_t offset, uint32_t byte_size,
+                                uint64_t value) {
+  switch (byte_size) {
+  case 1:
+    return PutU8(offset, value);
+  case 2:
+    return PutU16(offset, value);
+  case 4:
+    return PutU32(offset, value);
+  case 8:
+    return PutU64(offset, value);
+  default:
+    assert(!"GetMax64 unhandled case!");
+    break;
+  }
+  return UINT32_MAX;
 }
 
-uint32_t
-DataEncoder::PutData (uint32_t offset, const void *src, uint32_t src_len)
-{
-    if (src == nullptr || src_len == 0)
-        return offset;
+uint32_t DataEncoder::PutData(uint32_t offset, const void *src,
+                              uint32_t src_len) {
+  if (src == nullptr || src_len == 0)
+    return offset;
 
-    if (ValidOffsetForDataOfSize(offset, src_len))
-    {
-        memcpy (m_start + offset, src, src_len);
-        return offset + src_len;
-    }
-    return UINT32_MAX;
+  if (ValidOffsetForDataOfSize(offset, src_len)) {
+    memcpy(m_start + offset, src, src_len);
+    return offset + src_len;
+  }
+  return UINT32_MAX;
 }
 
-uint32_t
-DataEncoder::PutAddress (uint32_t offset, lldb::addr_t addr)
-{
-    return PutMaxU64 (offset, GetAddressByteSize(), addr);
+uint32_t DataEncoder::PutAddress(uint32_t offset, lldb::addr_t addr) {
+  return PutMaxU64(offset, GetAddressByteSize(), addr);
 }
 
-uint32_t
-DataEncoder::PutCString (uint32_t offset, const char *cstr)
-{
-    if (cstr != nullptr)
-        return PutData (offset, cstr, strlen(cstr) + 1);
-    return UINT32_MAX;
+uint32_t DataEncoder::PutCString(uint32_t offset, const char *cstr) {
+  if (cstr != nullptr)
+    return PutData(offset, cstr, strlen(cstr) + 1);
+  return UINT32_MAX;
 }

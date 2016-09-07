@@ -14,193 +14,158 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-enumerations.h"
-#include "lldb/lldb-private.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
 
 namespace lldb_private {
 
-class ThreadPlanCallFunction : public ThreadPlan
-{
-    // Create a thread plan to call a function at the address passed in the "function"
-    // argument.  If you plan to call GetReturnValueObject, then pass in the 
-    // return type, otherwise just pass in an invalid CompilerType.
+class ThreadPlanCallFunction : public ThreadPlan {
+  // Create a thread plan to call a function at the address passed in the
+  // "function"
+  // argument.  If you plan to call GetReturnValueObject, then pass in the
+  // return type, otherwise just pass in an invalid CompilerType.
 public:
-    ThreadPlanCallFunction (Thread &thread,
-                            const Address &function,
-                            const CompilerType &return_type,
-                            llvm::ArrayRef<lldb::addr_t> args,
-                            const EvaluateExpressionOptions &options);
+  ThreadPlanCallFunction(Thread &thread, const Address &function,
+                         const CompilerType &return_type,
+                         llvm::ArrayRef<lldb::addr_t> args,
+                         const EvaluateExpressionOptions &options);
 
-    ThreadPlanCallFunction(Thread &thread,
-                           const Address &function,
-                           const EvaluateExpressionOptions &options);
+  ThreadPlanCallFunction(Thread &thread, const Address &function,
+                         const EvaluateExpressionOptions &options);
 
-    ~ThreadPlanCallFunction() override;
+  ~ThreadPlanCallFunction() override;
 
-    void
-    GetDescription(Stream *s, lldb::DescriptionLevel level) override;
+  void GetDescription(Stream *s, lldb::DescriptionLevel level) override;
 
-    bool
-    ValidatePlan(Stream *error) override;
+  bool ValidatePlan(Stream *error) override;
 
-    bool
-    ShouldStop(Event *event_ptr) override;
-    
-    Vote
-    ShouldReportStop(Event *event_ptr) override;
+  bool ShouldStop(Event *event_ptr) override;
 
-    bool
-    StopOthers() override;
-    
-    lldb::StateType
-    GetPlanRunState() override;
+  Vote ShouldReportStop(Event *event_ptr) override;
 
-    void
-    DidPush() override;
+  bool StopOthers() override;
 
-    bool
-    WillStop() override;
+  lldb::StateType GetPlanRunState() override;
 
-    bool
-    MischiefManaged() override;
+  void DidPush() override;
 
-    // To get the return value from a function call you must create a 
-    // lldb::ValueSP that contains a valid clang type in its context and call
-    // RequestReturnValue. The ValueSP will be stored and when the function is
-    // done executing, the object will check if there is a requested return 
-    // value. If there is, the return value will be retrieved using the 
-    // ABI::GetReturnValue() for the ABI in the process. Then after the thread
-    // plan is complete, you can call "GetReturnValue()" to retrieve the value
-    // that was extracted.
+  bool WillStop() override;
 
-    lldb::ValueObjectSP
-    GetReturnValueObject() override
-    {
-        return m_return_valobj_sp;
-    }
+  bool MischiefManaged() override;
 
-    // Return the stack pointer that the function received
-    // on entry.  Any stack address below this should be 
-    // considered invalid after the function has been
-    // cleaned up.
-    lldb::addr_t
-    GetFunctionStackPointer()
-    {
-        return m_function_sp;
-    }
-    
-    // Classes that derive from FunctionCaller, and implement
-    // their own WillPop methods should call this so that the
-    // thread state gets restored if the plan gets discarded.
-    void
-    WillPop() override;
-    
-    // If the thread plan stops mid-course, this will be the stop reason that interrupted us.
-    // Once DoTakedown is called, this will be the real stop reason at the end of the function call.
-    // If it hasn't been set for one or the other of these reasons, we'll return the PrivateStopReason.
-    // This is needed because we want the CallFunction thread plans not to show up as the stop reason.
-    // But if something bad goes wrong, it is nice to be able to tell the user what really happened.
+  // To get the return value from a function call you must create a
+  // lldb::ValueSP that contains a valid clang type in its context and call
+  // RequestReturnValue. The ValueSP will be stored and when the function is
+  // done executing, the object will check if there is a requested return
+  // value. If there is, the return value will be retrieved using the
+  // ABI::GetReturnValue() for the ABI in the process. Then after the thread
+  // plan is complete, you can call "GetReturnValue()" to retrieve the value
+  // that was extracted.
 
-    lldb::StopInfoSP
-    GetRealStopInfo() override
-    {
-        if (m_real_stop_info_sp)
-            return m_real_stop_info_sp;
-        else
-            return GetPrivateStopInfo ();
-    }
-    
-    lldb::addr_t
-    GetStopAddress ()
-    {
-        return m_stop_address;
-    }
+  lldb::ValueObjectSP GetReturnValueObject() override {
+    return m_return_valobj_sp;
+  }
 
-    bool
-    RestoreThreadState() override;
-    
-    void
-    ThreadDestroyed() override
-    {
-        m_takedown_done = true;
-    }
-    
-    virtual void
-    SetStopOthers (bool new_value) override;
+  // Return the stack pointer that the function received
+  // on entry.  Any stack address below this should be
+  // considered invalid after the function has been
+  // cleaned up.
+  lldb::addr_t GetFunctionStackPointer() { return m_function_sp; }
 
-    lldb::LanguageType
-    GetExpressionLanguage()
-    {
-        return m_expression_language;
-    }
+  // Classes that derive from FunctionCaller, and implement
+  // their own WillPop methods should call this so that the
+  // thread state gets restored if the plan gets discarded.
+  void WillPop() override;
 
-    bool
-    HitErrorBackstop ()
-    {
-        return m_hit_error_backstop;
-    }
-    
+  // If the thread plan stops mid-course, this will be the stop reason that
+  // interrupted us.
+  // Once DoTakedown is called, this will be the real stop reason at the end of
+  // the function call.
+  // If it hasn't been set for one or the other of these reasons, we'll return
+  // the PrivateStopReason.
+  // This is needed because we want the CallFunction thread plans not to show up
+  // as the stop reason.
+  // But if something bad goes wrong, it is nice to be able to tell the user
+  // what really happened.
+
+  lldb::StopInfoSP GetRealStopInfo() override {
+    if (m_real_stop_info_sp)
+      return m_real_stop_info_sp;
+    else
+      return GetPrivateStopInfo();
+  }
+
+  lldb::addr_t GetStopAddress() { return m_stop_address; }
+
+  bool RestoreThreadState() override;
+
+  void ThreadDestroyed() override { m_takedown_done = true; }
+
+  virtual void SetStopOthers(bool new_value) override;
+
+  lldb::LanguageType GetExpressionLanguage() { return m_expression_language; }
+
+  bool HitErrorBackstop() { return m_hit_error_backstop; }
+
 protected:
-    void ReportRegisterState (const char *message);
+  void ReportRegisterState(const char *message);
 
-    bool
-    DoPlanExplainsStop(Event *event_ptr) override;
+  bool DoPlanExplainsStop(Event *event_ptr) override;
 
-    virtual void
-    SetReturnValue();
+  virtual void SetReturnValue();
 
-    bool
-    ConstructorSetup (Thread &thread,
-                      ABI *& abi,
-                      lldb::addr_t &start_load_addr,
-                      lldb::addr_t &function_load_addr);
+  bool ConstructorSetup(Thread &thread, ABI *&abi,
+                        lldb::addr_t &start_load_addr,
+                        lldb::addr_t &function_load_addr);
 
-    void
-    DoTakedown (bool success);
-    
-    void
-    SetBreakpoints ();
-    
-    void
-    ClearBreakpoints ();
-    
-    bool
-    BreakpointsExplainStop ();
+  void DoTakedown(bool success);
 
-    bool                                            m_valid;
-    bool                                            m_stop_other_threads;
-    bool                                            m_unwind_on_error;
-    bool                                            m_ignore_breakpoints;
-    bool                                            m_debug_execution;
-    bool                                            m_trap_exceptions;
-    Address                                         m_function_addr;
-    Address                                         m_start_addr;
-    lldb::addr_t                                    m_function_sp;
-    lldb::ThreadPlanSP                              m_subplan_sp;
-    LanguageRuntime                                *m_cxx_language_runtime;
-    LanguageRuntime                                *m_objc_language_runtime;
-    Thread::ThreadStateCheckpoint                   m_stored_thread_state;
-    lldb::StopInfoSP                                m_real_stop_info_sp; // In general we want to hide call function
-                                                                         // thread plans, but for reporting purposes,
-                                                                         // it's nice to know the real stop reason.
-                                                                         // This gets set in DoTakedown.
-    StreamString                                    m_constructor_errors;
-    lldb::ValueObjectSP                             m_return_valobj_sp;  // If this contains a valid pointer, use the ABI to extract values when complete
-    bool                                            m_takedown_done;    // We want to ensure we only do the takedown once.  This ensures that.
-    bool                                            m_should_clear_objc_exception_bp;
-    bool                                            m_should_clear_cxx_exception_bp;
-    lldb::addr_t                                    m_stop_address;     // This is the address we stopped at.  Also set in DoTakedown;
-    lldb::LanguageType                              m_expression_language; // Set from the incoming ExpressionOptions.
-    lldb::BreakpointSP                              m_error_backstop_bp_sp;
-    bool                                            m_hit_error_backstop;
+  void SetBreakpoints();
+
+  void ClearBreakpoints();
+
+  bool BreakpointsExplainStop();
+
+  bool m_valid;
+  bool m_stop_other_threads;
+  bool m_unwind_on_error;
+  bool m_ignore_breakpoints;
+  bool m_debug_execution;
+  bool m_trap_exceptions;
+  Address m_function_addr;
+  Address m_start_addr;
+  lldb::addr_t m_function_sp;
+  lldb::ThreadPlanSP m_subplan_sp;
+  LanguageRuntime *m_cxx_language_runtime;
+  LanguageRuntime *m_objc_language_runtime;
+  Thread::ThreadStateCheckpoint m_stored_thread_state;
+  lldb::StopInfoSP
+      m_real_stop_info_sp; // In general we want to hide call function
+                           // thread plans, but for reporting purposes,
+                           // it's nice to know the real stop reason.
+                           // This gets set in DoTakedown.
+  StreamString m_constructor_errors;
+  lldb::ValueObjectSP m_return_valobj_sp; // If this contains a valid pointer,
+                                          // use the ABI to extract values when
+                                          // complete
+  bool m_takedown_done; // We want to ensure we only do the takedown once.  This
+                        // ensures that.
+  bool m_should_clear_objc_exception_bp;
+  bool m_should_clear_cxx_exception_bp;
+  lldb::addr_t m_stop_address; // This is the address we stopped at.  Also set
+                               // in DoTakedown;
+  lldb::LanguageType
+      m_expression_language; // Set from the incoming ExpressionOptions.
+  lldb::BreakpointSP m_error_backstop_bp_sp;
+  bool m_hit_error_backstop;
 
 private:
-    CompilerType                                    m_return_type;
-    DISALLOW_COPY_AND_ASSIGN (ThreadPlanCallFunction);
+  CompilerType m_return_type;
+  DISALLOW_COPY_AND_ASSIGN(ThreadPlanCallFunction);
 };
 
 } // namespace lldb_private

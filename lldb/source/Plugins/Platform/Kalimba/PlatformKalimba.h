@@ -18,81 +18,70 @@
 
 namespace lldb_private {
 
-    class PlatformKalimba : public Platform
-    {
-    public:
-        PlatformKalimba(bool is_host);
+class PlatformKalimba : public Platform {
+public:
+  PlatformKalimba(bool is_host);
 
-        ~PlatformKalimba() override;
+  ~PlatformKalimba() override;
 
-        static void
-        Initialize ();
+  static void Initialize();
 
-        static void
-        Terminate ();
-        
-        //------------------------------------------------------------
-        // lldb_private::PluginInterface functions
-        //------------------------------------------------------------
-        static lldb::PlatformSP
-        CreateInstance (bool force, const lldb_private::ArchSpec *arch);
+  static void Terminate();
 
-        static lldb_private::ConstString
-        GetPluginNameStatic (bool is_host);
+  //------------------------------------------------------------
+  // lldb_private::PluginInterface functions
+  //------------------------------------------------------------
+  static lldb::PlatformSP CreateInstance(bool force,
+                                         const lldb_private::ArchSpec *arch);
 
-        static const char *
-        GetPluginDescriptionStatic (bool is_host);
+  static lldb_private::ConstString GetPluginNameStatic(bool is_host);
 
-        lldb_private::ConstString GetPluginName() override;
+  static const char *GetPluginDescriptionStatic(bool is_host);
 
-        uint32_t
-        GetPluginVersion() override
-        {
-            return 1;
-        }
+  lldb_private::ConstString GetPluginName() override;
 
-        //------------------------------------------------------------
-        // lldb_private::Platform functions
-        //------------------------------------------------------------
-        Error ResolveExecutable(const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                                const FileSpecList *module_search_paths_ptr) override;
+  uint32_t GetPluginVersion() override { return 1; }
 
-        const char *
-        GetDescription() override
-        {
-            return GetPluginDescriptionStatic(IsHost());
-        }
+  //------------------------------------------------------------
+  // lldb_private::Platform functions
+  //------------------------------------------------------------
+  Error ResolveExecutable(const lldb_private::ModuleSpec &module_spec,
+                          lldb::ModuleSP &module_sp,
+                          const FileSpecList *module_search_paths_ptr) override;
 
-        void GetStatus(Stream &strm) override;
+  const char *GetDescription() override {
+    return GetPluginDescriptionStatic(IsHost());
+  }
 
-        Error GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid, FileSpec &local_file) override;
+  void GetStatus(Stream &strm) override;
 
-        bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info) override;
+  Error GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid,
+                        FileSpec &local_file) override;
 
-        bool GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) override;
+  bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info) override;
 
-        size_t GetSoftwareBreakpointTrapOpcode(Target &target, BreakpointSite *bp_site) override;
+  bool GetSupportedArchitectureAtIndex(uint32_t idx, ArchSpec &arch) override;
 
-        lldb_private::Error LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
+  size_t GetSoftwareBreakpointTrapOpcode(Target &target,
+                                         BreakpointSite *bp_site) override;
 
-        lldb::ProcessSP Attach(ProcessAttachInfo &attach_info, Debugger &debugger, Target *target,
-                               Error &error) override;
+  lldb_private::Error
+  LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
 
-        // Kalimba processes can not be launched by spawning and attaching.
-        bool
-        CanDebugProcess() override
-        {
-            return false;
-        }
+  lldb::ProcessSP Attach(ProcessAttachInfo &attach_info, Debugger &debugger,
+                         Target *target, Error &error) override;
 
-        void CalculateTrapHandlerSymbolNames() override;
+  // Kalimba processes can not be launched by spawning and attaching.
+  bool CanDebugProcess() override { return false; }
 
-    protected:
-        lldb::PlatformSP m_remote_platform_sp;
+  void CalculateTrapHandlerSymbolNames() override;
 
-    private:
-        DISALLOW_COPY_AND_ASSIGN (PlatformKalimba);
-    };
+protected:
+  lldb::PlatformSP m_remote_platform_sp;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(PlatformKalimba);
+};
 
 } // namespace lldb_private
 

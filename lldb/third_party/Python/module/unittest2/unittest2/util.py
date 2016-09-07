@@ -4,6 +4,8 @@ __unittest = True
 
 
 _MAX_LENGTH = 80
+
+
 def safe_repr(obj, short=False):
     try:
         result = repr(obj)
@@ -13,14 +15,17 @@ def safe_repr(obj, short=False):
         return result
     return result[:_MAX_LENGTH] + ' [truncated]...'
 
+
 def safe_str(obj):
     try:
         return str(obj)
     except Exception:
         return object.__str__(obj)
 
+
 def strclass(cls):
     return "%s.%s" % (cls.__module__, cls.__name__)
+
 
 def sorted_list_difference(expected, actual):
     """Finds elements in only one or the other of two, sorted input lists.
@@ -61,6 +66,7 @@ def sorted_list_difference(expected, actual):
             unexpected.extend(actual[j:])
             break
     return missing, unexpected
+
 
 def unorderable_list_difference(expected, actual, ignore_duplicate=False):
     """Same behavior as sorted_list_difference but
