@@ -48,6 +48,7 @@ MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
+include(CMakeDependentOption)
 
 # Basic options ---------------------------------------------------------------
 option(LIBCXX_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
@@ -65,7 +66,9 @@ set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
 option(LIBCXX_INSTALL_HEADERS "Install the libc++ headers." ON)
 option(LIBCXX_INSTALL_LIBRARY "Install the libc++ library." ON)
 option(LIBCXX_INSTALL_SUPPORT_HEADERS "Install libc++ support headers." ON)
-option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY "Install libc++experimental.a" OFF)
+cmake_dependent_option(LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY
+        "Install libc++experimental.a" ON
+        "LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY;LIBCXX_INSTALL_LIBRARY" OFF)
 set(LIBCXX_ABI_VERSION 1 CACHE STRING "ABI version of libc++.")
 option(LIBCXX_ABI_UNSTABLE "Unstable ABI of libc++." OFF)
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)

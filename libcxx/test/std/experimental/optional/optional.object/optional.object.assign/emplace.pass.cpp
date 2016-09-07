@@ -81,6 +81,12 @@ int main()
         assert(*opt == 1);
     }
     {
+        optional<const int> opt(2);
+        opt.emplace(1);
+        assert(static_cast<bool>(opt) == true);
+        assert(*opt == 1);
+    }
+    {
         optional<X> opt;
         opt.emplace();
         assert(static_cast<bool>(opt) == true);

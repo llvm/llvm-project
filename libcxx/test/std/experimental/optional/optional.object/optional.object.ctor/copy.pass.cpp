@@ -88,12 +88,22 @@ int main()
         test(rhs);
     }
     {
+        typedef const int T;
+        optional<T> rhs(3);
+        test(rhs);
+    }
+    {
         typedef X T;
         optional<T> rhs;
         test(rhs);
     }
     {
         typedef X T;
+        optional<T> rhs(X(3));
+        test(rhs);
+    }
+    {
+        typedef const X T;
         optional<T> rhs(X(3));
         test(rhs);
     }

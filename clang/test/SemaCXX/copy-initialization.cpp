@@ -30,7 +30,7 @@ void test(const foo *P) { P->bar(); } // expected-error{{'bar' not viable: 'this
 
 namespace PR6757 {
   struct Foo {
-    Foo();
+    Foo(); // expected-note{{not viable}}
     Foo(Foo&); // expected-note{{candidate constructor not viable}}
   };
 
@@ -71,3 +71,12 @@ namespace DR5 {
     const S b = 0;
   }
 }
+
+struct A {};
+struct B : A {
+  B();
+  B(B&);
+  B(A);
+  B(int);
+};
+B b = 0; // ok, calls B(int) then A(const A&) then B(A).

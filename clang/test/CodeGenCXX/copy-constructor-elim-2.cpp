@@ -74,3 +74,23 @@ namespace PR12139 {
     return a.value;
   }
 }
+
+namespace ElidableCallIsNotCopyCtor {
+  struct A { A(const A&); };
+  struct B : A {
+    B(B&);
+    B(A);
+    B(int);
+  };
+  void f() {
+    // Here, we construct via B(int) then B(A). The B(A) construction is
+    // elidable, but we don't have an AST representation for the case where we
+    // must elide not only a constructor call but also some argument
+    // conversions, so we don't elide it.
+    // CHECK-LABEL: define void @_ZN25ElidableCallIsNotCopyCtor1fEv(
+    // CHECK: call {{.*}} @_ZN25ElidableCallIsNotCopyCtor1BC1Ei(
+    // CHECK: call {{.*}} @_ZN25ElidableCallIsNotCopyCtor1AC1ERKS0_(
+    // CHECK: call {{.*}} @_ZN25ElidableCallIsNotCopyCtor1BC1ENS_1AE(
+    B b = 0;
+  }
+}

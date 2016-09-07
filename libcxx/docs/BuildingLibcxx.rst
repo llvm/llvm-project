@@ -179,7 +179,7 @@ libc++experimental Specific Options
 
 .. option:: LIBCXX_INSTALL_EXPERIMENTAL_LIBRARY:BOOL
 
-  **Default**: ``OFF``
+  **Default**: ``LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY AND LIBCXX_INSTALL_LIBRARY``
 
   Install libc++experimental.a alongside libc++.
 
