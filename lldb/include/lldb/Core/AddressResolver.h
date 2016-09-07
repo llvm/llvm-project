@@ -16,12 +16,12 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-private.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Host/FileSpec.h"
-#include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/ConstString.h"
+#include "lldb/Core/SearchFilter.h"
+#include "lldb/Host/FileSpec.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -35,52 +35,38 @@ namespace lldb_private {
 /// General Outline:
 /// The AddressResolver is a Searcher.  In that protocol,
 /// the SearchFilter asks the question "At what depth of the symbol context
-/// descent do you want your callback to get called?" of the filter.  The resolver
-/// answers this question (in the GetDepth method) and provides the resolution callback.
+/// descent do you want your callback to get called?" of the filter.  The
+/// resolver
+/// answers this question (in the GetDepth method) and provides the resolution
+/// callback.
 //----------------------------------------------------------------------
 
-class AddressResolver :
-   public Searcher
-{
+class AddressResolver : public Searcher {
 public:
+  typedef enum { Exact, Regexp, Glob } MatchType;
 
-    typedef enum
-    {
-        Exact,
-        Regexp,
-        Glob
-    } MatchType;
+  AddressResolver();
 
+  ~AddressResolver() override;
 
-    AddressResolver ();
+  virtual void ResolveAddress(SearchFilter &filter);
 
-    ~AddressResolver () override;
+  virtual void ResolveAddressInModules(SearchFilter &filter,
+                                       ModuleList &modules);
 
-    virtual void
-    ResolveAddress (SearchFilter &filter);
+  void GetDescription(Stream *s) override = 0;
 
-    virtual void
-    ResolveAddressInModules (SearchFilter &filter,
-                             ModuleList &modules);
+  std::vector<AddressRange> &GetAddressRanges();
 
-    void
-    GetDescription (Stream *s) override = 0;
+  size_t GetNumberOfAddresses();
 
-    std::vector<AddressRange> &
-    GetAddressRanges ();
-
-    size_t
-    GetNumberOfAddresses ();
-
-    AddressRange &
-    GetAddressRangeAtIndex (size_t idx);
+  AddressRange &GetAddressRangeAtIndex(size_t idx);
 
 protected:
-
-    std::vector<AddressRange> m_address_ranges;
+  std::vector<AddressRange> m_address_ranges;
 
 private:
-    DISALLOW_COPY_AND_ASSIGN(AddressResolver);
+  DISALLOW_COPY_AND_ASSIGN(AddressResolver);
 };
 
 } // namespace lldb_private

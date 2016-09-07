@@ -490,7 +490,7 @@ int main(int argc, char **argv) {
     // The user has asked to use the new pass manager and provided a pipeline
     // string. Hand off the rest of the functionality to the new code for that
     // layer.
-    return runPassPipeline(argv[0], Context, *M, TM.get(), Out.get(),
+    return runPassPipeline(argv[0], *M, TM.get(), Out.get(),
                            PassPipeline, OK, VK, PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
                            EmitModuleHash)

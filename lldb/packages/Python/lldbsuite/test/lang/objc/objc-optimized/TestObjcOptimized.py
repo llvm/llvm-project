@@ -10,8 +10,8 @@ optimized it into a register.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 import re
 
@@ -21,6 +21,8 @@ from lldbsuite.test import lldbutil
 
 # rdar://problem/9087739
 # test failure: objc_optimized does not work for "-C clang -A i386"
+
+
 @skipUnlessDarwin
 class ObjcOptimizedTestCase(TestBase):
 
@@ -35,15 +37,24 @@ class ObjcOptimizedTestCase(TestBase):
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_symbol (self, self.method_spec, num_expected_locations=1, sym_exact=True)
+        lldbutil.run_break_set_by_symbol(
+            self,
+            self.method_spec,
+            num_expected_locations=1,
+            sym_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
-        self.expect("thread backtrace", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ["stop reason = breakpoint"],
-            patterns = ["frame.*0:.*%s %s" % (self.myclass, self.mymethod)])
+        self.expect(
+            "thread backtrace",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stop reason = breakpoint"],
+            patterns=[
+                "frame.*0:.*%s %s" %
+                (self.myclass,
+                 self.mymethod)])
 
         self.expect('expression member',
-            startstr = "(int) $0 = 5")
+                    startstr="(int) $0 = 5")
 
         # <rdar://problem/12693963>
         interp = self.dbg.GetCommandInterpreter()
@@ -59,7 +70,7 @@ class ObjcOptimizedTestCase(TestBase):
             desired_pointer = mo.group(0)
 
         self.expect('expression (self)',
-            substrs = [("(%s *) $1 = " % self.myclass), desired_pointer])
+                    substrs=[("(%s *) $1 = " % self.myclass), desired_pointer])
 
         self.expect('expression self->non_member', error=True,
-            substrs = ["does not have a member named 'non_member'"])
+                    substrs=["does not have a member named 'non_member'"])

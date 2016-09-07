@@ -18,74 +18,63 @@ using namespace std;
 //----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::Clear()
 //----------------------------------------------------------------------
-void
-DWARFAbbreviationDeclarationSet::Clear()
-{
-    m_idx_offset = 0;
-    m_decls.clear();
+void DWARFAbbreviationDeclarationSet::Clear() {
+  m_idx_offset = 0;
+  m_decls.clear();
 }
-
 
 //----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::Extract()
 //----------------------------------------------------------------------
-bool
-DWARFAbbreviationDeclarationSet::Extract(const DWARFDataExtractor& data, lldb::offset_t *offset_ptr)
-{
-    const lldb::offset_t begin_offset = *offset_ptr;
-    m_offset = begin_offset;
-    Clear();
-    DWARFAbbreviationDeclaration abbrevDeclaration;
-    dw_uleb128_t prev_abbr_code = 0;
-    while (abbrevDeclaration.Extract(data, offset_ptr))
-    {
-        m_decls.push_back(abbrevDeclaration);
-        if (m_idx_offset == 0)
-            m_idx_offset = abbrevDeclaration.Code();
-        else
-        {
-            if (prev_abbr_code + 1 != abbrevDeclaration.Code())
-                m_idx_offset = UINT32_MAX;    // Out of order indexes, we can't do O(1) lookups...
-        }
-        prev_abbr_code = abbrevDeclaration.Code();
+bool DWARFAbbreviationDeclarationSet::Extract(const DWARFDataExtractor &data,
+                                              lldb::offset_t *offset_ptr) {
+  const lldb::offset_t begin_offset = *offset_ptr;
+  m_offset = begin_offset;
+  Clear();
+  DWARFAbbreviationDeclaration abbrevDeclaration;
+  dw_uleb128_t prev_abbr_code = 0;
+  while (abbrevDeclaration.Extract(data, offset_ptr)) {
+    m_decls.push_back(abbrevDeclaration);
+    if (m_idx_offset == 0)
+      m_idx_offset = abbrevDeclaration.Code();
+    else {
+      if (prev_abbr_code + 1 != abbrevDeclaration.Code())
+        m_idx_offset =
+            UINT32_MAX; // Out of order indexes, we can't do O(1) lookups...
     }
-    return begin_offset != *offset_ptr;
+    prev_abbr_code = abbrevDeclaration.Code();
+  }
+  return begin_offset != *offset_ptr;
 }
-
 
 //----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::Dump()
 //----------------------------------------------------------------------
-void
-DWARFAbbreviationDeclarationSet::Dump(Stream *s) const
-{
-    std::for_each (m_decls.begin(), m_decls.end(), bind2nd(std::mem_fun_ref(&DWARFAbbreviationDeclaration::Dump),s));
+void DWARFAbbreviationDeclarationSet::Dump(Stream *s) const {
+  std::for_each(
+      m_decls.begin(), m_decls.end(),
+      bind2nd(std::mem_fun_ref(&DWARFAbbreviationDeclaration::Dump), s));
 }
-
 
 //----------------------------------------------------------------------
 // DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration()
 //----------------------------------------------------------------------
-const DWARFAbbreviationDeclaration*
-DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration(dw_uleb128_t abbrCode) const
-{
-    if (m_idx_offset == UINT32_MAX)
-    {
-        DWARFAbbreviationDeclarationCollConstIter pos;
-        DWARFAbbreviationDeclarationCollConstIter end = m_decls.end();
-        for (pos = m_decls.begin(); pos != end; ++pos)
-        {
-            if (pos->Code() == abbrCode)
-                return &(*pos);
-        }
+const DWARFAbbreviationDeclaration *
+DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration(
+    dw_uleb128_t abbrCode) const {
+  if (m_idx_offset == UINT32_MAX) {
+    DWARFAbbreviationDeclarationCollConstIter pos;
+    DWARFAbbreviationDeclarationCollConstIter end = m_decls.end();
+    for (pos = m_decls.begin(); pos != end; ++pos) {
+      if (pos->Code() == abbrCode)
+        return &(*pos);
     }
-    else
-    {
-        uint32_t idx = abbrCode - m_idx_offset;
-        if (idx < m_decls.size())
-            return &m_decls[idx];
-    }
-    return NULL;
+  } else {
+    uint32_t idx = abbrCode - m_idx_offset;
+    if (idx < m_decls.size())
+      return &m_decls[idx];
+  }
+  return NULL;
 }
 
 //----------------------------------------------------------------------
@@ -94,21 +83,19 @@ DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration(dw_uleb128_t abbrCod
 // Append an abbreviation declaration with a sequential code for O(n)
 // lookups. Handy when creating an DWARFAbbreviationDeclarationSet.
 //----------------------------------------------------------------------
-dw_uleb128_t
-DWARFAbbreviationDeclarationSet::AppendAbbrevDeclSequential(const DWARFAbbreviationDeclaration& abbrevDecl)
-{
-    // Get the next abbreviation code based on our current array size
-    dw_uleb128_t code = m_decls.size()+1;
+dw_uleb128_t DWARFAbbreviationDeclarationSet::AppendAbbrevDeclSequential(
+    const DWARFAbbreviationDeclaration &abbrevDecl) {
+  // Get the next abbreviation code based on our current array size
+  dw_uleb128_t code = m_decls.size() + 1;
 
-    // Push the new declaration on the back
-    m_decls.push_back(abbrevDecl);
+  // Push the new declaration on the back
+  m_decls.push_back(abbrevDecl);
 
-    // Update the code for this new declaration
-    m_decls.back().SetCode(code);
+  // Update the code for this new declaration
+  m_decls.back().SetCode(code);
 
-    return code;    // return the new abbreviation code!
+  return code; // return the new abbreviation code!
 }
-
 
 //----------------------------------------------------------------------
 // Encode
@@ -117,8 +104,9 @@ DWARFAbbreviationDeclarationSet::AppendAbbrevDeclSequential(const DWARFAbbreviat
 // into a byte representation as would be found in a ".debug_abbrev"
 // debug information section.
 //----------------------------------------------------------------------
-//void
-//DWARFAbbreviationDeclarationSet::Encode(BinaryStreamBuf& debug_abbrev_buf) const
+// void
+// DWARFAbbreviationDeclarationSet::Encode(BinaryStreamBuf& debug_abbrev_buf)
+// const
 //{
 //  DWARFAbbreviationDeclarationCollConstIter pos;
 //  DWARFAbbreviationDeclarationCollConstIter end = m_decls.end();
@@ -127,76 +115,63 @@ DWARFAbbreviationDeclarationSet::AppendAbbrevDeclSequential(const DWARFAbbreviat
 //  debug_abbrev_buf.Append8(0);
 //}
 
-
 //----------------------------------------------------------------------
 // DWARFDebugAbbrev constructor
 //----------------------------------------------------------------------
-DWARFDebugAbbrev::DWARFDebugAbbrev() :
-    m_abbrevCollMap(),
-    m_prev_abbr_offset_pos(m_abbrevCollMap.end())
-{
-}
-
+DWARFDebugAbbrev::DWARFDebugAbbrev()
+    : m_abbrevCollMap(), m_prev_abbr_offset_pos(m_abbrevCollMap.end()) {}
 
 //----------------------------------------------------------------------
 // DWARFDebugAbbrev::Parse()
 //----------------------------------------------------------------------
-void
-DWARFDebugAbbrev::Parse(const DWARFDataExtractor& data)
-{
-    lldb::offset_t offset = 0;
+void DWARFDebugAbbrev::Parse(const DWARFDataExtractor &data) {
+  lldb::offset_t offset = 0;
 
-    while (data.ValidOffset(offset))
-    {
-        uint32_t initial_cu_offset = offset;
-        DWARFAbbreviationDeclarationSet abbrevDeclSet;
+  while (data.ValidOffset(offset)) {
+    uint32_t initial_cu_offset = offset;
+    DWARFAbbreviationDeclarationSet abbrevDeclSet;
 
-        if (abbrevDeclSet.Extract(data, &offset))
-            m_abbrevCollMap[initial_cu_offset] = abbrevDeclSet;
-        else
-            break;
-    }
-    m_prev_abbr_offset_pos = m_abbrevCollMap.end();
+    if (abbrevDeclSet.Extract(data, &offset))
+      m_abbrevCollMap[initial_cu_offset] = abbrevDeclSet;
+    else
+      break;
+  }
+  m_prev_abbr_offset_pos = m_abbrevCollMap.end();
 }
 
 //----------------------------------------------------------------------
 // DWARFDebugAbbrev::Dump()
 //----------------------------------------------------------------------
-void
-DWARFDebugAbbrev::Dump(Stream *s) const
-{
-    if (m_abbrevCollMap.empty())
-    {
-        s->PutCString("< EMPTY >\n");
-        return;
-    }
+void DWARFDebugAbbrev::Dump(Stream *s) const {
+  if (m_abbrevCollMap.empty()) {
+    s->PutCString("< EMPTY >\n");
+    return;
+  }
 
-    DWARFAbbreviationDeclarationCollMapConstIter pos;
-    for (pos = m_abbrevCollMap.begin(); pos != m_abbrevCollMap.end(); ++pos)
-    {
-        s->Printf("Abbrev table for offset: 0x%8.8x\n", pos->first);
-        pos->second.Dump(s);
-    }
+  DWARFAbbreviationDeclarationCollMapConstIter pos;
+  for (pos = m_abbrevCollMap.begin(); pos != m_abbrevCollMap.end(); ++pos) {
+    s->Printf("Abbrev table for offset: 0x%8.8x\n", pos->first);
+    pos->second.Dump(s);
+  }
 }
-
 
 //----------------------------------------------------------------------
 // DWARFDebugAbbrev::GetAbbreviationDeclarationSet()
 //----------------------------------------------------------------------
-const DWARFAbbreviationDeclarationSet*
-DWARFDebugAbbrev::GetAbbreviationDeclarationSet(dw_offset_t cu_abbr_offset) const
-{
-    DWARFAbbreviationDeclarationCollMapConstIter end = m_abbrevCollMap.end();
-    DWARFAbbreviationDeclarationCollMapConstIter pos;
-    if (m_prev_abbr_offset_pos != end && m_prev_abbr_offset_pos->first == cu_abbr_offset)
-        return &(m_prev_abbr_offset_pos->second);
-    else
-    {
-        pos = m_abbrevCollMap.find(cu_abbr_offset);
-        m_prev_abbr_offset_pos = pos;
-    }
+const DWARFAbbreviationDeclarationSet *
+DWARFDebugAbbrev::GetAbbreviationDeclarationSet(
+    dw_offset_t cu_abbr_offset) const {
+  DWARFAbbreviationDeclarationCollMapConstIter end = m_abbrevCollMap.end();
+  DWARFAbbreviationDeclarationCollMapConstIter pos;
+  if (m_prev_abbr_offset_pos != end &&
+      m_prev_abbr_offset_pos->first == cu_abbr_offset)
+    return &(m_prev_abbr_offset_pos->second);
+  else {
+    pos = m_abbrevCollMap.find(cu_abbr_offset);
+    m_prev_abbr_offset_pos = pos;
+  }
 
-    if (pos != m_abbrevCollMap.end())
-        return &(pos->second);
-    return NULL;
+  if (pos != m_abbrevCollMap.end())
+    return &(pos->second);
+  return NULL;
 }

@@ -16,21 +16,15 @@
 
 #include "lldb/Symbol/CompilerType.h"
 
-namespace lldb_private
-{
-struct ClangUtil
-{
-    static bool
-    IsClangType(const CompilerType &ct);
+namespace lldb_private {
+struct ClangUtil {
+  static bool IsClangType(const CompilerType &ct);
 
-    static clang::QualType
-    GetQualType(const CompilerType &ct);
+  static clang::QualType GetQualType(const CompilerType &ct);
 
-    static clang::QualType
-    GetCanonicalQualType(const CompilerType &ct);
+  static clang::QualType GetCanonicalQualType(const CompilerType &ct);
 
-    static CompilerType
-    RemoveFastQualifiers(const CompilerType &ct);
+  static CompilerType RemoveFastQualifiers(const CompilerType &ct);
 };
 }
 

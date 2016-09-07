@@ -14,13 +14,11 @@ using namespace lldb;
 using namespace lldb_private;
 
 lldb::LanguageType
-SBLanguageRuntime::GetLanguageTypeFromString (const char *string)
-{
-    return Language::GetLanguageTypeFromString(string);
+SBLanguageRuntime::GetLanguageTypeFromString(const char *string) {
+  return Language::GetLanguageTypeFromString(string);
 }
 
 const char *
-SBLanguageRuntime::GetNameForLanguageType (lldb::LanguageType language)
-{
-    return Language::GetNameForLanguageType(language);
+SBLanguageRuntime::GetNameForLanguageType(lldb::LanguageType language) {
+  return Language::GetNameForLanguageType(language);
 }

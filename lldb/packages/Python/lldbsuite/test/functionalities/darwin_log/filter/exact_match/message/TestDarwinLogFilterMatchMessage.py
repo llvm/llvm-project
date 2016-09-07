@@ -40,7 +40,6 @@ class TestDarwinLogFilterMatchMessage(darwin_log.DarwinLogTestBase):
         # Turn on process monitor logging while we work out issues.
         self.enable_process_monitor_logging = True
 
-
     def tearDown(self):
         # Shut down the process if it's still running.
         if self.child:
@@ -58,7 +57,7 @@ class TestDarwinLogFilterMatchMessage(darwin_log.DarwinLogTestBase):
     EXPECT_REGEXES = [
         re.compile(r"log message ([^-]+)-(\S+)"),
         re.compile(r"exited with status")
-        ]
+    ]
 
     @decorators.skipUnlessDarwin
     def test_filter_accept_message_full_match(self):
@@ -72,10 +71,12 @@ class TestDarwinLogFilterMatchMessage(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we only accept
         # that message contents.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_no_accept_message_partial_match(self):
@@ -90,10 +91,12 @@ class TestDarwinLogFilterMatchMessage(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as the partial match on
         # the first message should not pass.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_reject_category_full_match(self):
@@ -107,10 +110,12 @@ class TestDarwinLogFilterMatchMessage(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we rejected the first
         # via message contents rejection.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_accept_category_second_rule(self):
@@ -126,7 +131,9 @@ class TestDarwinLogFilterMatchMessage(darwin_log.DarwinLogTestBase):
         # the first filter doesn't match any, and the second filter matches
         # the category of the second log message.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")

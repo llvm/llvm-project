@@ -16,50 +16,33 @@
 
 using namespace std::chrono;
 
-namespace lldb_perf
-{
-class TimeGauge : public Gauge<double>
-{
+namespace lldb_perf {
+class TimeGauge : public Gauge<double> {
 public:
-    TimeGauge ();
-    
-    virtual
-    ~TimeGauge ()
-    {
-    }
-    
-    void
-    Start ();
-    
-    double
-    Stop ();
-    
-    virtual double
-    GetStartValue () const;
-    
-    virtual double
-    GetStopValue () const;
+  TimeGauge();
 
-    virtual double
-    GetDeltaValue () const;
+  virtual ~TimeGauge() {}
+
+  void Start();
+
+  double Stop();
+
+  virtual double GetStartValue() const;
+
+  virtual double GetStopValue() const;
+
+  virtual double GetDeltaValue() const;
 
 private:
-    enum class State
-    {
-        eNeverUsed,
-        eCounting,
-        eStopped
-    };
-    
-    typedef high_resolution_clock::time_point TimeType;
-    TimeType m_start;
-    TimeType m_stop;
-    double m_delta;
-    State m_state;
-    
-    TimeType
-    Now ();
-    
+  enum class State { eNeverUsed, eCounting, eStopped };
+
+  typedef high_resolution_clock::time_point TimeType;
+  TimeType m_start;
+  TimeType m_stop;
+  double m_delta;
+  State m_state;
+
+  TimeType Now();
 };
 }
 

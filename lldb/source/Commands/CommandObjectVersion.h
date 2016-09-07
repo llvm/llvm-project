@@ -22,18 +22,14 @@ namespace lldb_private {
 // CommandObjectVersion
 //-------------------------------------------------------------------------
 
-class CommandObjectVersion : public CommandObjectParsed
-{
+class CommandObjectVersion : public CommandObjectParsed {
 public:
+  CommandObjectVersion(CommandInterpreter &interpreter);
 
-    CommandObjectVersion (CommandInterpreter &interpreter);
-
-    ~CommandObjectVersion() override;
+  ~CommandObjectVersion() override;
 
 protected:
-    bool
-    DoExecute(Args& args,
-	      CommandReturnObject &result) override;
+  bool DoExecute(Args &args, CommandReturnObject &result) override;
 };
 
 } // namespace lldb_private

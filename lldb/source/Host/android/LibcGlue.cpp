@@ -15,21 +15,15 @@
 
 #if __ANDROID_API__ < 21
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include "lldb/Host/Time.h"
 
-time_t timegm(struct tm* t)
-{
-    return (time_t) timegm64(t);
-}
+time_t timegm(struct tm *t) { return (time_t)timegm64(t); }
 
-int posix_openpt(int flags)
-{
-    return open("/dev/ptmx", flags);
-}
+int posix_openpt(int flags) { return open("/dev/ptmx", flags); }
 
 #endif

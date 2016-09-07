@@ -14,50 +14,40 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-private.h"
 #include "lldb/Target/Language.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
-    
-class ObjCPlusPlusLanguage :
-    public Language
-{
+
+class ObjCPlusPlusLanguage : public Language {
 public:
-    ObjCPlusPlusLanguage() = default;
+  ObjCPlusPlusLanguage() = default;
 
-    ~ObjCPlusPlusLanguage() override = default;
+  ~ObjCPlusPlusLanguage() override = default;
 
-    lldb::LanguageType
-    GetLanguageType() const override
-    {
-        return lldb::eLanguageTypeObjC_plus_plus;
-    }
-    
-    //------------------------------------------------------------------
-    // Static Functions
-    //------------------------------------------------------------------
-    static void
-    Initialize();
-    
-    static void
-    Terminate();
-    
-    static lldb_private::Language *
-    CreateInstance (lldb::LanguageType language);
-    
-    static lldb_private::ConstString
-    GetPluginNameStatic();
-    
-    //------------------------------------------------------------------
-    // PluginInterface protocol
-    //------------------------------------------------------------------
-    ConstString
-    GetPluginName() override;
-    
-    uint32_t
-    GetPluginVersion() override;
+  lldb::LanguageType GetLanguageType() const override {
+    return lldb::eLanguageTypeObjC_plus_plus;
+  }
+
+  //------------------------------------------------------------------
+  // Static Functions
+  //------------------------------------------------------------------
+  static void Initialize();
+
+  static void Terminate();
+
+  static lldb_private::Language *CreateInstance(lldb::LanguageType language);
+
+  static lldb_private::ConstString GetPluginNameStatic();
+
+  //------------------------------------------------------------------
+  // PluginInterface protocol
+  //------------------------------------------------------------------
+  ConstString GetPluginName() override;
+
+  uint32_t GetPluginVersion() override;
 };
-    
+
 } // namespace lldb_private
 
 #endif // liblldb_CPlusPlusLanguage_h_

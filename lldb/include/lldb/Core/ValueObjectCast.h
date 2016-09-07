@@ -21,55 +21,42 @@ namespace lldb_private {
 //---------------------------------------------------------------------------------
 // A ValueObject that represents a given value represented as a different type.
 //---------------------------------------------------------------------------------
-class ValueObjectCast : public ValueObject
-{
+class ValueObjectCast : public ValueObject {
 public:
-    ~ValueObjectCast() override;
+  ~ValueObjectCast() override;
 
-    static lldb::ValueObjectSP
-    Create (ValueObject &parent, 
-            const ConstString &name, 
-            const CompilerType &cast_type);
+  static lldb::ValueObjectSP Create(ValueObject &parent,
+                                    const ConstString &name,
+                                    const CompilerType &cast_type);
 
-    uint64_t
-    GetByteSize() override;
-    
-    size_t
-    CalculateNumChildren(uint32_t max) override;
-    
-    lldb::ValueType
-    GetValueType() const override;
-    
-    bool
-    IsInScope() override;
-    
-    ValueObject *
-    GetParent() override
-    {
-        return ((m_parent != nullptr) ? m_parent->GetParent() : nullptr);
-    }
-    
-    const ValueObject *
-    GetParent() const override
-    {
-        return ((m_parent != nullptr) ? m_parent->GetParent() : nullptr);
-    }
-    
+  uint64_t GetByteSize() override;
+
+  size_t CalculateNumChildren(uint32_t max) override;
+
+  lldb::ValueType GetValueType() const override;
+
+  bool IsInScope() override;
+
+  ValueObject *GetParent() override {
+    return ((m_parent != nullptr) ? m_parent->GetParent() : nullptr);
+  }
+
+  const ValueObject *GetParent() const override {
+    return ((m_parent != nullptr) ? m_parent->GetParent() : nullptr);
+  }
+
 protected:
-    ValueObjectCast(ValueObject &parent, 
-                    const ConstString &name, 
-                    const CompilerType &cast_type);
+  ValueObjectCast(ValueObject &parent, const ConstString &name,
+                  const CompilerType &cast_type);
 
-    bool
-    UpdateValue () override;
-    
-    CompilerType
-    GetCompilerTypeImpl () override;
-    
-    CompilerType m_cast_type;
-    
+  bool UpdateValue() override;
+
+  CompilerType GetCompilerTypeImpl() override;
+
+  CompilerType m_cast_type;
+
 private:
-    DISALLOW_COPY_AND_ASSIGN (ValueObjectCast);
+  DISALLOW_COPY_AND_ASSIGN(ValueObjectCast);
 };
 
 } // namespace lldb_private

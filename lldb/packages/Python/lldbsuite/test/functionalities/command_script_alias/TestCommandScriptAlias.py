@@ -5,18 +5,20 @@ Test lldb Python commands.
 from __future__ import print_function
 
 
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.lldbtest import *
+
 
 class CommandScriptAliasTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def test (self):
-        self.pycmd_tests ()
+    def test(self):
+        self.pycmd_tests()
 
-    def pycmd_tests (self):
+    def pycmd_tests(self):
         self.runCmd("command script import tcsacmd.py")
         self.runCmd("command script add -f tcsacmd.some_command_here attach")
 
@@ -32,6 +34,7 @@ class CommandScriptAliasTestCase(TestBase):
         if not self.TraceOn():
             self.HideStdout()
 
-        self.expect('attach a', substrs = ['Victory is mine']);
+        self.expect('attach a', substrs=['Victory is mine'])
         self.runCmd("command script delete attach")
-        self.runCmd('attach noprocessexistswiththisname', check=False) # this can't crash but we don't care whether the actual attach works
+        # this can't crash but we don't care whether the actual attach works
+        self.runCmd('attach noprocessexistswiththisname', check=False)

@@ -10,9 +10,11 @@ import os
 import sys
 from optparse import OptionParser
 
+
 def is_exe(fpath):
     """Check whether fpath is an executable."""
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
 
 def which(program):
     """Find the full path to a program, or return None."""
@@ -27,8 +29,15 @@ def which(program):
                 return exe_file
     return None
 
-def do_llvm_mc_disassembly(gdb_commands, gdb_options, exe, func, mc, mc_options):
-    from cStringIO import StringIO 
+
+def do_llvm_mc_disassembly(
+        gdb_commands,
+        gdb_options,
+        exe,
+        func,
+        mc,
+        mc_options):
+    from cStringIO import StringIO
     import pexpect
 
     gdb_prompt = "\r\n\(gdb\) "
@@ -37,7 +46,8 @@ def do_llvm_mc_disassembly(gdb_commands, gdb_options, exe, func, mc, mc_options)
     gdb.logfile_read = sys.stdout
     gdb.expect(gdb_prompt)
 
-    # See if there any extra command(s) to execute before we issue the file command.
+    # See if there any extra command(s) to execute before we issue the file
+    # command.
     for cmd in gdb_commands:
         gdb.sendline(cmd)
         gdb.expect(gdb_prompt)
@@ -93,12 +103,14 @@ def do_llvm_mc_disassembly(gdb_commands, gdb_options, exe, func, mc, mc_options)
             # Get the last output line from the gdb examine memory command,
             # split the string into a 3-tuple with separator '>:' to handle
             # objc method names.
-            memory_dump = x_output.split(os.linesep)[-1].partition('>:')[2].strip()
-            #print "\nbytes:", memory_dump
+            memory_dump = x_output.split(
+                os.linesep)[-1].partition('>:')[2].strip()
+            # print "\nbytes:", memory_dump
             disasm_str = prev_line.partition('>:')[2]
             print >> mc_input, '%s # %s' % (memory_dump, disasm_str)
 
-        # We're done with the processing.  Assign the current line to be prev_line.
+        # We're done with the processing.  Assign the current line to be
+        # prev_line.
         prev_line = line
 
     # Close the gdb session now that we are done with it.
@@ -117,15 +129,21 @@ def do_llvm_mc_disassembly(gdb_commands, gdb_options, exe, func, mc, mc_options)
     # And invoke llvm-mc with the just recorded file.
     #mc = pexpect.spawn('%s -disassemble %s disasm-input.txt' % (mc, mc_options))
     #mc.logfile_read = sys.stdout
-    #print "mc:", mc
-    #mc.close()
-    
+    # print "mc:", mc
+    # mc.close()
+
 
 def main():
     # This is to set up the Python path to include the pexpect-2.4 dir.
     # Remember to update this when/if things change.
     scriptPath = sys.path[0]
-    sys.path.append(os.path.join(scriptPath, os.pardir, os.pardir, 'test', 'pexpect-2.4'))
+    sys.path.append(
+        os.path.join(
+            scriptPath,
+            os.pardir,
+            os.pardir,
+            'test',
+            'pexpect-2.4'))
 
     parser = OptionParser(usage="""\
 Run gdb to disassemble a function, feed the bytes to 'llvm-mc -disassemble' command,
@@ -133,32 +151,46 @@ and display the disassembly result.
 
 Usage: %prog [options]
 """)
-    parser.add_option('-C', '--gdb-command',
-                      type='string', action='append', metavar='COMMAND',
-                      default=[], dest='gdb_commands',
-                      help='Command(s) gdb executes after starting up (can be empty)')
-    parser.add_option('-O', '--gdb-options',
-                      type='string', action='store',
-                      dest='gdb_options',
-                      help="""The options passed to 'gdb' command if specified.""")
+    parser.add_option(
+        '-C',
+        '--gdb-command',
+        type='string',
+        action='append',
+        metavar='COMMAND',
+        default=[],
+        dest='gdb_commands',
+        help='Command(s) gdb executes after starting up (can be empty)')
+    parser.add_option(
+        '-O',
+        '--gdb-options',
+        type='string',
+        action='store',
+        dest='gdb_options',
+        help="""The options passed to 'gdb' command if specified.""")
     parser.add_option('-e', '--executable',
                       type='string', action='store',
                       dest='executable',
                       help="""The executable to do disassembly on.""")
-    parser.add_option('-f', '--function',
-                      type='string', action='store',
-                      dest='function',
-                      help="""The function name (could be an address to gdb) for disassembly.""")
+    parser.add_option(
+        '-f',
+        '--function',
+        type='string',
+        action='store',
+        dest='function',
+        help="""The function name (could be an address to gdb) for disassembly.""")
     parser.add_option('-m', '--llvm-mc',
                       type='string', action='store',
                       dest='llvm_mc',
                       help="""The llvm-mc executable full path, if specified.
                       Otherwise, it must be present in your PATH environment.""")
 
-    parser.add_option('-o', '--options',
-                      type='string', action='store',
-                      dest='llvm_mc_options',
-                      help="""The options passed to 'llvm-mc -disassemble' command if specified.""")
+    parser.add_option(
+        '-o',
+        '--options',
+        type='string',
+        action='store',
+        dest='llvm_mc_options',
+        help="""The options passed to 'llvm-mc -disassemble' command if specified.""")
 
     opts, args = parser.parse_args()
 
@@ -192,7 +224,13 @@ Usage: %prog [options]
     print "llvm-mc:", llvm_mc
     print "llvm-mc options:", llvm_mc_options
 
-    do_llvm_mc_disassembly(gdb_commands, gdb_options, executable, function, llvm_mc, llvm_mc_options)
+    do_llvm_mc_disassembly(
+        gdb_commands,
+        gdb_options,
+        executable,
+        function,
+        llvm_mc,
+        llvm_mc_options)
 
 if __name__ == '__main__':
     main()

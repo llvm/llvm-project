@@ -23,50 +23,54 @@ host = raw_input('Hostname: ')
 user = raw_input('Username: ')
 X = getpass.getpass('Password: ')
 
-def get_process_info ():
 
-    # This seems to work on both Linux and BSD, but should otherwise be considered highly UNportable.
+def get_process_info():
 
-    ps = pexpect.run ('ps ax -O ppid')
+    # This seems to work on both Linux and BSD, but should otherwise be
+    # considered highly UNportable.
+
+    ps = pexpect.run('ps ax -O ppid')
     pass
-def start_tunnel ():
+
+
+def start_tunnel():
     try:
-        ssh_tunnel = pexpect.spawn (tunnel_command % globals())
-        ssh_tunnel.expect ('password:')
-        time.sleep (0.1)
-        ssh_tunnel.sendline (X)
-        time.sleep (60) # Cygwin is slow to update process status.
-        ssh_tunnel.expect (pexpect.EOF)
+        ssh_tunnel = pexpect.spawn(tunnel_command % globals())
+        ssh_tunnel.expect('password:')
+        time.sleep(0.1)
+        ssh_tunnel.sendline(X)
+        time.sleep(60)  # Cygwin is slow to update process status.
+        ssh_tunnel.expect(pexpect.EOF)
 
     except Exception, e:
         print str(e)
 
-def main ():
+
+def main():
 
     while True:
-        ps = pexpect.spawn ('ps')
-        time.sleep (1)
-        index = ps.expect (['/usr/bin/ssh', pexpect.EOF, pexpect.TIMEOUT])
+        ps = pexpect.spawn('ps')
+        time.sleep(1)
+        index = ps.expect(['/usr/bin/ssh', pexpect.EOF, pexpect.TIMEOUT])
         if index == 2:
             print 'TIMEOUT in ps command...'
             print str(ps)
-            time.sleep (13)
+            time.sleep(13)
         if index == 1:
             print time.asctime(),
             print 'restarting tunnel'
-            start_tunnel ()
-            time.sleep (11)
-	        print 'tunnel OK'
+            start_tunnel()
+            time.sleep(11)
+                print 'tunnel OK'
         else:
             # print 'tunnel OK'
-            time.sleep (7)
+            time.sleep(7)
 
 if __name__ == '__main__':
-    main ()
+    main()
 
 # This was for older SSH versions that didn't have -f option
 #tunnel_command = 'ssh -C -n -L 25:%(host)s:25 -L 110:%(host)s:110 %(user)s@%(host)s -f nothing.sh'
-#nothing_script = """#!/bin/sh
-#while true; do sleep 53; done
+# nothing_script = """#!/bin/sh
+# while true; do sleep 53; done
 #"""
-

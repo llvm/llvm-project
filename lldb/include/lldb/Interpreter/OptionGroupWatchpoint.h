@@ -22,48 +22,41 @@ namespace lldb_private {
 // OptionGroupWatchpoint
 //-------------------------------------------------------------------------
 
-    class OptionGroupWatchpoint : public OptionGroup
-    {
-    public:
-        OptionGroupWatchpoint ();
+class OptionGroupWatchpoint : public OptionGroup {
+public:
+  OptionGroupWatchpoint();
 
-        ~OptionGroupWatchpoint() override;
+  ~OptionGroupWatchpoint() override;
 
-        static bool
-        IsWatchSizeSupported(uint32_t watch_size);
+  static bool IsWatchSizeSupported(uint32_t watch_size);
 
-        uint32_t
-        GetNumDefinitions() override;
-        
-        const OptionDefinition*
-        GetDefinitions() override;
-        
-        Error
-        SetOptionValue(uint32_t option_idx,
-                       const char *option_arg,
+  uint32_t GetNumDefinitions() override;
+
+  const OptionDefinition *GetDefinitions() override;
+
+  Error SetOptionValue(uint32_t option_idx, const char *option_arg,
                        ExecutionContext *execution_context) override;
-        
-        void
-        OptionParsingStarting(ExecutionContext *execution_context) override;
-        
-        // Note:
-        // eWatchRead == LLDB_WATCH_TYPE_READ; and
-        // eWatchWrite == LLDB_WATCH_TYPE_WRITE
-        typedef enum WatchType {
-            eWatchInvalid = 0,
-            eWatchRead,
-            eWatchWrite,
-            eWatchReadWrite
-        } WatchType;
 
-        WatchType watch_type;
-        uint32_t watch_size;
-        bool watch_type_specified;
+  void OptionParsingStarting(ExecutionContext *execution_context) override;
 
-    private:
-        DISALLOW_COPY_AND_ASSIGN(OptionGroupWatchpoint);
-    };
-    
+  // Note:
+  // eWatchRead == LLDB_WATCH_TYPE_READ; and
+  // eWatchWrite == LLDB_WATCH_TYPE_WRITE
+  typedef enum WatchType {
+    eWatchInvalid = 0,
+    eWatchRead,
+    eWatchWrite,
+    eWatchReadWrite
+  } WatchType;
+
+  WatchType watch_type;
+  uint32_t watch_size;
+  bool watch_type_specified;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(OptionGroupWatchpoint);
+};
+
 } // namespace lldb_private
 
 #endif // liblldb_OptionGroupWatchpoint_h_

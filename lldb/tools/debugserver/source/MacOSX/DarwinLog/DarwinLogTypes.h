@@ -10,14 +10,13 @@
 #ifndef DarwinLogTypes_h
 #define DarwinLogTypes_h
 
-enum FilterTarget
-{
-    eFilterTargetInvalid,
-    eFilterTargetActivity,
-    eFilterTargetActivityChain,
-    eFilterTargetCategory,
-    eFilterTargetMessage,
-    eFilterTargetSubsystem
+enum FilterTarget {
+  eFilterTargetInvalid,
+  eFilterTargetActivity,
+  eFilterTargetActivityChain,
+  eFilterTargetCategory,
+  eFilterTargetMessage,
+  eFilterTargetSubsystem
 };
 
 #endif /* DarwinLogTypes_h */

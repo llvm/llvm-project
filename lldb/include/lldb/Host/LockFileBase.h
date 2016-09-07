@@ -14,60 +14,44 @@
 
 #include <functional>
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class LockFileBase
-{
+class LockFileBase {
 public:
-    virtual ~LockFileBase () = default;
+  virtual ~LockFileBase() = default;
 
-    bool
-    IsLocked () const;
+  bool IsLocked() const;
 
-    Error
-    WriteLock (const uint64_t start, const uint64_t len);
-    Error
-    TryWriteLock (const uint64_t start, const uint64_t len);
+  Error WriteLock(const uint64_t start, const uint64_t len);
+  Error TryWriteLock(const uint64_t start, const uint64_t len);
 
-    Error
-    ReadLock (const uint64_t start, const uint64_t len);
-    Error
-    TryReadLock (const uint64_t start, const uint64_t len);
+  Error ReadLock(const uint64_t start, const uint64_t len);
+  Error TryReadLock(const uint64_t start, const uint64_t len);
 
-    Error
-    Unlock ();
+  Error Unlock();
 
 protected:
-    using Locker = std::function<Error (const uint64_t, const uint64_t)>;
+  using Locker = std::function<Error(const uint64_t, const uint64_t)>;
 
-    LockFileBase (int fd);
+  LockFileBase(int fd);
 
-    virtual bool
-    IsValidFile () const;
+  virtual bool IsValidFile() const;
 
-    virtual Error
-    DoWriteLock (const uint64_t start, const uint64_t len) = 0;
-    virtual Error
-    DoTryWriteLock (const uint64_t start, const uint64_t len) = 0;
+  virtual Error DoWriteLock(const uint64_t start, const uint64_t len) = 0;
+  virtual Error DoTryWriteLock(const uint64_t start, const uint64_t len) = 0;
 
-    virtual Error
-    DoReadLock (const uint64_t start, const uint64_t len) = 0;
-    virtual Error
-    DoTryReadLock (const uint64_t start, const uint64_t len) = 0;
+  virtual Error DoReadLock(const uint64_t start, const uint64_t len) = 0;
+  virtual Error DoTryReadLock(const uint64_t start, const uint64_t len) = 0;
 
-    virtual Error
-    DoUnlock () = 0;
+  virtual Error DoUnlock() = 0;
 
-    Error
-    DoLock (const Locker &locker, const uint64_t start, const uint64_t len);
+  Error DoLock(const Locker &locker, const uint64_t start, const uint64_t len);
 
-    int m_fd;  // not owned.
-    bool m_locked;
-    uint64_t m_start;
-    uint64_t m_len;
+  int m_fd; // not owned.
+  bool m_locked;
+  uint64_t m_start;
+  uint64_t m_len;
 };
-
 }
 
 #endif

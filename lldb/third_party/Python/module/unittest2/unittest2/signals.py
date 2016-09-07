@@ -7,6 +7,7 @@ __unittest = True
 
 
 class _InterruptHandler(object):
+
     def __init__(self, default_handler):
         self.called = False
         self.default_handler = default_handler
@@ -17,7 +18,7 @@ class _InterruptHandler(object):
             # if we aren't the installed handler, then delegate immediately
             # to the default handler
             self.default_handler(signum, frame)
-            
+
         if self.called:
             self.default_handler(signum, frame)
         self.called = True
@@ -25,13 +26,18 @@ class _InterruptHandler(object):
             result.stop()
 
 _results = weakref.WeakKeyDictionary()
+
+
 def registerResult(result):
     _results[result] = 1
+
 
 def removeResult(result):
     return bool(_results.pop(result, None))
 
 _interrupt_handler = None
+
+
 def installHandler():
     global _interrupt_handler
     if _interrupt_handler is None:

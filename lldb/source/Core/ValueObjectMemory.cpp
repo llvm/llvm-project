@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "lldb/Core/ValueObjectMemory.h"
 
 // C Includes
@@ -15,9 +14,9 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObjectList.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Core/ValueObjectList.h"
 
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -33,256 +32,199 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ValueObjectSP
-ValueObjectMemory::Create (ExecutionContextScope *exe_scope, 
-                           const char *name,
-                           const Address &address, 
-                           lldb::TypeSP &type_sp)
-{
-    return (new ValueObjectMemory (exe_scope, name, address, type_sp))->GetSP();
+ValueObjectSP ValueObjectMemory::Create(ExecutionContextScope *exe_scope,
+                                        const char *name,
+                                        const Address &address,
+                                        lldb::TypeSP &type_sp) {
+  return (new ValueObjectMemory(exe_scope, name, address, type_sp))->GetSP();
 }
 
-ValueObjectSP
-ValueObjectMemory::Create (ExecutionContextScope *exe_scope, 
-                           const char *name,
-                           const Address &address, 
-                           const CompilerType &ast_type)
-{
-    return (new ValueObjectMemory (exe_scope, name, address, ast_type))->GetSP();
+ValueObjectSP ValueObjectMemory::Create(ExecutionContextScope *exe_scope,
+                                        const char *name,
+                                        const Address &address,
+                                        const CompilerType &ast_type) {
+  return (new ValueObjectMemory(exe_scope, name, address, ast_type))->GetSP();
 }
 
-ValueObjectMemory::ValueObjectMemory (ExecutionContextScope *exe_scope,
-                                      const char *name, 
-                                      const Address &address,
-                                      lldb::TypeSP &type_sp) :
-    ValueObject(exe_scope),
-    m_address (address),
-    m_type_sp(type_sp),
-    m_compiler_type()
-{
-    // Do not attempt to construct one of these objects with no variable!
-    assert (m_type_sp.get() != NULL);
-    SetName (ConstString(name));
-    m_value.SetContext(Value::eContextTypeLLDBType, m_type_sp.get());
-    TargetSP target_sp (GetTargetSP());
-    lldb::addr_t load_address = m_address.GetLoadAddress(target_sp.get());
-    if (load_address != LLDB_INVALID_ADDRESS)
-    {
-        m_value.SetValueType(Value::eValueTypeLoadAddress);
-        m_value.GetScalar() = load_address;
+ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
+                                     const char *name, const Address &address,
+                                     lldb::TypeSP &type_sp)
+    : ValueObject(exe_scope), m_address(address), m_type_sp(type_sp),
+      m_compiler_type() {
+  // Do not attempt to construct one of these objects with no variable!
+  assert(m_type_sp.get() != NULL);
+  SetName(ConstString(name));
+  m_value.SetContext(Value::eContextTypeLLDBType, m_type_sp.get());
+  TargetSP target_sp(GetTargetSP());
+  lldb::addr_t load_address = m_address.GetLoadAddress(target_sp.get());
+  if (load_address != LLDB_INVALID_ADDRESS) {
+    m_value.SetValueType(Value::eValueTypeLoadAddress);
+    m_value.GetScalar() = load_address;
+  } else {
+    lldb::addr_t file_address = m_address.GetFileAddress();
+    if (file_address != LLDB_INVALID_ADDRESS) {
+      m_value.SetValueType(Value::eValueTypeFileAddress);
+      m_value.GetScalar() = file_address;
+    } else {
+      m_value.GetScalar() = m_address.GetOffset();
+      m_value.SetValueType(Value::eValueTypeScalar);
     }
-    else
-    {
-        lldb::addr_t file_address = m_address.GetFileAddress();
-        if (file_address != LLDB_INVALID_ADDRESS)
-        {
-            m_value.SetValueType(Value::eValueTypeFileAddress);
-            m_value.GetScalar() = file_address;
-        }
-        else
-        {
-            m_value.GetScalar() = m_address.GetOffset();
-            m_value.SetValueType (Value::eValueTypeScalar);
-        }
+  }
+}
+
+ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
+                                     const char *name, const Address &address,
+                                     const CompilerType &ast_type)
+    : ValueObject(exe_scope), m_address(address), m_type_sp(),
+      m_compiler_type(ast_type) {
+  // Do not attempt to construct one of these objects with no variable!
+  assert(m_compiler_type.GetTypeSystem());
+  assert(m_compiler_type.GetOpaqueQualType());
+
+  TargetSP target_sp(GetTargetSP());
+
+  SetName(ConstString(name));
+  //    m_value.SetContext(Value::eContextTypeClangType,
+  //    m_compiler_type.GetOpaqueQualType());
+  m_value.SetCompilerType(m_compiler_type);
+  lldb::addr_t load_address = m_address.GetLoadAddress(target_sp.get());
+  if (load_address != LLDB_INVALID_ADDRESS) {
+    m_value.SetValueType(Value::eValueTypeLoadAddress);
+    m_value.GetScalar() = load_address;
+  } else {
+    lldb::addr_t file_address = m_address.GetFileAddress();
+    if (file_address != LLDB_INVALID_ADDRESS) {
+      m_value.SetValueType(Value::eValueTypeFileAddress);
+      m_value.GetScalar() = file_address;
+    } else {
+      m_value.GetScalar() = m_address.GetOffset();
+      m_value.SetValueType(Value::eValueTypeScalar);
     }
+  }
 }
 
-ValueObjectMemory::ValueObjectMemory (ExecutionContextScope *exe_scope,
-                                      const char *name, 
-                                      const Address &address,
-                                      const CompilerType &ast_type) :
-    ValueObject(exe_scope),
-    m_address (address),
-    m_type_sp(),
-    m_compiler_type(ast_type)
-{
-    // Do not attempt to construct one of these objects with no variable!
-    assert (m_compiler_type.GetTypeSystem());
-    assert (m_compiler_type.GetOpaqueQualType());
-    
-    TargetSP target_sp (GetTargetSP());
+ValueObjectMemory::~ValueObjectMemory() {}
 
-    SetName (ConstString(name));
-//    m_value.SetContext(Value::eContextTypeClangType, m_compiler_type.GetOpaqueQualType());
-    m_value.SetCompilerType(m_compiler_type);
-    lldb::addr_t load_address = m_address.GetLoadAddress (target_sp.get());
-    if (load_address != LLDB_INVALID_ADDRESS)
-    {
-        m_value.SetValueType(Value::eValueTypeLoadAddress);
-        m_value.GetScalar() = load_address;
-    }
-    else
-    {
-        lldb::addr_t file_address = m_address.GetFileAddress();
-        if (file_address != LLDB_INVALID_ADDRESS)
-        {
-            m_value.SetValueType(Value::eValueTypeFileAddress);
-            m_value.GetScalar() = file_address;
-        }
-        else
-        {
-            m_value.GetScalar() = m_address.GetOffset();
-            m_value.SetValueType (Value::eValueTypeScalar);
-        }
-    }
+CompilerType ValueObjectMemory::GetCompilerTypeImpl() {
+  if (m_type_sp)
+    return m_type_sp->GetForwardCompilerType();
+  return m_compiler_type;
 }
 
-ValueObjectMemory::~ValueObjectMemory()
-{
+ConstString ValueObjectMemory::GetTypeName() {
+  if (m_type_sp)
+    return m_type_sp->GetName();
+  return m_compiler_type.GetConstTypeName();
 }
 
-CompilerType
-ValueObjectMemory::GetCompilerTypeImpl ()
-{
-    if (m_type_sp)
-        return m_type_sp->GetForwardCompilerType ();
-    return m_compiler_type;
+ConstString ValueObjectMemory::GetDisplayTypeName() {
+  if (m_type_sp)
+    return m_type_sp->GetForwardCompilerType().GetDisplayTypeName();
+  return m_compiler_type.GetDisplayTypeName();
 }
 
-ConstString
-ValueObjectMemory::GetTypeName()
-{
-    if (m_type_sp)
-        return m_type_sp->GetName();
-    return m_compiler_type.GetConstTypeName();
-}
-
-ConstString
-ValueObjectMemory::GetDisplayTypeName()
-{
-    if (m_type_sp)
-        return m_type_sp->GetForwardCompilerType ().GetDisplayTypeName();
-    return m_compiler_type.GetDisplayTypeName();
-}
-
-size_t
-ValueObjectMemory::CalculateNumChildren(uint32_t max)
-{
-    if (m_type_sp)
-    {
-        auto child_count = m_type_sp->GetNumChildren(true);
-        return child_count <= max ? child_count : max;
-    }
-
-    const bool omit_empty_base_classes = true;
-    auto child_count = m_compiler_type.GetNumChildren (omit_empty_base_classes);
+size_t ValueObjectMemory::CalculateNumChildren(uint32_t max) {
+  if (m_type_sp) {
+    auto child_count = m_type_sp->GetNumChildren(true);
     return child_count <= max ? child_count : max;
+  }
+
+  const bool omit_empty_base_classes = true;
+  auto child_count = m_compiler_type.GetNumChildren(omit_empty_base_classes);
+  return child_count <= max ? child_count : max;
 }
 
-uint64_t
-ValueObjectMemory::GetByteSize()
-{
-    if (m_type_sp)
-        return m_type_sp->GetByteSize();
-    return m_compiler_type.GetByteSize (nullptr);
+uint64_t ValueObjectMemory::GetByteSize() {
+  if (m_type_sp)
+    return m_type_sp->GetByteSize();
+  return m_compiler_type.GetByteSize(nullptr);
 }
 
-lldb::ValueType
-ValueObjectMemory::GetValueType() const
-{
-    // RETHINK: Should this be inherited from somewhere?
-    return lldb::eValueTypeVariableGlobal;
+lldb::ValueType ValueObjectMemory::GetValueType() const {
+  // RETHINK: Should this be inherited from somewhere?
+  return lldb::eValueTypeVariableGlobal;
 }
 
-bool
-ValueObjectMemory::UpdateValue ()
-{
-    SetValueIsValid (false);
-    m_error.Clear();
+bool ValueObjectMemory::UpdateValue() {
+  SetValueIsValid(false);
+  m_error.Clear();
 
-    ExecutionContext exe_ctx (GetExecutionContextRef());
-    
-    Target *target = exe_ctx.GetTargetPtr();
-    if (target)
-    {
-        m_data.SetByteOrder(target->GetArchitecture().GetByteOrder());
-        m_data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
-    }
+  ExecutionContext exe_ctx(GetExecutionContextRef());
 
-    Value old_value(m_value);
-    if (m_address.IsValid())
-    {
-        Value::ValueType value_type = m_value.GetValueType();
+  Target *target = exe_ctx.GetTargetPtr();
+  if (target) {
+    m_data.SetByteOrder(target->GetArchitecture().GetByteOrder());
+    m_data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
+  }
 
-        switch (value_type)
-        {
-        default:
-            assert(!"Unhandled expression result value kind...");
-            break;
+  Value old_value(m_value);
+  if (m_address.IsValid()) {
+    Value::ValueType value_type = m_value.GetValueType();
 
-        case Value::eValueTypeScalar:
-            // The variable value is in the Scalar value inside the m_value.
-            // We can point our m_data right to it.
-            m_error = m_value.GetValueAsData (&exe_ctx, m_data, 0, GetModule().get());
-            break;
+    switch (value_type) {
+    default:
+      assert(!"Unhandled expression result value kind...");
+      break;
 
-        case Value::eValueTypeFileAddress:
-        case Value::eValueTypeLoadAddress:
-        case Value::eValueTypeHostAddress:
-            // The DWARF expression result was an address in the inferior
-            // process. If this variable is an aggregate type, we just need
-            // the address as the main value as all child variable objects
-            // will rely upon this location and add an offset and then read
-            // their own values as needed. If this variable is a simple
-            // type, we read all data for it into m_data.
-            // Make sure this type has a value before we try and read it
+    case Value::eValueTypeScalar:
+      // The variable value is in the Scalar value inside the m_value.
+      // We can point our m_data right to it.
+      m_error = m_value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
+      break;
 
-            // If we have a file address, convert it to a load address if we can.
-            if (value_type == Value::eValueTypeFileAddress && exe_ctx.GetProcessPtr())
-            {
-                lldb::addr_t load_addr = m_address.GetLoadAddress(target);
-                if (load_addr != LLDB_INVALID_ADDRESS)
-                {
-                    m_value.SetValueType(Value::eValueTypeLoadAddress);
-                    m_value.GetScalar() = load_addr;
-                }
-            }
+    case Value::eValueTypeFileAddress:
+    case Value::eValueTypeLoadAddress:
+    case Value::eValueTypeHostAddress:
+      // The DWARF expression result was an address in the inferior
+      // process. If this variable is an aggregate type, we just need
+      // the address as the main value as all child variable objects
+      // will rely upon this location and add an offset and then read
+      // their own values as needed. If this variable is a simple
+      // type, we read all data for it into m_data.
+      // Make sure this type has a value before we try and read it
 
-            if (!CanProvideValue())
-            {
-                // this value object represents an aggregate type whose
-                // children have values, but this object does not. So we
-                // say we are changed if our location has changed.
-                SetValueDidChange (value_type != old_value.GetValueType() || m_value.GetScalar() != old_value.GetScalar());
-            }
-            else
-            {
-                // Copy the Value and set the context to use our Variable
-                // so it can extract read its value into m_data appropriately
-                Value value(m_value);
-                if (m_type_sp)
-                    value.SetContext(Value::eContextTypeLLDBType, m_type_sp.get());
-                else
-                {
-                    //value.SetContext(Value::eContextTypeClangType, m_compiler_type.GetOpaqueQualType());
-                    value.SetCompilerType(m_compiler_type);
-                }
+      // If we have a file address, convert it to a load address if we can.
+      if (value_type == Value::eValueTypeFileAddress &&
+          exe_ctx.GetProcessPtr()) {
+        lldb::addr_t load_addr = m_address.GetLoadAddress(target);
+        if (load_addr != LLDB_INVALID_ADDRESS) {
+          m_value.SetValueType(Value::eValueTypeLoadAddress);
+          m_value.GetScalar() = load_addr;
+        }
+      }
 
-                m_error = value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
-            }
-            break;
+      if (!CanProvideValue()) {
+        // this value object represents an aggregate type whose
+        // children have values, but this object does not. So we
+        // say we are changed if our location has changed.
+        SetValueDidChange(value_type != old_value.GetValueType() ||
+                          m_value.GetScalar() != old_value.GetScalar());
+      } else {
+        // Copy the Value and set the context to use our Variable
+        // so it can extract read its value into m_data appropriately
+        Value value(m_value);
+        if (m_type_sp)
+          value.SetContext(Value::eContextTypeLLDBType, m_type_sp.get());
+        else {
+          // value.SetContext(Value::eContextTypeClangType,
+          // m_compiler_type.GetOpaqueQualType());
+          value.SetCompilerType(m_compiler_type);
         }
 
-        SetValueIsValid (m_error.Success());
+        m_error = value.GetValueAsData(&exe_ctx, m_data, 0, GetModule().get());
+      }
+      break;
     }
-    return m_error.Success();
+
+    SetValueIsValid(m_error.Success());
+  }
+  return m_error.Success();
 }
 
-
-
-bool
-ValueObjectMemory::IsInScope ()
-{
-    // FIXME: Maybe try to read the memory address, and if that works, then
-    // we are in scope?
-    return true;
+bool ValueObjectMemory::IsInScope() {
+  // FIXME: Maybe try to read the memory address, and if that works, then
+  // we are in scope?
+  return true;
 }
 
-
-lldb::ModuleSP
-ValueObjectMemory::GetModule()
-{
-    return m_address.GetModule();
-}
-
-
+lldb::ModuleSP ValueObjectMemory::GetModule() { return m_address.GetModule(); }

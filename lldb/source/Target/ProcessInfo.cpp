@@ -21,138 +21,101 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ProcessInfo::ProcessInfo () :
-    m_executable (),
-    m_arguments (),
-    m_environment (),
-    m_uid (UINT32_MAX),
-    m_gid (UINT32_MAX),
-    m_arch(),
-    m_pid (LLDB_INVALID_PROCESS_ID)
-{
+ProcessInfo::ProcessInfo()
+    : m_executable(), m_arguments(), m_environment(), m_uid(UINT32_MAX),
+      m_gid(UINT32_MAX), m_arch(), m_pid(LLDB_INVALID_PROCESS_ID) {}
+
+ProcessInfo::ProcessInfo(const char *name, const ArchSpec &arch,
+                         lldb::pid_t pid)
+    : m_executable(name, false), m_arguments(), m_environment(),
+      m_uid(UINT32_MAX), m_gid(UINT32_MAX), m_arch(arch), m_pid(pid) {}
+
+void ProcessInfo::Clear() {
+  m_executable.Clear();
+  m_arguments.Clear();
+  m_environment.Clear();
+  m_uid = UINT32_MAX;
+  m_gid = UINT32_MAX;
+  m_arch.Clear();
+  m_pid = LLDB_INVALID_PROCESS_ID;
 }
 
-ProcessInfo::ProcessInfo (const char *name, const ArchSpec &arch, lldb::pid_t pid) :
-    m_executable (name, false),
-    m_arguments (),
-    m_environment(),
-    m_uid (UINT32_MAX),
-    m_gid (UINT32_MAX),
-    m_arch (arch),
-    m_pid (pid)
-{
+const char *ProcessInfo::GetName() const {
+  return m_executable.GetFilename().GetCString();
 }
 
-void
-ProcessInfo::Clear ()
-{
+size_t ProcessInfo::GetNameLength() const {
+  return m_executable.GetFilename().GetLength();
+}
+
+void ProcessInfo::Dump(Stream &s, Platform *platform) const {
+  s << "Executable: " << GetName() << "\n";
+  s << "Triple: ";
+  m_arch.DumpTriple(s);
+  s << "\n";
+
+  s << "Arguments:\n";
+  m_arguments.Dump(s);
+
+  s << "Environment:\n";
+  m_environment.Dump(s, "env");
+}
+
+void ProcessInfo::SetExecutableFile(const FileSpec &exe_file,
+                                    bool add_exe_file_as_first_arg) {
+  if (exe_file) {
+    m_executable = exe_file;
+    if (add_exe_file_as_first_arg) {
+      char filename[PATH_MAX];
+      if (exe_file.GetPath(filename, sizeof(filename)))
+        m_arguments.InsertArgumentAtIndex(0, filename);
+    }
+  } else {
     m_executable.Clear();
-    m_arguments.Clear();
-    m_environment.Clear();
-    m_uid = UINT32_MAX;
-    m_gid = UINT32_MAX;
-    m_arch.Clear();
-    m_pid = LLDB_INVALID_PROCESS_ID;
+  }
 }
 
-const char *
-ProcessInfo::GetName() const
-{
-    return m_executable.GetFilename().GetCString();
+const char *ProcessInfo::GetArg0() const {
+  return (m_arg0.empty() ? nullptr : m_arg0.c_str());
 }
 
-size_t
-ProcessInfo::GetNameLength() const
-{
-    return m_executable.GetFilename().GetLength();
+void ProcessInfo::SetArg0(const char *arg) {
+  if (arg && arg[0])
+    m_arg0 = arg;
+  else
+    m_arg0.clear();
 }
 
-void
-ProcessInfo::Dump (Stream &s, Platform *platform) const
-{
-    s << "Executable: " << GetName() << "\n";
-    s << "Triple: ";
-    m_arch.DumpTriple(s);
-    s << "\n";
+void ProcessInfo::SetArguments(char const **argv,
+                               bool first_arg_is_executable) {
+  m_arguments.SetArguments(argv);
 
-    s << "Arguments:\n";
-    m_arguments.Dump(s);
-
-    s << "Environment:\n";
-    m_environment.Dump(s, "env");
-}
-
-void
-ProcessInfo::SetExecutableFile (const FileSpec &exe_file, bool add_exe_file_as_first_arg)
-{
-    if (exe_file)
-    {
-        m_executable = exe_file;
-        if (add_exe_file_as_first_arg)
-        {
-            char filename[PATH_MAX];
-            if (exe_file.GetPath(filename, sizeof(filename)))
-                m_arguments.InsertArgumentAtIndex (0, filename);
-        }
+  // Is the first argument the executable?
+  if (first_arg_is_executable) {
+    const char *first_arg = m_arguments.GetArgumentAtIndex(0);
+    if (first_arg) {
+      // Yes the first argument is an executable, set it as the executable
+      // in the launch options. Don't resolve the file path as the path
+      // could be a remote platform path
+      const bool resolve = false;
+      m_executable.SetFile(first_arg, resolve);
     }
-    else
-    {
-        m_executable.Clear();
+  }
+}
+
+void ProcessInfo::SetArguments(const Args &args, bool first_arg_is_executable) {
+  // Copy all arguments
+  m_arguments = args;
+
+  // Is the first argument the executable?
+  if (first_arg_is_executable) {
+    const char *first_arg = m_arguments.GetArgumentAtIndex(0);
+    if (first_arg) {
+      // Yes the first argument is an executable, set it as the executable
+      // in the launch options. Don't resolve the file path as the path
+      // could be a remote platform path
+      const bool resolve = false;
+      m_executable.SetFile(first_arg, resolve);
     }
-}
-
-const char *
-ProcessInfo::GetArg0 () const
-{
-    return (m_arg0.empty() ? nullptr : m_arg0.c_str());
-}
-
-void
-ProcessInfo::SetArg0 (const char *arg)
-{
-    if (arg && arg[0])
-        m_arg0 = arg;
-    else
-        m_arg0.clear();
-}
-
-void
-ProcessInfo::SetArguments (char const **argv, bool first_arg_is_executable)
-{
-    m_arguments.SetArguments (argv);
-
-    // Is the first argument the executable?
-    if (first_arg_is_executable)
-    {
-        const char *first_arg = m_arguments.GetArgumentAtIndex (0);
-        if (first_arg)
-        {
-            // Yes the first argument is an executable, set it as the executable
-            // in the launch options. Don't resolve the file path as the path
-            // could be a remote platform path
-            const bool resolve = false;
-            m_executable.SetFile(first_arg, resolve);
-        }
-    }
-}
-
-void
-ProcessInfo::SetArguments (const Args& args, bool first_arg_is_executable)
-{
-    // Copy all arguments
-    m_arguments = args;
-
-    // Is the first argument the executable?
-    if (first_arg_is_executable)
-    {
-        const char *first_arg = m_arguments.GetArgumentAtIndex (0);
-        if (first_arg)
-        {
-            // Yes the first argument is an executable, set it as the executable
-            // in the launch options. Don't resolve the file path as the path
-            // could be a remote platform path
-            const bool resolve = false;
-            m_executable.SetFile(first_arg, resolve);
-        }
-    }
+  }
 }

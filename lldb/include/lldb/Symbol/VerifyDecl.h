@@ -12,9 +12,8 @@
 
 #include "lldb/Core/ClangForward.h"
 
-namespace lldb_private
-{
-    void VerifyDecl (clang::Decl *decl);
+namespace lldb_private {
+void VerifyDecl(clang::Decl *decl);
 }
 
 #endif

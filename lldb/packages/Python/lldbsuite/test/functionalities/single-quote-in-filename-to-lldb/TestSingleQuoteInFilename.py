@@ -5,12 +5,12 @@ Test the lldb command line takes a filename with single quote chars.
 from __future__ import print_function
 
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class SingleQuoteInCommandLineTestCase(TestBase):
 
@@ -27,7 +27,9 @@ class SingleQuoteInCommandLineTestCase(TestBase):
         except:
             pass
 
-    @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(
+        hostoslist=["windows"],
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     @no_debug_info_test
     def test_lldb_invocation_with_single_quote_in_filename(self):
         """Test that 'lldb my_file_name' works where my_file_name is a string with a single quote char in it."""
@@ -39,7 +41,9 @@ class SingleQuoteInCommandLineTestCase(TestBase):
         prompt = "(lldb) "
 
         # So that the child gets torn down after the test.
-        self.child = pexpect.spawn('%s %s "%s"' % (lldbtest_config.lldbExec, self.lldbOption, self.myexe))
+        self.child = pexpect.spawn(
+            '%s %s "%s"' %
+            (lldbtest_config.lldbExec, self.lldbOption, self.myexe))
         child = self.child
         child.setecho(True)
         # Turn on logging for input/output to/from the child.
@@ -58,7 +62,7 @@ class SingleQuoteInCommandLineTestCase(TestBase):
         # stop further logging.
         child.logfile_send = None
         child.logfile_read = None
-        
+
         with open('child_send.txt', 'r') as fs:
             if self.TraceOn():
                 print("\n\nContents of child_send.txt:")
@@ -70,4 +74,4 @@ class SingleQuoteInCommandLineTestCase(TestBase):
                 print(from_child)
 
             self.expect(from_child, exe=False,
-                substrs = ["Current executable set to"])
+                        substrs=["Current executable set to"])

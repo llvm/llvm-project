@@ -3,8 +3,8 @@
 from __future__ import print_function
 
 
-
-import os, re
+import os
+import re
 import subprocess
 
 import lldb
@@ -12,16 +12,24 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestMultipleSimultaneousDebuggers(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfNoSBHeaders
     @expectedFlakeyDarwin()
-    @expectedFailureAll(archs="i[3-6]86", bugnumber="multi-process-driver.cpp creates an x64 target")
-    @expectedFailureAll(oslist=["windows", "linux", "freebsd"], bugnumber="llvm.org/pr20282")
+    @expectedFailureAll(
+        archs="i[3-6]86",
+        bugnumber="multi-process-driver.cpp creates an x64 target")
+    @expectedFailureAll(
+        oslist=[
+            "windows",
+            "linux",
+            "freebsd"],
+        bugnumber="llvm.org/pr20282")
     def test_multiple_debuggers(self):
-        env = {self.dylibPath : self.getLLDBLibraryEnvVal()}
+        env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
 
         self.driver_exe = os.path.join(os.getcwd(), "multi-process-driver")
         self.buildDriver('multi-process-driver.cpp', self.driver_exe)
@@ -41,4 +49,5 @@ class TestMultipleSimultaneousDebuggers(TestBase):
             check_call([self.driver_exe, self.inferior_exe], env=env)
         else:
             with open(os.devnull, 'w') as fnull:
-                check_call([self.driver_exe, self.inferior_exe], env=env, stdout=fnull, stderr=fnull)
+                check_call([self.driver_exe, self.inferior_exe],
+                           env=env, stdout=fnull, stderr=fnull)

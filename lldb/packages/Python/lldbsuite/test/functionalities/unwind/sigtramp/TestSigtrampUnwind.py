@@ -5,12 +5,13 @@ Test that we can backtrace correctly with 'sigtramp' functions on the stack
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class SigtrampUnwind(TestBase):
     mydir = TestBase.compute_mydir(__file__)
@@ -18,7 +19,7 @@ class SigtrampUnwind(TestBase):
     # On different platforms the "_sigtramp" and "__kill" frames are likely to be different.
     # This test could probably be adapted to run on linux/*bsd easily enough.
     @skipUnlessDarwin
-    def test (self):
+    def test(self):
         """Test that we can backtrace correctly with _sigtramp on the stack"""
         self.build()
         self.setTearDownCleanup()
@@ -27,10 +28,11 @@ class SigtrampUnwind(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
+        lldbutil.run_break_set_by_file_and_line(self, "main.c", line_number(
+            'main.c', '// Set breakpoint here'), num_expected_locations=1)
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.c", line_number('main.c', '// Set breakpoint here'), num_expected_locations=1)
-
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         if not process:
             self.fail("SBTarget.Launch() failed")
@@ -40,10 +42,20 @@ class SigtrampUnwind(TestBase):
                       "instead the actual state is: '%s'" %
                       lldbutil.state_type_to_str(process.GetState()))
 
-        self.expect("pro handle  -n false -p true -s false SIGUSR1", "Have lldb pass SIGUSR1 signals",
-            substrs = ["SIGUSR1", "true", "false", "false"])
+        self.expect(
+            "pro handle  -n false -p true -s false SIGUSR1",
+            "Have lldb pass SIGUSR1 signals",
+            substrs=[
+                "SIGUSR1",
+                "true",
+                "false",
+                "false"])
 
-        lldbutil.run_break_set_by_symbol (self, "handler", num_expected_locations=1, module_name="a.out")
+        lldbutil.run_break_set_by_symbol(
+            self,
+            "handler",
+            num_expected_locations=1,
+            module_name="a.out")
 
         self.runCmd("continue")
 
@@ -69,14 +81,14 @@ class SigtrampUnwind(TestBase):
             for f in thread.frames:
                 print("  %d %s" % (f.GetFrameID(), f.GetFunctionName()))
 
-        if found_handler == False:
+        if not found_handler:
             self.fail("Unable to find handler() in backtrace.")
 
-        if found_sigtramp == False:
+        if not found_sigtramp:
             self.fail("Unable to find _sigtramp() in backtrace.")
 
-        if found_kill == False:
+        if not found_kill:
             self.fail("Unable to find kill() in backtrace.")
 
-        if found_main == False:
+        if not found_main:
             self.fail("Unable to find main() in backtrace.")

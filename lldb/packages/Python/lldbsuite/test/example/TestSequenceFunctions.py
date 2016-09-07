@@ -4,14 +4,15 @@ import random
 import unittest
 import traceback
 
+
 class SequenceFunctionsTestCase(unittest.TestCase):
 
     def setUp(self):
-        #traceback.print_stack()
+        # traceback.print_stack()
         self.seq = list(range(10))
 
     def tearDown(self):
-        #traceback.print_stack()
+        # traceback.print_stack()
         pass
 
     def test_shuffle(self):

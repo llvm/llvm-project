@@ -342,12 +342,7 @@ void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile,
                                               unsigned FirstUncoveredLineNo) {
   OS << BeginSourceNameDiv;
   // Render the source name for the view.
-  std::string SourceFile = isFunctionView() ? "Function: " : "Source: ";
-  SourceFile += getSourceName().str();
-  SmallString<128> SourceText(SourceFile);
-  sys::path::remove_dots(SourceText, /*remove_dot_dots=*/true);
-  sys::path::native(SourceText);
-  OS << tag("pre", escape(SourceText, getOptions()));
+  OS << tag("pre", escape(getNativeSourceName(), getOptions()));
   if (WholeFile) {
     // Render the object file name for the view.
     OS << tag("pre",

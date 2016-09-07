@@ -5,20 +5,22 @@ Test lldb Python API SBValue::Cast(SBType) for C++ types.
 from __future__ import print_function
 
 
-
 import unittest2
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class CppValueCastTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @unittest2.expectedFailure("rdar://problem/10808472 SBValue::Cast test case is failing (virtual inheritance)")
+    @unittest2.expectedFailure(
+        "rdar://problem/10808472 SBValue::Cast test case is failing (virtual inheritance)")
     @add_test_categories(['pyapi'])
     def test_value_cast_with_virtual_inheritance(self):
         """Test SBValue::Cast(SBType) API for C++ types with virtual inheritance."""
@@ -34,23 +36,26 @@ class CppValueCastTestCase(TestBase):
         self.do_sbvalue_cast(self.exe_name)
 
     def setUp(self):
-        # Call super's setUp().                                                                                                           
+        # Call super's setUp().
         TestBase.setUp(self)
 
-        # Find the line number to break for main.c.                                                                                       
-        self.source = 'sbvalue-cast.cpp';
+        # Find the line number to break for main.c.
+        self.source = 'sbvalue-cast.cpp'
         self.line = line_number(self.source, '// Set breakpoint here.')
         self.exe_name = self.testMethodName
-        self.d_virtual = {'CXX_SOURCES': self.source, 'EXE': self.exe_name, 'CFLAGS_EXTRAS': '-DDO_VIRTUAL_INHERITANCE'}
+        self.d_virtual = {
+            'CXX_SOURCES': self.source,
+            'EXE': self.exe_name,
+            'CFLAGS_EXTRAS': '-DDO_VIRTUAL_INHERITANCE'}
         self.d_regular = {'CXX_SOURCES': self.source, 'EXE': self.exe_name}
 
-    def do_sbvalue_cast (self, exe_name):
+    def do_sbvalue_cast(self, exe_name):
         """Test SBValue::Cast(SBType) API for C++ types."""
         exe = os.path.join(os.getcwd(), exe_name)
 
         # Create a target from the debugger.
 
-        target = self.dbg.CreateTarget (exe)
+        target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
         # Set up our breakpoints:
@@ -59,7 +64,8 @@ class CppValueCastTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         self.assertTrue(process.GetState() == lldb.eStateStopped,
                         PROCESS_STOPPED)
@@ -74,14 +80,16 @@ class CppValueCastTestCase(TestBase):
         error = lldb.SBError()
 
         # First stop is for DerivedA instance.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
-        self.assertTrue (len(threads) == 1)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
+        self.assertTrue(len(threads) == 1)
         thread = threads[0]
         frame0 = thread.GetFrameAtIndex(0)
 
         tellerA = frame0.FindVariable('teller', lldb.eNoDynamicValues)
         self.DebugSBValue(tellerA)
-        self.assertTrue(tellerA.GetChildMemberWithName('m_base_val').GetValueAsUnsigned(error, 0) == 20)
+        self.assertTrue(tellerA.GetChildMemberWithName(
+            'm_base_val').GetValueAsUnsigned(error, 0) == 20)
 
         if self.TraceOn():
             for child in tellerA:
@@ -102,14 +110,15 @@ class CppValueCastTestCase(TestBase):
         self.assertTrue(a_member_val.GetValueAsUnsigned(error, 0) == 10)
 
         # Second stop is for DerivedB instance.
-        threads = lldbutil.continue_to_breakpoint (process, breakpoint)
-        self.assertTrue (len(threads) == 1)
+        threads = lldbutil.continue_to_breakpoint(process, breakpoint)
+        self.assertTrue(len(threads) == 1)
         thread = threads[0]
         frame0 = thread.GetFrameAtIndex(0)
 
         tellerB = frame0.FindVariable('teller', lldb.eNoDynamicValues)
         self.DebugSBValue(tellerB)
-        self.assertTrue(tellerB.GetChildMemberWithName('m_base_val').GetValueAsUnsigned(error, 0) == 12)
+        self.assertTrue(tellerB.GetChildMemberWithName(
+            'm_base_val').GetValueAsUnsigned(error, 0) == 12)
 
         if self.TraceOn():
             for child in tellerB:

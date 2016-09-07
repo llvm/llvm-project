@@ -278,6 +278,9 @@ public:
 
   StringRef getSourceName() const { return SourceName; }
 
+  /// \brief Return the source name formatted for the host OS.
+  std::string getNativeSourceName() const;
+
   bool isFunctionView() const { return FunctionView; }
 
   const CoverageViewOptions &getOptions() const { return Options; }

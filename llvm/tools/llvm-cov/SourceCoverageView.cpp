@@ -142,6 +142,15 @@ SourceCoverageView::create(StringRef SourceName, const MemoryBuffer &File,
   llvm_unreachable("Unknown coverage output format!");
 }
 
+std::string SourceCoverageView::getNativeSourceName() const {
+  std::string SourceFile = isFunctionView() ? "Function: " : "Source: ";
+  SourceFile += getSourceName().str();
+  SmallString<128> SourceText(SourceFile);
+  sys::path::remove_dots(SourceText, /*remove_dot_dots=*/true);
+  sys::path::native(SourceText);
+  return SourceText.c_str();
+}
+
 void SourceCoverageView::addExpansion(
     const coverage::CounterMappingRegion &Region,
     std::unique_ptr<SourceCoverageView> View) {

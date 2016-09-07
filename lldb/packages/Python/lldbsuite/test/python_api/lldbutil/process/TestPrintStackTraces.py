@@ -5,13 +5,14 @@ Test SBprocess and SBThread APIs with printing of the stack traces using lldbuti
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class ThreadsStackTracesTestCase(TestBase):
 
@@ -23,11 +24,12 @@ class ThreadsStackTracesTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
-    @expectedFailureAll("llvm.org/pr23043", ["linux"], archs=["i386"]) # We are unable to produce a backtrace of the main thread when the thread is blocked in fgets
-
-    #The __thread_start function in libc doesn't contain any epilogue and prologue instructions 
-    #hence unwinding fail when we are stopped in __thread_start
-    @expectedFailureAll(triple = 'mips*')
+    # We are unable to produce a backtrace of the main thread when the thread
+    # is blocked in fgets
+    @expectedFailureAll("llvm.org/pr23043", ["linux"], archs=["i386"])
+    # The __thread_start function in libc doesn't contain any epilogue and prologue instructions
+    # hence unwinding fail when we are stopped in __thread_start
+    @expectedFailureAll(triple='mips*')
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @expectedFlakeyAndroid("llvm.org/26492", archs=["arm"])
     @expectedFlakeyLinux("llvm.org/pr27687")
@@ -44,7 +46,8 @@ class ThreadsStackTracesTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (["abc", "xyz"], None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            ["abc", "xyz"], None, self.get_process_working_directory())
 
         if not process:
             self.fail("SBTarget.LaunchProcess() failed")
@@ -57,4 +60,4 @@ class ThreadsStackTracesTestCase(TestBase):
 
         stacktraces = lldbutil.print_stacktraces(process, string_buffer=True)
         self.expect(stacktraces, exe=False,
-            substrs = ['(int)argc=3'])
+                    substrs=['(int)argc=3'])

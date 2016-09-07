@@ -10,7 +10,4 @@
 #include "lldb/Symbol/VerifyDecl.h"
 #include "clang/AST/DeclBase.h"
 
-void lldb_private::VerifyDecl (clang::Decl *decl)
-{
-    decl->getAccess();
-}
+void lldb_private::VerifyDecl(clang::Decl *decl) { decl->getAccess(); }

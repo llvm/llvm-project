@@ -9,8 +9,7 @@
 
 #pragma once
 
-namespace MI
-{
+namespace MI {
 
 //   MI::ISingleton base class usage:
 //
@@ -26,31 +25,29 @@ namespace MI
 //       bool Shutdown() override;
 //   };
 
-//++ ============================================================================
+//++
+//============================================================================
 // Details: Base class for the singleton pattern.
 // Gotchas: Derived class must specify MI::ISingleton<> as a friend class.
 //--
-template <typename T> class ISingleton
-{
-    // Statics:
-  public:
-    // Return an instance of the derived class
-    static T &
-    Instance()
-    {
-        // This will fail if the derived class has not
-        // declared itself to be a friend of MI::ISingleton
-        static T instance;
+template <typename T> class ISingleton {
+  // Statics:
+public:
+  // Return an instance of the derived class
+  static T &Instance() {
+    // This will fail if the derived class has not
+    // declared itself to be a friend of MI::ISingleton
+    static T instance;
 
-        return instance;
-    }
+    return instance;
+  }
 
-    // Overrideable:
-  public:
-    virtual bool Initialize() = 0;
-    virtual bool Shutdown() = 0;
-    //
-    /* dtor */ virtual ~ISingleton(){}
+  // Overrideable:
+public:
+  virtual bool Initialize() = 0;
+  virtual bool Shutdown() = 0;
+  //
+  /* dtor */ virtual ~ISingleton() {}
 };
 
 } // namespace MI

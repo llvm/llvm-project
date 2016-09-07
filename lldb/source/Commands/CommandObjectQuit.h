@@ -22,21 +22,16 @@ namespace lldb_private {
 // CommandObjectQuit
 //-------------------------------------------------------------------------
 
-class CommandObjectQuit : public CommandObjectParsed
-{
+class CommandObjectQuit : public CommandObjectParsed {
 public:
+  CommandObjectQuit(CommandInterpreter &interpreter);
 
-    CommandObjectQuit (CommandInterpreter &interpreter);
-
-    ~CommandObjectQuit() override;
+  ~CommandObjectQuit() override;
 
 protected:
-    bool
-    DoExecute(Args& args,
-	      CommandReturnObject &result) override;
-    
-    bool
-    ShouldAskForConfirmation (bool& is_a_detach);
+  bool DoExecute(Args &args, CommandReturnObject &result) override;
+
+  bool ShouldAskForConfirmation(bool &is_a_detach);
 };
 
 } // namespace lldb_private

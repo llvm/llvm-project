@@ -31,6 +31,7 @@ def _find_file_in_paths(paths, exe_basename):
             return os.path.normcase(trial_exe_path)
     return None
 
+
 def find_executable(executable):
     """Finds the specified executable in the PATH or known good locations."""
 
@@ -59,6 +60,6 @@ def find_executable(executable):
 
     if not result or len(result) < 1:
         raise os.OSError(
-            "failed to find exe='%s' in paths='%s'" % (executable, paths_to_check))
+            "failed to find exe='%s' in paths='%s'" %
+            (executable, paths_to_check))
     return result
-

@@ -5,13 +5,14 @@ Test the iteration protocol for frame registers.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class RegistersIteratorTestCase(TestBase):
 
@@ -21,7 +22,8 @@ class RegistersIteratorTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break inside main().
-        self.line1 = line_number('main.cpp', '// Set break point at this line.')
+        self.line1 = line_number(
+            'main.cpp', '// Set break point at this line.')
 
     @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"])
@@ -37,7 +39,8 @@ class RegistersIteratorTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         if not process:
             self.fail("SBTarget.LaunchProcess() failed")
@@ -46,14 +49,17 @@ class RegistersIteratorTestCase(TestBase):
         for thread in process:
             if thread.GetStopReason() == lldb.eStopReasonBreakpoint:
                 for frame in thread:
-                    # Dump the registers of this frame using lldbutil.get_GPRs() and friends.
+                    # Dump the registers of this frame using
+                    # lldbutil.get_GPRs() and friends.
                     if self.TraceOn():
                         print(frame)
 
                     REGs = lldbutil.get_GPRs(frame)
                     num = len(REGs)
                     if self.TraceOn():
-                        print("\nNumber of general purpose registers: %d" % num)
+                        print(
+                            "\nNumber of general purpose registers: %d" %
+                            num)
                     for reg in REGs:
                         self.assertTrue(reg)
                         if self.TraceOn():
@@ -72,11 +78,15 @@ class RegistersIteratorTestCase(TestBase):
                     if self.platformIsDarwin():
                         num = len(REGs)
                         if self.TraceOn():
-                            print("\nNumber of exception state registers: %d" % num)
+                            print(
+                                "\nNumber of exception state registers: %d" %
+                                num)
                         for reg in REGs:
                             self.assertTrue(reg)
                             if self.TraceOn():
-                                print("%s => %s" % (reg.GetName(), reg.GetValue()))
+                                print(
+                                    "%s => %s" %
+                                    (reg.GetName(), reg.GetValue()))
                     else:
                         self.assertIsNone(REGs)
 
@@ -86,7 +96,8 @@ class RegistersIteratorTestCase(TestBase):
                         REGs = lldbutil.get_registers(frame, kind)
                         self.assertTrue(REGs)
 
-                    REGs = lldbutil.get_registers(frame, "Exception State Registers")
+                    REGs = lldbutil.get_registers(
+                        frame, "Exception State Registers")
                     if self.platformIsDarwin():
                         self.assertIsNotNone(REGs)
                     else:

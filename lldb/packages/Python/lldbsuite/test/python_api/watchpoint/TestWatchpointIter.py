@@ -5,7 +5,6 @@ Use lldb Python SBTarget API to iterate on the watchpoint(s) for the target.
 from __future__ import print_function
 
 
-
 import os
 import re
 import time
@@ -14,6 +13,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class WatchpointIteratorTestCase(TestBase):
 
@@ -25,11 +25,15 @@ class WatchpointIteratorTestCase(TestBase):
         # Our simple source filename.
         self.source = 'main.c'
         # Find the line number to break inside main().
-        self.line = line_number(self.source, '// Set break point at this line.')
+        self.line = line_number(
+            self.source, '// Set break point at this line.')
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    # Watchpoints not supported
+    @expectedFailureAndroid(archs=['arm', 'aarch64'])
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
     def test_watch_iter(self):
         """Exercise SBTarget.watchpoint_iter() API to iterate on the available watchpoints."""
         self.build()
@@ -46,18 +50,20 @@ class WatchpointIteratorTestCase(TestBase):
                         VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
         self.assertTrue(process.GetState() == lldb.eStateStopped,
                         PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         frame0 = thread.GetFrameAtIndex(0)
 
         # Watch 'global' for read and write.
         value = frame0.FindValue('global', lldb.eValueTypeVariableGlobal)
-        error = lldb.SBError();
+        error = lldb.SBError()
         watchpoint = value.Watch(True, False, True, error)
         self.assertTrue(value and watchpoint,
                         "Successfully found the variable and set a watchpoint")
@@ -73,7 +79,8 @@ class WatchpointIteratorTestCase(TestBase):
         watch_id = watchpoint.GetID()
         self.assertTrue(watch_id != 0)
 
-        # Continue.  Expect the program to stop due to the variable being written to.
+        # Continue.  Expect the program to stop due to the variable being
+        # written to.
         process.Continue()
 
         # Hide stdout if not running with '-t' option.
@@ -83,7 +90,8 @@ class WatchpointIteratorTestCase(TestBase):
         # Print the stack traces.
         lldbutil.print_stacktraces(process)
 
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonWatchpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonWatchpoint)
         self.assertTrue(thread, "The thread stopped due to watchpoint")
         self.DebugSBValue(value)
 
@@ -107,7 +115,9 @@ class WatchpointIteratorTestCase(TestBase):
         process.Continue()
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(process.GetState() == lldb.eStateExited, PROCESS_EXITED)
+        self.assertTrue(
+            process.GetState() == lldb.eStateExited,
+            PROCESS_EXITED)
 
         # Verify some vital statistics and exercise the iterator API.
         for watchpoint in target.watchpoint_iter():
@@ -115,4 +125,3 @@ class WatchpointIteratorTestCase(TestBase):
             self.assertTrue(watchpoint.GetWatchSize() == 4)
             self.assertTrue(watchpoint.GetHitCount() == 1)
             print(watchpoint)
-

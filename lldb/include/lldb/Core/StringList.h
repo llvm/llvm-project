@@ -20,159 +20,120 @@
 #include "llvm/ADT/StringRef.h"
 
 // Project includes
-#include "lldb/lldb-forward.h"
 #include "lldb/Core/STLUtils.h"
+#include "lldb/lldb-forward.h"
 
 namespace lldb_private {
 
-class StringList
-{
+class StringList {
 public:
-    StringList ();
+  StringList();
 
-    StringList (const char *str);
+  StringList(const char *str);
 
-    StringList (const char **strv, int strc);
-    
-    virtual
-    ~StringList ();
+  StringList(const char **strv, int strc);
 
-    void
-    AppendString (const std::string &s);
-    
-    void
-    AppendString (std::string &&s);
-    
-    void
-    AppendString (const char *str);
+  virtual ~StringList();
 
-    void
-    AppendString (const char *str, size_t str_len);
+  void AppendString(const std::string &s);
 
-    void
-    AppendString(llvm::StringRef str);
+  void AppendString(std::string &&s);
 
-    void
-    AppendList (const char ** strv, int strc);
+  void AppendString(const char *str);
 
-    void
-    AppendList (StringList strings);
+  void AppendString(const char *str, size_t str_len);
 
-    bool
-    ReadFileLines (FileSpec &input_file);
-    
-    size_t
-    GetSize () const;
+  void AppendString(llvm::StringRef str);
 
-    void
-    SetSize (size_t n)
-    {
-        m_strings.resize(n);
-    }
+  void AppendList(const char **strv, int strc);
 
-    size_t
-    GetMaxStringLength () const;
-    
-    std::string &
-    operator [](size_t idx)
-    {
-        // No bounds checking, verify "idx" is good prior to calling this function
-        return m_strings[idx];
-    }
-    
-    const std::string &
-    operator [](size_t idx) const
-    {
-        // No bounds checking, verify "idx" is good prior to calling this function
-        return m_strings[idx];
-    }
+  void AppendList(StringList strings);
 
-    void
-    PopBack ()
-    {
-        m_strings.pop_back();
-    }
-    const char *
-    GetStringAtIndex (size_t idx) const;
+  bool ReadFileLines(FileSpec &input_file);
 
-    void
-    Join (const char *separator, Stream &strm);
+  size_t GetSize() const;
 
-    void
-    Clear ();
+  void SetSize(size_t n) { m_strings.resize(n); }
 
-    void
-    LongestCommonPrefix (std::string &common_prefix);
+  size_t GetMaxStringLength() const;
 
-    void
-    InsertStringAtIndex (size_t idx, const std::string &str);
-    
-    void
-    InsertStringAtIndex (size_t idx, std::string &&str);
-    
-    void
-    InsertStringAtIndex (size_t id, const char *str);
+  std::string &operator[](size_t idx) {
+    // No bounds checking, verify "idx" is good prior to calling this function
+    return m_strings[idx];
+  }
 
-    void
-    DeleteStringAtIndex (size_t id);
+  const std::string &operator[](size_t idx) const {
+    // No bounds checking, verify "idx" is good prior to calling this function
+    return m_strings[idx];
+  }
 
-    void
-    RemoveBlankLines ();
+  void PopBack() { m_strings.pop_back(); }
+  const char *GetStringAtIndex(size_t idx) const;
 
-    size_t
-    SplitIntoLines (const std::string &lines);
+  void Join(const char *separator, Stream &strm);
 
-    size_t
-    SplitIntoLines (const char *lines, size_t len);
-    
-    std::string
-    CopyList(const char* item_preamble = nullptr,
-             const char* items_sep = "\n") const;
-    
-    StringList&
-    operator << (const char* str);
+  void Clear();
 
-    StringList&
-    operator << (const std::string &s);
+  void LongestCommonPrefix(std::string &common_prefix);
 
-    StringList&
-    operator << (StringList strings);
-    
-    // Copy assignment for a vector of strings
-    StringList&
-    operator = (const std::vector<std::string> &rhs);
+  void InsertStringAtIndex(size_t idx, const std::string &str);
 
-    // This string list contains a list of valid auto completion
-    // strings, and the "s" is passed in. "matches" is filled in
-    // with zero or more string values that start with "s", and
-    // the first string to exactly match one of the string
-    // values in this collection, will have "exact_matches_idx"
-    // filled in to match the index, or "exact_matches_idx" will
-    // have SIZE_MAX
-    size_t
-    AutoComplete (const char *s,
-                  StringList &matches,
-                  size_t &exact_matches_idx) const;
+  void InsertStringAtIndex(size_t idx, std::string &&str);
 
-    // Dump the StringList to the given lldb_private::Log, `log`, one item per line.
-    // If given, `name` will be used to identify the start and end of the list in the output.
-    virtual void LogDump(Log *log, const char *name = nullptr);
+  void InsertStringAtIndex(size_t id, const char *str);
 
-    // Static helper to convert an iterable of strings to a StringList, and then
-    // dump it with the semantics of the `LogDump` method.
-    template<typename T> static void LogDump(Log *log, T s_iterable, const char *name = nullptr)
-    {
-        if (!log)
-            return;
-        // Make a copy of the iterable as a StringList
-        StringList l{};
-        for (const auto &s : s_iterable)
-            l << s;
+  void DeleteStringAtIndex(size_t id);
 
-        l.LogDump(log, name);
-    }
+  void RemoveBlankLines();
+
+  size_t SplitIntoLines(const std::string &lines);
+
+  size_t SplitIntoLines(const char *lines, size_t len);
+
+  std::string CopyList(const char *item_preamble = nullptr,
+                       const char *items_sep = "\n") const;
+
+  StringList &operator<<(const char *str);
+
+  StringList &operator<<(const std::string &s);
+
+  StringList &operator<<(StringList strings);
+
+  // Copy assignment for a vector of strings
+  StringList &operator=(const std::vector<std::string> &rhs);
+
+  // This string list contains a list of valid auto completion
+  // strings, and the "s" is passed in. "matches" is filled in
+  // with zero or more string values that start with "s", and
+  // the first string to exactly match one of the string
+  // values in this collection, will have "exact_matches_idx"
+  // filled in to match the index, or "exact_matches_idx" will
+  // have SIZE_MAX
+  size_t AutoComplete(const char *s, StringList &matches,
+                      size_t &exact_matches_idx) const;
+
+  // Dump the StringList to the given lldb_private::Log, `log`, one item per
+  // line.
+  // If given, `name` will be used to identify the start and end of the list in
+  // the output.
+  virtual void LogDump(Log *log, const char *name = nullptr);
+
+  // Static helper to convert an iterable of strings to a StringList, and then
+  // dump it with the semantics of the `LogDump` method.
+  template <typename T>
+  static void LogDump(Log *log, T s_iterable, const char *name = nullptr) {
+    if (!log)
+      return;
+    // Make a copy of the iterable as a StringList
+    StringList l{};
+    for (const auto &s : s_iterable)
+      l << s;
+
+    l.LogDump(log, name);
+  }
+
 private:
-    STLStringArray m_strings;
+  STLStringArray m_strings;
 };
 
 } // namespace lldb_private

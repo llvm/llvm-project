@@ -17,82 +17,61 @@
 
 class ProcessKDP;
 
-class ThreadKDP : public lldb_private::Thread
-{
+class ThreadKDP : public lldb_private::Thread {
 public:
-    ThreadKDP (lldb_private::Process &process,
-               lldb::tid_t tid);
+  ThreadKDP(lldb_private::Process &process, lldb::tid_t tid);
 
-    virtual
-    ~ThreadKDP ();
+  virtual ~ThreadKDP();
 
-    virtual void
-    RefreshStateAfterStop();
+  virtual void RefreshStateAfterStop();
 
-    virtual const char *
-    GetName ();
+  virtual const char *GetName();
 
-    virtual const char *
-    GetQueueName ();
+  virtual const char *GetQueueName();
 
-    virtual lldb::RegisterContextSP
-    GetRegisterContext ();
+  virtual lldb::RegisterContextSP GetRegisterContext();
 
-    virtual lldb::RegisterContextSP
-    CreateRegisterContextForFrame (lldb_private::StackFrame *frame);
+  virtual lldb::RegisterContextSP
+  CreateRegisterContextForFrame(lldb_private::StackFrame *frame);
 
-    void
-    Dump (lldb_private::Log *log, uint32_t index);
+  void Dump(lldb_private::Log *log, uint32_t index);
 
-    static bool
-    ThreadIDIsValid (lldb::tid_t thread);
+  static bool ThreadIDIsValid(lldb::tid_t thread);
 
-    bool
-    ShouldStop (bool &step_more);
+  bool ShouldStop(bool &step_more);
 
-    const char *
-    GetBasicInfoAsString ();
+  const char *GetBasicInfoAsString();
 
-    void
-    SetName (const char *name)
-    {
-        if (name && name[0])
-            m_thread_name.assign (name);
-        else
-            m_thread_name.clear();
-    }
+  void SetName(const char *name) {
+    if (name && name[0])
+      m_thread_name.assign(name);
+    else
+      m_thread_name.clear();
+  }
 
-    lldb::addr_t
-    GetThreadDispatchQAddr ()
-    {
-        return m_thread_dispatch_qaddr;
-    }
+  lldb::addr_t GetThreadDispatchQAddr() { return m_thread_dispatch_qaddr; }
 
-    void
-    SetThreadDispatchQAddr (lldb::addr_t thread_dispatch_qaddr)
-    {
-        m_thread_dispatch_qaddr = thread_dispatch_qaddr;
-    }
-    
-    void
-    SetStopInfoFrom_KDP_EXCEPTION (const lldb_private::DataExtractor &exc_reply_packet);
+  void SetThreadDispatchQAddr(lldb::addr_t thread_dispatch_qaddr) {
+    m_thread_dispatch_qaddr = thread_dispatch_qaddr;
+  }
+
+  void SetStopInfoFrom_KDP_EXCEPTION(
+      const lldb_private::DataExtractor &exc_reply_packet);
 
 protected:
-    
-    friend class ProcessKDP;
+  friend class ProcessKDP;
 
-    //------------------------------------------------------------------
-    // Member variables.
-    //------------------------------------------------------------------
-    std::string m_thread_name;
-    std::string m_dispatch_queue_name;
-    lldb::addr_t m_thread_dispatch_qaddr;
-    lldb::StopInfoSP m_cached_stop_info_sp;
-    //------------------------------------------------------------------
-    // Protected member functions.
-    //------------------------------------------------------------------
-    virtual bool
-    CalculateStopInfo ();
+  //------------------------------------------------------------------
+  // Member variables.
+  //------------------------------------------------------------------
+  std::string m_thread_name;
+  std::string m_dispatch_queue_name;
+  lldb::addr_t m_thread_dispatch_qaddr;
+  lldb::StopInfoSP m_cached_stop_info_sp;
+  //------------------------------------------------------------------
+  // Protected member functions.
+  //------------------------------------------------------------------
+  virtual bool CalculateStopInfo();
 };
 
-#endif  // liblldb_ThreadKDP_h_
+#endif // liblldb_ThreadKDP_h_

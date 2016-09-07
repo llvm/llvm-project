@@ -22,18 +22,14 @@ namespace lldb_private {
 // CommandObjectSyntax
 //-------------------------------------------------------------------------
 
-class CommandObjectSyntax : public CommandObjectParsed
-{
+class CommandObjectSyntax : public CommandObjectParsed {
 public:
+  CommandObjectSyntax(CommandInterpreter &interpreter);
 
-    CommandObjectSyntax (CommandInterpreter &interpreter);
+  ~CommandObjectSyntax() override;
 
-    ~CommandObjectSyntax() override;
-    
 protected:
-    bool
-    DoExecute(Args& command,
-	      CommandReturnObject &result) override;
+  bool DoExecute(Args &command, CommandReturnObject &result) override;
 };
 
 } // namespace lldb_private

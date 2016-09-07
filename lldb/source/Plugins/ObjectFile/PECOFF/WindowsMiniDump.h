@@ -14,11 +14,10 @@
 
 namespace lldb_private {
 
-bool
-SaveMiniDump(const lldb::ProcessSP &process_sp,
-             const lldb_private::FileSpec &outfile,
-             lldb_private::Error &error);
+bool SaveMiniDump(const lldb::ProcessSP &process_sp,
+                  const lldb_private::FileSpec &outfile,
+                  lldb_private::Error &error);
 
-}  // namespace lldb_private
+} // namespace lldb_private
 
 #endif

@@ -11,6 +11,7 @@ __unittest = True
 class BaseTestSuite(unittest.TestSuite):
     """A simple test suite that doesn't provide class or module shared fixtures.
     """
+
     def __init__(self, tests=()):
         self._tests = []
         self.addTests(tests)
@@ -79,7 +80,6 @@ class TestSuite(BaseTestSuite):
     in the order in which they were added, aggregating the results. When
     subclassing, do not forget to call the base class constructor.
     """
-    
 
     def run(self, result):
         self._wrapped_run(result)
@@ -100,24 +100,24 @@ class TestSuite(BaseTestSuite):
         for test in self:
             if result.shouldStop:
                 break
-            
+
             if _isnotsuite(test):
                 self._tearDownPreviousClass(test, result)
                 self._handleModuleFixture(test, result)
                 self._handleClassSetUp(test, result)
                 result._previousTestClass = test.__class__
-                
-                if (getattr(test.__class__, '_classSetupFailed', False) or 
-                    getattr(result, '_moduleSetUpFailed', False)):
+
+                if (getattr(test.__class__, '_classSetupFailed', False) or
+                        getattr(result, '_moduleSetUpFailed', False)):
                     continue
-            
+
             if hasattr(test, '_wrapped_run'):
                 test._wrapped_run(result, debug)
             elif not debug:
                 test(result)
             else:
                 test.debug()
-    
+
     def _handleClassSetUp(self, test, result):
         previousClass = getattr(result, '_previousTestClass', None)
         currentClass = test.__class__
@@ -127,14 +127,14 @@ class TestSuite(BaseTestSuite):
             return
         if getattr(currentClass, "__unittest_skip__", False):
             return
-        
+
         try:
             currentClass._classSetupFailed = False
         except TypeError:
             # test may actually be a function
             # so its class will be a builtin-type
             pass
-            
+
         setUpClass = getattr(currentClass, 'setUpClass', None)
         if setUpClass is not None:
             try:
@@ -146,24 +146,22 @@ class TestSuite(BaseTestSuite):
                 className = util.strclass(currentClass)
                 errorName = 'setUpClass (%s)' % className
                 self._addClassOrModuleLevelException(result, e, errorName)
-    
+
     def _get_previous_module(self, result):
         previousModule = None
         previousClass = getattr(result, '_previousTestClass', None)
         if previousClass is not None:
             previousModule = previousClass.__module__
         return previousModule
-        
-        
+
     def _handleModuleFixture(self, test, result):
         previousModule = self._get_previous_module(result)
         currentModule = test.__class__.__module__
         if currentModule == previousModule:
             return
-        
+
         self._handleModuleTearDown(result)
 
-        
         result._moduleSetUpFailed = False
         try:
             module = sys.modules[currentModule]
@@ -187,14 +185,14 @@ class TestSuite(BaseTestSuite):
             addSkip(error, str(exception))
         else:
             result.addError(error, sys.exc_info())
-    
+
     def _handleModuleTearDown(self, result):
         previousModule = self._get_previous_module(result)
         if previousModule is None:
             return
         if result._moduleSetUpFailed:
             return
-            
+
         try:
             module = sys.modules[previousModule]
         except KeyError:
@@ -209,7 +207,7 @@ class TestSuite(BaseTestSuite):
                     raise
                 errorName = 'tearDownModule (%s)' % previousModule
                 self._addClassOrModuleLevelException(result, e, errorName)
-    
+
     def _tearDownPreviousClass(self, test, result):
         previousClass = getattr(result, '_previousTestClass', None)
         currentClass = test.__class__
@@ -221,7 +219,7 @@ class TestSuite(BaseTestSuite):
             return
         if getattr(previousClass, "__unittest_skip__", False):
             return
-        
+
         tearDownClass = getattr(previousClass, 'tearDownClass', None)
         if tearDownClass is not None:
             try:
@@ -271,6 +269,7 @@ class _ErrorHolder(object):
 
     def countTestCases(self):
         return 0
+
 
 def _isnotsuite(test):
     "A crude way to tell apart testcases and suites with duck-typing"

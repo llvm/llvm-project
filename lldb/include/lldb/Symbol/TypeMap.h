@@ -10,89 +10,68 @@
 #ifndef liblldb_TypeMap_h_
 #define liblldb_TypeMap_h_
 
-#include "lldb/lldb-private.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Utility/Iterable.h"
-#include <map>
+#include "lldb/lldb-private.h"
 #include <functional>
+#include <map>
 
 namespace lldb_private {
 
-class TypeMap
-{
+class TypeMap {
 public:
-    //------------------------------------------------------------------
-    // Constructors and Destructors
-    //------------------------------------------------------------------
-	TypeMap();
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  TypeMap();
 
-    virtual
-    ~TypeMap();
+  virtual ~TypeMap();
 
-    void
-    Clear();
+  void Clear();
 
-    void
-    Dump(Stream *s, bool show_context);
+  void Dump(Stream *s, bool show_context);
 
-    TypeMap
-    FindTypes(const ConstString &name);
+  TypeMap FindTypes(const ConstString &name);
 
-    void
-    Insert (const lldb::TypeSP& type);
+  void Insert(const lldb::TypeSP &type);
 
-    bool
-    Empty() const;
+  bool Empty() const;
 
-    bool
-    InsertUnique (const lldb::TypeSP& type);
+  bool InsertUnique(const lldb::TypeSP &type);
 
-    uint32_t
-    GetSize() const;
+  uint32_t GetSize() const;
 
-    lldb::TypeSP
-    GetTypeAtIndex(uint32_t idx);
-    
-    typedef std::multimap<lldb::user_id_t, lldb::TypeSP> collection;
-    typedef AdaptedIterable<collection, lldb::TypeSP, map_adapter> TypeIterable;
-    
-    TypeIterable
-    Types ()
-    {
-        return TypeIterable(m_types);
-    }
+  lldb::TypeSP GetTypeAtIndex(uint32_t idx);
 
-    void
-    ForEach (std::function <bool(const lldb::TypeSP &type_sp)> const &callback) const;
+  typedef std::multimap<lldb::user_id_t, lldb::TypeSP> collection;
+  typedef AdaptedIterable<collection, lldb::TypeSP, map_adapter> TypeIterable;
 
-    void
-    ForEach (std::function <bool(lldb::TypeSP &type_sp)> const &callback);
+  TypeIterable Types() { return TypeIterable(m_types); }
 
-    bool
-    Remove (const lldb::TypeSP &type_sp);
+  void ForEach(
+      std::function<bool(const lldb::TypeSP &type_sp)> const &callback) const;
 
-    void
-    RemoveMismatchedTypes (const char *qualified_typename,
-                           bool exact_match);
+  void ForEach(std::function<bool(lldb::TypeSP &type_sp)> const &callback);
 
-    void
-    RemoveMismatchedTypes (const std::string &type_scope,
-                           const std::string &type_basename,
-                           lldb::TypeClass type_class,
-                           bool exact_match);
+  bool Remove(const lldb::TypeSP &type_sp);
 
-    void
-    RemoveMismatchedTypes (lldb::TypeClass type_class);
+  void RemoveMismatchedTypes(const char *qualified_typename, bool exact_match);
+
+  void RemoveMismatchedTypes(const std::string &type_scope,
+                             const std::string &type_basename,
+                             lldb::TypeClass type_class, bool exact_match);
+
+  void RemoveMismatchedTypes(lldb::TypeClass type_class);
 
 private:
-    typedef collection::iterator iterator;
-    typedef collection::const_iterator const_iterator;
+  typedef collection::iterator iterator;
+  typedef collection::const_iterator const_iterator;
 
-    collection m_types;
+  collection m_types;
 
-    DISALLOW_COPY_AND_ASSIGN (TypeMap);
+  DISALLOW_COPY_AND_ASSIGN(TypeMap);
 };
 
 } // namespace lldb_private
 
-#endif  // liblldb_TypeMap_h_
+#endif // liblldb_TypeMap_h_

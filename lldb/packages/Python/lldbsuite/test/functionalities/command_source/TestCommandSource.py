@@ -7,12 +7,13 @@ See also http://llvm.org/viewvc/llvm-project?view=rev&revision=109673.
 from __future__ import print_function
 
 
-
-import os, sys
+import os
+import sys
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class CommandSourceTestCase(TestBase):
 
@@ -35,4 +36,4 @@ class CommandSourceTestCase(TestBase):
         import datetime
         self.expect(result.GetOutput(), "script my.date() runs successfully",
                     exe=False,
-            substrs = [str(datetime.date.today())])
+                    substrs=[str(datetime.date.today())])

@@ -14,9 +14,9 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Interpreter/Options.h"
 #include "lldb/Core/ArchSpec.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
+#include "lldb/Interpreter/Options.h"
 
 namespace lldb_private {
 
@@ -24,13 +24,11 @@ namespace lldb_private {
 // CommandObjectMultiwordTarget
 //-------------------------------------------------------------------------
 
-class CommandObjectMultiwordTarget : public CommandObjectMultiword
-{
+class CommandObjectMultiwordTarget : public CommandObjectMultiword {
 public:
+  CommandObjectMultiwordTarget(CommandInterpreter &interpreter);
 
-    CommandObjectMultiwordTarget (CommandInterpreter &interpreter);
-
-    ~CommandObjectMultiwordTarget() override;
+  ~CommandObjectMultiwordTarget() override;
 };
 
 } // namespace lldb_private

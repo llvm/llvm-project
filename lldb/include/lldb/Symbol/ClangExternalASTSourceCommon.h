@@ -10,7 +10,7 @@
 #ifndef liblldb_ClangExternalASTSourceCommon_h
 #define liblldb_ClangExternalASTSourceCommon_h
 
-// Clang headers like to use NDEBUG inside of them to enable/disable debug 
+// Clang headers like to use NDEBUG inside of them to enable/disable debug
 // related features using "#ifndef NDEBUG" preprocessor blocks to do one thing
 // or another. This is bad because it means that if clang was built in release
 // mode, it assumes that you are building in release mode which is not always
@@ -40,150 +40,107 @@
 #include "clang/AST/ExternalASTSource.h"
 
 // Project includes
+#include "lldb/Core/dwarf.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
-#include "lldb/Core/dwarf.h"
 
 namespace lldb_private {
 
-class ClangASTMetadata
-{
+class ClangASTMetadata {
 public:
-    ClangASTMetadata () :
-        m_user_id(0),
-        m_union_is_user_id(false),
-        m_union_is_isa_ptr(false),
-        m_has_object_ptr(false),
-        m_is_self (false),
-        m_is_dynamic_cxx (true)
-    {
-    }
+  ClangASTMetadata()
+      : m_user_id(0), m_union_is_user_id(false), m_union_is_isa_ptr(false),
+        m_has_object_ptr(false), m_is_self(false), m_is_dynamic_cxx(true) {}
 
-    bool
-    GetIsDynamicCXXType () const
-    {
-        return m_is_dynamic_cxx;
-    }
+  bool GetIsDynamicCXXType() const { return m_is_dynamic_cxx; }
 
-    void
-    SetIsDynamicCXXType (bool b)
-    {
-        m_is_dynamic_cxx = b;
-    }
+  void SetIsDynamicCXXType(bool b) { m_is_dynamic_cxx = b; }
 
-    void
-    SetUserID (lldb::user_id_t user_id)
-    {
-        m_user_id = user_id;
-        m_union_is_user_id = true;
-        m_union_is_isa_ptr = false;
-    }
+  void SetUserID(lldb::user_id_t user_id) {
+    m_user_id = user_id;
+    m_union_is_user_id = true;
+    m_union_is_isa_ptr = false;
+  }
 
-    lldb::user_id_t
-    GetUserID () const
-    {
-        if (m_union_is_user_id)
-            return m_user_id;
-        else
-            return LLDB_INVALID_UID;
-    }
+  lldb::user_id_t GetUserID() const {
+    if (m_union_is_user_id)
+      return m_user_id;
+    else
+      return LLDB_INVALID_UID;
+  }
 
-    void
-    SetISAPtr (uint64_t isa_ptr)
-    {
-        m_isa_ptr = isa_ptr;
-        m_union_is_user_id = false;
-        m_union_is_isa_ptr = true;
-    }
-    
-    uint64_t
-    GetISAPtr () const
-    {
-        if (m_union_is_isa_ptr)
-            return m_isa_ptr;
-        else
-            return 0;
-    }
-    
-    void
-    SetObjectPtrName(const char *name)
-    {
-        m_has_object_ptr = true;
-        if (strcmp (name, "self") == 0)
-            m_is_self = true;
-        else if (strcmp (name, "this") == 0)
-            m_is_self = false;
-        else
-            m_has_object_ptr = false;
-    }
-    
-    lldb::LanguageType
-    GetObjectPtrLanguage () const
-    {
-        if (m_has_object_ptr)
-        {
-            if (m_is_self)
-                return lldb::eLanguageTypeObjC;
-            else
-                return lldb::eLanguageTypeC_plus_plus;
-        }
-        return lldb::eLanguageTypeUnknown;
-    }
+  void SetISAPtr(uint64_t isa_ptr) {
+    m_isa_ptr = isa_ptr;
+    m_union_is_user_id = false;
+    m_union_is_isa_ptr = true;
+  }
 
-    const char *
-    GetObjectPtrName() const
-    {
-        if (m_has_object_ptr)
-        {
-            if (m_is_self)
-                return "self";
-            else
-                return "this";
-        }
-        else
-            return nullptr;
+  uint64_t GetISAPtr() const {
+    if (m_union_is_isa_ptr)
+      return m_isa_ptr;
+    else
+      return 0;
+  }
+
+  void SetObjectPtrName(const char *name) {
+    m_has_object_ptr = true;
+    if (strcmp(name, "self") == 0)
+      m_is_self = true;
+    else if (strcmp(name, "this") == 0)
+      m_is_self = false;
+    else
+      m_has_object_ptr = false;
+  }
+
+  lldb::LanguageType GetObjectPtrLanguage() const {
+    if (m_has_object_ptr) {
+      if (m_is_self)
+        return lldb::eLanguageTypeObjC;
+      else
+        return lldb::eLanguageTypeC_plus_plus;
     }
-    
-    bool
-    HasObjectPtr() const
-    {
-        return m_has_object_ptr;
-    }
-    
-    void
-    Dump (Stream *s);
-    
+    return lldb::eLanguageTypeUnknown;
+  }
+
+  const char *GetObjectPtrName() const {
+    if (m_has_object_ptr) {
+      if (m_is_self)
+        return "self";
+      else
+        return "this";
+    } else
+      return nullptr;
+  }
+
+  bool HasObjectPtr() const { return m_has_object_ptr; }
+
+  void Dump(Stream *s);
+
 private:
-    union
-    {
-        lldb::user_id_t m_user_id;
-        uint64_t  m_isa_ptr;
-    };
+  union {
+    lldb::user_id_t m_user_id;
+    uint64_t m_isa_ptr;
+  };
 
-    bool m_union_is_user_id : 1,
-         m_union_is_isa_ptr : 1,
-         m_has_object_ptr : 1,
-         m_is_self : 1,
-         m_is_dynamic_cxx : 1;
+  bool m_union_is_user_id : 1, m_union_is_isa_ptr : 1, m_has_object_ptr : 1,
+      m_is_self : 1, m_is_dynamic_cxx : 1;
 };
 
-class ClangExternalASTSourceCommon : public clang::ExternalASTSource 
-{
+class ClangExternalASTSourceCommon : public clang::ExternalASTSource {
 public:
-    ClangExternalASTSourceCommon();
-    ~ClangExternalASTSourceCommon() override;
+  ClangExternalASTSourceCommon();
+  ~ClangExternalASTSourceCommon() override;
 
-    ClangASTMetadata *GetMetadata(const void *object);
-    void SetMetadata(const void *object, ClangASTMetadata &metadata);
-    bool HasMetadata(const void *object);
-    
-    static ClangExternalASTSourceCommon *
-    Lookup(clang::ExternalASTSource *source);
+  ClangASTMetadata *GetMetadata(const void *object);
+  void SetMetadata(const void *object, ClangASTMetadata &metadata);
+  bool HasMetadata(const void *object);
 
-private:    
-    typedef llvm::DenseMap<const void *, ClangASTMetadata> MetadataMap;
-    
-    MetadataMap m_metadata;
+  static ClangExternalASTSourceCommon *Lookup(clang::ExternalASTSource *source);
+
+private:
+  typedef llvm::DenseMap<const void *, ClangASTMetadata> MetadataMap;
+
+  MetadataMap m_metadata;
 };
 
 } // namespace lldb_private

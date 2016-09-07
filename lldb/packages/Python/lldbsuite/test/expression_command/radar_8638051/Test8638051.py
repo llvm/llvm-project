@@ -5,10 +5,11 @@ Test the robustness of lldb expression parser.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.lldbtest import *
+
 
 class Radar8638051TestCase(TestBase):
 
@@ -25,15 +26,15 @@ class Radar8638051TestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
 
         self.expect("expression val",
-            startstr = "(int) $0 = 1")
+                    startstr="(int) $0 = 1")
         # (int) $0 = 1
 
         self.expect("expression *(&val)",
-            startstr = "(int) $1 = 1")
+                    startstr="(int) $1 = 1")
         # (int) $1 = 1
 
         # rdar://problem/8638051
         # lldb expression command: Could this crash be avoided
         self.expect("expression &val",
-            startstr = "(int *) $2 = ")
+                    startstr="(int *) $2 = ")
         # (int *) $2 = 0x....

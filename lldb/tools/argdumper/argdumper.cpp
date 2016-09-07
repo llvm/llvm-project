@@ -1,4 +1,5 @@
-//===-- argdumper.cpp --------------------------------------------*- C++ -*-===//
+//===-- argdumper.cpp --------------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -14,25 +15,20 @@
 
 using namespace lldb_private;
 
-int
-main (int argc, char *argv[])
-{
-    JSONArray::SP arguments(new JSONArray());
-    for (int i = 1;
-         i < argc;
-         i++)
-    {
-        arguments->AppendObject(JSONString::SP(new JSONString(argv[i])));
-    }
-    
-    JSONObject::SP object(new JSONObject());
-    object->SetObject("arguments", arguments);
-    
-    StreamString ss;
-    
-    object->Write(ss);
-    
-    std::cout << ss.GetData() << std::endl;
-    
-    return 0;
+int main(int argc, char *argv[]) {
+  JSONArray::SP arguments(new JSONArray());
+  for (int i = 1; i < argc; i++) {
+    arguments->AppendObject(JSONString::SP(new JSONString(argv[i])));
+  }
+
+  JSONObject::SP object(new JSONObject());
+  object->SetObject("arguments", arguments);
+
+  StreamString ss;
+
+  object->Write(ss);
+
+  std::cout << ss.GetData() << std::endl;
+
+  return 0;
 }

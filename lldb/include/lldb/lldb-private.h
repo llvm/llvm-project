@@ -12,21 +12,18 @@
 
 #if defined(__cplusplus)
 
-#include "lldb/lldb-public.h"
+#include "lldb/lldb-private-defines.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-interfaces.h"
 #include "lldb/lldb-private-types.h"
-#include "lldb/lldb-private-defines.h"
+#include "lldb/lldb-public.h"
 
 namespace lldb_private {
 
-const char *
-GetVersion ();
+const char *GetVersion();
 
 } // namespace lldb_private
 
+#endif // defined(__cplusplus)
 
-#endif  // defined(__cplusplus)
-
-
-#endif  // lldb_lldb_private_h_
+#endif // lldb_lldb_private_h_

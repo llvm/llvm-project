@@ -5,13 +5,14 @@ Test SBType for ObjC classes.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class ObjCSBTypeTestCase(TestBase):
 
@@ -38,22 +39,28 @@ class ObjCSBTypeTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
-
-
 
         # Get Frame #0.
         self.assertTrue(process.GetState() == lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), "There should be a thread stopped due to breakpoint condition")
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint condition")
 
         aBar = self.frame().FindVariable("aBar")
         aBarType = aBar.GetType()
         self.assertTrue(aBarType.IsValid(), "Bar should be a valid data type")
-        self.assertTrue(aBarType.GetName() == "Bar *", "Bar has the right name")
+        self.assertTrue(
+            aBarType.GetName() == "Bar *",
+            "Bar has the right name")
 
-        self.assertTrue(aBarType.GetNumberOfDirectBaseClasses() == 1, "Bar has a superclass")
+        self.assertTrue(
+            aBarType.GetNumberOfDirectBaseClasses() == 1,
+            "Bar has a superclass")
         aFooType = aBarType.GetDirectBaseClassAtIndex(0)
 
         self.assertTrue(aFooType.IsValid(), "Foo should be a valid data type")
@@ -62,4 +69,6 @@ class ObjCSBTypeTestCase(TestBase):
         self.assertTrue(aBarType.GetNumberOfFields() == 1, "Bar has a field")
         aBarField = aBarType.GetFieldAtIndex(0)
 
-        self.assertTrue(aBarField.GetName() == "_iVar", "The field has the right name")
+        self.assertTrue(
+            aBarField.GetName() == "_iVar",
+            "The field has the right name")

@@ -17,24 +17,24 @@ import sys
 import lldbbuild
 
 if len(sys.argv) != 3:
-     print "usage: " + sys.argv[0] + " TARGET_DIR LLVM_BUILD_DIR"
-     sys.exit(1)
+    print "usage: " + sys.argv[0] + " TARGET_DIR LLVM_BUILD_DIR"
+    sys.exit(1)
 
 target_dir = sys.argv[1]
 llvm_build_dir = lldbbuild.expected_package_build_path_for("llvm")
 
 if not os.path.isdir(target_dir):
     print target_dir + " doesn't exist"
-    sys.exit(1) 
+    sys.exit(1)
 
 if not os.path.isdir(llvm_build_dir):
-    llvm_build_dir = re.sub ("-macosx-", "-iphoneos-", llvm_build_dir)
+    llvm_build_dir = re.sub("-macosx-", "-iphoneos-", llvm_build_dir)
 
 if not os.path.isdir(llvm_build_dir):
-    llvm_build_dir = re.sub ("-iphoneos-", "-appletvos-", llvm_build_dir)
+    llvm_build_dir = re.sub("-iphoneos-", "-appletvos-", llvm_build_dir)
 
 if not os.path.isdir(llvm_build_dir):
-    llvm_build_dir = re.sub ("-appletvos-", "-watchos-", llvm_build_dir)
+    llvm_build_dir = re.sub("-appletvos-", "-watchos-", llvm_build_dir)
 
 if not os.path.isdir(llvm_build_dir):
     print llvm_build_dir + " doesn't exist"
@@ -59,7 +59,7 @@ for subdir in os.listdir(clang_dir):
         version_dir = os.path.join(clang_dir, subdir)
         break
 
-if version_dir == None:
+if version_dir is None:
     print "Couldn't find a subdirectory of the form #(.#)... in " + clang_dir
     sys.exit(1)
 

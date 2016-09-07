@@ -21,126 +21,93 @@
 // This class needs to be hidden as eventually belongs in a plugin that
 // will export the ObjectFile protocol
 //----------------------------------------------------------------------
-class ObjectFileJIT :
-    public lldb_private::ObjectFile
-{
+class ObjectFileJIT : public lldb_private::ObjectFile {
 public:
-    ObjectFileJIT(const lldb::ModuleSP &module_sp,
-                  const lldb::ObjectFileJITDelegateSP &delegate_sp);
+  ObjectFileJIT(const lldb::ModuleSP &module_sp,
+                const lldb::ObjectFileJITDelegateSP &delegate_sp);
 
-    ~ObjectFileJIT() override;
+  ~ObjectFileJIT() override;
 
-    //------------------------------------------------------------------
-    // Static Functions
-    //------------------------------------------------------------------
-    static void
-    Initialize();
+  //------------------------------------------------------------------
+  // Static Functions
+  //------------------------------------------------------------------
+  static void Initialize();
 
-    static void
-    Terminate();
+  static void Terminate();
 
-    static lldb_private::ConstString
-    GetPluginNameStatic();
+  static lldb_private::ConstString GetPluginNameStatic();
 
-    static const char *
-    GetPluginDescriptionStatic();
+  static const char *GetPluginDescriptionStatic();
 
-    static lldb_private::ObjectFile *
-    CreateInstance (const lldb::ModuleSP &module_sp,
-                    lldb::DataBufferSP& data_sp,
-                    lldb::offset_t data_offset,
-                    const lldb_private::FileSpec* file,
-                    lldb::offset_t file_offset,
-                    lldb::offset_t length);
+  static lldb_private::ObjectFile *
+  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
+                 lldb::offset_t data_offset, const lldb_private::FileSpec *file,
+                 lldb::offset_t file_offset, lldb::offset_t length);
 
-    static lldb_private::ObjectFile *
-    CreateMemoryInstance (const lldb::ModuleSP &module_sp, 
-                          lldb::DataBufferSP& data_sp, 
-                          const lldb::ProcessSP &process_sp, 
-                          lldb::addr_t header_addr);
+  static lldb_private::ObjectFile *CreateMemoryInstance(
+      const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
+      const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
-    static size_t
-    GetModuleSpecifications (const lldb_private::FileSpec& file,
-                             lldb::DataBufferSP& data_sp,
-                             lldb::offset_t data_offset,
-                             lldb::offset_t file_offset,
-                             lldb::offset_t length,
-                             lldb_private::ModuleSpecList &specs);
-    
-    //------------------------------------------------------------------
-    // Member Functions
-    //------------------------------------------------------------------
-    bool
-    ParseHeader() override;
+  static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
+                                        lldb::DataBufferSP &data_sp,
+                                        lldb::offset_t data_offset,
+                                        lldb::offset_t file_offset,
+                                        lldb::offset_t length,
+                                        lldb_private::ModuleSpecList &specs);
 
-    bool
-    SetLoadAddress(lldb_private::Target &target,
-                   lldb::addr_t value,
-                   bool value_is_offset) override;
-    
-    lldb::ByteOrder
-    GetByteOrder() const override;
-    
-    bool
-    IsExecutable() const override;
+  //------------------------------------------------------------------
+  // Member Functions
+  //------------------------------------------------------------------
+  bool ParseHeader() override;
 
-    uint32_t
-    GetAddressByteSize() const override;
+  bool SetLoadAddress(lldb_private::Target &target, lldb::addr_t value,
+                      bool value_is_offset) override;
 
-    lldb_private::Symtab *
-    GetSymtab() override;
+  lldb::ByteOrder GetByteOrder() const override;
 
-    bool
-    IsStripped() override;
-    
-    void
-    CreateSections(lldb_private::SectionList &unified_section_list) override;
+  bool IsExecutable() const override;
 
-    void
-    Dump(lldb_private::Stream *s) override;
+  uint32_t GetAddressByteSize() const override;
 
-    bool
-    GetArchitecture(lldb_private::ArchSpec &arch) override;
+  lldb_private::Symtab *GetSymtab() override;
 
-    bool
-    GetUUID(lldb_private::UUID* uuid) override;
+  bool IsStripped() override;
 
-    uint32_t
-    GetDependentModules(lldb_private::FileSpecList& files) override;
-    
-    size_t
-    ReadSectionData(const lldb_private::Section *section,
-                    lldb::offset_t section_offset,
-                    void *dst,
-                    size_t dst_len) const override;
+  void CreateSections(lldb_private::SectionList &unified_section_list) override;
 
-    size_t
-    ReadSectionData(const lldb_private::Section *section,
-                    lldb_private::DataExtractor& section_data) const override;
-    
-    lldb_private::Address
-    GetEntryPointAddress() override;
-    
-    lldb_private::Address
-    GetHeaderAddress() override;
-    
-    ObjectFile::Type
-    CalculateType() override;
-    
-    ObjectFile::Strata
-    CalculateStrata() override;
+  void Dump(lldb_private::Stream *s) override;
 
-    //------------------------------------------------------------------
-    // PluginInterface protocol
-    //------------------------------------------------------------------
-    lldb_private::ConstString
-    GetPluginName() override;
+  bool GetArchitecture(lldb_private::ArchSpec &arch) override;
 
-    uint32_t
-    GetPluginVersion() override;
+  bool GetUUID(lldb_private::UUID *uuid) override;
+
+  uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
+
+  size_t ReadSectionData(const lldb_private::Section *section,
+                         lldb::offset_t section_offset, void *dst,
+                         size_t dst_len) const override;
+
+  size_t
+  ReadSectionData(const lldb_private::Section *section,
+                  lldb_private::DataExtractor &section_data) const override;
+
+  lldb_private::Address GetEntryPointAddress() override;
+
+  lldb_private::Address GetHeaderAddress() override;
+
+  ObjectFile::Type CalculateType() override;
+
+  ObjectFile::Strata CalculateStrata() override;
+
+  //------------------------------------------------------------------
+  // PluginInterface protocol
+  //------------------------------------------------------------------
+  lldb_private::ConstString GetPluginName() override;
+
+  uint32_t GetPluginVersion() override;
 
 protected:
-    lldb::ObjectFileJITDelegateWP m_delegate_wp;
+  lldb::ObjectFileJITDelegateWP m_delegate_wp;
 };
 
 #endif // liblldb_ObjectFileJIT_h_

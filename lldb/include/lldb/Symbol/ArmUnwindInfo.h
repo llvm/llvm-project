@@ -29,48 +29,42 @@
 
 namespace lldb_private {
 
-class ArmUnwindInfo
-{
+class ArmUnwindInfo {
 public:
-    ArmUnwindInfo(const ObjectFile& objfile,
-                  lldb::SectionSP& arm_exidx,
-                  lldb::SectionSP& arm_extab);
+  ArmUnwindInfo(const ObjectFile &objfile, lldb::SectionSP &arm_exidx,
+                lldb::SectionSP &arm_extab);
 
-    ~ArmUnwindInfo();
+  ~ArmUnwindInfo();
 
-    bool
-    GetUnwindPlan(Target &target, const Address& addr, UnwindPlan& unwind_plan);
+  bool GetUnwindPlan(Target &target, const Address &addr,
+                     UnwindPlan &unwind_plan);
 
 private:
-    struct ArmExidxEntry
-    {
-        ArmExidxEntry(uint32_t f, lldb::addr_t a, uint32_t d);
+  struct ArmExidxEntry {
+    ArmExidxEntry(uint32_t f, lldb::addr_t a, uint32_t d);
 
-        bool
-        operator<(const ArmExidxEntry& other) const;
+    bool operator<(const ArmExidxEntry &other) const;
 
-        uint32_t file_address;
-        lldb::addr_t address;
-        uint32_t data;
-    };
+    uint32_t file_address;
+    lldb::addr_t address;
+    uint32_t data;
+  };
 
-    const uint8_t*
-    GetExceptionHandlingTableEntry(const Address& addr);
+  const uint8_t *GetExceptionHandlingTableEntry(const Address &addr);
 
-    uint8_t
-    GetByteAtOffset(const uint32_t* data, uint16_t offset) const;
+  uint8_t GetByteAtOffset(const uint32_t *data, uint16_t offset) const;
 
-    uint64_t
-    GetULEB128(const uint32_t* data, uint16_t& offset, uint16_t max_offset) const;
+  uint64_t GetULEB128(const uint32_t *data, uint16_t &offset,
+                      uint16_t max_offset) const;
 
-    const lldb::ByteOrder m_byte_order;
-    lldb::SectionSP m_arm_exidx_sp; // .ARM.exidx section
-    lldb::SectionSP m_arm_extab_sp; // .ARM.extab section
-    DataExtractor m_arm_exidx_data; // .ARM.exidx section data
-    DataExtractor m_arm_extab_data; // .ARM.extab section data
-    std::vector<ArmExidxEntry> m_exidx_entries;
+  const lldb::ByteOrder m_byte_order;
+  lldb::SectionSP m_arm_exidx_sp; // .ARM.exidx section
+  lldb::SectionSP m_arm_extab_sp; // .ARM.extab section
+  DataExtractor m_arm_exidx_data; // .ARM.exidx section data
+  DataExtractor m_arm_extab_data; // .ARM.extab section data
+  std::vector<ArmExidxEntry> m_exidx_entries;
 };
 
 } // namespace lldb_private
 
-#endif  // liblldb_ArmUnwindInfo_h_
+#endif // liblldb_ArmUnwindInfo_h_

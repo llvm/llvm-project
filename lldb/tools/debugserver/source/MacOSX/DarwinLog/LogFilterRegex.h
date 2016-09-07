@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LogFilterRegex_h
 #define LogFilterRegex_h
 
@@ -21,38 +20,25 @@
 #include "DarwinLogTypes.h"
 #include "LogFilter.h"
 
-class LogFilterRegex : public LogFilter
-{
+class LogFilterRegex : public LogFilter {
 public:
+  LogFilterRegex(bool match_accepts, FilterTarget filter_target,
+                 const std::string &regex);
 
-    LogFilterRegex(bool match_accepts, FilterTarget filter_target,
-                   const std::string &regex);
+  virtual ~LogFilterRegex();
 
-    virtual
-    ~LogFilterRegex();
+  bool IsValid() const { return m_is_valid; }
 
-    bool
-    IsValid() const
-    {
-        return m_is_valid;
-    }
+  const char *GetErrorAsCString() const { return m_error_text.c_str(); }
 
-    const char*
-    GetErrorAsCString() const
-    {
-        return m_error_text.c_str();
-    }
-
-    bool
-    DoesMatch(const LogMessage &message) const override;
+  bool DoesMatch(const LogMessage &message) const override;
 
 private:
-
-    const FilterTarget  m_filter_target;
-    const std::string   m_regex_text;
-    regex_t             m_regex;
-    bool                m_is_valid;
-    std::string         m_error_text;
+  const FilterTarget m_filter_target;
+  const std::string m_regex_text;
+  regex_t m_regex;
+  bool m_is_valid;
+  std::string m_error_text;
 };
 
 #endif /* LogFilterSubsystemRegex_hpp */

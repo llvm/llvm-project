@@ -5,12 +5,13 @@ inferior and traverses the stack for thread0 to arrive at frame with function
 from __future__ import print_function
 
 
-
-import os, sys
+import os
+import sys
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbbench import *
 from lldbsuite.test.lldbtest import *
+
 
 class AttachThenDisassemblyBench(BenchBase):
 
@@ -32,10 +33,11 @@ class AttachThenDisassemblyBench(BenchBase):
     def run_lldb_attach_then_disassembly(self, exe, count):
         target = self.dbg.CreateTarget(exe)
 
-        # Spawn a new process and don't display the stdout if not in TraceOn() mode.
+        # Spawn a new process and don't display the stdout if not in TraceOn()
+        # mode.
         import subprocess
-        popen = subprocess.Popen([exe, self.lldbOption],
-                                 stdout = open(os.devnull, 'w') if not self.TraceOn() else None)
+        popen = subprocess.Popen([exe, self.lldbOption], stdout=open(
+            os.devnull, 'w') if not self.TraceOn() else None)
         if self.TraceOn():
             print("pid of spawned process: %d" % popen.pid)
 
@@ -51,7 +53,7 @@ class AttachThenDisassemblyBench(BenchBase):
         i = 0
         found = False
         for f in thread0:
-            #print("frame#%d %s" % (i, f.GetFunctionName()))
+            # print("frame#%d %s" % (i, f.GetFunctionName()))
             if "MainLoop" in f.GetFunctionName():
                 found = True
                 thread0.SetSelectedFrame(i)
@@ -59,7 +61,7 @@ class AttachThenDisassemblyBench(BenchBase):
                     print("Found frame#%d for function 'MainLoop'" % i)
                 break
             i += 1
-            
+
         # Reset the stopwatch now.
         self.stopwatch.reset()
         for i in range(count):

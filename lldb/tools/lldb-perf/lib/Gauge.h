@@ -17,48 +17,35 @@
 
 namespace lldb_perf {
 
-template <class T>
-class Gauge
-{
+template <class T> class Gauge {
 public:
-    typedef T ValueType;
+  typedef T ValueType;
 
-    Gauge ()
-    {}
-    
-    virtual
-    ~Gauge ()
-    {}
-    
-    virtual void
-    Start () = 0;
-    
-    virtual ValueType
-    Stop () = 0;
+  Gauge() {}
 
-    virtual ValueType
-    GetStartValue () const = 0;
+  virtual ~Gauge() {}
 
-    virtual ValueType
-    GetStopValue () const = 0;
+  virtual void Start() = 0;
 
-    virtual ValueType
-    GetDeltaValue () const = 0;
+  virtual ValueType Stop() = 0;
 
+  virtual ValueType GetStartValue() const = 0;
+
+  virtual ValueType GetStopValue() const = 0;
+
+  virtual ValueType GetDeltaValue() const = 0;
 };
 
 template <class T>
-Results::ResultSP GetResult (const char *description, T value);
+Results::ResultSP GetResult(const char *description, T value);
+
+template <> Results::ResultSP GetResult(const char *description, double value);
 
 template <>
-Results::ResultSP GetResult (const char *description, double value);
+Results::ResultSP GetResult(const char *description, uint64_t value);
 
 template <>
-Results::ResultSP GetResult (const char *description, uint64_t value);
-
-template <>
-Results::ResultSP GetResult (const char *description, std::string value);
-
+Results::ResultSP GetResult(const char *description, std::string value);
 }
 
 #endif

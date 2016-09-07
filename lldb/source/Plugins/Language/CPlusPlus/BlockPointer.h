@@ -12,15 +12,14 @@
 
 #include "lldb/lldb-forward.h"
 
-namespace lldb_private
-{
-namespace formatters
-{
-bool
-BlockPointerSummaryProvider(ValueObject &, Stream &, const TypeSummaryOptions &);
+namespace lldb_private {
+namespace formatters {
+bool BlockPointerSummaryProvider(ValueObject &, Stream &,
+                                 const TypeSummaryOptions &);
 
 SyntheticChildrenFrontEnd *
-BlockPointerSyntheticFrontEndCreator(CXXSyntheticChildren *, lldb::ValueObjectSP);
+BlockPointerSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                     lldb::ValueObjectSP);
 } // namespace formatters
 } // namespace lldb_private
 

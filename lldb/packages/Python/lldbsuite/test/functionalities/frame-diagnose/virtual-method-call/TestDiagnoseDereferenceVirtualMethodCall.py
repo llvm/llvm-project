@@ -10,6 +10,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestDiagnoseVirtualMethodCall(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
@@ -21,5 +22,5 @@ class TestDiagnoseVirtualMethodCall(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
         self.runCmd("run", RUN_SUCCEEDED)
         self.expect("thread list", "Thread should be stopped",
-            substrs = ['stopped'])
-        self.expect("frame diagnose", "Crash diagnosis was accurate", "foo") 
+                    substrs=['stopped'])
+        self.expect("frame diagnose", "Crash diagnosis was accurate", "foo")

@@ -9,35 +9,33 @@
 
 // In-house headers:
 #include "MICmdFactory.h"
-#include "MICmnResources.h"
-#include "MICmdData.h"
 #include "MICmdBase.h"
 #include "MICmdCommands.h"
+#include "MICmdData.h"
+#include "MICmnResources.h"
 
-//++ ------------------------------------------------------------------------------------
+//++
+//------------------------------------------------------------------------------------
 // Details: CMICmdFactory constructor.
 // Type:    Method.
 // Args:    None.
 // Return:  None.
 // Throws:  None.
 //--
-CMICmdFactory::CMICmdFactory()
-{
-}
+CMICmdFactory::CMICmdFactory() {}
 
-//++ ------------------------------------------------------------------------------------
+//++
+//------------------------------------------------------------------------------------
 // Details: CMICmdFactory destructor.
 // Type:    Overridable.
 // Args:    None.
 // Return:  None.
 // Throws:  None.
 //--
-CMICmdFactory::~CMICmdFactory()
-{
-    Shutdown();
-}
+CMICmdFactory::~CMICmdFactory() { Shutdown(); }
 
-//++ ------------------------------------------------------------------------------------
+//++
+//------------------------------------------------------------------------------------
 // Details: Initialize resources for *this Command factory.
 // Type:    Method.
 // Args:    None.
@@ -45,22 +43,21 @@ CMICmdFactory::~CMICmdFactory()
 //          MIstatus::failure - Functionality failed.
 // Throws:  None.
 //--
-bool
-CMICmdFactory::Initialize()
-{
-    m_clientUsageRefCnt++;
+bool CMICmdFactory::Initialize() {
+  m_clientUsageRefCnt++;
 
-    if (m_bInitialized)
-        return MIstatus::success;
-
-    m_bInitialized = true;
-
-    MICmnCommands::RegisterAll();
-
+  if (m_bInitialized)
     return MIstatus::success;
+
+  m_bInitialized = true;
+
+  MICmnCommands::RegisterAll();
+
+  return MIstatus::success;
 }
 
-//++ ------------------------------------------------------------------------------------
+//++
+//------------------------------------------------------------------------------------
 // Details: Release resources for *this Command Factory.
 // Type:    Method.
 // Args:    None.
@@ -68,24 +65,24 @@ CMICmdFactory::Initialize()
 //          MIstatus::failure - Functionality failed.
 // Throws:  None.
 //--
-bool
-CMICmdFactory::Shutdown()
-{
-    if (--m_clientUsageRefCnt > 0)
-        return MIstatus::success;
-
-    if (!m_bInitialized)
-        return MIstatus::success;
-
-    m_mapMiCmdToCmdCreatorFn.clear();
-
-    m_bInitialized = false;
-
+bool CMICmdFactory::Shutdown() {
+  if (--m_clientUsageRefCnt > 0)
     return MIstatus::success;
+
+  if (!m_bInitialized)
+    return MIstatus::success;
+
+  m_mapMiCmdToCmdCreatorFn.clear();
+
+  m_bInitialized = false;
+
+  return MIstatus::success;
 }
 
-//++ ------------------------------------------------------------------------------------
-// Details: Register a command's creator function with the command identifier the MI
+//++
+//------------------------------------------------------------------------------------
+// Details: Register a command's creator function with the command identifier
+// the MI
 //          command name i.e. 'file-exec-and-symbols'.
 // Type:    Method.
 // Args:    vMiCmd          - (R) Command's name, the MI command.
@@ -94,33 +91,33 @@ CMICmdFactory::Shutdown()
 //          MIstatus::failure - Functionality failed.
 // Throws:  None.
 //--
-bool
-CMICmdFactory::CmdRegister(const CMIUtilString &vMiCmd, CmdCreatorFnPtr vCmdCreateFn)
-{
-    if (!IsValid(vMiCmd))
-    {
-        SetErrorDescription(CMIUtilString::Format(MIRSRC(IDS_CMDFACTORY_ERR_INVALID_CMD_NAME), vMiCmd.c_str()));
-        return MIstatus::failure;
-    }
-    if (vCmdCreateFn == nullptr)
-    {
-        SetErrorDescription(CMIUtilString::Format(MIRSRC(IDS_CMDFACTORY_ERR_INVALID_CMD_CR8FN), vMiCmd.c_str()));
-        return MIstatus::failure;
-    }
+bool CMICmdFactory::CmdRegister(const CMIUtilString &vMiCmd,
+                                CmdCreatorFnPtr vCmdCreateFn) {
+  if (!IsValid(vMiCmd)) {
+    SetErrorDescription(CMIUtilString::Format(
+        MIRSRC(IDS_CMDFACTORY_ERR_INVALID_CMD_NAME), vMiCmd.c_str()));
+    return MIstatus::failure;
+  }
+  if (vCmdCreateFn == nullptr) {
+    SetErrorDescription(CMIUtilString::Format(
+        MIRSRC(IDS_CMDFACTORY_ERR_INVALID_CMD_CR8FN), vMiCmd.c_str()));
+    return MIstatus::failure;
+  }
 
-    if (HaveAlready(vMiCmd))
-    {
-        SetErrorDescription(CMIUtilString::Format(MIRSRC(IDS_CMDFACTORY_ERR_CMD_ALREADY_REGED), vMiCmd.c_str()));
-        return MIstatus::failure;
-    }
+  if (HaveAlready(vMiCmd)) {
+    SetErrorDescription(CMIUtilString::Format(
+        MIRSRC(IDS_CMDFACTORY_ERR_CMD_ALREADY_REGED), vMiCmd.c_str()));
+    return MIstatus::failure;
+  }
 
-    MapPairMiCmdToCmdCreatorFn_t pr(vMiCmd, vCmdCreateFn);
-    m_mapMiCmdToCmdCreatorFn.insert(pr);
+  MapPairMiCmdToCmdCreatorFn_t pr(vMiCmd, vCmdCreateFn);
+  m_mapMiCmdToCmdCreatorFn.insert(pr);
 
-    return MIstatus::success;
+  return MIstatus::success;
 }
 
-//++ ------------------------------------------------------------------------------------
+//++
+//------------------------------------------------------------------------------------
 // Details: Check a command is already registered.
 // Type:    Method.
 // Args:    vMiCmd  - (R) Command's name, the MI command.
@@ -128,17 +125,17 @@ CMICmdFactory::CmdRegister(const CMIUtilString &vMiCmd, CmdCreatorFnPtr vCmdCrea
 //          False - not found.
 // Throws:  None.
 //--
-bool
-CMICmdFactory::HaveAlready(const CMIUtilString &vMiCmd) const
-{
-    const MapMiCmdToCmdCreatorFn_t::const_iterator it = m_mapMiCmdToCmdCreatorFn.find(vMiCmd);
-    if (it != m_mapMiCmdToCmdCreatorFn.end())
-        return true;
+bool CMICmdFactory::HaveAlready(const CMIUtilString &vMiCmd) const {
+  const MapMiCmdToCmdCreatorFn_t::const_iterator it =
+      m_mapMiCmdToCmdCreatorFn.find(vMiCmd);
+  if (it != m_mapMiCmdToCmdCreatorFn.end())
+    return true;
 
-    return false;
+  return false;
 }
 
-//++ ------------------------------------------------------------------------------------
+//++
+//------------------------------------------------------------------------------------
 // Details: Check a command's name is valid:
 //              - name is not empty
 //              - name does not have spaces
@@ -148,25 +145,23 @@ CMICmdFactory::HaveAlready(const CMIUtilString &vMiCmd) const
 //          False - not valid.
 // Throws:  None.
 //--
-bool
-CMICmdFactory::IsValid(const CMIUtilString &vMiCmd) const
-{
-    bool bValid = true;
+bool CMICmdFactory::IsValid(const CMIUtilString &vMiCmd) const {
+  bool bValid = true;
 
-    if (vMiCmd.empty())
-    {
-        bValid = false;
-        return false;
-    }
+  if (vMiCmd.empty()) {
+    bValid = false;
+    return false;
+  }
 
-    const size_t nPos = vMiCmd.find(' ');
-    if (nPos != std::string::npos)
-        bValid = false;
+  const size_t nPos = vMiCmd.find(' ');
+  if (nPos != std::string::npos)
+    bValid = false;
 
-    return bValid;
+  return bValid;
 }
 
-//++ ------------------------------------------------------------------------------------
+//++
+//------------------------------------------------------------------------------------
 // Details: Check a command is already registered.
 // Type:    Method.
 // Args:    vMiCmd  - (R) Command's name, the MI command.
@@ -174,49 +169,51 @@ CMICmdFactory::IsValid(const CMIUtilString &vMiCmd) const
 //          False - not found.
 // Throws:  None.
 //--
-bool
-CMICmdFactory::CmdExist(const CMIUtilString &vMiCmd) const
-{
-    return HaveAlready(vMiCmd);
+bool CMICmdFactory::CmdExist(const CMIUtilString &vMiCmd) const {
+  return HaveAlready(vMiCmd);
 }
 
-//++ ------------------------------------------------------------------------------------
-// Details: Create a command given the specified MI command name. The command data object
+//++
+//------------------------------------------------------------------------------------
+// Details: Create a command given the specified MI command name. The command
+// data object
 //          contains the options for the command.
 // Type:    Method.
 // Args:    vMiCmd      - (R) Command's name, the MI command.
-//          vCmdData    - (RW) Command's metadata status/information/result object.
+//          vCmdData    - (RW) Command's metadata status/information/result
+//          object.
 //          vpNewCmd    - (W) New command instance.
 // Return:  MIstatus::success - Functionality succeeded.
 //          MIstatus::failure - Functionality failed.
 // Throws:  None.
 //--
-bool
-CMICmdFactory::CmdCreate(const CMIUtilString &vMiCmd, const SMICmdData &vCmdData, CMICmdBase *&vpNewCmd)
-{
-    vpNewCmd = nullptr;
+bool CMICmdFactory::CmdCreate(const CMIUtilString &vMiCmd,
+                              const SMICmdData &vCmdData,
+                              CMICmdBase *&vpNewCmd) {
+  vpNewCmd = nullptr;
 
-    if (!IsValid(vMiCmd))
-    {
-        SetErrorDescription(CMIUtilString::Format(MIRSRC(IDS_CMDFACTORY_ERR_INVALID_CMD_NAME), vMiCmd.c_str()));
-        return MIstatus::failure;
-    }
-    if (!HaveAlready(vMiCmd))
-    {
-        SetErrorDescription(CMIUtilString::Format(MIRSRC(IDS_CMDFACTORY_ERR_CMD_NOT_REGISTERED), vMiCmd.c_str()));
-        return MIstatus::failure;
-    }
+  if (!IsValid(vMiCmd)) {
+    SetErrorDescription(CMIUtilString::Format(
+        MIRSRC(IDS_CMDFACTORY_ERR_INVALID_CMD_NAME), vMiCmd.c_str()));
+    return MIstatus::failure;
+  }
+  if (!HaveAlready(vMiCmd)) {
+    SetErrorDescription(CMIUtilString::Format(
+        MIRSRC(IDS_CMDFACTORY_ERR_CMD_NOT_REGISTERED), vMiCmd.c_str()));
+    return MIstatus::failure;
+  }
 
-    const MapMiCmdToCmdCreatorFn_t::const_iterator it = m_mapMiCmdToCmdCreatorFn.find(vMiCmd);
-    const CMIUtilString &rMiCmd((*it).first);
-    MIunused(rMiCmd);
-    CmdCreatorFnPtr pFn = (*it).second;
-    CMICmdBase *pCmd = (*pFn)();
+  const MapMiCmdToCmdCreatorFn_t::const_iterator it =
+      m_mapMiCmdToCmdCreatorFn.find(vMiCmd);
+  const CMIUtilString &rMiCmd((*it).first);
+  MIunused(rMiCmd);
+  CmdCreatorFnPtr pFn = (*it).second;
+  CMICmdBase *pCmd = (*pFn)();
 
-    SMICmdData cmdData(vCmdData);
-    cmdData.id = pCmd->GetGUID();
-    pCmd->SetCmdData(cmdData);
-    vpNewCmd = pCmd;
+  SMICmdData cmdData(vCmdData);
+  cmdData.id = pCmd->GetGUID();
+  pCmd->SetCmdData(cmdData);
+  vpNewCmd = pCmd;
 
-    return MIstatus::success;
+  return MIstatus::success;
 }

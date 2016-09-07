@@ -5,14 +5,15 @@ Test process attach.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 exe_name = "ProcessAttach"  # Must match Makefile
+
 
 class ProcessAttachTestCase(TestBase):
 

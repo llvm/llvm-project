@@ -15,9 +15,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Stream&
-lldb_private::operator << (Stream& strm, const UserID& uid)
-{
-    strm.Printf("{0x%8.8" PRIx64 "}", uid.GetID());
-    return strm;
+Stream &lldb_private::operator<<(Stream &strm, const UserID &uid) {
+  strm.Printf("{0x%8.8" PRIx64 "}", uid.GetID());
+  return strm;
 }

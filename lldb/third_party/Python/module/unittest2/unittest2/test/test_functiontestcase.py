@@ -145,6 +145,5 @@ class Test_FunctionTestCase(unittest2.TestCase):
         self.assertEqual(test.shortDescription(), "this tests foo")
 
 
-
 if __name__ == '__main__':
     unittest2.main()

@@ -12,11 +12,12 @@ class ConcurrentDelaySignalBreak(ConcurrentEventsBase):
 
     mydir = ConcurrentEventsBase.compute_mydir(__file__)
 
-    @skipIfFreeBSD # timing out on buildbot
-    @expectedFailureAll(triple = '^mips') # Atomic sequences are not supported yet for MIPS in LLDB.
+    @skipIfFreeBSD  # timing out on buildbot
+    # Atomic sequences are not supported yet for MIPS in LLDB.
+    @expectedFailureAll(triple='^mips')
     def test_delay_signal_break(self):
         """Test (1-second delay) signal and a breakpoint in multiple threads."""
         self.build(dictionary=self.getBuildFlags())
-        self.do_thread_actions(num_breakpoint_threads=1, num_delay_signal_threads=1)
-
-
+        self.do_thread_actions(
+            num_breakpoint_threads=1,
+            num_delay_signal_threads=1)

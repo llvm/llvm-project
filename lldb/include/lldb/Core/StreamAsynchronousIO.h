@@ -1,4 +1,5 @@
-//===-- StreamAsynchronousIO.h -----------------------------------*- C++ -*-===//
+//===-- StreamAsynchronousIO.h -----------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,24 +17,20 @@
 
 namespace lldb_private {
 
-class StreamAsynchronousIO : 
-    public Stream
-{
+class StreamAsynchronousIO : public Stream {
 public:
-    StreamAsynchronousIO (Debugger &debugger, bool for_stdout);
-    
-    ~StreamAsynchronousIO () override;
-    
-    void
-    Flush () override;
-    
-    size_t
-    Write (const void *src, size_t src_len) override;
-    
+  StreamAsynchronousIO(Debugger &debugger, bool for_stdout);
+
+  ~StreamAsynchronousIO() override;
+
+  void Flush() override;
+
+  size_t Write(const void *src, size_t src_len) override;
+
 private:
-    Debugger &m_debugger;
-    std::string m_data;
-    bool m_for_stdout;
+  Debugger &m_debugger;
+  std::string m_data;
+  bool m_for_stdout;
 };
 
 } // namespace lldb_private

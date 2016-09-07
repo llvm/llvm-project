@@ -24,6 +24,7 @@ add_lld_library(lldMachO
     LLVMDebugInfoDWARF
     LLVMObject
     LLVMSupport
+    LLVMDemangle
     ${PTHREAD_LIB}
   )
 

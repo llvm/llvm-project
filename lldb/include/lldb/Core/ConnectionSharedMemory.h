@@ -21,52 +21,39 @@
 
 namespace lldb_private {
 
-class ConnectionSharedMemory :
-    public Connection
-{
+class ConnectionSharedMemory : public Connection {
 public:
+  ConnectionSharedMemory();
 
-    ConnectionSharedMemory ();
+  ~ConnectionSharedMemory() override;
 
-    ~ConnectionSharedMemory () override;
+  bool IsConnected() const override;
 
-    bool
-    IsConnected () const override;
+  virtual lldb::ConnectionStatus BytesAvailable(uint32_t timeout_usec,
+                                                Error *error_ptr);
 
-    virtual lldb::ConnectionStatus
-    BytesAvailable (uint32_t timeout_usec, Error *error_ptr);
+  lldb::ConnectionStatus Connect(const char *s, Error *error_ptr) override;
 
-    lldb::ConnectionStatus
-    Connect (const char *s, Error *error_ptr) override;
+  lldb::ConnectionStatus Disconnect(Error *error_ptr) override;
 
-    lldb::ConnectionStatus
-    Disconnect (Error *error_ptr) override;
+  size_t Read(void *dst, size_t dst_len, uint32_t timeout_usec,
+              lldb::ConnectionStatus &status, Error *error_ptr) override;
 
-    size_t
-    Read (void *dst, 
-          size_t dst_len, 
-          uint32_t timeout_usec,
-          lldb::ConnectionStatus &status, 
-          Error *error_ptr) override;
+  size_t Write(const void *src, size_t src_len, lldb::ConnectionStatus &status,
+               Error *error_ptr) override;
 
-    size_t
-    Write (const void *src, size_t src_len, lldb::ConnectionStatus &status, Error *error_ptr) override;
+  std::string GetURI() override;
 
-    std::string
-    GetURI() override;
-
-    lldb::ConnectionStatus
-    Open (bool create, const char *name, size_t size, Error *error_ptr);
+  lldb::ConnectionStatus Open(bool create, const char *name, size_t size,
+                              Error *error_ptr);
 
 protected:
-
-    std::string m_name;
-    int m_fd;    // One buffer that contains all we need
-    DataBufferMemoryMap m_mmap;
+  std::string m_name;
+  int m_fd; // One buffer that contains all we need
+  DataBufferMemoryMap m_mmap;
 
 private:
-
-    DISALLOW_COPY_AND_ASSIGN (ConnectionSharedMemory);
+  DISALLOW_COPY_AND_ASSIGN(ConnectionSharedMemory);
 };
 
 } // namespace lldb_private

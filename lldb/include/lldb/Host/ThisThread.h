@@ -14,26 +14,23 @@
 
 #include <string>
 
-namespace llvm
-{
+namespace llvm {
 template <class T> class SmallVectorImpl;
 }
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class ThisThread
-{
-  private:
-    ThisThread();
+class ThisThread {
+private:
+  ThisThread();
 
-  public:
-    // ThisThread common functions.
-    static void SetName(llvm::StringRef name, int max_length);
+public:
+  // ThisThread common functions.
+  static void SetName(llvm::StringRef name, int max_length);
 
-    // ThisThread platform-specific functions.
-    static void SetName(llvm::StringRef name);
-    static void GetName(llvm::SmallVectorImpl<char> &name);
+  // ThisThread platform-specific functions.
+  static void SetName(llvm::StringRef name);
+  static void GetName(llvm::SmallVectorImpl<char> &name);
 };
 }
 
