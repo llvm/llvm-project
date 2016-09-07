@@ -4784,10 +4784,7 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
 
 SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                                 SDVTList VTList, ArrayRef<SDValue> Ops,
-                                MachineMemOperand *MMO,
-                                AtomicOrdering SuccessOrdering,
-                                AtomicOrdering FailureOrdering,
-                                SynchronizationScope SynchScope) {
+                                MachineMemOperand *MMO) {
   FoldingSetNodeID ID;
   ID.AddInteger(MemVT.getRawBits());
   AddNodeIDNode(ID, Opcode, VTList, Ops);
@@ -4799,21 +4796,12 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
   }
 
   auto *N = newSDNode<AtomicSDNode>(Opcode, dl.getIROrder(), dl.getDebugLoc(),
-                                    VTList, MemVT, MMO, SuccessOrdering,
-                                    FailureOrdering, SynchScope);
+                                    VTList, MemVT, MMO);
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
-}
-
-SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
-                                SDVTList VTList, ArrayRef<SDValue> Ops,
-                                MachineMemOperand *MMO, AtomicOrdering Ordering,
-                                SynchronizationScope SynchScope) {
-  return getAtomic(Opcode, dl, MemVT, VTList, Ops, MMO, Ordering,
-                   Ordering, SynchScope);
 }
 
 SDValue SelectionDAG::getAtomicCmpSwap(
@@ -4835,26 +4823,23 @@ SDValue SelectionDAG::getAtomicCmpSwap(
   auto Flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad |
                MachineMemOperand::MOStore;
   MachineMemOperand *MMO =
-    MF.getMachineMemOperand(PtrInfo, Flags, MemVT.getStoreSize(), Alignment);
+    MF.getMachineMemOperand(PtrInfo, Flags, MemVT.getStoreSize(), Alignment,
+                            AAMDNodes(), nullptr, SynchScope, SuccessOrdering,
+                            FailureOrdering);
 
-  return getAtomicCmpSwap(Opcode, dl, MemVT, VTs, Chain, Ptr, Cmp, Swp, MMO,
-                          SuccessOrdering, FailureOrdering, SynchScope);
+  return getAtomicCmpSwap(Opcode, dl, MemVT, VTs, Chain, Ptr, Cmp, Swp, MMO);
 }
 
 SDValue SelectionDAG::getAtomicCmpSwap(unsigned Opcode, const SDLoc &dl,
                                        EVT MemVT, SDVTList VTs, SDValue Chain,
                                        SDValue Ptr, SDValue Cmp, SDValue Swp,
-                                       MachineMemOperand *MMO,
-                                       AtomicOrdering SuccessOrdering,
-                                       AtomicOrdering FailureOrdering,
-                                       SynchronizationScope SynchScope) {
+                                       MachineMemOperand *MMO) {
   assert(Opcode == ISD::ATOMIC_CMP_SWAP ||
          Opcode == ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS);
   assert(Cmp.getValueType() == Swp.getValueType() && "Invalid Atomic Op Types");
 
   SDValue Ops[] = {Chain, Ptr, Cmp, Swp};
-  return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO,
-                   SuccessOrdering, FailureOrdering, SynchScope);
+  return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO);
 }
 
 SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
@@ -4880,16 +4865,15 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
 
   MachineMemOperand *MMO =
     MF.getMachineMemOperand(MachinePointerInfo(PtrVal), Flags,
-                            MemVT.getStoreSize(), Alignment);
+                            MemVT.getStoreSize(), Alignment, AAMDNodes(),
+                            nullptr, SynchScope, Ordering);
 
-  return getAtomic(Opcode, dl, MemVT, Chain, Ptr, Val, MMO,
-                   Ordering, SynchScope);
+  return getAtomic(Opcode, dl, MemVT, Chain, Ptr, Val, MMO);
 }
 
 SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                                 SDValue Chain, SDValue Ptr, SDValue Val,
-                                MachineMemOperand *MMO, AtomicOrdering Ordering,
-                                SynchronizationScope SynchScope) {
+                                MachineMemOperand *MMO) {
   assert((Opcode == ISD::ATOMIC_LOAD_ADD ||
           Opcode == ISD::ATOMIC_LOAD_SUB ||
           Opcode == ISD::ATOMIC_LOAD_AND ||
@@ -4909,18 +4893,17 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
   SDVTList VTs = Opcode == ISD::ATOMIC_STORE ? getVTList(MVT::Other) :
                                                getVTList(VT, MVT::Other);
   SDValue Ops[] = {Chain, Ptr, Val};
-  return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO, Ordering, SynchScope);
+  return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO);
 }
 
 SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                                 EVT VT, SDValue Chain, SDValue Ptr,
-                                MachineMemOperand *MMO, AtomicOrdering Ordering,
-                                SynchronizationScope SynchScope) {
+                                MachineMemOperand *MMO) {
   assert(Opcode == ISD::ATOMIC_LOAD && "Invalid Atomic Op");
 
   SDVTList VTs = getVTList(VT, MVT::Other);
   SDValue Ops[] = {Chain, Ptr};
-  return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO, Ordering, SynchScope);
+  return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO);
 }
 
 /// getMergeValues - Create a MERGE_VALUES node from the given operands.
@@ -6693,8 +6676,7 @@ AddrSpaceCastSDNode::AddrSpaceCastSDNode(unsigned Order, const DebugLoc &dl,
 
 MemSDNode::MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
                      SDVTList VTs, EVT memvt, MachineMemOperand *mmo)
-    : SDNode(Opc, Order, dl, VTs), MemoryVT(memvt), MMO(mmo),
-      SynchScope(CrossThread) {
+    : SDNode(Opc, Order, dl, VTs), MemoryVT(memvt), MMO(mmo) {
   MemSDNodeBits.IsVolatile = MMO->isVolatile();
   MemSDNodeBits.IsNonTemporal = MMO->isNonTemporal();
   MemSDNodeBits.IsInvariant = MMO->isInvariant();

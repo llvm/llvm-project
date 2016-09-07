@@ -43,6 +43,7 @@ FunctionPass *createSILoadStoreOptimizerPass(TargetMachine &tm);
 FunctionPass *createSIWholeQuadModePass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIFixSGPRCopiesPass();
+FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIDebuggerInsertNopsPass();
 FunctionPass *createSIInsertWaitsPass();
 FunctionPass *createAMDGPUCodeGenPreparePass(const GCNTargetMachine *TM = nullptr);
@@ -101,6 +102,9 @@ extern char &AMDGPUCodeGenPrepareID;
 
 void initializeSIAnnotateControlFlowPass(PassRegistry&);
 extern char &SIAnnotateControlFlowPassID;
+
+void initializeSIMemoryLegalizerPass(PassRegistry&);
+extern char &SIMemoryLegalizerID;
 
 void initializeSIDebuggerInsertNopsPass(PassRegistry&);
 extern char &SIDebuggerInsertNopsID;
@@ -169,7 +173,7 @@ enum AddressSpaces : unsigned {
 } // namespace AMDGPUAS
 
 /// AMDGPU-specific synchronization scopes.
-enum class AMDGPUSynchronizationScope {
+enum class AMDGPUSynchronizationScope : unsigned {
   /// Synchronized with respect to the entire system, which includes all
   /// work-items on all agents executing kernel dispatches for the same
   /// application process, together with all agents executing the same

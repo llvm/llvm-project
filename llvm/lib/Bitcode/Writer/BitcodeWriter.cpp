@@ -595,8 +595,8 @@ static unsigned getEncodedSynchScope(SynchronizationScope SynchScope) {
       (SynchScope - SynchronizationScopeFirstTargetSpecific));
 
   switch (SynchScope) {
+  default: llvm_unreachable("Invalid synch scope");
   case SingleThread: return bitc::SYNCHSCOPE_SINGLETHREAD;
-  default: // Map unknown scopes to cross-thread.
   case CrossThread: return bitc::SYNCHSCOPE_CROSSTHREAD;
   }
 }

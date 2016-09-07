@@ -968,8 +968,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}atomic_load_i32:
-; SI: buffer_load_dword [[RET:v[0-9]+]], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 glc
-; VI: flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc
+; SI: buffer_load_dword [[RET:v[0-9]+]], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 glc{{$}}
+; VI: flat_load_dword [[RET:v[0-9]+]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN: buffer_store_dword [[RET]]
 define void @atomic_load_i32(i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
 entry:
@@ -1004,8 +1004,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}atomic_store_i32_offset:
-; SI: buffer_store_dword {{v[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:16 glc{{$}}
-; VI: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}} glc{{$}}
+; SI: buffer_store_dword {{v[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:16{{$}}
+; VI: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @atomic_store_i32_offset(i32 %in, i32 addrspace(1)* %out) {
 entry:
   %gep = getelementptr i32, i32 addrspace(1)* %out, i64 4
@@ -1014,8 +1014,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}atomic_store_i32:
-; SI: buffer_store_dword {{v[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], 0 glc{{$}}
-; VI: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}} glc{{$}}
+; SI: buffer_store_dword {{v[0-9]+}}, off, s[{{[0-9]+}}:{{[0-9]+}}], 0{{$}}
+; VI: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @atomic_store_i32(i32 %in, i32 addrspace(1)* %out) {
 entry:
   store atomic i32 %in, i32 addrspace(1)* %out seq_cst, align 4
@@ -1023,8 +1023,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}atomic_store_i32_addr64_offset:
-; SI: buffer_store_dword {{v[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 offset:16 glc{{$}}
-; VI: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}} glc{{$}}
+; SI: buffer_store_dword {{v[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 offset:16{{$}}
+; VI: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @atomic_store_i32_addr64_offset(i32 %in, i32 addrspace(1)* %out, i64 %index) {
 entry:
   %ptr = getelementptr i32, i32 addrspace(1)* %out, i64 %index
@@ -1034,8 +1034,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}atomic_store_i32_addr64:
-; SI: buffer_store_dword {{v[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 glc{{$}}
-; VI: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}} glc{{$}}
+; SI: buffer_store_dword {{v[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64{{$}}
+; VI: flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], {{v[0-9]+}}{{$}}
 define void @atomic_store_i32_addr64(i32 %in, i32 addrspace(1)* %out, i64 %index) {
 entry:
   %ptr = getelementptr i32, i32 addrspace(1)* %out, i64 %index

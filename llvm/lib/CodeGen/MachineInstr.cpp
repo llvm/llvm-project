@@ -527,9 +527,13 @@ MachinePointerInfo MachinePointerInfo::getStack(MachineFunction &MF,
 MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
                                      uint64_t s, unsigned int a,
                                      const AAMDNodes &AAInfo,
-                                     const MDNode *Ranges)
+                                     const MDNode *Ranges,
+                                     SynchronizationScope SynchScope,
+                                     AtomicOrdering Ordering,
+                                     AtomicOrdering FailureOrdering)
     : PtrInfo(ptrinfo), Size(s), FlagVals(f), BaseAlignLog2(Log2_32(a) + 1),
-      AAInfo(AAInfo), Ranges(Ranges) {
+      AAInfo(AAInfo), Ranges(Ranges), SynchScope(SynchScope),
+      Ordering(Ordering), FailureOrdering(FailureOrdering) {
   assert((PtrInfo.V.isNull() || PtrInfo.V.is<const PseudoSourceValue*>() ||
           isa<PointerType>(PtrInfo.V.get<const Value*>()->getType())) &&
          "invalid pointer value");

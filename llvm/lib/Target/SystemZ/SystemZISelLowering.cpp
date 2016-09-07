@@ -3311,8 +3311,7 @@ SDValue SystemZTargetLowering::lowerATOMIC_LOAD_SUB(SDValue Op,
     if (NegSrc2.getNode())
       return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, MemVT,
                            Node->getChain(), Node->getBasePtr(), NegSrc2,
-                           Node->getMemOperand(), Node->getOrdering(),
-                           Node->getSynchScope());
+                           Node->getMemOperand());
 
     // Use the node as-is.
     return Op;

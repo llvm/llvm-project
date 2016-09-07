@@ -21562,8 +21562,7 @@ static SDValue lowerAtomicArith(SDValue N, SelectionDAG &DAG,
       AtomicSDNode *AN = cast<AtomicSDNode>(N.getNode());
       RHS = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), RHS);
       return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, VT, Chain, LHS,
-                           RHS, AN->getMemOperand(), AN->getOrdering(),
-                           AN->getSynchScope());
+                           RHS, AN->getMemOperand());
     }
     assert(Opc == ISD::ATOMIC_LOAD_ADD &&
            "Used AtomicRMW ops other than Add should have been expanded!");
@@ -21594,9 +21593,7 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) {
                                  cast<AtomicSDNode>(Node)->getMemoryVT(),
                                  Node->getOperand(0),
                                  Node->getOperand(1), Node->getOperand(2),
-                                 cast<AtomicSDNode>(Node)->getMemOperand(),
-                                 cast<AtomicSDNode>(Node)->getOrdering(),
-                                 cast<AtomicSDNode>(Node)->getSynchScope());
+                                 cast<AtomicSDNode>(Node)->getMemOperand());
     return Swap.getValue(1);
   }
   // Other atomic stores have a simple pattern.

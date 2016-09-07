@@ -78,6 +78,7 @@ add_llvm_target(AMDGPUCodeGen
   SILowerI1Copies.cpp
   SIMachineFunctionInfo.cpp
   SIMachineScheduler.cpp
+  SIMemoryLegalizer.cpp
   SIRegisterInfo.cpp
   SIShrinkInstructions.cpp
   SITypeRewriter.cpp

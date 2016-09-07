@@ -813,7 +813,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_load_i64:
-; GCN: flat_load_dwordx2 [[RET:v\[[0-9]+:[0-9]\]]], v[{{[0-9]+}}:{{[0-9]+}}] glc
+; GCN: flat_load_dwordx2 [[RET:v\[[0-9]+:[0-9]\]]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
 ; GCN: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, [[RET]]
 define void @atomic_load_i64(i64 addrspace(4)* %in, i64 addrspace(4)* %out) {
 entry:
@@ -846,7 +846,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_store_i64_offset:
-; GCN: flat_store_dwordx2 [[RET:v\[[0-9]+:[0-9]\]]], v[{{[0-9]+}}:{{[0-9]+}}] glc{{$}}
+; GCN: flat_store_dwordx2 [[RET:v\[[0-9]+:[0-9]\]]], v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 define void @atomic_store_i64_offset(i64 %in, i64 addrspace(4)* %out) {
 entry:
   %gep = getelementptr i64, i64 addrspace(4)* %out, i64 4
@@ -855,7 +855,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_store_i64:
-; GCN: flat_store_dwordx2 {{v\[[0-9]+:[0-9]\]}}, v[{{[0-9]+}}:{{[0-9]+}}] glc
+; GCN: flat_store_dwordx2 {{v\[[0-9]+:[0-9]\]}}, v[{{[0-9]+}}:{{[0-9]+}}]{{$}}
 define void @atomic_store_i64(i64 %in, i64 addrspace(4)* %out) {
 entry:
   store atomic i64 %in, i64 addrspace(4)* %out seq_cst, align 8
@@ -863,7 +863,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_store_i64_addr64_offset:
-; GCN: flat_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, v[{{[0-9]+:[0-9]+}}] glc{{$}}
+; GCN: flat_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, v[{{[0-9]+:[0-9]+}}]{{$}}
 define void @atomic_store_i64_addr64_offset(i64 %in, i64 addrspace(4)* %out, i64 %index) {
 entry:
   %ptr = getelementptr i64, i64 addrspace(4)* %out, i64 %index
@@ -873,7 +873,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_store_i64_addr64:
-; GCN: flat_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, v[{{[0-9]+:[0-9]+}}] glc{{$}}
+; GCN: flat_store_dwordx2 {{v\[[0-9]+:[0-9]+\]}}, v[{{[0-9]+:[0-9]+}}]{{$}}
 define void @atomic_store_i64_addr64(i64 %in, i64 addrspace(4)* %out, i64 %index) {
 entry:
   %ptr = getelementptr i64, i64 addrspace(4)* %out, i64 %index

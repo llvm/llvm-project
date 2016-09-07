@@ -2120,13 +2120,18 @@ void AssemblyWriter::writeAtomic(AtomicOrdering Ordering,
   if (Ordering == AtomicOrdering::NotAtomic)
     return;
 
-  if (SynchScope >= SynchronizationScopeFirstTargetSpecific)
+  if (SynchScope >= SynchronizationScopeFirstTargetSpecific) {
     Out << " synchscope(" << unsigned(SynchScope) << ')';
-
-  switch (SynchScope) {
-  case SingleThread: Out << " singlethread"; break;
-  default: // Map unknown scopes to cross-thread.
-  case CrossThread: break;
+  } else {
+    switch (SynchScope) {
+    case SingleThread:
+      Out << " singlethread";
+      break;
+    case CrossThread:
+      break;
+    default:
+      llvm_unreachable("Unknown SynchScope");
+    }
   }
 
   Out << " " << toIRString(Ordering);
@@ -2138,13 +2143,18 @@ void AssemblyWriter::writeAtomicCmpXchg(AtomicOrdering SuccessOrdering,
   assert(SuccessOrdering != AtomicOrdering::NotAtomic &&
          FailureOrdering != AtomicOrdering::NotAtomic);
 
-  if (SynchScope >= SynchronizationScopeFirstTargetSpecific)
+  if (SynchScope >= SynchronizationScopeFirstTargetSpecific) {
     Out << " synchscope(" << unsigned(SynchScope) << ')';
-
-  switch (SynchScope) {
-  case SingleThread: Out << " singlethread"; break;
-  default: // Map unknown scopes to cross-thread.
-  case CrossThread: break;
+  } else {
+    switch (SynchScope) {
+    case SingleThread:
+      Out << " singlethread";
+      break;
+    case CrossThread:
+      break;
+    default:
+      llvm_unreachable("Unknown SynchScope");
+    }
   }
 
   Out << " " << toIRString(SuccessOrdering);
