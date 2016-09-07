@@ -75,10 +75,6 @@ public:
                                   SmallVectorImpl<MCFixup> &Fixups,
                                   const MCSubtargetInfo &SubtargetInfo) const;
 
-  unsigned getCallTargetOpValue(const MCInst &Inst, unsigned OpNo,
-                                SmallVectorImpl<MCFixup> &Fixups,
-                                const MCSubtargetInfo &SubtargetInfo) const;
-
   void encodeInstruction(const MCInst &Inst, raw_ostream &Ostream,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &SubtargetInfo) const override;
@@ -286,19 +282,6 @@ LanaiMCCodeEmitter::getSplsOpValue(const MCInst &Inst, unsigned OpNo,
     getMachineOpValue(Inst, Op2, Fixups, SubtargetInfo);
 
   return Encoding;
-}
-
-unsigned LanaiMCCodeEmitter::getCallTargetOpValue(
-    const MCInst &Inst, unsigned OpNo, SmallVectorImpl<MCFixup> &Fixups,
-    const MCSubtargetInfo &SubtargetInfo) const {
-  const MCOperand &MCOp = Inst.getOperand(OpNo);
-  if (MCOp.isReg() || MCOp.isImm())
-    return getMachineOpValue(Inst, MCOp, Fixups, SubtargetInfo);
-
-  Fixups.push_back(MCFixup::create(
-      0, MCOp.getExpr(), static_cast<MCFixupKind>(Lanai::FIXUP_LANAI_25)));
-
-  return 0;
 }
 
 unsigned LanaiMCCodeEmitter::getBranchTargetOpValue(

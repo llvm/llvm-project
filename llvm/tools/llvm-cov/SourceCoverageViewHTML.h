@@ -38,7 +38,8 @@ class SourceCoverageViewHTML : public SourceCoverageView {
 
   void renderViewFooter(raw_ostream &OS) override;
 
-  void renderSourceName(raw_ostream &OS, bool WholeFile) override;
+  void renderSourceName(raw_ostream &OS, bool WholeFile,
+                        unsigned FirstUncoveredLineNo) override;
 
   void renderLinePrefix(raw_ostream &OS, unsigned ViewDepth) override;
 

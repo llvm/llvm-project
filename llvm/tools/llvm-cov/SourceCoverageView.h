@@ -175,6 +175,9 @@ class SourceCoverageView {
   /// Specifies whether or not the view is a function view.
   bool FunctionView;
 
+  /// Get the first uncovered line number for the source file.
+  unsigned getFirstUncoveredLineNo();
+
 protected:
   struct LineRef {
     StringRef Line;
@@ -195,7 +198,8 @@ protected:
   virtual void renderViewFooter(raw_ostream &OS) = 0;
 
   /// \brief Render the source name for the view.
-  virtual void renderSourceName(raw_ostream &OS, bool WholeFile) = 0;
+  virtual void renderSourceName(raw_ostream &OS, bool WholeFile,
+                                unsigned FirstUncoveredLineNo) = 0;
 
   /// \brief Render the line prefix at the given \p ViewDepth.
   virtual void renderLinePrefix(raw_ostream &OS, unsigned ViewDepth) = 0;
@@ -273,6 +277,9 @@ public:
   virtual ~SourceCoverageView() {}
 
   StringRef getSourceName() const { return SourceName; }
+
+  /// \brief Return the source name formatted for the host OS.
+  std::string getNativeSourceName() const;
 
   bool isFunctionView() const { return FunctionView; }
 

@@ -728,7 +728,7 @@ unsigned SIInstrInfo::calculateLDSSpillAddress(
   const SISubtarget &ST = MF->getSubtarget<SISubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   DebugLoc DL = MBB.findDebugLoc(MI);
-  unsigned WorkGroupSize = MFI->getMaximumWorkGroupSize(*MF);
+  unsigned WorkGroupSize = MFI->getMaxFlatWorkGroupSize();
   unsigned WavefrontSize = ST.getWavefrontSize();
 
   unsigned TIDReg = MFI->getTIDReg();
@@ -1184,14 +1184,39 @@ static void removeModOperands(MachineInstr &MI) {
   MI.RemoveOperand(Src0ModIdx);
 }
 
-// TODO: Maybe this should be removed this and custom fold everything in
-// SIFoldOperands?
 bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                 unsigned Reg, MachineRegisterInfo *MRI) const {
   if (!MRI->hasOneNonDBGUse(Reg))
     return false;
 
   unsigned Opc = UseMI.getOpcode();
+  if (Opc == AMDGPU::COPY) {
+    bool isVGPRCopy = RI.isVGPR(*MRI, UseMI.getOperand(0).getReg());
+    switch (DefMI.getOpcode()) {
+    default:
+      return false;
+    case AMDGPU::S_MOV_B64:
+      // TODO: We could fold 64-bit immediates, but this get compilicated
+      // when there are sub-registers.
+      return false;
+
+    case AMDGPU::V_MOV_B32_e32:
+    case AMDGPU::S_MOV_B32:
+      break;
+    }
+    unsigned NewOpc = isVGPRCopy ? AMDGPU::V_MOV_B32_e32 : AMDGPU::S_MOV_B32;
+    const MachineOperand *ImmOp = getNamedOperand(DefMI, AMDGPU::OpName::src0);
+    assert(ImmOp);
+    // FIXME: We could handle FrameIndex values here.
+    if (!ImmOp->isImm()) {
+      return false;
+    }
+    UseMI.setDesc(get(NewOpc));
+    UseMI.getOperand(1).ChangeToImmediate(ImmOp->getImm());
+    UseMI.addImplicitDefUseOperands(*UseMI.getParent()->getParent());
+    return true;
+  }
+
   if (Opc == AMDGPU::V_MAD_F32 || Opc == AMDGPU::V_MAC_F32_e64) {
     // Don't fold if we are using source modifiers. The new VOP2 instructions
     // don't have them.

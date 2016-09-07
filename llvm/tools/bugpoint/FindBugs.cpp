@@ -23,27 +23,20 @@
 #include <ctime>
 using namespace llvm;
 
-/// runManyPasses - Take the specified pass list and create different
-/// combinations of passes to compile the program with. Compile the program with
-/// each set and mark test to see if it compiled correctly. If the passes
-/// compiled correctly output nothing and rearrange the passes into a new order.
-/// If the passes did not compile correctly, output the command required to
-/// recreate the failure. This returns true if a compiler error is found.
-///
-bool BugDriver::runManyPasses(const std::vector<std::string> &AllPasses,
-                              std::string &ErrMsg) {
+Error
+BugDriver::runManyPasses(const std::vector<std::string> &AllPasses) {
   setPassesToRun(AllPasses);
   outs() << "Starting bug finding procedure...\n\n";
 
   // Creating a reference output if necessary
-  if (initializeExecutionEnvironment())
-    return false;
+  if (Error E = initializeExecutionEnvironment())
+    return E;
 
   outs() << "\n";
   if (ReferenceOutputFile.empty()) {
     outs() << "Generating reference output from raw program: \n";
-    if (!createReferenceFile(Program))
-      return false;
+    if (Error E = createReferenceFile(Program))
+      return E;
   }
 
   srand(time(nullptr));
@@ -67,8 +60,7 @@ bool BugDriver::runManyPasses(const std::vector<std::string> &AllPasses,
     if (runPasses(Program, PassesToRun, Filename, false)) {
       outs() << "\n";
       outs() << "Optimizer passes caused failure!\n\n";
-      debugOptimizerCrash();
-      return true;
+      return debugOptimizerCrash();
     } else {
       outs() << "Combination " << num << " optimized successfully!\n";
     }
@@ -77,12 +69,10 @@ bool BugDriver::runManyPasses(const std::vector<std::string> &AllPasses,
     // Step 3: Compile the optimized code.
     //
     outs() << "Running the code generator to test for a crash: ";
-    std::string Error;
-    compileProgram(Program, &Error);
-    if (!Error.empty()) {
+    if (Error E = compileProgram(Program)) {
       outs() << "\n*** compileProgram threw an exception: ";
-      outs() << Error;
-      return debugCodeGeneratorCrash(ErrMsg);
+      outs() << toString(std::move(E));
+      return debugCodeGeneratorCrash();
     }
     outs() << '\n';
 
@@ -91,17 +81,16 @@ bool BugDriver::runManyPasses(const std::vector<std::string> &AllPasses,
     // output (created above).
     //
     outs() << "*** Checking if passes caused miscompliation:\n";
-    bool Diff = diffProgram(Program, Filename, "", false, &Error);
-    if (Error.empty() && Diff) {
-      outs() << "\n*** diffProgram returned true!\n";
-      debugMiscompilation(&Error);
-      if (Error.empty())
-        return true;
+    Expected<bool> Diff = diffProgram(Program, Filename, "", false);
+    if (Error E = Diff.takeError()) {
+      errs() << toString(std::move(E));
+      return debugCodeGeneratorCrash();
     }
-    if (!Error.empty()) {
-      errs() << Error;
-      debugCodeGeneratorCrash(ErrMsg);
-      return true;
+    if (*Diff) {
+      outs() << "\n*** diffProgram returned true!\n";
+      Error E = debugMiscompilation();
+      if (!E)
+        return Error::success();
     }
     outs() << "\n*** diff'd output matches!\n";
 

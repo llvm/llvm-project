@@ -129,5 +129,5 @@ bb:
   ret void
 }
 
-attributes #0 = { norecurse nounwind "amdgpu-max-waves-per-eu"="1" }
+attributes #0 = { norecurse nounwind "amdgpu-waves-per-eu"="1,1" }
 attributes #1 = { norecurse nounwind }

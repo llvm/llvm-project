@@ -19,3 +19,4 @@
 type = Library
 name = Support
 parent = Libraries
+required_libraries = Demangle

@@ -3709,7 +3709,8 @@ bool X86InstrInfo::findFMA3CommutedOpIndices(
 
 bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
                                          unsigned &SrcOpIdx2) const {
-  if (!MI.isCommutable())
+  const MCInstrDesc &Desc = MI.getDesc();
+  if (!Desc.isCommutable())
     return false;
 
   switch (MI.getOpcode()) {
@@ -3750,6 +3751,27 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
         X86InstrFMA3Info::getFMA3Group(MI.getOpcode());
     if (FMA3Group)
       return findFMA3CommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2, *FMA3Group);
+
+    // Handled masked instructions since we need to skip over the mask input
+    // and the preserved input.
+    if (Desc.TSFlags & X86II::EVEX_K) {
+      unsigned CommutableOpIdx1 = Desc.getNumDefs() + 1;
+      // If there is no preserved input we only need to skip 1 operand.
+      if (MI.getDesc().getOperandConstraint(Desc.getNumDefs(),
+                                            MCOI::TIED_TO) != -1)
+        ++CommutableOpIdx1;
+      unsigned CommutableOpIdx2 = CommutableOpIdx1 + 1;
+      if (!fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2,
+                                CommutableOpIdx1, CommutableOpIdx2))
+        return false;
+
+      if (!MI.getOperand(SrcOpIdx1).isReg() ||
+          !MI.getOperand(SrcOpIdx2).isReg())
+        // No idea.
+        return false;
+      return true;
+    }
+
     return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
   }
   return false;

@@ -141,7 +141,7 @@ cl::list<std::string> CCToolArgv("gcc-tool-args", cl::Positional,
 /// initializeExecutionEnvironment - This method is used to set up the
 /// environment for executing LLVM programs.
 ///
-bool BugDriver::initializeExecutionEnvironment() {
+Error BugDriver::initializeExecutionEnvironment() {
   outs() << "Initializing execution environment: ";
 
   // Create an instance of the AbstractInterpreter interface as specified on
@@ -261,14 +261,17 @@ bool BugDriver::initializeExecutionEnvironment() {
   }
 
   // If there was an error creating the selected interpreter, quit with error.
-  return Interpreter == nullptr;
+  if (Interpreter == nullptr)
+    return make_error<StringError>("Failed to init execution environment",
+                                   inconvertibleErrorCode());
+  return Error::success();
 }
 
 /// compileProgram - Try to compile the specified module, returning false and
 /// setting Error if an error occurs.  This is used for code generation
 /// crash testing.
 ///
-void BugDriver::compileProgram(Module *M, std::string *Error) const {
+Error BugDriver::compileProgram(Module *M) const {
   // Emit the program to a bitcode file...
   SmallString<128> BitcodeFile;
   int BitcodeFD;
@@ -289,17 +292,18 @@ void BugDriver::compileProgram(Module *M, std::string *Error) const {
   FileRemover BitcodeFileRemover(BitcodeFile.str(), !SaveTemps);
 
   // Actually compile the program!
-  Interpreter->compileProgram(BitcodeFile.str(), Error, Timeout, MemoryLimit);
+  return Interpreter->compileProgram(BitcodeFile.str(), Timeout, MemoryLimit);
 }
 
 /// executeProgram - This method runs "Program", capturing the output of the
 /// program to a file, returning the filename of the file.  A recommended
 /// filename may be optionally specified.
 ///
-std::string
-BugDriver::executeProgram(const Module *Program, std::string OutputFile,
-                          std::string BitcodeFile, const std::string &SharedObj,
-                          AbstractInterpreter *AI, std::string *Error) const {
+Expected<std::string> BugDriver::executeProgram(const Module *Program,
+                                                std::string OutputFile,
+                                                std::string BitcodeFile,
+                                                const std::string &SharedObj,
+                                                AbstractInterpreter *AI) const {
   if (!AI)
     AI = Interpreter;
   assert(AI && "Interpreter should have been created already!");
@@ -347,13 +351,13 @@ BugDriver::executeProgram(const Module *Program, std::string OutputFile,
   if (!SharedObj.empty())
     SharedObjs.push_back(SharedObj);
 
-  int RetVal = AI->ExecuteProgram(BitcodeFile, InputArgv, InputFile, OutputFile,
-                                  Error, AdditionalLinkerArgs, SharedObjs,
-                                  Timeout, MemoryLimit);
-  if (!Error->empty())
-    return OutputFile;
+  Expected<int> RetVal = AI->ExecuteProgram(BitcodeFile, InputArgv, InputFile,
+                                            OutputFile, AdditionalLinkerArgs,
+                                            SharedObjs, Timeout, MemoryLimit);
+  if (Error E = RetVal.takeError())
+    return std::move(E);
 
-  if (RetVal == -1) {
+  if (*RetVal == -1) {
     errs() << "<timeout>";
     static bool FirstTimeout = true;
     if (FirstTimeout) {
@@ -372,7 +376,7 @@ BugDriver::executeProgram(const Module *Program, std::string OutputFile,
 
   if (AppendProgramExitCode) {
     std::ofstream outFile(OutputFile.c_str(), std::ios_base::app);
-    outFile << "exit " << RetVal << '\n';
+    outFile << "exit " << *RetVal << '\n';
     outFile.close();
   }
 
@@ -383,29 +387,27 @@ BugDriver::executeProgram(const Module *Program, std::string OutputFile,
 /// executeProgramSafely - Used to create reference output with the "safe"
 /// backend, if reference output is not provided.
 ///
-std::string BugDriver::executeProgramSafely(const Module *Program,
-                                            const std::string &OutputFile,
-                                            std::string *Error) const {
-  return executeProgram(Program, OutputFile, "", "", SafeInterpreter, Error);
+Expected<std::string>
+BugDriver::executeProgramSafely(const Module *Program,
+                                const std::string &OutputFile) const {
+  return executeProgram(Program, OutputFile, "", "", SafeInterpreter);
 }
 
-std::string BugDriver::compileSharedObject(const std::string &BitcodeFile,
-                                           std::string &Error) {
+Expected<std::string>
+BugDriver::compileSharedObject(const std::string &BitcodeFile) {
   assert(Interpreter && "Interpreter should have been created already!");
   std::string OutputFile;
 
   // Using the known-good backend.
-  CC::FileType FT = SafeInterpreter->OutputCode(BitcodeFile, OutputFile, Error);
-  if (!Error.empty())
-    return "";
+  Expected<CC::FileType> FT =
+      SafeInterpreter->OutputCode(BitcodeFile, OutputFile);
+  if (Error E = FT.takeError())
+    return std::move(E);
 
   std::string SharedObjectFile;
-  bool Failure = cc->MakeSharedObject(OutputFile, FT, SharedObjectFile,
-                                      AdditionalLinkerArgs, Error);
-  if (!Error.empty())
-    return "";
-  if (Failure)
-    exit(1);
+  if (Error E = cc->MakeSharedObject(OutputFile, *FT, SharedObjectFile,
+                                     AdditionalLinkerArgs))
+    return std::move(E);
 
   // Remove the intermediate C file
   sys::fs::remove(OutputFile);
@@ -418,25 +420,27 @@ std::string BugDriver::compileSharedObject(const std::string &BitcodeFile,
 /// otherwise. Note: initializeExecutionEnvironment should be called BEFORE
 /// this function.
 ///
-bool BugDriver::createReferenceFile(Module *M, const std::string &Filename) {
-  std::string Error;
-  compileProgram(Program, &Error);
-  if (!Error.empty())
-    return false;
+Error BugDriver::createReferenceFile(Module *M, const std::string &Filename) {
+  if (Error E = compileProgram(Program))
+    return E;
 
-  ReferenceOutputFile = executeProgramSafely(Program, Filename, &Error);
-  if (!Error.empty()) {
-    errs() << Error;
+  Expected<std::string> Result = executeProgramSafely(Program, Filename);
+  if (Error E = Result.takeError()) {
     if (Interpreter != SafeInterpreter) {
-      errs() << "*** There is a bug running the \"safe\" backend.  Either"
-             << " debug it (for example with the -run-jit bugpoint option,"
-             << " if JIT is being used as the \"safe\" backend), or fix the"
-             << " error some other way.\n";
+      E = joinErrors(
+              std::move(E),
+              make_error<StringError>(
+                  "*** There is a bug running the \"safe\" backend.  Either"
+                  " debug it (for example with the -run-jit bugpoint option,"
+                  " if JIT is being used as the \"safe\" backend), or fix the"
+                  " error some other way.\n",
+                  inconvertibleErrorCode()));
     }
-    return false;
+    return E;
   }
+  ReferenceOutputFile = *Result;
   outs() << "\nReference output is: " << ReferenceOutputFile << "\n\n";
-  return true;
+  return Error::success();
 }
 
 /// diffProgram - This method executes the specified module and diffs the
@@ -444,19 +448,19 @@ bool BugDriver::createReferenceFile(Module *M, const std::string &Filename) {
 /// is different, 1 is returned.  If there is a problem with the code
 /// generator (e.g., llc crashes), this will set ErrMsg.
 ///
-bool BugDriver::diffProgram(const Module *Program,
-                            const std::string &BitcodeFile,
-                            const std::string &SharedObject, bool RemoveBitcode,
-                            std::string *ErrMsg) const {
+Expected<bool> BugDriver::diffProgram(const Module *Program,
+                                      const std::string &BitcodeFile,
+                                      const std::string &SharedObject,
+                                      bool RemoveBitcode) const {
   // Execute the program, generating an output file...
-  std::string Output(
-      executeProgram(Program, "", BitcodeFile, SharedObject, nullptr, ErrMsg));
-  if (!ErrMsg->empty())
-    return false;
+  Expected<std::string> Output =
+      executeProgram(Program, "", BitcodeFile, SharedObject, nullptr);
+  if (Error E = Output.takeError())
+    return std::move(E);
 
   std::string Error;
   bool FilesDifferent = false;
-  if (int Diff = DiffFilesWithTolerance(ReferenceOutputFile, Output,
+  if (int Diff = DiffFilesWithTolerance(ReferenceOutputFile, *Output,
                                         AbsTolerance, RelTolerance, &Error)) {
     if (Diff == 2) {
       errs() << "While diffing output: " << Error << '\n';
@@ -465,7 +469,7 @@ bool BugDriver::diffProgram(const Module *Program,
     FilesDifferent = true;
   } else {
     // Remove the generated output if there are no differences.
-    sys::fs::remove(Output);
+    sys::fs::remove(*Output);
   }
 
   // Remove the bitcode file if we are supposed to.

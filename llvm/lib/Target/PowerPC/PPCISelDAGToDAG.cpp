@@ -4385,25 +4385,48 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     SDValue HBase = Base.getOperand(0);
 
     int Offset = N->getConstantOperandVal(FirstOp);
-    if (Offset < 0 || Offset > MaxDisplacement) {
-      // If we have a addi(toc@l)/addis(toc@ha) pair, and the addis has only
-      // one use, then we can do this for any offset, we just need to also
-      // update the offset (i.e. the symbol addend) on the addis also.
-      if (Base.getMachineOpcode() != PPC::ADDItocL)
-        continue;
+    if (ReplaceFlags) {
+      if (Offset < 0 || Offset > MaxDisplacement) {
+        // If we have a addi(toc@l)/addis(toc@ha) pair, and the addis has only
+        // one use, then we can do this for any offset, we just need to also
+        // update the offset (i.e. the symbol addend) on the addis also.
+        if (Base.getMachineOpcode() != PPC::ADDItocL)
+          continue;
 
-      if (!HBase.isMachineOpcode() ||
-          HBase.getMachineOpcode() != PPC::ADDIStocHA)
-        continue;
+        if (!HBase.isMachineOpcode() ||
+            HBase.getMachineOpcode() != PPC::ADDIStocHA)
+          continue;
 
-      if (!Base.hasOneUse() || !HBase.hasOneUse())
-        continue;
+        if (!Base.hasOneUse() || !HBase.hasOneUse())
+          continue;
 
-      SDValue HImmOpnd = HBase.getOperand(1);
-      if (HImmOpnd != ImmOpnd)
-        continue;
+        SDValue HImmOpnd = HBase.getOperand(1);
+        if (HImmOpnd != ImmOpnd)
+          continue;
 
-      UpdateHBase = true;
+        UpdateHBase = true;
+      }
+    } else {
+      // If we're directly folding the addend from an addi instruction, then:
+      //  1. In general, the offset on the memory access must be zero.
+      //  2. If the addend is a constant, then it can be combined with a
+      //     non-zero offset, but only if the result meets the encoding
+      //     requirements.
+      if (auto *C = dyn_cast<ConstantSDNode>(ImmOpnd)) {
+        Offset += C->getSExtValue();
+
+        if ((StorageOpcode == PPC::LWA || StorageOpcode == PPC::LD ||
+             StorageOpcode == PPC::STD) && (Offset % 4) != 0)
+          continue;
+
+        if (!isInt<16>(Offset))
+          continue;
+
+        ImmOpnd = CurDAG->getTargetConstant(Offset, SDLoc(ImmOpnd),
+                                            ImmOpnd.getValueType());
+      } else if (Offset != 0) {
+        continue;
+      }
     }
 
     // We found an opportunity.  Reverse the operands from the add

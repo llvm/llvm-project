@@ -672,8 +672,9 @@ PPCFrameLowering::twoUniqueScratchRegsRequired(MachineBasicBlock *MBB) const {
   bool IsLargeFrame = !isInt<16>(NegFrameSize);
   MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned MaxAlign = MFI.getMaxAlignment();
+  bool HasRedZone = Subtarget.isPPC64() || !Subtarget.isSVR4ABI();
 
-  return IsLargeFrame && HasBP && MaxAlign > 1;
+  return (IsLargeFrame || !HasRedZone) && HasBP && MaxAlign > 1;
 }
 
 bool PPCFrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
@@ -742,6 +743,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   // Do we have a frame pointer and/or base pointer for this function?
   bool HasFP = hasFP(MF);
   bool HasBP = RegInfo->hasBasePointer(MF);
+  bool HasRedZone = isPPC64 || !isSVR4ABI;
 
   unsigned SPReg       = isPPC64 ? PPC::X1  : PPC::R1;
   unsigned BPReg       = RegInfo->getBaseRegister(MF);
@@ -876,53 +878,56 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       MIB.addReg(MustSaveCRs[i], CrState);
   }
 
-  if (HasFP)
-    // FIXME: On PPC32 SVR4, we must not spill before claiming the stackframe.
-    BuildMI(MBB, MBBI, dl, StoreInst)
-      .addReg(FPReg)
-      .addImm(FPOffset)
-      .addReg(SPReg);
-
-  if (FI->usesPICBase())
-    // FIXME: On PPC32 SVR4, we must not spill before claiming the stackframe.
-    BuildMI(MBB, MBBI, dl, StoreInst)
-      .addReg(PPC::R30)
-      .addImm(PBPOffset)
-      .addReg(SPReg);
-
-  if (HasBP)
-    // FIXME: On PPC32 SVR4, we must not spill before claiming the stackframe.
-    BuildMI(MBB, MBBI, dl, StoreInst)
-      .addReg(BPReg)
-      .addImm(BPOffset)
-      .addReg(SPReg);
+  if (HasRedZone) {
+    if (HasFP)
+      BuildMI(MBB, MBBI, dl, StoreInst)
+        .addReg(FPReg)
+        .addImm(FPOffset)
+        .addReg(SPReg);
+    if (FI->usesPICBase())
+      BuildMI(MBB, MBBI, dl, StoreInst)
+        .addReg(PPC::R30)
+        .addImm(PBPOffset)
+        .addReg(SPReg);
+    if (HasBP)
+      BuildMI(MBB, MBBI, dl, StoreInst)
+        .addReg(BPReg)
+        .addImm(BPOffset)
+        .addReg(SPReg);
+  }
 
   if (MustSaveLR)
-    // FIXME: On PPC32 SVR4, we must not spill before claiming the stackframe.
     BuildMI(MBB, MBBI, dl, StoreInst)
       .addReg(ScratchReg, getKillRegState(true))
       .addImm(LROffset)
       .addReg(SPReg);
 
   if (MustSaveCR &&
-      !(SingleScratchReg && MustSaveLR)) // will only occur for PPC64
+      !(SingleScratchReg && MustSaveLR)) { // will only occur for PPC64
+    assert(HasRedZone && "A red zone is always available on PPC64");
     BuildMI(MBB, MBBI, dl, TII.get(PPC::STW8))
       .addReg(TempReg, getKillRegState(true))
       .addImm(8)
       .addReg(SPReg);
+  }
 
   // Skip the rest if this is a leaf function & all spills fit in the Red Zone.
-  if (!FrameSize) return;
+  if (!FrameSize)
+    return;
 
   // Adjust stack pointer: r1 += NegFrameSize.
   // If there is a preferred stack alignment, align R1 now
 
-  if (HasBP) {
+  if (HasBP && HasRedZone) {
     // Save a copy of r1 as the base pointer.
     BuildMI(MBB, MBBI, dl, OrInst, BPReg)
       .addReg(SPReg)
       .addReg(SPReg);
   }
+
+  // Have we generated a STUX instruction to claim stack frame? If so,
+  // the frame size will be placed in ScratchReg.
+  bool HasSTUX = false;
 
   // This condition must be kept in sync with canUseAsPrologue.
   if (HasBP && MaxAlign > 1) {
@@ -952,10 +957,12 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
         .addReg(ScratchReg, RegState::Kill)
         .addReg(TempReg, RegState::Kill);
     }
+
     BuildMI(MBB, MBBI, dl, StoreUpdtIdxInst, SPReg)
       .addReg(SPReg, RegState::Kill)
       .addReg(SPReg)
       .addReg(ScratchReg);
+    HasSTUX = true;
 
   } else if (!isLargeFrame) {
     BuildMI(MBB, MBBI, dl, StoreUpdtInst, SPReg)
@@ -973,6 +980,65 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       .addReg(SPReg, RegState::Kill)
       .addReg(SPReg)
       .addReg(ScratchReg);
+    HasSTUX = true;
+  }
+
+  if (!HasRedZone) {
+    assert(!isPPC64 && "A red zone is always available on PPC64");
+    if (HasSTUX) {
+      // The frame size is in ScratchReg, and the SPReg has been advanced
+      // (downwards) by the frame size: SPReg = old SPReg + ScratchReg.
+      // Set ScratchReg to the original SPReg: ScratchReg = SPReg - ScratchReg.
+      BuildMI(MBB, MBBI, dl, TII.get(PPC::SUBF), ScratchReg)
+        .addReg(ScratchReg, RegState::Kill)
+        .addReg(SPReg);
+
+      // Now that the stack frame has been allocated, save all the necessary
+      // registers using ScratchReg as the base address.
+      if (HasFP)
+        BuildMI(MBB, MBBI, dl, StoreInst)
+          .addReg(FPReg)
+          .addImm(FPOffset)
+          .addReg(ScratchReg);
+      if (FI->usesPICBase())
+        BuildMI(MBB, MBBI, dl, StoreInst)
+          .addReg(PPC::R30)
+          .addImm(PBPOffset)
+          .addReg(ScratchReg);
+      if (HasBP) {
+        BuildMI(MBB, MBBI, dl, StoreInst)
+          .addReg(BPReg)
+          .addImm(BPOffset)
+          .addReg(ScratchReg);
+        BuildMI(MBB, MBBI, dl, OrInst, BPReg)
+          .addReg(ScratchReg, RegState::Kill)
+          .addReg(ScratchReg);
+      }
+    } else {
+      // The frame size is a known 16-bit constant (fitting in the immediate
+      // field of STWU). To be here we have to be compiling for PPC32.
+      // Since the SPReg has been decreased by FrameSize, add it back to each
+      // offset.
+      if (HasFP)
+        BuildMI(MBB, MBBI, dl, StoreInst)
+          .addReg(FPReg)
+          .addImm(FrameSize + FPOffset)
+          .addReg(SPReg);
+      if (FI->usesPICBase())
+        BuildMI(MBB, MBBI, dl, StoreInst)
+          .addReg(PPC::R30)
+          .addImm(FrameSize + PBPOffset)
+          .addReg(SPReg);
+      if (HasBP) {
+        BuildMI(MBB, MBBI, dl, StoreInst)
+          .addReg(BPReg)
+          .addImm(FrameSize + BPOffset)
+          .addReg(SPReg);
+        BuildMI(MBB, MBBI, dl, TII.get(PPC::ADDI), BPReg)
+          .addReg(SPReg)
+          .addImm(FrameSize);
+      }
+    }
   }
 
   // Add Call Frame Information for the instructions we generated above.

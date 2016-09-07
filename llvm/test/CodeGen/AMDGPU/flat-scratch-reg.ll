@@ -1,6 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=NOXNACK -check-prefix=CI -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=NOXNACK -check-prefix=VI -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=carrizo -mattr=+xnack -verify-machineinstrs < %s | FileCheck -check-prefix=XNACK -check-prefix=VI  -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=carrizo -verify-machineinstrs < %s | FileCheck -check-prefix=XNACK -check-prefix=VI  -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=stoney -verify-machineinstrs < %s | FileCheck -check-prefix=XNACK -check-prefix=VI  -check-prefix=GCN %s
 
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=NOXNACK -check-prefix=HSA-NOXNACK -check-prefix=HSA -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mtriple=amdgcn--amdhsa -mcpu=carrizo -mattr=-xnack -verify-machineinstrs < %s | FileCheck -check-prefix=VI -check-prefix=NOXNACK -check-prefix=HSA-NOXNACK -check-prefix=HSA -check-prefix=GCN %s

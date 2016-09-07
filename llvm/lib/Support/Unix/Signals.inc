@@ -14,6 +14,7 @@
 
 #include "Unix.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -32,9 +33,6 @@
 #endif
 #if HAVE_SYS_STAT_H
 #include <sys/stat.h>
-#endif
-#if HAVE_CXXABI_H
-#include <cxxabi.h>
 #endif
 #if HAVE_DLFCN_H
 #include <dlfcn.h>
@@ -443,12 +441,8 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS) {
 
     if (dlinfo.dli_sname != nullptr) {
       OS << ' ';
-#  if HAVE_CXXABI_H
       int res;
-      char* d = abi::__cxa_demangle(dlinfo.dli_sname, nullptr, nullptr, &res);
-#  else
-      char* d = NULL;
-#  endif
+      char* d = itaniumDemangle(dlinfo.dli_sname, nullptr, nullptr, &res);
       if (!d) OS << dlinfo.dli_sname;
       else    OS << d;
       free(d);

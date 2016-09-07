@@ -121,4 +121,4 @@ define void @private_access_v2i64_alloca(<2 x i64> addrspace(1)* noalias %out, <
 }
 
 attributes #0 = { convergent nounwind }
-attributes #1 = { nounwind "amdgpu-max-waves-per-eu"="2" "amdgpu-max-work-group-size"="64" }
+attributes #1 = { nounwind "amdgpu-waves-per-eu"="1,2" "amdgpu-flat-work-group-size"="64,64" }

@@ -16,6 +16,8 @@
 #error "Missing macro definition of HANDLE_DI_FLAG"
 #endif
 
+HANDLE_DI_FLAG(0, Zero) // Use it as zero value.
+                        // For example: void foo(DIFlags Flags = FlagZero).
 HANDLE_DI_FLAG(1, Private)
 HANDLE_DI_FLAG(2, Protected)
 HANDLE_DI_FLAG(3, Public)
@@ -39,5 +41,12 @@ HANDLE_DI_FLAG((3 << 16), VirtualInheritance)
 HANDLE_DI_FLAG((1 << 18), IntroducedVirtual)
 HANDLE_DI_FLAG((1 << 19), BitField)
 HANDLE_DI_FLAG((1 << 20), NoReturn)
+
+#ifdef DI_FLAG_LARGEST_NEEDED
+// intended to be used with ADT/BitmaskEnum.h
+// NOTE: always must be equal to largest flag, check this when adding new flag
+HANDLE_DI_FLAG((1 << 20), Largest)
+#undef DI_FLAG_LARGEST_NEEDED
+#endif
 
 #undef HANDLE_DI_FLAG

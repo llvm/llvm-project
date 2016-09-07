@@ -70,7 +70,6 @@ struct PdbDbiStream {
 };
 
 struct PdbTpiRecord {
-  std::vector<uint8_t> RecordData;
   codeview::CVType Record;
 };
 

@@ -99,12 +99,23 @@ static const char *const EsanWhichToolName = "__esan_which_tool";
 // FIXME: Try to place these shadow constants, the names of the __esan_*
 // interface functions, and the ToolType enum into a header shared between
 // llvm and compiler-rt.
-static const uint64_t ShadowMask = 0x00000fffffffffffull;
-static const uint64_t ShadowOffs[3] = { // Indexed by scale
-  0x0000130000000000ull,
-  0x0000220000000000ull,
-  0x0000440000000000ull,
-};
+struct ShadowMemoryParams {
+  uint64_t ShadowMask;
+  uint64_t ShadowOffs[3];
+} ShadowParams;
+
+static const ShadowMemoryParams ShadowParams48 = {
+    0x00000fffffffffffull,
+    {
+        0x0000130000000000ull, 0x0000220000000000ull, 0x0000440000000000ull,
+    }};
+
+static const ShadowMemoryParams ShadowParams40 = {
+    0x0fffffffffull,
+    {
+        0x1300000000ull, 0x2200000000ull, 0x4400000000ull,
+    }};
+
 // This array is indexed by the ToolType enum.
 static const int ShadowScale[] = {
   0, // ESAN_None.
@@ -528,6 +539,20 @@ void EfficiencySanitizer::createDestructor(Module &M, Constant *ToolInfoArg) {
 }
 
 bool EfficiencySanitizer::initOnModule(Module &M) {
+
+  Triple TargetTriple(M.getTargetTriple());
+  switch (TargetTriple.getArch()) {
+    case Triple::x86_64:
+      ShadowParams = ShadowParams48;
+      break;
+    case Triple::mips64:
+    case Triple::mips64el:
+      ShadowParams = ShadowParams40;
+      break;
+    default:
+      report_fatal_error("unsupported architecture");
+  }
+
   Ctx = &M.getContext();
   const DataLayout &DL = M.getDataLayout();
   IRBuilder<> IRB(M.getContext());
@@ -559,13 +584,13 @@ bool EfficiencySanitizer::initOnModule(Module &M) {
 
 Value *EfficiencySanitizer::appToShadow(Value *Shadow, IRBuilder<> &IRB) {
   // Shadow = ((App & Mask) + Offs) >> Scale
-  Shadow = IRB.CreateAnd(Shadow, ConstantInt::get(IntptrTy, ShadowMask));
+  Shadow = IRB.CreateAnd(Shadow, ConstantInt::get(IntptrTy, ShadowParams.ShadowMask));
   uint64_t Offs;
   int Scale = ShadowScale[Options.ToolType];
   if (Scale <= 2)
-    Offs = ShadowOffs[Scale];
+    Offs = ShadowParams.ShadowOffs[Scale];
   else
-    Offs = ShadowOffs[0] << Scale;
+    Offs = ShadowParams.ShadowOffs[0] << Scale;
   Shadow = IRB.CreateAdd(Shadow, ConstantInt::get(IntptrTy, Offs));
   if (Scale > 0)
     Shadow = IRB.CreateLShr(Shadow, Scale);
