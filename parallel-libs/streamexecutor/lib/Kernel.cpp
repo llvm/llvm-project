@@ -16,7 +16,7 @@
 
 #include "streamexecutor/Device.h"
 #include "streamexecutor/Kernel.h"
-#include "streamexecutor/PlatformInterfaces.h"
+#include "streamexecutor/PlatformDevice.h"
 
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 

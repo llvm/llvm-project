@@ -38,7 +38,7 @@
 #include "streamexecutor/Kernel.h"
 #include "streamexecutor/LaunchDimensions.h"
 #include "streamexecutor/PackedKernelArgumentArray.h"
-#include "streamexecutor/PlatformInterfaces.h"
+#include "streamexecutor/PlatformDevice.h"
 #include "streamexecutor/Utils/Error.h"
 
 #include "llvm/ADT/Optional.h"

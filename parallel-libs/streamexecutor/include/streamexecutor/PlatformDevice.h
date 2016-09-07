@@ -1,4 +1,4 @@
-//===-- PlatformInterfaces.h - Interfaces to platform impls -----*- C++ -*-===//
+//===-- PlatformDevice.h - PlatformDevice class -----------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,20 +8,16 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Interfaces to platform-specific implementations.
+/// Declaration of the PlatformDevice class.
 ///
-/// The general pattern is that the functions in these interfaces take raw
-/// handle types as parameters. This means that these types and functions are
-/// not intended for public use. Instead, corresponding methods in public types
-/// like Stream, StreamExecutor, and Kernel use C++ templates to create
-/// type-safe public interfaces. Those public functions do the type-unsafe work
-/// of extracting raw handles from their arguments and forwarding those handles
-/// to the methods defined in this file in the proper format.
+/// Each specific platform such as CUDA or OpenCL must subclass PlatformDevice
+/// and override streamexecutor::Platform::getDevice to return an instance of
+/// their PlatformDevice subclass.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef STREAMEXECUTOR_PLATFORMINTERFACES_H
-#define STREAMEXECUTOR_PLATFORMINTERFACES_H
+#ifndef STREAMEXECUTOR_PLATFORMDEVICE_H
+#define STREAMEXECUTOR_PLATFORMDEVICE_H
 
 #include "streamexecutor/DeviceMemory.h"
 #include "streamexecutor/Kernel.h"
@@ -32,9 +28,6 @@
 namespace streamexecutor {
 
 /// Raw executor methods that must be implemented by each platform.
-///
-/// This class defines the platform interface that supports executing work on a
-/// device.
 ///
 /// The public Device and Stream classes have the type-safe versions of the
 /// functions in this interface.
@@ -184,4 +177,4 @@ public:
 
 } // namespace streamexecutor
 
-#endif // STREAMEXECUTOR_PLATFORMINTERFACES_H
+#endif // STREAMEXECUTOR_PLATFORMDEVICE_H

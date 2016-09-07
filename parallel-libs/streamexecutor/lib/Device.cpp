@@ -16,7 +16,7 @@
 
 #include <cassert>
 
-#include "streamexecutor/PlatformInterfaces.h"
+#include "streamexecutor/PlatformDevice.h"
 #include "streamexecutor/Stream.h"
 
 #include "llvm/ADT/STLExtras.h"
