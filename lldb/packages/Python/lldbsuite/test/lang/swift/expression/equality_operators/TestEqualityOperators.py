@@ -43,7 +43,7 @@ class TestUnitTests(TestBase):
         self.buildAll()
         self.do_test("Fooey.CompareEm2", "false", 2)
 
-    @decorators.expectedFailureAll(oslist=["linux"], bugnumber="rdar://28180489")
+    @decorators.expectedFailureAll(oslist=["linux", "macosx"], bugnumber="rdar://28180489")
     def test_equality_operators_other_module (self):
         """Test that we resolve expression operators correctly"""
         self.buildAll()
