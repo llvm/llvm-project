@@ -65,7 +65,7 @@ namespace RuntimeMD {
     KeyArgAlign                 = 10, // Kernel arg alignment
     KeyArgTypeName              = 11, // Kernel type name
     KeyArgName                  = 12, // Kernel name
-    KeyArgTypeKind              = 13, // Kernel argument type kind
+    KeyArgKind                  = 13, // Kernel argument kind
     KeyArgValueType             = 14, // Kernel argument value type
     KeyArgAddrQual              = 15, // Kernel argument address qualifier
     KeyArgAccQual               = 16, // Kernel argument access qualifier
@@ -77,13 +77,13 @@ namespace RuntimeMD {
     KeyWorkGroupSizeHint        = 22, // Work group size hint
     KeyVecTypeHint              = 23, // Vector type hint
     KeyKernelIndex              = 24, // Kernel index for device enqueue
-    KeySGPRs                    = 25, // Number of SGPRs
-    KeyVGPRs                    = 26, // Number of VGPRs
-    KeyMinWavesPerSIMD          = 27, // Minimum number of waves per SIMD
-    KeyMaxWavesPerSIMD          = 28, // Maximum number of waves per SIMD
-    KeyFlatWorkGroupSizeLimits  = 29, // Flat work group size limits
-    KeyMaxWorkGroupSize         = 30, // Maximum work group size
-    KeyNoPartialWorkGroups      = 31, // No partial work groups
+    KeyMinWavesPerSIMD          = 25, // Minimum number of waves per SIMD
+    KeyMaxWavesPerSIMD          = 26, // Maximum number of waves per SIMD
+    KeyFlatWorkGroupSizeLimits  = 27, // Flat work group size limits
+    KeyMaxWorkGroupSize         = 28, // Maximum work group size
+    KeyNoPartialWorkGroups      = 29, // No partial work groups
+    KeyPrintfInfo               = 30, // Prinf function call information
+    KeyArgActualAcc             = 31, // The actual kernel argument access qualifier
     KeyArgPointeeAlign          = 32, // Alignment of pointee type
   };
 
@@ -103,12 +103,21 @@ namespace RuntimeMD {
   };
 
   namespace KernelArg {
-    enum TypeKind : uint8_t {
-      Value     = 0,
-      Pointer   = 1,
-      Image     = 2,
-      Sampler   = 3,
-      Queue     = 4,
+    enum Kind : uint8_t {
+      ByValue                 = 0,
+      GlobalBuffer            = 1,
+      DynamicSharedPointer    = 2,
+      Sampler                 = 3,
+      Image                   = 4,
+      Pipe                    = 5,
+      Queue                   = 6,
+      HiddenGlobalOffsetX     = 7,
+      HiddenGlobalOffsetY     = 8,
+      HiddenGlobalOffsetZ     = 9,
+      HiddenNone              = 10,
+      HiddenPrintfBuffer      = 11,
+      HiddenDefaultQueue      = 12,
+      HiddenCompletionAction  = 13,
     };
 
     enum ValueType : uint16_t {
@@ -138,6 +147,8 @@ namespace RuntimeMD {
       Global     = 1,
       Constant   = 2,
       Local      = 3,
+      Generic    = 4,
+      Region     = 5,
     };
   } // namespace KernelArg
 } // namespace RuntimeMD

@@ -35,6 +35,10 @@ static cl::opt<std::string> OutputFilename("o", cl::Required,
 static cl::opt<std::string> CacheDir("cache-dir", cl::desc("Cache Directory"),
                                      cl::value_desc("directory"));
 
+static cl::opt<std::string> OptPipeline("opt-pipeline",
+                                        cl::desc("Optimizer Pipeline"),
+                                        cl::value_desc("pipeline"));
+
 static cl::opt<bool> SaveTemps("save-temps", cl::desc("Save temporary files"));
 
 static cl::opt<bool>
@@ -147,6 +151,9 @@ int main(int argc, char **argv) {
   if (SaveTemps)
     check(Conf.addSaveTemps(OutputFilename + "."),
           "Config::addSaveTemps failed");
+
+  // Run a custom pipeline, if asked for.
+  Conf.OptPipeline = OptPipeline;
 
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)

@@ -74,6 +74,9 @@ def fatal_warnings: F<"fatal-warnings">,
 def fini: S<"fini">, MetaVarName<"<symbol>">,
   HelpText<"Specify a finalizer function">;
 
+def gc_sections: F<"gc-sections">,
+  HelpText<"Enable garbage collection of unused sections">;
+
 def hash_style: S<"hash-style">,
   HelpText<"Specify hash style (sysv, gnu or both)">;
 
@@ -82,9 +85,6 @@ def help: F<"help">, HelpText<"Print option help">;
 def icf: F<"icf=all">, HelpText<"Enable identical code folding">;
 
 def image_base : J<"image-base=">, HelpText<"Set the base address">;
-
-def gc_sections: F<"gc-sections">,
-  HelpText<"Enable garbage collection of unused sections">;
 
 def init: S<"init">, MetaVarName<"<symbol>">,
   HelpText<"Specify an initializer function">;

@@ -97,6 +97,7 @@ static __inline__
 void __movsd(unsigned long *, unsigned long const *, size_t);
 static __inline__
 void __movsw(unsigned short *, unsigned short const *, size_t);
+static __inline__
 void __nop(void);
 void __nvreg_restore_fence(void);
 void __nvreg_save_fence(void);
@@ -917,6 +918,10 @@ _xgetbv(unsigned int __xcr_no) {
 static __inline__ void __DEFAULT_FN_ATTRS
 __halt(void) {
   __asm__ volatile ("hlt");
+}
+static __inline__ void __DEFAULT_FN_ATTRS
+__nop(void) {
+  __asm__ volatile ("nop");
 }
 #endif
 

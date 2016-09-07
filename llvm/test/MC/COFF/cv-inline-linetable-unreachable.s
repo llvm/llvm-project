@@ -15,6 +15,8 @@
 _g:                                     # @g
 Lfunc_begin0:
 	.cv_file	1 "\\usr\\local\\google\\home\\majnemer\\llvm\\src\\<stdin>"
+	.cv_func_id 0
+	.cv_inline_site_id 1 within 0 inlined_at 1 1 1
 	.cv_loc	0 1 7 0 is_stmt 0       # <stdin>:7:0
 # BB#0:                                 # %entry
 	pushl	%ebp

@@ -530,7 +530,7 @@ struct Allocator {
 
     if (delete_size && flags()->new_delete_type_mismatch &&
         delete_size != m->UsedSize()) {
-      ReportNewDeleteSizeMismatch(p, m->UsedSize(), delete_size, stack);
+      ReportNewDeleteSizeMismatch(p, delete_size, stack);
     }
 
     QuarantineChunk(m, ptr, stack, alloc_type);

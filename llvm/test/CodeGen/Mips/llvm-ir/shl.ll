@@ -169,7 +169,9 @@ define signext i128 @shl_i128(i128 signext %a, i128 signext %b) {
 entry:
 ; ALL-LABEL: shl_i128:
 
-  ; GP32:           lw        $25, %call16(__ashlti3)($gp)
+  ; o32 shouldn't use TImode helpers.
+  ; GP32-NOT:       lw        $25, %call16(__ashlti3)($gp)
+  ; MM-NOT:         lw        $25, %call16(__ashlti3)($2)
 
   ; M3:             sll       $[[T0:[0-9]+]], $7, 0
   ; M3:             dsllv     $[[T1:[0-9]+]], $5, $7
@@ -215,8 +217,6 @@ entry:
   ; 64R6:           or        $2, $[[T10]], $[[T8]]
   ; 64R6:           jr        $ra
   ; 64R6:           seleqz    $3, $[[T9]], $[[T7]]
-
-  ; MM:             lw        $25, %call16(__ashlti3)($2)
 
   %r = shl i128 %a, %b
   ret i128 %r

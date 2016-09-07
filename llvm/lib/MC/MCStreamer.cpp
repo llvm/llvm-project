@@ -220,22 +220,54 @@ bool MCStreamer::EmitCVFileDirective(unsigned FileNo, StringRef Filename) {
   return getContext().getCVContext().addFile(FileNo, Filename);
 }
 
+bool MCStreamer::EmitCVFuncIdDirective(unsigned FunctionId) {
+  return getContext().getCVContext().recordFunctionId(FunctionId);
+}
+
+bool MCStreamer::EmitCVInlineSiteIdDirective(unsigned FunctionId,
+                                             unsigned IAFunc, unsigned IAFile,
+                                             unsigned IALine, unsigned IACol,
+                                             SMLoc Loc) {
+  if (getContext().getCVContext().getCVFunctionInfo(IAFunc) == nullptr) {
+    getContext().reportError(Loc, "parent function id not introduced by "
+                                  ".cv_func_id or .cv_inline_site_id");
+    return true;
+  }
+
+  return getContext().getCVContext().recordInlinedCallSiteId(
+      FunctionId, IAFunc, IAFile, IALine, IACol);
+}
+
 void MCStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                     unsigned Line, unsigned Column,
                                     bool PrologueEnd, bool IsStmt,
-                                    StringRef FileName) {
-  getContext().getCVContext().setCurrentCVLoc(FunctionId, FileNo, Line, Column,
-                                              PrologueEnd, IsStmt);
+                                    StringRef FileName, SMLoc Loc) {
+  CodeViewContext &CVC = getContext().getCVContext();
+  MCCVFunctionInfo *FI = CVC.getCVFunctionInfo(FunctionId);
+  if (!FI)
+    return getContext().reportError(
+        Loc, "function id not introduced by .cv_func_id or .cv_inline_site_id");
+
+  // Track the section
+  if (FI->Section == nullptr)
+    FI->Section = getCurrentSectionOnly();
+  else if (FI->Section != getCurrentSectionOnly())
+    return getContext().reportError(
+        Loc,
+        "all .cv_loc directives for a function must be in the same section");
+
+  CVC.setCurrentCVLoc(FunctionId, FileNo, Line, Column, PrologueEnd, IsStmt);
 }
 
 void MCStreamer::EmitCVLinetableDirective(unsigned FunctionId,
                                           const MCSymbol *Begin,
                                           const MCSymbol *End) {}
 
-void MCStreamer::EmitCVInlineLinetableDirective(
-    unsigned PrimaryFunctionId, unsigned SourceFileId, unsigned SourceLineNum,
-    const MCSymbol *FnStartSym, const MCSymbol *FnEndSym,
-    ArrayRef<unsigned> SecondaryFunctionIds) {}
+void MCStreamer::EmitCVInlineLinetableDirective(unsigned PrimaryFunctionId,
+                                                unsigned SourceFileId,
+                                                unsigned SourceLineNum,
+                                                const MCSymbol *FnStartSym,
+                                                const MCSymbol *FnEndSym) {}
 
 void MCStreamer::EmitCVDefRangeDirective(
     ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,

@@ -647,3 +647,14 @@ namespace PR20218 {
     g(y); // expected-error {{ambiguous}}
   }
 }
+
+namespace StringLiteralToCharAmbiguity {
+  void f(char *, int);
+  void f(const char *, unsigned);
+  void g() { f("foo", 0); }
+#if __cplusplus <= 199711L
+  // expected-error@-2 {{call to 'f' is ambiguous}}
+  // expected-note@-5 {{candidate function}}
+  // expected-note@-5 {{candidate function}}
+#endif
+}

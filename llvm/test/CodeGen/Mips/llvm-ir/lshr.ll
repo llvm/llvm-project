@@ -153,7 +153,9 @@ define signext i128 @lshr_i128(i128 signext %a, i128 signext %b) {
 entry:
 ; ALL-LABEL: lshr_i128:
 
-  ; GP32:         lw      $25, %call16(__lshrti3)($gp)
+  ; o32 shouldn't use TImode helpers.
+  ; GP32-NOT:       lw        $25, %call16(__lshrti3)($gp)
+  ; MM-NOT:         lw        $25, %call16(__lshrti3)($2)
 
   ; M3:             sll       $[[T0:[0-9]+]], $7, 0
   ; M3:             dsrlv     $[[T1:[0-9]+]], $4, $7
@@ -199,8 +201,6 @@ entry:
   ; 64R6:           or        $3, $[[T10]], $[[T8]]
   ; 64R6:           jr        $ra
   ; 64R6:           seleqz    $2, $[[T9]], $[[T7]]
-
-  ; MM:             lw        $25, %call16(__lshrti3)($2)
 
   %r = lshr i128 %a, %b
   ret i128 %r

@@ -77,6 +77,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   default:
     return false;
   case X86::TCRETURNdi:
+  case X86::TCRETURNdicc:
   case X86::TCRETURNri:
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
@@ -94,8 +95,12 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     assert(MaxTCDelta <= 0 && "MaxTCDelta should never be positive");
 
     // Incoporate the retaddr area.
-    Offset = StackAdj-MaxTCDelta;
+    Offset = StackAdj - MaxTCDelta;
     assert(Offset >= 0 && "Offset should never be negative");
+
+    if (Opcode == X86::TCRETURNdicc) {
+      assert(Offset == 0 && "Conditional tail call cannot adjust the stack.");
+    }
 
     if (Offset) {
       // Check for possible merge with preceding ADD instruction.
@@ -105,19 +110,33 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
     // Jump to label or value in register.
     bool IsWin64 = STI->isTargetWin64();
-    if (Opcode == X86::TCRETURNdi || Opcode == X86::TCRETURNdi64) {
-      unsigned Op = (Opcode == X86::TCRETURNdi)
-                        ? X86::TAILJMPd
-                        : (IsWin64 ? X86::TAILJMPd64_REX : X86::TAILJMPd64);
+    if (Opcode == X86::TCRETURNdi || Opcode == X86::TCRETURNdicc ||
+        Opcode == X86::TCRETURNdi64) {
+      unsigned Op;
+      switch (Opcode) {
+      case X86::TCRETURNdi:
+        Op = X86::TAILJMPd;
+        break;
+      case X86::TCRETURNdicc:
+        Op = X86::TAILJMPd_CC;
+        break;
+      default:
+        Op = IsWin64 ? X86::TAILJMPd64_REX : X86::TAILJMPd64;
+        break;
+      }
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(Op));
-      if (JumpTarget.isGlobal())
+      if (JumpTarget.isGlobal()) {
         MIB.addGlobalAddress(JumpTarget.getGlobal(), JumpTarget.getOffset(),
                              JumpTarget.getTargetFlags());
-      else {
+      } else {
         assert(JumpTarget.isSymbol());
         MIB.addExternalSymbol(JumpTarget.getSymbolName(),
                               JumpTarget.getTargetFlags());
       }
+      if (Op == X86::TAILJMPd_CC) {
+        MIB.addImm(MBBI->getOperand(2).getImm());
+      }
+
     } else if (Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64) {
       unsigned Op = (Opcode == X86::TCRETURNmi)
                         ? X86::TAILJMPm

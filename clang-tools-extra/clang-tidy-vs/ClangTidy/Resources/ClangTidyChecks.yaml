@@ -1,0 +1,325 @@
+---
+Checks:
+   # This file should be updated when new checks are added, and eventually we should
+   # generate this file automatically from the .rst files in clang-tidy.
+  - Category:    CERT Secure Coding Standards
+    Label:       Overloaded allocation function pairs
+    Description: Checks for violations of CERT DCL54-CPP - Overload allocation and deallocation functions as a pair in the same scope
+    Name:        cert-dcl54-cpp
+  - Category:    C++ Core Guidelines
+    Label:       I.22 - Complex Global Initializers
+    Description: Checks for violations of Core Guideline I.22 - Avoid complex initializers of global objects
+    Name:        cppcoreguidelines-interfaces-global-init
+  - Category:    CERT Secure Coding Standards
+    Label:       DCL50-CPP
+    Description: Checks for violations of CERT DCL50-CPP - Do not define a C-style variadic function
+    Name:        cert-dcl50-cpp
+  - Category:    C++ Core Guidelines
+    Label:       Bounds.1 - No pointer arithmetic
+    Description: Checks for violations of Core Guideline Bounds.3 - Don't use pointer arithmetic.  Use span<> instead.
+    Name:        cppcoreguidelines-pro-bounds-pointer-arithmetic
+  - Category:    C++ Core Guidelines
+    Label:       Bounds.2 - Constant array indices
+    Description: Checks for violations of Core Bounds.2 - Only index into arrays using constant expressions.
+    Name:        cppcoreguidelines-pro-bounds-constant-array-index
+  - Category:    C++ Core Guidelines
+    Label:       Bounds.3 - Array to Pointer Decay
+    Description: Checks for violations of Core Guideline Bounds.3 - No array-to-pointer decay
+    Name:        cppcoreguidelines-pro-bounds-array-to-pointer-decay
+  - Category:    C++ Core Guidelines
+    Label:       const_cast (Type.3)
+    Description: Checks for violations of Core Guideline Type.3 - Don't use const_cast to cast away const
+    Name:        cppcoreguidelines-pro-type-const-cast
+  - Category:    C++ Core Guidelines
+    Label: C style casts (Type.4)
+    Description: Checks for violations of Core Guideline Type.3 - Don't use C-style (T)expression casts that would perform a static downcast, const_cast, or reinterpret_cast
+    Name:        cppcoreguidelines-pro-type-cstyle-cast
+  - Category:    C++ Core Guidelines
+    Label:       reinterpret_cast (Type.1)
+    Description: Checks for violations of Core Guideline Type.1 - Don't use reinterpret_cast.
+    Name:        cppcoreguidelines-pro-type-reinterpret-cast
+  - Category:    C++ Core Guidelines
+    Label:       Prefer dynamic_cast (Type.2)
+    Description: Checks for violations of Core Guideline Type.2 - Don't use static_cast downcasts.  Use dynamic_cast instead.
+    Name:        cppcoreguidelines-pro-type-static-cast-downcast
+  - Category:    C++ Core Guidelines
+    Label:       Member variable initialization (Type.6)
+    Description: Checks for violations of Core Guideline Type.6 - Always initialize a member variable.
+    Name:        cppcoreguidelines-pro-type-member-init
+  - Category:    C++ Core Guidelines
+    Label:       Avoid unions (Type.7)
+    Description: Checks for violations of Core Guideline Type.7 - Avoid accessing members of raw unions.  Use variant instead.
+    Name:        cppcoreguidelines-pro-type-union-access
+  - Category:    C++ Core Guidelines
+    Label:       Don't use varargs (Type.8)
+    Description: Checks for violations of Core Guideline Type.8 - Avoid reading varargs or passing vararg arguments.  Prefer variadic templates instead.
+    Name:        cppcoreguidelines-pro-type-vararg
+  - Category:    C++ Core Guidelines
+    Label:       Don't slice (ES.63 & C.145)
+    Description: Checks for violations of Core Guidelines ES.63 (Don't slice) and C.145 (Access polymorphic objects through pointers and references)
+    Name:        cppcoreguidelines-slicing
+  - Category:    C++ Core Guidelines
+    Label:       Detect unsafe special functions (C.21)
+    Description: Checks for violations of Core Guidelines C.21 - If you define or =delete any default operation, define or =delete them all.
+    Name:        cppcoreguidelines-special-member-functions
+  - Category:    Google Style Guide
+    Label:       Forbid explicitly parameterized make_pair
+    Description: 
+    Name:        google-build-explicit-make-pair
+  - Category:    Google Style Guide
+    Label:       Anonymous namespace in headers
+    Description: 
+    Name:        google-build-namespaces
+  - Category:    Google Style Guide
+    Label:       Find using namespace directives
+    Description: 
+    Name:        google-build-using-namespace
+  - Category:    Google Style Guide
+    Label:       Default arguments in virtual methods
+    Description: 
+    Name:        google-default-arguments
+  - Category:    Google Style Guide
+    Label:       explicit constructors
+    Description: 
+    Name:        google-explicit-constructor
+  - Category:    Google Style Guide
+    Label:       Global namespace pollution in headers
+    Description: 
+    Name:        google-global-names-in-headers
+  - Category:    Google Style Guide
+    Label:       Braces around statements
+    Description: 
+    Name:        google-readability-braces-around-statements
+  - Category:    Google Style Guide
+    Label:       No C-style casts
+    Description: 
+    Name:        google-readability-casting
+  - Category:    Google Style Guide
+    Label:       Find large functions
+    Description: 
+    Name:        google-readability-function-size
+  - Category:    Google Style Guide
+    Label:       Namespace closing comments
+    Description: 
+    Name:        google-readability-namespace-comments
+  - Category:    Google Style Guide
+    Label:       Find unnecessary calls to .get()
+    Description: 
+    Name:        google-readability-redundant-smartptr-get
+  - Category:    Google Style Guide
+    Label:       Find noncomformant TODO comments
+    Description: 
+    Name:        google-readability-todo
+  - Category:    Google Style Guide
+    Label:       Find implementation-specific integral types
+    Description: 
+    Name:        google-runtime-int
+  - Category:    Google Style Guide
+    Label:       Find const string references
+    Description: 
+    Name:        google-runtime-member-string-references
+  - Category:    Google Style Guide
+    Label:       Find zero-length memsets
+    Description: 
+    Name:        google-runtime-memset
+  - Category:    Google Style Guide
+    Label:       Find overloads of operator&
+    Description: 
+    Name:        google-runtime-operator
+  - Category:    Google Style Guide
+    Label:       Check usage of non-const references
+    Description: 
+    Name:        google-runtime-references
+  - Category:    LLVM Style Guide
+    Label:       LLVM header guards
+    Description: 
+    Name:        llvm-header-guard
+  - Category:    LLVM Style Guide
+    Label:       LLVM include order
+    Description: 
+    Name:        llvm-include-order
+  - Category:    LLVM Style Guide
+    Label:       LLVM namespace comments
+    Description: 
+    Name:        llvm-namespace-comment
+  - Category:    LLVM Style Guide
+    Label:       Find local twines
+    Description: 
+    Name:        llvm-twine-local
+  - Category:    Clang Diagnostics
+    Label:       Warnings
+    Description: 
+    Name:        clang-diagnostic-warning
+  - Category:    Clang Diagnostics
+    Label:       Errors
+    Description: 
+    Name:        clang-diagnostic-error
+  - Category:    Clang Diagnostics
+    Label:       Unknown
+    Description: 
+    Name:        clang-diagnostic-unknown
+  - Category:    Miscellaneous
+    Label:       Validate argument comments
+    Description: 
+    Name:        misc-argument-comment
+  - Category:    Miscellaneous
+    Label:       Side effects in assert()
+    Description: 
+    Name:        misc-assert-side-effect
+  - Category:    Miscellaneous
+    Label:       bool / pointer implicit conversions
+    Description: 
+    Name:        misc-bool-pointer-implicit-conversion
+  - Category:    Miscellaneous
+    Label:       Dangling handles
+    Description: 
+    Name:        misc-dangling-handle
+  - Category:    Miscellaneous
+    Label:       Definitions in headers
+    Description: 
+    Name:        misc-definitions-in-headers
+  - Category:    Miscellaneous
+    Label:       Type mismatch in fold operations
+    Description: 
+    Name:        misc-fold-init-type
+  - Category:    Miscellaneous
+    Label:       Forward declaration namespace
+    Description: 
+    Name:        misc-forward-declaration-namespace
+  - Category:    Miscellaneous
+    Label:       Inaccurate erase
+    Description: 
+    Name:        misc-inaccurate-erase
+  - Category:    Miscellaneous
+    Label:       Incorrect rounding
+    Description: 
+    Name:        misc-incorrect-roundings
+  - Category:    Miscellaneous
+    Label:       Inefficient STL algorithms
+    Description: 
+    Name:        misc-inefficient-algorithm
+  - Category:    Miscellaneous
+    Label:       Macro parentheses
+    Description: 
+    Name:        misc-macro-parentheses
+  - Category:    Miscellaneous
+    Label:       Macro repeated side effects
+    Description: 
+    Name:        misc-macro-repeated-side-effects
+  - Category:    Miscellaneous
+    Label:       Misplaced const
+    Description: 
+    Name:        misc-misplaced-const
+  - Category:    Miscellaneous
+    Label:       Misplaced widening casts
+    Description: 
+    Name:        misc-misplaced-widening-cast
+  - Category:    Miscellaneous
+    Label:       Move constructor const arguments
+    Description: 
+    Name:        misc-move-const-arg
+  - Category:    Miscellaneous
+    Label:       Move constructor initialization
+    Description: 
+    Name:        misc-move-constructor-init
+  - Category:    Miscellaneous
+    Label:       Multi-statement macros
+    Description: 
+    Name:        misc-multiple-statement-macro
+  - Category:    Miscellaneous
+    Label:       Verify new / delete overloads
+    Description: 
+    Name:        misc-new-delete-overloads
+  - Category:    Miscellaneous
+    Label:       Ensure move constructors are noexcept
+    Description: 
+    Name:        misc-noexcept-move-constructor
+  - Category:    Miscellaneous
+    Label:       Copying of non-copyable objects
+    Description: 
+    Name:        misc-non-copyable-objects
+  - Category:    Miscellaneous
+    Label:       Suspicious pointer / integer operations
+    Description: 
+    Name:        misc-pointer-and-integral-operation
+  - Category:    Miscellaneous
+    Label:       Find redundant expressions
+    Description: 
+    Name:        misc-redundant-expression
+  - Category:    Miscellaneous
+    Label:       sizeof() on stl containers
+    Description: 
+    Name:        misc-sizeof-container
+  - Category:    Miscellaneous
+    Label:       Suspicious sizeof() usage
+    Description: 
+    Name:        misc-sizeof-expression
+  - Category:    Miscellaneous
+    Label:       Replace assert with static_assert
+    Description: 
+    Name:        misc-static-assert
+  - Category:    Miscellaneous
+    Label:       Suspicious string constructor
+    Description: 
+    Name:        misc-string-constructor
+  - Category:    Miscellaneous
+    Label:       String integer assignment
+    Description: 
+    Name:        misc-string-integer-assignment
+  - Category:    Miscellaneous
+    Label:       String literal with embedded null
+    Description: 
+    Name:        misc-string-literal-with-embedded-nul
+  - Category:    Miscellaneous
+    Label:       Suspicious missing comma
+    Description: 
+    Name:        misc-suspicious-missing-comma
+  - Category:    Miscellaneous
+    Label:       Suspicious semicolon
+    Description: 
+    Name:        misc-suspicious-semicolon
+  - Category:    Miscellaneous
+    Label:       Suspicious string compare
+    Description: 
+    Name:        misc-suspicious-string-compare
+  - Category:    Miscellaneous
+    Label:       Swapped arguments
+    Description: 
+    Name:        misc-swapped-arguments
+  - Category:    Miscellaneous
+    Label:       Throw by value / catch by reference
+    Description: 
+    Name:        misc-throw-by-value-catch-by-reference
+  - Category:    Miscellaneous
+    Label:       Unconventional operator=()
+    Description: 
+    Name:        misc-unconventional-assign-operator
+  - Category:    Miscellaneous
+    Label:       Undelegated constructor
+    Description: 
+    Name:        misc-undelegated-constructor
+  - Category:    Miscellaneous
+    Label:       unique_ptr<> reset / release
+    Description: 
+    Name:        misc-uniqueptr-reset-release
+  - Category:    Miscellaneous
+    Label:       Unused Alias Decls
+    Description: 
+    Name:        misc-unused-alias-decls
+  - Category:    Miscellaneous
+    Label:       Unused Params
+    Description: 
+    Name:        misc-unused-parameters
+  - Category:    Miscellaneous
+    Label:       Unused Raii
+    Description: 
+    Name:        misc-unused-raii
+  - Category:    Miscellaneous
+    Label:       Unused Using Decls
+    Description: 
+    Name:        misc-unused-using-decls
+  - Category:    Miscellaneous
+    Label:       Virtual Near Miss
+    Description: 
+    Name:        misc-virtual-near-miss
+...

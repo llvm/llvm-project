@@ -1020,6 +1020,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     // check for the argument.
     if (SemaBuiltinRWPipe(*this, TheCall))
       return ExprError();
+    TheCall->setType(Context.IntTy);
     break;
   case Builtin::BIreserve_read_pipe:
   case Builtin::BIreserve_write_pipe:
@@ -1047,6 +1048,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BIget_pipe_max_packets:
     if (SemaBuiltinPipePackets(*this, TheCall))
       return ExprError();
+    TheCall->setType(Context.UnsignedIntTy);
     break;
   case Builtin::BIto_global:
   case Builtin::BIto_local:

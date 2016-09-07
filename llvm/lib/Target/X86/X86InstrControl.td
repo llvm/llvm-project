@@ -245,6 +245,8 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
   let Uses = [ESP] in {
   def TCRETURNdi : PseudoI<(outs),
                      (ins i32imm_pcrel:$dst, i32imm:$offset), []>;
+  def TCRETURNdicc : PseudoI<(outs),
+                     (ins i32imm_pcrel:$dst, i32imm:$offset, i32imm:$cond), []>;
   def TCRETURNri : PseudoI<(outs),
                      (ins ptr_rc_tailcall:$dst, i32imm:$offset), []>;
   let mayLoad = 1 in
@@ -257,6 +259,13 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
                            (ins i32imm_pcrel:$dst),
                            "jmp\t$dst",
                            [], IIC_JMP_REL>;
+
+  // This gets substituted to a conditional jump instruction in MC lowering.
+  def TAILJMPd_CC : Ii32PCRel<0x80, RawFrm, (outs),
+                           (ins i32imm_pcrel:$dst, i32imm:$cond),
+                           "",
+                           [], IIC_JMP_REL>;
+
   def TAILJMPr : I<0xFF, MRM4r, (outs), (ins ptr_rc_tailcall:$dst),
                    "", [], IIC_JMP_REG>;  // FIXME: Remove encoding when JIT is dead.
   let mayLoad = 1 in
