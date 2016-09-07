@@ -49,7 +49,7 @@ line. For example:
       Token t = readNextToken();
 
 Here the second line is indented in a way that suggests that it is meant to be
-the body of the `while` loop - whose body is in fact empty, becasue of the
+the body of the `while` loop - whose body is in fact empty, because of the
 semicolon at the end of the first line.
 
 Either remove the indentation from the second line:

@@ -30,14 +30,10 @@ using namespace lld::elf;
 
 template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
-                                         const Elf_Shdr *Header,
-                                         Kind SectionKind)
-    : Header(Header), File(File), SectionKind(SectionKind), Repl(this),
-      Compressed(Header->sh_flags & SHF_COMPRESSED) {
-  // The garbage collector sets sections' Live bits.
-  // If GC is disabled, all sections are considered live by default.
-  Live = !Config->GcSections;
-
+                                         const Elf_Shdr *Hdr, Kind SectionKind)
+    : InputSectionData(SectionKind, Hdr->sh_flags & SHF_COMPRESSED,
+                       !Config->GcSections),
+      Header(Hdr), File(File), Repl(this) {
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
   Alignment = std::max<uintX_t>(Header->sh_addralign, 1);
@@ -71,7 +67,6 @@ template <class ELFT>
 typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
   switch (SectionKind) {
   case Regular:
-  case Layout:
     return cast<InputSection<ELFT>>(this)->OutSecOff + Offset;
   case EHFrame:
     // The file crtbeginT.o has relocations pointing to the start of an empty
@@ -131,7 +126,7 @@ InputSection<ELFT>::InputSection(elf::ObjectFile<ELFT> *F,
 
 template <class ELFT>
 bool InputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
-  return S->SectionKind == Base::Regular || S->SectionKind == Base::Layout;
+  return S->SectionKind == Base::Regular;
 }
 
 template <class ELFT>
@@ -190,14 +185,11 @@ template <class ELFT>
 static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
                                     typename ELFT::uint P,
                                     const SymbolBody &Body, RelExpr Expr) {
-  typedef typename ELFT::uint uintX_t;
-
   switch (Expr) {
   case R_HINT:
     llvm_unreachable("cannot relocate hint relocs");
   case R_TLSLD:
-    return Out<ELFT>::Got->getTlsIndexOff() + A -
-           Out<ELFT>::Got->getNumEntries() * sizeof(uintX_t);
+    return Out<ELFT>::Got->getTlsIndexOff() + A - Out<ELFT>::Got->getSize();
   case R_TLSLD_PC:
     return Out<ELFT>::Got->getTlsIndexVA() + A - P;
   case R_THUNK_ABS:
@@ -209,7 +201,7 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
     return getPPC64TocBase() + A;
   case R_TLSGD:
     return Out<ELFT>::Got->getGlobalDynOffset(Body) + A -
-           Out<ELFT>::Got->getNumEntries() * sizeof(uintX_t);
+           Out<ELFT>::Got->getSize();
   case R_TLSGD_PC:
     return Out<ELFT>::Got->getGlobalDynAddr(Body) + A - P;
   case R_TLSDESC:
@@ -226,10 +218,12 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
     return Body.getSize<ELFT>() + A;
   case R_GOTREL:
     return Body.getVA<ELFT>(A) - Out<ELFT>::Got->getVA();
+  case R_GOTREL_FROM_END:
+    return Body.getVA<ELFT>(A) - Out<ELFT>::Got->getVA() -
+           Out<ELFT>::Got->getSize();
   case R_RELAX_TLS_GD_TO_IE_END:
   case R_GOT_FROM_END:
-    return Body.getGotOffset<ELFT>() + A -
-           Out<ELFT>::Got->getNumEntries() * sizeof(uintX_t);
+    return Body.getGotOffset<ELFT>() + A - Out<ELFT>::Got->getSize();
   case R_RELAX_TLS_GD_TO_IE_ABS:
   case R_GOT:
     return Body.getGotVA<ELFT>() + A;
@@ -241,6 +235,8 @@ static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
     return Body.getGotVA<ELFT>() + A - P;
   case R_GOTONLY_PC:
     return Out<ELFT>::Got->getVA() + A - P;
+  case R_GOTONLY_PC_FROM_END:
+    return Out<ELFT>::Got->getVA() + A - P + Out<ELFT>::Got->getSize();
   case R_RELAX_TLS_LD_TO_LE:
   case R_RELAX_TLS_IE_TO_LE:
   case R_RELAX_TLS_GD_TO_LE:
@@ -698,8 +694,7 @@ bool MipsAbiFlagsInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 }
 
 template <class ELFT>
-CommonInputSection<ELFT>::CommonInputSection(
-    std::vector<DefinedCommon<ELFT> *> Syms)
+CommonInputSection<ELFT>::CommonInputSection(std::vector<DefinedCommon *> Syms)
     : InputSection<ELFT>(nullptr, &Hdr) {
   Hdr.sh_size = 0;
   Hdr.sh_type = SHT_NOBITS;
@@ -707,12 +702,12 @@ CommonInputSection<ELFT>::CommonInputSection(
   this->Live = true;
 
   // Sort the common symbols by alignment as an heuristic to pack them better.
-  std::stable_sort(Syms.begin(), Syms.end(), [](const DefinedCommon<ELFT> *A,
-                                                const DefinedCommon<ELFT> *B) {
-    return A->Alignment > B->Alignment;
-  });
+  std::stable_sort(Syms.begin(), Syms.end(),
+                   [](const DefinedCommon *A, const DefinedCommon *B) {
+                     return A->Alignment > B->Alignment;
+                   });
 
-  for (DefinedCommon<ELFT> *Sym : Syms) {
+  for (DefinedCommon *Sym : Syms) {
     this->Alignment = std::max<uintX_t>(this->Alignment, Sym->Alignment);
     Hdr.sh_size = alignTo(Hdr.sh_size, Sym->Alignment);
 

@@ -15,13 +15,14 @@
 #ifndef STREAMEXECUTOR_DEVICE_H
 #define STREAMEXECUTOR_DEVICE_H
 
+#include <type_traits>
+
 #include "streamexecutor/KernelSpec.h"
 #include "streamexecutor/PlatformInterfaces.h"
 #include "streamexecutor/Utils/Error.h"
 
 namespace streamexecutor {
 
-class KernelInterface;
 class Stream;
 
 class Device {
@@ -29,28 +30,29 @@ public:
   explicit Device(PlatformDevice *PDevice);
   virtual ~Device();
 
-  /// Gets the kernel implementation for the underlying platform.
-  virtual Expected<std::unique_ptr<KernelInterface>>
-  getKernelImplementation(const MultiKernelLoaderSpec &Spec) {
-    // TODO(jhen): Implement this.
-    return nullptr;
+  /// Creates a kernel object for this device.
+  template <typename KernelT>
+  Expected<typename std::enable_if<std::is_base_of<KernelBase, KernelT>::value,
+                                   KernelT>::type>
+  createKernel(const MultiKernelLoaderSpec &Spec) {
+    Expected<const void *> MaybeKernelHandle = PDevice->createKernel(Spec);
+    if (!MaybeKernelHandle) {
+      return MaybeKernelHandle.takeError();
+    }
+    return KernelT(PDevice, *MaybeKernelHandle, Spec.getKernelName());
   }
 
-  Expected<std::unique_ptr<Stream>> createStream();
+  /// Creates a stream object for this device.
+  Expected<Stream> createStream();
 
   /// Allocates an array of ElementCount entries of type T in device memory.
   template <typename T>
   Expected<GlobalDeviceMemory<T>> allocateDeviceMemory(size_t ElementCount) {
-    Expected<GlobalDeviceMemoryBase> MaybeBase =
+    Expected<void *> MaybeMemory =
         PDevice->allocateDeviceMemory(ElementCount * sizeof(T));
-    if (!MaybeBase)
-      return MaybeBase.takeError();
-    return GlobalDeviceMemory<T>(*MaybeBase);
-  }
-
-  /// Frees memory previously allocated with allocateDeviceMemory.
-  template <typename T> Error freeDeviceMemory(GlobalDeviceMemory<T> Memory) {
-    return PDevice->freeDeviceMemory(Memory);
+    if (!MaybeMemory)
+      return MaybeMemory.takeError();
+    return GlobalDeviceMemory<T>(this, *MaybeMemory, ElementCount);
   }
 
   /// Allocates an array of ElementCount entries of type T in host memory.
@@ -125,7 +127,7 @@ public:
       return make_error(
           "copying too many elements, " + llvm::Twine(ElementCount) +
           ", to a host array of element count " + llvm::Twine(Dst.size()));
-    return PDevice->synchronousCopyD2H(Src.getBaseMemory(),
+    return PDevice->synchronousCopyD2H(Src.getBaseMemory().getHandle(),
                                        Src.getElementOffset() * sizeof(T),
                                        Dst.data(), 0, ElementCount * sizeof(T));
   }
@@ -149,19 +151,19 @@ public:
   }
 
   template <typename T>
-  Error synchronousCopyD2H(GlobalDeviceMemory<T> Src,
+  Error synchronousCopyD2H(const GlobalDeviceMemory<T> &Src,
                            llvm::MutableArrayRef<T> Dst, size_t ElementCount) {
     return synchronousCopyD2H(Src.asSlice(), Dst, ElementCount);
   }
 
   template <typename T>
-  Error synchronousCopyD2H(GlobalDeviceMemory<T> Src,
+  Error synchronousCopyD2H(const GlobalDeviceMemory<T> &Src,
                            llvm::MutableArrayRef<T> Dst) {
     return synchronousCopyD2H(Src.asSlice(), Dst);
   }
 
   template <typename T>
-  Error synchronousCopyD2H(GlobalDeviceMemory<T> Src, T *Dst,
+  Error synchronousCopyD2H(const GlobalDeviceMemory<T> &Src, T *Dst,
                            size_t ElementCount) {
     return synchronousCopyD2H(Src.asSlice(), Dst, ElementCount);
   }
@@ -179,9 +181,9 @@ public:
                         llvm::Twine(ElementCount) +
                         ", to a device array of element count " +
                         llvm::Twine(Dst.getElementCount()));
-    return PDevice->synchronousCopyH2D(Src.data(), 0, Dst.getBaseMemory(),
-                                       Dst.getElementOffset() * sizeof(T),
-                                       ElementCount * sizeof(T));
+    return PDevice->synchronousCopyH2D(
+        Src.data(), 0, Dst.getBaseMemory().getHandle(),
+        Dst.getElementOffset() * sizeof(T), ElementCount * sizeof(T));
   }
 
   template <typename T>
@@ -204,18 +206,18 @@ public:
   }
 
   template <typename T>
-  Error synchronousCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> Dst,
+  Error synchronousCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> &Dst,
                            size_t ElementCount) {
     return synchronousCopyH2D(Src, Dst.asSlice(), ElementCount);
   }
 
   template <typename T>
-  Error synchronousCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> Dst) {
+  Error synchronousCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> &Dst) {
     return synchronousCopyH2D(Src, Dst.asSlice());
   }
 
   template <typename T>
-  Error synchronousCopyH2D(T *Src, GlobalDeviceMemory<T> Dst,
+  Error synchronousCopyH2D(T *Src, GlobalDeviceMemory<T> &Dst,
                            size_t ElementCount) {
     return synchronousCopyH2D(Src, Dst.asSlice(), ElementCount);
   }
@@ -235,8 +237,8 @@ public:
                         ", to a device array of element count " +
                         llvm::Twine(Dst.getElementCount()));
     return PDevice->synchronousCopyD2D(
-        Src.getBaseMemory(), Src.getElementOffset() * sizeof(T),
-        Dst.getBaseMemory(), Dst.getElementOffset() * sizeof(T),
+        Src.getBaseMemory().getHandle(), Src.getElementOffset() * sizeof(T),
+        Dst.getBaseMemory().getHandle(), Dst.getElementOffset() * sizeof(T),
         ElementCount * sizeof(T));
   }
 
@@ -253,45 +255,51 @@ public:
   }
 
   template <typename T>
-  Error synchronousCopyD2D(GlobalDeviceMemory<T> Src,
+  Error synchronousCopyD2D(const GlobalDeviceMemory<T> &Src,
                            GlobalDeviceMemorySlice<T> Dst,
                            size_t ElementCount) {
     return synchronousCopyD2D(Src.asSlice(), Dst, ElementCount);
   }
 
   template <typename T>
-  Error synchronousCopyD2D(GlobalDeviceMemory<T> Src,
+  Error synchronousCopyD2D(const GlobalDeviceMemory<T> &Src,
                            GlobalDeviceMemorySlice<T> Dst) {
     return synchronousCopyD2D(Src.asSlice(), Dst);
   }
 
   template <typename T>
   Error synchronousCopyD2D(GlobalDeviceMemorySlice<T> Src,
-                           GlobalDeviceMemory<T> Dst, size_t ElementCount) {
+                           GlobalDeviceMemory<T> &Dst, size_t ElementCount) {
     return synchronousCopyD2D(Src, Dst.asSlice(), ElementCount);
   }
 
   template <typename T>
   Error synchronousCopyD2D(GlobalDeviceMemorySlice<T> Src,
-                           GlobalDeviceMemory<T> Dst) {
+                           GlobalDeviceMemory<T> &Dst) {
     return synchronousCopyD2D(Src, Dst.asSlice());
   }
 
   template <typename T>
-  Error synchronousCopyD2D(GlobalDeviceMemory<T> Src, GlobalDeviceMemory<T> Dst,
-                           size_t ElementCount) {
+  Error synchronousCopyD2D(const GlobalDeviceMemory<T> &Src,
+                           GlobalDeviceMemory<T> &Dst, size_t ElementCount) {
     return synchronousCopyD2D(Src.asSlice(), Dst.asSlice(), ElementCount);
   }
 
   template <typename T>
-  Error synchronousCopyD2D(GlobalDeviceMemory<T> Src,
-                           GlobalDeviceMemory<T> Dst) {
+  Error synchronousCopyD2D(const GlobalDeviceMemory<T> &Src,
+                           GlobalDeviceMemory<T> &Dst) {
     return synchronousCopyD2D(Src.asSlice(), Dst.asSlice());
   }
 
   ///@} End host-synchronous device memory copying functions
 
 private:
+  // Only a GlobalDeviceMemoryBase may free device memory.
+  friend GlobalDeviceMemoryBase;
+  Error freeDeviceMemory(const GlobalDeviceMemoryBase &Memory) {
+    return PDevice->freeDeviceMemory(Memory.getHandle());
+  }
+
   PlatformDevice *PDevice;
 };
 

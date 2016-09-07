@@ -76,8 +76,6 @@ ThreadPlanStepOut::ThreadPlanStepOut
     
     m_step_out_to_id = return_frame_sp->GetStackID();
     m_immediate_step_from_id = immediate_return_from_sp->GetStackID();
-    
-    StackID frame_zero_id = m_thread.GetStackFrameAtIndex(0)->GetStackID();
 
     // If the frame directly below the one we are returning to is inlined, we have to be
     // a little more careful.  It is non-trivial to determine the real "return code address" for

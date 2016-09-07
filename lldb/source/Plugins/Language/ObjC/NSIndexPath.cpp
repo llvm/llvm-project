@@ -26,6 +26,18 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
+static constexpr size_t
+PACKED_INDEX_SHIFT_64(size_t i)
+{
+    return (60 - (13 * (4-i)));
+}
+
+static constexpr size_t
+PACKED_INDEX_SHIFT_32(size_t i)
+{
+    return (32 - (13 * (2-i)));
+}
+
 class NSIndexPathSyntheticFrontEnd : public SyntheticChildrenFrontEnd
 {
 public:
@@ -284,23 +296,29 @@ protected:
             std::pair<uint64_t, bool>
             _indexAtPositionForInlinePayload(size_t pos)
             {
+                static const uint64_t PACKED_INDEX_MASK = ((1 << 13) - 1);
                 if (m_ptr_size == 8)
                 {
-                    switch (pos) {
-                        case 5: return {((m_indexes >> 51) & 0x1ff),true};
-                        case 4: return {((m_indexes >> 42) & 0x1ff),true};
-                        case 3: return {((m_indexes >> 33) & 0x1ff),true};
-                        case 2: return {((m_indexes >> 24) & 0x1ff),true};
-                        case 1: return {((m_indexes >> 15) & 0x1ff),true};
-                        case 0: return {((m_indexes >>  6) & 0x1ff),true};
+                    switch (pos)
+                    {
+                        case 3:
+                        case 2:
+                        case 1:
+                        case 0:
+                            return {(m_indexes >> PACKED_INDEX_SHIFT_64(pos)) & PACKED_INDEX_MASK,true};
+                        default:
+                            return {0,false};
                     }
                 }
                 else
                 {
-                    switch (pos) {
-                        case 2: return {((m_indexes >> 23) & 0x1ff),true};
-                        case 1: return {((m_indexes >> 14) & 0x1ff),true};
-                        case 0: return {((m_indexes >>  5) & 0x1ff),true};
+                    switch (pos)
+                    {
+                        case 0:
+                        case 1:
+                            return {(m_indexes >> PACKED_INDEX_SHIFT_32(pos)) & PACKED_INDEX_MASK,true};
+                        default:
+                            return {0,false};
                     }
                 }
                 return {0,false};

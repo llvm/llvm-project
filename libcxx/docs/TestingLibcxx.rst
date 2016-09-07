@@ -214,17 +214,16 @@ For more information about using the Google Benchmark library see the
 Building Benchmarks
 -------------------
 
-The benchmark tests are not enabled by default. To build the benchmarks
-libc++ must be configured using the CMake option ``-DLIBCXX_INCLUDE_BENCHMARKS=ON``.
-Then the benchmarks can be built using the ``libcxx-benchmarks`` target.
+The benchmark tests are not built by default. The benchmarks can be built using
+the ``cxx-benchmarks`` target.
 
 An example build would look like:
 
 .. code-block:: bash
 
   $ cd build
-  $ cmake [options] -DLIBCXX_INCLUDE_BENCHMARKS=ON <path to libcxx sources>
-  $ make libcxx-benchmarks
+  $ cmake [options] <path to libcxx sources>
+  $ make cxx-benchmarks
 
 This will build all of the benchmarks under ``<libcxx-src>/benchmarks`` to be
 built against the just-built libc++. The compiled tests are output into
@@ -252,7 +251,7 @@ For example:
 .. code-block:: bash
 
   $ cd build/benchmarks
-  $ make libcxx-benchmarks
+  $ make cxx-benchmarks
   $ ./algorithms.libcxx.out # Runs all the benchmarks
   $ ./algorithms.libcxx.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
 

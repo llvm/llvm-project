@@ -63,6 +63,12 @@ TypeSystem::IsAnonymousType (lldb::opaque_compiler_type_t type)
 }
 
 CompilerType
+TypeSystem::GetArrayType (lldb::opaque_compiler_type_t type, uint64_t size)
+{
+    return CompilerType();
+}
+
+CompilerType
 TypeSystem::GetLValueReferenceType (lldb::opaque_compiler_type_t type)
 {
     return CompilerType();

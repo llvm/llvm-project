@@ -12,34 +12,49 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "streamexecutor/Kernel.h"
+#include <cassert>
+
 #include "streamexecutor/Device.h"
+#include "streamexecutor/Kernel.h"
 #include "streamexecutor/PlatformInterfaces.h"
 
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 
 namespace streamexecutor {
 
-KernelBase::KernelBase(Device *Dev, const std::string &Name,
-                       const std::string &DemangledName,
-                       std::unique_ptr<KernelInterface> Implementation)
-    : TheDevice(Dev), Name(Name), DemangledName(DemangledName),
-      Implementation(std::move(Implementation)) {}
+KernelBase::KernelBase(PlatformDevice *D, const void *PlatformKernelHandle,
+                       llvm::StringRef Name)
+    : PDevice(D), PlatformKernelHandle(PlatformKernelHandle), Name(Name),
+      DemangledName(
+          llvm::symbolize::LLVMSymbolizer::DemangleName(Name, nullptr)) {
+  assert(D != nullptr &&
+         "cannot construct a kernel object with a null platform device");
+  assert(PlatformKernelHandle != nullptr &&
+         "cannot construct a kernel object with a null platform kernel handle");
+}
 
-KernelBase::~KernelBase() = default;
+KernelBase::KernelBase(KernelBase &&Other)
+    : PDevice(Other.PDevice), PlatformKernelHandle(Other.PlatformKernelHandle),
+      Name(std::move(Other.Name)),
+      DemangledName(std::move(Other.DemangledName)) {
+  Other.PDevice = nullptr;
+  Other.PlatformKernelHandle = nullptr;
+}
 
-Expected<KernelBase> KernelBase::create(Device *Dev,
-                                        const MultiKernelLoaderSpec &Spec) {
-  auto MaybeImplementation = Dev->getKernelImplementation(Spec);
-  if (!MaybeImplementation) {
-    return MaybeImplementation.takeError();
-  }
-  std::string Name = Spec.getKernelName();
-  std::string DemangledName =
-      llvm::symbolize::LLVMSymbolizer::DemangleName(Name, nullptr);
-  KernelBase Instance(Dev, Name, DemangledName,
-                      std::move(*MaybeImplementation));
-  return std::move(Instance);
+KernelBase &KernelBase::operator=(KernelBase &&Other) {
+  PDevice = Other.PDevice;
+  PlatformKernelHandle = Other.PlatformKernelHandle;
+  Name = std::move(Other.Name);
+  DemangledName = std::move(Other.DemangledName);
+  Other.PDevice = nullptr;
+  Other.PlatformKernelHandle = nullptr;
+  return *this;
+}
+
+KernelBase::~KernelBase() {
+  if (PlatformKernelHandle)
+    // TODO(jhen): Handle the error here.
+    consumeError(PDevice->destroyKernel(PlatformKernelHandle));
 }
 
 } // namespace streamexecutor

@@ -31,9 +31,9 @@
 /// the user. A simplified example workflow which a compiler might follow in the
 /// case of a CUDA kernel that is compiled to CUDA fatbin code is as follows:
 ///
-/// 1. The user defines a kernel function called UserKernel.
+/// 1. The user defines a kernel function called \c UserKernel.
 /// 2. The compiler compiles the kernel code into CUDA fatbin data and embeds
-///    that data into the host code at address __UserKernelFatbinAddress.
+///    that data into the host code at address \c __UserKernelFatbinAddress.
 /// 3. The compiler adds code at the beginning of the host code to instantiate a
 ///    MultiKernelLoaderSpec:
 ///    \code
@@ -43,16 +43,16 @@
 ///    \endcode
 /// 4. The compiler then adds code to the host code to add the fatbin data to
 ///    the new MultiKernelLoaderSpec, and to associate that data with the kernel
-///    name "UserKernel":
+///    name \c "UserKernel":
 ///    \code
 ///    namespace compiler_cuda_namespace {
 ///      UserKernelLoaderSpec.addCUDAFatbinInMemory(
 ///        __UserKernelFatbinAddress, "UserKernel");
 ///    } // namespace compiler_cuda_namespace
-///    \encode
+///    \endcode
 /// 5. The host code, having known beforehand that the compiler would initialize
 ///    a MultiKernelLoaderSpec based on the name of the CUDA kernel, makes use
-///    of the symbol cudanamespace::UserKernelLoaderSpec without defining it.
+///    of the symbol \c cudanamespace::UserKernelLoaderSpec without defining it.
 ///
 /// In the example above, the MultiKernelLoaderSpec instance created by the
 /// compiler can be used by the host code to create StreamExecutor kernel
@@ -115,8 +115,9 @@ public:
   /// Adds each item in SpecList to this object.
   ///
   /// Does not take ownership of the PTXCode pointers in the SpecList elements.
-  CUDAPTXInMemorySpec(llvm::StringRef KernelName,
-                      const llvm::ArrayRef<PTXSpec> SpecList);
+  CUDAPTXInMemorySpec(
+      llvm::StringRef KernelName,
+      const llvm::ArrayRef<CUDAPTXInMemorySpec::PTXSpec> SpecList);
 
   /// Returns a pointer to the PTX code for the requested compute capability.
   ///

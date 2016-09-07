@@ -82,6 +82,7 @@ set( LLDB_USED_LIBS
   lldbPluginInstrumentationRuntimeThreadSanitizer
   lldbPluginSystemRuntimeMacOSX
   lldbPluginProcessElfCore
+  lldbPluginProcessMinidump
   lldbPluginJITLoaderGDB
   lldbPluginExpressionParserClang
   lldbPluginExpressionParserGo

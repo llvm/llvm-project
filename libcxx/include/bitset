@@ -259,7 +259,7 @@ __bitset<_N_words, _Size>::__bitset(unsigned long long __v) _NOEXCEPT
 #if __SIZEOF_SIZE_T__ == 8
     : __first_{__v}
 #elif __SIZEOF_SIZE_T__ == 4
-    : __first_{__v, __v >> __bits_per_word}
+    : __first_{static_cast<__storage_type>(__v), static_cast<__storage_type>(__v >> __bits_per_word)}
 #else
 #error This constructor has not been ported to this platform
 #endif

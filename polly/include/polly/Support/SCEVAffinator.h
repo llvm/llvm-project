@@ -43,7 +43,7 @@ namespace polly {
 class Scop;
 class ScopStmt;
 
-/// @brief The result type of the SCEVAffinator.
+/// The result type of the SCEVAffinator.
 ///
 /// The first element of the pair is the isl representation of the SCEV, the
 /// second is the domain under which it is __invalid__.
@@ -55,7 +55,7 @@ public:
   SCEVAffinator(Scop *S, llvm::LoopInfo &LI);
   ~SCEVAffinator();
 
-  /// @brief Translate a SCEV to an isl_pw_aff.
+  /// Translate a SCEV to an isl_pw_aff.
   ///
   /// @param E  he expression that is translated.
   /// @param BB The block in which @p E is executed.
@@ -64,20 +64,20 @@ public:
   __isl_give PWACtx getPwAff(const llvm::SCEV *E,
                              llvm::BasicBlock *BB = nullptr);
 
-  /// @brief Take the asumption that @p PWAC is non-negative.
+  /// Take the asumption that @p PWAC is non-negative.
   void takeNonNegativeAssumption(PWACtx &PWAC);
 
-  /// @brief Interpret the PWA in @p PWAC as an unsigned value.
+  /// Interpret the PWA in @p PWAC as an unsigned value.
   void interpretAsUnsigned(__isl_keep PWACtx &PWAC, unsigned Width);
 
-  /// @brief Check an <nsw> AddRec for the loop @p L is cached.
+  /// Check an <nsw> AddRec for the loop @p L is cached.
   bool hasNSWAddRecForLoop(llvm::Loop *L) const;
 
 private:
-  /// @brief Key to identify cached expressions.
+  /// Key to identify cached expressions.
   using CacheKey = std::pair<const llvm::SCEV *, llvm::BasicBlock *>;
 
-  /// @brief Map to remembered cached expressions.
+  /// Map to remembered cached expressions.
   llvm::DenseMap<CacheKey, PWACtx> CachedExpressions;
 
   Scop *S;
@@ -87,16 +87,16 @@ private:
   llvm::LoopInfo &LI;
   llvm::BasicBlock *BB;
 
-  /// @brief Target data for element size computing.
+  /// Target data for element size computing.
   const llvm::DataLayout &TD;
 
-  /// @brief Return the loop for the current block if any.
+  /// Return the loop for the current block if any.
   llvm::Loop *getScope();
 
-  /// @brief Return a PWACtx for @p PWA that is always valid.
+  /// Return a PWACtx for @p PWA that is always valid.
   __isl_give PWACtx getPWACtxFromPWA(__isl_take isl_pw_aff *PWA);
 
-  /// @brief Compute the non-wrapping version of @p PWA for type @p ExprType.
+  /// Compute the non-wrapping version of @p PWA for type @p ExprType.
   ///
   /// @param PWA  The piece-wise affine function that might wrap.
   /// @param Type The type of the SCEV that was translated to @p PWA.
@@ -105,7 +105,7 @@ private:
   __isl_give isl_pw_aff *addModuloSemantic(__isl_take isl_pw_aff *PWA,
                                            llvm::Type *ExprType) const;
 
-  /// @brief If @p Expr might cause an integer wrap record an assumption.
+  /// If @p Expr might cause an integer wrap record an assumption.
   ///
   /// @param Expr The SCEV expression that might wrap.
   /// @param PWAC The isl representation of @p Expr with the invalid domain.

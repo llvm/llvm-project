@@ -33,7 +33,7 @@
          "accesses" : [
             {
                "kind" : "read",
-               "relation" : "{ Stmt_bb12[i0, i1, i2] -> E[i2, i0] }"
+               "relation" : "{ Stmt_bb12[i0, i1, i2] -> E[0, i2, i0] }"
             },
             {
                "kind" : "read",

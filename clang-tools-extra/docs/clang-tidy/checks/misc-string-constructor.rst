@@ -11,7 +11,7 @@ Examples:
 
 .. code-block:: c++
 
-  std::string('x', 50) str; // should be std::string(50, 'x') 
+  std::string('x', 50) str; // should be std::string(50, 'x')
 
 Calling the string-literal constructor with a length bigger than the literal is
 suspicious and adds extra random characters to the string.
@@ -30,3 +30,15 @@ Examples:
 .. code-block:: c++
 
   std::string("test", 0);   // Creation of an empty string.
+
+Options
+-------
+
+.. option::  WarnOnLargeLength
+
+   When non-zero, the check will warn on a string with a length greater than
+   `LargeLengthThreshold`. Default is `1`.
+
+.. option::  LargeLengthThreshold
+
+   An integer specifying the large length threshold. Default is `0x800000`.

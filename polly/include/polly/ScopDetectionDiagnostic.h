@@ -43,17 +43,17 @@ class Region;
 
 namespace polly {
 
-/// @brief Type to hold region delimiters (entry & exit block).
+/// Type to hold region delimiters (entry & exit block).
 using BBPair = std::pair<BasicBlock *, BasicBlock *>;
 
-/// @brief Return the region delimiters (entry & exit block) of @p R.
+/// Return the region delimiters (entry & exit block) of @p R.
 BBPair getBBPairForRegion(const Region *R);
 
-/// @brief Set the begin and end source location for the region limited by @p P.
+/// Set the begin and end source location for the region limited by @p P.
 void getDebugLocations(const BBPair &P, DebugLoc &Begin, DebugLoc &End);
 
 class RejectLog;
-/// @brief Emit optimization remarks about the rejected regions to the user.
+/// Emit optimization remarks about the rejected regions to the user.
 ///
 /// This emits the content of the reject log as optimization remarks.
 /// Remember to at least track failures (-polly-detect-track-failures).
@@ -102,7 +102,7 @@ enum RejectReasonKind {
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Base class of all reject reasons found during Scop detection.
+/// Base class of all reject reasons found during Scop detection.
 ///
 /// Subclasses of RejectReason should provide means to capture enough
 /// diagnostic information to help clients figure out what and where something
@@ -122,12 +122,12 @@ public:
 
   virtual ~RejectReason() {}
 
-  /// @brief Generate a reasonable diagnostic message describing this error.
+  /// Generate a reasonable diagnostic message describing this error.
   ///
   /// @return A debug message representing this error.
   virtual std::string getMessage() const = 0;
 
-  /// @brief Generate a message for the end-user describing this error.
+  /// Generate a message for the end-user describing this error.
   ///
   /// The message provided has to be suitable for the end-user. So it should
   /// not reference any LLVM internal data structures or terminology.
@@ -137,7 +137,7 @@ public:
   /// @return A short message representing this error.
   virtual std::string getEndUserMessage() const { return "Unspecified error."; }
 
-  /// @brief Get the source location of this error.
+  /// Get the source location of this error.
   ///
   /// @return The debug location for this error.
   virtual const llvm::DebugLoc &getDebugLoc() const;
@@ -145,7 +145,7 @@ public:
 
 typedef std::shared_ptr<RejectReason> RejectReasonPtr;
 
-/// @brief Stores all errors that ocurred during the detection.
+/// Stores all errors that ocurred during the detection.
 class RejectLog {
   Region *R;
   llvm::SmallVector<RejectReasonPtr, 1> ErrorReports;
@@ -159,7 +159,7 @@ public:
   iterator end() const { return ErrorReports.end(); }
   size_t size() const { return ErrorReports.size(); }
 
-  /// @brief Returns true, if we store at least one error.
+  /// Returns true, if we store at least one error.
   ///
   /// @return true, if we store at least one error.
   bool hasErrors() const { return size() > 0; }
@@ -171,7 +171,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Base class for CFG related reject reasons.
+/// Base class for CFG related reject reasons.
 ///
 /// Scop candidates that violate structural restrictions can be grouped under
 /// this reject reason class.
@@ -187,7 +187,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures bad terminator within a Scop candidate.
+/// Captures bad terminator within a Scop candidate.
 class ReportInvalidTerminator : public ReportCFG {
   BasicBlock *BB;
 
@@ -208,7 +208,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures irreducible regions in CFG.
+/// Captures irreducible regions in CFG.
 class ReportIrreducibleRegion : public ReportCFG {
   Region *R;
   DebugLoc DbgLoc;
@@ -231,7 +231,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Base class for non-affine reject reasons.
+/// Base class for non-affine reject reasons.
 ///
 /// Scop candidates that violate restrictions to affinity are reported under
 /// this class.
@@ -258,7 +258,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures a condition that is based on an 'undef' value.
+/// Captures a condition that is based on an 'undef' value.
 class ReportUndefCond : public ReportAffFunc {
   //===--------------------------------------------------------------------===//
 
@@ -281,7 +281,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures an invalid condition
+/// Captures an invalid condition
 ///
 /// Conditions have to be either constants or icmp instructions.
 class ReportInvalidCond : public ReportAffFunc {
@@ -306,7 +306,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures an undefined operand.
+/// Captures an undefined operand.
 class ReportUndefOperand : public ReportAffFunc {
   //===--------------------------------------------------------------------===//
 
@@ -329,14 +329,14 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures a non-affine branch.
+/// Captures a non-affine branch.
 class ReportNonAffBranch : public ReportAffFunc {
   //===--------------------------------------------------------------------===//
 
   // The BasicBlock we found the non-affine branch in.
   BasicBlock *BB;
 
-  /// @brief LHS & RHS of the failed condition.
+  /// LHS & RHS of the failed condition.
   //@{
   const SCEV *LHS;
   const SCEV *RHS;
@@ -362,7 +362,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures a missing base pointer.
+/// Captures a missing base pointer.
 class ReportNoBasePtr : public ReportAffFunc {
   //===--------------------------------------------------------------------===//
 public:
@@ -381,7 +381,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures an undefined base pointer.
+/// Captures an undefined base pointer.
 class ReportUndefBasePtr : public ReportAffFunc {
   //===--------------------------------------------------------------------===//
 public:
@@ -400,7 +400,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures a base pointer that is not invariant in the region.
+/// Captures a base pointer that is not invariant in the region.
 class ReportVariantBasePtr : public ReportAffFunc {
   //===--------------------------------------------------------------------===//
 
@@ -424,7 +424,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures a non-affine access function.
+/// Captures a non-affine access function.
 class ReportNonAffineAccess : public ReportAffFunc {
   //===--------------------------------------------------------------------===//
 
@@ -455,7 +455,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Report array accesses with differing element size.
+/// Report array accesses with differing element size.
 class ReportDifferentArrayElementSize : public ReportAffFunc {
   //===--------------------------------------------------------------------===//
 
@@ -479,7 +479,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures errors with non affine loop bounds.
+/// Captures errors with non affine loop bounds.
 class ReportLoopBound : public RejectReason {
   //===--------------------------------------------------------------------===//
 
@@ -511,11 +511,11 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures errors when loop overlap with nonaffine subregion.
+/// Captures errors when loop overlap with nonaffine subregion.
 class ReportLoopOverlapWithNonAffineSubRegion : public RejectReason {
   //===--------------------------------------------------------------------===//
 
-  /// @brief If L and R are set then L and R overlap.
+  /// If L and R are set then L and R overlap.
 
   /// The loop contains stmt overlapping nonaffine subregion.
   Loop *L;
@@ -542,7 +542,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures errors with non-side-effect-known function calls.
+/// Captures errors with non-side-effect-known function calls.
 class ReportFuncCall : public RejectReason {
   //===--------------------------------------------------------------------===//
 
@@ -566,14 +566,14 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures errors with aliasing.
+/// Captures errors with aliasing.
 class ReportAlias : public RejectReason {
   //===--------------------------------------------------------------------===//
 public:
   typedef std::vector<const llvm::Value *> PointerSnapshotTy;
 
 private:
-  /// @brief Format an invalid alias set.
+  /// Format an invalid alias set.
   ///
   //  @param Prefix A prefix string to put before the list of aliasing pointers.
   //  @param Suffix A suffix string to put after the list of aliasing pointers.
@@ -604,7 +604,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Base class for otherwise ungrouped reject reasons.
+/// Base class for otherwise ungrouped reject reasons.
 class ReportOther : public RejectReason {
   //===--------------------------------------------------------------------===//
 public:
@@ -622,7 +622,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures errors with bad IntToPtr instructions.
+/// Captures errors with bad IntToPtr instructions.
 class ReportIntToPtr : public ReportOther {
   //===--------------------------------------------------------------------===//
 
@@ -645,7 +645,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures errors with alloca instructions.
+/// Captures errors with alloca instructions.
 class ReportAlloca : public ReportOther {
   //===--------------------------------------------------------------------===//
   Instruction *Inst;
@@ -666,7 +666,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures errors with unknown instructions.
+/// Captures errors with unknown instructions.
 class ReportUnknownInst : public ReportOther {
   //===--------------------------------------------------------------------===//
   Instruction *Inst;
@@ -687,7 +687,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures errors with regions containing the function entry block.
+/// Captures errors with regions containing the function entry block.
 class ReportEntry : public ReportOther {
   //===--------------------------------------------------------------------===//
   BasicBlock *BB;
@@ -708,7 +708,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Report regions that seem not profitable to be optimized.
+/// Report regions that seem not profitable to be optimized.
 class ReportUnprofitable : public ReportOther {
   //===--------------------------------------------------------------------===//
   Region *R;
@@ -730,7 +730,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// @brief Captures errors with non-simple memory accesses.
+/// Captures errors with non-simple memory accesses.
 class ReportNonSimpleMemoryAccess : public ReportOther {
   //===--------------------------------------------------------------------===//
 

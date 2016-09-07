@@ -156,6 +156,8 @@ template <class ELFT> void elf::writeResult() {
     BuildId.reset(new BuildIdMd5<ELFT>);
   else if (Config->BuildId == BuildIdKind::Sha1)
     BuildId.reset(new BuildIdSha1<ELFT>);
+  else if (Config->BuildId == BuildIdKind::Uuid)
+    BuildId.reset(new BuildIdUuid<ELFT>);
   else if (Config->BuildId == BuildIdKind::Hexstring)
     BuildId.reset(new BuildIdHexstring<ELFT>);
 
@@ -174,7 +176,7 @@ template <class ELFT> void elf::writeResult() {
   StringRef S = Config->Rela ? ".rela.plt" : ".rel.plt";
   GotPlt.reset(new GotPltSection<ELFT>);
   RelaPlt.reset(new RelocationSection<ELFT>(S, false /*Sort*/));
-  if (!Config->StripAll) {
+  if (Config->Strip != StripPolicy::All) {
     StrTab.reset(new StringTableSection<ELFT>(".strtab", false));
     SymTabSec.reset(new SymbolTableSection<ELFT>(*StrTab));
   }
@@ -227,18 +229,17 @@ template <class ELFT> void elf::writeResult() {
   Out<ELFT>::Pool.clear();
 }
 
-template <class ELFT>
-static std::vector<DefinedCommon<ELFT> *> getCommonSymbols() {
-  std::vector<DefinedCommon<ELFT> *> V;
+template <class ELFT> static std::vector<DefinedCommon *> getCommonSymbols() {
+  std::vector<DefinedCommon *> V;
   for (Symbol *S : Symtab<ELFT>::X->getSymbols())
-    if (auto *B = dyn_cast<DefinedCommon<ELFT>>(S->body()))
+    if (auto *B = dyn_cast<DefinedCommon>(S->body()))
       V.push_back(B);
   return V;
 }
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
-  if (!Config->DiscardAll)
+  if (Config->Discard != DiscardPolicy::All)
     copyLocalSymbols();
   addReservedSymbols();
 
@@ -247,6 +248,8 @@ template <class ELFT> void Writer<ELFT>::run() {
 
   CommonInputSection<ELFT> Common(getCommonSymbols<ELFT>());
   CommonInputSection<ELFT>::X = &Common;
+
+  Script<ELFT>::X->createAssignments();
 
   Script<ELFT>::X->OutputSections = &OutputSections;
   if (ScriptConfig->HasContents)
@@ -327,7 +330,7 @@ static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
   if (Sec == &InputSection<ELFT>::Discarded)
     return false;
 
-  if (Config->DiscardNone)
+  if (Config->Discard == DiscardPolicy::None)
     return true;
 
   // In ELF assembly .L symbols are normally discarded by the assembler.
@@ -338,7 +341,7 @@ static bool shouldKeepInSymtab(InputSectionBase<ELFT> *Sec, StringRef SymName,
   if (!SymName.startswith(".L") && !SymName.empty())
     return true;
 
-  if (Config->DiscardLocals)
+  if (Config->Discard == DiscardPolicy::Locals)
     return false;
 
   return !(Sec->getSectionHdr()->sh_flags & SHF_MERGE);
@@ -601,8 +604,10 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   // __tls_get_addr is defined by the dynamic linker for dynamic ELFs. For
   // static linking the linker is required to optimize away any references to
   // __tls_get_addr, so it's not defined anywhere. Create a hidden definition
-  // to avoid the undefined symbol error.
-  if (!Out<ELFT>::DynSymTab)
+  // to avoid the undefined symbol error. As usual as special case is MIPS -
+  // MIPS libc defines __tls_get_addr itself because there are no TLS
+  // optimizations for this target.
+  if (!Out<ELFT>::DynSymTab && Config->EMachine != EM_MIPS)
     Symtab<ELFT>::X->addIgnored("__tls_get_addr");
 
   // If linker script do layout we do not need to create any standart symbols.
@@ -1304,29 +1309,23 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
   }
 
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
-    if (Sec != Out<ELFT>::Opd)
+    if (Sec != Out<ELFT>::Opd && Sec != Out<ELFT>::EhFrameHdr)
       Sec->writeTo(Buf + Sec->getFileOff());
+
+  // The .eh_frame_hdr depends on .eh_frame section contents, therefore
+  // it should be written after .eh_frame is written.
+  if (!Out<ELFT>::EhFrame->empty() && Out<ELFT>::EhFrameHdr)
+    Out<ELFT>::EhFrameHdr->writeTo(Buf + Out<ELFT>::EhFrameHdr->getFileOff());
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {
   if (!Out<ELFT>::BuildId)
     return;
 
-  // Compute a hash of all sections except .debug_* sections.
-  // We skip debug sections because they tend to be very large
-  // and their contents are very likely to be the same as long as
-  // other sections are the same.
+  // Compute a hash of all sections of the output file.
   uint8_t *Start = Buffer->getBufferStart();
-  uint8_t *Last = Start;
-  std::vector<ArrayRef<uint8_t>> Regions;
-  for (OutputSectionBase<ELFT> *Sec : OutputSections) {
-    uint8_t *End = Start + Sec->getFileOff();
-    if (!Sec->getName().startswith(".debug_"))
-      Regions.push_back({Last, End});
-    Last = End;
-  }
-  Regions.push_back({Last, Start + FileSize});
-  Out<ELFT>::BuildId->writeBuildId(Regions);
+  uint8_t *End = Start + FileSize;
+  Out<ELFT>::BuildId->writeBuildId({Start, End});
 }
 
 template void elf::writeResult<ELF32LE>();

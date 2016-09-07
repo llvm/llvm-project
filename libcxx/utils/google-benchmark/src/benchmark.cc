@@ -66,6 +66,11 @@ DEFINE_int32(benchmark_repetitions, 1,
              "The number of runs of each benchmark. If greater than 1, the "
              "mean and standard deviation of the runs will be reported.");
 
+DEFINE_bool(benchmark_report_aggregates_only, false,
+            "Report the result of each benchmark repetitions. When 'true' is "
+            "specified only the mean, standard deviation, and other statistics "
+            "are reported for repeated benchmarks.");
+
 DEFINE_string(benchmark_format, "console",
               "The format to use for console output. Valid values are "
               "'console', 'json', or 'csv'.");
@@ -110,6 +115,9 @@ bool IsZero(double n) {
 
 // For non-dense Range, intermediate values are powers of kRangeMultiplier.
 static const int kRangeMultiplier = 8;
+// The size of a benchmark family determines is the number of inputs to repeat
+// the benchmark on. If this is "large" then warn the user during configuration.
+static const size_t kMaxFamilySize = 100;
 static const size_t kMaxIterations = 1000000000;
 
 bool running_benchmark = false;
@@ -311,10 +319,17 @@ static std::unique_ptr<TimerManager> timer_manager = nullptr;
 
 namespace internal {
 
+enum ReportMode : unsigned {
+    RM_Unspecified, // The mode has not been manually specified
+    RM_Default,     // The mode is user-specified as default.
+    RM_ReportAggregatesOnly
+};
+
 // Information kept per benchmark we may want to run
 struct Benchmark::Instance {
   std::string      name;
   Benchmark*       benchmark;
+  ReportMode       report_mode;
   std::vector<int> arg;
   TimeUnit         time_unit;
   int              range_multiplier;
@@ -341,7 +356,8 @@ class BenchmarkFamilies {
   // Extract the list of benchmark instances that match the specified
   // regular expression.
   bool FindBenchmarks(const std::string& re,
-                      std::vector<Benchmark::Instance>* benchmarks);
+                      std::vector<Benchmark::Instance>* benchmarks,
+                      std::ostream* Err);
  private:
   BenchmarkFamilies() {}
 
@@ -364,6 +380,7 @@ public:
   void RangeMultiplier(int multiplier);
   void MinTime(double n);
   void Repetitions(int n);
+  void ReportAggregatesOnly(bool v);
   void UseRealTime();
   void UseManualTime();
   void Complexity(BigO complexity);
@@ -381,6 +398,7 @@ private:
   friend class BenchmarkFamilies;
 
   std::string name_;
+  ReportMode report_mode_;
   std::vector< std::vector<int> > args_;  // Args for all benchmark runs
   TimeUnit time_unit_;
   int range_multiplier_;
@@ -410,18 +428,20 @@ size_t BenchmarkFamilies::AddBenchmark(std::unique_ptr<Benchmark> family) {
 
 bool BenchmarkFamilies::FindBenchmarks(
     const std::string& spec,
-    std::vector<Benchmark::Instance>* benchmarks) {
+    std::vector<Benchmark::Instance>* benchmarks,
+    std::ostream* ErrStream) {
+  CHECK(ErrStream);
+  auto& Err = *ErrStream;
   // Make regular expression out of command-line flag
   std::string error_msg;
   Regex re;
   if (!re.Init(spec, &error_msg)) {
-    std::cerr << "Could not compile benchmark re: " << error_msg << std::endl;
+    Err << "Could not compile benchmark re: " << error_msg << std::endl;
     return false;
   }
 
   // Special list of thread counts to use when none are specified
-  std::vector<int> one_thread;
-  one_thread.push_back(1);
+  const std::vector<int> one_thread = {1};
 
   MutexLock l(mutex_);
   for (std::unique_ptr<Benchmark>& bench_family : families_) {
@@ -432,17 +452,29 @@ bool BenchmarkFamilies::FindBenchmarks(
     if (family->ArgsCnt() == -1) {
       family->Args({});
     }
-
-    for (auto const& args : family->args_) {
-      const std::vector<int>* thread_counts =
+    const std::vector<int>* thread_counts =
         (family->thread_counts_.empty()
          ? &one_thread
-         : &family->thread_counts_);
+         : &static_cast<const std::vector<int>&>(family->thread_counts_));
+    const size_t family_size = family->args_.size() * thread_counts->size();
+    // The benchmark will be run at least 'family_size' different inputs.
+    // If 'family_size' is very large warn the user.
+    if (family_size > kMaxFamilySize) {
+      Err <<  "The number of inputs is very large. " << family->name_
+          << " will be repeated at least " << family_size << " times.\n";
+    }
+    // reserve in the special case the regex ".", since we know the final
+    // family size.
+    if (spec == ".")
+      benchmarks->reserve(family_size);
+
+    for (auto const& args : family->args_) {
       for (int num_threads : *thread_counts) {
 
         Benchmark::Instance instance;
         instance.name = family->name_;
         instance.benchmark = bench_family.get();
+        instance.report_mode = family->report_mode_;
         instance.arg = args;
         instance.time_unit = family->time_unit_;
         instance.range_multiplier = family->range_multiplier_;
@@ -478,8 +510,8 @@ bool BenchmarkFamilies::FindBenchmarks(
         }
 
         if (re.Match(instance.name)) {
-          instance.last_benchmark_instance = (args == family->args_.back());
-          benchmarks->push_back(instance);
+          instance.last_benchmark_instance = (&args == &family->args_.back());
+          benchmarks->push_back(std::move(instance));
         }
       }
     }
@@ -488,7 +520,7 @@ bool BenchmarkFamilies::FindBenchmarks(
 }
 
 BenchmarkImp::BenchmarkImp(const char* name)
-    : name_(name), time_unit_(kNanosecond),
+    : name_(name), report_mode_(RM_Unspecified), time_unit_(kNanosecond),
       range_multiplier_(kRangeMultiplier), min_time_(0.0), repetitions_(0),
       use_real_time_(false), use_manual_time_(false),
       complexity_(oNone) {
@@ -532,22 +564,23 @@ void BenchmarkImp::Args(const std::vector<int>& args)
 
 void BenchmarkImp::Ranges(const std::vector<std::pair<int, int>>& ranges) {
   std::vector<std::vector<int>> arglists(ranges.size());
-  int total = 1;
+  std::size_t total = 1;
   for (std::size_t i = 0; i < ranges.size(); i++) {
     AddRange(&arglists[i], ranges[i].first, ranges[i].second, range_multiplier_);
     total *= arglists[i].size();
   }
 
-  std::vector<std::size_t> ctr(total, 0);
+  std::vector<std::size_t> ctr(arglists.size(), 0);
 
-  for (int i = 0; i < total; i++) {
+  for (std::size_t i = 0; i < total; i++) {
     std::vector<int> tmp;
+    tmp.reserve(arglists.size());
 
     for (std::size_t j = 0; j < arglists.size(); j++) {
-      tmp.push_back(arglists[j][ctr[j]]);
+      tmp.push_back(arglists[j].at(ctr[j]));
     }
 
-    args_.push_back(tmp);
+    args_.push_back(std::move(tmp));
 
     for (std::size_t j = 0; j < arglists.size(); j++) {
       if (ctr[j] + 1 < arglists[j].size()) {
@@ -573,6 +606,10 @@ void BenchmarkImp::MinTime(double t) {
 void BenchmarkImp::Repetitions(int n) {
   CHECK(n > 0);
   repetitions_ = n;
+}
+
+void BenchmarkImp::ReportAggregatesOnly(bool value) {
+  report_mode_ = value ? RM_ReportAggregatesOnly : RM_Default;
 }
 
 void BenchmarkImp::UseRealTime() {
@@ -703,6 +740,11 @@ Benchmark* Benchmark::Repetitions(int t) {
   return this;
 }
 
+Benchmark* Benchmark::ReportAggregatesOnly(bool value) {
+  imp_->ReportAggregatesOnly(value);
+  return this;
+}
+
 Benchmark* Benchmark::MinTime(double t) {
   imp_->MinTime(t);
   return this;
@@ -779,7 +821,8 @@ std::vector<BenchmarkReporter::Run>
 RunBenchmark(const benchmark::internal::Benchmark::Instance& b,
              std::vector<BenchmarkReporter::Run>* complexity_reports)
   EXCLUDES(GetBenchmarkLock()) {
-   std::vector<BenchmarkReporter::Run> reports; // return value
+  std::vector<BenchmarkReporter::Run> reports; // return value
+
   size_t iters = 1;
 
   std::vector<std::thread> pool;
@@ -788,6 +831,10 @@ RunBenchmark(const benchmark::internal::Benchmark::Instance& b,
 
   const int repeats = b.repetitions != 0 ? b.repetitions
                                          : FLAGS_benchmark_repetitions;
+  const bool report_aggregates_only = repeats != 1 &&
+      (b.report_mode == internal::RM_Unspecified
+        ? FLAGS_benchmark_report_aggregates_only
+        : b.report_mode == internal::RM_ReportAggregatesOnly);
   for (int i = 0; i < repeats; i++) {
     std::string mem;
     for (;;) {
@@ -914,22 +961,21 @@ RunBenchmark(const benchmark::internal::Benchmark::Instance& b,
       iters = static_cast<int>(next_iters + 0.5);
     }
   }
-  std::vector<BenchmarkReporter::Run> additional_run_stats = ComputeStats(reports);
-  reports.insert(reports.end(), additional_run_stats.begin(),
-                 additional_run_stats.end());
-
-  if((b.complexity != oNone) && b.last_benchmark_instance) {
-    additional_run_stats = ComputeBigO(*complexity_reports);
-    reports.insert(reports.end(), additional_run_stats.begin(),
-                   additional_run_stats.end());
-    complexity_reports->clear();
-  }
-
   if (b.multithreaded) {
     for (std::thread& thread : pool)
       thread.join();
   }
+  // Calculate additional statistics
+  auto stat_reports = ComputeStats(reports);
+  if((b.complexity != oNone) && b.last_benchmark_instance) {
+    auto additional_run_stats = ComputeBigO(*complexity_reports);
+    stat_reports.insert(stat_reports.end(), additional_run_stats.begin(),
+                   additional_run_stats.end());
+    complexity_reports->clear();
+  }
 
+  if (report_aggregates_only) reports.clear();
+  reports.insert(reports.end(), stat_reports.begin(), stat_reports.end());
   return reports;
 }
 
@@ -1064,47 +1110,52 @@ size_t RunSpecifiedBenchmarks(BenchmarkReporter* console_reporter,
   if (spec.empty() || spec == "all")
     spec = ".";  // Regexp that matches all benchmarks
 
+  // Setup the reporters
+  std::ofstream output_file;
+  std::unique_ptr<BenchmarkReporter> default_console_reporter;
+  std::unique_ptr<BenchmarkReporter> default_file_reporter;
+  if (!console_reporter) {
+    auto output_opts = FLAGS_color_print ? ConsoleReporter::OO_Color
+                                          : ConsoleReporter::OO_None;
+    default_console_reporter = internal::CreateReporter(
+          FLAGS_benchmark_format, output_opts);
+    console_reporter = default_console_reporter.get();
+  }
+  auto& Out = console_reporter->GetOutputStream();
+  auto& Err = console_reporter->GetErrorStream();
+
+  std::string const& fname = FLAGS_benchmark_out;
+  if (fname == "" && file_reporter) {
+    Err << "A custom file reporter was provided but "
+                   "--benchmark_out=<file> was not specified." << std::endl;
+    std::exit(1);
+  }
+  if (fname != "") {
+    output_file.open(fname);
+    if (!output_file.is_open()) {
+      Err << "invalid file name: '" << fname << std::endl;
+      std::exit(1);
+    }
+    if (!file_reporter) {
+      default_file_reporter = internal::CreateReporter(
+            FLAGS_benchmark_out_format, ConsoleReporter::OO_None);
+      file_reporter = default_file_reporter.get();
+    }
+    file_reporter->SetOutputStream(&output_file);
+    file_reporter->SetErrorStream(&output_file);
+  }
+
   std::vector<internal::Benchmark::Instance> benchmarks;
   auto families = internal::BenchmarkFamilies::GetInstance();
-  if (!families->FindBenchmarks(spec, &benchmarks)) return 0;
+  if (!families->FindBenchmarks(spec, &benchmarks, &Err)) return 0;
 
   if (FLAGS_benchmark_list_tests) {
     for (auto const& benchmark : benchmarks)
-      std::cout <<  benchmark.name << "\n";
+      Out <<  benchmark.name << "\n";
   } else {
-    // Setup the reporters
-    std::ofstream output_file;
-    std::unique_ptr<BenchmarkReporter> default_console_reporter;
-    std::unique_ptr<BenchmarkReporter> default_file_reporter;
-    if (!console_reporter) {
-      auto output_opts = FLAGS_color_print ? ConsoleReporter::OO_Color
-                                           : ConsoleReporter::OO_None;
-      default_console_reporter = internal::CreateReporter(
-          FLAGS_benchmark_format, output_opts);
-      console_reporter = default_console_reporter.get();
-    }
-    std::string const& fname = FLAGS_benchmark_out;
-    if (fname == "" && file_reporter) {
-      std::cerr << "A custom file reporter was provided but "
-                   "--benchmark_out=<file> was not specified." << std::endl;
-      std::exit(1);
-    }
-    if (fname != "") {
-      output_file.open(fname);
-      if (!output_file.is_open()) {
-        std::cerr << "invalid file name: '" << fname << std::endl;
-        std::exit(1);
-      }
-      if (!file_reporter) {
-        default_file_reporter = internal::CreateReporter(
-            FLAGS_benchmark_out_format, ConsoleReporter::OO_None);
-        file_reporter = default_file_reporter.get();
-      }
-      file_reporter->SetOutputStream(&output_file);
-      file_reporter->SetErrorStream(&output_file);
-    }
     internal::RunMatchingBenchmarks(benchmarks, console_reporter, file_reporter);
   }
+
   return benchmarks.size();
 }
 
@@ -1117,6 +1168,7 @@ void PrintUsageAndExit() {
           "          [--benchmark_filter=<regex>]\n"
           "          [--benchmark_min_time=<min_time>]\n"
           "          [--benchmark_repetitions=<num_repetitions>]\n"
+          "          [--benchmark_report_aggregates_only={true|false}\n"
           "          [--benchmark_format=<console|json|csv>]\n"
           "          [--benchmark_out=<filename>]\n"
           "          [--benchmark_out_format=<json|console|csv>]\n"
@@ -1137,6 +1189,8 @@ void ParseCommandLineFlags(int* argc, char** argv) {
                         &FLAGS_benchmark_min_time) ||
         ParseInt32Flag(argv[i], "benchmark_repetitions",
                        &FLAGS_benchmark_repetitions) ||
+        ParseBoolFlag(argv[i], "benchmark_report_aggregates_only",
+                       &FLAGS_benchmark_report_aggregates_only) ||
         ParseStringFlag(argv[i], "benchmark_format",
                         &FLAGS_benchmark_format) ||
         ParseStringFlag(argv[i], "benchmark_out",
@@ -1166,6 +1220,11 @@ Benchmark* RegisterBenchmarkInternal(Benchmark* bench) {
     BenchmarkFamilies* families = BenchmarkFamilies::GetInstance();
     families->AddBenchmark(std::move(bench_ptr));
     return bench;
+}
+
+int InitializeStreams() {
+    static std::ios_base::Init init;
+    return 0;
 }
 
 } // end namespace internal

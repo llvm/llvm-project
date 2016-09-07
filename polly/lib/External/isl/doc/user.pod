@@ -952,6 +952,9 @@ Spaces can be compared using the following functions:
 	#include <isl/space.h>
 	isl_bool isl_space_is_equal(__isl_keep isl_space *space1,
 		__isl_keep isl_space *space2);
+	isl_bool isl_space_has_equal_tuples(
+		__isl_keep isl_space *space1,
+		__isl_keep isl_space *space2);
 	isl_bool isl_space_is_domain(__isl_keep isl_space *space1,
 		__isl_keep isl_space *space2);
 	isl_bool isl_space_is_range(__isl_keep isl_space *space1,
@@ -970,6 +973,17 @@ tuples (C<isl_dim_in>, C<isl_dim_out> or C<isl_dim_set>) of the given
 spaces are the same.  That is, it checks if they have the same
 identifier (if any), the same dimension and the same internal structure
 (if any).
+C<isl_space_is_equal> checks whether two spaces are identical.
+In particular, it checks whether they have the same type
+(parameter, set or map space), the same tuples
+(if they are not parameter spaces) in the sense
+of C<isl_space_tuple_is_equal> and the same parameters
+in the same order.
+C<isl_space_has_equal_tuples> check whether two spaces have
+the same tuples.  In contrast to C<isl_space_is_equal>, it does not check the
+parameters.  This is useful because many C<isl> functions align the
+parameters before they perform their operations, such that equivalence
+is not necessary.
 
 It is often useful to create objects that live in the
 same space as some other object.  This can be accomplished

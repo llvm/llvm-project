@@ -29,7 +29,7 @@ int main()
     std::shuffle(ia, ia+sa, g);
     LIBCPP_ASSERT(std::equal(ia, ia+sa, ia1));
     assert(std::is_permutation(ia, ia+sa, ia1));
-    std::shuffle(ia, ia+sa, g);
+    std::shuffle(ia, ia+sa, std::move(g));
     LIBCPP_ASSERT(std::equal(ia, ia+sa, ia2));
     assert(std::is_permutation(ia, ia+sa, ia2));
 }

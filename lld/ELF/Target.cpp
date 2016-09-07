@@ -328,7 +328,7 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_386_PC32:
     return R_PC;
   case R_386_GOTPC:
-    return R_GOTONLY_PC;
+    return R_GOTONLY_PC_FROM_END;
   case R_386_TLS_IE:
     return R_GOT;
   case R_386_GOT32:
@@ -336,7 +336,7 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_386_TLS_GOTIE:
     return R_GOT_FROM_END;
   case R_386_GOTOFF:
-    return R_GOTREL;
+    return R_GOTREL_FROM_END;
   case R_386_TLS_LE:
     return R_TLS;
   case R_386_TLS_LE_32:
@@ -1457,6 +1457,7 @@ void AArch64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
 }
 
 AMDGPUTargetInfo::AMDGPUTargetInfo() {
+  RelativeRel = R_AMDGPU_REL64;
   GotRel = R_AMDGPU_ABS64;
   GotEntrySize = 8;
 }
@@ -1942,8 +1943,6 @@ void MipsTargetInfo<ELFT>::writeGotPlt(uint8_t *Buf, const SymbolBody &) const {
   write32<ELFT::TargetEndianness>(Buf, Out<ELFT>::Plt->getVA());
 }
 
-static uint16_t mipsHigh(uint64_t V) { return (V + 0x8000) >> 16; }
-
 template <endianness E, uint8_t BSIZE, uint8_t SHIFT>
 static int64_t getPcRelocAddend(const uint8_t *Loc) {
   uint32_t Instr = read32<E>(Loc);
@@ -1964,7 +1963,22 @@ static void applyMipsPcReloc(uint8_t *Loc, uint32_t Type, uint64_t V) {
 template <endianness E>
 static void writeMipsHi16(uint8_t *Loc, uint64_t V) {
   uint32_t Instr = read32<E>(Loc);
-  write32<E>(Loc, (Instr & 0xffff0000) | mipsHigh(V));
+  uint16_t Res = ((V + 0x8000) >> 16) & 0xffff;
+  write32<E>(Loc, (Instr & 0xffff0000) | Res);
+}
+
+template <endianness E>
+static void writeMipsHigher(uint8_t *Loc, uint64_t V) {
+  uint32_t Instr = read32<E>(Loc);
+  uint16_t Res = ((V + 0x80008000) >> 32) & 0xffff;
+  write32<E>(Loc, (Instr & 0xffff0000) | Res);
+}
+
+template <endianness E>
+static void writeMipsHighest(uint8_t *Loc, uint64_t V) {
+  uint32_t Instr = read32<E>(Loc);
+  uint16_t Res = ((V + 0x800080008000) >> 48) & 0xffff;
+  write32<E>(Loc, (Instr & 0xffff0000) | Res);
 }
 
 template <endianness E>
@@ -2048,6 +2062,8 @@ uint64_t MipsTargetInfo<ELFT>::getImplicitAddend(const uint8_t *Buf,
     return 0;
   case R_MIPS_32:
   case R_MIPS_GPREL32:
+  case R_MIPS_TLS_DTPREL32:
+  case R_MIPS_TLS_TPREL32:
     return read32<E>(Buf);
   case R_MIPS_26:
     // FIXME (simon): If the relocation target symbol is not a PLT entry
@@ -2107,18 +2123,24 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   const endianness E = ELFT::TargetEndianness;
   // Thread pointer and DRP offsets from the start of TLS data area.
   // https://www.linux-mips.org/wiki/NPTL
-  if (Type == R_MIPS_TLS_DTPREL_HI16 || Type == R_MIPS_TLS_DTPREL_LO16)
+  if (Type == R_MIPS_TLS_DTPREL_HI16 || Type == R_MIPS_TLS_DTPREL_LO16 ||
+      Type == R_MIPS_TLS_DTPREL32 || Type == R_MIPS_TLS_DTPREL64)
     Val -= 0x8000;
-  else if (Type == R_MIPS_TLS_TPREL_HI16 || Type == R_MIPS_TLS_TPREL_LO16)
+  else if (Type == R_MIPS_TLS_TPREL_HI16 || Type == R_MIPS_TLS_TPREL_LO16 ||
+           Type == R_MIPS_TLS_TPREL32 || Type == R_MIPS_TLS_TPREL64)
     Val -= 0x7000;
   if (ELFT::Is64Bits)
     std::tie(Type, Val) = calculateMips64RelChain(Type, Val);
   switch (Type) {
   case R_MIPS_32:
   case R_MIPS_GPREL32:
+  case R_MIPS_TLS_DTPREL32:
+  case R_MIPS_TLS_TPREL32:
     write32<E>(Loc, Val);
     break;
   case R_MIPS_64:
+  case R_MIPS_TLS_DTPREL64:
+  case R_MIPS_TLS_TPREL64:
     write64<E>(Loc, Val);
     break;
   case R_MIPS_26:
@@ -2150,6 +2172,12 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_MIPS_TLS_DTPREL_HI16:
   case R_MIPS_TLS_TPREL_HI16:
     writeMipsHi16<E>(Loc, Val);
+    break;
+  case R_MIPS_HIGHER:
+    writeMipsHigher<E>(Loc, Val);
+    break;
+  case R_MIPS_HIGHEST:
+    writeMipsHighest<E>(Loc, Val);
     break;
   case R_MIPS_JALR:
     // Ignore this optimization relocation for now

@@ -112,11 +112,11 @@ extern bool PollyUseRuntimeAliasChecks;
 extern bool PollyProcessUnprofitable;
 extern bool PollyInvariantLoadHoisting;
 
-/// @brief A function attribute which will cause Polly to skip the function
+/// A function attribute which will cause Polly to skip the function
 extern llvm::StringRef PollySkipFnAttr;
 
 //===----------------------------------------------------------------------===//
-/// @brief Pass to detect the maximal static control parts (Scops) of a
+/// Pass to detect the maximal static control parts (Scops) of a
 /// function.
 class ScopDetection : public FunctionPass {
 public:
@@ -125,56 +125,56 @@ public:
   // Remember the valid regions
   RegionSet ValidRegions;
 
-  /// @brief Context variables for SCoP detection.
+  /// Context variables for SCoP detection.
   struct DetectionContext {
     Region &CurRegion;   // The region to check.
     AliasSetTracker AST; // The AliasSetTracker to hold the alias information.
     bool Verifying;      // If we are in the verification phase?
 
-    /// @brief Container to remember rejection reasons for this region.
+    /// Container to remember rejection reasons for this region.
     RejectLog Log;
 
-    /// @brief Map a base pointer to all access functions accessing it.
+    /// Map a base pointer to all access functions accessing it.
     ///
     /// This map is indexed by the base pointer. Each element of the map
     /// is a list of memory accesses that reference this base pointer.
     BaseToAFs Accesses;
 
-    /// @brief The set of base pointers with non-affine accesses.
+    /// The set of base pointers with non-affine accesses.
     ///
     /// This set contains all base pointers and the locations where they are
     /// used for memory accesses that can not be detected as affine accesses.
     SetVector<std::pair<const SCEVUnknown *, Loop *>> NonAffineAccesses;
     BaseToElSize ElementSize;
 
-    /// @brief The region has at least one load instruction.
+    /// The region has at least one load instruction.
     bool hasLoads;
 
-    /// @brief The region has at least one store instruction.
+    /// The region has at least one store instruction.
     bool hasStores;
 
-    /// @brief Flag to indicate the region has at least one unknown access.
+    /// Flag to indicate the region has at least one unknown access.
     bool HasUnknownAccess;
 
-    /// @brief The set of non-affine subregions in the region we analyze.
+    /// The set of non-affine subregions in the region we analyze.
     RegionSet NonAffineSubRegionSet;
 
-    /// @brief The set of loops contained in non-affine regions.
+    /// The set of loops contained in non-affine regions.
     BoxedLoopsSetTy BoxedLoopsSet;
 
-    /// @brief Loads that need to be invariant during execution.
+    /// Loads that need to be invariant during execution.
     InvariantLoadsSetTy RequiredILS;
 
-    /// @brief Map to memory access description for the corresponding LLVM
+    /// Map to memory access description for the corresponding LLVM
     ///        instructions.
     MapInsnToMemAcc InsnToMemAcc;
 
-    /// @brief Initialize a DetectionContext from scratch.
+    /// Initialize a DetectionContext from scratch.
     DetectionContext(Region &R, AliasAnalysis &AA, bool Verify)
         : CurRegion(R), AST(AA), Verifying(Verify), Log(&R), hasLoads(false),
           hasStores(false), HasUnknownAccess(false) {}
 
-    /// @brief Initialize a DetectionContext with the data from @p DC.
+    /// Initialize a DetectionContext with the data from @p DC.
     DetectionContext(const DetectionContext &&DC)
         : CurRegion(DC.CurRegion), AST(DC.AST.getAliasAnalysis()),
           Verifying(DC.Verifying), Log(std::move(DC.Log)),
@@ -194,7 +194,7 @@ private:
   ScopDetection(const ScopDetection &) = delete;
   const ScopDetection &operator=(const ScopDetection &) = delete;
 
-  /// @brief Analysis passes used.
+  /// Analysis passes used.
   //@{
   const DominatorTree *DT;
   ScalarEvolution *SE;
@@ -203,19 +203,19 @@ private:
   AliasAnalysis *AA;
   //@}
 
-  /// @brief Map to remember detection contexts for all regions.
+  /// Map to remember detection contexts for all regions.
   using DetectionContextMapTy = DenseMap<BBPair, DetectionContext>;
   mutable DetectionContextMapTy DetectionContextMap;
 
-  /// @brief Remove cached results for @p R.
+  /// Remove cached results for @p R.
   void removeCachedResults(const Region &R);
 
-  /// @brief Remove cached results for the children of @p R recursively.
+  /// Remove cached results for the children of @p R recursively.
   ///
   /// @returns The number of regions erased regions.
   unsigned removeCachedResultsRecursively(const Region &R);
 
-  /// @brief Add the region @p AR as over approximated sub-region in @p Context.
+  /// Add the region @p AR as over approximated sub-region in @p Context.
   ///
   /// @param AR      The non-affine subregion.
   /// @param Context The current detection context.
@@ -223,7 +223,7 @@ private:
   /// @returns True if the subregion can be over approximated, false otherwise.
   bool addOverApproximatedRegion(Region *AR, DetectionContext &Context) const;
 
-  /// @brief Find for a given base pointer terms that hint towards dimension
+  /// Find for a given base pointer terms that hint towards dimension
   ///        sizes of a multi-dimensional array.
   ///
   /// @param Context      The current detection context.
@@ -233,7 +233,7 @@ private:
   getDelinearizationTerms(DetectionContext &Context,
                           const SCEVUnknown *BasePointer) const;
 
-  /// @brief Check if the dimension size of a delinearized array is valid.
+  /// Check if the dimension size of a delinearized array is valid.
   ///
   /// @param Context     The current detection context.
   /// @param Sizes       The sizes of the different array dimensions.
@@ -245,7 +245,7 @@ private:
                           SmallVectorImpl<const SCEV *> &Sizes,
                           const SCEVUnknown *BasePointer, Loop *Scope) const;
 
-  /// @brief Derive access functions for a given base pointer.
+  /// Derive access functions for a given base pointer.
   ///
   /// @param Context     The current detection context.
   /// @param Sizes       The sizes of the different array dimensions.
@@ -259,7 +259,7 @@ private:
                               const SCEVUnknown *BasePointer,
                               std::shared_ptr<ArrayShape> Shape) const;
 
-  /// @brief Check if all accesses to a given BasePointer are affine.
+  /// Check if all accesses to a given BasePointer are affine.
   ///
   /// @param Context     The current detection context.
   /// @param basepointer the base pointer we are interested in.
@@ -283,14 +283,14 @@ private:
   /// @param The region tree to scan for scops.
   void findScops(Region &R);
 
-  /// @brief Check if all basic block in the region are valid.
+  /// Check if all basic block in the region are valid.
   ///
   /// @param Context The context of scop detection.
   ///
   /// @return True if all blocks in R are valid, false otherwise.
   bool allBlocksValid(DetectionContext &Context) const;
 
-  /// @brief Check if a region has sufficient compute instructions
+  /// Check if a region has sufficient compute instructions.
   ///
   /// This function checks if a region has a non-trivial number of instructions
   /// in each loop. This can be used as an indicator if a loop is worth
@@ -304,7 +304,7 @@ private:
   bool hasSufficientCompute(DetectionContext &Context,
                             int NumAffineLoops) const;
 
-  /// @brief Check if the unique affine loop might be amendable to distribution.
+  /// Check if the unique affine loop might be amendable to distribution.
   ///
   /// This function checks if the number of non-trivial blocks in the unique
   /// affine loop in Context.CurRegion is at least two, thus if the loop might
@@ -315,7 +315,7 @@ private:
   /// @return True only if the affine loop might be amendable to distributable.
   bool hasPossiblyDistributableLoop(DetectionContext &Context) const;
 
-  /// @brief Check if a region is profitable to optimize.
+  /// Check if a region is profitable to optimize.
   ///
   /// Regions that are unlikely to expose interesting optimization opportunities
   /// are called 'unprofitable' and may be skipped during scop detection.
@@ -325,14 +325,14 @@ private:
   /// @return True if region is profitable to optimize, false otherwise.
   bool isProfitableRegion(DetectionContext &Context) const;
 
-  /// @brief Check if a region is a Scop.
+  /// Check if a region is a Scop.
   ///
   /// @param Context The context of scop detection.
   ///
   /// @return True if R is a Scop, false otherwise.
   bool isValidRegion(DetectionContext &Context) const;
 
-  /// @brief Check if an intrinsic call can be part of a Scop.
+  /// Check if an intrinsic call can be part of a Scop.
   ///
   /// @param II      The intrinsic call instruction to check.
   /// @param Context The current detection context.
@@ -340,7 +340,7 @@ private:
   /// @return True if the call instruction is valid, false otherwise.
   bool isValidIntrinsicInst(IntrinsicInst &II, DetectionContext &Context) const;
 
-  /// @brief Check if a call instruction can be part of a Scop.
+  /// Check if a call instruction can be part of a Scop.
   ///
   /// @param CI      The call instruction to check.
   /// @param Context The current detection context.
@@ -348,7 +348,7 @@ private:
   /// @return True if the call instruction is valid, false otherwise.
   bool isValidCallInst(CallInst &CI, DetectionContext &Context) const;
 
-  /// @brief Check if the given loads could be invariant and can be hoisted.
+  /// Check if the given loads could be invariant and can be hoisted.
   ///
   /// If true is returned the loads are added to the required invariant loads
   /// contained in the @p Context.
@@ -360,7 +360,7 @@ private:
   bool onlyValidRequiredInvariantLoads(InvariantLoadsSetTy &RequiredILS,
                                        DetectionContext &Context) const;
 
-  /// @brief Check if a value is invariant in the region Reg.
+  /// Check if a value is invariant in the region Reg.
   ///
   /// @param Val Value to check for invariance.
   /// @param Reg The region to consider for the invariance of Val.
@@ -369,7 +369,7 @@ private:
   ///         identified by Reg.
   bool isInvariant(const Value &Val, const Region &Reg) const;
 
-  /// @brief Check if the memory access caused by @p Inst is valid.
+  /// Check if the memory access caused by @p Inst is valid.
   ///
   /// @param Inst    The access instruction.
   /// @param AF      The access function.
@@ -378,7 +378,7 @@ private:
   bool isValidAccess(Instruction *Inst, const SCEV *AF, const SCEVUnknown *BP,
                      DetectionContext &Context) const;
 
-  /// @brief Check if a memory access can be part of a Scop.
+  /// Check if a memory access can be part of a Scop.
   ///
   /// @param Inst The instruction accessing the memory.
   /// @param Context The context of scop detection.
@@ -386,8 +386,8 @@ private:
   /// @return True if the memory access is valid, false otherwise.
   bool isValidMemoryAccess(MemAccInst Inst, DetectionContext &Context) const;
 
-  /// @brief Check if an instruction has any non trivial scalar dependencies
-  ///        as part of a Scop.
+  /// Check if an instruction has any non trivial scalar dependencies as part of
+  /// a Scop.
   ///
   /// @param Inst The instruction to check.
   /// @param RefRegion The region in respect to which we check the access
@@ -396,7 +396,7 @@ private:
   /// @return True if the instruction has scalar dependences, false otherwise.
   bool hasScalarDependency(Instruction &Inst, Region &RefRegion) const;
 
-  /// @brief Check if an instruction can be part of a Scop.
+  /// Check if an instruction can be part of a Scop.
   ///
   /// @param Inst The instruction to check.
   /// @param Context The context of scop detection.
@@ -404,7 +404,7 @@ private:
   /// @return True if the instruction is valid, false otherwise.
   bool isValidInstruction(Instruction &Inst, DetectionContext &Context) const;
 
-  /// @brief Check if the switch @p SI with condition @p Condition is valid.
+  /// Check if the switch @p SI with condition @p Condition is valid.
   ///
   /// @param BB           The block to check.
   /// @param SI           The switch to check.
@@ -416,7 +416,7 @@ private:
   bool isValidSwitch(BasicBlock &BB, SwitchInst *SI, Value *Condition,
                      bool IsLoopBranch, DetectionContext &Context) const;
 
-  /// @brief Check if the branch @p BI with condition @p Condition is valid.
+  /// Check if the branch @p BI with condition @p Condition is valid.
   ///
   /// @param BB           The block to check.
   /// @param BI           The branch to check.
@@ -428,7 +428,7 @@ private:
   bool isValidBranch(BasicBlock &BB, BranchInst *BI, Value *Condition,
                      bool IsLoopBranch, DetectionContext &Context) const;
 
-  /// @brief Check if the SCEV @p S is affine in the current @p Context.
+  /// Check if the SCEV @p S is affine in the current @p Context.
   ///
   /// This will also use a heuristic to decide if we want to require loads to be
   /// invariant to make the expression affine or if we want to treat is as
@@ -439,7 +439,7 @@ private:
   /// @param Context     The context of scop detection.
   bool isAffine(const SCEV *S, Loop *Scope, DetectionContext &Context) const;
 
-  /// @brief Check if the control flow in a basic block is valid.
+  /// Check if the control flow in a basic block is valid.
   ///
   /// This function checks if a certain basic block is terminated by a
   /// Terminator instruction we can handle or, if this is not the case,
@@ -456,7 +456,7 @@ private:
   bool isValidCFG(BasicBlock &BB, bool IsLoopBranch, bool AllowUnreachable,
                   DetectionContext &Context) const;
 
-  /// @brief Is a loop valid with respect to a given region.
+  /// Is a loop valid with respect to a given region.
   ///
   /// @param L The loop to check.
   /// @param Context The context of scop detection.
@@ -464,17 +464,17 @@ private:
   /// @return True if the loop is valid in the region.
   bool isValidLoop(Loop *L, DetectionContext &Context) const;
 
-  /// @brief Count the number of beneficial loops in @p R.
+  /// Count the number of beneficial loops in @p R.
   ///
   /// @param R The region to check
   int countBeneficialLoops(Region *R) const;
 
-  /// @brief Check if the function @p F is marked as invalid.
+  /// Check if the function @p F is marked as invalid.
   ///
   /// @note An OpenMP subfunction will be marked as invalid.
   bool isValidFunction(llvm::Function &F);
 
-  /// @brief Can ISL compute the trip count of a loop.
+  /// Can ISL compute the trip count of a loop.
   ///
   /// @param L The loop to check.
   /// @param Context The context of scop detection.
@@ -482,10 +482,10 @@ private:
   /// @return True if ISL can compute the trip count of the loop.
   bool canUseISLTripCount(Loop *L, DetectionContext &Context) const;
 
-  /// @brief Print the locations of all detected scops.
+  /// Print the locations of all detected scops.
   void printLocations(llvm::Function &F);
 
-  /// @brief Check if a region is reducible or not.
+  /// Check if a region is reducible or not.
   ///
   /// @param Region The region to check.
   /// @param DbgLoc Parameter to save the location of instruction that
@@ -494,7 +494,7 @@ private:
   /// @return True if R is reducible, false otherwise.
   bool isReducibleRegion(Region &R, DebugLoc &DbgLoc) const;
 
-  /// @brief Track diagnostics for invalid scops.
+  /// Track diagnostics for invalid scops.
   ///
   /// @param Context The context of scop detection.
   /// @param Assert Throw an assert in verify mode or not.
@@ -507,15 +507,15 @@ public:
   static char ID;
   explicit ScopDetection();
 
-  /// @brief Get the RegionInfo stored in this pass.
+  /// Get the RegionInfo stored in this pass.
   ///
   /// This was added to give the DOT printer easy access to this information.
   RegionInfo *getRI() const { return RI; }
 
-  /// @brief Get the LoopInfo stored in this pass.
+  /// Get the LoopInfo stored in this pass.
   LoopInfo *getLI() const { return LI; }
 
-  /// @brief Is the region is the maximum region of a Scop?
+  /// Is the region is the maximum region of a Scop?
   ///
   /// @param R The Region to test if it is maximum.
   /// @param Verify Rerun the scop detection to verify SCoP was not invalidated
@@ -524,16 +524,16 @@ public:
   /// @return Return true if R is the maximum Region in a Scop, false otherwise.
   bool isMaxRegionInScop(const Region &R, bool Verify = true) const;
 
-  /// @brief Return the detection context for @p R, nullptr if @p R was invalid.
+  /// Return the detection context for @p R, nullptr if @p R was invalid.
   DetectionContext *getDetectionContext(const Region *R) const;
 
-  /// @brief Return the set of rejection causes for @p R.
+  /// Return the set of rejection causes for @p R.
   const RejectLog *lookupRejectionLog(const Region *R) const;
 
-  /// @brief Return true if @p SubR is a non-affine subregion in @p ScopR.
+  /// Return true if @p SubR is a non-affine subregion in @p ScopR.
   bool isNonAffineSubRegion(const Region *SubR, const Region *ScopR) const;
 
-  /// @brief Get a message why a region is invalid
+  /// Get a message why a region is invalid
   ///
   /// @param R The region for which we get the error message
   ///
@@ -555,23 +555,22 @@ public:
   const_iterator end() const { return ValidRegions.end(); }
   //@}
 
-  /// @brief Emit rejection remarks for all rejected regions.
+  /// Emit rejection remarks for all rejected regions.
   ///
   /// @param F The function to emit remarks for.
   void emitMissedRemarks(const Function &F);
 
-  /// @brief Mark the function as invalid so we will not extract any scop from
+  /// Mark the function as invalid so we will not extract any scop from
   ///        the function.
   ///
   /// @param F The function to mark as invalid.
   static void markFunctionAsInvalid(Function *F);
 
-  /// @brief Verify if all valid Regions in this Function are still valid
+  /// Verify if all valid Regions in this Function are still valid
   /// after some transformations.
   void verifyAnalysis() const;
 
-  /// @brief Verify if R is still a valid part of Scop after some
-  /// transformations.
+  /// Verify if R is still a valid part of Scop after some transformations.
   ///
   /// @param R The Region to verify.
   void verifyRegion(const Region &R) const;

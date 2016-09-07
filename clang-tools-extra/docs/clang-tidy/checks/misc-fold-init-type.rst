@@ -14,14 +14,14 @@ through:
   initial value, so trucation wil happen at every application of ``operator+``
   and the result will be `0`, which might not be what the user expected.
 
-.. code:: c++
+.. code-block:: c++
 
   auto a = {0.5f, 0.5f, 0.5f, 0.5f};
   return std::accumulate(std::begin(a), std::end(a), 0);
 
 - Overflow: The following code also returns `0`.
 
-.. code:: c++
+.. code-block:: c++
 
   auto a = {65536LL * 65536 * 65536};
   return std::accumulate(std::begin(a), std::end(a), 0);

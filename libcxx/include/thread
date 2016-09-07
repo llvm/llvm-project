@@ -99,6 +99,7 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #include <tuple>
 #endif
 #include <__threading_support>
+#include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -159,8 +160,7 @@ public:
     pointer operator*() const {return *get();}
     _LIBCPP_INLINE_VISIBILITY
     pointer operator->() const {return get();}
-    pointer release();
-    void reset(pointer __p = nullptr);
+    void set_pointer(pointer __p);
 };
 
 template <class _Tp>
@@ -191,21 +191,12 @@ __thread_specific_ptr<_Tp>::~__thread_specific_ptr()
 }
 
 template <class _Tp>
-typename __thread_specific_ptr<_Tp>::pointer
-__thread_specific_ptr<_Tp>::release()
-{
-    pointer __p = get();
-    __libcpp_tl_set(__key_, nullptr);
-    return __p;
-}
-
-template <class _Tp>
 void
-__thread_specific_ptr<_Tp>::reset(pointer __p)
+__thread_specific_ptr<_Tp>::set_pointer(pointer __p)
 {
-    pointer __p_old = get();
+    _LIBCPP_ASSERT(get() == nullptr,
+                   "Attempting to overwrite thread local data");
     __libcpp_tl_set(__key_, __p);
-    delete __p_old;
 }
 
 class _LIBCPP_TYPE_VIS thread;
@@ -351,7 +342,7 @@ void* __thread_proxy(void* __vp)
 {
     // _Fp = std::tuple< unique_ptr<__thread_struct>, Functor, Args...>
     std::unique_ptr<_Fp> __p(static_cast<_Fp*>(__vp));
-    __thread_local_data().reset(_VSTD::get<0>(*__p).release());
+    __thread_local_data().set_pointer(_VSTD::get<0>(*__p).release());
     typedef typename __make_tuple_indices<tuple_size<_Fp>::value, 2>::type _Index;
     __thread_execute(*__p, _Index());
     return nullptr;
@@ -392,7 +383,7 @@ template <class _Fp>
 void* __thread_proxy_cxx03(void* __vp)
 {
     std::unique_ptr<_Fp> __p(static_cast<_Fp*>(__vp));
-    __thread_local_data().reset(__p->__tsp_.release());
+    __thread_local_data().set_pointer(__p->__tsp_.release());
     (__p->__fn_)();
     return nullptr;
 }

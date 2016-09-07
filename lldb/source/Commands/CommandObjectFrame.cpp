@@ -43,11 +43,213 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+#pragma mark CommandObjectFrameDiagnose
+
+//-------------------------------------------------------------------------
+// CommandObjectFrameInfo
+//-------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------
+// CommandObjectFrameDiagnose
+//-------------------------------------------------------------------------
+
+class CommandObjectFrameDiagnose : public CommandObjectParsed
+{
+public:
+    class CommandOptions : public Options
+    {
+    public:
+        CommandOptions() :
+        Options()
+        {
+            OptionParsingStarting(nullptr);
+        }
+        
+        ~CommandOptions() override = default;
+        
+        Error
+        SetOptionValue(uint32_t option_idx, const char *option_arg,
+                       ExecutionContext *execution_context) override
+        {
+            Error error;
+            const int short_option = m_getopt_table[option_idx].val;
+            switch (short_option)
+            {
+            case 'r':
+                reg = ConstString(option_arg);
+                break;
+
+            case 'a':
+                {
+                    bool success = false;
+
+                    address = StringConvert::ToUInt64 (option_arg, 0, 0, &success);
+                    if (!success)
+                    {
+                        address.reset();
+                        error.SetErrorStringWithFormat ("invalid address argument '%s'", option_arg);
+                    }
+                }
+                break;
+        
+            case 'o':
+                {
+                    bool success = false;
+                    
+                    offset = StringConvert::ToSInt64 (option_arg, 0, 0, &success);
+                    if (!success)
+                    {
+                        offset.reset();
+                        error.SetErrorStringWithFormat ("invalid offset argument '%s'", option_arg);
+                    }
+                }
+                break;
+                
+            default:
+                error.SetErrorStringWithFormat ("invalid short option character '%c'", short_option);
+                break;
+            }
+            
+            return error;
+        }
+        
+        void
+        OptionParsingStarting(ExecutionContext *execution_context) override
+        {
+            address.reset();
+            reg.reset();
+            offset.reset();
+        }
+        
+        const OptionDefinition*
+        GetDefinitions () override
+        {
+            return g_option_table;
+        }
+        
+        // Options table: Required for subclasses of Options.
+        static OptionDefinition g_option_table[];
+        
+        // Options.
+        llvm::Optional<lldb::addr_t> address;
+        llvm::Optional<ConstString> reg;
+        llvm::Optional<int64_t> offset;
+    };
+    
+    CommandObjectFrameDiagnose(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "frame diagnose",
+                              "Try to determine what path path the current stop location used to get to a register or address",
+                              nullptr, eCommandRequiresThread | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
+                              eCommandProcessMustBePaused),
+          m_options()
+    {
+        CommandArgumentEntry arg;
+        CommandArgumentData index_arg;
+        
+        // Define the first (and only) variant of this arg.
+        index_arg.arg_type = eArgTypeFrameIndex;
+        index_arg.arg_repetition = eArgRepeatOptional;
+        
+        // There is only one variant this argument could be; put it into the argument entry.
+        arg.push_back (index_arg);
+        
+        // Push the data for the first argument into the m_arguments vector.
+        m_arguments.push_back (arg);
+    }
+    
+    ~CommandObjectFrameDiagnose() override = default;
+    
+    Options *
+    GetOptions () override
+    {
+        return &m_options;
+    }
+    
+protected:
+    bool
+    DoExecute (Args& command, CommandReturnObject &result) override
+    {
+        Thread *thread = m_exe_ctx.GetThreadPtr();
+        StackFrameSP frame_sp = thread->GetSelectedFrame();
+        
+        ValueObjectSP valobj_sp;
+        
+        if (m_options.address.hasValue())
+        {
+            if (m_options.reg.hasValue() || m_options.offset.hasValue())
+            {
+                result.AppendError("`frame diagnose --address` is incompatible with other arguments.");
+                result.SetStatus(eReturnStatusFailed);
+                return false;
+            }
+            valobj_sp = frame_sp->GuessValueForAddress(m_options.address.getValue());
+        }
+        else if (m_options.reg.hasValue())
+        {
+            valobj_sp = frame_sp->GuessValueForRegisterAndOffset(m_options.reg.getValue(), m_options.offset.getValueOr(0));
+        }
+        else
+        {
+            StopInfoSP stop_info_sp = thread->GetStopInfo();
+            if (!stop_info_sp)
+            {
+                result.AppendError("No arguments provided, and no stop info.");
+                result.SetStatus(eReturnStatusFailed);
+                return false;
+            }
+
+            valobj_sp = StopInfo::GetCrashingDereference(stop_info_sp);
+        }
+        
+        if (!valobj_sp)
+        {
+            result.AppendError("No diagnosis available.");
+            result.SetStatus(eReturnStatusFailed);
+            return false;
+        }
+
+        const bool qualify_cxx_base_classes = false;
+
+        DumpValueObjectOptions::DeclPrintingHelper helper = [&valobj_sp, qualify_cxx_base_classes](ConstString type,
+                                                                         ConstString var,
+                                                                         const DumpValueObjectOptions &opts,
+                                                                         Stream &stream) -> bool {
+            const ValueObject::GetExpressionPathFormat format = ValueObject::GetExpressionPathFormat::eGetExpressionPathFormatHonorPointers;
+            valobj_sp->GetExpressionPath(stream, qualify_cxx_base_classes, format);
+            stream.PutCString(" =");
+            return true;
+        };
+
+        DumpValueObjectOptions options;
+        options.SetDeclPrintingHelper(helper);
+        ValueObjectPrinter printer(valobj_sp.get(), &result.GetOutputStream(), options);
+        printer.PrintValueObject();
+        
+        return true;
+    }
+    
+protected:
+    CommandOptions m_options;
+};
+
+OptionDefinition
+CommandObjectFrameDiagnose::CommandOptions::g_option_table[] =
+{
+    // clang-format off
+    {LLDB_OPT_SET_1, false, "register", 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeRegisterName,    "A register to diagnose."},
+    {LLDB_OPT_SET_1, false, "address",  'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddress,         "An address to diagnose."},
+    {LLDB_OPT_SET_1, false, "offset",   'o', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset,          "An optional offset.  Requires --register."},
+    {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+    // clang-format on
+};
 
 #pragma mark CommandObjectFrameInfo
 
@@ -278,8 +480,10 @@ protected:
 OptionDefinition
 CommandObjectFrameSelect::CommandOptions::g_option_table[] =
 {
-    { LLDB_OPT_SET_1, false, "relative", 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset, "A relative frame index offset from the current frame index."},
-    { 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
+  // clang-format off
+  {LLDB_OPT_SET_1, false, "relative", 'r', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeOffset, "A relative frame index offset from the current frame index."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+  // clang-format on
 };
 
 #pragma mark CommandObjectFrameVariable
@@ -610,6 +814,7 @@ CommandObjectMultiwordFrame::CommandObjectMultiwordFrame(CommandInterpreter &int
                              "Commands for selecting and examing the current thread's stack frames.",
                              "frame <subcommand> [<subcommand-options>]")
 {
+    LoadSubCommand ("diagnose", CommandObjectSP (new CommandObjectFrameDiagnose (interpreter)));
     LoadSubCommand ("info",   CommandObjectSP (new CommandObjectFrameInfo (interpreter)));
     LoadSubCommand ("select", CommandObjectSP (new CommandObjectFrameSelect (interpreter)));
     LoadSubCommand ("variable", CommandObjectSP (new CommandObjectFrameVariable (interpreter)));

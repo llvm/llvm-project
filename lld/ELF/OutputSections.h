@@ -135,7 +135,6 @@ public:
   uintX_t getMipsGotOffset(const SymbolBody &B, uintX_t Addend) const;
   uintX_t getGlobalDynAddr(const SymbolBody &B) const;
   uintX_t getGlobalDynOffset(const SymbolBody &B) const;
-  uintX_t getNumEntries() const { return Entries.size(); }
   typename Base::Kind getKind() const override { return Base::Got; }
   static bool classof(const Base *B) { return B->getKind() == Base::Got; }
 
@@ -377,10 +376,12 @@ public:
   void writeTo(uint8_t *Buf) override;
   bool hasRelocs() const { return !Relocs.empty(); }
   typename Base::Kind getKind() const override { return Base::Reloc; }
+  size_t getRelativeRelocCount() const { return NumRelativeRelocs; }
   static bool classof(const Base *B) { return B->getKind() == Base::Reloc; }
 
 private:
   bool Sort;
+  size_t NumRelativeRelocs = 0;
   std::vector<DynamicReloc<ELFT>> Relocs;
 };
 
@@ -699,7 +700,7 @@ template <class ELFT> class BuildIdSection : public OutputSectionBase<ELFT> {
 
 public:
   void writeTo(uint8_t *Buf) override;
-  virtual void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) = 0;
+  virtual void writeBuildId(ArrayRef<uint8_t> Buf) = 0;
   typename Base::Kind getKind() const override { return Base::BuildId; }
   static bool classof(const Base *B) { return B->getKind() == Base::BuildId; }
 
@@ -712,26 +713,32 @@ protected:
 template <class ELFT> class BuildIdFnv1 final : public BuildIdSection<ELFT> {
 public:
   BuildIdFnv1() : BuildIdSection<ELFT>(8) {}
-  void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
+  void writeBuildId(ArrayRef<uint8_t> Buf) override;
 };
 
 template <class ELFT> class BuildIdMd5 final : public BuildIdSection<ELFT> {
 public:
   BuildIdMd5() : BuildIdSection<ELFT>(16) {}
-  void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
+  void writeBuildId(ArrayRef<uint8_t> Buf) override;
 };
 
 template <class ELFT> class BuildIdSha1 final : public BuildIdSection<ELFT> {
 public:
   BuildIdSha1() : BuildIdSection<ELFT>(20) {}
-  void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
+  void writeBuildId(ArrayRef<uint8_t> Buf) override;
+};
+
+template <class ELFT> class BuildIdUuid final : public BuildIdSection<ELFT> {
+public:
+  BuildIdUuid() : BuildIdSection<ELFT>(16) {}
+  void writeBuildId(ArrayRef<uint8_t> Buf) override;
 };
 
 template <class ELFT>
 class BuildIdHexstring final : public BuildIdSection<ELFT> {
 public:
   BuildIdHexstring();
-  void writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) override;
+  void writeBuildId(ArrayRef<uint8_t>) override;
 };
 
 // All output sections that are hadnled by the linker specially are

@@ -4,21 +4,20 @@ include(CheckCXXCompilerFlag)
 #==============================================================================
 # Build Google Benchmark for libc++
 #==============================================================================
-check_cxx_compiler_flag(-stdlib=libc++ LIBCXX_HAS_NO_STDLIB_LIBCXX_FLAG)
-if (NOT LIBCXX_HAS_NO_STDLIB_LIBCXX_FLAG)
-  message(FATAL "Benchmark requires support for the -stdlib=libc++ flag")
-endif()
 
 set(BENCHMARK_LIBCXX_COMPILE_FLAGS
     -Wno-unused-command-line-argument
     -nostdinc++
-    -cxx-isystem ${LIBCXX_SOURCE_DIR}/include
-    -stdlib=libc++)
-set(BENCHMARK_LIBCXX_LINK_FLAGS
+    -isystem ${LIBCXX_SOURCE_DIR}/include
     -L${LIBCXX_LIBRARY_DIR}
-    -Wl,-rpath,${LIBCXX_LIBRARY_DIR})
+    -Wl,-rpath,${LIBCXX_LIBRARY_DIR}
+    )
+if (DEFINED LIBCXX_CXX_ABI_LIBRARY_PATH)
+  list(APPEND BENCHMARK_LIBCXX_COMPILE_FLAGS
+          -L${LIBCXX_CXX_ABI_LIBRARY_PATH}
+          -Wl,-rpath,${LIBCXX_CXX_ABI_LIBRARY_PATH})
+endif()
 split_list(BENCHMARK_LIBCXX_COMPILE_FLAGS)
-split_list(BENCHMARK_LIBCXX_LINK_FLAGS)
 
 ExternalProject_Add(google-benchmark-libcxx
         EXCLUDE_FROM_ALL ON
@@ -32,8 +31,7 @@ ExternalProject_Add(google-benchmark-libcxx
           -DCMAKE_BUILD_TYPE:STRING=RELEASE
           -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
           -DCMAKE_CXX_FLAGS:STRING=${BENCHMARK_LIBCXX_COMPILE_FLAGS}
-          -DCMAKE_SHARED_LINK_FLAGS:STRING=${BENCHMARK_LIBCXX_LINK_FLAGS}
-          -DCMAKE_EXE_LINK_FLAGS:STRING=${BENCHMARK_LIBCXX_LINK_FLAGS}
+          -DBENCHMARK_USE_LIBCXX:BOOL=ON
           -DBENCHMARK_ENABLE_TESTING:BOOL=OFF)
 
 #==============================================================================
@@ -46,18 +44,17 @@ if (LIBCXX_BUILD_BENCHMARK_NATIVE_STDLIB)
         SOURCE_DIR ${LIBCXX_SOURCE_DIR}/utils/google-benchmark
         INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/benchmark-native
         CMAKE_CACHE_ARGS
-          -DBENCHMARK_ENABLE_TESTING:BOOL=OFF
-        CMAKE_CACHE_ARGS
           -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
           -DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
           -DCMAKE_BUILD_TYPE:STRING=RELEASE
-          -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>)
+          -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+          -DBENCHMARK_ENABLE_TESTING:BOOL=OFF)
 endif()
 
 #==============================================================================
 # Benchmark tests configuration
 #==============================================================================
-add_custom_target(libcxx-benchmarks)
+add_custom_target(cxx-benchmarks)
 
 set(BENCHMARK_LIBCXX_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/benchmark-libcxx)
 set(BENCHMARK_NATIVE_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/benchmark-native)
@@ -67,7 +64,7 @@ set(BENCHMARK_TEST_COMPILE_FLAGS
 )
 set(BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS
     -nostdinc++
-    -cxx-isystem ${LIBCXX_SOURCE_DIR}/include
+    -isystem ${LIBCXX_SOURCE_DIR}/include
     ${BENCHMARK_TEST_COMPILE_FLAGS}
     -Wno-user-defined-literals
 )
@@ -86,7 +83,7 @@ macro(add_benchmark_test name source_file)
   set(libcxx_target ${name}_libcxx)
   add_executable(${libcxx_target} EXCLUDE_FROM_ALL ${source_file})
   add_dependencies(${libcxx_target} cxx google-benchmark-libcxx)
-  add_dependencies(libcxx-benchmarks ${libcxx_target})
+  add_dependencies(cxx-benchmarks ${libcxx_target})
   if (LIBCXX_ENABLE_SHARED)
     target_link_libraries(${libcxx_target} cxx_shared)
   else()
@@ -106,7 +103,7 @@ macro(add_benchmark_test name source_file)
     if (LIBCXX_HAS_PTHREAD_LIB)
       target_link_libraries(${native_target} -pthread)
     endif()
-    add_dependencies(libcxx-benchmarks ${native_target})
+    add_dependencies(cxx-benchmarks ${native_target})
     set_target_properties(${native_target}
       PROPERTIES
           OUTPUT_NAME "${name}.native.out"
@@ -123,7 +120,7 @@ endmacro()
 file(GLOB BENCHMARK_TESTS "*.bench.cpp")
 foreach(test_path ${BENCHMARK_TESTS})
   get_filename_component(test_file "${test_path}" NAME)
-  message(STATUS "TEST: ${test_file}")
+  message(STATUS "-- Adding Benchmark: ${test_file}")
   string(REPLACE ".bench.cpp" "" test_name "${test_file}")
   add_benchmark_test(${test_name} ${test_file})
 endforeach()

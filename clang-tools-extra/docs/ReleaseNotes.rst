@@ -20,9 +20,7 @@ Introduction
 This document contains the release notes for the Extra Clang Tools, part of the
 Clang release 4.0.0.  Here we describe the status of the Extra Clang Tools in some
 detail, including major improvements from the previous release and new feature
-work. For the general Clang release notes, see `the Clang documentation
-<http://llvm.org/releases/3.8.0/tools/clang/docs/ReleaseNotes.html>`_.  All LLVM
-releases may be downloaded from the `LLVM releases web
+work.  All LLVM releases may be downloaded from the `LLVM releases web
 site <http://llvm.org/releases/>`_.
 
 For more information about Clang or LLVM, including information about
@@ -69,6 +67,12 @@ Improvements to clang-tidy
 
   Flags classes where some, but not all, special member functions are user-defined.
 
+- New `misc-move-forwarding-reference
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-move-forwarding-reference.html>`_ check
+
+  Warns when ``std::move`` is applied to a forwarding reference instead of
+  ``std::forward``.
+
 - New `mpi-buffer-deref
   <http://clang.llvm.org/extra/clang-tidy/checks/mpi-buffer-deref.html>`_ check
 
@@ -90,6 +94,15 @@ Improvements to clang-tidy
 
   Flags function parameters of a pointer type that could be changed to point to
   a constant type instead.
+
+Fixed bugs:
+
+- `modernize-make-unique
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-unique.html>`_
+  and `modernize-make-shared
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-make-shared.html>`_
+  Calling ``make_{unique|shared}`` from within a member function of a type
+  with a private or protected constructor would be ill-formed.
 
 Improvements to include-fixer
 -----------------------------

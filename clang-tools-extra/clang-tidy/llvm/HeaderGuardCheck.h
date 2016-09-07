@@ -27,13 +27,9 @@ namespace llvm {
 ///     empty string between "," if there are other filename extensions.
 class LLVMHeaderGuardCheck : public utils::HeaderGuardCheck {
 public:
-  LLVMHeaderGuardCheck(StringRef Name, ClangTidyContext *Context)
-      : HeaderGuardCheck(Name, Context),
-        RawStringHeaderFileExtensions(
-            Options.getLocalOrGlobal("HeaderFileExtensions", ",h,hh,hpp,hxx")) {
-    utils::parseHeaderFileExtensions(RawStringHeaderFileExtensions,
-                                     HeaderFileExtensions, ',');
-  }
+  LLVMHeaderGuardCheck(StringRef Name, ClangTidyContext *Context);
+
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   bool shouldSuggestEndifComment(StringRef Filename) override { return false; }
   bool shouldFixHeaderGuard(StringRef Filename) override;
   std::string getHeaderGuard(StringRef Filename, StringRef OldGuard) override;

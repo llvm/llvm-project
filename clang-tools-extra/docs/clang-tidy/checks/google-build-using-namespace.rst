@@ -5,14 +5,13 @@ google-build-using-namespace
 
 Finds ``using namespace`` directives.
 
-https://google.github.io/styleguide/cppguide.html#Namespaces
-
-The check implements the following rule of the Google C++ Style Guide:
+The check implements the following rule of the
+`Google C++ Style Guide <https://google.github.io/styleguide/cppguide.html#Namespaces>`_:
 
   You may not use a using-directive to make all names from a namespace
   available.
 
-  .. code:: c++
+  .. code-block:: c++
 
     // Forbidden -- This pollutes the namespace.
     using namespace foo;

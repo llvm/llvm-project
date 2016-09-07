@@ -76,12 +76,10 @@ public:
   bool VisitTypeLoc(const TypeLoc Loc) {
     const SourceLocation TypeBeginLoc = Loc.getBeginLoc();
     const SourceLocation TypeEndLoc = Lexer::getLocForEndOfToken(
-                             TypeBeginLoc, 0, Context.getSourceManager(),
-                             Context.getLangOpts());
+        TypeBeginLoc, 0, Context.getSourceManager(), Context.getLangOpts());
     if (const auto *TemplateTypeParm =
-            dyn_cast<TemplateTypeParmType>(Loc.getType())) {
+            dyn_cast<TemplateTypeParmType>(Loc.getType()))
       return setResult(TemplateTypeParm->getDecl(), TypeBeginLoc, TypeEndLoc);
-    }
     if (const auto *TemplateSpecType =
             dyn_cast<TemplateSpecializationType>(Loc.getType())) {
       return setResult(TemplateSpecType->getTemplateName().getAsTemplateDecl(),
@@ -93,18 +91,16 @@ public:
 
   bool VisitCXXConstructorDecl(clang::CXXConstructorDecl *ConstructorDecl) {
     for (const auto *Initializer : ConstructorDecl->inits()) {
-      if (!Initializer->isWritten()) {
-        // Ignore implicit initializers.
+      // Ignore implicit initializers.
+      if (!Initializer->isWritten())
         continue;
-      }
       if (const clang::FieldDecl *FieldDecl = Initializer->getMember()) {
         const SourceLocation InitBeginLoc = Initializer->getSourceLocation(),
                              InitEndLoc = Lexer::getLocForEndOfToken(
                                  InitBeginLoc, 0, Context.getSourceManager(),
                                  Context.getLangOpts());
-        if (!setResult(FieldDecl, InitBeginLoc, InitEndLoc)) {
+        if (!setResult(FieldDecl, InitBeginLoc, InitEndLoc))
           return false;
-        }
       }
     }
     return true;
@@ -130,20 +126,17 @@ private:
   // \returns false on success.
   bool setResult(const NamedDecl *Decl, SourceLocation Start,
                  SourceLocation End) {
-    if (!Decl) {
+    if (!Decl)
       return true;
-    }
     if (Name.empty()) {
       // Offset is used to find the declaration.
       if (!Start.isValid() || !Start.isFileID() || !End.isValid() ||
-          !End.isFileID() || !isPointWithin(Start, End)) {
+          !End.isFileID() || !isPointWithin(Start, End))
         return true;
-      }
     } else {
       // Fully qualified name is used to find the declaration.
-      if (Name != Decl->getQualifiedNameAsString()) {
+      if (Name != Decl->getQualifiedNameAsString())
         return true;
-      }
     }
     Result = Decl;
     return false;
@@ -183,15 +176,13 @@ const NamedDecl *getNamedDeclAt(const ASTContext &Context,
     const SourceLocation FileLoc = CurrDecl->getLocStart();
     StringRef FileName = Context.getSourceManager().getFilename(FileLoc);
     // FIXME: Add test.
-    if (FileName == SearchFile) {
+    if (FileName == SearchFile)
       Visitor.TraverseDecl(CurrDecl);
-    }
   }
 
   NestedNameSpecifierLocFinder Finder(const_cast<ASTContext &>(Context));
-  for (const auto &Location : Finder.getNestedNameSpecifierLocations()) {
+  for (const auto &Location : Finder.getNestedNameSpecifierLocations())
     Visitor.handleNestedNameSpecifierLoc(Location);
-  }
 
   return Visitor.getNamedDecl();
 }

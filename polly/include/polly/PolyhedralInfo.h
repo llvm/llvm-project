@@ -34,18 +34,18 @@ class PolyhedralInfo : public llvm::FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  /// @brief Construct a new PolyhedralInfo pass.
+  /// Construct a new PolyhedralInfo pass.
   PolyhedralInfo() : FunctionPass(ID) {}
   ~PolyhedralInfo() {}
 
-  /// @brief   Check if a given loop is parallel.
+  /// Check if a given loop is parallel.
   ///
   /// @param L The loop.
   ///
   /// @return  Returns true, if loop is parallel false otherwise.
   bool isParallel(llvm::Loop *L) const;
 
-  /// @brief   Return the SCoP containing the @p L loop.
+  /// Return the SCoP containing the @p L loop.
   ///
   /// @param L The loop.
   ///
@@ -53,7 +53,7 @@ public:
   ///          Returns null if the loop is not contained in any SCoP.
   const Scop *getScopContainingLoop(llvm::Loop *L) const;
 
-  /// @brief   Computes the partial schedule for the given @p L loop.
+  /// Computes the partial schedule for the given @p L loop.
   ///
   /// @param S The SCoP containing the given loop
   /// @param L The loop.
@@ -62,21 +62,21 @@ public:
   __isl_give isl_union_map *getScheduleForLoop(const Scop *S,
                                                llvm::Loop *L) const;
 
-  /// @brief Get the SCoP and dependence analysis information for @p F.
+  /// Get the SCoP and dependence analysis information for @p F.
   bool runOnFunction(llvm::Function &F) override;
 
-  /// @brief Release the internal memory.
+  /// Release the internal memory.
   void releaseMemory() override {}
 
-  /// @brief Print to @p OS if each dimension of a loop nest is parallel or not.
+  /// Print to @p OS if each dimension of a loop nest is parallel or not.
   void print(llvm::raw_ostream &OS,
              const llvm::Module *M = nullptr) const override;
 
-  /// @brief Register all analyses and transformation required.
+  /// Register all analyses and transformation required.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override;
 
 private:
-  /// @brief   Check if a given loop is parallel or vectorizable.
+  /// Check if a given loop is parallel or vectorizable.
   ///
   /// @param L             The loop.
   /// @param MinDepDistPtr If not nullptr, the minimal dependence distance will

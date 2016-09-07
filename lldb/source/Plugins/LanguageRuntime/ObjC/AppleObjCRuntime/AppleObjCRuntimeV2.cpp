@@ -1771,7 +1771,6 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
     
 
     bool success = false;
-    bool any_found = false;
 
     diagnostics.Clear();
 
@@ -1832,7 +1831,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
                                                     process->GetByteOrder(),
                                                     addr_size);
 
-                    any_found = (ParseClassInfoArray (class_infos_data, num_class_infos) > 0);
+                    ParseClassInfoArray (class_infos_data, num_class_infos);
                 }
             }
             else

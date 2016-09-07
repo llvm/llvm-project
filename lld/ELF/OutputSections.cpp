@@ -19,7 +19,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SHA1.h"
-#include <map>
+#include "llvm/Support/RandomNumberGenerator.h"
 
 using namespace llvm;
 using namespace llvm::dwarf;
@@ -354,11 +354,18 @@ RelocationSection<ELFT>::RelocationSection(StringRef Name, bool Sort)
 
 template <class ELFT>
 void RelocationSection<ELFT>::addReloc(const DynamicReloc<ELFT> &Reloc) {
+  if (Reloc.Type == Target->RelativeRel)
+    ++NumRelativeRelocs;
   Relocs.push_back(Reloc);
 }
 
 template <class ELFT, class RelTy>
 static bool compRelocations(const RelTy &A, const RelTy &B) {
+  bool AIsRel = A.getType(Config->Mips64EL) == Target->RelativeRel;
+  bool BIsRel = B.getType(Config->Mips64EL) == Target->RelativeRel;
+  if (AIsRel != BIsRel)
+    return AIsRel;
+
   return A.getSymbol(Config->Mips64EL) < B.getSymbol(Config->Mips64EL);
 }
 
@@ -643,6 +650,8 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
 
   // Add strings. We know that these are the last strings to be added to
   // DynStrTab and doing this here allows this function to set DT_STRSZ.
+  for (StringRef S : Config->AuxiliaryList)
+    Add({DT_AUXILIARY, Out<ELFT>::DynStrTab->addString(S)});
   if (!Config->RPath.empty())
     Add({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
          Out<ELFT>::DynStrTab->addString(Config->RPath)});
@@ -661,6 +670,15 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
     Add({IsRela ? DT_RELASZ : DT_RELSZ, Out<ELFT>::RelaDyn->getSize()});
     Add({IsRela ? DT_RELAENT : DT_RELENT,
          uintX_t(IsRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel))});
+
+    // MIPS dynamic loader does not support RELCOUNT tag.
+    // The problem is in the tight relation between dynamic
+    // relocations and GOT. So do not emit this tag on MIPS.
+    if (Config->EMachine != EM_MIPS) {
+      size_t NumRelativeRels = Out<ELFT>::RelaDyn->getRelativeRelocCount();
+      if (Config->ZCombreloc && NumRelativeRels)
+        Add({IsRela ? DT_RELACOUNT : DT_RELCOUNT, NumRelativeRels});
+    }
   }
   if (Out<ELFT>::RelaPlt && Out<ELFT>::RelaPlt->hasRelocs()) {
     Add({DT_JMPREL, Out<ELFT>::RelaPlt});
@@ -1373,7 +1391,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
 
   // All symbols with STB_LOCAL binding precede the weak and global symbols.
   // .dynsym only contains global symbols.
-  if (!Config->DiscardAll && !StrTabSec.isDynamic())
+  if (Config->Discard != DiscardPolicy::All && !StrTabSec.isDynamic())
     writeLocalSymbols(Buf);
 
   writeGlobalSymbols(Buf);
@@ -1463,8 +1481,6 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
   case SymbolBody::LazyArchiveKind:
   case SymbolBody::LazyObjectKind:
     break;
-  case SymbolBody::DefinedBitcodeKind:
-    llvm_unreachable("should have been replaced");
   }
   return nullptr;
 }
@@ -1648,36 +1664,38 @@ template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT>
-void BuildIdFnv1<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+void BuildIdFnv1<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   const endianness E = ELFT::TargetEndianness;
 
   // 64-bit FNV-1 hash
   uint64_t Hash = 0xcbf29ce484222325;
-  for (ArrayRef<uint8_t> Buf : Bufs) {
-    for (uint8_t B : Buf) {
-      Hash *= 0x100000001b3;
-      Hash ^= B;
-    }
+  for (uint8_t B : Buf) {
+    Hash *= 0x100000001b3;
+    Hash ^= B;
   }
   write64<E>(this->HashBuf, Hash);
 }
 
 template <class ELFT>
-void BuildIdMd5<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+void BuildIdMd5<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   MD5 Hash;
-  for (ArrayRef<uint8_t> Buf : Bufs)
-    Hash.update(Buf);
+  Hash.update(Buf);
   MD5::MD5Result Res;
   Hash.final(Res);
   memcpy(this->HashBuf, Res, 16);
 }
 
 template <class ELFT>
-void BuildIdSha1<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+void BuildIdSha1<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   SHA1 Hash;
-  for (ArrayRef<uint8_t> Buf : Bufs)
-    Hash.update(Buf);
+  Hash.update(Buf);
   memcpy(this->HashBuf, Hash.final().data(), 20);
+}
+
+template <class ELFT>
+void BuildIdUuid<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
+  if (getRandomBytes(this->HashBuf, 16))
+    error("entropy source failure");
 }
 
 template <class ELFT>
@@ -1685,7 +1703,7 @@ BuildIdHexstring<ELFT>::BuildIdHexstring()
     : BuildIdSection<ELFT>(Config->BuildIdVector.size()) {}
 
 template <class ELFT>
-void BuildIdHexstring<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
+void BuildIdHexstring<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   memcpy(this->HashBuf, Config->BuildIdVector.data(),
          Config->BuildIdVector.size());
 }
@@ -1810,8 +1828,6 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
   case InputSectionBase<ELFT>::MipsAbiFlags:
     Sec = new MipsAbiFlagsOutputSection<ELFT>();
     break;
-  case InputSectionBase<ELFT>::Layout:
-    llvm_unreachable("Invalid section type");
   }
   Out<ELFT>::Pool.emplace_back(Sec);
   return {Sec, true};
@@ -1993,6 +2009,11 @@ template class BuildIdSha1<ELF32LE>;
 template class BuildIdSha1<ELF32BE>;
 template class BuildIdSha1<ELF64LE>;
 template class BuildIdSha1<ELF64BE>;
+
+template class BuildIdUuid<ELF32LE>;
+template class BuildIdUuid<ELF32BE>;
+template class BuildIdUuid<ELF64LE>;
+template class BuildIdUuid<ELF64BE>;
 
 template class BuildIdHexstring<ELF32LE>;
 template class BuildIdHexstring<ELF32BE>;

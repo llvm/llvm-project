@@ -184,15 +184,15 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer (StringExtractorGD
     ConnectionFileDescriptor file_conn;
     std::string hostname;
     packet.SetFilePos(::strlen ("qLaunchGDBServer;"));
-    std::string name;
-    std::string value;
+    llvm::StringRef name;
+    llvm::StringRef value;
     uint16_t port = UINT16_MAX;
     while (packet.GetNameColonValue(name, value))
     {
-        if (name.compare ("host") == 0)
-            hostname.swap(value);
-        else if (name.compare ("port") == 0)
-            port = StringConvert::ToUInt32(value.c_str(), 0, 0);
+        if (name.equals("host"))
+            hostname = value;
+        else if (name.equals("port"))
+            value.getAsInteger(0, port);
     }
 
     lldb::pid_t debugserver_pid = LLDB_INVALID_PROCESS_ID;
@@ -217,7 +217,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer (StringExtractorGD
         response.PutChar(';');
     }
 
-    PacketResult packet_result = SendPacketNoLock(response.GetData(), response.GetSize());
+    PacketResult packet_result = SendPacketNoLock(response.GetString());
     if (packet_result != PacketResult::Success)
     {
         if (debugserver_pid != LLDB_INVALID_PROCESS_ID)
@@ -247,7 +247,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qQueryGDBServer (StringExtractorGDB
 
     StreamGDBRemote escaped_response;
     escaped_response.PutEscapedBytes(response.GetData(), response.GetSize());
-    return SendPacketNoLock(escaped_response.GetData(), escaped_response.GetSize());
+    return SendPacketNoLock(escaped_response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -353,7 +353,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qProcessInfo (StringExtractorGDBRem
 
     StreamString response;
     CreateProcessInfoResponse_DebugServerStyle(proc_info, response);
-    return SendPacketNoLock (response.GetData (), response.GetSize ());
+    return SendPacketNoLock (response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -367,7 +367,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qGetWorkingDir (StringExtractorGDBR
 
     StreamString response;
     response.PutBytesAsRawHex8(cwd, strlen(cwd));
-    return SendPacketNoLock(response.GetData(), response.GetSize());
+    return SendPacketNoLock(response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -408,7 +408,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qC (StringExtractorGDBRemote &packe
         m_process_launch_info.Clear();
     }
 
-    return SendPacketNoLock (response.GetData(), response.GetSize());
+    return SendPacketNoLock (response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult
@@ -437,7 +437,7 @@ GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo(StringExtractorGDBRemo
 
     StreamString response;
     signal_array.Dump(response);
-    return SendPacketNoLock(response.GetData(), response.GetSize());
+    return SendPacketNoLock(response.GetString());
 }
 
 bool

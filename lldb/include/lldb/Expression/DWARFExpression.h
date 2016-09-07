@@ -435,7 +435,15 @@ public:
                            const DWARFCompileUnit* cu,
                            const DataExtractor& debug_loc_data,
                            lldb::offset_t offset);
-
+    
+    bool
+    IsRegister(StackFrame &frame,
+               const RegisterInfo *&register_info);
+    
+    bool
+    IsDereferenceOfRegister(StackFrame &frame,
+                            const RegisterInfo *&register_info,
+                            int64_t &offset);
 protected:
     //------------------------------------------------------------------
     /// Pretty-prints the location expression to a stream
@@ -475,6 +483,11 @@ protected:
                                      lldb::offset_t* offset_ptr,
                                      lldb::addr_t& low_pc,
                                      lldb::addr_t& high_pc);
+    
+    bool
+    GetOpAndEndOffsets(StackFrame &frame,
+                       lldb::offset_t &op_offset,
+                       lldb::offset_t &end_offset);
 
     //------------------------------------------------------------------
     /// Classes that inherit from DWARFExpression can see and modify these

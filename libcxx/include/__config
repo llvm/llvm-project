@@ -691,6 +691,12 @@ template <unsigned> struct __static_assert_check {};
 #define _NOALIAS
 #endif
 
+#ifdef __GNUC__
+#define _LIBCPP_MAY_ALIAS __attribute__((__may_alias__))
+#else
+#define _LIBCPP_MAY_ALIAS
+#endif
+
 #if __has_feature(cxx_explicit_conversions) || defined(__IBMCPP__)
 #   define _LIBCPP_EXPLICIT explicit
 #else
@@ -899,6 +905,12 @@ extern "C" void __sanitizer_annotate_contiguous_container(
 #if (defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS) && defined(__clang__) \
       && __has_attribute(acquire_capability))
 #define _LIBCPP_HAS_THREAD_SAFETY_ANNOTATIONS
+#endif
+
+#if __has_attribute(require_constant_initialization)
+#define _LIBCPP_SAFE_STATIC __attribute__((__require_constant_initialization__))
+#else
+#define _LIBCPP_SAFE_STATIC
 #endif
 
 #endif // __cplusplus

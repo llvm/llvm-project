@@ -1,3 +1,4 @@
+include(AddLLVM) # for add_lit_testsuite
 macro(pythonize_bool var)
   if (${var})
     set(${var} True)
@@ -34,14 +35,17 @@ else()
   set(LIBCXXABI_TEST_DEPS cxxabi_static)
 endif()
 
-if (NOT LIBCXXABI_BUILT_STANDALONE)
+if (NOT LIBCXXABI_STANDALONE_BUILD)
   list(APPEND LIBCXXABI_TEST_DEPS cxx)
   if (LIBCXXABI_USE_LLVM_UNWINDER)
     list(APPEND LIBCXXABI_TEST_DEPS unwind)
   endif()
 endif()
 
-add_lit_testsuite(check-libcxxabi "Running libcxxabi tests"
+add_lit_testsuite(check-cxxabi "Running libcxxabi tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${LIBCXXABI_TEST_DEPS}
   )
+
+# TODO: This is a legacy target name and should be removed at some point.
+add_custom_target(check-libcxxabi DEPENDS check-cxxabi)

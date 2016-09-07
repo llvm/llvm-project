@@ -80,6 +80,37 @@ void RunTestCase(MultiStringType const& MS) {
   }
 }
 
+void test_sfinae() {
+  using namespace fs;
+  {
+    using It = const char* const;
+    static_assert(std::is_constructible<path, It>::value, "");
+  }
+  {
+    using It = input_iterator<const char*>;
+    static_assert(std::is_constructible<path, It>::value, "");
+  }
+  {
+    struct Traits {
+      using iterator_category = std::input_iterator_tag;
+      using value_type = const char;
+      using pointer = const char*;
+      using reference = const char&;
+      using difference_type = std::ptrdiff_t;
+    };
+    using It = input_iterator<const char*, Traits>;
+    static_assert(std::is_constructible<path, It>::value, "");
+  }
+  {
+    using It = output_iterator<const char*>;
+    static_assert(!std::is_constructible<path, It>::value, "");
+
+  }
+  {
+    static_assert(!std::is_constructible<path, int*>::value, "");
+  }
+}
+
 int main() {
   for (auto const& MS : PathList) {
     RunTestCase<char>(MS);
@@ -87,4 +118,5 @@ int main() {
     RunTestCase<char16_t>(MS);
     RunTestCase<char32_t>(MS);
   }
+  test_sfinae();
 }

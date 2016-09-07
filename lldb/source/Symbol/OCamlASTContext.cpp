@@ -128,8 +128,7 @@ namespace
 
 OCamlASTContext::OCamlASTContext()
     : TypeSystem(eKindOCaml),
-      m_pointer_byte_size(0),
-      m_int_byte_size(0)
+      m_pointer_byte_size(0)
 {
 }
 
@@ -351,8 +350,6 @@ OCamlASTContext::IsIntegerType(lldb::opaque_compiler_type_t type, bool &is_signe
             case OCamlPrimitiveType::eTypeInt:
                 is_signed = true;
                 return true;
-            default:
-                break;
         }
     }
 

@@ -72,7 +72,9 @@ add_library_flags_if(LIBCXX_HAS_GCC_S_LIB gcc_s)
 add_library_flags_if(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB atomic)
 
 # Setup flags.
-add_flags_if_supported(-fPIC)
+if (NOT WIN32)
+  add_flags_if_supported(-fPIC)
+endif()
 add_link_flags_if_supported(-nodefaultlibs)
 
 if ( APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
@@ -105,9 +107,9 @@ if ( APPLE AND (LIBCXX_CXX_ABI_LIBNAME STREQUAL "libcxxabi" OR
       "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++unexp.exp"
       "/usr/lib/libSystem.B.dylib")
   else()
-    if ( ${CMAKE_OSX_SYSROOT} )
-      list(FIND ${CMAKE_OSX_ARCHITECTURES} "armv7" OSX_HAS_ARMV7)
-      if (OSX_HAS_ARMV7)
+    if (DEFINED CMAKE_OSX_SYSROOT)
+      list(FIND CMAKE_OSX_ARCHITECTURES "armv7" OSX_HAS_ARMV7)
+      if (NOT OSX_HAS_ARMV7 EQUAL -1)
         set(OSX_RE_EXPORT_LINE
           "${CMAKE_OSX_SYSROOT}/usr/lib/libc++abi.dylib"
           "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/libc++sjlj-abi.exp")

@@ -76,22 +76,17 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteRegister)
     if (HasFailure())
         return;
 
-    std::future<void> suffix_result = std::async(std::launch::async, [&] { client.ComputeThreadSuffixSupport(); });
-    Handle_QThreadSuffixSupported(server, true);
-    suffix_result.get();
-
-    GDBRemoteCommunicationClient::Lock lock(client, false);
-    ASSERT_TRUE(bool(lock));
-
     const lldb::tid_t tid = 0x47;
     const uint32_t reg_num = 4;
     std::future<bool> write_result =
-        std::async(std::launch::async, [&] { return client.WriteRegister(tid, reg_num, one_register, lock); });
+        std::async(std::launch::async, [&] { return client.WriteRegister(tid, reg_num, one_register); });
+
+    Handle_QThreadSuffixSupported(server, true);
 
     HandlePacket(server, "P4=" + one_register_hex + ";thread:0047;", "OK");
     ASSERT_TRUE(write_result.get());
 
-    write_result = std::async(std::launch::async, [&] { return client.WriteAllRegisters(tid, all_registers, lock); });
+    write_result = std::async(std::launch::async, [&] { return client.WriteAllRegisters(tid, all_registers); });
 
     HandlePacket(server, "G" + all_registers_hex + ";thread:0047;", "OK");
     ASSERT_TRUE(write_result.get());
@@ -105,23 +100,17 @@ TEST_F(GDBRemoteCommunicationClientTest, WriteRegisterNoSuffix)
     if (HasFailure())
         return;
 
-    std::future<void> suffix_result = std::async(std::launch::async, [&] { client.ComputeThreadSuffixSupport(); });
-    Handle_QThreadSuffixSupported(server, false);
-    suffix_result.get();
-
-    GDBRemoteCommunicationClient::Lock lock(client, false);
-    ASSERT_TRUE(bool(lock));
-
     const lldb::tid_t tid = 0x47;
     const uint32_t reg_num = 4;
     std::future<bool> write_result =
-        std::async(std::launch::async, [&] { return client.WriteRegister(tid, reg_num, one_register, lock); });
+        std::async(std::launch::async, [&] { return client.WriteRegister(tid, reg_num, one_register); });
 
+    Handle_QThreadSuffixSupported(server, false);
     HandlePacket(server, "Hg47", "OK");
     HandlePacket(server, "P4=" + one_register_hex, "OK");
     ASSERT_TRUE(write_result.get());
 
-    write_result = std::async(std::launch::async, [&] { return client.WriteAllRegisters(tid, all_registers, lock); });
+    write_result = std::async(std::launch::async, [&] { return client.WriteAllRegisters(tid, all_registers); });
 
     HandlePacket(server, "G" + all_registers_hex, "OK");
     ASSERT_TRUE(write_result.get());
@@ -135,27 +124,21 @@ TEST_F(GDBRemoteCommunicationClientTest, ReadRegister)
     if (HasFailure())
         return;
 
-    std::future<void> suffix_result = std::async(std::launch::async, [&] { client.ComputeThreadSuffixSupport(); });
-    Handle_QThreadSuffixSupported(server, true);
-    suffix_result.get();
-
     const lldb::tid_t tid = 0x47;
     const uint32_t reg_num = 4;
     std::future<bool> async_result = std::async(std::launch::async, [&] { return client.GetpPacketSupported(tid); });
+    Handle_QThreadSuffixSupported(server, true);
     HandlePacket(server, "p0;thread:0047;", one_register_hex);
     ASSERT_TRUE(async_result.get());
 
-    GDBRemoteCommunicationClient::Lock lock(client, false);
-    ASSERT_TRUE(bool(lock));
-
     std::future<DataBufferSP> read_result =
-        std::async(std::launch::async, [&] { return client.ReadRegister(tid, reg_num, lock); });
+        std::async(std::launch::async, [&] { return client.ReadRegister(tid, reg_num); });
     HandlePacket(server, "p4;thread:0047;", "41424344");
     auto buffer_sp = read_result.get();
     ASSERT_TRUE(bool(buffer_sp));
     ASSERT_EQ(0, memcmp(buffer_sp->GetBytes(), one_register, sizeof one_register));
 
-    read_result = std::async(std::launch::async, [&] { return client.ReadAllRegisters(tid, lock); });
+    read_result = std::async(std::launch::async, [&] { return client.ReadAllRegisters(tid); });
     HandlePacket(server, "g;thread:0047;", all_registers_hex);
     buffer_sp = read_result.get();
     ASSERT_TRUE(bool(buffer_sp));
@@ -170,14 +153,11 @@ TEST_F(GDBRemoteCommunicationClientTest, SaveRestoreRegistersNoSuffix)
     if (HasFailure())
         return;
 
-    std::future<void> suffix_result = std::async(std::launch::async, [&] { client.ComputeThreadSuffixSupport(); });
-    Handle_QThreadSuffixSupported(server, false);
-    suffix_result.get();
-
     const lldb::tid_t tid = 0x47;
     uint32_t save_id;
     std::future<bool> async_result =
         std::async(std::launch::async, [&] { return client.SaveRegisterState(tid, save_id); });
+    Handle_QThreadSuffixSupported(server, false);
     HandlePacket(server, "Hg47", "OK");
     HandlePacket(server, "QSaveRegisterState", "1");
     ASSERT_TRUE(async_result.get());

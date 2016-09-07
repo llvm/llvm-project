@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: c++03
+
 // <iterator>
 // template <class C> auto begin(C& c) -> decltype(c.begin());
 // template <class C> auto begin(const C& c) -> decltype(c.begin());
@@ -17,7 +19,6 @@
 
 #include "test_macros.h"
 
-#if TEST_STD_VER >= 11
 #include <iterator>
 #include <cassert>
 #include <vector>
@@ -142,7 +143,3 @@ int main(){
     static_assert(e - b == 3, "");
 #endif
 }
-
-#else
-int main(){}
-#endif

@@ -108,27 +108,6 @@ static bool ProcessVmReadvSupported()
 
 namespace
 {
-Error
-ResolveProcessArchitecture(lldb::pid_t pid, ArchSpec &arch)
-{
-    // Grab process info for the running process.
-    ProcessInstanceInfo process_info;
-    if (!Host::GetProcessInfo(pid, process_info))
-        return Error("failed to get process info");
-
-    // Resolve the executable module.
-    ModuleSpecList module_specs;
-    if (!ObjectFile::GetModuleSpecifications(process_info.GetExecutableFile(), 0, 0, module_specs))
-        return Error("failed to get module specifications");
-    assert(module_specs.GetSize() == 1);
-
-    arch = module_specs.GetModuleSpecRefAtIndex(0).GetArchitecture();
-    if (arch.IsValid())
-        return Error();
-    else
-        return Error("failed to retrieve a valid architecture from the exe module");
-}
-
 void
 MaybeLogLaunchInfo(const ProcessLaunchInfo &info)
 {

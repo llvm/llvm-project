@@ -55,9 +55,8 @@ public:
     if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FoundDecl)) {
       addUSRsOfOverridenFunctions(MethodDecl);
       for (const auto &OverriddenMethod : OverriddenMethods) {
-        if (checkIfOverriddenFunctionAscends(OverriddenMethod)) {
+        if (checkIfOverriddenFunctionAscends(OverriddenMethod))
           USRSet.insert(getUSRForDecl(OverriddenMethod));
-        }
       }
     } else if (const auto *RecordDecl = dyn_cast<CXXRecordDecl>(FoundDecl)) {
       handleCXXRecordDecl(RecordDecl);
@@ -71,9 +70,8 @@ public:
   }
 
   bool VisitCXXMethodDecl(const CXXMethodDecl *MethodDecl) {
-    if (MethodDecl->isVirtual()) {
+    if (MethodDecl->isVirtual())
       OverriddenMethods.push_back(MethodDecl);
-    }
     return true;
   }
 
@@ -87,46 +85,43 @@ private:
   void handleCXXRecordDecl(const CXXRecordDecl *RecordDecl) {
     RecordDecl = RecordDecl->getDefinition();
     if (const auto *ClassTemplateSpecDecl =
-            dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl)) {
+            dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl))
       handleClassTemplateDecl(ClassTemplateSpecDecl->getSpecializedTemplate());
-    }
     addUSRsOfCtorDtors(RecordDecl);
   }
 
   void handleClassTemplateDecl(const ClassTemplateDecl *TemplateDecl) {
-    for (const auto *Specialization : TemplateDecl->specializations()) {
+    for (const auto *Specialization : TemplateDecl->specializations())
       addUSRsOfCtorDtors(Specialization);
-    }
+
     for (const auto *PartialSpec : PartialSpecs) {
-      if (PartialSpec->getSpecializedTemplate() == TemplateDecl) {
+      if (PartialSpec->getSpecializedTemplate() == TemplateDecl)
         addUSRsOfCtorDtors(PartialSpec);
-      }
     }
     addUSRsOfCtorDtors(TemplateDecl->getTemplatedDecl());
   }
 
   void addUSRsOfCtorDtors(const CXXRecordDecl *RecordDecl) {
     RecordDecl = RecordDecl->getDefinition();
-    for (const auto *CtorDecl : RecordDecl->ctors()) {
+
+    for (const auto *CtorDecl : RecordDecl->ctors())
       USRSet.insert(getUSRForDecl(CtorDecl));
-    }
+
     USRSet.insert(getUSRForDecl(RecordDecl->getDestructor()));
     USRSet.insert(getUSRForDecl(RecordDecl));
   }
 
   void addUSRsOfOverridenFunctions(const CXXMethodDecl *MethodDecl) {
     USRSet.insert(getUSRForDecl(MethodDecl));
-    for (const auto &OverriddenMethod : MethodDecl->overridden_methods()) {
-      // Recursively visit each OverridenMethod.
+    // Recursively visit each OverridenMethod.
+    for (const auto &OverriddenMethod : MethodDecl->overridden_methods())
       addUSRsOfOverridenFunctions(OverriddenMethod);
-    }
   }
 
   bool checkIfOverriddenFunctionAscends(const CXXMethodDecl *MethodDecl) {
     for (const auto &OverriddenMethod : MethodDecl->overridden_methods()) {
-      if (USRSet.find(getUSRForDecl(OverriddenMethod)) != USRSet.end()) {
+      if (USRSet.find(getUSRForDecl(OverriddenMethod)) != USRSet.end())
         return true;
-      }
       return checkIfOverriddenFunctionAscends(OverriddenMethod);
     }
     return false;
@@ -151,28 +146,31 @@ struct NamedDeclFindingConsumer : public ASTConsumer {
     if (!Point.isValid())
       return;
     const NamedDecl *FoundDecl = nullptr;
-    if (OldName.empty()) {
+    if (OldName.empty())
       FoundDecl = getNamedDeclAt(Context, Point);
-    } else {
+    else
       FoundDecl = getNamedDeclFor(Context, OldName);
-    }
     if (FoundDecl == nullptr) {
-      FullSourceLoc FullLoc(Point, SourceMgr);
-      errs() << "clang-rename: could not find symbol at "
-             << SourceMgr.getFilename(Point) << ":"
-             << FullLoc.getSpellingLineNumber() << ":"
-             << FullLoc.getSpellingColumnNumber() << " (offset " << SymbolOffset
-             << ").\n";
+      if (OldName.empty()) {
+        FullSourceLoc FullLoc(Point, SourceMgr);
+        errs() << "clang-rename: could not find symbol at "
+               << SourceMgr.getFilename(Point) << ":"
+               << FullLoc.getSpellingLineNumber() << ":"
+               << FullLoc.getSpellingColumnNumber() << " (offset "
+               << SymbolOffset << ").\n";
+      } else {
+        errs() << "clang-rename: could not find symbol " << OldName << ".\n";
+      }
       return;
     }
 
     // If FoundDecl is a constructor or destructor, we want to instead take the
     // Decl of the corresponding class.
-    if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FoundDecl)) {
+    if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FoundDecl))
       FoundDecl = CtorDecl->getParent();
-    } else if (const auto *DtorDecl = dyn_cast<CXXDestructorDecl>(FoundDecl)) {
+    else if (const auto *DtorDecl = dyn_cast<CXXDestructorDecl>(FoundDecl))
       FoundDecl = DtorDecl->getParent();
-    }
+
     *SpellingName = FoundDecl->getNameAsString();
 
     AdditionalUSRFinder Finder(FoundDecl, Context, USRs);

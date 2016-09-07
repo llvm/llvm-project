@@ -57,6 +57,7 @@ typedef uint32_t _Unwind_State;
 static const _Unwind_State _US_VIRTUAL_UNWIND_FRAME   = 0;
 static const _Unwind_State _US_UNWIND_FRAME_STARTING  = 1;
 static const _Unwind_State _US_UNWIND_FRAME_RESUME    = 2;
+static const _Unwind_State _US_ACTION_MASK            = 3;
 /* Undocumented flag for force unwinding. */
 static const _Unwind_State _US_FORCE_UNWIND           = 8;
 

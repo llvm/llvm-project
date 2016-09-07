@@ -35,8 +35,8 @@
 # RUN:          global: foo3; \
 # RUN:          local: *; }; " > %t5.script
 # RUN: not ld.lld --version-script %t5.script -shared %t.o %t2.so -o %t5.so 2>&1 | \
-# RUN:   FileCheck -check-prefix=ERR %s
-# ERR: anonymous version definition is used in combination with other version definitions
+# RUN:   FileCheck -check-prefix=ERR1 %s
+# ERR1: anonymous version definition is used in combination with other version definitions
 
 # RUN: echo    "{             \
 # RUN:          global: foo1; \
@@ -45,7 +45,8 @@
 # RUN:          global: foo3; \
 # RUN:          local: *; }; " > %t5.script
 # RUN: not ld.lld --version-script %t5.script -shared %t.o %t2.so -o %t5.so 2>&1 | \
-# RUN:   FileCheck -check-prefix=ERR %s
+# RUN:   FileCheck -check-prefix=ERR2 %s
+# ERR2: EOF expected, but got VERSION_2.0
 
 # RUN: echo "VERSION_1.0{     \
 # RUN:          global: foo1; \

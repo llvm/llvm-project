@@ -701,24 +701,16 @@ protected:
 };
 
 OptionDefinition CommandObjectSourceInfo::CommandOptions::g_option_table[] = {
-    {LLDB_OPT_SET_ALL, false, "count", 'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,
-     "The number of line entries to display."},
-    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "shlib", 's', OptionParser::eRequiredArgument, nullptr, nullptr,
-     CommandCompletions::eModuleCompletion, eArgTypeShlibName,
-     "Look up the source in the given module or shared library (can be "
-     "specified more than once)."},
-    {LLDB_OPT_SET_1, false, "file", 'f', OptionParser::eRequiredArgument, nullptr, nullptr,
-     CommandCompletions::eSourceFileCompletion, eArgTypeFilename, "The file from which to display source."},
-    {LLDB_OPT_SET_1, false, "line", 'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLineNum,
-     "The line number at which to start the displaying lines."},
-    {LLDB_OPT_SET_1, false, "end-line", 'e', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLineNum,
-     "The line number at which to stop displaying lines."},
-    {LLDB_OPT_SET_2, false, "name", 'n', OptionParser::eRequiredArgument, nullptr, nullptr,
-     CommandCompletions::eSymbolCompletion, eArgTypeSymbol, "The name of a function whose source to display."},
-    {LLDB_OPT_SET_3, false, "address", 'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddressOrExpression,
-     "Lookup the address and display the source information for the "
-     "corresponding file and line."},
-    {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+  // clang-format off
+  {LLDB_OPT_SET_ALL,                false, "count",    'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeCount,               "The number of line entries to display."},
+  {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "shlib",    's', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eModuleCompletion,     eArgTypeShlibName,           "Look up the source in the given module or shared library (can be specified more than once)."},
+  {LLDB_OPT_SET_1,                  false, "file",     'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSourceFileCompletion, eArgTypeFilename,            "The file from which to display source."},
+  {LLDB_OPT_SET_1,                  false, "line",     'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeLineNum,             "The line number at which to start the displaying lines."},
+  {LLDB_OPT_SET_1,                  false, "end-line", 'e', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeLineNum,             "The line number at which to stop displaying lines."},
+  {LLDB_OPT_SET_2,                  false, "name",     'n', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion,     eArgTypeSymbol,              "The name of a function whose source to display."},
+  {LLDB_OPT_SET_3,                  false, "address",  'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeAddressOrExpression, "Lookup the address and display the source information for the corresponding file and line."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+  // clang-format on
 };
 
 #pragma mark CommandObjectSourceList
@@ -1514,16 +1506,17 @@ protected:
 OptionDefinition
 CommandObjectSourceList::CommandOptions::g_option_table[] =
 {
-{ LLDB_OPT_SET_ALL, false, "count",  'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeCount,   "The number of source lines to display."},
-{ LLDB_OPT_SET_1  |
-  LLDB_OPT_SET_2  , false, "shlib",  's', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eModuleCompletion, eArgTypeShlibName, "Look up the source file in the given shared library."},
-{ LLDB_OPT_SET_ALL, false, "show-breakpoints", 'b', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Show the line table locations from the debug information that indicate valid places to set source level breakpoints."},
-{ LLDB_OPT_SET_1  , false, "file",   'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSourceFileCompletion, eArgTypeFilename,    "The file from which to display source."},
-{ LLDB_OPT_SET_1  , false, "line",   'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLineNum,    "The line number at which to start the display source."},
-{ LLDB_OPT_SET_2  , false, "name",   'n', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion, eArgTypeSymbol,    "The name of a function whose source to display."},
-{ LLDB_OPT_SET_3  , false, "address",'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeAddressOrExpression, "Lookup the address and display the source information for the corresponding file and line."},
-{ LLDB_OPT_SET_4, false, "reverse", 'r', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone, "Reverse the listing to look backwards from the last displayed block of source."},
-{ 0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr }
+  // clang-format off
+  {LLDB_OPT_SET_ALL,                false, "count",            'c', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeCount,               "The number of source lines to display."},
+  {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "shlib",            's', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eModuleCompletion,     eArgTypeShlibName,           "Look up the source file in the given shared library."},
+  {LLDB_OPT_SET_ALL,                false, "show-breakpoints", 'b', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                         eArgTypeNone,                "Show the line table locations from the debug information that indicate valid places to set source level breakpoints."},
+  {LLDB_OPT_SET_1,                  false, "file",             'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSourceFileCompletion, eArgTypeFilename,            "The file from which to display source."},
+  {LLDB_OPT_SET_1,                  false, "line",             'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeLineNum,             "The line number at which to start the display source."},
+  {LLDB_OPT_SET_2,                  false, "name",             'n', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eSymbolCompletion,     eArgTypeSymbol,              "The name of a function whose source to display."},
+  {LLDB_OPT_SET_3,                  false, "address",          'a', OptionParser::eRequiredArgument, nullptr, nullptr, 0,                                         eArgTypeAddressOrExpression, "Lookup the address and display the source information for the corresponding file and line."},
+  {LLDB_OPT_SET_4,                  false, "reverse",          'r', OptionParser::eNoArgument,       nullptr, nullptr, 0,                                         eArgTypeNone,                "Reverse the listing to look backwards from the last displayed block of source."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+  // clang-format on
 };
 
 #pragma mark CommandObjectMultiwordSource

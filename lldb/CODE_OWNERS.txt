@@ -49,8 +49,8 @@ N: Zachary Turner
 E: zturner@google.com
 D: CMake build, Host (common+windows), Plugins/Process/Windows, Anything Windows-specific
 
-N: Oleksiy Vyalov
-E: ovyalov@google.com
+N: Pavel Labath
+E: labath@google.com
 D: Linux, Android
 
 N: Todd Fiala

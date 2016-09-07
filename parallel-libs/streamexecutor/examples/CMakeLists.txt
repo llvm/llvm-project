@@ -1,0 +1,2 @@
+add_executable(cuda_saxpy_example CUDASaxpy.cpp)
+target_link_libraries(cuda_saxpy_example streamexecutor)

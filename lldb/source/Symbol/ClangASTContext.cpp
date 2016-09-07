@@ -4626,6 +4626,24 @@ ClangASTContext::GetArrayElementType (lldb::opaque_compiler_type_t type, uint64_
 }
 
 CompilerType
+ClangASTContext::GetArrayType (lldb::opaque_compiler_type_t type, uint64_t size)
+{
+    if (type)
+    {
+        clang::QualType qual_type(GetCanonicalQualType(type));
+        if (clang::ASTContext *ast_ctx = getASTContext())
+        {
+            if (size != 0)
+                return CompilerType (ast_ctx, ast_ctx->getConstantArrayType(qual_type, llvm::APInt(64, size), clang::ArrayType::ArraySizeModifier::Normal, 0));
+            else
+                return CompilerType (ast_ctx, ast_ctx->getIncompleteArrayType(qual_type, clang::ArrayType::ArraySizeModifier::Normal, 0));
+        }
+    }
+    
+    return CompilerType();
+}
+
+CompilerType
 ClangASTContext::GetCanonicalType (lldb::opaque_compiler_type_t type)
 {
     if (type)

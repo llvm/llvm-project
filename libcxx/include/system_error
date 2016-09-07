@@ -635,7 +635,8 @@ private:
     static string __init(const error_code&, string);
 };
 
-_LIBCPP_FUNC_VIS void __throw_system_error(int ev, const char* what_arg);
+_LIBCPP_NORETURN _LIBCPP_FUNC_VIS
+void __throw_system_error(int ev, const char* what_arg);
 
 _LIBCPP_END_NAMESPACE_STD
 

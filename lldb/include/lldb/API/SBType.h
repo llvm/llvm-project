@@ -189,6 +189,9 @@ public:
     GetArrayElementType ();
     
     lldb::SBType
+    GetArrayType (uint64_t size);
+    
+    lldb::SBType
     GetVectorElementType ();
 
     lldb::SBType

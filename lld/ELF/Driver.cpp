@@ -328,10 +328,10 @@ static UnresolvedPolicy getUnresolvedSymbolOption(opt::InputArgList &Args) {
     if (S == "ignore-all" || S == "ignore-in-object-files")
       return UnresolvedPolicy::Ignore;
     if (S == "ignore-in-shared-libs" || S == "report-all")
-      return UnresolvedPolicy::Error;
+      return UnresolvedPolicy::ReportError;
     error("unknown --unresolved-symbols value: " + S);
   }
-  return UnresolvedPolicy::Error;
+  return UnresolvedPolicy::ReportError;
 }
 
 static bool isOutputFormatBinary(opt::InputArgList &Args) {
@@ -342,6 +342,34 @@ static bool isOutputFormatBinary(opt::InputArgList &Args) {
     error("unknown --oformat value: " + S);
   }
   return false;
+}
+
+static bool getArg(opt::InputArgList &Args, unsigned K1, unsigned K2,
+                   bool Default) {
+  if (auto *Arg = Args.getLastArg(K1, K2))
+    return Arg->getOption().getID() == K1;
+  return Default;
+}
+
+static DiscardPolicy getDiscardOption(opt::InputArgList &Args) {
+  auto *Arg =
+      Args.getLastArg(OPT_discard_all, OPT_discard_locals, OPT_discard_none);
+  if (!Arg)
+    return DiscardPolicy::Default;
+  if (Arg->getOption().getID() == OPT_discard_all)
+    return DiscardPolicy::All;
+  if (Arg->getOption().getID() == OPT_discard_locals)
+    return DiscardPolicy::Locals;
+  return DiscardPolicy::None;
+}
+
+static StripPolicy getStripOption(opt::InputArgList &Args) {
+  if (auto *Arg = Args.getLastArg(OPT_strip_all, OPT_strip_debug)) {
+    if (Arg->getOption().getID() == OPT_strip_all)
+      return StripPolicy::All;
+    return StripPolicy::Debug;
+  }
+  return StripPolicy::None;
 }
 
 // Initializes Config members by the command line options.
@@ -365,11 +393,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->AllowMultipleDefinition = Args.hasArg(OPT_allow_multiple_definition);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
-  Config->Demangle = !Args.hasArg(OPT_no_demangle);
+  Config->Demangle = getArg(Args, OPT_demangle, OPT_no_demangle, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
-  Config->DiscardAll = Args.hasArg(OPT_discard_all);
-  Config->DiscardLocals = Args.hasArg(OPT_discard_locals);
-  Config->DiscardNone = Args.hasArg(OPT_discard_none);
+  Config->Discard = getDiscardOption(Args);
   Config->EhFrameHdr = Args.hasArg(OPT_eh_frame_hdr);
   Config->EnableNewDtags = !Args.hasArg(OPT_disable_new_dtags);
   Config->ExportDynamic = Args.hasArg(OPT_export_dynamic);
@@ -378,14 +404,13 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ICF = Args.hasArg(OPT_icf);
   Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
   Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
+  Config->Nostdlib = Args.hasArg(OPT_nostdlib);
   Config->Pie = Args.hasArg(OPT_pie);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
   Config->Shared = Args.hasArg(OPT_shared);
-  Config->StripAll = Args.hasArg(OPT_strip_all);
-  Config->StripDebug = Args.hasArg(OPT_strip_debug);
-  Config->Target1Rel = Args.hasArg(OPT_target1_rel);
+  Config->Target1Rel = getArg(Args, OPT_target1_rel, OPT_target1_abs, false);
   Config->Threads = Args.hasArg(OPT_threads);
   Config->Trace = Args.hasArg(OPT_trace);
   Config->Verbose = Args.hasArg(OPT_verbose);
@@ -416,16 +441,12 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZOrigin = hasZOption(Args, "origin");
   Config->ZRelro = !hasZOption(Args, "norelro");
 
+  if (!Config->Relocatable)
+    Config->Strip = getStripOption(Args);
+
   if (Optional<StringRef> Value = getZOptionValue(Args, "stack-size"))
     if (Value->getAsInteger(0, Config->ZStackSize))
       error("invalid stack size: " + *Value);
-
-  if (Config->Relocatable)
-    Config->StripAll = false;
-
-  // --strip-all implies --strip-debug.
-  if (Config->StripAll)
-    Config->StripDebug = true;
 
   // Config->Pic is true if we are generating position-independent code.
   Config->Pic = Config->Pie || Config->Shared;
@@ -450,6 +471,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->BuildId = BuildIdKind::Md5;
     } else if (S == "sha1") {
       Config->BuildId = BuildIdKind::Sha1;
+    } else if (S == "uuid") {
+      Config->BuildId = BuildIdKind::Uuid;
     } else if (S == "none") {
       Config->BuildId = BuildIdKind::None;
     } else if (S.startswith("0x")) {
@@ -461,6 +484,11 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   }
 
   Config->OFormatBinary = isOutputFormatBinary(Args);
+
+  for (auto *Arg : Args.filtered(OPT_auxiliary))
+    Config->AuxiliaryList.push_back(Arg->getValue());
+  if (!Config->Shared && !Config->AuxiliaryList.empty())
+    error("-f may not be used without -shared");
 
   for (auto *Arg : Args.filtered(OPT_undefined))
     Config->Undefined.push_back(Arg->getValue());
@@ -476,7 +504,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   if (auto *Arg = Args.getLastArg(OPT_version_script))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
-      parseVersionScript(*Buffer);
+      readVersionScript(*Buffer);
 }
 
 void LinkerDriver::createFiles(opt::InputArgList &Args) {

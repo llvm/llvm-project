@@ -453,6 +453,9 @@ class _LIBCPP_TYPE_VIS directory_entry;
 template <class _Tp> struct __can_convert_char {
   static const bool value = false;
 };
+template <class _Tp> struct __can_convert_char<const _Tp>
+    : public __can_convert_char<_Tp> {
+};
 template <> struct __can_convert_char<char> {
     static const bool value = true;
     using __char_type = char;

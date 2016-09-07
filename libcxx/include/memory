@@ -663,6 +663,18 @@ _ValueType __libcpp_relaxed_load(_ValueType const* __value) {
 #endif
 }
 
+template <class _ValueType>
+inline _LIBCPP_ALWAYS_INLINE
+_ValueType __libcpp_acquire_load(_ValueType const* __value) {
+#if !defined(_LIBCPP_HAS_NO_THREADS) && \
+    defined(__ATOMIC_ACQUIRE) &&        \
+    (__has_builtin(__atomic_load_n) || _GNUC_VER >= 407)
+    return __atomic_load_n(__value, __ATOMIC_ACQUIRE);
+#else
+    return *__value;
+#endif
+}
+
 // addressof moved to <__functional_base>
 
 template <class _Tp> class allocator;

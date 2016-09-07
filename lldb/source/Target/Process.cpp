@@ -1188,6 +1188,7 @@ Process::HandleProcessStateChangedEvent (const EventSP &event_sp,
                 bool check_for_repl_breakpoint = false;
                 bool is_repl_breakpoint = false;
                 ThreadSP curr_thread;
+                StopInfoSP curr_thread_stop_info_sp;
                 // Lock the thread list so it doesn't change on us, this is the scope for the locker:
                 {
                     ThreadList &thread_list = process_sp->GetThreadList();
@@ -1197,7 +1198,10 @@ Process::HandleProcessStateChangedEvent (const EventSP &event_sp,
                     ThreadSP thread;
                     StopReason curr_thread_stop_reason = eStopReasonInvalid;
                     if (curr_thread)
+                    {
                         curr_thread_stop_reason = curr_thread->GetStopReason();
+                        curr_thread_stop_info_sp = curr_thread->GetStopInfo();
+                    }
                     if (!curr_thread ||
                         !curr_thread->IsValid() ||
                         curr_thread_stop_reason == eStopReasonInvalid ||
@@ -1350,6 +1354,20 @@ Process::HandleProcessStateChangedEvent (const EventSP &event_sp,
                                                          start_frame,
                                                          num_frames,
                                                          num_frames_with_source);
+                            if (curr_thread_stop_info_sp)
+                            {
+                                lldb::addr_t crashing_address;
+                                ValueObjectSP valobj_sp = StopInfo::GetCrashingDereference(curr_thread_stop_info_sp, &crashing_address);
+                                if (valobj_sp)
+                                {
+                                    const bool qualify_cxx_base_classes = false;
+                                    
+                                    const ValueObject::GetExpressionPathFormat format = ValueObject::GetExpressionPathFormat::eGetExpressionPathFormatHonorPointers;
+                                    stream->PutCString("Likely cause: ");
+                                    valobj_sp->GetExpressionPath(*stream, qualify_cxx_base_classes, format);
+                                    stream->Printf(" accessed 0x%" PRIx64 "\n", crashing_address);
+                                }
+                            }
                         }
                         else
                         {
@@ -6776,7 +6794,6 @@ Process::GetMemoryRegions (std::vector<lldb::MemoryRegionInfoSP>& region_list)
 
     Error error;
 
-    lldb::addr_t range_base = 0;
     lldb::addr_t range_end = 0;
 
     region_list.clear();
@@ -6791,7 +6808,6 @@ Process::GetMemoryRegions (std::vector<lldb::MemoryRegionInfoSP>& region_list)
             break;
         }
 
-        range_base = region_info->GetRange().GetRangeBase();
         range_end = region_info->GetRange().GetRangeEnd();
         if( region_info->GetMapped() == MemoryRegionInfo::eYes )
         {

@@ -10,29 +10,33 @@
 #ifndef LLD_ELF_LINKER_SCRIPT_H
 #define LLD_ELF_LINKER_SCRIPT_H
 
+#include "Strings.h"
 #include "Writer.h"
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Regex.h"
 #include <functional>
 
 namespace lld {
 namespace elf {
+class DefinedCommon;
 class ScriptParser;
 class SymbolBody;
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
-template <class ELFT> class DefinedCommon;
-template <class ELFT> class LayoutInputSection;
+class InputSectionData;
 
 typedef std::function<uint64_t(uint64_t)> Expr;
 
 // Parses a linker script. Calling this function updates
 // Config and ScriptConfig.
 void readLinkerScript(MemoryBufferRef MB);
+
+void readVersionScript(MemoryBufferRef MB);
 
 // This enum is used to implement linker script SECTIONS command.
 // https://sourceware.org/binutils/docs/ld/SECTIONS.html#SECTIONS
@@ -64,6 +68,7 @@ struct SymbolAssignment : BaseCommand {
   // Command attributes for PROVIDE, HIDDEN and PROVIDE_HIDDEN.
   bool Provide = false;
   bool Hidden = false;
+  InputSectionData *GoesAfter = nullptr;
 };
 
 // Linker scripts allow additional constraints to be put on ouput sections.
@@ -91,13 +96,15 @@ struct OutputSectionCommand : BaseCommand {
 enum SortKind { SortNone, SortByName, SortByAlignment };
 
 struct InputSectionDescription : BaseCommand {
-  InputSectionDescription() : BaseCommand(InputSectionKind) {}
+  InputSectionDescription(StringRef FilePattern)
+      : BaseCommand(InputSectionKind),
+        FileRe(compileGlobPatterns({FilePattern})) {}
   static bool classof(const BaseCommand *C);
-  StringRef FilePattern;
+  llvm::Regex FileRe;
   SortKind SortOuter = SortNone;
   SortKind SortInner = SortNone;
-  std::vector<StringRef> ExcludedFiles;
-  std::vector<StringRef> SectionPatterns;
+  llvm::Regex ExcludedFileRe;
+  llvm::Regex SectionRe;
 };
 
 struct AssertCommand : BaseCommand {
@@ -116,6 +123,8 @@ struct PhdrsCommand {
 
 // ScriptConfiguration holds linker script parse results.
 struct ScriptConfiguration {
+  // Used to create symbol assignments outside SECTIONS command.
+  std::vector<std::unique_ptr<SymbolAssignment>> Assignments;
   // Used to assign addresses to sections.
   std::vector<std::unique_ptr<BaseCommand>> Commands;
 
@@ -128,7 +137,7 @@ struct ScriptConfiguration {
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.
-  std::vector<StringRef> KeptSections;
+  std::vector<llvm::Regex *> KeptSections;
 };
 
 extern ScriptConfiguration *ScriptConfig;
@@ -140,6 +149,7 @@ template <class ELFT> class LinkerScript {
 public:
   LinkerScript();
   ~LinkerScript();
+  void createAssignments();
   void createSections(OutputSectionFactory<ELFT> &Factory);
 
   std::vector<PhdrEntry<ELFT>> createPhdrs();
@@ -151,6 +161,7 @@ public:
   void assignAddresses();
   int compareSections(StringRef A, StringRef B);
   bool hasPhdrsCommands();
+  uintX_t getOutputSectionAddress(StringRef Name);
   uintX_t getOutputSectionSize(StringRef Name);
   uintX_t getHeaderSize();
 
@@ -171,8 +182,6 @@ private:
   int getSectionIndex(StringRef Name);
   std::vector<size_t> getPhdrIndices(StringRef SectionName);
   size_t getPhdrIndex(StringRef PhdrName);
-
-  llvm::SpecificBumpPtrAllocator<LayoutInputSection<ELFT>> LAlloc;
 
   uintX_t Dot;
 };

@@ -53,8 +53,10 @@
 
 #if defined(__GNUC__)
 # define BENCHMARK_BUILTIN_EXPECT(x, y) __builtin_expect(x, y)
+# define BENCHMARK_DEPRECATED_MSG(msg) __attribute__((deprecated(msg)))
 #else
 # define BENCHMARK_BUILTIN_EXPECT(x, y) x
+# define BENCHMARK_DEPRECATED_MSG(msg)
 #endif
 
 #if defined(__GNUC__) && !defined(__clang__)

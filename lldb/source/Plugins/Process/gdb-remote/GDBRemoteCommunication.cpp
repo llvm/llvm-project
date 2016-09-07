@@ -187,12 +187,12 @@ GDBRemoteCommunication::~GDBRemoteCommunication()
 }
 
 char
-GDBRemoteCommunication::CalculcateChecksum (const char *payload, size_t payload_length)
+GDBRemoteCommunication::CalculcateChecksum (llvm::StringRef payload)
 {
     int checksum = 0;
 
-    for (size_t i = 0; i < payload_length; ++i)
-        checksum += payload[i];
+    for (char c : payload)
+        checksum += c;
 
     return checksum & 255;
 }
@@ -224,16 +224,16 @@ GDBRemoteCommunication::SendNack ()
 }
 
 GDBRemoteCommunication::PacketResult
-GDBRemoteCommunication::SendPacketNoLock (const char *payload, size_t payload_length)
+GDBRemoteCommunication::SendPacketNoLock (llvm::StringRef payload)
 {
     if (IsConnected())
     {
         StreamString packet(0, 4, eByteOrderBig);
 
         packet.PutChar('$');
-        packet.Write (payload, payload_length);
+        packet.Write (payload.data(), payload.size());
         packet.PutChar('#');
-        packet.PutHex8(CalculcateChecksum (payload, payload_length));
+        packet.PutHex8(CalculcateChecksum (payload));
 
         Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_PACKETS));
         ConnectionStatus status = eConnectionStatusSuccess;
@@ -455,7 +455,7 @@ GDBRemoteCommunication::WaitForPacketWithTimeoutMicroSecondsNoLock (StringExtrac
                         response_regex.Compile("^QC[0-9A-Fa-f]+$");
                     }
 
-                    PacketResult echo_packet_result = SendPacketNoLock (echo_packet, echo_packet_len);
+                    PacketResult echo_packet_result = SendPacketNoLock (llvm::StringRef(echo_packet, echo_packet_len));
                     if (echo_packet_result == PacketResult::Success)
                     {
                         const uint32_t max_retries = 3;
@@ -603,7 +603,7 @@ GDBRemoteCommunication::DecompressPacket ()
         packet_checksum_cstr[2] = '\0';
         long packet_checksum = strtol (packet_checksum_cstr, NULL, 16);
 
-        long actual_checksum = CalculcateChecksum (m_bytes.data() + 1, hash_mark_idx - 1);
+        long actual_checksum = CalculcateChecksum (llvm::StringRef(m_bytes).substr(1, hash_mark_idx - 1));
         bool success = packet_checksum == actual_checksum;
         if (!success)
         {
@@ -747,7 +747,7 @@ GDBRemoteCommunication::DecompressPacket ()
     new_packet.push_back ('#');
     if (GetSendAcks ())
     {
-        uint8_t decompressed_checksum = CalculcateChecksum ((const char *) decompressed_buffer, decompressed_bytes);
+        uint8_t decompressed_checksum = CalculcateChecksum (llvm::StringRef((const char *) decompressed_buffer, decompressed_bytes));
         char decompressed_checksum_str[3];
         snprintf (decompressed_checksum_str, 3, "%02x", decompressed_checksum);
         new_packet.append (decompressed_checksum_str);
@@ -1001,7 +1001,7 @@ GDBRemoteCommunication::CheckForPacket (const uint8_t *src, size_t src_len, Stri
                     {
                         const char *packet_checksum_cstr = &m_bytes[checksum_idx];
                         char packet_checksum = strtol (packet_checksum_cstr, NULL, 16);
-                        char actual_checksum = CalculcateChecksum (packet_str.c_str(), packet_str.size());
+                        char actual_checksum = CalculcateChecksum (packet_str);
                         success = packet_checksum == actual_checksum;
                         if (!success)
                         {

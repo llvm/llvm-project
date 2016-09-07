@@ -201,6 +201,13 @@ ABISysV_x86_64::GetRegisterInfoArray (uint32_t &count)
     return g_register_infos;
 }
 
+bool
+ABISysV_x86_64::GetPointerReturnRegister (const char *&name)
+{
+    name = "rax";
+    return true;
+}
+
 size_t
 ABISysV_x86_64::GetRedZoneSize () const
 {

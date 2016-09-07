@@ -1,5 +1,6 @@
-
+#undef NDEBUG
 #include <cstddef>
+#include <cassert>
 
 #include "benchmark/benchmark.h"
 
@@ -14,6 +15,16 @@ void BM_empty(benchmark::State& state) {
     }
 }
 BENCHMARK(BM_empty);
+
+// The new C++11 interface for args/ranges requires initializer list support.
+// Therefore we provide the old interface to support C++03.
+void BM_old_arg_range_interface(benchmark::State& state) {
+    assert((state.range(0) == 1 && state.range(1) == 2) ||
+           (state.range(0) == 5 && state.range(1) == 6));
+    while (state.KeepRunning()) {
+    }
+}
+BENCHMARK(BM_old_arg_range_interface)->ArgPair(1, 2)->RangePair(5, 5, 6, 6);
 
 template <class T, class U>
 void BM_template2(benchmark::State& state) {

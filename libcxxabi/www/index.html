@@ -104,7 +104,7 @@
       configure CMake using either of the following options.
   </p>
   <ul>
-  <li><code>-DLLVM_CONFIG=path/to/llvm-config</code></li>
+  <li><code>-DLLVM_CONFIG_PATH=path/to/llvm-config</code></li>
   <li><code>-DLLVM_PATH=path/to/llvm-source-root</code></li>
   </ul>
 
@@ -112,7 +112,7 @@
 
   <p>To run the tests:</p>
   <ul>
-  <li><code>make check-libcxxabi</code></li>
+  <li><code>make check-cxxabi</code></li>
   </ul>
   <p>Note: in a standalone build, the system's libc++ will be used for tests. If
   the system's libc++ was statically linked against libc++abi (or linked against

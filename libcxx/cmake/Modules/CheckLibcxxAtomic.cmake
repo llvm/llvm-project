@@ -9,9 +9,15 @@ INCLUDE(CheckCXXSourceCompiles)
 
 function(check_cxx_atomics varname)
   set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-  set(CMAKE_REQUIRED_FLAGS "-std=c++11 -nostdinc++ -isystem ${LIBCXX_SOURCE_DIR}/include")
+  set(CMAKE_REQUIRED_FLAGS "-nodefaultlibs -std=c++11 -nostdinc++ -isystem ${LIBCXX_SOURCE_DIR}/include")
   if (${LIBCXX_GCC_TOOLCHAIN})
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} --gcc-toolchain=${LIBCXX_GCC_TOOLCHAIN}")
+  endif()
+  if (CMAKE_C_FLAGS MATCHES -fsanitize OR CMAKE_CXX_FLAGS MATCHES -fsanitize)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fno-sanitize=all")
+  endif()
+  if (CMAKE_C_FLAGS MATCHES -fsanitize-coverage OR CMAKE_CXX_FLAGS MATCHES -fsanitize-coverage)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fno-sanitize-coverage=edge,trace-cmp,indirect-calls,8bit-counters")
   endif()
   check_cxx_source_compiles("
 #include <cstdint>

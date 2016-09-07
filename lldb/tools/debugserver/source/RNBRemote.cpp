@@ -38,7 +38,7 @@
 #include "RNBServices.h"
 #include "RNBSocket.h"
 #include "JSON.h"
-#include "lldb/Utility/StringExtractor.h"
+#include "lldb/Utility/StdStringExtractor.h"
 #include "MacOSX/Genealogy.h"
 #include "JSONGenerator.h"
 
@@ -2329,7 +2329,7 @@ RNBRemote::HandlePacket_QSetSTDIO (const char *p)
         // QSetSTDIN
         // QSetSTDOUT
         // QSetSTDERR
-        StringExtractor packet(p);
+        StdStringExtractor packet(p);
         packet.SetFilePos (7);
         char ch = packet.GetChar();
         while (packet.GetChar() != ':')
@@ -2368,7 +2368,7 @@ RNBRemote::HandlePacket_QSetWorkingDir (const char *p)
     // Only set the working directory if we don't already have a process
     if (!m_ctx.HasValidProcessID())
     {
-        StringExtractor packet(p += sizeof ("QSetWorkingDir:") - 1);
+        StdStringExtractor packet(p += sizeof ("QSetWorkingDir:") - 1);
         if (packet.GetHexByteString (m_ctx.GetWorkingDir()))
         {
             struct stat working_dir_stat;
@@ -3473,7 +3473,7 @@ RNBRemote::HandlePacket_G (const char *p)
     if (g_num_reg_entries == 0)
         InitializeRegisters ();
 
-    StringExtractor packet(p);
+    StdStringExtractor packet(p);
     packet.SetFilePos(1); // Skip the 'G'
     
     nub_process_t pid = m_ctx.ProcessID();
@@ -3540,10 +3540,10 @@ RNBRemoteShouldCancelCallback (void *not_used)
 rnb_err_t
 RNBRemote::HandlePacket_AllocateMemory (const char *p)
 {
-    StringExtractor packet (p);
+    StdStringExtractor packet (p);
     packet.SetFilePos(2); // Skip the "_M"
     
-    nub_addr_t size = packet.GetHexMaxU64 (StringExtractor::BigEndian, 0);
+    nub_addr_t size = packet.GetHexMaxU64 (StdStringExtractor::BigEndian, 0);
     if (size != 0)
     {
         if (packet.GetChar() == ',')
@@ -3590,9 +3590,9 @@ RNBRemote::HandlePacket_AllocateMemory (const char *p)
 rnb_err_t
 RNBRemote::HandlePacket_DeallocateMemory (const char *p)
 {
-    StringExtractor packet (p);
+    StdStringExtractor packet (p);
     packet.SetFilePos(2); // Skip the "_m"
-    nub_addr_t addr = packet.GetHexMaxU64 (StringExtractor::BigEndian, INVALID_NUB_ADDRESS);
+    nub_addr_t addr = packet.GetHexMaxU64 (StdStringExtractor::BigEndian, INVALID_NUB_ADDRESS);
 
     if (addr != INVALID_NUB_ADDRESS)
     {
@@ -3669,7 +3669,7 @@ RNBRemote::HandlePacket_RestoreRegisterState (const char *p)
             return HandlePacket_ILLFORMED (__FILE__, __LINE__, p, "No thread was is set with the Hg packet");
     }
     
-    StringExtractor packet (p);
+    StdStringExtractor packet (p);
     packet.SetFilePos(strlen("QRestoreRegisterState:")); // Skip the "QRestoreRegisterState:"
     const uint32_t save_id = packet.GetU32(0);
                       
@@ -4222,7 +4222,7 @@ RNBRemote::HandlePacket_P (const char *p)
 
     nub_process_t pid = m_ctx.ProcessID();
 
-    StringExtractor packet (p);
+    StdStringExtractor packet (p);
 
     const char cmd_char = packet.GetChar();
     // Register ID is always in big endian
@@ -4372,7 +4372,7 @@ RNBRemote::HandlePacket_GetProfileData (const char *p)
     if (pid == INVALID_NUB_PROCESS)
         return SendPacket ("OK");
     
-    StringExtractor packet(p += sizeof ("qGetProfileData"));
+    StdStringExtractor packet(p += sizeof ("qGetProfileData"));
     DNBProfileDataScanType scan_type = eProfileAll;
     std::string name;
     std::string value;
@@ -4408,7 +4408,7 @@ RNBRemote::HandlePacket_SetEnableAsyncProfiling (const char *p)
     if (pid == INVALID_NUB_PROCESS)
         return SendPacket ("OK");
 
-    StringExtractor packet(p += sizeof ("QSetEnableAsyncProfiling"));
+    StdStringExtractor packet(p += sizeof ("QSetEnableAsyncProfiling"));
     bool enable = false;
     uint64_t interval_usec = 0;
     DNBProfileDataScanType scan_type = eProfileAll;

@@ -41,7 +41,8 @@ private:
   std::map<std::string, tooling::Replacements> &FileToReplaces;
   bool PrintLocations;
 };
-}
-}
+
+} // namespace rename
+} // namespace clang
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_RENAMING_ACTION_H

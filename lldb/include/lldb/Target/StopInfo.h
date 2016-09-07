@@ -186,6 +186,9 @@ public:
 
     static lldb::ExpressionVariableSP
     GetExpressionVariable (lldb::StopInfoSP &stop_info_sp);
+    
+    static lldb::ValueObjectSP
+    GetCrashingDereference (lldb::StopInfoSP &stop_info_sp, lldb::addr_t *crashing_address = nullptr);
 
 protected:
     // Perform any action that is associated with this stop.  This is done as the

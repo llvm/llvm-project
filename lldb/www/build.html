@@ -298,43 +298,6 @@
               <br />&gt; make
               <br />&gt; make check-lldb
             </code>
-            <h2>To build with autoconf</h2>
-            <p>
-              If you do not have CMake, it is still possible to build LLDB using the autoconf build system. If you are using
-              Clang or GCC 4.8+, run:
-            </p>
-            <code>
-              &gt; $llvm/configure
-              <br />&gt; make
-            </code>
-            <p>If you are building with a GCC that isn't the default gcc/g++, like gcc-4.9/g++-4.9</p>
-            <code>
-              &gt; $llvm/configure CC=gcc-4.9 CXX=g++-4.9
-              <br />&gt; make CC=gcc-4.9 CXX=g++-4.9
-            </code>
-            <p>
-              If you are running in a system that doesn't have a lot of RAM (less than 4GB), you might want to disable
-              debug symbols by specifying DEBUG_SYMBOLS=0 when running make. You will know if you need to enable this
-              because you will fail to link clang (the linker will get a SIGKILL and exit with status 9).
-            </p>
-            <code>
-              &gt; make DEBUG_SYMBOLS=0
-            </code>
-            <p> To run the LLDB test suite, run:</p>
-            <code>
-              <br />&gt; make -C tools/lldb/test
-            </code>
-            <p>
-              Note that once both LLVM and Clang have been configured and built it is not
-              necessary to perform a top-level <tt>make</tt> to rebuild changes made only to LLDB.
-              You can run <tt>make</tt> from the <tt>build/tools/lldb</tt> subdirectory as well.
-            </p>
-            <p>
-              If you wish to build with libc++ instead of libstdc++ (the default), run configure with the
-              <tt>--enable-libcpp</tt> flag.
-            </p>
-            <p> If you wish to build a release version of LLDB, run configure with the <tt>--enable-optimized</tt> flag.</p>
-
             <h2>Building API reference documentation</h2>
             <p>
               LLDB exposes a C++ as well as a Python API. To build the reference documentation for these two APIs, ensure you have

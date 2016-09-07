@@ -25,6 +25,8 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 
+#include "llvm/ADT/StringSwitch.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -842,7 +844,15 @@ Args::StripSpaces (std::string &s, bool leading, bool trailing, bool return_null
 bool
 Args::StringToBoolean (const char *s, bool fail_value, bool *success_ptr)
 {
-    llvm::StringRef ref = llvm::StringRef(s).trim();
+    if (!s)
+        return fail_value;
+    return Args::StringToBoolean(llvm::StringRef(s), fail_value, success_ptr);
+}
+
+bool
+Args::StringToBoolean(llvm::StringRef ref, bool fail_value, bool *success_ptr)
+{
+    ref = ref.trim();
     if (ref.equals_lower("false") ||
         ref.equals_lower("off") ||
         ref.equals_lower("no") ||
@@ -852,13 +862,10 @@ Args::StringToBoolean (const char *s, bool fail_value, bool *success_ptr)
             *success_ptr = true;
         return false;
     }
-    else
-    if (ref.equals_lower("true") ||
-        ref.equals_lower("on") ||
-        ref.equals_lower("yes") ||
-        ref.equals_lower("1"))
+    else if (ref.equals_lower("true") || ref.equals_lower("on") || ref.equals_lower("yes") || ref.equals_lower("1"))
     {
-        if (success_ptr) *success_ptr = true;
+        if (success_ptr)
+            *success_ptr = true;
         return true;
     }
     if (success_ptr) *success_ptr = false;
@@ -1088,54 +1095,51 @@ Args::StringToFormat
 lldb::Encoding
 Args::StringToEncoding (const char *s, lldb::Encoding fail_value)
 {
-    if (s && s[0])
-    {
-        if (strcmp(s, "uint") == 0)
-            return eEncodingUint;
-        else if (strcmp(s, "sint") == 0)
-            return eEncodingSint;
-        else if (strcmp(s, "ieee754") == 0)
-            return eEncodingIEEE754;
-        else if (strcmp(s, "vector") == 0)
-            return eEncodingVector;
-    }
-    return fail_value;
+    if (!s)
+        return fail_value;
+    return StringToEncoding(llvm::StringRef(s), fail_value);
+}
+
+lldb::Encoding
+Args::StringToEncoding(llvm::StringRef s, lldb::Encoding fail_value)
+{
+    return llvm::StringSwitch<lldb::Encoding>(s)
+        .Case("uint", eEncodingUint)
+        .Case("sint", eEncodingSint)
+        .Case("ieee754", eEncodingIEEE754)
+        .Case("vector", eEncodingVector)
+        .Default(fail_value);
 }
 
 uint32_t
 Args::StringToGenericRegister (const char *s)
 {
-    if (s && s[0])
-    {
-        if (strcmp(s, "pc") == 0)
-            return LLDB_REGNUM_GENERIC_PC;
-        else if (strcmp(s, "sp") == 0)
-            return LLDB_REGNUM_GENERIC_SP;
-        else if (strcmp(s, "fp") == 0)
-            return LLDB_REGNUM_GENERIC_FP;
-        else if (strcmp(s, "ra") == 0 || strcmp(s, "lr") == 0)
-            return LLDB_REGNUM_GENERIC_RA;
-        else if (strcmp(s, "flags") == 0)
-            return LLDB_REGNUM_GENERIC_FLAGS;
-        else if (strncmp(s, "arg", 3) == 0)
-        {
-            if (s[3] && s[4] == '\0')
-            {
-                switch (s[3])
-                {
-                    case '1': return LLDB_REGNUM_GENERIC_ARG1;
-                    case '2': return LLDB_REGNUM_GENERIC_ARG2;
-                    case '3': return LLDB_REGNUM_GENERIC_ARG3;
-                    case '4': return LLDB_REGNUM_GENERIC_ARG4;
-                    case '5': return LLDB_REGNUM_GENERIC_ARG5;
-                    case '6': return LLDB_REGNUM_GENERIC_ARG6;
-                    case '7': return LLDB_REGNUM_GENERIC_ARG7;
-                    case '8': return LLDB_REGNUM_GENERIC_ARG8;
-                }
-            }
-        }
-    }
-    return LLDB_INVALID_REGNUM;
+    if (!s)
+        return LLDB_INVALID_REGNUM;
+    return StringToGenericRegister(llvm::StringRef(s));
+}
+
+uint32_t
+Args::StringToGenericRegister(llvm::StringRef s)
+{
+    if (s.empty())
+        return LLDB_INVALID_REGNUM;
+    uint32_t result = llvm::StringSwitch<uint32_t>(s)
+                          .Case("pc", LLDB_REGNUM_GENERIC_PC)
+                          .Case("sp", LLDB_REGNUM_GENERIC_SP)
+                          .Case("fp", LLDB_REGNUM_GENERIC_FP)
+                          .Cases("ra", "lr", LLDB_REGNUM_GENERIC_RA)
+                          .Case("flags", LLDB_REGNUM_GENERIC_FLAGS)
+                          .Case("arg1", LLDB_REGNUM_GENERIC_ARG1)
+                          .Case("arg2", LLDB_REGNUM_GENERIC_ARG2)
+                          .Case("arg3", LLDB_REGNUM_GENERIC_ARG3)
+                          .Case("arg4", LLDB_REGNUM_GENERIC_ARG4)
+                          .Case("arg5", LLDB_REGNUM_GENERIC_ARG5)
+                          .Case("arg6", LLDB_REGNUM_GENERIC_ARG6)
+                          .Case("arg7", LLDB_REGNUM_GENERIC_ARG7)
+                          .Case("arg8", LLDB_REGNUM_GENERIC_ARG8)
+                          .Default(LLDB_INVALID_REGNUM);
+    return result;
 }
 
 

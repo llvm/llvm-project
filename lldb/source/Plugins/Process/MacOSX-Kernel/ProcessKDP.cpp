@@ -1099,7 +1099,7 @@ public:
                                     return false;
                                 }
                                 payload_bytes.resize(ascii_hex_bytes_cstr_len/2);
-                                if (extractor.GetHexBytes(&payload_bytes[0], payload_bytes.size(), '\xdd') != payload_bytes.size())
+                                if (extractor.GetHexBytes(payload_bytes, '\xdd') != payload_bytes.size())
                                 {
                                     result.AppendErrorWithFormat ("payload data must only contain ASCII hex characters (no spaces or hex prefixes): '%s'", ascii_hex_bytes_cstr);
                                     result.SetStatus (eReturnStatusFailed);

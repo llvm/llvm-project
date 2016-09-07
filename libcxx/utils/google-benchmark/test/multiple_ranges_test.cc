@@ -41,6 +41,21 @@ BENCHMARK_DEFINE_F(MultipleRangesFixture, Empty)(benchmark::State& state) {
   }
 }
 
-BENCHMARK_REGISTER_F(MultipleRangesFixture, Empty)->RangeMultiplier(2)->Ranges({{1, 2}, {3, 7}, {5, 15}})->Args({7, 6, 3});
+BENCHMARK_REGISTER_F(MultipleRangesFixture, Empty)->RangeMultiplier(2)
+    ->Ranges({{1, 2}, {3, 7}, {5, 15}})->Args({7, 6, 3});
+
+void BM_CheckDefaultArgument(benchmark::State& state) {
+  // Test that the 'range()' without an argument is the same as 'range(0)'.
+  assert(state.range() == state.range(0));
+  assert(state.range() != state.range(1));
+  while (state.KeepRunning()) {}
+}
+BENCHMARK(BM_CheckDefaultArgument)->Ranges({{1, 5}, {6, 10}});
+
+static void BM_MultipleRanges(benchmark::State& st) {
+    while (st.KeepRunning()) {}
+}
+BENCHMARK(BM_MultipleRanges)->Ranges({{5, 5}, {6, 6}});
+
 
 BENCHMARK_MAIN()

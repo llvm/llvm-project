@@ -59,26 +59,41 @@ namespace streamexecutor {
 /// of a stream once it is in an error state.
 class Stream {
 public:
-  explicit Stream(std::unique_ptr<PlatformStreamHandle> PStream);
+  Stream(PlatformDevice *D, const void *PlatformStreamHandle);
+
+  Stream(const Stream &Other) = delete;
+  Stream &operator=(const Stream &Other) = delete;
+
+  Stream(Stream &&Other);
+  Stream &operator=(Stream &&Other);
 
   ~Stream();
 
   /// Returns whether any error has occurred while entraining work on this
   /// stream.
   bool isOK() const {
-    llvm::sys::ScopedReader ReaderLock(ErrorMessageMutex);
+    llvm::sys::ScopedReader ReaderLock(*ErrorMessageMutex);
     return !ErrorMessage;
   }
 
   /// Returns the status created by the first error that occurred while
   /// entraining work on this stream.
   Error getStatus() const {
-    llvm::sys::ScopedReader ReaderLock(ErrorMessageMutex);
+    llvm::sys::ScopedReader ReaderLock(*ErrorMessageMutex);
     if (ErrorMessage)
       return make_error(*ErrorMessage);
     else
       return Error::success();
-  };
+  }
+
+  // Blocks the calling host thread until all work enqueued on this Stream
+  // completes.
+  //
+  // Returns the result of getStatus() after the Stream work completes.
+  Error blockHostUntilDone() {
+    setError(PDevice->blockHostUntilDone(PlatformStreamHandle));
+    return getStatus();
+  }
 
   /// Entrains onto the stream of operations a kernel launch with the given
   /// arguments.
@@ -86,15 +101,15 @@ public:
   /// These arguments can be device memory types like GlobalDeviceMemory<T> and
   /// SharedDeviceMemory<T>, or they can be primitive types such as int. The
   /// allowable argument types are determined by the template parameters to the
-  /// TypedKernel argument.
+  /// Kernel argument.
   template <typename... ParameterTs>
   Stream &thenLaunch(BlockDimensions BlockSize, GridDimensions GridSize,
-                     const TypedKernel<ParameterTs...> &Kernel,
+                     const Kernel<ParameterTs...> &K,
                      const ParameterTs &... Arguments) {
     auto ArgumentArray =
         make_kernel_argument_pack<ParameterTs...>(Arguments...);
-    setError(PDevice->launch(ThePlatformStream.get(), BlockSize, GridSize,
-                             Kernel, ArgumentArray));
+    setError(PDevice->launch(PlatformStreamHandle, BlockSize, GridSize,
+                             K.getPlatformHandle(), ArgumentArray));
     return *this;
   }
 
@@ -124,7 +139,8 @@ public:
       setError("copying too many elements, " + llvm::Twine(ElementCount) +
                ", to a host array of element count " + llvm::Twine(Dst.size()));
     else
-      setError(PDevice->copyD2H(ThePlatformStream.get(), Src.getBaseMemory(),
+      setError(PDevice->copyD2H(PlatformStreamHandle,
+                                Src.getBaseMemory().getHandle(),
                                 Src.getElementOffset() * sizeof(T), Dst.data(),
                                 0, ElementCount * sizeof(T)));
     return *this;
@@ -151,20 +167,22 @@ public:
   }
 
   template <typename T>
-  Stream &thenCopyD2H(GlobalDeviceMemory<T> Src, llvm::MutableArrayRef<T> Dst,
-                      size_t ElementCount) {
+  Stream &thenCopyD2H(const GlobalDeviceMemory<T> &Src,
+                      llvm::MutableArrayRef<T> Dst, size_t ElementCount) {
     thenCopyD2H(Src.asSlice(), Dst, ElementCount);
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyD2H(GlobalDeviceMemory<T> Src, llvm::MutableArrayRef<T> Dst) {
+  Stream &thenCopyD2H(const GlobalDeviceMemory<T> &Src,
+                      llvm::MutableArrayRef<T> Dst) {
     thenCopyD2H(Src.asSlice(), Dst);
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyD2H(GlobalDeviceMemory<T> Src, T *Dst, size_t ElementCount) {
+  Stream &thenCopyD2H(const GlobalDeviceMemory<T> &Src, T *Dst,
+                      size_t ElementCount) {
     thenCopyD2H(Src.asSlice(), Dst, ElementCount);
     return *this;
   }
@@ -182,7 +200,7 @@ public:
                llvm::Twine(Dst.getElementCount()));
     else
       setError(PDevice->copyH2D(
-          ThePlatformStream.get(), Src.data(), 0, Dst.getBaseMemory(),
+          PlatformStreamHandle, Src.data(), 0, Dst.getBaseMemory().getHandle(),
           Dst.getElementOffset() * sizeof(T), ElementCount * sizeof(T)));
     return *this;
   }
@@ -207,20 +225,20 @@ public:
   }
 
   template <typename T>
-  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> Dst,
+  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> &Dst,
                       size_t ElementCount) {
     thenCopyH2D(Src, Dst.asSlice(), ElementCount);
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> Dst) {
+  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> &Dst) {
     thenCopyH2D(Src, Dst.asSlice());
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyH2D(T *Src, GlobalDeviceMemory<T> Dst, size_t ElementCount) {
+  Stream &thenCopyH2D(T *Src, GlobalDeviceMemory<T> &Dst, size_t ElementCount) {
     thenCopyH2D(Src, Dst.asSlice(), ElementCount);
     return *this;
   }
@@ -238,8 +256,8 @@ public:
                llvm::Twine(Dst.getElementCount()));
     else
       setError(PDevice->copyD2D(
-          ThePlatformStream.get(), Src.getBaseMemory(),
-          Src.getElementOffset() * sizeof(T), Dst.getBaseMemory(),
+          PlatformStreamHandle, Src.getBaseMemory().getHandle(),
+          Src.getElementOffset() * sizeof(T), Dst.getBaseMemory().getHandle(),
           Dst.getElementOffset() * sizeof(T), ElementCount * sizeof(T)));
     return *this;
   }
@@ -258,42 +276,43 @@ public:
   }
 
   template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemory<T> Src, GlobalDeviceMemorySlice<T> Dst,
-                      size_t ElementCount) {
+  Stream &thenCopyD2D(const GlobalDeviceMemory<T> &Src,
+                      GlobalDeviceMemorySlice<T> Dst, size_t ElementCount) {
     thenCopyD2D(Src.asSlice(), Dst, ElementCount);
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemory<T> Src,
+  Stream &thenCopyD2D(const GlobalDeviceMemory<T> &Src,
                       GlobalDeviceMemorySlice<T> Dst) {
     thenCopyD2D(Src.asSlice(), Dst);
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src, GlobalDeviceMemory<T> Dst,
-                      size_t ElementCount) {
+  Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src,
+                      GlobalDeviceMemory<T> &Dst, size_t ElementCount) {
     thenCopyD2D(Src, Dst.asSlice(), ElementCount);
     return *this;
   }
 
   template <typename T>
   Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src,
-                      GlobalDeviceMemory<T> Dst) {
+                      GlobalDeviceMemory<T> &Dst) {
     thenCopyD2D(Src, Dst.asSlice());
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemory<T> Src, GlobalDeviceMemory<T> Dst,
-                      size_t ElementCount) {
+  Stream &thenCopyD2D(const GlobalDeviceMemory<T> &Src,
+                      GlobalDeviceMemory<T> &Dst, size_t ElementCount) {
     thenCopyD2D(Src.asSlice(), Dst.asSlice(), ElementCount);
     return *this;
   }
 
   template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemory<T> Src, GlobalDeviceMemory<T> Dst) {
+  Stream &thenCopyD2D(const GlobalDeviceMemory<T> &Src,
+                      GlobalDeviceMemory<T> &Dst) {
     thenCopyD2D(Src.asSlice(), Dst.asSlice());
     return *this;
   }
@@ -306,7 +325,7 @@ private:
   /// Does not overwrite the error if it is already set.
   void setError(Error &&E) {
     if (E) {
-      llvm::sys::ScopedWriter WriterLock(ErrorMessageMutex);
+      llvm::sys::ScopedWriter WriterLock(*ErrorMessageMutex);
       if (!ErrorMessage)
         ErrorMessage = consumeAndGetMessage(std::move(E));
     }
@@ -316,7 +335,7 @@ private:
   ///
   /// Does not overwrite the error if it is already set.
   void setError(llvm::Twine Message) {
-    llvm::sys::ScopedWriter WriterLock(ErrorMessageMutex);
+    llvm::sys::ScopedWriter WriterLock(*ErrorMessageMutex);
     if (!ErrorMessage)
       ErrorMessage = Message.str();
   }
@@ -325,19 +344,14 @@ private:
   PlatformDevice *PDevice;
 
   /// The platform-specific stream handle for this instance.
-  std::unique_ptr<PlatformStreamHandle> ThePlatformStream;
+  const void *PlatformStreamHandle;
 
   /// Mutex that guards the error state flags.
-  ///
-  /// Mutable so that it can be obtained via const reader lock.
-  mutable llvm::sys::RWMutex ErrorMessageMutex;
+  std::unique_ptr<llvm::sys::RWMutex> ErrorMessageMutex;
 
   /// First error message for an operation in this stream or empty if there have
   /// been no errors.
   llvm::Optional<std::string> ErrorMessage;
-
-  Stream(const Stream &) = delete;
-  void operator=(const Stream &) = delete;
 };
 
 } // namespace streamexecutor

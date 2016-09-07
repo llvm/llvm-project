@@ -502,7 +502,16 @@ CompilerType::GetArrayElementType (uint64_t *stride) const
     if (IsValid())
     {
         return m_type_system->GetArrayElementType(m_type, stride);
-        
+    }
+    return CompilerType();
+}
+
+CompilerType
+CompilerType::GetArrayType (uint64_t size) const
+{
+    if (IsValid())
+    {
+        return m_type_system->GetArrayType(m_type, size);
     }
     return CompilerType();
 }

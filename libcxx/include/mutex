@@ -574,7 +574,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 call_once(once_flag& __flag, _Callable&& __func, _Args&&... __args)
 {
-    if (__libcpp_relaxed_load(&__flag.__state_) != ~0ul)
+    if (__libcpp_acquire_load(&__flag.__state_) != ~0ul)
     {
         typedef tuple<_Callable&&, _Args&&...> _Gp;
         _Gp __f(_VSTD::forward<_Callable>(__func), _VSTD::forward<_Args>(__args)...);
@@ -590,7 +590,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 call_once(once_flag& __flag, _Callable& __func)
 {
-    if (__libcpp_relaxed_load(&__flag.__state_) != ~0ul)
+    if (__libcpp_acquire_load(&__flag.__state_) != ~0ul)
     {
         __call_once_param<_Callable> __p(__func);
         __call_once(__flag.__state_, &__p, &__call_once_proxy<_Callable>);
