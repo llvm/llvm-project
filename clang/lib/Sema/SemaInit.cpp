@@ -3438,6 +3438,23 @@ static bool TryInitializerListConstruction(Sema &S,
   return true;
 }
 
+/// Determine if the constructor has the signature of a copy or move
+/// constructor for the type T of the class in which it was found. That is,
+/// determine if its first parameter is of type T or reference to (possibly
+/// cv-qualified) T.
+static bool hasCopyOrMoveCtorParam(ASTContext &Ctx,
+                                   const ConstructorInfo &Info) {
+  if (Info.Constructor->getNumParams() == 0)
+    return false;
+
+  QualType ParmT =
+      Info.Constructor->getParamDecl(0)->getType().getNonReferenceType();
+  QualType ClassT =
+      Ctx.getRecordType(cast<CXXRecordDecl>(Info.FoundDecl->getDeclContext()));
+
+  return Ctx.hasSameUnqualifiedType(ParmT, ClassT);
+}
+
 static OverloadingResult
 ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
                            MultiExprArg Args,
@@ -3445,59 +3462,56 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
                            DeclContext::lookup_result Ctors,
                            OverloadCandidateSet::iterator &Best,
                            bool CopyInitializing, bool AllowExplicit,
-                           bool OnlyListConstructors, bool IsListInit) {
+                           bool OnlyListConstructors, bool IsListInit,
+                           bool SecondStepOfCopyInit = false) {
   CandidateSet.clear();
 
   for (NamedDecl *D : Ctors) {
     auto Info = getConstructorInfo(D);
-    if (!Info.Constructor)
+    if (!Info.Constructor || Info.Constructor->isInvalidDecl())
       continue;
 
-    bool SuppressUserConversions = false;
+    if (!AllowExplicit && Info.Constructor->isExplicit())
+      continue;
 
-    if (!Info.ConstructorTmpl) {
-      // C++11 [over.best.ics]p4:
-      //   ... and the constructor or user-defined conversion function is a
-      //   candidate by
-      //   - 13.3.1.3, when the argument is the temporary in the second step
-      //     of a class copy-initialization, or
-      //   - 13.3.1.4, 13.3.1.5, or 13.3.1.6 (in all cases),
-      //   user-defined conversion sequences are not considered.
-      // FIXME: This breaks backward compatibility, e.g. PR12117. As a
-      //        temporary fix, let's re-instate the third bullet above until
-      //        there is a resolution in the standard, i.e.,
-      //   - 13.3.1.7 when the initializer list has exactly one element that is
-      //     itself an initializer list and a conversion to some class X or
-      //     reference to (possibly cv-qualified) X is considered for the first
-      //     parameter of a constructor of X.
-      if ((CopyInitializing ||
-           (IsListInit && Args.size() == 1 && isa<InitListExpr>(Args[0]))) &&
-          Info.Constructor->isCopyOrMoveConstructor())
-        SuppressUserConversions = true;
-    }
+    if (OnlyListConstructors && !S.isInitListConstructor(Info.Constructor))
+      continue;
 
-    if (!Info.Constructor->isInvalidDecl() &&
-        (AllowExplicit || !Info.Constructor->isExplicit()) &&
-        (!OnlyListConstructors || S.isInitListConstructor(Info.Constructor))) {
-      if (Info.ConstructorTmpl)
-        S.AddTemplateOverloadCandidate(Info.ConstructorTmpl, Info.FoundDecl,
-                                       /*ExplicitArgs*/ nullptr, Args,
-                                       CandidateSet, SuppressUserConversions);
-      else {
-        // C++ [over.match.copy]p1:
-        //   - When initializing a temporary to be bound to the first parameter 
-        //     of a constructor that takes a reference to possibly cv-qualified 
-        //     T as its first argument, called with a single argument in the 
-        //     context of direct-initialization, explicit conversion functions
-        //     are also considered.
-        bool AllowExplicitConv = AllowExplicit && !CopyInitializing && 
-                                 Args.size() == 1 &&
-                                 Info.Constructor->isCopyOrMoveConstructor();
-        S.AddOverloadCandidate(Info.Constructor, Info.FoundDecl, Args,
-                               CandidateSet, SuppressUserConversions,
-                               /*PartialOverloading=*/false,
-                               /*AllowExplicit=*/AllowExplicitConv);
-      }
+    // C++11 [over.best.ics]p4:
+    //   ... and the constructor or user-defined conversion function is a
+    //   candidate by
+    //   - 13.3.1.3, when the argument is the temporary in the second step
+    //     of a class copy-initialization, or
+    //   - 13.3.1.4, 13.3.1.5, or 13.3.1.6 (in all cases), [not handled here]
+    //   - the second phase of 13.3.1.7 when the initializer list has exactly
+    //     one element that is itself an initializer list, and the target is
+    //     the first parameter of a constructor of class X, and the conversion
+    //     is to X or reference to (possibly cv-qualified X),
+    //   user-defined conversion sequences are not considered.
+    bool SuppressUserConversions =
+        SecondStepOfCopyInit ||
+        (IsListInit && Args.size() == 1 && isa<InitListExpr>(Args[0]) &&
+         hasCopyOrMoveCtorParam(S.Context, Info));
+
+    if (Info.ConstructorTmpl)
+      S.AddTemplateOverloadCandidate(Info.ConstructorTmpl, Info.FoundDecl,
+                                     /*ExplicitArgs*/ nullptr, Args,
+                                     CandidateSet, SuppressUserConversions);
+    else {
+      // C++ [over.match.copy]p1:
+      //   - When initializing a temporary to be bound to the first parameter 
+      //     of a constructor [for type T] that takes a reference to possibly
+      //     cv-qualified T as its first argument, called with a single
+      //     argument in the context of direct-initialization, explicit
+      //     conversion functions are also considered.
+      // FIXME: What if a constructor template instantiates to such a signature?
+      bool AllowExplicitConv = AllowExplicit && !CopyInitializing && 
+                               Args.size() == 1 &&
+                               hasCopyOrMoveCtorParam(S.Context, Info);
+      S.AddOverloadCandidate(Info.Constructor, Info.FoundDecl, Args,
+                             CandidateSet, SuppressUserConversions,
+                             /*PartialOverloading=*/false,
+                             /*AllowExplicit=*/AllowExplicitConv);
     }
   }
 
@@ -5348,50 +5362,6 @@ static bool shouldDestroyTemporary(const InitializedEntity &Entity) {
   llvm_unreachable("missed an InitializedEntity kind?");
 }
 
-/// \brief Look for copy and move constructors and constructor templates, for
-/// copying an object via direct-initialization (per C++11 [dcl.init]p16).
-static void LookupCopyAndMoveConstructors(Sema &S,
-                                          OverloadCandidateSet &CandidateSet,
-                                          CXXRecordDecl *Class,
-                                          Expr *CurInitExpr) {
-  DeclContext::lookup_result R = S.LookupConstructors(Class);
-  // The container holding the constructors can under certain conditions
-  // be changed while iterating (e.g. because of deserialization).
-  // To be safe we copy the lookup results to a new container.
-  SmallVector<NamedDecl*, 16> Ctors(R.begin(), R.end());
-  for (SmallVectorImpl<NamedDecl *>::iterator
-         CI = Ctors.begin(), CE = Ctors.end(); CI != CE; ++CI) {
-    NamedDecl *D = *CI;
-    auto Info = getConstructorInfo(D);
-    if (!Info.Constructor)
-      continue;
-
-    if (!Info.ConstructorTmpl) {
-      // Handle copy/move constructors, only.
-      if (Info.Constructor->isInvalidDecl() ||
-          !Info.Constructor->isCopyOrMoveConstructor() ||
-          !Info.Constructor->isConvertingConstructor(/*AllowExplicit=*/true))
-        continue;
-
-      S.AddOverloadCandidate(Info.Constructor, Info.FoundDecl,
-                             CurInitExpr, CandidateSet);
-      continue;
-    }
-
-    // Handle constructor templates.
-    if (Info.ConstructorTmpl->isInvalidDecl())
-      continue;
-
-    if (!Info.Constructor->isConvertingConstructor(/*AllowExplicit=*/true))
-      continue;
-
-    // FIXME: Do we need to limit this to copy-constructor-like
-    // candidates?
-    S.AddTemplateOverloadCandidate(Info.ConstructorTmpl, Info.FoundDecl,
-                                   nullptr, CurInitExpr, CandidateSet, true);
-  }
-}
-
 /// \brief Get the location at which initialization diagnostics should appear.
 static SourceLocation getInitializationLoc(const InitializedEntity &Entity,
                                            Expr *Initializer) {
@@ -5462,39 +5432,24 @@ static ExprResult CopyObject(Sema &S,
   if (!Class)
     return CurInit;
 
-  // C++0x [class.copy]p32:
-  //   When certain criteria are met, an implementation is allowed to
-  //   omit the copy/move construction of a class object, even if the
-  //   copy/move constructor and/or destructor for the object have
-  //   side effects. [...]
-  //     - when a temporary class object that has not been bound to a
-  //       reference (12.2) would be copied/moved to a class object
-  //       with the same cv-unqualified type, the copy/move operation
-  //       can be omitted by constructing the temporary object
-  //       directly into the target of the omitted copy/move
-  //
-  // Note that the other three bullets are handled elsewhere. Copy
-  // elision for return statements and throw expressions are handled as part
-  // of constructor initialization, while copy elision for exception handlers
-  // is handled by the run-time.
-  bool Elidable = CurInitExpr->isTemporaryObject(S.Context, Class);
   SourceLocation Loc = getInitializationLoc(Entity, CurInit.get());
 
   // Make sure that the type we are copying is complete.
   if (S.RequireCompleteType(Loc, T, diag::err_temp_copy_incomplete))
     return CurInit;
 
-  // Perform overload resolution using the class's copy/move constructors.
-  // Only consider constructors and constructor templates. Per
-  // C++0x [dcl.init]p16, second bullet to class types, this initialization
+  // Perform overload resolution using the class's constructors. Per
+  // C++11 [dcl.init]p16, second bullet for class types, this initialization
   // is direct-initialization.
   OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
-  LookupCopyAndMoveConstructors(S, CandidateSet, Class, CurInitExpr);
-
-  bool HadMultipleCandidates = (CandidateSet.size() > 1);
+  DeclContext::lookup_result Ctors = S.LookupConstructors(Class);
 
   OverloadCandidateSet::iterator Best;
-  switch (CandidateSet.BestViableFunction(S, Loc, Best)) {
+  switch (ResolveConstructorOverload(
+      S, Loc, CurInitExpr, CandidateSet, Ctors, Best,
+      /*CopyInitializing=*/false, /*AllowExplicit=*/true,
+      /*OnlyListConstructors=*/false, /*IsListInit=*/false,
+      /*SecondStepOfCopyInit=*/true)) {
   case OR_Success:
     break;
 
@@ -5523,6 +5478,8 @@ static ExprResult CopyObject(Sema &S,
     S.NoteDeletedFunction(Best->Function);
     return ExprError();
   }
+
+  bool HadMultipleCandidates = CandidateSet.size() > 1;
 
   CXXConstructorDecl *Constructor = cast<CXXConstructorDecl>(Best->Function);
   SmallVector<Expr*, 8> ConstructorArgs;
@@ -5563,6 +5520,31 @@ static ExprResult CopyObject(Sema &S,
   if (S.CompleteConstructorCall(Constructor, CurInitExpr, Loc, ConstructorArgs))
     return ExprError();
 
+  // C++0x [class.copy]p32:
+  //   When certain criteria are met, an implementation is allowed to
+  //   omit the copy/move construction of a class object, even if the
+  //   copy/move constructor and/or destructor for the object have
+  //   side effects. [...]
+  //     - when a temporary class object that has not been bound to a
+  //       reference (12.2) would be copied/moved to a class object
+  //       with the same cv-unqualified type, the copy/move operation
+  //       can be omitted by constructing the temporary object
+  //       directly into the target of the omitted copy/move
+  //
+  // Note that the other three bullets are handled elsewhere. Copy
+  // elision for return statements and throw expressions are handled as part
+  // of constructor initialization, while copy elision for exception handlers
+  // is handled by the run-time.
+  //
+  // FIXME: If the function parameter is not the same type as the temporary, we
+  // should still be able to elide the copy, but we don't have a way to
+  // represent in the AST how much should be elided in this case.
+  bool Elidable =
+      CurInitExpr->isTemporaryObject(S.Context, Class) &&
+      S.Context.hasSameUnqualifiedType(
+          Best->Function->getParamDecl(0)->getType().getNonReferenceType(),
+          CurInitExpr->getType());
+
   // Actually perform the constructor call.
   CurInit = S.BuildCXXConstructExpr(Loc, T, Best->FoundDecl, Constructor,
                                     Elidable,
@@ -5598,12 +5580,16 @@ static void CheckCXX98CompatAccessibleCopy(Sema &S,
 
   // Find constructors which would have been considered.
   OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
-  LookupCopyAndMoveConstructors(
-      S, CandidateSet, cast<CXXRecordDecl>(Record->getDecl()), CurInitExpr);
+  DeclContext::lookup_result Ctors =
+      S.LookupConstructors(cast<CXXRecordDecl>(Record->getDecl()));
 
   // Perform overload resolution.
   OverloadCandidateSet::iterator Best;
-  OverloadingResult OR = CandidateSet.BestViableFunction(S, Loc, Best);
+  OverloadingResult OR = ResolveConstructorOverload(
+      S, Loc, CurInitExpr, CandidateSet, Ctors, Best,
+      /*CopyInitializing=*/false, /*AllowExplicit=*/true,
+      /*OnlyListConstructors=*/false, /*IsListInit=*/false,
+      /*SecondStepOfCopyInit=*/true);
 
   PartialDiagnostic Diag = S.PDiag(diag::warn_cxx98_compat_temp_copy)
     << OR << (int)Entity.getKind() << CurInitExpr->getType()
@@ -5723,9 +5709,10 @@ PerformConstructorInitialization(Sema &S,
   //     T as its first argument, called with a single argument in the 
   //     context of direct-initialization, explicit conversion functions
   //     are also considered.
-  bool AllowExplicitConv = Kind.AllowExplicit() && !Kind.isCopyInit() &&
-                           Args.size() == 1 && 
-                           Constructor->isCopyOrMoveConstructor();
+  bool AllowExplicitConv =
+      Kind.AllowExplicit() && !Kind.isCopyInit() && Args.size() == 1 &&
+      hasCopyOrMoveCtorParam(S.Context,
+                             getConstructorInfo(Step.Function.FoundDecl));
 
   // Determine the arguments required to actually perform the constructor
   // call.

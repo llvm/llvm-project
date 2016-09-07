@@ -19,6 +19,13 @@
 
 using std::experimental::optional;
 
+struct AllowConstAssign {
+  AllowConstAssign(AllowConstAssign const&) {}
+  AllowConstAssign const& operator=(AllowConstAssign const&) const {
+      return *this;
+  }
+};
+
 struct X
 {
     static bool throw_now;
@@ -41,6 +48,11 @@ int main()
         opt = opt2;
         static_assert(static_cast<bool>(opt2) == false, "");
         assert(static_cast<bool>(opt) == static_cast<bool>(opt2));
+    }
+    {
+        optional<const AllowConstAssign> opt;
+        optional<const AllowConstAssign> opt2;
+        opt = opt2;
     }
     {
         optional<int> opt;

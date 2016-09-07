@@ -643,8 +643,8 @@ namespace dr58 { // dr58: yes
 
 namespace dr59 { // dr59: yes
   template<typename T> struct convert_to { operator T() const; };
-  struct A {}; // expected-note 2{{volatile qualifier}}
-  struct B : A {}; // expected-note 2{{volatile qualifier}}
+  struct A {}; // expected-note 2{{volatile qualifier}} expected-note 2{{requires 0 arguments}}
+  struct B : A {}; // expected-note 2{{volatile qualifier}} expected-note 2{{requires 0 arguments}}
 #if __cplusplus >= 201103L // move constructors
   // expected-note@-3 2{{volatile qualifier}}
   // expected-note@-3 2{{volatile qualifier}}
@@ -902,7 +902,7 @@ namespace dr84 { // dr84: yes
   struct C {};
   struct B {
     B(B&); // expected-note {{candidate}}
-    B(C);
+    B(C); // expected-note {{no known conversion from 'dr84::B' to 'dr84::C'}}
     operator C() const;
   };
   A a;

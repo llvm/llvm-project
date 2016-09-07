@@ -81,6 +81,17 @@ int main()
             assert(*opt == X({1, 2}));
         }
     }
+    X::dtor_called = false;
+    {
+        X x;
+        {
+            optional<const X> opt(x);
+            assert(X::dtor_called == false);
+            opt.emplace({1, 2});
+            assert(X::dtor_called == true);
+            assert(*opt == X({1, 2}));
+        }
+    }
     {
         optional<std::vector<int>> opt;
         opt.emplace({1, 2, 3}, std::allocator<int>());
