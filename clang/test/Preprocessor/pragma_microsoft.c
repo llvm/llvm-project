@@ -162,3 +162,19 @@ void g() {}
 
 // Test that runtime_checks is parsed but ignored.
 #pragma runtime_checks("sc", restore) // no-warning
+
+// Test pragma intrinsic
+#pragma intrinsic(memset) // no-warning
+#pragma intrinsic(memcpy, strlen, strlen) // no-warning
+#pragma intrinsic() // no-warning
+#pragma intrinsic(asdf) // expected-warning {{'asdf' is not a recognized builtin; consider including <intrin.h>}}
+#pragma intrinsic(main) // expected-warning {{'main' is not a recognized builtin; consider including <intrin.h>}}
+#pragma intrinsic( // expected-warning {{missing ')' after}}
+#pragma intrinsic(int) // expected-warning {{missing ')' after}}
+#pragma intrinsic(strcmp) asdf // expected-warning {{extra tokens at end}}
+
+#define __INTRIN_H  // there should be no notes after defining __INTRIN_H
+#pragma intrinsic(asdf) // expected-warning-re {{'asdf' is not a recognized builtin{{$}}}}
+#pragma intrinsic(memset) // no-warning
+#undef __INTRIN_H
+#pragma intrinsic(asdf) // expected-warning {{'asdf' is not a recognized builtin; consider including <intrin.h>}}

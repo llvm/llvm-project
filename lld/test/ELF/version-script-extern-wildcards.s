@@ -1,15 +1,15 @@
-# REQUIRES: shell
+# REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: echo "LIBSAMPLE_1.0 { \
 # RUN:   global:             \
-# RUN:      extern "C++" {   \
+# RUN:      extern \"C++\" { \
 # RUN:        foo*;          \
 # RUN:   };                  \
 # RUN: };                    \
 # RUN: LIBSAMPLE_2.0 {       \
 # RUN:   global:             \
-# RUN:     extern "C++" {    \
+# RUN:     extern \"C++\" {  \
 # RUN:       zed*;           \
 # RUN:       bar;            \
 # RUN:   };                  \

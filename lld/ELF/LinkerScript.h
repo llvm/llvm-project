@@ -54,8 +54,9 @@ struct BaseCommand {
 };
 
 struct SymbolAssignment : BaseCommand {
-  SymbolAssignment(StringRef Name, Expr E)
-      : BaseCommand(AssignmentKind), Name(Name), Expression(E) {}
+  SymbolAssignment(StringRef Name, Expr E, bool IsAbsolute)
+      : BaseCommand(AssignmentKind), Name(Name), Expression(E),
+        IsAbsolute(IsAbsolute) {}
   static bool classof(const BaseCommand *C);
 
   // The LHS of an expression. Name is either a symbol name or ".".
@@ -68,6 +69,7 @@ struct SymbolAssignment : BaseCommand {
   // Command attributes for PROVIDE, HIDDEN and PROVIDE_HIDDEN.
   bool Provide = false;
   bool Hidden = false;
+  bool IsAbsolute;
   InputSectionData *GoesAfter = nullptr;
 };
 

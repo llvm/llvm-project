@@ -59,3 +59,19 @@ void test7(write_only pipe int p, global int *ptr) {
   // CHECK: call i32 @__get_pipe_max_packets(%opencl.pipe_t* %{{.*}})
   *ptr = get_pipe_max_packets(p);
 }
+
+void test8(read_only pipe int r, write_only pipe int w, global int *ptr) {
+  // verify that return type is correctly casted to i1 value
+  // CHECK: %[[R:[0-9]+]] = call i32 @__read_pipe_2
+  // CHECK: icmp ne i32 %[[R]], 0
+  if (read_pipe(r, ptr)) *ptr = -1;
+  // CHECK: %[[W:[0-9]+]] = call i32 @__write_pipe_2
+  // CHECK: icmp ne i32 %[[W]], 0
+  if (write_pipe(w, ptr)) *ptr = -1;
+  // CHECK: %[[N:[0-9]+]] = call i32 @__get_pipe_num_packets
+  // CHECK: icmp ne i32 %[[N]], 0
+  if (get_pipe_num_packets(r)) *ptr = -1;
+  // CHECK: %[[M:[0-9]+]] = call i32 @__get_pipe_max_packets
+  // CHECK: icmp ne i32 %[[M]], 0
+  if (get_pipe_max_packets(w)) *ptr = -1;
+}

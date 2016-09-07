@@ -983,7 +983,8 @@ bool Vectorizer::vectorizeLoadChain(
         Instruction *UI = cast<Instruction>(Use);
         unsigned Idx = cast<ConstantInt>(UI->getOperand(1))->getZExtValue();
         unsigned NewIdx = Idx + I * VecWidth;
-        Value *V = Builder.CreateExtractElement(LI, Builder.getInt32(NewIdx));
+        Value *V = Builder.CreateExtractElement(LI, Builder.getInt32(NewIdx),
+                                                UI->getName());
         if (V->getType() != UI->getType())
           V = Builder.CreateBitCast(V, UI->getType());
 
@@ -1002,8 +1003,9 @@ bool Vectorizer::vectorizeLoadChain(
       I->eraseFromParent();
   } else {
     for (unsigned I = 0, E = Chain.size(); I != E; ++I) {
-      Value *V = Builder.CreateExtractElement(LI, Builder.getInt32(I));
       Value *CV = Chain[I];
+      Value *V =
+          Builder.CreateExtractElement(LI, Builder.getInt32(I), CV->getName());
       if (V->getType() != CV->getType()) {
         V = Builder.CreateBitOrPointerCast(V, CV->getType());
       }

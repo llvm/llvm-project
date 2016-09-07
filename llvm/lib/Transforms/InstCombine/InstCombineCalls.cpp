@@ -584,7 +584,7 @@ static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
   // See if we're dealing with constant values.
   Constant *C0 = dyn_cast<Constant>(Op0);
   ConstantInt *CI0 =
-      C0 ? dyn_cast<ConstantInt>(C0->getAggregateElement((unsigned)0))
+      C0 ? dyn_cast_or_null<ConstantInt>(C0->getAggregateElement((unsigned)0))
          : nullptr;
 
   // Attempt to constant fold.
@@ -722,10 +722,10 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
   Constant *C0 = dyn_cast<Constant>(Op0);
   Constant *C1 = dyn_cast<Constant>(Op1);
   ConstantInt *CI00 =
-      C0 ? dyn_cast<ConstantInt>(C0->getAggregateElement((unsigned)0))
+      C0 ? dyn_cast_or_null<ConstantInt>(C0->getAggregateElement((unsigned)0))
          : nullptr;
   ConstantInt *CI10 =
-      C1 ? dyn_cast<ConstantInt>(C1->getAggregateElement((unsigned)0))
+      C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)0))
          : nullptr;
 
   // Constant Fold - insert bottom Length bits starting at the Index'th bit.
@@ -1856,10 +1856,10 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // See if we're dealing with constant values.
     Constant *C1 = dyn_cast<Constant>(Op1);
     ConstantInt *CILength =
-        C1 ? dyn_cast<ConstantInt>(C1->getAggregateElement((unsigned)0))
+        C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)0))
            : nullptr;
     ConstantInt *CIIndex =
-        C1 ? dyn_cast<ConstantInt>(C1->getAggregateElement((unsigned)1))
+        C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)1))
            : nullptr;
 
     // Attempt to simplify to a constant, shuffle vector or EXTRQI call.
@@ -1919,7 +1919,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // See if we're dealing with constant values.
     Constant *C1 = dyn_cast<Constant>(Op1);
     ConstantInt *CI11 =
-        C1 ? dyn_cast<ConstantInt>(C1->getAggregateElement((unsigned)1))
+        C1 ? dyn_cast_or_null<ConstantInt>(C1->getAggregateElement((unsigned)1))
            : nullptr;
 
     // Attempt to simplify to a constant, shuffle vector or INSERTQI call.

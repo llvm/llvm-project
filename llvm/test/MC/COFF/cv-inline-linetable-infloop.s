@@ -19,6 +19,8 @@
 	.p2align	4, 0x90
 infloop:                                    # @infloop
 .Lfunc_begin1:
+	.cv_func_id 0
+	.cv_inline_site_id 2 within 0 inlined_at 1 1 1
 	.cv_loc	2 1 3 7                 # t.c:3:7
 	jmp	.Lfunc_begin1
 .Lfunc_end1:
@@ -31,6 +33,7 @@ infloop:                                    # @infloop
 	.globl	afterinfloop
 	.p2align	4, 0x90
 afterinfloop:                                    # @afterinfloop
+	.cv_func_id 3
 	.cv_loc	3 1 13 0                # t.c:13:0
 	retq
 

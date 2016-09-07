@@ -7,9 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "gtest/gtest.h"
+
 #include "lldb/Host/Symbols.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "gtest/gtest.h"
 
 using namespace lldb_private;
 
