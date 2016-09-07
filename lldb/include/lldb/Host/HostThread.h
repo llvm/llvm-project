@@ -16,8 +16,7 @@
 
 #include <memory>
 
-namespace lldb_private
-{
+namespace lldb_private {
 
 class HostNativeThreadBase;
 
@@ -30,26 +29,25 @@ class HostNativeThreadBase;
 /// machine.
 ///
 //----------------------------------------------------------------------
-class HostThread
-{
-  public:
-    HostThread();
-    HostThread(lldb::thread_t thread);
+class HostThread {
+public:
+  HostThread();
+  HostThread(lldb::thread_t thread);
 
-    Error Join(lldb::thread_result_t *result);
-    Error Cancel();
-    void Reset();
-    lldb::thread_t Release();
+  Error Join(lldb::thread_result_t *result);
+  Error Cancel();
+  void Reset();
+  lldb::thread_t Release();
 
-    bool IsJoinable() const;
-    HostNativeThread &GetNativeThread();
-    const HostNativeThread &GetNativeThread() const;
-    lldb::thread_result_t GetResult() const;
+  bool IsJoinable() const;
+  HostNativeThread &GetNativeThread();
+  const HostNativeThread &GetNativeThread() const;
+  lldb::thread_result_t GetResult() const;
 
-    bool EqualsThread(lldb::thread_t thread) const;
+  bool EqualsThread(lldb::thread_t thread) const;
 
-  private:
-    std::shared_ptr<HostNativeThreadBase> m_native_thread;
+private:
+  std::shared_ptr<HostNativeThreadBase> m_native_thread;
 };
 }
 

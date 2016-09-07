@@ -56,6 +56,12 @@ template <class ELFT> static void addSynthetic(SymbolAssignment *Cmd) {
   Cmd->Sym = Sym->body();
 }
 
+template <class ELFT> static void addSymbol(SymbolAssignment *Cmd) {
+  if (Cmd->IsAbsolute)
+    addRegular<ELFT>(Cmd);
+  else
+    addSynthetic<ELFT>(Cmd);
+}
 // If a symbol was in PROVIDE(), we need to define it only when
 // it is an undefined symbol.
 template <class ELFT> static bool shouldDefine(SymbolAssignment *Cmd) {
@@ -162,7 +168,7 @@ static bool checkConstraint(uint64_t Flags, ConstraintKind Kind) {
   bool RO = (Kind == ConstraintKind::ReadOnly);
   bool RW = (Kind == ConstraintKind::ReadWrite);
   bool Writable = Flags & SHF_WRITE;
-  return !((RO && Writable) || (RW && !Writable));
+  return !(RO && Writable) && !(RW && !Writable);
 }
 
 template <class ELFT>
@@ -184,7 +190,7 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
   for (const std::unique_ptr<BaseCommand> &Base : OutCmd.Commands) {
     if (auto *OutCmd = dyn_cast<SymbolAssignment>(Base.get())) {
       if (shouldDefine<ELFT>(OutCmd))
-        addSynthetic<ELFT>(OutCmd);
+        addSymbol<ELFT>(OutCmd);
       OutCmd->GoesAfter = Ret.empty() ? nullptr : Ret.back();
       continue;
     }
@@ -267,6 +273,26 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
   }
 }
 
+// Sets value of a section-defined symbol. Two kinds of
+// symbols are processed: synthetic symbols, whose value
+// is an offset from beginning of section and regular
+// symbols whose value is absolute.
+template <class ELFT>
+static void assignSectionSymbol(SymbolAssignment *Cmd,
+                                OutputSectionBase<ELFT> *Sec,
+                                typename ELFT::uint Off) {
+  if (!Cmd->Sym)
+    return;
+
+  if (auto *Body = dyn_cast<DefinedSynthetic<ELFT>>(Cmd->Sym)) {
+    Body->Section = Sec;
+    Body->Value = Cmd->Expression(Sec->getVA() + Off) - Sec->getVA();
+    return;
+  }
+  auto *Body = cast<DefinedRegular<ELFT>>(Cmd->Sym);
+  Body->Value = Cmd->Expression(Sec->getVA() + Off);
+}
+
 // Linker script may define start and end symbols for special section types,
 // like .got, .eh_frame_hdr, .eh_frame and others. Those sections are not a list
 // of regular input input sections, therefore our way of defining symbols for
@@ -280,12 +306,7 @@ void addStartEndSymbols(OutputSectionCommand *Cmd,
 
   for (std::unique_ptr<BaseCommand> &Base : Cmd->Commands) {
     if (auto *AssignCmd = dyn_cast<SymbolAssignment>(Base.get())) {
-      if (auto *Sym = cast_or_null<DefinedSynthetic<ELFT>>(AssignCmd->Sym)) {
-        Sym->Section = Sec;
-        Sym->Value =
-            AssignCmd->Expression(Sec->getVA() + (Start ? 0 : Sec->getSize())) -
-            Sec->getVA();
-      }
+      assignSectionSymbol<ELFT>(AssignCmd, Sec, Start ? 0 : Sec->getSize());
     } else {
       if (!Start && isa<SymbolAssignment>(PrevCmd))
         error("section '" + Sec->getName() +
@@ -322,19 +343,13 @@ void assignOffsets(OutputSectionCommand *Cmd, OutputSectionBase<ELFT> *Sec) {
       if (D != AssignCmd->GoesAfter)
         break;
 
-      uintX_t Value = AssignCmd->Expression(Sec->getVA() + Off) - Sec->getVA();
       if (AssignCmd->Name == ".") {
         // Update to location counter means update to section size.
-        Off = Value;
+        Off = AssignCmd->Expression(Sec->getVA() + Off) - Sec->getVA();
         Sec->setSize(Off);
         continue;
       }
-
-      if (DefinedSynthetic<ELFT> *Sym =
-              cast_or_null<DefinedSynthetic<ELFT>>(AssignCmd->Sym)) {
-        Sym->Section = OutSec;
-        Sym->Value = Value;
-      }
+      assignSectionSymbol<ELFT>(AssignCmd, Sec, Off);
     }
   };
 
@@ -621,8 +636,9 @@ private:
   void readVersionScriptCommand();
 
   SymbolAssignment *readAssignment(StringRef Name);
+  std::vector<uint8_t> readFill();
   OutputSectionCommand *readOutputSectionDescription(StringRef OutSec);
-  std::vector<uint8_t> readOutputSectionFiller();
+  std::vector<uint8_t> readOutputSectionFiller(StringRef Tok);
   std::vector<StringRef> readOutputSectionPhdrs();
   InputSectionDescription *readInputSectionDescription(StringRef Tok);
   Regex readFilePatterns();
@@ -630,7 +646,7 @@ private:
   unsigned readPhdrType();
   SortKind readSortKind();
   SymbolAssignment *readProvideHidden(bool Provide, bool Hidden);
-  SymbolAssignment *readProvideOrAssignment(StringRef Tok);
+  SymbolAssignment *readProvideOrAssignment(StringRef Tok, bool MakeAbsolute);
   void readSort();
   Expr readAssert();
 
@@ -709,7 +725,7 @@ void ScriptParser::readLinkerScript() {
       readSections();
     } else if (Tok == "VERSION") {
       readVersion();
-    } else if (SymbolAssignment *Cmd = readProvideOrAssignment(Tok)) {
+    } else if (SymbolAssignment *Cmd = readProvideOrAssignment(Tok, true)) {
       if (Opt.HasContents)
         Opt.Commands.emplace_back(Cmd);
       else
@@ -871,7 +887,7 @@ void ScriptParser::readSections() {
   expect("{");
   while (!Error && !skip("}")) {
     StringRef Tok = next();
-    BaseCommand *Cmd = readProvideOrAssignment(Tok);
+    BaseCommand *Cmd = readProvideOrAssignment(Tok, true);
     if (!Cmd) {
       if (Tok == "ASSERT")
         Cmd = new AssertCommand(readAssert());
@@ -980,6 +996,18 @@ Expr ScriptParser::readAssert() {
   };
 }
 
+// Reads a FILL(expr) command. We handle the FILL command as an
+// alias for =fillexp section attribute, which is different from
+// what GNU linkers do.
+// https://sourceware.org/binutils/docs/ld/Output-Section-Data.html
+std::vector<uint8_t> ScriptParser::readFill() {
+  expect("(");
+  std::vector<uint8_t> V = readOutputSectionFiller(next());
+  expect(")");
+  expect(";");
+  return V;
+}
+
 OutputSectionCommand *
 ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd = new OutputSectionCommand(OutSec);
@@ -1007,8 +1035,10 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 
   while (!Error && !skip("}")) {
     StringRef Tok = next();
-    if (SymbolAssignment *Assignment = readProvideOrAssignment(Tok))
+    if (SymbolAssignment *Assignment = readProvideOrAssignment(Tok, false))
       Cmd->Commands.emplace_back(Assignment);
+    else if (Tok == "FILL")
+      Cmd->Filler = readFill();
     else if (Tok == "SORT")
       readSort();
     else if (peek() == "(")
@@ -1017,7 +1047,8 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
       setError("unknown command " + Tok);
   }
   Cmd->Phdrs = readOutputSectionPhdrs();
-  Cmd->Filler = readOutputSectionFiller();
+  if (peek().startswith("="))
+    Cmd->Filler = readOutputSectionFiller(next().drop_front());
   return Cmd;
 }
 
@@ -1028,13 +1059,9 @@ ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 // hexstrings as blobs of arbitrary sizes, while ld.gold handles them
 // as 32-bit big-endian values. We will do the same as ld.gold does
 // because it's simpler than what ld.bfd does.
-std::vector<uint8_t> ScriptParser::readOutputSectionFiller() {
-  if (!peek().startswith("="))
-    return {};
-
-  StringRef Tok = next();
+std::vector<uint8_t> ScriptParser::readOutputSectionFiller(StringRef Tok) {
   uint32_t V;
-  if (Tok.substr(1).getAsInteger(0, V)) {
+  if (Tok.getAsInteger(0, V)) {
     setError("invalid filler expression: " + Tok);
     return {};
   }
@@ -1051,7 +1078,8 @@ SymbolAssignment *ScriptParser::readProvideHidden(bool Provide, bool Hidden) {
   return Cmd;
 }
 
-SymbolAssignment *ScriptParser::readProvideOrAssignment(StringRef Tok) {
+SymbolAssignment *ScriptParser::readProvideOrAssignment(StringRef Tok,
+                                                        bool MakeAbsolute) {
   SymbolAssignment *Cmd = nullptr;
   if (peek() == "=" || peek() == "+=") {
     Cmd = readAssignment(Tok);
@@ -1063,6 +1091,8 @@ SymbolAssignment *ScriptParser::readProvideOrAssignment(StringRef Tok) {
   } else if (Tok == "PROVIDE_HIDDEN") {
     Cmd = readProvideHidden(true, true);
   }
+  if (Cmd && MakeAbsolute)
+    Cmd->IsAbsolute = true;
   return Cmd;
 }
 
@@ -1141,11 +1171,18 @@ static uint64_t getHeaderSize() {
 
 SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   StringRef Op = next();
+  bool IsAbsolute = false;
+  Expr E;
   assert(Op == "=" || Op == "+=");
-  Expr E = readExpr();
+  if (skip("ABSOLUTE")) {
+    E = readParenExpr();
+    IsAbsolute = true;
+  } else {
+    E = readExpr();
+  }
   if (Op == "+=")
     E = [=](uint64_t Dot) { return getSymbolValue(Name, Dot) + E(Dot); };
-  return new SymbolAssignment(Name, E);
+  return new SymbolAssignment(Name, E, IsAbsolute);
 }
 
 // This is an operator-precedence parser to parse a linker

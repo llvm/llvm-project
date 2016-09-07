@@ -21,73 +21,51 @@ using namespace lldb;
 using namespace lldb_private;
 
 ScriptInterpreterNone::ScriptInterpreterNone(CommandInterpreter &interpreter)
-    : ScriptInterpreter(interpreter, eScriptLanguageNone)
-{
+    : ScriptInterpreter(interpreter, eScriptLanguageNone) {}
+
+ScriptInterpreterNone::~ScriptInterpreterNone() {}
+
+bool ScriptInterpreterNone::ExecuteOneLine(const char *command,
+                                           CommandReturnObject *,
+                                           const ExecuteScriptOptions &) {
+  m_interpreter.GetDebugger().GetErrorFile()->PutCString(
+      "error: there is no embedded script interpreter in this mode.\n");
+  return false;
 }
 
-ScriptInterpreterNone::~ScriptInterpreterNone()
-{
+void ScriptInterpreterNone::ExecuteInterpreterLoop() {
+  m_interpreter.GetDebugger().GetErrorFile()->PutCString(
+      "error: there is no embedded script interpreter in this mode.\n");
 }
 
-bool
-ScriptInterpreterNone::ExecuteOneLine(const char *command, CommandReturnObject *, const ExecuteScriptOptions &)
-{
-    m_interpreter.GetDebugger().GetErrorFile()->PutCString(
-        "error: there is no embedded script interpreter in this mode.\n");
-    return false;
+void ScriptInterpreterNone::Initialize() {
+  static std::once_flag g_once_flag;
+
+  std::call_once(g_once_flag, []() {
+    PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                  GetPluginDescriptionStatic(),
+                                  lldb::eScriptLanguageNone, CreateInstance);
+  });
 }
 
-void
-ScriptInterpreterNone::ExecuteInterpreterLoop()
-{
-    m_interpreter.GetDebugger().GetErrorFile()->PutCString(
-        "error: there is no embedded script interpreter in this mode.\n");
-}
-
-void
-ScriptInterpreterNone::Initialize()
-{
-    static std::once_flag g_once_flag;
-
-    std::call_once(g_once_flag, []()
-                   {
-                       PluginManager::RegisterPlugin(GetPluginNameStatic(), GetPluginDescriptionStatic(),
-                                                     lldb::eScriptLanguageNone, CreateInstance);
-                   });
-}
-
-void
-ScriptInterpreterNone::Terminate()
-{
-}
+void ScriptInterpreterNone::Terminate() {}
 
 lldb::ScriptInterpreterSP
-ScriptInterpreterNone::CreateInstance(CommandInterpreter &interpreter)
-{
-    return std::make_shared<ScriptInterpreterNone>(interpreter);
+ScriptInterpreterNone::CreateInstance(CommandInterpreter &interpreter) {
+  return std::make_shared<ScriptInterpreterNone>(interpreter);
 }
 
-lldb_private::ConstString
-ScriptInterpreterNone::GetPluginNameStatic()
-{
-    static ConstString g_name("script-none");
-    return g_name;
+lldb_private::ConstString ScriptInterpreterNone::GetPluginNameStatic() {
+  static ConstString g_name("script-none");
+  return g_name;
 }
 
-const char *
-ScriptInterpreterNone::GetPluginDescriptionStatic()
-{
-    return "Null script interpreter";
+const char *ScriptInterpreterNone::GetPluginDescriptionStatic() {
+  return "Null script interpreter";
 }
 
-lldb_private::ConstString
-ScriptInterpreterNone::GetPluginName()
-{
-    return GetPluginNameStatic();
+lldb_private::ConstString ScriptInterpreterNone::GetPluginName() {
+  return GetPluginNameStatic();
 }
 
-uint32_t
-ScriptInterpreterNone::GetPluginVersion()
-{
-    return 1;
-}
+uint32_t ScriptInterpreterNone::GetPluginVersion() { return 1; }

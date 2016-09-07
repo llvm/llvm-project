@@ -5,12 +5,13 @@ Test that we do not attempt to make a dynamic type for a 'const char*'
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 @skipUnlessDarwin
 class Rdar10967107TestCase(TestBase):
@@ -35,32 +36,47 @@ class Rdar10967107TestCase(TestBase):
         exe = os.path.join(os.getcwd(), self.exe_name)
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line (self, self.main_source, self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self,
+            self.main_source,
+            self.line,
+            num_expected_locations=1,
+            loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
-        # check that we correctly see the const char*, even with dynamic types on
-        self.expect("frame variable my_string", substrs = ['const char *'])
-        self.expect("frame variable my_string --dynamic-type run-target", substrs = ['const char *'])
+        # check that we correctly see the const char*, even with dynamic types
+        # on
+        self.expect("frame variable my_string", substrs=['const char *'])
+        self.expect(
+            "frame variable my_string --dynamic-type run-target",
+            substrs=['const char *'])
         # check that expr also gets it right
-        self.expect("expr my_string", substrs = ['const char *'])
-        self.expect("expr -d run -- my_string", substrs = ['const char *'])
+        self.expect("expr my_string", substrs=['const char *'])
+        self.expect("expr -d run -- my_string", substrs=['const char *'])
         # but check that we get the real Foolie as such
-        self.expect("frame variable my_foolie", substrs = ['FoolMeOnce *'])
-        self.expect("frame variable my_foolie --dynamic-type run-target", substrs = ['FoolMeOnce *'])
+        self.expect("frame variable my_foolie", substrs=['FoolMeOnce *'])
+        self.expect(
+            "frame variable my_foolie --dynamic-type run-target",
+            substrs=['FoolMeOnce *'])
         # check that expr also gets it right
-        self.expect("expr my_foolie", substrs = ['FoolMeOnce *'])
-        self.expect("expr -d run -- my_foolie", substrs = ['FoolMeOnce *'])
+        self.expect("expr my_foolie", substrs=['FoolMeOnce *'])
+        self.expect("expr -d run -- my_foolie", substrs=['FoolMeOnce *'])
         # now check that assigning a true string does not break anything
         self.runCmd("next")
-        # check that we correctly see the const char*, even with dynamic types on
-        self.expect("frame variable my_string", substrs = ['const char *'])
-        self.expect("frame variable my_string --dynamic-type run-target", substrs = ['const char *'])
+        # check that we correctly see the const char*, even with dynamic types
+        # on
+        self.expect("frame variable my_string", substrs=['const char *'])
+        self.expect(
+            "frame variable my_string --dynamic-type run-target",
+            substrs=['const char *'])
         # check that expr also gets it right
-        self.expect("expr my_string", substrs = ['const char *'])
-        self.expect("expr -d run -- my_string", substrs = ['const char *'])
+        self.expect("expr my_string", substrs=['const char *'])
+        self.expect("expr -d run -- my_string", substrs=['const char *'])
         # but check that we get the real Foolie as such
-        self.expect("frame variable my_foolie", substrs = ['FoolMeOnce *'])
-        self.expect("frame variable my_foolie --dynamic-type run-target", substrs = ['FoolMeOnce *'])
+        self.expect("frame variable my_foolie", substrs=['FoolMeOnce *'])
+        self.expect(
+            "frame variable my_foolie --dynamic-type run-target",
+            substrs=['FoolMeOnce *'])
         # check that expr also gets it right
-        self.expect("expr my_foolie", substrs = ['FoolMeOnce *'])
-        self.expect("expr -d run -- my_foolie", substrs = ['FoolMeOnce *'])
+        self.expect("expr my_foolie", substrs=['FoolMeOnce *'])
+        self.expect("expr -d run -- my_foolie", substrs=['FoolMeOnce *'])

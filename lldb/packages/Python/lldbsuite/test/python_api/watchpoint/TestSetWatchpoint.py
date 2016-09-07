@@ -5,13 +5,14 @@ Use lldb Python SBValue API to create a watchpoint for read_write of 'globl' var
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class SetWatchpointAPITestCase(TestBase):
 
@@ -23,12 +24,17 @@ class SetWatchpointAPITestCase(TestBase):
         # Our simple source filename.
         self.source = 'main.c'
         # Find the line number to break inside main().
-        self.line = line_number(self.source, '// Set break point at this line.')
+        self.line = line_number(
+            self.source, '// Set break point at this line.')
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
-    @expectedFailureAll(archs=['s390x']) # Read-write watchpoints not supported on SystemZ
+    # Watchpoints not supported
+    @expectedFailureAndroid(archs=['arm', 'aarch64'])
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    # Read-write watchpoints not supported on SystemZ
+    @expectedFailureAll(archs=['s390x'])
     def test_watch_val(self):
         """Exercise SBValue.Watch() API to set a watchpoint."""
         self.build()
@@ -45,18 +51,20 @@ class SetWatchpointAPITestCase(TestBase):
                         VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         # We should be stopped due to the breakpoint.  Get frame #0.
         process = target.GetProcess()
         self.assertTrue(process.GetState() == lldb.eStateStopped,
                         PROCESS_STOPPED)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         frame0 = thread.GetFrameAtIndex(0)
 
         # Watch 'global' for read and write.
         value = frame0.FindValue('global', lldb.eValueTypeVariableGlobal)
-        error = lldb.SBError();
+        error = lldb.SBError()
         watchpoint = value.Watch(True, True, True, error)
         self.assertTrue(value and watchpoint,
                         "Successfully found the variable and set a watchpoint")
@@ -68,28 +76,35 @@ class SetWatchpointAPITestCase(TestBase):
 
         print(watchpoint)
 
-        # Continue.  Expect the program to stop due to the variable being written to.
+        # Continue.  Expect the program to stop due to the variable being
+        # written to.
         process.Continue()
 
         if (self.TraceOn()):
             lldbutil.print_stacktraces(process)
 
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonWatchpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonWatchpoint)
         self.assertTrue(thread, "The thread stopped due to watchpoint")
         self.DebugSBValue(value)
 
-        # Continue.  Expect the program to stop due to the variable being read from.
+        # Continue.  Expect the program to stop due to the variable being read
+        # from.
         process.Continue()
 
         if (self.TraceOn()):
             lldbutil.print_stacktraces(process)
 
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonWatchpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonWatchpoint)
         self.assertTrue(thread, "The thread stopped due to watchpoint")
         self.DebugSBValue(value)
 
-        # Continue the process.  We don't expect the program to be stopped again.
+        # Continue the process.  We don't expect the program to be stopped
+        # again.
         process.Continue()
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(process.GetState() == lldb.eStateExited, PROCESS_EXITED)
+        self.assertTrue(
+            process.GetState() == lldb.eStateExited,
+            PROCESS_EXITED)

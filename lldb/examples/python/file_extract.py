@@ -4,16 +4,17 @@ import string
 import struct
 import sys
 
+
 class FileExtract:
     '''Decode binary data from a file'''
-    
-    def __init__(self, f, b = '='):
+
+    def __init__(self, f, b='='):
         '''Initialize with an open binary file and optional byte order'''
-        
+
         self.file = f
         self.byte_order = b
         self.offsets = list()
-    
+
     def set_byte_order(self, b):
         '''Set the byte order, valid values are "big", "little", "swap", "native", "<", ">", "@", "="'''
         if b == 'big':
@@ -32,18 +33,18 @@ class FileExtract:
 
     def is_in_memory(self):
         return False
-    
-    def seek(self, offset, whence = 0):
+
+    def seek(self, offset, whence=0):
         if self.file:
             return self.file.seek(offset, whence)
-        raise ValueError    
+        raise ValueError
 
     def tell(self):
         if self.file:
             return self.file.tell()
-        raise ValueError    
-    
-    def read_size (self, byte_size):
+        raise ValueError
+
+    def read_size(self, byte_size):
         s = self.file.read(byte_size)
         if len(s) != byte_size:
             return None
@@ -53,12 +54,12 @@ class FileExtract:
         '''Push the current file offset and seek to "offset"'''
         self.offsets.append(self.file.tell())
         self.file.seek(offset, 0)
-    
+
     def pop_offset_and_seek(self):
         '''Pop a previously pushed file offset, or do nothing if there were no previously pushed offsets'''
         if len(self.offsets) > 0:
             self.file.seek(self.offsets.pop())
-        
+
     def get_sint8(self, fail_value=0):
         '''Extract a single int8_t from the binary file at the current file position, returns a single integer'''
         s = self.read_size(1)
@@ -112,7 +113,7 @@ class FileExtract:
             return v
         else:
             return fail_value
-        
+
     def get_sint64(self, fail_value=0):
         '''Extract a single int64_t from the binary file at the current file position, returns a single integer'''
         s = self.read_size(8)
@@ -131,7 +132,11 @@ class FileExtract:
         else:
             return fail_value
 
-    def get_fixed_length_c_string(self, n, fail_value='', isprint_only_with_space_padding=False):
+    def get_fixed_length_c_string(
+            self,
+            n,
+            fail_value='',
+            isprint_only_with_space_padding=False):
         '''Extract a single fixed length C string from the binary file at the current file position, returns a single C string'''
         s = self.read_size(n)
         if s:
@@ -174,7 +179,7 @@ class FileExtract:
 
     def get_n_sint16(self, n, fail_value=0):
         '''Extract "n" int16_t integers from the binary file at the current file position, returns a list of integers'''
-        s = self.read_size(2*n)
+        s = self.read_size(2 * n)
         if s:
             return struct.unpack(self.byte_order + ("%u" % n) + 'h', s)
         else:
@@ -182,7 +187,7 @@ class FileExtract:
 
     def get_n_uint16(self, n, fail_value=0):
         '''Extract "n" uint16_t integers from the binary file at the current file position, returns a list of integers'''
-        s = self.read_size(2*n)
+        s = self.read_size(2 * n)
         if s:
             return struct.unpack(self.byte_order + ("%u" % n) + 'H', s)
         else:
@@ -190,7 +195,7 @@ class FileExtract:
 
     def get_n_sint32(self, n, fail_value=0):
         '''Extract "n" int32_t integers from the binary file at the current file position, returns a list of integers'''
-        s = self.read_size(4*n)
+        s = self.read_size(4 * n)
         if s:
             return struct.unpack(self.byte_order + ("%u" % n) + 'i', s)
         else:
@@ -198,7 +203,7 @@ class FileExtract:
 
     def get_n_uint32(self, n, fail_value=0):
         '''Extract "n" uint32_t integers from the binary file at the current file position, returns a list of integers'''
-        s = self.read_size(4*n)
+        s = self.read_size(4 * n)
         if s:
             return struct.unpack(self.byte_order + ("%u" % n) + 'I', s)
         else:
@@ -206,7 +211,7 @@ class FileExtract:
 
     def get_n_sint64(self, n, fail_value=0):
         '''Extract "n" int64_t integers from the binary file at the current file position, returns a list of integers'''
-        s = self.read_size(8*n)
+        s = self.read_size(8 * n)
         if s:
             return struct.unpack(self.byte_order + ("%u" % n) + 'q', s)
         else:
@@ -214,7 +219,7 @@ class FileExtract:
 
     def get_n_uint64(self, n, fail_value=0):
         '''Extract "n" uint64_t integers from the binary file at the current file position, returns a list of integers'''
-        s = self.read_size(8*n)
+        s = self.read_size(8 * n)
         if s:
             return struct.unpack(self.byte_order + ("%u" % n) + 'Q', s)
         else:

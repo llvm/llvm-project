@@ -5,31 +5,33 @@ Test thread creation after process attach.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class CreateAfterAttachTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfFreeBSD # Hangs.  May be the same as Linux issue llvm.org/pr16229 but
-                   # not yet investigated.  Revisit once required functionality
-                   # is implemented for FreeBSD.
-    @skipIfWindows # Occasionally hangs on Windows, may be same as other issues.
+    @skipIfFreeBSD  # Hangs.  May be the same as Linux issue llvm.org/pr16229 but
+    # not yet investigated.  Revisit once required functionality
+    # is implemented for FreeBSD.
+    # Occasionally hangs on Windows, may be same as other issues.
+    @skipIfWindows
     @skipIfiOSSimulator
     def test_create_after_attach_with_popen(self):
         """Test thread creation after process attach."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
         self.create_after_attach(use_fork=False)
 
-    @skipIfFreeBSD # Hangs. Revisit once required functionality is implemented
-                   # for FreeBSD.
+    @skipIfFreeBSD  # Hangs. Revisit once required functionality is implemented
+    # for FreeBSD.
     @skipIfRemote
-    @skipIfWindows # Windows doesn't have fork.
+    @skipIfWindows  # Windows doesn't have fork.
     @skipIfiOSSimulator
     def test_create_after_attach_with_fork(self):
         """Test thread creation after process attach."""
@@ -66,13 +68,16 @@ class CreateAfterAttachTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # This should create a breakpoint in the main thread.
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_1, num_expected_locations=1)
 
         # This should create a breakpoint in the second child thread.
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_2, num_expected_locations=1)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_2, num_expected_locations=1)
 
         # This should create a breakpoint in the first child thread.
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_3, num_expected_locations=1)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_3, num_expected_locations=1)
 
         # Note:  With std::thread, we cannot rely on particular thread numbers.  Using
         # std::thread may cause the program to spin up a thread pool (and it does on
@@ -83,10 +88,10 @@ class CreateAfterAttachTestCase(TestBase):
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       '* thread #',
-                       'main',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             '* thread #',
+                             'main',
+                             'stop reason = breakpoint'])
 
         # Change a variable to escape the loop
         self.runCmd("expression main_thread_continue = 1")
@@ -96,10 +101,10 @@ class CreateAfterAttachTestCase(TestBase):
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       '* thread #',
-                       'thread_2_func',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             '* thread #',
+                             'thread_2_func',
+                             'stop reason = breakpoint'])
 
         # Change a variable to escape the loop
         self.runCmd("expression child_thread_continue = 1")
@@ -110,13 +115,15 @@ class CreateAfterAttachTestCase(TestBase):
         # The stop reason of the thread should be breakpoint.
         # Thread 3 may or may not have already exited.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       '* thread #',
-                       'thread_1_func',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             '* thread #',
+                             'thread_1_func',
+                             'stop reason = breakpoint'])
 
         # Run to completion
         self.runCmd("continue")
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(process.GetState() == lldb.eStateExited, PROCESS_EXITED)
+        self.assertTrue(
+            process.GetState() == lldb.eStateExited,
+            PROCESS_EXITED)

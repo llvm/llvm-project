@@ -5,6 +5,7 @@ Fuzz tests an object after the default construction to make sure it does not cra
 import sys
 import lldb
 
+
 def fuzz_obj(obj):
     broadcaster = obj.GetBroadcaster()
     # Do fuzz testing on the broadcaster obj, it should not crash lldb.

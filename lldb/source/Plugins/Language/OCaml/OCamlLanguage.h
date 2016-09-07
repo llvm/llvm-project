@@ -1,4 +1,5 @@
-//===-- OCamlLanguage.h ------------------------------------------*- C++ -*-===//
+//===-- OCamlLanguage.h ------------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -22,38 +23,27 @@
 #include "lldb/Target/Language.h"
 #include "lldb/lldb-private.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class OCamlLanguage : public Language
-{
+class OCamlLanguage : public Language {
 public:
-    lldb::LanguageType
-    GetLanguageType() const override
-    {
-        return lldb::eLanguageTypeOCaml;
-    }
+  lldb::LanguageType GetLanguageType() const override {
+    return lldb::eLanguageTypeOCaml;
+  }
 
-    static void
-    Initialize();
+  static void Initialize();
 
-    static void
-    Terminate();
+  static void Terminate();
 
-    static lldb_private::Language *
-    CreateInstance(lldb::LanguageType language);
+  static lldb_private::Language *CreateInstance(lldb::LanguageType language);
 
-    static lldb_private::ConstString
-    GetPluginNameStatic();
+  static lldb_private::ConstString GetPluginNameStatic();
 
-    ConstString
-    GetPluginName() override;
+  ConstString GetPluginName() override;
 
-    uint32_t
-    GetPluginVersion() override;
+  uint32_t GetPluginVersion() override;
 
-    bool
-    IsNilReference(ValueObject &valobj) override;
+  bool IsNilReference(ValueObject &valobj) override;
 };
 
 } // namespace lldb_private

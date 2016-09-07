@@ -5,10 +5,11 @@ Test that lldb persistent variables works correctly.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.lldbtest import *
+
 
 class PersistentVariablesTestCase(TestBase):
 
@@ -27,28 +28,28 @@ class PersistentVariablesTestCase(TestBase):
         self.runCmd("expression int $i = i")
 
         self.expect("expression $i == i",
-            startstr = "(bool) $0 = true")
+                    startstr="(bool) $0 = true")
 
         self.expect("expression $i + 1",
-            startstr = "(int) $1 = 6")
+                    startstr="(int) $1 = 6")
 
         self.expect("expression $i + 3",
-            startstr = "(int) $2 = 8")
+                    startstr="(int) $2 = 8")
 
         self.expect("expression $2 + $1",
-            startstr = "(int) $3 = 14")
+                    startstr="(int) $3 = 14")
 
         self.expect("expression $3",
-            startstr = "(int) $3 = 14")
+                    startstr="(int) $3 = 14")
 
         self.expect("expression $2",
-            startstr = "(int) $2 = 8")
+                    startstr="(int) $2 = 8")
 
         self.expect("expression (int)-2",
-            startstr = "(int) $4 = -2")
+                    startstr="(int) $4 = -2")
 
         self.expect("expression $4 > (int)31",
-            startstr = "(bool) $5 = false")
+                    startstr="(bool) $5 = false")
 
         self.expect("expression (long)$4",
-            startstr = "(long) $6 = -2")
+                    startstr="(long) $6 = -2")

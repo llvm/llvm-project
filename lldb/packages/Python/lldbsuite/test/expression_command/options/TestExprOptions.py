@@ -10,11 +10,12 @@ o test_expr_options:
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
+
 
 class ExprOptionsTestCase(TestBase):
 
@@ -25,7 +26,7 @@ class ExprOptionsTestCase(TestBase):
         TestBase.setUp(self)
 
         self.main_source = "main.cpp"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
         self.line = line_number('main.cpp', '// breakpoint_in_main')
         self.exe = os.path.join(os.getcwd(), "a.out")
 
@@ -41,14 +42,17 @@ class ExprOptionsTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set breakpoints inside main.
-        breakpoint = target.BreakpointCreateBySourceRegex('// breakpoint_in_main', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            '// breakpoint_in_main', self.main_source_spec)
         self.assertTrue(breakpoint)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
         self.assertEqual(len(threads), 1)
 
         frame = threads[0].GetFrameAtIndex(0)

@@ -17,33 +17,32 @@
 
 #include <string>
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class HostInfoLinux : public HostInfoPosix
-{
-    friend class HostInfoBase;
+class HostInfoLinux : public HostInfoPosix {
+  friend class HostInfoBase;
 
-  private:
-    // Static class, unconstructable.
-    HostInfoLinux();
-    ~HostInfoLinux();
+private:
+  // Static class, unconstructable.
+  HostInfoLinux();
+  ~HostInfoLinux();
 
-  public:
-    static void Initialize();
-    static uint32_t GetMaxThreadNameLength();
+public:
+  static void Initialize();
+  static uint32_t GetMaxThreadNameLength();
 
-    static bool GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update);
-    static bool GetOSBuildString(std::string &s);
-    static bool GetOSKernelDescription(std::string &s);
-    static llvm::StringRef GetDistributionId();
-    static FileSpec GetProgramFileSpec();
+  static bool GetOSVersion(uint32_t &major, uint32_t &minor, uint32_t &update);
+  static bool GetOSBuildString(std::string &s);
+  static bool GetOSKernelDescription(std::string &s);
+  static llvm::StringRef GetDistributionId();
+  static FileSpec GetProgramFileSpec();
 
-  protected:
-    static bool ComputeSupportExeDirectory(FileSpec &file_spec);
-    static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
-    static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
-    static void ComputeHostArchitectureSupport(ArchSpec &arch_32, ArchSpec &arch_64);
+protected:
+  static bool ComputeSupportExeDirectory(FileSpec &file_spec);
+  static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);
+  static bool ComputeUserPluginsDirectory(FileSpec &file_spec);
+  static void ComputeHostArchitectureSupport(ArchSpec &arch_32,
+                                             ArchSpec &arch_64);
 };
 }
 

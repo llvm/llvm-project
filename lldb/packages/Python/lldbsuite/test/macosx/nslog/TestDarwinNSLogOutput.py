@@ -18,6 +18,7 @@ from lldbsuite.test import decorators
 from lldbsuite.test import lldbtest
 from lldbsuite.test import lldbtest_config
 
+
 @decorators.skipUnlessDarwin
 class DarwinNSLogOutputTestCase(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
@@ -125,7 +126,9 @@ class DarwinNSLogOutputTestCase(lldbtest.TestBase):
         ])
         self.assertIsNotNone(self.child.match)
         self.assertGreater(len(self.child.match.groups()), 0)
-        self.assertEqual("This is a message from NSLog", self.child.match.group(1))
+        self.assertEqual(
+            "This is a message from NSLog",
+            self.child.match.group(1))
 
     def test_nslog_output_is_suppressed_with_env_var(self):
         """Test that NSLog() output does not show up with the ignore env var."""

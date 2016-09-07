@@ -29,35 +29,32 @@
 ///
 //----------------------------------------------------------------------
 
-namespace lldb_private
-{
+namespace lldb_private {
 
 class HostNativeProcessBase;
 class HostThread;
 
-class HostProcess
-{
+class HostProcess {
 public:
-    HostProcess();
-    HostProcess(lldb::process_t process);
-    ~HostProcess();
+  HostProcess();
+  HostProcess(lldb::process_t process);
+  ~HostProcess();
 
-    Error Terminate();
-    Error GetMainModule(FileSpec &file_spec) const;
+  Error Terminate();
+  Error GetMainModule(FileSpec &file_spec) const;
 
-    lldb::pid_t GetProcessId() const;
-    bool IsRunning() const;
+  lldb::pid_t GetProcessId() const;
+  bool IsRunning() const;
 
-    HostThread
-    StartMonitoring(const Host::MonitorChildProcessCallback &callback, bool monitor_signals);
+  HostThread StartMonitoring(const Host::MonitorChildProcessCallback &callback,
+                             bool monitor_signals);
 
-    HostNativeProcessBase &GetNativeProcess();
-    const HostNativeProcessBase &GetNativeProcess() const;
+  HostNativeProcessBase &GetNativeProcess();
+  const HostNativeProcessBase &GetNativeProcess() const;
 
-  private:
-    std::shared_ptr<HostNativeProcessBase> m_native_process;
+private:
+  std::shared_ptr<HostNativeProcessBase> m_native_process;
 };
-
 }
 
 #endif

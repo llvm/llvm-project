@@ -7,6 +7,7 @@ import unittest2
 def resultFactory(*_):
     return unittest2.TestResult()
 
+
 class OldTestResult(object):
     """An object honouring TestResult before startTestRun/stopTestRun."""
 
@@ -37,7 +38,9 @@ class OldTestResult(object):
     def printErrors(self):
         pass
 
+
 class LoggingResult(unittest2.TestResult):
+
     def __init__(self, log):
         self._events = log
         super(LoggingResult, self).__init__()
@@ -98,6 +101,7 @@ class EqualityMixin(object):
             self.assertNotEqual(obj_1, obj_2)
             self.assertNotEqual(obj_2, obj_1)
 
+
 class HashingMixin(object):
     """Used as a mixin for TestCase"""
 
@@ -123,24 +127,24 @@ class HashingMixin(object):
                 self.fail("Problem hashing %s and %s: %s" % (obj_1, obj_2, e))
 
 
-
 # copied from Python 2.6
 try:
     from warnings import catch_warnings
 except ImportError:
     class catch_warnings(object):
+
         def __init__(self, record=False, module=None):
             self._record = record
             self._module = sys.modules['warnings']
             self._entered = False
-    
+
         def __repr__(self):
             args = []
             if self._record:
                 args.append("record=True")
             name = type(self).__name__
             return "%s(%s)" % (name, ", ".join(args))
-    
+
         def __enter__(self):
             if self._entered:
                 raise RuntimeError("Cannot enter %r twice" % self)
@@ -150,28 +154,36 @@ except ImportError:
             self._showwarning = self._module.showwarning
             if self._record:
                 log = []
+
                 def showwarning(*args, **kwargs):
                     log.append(WarningMessage(*args, **kwargs))
                 self._module.showwarning = showwarning
                 return log
             else:
                 return None
-    
+
         def __exit__(self, *exc_info):
             if not self._entered:
-                raise RuntimeError("Cannot exit %r without entering first" % self)
+                raise RuntimeError(
+                    "Cannot exit %r without entering first" %
+                    self)
             self._module.filters = self._filters
             self._module.showwarning = self._showwarning
 
     class WarningMessage(object):
-        _WARNING_DETAILS = ("message", "category", "filename", "lineno", "file",
-                            "line")
+        _WARNING_DETAILS = (
+            "message",
+            "category",
+            "filename",
+            "lineno",
+            "file",
+            "line")
+
         def __init__(self, message, category, filename, lineno, file=None,
-                        line=None):
+                     line=None):
             local_values = locals()
             for attr in self._WARNING_DETAILS:
                 setattr(self, attr, local_values[attr])
             self._category_name = None
             if category.__name__:
                 self._category_name = category.__name__
-

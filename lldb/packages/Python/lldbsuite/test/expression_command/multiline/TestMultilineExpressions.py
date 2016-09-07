@@ -8,6 +8,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class MultilineExpressionsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -19,7 +20,9 @@ class MultilineExpressionsTestCase(TestBase):
         self.line = line_number('main.c', 'break')
 
     @skipIfRemote
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_with_run_commands(self):
         """Test that multiline expressions work correctly"""
         self.build()
@@ -28,7 +31,9 @@ class MultilineExpressionsTestCase(TestBase):
         prompt = "(lldb) "
 
         # So that the child gets torn down after the test.
-        self.child = pexpect.spawn('%s %s %s' % (lldbtest_config.lldbExec, self.lldbOption, exe))
+        self.child = pexpect.spawn(
+            '%s %s %s' %
+            (lldbtest_config.lldbExec, self.lldbOption, exe))
         child = self.child
         # Turn on logging for what the child sends back.
         if self.TraceOn():
@@ -54,4 +59,4 @@ class MultilineExpressionsTestCase(TestBase):
         child.sendline('')
         child.expect_exact(prompt)
         self.expect(child.before, exe=False,
-            patterns = ['= 5'])
+                    patterns=['= 5'])

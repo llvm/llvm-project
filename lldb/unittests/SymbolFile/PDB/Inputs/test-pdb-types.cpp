@@ -1,5 +1,6 @@
 // Compile with "cl /c /Zi /GR- /EHsc test-pdb-types.cpp"
-// Link with "link test-pdb-types.obj /debug /nodefaultlib /entry:main /out:test-pdb-types.exe"
+// Link with "link test-pdb-types.obj /debug /nodefaultlib /entry:main
+// /out:test-pdb-types.exe"
 
 using namespace std;
 
@@ -21,42 +22,29 @@ static const int sizeof_double = sizeof(double);
 static const int sizeof_bool = sizeof(bool);
 static const int sizeof_wchar = sizeof(wchar_t);
 
-enum Enum
-{
-    EValue1 = 1,
-    EValue2 = 2,
+enum Enum {
+  EValue1 = 1,
+  EValue2 = 2,
 };
 
-enum ShortEnum : short
-{
-    ESValue1 = 1,
-    ESValue2 = 2
-};
+enum ShortEnum : short { ESValue1 = 1, ESValue2 = 2 };
 
-namespace NS
-{
-class NSClass
-{
-    float f;
-    double d;
+namespace NS {
+class NSClass {
+  float f;
+  double d;
 };
 }
 
-class Class
-{
+class Class {
 public:
-    class NestedClass
-    {
-        Enum e;
-    };
-    ShortEnum se;
+  class NestedClass {
+    Enum e;
+  };
+  ShortEnum se;
 };
 
-int
-test_func(int a, int b)
-{
-    return a + b;
-}
+int test_func(int a, int b) { return a + b; }
 
 typedef Class ClassTypedef;
 typedef NS::NSClass NSClassTypedef;
@@ -71,16 +59,14 @@ static const int sizeof_ClassTypedef = sizeof(ClassTypedef);
 static const int sizeof_NSClassTypedef = sizeof(NSClassTypedef);
 static const int sizeof_GlobalArray = sizeof(GlobalArray);
 
-int
-main(int argc, char **argv)
-{
-    ShortEnum e1;
-    Enum e2;
-    Class c1;
-    Class::NestedClass c2;
-    NS::NSClass c3;
+int main(int argc, char **argv) {
+  ShortEnum e1;
+  Enum e2;
+  Class c1;
+  Class::NestedClass c2;
+  NS::NSClass c3;
 
-    ClassTypedef t1;
-    NSClassTypedef t2;
-    return test_func(1, 2);
+  ClassTypedef t1;
+  NSClassTypedef t2;
+  return test_func(1, 2);
 }

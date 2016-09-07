@@ -23,16 +23,13 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Config/config.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MachO.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
-
-#if defined(HAVE_CXXABI_H)
-#include <cxxabi.h>
-#endif
 
 using lld::mach_o::ArchHandler;
 using lld::mach_o::MachOFile;
@@ -876,20 +873,18 @@ std::string MachOLinkingContext::demangle(StringRef symbolName) const {
   if (!symbolName.startswith("__Z"))
     return symbolName;
 
-#if defined(HAVE_CXXABI_H)
   SmallString<256> symBuff;
   StringRef nullTermSym = Twine(symbolName).toNullTerminatedStringRef(symBuff);
   // Mach-O has extra leading underscore that needs to be removed.
   const char *cstr = nullTermSym.data() + 1;
   int status;
-  char *demangled = abi::__cxa_demangle(cstr, nullptr, nullptr, &status);
+  char *demangled = llvm::itaniumDemangle(cstr, nullptr, nullptr, &status);
   if (demangled) {
     std::string result(demangled);
     // __cxa_demangle() always uses a malloc'ed buffer to return the result.
     free(demangled);
     return result;
   }
-#endif
 
   return symbolName;
 }

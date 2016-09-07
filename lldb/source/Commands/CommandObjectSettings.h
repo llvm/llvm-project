@@ -18,20 +18,17 @@
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/Options.h"
 
-
 namespace lldb_private {
 
 //-------------------------------------------------------------------------
 // CommandObjectMultiwordSettings
 //-------------------------------------------------------------------------
 
-class CommandObjectMultiwordSettings : public CommandObjectMultiword
-{
+class CommandObjectMultiwordSettings : public CommandObjectMultiword {
 public:
+  CommandObjectMultiwordSettings(CommandInterpreter &interpreter);
 
-    CommandObjectMultiwordSettings (CommandInterpreter &interpreter);
-
-    ~CommandObjectMultiwordSettings() override;
+  ~CommandObjectMultiwordSettings() override;
 };
 
 } // namespace lldb_private

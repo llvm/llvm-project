@@ -1023,4 +1023,18 @@ int main()
 	s_long.replace(s_long.begin(), s_long.begin(), s_long.begin(), s_long.end());
 	assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
 	}
+
+	{ // test assigning a different type
+    typedef std::string S;
+	const uint8_t pc[] = "ABCD";
+	uint8_t        p[] = "EFGH";
+
+	S s;
+	s.replace(s.begin(), s.end(), pc, pc + 4);
+	assert(s == "ABCD");
+
+	s.clear();
+	s.replace(s.begin(), s.end(), p, p + 4);
+	assert(s == "EFGH");
+	}
 }

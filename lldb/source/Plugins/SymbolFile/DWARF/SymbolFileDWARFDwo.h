@@ -16,64 +16,56 @@
 // Project includes
 #include "SymbolFileDWARF.h"
 
-class SymbolFileDWARFDwo : public SymbolFileDWARF
-{
+class SymbolFileDWARFDwo : public SymbolFileDWARF {
 public:
-    SymbolFileDWARFDwo(lldb::ObjectFileSP objfile, DWARFCompileUnit* dwarf_cu);
+  SymbolFileDWARFDwo(lldb::ObjectFileSP objfile, DWARFCompileUnit *dwarf_cu);
 
-    ~SymbolFileDWARFDwo() override = default;
-    
-    lldb::CompUnitSP
-    ParseCompileUnit(DWARFCompileUnit* dwarf_cu, uint32_t cu_idx) override;
+  ~SymbolFileDWARFDwo() override = default;
 
-    DWARFCompileUnit*
-    GetCompileUnit();
+  lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit *dwarf_cu,
+                                    uint32_t cu_idx) override;
 
-    DWARFCompileUnit*
-    GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
+  DWARFCompileUnit *GetCompileUnit();
 
-    lldb_private::DWARFExpression::LocationListFormat
-    GetLocationListFormat() const override;
+  DWARFCompileUnit *
+  GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
 
-    lldb_private::TypeSystem*
-    GetTypeSystemForLanguage(lldb::LanguageType language) override;
+  lldb_private::DWARFExpression::LocationListFormat
+  GetLocationListFormat() const override;
 
-    DWARFDIE
-    GetDIE(const DIERef &die_ref) override;
+  lldb_private::TypeSystem *
+  GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
-    std::unique_ptr<SymbolFileDWARFDwo>
-    GetDwoSymbolFileForCompileUnit(DWARFCompileUnit &dwarf_cu, const DWARFDebugInfoEntry &cu_die) override
-    {
-        return nullptr;
-    }
+  DWARFDIE
+  GetDIE(const DIERef &die_ref) override;
+
+  std::unique_ptr<SymbolFileDWARFDwo>
+  GetDwoSymbolFileForCompileUnit(DWARFCompileUnit &dwarf_cu,
+                                 const DWARFDebugInfoEntry &cu_die) override {
+    return nullptr;
+  }
 
 protected:
-    void
-    LoadSectionData (lldb::SectionType sect_type, lldb_private::DWARFDataExtractor& data) override;
+  void LoadSectionData(lldb::SectionType sect_type,
+                       lldb_private::DWARFDataExtractor &data) override;
 
-    DIEToTypePtr&
-    GetDIEToType() override;
+  DIEToTypePtr &GetDIEToType() override;
 
-    DIEToVariableSP&
-    GetDIEToVariable() override;
-    
-    DIEToClangType&
-    GetForwardDeclDieToClangType() override;
+  DIEToVariableSP &GetDIEToVariable() override;
 
-    ClangTypeToDIE&
-    GetForwardDeclClangTypeToDie() override;
+  DIEToClangType &GetForwardDeclDieToClangType() override;
 
-    UniqueDWARFASTTypeMap&
-    GetUniqueDWARFASTTypeMap() override;
+  ClangTypeToDIE &GetForwardDeclClangTypeToDie() override;
 
-    lldb::TypeSP
-    FindDefinitionTypeForDWARFDeclContext (const DWARFDeclContext &die_decl_ctx) override;
+  UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() override;
 
-    SymbolFileDWARF*
-    GetBaseSymbolFile();
+  lldb::TypeSP FindDefinitionTypeForDWARFDeclContext(
+      const DWARFDeclContext &die_decl_ctx) override;
 
-    lldb::ObjectFileSP m_obj_file_sp;
-    DWARFCompileUnit* m_base_dwarf_cu;
+  SymbolFileDWARF *GetBaseSymbolFile();
+
+  lldb::ObjectFileSP m_obj_file_sp;
+  DWARFCompileUnit *m_base_dwarf_cu;
 };
 
 #endif // SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_

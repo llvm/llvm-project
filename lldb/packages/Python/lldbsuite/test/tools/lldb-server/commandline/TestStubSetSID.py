@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 
-
 import gdbremote_testcase
 import lldbgdbserverutils
 import os
@@ -11,6 +10,7 @@ import time
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class TestStubSetSIDTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
 
@@ -23,7 +23,9 @@ class TestStubSetSIDTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         server = self.launch_debug_monitor()
         self.assertIsNotNone(server)
-        self.assertTrue(lldbgdbserverutils.process_is_running(server.pid, True))
+        self.assertTrue(
+            lldbgdbserverutils.process_is_running(
+                server.pid, True))
 
         # Get the process id for the stub.
         return os.getsid(server.pid)
@@ -41,14 +43,14 @@ class TestStubSetSIDTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertNotEqual(stub_sid, os.getsid(0))
 
     @debugserver_test
-    @skipIfRemote # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
+    @skipIfRemote  # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
     def test_sid_is_same_without_setsid_debugserver(self):
         self.init_debugserver_test()
         self.set_inferior_startup_launch()
         self.sid_is_same_without_setsid()
 
     @llgs_test
-    @skipIfRemote # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
+    @skipIfRemote  # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
     @expectedFailureAll(oslist=['freebsd'])
     def test_sid_is_same_without_setsid_llgs(self):
         self.init_llgs_test()
@@ -56,28 +58,28 @@ class TestStubSetSIDTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.sid_is_same_without_setsid()
 
     @debugserver_test
-    @skipIfRemote # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
+    @skipIfRemote  # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
     def test_sid_is_different_with_setsid_debugserver(self):
         self.init_debugserver_test()
         self.set_inferior_startup_launch()
         self.sid_is_different_with_setsid()
 
     @llgs_test
-    @skipIfRemote # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
+    @skipIfRemote  # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
     def test_sid_is_different_with_setsid_llgs(self):
         self.init_llgs_test()
         self.set_inferior_startup_launch()
         self.sid_is_different_with_setsid()
 
     @debugserver_test
-    @skipIfRemote # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
+    @skipIfRemote  # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
     def test_sid_is_different_with_S_debugserver(self):
         self.init_debugserver_test()
         self.set_inferior_startup_launch()
         self.sid_is_different_with_S()
 
     @llgs_test
-    @skipIfRemote # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
+    @skipIfRemote  # --setsid not used on remote platform and currently it is also impossible to get the sid of lldb-platform running on a remote target
     def test_sid_is_different_with_S_llgs(self):
         self.init_llgs_test()
         self.set_inferior_startup_launch()

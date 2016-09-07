@@ -12,42 +12,29 @@
 
 #include <string>
 
-class LogMessage
-{
+class LogMessage {
 public:
+  virtual ~LogMessage();
 
-    virtual
-    ~LogMessage();
+  virtual bool HasActivity() const = 0;
 
-    virtual bool
-    HasActivity() const = 0;
+  virtual const char *GetActivity() const = 0;
 
-    virtual const char*
-    GetActivity() const = 0;
+  virtual std::string GetActivityChain() const = 0;
 
-    virtual std::string
-    GetActivityChain() const = 0;
+  virtual bool HasCategory() const = 0;
 
-    virtual bool
-    HasCategory() const = 0;
+  virtual const char *GetCategory() const = 0;
 
-    virtual const char*
-    GetCategory() const = 0;
+  virtual bool HasSubsystem() const = 0;
 
-    virtual bool
-    HasSubsystem() const = 0;
+  virtual const char *GetSubsystem() const = 0;
 
-    virtual const char*
-    GetSubsystem() const = 0;
-
-    // This can be expensive, so once we ask for it, we'll cache the result.
-    virtual const char*
-    GetMessage() const = 0;
+  // This can be expensive, so once we ask for it, we'll cache the result.
+  virtual const char *GetMessage() const = 0;
 
 protected:
-
-    LogMessage();
-
+  LogMessage();
 };
 
 #endif /* LogMessage_h */

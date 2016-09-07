@@ -19,9 +19,9 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Address.h"
+#include "lldb/Core/STLUtils.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Core/STLUtils.h"
 
 namespace lldb_private {
 
@@ -29,28 +29,28 @@ namespace lldb_private {
 // CommandObjectMultiwordBreakpoint
 //-------------------------------------------------------------------------
 
-class CommandObjectMultiwordBreakpoint : public CommandObjectMultiword
-{
+class CommandObjectMultiwordBreakpoint : public CommandObjectMultiword {
 public:
-    CommandObjectMultiwordBreakpoint (CommandInterpreter &interpreter);
+  CommandObjectMultiwordBreakpoint(CommandInterpreter &interpreter);
 
-    ~CommandObjectMultiwordBreakpoint() override;
+  ~CommandObjectMultiwordBreakpoint() override;
 
-    static void
-    VerifyBreakpointOrLocationIDs (Args &args, Target *target, CommandReturnObject &result, BreakpointIDList *valid_ids)
-    {
-        VerifyIDs (args, target, true, result, valid_ids);
-    }
+  static void VerifyBreakpointOrLocationIDs(Args &args, Target *target,
+                                            CommandReturnObject &result,
+                                            BreakpointIDList *valid_ids) {
+    VerifyIDs(args, target, true, result, valid_ids);
+  }
 
-    static void
-    VerifyBreakpointIDs (Args &args, Target *target, CommandReturnObject &result, BreakpointIDList *valid_ids)
-    {
-        VerifyIDs (args, target, false, result, valid_ids);
-    }
+  static void VerifyBreakpointIDs(Args &args, Target *target,
+                                  CommandReturnObject &result,
+                                  BreakpointIDList *valid_ids) {
+    VerifyIDs(args, target, false, result, valid_ids);
+  }
 
 private:
-    static void
-    VerifyIDs (Args &args, Target *target, bool allow_locations, CommandReturnObject &result, BreakpointIDList *valid_ids);
+  static void VerifyIDs(Args &args, Target *target, bool allow_locations,
+                        CommandReturnObject &result,
+                        BreakpointIDList *valid_ids);
 };
 
 } // namespace lldb_private

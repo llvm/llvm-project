@@ -11,6 +11,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class SymbolContextTwoFilesTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -30,7 +31,10 @@ class SymbolContextTwoFilesTestCase(TestBase):
         for symbol_name in ["struct1::f()", "struct2::f()"]:
             sc_list = module.FindFunctions(symbol_name, lldb.eSymbolTypeCode)
             self.assertTrue(1, sc_list.GetSize())
-            symbol_address = sc_list.GetContextAtIndex(0).GetSymbol().GetStartAddress()
+            symbol_address = sc_list.GetContextAtIndex(
+                0).GetSymbol().GetStartAddress()
             self.assertTrue(symbol_address.IsValid())
-            sc_by_address = module.ResolveSymbolContextForAddress(symbol_address, lldb.eSymbolContextFunction)
-            self.assertEqual(symbol_name, sc_by_address.GetFunction().GetName())
+            sc_by_address = module.ResolveSymbolContextForAddress(
+                symbol_address, lldb.eSymbolContextFunction)
+            self.assertEqual(symbol_name,
+                             sc_by_address.GetFunction().GetName())

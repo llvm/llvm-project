@@ -12,19 +12,20 @@ import six
 import use_lldb_suite
 import lldb
 
-windows, linux, macosx, darwin, ios, darwin_all, freebsd, netbsd, bsd_all, android = range(10)
+windows, linux, macosx, darwin, ios, darwin_all, freebsd, netbsd, bsd_all, android = range(
+    10)
 
 __name_lookup = {
-    windows : ["windows"],
-    linux : ["linux"],
-    macosx : ["macosx"],
-    darwin : ["darwin"],
-    ios : ["ios"],
-    darwin_all : ["macosx", "darwin", "ios"],
-    freebsd : ["freebsd"],
-    netbsd : ["netbsd"],
-    bsd_all : ["freebsd", "netbsd"],
-    android : ["android"]
+    windows: ["windows"],
+    linux: ["linux"],
+    macosx: ["macosx"],
+    darwin: ["darwin"],
+    ios: ["ios"],
+    darwin_all: ["macosx", "darwin", "ios"],
+    freebsd: ["freebsd"],
+    netbsd: ["netbsd"],
+    bsd_all: ["freebsd", "netbsd"],
+    android: ["android"]
 }
 
 

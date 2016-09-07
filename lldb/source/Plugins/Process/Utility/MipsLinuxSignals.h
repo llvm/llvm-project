@@ -1,4 +1,5 @@
-//===-- MipsLinuxSignals.h ------------------------------------------*- C++ -*-===//
+//===-- MipsLinuxSignals.h ------------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,14 +20,12 @@
 namespace lldb_private {
 
 /// Linux specific set of Unix signals.
-class MipsLinuxSignals : public UnixSignals
-{
+class MipsLinuxSignals : public UnixSignals {
 public:
-    MipsLinuxSignals();
+  MipsLinuxSignals();
 
 private:
-    void
-    Reset() override;
+  void Reset() override;
 };
 
 } // namespace lldb_private

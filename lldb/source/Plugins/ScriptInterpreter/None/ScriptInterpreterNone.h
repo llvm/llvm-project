@@ -16,49 +16,40 @@
 // Project includes
 #include "lldb/Interpreter/ScriptInterpreter.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class ScriptInterpreterNone : public ScriptInterpreter
-{
-  public:
-    ScriptInterpreterNone(CommandInterpreter &interpreter);
+class ScriptInterpreterNone : public ScriptInterpreter {
+public:
+  ScriptInterpreterNone(CommandInterpreter &interpreter);
 
-    ~ScriptInterpreterNone() override;
+  ~ScriptInterpreterNone() override;
 
-    bool
-    ExecuteOneLine(const char *command, CommandReturnObject *result,
-                   const ExecuteScriptOptions &options = ExecuteScriptOptions()) override;
+  bool ExecuteOneLine(
+      const char *command, CommandReturnObject *result,
+      const ExecuteScriptOptions &options = ExecuteScriptOptions()) override;
 
-    void
-    ExecuteInterpreterLoop() override;
+  void ExecuteInterpreterLoop() override;
 
-    //------------------------------------------------------------------
-    // Static Functions
-    //------------------------------------------------------------------
-    static void
-    Initialize();
+  //------------------------------------------------------------------
+  // Static Functions
+  //------------------------------------------------------------------
+  static void Initialize();
 
-    static void
-    Terminate();
+  static void Terminate();
 
-    static lldb::ScriptInterpreterSP
-    CreateInstance(CommandInterpreter &interpreter);
+  static lldb::ScriptInterpreterSP
+  CreateInstance(CommandInterpreter &interpreter);
 
-    static lldb_private::ConstString
-    GetPluginNameStatic();
+  static lldb_private::ConstString GetPluginNameStatic();
 
-    static const char *
-    GetPluginDescriptionStatic();
+  static const char *GetPluginDescriptionStatic();
 
-    //------------------------------------------------------------------
-    // PluginInterface protocol
-    //------------------------------------------------------------------
-    lldb_private::ConstString
-    GetPluginName() override;
+  //------------------------------------------------------------------
+  // PluginInterface protocol
+  //------------------------------------------------------------------
+  lldb_private::ConstString GetPluginName() override;
 
-    uint32_t
-    GetPluginVersion() override;
+  uint32_t GetPluginVersion() override;
 };
 
 } // namespace lldb_private

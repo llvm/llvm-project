@@ -34,7 +34,7 @@ if sys.version_info[0] >= 3:
 else:
     cmp_ = cmp
 
-reversed_cmp_ = lambda x, y: -cmp_(x,y)
+reversed_cmp_ = lambda x, y: -cmp_(x, y)
 
 __all__ = ['TestResult', 'TestCase', 'TestSuite',
            'TextTestRunner', 'TestLoader', 'FunctionTestCase', 'main',
@@ -69,7 +69,7 @@ except ImportError:
     # Compatibility with platforms that don't have the signal module
     pass
 else:
-    __all__.extend(['installHandler', 'registerResult', 'removeResult', 
+    __all__.extend(['installHandler', 'registerResult', 'removeResult',
                     'removeHandler'])
 
 # deprecated

@@ -15,35 +15,29 @@
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Target/Thread.h"
 
-class ThreadWinMiniDump : public lldb_private::Thread
-{
+class ThreadWinMiniDump : public lldb_private::Thread {
 public:
-    ThreadWinMiniDump(lldb_private::Process &process, lldb::tid_t tid);
+  ThreadWinMiniDump(lldb_private::Process &process, lldb::tid_t tid);
 
-    virtual
-    ~ThreadWinMiniDump();
+  virtual ~ThreadWinMiniDump();
 
-    void
-    RefreshStateAfterStop() override;
+  void RefreshStateAfterStop() override;
 
-    lldb::RegisterContextSP
-    GetRegisterContext() override;
+  lldb::RegisterContextSP GetRegisterContext() override;
 
-    lldb::RegisterContextSP
-    CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
+  lldb::RegisterContextSP
+  CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
-    void
-    ClearStackFrames() override;
+  void ClearStackFrames() override;
 
-    void
-    SetContext(const void *context);
+  void SetContext(const void *context);
 
 protected:
-    lldb::RegisterContextSP m_reg_context_sp;
-    class Data;
-    std::unique_ptr<Data> m_data;  // for WinAPI-specific data
+  lldb::RegisterContextSP m_reg_context_sp;
+  class Data;
+  std::unique_ptr<Data> m_data; // for WinAPI-specific data
 
-    bool CalculateStopInfo() override;
+  bool CalculateStopInfo() override;
 };
 
 #endif

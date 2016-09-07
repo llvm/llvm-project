@@ -19,6 +19,14 @@
 
 using std::experimental::optional;
 
+struct AllowConstAssign {
+  AllowConstAssign() {}
+  AllowConstAssign(AllowConstAssign const&) {}
+  AllowConstAssign const& operator=(AllowConstAssign const&) const {
+      return *this;
+  }
+};
+
 struct X
 {
 };
@@ -51,6 +59,11 @@ int main()
         opt = i;
         assert(static_cast<bool>(opt) == true);
         assert(*opt == i);
+    }
+    {
+        optional<const AllowConstAssign> opt;
+        const AllowConstAssign other;
+        opt = other;
     }
     {
         optional<std::unique_ptr<int>> opt;

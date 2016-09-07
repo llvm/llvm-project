@@ -26,23 +26,32 @@ import os
 import shutil
 import sys
 
+
 def copy_one_file(dest_dir, source_dir, filename):
     source_path = os.path.join(source_dir, filename)
     dest_path = os.path.join(dest_dir, filename)
     print 'Copying file %s ==> %s...' % (source_path, dest_path)
     shutil.copyfile(source_path, dest_path)
 
-def copy_named_files(dest_dir, source_dir, files, extensions, copy_debug_suffix_also):
+
+def copy_named_files(
+        dest_dir,
+        source_dir,
+        files,
+        extensions,
+        copy_debug_suffix_also):
     for (file, ext) in itertools.product(files, extensions):
         copy_one_file(dest_dir, source_dir, file + '.' + ext)
         if copy_debug_suffix_also:
             copy_one_file(dest_dir, source_dir, file + '_d.' + ext)
+
 
 def copy_subdirectory(dest_dir, source_dir, subdir):
     dest_dir = os.path.join(dest_dir, subdir)
     source_dir = os.path.join(source_dir, subdir)
     print 'Copying directory %s ==> %s...' % (source_dir, dest_dir)
     shutil.copytree(source_dir, dest_dir)
+
 
 def copy_distro(dest_dir, dest_subdir, source_dir, source_prefix):
     dest_dir = os.path.join(dest_dir, dest_subdir)
@@ -54,11 +63,19 @@ def copy_distro(dest_dir, dest_subdir, source_dir, source_prefix):
     if source_prefix:
         PCbuild_dir = os.path.join(PCbuild_dir, source_prefix)
     # First copy the files that go into the root of the new distribution. This
-    # includes the Python executables, python27(_d).dll, and relevant PDB files.
+    # includes the Python executables, python27(_d).dll, and relevant PDB
+    # files.
     print 'Copying Python executables...'
-    copy_named_files(dest_dir, PCbuild_dir, ['w9xpopen'], ['exe', 'pdb'], False)
-    copy_named_files(dest_dir, PCbuild_dir, ['python_d', 'pythonw_d'], ['exe'], False)
-    copy_named_files(dest_dir, PCbuild_dir, ['python', 'pythonw'], ['exe', 'pdb'], False)
+    copy_named_files(
+        dest_dir, PCbuild_dir, ['w9xpopen'], [
+            'exe', 'pdb'], False)
+    copy_named_files(
+        dest_dir, PCbuild_dir, [
+            'python_d', 'pythonw_d'], ['exe'], False)
+    copy_named_files(
+        dest_dir, PCbuild_dir, [
+            'python', 'pythonw'], [
+            'exe', 'pdb'], False)
     copy_named_files(dest_dir, PCbuild_dir, ['python27'], ['dll', 'pdb'], True)
 
     # Next copy everything in the Include directory.
@@ -83,8 +100,17 @@ def copy_distro(dest_dir, dest_subdir, source_dir, source_prefix):
     copy_subdirectory(tools_dest_dir, tools_source_dir, 'versioncheck')
     copy_subdirectory(tools_dest_dir, tools_source_dir, 'webchecker')
 
-    pyd_names = ['_ctypes', '_ctypes_test', '_elementtree', '_multiprocessing', '_socket',
-                 '_testcapi', 'pyexpat', 'select', 'unicodedata', 'winsound']
+    pyd_names = [
+        '_ctypes',
+        '_ctypes_test',
+        '_elementtree',
+        '_multiprocessing',
+        '_socket',
+        '_testcapi',
+        'pyexpat',
+        'select',
+        'unicodedata',
+        'winsound']
 
     # Copy builtin extension modules (pyd files)
     dlls_dir = os.path.join(dest_dir, 'DLLs')
@@ -100,11 +126,26 @@ def copy_distro(dest_dir, dest_subdir, source_dir, source_prefix):
     copy_named_files(libs_dir, PCbuild_dir, ['python27'], ['lib'], True)
 
 
-parser = argparse.ArgumentParser(description='Install a custom Python distribution')
-parser.add_argument('--source', required=True, help='The root of the source tree where Python is built.')
-parser.add_argument('--dest', required=True, help='The location to install the Python distributions.')
-parser.add_argument('--overwrite', default=False, action='store_true', help='If the destination directory already exists, destroys its contents first.')
-parser.add_argument('--silent', default=False, action='store_true', help='If --overwite was specified, suppress confirmation before deleting a directory tree.')
+parser = argparse.ArgumentParser(
+    description='Install a custom Python distribution')
+parser.add_argument(
+    '--source',
+    required=True,
+    help='The root of the source tree where Python is built.')
+parser.add_argument(
+    '--dest',
+    required=True,
+    help='The location to install the Python distributions.')
+parser.add_argument(
+    '--overwrite',
+    default=False,
+    action='store_true',
+    help='If the destination directory already exists, destroys its contents first.')
+parser.add_argument(
+    '--silent',
+    default=False,
+    action='store_true',
+    help='If --overwite was specified, suppress confirmation before deleting a directory tree.')
 
 args = parser.parse_args()
 

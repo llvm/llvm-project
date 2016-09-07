@@ -18,71 +18,57 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void
-OptionValueRegex::DumpValue (const ExecutionContext *exe_ctx, Stream &strm, uint32_t dump_mask)
-{
+void OptionValueRegex::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
+                                 uint32_t dump_mask) {
+  if (dump_mask & eDumpOptionType)
+    strm.Printf("(%s)", GetTypeAsCString());
+  if (dump_mask & eDumpOptionValue) {
     if (dump_mask & eDumpOptionType)
-        strm.Printf ("(%s)", GetTypeAsCString ());
-    if (dump_mask & eDumpOptionValue)
-    {
-        if (dump_mask & eDumpOptionType)
-            strm.PutCString (" = ");
-        if (m_regex.IsValid())
-        {
-            const char *regex_text = m_regex.GetText();
-            if (regex_text && regex_text[0])
-                strm.Printf ("%s", regex_text);
-        }
-        else
-        {
-            
-        }
+      strm.PutCString(" = ");
+    if (m_regex.IsValid()) {
+      const char *regex_text = m_regex.GetText();
+      if (regex_text && regex_text[0])
+        strm.Printf("%s", regex_text);
+    } else {
     }
+  }
 }
 
-Error
-OptionValueRegex::SetValueFromString (llvm::StringRef value,
-                                        VarSetOperationType op)
-{
-    Error error;
-    switch (op)
-    {
-    case eVarSetOperationInvalid:
-    case eVarSetOperationInsertBefore:
-    case eVarSetOperationInsertAfter:
-    case eVarSetOperationRemove:
-    case eVarSetOperationAppend:
-        error = OptionValue::SetValueFromString (value, op);
-        break;
+Error OptionValueRegex::SetValueFromString(llvm::StringRef value,
+                                           VarSetOperationType op) {
+  Error error;
+  switch (op) {
+  case eVarSetOperationInvalid:
+  case eVarSetOperationInsertBefore:
+  case eVarSetOperationInsertAfter:
+  case eVarSetOperationRemove:
+  case eVarSetOperationAppend:
+    error = OptionValue::SetValueFromString(value, op);
+    break;
 
-    case eVarSetOperationClear:
-        Clear();
-        NotifyValueChanged();
-        break;
+  case eVarSetOperationClear:
+    Clear();
+    NotifyValueChanged();
+    break;
 
-    case eVarSetOperationReplace:
-    case eVarSetOperationAssign:
-        if (m_regex.Compile (value.str().c_str()))
-        {
-            m_value_was_set = true;
-            NotifyValueChanged();
-        }
-        else
-        {
-            char regex_error[1024];
-            if (m_regex.GetErrorAsCString(regex_error, sizeof(regex_error)))
-                error.SetErrorString (regex_error);
-            else
-                error.SetErrorStringWithFormat ("regex error %u", m_regex.GetErrorCode());
-        }
-        break;
+  case eVarSetOperationReplace:
+  case eVarSetOperationAssign:
+    if (m_regex.Compile(value.str().c_str())) {
+      m_value_was_set = true;
+      NotifyValueChanged();
+    } else {
+      char regex_error[1024];
+      if (m_regex.GetErrorAsCString(regex_error, sizeof(regex_error)))
+        error.SetErrorString(regex_error);
+      else
+        error.SetErrorStringWithFormat("regex error %u",
+                                       m_regex.GetErrorCode());
     }
-    return error;
+    break;
+  }
+  return error;
 }
 
-
-lldb::OptionValueSP
-OptionValueRegex::DeepCopy () const
-{
-    return OptionValueSP(new OptionValueRegex(m_regex.GetText()));
+lldb::OptionValueSP OptionValueRegex::DeepCopy() const {
+  return OptionValueSP(new OptionValueRegex(m_regex.GetText()));
 }

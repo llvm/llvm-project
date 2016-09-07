@@ -1,4 +1,5 @@
-//===-- NativeThreadListDarwin.cpp ------------------------------------*- C++ -*-===//
+//===-- NativeThreadListDarwin.cpp ------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -31,16 +32,10 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_darwin;
 
-NativeThreadListDarwin::NativeThreadListDarwin() :
-    m_threads(),
-    m_threads_mutex(),
-    m_is_64_bit(false)
-{
-}
+NativeThreadListDarwin::NativeThreadListDarwin()
+    : m_threads(), m_threads_mutex(), m_is_64_bit(false) {}
 
-NativeThreadListDarwin::~NativeThreadListDarwin()
-{
-}
+NativeThreadListDarwin::~NativeThreadListDarwin() {}
 
 // These methods will be accessed directly from NativeThreadDarwin
 #if 0
@@ -155,41 +150,33 @@ NativeThreadListDarwin::GetThreadInfo (nub_thread_t tid) const
 #endif
 
 NativeThreadDarwinSP
-NativeThreadListDarwin::GetThreadByID(lldb::tid_t tid) const
-{
-    std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
-    for (auto thread_sp : m_threads)
-    {
-        if (thread_sp && (thread_sp->GetID() == tid))
-            return thread_sp;
-    }
-    return NativeThreadDarwinSP();
+NativeThreadListDarwin::GetThreadByID(lldb::tid_t tid) const {
+  std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
+  for (auto thread_sp : m_threads) {
+    if (thread_sp && (thread_sp->GetID() == tid))
+      return thread_sp;
+  }
+  return NativeThreadDarwinSP();
 }
 
-NativeThreadDarwinSP
-NativeThreadListDarwin::GetThreadByMachPortNumber(::thread_t mach_port_number)
-    const
-{
-    std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
-    for (auto thread_sp : m_threads)
-    {
-        if (thread_sp && (thread_sp->GetMachPortNumber() == mach_port_number))
-            return thread_sp;
-    }
-    return NativeThreadDarwinSP();
+NativeThreadDarwinSP NativeThreadListDarwin::GetThreadByMachPortNumber(
+    ::thread_t mach_port_number) const {
+  std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
+  for (auto thread_sp : m_threads) {
+    if (thread_sp && (thread_sp->GetMachPortNumber() == mach_port_number))
+      return thread_sp;
+  }
+  return NativeThreadDarwinSP();
 }
 
-lldb::tid_t
-NativeThreadListDarwin::GetThreadIDByMachPortNumber(::thread_t mach_port_number)
-    const
-{
-    std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
-    for (auto thread_sp : m_threads)
-    {
-        if (thread_sp && (thread_sp->GetMachPortNumber() == mach_port_number))
-            return thread_sp->GetID();
-    }
-    return LLDB_INVALID_THREAD_ID;
+lldb::tid_t NativeThreadListDarwin::GetThreadIDByMachPortNumber(
+    ::thread_t mach_port_number) const {
+  std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
+  for (auto thread_sp : m_threads) {
+    if (thread_sp && (thread_sp->GetMachPortNumber() == mach_port_number))
+      return thread_sp->GetID();
+  }
+  return LLDB_INVALID_THREAD_ID;
 }
 
 // TODO implement
@@ -267,11 +254,9 @@ NativeThreadListDarwin::RestoreRegisterState (nub_thread_t tid, uint32_t save_id
 }
 #endif
 
-size_t
-NativeThreadListDarwin::GetNumberOfThreads() const
-{
-    std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
-    return static_cast<size_t>(m_threads.size());
+size_t NativeThreadListDarwin::GetNumberOfThreads() const {
+  std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
+  return static_cast<size_t>(m_threads.size());
 }
 
 // TODO implement
@@ -297,149 +282,129 @@ NativeThreadListDarwin::CurrentThreadID ( )
 
 #endif
 
-bool
-NativeThreadListDarwin::NotifyException(MachException::Data &exc)
-{
-    auto thread_sp = GetThreadByMachPortNumber(exc.thread_port);
-    if (thread_sp)
-    {
-        thread_sp->NotifyException(exc);
-        return true;
+bool NativeThreadListDarwin::NotifyException(MachException::Data &exc) {
+  auto thread_sp = GetThreadByMachPortNumber(exc.thread_port);
+  if (thread_sp) {
+    thread_sp->NotifyException(exc);
+    return true;
+  }
+  return false;
+}
+
+void NativeThreadListDarwin::Clear() {
+  std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
+  m_threads.clear();
+}
+
+uint32_t NativeThreadListDarwin::UpdateThreadList(NativeProcessDarwin &process,
+                                                  bool update,
+                                                  collection *new_threads) {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
+
+  std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
+  if (log)
+    log->Printf("NativeThreadListDarwin::%s() (pid = %" PRIu64 ", update = "
+                "%u) process stop count = %u",
+                __FUNCTION__, process.GetID(), update, process.GetStopID());
+
+  if (process.GetStopID() == 0) {
+    // On our first stop, we'll record details like 32/64 bitness and
+    // select the proper architecture implementation.
+    //
+    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, (int)process.GetID()};
+
+    struct kinfo_proc processInfo;
+    size_t bufsize = sizeof(processInfo);
+    if ((sysctl(mib, (unsigned)(sizeof(mib) / sizeof(int)), &processInfo,
+                &bufsize, NULL, 0) == 0) &&
+        (bufsize > 0)) {
+      if (processInfo.kp_proc.p_flag & P_LP64)
+        m_is_64_bit = true;
     }
-    return false;
-}
-
-void
-NativeThreadListDarwin::Clear()
-{
-    std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
-    m_threads.clear();
-}
-
-uint32_t
-NativeThreadListDarwin::UpdateThreadList(NativeProcessDarwin &process,
-                                         bool update,
-                                         collection *new_threads)
-{
-    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
-
-    std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
-    if (log)
-        log->Printf("NativeThreadListDarwin::%s() (pid = %" PRIu64 ", update = "
-                    "%u) process stop count = %u", __FUNCTION__,
-                    process.GetID(), update, process.GetStopID());
-
-    if (process.GetStopID() == 0)
-    {
-        // On our first stop, we'll record details like 32/64 bitness and
-        // select the proper architecture implementation.
-        //
-        int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PID,
-            (int)process.GetID() };
-
-        struct kinfo_proc processInfo;
-        size_t bufsize = sizeof(processInfo);
-        if ((sysctl(mib, (unsigned)(sizeof(mib)/sizeof(int)), &processInfo,
-                    &bufsize, NULL, 0) == 0) && (bufsize > 0))
-        {
-            if (processInfo.kp_proc.p_flag & P_LP64)
-                m_is_64_bit = true;
-        }
 
 // TODO implement architecture selection and abstraction.
 #if 0
-#if defined (__i386__) || defined (__x86_64__)
+#if defined(__i386__) || defined(__x86_64__)
         if (m_is_64_bit)
             DNBArchProtocol::SetArchitecture(CPU_TYPE_X86_64);
         else
             DNBArchProtocol::SetArchitecture(CPU_TYPE_I386);
-#elif defined (__arm__) || defined (__arm64__) || defined (__aarch64__)
+#elif defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
         if (m_is_64_bit)
             DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64);
         else
             DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM);
 #endif
 #endif
+  }
+
+  if (m_threads.empty() || update) {
+    thread_array_t thread_list = nullptr;
+    mach_msg_type_number_t thread_list_count = 0;
+    task_t task = process.GetTask();
+
+    Error error;
+    auto mach_err = ::task_threads(task, &thread_list, &thread_list_count);
+    error.SetError(mach_err, eErrorTypeMachKernel);
+    if (error.Fail()) {
+      if (log)
+        log->Printf("::task_threads(task = 0x%4.4x, thread_list => %p, "
+                    "thread_list_count => %u) failed: %u (%s)",
+                    task, thread_list, thread_list_count, error.GetError(),
+                    error.AsCString());
+      return 0;
     }
-    
-    if (m_threads.empty() || update)
-    {
-        thread_array_t thread_list = nullptr;
-        mach_msg_type_number_t thread_list_count = 0;
-        task_t task = process.GetTask();
 
-        Error error;
-        auto mach_err = ::task_threads(task, &thread_list, &thread_list_count);
-        error.SetError(mach_err, eErrorTypeMachKernel);
-        if (error.Fail())
-        {
-            if (log)
-                log->Printf("::task_threads(task = 0x%4.4x, thread_list => %p, "
-                            "thread_list_count => %u) failed: %u (%s)", task,
-                            thread_list, thread_list_count, error.GetError(),
-                            error.AsCString());
-            return 0;
+    if (thread_list_count > 0) {
+      collection currThreads;
+      size_t idx;
+      // Iterator through the current thread list and see which threads
+      // we already have in our list (keep them), which ones we don't
+      // (add them), and which ones are not around anymore (remove them).
+      for (idx = 0; idx < thread_list_count; ++idx) {
+        // Get the Mach thread port.
+        const ::thread_t mach_port_num = thread_list[idx];
+
+        // Get the unique thread id for the mach port number.
+        uint64_t unique_thread_id =
+            NativeThreadDarwin::GetGloballyUniqueThreadIDForMachPortID(
+                mach_port_num);
+
+        // Retrieve the thread if it exists.
+        auto thread_sp = GetThreadByID(unique_thread_id);
+        if (thread_sp) {
+          // We are already tracking it. Keep the existing native
+          // thread instance.
+          currThreads.push_back(thread_sp);
+        } else {
+          // We don't have a native thread instance for this thread.
+          // Create it now.
+          thread_sp.reset(new NativeThreadDarwin(
+              &process, m_is_64_bit, unique_thread_id, mach_port_num));
+
+          // Add the new thread regardless of its is user ready state.
+          // Make sure the thread is ready to be displayed and shown
+          // to users before we add this thread to our list...
+          if (thread_sp->IsUserReady()) {
+            if (new_threads)
+              new_threads->push_back(thread_sp);
+
+            currThreads.push_back(thread_sp);
+          }
         }
+      }
 
-        if (thread_list_count > 0)
-        {
-            collection currThreads;
-            size_t idx;
-            // Iterator through the current thread list and see which threads
-            // we already have in our list (keep them), which ones we don't
-            // (add them), and which ones are not around anymore (remove them).
-            for (idx = 0; idx < thread_list_count; ++idx)
-            {
-                // Get the Mach thread port.
-                const ::thread_t mach_port_num = thread_list[idx];
+      m_threads.swap(currThreads);
+      m_current_thread.reset();
 
-                // Get the unique thread id for the mach port number.
-                uint64_t unique_thread_id =
-                    NativeThreadDarwin::
-                    GetGloballyUniqueThreadIDForMachPortID(mach_port_num);
-
-                // Retrieve the thread if it exists.
-                auto thread_sp = GetThreadByID(unique_thread_id);
-                if (thread_sp)
-                {
-                    // We are already tracking it. Keep the existing native
-                    // thread instance.
-                    currThreads.push_back(thread_sp);
-                }
-                else
-                {
-                    // We don't have a native thread instance for this thread.
-                    // Create it now.
-                    thread_sp.reset(new NativeThreadDarwin(&process,
-                                                           m_is_64_bit,
-                                                           unique_thread_id,
-                                                           mach_port_num));
-
-                    // Add the new thread regardless of its is user ready state.
-                    // Make sure the thread is ready to be displayed and shown
-                    // to users before we add this thread to our list...
-                    if (thread_sp->IsUserReady())
-                    {
-                        if (new_threads)
-                            new_threads->push_back(thread_sp);
-                    
-                        currThreads.push_back(thread_sp);
-                    }
-                }
-            }
-
-            m_threads.swap(currThreads);
-            m_current_thread.reset();
-
-            // Free the vm memory given to us by ::task_threads()
-            vm_size_t thread_list_size = (vm_size_t) (thread_list_count *
-                                                      sizeof (::thread_t));
-            ::vm_deallocate(::mach_task_self(),
-                            (vm_address_t)thread_list,
-                            thread_list_size);
-        }
+      // Free the vm memory given to us by ::task_threads()
+      vm_size_t thread_list_size =
+          (vm_size_t)(thread_list_count * sizeof(::thread_t));
+      ::vm_deallocate(::mach_task_self(), (vm_address_t)thread_list,
+                      thread_list_size);
     }
-    return static_cast<uint32_t>(m_threads.size());
+  }
+  return static_cast<uint32_t>(m_threads.size());
 }
 
 // TODO implement
@@ -470,37 +435,31 @@ NativeThreadListDarwin::CurrentThread (MachThreadSP& thread_sp)
 
 #endif
 
-void
-NativeThreadListDarwin::Dump(Stream &stream) const
-{
-    bool first = true;
+void NativeThreadListDarwin::Dump(Stream &stream) const {
+  bool first = true;
 
-    std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
-    for (auto thread_sp : m_threads)
-    {
-        if (thread_sp)
-        {
-            // Handle newlines between thread entries.
-            if (first)
-                first = false;
-            else
-                stream.PutChar('\n');
-            thread_sp->Dump(stream);
-        }
+  std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
+  for (auto thread_sp : m_threads) {
+    if (thread_sp) {
+      // Handle newlines between thread entries.
+      if (first)
+        first = false;
+      else
+        stream.PutChar('\n');
+      thread_sp->Dump(stream);
     }
+  }
 }
 
-void
-NativeThreadListDarwin::ProcessWillResume(NativeProcessDarwin &process,
-                                    const ResumeActionList &thread_actions)
-{
-    std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
+void NativeThreadListDarwin::ProcessWillResume(
+    NativeProcessDarwin &process, const ResumeActionList &thread_actions) {
+  std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
 
-    // Update our thread list, because sometimes libdispatch or the kernel
-    // will spawn threads while a task is suspended.
-    NativeThreadListDarwin::collection new_threads;
+  // Update our thread list, because sometimes libdispatch or the kernel
+  // will spawn threads while a task is suspended.
+  NativeThreadListDarwin::collection new_threads;
 
-    // TODO implement this.
+// TODO implement this.
 #if 0
     // First figure out if we were planning on running only one thread, and if
     // so, force that thread to resume.
@@ -526,7 +485,7 @@ NativeThreadListDarwin::ProcessWillResume(NativeProcessDarwin &process,
         run_one_thread = false;
 #endif
 
-    UpdateThreadList(process, true, &new_threads);
+  UpdateThreadList(process, true, &new_threads);
 
 #if 0
     DNBThreadResumeAction resume_new_threads = { -1U, eStateRunning, 0, INVALID_NUB_ADDRESS };
@@ -576,20 +535,17 @@ NativeThreadListDarwin::ProcessWillResume(NativeProcessDarwin &process,
 #endif
 }
 
-uint32_t
-NativeThreadListDarwin::ProcessDidStop(NativeProcessDarwin &process)
-{
-    std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
+uint32_t NativeThreadListDarwin::ProcessDidStop(NativeProcessDarwin &process) {
+  std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
 
-    // Update our thread list.
-    UpdateThreadList(process, true);
+  // Update our thread list.
+  UpdateThreadList(process, true);
 
-    for (auto thread_sp : m_threads)
-    {
-        if (thread_sp)
-            thread_sp->ThreadDidStop();
-    }
-    return (uint32_t)m_threads.size();
+  for (auto thread_sp : m_threads) {
+    if (thread_sp)
+      thread_sp->ThreadDidStop();
+  }
+  return (uint32_t)m_threads.size();
 }
 
 //----------------------------------------------------------------------
@@ -603,16 +559,13 @@ NativeThreadListDarwin::ProcessDidStop(NativeProcessDarwin &process)
 //    true if we should stop and notify our clients
 //    false if we should resume our child process and skip notification
 //----------------------------------------------------------------------
-bool
-NativeThreadListDarwin::ShouldStop(bool &step_more)
-{
-    std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
-    for (auto thread_sp : m_threads)
-    {
-        if (thread_sp && thread_sp->ShouldStop(step_more))
-            return true;
-    }
-    return false;
+bool NativeThreadListDarwin::ShouldStop(bool &step_more) {
+  std::lock_guard<std::recursive_mutex> locker(m_threads_mutex);
+  for (auto thread_sp : m_threads) {
+    if (thread_sp && thread_sp->ShouldStop(step_more))
+      return true;
+  }
+  return false;
 }
 
 // Implement.

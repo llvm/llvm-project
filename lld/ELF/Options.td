@@ -106,6 +106,9 @@ def no_as_needed: F<"no-as-needed">,
 def no_demangle: F<"no-demangle">,
   HelpText<"Do not demangle symbol names">;
 
+def no_gc_sections: F<"no-gc-sections">,
+  HelpText<"Disable garbage collection of unused sections">;
+
 def no_gnu_unique: F<"no-gnu-unique">,
   HelpText<"Disable STB_GNU_UNIQUE symbol binding">;
 

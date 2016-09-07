@@ -60,11 +60,12 @@ class TestDarwinLogFilterRegexActivityChain(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we only accept
         # that activity.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
-
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_accept_activity_chain_partial_match(self):
@@ -76,11 +77,12 @@ class TestDarwinLogFilterRegexActivityChain(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we only accept
         # that activity.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
-
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_reject_activity_chain_full_match(self):
@@ -92,11 +94,12 @@ class TestDarwinLogFilterRegexActivityChain(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we rejected the first
         # via activity-chain rejection.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat1"),
-                        "first log line should not be present, second log line "
-                        "should be")
-
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat1"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_reject_activity_chain_partial_match(self):
@@ -108,11 +111,12 @@ class TestDarwinLogFilterRegexActivityChain(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we rejected the first
         # via activity-chain rejection.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
-
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_accept_activity_chain_second_rule(self):
@@ -126,7 +130,9 @@ class TestDarwinLogFilterRegexActivityChain(darwin_log.DarwinLogTestBase):
         # the first filter doesn't match any, and the second filter matches
         # the activity-chain of the second log message.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")

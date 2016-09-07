@@ -13,8 +13,8 @@ except ImportError:
 
 __unittest = True
 
-FAILFAST     = "  -f, --failfast   Stop on first failure\n"
-CATCHBREAK   = "  -c, --catch      Catch control-C and display results\n"
+FAILFAST = "  -f, --failfast   Stop on first failure\n"
+CATCHBREAK = "  -c, --catch      Catch control-C and display results\n"
 BUFFEROUTPUT = "  -b, --buffer     Buffer stdout and stderr during test runs\n"
 
 USAGE_AS_MAIN = """\
@@ -69,7 +69,7 @@ class TestProgram(object):
        for making test modules conveniently executable.
     """
     USAGE = USAGE_FROM_MODULE
-    
+
     # defaults for testing
     failfast = catchbreak = buffer = progName = None
 
@@ -103,11 +103,11 @@ class TestProgram(object):
             print(msg)
         usage = {'progName': self.progName, 'catchbreak': '', 'failfast': '',
                  'buffer': ''}
-        if self.failfast != False:
+        if self.failfast:
             usage['failfast'] = FAILFAST
-        if self.catchbreak != False and installHandler is not None:
+        if self.catchbreak and installHandler is not None:
             usage['catchbreak'] = CATCHBREAK
-        if self.buffer != False:
+        if self.buffer:
             usage['buffer'] = BUFFEROUTPUT
         print(self.USAGE % usage)
         sys.exit(2)
@@ -122,21 +122,21 @@ class TestProgram(object):
         try:
             options, args = getopt.getopt(argv[1:], 'hHvqfcb', long_opts)
             for opt, value in options:
-                if opt in ('-h','-H','--help'):
+                if opt in ('-h', '-H', '--help'):
                     self.usageExit()
-                if opt in ('-q','--quiet'):
+                if opt in ('-q', '--quiet'):
                     self.verbosity = 0
-                if opt in ('-v','--verbose'):
+                if opt in ('-v', '--verbose'):
                     self.verbosity = 2
-                if opt in ('-f','--failfast'):
+                if opt in ('-f', '--failfast'):
                     if self.failfast is None:
                         self.failfast = True
                     # Should this raise an exception if -f is not valid?
-                if opt in ('-c','--catch'):
+                if opt in ('-c', '--catch'):
                     if self.catchbreak is None and installHandler is not None:
                         self.catchbreak = True
                     # Should this raise an exception if -c is not valid?
-                if opt in ('-b','--buffer'):
+                if opt in ('-b', '--buffer'):
                     if self.buffer is None:
                         self.buffer = True
                     # Should this raise an exception if -b is not valid?
@@ -169,24 +169,40 @@ class TestProgram(object):
         parser.prog = self.progName
         parser.add_option('-v', '--verbose', dest='verbose', default=False,
                           help='Verbose output', action='store_true')
-        if self.failfast != False:
-            parser.add_option('-f', '--failfast', dest='failfast', default=False,
-                              help='Stop on first fail or error', 
-                              action='store_true')
-        if self.catchbreak != False and installHandler is not None:
-            parser.add_option('-c', '--catch', dest='catchbreak', default=False,
-                              help='Catch ctrl-C and display results so far', 
-                              action='store_true')
-        if self.buffer != False:
+        if self.failfast:
+            parser.add_option(
+                '-f',
+                '--failfast',
+                dest='failfast',
+                default=False,
+                help='Stop on first fail or error',
+                action='store_true')
+        if self.catchbreak and installHandler is not None:
+            parser.add_option(
+                '-c',
+                '--catch',
+                dest='catchbreak',
+                default=False,
+                help='Catch ctrl-C and display results so far',
+                action='store_true')
+        if self.buffer:
             parser.add_option('-b', '--buffer', dest='buffer', default=False,
-                              help='Buffer stdout and stderr during tests', 
+                              help='Buffer stdout and stderr during tests',
                               action='store_true')
         parser.add_option('-s', '--start-directory', dest='start', default='.',
                           help="Directory to start discovery ('.' default)")
-        parser.add_option('-p', '--pattern', dest='pattern', default='test*.py',
-                          help="Pattern to match tests ('test*.py' default)")
-        parser.add_option('-t', '--top-level-directory', dest='top', default=None,
-                          help='Top level directory of project (defaults to start directory)')
+        parser.add_option(
+            '-p',
+            '--pattern',
+            dest='pattern',
+            default='test*.py',
+            help="Pattern to match tests ('test*.py' default)")
+        parser.add_option(
+            '-t',
+            '--top-level-directory',
+            dest='top',
+            default=None,
+            help='Top level directory of project (defaults to start directory)')
 
         options, args = parser.parse_args(argv)
         if len(args) > 3:
@@ -194,7 +210,7 @@ class TestProgram(object):
 
         for name, value in zip(('start', 'pattern', 'top'), args):
             setattr(options, name, value)
-        
+
         # only set options from the parsing here
         # if they weren't set explicitly in the constructor
         if self.failfast is None:
@@ -203,7 +219,7 @@ class TestProgram(object):
             self.catchbreak = options.catchbreak
         if self.buffer is None:
             self.buffer = options.buffer
-        
+
         if options.verbose:
             self.verbosity = 2
 
@@ -236,7 +252,7 @@ class TestProgram(object):
 
 main = TestProgram
 
+
 def main_():
     TestProgram.USAGE = USAGE_AS_MAIN
     main(module=None)
-

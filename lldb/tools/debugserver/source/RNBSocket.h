@@ -14,72 +14,66 @@
 #ifndef __RNBSocket_h__
 #define __RNBSocket_h__
 
+#include "DNBTimer.h"
 #include "RNBDefs.h"
+#include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <string>
-#include "DNBTimer.h"
 
 #ifdef WITH_LOCKDOWN
 #include "lockdown.h"
 #endif
 
-class RNBSocket
-{
+class RNBSocket {
 public:
-    typedef void (*PortBoundCallback) (const void *baton, uint16_t port);
+  typedef void (*PortBoundCallback)(const void *baton, uint16_t port);
 
-    RNBSocket () :
-        m_fd (-1),
+  RNBSocket()
+      : m_fd(-1),
 #ifdef WITH_LOCKDOWN
-        m_fd_from_lockdown (false),
-        m_ld_conn (),
+        m_fd_from_lockdown(false), m_ld_conn(),
 #endif
-        m_timer (true)      // Make a thread safe timer
-    {
-    }
-    ~RNBSocket (void)
-    {
-        Disconnect (false);
-    }
+        m_timer(true) // Make a thread safe timer
+  {
+  }
+  ~RNBSocket(void) { Disconnect(false); }
 
-    rnb_err_t Listen (const char *listen_host,
-                      uint16_t port,
-                      PortBoundCallback callback,
-                      const void *callback_baton);
-    rnb_err_t Connect (const char *host, uint16_t port);
+  rnb_err_t Listen(const char *listen_host, uint16_t port,
+                   PortBoundCallback callback, const void *callback_baton);
+  rnb_err_t Connect(const char *host, uint16_t port);
 
-    rnb_err_t useFD(int fd);
+  rnb_err_t useFD(int fd);
 
 #ifdef WITH_LOCKDOWN
-    rnb_err_t ConnectToService();
+  rnb_err_t ConnectToService();
 #endif
-    rnb_err_t OpenFile (const char *path);
-    rnb_err_t Disconnect (bool save_errno);
-    rnb_err_t Read (std::string &p);
-    rnb_err_t Write (const void *buffer, size_t length);
+  rnb_err_t OpenFile(const char *path);
+  rnb_err_t Disconnect(bool save_errno);
+  rnb_err_t Read(std::string &p);
+  rnb_err_t Write(const void *buffer, size_t length);
 
-    bool IsConnected () const { return m_fd != -1; }
-    void SaveErrno (int curr_errno);
-    DNBTimer& Timer() { return m_timer; }
+  bool IsConnected() const { return m_fd != -1; }
+  void SaveErrno(int curr_errno);
+  DNBTimer &Timer() { return m_timer; }
 
-    static int SetSocketOption(int fd, int level, int option_name, int option_value);
+  static int SetSocketOption(int fd, int level, int option_name,
+                             int option_value);
+
 private:
-    // Outlaw some constructors
-    RNBSocket (const RNBSocket &);
+  // Outlaw some constructors
+  RNBSocket(const RNBSocket &);
 
 protected:
-    rnb_err_t ClosePort (int& fd, bool save_errno);
+  rnb_err_t ClosePort(int &fd, bool save_errno);
 
-    int m_fd;    // Socket we use to communicate once conn established
+  int m_fd; // Socket we use to communicate once conn established
 
 #ifdef WITH_LOCKDOWN
-    bool m_fd_from_lockdown;
-    lockdown_connection m_ld_conn;
+  bool m_fd_from_lockdown;
+  lockdown_connection m_ld_conn;
 #endif
 
-    DNBTimer m_timer;
+  DNBTimer m_timer;
 };
-
 
 #endif // #ifndef __RNBSocket_h__

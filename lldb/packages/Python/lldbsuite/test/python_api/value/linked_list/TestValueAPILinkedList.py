@@ -6,13 +6,14 @@ supports iteration till the end of list is reached.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class ValueAsLinkedListTestCase(TestBase):
 
@@ -26,8 +27,9 @@ class ValueAsLinkedListTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number('main.cpp', '// Break at this line')
 
-    # Py3 asserts due to a bug in SWIG.  A fix for this was upstreamed into SWIG 3.0.8.
-    @skipIf(py_version=['>=', (3,0)], swig_version=['<', (3,0,8)])
+    # Py3 asserts due to a bug in SWIG.  A fix for this was upstreamed into
+    # SWIG 3.0.8.
+    @skipIf(py_version=['>=', (3, 0)], swig_version=['<', (3, 0, 8)])
     @add_test_categories(['pyapi'])
     def test(self):
         """Exercise SBValue API linked_list_iter."""
@@ -45,13 +47,17 @@ class ValueAsLinkedListTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Get Frame #0.
         self.assertTrue(process.GetState() == lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), "There should be a thread stopped due to breakpoint condition")
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint condition")
         frame0 = thread.GetFrameAtIndex(0)
 
         # Get variable 'task_head'.
@@ -66,7 +72,8 @@ class ValueAsLinkedListTestCase(TestBase):
         cvf = lldbutil.ChildVisitingFormatter(indent_child=2)
         for t in task_head.linked_list_iter('next'):
             self.assertTrue(t, VALID_VARIABLE)
-            # Make sure that 'next' corresponds to an SBValue with pointer type.
+            # Make sure that 'next' corresponds to an SBValue with pointer
+            # type.
             self.assertTrue(t.TypeIsPointerType())
             if self.TraceOn():
                 print(cvf.format(t))
@@ -96,7 +103,8 @@ class ValueAsLinkedListTestCase(TestBase):
         list = []
         for t in task_head.linked_list_iter('next', eol):
             self.assertTrue(t, VALID_VARIABLE)
-            # Make sure that 'next' corresponds to an SBValue with pointer type.
+            # Make sure that 'next' corresponds to an SBValue with pointer
+            # type.
             self.assertTrue(t.TypeIsPointerType())
             if self.TraceOn():
                 print(cvf.format(t))
@@ -106,7 +114,7 @@ class ValueAsLinkedListTestCase(TestBase):
         if self.TraceOn():
             print("visited IDs:", list)
         self.assertTrue(visitedIDs == list)
-        
+
         # Get variable 'empty_task_head'.
         empty_task_head = frame0.FindVariable('empty_task_head')
         self.assertTrue(empty_task_head, VALID_VARIABLE)

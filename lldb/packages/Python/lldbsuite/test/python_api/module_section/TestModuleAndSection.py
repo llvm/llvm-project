@@ -5,8 +5,8 @@ Test some SBModule and SBSection APIs.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
@@ -14,12 +14,14 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test.lldbutil import symbol_type_to_str
 
+
 class ModuleAndSectionAPIsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # Py3 asserts due to a bug in SWIG.  A fix for this was upstreamed into SWIG 3.0.8.
-    @skipIf(py_version=['>=', (3,0)], swig_version=['<', (3,0,8)])
+    # Py3 asserts due to a bug in SWIG.  A fix for this was upstreamed into
+    # SWIG 3.0.8.
+    @skipIf(py_version=['>=', (3, 0)], swig_version=['<', (3, 0, 8)])
     @add_test_categories(['pyapi'])
     def test_module_and_section(self):
         """Test module and section APIs."""
@@ -47,18 +49,29 @@ class ModuleAndSectionAPIsTestCase(TestBase):
         INDENT2 = INDENT * 2
         for sec in exe_module.section_iter():
             print(sec)
-            print(INDENT + "Number of subsections: %d" % sec.GetNumSubSections())
+            print(
+                INDENT +
+                "Number of subsections: %d" %
+                sec.GetNumSubSections())
             if sec.GetNumSubSections() == 0:
                 for sym in exe_module.symbol_in_section_iter(sec):
                     print(INDENT + str(sym))
-                    print(INDENT + "symbol type: %s" % symbol_type_to_str(sym.GetType()))
+                    print(
+                        INDENT +
+                        "symbol type: %s" %
+                        symbol_type_to_str(
+                            sym.GetType()))
             else:
                 for subsec in sec:
                     print(INDENT + str(subsec))
                     # Now print the symbols belonging to the subsection....
                     for sym in exe_module.symbol_in_section_iter(subsec):
                         print(INDENT2 + str(sym))
-                        print(INDENT2 + "symbol type: %s" % symbol_type_to_str(sym.GetType()))
+                        print(
+                            INDENT2 +
+                            "symbol type: %s" %
+                            symbol_type_to_str(
+                                sym.GetType()))
 
     @add_test_categories(['pyapi'])
     def test_module_and_section_boundary_condition(self):
@@ -128,4 +141,3 @@ class ModuleAndSectionAPIsTestCase(TestBase):
         INDENT2 = INDENT * 2
         for cu in exe_module.compile_unit_iter():
             print(cu)
-

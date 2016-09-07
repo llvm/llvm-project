@@ -18,59 +18,45 @@
 using namespace lldb;
 using namespace lldb_private;
 
-OptionGroupUUID::OptionGroupUUID() :
-    m_uuid ()
-{
-}
+OptionGroupUUID::OptionGroupUUID() : m_uuid() {}
 
-OptionGroupUUID::~OptionGroupUUID ()
-{
-}
+OptionGroupUUID::~OptionGroupUUID() {}
 
-static OptionDefinition
-g_option_table[] =
-{
-    { LLDB_OPT_SET_1 , false, "uuid", 'u', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeNone, "A module UUID value."},
+static OptionDefinition g_option_table[] = {
+    {LLDB_OPT_SET_1, false, "uuid", 'u', OptionParser::eRequiredArgument,
+     nullptr, nullptr, 0, eArgTypeNone, "A module UUID value."},
 };
 
-uint32_t
-OptionGroupUUID::GetNumDefinitions ()
-{
-    return llvm::array_lengthof(g_option_table);
+uint32_t OptionGroupUUID::GetNumDefinitions() {
+  return llvm::array_lengthof(g_option_table);
 }
 
-const OptionDefinition *
-OptionGroupUUID::GetDefinitions ()
-{
-    return g_option_table;
+const OptionDefinition *OptionGroupUUID::GetDefinitions() {
+  return g_option_table;
 }
 
-Error
-OptionGroupUUID::SetOptionValue(uint32_t option_idx,
-                                const char *option_arg,
-                                ExecutionContext *execution_context)
-{
-    Error error;
-    const int short_option = g_option_table[option_idx].short_option;
+Error OptionGroupUUID::SetOptionValue(uint32_t option_idx,
+                                      const char *option_arg,
+                                      ExecutionContext *execution_context) {
+  Error error;
+  const int short_option = g_option_table[option_idx].short_option;
 
-    switch (short_option)
-    {
-        case 'u':
-            error = m_uuid.SetValueFromString (option_arg);
-            if (error.Success())
-                m_uuid.SetOptionWasSet();
-            break;
+  switch (short_option) {
+  case 'u':
+    error = m_uuid.SetValueFromString(option_arg);
+    if (error.Success())
+      m_uuid.SetOptionWasSet();
+    break;
 
-        default:
-            error.SetErrorStringWithFormat ("unrecognized option '%c'", short_option);
-            break;
-    }
+  default:
+    error.SetErrorStringWithFormat("unrecognized option '%c'", short_option);
+    break;
+  }
 
-    return error;
+  return error;
 }
 
-void
-OptionGroupUUID::OptionParsingStarting(ExecutionContext *execution_context)
-{
-    m_uuid.Clear();
+void OptionGroupUUID::OptionParsingStarting(
+    ExecutionContext *execution_context) {
+  m_uuid.Clear();
 }

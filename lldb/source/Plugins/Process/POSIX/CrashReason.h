@@ -16,47 +16,43 @@
 
 #include <string>
 
-enum class CrashReason
-{
-    eInvalidCrashReason,
+enum class CrashReason {
+  eInvalidCrashReason,
 
-    // SIGSEGV crash reasons.
-    eInvalidAddress,
-    ePrivilegedAddress,
+  // SIGSEGV crash reasons.
+  eInvalidAddress,
+  ePrivilegedAddress,
 
-    // SIGILL crash reasons.
-    eIllegalOpcode,
-    eIllegalOperand,
-    eIllegalAddressingMode,
-    eIllegalTrap,
-    ePrivilegedOpcode,
-    ePrivilegedRegister,
-    eCoprocessorError,
-    eInternalStackError,
+  // SIGILL crash reasons.
+  eIllegalOpcode,
+  eIllegalOperand,
+  eIllegalAddressingMode,
+  eIllegalTrap,
+  ePrivilegedOpcode,
+  ePrivilegedRegister,
+  eCoprocessorError,
+  eInternalStackError,
 
-    // SIGBUS crash reasons,
-    eIllegalAlignment,
-    eIllegalAddress,
-    eHardwareError,
+  // SIGBUS crash reasons,
+  eIllegalAlignment,
+  eIllegalAddress,
+  eHardwareError,
 
-    // SIGFPE crash reasons,
-    eIntegerDivideByZero,
-    eIntegerOverflow,
-    eFloatDivideByZero,
-    eFloatOverflow,
-    eFloatUnderflow,
-    eFloatInexactResult,
-    eFloatInvalidOperation,
-    eFloatSubscriptRange
+  // SIGFPE crash reasons,
+  eIntegerDivideByZero,
+  eIntegerOverflow,
+  eFloatDivideByZero,
+  eFloatOverflow,
+  eFloatUnderflow,
+  eFloatInexactResult,
+  eFloatInvalidOperation,
+  eFloatSubscriptRange
 };
 
-std::string
-GetCrashReasonString (CrashReason reason, lldb::addr_t fault_addr);
+std::string GetCrashReasonString(CrashReason reason, lldb::addr_t fault_addr);
 
-const char *
-CrashReasonAsString (CrashReason reason);
+const char *CrashReasonAsString(CrashReason reason);
 
-CrashReason
-GetCrashReason(const siginfo_t& info);
+CrashReason GetCrashReason(const siginfo_t &info);
 
 #endif // #ifndef liblldb_CrashReason_H_

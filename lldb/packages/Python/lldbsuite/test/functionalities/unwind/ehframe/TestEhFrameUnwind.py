@@ -5,20 +5,20 @@ Test that we can backtrace correctly from Non ABI functions on the stack
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class EHFrameBasedUnwind(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
-	
     @skipUnlessPlatform(['linux'])
     @skipIf(archs=["aarch64", "arm", "i386", "i686"])
-    def test (self):
+    def test(self):
         """Test that we can backtrace correctly from Non ABI  functions on the stack"""
         self.build()
         self.setTearDownCleanup()
@@ -28,9 +28,10 @@ class EHFrameBasedUnwind(TestBase):
 
         self.assertTrue(target, VALID_TARGET)
 
-        lldbutil.run_break_set_by_symbol (self, "func")
+        lldbutil.run_break_set_by_symbol(self, "func")
 
-        process = target.LaunchSimple (["abc", "xyz"], None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            ["abc", "xyz"], None, self.get_process_working_directory())
 
         if not process:
             self.fail("SBTarget.Launch() failed")
@@ -42,10 +43,10 @@ class EHFrameBasedUnwind(TestBase):
 
         stacktraces = lldbutil.print_stacktraces(process, string_buffer=True)
         self.expect(stacktraces, exe=False,
-            substrs = ['(int)argc=3'])
+                    substrs=['(int)argc=3'])
 
         self.runCmd("thread step-inst")
 
         stacktraces = lldbutil.print_stacktraces(process, string_buffer=True)
         self.expect(stacktraces, exe=False,
-            substrs = ['(int)argc=3'])
+                    substrs=['(int)argc=3'])

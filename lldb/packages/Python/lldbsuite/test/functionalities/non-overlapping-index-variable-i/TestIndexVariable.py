@@ -4,10 +4,10 @@ from out of scope to in scope when stopped at the breakpoint."""
 from __future__ import print_function
 
 
-
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
+
 
 class NonOverlappingIndexVariableCase(TestBase):
 
@@ -16,7 +16,8 @@ class NonOverlappingIndexVariableCase(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.source = 'main.cpp'
-        self.line_to_break = line_number(self.source, '// Set breakpoint here.')
+        self.line_to_break = line_number(
+            self.source, '// Set breakpoint here.')
 
     # rdar://problem/9890530
     def test_eval_index_variable(self):
@@ -26,14 +27,19 @@ class NonOverlappingIndexVariableCase(TestBase):
         exe = os.path.join(os.getcwd(), self.exe_name)
         self.runCmd("file %s" % exe, CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line (self, self.source, self.line_to_break, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self,
+            self.source,
+            self.line_to_break,
+            num_expected_locations=1,
+            loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         self.runCmd('frame variable i')
         self.runCmd('expr i')

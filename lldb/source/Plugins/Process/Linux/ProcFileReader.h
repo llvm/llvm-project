@@ -18,18 +18,18 @@
 namespace lldb_private {
 namespace process_linux {
 
-    class ProcFileReader
-    {
-    public:
+class ProcFileReader {
+public:
+  static lldb::DataBufferSP ReadIntoDataBuffer(lldb::pid_t pid,
+                                               const char *name);
 
-        static lldb::DataBufferSP
-        ReadIntoDataBuffer (lldb::pid_t pid, const char *name);
-
-        /// Parse the /proc/{@a pid}/{@a name} file line by line, passing each line to line_parser, until
-        /// either end of file or until line_parser returns false.
-        static Error
-        ProcessLineByLine (lldb::pid_t pid, const char *name, std::function<bool (const std::string &line)> line_parser);
-    };
+  /// Parse the /proc/{@a pid}/{@a name} file line by line, passing each line to
+  /// line_parser, until
+  /// either end of file or until line_parser returns false.
+  static Error
+  ProcessLineByLine(lldb::pid_t pid, const char *name,
+                    std::function<bool(const std::string &line)> line_parser);
+};
 
 } // namespace process_linux
 } // namespace lldb_private

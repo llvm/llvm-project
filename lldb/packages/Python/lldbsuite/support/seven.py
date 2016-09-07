@@ -10,7 +10,12 @@ else:
     def get_command_status_output(command):
         try:
             import subprocess
-            return (0, subprocess.check_output(command, shell=True, universal_newlines=True))
+            return (
+                0,
+                subprocess.check_output(
+                    command,
+                    shell=True,
+                    universal_newlines=True))
         except subprocess.CalledProcessError as e:
             return (e.returncode, e.output)
 

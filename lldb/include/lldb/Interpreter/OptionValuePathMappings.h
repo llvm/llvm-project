@@ -14,78 +14,52 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Target/PathMappingList.h"
 #include "lldb/Interpreter/OptionValue.h"
+#include "lldb/Target/PathMappingList.h"
 
 namespace lldb_private {
 
-class OptionValuePathMappings : public OptionValue
-{
+class OptionValuePathMappings : public OptionValue {
 public:
-    OptionValuePathMappings (bool notify_changes) :
-        OptionValue(),
-        m_path_mappings (),
-        m_notify_changes (notify_changes)
-    {
-    }
-    
-    ~OptionValuePathMappings() override
-    {
-    }
-    
-    //---------------------------------------------------------------------
-    // Virtual subclass pure virtual overrides
-    //---------------------------------------------------------------------
-    
-    OptionValue::Type
-    GetType() const override
-    {
-        return eTypePathMap;
-    }
-    
-    void
-    DumpValue(const ExecutionContext *exe_ctx, Stream &strm, uint32_t dump_mask) override;
-    
-    Error
-    SetValueFromString(llvm::StringRef value,
-		       VarSetOperationType op = eVarSetOperationAssign) override;
-    
-    bool
-    Clear() override
-    {
-        m_path_mappings.Clear(m_notify_changes);
-        m_value_was_set = false;
-        return true;
-    }
-    
-    lldb::OptionValueSP
-    DeepCopy() const override;
-    
-    bool
-    IsAggregateValue() const override
-    {
-        return true;
-    }
+  OptionValuePathMappings(bool notify_changes)
+      : OptionValue(), m_path_mappings(), m_notify_changes(notify_changes) {}
 
-    //---------------------------------------------------------------------
-    // Subclass specific functions
-    //---------------------------------------------------------------------
-    
-    PathMappingList &
-    GetCurrentValue()
-    {
-        return m_path_mappings;
-    }
-    
-    const PathMappingList &
-    GetCurrentValue() const
-    {
-        return m_path_mappings;
-    }
-    
+  ~OptionValuePathMappings() override {}
+
+  //---------------------------------------------------------------------
+  // Virtual subclass pure virtual overrides
+  //---------------------------------------------------------------------
+
+  OptionValue::Type GetType() const override { return eTypePathMap; }
+
+  void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
+                 uint32_t dump_mask) override;
+
+  Error
+  SetValueFromString(llvm::StringRef value,
+                     VarSetOperationType op = eVarSetOperationAssign) override;
+
+  bool Clear() override {
+    m_path_mappings.Clear(m_notify_changes);
+    m_value_was_set = false;
+    return true;
+  }
+
+  lldb::OptionValueSP DeepCopy() const override;
+
+  bool IsAggregateValue() const override { return true; }
+
+  //---------------------------------------------------------------------
+  // Subclass specific functions
+  //---------------------------------------------------------------------
+
+  PathMappingList &GetCurrentValue() { return m_path_mappings; }
+
+  const PathMappingList &GetCurrentValue() const { return m_path_mappings; }
+
 protected:
-    PathMappingList m_path_mappings;
-    bool m_notify_changes;
+  PathMappingList m_path_mappings;
+  bool m_notify_changes;
 };
 
 } // namespace lldb_private

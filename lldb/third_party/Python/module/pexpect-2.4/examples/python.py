@@ -7,10 +7,10 @@ the user interactive control over the session. Why? For fun... """
 # c = pexpect.spawn ('/usr/bin/env python ./python.py')
 
 import pexpect
-c = pexpect.spawn ('/usr/bin/env python')
-c.expect ('>>>')
+c = pexpect.spawn('/usr/bin/env python')
+c.expect('>>>')
 print 'And now for something completely different...'
-f = lambda s:s and f(s[1:])+s[0] # Makes a function to reverse a string.
+f = lambda s: s and f(s[1:]) + s[0]  # Makes a function to reverse a string.
 print f(c.before)
 print 'Yes, it\'s python, but it\'s backwards.'
 print
@@ -19,4 +19,3 @@ print c.after,
 c.interact()
 c.kill(1)
 print 'is alive:', c.isalive()
-

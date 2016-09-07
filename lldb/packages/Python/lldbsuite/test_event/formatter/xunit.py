@@ -180,7 +180,7 @@ class XunitFormatter(ResultsFormatter):
             "unexpected_successes": [],
             "expected_failures": [],
             "all": []
-            }
+        }
 
         self.status_handlers = {
             EventBuilder.STATUS_SUCCESS: self._handle_success,
@@ -197,9 +197,11 @@ class XunitFormatter(ResultsFormatter):
                 self._handle_exceptional_exit,
             EventBuilder.STATUS_TIMEOUT:
                 self._handle_timeout
-            }
+        }
 
-    RESULT_TYPES = {EventBuilder.TYPE_TEST_RESULT, EventBuilder.TYPE_JOB_RESULT}
+    RESULT_TYPES = {
+        EventBuilder.TYPE_TEST_RESULT,
+        EventBuilder.TYPE_JOB_RESULT}
 
     def handle_event(self, test_event):
         super(XunitFormatter, self).handle_event(test_event)

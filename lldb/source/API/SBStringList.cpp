@@ -14,133 +14,90 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBStringList::SBStringList () :
-    m_opaque_ap ()
-{
+SBStringList::SBStringList() : m_opaque_ap() {}
+
+SBStringList::SBStringList(const lldb_private::StringList *lldb_strings_ptr)
+    : m_opaque_ap() {
+  if (lldb_strings_ptr)
+    m_opaque_ap.reset(new lldb_private::StringList(*lldb_strings_ptr));
 }
 
-SBStringList::SBStringList (const lldb_private::StringList *lldb_strings_ptr) :
-    m_opaque_ap ()
-{
-    if (lldb_strings_ptr)
-        m_opaque_ap.reset (new lldb_private::StringList (*lldb_strings_ptr));
+SBStringList::SBStringList(const SBStringList &rhs) : m_opaque_ap() {
+  if (rhs.IsValid())
+    m_opaque_ap.reset(new lldb_private::StringList(*rhs));
 }
 
-SBStringList::SBStringList (const SBStringList  &rhs) :
-    m_opaque_ap ()
-{
+const SBStringList &SBStringList::operator=(const SBStringList &rhs) {
+  if (this != &rhs) {
     if (rhs.IsValid())
-        m_opaque_ap.reset (new lldb_private::StringList(*rhs));
+      m_opaque_ap.reset(new lldb_private::StringList(*rhs));
+    else
+      m_opaque_ap.reset();
+  }
+  return *this;
 }
 
+SBStringList::~SBStringList() {}
 
-const SBStringList &
-SBStringList::operator = (const SBStringList &rhs)
-{
-    if (this != &rhs)
-    {
-        if (rhs.IsValid())
-            m_opaque_ap.reset(new lldb_private::StringList(*rhs));
-        else
-            m_opaque_ap.reset();
-    }
-    return *this;
+const lldb_private::StringList *SBStringList::operator->() const {
+  return m_opaque_ap.get();
 }
 
-SBStringList::~SBStringList ()
-{
+const lldb_private::StringList &SBStringList::operator*() const {
+  return *m_opaque_ap;
 }
 
-const lldb_private::StringList *
-SBStringList::operator->() const
-{
-    return m_opaque_ap.get();
-}
+bool SBStringList::IsValid() const { return (m_opaque_ap.get() != NULL); }
 
-const lldb_private::StringList &
-SBStringList::operator*() const
-{
-    return *m_opaque_ap;
-}
-
-bool
-SBStringList::IsValid() const
-{
-    return (m_opaque_ap.get() != NULL);
-}
-
-void
-SBStringList::AppendString (const char *str)
-{
-    if (str != NULL)
-    {
-        if (IsValid())
-            m_opaque_ap->AppendString (str);
-        else
-            m_opaque_ap.reset (new lldb_private::StringList (str));
-    }
-
-}
-
-void
-SBStringList::AppendList (const char **strv, int strc)
-{
-    if ((strv != NULL)
-        && (strc > 0))
-    {
-        if (IsValid())
-            m_opaque_ap->AppendList (strv, strc);
-        else
-            m_opaque_ap.reset (new lldb_private::StringList (strv, strc));
-    }
-}
-
-void
-SBStringList::AppendList (const SBStringList &strings)
-{
-    if (strings.IsValid())
-    {
-        if (! IsValid())
-            m_opaque_ap.reset (new lldb_private::StringList());
-        m_opaque_ap->AppendList (*(strings.m_opaque_ap));
-    }
-}
-
-uint32_t
-SBStringList::GetSize () const
-{
+void SBStringList::AppendString(const char *str) {
+  if (str != NULL) {
     if (IsValid())
-    {
-        return m_opaque_ap->GetSize();
-    }
-    return 0;
+      m_opaque_ap->AppendString(str);
+    else
+      m_opaque_ap.reset(new lldb_private::StringList(str));
+  }
 }
 
-const char *
-SBStringList::GetStringAtIndex (size_t idx)
-{
+void SBStringList::AppendList(const char **strv, int strc) {
+  if ((strv != NULL) && (strc > 0)) {
     if (IsValid())
-    {
-        return m_opaque_ap->GetStringAtIndex (idx);
-    }
-    return NULL;
+      m_opaque_ap->AppendList(strv, strc);
+    else
+      m_opaque_ap.reset(new lldb_private::StringList(strv, strc));
+  }
 }
 
-const char *
-SBStringList::GetStringAtIndex (size_t idx) const
-{
-    if (IsValid())
-    {
-        return m_opaque_ap->GetStringAtIndex (idx);
-    }
-    return NULL;
+void SBStringList::AppendList(const SBStringList &strings) {
+  if (strings.IsValid()) {
+    if (!IsValid())
+      m_opaque_ap.reset(new lldb_private::StringList());
+    m_opaque_ap->AppendList(*(strings.m_opaque_ap));
+  }
 }
 
-void
-SBStringList::Clear ()
-{
-    if (IsValid())
-    {
-        m_opaque_ap->Clear();
-    }
+uint32_t SBStringList::GetSize() const {
+  if (IsValid()) {
+    return m_opaque_ap->GetSize();
+  }
+  return 0;
+}
+
+const char *SBStringList::GetStringAtIndex(size_t idx) {
+  if (IsValid()) {
+    return m_opaque_ap->GetStringAtIndex(idx);
+  }
+  return NULL;
+}
+
+const char *SBStringList::GetStringAtIndex(size_t idx) const {
+  if (IsValid()) {
+    return m_opaque_ap->GetStringAtIndex(idx);
+  }
+  return NULL;
+}
+
+void SBStringList::Clear() {
+  if (IsValid()) {
+    m_opaque_ap->Clear();
+  }
 }

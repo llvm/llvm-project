@@ -1,4 +1,5 @@
-//===-- CommandObjectApropos.h -----------------------------------*- C++ -*-===//
+//===-- CommandObjectApropos.h -----------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -22,18 +23,14 @@ namespace lldb_private {
 // CommandObjectApropos
 //-------------------------------------------------------------------------
 
-class CommandObjectApropos : public CommandObjectParsed
-{
+class CommandObjectApropos : public CommandObjectParsed {
 public:
+  CommandObjectApropos(CommandInterpreter &interpreter);
 
-    CommandObjectApropos (CommandInterpreter &interpreter);
-
-    ~CommandObjectApropos() override;
+  ~CommandObjectApropos() override;
 
 protected:
-    bool
-    DoExecute(Args& command,
-	      CommandReturnObject &result) override;
+  bool DoExecute(Args &command, CommandReturnObject &result) override;
 };
 
 } // namespace lldb_private

@@ -16,6 +16,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class Wow64MiniDumpTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -66,7 +67,8 @@ class Wow64MiniDumpTestCase(TestBase):
         # In the dump, none of the threads are stopped, so we cannot use
         # lldbutil.get_stopped_thread.
         thread = process.GetThreadAtIndex(0)
-        # The crash is in main, so there should be at least one frame on the stack.
+        # The crash is in main, so there should be at least one frame on the
+        # stack.
         self.assertGreaterEqual(thread.GetNumFrames(), 1)
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame.IsValid())

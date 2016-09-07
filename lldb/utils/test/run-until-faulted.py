@@ -9,9 +9,11 @@ import os
 import sys
 from optparse import OptionParser
 
+
 def is_exe(fpath):
     """Check whether fpath is an executable."""
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
 
 def which(program):
     """Find the full path to a program, or return None."""
@@ -26,9 +28,11 @@ def which(program):
                 return exe_file
     return None
 
+
 def do_lldb_launch_loop(lldb_command, exe, exe_options):
-    from cStringIO import StringIO 
-    import pexpect, time
+    from cStringIO import StringIO
+    import pexpect
+    import time
 
     prompt = "\(lldb\) "
     lldb = pexpect.spawn(lldb_command)
@@ -37,17 +41,18 @@ def do_lldb_launch_loop(lldb_command, exe, exe_options):
     lldb.expect(prompt)
 
     # Now issue the file command.
-    #print "sending 'file %s' command..." % exe
+    # print "sending 'file %s' command..." % exe
     lldb.sendline('file %s' % exe)
     lldb.expect(prompt)
 
     # Loop until it faults....
     count = 0
-    #while True:
+    # while True:
     #    count = count + 1
     for i in range(100):
         count = i
-        #print "sending 'process launch -- %s' command... (iteration: %d)" % (exe_options, count)
+        # print "sending 'process launch -- %s' command... (iteration: %d)" %
+        # (exe_options, count)
         lldb.sendline('process launch -- %s' % exe_options)
         index = lldb.expect(['Process .* exited with status',
                              'Process .* stopped',
@@ -57,19 +62,26 @@ def do_lldb_launch_loop(lldb_command, exe, exe_options):
             time.sleep(3)
         elif index == 1:
             # Perfect, our process had stopped; break out of the loop.
-            break;
+            break
         elif index == 2:
             # Something went wrong.
-            print "TIMEOUT occurred:", str(lldb)        
+            print "TIMEOUT occurred:", str(lldb)
 
     # Give control of lldb shell to the user.
     lldb.interact()
+
 
 def main():
     # This is to set up the Python path to include the pexpect-2.4 dir.
     # Remember to update this when/if things change.
     scriptPath = sys.path[0]
-    sys.path.append(os.path.join(scriptPath, os.pardir, os.pardir, 'test', 'pexpect-2.4'))
+    sys.path.append(
+        os.path.join(
+            scriptPath,
+            os.pardir,
+            os.pardir,
+            'test',
+            'pexpect-2.4'))
 
     parser = OptionParser(usage="""\
 %prog [options]
@@ -80,14 +92,21 @@ The lldb executable is located via your PATH env variable, if not specified.\
                       type='string', action='store', metavar='LLDB_COMMAND',
                       default='lldb', dest='lldb_command',
                       help='Full path to your lldb command')
-    parser.add_option('-e', '--executable',
-                      type='string', action='store',
-                      dest='exe',
-                      help="""(Mandatory) The executable to launch via lldb.""")
-    parser.add_option('-o', '--options',
-                      type='string', action='store',
-                      default = '', dest='exe_options',
-                      help="""The args/options passed to the launched program, if specified.""")
+    parser.add_option(
+        '-e',
+        '--executable',
+        type='string',
+        action='store',
+        dest='exe',
+        help="""(Mandatory) The executable to launch via lldb.""")
+    parser.add_option(
+        '-o',
+        '--options',
+        type='string',
+        action='store',
+        default='',
+        dest='exe_options',
+        help="""The args/options passed to the launched program, if specified.""")
 
     opts, args = parser.parse_args()
 

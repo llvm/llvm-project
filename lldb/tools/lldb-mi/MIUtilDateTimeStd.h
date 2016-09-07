@@ -15,27 +15,27 @@
 // In-house headers:
 #include "MIUtilString.h"
 
-//++ ============================================================================
+//++
+//============================================================================
 // Details: MI common code utility class. Used to retrieve system local date
 //          time.
 //--
-class CMIUtilDateTimeStd
-{
-    // Methods:
-  public:
-    /* ctor */ CMIUtilDateTimeStd();
+class CMIUtilDateTimeStd {
+  // Methods:
+public:
+  /* ctor */ CMIUtilDateTimeStd();
 
-    CMIUtilString GetDate();
-    CMIUtilString GetTime();
-    CMIUtilString GetDateTimeLogFilename();
+  CMIUtilString GetDate();
+  CMIUtilString GetTime();
+  CMIUtilString GetDateTimeLogFilename();
 
-    // Overrideable:
-  public:
-    // From CMICmnBase
-    /* dtor */ virtual ~CMIUtilDateTimeStd();
+  // Overrideable:
+public:
+  // From CMICmnBase
+  /* dtor */ virtual ~CMIUtilDateTimeStd();
 
-    // Attributes:
-  private:
-    std::time_t m_rawTime;
-    char m_pScratch[16];
+  // Attributes:
+private:
+  std::time_t m_rawTime;
+  char m_pScratch[16];
 };

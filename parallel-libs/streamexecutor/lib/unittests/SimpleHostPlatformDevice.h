@@ -20,7 +20,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "streamexecutor/PlatformInterfaces.h"
+#include "streamexecutor/PlatformDevice.h"
 
 namespace streamexecutor {
 namespace test {
@@ -34,9 +34,7 @@ class SimpleHostPlatformDevice : public streamexecutor::PlatformDevice {
 public:
   std::string getName() const override { return "SimpleHostPlatformDevice"; }
 
-  streamexecutor::Expected<
-      std::unique_ptr<streamexecutor::PlatformStreamHandle>>
-  createStream() override {
+  streamexecutor::Expected<const void *> createStream() override {
     return nullptr;
   }
 
@@ -69,7 +67,7 @@ public:
     return streamexecutor::Error::success();
   }
 
-  streamexecutor::Error copyD2H(streamexecutor::PlatformStreamHandle *S,
+  streamexecutor::Error copyD2H(const void *StreamHandle,
                                 const void *DeviceHandleSrc,
                                 size_t SrcByteOffset, void *HostDst,
                                 size_t DstByteOffset,
@@ -80,8 +78,8 @@ public:
     return streamexecutor::Error::success();
   }
 
-  streamexecutor::Error copyH2D(streamexecutor::PlatformStreamHandle *S,
-                                const void *HostSrc, size_t SrcByteOffset,
+  streamexecutor::Error copyH2D(const void *StreamHandle, const void *HostSrc,
+                                size_t SrcByteOffset,
                                 const void *DeviceHandleDst,
                                 size_t DstByteOffset,
                                 size_t ByteCount) override {
@@ -92,7 +90,7 @@ public:
   }
 
   streamexecutor::Error
-  copyD2D(streamexecutor::PlatformStreamHandle *S, const void *DeviceHandleSrc,
+  copyD2D(const void *StreamHandle, const void *DeviceHandleSrc,
           size_t SrcByteOffset, const void *DeviceHandleDst,
           size_t DstByteOffset, size_t ByteCount) override {
     std::memcpy(static_cast<char *>(const_cast<void *>(DeviceHandleDst)) +

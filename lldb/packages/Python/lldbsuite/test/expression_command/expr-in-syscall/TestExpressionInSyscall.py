@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -15,7 +14,9 @@ class ExprSyscallTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765, getpid() does not exist on Windows")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr21765, getpid() does not exist on Windows")
     def test_setpgid(self):
         self.build()
         self.expr_syscall()
@@ -32,16 +33,16 @@ class ExprSyscallTestCase(TestBase):
         # launch the inferior and don't wait for it to stop
         self.dbg.SetAsync(True)
         error = lldb.SBError()
-        process = target.Launch (listener,
-                None,      # argv
-                None,      # envp
-                None,      # stdin_path
-                None,      # stdout_path
-                None,      # stderr_path
-                None,      # working directory
-                0,         # launch flags
-                False,     # Stop at entry
-                error)     # error
+        process = target.Launch(listener,
+                                None,      # argv
+                                None,      # envp
+                                None,      # stdin_path
+                                None,      # stdout_path
+                                None,      # stderr_path
+                                None,      # working directory
+                                0,         # launch flags
+                                False,     # Stop at entry
+                                error)     # error
 
         self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
 
@@ -54,7 +55,10 @@ class ExprSyscallTestCase(TestBase):
             pass
 
         # now the process should be running (blocked in the syscall)
-        self.assertEqual(process.GetState(), lldb.eStateRunning, "Process is running")
+        self.assertEqual(
+            process.GetState(),
+            lldb.eStateRunning,
+            "Process is running")
 
         # send the process a signal
         process.SendAsyncInterrupt()
@@ -62,13 +66,18 @@ class ExprSyscallTestCase(TestBase):
             pass
 
         # as a result the process should stop
-        # in all likelihood we have stopped in the middle of the sleep() syscall
-        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
+        # in all likelihood we have stopped in the middle of the sleep()
+        # syscall
+        self.assertEqual(
+            process.GetState(),
+            lldb.eStateStopped,
+            PROCESS_STOPPED)
         thread = process.GetSelectedThread()
 
         # try evaluating a couple of expressions in this state
-        self.expect("expr release_flag = 1", substrs = [" = 1"])
-        self.expect("print (int)getpid()", substrs = [str(process.GetProcessID())])
+        self.expect("expr release_flag = 1", substrs=[" = 1"])
+        self.expect("print (int)getpid()",
+                    substrs=[str(process.GetProcessID())])
 
         # and run the process to completion
         process.Continue()

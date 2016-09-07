@@ -3,12 +3,14 @@
 from __future__ import print_function
 
 
-
-import os, sys, time
+import os
+import sys
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class Rdar12586188TestCase(TestBase):
 
@@ -27,7 +29,11 @@ class Rdar12586188TestCase(TestBase):
     def run_test(self):
         """Check that we handle an ImportError in a special way when command script importing files."""
 
-        self.expect("command script import ./fail12586188.py --allow-reload",
-                error=True, substrs = ['raise ImportError("I do not want to be imported")'])
-        self.expect("command script import ./fail212586188.py --allow-reload",
-                error=True, substrs = ['raise ValueError("I do not want to be imported")'])
+        self.expect(
+            "command script import ./fail12586188.py --allow-reload",
+            error=True,
+            substrs=['raise ImportError("I do not want to be imported")'])
+        self.expect(
+            "command script import ./fail212586188.py --allow-reload",
+            error=True,
+            substrs=['raise ValueError("I do not want to be imported")'])

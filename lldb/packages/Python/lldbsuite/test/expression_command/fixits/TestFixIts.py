@@ -5,11 +5,11 @@ Test calling an expression with errors that a FixIt can fix.
 from __future__ import print_function
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class ExprCommandWithFixits(TestBase):
 
@@ -20,7 +20,7 @@ class ExprCommandWithFixits(TestBase):
         TestBase.setUp(self)
 
         self.main_source = "main.cpp"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @skipUnlessDarwin
     def test(self):
@@ -36,20 +36,23 @@ class ExprCommandWithFixits(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        breakpoint = target.BreakpointCreateBySourceRegex('Stop here to evaluate expressions',self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'Stop here to evaluate expressions', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
-        
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
+
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
-        
+
         options = lldb.SBExpressionOptions()
         options.SetAutoApplyFixIts(True)
 
@@ -60,7 +63,7 @@ class ExprCommandWithFixits(TestBase):
         self.assertTrue(value.IsValid())
         self.assertTrue(value.GetError().Success())
         self.assertTrue(value.GetValueAsUnsigned() == 10)
-        
+
         # Try with two errors:
         two_error_expression = "my_pointer.second->a"
         value = frame.EvaluateExpression(two_error_expression, options)
@@ -74,8 +77,9 @@ class ExprCommandWithFixits(TestBase):
         self.assertTrue(value.IsValid())
         self.assertTrue(value.GetError().Fail())
         error_string = value.GetError().GetCString()
-        self.assertTrue(error_string.find("fixed expression suggested:") != -1, "Fix was suggested")
-        self.assertTrue(error_string.find("my_pointer->second.a") != -1, "Fix was right")
-
-        
-
+        self.assertTrue(
+            error_string.find("fixed expression suggested:") != -1,
+            "Fix was suggested")
+        self.assertTrue(
+            error_string.find("my_pointer->second.a") != -1,
+            "Fix was right")

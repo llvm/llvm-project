@@ -9,7 +9,6 @@
 
 #include "lldb/Core/AddressResolver.h"
 
-
 // Project includes
 
 #include "lldb/Core/Address.h"
@@ -26,41 +25,27 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 // AddressResolver:
 //----------------------------------------------------------------------
-AddressResolver::AddressResolver ()
-{
+AddressResolver::AddressResolver() {}
+
+AddressResolver::~AddressResolver() {}
+
+void AddressResolver::ResolveAddressInModules(SearchFilter &filter,
+                                              ModuleList &modules) {
+  filter.SearchInModuleList(*this, modules);
 }
 
-AddressResolver::~AddressResolver ()
-{
-
+void AddressResolver::ResolveAddress(SearchFilter &filter) {
+  filter.Search(*this);
 }
 
-void
-AddressResolver::ResolveAddressInModules (SearchFilter &filter, ModuleList &modules)
-{
-    filter.SearchInModuleList(*this, modules);
+std::vector<AddressRange> &AddressResolver::GetAddressRanges() {
+  return m_address_ranges;
 }
 
-void
-AddressResolver::ResolveAddress (SearchFilter &filter)
-{
-    filter.Search (*this);
+size_t AddressResolver::GetNumberOfAddresses() {
+  return m_address_ranges.size();
 }
 
-std::vector<AddressRange> &
-AddressResolver::GetAddressRanges ()
-{
-    return m_address_ranges;
-}
-
-size_t
-AddressResolver::GetNumberOfAddresses ()
-{
-    return m_address_ranges.size();
-}
-
-AddressRange &
-AddressResolver::GetAddressRangeAtIndex (size_t idx)
-{
+AddressRange &AddressResolver::GetAddressRangeAtIndex(size_t idx) {
   return m_address_ranges[idx];
 }

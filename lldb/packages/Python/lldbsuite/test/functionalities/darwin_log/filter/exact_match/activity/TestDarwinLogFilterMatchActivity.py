@@ -60,29 +60,32 @@ class TestDarwinLogFilterMatchActivity(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we only accept
         # that activity.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
-
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_reject_activity_partial_match(self):
         """Test that fall-through reject, accept match activity via partial match does not accept."""
         self.do_test(
             ["--no-match-accepts false",
-             "--filter \"accept activity match child-activity\"",  # Fully match second message.
+             # Fully match second message.
+             "--filter \"accept activity match child-activity\"",
              "--filter \"accept activity match parent-\""]         # Only partially match first message.
         )
 
         # We should only see the second log message as we only accept
         # that activity.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
-
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_reject_activity_full_match(self):
@@ -95,11 +98,12 @@ class TestDarwinLogFilterMatchActivity(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as we rejected the first
         # via activity rejection.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
-
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_filter_accept_activity_second_rule(self):
@@ -115,7 +119,9 @@ class TestDarwinLogFilterMatchActivity(darwin_log.DarwinLogTestBase):
         # the first filter doesn't match any, and the second filter matches
         # the activity of the second log message.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")

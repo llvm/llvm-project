@@ -29,7 +29,7 @@
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x99XX }" > %t.script
 # RUN: not ld.lld -o %t.out --script %t.script %t 2>&1 \
 # RUN:   | FileCheck --check-prefix=ERR2 %s
-# ERR2: invalid filler expression: =0x99XX
+# ERR2: invalid filler expression: 0x99XX
 
 .section        .mysec.1,"a"
 .align  16

@@ -3,12 +3,14 @@
 from __future__ import print_function
 
 
-
-import os, sys, time
+import os
+import sys
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class ProcessIOTestCase(TestBase):
 
@@ -19,16 +21,19 @@ class ProcessIOTestCase(TestBase):
         TestBase.setUp(self)
         # Get the full path to our executable to be debugged.
         self.exe = os.path.join(os.getcwd(), "process_io")
-        self.local_input_file  = os.path.join(os.getcwd(), "input.txt")
+        self.local_input_file = os.path.join(os.getcwd(), "input.txt")
         self.local_output_file = os.path.join(os.getcwd(), "output.txt")
-        self.local_error_file  = os.path.join(os.getcwd(), "error.txt")
+        self.local_error_file = os.path.join(os.getcwd(), "error.txt")
 
-        self.input_file  = os.path.join(self.get_process_working_directory(), "input.txt")
-        self.output_file = os.path.join(self.get_process_working_directory(), "output.txt")
-        self.error_file  = os.path.join(self.get_process_working_directory(), "error.txt")
+        self.input_file = os.path.join(
+            self.get_process_working_directory(), "input.txt")
+        self.output_file = os.path.join(
+            self.get_process_working_directory(), "output.txt")
+        self.error_file = os.path.join(
+            self.get_process_working_directory(), "error.txt")
         self.lines = ["Line 1", "Line 2", "Line 3"]
 
-    @skipIfWindows # stdio manipulation unsupported on Windows
+    @skipIfWindows  # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
     def test_stdin_by_api(self):
@@ -39,7 +44,7 @@ class ProcessIOTestCase(TestBase):
         output = self.process.GetSTDOUT(1000)
         self.check_process_output(output, output)
 
-    @skipIfWindows # stdio manipulation unsupported on Windows
+    @skipIfWindows  # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
     def test_stdin_redirection(self):
@@ -48,10 +53,10 @@ class ProcessIOTestCase(TestBase):
         self.create_target()
         self.redirect_stdin()
         self.run_process(False)
-        output = self.process.GetSTDOUT(1000)        
+        output = self.process.GetSTDOUT(1000)
         self.check_process_output(output, output)
 
-    @skipIfWindows # stdio manipulation unsupported on Windows
+    @skipIfWindows  # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
     def test_stdout_redirection(self):
@@ -64,7 +69,7 @@ class ProcessIOTestCase(TestBase):
         error = self.process.GetSTDOUT(1000)
         self.check_process_output(output, error)
 
-    @skipIfWindows # stdio manipulation unsupported on Windows
+    @skipIfWindows  # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
     def test_stderr_redirection(self):
@@ -77,7 +82,7 @@ class ProcessIOTestCase(TestBase):
         error = self.read_error_file_and_delete()
         self.check_process_output(output, error)
 
-    @skipIfWindows # stdio manipulation unsupported on Windows
+    @skipIfWindows  # stdio manipulation unsupported on Windows
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux(bugnumber="llvm.org/pr26437")
     def test_stdout_stderr_redirection(self):
@@ -98,29 +103,35 @@ class ProcessIOTestCase(TestBase):
             self.runCmd('platform get-file "{remote}" "{local}"'.format(
                 remote=target_file, local=local_file))
 
-        self.assertTrue(os.path.exists(local_file), 'Make sure "{local}" file exists'.format(local=local_file))
+        self.assertTrue(
+            os.path.exists(local_file),
+            'Make sure "{local}" file exists'.format(
+                local=local_file))
         f = open(local_file, 'r')
         contents = f.read()
         f.close()
 
-        #TODO: add 'platform delete-file' file command
-        #if lldb.remote_platform:
+        # TODO: add 'platform delete-file' file command
+        # if lldb.remote_platform:
         #    self.runCmd('platform delete-file "{remote}"'.format(remote=target_file))
         os.unlink(local_file)
         return contents
 
     def read_output_file_and_delete(self):
-        return self.read_file_and_delete(self.output_file, self.local_output_file)
+        return self.read_file_and_delete(
+            self.output_file, self.local_output_file)
 
     def read_error_file_and_delete(self):
-        return self.read_file_and_delete(self.error_file, self.local_error_file)
+        return self.read_file_and_delete(
+            self.error_file, self.local_error_file)
 
     def create_target(self):
         '''Create the target and launch info that will be used by all tests'''
-        self.target = self.dbg.CreateTarget(self.exe)        
+        self.target = self.dbg.CreateTarget(self.exe)
         self.launch_info = lldb.SBLaunchInfo([self.exe])
-        self.launch_info.SetWorkingDirectory(self.get_process_working_directory())
-    
+        self.launch_info.SetWorkingDirectory(
+            self.get_process_working_directory())
+
     def redirect_stdin(self):
         '''Redirect STDIN (file descriptor 0) to use our input.txt file
 
@@ -140,43 +151,49 @@ class ProcessIOTestCase(TestBase):
         # clean slate for the next test case.
         def cleanup():
             os.unlink(self.local_input_file)
-            #TODO: add 'platform delete-file' file command
-            #if lldb.remote_platform:
+            # TODO: add 'platform delete-file' file command
+            # if lldb.remote_platform:
             #    self.runCmd('platform delete-file "{remote}"'.format(remote=self.input_file))
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
-        self.launch_info.AddOpenFileAction(0, self.input_file, True, False);
-        
+        self.launch_info.AddOpenFileAction(0, self.input_file, True, False)
+
     def redirect_stdout(self):
         '''Redirect STDOUT (file descriptor 1) to use our output.txt file'''
-        self.launch_info.AddOpenFileAction(1, self.output_file, False, True);
-    
+        self.launch_info.AddOpenFileAction(1, self.output_file, False, True)
+
     def redirect_stderr(self):
         '''Redirect STDERR (file descriptor 2) to use our error.txt file'''
-        self.launch_info.AddOpenFileAction(2, self.error_file, False, True);
-        
+        self.launch_info.AddOpenFileAction(2, self.error_file, False, True)
+
     def run_process(self, put_stdin):
         '''Run the process to completion and optionally put lines to STDIN via the API if "put_stdin" is True'''
         # Set the breakpoints
-        self.breakpoint = self.target.BreakpointCreateBySourceRegex('Set breakpoint here', lldb.SBFileSpec("main.c"))
-        self.assertTrue(self.breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
+        self.breakpoint = self.target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here', lldb.SBFileSpec("main.c"))
+        self.assertTrue(
+            self.breakpoint.GetNumLocations() > 0,
+            VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
         error = lldb.SBError()
         # This should launch the process and it should exit by the time we get back
         # because we have synchronous mode enabled
-        self.process = self.target.Launch (self.launch_info, error)
+        self.process = self.target.Launch(self.launch_info, error)
 
-        self.assertTrue(error.Success(), "Make sure process launched successfully")
+        self.assertTrue(
+            error.Success(),
+            "Make sure process launched successfully")
         self.assertTrue(self.process, PROCESS_IS_VALID)
 
         if self.TraceOn():
             print("process launched.")
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (self.process, self.breakpoint)
-        
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            self.process, self.breakpoint)
+
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
         self.frame = self.thread.frames[0]
@@ -189,13 +206,13 @@ class ProcessIOTestCase(TestBase):
         if put_stdin:
             for line in self.lines:
                 self.process.PutSTDIN(line + "\n")
-        
+
         # Let process continue so it will exit
         self.process.Continue()
         state = self.process.GetState()
         self.assertTrue(state == lldb.eStateExited, PROCESS_IS_VALID)
-        
-    def check_process_output (self, output, error):
+
+    def check_process_output(self, output, error):
             # Since we launched the process without specifying stdin/out/err,
             # a pseudo terminal is used for stdout/err, and we are satisfied
             # once "input line=>1" appears in stdout.
@@ -203,10 +220,14 @@ class ProcessIOTestCase(TestBase):
         if self.TraceOn():
             print("output = '%s'" % output)
             print("error = '%s'" % error)
-        
+
         for line in self.lines:
             check_line = 'input line to stdout: %s' % (line)
-            self.assertTrue(check_line in output, "verify stdout line shows up in STDOUT")
+            self.assertTrue(
+                check_line in output,
+                "verify stdout line shows up in STDOUT")
         for line in self.lines:
             check_line = 'input line to stderr: %s' % (line)
-            self.assertTrue(check_line in error, "verify stderr line shows up in STDERR")
+            self.assertTrue(
+                check_line in error,
+                "verify stderr line shows up in STDERR")

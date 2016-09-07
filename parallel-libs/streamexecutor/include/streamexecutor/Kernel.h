@@ -28,19 +28,32 @@
 
 namespace streamexecutor {
 
-class PlatformKernelHandle;
+class PlatformDevice;
 
 /// The base class for all kernel types.
 ///
 /// Stores the name of the kernel in both mangled and demangled forms.
 class KernelBase {
 public:
-  KernelBase(llvm::StringRef Name);
+  KernelBase(PlatformDevice *D, const void *PlatformKernelHandle,
+             llvm::StringRef Name);
 
+  KernelBase(const KernelBase &Other) = delete;
+  KernelBase &operator=(const KernelBase &Other) = delete;
+
+  KernelBase(KernelBase &&Other);
+  KernelBase &operator=(KernelBase &&Other);
+
+  ~KernelBase();
+
+  const void *getPlatformHandle() const { return PlatformKernelHandle; }
   const std::string &getName() const { return Name; }
   const std::string &getDemangledName() const { return DemangledName; }
 
 private:
+  PlatformDevice *PDevice;
+  const void *PlatformKernelHandle;
+
   std::string Name;
   std::string DemangledName;
 };
@@ -51,17 +64,12 @@ private:
 /// function.
 template <typename... ParameterTs> class Kernel : public KernelBase {
 public:
-  Kernel(llvm::StringRef Name, std::unique_ptr<PlatformKernelHandle> PHandle)
-      : KernelBase(Name), PHandle(std::move(PHandle)) {}
+  Kernel(PlatformDevice *D, const void *PlatformKernelHandle,
+         llvm::StringRef Name)
+      : KernelBase(D, PlatformKernelHandle, Name) {}
 
   Kernel(Kernel &&Other) = default;
   Kernel &operator=(Kernel &&Other) = default;
-
-  /// Gets the underlying platform-specific handle for this kernel.
-  PlatformKernelHandle *getPlatformHandle() const { return PHandle.get(); }
-
-private:
-  std::unique_ptr<PlatformKernelHandle> PHandle;
 };
 
 } // namespace streamexecutor

@@ -18,61 +18,46 @@ namespace lldb_private {
 
 //----------------------------------------------------------------------
 /// @class FileLineResolver FileLineResolver.h "lldb/Core/FileLineResolver.h"
-/// @brief This class finds address for source file and line.  Optionally, it will look for inlined
+/// @brief This class finds address for source file and line.  Optionally, it
+/// will look for inlined
 /// instances of the file and line specification.
 //----------------------------------------------------------------------
 
-class FileLineResolver :
-    public Searcher
-{
+class FileLineResolver : public Searcher {
 public:
-    FileLineResolver () :
-        m_file_spec(),
+  FileLineResolver()
+      : m_file_spec(),
         m_line_number(UINT32_MAX), // Set this to zero for all lines in a file
-        m_sc_list (),
-        m_inlines (true)
-    {
-    }
-        
-    FileLineResolver (const FileSpec &resolver,
-                      uint32_t line_no,
-                      bool check_inlines);
+        m_sc_list(), m_inlines(true) {}
 
-    ~FileLineResolver () override;
+  FileLineResolver(const FileSpec &resolver, uint32_t line_no,
+                   bool check_inlines);
 
-    Searcher::CallbackReturn
-    SearchCallback (SearchFilter &filter,
-                    SymbolContext &context,
-                    Address *addr,
-                    bool containing) override;
+  ~FileLineResolver() override;
 
-    Searcher::Depth
-    GetDepth () override;
+  Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
+                                          SymbolContext &context, Address *addr,
+                                          bool containing) override;
 
-    void
-    GetDescription (Stream *s) override;
+  Searcher::Depth GetDepth() override;
 
-    const SymbolContextList &
-    GetFileLineMatches()
-    {
-        return m_sc_list;
-    }
+  void GetDescription(Stream *s) override;
 
-    void
-    Clear();
+  const SymbolContextList &GetFileLineMatches() { return m_sc_list; }
 
-    void
-    Reset (const FileSpec &file_spec,
-           uint32_t line,
-           bool check_inlines);
-protected:    
-    FileSpec m_file_spec; // This is the file spec we are looking for.
-    uint32_t m_line_number; // This is the line number that we are looking for.
-    SymbolContextList m_sc_list;
-    bool m_inlines; // This determines whether the resolver looks for inlined functions or not.
+  void Clear();
+
+  void Reset(const FileSpec &file_spec, uint32_t line, bool check_inlines);
+
+protected:
+  FileSpec m_file_spec;   // This is the file spec we are looking for.
+  uint32_t m_line_number; // This is the line number that we are looking for.
+  SymbolContextList m_sc_list;
+  bool m_inlines; // This determines whether the resolver looks for inlined
+                  // functions or not.
 
 private:
-    DISALLOW_COPY_AND_ASSIGN(FileLineResolver);
+  DISALLOW_COPY_AND_ASSIGN(FileLineResolver);
 };
 
 } // namespace lldb_private

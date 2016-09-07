@@ -3,14 +3,15 @@
 from __future__ import print_function
 
 
-
-import os, sys
+import os
+import sys
 import lldb
 from lldbsuite.test.lldbbench import *
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import configuration
 from lldbsuite.test import lldbutil
+
 
 class CompileRunToBreakpointBench(BenchBase):
 
@@ -27,7 +28,9 @@ class CompileRunToBreakpointBench(BenchBase):
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_run_lldb_then_gdb(self):
         """Benchmark turnaround time with lldb vs. gdb."""
         print()
@@ -35,15 +38,18 @@ class CompileRunToBreakpointBench(BenchBase):
         print("lldb turnaround benchmark:", self.stopwatch)
         self.run_gdb_turnaround(self.exe, self.function, self.count)
         print("gdb turnaround benchmark:", self.stopwatch)
-        print("lldb_avg/gdb_avg: %f" % (self.lldb_avg/self.gdb_avg))
+        print("lldb_avg/gdb_avg: %f" % (self.lldb_avg / self.gdb_avg))
 
     def run_lldb_turnaround(self, exe, function, count):
         import pexpect
+
         def run_one_round():
             prompt = self.child_prompt
 
             # So that the child gets torn down after the test.
-            self.child = pexpect.spawn('%s %s %s' % (lldbtest_config.lldbExec, self.lldbOption, exe))
+            self.child = pexpect.spawn(
+                '%s %s %s' %
+                (lldbtest_config.lldbExec, self.lldbOption, exe))
             child = self.child
 
             # Turn on logging for what the child sends back.
@@ -62,7 +68,8 @@ class CompileRunToBreakpointBench(BenchBase):
         self.stopwatch.reset()
 
         for i in range(count + 1):
-            # Ignore the first invoke lldb and run to the breakpoint turnaround time.
+            # Ignore the first invoke lldb and run to the breakpoint turnaround
+            # time.
             if i == 0:
                 run_one_round()
             else:
@@ -80,6 +87,7 @@ class CompileRunToBreakpointBench(BenchBase):
 
     def run_gdb_turnaround(self, exe, function, count):
         import pexpect
+
         def run_one_round():
             prompt = self.child_prompt
 
@@ -102,8 +110,9 @@ class CompileRunToBreakpointBench(BenchBase):
         # Reset the stopwatch now.
         self.stopwatch.reset()
 
-        for i in range(count+1):
-            # Ignore the first invoke lldb and run to the breakpoint turnaround time.
+        for i in range(count + 1):
+            # Ignore the first invoke lldb and run to the breakpoint turnaround
+            # time.
             if i == 0:
                 run_one_round()
             else:

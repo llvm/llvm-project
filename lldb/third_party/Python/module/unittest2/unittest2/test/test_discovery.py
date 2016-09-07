@@ -27,12 +27,15 @@ class TestDiscovery(unittest2.TestCase):
         loader = unittest2.TestLoader()
 
         original_listdir = os.listdir
+
         def restore_listdir():
             os.listdir = original_listdir
         original_isfile = os.path.isfile
+
         def restore_isfile():
             os.path.isfile = original_isfile
         original_isdir = os.path.isdir
+
         def restore_isdir():
             os.path.isdir = original_isdir
 
@@ -63,19 +66,22 @@ class TestDiscovery(unittest2.TestCase):
         expected = [name + ' module tests' for name in
                     ('test1', 'test2')]
         expected.extend([('test_dir.%s' % name) + ' module tests' for name in
-                    ('test3', 'test4')])
+                         ('test3', 'test4')])
         self.assertEqual(suite, expected)
 
     def test_find_tests_with_package(self):
         loader = unittest2.TestLoader()
 
         original_listdir = os.listdir
+
         def restore_listdir():
             os.listdir = original_listdir
         original_isfile = os.path.isfile
+
         def restore_isfile():
             os.path.isfile = original_isfile
         original_isdir = os.path.isdir
+
         def restore_isdir():
             os.path.isdir = original_isdir
 
@@ -110,9 +116,11 @@ class TestDiscovery(unittest2.TestCase):
             __hash__ = None
 
         loader._get_module_from_name = lambda name: Module(name)
+
         def loadTestsFromModule(module, use_load_tests):
             if use_load_tests:
-                raise self.failureException('use_load_tests should be False for packages')
+                raise self.failureException(
+                    'use_load_tests should be False for packages')
             return module.path + ' module tests'
         loader.loadTestsFromModule = loadTestsFromModule
 
@@ -127,15 +135,18 @@ class TestDiscovery(unittest2.TestCase):
                          ['load_tests', 'test_directory2' + ' module tests'])
         self.assertEqual(Module.paths, ['test_directory', 'test_directory2'])
 
-        # load_tests should have been called once with loader, tests and pattern
-        self.assertEqual(Module.load_tests_args,
-                         [(loader, 'test_directory' + ' module tests', 'test*')])
+        # load_tests should have been called once with loader, tests and
+        # pattern
+        self.assertEqual(
+            Module.load_tests_args, [
+                (loader, 'test_directory' + ' module tests', 'test*')])
 
     def test_discover(self):
         loader = unittest2.TestLoader()
 
         original_isfile = os.path.isfile
         original_isdir = os.path.isdir
+
         def restore_isfile():
             os.path.isfile = original_isfile
 
@@ -143,6 +154,7 @@ class TestDiscovery(unittest2.TestCase):
         self.addCleanup(restore_isfile)
 
         orig_sys_path = sys.path[:]
+
         def restore_path():
             sys.path[:] = orig_sys_path
         self.addCleanup(restore_path)
@@ -163,6 +175,7 @@ class TestDiscovery(unittest2.TestCase):
         self.addCleanup(restore_isdir)
 
         _find_tests_args = []
+
         def _find_tests(start_dir, pattern):
             _find_tests_args.append((start_dir, pattern))
             return ['tests']
@@ -186,6 +199,7 @@ class TestDiscovery(unittest2.TestCase):
         isfile = os.path.isfile
         os.path.isfile = lambda _: True
         orig_sys_path = sys.path[:]
+
         def restore():
             os.path.isfile = isfile
             os.listdir = listdir
@@ -195,16 +209,17 @@ class TestDiscovery(unittest2.TestCase):
         suite = loader.discover('.')
         self.assertIn(os.getcwd(), sys.path)
         self.assertEqual(suite.countTestCases(), 1)
-        test = list(list(suite)[0])[0] # extract test from suite
+        test = list(list(suite)[0])[0]  # extract test from suite
 
         self.assertRaises(ImportError,
-            lambda: test.test_this_does_not_exist())
+                          lambda: test.test_this_does_not_exist())
 
     def test_command_line_handling_parseArgs(self):
         # Haha - take that uninstantiable class
         program = object.__new__(unittest2.TestProgram)
 
         args = []
+
         def do_discovery(argv):
             args.extend(argv)
         program._do_discovery = do_discovery
@@ -217,6 +232,7 @@ class TestDiscovery(unittest2.TestCase):
     def test_command_line_handling_do_discovery_too_many_arguments(self):
         class Stop(Exception):
             pass
+
         def usageExit():
             raise Stop
 
@@ -224,15 +240,15 @@ class TestDiscovery(unittest2.TestCase):
         program.usageExit = usageExit
 
         self.assertRaises(Stop,
-            # too many args
-            lambda: program._do_discovery(['one', 'two', 'three', 'four']))
-
+                          # too many args
+                          lambda: program._do_discovery(['one', 'two', 'three', 'four']))
 
     def test_command_line_handling_do_discovery_calls_loader(self):
         program = object.__new__(unittest2.TestProgram)
 
         class Loader(object):
             args = []
+
             def discover(self, start_dir, pattern, top_level_dir):
                 self.args.append((start_dir, pattern, top_level_dir))
                 return 'tests'
@@ -317,7 +333,7 @@ class TestDiscovery(unittest2.TestCase):
         original_listdir = os.listdir
         original_isfile = os.path.isfile
         original_isdir = os.path.isdir
-        
+
         def cleanup():
             os.listdir = original_listdir
             os.path.isfile = original_isfile
@@ -326,37 +342,42 @@ class TestDiscovery(unittest2.TestCase):
             if full_path in sys.path:
                 sys.path.remove(full_path)
         self.addCleanup(cleanup)
-        
+
         def listdir(_):
             return ['foo.py']
+
         def isfile(_):
             return True
+
         def isdir(_):
             return True
         os.listdir = listdir
         os.path.isfile = isfile
         os.path.isdir = isdir
-        
+
         loader = unittest2.TestLoader()
-        
+
         mod_dir = os.path.abspath('bar')
         expected_dir = os.path.abspath('foo')
-        msg = re.escape(r"'foo' module incorrectly imported from %r. Expected %r. "
-                "Is this module globally installed?" % (mod_dir, expected_dir))
+        msg = re.escape(
+            r"'foo' module incorrectly imported from %r. Expected %r. "
+            "Is this module globally installed?" %
+            (mod_dir, expected_dir))
         self.assertRaisesRegexp(
             ImportError, '^%s$' % msg, loader.discover,
             start_dir='foo', pattern='foo.py'
         )
         self.assertEqual(sys.path[0], full_path)
 
-        
     def test_discovery_from_dotted_path(self):
         loader = unittest2.TestLoader()
-        
+
         tests = [self]
-        expectedPath = os.path.abspath(os.path.dirname(unittest2.test.__file__))
+        expectedPath = os.path.abspath(
+            os.path.dirname(unittest2.test.__file__))
 
         self.wasRun = False
+
         def _find_tests(start_dir, pattern):
             self.wasRun = True
             self.assertEqual(start_dir, expectedPath)

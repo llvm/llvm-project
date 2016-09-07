@@ -12,14 +12,15 @@
 
 #if defined(__cplusplus)
 
-// Include Compiler.h here so we don't define LLVM_FALLTHROUGH and then Compiler.h
+// Include Compiler.h here so we don't define LLVM_FALLTHROUGH and then
+// Compiler.h
 // later tries to redefine it.
 #include "llvm/Support/Compiler.h"
 
 #ifndef LLVM_FALLTHROUGH
 
 #ifndef __has_cpp_attribute
-# define __has_cpp_attribute(x) 0
+#define __has_cpp_attribute(x) 0
 #endif
 
 /// \macro LLVM_FALLTHROUGH
@@ -32,8 +33,6 @@
 
 #endif // ifndef LLVM_FALLTHROUGH
 
+#endif // #if defined(__cplusplus)
 
-
-#endif  // #if defined(__cplusplus)
-
-#endif  // liblldb_lldb_private_defines_h_
+#endif // liblldb_lldb_private_defines_h_

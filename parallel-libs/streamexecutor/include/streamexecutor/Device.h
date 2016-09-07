@@ -18,7 +18,7 @@
 #include <type_traits>
 
 #include "streamexecutor/KernelSpec.h"
-#include "streamexecutor/PlatformInterfaces.h"
+#include "streamexecutor/PlatformDevice.h"
 #include "streamexecutor/Utils/Error.h"
 
 namespace streamexecutor {
@@ -35,12 +35,11 @@ public:
   Expected<typename std::enable_if<std::is_base_of<KernelBase, KernelT>::value,
                                    KernelT>::type>
   createKernel(const MultiKernelLoaderSpec &Spec) {
-    Expected<std::unique_ptr<PlatformKernelHandle>> MaybeKernelHandle =
-        PDevice->createKernel(Spec);
+    Expected<const void *> MaybeKernelHandle = PDevice->createKernel(Spec);
     if (!MaybeKernelHandle) {
       return MaybeKernelHandle.takeError();
     }
-    return KernelT(Spec.getKernelName(), std::move(*MaybeKernelHandle));
+    return KernelT(PDevice, *MaybeKernelHandle, Spec.getKernelName());
   }
 
   /// Creates a stream object for this device.

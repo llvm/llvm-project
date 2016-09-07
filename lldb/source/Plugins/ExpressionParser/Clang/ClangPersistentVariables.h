@@ -21,81 +21,74 @@
 
 #include "lldb/Expression/ExpressionVariable.h"
 
-namespace lldb_private
-{
-    
+namespace lldb_private {
+
 //----------------------------------------------------------------------
-/// @class ClangPersistentVariables ClangPersistentVariables.h "lldb/Expression/ClangPersistentVariables.h"
-/// @brief Manages persistent values that need to be preserved between expression invocations.
+/// @class ClangPersistentVariables ClangPersistentVariables.h
+/// "lldb/Expression/ClangPersistentVariables.h"
+/// @brief Manages persistent values that need to be preserved between
+/// expression invocations.
 ///
 /// A list of variables that can be accessed and updated by any expression.  See
 /// ClangPersistentVariable for more discussion.  Also provides an increasing,
 /// 0-based counter for naming result variables.
 //----------------------------------------------------------------------
-class ClangPersistentVariables : public PersistentExpressionState
-{
+class ClangPersistentVariables : public PersistentExpressionState {
 public:
-    ClangPersistentVariables();
+  ClangPersistentVariables();
 
-    ~ClangPersistentVariables() override = default;
+  ~ClangPersistentVariables() override = default;
 
-    //------------------------------------------------------------------
-    // llvm casting support
-    //------------------------------------------------------------------
-    static bool classof(const PersistentExpressionState *pv)
-    {
-        return pv->getKind() == PersistentExpressionState::eKindClang;
-    }
+  //------------------------------------------------------------------
+  // llvm casting support
+  //------------------------------------------------------------------
+  static bool classof(const PersistentExpressionState *pv) {
+    return pv->getKind() == PersistentExpressionState::eKindClang;
+  }
 
-    lldb::ExpressionVariableSP
-    CreatePersistentVariable (const lldb::ValueObjectSP &valobj_sp) override;
+  lldb::ExpressionVariableSP
+  CreatePersistentVariable(const lldb::ValueObjectSP &valobj_sp) override;
 
-    lldb::ExpressionVariableSP
-    CreatePersistentVariable (ExecutionContextScope *exe_scope,
-                              const ConstString &name, 
-                              const CompilerType& compiler_type, 
-                              lldb::ByteOrder byte_order, 
-                              uint32_t addr_byte_size) override;
+  lldb::ExpressionVariableSP CreatePersistentVariable(
+      ExecutionContextScope *exe_scope, const ConstString &name,
+      const CompilerType &compiler_type, lldb::ByteOrder byte_order,
+      uint32_t addr_byte_size) override;
 
-    //----------------------------------------------------------------------
-    /// Return the next entry in the sequence of strings "$0", "$1", ... for
-    /// use naming persistent expression convenience variables.
-    ///
-    /// @return
-    ///     A string that contains the next persistent variable name.
-    //----------------------------------------------------------------------
-    ConstString
-    GetNextPersistentVariableName () override;
-    
-    void
-    RemovePersistentVariable (lldb::ExpressionVariableSP variable) override;
-    
-    void
-    RegisterPersistentDecl (const ConstString &name,
-                            clang::NamedDecl *decl);
-    
-    clang::NamedDecl *
-    GetPersistentDecl (const ConstString &name);
-    
-    void
-    AddHandLoadedClangModule(ClangModulesDeclVendor::ModuleID module)
-    {
-        m_hand_loaded_clang_modules.push_back(module);
-    }
-    
-    const ClangModulesDeclVendor::ModuleVector &GetHandLoadedClangModules()
-    {
-        return m_hand_loaded_clang_modules;
-    }
-    
+  //----------------------------------------------------------------------
+  /// Return the next entry in the sequence of strings "$0", "$1", ... for
+  /// use naming persistent expression convenience variables.
+  ///
+  /// @return
+  ///     A string that contains the next persistent variable name.
+  //----------------------------------------------------------------------
+  ConstString GetNextPersistentVariableName() override;
+
+  void RemovePersistentVariable(lldb::ExpressionVariableSP variable) override;
+
+  void RegisterPersistentDecl(const ConstString &name, clang::NamedDecl *decl);
+
+  clang::NamedDecl *GetPersistentDecl(const ConstString &name);
+
+  void AddHandLoadedClangModule(ClangModulesDeclVendor::ModuleID module) {
+    m_hand_loaded_clang_modules.push_back(module);
+  }
+
+  const ClangModulesDeclVendor::ModuleVector &GetHandLoadedClangModules() {
+    return m_hand_loaded_clang_modules;
+  }
+
 private:
-    uint32_t                                                m_next_persistent_variable_id;  ///< The counter used by GetNextResultName().
-    
-    typedef llvm::DenseMap<const char *, clang::NamedDecl *>    PersistentDeclMap;
-    PersistentDeclMap                                           m_persistent_decls;         ///< Persistent entities declared by the user.
-    
-    ClangModulesDeclVendor::ModuleVector                    m_hand_loaded_clang_modules;    ///< These are Clang modules we hand-loaded; these are the highest-
-                                                                                            ///< priority source for macros.
+  uint32_t m_next_persistent_variable_id; ///< The counter used by
+                                          ///GetNextResultName().
+
+  typedef llvm::DenseMap<const char *, clang::NamedDecl *> PersistentDeclMap;
+  PersistentDeclMap
+      m_persistent_decls; ///< Persistent entities declared by the user.
+
+  ClangModulesDeclVendor::ModuleVector
+      m_hand_loaded_clang_modules; ///< These are Clang modules we hand-loaded;
+                                   ///these are the highest-
+                                   ///< priority source for macros.
 };
 
 } // namespace lldb_private

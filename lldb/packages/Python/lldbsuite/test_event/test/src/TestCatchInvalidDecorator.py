@@ -63,7 +63,7 @@ def _filter_error_results(events):
         for event in events
         if event.get("event", None) in ["job_result", "test_result"] and
         event.get("status", None) == "error"
-        ]
+    ]
 
 
 if __name__ == "__main__":

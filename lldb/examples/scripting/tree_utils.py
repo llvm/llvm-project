@@ -1,4 +1,4 @@
-""" 
+"""
 # ===-- tree_utils.py ---------------------------------------*- Python -*-===//
 #
 #                     The LLVM Compiler Infrastructure
@@ -9,7 +9,7 @@
 # ===---------------------------------------------------------------------===//
 
 tree_utils.py  - A set of functions for examining binary
-search trees, based on the example search tree defined in 
+search trees, based on the example search tree defined in
 dictionary.c.  These functions contain calls to LLDB API
 functions, and assume that the LLDB Python module has been
 imported.
@@ -20,7 +20,7 @@ http://lldb.llvm.org/scripting.html
 """
 
 
-def DFS (root, word, cur_path):
+def DFS(root, word, cur_path):
     """
     Recursively traverse a binary search tree containing
     words sorted alphabetically, searching for a particular
@@ -33,21 +33,21 @@ def DFS (root, word, cur_path):
     the one defined in dictionary.c  It uses LLDB API
     functions to examine and traverse the tree nodes.
     """
-    
+
     # Get pointer field values out of node 'root'
 
-    root_word_ptr = root.GetChildMemberWithName ("word")
-    left_child_ptr = root.GetChildMemberWithName ("left")
-    right_child_ptr = root.GetChildMemberWithName ("right")
+    root_word_ptr = root.GetChildMemberWithName("word")
+    left_child_ptr = root.GetChildMemberWithName("left")
+    right_child_ptr = root.GetChildMemberWithName("right")
 
-    # Get the word out of the word pointer and strip off 
+    # Get the word out of the word pointer and strip off
     # surrounding quotes (added by call to GetSummary).
 
     root_word = root_word_ptr.GetSummary()
-    end = len (root_word) - 1
+    end = len(root_word) - 1
     if root_word[0] == '"' and root_word[end] == '"':
         root_word = root_word[1:end]
-    end = len (root_word) - 1
+    end = len(root_word) - 1
     if root_word[0] == '\'' and root_word[end] == '\'':
         root_word = root_word[1:end]
 
@@ -59,23 +59,23 @@ def DFS (root, word, cur_path):
 
         # Check to see if left child is NULL
 
-        if left_child_ptr.GetValue() == None:
+        if left_child_ptr.GetValue() is None:
             return ""
         else:
             cur_path = cur_path + "L"
-            return DFS (left_child_ptr, word, cur_path)
+            return DFS(left_child_ptr, word, cur_path)
     else:
 
         # Check to see if right child is NULL
 
-        if right_child_ptr.GetValue() == None:
+        if right_child_ptr.GetValue() is None:
             return ""
         else:
             cur_path = cur_path + "R"
-            return DFS (right_child_ptr, word, cur_path)
-    
+            return DFS(right_child_ptr, word, cur_path)
 
-def tree_size (root):
+
+def tree_size(root):
     """
     Recursively traverse a binary search tree, counting
     the nodes in the tree.  Returns the final count.
@@ -84,20 +84,20 @@ def tree_size (root):
     the one defined in dictionary.c  It uses LLDB API
     functions to examine and traverse the tree nodes.
     """
-    if (root.GetValue == None):
+    if (root.GetValue is None):
         return 0
 
-    if (int (root.GetValue(), 16) == 0):
+    if (int(root.GetValue(), 16) == 0):
         return 0
 
-    left_size = tree_size (root.GetChildAtIndex(1));
-    right_size = tree_size (root.GetChildAtIndex(2));
+    left_size = tree_size(root.GetChildAtIndex(1))
+    right_size = tree_size(root.GetChildAtIndex(2))
 
     total_size = left_size + right_size + 1
     return total_size
-    
 
-def print_tree (root):
+
+def print_tree(root):
     """
     Recursively traverse a binary search tree, printing out
     the words at the nodes in alphabetical order (the
@@ -107,12 +107,12 @@ def print_tree (root):
     the one defined in dictionary.c  It uses LLDB API
     functions to examine and traverse the tree nodes.
     """
-    if (root.GetChildAtIndex(1).GetValue() != None) and (int (root.GetChildAtIndex(1).GetValue(), 16) != 0):
-        print_tree (root.GetChildAtIndex(1))
+    if (root.GetChildAtIndex(1).GetValue() is not None) and (
+            int(root.GetChildAtIndex(1).GetValue(), 16) != 0):
+        print_tree(root.GetChildAtIndex(1))
 
     print root.GetChildAtIndex(0).GetSummary()
 
-    if (root.GetChildAtIndex(2).GetValue() != None) and (int (root.GetChildAtIndex(2).GetValue(), 16) != 0):
-        print_tree (root.GetChildAtIndex(2))
-
-
+    if (root.GetChildAtIndex(2).GetValue() is not None) and (
+            int(root.GetChildAtIndex(2).GetValue(), 16) != 0):
+        print_tree(root.GetChildAtIndex(2))

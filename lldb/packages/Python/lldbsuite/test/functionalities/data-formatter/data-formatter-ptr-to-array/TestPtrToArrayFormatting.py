@@ -5,11 +5,12 @@ Test lldb data formatter subsystem.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
+
 
 class PtrToArrayDataFormatterTestCase(TestBase):
 
@@ -30,14 +31,15 @@ class PtrToArrayDataFormatterTestCase(TestBase):
         """Test that LLDB handles the clang typeclass Paren correctly."""
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
@@ -49,9 +51,9 @@ class PtrToArrayDataFormatterTestCase(TestBase):
         self.addTearDownHook(cleanup)
 
         self.expect('p *(int (*)[3])foo',
-            substrs = ['(int [3]) $','[0] = 1','[1] = 2','[2] = 3'])
+                    substrs=['(int [3]) $', '[0] = 1', '[1] = 2', '[2] = 3'])
 
         self.expect('p *(int (*)[3])foo', matching=False,
-            substrs = ['01 00 00 00 02 00 00 00 03 00 00 00'])
+                    substrs=['01 00 00 00 02 00 00 00 03 00 00 00'])
         self.expect('p *(int (*)[3])foo', matching=False,
-            substrs = ['0x000000030000000200000001'])
+                    substrs=['0x000000030000000200000001'])

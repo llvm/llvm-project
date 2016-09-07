@@ -3,14 +3,16 @@
 import lldb
 import shlex
 
+
 @lldb.command("shadow")
 def check_shadow_command(debugger, command, exe_ctx, result, dict):
     '''Check the currently selected stack frame for shadowed variables'''
     process = exe_ctx.GetProcess()
     state = process.GetState()
     if state != lldb.eStateStopped:
-        print >>result, "process must be stopped, state is %s" % lldb.SBDebugger.StateAsCString(state)
-        return        
+        print >>result, "process must be stopped, state is %s" % lldb.SBDebugger.StateAsCString(
+            state)
+        return
     frame = exe_ctx.GetFrame()
     if not frame:
         print >>result, "invalid frame"
@@ -18,10 +20,10 @@ def check_shadow_command(debugger, command, exe_ctx, result, dict):
     # Parse command line args
     command_args = shlex.split(command)
     # TODO: add support for using arguments that are passed to this command...
-    
+
     # Make a dictionary of variable name to "SBBlock and SBValue"
     shadow_dict = {}
-    
+
     num_shadowed_variables = 0
     # Get the deepest most block from the current frame
     block = frame.GetBlock()
@@ -40,7 +42,7 @@ def check_shadow_command(debugger, command, exe_ctx, result, dict):
                 shadow_dict[block_var_name].append(block_var)
             else:
                 shadow_dict[block_var_name] = [block_var]
-        # Get the parent block and continue 
+        # Get the parent block and continue
         block = block.GetParent()
 
     num_shadowed_variables = 0
@@ -54,4 +56,3 @@ def check_shadow_command(debugger, command, exe_ctx, result, dict):
                     print >>result, str(shadow_var.GetDeclaration())
     if num_shadowed_variables == 0:
         print >>result, 'no variables are shadowed'
-
