@@ -6,10 +6,18 @@ include(SwiftAddCustomCommandTarget)
 set(output_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin")
 set(module_cache_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/repl_swift_module_cache")
 
-if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+set(swift_compile_cmd "${LLDB_SWIFTC}" -resource-dir "${LLDB_PATH_TO_SWIFT_BUILD}/lib/swift" -module-cache-path "${module_cache_dir}")
+if(CMAKE_CROSSCOMPILING)
+  set(swift_compile_cmd ${swift_compile_cmd} -target "${LLVM_HOST_TRIPLE}" -sdk "${CMAKE_SYSROOT}")
+  if(CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN)
+	  set(swift_compile_cmd ${swift_compile_cmd} -tools-directory "${CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN}")
+  endif()
+endif()
+
+if (CMAKE_SYSTEM_NAME MATCHES "Linux")  
   add_custom_command_target(
       repl_swift_target
-      COMMAND "${LLDB_PATH_TO_SWIFT_BUILD}/bin/swiftc" -o "${output_dir}/repl_swift" -module-cache-path "${module_cache_dir}" -Xlinker -rpath -Xlinker \$ORIGIN/../lib/swift/linux "${CMAKE_CURRENT_SOURCE_DIR}/main.swift"
+      COMMAND ${swift_compile_cmd} -o "${output_dir}/repl_swift" -Xlinker -rpath -Xlinker \$ORIGIN/../lib/swift/linux "${CMAKE_CURRENT_SOURCE_DIR}/main.swift"
       OUTPUT "${output_dir}/repl_swift"
       VERBATIM
       ALL
@@ -17,7 +25,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Linux")
 else()
   add_custom_command_target(
       repl_swift_target
-      COMMAND "${LLDB_PATH_TO_SWIFT_BUILD}/bin/swiftc" -o "${output_dir}/repl_swift" -module-cache-path "${module_cache_dir}" "${CMAKE_CURRENT_SOURCE_DIR}/main.swift"
+      COMMAND ${swift_compile_cmd} -o "${output_dir}/repl_swift" "${CMAKE_CURRENT_SOURCE_DIR}/main.swift"
       OUTPUT "${output_dir}/repl_swift"
       VERBATIM
       ALL
