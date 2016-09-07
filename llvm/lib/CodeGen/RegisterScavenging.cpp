@@ -419,7 +419,8 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
   for (const MachineOperand &MO : MI.operands()) {
     if (MO.isReg() && MO.getReg() != 0 && !(MO.isUse() && MO.isUndef()) &&
         !TargetRegisterInfo::isVirtualRegister(MO.getReg()))
-      Candidates.reset(MO.getReg());
+      for (MCRegAliasIterator AI(MO.getReg(), TRI, true); AI.isValid(); ++AI)
+        Candidates.reset(*AI);
   }
 
   // Try to find a register that's unused if there is one, as then we won't

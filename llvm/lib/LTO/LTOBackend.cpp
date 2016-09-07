@@ -103,18 +103,19 @@ Error Config::addSaveTemps(std::string OutputFileName,
 namespace {
 
 std::unique_ptr<TargetMachine>
-createTargetMachine(Config &C, StringRef TheTriple, const Target *TheTarget) {
+createTargetMachine(Config &Conf, StringRef TheTriple,
+                    const Target *TheTarget) {
   SubtargetFeatures Features;
   Features.getDefaultSubtargetFeatures(Triple(TheTriple));
-  for (const std::string &A : C.MAttrs)
+  for (const std::string &A : Conf.MAttrs)
     Features.AddFeature(A);
 
   return std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
-      TheTriple, C.CPU, Features.getString(), C.Options, C.RelocModel,
-      C.CodeModel, C.CGOptLevel));
+      TheTriple, Conf.CPU, Features.getString(), Conf.Options, Conf.RelocModel,
+      Conf.CodeModel, Conf.CGOptLevel));
 }
 
-static void runOldPMPasses(Config &C, Module &M, TargetMachine *TM,
+static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
                            bool IsThinLto) {
   legacy::PassManager passes;
   passes.add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
@@ -125,22 +126,22 @@ static void runOldPMPasses(Config &C, Module &M, TargetMachine *TM,
   // Unconditionally verify input since it is not verified before this
   // point and has unknown origin.
   PMB.VerifyInput = true;
-  PMB.VerifyOutput = !C.DisableVerify;
+  PMB.VerifyOutput = !Conf.DisableVerify;
   PMB.LoopVectorize = true;
   PMB.SLPVectorize = true;
-  PMB.OptLevel = C.OptLevel;
+  PMB.OptLevel = Conf.OptLevel;
   if (IsThinLto)
     PMB.populateThinLTOPassManager(passes);
   else
     PMB.populateLTOPassManager(passes);
-  passes.run(M);
+  passes.run(Mod);
 }
 
-bool opt(Config &C, TargetMachine *TM, unsigned Task, Module &M,
+bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
          bool IsThinLto) {
-  M.setDataLayout(TM->createDataLayout());
-  runOldPMPasses(C, M, TM, IsThinLto);
-  return !C.PostOptModuleHook || C.PostOptModuleHook(Task, M);
+  Mod.setDataLayout(TM->createDataLayout());
+  runOldPMPasses(Conf, Mod, TM, IsThinLto);
+  return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
 /// Monolithic LTO does not support caching (yet), this is a convenient wrapper
@@ -156,9 +157,9 @@ static AddOutputFn getUncachedOutputWrapper(AddOutputFn &AddOutput,
   };
 }
 
-void codegen(Config &C, TargetMachine *TM, AddOutputFn AddOutput, unsigned Task,
-             Module &M) {
-  if (C.PreCodeGenModuleHook && !C.PreCodeGenModuleHook(Task, M))
+void codegen(Config &Conf, TargetMachine *TM, AddOutputFn AddOutput,
+             unsigned Task, Module &Mod) {
+  if (Conf.PreCodeGenModuleHook && !Conf.PreCodeGenModuleHook(Task, Mod))
     return;
 
   auto Output = AddOutput(Task);
@@ -167,18 +168,18 @@ void codegen(Config &C, TargetMachine *TM, AddOutputFn AddOutput, unsigned Task,
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS,
                               TargetMachine::CGFT_ObjectFile))
     report_fatal_error("Failed to setup codegen");
-  CodeGenPasses.run(M);
+  CodeGenPasses.run(Mod);
 }
 
 void splitCodeGen(Config &C, TargetMachine *TM, AddOutputFn AddOutput,
                   unsigned ParallelCodeGenParallelismLevel,
-                  std::unique_ptr<Module> M) {
+                  std::unique_ptr<Module> Mod) {
   ThreadPool CodegenThreadPool(ParallelCodeGenParallelismLevel);
   unsigned ThreadCount = 0;
   const Target *T = &TM->getTarget();
 
   SplitModule(
-      std::move(M), ParallelCodeGenParallelismLevel,
+      std::move(Mod), ParallelCodeGenParallelismLevel,
       [&](std::unique_ptr<Module> MPart) {
         // We want to clone the module in a new context to multi-thread the
         // codegen. We do it by serializing partition modules to bitcode
@@ -215,14 +216,14 @@ void splitCodeGen(Config &C, TargetMachine *TM, AddOutputFn AddOutput,
       false);
 }
 
-Expected<const Target *> initAndLookupTarget(Config &C, Module &M) {
+Expected<const Target *> initAndLookupTarget(Config &C, Module &Mod) {
   if (!C.OverrideTriple.empty())
-    M.setTargetTriple(C.OverrideTriple);
-  else if (M.getTargetTriple().empty())
-    M.setTargetTriple(C.DefaultTriple);
+    Mod.setTargetTriple(C.OverrideTriple);
+  else if (Mod.getTargetTriple().empty())
+    Mod.setTargetTriple(C.DefaultTriple);
 
   std::string Msg;
-  const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
+  const Target *T = TargetRegistry::lookupTarget(Mod.getTargetTriple(), Msg);
   if (!T)
     return make_error<StringError>(Msg, inconvertibleErrorCode());
   return T;
@@ -232,23 +233,23 @@ Expected<const Target *> initAndLookupTarget(Config &C, Module &M) {
 
 Error lto::backend(Config &C, AddOutputFn AddOutput,
                    unsigned ParallelCodeGenParallelismLevel,
-                   std::unique_ptr<Module> M) {
-  Expected<const Target *> TOrErr = initAndLookupTarget(C, *M);
+                   std::unique_ptr<Module> Mod) {
+  Expected<const Target *> TOrErr = initAndLookupTarget(C, *Mod);
   if (!TOrErr)
     return TOrErr.takeError();
 
   std::unique_ptr<TargetMachine> TM =
-      createTargetMachine(C, M->getTargetTriple(), *TOrErr);
+      createTargetMachine(C, Mod->getTargetTriple(), *TOrErr);
 
   if (!C.CodeGenOnly)
-    if (!opt(C, TM.get(), 0, *M, /*IsThinLto=*/false))
+    if (!opt(C, TM.get(), 0, *Mod, /*IsThinLto=*/false))
       return Error();
 
   if (ParallelCodeGenParallelismLevel == 1) {
-    codegen(C, TM.get(), getUncachedOutputWrapper(AddOutput, 0), 0, *M);
+    codegen(C, TM.get(), getUncachedOutputWrapper(AddOutput, 0), 0, *Mod);
   } else {
     splitCodeGen(C, TM.get(), AddOutput, ParallelCodeGenParallelismLevel,
-                 std::move(M));
+                 std::move(Mod));
   }
   return Error();
 }

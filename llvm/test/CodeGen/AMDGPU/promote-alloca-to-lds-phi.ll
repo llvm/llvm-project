@@ -201,4 +201,4 @@ for.body:                                         ; preds = %for.body, %for.body
 
 declare i32* @get_unknown_pointer() #0
 
-attributes #0 = { nounwind "amdgpu-max-waves-per-eu"="1" }
+attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" }

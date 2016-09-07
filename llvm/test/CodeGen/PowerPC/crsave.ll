@@ -14,8 +14,9 @@ entry:
   ret i32 %1
 }
 
-; PPC32: stw 31, -4(1)
+; PPC32-LABEL: test_cr2:
 ; PPC32: stwu 1, -32(1)
+; PPC32: stw 31, 28(1)
 ; PPC32: mfcr 12
 ; PPC32-NEXT: stw 12, 24(31)
 ; PPC32: lwz 12, 24(31)
@@ -43,8 +44,9 @@ entry:
   ret i32 %1
 }
 
-; PPC32: stw 31, -4(1)
+; PPC32-LABEL: test_cr234:
 ; PPC32: stwu 1, -32(1)
+; PPC32: stw 31, 28(1)
 ; PPC32: mfcr 12
 ; PPC32-NEXT: stw 12, 24(31)
 ; PPC32: lwz 12, 24(31)

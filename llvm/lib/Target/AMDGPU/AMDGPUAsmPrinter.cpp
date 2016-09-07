@@ -202,6 +202,16 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       OutStreamer->emitRawComment(" LDSByteSize: " + Twine(KernelInfo.LDSSize) +
                                   " bytes/workgroup (compile time only)", false);
 
+      OutStreamer->emitRawComment(" SGPRBlocks: " +
+                                  Twine(KernelInfo.SGPRBlocks), false);
+      OutStreamer->emitRawComment(" VGPRBlocks: " +
+                                  Twine(KernelInfo.VGPRBlocks), false);
+
+      OutStreamer->emitRawComment(" NumSGPRsForWavesPerEU: " +
+                                  Twine(KernelInfo.NumSGPRsForWavesPerEU), false);
+      OutStreamer->emitRawComment(" NumVGPRsForWavesPerEU: " +
+                                  Twine(KernelInfo.NumVGPRsForWavesPerEU), false);
+
       OutStreamer->emitRawComment(" ReservedVGPRFirst: " + Twine(KernelInfo.ReservedVGPRFirst),
                                   false);
       OutStreamer->emitRawComment(" ReservedVGPRCount: " + Twine(KernelInfo.ReservedVGPRCount),
@@ -446,20 +456,15 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       ExtraSGPRs = 6;
   }
 
-  MaxSGPR += ExtraSGPRs;
-
   // Record first reserved register and reserved register count fields, and
   // update max register counts if "amdgpu-debugger-reserve-regs" attribute was
-  // specified.
-  if (STM.debuggerReserveRegs()) {
-    ProgInfo.ReservedVGPRFirst = MaxVGPR + 1;
-    ProgInfo.ReservedVGPRCount = MFI->getDebuggerReservedVGPRCount();
-    MaxVGPR += MFI->getDebuggerReservedVGPRCount();
-  }
+  // requested.
+  ProgInfo.ReservedVGPRFirst = STM.debuggerReserveRegs() ? MaxVGPR + 1 : 0;
+  ProgInfo.ReservedVGPRCount = RI->getNumDebuggerReservedVGPRs(STM);
 
   // Update DebuggerWavefrontPrivateSegmentOffsetSGPR and
   // DebuggerPrivateSegmentBufferSGPR fields if "amdgpu-debugger-emit-prologue"
-  // attribute was specified.
+  // attribute was requested.
   if (STM.debuggerEmitPrologue()) {
     ProgInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR =
       RI->getHWRegIndex(MFI->getScratchWaveOffsetReg());
@@ -467,10 +472,21 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       RI->getHWRegIndex(MFI->getScratchRSrcReg());
   }
 
+  // Account for extra SGPRs and VGPRs reserved for debugger use.
+  MaxSGPR += ExtraSGPRs;
+  MaxVGPR += RI->getNumDebuggerReservedVGPRs(STM);
+
   // We found the maximum register index. They start at 0, so add one to get the
   // number of registers.
   ProgInfo.NumVGPR = MaxVGPR + 1;
   ProgInfo.NumSGPR = MaxSGPR + 1;
+
+  // Adjust number of registers used to meet default/requested minimum/maximum
+  // number of waves per execution unit request.
+  ProgInfo.NumSGPRsForWavesPerEU = std::max(
+    ProgInfo.NumSGPR, RI->getMinNumSGPRs(STM, MFI->getMaxWavesPerEU()));
+  ProgInfo.NumVGPRsForWavesPerEU = std::max(
+    ProgInfo.NumVGPR, RI->getMinNumVGPRs(MFI->getMaxWavesPerEU()));
 
   if (STM.hasSGPRInitBug()) {
     if (ProgInfo.NumSGPR > SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG) {
@@ -482,6 +498,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     }
 
     ProgInfo.NumSGPR = SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
+    ProgInfo.NumSGPRsForWavesPerEU = SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
   }
 
   if (MFI->NumUserSGPRs > STM.getMaxNumUserSGPRs()) {
@@ -498,8 +515,16 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     Ctx.diagnose(Diag);
   }
 
-  ProgInfo.VGPRBlocks = (ProgInfo.NumVGPR - 1) / 4;
-  ProgInfo.SGPRBlocks = (ProgInfo.NumSGPR - 1) / 8;
+  // SGPRBlocks is actual number of SGPR blocks minus 1.
+  ProgInfo.SGPRBlocks = alignTo(ProgInfo.NumSGPRsForWavesPerEU,
+                                RI->getSGPRAllocGranule());
+  ProgInfo.SGPRBlocks = ProgInfo.SGPRBlocks / RI->getSGPRAllocGranule() - 1;
+
+  // VGPRBlocks is actual number of VGPR blocks minus 1.
+  ProgInfo.VGPRBlocks = alignTo(ProgInfo.NumVGPRsForWavesPerEU,
+                                RI->getVGPRAllocGranule());
+  ProgInfo.VGPRBlocks = ProgInfo.VGPRBlocks / RI->getVGPRAllocGranule() - 1;
+
   // Set the value to initialize FP_ROUND and FP_DENORM parts of the mode
   // register.
   ProgInfo.FloatMode = getFPMode(MF);
@@ -525,8 +550,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     LDSAlignShift = 9;
   }
 
-  unsigned LDSSpillSize = MFI->LDSWaveSpillSize *
-                          MFI->getMaximumWorkGroupSize(MF);
+  unsigned LDSSpillSize =
+    MFI->LDSWaveSpillSize * MFI->getMaxFlatWorkGroupSize();
 
   ProgInfo.LDSSize = MFI->getLDSSize() + LDSSpillSize;
   ProgInfo.LDSBlocks =

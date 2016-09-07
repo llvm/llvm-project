@@ -1252,7 +1252,7 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
 
   for (unsigned OpN = 0; OpN < NumOps; ++OpN) {
     MachineOperand &Op = In.getOperand(OpN);
-    if (!Op.isReg() || !Op.isUse())
+    if (!Op.isReg() || !Op.isUse() || Op.isUndef())
       continue;
     RegisterRef RR = { Op.getReg(), Op.getSubReg() };
     // Add implicit uses on return and call instructions, and on predicated

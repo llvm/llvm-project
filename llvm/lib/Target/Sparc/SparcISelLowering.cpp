@@ -1620,7 +1620,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   if (Subtarget->isV9())
     setMaxAtomicSizeInBitsSupported(64);
   else if (Subtarget->hasLeonCasa())
-    setMaxAtomicSizeInBitsSupported(64);
+    setMaxAtomicSizeInBitsSupported(32);
   else
     setMaxAtomicSizeInBitsSupported(0);
 

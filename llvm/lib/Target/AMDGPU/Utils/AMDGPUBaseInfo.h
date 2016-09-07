@@ -45,9 +45,28 @@ bool isGroupSegment(const GlobalValue *GV);
 bool isGlobalSegment(const GlobalValue *GV);
 bool isReadOnlySegment(const GlobalValue *GV);
 
+/// \returns Integer value requested using \p F's \p Name attribute.
+///
+/// \returns \p Default if attribute is not present.
+///
+/// \returns \p Default and emits error if requested value cannot be converted
+/// to integer.
 int getIntegerAttribute(const Function &F, StringRef Name, int Default);
 
-unsigned getMaximumWorkGroupSize(const Function &F);
+/// \returns A pair of integer values requested using \p F's \p Name attribute
+/// in "first[,second]" format ("second" is optional unless \p OnlyFirstRequired
+/// is false).
+///
+/// \returns \p Default if attribute is not present.
+///
+/// \returns \p Default and emits error if one of the requested values cannot be
+/// converted to integer, or \p OnlyFirstRequired is false and "second" value is
+/// not present.
+std::pair<int, int> getIntegerPairAttribute(const Function &F,
+                                            StringRef Name,
+                                            std::pair<int, int> Default,
+                                            bool OnlyFirstRequired = false);
+
 unsigned getInitialPSInputAddr(const Function &F);
 
 bool isShader(CallingConv::ID cc);

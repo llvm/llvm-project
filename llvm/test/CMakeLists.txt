@@ -32,6 +32,7 @@ set(LLVM_TEST_DEPENDS
           llvm-as
           llvm-bcanalyzer
           llvm-c-test
+          llvm-cxxfilt
           llvm-config
           llvm-cov
           llvm-cxxdump

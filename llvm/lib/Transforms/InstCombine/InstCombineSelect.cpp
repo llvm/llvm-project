@@ -1133,29 +1133,24 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     if (Instruction *IV = FoldSelectOpOp(SI, TI, FI))
       return IV;
 
-  // (select C, (sext X), const) -> (sext (select C, X, const')) and
-  // variations thereof when extending from i1, as that allows further folding
-  // into logic ops. When the sext is from a larger type, we prefer to have it
-  // as an operand.
-  if (TI &&
-      (TI->getOpcode() == Instruction::ZExt || TI->getOpcode() == Instruction::SExt)) {
+  // (select C, (ext X), const) -> (ext (select C, X, const')) and variations
+  // thereof when extending from i1, as that allows further folding into logic
+  // ops. When the sext is from a larger type, prefer to have it as an operand.
+  if (TI && (TI->getOpcode() == Instruction::ZExt ||
+             TI->getOpcode() == Instruction::SExt)) {
     bool IsSExt = TI->getOpcode() == Instruction::SExt;
     const APInt *C;
-    if (match(FalseVal, m_APInt(C))) {
-      if (Instruction *IV =
-              foldSelectExtConst(*Builder, SI, TI, *C, true, IsSExt))
-        return IV;
-    }
+    if (match(FalseVal, m_APInt(C)))
+      if (auto *I = foldSelectExtConst(*Builder, SI, TI, *C, true, IsSExt))
+        return I;
   }
-  if (FI &&
-      (FI->getOpcode() == Instruction::ZExt || FI->getOpcode() == Instruction::SExt)) {
+  if (FI && (FI->getOpcode() == Instruction::ZExt ||
+             FI->getOpcode() == Instruction::SExt)) {
     bool IsSExt = FI->getOpcode() == Instruction::SExt;
     const APInt *C;
-    if (match(TrueVal, m_APInt(C))) {
-      if (Instruction *IV =
-              foldSelectExtConst(*Builder, SI, FI, *C, false, IsSExt))
-          return IV;
-    }
+    if (match(TrueVal, m_APInt(C)))
+      if (auto *I = foldSelectExtConst(*Builder, SI, FI, *C, false, IsSExt))
+        return I;
   }
 
   // See if we can fold the select into one of our operands.
@@ -1293,7 +1288,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     return &SI;
   }
 
-  if (VectorType* VecTy = dyn_cast<VectorType>(SelType)) {
+  if (VectorType *VecTy = dyn_cast<VectorType>(SelType)) {
     unsigned VWidth = VecTy->getNumElements();
     APInt UndefElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));

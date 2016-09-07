@@ -90,6 +90,7 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
+      AU.addRequired<DominatorTreeWrapperPass>();
       AU.addRequired<AssumptionCacheTracker>();
       AU.addRequired<TargetLibraryInfoWrapperPass>();
     }
@@ -99,9 +100,8 @@ namespace {
       if (skipFunction(F))
         return false;
 
-      const DominatorTreeWrapperPass *DTWP =
-          getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-      const DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+      const DominatorTree *DT =
+          &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
       const TargetLibraryInfo *TLI =
           &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
       AssumptionCache *AC =
@@ -115,6 +115,7 @@ char InstSimplifier::ID = 0;
 INITIALIZE_PASS_BEGIN(InstSimplifier, "instsimplify",
                       "Remove redundant instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(InstSimplifier, "instsimplify",
                     "Remove redundant instructions", false, false)
@@ -127,10 +128,10 @@ FunctionPass *llvm::createInstructionSimplifierPass() {
 
 PreservedAnalyses InstSimplifierPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
-  auto *DT = AM.getCachedResult<DominatorTreeAnalysis>(F);
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
-  bool Changed = runImpl(F, DT, &TLI, &AC);
+  bool Changed = runImpl(F, &DT, &TLI, &AC);
   if (!Changed)
     return PreservedAnalyses::all();
   // FIXME: This should also 'preserve the CFG'.
