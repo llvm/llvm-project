@@ -1401,9 +1401,13 @@ static bool canSinkInstructions(
   // we're contemplating sinking, it must already be determined to be sinkable.
   if (!isa<StoreInst>(I0)) {
     auto *PNUse = dyn_cast<PHINode>(*I0->user_begin());
-    if (!all_of(Insts, [&PNUse](const Instruction *I) -> bool {
+    auto *Succ = I0->getParent()->getTerminator()->getSuccessor(0);
+    if (!all_of(Insts, [&PNUse,&Succ](const Instruction *I) -> bool {
           auto *U = cast<Instruction>(*I->user_begin());
-          return U == PNUse || U->getParent() == I->getParent();
+          return (PNUse &&
+                  PNUse->getParent() == Succ &&
+                  PNUse->getIncomingValueForBlock(I->getParent()) == I) ||
+                 U->getParent() == I->getParent();
         }))
       return false;
   }
@@ -1426,13 +1430,18 @@ static bool canSinkInstructions(
         return false;
       }
       // Because SROA can't handle speculating stores of selects, try not
-      // to sink stores of allocas when we'd have to create a PHI for the
-      // address operand.
+      // to sink loads or stores of allocas when we'd have to create a PHI for
+      // the address operand.
       // FIXME: This is a workaround for a deficiency in SROA - see
       // https://llvm.org/bugs/show_bug.cgi?id=30188
       if (OI == 1 && isa<StoreInst>(I0) &&
           any_of(Insts, [](const Instruction *I) {
             return isa<AllocaInst>(I->getOperand(1));
+          }))
+        return false;
+      if (OI == 0 && isa<LoadInst>(I0) &&
+          any_of(Insts, [](const Instruction *I) {
+            return isa<AllocaInst>(I->getOperand(0));
           }))
         return false;
       for (auto *I : Insts)

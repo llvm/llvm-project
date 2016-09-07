@@ -27,7 +27,7 @@ static const LangAS::Map DefaultAddrSpaceMap = { 0 };
 TargetInfo::TargetInfo(const llvm::Triple &T) : TargetOpts(), Triple(T) {
   // Set defaults.  Defaults are set for a 32-bit RISC platform, like PPC or
   // SPARC.  These should be overridden by concrete targets as needed.
-  BigEndian = true;
+  BigEndian = !T.isLittleEndian();
   TLSSupported = true;
   NoAsmVariants = false;
   HasFloat128 = false;

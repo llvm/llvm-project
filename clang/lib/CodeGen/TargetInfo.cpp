@@ -6970,7 +6970,6 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   appendOpenCLVersionMD(M);
 }
 
-
 unsigned AMDGPUTargetCodeGenInfo::getOpenCLKernelCallingConv() const {
   return llvm::CallingConv::AMDGPU_KERNEL;
 }
@@ -7644,7 +7643,7 @@ void SPIRTargetCodeGenInfo::emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
   appendOpenCLVersionMD(CGM);
 }
 
-static void appendOpenCLVersionMD (CodeGen::CodeGenModule &CGM) {
+static void appendOpenCLVersionMD(CodeGen::CodeGenModule &CGM) {
   llvm::LLVMContext &Ctx = CGM.getModule().getContext();
   llvm::Type *Int32Ty = llvm::Type::getInt32Ty(Ctx);
   llvm::Module &M = CGM.getModule();
