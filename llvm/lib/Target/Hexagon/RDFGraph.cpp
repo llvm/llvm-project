@@ -62,6 +62,8 @@ raw_ostream &operator<< (raw_ostream &OS, const Print<NodeId> &P) {
       }
       break;
     case NodeAttrs::Ref:
+      if (Flags & NodeAttrs::Undef)
+        OS << '/';
       if (Flags & NodeAttrs::Preserving)
         OS << '+';
       if (Flags & NodeAttrs::Clobbering)
@@ -1189,6 +1191,19 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     return false;
   };
 
+  auto isDefUndef = [this] (const MachineInstr &In, RegisterRef DR) -> bool {
+    // This instruction defines DR. Check if there is a use operand that
+    // would make DR live on entry to the instruction.
+    for (const MachineOperand &UseOp : In.operands()) {
+      if (!UseOp.isReg() || !UseOp.isUse() || UseOp.isUndef())
+        continue;
+      RegisterRef UR = { UseOp.getReg(), UseOp.getSubReg() };
+      if (RAI.alias(DR, UR))
+        return false;
+    }
+    return true;
+  };
+
   // Collect a set of registers that this instruction implicitly uses
   // or defines. Implicit operands from an instruction will be ignored
   // unless they are listed here.
@@ -1216,8 +1231,12 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
       continue;
     RegisterRef RR = { Op.getReg(), Op.getSubReg() };
     uint16_t Flags = NodeAttrs::None;
-    if (TOI.isPreserving(In, OpN))
+    if (TOI.isPreserving(In, OpN)) {
       Flags |= NodeAttrs::Preserving;
+      // If the def is preserving, check if it is also undefined.
+      if (isDefUndef(In, RR))
+        Flags |= NodeAttrs::Undef;
+    }
     if (TOI.isClobbering(In, OpN))
       Flags |= NodeAttrs::Clobbering;
     if (TOI.isFixedReg(In, OpN))
@@ -1239,8 +1258,12 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     if (DoneDefs.count(RR))
       continue;
     uint16_t Flags = NodeAttrs::None;
-    if (TOI.isPreserving(In, OpN))
+    if (TOI.isPreserving(In, OpN)) {
       Flags |= NodeAttrs::Preserving;
+      // If the def is preserving, check if it is also undefined.
+      if (isDefUndef(In, RR))
+        Flags |= NodeAttrs::Undef;
+    }
     if (TOI.isClobbering(In, OpN))
       Flags |= NodeAttrs::Clobbering;
     if (TOI.isFixedReg(In, OpN))
@@ -1252,7 +1275,7 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
 
   for (unsigned OpN = 0; OpN < NumOps; ++OpN) {
     MachineOperand &Op = In.getOperand(OpN);
-    if (!Op.isReg() || !Op.isUse() || Op.isUndef())
+    if (!Op.isReg() || !Op.isUse())
       continue;
     RegisterRef RR = { Op.getReg(), Op.getSubReg() };
     // Add implicit uses on return and call instructions, and on predicated
@@ -1263,6 +1286,8 @@ void DataFlowGraph::buildStmt(NodeAddr<BlockNode*> BA, MachineInstr &In) {
     if (Implicit && !TakeImplicit && !ImpUses.count(RR))
       continue;
     uint16_t Flags = NodeAttrs::None;
+    if (Op.isUndef())
+      Flags |= NodeAttrs::Undef;
     if (TOI.isFixedReg(In, OpN))
       Flags |= NodeAttrs::Fixed;
     NodeAddr<UseNode*> UA = newUse(SA, Op, Flags);

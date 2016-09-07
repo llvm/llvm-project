@@ -49,6 +49,7 @@ STATISTIC(NumDeadBlocks, "Number of dead blocks removed");
 STATISTIC(NumBranchOpts, "Number of branches optimized");
 STATISTIC(NumTailMerge , "Number of block tails merged");
 STATISTIC(NumHoist     , "Number of times common instructions are hoisted");
+STATISTIC(NumTailCalls,  "Number of tail calls optimized");
 
 static cl::opt<cl::boolOrDefault> FlagEnableTailMerge("enable-tail-merge",
                               cl::init(cl::BOU_UNSET), cl::Hidden);
@@ -1445,6 +1446,42 @@ ReoptimizeBlock:
           return MadeChange;
         }
       }
+    }
+  }
+
+  if (!IsEmptyBlock(MBB) && MBB->pred_size() == 1 &&
+      MF.getFunction()->optForSize()) {
+    // Changing "Jcc foo; foo: jmp bar;" into "Jcc bar;" might change the branch
+    // direction, thereby defeating careful block placement and regressing
+    // performance. Therefore, only consider this for optsize functions.
+    MachineInstr &TailCall = *MBB->getFirstNonDebugInstr();
+    if (TII->isUnconditionalTailCall(TailCall)) {
+      MachineBasicBlock *Pred = *MBB->pred_begin();
+      MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
+      SmallVector<MachineOperand, 4> PredCond;
+      bool PredAnalyzable =
+          !TII->analyzeBranch(*Pred, PredTBB, PredFBB, PredCond, true);
+
+      if (PredAnalyzable && !PredCond.empty() && PredTBB == MBB) {
+        // The predecessor has a conditional branch to this block which consists
+        // of only a tail call. Try to fold the tail call into the conditional
+        // branch.
+        if (TII->canMakeTailCallConditional(PredCond, TailCall)) {
+          // TODO: It would be nice if analyzeBranch() could provide a pointer
+          // to the branch insturction so replaceBranchWithTailCall() doesn't
+          // have to search for it.
+          TII->replaceBranchWithTailCall(*Pred, PredCond, TailCall);
+          ++NumTailCalls;
+          Pred->removeSuccessor(MBB);
+          MadeChange = true;
+          return MadeChange;
+        }
+      }
+      // If the predecessor is falling through to this block, we could reverse
+      // the branch condition and fold the tail call into that. However, after
+      // that we might have to re-arrange the CFG to fall through to the other
+      // block and there is a high risk of regressing code size rather than
+      // improving it.
     }
   }
 

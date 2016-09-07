@@ -283,7 +283,7 @@ struct D : virtual Z, B, C {
 } d;
 
 D::~D() {
-  // CHECK-LABEL: define x86_thiscallcc void @"\01??1D@diamond@@UAE@XZ"(%"struct.diamond::D"*)
+  // CHECK-LABEL: define x86_thiscallcc void @"\01??1D@diamond@@UAE@XZ"(%"struct.diamond::D"*{{.*}})
   // CHECK: %[[ARG_i8:.*]] = bitcast %"struct.diamond::D"* %{{.*}} to i8*
   // CHECK: %[[THIS_i8:.*]] = getelementptr inbounds i8, i8* %[[ARG_i8]], i32 -24
   // CHECK: %[[THIS:.*]] = bitcast i8* %[[THIS_i8]] to %"struct.diamond::D"*

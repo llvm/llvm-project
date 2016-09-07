@@ -28077,7 +28077,8 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
   // pmulld is supported since SSE41. It is better to use pmulld
   // instead of pmullw+pmulhw.
-  if (Subtarget.hasSSE41())
+  // pmullw/pmulhw are not supported by SSE.
+  if (Subtarget.hasSSE41() || !Subtarget.hasSSE2())
     return SDValue();
 
   ShrinkMode Mode;

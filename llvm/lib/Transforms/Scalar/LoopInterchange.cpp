@@ -573,7 +573,7 @@ struct LoopInterchange : public FunctionPass {
                    unsigned OuterLoopId, BasicBlock *LoopNestExit,
                    std::vector<std::vector<char>> &DependencyMatrix) {
 
-    DEBUG(dbgs() << "Processing Innder Loop Id = " << InnerLoopId
+    DEBUG(dbgs() << "Processing Inner Loop Id = " << InnerLoopId
                  << " and OuterLoopId = " << OuterLoopId << "\n");
     Loop *InnerLoop = LoopList[InnerLoopId];
     Loop *OuterLoop = LoopList[OuterLoopId];

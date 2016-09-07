@@ -1,5 +1,5 @@
 ===================================
-Compiling CUDA C/C++ with LLVM
+Compiling CUDA with clang
 ===================================
 
 .. contents::
@@ -8,57 +8,39 @@ Compiling CUDA C/C++ with LLVM
 Introduction
 ============
 
-This document contains the user guides and the internals of compiling CUDA
-C/C++ with LLVM. It is aimed at both users who want to compile CUDA with LLVM
-and developers who want to improve LLVM for GPUs. This document assumes a basic
-familiarity with CUDA. Information about CUDA programming can be found in the
+This document describes how to compile CUDA code with clang, and gives some
+details about LLVM and clang's CUDA implementations.
+
+This document assumes a basic familiarity with CUDA. Information about CUDA
+programming can be found in the
 `CUDA programming guide
 <http://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html>`_.
 
-How to Build LLVM with CUDA Support
-===================================
+Compiling CUDA Code
+===================
 
-CUDA support is still in development and works the best in the trunk version
-of LLVM. Below is a quick summary of downloading and building the trunk
-version. Consult the `Getting Started
-<http://llvm.org/docs/GettingStarted.html>`_ page for more details on setting
-up LLVM.
+Prerequisites
+-------------
 
-#. Checkout LLVM
+CUDA is supported in llvm 3.9, but it's still in active development, so we
+recommend you `compile clang/LLVM from HEAD
+<http://llvm.org/docs/GettingStarted.html>`_.
 
-   .. code-block:: console
+Before you build CUDA code, you'll need to have installed the appropriate
+driver for your nvidia GPU and the CUDA SDK.  See `NVIDIA's CUDA installation
+guide <https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html>`_
+for details.  Note that clang `does not support
+<https://llvm.org/bugs/show_bug.cgi?id=26966>`_ the CUDA toolkit as installed
+by many Linux package managers; you probably need to install nvidia's package.
 
-     $ cd where-you-want-llvm-to-live
-     $ svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm
+You will need CUDA 7.0 or 7.5 to compile with clang.  CUDA 8 support is in the
+works.
 
-#. Checkout Clang
+Building AXPY
+-------------
 
-   .. code-block:: console
-
-     $ cd where-you-want-llvm-to-live
-     $ cd llvm/tools
-     $ svn co http://llvm.org/svn/llvm-project/cfe/trunk clang
-
-#. Configure and build LLVM and Clang
-
-   .. code-block:: console
-
-     $ cd where-you-want-llvm-to-live
-     $ mkdir build
-     $ cd build
-     $ cmake [options] ..
-     $ make
-
-How to Compile CUDA C/C++ with LLVM
-===================================
-
-We assume you have installed the CUDA driver and runtime. Consult the `NVIDIA
-CUDA installation guide
-<https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html>`_ if
-you have not.
-
-Suppose you want to compile and run the following CUDA program (``axpy.cu``)
-which multiplies a ``float`` array by a ``float`` scalar (AXPY).
+Suppose you want to compile and run the following CUDA program (``axpy.cu``),
+which multiplies a ``float`` array by a ``float`` scalar.
 
 .. code-block:: c++
 
@@ -118,6 +100,13 @@ typically ``/usr/local/cuda``. ``<GPU arch>`` is `the compute capability of
 your GPU <https://developer.nvidia.com/cuda-gpus>`_. For example, if you want
 to run your program on a GPU with compute capability of 3.5, you should specify
 ``--cuda-gpu-arch=sm_35``.
+
+Note: You cannot pass ``compute_XX`` as an argument to ``--cuda-gpu-arch``;
+only ``sm_XX`` is currently supported.  However, clang always includes PTX in
+its binaries, so e.g. a binary compiled with ``--cuda-gpu-arch=sm_30`` would be
+forwards-compatible with e.g. ``sm_35`` GPUs.
+
+You can pass ``--cuda-gpu-arch`` multiple times to compile for multiple archs.
 
 Detecting clang vs NVCC
 =======================

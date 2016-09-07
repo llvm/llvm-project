@@ -111,7 +111,7 @@ D::~D() { }
 // CHECKIOS5-LABEL: define %class.D* @_ZN1DD1Ev(%class.D* %this)
 
 // CHECKMS-LABEL: define x86_thiscallcc %class.D* @"\01??0D@@QAE@XZ"(%class.D* returned %this, i32 %is_most_derived)
-// CHECKMS-LABEL: define x86_thiscallcc void @"\01??1D@@UAE@XZ"(%class.D*)
+// CHECKMS-LABEL: define x86_thiscallcc void @"\01??1D@@UAE@XZ"(%class.D* %this)
 
 class E {
 public:

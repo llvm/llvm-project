@@ -470,10 +470,11 @@ semantics:
 * A conversion from type ``T`` to a value of type ``U`` is permitted if ``T``
   and ``U`` are compatible types.  This conversion is given "conversion" rank.
 
-* A conversion from a pointer of type ``T*`` to a pointer of type ``U*``, where
-  ``T`` and ``U`` are incompatible, is allowed, but is ranked below all other
-  types of conversions. Please note: ``U`` lacking qualifiers that are present
-  on ``T`` is sufficient for ``T`` and ``U`` to be incompatible.
+* If no viable candidates are otherwise available, we allow a conversion from a
+  pointer of type ``T*`` to a pointer of type ``U*``, where ``T`` and ``U`` are
+  incompatible. This conversion is ranked below all other types of conversions.
+  Please note: ``U`` lacking qualifiers that are present on ``T`` is sufficient
+  for ``T`` and ``U`` to be incompatible.
 
 The declaration of ``overloadable`` functions is restricted to function
 declarations and definitions.  Most importantly, if any function with a given

@@ -109,11 +109,9 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
       continue;
     // Stop at the covering/overwriting def of the initial register reference.
     RegisterRef RR = TA.Addr->getRegRef();
-    if (RAI.covers(RR, RefRR)) {
-      uint16_t Flags = TA.Addr->getFlags();
-      if (!(Flags & NodeAttrs::Preserving))
+    if (RAI.covers(RR, RefRR))
+      if (!DFG.IsPreservingDef(TA))
         continue;
-    }
     // Get the next level of reaching defs. This will include multiple
     // reaching defs for shadows.
     for (auto S : DFG.getRelatedRefs(TA.Addr->getOwner(DFG), TA))
@@ -221,7 +219,7 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
       // defs to actually define a register.
       uint16_t Flags = DA.Addr->getFlags();
       if (!FullChain || !(Flags & NodeAttrs::PhiRef))
-        if (!(Flags & NodeAttrs::Preserving))
+        if (!(Flags & NodeAttrs::Preserving)) // Don't care about Undef here.
           RRs.insert(DA.Addr->getRegRef());
     }
   }
@@ -291,9 +289,11 @@ NodeSet Liveness::getAllReachedUses(RegisterRef RefRR,
   NodeId U = DefA.Addr->getReachedUse();
   while (U != 0) {
     auto UA = DFG.addr<UseNode*>(U);
-    auto UR = UA.Addr->getRegRef();
-    if (RAI.alias(RefRR, UR) && !RAI.covers(DefRRs, UR))
-      Uses.insert(U);
+    if (!(UA.Addr->getFlags() & NodeAttrs::Undef)) {
+      auto UR = UA.Addr->getRegRef();
+      if (RAI.alias(RefRR, UR) && !RAI.covers(DefRRs, UR))
+        Uses.insert(U);
+    }
     U = UA.Addr->getSibling();
   }
 
@@ -307,7 +307,7 @@ NodeSet Liveness::getAllReachedUses(RegisterRef RefRR,
     if (RAI.covers(DefRRs, DR) || !RAI.alias(RefRR, DR))
       continue;
     NodeSet T;
-    if (DA.Addr->getFlags() & NodeAttrs::Preserving) {
+    if (DFG.IsPreservingDef(DA)) {
       // If it is a preserving def, do not update the set of intervening defs.
       T = getAllReachedUses(RefRR, DA, DefRRs);
     } else {
@@ -358,7 +358,8 @@ void Liveness::computePhiInfo() {
       NodeId UN = DA.Addr->getReachedUse();
       while (UN != 0) {
         NodeAddr<UseNode*> A = DFG.addr<UseNode*>(UN);
-        if (!(A.Addr->getFlags() & NodeAttrs::PhiRef))
+        uint16_t F = A.Addr->getFlags();
+        if ((F & (NodeAttrs::Undef | NodeAttrs::PhiRef)) == 0)
           RealUses[getRestrictedRegRef(A)].insert(A.Id);
         UN = A.Addr->getSibling();
       }
@@ -847,14 +848,16 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
       if (B != BA.Addr->getCode())
         Defs.insert(R);
       else {
-        bool IsPreserving = DA.Addr->getFlags() & NodeAttrs::Preserving;
+        bool IsPreserving = DFG.IsPreservingDef(DA);
         if (IA.Addr->getKind() != NodeAttrs::Phi && !IsPreserving) {
           bool Covering = RAI.covers(DDR, I.first);
           NodeId U = DA.Addr->getReachedUse();
           while (U && Covering) {
             auto DUA = DFG.addr<UseNode*>(U);
-            RegisterRef Q = DUA.Addr->getRegRef();
-            Covering = RAI.covers(DA.Addr->getRegRef(), Q);
+            if (!(DUA.Addr->getFlags() & NodeAttrs::Undef)) {
+              RegisterRef Q = DUA.Addr->getRegRef();
+              Covering = RAI.covers(DA.Addr->getRegRef(), Q);
+            }
             U = DUA.Addr->getSibling();
           }
           if (!Covering)
@@ -898,6 +901,8 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
       continue;
     for (NodeAddr<UseNode*> UA : IA.Addr->members_if(DFG.IsUse, DFG)) {
       RegisterRef RR = UA.Addr->getRegRef();
+      if (UA.Addr->getFlags() & NodeAttrs::Undef)
+        continue;
       for (auto D : getAllReachingDefs(UA))
         if (getBlockWithRef(D.Id) != B)
           LiveIn[RR].insert(D.Id);
