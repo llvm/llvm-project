@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 import subprocess
 import unittest2
 
+@unittest2.skip("skipping due to frequent timeouts: rdar://28183131")
 class SBBreakpointCallbackCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
