@@ -2881,25 +2881,34 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1,
         LL.getValueType().isInteger()) {
       // fold (and (seteq X, 0), (seteq Y, 0)) -> (seteq (or X, Y), 0)
       if (isNullConstant(LR) && Op1 == ISD::SETEQ) {
-        SDValue ORNode = DAG.getNode(ISD::OR, SDLoc(N0),
-                                     LR.getValueType(), LL, RL);
-        AddToWorklist(ORNode.getNode());
-        return DAG.getSetCC(SDLoc(LocReference), VT, ORNode, LR, Op1);
-      }
-      if (isAllOnesConstant(LR)) {
-        // fold (and (seteq X, -1), (seteq Y, -1)) -> (seteq (and X, Y), -1)
-        if (Op1 == ISD::SETEQ) {
-          SDValue ANDNode = DAG.getNode(ISD::AND, SDLoc(N0),
-                                        LR.getValueType(), LL, RL);
-          AddToWorklist(ANDNode.getNode());
-          return DAG.getSetCC(SDLoc(LocReference), VT, ANDNode, LR, Op1);
-        }
-        // fold (and (setgt X, -1), (setgt Y, -1)) -> (setgt (or X, Y), -1)
-        if (Op1 == ISD::SETGT) {
+        EVT CCVT = getSetCCResultType(LR.getValueType());
+        if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
           SDValue ORNode = DAG.getNode(ISD::OR, SDLoc(N0),
                                        LR.getValueType(), LL, RL);
           AddToWorklist(ORNode.getNode());
           return DAG.getSetCC(SDLoc(LocReference), VT, ORNode, LR, Op1);
+        }
+      }
+      if (isAllOnesConstant(LR)) {
+        // fold (and (seteq X, -1), (seteq Y, -1)) -> (seteq (and X, Y), -1)
+        if (Op1 == ISD::SETEQ) {
+          EVT CCVT = getSetCCResultType(LR.getValueType());
+          if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
+            SDValue ANDNode = DAG.getNode(ISD::AND, SDLoc(N0),
+                                          LR.getValueType(), LL, RL);
+            AddToWorklist(ANDNode.getNode());
+            return DAG.getSetCC(SDLoc(LocReference), VT, ANDNode, LR, Op1);
+          }
+        }
+        // fold (and (setgt X, -1), (setgt Y, -1)) -> (setgt (or X, Y), -1)
+        if (Op1 == ISD::SETGT) {
+          EVT CCVT = getSetCCResultType(LR.getValueType());
+          if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
+            SDValue ORNode = DAG.getNode(ISD::OR, SDLoc(N0),
+                                         LR.getValueType(), LL, RL);
+            AddToWorklist(ORNode.getNode());
+            return DAG.getSetCC(SDLoc(LocReference), VT, ORNode, LR, Op1);
+          }
         }
       }
     }
@@ -2908,14 +2917,17 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1,
         Op0 == Op1 && LL.getValueType().isInteger() &&
       Op0 == ISD::SETNE && ((isNullConstant(LR) && isAllOnesConstant(RR)) ||
                             (isAllOnesConstant(LR) && isNullConstant(RR)))) {
-      SDLoc DL(N0);
-      SDValue ADDNode = DAG.getNode(ISD::ADD, DL, LL.getValueType(),
-                                    LL, DAG.getConstant(1, DL,
-                                                        LL.getValueType()));
-      AddToWorklist(ADDNode.getNode());
-      return DAG.getSetCC(SDLoc(LocReference), VT, ADDNode,
-                          DAG.getConstant(2, DL, LL.getValueType()),
-                          ISD::SETUGE);
+      EVT CCVT = getSetCCResultType(LL.getValueType());
+      if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
+        SDLoc DL(N0);
+        SDValue ADDNode = DAG.getNode(ISD::ADD, DL, LL.getValueType(),
+                                      LL, DAG.getConstant(1, DL,
+                                                          LL.getValueType()));
+        AddToWorklist(ADDNode.getNode());
+        return DAG.getSetCC(SDLoc(LocReference), VT, ADDNode,
+                            DAG.getConstant(2, DL, LL.getValueType()),
+                            ISD::SETUGE);
+      }
     }
     // canonicalize equivalent to ll == rl
     if (LL == RR && LR == RL) {
@@ -3636,18 +3648,24 @@ SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *LocReference) {
       // fold (or (setne X, 0), (setne Y, 0)) -> (setne (or X, Y), 0)
       // fold (or (setlt X, 0), (setlt Y, 0)) -> (setne (or X, Y), 0)
       if (isNullConstant(LR) && (Op1 == ISD::SETNE || Op1 == ISD::SETLT)) {
-        SDValue ORNode = DAG.getNode(ISD::OR, SDLoc(LR),
-                                     LR.getValueType(), LL, RL);
-        AddToWorklist(ORNode.getNode());
-        return DAG.getSetCC(SDLoc(LocReference), VT, ORNode, LR, Op1);
+        EVT CCVT = getSetCCResultType(LR.getValueType());
+        if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
+          SDValue ORNode = DAG.getNode(ISD::OR, SDLoc(LR),
+                                       LR.getValueType(), LL, RL);
+          AddToWorklist(ORNode.getNode());
+          return DAG.getSetCC(SDLoc(LocReference), VT, ORNode, LR, Op1);
+        }
       }
       // fold (or (setne X, -1), (setne Y, -1)) -> (setne (and X, Y), -1)
       // fold (or (setgt X, -1), (setgt Y  -1)) -> (setgt (and X, Y), -1)
       if (isAllOnesConstant(LR) && (Op1 == ISD::SETNE || Op1 == ISD::SETGT)) {
-        SDValue ANDNode = DAG.getNode(ISD::AND, SDLoc(LR),
-                                      LR.getValueType(), LL, RL);
-        AddToWorklist(ANDNode.getNode());
-        return DAG.getSetCC(SDLoc(LocReference), VT, ANDNode, LR, Op1);
+        EVT CCVT = getSetCCResultType(LR.getValueType());
+        if (VT == CCVT || (!LegalOperations && VT == MVT::i1)) {
+          SDValue ANDNode = DAG.getNode(ISD::AND, SDLoc(LR),
+                                        LR.getValueType(), LL, RL);
+          AddToWorklist(ANDNode.getNode());
+          return DAG.getSetCC(SDLoc(LocReference), VT, ANDNode, LR, Op1);
+        }
       }
     }
     // canonicalize equivalent to ll == rl

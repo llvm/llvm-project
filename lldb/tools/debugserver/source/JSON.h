@@ -25,358 +25,281 @@
 #include <string>
 #include <vector>
 
-class JSONValue
-{
+class JSONValue {
 public:
-    virtual void
-    Write (std::ostream& s) = 0;
-    
-    typedef std::shared_ptr<JSONValue> SP;
-    
-    enum class Kind
-    {
-        String,
-        Number,
-        True,
-        False,
-        Null,
-        Object,
-        Array
-    };
-    
-    JSONValue (Kind k) :
-    m_kind(k)
-    {}
-    
-    Kind
-    GetKind() const
-    {
-        return m_kind;
-    }
-    
-    virtual
-    ~JSONValue () = default;
-    
-private:
-    const Kind m_kind;
-};
+  virtual void Write(std::ostream &s) = 0;
 
-class JSONString : public JSONValue
-{
-public:
-    JSONString ();
-    JSONString (const char* s);
-    JSONString (const std::string& s);
+  typedef std::shared_ptr<JSONValue> SP;
 
-    JSONString (const JSONString& s) = delete;
-    JSONString&
-    operator = (const JSONString& s) = delete;
-    
-    void
-    Write(std::ostream& s) override;
-    
-    typedef std::shared_ptr<JSONString> SP;
-    
-    std::string
-    GetData () { return m_data; }
-    
-    static bool classof(const JSONValue *V)
-    {
-        return V->GetKind() == JSONValue::Kind::String;
-    }
-    
-    ~JSONString() override = default;
-    
-private:
-    
-    static std::string
-    json_string_quote_metachars (const std::string&);
-    
-    std::string m_data;
-};
+  enum class Kind { String, Number, True, False, Null, Object, Array };
 
-class JSONNumber : public JSONValue
-{
-public:
-    typedef std::shared_ptr<JSONNumber> SP;
+  JSONValue(Kind k) : m_kind(k) {}
 
-    // We cretae a constructor for all integer and floating point type with using templates and
-    // SFINAE to avoid having ambiguous overloads because of the implicit type promotion. If we
-    // would have constructors only with int64_t, uint64_t and double types then constructing a
-    // JSONNumber from an int32_t (or any other similar type) would fail to compile.
+  Kind GetKind() const { return m_kind; }
 
-    template <typename T,
-              typename std::enable_if<std::is_integral<T>::value &&
-                                      std::is_unsigned<T>::value>::type* = nullptr>
-    explicit JSONNumber (T u) :
-        JSONValue(JSONValue::Kind::Number),
-        m_data_type(DataType::Unsigned)
-    {
-        m_data.m_unsigned = u;
-    }
-
-    template <typename T,
-              typename std::enable_if<std::is_integral<T>::value &&
-                                      std::is_signed<T>::value>::type* = nullptr>
-    explicit JSONNumber (T s) :
-        JSONValue(JSONValue::Kind::Number),
-        m_data_type(DataType::Signed)
-    {
-        m_data.m_signed = s;
-    }
-
-    template <typename T,
-              typename std::enable_if<std::is_floating_point<T>::value>::type* = nullptr>
-    explicit JSONNumber (T d) :
-        JSONValue(JSONValue::Kind::Number),
-        m_data_type(DataType::Double)
-    {
-        m_data.m_double = d;
-    }
-
-    ~JSONNumber() override = default;
-
-    JSONNumber (const JSONNumber& s) = delete;
-    JSONNumber&
-    operator = (const JSONNumber& s) = delete;
-
-    void
-    Write(std::ostream& s) override;
-
-    uint64_t
-    GetAsUnsigned() const;
-
-    int64_t
-    GetAsSigned() const;
-
-    double
-    GetAsDouble() const;
-
-    static bool classof(const JSONValue *V)
-    {
-        return V->GetKind() == JSONValue::Kind::Number;
-    }
+  virtual ~JSONValue() = default;
 
 private:
-    enum class DataType : uint8_t
-    {
-        Unsigned,
-        Signed,
-        Double
-    } m_data_type;
-
-    union
-    {
-        uint64_t m_unsigned;
-        int64_t  m_signed;
-        double   m_double;
-    } m_data;
+  const Kind m_kind;
 };
 
-class JSONTrue : public JSONValue
-{
+class JSONString : public JSONValue {
 public:
-    JSONTrue ();
+  JSONString();
+  JSONString(const char *s);
+  JSONString(const std::string &s);
 
-    JSONTrue (const JSONTrue& s) = delete;
-    JSONTrue&
-    operator = (const JSONTrue& s) = delete;
-    
-    void
-    Write(std::ostream& s) override;
-    
-    typedef std::shared_ptr<JSONTrue> SP;
-    
-    static bool classof(const JSONValue *V)
-    {
-        return V->GetKind() == JSONValue::Kind::True;
-    }
-    
-    ~JSONTrue() override = default;
-};
+  JSONString(const JSONString &s) = delete;
+  JSONString &operator=(const JSONString &s) = delete;
 
-class JSONFalse : public JSONValue
-{
-public:
-    JSONFalse ();
+  void Write(std::ostream &s) override;
 
-    JSONFalse (const JSONFalse& s) = delete;
-    JSONFalse&
-    operator = (const JSONFalse& s) = delete;
-    
-    void
-    Write(std::ostream& s) override;
-    
-    typedef std::shared_ptr<JSONFalse> SP;
-    
-    static bool classof(const JSONValue *V)
-    {
-        return V->GetKind() == JSONValue::Kind::False;
-    }
-    
-    ~JSONFalse() override = default;
-};
+  typedef std::shared_ptr<JSONString> SP;
 
-class JSONNull : public JSONValue
-{
-public:
-    JSONNull ();
+  std::string GetData() { return m_data; }
 
-    JSONNull (const JSONNull& s) = delete;
-    JSONNull&
-    operator = (const JSONNull& s) = delete;
-    
-    void
-    Write(std::ostream& s) override;
-    
-    typedef std::shared_ptr<JSONNull> SP;
-    
-    static bool classof(const JSONValue *V)
-    {
-        return V->GetKind() == JSONValue::Kind::Null;
-    }
-    
-    ~JSONNull() override = default;
-};
+  static bool classof(const JSONValue *V) {
+    return V->GetKind() == JSONValue::Kind::String;
+  }
 
-class JSONObject : public JSONValue
-{
-public:
-    JSONObject ();
-    
-    JSONObject (const JSONObject& s) = delete;
-    JSONObject&
-    operator = (const JSONObject& s) = delete;
+  ~JSONString() override = default;
 
-    void
-    Write(std::ostream& s) override;
-    
-    typedef std::shared_ptr<JSONObject> SP;
-    
-    static bool classof(const JSONValue *V)
-    {
-        return V->GetKind() == JSONValue::Kind::Object;
-    }
-    
-    bool
-    SetObject (const std::string& key,
-               JSONValue::SP value);
-    
-    JSONValue::SP
-    GetObject (const std::string& key) const;
-
-    // -------------------------------------------------------------------------
-    /// Return keyed value as bool
-    ///
-    /// @param[in] key
-    ///     The value of the key to lookup
-    ///
-    /// @param[out] value
-    ///     The value of the key as a bool.  Undefined if the key doesn't
-    ///     exist or if the key is not either true or false.
-    ///
-    /// @return
-    ///     true if the key existed as was a bool value; false otherwise.
-    ///     Note the return value is *not* the value of the bool, use
-    ///     \b value for that.
-    // -------------------------------------------------------------------------
-    bool
-    GetObjectAsBool (const std::string& key, bool& value) const;
-
-    bool
-    GetObjectAsString (const std::string& key, std::string& value) const;
-
-    ~JSONObject() override = default;
-    
 private:
-    typedef std::map<std::string, JSONValue::SP> Map;
-    typedef Map::iterator Iterator;
-    Map m_elements;
+  static std::string json_string_quote_metachars(const std::string &);
+
+  std::string m_data;
 };
 
-class JSONArray : public JSONValue
-{
+class JSONNumber : public JSONValue {
 public:
-    JSONArray ();
-    
-    JSONArray (const JSONArray& s) = delete;
-    JSONArray&
-    operator = (const JSONArray& s) = delete;
-    
-    void
-    Write(std::ostream& s) override;
-    
-    typedef std::shared_ptr<JSONArray> SP;
-    
-    static bool classof(const JSONValue *V)
-    {
-        return V->GetKind() == JSONValue::Kind::Array;
-    }
-    
+  typedef std::shared_ptr<JSONNumber> SP;
+
+  // We cretae a constructor for all integer and floating point type with using
+  // templates and
+  // SFINAE to avoid having ambiguous overloads because of the implicit type
+  // promotion. If we
+  // would have constructors only with int64_t, uint64_t and double types then
+  // constructing a
+  // JSONNumber from an int32_t (or any other similar type) would fail to
+  // compile.
+
+  template <typename T, typename std::enable_if<
+                            std::is_integral<T>::value &&
+                            std::is_unsigned<T>::value>::type * = nullptr>
+  explicit JSONNumber(T u)
+      : JSONValue(JSONValue::Kind::Number), m_data_type(DataType::Unsigned) {
+    m_data.m_unsigned = u;
+  }
+
+  template <typename T,
+            typename std::enable_if<std::is_integral<T>::value &&
+                                    std::is_signed<T>::value>::type * = nullptr>
+  explicit JSONNumber(T s)
+      : JSONValue(JSONValue::Kind::Number), m_data_type(DataType::Signed) {
+    m_data.m_signed = s;
+  }
+
+  template <typename T, typename std::enable_if<
+                            std::is_floating_point<T>::value>::type * = nullptr>
+  explicit JSONNumber(T d)
+      : JSONValue(JSONValue::Kind::Number), m_data_type(DataType::Double) {
+    m_data.m_double = d;
+  }
+
+  ~JSONNumber() override = default;
+
+  JSONNumber(const JSONNumber &s) = delete;
+  JSONNumber &operator=(const JSONNumber &s) = delete;
+
+  void Write(std::ostream &s) override;
+
+  uint64_t GetAsUnsigned() const;
+
+  int64_t GetAsSigned() const;
+
+  double GetAsDouble() const;
+
+  static bool classof(const JSONValue *V) {
+    return V->GetKind() == JSONValue::Kind::Number;
+  }
+
 private:
-    typedef std::vector<JSONValue::SP> Vector;
-    typedef Vector::iterator Iterator;
-    typedef Vector::size_type Index;
-    typedef Vector::size_type Size;
-    
-public:
-    bool
-    SetObject (Index i,
-               JSONValue::SP value);
-    
-    bool
-    AppendObject (JSONValue::SP value);
-    
-    JSONValue::SP
-    GetObject (Index i);
-    
-    Size
-    GetNumElements ();
+  enum class DataType : uint8_t { Unsigned, Signed, Double } m_data_type;
 
-    ~JSONArray() override = default;
-    
-    Vector m_elements;
+  union {
+    uint64_t m_unsigned;
+    int64_t m_signed;
+    double m_double;
+  } m_data;
 };
 
-class JSONParser : public StdStringExtractor
-{
+class JSONTrue : public JSONValue {
 public:
-    enum Token
-    {
-        Invalid,
-        Error,
-        ObjectStart,
-        ObjectEnd,
-        ArrayStart,
-        ArrayEnd,
-        Comma,
-        Colon,
-        String,
-        Integer,
-        Float,
-        True,
-        False,
-        Null,
-        EndOfFile
-    };
+  JSONTrue();
 
-    JSONParser (const char *cstr);
+  JSONTrue(const JSONTrue &s) = delete;
+  JSONTrue &operator=(const JSONTrue &s) = delete;
 
-    int
-    GetEscapedChar (bool &was_escaped);
+  void Write(std::ostream &s) override;
 
-    Token
-    GetToken (std::string &value);
+  typedef std::shared_ptr<JSONTrue> SP;
 
-    JSONValue::SP
-    ParseJSONValue ();
+  static bool classof(const JSONValue *V) {
+    return V->GetKind() == JSONValue::Kind::True;
+  }
+
+  ~JSONTrue() override = default;
+};
+
+class JSONFalse : public JSONValue {
+public:
+  JSONFalse();
+
+  JSONFalse(const JSONFalse &s) = delete;
+  JSONFalse &operator=(const JSONFalse &s) = delete;
+
+  void Write(std::ostream &s) override;
+
+  typedef std::shared_ptr<JSONFalse> SP;
+
+  static bool classof(const JSONValue *V) {
+    return V->GetKind() == JSONValue::Kind::False;
+  }
+
+  ~JSONFalse() override = default;
+};
+
+class JSONNull : public JSONValue {
+public:
+  JSONNull();
+
+  JSONNull(const JSONNull &s) = delete;
+  JSONNull &operator=(const JSONNull &s) = delete;
+
+  void Write(std::ostream &s) override;
+
+  typedef std::shared_ptr<JSONNull> SP;
+
+  static bool classof(const JSONValue *V) {
+    return V->GetKind() == JSONValue::Kind::Null;
+  }
+
+  ~JSONNull() override = default;
+};
+
+class JSONObject : public JSONValue {
+public:
+  JSONObject();
+
+  JSONObject(const JSONObject &s) = delete;
+  JSONObject &operator=(const JSONObject &s) = delete;
+
+  void Write(std::ostream &s) override;
+
+  typedef std::shared_ptr<JSONObject> SP;
+
+  static bool classof(const JSONValue *V) {
+    return V->GetKind() == JSONValue::Kind::Object;
+  }
+
+  bool SetObject(const std::string &key, JSONValue::SP value);
+
+  JSONValue::SP GetObject(const std::string &key) const;
+
+  // -------------------------------------------------------------------------
+  /// Return keyed value as bool
+  ///
+  /// @param[in] key
+  ///     The value of the key to lookup
+  ///
+  /// @param[out] value
+  ///     The value of the key as a bool.  Undefined if the key doesn't
+  ///     exist or if the key is not either true or false.
+  ///
+  /// @return
+  ///     true if the key existed as was a bool value; false otherwise.
+  ///     Note the return value is *not* the value of the bool, use
+  ///     \b value for that.
+  // -------------------------------------------------------------------------
+  bool GetObjectAsBool(const std::string &key, bool &value) const;
+
+  bool GetObjectAsString(const std::string &key, std::string &value) const;
+
+  ~JSONObject() override = default;
+
+private:
+  typedef std::map<std::string, JSONValue::SP> Map;
+  typedef Map::iterator Iterator;
+  Map m_elements;
+};
+
+class JSONArray : public JSONValue {
+public:
+  JSONArray();
+
+  JSONArray(const JSONArray &s) = delete;
+  JSONArray &operator=(const JSONArray &s) = delete;
+
+  void Write(std::ostream &s) override;
+
+  typedef std::shared_ptr<JSONArray> SP;
+
+  static bool classof(const JSONValue *V) {
+    return V->GetKind() == JSONValue::Kind::Array;
+  }
+
+private:
+  typedef std::vector<JSONValue::SP> Vector;
+  typedef Vector::iterator Iterator;
+  typedef Vector::size_type Index;
+  typedef Vector::size_type Size;
+
+public:
+  bool SetObject(Index i, JSONValue::SP value);
+
+  bool AppendObject(JSONValue::SP value);
+
+  JSONValue::SP GetObject(Index i);
+
+  Size GetNumElements();
+
+  ~JSONArray() override = default;
+
+  Vector m_elements;
+};
+
+class JSONParser : public StdStringExtractor {
+public:
+  enum Token {
+    Invalid,
+    Error,
+    ObjectStart,
+    ObjectEnd,
+    ArrayStart,
+    ArrayEnd,
+    Comma,
+    Colon,
+    String,
+    Integer,
+    Float,
+    True,
+    False,
+    Null,
+    EndOfFile
+  };
+
+  JSONParser(const char *cstr);
+
+  int GetEscapedChar(bool &was_escaped);
+
+  Token GetToken(std::string &value);
+
+  JSONValue::SP ParseJSONValue();
 
 protected:
-    JSONValue::SP
-    ParseJSONObject ();
+  JSONValue::SP ParseJSONObject();
 
-    JSONValue::SP
-    ParseJSONArray ();
+  JSONValue::SP ParseJSONArray();
 };
 
 #endif // utility_JSON_h_

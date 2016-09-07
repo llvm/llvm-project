@@ -9,10 +9,6 @@
 
 #include "ActivityStore.h"
 
-ActivityStore::ActivityStore()
-{
-}
+ActivityStore::ActivityStore() {}
 
-ActivityStore::~ActivityStore()
-{
-}
+ActivityStore::~ActivityStore() {}

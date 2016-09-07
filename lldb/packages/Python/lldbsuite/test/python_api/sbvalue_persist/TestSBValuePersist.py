@@ -3,12 +3,14 @@
 from __future__ import print_function
 
 
-
-import os, sys, time
+import os
+import sys
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class SBValuePersistTestCase(TestBase):
 
@@ -22,15 +24,15 @@ class SBValuePersistTestCase(TestBase):
         self.setTearDownCleanup()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_source_regexp (self, "break here")
+        lldbutil.run_break_set_by_source_regexp(self, "break here")
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
-        
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
+
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
         def cleanup():
@@ -49,7 +51,7 @@ class SBValuePersistTestCase(TestBase):
         self.assertTrue(foo.IsValid(), "foo is not valid")
         self.assertTrue(bar.IsValid(), "bar is not valid")
         self.assertTrue(baz.IsValid(), "baz is not valid")
-        
+
         fooPersist = foo.Persist()
         barPersist = bar.Persist()
         bazPersist = baz.Persist()
@@ -58,18 +60,26 @@ class SBValuePersistTestCase(TestBase):
         self.assertTrue(barPersist.IsValid(), "barPersist is not valid")
         self.assertTrue(bazPersist.IsValid(), "bazPersist is not valid")
 
-        self.assertTrue(fooPersist.GetValueAsUnsigned(0) == 10, "fooPersist != 10")
-        self.assertTrue(barPersist.GetPointeeData().sint32[0] == 4, "barPersist != 4")
+        self.assertTrue(
+            fooPersist.GetValueAsUnsigned(0) == 10,
+            "fooPersist != 10")
+        self.assertTrue(
+            barPersist.GetPointeeData().sint32[0] == 4,
+            "barPersist != 4")
         self.assertTrue(bazPersist.GetSummary() == '"85"', "bazPersist != 85")
-        
+
         self.runCmd("continue")
 
         self.assertTrue(fooPersist.IsValid(), "fooPersist is not valid")
         self.assertTrue(barPersist.IsValid(), "barPersist is not valid")
         self.assertTrue(bazPersist.IsValid(), "bazPersist is not valid")
 
-        self.assertTrue(fooPersist.GetValueAsUnsigned(0) == 10, "fooPersist != 10")
-        self.assertTrue(barPersist.GetPointeeData().sint32[0] == 4, "barPersist != 4")
+        self.assertTrue(
+            fooPersist.GetValueAsUnsigned(0) == 10,
+            "fooPersist != 10")
+        self.assertTrue(
+            barPersist.GetPointeeData().sint32[0] == 4,
+            "barPersist != 4")
         self.assertTrue(bazPersist.GetSummary() == '"85"', "bazPersist != 85")
-        
-        self.expect("expr *(%s)" % (barPersist.GetName()), substrs = ['= 4'])
+
+        self.expect("expr *(%s)" % (barPersist.GetName()), substrs=['= 4'])

@@ -16,19 +16,18 @@
 // Project includes
 #include "lldb/lldb-forward.h"
 
-namespace lldb_private
-{
-namespace formatters
-{
+namespace lldb_private {
+namespace formatters {
 
-bool
-JavaStringSummaryProvider(ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options);
+bool JavaStringSummaryProvider(ValueObject &valobj, Stream &stream,
+                               const TypeSummaryOptions &options);
 
-bool
-JavaArraySummaryProvider(ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options);
+bool JavaArraySummaryProvider(ValueObject &valobj, Stream &stream,
+                              const TypeSummaryOptions &options);
 
-SyntheticChildrenFrontEnd*
-JavaArraySyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp);
+SyntheticChildrenFrontEnd *
+JavaArraySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                  lldb::ValueObjectSP valobj_sp);
 
 } // namespace formatters
 } // namespace lldb_private

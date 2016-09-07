@@ -545,7 +545,7 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "amdgpu-max-waves-per-eu"="2" }
+attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,2" }
 
 ; HSAOPT: !0 = !{}
 ; HSAOPT: !1 = !{i32 0, i32 2048}

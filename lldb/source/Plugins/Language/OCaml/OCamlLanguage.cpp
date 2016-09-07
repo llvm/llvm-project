@@ -1,4 +1,5 @@
-//===-- OCamlLanguage.cpp ----------------------------------------*- C++ -*-===//
+//===-- OCamlLanguage.cpp ----------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -27,52 +28,36 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void
-OCamlLanguage::Initialize()
-{
-    PluginManager::RegisterPlugin(GetPluginNameStatic(), "OCaml Language", CreateInstance);
+void OCamlLanguage::Initialize() {
+  PluginManager::RegisterPlugin(GetPluginNameStatic(), "OCaml Language",
+                                CreateInstance);
 }
 
-void
-OCamlLanguage::Terminate()
-{
-    PluginManager::UnregisterPlugin(CreateInstance);
+void OCamlLanguage::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString
-OCamlLanguage::GetPluginNameStatic()
-{
-    static ConstString g_name("OCaml");
-    return g_name;
+lldb_private::ConstString OCamlLanguage::GetPluginNameStatic() {
+  static ConstString g_name("OCaml");
+  return g_name;
 }
 
-lldb_private::ConstString
-OCamlLanguage::GetPluginName()
-{
-    return GetPluginNameStatic();
+lldb_private::ConstString OCamlLanguage::GetPluginName() {
+  return GetPluginNameStatic();
 }
 
-uint32_t
-OCamlLanguage::GetPluginVersion()
-{
-    return 1;
+uint32_t OCamlLanguage::GetPluginVersion() { return 1; }
+
+Language *OCamlLanguage::CreateInstance(lldb::LanguageType language) {
+  if (language == eLanguageTypeOCaml)
+    return new OCamlLanguage();
+  return nullptr;
 }
 
-Language *
-OCamlLanguage::CreateInstance(lldb::LanguageType language)
-{
-    if (language == eLanguageTypeOCaml)
-        return new OCamlLanguage();
-    return nullptr;
+bool OCamlLanguage::IsNilReference(ValueObject &valobj) {
+  if (!valobj.GetCompilerType().IsReferenceType())
+    return false;
+
+  // If we failed to read the value then it is not a nil reference.
+  return valobj.GetValueAsUnsigned(UINT64_MAX) == 0;
 }
-
-bool
-OCamlLanguage::IsNilReference(ValueObject &valobj)
-{
-    if (!valobj.GetCompilerType().IsReferenceType())
-        return false;
-
-    // If we failed to read the value then it is not a nil reference.
-    return valobj.GetValueAsUnsigned(UINT64_MAX) == 0;
-}
-

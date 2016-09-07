@@ -12,7 +12,8 @@
 // In-house headers:
 #include "MICmnBase.h"
 
-//++ ============================================================================
+//++
+//============================================================================
 // Details: MI common code MI Result class. Part of the CMICmnMIValueRecord
 //          set of objects.
 //          The syntax is as follows:
@@ -25,25 +26,26 @@
 //          value ==> const | tuple | list
 //          const ==> c-string (7 bit iso c string content)
 //          tuple ==>  "{}" | "{" result ( "," result )* "}"
-//          list ==>  "[]" | "[" value ( "," value )* "]" | "[" result ( "," result )* "]"
+//          list ==>  "[]" | "[" value ( "," value )* "]" | "[" result ( ","
+//          result )* "]"
 //          More information see:
 //          http://ftp.gnu.org/old-gnu/Manuals/gdb-5.1.1/html_chapter/gdb_22.html
 //--
-class CMICmnMIValue : public CMICmnBase
-{
-    // Methods:
-  public:
-    /* ctor */ CMICmnMIValue();
-    //
-    const CMIUtilString &GetString() const;
+class CMICmnMIValue : public CMICmnBase {
+  // Methods:
+public:
+  /* ctor */ CMICmnMIValue();
+  //
+  const CMIUtilString &GetString() const;
 
-    // Overridden:
-  public:
-    // From CMICmnBase
-    /* dtor */ ~CMICmnMIValue() override;
+  // Overridden:
+public:
+  // From CMICmnBase
+  /* dtor */ ~CMICmnMIValue() override;
 
-    // Attributes:
-  protected:
-    CMIUtilString m_strValue;
-    bool m_bJustConstructed; // True = *this just constructed with no value, false = *this has had value added to it
+  // Attributes:
+protected:
+  CMIUtilString m_strValue;
+  bool m_bJustConstructed; // True = *this just constructed with no value, false
+                           // = *this has had value added to it
 };

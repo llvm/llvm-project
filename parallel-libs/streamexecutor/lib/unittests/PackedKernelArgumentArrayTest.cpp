@@ -16,7 +16,7 @@
 #include "streamexecutor/Device.h"
 #include "streamexecutor/DeviceMemory.h"
 #include "streamexecutor/PackedKernelArgumentArray.h"
-#include "streamexecutor/PlatformInterfaces.h"
+#include "streamexecutor/PlatformDevice.h"
 
 #include "llvm/ADT/Twine.h"
 

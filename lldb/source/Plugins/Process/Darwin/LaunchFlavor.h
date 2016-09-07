@@ -13,22 +13,21 @@
 namespace lldb_private {
 namespace process_darwin {
 
-enum class LaunchFlavor
-{
-    Default = 0,
-    PosixSpawn = 1,
-    ForkExec = 2,
+enum class LaunchFlavor {
+  Default = 0,
+  PosixSpawn = 1,
+  ForkExec = 2,
 #ifdef WITH_SPRINGBOARD
-    SpringBoard = 3,
+  SpringBoard = 3,
 #endif
 #ifdef WITH_BKS
-    BKS = 4,
+  BKS = 4,
 #endif
 #ifdef WITH_FBS
-    FBS = 5
+  FBS = 5
 #endif
 };
-
-}} // namespaces
+}
+} // namespaces
 
 #endif /* LaunchFlavor_h */

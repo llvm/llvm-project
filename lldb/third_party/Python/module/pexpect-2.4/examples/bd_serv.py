@@ -14,20 +14,30 @@ This exposes an shell terminal on a socket.
 # Having the password on the command line is not a good idea, but
 # then this entire project is probably not the most security concious thing
 # I've ever built. This should be considered an experimental tool -- at best.
-import pxssh, pexpect, ANSI
-import time, sys, os, getopt, getpass, traceback, threading, socket
+import pxssh
+import pexpect
+import ANSI
+import time
+import sys
+import os
+import getopt
+import getpass
+import traceback
+import threading
+import socket
+
 
 def exit_with_usage(exit_code=1):
 
     print globals()['__doc__']
     os._exit(exit_code)
 
+
 class roller (threading.Thread):
 
     """This runs a function in a loop in a thread."""
 
     def __init__(self, interval, function, args=[], kwargs={}):
-
         """The interval parameter defines time between each call to the function.
         """
 
@@ -39,7 +49,6 @@ class roller (threading.Thread):
         self.finished = threading.Event()
 
     def cancel(self):
-
         """Stop the roller."""
 
         self.finished.set()
@@ -50,8 +59,8 @@ class roller (threading.Thread):
             # self.finished.wait(self.interval)
             self.function(*self.args, **self.kwargs)
 
-def endless_poll (child, prompt, screen, refresh_timeout=0.1):
 
+def endless_poll(child, prompt, screen, refresh_timeout=0.1):
     """This keeps the screen updated with the output of the child. This runs in
     a separate thread. See roller(). """
 
@@ -61,7 +70,7 @@ def endless_poll (child, prompt, screen, refresh_timeout=0.1):
         screen.write(s)
     except:
         pass
-    #while True:
+    # while True:
     #    #child.prompt (timeout=refresh_timeout)
     #    try:
     #        #child.read_nonblocking(1,timeout=refresh_timeout)
@@ -69,14 +78,14 @@ def endless_poll (child, prompt, screen, refresh_timeout=0.1):
     #    except:
     #        pass
 
-def daemonize (stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
 
+def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
     '''This forks the current process into a daemon. Almost none of this is
     necessary (or advisable) if your daemon is being started by inetd. In that
     case, stdin, stdout and stderr are all set up for you to refer to the
     network connection, and the fork()s and session manipulation should not be
     done (to avoid confusing inetd). Only the chdir() and umask() steps remain
-    as useful. 
+    as useful.
 
     References:
         UNIX Programming FAQ
@@ -94,30 +103,30 @@ def daemonize (stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
     expect. '''
 
     # Do first fork.
-    try: 
-        pid = os.fork() 
+    try:
+        pid = os.fork()
         if pid > 0:
             sys.exit(0)   # Exit first parent.
-    except OSError, e: 
-        sys.stderr.write ("fork #1 failed: (%d) %s\n" % (e.errno, e.strerror) )
+    except OSError as e:
+        sys.stderr.write("fork #1 failed: (%d) %s\n" % (e.errno, e.strerror))
         sys.exit(1)
 
     # Decouple from parent environment.
-    os.chdir("/") 
-    os.umask(0) 
-    os.setsid() 
+    os.chdir("/")
+    os.umask(0)
+    os.setsid()
 
     # Do second fork.
-    try: 
-        pid = os.fork() 
+    try:
+        pid = os.fork()
         if pid > 0:
             sys.exit(0)   # Exit second parent.
-    except OSError, e: 
-        sys.stderr.write ("fork #2 failed: (%d) %s\n" % (e.errno, e.strerror) )
+    except OSError as e:
+        sys.stderr.write("fork #2 failed: (%d) %s\n" % (e.errno, e.strerror))
         sys.exit(1)
 
     # Now I am a daemon!
-    
+
     # Redirect standard file descriptors.
     si = open(stdin, 'r')
     so = open(stdout, 'a+')
@@ -129,25 +138,32 @@ def daemonize (stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
     # I now return as the daemon
     return 0
 
-def add_cursor_blink (response, row, col):
 
-    i = (row-1) * 80 + col
-    return response[:i]+'<img src="http://www.noah.org/cursor.gif">'+response[i:]
+def add_cursor_blink(response, row, col):
 
-def main ():
+    i = (row - 1) * 80 + col
+    return response[:i] + \
+        '<img src="http://www.noah.org/cursor.gif">' + response[i:]
+
+
+def main():
 
     try:
-        optlist, args = getopt.getopt(sys.argv[1:], 'h?d', ['help','h','?', 'hostname=', 'username=', 'password=', 'port=', 'watch'])
-    except Exception, e:
+        optlist, args = getopt.getopt(
+            sys.argv[
+                1:], 'h?d', [
+                'help', 'h', '?', 'hostname=', 'username=', 'password=', 'port=', 'watch'])
+    except Exception as e:
         print str(e)
         exit_with_usage()
 
     command_line_options = dict(optlist)
     options = dict(optlist)
     # There are a million ways to cry for help. These are but a few of them.
-    if [elem for elem in command_line_options if elem in ['-h','--h','-?','--?','--help']]:
+    if [elem for elem in command_line_options if elem in [
+            '-h', '--h', '-?', '--?', '--help']]:
         exit_with_usage(0)
-  
+
     hostname = "127.0.0.1"
     port = 1664
     username = os.getenv('USER')
@@ -170,38 +186,39 @@ def main ():
         password = options['--password']
     else:
         password = getpass.getpass('password: ')
-   
-    if daemon_mode: 
+
+    if daemon_mode:
         print "daemonizing server"
         daemonize()
-        #daemonize('/dev/null','/tmp/daemon.log','/tmp/daemon.log')
-    
-    sys.stdout.write ('server started with pid %d\n' % os.getpid() )
+        # daemonize('/dev/null','/tmp/daemon.log','/tmp/daemon.log')
 
-    virtual_screen = ANSI.ANSI (24,80) 
+    sys.stdout.write('server started with pid %d\n' % os.getpid())
+
+    virtual_screen = ANSI.ANSI(24, 80)
     child = pxssh.pxssh()
-    child.login (hostname, username, password)
+    child.login(hostname, username, password)
     print 'created shell. command line prompt is', child.PROMPT
     #child.sendline ('stty -echo')
-    #child.setecho(False)
-    virtual_screen.write (child.before)
-    virtual_screen.write (child.after)
+    # child.setecho(False)
+    virtual_screen.write(child.before)
+    virtual_screen.write(child.after)
 
-    if os.path.exists("/tmp/mysock"): os.remove("/tmp/mysock")
+    if os.path.exists("/tmp/mysock"):
+        os.remove("/tmp/mysock")
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     localhost = '127.0.0.1'
     s.bind('/tmp/mysock')
-    os.chmod('/tmp/mysock',0777)
+    os.chmod('/tmp/mysock', 0o777)
     print 'Listen'
     s.listen(1)
     print 'Accept'
     #s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     #localhost = '127.0.0.1'
     #s.bind((localhost, port))
-    #print 'Listen'
-    #s.listen(1)
+    # print 'Listen'
+    # s.listen(1)
 
-    r = roller (0.01, endless_poll, (child, child.PROMPT, virtual_screen))
+    r = roller(0.01, endless_poll, (child, child.PROMPT, virtual_screen))
     r.start()
     print "screen poll updater started in background thread"
     sys.stdout.flush()
@@ -211,12 +228,12 @@ def main ():
             conn, addr = s.accept()
             print 'Connected by', addr
             data = conn.recv(1024)
-            if data[0]!=':':
+            if data[0] != ':':
                 cmd = ':sendline'
                 arg = data.strip()
             else:
                 request = data.split(' ', 1)
-                if len(request)>1:
+                if len(request) > 1:
                     cmd = request[0].strip()
                     arg = request[1].strip()
                 else:
@@ -225,45 +242,50 @@ def main ():
                 r.cancel()
                 break
             elif cmd == ':sendline':
-                child.sendline (arg)
-                #child.prompt(timeout=2)
+                child.sendline(arg)
+                # child.prompt(timeout=2)
                 time.sleep(0.2)
                 shell_window = str(virtual_screen)
-            elif cmd == ':send' or cmd==':xsend':
-                if cmd==':xsend':
+            elif cmd == ':send' or cmd == ':xsend':
+                if cmd == ':xsend':
                     arg = arg.decode("hex")
-                child.send (arg)
+                child.send(arg)
                 time.sleep(0.2)
                 shell_window = str(virtual_screen)
             elif cmd == ':cursor':
-                shell_window = '%x%x' % (virtual_screen.cur_r, virtual_screen.cur_c)
+                shell_window = '%x%x' % (
+                    virtual_screen.cur_r, virtual_screen.cur_c)
             elif cmd == ':refresh':
                 shell_window = str(virtual_screen)
 
             response = []
-            response.append (shell_window)
+            response.append(shell_window)
             #response = add_cursor_blink (response, row, col)
             sent = conn.send('\n'.join(response))
-            if watch_mode: print '\n'.join(response)
-            if sent < len (response):
+            if watch_mode:
+                print '\n'.join(response)
+            if sent < len(response):
                 print "Sent is too short. Some data was cut off."
             conn.close()
     finally:
         r.cancel()
         print "cleaning up socket"
         s.close()
-        if os.path.exists("/tmp/mysock"): os.remove("/tmp/mysock")
+        if os.path.exists("/tmp/mysock"):
+            os.remove("/tmp/mysock")
         print "done!"
 
-def pretty_box (rows, cols, s):
 
+def pretty_box(rows, cols, s):
     """This puts an ASCII text box around the given string, s.
     """
 
-    top_bot = '+' + '-'*cols + '+\n'
-    return top_bot + '\n'.join(['|'+line+'|' for line in s.split('\n')]) + '\n' + top_bot
-    
-def error_response (msg):
+    top_bot = '+' + '-' * cols + '+\n'
+    return top_bot + \
+        '\n'.join(['|' + line + '|' for line in s.split('\n')]) + '\n' + top_bot
+
+
+def error_response(msg):
 
     response = []
     response.append ("""All commands start with :
@@ -280,11 +302,11 @@ Example:
 is equivalent to:
     :sendline ls -l
 """)
-    response.append (msg)
+    response.append(msg)
     return '\n'.join(response)
 
-def parse_host_connect_string (hcs):
 
+def parse_host_connect_string(hcs):
     """This parses a host connection string in the form
     username:password@hostname:port. All fields are options expcet hostname. A
     dictionary is returned with all four keys. Keys that were not included are
@@ -292,14 +314,16 @@ def parse_host_connect_string (hcs):
     then you must backslash escape it. """
 
     if '@' in hcs:
-        p = re.compile (r'(?P<username>[^@:]*)(:?)(?P<password>.*)(?!\\)@(?P<hostname>[^:]*):?(?P<port>[0-9]*)')
+        p = re.compile(
+            r'(?P<username>[^@:]*)(:?)(?P<password>.*)(?!\\)@(?P<hostname>[^:]*):?(?P<port>[0-9]*)')
     else:
-        p = re.compile (r'(?P<username>)(?P<password>)(?P<hostname>[^:]*):?(?P<port>[0-9]*)')
-    m = p.search (hcs)
+        p = re.compile(
+            r'(?P<username>)(?P<password>)(?P<hostname>[^:]*):?(?P<port>[0-9]*)')
+    m = p.search(hcs)
     d = m.groupdict()
-    d['password'] = d['password'].replace('\\@','@')
+    d['password'] = d['password'].replace('\\@', '@')
     return d
-     
+
 if __name__ == "__main__":
 
     try:
@@ -309,8 +333,7 @@ if __name__ == "__main__":
         print time.asctime()
         print "TOTAL TIME IN MINUTES:",
         print (time.time() - start_time) / 60.0
-    except Exception, e:
+    except Exception as e:
         print str(e)
         tb_dump = traceback.format_exc()
         print str(tb_dump)
-

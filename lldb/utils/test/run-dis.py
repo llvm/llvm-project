@@ -5,7 +5,9 @@ Run lldb disassembler on all the binaries specified by a combination of root dir
 and path pattern.
 """
 
-import os, sys, subprocess
+import os
+import sys
+import subprocess
 import re
 from optparse import OptionParser
 
@@ -29,10 +31,13 @@ template = '%s/lldb-disasm.py -C "platform select remote-ios" -o "-n" -q -e %s -
 
 # Regular expression for detecting file output for Mach-o binary.
 mach_o = re.compile('\sMach-O.+binary')
+
+
 def isbinary(path):
-    file_output = subprocess.Popen(["file", path], 
+    file_output = subprocess.Popen(["file", path],
                                    stdout=subprocess.PIPE).stdout.read()
     return (mach_o.search(file_output) is not None)
+
 
 def walk_and_invoke(sdk_root, path_regexp, suffix, num_symbols):
     """Look for matched file and invoke lldb disassembly on it."""
@@ -49,7 +54,8 @@ def walk_and_invoke(sdk_root, path_regexp, suffix, num_symbols):
             if os.path.islink(path):
                 continue
 
-            # We'll be pattern matching based on the path relative to the SDK root.
+            # We'll be pattern matching based on the path relative to the SDK
+            # root.
             replaced_path = path.replace(root_dir, "", 1)
             # Check regular expression match for the replaced path.
             if not path_regexp.search(replaced_path):
@@ -60,9 +66,11 @@ def walk_and_invoke(sdk_root, path_regexp, suffix, num_symbols):
             if not isbinary(path):
                 continue
 
-            command = template % (scriptPath, path, num_symbols if num_symbols > 0 else 1000)
+            command = template % (
+                scriptPath, path, num_symbols if num_symbols > 0 else 1000)
             print "Running %s" % (command)
             os.system(command)
+
 
 def main():
     """Read the root dir and the path spec, invoke lldb-disasm.py on the file."""
@@ -78,23 +86,32 @@ def main():
 Run lldb disassembler on all the binaries specified by a combination of root dir
 and path pattern.
 """)
-    parser.add_option('-r', '--root-dir',
-                      type='string', action='store',
-                      dest='root_dir',
-                      help='Mandatory: the root directory for the SDK symbols.')
-    parser.add_option('-p', '--path-pattern',
-                      type='string', action='store',
-                      dest='path_pattern',
-                      help='Mandatory: regular expression pattern for the desired binaries.')
+    parser.add_option(
+        '-r',
+        '--root-dir',
+        type='string',
+        action='store',
+        dest='root_dir',
+        help='Mandatory: the root directory for the SDK symbols.')
+    parser.add_option(
+        '-p',
+        '--path-pattern',
+        type='string',
+        action='store',
+        dest='path_pattern',
+        help='Mandatory: regular expression pattern for the desired binaries.')
     parser.add_option('-s', '--suffix',
                       type='string', action='store', default=None,
                       dest='suffix',
                       help='Specify the suffix of the binaries to look for.')
-    parser.add_option('-n', '--num-symbols',
-                      type='int', action='store', default=-1,
-                      dest='num_symbols',
-                      help="""The number of symbols to disassemble, if specified.""")
-
+    parser.add_option(
+        '-n',
+        '--num-symbols',
+        type='int',
+        action='store',
+        default=-1,
+        dest='num_symbols',
+        help="""The number of symbols to disassemble, if specified.""")
 
     opts, args = parser.parse_args()
     if not opts.root_dir or not opts.path_pattern:

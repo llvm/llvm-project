@@ -13,36 +13,26 @@
 #include "DWARFDIE.h"
 #include <vector>
 
-class DWARFDIECollection
-{
+class DWARFDIECollection {
 public:
-    DWARFDIECollection() :
-        m_dies()
-    {
-    }
-    ~DWARFDIECollection()
-    {
-    }
+  DWARFDIECollection() : m_dies() {}
+  ~DWARFDIECollection() {}
 
-    void
-    Append (const DWARFDIE &die);
+  void Append(const DWARFDIE &die);
 
-    void
-    Dump(lldb_private::Stream *s, const char* title) const;
+  void Dump(lldb_private::Stream *s, const char *title) const;
 
-    DWARFDIE
-    GetDIEAtIndex (uint32_t idx) const;
+  DWARFDIE
+  GetDIEAtIndex(uint32_t idx) const;
 
-    size_t
-    Size() const;
+  size_t Size() const;
 
 protected:
-    typedef std::vector<DWARFDIE>               collection;
-    typedef collection::iterator                iterator;
-    typedef collection::const_iterator          const_iterator;
+  typedef std::vector<DWARFDIE> collection;
+  typedef collection::iterator iterator;
+  typedef collection::const_iterator const_iterator;
 
-    collection m_dies;  // Ordered list of die offsets
+  collection m_dies; // Ordered list of die offsets
 };
 
-
-#endif  // SymbolFileDWARF_DWARFDIECollection_h_
+#endif // SymbolFileDWARF_DWARFDIECollection_h_

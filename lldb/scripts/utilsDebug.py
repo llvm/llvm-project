@@ -28,9 +28,11 @@ import sys
 # Authors: Illya Rudkin 28/11/2013.
 # Changes: None.
 #--
+
+
 class CDebugFnVerbose(object):
     # Public static properties:
-    bVerboseOn = False # True = turn on function tracing, False = turn off.
+    bVerboseOn = False  # True = turn on function tracing, False = turn off.
 
     # Public:
     #++------------------------------------------------------------------------
@@ -51,10 +53,13 @@ class CDebugFnVerbose(object):
     # Throws:  None.
     #--
     def dump_object(self, vstrText, vObject):
-        if CDebugFnVerbose.bVerboseOn == False:
+        if not CDebugFnVerbose.bVerboseOn:
             return
-        sys.stdout.write("%d%s> Dp: %s" % (CDebugFnVerbose.__nLevel, self.__get_dots(),
-                                           vstrText))
+        sys.stdout.write(
+            "%d%s> Dp: %s" %
+            (CDebugFnVerbose.__nLevel,
+             self.__get_dots(),
+             vstrText))
         print(vObject)
 
     #++------------------------------------------------------------------------
@@ -65,7 +70,7 @@ class CDebugFnVerbose(object):
     # Throws:  None.
     #--
     def dump_text(self, vstrText):
-        if CDebugFnVerbose.bVerboseOn == False:
+        if not CDebugFnVerbose.bVerboseOn:
             return
         print(("%d%s> Dp: %s" % (CDebugFnVerbose.__nLevel, self.__get_dots(),
                                  vstrText)))
@@ -94,8 +99,8 @@ class CDebugFnVerbose(object):
     #--
     def __indent_back(self):
         if CDebugFnVerbose.bVerboseOn:
-            print(("%d%s< fn: %s" % (CDebugFnVerbose.__nLevel, self.__get_dots(),
-                                     self.__strFnName)))
+            print(("%d%s< fn: %s" % (CDebugFnVerbose.__nLevel,
+                                     self.__get_dots(), self.__strFnName)))
         CDebugFnVerbose.__nLevel -= 1
 
     #++------------------------------------------------------------------------
@@ -110,11 +115,11 @@ class CDebugFnVerbose(object):
         CDebugFnVerbose.__nLevel += 1
         self.__strFnName = vstrFnName
         if CDebugFnVerbose.bVerboseOn:
-            print(("%d%s> fn: %s" % (CDebugFnVerbose.__nLevel, self.__get_dots(),
-                                     self.__strFnName)))
+            print(("%d%s> fn: %s" % (CDebugFnVerbose.__nLevel,
+                                     self.__get_dots(), self.__strFnName)))
 
     # Private statics attributes:
-    __nLevel = 0 # Indentation level counter
+    __nLevel = 0  # Indentation level counter
 
     # Private attributes:
     __strFnName = ""

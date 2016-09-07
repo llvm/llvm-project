@@ -1,11 +1,12 @@
 from __future__ import print_function
-import lldb, sys
+import lldb
+import sys
+
 
 def some_command_here(debugger, command, result, d):
-  if command == "a":
-    print("Victory is mine", file=result)
-    return True
-  else:
-    print("Sadness for all", file=result)
-    return False
-
+    if command == "a":
+        print("Victory is mine", file=result)
+        return True
+    else:
+        print("Sadness for all", file=result)
+        return False

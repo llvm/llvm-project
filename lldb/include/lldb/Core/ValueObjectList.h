@@ -16,80 +16,60 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-private.h"
 #include "lldb/Core/UserID.h"
 #include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
 //----------------------------------------------------------------------
 // A collection of ValueObject values that
 //----------------------------------------------------------------------
-class ValueObjectList
-{
+class ValueObjectList {
 public:
-    //------------------------------------------------------------------
-    // Constructors and Destructors
-    //------------------------------------------------------------------
-    ValueObjectList ();
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  ValueObjectList();
 
-    ValueObjectList (const ValueObjectList &rhs);
+  ValueObjectList(const ValueObjectList &rhs);
 
-    ~ValueObjectList();
+  ~ValueObjectList();
 
-    const ValueObjectList &
-    operator = (const ValueObjectList &rhs);
+  const ValueObjectList &operator=(const ValueObjectList &rhs);
 
-    void
-    Append (const lldb::ValueObjectSP &val_obj_sp);
+  void Append(const lldb::ValueObjectSP &val_obj_sp);
 
-    void
-    Append (const ValueObjectList &valobj_list);
+  void Append(const ValueObjectList &valobj_list);
 
-    lldb::ValueObjectSP
-    FindValueObjectByPointer (ValueObject *valobj);
+  lldb::ValueObjectSP FindValueObjectByPointer(ValueObject *valobj);
 
-    size_t
-    GetSize () const;
-    
-    void
-    Resize (size_t size);
+  size_t GetSize() const;
 
-    lldb::ValueObjectSP
-    GetValueObjectAtIndex (size_t idx);
+  void Resize(size_t size);
 
-    lldb::ValueObjectSP
-    RemoveValueObjectAtIndex (size_t idx);
-    
-    void
-    SetValueObjectAtIndex (size_t idx, 
-                           const lldb::ValueObjectSP &valobj_sp);
-    
-    lldb::ValueObjectSP
-    FindValueObjectByValueName (const char *name);
+  lldb::ValueObjectSP GetValueObjectAtIndex(size_t idx);
 
-    lldb::ValueObjectSP
-    FindValueObjectByUID (lldb::user_id_t uid);
+  lldb::ValueObjectSP RemoveValueObjectAtIndex(size_t idx);
 
-    void
-    Swap (ValueObjectList &value_object_list);
-    
-    void
-    Clear ()
-    {
-        m_value_objects.clear();
-    }
+  void SetValueObjectAtIndex(size_t idx, const lldb::ValueObjectSP &valobj_sp);
+
+  lldb::ValueObjectSP FindValueObjectByValueName(const char *name);
+
+  lldb::ValueObjectSP FindValueObjectByUID(lldb::user_id_t uid);
+
+  void Swap(ValueObjectList &value_object_list);
+
+  void Clear() { m_value_objects.clear(); }
 
 protected:
-    typedef std::vector<lldb::ValueObjectSP> collection;
-    //------------------------------------------------------------------
-    // Classes that inherit from ValueObjectList can see and modify these
-    //------------------------------------------------------------------
-    collection  m_value_objects;
-
+  typedef std::vector<lldb::ValueObjectSP> collection;
+  //------------------------------------------------------------------
+  // Classes that inherit from ValueObjectList can see and modify these
+  //------------------------------------------------------------------
+  collection m_value_objects;
 };
-
 
 } // namespace lldb_private
 
-#endif  // liblldb_ValueObjectList_h_
+#endif // liblldb_ValueObjectList_h_

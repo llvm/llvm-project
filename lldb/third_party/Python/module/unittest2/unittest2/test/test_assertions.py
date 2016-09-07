@@ -4,6 +4,7 @@ import unittest2
 
 
 class Test_Assertions(unittest2.TestCase):
+
     def test_AlmostEqual(self):
         self.assertAlmostEqual(1.00000001, 1.0)
         self.assertNotAlmostEqual(1.0000001, 1.0)
@@ -16,12 +17,12 @@ class Test_Assertions(unittest2.TestCase):
         self.assertRaises(self.failureException,
                           self.assertAlmostEqual, 1.1, 1.0, places=1)
 
-        self.assertAlmostEqual(0, .1+.1j, places=0)
-        self.assertNotAlmostEqual(0, .1+.1j, places=1)
+        self.assertAlmostEqual(0, .1 + .1j, places=0)
+        self.assertNotAlmostEqual(0, .1 + .1j, places=1)
         self.assertRaises(self.failureException,
-                          self.assertAlmostEqual, 0, .1+.1j, places=1)
+                          self.assertAlmostEqual, 0, .1 + .1j, places=1)
         self.assertRaises(self.failureException,
-                          self.assertNotAlmostEqual, 0, .1+.1j, places=0)
+                          self.assertNotAlmostEqual, 0, .1 + .1j, places=0)
 
         try:
             self.assertAlmostEqual(float('inf'), float('inf'))
@@ -33,24 +34,23 @@ class Test_Assertions(unittest2.TestCase):
             self.assertAlmostEqual(x, x)
             self.assertRaises(self.failureException, self.assertNotAlmostEqual,
                               x, x)
-            
-            
+
     def test_AmostEqualWithDelta(self):
         self.assertAlmostEqual(1.1, 1.0, delta=0.5)
         self.assertAlmostEqual(1.0, 1.1, delta=0.5)
         self.assertNotAlmostEqual(1.1, 1.0, delta=0.05)
         self.assertNotAlmostEqual(1.0, 1.1, delta=0.05)
-        
+
         self.assertRaises(self.failureException, self.assertAlmostEqual,
                           1.1, 1.0, delta=0.05)
         self.assertRaises(self.failureException, self.assertNotAlmostEqual,
                           1.1, 1.0, delta=0.5)
-        
+
         self.assertRaises(TypeError, self.assertAlmostEqual,
                           1.1, 1.0, places=2, delta=2)
         self.assertRaises(TypeError, self.assertNotAlmostEqual,
                           1.1, 1.0, places=2, delta=2)
-        
+
         first = datetime.datetime.now()
         second = first + datetime.timedelta(seconds=10)
         self.assertAlmostEqual(first, second,
@@ -96,18 +96,24 @@ class TestLongMessage(unittest2.TestCase):
         self.assertTrue(unittest2.TestCase.longMessage)
 
     def test_formatMsg(self):
-        self.assertEquals(self.testableFalse._formatMessage(None, "foo"), "foo")
-        self.assertEquals(self.testableFalse._formatMessage("foo", "bar"), "foo")
+        self.assertEquals(
+            self.testableFalse._formatMessage(
+                None, "foo"), "foo")
+        self.assertEquals(
+            self.testableFalse._formatMessage(
+                "foo", "bar"), "foo")
 
         self.assertEquals(self.testableTrue._formatMessage(None, "foo"), "foo")
-        self.assertEquals(self.testableTrue._formatMessage("foo", "bar"), "bar : foo")
-        
+        self.assertEquals(
+            self.testableTrue._formatMessage(
+                "foo", "bar"), "bar : foo")
+
         # This blows up if _formatMessage uses string concatenation
         self.testableTrue._formatMessage(object(), 'foo')
 
     def assertMessages(self, methodName, args, errors):
         def getMethod(i):
-            useTestableFalse  = i < 2
+            useTestableFalse = i < 2
             if useTestableFalse:
                 test = self.testableFalse
             else:
@@ -124,7 +130,7 @@ class TestLongMessage(unittest2.TestCase):
             self.assertRaisesRegexp(self.failureException,
                                     expected_regexp,
                                     lambda: testMethod(*args, **kwargs))
-            
+
     def testAssertTrue(self):
         self.assertMessages('assertTrue', (False,),
                             ["^False is not True$", "^oops$", "^False is not True$",
@@ -141,18 +147,27 @@ class TestLongMessage(unittest2.TestCase):
                              "^1 == 1 : oops$"])
 
     def testAlmostEqual(self):
-        self.assertMessages('assertAlmostEqual', (1, 2),
-                            ["^1 != 2 within 7 places$", "^oops$",
-                             "^1 != 2 within 7 places$", "^1 != 2 within 7 places : oops$"])
+        self.assertMessages('assertAlmostEqual',
+                            (1,
+                             2),
+                            ["^1 != 2 within 7 places$",
+                             "^oops$",
+                             "^1 != 2 within 7 places$",
+                             "^1 != 2 within 7 places : oops$"])
 
     def testNotAlmostEqual(self):
-        self.assertMessages('assertNotAlmostEqual', (1, 1),
-                            ["^1 == 1 within 7 places$", "^oops$",
-                             "^1 == 1 within 7 places$", "^1 == 1 within 7 places : oops$"])
+        self.assertMessages('assertNotAlmostEqual',
+                            (1,
+                             1),
+                            ["^1 == 1 within 7 places$",
+                             "^oops$",
+                             "^1 == 1 within 7 places$",
+                             "^1 == 1 within 7 places : oops$"])
 
     def test_baseAssertEqual(self):
-        self.assertMessages('_baseAssertEqual', (1, 2),
-                            ["^1 != 2$", "^oops$", "^1 != 2$", "^1 != 2 : oops$"])
+        self.assertMessages(
+            '_baseAssertEqual', (1, 2), [
+                "^1 != 2$", "^oops$", "^1 != 2$", "^1 != 2 : oops$"])
 
     def testAssertSequenceEqual(self):
         # Error messages are multiline so not testing on full message

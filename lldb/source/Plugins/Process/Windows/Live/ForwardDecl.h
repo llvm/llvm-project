@@ -14,17 +14,18 @@
 
 // ExceptionResult is returned by the debug delegate to specify how it processed
 // the exception.
-enum class ExceptionResult
-{
-    BreakInDebugger,  // Break in the debugger and give the user a chance to interact with
-                      // the program before continuing.
-    MaskException,    // Eat the exception and don't let the application know it occurred.
-    SendToApplication // Send the exception to the application to be handled as if there were
-                      // no debugger attached.
+enum class ExceptionResult {
+  BreakInDebugger,  // Break in the debugger and give the user a chance to
+                    // interact with
+                    // the program before continuing.
+  MaskException,    // Eat the exception and don't let the application know it
+                    // occurred.
+  SendToApplication // Send the exception to the application to be handled as if
+                    // there were
+                    // no debugger attached.
 };
 
-namespace lldb_private
-{
+namespace lldb_private {
 
 class ProcessWindows;
 

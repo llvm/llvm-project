@@ -18,26 +18,17 @@
 
 namespace lldb_private {
 
-class OptionValueArgs : public OptionValueArray
-{
+class OptionValueArgs : public OptionValueArray {
 public:
-    OptionValueArgs () :
-        OptionValueArray (OptionValue::ConvertTypeToMask (OptionValue::eTypeString))
-    {
-    }
-    
-    ~OptionValueArgs() override
-    {
-    }
-    
-    size_t
-    GetArgs (Args &args);
-    
-    Type
-    GetType() const override
-    {
-        return eTypeArgs;
-    }
+  OptionValueArgs()
+      : OptionValueArray(
+            OptionValue::ConvertTypeToMask(OptionValue::eTypeString)) {}
+
+  ~OptionValueArgs() override {}
+
+  size_t GetArgs(Args &args);
+
+  Type GetType() const override { return eTypeArgs; }
 };
 
 } // namespace lldb_private

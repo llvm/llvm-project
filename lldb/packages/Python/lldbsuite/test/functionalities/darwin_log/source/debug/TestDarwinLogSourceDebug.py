@@ -60,10 +60,12 @@ class TestDarwinLogSourceDebug(darwin_log.DarwinLogTestBase):
         # We should only see the second log message as the first is a
         # debug-level message and we're not including debug-level messages.
         self.assertIsNotNone(self.child.match)
-        self.assertTrue((len(self.child.match.groups()) > 1) and
-                        (self.child.match.group(2) == "cat2"),
-                        "first log line should not be present, second log line "
-                        "should be")
+        self.assertTrue(
+            (len(
+                self.child.match.groups()) > 1) and (
+                self.child.match.group(2) == "cat2"),
+            "first log line should not be present, second log line "
+            "should be")
 
     @decorators.skipUnlessDarwin
     def test_source_explicitly_include_debug(self):

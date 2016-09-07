@@ -9,15 +9,15 @@ Apple OSX. """
 
 import pexpect
 
-child = pexpect.spawn ('df')
+child = pexpect.spawn('df')
 
 # parse 'df' output into a list.
 pattern = "\n(\S+).*?([0-9]+)%"
 filesystem_list = []
-for dummy in range (0, 1000):
-    i = child.expect ([pattern, pexpect.EOF])
+for dummy in range(0, 1000):
+    i = child.expect([pattern, pexpect.EOF])
     if i == 0:
-        filesystem_list.append (child.match.groups())
+        filesystem_list.append(child.match.groups())
     else:
         break
 
@@ -31,4 +31,3 @@ for m in filesystem_list:
     else:
         s = '  ' + s
     print s
-

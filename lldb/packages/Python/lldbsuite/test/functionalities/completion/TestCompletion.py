@@ -5,13 +5,13 @@ Test the lldb command line completion mechanism.
 from __future__ import print_function
 
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
+
 
 class CommandLineCompletionTestCase(TestBase):
 
@@ -27,29 +27,31 @@ class CommandLineCompletionTestCase(TestBase):
             pass
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_at(self):
         """Test that 'at' completes to 'attach '."""
         self.complete_from_to('at', 'attach ')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_de(self):
         """Test that 'de' completes to 'detach '."""
         self.complete_from_to('de', 'detach ')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_process_attach_dash_dash_con(self):
         """Test that 'process attach --con' completes to 'process attach --continue '."""
-        self.complete_from_to('process attach --con', 'process attach --continue ')
+        self.complete_from_to(
+            'process attach --con',
+            'process attach --continue ')
 
     # <rdar://problem/11052829>
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_infinite_loop_while_completing(self):
         """Test that 'process print hello\' completes to itself and does not infinite loop."""
@@ -57,147 +59,176 @@ class CommandLineCompletionTestCase(TestBase):
                               turn_off_re_match=True)
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_watchpoint_co(self):
         """Test that 'watchpoint co' completes to 'watchpoint command '."""
         self.complete_from_to('watchpoint co', 'watchpoint command ')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_watchpoint_command_space(self):
         """Test that 'watchpoint command ' completes to ['Available completions:', 'add', 'delete', 'list']."""
-        self.complete_from_to('watchpoint command ', ['Available completions:', 'add', 'delete', 'list'])
+        self.complete_from_to(
+            'watchpoint command ', [
+                'Available completions:', 'add', 'delete', 'list'])
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_watchpoint_command_a(self):
         """Test that 'watchpoint command a' completes to 'watchpoint command add '."""
-        self.complete_from_to('watchpoint command a', 'watchpoint command add ')
+        self.complete_from_to(
+            'watchpoint command a',
+            'watchpoint command add ')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_watchpoint_set_variable_dash_w(self):
         """Test that 'watchpoint set variable -w' completes to 'watchpoint set variable -w '."""
-        self.complete_from_to('watchpoint set variable -w', 'watchpoint set variable -w ')
+        self.complete_from_to(
+            'watchpoint set variable -w',
+            'watchpoint set variable -w ')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_watchpoint_set_variable_dash_w_space(self):
         """Test that 'watchpoint set variable -w ' completes to ['Available completions:', 'read', 'write', 'read_write']."""
-        self.complete_from_to('watchpoint set variable -w ', ['Available completions:', 'read', 'write', 'read_write'])
+        self.complete_from_to('watchpoint set variable -w ',
+                              ['Available completions:', 'read', 'write', 'read_write'])
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_watchpoint_set_ex(self):
         """Test that 'watchpoint set ex' completes to 'watchpoint set expression '."""
-        self.complete_from_to('watchpoint set ex', 'watchpoint set expression ')
+        self.complete_from_to(
+            'watchpoint set ex',
+            'watchpoint set expression ')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_watchpoint_set_var(self):
         """Test that 'watchpoint set var' completes to 'watchpoint set variable '."""
         self.complete_from_to('watchpoint set var', 'watchpoint set variable ')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_watchpoint_set_variable_dash_w_read_underbar(self):
         """Test that 'watchpoint set variable -w read_' completes to 'watchpoint set variable -w read_write'."""
-        self.complete_from_to('watchpoint set variable -w read_', 'watchpoint set variable -w read_write')
+        self.complete_from_to(
+            'watchpoint set variable -w read_',
+            'watchpoint set variable -w read_write')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_help_fi(self):
         """Test that 'help fi' completes to ['Available completions:', 'file', 'finish']."""
-        self.complete_from_to('help fi', ['Available completions:', 'file', 'finish'])
+        self.complete_from_to(
+            'help fi', [
+                'Available completions:', 'file', 'finish'])
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_help_watchpoint_s(self):
         """Test that 'help watchpoint s' completes to 'help watchpoint set '."""
         self.complete_from_to('help watchpoint s', 'help watchpoint set ')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_append_target_er(self):
         """Test that 'settings append target.er' completes to 'settings append target.error-path'."""
-        self.complete_from_to('settings append target.er', 'settings append target.error-path')
+        self.complete_from_to(
+            'settings append target.er',
+            'settings append target.error-path')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_insert_after_target_en(self):
         """Test that 'settings insert-after target.env' completes to 'settings insert-after target.env-vars'."""
-        self.complete_from_to('settings insert-after target.env', 'settings insert-after target.env-vars')
+        self.complete_from_to(
+            'settings insert-after target.env',
+            'settings insert-after target.env-vars')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_insert_before_target_en(self):
         """Test that 'settings insert-before target.env' completes to 'settings insert-before target.env-vars'."""
-        self.complete_from_to('settings insert-before target.env', 'settings insert-before target.env-vars')
+        self.complete_from_to(
+            'settings insert-before target.env',
+            'settings insert-before target.env-vars')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_replace_target_ru(self):
         """Test that 'settings replace target.ru' completes to 'settings replace target.run-args'."""
-        self.complete_from_to('settings replace target.ru', 'settings replace target.run-args')
+        self.complete_from_to(
+            'settings replace target.ru',
+            'settings replace target.run-args')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_s(self):
         """Test that 'settings s' completes to ['Available completions:', 'set', 'show']."""
-        self.complete_from_to('settings s', ['Available completions:', 'set', 'show'])
+        self.complete_from_to(
+            'settings s', [
+                'Available completions:', 'set', 'show'])
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_set_th(self):
         """Test that 'settings set th' completes to 'settings set thread-format'."""
         self.complete_from_to('settings set th', 'settings set thread-format')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_s_dash(self):
         """Test that 'settings set -' completes to 'settings set -g'."""
         self.complete_from_to('settings set -', 'settings set -g')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_clear_th(self):
         """Test that 'settings clear th' completes to 'settings clear thread-format'."""
-        self.complete_from_to('settings clear th', 'settings clear thread-format')
+        self.complete_from_to(
+            'settings clear th',
+            'settings clear thread-format')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_set_ta(self):
         """Test that 'settings set ta' completes to 'settings set target.'."""
-        self.complete_from_to('settings set target.ma', 'settings set target.max-')
+        self.complete_from_to(
+            'settings set target.ma',
+            'settings set target.max-')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_set_target_exec(self):
         """Test that 'settings set target.exec' completes to 'settings set target.exec-search-paths '."""
-        self.complete_from_to('settings set target.exec', 'settings set target.exec-search-paths')
+        self.complete_from_to(
+            'settings set target.exec',
+            'settings set target.exec-search-paths')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_set_target_pr(self):
         """Test that 'settings set target.pr' completes to ['Available completions:',
@@ -208,21 +239,25 @@ class CommandLineCompletionTestCase(TestBase):
                                'target.process.'])
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_set_target_process(self):
         """Test that 'settings set target.process' completes to 'settings set target.process.'."""
-        self.complete_from_to('settings set target.process', 'settings set target.process.')
+        self.complete_from_to(
+            'settings set target.process',
+            'settings set target.process.')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_set_target_process_dot(self):
         """Test that 'settings set target.process.t' completes to 'settings set target.process.thread.'."""
-        self.complete_from_to('settings set target.process.t', 'settings set target.process.thread.')
+        self.complete_from_to(
+            'settings set target.process.t',
+            'settings set target.process.thread.')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_settings_set_target_process_thread_dot(self):
         """Test that 'settings set target.process.thread.' completes to ['Available completions:',
@@ -233,31 +268,39 @@ class CommandLineCompletionTestCase(TestBase):
                                'target.process.thread.trace-thread'])
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_target_space(self):
         """Test that 'target ' completes to ['Available completions:', 'create', 'delete', 'list',
         'modules', 'select', 'stop-hook', 'variable']."""
         self.complete_from_to('target ',
-                              ['Available completions:', 'create', 'delete', 'list',
-                               'modules', 'select', 'stop-hook', 'variable'])
+                              ['Available completions:',
+                               'create',
+                               'delete',
+                               'list',
+                               'modules',
+                               'select',
+                               'stop-hook',
+                               'variable'])
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_target_create_dash_co(self):
         """Test that 'target create --co' completes to 'target variable --core '."""
         self.complete_from_to('target create --co', 'target create --core ')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @skipIfFreeBSD # timing out on the FreeBSD buildbot
+    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     @no_debug_info_test
     def test_target_va(self):
         """Test that 'target va' completes to 'target variable '."""
         self.complete_from_to('target va', 'target variable ')
 
     @expectedFailureAll(hostoslist=["windows"], bugnumber="llvm.org/pr24679")
-    @expectedFailureAll(oslist=lldbplatform.darwin_all, bugnumber="llvm.org/pr25485")
+    @expectedFailureAll(
+        oslist=lldbplatform.darwin_all,
+        bugnumber="llvm.org/pr25485")
     def test_symbol_name(self):
         self.build()
         self.complete_from_to('''file a.out
@@ -277,7 +320,7 @@ class CommandLineCompletionTestCase(TestBase):
         # later on.
         if not isinstance(patterns, list):
             patterns = [patterns]
-        
+
         # The default lldb prompt.
         prompt = "(lldb) "
 
@@ -304,7 +347,7 @@ class CommandLineCompletionTestCase(TestBase):
         # stop further logging.
         child.logfile_send = None
         child.logfile_read = None
-        
+
         with open('child_send.txt', 'r') as fs:
             if self.TraceOn():
                 print("\n\nContents of child_send.txt:")
@@ -318,10 +361,13 @@ class CommandLineCompletionTestCase(TestBase):
             # The matching could be verbatim or using generic re pattern.
             for p in patterns:
                 # Test that str_input completes to our patterns or substrings.
-                # If each pattern/substring matches from_child, the completion mechanism works!
+                # If each pattern/substring matches from_child, the completion
+                # mechanism works!
                 if turn_off_re_match:
-                    self.expect(from_child, msg=COMPLETION_MSG(str_input, p), exe=False,
-                        substrs = [p])
+                    self.expect(
+                        from_child, msg=COMPLETION_MSG(
+                            str_input, p), exe=False, substrs=[p])
                 else:
-                    self.expect(from_child, msg=COMPLETION_MSG(str_input, p), exe=False,
-                        patterns = [p])
+                    self.expect(
+                        from_child, msg=COMPLETION_MSG(
+                            str_input, p), exe=False, patterns=[p])

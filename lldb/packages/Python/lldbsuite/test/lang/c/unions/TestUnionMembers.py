@@ -2,6 +2,7 @@ import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
+
 class TestUnionMembers(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -10,22 +11,29 @@ class TestUnionMembers(TestBase):
         self._load_exe()
 
         # Set breakpoints
-        bp = self.target.BreakpointCreateBySourceRegex("Break here", self.src_file_spec)
-        self.assertTrue(bp.IsValid() and bp.GetNumLocations() >= 1, VALID_BREAKPOINT)
+        bp = self.target.BreakpointCreateBySourceRegex(
+            "Break here", self.src_file_spec)
+        self.assertTrue(
+            bp.IsValid() and bp.GetNumLocations() >= 1,
+            VALID_BREAKPOINT)
 
         # Launch the process
-        self.process = self.target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.process = self.target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(self.process.IsValid(), PROCESS_IS_VALID)
-        self.assertTrue(self.process.GetState() == lldb.eStateStopped, PROCESS_STOPPED)
+        self.assertTrue(
+            self.process.GetState() == lldb.eStateStopped,
+            PROCESS_STOPPED)
 
-        thread = lldbutil.get_stopped_thread(self.process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            self.process, lldb.eStopReasonBreakpoint)
         self.assertTrue(thread.IsValid())
         frame = thread.GetSelectedFrame()
         self.assertTrue(frame.IsValid())
 
-        val = frame.EvaluateExpression("u");
+        val = frame.EvaluateExpression("u")
         self.assertTrue(val.IsValid())
-        val = frame.EvaluateExpression("u.s");
+        val = frame.EvaluateExpression("u.s")
         self.assertTrue(val.IsValid())
         self.assertEqual(val.GetNumChildren(), 2)
 
@@ -39,7 +47,7 @@ class TestUnionMembers(TestBase):
         self.assertTrue(self.src_file_spec.IsValid(), "breakpoint file")
 
         # Get the path of the executable
-        exe_path  = os.path.join(cwd, 'a.out')
+        exe_path = os.path.join(cwd, 'a.out')
 
         # Load the executable
         self.target = self.dbg.CreateTarget(exe_path)

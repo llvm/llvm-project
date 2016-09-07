@@ -1,4 +1,5 @@
-//===-- SBExpressionOptions.cpp ---------------------------------------------*- C++ -*-===//
+//===-- SBExpressionOptions.cpp ---------------------------------------------*-
+//C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,220 +16,150 @@
 using namespace lldb;
 using namespace lldb_private;
 
+SBExpressionOptions::SBExpressionOptions()
+    : m_opaque_ap(new EvaluateExpressionOptions()) {}
 
-SBExpressionOptions::SBExpressionOptions () :
-    m_opaque_ap(new EvaluateExpressionOptions())
-{
+SBExpressionOptions::SBExpressionOptions(const SBExpressionOptions &rhs) {
+  m_opaque_ap.reset(new EvaluateExpressionOptions());
+  *(m_opaque_ap.get()) = rhs.ref();
 }
 
-SBExpressionOptions::SBExpressionOptions (const SBExpressionOptions &rhs)
-{
-    m_opaque_ap.reset(new EvaluateExpressionOptions());
-    *(m_opaque_ap.get()) = rhs.ref();
+const SBExpressionOptions &SBExpressionOptions::
+operator=(const SBExpressionOptions &rhs) {
+  if (this != &rhs) {
+    this->ref() = rhs.ref();
+  }
+  return *this;
 }
 
-const SBExpressionOptions &
-SBExpressionOptions::operator = (const SBExpressionOptions &rhs)
-{
-    if (this != &rhs)
-    {
-        this->ref() = rhs.ref();
-    }
-    return *this;
+SBExpressionOptions::~SBExpressionOptions() {}
+
+bool SBExpressionOptions::GetCoerceResultToId() const {
+  return m_opaque_ap->DoesCoerceToId();
 }
 
-SBExpressionOptions::~SBExpressionOptions()
-{
+void SBExpressionOptions::SetCoerceResultToId(bool coerce) {
+  m_opaque_ap->SetCoerceToId(coerce);
 }
 
-bool
-SBExpressionOptions::GetCoerceResultToId () const
-{
-    return m_opaque_ap->DoesCoerceToId ();
+bool SBExpressionOptions::GetUnwindOnError() const {
+  return m_opaque_ap->DoesUnwindOnError();
 }
 
-void
-SBExpressionOptions::SetCoerceResultToId (bool coerce)
-{
-    m_opaque_ap->SetCoerceToId (coerce);
+void SBExpressionOptions::SetUnwindOnError(bool unwind) {
+  m_opaque_ap->SetUnwindOnError(unwind);
 }
 
-bool
-SBExpressionOptions::GetUnwindOnError () const
-{
-    return m_opaque_ap->DoesUnwindOnError ();
+bool SBExpressionOptions::GetIgnoreBreakpoints() const {
+  return m_opaque_ap->DoesIgnoreBreakpoints();
 }
 
-void
-SBExpressionOptions::SetUnwindOnError (bool unwind)
-{
-    m_opaque_ap->SetUnwindOnError (unwind);
+void SBExpressionOptions::SetIgnoreBreakpoints(bool ignore) {
+  m_opaque_ap->SetIgnoreBreakpoints(ignore);
 }
 
-bool
-SBExpressionOptions::GetIgnoreBreakpoints () const
-{
-    return m_opaque_ap->DoesIgnoreBreakpoints ();
+lldb::DynamicValueType SBExpressionOptions::GetFetchDynamicValue() const {
+  return m_opaque_ap->GetUseDynamic();
 }
 
-void
-SBExpressionOptions::SetIgnoreBreakpoints (bool ignore)
-{
-    m_opaque_ap->SetIgnoreBreakpoints (ignore);
+void SBExpressionOptions::SetFetchDynamicValue(lldb::DynamicValueType dynamic) {
+  m_opaque_ap->SetUseDynamic(dynamic);
 }
 
-lldb::DynamicValueType
-SBExpressionOptions::GetFetchDynamicValue () const
-{
-    return m_opaque_ap->GetUseDynamic ();
+uint32_t SBExpressionOptions::GetTimeoutInMicroSeconds() const {
+  return m_opaque_ap->GetTimeoutUsec();
 }
 
-void
-SBExpressionOptions::SetFetchDynamicValue (lldb::DynamicValueType dynamic)
-{
-    m_opaque_ap->SetUseDynamic (dynamic);
+void SBExpressionOptions::SetTimeoutInMicroSeconds(uint32_t timeout) {
+  m_opaque_ap->SetTimeoutUsec(timeout);
 }
 
-uint32_t
-SBExpressionOptions::GetTimeoutInMicroSeconds () const
-{
-    return m_opaque_ap->GetTimeoutUsec ();
+uint32_t SBExpressionOptions::GetOneThreadTimeoutInMicroSeconds() const {
+  return m_opaque_ap->GetOneThreadTimeoutUsec();
 }
 
-void
-SBExpressionOptions::SetTimeoutInMicroSeconds (uint32_t timeout)
-{
-    m_opaque_ap->SetTimeoutUsec (timeout);
+void SBExpressionOptions::SetOneThreadTimeoutInMicroSeconds(uint32_t timeout) {
+  m_opaque_ap->SetOneThreadTimeoutUsec(timeout);
 }
 
-uint32_t
-SBExpressionOptions::GetOneThreadTimeoutInMicroSeconds () const
-{
-    return m_opaque_ap->GetOneThreadTimeoutUsec ();
+bool SBExpressionOptions::GetTryAllThreads() const {
+  return m_opaque_ap->GetTryAllThreads();
 }
 
-void
-SBExpressionOptions::SetOneThreadTimeoutInMicroSeconds (uint32_t timeout)
-{
-    m_opaque_ap->SetOneThreadTimeoutUsec (timeout);
+void SBExpressionOptions::SetTryAllThreads(bool run_others) {
+  m_opaque_ap->SetTryAllThreads(run_others);
 }
 
-bool
-SBExpressionOptions::GetTryAllThreads () const
-{
-    return m_opaque_ap->GetTryAllThreads ();
+bool SBExpressionOptions::GetStopOthers() const {
+  return m_opaque_ap->GetStopOthers();
 }
 
-void
-SBExpressionOptions::SetTryAllThreads (bool run_others)
-{
-    m_opaque_ap->SetTryAllThreads (run_others);
+void SBExpressionOptions::SetStopOthers(bool run_others) {
+  m_opaque_ap->SetStopOthers(run_others);
 }
 
-bool
-SBExpressionOptions::GetStopOthers () const
-{
-    return m_opaque_ap->GetStopOthers ();
+bool SBExpressionOptions::GetTrapExceptions() const {
+  return m_opaque_ap->GetTrapExceptions();
 }
 
-void
-SBExpressionOptions::SetStopOthers (bool run_others)
-{
-    m_opaque_ap->SetStopOthers (run_others);
+void SBExpressionOptions::SetTrapExceptions(bool trap_exceptions) {
+  m_opaque_ap->SetTrapExceptions(trap_exceptions);
 }
 
-bool
-SBExpressionOptions::GetTrapExceptions () const
-{
-    return m_opaque_ap->GetTrapExceptions ();
+void SBExpressionOptions::SetLanguage(lldb::LanguageType language) {
+  m_opaque_ap->SetLanguage(language);
 }
 
-void
-SBExpressionOptions::SetTrapExceptions (bool trap_exceptions)
-{
-    m_opaque_ap->SetTrapExceptions (trap_exceptions);
+void SBExpressionOptions::SetCancelCallback(
+    lldb::ExpressionCancelCallback callback, void *baton) {
+  m_opaque_ap->SetCancelCallback(callback, baton);
 }
 
-void
-SBExpressionOptions::SetLanguage (lldb::LanguageType language)
-{
-    m_opaque_ap->SetLanguage(language);
+bool SBExpressionOptions::GetGenerateDebugInfo() {
+  return m_opaque_ap->GetGenerateDebugInfo();
 }
 
-void
-SBExpressionOptions::SetCancelCallback (lldb::ExpressionCancelCallback callback, void *baton)
-{
-    m_opaque_ap->SetCancelCallback (callback, baton);
+void SBExpressionOptions::SetGenerateDebugInfo(bool b) {
+  return m_opaque_ap->SetGenerateDebugInfo(b);
 }
 
-bool
-SBExpressionOptions::GetGenerateDebugInfo ()
-{
-    return m_opaque_ap->GetGenerateDebugInfo();
+bool SBExpressionOptions::GetSuppressPersistentResult() {
+  return m_opaque_ap->GetResultIsInternal();
 }
 
-void
-SBExpressionOptions::SetGenerateDebugInfo (bool b)
-{
-    return m_opaque_ap->SetGenerateDebugInfo(b);
+void SBExpressionOptions::SetSuppressPersistentResult(bool b) {
+  return m_opaque_ap->SetResultIsInternal(b);
 }
 
-bool
-SBExpressionOptions::GetSuppressPersistentResult ()
-{
-    return m_opaque_ap->GetResultIsInternal ();
+const char *SBExpressionOptions::GetPrefix() const {
+  return m_opaque_ap->GetPrefix();
 }
 
-void
-SBExpressionOptions::SetSuppressPersistentResult (bool b)
-{
-    return m_opaque_ap->SetResultIsInternal (b);
+void SBExpressionOptions::SetPrefix(const char *prefix) {
+  return m_opaque_ap->SetPrefix(prefix);
 }
 
-const char *
-SBExpressionOptions::GetPrefix () const
-{
-    return m_opaque_ap->GetPrefix();
+bool SBExpressionOptions::GetAutoApplyFixIts() {
+  return m_opaque_ap->GetAutoApplyFixIts();
 }
 
-void
-SBExpressionOptions::SetPrefix (const char *prefix)
-{
-    return m_opaque_ap->SetPrefix(prefix);
+void SBExpressionOptions::SetAutoApplyFixIts(bool b) {
+  return m_opaque_ap->SetAutoApplyFixIts(b);
 }
 
-bool
-SBExpressionOptions::GetAutoApplyFixIts ()
-{
-    return m_opaque_ap->GetAutoApplyFixIts ();
+bool SBExpressionOptions::GetTopLevel() {
+  return m_opaque_ap->GetExecutionPolicy() == eExecutionPolicyTopLevel;
 }
 
-void
-SBExpressionOptions::SetAutoApplyFixIts (bool b)
-{
-    return m_opaque_ap->SetAutoApplyFixIts (b);
+void SBExpressionOptions::SetTopLevel(bool b) {
+  m_opaque_ap->SetExecutionPolicy(b ? eExecutionPolicyTopLevel
+                                    : m_opaque_ap->default_execution_policy);
 }
 
-bool
-SBExpressionOptions::GetTopLevel ()
-{
-    return m_opaque_ap->GetExecutionPolicy() == eExecutionPolicyTopLevel;
+EvaluateExpressionOptions *SBExpressionOptions::get() const {
+  return m_opaque_ap.get();
 }
 
-void
-SBExpressionOptions::SetTopLevel (bool b)
-{
-    m_opaque_ap->SetExecutionPolicy(b ? eExecutionPolicyTopLevel : m_opaque_ap->default_execution_policy);
-}
-
-EvaluateExpressionOptions *
-SBExpressionOptions::get() const
-{
-    return m_opaque_ap.get();
-}
-
-EvaluateExpressionOptions &
-SBExpressionOptions::ref () const
-{
-    return *(m_opaque_ap.get());
+EvaluateExpressionOptions &SBExpressionOptions::ref() const {
+  return *(m_opaque_ap.get());
 }

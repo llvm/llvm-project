@@ -16,10 +16,9 @@
 // Other libraries and framework includes
 // Project includes
 
-#include "lldb/lldb-types.h"
-#include "lldb/Interpreter/Options.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
-
+#include "lldb/Interpreter/Options.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb_private {
 
@@ -27,12 +26,11 @@ namespace lldb_private {
 // CommandObjectMultiwordWatchpoint
 //-------------------------------------------------------------------------
 
-class CommandObjectWatchpointCommand : public CommandObjectMultiword
-{
+class CommandObjectWatchpointCommand : public CommandObjectMultiword {
 public:
-    CommandObjectWatchpointCommand (CommandInterpreter &interpreter);
+  CommandObjectWatchpointCommand(CommandInterpreter &interpreter);
 
-    ~CommandObjectWatchpointCommand() override;
+  ~CommandObjectWatchpointCommand() override;
 };
 
 } // namespace lldb_private

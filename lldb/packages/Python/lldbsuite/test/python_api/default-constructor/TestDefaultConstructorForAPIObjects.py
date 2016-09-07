@@ -14,13 +14,14 @@ after default construction.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class APIDefaultConstructorTestCase(TestBase):
 
@@ -125,7 +126,8 @@ class APIDefaultConstructorTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @no_debug_info_test
-    # darwin: This test passes with swig 3.0.2, fails w/3.0.5 other tests fail with 2.0.12 http://llvm.org/pr23488
+    # darwin: This test passes with swig 3.0.2, fails w/3.0.5 other tests fail
+    # with 2.0.12 http://llvm.org/pr23488
     def test_SBError(self):
         obj = lldb.SBError()
         if self.TraceOn():
@@ -228,8 +230,9 @@ class APIDefaultConstructorTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @no_debug_info_test
-    # Py3 asserts due to a bug in SWIG.  Trying to upstream a patch to fix this in 3.0.8
-    @skipIf(py_version=['>=', (3,0)], swig_version=['<', (3,0,8)])
+    # Py3 asserts due to a bug in SWIG.  Trying to upstream a patch to fix
+    # this in 3.0.8
+    @skipIf(py_version=['>=', (3, 0)], swig_version=['<', (3, 0, 8)])
     def test_SBModule(self):
         obj = lldb.SBModule()
         if self.TraceOn():
@@ -347,7 +350,7 @@ class APIDefaultConstructorTestCase(TestBase):
         except:
             # Exception is expected.
             return
-            
+
         # Unreachable code because lldb.SBType() should fail.
         # Do fuzz testing on the invalid obj, it should not crash lldb.
         import sb_type

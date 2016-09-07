@@ -65,9 +65,9 @@ def collect_events_whole_file(test_filename):
         "--inferior",
         "--results-formatter=lldbsuite.test_event.formatter.pickled.RawPickledFormatter",
         "--results-file={}".format(events_filename),
-        "-p", os.path.basename(test_filename),
-        os.path.dirname(test_filename)
-        ]
+        "-p",
+        os.path.basename(test_filename),
+        os.path.dirname(test_filename)]
     return _collect_events_with_command(command, events_filename)
 
 
@@ -79,7 +79,7 @@ def collect_events_for_directory_with_filter(test_filename, filter_desc):
         "--inferior",
         "--results-formatter=lldbsuite.test_event.formatter.pickled.RawPickledFormatter",
         "--results-file={}".format(events_filename),
-        "-f", filter_desc,
-        os.path.dirname(test_filename)
-        ]
+        "-f",
+        filter_desc,
+        os.path.dirname(test_filename)]
     return _collect_events_with_command(command, events_filename)

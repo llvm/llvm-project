@@ -4,11 +4,13 @@ Test saving a core file (or mini dump).
 
 from __future__ import print_function
 
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class ProcessSaveCoreTestCase(TestBase):
 
@@ -22,7 +24,8 @@ class ProcessSaveCoreTestCase(TestBase):
         exe = os.path.join(os.getcwd(), "a.out")
         core = os.path.join(os.getcwd(), "core.dmp")
         target = self.dbg.CreateTarget(exe)
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertNotEqual(process.GetState(), lldb.eStateStopped)
         error = process.SaveCore(core)
         self.assertTrue(error.Fail())
@@ -37,7 +40,8 @@ class ProcessSaveCoreTestCase(TestBase):
         try:
             target = self.dbg.CreateTarget(exe)
             breakpoint = target.BreakpointCreateByName("bar")
-            process = target.LaunchSimple(None, None, self.get_process_working_directory())
+            process = target.LaunchSimple(
+                None, None, self.get_process_working_directory())
             self.assertEqual(process.GetState(), lldb.eStateStopped)
             self.assertTrue(process.SaveCore(core))
             self.assertTrue(os.path.isfile(core))
@@ -47,8 +51,13 @@ class ProcessSaveCoreTestCase(TestBase):
             # the executable in the module list.
             target = self.dbg.CreateTarget(None)
             process = target.LoadCore(core)
-            files = [target.GetModuleAtIndex(i).GetFileSpec() for i in range(0, target.GetNumModules())]
-            paths = [os.path.join(f.GetDirectory(), f.GetFilename()) for f in files]
+            files = [
+                target.GetModuleAtIndex(i).GetFileSpec() for i in range(
+                    0, target.GetNumModules())]
+            paths = [
+                os.path.join(
+                    f.GetDirectory(),
+                    f.GetFilename()) for f in files]
             self.assertTrue(exe in paths)
 
         finally:
@@ -56,5 +65,3 @@ class ProcessSaveCoreTestCase(TestBase):
             self.assertTrue(self.dbg.DeleteTarget(target))
             if (os.path.isfile(core)):
                 os.unlink(core)
-
-

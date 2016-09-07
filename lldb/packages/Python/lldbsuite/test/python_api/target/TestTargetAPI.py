@@ -5,14 +5,15 @@ Test SBTarget APIs.
 from __future__ import print_function
 
 
-
 import unittest2
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class TargetAPITestCase(TestBase):
 
@@ -22,11 +23,14 @@ class TargetAPITestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to of function 'c'.
-        self.line1 = line_number('main.c', '// Find the line number for breakpoint 1 here.')
-        self.line2 = line_number('main.c', '// Find the line number for breakpoint 2 here.')
-        self.line_main = line_number("main.c", "// Set a break at entry to main.")
+        self.line1 = line_number(
+            'main.c', '// Find the line number for breakpoint 1 here.')
+        self.line2 = line_number(
+            'main.c', '// Find the line number for breakpoint 2 here.')
+        self.line_main = line_number(
+            "main.c", "// Set a break at entry to main.")
 
-    #rdar://problem/9700873
+    # rdar://problem/9700873
     # Find global variable value fails for dwarf if inferior not started
     # (Was CrashTracer: [USER] 1 crash in Python at _lldb.so: lldb_private::MemoryCache::Read + 94)
     #
@@ -101,20 +105,20 @@ class TargetAPITestCase(TestBase):
         target = self.create_simple_target('b.out')
 
         # find the file address in the .data section of the main
-        # module            
+        # module
         data_section = self.find_data_section(target)
         data_section_addr = data_section.file_addr
 
         # resolve the above address, and compare the address produced
-        # by the resolution against the original address/section       
+        # by the resolution against the original address/section
         res_file_addr = target.ResolveFileAddress(data_section_addr)
         self.assertTrue(res_file_addr.IsValid())
 
-        self.assertEqual(data_section_addr, res_file_addr.file_addr) 
+        self.assertEqual(data_section_addr, res_file_addr.file_addr)
 
         data_section2 = res_file_addr.section
         self.assertIsNotNone(data_section2)
-        self.assertEqual(data_section.name, data_section2.name) 
+        self.assertEqual(data_section.name, data_section2.name)
 
     @add_test_categories(['pyapi'])
     def test_read_memory(self):
@@ -123,18 +127,20 @@ class TargetAPITestCase(TestBase):
         self.setTearDownCleanup(dictionary=d)
         target = self.create_simple_target('b.out')
 
-        breakpoint = target.BreakpointCreateByLocation("main.c", self.line_main)
+        breakpoint = target.BreakpointCreateByLocation(
+            "main.c", self.line_main)
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Put debugger into synchronous mode so when we target.LaunchSimple returns
         # it will guaranteed to be at the breakpoint
         self.dbg.SetAsync(False)
-        
+
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         # find the file address in the .data section of the main
-        # module            
+        # module
         data_section = self.find_data_section(target)
         sb_addr = lldb.SBAddress(data_section, 0)
         error = lldb.SBError()
@@ -162,7 +168,7 @@ class TargetAPITestCase(TestBase):
                     sect_type = ss.GetSectionType()
                     if sect_type == lldb.eSectionTypeData:
                         data_section = ss
-                        break                    
+                        break
 
         self.assertIsNotNone(data_section)
         return data_section
@@ -175,7 +181,7 @@ class TargetAPITestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        #rdar://problem/9700873
+        # rdar://problem/9700873
         # Find global variable value fails for dwarf if inferior not started
         # (Was CrashTracer: [USER] 1 crash in Python at _lldb.so: lldb_private::MemoryCache::Read + 94)
         #
@@ -186,30 +192,37 @@ class TargetAPITestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
         # Make sure we hit our breakpoint:
-        thread_list = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
-        self.assertTrue (len(thread_list) == 1)
+        thread_list = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
+        self.assertTrue(len(thread_list) == 1)
 
-        value_list = target.FindGlobalVariables('my_global_var_of_char_type', 3)
+        value_list = target.FindGlobalVariables(
+            'my_global_var_of_char_type', 3)
         self.assertTrue(value_list.GetSize() == 1)
         my_global_var = value_list.GetValueAtIndex(0)
         self.DebugSBValue(my_global_var)
         self.assertTrue(my_global_var)
         self.expect(my_global_var.GetName(), exe=False,
-            startstr = "my_global_var_of_char_type")
+                    startstr="my_global_var_of_char_type")
         self.expect(my_global_var.GetTypeName(), exe=False,
-            startstr = "char")
+                    startstr="char")
         self.expect(my_global_var.GetValue(), exe=False,
-            startstr = "'X'")
+                    startstr="'X'")
 
-        # While we are at it, let's also exercise the similar SBModule.FindGlobalVariables() API.
+        # While we are at it, let's also exercise the similar
+        # SBModule.FindGlobalVariables() API.
         for m in target.module_iter():
-            if os.path.normpath(m.GetFileSpec().GetDirectory()) == os.getcwd() and m.GetFileSpec().GetFilename() == exe_name:
-                value_list = m.FindGlobalVariables(target, 'my_global_var_of_char_type', 3)
+            if os.path.normpath(m.GetFileSpec().GetDirectory()) == os.getcwd(
+            ) and m.GetFileSpec().GetFilename() == exe_name:
+                value_list = m.FindGlobalVariables(
+                    target, 'my_global_var_of_char_type', 3)
                 self.assertTrue(value_list.GetSize() == 1)
-                self.assertTrue(value_list.GetValueAtIndex(0).GetValue() == "'X'")
+                self.assertTrue(
+                    value_list.GetValueAtIndex(0).GetValue() == "'X'")
                 break
 
     def find_functions(self, exe_name):
@@ -224,8 +237,9 @@ class TargetAPITestCase(TestBase):
         self.assertTrue(list.GetSize() == 1)
 
         for sc in list:
-            self.assertTrue(sc.GetModule().GetFileSpec().GetFilename() == exe_name)
-            self.assertTrue(sc.GetSymbol().GetName() == 'c')                
+            self.assertTrue(
+                sc.GetModule().GetFileSpec().GetFilename() == exe_name)
+            self.assertTrue(sc.GetSymbol().GetName() == 'c')
 
     def get_description(self):
         """Exercise SBTaget.GetDescription() API."""
@@ -237,21 +251,22 @@ class TargetAPITestCase(TestBase):
 
         from lldbsuite.test.lldbutil import get_description
 
-        # get_description() allows no option to mean lldb.eDescriptionLevelBrief.
+        # get_description() allows no option to mean
+        # lldb.eDescriptionLevelBrief.
         desc = get_description(target)
         #desc = get_description(target, option=lldb.eDescriptionLevelBrief)
         if not desc:
             self.fail("SBTarget.GetDescription() failed")
         self.expect(desc, exe=False,
-            substrs = ['a.out'])
+                    substrs=['a.out'])
         self.expect(desc, exe=False, matching=False,
-            substrs = ['Target', 'Module', 'Breakpoint'])
+                    substrs=['Target', 'Module', 'Breakpoint'])
 
         desc = get_description(target, option=lldb.eDescriptionLevelFull)
         if not desc:
             self.fail("SBTarget.GetDescription() failed")
         self.expect(desc, exe=False,
-            substrs = ['a.out', 'Target', 'Module', 'Breakpoint'])
+                    substrs=['a.out', 'Target', 'Module', 'Breakpoint'])
 
     @not_remote_testsuite_ready
     def launch_new_process_and_redirect_stdout(self):
@@ -263,28 +278,44 @@ class TargetAPITestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Add an extra twist of stopping the inferior in a breakpoint, and then continue till it's done.
-        # We should still see the entire stdout redirected once the process is finished.
+        # We should still see the entire stdout redirected once the process is
+        # finished.
         line = line_number('main.c', '// a(3) -> c(3)')
         breakpoint = target.BreakpointCreateByLocation('main.c', line)
 
         # Now launch the process, do not stop at entry point, and redirect stdout to "stdout.txt" file.
-        # The inferior should run to completion after "process.Continue()" call.
-        local_path = "stdout.txt";
+        # The inferior should run to completion after "process.Continue()"
+        # call.
+        local_path = "stdout.txt"
         if lldb.remote_platform:
-            stdout_path = lldbutil.append_to_process_working_directory("lldb-stdout-redirect.txt")
+            stdout_path = lldbutil.append_to_process_working_directory(
+                "lldb-stdout-redirect.txt")
         else:
             stdout_path = local_path
         error = lldb.SBError()
-        process = target.Launch (self.dbg.GetListener(), None, None, None, stdout_path, None, None, 0, False, error)
+        process = target.Launch(
+            self.dbg.GetListener(),
+            None,
+            None,
+            None,
+            stdout_path,
+            None,
+            None,
+            0,
+            False,
+            error)
         process.Continue()
         #self.runCmd("process status")
         if lldb.remote_platform:
             # copy output file to host
-            lldb.remote_platform.Get(lldb.SBFileSpec(stdout_path), lldb.SBFileSpec(local_path))
+            lldb.remote_platform.Get(
+                lldb.SBFileSpec(stdout_path),
+                lldb.SBFileSpec(local_path))
 
         # The 'stdout.txt' file should now exist.
-        self.assertTrue(os.path.isfile("stdout.txt"),
-                        "'stdout.txt' exists due to redirected stdout via SBTarget.Launch() API.")
+        self.assertTrue(
+            os.path.isfile("stdout.txt"),
+            "'stdout.txt' exists due to redirected stdout via SBTarget.Launch() API.")
 
         # Read the output file produced by running the program.
         with open('stdout.txt', 'r') as f:
@@ -298,8 +329,7 @@ class TargetAPITestCase(TestBase):
             pass
 
         self.expect(output, exe=False,
-            substrs = ["a(1)", "b(2)", "a(3)"])
-
+                    substrs=["a(1)", "b(2)", "a(3)"])
 
     def resolve_symbol_context_with_address(self):
         """Exercise SBTaget.ResolveSymbolContextForAddress() API."""
@@ -322,13 +352,17 @@ class TargetAPITestCase(TestBase):
                         VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be on self.line1.
         self.assertTrue(process.GetState() == lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), "There should be a thread stopped due to breakpoint condition")
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint condition")
         #self.runCmd("process status")
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
@@ -339,8 +373,11 @@ class TargetAPITestCase(TestBase):
         # Continue the inferior, the breakpoint 2 should be hit.
         process.Continue()
         self.assertTrue(process.GetState() == lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), "There should be a thread stopped due to breakpoint condition")
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint condition")
         #self.runCmd("process status")
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
@@ -351,9 +388,12 @@ class TargetAPITestCase(TestBase):
         #print("address1:", address1)
         #print("address2:", address2)
 
-        # Now call SBTarget.ResolveSymbolContextForAddress() with the addresses from our line entry.
-        context1 = target.ResolveSymbolContextForAddress(address1, lldb.eSymbolContextEverything)
-        context2 = target.ResolveSymbolContextForAddress(address2, lldb.eSymbolContextEverything)
+        # Now call SBTarget.ResolveSymbolContextForAddress() with the addresses
+        # from our line entry.
+        context1 = target.ResolveSymbolContextForAddress(
+            address1, lldb.eSymbolContextEverything)
+        context2 = target.ResolveSymbolContextForAddress(
+            address2, lldb.eSymbolContextEverything)
 
         self.assertTrue(context1 and context2)
         #print("context1:", context1)

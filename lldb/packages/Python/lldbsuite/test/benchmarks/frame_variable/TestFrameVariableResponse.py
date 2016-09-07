@@ -3,13 +3,14 @@
 from __future__ import print_function
 
 
-
-import os, sys
+import os
+import sys
 import lldb
 from lldbsuite.test import configuration
 from lldbsuite.test import lldbtest_config
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbbench import *
+
 
 class FrameVariableResponseBench(BenchBase):
 
@@ -23,7 +24,9 @@ class FrameVariableResponseBench(BenchBase):
 
     @benchmarks_test
     @no_debug_info_test
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_startup_delay(self):
         """Test response time for the 'frame variable' command."""
         print()
@@ -40,7 +43,9 @@ class FrameVariableResponseBench(BenchBase):
         self.stopwatch.reset()
         for i in range(count):
             # So that the child gets torn down after the test.
-            self.child = pexpect.spawn('%s %s %s' % (lldbtest_config.lldbExec, self.lldbOption, exe))
+            self.child = pexpect.spawn(
+                '%s %s %s' %
+                (lldbtest_config.lldbExec, self.lldbOption, exe))
             child = self.child
 
             # Turn on logging for what the child sends back.
@@ -52,9 +57,9 @@ class FrameVariableResponseBench(BenchBase):
             child.expect_exact(prompt)
 
             # Run the target and expect it to be stopped due to breakpoint.
-            child.sendline('run') # Aka 'process launch'.
+            child.sendline('run')  # Aka 'process launch'.
             child.expect_exact(prompt)
-        
+
             with self.stopwatch:
                 # Measure the 'frame variable' response time.
                 child.sendline('frame variable')

@@ -15,7 +15,9 @@ class JITLoaderGDBTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipTestIfFn(lambda : "Skipped because the test crashes the test runner", bugnumber="llvm.org/pr24702")
+    @skipTestIfFn(
+        lambda: "Skipped because the test crashes the test runner",
+        bugnumber="llvm.org/pr24702")
     @unittest2.expectedFailure("llvm.org/pr24702")
     def test_bogus_values(self):
         """Test that we handle inferior misusing the GDB JIT interface"""
@@ -27,10 +29,12 @@ class JITLoaderGDBTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # launch the process, do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        # The inferior will now pass bogus values over the interface. Make sure we don't crash.
+        # The inferior will now pass bogus values over the interface. Make sure
+        # we don't crash.
 
         self.assertEqual(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)

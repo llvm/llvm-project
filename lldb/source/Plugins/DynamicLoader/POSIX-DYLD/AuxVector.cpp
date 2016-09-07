@@ -28,113 +28,92 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static bool
-GetMaxU64(DataExtractor &data,
-          lldb::offset_t *offset_ptr,
-          uint64_t *value,
-          unsigned int byte_size)
-{
-    lldb::offset_t saved_offset = *offset_ptr;
-    *value = data.GetMaxU64(offset_ptr, byte_size);
-    return *offset_ptr != saved_offset;
+static bool GetMaxU64(DataExtractor &data, lldb::offset_t *offset_ptr,
+                      uint64_t *value, unsigned int byte_size) {
+  lldb::offset_t saved_offset = *offset_ptr;
+  *value = data.GetMaxU64(offset_ptr, byte_size);
+  return *offset_ptr != saved_offset;
 }
 
-static bool
-ParseAuxvEntry(DataExtractor &data,
-               AuxVector::Entry &entry,
-               lldb::offset_t *offset_ptr,
-               unsigned int byte_size)
-{
-    if (!GetMaxU64(data, offset_ptr, &entry.type, byte_size))
-        return false;
+static bool ParseAuxvEntry(DataExtractor &data, AuxVector::Entry &entry,
+                           lldb::offset_t *offset_ptr, unsigned int byte_size) {
+  if (!GetMaxU64(data, offset_ptr, &entry.type, byte_size))
+    return false;
 
-    if (!GetMaxU64(data, offset_ptr, &entry.value, byte_size))
-        return false;
+  if (!GetMaxU64(data, offset_ptr, &entry.value, byte_size))
+    return false;
 
-    return true;
+  return true;
 }
 
-DataBufferSP
-AuxVector::GetAuxvData()
-{
-    if (m_process)
-        return m_process->GetAuxvData ();
-    else
-        return DataBufferSP ();
+DataBufferSP AuxVector::GetAuxvData() {
+  if (m_process)
+    return m_process->GetAuxvData();
+  else
+    return DataBufferSP();
 }
 
-void
-AuxVector::ParseAuxv(DataExtractor &data)
-{
-    const unsigned int byte_size  = m_process->GetAddressByteSize();
-    lldb::offset_t offset = 0;
+void AuxVector::ParseAuxv(DataExtractor &data) {
+  const unsigned int byte_size = m_process->GetAddressByteSize();
+  lldb::offset_t offset = 0;
 
-    for (;;) 
-    {
-        Entry entry;
+  for (;;) {
+    Entry entry;
 
-        if (!ParseAuxvEntry(data, entry, &offset, byte_size))
-            break;
+    if (!ParseAuxvEntry(data, entry, &offset, byte_size))
+      break;
 
-        if (entry.type == AT_NULL)
-            break;
+    if (entry.type == AT_NULL)
+      break;
 
-        if (entry.type == AT_IGNORE)
-            continue;
+    if (entry.type == AT_IGNORE)
+      continue;
 
-        m_auxv.push_back(entry);
-    }
+    m_auxv.push_back(entry);
+  }
 }
 
-AuxVector::AuxVector(Process *process)
-    : m_process(process)
-{
-    DataExtractor data;
-    Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
+AuxVector::AuxVector(Process *process) : m_process(process) {
+  DataExtractor data;
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
 
-    data.SetData(GetAuxvData());
-    data.SetByteOrder(m_process->GetByteOrder());
-    data.SetAddressByteSize(m_process->GetAddressByteSize());
-    
-    ParseAuxv(data);
+  data.SetData(GetAuxvData());
+  data.SetByteOrder(m_process->GetByteOrder());
+  data.SetAddressByteSize(m_process->GetAddressByteSize());
 
-    if (log)
-        DumpToLog(log);
+  ParseAuxv(data);
+
+  if (log)
+    DumpToLog(log);
 }
 
-AuxVector::iterator 
-AuxVector::FindEntry(EntryType type) const
-{
-    for (iterator I = begin(); I != end(); ++I)
-    {
-        if (I->type == static_cast<uint64_t>(type))
-            return I;
-    }
+AuxVector::iterator AuxVector::FindEntry(EntryType type) const {
+  for (iterator I = begin(); I != end(); ++I) {
+    if (I->type == static_cast<uint64_t>(type))
+      return I;
+  }
 
-    return end();
+  return end();
 }
 
-void
-AuxVector::DumpToLog(Log *log) const
-{
-    if (!log)
-        return;
+void AuxVector::DumpToLog(Log *log) const {
+  if (!log)
+    return;
 
-    log->PutCString("AuxVector: ");
-    for (iterator I = begin(); I != end(); ++I)
-    {
-        log->Printf("   %s [%" PRIu64 "]: %" PRIx64, GetEntryName(*I), I->type, I->value);
-    }
+  log->PutCString("AuxVector: ");
+  for (iterator I = begin(); I != end(); ++I) {
+    log->Printf("   %s [%" PRIu64 "]: %" PRIx64, GetEntryName(*I), I->type,
+                I->value);
+  }
 }
 
-const char *
-AuxVector::GetEntryName(EntryType type)
-{
-    const char *name = "AT_???";
+const char *AuxVector::GetEntryName(EntryType type) {
+  const char *name = "AT_???";
 
-#define ENTRY_NAME(_type) _type: name = #_type
-    switch (type) 
-    {
+#define ENTRY_NAME(_type)                                                      \
+  _type:                                                                       \
+  name = #_type
+  switch (type) {
     case ENTRY_NAME(AT_NULL);           break;
     case ENTRY_NAME(AT_IGNORE);         break;
     case ENTRY_NAME(AT_EXECFD);         break;
@@ -173,4 +152,3 @@ AuxVector::GetEntryName(EntryType type)
 
     return name;
 }
-

@@ -34,5 +34,5 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "amdgpu-max-work-group-size"="64" }
-attributes #1 = { nounwind optnone noinline "amdgpu-max-work-group-size"="64" }
+attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" }
+attributes #1 = { nounwind optnone noinline "amdgpu-flat-work-group-size"="64,64" }

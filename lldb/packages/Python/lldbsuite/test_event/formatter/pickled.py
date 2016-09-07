@@ -31,21 +31,29 @@ class RawPickledFormatter(ResultsFormatter):
         return parser
 
     class StreamSerializer(object):
+
         @staticmethod
         def serialize(test_event, out_file):
-            # Send it as {serialized_length_of_serialized_bytes}{serialized_bytes}
+            # Send it as
+            # {serialized_length_of_serialized_bytes}{serialized_bytes}
             import struct
             msg = cPickle.dumps(test_event)
             packet = struct.pack("!I%ds" % len(msg), len(msg), msg)
             out_file.send(packet)
 
     class BlockSerializer(object):
+
         @staticmethod
         def serialize(test_event, out_file):
             cPickle.dump(test_event, out_file)
 
     def __init__(self, out_file, options, file_is_stream):
-        super(RawPickledFormatter, self).__init__(out_file, options, file_is_stream)
+        super(
+            RawPickledFormatter,
+            self).__init__(
+            out_file,
+            options,
+            file_is_stream)
         self.pid = os.getpid()
         if file_is_stream:
             self.serializer = self.StreamSerializer()

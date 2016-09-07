@@ -5,10 +5,11 @@ Fuzz tests an object after the default construction to make sure it does not cra
 import sys
 import lldb
 
+
 def fuzz_obj(obj):
     obj.GetName()
     obj.GetByteSize()
-    #obj.GetEncoding(5)
+    # obj.GetEncoding(5)
     obj.GetNumberChildren(True)
     member = lldb.SBTypeMember()
     obj.GetChildAtIndex(True, 0, member)

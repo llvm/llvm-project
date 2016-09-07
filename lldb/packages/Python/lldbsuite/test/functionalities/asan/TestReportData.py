@@ -5,25 +5,28 @@ Test the AddressSanitizer runtime support for report breakpoint and data extract
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import json
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class AsanTestReportDataCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["linux"], bugnumber="non-core functionality, need to reenable and fix later (DES 2014.11.07)")
-    @skipIfFreeBSD # llvm.org/pr21136 runtimes not yet available by default
+    @expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="non-core functionality, need to reenable and fix later (DES 2014.11.07)")
+    @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @skipIfRemote
     @skipUnlessCompilerRt
     def test(self):
-        self.build ()
-        self.asan_tests ()
+        self.build()
+        self.asan_tests()
 
     def setUp(self):
         # Call super's setUp().
@@ -34,26 +37,43 @@ class AsanTestReportDataCase(TestBase):
         self.line_breakpoint = line_number('main.c', '// break line')
         self.line_crash = line_number('main.c', '// BOOM line')
 
-    def asan_tests (self):
-        exe = os.path.join (os.getcwd(), "a.out")
-        self.expect("file " + exe, patterns = [ "Current executable set to .*a.out" ])
+    def asan_tests(self):
+        exe = os.path.join(os.getcwd(), "a.out")
+        self.expect(
+            "file " + exe,
+            patterns=["Current executable set to .*a.out"])
         self.runCmd("run")
 
         stop_reason = self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason()
         if stop_reason == lldb.eStopReasonExec:
-            # On OS X 10.10 and older, we need to re-exec to enable interceptors.
+            # On OS X 10.10 and older, we need to re-exec to enable
+            # interceptors.
             self.runCmd("continue")
 
-        self.expect("thread list", "Process should be stopped due to ASan report",
-            substrs = ['stopped', 'stop reason = Use of deallocated memory detected'])
+        self.expect(
+            "thread list",
+            "Process should be stopped due to ASan report",
+            substrs=[
+                'stopped',
+                'stop reason = Use of deallocated memory detected'])
 
-        self.assertEqual(self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(), lldb.eStopReasonInstrumentation)
+        self.assertEqual(
+            self.dbg.GetSelectedTarget().process.GetSelectedThread().GetStopReason(),
+            lldb.eStopReasonInstrumentation)
 
         self.expect("bt", "The backtrace should show the crashing line",
-            substrs = ['main.c:%d' % self.line_crash])
+                    substrs=['main.c:%d' % self.line_crash])
 
-        self.expect("thread info -s", "The extended stop info should contain the ASan provided fields",
-            substrs = ["access_size", "access_type", "address", "pc", "description", "heap-use-after-free"])
+        self.expect(
+            "thread info -s",
+            "The extended stop info should contain the ASan provided fields",
+            substrs=[
+                "access_size",
+                "access_type",
+                "address",
+                "pc",
+                "description",
+                "heap-use-after-free"])
 
         output_lines = self.res.GetOutput().split('\n')
         json_line = '\n'.join(output_lines[2:])

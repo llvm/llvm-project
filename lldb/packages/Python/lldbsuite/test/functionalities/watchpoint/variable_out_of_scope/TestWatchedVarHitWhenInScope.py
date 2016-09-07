@@ -5,12 +5,13 @@ Test that a variable watchpoint should only hit when in scope.
 from __future__ import print_function
 
 
-
 import unittest2
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
+
 
 class WatchedVariableHitWhenInScopeTestCase(TestBase):
 
@@ -20,7 +21,7 @@ class WatchedVariableHitWhenInScopeTestCase(TestBase):
     # This test depends on not tracking watchpoint expression hits if we have
     # left the watchpoint scope.  We will provide such an ability at some point
     # but the way this was done was incorrect, and it is unclear that for the
-    # most part that's not what folks mostly want, so we have to provide a 
+    # most part that's not what folks mostly want, so we have to provide a
     # clearer API to express this.
     #
 
@@ -42,7 +43,8 @@ class WatchedVariableHitWhenInScopeTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Add a breakpoint to set a watchpoint when stopped in main.
-        lldbutil.run_break_set_by_symbol (self, "main", num_expected_locations=-1)
+        lldbutil.run_break_set_by_symbol(
+            self, "main", num_expected_locations=-1)
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
@@ -50,34 +52,34 @@ class WatchedVariableHitWhenInScopeTestCase(TestBase):
         # We should be stopped again due to the breakpoint.
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         # Now let's set a watchpoint for 'c.a'.
         # There should be only one watchpoint hit (see main.c).
         self.expect("watchpoint set variable c.a", WATCHPOINT_CREATED,
-            substrs = ['Watchpoint created', 'size = 4', 'type = w'])
+                    substrs=['Watchpoint created', 'size = 4', 'type = w'])
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should be 0 initially.
         self.expect("watchpoint list -v",
-            substrs = ['hit_count = 0'])
+                    substrs=['hit_count = 0'])
 
         self.runCmd("process continue")
 
         # We should be stopped again due to the watchpoint (write type), but
         # only once.  The stop reason of the thread should be watchpoint.
         self.expect("thread list", STOPPED_DUE_TO_WATCHPOINT,
-            substrs = ['stopped',
-                       'stop reason = watchpoint'])
+                    substrs=['stopped',
+                             'stop reason = watchpoint'])
 
         self.runCmd("process continue")
         # Don't expect the read of 'global' to trigger a stop exception.
         # The process status should be 'exited'.
         self.expect("process status",
-            substrs = ['exited'])
+                    substrs=['exited'])
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should now be 1.
         self.expect("watchpoint list -v",
-            substrs = ['hit_count = 1'])
+                    substrs=['hit_count = 1'])

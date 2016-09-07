@@ -19,42 +19,32 @@
 
 #include "lldb/Expression/DiagnosticManager.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-
-class ClangDiagnostic : public Diagnostic
-{
+class ClangDiagnostic : public Diagnostic {
 public:
-    typedef std::vector<clang::FixItHint> FixItList;
-    
-    static inline bool classof(const ClangDiagnostic *) { return true; }
-    static inline bool classof(const Diagnostic *diag) {
-        return diag->getKind() == eDiagnosticOriginClang;
-    }
-    
-    ClangDiagnostic(const char *message, DiagnosticSeverity severity, uint32_t compiler_id) :
-        Diagnostic(message, severity, eDiagnosticOriginClang, compiler_id)
-    {
-    }
-    
-    virtual ~ClangDiagnostic() = default;
-    
-    bool HasFixIts () const override { return !m_fixit_vec.empty(); }
-    
-    void
-    AddFixitHint (const clang::FixItHint &fixit)
-    {
-        m_fixit_vec.push_back(fixit);
-    }
-    
-    const FixItList &
-    FixIts() const
-    {
-        return m_fixit_vec;
-    }
-    FixItList m_fixit_vec;
+  typedef std::vector<clang::FixItHint> FixItList;
+
+  static inline bool classof(const ClangDiagnostic *) { return true; }
+  static inline bool classof(const Diagnostic *diag) {
+    return diag->getKind() == eDiagnosticOriginClang;
+  }
+
+  ClangDiagnostic(const char *message, DiagnosticSeverity severity,
+                  uint32_t compiler_id)
+      : Diagnostic(message, severity, eDiagnosticOriginClang, compiler_id) {}
+
+  virtual ~ClangDiagnostic() = default;
+
+  bool HasFixIts() const override { return !m_fixit_vec.empty(); }
+
+  void AddFixitHint(const clang::FixItHint &fixit) {
+    m_fixit_vec.push_back(fixit);
+  }
+
+  const FixItList &FixIts() const { return m_fixit_vec; }
+  FixItList m_fixit_vec;
 };
 
-}  // namespace lldb_private
+} // namespace lldb_private
 #endif /* lldb_ClangDiagnostic_h */

@@ -21,60 +21,48 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void
-OptionValueChar::DumpValue (const ExecutionContext *exe_ctx, Stream &strm, uint32_t dump_mask)
-{
+void OptionValueChar::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
+                                uint32_t dump_mask) {
+  if (dump_mask & eDumpOptionType)
+    strm.Printf("(%s)", GetTypeAsCString());
+
+  if (dump_mask & eDumpOptionValue) {
     if (dump_mask & eDumpOptionType)
-        strm.Printf ("(%s)", GetTypeAsCString ());
-
-    if (dump_mask & eDumpOptionValue)
-    {
-        if (dump_mask & eDumpOptionType)
-            strm.PutCString (" = ");
-        if (m_current_value != '\0')
-            strm.PutChar(m_current_value);
-        else
-            strm.PutCString("(null)");
-    }
+      strm.PutCString(" = ");
+    if (m_current_value != '\0')
+      strm.PutChar(m_current_value);
+    else
+      strm.PutCString("(null)");
+  }
 }
 
-Error
-OptionValueChar::SetValueFromString (llvm::StringRef value,
-                                      VarSetOperationType op)
-{
-    Error error;
-    switch (op)
-    {
-    case eVarSetOperationClear:
-        Clear();
-        break;
+Error OptionValueChar::SetValueFromString(llvm::StringRef value,
+                                          VarSetOperationType op) {
+  Error error;
+  switch (op) {
+  case eVarSetOperationClear:
+    Clear();
+    break;
 
-    case eVarSetOperationReplace:
-    case eVarSetOperationAssign:
-        {
-            bool success = false;
-            char char_value = Args::StringToChar(value.str().c_str(), '\0', &success);
-            if (success)
-            {
-                m_current_value = char_value;
-                m_value_was_set = true;
-            }
-            else
-                error.SetErrorStringWithFormat("'%s' cannot be longer than 1 character", value.str().c_str());
-        }
-        break;
+  case eVarSetOperationReplace:
+  case eVarSetOperationAssign: {
+    bool success = false;
+    char char_value = Args::StringToChar(value.str().c_str(), '\0', &success);
+    if (success) {
+      m_current_value = char_value;
+      m_value_was_set = true;
+    } else
+      error.SetErrorStringWithFormat("'%s' cannot be longer than 1 character",
+                                     value.str().c_str());
+  } break;
 
-    default:
-        error = OptionValue::SetValueFromString (value.str().c_str(), op);
-        break;
-    }
-    return error;
+  default:
+    error = OptionValue::SetValueFromString(value.str().c_str(), op);
+    break;
+  }
+  return error;
 }
 
-lldb::OptionValueSP
-OptionValueChar::DeepCopy () const
-{
-    return OptionValueSP(new OptionValueChar(*this));
+lldb::OptionValueSP OptionValueChar::DeepCopy() const {
+  return OptionValueSP(new OptionValueChar(*this));
 }
-
-

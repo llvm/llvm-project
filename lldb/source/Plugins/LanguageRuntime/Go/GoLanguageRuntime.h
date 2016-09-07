@@ -14,80 +14,73 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-private.h"
 #include "lldb/Breakpoint/BreakpointResolver.h"
-#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Core/Value.h"
+#include "lldb/Target/LanguageRuntime.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
-    
-    class GoLanguageRuntime :
-    public lldb_private::LanguageRuntime
-    {
-    public:
-        ~GoLanguageRuntime() override = default;
 
-        //------------------------------------------------------------------
-        // Static Functions
-        //------------------------------------------------------------------
-        static void
-        Initialize();
-        
-        static void
-        Terminate();
-        
-        static lldb_private::LanguageRuntime *
-        CreateInstance(Process *process, lldb::LanguageType language);
-        
-        static lldb_private::ConstString
-        GetPluginNameStatic();
+class GoLanguageRuntime : public lldb_private::LanguageRuntime {
+public:
+  ~GoLanguageRuntime() override = default;
 
-        lldb::LanguageType
-        GetLanguageType() const override
-        {
-            return lldb::eLanguageTypeGo;
-        }
+  //------------------------------------------------------------------
+  // Static Functions
+  //------------------------------------------------------------------
+  static void Initialize();
 
-        bool
-        GetObjectDescription(Stream &str, ValueObject &object) override
-        {
-            // TODO(ribrdb): Maybe call String() method?
-            return false;
-        }
+  static void Terminate();
 
-        bool
-        GetObjectDescription(Stream &str, Value &value, ExecutionContextScope *exe_scope) override
-        {
-            return false;
-        }
+  static lldb_private::LanguageRuntime *
+  CreateInstance(Process *process, lldb::LanguageType language);
 
-        bool GetDynamicTypeAndAddress(ValueObject &in_value, lldb::DynamicValueType use_dynamic,
-                                      TypeAndOrName &class_type_or_name, Address &address,
-                                      Value::ValueType &value_type) override;
+  static lldb_private::ConstString GetPluginNameStatic();
 
-        bool CouldHaveDynamicValue(ValueObject &in_value) override;
+  lldb::LanguageType GetLanguageType() const override {
+    return lldb::eLanguageTypeGo;
+  }
 
-        lldb::BreakpointResolverSP
-        CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp, bool throw_bp) override
-        {
-            return lldb::BreakpointResolverSP();
-        }
+  bool GetObjectDescription(Stream &str, ValueObject &object) override {
+    // TODO(ribrdb): Maybe call String() method?
+    return false;
+  }
 
-        TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name, ValueObject &static_value) override;
+  bool GetObjectDescription(Stream &str, Value &value,
+                            ExecutionContextScope *exe_scope) override {
+    return false;
+  }
 
-        //------------------------------------------------------------------
-        // PluginInterface protocol
-        //------------------------------------------------------------------
-        lldb_private::ConstString
-        GetPluginName() override;
-        
-        uint32_t
-        GetPluginVersion() override;
-        
-    private:
-        GoLanguageRuntime(Process *process) : lldb_private::LanguageRuntime(process) { } // Call CreateInstance instead.
-    };
-    
+  bool GetDynamicTypeAndAddress(ValueObject &in_value,
+                                lldb::DynamicValueType use_dynamic,
+                                TypeAndOrName &class_type_or_name,
+                                Address &address,
+                                Value::ValueType &value_type) override;
+
+  bool CouldHaveDynamicValue(ValueObject &in_value) override;
+
+  lldb::BreakpointResolverSP CreateExceptionResolver(Breakpoint *bkpt,
+                                                     bool catch_bp,
+                                                     bool throw_bp) override {
+    return lldb::BreakpointResolverSP();
+  }
+
+  TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
+                                 ValueObject &static_value) override;
+
+  //------------------------------------------------------------------
+  // PluginInterface protocol
+  //------------------------------------------------------------------
+  lldb_private::ConstString GetPluginName() override;
+
+  uint32_t GetPluginVersion() override;
+
+private:
+  GoLanguageRuntime(Process *process)
+      : lldb_private::LanguageRuntime(process) {
+  } // Call CreateInstance instead.
+};
+
 } // namespace lldb_private
 
 #endif // liblldb_GoLanguageRuntime_h_

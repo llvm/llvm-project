@@ -17,27 +17,28 @@
 // Declarations:
 class CMICmnLog;
 
-//++ ============================================================================
+//++
+//============================================================================
 // Details: MI debugging aid utility class.
 //--
-class CMIUtilDebug
-{
-    // Statics:
-  public:
-    static void ShowDlgWaitForDbgAttach();
-    static void WaitForDbgAttachInfinteLoop();
+class CMIUtilDebug {
+  // Statics:
+public:
+  static void ShowDlgWaitForDbgAttach();
+  static void WaitForDbgAttachInfinteLoop();
 
-    // Methods:
-  public:
-    /* ctor */ CMIUtilDebug();
+  // Methods:
+public:
+  /* ctor */ CMIUtilDebug();
 
-    // Overrideable:
-  public:
-    // From CMICmnBase
-    /* dtor */ virtual ~CMIUtilDebug();
+  // Overrideable:
+public:
+  // From CMICmnBase
+  /* dtor */ virtual ~CMIUtilDebug();
 };
 
-//++ ============================================================================
+//++
+//============================================================================
 // Details: MI debug utility class. Used to indicate the current function
 //          depth in the call stack. It uses the CMIlCmnLog logger to output
 //          the current fn trace information.
@@ -46,27 +47,29 @@ class CMIUtilDebug
 //          Use preprocessor definition MI_USE_DEBUG_TRACE_FN to turn off or on
 //          tracing code.
 //--
-class CMIUtilDebugFnTrace
-{
-    // Methods:
-  public:
-    /* ctor */ CMIUtilDebugFnTrace(const CMIUtilString &vFnName);
+class CMIUtilDebugFnTrace {
+  // Methods:
+public:
+  /* ctor */ CMIUtilDebugFnTrace(const CMIUtilString &vFnName);
 
-    // Overrideable:
-  public:
-    // From CMICmnBase
-    /* dtor */ virtual ~CMIUtilDebugFnTrace();
+  // Overrideable:
+public:
+  // From CMICmnBase
+  /* dtor */ virtual ~CMIUtilDebugFnTrace();
 
-    // Attributes:
-  private:
-    const CMIUtilString m_strFnName;
+  // Attributes:
+private:
+  const CMIUtilString m_strFnName;
 
-    static CMICmnLog &ms_rLog;
-    static MIuint ms_fnDepthCnt; // Increment count as fn depth increases, decrement count as fn stack pops off
+  static CMICmnLog &ms_rLog;
+  static MIuint ms_fnDepthCnt; // Increment count as fn depth increases,
+                               // decrement count as fn stack pops off
 };
 
-//++ ============================================================================
-// Details: Take the given text and send it to the server's Logger to output to the
+//++
+//============================================================================
+// Details: Take the given text and send it to the server's Logger to output to
+// the
 //          trace file.
 // Type:    Compile preprocess.
 // Args:    x   - (R) Message (may be seen by user).

@@ -1,4 +1,5 @@
-//===-- MinidumpParser.h -----------------------------------------*- C++ -*-===//
+//===-- MinidumpParser.h -----------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -28,44 +29,37 @@
 #include <cstring>
 #include <unordered_map>
 
+namespace lldb_private {
 
-namespace lldb_private
-{
+namespace minidump {
 
-namespace minidump
-{
-
-class MinidumpParser
-{
+class MinidumpParser {
 public:
-    static llvm::Optional<MinidumpParser>
-    Create(const lldb::DataBufferSP &data_buf_sp);
+  static llvm::Optional<MinidumpParser>
+  Create(const lldb::DataBufferSP &data_buf_sp);
 
-    lldb::offset_t
-    GetByteSize();
+  lldb::offset_t GetByteSize();
 
-    llvm::Optional<llvm::ArrayRef<uint8_t>>
-    GetStream(MinidumpStreamType stream_type);
+  llvm::Optional<llvm::ArrayRef<uint8_t>>
+  GetStream(MinidumpStreamType stream_type);
 
-    llvm::Optional<std::vector<const MinidumpThread *>>
-    GetThreads();
+  llvm::Optional<std::vector<const MinidumpThread *>> GetThreads();
 
-    const MinidumpSystemInfo *
-    GetSystemInfo();
+  const MinidumpSystemInfo *GetSystemInfo();
 
-    ArchSpec
-    GetArchitecture();
+  ArchSpec GetArchitecture();
 
-    const MinidumpMiscInfo *
-    GetMiscInfo();
+  const MinidumpMiscInfo *GetMiscInfo();
 
 private:
-    lldb::DataBufferSP m_data_sp;
-    const MinidumpHeader *m_header;
-    llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> m_directory_map;
+  lldb::DataBufferSP m_data_sp;
+  const MinidumpHeader *m_header;
+  llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> m_directory_map;
 
-    MinidumpParser(const lldb::DataBufferSP &data_buf_sp, const MinidumpHeader *header,
-                   const llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> &directory_map);
+  MinidumpParser(const lldb::DataBufferSP &data_buf_sp,
+                 const MinidumpHeader *header,
+                 const llvm::DenseMap<uint32_t, MinidumpLocationDescriptor>
+                     &directory_map);
 };
 
 } // namespace minidump

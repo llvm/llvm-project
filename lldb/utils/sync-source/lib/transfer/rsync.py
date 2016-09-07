@@ -7,6 +7,7 @@ import transfer.protocol
 
 
 class RsyncOverSsh(transfer.protocol.Protocol):
+
     def __init__(self, options, config):
         super(RsyncOverSsh, self).__init__(options, config)
         self.ssh_config = config.get_value("ssh")

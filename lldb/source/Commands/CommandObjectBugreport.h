@@ -22,12 +22,11 @@ namespace lldb_private {
 // CommandObjectMultiwordBugreport
 //-------------------------------------------------------------------------
 
-class CommandObjectMultiwordBugreport : public CommandObjectMultiword
-{
+class CommandObjectMultiwordBugreport : public CommandObjectMultiword {
 public:
-    CommandObjectMultiwordBugreport(CommandInterpreter &interpreter);
+  CommandObjectMultiwordBugreport(CommandInterpreter &interpreter);
 
-    ~CommandObjectMultiwordBugreport() override;
+  ~CommandObjectMultiwordBugreport() override;
 };
 
 } // namespace lldb_private

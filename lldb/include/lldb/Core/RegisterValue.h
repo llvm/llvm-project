@@ -18,376 +18,258 @@
 #include "llvm/ADT/APInt.h"
 
 // Project includes
-#include "lldb/lldb-public.h"
-#include "lldb/lldb-private.h"
-#include "lldb/Host/Endian.h"
 #include "lldb/Core/Scalar.h"
+#include "lldb/Host/Endian.h"
+#include "lldb/lldb-private.h"
+#include "lldb/lldb-public.h"
 
 namespace lldb_private {
 
-    class RegisterValue
-    {
-    public:
-        enum
-        {
-            kMaxRegisterByteSize = 32u
-        };
+class RegisterValue {
+public:
+  enum { kMaxRegisterByteSize = 32u };
 
-        enum Type
-        {
-            eTypeInvalid,
-            eTypeUInt8,
-            eTypeUInt16,
-            eTypeUInt32,
-            eTypeUInt64,
-            eTypeUInt128,
-            eTypeFloat,
-            eTypeDouble,
-            eTypeLongDouble,
-            eTypeBytes
-        };
-        
-        RegisterValue () : 
-            m_type (eTypeInvalid),
-            m_scalar ((unsigned long)0)
-        {
-        }
+  enum Type {
+    eTypeInvalid,
+    eTypeUInt8,
+    eTypeUInt16,
+    eTypeUInt32,
+    eTypeUInt64,
+    eTypeUInt128,
+    eTypeFloat,
+    eTypeDouble,
+    eTypeLongDouble,
+    eTypeBytes
+  };
 
-        explicit 
-        RegisterValue (uint8_t inst) : 
-            m_type (eTypeUInt8)
-        {
-            m_scalar = inst;
-        }
+  RegisterValue() : m_type(eTypeInvalid), m_scalar((unsigned long)0) {}
 
-        explicit 
-        RegisterValue (uint16_t inst) : 
-            m_type (eTypeUInt16)
-        {
-            m_scalar = inst;
-        }
+  explicit RegisterValue(uint8_t inst) : m_type(eTypeUInt8) { m_scalar = inst; }
 
-        explicit 
-        RegisterValue (uint32_t inst) : 
-            m_type (eTypeUInt32)
-        {
-            m_scalar = inst;
-        }
+  explicit RegisterValue(uint16_t inst) : m_type(eTypeUInt16) {
+    m_scalar = inst;
+  }
 
-        explicit 
-        RegisterValue (uint64_t inst) : 
-            m_type (eTypeUInt64)
-        {
-            m_scalar = inst;
-        }
+  explicit RegisterValue(uint32_t inst) : m_type(eTypeUInt32) {
+    m_scalar = inst;
+  }
 
-        explicit 
-        RegisterValue (llvm::APInt inst) :
-            m_type (eTypeUInt128)
-        {
-            m_scalar = llvm::APInt(inst);
-        }
+  explicit RegisterValue(uint64_t inst) : m_type(eTypeUInt64) {
+    m_scalar = inst;
+  }
 
-        explicit 
-        RegisterValue (float value) : 
-            m_type (eTypeFloat)
-        {
-            m_scalar = value;
-        }
+  explicit RegisterValue(llvm::APInt inst) : m_type(eTypeUInt128) {
+    m_scalar = llvm::APInt(inst);
+  }
 
-        explicit 
-        RegisterValue (double value) : 
-            m_type (eTypeDouble)
-        {
-            m_scalar = value;
-        }
+  explicit RegisterValue(float value) : m_type(eTypeFloat) { m_scalar = value; }
 
-        explicit 
-        RegisterValue (long double value) : 
-            m_type (eTypeLongDouble)
-        {
-            m_scalar = value;
-        }
+  explicit RegisterValue(double value) : m_type(eTypeDouble) {
+    m_scalar = value;
+  }
 
-        explicit 
-        RegisterValue (uint8_t *bytes, size_t length, lldb::ByteOrder byte_order)
-        {
-            SetBytes (bytes, length, byte_order);
-        }
+  explicit RegisterValue(long double value) : m_type(eTypeLongDouble) {
+    m_scalar = value;
+  }
 
-        RegisterValue::Type
-        GetType () const
-        {
-            return m_type;
-        }
+  explicit RegisterValue(uint8_t *bytes, size_t length,
+                         lldb::ByteOrder byte_order) {
+    SetBytes(bytes, length, byte_order);
+  }
 
-        bool
-        CopyValue (const RegisterValue &rhs);
+  RegisterValue::Type GetType() const { return m_type; }
 
-        void
-        SetType (RegisterValue::Type type)
-        {
-            m_type = type;
-        }
+  bool CopyValue(const RegisterValue &rhs);
 
-        RegisterValue::Type
-        SetType (const RegisterInfo *reg_info);
-        
-        bool
-        GetData (DataExtractor &data) const;
-        
-        // Copy the register value from this object into a buffer in "dst"
-        // and obey the "dst_byte_order" when copying the data. Also watch out
-        // in case "dst_len" is longer or shorter than the register value 
-        // described by "reg_info" and only copy the least significant bytes 
-        // of the register value, or pad the destination with zeroes if the
-        // register byte size is shorter that "dst_len" (all while correctly
-        // abiding the "dst_byte_order"). Returns the number of bytes copied
-        // into "dst".
-        uint32_t
-        GetAsMemoryData (const RegisterInfo *reg_info,
-                         void *dst, 
-                         uint32_t dst_len, 
-                         lldb::ByteOrder dst_byte_order,
-                         Error &error) const;
+  void SetType(RegisterValue::Type type) { m_type = type; }
 
-        uint32_t
-        SetFromMemoryData (const RegisterInfo *reg_info,
-                           const void *src,
-                           uint32_t src_len,
-                           lldb::ByteOrder src_byte_order,
-                           Error &error);
-                           
-        bool
-        GetScalarValue (Scalar &scalar) const;
+  RegisterValue::Type SetType(const RegisterInfo *reg_info);
 
-        uint8_t
-        GetAsUInt8(uint8_t fail_value = UINT8_MAX, bool *success_ptr = nullptr) const
-        {
-            if (m_type == eTypeUInt8)
-            {
-                if (success_ptr)
-                    *success_ptr = true;                
-                return m_scalar.UChar(fail_value);
-            }
-            if (success_ptr)
-                *success_ptr = true;
-            return fail_value;
-        }
+  bool GetData(DataExtractor &data) const;
 
-        uint16_t
-        GetAsUInt16(uint16_t fail_value = UINT16_MAX, bool *success_ptr = nullptr) const;
+  // Copy the register value from this object into a buffer in "dst"
+  // and obey the "dst_byte_order" when copying the data. Also watch out
+  // in case "dst_len" is longer or shorter than the register value
+  // described by "reg_info" and only copy the least significant bytes
+  // of the register value, or pad the destination with zeroes if the
+  // register byte size is shorter that "dst_len" (all while correctly
+  // abiding the "dst_byte_order"). Returns the number of bytes copied
+  // into "dst".
+  uint32_t GetAsMemoryData(const RegisterInfo *reg_info, void *dst,
+                           uint32_t dst_len, lldb::ByteOrder dst_byte_order,
+                           Error &error) const;
 
-        uint32_t
-        GetAsUInt32(uint32_t fail_value = UINT32_MAX, bool *success_ptr = nullptr) const;
+  uint32_t SetFromMemoryData(const RegisterInfo *reg_info, const void *src,
+                             uint32_t src_len, lldb::ByteOrder src_byte_order,
+                             Error &error);
 
-        uint64_t
-        GetAsUInt64(uint64_t fail_value = UINT64_MAX, bool *success_ptr = nullptr) const;
+  bool GetScalarValue(Scalar &scalar) const;
 
-        llvm::APInt
-        GetAsUInt128(const llvm::APInt& fail_value, bool *success_ptr = nullptr) const;
+  uint8_t GetAsUInt8(uint8_t fail_value = UINT8_MAX,
+                     bool *success_ptr = nullptr) const {
+    if (m_type == eTypeUInt8) {
+      if (success_ptr)
+        *success_ptr = true;
+      return m_scalar.UChar(fail_value);
+    }
+    if (success_ptr)
+      *success_ptr = true;
+    return fail_value;
+  }
 
-        float
-        GetAsFloat(float fail_value = 0.0f, bool *success_ptr = nullptr) const;
+  uint16_t GetAsUInt16(uint16_t fail_value = UINT16_MAX,
+                       bool *success_ptr = nullptr) const;
 
-        double
-        GetAsDouble(double fail_value = 0.0, bool *success_ptr = nullptr) const;
+  uint32_t GetAsUInt32(uint32_t fail_value = UINT32_MAX,
+                       bool *success_ptr = nullptr) const;
 
-        long double
-        GetAsLongDouble(long double fail_value = 0.0, bool *success_ptr = nullptr) const;
+  uint64_t GetAsUInt64(uint64_t fail_value = UINT64_MAX,
+                       bool *success_ptr = nullptr) const;
 
-        void
-        SetValueToInvalid ()
-        {
-            m_type = eTypeInvalid;
-        }
+  llvm::APInt GetAsUInt128(const llvm::APInt &fail_value,
+                           bool *success_ptr = nullptr) const;
 
-        bool
-        ClearBit (uint32_t bit);
+  float GetAsFloat(float fail_value = 0.0f, bool *success_ptr = nullptr) const;
 
-        bool
-        SetBit (uint32_t bit);
+  double GetAsDouble(double fail_value = 0.0,
+                     bool *success_ptr = nullptr) const;
 
-        bool
-        operator == (const RegisterValue &rhs) const;
+  long double GetAsLongDouble(long double fail_value = 0.0,
+                              bool *success_ptr = nullptr) const;
 
-        bool
-        operator != (const RegisterValue &rhs) const;
+  void SetValueToInvalid() { m_type = eTypeInvalid; }
 
-        void
-        operator = (uint8_t uint)
-        {
-            m_type = eTypeUInt8;
-            m_scalar = uint;
-        }
+  bool ClearBit(uint32_t bit);
 
-        void
-        operator = (uint16_t uint)
-        {
-            m_type = eTypeUInt16;
-            m_scalar = uint;
-        }
+  bool SetBit(uint32_t bit);
 
-        void
-        operator = (uint32_t uint)
-        {
-            m_type = eTypeUInt32;
-            m_scalar = uint;
-        }
+  bool operator==(const RegisterValue &rhs) const;
 
-        void
-        operator = (uint64_t uint)
-        {
-            m_type = eTypeUInt64;
-            m_scalar = uint;
-        }
+  bool operator!=(const RegisterValue &rhs) const;
 
-        void
-        operator = (llvm::APInt uint)
-        {
-            m_type = eTypeUInt128;
-            m_scalar = llvm::APInt(uint);
-        }
+  void operator=(uint8_t uint) {
+    m_type = eTypeUInt8;
+    m_scalar = uint;
+  }
 
-        void
-        operator = (float f)
-        {
-            m_type = eTypeFloat;
-            m_scalar = f;
-        }
+  void operator=(uint16_t uint) {
+    m_type = eTypeUInt16;
+    m_scalar = uint;
+  }
 
-        void
-        operator = (double f)
-        {
-            m_type = eTypeDouble;
-            m_scalar = f;
-        }
+  void operator=(uint32_t uint) {
+    m_type = eTypeUInt32;
+    m_scalar = uint;
+  }
 
-        void
-        operator = (long double f)
-        {
-            m_type = eTypeLongDouble;
-            m_scalar = f;
-        }
+  void operator=(uint64_t uint) {
+    m_type = eTypeUInt64;
+    m_scalar = uint;
+  }
 
-        void
-        SetUInt8 (uint8_t uint)
-        {
-            m_type = eTypeUInt8;
-            m_scalar = uint;
-        }
+  void operator=(llvm::APInt uint) {
+    m_type = eTypeUInt128;
+    m_scalar = llvm::APInt(uint);
+  }
 
-        void
-        SetUInt16 (uint16_t uint)
-        {
-            m_type = eTypeUInt16;
-            m_scalar = uint;
-        }
+  void operator=(float f) {
+    m_type = eTypeFloat;
+    m_scalar = f;
+  }
 
-        void
-        SetUInt32 (uint32_t uint, Type t = eTypeUInt32)
-        {
-            m_type = t;
-            m_scalar = uint;
-        }
+  void operator=(double f) {
+    m_type = eTypeDouble;
+    m_scalar = f;
+  }
 
-        void
-        SetUInt64 (uint64_t uint, Type t = eTypeUInt64)
-        {
-            m_type = t;
-            m_scalar = uint;
-        }
+  void operator=(long double f) {
+    m_type = eTypeLongDouble;
+    m_scalar = f;
+  }
 
-        void
-        SetUInt128 (llvm::APInt uint)
-        {
-            m_type = eTypeUInt128;
-            m_scalar = uint;
-        }
+  void SetUInt8(uint8_t uint) {
+    m_type = eTypeUInt8;
+    m_scalar = uint;
+  }
 
-        bool
-        SetUInt (uint64_t uint, uint32_t byte_size);
-    
-        void
-        SetFloat (float f)
-        {
-            m_type = eTypeFloat;
-            m_scalar = f;
-        }
+  void SetUInt16(uint16_t uint) {
+    m_type = eTypeUInt16;
+    m_scalar = uint;
+  }
 
-        void
-        SetDouble (double f)
-        {
-            m_type = eTypeDouble;
-            m_scalar = f;
-        }
+  void SetUInt32(uint32_t uint, Type t = eTypeUInt32) {
+    m_type = t;
+    m_scalar = uint;
+  }
 
-        void
-        SetLongDouble (long double f)
-        {
-            m_type = eTypeLongDouble;
-            m_scalar = f;
-        }
+  void SetUInt64(uint64_t uint, Type t = eTypeUInt64) {
+    m_type = t;
+    m_scalar = uint;
+  }
 
-        void
-        SetBytes (const void *bytes, size_t length, lldb::ByteOrder byte_order);
+  void SetUInt128(llvm::APInt uint) {
+    m_type = eTypeUInt128;
+    m_scalar = uint;
+  }
 
-        bool
-        SignExtend (uint32_t sign_bitpos);
+  bool SetUInt(uint64_t uint, uint32_t byte_size);
 
-        Error
-        SetValueFromCString (const RegisterInfo *reg_info, 
-                             const char *value_str);
+  void SetFloat(float f) {
+    m_type = eTypeFloat;
+    m_scalar = f;
+  }
 
-        Error
-        SetValueFromData (const RegisterInfo *reg_info, 
-                          DataExtractor &data, 
-                          lldb::offset_t offset,
-                          bool partial_data_ok);
+  void SetDouble(double f) {
+    m_type = eTypeDouble;
+    m_scalar = f;
+  }
 
-        // The default value of 0 for reg_name_right_align_at means no alignment at all.
-        bool
-        Dump (Stream *s, 
-              const RegisterInfo *reg_info, 
-              bool prefix_with_name,
-              bool prefix_with_alt_name,
-              lldb::Format format,
-              uint32_t reg_name_right_align_at = 0) const;
+  void SetLongDouble(long double f) {
+    m_type = eTypeLongDouble;
+    m_scalar = f;
+  }
 
-        const void *
-        GetBytes () const;
+  void SetBytes(const void *bytes, size_t length, lldb::ByteOrder byte_order);
 
-        lldb::ByteOrder
-        GetByteOrder () const
-        {
-            if (m_type == eTypeBytes)
-                return buffer.byte_order;
-            return endian::InlHostByteOrder();
-        }
-        
-        uint32_t
-        GetByteSize () const;
+  bool SignExtend(uint32_t sign_bitpos);
 
-        static uint32_t
-        GetMaxByteSize ()
-        {
-            return kMaxRegisterByteSize;
-        }
+  Error SetValueFromCString(const RegisterInfo *reg_info,
+                            const char *value_str);
 
-        void
-        Clear();
+  Error SetValueFromData(const RegisterInfo *reg_info, DataExtractor &data,
+                         lldb::offset_t offset, bool partial_data_ok);
 
-    protected:
-        RegisterValue::Type m_type;
-        Scalar m_scalar;
+  // The default value of 0 for reg_name_right_align_at means no alignment at
+  // all.
+  bool Dump(Stream *s, const RegisterInfo *reg_info, bool prefix_with_name,
+            bool prefix_with_alt_name, lldb::Format format,
+            uint32_t reg_name_right_align_at = 0) const;
 
-        struct
-        {
-            uint8_t bytes[kMaxRegisterByteSize]; // This must be big enough to hold any register for any supported target.
-            uint8_t length;
-            lldb::ByteOrder byte_order;
-        } buffer;
-    };
+  const void *GetBytes() const;
+
+  lldb::ByteOrder GetByteOrder() const {
+    if (m_type == eTypeBytes)
+      return buffer.byte_order;
+    return endian::InlHostByteOrder();
+  }
+
+  uint32_t GetByteSize() const;
+
+  static uint32_t GetMaxByteSize() { return kMaxRegisterByteSize; }
+
+  void Clear();
+
+protected:
+  RegisterValue::Type m_type;
+  Scalar m_scalar;
+
+  struct {
+    uint8_t bytes[kMaxRegisterByteSize]; // This must be big enough to hold any
+                                         // register for any supported target.
+    uint8_t length;
+    lldb::ByteOrder byte_order;
+  } buffer;
+};
 
 } // namespace lldb_private
 

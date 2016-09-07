@@ -297,4 +297,4 @@ define void @ptrtoint(i32 addrspace(1)* %out, i32 %a, i32 %b) #0 {
 
 ; OPT: !0 = !{i32 0, i32 2048}
 
-attributes #0 = { nounwind "amdgpu-max-waves-per-eu"="2" }
+attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,2" }

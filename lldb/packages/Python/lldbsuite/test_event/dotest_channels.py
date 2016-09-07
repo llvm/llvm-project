@@ -42,6 +42,7 @@ class UnpicklingForwardingReaderChannel(asyncore.dispatcher):
     The bulk of this class is devoted to reading and parsing out
     the payload bytes.
     """
+
     def __init__(self, file_object, async_map, forwarding_func):
         asyncore.dispatcher.__init__(self, sock=file_object, map=async_map)
 
@@ -181,6 +182,7 @@ class UnpicklingForwardingListenerChannel(asyncore.dispatcher):
     one of the reasons for implementing with asyncore.  This listener shuts
     down once a single connection is made to it.
     """
+
     def __init__(self, async_map, host, port, backlog_count, forwarding_func):
         asyncore.dispatcher.__init__(self, map=async_map)
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)

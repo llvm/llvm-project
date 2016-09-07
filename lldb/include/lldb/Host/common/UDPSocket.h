@@ -12,24 +12,25 @@
 
 #include "lldb/Host/Socket.h"
 
-namespace lldb_private
-{
-    class UDPSocket: public Socket
-    {
-    public:
-        UDPSocket(bool child_processes_inherit, Error &error);
+namespace lldb_private {
+class UDPSocket : public Socket {
+public:
+  UDPSocket(bool child_processes_inherit, Error &error);
 
-        static Error Connect(llvm::StringRef name, bool child_processes_inherit, Socket *&send_socket, Socket *&recv_socket);
-    private:
-        UDPSocket(NativeSocket socket);
+  static Error Connect(llvm::StringRef name, bool child_processes_inherit,
+                       Socket *&send_socket, Socket *&recv_socket);
 
-        size_t Send(const void *buf, const size_t num_bytes) override;
-        Error Connect(llvm::StringRef name) override;
-        Error Listen(llvm::StringRef name, int backlog) override;
-        Error Accept(llvm::StringRef name, bool child_processes_inherit, Socket *&socket) override;
+private:
+  UDPSocket(NativeSocket socket);
 
-        SocketAddress m_send_sockaddr;
-    };
+  size_t Send(const void *buf, const size_t num_bytes) override;
+  Error Connect(llvm::StringRef name) override;
+  Error Listen(llvm::StringRef name, int backlog) override;
+  Error Accept(llvm::StringRef name, bool child_processes_inherit,
+               Socket *&socket) override;
+
+  SocketAddress m_send_sockaddr;
+};
 }
 
 #endif // ifndef liblldb_UDPSocket_h_

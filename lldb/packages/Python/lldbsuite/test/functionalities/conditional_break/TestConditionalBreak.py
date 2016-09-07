@@ -5,8 +5,8 @@ Test conditionally break on a function and inspect its variables.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
@@ -17,6 +17,7 @@ from lldbsuite.test import lldbutil
 # lldb not able to digest the clang-generated debug info correctly with respect to function name
 #
 # This class currently fails for clang as well as llvm-gcc.
+
 
 class ConditionalBreakTestCase(TestBase):
 
@@ -33,7 +34,9 @@ class ConditionalBreakTestCase(TestBase):
         self.build()
         self.simulate_conditional_break_by_user()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265: args in frames other than #0 are not evaluated correctly")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr26265: args in frames other than #0 are not evaluated correctly")
     def do_conditional_break(self):
         """Exercise some thread and frame APIs to break if c() is called by a()."""
         exe = os.path.join(os.getcwd(), "a.out")
@@ -45,7 +48,8 @@ class ConditionalBreakTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         self.assertTrue(process, PROCESS_IS_VALID)
 
@@ -54,7 +58,8 @@ class ConditionalBreakTestCase(TestBase):
                         STOPPED_DUE_TO_BREAKPOINT)
 
         # Find the line number where a's parent frame function is c.
-        line = line_number('main.c',
+        line = line_number(
+            'main.c',
             "// Find the line number where c's parent frame is a here.")
 
         # Suppose we are only interested in the call scenario where c()'s
@@ -66,15 +71,17 @@ class ConditionalBreakTestCase(TestBase):
         for j in range(10):
             if self.TraceOn():
                 print("j is: ", j)
-            thread = lldbutil.get_one_thread_stopped_at_breakpoint(process, breakpoint)
-            self.assertIsNotNone(thread, "Expected one thread to be stopped at the breakpoint")
-            
+            thread = lldbutil.get_one_thread_stopped_at_breakpoint(
+                process, breakpoint)
+            self.assertIsNotNone(
+                thread, "Expected one thread to be stopped at the breakpoint")
+
             if thread.GetNumFrames() >= 2:
                 frame0 = thread.GetFrameAtIndex(0)
                 name0 = frame0.GetFunction().GetName()
                 frame1 = thread.GetFrameAtIndex(1)
                 name1 = frame1.GetFunction().GetName()
-                #lldbutil.print_stacktrace(thread)
+                # lldbutil.print_stacktrace(thread)
                 self.assertTrue(name0 == "c", "Break on function c()")
                 if (name1 == "a"):
                     # By design, we know that a() calls c() only from main.c:27.
@@ -83,7 +90,8 @@ class ConditionalBreakTestCase(TestBase):
                     self.assertTrue(frame1.GetLineEntry().GetLine() == line,
                                     "Immediate caller a() at main.c:%d" % line)
 
-                    # And the local variable 'val' should have a value of (int) 3.
+                    # And the local variable 'val' should have a value of (int)
+                    # 3.
                     val = frame1.FindVariable("val")
                     self.assertEqual("int", val.GetTypeName())
                     self.assertEqual("3", val.GetValue())
@@ -109,28 +117,28 @@ class ConditionalBreakTestCase(TestBase):
         self.runCmd("file a.out")
         self.runCmd("command source .lldb")
 
-        self.runCmd ("break list")
+        self.runCmd("break list")
 
         if self.TraceOn():
             print("About to run.")
         self.runCmd("run", RUN_SUCCEEDED)
 
-        self.runCmd ("break list")
+        self.runCmd("break list")
 
         if self.TraceOn():
             print("Done running")
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped', 'stop reason = breakpoint'])
+                    substrs=['stopped', 'stop reason = breakpoint'])
 
         # The frame info for frame #0 points to a.out`c and its immediate caller
         # (frame #1) points to a.out`a.
 
         self.expect("frame info", "We should stop at c()",
-            substrs = ["a.out`c"])
+                    substrs=["a.out`c"])
 
         # Select our parent frame as the current frame.
         self.runCmd("frame select 1")
         self.expect("frame info", "The immediate caller should be a()",
-            substrs = ["a.out`a"])
+                    substrs=["a.out`a"])

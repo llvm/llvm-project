@@ -48,12 +48,6 @@ public:
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
 
-  unsigned getRegPressureSetLimit(const MachineFunction &MF,
-                                  unsigned Idx) const override;
-
-  unsigned getDefaultRegPressureSetLimit(const MachineFunction &MF,
-                                         unsigned Idx) const;
-
   bool requiresRegisterScavenging(const MachineFunction &Fn) const override;
 
 
@@ -172,14 +166,6 @@ public:
   unsigned getPreloadedValue(const MachineFunction &MF,
                              enum PreloadedValue Value) const;
 
-  /// \brief Give the maximum number of VGPRs that can be used by \p WaveCount
-  ///        concurrent waves.
-  unsigned getNumVGPRsAllowed(unsigned WaveCount) const;
-
-  /// \brief Give the maximum number of SGPRs that can be used by \p WaveCount
-  ///        concurrent waves.
-  unsigned getNumSGPRsAllowed(const SISubtarget &ST, unsigned WaveCount) const;
-
   unsigned findUnusedRegister(const MachineRegisterInfo &MRI,
                               const TargetRegisterClass *RC,
                               const MachineFunction &MF) const;
@@ -195,6 +181,70 @@ public:
   bool isVGPRPressureSet(unsigned SetID) const {
     return VGPRPressureSets.test(SetID) && !SGPRPressureSets.test(SetID);
   }
+
+  /// \returns SGPR allocation granularity supported by the subtarget.
+  unsigned getSGPRAllocGranule() const {
+    return 8;
+  }
+
+  /// \returns Total number of SGPRs supported by the subtarget.
+  unsigned getTotalNumSGPRs(const SISubtarget &ST) const;
+
+  /// \returns Number of addressable SGPRs supported by the subtarget.
+  unsigned getNumAddressableSGPRs(const SISubtarget &ST) const;
+
+  /// \returns Number of reserved SGPRs supported by the subtarget.
+  unsigned getNumReservedSGPRs(const SISubtarget &ST) const;
+
+  /// \returns Minimum number of SGPRs that meets given number of waves per
+  /// execution unit requirement for given subtarget.
+  unsigned getMinNumSGPRs(const SISubtarget &ST, unsigned WavesPerEU) const;
+
+  /// \returns Maximum number of SGPRs that meets given number of waves per
+  /// execution unit requirement for given subtarget.
+  unsigned getMaxNumSGPRs(const SISubtarget &ST, unsigned WavesPerEU) const;
+
+  /// \returns Maximum number of SGPRs that meets number of waves per execution
+  /// unit requirement for function \p MF, or number of SGPRs explicitly
+  /// requested using "amdgpu-num-sgpr" attribute attached to function \p MF.
+  ///
+  /// \returns Value that meets number of waves per execution unit requirement
+  /// if explicitly requested value cannot be converted to integer, violates
+  /// subtarget's specifications, or does not meet number of waves per execution
+  /// unit requirement.
+  unsigned getMaxNumSGPRs(const MachineFunction &MF) const;
+
+  /// \returns VGPR allocation granularity supported by the subtarget.
+  unsigned getVGPRAllocGranule() const {
+    return 4;
+  }
+
+  /// \returns Total number of VGPRs supported by the subtarget.
+  unsigned getTotalNumVGPRs() const {
+    return 256;
+  }
+
+  /// \returns Number of reserved VGPRs for debugger use supported by the
+  /// subtarget.
+  unsigned getNumDebuggerReservedVGPRs(const SISubtarget &ST) const;
+
+  /// \returns Minimum number of SGPRs that meets given number of waves per
+  /// execution unit requirement.
+  unsigned getMinNumVGPRs(unsigned WavesPerEU) const;
+
+  /// \returns Maximum number of VGPRs that meets given number of waves per
+  /// execution unit requirement.
+  unsigned getMaxNumVGPRs(unsigned WavesPerEU) const;
+
+  /// \returns Maximum number of VGPRs that meets number of waves per execution
+  /// unit requirement for function \p MF, or number of VGPRs explicitly
+  /// requested using "amdgpu-num-vgpr" attribute attached to function \p MF.
+  ///
+  /// \returns Value that meets number of waves per execution unit requirement
+  /// if explicitly requested value cannot be converted to integer, violates
+  /// subtarget's specifications, or does not meet number of waves per execution
+  /// unit requirement.
+  unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
 
 private:
   void buildScratchLoadStore(MachineBasicBlock::iterator MI,

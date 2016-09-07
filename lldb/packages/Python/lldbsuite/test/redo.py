@@ -17,7 +17,9 @@ for help.
 
 from __future__ import print_function
 
-import os, sys, datetime
+import os
+import sys
+import datetime
 import re
 
 # If True, redo with no '-t' option for the test driver.
@@ -42,6 +44,7 @@ comp_specs = set()
 # The "-A arch" for arch_specs.
 arch_specs = set()
 
+
 def usage():
     print("""\
 Usage: redo.py [-F filename_component] [-n] [session_dir] [-d]
@@ -60,6 +63,7 @@ possible session directories with names starting with %Y-%m-%d- (for example,
 2012-01-23-) and employs the one with the latest timestamp.""")
     sys.exit(0)
 
+
 def where(session_dir, test_dir):
     """Returns the full path to the session directory; None if non-existent."""
     abspath = os.path.abspath(session_dir)
@@ -77,6 +81,8 @@ def where(session_dir, test_dir):
 filter_pattern = re.compile("^\./dotest\.py.*-f (.*)$")
 comp_pattern = re.compile(" -C ([^ ]+) ")
 arch_pattern = re.compile(" -A ([^ ]+) ")
+
+
 def redo(suffix, dir, names):
     """Visitor function for os.path.walk(path, visit, arg)."""
     global redo_specs
@@ -108,9 +114,10 @@ def redo(suffix, dir, names):
                                 comp_specs.add(comp.group(1))
                             arch = arch_pattern.search(line)
                             if arch:
-                                arch_specs.add(arch.group(1))                                
+                                arch_specs.add(arch.group(1))
             else:
                 continue
+
 
 def main():
     """Read the session directory and run the failed test cases one by one."""
@@ -128,7 +135,8 @@ def main():
 
     index = 1
     while index < len(sys.argv):
-        if sys.argv[index].startswith('-h') or sys.argv[index].startswith('--help'):
+        if sys.argv[index].startswith(
+                '-h') or sys.argv[index].startswith('--help'):
             usage()
 
         if sys.argv[index].startswith('-'):
@@ -185,8 +193,8 @@ def main():
     for arch in arch_specs:
         archs += "--arch %s " % (arch)
 
-    command = "./dotest.py %s %s -v %s %s -f " % (compilers, archs, "" if no_trace else "-t", "-d" if do_delay else "")
-
+    command = "./dotest.py %s %s -v %s %s -f " % (
+        compilers, archs, "" if no_trace else "-t", "-d" if do_delay else "")
 
     print("Running %s" % (command + filters))
     os.system(command + filters)

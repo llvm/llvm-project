@@ -64,9 +64,8 @@ class TestDarwinLogMessageFormat(darwin_log.DarwinLogTestBase):
         # content.
         self.assertIsNotNone(self.child.match)
         self.assertFalse((len(self.child.match.groups()) > 0) and
-                        (self.child.match.group(1) != ""),
-                        "we should not have seen a header")
-
+                         (self.child.match.group(1) != ""),
+                         "we should not have seen a header")
 
     @decorators.skipUnlessDarwin
     def test_display_with_header_works(self):
@@ -83,8 +82,8 @@ class TestDarwinLogMessageFormat(darwin_log.DarwinLogTestBase):
         # content.
         self.assertIsNotNone(self.child.match)
         self.assertTrue((len(self.child.match.groups()) > 0) and
-                         (self.child.match.group(1) != ""),
-                         "we should have printed a header")
+                        (self.child.match.group(1) != ""),
+                        "we should have printed a header")
 
     def assert_header_contains_timestamp(self, header):
         fields = header.split(',')

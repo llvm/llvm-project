@@ -13,3214 +13,1965 @@
 #ifndef liblldb_GoAST_h
 #define liblldb_GoAST_h
 
+#include "Plugins/ExpressionParser/Go/GoLexer.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Casting.h"
-#include "Plugins/ExpressionParser/Go/GoLexer.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class GoASTNode
-{
-  public:
-    typedef GoLexer::TokenType TokenType;
-    typedef GoLexer::Token Token;
-    enum ChanDir
-    {
-        eChanBidir,
-        eChanSend,
-        eChanRecv,
-    };
-    enum NodeKind
-    {
-        eBadDecl,
-        eFuncDecl,
-        eGenDecl,
-        eArrayType,
-        eBadExpr,
-        eBasicLit,
-        eBinaryExpr,
-        eIdent,
-        eCallExpr,
-        eChanType,
-        eCompositeLit,
-        eEllipsis,
-        eFuncType,
-        eFuncLit,
-        eIndexExpr,
-        eInterfaceType,
-        eKeyValueExpr,
-        eMapType,
-        eParenExpr,
-        eSelectorExpr,
-        eSliceExpr,
-        eStarExpr,
-        eStructType,
-        eTypeAssertExpr,
-        eUnaryExpr,
-        eImportSpec,
-        eTypeSpec,
-        eValueSpec,
-        eAssignStmt,
-        eBadStmt,
-        eBlockStmt,
-        eBranchStmt,
-        eCaseClause,
-        eCommClause,
-        eDeclStmt,
-        eDeferStmt,
-        eEmptyStmt,
-        eExprStmt,
-        eForStmt,
-        eGoStmt,
-        eIfStmt,
-        eIncDecStmt,
-        eLabeledStmt,
-        eRangeStmt,
-        eReturnStmt,
-        eSelectStmt,
-        eSendStmt,
-        eSwitchStmt,
-        eTypeSwitchStmt,
-        eField,
-        eFieldList,
-    };
+class GoASTNode {
+public:
+  typedef GoLexer::TokenType TokenType;
+  typedef GoLexer::Token Token;
+  enum ChanDir {
+    eChanBidir,
+    eChanSend,
+    eChanRecv,
+  };
+  enum NodeKind {
+    eBadDecl,
+    eFuncDecl,
+    eGenDecl,
+    eArrayType,
+    eBadExpr,
+    eBasicLit,
+    eBinaryExpr,
+    eIdent,
+    eCallExpr,
+    eChanType,
+    eCompositeLit,
+    eEllipsis,
+    eFuncType,
+    eFuncLit,
+    eIndexExpr,
+    eInterfaceType,
+    eKeyValueExpr,
+    eMapType,
+    eParenExpr,
+    eSelectorExpr,
+    eSliceExpr,
+    eStarExpr,
+    eStructType,
+    eTypeAssertExpr,
+    eUnaryExpr,
+    eImportSpec,
+    eTypeSpec,
+    eValueSpec,
+    eAssignStmt,
+    eBadStmt,
+    eBlockStmt,
+    eBranchStmt,
+    eCaseClause,
+    eCommClause,
+    eDeclStmt,
+    eDeferStmt,
+    eEmptyStmt,
+    eExprStmt,
+    eForStmt,
+    eGoStmt,
+    eIfStmt,
+    eIncDecStmt,
+    eLabeledStmt,
+    eRangeStmt,
+    eReturnStmt,
+    eSelectStmt,
+    eSendStmt,
+    eSwitchStmt,
+    eTypeSwitchStmt,
+    eField,
+    eFieldList,
+  };
 
-    virtual ~GoASTNode() = default;
+  virtual ~GoASTNode() = default;
 
-    NodeKind
-    GetKind() const
-    {
-        return m_kind;
-    }
+  NodeKind GetKind() const { return m_kind; }
 
-    virtual const char *GetKindName() const = 0;
+  virtual const char *GetKindName() const = 0;
 
-    template <typename V> void WalkChildren(V &v);
+  template <typename V> void WalkChildren(V &v);
 
-  protected:
-    explicit GoASTNode(NodeKind kind) : m_kind(kind) { }
+protected:
+  explicit GoASTNode(NodeKind kind) : m_kind(kind) {}
 
-  private:
-    const NodeKind m_kind;
-    
-    GoASTNode(const GoASTNode &) = delete;
-    const GoASTNode &operator=(const GoASTNode &) = delete;
+private:
+  const NodeKind m_kind;
+
+  GoASTNode(const GoASTNode &) = delete;
+  const GoASTNode &operator=(const GoASTNode &) = delete;
 };
 
+class GoASTDecl : public GoASTNode {
+public:
+  template <typename R, typename V> R Visit(V *v) const;
 
-class GoASTDecl : public GoASTNode
-{
-  public:
-    template <typename R, typename V> R Visit(V *v) const;
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() >= eBadDecl && n->GetKind() <= eGenDecl;
+  }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() >= eBadDecl && n->GetKind() <= eGenDecl;
-    }
+protected:
+  explicit GoASTDecl(NodeKind kind) : GoASTNode(kind) {}
 
-  protected:
-    explicit GoASTDecl(NodeKind kind) : GoASTNode(kind) { }
-  private:
-
-    GoASTDecl(const GoASTDecl &) = delete;
-    const GoASTDecl &operator=(const GoASTDecl &) = delete;
+private:
+  GoASTDecl(const GoASTDecl &) = delete;
+  const GoASTDecl &operator=(const GoASTDecl &) = delete;
 };
 
-class GoASTExpr : public GoASTNode
-{
-  public:
-    template <typename R, typename V> R Visit(V *v) const;
+class GoASTExpr : public GoASTNode {
+public:
+  template <typename R, typename V> R Visit(V *v) const;
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() >= eArrayType && n->GetKind() <= eUnaryExpr;
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() >= eArrayType && n->GetKind() <= eUnaryExpr;
+  }
 
-  protected:
-    explicit GoASTExpr(NodeKind kind) : GoASTNode(kind) { }
-  private:
+protected:
+  explicit GoASTExpr(NodeKind kind) : GoASTNode(kind) {}
 
-    GoASTExpr(const GoASTExpr &) = delete;
-    const GoASTExpr &operator=(const GoASTExpr &) = delete;
+private:
+  GoASTExpr(const GoASTExpr &) = delete;
+  const GoASTExpr &operator=(const GoASTExpr &) = delete;
 };
 
-class GoASTSpec : public GoASTNode
-{
-  public:
-    template <typename R, typename V> R Visit(V *v) const;
+class GoASTSpec : public GoASTNode {
+public:
+  template <typename R, typename V> R Visit(V *v) const;
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() >= eImportSpec && n->GetKind() <= eValueSpec;
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() >= eImportSpec && n->GetKind() <= eValueSpec;
+  }
 
-  protected:
-    explicit GoASTSpec(NodeKind kind) : GoASTNode(kind) { }
-  private:
+protected:
+  explicit GoASTSpec(NodeKind kind) : GoASTNode(kind) {}
 
-    GoASTSpec(const GoASTSpec &) = delete;
-    const GoASTSpec &operator=(const GoASTSpec &) = delete;
+private:
+  GoASTSpec(const GoASTSpec &) = delete;
+  const GoASTSpec &operator=(const GoASTSpec &) = delete;
 };
 
-class GoASTStmt : public GoASTNode
-{
-  public:
-    template <typename R, typename V> R Visit(V *v) const;
+class GoASTStmt : public GoASTNode {
+public:
+  template <typename R, typename V> R Visit(V *v) const;
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() >= eAssignStmt && n->GetKind() <= eTypeSwitchStmt;
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() >= eAssignStmt && n->GetKind() <= eTypeSwitchStmt;
+  }
 
-  protected:
-    explicit GoASTStmt(NodeKind kind) : GoASTNode(kind) { }
-  private:
+protected:
+  explicit GoASTStmt(NodeKind kind) : GoASTNode(kind) {}
 
-    GoASTStmt(const GoASTStmt &) = delete;
-    const GoASTStmt &operator=(const GoASTStmt &) = delete;
+private:
+  GoASTStmt(const GoASTStmt &) = delete;
+  const GoASTStmt &operator=(const GoASTStmt &) = delete;
 };
 
+class GoASTArrayType : public GoASTExpr {
+public:
+  GoASTArrayType(GoASTExpr *len, GoASTExpr *elt)
+      : GoASTExpr(eArrayType), m_len_up(len), m_elt_up(elt) {}
+  ~GoASTArrayType() override = default;
 
-class GoASTArrayType : public GoASTExpr
-{
-  public:
-    GoASTArrayType(GoASTExpr *len, GoASTExpr *elt) : GoASTExpr(eArrayType), m_len_up(len), m_elt_up(elt) {}
-    ~GoASTArrayType() override = default;
+  const char *GetKindName() const override { return "ArrayType"; }
 
-    const char *
-    GetKindName() const override
-    {
-        return "ArrayType";
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eArrayType; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eArrayType;
-    }
-    
-    const GoASTExpr *
-    GetLen() const
-    {
-        return m_len_up.get();
-    }
-    void
-    SetLen(GoASTExpr *len)
-    {
-        m_len_up.reset(len);
-    }
+  const GoASTExpr *GetLen() const { return m_len_up.get(); }
+  void SetLen(GoASTExpr *len) { m_len_up.reset(len); }
 
-    const GoASTExpr *
-    GetElt() const
-    {
-        return m_elt_up.get();
-    }
-    void
-    SetElt(GoASTExpr *elt)
-    {
-        m_elt_up.reset(elt);
-    }
+  const GoASTExpr *GetElt() const { return m_elt_up.get(); }
+  void SetElt(GoASTExpr *elt) { m_elt_up.reset(elt); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_len_up;
-    std::unique_ptr<GoASTExpr> m_elt_up;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_len_up;
+  std::unique_ptr<GoASTExpr> m_elt_up;
 
-    GoASTArrayType(const GoASTArrayType &) = delete;
-    const GoASTArrayType &operator=(const GoASTArrayType &) = delete;
+  GoASTArrayType(const GoASTArrayType &) = delete;
+  const GoASTArrayType &operator=(const GoASTArrayType &) = delete;
 };
 
-class GoASTAssignStmt : public GoASTStmt
-{
-  public:
-    explicit GoASTAssignStmt(bool define) : GoASTStmt(eAssignStmt), m_define(define) {}
-    ~GoASTAssignStmt() override = default;
+class GoASTAssignStmt : public GoASTStmt {
+public:
+  explicit GoASTAssignStmt(bool define)
+      : GoASTStmt(eAssignStmt), m_define(define) {}
+  ~GoASTAssignStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "AssignStmt";
-    }
+  const char *GetKindName() const override { return "AssignStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eAssignStmt;
-    }
-    
-    size_t
-    NumLhs() const
-    {
-        return m_lhs.size();
-    }
-    const GoASTExpr *
-    GetLhs(int i) const
-    {
-        return m_lhs[i].get();
-    }
-    void
-    AddLhs(GoASTExpr *lhs)
-    {
-        m_lhs.push_back(std::unique_ptr<GoASTExpr>(lhs));
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eAssignStmt;
+  }
 
-    size_t
-    NumRhs() const
-    {
-        return m_rhs.size();
-    }
-    const GoASTExpr *
-    GetRhs(int i) const
-    {
-        return m_rhs[i].get();
-    }
-    void
-    AddRhs(GoASTExpr *rhs)
-    {
-        m_rhs.push_back(std::unique_ptr<GoASTExpr>(rhs));
-    }
+  size_t NumLhs() const { return m_lhs.size(); }
+  const GoASTExpr *GetLhs(int i) const { return m_lhs[i].get(); }
+  void AddLhs(GoASTExpr *lhs) {
+    m_lhs.push_back(std::unique_ptr<GoASTExpr>(lhs));
+  }
 
-    bool 
-    GetDefine() const
-    {
-        return m_define;
-    }
-    void
-    SetDefine(bool define)
-    {
-        m_define = define;
-    }
+  size_t NumRhs() const { return m_rhs.size(); }
+  const GoASTExpr *GetRhs(int i) const { return m_rhs[i].get(); }
+  void AddRhs(GoASTExpr *rhs) {
+    m_rhs.push_back(std::unique_ptr<GoASTExpr>(rhs));
+  }
 
-  private:
-    friend class GoASTNode;
-    std::vector<std::unique_ptr<GoASTExpr> > m_lhs;
-    std::vector<std::unique_ptr<GoASTExpr> > m_rhs;
-    bool m_define;
+  bool GetDefine() const { return m_define; }
+  void SetDefine(bool define) { m_define = define; }
 
-    GoASTAssignStmt(const GoASTAssignStmt &) = delete;
-    const GoASTAssignStmt &operator=(const GoASTAssignStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::vector<std::unique_ptr<GoASTExpr>> m_lhs;
+  std::vector<std::unique_ptr<GoASTExpr>> m_rhs;
+  bool m_define;
+
+  GoASTAssignStmt(const GoASTAssignStmt &) = delete;
+  const GoASTAssignStmt &operator=(const GoASTAssignStmt &) = delete;
 };
 
-class GoASTBadDecl : public GoASTDecl
-{
-  public:
-    GoASTBadDecl() : GoASTDecl(eBadDecl) {}
-    ~GoASTBadDecl() override = default;
+class GoASTBadDecl : public GoASTDecl {
+public:
+  GoASTBadDecl() : GoASTDecl(eBadDecl) {}
+  ~GoASTBadDecl() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "BadDecl";
-    }
+  const char *GetKindName() const override { return "BadDecl"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eBadDecl;
-    }
-    
-    GoASTBadDecl(const GoASTBadDecl &) = delete;
-    const GoASTBadDecl &operator=(const GoASTBadDecl &) = delete;
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eBadDecl; }
+
+  GoASTBadDecl(const GoASTBadDecl &) = delete;
+  const GoASTBadDecl &operator=(const GoASTBadDecl &) = delete;
 };
 
-class GoASTBadExpr : public GoASTExpr
-{
-  public:
-    GoASTBadExpr() : GoASTExpr(eBadExpr) {}
-    ~GoASTBadExpr() override = default;
+class GoASTBadExpr : public GoASTExpr {
+public:
+  GoASTBadExpr() : GoASTExpr(eBadExpr) {}
+  ~GoASTBadExpr() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "BadExpr";
-    }
+  const char *GetKindName() const override { return "BadExpr"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eBadExpr;
-    }
-    
-    GoASTBadExpr(const GoASTBadExpr &) = delete;
-    const GoASTBadExpr &operator=(const GoASTBadExpr &) = delete;
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eBadExpr; }
+
+  GoASTBadExpr(const GoASTBadExpr &) = delete;
+  const GoASTBadExpr &operator=(const GoASTBadExpr &) = delete;
 };
 
-class GoASTBadStmt : public GoASTStmt
-{
-  public:
-    GoASTBadStmt() : GoASTStmt(eBadStmt) {}
-    ~GoASTBadStmt() override = default;
+class GoASTBadStmt : public GoASTStmt {
+public:
+  GoASTBadStmt() : GoASTStmt(eBadStmt) {}
+  ~GoASTBadStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "BadStmt";
-    }
+  const char *GetKindName() const override { return "BadStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eBadStmt;
-    }
-    
-    GoASTBadStmt(const GoASTBadStmt &) = delete;
-    const GoASTBadStmt &operator=(const GoASTBadStmt &) = delete;
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eBadStmt; }
+
+  GoASTBadStmt(const GoASTBadStmt &) = delete;
+  const GoASTBadStmt &operator=(const GoASTBadStmt &) = delete;
 };
 
-class GoASTBasicLit : public GoASTExpr
-{
-  public:
-    explicit GoASTBasicLit(Token value) : GoASTExpr(eBasicLit), m_value(value) {}
-    ~GoASTBasicLit() override = default;
+class GoASTBasicLit : public GoASTExpr {
+public:
+  explicit GoASTBasicLit(Token value) : GoASTExpr(eBasicLit), m_value(value) {}
+  ~GoASTBasicLit() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "BasicLit";
-    }
+  const char *GetKindName() const override { return "BasicLit"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eBasicLit;
-    }
-    
-    Token 
-    GetValue() const
-    {
-        return m_value;
-    }
-    void
-    SetValue(Token value)
-    {
-        m_value = value;
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eBasicLit; }
 
-  private:
-    friend class GoASTNode;
-    Token m_value;
+  Token GetValue() const { return m_value; }
+  void SetValue(Token value) { m_value = value; }
 
-    GoASTBasicLit(const GoASTBasicLit &) = delete;
-    const GoASTBasicLit &operator=(const GoASTBasicLit &) = delete;
+private:
+  friend class GoASTNode;
+  Token m_value;
+
+  GoASTBasicLit(const GoASTBasicLit &) = delete;
+  const GoASTBasicLit &operator=(const GoASTBasicLit &) = delete;
 };
 
-class GoASTBinaryExpr : public GoASTExpr
-{
-  public:
-    GoASTBinaryExpr(GoASTExpr *x, GoASTExpr *y, TokenType op) : GoASTExpr(eBinaryExpr), m_x_up(x), m_y_up(y), m_op(op) {}
-    ~GoASTBinaryExpr() override = default;
+class GoASTBinaryExpr : public GoASTExpr {
+public:
+  GoASTBinaryExpr(GoASTExpr *x, GoASTExpr *y, TokenType op)
+      : GoASTExpr(eBinaryExpr), m_x_up(x), m_y_up(y), m_op(op) {}
+  ~GoASTBinaryExpr() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "BinaryExpr";
-    }
+  const char *GetKindName() const override { return "BinaryExpr"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eBinaryExpr;
-    }
-    
-    const GoASTExpr *
-    GetX() const
-    {
-        return m_x_up.get();
-    }
-    void
-    SetX(GoASTExpr *x)
-    {
-        m_x_up.reset(x);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eBinaryExpr;
+  }
 
-    const GoASTExpr *
-    GetY() const
-    {
-        return m_y_up.get();
-    }
-    void
-    SetY(GoASTExpr *y)
-    {
-        m_y_up.reset(y);
-    }
+  const GoASTExpr *GetX() const { return m_x_up.get(); }
+  void SetX(GoASTExpr *x) { m_x_up.reset(x); }
 
-    TokenType 
-    GetOp() const
-    {
-        return m_op;
-    }
-    void
-    SetOp(TokenType op)
-    {
-        m_op = op;
-    }
+  const GoASTExpr *GetY() const { return m_y_up.get(); }
+  void SetY(GoASTExpr *y) { m_y_up.reset(y); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_x_up;
-    std::unique_ptr<GoASTExpr> m_y_up;
-    TokenType m_op;
+  TokenType GetOp() const { return m_op; }
+  void SetOp(TokenType op) { m_op = op; }
 
-    GoASTBinaryExpr(const GoASTBinaryExpr &) = delete;
-    const GoASTBinaryExpr &operator=(const GoASTBinaryExpr &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_x_up;
+  std::unique_ptr<GoASTExpr> m_y_up;
+  TokenType m_op;
+
+  GoASTBinaryExpr(const GoASTBinaryExpr &) = delete;
+  const GoASTBinaryExpr &operator=(const GoASTBinaryExpr &) = delete;
 };
 
-class GoASTBlockStmt : public GoASTStmt
-{
-  public:
-    GoASTBlockStmt() : GoASTStmt(eBlockStmt) {}
-    ~GoASTBlockStmt() override = default;
+class GoASTBlockStmt : public GoASTStmt {
+public:
+  GoASTBlockStmt() : GoASTStmt(eBlockStmt) {}
+  ~GoASTBlockStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "BlockStmt";
-    }
+  const char *GetKindName() const override { return "BlockStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eBlockStmt;
-    }
-    
-    size_t
-    NumList() const
-    {
-        return m_list.size();
-    }
-    const GoASTStmt *
-    GetList(int i) const
-    {
-        return m_list[i].get();
-    }
-    void
-    AddList(GoASTStmt *list)
-    {
-        m_list.push_back(std::unique_ptr<GoASTStmt>(list));
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eBlockStmt; }
 
-  private:
-    friend class GoASTNode;
-    std::vector<std::unique_ptr<GoASTStmt> > m_list;
+  size_t NumList() const { return m_list.size(); }
+  const GoASTStmt *GetList(int i) const { return m_list[i].get(); }
+  void AddList(GoASTStmt *list) {
+    m_list.push_back(std::unique_ptr<GoASTStmt>(list));
+  }
 
-    GoASTBlockStmt(const GoASTBlockStmt &) = delete;
-    const GoASTBlockStmt &operator=(const GoASTBlockStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::vector<std::unique_ptr<GoASTStmt>> m_list;
+
+  GoASTBlockStmt(const GoASTBlockStmt &) = delete;
+  const GoASTBlockStmt &operator=(const GoASTBlockStmt &) = delete;
 };
 
-class GoASTIdent : public GoASTExpr
-{
-  public:
-    explicit GoASTIdent(Token name) : GoASTExpr(eIdent), m_name(name) {}
-    ~GoASTIdent() override = default;
+class GoASTIdent : public GoASTExpr {
+public:
+  explicit GoASTIdent(Token name) : GoASTExpr(eIdent), m_name(name) {}
+  ~GoASTIdent() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "Ident";
-    }
+  const char *GetKindName() const override { return "Ident"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eIdent;
-    }
-    
-    Token 
-    GetName() const
-    {
-        return m_name;
-    }
-    void
-    SetName(Token name)
-    {
-        m_name = name;
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eIdent; }
 
-  private:
-    friend class GoASTNode;
-    Token m_name;
+  Token GetName() const { return m_name; }
+  void SetName(Token name) { m_name = name; }
 
-    GoASTIdent(const GoASTIdent &) = delete;
-    const GoASTIdent &operator=(const GoASTIdent &) = delete;
+private:
+  friend class GoASTNode;
+  Token m_name;
+
+  GoASTIdent(const GoASTIdent &) = delete;
+  const GoASTIdent &operator=(const GoASTIdent &) = delete;
 };
 
-class GoASTBranchStmt : public GoASTStmt
-{
-  public:
-    GoASTBranchStmt(GoASTIdent *label, TokenType tok) : GoASTStmt(eBranchStmt), m_label_up(label), m_tok(tok) {}
-    ~GoASTBranchStmt() override = default;
+class GoASTBranchStmt : public GoASTStmt {
+public:
+  GoASTBranchStmt(GoASTIdent *label, TokenType tok)
+      : GoASTStmt(eBranchStmt), m_label_up(label), m_tok(tok) {}
+  ~GoASTBranchStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "BranchStmt";
-    }
+  const char *GetKindName() const override { return "BranchStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eBranchStmt;
-    }
-    
-    const GoASTIdent *
-    GetLabel() const
-    {
-        return m_label_up.get();
-    }
-    void
-    SetLabel(GoASTIdent *label)
-    {
-        m_label_up.reset(label);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eBranchStmt;
+  }
 
-    TokenType 
-    GetTok() const
-    {
-        return m_tok;
-    }
-    void
-    SetTok(TokenType tok)
-    {
-        m_tok = tok;
-    }
+  const GoASTIdent *GetLabel() const { return m_label_up.get(); }
+  void SetLabel(GoASTIdent *label) { m_label_up.reset(label); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTIdent> m_label_up;
-    TokenType m_tok;
+  TokenType GetTok() const { return m_tok; }
+  void SetTok(TokenType tok) { m_tok = tok; }
 
-    GoASTBranchStmt(const GoASTBranchStmt &) = delete;
-    const GoASTBranchStmt &operator=(const GoASTBranchStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTIdent> m_label_up;
+  TokenType m_tok;
+
+  GoASTBranchStmt(const GoASTBranchStmt &) = delete;
+  const GoASTBranchStmt &operator=(const GoASTBranchStmt &) = delete;
 };
 
-class GoASTCallExpr : public GoASTExpr
-{
-  public:
-    explicit GoASTCallExpr(bool ellipsis) : GoASTExpr(eCallExpr), m_ellipsis(ellipsis) {}
-    ~GoASTCallExpr() override = default;
+class GoASTCallExpr : public GoASTExpr {
+public:
+  explicit GoASTCallExpr(bool ellipsis)
+      : GoASTExpr(eCallExpr), m_ellipsis(ellipsis) {}
+  ~GoASTCallExpr() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "CallExpr";
-    }
+  const char *GetKindName() const override { return "CallExpr"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eCallExpr;
-    }
-    
-    const GoASTExpr *
-    GetFun() const
-    {
-        return m_fun_up.get();
-    }
-    void
-    SetFun(GoASTExpr *fun)
-    {
-        m_fun_up.reset(fun);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eCallExpr; }
 
-    size_t
-    NumArgs() const
-    {
-        return m_args.size();
-    }
-    const GoASTExpr *
-    GetArgs(int i) const
-    {
-        return m_args[i].get();
-    }
-    void
-    AddArgs(GoASTExpr *args)
-    {
-        m_args.push_back(std::unique_ptr<GoASTExpr>(args));
-    }
+  const GoASTExpr *GetFun() const { return m_fun_up.get(); }
+  void SetFun(GoASTExpr *fun) { m_fun_up.reset(fun); }
 
-    bool 
-    GetEllipsis() const
-    {
-        return m_ellipsis;
-    }
-    void
-    SetEllipsis(bool ellipsis)
-    {
-        m_ellipsis = ellipsis;
-    }
+  size_t NumArgs() const { return m_args.size(); }
+  const GoASTExpr *GetArgs(int i) const { return m_args[i].get(); }
+  void AddArgs(GoASTExpr *args) {
+    m_args.push_back(std::unique_ptr<GoASTExpr>(args));
+  }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_fun_up;
-    std::vector<std::unique_ptr<GoASTExpr> > m_args;
-    bool m_ellipsis;
+  bool GetEllipsis() const { return m_ellipsis; }
+  void SetEllipsis(bool ellipsis) { m_ellipsis = ellipsis; }
 
-    GoASTCallExpr(const GoASTCallExpr &) = delete;
-    const GoASTCallExpr &operator=(const GoASTCallExpr &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_fun_up;
+  std::vector<std::unique_ptr<GoASTExpr>> m_args;
+  bool m_ellipsis;
+
+  GoASTCallExpr(const GoASTCallExpr &) = delete;
+  const GoASTCallExpr &operator=(const GoASTCallExpr &) = delete;
 };
 
-class GoASTCaseClause : public GoASTStmt
-{
-  public:
-    GoASTCaseClause() : GoASTStmt(eCaseClause) {}
-    ~GoASTCaseClause() override = default;
+class GoASTCaseClause : public GoASTStmt {
+public:
+  GoASTCaseClause() : GoASTStmt(eCaseClause) {}
+  ~GoASTCaseClause() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "CaseClause";
-    }
+  const char *GetKindName() const override { return "CaseClause"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eCaseClause;
-    }
-    
-    size_t
-    NumList() const
-    {
-        return m_list.size();
-    }
-    const GoASTExpr *
-    GetList(int i) const
-    {
-        return m_list[i].get();
-    }
-    void
-    AddList(GoASTExpr *list)
-    {
-        m_list.push_back(std::unique_ptr<GoASTExpr>(list));
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eCaseClause;
+  }
 
-    size_t
-    NumBody() const
-    {
-        return m_body.size();
-    }
-    const GoASTStmt *
-    GetBody(int i) const
-    {
-        return m_body[i].get();
-    }
-    void
-    AddBody(GoASTStmt *body)
-    {
-        m_body.push_back(std::unique_ptr<GoASTStmt>(body));
-    }
+  size_t NumList() const { return m_list.size(); }
+  const GoASTExpr *GetList(int i) const { return m_list[i].get(); }
+  void AddList(GoASTExpr *list) {
+    m_list.push_back(std::unique_ptr<GoASTExpr>(list));
+  }
 
-  private:
-    friend class GoASTNode;
-    std::vector<std::unique_ptr<GoASTExpr> > m_list;
-    std::vector<std::unique_ptr<GoASTStmt> > m_body;
+  size_t NumBody() const { return m_body.size(); }
+  const GoASTStmt *GetBody(int i) const { return m_body[i].get(); }
+  void AddBody(GoASTStmt *body) {
+    m_body.push_back(std::unique_ptr<GoASTStmt>(body));
+  }
 
-    GoASTCaseClause(const GoASTCaseClause &) = delete;
-    const GoASTCaseClause &operator=(const GoASTCaseClause &) = delete;
+private:
+  friend class GoASTNode;
+  std::vector<std::unique_ptr<GoASTExpr>> m_list;
+  std::vector<std::unique_ptr<GoASTStmt>> m_body;
+
+  GoASTCaseClause(const GoASTCaseClause &) = delete;
+  const GoASTCaseClause &operator=(const GoASTCaseClause &) = delete;
 };
 
-class GoASTChanType : public GoASTExpr
-{
-  public:
-    GoASTChanType(ChanDir dir, GoASTExpr *value) : GoASTExpr(eChanType), m_dir(dir), m_value_up(value) {}
-    ~GoASTChanType() override = default;
+class GoASTChanType : public GoASTExpr {
+public:
+  GoASTChanType(ChanDir dir, GoASTExpr *value)
+      : GoASTExpr(eChanType), m_dir(dir), m_value_up(value) {}
+  ~GoASTChanType() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "ChanType";
-    }
+  const char *GetKindName() const override { return "ChanType"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eChanType;
-    }
-    
-    ChanDir 
-    GetDir() const
-    {
-        return m_dir;
-    }
-    void
-    SetDir(ChanDir dir)
-    {
-        m_dir = dir;
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eChanType; }
 
-    const GoASTExpr *
-    GetValue() const
-    {
-        return m_value_up.get();
-    }
-    void
-    SetValue(GoASTExpr *value)
-    {
-        m_value_up.reset(value);
-    }
+  ChanDir GetDir() const { return m_dir; }
+  void SetDir(ChanDir dir) { m_dir = dir; }
 
-  private:
-    friend class GoASTNode;
-    ChanDir m_dir;
-    std::unique_ptr<GoASTExpr> m_value_up;
+  const GoASTExpr *GetValue() const { return m_value_up.get(); }
+  void SetValue(GoASTExpr *value) { m_value_up.reset(value); }
 
-    GoASTChanType(const GoASTChanType &) = delete;
-    const GoASTChanType &operator=(const GoASTChanType &) = delete;
+private:
+  friend class GoASTNode;
+  ChanDir m_dir;
+  std::unique_ptr<GoASTExpr> m_value_up;
+
+  GoASTChanType(const GoASTChanType &) = delete;
+  const GoASTChanType &operator=(const GoASTChanType &) = delete;
 };
 
-class GoASTCommClause : public GoASTStmt
-{
-  public:
-    GoASTCommClause() : GoASTStmt(eCommClause) {}
-    ~GoASTCommClause() override = default;
+class GoASTCommClause : public GoASTStmt {
+public:
+  GoASTCommClause() : GoASTStmt(eCommClause) {}
+  ~GoASTCommClause() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "CommClause";
-    }
+  const char *GetKindName() const override { return "CommClause"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eCommClause;
-    }
-    
-    const GoASTStmt *
-    GetComm() const
-    {
-        return m_comm_up.get();
-    }
-    void
-    SetComm(GoASTStmt *comm)
-    {
-        m_comm_up.reset(comm);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eCommClause;
+  }
 
-    size_t
-    NumBody() const
-    {
-        return m_body.size();
-    }
-    const GoASTStmt *
-    GetBody(int i) const
-    {
-        return m_body[i].get();
-    }
-    void
-    AddBody(GoASTStmt *body)
-    {
-        m_body.push_back(std::unique_ptr<GoASTStmt>(body));
-    }
+  const GoASTStmt *GetComm() const { return m_comm_up.get(); }
+  void SetComm(GoASTStmt *comm) { m_comm_up.reset(comm); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTStmt> m_comm_up;
-    std::vector<std::unique_ptr<GoASTStmt> > m_body;
+  size_t NumBody() const { return m_body.size(); }
+  const GoASTStmt *GetBody(int i) const { return m_body[i].get(); }
+  void AddBody(GoASTStmt *body) {
+    m_body.push_back(std::unique_ptr<GoASTStmt>(body));
+  }
 
-    GoASTCommClause(const GoASTCommClause &) = delete;
-    const GoASTCommClause &operator=(const GoASTCommClause &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTStmt> m_comm_up;
+  std::vector<std::unique_ptr<GoASTStmt>> m_body;
+
+  GoASTCommClause(const GoASTCommClause &) = delete;
+  const GoASTCommClause &operator=(const GoASTCommClause &) = delete;
 };
 
-class GoASTCompositeLit : public GoASTExpr
-{
-  public:
-    GoASTCompositeLit() : GoASTExpr(eCompositeLit) {}
-    ~GoASTCompositeLit() override = default;
+class GoASTCompositeLit : public GoASTExpr {
+public:
+  GoASTCompositeLit() : GoASTExpr(eCompositeLit) {}
+  ~GoASTCompositeLit() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "CompositeLit";
-    }
+  const char *GetKindName() const override { return "CompositeLit"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eCompositeLit;
-    }
-    
-    const GoASTExpr *
-    GetType() const
-    {
-        return m_type_up.get();
-    }
-    void
-    SetType(GoASTExpr *type)
-    {
-        m_type_up.reset(type);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eCompositeLit;
+  }
 
-    size_t
-    NumElts() const
-    {
-        return m_elts.size();
-    }
-    const GoASTExpr *
-    GetElts(int i) const
-    {
-        return m_elts[i].get();
-    }
-    void
-    AddElts(GoASTExpr *elts)
-    {
-        m_elts.push_back(std::unique_ptr<GoASTExpr>(elts));
-    }
+  const GoASTExpr *GetType() const { return m_type_up.get(); }
+  void SetType(GoASTExpr *type) { m_type_up.reset(type); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_type_up;
-    std::vector<std::unique_ptr<GoASTExpr> > m_elts;
+  size_t NumElts() const { return m_elts.size(); }
+  const GoASTExpr *GetElts(int i) const { return m_elts[i].get(); }
+  void AddElts(GoASTExpr *elts) {
+    m_elts.push_back(std::unique_ptr<GoASTExpr>(elts));
+  }
 
-    GoASTCompositeLit(const GoASTCompositeLit &) = delete;
-    const GoASTCompositeLit &operator=(const GoASTCompositeLit &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_type_up;
+  std::vector<std::unique_ptr<GoASTExpr>> m_elts;
+
+  GoASTCompositeLit(const GoASTCompositeLit &) = delete;
+  const GoASTCompositeLit &operator=(const GoASTCompositeLit &) = delete;
 };
 
-class GoASTDeclStmt : public GoASTStmt
-{
-  public:
-    explicit GoASTDeclStmt(GoASTDecl *decl) : GoASTStmt(eDeclStmt), m_decl_up(decl) {}
-    ~GoASTDeclStmt() override = default;
+class GoASTDeclStmt : public GoASTStmt {
+public:
+  explicit GoASTDeclStmt(GoASTDecl *decl)
+      : GoASTStmt(eDeclStmt), m_decl_up(decl) {}
+  ~GoASTDeclStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "DeclStmt";
-    }
+  const char *GetKindName() const override { return "DeclStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eDeclStmt;
-    }
-    
-    const GoASTDecl *
-    GetDecl() const
-    {
-        return m_decl_up.get();
-    }
-    void
-    SetDecl(GoASTDecl *decl)
-    {
-        m_decl_up.reset(decl);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eDeclStmt; }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTDecl> m_decl_up;
+  const GoASTDecl *GetDecl() const { return m_decl_up.get(); }
+  void SetDecl(GoASTDecl *decl) { m_decl_up.reset(decl); }
 
-    GoASTDeclStmt(const GoASTDeclStmt &) = delete;
-    const GoASTDeclStmt &operator=(const GoASTDeclStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTDecl> m_decl_up;
+
+  GoASTDeclStmt(const GoASTDeclStmt &) = delete;
+  const GoASTDeclStmt &operator=(const GoASTDeclStmt &) = delete;
 };
 
-class GoASTDeferStmt : public GoASTStmt
-{
-  public:
-    explicit GoASTDeferStmt(GoASTCallExpr *call) : GoASTStmt(eDeferStmt), m_call_up(call) {}
-    ~GoASTDeferStmt() override = default;
+class GoASTDeferStmt : public GoASTStmt {
+public:
+  explicit GoASTDeferStmt(GoASTCallExpr *call)
+      : GoASTStmt(eDeferStmt), m_call_up(call) {}
+  ~GoASTDeferStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "DeferStmt";
-    }
+  const char *GetKindName() const override { return "DeferStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eDeferStmt;
-    }
-    
-    const GoASTCallExpr *
-    GetCall() const
-    {
-        return m_call_up.get();
-    }
-    void
-    SetCall(GoASTCallExpr *call)
-    {
-        m_call_up.reset(call);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eDeferStmt; }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTCallExpr> m_call_up;
+  const GoASTCallExpr *GetCall() const { return m_call_up.get(); }
+  void SetCall(GoASTCallExpr *call) { m_call_up.reset(call); }
 
-    GoASTDeferStmt(const GoASTDeferStmt &) = delete;
-    const GoASTDeferStmt &operator=(const GoASTDeferStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTCallExpr> m_call_up;
+
+  GoASTDeferStmt(const GoASTDeferStmt &) = delete;
+  const GoASTDeferStmt &operator=(const GoASTDeferStmt &) = delete;
 };
 
-class GoASTEllipsis : public GoASTExpr
-{
-  public:
-    explicit GoASTEllipsis(GoASTExpr *elt) : GoASTExpr(eEllipsis), m_elt_up(elt) {}
-    ~GoASTEllipsis() override = default;
+class GoASTEllipsis : public GoASTExpr {
+public:
+  explicit GoASTEllipsis(GoASTExpr *elt)
+      : GoASTExpr(eEllipsis), m_elt_up(elt) {}
+  ~GoASTEllipsis() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "Ellipsis";
-    }
+  const char *GetKindName() const override { return "Ellipsis"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eEllipsis;
-    }
-    
-    const GoASTExpr *
-    GetElt() const
-    {
-        return m_elt_up.get();
-    }
-    void
-    SetElt(GoASTExpr *elt)
-    {
-        m_elt_up.reset(elt);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eEllipsis; }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_elt_up;
+  const GoASTExpr *GetElt() const { return m_elt_up.get(); }
+  void SetElt(GoASTExpr *elt) { m_elt_up.reset(elt); }
 
-    GoASTEllipsis(const GoASTEllipsis &) = delete;
-    const GoASTEllipsis &operator=(const GoASTEllipsis &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_elt_up;
+
+  GoASTEllipsis(const GoASTEllipsis &) = delete;
+  const GoASTEllipsis &operator=(const GoASTEllipsis &) = delete;
 };
 
-class GoASTEmptyStmt : public GoASTStmt
-{
-  public:
-    GoASTEmptyStmt() : GoASTStmt(eEmptyStmt) {}
-    ~GoASTEmptyStmt() override = default;
+class GoASTEmptyStmt : public GoASTStmt {
+public:
+  GoASTEmptyStmt() : GoASTStmt(eEmptyStmt) {}
+  ~GoASTEmptyStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "EmptyStmt";
-    }
+  const char *GetKindName() const override { return "EmptyStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eEmptyStmt;
-    }
-    
-    GoASTEmptyStmt(const GoASTEmptyStmt &) = delete;
-    const GoASTEmptyStmt &operator=(const GoASTEmptyStmt &) = delete;
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eEmptyStmt; }
+
+  GoASTEmptyStmt(const GoASTEmptyStmt &) = delete;
+  const GoASTEmptyStmt &operator=(const GoASTEmptyStmt &) = delete;
 };
 
-class GoASTExprStmt : public GoASTStmt
-{
-  public:
-    explicit GoASTExprStmt(GoASTExpr *x) : GoASTStmt(eExprStmt), m_x_up(x) {}
-    ~GoASTExprStmt() override = default;
+class GoASTExprStmt : public GoASTStmt {
+public:
+  explicit GoASTExprStmt(GoASTExpr *x) : GoASTStmt(eExprStmt), m_x_up(x) {}
+  ~GoASTExprStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "ExprStmt";
-    }
+  const char *GetKindName() const override { return "ExprStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eExprStmt;
-    }
-    
-    const GoASTExpr *
-    GetX() const
-    {
-        return m_x_up.get();
-    }
-    void
-    SetX(GoASTExpr *x)
-    {
-        m_x_up.reset(x);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eExprStmt; }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_x_up;
+  const GoASTExpr *GetX() const { return m_x_up.get(); }
+  void SetX(GoASTExpr *x) { m_x_up.reset(x); }
 
-    GoASTExprStmt(const GoASTExprStmt &) = delete;
-    const GoASTExprStmt &operator=(const GoASTExprStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_x_up;
+
+  GoASTExprStmt(const GoASTExprStmt &) = delete;
+  const GoASTExprStmt &operator=(const GoASTExprStmt &) = delete;
 };
 
-class GoASTField : public GoASTNode
-{
-  public:
-    GoASTField() : GoASTNode(eField) {}
-    ~GoASTField() override = default;
+class GoASTField : public GoASTNode {
+public:
+  GoASTField() : GoASTNode(eField) {}
+  ~GoASTField() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "Field";
-    }
+  const char *GetKindName() const override { return "Field"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eField;
-    }
-    
-    size_t
-    NumNames() const
-    {
-        return m_names.size();
-    }
-    const GoASTIdent *
-    GetNames(int i) const
-    {
-        return m_names[i].get();
-    }
-    void
-    AddNames(GoASTIdent *names)
-    {
-        m_names.push_back(std::unique_ptr<GoASTIdent>(names));
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eField; }
 
-    const GoASTExpr *
-    GetType() const
-    {
-        return m_type_up.get();
-    }
-    void
-    SetType(GoASTExpr *type)
-    {
-        m_type_up.reset(type);
-    }
+  size_t NumNames() const { return m_names.size(); }
+  const GoASTIdent *GetNames(int i) const { return m_names[i].get(); }
+  void AddNames(GoASTIdent *names) {
+    m_names.push_back(std::unique_ptr<GoASTIdent>(names));
+  }
 
-    const GoASTBasicLit *
-    GetTag() const
-    {
-        return m_tag_up.get();
-    }
-    void
-    SetTag(GoASTBasicLit *tag)
-    {
-        m_tag_up.reset(tag);
-    }
+  const GoASTExpr *GetType() const { return m_type_up.get(); }
+  void SetType(GoASTExpr *type) { m_type_up.reset(type); }
 
-  private:
-    friend class GoASTNode;
-    std::vector<std::unique_ptr<GoASTIdent> > m_names;
-    std::unique_ptr<GoASTExpr> m_type_up;
-    std::unique_ptr<GoASTBasicLit> m_tag_up;
+  const GoASTBasicLit *GetTag() const { return m_tag_up.get(); }
+  void SetTag(GoASTBasicLit *tag) { m_tag_up.reset(tag); }
 
-    GoASTField(const GoASTField &) = delete;
-    const GoASTField &operator=(const GoASTField &) = delete;
+private:
+  friend class GoASTNode;
+  std::vector<std::unique_ptr<GoASTIdent>> m_names;
+  std::unique_ptr<GoASTExpr> m_type_up;
+  std::unique_ptr<GoASTBasicLit> m_tag_up;
+
+  GoASTField(const GoASTField &) = delete;
+  const GoASTField &operator=(const GoASTField &) = delete;
 };
 
-class GoASTFieldList : public GoASTNode
-{
-  public:
-    GoASTFieldList() : GoASTNode(eFieldList) {}
-    ~GoASTFieldList() override = default;
+class GoASTFieldList : public GoASTNode {
+public:
+  GoASTFieldList() : GoASTNode(eFieldList) {}
+  ~GoASTFieldList() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "FieldList";
-    }
+  const char *GetKindName() const override { return "FieldList"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eFieldList;
-    }
-    
-    size_t
-    NumList() const
-    {
-        return m_list.size();
-    }
-    const GoASTField *
-    GetList(int i) const
-    {
-        return m_list[i].get();
-    }
-    void
-    AddList(GoASTField *list)
-    {
-        m_list.push_back(std::unique_ptr<GoASTField>(list));
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eFieldList; }
 
-  private:
-    friend class GoASTNode;
-    std::vector<std::unique_ptr<GoASTField> > m_list;
+  size_t NumList() const { return m_list.size(); }
+  const GoASTField *GetList(int i) const { return m_list[i].get(); }
+  void AddList(GoASTField *list) {
+    m_list.push_back(std::unique_ptr<GoASTField>(list));
+  }
 
-    GoASTFieldList(const GoASTFieldList &) = delete;
-    const GoASTFieldList &operator=(const GoASTFieldList &) = delete;
+private:
+  friend class GoASTNode;
+  std::vector<std::unique_ptr<GoASTField>> m_list;
+
+  GoASTFieldList(const GoASTFieldList &) = delete;
+  const GoASTFieldList &operator=(const GoASTFieldList &) = delete;
 };
 
-class GoASTForStmt : public GoASTStmt
-{
-  public:
-    GoASTForStmt(GoASTStmt *init, GoASTExpr *cond, GoASTStmt *post, GoASTBlockStmt *body) : GoASTStmt(eForStmt), m_init_up(init), m_cond_up(cond), m_post_up(post), m_body_up(body) {}
-    ~GoASTForStmt() override = default;
+class GoASTForStmt : public GoASTStmt {
+public:
+  GoASTForStmt(GoASTStmt *init, GoASTExpr *cond, GoASTStmt *post,
+               GoASTBlockStmt *body)
+      : GoASTStmt(eForStmt), m_init_up(init), m_cond_up(cond), m_post_up(post),
+        m_body_up(body) {}
+  ~GoASTForStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "ForStmt";
-    }
+  const char *GetKindName() const override { return "ForStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eForStmt;
-    }
-    
-    const GoASTStmt *
-    GetInit() const
-    {
-        return m_init_up.get();
-    }
-    void
-    SetInit(GoASTStmt *init)
-    {
-        m_init_up.reset(init);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eForStmt; }
 
-    const GoASTExpr *
-    GetCond() const
-    {
-        return m_cond_up.get();
-    }
-    void
-    SetCond(GoASTExpr *cond)
-    {
-        m_cond_up.reset(cond);
-    }
+  const GoASTStmt *GetInit() const { return m_init_up.get(); }
+  void SetInit(GoASTStmt *init) { m_init_up.reset(init); }
 
-    const GoASTStmt *
-    GetPost() const
-    {
-        return m_post_up.get();
-    }
-    void
-    SetPost(GoASTStmt *post)
-    {
-        m_post_up.reset(post);
-    }
+  const GoASTExpr *GetCond() const { return m_cond_up.get(); }
+  void SetCond(GoASTExpr *cond) { m_cond_up.reset(cond); }
 
-    const GoASTBlockStmt *
-    GetBody() const
-    {
-        return m_body_up.get();
-    }
-    void
-    SetBody(GoASTBlockStmt *body)
-    {
-        m_body_up.reset(body);
-    }
+  const GoASTStmt *GetPost() const { return m_post_up.get(); }
+  void SetPost(GoASTStmt *post) { m_post_up.reset(post); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTStmt> m_init_up;
-    std::unique_ptr<GoASTExpr> m_cond_up;
-    std::unique_ptr<GoASTStmt> m_post_up;
-    std::unique_ptr<GoASTBlockStmt> m_body_up;
+  const GoASTBlockStmt *GetBody() const { return m_body_up.get(); }
+  void SetBody(GoASTBlockStmt *body) { m_body_up.reset(body); }
 
-    GoASTForStmt(const GoASTForStmt &) = delete;
-    const GoASTForStmt &operator=(const GoASTForStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTStmt> m_init_up;
+  std::unique_ptr<GoASTExpr> m_cond_up;
+  std::unique_ptr<GoASTStmt> m_post_up;
+  std::unique_ptr<GoASTBlockStmt> m_body_up;
+
+  GoASTForStmt(const GoASTForStmt &) = delete;
+  const GoASTForStmt &operator=(const GoASTForStmt &) = delete;
 };
 
-class GoASTFuncType : public GoASTExpr
-{
-  public:
-    GoASTFuncType(GoASTFieldList *params, GoASTFieldList *results) : GoASTExpr(eFuncType), m_params_up(params), m_results_up(results) {}
-    ~GoASTFuncType() override = default;
+class GoASTFuncType : public GoASTExpr {
+public:
+  GoASTFuncType(GoASTFieldList *params, GoASTFieldList *results)
+      : GoASTExpr(eFuncType), m_params_up(params), m_results_up(results) {}
+  ~GoASTFuncType() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "FuncType";
-    }
+  const char *GetKindName() const override { return "FuncType"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eFuncType;
-    }
-    
-    const GoASTFieldList *
-    GetParams() const
-    {
-        return m_params_up.get();
-    }
-    void
-    SetParams(GoASTFieldList *params)
-    {
-        m_params_up.reset(params);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eFuncType; }
 
-    const GoASTFieldList *
-    GetResults() const
-    {
-        return m_results_up.get();
-    }
-    void
-    SetResults(GoASTFieldList *results)
-    {
-        m_results_up.reset(results);
-    }
+  const GoASTFieldList *GetParams() const { return m_params_up.get(); }
+  void SetParams(GoASTFieldList *params) { m_params_up.reset(params); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTFieldList> m_params_up;
-    std::unique_ptr<GoASTFieldList> m_results_up;
+  const GoASTFieldList *GetResults() const { return m_results_up.get(); }
+  void SetResults(GoASTFieldList *results) { m_results_up.reset(results); }
 
-    GoASTFuncType(const GoASTFuncType &) = delete;
-    const GoASTFuncType &operator=(const GoASTFuncType &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTFieldList> m_params_up;
+  std::unique_ptr<GoASTFieldList> m_results_up;
+
+  GoASTFuncType(const GoASTFuncType &) = delete;
+  const GoASTFuncType &operator=(const GoASTFuncType &) = delete;
 };
 
-class GoASTFuncDecl : public GoASTDecl
-{
-  public:
-    GoASTFuncDecl(GoASTFieldList *recv, GoASTIdent *name, GoASTFuncType *type, GoASTBlockStmt *body) : GoASTDecl(eFuncDecl), m_recv_up(recv), m_name_up(name), m_type_up(type), m_body_up(body) {}
-    ~GoASTFuncDecl() override = default;
+class GoASTFuncDecl : public GoASTDecl {
+public:
+  GoASTFuncDecl(GoASTFieldList *recv, GoASTIdent *name, GoASTFuncType *type,
+                GoASTBlockStmt *body)
+      : GoASTDecl(eFuncDecl), m_recv_up(recv), m_name_up(name), m_type_up(type),
+        m_body_up(body) {}
+  ~GoASTFuncDecl() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "FuncDecl";
-    }
+  const char *GetKindName() const override { return "FuncDecl"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eFuncDecl;
-    }
-    
-    const GoASTFieldList *
-    GetRecv() const
-    {
-        return m_recv_up.get();
-    }
-    void
-    SetRecv(GoASTFieldList *recv)
-    {
-        m_recv_up.reset(recv);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eFuncDecl; }
 
-    const GoASTIdent *
-    GetName() const
-    {
-        return m_name_up.get();
-    }
-    void
-    SetName(GoASTIdent *name)
-    {
-        m_name_up.reset(name);
-    }
+  const GoASTFieldList *GetRecv() const { return m_recv_up.get(); }
+  void SetRecv(GoASTFieldList *recv) { m_recv_up.reset(recv); }
 
-    const GoASTFuncType *
-    GetType() const
-    {
-        return m_type_up.get();
-    }
-    void
-    SetType(GoASTFuncType *type)
-    {
-        m_type_up.reset(type);
-    }
+  const GoASTIdent *GetName() const { return m_name_up.get(); }
+  void SetName(GoASTIdent *name) { m_name_up.reset(name); }
 
-    const GoASTBlockStmt *
-    GetBody() const
-    {
-        return m_body_up.get();
-    }
-    void
-    SetBody(GoASTBlockStmt *body)
-    {
-        m_body_up.reset(body);
-    }
+  const GoASTFuncType *GetType() const { return m_type_up.get(); }
+  void SetType(GoASTFuncType *type) { m_type_up.reset(type); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTFieldList> m_recv_up;
-    std::unique_ptr<GoASTIdent> m_name_up;
-    std::unique_ptr<GoASTFuncType> m_type_up;
-    std::unique_ptr<GoASTBlockStmt> m_body_up;
+  const GoASTBlockStmt *GetBody() const { return m_body_up.get(); }
+  void SetBody(GoASTBlockStmt *body) { m_body_up.reset(body); }
 
-    GoASTFuncDecl(const GoASTFuncDecl &) = delete;
-    const GoASTFuncDecl &operator=(const GoASTFuncDecl &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTFieldList> m_recv_up;
+  std::unique_ptr<GoASTIdent> m_name_up;
+  std::unique_ptr<GoASTFuncType> m_type_up;
+  std::unique_ptr<GoASTBlockStmt> m_body_up;
+
+  GoASTFuncDecl(const GoASTFuncDecl &) = delete;
+  const GoASTFuncDecl &operator=(const GoASTFuncDecl &) = delete;
 };
 
-class GoASTFuncLit : public GoASTExpr
-{
-  public:
-    GoASTFuncLit(GoASTFuncType *type, GoASTBlockStmt *body) : GoASTExpr(eFuncLit), m_type_up(type), m_body_up(body) {}
-    ~GoASTFuncLit() override = default;
+class GoASTFuncLit : public GoASTExpr {
+public:
+  GoASTFuncLit(GoASTFuncType *type, GoASTBlockStmt *body)
+      : GoASTExpr(eFuncLit), m_type_up(type), m_body_up(body) {}
+  ~GoASTFuncLit() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "FuncLit";
-    }
+  const char *GetKindName() const override { return "FuncLit"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eFuncLit;
-    }
-    
-    const GoASTFuncType *
-    GetType() const
-    {
-        return m_type_up.get();
-    }
-    void
-    SetType(GoASTFuncType *type)
-    {
-        m_type_up.reset(type);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eFuncLit; }
 
-    const GoASTBlockStmt *
-    GetBody() const
-    {
-        return m_body_up.get();
-    }
-    void
-    SetBody(GoASTBlockStmt *body)
-    {
-        m_body_up.reset(body);
-    }
+  const GoASTFuncType *GetType() const { return m_type_up.get(); }
+  void SetType(GoASTFuncType *type) { m_type_up.reset(type); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTFuncType> m_type_up;
-    std::unique_ptr<GoASTBlockStmt> m_body_up;
+  const GoASTBlockStmt *GetBody() const { return m_body_up.get(); }
+  void SetBody(GoASTBlockStmt *body) { m_body_up.reset(body); }
 
-    GoASTFuncLit(const GoASTFuncLit &) = delete;
-    const GoASTFuncLit &operator=(const GoASTFuncLit &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTFuncType> m_type_up;
+  std::unique_ptr<GoASTBlockStmt> m_body_up;
+
+  GoASTFuncLit(const GoASTFuncLit &) = delete;
+  const GoASTFuncLit &operator=(const GoASTFuncLit &) = delete;
 };
 
-class GoASTGenDecl : public GoASTDecl
-{
-  public:
-    explicit GoASTGenDecl(TokenType tok) : GoASTDecl(eGenDecl), m_tok(tok) {}
-    ~GoASTGenDecl() override = default;
+class GoASTGenDecl : public GoASTDecl {
+public:
+  explicit GoASTGenDecl(TokenType tok) : GoASTDecl(eGenDecl), m_tok(tok) {}
+  ~GoASTGenDecl() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "GenDecl";
-    }
+  const char *GetKindName() const override { return "GenDecl"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eGenDecl;
-    }
-    
-    TokenType 
-    GetTok() const
-    {
-        return m_tok;
-    }
-    void
-    SetTok(TokenType tok)
-    {
-        m_tok = tok;
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eGenDecl; }
 
-    size_t
-    NumSpecs() const
-    {
-        return m_specs.size();
-    }
-    const GoASTSpec *
-    GetSpecs(int i) const
-    {
-        return m_specs[i].get();
-    }
-    void
-    AddSpecs(GoASTSpec *specs)
-    {
-        m_specs.push_back(std::unique_ptr<GoASTSpec>(specs));
-    }
+  TokenType GetTok() const { return m_tok; }
+  void SetTok(TokenType tok) { m_tok = tok; }
 
-  private:
-    friend class GoASTNode;
-    TokenType m_tok;
-    std::vector<std::unique_ptr<GoASTSpec> > m_specs;
+  size_t NumSpecs() const { return m_specs.size(); }
+  const GoASTSpec *GetSpecs(int i) const { return m_specs[i].get(); }
+  void AddSpecs(GoASTSpec *specs) {
+    m_specs.push_back(std::unique_ptr<GoASTSpec>(specs));
+  }
 
-    GoASTGenDecl(const GoASTGenDecl &) = delete;
-    const GoASTGenDecl &operator=(const GoASTGenDecl &) = delete;
+private:
+  friend class GoASTNode;
+  TokenType m_tok;
+  std::vector<std::unique_ptr<GoASTSpec>> m_specs;
+
+  GoASTGenDecl(const GoASTGenDecl &) = delete;
+  const GoASTGenDecl &operator=(const GoASTGenDecl &) = delete;
 };
 
-class GoASTGoStmt : public GoASTStmt
-{
-  public:
-    explicit GoASTGoStmt(GoASTCallExpr *call) : GoASTStmt(eGoStmt), m_call_up(call) {}
-    ~GoASTGoStmt() override = default;
+class GoASTGoStmt : public GoASTStmt {
+public:
+  explicit GoASTGoStmt(GoASTCallExpr *call)
+      : GoASTStmt(eGoStmt), m_call_up(call) {}
+  ~GoASTGoStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "GoStmt";
-    }
+  const char *GetKindName() const override { return "GoStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eGoStmt;
-    }
-    
-    const GoASTCallExpr *
-    GetCall() const
-    {
-        return m_call_up.get();
-    }
-    void
-    SetCall(GoASTCallExpr *call)
-    {
-        m_call_up.reset(call);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eGoStmt; }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTCallExpr> m_call_up;
+  const GoASTCallExpr *GetCall() const { return m_call_up.get(); }
+  void SetCall(GoASTCallExpr *call) { m_call_up.reset(call); }
 
-    GoASTGoStmt(const GoASTGoStmt &) = delete;
-    const GoASTGoStmt &operator=(const GoASTGoStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTCallExpr> m_call_up;
+
+  GoASTGoStmt(const GoASTGoStmt &) = delete;
+  const GoASTGoStmt &operator=(const GoASTGoStmt &) = delete;
 };
 
-class GoASTIfStmt : public GoASTStmt
-{
-  public:
-    GoASTIfStmt(GoASTStmt *init, GoASTExpr *cond, GoASTBlockStmt *body, GoASTStmt *els) : GoASTStmt(eIfStmt), m_init_up(init), m_cond_up(cond), m_body_up(body), m_els_up(els) {}
-    ~GoASTIfStmt() override = default;
+class GoASTIfStmt : public GoASTStmt {
+public:
+  GoASTIfStmt(GoASTStmt *init, GoASTExpr *cond, GoASTBlockStmt *body,
+              GoASTStmt *els)
+      : GoASTStmt(eIfStmt), m_init_up(init), m_cond_up(cond), m_body_up(body),
+        m_els_up(els) {}
+  ~GoASTIfStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "IfStmt";
-    }
+  const char *GetKindName() const override { return "IfStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eIfStmt;
-    }
-    
-    const GoASTStmt *
-    GetInit() const
-    {
-        return m_init_up.get();
-    }
-    void
-    SetInit(GoASTStmt *init)
-    {
-        m_init_up.reset(init);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eIfStmt; }
 
-    const GoASTExpr *
-    GetCond() const
-    {
-        return m_cond_up.get();
-    }
-    void
-    SetCond(GoASTExpr *cond)
-    {
-        m_cond_up.reset(cond);
-    }
+  const GoASTStmt *GetInit() const { return m_init_up.get(); }
+  void SetInit(GoASTStmt *init) { m_init_up.reset(init); }
 
-    const GoASTBlockStmt *
-    GetBody() const
-    {
-        return m_body_up.get();
-    }
-    void
-    SetBody(GoASTBlockStmt *body)
-    {
-        m_body_up.reset(body);
-    }
+  const GoASTExpr *GetCond() const { return m_cond_up.get(); }
+  void SetCond(GoASTExpr *cond) { m_cond_up.reset(cond); }
 
-    const GoASTStmt *
-    GetEls() const
-    {
-        return m_els_up.get();
-    }
-    void
-    SetEls(GoASTStmt *els)
-    {
-        m_els_up.reset(els);
-    }
+  const GoASTBlockStmt *GetBody() const { return m_body_up.get(); }
+  void SetBody(GoASTBlockStmt *body) { m_body_up.reset(body); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTStmt> m_init_up;
-    std::unique_ptr<GoASTExpr> m_cond_up;
-    std::unique_ptr<GoASTBlockStmt> m_body_up;
-    std::unique_ptr<GoASTStmt> m_els_up;
+  const GoASTStmt *GetEls() const { return m_els_up.get(); }
+  void SetEls(GoASTStmt *els) { m_els_up.reset(els); }
 
-    GoASTIfStmt(const GoASTIfStmt &) = delete;
-    const GoASTIfStmt &operator=(const GoASTIfStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTStmt> m_init_up;
+  std::unique_ptr<GoASTExpr> m_cond_up;
+  std::unique_ptr<GoASTBlockStmt> m_body_up;
+  std::unique_ptr<GoASTStmt> m_els_up;
+
+  GoASTIfStmt(const GoASTIfStmt &) = delete;
+  const GoASTIfStmt &operator=(const GoASTIfStmt &) = delete;
 };
 
-class GoASTImportSpec : public GoASTSpec
-{
-  public:
-    GoASTImportSpec(GoASTIdent *name, GoASTBasicLit *path) : GoASTSpec(eImportSpec), m_name_up(name), m_path_up(path) {}
-    ~GoASTImportSpec() override = default;
+class GoASTImportSpec : public GoASTSpec {
+public:
+  GoASTImportSpec(GoASTIdent *name, GoASTBasicLit *path)
+      : GoASTSpec(eImportSpec), m_name_up(name), m_path_up(path) {}
+  ~GoASTImportSpec() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "ImportSpec";
-    }
+  const char *GetKindName() const override { return "ImportSpec"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eImportSpec;
-    }
-    
-    const GoASTIdent *
-    GetName() const
-    {
-        return m_name_up.get();
-    }
-    void
-    SetName(GoASTIdent *name)
-    {
-        m_name_up.reset(name);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eImportSpec;
+  }
 
-    const GoASTBasicLit *
-    GetPath() const
-    {
-        return m_path_up.get();
-    }
-    void
-    SetPath(GoASTBasicLit *path)
-    {
-        m_path_up.reset(path);
-    }
+  const GoASTIdent *GetName() const { return m_name_up.get(); }
+  void SetName(GoASTIdent *name) { m_name_up.reset(name); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTIdent> m_name_up;
-    std::unique_ptr<GoASTBasicLit> m_path_up;
+  const GoASTBasicLit *GetPath() const { return m_path_up.get(); }
+  void SetPath(GoASTBasicLit *path) { m_path_up.reset(path); }
 
-    GoASTImportSpec(const GoASTImportSpec &) = delete;
-    const GoASTImportSpec &operator=(const GoASTImportSpec &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTIdent> m_name_up;
+  std::unique_ptr<GoASTBasicLit> m_path_up;
+
+  GoASTImportSpec(const GoASTImportSpec &) = delete;
+  const GoASTImportSpec &operator=(const GoASTImportSpec &) = delete;
 };
 
-class GoASTIncDecStmt : public GoASTStmt
-{
-  public:
-    GoASTIncDecStmt(GoASTExpr *x, TokenType tok) : GoASTStmt(eIncDecStmt), m_x_up(x), m_tok(tok) {}
-    ~GoASTIncDecStmt() override = default;
+class GoASTIncDecStmt : public GoASTStmt {
+public:
+  GoASTIncDecStmt(GoASTExpr *x, TokenType tok)
+      : GoASTStmt(eIncDecStmt), m_x_up(x), m_tok(tok) {}
+  ~GoASTIncDecStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "IncDecStmt";
-    }
+  const char *GetKindName() const override { return "IncDecStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eIncDecStmt;
-    }
-    
-    const GoASTExpr *
-    GetX() const
-    {
-        return m_x_up.get();
-    }
-    void
-    SetX(GoASTExpr *x)
-    {
-        m_x_up.reset(x);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eIncDecStmt;
+  }
 
-    TokenType 
-    GetTok() const
-    {
-        return m_tok;
-    }
-    void
-    SetTok(TokenType tok)
-    {
-        m_tok = tok;
-    }
+  const GoASTExpr *GetX() const { return m_x_up.get(); }
+  void SetX(GoASTExpr *x) { m_x_up.reset(x); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_x_up;
-    TokenType m_tok;
+  TokenType GetTok() const { return m_tok; }
+  void SetTok(TokenType tok) { m_tok = tok; }
 
-    GoASTIncDecStmt(const GoASTIncDecStmt &) = delete;
-    const GoASTIncDecStmt &operator=(const GoASTIncDecStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_x_up;
+  TokenType m_tok;
+
+  GoASTIncDecStmt(const GoASTIncDecStmt &) = delete;
+  const GoASTIncDecStmt &operator=(const GoASTIncDecStmt &) = delete;
 };
 
-class GoASTIndexExpr : public GoASTExpr
-{
-  public:
-    GoASTIndexExpr(GoASTExpr *x, GoASTExpr *index) : GoASTExpr(eIndexExpr), m_x_up(x), m_index_up(index) {}
-    ~GoASTIndexExpr() override = default;
+class GoASTIndexExpr : public GoASTExpr {
+public:
+  GoASTIndexExpr(GoASTExpr *x, GoASTExpr *index)
+      : GoASTExpr(eIndexExpr), m_x_up(x), m_index_up(index) {}
+  ~GoASTIndexExpr() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "IndexExpr";
-    }
+  const char *GetKindName() const override { return "IndexExpr"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eIndexExpr;
-    }
-    
-    const GoASTExpr *
-    GetX() const
-    {
-        return m_x_up.get();
-    }
-    void
-    SetX(GoASTExpr *x)
-    {
-        m_x_up.reset(x);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eIndexExpr; }
 
-    const GoASTExpr *
-    GetIndex() const
-    {
-        return m_index_up.get();
-    }
-    void
-    SetIndex(GoASTExpr *index)
-    {
-        m_index_up.reset(index);
-    }
+  const GoASTExpr *GetX() const { return m_x_up.get(); }
+  void SetX(GoASTExpr *x) { m_x_up.reset(x); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_x_up;
-    std::unique_ptr<GoASTExpr> m_index_up;
+  const GoASTExpr *GetIndex() const { return m_index_up.get(); }
+  void SetIndex(GoASTExpr *index) { m_index_up.reset(index); }
 
-    GoASTIndexExpr(const GoASTIndexExpr &) = delete;
-    const GoASTIndexExpr &operator=(const GoASTIndexExpr &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_x_up;
+  std::unique_ptr<GoASTExpr> m_index_up;
+
+  GoASTIndexExpr(const GoASTIndexExpr &) = delete;
+  const GoASTIndexExpr &operator=(const GoASTIndexExpr &) = delete;
 };
 
-class GoASTInterfaceType : public GoASTExpr
-{
-  public:
-    explicit GoASTInterfaceType(GoASTFieldList *methods) : GoASTExpr(eInterfaceType), m_methods_up(methods) {}
-    ~GoASTInterfaceType() override = default;
+class GoASTInterfaceType : public GoASTExpr {
+public:
+  explicit GoASTInterfaceType(GoASTFieldList *methods)
+      : GoASTExpr(eInterfaceType), m_methods_up(methods) {}
+  ~GoASTInterfaceType() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "InterfaceType";
-    }
+  const char *GetKindName() const override { return "InterfaceType"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eInterfaceType;
-    }
-    
-    const GoASTFieldList *
-    GetMethods() const
-    {
-        return m_methods_up.get();
-    }
-    void
-    SetMethods(GoASTFieldList *methods)
-    {
-        m_methods_up.reset(methods);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eInterfaceType;
+  }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTFieldList> m_methods_up;
+  const GoASTFieldList *GetMethods() const { return m_methods_up.get(); }
+  void SetMethods(GoASTFieldList *methods) { m_methods_up.reset(methods); }
 
-    GoASTInterfaceType(const GoASTInterfaceType &) = delete;
-    const GoASTInterfaceType &operator=(const GoASTInterfaceType &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTFieldList> m_methods_up;
+
+  GoASTInterfaceType(const GoASTInterfaceType &) = delete;
+  const GoASTInterfaceType &operator=(const GoASTInterfaceType &) = delete;
 };
 
-class GoASTKeyValueExpr : public GoASTExpr
-{
-  public:
-    GoASTKeyValueExpr(GoASTExpr *key, GoASTExpr *value) : GoASTExpr(eKeyValueExpr), m_key_up(key), m_value_up(value) {}
-    ~GoASTKeyValueExpr() override = default;
+class GoASTKeyValueExpr : public GoASTExpr {
+public:
+  GoASTKeyValueExpr(GoASTExpr *key, GoASTExpr *value)
+      : GoASTExpr(eKeyValueExpr), m_key_up(key), m_value_up(value) {}
+  ~GoASTKeyValueExpr() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "KeyValueExpr";
-    }
+  const char *GetKindName() const override { return "KeyValueExpr"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eKeyValueExpr;
-    }
-    
-    const GoASTExpr *
-    GetKey() const
-    {
-        return m_key_up.get();
-    }
-    void
-    SetKey(GoASTExpr *key)
-    {
-        m_key_up.reset(key);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eKeyValueExpr;
+  }
 
-    const GoASTExpr *
-    GetValue() const
-    {
-        return m_value_up.get();
-    }
-    void
-    SetValue(GoASTExpr *value)
-    {
-        m_value_up.reset(value);
-    }
+  const GoASTExpr *GetKey() const { return m_key_up.get(); }
+  void SetKey(GoASTExpr *key) { m_key_up.reset(key); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_key_up;
-    std::unique_ptr<GoASTExpr> m_value_up;
+  const GoASTExpr *GetValue() const { return m_value_up.get(); }
+  void SetValue(GoASTExpr *value) { m_value_up.reset(value); }
 
-    GoASTKeyValueExpr(const GoASTKeyValueExpr &) = delete;
-    const GoASTKeyValueExpr &operator=(const GoASTKeyValueExpr &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_key_up;
+  std::unique_ptr<GoASTExpr> m_value_up;
+
+  GoASTKeyValueExpr(const GoASTKeyValueExpr &) = delete;
+  const GoASTKeyValueExpr &operator=(const GoASTKeyValueExpr &) = delete;
 };
 
-class GoASTLabeledStmt : public GoASTStmt
-{
-  public:
-    GoASTLabeledStmt(GoASTIdent *label, GoASTStmt *stmt) : GoASTStmt(eLabeledStmt), m_label_up(label), m_stmt_up(stmt) {}
-    ~GoASTLabeledStmt() override = default;
+class GoASTLabeledStmt : public GoASTStmt {
+public:
+  GoASTLabeledStmt(GoASTIdent *label, GoASTStmt *stmt)
+      : GoASTStmt(eLabeledStmt), m_label_up(label), m_stmt_up(stmt) {}
+  ~GoASTLabeledStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "LabeledStmt";
-    }
+  const char *GetKindName() const override { return "LabeledStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eLabeledStmt;
-    }
-    
-    const GoASTIdent *
-    GetLabel() const
-    {
-        return m_label_up.get();
-    }
-    void
-    SetLabel(GoASTIdent *label)
-    {
-        m_label_up.reset(label);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eLabeledStmt;
+  }
 
-    const GoASTStmt *
-    GetStmt() const
-    {
-        return m_stmt_up.get();
-    }
-    void
-    SetStmt(GoASTStmt *stmt)
-    {
-        m_stmt_up.reset(stmt);
-    }
+  const GoASTIdent *GetLabel() const { return m_label_up.get(); }
+  void SetLabel(GoASTIdent *label) { m_label_up.reset(label); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTIdent> m_label_up;
-    std::unique_ptr<GoASTStmt> m_stmt_up;
+  const GoASTStmt *GetStmt() const { return m_stmt_up.get(); }
+  void SetStmt(GoASTStmt *stmt) { m_stmt_up.reset(stmt); }
 
-    GoASTLabeledStmt(const GoASTLabeledStmt &) = delete;
-    const GoASTLabeledStmt &operator=(const GoASTLabeledStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTIdent> m_label_up;
+  std::unique_ptr<GoASTStmt> m_stmt_up;
+
+  GoASTLabeledStmt(const GoASTLabeledStmt &) = delete;
+  const GoASTLabeledStmt &operator=(const GoASTLabeledStmt &) = delete;
 };
 
-class GoASTMapType : public GoASTExpr
-{
-  public:
-    GoASTMapType(GoASTExpr *key, GoASTExpr *value) : GoASTExpr(eMapType), m_key_up(key), m_value_up(value) {}
-    ~GoASTMapType() override = default;
+class GoASTMapType : public GoASTExpr {
+public:
+  GoASTMapType(GoASTExpr *key, GoASTExpr *value)
+      : GoASTExpr(eMapType), m_key_up(key), m_value_up(value) {}
+  ~GoASTMapType() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "MapType";
-    }
+  const char *GetKindName() const override { return "MapType"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eMapType;
-    }
-    
-    const GoASTExpr *
-    GetKey() const
-    {
-        return m_key_up.get();
-    }
-    void
-    SetKey(GoASTExpr *key)
-    {
-        m_key_up.reset(key);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eMapType; }
 
-    const GoASTExpr *
-    GetValue() const
-    {
-        return m_value_up.get();
-    }
-    void
-    SetValue(GoASTExpr *value)
-    {
-        m_value_up.reset(value);
-    }
+  const GoASTExpr *GetKey() const { return m_key_up.get(); }
+  void SetKey(GoASTExpr *key) { m_key_up.reset(key); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_key_up;
-    std::unique_ptr<GoASTExpr> m_value_up;
+  const GoASTExpr *GetValue() const { return m_value_up.get(); }
+  void SetValue(GoASTExpr *value) { m_value_up.reset(value); }
 
-    GoASTMapType(const GoASTMapType &) = delete;
-    const GoASTMapType &operator=(const GoASTMapType &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_key_up;
+  std::unique_ptr<GoASTExpr> m_value_up;
+
+  GoASTMapType(const GoASTMapType &) = delete;
+  const GoASTMapType &operator=(const GoASTMapType &) = delete;
 };
 
-class GoASTParenExpr : public GoASTExpr
-{
-  public:
-    explicit GoASTParenExpr(GoASTExpr *x) : GoASTExpr(eParenExpr), m_x_up(x) {}
-    ~GoASTParenExpr() override = default;
+class GoASTParenExpr : public GoASTExpr {
+public:
+  explicit GoASTParenExpr(GoASTExpr *x) : GoASTExpr(eParenExpr), m_x_up(x) {}
+  ~GoASTParenExpr() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "ParenExpr";
-    }
+  const char *GetKindName() const override { return "ParenExpr"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eParenExpr;
-    }
-    
-    const GoASTExpr *
-    GetX() const
-    {
-        return m_x_up.get();
-    }
-    void
-    SetX(GoASTExpr *x)
-    {
-        m_x_up.reset(x);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eParenExpr; }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_x_up;
+  const GoASTExpr *GetX() const { return m_x_up.get(); }
+  void SetX(GoASTExpr *x) { m_x_up.reset(x); }
 
-    GoASTParenExpr(const GoASTParenExpr &) = delete;
-    const GoASTParenExpr &operator=(const GoASTParenExpr &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_x_up;
+
+  GoASTParenExpr(const GoASTParenExpr &) = delete;
+  const GoASTParenExpr &operator=(const GoASTParenExpr &) = delete;
 };
 
-class GoASTRangeStmt : public GoASTStmt
-{
-  public:
-    GoASTRangeStmt(GoASTExpr *key, GoASTExpr *value, bool define, GoASTExpr *x, GoASTBlockStmt *body) : GoASTStmt(eRangeStmt), m_key_up(key), m_value_up(value), m_define(define), m_x_up(x), m_body_up(body) {}
-    ~GoASTRangeStmt() override = default;
+class GoASTRangeStmt : public GoASTStmt {
+public:
+  GoASTRangeStmt(GoASTExpr *key, GoASTExpr *value, bool define, GoASTExpr *x,
+                 GoASTBlockStmt *body)
+      : GoASTStmt(eRangeStmt), m_key_up(key), m_value_up(value),
+        m_define(define), m_x_up(x), m_body_up(body) {}
+  ~GoASTRangeStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "RangeStmt";
-    }
+  const char *GetKindName() const override { return "RangeStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eRangeStmt;
-    }
-    
-    const GoASTExpr *
-    GetKey() const
-    {
-        return m_key_up.get();
-    }
-    void
-    SetKey(GoASTExpr *key)
-    {
-        m_key_up.reset(key);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eRangeStmt; }
 
-    const GoASTExpr *
-    GetValue() const
-    {
-        return m_value_up.get();
-    }
-    void
-    SetValue(GoASTExpr *value)
-    {
-        m_value_up.reset(value);
-    }
+  const GoASTExpr *GetKey() const { return m_key_up.get(); }
+  void SetKey(GoASTExpr *key) { m_key_up.reset(key); }
 
-    bool 
-    GetDefine() const
-    {
-        return m_define;
-    }
-    void
-    SetDefine(bool define)
-    {
-        m_define = define;
-    }
+  const GoASTExpr *GetValue() const { return m_value_up.get(); }
+  void SetValue(GoASTExpr *value) { m_value_up.reset(value); }
 
-    const GoASTExpr *
-    GetX() const
-    {
-        return m_x_up.get();
-    }
-    void
-    SetX(GoASTExpr *x)
-    {
-        m_x_up.reset(x);
-    }
+  bool GetDefine() const { return m_define; }
+  void SetDefine(bool define) { m_define = define; }
 
-    const GoASTBlockStmt *
-    GetBody() const
-    {
-        return m_body_up.get();
-    }
-    void
-    SetBody(GoASTBlockStmt *body)
-    {
-        m_body_up.reset(body);
-    }
+  const GoASTExpr *GetX() const { return m_x_up.get(); }
+  void SetX(GoASTExpr *x) { m_x_up.reset(x); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_key_up;
-    std::unique_ptr<GoASTExpr> m_value_up;
-    bool m_define;
-    std::unique_ptr<GoASTExpr> m_x_up;
-    std::unique_ptr<GoASTBlockStmt> m_body_up;
+  const GoASTBlockStmt *GetBody() const { return m_body_up.get(); }
+  void SetBody(GoASTBlockStmt *body) { m_body_up.reset(body); }
 
-    GoASTRangeStmt(const GoASTRangeStmt &) = delete;
-    const GoASTRangeStmt &operator=(const GoASTRangeStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_key_up;
+  std::unique_ptr<GoASTExpr> m_value_up;
+  bool m_define;
+  std::unique_ptr<GoASTExpr> m_x_up;
+  std::unique_ptr<GoASTBlockStmt> m_body_up;
+
+  GoASTRangeStmt(const GoASTRangeStmt &) = delete;
+  const GoASTRangeStmt &operator=(const GoASTRangeStmt &) = delete;
 };
 
-class GoASTReturnStmt : public GoASTStmt
-{
-  public:
-    GoASTReturnStmt() : GoASTStmt(eReturnStmt) {}
-    ~GoASTReturnStmt() override = default;
+class GoASTReturnStmt : public GoASTStmt {
+public:
+  GoASTReturnStmt() : GoASTStmt(eReturnStmt) {}
+  ~GoASTReturnStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "ReturnStmt";
-    }
+  const char *GetKindName() const override { return "ReturnStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eReturnStmt;
-    }
-    
-    size_t
-    NumResults() const
-    {
-        return m_results.size();
-    }
-    const GoASTExpr *
-    GetResults(int i) const
-    {
-        return m_results[i].get();
-    }
-    void
-    AddResults(GoASTExpr *results)
-    {
-        m_results.push_back(std::unique_ptr<GoASTExpr>(results));
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eReturnStmt;
+  }
 
-  private:
-    friend class GoASTNode;
-    std::vector<std::unique_ptr<GoASTExpr> > m_results;
+  size_t NumResults() const { return m_results.size(); }
+  const GoASTExpr *GetResults(int i) const { return m_results[i].get(); }
+  void AddResults(GoASTExpr *results) {
+    m_results.push_back(std::unique_ptr<GoASTExpr>(results));
+  }
 
-    GoASTReturnStmt(const GoASTReturnStmt &) = delete;
-    const GoASTReturnStmt &operator=(const GoASTReturnStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::vector<std::unique_ptr<GoASTExpr>> m_results;
+
+  GoASTReturnStmt(const GoASTReturnStmt &) = delete;
+  const GoASTReturnStmt &operator=(const GoASTReturnStmt &) = delete;
 };
 
-class GoASTSelectStmt : public GoASTStmt
-{
-  public:
-    explicit GoASTSelectStmt(GoASTBlockStmt *body) : GoASTStmt(eSelectStmt), m_body_up(body) {}
-    ~GoASTSelectStmt() override = default;
+class GoASTSelectStmt : public GoASTStmt {
+public:
+  explicit GoASTSelectStmt(GoASTBlockStmt *body)
+      : GoASTStmt(eSelectStmt), m_body_up(body) {}
+  ~GoASTSelectStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "SelectStmt";
-    }
+  const char *GetKindName() const override { return "SelectStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eSelectStmt;
-    }
-    
-    const GoASTBlockStmt *
-    GetBody() const
-    {
-        return m_body_up.get();
-    }
-    void
-    SetBody(GoASTBlockStmt *body)
-    {
-        m_body_up.reset(body);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eSelectStmt;
+  }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTBlockStmt> m_body_up;
+  const GoASTBlockStmt *GetBody() const { return m_body_up.get(); }
+  void SetBody(GoASTBlockStmt *body) { m_body_up.reset(body); }
 
-    GoASTSelectStmt(const GoASTSelectStmt &) = delete;
-    const GoASTSelectStmt &operator=(const GoASTSelectStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTBlockStmt> m_body_up;
+
+  GoASTSelectStmt(const GoASTSelectStmt &) = delete;
+  const GoASTSelectStmt &operator=(const GoASTSelectStmt &) = delete;
 };
 
-class GoASTSelectorExpr : public GoASTExpr
-{
-  public:
-    GoASTSelectorExpr(GoASTExpr *x, GoASTIdent *sel) : GoASTExpr(eSelectorExpr), m_x_up(x), m_sel_up(sel) {}
-    ~GoASTSelectorExpr() override = default;
+class GoASTSelectorExpr : public GoASTExpr {
+public:
+  GoASTSelectorExpr(GoASTExpr *x, GoASTIdent *sel)
+      : GoASTExpr(eSelectorExpr), m_x_up(x), m_sel_up(sel) {}
+  ~GoASTSelectorExpr() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "SelectorExpr";
-    }
+  const char *GetKindName() const override { return "SelectorExpr"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eSelectorExpr;
-    }
-    
-    const GoASTExpr *
-    GetX() const
-    {
-        return m_x_up.get();
-    }
-    void
-    SetX(GoASTExpr *x)
-    {
-        m_x_up.reset(x);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eSelectorExpr;
+  }
 
-    const GoASTIdent *
-    GetSel() const
-    {
-        return m_sel_up.get();
-    }
-    void
-    SetSel(GoASTIdent *sel)
-    {
-        m_sel_up.reset(sel);
-    }
+  const GoASTExpr *GetX() const { return m_x_up.get(); }
+  void SetX(GoASTExpr *x) { m_x_up.reset(x); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_x_up;
-    std::unique_ptr<GoASTIdent> m_sel_up;
+  const GoASTIdent *GetSel() const { return m_sel_up.get(); }
+  void SetSel(GoASTIdent *sel) { m_sel_up.reset(sel); }
 
-    GoASTSelectorExpr(const GoASTSelectorExpr &) = delete;
-    const GoASTSelectorExpr &operator=(const GoASTSelectorExpr &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_x_up;
+  std::unique_ptr<GoASTIdent> m_sel_up;
+
+  GoASTSelectorExpr(const GoASTSelectorExpr &) = delete;
+  const GoASTSelectorExpr &operator=(const GoASTSelectorExpr &) = delete;
 };
 
-class GoASTSendStmt : public GoASTStmt
-{
-  public:
-    GoASTSendStmt(GoASTExpr *chan, GoASTExpr *value) : GoASTStmt(eSendStmt), m_chan_up(chan), m_value_up(value) {}
-    ~GoASTSendStmt() override = default;
+class GoASTSendStmt : public GoASTStmt {
+public:
+  GoASTSendStmt(GoASTExpr *chan, GoASTExpr *value)
+      : GoASTStmt(eSendStmt), m_chan_up(chan), m_value_up(value) {}
+  ~GoASTSendStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "SendStmt";
-    }
+  const char *GetKindName() const override { return "SendStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eSendStmt;
-    }
-    
-    const GoASTExpr *
-    GetChan() const
-    {
-        return m_chan_up.get();
-    }
-    void
-    SetChan(GoASTExpr *chan)
-    {
-        m_chan_up.reset(chan);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eSendStmt; }
 
-    const GoASTExpr *
-    GetValue() const
-    {
-        return m_value_up.get();
-    }
-    void
-    SetValue(GoASTExpr *value)
-    {
-        m_value_up.reset(value);
-    }
+  const GoASTExpr *GetChan() const { return m_chan_up.get(); }
+  void SetChan(GoASTExpr *chan) { m_chan_up.reset(chan); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_chan_up;
-    std::unique_ptr<GoASTExpr> m_value_up;
+  const GoASTExpr *GetValue() const { return m_value_up.get(); }
+  void SetValue(GoASTExpr *value) { m_value_up.reset(value); }
 
-    GoASTSendStmt(const GoASTSendStmt &) = delete;
-    const GoASTSendStmt &operator=(const GoASTSendStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_chan_up;
+  std::unique_ptr<GoASTExpr> m_value_up;
+
+  GoASTSendStmt(const GoASTSendStmt &) = delete;
+  const GoASTSendStmt &operator=(const GoASTSendStmt &) = delete;
 };
 
-class GoASTSliceExpr : public GoASTExpr
-{
-  public:
-    GoASTSliceExpr(GoASTExpr *x, GoASTExpr *low, GoASTExpr *high, GoASTExpr *max, bool slice3) : GoASTExpr(eSliceExpr), m_x_up(x), m_low_up(low), m_high_up(high), m_max_up(max), m_slice3(slice3) {}
-    ~GoASTSliceExpr() override = default;
+class GoASTSliceExpr : public GoASTExpr {
+public:
+  GoASTSliceExpr(GoASTExpr *x, GoASTExpr *low, GoASTExpr *high, GoASTExpr *max,
+                 bool slice3)
+      : GoASTExpr(eSliceExpr), m_x_up(x), m_low_up(low), m_high_up(high),
+        m_max_up(max), m_slice3(slice3) {}
+  ~GoASTSliceExpr() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "SliceExpr";
-    }
+  const char *GetKindName() const override { return "SliceExpr"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eSliceExpr;
-    }
-    
-    const GoASTExpr *
-    GetX() const
-    {
-        return m_x_up.get();
-    }
-    void
-    SetX(GoASTExpr *x)
-    {
-        m_x_up.reset(x);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eSliceExpr; }
 
-    const GoASTExpr *
-    GetLow() const
-    {
-        return m_low_up.get();
-    }
-    void
-    SetLow(GoASTExpr *low)
-    {
-        m_low_up.reset(low);
-    }
+  const GoASTExpr *GetX() const { return m_x_up.get(); }
+  void SetX(GoASTExpr *x) { m_x_up.reset(x); }
 
-    const GoASTExpr *
-    GetHigh() const
-    {
-        return m_high_up.get();
-    }
-    void
-    SetHigh(GoASTExpr *high)
-    {
-        m_high_up.reset(high);
-    }
+  const GoASTExpr *GetLow() const { return m_low_up.get(); }
+  void SetLow(GoASTExpr *low) { m_low_up.reset(low); }
 
-    const GoASTExpr *
-    GetMax() const
-    {
-        return m_max_up.get();
-    }
-    void
-    SetMax(GoASTExpr *max)
-    {
-        m_max_up.reset(max);
-    }
+  const GoASTExpr *GetHigh() const { return m_high_up.get(); }
+  void SetHigh(GoASTExpr *high) { m_high_up.reset(high); }
 
-    bool 
-    GetSlice3() const
-    {
-        return m_slice3;
-    }
-    void
-    SetSlice3(bool slice3)
-    {
-        m_slice3 = slice3;
-    }
+  const GoASTExpr *GetMax() const { return m_max_up.get(); }
+  void SetMax(GoASTExpr *max) { m_max_up.reset(max); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_x_up;
-    std::unique_ptr<GoASTExpr> m_low_up;
-    std::unique_ptr<GoASTExpr> m_high_up;
-    std::unique_ptr<GoASTExpr> m_max_up;
-    bool m_slice3;
+  bool GetSlice3() const { return m_slice3; }
+  void SetSlice3(bool slice3) { m_slice3 = slice3; }
 
-    GoASTSliceExpr(const GoASTSliceExpr &) = delete;
-    const GoASTSliceExpr &operator=(const GoASTSliceExpr &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_x_up;
+  std::unique_ptr<GoASTExpr> m_low_up;
+  std::unique_ptr<GoASTExpr> m_high_up;
+  std::unique_ptr<GoASTExpr> m_max_up;
+  bool m_slice3;
+
+  GoASTSliceExpr(const GoASTSliceExpr &) = delete;
+  const GoASTSliceExpr &operator=(const GoASTSliceExpr &) = delete;
 };
 
-class GoASTStarExpr : public GoASTExpr
-{
-  public:
-    explicit GoASTStarExpr(GoASTExpr *x) : GoASTExpr(eStarExpr), m_x_up(x) {}
-    ~GoASTStarExpr() override = default;
+class GoASTStarExpr : public GoASTExpr {
+public:
+  explicit GoASTStarExpr(GoASTExpr *x) : GoASTExpr(eStarExpr), m_x_up(x) {}
+  ~GoASTStarExpr() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "StarExpr";
-    }
+  const char *GetKindName() const override { return "StarExpr"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eStarExpr;
-    }
-    
-    const GoASTExpr *
-    GetX() const
-    {
-        return m_x_up.get();
-    }
-    void
-    SetX(GoASTExpr *x)
-    {
-        m_x_up.reset(x);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eStarExpr; }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_x_up;
+  const GoASTExpr *GetX() const { return m_x_up.get(); }
+  void SetX(GoASTExpr *x) { m_x_up.reset(x); }
 
-    GoASTStarExpr(const GoASTStarExpr &) = delete;
-    const GoASTStarExpr &operator=(const GoASTStarExpr &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_x_up;
+
+  GoASTStarExpr(const GoASTStarExpr &) = delete;
+  const GoASTStarExpr &operator=(const GoASTStarExpr &) = delete;
 };
 
-class GoASTStructType : public GoASTExpr
-{
-  public:
-    explicit GoASTStructType(GoASTFieldList *fields) : GoASTExpr(eStructType), m_fields_up(fields) {}
-    ~GoASTStructType() override = default;
+class GoASTStructType : public GoASTExpr {
+public:
+  explicit GoASTStructType(GoASTFieldList *fields)
+      : GoASTExpr(eStructType), m_fields_up(fields) {}
+  ~GoASTStructType() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "StructType";
-    }
+  const char *GetKindName() const override { return "StructType"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eStructType;
-    }
-    
-    const GoASTFieldList *
-    GetFields() const
-    {
-        return m_fields_up.get();
-    }
-    void
-    SetFields(GoASTFieldList *fields)
-    {
-        m_fields_up.reset(fields);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eStructType;
+  }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTFieldList> m_fields_up;
+  const GoASTFieldList *GetFields() const { return m_fields_up.get(); }
+  void SetFields(GoASTFieldList *fields) { m_fields_up.reset(fields); }
 
-    GoASTStructType(const GoASTStructType &) = delete;
-    const GoASTStructType &operator=(const GoASTStructType &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTFieldList> m_fields_up;
+
+  GoASTStructType(const GoASTStructType &) = delete;
+  const GoASTStructType &operator=(const GoASTStructType &) = delete;
 };
 
-class GoASTSwitchStmt : public GoASTStmt
-{
-  public:
-    GoASTSwitchStmt(GoASTStmt *init, GoASTExpr *tag, GoASTBlockStmt *body) : GoASTStmt(eSwitchStmt), m_init_up(init), m_tag_up(tag), m_body_up(body) {}
-    ~GoASTSwitchStmt() override = default;
+class GoASTSwitchStmt : public GoASTStmt {
+public:
+  GoASTSwitchStmt(GoASTStmt *init, GoASTExpr *tag, GoASTBlockStmt *body)
+      : GoASTStmt(eSwitchStmt), m_init_up(init), m_tag_up(tag),
+        m_body_up(body) {}
+  ~GoASTSwitchStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "SwitchStmt";
-    }
+  const char *GetKindName() const override { return "SwitchStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eSwitchStmt;
-    }
-    
-    const GoASTStmt *
-    GetInit() const
-    {
-        return m_init_up.get();
-    }
-    void
-    SetInit(GoASTStmt *init)
-    {
-        m_init_up.reset(init);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eSwitchStmt;
+  }
 
-    const GoASTExpr *
-    GetTag() const
-    {
-        return m_tag_up.get();
-    }
-    void
-    SetTag(GoASTExpr *tag)
-    {
-        m_tag_up.reset(tag);
-    }
+  const GoASTStmt *GetInit() const { return m_init_up.get(); }
+  void SetInit(GoASTStmt *init) { m_init_up.reset(init); }
 
-    const GoASTBlockStmt *
-    GetBody() const
-    {
-        return m_body_up.get();
-    }
-    void
-    SetBody(GoASTBlockStmt *body)
-    {
-        m_body_up.reset(body);
-    }
+  const GoASTExpr *GetTag() const { return m_tag_up.get(); }
+  void SetTag(GoASTExpr *tag) { m_tag_up.reset(tag); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTStmt> m_init_up;
-    std::unique_ptr<GoASTExpr> m_tag_up;
-    std::unique_ptr<GoASTBlockStmt> m_body_up;
+  const GoASTBlockStmt *GetBody() const { return m_body_up.get(); }
+  void SetBody(GoASTBlockStmt *body) { m_body_up.reset(body); }
 
-    GoASTSwitchStmt(const GoASTSwitchStmt &) = delete;
-    const GoASTSwitchStmt &operator=(const GoASTSwitchStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTStmt> m_init_up;
+  std::unique_ptr<GoASTExpr> m_tag_up;
+  std::unique_ptr<GoASTBlockStmt> m_body_up;
+
+  GoASTSwitchStmt(const GoASTSwitchStmt &) = delete;
+  const GoASTSwitchStmt &operator=(const GoASTSwitchStmt &) = delete;
 };
 
-class GoASTTypeAssertExpr : public GoASTExpr
-{
-  public:
-    GoASTTypeAssertExpr(GoASTExpr *x, GoASTExpr *type) : GoASTExpr(eTypeAssertExpr), m_x_up(x), m_type_up(type) {}
-    ~GoASTTypeAssertExpr() override = default;
+class GoASTTypeAssertExpr : public GoASTExpr {
+public:
+  GoASTTypeAssertExpr(GoASTExpr *x, GoASTExpr *type)
+      : GoASTExpr(eTypeAssertExpr), m_x_up(x), m_type_up(type) {}
+  ~GoASTTypeAssertExpr() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "TypeAssertExpr";
-    }
+  const char *GetKindName() const override { return "TypeAssertExpr"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eTypeAssertExpr;
-    }
-    
-    const GoASTExpr *
-    GetX() const
-    {
-        return m_x_up.get();
-    }
-    void
-    SetX(GoASTExpr *x)
-    {
-        m_x_up.reset(x);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eTypeAssertExpr;
+  }
 
-    const GoASTExpr *
-    GetType() const
-    {
-        return m_type_up.get();
-    }
-    void
-    SetType(GoASTExpr *type)
-    {
-        m_type_up.reset(type);
-    }
+  const GoASTExpr *GetX() const { return m_x_up.get(); }
+  void SetX(GoASTExpr *x) { m_x_up.reset(x); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTExpr> m_x_up;
-    std::unique_ptr<GoASTExpr> m_type_up;
+  const GoASTExpr *GetType() const { return m_type_up.get(); }
+  void SetType(GoASTExpr *type) { m_type_up.reset(type); }
 
-    GoASTTypeAssertExpr(const GoASTTypeAssertExpr &) = delete;
-    const GoASTTypeAssertExpr &operator=(const GoASTTypeAssertExpr &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTExpr> m_x_up;
+  std::unique_ptr<GoASTExpr> m_type_up;
+
+  GoASTTypeAssertExpr(const GoASTTypeAssertExpr &) = delete;
+  const GoASTTypeAssertExpr &operator=(const GoASTTypeAssertExpr &) = delete;
 };
 
-class GoASTTypeSpec : public GoASTSpec
-{
-  public:
-    GoASTTypeSpec(GoASTIdent *name, GoASTExpr *type) : GoASTSpec(eTypeSpec), m_name_up(name), m_type_up(type) {}
-    ~GoASTTypeSpec() override = default;
+class GoASTTypeSpec : public GoASTSpec {
+public:
+  GoASTTypeSpec(GoASTIdent *name, GoASTExpr *type)
+      : GoASTSpec(eTypeSpec), m_name_up(name), m_type_up(type) {}
+  ~GoASTTypeSpec() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "TypeSpec";
-    }
+  const char *GetKindName() const override { return "TypeSpec"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eTypeSpec;
-    }
-    
-    const GoASTIdent *
-    GetName() const
-    {
-        return m_name_up.get();
-    }
-    void
-    SetName(GoASTIdent *name)
-    {
-        m_name_up.reset(name);
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eTypeSpec; }
 
-    const GoASTExpr *
-    GetType() const
-    {
-        return m_type_up.get();
-    }
-    void
-    SetType(GoASTExpr *type)
-    {
-        m_type_up.reset(type);
-    }
+  const GoASTIdent *GetName() const { return m_name_up.get(); }
+  void SetName(GoASTIdent *name) { m_name_up.reset(name); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTIdent> m_name_up;
-    std::unique_ptr<GoASTExpr> m_type_up;
+  const GoASTExpr *GetType() const { return m_type_up.get(); }
+  void SetType(GoASTExpr *type) { m_type_up.reset(type); }
 
-    GoASTTypeSpec(const GoASTTypeSpec &) = delete;
-    const GoASTTypeSpec &operator=(const GoASTTypeSpec &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTIdent> m_name_up;
+  std::unique_ptr<GoASTExpr> m_type_up;
+
+  GoASTTypeSpec(const GoASTTypeSpec &) = delete;
+  const GoASTTypeSpec &operator=(const GoASTTypeSpec &) = delete;
 };
 
-class GoASTTypeSwitchStmt : public GoASTStmt
-{
-  public:
-    GoASTTypeSwitchStmt(GoASTStmt *init, GoASTStmt *assign, GoASTBlockStmt *body) : GoASTStmt(eTypeSwitchStmt), m_init_up(init), m_assign_up(assign), m_body_up(body) {}
-    ~GoASTTypeSwitchStmt() override = default;
+class GoASTTypeSwitchStmt : public GoASTStmt {
+public:
+  GoASTTypeSwitchStmt(GoASTStmt *init, GoASTStmt *assign, GoASTBlockStmt *body)
+      : GoASTStmt(eTypeSwitchStmt), m_init_up(init), m_assign_up(assign),
+        m_body_up(body) {}
+  ~GoASTTypeSwitchStmt() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "TypeSwitchStmt";
-    }
+  const char *GetKindName() const override { return "TypeSwitchStmt"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eTypeSwitchStmt;
-    }
-    
-    const GoASTStmt *
-    GetInit() const
-    {
-        return m_init_up.get();
-    }
-    void
-    SetInit(GoASTStmt *init)
-    {
-        m_init_up.reset(init);
-    }
+  static bool classof(const GoASTNode *n) {
+    return n->GetKind() == eTypeSwitchStmt;
+  }
 
-    const GoASTStmt *
-    GetAssign() const
-    {
-        return m_assign_up.get();
-    }
-    void
-    SetAssign(GoASTStmt *assign)
-    {
-        m_assign_up.reset(assign);
-    }
+  const GoASTStmt *GetInit() const { return m_init_up.get(); }
+  void SetInit(GoASTStmt *init) { m_init_up.reset(init); }
 
-    const GoASTBlockStmt *
-    GetBody() const
-    {
-        return m_body_up.get();
-    }
-    void
-    SetBody(GoASTBlockStmt *body)
-    {
-        m_body_up.reset(body);
-    }
+  const GoASTStmt *GetAssign() const { return m_assign_up.get(); }
+  void SetAssign(GoASTStmt *assign) { m_assign_up.reset(assign); }
 
-  private:
-    friend class GoASTNode;
-    std::unique_ptr<GoASTStmt> m_init_up;
-    std::unique_ptr<GoASTStmt> m_assign_up;
-    std::unique_ptr<GoASTBlockStmt> m_body_up;
+  const GoASTBlockStmt *GetBody() const { return m_body_up.get(); }
+  void SetBody(GoASTBlockStmt *body) { m_body_up.reset(body); }
 
-    GoASTTypeSwitchStmt(const GoASTTypeSwitchStmt &) = delete;
-    const GoASTTypeSwitchStmt &operator=(const GoASTTypeSwitchStmt &) = delete;
+private:
+  friend class GoASTNode;
+  std::unique_ptr<GoASTStmt> m_init_up;
+  std::unique_ptr<GoASTStmt> m_assign_up;
+  std::unique_ptr<GoASTBlockStmt> m_body_up;
+
+  GoASTTypeSwitchStmt(const GoASTTypeSwitchStmt &) = delete;
+  const GoASTTypeSwitchStmt &operator=(const GoASTTypeSwitchStmt &) = delete;
 };
 
-class GoASTUnaryExpr : public GoASTExpr
-{
-  public:
-    GoASTUnaryExpr(TokenType op, GoASTExpr *x) : GoASTExpr(eUnaryExpr), m_op(op), m_x_up(x) {}
-    ~GoASTUnaryExpr() override = default;
+class GoASTUnaryExpr : public GoASTExpr {
+public:
+  GoASTUnaryExpr(TokenType op, GoASTExpr *x)
+      : GoASTExpr(eUnaryExpr), m_op(op), m_x_up(x) {}
+  ~GoASTUnaryExpr() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "UnaryExpr";
-    }
+  const char *GetKindName() const override { return "UnaryExpr"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eUnaryExpr;
-    }
-    
-    TokenType 
-    GetOp() const
-    {
-        return m_op;
-    }
-    void
-    SetOp(TokenType op)
-    {
-        m_op = op;
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eUnaryExpr; }
 
-    const GoASTExpr *
-    GetX() const
-    {
-        return m_x_up.get();
-    }
-    void
-    SetX(GoASTExpr *x)
-    {
-        m_x_up.reset(x);
-    }
+  TokenType GetOp() const { return m_op; }
+  void SetOp(TokenType op) { m_op = op; }
 
-  private:
-    friend class GoASTNode;
-    TokenType m_op;
-    std::unique_ptr<GoASTExpr> m_x_up;
+  const GoASTExpr *GetX() const { return m_x_up.get(); }
+  void SetX(GoASTExpr *x) { m_x_up.reset(x); }
 
-    GoASTUnaryExpr(const GoASTUnaryExpr &) = delete;
-    const GoASTUnaryExpr &operator=(const GoASTUnaryExpr &) = delete;
+private:
+  friend class GoASTNode;
+  TokenType m_op;
+  std::unique_ptr<GoASTExpr> m_x_up;
+
+  GoASTUnaryExpr(const GoASTUnaryExpr &) = delete;
+  const GoASTUnaryExpr &operator=(const GoASTUnaryExpr &) = delete;
 };
 
-class GoASTValueSpec : public GoASTSpec
-{
-  public:
-    GoASTValueSpec() : GoASTSpec(eValueSpec) {}
-    ~GoASTValueSpec() override = default;
+class GoASTValueSpec : public GoASTSpec {
+public:
+  GoASTValueSpec() : GoASTSpec(eValueSpec) {}
+  ~GoASTValueSpec() override = default;
 
-    const char *
-    GetKindName() const override
-    {
-        return "ValueSpec";
-    }
+  const char *GetKindName() const override { return "ValueSpec"; }
 
-    static bool
-    classof(const GoASTNode *n)
-    {
-        return n->GetKind() == eValueSpec;
-    }
-    
-    size_t
-    NumNames() const
-    {
-        return m_names.size();
-    }
-    const GoASTIdent *
-    GetNames(int i) const
-    {
-        return m_names[i].get();
-    }
-    void
-    AddNames(GoASTIdent *names)
-    {
-        m_names.push_back(std::unique_ptr<GoASTIdent>(names));
-    }
+  static bool classof(const GoASTNode *n) { return n->GetKind() == eValueSpec; }
 
-    const GoASTExpr *
-    GetType() const
-    {
-        return m_type_up.get();
-    }
-    void
-    SetType(GoASTExpr *type)
-    {
-        m_type_up.reset(type);
-    }
+  size_t NumNames() const { return m_names.size(); }
+  const GoASTIdent *GetNames(int i) const { return m_names[i].get(); }
+  void AddNames(GoASTIdent *names) {
+    m_names.push_back(std::unique_ptr<GoASTIdent>(names));
+  }
 
-    size_t
-    NumValues() const
-    {
-        return m_values.size();
-    }
-    const GoASTExpr *
-    GetValues(int i) const
-    {
-        return m_values[i].get();
-    }
-    void
-    AddValues(GoASTExpr *values)
-    {
-        m_values.push_back(std::unique_ptr<GoASTExpr>(values));
-    }
+  const GoASTExpr *GetType() const { return m_type_up.get(); }
+  void SetType(GoASTExpr *type) { m_type_up.reset(type); }
 
-  private:
-    friend class GoASTNode;
-    std::vector<std::unique_ptr<GoASTIdent> > m_names;
-    std::unique_ptr<GoASTExpr> m_type_up;
-    std::vector<std::unique_ptr<GoASTExpr> > m_values;
+  size_t NumValues() const { return m_values.size(); }
+  const GoASTExpr *GetValues(int i) const { return m_values[i].get(); }
+  void AddValues(GoASTExpr *values) {
+    m_values.push_back(std::unique_ptr<GoASTExpr>(values));
+  }
 
-    GoASTValueSpec(const GoASTValueSpec &) = delete;
-    const GoASTValueSpec &operator=(const GoASTValueSpec &) = delete;
+private:
+  friend class GoASTNode;
+  std::vector<std::unique_ptr<GoASTIdent>> m_names;
+  std::unique_ptr<GoASTExpr> m_type_up;
+  std::vector<std::unique_ptr<GoASTExpr>> m_values;
+
+  GoASTValueSpec(const GoASTValueSpec &) = delete;
+  const GoASTValueSpec &operator=(const GoASTValueSpec &) = delete;
 };
 
-
-template <typename R, typename V>
-R GoASTDecl::Visit(V* v) const
-{
-    switch(GetKind())
-    {
-    case eBadDecl:
-        return v->VisitBadDecl(llvm::cast<const GoASTBadDecl>(this));
-    case eFuncDecl:
-        return v->VisitFuncDecl(llvm::cast<const GoASTFuncDecl>(this));
-    case eGenDecl:
-        return v->VisitGenDecl(llvm::cast<const GoASTGenDecl>(this));
-    default:
-        assert(false && "Invalid kind");
-    }
+template <typename R, typename V> R GoASTDecl::Visit(V *v) const {
+  switch (GetKind()) {
+  case eBadDecl:
+    return v->VisitBadDecl(llvm::cast<const GoASTBadDecl>(this));
+  case eFuncDecl:
+    return v->VisitFuncDecl(llvm::cast<const GoASTFuncDecl>(this));
+  case eGenDecl:
+    return v->VisitGenDecl(llvm::cast<const GoASTGenDecl>(this));
+  default:
+    assert(false && "Invalid kind");
+  }
 }
 
-template <typename R, typename V>
-R GoASTExpr::Visit(V* v) const
-{
-    switch(GetKind())
-    {
-    case eArrayType:
-        return v->VisitArrayType(llvm::cast<const GoASTArrayType>(this));
-    case eBadExpr:
-        return v->VisitBadExpr(llvm::cast<const GoASTBadExpr>(this));
-    case eBasicLit:
-        return v->VisitBasicLit(llvm::cast<const GoASTBasicLit>(this));
-    case eBinaryExpr:
-        return v->VisitBinaryExpr(llvm::cast<const GoASTBinaryExpr>(this));
-    case eIdent:
-        return v->VisitIdent(llvm::cast<const GoASTIdent>(this));
-    case eCallExpr:
-        return v->VisitCallExpr(llvm::cast<const GoASTCallExpr>(this));
-    case eChanType:
-        return v->VisitChanType(llvm::cast<const GoASTChanType>(this));
-    case eCompositeLit:
-        return v->VisitCompositeLit(llvm::cast<const GoASTCompositeLit>(this));
-    case eEllipsis:
-        return v->VisitEllipsis(llvm::cast<const GoASTEllipsis>(this));
-    case eFuncType:
-        return v->VisitFuncType(llvm::cast<const GoASTFuncType>(this));
-    case eFuncLit:
-        return v->VisitFuncLit(llvm::cast<const GoASTFuncLit>(this));
-    case eIndexExpr:
-        return v->VisitIndexExpr(llvm::cast<const GoASTIndexExpr>(this));
-    case eInterfaceType:
-        return v->VisitInterfaceType(llvm::cast<const GoASTInterfaceType>(this));
-    case eKeyValueExpr:
-        return v->VisitKeyValueExpr(llvm::cast<const GoASTKeyValueExpr>(this));
-    case eMapType:
-        return v->VisitMapType(llvm::cast<const GoASTMapType>(this));
-    case eParenExpr:
-        return v->VisitParenExpr(llvm::cast<const GoASTParenExpr>(this));
-    case eSelectorExpr:
-        return v->VisitSelectorExpr(llvm::cast<const GoASTSelectorExpr>(this));
-    case eSliceExpr:
-        return v->VisitSliceExpr(llvm::cast<const GoASTSliceExpr>(this));
-    case eStarExpr:
-        return v->VisitStarExpr(llvm::cast<const GoASTStarExpr>(this));
-    case eStructType:
-        return v->VisitStructType(llvm::cast<const GoASTStructType>(this));
-    case eTypeAssertExpr:
-        return v->VisitTypeAssertExpr(llvm::cast<const GoASTTypeAssertExpr>(this));
-    case eUnaryExpr:
-        return v->VisitUnaryExpr(llvm::cast<const GoASTUnaryExpr>(this));
-    default:
-        assert(false && "Invalid kind");
-        return R();
-    }
+template <typename R, typename V> R GoASTExpr::Visit(V *v) const {
+  switch (GetKind()) {
+  case eArrayType:
+    return v->VisitArrayType(llvm::cast<const GoASTArrayType>(this));
+  case eBadExpr:
+    return v->VisitBadExpr(llvm::cast<const GoASTBadExpr>(this));
+  case eBasicLit:
+    return v->VisitBasicLit(llvm::cast<const GoASTBasicLit>(this));
+  case eBinaryExpr:
+    return v->VisitBinaryExpr(llvm::cast<const GoASTBinaryExpr>(this));
+  case eIdent:
+    return v->VisitIdent(llvm::cast<const GoASTIdent>(this));
+  case eCallExpr:
+    return v->VisitCallExpr(llvm::cast<const GoASTCallExpr>(this));
+  case eChanType:
+    return v->VisitChanType(llvm::cast<const GoASTChanType>(this));
+  case eCompositeLit:
+    return v->VisitCompositeLit(llvm::cast<const GoASTCompositeLit>(this));
+  case eEllipsis:
+    return v->VisitEllipsis(llvm::cast<const GoASTEllipsis>(this));
+  case eFuncType:
+    return v->VisitFuncType(llvm::cast<const GoASTFuncType>(this));
+  case eFuncLit:
+    return v->VisitFuncLit(llvm::cast<const GoASTFuncLit>(this));
+  case eIndexExpr:
+    return v->VisitIndexExpr(llvm::cast<const GoASTIndexExpr>(this));
+  case eInterfaceType:
+    return v->VisitInterfaceType(llvm::cast<const GoASTInterfaceType>(this));
+  case eKeyValueExpr:
+    return v->VisitKeyValueExpr(llvm::cast<const GoASTKeyValueExpr>(this));
+  case eMapType:
+    return v->VisitMapType(llvm::cast<const GoASTMapType>(this));
+  case eParenExpr:
+    return v->VisitParenExpr(llvm::cast<const GoASTParenExpr>(this));
+  case eSelectorExpr:
+    return v->VisitSelectorExpr(llvm::cast<const GoASTSelectorExpr>(this));
+  case eSliceExpr:
+    return v->VisitSliceExpr(llvm::cast<const GoASTSliceExpr>(this));
+  case eStarExpr:
+    return v->VisitStarExpr(llvm::cast<const GoASTStarExpr>(this));
+  case eStructType:
+    return v->VisitStructType(llvm::cast<const GoASTStructType>(this));
+  case eTypeAssertExpr:
+    return v->VisitTypeAssertExpr(llvm::cast<const GoASTTypeAssertExpr>(this));
+  case eUnaryExpr:
+    return v->VisitUnaryExpr(llvm::cast<const GoASTUnaryExpr>(this));
+  default:
+    assert(false && "Invalid kind");
+    return R();
+  }
 }
 
-template <typename R, typename V>
-R GoASTSpec::Visit(V* v) const
-{
-    switch(GetKind())
-    {
-    case eImportSpec:
-        return v->VisitImportSpec(llvm::cast<const GoASTImportSpec>(this));
-    case eTypeSpec:
-        return v->VisitTypeSpec(llvm::cast<const GoASTTypeSpec>(this));
-    case eValueSpec:
-        return v->VisitValueSpec(llvm::cast<const GoASTValueSpec>(this));
-    default:
-        assert(false && "Invalid kind");
-    }
+template <typename R, typename V> R GoASTSpec::Visit(V *v) const {
+  switch (GetKind()) {
+  case eImportSpec:
+    return v->VisitImportSpec(llvm::cast<const GoASTImportSpec>(this));
+  case eTypeSpec:
+    return v->VisitTypeSpec(llvm::cast<const GoASTTypeSpec>(this));
+  case eValueSpec:
+    return v->VisitValueSpec(llvm::cast<const GoASTValueSpec>(this));
+  default:
+    assert(false && "Invalid kind");
+  }
 }
 
-template <typename R, typename V>
-R GoASTStmt::Visit(V* v) const
-{
-    switch(GetKind())
-    {
-    case eAssignStmt:
-        return v->VisitAssignStmt(llvm::cast<const GoASTAssignStmt>(this));
-    case eBadStmt:
-        return v->VisitBadStmt(llvm::cast<const GoASTBadStmt>(this));
-    case eBlockStmt:
-        return v->VisitBlockStmt(llvm::cast<const GoASTBlockStmt>(this));
-    case eBranchStmt:
-        return v->VisitBranchStmt(llvm::cast<const GoASTBranchStmt>(this));
-    case eCaseClause:
-        return v->VisitCaseClause(llvm::cast<const GoASTCaseClause>(this));
-    case eCommClause:
-        return v->VisitCommClause(llvm::cast<const GoASTCommClause>(this));
-    case eDeclStmt:
-        return v->VisitDeclStmt(llvm::cast<const GoASTDeclStmt>(this));
-    case eDeferStmt:
-        return v->VisitDeferStmt(llvm::cast<const GoASTDeferStmt>(this));
-    case eEmptyStmt:
-        return v->VisitEmptyStmt(llvm::cast<const GoASTEmptyStmt>(this));
-    case eExprStmt:
-        return v->VisitExprStmt(llvm::cast<const GoASTExprStmt>(this));
-    case eForStmt:
-        return v->VisitForStmt(llvm::cast<const GoASTForStmt>(this));
-    case eGoStmt:
-        return v->VisitGoStmt(llvm::cast<const GoASTGoStmt>(this));
-    case eIfStmt:
-        return v->VisitIfStmt(llvm::cast<const GoASTIfStmt>(this));
-    case eIncDecStmt:
-        return v->VisitIncDecStmt(llvm::cast<const GoASTIncDecStmt>(this));
-    case eLabeledStmt:
-        return v->VisitLabeledStmt(llvm::cast<const GoASTLabeledStmt>(this));
-    case eRangeStmt:
-        return v->VisitRangeStmt(llvm::cast<const GoASTRangeStmt>(this));
-    case eReturnStmt:
-        return v->VisitReturnStmt(llvm::cast<const GoASTReturnStmt>(this));
-    case eSelectStmt:
-        return v->VisitSelectStmt(llvm::cast<const GoASTSelectStmt>(this));
-    case eSendStmt:
-        return v->VisitSendStmt(llvm::cast<const GoASTSendStmt>(this));
-    case eSwitchStmt:
-        return v->VisitSwitchStmt(llvm::cast<const GoASTSwitchStmt>(this));
-    case eTypeSwitchStmt:
-        return v->VisitTypeSwitchStmt(llvm::cast<const GoASTTypeSwitchStmt>(this));
-    default:
-        assert(false && "Invalid kind");
-    }
+template <typename R, typename V> R GoASTStmt::Visit(V *v) const {
+  switch (GetKind()) {
+  case eAssignStmt:
+    return v->VisitAssignStmt(llvm::cast<const GoASTAssignStmt>(this));
+  case eBadStmt:
+    return v->VisitBadStmt(llvm::cast<const GoASTBadStmt>(this));
+  case eBlockStmt:
+    return v->VisitBlockStmt(llvm::cast<const GoASTBlockStmt>(this));
+  case eBranchStmt:
+    return v->VisitBranchStmt(llvm::cast<const GoASTBranchStmt>(this));
+  case eCaseClause:
+    return v->VisitCaseClause(llvm::cast<const GoASTCaseClause>(this));
+  case eCommClause:
+    return v->VisitCommClause(llvm::cast<const GoASTCommClause>(this));
+  case eDeclStmt:
+    return v->VisitDeclStmt(llvm::cast<const GoASTDeclStmt>(this));
+  case eDeferStmt:
+    return v->VisitDeferStmt(llvm::cast<const GoASTDeferStmt>(this));
+  case eEmptyStmt:
+    return v->VisitEmptyStmt(llvm::cast<const GoASTEmptyStmt>(this));
+  case eExprStmt:
+    return v->VisitExprStmt(llvm::cast<const GoASTExprStmt>(this));
+  case eForStmt:
+    return v->VisitForStmt(llvm::cast<const GoASTForStmt>(this));
+  case eGoStmt:
+    return v->VisitGoStmt(llvm::cast<const GoASTGoStmt>(this));
+  case eIfStmt:
+    return v->VisitIfStmt(llvm::cast<const GoASTIfStmt>(this));
+  case eIncDecStmt:
+    return v->VisitIncDecStmt(llvm::cast<const GoASTIncDecStmt>(this));
+  case eLabeledStmt:
+    return v->VisitLabeledStmt(llvm::cast<const GoASTLabeledStmt>(this));
+  case eRangeStmt:
+    return v->VisitRangeStmt(llvm::cast<const GoASTRangeStmt>(this));
+  case eReturnStmt:
+    return v->VisitReturnStmt(llvm::cast<const GoASTReturnStmt>(this));
+  case eSelectStmt:
+    return v->VisitSelectStmt(llvm::cast<const GoASTSelectStmt>(this));
+  case eSendStmt:
+    return v->VisitSendStmt(llvm::cast<const GoASTSendStmt>(this));
+  case eSwitchStmt:
+    return v->VisitSwitchStmt(llvm::cast<const GoASTSwitchStmt>(this));
+  case eTypeSwitchStmt:
+    return v->VisitTypeSwitchStmt(llvm::cast<const GoASTTypeSwitchStmt>(this));
+  default:
+    assert(false && "Invalid kind");
+  }
 }
 
-template <typename V>
-void GoASTNode::WalkChildren(V &v)
-{
-    switch (m_kind)
-    {
+template <typename V> void GoASTNode::WalkChildren(V &v) {
+  switch (m_kind) {
 
-
-    case eArrayType:
-        {
-            GoASTArrayType *n = llvm::cast<GoASTArrayType>(this);
-            (void)n;
-            v(n->m_len_up.get());
-            v(n->m_elt_up.get());
-            return;
-        }
-    case eAssignStmt:
-        {
-            GoASTAssignStmt *n = llvm::cast<GoASTAssignStmt>(this);
-            (void)n;
-            for (auto& e : n->m_lhs) { v(e.get()); }
-            for (auto& e : n->m_rhs) { v(e.get()); }
-            return;
-        }
-    case eBasicLit:
-        {
-            GoASTBasicLit *n = llvm::cast<GoASTBasicLit>(this);
-            (void)n;
-            return;
-        }
-    case eBinaryExpr:
-        {
-            GoASTBinaryExpr *n = llvm::cast<GoASTBinaryExpr>(this);
-            (void)n;
-            v(n->m_x_up.get());
-            v(n->m_y_up.get());
-            return;
-        }
-    case eBlockStmt:
-        {
-            GoASTBlockStmt *n = llvm::cast<GoASTBlockStmt>(this);
-            (void)n;
-            for (auto& e : n->m_list) { v(e.get()); }
-            return;
-        }
-    case eIdent:
-        {
-            GoASTIdent *n = llvm::cast<GoASTIdent>(this);
-            (void)n;
-            return;
-        }
-    case eBranchStmt:
-        {
-            GoASTBranchStmt *n = llvm::cast<GoASTBranchStmt>(this);
-            (void)n;
-            v(n->m_label_up.get());
-            return;
-        }
-    case eCallExpr:
-        {
-            GoASTCallExpr *n = llvm::cast<GoASTCallExpr>(this);
-            (void)n;
-            v(n->m_fun_up.get());
-            for (auto& e : n->m_args) { v(e.get()); }
-            return;
-        }
-    case eCaseClause:
-        {
-            GoASTCaseClause *n = llvm::cast<GoASTCaseClause>(this);
-            (void)n;
-            for (auto& e : n->m_list) { v(e.get()); }
-            for (auto& e : n->m_body) { v(e.get()); }
-            return;
-        }
-    case eChanType:
-        {
-            GoASTChanType *n = llvm::cast<GoASTChanType>(this);
-            (void)n;
-            v(n->m_value_up.get());
-            return;
-        }
-    case eCommClause:
-        {
-            GoASTCommClause *n = llvm::cast<GoASTCommClause>(this);
-            (void)n;
-            v(n->m_comm_up.get());
-            for (auto& e : n->m_body) { v(e.get()); }
-            return;
-        }
-    case eCompositeLit:
-        {
-            GoASTCompositeLit *n = llvm::cast<GoASTCompositeLit>(this);
-            (void)n;
-            v(n->m_type_up.get());
-            for (auto& e : n->m_elts) { v(e.get()); }
-            return;
-        }
-    case eDeclStmt:
-        {
-            GoASTDeclStmt *n = llvm::cast<GoASTDeclStmt>(this);
-            (void)n;
-            v(n->m_decl_up.get());
-            return;
-        }
-    case eDeferStmt:
-        {
-            GoASTDeferStmt *n = llvm::cast<GoASTDeferStmt>(this);
-            (void)n;
-            v(n->m_call_up.get());
-            return;
-        }
-    case eEllipsis:
-        {
-            GoASTEllipsis *n = llvm::cast<GoASTEllipsis>(this);
-            (void)n;
-            v(n->m_elt_up.get());
-            return;
-        }
-    case eExprStmt:
-        {
-            GoASTExprStmt *n = llvm::cast<GoASTExprStmt>(this);
-            (void)n;
-            v(n->m_x_up.get());
-            return;
-        }
-    case eField:
-        {
-            GoASTField *n = llvm::cast<GoASTField>(this);
-            (void)n;
-            for (auto& e : n->m_names) { v(e.get()); }
-            v(n->m_type_up.get());
-            v(n->m_tag_up.get());
-            return;
-        }
-    case eFieldList:
-        {
-            GoASTFieldList *n = llvm::cast<GoASTFieldList>(this);
-            (void)n;
-            for (auto& e : n->m_list) { v(e.get()); }
-            return;
-        }
-    case eForStmt:
-        {
-            GoASTForStmt *n = llvm::cast<GoASTForStmt>(this);
-            (void)n;
-            v(n->m_init_up.get());
-            v(n->m_cond_up.get());
-            v(n->m_post_up.get());
-            v(n->m_body_up.get());
-            return;
-        }
-    case eFuncType:
-        {
-            GoASTFuncType *n = llvm::cast<GoASTFuncType>(this);
-            (void)n;
-            v(n->m_params_up.get());
-            v(n->m_results_up.get());
-            return;
-        }
-    case eFuncDecl:
-        {
-            GoASTFuncDecl *n = llvm::cast<GoASTFuncDecl>(this);
-            (void)n;
-            v(n->m_recv_up.get());
-            v(n->m_name_up.get());
-            v(n->m_type_up.get());
-            v(n->m_body_up.get());
-            return;
-        }
-    case eFuncLit:
-        {
-            GoASTFuncLit *n = llvm::cast<GoASTFuncLit>(this);
-            (void)n;
-            v(n->m_type_up.get());
-            v(n->m_body_up.get());
-            return;
-        }
-    case eGenDecl:
-        {
-            GoASTGenDecl *n = llvm::cast<GoASTGenDecl>(this);
-            (void)n;
-            for (auto& e : n->m_specs) { v(e.get()); }
-            return;
-        }
-    case eGoStmt:
-        {
-            GoASTGoStmt *n = llvm::cast<GoASTGoStmt>(this);
-            (void)n;
-            v(n->m_call_up.get());
-            return;
-        }
-    case eIfStmt:
-        {
-            GoASTIfStmt *n = llvm::cast<GoASTIfStmt>(this);
-            (void)n;
-            v(n->m_init_up.get());
-            v(n->m_cond_up.get());
-            v(n->m_body_up.get());
-            v(n->m_els_up.get());
-            return;
-        }
-    case eImportSpec:
-        {
-            GoASTImportSpec *n = llvm::cast<GoASTImportSpec>(this);
-            (void)n;
-            v(n->m_name_up.get());
-            v(n->m_path_up.get());
-            return;
-        }
-    case eIncDecStmt:
-        {
-            GoASTIncDecStmt *n = llvm::cast<GoASTIncDecStmt>(this);
-            (void)n;
-            v(n->m_x_up.get());
-            return;
-        }
-    case eIndexExpr:
-        {
-            GoASTIndexExpr *n = llvm::cast<GoASTIndexExpr>(this);
-            (void)n;
-            v(n->m_x_up.get());
-            v(n->m_index_up.get());
-            return;
-        }
-    case eInterfaceType:
-        {
-            GoASTInterfaceType *n = llvm::cast<GoASTInterfaceType>(this);
-            (void)n;
-            v(n->m_methods_up.get());
-            return;
-        }
-    case eKeyValueExpr:
-        {
-            GoASTKeyValueExpr *n = llvm::cast<GoASTKeyValueExpr>(this);
-            (void)n;
-            v(n->m_key_up.get());
-            v(n->m_value_up.get());
-            return;
-        }
-    case eLabeledStmt:
-        {
-            GoASTLabeledStmt *n = llvm::cast<GoASTLabeledStmt>(this);
-            (void)n;
-            v(n->m_label_up.get());
-            v(n->m_stmt_up.get());
-            return;
-        }
-    case eMapType:
-        {
-            GoASTMapType *n = llvm::cast<GoASTMapType>(this);
-            (void)n;
-            v(n->m_key_up.get());
-            v(n->m_value_up.get());
-            return;
-        }
-    case eParenExpr:
-        {
-            GoASTParenExpr *n = llvm::cast<GoASTParenExpr>(this);
-            (void)n;
-            v(n->m_x_up.get());
-            return;
-        }
-    case eRangeStmt:
-        {
-            GoASTRangeStmt *n = llvm::cast<GoASTRangeStmt>(this);
-            (void)n;
-            v(n->m_key_up.get());
-            v(n->m_value_up.get());
-            v(n->m_x_up.get());
-            v(n->m_body_up.get());
-            return;
-        }
-    case eReturnStmt:
-        {
-            GoASTReturnStmt *n = llvm::cast<GoASTReturnStmt>(this);
-            (void)n;
-            for (auto& e : n->m_results) { v(e.get()); }
-            return;
-        }
-    case eSelectStmt:
-        {
-            GoASTSelectStmt *n = llvm::cast<GoASTSelectStmt>(this);
-            (void)n;
-            v(n->m_body_up.get());
-            return;
-        }
-    case eSelectorExpr:
-        {
-            GoASTSelectorExpr *n = llvm::cast<GoASTSelectorExpr>(this);
-            (void)n;
-            v(n->m_x_up.get());
-            v(n->m_sel_up.get());
-            return;
-        }
-    case eSendStmt:
-        {
-            GoASTSendStmt *n = llvm::cast<GoASTSendStmt>(this);
-            (void)n;
-            v(n->m_chan_up.get());
-            v(n->m_value_up.get());
-            return;
-        }
-    case eSliceExpr:
-        {
-            GoASTSliceExpr *n = llvm::cast<GoASTSliceExpr>(this);
-            (void)n;
-            v(n->m_x_up.get());
-            v(n->m_low_up.get());
-            v(n->m_high_up.get());
-            v(n->m_max_up.get());
-            return;
-        }
-    case eStarExpr:
-        {
-            GoASTStarExpr *n = llvm::cast<GoASTStarExpr>(this);
-            (void)n;
-            v(n->m_x_up.get());
-            return;
-        }
-    case eStructType:
-        {
-            GoASTStructType *n = llvm::cast<GoASTStructType>(this);
-            (void)n;
-            v(n->m_fields_up.get());
-            return;
-        }
-    case eSwitchStmt:
-        {
-            GoASTSwitchStmt *n = llvm::cast<GoASTSwitchStmt>(this);
-            (void)n;
-            v(n->m_init_up.get());
-            v(n->m_tag_up.get());
-            v(n->m_body_up.get());
-            return;
-        }
-    case eTypeAssertExpr:
-        {
-            GoASTTypeAssertExpr *n = llvm::cast<GoASTTypeAssertExpr>(this);
-            (void)n;
-            v(n->m_x_up.get());
-            v(n->m_type_up.get());
-            return;
-        }
-    case eTypeSpec:
-        {
-            GoASTTypeSpec *n = llvm::cast<GoASTTypeSpec>(this);
-            (void)n;
-            v(n->m_name_up.get());
-            v(n->m_type_up.get());
-            return;
-        }
-    case eTypeSwitchStmt:
-        {
-            GoASTTypeSwitchStmt *n = llvm::cast<GoASTTypeSwitchStmt>(this);
-            (void)n;
-            v(n->m_init_up.get());
-            v(n->m_assign_up.get());
-            v(n->m_body_up.get());
-            return;
-        }
-    case eUnaryExpr:
-        {
-            GoASTUnaryExpr *n = llvm::cast<GoASTUnaryExpr>(this);
-            (void)n;
-            v(n->m_x_up.get());
-            return;
-        }
-    case eValueSpec:
-        {
-            GoASTValueSpec *n = llvm::cast<GoASTValueSpec>(this);
-            (void)n;
-            for (auto& e : n->m_names) { v(e.get()); }
-            v(n->m_type_up.get());
-            for (auto& e : n->m_values) { v(e.get()); }
-            return;
-        }
-
-        case eEmptyStmt:
-        case eBadDecl:
-        case eBadExpr:
-        case eBadStmt:
-          break;
+  case eArrayType: {
+    GoASTArrayType *n = llvm::cast<GoASTArrayType>(this);
+    (void)n;
+    v(n->m_len_up.get());
+    v(n->m_elt_up.get());
+    return;
+  }
+  case eAssignStmt: {
+    GoASTAssignStmt *n = llvm::cast<GoASTAssignStmt>(this);
+    (void)n;
+    for (auto &e : n->m_lhs) {
+      v(e.get());
     }
+    for (auto &e : n->m_rhs) {
+      v(e.get());
+    }
+    return;
+  }
+  case eBasicLit: {
+    GoASTBasicLit *n = llvm::cast<GoASTBasicLit>(this);
+    (void)n;
+    return;
+  }
+  case eBinaryExpr: {
+    GoASTBinaryExpr *n = llvm::cast<GoASTBinaryExpr>(this);
+    (void)n;
+    v(n->m_x_up.get());
+    v(n->m_y_up.get());
+    return;
+  }
+  case eBlockStmt: {
+    GoASTBlockStmt *n = llvm::cast<GoASTBlockStmt>(this);
+    (void)n;
+    for (auto &e : n->m_list) {
+      v(e.get());
+    }
+    return;
+  }
+  case eIdent: {
+    GoASTIdent *n = llvm::cast<GoASTIdent>(this);
+    (void)n;
+    return;
+  }
+  case eBranchStmt: {
+    GoASTBranchStmt *n = llvm::cast<GoASTBranchStmt>(this);
+    (void)n;
+    v(n->m_label_up.get());
+    return;
+  }
+  case eCallExpr: {
+    GoASTCallExpr *n = llvm::cast<GoASTCallExpr>(this);
+    (void)n;
+    v(n->m_fun_up.get());
+    for (auto &e : n->m_args) {
+      v(e.get());
+    }
+    return;
+  }
+  case eCaseClause: {
+    GoASTCaseClause *n = llvm::cast<GoASTCaseClause>(this);
+    (void)n;
+    for (auto &e : n->m_list) {
+      v(e.get());
+    }
+    for (auto &e : n->m_body) {
+      v(e.get());
+    }
+    return;
+  }
+  case eChanType: {
+    GoASTChanType *n = llvm::cast<GoASTChanType>(this);
+    (void)n;
+    v(n->m_value_up.get());
+    return;
+  }
+  case eCommClause: {
+    GoASTCommClause *n = llvm::cast<GoASTCommClause>(this);
+    (void)n;
+    v(n->m_comm_up.get());
+    for (auto &e : n->m_body) {
+      v(e.get());
+    }
+    return;
+  }
+  case eCompositeLit: {
+    GoASTCompositeLit *n = llvm::cast<GoASTCompositeLit>(this);
+    (void)n;
+    v(n->m_type_up.get());
+    for (auto &e : n->m_elts) {
+      v(e.get());
+    }
+    return;
+  }
+  case eDeclStmt: {
+    GoASTDeclStmt *n = llvm::cast<GoASTDeclStmt>(this);
+    (void)n;
+    v(n->m_decl_up.get());
+    return;
+  }
+  case eDeferStmt: {
+    GoASTDeferStmt *n = llvm::cast<GoASTDeferStmt>(this);
+    (void)n;
+    v(n->m_call_up.get());
+    return;
+  }
+  case eEllipsis: {
+    GoASTEllipsis *n = llvm::cast<GoASTEllipsis>(this);
+    (void)n;
+    v(n->m_elt_up.get());
+    return;
+  }
+  case eExprStmt: {
+    GoASTExprStmt *n = llvm::cast<GoASTExprStmt>(this);
+    (void)n;
+    v(n->m_x_up.get());
+    return;
+  }
+  case eField: {
+    GoASTField *n = llvm::cast<GoASTField>(this);
+    (void)n;
+    for (auto &e : n->m_names) {
+      v(e.get());
+    }
+    v(n->m_type_up.get());
+    v(n->m_tag_up.get());
+    return;
+  }
+  case eFieldList: {
+    GoASTFieldList *n = llvm::cast<GoASTFieldList>(this);
+    (void)n;
+    for (auto &e : n->m_list) {
+      v(e.get());
+    }
+    return;
+  }
+  case eForStmt: {
+    GoASTForStmt *n = llvm::cast<GoASTForStmt>(this);
+    (void)n;
+    v(n->m_init_up.get());
+    v(n->m_cond_up.get());
+    v(n->m_post_up.get());
+    v(n->m_body_up.get());
+    return;
+  }
+  case eFuncType: {
+    GoASTFuncType *n = llvm::cast<GoASTFuncType>(this);
+    (void)n;
+    v(n->m_params_up.get());
+    v(n->m_results_up.get());
+    return;
+  }
+  case eFuncDecl: {
+    GoASTFuncDecl *n = llvm::cast<GoASTFuncDecl>(this);
+    (void)n;
+    v(n->m_recv_up.get());
+    v(n->m_name_up.get());
+    v(n->m_type_up.get());
+    v(n->m_body_up.get());
+    return;
+  }
+  case eFuncLit: {
+    GoASTFuncLit *n = llvm::cast<GoASTFuncLit>(this);
+    (void)n;
+    v(n->m_type_up.get());
+    v(n->m_body_up.get());
+    return;
+  }
+  case eGenDecl: {
+    GoASTGenDecl *n = llvm::cast<GoASTGenDecl>(this);
+    (void)n;
+    for (auto &e : n->m_specs) {
+      v(e.get());
+    }
+    return;
+  }
+  case eGoStmt: {
+    GoASTGoStmt *n = llvm::cast<GoASTGoStmt>(this);
+    (void)n;
+    v(n->m_call_up.get());
+    return;
+  }
+  case eIfStmt: {
+    GoASTIfStmt *n = llvm::cast<GoASTIfStmt>(this);
+    (void)n;
+    v(n->m_init_up.get());
+    v(n->m_cond_up.get());
+    v(n->m_body_up.get());
+    v(n->m_els_up.get());
+    return;
+  }
+  case eImportSpec: {
+    GoASTImportSpec *n = llvm::cast<GoASTImportSpec>(this);
+    (void)n;
+    v(n->m_name_up.get());
+    v(n->m_path_up.get());
+    return;
+  }
+  case eIncDecStmt: {
+    GoASTIncDecStmt *n = llvm::cast<GoASTIncDecStmt>(this);
+    (void)n;
+    v(n->m_x_up.get());
+    return;
+  }
+  case eIndexExpr: {
+    GoASTIndexExpr *n = llvm::cast<GoASTIndexExpr>(this);
+    (void)n;
+    v(n->m_x_up.get());
+    v(n->m_index_up.get());
+    return;
+  }
+  case eInterfaceType: {
+    GoASTInterfaceType *n = llvm::cast<GoASTInterfaceType>(this);
+    (void)n;
+    v(n->m_methods_up.get());
+    return;
+  }
+  case eKeyValueExpr: {
+    GoASTKeyValueExpr *n = llvm::cast<GoASTKeyValueExpr>(this);
+    (void)n;
+    v(n->m_key_up.get());
+    v(n->m_value_up.get());
+    return;
+  }
+  case eLabeledStmt: {
+    GoASTLabeledStmt *n = llvm::cast<GoASTLabeledStmt>(this);
+    (void)n;
+    v(n->m_label_up.get());
+    v(n->m_stmt_up.get());
+    return;
+  }
+  case eMapType: {
+    GoASTMapType *n = llvm::cast<GoASTMapType>(this);
+    (void)n;
+    v(n->m_key_up.get());
+    v(n->m_value_up.get());
+    return;
+  }
+  case eParenExpr: {
+    GoASTParenExpr *n = llvm::cast<GoASTParenExpr>(this);
+    (void)n;
+    v(n->m_x_up.get());
+    return;
+  }
+  case eRangeStmt: {
+    GoASTRangeStmt *n = llvm::cast<GoASTRangeStmt>(this);
+    (void)n;
+    v(n->m_key_up.get());
+    v(n->m_value_up.get());
+    v(n->m_x_up.get());
+    v(n->m_body_up.get());
+    return;
+  }
+  case eReturnStmt: {
+    GoASTReturnStmt *n = llvm::cast<GoASTReturnStmt>(this);
+    (void)n;
+    for (auto &e : n->m_results) {
+      v(e.get());
+    }
+    return;
+  }
+  case eSelectStmt: {
+    GoASTSelectStmt *n = llvm::cast<GoASTSelectStmt>(this);
+    (void)n;
+    v(n->m_body_up.get());
+    return;
+  }
+  case eSelectorExpr: {
+    GoASTSelectorExpr *n = llvm::cast<GoASTSelectorExpr>(this);
+    (void)n;
+    v(n->m_x_up.get());
+    v(n->m_sel_up.get());
+    return;
+  }
+  case eSendStmt: {
+    GoASTSendStmt *n = llvm::cast<GoASTSendStmt>(this);
+    (void)n;
+    v(n->m_chan_up.get());
+    v(n->m_value_up.get());
+    return;
+  }
+  case eSliceExpr: {
+    GoASTSliceExpr *n = llvm::cast<GoASTSliceExpr>(this);
+    (void)n;
+    v(n->m_x_up.get());
+    v(n->m_low_up.get());
+    v(n->m_high_up.get());
+    v(n->m_max_up.get());
+    return;
+  }
+  case eStarExpr: {
+    GoASTStarExpr *n = llvm::cast<GoASTStarExpr>(this);
+    (void)n;
+    v(n->m_x_up.get());
+    return;
+  }
+  case eStructType: {
+    GoASTStructType *n = llvm::cast<GoASTStructType>(this);
+    (void)n;
+    v(n->m_fields_up.get());
+    return;
+  }
+  case eSwitchStmt: {
+    GoASTSwitchStmt *n = llvm::cast<GoASTSwitchStmt>(this);
+    (void)n;
+    v(n->m_init_up.get());
+    v(n->m_tag_up.get());
+    v(n->m_body_up.get());
+    return;
+  }
+  case eTypeAssertExpr: {
+    GoASTTypeAssertExpr *n = llvm::cast<GoASTTypeAssertExpr>(this);
+    (void)n;
+    v(n->m_x_up.get());
+    v(n->m_type_up.get());
+    return;
+  }
+  case eTypeSpec: {
+    GoASTTypeSpec *n = llvm::cast<GoASTTypeSpec>(this);
+    (void)n;
+    v(n->m_name_up.get());
+    v(n->m_type_up.get());
+    return;
+  }
+  case eTypeSwitchStmt: {
+    GoASTTypeSwitchStmt *n = llvm::cast<GoASTTypeSwitchStmt>(this);
+    (void)n;
+    v(n->m_init_up.get());
+    v(n->m_assign_up.get());
+    v(n->m_body_up.get());
+    return;
+  }
+  case eUnaryExpr: {
+    GoASTUnaryExpr *n = llvm::cast<GoASTUnaryExpr>(this);
+    (void)n;
+    v(n->m_x_up.get());
+    return;
+  }
+  case eValueSpec: {
+    GoASTValueSpec *n = llvm::cast<GoASTValueSpec>(this);
+    (void)n;
+    for (auto &e : n->m_names) {
+      v(e.get());
+    }
+    v(n->m_type_up.get());
+    for (auto &e : n->m_values) {
+      v(e.get());
+    }
+    return;
+  }
+
+  case eEmptyStmt:
+  case eBadDecl:
+  case eBadExpr:
+  case eBadStmt:
+    break;
+  }
 }
 
-}  // namespace lldb_private
+} // namespace lldb_private
 
 #endif
-

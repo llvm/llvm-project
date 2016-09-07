@@ -21,18 +21,15 @@
 // readline.so linked against GNU readline.
 
 #ifndef LLDB_DISABLE_LIBEDIT
-PyDoc_STRVAR(
-    moduleDocumentation,
-    "Simple readline module implementation based on libedit.");
+PyDoc_STRVAR(moduleDocumentation,
+             "Simple readline module implementation based on libedit.");
 #else
-PyDoc_STRVAR(
-    moduleDocumentation,
-    "Stub module meant to avoid linking GNU readline.");
+PyDoc_STRVAR(moduleDocumentation,
+             "Stub module meant to avoid linking GNU readline.");
 #endif
 
 #if PY_MAJOR_VERSION >= 3
-static struct PyModuleDef readline_module =
-{
+static struct PyModuleDef readline_module = {
     PyModuleDef_HEAD_INIT, // m_base
     "readline",            // m_name
     moduleDocumentation,   // m_doc
@@ -44,57 +41,47 @@ static struct PyModuleDef readline_module =
     nullptr,               // m_free
 };
 #else
-static struct PyMethodDef moduleMethods[] =
-{
-    {nullptr, nullptr, 0, nullptr}
-};
+static struct PyMethodDef moduleMethods[] = {{nullptr, nullptr, 0, nullptr}};
 #endif
 
 #ifndef LLDB_DISABLE_LIBEDIT
-static char*
+static char *
 #if PY_MAJOR_VERSION >= 3
 simple_readline(FILE *stdin, FILE *stdout, const char *prompt)
 #else
 simple_readline(FILE *stdin, FILE *stdout, char *prompt)
 #endif
 {
-    rl_instream = stdin;
-    rl_outstream = stdout;
-    char* line = readline(prompt);
-    if (!line)
-    {
-        char* ret = (char*)PyMem_Malloc(1);
-        if (ret != NULL)
-            *ret = '\0';
-        return ret;
-    }
-    if (*line)
-        add_history(line);
-    int n = strlen(line);
-    char* ret = (char*)PyMem_Malloc(n + 2);
-    strncpy(ret, line, n);
-    free(line);
-    ret[n] = '\n';
-    ret[n+1] = '\0';
+  rl_instream = stdin;
+  rl_outstream = stdout;
+  char *line = readline(prompt);
+  if (!line) {
+    char *ret = (char *)PyMem_Malloc(1);
+    if (ret != NULL)
+      *ret = '\0';
     return ret;
+  }
+  if (*line)
+    add_history(line);
+  int n = strlen(line);
+  char *ret = (char *)PyMem_Malloc(n + 2);
+  strncpy(ret, line, n);
+  free(line);
+  ret[n] = '\n';
+  ret[n + 1] = '\0';
+  return ret;
 }
 #endif
 
-PyMODINIT_FUNC
-initreadline(void)
-{
+PyMODINIT_FUNC initreadline(void) {
 #ifndef LLDB_DISABLE_LIBEDIT
-    PyOS_ReadlineFunctionPointer = simple_readline;
+  PyOS_ReadlineFunctionPointer = simple_readline;
 #endif
 
 #if PY_MAJOR_VERSION >= 3
-    return PyModule_Create(&readline_module);
+  return PyModule_Create(&readline_module);
 #else
-    Py_InitModule4(
-        "readline",
-        moduleMethods,
-        moduleDocumentation,
-        static_cast<PyObject *>(NULL),
-        PYTHON_API_VERSION);
+  Py_InitModule4("readline", moduleMethods, moduleDocumentation,
+                 static_cast<PyObject *>(NULL), PYTHON_API_VERSION);
 #endif
 }

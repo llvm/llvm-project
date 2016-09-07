@@ -23,9 +23,11 @@ import unittest2
 # LLDB Modules
 import lldbsuite
 
+
 def __setCrashInfoHook_Mac(text):
     from . import crashinfo
     crashinfo.setCrashReporterDescription(text)
+
 
 def setupCrashInfoHook():
     if platform.system() == "Darwin":
@@ -33,16 +35,19 @@ def setupCrashInfoHook():
         test_dir = os.environ['LLDB_TEST']
         if not test_dir or not os.path.exists(test_dir):
             return
-        dylib_lock = os.path.join(test_dir,"crashinfo.lock")
-        dylib_src = os.path.join(test_dir,"crashinfo.c")
-        dylib_dst = os.path.join(test_dir,"crashinfo.so")
+        dylib_lock = os.path.join(test_dir, "crashinfo.lock")
+        dylib_src = os.path.join(test_dir, "crashinfo.c")
+        dylib_dst = os.path.join(test_dir, "crashinfo.so")
         try:
             compile_lock = lock.Lock(dylib_lock)
             compile_lock.acquire()
-            if not os.path.isfile(dylib_dst) or os.path.getmtime(dylib_dst) < os.path.getmtime(dylib_src):
+            if not os.path.isfile(dylib_dst) or os.path.getmtime(
+                    dylib_dst) < os.path.getmtime(dylib_src):
                 # we need to compile
-                cmd = "SDKROOT= xcrun clang %s -o %s -framework Python -Xlinker -dylib -iframework /System/Library/Frameworks/ -Xlinker -F /System/Library/Frameworks/" % (dylib_src,dylib_dst)
-                if subprocess.call(cmd,shell=True) != 0 or not os.path.isfile(dylib_dst):
+                cmd = "SDKROOT= xcrun clang %s -o %s -framework Python -Xlinker -dylib -iframework /System/Library/Frameworks/ -Xlinker -F /System/Library/Frameworks/" % (
+                    dylib_src, dylib_dst)
+                if subprocess.call(
+                        cmd, shell=True) != 0 or not os.path.isfile(dylib_dst):
                     raise Exception('command failed: "{}"'.format(cmd))
         finally:
             compile_lock.release()
@@ -92,7 +97,8 @@ skip_long_running_test = True
 # prints machine-readable output similar to what clang tests produce.
 parsable = False
 
-# The regular expression pattern to match against eligible filenames as our test cases.
+# The regular expression pattern to match against eligible filenames as
+# our test cases.
 regexp = None
 
 # By default, recorded session info for errored/failed test are dumped into its
@@ -121,7 +127,7 @@ verbose = 0
 # By default, search from the script directory.
 # We can't use sys.path[0] to determine the script directory
 # because it doesn't work under a debugger
-testdirs = [ os.path.dirname(os.path.realpath(__file__)) ]
+testdirs = [os.path.dirname(os.path.realpath(__file__))]
 
 # Separator string.
 separator = '-' * 70
@@ -152,15 +158,18 @@ test_result = None
 rerun_all_issues = False
 rerun_max_file_threhold = 0
 
-# The names of all tests. Used to assert we don't have two tests with the same base name.
+# The names of all tests. Used to assert we don't have two tests with the
+# same base name.
 all_tests = set()
 
 # safe default
-setCrashInfoHook = lambda x : None
+setCrashInfoHook = lambda x: None
+
 
 def shouldSkipBecauseOfCategories(test_categories):
     if useCategories:
-        if len(test_categories) == 0 or len(categoriesList & set(test_categories)) == 0:
+        if len(test_categories) == 0 or len(
+                categoriesList & set(test_categories)) == 0:
             return True
 
     for category in skipCategories:

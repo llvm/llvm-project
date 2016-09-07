@@ -3,7 +3,6 @@
 from __future__ import print_function
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -17,10 +16,19 @@ class TestStepOverWatchpoint(TestBase):
     def getCategories(self):
         return ['basic_process']
 
-    @expectedFailureAndroid(archs=['arm', 'aarch64']) # Watchpoints not supported
-    @expectedFailureAll(oslist=["linux"], archs=['aarch64', 'arm'], bugnumber="llvm.org/pr26031")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
-    @expectedFailureAll(archs=['s390x']) # Read-write watchpoints not supported on SystemZ
+    # Watchpoints not supported
+    @expectedFailureAndroid(archs=['arm', 'aarch64'])
+    @expectedFailureAll(
+        oslist=["linux"],
+        archs=[
+            'aarch64',
+            'arm'],
+        bugnumber="llvm.org/pr26031")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    # Read-write watchpoints not supported on SystemZ
+    @expectedFailureAll(archs=['s390x'])
     def test(self):
         """Test stepping over watchpoints."""
         self.build()
@@ -73,9 +81,10 @@ class TestStepOverWatchpoint(TestBase):
                                       lldb.eValueTypeVariableGlobal)
         self.assertTrue(write_value, "Failed to find write value.")
 
-        # Most of the MIPS boards provide only one H/W watchpoints, and S/W watchpoints are not supported yet
+        # Most of the MIPS boards provide only one H/W watchpoints, and S/W
+        # watchpoints are not supported yet
         arch = self.getArchitecture()
-        if re.match("^mips",arch):
+        if re.match("^mips", arch):
             self.runCmd("watchpoint delete 1")
 
         # resolve_location=True, read=False, write=True

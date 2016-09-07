@@ -5,34 +5,37 @@ Test lldb data formatter subsystem.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class LibcxxUnorderedDataFormatterTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfWindows # libc++ not ported to Windows yet
+    @skipIfWindows  # libc++ not ported to Windows yet
     @skipIf(compiler="gcc")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_source_regexp (self, "Set break point at this line.")
+        lldbutil.run_break_set_by_source_regexp(
+            self, "Set break point at this line.")
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        lldbutil.skip_if_library_missing(self, self.target(), lldbutil.PrintableRegex("libc\+\+"))
+        lldbutil.skip_if_library_missing(
+            self, self.target(), lldbutil.PrintableRegex("libc\+\+"))
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
@@ -41,12 +44,14 @@ class LibcxxUnorderedDataFormatterTestCase(TestBase):
             self.runCmd('type summary clear', check=False)
             self.runCmd('type filter clear', check=False)
             self.runCmd('type synth clear', check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
+            self.runCmd(
+                "settings set target.max-children-count 256",
+                check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        self.expect('image list', substrs = self.getLibcPlusPlusLibs())
+        self.expect('image list', substrs=self.getLibcPlusPlusLibs())
 
         self.look_for_content_and_continue(
             "map", ['size=5 {', 'hello', 'world', 'this', 'is', 'me'])
@@ -72,6 +77,6 @@ class LibcxxUnorderedDataFormatterTestCase(TestBase):
                          '(\[\d\] = "world"(\\n|.)+){2}'])
 
     def look_for_content_and_continue(self, var_name, patterns):
-        self.expect( ("frame variable %s" % var_name), patterns=patterns)
-        self.expect( ("frame variable %s" % var_name), patterns=patterns)
+        self.expect(("frame variable %s" % var_name), patterns=patterns)
+        self.expect(("frame variable %s" % var_name), patterns=patterns)
         self.runCmd("continue")

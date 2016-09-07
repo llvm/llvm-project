@@ -5,10 +5,12 @@
 # April 2003
 #
 from pexpect import *
-import os, sys
+import os
+import sys
 import getpass
 import time
-    
+
+
 class ssh_session:
 
     "Session with extra state including the password to be used."
@@ -25,30 +27,29 @@ class ssh_session:
             '@@@@@@@@@@@@',
             'Command not found.',
             EOF,
-            ]
-        
-        self.f = open('ssh.out','w')
-            
+        ]
+
+        self.f = open('ssh.out', 'w')
+
     def __repr__(self):
 
-        outl = 'class :'+self.__class__.__name__
+        outl = 'class :' + self.__class__.__name__
         for attr in self.__dict__:
             if attr == 'password':
-                outl += '\n\t'+attr+' : '+'*'*len(self.password)
+                outl += '\n\t' + attr + ' : ' + '*' * len(self.password)
             else:
-                outl += '\n\t'+attr+' : '+str(getattr(self, attr))
+                outl += '\n\t' + attr + ' : ' + str(getattr(self, attr))
         return outl
 
     def __exec(self, command):
-
         "Execute a command on the remote host.    Return the output."
         child = spawn(command,
-                                    #timeout=10,
-                                    )
+                      # timeout=10,
+                      )
         if self.verbose:
             sys.stderr.write("-> " + command + "\n")
         seen = child.expect(self.keys)
-        self.f.write(str(child.before) + str(child.after)+'\n')
+        self.f.write(str(child.before) + str(child.after) + '\n')
         if seen == 0:
             child.sendline('yes')
             seen = child.expect(self.keys)
@@ -61,13 +62,13 @@ class ssh_session:
             # Added to allow the background running of remote process
             if not child.isalive():
                 seen = child.expect(self.keys)
-        if seen == 2: 
+        if seen == 2:
             lines = child.readlines()
             self.f.write(lines)
         if self.verbose:
             sys.stderr.write("<- " + child.before + "|\n")
         try:
-            self.f.write(str(child.before) + str(child.after)+'\n')
+            self.f.write(str(child.before) + str(child.after) + '\n')
         except:
             pass
         self.f.close()
@@ -75,20 +76,18 @@ class ssh_session:
 
     def ssh(self, command):
 
-        return self.__exec("ssh -l %s %s \"%s\"" \
-                                             % (self.user,self.host,command))
+        return self.__exec("ssh -l %s %s \"%s\""
+                           % (self.user, self.host, command))
 
     def scp(self, src, dst):
 
-        return self.__exec("scp %s %s@%s:%s" \
-                                             % (src, session.user, session.host, dst))
+        return self.__exec("scp %s %s@%s:%s"
+                           % (src, session.user, session.host, dst))
 
     def exists(self, file):
-
         "Retrieve file permissions of specified remote file."
         seen = self.ssh("/bin/ls -ld %s" % file)
         if string.find(seen, "No such file") > -1:
-            return None # File doesn't exist
+            return None  # File doesn't exist
         else:
-            return seen.split()[0] # Return permission field of listing.
-
+            return seen.split()[0]  # Return permission field of listing.

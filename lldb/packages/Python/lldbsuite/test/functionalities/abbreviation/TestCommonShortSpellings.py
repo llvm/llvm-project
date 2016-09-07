@@ -6,19 +6,20 @@ many commands remain available even after we add/delete commands in the future.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class CommonShortSpellingsTestCase(TestBase):
-    
+
     mydir = TestBase.compute_mydir(__file__)
 
     @no_debug_info_test
-    def test_abbrevs2 (self):
+    def test_abbrevs2(self):
         command_interpreter = self.dbg.GetCommandInterpreter()
         self.assertTrue(command_interpreter, VALID_COMMAND_INTERPRETER)
         result = lldb.SBCommandReturnObject()

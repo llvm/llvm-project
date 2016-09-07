@@ -17,63 +17,70 @@ class Test_TextTestRunner(unittest2.TestCase):
         self.assertTrue(runner.descriptions)
         self.assertEqual(runner.resultclass, unittest2.TextTestResult)
 
-
     def testBufferAndFailfast(self):
         class Test(unittest2.TestCase):
+
             def testFoo(self):
                 pass
         result = unittest2.TestResult()
         runner = unittest2.TextTestRunner(stream=StringIO(), failfast=True,
-                                           buffer=True)
+                                          buffer=True)
         # Use our result object
         runner._makeResult = lambda: result
         runner.run(Test('testFoo'))
-        
+
         self.assertTrue(result.failfast)
         self.assertTrue(result.buffer)
 
     def testRunnerRegistersResult(self):
         class Test(unittest2.TestCase):
+
             def testFoo(self):
                 pass
         originalRegisterResult = unittest2.runner.registerResult
+
         def cleanup():
             unittest2.runner.registerResult = originalRegisterResult
         self.addCleanup(cleanup)
-        
+
         result = unittest2.TestResult()
         runner = unittest2.TextTestRunner(stream=StringIO())
         # Use our result object
         runner._makeResult = lambda: result
-        
+
         self.wasRegistered = 0
+
         def fakeRegisterResult(thisResult):
             self.wasRegistered += 1
             self.assertEqual(thisResult, result)
         unittest2.runner.registerResult = fakeRegisterResult
-        
+
         runner.run(unittest2.TestSuite())
         self.assertEqual(self.wasRegistered, 1)
-        
+
     def test_works_with_result_without_startTestRun_stopTestRun(self):
         class OldTextResult(OldTestResult):
+
             def __init__(self, *_):
                 super(OldTextResult, self).__init__()
             separator2 = ''
+
             def printErrors(self):
                 pass
 
-        runner = unittest2.TextTestRunner(stream=StringIO(), 
+        runner = unittest2.TextTestRunner(stream=StringIO(),
                                           resultclass=OldTextResult)
         runner.run(unittest2.TestSuite())
 
     def test_startTestRun_stopTestRun_called(self):
         class LoggingTextResult(LoggingResult):
             separator2 = ''
+
             def printErrors(self):
                 pass
 
         class LoggingRunner(unittest2.TextTestRunner):
+
             def __init__(self, events):
                 super(LoggingRunner, self).__init__(StringIO())
                 self._events = events
@@ -107,15 +114,15 @@ class Test_TextTestRunner(unittest2.TestCase):
         DESCRIPTIONS = object()
         VERBOSITY = object()
         runner = unittest2.TextTestRunner(STREAM, DESCRIPTIONS, VERBOSITY,
-                                         resultclass=MockResultClass)
+                                          resultclass=MockResultClass)
         self.assertEqual(runner.resultclass, MockResultClass)
 
         expectedresult = (runner.stream, DESCRIPTIONS, VERBOSITY)
         self.assertEqual(runner._makeResult(), expectedresult)
 
-
     def test_oldresult(self):
         class Test(unittest2.TestCase):
+
             def testFoo(self):
                 pass
         runner = unittest2.TextTestRunner(resultclass=OldTestResult,

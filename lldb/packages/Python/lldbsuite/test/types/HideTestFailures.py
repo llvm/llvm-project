@@ -5,14 +5,16 @@ Test that variables of integer basic types are displayed correctly.
 from __future__ import print_function
 
 
-
 import AbstractBase
 import sys
 import lldb
 from lldbsuite.test.lldbtest import *
 
 # rdar://problem/9649573
-# Capture the lldb and gdb-remote log files for test failures when run with no "-w" option
+# Capture the lldb and gdb-remote log files for test failures when run
+# with no "-w" option
+
+
 class DebugIntegerTypesFailures(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)

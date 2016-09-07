@@ -1,4 +1,4 @@
-//===-- PlatformInterfaces.cpp - Platform interface implementations -------===//
+//===-- PlatformDevice.cpp - Platform interface implementations -----------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,11 +8,11 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation file for PlatformInterfaces.h.
+/// Implementation file for PlatformDevice.h.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "streamexecutor/PlatformInterfaces.h"
+#include "streamexecutor/PlatformDevice.h"
 
 namespace streamexecutor {
 

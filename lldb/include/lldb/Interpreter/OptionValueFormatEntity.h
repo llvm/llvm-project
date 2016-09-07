@@ -1,4 +1,5 @@
-//===-- OptionValueFormatEntity.h --------------------------------------*- C++ -*-===//
+//===-- OptionValueFormatEntity.h --------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -19,85 +20,54 @@
 
 namespace lldb_private {
 
-class OptionValueFormatEntity : public OptionValue
-{
+class OptionValueFormatEntity : public OptionValue {
 public:
-    OptionValueFormatEntity (const char *default_format);
-    
-    ~OptionValueFormatEntity() override
-    {
-    }
-    
-    //---------------------------------------------------------------------
-    // Virtual subclass pure virtual overrides
-    //---------------------------------------------------------------------
-    
-    OptionValue::Type
-    GetType () const override
-    {
-        return eTypeFormatEntity;
-    }
-    
-    void
-    DumpValue (const ExecutionContext *exe_ctx, Stream &strm, uint32_t dump_mask) override;
-    
-    Error
-    SetValueFromString (llvm::StringRef value,
-                         VarSetOperationType op = eVarSetOperationAssign) override;
-    
-    bool
-    Clear () override;
-    
-    lldb::OptionValueSP
-    DeepCopy () const override;
+  OptionValueFormatEntity(const char *default_format);
 
-    size_t
-    AutoComplete (CommandInterpreter &interpreter,
-                  const char *s,
-                  int match_start_point,
-                  int max_return_elements,
-                  bool &word_complete,
-                  StringList &matches) override;
+  ~OptionValueFormatEntity() override {}
 
-    //---------------------------------------------------------------------
-    // Subclass specific functions
-    //---------------------------------------------------------------------
-    
-    FormatEntity::Entry &
-    GetCurrentValue()
-    {
-        return m_current_entry;
-    }
-    
-    const FormatEntity::Entry &
-    GetCurrentValue() const
-    {
-        return m_current_entry;
-    }
-    
-    void
-    SetCurrentValue (const FormatEntity::Entry &value)
-    {
-        m_current_entry = value;
-    }
+  //---------------------------------------------------------------------
+  // Virtual subclass pure virtual overrides
+  //---------------------------------------------------------------------
 
-    FormatEntity::Entry &
-    GetDefaultValue()
-    {
-        return m_default_entry;
-    }
-    
-    const FormatEntity::Entry &
-    GetDefaultValue() const
-    {
-        return m_default_entry;
-    }
+  OptionValue::Type GetType() const override { return eTypeFormatEntity; }
+
+  void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
+                 uint32_t dump_mask) override;
+
+  Error
+  SetValueFromString(llvm::StringRef value,
+                     VarSetOperationType op = eVarSetOperationAssign) override;
+
+  bool Clear() override;
+
+  lldb::OptionValueSP DeepCopy() const override;
+
+  size_t AutoComplete(CommandInterpreter &interpreter, const char *s,
+                      int match_start_point, int max_return_elements,
+                      bool &word_complete, StringList &matches) override;
+
+  //---------------------------------------------------------------------
+  // Subclass specific functions
+  //---------------------------------------------------------------------
+
+  FormatEntity::Entry &GetCurrentValue() { return m_current_entry; }
+
+  const FormatEntity::Entry &GetCurrentValue() const { return m_current_entry; }
+
+  void SetCurrentValue(const FormatEntity::Entry &value) {
+    m_current_entry = value;
+  }
+
+  FormatEntity::Entry &GetDefaultValue() { return m_default_entry; }
+
+  const FormatEntity::Entry &GetDefaultValue() const { return m_default_entry; }
 
 protected:
-    std::string m_current_format;
-    std::string m_default_format;
-    FormatEntity::Entry m_current_entry;
-    FormatEntity::Entry m_default_entry;
+  std::string m_current_format;
+  std::string m_default_format;
+  FormatEntity::Entry m_current_entry;
+  FormatEntity::Entry m_default_entry;
 };
 
 } // namespace lldb_private

@@ -5,6 +5,7 @@ Fuzz tests an object after the default construction to make sure it does not cra
 import sys
 import lldb
 
+
 def fuzz_obj(obj):
     obj.GetID()
     obj.ClearAllBreakpointSites()
@@ -28,7 +29,7 @@ def fuzz_obj(obj):
     obj.SetQueueName("my queue")
     obj.GetQueueName()
     obj.SetScriptCallbackFunction(None)
-    obj.SetScriptCallbackBody (None)
+    obj.SetScriptCallbackBody(None)
     obj.GetNumResolvedLocations()
     obj.GetNumLocations()
     obj.GetDescription(lldb.SBStream())

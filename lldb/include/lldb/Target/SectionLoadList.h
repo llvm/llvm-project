@@ -1,4 +1,5 @@
-//===-- SectionLoadList.h -----------------------------------------------*- C++ -*-===//
+//===-- SectionLoadList.h -----------------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,69 +19,61 @@
 // Other libraries and framework includes
 #include "llvm/ADT/DenseMap.h"
 // Project includes
-#include "lldb/lldb-public.h"
 #include "lldb/Core/Section.h"
+#include "lldb/lldb-public.h"
 
 namespace lldb_private {
 
-class SectionLoadList
-{
+class SectionLoadList {
 public:
-    //------------------------------------------------------------------
-    // Constructors and Destructors
-    //------------------------------------------------------------------
-    SectionLoadList() : m_addr_to_sect(), m_sect_to_addr(), m_mutex() {}
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  SectionLoadList() : m_addr_to_sect(), m_sect_to_addr(), m_mutex() {}
 
-    SectionLoadList (const SectionLoadList& rhs);
+  SectionLoadList(const SectionLoadList &rhs);
 
-    ~SectionLoadList()
-    {
-        // Call clear since this takes a lock and clears the section load list
-        // in case another thread is currently using this section load list
-        Clear();
-    }
+  ~SectionLoadList() {
+    // Call clear since this takes a lock and clears the section load list
+    // in case another thread is currently using this section load list
+    Clear();
+  }
 
-    void
-    operator=(const SectionLoadList &rhs);
-    
-    bool
-    IsEmpty() const;
+  void operator=(const SectionLoadList &rhs);
 
-    void
-    Clear ();
+  bool IsEmpty() const;
 
-    lldb::addr_t
-    GetSectionLoadAddress (const lldb::SectionSP &section_sp) const;
+  void Clear();
 
-    bool
-    ResolveLoadAddress (lldb::addr_t load_addr, Address &so_addr) const;
+  lldb::addr_t GetSectionLoadAddress(const lldb::SectionSP &section_sp) const;
 
-    bool
-    SetSectionLoadAddress (const lldb::SectionSP &section_sp, lldb::addr_t load_addr, bool warn_multiple = false);
+  bool ResolveLoadAddress(lldb::addr_t load_addr, Address &so_addr) const;
 
-    // The old load address should be specified when unloading to ensure we get
-    // the correct instance of the section as a shared library could be loaded
-    // at more than one location.
-    bool
-    SetSectionUnloaded (const lldb::SectionSP &section_sp, lldb::addr_t load_addr);
+  bool SetSectionLoadAddress(const lldb::SectionSP &section_sp,
+                             lldb::addr_t load_addr,
+                             bool warn_multiple = false);
 
-    // Unload all instances of a section. This function can be used on systems
-    // that don't support multiple copies of the same shared library to be
-    // loaded at the same time.
-    size_t
-    SetSectionUnloaded (const lldb::SectionSP &section_sp);
+  // The old load address should be specified when unloading to ensure we get
+  // the correct instance of the section as a shared library could be loaded
+  // at more than one location.
+  bool SetSectionUnloaded(const lldb::SectionSP &section_sp,
+                          lldb::addr_t load_addr);
 
-    void
-    Dump (Stream &s, Target *target);
+  // Unload all instances of a section. This function can be used on systems
+  // that don't support multiple copies of the same shared library to be
+  // loaded at the same time.
+  size_t SetSectionUnloaded(const lldb::SectionSP &section_sp);
+
+  void Dump(Stream &s, Target *target);
 
 protected:
-    typedef std::map<lldb::addr_t, lldb::SectionSP> addr_to_sect_collection;
-    typedef llvm::DenseMap<const Section *, lldb::addr_t> sect_to_addr_collection;
-    addr_to_sect_collection m_addr_to_sect;
-    sect_to_addr_collection m_sect_to_addr;
-    mutable std::recursive_mutex m_mutex;
+  typedef std::map<lldb::addr_t, lldb::SectionSP> addr_to_sect_collection;
+  typedef llvm::DenseMap<const Section *, lldb::addr_t> sect_to_addr_collection;
+  addr_to_sect_collection m_addr_to_sect;
+  sect_to_addr_collection m_sect_to_addr;
+  mutable std::recursive_mutex m_mutex;
 };
 
 } // namespace lldb_private
 
-#endif  // liblldb_SectionLoadList_h_
+#endif // liblldb_SectionLoadList_h_

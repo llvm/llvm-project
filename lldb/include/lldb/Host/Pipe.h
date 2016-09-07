@@ -12,14 +12,12 @@
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/PipeWindows.h"
-namespace lldb_private
-{
+namespace lldb_private {
 typedef PipeWindows Pipe;
 }
 #else
 #include "lldb/Host/posix/PipePosix.h"
-namespace lldb_private
-{
+namespace lldb_private {
 typedef PipePosix Pipe;
 }
 #endif

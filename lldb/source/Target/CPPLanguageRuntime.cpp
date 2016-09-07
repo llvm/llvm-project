@@ -1,4 +1,5 @@
-//===-- CPPLanguageRuntime.cpp -------------------------------------------------*- C++ -*-===//
+//===-- CPPLanguageRuntime.cpp
+//-------------------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -23,26 +24,19 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 // Destructor
 //----------------------------------------------------------------------
-CPPLanguageRuntime::~CPPLanguageRuntime()
-{
+CPPLanguageRuntime::~CPPLanguageRuntime() {}
+
+CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
+    : LanguageRuntime(process) {}
+
+bool CPPLanguageRuntime::GetObjectDescription(Stream &str,
+                                              ValueObject &object) {
+  // C++ has no generic way to do this.
+  return false;
 }
 
-CPPLanguageRuntime::CPPLanguageRuntime (Process *process) :
-    LanguageRuntime (process)
-{
-
-}
-
-bool
-CPPLanguageRuntime::GetObjectDescription (Stream &str, ValueObject &object)
-{
-    // C++ has no generic way to do this.
-    return false;
-}
-
-bool
-CPPLanguageRuntime::GetObjectDescription (Stream &str, Value &value, ExecutionContextScope *exe_scope)
-{
-    // C++ has no generic way to do this.
-    return false;
+bool CPPLanguageRuntime::GetObjectDescription(
+    Stream &str, Value &value, ExecutionContextScope *exe_scope) {
+  // C++ has no generic way to do this.
+  return false;
 }

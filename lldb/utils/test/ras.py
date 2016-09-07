@@ -24,7 +24,8 @@ from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-def runTestsuite(testDir, sessDir, envs = None):
+
+def runTestsuite(testDir, sessDir, envs=None):
     """Run the testsuite and return a (summary, output) tuple."""
     os.chdir(testDir)
 
@@ -35,7 +36,8 @@ def runTestsuite(testDir, sessDir, envs = None):
         print var + "=" + val
         os.environ[var] = val
 
-    import shlex, subprocess
+    import shlex
+    import subprocess
 
     command_line = "./dotest.py -w -s %s" % sessDir
     # Apply correct tokenization for subprocess.Popen().
@@ -46,7 +48,7 @@ def runTestsuite(testDir, sessDir, envs = None):
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # Wait for subprocess to terminate.
     stdout, stderr = process.communicate()
-    
+
     # This will be used as the subject line of our email about this test.
     cmd = "%s %s" % (' '.join(envs) if envs else "", command_line)
 
@@ -54,6 +56,7 @@ def runTestsuite(testDir, sessDir, envs = None):
 
 
 COMMASPACE = ', '
+
 
 def main():
     parser = OptionParser(usage="""\
@@ -103,7 +106,7 @@ SMTP server, which then does the normal delivery process.
     sessDir = 'tmp-lldb-session'
     if os.path.exists(sessDir):
         shutil.rmtree(sessDir)
-    #print "environments:", opts.environments
+    # print "environments:", opts.environments
     summary, output = runTestsuite(testDir, sessDir, opts.environments)
 
     # Create the enclosing (outer) message
@@ -119,9 +122,10 @@ SMTP server, which then does the normal delivery process.
     if not os.path.exists(sessDir):
         outer.attach(MIMEText(output, 'plain'))
     else:
-        outer.attach(MIMEText("%s\n%s\n\n" % (output,
-                                              "Session logs of test failures/errors:"),
-                              'plain'))
+        outer.attach(
+            MIMEText(
+                "%s\n%s\n\n" %
+                (output, "Session logs of test failures/errors:"), 'plain'))
 
     for filename in (os.listdir(sessDir) if os.path.exists(sessDir) else []):
         path = os.path.join(sessDir, filename)

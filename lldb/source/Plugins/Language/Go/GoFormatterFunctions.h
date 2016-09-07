@@ -28,14 +28,14 @@
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 
-namespace lldb_private
-{
-namespace formatters
-{
+namespace lldb_private {
+namespace formatters {
 
-bool GoStringSummaryProvider(ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options);
+bool GoStringSummaryProvider(ValueObject &valobj, Stream &stream,
+                             const TypeSummaryOptions &options);
 
-SyntheticChildrenFrontEnd *GoSliceSyntheticFrontEndCreator(CXXSyntheticChildren *, lldb::ValueObjectSP);
+SyntheticChildrenFrontEnd *
+GoSliceSyntheticFrontEndCreator(CXXSyntheticChildren *, lldb::ValueObjectSP);
 
 } // namespace formatters
 } // namespace lldb_private

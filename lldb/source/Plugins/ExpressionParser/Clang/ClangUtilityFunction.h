@@ -12,24 +12,24 @@
 
 // C Includes
 // C++ Includes
-#include <string>
 #include <map>
+#include <string>
 #include <vector>
 
 // Other libraries and framework includes
 // Project includes
 #include "ClangExpressionHelper.h"
 
-#include "lldb/lldb-forward.h"
-#include "lldb/lldb-private.h"
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Expression/UtilityFunction.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-private.h"
 
-namespace lldb_private 
-{
+namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class ClangUtilityFunction ClangUtilityFunction.h "lldb/Expression/ClangUtilityFunction.h"
+/// @class ClangUtilityFunction ClangUtilityFunction.h
+/// "lldb/Expression/ClangUtilityFunction.h"
 /// @brief Encapsulates a single expression for use with Clang
 ///
 /// LLDB uses expressions for various purposes, notably to call functions
@@ -39,97 +39,75 @@ namespace lldb_private
 /// simply provide a way to push a function into the target for the debugger to
 /// call later on.
 //----------------------------------------------------------------------
-class ClangUtilityFunction : public UtilityFunction
-{
+class ClangUtilityFunction : public UtilityFunction {
 public:
-    class ClangUtilityFunctionHelper : public ClangExpressionHelper
-    {
-    public:
-        ClangUtilityFunctionHelper ()
-        {
-        }
-        
-        ~ClangUtilityFunctionHelper() override {}
-        
-        //------------------------------------------------------------------
-        /// Return the object that the parser should use when resolving external
-        /// values.  May be NULL if everything should be self-contained.
-        //------------------------------------------------------------------
-        ClangExpressionDeclMap *
-        DeclMap() override
-        {
-            return m_expr_decl_map_up.get();
-        }
-        
-        void
-        ResetDeclMap()
-        {
-            m_expr_decl_map_up.reset();
-        }
-        
-        void
-        ResetDeclMap (ExecutionContext & exe_ctx, bool keep_result_in_memory);
+  class ClangUtilityFunctionHelper : public ClangExpressionHelper {
+  public:
+    ClangUtilityFunctionHelper() {}
 
-        //------------------------------------------------------------------
-        /// Return the object that the parser should allow to access ASTs.
-        /// May be NULL if the ASTs do not need to be transformed.
-        ///
-        /// @param[in] passthrough
-        ///     The ASTConsumer that the returned transformer should send
-        ///     the ASTs to after transformation.
-        //------------------------------------------------------------------
-        clang::ASTConsumer *
-        ASTTransformer(clang::ASTConsumer *passthrough) override
-        {
-            return nullptr;
-        }
-    private:
-        std::unique_ptr<ClangExpressionDeclMap> m_expr_decl_map_up;
-    };
+    ~ClangUtilityFunctionHelper() override {}
+
     //------------------------------------------------------------------
-    /// Constructor
-    ///
-    /// @param[in] text
-    ///     The text of the function.  Must be a full translation unit.
-    ///
-    /// @param[in] name
-    ///     The name of the function, as used in the text.
+    /// Return the object that the parser should use when resolving external
+    /// values.  May be NULL if everything should be self-contained.
     //------------------------------------------------------------------
-    ClangUtilityFunction (ExecutionContextScope &exe_scope,
-                          const char *text,
-                          const char *name);
-    
-    ~ClangUtilityFunction() override;
-    
-    ExpressionTypeSystemHelper *
-    GetTypeSystemHelper () override
-    {
-        return &m_type_system_helper;
+    ClangExpressionDeclMap *DeclMap() override {
+      return m_expr_decl_map_up.get();
     }
 
-    ClangExpressionDeclMap *
-    DeclMap()
-    {
-        return m_type_system_helper.DeclMap();
+    void ResetDeclMap() { m_expr_decl_map_up.reset(); }
+
+    void ResetDeclMap(ExecutionContext &exe_ctx, bool keep_result_in_memory);
+
+    //------------------------------------------------------------------
+    /// Return the object that the parser should allow to access ASTs.
+    /// May be NULL if the ASTs do not need to be transformed.
+    ///
+    /// @param[in] passthrough
+    ///     The ASTConsumer that the returned transformer should send
+    ///     the ASTs to after transformation.
+    //------------------------------------------------------------------
+    clang::ASTConsumer *
+    ASTTransformer(clang::ASTConsumer *passthrough) override {
+      return nullptr;
     }
 
-    void
-    ResetDeclMap ()
-    {
-        m_type_system_helper.ResetDeclMap();
-    }
-    
-    void
-    ResetDeclMap (ExecutionContext & exe_ctx, bool keep_result_in_memory)
-    {
-        m_type_system_helper.ResetDeclMap(exe_ctx, keep_result_in_memory);
-    }
+  private:
+    std::unique_ptr<ClangExpressionDeclMap> m_expr_decl_map_up;
+  };
+  //------------------------------------------------------------------
+  /// Constructor
+  ///
+  /// @param[in] text
+  ///     The text of the function.  Must be a full translation unit.
+  ///
+  /// @param[in] name
+  ///     The name of the function, as used in the text.
+  //------------------------------------------------------------------
+  ClangUtilityFunction(ExecutionContextScope &exe_scope, const char *text,
+                       const char *name);
 
-    bool
-    Install(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) override;
+  ~ClangUtilityFunction() override;
+
+  ExpressionTypeSystemHelper *GetTypeSystemHelper() override {
+    return &m_type_system_helper;
+  }
+
+  ClangExpressionDeclMap *DeclMap() { return m_type_system_helper.DeclMap(); }
+
+  void ResetDeclMap() { m_type_system_helper.ResetDeclMap(); }
+
+  void ResetDeclMap(ExecutionContext &exe_ctx, bool keep_result_in_memory) {
+    m_type_system_helper.ResetDeclMap(exe_ctx, keep_result_in_memory);
+  }
+
+  bool Install(DiagnosticManager &diagnostic_manager,
+               ExecutionContext &exe_ctx) override;
 
 private:
-    ClangUtilityFunctionHelper m_type_system_helper; ///< The map to use when parsing and materializing the expression.
+  ClangUtilityFunctionHelper m_type_system_helper; ///< The map to use when
+                                                   ///parsing and materializing
+                                                   ///the expression.
 };
 
 } // namespace lldb_private

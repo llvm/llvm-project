@@ -25,6 +25,7 @@ class SOP1_Pseudo <string opName, dag outs, dag ins,
   let SALU = 1;
   let SOP1 = 1;
   let SchedRW = [WriteSALU];
+  let UseNamedOperandTable = 1;
 
   string Mnemonic = opName;
   string AsmOperands = asmOps;

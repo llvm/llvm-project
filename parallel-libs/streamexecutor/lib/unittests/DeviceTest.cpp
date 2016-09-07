@@ -17,7 +17,7 @@
 
 #include "SimpleHostPlatformDevice.h"
 #include "streamexecutor/Device.h"
-#include "streamexecutor/PlatformInterfaces.h"
+#include "streamexecutor/PlatformDevice.h"
 
 #include "gtest/gtest.h"
 

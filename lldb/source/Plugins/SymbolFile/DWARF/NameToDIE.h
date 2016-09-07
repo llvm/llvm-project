@@ -12,51 +12,42 @@
 
 #include <functional>
 
-#include "lldb/Core/dwarf.h"
-#include "lldb/Core/UniqueCStringMap.h"
-#include "lldb/lldb-defines.h"
 #include "DIERef.h"
+#include "lldb/Core/UniqueCStringMap.h"
+#include "lldb/Core/dwarf.h"
+#include "lldb/lldb-defines.h"
 
 class SymbolFileDWARF;
 
-class NameToDIE
-{
+class NameToDIE {
 public:
-    NameToDIE () :
-        m_map()
-    {
-    }
+  NameToDIE() : m_map() {}
 
-    ~NameToDIE ()
-    {
-    }
+  ~NameToDIE() {}
 
-    void
-    Dump (lldb_private::Stream *s);
+  void Dump(lldb_private::Stream *s);
 
-    void
-    Insert (const lldb_private::ConstString& name, const DIERef& die_ref);
+  void Insert(const lldb_private::ConstString &name, const DIERef &die_ref);
 
-    void
-    Append (const NameToDIE& other);
+  void Append(const NameToDIE &other);
 
-    void
-    Finalize();
+  void Finalize();
 
-    size_t
-    Find (const lldb_private::ConstString &name, DIEArray &info_array) const;
-    
-    size_t
-    Find (const lldb_private::RegularExpression& regex, DIEArray &info_array) const;
+  size_t Find(const lldb_private::ConstString &name,
+              DIEArray &info_array) const;
 
-    size_t
-    FindAllEntriesForCompileUnit (dw_offset_t cu_offset, DIEArray &info_array) const;
+  size_t Find(const lldb_private::RegularExpression &regex,
+              DIEArray &info_array) const;
 
-    void
-    ForEach (std::function <bool(const char *name, const DIERef& die_ref)> const &callback) const;
+  size_t FindAllEntriesForCompileUnit(dw_offset_t cu_offset,
+                                      DIEArray &info_array) const;
+
+  void
+  ForEach(std::function<bool(const char *name, const DIERef &die_ref)> const
+              &callback) const;
 
 protected:
-    lldb_private::UniqueCStringMap<DIERef> m_map;
+  lldb_private::UniqueCStringMap<DIERef> m_map;
 };
 
-#endif  // SymbolFileDWARF_NameToDIE_h_
+#endif // SymbolFileDWARF_NameToDIE_h_

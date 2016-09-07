@@ -3,12 +3,12 @@
 from __future__ import print_function
 
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class ConvenienceVariablesCase(TestBase):
 
@@ -20,9 +20,11 @@ class ConvenienceVariablesCase(TestBase):
         # Find the line number to break on inside main.cpp.
         self.line = line_number('main.c', 'Hello world.')
 
-    @skipIfFreeBSD # llvm.org/pr17228
+    @skipIfFreeBSD  # llvm.org/pr17228
     @skipIfRemote
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")
     def test_with_run_commands(self):
         """Test convenience variables lldb.debugger, lldb.target, lldb.process, lldb.thread, and lldb.frame."""
         self.build()
@@ -32,7 +34,9 @@ class ConvenienceVariablesCase(TestBase):
         python_prompt = ">>> "
 
         # So that the child gets torn down after the test.
-        self.child = pexpect.spawn('%s %s %s' % (lldbtest_config.lldbExec, self.lldbOption, exe))
+        self.child = pexpect.spawn(
+            '%s %s %s' %
+            (lldbtest_config.lldbExec, self.lldbOption, exe))
         child = self.child
         # Turn on logging for what the child sends back.
         if self.TraceOn():
@@ -56,25 +60,33 @@ class ConvenienceVariablesCase(TestBase):
         child.sendline('print(lldb.debugger)')
         child.expect_exact(python_prompt)
         self.expect(child.before, exe=False,
-            patterns = ['Debugger \(instance: .*, id: \d\)'])
+                    patterns=['Debugger \(instance: .*, id: \d\)'])
 
         child.sendline('print(lldb.target)')
         child.expect_exact(python_prompt)
         self.expect(child.before, exe=False,
-            substrs = ['a.out'])
+                    substrs=['a.out'])
 
         child.sendline('print(lldb.process)')
         child.expect_exact(python_prompt)
-        self.expect(child.before, exe=False,
-            patterns = ['SBProcess: pid = \d+, state = stopped, threads = \d, executable = a.out'])
+        self.expect(child.before, exe=False, patterns=[
+                    'SBProcess: pid = \d+, state = stopped, threads = \d, executable = a.out'])
 
         child.sendline('print(lldb.thread)')
         child.expect_exact(python_prompt)
         # Linux outputs decimal tid and 'name' instead of 'queue'
-        self.expect(child.before, exe=False,
-            patterns = ['thread #1: tid = (0x[0-9a-f]+|[0-9]+), 0x[0-9a-f]+ a\.out`main\(argc=1, argv=0x[0-9a-f]+\) \+ \d+ at main\.c:%d, (name|queue) = \'.+\', stop reason = breakpoint 1\.1' % self.line])
+        self.expect(
+            child.before,
+            exe=False,
+            patterns=[
+                'thread #1: tid = (0x[0-9a-f]+|[0-9]+), 0x[0-9a-f]+ a\.out`main\(argc=1, argv=0x[0-9a-f]+\) \+ \d+ at main\.c:%d, (name|queue) = \'.+\', stop reason = breakpoint 1\.1' %
+                self.line])
 
         child.sendline('print(lldb.frame)')
         child.expect_exact(python_prompt)
-        self.expect(child.before, exe=False,
-            patterns = ['frame #0: 0x[0-9a-f]+ a\.out`main\(argc=1, argv=0x[0-9a-f]+\) \+ \d+ at main\.c:%d' % self.line])
+        self.expect(
+            child.before,
+            exe=False,
+            patterns=[
+                'frame #0: 0x[0-9a-f]+ a\.out`main\(argc=1, argv=0x[0-9a-f]+\) \+ \d+ at main\.c:%d' %
+                self.line])

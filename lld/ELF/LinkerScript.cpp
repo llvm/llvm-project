@@ -162,7 +162,7 @@ static bool checkConstraint(uint64_t Flags, ConstraintKind Kind) {
   bool RO = (Kind == ConstraintKind::ReadOnly);
   bool RW = (Kind == ConstraintKind::ReadWrite);
   bool Writable = Flags & SHF_WRITE;
-  return !((RO && Writable) || (RW && !Writable));
+  return !(RO && Writable) && !(RW && !Writable);
 }
 
 template <class ELFT>

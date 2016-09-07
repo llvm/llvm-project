@@ -12,8 +12,8 @@
 
 #include <vector>
 
-#include "lldb/lldb-private.h"
 #include "lldb/Core/DataBuffer.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
@@ -27,111 +27,103 @@ namespace lldb_private {
 /// fault new data pages in. Large amounts of data that comes from files
 /// should probably use the DataBufferMemoryMap class.
 //----------------------------------------------------------------------
-class DataBufferHeap : public DataBuffer
-{
+class DataBufferHeap : public DataBuffer {
 public:
-    //------------------------------------------------------------------
-    /// Default constructor
-    ///
-    /// Initializes the heap based buffer with no bytes.
-    //------------------------------------------------------------------
-    DataBufferHeap ();
+  //------------------------------------------------------------------
+  /// Default constructor
+  ///
+  /// Initializes the heap based buffer with no bytes.
+  //------------------------------------------------------------------
+  DataBufferHeap();
 
-    //------------------------------------------------------------------
-    /// Construct with size \a n and fill with \a ch.
-    ///
-    /// Initialize this class with \a n bytes and fills the buffer with
-    /// \a ch.
-    ///
-    /// @param[in] n
-    ///     The number of bytes that heap based buffer should contain.
-    ///
-    /// @param[in] ch
-    ///     The character to use when filling the buffer initially.
-    //------------------------------------------------------------------
-    DataBufferHeap (lldb::offset_t n, uint8_t ch);
+  //------------------------------------------------------------------
+  /// Construct with size \a n and fill with \a ch.
+  ///
+  /// Initialize this class with \a n bytes and fills the buffer with
+  /// \a ch.
+  ///
+  /// @param[in] n
+  ///     The number of bytes that heap based buffer should contain.
+  ///
+  /// @param[in] ch
+  ///     The character to use when filling the buffer initially.
+  //------------------------------------------------------------------
+  DataBufferHeap(lldb::offset_t n, uint8_t ch);
 
-    //------------------------------------------------------------------
-    /// Construct by making a copy of \a src_len bytes from \a src.
-    ///
-    /// @param[in] src
-    ///     A pointer to the data to copy.
-    ///
-    /// @param[in] src_len
-    ///     The number of bytes in \a src to copy.
-    //------------------------------------------------------------------
-    DataBufferHeap (const void *src, lldb::offset_t src_len);
+  //------------------------------------------------------------------
+  /// Construct by making a copy of \a src_len bytes from \a src.
+  ///
+  /// @param[in] src
+  ///     A pointer to the data to copy.
+  ///
+  /// @param[in] src_len
+  ///     The number of bytes in \a src to copy.
+  //------------------------------------------------------------------
+  DataBufferHeap(const void *src, lldb::offset_t src_len);
 
-    //------------------------------------------------------------------
-    /// Destructor.
-    ///
-    /// Virtual destructor since this class inherits from a pure virtual
-    /// base class #DataBuffer.
-    //------------------------------------------------------------------
-    ~DataBufferHeap() override;
+  //------------------------------------------------------------------
+  /// Destructor.
+  ///
+  /// Virtual destructor since this class inherits from a pure virtual
+  /// base class #DataBuffer.
+  //------------------------------------------------------------------
+  ~DataBufferHeap() override;
 
-    //------------------------------------------------------------------
-    /// @copydoc DataBuffer::GetBytes()
-    //------------------------------------------------------------------
-    uint8_t *
-    GetBytes () override;
+  //------------------------------------------------------------------
+  /// @copydoc DataBuffer::GetBytes()
+  //------------------------------------------------------------------
+  uint8_t *GetBytes() override;
 
-    //------------------------------------------------------------------
-    /// @copydoc DataBuffer::GetBytes() const
-    //------------------------------------------------------------------
-    const uint8_t *
-    GetBytes () const override;
+  //------------------------------------------------------------------
+  /// @copydoc DataBuffer::GetBytes() const
+  //------------------------------------------------------------------
+  const uint8_t *GetBytes() const override;
 
-    //------------------------------------------------------------------
-    /// @copydoc DataBuffer::GetByteSize() const
-    //------------------------------------------------------------------
-    lldb::offset_t
-    GetByteSize () const override;
+  //------------------------------------------------------------------
+  /// @copydoc DataBuffer::GetByteSize() const
+  //------------------------------------------------------------------
+  lldb::offset_t GetByteSize() const override;
 
-    //------------------------------------------------------------------
-    /// Set the number of bytes in the data buffer.
-    ///
-    /// Sets the number of bytes that this object should be able to
-    /// contain. This can be used prior to copying data into the buffer.
-    ///
-    /// @param[in] byte_size
-    ///     The new size in bytes that this data buffer should attempt
-    ///     to resize itself to.
-    ///
-    /// @return
-    ///     The size in bytes after that this heap buffer was
-    ///     successfully resized to.
-    //------------------------------------------------------------------
-    lldb::offset_t
-    SetByteSize (lldb::offset_t byte_size);
+  //------------------------------------------------------------------
+  /// Set the number of bytes in the data buffer.
+  ///
+  /// Sets the number of bytes that this object should be able to
+  /// contain. This can be used prior to copying data into the buffer.
+  ///
+  /// @param[in] byte_size
+  ///     The new size in bytes that this data buffer should attempt
+  ///     to resize itself to.
+  ///
+  /// @return
+  ///     The size in bytes after that this heap buffer was
+  ///     successfully resized to.
+  //------------------------------------------------------------------
+  lldb::offset_t SetByteSize(lldb::offset_t byte_size);
 
-    //------------------------------------------------------------------
-    /// Makes a copy of the \a src_len bytes in \a src.
-    ///
-    /// Copies the data in \a src into an internal buffer.
-    ///
-    /// @param[in] src
-    ///     A pointer to the data to copy.
-    ///
-    /// @param[in] src_len
-    ///     The number of bytes in \a src to copy.
-    //------------------------------------------------------------------
-    void
-    CopyData (const void *src, lldb::offset_t src_len);
+  //------------------------------------------------------------------
+  /// Makes a copy of the \a src_len bytes in \a src.
+  ///
+  /// Copies the data in \a src into an internal buffer.
+  ///
+  /// @param[in] src
+  ///     A pointer to the data to copy.
+  ///
+  /// @param[in] src_len
+  ///     The number of bytes in \a src to copy.
+  //------------------------------------------------------------------
+  void CopyData(const void *src, lldb::offset_t src_len);
 
-    void
-    AppendData (const void *src, uint64_t src_len);
+  void AppendData(const void *src, uint64_t src_len);
 
-    void
-    Clear();
+  void Clear();
 
 private:
-    //------------------------------------------------------------------
-    // This object uses a std::vector<uint8_t> to store its data. This
-    // takes care of free the data when the object is deleted.
-    //------------------------------------------------------------------
-    typedef std::vector<uint8_t> buffer_t; ///< Buffer type
-    buffer_t m_data; ///< The heap based buffer where data is stored
+  //------------------------------------------------------------------
+  // This object uses a std::vector<uint8_t> to store its data. This
+  // takes care of free the data when the object is deleted.
+  //------------------------------------------------------------------
+  typedef std::vector<uint8_t> buffer_t; ///< Buffer type
+  buffer_t m_data; ///< The heap based buffer where data is stored
 };
 
 } // namespace lldb_private

@@ -1,11 +1,11 @@
 from __future__ import print_function
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class ExprCharTestCase(TestBase):
 
@@ -16,24 +16,27 @@ class ExprCharTestCase(TestBase):
         TestBase.setUp(self)
 
         self.main_source = "main.cpp"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
         self.exe = os.path.join(os.getcwd(), "a.out")
 
     def do_test(self, dictionary=None):
         """These basic expression commands should work as expected."""
-        self.build(dictionary = dictionary)
+        self.build(dictionary=dictionary)
 
         target = self.dbg.CreateTarget(self.exe)
         self.assertTrue(target)
 
-        breakpoint = target.BreakpointCreateBySourceRegex('// Break here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            '// Break here', self.main_source_spec)
         self.assertTrue(breakpoint)
 
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
         self.assertEqual(len(threads), 1)
 
         frame = threads[0].GetFrameAtIndex(0)
@@ -57,13 +60,22 @@ class ExprCharTestCase(TestBase):
     def test_default_char(self):
         self.do_test()
 
-    @expectedFailureAll(archs=["arm", "aarch64", "s390x"], bugnumber="llvm.org/pr23069")
+    @expectedFailureAll(
+        archs=[
+            "arm",
+            "aarch64",
+            "s390x"],
+        bugnumber="llvm.org/pr23069")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_signed_char(self):
         self.do_test(dictionary={'CFLAGS_EXTRAS': '-fsigned-char'})
 
-    @expectedFailureAll(archs=["i[3-6]86", "x86_64"], bugnumber="llvm.org/pr23069")
+    @expectedFailureAll(
+        archs=[
+            "i[3-6]86",
+            "x86_64"],
+        bugnumber="llvm.org/pr23069")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
-    @expectedFailureAll(triple = 'mips*', bugnumber="llvm.org/pr23069")
+    @expectedFailureAll(triple='mips*', bugnumber="llvm.org/pr23069")
     def test_unsigned_char(self):
         self.do_test(dictionary={'CFLAGS_EXTRAS': '-funsigned-char'})

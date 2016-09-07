@@ -18,6 +18,7 @@ import use_lldb_suite
 from swig_bot_lib import client
 from swig_bot_lib import server
 
+
 def process_args(args):
     parser = argparse.ArgumentParser(
         description='Run swig-bot client or server.')
@@ -54,10 +55,12 @@ def process_args(args):
 
     return options
 
+
 def run_client(options):
     logging.info("Running swig_bot in client mode")
     client.finalize_subparser_options(options)
     client.run(options)
+
 
 def run_server(options):
     logging.info("Running swig_bot in server mode")
@@ -68,7 +71,8 @@ if __name__ == "__main__":
     options = process_args(sys.argv[1:])
     try:
         if options.func is None:
-            logging.error("Unknown mode specified.  Expected client or server.")
+            logging.error(
+                "Unknown mode specified.  Expected client or server.")
             sys.exit(-1)
         else:
             options.func(options)

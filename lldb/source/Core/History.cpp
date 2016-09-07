@@ -19,8 +19,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void
-HistorySourceUInt::DumpHistoryEvent (Stream &strm, HistoryEvent event)
-{
-    strm.Printf ("%s %" PRIu64, m_name.c_str(), (uint64_t)((uintptr_t)event));
+void HistorySourceUInt::DumpHistoryEvent(Stream &strm, HistoryEvent event) {
+  strm.Printf("%s %" PRIu64, m_name.c_str(), (uint64_t)((uintptr_t)event));
 }

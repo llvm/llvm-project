@@ -5,15 +5,15 @@
 # interface is a reduced version of the full internal mechanism, but captures
 # most of the power with a much simpler interface.
 #
-# But I'll attempt a brief summary here.  
+# But I'll attempt a brief summary here.
 # Stepping in lldb is done independently for each thread.  Moreover, the stepping
-# operations are stackable.  So for instance if you did a "step over", and in 
+# operations are stackable.  So for instance if you did a "step over", and in
 # the course of stepping over you hit a breakpoint, stopped and stepped again,
 # the first "step-over" would be suspended, and the new step operation would
 # be enqueued.  Then if that step over caused the program to hit another breakpoint,
 # lldb would again suspend the second step and return control to the user, so
-# now there are two pending step overs.  Etc. with all the other stepping 
-# operations.  Then if you hit "continue" the bottom-most step-over would complete, 
+# now there are two pending step overs.  Etc. with all the other stepping
+# operations.  Then if you hit "continue" the bottom-most step-over would complete,
 # and another continue would complete the first "step-over".
 #
 # lldb represents this system with a stack of "Thread Plans".  Each time a new
@@ -26,16 +26,16 @@
 # the current thread.  In the scripted interface, you indicate this by returning
 # False or True respectively from the should_step method.
 #
-# Each time the process stops the thread plan stack for each thread that stopped 
+# Each time the process stops the thread plan stack for each thread that stopped
 # "for a reason", Ii.e. a single-step completed on that thread, or a breakpoint
-# was hit), is queried to determine how to proceed, starting from the most 
+# was hit), is queried to determine how to proceed, starting from the most
 # recently pushed plan, in two stages:
 #
 # 1) Each plan is asked if it "explains" the stop.  The first plan to claim the
 #    stop wins.  In scripted Thread Plans, this is done by returning True from
 #    the "explains_stop method.  This is how, for instance, control is returned
-#    to the User when the "step-over" plan hits a breakpoint.  The step-over 
-#    plan doesn't explain the breakpoint stop, so it returns false, and the 
+#    to the User when the "step-over" plan hits a breakpoint.  The step-over
+#    plan doesn't explain the breakpoint stop, so it returns false, and the
 #    breakpoint hit is propagated up the stack to the "base" thread plan, which
 #    is the one that handles random breakpoint hits.
 #
@@ -50,10 +50,10 @@
 #         the next time the thread continues.
 #
 #    Note that deciding to return control to the user, and deciding your plan
-#    is done, are orthgonal operations.  You could set up the next phase of 
+#    is done, are orthgonal operations.  You could set up the next phase of
 #    stepping, and then return True from should_stop, and when the user next
 #    "continued" the process your plan would resume control.  Of course, the
-#    user might also "step-over" or some other operation that would push a 
+#    user might also "step-over" or some other operation that would push a
 #    different plan, which would take control till it was done.
 #
 #    One other detail you should be aware of, if the plan below you on the
@@ -71,8 +71,8 @@
 #    This is useful, for instance, in the FinishPrintAndContinue plan.  What might
 #    happen here is that after continuing but before the finish is done, the program
 #    could hit another breakpoint and stop.  Then the user could use the step
-#    command repeatedly until they leave the frame of interest by stepping.  
-#    In that case, the step plan is the one that will be responsible for stopping, 
+#    command repeatedly until they leave the frame of interest by stepping.
+#    In that case, the step plan is the one that will be responsible for stopping,
 #    and the finish plan won't be asked should_stop, it will just be asked if it
 #    is stale.  In this case, if the step_out plan that the FinishPrintAndContinue
 #    plan is driving is stale, so is ours, and it is time to do our printing.
@@ -80,7 +80,7 @@
 # Both examples show stepping through an address range for 20 bytes from the
 # current PC.  The first one does it by single stepping and checking a condition.
 # It doesn't, however handle the case where you step into another frame while
-# still in the current range in the starting frame.  
+# still in the current range in the starting frame.
 #
 # That is better handled in the second example by using the built-in StepOverRange
 # thread plan.
@@ -95,76 +95,84 @@
 
 import lldb
 
+
 class SimpleStep:
-    def __init__ (self, thread_plan, dict):
+
+    def __init__(self, thread_plan, dict):
         self.thread_plan = thread_plan
         self.start_address = thread_plan.GetThread().GetFrameAtIndex(0).GetPC()
-        
-    def explains_stop (self, event):
+
+    def explains_stop(self, event):
         # We are stepping, so if we stop for any other reason, it isn't
         # because of us.
-        if self.thread_plan.GetThread().GetStopReason()== lldb.eStopReasonTrace:
+        if self.thread_plan.GetThread().GetStopReason() == lldb.eStopReasonTrace:
             return True
         else:
             return False
-        
-    def should_stop (self, event):
+
+    def should_stop(self, event):
         cur_pc = self.thread_plan.GetThread().GetFrameAtIndex(0).GetPC()
-        
+
         if cur_pc < self.start_address or cur_pc >= self.start_address + 20:
             self.thread_plan.SetPlanComplete(True)
             return True
         else:
             return False
 
-    def should_step (self):
+    def should_step(self):
         return True
 
+
 class StepWithPlan:
-    def __init__ (self, thread_plan, dict):
+
+    def __init__(self, thread_plan, dict):
         self.thread_plan = thread_plan
         self.start_address = thread_plan.GetThread().GetFrameAtIndex(0).GetPCAddress()
-        self.step_thread_plan =thread_plan.QueueThreadPlanForStepOverRange(self.start_address, 20);
+        self.step_thread_plan = thread_plan.QueueThreadPlanForStepOverRange(
+            self.start_address, 20)
 
-    def explains_stop (self, event):
+    def explains_stop(self, event):
         # Since all I'm doing is running a plan, I will only ever get askedthis
         # if myplan doesn't explain the stop, and in that caseI don'teither.
         return False
 
-    def should_stop (self, event):
+    def should_stop(self, event):
         if self.step_thread_plan.IsPlanComplete():
             self.thread_plan.SetPlanComplete(True)
             return True
         else:
             return False
 
-    def should_step (self):
+    def should_step(self):
         return False
 
 # Here's another example which does "step over" through the current function,
 # and when it stops at each line, it checks some condition (in this example the
 # value of a variable) and stops if that condition is true.
 
+
 class StepCheckingCondition:
-    def __init__ (self, thread_plan, dict):
+
+    def __init__(self, thread_plan, dict):
         self.thread_plan = thread_plan
         self.start_frame = thread_plan.GetThread().GetFrameAtIndex(0)
         self.queue_next_plan()
 
-    def queue_next_plan (self):
+    def queue_next_plan(self):
         cur_frame = self.thread_plan.GetThread().GetFrameAtIndex(0)
         cur_line_entry = cur_frame.GetLineEntry()
         start_address = cur_line_entry.GetStartAddress()
         end_address = cur_line_entry.GetEndAddress()
         line_range = end_address.GetFileAddress() - start_address.GetFileAddress()
-        self.step_thread_plan = self.thread_plan.QueueThreadPlanForStepOverRange(start_address, line_range)
+        self.step_thread_plan = self.thread_plan.QueueThreadPlanForStepOverRange(
+            start_address, line_range)
 
-    def explains_stop (self, event):
+    def explains_stop(self, event):
         # We are stepping, so if we stop for any other reason, it isn't
         # because of us.
         return False
-        
-    def should_stop (self, event):
+
+    def should_stop(self, event):
         if not self.step_thread_plan.IsPlanComplete():
             return False
 
@@ -182,7 +190,7 @@ class StepCheckingCondition:
             return True
 
         error = lldb.SBError()
-        a_value = a_var.GetValueAsSigned (error)
+        a_value = a_var.GetValueAsSigned(error)
         if not error.Success():
             print "A value was not good."
             return True
@@ -194,7 +202,7 @@ class StepCheckingCondition:
             self.queue_next_plan()
             return False
 
-    def should_step (self):
+    def should_step(self):
         return True
 
 # Here's an example that steps out of the current frame, gathers some information
@@ -202,29 +210,32 @@ class StepCheckingCondition:
 # plans are not a safe place to call lldb command-line commands, so the information
 # is gathered through SB API calls.
 
+
 class FinishPrintAndContinue:
-    def __init__ (self, thread_plan, dict):
+
+    def __init__(self, thread_plan, dict):
         self.thread_plan = thread_plan
-        self.step_out_thread_plan = thread_plan.QueueThreadPlanForStepOut(0, True)
+        self.step_out_thread_plan = thread_plan.QueueThreadPlanForStepOut(
+            0, True)
         self.thread = self.thread_plan.GetThread()
 
-    def is_stale (self):
+    def is_stale(self):
         if self.step_out_thread_plan.IsPlanStale():
             self.do_print()
             return True
         else:
             return False
 
-    def explains_stop (self, event):
+    def explains_stop(self, event):
         return False
 
-    def should_stop (self, event):
-        if  self.step_out_thread_plan.IsPlanComplete():
+    def should_stop(self, event):
+        if self.step_out_thread_plan.IsPlanComplete():
             self.do_print()
             self.thread_plan.SetPlanComplete(True)
         return False
 
-    def do_print (self):
+    def do_print(self):
         frame_0 = self.thread.frames[0]
         rax_value = frame_0.FindRegister("rax")
         if rax_value.GetError().Success():

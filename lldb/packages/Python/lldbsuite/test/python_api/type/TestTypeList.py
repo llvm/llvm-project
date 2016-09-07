@@ -5,7 +5,6 @@ Test SBType and SBTypeList API.
 from __future__ import print_function
 
 
-
 import os
 import re
 import time
@@ -14,6 +13,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class TypeAndTypeListTestCase(TestBase):
 
@@ -45,20 +45,27 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Get Frame #0.
         self.assertTrue(process.GetState() == lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), "There should be a thread stopped due to breakpoint condition")
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint condition")
         frame0 = thread.GetFrameAtIndex(0)
 
         # Get the type 'Task'.
         type_list = target.FindTypes('Task')
         if self.TraceOn():
-            print("Size of type_list from target.FindTypes('Task') query: %d" % type_list.GetSize())
-        self.assertTrue(len(type_list) >= 1) # a second Task make be scared up by the Objective-C runtime
+            print(
+                "Size of type_list from target.FindTypes('Task') query: %d" %
+                type_list.GetSize())
+        # a second Task make be scared up by the Objective-C runtime
+        self.assertTrue(len(type_list) >= 1)
         for type in type_list:
             self.assertTrue(type)
             self.DebugSBType(type)
@@ -69,9 +76,13 @@ class TypeAndTypeListTestCase(TestBase):
                         self.assertTrue(enum_member)
                         self.DebugSBType(enum_member.type)
                 elif field.name == "my_type_is_nameless":
-                    self.assertTrue(field.type.IsAnonymousType(), "my_type_is_nameless has an anonymous type")
+                    self.assertTrue(
+                        field.type.IsAnonymousType(),
+                        "my_type_is_nameless has an anonymous type")
                 elif field.name == "my_type_is_named":
-                    self.assertFalse(field.type.IsAnonymousType(), "my_type_is_named has a named type")
+                    self.assertFalse(
+                        field.type.IsAnonymousType(),
+                        "my_type_is_named has a named type")
 
         # Pass an empty string.  LLDB should not crash. :-)
         fuzz_types = target.FindTypes(None)
@@ -87,7 +98,8 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(task_ref_type)
         self.DebugSBType(task_ref_type)
 
-        # Get the pointer type of 'Task', which is the same as task_head's type.
+        # Get the pointer type of 'Task', which is the same as task_head's
+        # type.
         task_pointer_type = task_type.GetPointerType()
         self.assertTrue(task_pointer_type)
         self.DebugSBType(task_pointer_type)
@@ -114,6 +126,7 @@ class TypeAndTypeListTestCase(TestBase):
         id_type = id.GetType()
         self.DebugSBType(id_type)
 
-        # SBType.GetBasicType() takes an enum 'BasicType' (lldb-enumerations.h).
+        # SBType.GetBasicType() takes an enum 'BasicType'
+        # (lldb-enumerations.h).
         int_type = id_type.GetBasicType(lldb.eBasicTypeInt)
         self.assertTrue(id_type == int_type)

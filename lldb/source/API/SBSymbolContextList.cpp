@@ -14,104 +14,68 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBSymbolContextList::SBSymbolContextList () :
-    m_opaque_ap (new SymbolContextList())
-{
+SBSymbolContextList::SBSymbolContextList()
+    : m_opaque_ap(new SymbolContextList()) {}
+
+SBSymbolContextList::SBSymbolContextList(const SBSymbolContextList &rhs)
+    : m_opaque_ap(new SymbolContextList(*rhs.m_opaque_ap)) {}
+
+SBSymbolContextList::~SBSymbolContextList() {}
+
+const SBSymbolContextList &SBSymbolContextList::
+operator=(const SBSymbolContextList &rhs) {
+  if (this != &rhs) {
+    *m_opaque_ap = *rhs.m_opaque_ap;
+  }
+  return *this;
 }
 
-SBSymbolContextList::SBSymbolContextList (const SBSymbolContextList& rhs) :
-    m_opaque_ap (new SymbolContextList(*rhs.m_opaque_ap))
-{
+uint32_t SBSymbolContextList::GetSize() const {
+  if (m_opaque_ap.get())
+    return m_opaque_ap->GetSize();
+  return 0;
 }
 
-SBSymbolContextList::~SBSymbolContextList ()
-{
-}
-
-const SBSymbolContextList &
-SBSymbolContextList::operator = (const SBSymbolContextList &rhs)
-{
-    if (this != &rhs)
-    {
-        *m_opaque_ap = *rhs.m_opaque_ap;
+SBSymbolContext SBSymbolContextList::GetContextAtIndex(uint32_t idx) {
+  SBSymbolContext sb_sc;
+  if (m_opaque_ap.get()) {
+    SymbolContext sc;
+    if (m_opaque_ap->GetContextAtIndex(idx, sc)) {
+      sb_sc.SetSymbolContext(&sc);
     }
-    return *this;
+  }
+  return sb_sc;
 }
 
-uint32_t
-SBSymbolContextList::GetSize() const
-{
-    if (m_opaque_ap.get())
-        return m_opaque_ap->GetSize();
-    return 0;
+void SBSymbolContextList::Clear() {
+  if (m_opaque_ap.get())
+    m_opaque_ap->Clear();
 }
 
-SBSymbolContext
-SBSymbolContextList::GetContextAtIndex (uint32_t idx)
-{
-    SBSymbolContext sb_sc;
-    if (m_opaque_ap.get())
-    {
-        SymbolContext sc;
-        if (m_opaque_ap->GetContextAtIndex (idx, sc))
-        {
-            sb_sc.SetSymbolContext(&sc);
-        }
-    }
-    return sb_sc;
+void SBSymbolContextList::Append(SBSymbolContext &sc) {
+  if (sc.IsValid() && m_opaque_ap.get())
+    m_opaque_ap->Append(*sc);
 }
 
-void
-SBSymbolContextList::Clear()
-{
-    if (m_opaque_ap.get())
-        m_opaque_ap->Clear();
+void SBSymbolContextList::Append(SBSymbolContextList &sc_list) {
+  if (sc_list.IsValid() && m_opaque_ap.get())
+    m_opaque_ap->Append(*sc_list);
 }
 
-void
-SBSymbolContextList::Append(SBSymbolContext &sc)
-{
-    if (sc.IsValid() && m_opaque_ap.get())
-        m_opaque_ap->Append(*sc);
+bool SBSymbolContextList::IsValid() const { return m_opaque_ap.get() != NULL; }
+
+lldb_private::SymbolContextList *SBSymbolContextList::operator->() const {
+  return m_opaque_ap.get();
 }
 
-void
-SBSymbolContextList::Append(SBSymbolContextList &sc_list)
-{
-    if (sc_list.IsValid() && m_opaque_ap.get())
-        m_opaque_ap->Append(*sc_list);
+lldb_private::SymbolContextList &SBSymbolContextList::operator*() const {
+  assert(m_opaque_ap.get());
+  return *m_opaque_ap.get();
 }
 
-
-bool
-SBSymbolContextList::IsValid () const
-{
-    return m_opaque_ap.get() != NULL;
+bool SBSymbolContextList::GetDescription(lldb::SBStream &description) {
+  Stream &strm = description.ref();
+  if (m_opaque_ap.get())
+    m_opaque_ap->GetDescription(&strm, lldb::eDescriptionLevelFull, NULL);
+  return true;
 }
-
-
-
-lldb_private::SymbolContextList*
-SBSymbolContextList::operator->() const
-{
-    return m_opaque_ap.get();
-}
-
-
-lldb_private::SymbolContextList&
-SBSymbolContextList::operator*() const
-{
-    assert (m_opaque_ap.get());
-    return *m_opaque_ap.get();
-}
-
-bool
-SBSymbolContextList::GetDescription (lldb::SBStream &description)
-{
-    Stream &strm = description.ref();    
-    if (m_opaque_ap.get())
-        m_opaque_ap->GetDescription (&strm, lldb::eDescriptionLevelFull, NULL);
-    return true;
-}
-
-

@@ -21,10 +21,10 @@
 
 #include <CoreFoundationCPP/CFCBundle.h>
 #include <CoreFoundationCPP/CFCData.h>
-#include <CoreFoundationCPP/CFCReleaser.h>
 #include <CoreFoundationCPP/CFCMutableArray.h>
 #include <CoreFoundationCPP/CFCMutableDictionary.h>
 #include <CoreFoundationCPP/CFCMutableSet.h>
+#include <CoreFoundationCPP/CFCReleaser.h>
 #include <CoreFoundationCPP/CFCString.h>
 
-#endif  // CoreFoundationCPP_CoreFoundationCPP_H_
+#endif // CoreFoundationCPP_CoreFoundationCPP_H_

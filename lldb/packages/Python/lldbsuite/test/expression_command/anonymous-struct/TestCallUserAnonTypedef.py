@@ -24,7 +24,10 @@ class TestExprLookupAnonStructTypedef(TestBase):
         self.line = line_number('main.cpp', '// lldb testsuite break')
 
     @expectedFailureAll(oslist=["windows"])
-    @expectedFailureAll(oslist=['linux'], archs=['arm'], bugnumber="llvm.org/pr27868")
+    @expectedFailureAll(
+        oslist=['linux'],
+        archs=['arm'],
+        bugnumber="llvm.org/pr27868")
     def test(self):
         """Test typedeffed untagged struct arguments for function call expressions"""
         self.build()

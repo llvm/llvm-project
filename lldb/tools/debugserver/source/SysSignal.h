@@ -14,10 +14,9 @@
 #ifndef __SysSignal_h__
 #define __SysSignal_h__
 
-class SysSignal
-{
+class SysSignal {
 public:
-    static const char *Name(int signal);
+  static const char *Name(int signal);
 };
 
 #endif

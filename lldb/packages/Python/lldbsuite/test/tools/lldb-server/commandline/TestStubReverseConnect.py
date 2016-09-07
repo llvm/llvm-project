@@ -10,6 +10,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestStubReverseConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -30,7 +31,7 @@ class TestStubReverseConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(sock)
 
         sock.settimeout(timeout_seconds)
-        sock.bind(("127.0.0.1",0))
+        sock.bind(("127.0.0.1", 0))
         sock.listen(1)
 
         def tear_down_listener():
@@ -56,18 +57,25 @@ class TestStubReverseConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         triple = self.dbg.GetSelectedPlatform().GetTriple()
         if re.match(".*-.*-.*-android", triple):
-            self.forward_adb_port(self.port, self.port, "reverse", self.stub_device)
+            self.forward_adb_port(
+                self.port,
+                self.port,
+                "reverse",
+                self.stub_device)
 
         # Start the stub.
         server = self.launch_debug_monitor(logfile=sys.stdout)
         self.assertIsNotNone(server)
-        self.assertTrue(lldbgdbserverutils.process_is_running(server.pid, True))
+        self.assertTrue(
+            lldbgdbserverutils.process_is_running(
+                server.pid, True))
 
         # Listen for the stub's connection to us.
         (stub_socket, address) = self.listener_socket.accept()
         self.assertIsNotNone(stub_socket)
         self.assertIsNotNone(address)
-        print("connected to stub {} on {}".format(address, stub_socket.getsockname()))
+        print("connected to stub {} on {}".format(
+            address, stub_socket.getsockname()))
 
         # Verify we can do the handshake.  If that works, we'll call it good.
         self.do_handshake(stub_socket, timeout_seconds=self._DEFAULT_TIMEOUT)
@@ -82,7 +90,7 @@ class TestStubReverseConnect(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.reverse_connect_works()
 
     @llgs_test
-    @skipIfRemote # reverse connect is not a supported use case for now
+    @skipIfRemote  # reverse connect is not a supported use case for now
     def test_reverse_connect_works_llgs(self):
         self.init_llgs_test(use_named_pipe=False)
         self.set_inferior_startup_launch()

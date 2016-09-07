@@ -7,44 +7,37 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/lldb-types.h"
-#include "lldb/lldb-private-forward.h"
 #include "lldb/Host/common/NativeRegisterContextRegisterInfo.h"
+#include "lldb/lldb-private-forward.h"
+#include "lldb/lldb-types.h"
 
 using namespace lldb_private;
 
-NativeRegisterContextRegisterInfo::NativeRegisterContextRegisterInfo (NativeThreadProtocol &thread,
-                                                                      uint32_t concrete_frame_idx,
-                                                                      RegisterInfoInterface *register_info_interface) :
-    NativeRegisterContext (thread, concrete_frame_idx),
-    m_register_info_interface_up (register_info_interface)
-{
-    assert (register_info_interface && "null register_info_interface");
+NativeRegisterContextRegisterInfo::NativeRegisterContextRegisterInfo(
+    NativeThreadProtocol &thread, uint32_t concrete_frame_idx,
+    RegisterInfoInterface *register_info_interface)
+    : NativeRegisterContext(thread, concrete_frame_idx),
+      m_register_info_interface_up(register_info_interface) {
+  assert(register_info_interface && "null register_info_interface");
 }
 
-uint32_t
-NativeRegisterContextRegisterInfo::GetRegisterCount () const
-{
-    return m_register_info_interface_up->GetRegisterCount ();
+uint32_t NativeRegisterContextRegisterInfo::GetRegisterCount() const {
+  return m_register_info_interface_up->GetRegisterCount();
 }
 
-uint32_t
-NativeRegisterContextRegisterInfo::GetUserRegisterCount () const
-{
-    return m_register_info_interface_up->GetUserRegisterCount ();
+uint32_t NativeRegisterContextRegisterInfo::GetUserRegisterCount() const {
+  return m_register_info_interface_up->GetUserRegisterCount();
 }
 
-const RegisterInfo *
-NativeRegisterContextRegisterInfo::GetRegisterInfoAtIndex (uint32_t reg_index) const
-{
-    if (reg_index <= GetRegisterCount ())
-        return m_register_info_interface_up->GetRegisterInfo () + reg_index;
-    else
-        return nullptr;
+const RegisterInfo *NativeRegisterContextRegisterInfo::GetRegisterInfoAtIndex(
+    uint32_t reg_index) const {
+  if (reg_index <= GetRegisterCount())
+    return m_register_info_interface_up->GetRegisterInfo() + reg_index;
+  else
+    return nullptr;
 }
 
-const RegisterInfoInterface&
-NativeRegisterContextRegisterInfo::GetRegisterInfoInterface () const
-{
-    return *m_register_info_interface_up;
+const RegisterInfoInterface &
+NativeRegisterContextRegisterInfo::GetRegisterInfoInterface() const {
+  return *m_register_info_interface_up;
 }

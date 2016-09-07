@@ -14,193 +14,128 @@
 #include <memory>
 #include <vector>
 
-#include "lldb/lldb-private.h"
-#include "lldb/lldb-enumerations.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Core/UserID.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/Declaration.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
-class Variable : public UserID,
-    public std::enable_shared_from_this<Variable>
-{
+class Variable : public UserID, public std::enable_shared_from_this<Variable> {
 public:
-    typedef RangeVector<lldb::addr_t, lldb::addr_t> RangeList;
+  typedef RangeVector<lldb::addr_t, lldb::addr_t> RangeList;
 
-    //------------------------------------------------------------------
-    // Constructors and Destructors
-    //------------------------------------------------------------------
-    Variable (lldb::user_id_t uid,
-              const char *name, 
-              const char *mangled,  // The mangled or fully qualified name of the variable.
-              const lldb::SymbolFileTypeSP &symfile_type_sp,
-              lldb::ValueType scope,
-              SymbolContextScope *owner_scope,
-              const RangeList& scope_range,
-              Declaration* decl,
-              const DWARFExpression& location,
-              bool external,
-              bool artificial,
-              bool static_member = false);
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  Variable(lldb::user_id_t uid, const char *name,
+           const char
+               *mangled, // The mangled or fully qualified name of the variable.
+           const lldb::SymbolFileTypeSP &symfile_type_sp,
+           lldb::ValueType scope, SymbolContextScope *owner_scope,
+           const RangeList &scope_range, Declaration *decl,
+           const DWARFExpression &location, bool external, bool artificial,
+           bool static_member = false);
 
-    virtual
-    ~Variable();
+  virtual ~Variable();
 
-    void
-    Dump(Stream *s, bool show_context) const;
+  void Dump(Stream *s, bool show_context) const;
 
-    bool
-    DumpDeclaration (Stream *s, 
-                     bool show_fullpaths, 
-                     bool show_module);
-    
-    const Declaration&
-    GetDeclaration() const
-    {
-        return m_declaration;
-    }
+  bool DumpDeclaration(Stream *s, bool show_fullpaths, bool show_module);
 
-    ConstString
-    GetName() const;
+  const Declaration &GetDeclaration() const { return m_declaration; }
 
-    ConstString
-    GetUnqualifiedName() const;
+  ConstString GetName() const;
 
-    SymbolContextScope *
-    GetSymbolContextScope() const
-    {
-        return m_owner_scope;
-    }
+  ConstString GetUnqualifiedName() const;
 
-    // Since a variable can have a basename "i" and also a mangled 
-    // named "_ZN12_GLOBAL__N_11iE" and a demangled mangled name 
-    // "(anonymous namespace)::i", this function will allow a generic match
-    // function that can be called by commands and expression parsers to make
-    // sure we match anything we come across.
-    bool
-    NameMatches (const ConstString &name) const;
+  SymbolContextScope *GetSymbolContextScope() const { return m_owner_scope; }
 
-    bool
-    NameMatches (const RegularExpression& regex) const;
+  // Since a variable can have a basename "i" and also a mangled
+  // named "_ZN12_GLOBAL__N_11iE" and a demangled mangled name
+  // "(anonymous namespace)::i", this function will allow a generic match
+  // function that can be called by commands and expression parsers to make
+  // sure we match anything we come across.
+  bool NameMatches(const ConstString &name) const;
 
-    Type *
-    GetType();
+  bool NameMatches(const RegularExpression &regex) const;
 
-    lldb::LanguageType
-    GetLanguage () const;
+  Type *GetType();
 
-    lldb::ValueType
-    GetScope() const
-    {
-        return m_scope;
-    }
+  lldb::LanguageType GetLanguage() const;
 
-    bool
-    IsExternal() const
-    {
-        return m_external;
-    }
+  lldb::ValueType GetScope() const { return m_scope; }
 
-    bool
-    IsArtificial() const
-    {
-        return m_artificial;
-    }
+  bool IsExternal() const { return m_external; }
 
-    bool IsStaticMember() const
-    {
-        return m_static_member;
-    }
+  bool IsArtificial() const { return m_artificial; }
 
-    DWARFExpression &
-    LocationExpression()
-    {
-        return m_location;
-    }
+  bool IsStaticMember() const { return m_static_member; }
 
-    const DWARFExpression &
-    LocationExpression() const
-    {
-        return m_location;
-    }
-    
-    bool
-    DumpLocationForAddress (Stream *s, 
-                            const Address &address);
+  DWARFExpression &LocationExpression() { return m_location; }
 
-    size_t
-    MemorySize() const;
+  const DWARFExpression &LocationExpression() const { return m_location; }
 
-    void
-    CalculateSymbolContext (SymbolContext *sc);
+  bool DumpLocationForAddress(Stream *s, const Address &address);
 
-    bool
-    IsInScope (StackFrame *frame);
+  size_t MemorySize() const;
 
-    bool
-    LocationIsValidForFrame (StackFrame *frame);
+  void CalculateSymbolContext(SymbolContext *sc);
 
-    bool
-    LocationIsValidForAddress (const Address &address);
-    
-    bool
-    GetLocationIsConstantValueData () const
-    {
-        return m_loc_is_const_data;
-    }
-    
-    void
-    SetLocationIsConstantValueData (bool b)
-    {
-        m_loc_is_const_data = b;
-    }
-    
-    typedef size_t (*GetVariableCallback) (void *baton,
-                                           const char *name,
-                                           VariableList &var_list);
+  bool IsInScope(StackFrame *frame);
 
+  bool LocationIsValidForFrame(StackFrame *frame);
 
-    static Error
-    GetValuesForVariableExpressionPath (const char *variable_expr_path,
-                                        ExecutionContextScope *scope,
-                                        GetVariableCallback callback,
-                                        void *baton,
-                                        VariableList &variable_list,
-                                        ValueObjectList &valobj_list);
+  bool LocationIsValidForAddress(const Address &address);
 
-    static size_t
-    AutoComplete (const ExecutionContext &exe_ctx,
-                  const char *name,
-                  StringList &matches,
-                  bool &word_complete);
+  bool GetLocationIsConstantValueData() const { return m_loc_is_const_data; }
 
-    CompilerDeclContext
-    GetDeclContext ();
+  void SetLocationIsConstantValueData(bool b) { m_loc_is_const_data = b; }
 
-    CompilerDecl
-    GetDecl ();
+  typedef size_t (*GetVariableCallback)(void *baton, const char *name,
+                                        VariableList &var_list);
+
+  static Error GetValuesForVariableExpressionPath(
+      const char *variable_expr_path, ExecutionContextScope *scope,
+      GetVariableCallback callback, void *baton, VariableList &variable_list,
+      ValueObjectList &valobj_list);
+
+  static size_t AutoComplete(const ExecutionContext &exe_ctx, const char *name,
+                             StringList &matches, bool &word_complete);
+
+  CompilerDeclContext GetDeclContext();
+
+  CompilerDecl GetDecl();
 
 protected:
-    ConstString m_name;                 // The basename of the variable (no namespaces)
-    Mangled m_mangled;                  // The mangled name of the variable
-    lldb::SymbolFileTypeSP m_symfile_type_sp;   // The type pointer of the variable (int, struct, class, etc)
-    lldb::ValueType m_scope;            // global, parameter, local
-    SymbolContextScope *m_owner_scope;  // The symbol file scope that this variable was defined in
-    RangeList m_scope_range;            // The list of ranges inside the owner's scope where this variable is valid
-    Declaration m_declaration;          // Declaration location for this item.
-    DWARFExpression m_location;         // The location of this variable that can be fed to DWARFExpression::Evaluate()
-    uint8_t m_external:1,               // Visible outside the containing compile unit?
-            m_artificial:1,             // Non-zero if the variable is not explicitly declared in source
-            m_loc_is_const_data:1,      // The m_location expression contains the constant variable value data, not a DWARF location
-            m_static_member:1;          // Non-zero if variable is static member of a class or struct.
+  ConstString m_name; // The basename of the variable (no namespaces)
+  Mangled m_mangled;  // The mangled name of the variable
+  lldb::SymbolFileTypeSP m_symfile_type_sp; // The type pointer of the variable
+                                            // (int, struct, class, etc)
+  lldb::ValueType m_scope;                  // global, parameter, local
+  SymbolContextScope
+      *m_owner_scope; // The symbol file scope that this variable was defined in
+  RangeList m_scope_range; // The list of ranges inside the owner's scope where
+                           // this variable is valid
+  Declaration m_declaration;  // Declaration location for this item.
+  DWARFExpression m_location; // The location of this variable that can be fed
+                              // to DWARFExpression::Evaluate()
+  uint8_t m_external : 1,     // Visible outside the containing compile unit?
+      m_artificial : 1, // Non-zero if the variable is not explicitly declared
+                        // in source
+      m_loc_is_const_data : 1, // The m_location expression contains the
+                               // constant variable value data, not a DWARF
+                               // location
+      m_static_member : 1; // Non-zero if variable is static member of a class
+                           // or struct.
 private:
-    Variable(const Variable& rhs);
-    Variable& operator=(const Variable& rhs);
+  Variable(const Variable &rhs);
+  Variable &operator=(const Variable &rhs);
 };
 
 } // namespace lldb_private
 
-#endif  // liblldb_Variable_h_
+#endif // liblldb_Variable_h_

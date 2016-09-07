@@ -24,16 +24,16 @@
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/Error.h"
+#include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Core/ThreadSafeValue.h"
-#include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Host/HostThread.h"
-#include "lldb/lldb-private-forward.h"
-#include "lldb/Utility/StringExtractor.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/StringExtractor.h"
+#include "lldb/lldb-private-forward.h"
 
 #include "GDBRemoteCommunicationClient.h"
 #include "GDBRemoteRegisterContext.h"
@@ -43,478 +43,376 @@ namespace process_gdb_remote {
 
 class ThreadGDBRemote;
 
-class ProcessGDBRemote : public Process, private GDBRemoteClientBase::ContinueDelegate
-{
+class ProcessGDBRemote : public Process,
+                         private GDBRemoteClientBase::ContinueDelegate {
 public:
-    ProcessGDBRemote(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
+  ProcessGDBRemote(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
 
-    ~ProcessGDBRemote() override;
+  ~ProcessGDBRemote() override;
 
-    static lldb::ProcessSP
-    CreateInstance (lldb::TargetSP target_sp,
-                    lldb::ListenerSP listener_sp,
-                    const FileSpec *crash_file_path);
+  static lldb::ProcessSP CreateInstance(lldb::TargetSP target_sp,
+                                        lldb::ListenerSP listener_sp,
+                                        const FileSpec *crash_file_path);
 
-    static void
-    Initialize();
+  static void Initialize();
 
-    static void
-    DebuggerInitialize (Debugger &debugger);
+  static void DebuggerInitialize(Debugger &debugger);
 
-    static void
-    Terminate();
+  static void Terminate();
 
-    static ConstString
-    GetPluginNameStatic();
+  static ConstString GetPluginNameStatic();
 
-    static const char *
-    GetPluginDescriptionStatic();
+  static const char *GetPluginDescriptionStatic();
 
-    //------------------------------------------------------------------
-    // Check if a given Process
-    //------------------------------------------------------------------
-    bool
-    CanDebug (lldb::TargetSP target_sp, bool plugin_specified_by_name) override;
+  //------------------------------------------------------------------
+  // Check if a given Process
+  //------------------------------------------------------------------
+  bool CanDebug(lldb::TargetSP target_sp,
+                bool plugin_specified_by_name) override;
 
-    CommandObject *
-    GetPluginCommandObject() override;
+  CommandObject *GetPluginCommandObject() override;
 
-    //------------------------------------------------------------------
-    // Creating a new process, or attaching to an existing one
-    //------------------------------------------------------------------
-    Error
-    WillLaunch (Module* module) override;
+  //------------------------------------------------------------------
+  // Creating a new process, or attaching to an existing one
+  //------------------------------------------------------------------
+  Error WillLaunch(Module *module) override;
 
-    Error
-    DoLaunch (Module *exe_module, ProcessLaunchInfo &launch_info) override;
+  Error DoLaunch(Module *exe_module, ProcessLaunchInfo &launch_info) override;
 
-    void
-    DidLaunch () override;
+  void DidLaunch() override;
 
-    Error
-    WillAttachToProcessWithID (lldb::pid_t pid) override;
+  Error WillAttachToProcessWithID(lldb::pid_t pid) override;
 
-    Error
-    WillAttachToProcessWithName (const char *process_name, bool wait_for_launch) override;
+  Error WillAttachToProcessWithName(const char *process_name,
+                                    bool wait_for_launch) override;
 
-    Error
-    DoConnectRemote (Stream *strm, const char *remote_url) override;
-    
-    Error
-    WillLaunchOrAttach ();
-    
-    Error
-    DoAttachToProcessWithID (lldb::pid_t pid, const ProcessAttachInfo &attach_info) override;
-    
-    Error
-    DoAttachToProcessWithName (const char *process_name,
-                               const ProcessAttachInfo &attach_info) override;
+  Error DoConnectRemote(Stream *strm, const char *remote_url) override;
 
-    void
-    DidAttach (ArchSpec &process_arch) override;
+  Error WillLaunchOrAttach();
 
-    //------------------------------------------------------------------
-    // PluginInterface protocol
-    //------------------------------------------------------------------
-    ConstString
-    GetPluginName() override;
+  Error DoAttachToProcessWithID(lldb::pid_t pid,
+                                const ProcessAttachInfo &attach_info) override;
 
-    uint32_t
-    GetPluginVersion() override;
+  Error
+  DoAttachToProcessWithName(const char *process_name,
+                            const ProcessAttachInfo &attach_info) override;
 
-    //------------------------------------------------------------------
-    // Process Control
-    //------------------------------------------------------------------
-    Error
-    WillResume () override;
+  void DidAttach(ArchSpec &process_arch) override;
 
-    Error
-    DoResume () override;
+  //------------------------------------------------------------------
+  // PluginInterface protocol
+  //------------------------------------------------------------------
+  ConstString GetPluginName() override;
 
-    Error
-    DoHalt (bool &caused_stop) override;
+  uint32_t GetPluginVersion() override;
 
-    Error
-    DoDetach (bool keep_stopped) override;
-    
-    bool
-    DetachRequiresHalt() override { return true; }
+  //------------------------------------------------------------------
+  // Process Control
+  //------------------------------------------------------------------
+  Error WillResume() override;
 
-    Error
-    DoSignal (int signal) override;
+  Error DoResume() override;
 
-    Error
-    DoDestroy () override;
+  Error DoHalt(bool &caused_stop) override;
 
-    void
-    RefreshStateAfterStop() override;
+  Error DoDetach(bool keep_stopped) override;
 
-    void
-    SetUnixSignals(const lldb::UnixSignalsSP &signals_sp);
+  bool DetachRequiresHalt() override { return true; }
 
-    //------------------------------------------------------------------
-    // Process Queries
-    //------------------------------------------------------------------
-    bool
-    IsAlive () override;
+  Error DoSignal(int signal) override;
 
-    lldb::addr_t
-    GetImageInfoAddress() override;
+  Error DoDestroy() override;
 
-    void
-    WillPublicStop () override;
+  void RefreshStateAfterStop() override;
 
-    //------------------------------------------------------------------
-    // Process Memory
-    //------------------------------------------------------------------
-    size_t
-    DoReadMemory (lldb::addr_t addr, void *buf, size_t size, Error &error) override;
+  void SetUnixSignals(const lldb::UnixSignalsSP &signals_sp);
 
-    size_t
-    DoWriteMemory (lldb::addr_t addr, const void *buf, size_t size, Error &error) override;
+  //------------------------------------------------------------------
+  // Process Queries
+  //------------------------------------------------------------------
+  bool IsAlive() override;
 
-    lldb::addr_t
-    DoAllocateMemory (size_t size, uint32_t permissions, Error &error) override;
+  lldb::addr_t GetImageInfoAddress() override;
 
-    Error
-    GetMemoryRegionInfo (lldb::addr_t load_addr, MemoryRegionInfo &region_info) override;
-    
-    Error
-    DoDeallocateMemory (lldb::addr_t ptr) override;
+  void WillPublicStop() override;
 
-    //------------------------------------------------------------------
-    // Process STDIO
-    //------------------------------------------------------------------
-    size_t
-    PutSTDIN (const char *buf, size_t buf_size, Error &error) override;
+  //------------------------------------------------------------------
+  // Process Memory
+  //------------------------------------------------------------------
+  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
+                      Error &error) override;
 
-    //----------------------------------------------------------------------
-    // Process Breakpoints
-    //----------------------------------------------------------------------
-    Error
-    EnableBreakpointSite (BreakpointSite *bp_site) override;
+  size_t DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                       Error &error) override;
 
-    Error
-    DisableBreakpointSite (BreakpointSite *bp_site) override;
+  lldb::addr_t DoAllocateMemory(size_t size, uint32_t permissions,
+                                Error &error) override;
 
-    //----------------------------------------------------------------------
-    // Process Watchpoints
-    //----------------------------------------------------------------------
-    Error
-    EnableWatchpoint (Watchpoint *wp, bool notify = true) override;
+  Error GetMemoryRegionInfo(lldb::addr_t load_addr,
+                            MemoryRegionInfo &region_info) override;
 
-    Error
-    DisableWatchpoint (Watchpoint *wp, bool notify = true) override;
+  Error DoDeallocateMemory(lldb::addr_t ptr) override;
 
-    Error
-    GetWatchpointSupportInfo (uint32_t &num) override;
-    
-    Error
-    GetWatchpointSupportInfo (uint32_t &num, bool& after) override;
-    
-    bool
-    StartNoticingNewThreads() override;
+  //------------------------------------------------------------------
+  // Process STDIO
+  //------------------------------------------------------------------
+  size_t PutSTDIN(const char *buf, size_t buf_size, Error &error) override;
 
-    bool
-    StopNoticingNewThreads() override;
+  //----------------------------------------------------------------------
+  // Process Breakpoints
+  //----------------------------------------------------------------------
+  Error EnableBreakpointSite(BreakpointSite *bp_site) override;
 
-    GDBRemoteCommunicationClient &
-    GetGDBRemote()
-    {
-        return m_gdb_comm;
-    }
-    
-    Error
-    SendEventData(const char *data) override;
+  Error DisableBreakpointSite(BreakpointSite *bp_site) override;
 
-    //----------------------------------------------------------------------
-    // Override DidExit so we can disconnect from the remote GDB server
-    //----------------------------------------------------------------------
-    void
-    DidExit () override;
+  //----------------------------------------------------------------------
+  // Process Watchpoints
+  //----------------------------------------------------------------------
+  Error EnableWatchpoint(Watchpoint *wp, bool notify = true) override;
 
-    void
-    SetUserSpecifiedMaxMemoryTransferSize (uint64_t user_specified_max);
+  Error DisableWatchpoint(Watchpoint *wp, bool notify = true) override;
 
-    bool
-    GetModuleSpec(const FileSpec& module_file_spec,
-                  const ArchSpec& arch,
-                  ModuleSpec &module_spec) override;
+  Error GetWatchpointSupportInfo(uint32_t &num) override;
 
-    bool
-    GetHostOSVersion(uint32_t &major,
-                     uint32_t &minor,
-                     uint32_t &update) override;
+  Error GetWatchpointSupportInfo(uint32_t &num, bool &after) override;
 
-    size_t
-    LoadModules(LoadedModuleInfoList &module_list) override;
+  bool StartNoticingNewThreads() override;
 
-    size_t
-    LoadModules() override;
+  bool StopNoticingNewThreads() override;
 
-    Error
-    GetFileLoadAddress(const FileSpec& file, bool& is_loaded, lldb::addr_t& load_addr) override;
+  GDBRemoteCommunicationClient &GetGDBRemote() { return m_gdb_comm; }
 
-    void
-    ModulesDidLoad (ModuleList &module_list) override;
+  Error SendEventData(const char *data) override;
 
-    StructuredData::ObjectSP
-    GetLoadedDynamicLibrariesInfos (lldb::addr_t image_list_address, lldb::addr_t image_count) override;
+  //----------------------------------------------------------------------
+  // Override DidExit so we can disconnect from the remote GDB server
+  //----------------------------------------------------------------------
+  void DidExit() override;
 
-    Error
-    ConfigureStructuredData(const ConstString &type_name,
-                            const StructuredData::ObjectSP &config_sp) override;
+  void SetUserSpecifiedMaxMemoryTransferSize(uint64_t user_specified_max);
 
-    StructuredData::ObjectSP
-    GetLoadedDynamicLibrariesInfos () override;
+  bool GetModuleSpec(const FileSpec &module_file_spec, const ArchSpec &arch,
+                     ModuleSpec &module_spec) override;
 
-    StructuredData::ObjectSP
-    GetLoadedDynamicLibrariesInfos (const std::vector<lldb::addr_t> &load_addresses) override;
+  bool GetHostOSVersion(uint32_t &major, uint32_t &minor,
+                        uint32_t &update) override;
 
-    StructuredData::ObjectSP
-    GetLoadedDynamicLibrariesInfos_sender (StructuredData::ObjectSP args);
+  size_t LoadModules(LoadedModuleInfoList &module_list) override;
 
-    StructuredData::ObjectSP
-    GetSharedCacheInfo () override;
+  size_t LoadModules() override;
 
-    std::string
-    HarmonizeThreadIdsForProfileData(StringExtractorGDBRemote &inputStringExtractor);
+  Error GetFileLoadAddress(const FileSpec &file, bool &is_loaded,
+                           lldb::addr_t &load_addr) override;
+
+  void ModulesDidLoad(ModuleList &module_list) override;
+
+  StructuredData::ObjectSP
+  GetLoadedDynamicLibrariesInfos(lldb::addr_t image_list_address,
+                                 lldb::addr_t image_count) override;
+
+  Error
+  ConfigureStructuredData(const ConstString &type_name,
+                          const StructuredData::ObjectSP &config_sp) override;
+
+  StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos() override;
+
+  StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      const std::vector<lldb::addr_t> &load_addresses) override;
+
+  StructuredData::ObjectSP
+  GetLoadedDynamicLibrariesInfos_sender(StructuredData::ObjectSP args);
+
+  StructuredData::ObjectSP GetSharedCacheInfo() override;
+
+  std::string HarmonizeThreadIdsForProfileData(
+      StringExtractorGDBRemote &inputStringExtractor);
 
 protected:
-    friend class ThreadGDBRemote;
-    friend class GDBRemoteCommunicationClient;
-    friend class GDBRemoteRegisterContext;
+  friend class ThreadGDBRemote;
+  friend class GDBRemoteCommunicationClient;
+  friend class GDBRemoteRegisterContext;
 
-    //------------------------------------------------------------------
-    /// Broadcaster event bits definitions.
-    //------------------------------------------------------------------
-    enum
-    {
-        eBroadcastBitAsyncContinue                  = (1 << 0),
-        eBroadcastBitAsyncThreadShouldExit          = (1 << 1),
-        eBroadcastBitAsyncThreadDidExit             = (1 << 2)
-    };
-    
-    Flags m_flags;            // Process specific flags (see eFlags enums)
-    GDBRemoteCommunicationClient m_gdb_comm;
-    std::atomic<lldb::pid_t> m_debugserver_pid;
-    std::vector<StringExtractorGDBRemote> m_stop_packet_stack;  // The stop packet stack replaces the last stop packet variable
-    std::recursive_mutex m_last_stop_packet_mutex;
-    GDBRemoteDynamicRegisterInfo m_register_info;
-    Broadcaster m_async_broadcaster;
-    lldb::ListenerSP m_async_listener_sp;
-    HostThread m_async_thread;
-    std::recursive_mutex m_async_thread_state_mutex;
-    typedef std::vector<lldb::tid_t> tid_collection;
-    typedef std::vector< std::pair<lldb::tid_t,int> > tid_sig_collection;
-    typedef std::map<lldb::addr_t, lldb::addr_t> MMapMap;
-    typedef std::map<uint32_t, std::string> ExpeditedRegisterMap;
-    tid_collection m_thread_ids; // Thread IDs for all threads. This list gets updated after stopping
-    std::vector<lldb::addr_t> m_thread_pcs; // PC values for all the threads.
-    StructuredData::ObjectSP m_jstopinfo_sp; // Stop info only for any threads that have valid stop infos
-    StructuredData::ObjectSP m_jthreadsinfo_sp; // Full stop info, expedited registers and memory for all threads if "jThreadsInfo" packet is supported
-    tid_collection m_continue_c_tids;                  // 'c' for continue
-    tid_sig_collection m_continue_C_tids; // 'C' for continue with signal
-    tid_collection m_continue_s_tids;                  // 's' for step
-    tid_sig_collection m_continue_S_tids; // 'S' for step with signal
-    uint64_t m_max_memory_size;       // The maximum number of bytes to read/write when reading and writing memory
-    uint64_t m_remote_stub_max_memory_size;    // The maximum memory size the remote gdb stub can handle
-    MMapMap m_addr_to_mmap_size;
-    lldb::BreakpointSP m_thread_create_bp_sp;
-    bool m_waiting_for_attach;
-    bool m_destroy_tried_resuming;
-    lldb::CommandObjectSP m_command_sp;
-    int64_t m_breakpoint_pc_offset;
-    lldb::tid_t m_initial_tid; // The initial thread ID, given by stub on attach
+  //------------------------------------------------------------------
+  /// Broadcaster event bits definitions.
+  //------------------------------------------------------------------
+  enum {
+    eBroadcastBitAsyncContinue = (1 << 0),
+    eBroadcastBitAsyncThreadShouldExit = (1 << 1),
+    eBroadcastBitAsyncThreadDidExit = (1 << 2)
+  };
 
-    //----------------------------------------------------------------------
-    // Accessors
-    //----------------------------------------------------------------------
-    bool
-    IsRunning ( lldb::StateType state )
-    {
-        return state == lldb::eStateRunning || IsStepping(state);
-    }
+  Flags m_flags; // Process specific flags (see eFlags enums)
+  GDBRemoteCommunicationClient m_gdb_comm;
+  std::atomic<lldb::pid_t> m_debugserver_pid;
+  std::vector<StringExtractorGDBRemote> m_stop_packet_stack; // The stop packet
+                                                             // stack replaces
+                                                             // the last stop
+                                                             // packet variable
+  std::recursive_mutex m_last_stop_packet_mutex;
+  GDBRemoteDynamicRegisterInfo m_register_info;
+  Broadcaster m_async_broadcaster;
+  lldb::ListenerSP m_async_listener_sp;
+  HostThread m_async_thread;
+  std::recursive_mutex m_async_thread_state_mutex;
+  typedef std::vector<lldb::tid_t> tid_collection;
+  typedef std::vector<std::pair<lldb::tid_t, int>> tid_sig_collection;
+  typedef std::map<lldb::addr_t, lldb::addr_t> MMapMap;
+  typedef std::map<uint32_t, std::string> ExpeditedRegisterMap;
+  tid_collection m_thread_ids; // Thread IDs for all threads. This list gets
+                               // updated after stopping
+  std::vector<lldb::addr_t> m_thread_pcs;     // PC values for all the threads.
+  StructuredData::ObjectSP m_jstopinfo_sp;    // Stop info only for any threads
+                                              // that have valid stop infos
+  StructuredData::ObjectSP m_jthreadsinfo_sp; // Full stop info, expedited
+                                              // registers and memory for all
+                                              // threads if "jThreadsInfo"
+                                              // packet is supported
+  tid_collection m_continue_c_tids;           // 'c' for continue
+  tid_sig_collection m_continue_C_tids;       // 'C' for continue with signal
+  tid_collection m_continue_s_tids;           // 's' for step
+  tid_sig_collection m_continue_S_tids;       // 'S' for step with signal
+  uint64_t m_max_memory_size; // The maximum number of bytes to read/write when
+                              // reading and writing memory
+  uint64_t m_remote_stub_max_memory_size; // The maximum memory size the remote
+                                          // gdb stub can handle
+  MMapMap m_addr_to_mmap_size;
+  lldb::BreakpointSP m_thread_create_bp_sp;
+  bool m_waiting_for_attach;
+  bool m_destroy_tried_resuming;
+  lldb::CommandObjectSP m_command_sp;
+  int64_t m_breakpoint_pc_offset;
+  lldb::tid_t m_initial_tid; // The initial thread ID, given by stub on attach
 
-    bool
-    IsStepping ( lldb::StateType state)
-    {
-        return state == lldb::eStateStepping;
-    }
+  //----------------------------------------------------------------------
+  // Accessors
+  //----------------------------------------------------------------------
+  bool IsRunning(lldb::StateType state) {
+    return state == lldb::eStateRunning || IsStepping(state);
+  }
 
-    bool
-    CanResume ( lldb::StateType state)
-    {
-        return state == lldb::eStateStopped;
-    }
+  bool IsStepping(lldb::StateType state) {
+    return state == lldb::eStateStepping;
+  }
 
-    bool
-    HasExited (lldb::StateType state)
-    {
-        return state == lldb::eStateExited;
-    }
+  bool CanResume(lldb::StateType state) { return state == lldb::eStateStopped; }
 
-    bool
-    ProcessIDIsValid ( ) const;
+  bool HasExited(lldb::StateType state) { return state == lldb::eStateExited; }
 
-    void
-    Clear ( );
+  bool ProcessIDIsValid() const;
 
-    Flags &
-    GetFlags ()
-    {
-        return m_flags;
-    }
+  void Clear();
 
-    const Flags &
-    GetFlags () const
-    {
-        return m_flags;
-    }
+  Flags &GetFlags() { return m_flags; }
 
-    bool
-    UpdateThreadList (ThreadList &old_thread_list, 
-                      ThreadList &new_thread_list) override;
+  const Flags &GetFlags() const { return m_flags; }
 
-    Error
-    EstablishConnectionIfNeeded (const ProcessInfo &process_info);
+  bool UpdateThreadList(ThreadList &old_thread_list,
+                        ThreadList &new_thread_list) override;
 
-    Error
-    LaunchAndConnectToDebugserver (const ProcessInfo &process_info);
+  Error EstablishConnectionIfNeeded(const ProcessInfo &process_info);
 
-    void
-    KillDebugserverProcess ();
+  Error LaunchAndConnectToDebugserver(const ProcessInfo &process_info);
 
-    void
-    BuildDynamicRegisterInfo (bool force);
+  void KillDebugserverProcess();
 
-    void
-    SetLastStopPacket (const StringExtractorGDBRemote &response);
+  void BuildDynamicRegisterInfo(bool force);
 
-    bool
-    ParsePythonTargetDefinition(const FileSpec &target_definition_fspec);
+  void SetLastStopPacket(const StringExtractorGDBRemote &response);
 
-    const lldb::DataBufferSP
-    GetAuxvData() override;
+  bool ParsePythonTargetDefinition(const FileSpec &target_definition_fspec);
 
-    StructuredData::ObjectSP
-    GetExtendedInfoForThread (lldb::tid_t tid);
+  const lldb::DataBufferSP GetAuxvData() override;
 
-    void
-    GetMaxMemorySize();
+  StructuredData::ObjectSP GetExtendedInfoForThread(lldb::tid_t tid);
 
-    bool
-    CalculateThreadStopInfo (ThreadGDBRemote *thread);
+  void GetMaxMemorySize();
 
-    size_t
-    UpdateThreadPCsFromStopReplyThreadsValue (std::string &value);
+  bool CalculateThreadStopInfo(ThreadGDBRemote *thread);
 
-    size_t
-    UpdateThreadIDsFromStopReplyThreadsValue (std::string &value);
+  size_t UpdateThreadPCsFromStopReplyThreadsValue(std::string &value);
 
-    bool
-    HandleNotifyPacket(StringExtractorGDBRemote &packet);
+  size_t UpdateThreadIDsFromStopReplyThreadsValue(std::string &value);
 
-    bool
-    StartAsyncThread ();
+  bool HandleNotifyPacket(StringExtractorGDBRemote &packet);
 
-    void
-    StopAsyncThread ();
+  bool StartAsyncThread();
 
-    static lldb::thread_result_t
-    AsyncThread (void *arg);
+  void StopAsyncThread();
 
-    static bool
-    MonitorDebugserverProcess(std::weak_ptr<ProcessGDBRemote> process_wp, lldb::pid_t pid, bool exited, int signo,
-                              int exit_status);
+  static lldb::thread_result_t AsyncThread(void *arg);
 
-    lldb::StateType
-    SetThreadStopInfo (StringExtractor& stop_packet);
+  static bool
+  MonitorDebugserverProcess(std::weak_ptr<ProcessGDBRemote> process_wp,
+                            lldb::pid_t pid, bool exited, int signo,
+                            int exit_status);
 
-    bool
-    GetThreadStopInfoFromJSON (ThreadGDBRemote *thread, const StructuredData::ObjectSP &thread_infos_sp);
+  lldb::StateType SetThreadStopInfo(StringExtractor &stop_packet);
 
-    lldb::ThreadSP
-    SetThreadStopInfo (StructuredData::Dictionary *thread_dict);
+  bool
+  GetThreadStopInfoFromJSON(ThreadGDBRemote *thread,
+                            const StructuredData::ObjectSP &thread_infos_sp);
 
-    lldb::ThreadSP
-    SetThreadStopInfo (lldb::tid_t tid,
-                       ExpeditedRegisterMap &expedited_register_map,
-                       uint8_t signo,
-                       const std::string &thread_name,
-                       const std::string &reason,
-                       const std::string &description,
-                       uint32_t exc_type,
-                       const std::vector<lldb::addr_t> &exc_data,
-                       lldb::addr_t thread_dispatch_qaddr,
-                       bool queue_vars_valid,
-                       lldb_private::LazyBool associated_with_libdispatch_queue,
-                       lldb::addr_t dispatch_queue_t,
-                       std::string &queue_name,
-                       lldb::QueueKind queue_kind,
-                       uint64_t queue_serial);
+  lldb::ThreadSP SetThreadStopInfo(StructuredData::Dictionary *thread_dict);
 
-    void
-    HandleStopReplySequence ();
+  lldb::ThreadSP
+  SetThreadStopInfo(lldb::tid_t tid,
+                    ExpeditedRegisterMap &expedited_register_map, uint8_t signo,
+                    const std::string &thread_name, const std::string &reason,
+                    const std::string &description, uint32_t exc_type,
+                    const std::vector<lldb::addr_t> &exc_data,
+                    lldb::addr_t thread_dispatch_qaddr, bool queue_vars_valid,
+                    lldb_private::LazyBool associated_with_libdispatch_queue,
+                    lldb::addr_t dispatch_queue_t, std::string &queue_name,
+                    lldb::QueueKind queue_kind, uint64_t queue_serial);
 
-    void
-    ClearThreadIDList ();
+  void HandleStopReplySequence();
 
-    bool
-    UpdateThreadIDList ();
+  void ClearThreadIDList();
 
-    void
-    DidLaunchOrAttach (ArchSpec& process_arch);
+  bool UpdateThreadIDList();
 
-    Error
-    ConnectToDebugserver (const char *host_port);
+  void DidLaunchOrAttach(ArchSpec &process_arch);
 
-    const char *
-    GetDispatchQueueNameForThread (lldb::addr_t thread_dispatch_qaddr,
-                                   std::string &dispatch_queue_name);
+  Error ConnectToDebugserver(const char *host_port);
 
-    DynamicLoader *
-    GetDynamicLoader () override;
+  const char *GetDispatchQueueNameForThread(lldb::addr_t thread_dispatch_qaddr,
+                                            std::string &dispatch_queue_name);
 
-    // Query remote GDBServer for register information
-    bool
-    GetGDBServerRegisterInfo (ArchSpec &arch);
+  DynamicLoader *GetDynamicLoader() override;
 
-    // Query remote GDBServer for a detailed loaded library list
-    Error
-    GetLoadedModuleList (LoadedModuleInfoList &);
+  // Query remote GDBServer for register information
+  bool GetGDBServerRegisterInfo(ArchSpec &arch);
 
-    lldb::ModuleSP
-    LoadModuleAtAddress (const FileSpec &file, lldb::addr_t link_map, lldb::addr_t base_addr,
-                         bool value_is_offset);
+  // Query remote GDBServer for a detailed loaded library list
+  Error GetLoadedModuleList(LoadedModuleInfoList &);
+
+  lldb::ModuleSP LoadModuleAtAddress(const FileSpec &file,
+                                     lldb::addr_t link_map,
+                                     lldb::addr_t base_addr,
+                                     bool value_is_offset);
 
 private:
-    //------------------------------------------------------------------
-    // For ProcessGDBRemote only
-    //------------------------------------------------------------------
-    std::string m_partial_profile_data;
-    std::map<uint64_t, uint32_t> m_thread_id_to_used_usec_map;
+  //------------------------------------------------------------------
+  // For ProcessGDBRemote only
+  //------------------------------------------------------------------
+  std::string m_partial_profile_data;
+  std::map<uint64_t, uint32_t> m_thread_id_to_used_usec_map;
 
-    static bool
-    NewThreadNotifyBreakpointHit (void *baton,
-                         StoppointCallbackContext *context,
-                         lldb::user_id_t break_id,
-                         lldb::user_id_t break_loc_id);
+  static bool NewThreadNotifyBreakpointHit(void *baton,
+                                           StoppointCallbackContext *context,
+                                           lldb::user_id_t break_id,
+                                           lldb::user_id_t break_loc_id);
 
-    //------------------------------------------------------------------
-    // ContinueDelegate interface
-    //------------------------------------------------------------------
-    void
-    HandleAsyncStdout(llvm::StringRef out) override;
-    void
-    HandleAsyncMisc(llvm::StringRef data) override;
-    void
-    HandleStopReply() override;
-    bool
-    HandleAsyncStructuredData(const StructuredData::ObjectSP
-                              &object_sp) override;
+  //------------------------------------------------------------------
+  // ContinueDelegate interface
+  //------------------------------------------------------------------
+  void HandleAsyncStdout(llvm::StringRef out) override;
+  void HandleAsyncMisc(llvm::StringRef data) override;
+  void HandleStopReply() override;
+  bool
+  HandleAsyncStructuredData(const StructuredData::ObjectSP &object_sp) override;
 
-    DISALLOW_COPY_AND_ASSIGN (ProcessGDBRemote);
+  DISALLOW_COPY_AND_ASSIGN(ProcessGDBRemote);
 };
 
 } // namespace process_gdb_remote

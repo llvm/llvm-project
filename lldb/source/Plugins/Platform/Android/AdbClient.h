@@ -31,146 +31,116 @@ class FileSpec;
 
 namespace platform_android {
 
-class AdbClient
-{
+class AdbClient {
 public:
-    enum UnixSocketNamespace
-    {
-        UnixSocketNamespaceAbstract,
-        UnixSocketNamespaceFileSystem,
-    };
+  enum UnixSocketNamespace {
+    UnixSocketNamespaceAbstract,
+    UnixSocketNamespaceFileSystem,
+  };
 
-    using DeviceIDList = std::list<std::string>;
+  using DeviceIDList = std::list<std::string>;
 
-    class SyncService
-    {
-        friend class AdbClient;
+  class SyncService {
+    friend class AdbClient;
 
-    public:
-        ~SyncService ();
+  public:
+    ~SyncService();
 
-        Error
-        PullFile (const FileSpec &remote_file, const FileSpec &local_file);
+    Error PullFile(const FileSpec &remote_file, const FileSpec &local_file);
 
-        Error
-        PushFile (const FileSpec &local_file, const FileSpec &remote_file);
+    Error PushFile(const FileSpec &local_file, const FileSpec &remote_file);
 
-        Error
-        Stat (const FileSpec &remote_file, uint32_t &mode, uint32_t &size, uint32_t &mtime);
+    Error Stat(const FileSpec &remote_file, uint32_t &mode, uint32_t &size,
+               uint32_t &mtime);
 
-        bool
-        IsConnected () const;
+    bool IsConnected() const;
 
-    private:
-        explicit SyncService (std::unique_ptr<Connection> &&conn);
+  private:
+    explicit SyncService(std::unique_ptr<Connection> &&conn);
 
-        Error
-        SendSyncRequest (const char *request_id, const uint32_t data_len, const void *data);
+    Error SendSyncRequest(const char *request_id, const uint32_t data_len,
+                          const void *data);
 
-        Error
-        ReadSyncHeader (std::string &response_id, uint32_t &data_len); 
+    Error ReadSyncHeader(std::string &response_id, uint32_t &data_len);
 
-        Error
-        PullFileChunk (std::vector<char> &buffer, bool &eof);
+    Error PullFileChunk(std::vector<char> &buffer, bool &eof);
 
-        Error
-        ReadAllBytes (void *buffer, size_t size);
+    Error ReadAllBytes(void *buffer, size_t size);
 
-        Error
-        internalPullFile (const FileSpec &remote_file, const FileSpec &local_file);
+    Error internalPullFile(const FileSpec &remote_file,
+                           const FileSpec &local_file);
 
-        Error
-        internalPushFile (const FileSpec &local_file, const FileSpec &remote_file);
+    Error internalPushFile(const FileSpec &local_file,
+                           const FileSpec &remote_file);
 
-        Error
-        internalStat (const FileSpec &remote_file, uint32_t &mode, uint32_t &size, uint32_t &mtime);
+    Error internalStat(const FileSpec &remote_file, uint32_t &mode,
+                       uint32_t &size, uint32_t &mtime);
 
-        Error
-        executeCommand (const std::function<Error()> &cmd);
+    Error executeCommand(const std::function<Error()> &cmd);
 
-        std::unique_ptr<Connection> m_conn;   
-    };
+    std::unique_ptr<Connection> m_conn;
+  };
 
-    static Error
-    CreateByDeviceID(const std::string &device_id, AdbClient &adb);
+  static Error CreateByDeviceID(const std::string &device_id, AdbClient &adb);
 
-    AdbClient ();
-    explicit AdbClient (const std::string &device_id);
+  AdbClient();
+  explicit AdbClient(const std::string &device_id);
 
-    ~AdbClient();
+  ~AdbClient();
 
-    const std::string&
-    GetDeviceID() const;
+  const std::string &GetDeviceID() const;
 
-    Error
-    GetDevices (DeviceIDList &device_list);
+  Error GetDevices(DeviceIDList &device_list);
 
-    Error
-    SetPortForwarding (const uint16_t local_port, const uint16_t remote_port);
+  Error SetPortForwarding(const uint16_t local_port,
+                          const uint16_t remote_port);
 
-    Error
-    SetPortForwarding (const uint16_t local_port,
-                       const char* remote_socket_name,
-                       const UnixSocketNamespace socket_namespace);
+  Error SetPortForwarding(const uint16_t local_port,
+                          const char *remote_socket_name,
+                          const UnixSocketNamespace socket_namespace);
 
-    Error
-    DeletePortForwarding (const uint16_t local_port);
+  Error DeletePortForwarding(const uint16_t local_port);
 
-    Error
-    Shell (const char* command, uint32_t timeout_ms, std::string* output);
+  Error Shell(const char *command, uint32_t timeout_ms, std::string *output);
 
-    Error
-    ShellToFile(const char *command, uint32_t timeout_ms, const FileSpec &output_file_spec);
+  Error ShellToFile(const char *command, uint32_t timeout_ms,
+                    const FileSpec &output_file_spec);
 
-    std::unique_ptr<SyncService>
-    GetSyncService (Error &error);
+  std::unique_ptr<SyncService> GetSyncService(Error &error);
 
-    Error
-    SwitchDeviceTransport ();
+  Error SwitchDeviceTransport();
 
 private:
-    Error
-    Connect ();
+  Error Connect();
 
-    void
-    SetDeviceID (const std::string &device_id);
+  void SetDeviceID(const std::string &device_id);
 
-    Error
-    SendMessage (const std::string &packet, const bool reconnect = true);
+  Error SendMessage(const std::string &packet, const bool reconnect = true);
 
-    Error
-    SendDeviceMessage (const std::string &packet);
+  Error SendDeviceMessage(const std::string &packet);
 
-    Error
-    ReadMessage (std::vector<char> &message);
+  Error ReadMessage(std::vector<char> &message);
 
-    Error
-    ReadMessageStream (std::vector<char> &message, uint32_t timeout_ms);
+  Error ReadMessageStream(std::vector<char> &message, uint32_t timeout_ms);
 
-    Error
-    GetResponseError (const char *response_id);
+  Error GetResponseError(const char *response_id);
 
-    Error
-    ReadResponseStatus ();
+  Error ReadResponseStatus();
 
-    Error
-    Sync ();
+  Error Sync();
 
-    Error
-    StartSync ();
+  Error StartSync();
 
-    Error
-    internalShell(const char *command, uint32_t timeout_ms, std::vector<char> &output_buf);
+  Error internalShell(const char *command, uint32_t timeout_ms,
+                      std::vector<char> &output_buf);
 
-    Error
-    ReadAllBytes(void *buffer, size_t size);
+  Error ReadAllBytes(void *buffer, size_t size);
 
-    std::string m_device_id;
-    std::unique_ptr<Connection> m_conn;
+  std::string m_device_id;
+  std::unique_ptr<Connection> m_conn;
 };
 
 } // namespace platform_android
 } // namespace lldb_private
 
-#endif  // liblldb_AdbClient_h_
-
+#endif // liblldb_AdbClient_h_

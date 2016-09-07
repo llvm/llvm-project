@@ -10,48 +10,39 @@
 #ifndef LLDB_SBQueueItem_h_
 #define LLDB_SBQueueItem_h_
 
-#include "lldb/API/SBDefines.h"
 #include "lldb/API/SBAddress.h"
+#include "lldb/API/SBDefines.h"
 
 namespace lldb {
 
-class LLDB_API SBQueueItem
-{
+class LLDB_API SBQueueItem {
 public:
-    SBQueueItem ();
+  SBQueueItem();
 
-    SBQueueItem (const lldb::QueueItemSP& queue_item_sp);
-    
-   ~SBQueueItem();
+  SBQueueItem(const lldb::QueueItemSP &queue_item_sp);
 
-    bool
-    IsValid() const;
+  ~SBQueueItem();
 
-    void
-    Clear ();
+  bool IsValid() const;
 
-    lldb::QueueItemKind
-    GetKind () const;
+  void Clear();
 
-    void
-    SetKind (lldb::QueueItemKind kind);
+  lldb::QueueItemKind GetKind() const;
 
-    lldb::SBAddress
-    GetAddress () const;
+  void SetKind(lldb::QueueItemKind kind);
 
-    void
-    SetAddress (lldb::SBAddress addr);
+  lldb::SBAddress GetAddress() const;
 
-    void
-    SetQueueItem (const lldb::QueueItemSP& queue_item_sp);
+  void SetAddress(lldb::SBAddress addr);
 
-    SBThread
-    GetExtendedBacktraceThread (const char *type);
+  void SetQueueItem(const lldb::QueueItemSP &queue_item_sp);
+
+  SBThread GetExtendedBacktraceThread(const char *type);
 
 private:
-    lldb::QueueItemSP           m_queue_item_sp;
+  lldb::QueueItemSP m_queue_item_sp;
 };
 
 } // namespace lldb
 
-#endif  // LLDB_SBQueueItem_h_
+#endif // LLDB_SBQueueItem_h_
