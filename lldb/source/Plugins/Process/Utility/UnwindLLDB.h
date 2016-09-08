@@ -18,6 +18,7 @@
 // Project includes
 #include "lldb/Core/ConstString.h"
 #include "lldb/Symbol/FuncUnwinders.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Unwind.h"

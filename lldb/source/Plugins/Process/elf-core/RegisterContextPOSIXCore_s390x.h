@@ -16,6 +16,7 @@
 // Project includes
 #include "Plugins/Process/Utility/RegisterContextPOSIX_s390x.h"
 #include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
 
 class RegisterContextCorePOSIX_s390x : public RegisterContextPOSIX_s390x {
 public:

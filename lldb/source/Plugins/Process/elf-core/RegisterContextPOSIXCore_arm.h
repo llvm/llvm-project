@@ -16,6 +16,7 @@
 // Project includes
 #include "Plugins/Process/Utility/RegisterContextPOSIX_arm.h"
 #include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
 
 class RegisterContextCorePOSIX_arm : public RegisterContextPOSIX_arm {
 public:

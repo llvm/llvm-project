@@ -12,7 +12,9 @@
 
 #if defined(__cplusplus)
 
-#include "lldb/lldb-private.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-types.h"
 
 #include <set>
 

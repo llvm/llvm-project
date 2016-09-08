@@ -16,6 +16,7 @@
 // Project includes
 #include "Plugins/Process/Utility/RegisterContextPOSIX_powerpc.h"
 #include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataExtractor.h"
 
 class RegisterContextCorePOSIX_powerpc : public RegisterContextPOSIX_powerpc {
 public:

@@ -193,7 +193,8 @@ public:
 private:
   Mutex *m_mutex = nullptr;
 
-  DISALLOW_COPY_AND_ASSIGN(LockingAdaptedIterable);
+  LockingAdaptedIterable(const LockingAdaptedIterable &) = delete;
+  LockingAdaptedIterable &operator=(const LockingAdaptedIterable &) = delete;
 };
 
 } // namespace lldb_private

@@ -10,6 +10,11 @@
 #ifndef liblldb_RegisterContext_x86_H_
 #define liblldb_RegisterContext_x86_H_
 
+#include <cstddef>
+#include <cstdint>
+
+#include "llvm/Support/Compiler.h"
+
 //---------------------------------------------------------------------------
 // i386 ehframe, dwarf regnums
 //---------------------------------------------------------------------------

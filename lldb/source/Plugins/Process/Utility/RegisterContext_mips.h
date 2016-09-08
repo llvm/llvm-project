@@ -10,6 +10,9 @@
 #ifndef liblldb_RegisterContext_mips64_H_
 #define liblldb_RegisterContext_mips64_H_
 
+#include <cstddef>
+#include <cstdint>
+
 // eh_frame and DWARF Register numbers (eRegisterKindEHFrame &
 // eRegisterKindDWARF)
 
