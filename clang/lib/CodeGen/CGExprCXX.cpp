@@ -33,6 +33,7 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
          isa<CXXOperatorCallExpr>(CE));
   assert(MD->isInstance() &&
          "Trying to emit a member or operator call expr on a static method!");
+  ASTContext &C = CGF.getContext();
 
   // C++11 [class.mfct.non-static]p2:
   //   If a non-static member function of a class X is called for an object that
@@ -40,13 +41,16 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, const CXXMethodDecl *MD,
   SourceLocation CallLoc;
   if (CE)
     CallLoc = CE->getExprLoc();
-  CGF.EmitTypeCheck(
-      isa<CXXConstructorDecl>(MD) ? CodeGenFunction::TCK_ConstructorCall
-                                  : CodeGenFunction::TCK_MemberCall,
-      CallLoc, This, CGF.getContext().getRecordType(MD->getParent()));
+  CGF.EmitTypeCheck(isa<CXXConstructorDecl>(MD)
+                        ? CodeGenFunction::TCK_ConstructorCall
+                        : CodeGenFunction::TCK_MemberCall,
+                    CallLoc, This, C.getRecordType(MD->getParent()));
 
   // Push the this ptr.
-  Args.add(RValue::get(This), MD->getThisType(CGF.getContext()));
+  const CXXRecordDecl *RD =
+      CGF.CGM.getCXXABI().getThisArgumentTypeForMethod(MD);
+  Args.add(RValue::get(This),
+           RD ? C.getPointerType(C.getTypeDeclType(RD)) : C.VoidPtrTy);
 
   // If there is an implicit parameter (e.g. VTT), emit it.
   if (ImplicitParam) {

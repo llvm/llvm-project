@@ -17,9 +17,10 @@
 
 import argparse
 import difflib
+import json
+import re
 import subprocess
 import vim
-import json
 
 # set g:clang_include_fixer_path to the path to clang-include-fixer if it is not
 # on the path.
@@ -43,6 +44,10 @@ if vim.eval('exists("g:clang_include_fixer_increment_num")') == "1":
 jump_to_include = False
 if vim.eval('exists("g:clang_include_fixer_jump_to_include")') == "1":
   jump_to_include = vim.eval('g:clang_include_fixer_jump_to_include') != "0"
+
+query_mode = True
+if vim.eval('exists("g:clang_include_fixer_query_mode")') == "1":
+  query_mode = vim.eval('g:clang_include_fixer_query_mode') != "0"
 
 
 def GetUserSelection(message, headers, maximum_suggested_headers):
@@ -105,6 +110,25 @@ def InsertHeaderToVimBuffer(header, text):
       vim.current.window.cursor = (line_num, 0)
 
 
+# The vim internal implementation (expand("cword"/"cWORD")) doesn't support
+# our use case very well, we re-implement our own one.
+def get_symbol_under_cursor():
+  line = vim.eval("line(\".\")")
+  # column number in vim is 1-based.
+  col = int(vim.eval("col(\".\")")) - 1
+  line_text = vim.eval("getline({0})".format(line))
+  if len(line_text) == 0: return ""
+  symbol_pos_begin = col
+  p = re.compile('[a-zA-Z0-9:_]')
+  while symbol_pos_begin >= 0 and p.match(line_text[symbol_pos_begin]):
+    symbol_pos_begin -= 1
+
+  symbol_pos_end = col
+  while symbol_pos_end < len(line_text) and p.match(line_text[symbol_pos_end]):
+    symbol_pos_end += 1
+  return line_text[symbol_pos_begin+1:symbol_pos_end]
+
+
 def main():
   parser = argparse.ArgumentParser(
       description='Vim integration for clang-include-fixer')
@@ -118,9 +142,18 @@ def main():
   buf = vim.current.buffer
   text = '\n'.join(buf)
 
-  # Run command to get all headers.
-  command = [binary, "-stdin", "-output-headers", "-db=" + args.db,
-             "-input=" + args.input, vim.current.buffer.name]
+  if query_mode:
+    symbol = get_symbol_under_cursor()
+    if len(symbol) == 0:
+      print "Skip querying empty symbol."
+      return
+    command = [binary, "-stdin", "-query-symbol="+get_symbol_under_cursor(),
+               "-db=" + args.db, "-input=" + args.input,
+               vim.current.buffer.name]
+  else:
+    # Run command to get all headers.
+    command = [binary, "-stdin", "-output-headers", "-db=" + args.db,
+               "-input=" + args.input, vim.current.buffer.name]
   stdout, stderr = execute(command, text)
   if stderr:
     print >> sys.stderr, "Error while running clang-include-fixer: " + stderr

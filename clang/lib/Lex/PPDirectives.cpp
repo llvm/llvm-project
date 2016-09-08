@@ -12,24 +12,41 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/Module.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/HeaderSearch.h"
-#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Lex/ModuleMap.h"
+#include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PTHLexer.h"
+#include "clang/Lex/Token.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/iterator_range.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/SaveAndRestore.h"
+#include <algorithm>
+#include <cassert>
+#include <cstring>
+#include <new>
+#include <string>
+#include <utility>
 
 using namespace clang;
 
@@ -381,7 +398,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation IfTokenLoc,
   // disabling warnings, etc.
   CurPPLexer->LexingRawMode = true;
   Token Tok;
-  while (1) {
+  while (true) {
     CurLexer->Lex(Tok);
 
     if (Tok.is(tok::code_completion)) {
@@ -577,7 +594,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation IfTokenLoc,
 }
 
 void Preprocessor::PTHSkipExcludedConditionalBlock() {
-  while (1) {
+  while (true) {
     assert(CurPTHLexer);
     assert(CurPTHLexer->LexingRawMode == false);
 
@@ -1854,9 +1871,9 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
         !SuggestedModule.getModule()
              ->getTopLevelModule()
              ->HasIncompatibleModuleFile) {
-      clang::Module::Requirement Requirement;
-      clang::Module::UnresolvedHeaderDirective MissingHeader;
-      clang::Module *ShadowingModule = nullptr;
+      Module::Requirement Requirement;
+      Module::UnresolvedHeaderDirective MissingHeader;
+      Module *ShadowingModule = nullptr;
       Module *M = SuggestedModule.getModule();
       // Identify the cause.
       (void)M->isAvailable(getLangOpts(), getTargetInfo(), Requirement,
@@ -2130,7 +2147,7 @@ void Preprocessor::HandleIncludeMacrosDirective(SourceLocation HashLoc,
 bool Preprocessor::ReadMacroDefinitionArgList(MacroInfo *MI, Token &Tok) {
   SmallVector<IdentifierInfo*, 32> Arguments;
 
-  while (1) {
+  while (true) {
     LexUnexpandedToken(Tok);
     switch (Tok.getKind()) {
     case tok::r_paren:

@@ -1,0 +1,7 @@
+obj/
+bin/
+.vs/
+Key.snk
+clang-tidy.exe
+packages/
+*.csproj.user

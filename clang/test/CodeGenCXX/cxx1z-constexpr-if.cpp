@@ -2,7 +2,15 @@
 
 void should_be_used_1();
 void should_be_used_2();
+void should_be_used_3();
 void should_not_be_used();
+
+struct A {
+  constexpr explicit operator bool() const {
+    return true;
+  }
+};
+
 void f() {
   if constexpr (false)
     should_not_be_used();
@@ -15,7 +23,12 @@ void f() {
     goto foo;
 foo: should_not_be_used();
   }
+  if constexpr (A())
+    should_be_used_3();
+  else
+    should_not_be_used();
 }
 
 // CHECK: should_be_used_1
 // CHECK: should_be_used_2
+// CHECK: should_be_used_3

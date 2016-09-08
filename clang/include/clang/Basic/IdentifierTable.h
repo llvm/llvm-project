@@ -205,8 +205,7 @@ public:
 
   /// \brief Return a value indicating whether this is a builtin function.
   ///
-  /// 0 is not-built-in.  1 is builtin-for-some-nonprimary-target.
-  /// 2+ are specific builtin functions.
+  /// 0 is not-built-in. 1+ are specific builtin functions.
   unsigned getBuiltinID() const {
     if (ObjCOrBuiltinID >= tok::NUM_OBJC_KEYWORDS)
       return ObjCOrBuiltinID - tok::NUM_OBJC_KEYWORDS;

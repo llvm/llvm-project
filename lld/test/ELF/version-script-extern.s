@@ -1,17 +1,18 @@
-# REQUIRES: shell
+# REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: echo "LIBSAMPLE_1.0 { \
 # RUN:   global:             \
-# RUN:      extern "C++" {   \
-# RUN:         \"foo(int)\";    \
-# RUN:         \"zed(int)\";    \
+# RUN:      extern \"C++\" { \
+# RUN:         \"foo(int)\"; \
+# RUN:         \"zed(int)\"; \
+# RUN:         \"abc::abc()\"; \
 # RUN:   };                  \
 # RUN: };                    \
 # RUN: LIBSAMPLE_2.0 {       \
 # RUN:   global:             \
-# RUN:     extern "C++" {    \
-# RUN:       \"bar(int)\";      \
+# RUN:     extern \"C++\" {  \
+# RUN:       \"bar(int)\";   \
 # RUN:   };                  \
 # RUN: }; " > %t.script
 # RUN: ld.lld --version-script %t.script -shared %t.o -o %t.so
@@ -54,11 +55,20 @@
 # DSO-NEXT:      Other: 0
 # DSO-NEXT:      Section: .text (0x6)
 # DSO-NEXT:    }
+# DSO-NEXT:    Symbol {
+# DSO-NEXT:      Name: _ZN3abcC1Ev@@LIBSAMPLE_1.0
+# DSO-NEXT:      Value: 0x1003
+# DSO-NEXT:      Size: 0
+# DSO-NEXT:      Binding: Global (0x1)
+# DSO-NEXT:      Type: Function (0x2)
+# DSO-NEXT:      Other: 0
+# DSO-NEXT:      Section: .text (0x6)
+# DSO-NEXT:    }
 # DSO-NEXT:  ]
 # DSO-NEXT:  Version symbols {
 # DSO-NEXT:    Section Name: .gnu.version
-# DSO-NEXT:    Address: 0x228
-# DSO-NEXT:    Offset: 0x228
+# DSO-NEXT:    Address: 0x240
+# DSO-NEXT:    Offset: 0x240
 # DSO-NEXT:    Link: 1
 # DSO-NEXT:    Symbols [
 # DSO-NEXT:      Symbol {
@@ -77,6 +87,10 @@
 # DSO-NEXT:        Version: 2
 # DSO-NEXT:        Name: _Z3zedi@@LIBSAMPLE_1.0
 # DSO-NEXT:      }
+# DSO-NEXT:      Symbol {
+# DSO-NEXT:        Version: 2
+# DSO-NEXT:        Name: _ZN3abcC1Ev@@LIBSAMPLE_1.0
+# DSO-NEXT:      }
 # DSO-NEXT:    ]
 # DSO-NEXT:  }
 
@@ -94,4 +108,9 @@ retq
 .globl _Z3zedi
 .type _Z3zedi,@function
 _Z3zedi:
+retq
+
+.globl _ZN3abcC1Ev
+.type _ZN3abcC1Ev,@function
+_ZN3abcC1Ev:
 retq

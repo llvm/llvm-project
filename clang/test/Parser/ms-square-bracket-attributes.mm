@@ -94,6 +94,23 @@ struct struct_with_uuid2_trigraph;
 // expected-error@+1 {{uuid attribute contains a malformed GUID}}
 [uuid(0Z0000A0-0000-0000-C000-000000000049)] struct struct_with_uuid2;
 
+struct OuterClass {
+  // [] uuids and inner classes are weird in cl.exe: It warns that uuid on
+  // nested types has undefined behavior, and errors out __uuidof() claiming
+  // that the inner type has no assigned uuid.  Things work fine if __declspec()
+  // is used instead.  clang-cl handles this fine.
+  [uuid(10000000-0000-0000-0000-000000000000)] class InnerClass1;
+  [uuid(10000000-0000-0000-0000-000000000000)] class InnerClass2 {} ic;
+  [uuid(10000000-0000-0000-0000-000000000000)] static class InnerClass3 {} sic;
+  // Putting `static` in front of [...] causes parse errors in both cl and clang
+
+  // This is the only syntax to declare an inner class with []-style attributes
+  // that works in cl: Declare the inner class without an attribute, and then
+  // have the []-style attribute on the definition.
+  class InnerClass;
+};
+[uuid(10000000-0000-0000-0000-000000000000)] class OuterClass::InnerClass {};
+
 void use_it() {
   (void)__uuidof(struct_with_uuid);
   (void)__uuidof(struct_with_uuid_brace);
@@ -107,7 +124,17 @@ void use_it() {
   (void)__uuidof(struct_with_uuid2_macro);
   (void)__uuidof(struct_with_uuid2_macro_part);
   (void)__uuidof(struct_with_uuid2_trigraph);
+
+  (void)__uuidof(OuterClass::InnerClass);
+  (void)__uuidof(OuterClass::InnerClass1);
+  (void)__uuidof(OuterClass::InnerClass2);
+  (void)__uuidof(OuterClass::InnerClass3);
+  (void)__uuidof(OuterClass().ic);
+  (void)__uuidof(OuterClass::sic);
 }
+
+// expected-warning@+1 {{'uuid' attribute only applies to classes}}
+[uuid("000000A0-0000-0000-C000-000000000049")] void f();
 }
 
 // clang supports these on toplevel decls, but not on local decls since this

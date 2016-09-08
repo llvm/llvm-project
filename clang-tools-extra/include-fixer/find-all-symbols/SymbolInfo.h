@@ -54,6 +54,8 @@ public:
              int LineNumber, const std::vector<Context> &Contexts,
              unsigned NumOccurrences = 0);
 
+  void SetFilePath(llvm::StringRef Path) { FilePath = Path; }
+
   /// \brief Get symbol name.
   llvm::StringRef getName() const { return Name; }
 

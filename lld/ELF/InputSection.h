@@ -53,6 +53,8 @@ public:
   bool Compressed;
   // If a section is compressed, this vector has uncompressed section data.
   SmallVector<char, 0> Uncompressed;
+
+  std::vector<Relocation> Relocations;
 };
 
 // This corresponds to a section of an input file.
@@ -102,7 +104,6 @@ public:
   void uncompress();
 
   void relocate(uint8_t *Buf, uint8_t *BufEnd);
-  std::vector<Relocation<ELFT>> Relocations;
 };
 
 template <class ELFT> InputSectionBase<ELFT> InputSectionBase<ELFT>::Discarded;

@@ -98,6 +98,12 @@ cl::opt<std::string> Input("input",
                            cl::desc("String to initialize the database"),
                            cl::cat(IncludeFixerCategory));
 
+cl::opt<std::string>
+    QuerySymbol("query-symbol",
+                 cl::desc("Query a given symbol (e.g. \"a::b::foo\") in\n"
+                          "database directly without parsing the file."),
+                 cl::cat(IncludeFixerCategory));
+
 cl::opt<bool>
     MinimizeIncludePaths("minimize-paths",
                          cl::desc("Whether to minimize added include paths"),
@@ -236,6 +242,7 @@ int includeFixerMain(int argc, const char **argv) {
   tooling::ClangTool tool(options.getCompilations(),
                           options.getSourcePathList());
 
+  llvm::StringRef SourceFilePath = options.getSourcePathList().front();
   // In STDINMode, we override the file content with the <stdin> input.
   // Since `tool.mapVirtualFile` takes `StringRef`, we define `Code` outside of
   // the if-block so that `Code` is not released after the if-block.
@@ -253,7 +260,7 @@ int includeFixerMain(int argc, const char **argv) {
     if (Code->getBufferSize() == 0)
       return 0;  // Skip empty files.
 
-    tool.mapVirtualFile(options.getSourcePathList().front(), Code->getBuffer());
+    tool.mapVirtualFile(SourceFilePath, Code->getBuffer());
   }
 
   if (!InsertHeader.empty()) {
@@ -314,9 +321,30 @@ int includeFixerMain(int argc, const char **argv) {
 
   // Set up data source.
   std::unique_ptr<include_fixer::SymbolIndexManager> SymbolIndexMgr =
-      createSymbolIndexManager(options.getSourcePathList().front());
+      createSymbolIndexManager(SourceFilePath);
   if (!SymbolIndexMgr)
     return 1;
+
+  // Query symbol mode.
+  if (!QuerySymbol.empty()) {
+    auto MatchedSymbols = SymbolIndexMgr->search(QuerySymbol);
+    for (auto &Symbol : MatchedSymbols) {
+      std::string HeaderPath = Symbol.getFilePath().str();
+      Symbol.SetFilePath(((HeaderPath[0] == '"' || HeaderPath[0] == '<')
+                              ? HeaderPath
+                              : "\"" + HeaderPath + "\""));
+    }
+
+    // We leave an empty symbol range as we don't know the range of the symbol
+    // being queried in this mode. include-fixer won't add namespace qualifiers
+    // if the symbol range is empty, which also fits this case.
+    IncludeFixerContext::QuerySymbolInfo Symbol;
+    Symbol.RawIdentifier = QuerySymbol;
+    auto Context =
+        IncludeFixerContext(SourceFilePath, {Symbol}, MatchedSymbols);
+    writeToJson(llvm::outs(), Context);
+    return 0;
+  }
 
   // Now run our tool.
   std::vector<include_fixer::IncludeFixerContext> Contexts;
