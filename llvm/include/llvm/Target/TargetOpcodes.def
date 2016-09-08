@@ -153,7 +153,24 @@ HANDLE_TARGET_OPCODE(PATCHABLE_FUNCTION_ENTER)
 /// Wraps a return instruction and its operands to enable adding nop sleds
 /// either before or after the return. The nop sleds are useful for inserting
 /// instrumentation instructions at runtime.
+/// The patch here replaces the return instruction.
 HANDLE_TARGET_OPCODE(PATCHABLE_RET)
+
+/// This is a marker instruction which gets translated into a nop sled, useful
+/// for inserting instrumentation instructions at runtime.
+/// The patch here prepends the return instruction.
+/// The same thing as in x86_64 is not possible for ARM because it has multiple
+/// return instructions. Furthermore, CPU allows parametrized and even
+/// conditional return instructions. In the current ARM implementation we are
+/// making use of the fact that currently LLVM doesn't seem to generate
+/// conditional return instructions.
+/// On ARM, the same instruction can be used for popping multiple registers
+/// from the stack and returning (it just pops pc register too), and LLVM
+/// generates it sometimes. So we can't insert the sled between this stack
+/// adjustment and the return without splitting the original instruction into 2
+/// instructions. So on ARM, rather than jumping into the exit trampoline, we
+/// call it, it does the tracing, preserves the stack and returns.
+HANDLE_TARGET_OPCODE(PATCHABLE_FUNCTION_EXIT)
 
 /// Wraps a tail call instruction and its operands to enable adding nop sleds
 /// either before or after the tail exit. We use this as a disambiguation from

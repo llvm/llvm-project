@@ -65,6 +65,50 @@ bool CodeViewContext::addFile(unsigned FileNumber, StringRef Filename) {
   return true;
 }
 
+bool CodeViewContext::recordFunctionId(unsigned FuncId) {
+  if (FuncId >= Functions.size())
+    Functions.resize(FuncId + 1);
+
+  // Return false if this function info was already allocated.
+  if (!Functions[FuncId].isUnallocatedFunctionInfo())
+    return false;
+
+  // Mark this as an allocated normal function, and leave the rest alone.
+  Functions[FuncId].ParentFuncIdPlusOne = MCCVFunctionInfo::FunctionSentinel;
+  return true;
+}
+
+bool CodeViewContext::recordInlinedCallSiteId(unsigned FuncId, unsigned IAFunc,
+                                              unsigned IAFile, unsigned IALine,
+                                              unsigned IACol) {
+  if (FuncId >= Functions.size())
+    Functions.resize(FuncId + 1);
+
+  // Return false if this function info was already allocated.
+  if (!Functions[FuncId].isUnallocatedFunctionInfo())
+    return false;
+
+  MCCVFunctionInfo::LineInfo InlinedAt;
+  InlinedAt.File = IAFile;
+  InlinedAt.Line = IALine;
+  InlinedAt.Col = IACol;
+
+  // Mark this as an inlined call site and record call site line info.
+  MCCVFunctionInfo *Info = &Functions[FuncId];
+  Info->ParentFuncIdPlusOne = IAFunc + 1;
+  Info->InlinedAt = InlinedAt;
+
+  // Walk up the call chain adding this function id to the InlinedAtMap of all
+  // transitive callers until we hit a real function.
+  while (Info->isInlinedCallSite()) {
+    InlinedAt = Info->InlinedAt;
+    Info = getCVFunctionInfo(Info->getParentFuncId());
+    Info->InlinedAtMap[FuncId] = InlinedAt;
+  }
+
+  return true;
+}
+
 MCDataFragment *CodeViewContext::getStringTableFragment() {
   if (!StrTabFragment) {
     StrTabFragment = new MCDataFragment();
@@ -237,15 +281,17 @@ static uint32_t encodeSignedNumber(uint32_t Data) {
   return Data << 1;
 }
 
-void CodeViewContext::emitInlineLineTableForFunction(
-    MCObjectStreamer &OS, unsigned PrimaryFunctionId, unsigned SourceFileId,
-    unsigned SourceLineNum, const MCSymbol *FnStartSym,
-    const MCSymbol *FnEndSym, ArrayRef<unsigned> SecondaryFunctionIds) {
+void CodeViewContext::emitInlineLineTableForFunction(MCObjectStreamer &OS,
+                                                     unsigned PrimaryFunctionId,
+                                                     unsigned SourceFileId,
+                                                     unsigned SourceLineNum,
+                                                     const MCSymbol *FnStartSym,
+                                                     const MCSymbol *FnEndSym) {
   // Create and insert a fragment into the current section that will be encoded
   // later.
-  new MCCVInlineLineTableFragment(
-      PrimaryFunctionId, SourceFileId, SourceLineNum, FnStartSym, FnEndSym,
-      SecondaryFunctionIds, OS.getCurrentSectionOnly());
+  new MCCVInlineLineTableFragment(PrimaryFunctionId, SourceFileId,
+                                  SourceLineNum, FnStartSym, FnEndSym,
+                                  OS.getCurrentSectionOnly());
 }
 
 void CodeViewContext::emitDefRange(
@@ -280,20 +326,21 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
   size_t LocBegin;
   size_t LocEnd;
   std::tie(LocBegin, LocEnd) = getLineExtent(Frag.SiteFuncId);
-  for (unsigned SecondaryId : Frag.SecondaryFuncs) {
-    auto Extent = getLineExtent(SecondaryId);
+
+  // Include all child inline call sites in our .cv_loc extent.
+  MCCVFunctionInfo *SiteInfo = getCVFunctionInfo(Frag.SiteFuncId);
+  for (auto &KV : SiteInfo->InlinedAtMap) {
+    unsigned ChildId = KV.first;
+    auto Extent = getLineExtent(ChildId);
     LocBegin = std::min(LocBegin, Extent.first);
     LocEnd = std::max(LocEnd, Extent.second);
   }
+
   if (LocBegin >= LocEnd)
     return;
   ArrayRef<MCCVLineEntry> Locs = getLinesForExtent(LocBegin, LocEnd);
   if (Locs.empty())
     return;
-
-  SmallSet<unsigned, 8> InlinedFuncIds;
-  InlinedFuncIds.insert(Frag.SiteFuncId);
-  InlinedFuncIds.insert(Frag.SecondaryFuncs.begin(), Frag.SecondaryFuncs.end());
 
   // Make an artificial start location using the function start and the inlinee
   // lines start location information. All deltas start relative to this
@@ -301,48 +348,61 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
   MCCVLineEntry StartLoc(Frag.getFnStartSym(), MCCVLoc(Locs.front()));
   StartLoc.setFileNum(Frag.StartFileId);
   StartLoc.setLine(Frag.StartLineNum);
-  const MCCVLineEntry *LastLoc = &StartLoc;
   bool HaveOpenRange = false;
+
+  const MCSymbol *LastLabel = Frag.getFnStartSym();
+  MCCVFunctionInfo::LineInfo LastSourceLoc, CurSourceLoc;
+  LastSourceLoc.File = Frag.StartFileId;
+  LastSourceLoc.Line = Frag.StartLineNum;
 
   SmallVectorImpl<char> &Buffer = Frag.getContents();
   Buffer.clear(); // Clear old contents if we went through relaxation.
   for (const MCCVLineEntry &Loc : Locs) {
-    if (!InlinedFuncIds.count(Loc.getFunctionId())) {
-      // We've hit a cv_loc not attributed to this inline call site. Use this
-      // label to end the PC range.
-      if (HaveOpenRange) {
-        unsigned Length =
-            computeLabelDiff(Layout, LastLoc->getLabel(), Loc.getLabel());
-        compressAnnotation(BinaryAnnotationsOpCode::ChangeCodeLength, Buffer);
-        compressAnnotation(Length, Buffer);
+    if (Loc.getFunctionId() == Frag.SiteFuncId) {
+      CurSourceLoc.File = Loc.getFileNum();
+      CurSourceLoc.Line = Loc.getLine();
+    } else {
+      auto I = SiteInfo->InlinedAtMap.find(Loc.getFunctionId());
+      if (I != SiteInfo->InlinedAtMap.end()) {
+        // This .cv_loc is from a child inline call site. Use the source
+        // location of the inlined call site instead of the .cv_loc directive
+        // source location.
+        CurSourceLoc = I->second;
+      } else {
+        // We've hit a cv_loc not attributed to this inline call site. Use this
+        // label to end the PC range.
+        if (HaveOpenRange) {
+          unsigned Length = computeLabelDiff(Layout, LastLabel, Loc.getLabel());
+          compressAnnotation(BinaryAnnotationsOpCode::ChangeCodeLength, Buffer);
+          compressAnnotation(Length, Buffer);
+          LastLabel = Loc.getLabel();
+        }
+        HaveOpenRange = false;
+        continue;
       }
-      HaveOpenRange = false;
-      continue;
     }
 
-    // If we've already opened the function and we're at an indirectly inlined
-    // location, continue until the next directly inlined location.
-    bool DirectlyInlined = Loc.getFunctionId() == Frag.SiteFuncId;
-    if (!DirectlyInlined && HaveOpenRange)
+    // Skip this .cv_loc if we have an open range and this isn't a meaningful
+    // source location update. The current table format does not support column
+    // info, so we can skip updates for those.
+    if (HaveOpenRange && CurSourceLoc.File == LastSourceLoc.File &&
+        CurSourceLoc.Line == LastSourceLoc.Line)
       continue;
+
     HaveOpenRange = true;
 
-    if (Loc.getFileNum() != LastLoc->getFileNum()) {
+    if (CurSourceLoc.File != LastSourceLoc.File) {
       // File ids are 1 based, and each file checksum table entry is 8 bytes
       // long. See emitFileChecksums above.
-      unsigned FileOffset = 8 * (Loc.getFileNum() - 1);
+      unsigned FileOffset = 8 * (CurSourceLoc.File - 1);
       compressAnnotation(BinaryAnnotationsOpCode::ChangeFile, Buffer);
       compressAnnotation(FileOffset, Buffer);
     }
 
-    int LineDelta = Loc.getLine() - LastLoc->getLine();
-    if (LineDelta == 0)
-      continue;
-
+    int LineDelta = CurSourceLoc.Line - LastSourceLoc.Line;
     unsigned EncodedLineDelta = encodeSignedNumber(LineDelta);
-    unsigned CodeDelta =
-        computeLabelDiff(Layout, LastLoc->getLabel(), Loc.getLabel());
-    if (CodeDelta == 0) {
+    unsigned CodeDelta = computeLabelDiff(Layout, LastLabel, Loc.getLabel());
+    if (CodeDelta == 0 && LineDelta != 0) {
       compressAnnotation(BinaryAnnotationsOpCode::ChangeLineOffset, Buffer);
       compressAnnotation(EncodedLineDelta, Buffer);
     } else if (EncodedLineDelta < 0x8 && CodeDelta <= 0xf) {
@@ -355,29 +415,29 @@ void CodeViewContext::encodeInlineLineTable(MCAsmLayout &Layout,
       compressAnnotation(Operand, Buffer);
     } else {
       // Otherwise use the separate line and code deltas.
-      compressAnnotation(BinaryAnnotationsOpCode::ChangeLineOffset, Buffer);
-      compressAnnotation(EncodedLineDelta, Buffer);
+      if (LineDelta != 0) {
+        compressAnnotation(BinaryAnnotationsOpCode::ChangeLineOffset, Buffer);
+        compressAnnotation(EncodedLineDelta, Buffer);
+      }
       compressAnnotation(BinaryAnnotationsOpCode::ChangeCodeOffset, Buffer);
       compressAnnotation(CodeDelta, Buffer);
     }
 
-    LastLoc = &Loc;
+    LastLabel = Loc.getLabel();
+    LastSourceLoc = CurSourceLoc;
   }
 
   assert(HaveOpenRange);
 
   unsigned EndSymLength =
-      computeLabelDiff(Layout, LastLoc->getLabel(), Frag.getFnEndSym());
+      computeLabelDiff(Layout, LastLabel, Frag.getFnEndSym());
   unsigned LocAfterLength = ~0U;
   ArrayRef<MCCVLineEntry> LocAfter = getLinesForExtent(LocEnd, LocEnd + 1);
   if (!LocAfter.empty()) {
     // Only try to compute this difference if we're in the same section.
     const MCCVLineEntry &Loc = LocAfter[0];
-    if (&Loc.getLabel()->getSection(false) ==
-        &LastLoc->getLabel()->getSection(false)) {
-      LocAfterLength =
-          computeLabelDiff(Layout, LastLoc->getLabel(), Loc.getLabel());
-    }
+    if (&Loc.getLabel()->getSection(false) == &LastLabel->getSection(false))
+      LocAfterLength = computeLabelDiff(Layout, LastLabel, Loc.getLabel());
   }
 
   compressAnnotation(BinaryAnnotationsOpCode::ChangeCodeLength, Buffer);

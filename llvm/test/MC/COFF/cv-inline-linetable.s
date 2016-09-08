@@ -15,6 +15,9 @@
 "?baz@@YAXXZ":                          # @"\01?baz@@YAXXZ"
 Lfunc_begin0:
 	.cv_file	1 "D:\\src\\llvm\\build\\t.cpp"
+	.cv_func_id 0
+	.cv_inline_site_id 1 within 0 inlined_at 1 15 3
+	.cv_inline_site_id 2 within 1 inlined_at 1 10 3
 	.cv_loc	0 1 13 0 is_stmt 0      # t.cpp:13:0
 # BB#0:                                 # %entry
 	pushl	%eax
@@ -84,16 +87,18 @@ Ltmp3:
 Ltmp4:
 	.short	4429
 	.asciz	"\000\000\000\000\000\000\000\000\003\020\000"
-	.cv_inline_linetable	1 1 9 Lfunc_begin0 Lfunc_end0 contains 2
+	.cv_inline_linetable	1 1 9 Lfunc_begin0 Lfunc_end0
 # CHECK:    InlineSite {
 # CHECK:      PtrParent: 0x0
 # CHECK:      PtrEnd: 0x0
 # CHECK:      Inlinee: bar (0x1003)
 # CHECK:      BinaryAnnotations [
-# CHECK:        ChangeLineOffset: 2
-# CHECK:        ChangeCodeOffset: 0x2D
-# CHECK:        ChangeCodeLength: 0x7
-# CHECK:      ]
+# CHECK-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x8, LineOffset: 0}
+# CHECK-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x7, LineOffset: 1}
+# CHECK-NEXT:   ChangeLineOffset: 1
+# CHECK-NEXT:   ChangeCodeOffset: 0x1E
+# CHECK-NEXT:   ChangeCodeLength: 0x7
+# CHECK-NEXT: ]
 # CHECK:    }
 Ltmp5:
 	.short	Ltmp7-Ltmp6
@@ -106,12 +111,12 @@ Ltmp6:
 # CHECK:      PtrEnd: 0x0
 # CHECK:      Inlinee: foo (0x1004)
 # CHECK:      BinaryAnnotations [
-# CHECK:        ChangeLineOffset: 1
-# CHECK:        ChangeCodeOffset: 0x19
-# CHECK:        ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x6, LineOffset: 1}
-# CHECK:        ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x7, LineOffset: 1}
-# CHECK:        ChangeCodeLength: 0x7
-# CHECK:      ]
+# CHECK-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xF, LineOffset: 0}
+# CHECK-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xA, LineOffset: 1}
+# CHECK-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x6, LineOffset: 1}
+# CHECK-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x7, LineOffset: 1}
+# CHECK-NEXT:   ChangeCodeLength: 0x7
+# CHECK-NEXT: ]
 # CHECK:    }
 Ltmp7:
 	.short	2

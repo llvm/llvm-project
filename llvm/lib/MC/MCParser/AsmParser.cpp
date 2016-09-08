@@ -378,6 +378,9 @@ private:
 
   bool parseRegisterOrRegisterNumber(int64_t &Register, SMLoc DirectiveLoc);
 
+  bool parseCVFunctionId(int64_t &FunctionId, StringRef DirectiveName);
+  bool parseCVFileId(int64_t &FileId, StringRef DirectiveName);
+
   // Generic (target and platform independent) directive parsing.
   enum DirectiveKind {
     DK_NO_DIRECTIVE, // Placeholder
@@ -397,8 +400,9 @@ private:
     DK_IFNB, DK_IFC, DK_IFEQS, DK_IFNC, DK_IFNES, DK_IFDEF, DK_IFNDEF,
     DK_IFNOTDEF, DK_ELSEIF, DK_ELSE, DK_ENDIF,
     DK_SPACE, DK_SKIP, DK_FILE, DK_LINE, DK_LOC, DK_STABS,
-    DK_CV_FILE, DK_CV_LOC, DK_CV_LINETABLE, DK_CV_INLINE_LINETABLE,
-    DK_CV_DEF_RANGE, DK_CV_STRINGTABLE, DK_CV_FILECHECKSUMS,
+    DK_CV_FILE, DK_CV_FUNC_ID, DK_CV_INLINE_SITE_ID, DK_CV_LOC, DK_CV_LINETABLE,
+    DK_CV_INLINE_LINETABLE, DK_CV_DEF_RANGE, DK_CV_STRINGTABLE,
+    DK_CV_FILECHECKSUMS,
     DK_CFI_SECTIONS, DK_CFI_STARTPROC, DK_CFI_ENDPROC, DK_CFI_DEF_CFA,
     DK_CFI_DEF_CFA_OFFSET, DK_CFI_ADJUST_CFA_OFFSET, DK_CFI_DEF_CFA_REGISTER,
     DK_CFI_OFFSET, DK_CFI_REL_OFFSET, DK_CFI_PERSONALITY, DK_CFI_LSDA,
@@ -436,9 +440,11 @@ private:
   bool parseDirectiveLoc();
   bool parseDirectiveStabs();
 
-  // ".cv_file", ".cv_loc", ".cv_linetable", "cv_inline_linetable",
-  // ".cv_def_range"
+  // ".cv_file", ".cv_func_id", ".cv_inline_site_id", ".cv_loc", ".cv_linetable",
+  // ".cv_inline_linetable", ".cv_def_range"
   bool parseDirectiveCVFile();
+  bool parseDirectiveCVFuncId();
+  bool parseDirectiveCVInlineSiteId();
   bool parseDirectiveCVLoc();
   bool parseDirectiveCVLinetable();
   bool parseDirectiveCVInlineLinetable();
@@ -1790,6 +1796,10 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveStabs();
     case DK_CV_FILE:
       return parseDirectiveCVFile();
+    case DK_CV_FUNC_ID:
+      return parseDirectiveCVFuncId();
+    case DK_CV_INLINE_SITE_ID:
+      return parseDirectiveCVInlineSiteId();
     case DK_CV_LOC:
       return parseDirectiveCVLoc();
     case DK_CV_LINETABLE:
@@ -3240,6 +3250,107 @@ bool AsmParser::parseDirectiveCVFile() {
   return false;
 }
 
+bool AsmParser::parseCVFunctionId(int64_t &FunctionId,
+                                  StringRef DirectiveName) {
+  SMLoc Loc;
+  return parseTokenLoc(Loc) ||
+         parseIntToken(FunctionId, "expected function id in '" + DirectiveName +
+                                       "' directive") ||
+         check(FunctionId < 0 || FunctionId >= UINT_MAX, Loc,
+               "expected function id within range [0, UINT_MAX)");
+}
+
+bool AsmParser::parseCVFileId(int64_t &FileNumber, StringRef DirectiveName) {
+  SMLoc Loc;
+  return parseTokenLoc(Loc) ||
+         parseIntToken(FileNumber, "expected integer in '" + DirectiveName +
+                                       "' directive") ||
+         check(FileNumber < 1, Loc, "file number less than one in '" +
+                                        DirectiveName + "' directive") ||
+         check(!getCVContext().isValidFileNumber(FileNumber), Loc,
+               "unassigned file number in '" + DirectiveName + "' directive");
+}
+
+/// parseDirectiveCVFuncId
+/// ::= .cv_func_id FunctionId
+///
+/// Introduces a function ID that can be used with .cv_loc.
+bool AsmParser::parseDirectiveCVFuncId() {
+  SMLoc FunctionIdLoc = getTok().getLoc();
+  int64_t FunctionId;
+
+  if (parseCVFunctionId(FunctionId, ".cv_func_id") ||
+      parseToken(AsmToken::EndOfStatement,
+                 "unexpected token in '.cv_func_id' directive"))
+    return true;
+
+  if (!getStreamer().EmitCVFuncIdDirective(FunctionId))
+    Error(FunctionIdLoc, "function id already allocated");
+
+  return false;
+}
+
+/// parseDirectiveCVInlineSiteId
+/// ::= .cv_inline_site_id FunctionId
+///         "within" IAFunc
+///         "inlined_at" IAFile IALine [IACol]
+///
+/// Introduces a function ID that can be used with .cv_loc. Includes "inlined
+/// at" source location information for use in the line table of the caller,
+/// whether the caller is a real function or another inlined call site.
+bool AsmParser::parseDirectiveCVInlineSiteId() {
+  SMLoc FunctionIdLoc = getTok().getLoc();
+  int64_t FunctionId;
+  int64_t IAFunc;
+  int64_t IAFile;
+  int64_t IALine;
+  int64_t IACol = 0;
+
+  // FunctionId
+  if (parseCVFunctionId(FunctionId, ".cv_inline_site_id"))
+    return true;
+
+  // "within"
+  if (check((getLexer().isNot(AsmToken::Identifier) ||
+             getTok().getIdentifier() != "within"),
+            "expected 'within' identifier in '.cv_inline_site_id' directive"))
+    return true;
+  Lex();
+
+  // IAFunc
+  if (parseCVFunctionId(IAFunc, ".cv_inline_site_id"))
+    return true;
+
+  // "inlined_at"
+  if (check((getLexer().isNot(AsmToken::Identifier) ||
+             getTok().getIdentifier() != "inlined_at"),
+            "expected 'inlined_at' identifier in '.cv_inline_site_id' "
+            "directive") )
+    return true;
+  Lex();
+
+  // IAFile IALine
+  if (parseCVFileId(IAFile, ".cv_inline_site_id") ||
+      parseIntToken(IALine, "expected line number after 'inlined_at'"))
+    return true;
+
+  // [IACol]
+  if (getLexer().is(AsmToken::Integer)) {
+    IACol = getTok().getIntVal();
+    Lex();
+  }
+
+  if (parseToken(AsmToken::EndOfStatement,
+                 "unexpected token in '.cv_inline_site_id' directive"))
+    return true;
+
+  if (!getStreamer().EmitCVInlineSiteIdDirective(FunctionId, IAFunc, IAFile,
+                                                 IALine, IACol, FunctionIdLoc))
+    Error(FunctionIdLoc, "function id already allocated");
+
+  return false;
+}
+
 /// parseDirectiveCVLoc
 /// ::= .cv_loc FunctionId FileNumber [LineNumber] [ColumnPos] [prologue_end]
 ///                                [is_stmt VALUE]
@@ -3248,18 +3359,11 @@ bool AsmParser::parseDirectiveCVFile() {
 /// third number is a column position (zero if not specified).  The remaining
 /// optional items are .loc sub-directives.
 bool AsmParser::parseDirectiveCVLoc() {
+  SMLoc DirectiveLoc = getTok().getLoc();
   SMLoc Loc;
   int64_t FunctionId, FileNumber;
-  if (parseTokenLoc(Loc) ||
-      parseIntToken(FunctionId, "unexpected token in '.cv_loc' directive") ||
-      check(FunctionId < 0, Loc,
-            "function id less than zero in '.cv_loc' directive") ||
-      parseTokenLoc(Loc) ||
-      parseIntToken(FileNumber, "expected integer in '.cv_loc' directive") ||
-      check(FileNumber < 1, Loc,
-            "file number less than one in '.cv_loc' directive") ||
-      check(!getCVContext().isValidFileNumber(FileNumber), Loc,
-            "unassigned file number in '.cv_loc' directive"))
+  if (parseCVFunctionId(FunctionId, ".cv_loc") ||
+      parseCVFileId(FileNumber, ".cv_loc"))
     return true;
 
   int64_t LineNumber = 0;
@@ -3307,7 +3411,8 @@ bool AsmParser::parseDirectiveCVLoc() {
   Lex();
 
   getStreamer().EmitCVLocDirective(FunctionId, FileNumber, LineNumber,
-                                   ColumnPos, PrologueEnd, IsStmt, StringRef());
+                                   ColumnPos, PrologueEnd, IsStmt, StringRef(),
+                                   DirectiveLoc);
   return false;
 }
 
@@ -3317,10 +3422,7 @@ bool AsmParser::parseDirectiveCVLinetable() {
   int64_t FunctionId;
   StringRef FnStartName, FnEndName;
   SMLoc Loc = getTok().getLoc();
-  if (parseIntToken(FunctionId,
-                    "expected Integer in '.cv_linetable' directive") ||
-      check(FunctionId < 0, Loc,
-            "function id less than zero in '.cv_linetable' directive") ||
+  if (parseCVFunctionId(FunctionId, ".cv_linetable") ||
       parseToken(AsmToken::Comma,
                  "unexpected token in '.cv_linetable' directive") ||
       parseTokenLoc(Loc) || check(parseIdentifier(FnStartName), Loc,
@@ -3340,16 +3442,11 @@ bool AsmParser::parseDirectiveCVLinetable() {
 
 /// parseDirectiveCVInlineLinetable
 /// ::= .cv_inline_linetable PrimaryFunctionId FileId LineNum FnStart FnEnd
-///          ("contains" SecondaryFunctionId+)?
 bool AsmParser::parseDirectiveCVInlineLinetable() {
   int64_t PrimaryFunctionId, SourceFileId, SourceLineNum;
   StringRef FnStartName, FnEndName;
   SMLoc Loc = getTok().getLoc();
-  if (parseIntToken(
-          PrimaryFunctionId,
-          "expected PrimaryFunctionId in '.cv_inline_linetable' directive") ||
-      check(PrimaryFunctionId < 0, Loc,
-            "function id less than zero in '.cv_inline_linetable' directive") ||
+  if (parseCVFunctionId(PrimaryFunctionId, ".cv_inline_linetable") ||
       parseTokenLoc(Loc) ||
       parseIntToken(
           SourceFileId,
@@ -3368,24 +3465,6 @@ bool AsmParser::parseDirectiveCVInlineLinetable() {
                                   "expected identifier in directive"))
     return true;
 
-  SmallVector<unsigned, 8> SecondaryFunctionIds;
-  if (getLexer().is(AsmToken::Identifier)) {
-    if (getTok().getIdentifier() != "contains")
-      return TokError(
-          "unexpected identifier in '.cv_inline_linetable' directive");
-    Lex();
-
-    while (getLexer().isNot(AsmToken::EndOfStatement)) {
-      int64_t SecondaryFunctionId = getTok().getIntVal();
-      if (SecondaryFunctionId < 0)
-        return TokError(
-            "function id less than zero in '.cv_inline_linetable' directive");
-      Lex();
-
-      SecondaryFunctionIds.push_back(SecondaryFunctionId);
-    }
-  }
-
   if (parseToken(AsmToken::EndOfStatement, "Expected End of Statement"))
     return true;
 
@@ -3393,7 +3472,7 @@ bool AsmParser::parseDirectiveCVInlineLinetable() {
   MCSymbol *FnEndSym = getContext().getOrCreateSymbol(FnEndName);
   getStreamer().EmitCVInlineLinetableDirective(PrimaryFunctionId, SourceFileId,
                                                SourceLineNum, FnStartSym,
-                                               FnEndSym, SecondaryFunctionIds);
+                                               FnEndSym);
   return false;
 }
 
@@ -4701,9 +4780,11 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".loc"] = DK_LOC;
   DirectiveKindMap[".stabs"] = DK_STABS;
   DirectiveKindMap[".cv_file"] = DK_CV_FILE;
+  DirectiveKindMap[".cv_func_id"] = DK_CV_FUNC_ID;
   DirectiveKindMap[".cv_loc"] = DK_CV_LOC;
   DirectiveKindMap[".cv_linetable"] = DK_CV_LINETABLE;
   DirectiveKindMap[".cv_inline_linetable"] = DK_CV_INLINE_LINETABLE;
+  DirectiveKindMap[".cv_inline_site_id"] = DK_CV_INLINE_SITE_ID;
   DirectiveKindMap[".cv_def_range"] = DK_CV_DEF_RANGE;
   DirectiveKindMap[".cv_stringtable"] = DK_CV_STRINGTABLE;
   DirectiveKindMap[".cv_filechecksums"] = DK_CV_FILECHECKSUMS;

@@ -21,11 +21,14 @@
 ; 16:   x += 7;
 ; 17: }
 
+; ASM: .cv_func_id 0
 ; ASM: .cv_loc 0 1 13 0 is_stmt 0      # t.cpp:13:0
 ; ASM: .cv_loc 0 1 14 5                # t.cpp:14:5
 ; ASM: addl    $6, "?x@@3HC"
+; ASM: .cv_inline_site_id 1 within 0 inlined_at 1 15 3
 ; ASM: .cv_loc 1 1 9 5                 # t.cpp:9:5
 ; ASM: addl    $4, "?x@@3HC"
+; ASM: .cv_inline_site_id 2 within 1 inlined_at 1 10 3
 ; ASM: .cv_loc 2 1 3 7                 # t.cpp:3:7
 ; ASM: .cv_loc 2 1 4 5                 # t.cpp:4:5
 ; ASM: addl    {{.*}}, "?x@@3HC"
@@ -60,7 +63,7 @@
 ; ASM: .long
 ; ASM: .long
 ; ASM: .long
-; ASM: .cv_inline_linetable 1 1 8 Lfunc_begin0 Lfunc_end0 contains 2
+; ASM: .cv_inline_linetable 1 1 8 Lfunc_begin0 Lfunc_end0
 ; ASM: .short 4429
 ; ASM: .long
 ; ASM: .long
@@ -184,8 +187,9 @@
 ; OBJ:     Inlinee: bar (0x1002)
 ; OBJ:      BinaryAnnotations [
 ; OBJ-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x8, LineOffset: 1}
-; OBJ-NEXT:   ChangeLineOffset: 2
-; OBJ-NEXT:   ChangeCodeOffset: 0x25
+; OBJ-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x7, LineOffset: 1}
+; OBJ-NEXT:   ChangeLineOffset: 1
+; OBJ-NEXT:   ChangeCodeOffset: 0x1E
 ; OBJ-NEXT:   ChangeCodeLength: 0x7
 ; OBJ:      ]
 ; OBJ:   }

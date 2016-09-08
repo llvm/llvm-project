@@ -20,13 +20,13 @@
 ; OBJ:   SubSectionType: Symbols (0xF1)
 ; OBJ:   ProcStart {
 ; OBJ:   InlineSite {
-; OBJ:     Inlinee: h (0x1004)
+; OBJ:     Inlinee: h (0x1002)
 ; OBJ:   }
 ; OBJ:   InlineSite {
 ; OBJ:     Inlinee: g (0x1003)
 ; OBJ:   }
 ; OBJ:   InlineSite {
-; OBJ:     Inlinee: f (0x1002)
+; OBJ:     Inlinee: f (0x1004)
 ; OBJ:   }
 ; OBJ:   InlineSiteEnd {
 ; OBJ:   }

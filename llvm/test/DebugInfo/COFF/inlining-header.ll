@@ -25,13 +25,16 @@
 
 ; ASM: _main:                                  # @main
 ; ASM: Lfunc_begin0:
+; ASM:         .cv_func_id 0
 ; ASM: # BB#0:                                 # %entry
 ; ASM:         .cv_file        1 "D:\\src\\llvm\\build\\t.cpp"
 ; ASM:         .cv_loc 0 1 9 5 is_stmt 0       # t.cpp:9:5
 ; ASM:         incl    "?x@@3HC"
+; ASM:         .cv_inline_site_id 1 within 0 inlined_at 1 10 3
 ; ASM:         .cv_loc 1 1 4 5                 # t.cpp:4:5
 ; ASM:         addl    $2, "?x@@3HC"
 ; ASM:         .cv_file        2 "D:\\src\\llvm\\build\\t.h"
+; ASM:         .cv_inline_site_id 2 within 1 inlined_at 1 5 3
 ; ASM:         .cv_loc 2 2 2 5                 # ./t.h:2:5
 ; ASM:         addl    $3, "?x@@3HC"
 ; ASM:         .cv_loc 1 1 6 5                 # t.cpp:6:5
@@ -61,7 +64,6 @@
 
 ; OBJ: Subsection [
 ; OBJ:   SubSectionType: Symbols (0xF1)
-; OBJ:   SubSectionSize: 0x62
 ; OBJ:   ProcStart {
 ; OBJ:     Kind: S_GPROC32_ID (0x1147)
 ; OBJ:     FunctionType: main (0x1005)
@@ -78,7 +80,8 @@
 ; OBJ:          Inlinee: g (0x1002)
 ; OBJ:          BinaryAnnotations [
 ; OBJ-NEXT:       ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x6, LineOffset: 1}
-; OBJ-NEXT:       ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xE, LineOffset: 2}
+; OBJ-NEXT:       ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x7, LineOffset: 1}
+; OBJ-NEXT:       ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x7, LineOffset: 1}
 ; OBJ-NEXT:       ChangeCodeLength: 0x7
 ; OBJ-NEXT:     ]
 ; OBJ:        }

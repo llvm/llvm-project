@@ -391,3 +391,13 @@
   bnezc $2, -4194303       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
   bnezc $2, 4194304        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch target out of range
   bnezc $2, 4194303        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: branch to misaligned address
+  dlsa $3, $4, $5, 5           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected immediate in range 1 .. 4
+  dlsa $3, $4, $5, -1          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected immediate in range 1 .. 4
+  dlsa $3, $4, $5, 0           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected immediate in range 1 .. 4
+  lwupc $2, 262145             # CHECK: :[[@LINE]]:13: error: expected both 19-bit signed immediate and multiple of 4
+  lwupc $2, 5                  # CHECK: :[[@LINE]]:13: error: expected both 19-bit signed immediate and multiple of 4
+  lwupc $2, -262145            # CHECK: :[[@LINE]]:13: error: expected both 19-bit signed immediate and multiple of 4
+  lwupc $2, $2                 # CHECK: :[[@LINE]]:13: error: expected both 19-bit signed immediate and multiple of 4
+  lwupc $2, bar+267            # CHECK: :[[@LINE]]:13: error: expected both 19-bit signed immediate and multiple of 4
+  aui $3, $4, 32768            # CHECK: :[[@LINE]]:15: error: expected 16-bit signed immediate
+  aui $3, $4, -32769           # CHECK: :[[@LINE]]:15: error: expected 16-bit signed immediate

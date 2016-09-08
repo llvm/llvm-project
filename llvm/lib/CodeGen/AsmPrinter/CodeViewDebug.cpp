@@ -124,7 +124,16 @@ CodeViewDebug::getInlineSite(const DILocation *InlinedAt,
   auto SiteInsertion = CurFn->InlineSites.insert({InlinedAt, InlineSite()});
   InlineSite *Site = &SiteInsertion.first->second;
   if (SiteInsertion.second) {
+    unsigned ParentFuncId = CurFn->FuncId;
+    if (const DILocation *OuterIA = InlinedAt->getInlinedAt())
+      ParentFuncId =
+          getInlineSite(OuterIA, InlinedAt->getScope()->getSubprogram())
+              .SiteFuncId;
+
     Site->SiteFuncId = NextFuncId++;
+    OS.EmitCVInlineSiteIdDirective(
+        Site->SiteFuncId, ParentFuncId, maybeRecordFile(InlinedAt->getFile()),
+        InlinedAt->getLine(), InlinedAt->getColumn(), SMLoc());
     Site->Inlinee = Inlinee;
     InlinedSubprograms.insert(Inlinee);
     getFuncIdForSubprogram(Inlinee);
@@ -357,8 +366,8 @@ void CodeViewDebug::maybeRecordLocation(const DebugLoc &DL,
   }
 
   OS.EmitCVLocDirective(FuncId, FileId, DL.getLine(), DL.getCol(),
-                        /*PrologueEnd=*/false,
-                        /*IsStmt=*/false, DL->getFilename());
+                        /*PrologueEnd=*/false, /*IsStmt=*/false,
+                        DL->getFilename(), SMLoc());
 }
 
 void CodeViewDebug::emitCodeViewMagicVersion() {
@@ -529,17 +538,6 @@ void CodeViewDebug::emitInlineeLinesSubsection() {
   endCVSubsection(InlineEnd);
 }
 
-void CodeViewDebug::collectInlineSiteChildren(
-    SmallVectorImpl<unsigned> &Children, const FunctionInfo &FI,
-    const InlineSite &Site) {
-  for (const DILocation *ChildSiteLoc : Site.ChildSites) {
-    auto I = FI.InlineSites.find(ChildSiteLoc);
-    const InlineSite &ChildSite = I->second;
-    Children.push_back(ChildSite.SiteFuncId);
-    collectInlineSiteChildren(Children, FI, ChildSite);
-  }
-}
-
 void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
                                         const DILocation *InlinedAt,
                                         const InlineSite &Site) {
@@ -565,11 +563,9 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
 
   unsigned FileId = maybeRecordFile(Site.Inlinee->getFile());
   unsigned StartLineNum = Site.Inlinee->getLine();
-  SmallVector<unsigned, 3> SecondaryFuncIds;
-  collectInlineSiteChildren(SecondaryFuncIds, FI, Site);
 
   OS.EmitCVInlineLinetableDirective(Site.SiteFuncId, FileId, StartLineNum,
-                                    FI.Begin, FI.End, SecondaryFuncIds);
+                                    FI.Begin, FI.End);
 
   OS.EmitLabel(InlineEnd);
 
@@ -876,6 +872,8 @@ void CodeViewDebug::beginFunction(const MachineFunction *MF) {
   CurFn = &FnDebugInfo[GV];
   CurFn->FuncId = NextFuncId++;
   CurFn->Begin = Asm->getFunctionBegin();
+
+  OS.EmitCVFuncIdDirective(CurFn->FuncId);
 
   // Find the end of the function prolog.  First known non-DBG_VALUE and
   // non-frame setup location marks the beginning of the function body.

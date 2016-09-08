@@ -13,6 +13,7 @@
 #include "MipsRegisterInfo.h"
 #include "MipsTargetObjectFile.h"
 #include "MipsTargetStreamer.h"
+#include "MCTargetDesc/MipsBaseInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCContext.h"
@@ -1166,8 +1167,14 @@ public:
   }
   template <unsigned Bits, unsigned ShiftLeftAmount>
   bool isScaledSImm() const {
-    return isConstantImm() &&
-           isShiftedInt<Bits, ShiftLeftAmount>(getConstantImm());
+    if (isConstantImm() && isShiftedInt<Bits, ShiftLeftAmount>(getConstantImm()))
+      return true;
+    // Operand can also be a symbol or symbol plus offset in case of relocations.
+    if (Kind != k_Immediate)
+      return false;
+    MCValue Res;
+    bool Success = getImm()->evaluateAsRelocatable(Res, nullptr, nullptr);
+    return Success && isShiftedInt<Bits, ShiftLeftAmount>(Res.getConstant());
   }
   bool isRegList16() const {
     if (!isRegList())
@@ -1839,7 +1846,8 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     ExpandedJalSym = true;
   }
 
-  if (MCID.mayLoad() || MCID.mayStore()) {
+  bool IsPCRelativeLoad = (MCID.TSFlags & MipsII::IsPCRelativeLoad) != 0;
+  if ((MCID.mayLoad() || MCID.mayStore()) && !IsPCRelativeLoad) {
     // Check the offset of memory operand, if it is a symbol
     // reference or immediate we may have to expand instructions.
     for (unsigned i = 0; i < MCID.getNumOperands(); i++) {
@@ -4030,6 +4038,9 @@ bool MipsAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_SImm16_Relaxed:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 16-bit signed immediate");
+  case Match_SImm19_Lsl2:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected both 19-bit signed immediate and multiple of 4");
   case Match_UImm20_0:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 20-bit unsigned immediate");

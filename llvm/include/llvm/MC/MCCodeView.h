@@ -105,6 +105,55 @@ public:
   static void Make(MCObjectStreamer *MCOS);
 };
 
+/// Information describing a function or inlined call site introduced by
+/// .cv_func_id or .cv_inline_site_id. Accumulates information from .cv_loc
+/// directives used with this function's id or the id of an inlined call site
+/// within this function or inlined call site.
+struct MCCVFunctionInfo {
+  /// If this represents an inlined call site, then ParentFuncIdPlusOne will be
+  /// the parent function id plus one. If this represents a normal function,
+  /// then there is no parent, and ParentFuncIdPlusOne will be FunctionSentinel.
+  /// If this struct is an unallocated slot in the function info vector, then
+  /// ParentFuncIdPlusOne will be zero.
+  unsigned ParentFuncIdPlusOne = 0;
+
+  enum : unsigned { FunctionSentinel = ~0U };
+
+  struct LineInfo {
+    unsigned File;
+    unsigned Line;
+    unsigned Col;
+  };
+
+  LineInfo InlinedAt;
+
+  /// The section of the first .cv_loc directive used for this function, or null
+  /// if none has been seen yet.
+  MCSection *Section = nullptr;
+
+  /// Map from inlined call site id to the inlined at location to use for that
+  /// call site. Call chains are collapsed, so for the call chain 'f -> g -> h',
+  /// the InlinedAtMap of 'f' will contain entries for 'g' and 'h' that both
+  /// list the line info for the 'g' call site.
+  DenseMap<unsigned, LineInfo> InlinedAtMap;
+
+  /// Returns true if this is function info has not yet been used in a
+  /// .cv_func_id or .cv_inline_site_id directive.
+  bool isUnallocatedFunctionInfo() const { return ParentFuncIdPlusOne == 0; }
+
+  /// Returns true if this represents an inlined call site, meaning
+  /// ParentFuncIdPlusOne is neither zero nor ~0U.
+  bool isInlinedCallSite() const {
+    return !isUnallocatedFunctionInfo() &&
+           ParentFuncIdPlusOne != FunctionSentinel;
+  }
+
+  unsigned getParentFuncId() const {
+    assert(isInlinedCallSite());
+    return ParentFuncIdPlusOne - 1;
+  }
+};
+
 /// Holds state from .cv_file and .cv_loc directives for later emission.
 class CodeViewContext {
 public:
@@ -114,6 +163,27 @@ public:
   bool isValidFileNumber(unsigned FileNumber) const;
   bool addFile(unsigned FileNumber, StringRef Filename);
   ArrayRef<StringRef> getFilenames() { return Filenames; }
+
+  /// Records the function id of a normal function. Returns false if the
+  /// function id has already been used, and true otherwise.
+  bool recordFunctionId(unsigned FuncId);
+
+  /// Records the function id of an inlined call site. Records the "inlined at"
+  /// location info of the call site, including what function or inlined call
+  /// site it was inlined into. Returns false if the function id has already
+  /// been used, and true otherwise.
+  bool recordInlinedCallSiteId(unsigned FuncId, unsigned IAFunc,
+                               unsigned IAFile, unsigned IALine,
+                               unsigned IACol);
+
+  /// Retreive the function info if this is a valid function id, or nullptr.
+  MCCVFunctionInfo *getCVFunctionInfo(unsigned FuncId) {
+    if (FuncId >= Functions.size())
+      return nullptr;
+    if (Functions[FuncId].isUnallocatedFunctionInfo())
+      return nullptr;
+    return &Functions[FuncId];
+  }
 
   /// Saves the information from the currently parsed .cv_loc directive
   /// and sets CVLocSeen.  When the next instruction is assembled an entry
@@ -179,10 +249,12 @@ public:
                                 const MCSymbol *FuncBegin,
                                 const MCSymbol *FuncEnd);
 
-  void emitInlineLineTableForFunction(
-      MCObjectStreamer &OS, unsigned PrimaryFunctionId, unsigned SourceFileId,
-      unsigned SourceLineNum, const MCSymbol *FnStartSym,
-      const MCSymbol *FnEndSym, ArrayRef<unsigned> SecondaryFunctionIds);
+  void emitInlineLineTableForFunction(MCObjectStreamer &OS,
+                                      unsigned PrimaryFunctionId,
+                                      unsigned SourceFileId,
+                                      unsigned SourceLineNum,
+                                      const MCSymbol *FnStartSym,
+                                      const MCSymbol *FnEndSym);
 
   /// Encodes the binary annotations once we have a layout.
   void encodeInlineLineTable(MCAsmLayout &Layout,
@@ -230,6 +302,9 @@ private:
 
   /// A collection of MCCVLineEntry for each section.
   std::vector<MCCVLineEntry> MCCVLines;
+
+  /// All known functions and inlined call sites, indexed by function id.
+  std::vector<MCCVFunctionInfo> Functions;
 };
 
 } // end namespace llvm

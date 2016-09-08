@@ -7,6 +7,8 @@
 .cv_file 1 "a.c"
 .cv_file 2 "t.inc"
 
+.cv_func_id 0
+
 # Implements this C:
 # void f(volatile int *x) {
 #   ++*x;

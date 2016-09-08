@@ -22,6 +22,7 @@
 ; 17: }
 
 ; ASM: f:                                      # @f
+; ASM:         .cv_func_id 0
 ; ASM:         .cv_file        1 "D:\\src\\llvm\\build\\t.cpp"
 ; ASM:         .cv_loc 0 1 7 0 is_stmt 0       # t.cpp:7:0
 ; ASM: .seh_proc f
@@ -40,6 +41,7 @@
 ; ASM:         .cv_loc 0 1 9 9                 # t.cpp:9:9
 ; ASM:         movl    $42, 40(%rsp)
 ; ASM: [[inline_site1:\.Ltmp.*]]:
+; ASM:         .cv_inline_site_id 1 within 0 inlined_at 1 10 5
 ; ASM:         .cv_loc 1 1 4 7                 # t.cpp:4:7
 ; ASM:         movl    $3, 44(%rsp)
 ; ASM:         leaq    44(%rsp), %rcx
@@ -54,6 +56,7 @@
 ; ASM:         .cv_loc 0 1 13 9                # t.cpp:13:9
 ; ASM:         movl    $42, 36(%rsp)
 ; ASM: [[inline_site2:\.Ltmp.*]]:
+; ASM:         .cv_inline_site_id 2 within 0 inlined_at 1 14 5
 ; ASM:         .cv_loc 2 1 4 7                 # t.cpp:4:7
 ; ASM:         movl    $3, 48(%rsp)
 ; ASM:         leaq    48(%rsp), %rcx

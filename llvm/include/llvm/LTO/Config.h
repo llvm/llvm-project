@@ -78,6 +78,11 @@ struct Config {
   /// Disable entirely the optimizer, including importing for ThinLTO
   bool CodeGenOnly = false;
 
+  /// If this field is set, the set of passes run in the middle-end optimizer
+  /// will be the one specified by the string. Only works with the new pass
+  /// manager as the old one doesn't have this ability.
+  std::string OptPipeline;
+
   /// Setting this field will replace target triples in input files with this
   /// triple.
   std::string OverrideTriple;
@@ -164,6 +169,7 @@ struct Config {
         RelocModel(std::move(X.RelocModel)), CodeModel(std::move(X.CodeModel)),
         CGOptLevel(std::move(X.CGOptLevel)), OptLevel(std::move(X.OptLevel)),
         DisableVerify(std::move(X.DisableVerify)),
+        OptPipeline(std::move(X.OptPipeline)),
         OverrideTriple(std::move(X.OverrideTriple)),
         DefaultTriple(std::move(X.DefaultTriple)),
         ShouldDiscardValueNames(std::move(X.ShouldDiscardValueNames)),
@@ -187,6 +193,7 @@ struct Config {
     CGOptLevel = std::move(X.CGOptLevel);
     OptLevel = std::move(X.OptLevel);
     DisableVerify = std::move(X.DisableVerify);
+    OptPipeline = std::move(X.OptPipeline);
     OverrideTriple = std::move(X.OverrideTriple);
     DefaultTriple = std::move(X.DefaultTriple);
     ShouldDiscardValueNames = std::move(X.ShouldDiscardValueNames);

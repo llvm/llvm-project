@@ -824,6 +824,15 @@ void AMDGPUAsmPrinter::emitStartOfRuntimeMetadata(const Module &M) {
       }
     }
   }
+
+  if (auto MD = M.getNamedMetadata("llvm.printf.fmts")) {
+    for (unsigned I = 0; I < MD->getNumOperands(); ++I) {
+      auto Node = MD->getOperand(I);
+      if (Node->getNumOperands() > 0)
+        emitRuntimeMDStringValue(*OutStreamer, RuntimeMD::KeyPrintfInfo,
+            cast<MDString>(Node->getOperand(0))->getString());
+    }
+  }
 }
 
 static std::string getOCLTypeName(Type *Ty, bool Signed) {
@@ -896,6 +905,93 @@ static RuntimeMD::KernelArg::ValueType getRuntimeMDValueType(
   }
 }
 
+static RuntimeMD::KernelArg::AddressSpaceQualifer getRuntimeAddrSpace(
+    AMDGPUAS::AddressSpaces A) {
+  switch (A) {
+  case AMDGPUAS::GLOBAL_ADDRESS:
+    return RuntimeMD::KernelArg::Global;
+  case AMDGPUAS::CONSTANT_ADDRESS:
+    return RuntimeMD::KernelArg::Constant;
+  case AMDGPUAS::LOCAL_ADDRESS:
+    return RuntimeMD::KernelArg::Local;
+  case AMDGPUAS::FLAT_ADDRESS:
+    return RuntimeMD::KernelArg::Generic;
+  case AMDGPUAS::REGION_ADDRESS:
+    return RuntimeMD::KernelArg::Region;
+  default:
+    return RuntimeMD::KernelArg::Private;
+  }
+}
+
+static void emitRuntimeMetadataForKernelArg(const DataLayout &DL,
+    MCStreamer &OutStreamer, Type *T,
+    RuntimeMD::KernelArg::Kind Kind,
+    StringRef BaseTypeName = "", StringRef TypeName = "",
+    StringRef ArgName = "", StringRef TypeQual = "", StringRef AccQual = "") {
+  // Emit KeyArgBegin.
+  OutStreamer.EmitIntValue(RuntimeMD::KeyArgBegin, 1);
+
+  // Emit KeyArgSize and KeyArgAlign.
+  emitRuntimeMDIntValue(OutStreamer, RuntimeMD::KeyArgSize,
+                        DL.getTypeAllocSize(T), 4);
+  emitRuntimeMDIntValue(OutStreamer, RuntimeMD::KeyArgAlign,
+                        DL.getABITypeAlignment(T), 4);
+  if (auto PT = dyn_cast<PointerType>(T)) {
+    auto ET = PT->getElementType();
+    if (PT->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS && ET->isSized())
+      emitRuntimeMDIntValue(OutStreamer, RuntimeMD::KeyArgPointeeAlign,
+                        DL.getABITypeAlignment(ET), 4);
+  }
+
+  // Emit KeyArgTypeName.
+  if (!TypeName.empty())
+    emitRuntimeMDStringValue(OutStreamer, RuntimeMD::KeyArgTypeName, TypeName);
+
+  // Emit KeyArgName.
+  if (!ArgName.empty())
+    emitRuntimeMDStringValue(OutStreamer, RuntimeMD::KeyArgName, ArgName);
+
+  // Emit KeyArgIsVolatile, KeyArgIsRestrict, KeyArgIsConst and KeyArgIsPipe.
+  SmallVector<StringRef, 1> SplitQ;
+  TypeQual.split(SplitQ, " ", -1, false /* Drop empty entry */);
+
+  for (StringRef KeyName : SplitQ) {
+    auto Key = StringSwitch<RuntimeMD::Key>(KeyName)
+      .Case("volatile", RuntimeMD::KeyArgIsVolatile)
+      .Case("restrict", RuntimeMD::KeyArgIsRestrict)
+      .Case("const",    RuntimeMD::KeyArgIsConst)
+      .Case("pipe",     RuntimeMD::KeyArgIsPipe)
+      .Default(RuntimeMD::KeyNull);
+    OutStreamer.EmitIntValue(Key, 1);
+  }
+
+  // Emit KeyArgKind.
+  emitRuntimeMDIntValue(OutStreamer, RuntimeMD::KeyArgKind, Kind, 1);
+
+  // Emit KeyArgValueType.
+  emitRuntimeMDIntValue(OutStreamer, RuntimeMD::KeyArgValueType,
+                        getRuntimeMDValueType(T, BaseTypeName), 2);
+
+  // Emit KeyArgAccQual.
+  if (!AccQual.empty()) {
+    auto AQ = StringSwitch<RuntimeMD::KernelArg::AccessQualifer>(AccQual)
+      .Case("read_only",  RuntimeMD::KernelArg::ReadOnly)
+      .Case("write_only", RuntimeMD::KernelArg::WriteOnly)
+      .Case("read_write", RuntimeMD::KernelArg::ReadWrite)
+      .Default(RuntimeMD::KernelArg::None);
+    emitRuntimeMDIntValue(OutStreamer, RuntimeMD::KeyArgAccQual, AQ, 1);
+  }
+
+  // Emit KeyArgAddrQual.
+  if (auto *PT = dyn_cast<PointerType>(T))
+    emitRuntimeMDIntValue(OutStreamer, RuntimeMD::KeyArgAddrQual,
+        getRuntimeAddrSpace(static_cast<AMDGPUAS::AddressSpaces>(
+            PT->getAddressSpace())), 1);
+
+  // Emit KeyArgEnd
+  OutStreamer.EmitIntValue(RuntimeMD::KeyArgEnd, 1);
+}
+
 void AMDGPUAsmPrinter::emitRuntimeMetadata(const Function &F) {
   if (!F.getMetadata("kernel_arg_type"))
     return;
@@ -906,56 +1002,25 @@ void AMDGPUAsmPrinter::emitRuntimeMetadata(const Function &F) {
   OutStreamer->EmitIntValue(RuntimeMD::KeyKernelBegin, 1);
   emitRuntimeMDStringValue(*OutStreamer, RuntimeMD::KeyKernelName, F.getName());
 
+  const DataLayout &DL = F.getParent()->getDataLayout();
   for (auto &Arg : F.args()) {
-    // Emit KeyArgBegin.
     unsigned I = Arg.getArgNo();
-    OutStreamer->EmitIntValue(RuntimeMD::KeyArgBegin, 1);
-
-    // Emit KeyArgSize, KeyArgAlign and KeyArgPointeeAlign.
     Type *T = Arg.getType();
-    const DataLayout &DL = F.getParent()->getDataLayout();
-    emitRuntimeMDIntValue(*OutStreamer, RuntimeMD::KeyArgSize,
-                          DL.getTypeAllocSize(T), 4);
-    emitRuntimeMDIntValue(*OutStreamer, RuntimeMD::KeyArgAlign,
-                          DL.getABITypeAlignment(T), 4);
-    if (auto PT = dyn_cast<PointerType>(T)) {
-      auto ET = PT->getElementType();
-      if (ET->isSized())
-        emitRuntimeMDIntValue(*OutStreamer, RuntimeMD::KeyArgPointeeAlign,
-                          DL.getABITypeAlignment(ET), 4);
-    }
-
-    // Emit KeyArgTypeName.
     auto TypeName = dyn_cast<MDString>(F.getMetadata(
-      "kernel_arg_type")->getOperand(I))->getString();
-    emitRuntimeMDStringValue(*OutStreamer, RuntimeMD::KeyArgTypeName, TypeName);
-
-    // Emit KeyArgName.
-    if (auto ArgNameMD = F.getMetadata("kernel_arg_name")) {
-      auto ArgName = cast<MDString>(ArgNameMD->getOperand(I))->getString();
-      emitRuntimeMDStringValue(*OutStreamer, RuntimeMD::KeyArgName, ArgName);
-    }
-
-    // Emit KeyArgIsVolatile, KeyArgIsRestrict, KeyArgIsConst and KeyArgIsPipe.
+        "kernel_arg_type")->getOperand(I))->getString();
+    auto BaseTypeName = cast<MDString>(F.getMetadata(
+        "kernel_arg_base_type")->getOperand(I))->getString();
+    StringRef ArgName;
+    if (auto ArgNameMD = F.getMetadata("kernel_arg_name"))
+      ArgName = cast<MDString>(ArgNameMD->getOperand(I))->getString();
     auto TypeQual = cast<MDString>(F.getMetadata(
-      "kernel_arg_type_qual")->getOperand(I))->getString();
-    SmallVector<StringRef, 1> SplitQ;
-    TypeQual.split(SplitQ, " ", -1, false /* Drop empty entry */);
-
-    for (StringRef KeyName : SplitQ) {
-      auto Key = StringSwitch<RuntimeMD::Key>(KeyName)
-        .Case("volatile", RuntimeMD::KeyArgIsVolatile)
-        .Case("restrict", RuntimeMD::KeyArgIsRestrict)
-        .Case("const",    RuntimeMD::KeyArgIsConst)
-        .Case("pipe",     RuntimeMD::KeyArgIsPipe)
-        .Default(RuntimeMD::KeyNull);
-      OutStreamer->EmitIntValue(Key, 1);
-    }
-
-    // Emit KeyArgTypeKind.
-    auto BaseTypeName = cast<MDString>(
-      F.getMetadata("kernel_arg_base_type")->getOperand(I))->getString();
-    auto TypeKind = StringSwitch<RuntimeMD::KernelArg::TypeKind>(BaseTypeName)
+        "kernel_arg_type_qual")->getOperand(I))->getString();
+    auto AccQual = cast<MDString>(F.getMetadata(
+        "kernel_arg_access_qual")->getOperand(I))->getString();
+    RuntimeMD::KernelArg::Kind Kind;
+    if (TypeQual.find("pipe") != StringRef::npos)
+      Kind = RuntimeMD::KernelArg::Pipe;
+    else Kind = StringSwitch<RuntimeMD::KernelArg::Kind>(BaseTypeName)
       .Case("sampler_t", RuntimeMD::KernelArg::Sampler)
       .Case("queue_t",   RuntimeMD::KernelArg::Queue)
       .Cases("image1d_t", "image1d_array_t", "image1d_buffer_t",
@@ -965,32 +1030,30 @@ void AMDGPUAsmPrinter::emitRuntimeMetadata(const Function &F) {
              "image2d_msaa_depth_t",  RuntimeMD::KernelArg::Image)
       .Cases("image2d_array_msaa_depth_t", "image3d_t",
              RuntimeMD::KernelArg::Image)
-      .Default(isa<PointerType>(T) ? RuntimeMD::KernelArg::Pointer :
-               RuntimeMD::KernelArg::Value);
-    emitRuntimeMDIntValue(*OutStreamer, RuntimeMD::KeyArgTypeKind, TypeKind, 1);
+      .Default(isa<PointerType>(T) ?
+                   (T->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ?
+                   RuntimeMD::KernelArg::DynamicSharedPointer :
+                   RuntimeMD::KernelArg::GlobalBuffer) :
+                   RuntimeMD::KernelArg::ByValue);
+    emitRuntimeMetadataForKernelArg(DL, *OutStreamer, T,
+        Kind, BaseTypeName, TypeName, ArgName, TypeQual, AccQual);
+  }
 
-    // Emit KeyArgValueType.
-    emitRuntimeMDIntValue(*OutStreamer, RuntimeMD::KeyArgValueType,
-                          getRuntimeMDValueType(T, BaseTypeName), 2);
-
-    // Emit KeyArgAccQual.
-    auto AccQual = cast<MDString>(F.getMetadata(
-      "kernel_arg_access_qual")->getOperand(I))->getString();
-    auto AQ = StringSwitch<RuntimeMD::KernelArg::AccessQualifer>(AccQual)
-      .Case("read_only",  RuntimeMD::KernelArg::ReadOnly)
-      .Case("write_only", RuntimeMD::KernelArg::WriteOnly)
-      .Case("read_write", RuntimeMD::KernelArg::ReadWrite)
-      .Default(RuntimeMD::KernelArg::None);
-    emitRuntimeMDIntValue(*OutStreamer, RuntimeMD::KeyArgAccQual, AQ, 1);
-
-    // Emit KeyArgAddrQual.
-    if (auto *PT = dyn_cast<PointerType>(T)) {
-      emitRuntimeMDIntValue(*OutStreamer, RuntimeMD::KeyArgAddrQual,
-                            PT->getAddressSpace(), 1);
+  // Emit hidden kernel arguments for OpenCL kernels.
+  if (F.getParent()->getNamedMetadata("opencl.ocl.version")) {
+    auto Int64T = Type::getInt64Ty(F.getContext());
+    emitRuntimeMetadataForKernelArg(DL, *OutStreamer, Int64T,
+                                    RuntimeMD::KernelArg::HiddenGlobalOffsetX);
+    emitRuntimeMetadataForKernelArg(DL, *OutStreamer, Int64T,
+                                    RuntimeMD::KernelArg::HiddenGlobalOffsetY);
+    emitRuntimeMetadataForKernelArg(DL, *OutStreamer, Int64T,
+                                    RuntimeMD::KernelArg::HiddenGlobalOffsetZ);
+    if (F.getParent()->getNamedMetadata("llvm.printf.fmts")) {
+      auto Int8PtrT = Type::getInt8PtrTy(F.getContext(),
+          RuntimeMD::KernelArg::Global);
+      emitRuntimeMetadataForKernelArg(DL, *OutStreamer, Int8PtrT,
+                                      RuntimeMD::KernelArg::HiddenPrintfBuffer);
     }
-
-    // Emit KeyArgEnd
-    OutStreamer->EmitIntValue(RuntimeMD::KeyArgEnd, 1);
   }
 
   // Emit KeyReqdWorkGroupSize, KeyWorkGroupSizeHint, and KeyVecTypeHint.
