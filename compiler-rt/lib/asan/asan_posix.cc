@@ -39,6 +39,8 @@ const char *DescribeSignalOrException(int signo) {
       return "FPE";
     case SIGILL:
       return "ILL";
+    case SIGABRT:
+      return "ABRT";
     default:
       return "SEGV";
   }
