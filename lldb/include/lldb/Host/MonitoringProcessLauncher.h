@@ -12,6 +12,7 @@
 
 // C Includes
 // C++ Includes
+#include <memory>
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Host/ProcessLauncher.h"
