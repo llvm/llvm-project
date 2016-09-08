@@ -242,14 +242,15 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
       if (V.empty())
         continue;
 
-      OutputSectionBase<ELFT> *OutSec;
-      bool IsNew;
-      std::tie(OutSec, IsNew) = Factory.create(V.front(), Cmd->Name);
-      if (IsNew)
-        OutputSections->push_back(OutSec);
-
-      uint32_t Subalign = Cmd->SubalignExpr ? Cmd->SubalignExpr(0) : 0;
       for (InputSectionBase<ELFT> *Sec : V) {
+        OutputSectionBase<ELFT> *OutSec;
+        bool IsNew;
+        std::tie(OutSec, IsNew) = Factory.create(Sec, Cmd->Name);
+        if (IsNew)
+          OutputSections->push_back(OutSec);
+
+        uint32_t Subalign = Cmd->SubalignExpr ? Cmd->SubalignExpr(0) : 0;
+
         if (Subalign)
           Sec->Alignment = Subalign;
         OutSec->addSection(Sec);
@@ -368,16 +369,15 @@ void assignOffsets(OutputSectionCommand *Cmd, OutputSectionBase<ELFT> *Sec) {
 }
 
 template <class ELFT>
-static OutputSectionBase<ELFT> *
-findSection(OutputSectionCommand &Cmd,
-            ArrayRef<OutputSectionBase<ELFT> *> Sections) {
-  for (OutputSectionBase<ELFT> *Sec : Sections) {
-    if (Sec->getName() != Cmd.Name)
-      continue;
-    if (checkConstraint(Sec->getFlags(), Cmd.Constraint))
-      return Sec;
-  }
-  return nullptr;
+static std::vector<OutputSectionBase<ELFT> *>
+findSections(OutputSectionCommand &Cmd,
+             ArrayRef<OutputSectionBase<ELFT> *> Sections) {
+  std::vector<OutputSectionBase<ELFT> *> Ret;
+  for (OutputSectionBase<ELFT> *Sec : Sections)
+    if (Sec->getName() == Cmd.Name &&
+        checkConstraint(Sec->getFlags(), Cmd.Constraint))
+      Ret.push_back(Sec);
+  return Ret;
 }
 
 template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
@@ -413,35 +413,35 @@ template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
     }
 
     auto *Cmd = cast<OutputSectionCommand>(Base.get());
-    OutputSectionBase<ELFT> *Sec = findSection<ELFT>(*Cmd, *OutputSections);
-    if (!Sec)
-      continue;
+    for (OutputSectionBase<ELFT> *Sec :
+         findSections<ELFT>(*Cmd, *OutputSections)) {
 
-    if (Cmd->AddrExpr)
-      Dot = Cmd->AddrExpr(Dot);
+      if (Cmd->AddrExpr)
+        Dot = Cmd->AddrExpr(Dot);
 
-    if (Cmd->AlignExpr)
-      Sec->updateAlignment(Cmd->AlignExpr(Dot));
+      if (Cmd->AlignExpr)
+        Sec->updateAlignment(Cmd->AlignExpr(Dot));
 
-    if ((Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS) {
-      uintX_t TVA = Dot + ThreadBssOffset;
-      TVA = alignTo(TVA, Sec->getAlignment());
-      Sec->setVA(TVA);
+      if ((Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS) {
+        uintX_t TVA = Dot + ThreadBssOffset;
+        TVA = alignTo(TVA, Sec->getAlignment());
+        Sec->setVA(TVA);
+        assignOffsets(Cmd, Sec);
+        ThreadBssOffset = TVA - Dot + Sec->getSize();
+        continue;
+      }
+
+      if (!(Sec->getFlags() & SHF_ALLOC)) {
+        assignOffsets(Cmd, Sec);
+        continue;
+      }
+
+      Dot = alignTo(Dot, Sec->getAlignment());
+      Sec->setVA(Dot);
       assignOffsets(Cmd, Sec);
-      ThreadBssOffset = TVA - Dot + Sec->getSize();
-      continue;
+      MinVA = std::min(MinVA, Dot);
+      Dot += Sec->getSize();
     }
-
-    if (!(Sec->getFlags() & SHF_ALLOC)) {
-      assignOffsets(Cmd, Sec);
-      continue;
-    }
-
-    Dot = alignTo(Dot, Sec->getAlignment());
-    Sec->setVA(Dot);
-    assignOffsets(Cmd, Sec);
-    MinVA = std::min(MinVA, Dot);
-    Dot += Sec->getSize();
   }
 
   // ELF and Program headers need to be right before the first section in

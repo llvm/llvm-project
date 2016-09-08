@@ -4,6 +4,7 @@ add_subdirectory(clang-reorder-fields)
 add_subdirectory(modularize)
 if(CLANG_ENABLE_STATIC_ANALYZER)
 add_subdirectory(clang-tidy)
+add_subdirectory(clang-tidy-vs)
 endif()
 
 add_subdirectory(clang-query)

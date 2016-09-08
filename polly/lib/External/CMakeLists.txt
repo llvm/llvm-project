@@ -260,6 +260,17 @@ add_polly_library(PollyISL FORCE_STATIC
   ${ISL_FILES}
 )
 
+if (MSVC)
+  # Disable common warnings; ideally, they should be fixed upstream
+  target_compile_options(PollyISL PRIVATE
+    -wd4018 # 'expression' : signed/unsigned mismatch
+    -wd4090 # 'operation' : different 'modifier' qualifiers
+    -wd4200 # nonstandard extension used: zero-sized array in struct/union
+    -wd4201 # nonstandard extension used: nameless struct/union
+    -wd4334 # 'operator': result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?)
+  )
+endif ()
+
 # ISL requires at least C99 to compile. gcc < 5.0 use -std=gnu89 as default.
 target_enable_c99(PollyISL)
 
