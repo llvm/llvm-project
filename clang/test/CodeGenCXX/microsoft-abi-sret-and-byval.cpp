@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-linux | FileCheck -check-prefix LINUX %s
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WIN32 %s
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=thumb-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WOA %s
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WIN64 %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=i386-pc-linux | FileCheck -check-prefix LINUX %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=i386-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WIN32 %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=thumb-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WOA %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple=x86_64-pc-win32 -mconstructor-aliases -fno-rtti | FileCheck -check-prefix WIN64 %s
 
 struct Empty {};
 
@@ -401,3 +401,30 @@ void fn2(FnPtr1 a, SmallWithDtor b) { fn1(a, b); };
 // WIN32:   %[[addr:[^ ]*]] = bitcast {}** %[[gep2]] to void [[dst_ty]]*
 // WIN32:   store void [[dst_ty]] %[[a2]], void [[dst_ty]]* %[[addr]], align 4
 // WIN32:   call void @"\01?fn1@@YAXP6AXUForwardDeclare1@@@ZUSmallWithDtor@@@Z"([[argmem_ty]]* inalloca %[[argmem]])
+
+namespace pr30293 {
+// Virtual methods living in a secondary vtable take i8* as their 'this'
+// parameter because the 'this' parameter on entry points to the secondary
+// vptr. We used to have a bug where we didn't apply this rule consistently,
+// and it would cause assertion failures when used with inalloca.
+struct A {
+  virtual void f();
+};
+struct B {
+  virtual void __cdecl h(SmallWithDtor);
+};
+struct C final : A, B {
+  void g();
+  void __cdecl h(SmallWithDtor);
+  void f();
+};
+void C::g() { return h(SmallWithDtor()); }
+
+// WIN32-LABEL: define x86_thiscallcc void @"\01?g@C@pr30293@@QAEXXZ"(%"struct.pr30293::C"* %this)
+// WIN32: call x86_thiscallcc %struct.SmallWithDtor* @"\01??0SmallWithDtor@@QAE@XZ"
+// WIN32: call void @"\01?h@C@pr30293@@UAAXUSmallWithDtor@@@Z"(<{ i8*, %struct.SmallWithDtor }>* inalloca %{{[^,)]*}})
+// WIN32: declare void @"\01?h@C@pr30293@@UAAXUSmallWithDtor@@@Z"(<{ i8*, %struct.SmallWithDtor }>* inalloca)
+
+// WIN64-LABEL: define void @"\01?g@C@pr30293@@QEAAXXZ"(%"struct.pr30293::C"* %this)
+// WIN64: declare void @"\01?h@C@pr30293@@UEAAXUSmallWithDtor@@@Z"(i8*, i32)
+}

@@ -5164,12 +5164,18 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
   //  implicitly converted to type T, where the converted
   //  expression is a constant expression and the implicit conversion
   //  sequence contains only [... list of conversions ...].
+  // C++1z [stmt.if]p2:
+  //  If the if statement is of the form if constexpr, the value of the
+  //  condition shall be a contextually converted constant expression of type
+  //  bool.
   ImplicitConversionSequence ICS =
-    TryCopyInitialization(S, From, T,
-                          /*SuppressUserConversions=*/false,
-                          /*InOverloadResolution=*/false,
-                          /*AllowObjcWritebackConversion=*/false,
-                          /*AllowExplicit=*/false);
+      CCE == Sema::CCEK_ConstexprIf
+          ? TryContextuallyConvertToBool(S, From)
+          : TryCopyInitialization(S, From, T,
+                                  /*SuppressUserConversions=*/false,
+                                  /*InOverloadResolution=*/false,
+                                  /*AllowObjcWritebackConversion=*/false,
+                                  /*AllowExplicit=*/false);
   StandardConversionSequence *SCS = nullptr;
   switch (ICS.getKind()) {
   case ImplicitConversionSequence::StandardConversion:
@@ -8594,13 +8600,40 @@ bool clang::isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
   if (Cand1.IgnoreObjectArgument || Cand2.IgnoreObjectArgument)
     StartArg = 1;
 
+  auto IsIllFormedConversion = [&](const ImplicitConversionSequence &ICS) {
+    // We don't allow incompatible pointer conversions in C++.
+    if (!S.getLangOpts().CPlusPlus)
+      return ICS.isStandard() &&
+             ICS.Standard.Second == ICK_Incompatible_Pointer_Conversion;
+
+    // The only ill-formed conversion we allow in C++ is the string literal to
+    // char* conversion, which is only considered ill-formed after C++11.
+    return S.getLangOpts().CPlusPlus11 && !S.getLangOpts().WritableStrings &&
+           hasDeprecatedStringLiteralToCharPtrConversion(ICS);
+  };
+
+  // Define functions that don't require ill-formed conversions for a given
+  // argument to be better candidates than functions that do.
+  unsigned NumArgs = Cand1.NumConversions;
+  assert(Cand2.NumConversions == NumArgs && "Overload candidate mismatch");
+  bool HasBetterConversion = false;
+  for (unsigned ArgIdx = StartArg; ArgIdx < NumArgs; ++ArgIdx) {
+    bool Cand1Bad = IsIllFormedConversion(Cand1.Conversions[ArgIdx]);
+    bool Cand2Bad = IsIllFormedConversion(Cand2.Conversions[ArgIdx]);
+    if (Cand1Bad != Cand2Bad) {
+      if (Cand1Bad)
+        return false;
+      HasBetterConversion = true;
+    }
+  }
+
+  if (HasBetterConversion)
+    return true;
+
   // C++ [over.match.best]p1:
   //   A viable function F1 is defined to be a better function than another
   //   viable function F2 if for all arguments i, ICSi(F1) is not a worse
   //   conversion sequence than ICSi(F2), and then...
-  unsigned NumArgs = Cand1.NumConversions;
-  assert(Cand2.NumConversions == NumArgs && "Overload candidate mismatch");
-  bool HasBetterConversion = false;
   for (unsigned ArgIdx = StartArg; ArgIdx < NumArgs; ++ArgIdx) {
     switch (CompareImplicitConversionSequences(S, Loc,
                                                Cand1.Conversions[ArgIdx],

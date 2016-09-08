@@ -2309,13 +2309,6 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
         if (isPromoted)
           V = emitArgumentDemotion(*this, Arg, V);
 
-        if (const CXXMethodDecl *MD =
-            dyn_cast_or_null<CXXMethodDecl>(CurCodeDecl)) {
-          if (MD->isVirtual() && Arg == CXXABIThisDecl)
-            V = CGM.getCXXABI().
-                adjustThisParameterInVirtualFunctionPrologue(*this, CurGD, V);
-        }
-
         // Because of merging of function types from multiple decls it is
         // possible for the type of an argument to not match the corresponding
         // type in the function type. Since we are codegening the callee

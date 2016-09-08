@@ -14,13 +14,25 @@
 
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/LexDiagnostic.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/Token.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint> 
+#include <cstring>
+#include <string>
 
 using namespace clang;
 
@@ -135,7 +147,7 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
       if (Diags)
         Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
              diag::err_hex_escape_no_digits) << "x";
-      HadError = 1;
+      HadError = true;
       break;
     }
 
@@ -452,7 +464,6 @@ static void EncodeUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
   // Update the buffer.
   ResultBuf += bytesToWrite;
 }
-
 
 ///       integer-constant: [C99 6.4.4.1]
 ///         decimal-constant integer-suffix
@@ -985,7 +996,6 @@ NumericLiteralParser::GetFloatValue(llvm::APFloat &Result) {
 
   return Result.convertFromString(Str, APFloat::rmNearestTiesToEven);
 }
-
 
 /// \verbatim
 ///       user-defined-character-literal: [C++11 lex.ext]

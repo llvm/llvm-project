@@ -196,7 +196,7 @@ struct E : virtual C { int e; };
 struct F : D, E { ~F(); int f; };
 
 F::~F() {
-// CHECK-LABEL: define x86_thiscallcc void @"\01??1F@test2@@UAE@XZ"(%"struct.test2::F"*)
+// CHECK-LABEL: define x86_thiscallcc void @"\01??1F@test2@@UAE@XZ"(%"struct.test2::F"*{{[^,]*}})
 //      Do an adjustment from C vbase subobject to F as though F was the
 //      complete type.
 // CHECK:   getelementptr inbounds i8, i8* %{{.*}}, i32 -20

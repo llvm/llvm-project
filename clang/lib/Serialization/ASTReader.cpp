@@ -1,4 +1,4 @@
-//===-- ASTReader.cpp - AST File Reader ----------------------------------===//
+//===-- ASTReader.cpp - AST File Reader -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,39 +16,62 @@
 #include "ASTReaderInternals.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/ASTUnresolvedSet.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclGroup.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/Frontend/PCHContainerOperations.h"
-#include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/RawCommentList.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLocVisitor.h"
+#include "clang/AST/UnresolvedSet.h"
+#include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/FileSystemOptions.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/SourceManagerInternals.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Basic/Version.h"
 #include "clang/Basic/VersionTuple.h"
-#include "clang/Frontend/Utils.h"
+#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/MacroInfo.h"
+#include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/ModuleManager.h"
 #include "clang/Serialization/SerializationDiagnostic.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Bitcode/BitstreamReader.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -56,15 +79,26 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
+#include <cstdint>
 #include <cstdio>
+#include <cstring>
+#include <ctime>
 #include <iterator>
+#include <limits>
+#include <map>
+#include <memory>
+#include <new>
+#include <string>
 #include <system_error>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 using namespace clang;
 using namespace clang::serialization;
 using namespace clang::serialization::reader;
 using llvm::BitstreamCursor;
-
 
 //===----------------------------------------------------------------------===//
 // ChainedASTReaderListener implementation
@@ -75,14 +109,17 @@ ChainedASTReaderListener::ReadFullVersionInformation(StringRef FullVersion) {
   return First->ReadFullVersionInformation(FullVersion) ||
          Second->ReadFullVersionInformation(FullVersion);
 }
+
 void ChainedASTReaderListener::ReadModuleName(StringRef ModuleName) {
   First->ReadModuleName(ModuleName);
   Second->ReadModuleName(ModuleName);
 }
+
 void ChainedASTReaderListener::ReadModuleMapFile(StringRef ModuleMapPath) {
   First->ReadModuleMapFile(ModuleMapPath);
   Second->ReadModuleMapFile(ModuleMapPath);
 }
+
 bool
 ChainedASTReaderListener::ReadLanguageOptions(const LangOptions &LangOpts,
                                               bool Complain,
@@ -92,6 +129,7 @@ ChainedASTReaderListener::ReadLanguageOptions(const LangOptions &LangOpts,
          Second->ReadLanguageOptions(LangOpts, Complain,
                                      AllowCompatibleDifferences);
 }
+
 bool ChainedASTReaderListener::ReadTargetOptions(
     const TargetOptions &TargetOpts, bool Complain,
     bool AllowCompatibleDifferences) {
@@ -100,11 +138,13 @@ bool ChainedASTReaderListener::ReadTargetOptions(
          Second->ReadTargetOptions(TargetOpts, Complain,
                                    AllowCompatibleDifferences);
 }
+
 bool ChainedASTReaderListener::ReadDiagnosticOptions(
     IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts, bool Complain) {
   return First->ReadDiagnosticOptions(DiagOpts, Complain) ||
          Second->ReadDiagnosticOptions(DiagOpts, Complain);
 }
+
 bool
 ChainedASTReaderListener::ReadFileSystemOptions(const FileSystemOptions &FSOpts,
                                                 bool Complain) {
@@ -120,6 +160,7 @@ bool ChainedASTReaderListener::ReadHeaderSearchOptions(
          Second->ReadHeaderSearchOptions(HSOpts, SpecificModuleCachePath,
                                          Complain);
 }
+
 bool ChainedASTReaderListener::ReadPreprocessorOptions(
     const PreprocessorOptions &PPOpts, bool Complain,
     std::string &SuggestedPredefines) {
@@ -145,6 +186,7 @@ void ChainedASTReaderListener::visitModuleFile(StringRef Filename,
   First->visitModuleFile(Filename, Kind);
   Second->visitModuleFile(Filename, Kind);
 }
+
 bool ChainedASTReaderListener::visitInputFile(StringRef Filename,
                                               bool isSystem,
                                               bool isOverridden,
@@ -336,11 +378,13 @@ bool PCHValidator::ReadTargetOptions(const TargetOptions &TargetOpts,
 }
 
 namespace {
+
   typedef llvm::StringMap<std::pair<StringRef, bool /*IsUndef*/> >
     MacroDefinitionsMap;
   typedef llvm::DenseMap<DeclarationName, SmallVector<NamedDecl *, 8> >
     DeclsMap;
-}
+
+} // end anonymous namespace
 
 static bool checkDiagnosticGroupMappings(DiagnosticsEngine &StoredDiags,
                                          DiagnosticsEngine &Diags,
@@ -496,12 +540,16 @@ collectMacroDefinitions(const PreprocessorOptions &PPOpts,
 /// against the preprocessor options in an existing preprocessor.
 ///
 /// \param Diags If non-null, produce diagnostics for any mismatches incurred.
+/// \param Validate If true, validate preprocessor options. If false, allow
+///        macros defined by \p ExistingPPOpts to override those defined by
+///        \p PPOpts in SuggestedPredefines.
 static bool checkPreprocessorOptions(const PreprocessorOptions &PPOpts,
                                      const PreprocessorOptions &ExistingPPOpts,
                                      DiagnosticsEngine *Diags,
                                      FileManager &FileMgr,
                                      std::string &SuggestedPredefines,
-                                     const LangOptions &LangOpts) {
+                                     const LangOptions &LangOpts,
+                                     bool Validate = true) {
   // Check macro definitions.
   MacroDefinitionsMap ASTFileMacros;
   collectMacroDefinitions(PPOpts, ASTFileMacros);
@@ -517,7 +565,7 @@ static bool checkPreprocessorOptions(const PreprocessorOptions &PPOpts,
     // Check whether we know anything about this macro name or not.
     llvm::StringMap<std::pair<StringRef, bool /*IsUndef*/> >::iterator Known
       = ASTFileMacros.find(MacroName);
-    if (Known == ASTFileMacros.end()) {
+    if (!Validate || Known == ASTFileMacros.end()) {
       // FIXME: Check whether this identifier was referenced anywhere in the
       // AST file. If so, we should reject the AST file. Unfortunately, this
       // information isn't in the control block. What shall we do about it?
@@ -560,7 +608,7 @@ static bool checkPreprocessorOptions(const PreprocessorOptions &PPOpts,
   }
 
   // Check whether we're using predefines.
-  if (PPOpts.UsePredefines != ExistingPPOpts.UsePredefines) {
+  if (PPOpts.UsePredefines != ExistingPPOpts.UsePredefines && Validate) {
     if (Diags) {
       Diags->Report(diag::err_pch_undef) << ExistingPPOpts.UsePredefines;
     }
@@ -569,7 +617,7 @@ static bool checkPreprocessorOptions(const PreprocessorOptions &PPOpts,
 
   // Detailed record is important since it is used for the module cache hash.
   if (LangOpts.Modules &&
-      PPOpts.DetailedRecord != ExistingPPOpts.DetailedRecord) {
+      PPOpts.DetailedRecord != ExistingPPOpts.DetailedRecord && Validate) {
     if (Diags) {
       Diags->Report(diag::err_pch_pp_detailed_record) << PPOpts.DetailedRecord;
     }
@@ -618,6 +666,19 @@ bool PCHValidator::ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
                                   PP.getLangOpts());
 }
 
+bool SimpleASTReaderListener::ReadPreprocessorOptions(
+                                  const PreprocessorOptions &PPOpts,
+                                  bool Complain,
+                                  std::string &SuggestedPredefines) {
+  return checkPreprocessorOptions(PPOpts,
+                                  PP.getPreprocessorOpts(),
+                                  nullptr,
+                                  PP.getFileManager(),
+                                  SuggestedPredefines,
+                                  PP.getLangOpts(),
+                                  false);
+}
+
 /// Check the header search options deserialized from the control block
 /// against the header search options in an existing preprocessor.
 ///
@@ -662,12 +723,9 @@ void ASTReader::setDeserializationListener(ASTDeserializationListener *Listener,
   OwnsDeserializationListener = TakeOwnership;
 }
 
-
-
 unsigned ASTSelectorLookupTrait::ComputeHash(Selector Sel) {
   return serialization::ComputeHash(Sel);
 }
-
 
 std::pair<unsigned, unsigned>
 ASTSelectorLookupTrait::ReadKeyDataLength(const unsigned char*& d) {
@@ -1698,6 +1756,7 @@ void ASTReader::ReadDefinedMacros() {
 }
 
 namespace {
+
   /// \brief Visitor class used to look up identifirs in an AST file.
   class IdentifierLookupVisitor {
     StringRef Name;
@@ -1749,7 +1808,8 @@ namespace {
     // files.
     IdentifierInfo *getIdentifierInfo() const { return Found; }
   };
-}
+
+} // end anonymous namespace
 
 void ASTReader::updateOutOfDateIdentifier(IdentifierInfo &II) {
   // Note that we are loading an identifier.
@@ -1973,7 +2033,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       ErrorStr += "' referenced by AST file '";
       ErrorStr += F.FileName;
       ErrorStr += "'";
-      Error(ErrorStr.c_str());
+      Error(ErrorStr);
     }
     // Record that we didn't find the file.
     F.InputFilesLoaded[ID-1] = InputFile::getNotFound();
@@ -2090,7 +2150,7 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
   // Read all of the records in the options block.
   RecordData Record;
   ASTReadResult Result = Success;
-  while (1) {
+  while (true) {
     llvm::BitstreamEntry Entry = Stream.advance();
     
     switch (Entry.Kind) {
@@ -2178,7 +2238,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
   RecordData Record;
   unsigned NumInputs = 0;
   unsigned NumUserInputs = 0;
-  while (1) {
+  while (true) {
     llvm::BitstreamEntry Entry = Stream.advance();
     
     switch (Entry.Kind) {
@@ -2463,7 +2523,7 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
 
   // Read all of the records and blocks for the AST file.
   RecordData Record;
-  while (1) {
+  while (true) {
     llvm::BitstreamEntry Entry = Stream.advance();
     
     switch (Entry.Kind) {
@@ -3450,7 +3510,7 @@ static void updateModuleTimestamp(ModuleFile &MF) {
 /// cursor into the start of the given block ID, returning false on success and
 /// true on failure.
 static bool SkipCursorToBlock(BitstreamCursor &Cursor, unsigned BlockID) {
-  while (1) {
+  while (true) {
     llvm::BitstreamEntry Entry = Cursor.advance();
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::Error:
@@ -3798,7 +3858,7 @@ ASTReader::ReadASTCore(StringRef FileName,
 
   // This is used for compatibility with older PCH formats.
   bool HaveReadControlBlock = false;
-  while (1) {
+  while (true) {
     llvm::BitstreamEntry Entry = Stream.advance();
     
     switch (Entry.Kind) {
@@ -4088,7 +4148,7 @@ static ASTFileSignature readASTFileSignature(llvm::BitstreamReader &StreamFile){
 
   // Scan for SIGNATURE inside the control block.
   ASTReader::RecordData Record;
-  while (1) {
+  while (true) {
     llvm::BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
     if (Entry.Kind == llvm::BitstreamEntry::EndBlock ||
         Entry.Kind != llvm::BitstreamEntry::Record)
@@ -4134,7 +4194,7 @@ std::string ASTReader::getOriginalSourceFile(
 
   // Scan for ORIGINAL_FILE inside the control block.
   RecordData Record;
-  while (1) {
+  while (true) {
     llvm::BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
     if (Entry.Kind == llvm::BitstreamEntry::EndBlock)
       return std::string();
@@ -4152,6 +4212,7 @@ std::string ASTReader::getOriginalSourceFile(
 }
 
 namespace {
+
   class SimplePCHValidator : public ASTReaderListener {
     const LangOptions &ExistingLangOpts;
     const TargetOptions &ExistingTargetOpts;
@@ -4178,11 +4239,13 @@ namespace {
       return checkLanguageOptions(ExistingLangOpts, LangOpts, nullptr,
                                   AllowCompatibleDifferences);
     }
+
     bool ReadTargetOptions(const TargetOptions &TargetOpts, bool Complain,
                            bool AllowCompatibleDifferences) override {
       return checkTargetOptions(ExistingTargetOpts, TargetOpts, nullptr,
                                 AllowCompatibleDifferences);
     }
+
     bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                  StringRef SpecificModuleCachePath,
                                  bool Complain) override {
@@ -4190,6 +4253,7 @@ namespace {
                                       ExistingModuleCachePath,
                                       nullptr, ExistingLangOpts);
     }
+
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
                                  bool Complain,
                                  std::string &SuggestedPredefines) override {
@@ -4197,7 +4261,8 @@ namespace {
                                       SuggestedPredefines, ExistingLangOpts);
     }
   };
-}
+
+} // end anonymous namespace
 
 bool ASTReader::readASTFileControlBlock(
     StringRef Filename, FileManager &FileMgr,
@@ -5025,7 +5090,7 @@ struct PPEntityComp {
   }
 };
 
-}
+} // end anonymous namespace
 
 PreprocessedEntityID ASTReader::findPreprocessedEntity(SourceLocation Loc,
                                                        bool EndsAfter) const {
@@ -5115,6 +5180,7 @@ Optional<bool> ASTReader::isPreprocessedEntityInFileID(unsigned Index,
 }
 
 namespace {
+
   /// \brief Visitor used to search for information about a header file.
   class HeaderFileInfoVisitor {
     const FileEntry *FE;
@@ -5142,7 +5208,8 @@ namespace {
     
     Optional<HeaderFileInfo> getHeaderFileInfo() const { return HFI; }
   };
-}
+
+} // end anonymous namespace
 
 HeaderFileInfo ASTReader::GetHeaderFileInfo(const FileEntry *FE) {
   HeaderFileInfoVisitor Visitor(FE);
@@ -5180,7 +5247,7 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
       Diag.DiagStatePoints.push_back(
           DiagnosticsEngine::DiagStatePoint(NewState,
                                             FullSourceLoc(Loc, SourceMgr)));
-      while (1) {
+      while (true) {
         assert(Idx < F.PragmaDiagMappings.size() &&
                "Invalid data, didn't find '-1' marking end of diag/map pairs");
         if (Idx >= F.PragmaDiagMappings.size()) {
@@ -5756,6 +5823,7 @@ public:
 void TypeLocReader::VisitQualifiedTypeLoc(QualifiedTypeLoc TL) {
   // nothing to do
 }
+
 void TypeLocReader::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
   TL.setBuiltinLoc(ReadSourceLocation(Record, Idx));
   if (TL.needsExtraLocalData()) {
@@ -5765,31 +5833,40 @@ void TypeLocReader::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
     TL.setModeAttr(Record[Idx++]);
   }
 }
+
 void TypeLocReader::VisitComplexTypeLoc(ComplexTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitPointerTypeLoc(PointerTypeLoc TL) {
   TL.setStarLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitDecayedTypeLoc(DecayedTypeLoc TL) {
   // nothing to do
 }
+
 void TypeLocReader::VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
   // nothing to do
 }
+
 void TypeLocReader::VisitBlockPointerTypeLoc(BlockPointerTypeLoc TL) {
   TL.setCaretLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitLValueReferenceTypeLoc(LValueReferenceTypeLoc TL) {
   TL.setAmpLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
   TL.setAmpAmpLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
   TL.setStarLoc(ReadSourceLocation(Record, Idx));
   TL.setClassTInfo(Reader.GetTypeSourceInfo(F, Record, Idx));
 }
+
 void TypeLocReader::VisitArrayTypeLoc(ArrayTypeLoc TL) {
   TL.setLBracketLoc(ReadSourceLocation(Record, Idx));
   TL.setRBracketLoc(ReadSourceLocation(Record, Idx));
@@ -5798,29 +5875,37 @@ void TypeLocReader::VisitArrayTypeLoc(ArrayTypeLoc TL) {
   else
     TL.setSizeExpr(nullptr);
 }
+
 void TypeLocReader::VisitConstantArrayTypeLoc(ConstantArrayTypeLoc TL) {
   VisitArrayTypeLoc(TL);
 }
+
 void TypeLocReader::VisitIncompleteArrayTypeLoc(IncompleteArrayTypeLoc TL) {
   VisitArrayTypeLoc(TL);
 }
+
 void TypeLocReader::VisitVariableArrayTypeLoc(VariableArrayTypeLoc TL) {
   VisitArrayTypeLoc(TL);
 }
+
 void TypeLocReader::VisitDependentSizedArrayTypeLoc(
                                             DependentSizedArrayTypeLoc TL) {
   VisitArrayTypeLoc(TL);
 }
+
 void TypeLocReader::VisitDependentSizedExtVectorTypeLoc(
                                         DependentSizedExtVectorTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitVectorTypeLoc(VectorTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitFunctionTypeLoc(FunctionTypeLoc TL) {
   TL.setLocalRangeBegin(ReadSourceLocation(Record, Idx));
   TL.setLParenLoc(ReadSourceLocation(Record, Idx));
@@ -5830,9 +5915,11 @@ void TypeLocReader::VisitFunctionTypeLoc(FunctionTypeLoc TL) {
     TL.setParam(i, ReadDeclAs<ParmVarDecl>(Record, Idx));
   }
 }
+
 void TypeLocReader::VisitFunctionProtoTypeLoc(FunctionProtoTypeLoc TL) {
   VisitFunctionTypeLoc(TL);
 }
+
 void TypeLocReader::VisitFunctionNoProtoTypeLoc(FunctionNoProtoTypeLoc TL) {
   VisitFunctionTypeLoc(TL);
 }
@@ -5856,21 +5943,26 @@ void TypeLocReader::VisitTypeOfTypeLoc(TypeOfTypeLoc TL) {
 void TypeLocReader::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
   TL.setKWLoc(ReadSourceLocation(Record, Idx));
   TL.setLParenLoc(ReadSourceLocation(Record, Idx));
   TL.setRParenLoc(ReadSourceLocation(Record, Idx));
   TL.setUnderlyingTInfo(Reader.GetTypeSourceInfo(F, Record, Idx));
 }
+
 void TypeLocReader::VisitAutoTypeLoc(AutoTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitRecordTypeLoc(RecordTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitEnumTypeLoc(EnumTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   TL.setAttrNameLoc(ReadSourceLocation(Record, Idx));
   if (TL.hasAttrOperand()) {
@@ -5887,9 +5979,11 @@ void TypeLocReader::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   } else if (TL.hasAttrEnumOperand())
     TL.setAttrEnumOperandLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitSubstTemplateTypeParmTypeLoc(
                                             SubstTemplateTypeParmTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation(Record, Idx));
@@ -5914,18 +6008,22 @@ void TypeLocReader::VisitParenTypeLoc(ParenTypeLoc TL) {
   TL.setLParenLoc(ReadSourceLocation(Record, Idx));
   TL.setRParenLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitElaboratedTypeLoc(ElaboratedTypeLoc TL) {
   TL.setElaboratedKeywordLoc(ReadSourceLocation(Record, Idx));
   TL.setQualifierLoc(Reader.ReadNestedNameSpecifierLoc(F, Record, Idx));
 }
+
 void TypeLocReader::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
   TL.setElaboratedKeywordLoc(ReadSourceLocation(Record, Idx));
   TL.setQualifierLoc(Reader.ReadNestedNameSpecifierLoc(F, Record, Idx));
   TL.setNameLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitDependentTemplateSpecializationTypeLoc(
        DependentTemplateSpecializationTypeLoc TL) {
   TL.setElaboratedKeywordLoc(ReadSourceLocation(Record, Idx));
@@ -5940,12 +6038,15 @@ void TypeLocReader::VisitDependentTemplateSpecializationTypeLoc(
                                           TL.getTypePtr()->getArg(I).getKind(),
                                           Record, Idx));
 }
+
 void TypeLocReader::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
   TL.setEllipsisLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
   TL.setNameLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitObjCObjectTypeLoc(ObjCObjectTypeLoc TL) {
   TL.setHasBaseTypeAsWritten(Record[Idx++]);
   TL.setTypeArgsLAngleLoc(ReadSourceLocation(Record, Idx));
@@ -5957,14 +6058,17 @@ void TypeLocReader::VisitObjCObjectTypeLoc(ObjCObjectTypeLoc TL) {
   for (unsigned i = 0, e = TL.getNumProtocols(); i != e; ++i)
     TL.setProtocolLoc(i, ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitObjCObjectPointerTypeLoc(ObjCObjectPointerTypeLoc TL) {
   TL.setStarLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
   TL.setKWLoc(ReadSourceLocation(Record, Idx));
   TL.setLParenLoc(ReadSourceLocation(Record, Idx));
   TL.setRParenLoc(ReadSourceLocation(Record, Idx));
 }
+
 void TypeLocReader::VisitPipeTypeLoc(PipeTypeLoc TL) {
   TL.setKWLoc(ReadSourceLocation(Record, Idx));
 }
@@ -6610,7 +6714,7 @@ public:
   }
 };
 
-}
+} // end anonymous namespace
 
 void ASTReader::FindFileRegionDecls(FileID File,
                                     unsigned Offset, unsigned Length,
@@ -7018,6 +7122,7 @@ IdentifierInfo *ASTReader::get(StringRef Name) {
 }
 
 namespace clang {
+
   /// \brief An identifier-lookup iterator that enumerates all of the
   /// identifiers stored within a set of AST files.
   class ASTIdentifierIterator : public IdentifierIterator {
@@ -7045,7 +7150,8 @@ namespace clang {
 
     StringRef Next() override;
   };
-}
+
+} // end namespace clang
 
 ASTIdentifierIterator::ASTIdentifierIterator(const ASTReader &Reader,
                                              bool SkipModules)
@@ -7077,6 +7183,7 @@ StringRef ASTIdentifierIterator::Next() {
 }
 
 namespace {
+
 /// A utility for appending two IdentifierIterators.
 class ChainedIdentifierIterator : public IdentifierIterator {
   std::unique_ptr<IdentifierIterator> Current;
@@ -7101,6 +7208,7 @@ public:
     return Next();
   }
 };
+
 } // end anonymous namespace.
 
 IdentifierIterator *ASTReader::getIdentifiers() {
@@ -7116,7 +7224,9 @@ IdentifierIterator *ASTReader::getIdentifiers() {
   return new ASTIdentifierIterator(*this);
 }
 
-namespace clang { namespace serialization {
+namespace clang {
+namespace serialization {
+
   class ReadMethodPoolVisitor {
     ASTReader &Reader;
     Selector Sel;
@@ -7186,7 +7296,9 @@ namespace clang { namespace serialization {
     }
     bool factoryHasMoreThanOneDecl() const { return FactoryHasMoreThanOneDecl; }
   };
-} } // end namespace clang::serialization
+
+} // end namespace serialization
+} // end namespace clang
 
 /// \brief Add the given set of methods to the method list.
 static void addMethodsToPool(Sema &S, ArrayRef<ObjCMethodDecl *> Methods,
@@ -7781,7 +7893,7 @@ void ASTReader::ReadQualifierInfo(ModuleFile &F, QualifierInfo &Info,
   Info.NumTemplParamLists = NumTPLists;
   if (NumTPLists) {
     Info.TemplParamLists = new (Context) TemplateParameterList*[NumTPLists];
-    for (unsigned i=0; i != NumTPLists; ++i)
+    for (unsigned i = 0; i != NumTPLists; ++i)
       Info.TemplParamLists[i] = ReadTemplateParameterList(F, Record, Idx);
   }
 }
@@ -8001,7 +8113,7 @@ ASTReader::ReadCXXCtorInitializers(ModuleFile &F, const RecordData &Record,
     } else {
       SourceOrderOrNumArrayIndices = Record[Idx++];
       Indices.reserve(SourceOrderOrNumArrayIndices);
-      for (unsigned i=0; i != SourceOrderOrNumArrayIndices; ++i)
+      for (unsigned i = 0; i != SourceOrderOrNumArrayIndices; ++i)
         Indices.push_back(ReadDeclAs<VarDecl>(F, Record, Idx));
     }
 
@@ -8712,7 +8824,10 @@ ASTReader::ASTReader(
   bool AllowConfigurationMismatch, bool ValidateSystemInputs,
   bool UseGlobalIndex,
   std::unique_ptr<llvm::Timer> ReadTimer)
-    : Listener(new PCHValidator(PP, *this)), DeserializationListener(nullptr),
+    : Listener(DisableValidation ?
+        cast<ASTReaderListener>(new SimpleASTReaderListener(PP)) :
+        cast<ASTReaderListener>(new PCHValidator(PP, *this))),
+      DeserializationListener(nullptr),
       OwnsDeserializationListener(false), SourceMgr(PP.getSourceManager()),
       FileMgr(PP.getFileManager()), PCHContainerRdr(PCHContainerRdr),
       Diags(PP.getDiagnostics()), SemaObj(nullptr), PP(PP), Context(Context),

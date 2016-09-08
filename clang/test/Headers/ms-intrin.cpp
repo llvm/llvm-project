@@ -52,6 +52,7 @@ void f() {
   __cpuidex(info, 0, 0);
   _xgetbv(0);
   __halt();
+  __nop();
   __readmsr(0);
 
   // FIXME: Call these in 64-bit too once the intrinsics have been fixed to

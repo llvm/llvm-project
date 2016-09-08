@@ -46,6 +46,11 @@ namespace ccce {
     if constexpr (N) {} // expected-error {{cannot be narrowed}}
   }
   template void g<5>(); // expected-note {{instantiation of}}
+  void h() {
+    if constexpr (4.3) {} // expected-error{{conversion from 'double' to 'bool' is not allowed in a converted constant expression}}
+    constexpr void *p = nullptr;
+    if constexpr (p) {} // expected-error{{conversion from 'void *const' to 'bool' is not allowed in a converted constant expression}}
+  }
 }
 
 namespace generic_lambda {
