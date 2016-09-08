@@ -88,6 +88,8 @@ void AsanOnDeadlySignal(int signo, void *siginfo, void *context) {
     ReportDeadlySignal("FPE", sig);
   else if (signo == SIGILL)
     ReportDeadlySignal("ILL", sig);
+  else if (signo == SIGABRT)
+    ReportDeadlySignal("ABRT", sig);
   else
     ReportDeadlySignal("SEGV", sig);
 }

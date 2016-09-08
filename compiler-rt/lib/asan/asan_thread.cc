@@ -345,7 +345,7 @@ AsanThread *GetCurrentThread() {
       // limits, so only do this magic on Android, and only if the found thread
       // is the main thread.
       AsanThreadContext *tctx = GetThreadContextByTidLocked(0);
-      if (ThreadStackContainsAddress(tctx, &context)) {
+      if (tctx && ThreadStackContainsAddress(tctx, &context)) {
         SetCurrentThread(tctx->thread);
         return tctx->thread;
       }

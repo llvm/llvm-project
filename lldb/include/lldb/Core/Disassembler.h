@@ -22,7 +22,9 @@
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Core/Opcode.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Interpreter/OptionValue.h"
+#include "lldb/Symbol/LineEntry.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -314,6 +316,7 @@ public:
                           const char *plugin_name, const char *flavor,
                           const ExecutionContext &exe_ctx,
                           const AddressRange &range, uint32_t num_instructions,
+                          bool mixed_source_and_assembly,
                           uint32_t num_mixed_context_lines, uint32_t options,
                           Stream &strm);
 
@@ -321,6 +324,7 @@ public:
                           const char *plugin_name, const char *flavor,
                           const ExecutionContext &exe_ctx, const Address &start,
                           uint32_t num_instructions,
+                          bool mixed_source_and_assembly,
                           uint32_t num_mixed_context_lines, uint32_t options,
                           Stream &strm);
 
@@ -328,22 +332,21 @@ public:
   Disassemble(Debugger &debugger, const ArchSpec &arch, const char *plugin_name,
               const char *flavor, const ExecutionContext &exe_ctx,
               SymbolContextList &sc_list, uint32_t num_instructions,
+              bool mixed_source_and_assembly, uint32_t num_mixed_context_lines,
+              uint32_t options, Stream &strm);
+
+  static bool
+  Disassemble(Debugger &debugger, const ArchSpec &arch, const char *plugin_name,
+              const char *flavor, const ExecutionContext &exe_ctx,
+              const ConstString &name, Module *module,
+              uint32_t num_instructions, bool mixed_source_and_assembly,
               uint32_t num_mixed_context_lines, uint32_t options, Stream &strm);
 
-  static bool Disassemble(Debugger &debugger, const ArchSpec &arch,
-                          const char *plugin_name, const char *flavor,
-                          const ExecutionContext &exe_ctx,
-                          const ConstString &name, Module *module,
-                          uint32_t num_instructions,
-                          uint32_t num_mixed_context_lines, uint32_t options,
-                          Stream &strm);
-
-  static bool Disassemble(Debugger &debugger, const ArchSpec &arch,
-                          const char *plugin_name, const char *flavor,
-                          const ExecutionContext &exe_ctx,
-                          uint32_t num_instructions,
-                          uint32_t num_mixed_context_lines, uint32_t options,
-                          Stream &strm);
+  static bool
+  Disassemble(Debugger &debugger, const ArchSpec &arch, const char *plugin_name,
+              const char *flavor, const ExecutionContext &exe_ctx,
+              uint32_t num_instructions, bool mixed_source_and_assembly,
+              uint32_t num_mixed_context_lines, uint32_t options, Stream &strm);
 
   //------------------------------------------------------------------
   // Constructors and Destructors
@@ -359,6 +362,7 @@ public:
                                 const ArchSpec &arch,
                                 const ExecutionContext &exe_ctx,
                                 uint32_t num_instructions,
+                                bool mixed_source_and_assembly,
                                 uint32_t num_mixed_context_lines,
                                 uint32_t options, Stream &strm);
 
@@ -388,6 +392,73 @@ public:
                                       const char *flavor) = 0;
 
 protected:
+  // SourceLine and SourceLinesToDisplay structures are only used in
+  // the mixed source and assembly display methods internal to this class.
+
+  struct SourceLine {
+    FileSpec file;
+    uint32_t line;
+
+    SourceLine() : file(), line(LLDB_INVALID_LINE_NUMBER) {}
+
+    bool operator==(const SourceLine &rhs) const {
+      return file == rhs.file && line == rhs.line;
+    }
+
+    bool operator!=(const SourceLine &rhs) const {
+      return file != rhs.file || line != rhs.line;
+    }
+
+    bool IsValid() const { return line != LLDB_INVALID_LINE_NUMBER; }
+  };
+
+  struct SourceLinesToDisplay {
+    std::vector<SourceLine> lines;
+
+    // index of the "current" source line, if we want to highlight that
+    // when displaying the source lines.  (as opposed to the surrounding
+    // source lines provided to give context)
+    size_t current_source_line;
+
+    // Whether to print a blank line at the end of the source lines.
+    bool print_source_context_end_eol;
+
+    SourceLinesToDisplay()
+        : lines(), current_source_line(-1), print_source_context_end_eol(true) {
+    }
+  };
+
+  // Get the function's declaration line number, hopefully a line number earlier
+  // than the opening curly brace at the start of the function body.
+  static SourceLine GetFunctionDeclLineEntry(const SymbolContext &sc);
+
+  // Add the provided SourceLine to the map of filenames-to-source-lines-seen.
+  static void AddLineToSourceLineTables(
+      SourceLine &line,
+      std::map<FileSpec, std::set<uint32_t>> &source_lines_seen);
+
+  // Given a source line, determine if we should print it when we're doing
+  // mixed source & assembly output.
+  // We're currently using the target.process.thread.step-avoid-regexp setting
+  // (which is used for stepping over inlined STL functions by default) to
+  // determine what source lines to avoid showing.
+  //
+  // Returns true if this source line should be elided (if the source line
+  // should
+  // not be displayed).
+  static bool
+  ElideMixedSourceAndDisassemblyLine(const ExecutionContext &exe_ctx,
+                                     const SymbolContext &sc, SourceLine &line);
+
+  static bool
+  ElideMixedSourceAndDisassemblyLine(const ExecutionContext &exe_ctx,
+                                     const SymbolContext &sc, LineEntry &line) {
+    SourceLine sl;
+    sl.file = line.file;
+    sl.line = line.line;
+    return ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, sl);
+  };
+
   //------------------------------------------------------------------
   // Classes that inherit from Disassembler can see and modify these
   //------------------------------------------------------------------
