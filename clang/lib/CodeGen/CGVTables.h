@@ -49,6 +49,12 @@ class CodeGenVTables {
   /// indices.
   SecondaryVirtualPointerIndicesMapTy SecondaryVirtualPointerIndices;
 
+  /// Cache for the pure virtual member call function.
+  llvm::Constant *PureVirtualFn = nullptr;
+
+  /// Cache for the deleted virtual member call function.
+  llvm::Constant *DeletedVirtualFn = nullptr;
+
   /// emitThunk - Emit a single thunk.
   void emitThunk(GlobalDecl GD, const ThunkInfo &Thunk, bool ForVTable);
 
@@ -56,15 +62,16 @@ class CodeGenVTables {
   /// the ABI.
   void maybeEmitThunkForVTable(GlobalDecl GD, const ThunkInfo &Thunk);
 
+  llvm::Constant *CreateVTableComponent(unsigned Idx,
+                                        const VTableLayout &VTLayout,
+                                        llvm::Constant *RTTI,
+                                        unsigned &NextVTableThunkIndex);
+
 public:
-  /// CreateVTableInitializer - Create a vtable initializer for the given record
-  /// decl.
-  /// \param Components - The vtable components; this is really an array of
-  /// VTableComponents.
-  llvm::Constant *CreateVTableInitializer(
-      const CXXRecordDecl *RD, const VTableComponent *Components,
-      unsigned NumComponents, const VTableLayout::VTableThunkTy *VTableThunks,
-      unsigned NumVTableThunks, llvm::Constant *RTTI);
+  /// CreateVTableInitializer - Create a vtable initializer with the given
+  /// layout.
+  llvm::Constant *CreateVTableInitializer(const VTableLayout &VTLayout,
+                                          llvm::Constant *RTTI);
 
   CodeGenVTables(CodeGenModule &CGM);
 

@@ -1576,7 +1576,7 @@ void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
     const VTableLayout &VFTLayout =
         CGM.getMicrosoftVTableContext().getVFTableLayout(RD, CharUnits::Zero());
     unsigned VSlotCount =
-        VFTLayout.getNumVTableComponents() - CGM.getLangOpts().RTTIData;
+        VFTLayout.vtable_components().size() - CGM.getLangOpts().RTTIData;
     unsigned VTableWidth = PtrWidth * VSlotCount;
 
     // Create a very wide void* type and insert it directly in the element list.
