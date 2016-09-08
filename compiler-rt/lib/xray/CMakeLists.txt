@@ -8,8 +8,16 @@ set(XRAY_SOURCES
 )
 
 set(x86_64_SOURCES
+		xray_x86_64.cc
 		xray_trampoline_x86_64.S
 		${XRAY_SOURCES})
+
+set(arm_SOURCES
+		xray_arm.cc
+		xray_trampoline_arm.S
+		${XRAY_SOURCES})
+
+set(armhf_SOURCES ${arm_SOURCES})
 
 include_directories(..)
 include_directories(../../include)

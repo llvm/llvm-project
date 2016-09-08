@@ -392,29 +392,12 @@ void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack) {
   in_report.ReportError(error);
 }
 
-void ReportNewDeleteSizeMismatch(uptr addr, uptr alloc_size, uptr delete_size,
+void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
                                  BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
-  Decorator d;
-  Printf("%s", d.Warning());
-  char tname[128];
-  u32 curr_tid = GetCurrentTidOrInvalid();
-  Report("ERROR: AddressSanitizer: new-delete-type-mismatch on %p in "
-         "thread T%d%s:\n",
-         addr, curr_tid,
-         ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)));
-  Printf("%s  object passed to delete has wrong type:\n", d.EndWarning());
-  Printf("  size of the allocated type:   %zd bytes;\n"
-         "  size of the deallocated type: %zd bytes.\n",
-         alloc_size, delete_size);
-  CHECK_GT(free_stack->size, 0);
-  ScarinessScore::PrintSimple(10, "new-delete-type-mismatch");
-  GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
-  stack.Print();
-  DescribeAddressIfHeap(addr);
-  ReportErrorSummary("new-delete-type-mismatch", &stack);
-  Report("HINT: if you don't care about these errors you may set "
-         "ASAN_OPTIONS=new_delete_type_mismatch=0\n");
+  ErrorNewDeleteSizeMismatch error(addr, GetCurrentTidOrInvalid(), delete_size,
+                                   free_stack);
+  in_report.ReportError(error);
 }
 
 void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack) {
