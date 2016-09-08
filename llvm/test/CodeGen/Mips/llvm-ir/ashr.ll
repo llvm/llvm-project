@@ -162,7 +162,9 @@ define signext i128 @ashr_i128(i128 signext %a, i128 signext %b) {
 entry:
 ; ALL-LABEL: ashr_i128:
 
-  ; GP32:           lw        $25, %call16(__ashrti3)($gp)
+  ; o32 shouldn't use TImode helpers.
+  ; GP32-NOT:       lw        $25, %call16(__ashrti3)($gp)
+  ; MM-NOT:         lw        $25, %call16(__ashrti3)($2)
 
   ; M3:             sll       $[[T0:[0-9]+]], $7, 0
   ; M3:             dsrav     $[[T1:[0-9]+]], $4, $7
@@ -212,8 +214,6 @@ entry:
   ; 64R6:           selnez    $[[T13:[0-9]+]], $[[T0]], $[[T3]]
   ; 64R6:           jr        $ra
   ; 64R6:           or        $3, $[[T13]], $[[T12]]
-
-  ; MM:             lw        $25, %call16(__ashrti3)($2)
 
   %r = ashr i128 %a, %b
   ret i128 %r

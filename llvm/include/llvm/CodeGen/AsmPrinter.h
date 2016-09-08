@@ -188,6 +188,34 @@ public:
   MCSymbol *getSymbol(const GlobalValue *GV) const;
 
   //===------------------------------------------------------------------===//
+  // XRay instrumentation implementation.
+  //===------------------------------------------------------------------===//
+public:
+  // This describes the kind of sled we're storing in the XRay table.
+  enum class SledKind : uint8_t {
+    FUNCTION_ENTER = 0,
+    FUNCTION_EXIT = 1,
+    TAIL_CALL = 2,
+  };
+
+  // The table will contain these structs that point to the sled, the function
+  // containing the sled, and what kind of sled (and whether they should always
+  // be instrumented).
+  struct XRayFunctionEntry {
+    const MCSymbol *Sled;
+    const MCSymbol *Function;
+    SledKind Kind;
+    bool AlwaysInstrument;
+    const class Function *Fn;
+  };
+
+  // All the sleds to be emitted.
+  std::vector<XRayFunctionEntry> Sleds;
+
+  // Helper function to record a given XRay sled.
+  void recordSled(MCSymbol *Sled, const MachineInstr &MI, SledKind Kind);
+
+  //===------------------------------------------------------------------===//
   // MachineFunctionPass Implementation.
   //===------------------------------------------------------------------===//
 

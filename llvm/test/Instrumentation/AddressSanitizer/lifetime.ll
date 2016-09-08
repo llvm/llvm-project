@@ -97,6 +97,47 @@ define void @lifetime() sanitize_address {
   ret void
 }
 
+; Case of lifetime depends on how we get into the block.
+define void @ambiguous_lifetime(i1 %x) sanitize_address {
+  ; CHECK-LABEL: define void @ambiguous_lifetime
+
+entry:
+  ; Regular variable lifetime intrinsics.
+  %i = alloca i8, align 4  ; Good
+  %j = alloca i8, align 4  ; Bad
+
+  call void @llvm.lifetime.start(i64 1, i8* %i)
+  ; CHECK: store i8 1, i8* %{{[0-9]+}}
+  ; CHECK-NEXT: call void @llvm.lifetime.start
+
+  br i1 %x, label %bb0, label %bb1
+
+bb0:
+  ; CHECK-LABEL: bb0:
+
+  call void @llvm.lifetime.start(i64 1, i8* %j)
+  ; CHECK-NOT: store i8 1, i8* %{{[0-9]+}}
+  ; CHECK-NEXT: call void @llvm.lifetime.start
+
+  br label %bb1
+
+bb1:
+  ; CHECK-LABEL: bb1:
+
+  store volatile i8 0, i8* %i
+  store volatile i8 0, i8* %j
+
+  call void @llvm.lifetime.end(i64 1, i8* %i)
+  ; CHECK: store i8 -8, i8* %{{[0-9]+}}
+  ; CHECK-NEXT: call void @llvm.lifetime.end
+
+  call void @llvm.lifetime.end(i64 1, i8* %j)
+  ; CHECK-NOT: store i8 -8, i8* %{{[0-9]+}}
+  ; CHECK-NEXT: call void @llvm.lifetime.end
+
+  ret void
+}
+
 ; Check that arguments of lifetime may come from phi nodes.
 define void @phi_args(i1 %x) sanitize_address {
   ; CHECK-LABEL: define void @phi_args(i1 %x)

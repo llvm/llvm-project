@@ -222,15 +222,20 @@ public:
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
 
   bool EmitCVFileDirective(unsigned FileNo, StringRef Filename) override;
+  bool EmitCVFuncIdDirective(unsigned FuncId) override;
+  bool EmitCVInlineSiteIdDirective(unsigned FunctionId, unsigned IAFunc,
+                                   unsigned IAFile, unsigned IALine,
+                                   unsigned IACol, SMLoc Loc) override;
   void EmitCVLocDirective(unsigned FunctionId, unsigned FileNo, unsigned Line,
                           unsigned Column, bool PrologueEnd, bool IsStmt,
-                          StringRef FileName) override;
+                          StringRef FileName, SMLoc Loc) override;
   void EmitCVLinetableDirective(unsigned FunctionId, const MCSymbol *FnStart,
                                 const MCSymbol *FnEnd) override;
-  void EmitCVInlineLinetableDirective(
-      unsigned PrimaryFunctionId, unsigned SourceFileId, unsigned SourceLineNum,
-      const MCSymbol *FnStartSym, const MCSymbol *FnEndSym,
-      ArrayRef<unsigned> SecondaryFunctionIds) override;
+  void EmitCVInlineLinetableDirective(unsigned PrimaryFunctionId,
+                                      unsigned SourceFileId,
+                                      unsigned SourceLineNum,
+                                      const MCSymbol *FnStartSym,
+                                      const MCSymbol *FnEndSym) override;
   void EmitCVDefRangeDirective(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       StringRef FixedSizePortion) override;
@@ -1114,10 +1119,26 @@ bool MCAsmStreamer::EmitCVFileDirective(unsigned FileNo, StringRef Filename) {
   return true;
 }
 
+bool MCAsmStreamer::EmitCVFuncIdDirective(unsigned FuncId) {
+  OS << "\t.cv_func_id " << FuncId << '\n';
+  return MCStreamer::EmitCVFuncIdDirective(FuncId);
+}
+
+bool MCAsmStreamer::EmitCVInlineSiteIdDirective(unsigned FunctionId,
+                                                unsigned IAFunc,
+                                                unsigned IAFile,
+                                                unsigned IALine, unsigned IACol,
+                                                SMLoc Loc) {
+  OS << "\t.cv_inline_site_id " << FunctionId << " within " << IAFunc
+     << " inlined_at " << IAFile << ' ' << IALine << ' ' << IACol << '\n';
+  return MCStreamer::EmitCVInlineSiteIdDirective(FunctionId, IAFunc, IAFile,
+                                                 IALine, IACol, Loc);
+}
+
 void MCAsmStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                        unsigned Line, unsigned Column,
                                        bool PrologueEnd, bool IsStmt,
-                                       StringRef FileName) {
+                                       StringRef FileName, SMLoc Loc) {
   OS << "\t.cv_loc\t" << FunctionId << " " << FileNo << " " << Line << " "
      << Column;
   if (PrologueEnd)
@@ -1135,12 +1156,12 @@ void MCAsmStreamer::EmitCVLocDirective(unsigned FunctionId, unsigned FileNo,
 
   if (IsVerboseAsm) {
     OS.PadToColumn(MAI->getCommentColumn());
-    OS << MAI->getCommentString() << ' ' << FileName << ':'
-       << Line << ':' << Column;
+    OS << MAI->getCommentString() << ' ' << FileName << ':' << Line << ':'
+       << Column;
   }
   EmitEOL();
   this->MCStreamer::EmitCVLocDirective(FunctionId, FileNo, Line, Column,
-                                       PrologueEnd, IsStmt, FileName);
+                                       PrologueEnd, IsStmt, FileName, Loc);
 }
 
 void MCAsmStreamer::EmitCVLinetableDirective(unsigned FunctionId,
@@ -1154,24 +1175,19 @@ void MCAsmStreamer::EmitCVLinetableDirective(unsigned FunctionId,
   this->MCStreamer::EmitCVLinetableDirective(FunctionId, FnStart, FnEnd);
 }
 
-void MCAsmStreamer::EmitCVInlineLinetableDirective(
-    unsigned PrimaryFunctionId, unsigned SourceFileId, unsigned SourceLineNum,
-    const MCSymbol *FnStartSym, const MCSymbol *FnEndSym,
-    ArrayRef<unsigned> SecondaryFunctionIds) {
+void MCAsmStreamer::EmitCVInlineLinetableDirective(unsigned PrimaryFunctionId,
+                                                   unsigned SourceFileId,
+                                                   unsigned SourceLineNum,
+                                                   const MCSymbol *FnStartSym,
+                                                   const MCSymbol *FnEndSym) {
   OS << "\t.cv_inline_linetable\t" << PrimaryFunctionId << ' ' << SourceFileId
      << ' ' << SourceLineNum << ' ';
   FnStartSym->print(OS, MAI);
   OS << ' ';
   FnEndSym->print(OS, MAI);
-  if (!SecondaryFunctionIds.empty()) {
-    OS << " contains";
-    for (unsigned SecondaryFunctionId : SecondaryFunctionIds)
-      OS << ' ' << SecondaryFunctionId;
-  }
   EmitEOL();
   this->MCStreamer::EmitCVInlineLinetableDirective(
-      PrimaryFunctionId, SourceFileId, SourceLineNum, FnStartSym, FnEndSym,
-      SecondaryFunctionIds);
+      PrimaryFunctionId, SourceFileId, SourceLineNum, FnStartSym, FnEndSym);
 }
 
 void MCAsmStreamer::EmitCVDefRangeDirective(

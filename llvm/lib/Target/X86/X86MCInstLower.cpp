@@ -499,18 +499,17 @@ ReSimplify:
     break;
   }
 
-  // TAILJMPd, TAILJMPd64 - Lower to the correct jump instructions.
-  case X86::TAILJMPr:
+  // TAILJMPd, TAILJMPd64, TailJMPd_cc - Lower to the correct jump instruction.
+  { unsigned Opcode;
+  case X86::TAILJMPr:   Opcode = X86::JMP32r; goto SetTailJmpOpcode;
   case X86::TAILJMPd:
-  case X86::TAILJMPd64: {
-    unsigned Opcode;
-    switch (OutMI.getOpcode()) {
-    default: llvm_unreachable("Invalid opcode");
-    case X86::TAILJMPr: Opcode = X86::JMP32r; break;
-    case X86::TAILJMPd:
-    case X86::TAILJMPd64: Opcode = X86::JMP_1; break;
-    }
+  case X86::TAILJMPd64: Opcode = X86::JMP_1;  goto SetTailJmpOpcode;
+  case X86::TAILJMPd_CC:
+    Opcode = X86::GetCondBranchFromCond(
+        static_cast<X86::CondCode>(MI->getOperand(1).getImm()));
+    goto SetTailJmpOpcode;
 
+  SetTailJmpOpcode:
     MCOperand Saved = OutMI.getOperand(0);
     OutMI = MCInst();
     OutMI.setOpcode(Opcode);
@@ -1023,16 +1022,6 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
            getSubtargetInfo());
 }
 
-void X86AsmPrinter::recordSled(MCSymbol *Sled, const MachineInstr &MI,
-                               SledKind Kind) {
-  auto Fn = MI.getParent()->getParent()->getFunction();
-  auto Attr = Fn->getFnAttribute("function-instrument");
-  bool AlwaysInstrument =
-      Attr.isStringAttribute() && Attr.getValueAsString() == "xray-always";
-  Sleds.emplace_back(
-      XRayFunctionEntry{Sled, CurrentFnSym, Kind, AlwaysInstrument, Fn});
-}
-
 void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
                                                   X86MCInstLower &MCIL) {
   // We want to emit the following pattern:
@@ -1306,6 +1295,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::TAILJMPr:
   case X86::TAILJMPm:
   case X86::TAILJMPd:
+  case X86::TAILJMPd_CC:
   case X86::TAILJMPr64:
   case X86::TAILJMPm64:
   case X86::TAILJMPd64:

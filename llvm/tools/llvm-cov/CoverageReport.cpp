@@ -116,6 +116,19 @@ raw_ostream::Colors determineCoveragePercentageColor(const T &Info) {
                                           : raw_ostream::RED;
 }
 
+/// \brief Determine the length of the longest common prefix of the strings in
+/// \p Strings.
+unsigned getLongestCommonPrefixLen(ArrayRef<StringRef> Strings) {
+  unsigned LCP = Strings[0].size();
+  for (unsigned I = 1, E = Strings.size(); LCP > 0 && I < E; ++I) {
+    auto Mismatch =
+        std::mismatch(Strings[0].begin(), Strings[0].end(), Strings[I].begin())
+            .first;
+    LCP = std::min(LCP, (unsigned)std::distance(Strings[0].begin(), Mismatch));
+  }
+  return LCP;
+}
+
 } // end anonymous namespace
 
 namespace llvm {
@@ -236,9 +249,14 @@ void CoverageReport::renderFileReports(raw_ostream &OS) {
   renderDivider(FileReportColumns, OS);
   OS << "\n";
 
+  std::vector<StringRef> UniqueSourceFiles = Coverage.getUniqueSourceFiles();
+  unsigned LCP = 0;
+  if (UniqueSourceFiles.size() > 1)
+    LCP = getLongestCommonPrefixLen(UniqueSourceFiles);
+
   FileCoverageSummary Totals("TOTAL");
-  for (StringRef Filename : Coverage.getUniqueSourceFiles()) {
-    FileCoverageSummary Summary(Filename);
+  for (StringRef Filename : UniqueSourceFiles) {
+    FileCoverageSummary Summary(Filename.drop_front(LCP));
     for (const auto &F : Coverage.getCoveredFunctions(Filename)) {
       FunctionCoverageSummary Function = FunctionCoverageSummary::get(F);
       Summary.addFunction(Function);

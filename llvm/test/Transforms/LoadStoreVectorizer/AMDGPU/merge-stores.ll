@@ -196,11 +196,11 @@ define void @merge_global_store_4_constants_i64(i64 addrspace(1)* %out) #0 {
 }
 
 ; CHECK-LABEL: @merge_global_store_2_adjacent_loads_i32
-; CHECK: [[LOAD:%[0-9]+]] = load <2 x i32>
-; CHECK: [[ELT0:%[0-9]+]] = extractelement <2 x i32> [[LOAD]], i32 0
-; CHECK: [[ELT1:%[0-9]+]] = extractelement <2 x i32> [[LOAD]], i32 1
-; CHECK: [[INSERT0:%[0-9]+]] = insertelement <2 x i32> undef, i32 [[ELT0]], i32 0
-; CHECK: [[INSERT1:%[0-9]+]] = insertelement <2 x i32> [[INSERT0]], i32 [[ELT1]], i32 1
+; CHECK: [[LOAD:%[^ ]+]] = load <2 x i32>
+; CHECK: [[ELT0:%[^ ]+]] = extractelement <2 x i32> [[LOAD]], i32 0
+; CHECK: [[ELT1:%[^ ]+]] = extractelement <2 x i32> [[LOAD]], i32 1
+; CHECK: [[INSERT0:%[^ ]+]] = insertelement <2 x i32> undef, i32 [[ELT0]], i32 0
+; CHECK: [[INSERT1:%[^ ]+]] = insertelement <2 x i32> [[INSERT0]], i32 [[ELT1]], i32 1
 ; CHECK: store <2 x i32> [[INSERT1]]
 define void @merge_global_store_2_adjacent_loads_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
@@ -235,11 +235,11 @@ define void @merge_global_store_2_adjacent_loads_i32_nonzero_base(i32 addrspace(
 }
 
 ; CHECK-LABEL: @merge_global_store_2_adjacent_loads_shuffle_i32
-; CHECK: [[LOAD:%[0-9]+]] = load <2 x i32>
-; CHECK: [[ELT0:%[0-9]+]] = extractelement <2 x i32> [[LOAD]], i32 0
-; CHECK: [[ELT1:%[0-9]+]] = extractelement <2 x i32> [[LOAD]], i32 1
-; CHECK: [[INSERT0:%[0-9]+]] = insertelement <2 x i32> undef, i32 [[ELT1]], i32 0
-; CHECK: [[INSERT1:%[0-9]+]] = insertelement <2 x i32> [[INSERT0]], i32 [[ELT0]], i32 1
+; CHECK: [[LOAD:%[^ ]+]] = load <2 x i32>
+; CHECK: [[ELT0:%[^ ]+]] = extractelement <2 x i32> [[LOAD]], i32 0
+; CHECK: [[ELT1:%[^ ]+]] = extractelement <2 x i32> [[LOAD]], i32 1
+; CHECK: [[INSERT0:%[^ ]+]] = insertelement <2 x i32> undef, i32 [[ELT1]], i32 0
+; CHECK: [[INSERT1:%[^ ]+]] = insertelement <2 x i32> [[INSERT0]], i32 [[ELT0]], i32 1
 ; CHECK: store <2 x i32> [[INSERT1]]
 define void @merge_global_store_2_adjacent_loads_shuffle_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1

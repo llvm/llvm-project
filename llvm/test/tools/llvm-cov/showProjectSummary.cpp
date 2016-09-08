@@ -36,11 +36,8 @@ int main(int argc, char ** argv) {
 // HTML: <span>Code Coverage Report</span>
 // HTML: <div class='created-time'>
 // HTML: <span>Created:
-// HTML-FILE: <pre>Source:
-// HTML-FILE: showProjectSummary.cpp</pre>
-// HTML-FILE: <pre>Binary:
-// HTML-FILE: showProjectSummary.covmapping</pre>
-// HTML-FUNCTION: <pre>Function: main</pre>
+// HTML-FILE: <pre>Source: {{.*}}showProjectSummary.cpp (Binary: showProjectSummary.covmapping)</pre>
+// HTML-FUNCTION: <pre>main</pre>
 // HTML-UNCOVEREDLINE: <a href='#L8'>Go to first unexecuted line</a>
 // HTML-HEADER: <tr><td><span><pre>Line No.</pre></span></td>
 // HTML-HEADER: <td><span><pre>Count</pre></span></td>

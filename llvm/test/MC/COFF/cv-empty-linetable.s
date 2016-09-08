@@ -16,6 +16,7 @@ _f:                                     # @f
 Lfunc_begin0:
 # BB#0:                                 # %entry
 	.cv_file	1 "cv-empty-linetable.s"
+	.cv_func_id 1
 	.cv_loc	1 1 3 15 is_stmt 0
 	jmp	_g                      # TAILCALL
 Lfunc_end0:

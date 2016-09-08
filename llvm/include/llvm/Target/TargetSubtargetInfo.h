@@ -71,6 +71,8 @@ public:
 
   virtual ~TargetSubtargetInfo();
 
+  virtual bool isXRaySupported() const { return false; }
+
   // Interfaces to the major aspects of target machine information:
   //
   // -- Instruction opcode and operand information

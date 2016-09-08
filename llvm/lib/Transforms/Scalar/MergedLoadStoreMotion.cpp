@@ -260,7 +260,7 @@ void MergedLoadStoreMotion::hoistInstruction(BasicBlock *BB,
   assert(HoistCand->getParent() != BB);
 
   // Intersect optional metadata.
-  HoistCand->intersectOptionalDataWith(ElseInst);
+  HoistCand->andIRFlags(ElseInst);
   HoistCand->dropUnknownNonDebugMetadata();
 
   // Prepend point for instruction insert
@@ -434,7 +434,7 @@ bool MergedLoadStoreMotion::sinkStore(BasicBlock *BB, StoreInst *S0,
     // Hoist the instruction.
     BasicBlock::iterator InsertPt = BB->getFirstInsertionPt();
     // Intersect optional metadata.
-    S0->intersectOptionalDataWith(S1);
+    S0->andIRFlags(S1);
     S0->dropUnknownNonDebugMetadata();
 
     // Create the new store to be inserted at the join point.

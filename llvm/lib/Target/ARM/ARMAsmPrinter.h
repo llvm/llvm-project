@@ -94,7 +94,19 @@ public:
   // lowerOperand - Convert a MachineOperand into the equivalent MCOperand.
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
 
+  //===------------------------------------------------------------------===//
+  // XRay implementation
+  //===------------------------------------------------------------------===//
+public:
+  // XRay-specific lowering for ARM.
+  void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
+  void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
+  // Helper function that emits the XRay sleds we've collected for a particular
+  // function.
+  void EmitXRayTable();
+
 private:
+  void EmitSled(const MachineInstr &MI, SledKind Kind);
 
   // Helpers for EmitStartOfAsmFile() and EmitEndOfAsmFile()
   void emitAttributes();

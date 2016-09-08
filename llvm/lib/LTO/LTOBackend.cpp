@@ -15,12 +15,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/LTO/LTOBackend.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -115,6 +121,41 @@ createTargetMachine(Config &Conf, StringRef TheTriple,
       Conf.CodeModel, Conf.CGOptLevel));
 }
 
+static void runNewPMCustomPasses(Module &Mod, TargetMachine *TM,
+                                 std::string PipelineDesc,
+                                 bool DisableVerify) {
+  PassBuilder PB(TM);
+  AAManager AA;
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+
+  // Register the AA manager first so that our version is the one used.
+  FAM.registerPass([&] { return std::move(AA); });
+
+  // Register all the basic analyses with the managers.
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  ModulePassManager MPM;
+
+  // Always verify the input.
+  MPM.addPass(VerifierPass());
+
+  // Now, add all the passes we've been requested to.
+  if (!PB.parsePassPipeline(MPM, PipelineDesc))
+    report_fatal_error("unable to parse pass pipeline description: " +
+                       PipelineDesc);
+
+  if (!DisableVerify)
+    MPM.addPass(VerifierPass());
+  MPM.run(Mod, MAM);
+}
+
 static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
                            bool IsThinLto) {
   legacy::PassManager passes;
@@ -140,7 +181,10 @@ static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
 bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
          bool IsThinLto) {
   Mod.setDataLayout(TM->createDataLayout());
-  runOldPMPasses(Conf, Mod, TM, IsThinLto);
+  if (Conf.OptPipeline.empty())
+    runOldPMPasses(Conf, Mod, TM, IsThinLto);
+  else
+    runNewPMCustomPasses(Mod, TM, Conf.OptPipeline, Conf.DisableVerify);
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
