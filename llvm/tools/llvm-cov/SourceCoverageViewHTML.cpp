@@ -415,26 +415,21 @@ void SourceCoverageViewHTML::renderLine(
   //    snippet 3, and so on.
 
   Optional<std::string> Color;
-  SmallVector<std::pair<unsigned, unsigned>, 4> HighlightedRanges;
+  SmallVector<std::pair<unsigned, unsigned>, 2> HighlightedRanges;
   auto Highlight = [&](const std::string &Snippet, unsigned LC, unsigned RC) {
-    if (getOptions().Debug) {
-      if (!HighlightedRanges.empty() &&
-          HighlightedRanges.back().second == LC - 1) {
-        HighlightedRanges.back().second = RC;
-      } else
-        HighlightedRanges.emplace_back(LC, RC);
-    }
+    if (getOptions().Debug)
+      HighlightedRanges.emplace_back(LC, RC);
     return tag("span", Snippet, Color.getValue());
   };
 
   auto CheckIfUncovered = [](const coverage::CoverageSegment *S) {
-    return S && (S->HasCount && S->Count == 0);
+    return S && S->HasCount && S->Count == 0;
   };
 
-  if (CheckIfUncovered(WrappedSegment) ||
-      CheckIfUncovered(Segments.empty() ? nullptr : Segments.front())) {
+  if (CheckIfUncovered(WrappedSegment)) {
     Color = "red";
-    Snippets[0] = Highlight(Snippets[0], 0, Snippets[0].size());
+    if (!Snippets[0].empty())
+      Snippets[0] = Highlight(Snippets[0], 1, 1 + Snippets[0].size());
   }
 
   for (unsigned I = 0, E = Segments.size(); I < E; ++I) {
@@ -452,16 +447,15 @@ void SourceCoverageViewHTML::renderLine(
   }
 
   if (Color.hasValue() && Segments.empty())
-    Snippets.back() = Highlight(Snippets.back(), Snippets[0].size(), 0);
+    Snippets.back() = Highlight(Snippets.back(), 1, 1 + Snippets.back().size());
 
   if (getOptions().Debug) {
     for (const auto &Range : HighlightedRanges) {
-      errs() << "Highlighted line " << LineNo << ", " << Range.first + 1
-             << " -> ";
+      errs() << "Highlighted line " << LineNo << ", " << Range.first << " -> ";
       if (Range.second == 0)
         errs() << "?";
       else
-        errs() << Range.second + 1;
+        errs() << Range.second;
       errs() << "\n";
     }
   }

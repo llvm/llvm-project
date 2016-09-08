@@ -72,7 +72,7 @@ define void @multiple_use_fadd_multi_fmad(float addrspace(1)* %out, float %x, fl
 }
 
 ; GCN-LABEL: {{^}}fmul_x2_xn2:
-; GCN: v_mul_f32_e64 [[TMP0:v[0-9]+]], -4.0, [[X:s[0-9]+]]
+; GCN: v_mul_f32_e64 [[TMP0:v[0-9]+]], [[X:s[0-9]+]], -4.0
 ; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], [[X]], [[TMP0]]
 ; GCN: buffer_store_dword [[RESULT]]
 define void @fmul_x2_xn2(float addrspace(1)* %out, float %x, float %y) #0 {

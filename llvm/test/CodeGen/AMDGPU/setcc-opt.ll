@@ -178,7 +178,7 @@ define void @cmp_sext_k_neg1(i1 addrspace(1)* %out, i8 addrspace(1)* %b.ptr) nou
 
 ; FUNC-LABEL: {{^}}cmp_sext_k_neg1_i8_sext_arg:
 ; GCN: s_load_dword [[B:s[0-9]+]]
-; GCN: v_cmp_ne_i32_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], -1, [[B]]
+; GCN: v_cmp_ne_i32_e64 [[CMP:s\[[0-9]+:[0-9]+\]]], [[B]], -1{{$}}
 ; GCN-NEXT: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], 0, 1, [[CMP]]
 ; GCN-NEXT: buffer_store_byte [[RESULT]]
 ; GCN: s_endpgm

@@ -25,7 +25,7 @@ declare <16 x double> @llvm.ceil.v16f64(<16 x double>) nounwind readnone
 ; SI-DAG: cmp_lt_i32
 ; SI-DAG: cndmask_b32
 ; SI-DAG: cndmask_b32
-; SI-DAG: v_cmp_lt_f64
+; SI-DAG: v_cmp_gt_f64
 ; SI-DAG: v_cmp_lg_f64
 ; SI-DAG: v_cndmask_b32
 ; SI: v_cndmask_b32

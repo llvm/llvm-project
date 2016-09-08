@@ -86,6 +86,10 @@ private:
   unsigned findUsedSGPR(const MachineInstr &MI, int OpIndices[3]) const;
 
 protected:
+  bool swapSourceModifiers(MachineInstr &MI,
+                           MachineOperand &Src0, unsigned Src0OpName,
+                           MachineOperand &Src1, unsigned Src1OpName) const;
+
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
@@ -144,7 +148,12 @@ public:
   unsigned getMovOpcode(const TargetRegisterClass *DstRC) const;
 
   LLVM_READONLY
-  int commuteOpcode(const MachineInstr &MI) const;
+  int commuteOpcode(unsigned Opc) const;
+
+  LLVM_READONLY
+  inline int commuteOpcode(const MachineInstr &MI) const {
+    return commuteOpcode(MI.getOpcode());
+  }
 
   bool findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;

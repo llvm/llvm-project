@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs< %s | FileCheck -check-prefix=SI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs< %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -march=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG %s
 
 declare i32 @llvm.r600.read.tidig.x() nounwind readnone
@@ -73,7 +73,7 @@ define void @sgpr_trunc_i32_to_i1(i32 addrspace(1)* %out, i32 %a) {
 ; SI-LABEL: {{^}}s_trunc_i64_to_i1:
 ; SI: s_load_dwordx2 s{{\[}}[[SLO:[0-9]+]]:{{[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; SI: s_and_b32 [[MASKED:s[0-9]+]], 1, s[[SLO]]
-; SI: v_cmp_eq_i32_e64 s{{\[}}[[VLO:[0-9]+]]:[[VHI:[0-9]+]]], 1, [[MASKED]]
+; SI: v_cmp_eq_i32_e64 s{{\[}}[[VLO:[0-9]+]]:[[VHI:[0-9]+]]], [[MASKED]], 1{{$}}
 ; SI: v_cndmask_b32_e64 {{v[0-9]+}}, -12, 63, s{{\[}}[[VLO]]:[[VHI]]]
 define void @s_trunc_i64_to_i1(i32 addrspace(1)* %out, i64 %x) {
   %trunc = trunc i64 %x to i1

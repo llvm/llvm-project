@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
 
@@ -75,7 +75,7 @@ define void @fabs_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %in) {
 ; SI: s_load_dword [[ABS_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xb
 ; VI: s_load_dword [[ABS_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x2c
 ; GCN-NOT: and
-; GCN: v_mul_f32_e64 v{{[0-9]+}}, |[[ABS_VALUE]]|, v{{[0-9]+}}
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, v{{[0-9]+}}, |[[ABS_VALUE]]|
 define void @fabs_fn_fold(float addrspace(1)* %out, float %in0, float %in1) {
   %fabs = call float @fabs(float %in0)
   %fmul = fmul float %fabs, %in1
@@ -87,7 +87,7 @@ define void @fabs_fn_fold(float addrspace(1)* %out, float %in0, float %in1) {
 ; SI: s_load_dword [[ABS_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xb
 ; VI: s_load_dword [[ABS_VALUE:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x2c
 ; GCN-NOT: and
-; GCN: v_mul_f32_e64 v{{[0-9]+}}, |[[ABS_VALUE]]|, v{{[0-9]+}}
+; GCN: v_mul_f32_e64 v{{[0-9]+}}, v{{[0-9]+}}, |[[ABS_VALUE]]|
 define void @fabs_fold(float addrspace(1)* %out, float %in0, float %in1) {
   %fabs = call float @llvm.fabs.f32(float %in0)
   %fmul = fmul float %fabs, %in1
