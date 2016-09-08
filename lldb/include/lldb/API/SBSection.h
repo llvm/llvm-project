@@ -54,6 +54,21 @@ public:
   SectionType GetSectionType();
 
   //------------------------------------------------------------------
+  /// Gets the permissions (RWX) of the section of the object file
+  ///
+  /// Returns a mask of bits of enum lldb::Permissions for this section.
+  /// Sections for which permissions are not defined, 0 is returned for
+  /// them. The binary representation of this value corresponds to [XRW]
+  /// i.e. for a section having read and execute permissions, the value
+  /// returned is 6
+  ///
+  /// @return
+  ///     Returns an unsigned value for Permissions for the section.
+  //------------------------------------------------------------------
+  uint32_t
+  GetPermissions() const;
+
+  //------------------------------------------------------------------
   /// Return the size of a target's byte represented by this section
   /// in numbers of host bytes. Note that certain architectures have
   /// varying minimum addressable unit (i.e. byte) size for their

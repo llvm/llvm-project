@@ -640,9 +640,21 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   // in the form of { global: foo; bar; local *; }. So, local is default.
   // Here, we make specified symbols global.
   if (!Config->VersionScriptGlobals.empty()) {
-    for (SymbolVersion &Sym : Config->VersionScriptGlobals)
+    std::vector<StringRef> Globs;
+    for (SymbolVersion &Sym : Config->VersionScriptGlobals) {
+      if (hasWildcard(Sym.Name)) {
+        Globs.push_back(Sym.Name);
+        continue;
+      }
       if (SymbolBody *B = find(Sym.Name))
         B->symbol()->VersionId = VER_NDX_GLOBAL;
+    }
+    if (Globs.empty())
+      return;
+    Regex Re = compileGlobPatterns(Globs);
+    std::vector<SymbolBody *> Syms = findAll(Re);
+    for (SymbolBody *B : Syms)
+      B->symbol()->VersionId = VER_NDX_GLOBAL;
     return;
   }
 

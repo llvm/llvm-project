@@ -55,6 +55,8 @@ add_polly_library(Polly
   Transform/CodePreparation.cpp
   Transform/DeadCodeElimination.cpp
   Transform/ScheduleOptimizer.cpp
+  Transform/FlattenSchedule.cpp
+  Transform/FlattenAlgo.cpp
   ${POLLY_HEADER_FILES}
   )
 

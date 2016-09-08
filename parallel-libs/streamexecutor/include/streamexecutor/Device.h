@@ -30,6 +30,9 @@ public:
   explicit Device(PlatformDevice *PDevice);
   virtual ~Device();
 
+  /// Gets the name of this device.
+  std::string getName() const { return PDevice->getName(); }
+
   /// Creates a kernel object for this device.
   template <typename KernelT>
   Expected<typename std::enable_if<std::is_base_of<KernelBase, KernelT>::value,

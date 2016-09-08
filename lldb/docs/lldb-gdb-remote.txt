@@ -1054,6 +1054,28 @@ for this region.
 //----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
+// jModulesInfo:[{"file":"...",triple:"..."}, ...]
+//
+// BRIEF
+//  Get information for a list of modules by given module path and
+//  architecture.
+//
+// RESPONSE
+//  A JSON array of dictionaries containing the following keys: uuid,
+//  triple, file_path, file_offset, file_size. The meaning of the fields
+//  is the same as in the qModuleInfo packet. The server signals the
+//  failure to retrieve the module info for a file by ommiting the
+//  corresponding array entry from the response. The server may also
+//  include entries the client did not ask for, if it has reason to
+//  the modules will be interesting to the client.
+//
+// PRIORITY TO IMPLEMENT
+//  Optional. If not implemented, qModuleInfo packet will be used, which
+//  may be slower if the target contains a large number of modules and
+//  the communication link has a non-negligible latency.
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
 // Stop reply packet extensions
 //
 // BRIEF

@@ -537,8 +537,10 @@ void Dependences::calculateDependences(Scop &S) {
       isl_set *AccDomW = isl_map_wrap(MA->getAccessRelation());
       isl_union_map *AccRedDepU = isl_union_map_intersect_domain(
           isl_union_map_copy(TC_RED), isl_union_set_from_set(AccDomW));
-      if (isl_union_map_is_empty(AccRedDepU) && !isl_union_map_free(AccRedDepU))
+      if (isl_union_map_is_empty(AccRedDepU)) {
+        isl_union_map_free(AccRedDepU);
         continue;
+      }
 
       isl_map *AccRedDep = isl_map_from_union_map(AccRedDepU);
       RED_SIN = isl_union_map_add_map(RED_SIN, isl_map_copy(AccRedDep));

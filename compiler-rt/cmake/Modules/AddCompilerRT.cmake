@@ -195,8 +195,14 @@ function(add_compiler_rt_runtime name type)
     set_target_properties(${libname} PROPERTIES
         OUTPUT_NAME ${output_name_${libname}})
     set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Runtime")
-    if(LIB_LINK_LIBS AND ${type} STREQUAL "SHARED")
-      target_link_libraries(${libname} ${LIB_LINK_LIBS})
+    if(${type} STREQUAL "SHARED")
+      if(LIB_LINK_LIBS)
+        target_link_libraries(${libname} ${LIB_LINK_LIBS})
+      endif()
+      if(WIN32 AND NOT CYGWIN AND NOT MINGW)
+        set_target_properties(${libname} PROPERTIES IMPORT_PREFIX "")
+        set_target_properties(${libname} PROPERTIES IMPORT_SUFFIX ".lib")
+      endif()
     endif()
     install(TARGETS ${libname}
       ARCHIVE DESTINATION ${COMPILER_RT_LIBRARY_INSTALL_DIR}

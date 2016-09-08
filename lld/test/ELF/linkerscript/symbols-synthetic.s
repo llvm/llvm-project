@@ -54,8 +54,9 @@
 # RUN: ld.lld -o %t1 --eh-frame-hdr --script %t.script %t
 
 # SIMPLE:      0000000000000160         .foo    00000000 .hidden _end_sec
-# SIMPLE:      0000000000000158         .foo    00000000 _begin_sec
+# SIMPLE-NEXT: 0000000000000158         .foo    00000000 _begin_sec
 # SIMPLE-NEXT: 0000000000000160         *ABS*   00000000 _end_sec_abs
+# SIMPLE-NEXT: 0000000000001048         .text   00000000 _start
 # SIMPLE-NEXT: 0000000000000158         .foo    00000000 begin_foo
 # SIMPLE-NEXT: 0000000000000160         .foo    00000000 end_foo
 # SIMPLE-NEXT: 0000000000000008         .foo    00000000 size_foo_1

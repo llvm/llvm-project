@@ -23,6 +23,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -1963,13 +1964,13 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB) {
   if (!TLI)
     return false;
 
-  ReturnInst *RI = dyn_cast<ReturnInst>(BB->getTerminator());
-  if (!RI)
+  ReturnInst *RetI = dyn_cast<ReturnInst>(BB->getTerminator());
+  if (!RetI)
     return false;
 
   PHINode *PN = nullptr;
   BitCastInst *BCI = nullptr;
-  Value *V = RI->getReturnValue();
+  Value *V = RetI->getReturnValue();
   if (V) {
     BCI = dyn_cast<BitCastInst>(V);
     if (BCI)
@@ -1983,14 +1984,6 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB) {
   if (PN && PN->getParent() != BB)
     return false;
 
-  // It's not safe to eliminate the sign / zero extension of the return value.
-  // See llvm::isInTailCallPosition().
-  const Function *F = BB->getParent();
-  AttributeSet CallerAttrs = F->getAttributes();
-  if (CallerAttrs.hasAttribute(AttributeSet::ReturnIndex, Attribute::ZExt) ||
-      CallerAttrs.hasAttribute(AttributeSet::ReturnIndex, Attribute::SExt))
-    return false;
-
   // Make sure there are no instructions between the PHI and return, or that the
   // return is the first instruction in the block.
   if (PN) {
@@ -1999,24 +1992,26 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB) {
     if (&*BI == BCI)
       // Also skip over the bitcast.
       ++BI;
-    if (&*BI != RI)
+    if (&*BI != RetI)
       return false;
   } else {
     BasicBlock::iterator BI = BB->begin();
     while (isa<DbgInfoIntrinsic>(BI)) ++BI;
-    if (&*BI != RI)
+    if (&*BI != RetI)
       return false;
   }
 
   /// Only dup the ReturnInst if the CallInst is likely to be emitted as a tail
   /// call.
+  const Function *F = BB->getParent();
   SmallVector<CallInst*, 4> TailCalls;
   if (PN) {
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
       CallInst *CI = dyn_cast<CallInst>(PN->getIncomingValue(I));
       // Make sure the phi value is indeed produced by the tail call.
       if (CI && CI->hasOneUse() && CI->getParent() == PN->getIncomingBlock(I) &&
-          TLI->mayBeEmittedAsTailCall(CI))
+          TLI->mayBeEmittedAsTailCall(CI) &&
+          attributesPermitTailCall(F, CI, RetI, *TLI))
         TailCalls.push_back(CI);
     }
   } else {
@@ -2033,7 +2028,8 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB) {
         continue;
 
       CallInst *CI = dyn_cast<CallInst>(&*RI);
-      if (CI && CI->use_empty() && TLI->mayBeEmittedAsTailCall(CI))
+      if (CI && CI->use_empty() && TLI->mayBeEmittedAsTailCall(CI) &&
+          attributesPermitTailCall(F, CI, RetI, *TLI))
         TailCalls.push_back(CI);
     }
   }
@@ -2060,7 +2056,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB) {
       continue;
 
     // Duplicate the return into CallBB.
-    (void)FoldReturnIntoUncondBranch(RI, BB, CallBB);
+    (void)FoldReturnIntoUncondBranch(RetI, BB, CallBB);
     ModifiedDT = Changed = true;
     ++NumRetsDup;
   }

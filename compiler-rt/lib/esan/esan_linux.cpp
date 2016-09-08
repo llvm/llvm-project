@@ -25,7 +25,7 @@
 namespace __esan {
 
 void verifyAddressSpace() {
-#if SANITIZER_LINUX && (defined(__x86_64__) || SANITIZER_MIPS64)
+#if SANITIZER_LINUX && defined(__x86_64__)
   // The kernel determines its mmap base from the stack size limit.
   // Our Linux 64-bit shadow mapping assumes the stack limit is less than a
   // terabyte, which keeps the mmap region above 0x7e00'.

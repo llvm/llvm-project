@@ -47,7 +47,6 @@
       <li><a href="/source.html">Source</a></li>
       <li><a href="/build.html">Build</a></li>
       <li><a href="/test.html">Test</a></li>
-      <li><a href="/lldb-coding-conventions.html">Coding Conventions</a></li>      
       <li><a href="/SB-api-coding-rules.html">SB API Coding Rules</a></li>
       <li><a href="http://llvm.org/bugs">Bug Reports</a></li>
       <li><a href="http://llvm.org/svn/llvm-project/lldb/trunk">Browse SVN</a></li>

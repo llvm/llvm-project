@@ -170,6 +170,18 @@ def classyfier1(lines):
             continue
         elif line.startswith("New access function '"):
             yield {'NewAccessFunction'}
+        elif line == 'Schedule before flattening {':
+            while True:
+                yield  {'ScheduleBeforeFlattening'}
+                if line == '}':
+                    break
+                line = i.__next__()
+        elif line == 'Schedule after flattening {':
+            while True:
+                yield  {'ScheduleAfterFlattening'}
+                if line == '}':
+                    break
+                line = i.__next__()
         else:
             yield set()
         line = i.__next__()

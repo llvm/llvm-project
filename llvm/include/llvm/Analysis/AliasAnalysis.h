@@ -854,7 +854,7 @@ class AAManager : public AnalysisInfoMixin<AAManager> {
 public:
   typedef AAResults Result;
 
-  // This type hase value semantics. We have to spell these out because MSVC
+  // This type has value semantics. We have to spell these out because MSVC
   // won't synthesize them.
   AAManager() {}
   AAManager(AAManager &&Arg) : ResultGetters(std::move(Arg.ResultGetters)) {}

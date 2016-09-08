@@ -96,7 +96,7 @@ namespace rdf {
     // the dominator tree), create a map: block -> set of uses live on exit.
     std::map<MachineBasicBlock*,RefMap> PhiLOX;
 
-    bool isRestricted(NodeAddr<InstrNode*> IA, NodeAddr<RefNode*> RA,
+    bool isRestrictedToRef(NodeAddr<InstrNode*> IA, NodeAddr<RefNode*> RA,
         RegisterRef RR) const;
     RegisterRef getRestrictedRegRef(NodeAddr<RefNode*> RA) const;
     unsigned getPhysReg(RegisterRef RR) const;

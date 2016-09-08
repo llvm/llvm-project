@@ -34,7 +34,6 @@ namespace __esan {
 
 extern bool EsanIsInitialized;
 extern bool EsanDuringInit;
-extern uptr VmaSize;
 
 void initializeLibrary(ToolType Tool);
 int finalizeLibrary();

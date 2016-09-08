@@ -1029,10 +1029,9 @@ Currently, only the following parameter attributes are defined:
     This indicates that the pointer parameter specifies the address of a
     structure that is the return value of the function in the source
     program. This pointer must be guaranteed by the caller to be valid:
-    loads and stores to the structure may be assumed by the callee
-    not to trap and to be properly aligned. This may only be applied to
-    the first parameter. This is not a valid attribute for return
-    values.
+    loads and stores to the structure may be assumed by the callee not
+    to trap and to be properly aligned. This is not a valid attribute
+    for return values.
 
 ``align <n>``
     This indicates that the pointer value may be assumed by the optimizer to

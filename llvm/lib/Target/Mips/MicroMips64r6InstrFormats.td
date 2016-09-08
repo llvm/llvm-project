@@ -219,3 +219,49 @@ class POOL32S_3R_FM_MMR6<string instr_asm, bits<9> funct>
   let Inst{10-9}  = 0b00;
   let Inst{8-0}   = funct;
 }
+
+class POOL32S_DBITSWAP_FM_MMR6<string instr_asm> : MMR6Arch<instr_asm>,
+      MipsR6Inst {
+  bits<5> rt;
+  bits<5> rd;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b010110;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = rd;
+  let Inst{15-12}  = 0b0000;
+  let Inst{11-6}  = 0b101100;
+  let Inst{5-0}   = 0b111100;
+}
+
+class POOL32S_3RSA_FM_MMR6<string instr_asm> : MMR6Arch<instr_asm>,
+      MipsR6Inst {
+  bits<5> rt;
+  bits<5> rs;
+  bits<5> rd;
+  bits<2> sa;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b010110;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = rs;
+  let Inst{15-11} = rd;
+  let Inst{10-9} = sa;
+  let Inst{8-6} = 0b100;
+  let Inst{5-0} = 0b000100;
+}
+
+class PCREL_1ROFFSET19_FM_MMR6<string instr_asm> : MMR6Arch<instr_asm>,
+      MipsR6Inst {
+  bits<5> rt;
+  bits<19> offset;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b011110;
+  let Inst{25-21} = rt;
+  let Inst{20-19} = 0b10;
+  let Inst{18-0} = offset;
+}

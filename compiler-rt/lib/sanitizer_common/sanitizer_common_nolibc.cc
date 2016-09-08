@@ -17,6 +17,9 @@
 
 namespace __sanitizer {
 
+// The Windows implementations of these functions use the win32 API directly,
+// bypassing libc.
+#if !SANITIZER_WINDOWS
 #if SANITIZER_LINUX
 bool ShouldLogAfterPrintf() { return false; }
 void LogMessageOnPrintf(const char *str) {}
@@ -24,5 +27,6 @@ void LogMessageOnPrintf(const char *str) {}
 void WriteToSyslog(const char *buffer) {}
 void Abort() { internal__exit(1); }
 void SleepForSeconds(int seconds) { internal_sleep(seconds); }
+#endif // !SANITIZER_WINDOWS
 
 }  // namespace __sanitizer

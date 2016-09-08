@@ -277,6 +277,7 @@ def warn_shared_textrel: F<"warn-shared-textrel">;
 def EB : F<"EB">;
 def EL : F<"EL">;
 def G: JoinedOrSeparate<["-"], "G">;
+def Qy : F<"Qy">;
 
 // Aliases for ignored options
 def alias_define_common_d: Flag<["-"], "d">, Alias<define_common>;

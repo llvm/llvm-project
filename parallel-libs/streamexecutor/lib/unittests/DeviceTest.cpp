@@ -74,6 +74,10 @@ public:
 using llvm::ArrayRef;
 using llvm::MutableArrayRef;
 
+TEST_F(DeviceTest, GetName) {
+  EXPECT_EQ(Device.getName(), "SimpleHostPlatformDevice");
+}
+
 TEST_F(DeviceTest, AllocateAndFreeDeviceMemory) {
   se::Expected<se::GlobalDeviceMemory<int>> MaybeMemory =
       Device.allocateDeviceMemory<int>(10);

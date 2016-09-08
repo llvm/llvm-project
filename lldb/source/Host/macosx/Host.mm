@@ -1410,7 +1410,7 @@ HostThread Host::StartMonitoringChildProcess(
   if (source) {
     Host::MonitorChildProcessCallback callback_copy = callback;
     ::dispatch_source_set_cancel_handler(source, ^{
-      ::dispatch_release(source);
+      dispatch_release(source);
     });
     ::dispatch_source_set_event_handler(source, ^{
 

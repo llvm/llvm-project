@@ -1962,7 +1962,7 @@ bool GVN::propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
       unsigned NumReplacements =
           DominatesByEdge
               ? replaceDominatedUsesWith(LHS, RHS, *DT, Root)
-              : replaceDominatedUsesWith(LHS, RHS, *DT, Root.getStart(), false);
+              : replaceDominatedUsesWith(LHS, RHS, *DT, Root.getStart());
 
       Changed |= NumReplacements > 0;
       NumGVNEqProp += NumReplacements;
@@ -2038,7 +2038,7 @@ bool GVN::propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
               DominatesByEdge
                   ? replaceDominatedUsesWith(NotCmp, NotVal, *DT, Root)
                   : replaceDominatedUsesWith(NotCmp, NotVal, *DT,
-                                             Root.getStart(), false);
+                                             Root.getStart());
           Changed |= NumReplacements > 0;
           NumGVNEqProp += NumReplacements;
         }

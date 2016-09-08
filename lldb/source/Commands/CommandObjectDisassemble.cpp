@@ -313,7 +313,7 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
   }
 
   if (m_options.show_mixed && m_options.num_lines_context == 0)
-    m_options.num_lines_context = 1;
+    m_options.num_lines_context = 2;
 
   // Always show the PC in the disassembly
   uint32_t options = Disassembler::eOptionMarkPCAddress;
@@ -336,7 +336,7 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
             m_interpreter.GetDebugger(), m_options.arch, plugin_name,
             flavor_string, m_exe_ctx, name,
             nullptr, // Module *
-            m_options.num_instructions,
+            m_options.num_instructions, m_options.show_mixed,
             m_options.show_mixed ? m_options.num_lines_context : 0, options,
             result.GetOutputStream())) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -499,7 +499,7 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
         if (Disassembler::Disassemble(
                 m_interpreter.GetDebugger(), m_options.arch, plugin_name,
                 flavor_string, m_exe_ctx, cur_range.GetBaseAddress(),
-                m_options.num_instructions,
+                m_options.num_instructions, m_options.show_mixed,
                 m_options.show_mixed ? m_options.num_lines_context : 0, options,
                 result.GetOutputStream())) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -547,6 +547,7 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
         if (Disassembler::Disassemble(
                 m_interpreter.GetDebugger(), m_options.arch, plugin_name,
                 flavor_string, m_exe_ctx, cur_range, m_options.num_instructions,
+                m_options.show_mixed,
                 m_options.show_mixed ? m_options.num_lines_context : 0, options,
                 result.GetOutputStream())) {
           result.SetStatus(eReturnStatusSuccessFinishResult);

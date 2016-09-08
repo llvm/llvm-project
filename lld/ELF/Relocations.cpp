@@ -93,15 +93,15 @@ handleMipsTlsRelocation(uint32_t Type, SymbolBody &Body,
                         InputSectionBase<ELFT> &C, typename ELFT::uint Offset,
                         typename ELFT::uint Addend, RelExpr Expr) {
   if (Expr == R_MIPS_TLSLD) {
-    if (Out<ELFT>::Got->addTlsIndex())
+    if (Out<ELFT>::Got->addTlsIndex() && Config->Pic)
       Out<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, Out<ELFT>::Got,
                                     Out<ELFT>::Got->getTlsIndexOff(), false,
                                     nullptr, 0});
-    C.Relocations.push_back({Expr, Type, &C, Offset, Addend, &Body});
+    C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
   if (Target->isTlsGlobalDynamicRel(Type)) {
-    if (Out<ELFT>::Got->addDynTlsEntry(Body)) {
+    if (Out<ELFT>::Got->addDynTlsEntry(Body) && Body.isPreemptible()) {
       typedef typename ELFT::uint uintX_t;
       uintX_t Off = Out<ELFT>::Got->getGlobalDynOffset(Body);
       Out<ELFT>::RelaDyn->addReloc(
@@ -110,7 +110,7 @@ handleMipsTlsRelocation(uint32_t Type, SymbolBody &Body,
                                     Off + (uintX_t)sizeof(uintX_t), false,
                                     &Body, 0});
     }
-    C.Relocations.push_back({Expr, Type, &C, Offset, Addend, &Body});
+    C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
   return 0;
@@ -141,7 +141,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
           {Target->TlsDescRel, Out<ELFT>::Got, Off, false, &Body, 0});
     }
     if (Expr != R_HINT)
-      C.Relocations.push_back({Expr, Type, &C, Offset, Addend, &Body});
+      C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
 
@@ -149,21 +149,21 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     // Local-Dynamic relocs can be relaxed to Local-Exec.
     if (!Config->Shared) {
       C.Relocations.push_back(
-          {R_RELAX_TLS_LD_TO_LE, Type, &C, Offset, Addend, &Body});
+          {R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Body});
       return 2;
     }
     if (Out<ELFT>::Got->addTlsIndex())
       Out<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, Out<ELFT>::Got,
                                     Out<ELFT>::Got->getTlsIndexOff(), false,
                                     nullptr, 0});
-    C.Relocations.push_back({Expr, Type, &C, Offset, Addend, &Body});
+    C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     return 1;
   }
 
   // Local-Dynamic relocs can be relaxed to Local-Exec.
   if (Target->isTlsLocalDynamicRel(Type) && !Config->Shared) {
     C.Relocations.push_back(
-        {R_RELAX_TLS_LD_TO_LE, Type, &C, Offset, Addend, &Body});
+        {R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Body});
     return 1;
   }
 
@@ -182,7 +182,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
                                         Off + (uintX_t)sizeof(uintX_t), false,
                                         &Body, 0});
       }
-      C.Relocations.push_back({Expr, Type, &C, Offset, Addend, &Body});
+      C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
       return 1;
     }
 
@@ -191,7 +191,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     if (isPreemptible(Body, Type)) {
       C.Relocations.push_back(
           {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_IE), Type,
-           &C, Offset, Addend, &Body});
+           Offset, Addend, &Body});
       if (!Body.isInGot()) {
         Out<ELFT>::Got->addEntry(Body);
         Out<ELFT>::RelaDyn->addReloc({Target->TlsGotRel, Out<ELFT>::Got,
@@ -201,7 +201,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
       return Target->TlsGdRelaxSkip;
     }
     C.Relocations.push_back(
-        {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_LE), Type, &C,
+        {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_LE), Type,
          Offset, Addend, &Body});
     return Target->TlsGdRelaxSkip;
   }
@@ -211,7 +211,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
   if (Target->isTlsInitialExecRel(Type) && !Config->Shared &&
       !isPreemptible(Body, Type)) {
     C.Relocations.push_back(
-        {R_RELAX_TLS_IE_TO_LE, Type, &C, Offset, Addend, &Body});
+        {R_RELAX_TLS_IE_TO_LE, Type, Offset, Addend, &Body});
     return 1;
   }
   return 0;
@@ -609,7 +609,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       // when outputting this section. We also have to do it if the format
       // uses Elf_Rel, since in that case the written value is the addend.
       if (Constant || !RelTy::IsRela)
-        C.Relocations.push_back({Expr, Type, &C, Offset, Addend, &Body});
+        C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
     } else {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
@@ -658,15 +658,17 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 
     if (refersToGotEntry(Expr)) {
       if (Config->EMachine == EM_MIPS) {
-        // MIPS ABI has special rules to process GOT entries
-        // and doesn't require relocation entries for them.
+        // MIPS ABI has special rules to process GOT entries and doesn't
+        // require relocation entries for them. A special case is TLS
+        // relocations. In that case dynamic loader applies dynamic
+        // relocations to initialize TLS GOT entries.
         // See "Global Offset Table" in Chapter 5 in the following document
         // for detailed description:
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
         Out<ELFT>::Got->addMipsEntry(Body, Addend, Expr);
-        if (Body.isTls())
+        if (Body.isTls() && Body.isPreemptible())
           AddDyn({Target->TlsGotRel, Out<ELFT>::Got, Body.getGotOffset<ELFT>(),
-                  !Preemptible, &Body, 0});
+                  false, &Body, 0});
         continue;
       }
 

@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=i686-pc-win32 %s -o /dev/null 2>&1 | FileCheck %s
 
 .text
 foo:

@@ -3148,7 +3148,7 @@ namespace {
                              LLVMContext::MD_noalias, LLVMContext::MD_fpmath,
                              LLVMContext::MD_invariant_group};
       combineMetadata(K, H, KnownIDs);
-      K->intersectOptionalDataWith(H);
+      K->andIRFlags(H);
 
       for (unsigned o = 0; o < NumOperands; ++o)
         K->setOperand(o, ReplacedOperands[o]);

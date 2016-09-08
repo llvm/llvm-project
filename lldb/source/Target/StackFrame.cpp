@@ -229,7 +229,7 @@ const char *StackFrame::Disassemble() {
       const char *flavor = nullptr;
       Disassembler::Disassemble(target->GetDebugger(),
                                 target->GetArchitecture(), plugin_name, flavor,
-                                exe_ctx, 0, 0, 0, m_disassembly);
+                                exe_ctx, 0, false, 0, 0, m_disassembly);
     }
     if (m_disassembly.GetSize() == 0)
       return nullptr;
@@ -853,10 +853,9 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                 } else {
                   ValueObjectSP synthetic = valobj_sp->GetSyntheticValue();
                   if (no_synth_child /* synthetic is forbidden */ ||
-                      !synthetic /* no synthetic */
-                      ||
-                      synthetic == valobj_sp) /* synthetic is the same as the
-                                                 original object */
+                      !synthetic                 /* no synthetic */
+                      || synthetic == valobj_sp) /* synthetic is the same as the
+                                                    original object */
                   {
                     valobj_sp->GetExpressionPath(var_expr_path_strm, false);
                     error.SetErrorStringWithFormat(
@@ -1906,10 +1905,11 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
                                  target_arch.GetMaximumOpcodeByteSize());
             const char *plugin_name = nullptr;
             const char *flavor = nullptr;
-            Disassembler::Disassemble(target->GetDebugger(), target_arch,
-                                      plugin_name, flavor, exe_ctx, pc_range,
-                                      disasm_lines, 0,
-                                      Disassembler::eOptionMarkPCAddress, strm);
+            const bool mixed_source_and_assembly = false;
+            Disassembler::Disassemble(
+                target->GetDebugger(), target_arch, plugin_name, flavor,
+                exe_ctx, pc_range, disasm_lines, mixed_source_and_assembly, 0,
+                Disassembler::eOptionMarkPCAddress, strm);
           }
         }
         break;
