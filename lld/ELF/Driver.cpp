@@ -54,7 +54,8 @@ bool elf::link(ArrayRef<const char *> Args, raw_ostream &Error) {
 }
 
 // Parses a linker -m option.
-static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
+static std::pair<ELFKind, uint16_t> parseEmulation(StringRef Emul) {
+  StringRef S = Emul;
   if (S.endswith("_fbsd"))
     S = S.drop_back(5);
 
@@ -70,6 +71,7 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
           .Case("elf64btsmip", {ELF64BEKind, EM_MIPS})
           .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
           .Case("elf64ppc", {ELF64BEKind, EM_PPC64})
+          .Case("elf_amd64", {ELF64LEKind, EM_X86_64})
           .Case("elf_i386", {ELF32LEKind, EM_386})
           .Case("elf_iamcu", {ELF32LEKind, EM_IAMCU})
           .Case("elf_x86_64", {ELF64LEKind, EM_X86_64})
@@ -77,9 +79,9 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
 
   if (Ret.first == ELFNoneKind) {
     if (S == "i386pe" || S == "i386pep" || S == "thumb2pe")
-      error("Windows targets are not supported on the ELF frontend: " + S);
+      error("Windows targets are not supported on the ELF frontend: " + Emul);
     else
-      error("unknown emulation: " + S);
+      error("unknown emulation: " + Emul);
   }
   return Ret;
 }
@@ -311,7 +313,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     link<ELF64BE>(Args);
     return;
   default:
-    error("-m or at least a .o file required");
+    error("target emulation unknown: -m or at least one .o file required");
   }
 }
 

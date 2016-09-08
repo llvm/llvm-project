@@ -16,7 +16,7 @@
 # CHECK-NEXT: Other: 0
 # CHECK-NEXT: Section: Undefined
 
-# CHECK: NEEDED SharedLibrary ({{.*}}2.so)
+# CHECK: NEEDED SharedLibrary (as-needed-no-reloc{{.*}}2.so)
 
         .globl _start
 _start:

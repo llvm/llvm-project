@@ -130,26 +130,22 @@ LinkerScript<ELFT>::getInputSections(const InputSectionDescription *I) {
   return Ret;
 }
 
-template <class ELFT>
-static bool compareName(InputSectionBase<ELFT> *A, InputSectionBase<ELFT> *B) {
+static bool compareName(InputSectionData *A, InputSectionData *B) {
   return A->Name < B->Name;
 }
 
-template <class ELFT>
-static bool compareAlignment(InputSectionBase<ELFT> *A,
-                             InputSectionBase<ELFT> *B) {
+static bool compareAlignment(InputSectionData *A, InputSectionData *B) {
   // ">" is not a mistake. Larger alignments are placed before smaller
   // alignments in order to reduce the amount of padding necessary.
   // This is compatible with GNU.
   return A->Alignment > B->Alignment;
 }
 
-template <class ELFT>
-static std::function<bool(InputSectionBase<ELFT> *, InputSectionBase<ELFT> *)>
+static std::function<bool(InputSectionData *, InputSectionData *)>
 getComparator(SortKind K) {
   if (K == SortByName)
-    return compareName<ELFT>;
-  return compareAlignment<ELFT>;
+    return compareName;
+  return compareAlignment;
 }
 
 template <class ELFT>
@@ -200,9 +196,9 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
     if (!matchConstraints<ELFT>(V, OutCmd.Constraint))
       continue;
     if (Cmd->SortInner)
-      std::stable_sort(V.begin(), V.end(), getComparator<ELFT>(Cmd->SortInner));
+      std::stable_sort(V.begin(), V.end(), getComparator(Cmd->SortInner));
     if (Cmd->SortOuter)
-      std::stable_sort(V.begin(), V.end(), getComparator<ELFT>(Cmd->SortOuter));
+      std::stable_sort(V.begin(), V.end(), getComparator(Cmd->SortOuter));
 
     // Add all input sections corresponding to rule 'Cmd' to
     // resulting vector. We do not add duplicate input sections.

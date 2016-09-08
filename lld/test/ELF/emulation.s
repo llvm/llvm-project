@@ -1,3 +1,34 @@
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-freebsd %s -o %tx64
+# RUN: ld.lld -m elf_amd64_fbsd %tx64 -o %t2x64
+# RUN: llvm-readobj -file-headers %t2x64 | FileCheck --check-prefix=AMD64 %s
+# RUN: ld.lld %tx64 -o %t3x64
+# RUN: llvm-readobj -file-headers %t3x64 | FileCheck --check-prefix=AMD64 %s
+# AMD64:      ElfHeader {
+# AMD64-NEXT:   Ident {
+# AMD64-NEXT:     Magic: (7F 45 4C 46)
+# AMD64-NEXT:     Class: 64-bit (0x2)
+# AMD64-NEXT:     DataEncoding: LittleEndian (0x1)
+# AMD64-NEXT:     FileVersion: 1
+# AMD64-NEXT:     OS/ABI: FreeBSD (0x9)
+# AMD64-NEXT:     ABIVersion: 0
+# AMD64-NEXT:     Unused: (00 00 00 00 00 00 00)
+# AMD64-NEXT:   }
+# AMD64-NEXT:   Type: Executable (0x2)
+# AMD64-NEXT:   Machine: EM_X86_64 (0x3E)
+# AMD64-NEXT:   Version: 1
+# AMD64-NEXT:   Entry:
+# AMD64-NEXT:   ProgramHeaderOffset: 0x40
+# AMD64-NEXT:   SectionHeaderOffset:
+# AMD64-NEXT:   Flags [ (0x0)
+# AMD64-NEXT:   ]
+# AMD64-NEXT:   HeaderSize: 64
+# AMD64-NEXT:   ProgramHeaderEntrySize: 56
+# AMD64-NEXT:   ProgramHeaderCount:
+# AMD64-NEXT:   SectionHeaderEntrySize: 64
+# AMD64-NEXT:   SectionHeaderCount:
+# AMD64-NEXT:   StringTableSectionIndex:
+# AMD64-NEXT: }
+
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %tx64
 # RUN: ld.lld -m elf_x86_64 %tx64 -o %t2x64
 # RUN: llvm-readobj -file-headers %t2x64 | FileCheck --check-prefix=X86-64 %s

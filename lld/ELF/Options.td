@@ -167,7 +167,7 @@ def trace: F<"trace">, HelpText<"Print the names of the input files">;
 
 def trace_symbol : J<"trace-symbol=">, HelpText<"Trace references to symbols">;
 
-def undefined: J<"undefined=">,
+def undefined: S<"undefined">,
   HelpText<"Force undefined symbol during linking">;
 
 def unresolved_symbols: J<"unresolved-symbols=">,
@@ -229,6 +229,7 @@ def alias_strip_all: Flag<["-"], "s">, Alias<strip_all>;
 def alias_strip_debug_S: Flag<["-"], "S">, Alias<strip_debug>;
 def alias_trace: Flag<["-"], "t">, Alias<trace>;
 def alias_trace_symbol_y : JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>;
+def alias_undefined_eq: J<"undefined=">, Alias<undefined>;
 def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 def alias_version_V: Flag<["-"], "V">, Alias<version>;
 def alias_version_v: Flag<["-"], "v">, Alias<version>;
