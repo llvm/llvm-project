@@ -497,9 +497,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 }
 
-int SIInstrInfo::commuteOpcode(const MachineInstr &MI) const {
-  const unsigned Opcode = MI.getOpcode();
-
+int SIInstrInfo::commuteOpcode(unsigned Opcode) const {
   int NewOpc;
 
   // Try to map original to commuted opcode
@@ -908,91 +906,89 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   return true;
 }
 
-/// Commutes the operands in the given instruction.
-/// The commutable operands are specified by their indices OpIdx0 and OpIdx1.
-///
-/// Do not call this method for a non-commutable instruction or for
-/// non-commutable pair of operand indices OpIdx0 and OpIdx1.
-/// Even though the instruction is commutable, the method may still
-/// fail to commute the operands, null pointer is returned in such cases.
+bool SIInstrInfo::swapSourceModifiers(MachineInstr &MI,
+                                      MachineOperand &Src0,
+                                      unsigned Src0OpName,
+                                      MachineOperand &Src1,
+                                      unsigned Src1OpName) const {
+  MachineOperand *Src0Mods = getNamedOperand(MI, Src0OpName);
+  if (!Src0Mods)
+    return false;
+
+  MachineOperand *Src1Mods = getNamedOperand(MI, Src1OpName);
+  assert(Src1Mods &&
+         "All commutable instructions have both src0 and src1 modifiers");
+
+  int Src0ModsVal = Src0Mods->getImm();
+  int Src1ModsVal = Src1Mods->getImm();
+
+  Src1Mods->setImm(Src0ModsVal);
+  Src0Mods->setImm(Src1ModsVal);
+  return true;
+}
+
+static MachineInstr *swapRegAndNonRegOperand(MachineInstr &MI,
+                                             MachineOperand &RegOp,
+                                             MachineOperand &ImmOp) {
+  // TODO: Handle other immediate like types.
+  if (!ImmOp.isImm())
+    return nullptr;
+
+  int64_t ImmVal = ImmOp.getImm();
+  ImmOp.ChangeToRegister(RegOp.getReg(), false, false,
+                         RegOp.isKill(), RegOp.isDead(), RegOp.isUndef(),
+                         RegOp.isDebug());
+  ImmOp.setSubReg(RegOp.getSubReg());
+  RegOp.ChangeToImmediate(ImmVal);
+  return &MI;
+}
+
 MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
-                                                  unsigned OpIdx0,
-                                                  unsigned OpIdx1) const {
-  int CommutedOpcode = commuteOpcode(MI);
+                                                  unsigned Src0Idx,
+                                                  unsigned Src1Idx) const {
+  assert(!NewMI && "this should never be used");
+
+  unsigned Opc = MI.getOpcode();
+  int CommutedOpcode = commuteOpcode(Opc);
   if (CommutedOpcode == -1)
     return nullptr;
 
-  int Src0Idx =
-      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
+  assert(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0) ==
+           static_cast<int>(Src0Idx) &&
+         AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1) ==
+           static_cast<int>(Src1Idx) &&
+         "inconsistency with findCommutedOpIndices");
+
   MachineOperand &Src0 = MI.getOperand(Src0Idx);
-  if (!Src0.isReg())
-    return nullptr;
-
-  int Src1Idx =
-      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src1);
-
-  if ((OpIdx0 != static_cast<unsigned>(Src0Idx) ||
-       OpIdx1 != static_cast<unsigned>(Src1Idx)) &&
-      (OpIdx0 != static_cast<unsigned>(Src1Idx) ||
-       OpIdx1 != static_cast<unsigned>(Src0Idx)))
-    return nullptr;
-
   MachineOperand &Src1 = MI.getOperand(Src1Idx);
 
-  if (isVOP2(MI) || isVOPC(MI)) {
-    const MCInstrDesc &InstrDesc = MI.getDesc();
-    // For VOP2 and VOPC instructions, any operand type is valid to use for
-    // src0.  Make sure we can use the src0 as src1.
-    //
-    // We could be stricter here and only allow commuting if there is a reason
-    // to do so. i.e. if both operands are VGPRs there is no real benefit,
-    // although MachineCSE attempts to find matches by commuting.
-    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-    if (!isLegalRegOperand(MRI, InstrDesc.OpInfo[Src1Idx], Src0))
-      return nullptr;
-  }
-
-  MachineInstr *CommutedMI = &MI;
-  if (!Src1.isReg()) {
-    // Allow commuting instructions with Imm operands.
-    if (NewMI || !Src1.isImm() || (!isVOP2(MI) && !isVOP3(MI))) {
-      return nullptr;
-    }
-    // Be sure to copy the source modifiers to the right place.
-    if (MachineOperand *Src0Mods =
-            getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)) {
-      MachineOperand *Src1Mods =
-          getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
-
-      int Src0ModsVal = Src0Mods->getImm();
-      if (!Src1Mods && Src0ModsVal != 0)
-        return nullptr;
-
-      // XXX - This assert might be a lie. It might be useful to have a neg
-      // modifier with 0.0.
-      int Src1ModsVal = Src1Mods->getImm();
-      assert((Src1ModsVal == 0) && "Not expecting modifiers with immediates");
-
-      Src1Mods->setImm(Src0ModsVal);
-      Src0Mods->setImm(Src1ModsVal);
+  MachineInstr *CommutedMI = nullptr;
+  if (Src0.isReg() && Src1.isReg()) {
+    if (isOperandLegal(MI, Src1Idx, &Src0)) {
+      // Be sure to copy the source modifiers to the right place.
+      CommutedMI
+        = TargetInstrInfo::commuteInstructionImpl(MI, NewMI, Src0Idx, Src1Idx);
     }
 
-    unsigned Reg = Src0.getReg();
-    unsigned SubReg = Src0.getSubReg();
-    if (Src1.isImm())
-      Src0.ChangeToImmediate(Src1.getImm());
-    else
-      llvm_unreachable("Should only have immediates");
-
-    Src1.ChangeToRegister(Reg, false);
-    Src1.setSubReg(SubReg);
+  } else if (Src0.isReg() && !Src1.isReg()) {
+    // src0 should always be able to support any operand type, so no need to
+    // check operand legality.
+    CommutedMI = swapRegAndNonRegOperand(MI, Src0, Src1);
+  } else if (!Src0.isReg() && Src1.isReg()) {
+    if (isOperandLegal(MI, Src1Idx, &Src0))
+      CommutedMI = swapRegAndNonRegOperand(MI, Src1, Src0);
   } else {
-    CommutedMI =
-        TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx0, OpIdx1);
+    // FIXME: Found two non registers to commute. This does happen.
+    return nullptr;
   }
 
-  if (CommutedMI)
+
+  if (CommutedMI) {
+    swapSourceModifiers(MI, Src0, AMDGPU::OpName::src0_modifiers,
+                        Src1, AMDGPU::OpName::src1_modifiers);
+
     CommutedMI->setDesc(get(CommutedOpcode));
+  }
 
   return CommutedMI;
 }
@@ -1002,8 +998,7 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
 // TargetInstrInfo::commuteInstruction uses it.
 bool SIInstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx0,
                                         unsigned &SrcOpIdx1) const {
-  const MCInstrDesc &MCID = MI.getDesc();
-  if (!MCID.isCommutable())
+  if (!MI.isCommutable())
     return false;
 
   unsigned Opc = MI.getOpcode();
@@ -1011,29 +1006,8 @@ bool SIInstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx0,
   if (Src0Idx == -1)
     return false;
 
-  // FIXME: Workaround TargetInstrInfo::commuteInstruction asserting on
-  // immediate. Also, immediate src0 operand is not handled in
-  // SIInstrInfo::commuteInstruction();
-  if (!MI.getOperand(Src0Idx).isReg())
-    return false;
-
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
   if (Src1Idx == -1)
-    return false;
-
-  MachineOperand &Src1 = MI.getOperand(Src1Idx);
-  if (Src1.isImm()) {
-    // SIInstrInfo::commuteInstruction() does support commuting the immediate
-    // operand src1 in 2 and 3 operand instructions.
-    if (!isVOP2(MI.getOpcode()) && !isVOP3(MI.getOpcode()))
-      return false;
-  } else if (Src1.isReg()) {
-    // If any source modifiers are set, the generic instruction commuting won't
-    // understand how to copy the source modifiers.
-    if (hasModifiersSet(MI, AMDGPU::OpName::src0_modifiers) ||
-        hasModifiersSet(MI, AMDGPU::OpName::src1_modifiers))
-      return false;
-  } else
     return false;
 
   return fixCommutedOpIndices(SrcOpIdx0, SrcOpIdx1, Src0Idx, Src1Idx);
@@ -2016,11 +1990,10 @@ MachineOperand SIInstrInfo::buildExtractSubRegOrImm(
   unsigned SubIdx,
   const TargetRegisterClass *SubRC) const {
   if (Op.isImm()) {
-    // XXX - Is there a better way to do this?
     if (SubIdx == AMDGPU::sub0)
-      return MachineOperand::CreateImm(Op.getImm() & 0xFFFFFFFF);
+      return MachineOperand::CreateImm(static_cast<int32_t>(Op.getImm()));
     if (SubIdx == AMDGPU::sub1)
-      return MachineOperand::CreateImm(Op.getImm() >> 32);
+      return MachineOperand::CreateImm(static_cast<int32_t>(Op.getImm() >> 32));
 
     llvm_unreachable("Unhandled register index for immediate");
   }

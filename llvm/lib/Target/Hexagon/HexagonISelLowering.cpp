@@ -1968,9 +1968,13 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     for (unsigned VectExpOp : VectExpOps)
       setOperationAction(VectExpOp, VT, Expand);
 
-    // Expand all extended loads and truncating stores:
+    // Expand all extending loads and truncating stores:
     for (MVT TargetVT : MVT::vector_valuetypes()) {
+      if (TargetVT == VT)
+        continue;
       setLoadExtAction(ISD::EXTLOAD, TargetVT, VT, Expand);
+      setLoadExtAction(ISD::ZEXTLOAD, TargetVT, VT, Expand);
+      setLoadExtAction(ISD::SEXTLOAD, TargetVT, VT, Expand);
       setTruncStoreAction(VT, TargetVT, Expand);
     }
 

@@ -19,15 +19,6 @@
 // CHECK-NEXT:     Section: Undefined (0x0)
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: _start
-// CHECK-NEXT:     Value:
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .text
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
 // CHECK-NEXT:     Name: CommonStrong_with_CommonStrong
 // CHECK-NEXT:     Value:
 // CHECK-NEXT:     Size: 63
@@ -315,6 +306,15 @@
 // CHECK-NEXT:     Other: 0
 // CHECK-NEXT:     Section: Undefined
 // CHECK-NEXT:   }
+// CHECK-NEXT:  Symbol {
+// CHECK-NEXT:    Name: _start (929)
+// CHECK-NEXT:    Value: 0x11000
+// CHECK-NEXT:    Size: 0
+// CHECK-NEXT:    Binding: Global (0x1)
+// CHECK-NEXT:    Type: None (0x0)
+// CHECK-NEXT:    Other: 0
+// CHECK-NEXT:    Section: .text (0x1)
+// CHECK-NEXT:  }
 // CHECK-NEXT: ]
 
 .globl _start

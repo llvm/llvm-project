@@ -31,7 +31,7 @@ done:
 ; SI-LABEL: {{^}}uniform_if_vcc:
 ; FIXME: We could use _e32 here if we re-used the 0 from [[STORE_VAL]], and
 ; also scheduled the write first.
-; SI-DAG: v_cmp_eq_f32_e64 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], 0, s{{[0-9]+}}
+; SI-DAG: v_cmp_eq_f32_e64 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 0{{$}}
 ; SI-DAG: s_and_b64 vcc, exec, [[COND]]
 ; SI-DAG: v_mov_b32_e32 [[STORE_VAL:v[0-9]+]], 0
 ; SI: s_cbranch_vccnz [[IF_LABEL:[0-9_A-Za-z]+]]
@@ -88,7 +88,7 @@ done:
 ; SI-LABEL: {{^}}uniform_if_swap_br_targets_vcc:
 ; FIXME: We could use _e32 here if we re-used the 0 from [[STORE_VAL]], and
 ; also scheduled the write first.
-; SI-DAG: v_cmp_neq_f32_e64 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], 0, s{{[0-9]+}}
+; SI-DAG: v_cmp_neq_f32_e64 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 0{{$}}
 ; SI-DAG: s_and_b64 vcc, exec, [[COND]]
 ; SI-DAG: v_mov_b32_e32 [[STORE_VAL:v[0-9]+]], 0
 ; SI: s_cbranch_vccnz [[IF_LABEL:[0-9_A-Za-z]+]]
@@ -253,7 +253,7 @@ ENDIF:                                            ; preds = %IF, %main_body
 ; SI: s_load_dword [[COND:s[0-9]+]]
 ; SI: s_cmp_lt_i32 [[COND]], 1
 ; SI: s_cbranch_scc1 [[EXIT:[A-Za-z0-9_]+]]
-; SI: v_cmp_lt_i32_e64 [[MASK:s\[[0-9]+:[0-9]+\]]], 0, [[COND]]
+; SI: v_cmp_gt_i32_e64 [[MASK:s\[[0-9]+:[0-9]+\]]], [[COND]], 0{{$}}
 ; SI: s_and_b64 vcc, exec, [[MASK]]
 ; SI: s_cbranch_vccnz [[EXIT]]
 ; SI: buffer_store

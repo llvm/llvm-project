@@ -210,9 +210,9 @@ CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
     return nullptr;
 
   auto Expansions = FunctionCoverage.getExpansions();
-  auto View = SourceCoverageView::create(
-      getSymbolForHumans(Function.Name), SourceBuffer.get(), ViewOpts,
-      std::move(FunctionCoverage), /*FunctionView=*/true);
+  auto View = SourceCoverageView::create(getSymbolForHumans(Function.Name),
+                                         SourceBuffer.get(), ViewOpts,
+                                         std::move(FunctionCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
 
   return View;
@@ -238,7 +238,7 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
     auto SubViewExpansions = SubViewCoverage.getExpansions();
     auto SubView = SourceCoverageView::create(
         getSymbolForHumans(Function->Name), SourceBuffer.get(), ViewOpts,
-        std::move(SubViewCoverage), /*FunctionView=*/true);
+        std::move(SubViewCoverage));
     attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
 
     if (SubView) {

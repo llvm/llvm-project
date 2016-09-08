@@ -212,11 +212,19 @@ else()
         CFLAGS ${ASAN_CFLAGS} -DASAN_DLL_THUNK
         DEFS ${ASAN_COMMON_DEFINITIONS}
         PARENT_TARGET asan)
+
+      set(DYNAMIC_RUNTIME_THUNK_CFLAGS "-DASAN_DYNAMIC_RUNTIME_THUNK")
+      if(MSVC)
+        list(APPEND DYNAMIC_RUNTIME_THUNK_CFLAGS "-Zl")
+      elseif(CMAKE_C_COMPILER_ID MATCHES Clang)
+        list(APPEND DYNAMIC_RUNTIME_THUNK_CFLAGS "-nodefaultlibs")
+      endif()
+
       add_compiler_rt_runtime(clang_rt.asan_dynamic_runtime_thunk
         STATIC
         ARCHS ${arch}
         SOURCES asan_win_dynamic_runtime_thunk.cc
-        CFLAGS ${ASAN_CFLAGS} -DASAN_DYNAMIC_RUNTIME_THUNK -Zl
+        CFLAGS ${ASAN_CFLAGS} ${DYNAMIC_RUNTIME_THUNK_CFLAGS}
         DEFS ${ASAN_COMMON_DEFINITIONS}
         PARENT_TARGET asan)
     endif()

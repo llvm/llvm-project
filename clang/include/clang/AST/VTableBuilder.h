@@ -218,12 +218,6 @@ private:
 class VTableLayout {
 public:
   typedef std::pair<uint64_t, ThunkInfo> VTableThunkTy;
-
-  typedef const VTableComponent *vtable_component_iterator;
-  typedef const VTableThunkTy *vtable_thunk_iterator;
-  typedef llvm::iterator_range<vtable_component_iterator>
-      vtable_component_range;
-
   typedef llvm::DenseMap<BaseSubobject, uint64_t> AddressPointsMapTy;
 
 private:
@@ -248,31 +242,12 @@ public:
                bool IsMicrosoftABI);
   ~VTableLayout();
 
-  uint64_t getNumVTableComponents() const {
-    return NumVTableComponents;
+  ArrayRef<VTableComponent> vtable_components() const {
+    return {VTableComponents.get(), size_t(NumVTableComponents)};
   }
 
-  vtable_component_range vtable_components() const {
-    return vtable_component_range(vtable_component_begin(),
-                                  vtable_component_end());
-  }
-
-  vtable_component_iterator vtable_component_begin() const {
-    return VTableComponents.get();
-  }
-
-  vtable_component_iterator vtable_component_end() const {
-    return VTableComponents.get() + NumVTableComponents;
-  }
-
-  uint64_t getNumVTableThunks() const { return NumVTableThunks; }
-
-  vtable_thunk_iterator vtable_thunk_begin() const {
-    return VTableThunks.get();
-  }
-
-  vtable_thunk_iterator vtable_thunk_end() const {
-    return VTableThunks.get() + NumVTableThunks;
+  ArrayRef<VTableThunkTy> vtable_thunks() const {
+    return {VTableThunks.get(), size_t(NumVTableThunks)};
   }
 
   uint64_t getAddressPoint(BaseSubobject Base) const {

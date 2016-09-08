@@ -270,7 +270,10 @@ static bool ShouldReportDeadlyException(unsigned code) {
 }
 
 // Return the textual name for this exception.
-static const char *DescribeDeadlyException(unsigned code) {
+const char *DescribeSignalOrException(int signo) {
+  unsigned code = signo;
+  // Get the string description of the exception if this is a known deadly
+  // exception.
   switch (code) {
     case EXCEPTION_ACCESS_VIOLATION:
       return "access-violation";
@@ -289,12 +292,8 @@ static long WINAPI SEHHandler(EXCEPTION_POINTERS *info) {
   CONTEXT *context = info->ContextRecord;
 
   if (ShouldReportDeadlyException(exception_record->ExceptionCode)) {
-    // Get the string description of the exception if this is a known deadly
-    // exception.
-    const char *description =
-        DescribeDeadlyException(exception_record->ExceptionCode);
     SignalContext sig = SignalContext::Create(exception_record, context);
-    ReportDeadlySignal(description, sig);
+    ReportDeadlySignal(exception_record->ExceptionCode, sig);
   }
 
   // FIXME: Handle EXCEPTION_STACK_OVERFLOW here.

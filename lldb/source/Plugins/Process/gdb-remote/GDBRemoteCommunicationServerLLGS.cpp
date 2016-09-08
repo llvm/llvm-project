@@ -1592,6 +1592,9 @@ GDBRemoteCommunicationServerLLGS::Handle_qRegisterInfo(
   case eFormatVectorOfFloat32:
     response.PutCString("format:vector-float32;");
     break;
+  case eFormatVectorOfUInt64:
+    response.PutCString("format:vector-uint64;");
+    break;
   case eFormatVectorOfUInt128:
     response.PutCString("format:vector-uint128;");
     break;

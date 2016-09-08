@@ -13,6 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Attributes.h"
+#include "clang/Basic/FileManager.h"
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/DirectoryLookup.h"
@@ -21,15 +27,34 @@
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
-#include "llvm/ADT/STLExtras.h"
+#include "clang/Lex/PreprocessorLexer.h"
+#include "clang/Lex/PTHLexer.h"
+#include "clang/Lex/Token.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdio>
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstring>
 #include <ctime>
+#include <string>
+#include <tuple>
+#include <utility>
+
 using namespace clang;
 
 MacroDirective *
@@ -285,7 +310,6 @@ static IdentifierInfo *RegisterBuiltinMacro(Preprocessor &PP, const char *Name){
   return Id;
 }
 
-
 /// RegisterBuiltinMacros - Register builtin macros, such as __LINE__ with the
 /// identifier table.
 void Preprocessor::RegisterBuiltinMacros() {
@@ -366,9 +390,7 @@ static bool isTrivialSingleTokenExpansion(const MacroInfo *MI,
   // If this is a function-like macro invocation, it's safe to trivially expand
   // as long as the identifier is not a macro argument.
   return std::find(MI->arg_begin(), MI->arg_end(), II) == MI->arg_end();
-
 }
-
 
 /// isNextPPTokenLParen - Determine whether the next preprocessor token to be
 /// lexed is a '('.  If so, consume the token and return true, if not, this
@@ -479,7 +501,8 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
     } else {
       Callbacks->MacroExpands(Identifier, M, ExpansionRange, Args);
       if (!DelayedMacroExpandsCallbacks.empty()) {
-        for (unsigned i=0, e = DelayedMacroExpandsCallbacks.size(); i!=e; ++i) {
+        for (unsigned i = 0, e = DelayedMacroExpandsCallbacks.size(); i != e;
+             ++i) {
           MacroExpandsInfo &Info = DelayedMacroExpandsCallbacks[i];
           // FIXME: We lose macro args info with delayed callback.
           Callbacks->MacroExpands(Info.Tok, Info.MD, Info.Range,
@@ -741,7 +764,7 @@ MacroArgs *Preprocessor::ReadFunctionLikeMacroArgs(Token &MacroName,
     // that we already consumed the first one.
     unsigned NumParens = 0;
 
-    while (1) {
+    while (true) {
       // Read arguments as unexpanded tokens.  This avoids issues, e.g., where
       // an argument value in a macro could expand to ',' or '(' or ')'.
       LexUnexpandedToken(Tok);
@@ -1041,7 +1064,6 @@ static void ComputeDATE_TIME(SourceLocation &DATELoc, SourceLocation &TIMELoc,
     TIMELoc = TmpTok.getLocation();
   }
 }
-
 
 /// HasFeature - Return true if we recognize and implement the feature
 /// specified by the identifier as a standard language feature.

@@ -509,6 +509,13 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
       module_list.Append(module_sp);
     }
   }
+
+  std::vector<FileSpec> module_names;
+  for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
+    module_names.push_back(I->file_spec);
+  m_process->PrefetchModuleSpecs(
+      module_names, m_process->GetTarget().GetArchitecture().GetTriple());
+
   for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I) {
     ModuleSP module_sp =
         LoadModuleAtAddress(I->file_spec, I->link_addr, I->base_addr, true);

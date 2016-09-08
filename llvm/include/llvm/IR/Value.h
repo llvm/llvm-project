@@ -442,11 +442,6 @@ public:
     return SubclassOptionalData == V->SubclassOptionalData;
   }
 
-  /// \brief Clear any optional flags not set in the given Value.
-  void intersectOptionalDataWith(const Value *V) {
-    SubclassOptionalData &= V->SubclassOptionalData;
-  }
-
   /// \brief Return true if there is a value handle associated with this value.
   bool hasValueHandle() const { return HasValueHandle; }
 

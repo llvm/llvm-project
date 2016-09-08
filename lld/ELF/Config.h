@@ -127,7 +127,7 @@ struct Configuration {
   ELFKind EKind = ELFNoneKind;
   uint16_t DefaultSymbolVersion = llvm::ELF::VER_NDX_GLOBAL;
   uint16_t EMachine = llvm::ELF::EM_NONE;
-  uint64_t EntryAddr = -1;
+  uint64_t EntryAddr = 0;
   uint64_t ImageBase;
   uint64_t ZStackSize = -1;
   unsigned LtoJobs;

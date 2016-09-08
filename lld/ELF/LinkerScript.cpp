@@ -41,10 +41,10 @@ using namespace llvm::object;
 using namespace lld;
 using namespace lld::elf;
 
+LinkerScriptBase *elf::ScriptBase;
 ScriptConfiguration *elf::ScriptConfig;
 
-template <class ELFT>
-static void addRegular(SymbolAssignment *Cmd) {
+template <class ELFT> static void addRegular(SymbolAssignment *Cmd) {
   Symbol *Sym = Symtab<ELFT>::X->addRegular(Cmd->Name, STB_GLOBAL, STV_DEFAULT);
   Sym->Visibility = Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT;
   Cmd->Sym = Sym->body();
@@ -99,7 +99,7 @@ template <class ELFT> LinkerScript<ELFT>::~LinkerScript() {}
 template <class ELFT>
 bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
   for (Regex *Re : Opt.KeptSections)
-    if (Re->match(S->getSectionName()))
+    if (Re->match(S->Name))
       return true;
   return false;
 }
@@ -121,7 +121,7 @@ LinkerScript<ELFT>::getInputSections(const InputSectionDescription *I) {
     if (fileMatches(I, sys::path::filename(F->getName())))
       for (InputSectionBase<ELFT> *S : F->getSections())
         if (!isDiscarded(S) && !S->OutSec &&
-            const_cast<Regex &>(Re).match(S->getSectionName()))
+            const_cast<Regex &>(Re).match(S->Name))
           Ret.push_back(S);
   }
 
@@ -132,7 +132,7 @@ LinkerScript<ELFT>::getInputSections(const InputSectionDescription *I) {
 
 template <class ELFT>
 static bool compareName(InputSectionBase<ELFT> *A, InputSectionBase<ELFT> *B) {
-  return A->getSectionName() < B->getSectionName();
+  return A->Name < B->Name;
 }
 
 template <class ELFT>
@@ -213,8 +213,7 @@ LinkerScript<ELFT>::createInputSectionList(OutputSectionCommand &OutCmd) {
   return Ret;
 }
 
-template <class ELFT>
-void LinkerScript<ELFT>::createAssignments() {
+template <class ELFT> void LinkerScript<ELFT>::createAssignments() {
   for (const std::unique_ptr<SymbolAssignment> &Cmd : Opt.Assignments) {
     if (shouldDefine<ELFT>(Cmd.get()))
       addRegular<ELFT>(Cmd.get());
@@ -556,8 +555,7 @@ template <class ELFT> bool LinkerScript<ELFT>::hasPhdrsCommands() {
 }
 
 template <class ELFT>
-typename ELFT::uint
-LinkerScript<ELFT>::getOutputSectionAddress(StringRef Name) {
+uint64_t LinkerScript<ELFT>::getOutputSectionAddress(StringRef Name) {
   for (OutputSectionBase<ELFT> *Sec : *OutputSections)
     if (Sec->getName() == Name)
       return Sec->getVA();
@@ -566,7 +564,7 @@ LinkerScript<ELFT>::getOutputSectionAddress(StringRef Name) {
 }
 
 template <class ELFT>
-typename ELFT::uint LinkerScript<ELFT>::getOutputSectionSize(StringRef Name) {
+uint64_t LinkerScript<ELFT>::getOutputSectionSize(StringRef Name) {
   for (OutputSectionBase<ELFT> *Sec : *OutputSections)
     if (Sec->getName() == Name)
       return Sec->getSize();
@@ -575,8 +573,23 @@ typename ELFT::uint LinkerScript<ELFT>::getOutputSectionSize(StringRef Name) {
 }
 
 template <class ELFT>
-typename ELFT::uint LinkerScript<ELFT>::getHeaderSize() {
+uint64_t LinkerScript<ELFT>::getOutputSectionAlign(StringRef Name) {
+  for (OutputSectionBase<ELFT> *Sec : *OutputSections)
+    if (Sec->getName() == Name)
+      return Sec->getAlignment();
+  error("undefined section " + Name);
+  return 0;
+}
+
+template <class ELFT> uint64_t LinkerScript<ELFT>::getHeaderSize() {
   return Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+}
+
+template <class ELFT> uint64_t LinkerScript<ELFT>::getSymbolValue(StringRef S) {
+  if (SymbolBody *B = Symtab<ELFT>::X->find(S))
+    return B->getVA<ELFT>();
+  error("symbol not found: " + S);
+  return 0;
 }
 
 // Returns indices of ELF headers containing specific section, identified
@@ -836,7 +849,7 @@ void ScriptParser::readOutputFormat() {
   next();
   StringRef Tok = next();
   if (Tok == ")")
-   return;
+    return;
   if (Tok != ",") {
     setError("unexpected token: " + Tok);
     return;
@@ -1099,74 +1112,7 @@ SymbolAssignment *ScriptParser::readProvideOrAssignment(StringRef Tok,
 static uint64_t getSymbolValue(StringRef S, uint64_t Dot) {
   if (S == ".")
     return Dot;
-
-  switch (Config->EKind) {
-  case ELF32LEKind:
-    if (SymbolBody *B = Symtab<ELF32LE>::X->find(S))
-      return B->getVA<ELF32LE>();
-    break;
-  case ELF32BEKind:
-    if (SymbolBody *B = Symtab<ELF32BE>::X->find(S))
-      return B->getVA<ELF32BE>();
-    break;
-  case ELF64LEKind:
-    if (SymbolBody *B = Symtab<ELF64LE>::X->find(S))
-      return B->getVA<ELF64LE>();
-    break;
-  case ELF64BEKind:
-    if (SymbolBody *B = Symtab<ELF64BE>::X->find(S))
-      return B->getVA<ELF64BE>();
-    break;
-  default:
-    llvm_unreachable("unsupported target");
-  }
-  error("symbol not found: " + S);
-  return 0;
-}
-
-static uint64_t getSectionSize(StringRef Name) {
-  switch (Config->EKind) {
-  case ELF32LEKind:
-    return Script<ELF32LE>::X->getOutputSectionSize(Name);
-  case ELF32BEKind:
-    return Script<ELF32BE>::X->getOutputSectionSize(Name);
-  case ELF64LEKind:
-    return Script<ELF64LE>::X->getOutputSectionSize(Name);
-  case ELF64BEKind:
-    return Script<ELF64BE>::X->getOutputSectionSize(Name);
-  default:
-    llvm_unreachable("unsupported target");
-  }
-}
-
-static uint64_t getSectionAddress(StringRef Name) {
-  switch (Config->EKind) {
-  case ELF32LEKind:
-    return Script<ELF32LE>::X->getOutputSectionAddress(Name);
-  case ELF32BEKind:
-    return Script<ELF32BE>::X->getOutputSectionAddress(Name);
-  case ELF64LEKind:
-    return Script<ELF64LE>::X->getOutputSectionAddress(Name);
-  case ELF64BEKind:
-    return Script<ELF64BE>::X->getOutputSectionAddress(Name);
-  default:
-    llvm_unreachable("unsupported target");
-  }
-}
-
-static uint64_t getHeaderSize() {
-  switch (Config->EKind) {
-  case ELF32LEKind:
-    return Script<ELF32LE>::X->getHeaderSize();
-  case ELF32BEKind:
-    return Script<ELF32BE>::X->getHeaderSize();
-  case ELF64LEKind:
-    return Script<ELF64LE>::X->getHeaderSize();
-  case ELF64BEKind:
-    return Script<ELF64BE>::X->getHeaderSize();
-  default:
-    llvm_unreachable("unsupported target");
-  }
+  return ScriptBase->getSymbolValue(S);
 }
 
 SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
@@ -1314,7 +1260,8 @@ Expr ScriptParser::readPrimary() {
     expect("(");
     StringRef Name = next();
     expect(")");
-    return [=](uint64_t Dot) { return getSectionAddress(Name); };
+    return
+        [=](uint64_t Dot) { return ScriptBase->getOutputSectionAddress(Name); };
   }
   if (Tok == "ASSERT")
     return readAssert();
@@ -1366,10 +1313,17 @@ Expr ScriptParser::readPrimary() {
     expect("(");
     StringRef Name = next();
     expect(")");
-    return [=](uint64_t Dot) { return getSectionSize(Name); };
+    return [=](uint64_t Dot) { return ScriptBase->getOutputSectionSize(Name); };
+  }
+  if (Tok == "ALIGNOF") {
+    expect("(");
+    StringRef Name = next();
+    expect(")");
+    return
+        [=](uint64_t Dot) { return ScriptBase->getOutputSectionAlign(Name); };
   }
   if (Tok == "SIZEOF_HEADERS")
-    return [=](uint64_t Dot) { return getHeaderSize(); };
+    return [=](uint64_t Dot) { return ScriptBase->getHeaderSize(); };
 
   // Tok is a literal number.
   uint64_t V;
@@ -1414,18 +1368,18 @@ std::vector<StringRef> ScriptParser::readOutputSectionPhdrs() {
 unsigned ScriptParser::readPhdrType() {
   StringRef Tok = next();
   unsigned Ret = StringSwitch<unsigned>(Tok)
-      .Case("PT_NULL", PT_NULL)
-      .Case("PT_LOAD", PT_LOAD)
-      .Case("PT_DYNAMIC", PT_DYNAMIC)
-      .Case("PT_INTERP", PT_INTERP)
-      .Case("PT_NOTE", PT_NOTE)
-      .Case("PT_SHLIB", PT_SHLIB)
-      .Case("PT_PHDR", PT_PHDR)
-      .Case("PT_TLS", PT_TLS)
-      .Case("PT_GNU_EH_FRAME", PT_GNU_EH_FRAME)
-      .Case("PT_GNU_STACK", PT_GNU_STACK)
-      .Case("PT_GNU_RELRO", PT_GNU_RELRO)
-      .Default(-1);
+                     .Case("PT_NULL", PT_NULL)
+                     .Case("PT_LOAD", PT_LOAD)
+                     .Case("PT_DYNAMIC", PT_DYNAMIC)
+                     .Case("PT_INTERP", PT_INTERP)
+                     .Case("PT_NOTE", PT_NOTE)
+                     .Case("PT_SHLIB", PT_SHLIB)
+                     .Case("PT_PHDR", PT_PHDR)
+                     .Case("PT_TLS", PT_TLS)
+                     .Case("PT_GNU_EH_FRAME", PT_GNU_EH_FRAME)
+                     .Case("PT_GNU_STACK", PT_GNU_STACK)
+                     .Case("PT_GNU_RELRO", PT_GNU_RELRO)
+                     .Default(-1);
 
   if (Ret == (unsigned)-1) {
     setError("invalid program header type: " + Tok);

@@ -55,7 +55,7 @@ define void @fabs_v4f64(<4 x double> addrspace(1)* %out, <4 x double> %in) {
 ; SI-LABEL: {{^}}fabs_fold_f64:
 ; SI: s_load_dwordx2 [[ABS_VALUE:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; SI-NOT: and
-; SI: v_mul_f64 {{v\[[0-9]+:[0-9]+\]}}, |[[ABS_VALUE]]|, {{v\[[0-9]+:[0-9]+\]}}
+; SI: v_mul_f64 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, |[[ABS_VALUE]]|
 ; SI: s_endpgm
 define void @fabs_fold_f64(double addrspace(1)* %out, double %in0, double %in1) {
   %fabs = call double @llvm.fabs.f64(double %in0)
@@ -67,7 +67,7 @@ define void @fabs_fold_f64(double addrspace(1)* %out, double %in0, double %in1) 
 ; SI-LABEL: {{^}}fabs_fn_fold_f64:
 ; SI: s_load_dwordx2 [[ABS_VALUE:s\[[0-9]+:[0-9]+\]]], {{s\[[0-9]+:[0-9]+\]}}, 0xb
 ; SI-NOT: and
-; SI: v_mul_f64 {{v\[[0-9]+:[0-9]+\]}}, |[[ABS_VALUE]]|, {{v\[[0-9]+:[0-9]+\]}}
+; SI: v_mul_f64 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, |[[ABS_VALUE]]|
 ; SI: s_endpgm
 define void @fabs_fn_fold_f64(double addrspace(1)* %out, double %in0, double %in1) {
   %fabs = call double @fabs(double %in0)

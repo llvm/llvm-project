@@ -327,6 +327,33 @@ STDCXX_INTERCEPTOR(void, _ZNSt3__119__shared_weak_count16__release_sharedEv,
   }
 }
 
+namespace {
+struct call_once_callback_args {
+  void (*orig_func)(void *arg);
+  void *orig_arg;
+  void *flag;
+};
+
+void call_once_callback_wrapper(void *arg) {
+  call_once_callback_args *new_args = (call_once_callback_args *)arg;
+  new_args->orig_func(new_args->orig_arg);
+  __tsan_release(new_args->flag);
+}
+}  // namespace
+
+// This adds a libc++ interceptor for:
+//     void __call_once(volatile unsigned long&, void*, void(*)(void*));
+// C++11 call_once is implemented via an internal function __call_once which is
+// inside libc++.dylib, and the atomic release store inside it is thus
+// TSan-invisible. To avoid false positives, this interceptor wraps the callback
+// function and performs an explicit Release after the user code has run.
+STDCXX_INTERCEPTOR(void, _ZNSt3__111__call_onceERVmPvPFvS2_E, void *flag,
+                   void *arg, void (*func)(void *arg)) {
+  call_once_callback_args new_args = {func, arg, flag};
+  REAL(_ZNSt3__111__call_onceERVmPvPFvS2_E)(flag, &new_args,
+                                            call_once_callback_wrapper);
+}
+
 }  // namespace __tsan
 
 #endif  // SANITIZER_MAC

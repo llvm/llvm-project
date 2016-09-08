@@ -569,16 +569,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   std::unique_ptr<TargetInfo> TI(createTarget());
   Target = TI.get();
   LinkerScript<ELFT> LS;
-  Script<ELFT>::X = &LS;
+  ScriptBase = Script<ELFT>::X = &LS;
 
   Config->Rela = ELFT::Is64Bits || Config->EMachine == EM_X86_64;
   Config->Mips64EL =
       (Config->EMachine == EM_MIPS && Config->EKind == ELF64LEKind);
-
-  // Add entry symbol. Note that AMDGPU binaries have no entry points.
-  if (Config->Entry.empty() && !Config->Shared && !Config->Relocatable &&
-      Config->EMachine != EM_AMDGPU)
-    Config->Entry = (Config->EMachine == EM_MIPS) ? "__start" : "_start";
 
   // Default output filename is "a.out" by the Unix tradition.
   if (Config->OutputFile.empty())
@@ -587,13 +582,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // Handle --trace-symbol.
   for (auto *Arg : Args.filtered(OPT_trace_symbol))
     Symtab.trace(Arg->getValue());
-
-  // Set either EntryAddr (if S is a number) or EntrySym (otherwise).
-  if (!Config->Entry.empty()) {
-    StringRef S = Config->Entry;
-    if (S.getAsInteger(0, Config->EntryAddr))
-      Config->EntrySym = Symtab.addUndefined(S);
-  }
 
   // Initialize Config->ImageBase.
   if (auto *Arg = Args.getLastArg(OPT_image_base)) {
@@ -606,8 +594,27 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     Config->ImageBase = Config->Pic ? 0 : Target->DefaultImageBase;
   }
 
+  // Add all files to the symbol table. After this, the symbol table
+  // contains all known names except a few linker-synthesized symbols.
   for (std::unique_ptr<InputFile> &F : Files)
     Symtab.addFile(std::move(F));
+
+  // Add the start symbol.
+  // It initializes either Config->Entry or Config->EntryAddr.
+  // Note that AMDGPU binaries have no entries.
+  if (!Config->Entry.empty()) {
+    // It is either "-e <addr>" or "-e <symbol>".
+    if (Config->Entry.getAsInteger(0, Config->EntryAddr))
+      Config->EntrySym = Symtab.addUndefined(Config->Entry);
+  } else if (!Config->Shared && !Config->Relocatable &&
+             Config->EMachine != EM_AMDGPU) {
+    // -e was not specified. Use the default start symbol name
+    // if it is resolvable.
+    Config->Entry = (Config->EMachine == EM_MIPS) ? "__start" : "_start";
+    if (Symtab.find(Config->Entry))
+      Config->EntrySym = Symtab.addUndefined(Config->Entry);
+  }
+
   if (HasError)
     return; // There were duplicate symbols or incompatible files
 

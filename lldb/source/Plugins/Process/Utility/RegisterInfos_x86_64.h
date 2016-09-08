@@ -32,6 +32,16 @@
    LLVM_EXTENSION offsetof(FPR, xstate) +                                      \
    LLVM_EXTENSION offsetof(XSAVE, ymmh[0]) + (32 * reg_index))
 
+#define BNDR_OFFSET(reg_index) \
+    (LLVM_EXTENSION offsetof(UserArea, fpr) + \
+     LLVM_EXTENSION offsetof(FPR, xstate) + \
+     LLVM_EXTENSION offsetof(XSAVE, mpxr[reg_index]))
+
+#define BNDC_OFFSET(reg_index) \
+    (LLVM_EXTENSION offsetof(UserArea, fpr) + \
+     LLVM_EXTENSION offsetof(FPR, xstate) + \
+     LLVM_EXTENSION offsetof(XSAVE, mpxc[reg_index]))
+
 #ifdef DECLARE_REGISTER_INFOS_X86_64_STRUCT
 
 // Number of bytes needed to represent a FPR.
@@ -45,6 +55,10 @@
 
 // Number of bytes needed to represent a YMM register.
 #define YMM_SIZE sizeof(YMMReg)
+
+// Number of bytes needed to represent MPX registers.
+#define BNDR_SIZE sizeof(MPXReg)
+#define BNDC_SIZE sizeof(MPXCsr)
 
 #define DR_SIZE sizeof(((DBG *)NULL)->dr[0])
 
@@ -109,6 +123,26 @@
                                    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,   \
                                    lldb_##reg##i##_x86_64 },                   \
                                    NULL, NULL, NULL, 0                         \
+  }
+
+#define DEFINE_BNDR(reg, i)                                                    \
+  {                                                                            \
+    #reg #i, NULL, BNDR_SIZE,                                                  \
+        LLVM_EXTENSION BNDR_OFFSET(i), eEncodingVector, eFormatVectorOfUInt64, \
+                                   {dwarf_##reg##i##_x86_64,                   \
+                                    dwarf_##reg##i##_x86_64,                   \
+                                    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,  \
+                                    lldb_##reg##i##_x86_64 },                  \
+                                    NULL, NULL                                 \
+  }
+
+#define DEFINE_BNDC(name, i)                                                   \
+  {                                                                            \
+    #name, NULL, BNDC_SIZE,                                                    \
+        LLVM_EXTENSION BNDC_OFFSET(i), eEncodingVector, eFormatVectorOfUInt8,  \
+        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,        \
+         LLDB_INVALID_REGNUM, lldb_##name##_x86_64 },                          \
+         NULL, NULL                                                            \
   }
 
 #define DEFINE_DR(reg, i)                                                      \
@@ -288,6 +322,15 @@ static RegisterInfo g_register_infos_x86_64[] = {
     DEFINE_YMM(ymm, 12), DEFINE_YMM(ymm, 13), DEFINE_YMM(ymm, 14),
     DEFINE_YMM(ymm, 15),
 
+    // MPX registers
+    DEFINE_BNDR(bnd, 0),
+    DEFINE_BNDR(bnd, 1),
+    DEFINE_BNDR(bnd, 2),
+    DEFINE_BNDR(bnd, 3),
+
+    DEFINE_BNDC(bndcfgu, 0),
+    DEFINE_BNDC(bndstatus, 1),
+
     // Debug registers for lldb internal use
     DEFINE_DR(dr, 0), DEFINE_DR(dr, 1), DEFINE_DR(dr, 2), DEFINE_DR(dr, 3),
     DEFINE_DR(dr, 4), DEFINE_DR(dr, 5), DEFINE_DR(dr, 6), DEFINE_DR(dr, 7)};
@@ -305,6 +348,8 @@ static_assert((sizeof(g_register_infos_x86_64) /
 #undef DEFINE_FP
 #undef DEFINE_XMM
 #undef DEFINE_YMM
+#undef DEFINE_BNDR
+#undef DEFINE_BNDC
 #undef DEFINE_DR
 #undef DEFINE_GPR_PSEUDO_32
 #undef DEFINE_GPR_PSEUDO_16

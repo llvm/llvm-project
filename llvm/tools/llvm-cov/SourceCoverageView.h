@@ -172,9 +172,6 @@ class SourceCoverageView {
   /// on display.
   std::vector<InstantiationView> InstantiationSubViews;
 
-  /// Specifies whether or not the view is a function view.
-  bool FunctionView;
-
   /// Get the first uncovered line number for the source file.
   unsigned getFirstUncoveredLineNo();
 
@@ -264,24 +261,24 @@ protected:
 
   SourceCoverageView(StringRef SourceName, const MemoryBuffer &File,
                      const CoverageViewOptions &Options,
-                     coverage::CoverageData &&CoverageInfo, bool FunctionView)
+                     coverage::CoverageData &&CoverageInfo)
       : SourceName(SourceName), File(File), Options(Options),
-        CoverageInfo(std::move(CoverageInfo)), FunctionView(FunctionView) {}
+        CoverageInfo(std::move(CoverageInfo)) {}
 
 public:
   static std::unique_ptr<SourceCoverageView>
   create(StringRef SourceName, const MemoryBuffer &File,
          const CoverageViewOptions &Options,
-         coverage::CoverageData &&CoverageInfo, bool FucntionView = false);
+         coverage::CoverageData &&CoverageInfo);
 
   virtual ~SourceCoverageView() {}
 
-  StringRef getSourceName() const { return SourceName; }
-
   /// \brief Return the source name formatted for the host OS.
-  std::string getNativeSourceName() const;
+  std::string getSourceName() const;
 
-  bool isFunctionView() const { return FunctionView; }
+  /// \brief Return a verbose description of the source name and the binary it
+  /// corresponds to.
+  std::string getVerboseSourceName() const;
 
   const CoverageViewOptions &getOptions() const { return Options; }
 

@@ -16,18 +16,27 @@
 #include "ASTReaderInternals.h"
 #include "MultiOnDiskHashTable.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTUnresolvedSet.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclContextInternals.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
-#include "clang/AST/DeclLookups.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/LambdaCapture.h"
+#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/RawCommentList.h"
+#include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/FileSystemStatCache.h"
+#include "clang/Basic/FileSystemOptions.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/Module.h"
+#include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/SourceManagerInternals.h"
 #include "clang/Basic/TargetInfo.h"
@@ -37,28 +46,48 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/MacroInfo.h"
+#include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Lex/Token.h"
 #include "clang/Sema/IdentifierResolver.h"
+#include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/Module.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Serialization/SerializationDiagnostic.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Bitcode/BitCodes.h"
 #include "llvm/Bitcode/BitstreamWriter.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cstdio>
-#include <string.h>
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <deque>
+#include <limits>
+#include <new>
+#include <tuple>
 #include <utility>
 
 using namespace clang;
@@ -82,6 +111,7 @@ static StringRef bytes(const SmallVectorImpl<T> &v) {
 //===----------------------------------------------------------------------===//
 
 namespace clang {
+
   class ASTTypeWriter {
     ASTWriter &Writer;
     ASTRecordWriter Record;
@@ -126,6 +156,7 @@ namespace clang {
 #define ABSTRACT_TYPE(Class, Base)
 #include "clang/AST/TypeNodes.def"
   };
+
 } // end namespace clang
 
 void ASTTypeWriter::VisitBuiltinType(const BuiltinType *T) {
@@ -503,6 +534,7 @@ public:
 void TypeLocWriter::VisitQualifiedTypeLoc(QualifiedTypeLoc TL) {
   // nothing to do
 }
+
 void TypeLocWriter::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
   Record.AddSourceLocation(TL.getBuiltinLoc());
   if (TL.needsExtraLocalData()) {
@@ -512,31 +544,40 @@ void TypeLocWriter::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
     Record.push_back(TL.hasModeAttr());
   }
 }
+
 void TypeLocWriter::VisitComplexTypeLoc(ComplexTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitPointerTypeLoc(PointerTypeLoc TL) {
   Record.AddSourceLocation(TL.getStarLoc());
 }
+
 void TypeLocWriter::VisitDecayedTypeLoc(DecayedTypeLoc TL) {
   // nothing to do
 }
+
 void TypeLocWriter::VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
   // nothing to do
 }
+
 void TypeLocWriter::VisitBlockPointerTypeLoc(BlockPointerTypeLoc TL) {
   Record.AddSourceLocation(TL.getCaretLoc());
 }
+
 void TypeLocWriter::VisitLValueReferenceTypeLoc(LValueReferenceTypeLoc TL) {
   Record.AddSourceLocation(TL.getAmpLoc());
 }
+
 void TypeLocWriter::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
   Record.AddSourceLocation(TL.getAmpAmpLoc());
 }
+
 void TypeLocWriter::VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
   Record.AddSourceLocation(TL.getStarLoc());
   Record.AddTypeSourceInfo(TL.getClassTInfo());
 }
+
 void TypeLocWriter::VisitArrayTypeLoc(ArrayTypeLoc TL) {
   Record.AddSourceLocation(TL.getLBracketLoc());
   Record.AddSourceLocation(TL.getRBracketLoc());
@@ -544,29 +585,37 @@ void TypeLocWriter::VisitArrayTypeLoc(ArrayTypeLoc TL) {
   if (TL.getSizeExpr())
     Record.AddStmt(TL.getSizeExpr());
 }
+
 void TypeLocWriter::VisitConstantArrayTypeLoc(ConstantArrayTypeLoc TL) {
   VisitArrayTypeLoc(TL);
 }
+
 void TypeLocWriter::VisitIncompleteArrayTypeLoc(IncompleteArrayTypeLoc TL) {
   VisitArrayTypeLoc(TL);
 }
+
 void TypeLocWriter::VisitVariableArrayTypeLoc(VariableArrayTypeLoc TL) {
   VisitArrayTypeLoc(TL);
 }
+
 void TypeLocWriter::VisitDependentSizedArrayTypeLoc(
                                             DependentSizedArrayTypeLoc TL) {
   VisitArrayTypeLoc(TL);
 }
+
 void TypeLocWriter::VisitDependentSizedExtVectorTypeLoc(
                                         DependentSizedExtVectorTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitVectorTypeLoc(VectorTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitFunctionTypeLoc(FunctionTypeLoc TL) {
   Record.AddSourceLocation(TL.getLocalRangeBegin());
   Record.AddSourceLocation(TL.getLParenLoc());
@@ -592,30 +641,37 @@ void TypeLocWriter::VisitTypeOfExprTypeLoc(TypeOfExprTypeLoc TL) {
   Record.AddSourceLocation(TL.getLParenLoc());
   Record.AddSourceLocation(TL.getRParenLoc());
 }
+
 void TypeLocWriter::VisitTypeOfTypeLoc(TypeOfTypeLoc TL) {
   Record.AddSourceLocation(TL.getTypeofLoc());
   Record.AddSourceLocation(TL.getLParenLoc());
   Record.AddSourceLocation(TL.getRParenLoc());
   Record.AddTypeSourceInfo(TL.getUnderlyingTInfo());
 }
+
 void TypeLocWriter::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
   Record.AddSourceLocation(TL.getKWLoc());
   Record.AddSourceLocation(TL.getLParenLoc());
   Record.AddSourceLocation(TL.getRParenLoc());
   Record.AddTypeSourceInfo(TL.getUnderlyingTInfo());
 }
+
 void TypeLocWriter::VisitAutoTypeLoc(AutoTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitRecordTypeLoc(RecordTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitEnumTypeLoc(EnumTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   Record.AddSourceLocation(TL.getAttrNameLoc());
   if (TL.hasAttrOperand()) {
@@ -631,17 +687,21 @@ void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
     Record.AddSourceLocation(TL.getAttrEnumOperandLoc());
   }
 }
+
 void TypeLocWriter::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitSubstTemplateTypeParmTypeLoc(
                                             SubstTemplateTypeParmTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitSubstTemplateTypeParmPackTypeLoc(
                                           SubstTemplateTypeParmPackTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitTemplateSpecializationTypeLoc(
                                            TemplateSpecializationTypeLoc TL) {
   Record.AddSourceLocation(TL.getTemplateKeywordLoc());
@@ -652,22 +712,27 @@ void TypeLocWriter::VisitTemplateSpecializationTypeLoc(
     Record.AddTemplateArgumentLocInfo(TL.getArgLoc(i).getArgument().getKind(),
                                       TL.getArgLoc(i).getLocInfo());
 }
+
 void TypeLocWriter::VisitParenTypeLoc(ParenTypeLoc TL) {
   Record.AddSourceLocation(TL.getLParenLoc());
   Record.AddSourceLocation(TL.getRParenLoc());
 }
+
 void TypeLocWriter::VisitElaboratedTypeLoc(ElaboratedTypeLoc TL) {
   Record.AddSourceLocation(TL.getElaboratedKeywordLoc());
   Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
 }
+
 void TypeLocWriter::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
   Record.AddSourceLocation(TL.getElaboratedKeywordLoc());
   Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitDependentTemplateSpecializationTypeLoc(
        DependentTemplateSpecializationTypeLoc TL) {
   Record.AddSourceLocation(TL.getElaboratedKeywordLoc());
@@ -680,12 +745,15 @@ void TypeLocWriter::VisitDependentTemplateSpecializationTypeLoc(
     Record.AddTemplateArgumentLocInfo(TL.getArgLoc(I).getArgument().getKind(),
                                       TL.getArgLoc(I).getLocInfo());
 }
+
 void TypeLocWriter::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
   Record.AddSourceLocation(TL.getEllipsisLoc());
 }
+
 void TypeLocWriter::VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
+
 void TypeLocWriter::VisitObjCObjectTypeLoc(ObjCObjectTypeLoc TL) {
   Record.push_back(TL.hasBaseTypeAsWritten());
   Record.AddSourceLocation(TL.getTypeArgsLAngleLoc());
@@ -697,14 +765,17 @@ void TypeLocWriter::VisitObjCObjectTypeLoc(ObjCObjectTypeLoc TL) {
   for (unsigned i = 0, e = TL.getNumProtocols(); i != e; ++i)
     Record.AddSourceLocation(TL.getProtocolLoc(i));
 }
+
 void TypeLocWriter::VisitObjCObjectPointerTypeLoc(ObjCObjectPointerTypeLoc TL) {
   Record.AddSourceLocation(TL.getStarLoc());
 }
+
 void TypeLocWriter::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
   Record.AddSourceLocation(TL.getKWLoc());
   Record.AddSourceLocation(TL.getLParenLoc());
   Record.AddSourceLocation(TL.getRParenLoc());
 }
+
 void TypeLocWriter::VisitPipeTypeLoc(PipeTypeLoc TL) {
   Record.AddSourceLocation(TL.getKWLoc());
 }
@@ -1212,7 +1283,7 @@ adjustFilenameForRelocatableAST(const char *Filename, StringRef BaseDir) {
 }
 
 static ASTFileSignature getSignature() {
-  while (1) {
+  while (true) {
     if (ASTFileSignature S = llvm::sys::Process::GetRandomNumber())
       return S;
     // Rely on GetRandomNumber to eventually return non-zero...
@@ -1534,6 +1605,7 @@ uint64_t ASTWriter::WriteControlBlock(Preprocessor &PP,
 }
 
 namespace  {
+
   /// \brief An input file.
   struct InputFileEntry {
     const FileEntry *File;
@@ -1541,6 +1613,7 @@ namespace  {
     bool IsTransient;
     bool BufferOverridden;
   };
+
 } // end anonymous namespace
 
 void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
@@ -1701,6 +1774,7 @@ static unsigned CreateSLocExpansionAbbrev(llvm::BitstreamWriter &Stream) {
 }
 
 namespace {
+
   // Trait used for the on-disk hash table of header search information.
   class HeaderFileInfoTrait {
     ASTWriter &Writer;
@@ -1809,6 +1883,7 @@ namespace {
     const char *strings_begin() const { return FrameworkStringData.begin(); }
     const char *strings_end() const { return FrameworkStringData.end(); }
   };
+
 } // end anonymous namespace
 
 /// \brief Write the header search block for the list of files that 
@@ -2869,6 +2944,7 @@ void ASTWriter::WriteComments() {
 //===----------------------------------------------------------------------===//
 
 namespace {
+
 // Trait used for the on-disk hash table used in the method pool.
 class ASTMethodPoolTrait {
   ASTWriter &Writer;
@@ -2973,6 +3049,7 @@ public:
     assert(Out.tell() - Start == DataLen && "Data length is wrong");
   }
 };
+
 } // end anonymous namespace
 
 /// \brief Write ObjC data: selectors and the method pool.
@@ -3144,6 +3221,7 @@ static NamedDecl *getDeclForLocalLookup(const LangOptions &LangOpts,
 }
 
 namespace {
+
 class ASTIdentifierTableTrait {
   ASTWriter &Writer;
   Preprocessor &PP;
@@ -3194,6 +3272,7 @@ public:
     auto MacroOffset = Writer.getMacroDirectivesOffset(II);
     return isInterestingIdentifier(II, MacroOffset);
   }
+
   bool isInterestingNonMacroIdentifier(const IdentifierInfo *II) {
     return isInterestingIdentifier(II, 0);
   }
@@ -3287,6 +3366,7 @@ public:
     }
   }
 };
+
 } // end anonymous namespace
 
 /// \brief Write the identifier table into the AST file.
@@ -3393,6 +3473,7 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
 //===----------------------------------------------------------------------===//
 
 namespace {
+
 // Trait used for the on-disk hash table used in the method pool.
 class ASTDeclContextNameLookupTrait {
   ASTWriter &Writer;
@@ -3518,6 +3599,7 @@ public:
     assert(Out.tell() - Start == DataLen && "Data length is wrong");
   }
 };
+
 } // end anonymous namespace
 
 bool ASTWriter::isLookupResultExternal(StoredDeclsList &Result,
@@ -5184,7 +5266,7 @@ void ASTRecordWriter::AddDeclarationNameInfo(
 void ASTRecordWriter::AddQualifierInfo(const QualifierInfo &Info) {
   AddNestedNameSpecifierLoc(Info.QualifierLoc);
   Record->push_back(Info.NumTemplParamLists);
-  for (unsigned i=0, e=Info.NumTemplParamLists; i != e; ++i)
+  for (unsigned i = 0, e = Info.NumTemplParamLists; i != e; ++i)
     AddTemplateParameterList(Info.TemplParamLists[i]);
 }
 
@@ -5397,7 +5479,7 @@ void ASTRecordWriter::AddTemplateArgumentList(
     const TemplateArgumentList *TemplateArgs) {
   assert(TemplateArgs && "No TemplateArgs!");
   Record->push_back(TemplateArgs->size());
-  for (int i=0, e = TemplateArgs->size(); i != e; ++i)
+  for (int i = 0, e = TemplateArgs->size(); i != e; ++i)
     AddTemplateArgument(TemplateArgs->get(i));
 }
 
@@ -5408,7 +5490,7 @@ void ASTRecordWriter::AddASTTemplateArgumentListInfo(
   AddSourceLocation(ASTTemplArgList->RAngleLoc);
   Record->push_back(ASTTemplArgList->NumTemplateArgs);
   const TemplateArgumentLoc *TemplArgs = ASTTemplArgList->getTemplateArgs();
-  for (int i=0, e = ASTTemplArgList->NumTemplateArgs; i != e; ++i)
+  for (int i = 0, e = ASTTemplArgList->NumTemplateArgs; i != e; ++i)
     AddTemplateArgumentLoc(TemplArgs[i]);
 }
 

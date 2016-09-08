@@ -147,7 +147,7 @@ define void @global_sextload_v1i16_to_v1i32(<1 x i32> addrspace(1)* %out, <1 x i
 
 ; EG: VTX_READ_32 [[DST:T[0-9]\.[XYZW]]], [[DST]], 0, #1
 ; TODO: This should use DST, but for some there are redundant MOVs
-; EG: LSHR {{[* ]*}}T{{[0-9].[XYZW]}}, {{PV.[XYZW]}}, literal
+; EG: BFE_UINT {{[* ]*}}T{{[0-9].[XYZW]}}, {{PV.[XYZW]}}, literal
 ; EG: 16
 define void @global_zextload_v2i16_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
   %load = load <2 x i16>, <2 x i16> addrspace(1)* %in
@@ -219,9 +219,10 @@ entry:
 
 ; EG: VTX_READ_64 [[DST:T[0-9]\.XY]], {{T[0-9].[XYZW]}}, 0, #1
 ; TODO: These should use DST, but for some there are redundant MOVs
-; EG-DAG: LSHR {{[* ]*}}T{{[0-9].[XYZW]}}, {{PV.[XYZW]}}, literal
-; EG-DAG: LSHR {{[* ]*}}T{{[0-9].[XYZW]}}, {{T[0-9].[XYZW]}}, literal
+; EG-DAG: BFE_UINT {{[* ]*}}T{{[0-9].[XYZW]}}, {{T[0-9].[XYZW]}}, literal
 ; EG-DAG: 16
+; EG-DAG: BFE_UINT {{[* ]*}}T{{[0-9].[XYZW]}}, {{T[0-9].[XYZW]}}, literal
+; EG-DAG: AND_INT {{[* ]*}}T{{[0-9].[XYZW]}}, {{T[0-9].[XYZW]}}, literal
 ; EG-DAG: 16
 define void @global_global_zextload_v4i16_to_v4i32(<4 x i32> addrspace(1)* %out, <4 x i16> addrspace(1)* %in) #0 {
   %load = load <4 x i16>, <4 x i16> addrspace(1)* %in

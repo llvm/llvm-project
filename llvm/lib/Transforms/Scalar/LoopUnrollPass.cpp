@@ -649,7 +649,7 @@ static bool canUnrollCompletely(Loop *L, unsigned Threshold,
 
   if (UnrolledCost <= Threshold) {
     DEBUG(dbgs() << "  Can fully unroll, because unrolled cost: "
-                 << UnrolledCost << "<" << Threshold << "\n");
+                 << UnrolledCost << "<=" << Threshold << "\n");
     return true;
   }
 

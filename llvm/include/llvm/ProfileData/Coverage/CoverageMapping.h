@@ -244,16 +244,6 @@ struct CounterMappingRegion {
   inline std::pair<unsigned, unsigned> endLoc() const {
     return std::pair<unsigned, unsigned>(LineEnd, ColumnEnd);
   }
-
-  bool contains(const CounterMappingRegion &Other) const {
-    if (FileID != Other.FileID)
-      return false;
-    if (startLoc() > Other.startLoc())
-      return false;
-    if (endLoc() < Other.endLoc())
-      return false;
-    return true;
-  }
 };
 
 /// \brief Associates a source range with an execution count.

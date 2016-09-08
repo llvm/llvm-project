@@ -696,7 +696,7 @@ private:
       else
         OtherGep = cast<GetElementPtrInst>(
             cast<StoreInst>(OtherInst)->getPointerOperand());
-      ClonedGep->intersectOptionalDataWith(OtherGep);
+      ClonedGep->andIRFlags(OtherGep);
     }
 
     // Replace uses of Gep with ClonedGep in Repl.
@@ -843,7 +843,7 @@ private:
             MSSA->removeMemoryAccess(OldMA);
           }
 
-          Repl->intersectOptionalDataWith(I);
+          Repl->andIRFlags(I);
           combineKnownMetadata(Repl, I);
           I->replaceAllUsesWith(Repl);
           // Also invalidate the Alias Analysis cache.

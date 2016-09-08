@@ -413,6 +413,15 @@ class ConstantSImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = [],
   let DiagnosticType = "SImm" # Bits # "_" # Offset;
 }
 
+class SimmLslAsmOperandClass<int Bits, list<AsmOperandClass> Supers = [],
+                                  int Shift = 0> : AsmOperandClass {
+  let Name = "Simm" # Bits # "_Lsl" # Shift;
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isScaledSImm<" # Bits # ", " # Shift # ">";
+  let SuperClasses = Supers;
+  let DiagnosticType = "SImm" # Bits # "_Lsl" # Shift;
+}
+
 class ConstantUImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = [],
                                   int Offset = 0> : AsmOperandClass {
   let Name = "ConstantUImm" # Bits # "_" # Offset;
@@ -485,6 +494,13 @@ def ConstantUImm26AsmOperandClass
     : ConstantUImmAsmOperandClass<26, [SImm32AsmOperandClass]>;
 def ConstantUImm20AsmOperandClass
     : ConstantUImmAsmOperandClass<20, [ConstantUImm26AsmOperandClass]>;
+def ConstantSImm19Lsl2AsmOperandClass : AsmOperandClass {
+  let Name = "SImm19Lsl2";
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isScaledSImm<19, 2>";
+  let SuperClasses = [ConstantUImm20AsmOperandClass];
+  let DiagnosticType = "SImm19_Lsl2";
+}
 def UImm16RelaxedAsmOperandClass
     : UImmAsmOperandClass<16, [ConstantUImm20AsmOperandClass]> {
   let Name = "UImm16_Relaxed";
@@ -611,6 +627,9 @@ def ConstantImmzAsmOperandClass : AsmOperandClass {
   let DiagnosticType = "Immz";
 }
 
+def Simm19Lsl2AsmOperand
+    : SimmLslAsmOperandClass<19, [], 2>;
+
 def MipsJumpTargetAsmOperand : AsmOperandClass {
   let Name = "JumpTarget";
   let ParserMethod = "parseJumpTarget";
@@ -645,7 +664,7 @@ def imm64: Operand<i64>;
 def simm19_lsl2 : Operand<i32> {
   let EncoderMethod = "getSimm19Lsl2Encoding";
   let DecoderMethod = "DecodeSimm19Lsl2";
-  let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let ParserMatchClass = Simm19Lsl2AsmOperand;
 }
 
 def simm18_lsl3 : Operand<i32> {

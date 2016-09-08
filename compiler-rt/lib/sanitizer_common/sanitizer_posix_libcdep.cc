@@ -44,6 +44,8 @@
 #define MAP_NORESERVE 0
 #endif
 
+typedef void (*sa_sigaction_t)(int, siginfo_t *, void *);
+
 namespace __sanitizer {
 
 u32 GetUid() {
@@ -126,6 +128,16 @@ void SleepForMillis(int millis) {
 }
 
 void Abort() {
+#ifndef SANITIZER_GO
+  // If we are handling SIGABRT, unhandle it first.
+  if (IsHandledDeadlySignal(SIGABRT)) {
+    struct sigaction sigact;
+    internal_memset(&sigact, 0, sizeof(sigact));
+    sigact.sa_sigaction = (sa_sigaction_t)SIG_DFL;
+    internal_sigaction(SIGABRT, &sigact, nullptr);
+  }
+#endif
+
   abort();
 }
 
@@ -170,7 +182,6 @@ void UnsetAlternateSignalStack() {
   UnmapOrDie(oldstack.ss_sp, oldstack.ss_size);
 }
 
-typedef void (*sa_sigaction_t)(int, siginfo_t *, void *);
 static void MaybeInstallSigaction(int signum,
                                   SignalHandlerType handler) {
   if (!IsHandledDeadlySignal(signum))

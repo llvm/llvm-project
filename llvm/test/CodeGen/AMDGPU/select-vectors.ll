@@ -58,7 +58,7 @@ define void @s_select_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %a, <4 x i32
 
 ; FUNC-LABEL: {{^}}v_select_v4i32:
 ; SI: buffer_load_dwordx4
-; SI: v_cmp_gt_u32_e64 vcc, 32, s{{[0-9]+}}
+; SI: v_cmp_lt_u32_e64 vcc, s{{[0-9]+}}, 32
 ; SI: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
 ; SI: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
 ; SI: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
@@ -96,7 +96,7 @@ define void @select_v8i32(<8 x i32> addrspace(1)* %out, <8 x i32> %a, <8 x i32> 
 ; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[AHI]]
 ; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[BHI]]
 ; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[ALO]]
-; SI-DAG: v_cmp_eq_i32_e64 vcc, 0, s{{[0-9]+}}
+; SI-DAG: v_cmp_eq_i32_e64 vcc, s{{[0-9]+}}, 0{{$}}
 
 ; SI: v_cndmask_b32_e32
 ; SI: v_mov_b32_e32 v{{[0-9]+}}, s[[BLO]]
@@ -112,7 +112,7 @@ define void @s_select_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %a, <2 x
 ; FUNC-LABEL: {{^}}s_select_v4f32:
 ; SI: s_load_dwordx4
 ; SI: s_load_dwordx4
-; SI: v_cmp_eq_i32_e64 vcc, 0, s{{[0-9]+}}
+; SI: v_cmp_eq_i32_e64 vcc, s{{[0-9]+}}, 0{{$}}
 
 ; SI: v_cndmask_b32_e32
 ; SI: v_cndmask_b32_e32
@@ -129,7 +129,7 @@ define void @s_select_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %a, <4 x
 
 ; FUNC-LABEL: {{^}}v_select_v4f32:
 ; SI: buffer_load_dwordx4
-; SI: v_cmp_gt_u32_e64 vcc, 32, s{{[0-9]+}}
+; SI: v_cmp_lt_u32_e64 vcc, s{{[0-9]+}}, 32
 ; SI: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
 ; SI: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}
 ; SI: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v{{[0-9]+}}

@@ -261,7 +261,7 @@ template <class ELFT> void GotSection<ELFT>::finalize() {
   this->Header.sh_size = EntriesNum * sizeof(uintX_t);
 }
 
-template <class ELFT> void GotSection<ELFT>::writeMipsGot(uint8_t *&Buf) {
+template <class ELFT> void GotSection<ELFT>::writeMipsGot(uint8_t *Buf) {
   // Set the MSB of the second GOT slot. This is not required by any
   // MIPS ABI documentation, though.
   //
@@ -293,11 +293,38 @@ template <class ELFT> void GotSection<ELFT>::writeMipsGot(uint8_t *&Buf) {
   };
   std::for_each(std::begin(MipsLocal), std::end(MipsLocal), AddEntry);
   std::for_each(std::begin(MipsGlobal), std::end(MipsGlobal), AddEntry);
+  // Initialize TLS-related GOT entries. If the entry has a corresponding
+  // dynamic relocations, leave it initialized by zero. Write down adjusted
+  // TLS symbol's values otherwise. To calculate the adjustments use offsets
+  // for thread-local storage.
+  // https://www.linux-mips.org/wiki/NPTL
+  if (TlsIndexOff != -1U && !Config->Pic)
+    write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Buf + TlsIndexOff,
+                                                            1);
+  for (const SymbolBody *B : Entries) {
+    if (!B || B->isPreemptible())
+      continue;
+    uintX_t VA = B->getVA<ELFT>();
+    if (B->GotIndex != -1U) {
+      uint8_t *Entry = Buf + B->GotIndex * sizeof(uintX_t);
+      write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry,
+                                                              VA - 0x7000);
+    }
+    if (B->GlobalDynIndex != -1U) {
+      uint8_t *Entry = Buf + B->GlobalDynIndex * sizeof(uintX_t);
+      write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry, 1);
+      Entry += sizeof(uintX_t);
+      write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry,
+                                                              VA - 0x8000);
+    }
+  }
 }
 
 template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
-  if (Config->EMachine == EM_MIPS)
+  if (Config->EMachine == EM_MIPS) {
     writeMipsGot(Buf);
+    return;
+  }
   for (const SymbolBody *B : Entries) {
     uint8_t *Entry = Buf;
     Buf += sizeof(uintX_t);
@@ -904,7 +931,7 @@ template <class ELFT> void OutputSection<ELFT>::sortInitFini() {
 
   std::vector<Pair> V;
   for (InputSection<ELFT> *S : Sections)
-    V.push_back({getPriority(S->getSectionName()), S});
+    V.push_back({getPriority(S->Name), S});
   std::stable_sort(V.begin(), V.end(), Comp);
   Sections.clear();
   for (Pair &P : V)
@@ -953,8 +980,8 @@ static bool compCtors(const InputSection<ELFT> *A,
   bool EndB = isCrtend(B->getFile()->getName());
   if (EndA != EndB)
     return EndB;
-  StringRef X = A->getSectionName();
-  StringRef Y = B->getSectionName();
+  StringRef X = A->Name;
+  StringRef Y = B->Name;
   assert(X.startswith(".ctors") || X.startswith(".dtors"));
   assert(Y.startswith(".ctors") || Y.startswith(".dtors"));
   X = X.substr(6);
@@ -1005,7 +1032,7 @@ CieRecord *EhOutputSection<ELFT>::addCie(EhSectionPiece &Piece,
                                          ArrayRef<RelTy> Rels) {
   const endianness E = ELFT::TargetEndianness;
   if (read32<E>(Piece.data().data() + 4) != 0)
-    fatal("CIE expected at beginning of .eh_frame: " + Sec->getSectionName());
+    fatal("CIE expected at beginning of .eh_frame: " + Sec->Name);
 
   SymbolBody *Personality = nullptr;
   unsigned FirstRelI = Piece.FirstRelocation;
@@ -1809,7 +1836,7 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
   if (Sec)
     return {Sec, false};
 
-  switch (C->SectionKind) {
+  switch (C->kind()) {
   case InputSectionBase<ELFT>::Regular:
     Sec = new OutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
     break;

@@ -302,7 +302,7 @@ end:
 }
 
 ; CHECK-LABEL: {{^}}no_skip_no_successors:
-; CHECK: v_cmp_nle_f32
+; CHECK: v_cmp_nge_f32
 ; CHECK: s_and_b64 vcc, exec,
 ; CHECK: s_cbranch_vccz [[SKIPKILL:BB[0-9]+_[0-9]+]]
 

@@ -9237,7 +9237,8 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
     WorkList.pop_back();
     unsigned NumClusters = W.LastCluster - W.FirstCluster + 1;
 
-    if (NumClusters > 3 && TM.getOptLevel() != CodeGenOpt::None) {
+    if (NumClusters > 3 && TM.getOptLevel() != CodeGenOpt::None &&
+        !DefaultMBB->getParent()->getFunction()->optForMinSize()) {
       // For optimized builds, lower large range as a balanced binary tree.
       splitWorkItem(WorkList, W, SI.getCondition(), SwitchMBB);
       continue;
