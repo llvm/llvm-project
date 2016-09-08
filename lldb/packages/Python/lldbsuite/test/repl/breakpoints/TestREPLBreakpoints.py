@@ -11,11 +11,13 @@
 # ------------------------------------------------------------------------------
 """Test that we can define and use classes in the REPL"""
 
-import os, time
+import os
+import time
 import unittest2
 import lldb
 import lldbsuite.test.decorators as decorators
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
+
 
 class REPLBreakpointsTestCase (REPLTest):
 
@@ -23,7 +25,11 @@ class REPLBreakpointsTestCase (REPLTest):
 
     @decorators.swiftTest
     @decorators.no_debug_info_test
-    @decorators.expectedFailureAll(oslist=["macosx", "linux"], bugnumber="rdar://23091701")
+    @decorators.expectedFailureAll(
+        oslist=[
+            "macosx",
+            "linux"],
+        bugnumber="rdar://23091701")
     def testREPL(self):
         REPLTest.testREPL(self)
 
@@ -31,9 +37,28 @@ class REPLBreakpointsTestCase (REPLTest):
         self.command('''func foo() {
     print("hello")
 }''', prompt_sync=False, patterns=['4>'])
-        
+
         # Set a breakpoint
         function_pattern = '''foo \(\) -> \(\)'''
         source_pattern = 'at repl.swift:2'
-        self.command(':b 2', prompt_sync=False, patterns=['Breakpoint 1', function_pattern, source_pattern, 'address = 0x', '4>'])
-        self.command('foo()', prompt_sync=False, patterns=['Execution stopped at breakpoint', 'Process [0-9]+ stopped', 'thread #1: tid = 0x', 'foo\(\) -> \(\)', source_pattern, 'stop reason = breakpoint 1.1', '-> 2', '''print\("hello"\)'''])
+        self.command(
+            ':b 2',
+            prompt_sync=False,
+            patterns=[
+                'Breakpoint 1',
+                function_pattern,
+                source_pattern,
+                'address = 0x',
+                '4>'])
+        self.command(
+            'foo()',
+            prompt_sync=False,
+            patterns=[
+                'Execution stopped at breakpoint',
+                'Process [0-9]+ stopped',
+                'thread #1: tid = 0x',
+                'foo\(\) -> \(\)',
+                source_pattern,
+                'stop reason = breakpoint 1.1',
+                '-> 2',
+                '''print\("hello"\)'''])

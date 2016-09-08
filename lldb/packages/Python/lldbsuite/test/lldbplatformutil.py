@@ -18,31 +18,39 @@ from . import configuration
 import use_lldb_suite
 import lldb
 
+
 def check_first_register_readable(test_case):
     arch = test_case.getArchitecture()
 
     if arch in ['x86_64', 'i386']:
-        test_case.expect("register read eax", substrs = ['eax = 0x'])
+        test_case.expect("register read eax", substrs=['eax = 0x'])
     elif arch in ['arm']:
-    	test_case.expect("register read r0", substrs = ['r0 = 0x'])
+        test_case.expect("register read r0", substrs=['r0 = 0x'])
     elif arch in ['aarch64']:
-        test_case.expect("register read x0", substrs = ['x0 = 0x'])
-    elif re.match("mips",arch):
-        test_case.expect("register read zero", substrs = ['zero = 0x'])
+        test_case.expect("register read x0", substrs=['x0 = 0x'])
+    elif re.match("mips", arch):
+        test_case.expect("register read zero", substrs=['zero = 0x'])
     elif arch in ['s390x']:
-    	test_case.expect("register read r0", substrs = ['r0 = 0x'])
+        test_case.expect("register read r0", substrs=['r0 = 0x'])
     else:
         # TODO: Add check for other architectures
-        test_case.fail("Unsupported architecture for test case (arch: %s)" % test_case.getArchitecture())
+        test_case.fail(
+            "Unsupported architecture for test case (arch: %s)" %
+            test_case.getArchitecture())
+
 
 def _run_adb_command(cmd, device_id):
     device_id_args = []
     if device_id:
         device_id_args = ["-s", device_id]
     full_cmd = ["adb"] + device_id_args + cmd
-    p = subprocess.Popen(full_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(
+        full_cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     return p.returncode, stdout, stderr
+
 
 def _target_is_android():
     if not hasattr(_target_is_android, 'result'):
@@ -50,6 +58,7 @@ def _target_is_android():
         match = re.match(".*-.*-.*-android", triple)
         _target_is_android.result = match is not None
     return _target_is_android.result
+
 
 def android_device_api():
     if not hasattr(android_device_api, 'result'):
@@ -69,8 +78,10 @@ def android_device_api():
             raise LookupError(
                 ">>> Unable to determine the API level of the Android device.\n"
                 ">>> stdout:\n%s\n"
-                ">>> stderr:\n%s\n" % (stdout, stderr))
+                ">>> stderr:\n%s\n" %
+                (stdout, stderr))
     return android_device_api.result
+
 
 def match_android_device(device_arch, valid_archs=None, valid_api_levels=None):
     if not _target_is_android():
@@ -82,6 +93,7 @@ def match_android_device(device_arch, valid_archs=None, valid_api_levels=None):
 
     return True
 
+
 def finalize_build_dictionary(dictionary):
     if _target_is_android():
         if dictionary is None:
@@ -90,6 +102,7 @@ def finalize_build_dictionary(dictionary):
         if android_device_api() >= 16:
             dictionary["PIE"] = 1
     return dictionary
+
 
 def getHostPlatform():
     """Returns the host platform running the test suite."""
@@ -111,6 +124,7 @@ def getHostPlatform():
 def getDarwinOSTriples():
     return ['darwin', 'macosx', 'ios']
 
+
 def getPlatform():
     """Returns the target platform which the tests are running on."""
     platform = lldb.DBG.GetSelectedPlatform().GetTriple().split('-')[2]
@@ -120,9 +134,11 @@ def getPlatform():
         platform = 'netbsd'
     return platform
 
+
 def platformIsDarwin():
     """Returns true if the OS triple for the selected platform is any valid apple OS"""
     return getPlatform() in getDarwinOSTriples()
+
 
 class _PlatformContext(object):
     """Value object class which contains platform-specific options."""
@@ -131,6 +147,7 @@ class _PlatformContext(object):
         self.shlib_environment_var = shlib_environment_var
         self.shlib_prefix = shlib_prefix
         self.shlib_extension = shlib_extension
+
 
 def createPlatformContext():
     if platformIsDarwin():

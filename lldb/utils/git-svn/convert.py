@@ -11,14 +11,18 @@ Usage:
 4. git svn dcommit [--commit-url https://id@llvm.org/svn/llvm-project/lldb/trunk]
 """
 
-import os, re, sys
+import os
+import re
+import sys
 import StringIO
+
 
 def usage(problem_file=None):
     if problem_file:
         print "%s is not a file" % problem_file
     print "Usage: convert.py raw-message-source [raw-message-source2 ...]"
     sys.exit(0)
+
 
 def do_convert(file):
     """Skip all preceding mail message headers until 'From: ' is encountered.
@@ -38,7 +42,8 @@ def do_convert(file):
 
     # By default, splitlines() don't include line breaks.  CRLF should be gone.
     for line in content.splitlines():
-        # Wait till we scan the 'From: ' header before start printing the lines.
+        # Wait till we scan the 'From: ' header before start printing the
+        # lines.
         if not from_header_seen:
             if not line.startswith('From: '):
                 continue
@@ -51,6 +56,7 @@ def do_convert(file):
         f_out.write(new_content.getvalue())
 
     print "done"
+
 
 def main():
     if len(sys.argv) == 1:

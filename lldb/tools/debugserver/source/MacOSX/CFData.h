@@ -16,24 +16,24 @@
 
 #include "CFUtils.h"
 
-class CFData : public CFReleaser<CFDataRef>
-{
+class CFData : public CFReleaser<CFDataRef> {
 public:
-    //------------------------------------------------------------------
-    // Constructors and Destructors
-    //------------------------------------------------------------------
-    CFData(CFDataRef data = NULL);
-    CFData(const CFData& rhs);
-    CFData& operator=(const CFData& rhs);
-    virtual ~CFData();
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  CFData(CFDataRef data = NULL);
+  CFData(const CFData &rhs);
+  CFData &operator=(const CFData &rhs);
+  virtual ~CFData();
 
-        CFDataRef Serialize(CFPropertyListRef plist, CFPropertyListFormat format);
-        const uint8_t* GetBytePtr () const;
-        CFIndex GetLength () const;
+  CFDataRef Serialize(CFPropertyListRef plist, CFPropertyListFormat format);
+  const uint8_t *GetBytePtr() const;
+  CFIndex GetLength() const;
+
 protected:
-    //------------------------------------------------------------------
-    // Classes that inherit from CFData can see and modify these
-    //------------------------------------------------------------------
+  //------------------------------------------------------------------
+  // Classes that inherit from CFData can see and modify these
+  //------------------------------------------------------------------
 };
 
 #endif // #ifndef __CFData_h__

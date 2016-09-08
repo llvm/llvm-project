@@ -24,7 +24,9 @@ class SwiftGetValueAsUnsignedAPITest(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
-    @decorators.expectedFailureAll(oslist=["linux"], bugnumber="rdar://problem/23426695")
+    @decorators.expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="rdar://problem/23426695")
     def test_get_value_as_unsigned_sbapi(self):
         """Tests that the SBValue::GetValueAsUnsigned() API works for Swift types"""
         self.build()
@@ -36,14 +38,15 @@ class SwiftGetValueAsUnsignedAPITest(TestBase):
     def getvalue_commands(self):
         """Tests that the SBValue::GetValueAsUnsigned() API works for Swift types"""
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
-        lldbutil.run_break_set_by_source_regexp(self,r"break here",num_expected_locations=1)
+        lldbutil.run_break_set_by_source_regexp(
+            self, r"break here", num_expected_locations=1)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         frame = self.frame()
         string = frame.FindVariable("aString")
@@ -52,16 +55,24 @@ class SwiftGetValueAsUnsignedAPITest(TestBase):
         classobject = frame.FindVariable("aClassObject")
 
         numberValue = number.GetValueAsUnsigned()
-        self.assertTrue(numberValue == 123456, "Swift.Int does not have a valid value")
+        self.assertTrue(
+            numberValue == 123456,
+            "Swift.Int does not have a valid value")
 
-        builtinPointerValue = string.GetChildMemberWithName("str_value").GetChildMemberWithName("base").GetChildMemberWithName("value")
-        self.assertTrue(builtinPointerValue != 0, "Builtin.RawPointer does not have a valid value")
+        builtinPointerValue = string.GetChildMemberWithName(
+            "str_value").GetChildMemberWithName("base").GetChildMemberWithName("value")
+        self.assertTrue(builtinPointerValue != 0,
+                        "Builtin.RawPointer does not have a valid value")
 
-        objectPointerValue = string.GetChildMemberWithName("str_value").GetChildMemberWithName("value")
-        self.assertTrue(objectPointerValue != 0, "Builtin.RawPointer does not have a valid value")
+        objectPointerValue = string.GetChildMemberWithName(
+            "str_value").GetChildMemberWithName("value")
+        self.assertTrue(objectPointerValue != 0,
+                        "Builtin.RawPointer does not have a valid value")
 
         classValue = classobject.GetValueAsUnsigned()
-        self.assertTrue(classValue != 0, "Class types are aggregates with pointer values")
+        self.assertTrue(
+            classValue != 0,
+            "Class types are aggregates with pointer values")
 
 
 if __name__ == '__main__':

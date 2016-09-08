@@ -22,27 +22,28 @@ import os.path
 import unittest2
 
 
-def execute_command (command):
-    (exit_status, output) = commands.getstatusoutput (command)
+def execute_command(command):
+    (exit_status, output) = commands.getstatusoutput(command)
     return exit_status
+
 
 class TestUnitTests(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
-    def test_equality_operators_fileprivate (self):
+    def test_equality_operators_fileprivate(self):
         """Test that we resolve expression operators correctly"""
         self.buildAll()
         self.do_test("Fooey.CompareEm1", "true", 1)
 
-    def test_equality_operators_private (self):
+    def test_equality_operators_private(self):
         """Test that we resolve expression operators correctly"""
         self.buildAll()
         self.do_test("Fooey.CompareEm2", "false", 2)
 
     @decorators.expectedFailureAll(bugnumber="rdar://27015195")
-    def test_equality_operators_other_module (self):
+    def test_equality_operators_other_module(self):
         """Test that we resolve expression operators correctly"""
         self.buildAll()
         self.do_test("Fooey.CompareEm3", "false", 3)
@@ -76,7 +77,7 @@ class TestUnitTests(TestBase):
         process = target.LaunchSimple(None, env_arr, os.getcwd())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, bkpt)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process, bkpt)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -86,22 +87,35 @@ class TestUnitTests(TestBase):
         options = lldb.SBExpressionOptions()
 
         value = self.frame.EvaluateExpression("lhs == rhs", options)
-        self.assertTrue(value.GetError().Success(), "Expression in %s was successful"%(bkpt_name))
+        self.assertTrue(
+            value.GetError().Success(),
+            "Expression in %s was successful" %
+            (bkpt_name))
         summary = value.GetSummary()
-        self.assertTrue(summary == compare_value, "Expression in CompareEm has wrong value: %s (expected %s)."%(summary, compare_value))
+        self.assertTrue(
+            summary == compare_value,
+            "Expression in CompareEm has wrong value: %s (expected %s)." %
+            (summary,
+             compare_value))
 
         # And make sure we got did increment the counter by the right value.
         value = self.frame.EvaluateExpression("Fooey.GetCounter()", options)
         self.assertTrue(value.GetError().Success(), "GetCounter worked")
 
         counter = value.GetValueAsUnsigned()
-        self.assertTrue(counter == counter_value, "Counter value is wrong: %d (expected %d)"%(counter, counter_value))
+        self.assertTrue(
+            counter == counter_value, "Counter value is wrong: %d (expected %d)" %
+            (counter, counter_value))
 
         # Make sure the presence of these type specific == operators doesn't interfere
         # with finding other unrelated == operators.
         value = self.frame.EvaluateExpression("1 == 2", options)
-        self.assertTrue(value.GetError().Success(), "1 == 2 expression couldn't run")
-        self.assertTrue(value.GetSummary() == "false", "1 == 2 didn't return false.")
+        self.assertTrue(
+            value.GetError().Success(),
+            "1 == 2 expression couldn't run")
+        self.assertTrue(
+            value.GetSummary() == "false",
+            "1 == 2 didn't return false.")
 
 if __name__ == '__main__':
     import atexit

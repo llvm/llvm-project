@@ -3,25 +3,34 @@
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class BitfieldsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-    
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break inside main().
         self.line = line_number('main.c', '// Set break point at this line.')
 
-    @skipIfWindows # BitFields exhibit crashes in record layout on Windows (http://llvm.org/pr21800)
-    @skipIf("llvm.org/pr27510", oslist=["linux"], compiler="clang", compiler_version=[">=", "3.9"]) # expectedFailure, skip to avoid crash
+    # BitFields exhibit crashes in record layout on Windows
+    # (http://llvm.org/pr21800)
+    @skipIfWindows
+    @skipIf(
+        "llvm.org/pr27510",
+        oslist=["linux"],
+        compiler="clang",
+        compiler_version=[
+            ">=",
+            "3.9"])  # expectedFailure, skip to avoid crash
     def test_and_run_command(self):
         """Test 'frame variable ...' on a variable with bitfields."""
         self.build()
@@ -29,77 +38,91 @@ class BitfieldsTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # Break inside the main.
-        lldbutil.run_break_set_by_file_and_line (self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         # The breakpoint should have a hit count of 1.
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
-            substrs = [' resolved, hit count = 1'])
+                    substrs=[' resolved, hit count = 1'])
 
         # This should display correctly.
-        self.expect("frame variable --show-types bits", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['(uint32_t:1) b1 = 1',
-                       '(uint32_t:2) b2 = 3',
-                       '(uint32_t:3) b3 = 7',
-                       '(uint32_t) b4 = 15',
-                       '(uint32_t:5) b5 = 31',
-                       '(uint32_t:6) b6 = 63',
-                       '(uint32_t:7) b7 = 127',
-                       '(uint32_t:4) four = 15'])
+        self.expect(
+            "frame variable --show-types bits",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                '(uint32_t:1) b1 = 1',
+                '(uint32_t:2) b2 = 3',
+                '(uint32_t:3) b3 = 7',
+                '(uint32_t) b4 = 15',
+                '(uint32_t:5) b5 = 31',
+                '(uint32_t:6) b6 = 63',
+                '(uint32_t:7) b7 = 127',
+                '(uint32_t:4) four = 15'])
 
         # And so should this.
         # rdar://problem/8348251
-        self.expect("frame variable --show-types", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['(uint32_t:1) b1 = 1',
-                       '(uint32_t:2) b2 = 3',
-                       '(uint32_t:3) b3 = 7',
-                       '(uint32_t) b4 = 15',
-                       '(uint32_t:5) b5 = 31',
-                       '(uint32_t:6) b6 = 63',
-                       '(uint32_t:7) b7 = 127',
-                       '(uint32_t:4) four = 15'])
+        self.expect(
+            "frame variable --show-types",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                '(uint32_t:1) b1 = 1',
+                '(uint32_t:2) b2 = 3',
+                '(uint32_t:3) b3 = 7',
+                '(uint32_t) b4 = 15',
+                '(uint32_t:5) b5 = 31',
+                '(uint32_t:6) b6 = 63',
+                '(uint32_t:7) b7 = 127',
+                '(uint32_t:4) four = 15'])
 
         self.expect("expr (bits.b1)", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['uint32_t', '1'])
+                    substrs=['uint32_t', '1'])
         self.expect("expr (bits.b2)", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['uint32_t', '3'])
+                    substrs=['uint32_t', '3'])
         self.expect("expr (bits.b3)", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['uint32_t', '7'])
+                    substrs=['uint32_t', '7'])
         self.expect("expr (bits.b4)", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['uint32_t', '15'])
+                    substrs=['uint32_t', '15'])
         self.expect("expr (bits.b5)", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['uint32_t', '31'])
+                    substrs=['uint32_t', '31'])
         self.expect("expr (bits.b6)", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['uint32_t', '63'])
+                    substrs=['uint32_t', '63'])
         self.expect("expr (bits.b7)", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['uint32_t', '127'])
+                    substrs=['uint32_t', '127'])
         self.expect("expr (bits.four)", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['uint32_t', '15'])
+                    substrs=['uint32_t', '15'])
 
-        self.expect("frame variable --show-types more_bits", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['(uint32_t:3) a = 3',
-                       '(uint8_t:1) b = \'\\0\'',
-                       '(uint8_t:1) c = \'\\x01\'',
-                       '(uint8_t:1) d = \'\\0\''])
+        self.expect(
+            "frame variable --show-types more_bits",
+            VARIABLES_DISPLAYED_CORRECTLY,
+            substrs=[
+                '(uint32_t:3) a = 3',
+                '(uint8_t:1) b = \'\\0\'',
+                '(uint8_t:1) c = \'\\x01\'',
+                '(uint8_t:1) d = \'\\0\''])
 
         self.expect("expr (more_bits.a)", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['uint32_t', '3'])
+                    substrs=['uint32_t', '3'])
         self.expect("expr (more_bits.b)", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['uint8_t', '\\0'])
+                    substrs=['uint8_t', '\\0'])
         self.expect("expr (more_bits.c)", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['uint8_t', '\\x01'])
+                    substrs=['uint8_t', '\\x01'])
         self.expect("expr (more_bits.d)", VARIABLES_DISPLAYED_CORRECTLY,
-            substrs = ['uint8_t', '\\0'])
+                    substrs=['uint8_t', '\\0'])
 
     @add_test_categories(['pyapi'])
-    @skipIfWindows # BitFields exhibit crashes in record layout on Windows (http://llvm.org/pr21800)
-    @expectedFailureAll(oslist=["linux"], bugnumber="https://bugs.swift.org/browse/SR-1524")
+    # BitFields exhibit crashes in record layout on Windows
+    # (http://llvm.org/pr21800)
+    @skipIfWindows
+    @expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="https://bugs.swift.org/browse/SR-1524")
     def test_and_python_api(self):
         """Use Python APIs to inspect a bitfields variable."""
         self.build()
@@ -111,11 +134,13 @@ class BitfieldsTestCase(TestBase):
         breakpoint = target.BreakpointCreateByLocation("main.c", self.line)
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # The stop reason of the thread should be breakpoint.
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
 
         # The breakpoint should have a hit count of 1.
@@ -125,10 +150,14 @@ class BitfieldsTestCase(TestBase):
         frame = thread.GetFrameAtIndex(0)
         bits = frame.FindVariable("bits")
         self.DebugSBValue(bits)
-        self.assertTrue(bits.GetTypeName() == 'Bits', "bits.GetTypeName() == 'Bits'");
-        self.assertTrue(bits.GetNumChildren() == 10, "bits.GetNumChildren() == 10");
+        self.assertTrue(
+            bits.GetTypeName() == 'Bits',
+            "bits.GetTypeName() == 'Bits'")
+        self.assertTrue(
+            bits.GetNumChildren() == 10,
+            "bits.GetNumChildren() == 10")
         test_compiler = self.getCompiler()
-        self.assertTrue(bits.GetByteSize() == 32, "bits.GetByteSize() == 32");
+        self.assertTrue(bits.GetByteSize() == 32, "bits.GetByteSize() == 32")
 
         # Notice the pattern of int(b1.GetValue(), 0).  We pass a base of 0
         # so that the proper radix is determined based on the contents of the

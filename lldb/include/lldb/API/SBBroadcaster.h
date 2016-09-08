@@ -14,84 +14,70 @@
 
 namespace lldb {
 
-class LLDB_API SBBroadcaster
-{
+class LLDB_API SBBroadcaster {
 public:
-    SBBroadcaster ();
+  SBBroadcaster();
 
-    SBBroadcaster (const char *name);
+  SBBroadcaster(const char *name);
 
-    SBBroadcaster (const SBBroadcaster &rhs);
-    
-    const SBBroadcaster &
-    operator = (const SBBroadcaster &rhs);
+  SBBroadcaster(const SBBroadcaster &rhs);
 
-    ~SBBroadcaster();
+  const SBBroadcaster &operator=(const SBBroadcaster &rhs);
 
-    bool
-    IsValid () const;
+  ~SBBroadcaster();
 
-    void
-    Clear ();
+  bool IsValid() const;
 
-    void
-    BroadcastEventByType (uint32_t event_type, bool unique = false);
+  void Clear();
 
-    void
-    BroadcastEvent (const lldb::SBEvent &event, bool unique = false);
+  void BroadcastEventByType(uint32_t event_type, bool unique = false);
 
-    void
-    AddInitialEventsToListener (const lldb::SBListener &listener, uint32_t requested_events);
+  void BroadcastEvent(const lldb::SBEvent &event, bool unique = false);
 
-    uint32_t
-    AddListener (const lldb::SBListener &listener, uint32_t event_mask);
+  void AddInitialEventsToListener(const lldb::SBListener &listener,
+                                  uint32_t requested_events);
 
-    const char *
-    GetName () const;
+  uint32_t AddListener(const lldb::SBListener &listener, uint32_t event_mask);
 
-    bool
-    EventTypeHasListeners (uint32_t event_type);
+  const char *GetName() const;
 
-    bool
-    RemoveListener (const lldb::SBListener &listener, uint32_t event_mask = UINT32_MAX);
+  bool EventTypeHasListeners(uint32_t event_type);
 
-    // This comparison is checking if the internal opaque pointer value
-    // is equal to that in "rhs".
-    bool
-    operator == (const lldb::SBBroadcaster &rhs) const;
+  bool RemoveListener(const lldb::SBListener &listener,
+                      uint32_t event_mask = UINT32_MAX);
 
-    // This comparison is checking if the internal opaque pointer value
-    // is not equal to that in "rhs".
-    bool
-    operator != (const lldb::SBBroadcaster &rhs) const;
+  // This comparison is checking if the internal opaque pointer value
+  // is equal to that in "rhs".
+  bool operator==(const lldb::SBBroadcaster &rhs) const;
 
-    // This comparison is checking if the internal opaque pointer value
-    // is less than that in "rhs" so SBBroadcaster objects can be contained
-    // in ordered containers.
-    bool
-    operator < (const lldb::SBBroadcaster &rhs) const;
+  // This comparison is checking if the internal opaque pointer value
+  // is not equal to that in "rhs".
+  bool operator!=(const lldb::SBBroadcaster &rhs) const;
+
+  // This comparison is checking if the internal opaque pointer value
+  // is less than that in "rhs" so SBBroadcaster objects can be contained
+  // in ordered containers.
+  bool operator<(const lldb::SBBroadcaster &rhs) const;
 
 protected:
-    friend class SBCommandInterpreter;
-    friend class SBCommunication;
-    friend class SBEvent;
-    friend class SBListener;
-    friend class SBProcess;
-    friend class SBTarget;
+  friend class SBCommandInterpreter;
+  friend class SBCommunication;
+  friend class SBEvent;
+  friend class SBListener;
+  friend class SBProcess;
+  friend class SBTarget;
 
-    SBBroadcaster (lldb_private::Broadcaster *broadcaster, bool owns);
+  SBBroadcaster(lldb_private::Broadcaster *broadcaster, bool owns);
 
-    lldb_private::Broadcaster *
-    get () const;
+  lldb_private::Broadcaster *get() const;
 
-    void
-    reset (lldb_private::Broadcaster *broadcaster, bool owns);
+  void reset(lldb_private::Broadcaster *broadcaster, bool owns);
 
 private:
-    lldb::BroadcasterSP m_opaque_sp;
-    lldb_private::Broadcaster *m_opaque_ptr;
+  lldb::BroadcasterSP m_opaque_sp;
+  lldb_private::Broadcaster *m_opaque_ptr;
 };
 
 } // namespace lldb
 
-#endif  // LLDB_SBBroadcaster_h_
+#endif // LLDB_SBBroadcaster_h_

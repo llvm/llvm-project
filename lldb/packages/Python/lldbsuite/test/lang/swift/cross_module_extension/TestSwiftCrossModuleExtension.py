@@ -22,13 +22,14 @@ import os.path
 import unittest2
 
 
-def execute_command (command):
+def execute_command(command):
     # print '%% %s' % (command)
-    (exit_status, output) = commands.getstatusoutput (command)
+    (exit_status, output) = commands.getstatusoutput(command)
     # if output:
     #     print output
     # print 'status = %u' % (exit_status)
     return exit_status
+
 
 class TestSwiftCrossModuleExtension(TestBase):
 
@@ -36,7 +37,9 @@ class TestSwiftCrossModuleExtension(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.expectedFailureAll(oslist=["macosx"], bugnumber="https://bugs.swift.org/browse/SR-1525")
+    @decorators.expectedFailureAll(
+        oslist=["macosx"],
+        bugnumber="https://bugs.swift.org/browse/SR-1525")
     def test_cross_module_extension(self):
         """Test that we correctly find private extension decls across modules"""
         self.buildAll()
@@ -45,9 +48,9 @@ class TestSwiftCrossModuleExtension(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.a_source = "moda.swift"
-        self.a_source_spec = lldb.SBFileSpec (self.a_source)
+        self.a_source_spec = lldb.SBFileSpec(self.a_source)
         self.b_source = "modb.swift"
-        self.b_source_spec = lldb.SBFileSpec (self.b_source)
+        self.b_source_spec = lldb.SBFileSpec(self.b_source)
 
     def buildAll(self):
         execute_command("make everything")
@@ -66,15 +69,18 @@ class TestSwiftCrossModuleExtension(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        a_breakpoint = target.BreakpointCreateBySourceRegex('break here', self.a_source_spec)
+        a_breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here', self.a_source_spec)
         self.assertTrue(a_breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-        b_breakpoint = target.BreakpointCreateBySourceRegex('break here', self.b_source_spec)
+        b_breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here', self.b_source_spec)
         self.assertTrue(b_breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         process = target.LaunchSimple(None, None, os.getcwd())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, a_breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, a_breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -83,11 +89,12 @@ class TestSwiftCrossModuleExtension(TestBase):
 
         var = self.frame.FindVariable("a")
         child_v = var.GetChildMemberWithName("v")
-        lldbutil.check_variable(self,var,False,typename="moda.S.A")
-        lldbutil.check_variable(self,child_v,False,value="1")
+        lldbutil.check_variable(self, var, False, typename="moda.S.A")
+        lldbutil.check_variable(self, child_v, False, value="1")
 
         process.Continue()
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, b_breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, b_breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -96,8 +103,8 @@ class TestSwiftCrossModuleExtension(TestBase):
 
         var = self.frame.FindVariable("a")
         child_v = var.GetChildMemberWithName("v")
-        lldbutil.check_variable(self,var,False,typename="moda.S.A")
-        lldbutil.check_variable(self,child_v,False,value="3")
+        lldbutil.check_variable(self, var, False, typename="moda.S.A")
+        lldbutil.check_variable(self, child_v, False, value="3")
 
 if __name__ == '__main__':
     import atexit

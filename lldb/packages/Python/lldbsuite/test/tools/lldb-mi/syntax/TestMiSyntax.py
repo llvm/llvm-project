@@ -5,22 +5,22 @@ Test that the lldb-mi driver understands MI command syntax.
 from __future__ import print_function
 
 
-
 import lldbmi_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
-    @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
+    @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_tokens(self):
         """Test that 'lldb-mi --interpreter' prints command tokens."""
 
-        self.spawnLldbMi(args = None)
+        self.spawnLldbMi(args=None)
 
         # Load executable
         self.runCmd("000-file-exec-and-symbols %s" % self.myexe)
@@ -38,8 +38,8 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("0000000000000000000003\^running")
         self.expect("\*stopped,reason=\"exited-normally\"")
 
-    @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
-    @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
+    @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
+    @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
     def test_lldbmi_specialchars(self):
         """Test that 'lldb-mi --interpreter' handles complicated strings."""
 
@@ -52,10 +52,12 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
         os.symlink(self.myexe, complicated_myexe)
         self.addTearDownHook(lambda: os.unlink(complicated_myexe))
 
-        self.spawnLldbMi(args = "\"%s\"" % complicated_myexe)
+        self.spawnLldbMi(args="\"%s\"" % complicated_myexe)
 
         # Test that the executable was loaded
-        self.expect("-file-exec-and-symbols \"%s\"" % complicated_myexe, exactly = True)
+        self.expect(
+            "-file-exec-and-symbols \"%s\"" %
+            complicated_myexe, exactly=True)
         self.expect("\^done")
 
         # Check that it was loaded correctly
@@ -65,13 +67,15 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
         self.expect("\^running")
         self.expect("\*stopped,reason=\"breakpoint-hit\"")
 
-    @skipIfWindows #llvm.org/pr24452: Get lldb-mi tests working on Windows
-    @skipIfFreeBSD # llvm.org/pr22411: Failure presumably due to known thread races
-    @expectedFailureAll(oslist=["linux"], bugnumber="Failing in ~6/600 dosep runs (build 3120-3122)")
+    @skipIfWindows  # llvm.org/pr24452: Get lldb-mi tests working on Windows
+    @skipIfFreeBSD  # llvm.org/pr22411: Failure presumably due to known thread races
+    @expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="Failing in ~6/600 dosep runs (build 3120-3122)")
     def test_lldbmi_process_output(self):
         """Test that 'lldb-mi --interpreter' wraps process output correctly."""
 
-        self.spawnLldbMi(args = None)
+        self.spawnLldbMi(args=None)
 
         # Load executable
         self.runCmd("-file-exec-and-symbols %s" % self.myexe)

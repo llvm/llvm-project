@@ -12,8 +12,8 @@
 
 #include <vector>
 
-#include "lldb/lldb-forward.h"
 #include "lldb/Host/Mutex.h"
+#include "lldb/lldb-forward.h"
 
 namespace lldb_private {
 
@@ -22,37 +22,28 @@ namespace lldb_private {
 ///
 /// Class used by the Process to hold a list of its JITLoaders.
 //----------------------------------------------------------------------
-class JITLoaderList
-{
+class JITLoaderList {
 public:
+  JITLoaderList();
+  ~JITLoaderList();
 
-    JITLoaderList();
-    ~JITLoaderList();
+  void Append(const lldb::JITLoaderSP &jit_loader_sp);
 
-    void
-    Append (const lldb::JITLoaderSP &jit_loader_sp);
+  void Remove(const lldb::JITLoaderSP &jit_loader_sp);
 
-    void
-    Remove (const lldb::JITLoaderSP &jit_loader_sp);
+  size_t GetSize() const;
 
-    size_t
-    GetSize() const;
+  lldb::JITLoaderSP GetLoaderAtIndex(size_t idx);
 
-    lldb::JITLoaderSP
-    GetLoaderAtIndex (size_t idx);
+  void DidLaunch();
 
-    void
-    DidLaunch();
+  void DidAttach();
 
-    void
-    DidAttach();
-
-    void
-    ModulesDidLoad (ModuleList &module_list);
+  void ModulesDidLoad(ModuleList &module_list);
 
 private:
-    std::vector<lldb::JITLoaderSP> m_jit_loaders_vec;
-    lldb_private::Mutex m_jit_loaders_mutex;
+  std::vector<lldb::JITLoaderSP> m_jit_loaders_vec;
+  lldb_private::Mutex m_jit_loaders_mutex;
 };
 
 } // namespace lldb_private

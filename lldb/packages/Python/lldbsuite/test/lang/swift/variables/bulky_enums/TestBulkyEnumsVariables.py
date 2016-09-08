@@ -63,7 +63,13 @@ class TestBulkyEnumVariables(TestBase):
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
-        self.expect('frame variable e', substrs=['e = X ', '0 = "hello world"', 'b = (a = 100, b = 200)', 'a = (a = 300, b = 400)'])
+        self.expect(
+            'frame variable e',
+            substrs=[
+                'e = X ',
+                '0 = "hello world"',
+                'b = (a = 100, b = 200)',
+                'a = (a = 300, b = 400)'])
 
 if __name__ == '__main__':
     import atexit

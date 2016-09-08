@@ -12,14 +12,15 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class LinuxCoreTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     mydir = TestBase.compute_mydir(__file__)
 
-    _i386_pid   = 32306
+    _i386_pid = 32306
     _x86_64_pid = 32259
-    _s390x_pid  = 1045
+    _s390x_pid = 1045
 
     @skipIf(bugnumber="llvm.org/pr26947")
     def test_i386(self):
@@ -30,8 +31,9 @@ class LinuxCoreTestCase(TestBase):
         """Test that lldb can read the process information from an x86_64 linux core file."""
         self.do_test("x86_64", self._x86_64_pid)
 
-    # This seems to hang on non-s390x platforms for some reason.  Disabling for now.
-    @skipIf(archs=no_match(['s390x'])) 
+    # This seems to hang on non-s390x platforms for some reason.  Disabling
+    # for now.
+    @skipIf(archs=no_match(['s390x']))
     def test_s390x(self):
         """Test that lldb can read the process information from an s390x linux core file."""
         self.do_test("s390x", self._s390x_pid)
@@ -40,7 +42,7 @@ class LinuxCoreTestCase(TestBase):
         """Test that we read the information from the core correctly even if we have a running
         process with the same PID around"""
         try:
-            shutil.copyfile("x86_64.out",  "x86_64-pid.out")
+            shutil.copyfile("x86_64.out", "x86_64-pid.out")
             shutil.copyfile("x86_64.core", "x86_64-pid.core")
             with open("x86_64-pid.core", "r+b") as f:
                 # These are offsets into the NT_PRSTATUS and NT_PRPSINFO structures in the note
@@ -48,9 +50,14 @@ class LinuxCoreTestCase(TestBase):
                 # as well. (Notes can be viewed with readelf --notes.)
                 for pid_offset in [0x1c4, 0x320]:
                     f.seek(pid_offset)
-                    self.assertEqual(struct.unpack("<I", f.read(4))[0], self._x86_64_pid)
+                    self.assertEqual(
+                        struct.unpack(
+                            "<I",
+                            f.read(4))[0],
+                        self._x86_64_pid)
 
-                    # We insert our own pid, and make sure the test still works.
+                    # We insert our own pid, and make sure the test still
+                    # works.
                     f.seek(pid_offset)
                     f.write(struct.pack("<I", os.getpid()))
             self.do_test("x86_64-pid", os.getpid())
@@ -69,10 +76,15 @@ class LinuxCoreTestCase(TestBase):
 
         altframe = altprocess.GetSelectedThread().GetFrameAtIndex(0)
         self.assertEqual(altframe.GetFunctionName(), "_start")
-        self.assertEqual(altframe.GetLineEntry().GetLine(), line_number("altmain.c", "Frame _start"))
+        self.assertEqual(
+            altframe.GetLineEntry().GetLine(),
+            line_number(
+                "altmain.c",
+                "Frame _start"))
 
         error = lldb.SBError()
-        F = altprocess.ReadCStringFromMemory(altframe.FindVariable("F").GetValueAsUnsigned(), 256, error)
+        F = altprocess.ReadCStringFromMemory(
+            altframe.FindVariable("F").GetValueAsUnsigned(), 256, error)
         self.assertTrue(error.Success())
         self.assertEqual(F, "_start")
 
@@ -97,5 +109,7 @@ class LinuxCoreTestCase(TestBase):
             self.assertTrue(frame)
             self.assertEqual(frame.GetFunctionName(), backtrace[i])
             self.assertEqual(frame.GetLineEntry().GetLine(),
-                    line_number("main.c", "Frame " + backtrace[i]))
-            self.assertEqual(frame.FindVariable("F").GetValueAsUnsigned(), ord(backtrace[i][0]))
+                             line_number("main.c", "Frame " + backtrace[i]))
+            self.assertEqual(
+                frame.FindVariable("F").GetValueAsUnsigned(), ord(
+                    backtrace[i][0]))

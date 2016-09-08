@@ -24,9 +24,11 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test_event import build_exception
 import swift
 
+
 def getArchitecture():
     """Returns the architecture in effect the test suite is running with."""
     return os.environ["ARCH"] if "ARCH" in os.environ else ""
+
 
 def getCompiler():
     """Returns the compiler in effect the test suite is running with."""
@@ -34,26 +36,29 @@ def getCompiler():
     compiler = lldbutil.which(compiler)
     return os.path.realpath(compiler)
 
+
 def getArchFlag():
     """Returns the flag required to specify the arch"""
     compiler = getCompiler()
     if compiler is None:
-      return ""
+        return ""
     elif "gcc" in compiler:
-      archflag = "-m"
+        archflag = "-m"
     elif "clang" in compiler:
-      archflag = "-arch"
+        archflag = "-arch"
     else:
-      archflag = None
+        archflag = None
 
     return ("ARCHFLAG=" + archflag) if archflag else ""
+
 
 def getMake():
     """Returns the name for GNU make"""
     if platform.system() == "FreeBSD" or platform.system() == "NetBSD":
-      return "gmake"
+        return "gmake"
     else:
-      return "make"
+        return "make"
+
 
 def getArchSpec(architecture):
     """
@@ -66,13 +71,15 @@ def getArchSpec(architecture):
 
     return ("ARCH=" + arch) if arch else ""
 
+
 def getCCSpec(compiler):
     """
     Helper function to return the key-value string to specify the compiler
     used for the make system.
     """
 
-    lldbLib = os.environ["LLDB_LIB_DIR"] if "LLDB_LIB_DIR" in os.environ else None
+    lldbLib = os.environ[
+        "LLDB_LIB_DIR"] if "LLDB_LIB_DIR" in os.environ else None
 
     cc = compiler if compiler else None
     if not cc and "CC" in os.environ:
@@ -83,10 +90,11 @@ def getCCSpec(compiler):
     # Note the leading space character.
     if cc:
         if swiftcc:
-            return (" CC=" + cc + " SWIFTCC=" + swiftcc )
+            return (" CC=" + cc + " SWIFTCC=" + swiftcc)
         else:
             return "CC=\"%s\"" % cc
     return ""
+
 
 def getCmdLine(d):
     """
@@ -119,58 +127,91 @@ def runBuildCommands(commands, sender):
         raise build_exception.BuildError(called_process_error)
 
 
-def buildDefault(sender=None, architecture=None, compiler=None, dictionary=None, clean=True):
+def buildDefault(
+        sender=None,
+        architecture=None,
+        compiler=None,
+        dictionary=None,
+        clean=True):
     """Build the binaries the default way."""
     commands = []
     if clean:
         commands.append([getMake(), "clean", getCmdLine(dictionary)])
-    commands.append([getMake(), getArchSpec(architecture), getCCSpec(compiler), getCmdLine(dictionary)])
+    commands.append([getMake(), getArchSpec(architecture),
+                     getCCSpec(compiler), getCmdLine(dictionary)])
 
     runBuildCommands(commands, sender=sender)
 
     # True signifies that we can handle building default.
     return True
 
-def safeGetEnviron(name,default = None):
+
+def safeGetEnviron(name, default=None):
     return os.environ[name] if name in os.environ else default
 
-def buildDwarf(sender=None, architecture=None, compiler=None, dictionary=None, clean=True):
+
+def buildDwarf(
+        sender=None,
+        architecture=None,
+        compiler=None,
+        dictionary=None,
+        clean=True):
     """Build the binaries with dwarf debug info."""
     commands = []
     if clean:
         commands.append([getMake(), "clean", getCmdLine(dictionary)])
-    commands.append([getMake(), "MAKE_DSYM=NO", getArchSpec(architecture), getCCSpec(compiler), getCmdLine(dictionary)])
+    commands.append([getMake(), "MAKE_DSYM=NO", getArchSpec(
+        architecture), getCCSpec(compiler), getCmdLine(dictionary)])
 
     runBuildCommands(commands, sender=sender)
     # True signifies that we can handle building dwarf.
     return True
 
-def buildDwo(sender=None, architecture=None, compiler=None, dictionary=None, clean=True):
+
+def buildDwo(
+        sender=None,
+        architecture=None,
+        compiler=None,
+        dictionary=None,
+        clean=True):
     """Build the binaries with dwarf debug info."""
     commands = []
     if clean:
         commands.append([getMake(), "clean", getCmdLine(dictionary)])
-    commands.append([getMake(), "MAKE_DSYM=NO", "MAKE_DWO=YES", getArchSpec(architecture), getCCSpec(compiler), getCmdLine(dictionary)])
+    commands.append([getMake(), "MAKE_DSYM=NO", "MAKE_DWO=YES", getArchSpec(
+        architecture), getCCSpec(compiler), getCmdLine(dictionary)])
 
     runBuildCommands(commands, sender=sender)
     # True signifies that we can handle building dwo.
     return True
 
-def buildGModules(sender=None, architecture=None, compiler=None, dictionary=None, clean=True):
+
+def buildGModules(
+        sender=None,
+        architecture=None,
+        compiler=None,
+        dictionary=None,
+        clean=True):
     """Build the binaries with dwarf debug info."""
     commands = []
     if clean:
         commands.append([getMake(), "clean", getCmdLine(dictionary)])
-    commands.append([getMake(), "MAKE_DSYM=NO", "MAKE_GMODULES=YES", getArchSpec(architecture), getCCSpec(compiler), getCmdLine(dictionary)])
+    commands.append([getMake(),
+                     "MAKE_DSYM=NO",
+                     "MAKE_GMODULES=YES",
+                     getArchSpec(architecture),
+                     getCCSpec(compiler),
+                     getCmdLine(dictionary)])
 
     lldbtest.system(commands, sender=sender)
     # True signifies that we can handle building with gmodules.
     return True
 
+
 def cleanup(sender=None, dictionary=None):
     """Perform a platform-specific cleanup after the test."""
     #import traceback
-    #traceback.print_stack()
+    # traceback.print_stack()
     commands = []
     if os.path.isfile("Makefile"):
         commands.append([getMake(), "clean", getCmdLine(dictionary)])

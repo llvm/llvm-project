@@ -27,36 +27,39 @@
 
 // RegisterKind: EHFrame, DWARF, Generic, Process Plugin, LLDB
 
-#define DEFINE_GPR(name, size, offset, alt, generic)                                                                   \
-    {                                                                                                                  \
-        #name, alt, size, offset, eEncodingUint, eFormatHex,                                                           \
-        { dwarf_##name##_s390x, dwarf_##name##_s390x, generic, LLDB_INVALID_REGNUM, lldb_##name##_s390x },             \
-        NULL, NULL,                                                                                                    \
-    }
+#define DEFINE_GPR(name, size, offset, alt, generic)                           \
+  {                                                                            \
+    #name, alt, size, offset, eEncodingUint, eFormatHex,                       \
+        {dwarf_##name##_s390x, dwarf_##name##_s390x, generic,                  \
+         LLDB_INVALID_REGNUM, lldb_##name##_s390x },                           \
+         NULL, NULL,                                                           \
+  }
 
-#define DEFINE_GPR_NODWARF(name, size, offset, alt, generic)                                                           \
-    {                                                                                                                  \
-        #name, alt, size, offset, eEncodingUint, eFormatHex,                                                           \
-        { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, generic, LLDB_INVALID_REGNUM, lldb_##name##_s390x },               \
-        NULL, NULL,                                                                                                    \
-    }
+#define DEFINE_GPR_NODWARF(name, size, offset, alt, generic)                   \
+  {                                                                            \
+    #name, alt, size, offset, eEncodingUint, eFormatHex,                       \
+        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, generic,                    \
+         LLDB_INVALID_REGNUM, lldb_##name##_s390x },                           \
+         NULL, NULL,                                                           \
+  }
 
-#define DEFINE_FPR(name, size, offset)                                                                                 \
-    {                                                                                                                  \
-        #name, NULL, size, offset, eEncodingUint, eFormatHex,                                                          \
-        { dwarf_##name##_s390x, dwarf_##name##_s390x, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, lldb_##name##_s390x }, \
-        NULL, NULL,                                                                                                    \
-    }
+#define DEFINE_FPR(name, size, offset)                                         \
+  {                                                                            \
+    #name, NULL, size, offset, eEncodingUint, eFormatHex,                      \
+        {dwarf_##name##_s390x, dwarf_##name##_s390x, LLDB_INVALID_REGNUM,      \
+         LLDB_INVALID_REGNUM, lldb_##name##_s390x },                           \
+         NULL, NULL,                                                           \
+  }
 
-#define DEFINE_FPR_NODWARF(name, size, offset)                                                                         \
-    {                                                                                                                  \
-        #name, NULL, size, offset, eEncodingUint, eFormatHex,                                                          \
-        { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, lldb_##name##_s390x },   \
-        NULL, NULL,                                                                                                    \
-    }
+#define DEFINE_FPR_NODWARF(name, size, offset)                                 \
+  {                                                                            \
+    #name, NULL, size, offset, eEncodingUint, eFormatHex,                      \
+        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,        \
+         LLDB_INVALID_REGNUM, lldb_##name##_s390x },                           \
+         NULL, NULL,                                                           \
+  }
 
-static RegisterInfo g_register_infos_s390x[] =
-{
+static RegisterInfo g_register_infos_s390x[] = {
     // General purpose registers.
     DEFINE_GPR(r0, 8, GPR_OFFSET(0), nullptr, LLDB_INVALID_REGNUM),
     DEFINE_GPR(r1, 8, GPR_OFFSET(1), nullptr, LLDB_INVALID_REGNUM),
@@ -94,31 +97,25 @@ static RegisterInfo g_register_infos_s390x[] =
     DEFINE_GPR(pswa, 8, 8, "pc", LLDB_REGNUM_GENERIC_PC),
 
     // Floating point registers.
-    DEFINE_FPR(f0, 8, FPR_OFFSET(0)),
-    DEFINE_FPR(f1, 8, FPR_OFFSET(1)),
-    DEFINE_FPR(f2, 8, FPR_OFFSET(2)),
-    DEFINE_FPR(f3, 8, FPR_OFFSET(3)),
-    DEFINE_FPR(f4, 8, FPR_OFFSET(4)),
-    DEFINE_FPR(f5, 8, FPR_OFFSET(5)),
-    DEFINE_FPR(f6, 8, FPR_OFFSET(6)),
-    DEFINE_FPR(f7, 8, FPR_OFFSET(7)),
-    DEFINE_FPR(f8, 8, FPR_OFFSET(8)),
-    DEFINE_FPR(f9, 8, FPR_OFFSET(9)),
-    DEFINE_FPR(f10, 8, FPR_OFFSET(10)),
-    DEFINE_FPR(f11, 8, FPR_OFFSET(11)),
-    DEFINE_FPR(f12, 8, FPR_OFFSET(12)),
-    DEFINE_FPR(f13, 8, FPR_OFFSET(13)),
-    DEFINE_FPR(f14, 8, FPR_OFFSET(14)),
-    DEFINE_FPR(f15, 8, FPR_OFFSET(15)),
+    DEFINE_FPR(f0, 8, FPR_OFFSET(0)), DEFINE_FPR(f1, 8, FPR_OFFSET(1)),
+    DEFINE_FPR(f2, 8, FPR_OFFSET(2)), DEFINE_FPR(f3, 8, FPR_OFFSET(3)),
+    DEFINE_FPR(f4, 8, FPR_OFFSET(4)), DEFINE_FPR(f5, 8, FPR_OFFSET(5)),
+    DEFINE_FPR(f6, 8, FPR_OFFSET(6)), DEFINE_FPR(f7, 8, FPR_OFFSET(7)),
+    DEFINE_FPR(f8, 8, FPR_OFFSET(8)), DEFINE_FPR(f9, 8, FPR_OFFSET(9)),
+    DEFINE_FPR(f10, 8, FPR_OFFSET(10)), DEFINE_FPR(f11, 8, FPR_OFFSET(11)),
+    DEFINE_FPR(f12, 8, FPR_OFFSET(12)), DEFINE_FPR(f13, 8, FPR_OFFSET(13)),
+    DEFINE_FPR(f14, 8, FPR_OFFSET(14)), DEFINE_FPR(f15, 8, FPR_OFFSET(15)),
     DEFINE_FPR_NODWARF(fpc, 4, 0),
 
     // Linux operating-specific info.
-    DEFINE_GPR_NODWARF(orig_r2, 8, 16 + 16 * 8 + 16 * 4, nullptr, LLDB_INVALID_REGNUM),
+    DEFINE_GPR_NODWARF(orig_r2, 8, 16 + 16 * 8 + 16 * 4, nullptr,
+                       LLDB_INVALID_REGNUM),
     DEFINE_GPR_NODWARF(last_break, 8, 0, nullptr, LLDB_INVALID_REGNUM),
     DEFINE_GPR_NODWARF(system_call, 4, 0, nullptr, LLDB_INVALID_REGNUM),
 };
 
-static_assert((sizeof(g_register_infos_s390x) / sizeof(g_register_infos_s390x[0])) == k_num_registers_s390x,
+static_assert((sizeof(g_register_infos_s390x) /
+               sizeof(g_register_infos_s390x[0])) == k_num_registers_s390x,
               "g_register_infos_s390x has wrong number of register infos");
 
 #undef GPR_OFFSET

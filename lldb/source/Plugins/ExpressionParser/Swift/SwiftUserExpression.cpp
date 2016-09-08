@@ -12,7 +12,7 @@
 
 #include <stdio.h>
 #if HAVE_SYS_TYPES_H
-#  include <sys/types.h>
+#include <sys/types.h>
 #endif
 
 #include "SwiftExpressionParser.h"
@@ -36,732 +36,702 @@
 #include "swift/AST/Types.h"
 
 #include <cstdlib>
-#include <string>
 #include <map>
+#include <string>
 
 #include "SwiftUserExpression.h"
 
 using namespace lldb_private;
 
-SwiftUserExpression::SwiftUserExpression (ExecutionContextScope &exe_scope,
-                                          const char *expr,
-                                          const char *expr_prefix,
-                                          lldb::LanguageType language,
-                                          ResultType desired_type,
-                                          const EvaluateExpressionOptions &options) :
-    LLVMUserExpression (exe_scope, expr, expr_prefix, language, desired_type, options),
-    m_type_system_helper(*m_target_wp.lock().get()),
-    m_result_delegate(*this, false),
-    m_error_delegate(*this, true),
-    m_persistent_variable_delegate(*this)
-{
-}
+SwiftUserExpression::SwiftUserExpression(
+    ExecutionContextScope &exe_scope, const char *expr, const char *expr_prefix,
+    lldb::LanguageType language, ResultType desired_type,
+    const EvaluateExpressionOptions &options)
+    : LLVMUserExpression(exe_scope, expr, expr_prefix, language, desired_type,
+                         options),
+      m_type_system_helper(*m_target_wp.lock().get()),
+      m_result_delegate(*this, false), m_error_delegate(*this, true),
+      m_persistent_variable_delegate(*this) {}
 
-SwiftUserExpression::~SwiftUserExpression ()
-{
-}
+SwiftUserExpression::~SwiftUserExpression() {}
 
-void
-SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
-{
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
+void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+  if (log)
+    log->Printf("SwiftUserExpression::ScanContext()");
+
+  m_target = exe_ctx.GetTargetPtr();
+
+  if (!m_target) {
+    if (log)
+      log->Printf("  [SUE::SC] Null target");
+    return;
+  }
+
+  StackFrame *frame = exe_ctx.GetFramePtr();
+  if (frame == NULL) {
+    if (log)
+      log->Printf("  [SUE::SC] Null stack frame");
+    return;
+  }
+
+  SymbolContext sym_ctx = frame->GetSymbolContext(
+      lldb::eSymbolContextFunction | lldb::eSymbolContextBlock |
+      lldb::eSymbolContextCompUnit | lldb::eSymbolContextSymbol);
+
+  // This stage of the scan is only for Swift, but when we are going to do Swift
+  // evaluation we need to do this scan.
+  // So be sure to cover both cases:
+  // 1) When the langauge is eLanguageTypeUnknown, to determine if this IS Swift
+  // 2) When the language is explicitly set to eLanguageTypeSwift.
+
+  bool frame_is_swift = false;
+
+  if (sym_ctx.comp_unit && (m_language == lldb::eLanguageTypeUnknown ||
+                            m_language == lldb::eLanguageTypeSwift)) {
+    if (sym_ctx.comp_unit->GetLanguage() == lldb::eLanguageTypeSwift ||
+        sym_ctx.comp_unit->GetLanguage() == lldb::eLanguageTypePLI)
+      frame_is_swift = true;
+  } else if (sym_ctx.symbol && m_language == lldb::eLanguageTypeUnknown) {
+    if (sym_ctx.symbol->GetMangled().GuessLanguage() ==
+        lldb::eLanguageTypeSwift)
+      frame_is_swift = true;
+  }
+
+  if (frame_is_swift) {
+    m_language_flags &= ~eLanguageFlagIsClass;
+    m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
+
+    // we need to make sure the Target's SwiftASTContext has been setup BEFORE
+    // we do any Swift name lookups
+    if (m_target) {
+      SwiftASTContext *swift_ast_ctx = m_target->GetScratchSwiftASTContext(err);
+      if (!swift_ast_ctx) {
+        if (log)
+          log->Printf("  [SUE::SC] NULL Swift AST Context");
+        return;
+      }
+
+      if (!swift_ast_ctx->GetClangImporter()) {
+        if (log)
+          log->Printf("  [SUE::SC] Swift AST Context has no Clang importer");
+        return;
+      }
+
+      if (swift_ast_ctx->HasFatalErrors()) {
+        if (log)
+          log->Printf("  [SUE::SC] Swift AST Context has fatal errors");
+        return;
+      }
+    }
 
     if (log)
-        log->Printf("SwiftUserExpression::ScanContext()");
+      log->Printf("  [SUE::SC] Compilation unit is swift");
 
-    m_target = exe_ctx.GetTargetPtr();
+    Block *function_block = sym_ctx.GetFunctionBlock();
 
-    if (!m_target)
-    {
-        if (log)
-            log->Printf("  [SUE::SC] Null target");
-        return;
-    }
-    
-    StackFrame *frame = exe_ctx.GetFramePtr();
-    if (frame == NULL)
-    {
-        if (log)
-            log->Printf("  [SUE::SC] Null stack frame");
-        return;
-    }
-    
-    SymbolContext sym_ctx = frame->GetSymbolContext(lldb::eSymbolContextFunction | lldb::eSymbolContextBlock | lldb::eSymbolContextCompUnit | lldb::eSymbolContextSymbol);
+    if (function_block) {
+      lldb::VariableListSP variable_list_sp(
+          function_block->GetBlockVariableList(true));
 
-    // This stage of the scan is only for Swift, but when we are going to do Swift evaluation we need to do this scan.
-    // So be sure to cover both cases:
-    // 1) When the langauge is eLanguageTypeUnknown, to determine if this IS Swift
-    // 2) When the language is explicitly set to eLanguageTypeSwift.
+      if (variable_list_sp) {
+        lldb::VariableSP self_var_sp(
+            variable_list_sp->FindVariable(ConstString("self")));
 
-    bool frame_is_swift = false;
+        do {
+          if (!self_var_sp)
+            break;
 
-    if (sym_ctx.comp_unit && (m_language == lldb::eLanguageTypeUnknown || m_language == lldb::eLanguageTypeSwift))
-    {
-        if (sym_ctx.comp_unit->GetLanguage() == lldb::eLanguageTypeSwift ||
-            sym_ctx.comp_unit->GetLanguage() == lldb::eLanguageTypePLI)
-            frame_is_swift = true;
-    }
-    else if (sym_ctx.symbol && m_language == lldb::eLanguageTypeUnknown)
-    {
-        if (sym_ctx.symbol->GetMangled().GuessLanguage() == lldb::eLanguageTypeSwift)
-            frame_is_swift = true;
-    }
+          CompilerType self_type;
 
-    if (frame_is_swift)
-    {
-        m_language_flags &= ~eLanguageFlagIsClass;
-        m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
+          lldb::StackFrameSP stack_frame_sp = exe_ctx.GetFrameSP();
 
-        // we need to make sure the Target's SwiftASTContext has been setup BEFORE we do any Swift name lookups
-        if (m_target)
-        {
-            SwiftASTContext *swift_ast_ctx = m_target->GetScratchSwiftASTContext(err);
-            if (!swift_ast_ctx)
-            {
-                if (log)
-                    log->Printf("  [SUE::SC] NULL Swift AST Context");
-                return;
-            }
-            
-            if (!swift_ast_ctx->GetClangImporter())
-            {
-                if (log)
-                    log->Printf("  [SUE::SC] Swift AST Context has no Clang importer");
-                return;
+          if (stack_frame_sp) {
+            // If we have a self variable, but it has no location at the current
+            // PC, then we can't use
+            // it.  Set the self var back to empty and we'll just pretend we are
+            // in a regular frame,
+            // which is really the best we can do.
+
+            if (!self_var_sp->LocationIsValidForFrame(stack_frame_sp.get())) {
+              self_var_sp.reset();
+              break;
             }
 
-            if (swift_ast_ctx->HasFatalErrors())
-            {
-                if (log)
-                    log->Printf("  [SUE::SC] Swift AST Context has fatal errors");
-                return;
+            lldb::ValueObjectSP valobj_sp =
+                stack_frame_sp->GetValueObjectForFrameVariable(
+                    self_var_sp, lldb::eDynamicDontRunTarget);
+
+            if (valobj_sp && valobj_sp->GetError().Success())
+              self_type = valobj_sp->GetCompilerType();
+          }
+
+          if (!self_type.IsValid()) {
+            Type *self_lldb_type = self_var_sp->GetType();
+
+            if (self_lldb_type)
+              self_type = self_var_sp->GetType()->GetForwardCompilerType();
+          }
+
+          if (!self_type.IsValid()) {
+            // If the self_type is invalid at this point, reset it.  Code below
+            // the phony do/while will
+            // assume the existence of this var means something, but it is
+            // useless in this condition.
+            self_var_sp.reset();
+            break;
+          }
+
+          // Check to see if we are in a class func of a class (or static func
+          // of a struct) and adjust our
+          // self_type to point to the instance type.
+
+          m_language_flags |= eLanguageFlagNeedsObjectPointer;
+
+          Flags self_type_flags(self_type.GetTypeInfo());
+
+          if (self_type_flags.AllSet(lldb::eTypeIsSwift |
+                                     lldb::eTypeIsMetatype)) {
+            self_type = self_type.GetInstanceType();
+            self_type_flags = self_type.GetTypeInfo();
+            if (self_type_flags.Test(lldb::eTypeIsClass))
+              m_language_flags |= eLanguageFlagIsClass;
+            m_language_flags |= eLanguageFlagInStaticMethod;
+          }
+
+          if (self_type_flags.AllSet(lldb::eTypeIsSwift |
+                                     lldb::eTypeInstanceIsPointer)) {
+            if (self_type_flags.Test(lldb::eTypeIsClass))
+              m_language_flags |= eLanguageFlagIsClass;
+          }
+
+          swift::Type object_type =
+              swift::Type((swift::TypeBase *)(self_type.GetOpaqueQualType()))
+                  ->getLValueOrInOutObjectType();
+
+          if (object_type.getPointer() &&
+              (object_type.getPointer() != self_type.GetOpaqueQualType()))
+            self_type = CompilerType(self_type.GetTypeSystem(),
+                                     object_type.getPointer());
+
+          if (Flags(self_type.GetTypeInfo())
+                  .AllSet(lldb::eTypeIsSwift | lldb::eTypeIsEnumeration |
+                          lldb::eTypeIsGeneric)) {
+            // Optional<T> means a weak 'self.'  Make sure this really is
+            // Optional<T>
+            if (self_type.GetTypeName().GetStringRef().startswith(
+                    "Swift.Optional<")) {
+              m_language_flags |= eLanguageFlagIsClass;
+              m_language_flags |= eLanguageFlagIsWeakSelf;
+            } else {
+              // Something else is going on that we don't handle.
+              m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
+              self_var_sp.reset();
+              break;
             }
-        }
+          }
 
-        if (log)
-            log->Printf("  [SUE::SC] Compilation unit is swift");
+          if (Flags(self_type.GetTypeInfo())
+                  .AllSet(lldb::eTypeIsSwift | lldb::eTypeIsStructUnion |
+                          lldb::eTypeIsGeneric) &&
+              self_type_flags.AllSet(lldb::eTypeIsSwift |
+                                     lldb::eTypeIsReference |
+                                     lldb::eTypeHasValue)) {
+            // We can't extend generic structs when "self" is mutating at the
+            // moment.
+            m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
+            self_var_sp.reset();
+            break;
+          }
 
-        Block *function_block = sym_ctx.GetFunctionBlock();
+          if (log)
+            log->Printf("  [SUE::SC] Containing class name: %s",
+                        self_type.GetTypeName().AsCString());
 
-        if (function_block)
-        {
-            lldb::VariableListSP variable_list_sp (function_block->GetBlockVariableList (true));
+          bool is_generic =
+              self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsGeneric);
+          bool is_bound =
+              is_generic && self_type_flags.AllSet(lldb::eTypeIsBound);
+          if (!is_generic || !is_bound)
+            break;
 
-            if (variable_list_sp)
-            {
-                lldb::VariableSP self_var_sp (variable_list_sp->FindVariable(ConstString("self")));
+          CompilerType self_unbound_type = self_type.GetUnboundType();
 
-                do
-                {
-                    if (!self_var_sp)
-                        break;
+          const size_t num_template_args = self_type.GetNumTemplateArguments();
+          if (log && num_template_args)
+            log->Printf("  [SUE::SC] Class generic arguments:");
 
-                    CompilerType self_type;
+          for (size_t ai = 0, ae = num_template_args; ai != ae; ++ai) {
+            lldb::TemplateArgumentKind template_arg_kind;
 
-                    lldb::StackFrameSP stack_frame_sp = exe_ctx.GetFrameSP();
+            CompilerType template_arg_type =
+                self_type.GetTemplateArgument(ai, template_arg_kind);
 
-                    if (stack_frame_sp)
-                    {
-                        // If we have a self variable, but it has no location at the current PC, then we can't use
-                        // it.  Set the self var back to empty and we'll just pretend we are in a regular frame,
-                        // which is really the best we can do.
-
-                        if (!self_var_sp->LocationIsValidForFrame (stack_frame_sp.get()))
-                        {
-                            self_var_sp.reset();
-                            break;
-                        }
-
-                        lldb::ValueObjectSP valobj_sp = stack_frame_sp->GetValueObjectForFrameVariable(self_var_sp, lldb::eDynamicDontRunTarget);
-
-                        if (valobj_sp && valobj_sp->GetError().Success())
-                            self_type = valobj_sp->GetCompilerType();
-                    }
-
-                    if (!self_type.IsValid())
-                    {
-                        Type *self_lldb_type = self_var_sp->GetType();
-
-                        if (self_lldb_type)
-                            self_type = self_var_sp->GetType()->GetForwardCompilerType();
-                    }
-
-                    if (!self_type.IsValid())
-                    {
-                        // If the self_type is invalid at this point, reset it.  Code below the phony do/while will
-                        // assume the existence of this var means something, but it is useless in this condition.
-                        self_var_sp.reset();
-                        break;
-                    }
-
-                    // Check to see if we are in a class func of a class (or static func of a struct) and adjust our
-                    // self_type to point to the instance type.
-
-                    m_language_flags |= eLanguageFlagNeedsObjectPointer;
-                    
-                    Flags self_type_flags(self_type.GetTypeInfo());
-
-                    if (self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsMetatype))
-                    {
-                        self_type = self_type.GetInstanceType();
-                        self_type_flags = self_type.GetTypeInfo();
-                        if (self_type_flags.Test(lldb::eTypeIsClass))
-                            m_language_flags |= eLanguageFlagIsClass;
-                        m_language_flags |= eLanguageFlagInStaticMethod;
-                    }
-
-                    if (self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeInstanceIsPointer))
-                    {
-                        if (self_type_flags.Test(lldb::eTypeIsClass))
-                            m_language_flags |= eLanguageFlagIsClass;
-                    }
-
-                    swift::Type object_type = swift::Type((swift::TypeBase*)(self_type.GetOpaqueQualType()))->getLValueOrInOutObjectType();
-                    
-                    if (object_type.getPointer() && (object_type.getPointer() != self_type.GetOpaqueQualType()))
-                        self_type = CompilerType(self_type.GetTypeSystem(), object_type.getPointer());
-
-                    if (Flags(self_type.GetTypeInfo()).AllSet(lldb::eTypeIsSwift | lldb::eTypeIsEnumeration | lldb::eTypeIsGeneric))
-                    {
-                        // Optional<T> means a weak 'self.'  Make sure this really is Optional<T>
-                        if (self_type.GetTypeName().GetStringRef().startswith("Swift.Optional<"))
-                        {
-                            m_language_flags |= eLanguageFlagIsClass;
-                            m_language_flags |= eLanguageFlagIsWeakSelf;
-                        }
-                        else
-                        {
-                            // Something else is going on that we don't handle.
-                            m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
-                            self_var_sp.reset();
-                            break;
-                        }
-                    }
-
-                    if (Flags(self_type.GetTypeInfo()).AllSet(lldb::eTypeIsSwift | lldb::eTypeIsStructUnion | lldb::eTypeIsGeneric) &&
-                        self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsReference | lldb::eTypeHasValue))
-                    {
-                        // We can't extend generic structs when "self" is mutating at the moment.
-                        m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
-                        self_var_sp.reset();
-                        break;
-                    }
-                    
-                    if (log)
-                        log->Printf("  [SUE::SC] Containing class name: %s", self_type.GetTypeName().AsCString());
-
-                    bool is_generic = self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsGeneric);
-                    bool is_bound = is_generic && self_type_flags.AllSet(lldb::eTypeIsBound);
-                    if (!is_generic || !is_bound)
-                        break;
-
-                    CompilerType self_unbound_type = self_type.GetUnboundType();
-
-                    const size_t num_template_args = self_type.GetNumTemplateArguments();
-                    if (log && num_template_args)
-                        log->Printf("  [SUE::SC] Class generic arguments:");
-
-                    for (size_t ai = 0, ae = num_template_args; ai != ae; ++ai)
-                    {
-                        lldb::TemplateArgumentKind template_arg_kind;
-
-                        CompilerType template_arg_type = self_type.GetTemplateArgument(ai, template_arg_kind);
-
-                        ConstString template_arg_name = template_arg_type.GetTypeName();
-
-                        if (log)
-                            log->Printf("    [SUE::SC] Argument name: %s", template_arg_name.AsCString());
-
-                        CompilerType concrete_type = exe_ctx.GetProcessRef().GetSwiftLanguageRuntime()->GetConcreteType(frame, template_arg_name);
-
-                        const char *printable_name;
-                        if (concrete_type.IsValid())
-                            printable_name = concrete_type.GetTypeName().AsCString();
-                        else
-                            printable_name = template_arg_type.GetTypeName().AsCString();
-
-                        if (log)
-                            log->Printf("    [SUE::SC] Argument type: %s", printable_name);
-                    }
-
-                    if (log && self_unbound_type.GetNumTemplateArguments())
-                        log->Printf("  [SUE::SC] Class unbound generic arguments:");
-
-                    for (size_t ai = 0, ae = self_unbound_type.GetNumTemplateArguments(); ai != ae; ++ai)
-                    {
-                        lldb::TemplateArgumentKind template_arg_kind;
-
-                        CompilerType template_arg_type = self_unbound_type.GetTemplateArgument(ai, template_arg_kind);
-
-                        ConstString template_arg_name = template_arg_type.GetTypeName();
-
-                        if (log)
-                            log->Printf("    [SUE::SC] Argument name: %s", template_arg_name.AsCString());
-
-                        CompilerType concrete_type = exe_ctx.GetProcessRef().GetSwiftLanguageRuntime()->GetConcreteType(frame, template_arg_name);
-
-                        if (log)
-                            log->Printf("    [SUE::SC] Argument type: %s", concrete_type.GetTypeName().AsCString());
-
-                        m_swift_generic_info.class_bindings.push_back({ template_arg_name.AsCString(), concrete_type });
-                    }
-                }
-                while (0);
-            }
-        }
-
-        do
-        {
-            ConstString function_name = sym_ctx.GetFunctionName(Mangled::ePreferMangled);
-
-            if (function_name.IsEmpty())
-                break;
+            ConstString template_arg_name = template_arg_type.GetTypeName();
 
             if (log)
-                log->Printf("  [SUE::SC] Function name: %s", function_name.AsCString());
+              log->Printf("    [SUE::SC] Argument name: %s",
+                          template_arg_name.AsCString());
 
-            Error get_type_error;
-            SwiftASTContext *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(sym_ctx.module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
-            if (!ast_context || ast_context->HasFatalErrors())
-                break;
+            CompilerType concrete_type =
+                exe_ctx.GetProcessRef()
+                    .GetSwiftLanguageRuntime()
+                    ->GetConcreteType(frame, template_arg_name);
 
-            CompilerType function_type = ast_context->GetTypeFromMangledTypename(function_name.AsCString(), get_type_error);
+            const char *printable_name;
+            if (concrete_type.IsValid())
+              printable_name = concrete_type.GetTypeName().AsCString();
+            else
+              printable_name = template_arg_type.GetTypeName().AsCString();
 
-            if (get_type_error.Fail() || !function_type.IsValid())
-                break;
+            if (log)
+              log->Printf("    [SUE::SC] Argument type: %s", printable_name);
+          }
 
-            if (log && function_type.GetNumTemplateArguments())
-                log->Printf("  [SUE::SC] Function generic arguments:");
+          if (log && self_unbound_type.GetNumTemplateArguments())
+            log->Printf("  [SUE::SC] Class unbound generic arguments:");
 
-            for (size_t ai = 0, ae = function_type.GetNumTemplateArguments(); ai != ae; ++ai)
-            {
-                lldb::TemplateArgumentKind template_arg_kind;
+          for (size_t ai = 0, ae = self_unbound_type.GetNumTemplateArguments();
+               ai != ae; ++ai) {
+            lldb::TemplateArgumentKind template_arg_kind;
 
-                CompilerType template_arg_type = function_type.GetTemplateArgument(ai, template_arg_kind);
+            CompilerType template_arg_type =
+                self_unbound_type.GetTemplateArgument(ai, template_arg_kind);
 
-                ConstString template_arg_name = template_arg_type.GetTypeName();
+            ConstString template_arg_name = template_arg_type.GetTypeName();
 
-                if (log)
-                    log->Printf("    [SUE::SC] Argument name: %s", template_arg_name.AsCString());
+            if (log)
+              log->Printf("    [SUE::SC] Argument name: %s",
+                          template_arg_name.AsCString());
 
-                CompilerType concrete_type = exe_ctx.GetProcessRef().GetSwiftLanguageRuntime()->GetConcreteType(frame, template_arg_name);
-                
-                lldbassert(concrete_type.IsValid());
-                
-                if (!concrete_type.IsValid())
-                {
-                    if (log)
-                        log->Printf("  [SUE::SC] Concrete type of generic parameter is invalid");
-                    
-                    continue;
-                }
+            CompilerType concrete_type =
+                exe_ctx.GetProcessRef()
+                    .GetSwiftLanguageRuntime()
+                    ->GetConcreteType(frame, template_arg_name);
 
-                if (log)
-                    log->Printf("    [SUE::SC] Argument type: %s", concrete_type.GetTypeName().AsCString());
+            if (log)
+              log->Printf("    [SUE::SC] Argument type: %s",
+                          concrete_type.GetTypeName().AsCString());
 
-                const char *name = template_arg_name.AsCString();
-
-                bool found = false;
-
-                for (const SwiftGenericInfo::Binding &binding : m_swift_generic_info.class_bindings)
-                {
-                    if (binding.name == name)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found)
-                    m_swift_generic_info.function_bindings.push_back({ name, concrete_type });
-            }
-        }
-        while (0);
+            m_swift_generic_info.class_bindings.push_back(
+                {template_arg_name.AsCString(), concrete_type});
+          }
+        } while (0);
+      }
     }
+
+    do {
+      ConstString function_name =
+          sym_ctx.GetFunctionName(Mangled::ePreferMangled);
+
+      if (function_name.IsEmpty())
+        break;
+
+      if (log)
+        log->Printf("  [SUE::SC] Function name: %s", function_name.AsCString());
+
+      Error get_type_error;
+      SwiftASTContext *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(
+          sym_ctx.module_sp->GetTypeSystemForLanguage(
+              lldb::eLanguageTypeSwift));
+      if (!ast_context || ast_context->HasFatalErrors())
+        break;
+
+      CompilerType function_type = ast_context->GetTypeFromMangledTypename(
+          function_name.AsCString(), get_type_error);
+
+      if (get_type_error.Fail() || !function_type.IsValid())
+        break;
+
+      if (log && function_type.GetNumTemplateArguments())
+        log->Printf("  [SUE::SC] Function generic arguments:");
+
+      for (size_t ai = 0, ae = function_type.GetNumTemplateArguments();
+           ai != ae; ++ai) {
+        lldb::TemplateArgumentKind template_arg_kind;
+
+        CompilerType template_arg_type =
+            function_type.GetTemplateArgument(ai, template_arg_kind);
+
+        ConstString template_arg_name = template_arg_type.GetTypeName();
+
+        if (log)
+          log->Printf("    [SUE::SC] Argument name: %s",
+                      template_arg_name.AsCString());
+
+        CompilerType concrete_type =
+            exe_ctx.GetProcessRef().GetSwiftLanguageRuntime()->GetConcreteType(
+                frame, template_arg_name);
+
+        lldbassert(concrete_type.IsValid());
+
+        if (!concrete_type.IsValid()) {
+          if (log)
+            log->Printf(
+                "  [SUE::SC] Concrete type of generic parameter is invalid");
+
+          continue;
+        }
+
+        if (log)
+          log->Printf("    [SUE::SC] Argument type: %s",
+                      concrete_type.GetTypeName().AsCString());
+
+        const char *name = template_arg_name.AsCString();
+
+        bool found = false;
+
+        for (const SwiftGenericInfo::Binding &binding :
+             m_swift_generic_info.class_bindings) {
+          if (binding.name == name) {
+            found = true;
+            break;
+          }
+        }
+
+        if (!found)
+          m_swift_generic_info.function_bindings.push_back(
+              {name, concrete_type});
+      }
+    } while (0);
+  }
 }
 
-bool
-SwiftUserExpression::Parse (DiagnosticManager &diagnostic_manager,
-                            ExecutionContext &exe_ctx,
-                            lldb_private::ExecutionPolicy execution_policy,
-                            bool keep_result_in_memory,
-                            bool generate_debug_info,
-                            uint32_t line_offset)
-{
-    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
+bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
+                                ExecutionContext &exe_ctx,
+                                lldb_private::ExecutionPolicy execution_policy,
+                                bool keep_result_in_memory,
+                                bool generate_debug_info,
+                                uint32_t line_offset) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-    Error err;
+  Error err;
 
-    InstallContext(exe_ctx);
+  InstallContext(exe_ctx);
 
-    if (Target *target = exe_ctx.GetTargetPtr())
-    {
-        if (PersistentExpressionState *persistent_state = target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeSwift))
-        {
-            m_result_delegate.RegisterPersistentState(persistent_state);
-            m_error_delegate.RegisterPersistentState(persistent_state);
-        }
-        else
-        {
-            diagnostic_manager.PutCString (eDiagnosticSeverityError, "couldn't start parsing (no persistent data)");
-            return false;
-        }
+  if (Target *target = exe_ctx.GetTargetPtr()) {
+    if (PersistentExpressionState *persistent_state =
+            target->GetPersistentExpressionStateForLanguage(
+                lldb::eLanguageTypeSwift)) {
+      m_result_delegate.RegisterPersistentState(persistent_state);
+      m_error_delegate.RegisterPersistentState(persistent_state);
+    } else {
+      diagnostic_manager.PutCString(
+          eDiagnosticSeverityError,
+          "couldn't start parsing (no persistent data)");
+      return false;
     }
-    else
-    {
-        diagnostic_manager.PutCString (eDiagnosticSeverityError, "couldn't start parsing (no target)");
-        return false;
+  } else {
+    diagnostic_manager.PutCString(eDiagnosticSeverityError,
+                                  "couldn't start parsing (no target)");
+    return false;
+  }
+
+  ScanContext(exe_ctx, err);
+
+  if (!err.Success()) {
+    diagnostic_manager.Printf(eDiagnosticSeverityError, "warning: %s\n",
+                              err.AsCString());
+  }
+
+  StreamString m_transformed_stream;
+
+  ////////////////////////////////////
+  // Generate the expression
+  //
+
+  std::string prefix = m_expr_prefix;
+
+  std::unique_ptr<ExpressionSourceCode> source_code(
+      ExpressionSourceCode::CreateWrapped(prefix.c_str(), m_expr_text.c_str()));
+
+  const lldb::LanguageType lang_type = lldb::eLanguageTypeSwift;
+
+  m_options.SetLanguage(lang_type);
+  uint32_t first_body_line = 0;
+
+  if (!source_code->GetText(m_transformed_text, lang_type, m_language_flags,
+                            m_options, m_swift_generic_info, exe_ctx,
+                            first_body_line)) {
+    diagnostic_manager.PutCString(eDiagnosticSeverityError,
+                                  "couldn't construct expression body");
+    return false;
+  }
+
+  if (log)
+    log->Printf("Parsing the following code:\n%s", m_transformed_text.c_str());
+
+  ////////////////////////////////////
+  // Set up the target and compiler
+  //
+
+  Target *target = exe_ctx.GetTargetPtr();
+
+  if (!target) {
+    diagnostic_manager.PutCString(eDiagnosticSeverityError, "invalid target\n");
+    return false;
+  }
+
+  //////////////////////////
+  // Parse the expression
+  //
+
+  if (m_options.GetREPLEnabled())
+    m_materializer_ap.reset(new SwiftREPLMaterializer());
+  else
+    m_materializer_ap.reset(new Materializer());
+
+  class OnExit {
+  public:
+    typedef std::function<void(void)> Callback;
+
+    OnExit(Callback const &callback) : m_callback(callback) {}
+
+    ~OnExit() { m_callback(); }
+
+  private:
+    Callback m_callback;
+  };
+
+  ExecutionContextScope *exe_scope = NULL;
+
+  Process *process = exe_ctx.GetProcessPtr();
+
+  do {
+    exe_scope = exe_ctx.GetFramePtr();
+    if (exe_scope)
+      break;
+
+    exe_scope = process;
+    if (exe_scope)
+      break;
+
+    exe_scope = exe_ctx.GetTargetPtr();
+  } while (0);
+
+  std::unique_ptr<ExpressionParser> parser(
+      new SwiftExpressionParser(exe_scope, *this, m_options));
+
+  unsigned num_errors = parser->Parse(
+      diagnostic_manager, first_body_line,
+      first_body_line + source_code->GetNumBodyLines(), line_offset);
+
+  if (num_errors) {
+    // Calculate the fixed expression string at this point:
+    if (diagnostic_manager.HasFixIts()) {
+      if (parser->RewriteExpression(diagnostic_manager)) {
+        size_t fixed_start;
+        size_t fixed_end;
+        const std::string &fixed_expression =
+            diagnostic_manager.GetFixedExpression();
+        if (ExpressionSourceCode::GetOriginalBodyBounds(
+                fixed_expression, lang_type, fixed_start, fixed_end))
+          m_fixed_text =
+              fixed_expression.substr(fixed_start, fixed_end - fixed_start);
+      }
     }
+    return false;
+  }
 
-    ScanContext(exe_ctx, err);
+  //////////////////////////////////////////////////////////////////////////////////////////
+  // Prepare the output of the parser for execution, evaluating it statically if
+  // possible
+  //
 
-    if (!err.Success())
-    {
-        diagnostic_manager.Printf(eDiagnosticSeverityError, "warning: %s\n", err.AsCString());
-    }
+  Error jit_error = parser->PrepareForExecution(
+      m_jit_start_addr, m_jit_end_addr, m_execution_unit_sp, exe_ctx,
+      m_can_interpret, execution_policy);
 
-    StreamString m_transformed_stream;
-
-    ////////////////////////////////////
-    // Generate the expression
-    //
-
-    std::string prefix = m_expr_prefix;
-    
-    std::unique_ptr<ExpressionSourceCode> source_code (ExpressionSourceCode::CreateWrapped(prefix.c_str(), m_expr_text.c_str()));
-    
-    const lldb::LanguageType lang_type = lldb::eLanguageTypeSwift;
-    
-    m_options.SetLanguage(lang_type);
-    uint32_t first_body_line = 0;
-
-    if (!source_code->GetText(m_transformed_text,
-                              lang_type,
-                              m_language_flags,
-                              m_options,
-                              m_swift_generic_info,
-                              exe_ctx,
-                              first_body_line))
-    {
-        diagnostic_manager.PutCString (eDiagnosticSeverityError, "couldn't construct expression body");
-        return false;
-    }
-
-    if (log)
-        log->Printf("Parsing the following code:\n%s", m_transformed_text.c_str());
-
-    ////////////////////////////////////
-    // Set up the target and compiler
-    //
-
-    Target *target = exe_ctx.GetTargetPtr();
-
-    if (!target)
-    {
-        diagnostic_manager.PutCString (eDiagnosticSeverityError, "invalid target\n");
-        return false;
-    }
-
-    //////////////////////////
-    // Parse the expression
-    //
-
-    if (m_options.GetREPLEnabled())
-        m_materializer_ap.reset(new SwiftREPLMaterializer());
-    else
-        m_materializer_ap.reset(new Materializer());
-
-    class OnExit
-    {
-    public:
-        typedef std::function <void (void)> Callback;
-
-        OnExit (Callback const &callback) :
-            m_callback(callback)
-        {
-        }
-
-        ~OnExit ()
-        {
-            m_callback();
-        }
-    private:
-        Callback m_callback;
-    };
-    
-    ExecutionContextScope *exe_scope = NULL;
-    
-    Process *process = exe_ctx.GetProcessPtr();
-
-    do
-    {
-        exe_scope = exe_ctx.GetFramePtr();
-        if (exe_scope)
-            break;
-        
-        exe_scope = process;
-        if (exe_scope)
-            break;
-        
-        exe_scope = exe_ctx.GetTargetPtr();
-    } while(0);
-    
-    std::unique_ptr<ExpressionParser> parser(new SwiftExpressionParser(exe_scope, *this, m_options));
-    
-    unsigned num_errors = parser->Parse (diagnostic_manager, first_body_line, first_body_line + source_code->GetNumBodyLines(), line_offset);
-    
-    if (num_errors)
-    {
-        // Calculate the fixed expression string at this point:
-        if (diagnostic_manager.HasFixIts())
-        {
-            if (parser->RewriteExpression (diagnostic_manager))
-            {
-                size_t fixed_start;
-                size_t fixed_end;
-                const std::string &fixed_expression = diagnostic_manager.GetFixedExpression();
-                if (ExpressionSourceCode::GetOriginalBodyBounds(fixed_expression, lang_type, fixed_start, fixed_end))
-                    m_fixed_text = fixed_expression.substr(fixed_start, fixed_end - fixed_start);
-            }
-        }
-        return false;
-    }
-    
-    //////////////////////////////////////////////////////////////////////////////////////////
-    // Prepare the output of the parser for execution, evaluating it statically if possible
-    //
-    
-    Error jit_error = parser->PrepareForExecution (m_jit_start_addr,
-                                                   m_jit_end_addr,
-                                                   m_execution_unit_sp,
-                                                   exe_ctx,
-                                                   m_can_interpret,
-                                                   execution_policy);
-    
-    if (m_execution_unit_sp)
-    {
-        if (m_options.GetREPLEnabled())
-        {
-            llvm::cast<SwiftREPLMaterializer>(m_materializer_ap.get())->RegisterExecutionUnit(m_execution_unit_sp.get());
-        }
-
-        bool register_execution_unit = false;
-        
-        if (m_options.GetREPLEnabled())
-        {
-            if (!m_execution_unit_sp->GetJittedFunctions().empty() ||
-                !m_execution_unit_sp->GetJittedGlobalVariables().empty())
-            {
-                register_execution_unit = true;
-            }
-        }
-        else
-        {
-            if (m_execution_unit_sp->GetJittedFunctions().size() > 1 ||
-                m_execution_unit_sp->GetJittedGlobalVariables().size() > 1)
-            {
-                register_execution_unit = true;
-            }
-        }
-        
-        if (register_execution_unit)
-        {
-            // We currently key off there being more than one external function in the execution
-            // unit to determine whether it needs to live in the process.
-            
-            llvm::cast<SwiftPersistentExpressionState>(exe_ctx.GetTargetPtr()->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeSwift))->RegisterExecutionUnit(m_execution_unit_sp);
-        }
-    }
-    
-
-    if (m_options.GetGenerateDebugInfo())
-    {
-        StreamString jit_module_name;
-        jit_module_name.Printf("%s%u", FunctionName(), m_options.GetExpressionNumber());
-        const char *limit_file = m_options.GetPoundLineFilePath();
-        FileSpec limit_file_spec;
-        uint32_t limit_start_line = 0;
-        uint32_t limit_end_line = 0;
-        if (limit_file)
-        {
-            limit_file_spec.SetFile(limit_file, false);
-            limit_start_line = m_options.GetPoundLineLine();
-            limit_end_line = limit_start_line + std::count(m_expr_text.begin(), m_expr_text.end(), '\n');
-        }
-        m_execution_unit_sp->CreateJITModule(jit_module_name.GetString().c_str(),
-                                             limit_file ? &limit_file_spec : NULL,
-                                             limit_start_line,
-                                             limit_end_line);
+  if (m_execution_unit_sp) {
+    if (m_options.GetREPLEnabled()) {
+      llvm::cast<SwiftREPLMaterializer>(m_materializer_ap.get())
+          ->RegisterExecutionUnit(m_execution_unit_sp.get());
     }
 
-    if (jit_error.Success())
-    {
-        if (process && m_jit_start_addr != LLDB_INVALID_ADDRESS)
-            m_jit_process_wp = lldb::ProcessWP(process->shared_from_this());
-        return true;
+    bool register_execution_unit = false;
+
+    if (m_options.GetREPLEnabled()) {
+      if (!m_execution_unit_sp->GetJittedFunctions().empty() ||
+          !m_execution_unit_sp->GetJittedGlobalVariables().empty()) {
+        register_execution_unit = true;
+      }
+    } else {
+      if (m_execution_unit_sp->GetJittedFunctions().size() > 1 ||
+          m_execution_unit_sp->GetJittedGlobalVariables().size() > 1) {
+        register_execution_unit = true;
+      }
     }
-    else
-    {
-        const char *error_cstr = jit_error.AsCString();
-        if (error_cstr && error_cstr[0])
-            diagnostic_manager.PutCString (eDiagnosticSeverityError, error_cstr);
-        else
-            diagnostic_manager.PutCString (eDiagnosticSeverityError, "expression can't be interpreted or run\n");
-        return false;
+
+    if (register_execution_unit) {
+      // We currently key off there being more than one external function in the
+      // execution
+      // unit to determine whether it needs to live in the process.
+
+      llvm::cast<SwiftPersistentExpressionState>(
+          exe_ctx.GetTargetPtr()->GetPersistentExpressionStateForLanguage(
+              lldb::eLanguageTypeSwift))
+          ->RegisterExecutionUnit(m_execution_unit_sp);
     }
-}
+  }
 
-bool
-SwiftUserExpression::AddArguments (ExecutionContext &exe_ctx,
-                                   std::vector<lldb::addr_t> &args,
-                                   lldb::addr_t struct_address,
-                                   DiagnosticManager &diagnostic_manager)
-{
-    lldb::addr_t object_ptr = LLDB_INVALID_ADDRESS;
-    
-    if (m_language_flags & eLanguageFlagNeedsObjectPointer)
-    {
-        lldb::StackFrameSP frame_sp = exe_ctx.GetFrameSP();
-        if (!frame_sp)
-            return true;
-        
-        ConstString object_name("self");
-
-        Error object_ptr_error;
-
-        object_ptr = GetObjectPointer(frame_sp, object_name, object_ptr_error);
-
-        if (!object_ptr_error.Success())
-        {
-            diagnostic_manager.Printf(eDiagnosticSeverityWarning, "couldn't get required object pointer (substituting NULL): %s\n", object_ptr_error.AsCString());
-            object_ptr = 0;
-        }
-
-        if (m_options.GetPlaygroundTransformEnabled() ||
-            m_options.GetREPLEnabled())
-        {
-            // When calling the playground function we are calling
-            // a main function which takes two arguments: argc and argv
-            // So we pass two zeroes as arguments
-            args.push_back(0); // argc
-            args.push_back(0); // argv
-        }
-        else
-        {
-            args.push_back(struct_address);
-            args.push_back(object_ptr);
-        }
+  if (m_options.GetGenerateDebugInfo()) {
+    StreamString jit_module_name;
+    jit_module_name.Printf("%s%u", FunctionName(),
+                           m_options.GetExpressionNumber());
+    const char *limit_file = m_options.GetPoundLineFilePath();
+    FileSpec limit_file_spec;
+    uint32_t limit_start_line = 0;
+    uint32_t limit_end_line = 0;
+    if (limit_file) {
+      limit_file_spec.SetFile(limit_file, false);
+      limit_start_line = m_options.GetPoundLineLine();
+      limit_end_line = limit_start_line +
+                       std::count(m_expr_text.begin(), m_expr_text.end(), '\n');
     }
-    else
-    {
-        args.push_back(struct_address);
-    }
+    m_execution_unit_sp->CreateJITModule(jit_module_name.GetString().c_str(),
+                                         limit_file ? &limit_file_spec : NULL,
+                                         limit_start_line, limit_end_line);
+  }
+
+  if (jit_error.Success()) {
+    if (process && m_jit_start_addr != LLDB_INVALID_ADDRESS)
+      m_jit_process_wp = lldb::ProcessWP(process->shared_from_this());
     return true;
-}
-
-lldb::ExpressionVariableSP
-SwiftUserExpression::GetResultAfterDematerialization(ExecutionContextScope *exe_scope)
-{
-    lldb::ExpressionVariableSP in_result_sp = m_result_delegate.GetVariable();
-    lldb::ExpressionVariableSP in_error_sp = m_error_delegate.GetVariable();
-    
-    lldb::ExpressionVariableSP result_sp;
-    
-    if (in_error_sp)
-    {
-        bool error_is_valid = false;
-        
-        if (llvm::isa<SwiftASTContext>(in_error_sp->GetCompilerType().GetTypeSystem()))
-        {
-            lldb::ValueObjectSP val_sp = in_error_sp->GetValueObject();
-            if (val_sp)
-            {
-                if (exe_scope)
-                {
-                    lldb::ProcessSP process_sp = exe_scope->CalculateProcess();
-                    if (process_sp)
-                    {
-                        SwiftLanguageRuntime *swift_runtime = process_sp->GetSwiftLanguageRuntime();
-                        if (swift_runtime)
-                            error_is_valid = swift_runtime->IsValidErrorValue(*val_sp.get());
-                    }
-                }
-            }
-        }
-        
-        lldb::TargetSP target_sp = exe_scope->CalculateTarget();
-        
-        if (target_sp)
-        {
-            if (PersistentExpressionState *persistent_state = target_sp->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeSwift))
-            {
-                if (error_is_valid)
-                {
-                    persistent_state->RemovePersistentVariable(in_result_sp);
-                    result_sp = in_error_sp;
-                }
-                else
-                {
-                    persistent_state->RemovePersistentVariable(in_error_sp);
-                    result_sp = in_result_sp;
-                }
-            }
-        }
-    }
+  } else {
+    const char *error_cstr = jit_error.AsCString();
+    if (error_cstr && error_cstr[0])
+      diagnostic_manager.PutCString(eDiagnosticSeverityError, error_cstr);
     else
-        result_sp = in_result_sp;
-    
-    return result_sp;
+      diagnostic_manager.PutCString(eDiagnosticSeverityError,
+                                    "expression can't be interpreted or run\n");
+    return false;
+  }
 }
 
-SwiftUserExpression::ResultDelegate::ResultDelegate(SwiftUserExpression &user_expression,
-                                                    bool is_error) :
-    m_user_expression(user_expression),
-    m_is_error(is_error)
-{
-}
+bool SwiftUserExpression::AddArguments(ExecutionContext &exe_ctx,
+                                       std::vector<lldb::addr_t> &args,
+                                       lldb::addr_t struct_address,
+                                       DiagnosticManager &diagnostic_manager) {
+  lldb::addr_t object_ptr = LLDB_INVALID_ADDRESS;
 
-ConstString
-SwiftUserExpression::ResultDelegate::GetName()
-{
-    return m_persistent_state->GetNextPersistentVariableName(m_is_error);
-}
+  if (m_language_flags & eLanguageFlagNeedsObjectPointer) {
+    lldb::StackFrameSP frame_sp = exe_ctx.GetFrameSP();
+    if (!frame_sp)
+      return true;
 
-void
-SwiftUserExpression::ResultDelegate::DidDematerialize(lldb::ExpressionVariableSP &variable)
-{
-    m_variable = variable;
-}
+    ConstString object_name("self");
 
-void
-SwiftUserExpression::ResultDelegate::RegisterPersistentState(PersistentExpressionState *persistent_state)
-{
-    m_persistent_state = persistent_state;
-}
+    Error object_ptr_error;
 
-lldb::ExpressionVariableSP &
-SwiftUserExpression::ResultDelegate::GetVariable()
-{
-    return m_variable;
-}
+    object_ptr = GetObjectPointer(frame_sp, object_name, object_ptr_error);
 
-SwiftUserExpression::PersistentVariableDelegate::PersistentVariableDelegate(SwiftUserExpression &user_expression) :
-    m_user_expression(user_expression)
-{
-}
-
-ConstString
-SwiftUserExpression::PersistentVariableDelegate::GetName()
-{
-    return ConstString();
-}
-
-void
-SwiftUserExpression::PersistentVariableDelegate::DidDematerialize(lldb::ExpressionVariableSP &variable)
-{
-    if (SwiftExpressionVariable *swift_var = llvm::dyn_cast<SwiftExpressionVariable>(variable.get()))
-    {
-        swift_var->m_swift_flags &= ~SwiftExpressionVariable::EVSNeedsInit;
+    if (!object_ptr_error.Success()) {
+      diagnostic_manager.Printf(
+          eDiagnosticSeverityWarning,
+          "couldn't get required object pointer (substituting NULL): %s\n",
+          object_ptr_error.AsCString());
+      object_ptr = 0;
     }
+
+    if (m_options.GetPlaygroundTransformEnabled() ||
+        m_options.GetREPLEnabled()) {
+      // When calling the playground function we are calling
+      // a main function which takes two arguments: argc and argv
+      // So we pass two zeroes as arguments
+      args.push_back(0); // argc
+      args.push_back(0); // argv
+    } else {
+      args.push_back(struct_address);
+      args.push_back(object_ptr);
+    }
+  } else {
+    args.push_back(struct_address);
+  }
+  return true;
 }
 
+lldb::ExpressionVariableSP SwiftUserExpression::GetResultAfterDematerialization(
+    ExecutionContextScope *exe_scope) {
+  lldb::ExpressionVariableSP in_result_sp = m_result_delegate.GetVariable();
+  lldb::ExpressionVariableSP in_error_sp = m_error_delegate.GetVariable();
+
+  lldb::ExpressionVariableSP result_sp;
+
+  if (in_error_sp) {
+    bool error_is_valid = false;
+
+    if (llvm::isa<SwiftASTContext>(
+            in_error_sp->GetCompilerType().GetTypeSystem())) {
+      lldb::ValueObjectSP val_sp = in_error_sp->GetValueObject();
+      if (val_sp) {
+        if (exe_scope) {
+          lldb::ProcessSP process_sp = exe_scope->CalculateProcess();
+          if (process_sp) {
+            SwiftLanguageRuntime *swift_runtime =
+                process_sp->GetSwiftLanguageRuntime();
+            if (swift_runtime)
+              error_is_valid = swift_runtime->IsValidErrorValue(*val_sp.get());
+          }
+        }
+      }
+    }
+
+    lldb::TargetSP target_sp = exe_scope->CalculateTarget();
+
+    if (target_sp) {
+      if (PersistentExpressionState *persistent_state =
+              target_sp->GetPersistentExpressionStateForLanguage(
+                  lldb::eLanguageTypeSwift)) {
+        if (error_is_valid) {
+          persistent_state->RemovePersistentVariable(in_result_sp);
+          result_sp = in_error_sp;
+        } else {
+          persistent_state->RemovePersistentVariable(in_error_sp);
+          result_sp = in_result_sp;
+        }
+      }
+    }
+  } else
+    result_sp = in_result_sp;
+
+  return result_sp;
+}
+
+SwiftUserExpression::ResultDelegate::ResultDelegate(
+    SwiftUserExpression &user_expression, bool is_error)
+    : m_user_expression(user_expression), m_is_error(is_error) {}
+
+ConstString SwiftUserExpression::ResultDelegate::GetName() {
+  return m_persistent_state->GetNextPersistentVariableName(m_is_error);
+}
+
+void SwiftUserExpression::ResultDelegate::DidDematerialize(
+    lldb::ExpressionVariableSP &variable) {
+  m_variable = variable;
+}
+
+void SwiftUserExpression::ResultDelegate::RegisterPersistentState(
+    PersistentExpressionState *persistent_state) {
+  m_persistent_state = persistent_state;
+}
+
+lldb::ExpressionVariableSP &SwiftUserExpression::ResultDelegate::GetVariable() {
+  return m_variable;
+}
+
+SwiftUserExpression::PersistentVariableDelegate::PersistentVariableDelegate(
+    SwiftUserExpression &user_expression)
+    : m_user_expression(user_expression) {}
+
+ConstString SwiftUserExpression::PersistentVariableDelegate::GetName() {
+  return ConstString();
+}
+
+void SwiftUserExpression::PersistentVariableDelegate::DidDematerialize(
+    lldb::ExpressionVariableSP &variable) {
+  if (SwiftExpressionVariable *swift_var =
+          llvm::dyn_cast<SwiftExpressionVariable>(variable.get())) {
+    swift_var->m_swift_flags &= ~SwiftExpressionVariable::EVSNeedsInit;
+  }
+}

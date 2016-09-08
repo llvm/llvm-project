@@ -16,19 +16,18 @@
 // Other libraries and framework includes
 // Project includes
 
-#include "lldb/lldb-types.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb_private {
-    
-    class CommandObjectPlugin : public CommandObjectMultiword
-    {
-    public:
-        CommandObjectPlugin (CommandInterpreter &interpreter);
-        
-        ~CommandObjectPlugin() override;
-    };
-    
+
+class CommandObjectPlugin : public CommandObjectMultiword {
+public:
+  CommandObjectPlugin(CommandInterpreter &interpreter);
+
+  ~CommandObjectPlugin() override;
+};
+
 } // namespace lldb_private
 
 #endif // liblldb_CommandObjectPlugin_h_

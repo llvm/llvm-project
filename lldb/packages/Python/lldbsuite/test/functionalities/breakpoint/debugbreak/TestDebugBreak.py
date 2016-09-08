@@ -10,6 +10,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class DebugBreakTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -23,19 +24,23 @@ class DebugBreakTestCase(TestBase):
 
         # Run the program.
         target = self.dbg.CreateTarget(exe)
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         # We've hit the first stop, so grab the frame.
         self.assertEqual(process.GetState(), lldb.eStateStopped)
-        stop_reason = lldb.eStopReasonException if (lldbplatformutil.getPlatform()=="windows") else lldb.eStopReasonSignal
+        stop_reason = lldb.eStopReasonException if (
+            lldbplatformutil.getPlatform() == "windows") else lldb.eStopReasonSignal
         thread = lldbutil.get_stopped_thread(process, stop_reason)
-        self.assertIsNotNone(thread, "Unable to find thread stopped at the __debugbreak()")
+        self.assertIsNotNone(
+            thread, "Unable to find thread stopped at the __debugbreak()")
         frame = thread.GetFrameAtIndex(0)
 
         # We should be in funciton 'bar'.
         self.assertTrue(frame.IsValid())
         function_name = frame.GetFunctionName()
-        self.assertTrue('bar' in function_name, "Unexpected function name {}".format(function_name))
+        self.assertTrue('bar' in function_name,
+                        "Unexpected function name {}".format(function_name))
 
         # We should be able to evaluate the parameter foo.
         value = frame.EvaluateExpression('*foo')
@@ -45,10 +50,10 @@ class DebugBreakTestCase(TestBase):
         # subsequent stop.
         counter = 1
         while counter < 20:
-          value = frame.EvaluateExpression('count')
-          self.assertEqual(value.GetValueAsSigned(), counter)
-          counter += 2
-          process.Continue()
+            value = frame.EvaluateExpression('count')
+            self.assertEqual(value.GetValueAsSigned(), counter)
+            counter += 2
+            process.Continue()
 
         # The inferior should exit after the last iteration.
         self.assertEqual(process.GetState(), lldb.eStateExited)

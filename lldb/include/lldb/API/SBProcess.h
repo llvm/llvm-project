@@ -12,410 +12,334 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
-#include "lldb/API/SBTarget.h"
 #include "lldb/API/SBQueue.h"
+#include "lldb/API/SBTarget.h"
 #include <stdio.h>
 
 namespace lldb {
 
 class SBEvent;
 
-class LLDB_API SBProcess
-{
+class LLDB_API SBProcess {
 public:
-    //------------------------------------------------------------------
-    /// Broadcaster event bits definitions.
-    //------------------------------------------------------------------
-    FLAGS_ANONYMOUS_ENUM()
-    {
-        eBroadcastBitStateChanged   = (1 << 0),
-        eBroadcastBitInterrupt      = (1 << 1),
-        eBroadcastBitSTDOUT         = (1 << 2),
-        eBroadcastBitSTDERR         = (1 << 3),
-        eBroadcastBitProfileData    = (1 << 4)
-    };
+  //------------------------------------------------------------------
+  /// Broadcaster event bits definitions.
+  //------------------------------------------------------------------
+  FLAGS_ANONYMOUS_ENUM(){
+      eBroadcastBitStateChanged = (1 << 0), eBroadcastBitInterrupt = (1 << 1),
+      eBroadcastBitSTDOUT = (1 << 2), eBroadcastBitSTDERR = (1 << 3),
+      eBroadcastBitProfileData = (1 << 4)};
 
-    SBProcess ();
+  SBProcess();
 
-    SBProcess (const lldb::SBProcess& rhs);
+  SBProcess(const lldb::SBProcess &rhs);
 
-    const lldb::SBProcess&
-    operator = (const lldb::SBProcess& rhs);
+  const lldb::SBProcess &operator=(const lldb::SBProcess &rhs);
 
-    SBProcess (const lldb::ProcessSP &process_sp);
-    
-    ~SBProcess();
+  SBProcess(const lldb::ProcessSP &process_sp);
 
-    static const char *
-    GetBroadcasterClassName ();
-    
-    const char *
-    GetPluginName ();
-    
-    // DEPRECATED: use GetPluginName()
-    const char *
-    GetShortPluginName ();
-    
-    void
-    Clear ();
+  ~SBProcess();
 
-    bool
-    IsValid() const;
+  static const char *GetBroadcasterClassName();
 
-    lldb::SBTarget
-    GetTarget() const;
+  const char *GetPluginName();
 
-    lldb::ByteOrder
-    GetByteOrder() const;
+  // DEPRECATED: use GetPluginName()
+  const char *GetShortPluginName();
 
-    size_t
-    PutSTDIN (const char *src, size_t src_len);
+  void Clear();
 
-    size_t
-    GetSTDOUT (char *dst, size_t dst_len) const;
+  bool IsValid() const;
 
-    size_t
-    GetSTDERR (char *dst, size_t dst_len) const;
+  lldb::SBTarget GetTarget() const;
 
-    size_t
-    GetAsyncProfileData(char *dst, size_t dst_len) const;
-    
-    void
-    ReportEventState (const lldb::SBEvent &event, FILE *out) const;
+  lldb::ByteOrder GetByteOrder() const;
 
-    void
-    AppendEventStateReport (const lldb::SBEvent &event, lldb::SBCommandReturnObject &result);
+  size_t PutSTDIN(const char *src, size_t src_len);
 
-    //------------------------------------------------------------------
-    /// Remote connection related functions. These will fail if the
-    /// process is not in eStateConnected. They are intended for use
-    /// when connecting to an externally managed debugserver instance.
-    //------------------------------------------------------------------
-    bool
-    RemoteAttachToProcessWithID (lldb::pid_t pid,
-                                 lldb::SBError& error);
-    
-    bool
-    RemoteLaunch (char const **argv,
-                  char const **envp,
-                  const char *stdin_path,
-                  const char *stdout_path,
-                  const char *stderr_path,
-                  const char *working_directory,
-                  uint32_t launch_flags,
-                  bool stop_at_entry,
-                  lldb::SBError& error);
-    
-    //------------------------------------------------------------------
-    // Thread related functions
-    //------------------------------------------------------------------
-    uint32_t
-    GetNumThreads ();
+  size_t GetSTDOUT(char *dst, size_t dst_len) const;
 
-    lldb::SBThread
-    GetThreadAtIndex (size_t index);
+  size_t GetSTDERR(char *dst, size_t dst_len) const;
 
-    lldb::SBThread
-    GetThreadByID (lldb::tid_t sb_thread_id);
+  size_t GetAsyncProfileData(char *dst, size_t dst_len) const;
 
-    lldb::SBThread
-    GetThreadByIndexID (uint32_t index_id);
+  void ReportEventState(const lldb::SBEvent &event, FILE *out) const;
 
-    lldb::SBThread
-    GetSelectedThread () const;
+  void AppendEventStateReport(const lldb::SBEvent &event,
+                              lldb::SBCommandReturnObject &result);
 
-    //------------------------------------------------------------------
-    // Function for lazily creating a thread using the current OS
-    // plug-in. This function will be removed in the future when there
-    // are APIs to create SBThread objects through the interface and add
-    // them to the process through the SBProcess API.
-    //------------------------------------------------------------------
-    lldb::SBThread
-    CreateOSPluginThread (lldb::tid_t tid, lldb::addr_t context);
+  //------------------------------------------------------------------
+  /// Remote connection related functions. These will fail if the
+  /// process is not in eStateConnected. They are intended for use
+  /// when connecting to an externally managed debugserver instance.
+  //------------------------------------------------------------------
+  bool RemoteAttachToProcessWithID(lldb::pid_t pid, lldb::SBError &error);
 
-    bool
-    SetSelectedThread (const lldb::SBThread &thread);
+  bool RemoteLaunch(char const **argv, char const **envp,
+                    const char *stdin_path, const char *stdout_path,
+                    const char *stderr_path, const char *working_directory,
+                    uint32_t launch_flags, bool stop_at_entry,
+                    lldb::SBError &error);
 
-    bool
-    SetSelectedThreadByID (lldb::tid_t tid);
-    
-    bool
-    SetSelectedThreadByIndexID (uint32_t index_id);
+  //------------------------------------------------------------------
+  // Thread related functions
+  //------------------------------------------------------------------
+  uint32_t GetNumThreads();
 
-    //------------------------------------------------------------------
-    // Queue related functions
-    //------------------------------------------------------------------
-    uint32_t
-    GetNumQueues ();
+  lldb::SBThread GetThreadAtIndex(size_t index);
 
-    lldb::SBQueue
-    GetQueueAtIndex (size_t index);
+  lldb::SBThread GetThreadByID(lldb::tid_t sb_thread_id);
 
-    //------------------------------------------------------------------
-    // Stepping related functions
-    //------------------------------------------------------------------
+  lldb::SBThread GetThreadByIndexID(uint32_t index_id);
 
-    lldb::StateType
-    GetState ();
+  lldb::SBThread GetSelectedThread() const;
 
-    int
-    GetExitStatus ();
+  //------------------------------------------------------------------
+  // Function for lazily creating a thread using the current OS
+  // plug-in. This function will be removed in the future when there
+  // are APIs to create SBThread objects through the interface and add
+  // them to the process through the SBProcess API.
+  //------------------------------------------------------------------
+  lldb::SBThread CreateOSPluginThread(lldb::tid_t tid, lldb::addr_t context);
 
-    const char *
-    GetExitDescription ();
+  bool SetSelectedThread(const lldb::SBThread &thread);
 
-    //------------------------------------------------------------------
-    /// Gets the process ID
-    ///
-    /// Returns the process identifier for the process as it is known
-    /// on the system on which the process is running. For unix systems
-    /// this is typically the same as if you called "getpid()" in the
-    /// process.
-    ///
-    /// @return
-    ///     Returns LLDB_INVALID_PROCESS_ID if this object does not
-    ///     contain a valid process object, or if the process has not
-    ///     been launched. Returns a valid process ID if the process is
-    ///     valid.
-    //------------------------------------------------------------------
-    lldb::pid_t
-    GetProcessID ();
+  bool SetSelectedThreadByID(lldb::tid_t tid);
 
-    //------------------------------------------------------------------
-    /// Gets the unique ID associated with this process object
-    ///
-    /// Unique IDs start at 1 and increment up with each new process
-    /// instance. Since starting a process on a system might always
-    /// create a process with the same process ID, there needs to be a
-    /// way to tell two process instances apart.
-    ///
-    /// @return
-    ///     Returns a non-zero integer ID if this object contains a
-    ///     valid process object, zero if this object does not contain
-    ///     a valid process object.
-    //------------------------------------------------------------------
-    uint32_t
-    GetUniqueID();
+  bool SetSelectedThreadByIndexID(uint32_t index_id);
 
-    uint32_t
-    GetAddressByteSize() const;
+  //------------------------------------------------------------------
+  // Queue related functions
+  //------------------------------------------------------------------
+  uint32_t GetNumQueues();
 
-    lldb::SBError
-    Destroy ();
+  lldb::SBQueue GetQueueAtIndex(size_t index);
 
-    lldb::SBError
-    Continue ();
+  //------------------------------------------------------------------
+  // Stepping related functions
+  //------------------------------------------------------------------
 
-    lldb::SBError
-    Stop ();
+  lldb::StateType GetState();
 
-    lldb::SBError
-    Kill ();
+  int GetExitStatus();
 
-    lldb::SBError
-    Detach ();
+  const char *GetExitDescription();
 
-    lldb::SBError
-    Detach (bool keep_stopped);
+  //------------------------------------------------------------------
+  /// Gets the process ID
+  ///
+  /// Returns the process identifier for the process as it is known
+  /// on the system on which the process is running. For unix systems
+  /// this is typically the same as if you called "getpid()" in the
+  /// process.
+  ///
+  /// @return
+  ///     Returns LLDB_INVALID_PROCESS_ID if this object does not
+  ///     contain a valid process object, or if the process has not
+  ///     been launched. Returns a valid process ID if the process is
+  ///     valid.
+  //------------------------------------------------------------------
+  lldb::pid_t GetProcessID();
 
-    lldb::SBError
-    Signal (int signal);
+  //------------------------------------------------------------------
+  /// Gets the unique ID associated with this process object
+  ///
+  /// Unique IDs start at 1 and increment up with each new process
+  /// instance. Since starting a process on a system might always
+  /// create a process with the same process ID, there needs to be a
+  /// way to tell two process instances apart.
+  ///
+  /// @return
+  ///     Returns a non-zero integer ID if this object contains a
+  ///     valid process object, zero if this object does not contain
+  ///     a valid process object.
+  //------------------------------------------------------------------
+  uint32_t GetUniqueID();
 
-    lldb::SBUnixSignals
-    GetUnixSignals();
+  uint32_t GetAddressByteSize() const;
 
-    void
-    SendAsyncInterrupt();
-    
-    uint32_t
-    GetStopID(bool include_expression_stops = false);
+  lldb::SBError Destroy();
 
-    //------------------------------------------------------------------
-    /// Gets the stop event corresponding to stop ID.
-    //
-    /// Note that it wasn't fully implemented and tracks only the stop
-    /// event for the last natural stop ID.
-    ///
-    /// @param [in] stop_id
-    ///   The ID of the stop event to return.
-    ///
-    /// @return
-    ///   The stop event corresponding to stop ID.
-    //------------------------------------------------------------------
-    lldb::SBEvent
-    GetStopEventForStopID(uint32_t stop_id);
+  lldb::SBError Continue();
 
-    size_t
-    ReadMemory (addr_t addr, void *buf, size_t size, lldb::SBError &error);
+  lldb::SBError Stop();
 
-    size_t
-    WriteMemory (addr_t addr, const void *buf, size_t size, lldb::SBError &error);
+  lldb::SBError Kill();
 
-    size_t
-    ReadCStringFromMemory (addr_t addr, void *buf, size_t size, lldb::SBError &error);
+  lldb::SBError Detach();
 
-    uint64_t
-    ReadUnsignedFromMemory (addr_t addr, uint32_t byte_size, lldb::SBError &error);
+  lldb::SBError Detach(bool keep_stopped);
 
-    lldb::addr_t
-    ReadPointerFromMemory (addr_t addr, lldb::SBError &error);
+  lldb::SBError Signal(int signal);
 
-    // Events
-    static lldb::StateType
-    GetStateFromEvent (const lldb::SBEvent &event);
+  lldb::SBUnixSignals GetUnixSignals();
 
-    static bool
-    GetRestartedFromEvent (const lldb::SBEvent &event);
-    
-    static size_t
-    GetNumRestartedReasonsFromEvent (const lldb::SBEvent &event);
-    
-    static const char *
-    GetRestartedReasonAtIndexFromEvent (const lldb::SBEvent &event, size_t idx);
+  void SendAsyncInterrupt();
 
-    static lldb::SBProcess
-    GetProcessFromEvent (const lldb::SBEvent &event);
+  uint32_t GetStopID(bool include_expression_stops = false);
 
-    static bool
-    GetInterruptedFromEvent (const lldb::SBEvent &event);
-    
-    static bool
-    EventIsProcessEvent (const lldb::SBEvent &event);
+  //------------------------------------------------------------------
+  /// Gets the stop event corresponding to stop ID.
+  //
+  /// Note that it wasn't fully implemented and tracks only the stop
+  /// event for the last natural stop ID.
+  ///
+  /// @param [in] stop_id
+  ///   The ID of the stop event to return.
+  ///
+  /// @return
+  ///   The stop event corresponding to stop ID.
+  //------------------------------------------------------------------
+  lldb::SBEvent GetStopEventForStopID(uint32_t stop_id);
 
-    lldb::SBBroadcaster
-    GetBroadcaster () const;
+  size_t ReadMemory(addr_t addr, void *buf, size_t size, lldb::SBError &error);
 
-    static const char *
-    GetBroadcasterClass ();
+  size_t WriteMemory(addr_t addr, const void *buf, size_t size,
+                     lldb::SBError &error);
 
-    bool
-    GetDescription (lldb::SBStream &description);
+  size_t ReadCStringFromMemory(addr_t addr, void *buf, size_t size,
+                               lldb::SBError &error);
 
-    uint32_t
-    GetNumSupportedHardwareWatchpoints (lldb::SBError &error) const;
+  uint64_t ReadUnsignedFromMemory(addr_t addr, uint32_t byte_size,
+                                  lldb::SBError &error);
 
-    //------------------------------------------------------------------
-    /// Load a shared library into this process.
-    ///
-    /// @param[in] remote_image_spec
-    ///     The path for the shared library on the target what you want
-    ///     to load.
-    ///
-    /// @param[out] error
-    ///     An error object that gets filled in with any errors that
-    ///     might occur when trying to load the shared library.
-    ///
-    /// @return
-    ///     A token that represents the shared library that can be
-    ///     later used to unload the shared library. A value of
-    ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
-    ///     library can't be opened.
-    //------------------------------------------------------------------
-    uint32_t
-    LoadImage (lldb::SBFileSpec &remote_image_spec, lldb::SBError &error);
+  lldb::addr_t ReadPointerFromMemory(addr_t addr, lldb::SBError &error);
 
-    //------------------------------------------------------------------
-    /// Load a shared library into this process.
-    ///
-    /// @param[in] local_image_spec
-    ///     The file spec that points to the shared library that you
-    ///     want to load if the library is located on the host. The
-    ///     library will be copied over to the location specified by
-    ///     remote_image_spec or into the current working directory with
-    ///     the same filename if the remote_image_spec isn't specified.
-    ///
-    /// @param[in] remote_image_spec
-    ///     If local_image_spec is specified then the location where the
-    ///     library should be copied over from the host. If
-    ///     local_image_spec isn't specified, then the path for the
-    ///     shared library on the target what you want to load.
-    ///
-    /// @param[out] error
-    ///     An error object that gets filled in with any errors that
-    ///     might occur when trying to load the shared library.
-    ///
-    /// @return
-    ///     A token that represents the shared library that can be
-    ///     later used to unload the shared library. A value of
-    ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
-    ///     library can't be opened.
-    //------------------------------------------------------------------
-    uint32_t
-    LoadImage (const lldb::SBFileSpec &local_image_spec,
-               const lldb::SBFileSpec &remote_image_spec,
-               lldb::SBError &error);
-    
-    lldb::SBError
-    UnloadImage (uint32_t image_token);
-    
-    lldb::SBError
-    SendEventData (const char *data);
-    
-    //------------------------------------------------------------------
-    /// Return the number of different thread-origin extended backtraces
-    /// this process can support.
-    ///
-    /// When the process is stopped and you have an SBThread, lldb may be
-    /// able to show a backtrace of when that thread was originally created,
-    /// or the work item was enqueued to it (in the case of a libdispatch 
-    /// queue).
-    ///
-    /// @return
-    ///   The number of thread-origin extended backtrace types that may be
-    ///   available.
-    //------------------------------------------------------------------
-    uint32_t
-    GetNumExtendedBacktraceTypes ();
+  // Events
+  static lldb::StateType GetStateFromEvent(const lldb::SBEvent &event);
 
-    //------------------------------------------------------------------
-    /// Return the name of one of the thread-origin extended backtrace 
-    /// methods.
-    ///
-    /// @param [in] idx
-    ///   The index of the name to return.  They will be returned in
-    ///   the order that the user will most likely want to see them.
-    ///   e.g. if the type at index 0 is not available for a thread, 
-    ///   see if the type at index 1 provides an extended backtrace.
-    ///
-    /// @return
-    ///   The name at that index.
-    //------------------------------------------------------------------
-    const char *
-    GetExtendedBacktraceTypeAtIndex (uint32_t idx);
-    
-    lldb::SBThreadCollection
-    GetHistoryThreads (addr_t addr);
-    
-    bool
-    IsInstrumentationRuntimePresent(InstrumentationRuntimeType type);
+  static bool GetRestartedFromEvent(const lldb::SBEvent &event);
 
-    // Save the state of the process in a core file (or mini dump on Windows).
-    lldb::SBError
-    SaveCore(const char *file_name);
+  static size_t GetNumRestartedReasonsFromEvent(const lldb::SBEvent &event);
+
+  static const char *
+  GetRestartedReasonAtIndexFromEvent(const lldb::SBEvent &event, size_t idx);
+
+  static lldb::SBProcess GetProcessFromEvent(const lldb::SBEvent &event);
+
+  static bool GetInterruptedFromEvent(const lldb::SBEvent &event);
+
+  static bool EventIsProcessEvent(const lldb::SBEvent &event);
+
+  lldb::SBBroadcaster GetBroadcaster() const;
+
+  static const char *GetBroadcasterClass();
+
+  bool GetDescription(lldb::SBStream &description);
+
+  uint32_t GetNumSupportedHardwareWatchpoints(lldb::SBError &error) const;
+
+  //------------------------------------------------------------------
+  /// Load a shared library into this process.
+  ///
+  /// @param[in] remote_image_spec
+  ///     The path for the shared library on the target what you want
+  ///     to load.
+  ///
+  /// @param[out] error
+  ///     An error object that gets filled in with any errors that
+  ///     might occur when trying to load the shared library.
+  ///
+  /// @return
+  ///     A token that represents the shared library that can be
+  ///     later used to unload the shared library. A value of
+  ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
+  ///     library can't be opened.
+  //------------------------------------------------------------------
+  uint32_t LoadImage(lldb::SBFileSpec &remote_image_spec, lldb::SBError &error);
+
+  //------------------------------------------------------------------
+  /// Load a shared library into this process.
+  ///
+  /// @param[in] local_image_spec
+  ///     The file spec that points to the shared library that you
+  ///     want to load if the library is located on the host. The
+  ///     library will be copied over to the location specified by
+  ///     remote_image_spec or into the current working directory with
+  ///     the same filename if the remote_image_spec isn't specified.
+  ///
+  /// @param[in] remote_image_spec
+  ///     If local_image_spec is specified then the location where the
+  ///     library should be copied over from the host. If
+  ///     local_image_spec isn't specified, then the path for the
+  ///     shared library on the target what you want to load.
+  ///
+  /// @param[out] error
+  ///     An error object that gets filled in with any errors that
+  ///     might occur when trying to load the shared library.
+  ///
+  /// @return
+  ///     A token that represents the shared library that can be
+  ///     later used to unload the shared library. A value of
+  ///     LLDB_INVALID_IMAGE_TOKEN will be returned if the shared
+  ///     library can't be opened.
+  //------------------------------------------------------------------
+  uint32_t LoadImage(const lldb::SBFileSpec &local_image_spec,
+                     const lldb::SBFileSpec &remote_image_spec,
+                     lldb::SBError &error);
+
+  lldb::SBError UnloadImage(uint32_t image_token);
+
+  lldb::SBError SendEventData(const char *data);
+
+  //------------------------------------------------------------------
+  /// Return the number of different thread-origin extended backtraces
+  /// this process can support.
+  ///
+  /// When the process is stopped and you have an SBThread, lldb may be
+  /// able to show a backtrace of when that thread was originally created,
+  /// or the work item was enqueued to it (in the case of a libdispatch
+  /// queue).
+  ///
+  /// @return
+  ///   The number of thread-origin extended backtrace types that may be
+  ///   available.
+  //------------------------------------------------------------------
+  uint32_t GetNumExtendedBacktraceTypes();
+
+  //------------------------------------------------------------------
+  /// Return the name of one of the thread-origin extended backtrace
+  /// methods.
+  ///
+  /// @param [in] idx
+  ///   The index of the name to return.  They will be returned in
+  ///   the order that the user will most likely want to see them.
+  ///   e.g. if the type at index 0 is not available for a thread,
+  ///   see if the type at index 1 provides an extended backtrace.
+  ///
+  /// @return
+  ///   The name at that index.
+  //------------------------------------------------------------------
+  const char *GetExtendedBacktraceTypeAtIndex(uint32_t idx);
+
+  lldb::SBThreadCollection GetHistoryThreads(addr_t addr);
+
+  bool IsInstrumentationRuntimePresent(InstrumentationRuntimeType type);
+
+  // Save the state of the process in a core file (or mini dump on Windows).
+  lldb::SBError SaveCore(const char *file_name);
 
 protected:
-    friend class SBAddress;
-    friend class SBBreakpoint;
-    friend class SBBreakpointLocation;
-    friend class SBCommandInterpreter;
-    friend class SBDebugger;
-    friend class SBExecutionContext;
-    friend class SBFunction;
-    friend class SBModule;
-    friend class SBTarget;
-    friend class SBThread;
-    friend class SBValue;
-    friend class lldb_private::QueueImpl;
+  friend class SBAddress;
+  friend class SBBreakpoint;
+  friend class SBBreakpointLocation;
+  friend class SBCommandInterpreter;
+  friend class SBDebugger;
+  friend class SBExecutionContext;
+  friend class SBFunction;
+  friend class SBModule;
+  friend class SBTarget;
+  friend class SBThread;
+  friend class SBValue;
+  friend class lldb_private::QueueImpl;
 
-    lldb::ProcessSP
-    GetSP() const;
-    
-    void
-    SetSP (const lldb::ProcessSP &process_sp);
+  lldb::ProcessSP GetSP() const;
 
-    lldb::ProcessWP m_opaque_wp;
+  void SetSP(const lldb::ProcessSP &process_sp);
+
+  lldb::ProcessWP m_opaque_wp;
 };
 
-}  // namespace lldb
+} // namespace lldb
 
-#endif  // LLDB_SBProcess_h_
+#endif // LLDB_SBProcess_h_

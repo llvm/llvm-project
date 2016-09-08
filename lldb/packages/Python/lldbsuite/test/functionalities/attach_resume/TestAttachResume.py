@@ -5,14 +5,15 @@ Test process attach/resume.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 exe_name = "AttachResume"  # Must match Makefile
+
 
 class AttachResumeTestCase(TestBase):
 
@@ -53,18 +54,24 @@ class AttachResumeTestCase(TestBase):
         lldbutil.expect_state_changes(self, listener, [lldb.eStateStopped])
 
         # Second interrupt should have no effect.
-        self.expect("process interrupt", patterns=["Process is not running"], error=True)
+        self.expect(
+            "process interrupt",
+            patterns=["Process is not running"],
+            error=True)
 
         # check that this breakpoint is auto-cleared on detach (r204752)
-        self.runCmd("br set -f main.cpp -l %u" % (line_number('main.cpp', '// Set breakpoint here')))
+        self.runCmd("br set -f main.cpp -l %u" %
+                    (line_number('main.cpp', '// Set breakpoint here')))
 
         self.runCmd("c")
-        lldbutil.expect_state_changes(self, listener, [lldb.eStateRunning, lldb.eStateStopped])
+        lldbutil.expect_state_changes(
+            self, listener, [
+                lldb.eStateRunning, lldb.eStateStopped])
         self.expect('br list', 'Breakpoint not hit',
-            substrs = ['hit count = 1'])
+                    substrs=['hit count = 1'])
 
         # Make sure the breakpoint is not hit again.
-        self.expect("expr debugger_flag = false", substrs=[" = false"]);
+        self.expect("expr debugger_flag = false", substrs=[" = false"])
 
         self.runCmd("c")
         lldbutil.expect_state_changes(self, listener, [lldb.eStateRunning])

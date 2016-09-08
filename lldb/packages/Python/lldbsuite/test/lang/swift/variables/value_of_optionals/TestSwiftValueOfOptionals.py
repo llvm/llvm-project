@@ -33,7 +33,7 @@ class TestSwiftValueOfOptionalType(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_check(self):
         """Check that trying to read an optional's numeric value doesn't crash LLDB"""

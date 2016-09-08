@@ -24,55 +24,41 @@
 
 #include <vector>
 
-namespace lldb_private
-{
-    namespace formatters
-    {
-        namespace swift
-        {
-            struct SwiftOptionSetSummaryProvider : public TypeSummaryImpl
-            {
-                static bool
-                WouldEvenConsiderFormatting (CompilerType);
-                
-                SwiftOptionSetSummaryProvider (CompilerType);
+namespace lldb_private {
+namespace formatters {
+namespace swift {
+struct SwiftOptionSetSummaryProvider : public TypeSummaryImpl {
+  static bool WouldEvenConsiderFormatting(CompilerType);
 
-                virtual
-                ~SwiftOptionSetSummaryProvider () = default;
-                
-                virtual bool
-                FormatObject (ValueObject *valobj,
-                              std::string& dest,
-                              const TypeSummaryOptions& options);
-                
-                virtual std::string
-                GetDescription ();
-                
-                virtual bool
-                IsScripted ()
-                {
-                    return false;
-                }
-                
-                virtual bool
-                DoesPrintChildren (ValueObject* valobj) const;
-            private:
-                DISALLOW_COPY_AND_ASSIGN(SwiftOptionSetSummaryProvider);
-                
-                void
-                FillCasesIfNeeded ();
-                
-                CompilerType m_type;
-                
-                typedef std::vector<std::pair<llvm::APInt, lldb_private::ConstString>> CasesVector;
-                
-                llvm::Optional<CasesVector> m_cases;
-            };
-            
-            bool
-            SwiftOptionSet_SummaryProvider (ValueObject& valobj, Stream& stream);
-        }
-    }
+  SwiftOptionSetSummaryProvider(CompilerType);
+
+  virtual ~SwiftOptionSetSummaryProvider() = default;
+
+  virtual bool FormatObject(ValueObject *valobj, std::string &dest,
+                            const TypeSummaryOptions &options);
+
+  virtual std::string GetDescription();
+
+  virtual bool IsScripted() { return false; }
+
+  virtual bool DoesPrintChildren(ValueObject *valobj) const;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(SwiftOptionSetSummaryProvider);
+
+  void FillCasesIfNeeded();
+
+  CompilerType m_type;
+
+  typedef std::vector<std::pair<llvm::APInt, lldb_private::ConstString>>
+      CasesVector;
+
+  llvm::Optional<CasesVector> m_cases;
+};
+
+bool SwiftOptionSet_SummaryProvider(ValueObject &valobj, Stream &stream);
+}
+}
 }
 
 #endif // liblldb_SwiftOptionSet_h_

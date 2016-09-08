@@ -36,15 +36,16 @@ class TestExpressionsInSwiftMethodsFromObjC(TestBase):
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
-    def check_expression (self, expression, expected_result, use_summary = True):
-        value = self.frame.EvaluateExpression (expression)
-        self.assertTrue(value.IsValid(), expression+"returned a valid value")
+    def check_expression(self, expression, expected_result, use_summary=True):
+        value = self.frame.EvaluateExpression(expression)
+        self.assertTrue(value.IsValid(), expression + "returned a valid value")
 
         if use_summary:
             answer = value.GetSummary()
         else:
             answer = value.GetValue()
-        report_str = "%s expected: %s got: %s"%(expression, expected_result, answer)
+        report_str = "%s expected: %s got: %s" % (
+            expression, expected_result, answer)
         self.assertTrue(answer == expected_result, report_str)
 
     def do_test(self):
@@ -57,7 +58,8 @@ class TestExpressionsInSwiftMethodsFromObjC(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        ns_objc_bkpt = target.BreakpointCreateBySourceRegex('Stop here in NSObject derived class', self.main_source_spec)
+        ns_objc_bkpt = target.BreakpointCreateBySourceRegex(
+            'Stop here in NSObject derived class', self.main_source_spec)
         self.assertTrue(ns_objc_bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -66,16 +68,17 @@ class TestExpressionsInSwiftMethodsFromObjC(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, ns_objc_bkpt)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, ns_objc_bkpt)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
-        self.check_expression ("m_computed_ivar == 5", "true")
-        self.check_expression ("m_ivar", "10", use_summary=False)
-        self.check_expression ("self.m_ivar == 11", "false")
+        self.check_expression("m_computed_ivar == 5", "true")
+        self.check_expression("m_ivar", "10", use_summary=False)
+        self.check_expression("self.m_ivar == 11", "false")
 
 if __name__ == '__main__':
     import atexit

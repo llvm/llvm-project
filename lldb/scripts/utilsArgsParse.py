@@ -17,7 +17,7 @@
 """
 
 # Python modules:
-import getopt # Parse command line arguments
+import getopt  # Parse command line arguments
 
 # Third party modules:
 
@@ -54,6 +54,8 @@ strMsgArgFileNotImplemented = "Sorry the --argFile is not implemented"
 #          Str - Error message.
 # Throws:  None.
 #--
+
+
 def parse(vArgv, vstrListArgs, vListLongArgs, vDictArgReq, vstrHelpInfo):
     dictArgs = {}
     dictDummy = {}
@@ -127,8 +129,8 @@ def parse(vArgv, vstrListArgs, vListLongArgs, vDictArgReq, vstrHelpInfo):
         return (-1, dictDummy, strMsg)
 
     # Debug only
-    #print countMandatoryOpts
-    #print countMandatory
+    # print countMandatoryOpts
+    # print countMandatory
 
     # Do we have the exact number of mandatory arguments
     if (countMandatoryOpts > 0) and (countMandatory != countMandatoryOpts):

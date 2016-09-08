@@ -14,6 +14,7 @@
 import lldbsuite.test.lldbrepl as lldbrepl
 import lldbsuite.test.decorators as decorators
 
+
 class REPLTypeLookupTestCase(lldbrepl.REPLTest):
 
     mydir = lldbrepl.REPLTest.compute_mydir(__file__)
@@ -24,9 +25,8 @@ class REPLTypeLookupTestCase(lldbrepl.REPLTest):
     def doTest(self):
         self.command(
             ':type lookup NSArchiver',
-            patterns=['@interface NSArchiver']) # no Swift info, ObjC
+            patterns=['@interface NSArchiver'])  # no Swift info, ObjC
         self.command('import Foundation')
         self.command(
             ':type lookup NSArchiver',
-            patterns=['class NSArchiver']) # Swift info, no ObjC
-        
+            patterns=['class NSArchiver'])  # Swift info, no ObjC

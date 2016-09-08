@@ -66,6 +66,7 @@ you can always prevent this just by defining a default transition.
 Noah Spurrier 20020822
 """
 
+
 class ExceptionFSM(Exception):
 
     """This is the FSM Exception class."""
@@ -74,7 +75,8 @@ class ExceptionFSM(Exception):
         self.value = value
 
     def __str__(self):
-        return `self.value`
+        return repr(self.value)
+
 
 class FSM:
 
@@ -82,7 +84,6 @@ class FSM:
     """
 
     def __init__(self, initial_state, memory=None):
-
         """This creates the FSM. You set the initial state here. The "memory"
         attribute is any object that you want to pass along to the action
         functions. It is not used by the FSM. For parsing you would typically
@@ -101,8 +102,7 @@ class FSM:
         self.action = None
         self.memory = memory
 
-    def reset (self):
-
+    def reset(self):
         """This sets the current_state to the initial_state and sets
         input_symbol to None. The initial state was set by the constructor
         __init__(). """
@@ -110,8 +110,12 @@ class FSM:
         self.current_state = self.initial_state
         self.input_symbol = None
 
-    def add_transition (self, input_symbol, state, action=None, next_state=None):
-
+    def add_transition(
+            self,
+            input_symbol,
+            state,
+            action=None,
+            next_state=None):
         """This adds a transition that associates:
 
                 (input_symbol, current_state) --> (action, next_state)
@@ -127,8 +131,12 @@ class FSM:
             next_state = state
         self.state_transitions[(input_symbol, state)] = (action, next_state)
 
-    def add_transition_list (self, list_input_symbols, state, action=None, next_state=None):
-
+    def add_transition_list(
+            self,
+            list_input_symbols,
+            state,
+            action=None,
+            next_state=None):
         """This adds the same transition for a list of input symbols.
         You can pass a list or a string. Note that it is handy to use
         string.digits, string.whitespace, string.letters, etc. to add
@@ -141,10 +149,9 @@ class FSM:
         if next_state is None:
             next_state = state
         for input_symbol in list_input_symbols:
-            self.add_transition (input_symbol, state, action, next_state)
+            self.add_transition(input_symbol, state, action, next_state)
 
-    def add_transition_any (self, state, action=None, next_state=None):
-
+    def add_transition_any(self, state, action=None, next_state=None):
         """This adds a transition that associates:
 
                 (current_state) --> (action, next_state)
@@ -159,10 +166,9 @@ class FSM:
 
         if next_state is None:
             next_state = state
-        self.state_transitions_any [state] = (action, next_state)
+        self.state_transitions_any[state] = (action, next_state)
 
-    def set_default_transition (self, action, next_state):
-
+    def set_default_transition(self, action, next_state):
         """This sets the default transition. This defines an action and
         next_state if the FSM cannot find the input symbol and the current
         state in the transition list and if the FSM cannot find the
@@ -174,8 +180,7 @@ class FSM:
 
         self.default_transition = (action, next_state)
 
-    def get_transition (self, input_symbol, state):
-
+    def get_transition(self, input_symbol, state):
         """This returns (action, next state) given an input_symbol and state.
         This does not modify the FSM state, so calling this method has no side
         effects. Normally you do not call this method directly. It is called by
@@ -197,18 +202,17 @@ class FSM:
         4. No transition was defined. If we get here then raise an exception.
         """
 
-        if self.state_transitions.has_key((input_symbol, state)):
+        if (input_symbol, state) in self.state_transitions:
             return self.state_transitions[(input_symbol, state)]
-        elif self.state_transitions_any.has_key (state):
+        elif state in self.state_transitions_any:
             return self.state_transitions_any[state]
         elif self.default_transition is not None:
             return self.default_transition
         else:
-            raise ExceptionFSM ('Transition is undefined: (%s, %s).' %
-                (str(input_symbol), str(state)) )
+            raise ExceptionFSM('Transition is undefined: (%s, %s).' %
+                               (str(input_symbol), str(state)))
 
-    def process (self, input_symbol):
-
+    def process(self, input_symbol):
         """This is the main method that you call to process input. This may
         cause the FSM to change state and call an action. This method calls
         get_transition() to find the action and next_state associated with the
@@ -218,26 +222,26 @@ class FSM:
         (or a string) by calling process_list(). """
 
         self.input_symbol = input_symbol
-        (self.action, self.next_state) = self.get_transition (self.input_symbol, self.current_state)
+        (self.action, self.next_state) = self.get_transition(
+            self.input_symbol, self.current_state)
         if self.action is not None:
-            self.action (self)
+            self.action(self)
         self.current_state = self.next_state
         self.next_state = None
 
-    def process_list (self, input_symbols):
-
+    def process_list(self, input_symbols):
         """This takes a list and sends each element to process(). The list may
         be a string or any iterable object. """
 
         for s in input_symbols:
-            self.process (s)
+            self.process(s)
 
 ##############################################################################
 # The following is an example that demonstrates the use of the FSM class to
 # process an RPN expression. Run this module from the command line. You will
 # get a prompt > for input. Enter an RPN Expression. Numbers may be integers.
 # Operators are * / + - Use the = sign to evaluate and print the expression.
-# For example: 
+# For example:
 #
 #    167 3 2 2 * * * 1 - =
 #
@@ -246,58 +250,81 @@ class FSM:
 #    2003
 ##############################################################################
 
-import sys, os, traceback, optparse, time, string
+import sys
+import os
+import traceback
+import optparse
+import time
+import string
 
 #
-# These define the actions. 
+# These define the actions.
 # Note that "memory" is a list being used as a stack.
 #
 
-def BeginBuildNumber (fsm):
-    fsm.memory.append (fsm.input_symbol)
 
-def BuildNumber (fsm):
-    s = fsm.memory.pop ()
+def BeginBuildNumber(fsm):
+    fsm.memory.append(fsm.input_symbol)
+
+
+def BuildNumber(fsm):
+    s = fsm.memory.pop()
     s = s + fsm.input_symbol
-    fsm.memory.append (s)
+    fsm.memory.append(s)
 
-def EndBuildNumber (fsm):
-    s = fsm.memory.pop ()
-    fsm.memory.append (int(s))
 
-def DoOperator (fsm):
+def EndBuildNumber(fsm):
+    s = fsm.memory.pop()
+    fsm.memory.append(int(s))
+
+
+def DoOperator(fsm):
     ar = fsm.memory.pop()
     al = fsm.memory.pop()
     if fsm.input_symbol == '+':
-        fsm.memory.append (al + ar)
+        fsm.memory.append(al + ar)
     elif fsm.input_symbol == '-':
-        fsm.memory.append (al - ar)
+        fsm.memory.append(al - ar)
     elif fsm.input_symbol == '*':
-        fsm.memory.append (al * ar)
+        fsm.memory.append(al * ar)
     elif fsm.input_symbol == '/':
-        fsm.memory.append (al / ar)
+        fsm.memory.append(al / ar)
 
-def DoEqual (fsm):
+
+def DoEqual(fsm):
     print str(fsm.memory.pop())
 
-def Error (fsm):
+
+def Error(fsm):
     print 'That does not compute.'
     print str(fsm.input_symbol)
 
-def main():
 
+def main():
     """This is where the example starts and the FSM state transitions are
     defined. Note that states are strings (such as 'INIT'). This is not
     necessary, but it makes the example easier to read. """
 
-    f = FSM ('INIT', []) # "memory" will be used as a stack.
-    f.set_default_transition (Error, 'INIT')
-    f.add_transition_any  ('INIT', None, 'INIT')
-    f.add_transition      ('=',               'INIT',            DoEqual,          'INIT')
-    f.add_transition_list (string.digits,     'INIT',            BeginBuildNumber, 'BUILDING_NUMBER')
-    f.add_transition_list (string.digits,     'BUILDING_NUMBER', BuildNumber,      'BUILDING_NUMBER')
-    f.add_transition_list (string.whitespace, 'BUILDING_NUMBER', EndBuildNumber,   'INIT')
-    f.add_transition_list ('+-*/',            'INIT',            DoOperator,       'INIT')
+    f = FSM('INIT', [])  # "memory" will be used as a stack.
+    f.set_default_transition(Error, 'INIT')
+    f.add_transition_any('INIT', None, 'INIT')
+    f.add_transition('=', 'INIT', DoEqual, 'INIT')
+    f.add_transition_list(
+        string.digits,
+        'INIT',
+        BeginBuildNumber,
+        'BUILDING_NUMBER')
+    f.add_transition_list(
+        string.digits,
+        'BUILDING_NUMBER',
+        BuildNumber,
+        'BUILDING_NUMBER')
+    f.add_transition_list(
+        string.whitespace,
+        'BUILDING_NUMBER',
+        EndBuildNumber,
+        'INIT')
+    f.add_transition_list('+-*/', 'INIT', DoOperator, 'INIT')
 
     print
     print 'Enter an RPN Expression.'
@@ -305,26 +332,38 @@ def main():
     print 'Use the = sign to evaluate and print the expression.'
     print 'For example: '
     print '    167 3 2 2 * * * 1 - ='
-    inputstr = raw_input ('> ')
+    inputstr = raw_input('> ')
     f.process_list(inputstr)
 
 if __name__ == '__main__':
     try:
         start_time = time.time()
-        parser = optparse.OptionParser(formatter=optparse.TitledHelpFormatter(), usage=globals()['__doc__'], version='$Id: FSM.py 490 2007-12-07 15:46:24Z noah $')
-        parser.add_option ('-v', '--verbose', action='store_true', default=False, help='verbose output')
+        parser = optparse.OptionParser(
+            formatter=optparse.TitledHelpFormatter(),
+            usage=globals()['__doc__'],
+            version='$Id: FSM.py 490 2007-12-07 15:46:24Z noah $')
+        parser.add_option(
+            '-v',
+            '--verbose',
+            action='store_true',
+            default=False,
+            help='verbose output')
         (options, args) = parser.parse_args()
-        if options.verbose: print time.asctime()
+        if options.verbose:
+            print time.asctime()
         main()
-        if options.verbose: print time.asctime()
-        if options.verbose: print 'TOTAL TIME IN MINUTES:',
-        if options.verbose: print (time.time() - start_time) / 60.0
+        if options.verbose:
+            print time.asctime()
+        if options.verbose:
+            print 'TOTAL TIME IN MINUTES:',
+        if options.verbose:
+            print (time.time() - start_time) / 60.0
         sys.exit(0)
-    except KeyboardInterrupt, e: # Ctrl-C
+    except KeyboardInterrupt as e:  # Ctrl-C
         raise e
-    except SystemExit, e: # sys.exit()
+    except SystemExit as e:  # sys.exit()
         raise e
-    except Exception, e:
+    except Exception as e:
         print 'ERROR, UNEXPECTED EXCEPTION'
         print str(e)
         traceback.print_exc()

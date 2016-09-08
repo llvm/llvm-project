@@ -1,4 +1,5 @@
-//===-- FoundationValueTypes.h -------------------------------------*- C++ -*-===//
+//===-- FoundationValueTypes.h -------------------------------------*- C++
+//-*-===//
 //
 // This source file is part of the Swift.org open source project
 //
@@ -22,36 +23,35 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
 
-namespace lldb_private
-{
-    namespace formatters
-    {
-        namespace swift
-        {
-            bool
-            Date_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
-            
-            bool
-            NotificationName_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
-            
-            bool
-            URL_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
-            
-            bool
-            IndexPath_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
-            
-            bool
-            Measurement_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
-            
-            bool
-            UUID_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
-            
-            bool
-            Data_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
-            
-            SyntheticChildrenFrontEnd* URLComponentsSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP);
-        }
-    }
+namespace lldb_private {
+namespace formatters {
+namespace swift {
+bool Date_SummaryProvider(ValueObject &valobj, Stream &stream,
+                          const TypeSummaryOptions &options);
+
+bool NotificationName_SummaryProvider(ValueObject &valobj, Stream &stream,
+                                      const TypeSummaryOptions &options);
+
+bool URL_SummaryProvider(ValueObject &valobj, Stream &stream,
+                         const TypeSummaryOptions &options);
+
+bool IndexPath_SummaryProvider(ValueObject &valobj, Stream &stream,
+                               const TypeSummaryOptions &options);
+
+bool Measurement_SummaryProvider(ValueObject &valobj, Stream &stream,
+                                 const TypeSummaryOptions &options);
+
+bool UUID_SummaryProvider(ValueObject &valobj, Stream &stream,
+                          const TypeSummaryOptions &options);
+
+bool Data_SummaryProvider(ValueObject &valobj, Stream &stream,
+                          const TypeSummaryOptions &options);
+
+SyntheticChildrenFrontEnd *
+URLComponentsSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                      lldb::ValueObjectSP);
+}
+}
 }
 
 #endif // liblldb_FoundationValueTypes_h_

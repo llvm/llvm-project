@@ -1,4 +1,5 @@
-//===-- lldb-python.h --------------------------------------------*- C++ -*-===//
+//===-- lldb-python.h --------------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,7 +11,8 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H
 
-// Python.h needs to be included before any system headers in order to avoid redefinition of macros
+// Python.h needs to be included before any system headers in order to avoid
+// redefinition of macros
 
 #ifdef LLDB_DISABLE_PYTHON
 // Python is disabled in this build

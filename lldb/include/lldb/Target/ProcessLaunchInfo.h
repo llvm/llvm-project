@@ -21,232 +21,145 @@
 #include "lldb/Target/ProcessInfo.h"
 #include "lldb/Utility/PseudoTerminal.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-    //----------------------------------------------------------------------
-    // ProcessLaunchInfo
-    //
-    // Describes any information that is required to launch a process.
-    //----------------------------------------------------------------------
+//----------------------------------------------------------------------
+// ProcessLaunchInfo
+//
+// Describes any information that is required to launch a process.
+//----------------------------------------------------------------------
 
-    class ProcessLaunchInfo : public ProcessInfo
-    {
-    public:
+class ProcessLaunchInfo : public ProcessInfo {
+public:
+  ProcessLaunchInfo();
 
-        ProcessLaunchInfo ();
+  ProcessLaunchInfo(const FileSpec &stdin_file_spec,
+                    const FileSpec &stdout_file_spec,
+                    const FileSpec &stderr_file_spec,
+                    const FileSpec &working_dir, uint32_t launch_flags);
 
-        ProcessLaunchInfo(const FileSpec &stdin_file_spec,
-                          const FileSpec &stdout_file_spec,
-                          const FileSpec &stderr_file_spec,
-                          const FileSpec &working_dir,
-                          uint32_t launch_flags);
+  void AppendFileAction(const FileAction &info) {
+    m_file_actions.push_back(info);
+  }
 
-        void
-        AppendFileAction (const FileAction &info)
-        {
-            m_file_actions.push_back(info);
-        }
+  bool AppendCloseFileAction(int fd);
 
-        bool
-        AppendCloseFileAction (int fd);
+  bool AppendDuplicateFileAction(int fd, int dup_fd);
 
-        bool
-        AppendDuplicateFileAction (int fd, int dup_fd);
+  bool AppendOpenFileAction(int fd, const FileSpec &file_spec, bool read,
+                            bool write);
 
-        bool
-        AppendOpenFileAction(int fd, const FileSpec &file_spec,
-                             bool read, bool write);
+  bool AppendSuppressFileAction(int fd, bool read, bool write);
 
-        bool
-        AppendSuppressFileAction (int fd, bool read, bool write);
+  void FinalizeFileActions(Target *target, bool default_to_use_pty);
 
-        void
-        FinalizeFileActions (Target *target,
-                             bool default_to_use_pty);
+  size_t GetNumFileActions() const { return m_file_actions.size(); }
 
-        size_t
-        GetNumFileActions () const
-        {
-            return m_file_actions.size();
-        }
+  const FileAction *GetFileActionAtIndex(size_t idx) const;
 
-        const FileAction *
-        GetFileActionAtIndex (size_t idx) const;
+  const FileAction *GetFileActionForFD(int fd) const;
 
-        const FileAction *
-        GetFileActionForFD (int fd) const;
+  Flags &GetFlags() { return m_flags; }
 
-        Flags &
-        GetFlags ()
-        {
-            return m_flags;
-        }
+  const Flags &GetFlags() const { return m_flags; }
 
-        const Flags &
-        GetFlags () const
-        {
-            return m_flags;
-        }
+  const FileSpec &GetWorkingDirectory() const;
 
-        const FileSpec &
-        GetWorkingDirectory() const;
+  void SetWorkingDirectory(const FileSpec &working_dir);
 
-        void
-        SetWorkingDirectory(const FileSpec &working_dir);
+  const char *GetProcessPluginName() const;
 
-        const char *
-        GetProcessPluginName () const;
+  void SetProcessPluginName(const char *plugin);
 
-        void
-        SetProcessPluginName (const char *plugin);
+  const FileSpec &GetShell() const;
 
-        const FileSpec &
-        GetShell () const;
+  void SetShell(const FileSpec &shell);
 
-        void
-        SetShell (const FileSpec &shell);
+  uint32_t GetResumeCount() const { return m_resume_count; }
 
-        uint32_t
-        GetResumeCount () const
-        {
-            return m_resume_count;
-        }
+  void SetResumeCount(uint32_t c) { m_resume_count = c; }
 
-        void
-        SetResumeCount (uint32_t c)
-        {
-            m_resume_count = c;
-        }
+  bool GetLaunchInSeparateProcessGroup() const {
+    return m_flags.Test(lldb::eLaunchFlagLaunchInSeparateProcessGroup);
+  }
 
-        bool
-        GetLaunchInSeparateProcessGroup() const
-        {
-            return m_flags.Test(lldb::eLaunchFlagLaunchInSeparateProcessGroup);
-        }
+  void SetLaunchInSeparateProcessGroup(bool separate);
 
-        void
-        SetLaunchInSeparateProcessGroup (bool separate);
-        
-        bool
-        GetShellExpandArguments () const
-        {
-            return m_flags.Test(lldb::eLaunchFlagShellExpandArguments);
-        }
-        
-        void
-        SetShellExpandArguments (bool expand);
+  bool GetShellExpandArguments() const {
+    return m_flags.Test(lldb::eLaunchFlagShellExpandArguments);
+  }
 
-        void
-        Clear ();
+  void SetShellExpandArguments(bool expand);
 
-        bool
-        ConvertArgumentsForLaunchingInShell (Error &error,
-                                             bool localhost,
-                                             bool will_debug,
-                                             bool first_arg_is_full_shell_command,
-                                             int32_t num_resumes);
+  void Clear();
 
-        void
-        SetMonitorProcessCallback (Host::MonitorChildProcessCallback callback,
-                                   void *baton,
-                                   bool monitor_signals);
+  bool ConvertArgumentsForLaunchingInShell(Error &error, bool localhost,
+                                           bool will_debug,
+                                           bool first_arg_is_full_shell_command,
+                                           int32_t num_resumes);
 
-        Host::MonitorChildProcessCallback
-        GetMonitorProcessCallback() const
-        {
-            return m_monitor_callback;
-        }
+  void SetMonitorProcessCallback(Host::MonitorChildProcessCallback callback,
+                                 void *baton, bool monitor_signals);
 
-        void *
-        GetMonitorProcessBaton() const
-        {
-            return m_monitor_callback_baton;
-        }
+  Host::MonitorChildProcessCallback GetMonitorProcessCallback() const {
+    return m_monitor_callback;
+  }
 
-        bool
-        GetMonitorSignals() const
-        {
-            return m_monitor_signals;
-        }
+  void *GetMonitorProcessBaton() const { return m_monitor_callback_baton; }
 
-        // If the LaunchInfo has a monitor callback, then arrange to monitor the process.
-        // Return true if the LaunchInfo has taken care of monitoring the process, and false if the
-        // caller might want to monitor the process themselves.
+  bool GetMonitorSignals() const { return m_monitor_signals; }
 
-        bool
-        MonitorProcess () const;
+  // If the LaunchInfo has a monitor callback, then arrange to monitor the
+  // process.
+  // Return true if the LaunchInfo has taken care of monitoring the process, and
+  // false if the
+  // caller might want to monitor the process themselves.
 
-        lldb_utility::PseudoTerminal &
-        GetPTY ()
-        {
-            return *m_pty;
-        }
+  bool MonitorProcess() const;
 
-        // Get and set the actual listener that will be used for the process events
-        lldb::ListenerSP
-        GetListener () const
-        {
-            return m_listener_sp;
-        }
+  lldb_utility::PseudoTerminal &GetPTY() { return *m_pty; }
 
-        void
-        SetListener (const lldb::ListenerSP &listener_sp)
-        {
-            m_listener_sp = listener_sp;
-        }
+  // Get and set the actual listener that will be used for the process events
+  lldb::ListenerSP GetListener() const { return m_listener_sp; }
 
-        lldb::ListenerSP
-        GetListenerForProcess (Debugger &debugger);
+  void SetListener(const lldb::ListenerSP &listener_sp) {
+    m_listener_sp = listener_sp;
+  }
 
-        lldb::ListenerSP
-        GetHijackListener () const
-        {
-            return m_hijack_listener_sp;
-        }
+  lldb::ListenerSP GetListenerForProcess(Debugger &debugger);
 
-        void
-        SetHijackListener (const lldb::ListenerSP &listener_sp)
-        {
-            m_hijack_listener_sp = listener_sp;
-        }
+  lldb::ListenerSP GetHijackListener() const { return m_hijack_listener_sp; }
 
-        void
-        SetLaunchEventData (const char *data)
-        {
-            m_event_data.assign (data);
-        }
+  void SetHijackListener(const lldb::ListenerSP &listener_sp) {
+    m_hijack_listener_sp = listener_sp;
+  }
 
-        const char *
-        GetLaunchEventData () const
-        {
-            return m_event_data.c_str();
-        }
+  void SetLaunchEventData(const char *data) { m_event_data.assign(data); }
 
-        void
-        SetDetachOnError (bool enable);
+  const char *GetLaunchEventData() const { return m_event_data.c_str(); }
 
-        bool
-        GetDetachOnError () const
-        {
-            return m_flags.Test(lldb::eLaunchFlagDetachOnError);
-        }
+  void SetDetachOnError(bool enable);
 
-    protected:
-        FileSpec m_working_dir;
-        std::string m_plugin_name;
-        FileSpec m_shell;
-        Flags m_flags;       // Bitwise OR of bits from lldb::LaunchFlags
-        std::vector<FileAction> m_file_actions; // File actions for any other files
-        std::shared_ptr<lldb_utility::PseudoTerminal> m_pty;
-        uint32_t m_resume_count; // How many times do we resume after launching
-        Host::MonitorChildProcessCallback m_monitor_callback;
-        void *m_monitor_callback_baton;
-        bool m_monitor_signals;
-        std::string m_event_data; // A string passed to the plugin launch, having no meaning to the upper levels of lldb.
-        lldb::ListenerSP m_listener_sp;
-        lldb::ListenerSP m_hijack_listener_sp;
-    };
+  bool GetDetachOnError() const {
+    return m_flags.Test(lldb::eLaunchFlagDetachOnError);
+  }
+
+protected:
+  FileSpec m_working_dir;
+  std::string m_plugin_name;
+  FileSpec m_shell;
+  Flags m_flags; // Bitwise OR of bits from lldb::LaunchFlags
+  std::vector<FileAction> m_file_actions; // File actions for any other files
+  std::shared_ptr<lldb_utility::PseudoTerminal> m_pty;
+  uint32_t m_resume_count; // How many times do we resume after launching
+  Host::MonitorChildProcessCallback m_monitor_callback;
+  void *m_monitor_callback_baton;
+  bool m_monitor_signals;
+  std::string m_event_data; // A string passed to the plugin launch, having no
+                            // meaning to the upper levels of lldb.
+  lldb::ListenerSP m_listener_sp;
+  lldb::ListenerSP m_hijack_listener_sp;
+};
 }
 
 #endif // liblldb_ProcessLaunch_Info_h

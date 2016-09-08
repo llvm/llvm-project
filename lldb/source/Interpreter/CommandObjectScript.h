@@ -22,17 +22,15 @@ namespace lldb_private {
 // CommandObjectScript
 //-------------------------------------------------------------------------
 
-class CommandObjectScript : public CommandObjectRaw
-{
+class CommandObjectScript : public CommandObjectRaw {
 public:
-    CommandObjectScript(CommandInterpreter &interpreter,
-                        lldb::ScriptLanguage script_lang);
+  CommandObjectScript(CommandInterpreter &interpreter,
+                      lldb::ScriptLanguage script_lang);
 
-    ~CommandObjectScript() override;
+  ~CommandObjectScript() override;
 
 protected:
-    bool
-    DoExecute(const char *command, CommandReturnObject &result) override;
+  bool DoExecute(const char *command, CommandReturnObject &result) override;
 };
 
 } // namespace lldb_private

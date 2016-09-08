@@ -15,82 +15,64 @@
 
 namespace lldb {
 
-class LLDB_API SBTypeEnumMember
-{
+class LLDB_API SBTypeEnumMember {
 public:
-    SBTypeEnumMember ();
+  SBTypeEnumMember();
 
-    SBTypeEnumMember (const SBTypeEnumMember& rhs);
+  SBTypeEnumMember(const SBTypeEnumMember &rhs);
 
-    ~SBTypeEnumMember();
+  ~SBTypeEnumMember();
 
-    SBTypeEnumMember&
-    operator = (const SBTypeEnumMember& rhs);
+  SBTypeEnumMember &operator=(const SBTypeEnumMember &rhs);
 
-    bool
-    IsValid() const;
+  bool IsValid() const;
 
-    int64_t
-    GetValueAsSigned();
+  int64_t GetValueAsSigned();
 
-    uint64_t
-    GetValueAsUnsigned();
+  uint64_t GetValueAsUnsigned();
 
-    const char *
-    GetName ();
+  const char *GetName();
 
-    lldb::SBType
-    GetType ();
+  lldb::SBType GetType();
 
-    bool
-    GetDescription (lldb::SBStream &description,
-                    lldb::DescriptionLevel description_level);
+  bool GetDescription(lldb::SBStream &description,
+                      lldb::DescriptionLevel description_level);
 
 protected:
-    friend class SBType;
-    friend class SBTypeEnumMemberList;
+  friend class SBType;
+  friend class SBTypeEnumMemberList;
 
-    void
-    reset (lldb_private::TypeEnumMemberImpl *);
+  void reset(lldb_private::TypeEnumMemberImpl *);
 
-    lldb_private::TypeEnumMemberImpl &
-    ref ();
+  lldb_private::TypeEnumMemberImpl &ref();
 
-    const lldb_private::TypeEnumMemberImpl &
-    ref () const;
+  const lldb_private::TypeEnumMemberImpl &ref() const;
 
-    lldb::TypeEnumMemberImplSP m_opaque_sp;
+  lldb::TypeEnumMemberImplSP m_opaque_sp;
 
-    SBTypeEnumMember (const lldb::TypeEnumMemberImplSP &);
+  SBTypeEnumMember(const lldb::TypeEnumMemberImplSP &);
 };
 
-class SBTypeEnumMemberList
-{
+class SBTypeEnumMemberList {
 public:
-    SBTypeEnumMemberList();
+  SBTypeEnumMemberList();
 
-    SBTypeEnumMemberList(const SBTypeEnumMemberList& rhs);
+  SBTypeEnumMemberList(const SBTypeEnumMemberList &rhs);
 
-    ~SBTypeEnumMemberList();
+  ~SBTypeEnumMemberList();
 
-    SBTypeEnumMemberList&
-    operator = (const SBTypeEnumMemberList& rhs);
+  SBTypeEnumMemberList &operator=(const SBTypeEnumMemberList &rhs);
 
-    bool
-    IsValid();
+  bool IsValid();
 
-    void
-    Append (SBTypeEnumMember entry);
+  void Append(SBTypeEnumMember entry);
 
-    SBTypeEnumMember
-    GetTypeEnumMemberAtIndex (uint32_t index);
+  SBTypeEnumMember GetTypeEnumMemberAtIndex(uint32_t index);
 
-    uint32_t
-    GetSize();
-
+  uint32_t GetSize();
 
 private:
-    std::unique_ptr<lldb_private::TypeEnumMemberListImpl> m_opaque_ap;
+  std::unique_ptr<lldb_private::TypeEnumMemberListImpl> m_opaque_ap;
 };
 
 } // namespace lldb

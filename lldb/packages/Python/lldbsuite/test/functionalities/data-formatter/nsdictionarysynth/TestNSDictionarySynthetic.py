@@ -5,13 +5,14 @@ Test lldb data formatter subsystem.
 from __future__ import print_function
 
 
-
 import datetime
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class NSDictionarySyntheticTestCase(TestBase):
 
@@ -29,14 +30,15 @@ class NSDictionarySyntheticTestCase(TestBase):
         self.build()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.m", self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.m", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
@@ -50,21 +52,73 @@ class NSDictionarySyntheticTestCase(TestBase):
 
         # Now check that we are displaying Cocoa classes correctly
         self.expect('frame variable dictionary',
-                    substrs = ['3 key/value pairs'])
+                    substrs=['3 key/value pairs'])
         self.expect('frame variable mutabledict',
-                    substrs = ['4 key/value pairs'])
-        self.expect('frame variable dictionary --ptr-depth 1',
-                    substrs = ['3 key/value pairs','[0] = ','key = 0x','value = 0x','[1] = ','[2] = '])
-        self.expect('frame variable mutabledict --ptr-depth 1',
-                    substrs = ['4 key/value pairs','[0] = ','key = 0x','value = 0x','[1] = ','[2] = ','[3] = '])
-        self.expect('frame variable dictionary --ptr-depth 1 --dynamic-type no-run-target',
-                    substrs = ['3 key/value pairs','@"bar"','@"2 elements"','@"baz"','2 key/value pairs'])
-        self.expect('frame variable mutabledict --ptr-depth 1 --dynamic-type no-run-target',
-                    substrs = ['4 key/value pairs','(int)23','@"123"','@"http://www.apple.com"','@"sourceofstuff"','3 key/value pairs'])
-        self.expect('frame variable mutabledict --ptr-depth 2 --dynamic-type no-run-target',
-        substrs = ['4 key/value pairs','(int)23','@"123"','@"http://www.apple.com"','@"sourceofstuff"','3 key/value pairs','@"bar"','@"2 elements"'])
-        self.expect('frame variable mutabledict --ptr-depth 3 --dynamic-type no-run-target',
-        substrs = ['4 key/value pairs','(int)23','@"123"','@"http://www.apple.com"','@"sourceofstuff"','3 key/value pairs','@"bar"','@"2 elements"','(int)1','@"two"'])
+                    substrs=['4 key/value pairs'])
+        self.expect(
+            'frame variable dictionary --ptr-depth 1',
+            substrs=[
+                '3 key/value pairs',
+                '[0] = ',
+                'key = 0x',
+                'value = 0x',
+                '[1] = ',
+                '[2] = '])
+        self.expect(
+            'frame variable mutabledict --ptr-depth 1',
+            substrs=[
+                '4 key/value pairs',
+                '[0] = ',
+                'key = 0x',
+                'value = 0x',
+                '[1] = ',
+                '[2] = ',
+                '[3] = '])
+        self.expect(
+            'frame variable dictionary --ptr-depth 1 --dynamic-type no-run-target',
+            substrs=[
+                '3 key/value pairs',
+                '@"bar"',
+                '@"2 elements"',
+                '@"baz"',
+                '2 key/value pairs'])
+        self.expect(
+            'frame variable mutabledict --ptr-depth 1 --dynamic-type no-run-target',
+            substrs=[
+                '4 key/value pairs',
+                '(int)23',
+                '@"123"',
+                '@"http://www.apple.com"',
+                '@"sourceofstuff"',
+                '3 key/value pairs'])
+        self.expect(
+            'frame variable mutabledict --ptr-depth 2 --dynamic-type no-run-target',
+            substrs=[
+                '4 key/value pairs',
+                '(int)23',
+                '@"123"',
+                '@"http://www.apple.com"',
+                '@"sourceofstuff"',
+                '3 key/value pairs',
+                '@"bar"',
+                '@"2 elements"'])
+        self.expect(
+            'frame variable mutabledict --ptr-depth 3 --dynamic-type no-run-target',
+            substrs=[
+                '4 key/value pairs',
+                '(int)23',
+                '@"123"',
+                '@"http://www.apple.com"',
+                '@"sourceofstuff"',
+                '3 key/value pairs',
+                '@"bar"',
+                '@"2 elements"',
+                '(int)1',
+                '@"two"'])
 
-        self.assertTrue(self.frame().FindVariable("dictionary").MightHaveChildren(), "dictionary says it does not have children!")
-        self.assertTrue(self.frame().FindVariable("mutabledict").MightHaveChildren(), "mutable says it does not have children!")
+        self.assertTrue(
+            self.frame().FindVariable("dictionary").MightHaveChildren(),
+            "dictionary says it does not have children!")
+        self.assertTrue(
+            self.frame().FindVariable("mutabledict").MightHaveChildren(),
+            "mutable says it does not have children!")

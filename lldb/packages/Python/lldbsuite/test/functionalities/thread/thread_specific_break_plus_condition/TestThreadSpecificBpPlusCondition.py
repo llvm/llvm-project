@@ -6,22 +6,24 @@ conditioned breakpoints simultaneously
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class ThreadSpecificBreakPlusConditionTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIfFreeBSD # test frequently times out or hangs
-    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr18522') # hits break in another thread in testrun
+    @skipIfFreeBSD  # test frequently times out or hangs
+    # hits break in another thread in testrun
+    @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr18522')
     @add_test_categories(['pyapi'])
-    @expectedFlakeyLinux # this test fails 6/100 dosep runs
+    @expectedFlakeyLinux  # this test fails 6/100 dosep runs
     def test_python(self):
         """Test that we obey thread conditioned breakpoints."""
         self.build()
@@ -30,18 +32,24 @@ class ThreadSpecificBreakPlusConditionTestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
-        main_source_spec = lldb.SBFileSpec ("main.cpp")
+        main_source_spec = lldb.SBFileSpec("main.cpp")
 
-        # Set a breakpoint in the thread body, and make it active for only the first thread.
-        break_thread_body = target.BreakpointCreateBySourceRegex ("Break here in thread body.", main_source_spec)
-        self.assertTrue (break_thread_body.IsValid() and break_thread_body.GetNumLocations() > 0, "Failed to set thread body breakpoint.")
+        # Set a breakpoint in the thread body, and make it active for only the
+        # first thread.
+        break_thread_body = target.BreakpointCreateBySourceRegex(
+            "Break here in thread body.", main_source_spec)
+        self.assertTrue(
+            break_thread_body.IsValid() and break_thread_body.GetNumLocations() > 0,
+            "Failed to set thread body breakpoint.")
 
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, break_thread_body)
-        
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, break_thread_body)
+
         victim_thread = threads[0]
 
         # Pick one of the threads, and change the breakpoint so it ONLY stops for this thread,
@@ -52,14 +60,18 @@ class ThreadSpecificBreakPlusConditionTestCase(TestBase):
 
         frame = victim_thread.GetFrameAtIndex(0)
         value = frame.FindVariable("my_value").GetValueAsSigned(0)
-        self.assertTrue (value > 0 and value < 11, "Got a reasonable value for my_value.")
+        self.assertTrue(
+            value > 0 and value < 11,
+            "Got a reasonable value for my_value.")
 
-        cond_string = "my_value != %d"%(value)
+        cond_string = "my_value != %d" % (value)
 
         break_thread_body.SetThreadID(victim_thread.GetThreadID())
-        break_thread_body.SetCondition (cond_string)
+        break_thread_body.SetCondition(cond_string)
 
         process.Continue()
 
         next_stop_state = process.GetState()
-        self.assertTrue (next_stop_state == lldb.eStateExited, "We should have not hit the breakpoint again.")
+        self.assertTrue(
+            next_stop_state == lldb.eStateExited,
+            "We should have not hit the breakpoint again.")

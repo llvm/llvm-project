@@ -12,11 +12,11 @@ o test_modify_source_file_while_debugging:
 from __future__ import print_function
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class SourceManagerTestCase(TestBase):
 
@@ -39,7 +39,8 @@ class SourceManagerTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         #
         # Exercise Python APIs to display source lines.
@@ -52,19 +53,19 @@ class SourceManagerTestCase(TestBase):
         stream = lldb.SBStream()
         source_mgr.DisplaySourceLinesWithLineNumbers(filespec,
                                                      self.line,
-                                                     2, # context before
-                                                     2, # context after
-                                                     "=>", # prefix for current line
+                                                     2,  # context before
+                                                     2,  # context after
+                                                     "=>",  # prefix for current line
                                                      stream)
 
-        #    2   	
+        #    2
         #    3    int main(int argc, char const *argv[]) {
         # => 4        printf("Hello world.\n"); // Set break point at this line.
         #    5        return 0;
         #    6    }
         self.expect(stream.GetData(), "Source code displayed correctly",
                     exe=False,
-            patterns = ['=> %d.*Hello world' % self.line])
+                    patterns=['=> %d.*Hello world' % self.line])
 
         # Boundary condition testings for SBStream().  LLDB should not crash!
         stream.Print(None)
@@ -88,19 +89,23 @@ class SourceManagerTestCase(TestBase):
             system([["ls"]])
             system([["ls", "hidden"]])
 
-        # Set source remapping with invalid replace path and verify we get an error
-        self.expect("settings set target.source-map /a/b/c/d/e /q/r/s/t/u", error=True,
-            substrs = ['''error: the replacement path doesn't exist: "/q/r/s/t/u"'''])
-        
+        # Set source remapping with invalid replace path and verify we get an
+        # error
+        self.expect(
+            "settings set target.source-map /a/b/c/d/e /q/r/s/t/u",
+            error=True,
+            substrs=['''error: the replacement path doesn't exist: "/q/r/s/t/u"'''])
+
         # Set target.source-map settings.
-        self.runCmd("settings set target.source-map %s %s" % (os.getcwd(), os.path.join(os.getcwd(), "hidden")))
+        self.runCmd("settings set target.source-map %s %s" %
+                    (os.getcwd(), os.path.join(os.getcwd(), "hidden")))
         # And verify that the settings work.
         self.expect("settings show target.source-map",
-            substrs = [os.getcwd(), os.path.join(os.getcwd(), "hidden")])
+                    substrs=[os.getcwd(), os.path.join(os.getcwd(), "hidden")])
 
         # Display main() and verify that the source mapping has been kicked in.
         self.expect("source list -n main", SOURCE_DISPLAYED_CORRECTLY,
-            substrs = ['Hello world'])
+                    substrs=['Hello world'])
 
     def test_modify_source_file_while_debugging(self):
         """Modify a source file while debugging the executable."""
@@ -108,19 +113,23 @@ class SourceManagerTestCase(TestBase):
         exe = os.path.join(os.getcwd(), "a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'main.c:%d' % self.line,
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'main.c:%d' % self.line,
+                             'stop reason = breakpoint'])
 
         # Display some source code.
-        self.expect("source list -f main.c -l %d" % self.line, SOURCE_DISPLAYED_CORRECTLY,
-            substrs = ['Hello world'])
+        self.expect(
+            "source list -f main.c -l %d" %
+            self.line,
+            SOURCE_DISPLAYED_CORRECTLY,
+            substrs=['Hello world'])
 
         # The '-b' option shows the line table locations from the debug information
         # that indicates valid places to set source level breakpoints.
@@ -158,8 +167,9 @@ class SourceManagerTestCase(TestBase):
             # Touch the file just to be sure.
             os.utime('main.c', None)
             if self.TraceOn():
-                print("os.path.getmtime() after restore:", os.path.getmtime('main.c'))
-
+                print(
+                    "os.path.getmtime() after restore:",
+                    os.path.getmtime('main.c'))
 
         # Modify the source code file.
         with io.open('main.c', 'w', newline='\n') as f:
@@ -167,28 +177,35 @@ class SourceManagerTestCase(TestBase):
             f.write(new_content)
             if self.TraceOn():
                 print("new content:", new_content)
-                print("os.path.getmtime() after writing new content:", os.path.getmtime('main.c'))
+                print(
+                    "os.path.getmtime() after writing new content:",
+                    os.path.getmtime('main.c'))
             # Add teardown hook to restore the file to the original content.
             self.addTearDownHook(restore_file)
 
         # Display the source code again.  We should see the updated line.
-        self.expect("source list -f main.c -l %d" % self.line, SOURCE_DISPLAYED_CORRECTLY,
-            substrs = ['Hello lldb'])
+        self.expect(
+            "source list -f main.c -l %d" %
+            self.line,
+            SOURCE_DISPLAYED_CORRECTLY,
+            substrs=['Hello lldb'])
 
     def test_set_breakpoint_with_absloute_path(self):
         self.build()
-        self.runCmd("settings set target.source-map %s %s" % (os.getcwd(), os.path.join(os.getcwd(), "hidden")))
+        self.runCmd("settings set target.source-map %s %s" %
+                    (os.getcwd(), os.path.join(os.getcwd(), "hidden")))
 
         exe = os.path.join(os.getcwd(), "a.out")
         main = os.path.join(os.getcwd(), "hidden", "main.c")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line (self, main, self.line, num_expected_locations=1, loc_exact=False)
-        
+        lldbutil.run_break_set_by_file_and_line(
+            self, main, self.line, num_expected_locations=1, loc_exact=False)
+
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'main.c:%d' % self.line,
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'main.c:%d' % self.line,
+                             'stop reason = breakpoint'])

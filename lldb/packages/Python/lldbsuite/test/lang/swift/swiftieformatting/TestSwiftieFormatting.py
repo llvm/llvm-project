@@ -46,7 +46,8 @@ class TestSwiftieFormatting(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('Set breakpoint here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -55,7 +56,8 @@ class TestSwiftieFormatting(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -67,7 +69,9 @@ class TestSwiftieFormatting(TestBase):
         swcla.SetPreferSyntheticValue(True)
 
         ns_a = swcla.GetChildMemberWithName("ns_a")
-        self.assertTrue(ns_a.GetSummary() == '"Hello Swift"', "ns_a summary wrong")
+        self.assertTrue(
+            ns_a.GetSummary() == '"Hello Swift"',
+            "ns_a summary wrong")
 
         ns_d = swcla.GetChildMemberWithName("ns_d")
         self.assertTrue(ns_d.GetSummary() == '0 bytes', "ns_d summary wrong")
@@ -80,7 +84,9 @@ class TestSwiftieFormatting(TestBase):
         swcla.SetPreferSyntheticValue(True)
 
         ns_a = swcla.GetChildMemberWithName("ns_a")
-        self.assertTrue(ns_a.GetSummary() == '"Hello Swift"', "ns_a summary wrong")
+        self.assertTrue(
+            ns_a.GetSummary() == '"Hello Swift"',
+            "ns_a summary wrong")
 
         ns_d = swcla.GetChildMemberWithName("ns_d")
         self.assertTrue(ns_d.GetSummary() == '0 bytes', "ns_d summary wrong")
@@ -102,12 +108,28 @@ class TestSwiftieFormatting(TestBase):
         nsarr3.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         nsarr3.SetPreferSyntheticValue(True)
 
-        self.assertTrue(nsarr0.GetSummary() == 'Int64(2)', 'nsarr[0] summary wrong')
-        self.assertTrue(nsarr1.GetSummary() == 'Int64(3)', 'nsarr[1] summary wrong')
-        self.assertTrue(nsarr3.GetSummary() == 'Int64(5)', 'nsarr[3] summary wrong')
-        
-        self.expect('frame variable -d run nsarr[4] --ptr-depth=1', substrs=['"One"', '"Two"', '"Three"'])
-        self.expect('frame variable -d run nsarr[5] --ptr-depth=1', substrs=['Int64(1)', 'Int64(2)', 'Int64(3)'])
+        self.assertTrue(
+            nsarr0.GetSummary() == 'Int64(2)',
+            'nsarr[0] summary wrong')
+        self.assertTrue(
+            nsarr1.GetSummary() == 'Int64(3)',
+            'nsarr[1] summary wrong')
+        self.assertTrue(
+            nsarr3.GetSummary() == 'Int64(5)',
+            'nsarr[3] summary wrong')
+
+        self.expect(
+            'frame variable -d run nsarr[4] --ptr-depth=1',
+            substrs=[
+                '"One"',
+                '"Two"',
+                '"Three"'])
+        self.expect(
+            'frame variable -d run nsarr[5] --ptr-depth=1',
+            substrs=[
+                'Int64(1)',
+                'Int64(2)',
+                'Int64(3)'])
 
 if __name__ == '__main__':
     import atexit

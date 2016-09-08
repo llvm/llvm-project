@@ -15,4 +15,4 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
-#endif  // LLDB_lldb_h_
+#endif // LLDB_lldb_h_

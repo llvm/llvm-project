@@ -7,59 +7,43 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/HostNativeProcess.h"
 #include "lldb/Host/HostProcess.h"
+#include "lldb/Host/HostNativeProcess.h"
 #include "lldb/Host/HostThread.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-HostProcess::HostProcess()
-    : m_native_process(new HostNativeProcess)
-{
-}
+HostProcess::HostProcess() : m_native_process(new HostNativeProcess) {}
 
 HostProcess::HostProcess(lldb::process_t process)
-    : m_native_process(new HostNativeProcess(process))
-{
+    : m_native_process(new HostNativeProcess(process)) {}
+
+HostProcess::~HostProcess() {}
+
+Error HostProcess::Terminate() { return m_native_process->Terminate(); }
+
+Error HostProcess::GetMainModule(FileSpec &file_spec) const {
+  return m_native_process->GetMainModule(file_spec);
 }
 
-HostProcess::~HostProcess()
-{
+lldb::pid_t HostProcess::GetProcessId() const {
+  return m_native_process->GetProcessId();
 }
 
-Error HostProcess::Terminate()
-{
-    return m_native_process->Terminate();
+bool HostProcess::IsRunning() const { return m_native_process->IsRunning(); }
+
+HostThread HostProcess::StartMonitoring(HostProcess::MonitorCallback callback,
+                                        void *callback_baton,
+                                        bool monitor_signals) {
+  return m_native_process->StartMonitoring(callback, callback_baton,
+                                           monitor_signals);
 }
 
-Error HostProcess::GetMainModule(FileSpec &file_spec) const
-{
-    return m_native_process->GetMainModule(file_spec);
+HostNativeProcessBase &HostProcess::GetNativeProcess() {
+  return *m_native_process;
 }
 
-lldb::pid_t HostProcess::GetProcessId() const
-{
-    return m_native_process->GetProcessId();
-}
-
-bool HostProcess::IsRunning() const
-{
-    return m_native_process->IsRunning();
-}
-
-HostThread
-HostProcess::StartMonitoring(HostProcess::MonitorCallback callback, void *callback_baton, bool monitor_signals)
-{
-    return m_native_process->StartMonitoring(callback, callback_baton, monitor_signals);
-}
-
-HostNativeProcessBase &HostProcess::GetNativeProcess()
-{
-    return *m_native_process;
-}
-
-const HostNativeProcessBase &HostProcess::GetNativeProcess() const
-{
-    return *m_native_process;
+const HostNativeProcessBase &HostProcess::GetNativeProcess() const {
+  return *m_native_process;
 }

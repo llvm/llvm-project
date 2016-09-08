@@ -11,10 +11,12 @@
 # ------------------------------------------------------------------------------
 """Test that dynamic types work in the REPL."""
 
-import os, time
+import os
+import time
 import unittest2
 import lldb
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
+
 
 class REPLDynamicTypeTestCase (REPLTest):
 

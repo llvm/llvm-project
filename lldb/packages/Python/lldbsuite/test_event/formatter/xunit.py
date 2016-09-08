@@ -180,7 +180,7 @@ class XunitFormatter(ResultsFormatter):
             "unexpected_successes": [],
             "expected_failures": [],
             "all": []
-            }
+        }
 
         self.status_handlers = {
             EventBuilder.STATUS_SUCCESS: self._handle_success,
@@ -197,9 +197,11 @@ class XunitFormatter(ResultsFormatter):
                 self._handle_exceptional_exit,
             EventBuilder.STATUS_TIMEOUT:
                 self._handle_timeout
-            }
+        }
 
-    RESULT_TYPES = {EventBuilder.TYPE_TEST_RESULT, EventBuilder.TYPE_JOB_RESULT}
+    RESULT_TYPES = {
+        EventBuilder.TYPE_TEST_RESULT,
+        EventBuilder.TYPE_JOB_RESULT}
 
     def handle_event(self, test_event):
         super(XunitFormatter, self).handle_event(test_event)
@@ -409,7 +411,8 @@ class XunitFormatter(ResultsFormatter):
             with self.lock:
                 self.elements["expected_failures"].append(result)
         elif self.options.xfail == XunitFormatter.RM_SUCCESS:
-            result = self._common_add_testcase_entry(test_event, test_name_suffix="XFAIL:")
+            result = self._common_add_testcase_entry(
+                test_event, test_name_suffix="XFAIL:")
             with self.lock:
                 self.elements["successes"].append(result)
         elif self.options.xfail == XunitFormatter.RM_FAILURE:
@@ -450,7 +453,8 @@ class XunitFormatter(ResultsFormatter):
                 self.elements["unexpected_successes"].append(result)
         elif self.options.xpass == XunitFormatter.RM_SUCCESS:
             # Treat the xpass as a success.
-            result = self._common_add_testcase_entry(test_event, test_name_suffix="XPASS:")
+            result = self._common_add_testcase_entry(
+                test_event, test_name_suffix="XPASS:")
             with self.lock:
                 self.elements["successes"].append(result)
         elif self.options.xpass == XunitFormatter.RM_FAILURE:
@@ -492,7 +496,11 @@ class XunitFormatter(ResultsFormatter):
         # Call the status handler for the test result.
         self.status_handlers[status](test_event)
 
-    def _common_add_testcase_entry(self, test_event, inner_content=None, test_name_suffix=None):
+    def _common_add_testcase_entry(
+            self,
+            test_event,
+            inner_content=None,
+            test_name_suffix=None):
         """Registers a testcase result, and returns the text created.
 
         The caller is expected to manage failure/skip/success counts

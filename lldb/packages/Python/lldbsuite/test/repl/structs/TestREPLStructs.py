@@ -14,6 +14,7 @@
 import lldbsuite.test.lldbrepl as lldbrepl
 import lldbsuite.test.decorators as decorators
 
+
 class REPLStructsTestCase(lldbrepl.REPLTest):
 
     mydir = lldbrepl.REPLTest.compute_mydir(__file__)

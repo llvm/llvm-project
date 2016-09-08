@@ -5,13 +5,14 @@ Test that debug symbols have the correct order as specified by the order file.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class OrderFileTestCase(TestBase):
 
@@ -30,7 +31,7 @@ class OrderFileTestCase(TestBase):
         output = self.res.GetOutput()
         mo_f3 = re.search("Code +.+f3", output)
         mo_f1 = re.search("Code +.+f1", output)
-        
+
         # Match objects for f3 and f1 must exist and f3 must come before f1.
         self.assertTrue(mo_f3 and mo_f1 and mo_f3.start() < mo_f1.start(),
                         "Symbols have correct order by the order file")

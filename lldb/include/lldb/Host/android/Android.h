@@ -1,4 +1,5 @@
-//===-- lldb-android.h --------------------------------------------*- C++ -*-===//
+//===-- lldb-android.h --------------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -10,22 +11,19 @@
 #ifndef LLDB_lldb_android_h_
 #define LLDB_lldb_android_h_
 
+#include <errno.h>
 #include <sstream>
 #include <string>
-#include <errno.h>
 
-#define _isatty			isatty
-#define SYS_tgkill		__NR_tgkill
+#define _isatty isatty
+#define SYS_tgkill __NR_tgkill
 
-namespace std
-{
-	template <typename T>
-	std::string to_string(T value)
-	{
-		std::ostringstream os ;
-		os << value ;
-		return os.str() ;
-	}
+namespace std {
+template <typename T> std::string to_string(T value) {
+  std::ostringstream os;
+  os << value;
+  return os.str();
+}
 }
 
-#endif  // LLDB_lldb_android_h_
+#endif // LLDB_lldb_android_h_

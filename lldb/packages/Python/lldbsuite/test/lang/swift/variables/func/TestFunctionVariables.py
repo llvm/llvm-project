@@ -33,7 +33,7 @@ class TestFunctionVariables(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
         """Tests that Enum variables display correctly"""
@@ -45,7 +45,8 @@ class TestFunctionVariables(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('// Set breakpoint here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            '// Set breakpoint here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -54,7 +55,8 @@ class TestFunctionVariables(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         thread = threads[0]
@@ -66,13 +68,15 @@ class TestFunctionVariables(TestBase):
         # Grab the function pointer value as an unsigned load address
         func_ptr_addr = func_ptr_value.GetValueAsUnsigned()
 
-        # Resolve the load address into a section + offset address (lldb.SBAddress)
+        # Resolve the load address into a section + offset address
+        # (lldb.SBAddress)
         func_ptr_so_addr = target.ResolveLoadAddress(func_ptr_addr)
 
         # Get the debug info function for this address
         func_ptr_function = func_ptr_so_addr.GetFunction()
 
-        # Make sure the function pointer correctly resolved to our a.bar function
+        # Make sure the function pointer correctly resolved to our a.bar
+        # function
         self.assertTrue('a.bar () -> ()' == func_ptr_function.name)
 
 if __name__ == '__main__':

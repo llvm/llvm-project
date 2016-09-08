@@ -15,24 +15,24 @@
 
 #include "lldb/lldb-forward.h"
 
+#include "SwiftHashedContainer.h"
 #include "lldb/Core/ConstString.h"
 #include "lldb/DataFormatters/FormatClasses.h"
-#include "SwiftHashedContainer.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
 
 namespace lldb_private {
-    namespace formatters
-    {
-        namespace swift {            
-            bool
-            Dictionary_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
-            
-            SyntheticChildrenFrontEnd* DictionarySyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP);
-        }
-    }
+namespace formatters {
+namespace swift {
+bool Dictionary_SummaryProvider(ValueObject &valobj, Stream &stream,
+                                const TypeSummaryOptions &options);
+
+SyntheticChildrenFrontEnd *
+DictionarySyntheticFrontEndCreator(CXXSyntheticChildren *, lldb::ValueObjectSP);
+}
+}
 }
 
 #endif // liblldb_SwiftDictionary_h_

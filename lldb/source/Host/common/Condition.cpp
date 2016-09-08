@@ -12,7 +12,6 @@
 #include "lldb/Host/Condition.h"
 #include "lldb/Host/TimeValue.h"
 
-
 using namespace lldb_private;
 
 #ifndef _WIN32
@@ -23,10 +22,8 @@ using namespace lldb_private;
 // The default constructor will initialize a new pthread condition
 // and maintain the condition in the object state.
 //----------------------------------------------------------------------
-Condition::Condition () :
-    m_condition()
-{
-    ::pthread_cond_init (&m_condition, NULL);
+Condition::Condition() : m_condition() {
+  ::pthread_cond_init(&m_condition, NULL);
 }
 
 //----------------------------------------------------------------------
@@ -34,28 +31,17 @@ Condition::Condition () :
 //
 // Destroys the pthread condition that the object owns.
 //----------------------------------------------------------------------
-Condition::~Condition ()
-{
-    ::pthread_cond_destroy (&m_condition);
-}
+Condition::~Condition() { ::pthread_cond_destroy(&m_condition); }
 
 //----------------------------------------------------------------------
 // Unblock all threads waiting for a condition variable
 //----------------------------------------------------------------------
-int
-Condition::Broadcast ()
-{
-    return ::pthread_cond_broadcast (&m_condition);
-}
+int Condition::Broadcast() { return ::pthread_cond_broadcast(&m_condition); }
 
 //----------------------------------------------------------------------
 // Unblocks one thread waiting for the condition variable
 //----------------------------------------------------------------------
-int
-Condition::Signal ()
-{
-    return ::pthread_cond_signal (&m_condition);
-}
+int Condition::Signal() { return ::pthread_cond_signal(&m_condition); }
 
 //----------------------------------------------------------------------
 // The Wait() function atomically blocks the current thread
@@ -70,30 +56,25 @@ Condition::Signal ()
 //
 // The current thread re-acquires the lock on "mutex".
 //----------------------------------------------------------------------
-int
-Condition::Wait (Mutex &mutex, const TimeValue *abstime, bool *timed_out)
-{
-    int err = 0;
-    do
-    {
-        if (abstime && abstime->IsValid())
-        {
-            struct timespec abstime_ts = abstime->GetAsTimeSpec();
-            err = ::pthread_cond_timedwait (&m_condition, mutex.GetMutex(), &abstime_ts);
-        }
-        else
-            err = ::pthread_cond_wait (&m_condition, mutex.GetMutex());
-    } while (err == EINTR);
+int Condition::Wait(Mutex &mutex, const TimeValue *abstime, bool *timed_out) {
+  int err = 0;
+  do {
+    if (abstime && abstime->IsValid()) {
+      struct timespec abstime_ts = abstime->GetAsTimeSpec();
+      err =
+          ::pthread_cond_timedwait(&m_condition, mutex.GetMutex(), &abstime_ts);
+    } else
+      err = ::pthread_cond_wait(&m_condition, mutex.GetMutex());
+  } while (err == EINTR);
 
-    if (timed_out != NULL)
-    {
-        if (err == ETIMEDOUT)
-            *timed_out = true;
-        else
-            *timed_out = false;
-    }
+  if (timed_out != NULL) {
+    if (err == ETIMEDOUT)
+      *timed_out = true;
+    else
+      *timed_out = false;
+  }
 
-    return err;
+  return err;
 }
 
 #endif
@@ -101,8 +82,4 @@ Condition::Wait (Mutex &mutex, const TimeValue *abstime, bool *timed_out)
 //----------------------------------------------------------------------
 // Get accessor to the pthread condition object
 //----------------------------------------------------------------------
-lldb::condition_t *
-Condition::GetCondition()
-{
-    return &m_condition;
-}
+lldb::condition_t *Condition::GetCondition() { return &m_condition; }

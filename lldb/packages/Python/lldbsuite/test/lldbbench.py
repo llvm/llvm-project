@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 # LLDB modules
 from .lldbtest import *
 
+
 class Stopwatch(object):
     """Stopwatch provides a simple utility to start/stop your stopwatch multiple
     times.  Each start/stop is equal to a lap, with its elapsed time accumulated
@@ -66,7 +67,8 @@ class Stopwatch(object):
         if self.__start__ is None:
             self.__start__ = time.time()
         else:
-            raise Exception("start() already called, did you forget to stop() first?")
+            raise Exception(
+                "start() already called, did you forget to stop() first?")
         # Return self to facilitate the context manager __enter__ protocol.
         return self
 
@@ -77,7 +79,7 @@ class Stopwatch(object):
             self.__total_elapsed__ += elapsed
             self.__laps__ += 1
             self.__nums__.append(elapsed)
-            self.__start__ = None # Reset __start__ to be None again.
+            self.__start__ = None  # Reset __start__ to be None again.
         else:
             raise Exception("stop() called without first start()?")
 
@@ -89,32 +91,30 @@ class Stopwatch(object):
         """Equal to total elapsed time divided by the number of laps."""
         return self.__total_elapsed__ / self.__laps__
 
-    #def sigma(self):
+    # def sigma(self):
     #    """Return the standard deviation of the available samples."""
     #    if self.__laps__ <= 0:
     #        return None
     #    return numpy.std(self.__nums__)
 
     def __str__(self):
-        return "Avg: %f (Laps: %d, Total Elapsed Time: %f, min=%f, max=%f)" % (self.avg(),
-                                                                               self.__laps__,
-                                                                               self.__total_elapsed__,
-                                                                               min(self.__nums__),
-                                                                               max(self.__nums__))
+        return "Avg: %f (Laps: %d, Total Elapsed Time: %f, min=%f, max=%f)" % (self.avg(
+        ), self.__laps__, self.__total_elapsed__, min(self.__nums__), max(self.__nums__))
+
 
 class BenchBase(TestBase):
     """
     Abstract base class for benchmark tests.
     """
+
     def setUp(self):
         """Fixture for unittest test case setup."""
         super(BenchBase, self).setUp()
-        #TestBase.setUp(self)
+        # TestBase.setUp(self)
         self.stopwatch = Stopwatch()
 
     def tearDown(self):
         """Fixture for unittest test case teardown."""
         super(BenchBase, self).tearDown()
-        #TestBase.tearDown(self)
+        # TestBase.tearDown(self)
         del self.stopwatch
-

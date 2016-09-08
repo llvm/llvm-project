@@ -3,19 +3,22 @@
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
 from lldbsuite.test import lldbutil
 
+
 class CrashingRecursiveInferiorTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=['freebsd'], bugnumber="llvm.org/pr23699 SIGSEGV is reported as exception, not signal")
+    @expectedFailureAll(
+        oslist=['freebsd'],
+        bugnumber="llvm.org/pr23699 SIGSEGV is reported as exception, not signal")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_recursive_inferior_crashing(self):
         """Test that lldb reliably catches the inferior crashing (command)."""
@@ -49,13 +52,20 @@ class CrashingRecursiveInferiorTestCase(TestBase):
 
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr24939')
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
-    @expectedFailureAndroid(archs=['aarch64'], api_levels=list(range(21 + 1))) # No eh_frame for sa_restorer
+    @expectedFailureAndroid(
+        archs=['aarch64'],
+        api_levels=list(
+            range(
+                21 +
+                1)))  # No eh_frame for sa_restorer
     def test_recursive_inferior_crashing_step_after_break(self):
         """Test that lldb functions correctly after stepping through a crash."""
         self.build()
         self.recursive_inferior_crashing_step_after_break()
 
-    @skipIfLinux # Inferior exits after stepping after a segfault. This is working as intended IMHO.
+    # Inferior exits after stepping after a segfault. This is working as
+    # intended IMHO.
+    @skipIfLinux
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_recursive_inferior_crashing_expr_step_and_expr(self):
         """Test that lldb expressions work before and after stepping after a crash."""
@@ -63,14 +73,15 @@ class CrashingRecursiveInferiorTestCase(TestBase):
         self.recursive_inferior_crashing_expr_step_expr()
 
     def set_breakpoint(self, line):
-        lldbutil.run_break_set_by_file_and_line (self, "main.c", line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", line, num_expected_locations=1, loc_exact=True)
 
     def check_stop_reason(self):
         # We should have one crashing thread
         self.assertEqual(
-                len(lldbutil.get_crashed_threads(self, self.dbg.GetSelectedTarget().GetProcess())),
-                1,
-                STOPPED_DUE_TO_EXC_BAD_ACCESS)
+            len(lldbutil.get_crashed_threads(self, self.dbg.GetSelectedTarget().GetProcess())),
+            1,
+            STOPPED_DUE_TO_EXC_BAD_ACCESS)
 
     def setUp(self):
         # Call super's setUp().
@@ -93,17 +104,24 @@ class CrashingRecursiveInferiorTestCase(TestBase):
         else:
             stop_reason = 'stop reason = invalid address'
         self.expect("thread list", STOPPED_DUE_TO_EXC_BAD_ACCESS,
-            substrs = ['stopped',
-                       stop_reason])
+                    substrs=['stopped',
+                             stop_reason])
 
-        # And it should report a backtrace that includes main and the crash site.
-        self.expect("thread backtrace all",
-            substrs = [stop_reason, 'main', 'argc', 'argv', 'recursive_function'])
+        # And it should report a backtrace that includes main and the crash
+        # site.
+        self.expect(
+            "thread backtrace all",
+            substrs=[
+                stop_reason,
+                'main',
+                'argc',
+                'argv',
+                'recursive_function'])
 
         # And it should report the correct line number.
         self.expect("thread backtrace all",
-            substrs = [stop_reason,
-                       'main.c:%d' % self.line])
+                    substrs=[stop_reason,
+                             'main.c:%d' % self.line])
 
     def recursive_inferior_crashing_python(self):
         """Inferior crashes upon launching; lldb should catch the event and stop."""
@@ -114,7 +132,8 @@ class CrashingRecursiveInferiorTestCase(TestBase):
 
         # Now launch the process, and do not stop at entry point.
         # Both argv and envp are null.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         if process.GetState() != lldb.eStateStopped:
             self.fail("Process should be in the 'stopped' state, "
@@ -122,7 +141,10 @@ class CrashingRecursiveInferiorTestCase(TestBase):
                       lldbutil.state_type_to_str(process.GetState()))
 
         threads = lldbutil.get_crashed_threads(self, process)
-        self.assertEqual(len(threads), 1, "Failed to stop the thread upon bad access exception")
+        self.assertEqual(
+            len(threads),
+            1,
+            "Failed to stop the thread upon bad access exception")
 
         if self.TraceOn():
             lldbutil.print_stacktrace(threads[0])
@@ -135,7 +157,8 @@ class CrashingRecursiveInferiorTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
         self.check_stop_reason()
 
-        # lldb should be able to read from registers from the inferior after crashing.
+        # lldb should be able to read from registers from the inferior after
+        # crashing.
         lldbplatformutil.check_first_register_readable(self)
 
     def recursive_inferior_crashing_expr(self):
@@ -146,9 +169,10 @@ class CrashingRecursiveInferiorTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
         self.check_stop_reason()
 
-        # The lldb expression interpreter should be able to read from addresses of the inferior after a crash.
+        # The lldb expression interpreter should be able to read from addresses
+        # of the inferior after a crash.
         self.expect("p i",
-            startstr = '(int) $0 =')
+                    startstr='(int) $0 =')
 
     def recursive_inferior_crashing_step(self):
         """Test that lldb functions correctly after stepping through a crash."""
@@ -159,22 +183,24 @@ class CrashingRecursiveInferiorTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
 
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['main.c:%d' % self.line,
-                       'stop reason = breakpoint'])
+                    substrs=['main.c:%d' % self.line,
+                             'stop reason = breakpoint'])
 
         self.runCmd("next")
         self.check_stop_reason()
 
-        # The lldb expression interpreter should be able to read from addresses of the inferior after a crash.
+        # The lldb expression interpreter should be able to read from addresses
+        # of the inferior after a crash.
         self.expect("p i",
-            substrs = ['(int) $0 ='])
+                    substrs=['(int) $0 ='])
 
-        # lldb should be able to read from registers from the inferior after crashing.
+        # lldb should be able to read from registers from the inferior after
+        # crashing.
         lldbplatformutil.check_first_register_readable(self)
 
         # And it should report the correct line number.
         self.expect("thread backtrace all",
-            substrs = ['main.c:%d' % self.line])
+                    substrs=['main.c:%d' % self.line])
 
     def recursive_inferior_crashing_step_after_break(self):
         """Test that lldb behaves correctly when stepping after a crash."""
@@ -184,18 +210,24 @@ class CrashingRecursiveInferiorTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
         self.check_stop_reason()
 
-        expected_state = 'exited' # Provide the exit code.
+        expected_state = 'exited'  # Provide the exit code.
         if self.platformIsDarwin():
-            expected_state = 'stopped' # TODO: Determine why 'next' and 'continue' have no effect after a crash.
+            # TODO: Determine why 'next' and 'continue' have no effect after a
+            # crash.
+            expected_state = 'stopped'
         elif re.match(".*-.*-.*-android", self.dbg.GetSelectedPlatform().GetTriple()):
-            expected_state = 'stopped' # android has a default SEGV handler, which will re-raise the signal, so we come up stopped again
-
+            # android has a default SEGV handler, which will re-raise the
+            # signal, so we come up stopped again
+            expected_state = 'stopped'
 
         self.expect("next",
-            substrs = ['Process', expected_state])
+                    substrs=['Process', expected_state])
 
         if expected_state == 'exited':
-            self.expect("thread list", error=True,substrs = ['Process must be launched'])
+            self.expect(
+                "thread list",
+                error=True,
+                substrs=['Process must be launched'])
         else:
             self.check_stop_reason()
 
@@ -207,14 +239,16 @@ class CrashingRecursiveInferiorTestCase(TestBase):
         self.runCmd("run", RUN_SUCCEEDED)
         self.check_stop_reason()
 
-        # The lldb expression interpreter should be able to read from addresses of the inferior after a crash.
+        # The lldb expression interpreter should be able to read from addresses
+        # of the inferior after a crash.
         self.expect("p null",
-            startstr = '(char *) $0 = 0x0')
+                    startstr='(char *) $0 = 0x0')
 
         self.runCmd("next")
 
-        # The lldb expression interpreter should be able to read from addresses of the inferior after a step.
+        # The lldb expression interpreter should be able to read from addresses
+        # of the inferior after a step.
         self.expect("p null",
-            startstr = '(char *) $1 = 0x0')
+                    startstr='(char *) $1 = 0x0')
 
         self.check_stop_reason()

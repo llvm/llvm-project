@@ -11,12 +11,14 @@
 # ------------------------------------------------------------------------------
 """Test that the REPL allows defining subclasses of NSObject"""
 
-import os, time
+import os
+import time
 import unittest2
 import lldb
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
 import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbtest as lldbtest
+
 
 class REPLNSObjectSubclassTest (REPLTest):
 
@@ -41,5 +43,13 @@ class REPLNSObjectSubclassTest (REPLTest):
             return bar + baaz
           }
         }''', timeout=20)
-        self.command('Foo(a:2, b:3)', patterns=['\\$R0: Foo = {', 'ObjectiveC\\.NSObject = {', 'isa = __lldb_expr_[0-9]+\\.Foo','bar = 2','baaz = 3'], timeout=20)
+        self.command(
+            'Foo(a:2, b:3)',
+            patterns=[
+                '\\$R0: Foo = {',
+                'ObjectiveC\\.NSObject = {',
+                'isa = __lldb_expr_[0-9]+\\.Foo',
+                'bar = 2',
+                'baaz = 3'],
+            timeout=20)
         self.command('$R0.sum()', patterns='\\$R1: Int = 5', timeout=20)

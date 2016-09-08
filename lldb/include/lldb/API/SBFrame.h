@@ -15,227 +15,182 @@
 
 namespace lldb {
 
-class LLDB_API SBFrame
-{
+class LLDB_API SBFrame {
 public:
-    SBFrame ();
+  SBFrame();
 
-    SBFrame (const lldb::SBFrame &rhs);
-    
-    const lldb::SBFrame &
-    operator =(const lldb::SBFrame &rhs);
+  SBFrame(const lldb::SBFrame &rhs);
 
-    ~SBFrame();
+  const lldb::SBFrame &operator=(const lldb::SBFrame &rhs);
 
-    bool
-    IsEqual (const lldb::SBFrame &that) const;
+  ~SBFrame();
 
-    bool
-    IsValid() const;
+  bool IsEqual(const lldb::SBFrame &that) const;
 
-    uint32_t
-    GetFrameID () const;
+  bool IsValid() const;
 
-    lldb::addr_t
-    GetCFA () const;
+  uint32_t GetFrameID() const;
 
-    lldb::addr_t
-    GetPC () const;
+  lldb::addr_t GetCFA() const;
 
-    bool
-    SetPC (lldb::addr_t new_pc);
+  lldb::addr_t GetPC() const;
 
-    lldb::addr_t
-    GetSP () const;
+  bool SetPC(lldb::addr_t new_pc);
 
-    lldb::addr_t
-    GetFP () const;
+  lldb::addr_t GetSP() const;
 
-    lldb::SBAddress
-    GetPCAddress () const;
+  lldb::addr_t GetFP() const;
 
-    lldb::SBSymbolContext
-    GetSymbolContext (uint32_t resolve_scope) const;
+  lldb::SBAddress GetPCAddress() const;
 
-    lldb::SBModule
-    GetModule () const;
+  lldb::SBSymbolContext GetSymbolContext(uint32_t resolve_scope) const;
 
-    lldb::SBCompileUnit
-    GetCompileUnit () const;
+  lldb::SBModule GetModule() const;
 
-    lldb::SBFunction
-    GetFunction () const;
+  lldb::SBCompileUnit GetCompileUnit() const;
 
-    lldb::SBSymbol
-    GetSymbol () const;
+  lldb::SBFunction GetFunction() const;
 
-    /// Gets the deepest block that contains the frame PC.
-    ///
-    /// See also GetFrameBlock().
-    lldb::SBBlock
-    GetBlock () const;
+  lldb::SBSymbol GetSymbol() const;
 
-    /// Get the appropriate function name for this frame. Inlined functions in
-    /// LLDB are represented by Blocks that have inlined function information, so
-    /// just looking at the SBFunction or SBSymbol for a frame isn't enough.
-    /// This function will return the appropriate function, symbol or inlined
-    /// function name for the frame.
-    ///
-    /// This function returns:
-    /// - the name of the inlined function (if there is one)
-    /// - the name of the concrete function (if there is one)
-    /// - the name of the symbol (if there is one)
-    /// - NULL
-    ///
-    /// See also IsInlined().
-    const char *
-    GetFunctionName();
-    
-    // Get an appropriate function name for this frame that is suitable for display to a user
-    const char *
-    GetDisplayFunctionName ();
+  /// Gets the deepest block that contains the frame PC.
+  ///
+  /// See also GetFrameBlock().
+  lldb::SBBlock GetBlock() const;
 
-    const char *
-    GetFunctionName() const;
+  /// Get the appropriate function name for this frame. Inlined functions in
+  /// LLDB are represented by Blocks that have inlined function information, so
+  /// just looking at the SBFunction or SBSymbol for a frame isn't enough.
+  /// This function will return the appropriate function, symbol or inlined
+  /// function name for the frame.
+  ///
+  /// This function returns:
+  /// - the name of the inlined function (if there is one)
+  /// - the name of the concrete function (if there is one)
+  /// - the name of the symbol (if there is one)
+  /// - NULL
+  ///
+  /// See also IsInlined().
+  const char *GetFunctionName();
 
-    /// Return true if this frame represents an inlined function.
-    ///
-    /// See also GetFunctionName().
-    bool
-    IsInlined();
+  // Get an appropriate function name for this frame that is suitable for
+  // display to a user
+  const char *GetDisplayFunctionName();
 
-    bool
-    IsInlined() const;
+  const char *GetFunctionName() const;
 
-    /// The version that doesn't supply a 'use_dynamic' value will use the
-    /// target's default.
-    lldb::SBValue
-    EvaluateExpression (const char *expr);    
+  /// Return true if this frame represents an inlined function.
+  ///
+  /// See also GetFunctionName().
+  bool IsInlined();
 
-    lldb::SBValue
-    EvaluateExpression (const char *expr, lldb::DynamicValueType use_dynamic);
+  bool IsInlined() const;
 
-    lldb::SBValue
-    EvaluateExpression (const char *expr, lldb::DynamicValueType use_dynamic, bool unwind_on_error);
-    
-    lldb::SBValue
-    EvaluateExpression (const char *expr, const SBExpressionOptions &options);
+  /// The version that doesn't supply a 'use_dynamic' value will use the
+  /// target's default.
+  lldb::SBValue EvaluateExpression(const char *expr);
 
-    /// Gets the lexical block that defines the stack frame. Another way to think
-    /// of this is it will return the block that contains all of the variables
-    /// for a stack frame. Inlined functions are represented as SBBlock objects
-    /// that have inlined function information: the name of the inlined function,
-    /// where it was called from. The block that is returned will be the first 
-    /// block at or above the block for the PC (SBFrame::GetBlock()) that defines
-    /// the scope of the frame. When a function contains no inlined functions,
-    /// this will be the top most lexical block that defines the function. 
-    /// When a function has inlined functions and the PC is currently
-    /// in one of those inlined functions, this method will return the inlined
-    /// block that defines this frame. If the PC isn't currently in an inlined
-    /// function, the lexical block that defines the function is returned.
-    lldb::SBBlock
-    GetFrameBlock () const;
+  lldb::SBValue EvaluateExpression(const char *expr,
+                                   lldb::DynamicValueType use_dynamic);
 
-    lldb::SBLineEntry
-    GetLineEntry () const;
+  lldb::SBValue EvaluateExpression(const char *expr,
+                                   lldb::DynamicValueType use_dynamic,
+                                   bool unwind_on_error);
 
-    lldb::SBThread
-    GetThread () const;
+  lldb::SBValue EvaluateExpression(const char *expr,
+                                   const SBExpressionOptions &options);
 
-    const char *
-    Disassemble () const;
+  /// Gets the lexical block that defines the stack frame. Another way to think
+  /// of this is it will return the block that contains all of the variables
+  /// for a stack frame. Inlined functions are represented as SBBlock objects
+  /// that have inlined function information: the name of the inlined function,
+  /// where it was called from. The block that is returned will be the first
+  /// block at or above the block for the PC (SBFrame::GetBlock()) that defines
+  /// the scope of the frame. When a function contains no inlined functions,
+  /// this will be the top most lexical block that defines the function.
+  /// When a function has inlined functions and the PC is currently
+  /// in one of those inlined functions, this method will return the inlined
+  /// block that defines this frame. If the PC isn't currently in an inlined
+  /// function, the lexical block that defines the function is returned.
+  lldb::SBBlock GetFrameBlock() const;
 
-    void
-    Clear();
+  lldb::SBLineEntry GetLineEntry() const;
 
-    bool
-    operator == (const lldb::SBFrame &rhs) const;
+  lldb::SBThread GetThread() const;
 
-    bool
-    operator != (const lldb::SBFrame &rhs) const;
+  const char *Disassemble() const;
 
-    /// The version that doesn't supply a 'use_dynamic' value will use the
-    /// target's default.
-    lldb::SBValueList
-    GetVariables (bool arguments,
-                  bool locals,
-                  bool statics,
-                  bool in_scope_only);
+  void Clear();
 
-    lldb::SBValueList
-    GetVariables (bool arguments,
-                  bool locals,
-                  bool statics,
-                  bool in_scope_only,
-                  lldb::DynamicValueType  use_dynamic);
+  bool operator==(const lldb::SBFrame &rhs) const;
 
-    lldb::SBValueList
-    GetVariables (const lldb::SBVariablesOptions& options);
-    
-    lldb::SBValueList
-    GetRegisters ();
+  bool operator!=(const lldb::SBFrame &rhs) const;
 
-    lldb::SBValue
-    FindRegister (const char *name);
+  /// The version that doesn't supply a 'use_dynamic' value will use the
+  /// target's default.
+  lldb::SBValueList GetVariables(bool arguments, bool locals, bool statics,
+                                 bool in_scope_only);
 
-    /// The version that doesn't supply a 'use_dynamic' value will use the
-    /// target's default.
-    lldb::SBValue
-    FindVariable (const char *var_name);
+  lldb::SBValueList GetVariables(bool arguments, bool locals, bool statics,
+                                 bool in_scope_only,
+                                 lldb::DynamicValueType use_dynamic);
 
-    lldb::SBValue
-    FindVariable (const char *var_name, lldb::DynamicValueType use_dynamic);
+  lldb::SBValueList GetVariables(const lldb::SBVariablesOptions &options);
 
-    // Find a value for a variable expression path like "rect.origin.x" or
-    // "pt_ptr->x", "*self", "*this->obj_ptr". The returned value is _not_
-    // and expression result and is not a constant object like 
-    // SBFrame::EvaluateExpression(...) returns, but a child object of 
-    // the variable value.
-    lldb::SBValue
-    GetValueForVariablePath (const char *var_expr_cstr, 
-                             DynamicValueType use_dynamic);
+  lldb::SBValueList GetRegisters();
 
-    /// The version that doesn't supply a 'use_dynamic' value will use the
-    /// target's default.
-    lldb::SBValue
-    GetValueForVariablePath (const char *var_path);
+  lldb::SBValue FindRegister(const char *name);
 
-    /// Find variables, register sets, registers, or persistent variables using
-    /// the frame as the scope.
-    ///
-    /// NB. This function does not look up ivars in the function object pointer.
-    /// To do that use GetValueForVariablePath.
-    ///
-    /// The version that doesn't supply a 'use_dynamic' value will use the
-    /// target's default.
-    lldb::SBValue
-    FindValue (const char *name, ValueType value_type);
+  /// The version that doesn't supply a 'use_dynamic' value will use the
+  /// target's default.
+  lldb::SBValue FindVariable(const char *var_name);
 
-    lldb::SBValue
-    FindValue (const char *name, ValueType value_type, lldb::DynamicValueType use_dynamic);
+  lldb::SBValue FindVariable(const char *var_name,
+                             lldb::DynamicValueType use_dynamic);
 
-    bool
-    GetDescription (lldb::SBStream &description);
+  // Find a value for a variable expression path like "rect.origin.x" or
+  // "pt_ptr->x", "*self", "*this->obj_ptr". The returned value is _not_
+  // and expression result and is not a constant object like
+  // SBFrame::EvaluateExpression(...) returns, but a child object of
+  // the variable value.
+  lldb::SBValue GetValueForVariablePath(const char *var_expr_cstr,
+                                        DynamicValueType use_dynamic);
 
-    SBFrame (const lldb::StackFrameSP &lldb_object_sp);
+  /// The version that doesn't supply a 'use_dynamic' value will use the
+  /// target's default.
+  lldb::SBValue GetValueForVariablePath(const char *var_path);
+
+  /// Find variables, register sets, registers, or persistent variables using
+  /// the frame as the scope.
+  ///
+  /// NB. This function does not look up ivars in the function object pointer.
+  /// To do that use GetValueForVariablePath.
+  ///
+  /// The version that doesn't supply a 'use_dynamic' value will use the
+  /// target's default.
+  lldb::SBValue FindValue(const char *name, ValueType value_type);
+
+  lldb::SBValue FindValue(const char *name, ValueType value_type,
+                          lldb::DynamicValueType use_dynamic);
+
+  bool GetDescription(lldb::SBStream &description);
+
+  SBFrame(const lldb::StackFrameSP &lldb_object_sp);
 
 protected:
+  friend class SBBlock;
+  friend class SBExecutionContext;
+  friend class SBInstruction;
+  friend class SBThread;
+  friend class SBValue;
 
-    friend class SBBlock;
-    friend class SBExecutionContext;
-    friend class SBInstruction;
-    friend class SBThread;
-    friend class SBValue;
+  lldb::StackFrameSP GetFrameSP() const;
 
-    lldb::StackFrameSP
-    GetFrameSP() const;
+  void SetFrameSP(const lldb::StackFrameSP &lldb_object_sp);
 
-    void
-    SetFrameSP (const lldb::StackFrameSP &lldb_object_sp);
-
-    lldb::ExecutionContextRefSP m_opaque_sp;
+  lldb::ExecutionContextRefSP m_opaque_sp;
 };
 
 } // namespace lldb
 
-#endif  // LLDB_SBFrame_h_
+#endif // LLDB_SBFrame_h_

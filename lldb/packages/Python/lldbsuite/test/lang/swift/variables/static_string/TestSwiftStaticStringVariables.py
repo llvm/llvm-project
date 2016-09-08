@@ -36,7 +36,7 @@ class TestSwiftStaticStringVariables(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
         """Test that Swift.String formats properly"""
@@ -48,7 +48,8 @@ class TestSwiftStaticStringVariables(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('Set breakpoint here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -57,7 +58,8 @@ class TestSwiftStaticStringVariables(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -67,27 +69,36 @@ class TestSwiftStaticStringVariables(TestBase):
         s1 = self.frame.FindVariable("s1")
         s2 = self.frame.FindVariable("s2")
 
-        lldbutil.check_variable(self,s1,summary='"Hello world"')
-        lldbutil.check_variable(self,s2,summary='"ΞΕΛΛΘ"')
+        lldbutil.check_variable(self, s1, summary='"Hello world"')
+        lldbutil.check_variable(self, s2, summary='"ΞΕΛΛΘ"')
 
-        TheVeryLongOne = self.frame.FindVariable("TheVeryLongOne");
+        TheVeryLongOne = self.frame.FindVariable("TheVeryLongOne")
         summaryOptions = lldb.SBTypeSummaryOptions()
         summaryOptions.SetCapping(lldb.eTypeSummaryUncapped)
         uncappedSummaryStream = lldb.SBStream()
-        TheVeryLongOne.GetSummary(uncappedSummaryStream,summaryOptions)
+        TheVeryLongOne.GetSummary(uncappedSummaryStream, summaryOptions)
         uncappedSummary = uncappedSummaryStream.GetData()
-        self.assertTrue(uncappedSummary.find("someText") > 0, "uncappedSummary does not include the full string")
+        self.assertTrue(uncappedSummary.find("someText") > 0,
+                        "uncappedSummary does not include the full string")
         summaryOptions.SetCapping(lldb.eTypeSummaryCapped)
         cappedSummaryStream = lldb.SBStream()
-        TheVeryLongOne.GetSummary(cappedSummaryStream,summaryOptions)
+        TheVeryLongOne.GetSummary(cappedSummaryStream, summaryOptions)
         cappedSummary = cappedSummaryStream.GetData()
-        self.assertTrue(cappedSummary.find("someText") <= 0, "cappedSummary includes the full string")
+        self.assertTrue(
+            cappedSummary.find("someText") <= 0,
+            "cappedSummary includes the full string")
 
         IContainZerosASCII = self.frame.FindVariable("IContainZerosASCII")
         IContainZerosUnicode = self.frame.FindVariable("IContainZerosUnicode")
 
-        lldbutil.check_variable(self,IContainZerosASCII,summary='"a\\0b\\0c\\0d"')
-        lldbutil.check_variable(self,IContainZerosUnicode,summary='"HFIHЗIHF\\0VЭHVHЗ90HGЭ"')
+        lldbutil.check_variable(
+            self,
+            IContainZerosASCII,
+            summary='"a\\0b\\0c\\0d"')
+        lldbutil.check_variable(
+            self,
+            IContainZerosUnicode,
+            summary='"HFIHЗIHF\\0VЭHVHЗ90HGЭ"')
 
 if __name__ == '__main__':
     import atexit

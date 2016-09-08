@@ -5,13 +5,15 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
     def vCont_supports_mode(self, mode, inferior_args=None):
         # Setup the stub and set the gdb remote command stream.
-        procs = self.prep_debug_monitor_and_inferior(inferior_args=inferior_args)
+        procs = self.prep_debug_monitor_and_inferior(
+            inferior_args=inferior_args)
         self.add_vCont_query_packets()
 
         # Run the gdb remote command stream.
@@ -86,33 +88,58 @@ class TestGdbRemote_vCont(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.vCont_supports_S()
 
     @debugserver_test
-    def test_single_step_only_steps_one_instruction_with_Hc_vCont_s_debugserver(self):
+    def test_single_step_only_steps_one_instruction_with_Hc_vCont_s_debugserver(
+            self):
         self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
-        self.single_step_only_steps_one_instruction(use_Hc_packet=True, step_instruction="vCont;s")
+        self.single_step_only_steps_one_instruction(
+            use_Hc_packet=True, step_instruction="vCont;s")
 
     @llgs_test
-    @expectedFailureAndroid(bugnumber="llvm.org/pr24739", archs=["arm", "aarch64"])
-    @expectedFailureAll(oslist=["linux"], archs=["arm", "aarch64"], bugnumber="llvm.org/pr24739")
+    @expectedFailureAndroid(
+        bugnumber="llvm.org/pr24739",
+        archs=[
+            "arm",
+            "aarch64"])
+    @expectedFailureAll(
+        oslist=["linux"],
+        archs=[
+            "arm",
+            "aarch64"],
+        bugnumber="llvm.org/pr24739")
     def test_single_step_only_steps_one_instruction_with_Hc_vCont_s_llgs(self):
         self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
-        self.single_step_only_steps_one_instruction(use_Hc_packet=True, step_instruction="vCont;s")
+        self.single_step_only_steps_one_instruction(
+            use_Hc_packet=True, step_instruction="vCont;s")
 
     @debugserver_test
-    def test_single_step_only_steps_one_instruction_with_vCont_s_thread_debugserver(self):
+    def test_single_step_only_steps_one_instruction_with_vCont_s_thread_debugserver(
+            self):
         self.init_debugserver_test()
         self.build()
         self.set_inferior_startup_launch()
-        self.single_step_only_steps_one_instruction(use_Hc_packet=False, step_instruction="vCont;s:{thread}")
+        self.single_step_only_steps_one_instruction(
+            use_Hc_packet=False, step_instruction="vCont;s:{thread}")
 
     @llgs_test
-    @expectedFailureAndroid(bugnumber="llvm.org/pr24739", archs=["arm", "aarch64"])
-    @expectedFailureAll(oslist=["linux"], archs=["arm", "aarch64"], bugnumber="llvm.org/pr24739")
-    def test_single_step_only_steps_one_instruction_with_vCont_s_thread_llgs(self):
+    @expectedFailureAndroid(
+        bugnumber="llvm.org/pr24739",
+        archs=[
+            "arm",
+            "aarch64"])
+    @expectedFailureAll(
+        oslist=["linux"],
+        archs=[
+            "arm",
+            "aarch64"],
+        bugnumber="llvm.org/pr24739")
+    def test_single_step_only_steps_one_instruction_with_vCont_s_thread_llgs(
+            self):
         self.init_llgs_test()
         self.build()
         self.set_inferior_startup_launch()
-        self.single_step_only_steps_one_instruction(use_Hc_packet=False, step_instruction="vCont;s:{thread}")
+        self.single_step_only_steps_one_instruction(
+            use_Hc_packet=False, step_instruction="vCont;s:{thread}")

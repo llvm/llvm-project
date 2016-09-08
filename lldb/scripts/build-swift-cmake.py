@@ -30,9 +30,11 @@ parser.add_argument('--release', action='store_true',
                     help='build in release mode')
 parser.add_argument('--no-debugserver', action='store_true',
                     help='build without debugserver')
-parser.add_argument('--no-system-debugserver', action='store_false',
-                    dest='use_system_debugserver',
-                    help='do not copy in the system debugserver (default is to copy it in)')
+parser.add_argument(
+    '--no-system-debugserver',
+    action='store_false',
+    dest='use_system_debugserver',
+    help='do not copy in the system debugserver (default is to copy it in)')
 parser.add_argument('--package', action='store_true',
                     help='build for packaging')
 parser.add_argument('--foundation', action='store_true',
@@ -51,6 +53,7 @@ def update_git(dir):
         subprocess.call(["git", "fetch", "--all"], cwd=dir)
         subprocess.call(["git", "merge", "--ff-only", "@{upstream}"], cwd=dir)
 
+
 def use_gold_linker():
     """@return True if the gold linker should be used; False otherwise."""
     return os.path.isfile("/usr/bin/ld.gold")
@@ -65,13 +68,31 @@ checkout_git("ninja", "https://github.com/ninja-build/ninja.git", "master")
 checkout_git("lldb", "ssh://git@github.com/apple/swift-lldb.git", "master")
 
 if args.package:
-    checkout_git("llbuild", "ssh://git@github.com/apple/swift-llbuild.git", "master")
-    checkout_git("swiftpm", "ssh://git@github.com/apple/swift-package-manager.git", "master")
-    checkout_git("swift-corelibs-foundation", "ssh://git@github.com/apple/swift-corelibs-foundation.git", "master")
-    checkout_git("swift-corelibs-xctest", "ssh://git@github.com/apple/swift-corelibs-xctest.git", "master")
-    checkout_git("swift-integration-tests", "ssh://git@github.com/apple/swift-integration-tests.git", "master")
+    checkout_git(
+        "llbuild",
+        "ssh://git@github.com/apple/swift-llbuild.git",
+        "master")
+    checkout_git(
+        "swiftpm",
+        "ssh://git@github.com/apple/swift-package-manager.git",
+        "master")
+    checkout_git(
+        "swift-corelibs-foundation",
+        "ssh://git@github.com/apple/swift-corelibs-foundation.git",
+        "master")
+    checkout_git(
+        "swift-corelibs-xctest",
+        "ssh://git@github.com/apple/swift-corelibs-xctest.git",
+        "master")
+    checkout_git(
+        "swift-integration-tests",
+        "ssh://git@github.com/apple/swift-integration-tests.git",
+        "master")
 elif args.foundation:
-    checkout_git("swift-corelibs-foundation", "ssh://git@github.com/apple/swift-corelibs-foundation.git", "master")
+    checkout_git(
+        "swift-corelibs-foundation",
+        "ssh://git@github.com/apple/swift-corelibs-foundation.git",
+        "master")
 
 if args.update:
     update_git("llvm")
@@ -110,14 +131,20 @@ if package_darwin:
         os.makedirs("symroot")
     if not os.path.exists("package"):
         os.makedirs("package")
-    build_script_arguments += ["install_destdir=" + os.getcwd() + "/install", "installable_package=" + os.getcwd() + "/package/package.tar.gz", "install_toolchain_dir=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain", "install_symroot=" + os.getcwd() + "/symroot", "symbols_package=" + os.getcwd() + "/package/symbols.tar.gz"]
+    build_script_arguments += [
+        "install_destdir=" + os.getcwd() + "/install",
+        "installable_package=" + os.getcwd() + "/package/package.tar.gz",
+        "install_toolchain_dir=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain",
+        "install_symroot=" + os.getcwd() + "/symroot",
+        "symbols_package=" + os.getcwd() + "/package/symbols.tar.gz"]
 elif args.package:
     print("--package is unsupported on non-OS X platforms")
 else:
     if args.release:
         build_script_arguments += ["--release", "--assertions", "--lldb"]
     else:
-        build_script_arguments += ["--debug-swift", "--debug-lldb","--skip-build-benchmarks"]
+        build_script_arguments += ["--debug-swift",
+                                   "--debug-lldb", "--skip-build-benchmarks"]
     if args.foundation:
         build_script_arguments += ["--foundation"]
     build_script_impl_arguments += ["--build-swift-static-stdlib=1"]
@@ -130,7 +157,13 @@ else:
     if uname != "Darwin":
         # we don't build with Xcode, so we can actually install
         # build_script_impl_arguments += [ "--install-swift", "--install-lldb", "--install-prefix", "/usr", "--install-destdir", os.getcwd() + "/install", "--swift-install-components=compiler;clang-builtin-headers;stdlib;stdlib-experimental;sdk-overlay;editor-integration;tools;testsuite-tools;dev" ]
-        build_script_impl_arguments += [ "--install-swift", "--install-lldb", "--install-destdir", os.getcwd() + "/install", "--swift-install-components=compiler;clang-builtin-headers;stdlib;stdlib-experimental;sdk-overlay;editor-integration;tools;testsuite-tools;dev" ]
+        build_script_impl_arguments += [
+            "--install-swift",
+            "--install-lldb",
+            "--install-destdir",
+            os.getcwd() +
+            "/install",
+            "--swift-install-components=compiler;clang-builtin-headers;stdlib;stdlib-experimental;sdk-overlay;editor-integration;tools;testsuite-tools;dev"]
 
     # build_script_impl_arguments += ["--reconfigure"]
 
@@ -141,7 +174,8 @@ else:
 
     if args.test:
         build_script_arguments += ["--test"]
-        build_script_impl_arguments += ["--skip-test-cmark", "--skip-test-swift"]
+        build_script_impl_arguments += ["--skip-test-cmark",
+                                        "--skip-test-swift"]
         if args.curses:
             build_script_impl_arguments += ["--lldb-test-with-curses"]
 
@@ -150,7 +184,8 @@ else:
     elif args.use_system_debugserver:
         build_script_impl_arguments += ['--lldb-use-system-debugserver']
 
-args = ["./swift/utils/build-script"] + build_script_arguments + ["--"] + build_script_impl_arguments
+args = ["./swift/utils/build-script"] + \
+    build_script_arguments + ["--"] + build_script_impl_arguments
 
 print(" ".join(args))
 

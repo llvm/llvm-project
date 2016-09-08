@@ -49,7 +49,8 @@ class TestSwiftPathWithColon(TestBase):
         dst = os.path.join(colon_dir, 'a.out')
         dst_makefile = os.path.join(colon_dir, 'Makefile')
 
-        if not os.path.exists(colon_dir): os.makedirs(colon_dir)
+        if not os.path.exists(colon_dir):
+            os.makedirs(colon_dir)
 
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
@@ -60,7 +61,8 @@ class TestSwiftPathWithColon(TestBase):
         self.addTearDownHook(cleanup)
 
         f = open(dst_makefile, 'w')
-        f.write('LEVEL = ../../../../make\nSWIFT_SOURCES := main.swift\ninclude $(LEVEL)/Makefile.rules\n')
+        f.write(
+            'LEVEL = ../../../../make\nSWIFT_SOURCES := main.swift\ninclude $(LEVEL)/Makefile.rules\n')
         f.close()
 
         shutil.copy(src, copied_src)

@@ -36,25 +36,25 @@ class SwiftPartialBreakTest(TestBase):
     def break_commands(self):
         """Tests that we can break on a partial name of a Swift function"""
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
-        lldbutil.run_break_set_by_symbol(self,"incr")
-        lldbutil.run_break_set_by_symbol(self,"Accumulator.decr")
+        lldbutil.run_break_set_by_symbol(self, "incr")
+        lldbutil.run_break_set_by_symbol(self, "Accumulator.decr")
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
-        self.expect("frame select 0", substrs = ['Accumulator','incr'])
-
-        self.runCmd("continue", RUN_SUCCEEDED)
-
-        self.expect("frame select 0", substrs = ['Accumulator','decr'])
+        self.expect("frame select 0", substrs=['Accumulator', 'incr'])
 
         self.runCmd("continue", RUN_SUCCEEDED)
 
-        self.expect("frame select 0", substrs = ['Accumulator','incr'])
+        self.expect("frame select 0", substrs=['Accumulator', 'decr'])
+
+        self.runCmd("continue", RUN_SUCCEEDED)
+
+        self.expect("frame select 0", substrs=['Accumulator', 'incr'])
 
 if __name__ == '__main__':
     import atexit

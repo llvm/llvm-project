@@ -14,54 +14,41 @@
 
 #include "PythonDataObjects.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class PythonExceptionState
-{
-  public:
-    explicit PythonExceptionState(bool restore_on_exit);
-    ~PythonExceptionState();
+class PythonExceptionState {
+public:
+  explicit PythonExceptionState(bool restore_on_exit);
+  ~PythonExceptionState();
 
-    void
-    Acquire(bool restore_on_exit);
+  void Acquire(bool restore_on_exit);
 
-    void
-    Restore();
+  void Restore();
 
-    void
-    Discard();
+  void Discard();
 
-    void
-    Reset();
+  void Reset();
 
-    static bool
-    HasErrorOccurred();
+  static bool HasErrorOccurred();
 
-    bool
-    IsError() const;
+  bool IsError() const;
 
-    PythonObject
-    GetType() const;
+  PythonObject GetType() const;
 
-    PythonObject
-    GetValue() const;
+  PythonObject GetValue() const;
 
-    PythonObject
-    GetTraceback() const;
+  PythonObject GetTraceback() const;
 
-    std::string
-    Format() const;
+  std::string Format() const;
 
-  private:
-    std::string
-    ReadBacktrace() const;
+private:
+  std::string ReadBacktrace() const;
 
-    bool m_restore_on_exit;
+  bool m_restore_on_exit;
 
-    PythonObject m_type;
-    PythonObject m_value;
-    PythonObject m_traceback;
+  PythonObject m_type;
+  PythonObject m_value;
+  PythonObject m_traceback;
 };
 }
 

@@ -13,7 +13,6 @@
 #include "lldb/Host/TimeValue.h"
 #include "lldb/Host/windows/windows.h"
 
-
 using namespace lldb_private;
 
 //----------------------------------------------------------------------
@@ -22,11 +21,10 @@ using namespace lldb_private;
 // The default constructor will initialize a new pthread condition
 // and maintain the condition in the object state.
 //----------------------------------------------------------------------
-Condition::Condition () :
-    m_condition()
-{
-    m_condition = static_cast<PCONDITION_VARIABLE>(malloc(sizeof(CONDITION_VARIABLE)));
-    InitializeConditionVariable(static_cast<PCONDITION_VARIABLE>(m_condition));
+Condition::Condition() : m_condition() {
+  m_condition =
+      static_cast<PCONDITION_VARIABLE>(malloc(sizeof(CONDITION_VARIABLE)));
+  InitializeConditionVariable(static_cast<PCONDITION_VARIABLE>(m_condition));
 }
 
 //----------------------------------------------------------------------
@@ -34,29 +32,22 @@ Condition::Condition () :
 //
 // Destroys the pthread condition that the object owns.
 //----------------------------------------------------------------------
-Condition::~Condition ()
-{
-    free(m_condition);
-}
+Condition::~Condition() { free(m_condition); }
 
 //----------------------------------------------------------------------
 // Unblock all threads waiting for a condition variable
 //----------------------------------------------------------------------
-int
-Condition::Broadcast ()
-{
-    WakeAllConditionVariable(static_cast<PCONDITION_VARIABLE>(m_condition));
-    return 0;
+int Condition::Broadcast() {
+  WakeAllConditionVariable(static_cast<PCONDITION_VARIABLE>(m_condition));
+  return 0;
 }
 
 //----------------------------------------------------------------------
 // Unblocks one thread waiting for the condition variable
 //----------------------------------------------------------------------
-int
-Condition::Signal ()
-{
-    WakeConditionVariable(static_cast<PCONDITION_VARIABLE>(m_condition));
-    return 0;
+int Condition::Signal() {
+  WakeConditionVariable(static_cast<PCONDITION_VARIABLE>(m_condition));
+  return 0;
 }
 
 //----------------------------------------------------------------------
@@ -72,27 +63,26 @@ Condition::Signal ()
 //
 // The current thread re-acquires the lock on "mutex".
 //----------------------------------------------------------------------
-int
-Condition::Wait (Mutex &mutex, const TimeValue *abstime, bool *timed_out)
-{
-    DWORD wait = INFINITE;
-    if (abstime != NULL) {
-        int wval = (*abstime - TimeValue::Now()) / 1000000;
-        if (wval < 0) wval = 0;
+int Condition::Wait(Mutex &mutex, const TimeValue *abstime, bool *timed_out) {
+  DWORD wait = INFINITE;
+  if (abstime != NULL) {
+    int wval = (*abstime - TimeValue::Now()) / 1000000;
+    if (wval < 0)
+      wval = 0;
 
-        wait = wval;
-    }
+    wait = wval;
+  }
 
-    int err = SleepConditionVariableCS(static_cast<PCONDITION_VARIABLE>(m_condition), static_cast<PCRITICAL_SECTION>(mutex.m_mutex), wait);
+  int err = SleepConditionVariableCS(
+      static_cast<PCONDITION_VARIABLE>(m_condition),
+      static_cast<PCRITICAL_SECTION>(mutex.m_mutex), wait);
 
-    if (timed_out != NULL)
-    {
-        if ((err == 0) && GetLastError() == ERROR_TIMEOUT)
-            *timed_out = true;
-        else
-            *timed_out = false;
-    }
+  if (timed_out != NULL) {
+    if ((err == 0) && GetLastError() == ERROR_TIMEOUT)
+      *timed_out = true;
+    else
+      *timed_out = false;
+  }
 
-    return err == 0;
+  return err == 0;
 }
-

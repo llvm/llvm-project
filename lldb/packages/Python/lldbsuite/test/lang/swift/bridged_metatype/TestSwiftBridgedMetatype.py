@@ -35,7 +35,7 @@ class TestSwiftBridgedMetatype(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
         """Test the formatting of briged Swift metatypes"""
@@ -47,7 +47,8 @@ class TestSwiftBridgedMetatype(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('Set breakpoint here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -56,7 +57,8 @@ class TestSwiftBridgedMetatype(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -64,7 +66,7 @@ class TestSwiftBridgedMetatype(TestBase):
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
         var_k = self.frame.FindVariable("k")
-        lldbutil.check_variable(self,var_k,False,"NSString")
+        lldbutil.check_variable(self, var_k, False, "NSString")
 
 if __name__ == '__main__':
     import atexit

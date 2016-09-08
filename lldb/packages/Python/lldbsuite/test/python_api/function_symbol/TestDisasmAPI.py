@@ -5,13 +5,14 @@ Test retrieval of SBAddress from function/symbol, disassembly, and SBAddress API
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class DisasmAPITestCase(TestBase):
 
@@ -21,8 +22,10 @@ class DisasmAPITestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to of function 'c'.
-        self.line1 = line_number('main.c', '// Find the line number for breakpoint 1 here.')
-        self.line2 = line_number('main.c', '// Find the line number for breakpoint 2 here.')
+        self.line1 = line_number(
+            'main.c', '// Find the line number for breakpoint 1 here.')
+        self.line2 = line_number(
+            'main.c', '// Find the line number for breakpoint 2 here.')
 
     @add_test_categories(['pyapi'])
     def test(self):
@@ -47,13 +50,17 @@ class DisasmAPITestCase(TestBase):
                         VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be on self.line1.
         self.assertTrue(process.GetState() == lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), "There should be a thread stopped due to breakpoint condition")
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint condition")
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
         self.assertTrue(lineEntry.GetLine() == self.line1)
@@ -62,7 +69,8 @@ class DisasmAPITestCase(TestBase):
         #print("address1:", address1)
 
         # Now call SBTarget.ResolveSymbolContextForAddress() with address1.
-        context1 = target.ResolveSymbolContextForAddress(address1, lldb.eSymbolContextEverything)
+        context1 = target.ResolveSymbolContextForAddress(
+            address1, lldb.eSymbolContextEverything)
 
         self.assertTrue(context1)
         if self.TraceOn():
@@ -71,13 +79,17 @@ class DisasmAPITestCase(TestBase):
         # Continue the inferior, the breakpoint 2 should be hit.
         process.Continue()
         self.assertTrue(process.GetState() == lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), "There should be a thread stopped due to breakpoint condition")
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint condition")
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
         self.assertTrue(lineEntry.GetLine() == self.line2)
 
-        # Verify that the symbol and the function has the same address range per function 'a'.
+        # Verify that the symbol and the function has the same address range
+        # per function 'a'.
         symbol = context1.GetSymbol()
         function = frame0.GetFunction()
         self.assertTrue(symbol and function)
@@ -108,5 +120,6 @@ class DisasmAPITestCase(TestBase):
         from lldbsuite.test.lldbutil import get_description
         desc1 = get_description(sa1)
         desc2 = get_description(sa2)
-        self.assertTrue(desc1 and desc2 and desc1 == desc2,
-                        "SBAddress.GetDescription() API of sa1 and sa2 should return the same string")
+        self.assertTrue(
+            desc1 and desc2 and desc1 == desc2,
+            "SBAddress.GetDescription() API of sa1 and sa2 should return the same string")

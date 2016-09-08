@@ -16,21 +16,20 @@
 #include "swift/Basic/Demangle.h"
 
 namespace lldb_private {
-    class SwiftMangledNameVisitor
-    {
-    public:
-#define NODE(e) virtual void visit##e (swift::Demangle::NodePointer pointer); void accept##e (swift::Demangle::NodePointer cur_node);
+class SwiftMangledNameVisitor {
+public:
+#define NODE(e)                                                                \
+  virtual void visit##e(swift::Demangle::NodePointer pointer);                 \
+  void accept##e(swift::Demangle::NodePointer cur_node);
 #include "swift/Basic/DemangleNodes.def"
-        
-        virtual ~SwiftMangledNameVisitor() {}
-        
-        void
-        visit (const char* mangled_name);
-        
-    private:
-        void
-        accept (swift::Demangle::NodePointer pointer);
-    };
+
+  virtual ~SwiftMangledNameVisitor() {}
+
+  void visit(const char *mangled_name);
+
+private:
+  void accept(swift::Demangle::NodePointer pointer);
+};
 }
 
 #endif // #ifndef liblldb_SwiftMangledNameVisitor_h_

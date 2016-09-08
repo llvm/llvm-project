@@ -18,29 +18,24 @@
 #include "lldb/DataFormatters/TypeSynthetic.h"
 
 namespace lldb_private {
-    namespace formatters
-    {
-        namespace swift {
-            
-            class SwiftBasicTypeSyntheticFrontEnd : public SyntheticValueProviderFrontEnd
-            {
-            public:
-                SwiftBasicTypeSyntheticFrontEnd (ValueObject &backend):
-                SyntheticValueProviderFrontEnd (backend)
-                {
-                }
-                
-                ~SwiftBasicTypeSyntheticFrontEnd ()
-                {
-                }
-                
-                virtual lldb::ValueObjectSP
-                GetSyntheticValue ();
-            };
-            
-            SyntheticChildrenFrontEnd* SwiftBasicTypeSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP);
-        }
-    }
+namespace formatters {
+namespace swift {
+
+class SwiftBasicTypeSyntheticFrontEnd : public SyntheticValueProviderFrontEnd {
+public:
+  SwiftBasicTypeSyntheticFrontEnd(ValueObject &backend)
+      : SyntheticValueProviderFrontEnd(backend) {}
+
+  ~SwiftBasicTypeSyntheticFrontEnd() {}
+
+  virtual lldb::ValueObjectSP GetSyntheticValue();
+};
+
+SyntheticChildrenFrontEnd *
+SwiftBasicTypeSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                       lldb::ValueObjectSP);
+}
+}
 }
 
 #endif // liblldb_SwiftDictionary_h_

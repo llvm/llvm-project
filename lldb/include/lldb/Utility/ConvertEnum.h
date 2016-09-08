@@ -12,8 +12,7 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
 const char *GetVoteAsCString(Vote vote);
 const char *GetSectionTypeAsCString(lldb::SectionType sect_type);

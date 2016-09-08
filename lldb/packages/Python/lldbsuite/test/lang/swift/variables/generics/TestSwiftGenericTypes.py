@@ -33,7 +33,7 @@ class TestSwiftGenericTypes(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
         """Tests that we can break and display simple types"""
@@ -45,7 +45,8 @@ class TestSwiftGenericTypes(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('Set breakpoint here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -54,27 +55,35 @@ class TestSwiftGenericTypes(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
 
-        self.expect("frame variable object",substrs = ['(JustSomeType) object = 0x'])
-        self.expect("frame variable -d run-target -- object",substrs = ['(Int) object = 255'])
+        self.expect("frame variable object",
+                    substrs=['(JustSomeType) object = 0x'])
+        self.expect(
+            "frame variable -d run-target -- object",
+            substrs=['(Int) object = 255'])
 
         self.runCmd("continue")
         self.runCmd("frame select 0")
 
-        self.expect("frame variable --show-types c", 
-                    substrs = ['(Int) c = 255'])
+        self.expect("frame variable --show-types c",
+                    substrs=['(Int) c = 255'])
 
-        self.expect("frame variable --raw-output --show-types o_some", 
-                    substrs = ['(Swift.Optional<Swift.String>) o_some = some {', 
-                               '(Swift.String) some ='])
-        self.expect("frame variable --raw-output --show-types o_none", 
-                   substrs = ['(Swift.Optional<Swift.String>) o_none = none'])
+        self.expect("frame variable --raw-output --show-types o_some",
+                    substrs=['(Swift.Optional<Swift.String>) o_some = some {',
+                             '(Swift.String) some ='])
+        self.expect("frame variable --raw-output --show-types o_none",
+                    substrs=['(Swift.Optional<Swift.String>) o_none = none'])
 
-        self.expect("frame variable o_some o_none", substrs=['(String?) o_some = "Hello"','(String?) o_none = nil'])
+        self.expect(
+            "frame variable o_some o_none",
+            substrs=[
+                '(String?) o_some = "Hello"',
+                '(String?) o_none = nil'])
 
 if __name__ == '__main__':
     import atexit

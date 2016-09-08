@@ -15,8 +15,8 @@
 #include <string>
 
 // Other libraries and framework includes
-#include "lldb/Target/Thread.h"
 #include "RegisterContextPOSIX.h"
+#include "lldb/Target/Thread.h"
 
 class ProcessMessage;
 class ProcessMonitor;
@@ -25,118 +25,99 @@ class POSIXBreakpointProtocol;
 //------------------------------------------------------------------------------
 // @class FreeBSDThread
 // @brief Abstraction of a FreeBSD thread.
-class FreeBSDThread
-    : public lldb_private::Thread
-{
+class FreeBSDThread : public lldb_private::Thread {
 public:
+  //------------------------------------------------------------------
+  // Constructors and destructors
+  //------------------------------------------------------------------
+  FreeBSDThread(lldb_private::Process &process, lldb::tid_t tid);
 
-    //------------------------------------------------------------------
-    // Constructors and destructors
-    //------------------------------------------------------------------
-    FreeBSDThread(lldb_private::Process &process, lldb::tid_t tid);
+  virtual ~FreeBSDThread();
 
-    virtual ~FreeBSDThread();
+  // POSIXThread
+  void RefreshStateAfterStop() override;
 
-    // POSIXThread
-    void
-    RefreshStateAfterStop() override;
+  // This notifies the thread when a private stop occurs.
+  void DidStop() override;
 
-    // This notifies the thread when a private stop occurs.
-    void
-    DidStop () override;
+  const char *GetInfo() override;
 
-    const char *
-    GetInfo() override;
+  void SetName(const char *name) override;
 
-    void
-    SetName (const char *name) override;
+  const char *GetName() override;
 
-    const char *
-    GetName () override;
+  lldb::RegisterContextSP GetRegisterContext() override;
 
-    lldb::RegisterContextSP
-    GetRegisterContext() override;
+  lldb::RegisterContextSP
+  CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
-    lldb::RegisterContextSP
-    CreateRegisterContextForFrame (lldb_private::StackFrame *frame) override;
+  lldb::addr_t GetThreadPointer() override;
 
-    lldb::addr_t
-    GetThreadPointer () override;
+  //--------------------------------------------------------------------------
+  // These functions provide a mapping from the register offset
+  // back to the register index or name for use in debugging or log
+  // output.
 
-    //--------------------------------------------------------------------------
-    // These functions provide a mapping from the register offset
-    // back to the register index or name for use in debugging or log
-    // output.
+  unsigned GetRegisterIndexFromOffset(unsigned offset);
 
-    unsigned
-    GetRegisterIndexFromOffset(unsigned offset);
+  const char *GetRegisterName(unsigned reg);
 
-    const char *
-    GetRegisterName(unsigned reg);
+  const char *GetRegisterNameFromOffset(unsigned offset);
 
-    const char *
-    GetRegisterNameFromOffset(unsigned offset);
+  //--------------------------------------------------------------------------
+  // These methods form a specialized interface to POSIX threads.
+  //
+  bool Resume();
 
-    //--------------------------------------------------------------------------
-    // These methods form a specialized interface to POSIX threads.
-    //
-    bool Resume();
+  void Notify(const ProcessMessage &message);
 
-    void Notify(const ProcessMessage &message);
+  //--------------------------------------------------------------------------
+  // These methods provide an interface to watchpoints
+  //
+  bool EnableHardwareWatchpoint(lldb_private::Watchpoint *wp);
 
-    //--------------------------------------------------------------------------
-    // These methods provide an interface to watchpoints
-    //
-    bool EnableHardwareWatchpoint(lldb_private::Watchpoint *wp);
+  bool DisableHardwareWatchpoint(lldb_private::Watchpoint *wp);
 
-    bool DisableHardwareWatchpoint(lldb_private::Watchpoint *wp);
+  uint32_t NumSupportedHardwareWatchpoints();
 
-    uint32_t NumSupportedHardwareWatchpoints();
-
-    uint32_t FindVacantWatchpointIndex();
+  uint32_t FindVacantWatchpointIndex();
 
 protected:
-    POSIXBreakpointProtocol *
-    GetPOSIXBreakpointProtocol ()
-    {
-        if (!m_reg_context_sp)
-            m_reg_context_sp = GetRegisterContext();
-        return m_posix_thread;
-    }
-    
-    std::unique_ptr<lldb_private::StackFrame> m_frame_ap;
+  POSIXBreakpointProtocol *GetPOSIXBreakpointProtocol() {
+    if (!m_reg_context_sp)
+      m_reg_context_sp = GetRegisterContext();
+    return m_posix_thread;
+  }
 
-    lldb::BreakpointSiteSP m_breakpoint;
+  std::unique_ptr<lldb_private::StackFrame> m_frame_ap;
 
-    bool m_thread_name_valid;
-    std::string m_thread_name;
-    POSIXBreakpointProtocol *m_posix_thread;
+  lldb::BreakpointSiteSP m_breakpoint;
 
-    ProcessMonitor &
-    GetMonitor();
+  bool m_thread_name_valid;
+  std::string m_thread_name;
+  POSIXBreakpointProtocol *m_posix_thread;
 
-    bool
-    CalculateStopInfo() override;
+  ProcessMonitor &GetMonitor();
 
-    void BreakNotify(const ProcessMessage &message);
-    void WatchNotify(const ProcessMessage &message);
-    virtual void TraceNotify(const ProcessMessage &message);
-    void LimboNotify(const ProcessMessage &message);
-    void SignalNotify(const ProcessMessage &message);
-    void SignalDeliveredNotify(const ProcessMessage &message);
-    void CrashNotify(const ProcessMessage &message);
-    void ExitNotify(const ProcessMessage &message);
-    void ExecNotify(const ProcessMessage &message);
+  bool CalculateStopInfo() override;
 
-    lldb_private::Unwind *
-    GetUnwinder() override;
+  void BreakNotify(const ProcessMessage &message);
+  void WatchNotify(const ProcessMessage &message);
+  virtual void TraceNotify(const ProcessMessage &message);
+  void LimboNotify(const ProcessMessage &message);
+  void SignalNotify(const ProcessMessage &message);
+  void SignalDeliveredNotify(const ProcessMessage &message);
+  void CrashNotify(const ProcessMessage &message);
+  void ExitNotify(const ProcessMessage &message);
+  void ExecNotify(const ProcessMessage &message);
 
-    //--------------------------------------------------------------------------
-    // FreeBSDThread internal API.
+  lldb_private::Unwind *GetUnwinder() override;
 
-    // POSIXThread override
-    virtual void
-    WillResume(lldb::StateType resume_state) override;
+  //--------------------------------------------------------------------------
+  // FreeBSDThread internal API.
+
+  // POSIXThread override
+  virtual void WillResume(lldb::StateType resume_state) override;
 };
 
 #endif // #ifndef liblldb_FreeBSDThread_H_

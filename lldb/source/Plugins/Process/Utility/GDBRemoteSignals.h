@@ -19,16 +19,14 @@
 namespace lldb_private {
 
 /// Empty set of Unix signals to be filled by PlatformRemoteGDBServer
-class GDBRemoteSignals : public UnixSignals
-{
+class GDBRemoteSignals : public UnixSignals {
 public:
-    GDBRemoteSignals();
+  GDBRemoteSignals();
 
-    GDBRemoteSignals(const lldb::UnixSignalsSP &rhs);
+  GDBRemoteSignals(const lldb::UnixSignalsSP &rhs);
 
 private:
-    void
-    Reset() override;
+  void Reset() override;
 };
 
 } // namespace lldb_private

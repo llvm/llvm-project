@@ -5,11 +5,12 @@ Test that the user can input a format but it will not prevail over summary forma
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
+
 
 class FrameFormatSmallStructTestCase(TestBase):
 
@@ -26,13 +27,14 @@ class FrameFormatSmallStructTestCase(TestBase):
         self.build()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-            substrs = ['stopped',
-                       'stop reason = breakpoint'])
+                    substrs=['stopped',
+                             'stop reason = breakpoint'])
 
-        self.expect("thread list", substrs = ['addPair(p=(x = 3, y = -3))'])
+        self.expect("thread list", substrs=['addPair(p=(x = 3, y = -3))'])

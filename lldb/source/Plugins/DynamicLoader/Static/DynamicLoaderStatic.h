@@ -14,70 +14,58 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Target/DynamicLoader.h"
-#include "lldb/Host/FileSpec.h"
 #include "lldb/Core/UUID.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/Mutex.h"
+#include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
 
-class DynamicLoaderStatic : public lldb_private::DynamicLoader
-{
+class DynamicLoaderStatic : public lldb_private::DynamicLoader {
 public:
-    DynamicLoaderStatic(lldb_private::Process *process);
+  DynamicLoaderStatic(lldb_private::Process *process);
 
-    ~DynamicLoaderStatic() override;
+  ~DynamicLoaderStatic() override;
 
-    //------------------------------------------------------------------
-    // Static Functions
-    //------------------------------------------------------------------
-    static void
-    Initialize();
+  //------------------------------------------------------------------
+  // Static Functions
+  //------------------------------------------------------------------
+  static void Initialize();
 
-    static void
-    Terminate();
+  static void Terminate();
 
-    static lldb_private::ConstString
-    GetPluginNameStatic();
+  static lldb_private::ConstString GetPluginNameStatic();
 
-    static const char *
-    GetPluginDescriptionStatic();
+  static const char *GetPluginDescriptionStatic();
 
-    static lldb_private::DynamicLoader *
-    CreateInstance (lldb_private::Process *process, bool force);
+  static lldb_private::DynamicLoader *
+  CreateInstance(lldb_private::Process *process, bool force);
 
-    //------------------------------------------------------------------
-    /// Called after attaching a process.
-    ///
-    /// Allow DynamicLoader plug-ins to execute some code after
-    /// attaching to a process.
-    //------------------------------------------------------------------
-    void
-    DidAttach() override;
+  //------------------------------------------------------------------
+  /// Called after attaching a process.
+  ///
+  /// Allow DynamicLoader plug-ins to execute some code after
+  /// attaching to a process.
+  //------------------------------------------------------------------
+  void DidAttach() override;
 
-    void
-    DidLaunch() override;
+  void DidLaunch() override;
 
-    lldb::ThreadPlanSP
-    GetStepThroughTrampolinePlan(lldb_private::Thread &thread,
-                                 bool stop_others) override;
+  lldb::ThreadPlanSP GetStepThroughTrampolinePlan(lldb_private::Thread &thread,
+                                                  bool stop_others) override;
 
-    lldb_private::Error
-    CanLoadImage() override;
+  lldb_private::Error CanLoadImage() override;
 
-    //------------------------------------------------------------------
-    // PluginInterface protocol
-    //------------------------------------------------------------------
-    lldb_private::ConstString
-    GetPluginName() override;
+  //------------------------------------------------------------------
+  // PluginInterface protocol
+  //------------------------------------------------------------------
+  lldb_private::ConstString GetPluginName() override;
 
-    uint32_t
-    GetPluginVersion() override;
+  uint32_t GetPluginVersion() override;
 
 private:
-    void
-    LoadAllImagesAtFileAddresses ();
+  void LoadAllImagesAtFileAddresses();
 
-    DISALLOW_COPY_AND_ASSIGN (DynamicLoaderStatic);
+  DISALLOW_COPY_AND_ASSIGN(DynamicLoaderStatic);
 };
 
 #endif // liblldb_DynamicLoaderStatic_h_

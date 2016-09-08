@@ -5,13 +5,14 @@ Test SBValue.GetObjectDescription() with the value from SBTarget.FindGlobalVaria
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class ObjectDescriptionAPITestCase(TestBase):
 
@@ -22,7 +23,8 @@ class ObjectDescriptionAPITestCase(TestBase):
         TestBase.setUp(self)
         # Find the line number to break at.
         self.source = 'main.m'
-        self.line = line_number(self.source, '// Set break point at this line.')
+        self.line = line_number(
+            self.source, '// Set break point at this line.')
 
     # rdar://problem/10857337
     @skipUnlessDarwin
@@ -42,11 +44,13 @@ class ObjectDescriptionAPITestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
         # Make sure we hit our breakpoint:
-        thread_list = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
-        self.assertTrue (len(thread_list) == 1)
+        thread_list = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
+        self.assertTrue(len(thread_list) == 1)
 
         thread = thread_list[0]
         frame0 = thread.GetFrameAtIndex(0)
@@ -59,7 +63,8 @@ class ObjectDescriptionAPITestCase(TestBase):
                 print("val:", v)
                 print("object description:", v.GetObjectDescription())
             if v.GetName() == 'my_global_str':
-                self.assertTrue(v.GetObjectDescription() == 'This is a global string')
+                self.assertTrue(v.GetObjectDescription() ==
+                                'This is a global string')
 
         # But not here!
         value_list2 = target.FindGlobalVariables('my_global_str', 3)
@@ -69,4 +74,5 @@ class ObjectDescriptionAPITestCase(TestBase):
                 print("val:", v)
                 print("object description:", v.GetObjectDescription())
             if v.GetName() == 'my_global_str':
-                self.assertTrue(v.GetObjectDescription() == 'This is a global string')
+                self.assertTrue(v.GetObjectDescription() ==
+                                'This is a global string')

@@ -12,40 +12,38 @@
 
 // C Includes
 // C++ Includes
-#include <vector>
 #include <map>
+#include <vector>
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-private.h"
-#include "lldb/lldb-types.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/StructuredData.h"
+#include "lldb/lldb-private.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb_private {
-    
-typedef std::map<lldb::InstrumentationRuntimeType, lldb::InstrumentationRuntimeSP> InstrumentationRuntimeCollection;
-    
-class InstrumentationRuntime :
-    public std::enable_shared_from_this<InstrumentationRuntime>,
-    public PluginInterface
-{
-public:
-    
-    static void
-    ModulesDidLoad(lldb_private::ModuleList &module_list, Process *process, InstrumentationRuntimeCollection &runtimes);
-    
-    virtual void
-    ModulesDidLoad(lldb_private::ModuleList &module_list);
-    
-    virtual bool
-    IsActive();
 
-    virtual lldb::ThreadCollectionSP
-    GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info);
-    
+typedef std::map<lldb::InstrumentationRuntimeType,
+                 lldb::InstrumentationRuntimeSP>
+    InstrumentationRuntimeCollection;
+
+class InstrumentationRuntime
+    : public std::enable_shared_from_this<InstrumentationRuntime>,
+      public PluginInterface {
+public:
+  static void ModulesDidLoad(lldb_private::ModuleList &module_list,
+                             Process *process,
+                             InstrumentationRuntimeCollection &runtimes);
+
+  virtual void ModulesDidLoad(lldb_private::ModuleList &module_list);
+
+  virtual bool IsActive();
+
+  virtual lldb::ThreadCollectionSP
+  GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info);
 };
-    
+
 } // namespace lldb_private
 
-#endif  // liblldb_InstrumentationRuntime_h_
+#endif // liblldb_InstrumentationRuntime_h_

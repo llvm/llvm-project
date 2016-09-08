@@ -28,100 +28,87 @@ using namespace lldb_private;
 // "bugreport unwind"
 //-------------------------------------------------------------------------
 
-class CommandObjectBugreportUnwind : public CommandObjectParsed
-{
+class CommandObjectBugreportUnwind : public CommandObjectParsed {
 public:
-    CommandObjectBugreportUnwind(CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "bugreport unwind",
-                            "Create a bugreport for a bug in the stack unwinding code.",
-                            nullptr),
-        m_option_group(interpreter),
-        m_outfile_options()
-    {
-        m_option_group.Append (&m_outfile_options, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1 | LLDB_OPT_SET_2 | LLDB_OPT_SET_3);
-        m_option_group.Finalize();
-    }
+  CommandObjectBugreportUnwind(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "bugreport unwind",
+            "Create a bugreport for a bug in the stack unwinding code.",
+            nullptr),
+        m_option_group(interpreter), m_outfile_options() {
+    m_option_group.Append(&m_outfile_options, LLDB_OPT_SET_ALL,
+                          LLDB_OPT_SET_1 | LLDB_OPT_SET_2 | LLDB_OPT_SET_3);
+    m_option_group.Finalize();
+  }
 
-    ~CommandObjectBugreportUnwind() override
-    {
-    }
+  ~CommandObjectBugreportUnwind() override {}
 
-    Options *
-    GetOptions() override
-    {
-        return &m_option_group;
-    }
+  Options *GetOptions() override { return &m_option_group; }
 
 protected:
-    bool
-    DoExecute(Args& command, CommandReturnObject &result) override
-    {
-        StringList commands;
-        commands.AppendString("thread backtrace");
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    StringList commands;
+    commands.AppendString("thread backtrace");
 
-        Thread *thread = m_exe_ctx.GetThreadPtr();
-        if (thread)
-        {
-            char command_buffer[256];
+    Thread *thread = m_exe_ctx.GetThreadPtr();
+    if (thread) {
+      char command_buffer[256];
 
-            uint32_t frame_count = thread->GetStackFrameCount();
-            for (uint32_t i = 0; i < frame_count; ++i)
-            {
-                StackFrameSP frame = thread->GetStackFrameAtIndex(i);
-                lldb::addr_t pc = frame->GetStackID().GetPC();
+      uint32_t frame_count = thread->GetStackFrameCount();
+      for (uint32_t i = 0; i < frame_count; ++i) {
+        StackFrameSP frame = thread->GetStackFrameAtIndex(i);
+        lldb::addr_t pc = frame->GetStackID().GetPC();
 
-                snprintf(command_buffer, sizeof(command_buffer), "disassemble --bytes --address 0x%" PRIx64, pc);
-                commands.AppendString(command_buffer);
+        snprintf(command_buffer, sizeof(command_buffer),
+                 "disassemble --bytes --address 0x%" PRIx64, pc);
+        commands.AppendString(command_buffer);
 
-                snprintf(command_buffer, sizeof(command_buffer), "image show-unwind --address 0x%" PRIx64, pc);
-                commands.AppendString(command_buffer);
-            }
-        }
-
-        const FileSpec &outfile_spec = m_outfile_options.GetFile().GetCurrentValue();
-        if (outfile_spec)
-        {
-            char path[PATH_MAX];
-            outfile_spec.GetPath (path, sizeof(path));
-
-            uint32_t open_options = File::eOpenOptionWrite |
-                                    File::eOpenOptionCanCreate |
-                                    File::eOpenOptionAppend |
-                                    File::eOpenOptionCloseOnExec;
-
-            const bool append = m_outfile_options.GetAppend().GetCurrentValue();
-            if (!append)
-                open_options |= File::eOpenOptionTruncate;
-            
-            StreamFileSP outfile_stream = std::make_shared<StreamFile>();
-            Error error = outfile_stream->GetFile().Open(path, open_options);
-            if (error.Fail())
-            {
-                result.AppendErrorWithFormat("Failed to open file '%s' for %s: %s\n",
-                                             path,
-                                             append ? "append" : "write",
-                                             error.AsCString());
-                result.SetStatus(eReturnStatusFailed);
-                return false;
-            }
-
-            result.SetImmediateOutputStream(outfile_stream);
-        }
-
-        CommandInterpreterRunOptions options;
-        options.SetStopOnError(false);
-        options.SetEchoCommands(true);
-        options.SetPrintResults(true);
-        options.SetAddToHistory(false);
-        m_interpreter.HandleCommands(commands, &m_exe_ctx, options, result);
-
-        return result.Succeeded();
+        snprintf(command_buffer, sizeof(command_buffer),
+                 "image show-unwind --address 0x%" PRIx64, pc);
+        commands.AppendString(command_buffer);
+      }
     }
 
+    const FileSpec &outfile_spec =
+        m_outfile_options.GetFile().GetCurrentValue();
+    if (outfile_spec) {
+      char path[PATH_MAX];
+      outfile_spec.GetPath(path, sizeof(path));
+
+      uint32_t open_options =
+          File::eOpenOptionWrite | File::eOpenOptionCanCreate |
+          File::eOpenOptionAppend | File::eOpenOptionCloseOnExec;
+
+      const bool append = m_outfile_options.GetAppend().GetCurrentValue();
+      if (!append)
+        open_options |= File::eOpenOptionTruncate;
+
+      StreamFileSP outfile_stream = std::make_shared<StreamFile>();
+      Error error = outfile_stream->GetFile().Open(path, open_options);
+      if (error.Fail()) {
+        result.AppendErrorWithFormat("Failed to open file '%s' for %s: %s\n",
+                                     path, append ? "append" : "write",
+                                     error.AsCString());
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+
+      result.SetImmediateOutputStream(outfile_stream);
+    }
+
+    CommandInterpreterRunOptions options;
+    options.SetStopOnError(false);
+    options.SetEchoCommands(true);
+    options.SetPrintResults(true);
+    options.SetAddToHistory(false);
+    m_interpreter.HandleCommands(commands, &m_exe_ctx, options, result);
+
+    return result.Succeeded();
+  }
+
 private:
-    OptionGroupOptions m_option_group;
-    OptionGroupOutputFile m_outfile_options;
+  OptionGroupOptions m_option_group;
+  OptionGroupOutputFile m_outfile_options;
 };
 
 #pragma mark CommandObjectMultiwordBugreport
@@ -130,14 +117,15 @@ private:
 // CommandObjectMultiwordBugreport
 //-------------------------------------------------------------------------
 
-CommandObjectMultiwordBugreport::CommandObjectMultiwordBugreport(CommandInterpreter &interpreter)
-    : CommandObjectMultiword(interpreter, "bugreport", "Commands for creating domain-specific bug reports.",
-                             "bugreport <subcommand> [<subcommand-options>]")
-{
+CommandObjectMultiwordBugreport::CommandObjectMultiwordBugreport(
+    CommandInterpreter &interpreter)
+    : CommandObjectMultiword(
+          interpreter, "bugreport",
+          "Commands for creating domain-specific bug reports.",
+          "bugreport <subcommand> [<subcommand-options>]") {
 
-    LoadSubCommand("unwind", CommandObjectSP(new CommandObjectBugreportUnwind(interpreter)));
+  LoadSubCommand(
+      "unwind", CommandObjectSP(new CommandObjectBugreportUnwind(interpreter)));
 }
 
-CommandObjectMultiwordBugreport::~CommandObjectMultiwordBugreport ()
-{
-}
+CommandObjectMultiwordBugreport::~CommandObjectMultiwordBugreport() {}

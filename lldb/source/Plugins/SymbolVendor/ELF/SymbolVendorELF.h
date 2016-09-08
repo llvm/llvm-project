@@ -14,48 +14,42 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-private.h"
 #include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/lldb-private.h"
 
-class SymbolVendorELF : public lldb_private::SymbolVendor
-{
+class SymbolVendorELF : public lldb_private::SymbolVendor {
 public:
-    //------------------------------------------------------------------
-    // Constructors and Destructors
-    //------------------------------------------------------------------
-    SymbolVendorELF (const lldb::ModuleSP &module_sp);
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  SymbolVendorELF(const lldb::ModuleSP &module_sp);
 
-    ~SymbolVendorELF() override;
+  ~SymbolVendorELF() override;
 
-    //------------------------------------------------------------------
-    // Static Functions
-    //------------------------------------------------------------------
-    static void
-    Initialize();
+  //------------------------------------------------------------------
+  // Static Functions
+  //------------------------------------------------------------------
+  static void Initialize();
 
-    static void
-    Terminate();
+  static void Terminate();
 
-    static lldb_private::ConstString
-    GetPluginNameStatic();
+  static lldb_private::ConstString GetPluginNameStatic();
 
-    static const char *
-    GetPluginDescriptionStatic();
+  static const char *GetPluginDescriptionStatic();
 
-    static lldb_private::SymbolVendor*
-    CreateInstance (const lldb::ModuleSP &module_sp, lldb_private::Stream *feedback_strm);
+  static lldb_private::SymbolVendor *
+  CreateInstance(const lldb::ModuleSP &module_sp,
+                 lldb_private::Stream *feedback_strm);
 
-    //------------------------------------------------------------------
-    // PluginInterface protocol
-    //------------------------------------------------------------------
-    lldb_private::ConstString
-    GetPluginName() override;
+  //------------------------------------------------------------------
+  // PluginInterface protocol
+  //------------------------------------------------------------------
+  lldb_private::ConstString GetPluginName() override;
 
-    uint32_t
-    GetPluginVersion() override;
+  uint32_t GetPluginVersion() override;
 
 private:
-    DISALLOW_COPY_AND_ASSIGN (SymbolVendorELF);
+  DISALLOW_COPY_AND_ASSIGN(SymbolVendorELF);
 };
 
 #endif // liblldb_SymbolVendorELF_h_

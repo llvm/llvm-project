@@ -16,53 +16,34 @@
 
 #ifdef LLDB_USE_KQUEUES
 
-#include <sys/types.h>
 #include <sys/event.h>
 #include <sys/time.h>
+#include <sys/types.h>
 
 #include "lldb/lldb-defines.h"
 
 namespace lldb_private {
 
-class KQueue
-{
+class KQueue {
 public:
-    KQueue() :
-        m_fd(-1)
-    {
-    }
+  KQueue() : m_fd(-1) {}
 
-    ~KQueue()
-    {
-        Close();
-    }
-    
-    bool
-    IsValid () const
-    {
-        return m_fd >= 0;
-    }
+  ~KQueue() { Close(); }
 
-    int
-    GetFD (bool can_create);
+  bool IsValid() const { return m_fd >= 0; }
 
-    int
-    Close ();
+  int GetFD(bool can_create);
 
-    bool
-    AddFDEvent (int fd,
-                bool read,
-                bool write,
-                bool vnode);
+  int Close();
 
-    int
-    WaitForEvents (struct kevent *events,
-                   int num_events,
-                   Error &error,
-                   uint32_t timeout_usec = UINT32_MAX); // UINT32_MAX means infinite timeout
+  bool AddFDEvent(int fd, bool read, bool write, bool vnode);
+
+  int WaitForEvents(
+      struct kevent *events, int num_events, Error &error,
+      uint32_t timeout_usec = UINT32_MAX); // UINT32_MAX means infinite timeout
 
 protected:
-    int m_fd; // The kqueue fd
+  int m_fd; // The kqueue fd
 };
 
 } // namespace lldb_private

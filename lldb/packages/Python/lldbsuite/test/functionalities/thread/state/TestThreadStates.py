@@ -5,28 +5,37 @@ Test thread states.
 from __future__ import print_function
 
 
-
 import unittest2
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class ThreadStateTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr15824 thread states not properly maintained")
-    @expectedFailureAll(oslist=lldbplatformutil.getDarwinOSTriples(), bugnumber="llvm.org/pr15824 thread states not properly maintained")
-    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr18190 thread states not properly maintained")
+    @expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="llvm.org/pr15824 thread states not properly maintained")
+    @expectedFailureAll(
+        oslist=lldbplatformutil.getDarwinOSTriples(),
+        bugnumber="llvm.org/pr15824 thread states not properly maintained")
+    @expectedFailureAll(
+        oslist=["freebsd"],
+        bugnumber="llvm.org/pr18190 thread states not properly maintained")
     def test_state_after_breakpoint(self):
         """Test thread state after breakpoint."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
         self.thread_state_after_breakpoint_test()
 
-    @skipIfDarwin # 'llvm.org/pr23669', cause Python crash randomly
-    @expectedFailureAll(oslist=lldbplatformutil.getDarwinOSTriples(), bugnumber="llvm.org/pr23669")
+    @skipIfDarwin  # 'llvm.org/pr23669', cause Python crash randomly
+    @expectedFailureAll(
+        oslist=lldbplatformutil.getDarwinOSTriples(),
+        bugnumber="llvm.org/pr23669")
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr15824")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24660")
     def test_state_after_continue(self):
@@ -34,24 +43,31 @@ class ThreadStateTestCase(TestBase):
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
         self.thread_state_after_continue_test()
 
-    @skipIfDarwin # 'llvm.org/pr23669', cause Python crash randomly
+    @skipIfDarwin  # 'llvm.org/pr23669', cause Python crash randomly
     @expectedFailureDarwin('llvm.org/pr23669')
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24660")
-    @unittest2.expectedFailure("llvm.org/pr16712") # thread states not properly maintained
+    # thread states not properly maintained
+    @unittest2.expectedFailure("llvm.org/pr16712")
     def test_state_after_expression(self):
         """Test thread state after expression."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
         self.thread_state_after_expression_test()
 
-    @unittest2.expectedFailure("llvm.org/pr16712") # thread states not properly maintained
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
+    # thread states not properly maintained
+    @unittest2.expectedFailure("llvm.org/pr16712")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
     def test_process_interrupt(self):
         """Test process interrupt."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
         self.process_interrupt_test()
 
-    @unittest2.expectedFailure("llvm.org/pr15824") # thread states not properly maintained
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
+    # thread states not properly maintained
+    @unittest2.expectedFailure("llvm.org/pr15824")
+    @expectedFailureAll(
+        oslist=["windows"],
+        bugnumber="llvm.org/pr24668: Breakpoints not resolved correctly")
     def test_process_state(self):
         """Test thread states (comprehensive)."""
         self.build(dictionary=self.getBuildFlags(use_cpp11=False))
@@ -70,7 +86,8 @@ class ThreadStateTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint in the main thread.
-        bp = lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
+        bp = lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_1, num_expected_locations=1)
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
@@ -79,12 +96,16 @@ class ThreadStateTestCase(TestBase):
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
 
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
 
         # Make sure the thread is in the stopped state.
-        self.assertTrue(thread.IsStopped(), "Thread state isn't \'stopped\' during breakpoint 1.")
-        self.assertFalse(thread.IsSuspended(), "Thread state is \'suspended\' during breakpoint 1.")
+        self.assertTrue(
+            thread.IsStopped(),
+            "Thread state isn't \'stopped\' during breakpoint 1.")
+        self.assertFalse(thread.IsSuspended(),
+                         "Thread state is \'suspended\' during breakpoint 1.")
 
         # Kill the process
         self.runCmd("process kill")
@@ -92,7 +113,8 @@ class ThreadStateTestCase(TestBase):
     def wait_for_running_event(self):
         listener = self.dbg.GetListener()
         if lldb.remote_platform:
-            lldbutil.expect_state_changes(self, listener, [lldb.eStateConnected])
+            lldbutil.expect_state_changes(
+                self, listener, [lldb.eStateConnected])
         lldbutil.expect_state_changes(self, listener, [lldb.eStateRunning])
 
     def thread_state_after_continue_test(self):
@@ -101,8 +123,10 @@ class ThreadStateTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint in the main thread.
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_2, num_expected_locations=1)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_1, num_expected_locations=1)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_2, num_expected_locations=1)
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
@@ -111,17 +135,23 @@ class ThreadStateTestCase(TestBase):
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
 
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
 
-        # Continue, the inferior will go into an infinite loop waiting for 'g_test' to change.
+        # Continue, the inferior will go into an infinite loop waiting for
+        # 'g_test' to change.
         self.dbg.SetAsync(True)
         self.runCmd("continue")
         self.wait_for_running_event()
 
         # Check the thread state. It should be running.
-        self.assertFalse(thread.IsStopped(), "Thread state is \'stopped\' when it should be running.")
-        self.assertFalse(thread.IsSuspended(), "Thread state is \'suspended\' when it should be running.")
+        self.assertFalse(
+            thread.IsStopped(),
+            "Thread state is \'stopped\' when it should be running.")
+        self.assertFalse(
+            thread.IsSuspended(),
+            "Thread state is \'suspended\' when it should be running.")
 
         # Go back to synchronous interactions
         self.dbg.SetAsync(False)
@@ -135,8 +165,10 @@ class ThreadStateTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint in the main thread.
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_2, num_expected_locations=1)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_1, num_expected_locations=1)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_2, num_expected_locations=1)
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
@@ -145,19 +177,23 @@ class ThreadStateTestCase(TestBase):
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
 
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
 
         # Get the inferior out of its loop
         self.runCmd("expression g_test = 1")
 
         # Check the thread state
-        self.assertTrue(thread.IsStopped(), "Thread state isn't \'stopped\' after expression evaluation.")
-        self.assertFalse(thread.IsSuspended(), "Thread state is \'suspended\' after expression evaluation.")
+        self.assertTrue(
+            thread.IsStopped(),
+            "Thread state isn't \'stopped\' after expression evaluation.")
+        self.assertFalse(
+            thread.IsSuspended(),
+            "Thread state is \'suspended\' after expression evaluation.")
 
         # Let the process run to completion
         self.runCmd("process continue")
-
 
     def process_interrupt_test(self):
         """Test process interrupt and continue."""
@@ -165,7 +201,8 @@ class ThreadStateTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint in the main thread.
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_1, num_expected_locations=1)
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
@@ -174,10 +211,12 @@ class ThreadStateTestCase(TestBase):
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
 
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
 
-        # Continue, the inferior will go into an infinite loop waiting for 'g_test' to change.
+        # Continue, the inferior will go into an infinite loop waiting for
+        # 'g_test' to change.
         self.dbg.SetAsync(True)
         self.runCmd("continue")
         self.wait_for_running_event()
@@ -202,8 +241,10 @@ class ThreadStateTestCase(TestBase):
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
         # This should create a breakpoint in the main thread.
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_1, num_expected_locations=1)
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.break_2, num_expected_locations=1)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_1, num_expected_locations=1)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.break_2, num_expected_locations=1)
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
@@ -211,21 +252,30 @@ class ThreadStateTestCase(TestBase):
         # Get the target process
         target = self.dbg.GetSelectedTarget()
         process = target.GetProcess()
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        thread = lldbutil.get_stopped_thread(
+            process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
 
         # Make sure the thread is in the stopped state.
-        self.assertTrue(thread.IsStopped(), "Thread state isn't \'stopped\' during breakpoint 1.")
-        self.assertFalse(thread.IsSuspended(), "Thread state is \'suspended\' during breakpoint 1.")
+        self.assertTrue(
+            thread.IsStopped(),
+            "Thread state isn't \'stopped\' during breakpoint 1.")
+        self.assertFalse(thread.IsSuspended(),
+                         "Thread state is \'suspended\' during breakpoint 1.")
 
-        # Continue, the inferior will go into an infinite loop waiting for 'g_test' to change.
+        # Continue, the inferior will go into an infinite loop waiting for
+        # 'g_test' to change.
         self.dbg.SetAsync(True)
         self.runCmd("continue")
         self.wait_for_running_event()
 
         # Check the thread state. It should be running.
-        self.assertFalse(thread.IsStopped(), "Thread state is \'stopped\' when it should be running.")
-        self.assertFalse(thread.IsSuspended(), "Thread state is \'suspended\' when it should be running.")
+        self.assertFalse(
+            thread.IsStopped(),
+            "Thread state is \'stopped\' when it should be running.")
+        self.assertFalse(
+            thread.IsSuspended(),
+            "Thread state is \'suspended\' when it should be running.")
 
         # Go back to synchronous interactions
         self.dbg.SetAsync(False)
@@ -236,15 +286,22 @@ class ThreadStateTestCase(TestBase):
         self.assertEqual(thread.GetState(), lldb.eStopReasonSignal)
 
         # Check the thread state
-        self.assertTrue(thread.IsStopped(), "Thread state isn't \'stopped\' after process stop.")
-        self.assertFalse(thread.IsSuspended(), "Thread state is \'suspended\' after process stop.")
+        self.assertTrue(
+            thread.IsStopped(),
+            "Thread state isn't \'stopped\' after process stop.")
+        self.assertFalse(thread.IsSuspended(),
+                         "Thread state is \'suspended\' after process stop.")
 
         # Get the inferior out of its loop
         self.runCmd("expression g_test = 1")
 
         # Check the thread state
-        self.assertTrue(thread.IsStopped(), "Thread state isn't \'stopped\' after expression evaluation.")
-        self.assertFalse(thread.IsSuspended(), "Thread state is \'suspended\' after expression evaluation.")
+        self.assertTrue(
+            thread.IsStopped(),
+            "Thread state isn't \'stopped\' after expression evaluation.")
+        self.assertFalse(
+            thread.IsSuspended(),
+            "Thread state is \'suspended\' after expression evaluation.")
 
         self.assertEqual(thread.GetState(), lldb.eStopReasonSignal)
 
@@ -254,8 +311,11 @@ class ThreadStateTestCase(TestBase):
         self.assertEqual(thread.GetState(), lldb.eStopReasonBreakpoint)
 
         # Make sure both threads are stopped
-        self.assertTrue(thread.IsStopped(), "Thread state isn't \'stopped\' during breakpoint 2.")
-        self.assertFalse(thread.IsSuspended(), "Thread state is \'suspended\' during breakpoint 2.")
+        self.assertTrue(
+            thread.IsStopped(),
+            "Thread state isn't \'stopped\' during breakpoint 2.")
+        self.assertFalse(thread.IsSuspended(),
+                         "Thread state is \'suspended\' during breakpoint 2.")
 
         # Run to completion
         self.runCmd("continue")

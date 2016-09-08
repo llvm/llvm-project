@@ -14,91 +14,67 @@
 
 namespace lldb {
 
-class LLDB_API SBWatchpoint
-{
+class LLDB_API SBWatchpoint {
 public:
+  SBWatchpoint();
 
-    SBWatchpoint ();
+  SBWatchpoint(const lldb::SBWatchpoint &rhs);
 
-    SBWatchpoint (const lldb::SBWatchpoint &rhs);
+  SBWatchpoint(const lldb::WatchpointSP &wp_sp);
 
-    SBWatchpoint (const lldb::WatchpointSP &wp_sp);
+  ~SBWatchpoint();
 
-    ~SBWatchpoint ();
+  const lldb::SBWatchpoint &operator=(const lldb::SBWatchpoint &rhs);
 
-    const lldb::SBWatchpoint &
-    operator = (const lldb::SBWatchpoint &rhs);
+  bool IsValid() const;
 
-    bool
-    IsValid() const;
+  SBError GetError();
 
-    SBError
-    GetError();
+  watch_id_t GetID();
 
-    watch_id_t
-    GetID ();
+  /// With -1 representing an invalid hardware index.
+  int32_t GetHardwareIndex();
 
-    /// With -1 representing an invalid hardware index.
-    int32_t
-    GetHardwareIndex ();
+  lldb::addr_t GetWatchAddress();
 
-    lldb::addr_t
-    GetWatchAddress ();
+  size_t GetWatchSize();
 
-    size_t
-    GetWatchSize();
+  void SetEnabled(bool enabled);
 
-    void
-    SetEnabled(bool enabled);
+  bool IsEnabled();
 
-    bool
-    IsEnabled ();
+  uint32_t GetHitCount();
 
-    uint32_t
-    GetHitCount ();
+  uint32_t GetIgnoreCount();
 
-    uint32_t
-    GetIgnoreCount ();
+  void SetIgnoreCount(uint32_t n);
 
-    void
-    SetIgnoreCount (uint32_t n);
+  const char *GetCondition();
 
-    const char *
-    GetCondition ();
+  void SetCondition(const char *condition);
 
-    void 
-    SetCondition (const char *condition);
-    
-    bool
-    GetDescription (lldb::SBStream &description, DescriptionLevel level);
+  bool GetDescription(lldb::SBStream &description, DescriptionLevel level);
 
-    void
-    Clear ();
+  void Clear();
 
-    lldb::WatchpointSP
-    GetSP () const;
+  lldb::WatchpointSP GetSP() const;
 
-    void
-    SetSP (const lldb::WatchpointSP &sp);
+  void SetSP(const lldb::WatchpointSP &sp);
 
-    static bool
-    EventIsWatchpointEvent (const lldb::SBEvent &event);
-    
-    static lldb::WatchpointEventType
-    GetWatchpointEventTypeFromEvent (const lldb::SBEvent& event);
+  static bool EventIsWatchpointEvent(const lldb::SBEvent &event);
 
-    static lldb::SBWatchpoint
-    GetWatchpointFromEvent (const lldb::SBEvent& event);
+  static lldb::WatchpointEventType
+  GetWatchpointEventTypeFromEvent(const lldb::SBEvent &event);
+
+  static lldb::SBWatchpoint GetWatchpointFromEvent(const lldb::SBEvent &event);
 
 private:
-    friend class SBTarget;
-    friend class SBValue;
+  friend class SBTarget;
+  friend class SBValue;
 
-    
-    lldb::WatchpointSP m_opaque_sp;
-
+  lldb::WatchpointSP m_opaque_sp;
 };
 
 } // namespace lldb
 
-#endif  // LLDB_SBWatchpoint_h_
+#endif // LLDB_SBWatchpoint_h_

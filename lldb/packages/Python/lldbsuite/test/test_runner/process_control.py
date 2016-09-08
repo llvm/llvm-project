@@ -23,6 +23,7 @@ import threading
 
 class CommunicatorThread(threading.Thread):
     """Provides a thread class that communicates with a subprocess."""
+
     def __init__(self, process, event, output_file):
         super(CommunicatorThread, self).__init__()
         # Don't let this thread prevent shutdown.
@@ -100,6 +101,7 @@ class ProcessHelper(object):
 
     @see ProcessHelper.process_helper()
     """
+
     def __init__(self):
         super(ProcessHelper, self).__init__()
 
@@ -281,6 +283,7 @@ class UnixProcessHelper(ProcessHelper):
     This implementation supports anything that looks Posix-y
     (e.g. Darwin, Linux, *BSD, etc.)
     """
+
     def __init__(self):
         super(UnixProcessHelper, self).__init__()
 
@@ -415,6 +418,7 @@ class UnixProcessHelper(ProcessHelper):
 
 class WindowsProcessHelper(ProcessHelper):
     """Provides a Windows implementation of the ProcessHelper class."""
+
     def __init__(self):
         super(WindowsProcessHelper, self).__init__()
 
@@ -448,6 +452,7 @@ class ProcessDriver(object):
     way.  The on_process_exited method is informed if the exit was natural
     or if it was due to a timeout.
     """
+
     def __init__(self, soft_terminate_timeout=10.0):
         super(ProcessDriver, self).__init__()
         self.process_helper = ProcessHelper.process_helper()

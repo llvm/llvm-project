@@ -11,10 +11,6 @@
 
 using namespace lldb_private;
 
-SystemInitializer::SystemInitializer()
-{
-}
+SystemInitializer::SystemInitializer() {}
 
-SystemInitializer::~SystemInitializer()
-{
-}
+SystemInitializer::~SystemInitializer() {}

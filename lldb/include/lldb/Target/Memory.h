@@ -18,188 +18,141 @@
 // Other libraries and framework includes
 
 // Project includes
-#include "lldb/lldb-private.h"
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Host/Mutex.h"
+#include "lldb/lldb-private.h"
 
 namespace lldb_private {
-    //----------------------------------------------------------------------
-    // A class to track memory that was read from a live process between 
-    // runs. 
-    //----------------------------------------------------------------------
-    class MemoryCache
-    {
-    public:
-        //------------------------------------------------------------------
-        // Constructors and Destructors
-        //------------------------------------------------------------------
-        MemoryCache (Process &process);
-        
-        ~MemoryCache ();
-        
-        void
-        Clear(bool clear_invalid_ranges = false);
-        
-        void
-        Flush (lldb::addr_t addr, size_t size);
-        
-        size_t
-        Read (lldb::addr_t addr, 
-              void *dst, 
-              size_t dst_len,
-              Error &error);
-        
-        uint32_t
-        GetMemoryCacheLineSize() const
-        {
-            return m_L2_cache_line_byte_size ;
-        }
-        
-        void
-        AddInvalidRange (lldb::addr_t base_addr, lldb::addr_t byte_size);
+//----------------------------------------------------------------------
+// A class to track memory that was read from a live process between
+// runs.
+//----------------------------------------------------------------------
+class MemoryCache {
+public:
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  MemoryCache(Process &process);
 
-        bool
-        RemoveInvalidRange (lldb::addr_t base_addr, lldb::addr_t byte_size);
+  ~MemoryCache();
 
-        // Allow external sources to populate data into the L1 memory cache
-        void
-        AddL1CacheData(lldb::addr_t addr, const void *src, size_t src_len);
+  void Clear(bool clear_invalid_ranges = false);
 
-        void
-        AddL1CacheData(lldb::addr_t addr, const lldb::DataBufferSP &data_buffer_sp);
+  void Flush(lldb::addr_t addr, size_t size);
 
-    protected:
-        typedef std::map<lldb::addr_t, lldb::DataBufferSP> BlockMap;
-        typedef RangeArray<lldb::addr_t, lldb::addr_t, 4> InvalidRanges;
-        typedef Range<lldb::addr_t, lldb::addr_t> AddrRange;
-        //------------------------------------------------------------------
-        // Classes that inherit from MemoryCache can see and modify these
-        //------------------------------------------------------------------
-        Mutex m_mutex;
-        BlockMap m_L1_cache; // A first level memory cache whose chunk sizes vary that will be used only if the memory read fits entirely in a chunk
-        BlockMap m_L2_cache; // A memory cache of fixed size chinks (m_L2_cache_line_byte_size bytes in size each)
-        InvalidRanges m_invalid_ranges;
-        Process &m_process;
-        uint32_t m_L2_cache_line_byte_size;
-    private:
-        DISALLOW_COPY_AND_ASSIGN (MemoryCache);
-    };
+  size_t Read(lldb::addr_t addr, void *dst, size_t dst_len, Error &error);
 
-    
-    class AllocatedBlock
-    {
-    public:
-        AllocatedBlock (lldb::addr_t addr, 
-                        uint32_t byte_size, 
-                        uint32_t permissions,
-                        uint32_t chunk_size);
-        
-        ~AllocatedBlock ();
-        
-        lldb::addr_t
-        ReserveBlock (uint32_t size);
-        
-        bool
-        FreeBlock (lldb::addr_t addr);
-        
-        lldb::addr_t
-        GetBaseAddress () const
-        {
-            return m_addr;
-        }
-        
-        uint32_t
-        GetByteSize () const
-        {
-            return m_byte_size;
-        }
+  uint32_t GetMemoryCacheLineSize() const { return m_L2_cache_line_byte_size; }
 
-        uint32_t
-        GetPermissions () const
-        {
-            return m_permissions;
-        }
+  void AddInvalidRange(lldb::addr_t base_addr, lldb::addr_t byte_size);
 
-        uint32_t
-        GetChunkSize () const
-        {
-            return m_chunk_size;
-        }
+  bool RemoveInvalidRange(lldb::addr_t base_addr, lldb::addr_t byte_size);
 
-        bool
-        Contains (lldb::addr_t addr) const
-        {
-            return ((addr >= m_addr) && addr < (m_addr + m_byte_size));
-        }
-    protected:
-        uint32_t
-        TotalChunks () const
-        {
-            return m_byte_size / m_chunk_size;
-        }
-        
-        uint32_t 
-        CalculateChunksNeededForSize (uint32_t size) const
-        {
-            return (size + m_chunk_size - 1) / m_chunk_size;
-        }
-        const lldb::addr_t m_addr;    // Base address of this block of memory
-        const uint32_t m_byte_size;   // 4GB of chunk should be enough...
-        const uint32_t m_permissions; // Permissions for this memory (logical OR of lldb::Permissions bits)
-        const uint32_t m_chunk_size;  // The size of chunks that the memory at m_addr is divied up into
-        typedef std::map<uint32_t, uint32_t> OffsetToChunkSize;
-        OffsetToChunkSize m_offset_to_chunk_size;
-    };
-    
+  // Allow external sources to populate data into the L1 memory cache
+  void AddL1CacheData(lldb::addr_t addr, const void *src, size_t src_len);
 
-    //----------------------------------------------------------------------
-    // A class that can track allocated memory and give out allocated memory
-    // without us having to make an allocate/deallocate call every time we
-    // need some memory in a process that is being debugged.
-    //----------------------------------------------------------------------
-    class AllocatedMemoryCache
-    {
-    public:
-        //------------------------------------------------------------------
-        // Constructors and Destructors
-        //------------------------------------------------------------------
-        AllocatedMemoryCache (Process &process);
-        
-        ~AllocatedMemoryCache ();
-        
-        void
-        Clear();
+  void AddL1CacheData(lldb::addr_t addr,
+                      const lldb::DataBufferSP &data_buffer_sp);
 
-        lldb::addr_t
-        AllocateMemory (size_t byte_size, 
-                        uint32_t permissions, 
-                        Error &error);
+protected:
+  typedef std::map<lldb::addr_t, lldb::DataBufferSP> BlockMap;
+  typedef RangeArray<lldb::addr_t, lldb::addr_t, 4> InvalidRanges;
+  typedef Range<lldb::addr_t, lldb::addr_t> AddrRange;
+  //------------------------------------------------------------------
+  // Classes that inherit from MemoryCache can see and modify these
+  //------------------------------------------------------------------
+  Mutex m_mutex;
+  BlockMap m_L1_cache; // A first level memory cache whose chunk sizes vary that
+                       // will be used only if the memory read fits entirely in
+                       // a chunk
+  BlockMap m_L2_cache; // A memory cache of fixed size chinks
+                       // (m_L2_cache_line_byte_size bytes in size each)
+  InvalidRanges m_invalid_ranges;
+  Process &m_process;
+  uint32_t m_L2_cache_line_byte_size;
 
-        bool
-        DeallocateMemory (lldb::addr_t ptr);
-        
-    protected:
-        typedef std::shared_ptr<AllocatedBlock> AllocatedBlockSP;
+private:
+  DISALLOW_COPY_AND_ASSIGN(MemoryCache);
+};
 
-        AllocatedBlockSP
-        AllocatePage (uint32_t byte_size, 
-                      uint32_t permissions, 
-                      uint32_t chunk_size, 
-                      Error &error);
+class AllocatedBlock {
+public:
+  AllocatedBlock(lldb::addr_t addr, uint32_t byte_size, uint32_t permissions,
+                 uint32_t chunk_size);
 
+  ~AllocatedBlock();
 
-        //------------------------------------------------------------------
-        // Classes that inherit from MemoryCache can see and modify these
-        //------------------------------------------------------------------
-        Process &m_process;
-        Mutex m_mutex;
-        typedef std::multimap<uint32_t, AllocatedBlockSP> PermissionsToBlockMap;
-        PermissionsToBlockMap m_memory_map;
-        
-    private:
-        DISALLOW_COPY_AND_ASSIGN (AllocatedMemoryCache);
-    };
+  lldb::addr_t ReserveBlock(uint32_t size);
+
+  bool FreeBlock(lldb::addr_t addr);
+
+  lldb::addr_t GetBaseAddress() const { return m_addr; }
+
+  uint32_t GetByteSize() const { return m_byte_size; }
+
+  uint32_t GetPermissions() const { return m_permissions; }
+
+  uint32_t GetChunkSize() const { return m_chunk_size; }
+
+  bool Contains(lldb::addr_t addr) const {
+    return ((addr >= m_addr) && addr < (m_addr + m_byte_size));
+  }
+
+protected:
+  uint32_t TotalChunks() const { return m_byte_size / m_chunk_size; }
+
+  uint32_t CalculateChunksNeededForSize(uint32_t size) const {
+    return (size + m_chunk_size - 1) / m_chunk_size;
+  }
+  const lldb::addr_t m_addr;    // Base address of this block of memory
+  const uint32_t m_byte_size;   // 4GB of chunk should be enough...
+  const uint32_t m_permissions; // Permissions for this memory (logical OR of
+                                // lldb::Permissions bits)
+  const uint32_t m_chunk_size;  // The size of chunks that the memory at m_addr
+                                // is divied up into
+  typedef std::map<uint32_t, uint32_t> OffsetToChunkSize;
+  OffsetToChunkSize m_offset_to_chunk_size;
+};
+
+//----------------------------------------------------------------------
+// A class that can track allocated memory and give out allocated memory
+// without us having to make an allocate/deallocate call every time we
+// need some memory in a process that is being debugged.
+//----------------------------------------------------------------------
+class AllocatedMemoryCache {
+public:
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  AllocatedMemoryCache(Process &process);
+
+  ~AllocatedMemoryCache();
+
+  void Clear();
+
+  lldb::addr_t AllocateMemory(size_t byte_size, uint32_t permissions,
+                              Error &error);
+
+  bool DeallocateMemory(lldb::addr_t ptr);
+
+protected:
+  typedef std::shared_ptr<AllocatedBlock> AllocatedBlockSP;
+
+  AllocatedBlockSP AllocatePage(uint32_t byte_size, uint32_t permissions,
+                                uint32_t chunk_size, Error &error);
+
+  //------------------------------------------------------------------
+  // Classes that inherit from MemoryCache can see and modify these
+  //------------------------------------------------------------------
+  Process &m_process;
+  Mutex m_mutex;
+  typedef std::multimap<uint32_t, AllocatedBlockSP> PermissionsToBlockMap;
+  PermissionsToBlockMap m_memory_map;
+
+private:
+  DISALLOW_COPY_AND_ASSIGN(AllocatedMemoryCache);
+};
 
 } // namespace lldb_private
 
-#endif  // liblldb_Memory_h_
+#endif // liblldb_Memory_h_

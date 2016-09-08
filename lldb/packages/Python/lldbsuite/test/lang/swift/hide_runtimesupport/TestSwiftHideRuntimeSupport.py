@@ -41,7 +41,9 @@ class TestSwiftHideRuntimeSupport(TestBase):
         # This is the function to remove the custom settings in order to have a
         # clean slate for the next test case.
         def cleanup():
-            self.runCmd('settings set target.display-runtime-support-values true', check=False)
+            self.runCmd(
+                'settings set target.display-runtime-support-values true',
+                check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -56,7 +58,8 @@ class TestSwiftHideRuntimeSupport(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('break here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -65,14 +68,18 @@ class TestSwiftHideRuntimeSupport(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
-        self.expect('frame variable -d run', substrs=['$swift.type.T'], matching=False)
+        self.expect(
+            'frame variable -d run',
+            substrs=['$swift.type.T'],
+            matching=False)
         self.expect('frame variable -d run', substrs=['193627'], matching=True)
 
         var_opts = lldb.SBVariablesOptions()
@@ -86,21 +93,29 @@ class TestSwiftHideRuntimeSupport(TestBase):
         values = self.frame.GetVariables(var_opts)
         found = False
         for value in values:
-            if value.name == "$swift.type.T": found = True
+            if value.name == "$swift.type.T":
+                found = True
         self.assertFalse(found, "found the thing I was not expecting")
 
         var_opts.SetIncludeRuntimeSupportValues(True)
         values = self.frame.GetVariables(var_opts)
         found = False
         for value in values:
-            if value.name == "$swift.type.T": found = True
+            if value.name == "$swift.type.T":
+                found = True
         self.assertTrue(found, "not found the thing I was expecting")
 
         self.runCmd("settings set target.display-runtime-support-values true")
-        self.expect('frame variable -d run', substrs=['$swift.type.T'], matching=True)
+        self.expect(
+            'frame variable -d run',
+            substrs=['$swift.type.T'],
+            matching=True)
 
         self.runCmd("settings set target.display-runtime-support-values false")
-        self.expect('frame variable -d run', substrs=['$swift.type.T'], matching=False)
+        self.expect(
+            'frame variable -d run',
+            substrs=['$swift.type.T'],
+            matching=False)
 
 
 if __name__ == '__main__':

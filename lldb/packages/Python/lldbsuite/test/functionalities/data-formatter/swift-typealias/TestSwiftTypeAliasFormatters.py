@@ -18,14 +18,15 @@ import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 
+
 class TestSwiftTypeAliasFormatters(TestBase):
-    
+
     mydir = TestBase.compute_mydir(__file__)
-    
+
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @decorators.swiftTest
     def test_swift_type_alias_formatters(self):
@@ -41,9 +42,10 @@ class TestSwiftTypeAliasFormatters(TestBase):
         # Create the target
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
-        
+
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('break here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -52,41 +54,44 @@ class TestSwiftTypeAliasFormatters(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
-        
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
+
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
-        
+
         def cleanup():
             self.runCmd('type format clear', check=False)
             self.runCmd('type summary clear', check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
-        
+            self.runCmd(
+                "settings set target.max-children-count 256",
+                check=False)
+
         self.addTearDownHook(cleanup)
-        
+
         self.expect("frame variable f", substrs=['Foo) f = (value = 12)'])
         self.expect("frame variable b", substrs=['Bar) b = (value = 24)'])
-        
+
         self.runCmd('type summary add a.Foo -v -s "hello"')
         self.expect("frame variable f", substrs=['Foo) f = hello'])
         self.expect("frame variable b", substrs=['Bar) b = hello'])
-        
+
         self.runCmd('type summary add a.Bar -v -s "hi"')
         self.expect("frame variable f", substrs=['Foo) f = hello'])
         self.expect("frame variable b", substrs=['Bar) b = hi'])
-        
+
         self.runCmd("type summary delete a.Foo")
         self.expect("frame variable f", substrs=['Foo) f = (value = 12)'])
         self.expect("frame variable b", substrs=['Bar) b = hi'])
-        
+
         self.runCmd("type summary delete a.Bar")
         self.runCmd("type summary add -C no -v a.Foo -s hello")
         self.expect("frame variable f", substrs=['Foo) f = hello'])
         self.expect("frame variable b", substrs=['Bar) b = (value = 24)'])
-        
-        
+
+
 if __name__ == '__main__':
     import atexit
     lldb.SBDebugger.Initialize()

@@ -16,70 +16,54 @@
 //----------------------------------------------------------------------
 // CFData constructor
 //----------------------------------------------------------------------
-CFData::CFData(CFDataRef data) :
-    CFReleaser<CFDataRef>(data)
-{
-
-}
+CFData::CFData(CFDataRef data) : CFReleaser<CFDataRef>(data) {}
 
 //----------------------------------------------------------------------
 // CFData copy constructor
 //----------------------------------------------------------------------
-CFData::CFData(const CFData& rhs) :
-    CFReleaser<CFDataRef>(rhs)
-{
-
-}
+CFData::CFData(const CFData &rhs) : CFReleaser<CFDataRef>(rhs) {}
 
 //----------------------------------------------------------------------
 // CFData copy constructor
 //----------------------------------------------------------------------
-CFData&
-CFData::operator=(const CFData& rhs)
+CFData &CFData::operator=(const CFData &rhs)
 
 {
-    *this = rhs;
-    return *this;
+  *this = rhs;
+  return *this;
 }
 
 //----------------------------------------------------------------------
 // Destructor
 //----------------------------------------------------------------------
-CFData::~CFData()
-{
+CFData::~CFData() {}
+
+CFIndex CFData::GetLength() const {
+  CFDataRef data = get();
+  if (data)
+    return CFDataGetLength(data);
+  return 0;
 }
 
-
-CFIndex
-CFData::GetLength() const
-{
-    CFDataRef data = get();
-    if (data)
-        return CFDataGetLength (data);
-    return 0;
+const uint8_t *CFData::GetBytePtr() const {
+  CFDataRef data = get();
+  if (data)
+    return CFDataGetBytePtr(data);
+  return NULL;
 }
 
-
-const uint8_t*
-CFData::GetBytePtr() const
-{
-    CFDataRef data = get();
-    if (data)
-        return CFDataGetBytePtr (data);
-    return NULL;
+CFDataRef CFData::Serialize(CFPropertyListRef plist,
+                            CFPropertyListFormat format) {
+  CFAllocatorRef alloc = kCFAllocatorDefault;
+  reset();
+  CFReleaser<CFWriteStreamRef> stream(
+      ::CFWriteStreamCreateWithAllocatedBuffers(alloc, alloc));
+  ::CFWriteStreamOpen(stream.get());
+  CFIndex len =
+      ::CFPropertyListWriteToStream(plist, stream.get(), format, NULL);
+  if (len > 0)
+    reset((CFDataRef)::CFWriteStreamCopyProperty(stream.get(),
+                                                 kCFStreamPropertyDataWritten));
+  ::CFWriteStreamClose(stream.get());
+  return get();
 }
-
-CFDataRef
-CFData::Serialize(CFPropertyListRef plist, CFPropertyListFormat format)
-{
-    CFAllocatorRef alloc = kCFAllocatorDefault;
-    reset();
-    CFReleaser<CFWriteStreamRef> stream (::CFWriteStreamCreateWithAllocatedBuffers (alloc, alloc));
-    ::CFWriteStreamOpen (stream.get());
-    CFIndex len = ::CFPropertyListWriteToStream (plist, stream.get(), format, NULL);
-    if (len > 0)
-        reset((CFDataRef)::CFWriteStreamCopyProperty (stream.get(), kCFStreamPropertyDataWritten));
-    ::CFWriteStreamClose (stream.get());
-    return get();
-}
-

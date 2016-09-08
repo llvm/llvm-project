@@ -13,30 +13,42 @@ Example:
 
 """
 
-import os, sys, time, re, getopt, getpass
+import os
+import sys
+import time
+import re
+import getopt
+import getpass
 import traceback
-import pexpect, pxssh
+import pexpect
+import pxssh
+
 
 def exit_with_usage():
 
     print globals()['__doc__']
     os._exit(1)
 
+
 def main():
 
     ######################################################################
-    ## Parse the options, arguments, get ready, etc.
+    # Parse the options, arguments, get ready, etc.
     ######################################################################
     try:
-        optlist, args = getopt.getopt(sys.argv[1:], 'h?s:u:p:', ['help','h','?'])
-    except Exception, e:
+        optlist, args = getopt.getopt(
+            sys.argv[
+                1:], 'h?s:u:p:', [
+                'help', 'h', '?'])
+    except Exception as e:
         print str(e)
         exit_with_usage()
     options = dict(optlist)
     if len(args) > 1:
         exit_with_usage()
 
-    if [elem for elem in options if elem in ['-h','--h','-?','--?','--help']]:
+    if [elem for elem in options if elem in [
+            '-h', '--h', '-?', '--?', '--help']]:
         print "Help:"
         exit_with_usage()
 
@@ -67,8 +79,7 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except Exception, e:
+    except Exception as e:
         print str(e)
         traceback.print_exc()
         os._exit(1)
-

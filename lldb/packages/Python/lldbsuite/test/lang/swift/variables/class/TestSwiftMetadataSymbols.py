@@ -18,10 +18,11 @@ import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import os
 
+
 class TestSwiftMetadataSymbols(TestBase):
-    
+
     mydir = TestBase.compute_mydir(__file__)
-    
+
     @decorators.swiftTest
     def test_swift_metadata_symbols(self):
         """Test swift Class types"""
@@ -39,14 +40,14 @@ class TestSwiftMetadataSymbols(TestBase):
         # Create the target
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
-        
-        self.expect("target modules dump symtab -m a.out", 
-                    patterns = ['Metadata.*_TMC1a3Foo'])
 
-        self.expect("target modules dump symtab a.out", 
-                    patterns = ['Metadata.*type metadata for'])
+        self.expect("target modules dump symtab -m a.out",
+                    patterns=['Metadata.*_TMC1a3Foo'])
 
-        
+        self.expect("target modules dump symtab a.out",
+                    patterns=['Metadata.*type metadata for'])
+
+
 if __name__ == '__main__':
     import atexit
     lldb.SBDebugger.Initialize()

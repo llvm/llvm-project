@@ -33,6 +33,7 @@ from . import remote
 
 default_port = 8537
 
+
 def add_subparser_args(parser):
     parser.add_argument(
         "--port",
@@ -46,8 +47,10 @@ def add_subparser_args(parser):
         default=fs.find_executable("swig"),
         dest="swig_executable")
 
+
 def finalize_subparser_options(options):
     pass
+
 
 def initialize_listening_socket(options):
     logging.debug("Creating socket...")
@@ -59,6 +62,7 @@ def initialize_listening_socket(options):
     logging.debug("Putting socket in listen mode...")
     s.listen()
     return s
+
 
 def accept_once(sock, options):
     logging.debug("Waiting for connection...")
@@ -122,6 +126,7 @@ def accept_once(sock, options):
                               .format(pack_location))
                 shutil.rmtree(pack_location)
 
+
 def accept_loop(sock, options):
     while True:
         try:
@@ -130,6 +135,7 @@ def accept_loop(sock, options):
             error = traceback.format_exc()
             logging.error("An error occurred while processing the connection.")
             logging.error(error)
+
 
 def run(options):
     print(options)

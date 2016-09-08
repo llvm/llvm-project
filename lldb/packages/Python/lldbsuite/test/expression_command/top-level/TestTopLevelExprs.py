@@ -5,14 +5,15 @@ Test top-level expressions.
 from __future__ import print_function
 
 
-
 import unittest2
 
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class TopLevelExpressionsTestCase(TestBase):
 
@@ -29,8 +30,8 @@ class TopLevelExpressionsTestCase(TestBase):
 
         # Disable confirmation prompt to avoid infinite wait
         self.runCmd("settings set auto-confirm true")
-        self.addTearDownHook(lambda: self.runCmd("settings clear auto-confirm"))
-
+        self.addTearDownHook(
+            lambda: self.runCmd("settings clear auto-confirm"))
 
     def build_and_run(self):
         """Test top-level expressions."""
@@ -38,21 +39,32 @@ class TopLevelExpressionsTestCase(TestBase):
 
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line (self, "main.cpp", self.line, num_expected_locations=1, loc_exact=False)
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.cpp", self.line, num_expected_locations=1, loc_exact=False)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
     def run_dummy(self):
         self.runCmd("file dummy", CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line (self, "dummy.cpp", self.dummy_line, num_expected_locations=1, loc_exact=False)
+        lldbutil.run_break_set_by_file_and_line(
+            self,
+            "dummy.cpp",
+            self.dummy_line,
+            num_expected_locations=1,
+            loc_exact=False)
 
         self.runCmd("run", RUN_SUCCEEDED)
 
     @add_test_categories(['pyapi'])
     @expectedFailureAndroid(api_levels=[21, 22], bugnumber="llvm.org/pr27787")
-    @expectedFailureAll(oslist=["linux"], archs=["arm", "aarch64"], bugnumber="llvm.org/pr27787")
-    @skipIf(oslist=["windows"]) # Error in record layout on Windows
+    @expectedFailureAll(
+        oslist=["linux"],
+        archs=[
+            "arm",
+            "aarch64"],
+        bugnumber="llvm.org/pr27787")
+    @skipIf(oslist=["windows"])  # Error in record layout on Windows
     def test_top_level_expressions(self):
         self.build_and_run()
 
@@ -81,6 +93,7 @@ class TopLevelExpressionsTestCase(TestBase):
         for expression in expressions:
             self.frame().EvaluateExpression(expression, options)
 
-        resultFromTopLevel = self.frame().EvaluateExpression("doTest()").GetValueAsUnsigned()
+        resultFromTopLevel = self.frame().EvaluateExpression(
+            "doTest()").GetValueAsUnsigned()
 
         self.assertEqual(resultFromCode, resultFromTopLevel)

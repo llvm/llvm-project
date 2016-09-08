@@ -12,7 +12,9 @@
 #
 # ------------------------------------------------------------------------------
 
-import argparse, os, sys
+import argparse
+import os
+import sys
 import commands
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'plugins'))
 

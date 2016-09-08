@@ -46,7 +46,8 @@ class TestSwiftTypeLookup(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('break here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -63,13 +64,27 @@ class TestSwiftTypeLookup(TestBase):
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
-        # for now, type lookup won't load the AST context, so force load it before testing
+        # for now, type lookup won't load the AST context, so force load it
+        # before testing
         self.runCmd("expr 1")
 
         # check that basic cases work
-        self.expect("type lookup String", substrs=['struct String {', 'extension String : '])
-        self.expect("type lookup Cla1", substrs=['class Cla1 {', 'func bat(_ x: Swift.Int, y: a.Str1) -> Swift.Int'])
-        self.expect("type lookup Str1", substrs=['struct Str1 {','func bar()','var b'])
+        self.expect(
+            "type lookup String",
+            substrs=[
+                'struct String {',
+                'extension String : '])
+        self.expect(
+            "type lookup Cla1",
+            substrs=[
+                'class Cla1 {',
+                'func bat(_ x: Swift.Int, y: a.Str1) -> Swift.Int'])
+        self.expect(
+            "type lookup Str1",
+            substrs=[
+                'struct Str1 {',
+                'func bar()',
+                'var b'])
 
         # check that specifiers are honored
         # self.expect('type lookup class Cla1', substrs=['class Cla1 {'])
@@ -77,7 +92,10 @@ class TestSwiftTypeLookup(TestBase):
 
         # check that modules are honored
         self.expect("type lookup Swift.String", substrs=['struct String {'])
-        self.expect("type lookup a.String", substrs=['struct String {'], matching=False)
+        self.expect(
+            "type lookup a.String",
+            substrs=['struct String {'],
+            matching=False)
 
         # check that a combination of module and specifier is honored
         # self.expect('type lookup class a.Cla1', substrs=['class Cla1 {'])
@@ -86,20 +104,46 @@ class TestSwiftTypeLookup(TestBase):
         # self.expect('type lookup struct Swift.Cla1', substrs=['class Cla1 {'], matching=False, error=True)
 
         # check that nested types are looked up correctly
-        self.expect('type lookup Toplevel.Nested.Deeper', substrs=['class Deeper', 'func foo'])
+        self.expect('type lookup Toplevel.Nested.Deeper',
+                    substrs=['class Deeper', 'func foo'])
 
         # check that mangled name lookup works
-        self.expect('type lookup _TtSi', substrs=['struct Int', 'extension Int'])
+        self.expect(
+            'type lookup _TtSi',
+            substrs=[
+                'struct Int',
+                'extension Int'])
 
         # check that we can look for generic things
         self.expect('type lookup Generic', substrs=['class Generic', 'foo'])
-        self.expect('type lookup Generic<String>', substrs=['class Generic', 'func foo'])
+        self.expect(
+            'type lookup Generic<String>',
+            substrs=[
+                'class Generic',
+                'func foo'])
 
         # check that we print comment text (and let you get rid of it)
-        self.expect('type lookup Int', substrs=['Create an instance'], matching=False)
-        self.expect('type lookup --show-help -- Int', substrs=['Create an instance'], matching=True)
-        self.expect('type lookup foo', substrs=['func foo', 'Int', 'Double'], matching=True)
-        self.expect('type lookup --show-help -- print', substrs=['/// ', 'func print'], matching=True)
+        self.expect(
+            'type lookup Int',
+            substrs=['Create an instance'],
+            matching=False)
+        self.expect(
+            'type lookup --show-help -- Int',
+            substrs=['Create an instance'],
+            matching=True)
+        self.expect(
+            'type lookup foo',
+            substrs=[
+                'func foo',
+                'Int',
+                'Double'],
+            matching=True)
+        self.expect(
+            'type lookup --show-help -- print',
+            substrs=[
+                '/// ',
+                'func print'],
+            matching=True)
 
 if __name__ == '__main__':
     import atexit

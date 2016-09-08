@@ -1,4 +1,5 @@
-//===-- NativeRegisterContextRegisterInfo.h ----------------------*- C++ -*-===//
+//===-- NativeRegisterContextRegisterInfo.h ----------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -15,33 +16,27 @@
 #include "NativeRegisterContext.h"
 #include "Plugins/Process/Utility/RegisterInfoInterface.h"
 
-namespace lldb_private
-{
-    class NativeRegisterContextRegisterInfo: public NativeRegisterContext
-    {
-    public:
-        ///
-        /// Construct a NativeRegisterContextRegisterInfo, taking ownership
-        /// of the register_info_interface pointer.
-        ///
-        NativeRegisterContextRegisterInfo (NativeThreadProtocol &thread,
-                                           uint32_t concrete_frame_idx,
-                                           RegisterInfoInterface *register_info_interface);
+namespace lldb_private {
+class NativeRegisterContextRegisterInfo : public NativeRegisterContext {
+public:
+  ///
+  /// Construct a NativeRegisterContextRegisterInfo, taking ownership
+  /// of the register_info_interface pointer.
+  ///
+  NativeRegisterContextRegisterInfo(
+      NativeThreadProtocol &thread, uint32_t concrete_frame_idx,
+      RegisterInfoInterface *register_info_interface);
 
-        uint32_t
-        GetRegisterCount () const override;
+  uint32_t GetRegisterCount() const override;
 
-        uint32_t
-        GetUserRegisterCount () const override;
+  uint32_t GetUserRegisterCount() const override;
 
-        const RegisterInfo *
-        GetRegisterInfoAtIndex (uint32_t reg_index) const override;
+  const RegisterInfo *GetRegisterInfoAtIndex(uint32_t reg_index) const override;
 
-        const RegisterInfoInterface&
-        GetRegisterInfoInterface () const;
+  const RegisterInfoInterface &GetRegisterInfoInterface() const;
 
-    private:
-        std::unique_ptr<RegisterInfoInterface> m_register_info_interface_up;
-    };
+private:
+  std::unique_ptr<RegisterInfoInterface> m_register_info_interface_up;
+};
 }
 #endif

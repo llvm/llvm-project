@@ -5,12 +5,13 @@ Test SBProcess APIs, including ReadMemory(), WriteMemory(), and others.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
+
 
 class ProcessAPITestCase(TestBase):
 
@@ -20,7 +21,9 @@ class ProcessAPITestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break inside main().
-        self.line = line_number("main.cpp", "// Set break point at this line and check variable 'my_char'.")
+        self.line = line_number(
+            "main.cpp",
+            "// Set break point at this line and check variable 'my_char'.")
 
     @add_test_categories(['pyapi'])
     def test_read_memory(self):
@@ -35,10 +38,13 @@ class ProcessAPITestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), "There should be a thread stopped due to breakpoint")
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint")
         frame = thread.GetFrameAtIndex(0)
 
         # Get the SBValue for the global variable 'my_char'.
@@ -49,45 +55,55 @@ class ProcessAPITestCase(TestBase):
         # expect to get a Python string as the result object!
         error = lldb.SBError()
         self.assertFalse(val.TypeIsPointerType())
-        content = process.ReadMemory(val.AddressOf().GetValueAsUnsigned(), 1, error)
+        content = process.ReadMemory(
+            val.AddressOf().GetValueAsUnsigned(), 1, error)
         if not error.Success():
             self.fail("SBProcess.ReadMemory() failed")
         if self.TraceOn():
             print("memory content:", content)
 
-        self.expect(content, "Result from SBProcess.ReadMemory() matches our expected output: 'x'",
-                    exe=False,
-            startstr = b'x')
+        self.expect(
+            content,
+            "Result from SBProcess.ReadMemory() matches our expected output: 'x'",
+            exe=False,
+            startstr=b'x')
 
         # Read (char *)my_char_ptr.
         val = frame.FindValue("my_char_ptr", lldb.eValueTypeVariableGlobal)
         self.DebugSBValue(val)
-        cstring = process.ReadCStringFromMemory(val.GetValueAsUnsigned(), 256, error)
+        cstring = process.ReadCStringFromMemory(
+            val.GetValueAsUnsigned(), 256, error)
         if not error.Success():
             self.fail("SBProcess.ReadCStringFromMemory() failed")
         if self.TraceOn():
             print("cstring read is:", cstring)
 
-        self.expect(cstring, "Result from SBProcess.ReadCStringFromMemory() matches our expected output",
-                    exe=False,
-            startstr = 'Does it work?')
+        self.expect(
+            cstring,
+            "Result from SBProcess.ReadCStringFromMemory() matches our expected output",
+            exe=False,
+            startstr='Does it work?')
 
         # Get the SBValue for the global variable 'my_cstring'.
         val = frame.FindValue("my_cstring", lldb.eValueTypeVariableGlobal)
         self.DebugSBValue(val)
 
         # Due to the typemap magic (see lldb.swig), we pass in 256 to read at most 256 bytes
-        # from the address, and expect to get a Python string as the result object!
+        # from the address, and expect to get a Python string as the result
+        # object!
         self.assertFalse(val.TypeIsPointerType())
-        cstring = process.ReadCStringFromMemory(val.AddressOf().GetValueAsUnsigned(), 256, error)
+        cstring = process.ReadCStringFromMemory(
+            val.AddressOf().GetValueAsUnsigned(), 256, error)
         if not error.Success():
             self.fail("SBProcess.ReadCStringFromMemory() failed")
         if self.TraceOn():
             print("cstring read is:", cstring)
 
-        self.expect(cstring, "Result from SBProcess.ReadCStringFromMemory() matches our expected output",
-                    exe=False,
-            startstr = 'lldb.SBProcess.ReadCStringFromMemory() works!')
+        self.expect(
+            cstring,
+            "Result from SBProcess.ReadCStringFromMemory() matches our expected output",
+            exe=False,
+            startstr='lldb.SBProcess.ReadCStringFromMemory() works!')
 
         # Get the SBValue for the global variable 'my_uint32'.
         val = frame.FindValue("my_uint32", lldb.eValueTypeVariableGlobal)
@@ -96,14 +112,16 @@ class ProcessAPITestCase(TestBase):
         # Due to the typemap magic (see lldb.swig), we pass in 4 to read 4 bytes
         # from the address, and expect to get an int as the result!
         self.assertFalse(val.TypeIsPointerType())
-        my_uint32 = process.ReadUnsignedFromMemory(val.AddressOf().GetValueAsUnsigned(), 4, error)
+        my_uint32 = process.ReadUnsignedFromMemory(
+            val.AddressOf().GetValueAsUnsigned(), 4, error)
         if not error.Success():
             self.fail("SBProcess.ReadCStringFromMemory() failed")
         if self.TraceOn():
             print("uint32 read is:", my_uint32)
 
         if my_uint32 != 12345:
-            self.fail("Result from SBProcess.ReadUnsignedFromMemory() does not match our expected output")
+            self.fail(
+                "Result from SBProcess.ReadUnsignedFromMemory() does not match our expected output")
 
     @add_test_categories(['pyapi'])
     def test_write_memory(self):
@@ -118,17 +136,21 @@ class ProcessAPITestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), "There should be a thread stopped due to breakpoint")
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint")
         frame = thread.GetFrameAtIndex(0)
 
         # Get the SBValue for the global variable 'my_char'.
         val = frame.FindValue("my_char", lldb.eValueTypeVariableGlobal)
         self.DebugSBValue(val)
 
-        # If the variable does not have a load address, there's no sense continuing.
+        # If the variable does not have a load address, there's no sense
+        # continuing.
         if not val.GetLocation().startswith("0x"):
             return
 
@@ -136,7 +158,8 @@ class ProcessAPITestCase(TestBase):
         location = int(val.GetLocation(), 16)
 
         # The program logic makes the 'my_char' variable to have memory content as 'x'.
-        # But we want to use the WriteMemory() API to assign 'a' to the variable.
+        # But we want to use the WriteMemory() API to assign 'a' to the
+        # variable.
 
         # Now use WriteMemory() API to write 'a' into the global variable.
         error = lldb.SBError()
@@ -153,9 +176,11 @@ class ProcessAPITestCase(TestBase):
         if self.TraceOn():
             print("memory content:", content)
 
-        self.expect(content, "Result from SBProcess.ReadMemory() matches our expected output: 'a'",
-                    exe=False,
-            startstr = b'a')
+        self.expect(
+            content,
+            "Result from SBProcess.ReadMemory() matches our expected output: 'a'",
+            exe=False,
+            startstr=b'a')
 
     @add_test_categories(['pyapi'])
     def test_access_my_int(self):
@@ -170,17 +195,21 @@ class ProcessAPITestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread.IsValid(), "There should be a thread stopped due to breakpoint")
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint")
         frame = thread.GetFrameAtIndex(0)
 
         # Get the SBValue for the global variable 'my_int'.
         val = frame.FindValue("my_int", lldb.eValueTypeVariableGlobal)
         self.DebugSBValue(val)
 
-        # If the variable does not have a load address, there's no sense continuing.
+        # If the variable does not have a load address, there's no sense
+        # continuing.
         if not val.GetLocation().startswith("0x"):
             return
 
@@ -204,7 +233,8 @@ class ProcessAPITestCase(TestBase):
             return
 
         # The program logic makes the 'my_int' variable to have int type and value of 0.
-        # But we want to use the WriteMemory() API to assign 256 to the variable.
+        # But we want to use the WriteMemory() API to assign 256 to the
+        # variable.
 
         # Now use WriteMemory() API to write 256 into the global variable.
         error = lldb.SBError()
@@ -212,25 +242,31 @@ class ProcessAPITestCase(TestBase):
         if not error.Success() or result != byteSize:
             self.fail("SBProcess.WriteMemory() failed")
 
-        # Make sure that the val we got originally updates itself to notice the change:
-        self.expect(val.GetValue(),
-                    "SBProcess.ReadMemory() successfully writes (int)256 to the memory location for 'my_int'",
-                    exe=False,
-            startstr = '256')
+        # Make sure that the val we got originally updates itself to notice the
+        # change:
+        self.expect(
+            val.GetValue(),
+            "SBProcess.ReadMemory() successfully writes (int)256 to the memory location for 'my_int'",
+            exe=False,
+            startstr='256')
 
-        # And for grins, get the SBValue for the global variable 'my_int' again, to make sure that also tracks the new value:
+        # And for grins, get the SBValue for the global variable 'my_int'
+        # again, to make sure that also tracks the new value:
         val = frame.FindValue("my_int", lldb.eValueTypeVariableGlobal)
-        self.expect(val.GetValue(),
-                    "SBProcess.ReadMemory() successfully writes (int)256 to the memory location for 'my_int'",
-                    exe=False,
-            startstr = '256')
+        self.expect(
+            val.GetValue(),
+            "SBProcess.ReadMemory() successfully writes (int)256 to the memory location for 'my_int'",
+            exe=False,
+            startstr='256')
 
-        # Now read the memory content.  The bytearray should have (byte)1 as the second element.
+        # Now read the memory content.  The bytearray should have (byte)1 as
+        # the second element.
         content = process.ReadMemory(location, byteSize, error)
         if not error.Success():
             self.fail("SBProcess.ReadMemory() failed")
 
-        # The bytearray_to_int utility function expects a little endian bytearray.
+        # The bytearray_to_int utility function expects a little endian
+        # bytearray.
         if byteOrder == lldb.eByteOrderBig:
             content = bytearray(content, 'ascii')
             content.reverse()
@@ -254,15 +290,19 @@ class ProcessAPITestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         if self.TraceOn():
             print("process state:", state_type_to_str(process.GetState()))
         self.assertTrue(process.GetState() != lldb.eStateConnected)
 
         error = lldb.SBError()
-        success = process.RemoteLaunch(None, None, None, None, None, None, 0, False, error)
-        self.assertTrue(not success, "RemoteLaunch() should fail for process state != eStateConnected")
+        success = process.RemoteLaunch(
+            None, None, None, None, None, None, 0, False, error)
+        self.assertTrue(
+            not success,
+            "RemoteLaunch() should fail for process state != eStateConnected")
 
     @add_test_categories(['pyapi'])
     def test_get_num_supported_hardware_watchpoints(self):
@@ -278,10 +318,10 @@ class ProcessAPITestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
-        error = lldb.SBError();
+        error = lldb.SBError()
         num = process.GetNumSupportedHardwareWatchpoints(error)
         if self.TraceOn() and error.Success():
             print("Number of supported hardware watchpoints: %d" % num)
-

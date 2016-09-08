@@ -3,13 +3,14 @@
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import lldb
 import sys
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 @skipUnlessDarwin
 class AddDsymMidExecutionCommandCase(TestBase):
@@ -21,7 +22,7 @@ class AddDsymMidExecutionCommandCase(TestBase):
         TestBase.setUp(self)
         self.source = 'main.c'
 
-    @no_debug_info_test # Prevent the genaration of the dwarf version of this test
+    @no_debug_info_test  # Prevent the genaration of the dwarf version of this test
     @expectedFailureDarwin("rdar://23590100")
     def test_add_dsym_mid_execution(self):
         """Test that add-dsym mid-execution loads the symbols at the right place for a slid binary."""
@@ -31,11 +32,12 @@ class AddDsymMidExecutionCommandCase(TestBase):
         self.target = self.dbg.CreateTarget(exe)
         self.assertTrue(self.target, VALID_TARGET)
 
-        main_bp = self.target.BreakpointCreateByName ("main", "a.out")
+        main_bp = self.target.BreakpointCreateByName("main", "a.out")
         self.assertTrue(main_bp, VALID_BREAKPOINT)
 
         self.runCmd("settings set target.disable-aslr false")
-        self.process = self.target.LaunchSimple (None, None, self.get_process_working_directory())
+        self.process = self.target.LaunchSimple(
+            None, None, self.get_process_working_directory())
         self.assertTrue(self.process, PROCESS_IS_VALID)
 
         # The stop reason of the thread should be breakpoint.
@@ -45,4 +47,4 @@ class AddDsymMidExecutionCommandCase(TestBase):
         self.runCmd("add-dsym hide.app/Contents/a.out.dSYM")
 
         self.expect("frame select",
-                    substrs = ['a.out`main at main.c'])
+                    substrs=['a.out`main at main.c'])

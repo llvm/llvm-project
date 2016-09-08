@@ -32,138 +32,125 @@ namespace lldb_private {
 // eh_frame / debug_frame, and one to generate an UnwindPlan based
 // on the FDE in the eh_frame / debug_frame section.
 
-class DWARFCallFrameInfo
-{
+class DWARFCallFrameInfo {
 public:
+  DWARFCallFrameInfo(ObjectFile &objfile, lldb::SectionSP &section,
+                     lldb::RegisterKind reg_kind, bool is_eh_frame);
 
-    DWARFCallFrameInfo (ObjectFile& objfile, 
-                        lldb::SectionSP& section, 
-                        lldb::RegisterKind reg_kind, 
-                        bool is_eh_frame);
+  ~DWARFCallFrameInfo();
 
-    ~DWARFCallFrameInfo();
+  // Locate an AddressRange that includes the provided Address in this
+  // object's eh_frame/debug_info
+  // Returns true if a range is found to cover that address.
+  bool GetAddressRange(Address addr, AddressRange &range);
 
-    // Locate an AddressRange that includes the provided Address in this 
-    // object's eh_frame/debug_info
-    // Returns true if a range is found to cover that address.
-    bool
-    GetAddressRange (Address addr, AddressRange &range);
+  // Return an UnwindPlan based on the call frame information encoded
+  // in the FDE of this DWARFCallFrameInfo section.
+  bool GetUnwindPlan(Address addr, UnwindPlan &unwind_plan);
 
-    // Return an UnwindPlan based on the call frame information encoded 
-    // in the FDE of this DWARFCallFrameInfo section.
-    bool
-    GetUnwindPlan (Address addr, UnwindPlan& unwind_plan);
+  typedef RangeVector<lldb::addr_t, uint32_t> FunctionAddressAndSizeVector;
 
-    typedef RangeVector<lldb::addr_t, uint32_t> FunctionAddressAndSizeVector;
+  //------------------------------------------------------------------
+  // Build a vector of file address and size for all functions in this Module
+  // based on the eh_frame FDE entries.
+  //
+  // The eh_frame information can be a useful source of file address and size of
+  // the functions in a Module.  Often a binary's non-exported symbols are
+  // stripped
+  // before shipping so lldb won't know the start addr / size of many functions
+  // in the Module.  But the eh_frame can help to give the addresses of these
+  // stripped symbols, at least.
+  //
+  // @param[out] function_info
+  //      A vector provided by the caller is filled out.  May be empty if no
+  //      FDEs/no eh_frame
+  //      is present in this Module.
 
-    //------------------------------------------------------------------
-    // Build a vector of file address and size for all functions in this Module
-    // based on the eh_frame FDE entries.
-    //
-    // The eh_frame information can be a useful source of file address and size of
-    // the functions in a Module.  Often a binary's non-exported symbols are stripped
-    // before shipping so lldb won't know the start addr / size of many functions
-    // in the Module.  But the eh_frame can help to give the addresses of these 
-    // stripped symbols, at least.
-    //
-    // @param[out] function_info
-    //      A vector provided by the caller is filled out.  May be empty if no FDEs/no eh_frame
-    //      is present in this Module.
+  void
+  GetFunctionAddressAndSizeVector(FunctionAddressAndSizeVector &function_info);
 
-    void
-    GetFunctionAddressAndSizeVector (FunctionAddressAndSizeVector &function_info);
-
-    void
-    ForEachFDEEntries(const std::function<bool(lldb::addr_t, uint32_t, dw_offset_t)>& callback);
+  void ForEachFDEEntries(
+      const std::function<bool(lldb::addr_t, uint32_t, dw_offset_t)> &callback);
 
 private:
-    enum
-    {
-        CFI_AUG_MAX_SIZE = 8,
-        CFI_HEADER_SIZE = 8
-    };
+  enum { CFI_AUG_MAX_SIZE = 8, CFI_HEADER_SIZE = 8 };
 
-    struct CIE
-    {
-        dw_offset_t cie_offset;
-        uint8_t     version;
-        char        augmentation[CFI_AUG_MAX_SIZE];  // This is typically empty or very short.
-        uint32_t    code_align;
-        int32_t     data_align;
-        uint32_t    return_addr_reg_num;
-        dw_offset_t inst_offset;        // offset of CIE instructions in mCFIData
-        uint32_t    inst_length;        // length of CIE instructions in mCFIData
-        uint8_t     ptr_encoding;
-        uint8_t     lsda_addr_encoding; // The encoding of the LSDA address in the FDE augmentation data
-        lldb::addr_t personality_loc;    // (file) address of the pointer to the personality routine
-        lldb_private::UnwindPlan::Row initial_row;
+  struct CIE {
+    dw_offset_t cie_offset;
+    uint8_t version;
+    char augmentation[CFI_AUG_MAX_SIZE]; // This is typically empty or very
+                                         // short.
+    uint32_t code_align;
+    int32_t data_align;
+    uint32_t return_addr_reg_num;
+    dw_offset_t inst_offset; // offset of CIE instructions in mCFIData
+    uint32_t inst_length;    // length of CIE instructions in mCFIData
+    uint8_t ptr_encoding;
+    uint8_t lsda_addr_encoding;   // The encoding of the LSDA address in the FDE
+                                  // augmentation data
+    lldb::addr_t personality_loc; // (file) address of the pointer to the
+                                  // personality routine
+    lldb_private::UnwindPlan::Row initial_row;
 
-        CIE(dw_offset_t offset) : cie_offset(offset), version (-1), code_align (0),
-                                  data_align (0), return_addr_reg_num (LLDB_INVALID_REGNUM), inst_offset (0),
-                                  inst_length (0), ptr_encoding (0), 
-                                  lsda_addr_encoding (DW_EH_PE_omit), personality_loc (LLDB_INVALID_ADDRESS),
-                                  initial_row ()
-        { 
-        }
-    };
+    CIE(dw_offset_t offset)
+        : cie_offset(offset), version(-1), code_align(0), data_align(0),
+          return_addr_reg_num(LLDB_INVALID_REGNUM), inst_offset(0),
+          inst_length(0), ptr_encoding(0), lsda_addr_encoding(DW_EH_PE_omit),
+          personality_loc(LLDB_INVALID_ADDRESS), initial_row() {}
+  };
 
-    typedef std::shared_ptr<CIE> CIESP;
+  typedef std::shared_ptr<CIE> CIESP;
 
-    typedef std::map<dw_offset_t, CIESP> cie_map_t;
+  typedef std::map<dw_offset_t, CIESP> cie_map_t;
 
-    // Start address (file address), size, offset of FDE location
-    // used for finding an FDE for a given File address; the start address field is
-    // an offset into an individual Module.
-    typedef RangeDataVector<lldb::addr_t, uint32_t, dw_offset_t> FDEEntryMap;
+  // Start address (file address), size, offset of FDE location
+  // used for finding an FDE for a given File address; the start address field
+  // is
+  // an offset into an individual Module.
+  typedef RangeDataVector<lldb::addr_t, uint32_t, dw_offset_t> FDEEntryMap;
 
-    bool
-    IsEHFrame() const;
+  bool IsEHFrame() const;
 
-    bool
-    GetFDEEntryByFileAddress (lldb::addr_t file_offset, FDEEntryMap::Entry& fde_entry);
+  bool GetFDEEntryByFileAddress(lldb::addr_t file_offset,
+                                FDEEntryMap::Entry &fde_entry);
 
-    void
-    GetFDEIndex ();
+  void GetFDEIndex();
 
-    bool
-    FDEToUnwindPlan (uint32_t offset, Address startaddr, UnwindPlan& unwind_plan);
+  bool FDEToUnwindPlan(uint32_t offset, Address startaddr,
+                       UnwindPlan &unwind_plan);
 
-    const CIE* 
-    GetCIE(dw_offset_t cie_offset);
-    
-    void
-    GetCFIData();
+  const CIE *GetCIE(dw_offset_t cie_offset);
 
-    // Applies the specified DWARF opcode to the given row. This function handle the commands
-    // operates only on a single row (these are the ones what can appear both in CIE and in FDE).
-    // Returns true if the opcode is handled and false otherwise.
-    bool
-    HandleCommonDwarfOpcode(uint8_t primary_opcode,
-                            uint8_t extended_opcode,
-                            int32_t data_align,
-                            lldb::offset_t& offset,
-                            UnwindPlan::Row& row);
+  void GetCFIData();
 
-    ObjectFile&                 m_objfile;
-    lldb::SectionSP             m_section_sp;
-    lldb::RegisterKind          m_reg_kind;
-    Flags                       m_flags;
-    cie_map_t                   m_cie_map;
+  // Applies the specified DWARF opcode to the given row. This function handle
+  // the commands
+  // operates only on a single row (these are the ones what can appear both in
+  // CIE and in FDE).
+  // Returns true if the opcode is handled and false otherwise.
+  bool HandleCommonDwarfOpcode(uint8_t primary_opcode, uint8_t extended_opcode,
+                               int32_t data_align, lldb::offset_t &offset,
+                               UnwindPlan::Row &row);
 
-    DataExtractor               m_cfi_data;
-    bool                        m_cfi_data_initialized;   // only copy the section into the DE once
+  ObjectFile &m_objfile;
+  lldb::SectionSP m_section_sp;
+  lldb::RegisterKind m_reg_kind;
+  Flags m_flags;
+  cie_map_t m_cie_map;
 
-    FDEEntryMap                 m_fde_index;
-    bool                        m_fde_index_initialized;  // only scan the section for FDEs once
-    Mutex                       m_fde_index_mutex;        // and isolate the thread that does it
+  DataExtractor m_cfi_data;
+  bool m_cfi_data_initialized; // only copy the section into the DE once
 
-    bool                        m_is_eh_frame;
+  FDEEntryMap m_fde_index;
+  bool m_fde_index_initialized; // only scan the section for FDEs once
+  Mutex m_fde_index_mutex;      // and isolate the thread that does it
 
-    CIESP
-    ParseCIE (const uint32_t cie_offset);
+  bool m_is_eh_frame;
 
+  CIESP
+  ParseCIE(const uint32_t cie_offset);
 };
 
 } // namespace lldb_private
 
-#endif  // liblldb_DWARFCallFrameInfo_h_
+#endif // liblldb_DWARFCallFrameInfo_h_

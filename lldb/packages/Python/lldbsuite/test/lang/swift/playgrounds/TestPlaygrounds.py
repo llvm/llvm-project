@@ -22,9 +22,10 @@ import os.path
 import unittest2
 
 
-def execute_command (command):
-    (exit_status, output) = commands.getstatusoutput (command)
+def execute_command(command):
+    (exit_status, output) = commands.getstatusoutput(command)
     return exit_status
+
 
 class TestSwiftPlaygrounds(TestBase):
 
@@ -32,7 +33,9 @@ class TestSwiftPlaygrounds(TestBase):
 
     @decorators.skipUnlessDarwin
     @decorators.swiftTest
-    @decorators.skipIf(debug_info=decorators.no_match("dsym"), bugnumber="This test only builds one way")
+    @decorators.skipIf(
+        debug_info=decorators.no_match("dsym"),
+        bugnumber="This test only builds one way")
     def test_cross_module_extension(self):
         """Test that playgrounds work"""
         self.buildAll()
@@ -41,7 +44,8 @@ class TestSwiftPlaygrounds(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.PlaygroundStub_source = "PlaygroundStub.swift"
-        self.PlaygroundStub_source_spec = lldb.SBFileSpec (self.PlaygroundStub_source)
+        self.PlaygroundStub_source_spec = lldb.SBFileSpec(
+            self.PlaygroundStub_source)
 
     def buildAll(self):
         execute_command("make everything")
@@ -60,20 +64,22 @@ class TestSwiftPlaygrounds(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('Set breakpoint here', self.PlaygroundStub_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here', self.PlaygroundStub_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         process = target.LaunchSimple(None, None, os.getcwd())
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
-        contents = ""        
+        contents = ""
 
         with open('Contents.swift', 'r') as contents_file:
             contents = contents_file.read()
@@ -82,13 +88,13 @@ class TestSwiftPlaygrounds(TestBase):
         options.SetLanguage(lldb.eLanguageTypeSwift)
         options.SetPlaygroundTransformEnabled()
 
-        self.frame.EvaluateExpression (contents, options)
+        self.frame.EvaluateExpression(contents, options)
 
-        ret = self.frame.EvaluateExpression ("get_output()")
+        ret = self.frame.EvaluateExpression("get_output()")
 
         playground_output = ret.GetSummary()
 
-        self.assertTrue(playground_output != None)
+        self.assertTrue(playground_output is not None)
         self.assertTrue("a=\\'3\\'" in playground_output)
         self.assertTrue("b=\\'5\\'" in playground_output)
         self.assertTrue("=\\'8\\'" in playground_output)

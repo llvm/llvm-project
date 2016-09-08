@@ -3,12 +3,19 @@ from unittest2.test.support import EqualityMixin, LoggingResult
 import sys
 import unittest2
 
+
 class Test(object):
+
     class Foo(unittest2.TestCase):
+
         def test_1(self): pass
+
         def test_2(self): pass
+
         def test_3(self): pass
+
         def runTest(self): pass
+
 
 def _mk_TestSuite(*names):
     return unittest2.TestSuite(Test.Foo(n) for n in names)
@@ -16,7 +23,7 @@ def _mk_TestSuite(*names):
 
 class Test_TestSuite(unittest2.TestCase, EqualityMixin):
 
-    ### Set up attributes needed by inherited tests
+    # Set up attributes needed by inherited tests
     ################################################################
 
     # Used by EqualityMixin.test_eq
@@ -31,9 +38,9 @@ class Test_TestSuite(unittest2.TestCase, EqualityMixin):
                 (_mk_TestSuite('test_1'), _mk_TestSuite('test_2'))]
 
     ################################################################
-    ### /Set up attributes needed by inherited tests
+    # /Set up attributes needed by inherited tests
 
-    ### Tests for TestSuite.__init__
+    # Tests for TestSuite.__init__
     ################################################################
 
     # "class TestSuite([tests])"
@@ -93,7 +100,7 @@ class Test_TestSuite(unittest2.TestCase, EqualityMixin):
         self.assertEqual(suite.countTestCases(), 2)
 
     ################################################################
-    ### /Tests for TestSuite.__init__
+    # /Tests for TestSuite.__init__
 
     # Container types should support the iter protocol
     def test_iter(self):
@@ -121,6 +128,7 @@ class Test_TestSuite(unittest2.TestCase, EqualityMixin):
     # TestSuite instances) returns 0?
     def test_countTestCases_zero_nested(self):
         class Test1(unittest2.TestCase):
+
             def test(self):
                 pass
 
@@ -145,7 +153,9 @@ class Test_TestSuite(unittest2.TestCase, EqualityMixin):
     # Make sure this holds for nested TestSuite instances, too
     def test_countTestCases_nested(self):
         class Test1(unittest2.TestCase):
+
             def test1(self): pass
+
             def test2(self): pass
 
         test2 = unittest2.FunctionTestCase(lambda: None)
@@ -188,10 +198,12 @@ class Test_TestSuite(unittest2.TestCase, EqualityMixin):
         result = LoggingResult(events)
 
         class LoggingCase(unittest2.TestCase):
+
             def run(self, result):
                 events.append('run %s' % self._testMethodName)
 
             def test1(self): pass
+
             def test2(self): pass
 
         tests = [LoggingCase('test1'), LoggingCase('test2')]
@@ -203,6 +215,7 @@ class Test_TestSuite(unittest2.TestCase, EqualityMixin):
     # "Add a TestCase ... to the suite"
     def test_addTest__TestCase(self):
         class Foo(unittest2.TestCase):
+
             def test(self): pass
 
         test = Foo('test')
@@ -216,6 +229,7 @@ class Test_TestSuite(unittest2.TestCase, EqualityMixin):
     # "Add a ... TestSuite to the suite"
     def test_addTest__TestSuite(self):
         class Foo(unittest2.TestCase):
+
             def test(self): pass
 
         suite_2 = unittest2.TestSuite([Foo('test')])
@@ -233,7 +247,9 @@ class Test_TestSuite(unittest2.TestCase, EqualityMixin):
     # each element"
     def test_addTests(self):
         class Foo(unittest2.TestCase):
+
             def test_1(self): pass
+
             def test_2(self): pass
 
         test_1 = Foo('test_1')
@@ -294,35 +310,41 @@ class Test_TestSuite(unittest2.TestCase, EqualityMixin):
         # when the bug is fixed this line will not crash
         suite.run(unittest2.TestResult())
 
-
     def test_basetestsuite(self):
         class Test(unittest2.TestCase):
             wasSetUp = False
             wasTornDown = False
+
             @classmethod
             def setUpClass(cls):
                 cls.wasSetUp = True
+
             @classmethod
             def tearDownClass(cls):
                 cls.wasTornDown = True
+
             def testPass(self):
                 pass
+
             def testFail(self):
                 fail
+
         class Module(object):
             wasSetUp = False
             wasTornDown = False
+
             @staticmethod
             def setUpModule():
                 Module.wasSetUp = True
+
             @staticmethod
             def tearDownModule():
                 Module.wasTornDown = True
-        
+
         Test.__module__ = 'Module'
         sys.modules['Module'] = Module
         self.addCleanup(sys.modules.pop, 'Module')
-        
+
         suite = unittest2.BaseTestSuite()
         suite.addTests([Test('testPass'), Test('testFail')])
         self.assertEqual(suite.countTestCases(), 2)

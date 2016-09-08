@@ -13,19 +13,22 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class FloatTypesExprTestCase(AbstractBase.GenericTester):
 
     mydir = AbstractBase.GenericTester.compute_mydir(__file__)
 
     # rdar://problem/8493023
-    # test/types failures for Test*TypesExpr.py: element offset computed wrong and sign error?
+    # test/types failures for Test*TypesExpr.py: element offset computed wrong
+    # and sign error?
 
     def setUp(self):
         # Call super's setUp().
         AbstractBase.GenericTester.setUp(self)
         # disable "There is a running process, kill it and restart?" prompt
         self.runCmd("settings set auto-confirm true")
-        self.addTearDownHook(lambda: self.runCmd("settings clear auto-confirm"))
+        self.addTearDownHook(
+            lambda: self.runCmd("settings clear auto-confirm"))
 
     def test_float_type(self):
         """Test that float-type variable expressions are evaluated correctly."""

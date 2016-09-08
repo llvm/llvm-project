@@ -11,10 +11,12 @@
 # ------------------------------------------------------------------------------
 """Test that we can launch the REPL and define a variable."""
 
-import os, time
+import os
+import time
 import unittest2
 import lldb
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
+
 
 class REPLBasicTestCase (REPLTest):
 
@@ -22,5 +24,6 @@ class REPLBasicTestCase (REPLTest):
 
     def doTest(self):
         self.command('var a = 1', patterns=['a: Int = 1'])
-        self.command('let b = "Hello World"', patterns=['b: String = "Hello World"'])
-
+        self.command(
+            'let b = "Hello World"',
+            patterns=['b: String = "Hello World"'])

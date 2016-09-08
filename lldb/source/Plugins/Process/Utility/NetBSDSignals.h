@@ -16,14 +16,12 @@
 namespace lldb_private {
 
 /// NetBSD specific set of Unix signals.
-class NetBSDSignals : public UnixSignals
-{
+class NetBSDSignals : public UnixSignals {
 public:
-    NetBSDSignals();
+  NetBSDSignals();
 
 private:
-    void
-    Reset() override;
+  void Reset() override;
 };
 
 } // namespace lldb_private

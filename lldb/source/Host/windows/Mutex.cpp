@@ -11,15 +11,15 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/windows/windows.h"
 
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 #if 0
 // This logging is way too verbose to enable even for a log channel.
 // This logging can be enabled by changing the "#if 0", but should be
 // reverted prior to checking in.
 #include <cstdio>
-#define DEBUG_LOG(fmt, ...) printf(fmt, ## __VA_ARGS__)
+#define DEBUG_LOG(fmt, ...) printf(fmt, ##__VA_ARGS__)
 #else
 #define DEBUG_LOG(fmt, ...)
 #endif
@@ -31,11 +31,9 @@ using namespace lldb_private;
 //
 // Creates a pthread mutex with no attributes.
 //----------------------------------------------------------------------
-Mutex::Mutex () :
-    m_mutex()
-{
-    m_mutex = static_cast<PCRITICAL_SECTION>(malloc(sizeof(CRITICAL_SECTION)));
-    InitializeCriticalSection(static_cast<PCRITICAL_SECTION>(m_mutex));
+Mutex::Mutex() : m_mutex() {
+  m_mutex = static_cast<PCRITICAL_SECTION>(malloc(sizeof(CRITICAL_SECTION)));
+  InitializeCriticalSection(static_cast<PCRITICAL_SECTION>(m_mutex));
 }
 
 //----------------------------------------------------------------------
@@ -43,11 +41,9 @@ Mutex::Mutex () :
 //
 // Creates a pthread mutex with "type" as the mutex type.
 //----------------------------------------------------------------------
-Mutex::Mutex (Mutex::Type type) :
-    m_mutex()
-{
-    m_mutex = static_cast<PCRITICAL_SECTION>(malloc(sizeof(CRITICAL_SECTION)));
-    InitializeCriticalSection(static_cast<PCRITICAL_SECTION>(m_mutex));
+Mutex::Mutex(Mutex::Type type) : m_mutex() {
+  m_mutex = static_cast<PCRITICAL_SECTION>(malloc(sizeof(CRITICAL_SECTION)));
+  InitializeCriticalSection(static_cast<PCRITICAL_SECTION>(m_mutex));
 }
 
 //----------------------------------------------------------------------
@@ -55,10 +51,9 @@ Mutex::Mutex (Mutex::Type type) :
 //
 // Destroys the mutex owned by this object.
 //----------------------------------------------------------------------
-Mutex::~Mutex()
-{
-    DeleteCriticalSection(static_cast<PCRITICAL_SECTION>(m_mutex));
-    free(m_mutex);
+Mutex::~Mutex() {
+  DeleteCriticalSection(static_cast<PCRITICAL_SECTION>(m_mutex));
+  free(m_mutex);
 }
 
 //----------------------------------------------------------------------
@@ -69,13 +64,12 @@ Mutex::~Mutex()
 // RETURNS
 //  The error code from the pthread_mutex_lock() function call.
 //----------------------------------------------------------------------
-int
-Mutex::Lock()
-{
-    DEBUG_LOG ("[%4.4" PRIx64 "/%4.4" PRIx64 "] pthread_mutex_lock (%p)...\n", Host::GetCurrentProcessID(), Host::GetCurrentThreadID(), m_mutex);
+int Mutex::Lock() {
+  DEBUG_LOG("[%4.4" PRIx64 "/%4.4" PRIx64 "] pthread_mutex_lock (%p)...\n",
+            Host::GetCurrentProcessID(), Host::GetCurrentThreadID(), m_mutex);
 
-    EnterCriticalSection(static_cast<PCRITICAL_SECTION>(m_mutex));
-    return 0;
+  EnterCriticalSection(static_cast<PCRITICAL_SECTION>(m_mutex));
+  return 0;
 }
 
 //----------------------------------------------------------------------
@@ -86,10 +80,8 @@ Mutex::Lock()
 // RETURNS
 //  The error code from the pthread_mutex_trylock() function call.
 //----------------------------------------------------------------------
-int
-Mutex::TryLock(const char *failure_message)
-{
-    return TryEnterCriticalSection(static_cast<PCRITICAL_SECTION>(m_mutex)) == 0;
+int Mutex::TryLock(const char *failure_message) {
+  return TryEnterCriticalSection(static_cast<PCRITICAL_SECTION>(m_mutex)) == 0;
 }
 
 //----------------------------------------------------------------------
@@ -101,9 +93,7 @@ Mutex::TryLock(const char *failure_message)
 // RETURNS
 //  The error code from the pthread_mutex_unlock() function call.
 //----------------------------------------------------------------------
-int
-Mutex::Unlock()
-{
-    LeaveCriticalSection(static_cast<PCRITICAL_SECTION>(m_mutex));
-    return 0;
+int Mutex::Unlock() {
+  LeaveCriticalSection(static_cast<PCRITICAL_SECTION>(m_mutex));
+  return 0;
 }

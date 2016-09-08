@@ -16,38 +16,20 @@
 
 #include <pthread.h>
 
-class PThreadCondition
-{
+class PThreadCondition {
 public:
+  PThreadCondition() { ::pthread_cond_init(&m_condition, NULL); }
 
-    PThreadCondition()
-    {
-        ::pthread_cond_init (&m_condition, NULL);
-    }
+  ~PThreadCondition() { ::pthread_cond_destroy(&m_condition); }
 
-    ~PThreadCondition()
-    {
-        ::pthread_cond_destroy (&m_condition);
-    }
+  pthread_cond_t *Condition() { return &m_condition; }
 
-    pthread_cond_t *Condition()
-    {
-        return &m_condition;
-    }
+  int Broadcast() { return ::pthread_cond_broadcast(&m_condition); }
 
-    int Broadcast()
-    {
-        return ::pthread_cond_broadcast (&m_condition);
-    }
-
-    int Signal()
-    {
-        return ::pthread_cond_signal (&m_condition);
-    }
+  int Signal() { return ::pthread_cond_signal(&m_condition); }
 
 protected:
-    pthread_cond_t        m_condition;
+  pthread_cond_t m_condition;
 };
 
 #endif
-

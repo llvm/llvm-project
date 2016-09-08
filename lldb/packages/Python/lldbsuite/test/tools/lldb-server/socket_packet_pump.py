@@ -2,7 +2,6 @@
 from __future__ import print_function
 
 
-
 import re
 import select
 import threading
@@ -10,6 +9,7 @@ import traceback
 import codecs
 
 from six.moves import queue
+
 
 def _handle_output_packet_string(packet_contents):
     if (not packet_contents) or (len(packet_contents) < 1):
@@ -21,12 +21,15 @@ def _handle_output_packet_string(packet_contents):
     else:
         return packet_contents[1:].decode("hex")
 
+
 def _dump_queue(the_queue):
     while not the_queue.empty():
         print(codecs.encode(the_queue.get(True), "string_escape"))
         print("\n")
 
+
 class PumpQueues(object):
+
     def __init__(self):
         self._output_queue = queue.Queue()
         self._packet_queue = queue.Queue()
@@ -179,7 +182,8 @@ class SocketPacketPump(object):
                     # Likely a closed socket.  Done with the pump thread.
                     if self._logger:
                         self._logger.debug(
-                            "socket read failed, stopping pump read thread\n" + traceback.format_exc(3))
+                            "socket read failed, stopping pump read thread\n" +
+                            traceback.format_exc(3))
                     break
                 self._process_new_bytes(new_bytes)
 

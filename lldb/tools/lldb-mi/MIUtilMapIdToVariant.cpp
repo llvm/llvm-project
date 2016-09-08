@@ -10,42 +10,38 @@
 // In-house headers:
 #include "MIUtilMapIdToVariant.h"
 
-//++ ------------------------------------------------------------------------------------
+//++
+//------------------------------------------------------------------------------------
 // Details: CMIUtilMapIdToVariant constructor.
 // Type:    Method.
 // Args:    None.
 // Return:  None.
 // Throws:  None.
 //--
-CMIUtilMapIdToVariant::CMIUtilMapIdToVariant()
-{
-}
+CMIUtilMapIdToVariant::CMIUtilMapIdToVariant() {}
 
-//++ ------------------------------------------------------------------------------------
+//++
+//------------------------------------------------------------------------------------
 // Details: CMIUtilMapIdToVariant destructor.
 // Type:    Method.
 // Args:    None.
 // Return:  None.
 // Throws:  None.
 //--
-CMIUtilMapIdToVariant::~CMIUtilMapIdToVariant()
-{
-}
+CMIUtilMapIdToVariant::~CMIUtilMapIdToVariant() {}
 
-//++ ------------------------------------------------------------------------------------
+//++
+//------------------------------------------------------------------------------------
 // Details: Remove at the data from *this container.
 // Type:    Method.
 // Args:    None.
 // Return:  None.
 // Throws:  None.
 //--
-void
-CMIUtilMapIdToVariant::Clear()
-{
-    m_mapKeyToVariantValue.clear();
-}
+void CMIUtilMapIdToVariant::Clear() { m_mapKeyToVariantValue.clear(); }
 
-//++ ------------------------------------------------------------------------------------
+//++
+//------------------------------------------------------------------------------------
 // Details: Check an ID is present already in *this container.
 // Type:    Method.
 // Args:    vId - (R) Unique ID i.e. GUID.
@@ -53,30 +49,29 @@ CMIUtilMapIdToVariant::Clear()
 //          False - not found.
 // Throws:  None.
 //--
-bool
-CMIUtilMapIdToVariant::HaveAlready(const CMIUtilString &vId) const
-{
-    const MapKeyToVariantValue_t::const_iterator it = m_mapKeyToVariantValue.find(vId);
-    if (it != m_mapKeyToVariantValue.end())
-        return true;
+bool CMIUtilMapIdToVariant::HaveAlready(const CMIUtilString &vId) const {
+  const MapKeyToVariantValue_t::const_iterator it =
+      m_mapKeyToVariantValue.find(vId);
+  if (it != m_mapKeyToVariantValue.end())
+    return true;
 
-    return false;
+  return false;
 }
 
-//++ ------------------------------------------------------------------------------------
+//++
+//------------------------------------------------------------------------------------
 // Details: Determine if *this container is currently holding any data.
 // Type:    Method.
 // Args:    None.
 // Return:  bool    - True - Yes empty, false - one or more data object present.
 // Throws:  None.
 //--
-bool
-CMIUtilMapIdToVariant::IsEmpty() const
-{
-    return m_mapKeyToVariantValue.empty();
+bool CMIUtilMapIdToVariant::IsEmpty() const {
+  return m_mapKeyToVariantValue.empty();
 }
 
-//++ ------------------------------------------------------------------------------------
+//++
+//------------------------------------------------------------------------------------
 // Details: Check the ID is valid to be registered.
 // Type:    Method.
 // Args:    vId - (R) Unique ID i.e. GUID.
@@ -84,19 +79,19 @@ CMIUtilMapIdToVariant::IsEmpty() const
 //          False - not valid.
 // Throws:  None.
 //--
-bool
-CMIUtilMapIdToVariant::IsValid(const CMIUtilString &vId) const
-{
-    bool bValid = true;
+bool CMIUtilMapIdToVariant::IsValid(const CMIUtilString &vId) const {
+  bool bValid = true;
 
-    if (vId.empty())
-        bValid = false;
+  if (vId.empty())
+    bValid = false;
 
-    return bValid;
+  return bValid;
 }
 
-//++ ------------------------------------------------------------------------------------
-// Details: Remove from *this contain a data object specified by ID. The data object
+//++
+//------------------------------------------------------------------------------------
+// Details: Remove from *this contain a data object specified by ID. The data
+// object
 //          when removed also calls its destructor should it have one.
 // Type:    Method.
 // Args:    vId - (R) Unique ID i.e. GUID.
@@ -104,14 +99,12 @@ CMIUtilMapIdToVariant::IsValid(const CMIUtilString &vId) const
 //          MIstatus::failure - Functional failed.
 // Throws:  None.
 //--
-bool
-CMIUtilMapIdToVariant::Remove(const CMIUtilString &vId)
-{
-    const MapKeyToVariantValue_t::const_iterator it = m_mapKeyToVariantValue.find(vId);
-    if (it != m_mapKeyToVariantValue.end())
-    {
-        m_mapKeyToVariantValue.erase(it);
-    }
+bool CMIUtilMapIdToVariant::Remove(const CMIUtilString &vId) {
+  const MapKeyToVariantValue_t::const_iterator it =
+      m_mapKeyToVariantValue.find(vId);
+  if (it != m_mapKeyToVariantValue.end()) {
+    m_mapKeyToVariantValue.erase(it);
+  }
 
-    return MIstatus::success;
+  return MIstatus::success;
 }

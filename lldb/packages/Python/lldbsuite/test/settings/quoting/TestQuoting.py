@@ -5,7 +5,6 @@ Test quoting of arguments to lldb commands
 from __future__ import print_function
 
 
-
 import os
 import re
 import time
@@ -14,6 +13,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class SettingsCommandTestCase(TestBase):
 

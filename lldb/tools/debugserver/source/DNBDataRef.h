@@ -24,102 +24,102 @@
 #define __DNBDataRef_h__
 
 #include "DNBDefs.h"
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <limits.h>
 
-class DNBDataRef
-{
+class DNBDataRef {
 public:
-    // For use with Dump
-    typedef enum
-    {
-        TypeUInt8 = 0,
-        TypeChar,
-        TypeUInt16,
-        TypeUInt32,
-        TypeUInt64,
-        TypePointer,
-        TypeULEB128,
-        TypeSLEB128
-    }   Type;
-    typedef uint32_t offset_t;
-    typedef nub_addr_t addr_t;
+  // For use with Dump
+  typedef enum {
+    TypeUInt8 = 0,
+    TypeChar,
+    TypeUInt16,
+    TypeUInt32,
+    TypeUInt64,
+    TypePointer,
+    TypeULEB128,
+    TypeSLEB128
+  } Type;
+  typedef uint32_t offset_t;
+  typedef nub_addr_t addr_t;
 
-                    DNBDataRef();
-                    DNBDataRef(const uint8_t *start, size_t size, bool swap);
-                    ~DNBDataRef();
-        void        Clear()
-                    {
-                        DNBDataRef::SetData(NULL, 0);
-                        m_swap = false;
-                    }
+  DNBDataRef();
+  DNBDataRef(const uint8_t *start, size_t size, bool swap);
+  ~DNBDataRef();
+  void Clear() {
+    DNBDataRef::SetData(NULL, 0);
+    m_swap = false;
+  }
 
-    size_t          BytesLeft (size_t offset) const
-                    {
-                        const size_t size = GetSize();
-                        if (size > offset)
-                            return size - offset;
-                        return 0;
-                    }
+  size_t BytesLeft(size_t offset) const {
+    const size_t size = GetSize();
+    if (size > offset)
+      return size - offset;
+    return 0;
+  }
 
-    bool            ValidOffset(offset_t offset) const
-                    {
-                        return BytesLeft(offset) > 0;
-                    }
-    bool            ValidOffsetForDataOfSize(offset_t offset, uint32_t num_bytes) const
-                    {
-                        return num_bytes <= BytesLeft (offset);
-                    }
-    size_t          GetSize() const { return m_end - m_start; }
-    const uint8_t * GetDataStart() const { return m_start; }
-    const uint8_t * GetDataEnd() const { return m_end; }
-    bool            GetSwap() const { return m_swap; }
-    void            SetSwap(bool swap) { m_swap = swap; }
-    void            SetData(const uint8_t *start, size_t size)
-                    {
-                        m_start = start;
-                        if (m_start != NULL)
-                            m_end = start + size;
-                        else
-                            m_end = NULL;
-                    }
-    uint8_t         GetPointerSize() const { return m_ptrSize; }
-    void            SetPointerSize(uint8_t size) { m_ptrSize = size; }
-    void            SetEHPtrBaseAddrPCRelative(addr_t addr = INVALID_NUB_ADDRESS) { m_addrPCRelative = addr; }
-    void            SetEHPtrBaseAddrTEXT(addr_t addr = INVALID_NUB_ADDRESS)  { m_addrTEXT = addr; }
-    void            SetEHPtrBaseAddrDATA(addr_t addr = INVALID_NUB_ADDRESS)  { m_addrDATA = addr; }
-    uint8_t         Get8(offset_t *offset_ptr) const;
-    uint16_t        Get16(offset_t *offset_ptr) const;
-    uint32_t        Get32(offset_t *offset_ptr) const;
-    uint64_t        Get64(offset_t *offset_ptr) const;
-    uint32_t        GetMax32(offset_t *offset_ptr, uint32_t byte_size) const;
-    uint64_t        GetMax64(offset_t *offset_ptr, uint32_t byte_size) const;
-    uint64_t        GetPointer(offset_t *offset_ptr) const;
-//  uint64_t        GetDwarfEHPtr(offset_t *offset_ptr, uint32_t eh_ptr_enc) const;
-    const char *    GetCStr(offset_t *offset_ptr, uint32_t fixed_length = 0) const;
-    const char *    PeekCStr(offset_t offset) const
-                    {
-                        if (ValidOffset(offset))
-                            return (const char*)m_start + offset;
-                        return NULL;
-                    }
+  bool ValidOffset(offset_t offset) const { return BytesLeft(offset) > 0; }
+  bool ValidOffsetForDataOfSize(offset_t offset, uint32_t num_bytes) const {
+    return num_bytes <= BytesLeft(offset);
+  }
+  size_t GetSize() const { return m_end - m_start; }
+  const uint8_t *GetDataStart() const { return m_start; }
+  const uint8_t *GetDataEnd() const { return m_end; }
+  bool GetSwap() const { return m_swap; }
+  void SetSwap(bool swap) { m_swap = swap; }
+  void SetData(const uint8_t *start, size_t size) {
+    m_start = start;
+    if (m_start != NULL)
+      m_end = start + size;
+    else
+      m_end = NULL;
+  }
+  uint8_t GetPointerSize() const { return m_ptrSize; }
+  void SetPointerSize(uint8_t size) { m_ptrSize = size; }
+  void SetEHPtrBaseAddrPCRelative(addr_t addr = INVALID_NUB_ADDRESS) {
+    m_addrPCRelative = addr;
+  }
+  void SetEHPtrBaseAddrTEXT(addr_t addr = INVALID_NUB_ADDRESS) {
+    m_addrTEXT = addr;
+  }
+  void SetEHPtrBaseAddrDATA(addr_t addr = INVALID_NUB_ADDRESS) {
+    m_addrDATA = addr;
+  }
+  uint8_t Get8(offset_t *offset_ptr) const;
+  uint16_t Get16(offset_t *offset_ptr) const;
+  uint32_t Get32(offset_t *offset_ptr) const;
+  uint64_t Get64(offset_t *offset_ptr) const;
+  uint32_t GetMax32(offset_t *offset_ptr, uint32_t byte_size) const;
+  uint64_t GetMax64(offset_t *offset_ptr, uint32_t byte_size) const;
+  uint64_t GetPointer(offset_t *offset_ptr) const;
+  //  uint64_t        GetDwarfEHPtr(offset_t *offset_ptr, uint32_t eh_ptr_enc)
+  //  const;
+  const char *GetCStr(offset_t *offset_ptr, uint32_t fixed_length = 0) const;
+  const char *PeekCStr(offset_t offset) const {
+    if (ValidOffset(offset))
+      return (const char *)m_start + offset;
+    return NULL;
+  }
 
-    const uint8_t * GetData( offset_t *offset_ptr, uint32_t length) const;
-    uint64_t        Get_ULEB128 (offset_t *offset_ptr) const;
-    int64_t         Get_SLEB128 (offset_t *offset_ptr) const;
-    void            Skip_LEB128 (offset_t *offset_ptr) const;
+  const uint8_t *GetData(offset_t *offset_ptr, uint32_t length) const;
+  uint64_t Get_ULEB128(offset_t *offset_ptr) const;
+  int64_t Get_SLEB128(offset_t *offset_ptr) const;
+  void Skip_LEB128(offset_t *offset_ptr) const;
 
-    uint32_t        Dump(offset_t startOffset, offset_t endOffset, uint64_t offsetBase, DNBDataRef::Type type, uint32_t numPerLine, const char *typeFormat = NULL);
+  uint32_t Dump(offset_t startOffset, offset_t endOffset, uint64_t offsetBase,
+                DNBDataRef::Type type, uint32_t numPerLine,
+                const char *typeFormat = NULL);
+
 protected:
-    const uint8_t * m_start;
-    const uint8_t * m_end;
-    bool            m_swap;
-    uint8_t         m_ptrSize;
-    addr_t          m_addrPCRelative;
-    addr_t          m_addrTEXT;
-    addr_t          m_addrDATA;
+  const uint8_t *m_start;
+  const uint8_t *m_end;
+  bool m_swap;
+  uint8_t m_ptrSize;
+  addr_t m_addrPCRelative;
+  addr_t m_addrTEXT;
+  addr_t m_addrDATA;
 };
 
 #endif // #ifndef __DNBDataRef_h__

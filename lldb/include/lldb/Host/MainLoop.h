@@ -12,14 +12,12 @@
 
 #ifdef _WIN32
 #include "lldb/Host/MainLoopBase.h"
-namespace lldb_private
-{
+namespace lldb_private {
 typedef MainLoopBase MainLoop;
 }
 #else
 #include "lldb/Host/posix/MainLoopPosix.h"
-namespace lldb_private
-{
+namespace lldb_private {
 typedef MainLoopPosix MainLoop;
 }
 #endif

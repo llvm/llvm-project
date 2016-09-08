@@ -15,20 +15,16 @@
 
 using namespace lldb_private;
 
-NetBSDSignals::NetBSDSignals()
-    : UnixSignals()
-{
-    Reset();
-}
+NetBSDSignals::NetBSDSignals() : UnixSignals() { Reset(); }
 
-void
-NetBSDSignals::Reset()
-{
-    UnixSignals::Reset();
-    //        SIGNO  NAME          SUPPRESS STOP   NOTIFY DESCRIPTION
-    //        ====== ============  ======== ====== ====== ===================================================
-    AddSignal (32,   "SIGPWR",     false,   true , true , "power fail/restart (not reset when caught)");
+void NetBSDSignals::Reset() {
+  UnixSignals::Reset();
+  //        SIGNO  NAME          SUPPRESS STOP   NOTIFY DESCRIPTION
+  //        ====== ============  ======== ====== ======
+  //        ===================================================
+  AddSignal(32, "SIGPWR", false, true, true,
+            "power fail/restart (not reset when caught)");
 #ifdef SIGRTMIN /* SIGRTMAX */
-    /* Kernel only; not exposed to userland yet */
+                /* Kernel only; not exposed to userland yet */
 #endif
 }

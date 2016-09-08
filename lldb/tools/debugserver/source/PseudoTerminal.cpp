@@ -19,11 +19,8 @@
 //----------------------------------------------------------------------
 // PseudoTerminal constructor
 //----------------------------------------------------------------------
-PseudoTerminal::PseudoTerminal() :
-    m_master_fd(invalid_fd),
-    m_slave_fd(invalid_fd)
-{
-}
+PseudoTerminal::PseudoTerminal()
+    : m_master_fd(invalid_fd), m_slave_fd(invalid_fd) {}
 
 //----------------------------------------------------------------------
 // Destructor
@@ -32,36 +29,29 @@ PseudoTerminal::PseudoTerminal() :
 // to release any file descriptors that are needed beyond the lifespan
 // of this object.
 //----------------------------------------------------------------------
-PseudoTerminal::~PseudoTerminal()
-{
-    CloseMaster();
-    CloseSlave();
+PseudoTerminal::~PseudoTerminal() {
+  CloseMaster();
+  CloseSlave();
 }
 
 //----------------------------------------------------------------------
 // Close the master file descriptor if it is valid.
 //----------------------------------------------------------------------
-void
-PseudoTerminal::CloseMaster()
-{
-    if (m_master_fd > 0)
-    {
-        ::close (m_master_fd);
-        m_master_fd = invalid_fd;
-    }
+void PseudoTerminal::CloseMaster() {
+  if (m_master_fd > 0) {
+    ::close(m_master_fd);
+    m_master_fd = invalid_fd;
+  }
 }
 
 //----------------------------------------------------------------------
 // Close the slave file descriptor if it is valid.
 //----------------------------------------------------------------------
-void
-PseudoTerminal::CloseSlave()
-{
-    if (m_slave_fd > 0)
-    {
-        ::close (m_slave_fd);
-        m_slave_fd = invalid_fd;
-    }
+void PseudoTerminal::CloseSlave() {
+  if (m_slave_fd > 0) {
+    ::close(m_slave_fd);
+    m_slave_fd = invalid_fd;
+  }
 }
 
 //----------------------------------------------------------------------
@@ -75,31 +65,26 @@ PseudoTerminal::CloseSlave()
 // RETURNS:
 //  Zero when successful, non-zero indicating an error occurred.
 //----------------------------------------------------------------------
-PseudoTerminal::Error
-PseudoTerminal::OpenFirstAvailableMaster(int oflag)
-{
-    // Open the master side of a pseudo terminal
-    m_master_fd = ::posix_openpt (oflag);
-    if (m_master_fd < 0)
-    {
-        return err_posix_openpt_failed;
-    }
+PseudoTerminal::Error PseudoTerminal::OpenFirstAvailableMaster(int oflag) {
+  // Open the master side of a pseudo terminal
+  m_master_fd = ::posix_openpt(oflag);
+  if (m_master_fd < 0) {
+    return err_posix_openpt_failed;
+  }
 
-    // Grant access to the slave pseudo terminal
-    if (::grantpt (m_master_fd) < 0)
-    {
-        CloseMaster();
-        return err_grantpt_failed;
-    }
+  // Grant access to the slave pseudo terminal
+  if (::grantpt(m_master_fd) < 0) {
+    CloseMaster();
+    return err_grantpt_failed;
+  }
 
-    // Clear the lock flag on the slave pseudo terminal
-    if (::unlockpt (m_master_fd) < 0)
-    {
-        CloseMaster();
-        return err_unlockpt_failed;
-    }
+  // Clear the lock flag on the slave pseudo terminal
+  if (::unlockpt(m_master_fd) < 0) {
+    CloseMaster();
+    return err_unlockpt_failed;
+  }
 
-    return success;
+  return success;
 }
 
 //----------------------------------------------------------------------
@@ -112,26 +97,22 @@ PseudoTerminal::OpenFirstAvailableMaster(int oflag)
 // RETURNS:
 //  Zero when successful, non-zero indicating an error occurred.
 //----------------------------------------------------------------------
-PseudoTerminal::Error
-PseudoTerminal::OpenSlave(int oflag)
-{
-    CloseSlave();
+PseudoTerminal::Error PseudoTerminal::OpenSlave(int oflag) {
+  CloseSlave();
 
-    // Open the master side of a pseudo terminal
-    const char *slave_name = SlaveName();
+  // Open the master side of a pseudo terminal
+  const char *slave_name = SlaveName();
 
-    if (slave_name == NULL)
-        return err_ptsname_failed;
+  if (slave_name == NULL)
+    return err_ptsname_failed;
 
-    m_slave_fd = ::open (slave_name, oflag);
+  m_slave_fd = ::open(slave_name, oflag);
 
-    if (m_slave_fd < 0)
-        return err_open_slave_failed;
+  if (m_slave_fd < 0)
+    return err_open_slave_failed;
 
-    return success;
+  return success;
 }
-
-
 
 //----------------------------------------------------------------------
 // Get the name of the slave pseudo terminal. A master pseudo terminal
@@ -144,14 +125,11 @@ PseudoTerminal::OpenSlave(int oflag)
 //  that comes from static memory, so a copy of the string should be
 //  made as subsequent calls can change this value.
 //----------------------------------------------------------------------
-const char*
-PseudoTerminal::SlaveName() const
-{
-    if (m_master_fd < 0)
-        return NULL;
-    return ::ptsname (m_master_fd);
+const char *PseudoTerminal::SlaveName() const {
+  if (m_master_fd < 0)
+    return NULL;
+  return ::ptsname(m_master_fd);
 }
-
 
 //----------------------------------------------------------------------
 // Fork a child process that and have its stdio routed to a pseudo
@@ -175,53 +153,44 @@ PseudoTerminal::SlaveName() const
 //  in the child process: zero
 //----------------------------------------------------------------------
 
-pid_t
-PseudoTerminal::Fork(PseudoTerminal::Error& error)
-{
-    pid_t pid = invalid_pid;
-    error = OpenFirstAvailableMaster (O_RDWR|O_NOCTTY);
+pid_t PseudoTerminal::Fork(PseudoTerminal::Error &error) {
+  pid_t pid = invalid_pid;
+  error = OpenFirstAvailableMaster(O_RDWR | O_NOCTTY);
 
-    if (error == 0)
-    {
-        // Successfully opened our master pseudo terminal
+  if (error == 0) {
+    // Successfully opened our master pseudo terminal
 
-        pid = ::fork ();
-        if (pid < 0)
-        {
-            // Fork failed
-            error = err_fork_failed;
-        }
-        else if (pid == 0)
-        {
-            // Child Process
-            ::setsid();
+    pid = ::fork();
+    if (pid < 0) {
+      // Fork failed
+      error = err_fork_failed;
+    } else if (pid == 0) {
+      // Child Process
+      ::setsid();
 
-            error = OpenSlave (O_RDWR);
-            if (error == 0)
-            {
-                // Successfully opened slave
-                // We are done with the master in the child process so lets close it
-                CloseMaster ();
+      error = OpenSlave(O_RDWR);
+      if (error == 0) {
+        // Successfully opened slave
+        // We are done with the master in the child process so lets close it
+        CloseMaster();
 
-#if defined (TIOCSCTTY)
-                // Acquire the controlling terminal
-                if (::ioctl (m_slave_fd, TIOCSCTTY, (char *)0) < 0)
-                    error = err_failed_to_acquire_controlling_terminal;
+#if defined(TIOCSCTTY)
+        // Acquire the controlling terminal
+        if (::ioctl(m_slave_fd, TIOCSCTTY, (char *)0) < 0)
+          error = err_failed_to_acquire_controlling_terminal;
 #endif
-                // Duplicate all stdio file descriptors to the slave pseudo terminal
-                if (::dup2 (m_slave_fd, STDIN_FILENO) != STDIN_FILENO)
-                    error = error ? error : err_dup2_failed_on_stdin;
-                if (::dup2 (m_slave_fd, STDOUT_FILENO) != STDOUT_FILENO)
-                    error = error ? error : err_dup2_failed_on_stdout;
-                if (::dup2 (m_slave_fd, STDERR_FILENO) != STDERR_FILENO)
-                    error = error ? error : err_dup2_failed_on_stderr;
-            }
-        }
-        else
-        {
-            // Parent Process
-            // Do nothing and let the pid get returned!
-        }
+        // Duplicate all stdio file descriptors to the slave pseudo terminal
+        if (::dup2(m_slave_fd, STDIN_FILENO) != STDIN_FILENO)
+          error = error ? error : err_dup2_failed_on_stdin;
+        if (::dup2(m_slave_fd, STDOUT_FILENO) != STDOUT_FILENO)
+          error = error ? error : err_dup2_failed_on_stdout;
+        if (::dup2(m_slave_fd, STDERR_FILENO) != STDERR_FILENO)
+          error = error ? error : err_dup2_failed_on_stderr;
+      }
+    } else {
+      // Parent Process
+      // Do nothing and let the pid get returned!
     }
-    return pid;
+  }
+  return pid;
 }

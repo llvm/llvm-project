@@ -24,19 +24,21 @@ class TestSwiftNoProcess(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @decorators.swiftTest
     @decorators.skipUnlessDarwin
-    def test_swift_no_target (self):
+    def test_swift_no_target(self):
         """Tests that we give a reasonable error if we try to run expressions with no target"""
         result = lldb.SBCommandReturnObject()
-        ret_val = self.dbg.GetCommandInterpreter().HandleCommand("expression -l swift -- 1 + 2", result)
-        self.assertTrue(ret_val == lldb.eReturnStatusFailed, "Swift expression with no target should fail.")
+        ret_val = self.dbg.GetCommandInterpreter().HandleCommand(
+            "expression -l swift -- 1 + 2", result)
+        self.assertTrue(
+            ret_val == lldb.eReturnStatusFailed,
+            "Swift expression with no target should fail.")
 
     @decorators.swiftTest
     @decorators.skipUnlessDarwin
@@ -54,7 +56,8 @@ class TestSwiftNoProcess(TestBase):
         options = lldb.SBExpressionOptions()
         options.SetLanguage(lldb.eLanguageTypeSwift)
         ret_val = target.EvaluateExpression("1 + 2", options)
-        self.assertTrue(ret_val.GetError().Fail(), "Swift expressions with no process should fail.")
+        self.assertTrue(ret_val.GetError().Fail(),
+                        "Swift expressions with no process should fail.")
 
 
 if __name__ == '__main__':

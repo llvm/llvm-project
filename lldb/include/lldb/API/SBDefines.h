@@ -93,7 +93,6 @@ class LLDB_API SBValueList;
 class LLDB_API SBVariablesOptions;
 class LLDB_API SBWatchpoint;
 class LLDB_API SBUnixSignals;
-
 }
 
-#endif  // LLDB_SBDefines_h_
+#endif // LLDB_SBDefines_h_

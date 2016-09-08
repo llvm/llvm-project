@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/HostNativeThread.h"
 #include "lldb/Host/ThisThread.h"
+#include "lldb/Host/HostNativeThread.h"
 
 #include "llvm/ADT/SmallVector.h"
 
@@ -16,14 +16,10 @@
 
 using namespace lldb_private;
 
-void
-ThisThread::SetName(llvm::StringRef name)
-{
-    HostNativeThread::SetName(::pthread_self(), name);
+void ThisThread::SetName(llvm::StringRef name) {
+  HostNativeThread::SetName(::pthread_self(), name);
 }
 
-void
-ThisThread::GetName(llvm::SmallVectorImpl<char> &name)
-{
-    HostNativeThread::GetName(::pthread_self(), name);
+void ThisThread::GetName(llvm::SmallVectorImpl<char> &name) {
+  HostNativeThread::GetName(::pthread_self(), name);
 }

@@ -30,14 +30,13 @@
 // Common definitions:
 
 // Function return status
-namespace MIstatus
-{
+namespace MIstatus {
 const bool success = true;
 const bool failure = false;
 }
 
 // Use to avoid "unused parameter" compiler warnings:
-#define MIunused(x) (void) x;
+#define MIunused(x) (void)x;
 
 // Portability issues
 #ifdef _WIN64

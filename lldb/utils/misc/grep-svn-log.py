@@ -9,7 +9,10 @@ Example:
 svn log -v | grep-svn-log.py '^   D.+why_are_you_missing.h$'
 """
 
-import fileinput, re, sys, StringIO
+import fileinput
+import re
+import sys
+import StringIO
 
 # Separator string for "svn log -v" output.
 separator = '-' * 72
@@ -18,29 +21,36 @@ usage = """Usage: grep-svn-log.py line-pattern
 Example:
     svn log -v | grep-svn-log.py '^   D.+why_are_you_missing.h'"""
 
+
 class Log(StringIO.StringIO):
     """Simple facade to keep track of the log content."""
+
     def __init__(self):
         self.reset()
+
     def add_line(self, a_line):
         """Add a line to the content, if there is a previous line, commit it."""
         global separator
-        if self.prev_line != None:
+        if self.prev_line is not None:
             print >> self, self.prev_line
         self.prev_line = a_line
         self.separator_added = (a_line == separator)
+
     def del_line(self):
         """Forget about the previous line, do not commit it."""
         self.prev_line = None
+
     def reset(self):
         """Forget about the previous lines entered."""
         StringIO.StringIO.__init__(self)
         self.prev_line = None
+
     def finish(self):
         """Call this when you're finished with populating content."""
-        if self.prev_line != None:
+        if self.prev_line is not None:
             print >> self, self.prev_line
         self.prev_line = None
+
 
 def grep(regexp):
     # The log content to be written out once a match is found.
@@ -50,7 +60,7 @@ def grep(regexp):
     FOUND_LINE_MATCH = 1
     state = LOOKING_FOR_MATCH
 
-    while 1:
+    while True:
         line = sys.stdin.readline()
         if not line:
             return
@@ -71,6 +81,7 @@ def grep(regexp):
             # Update next state if necessary.
             if regexp.search(line):
                 state = FOUND_LINE_MATCH
+
 
 def main():
     if len(sys.argv) != 2:

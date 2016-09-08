@@ -29,71 +29,55 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
-void
-JavaLanguage::Initialize()
-{
-    PluginManager::RegisterPlugin(GetPluginNameStatic(), "Java Language", CreateInstance);
+void JavaLanguage::Initialize() {
+  PluginManager::RegisterPlugin(GetPluginNameStatic(), "Java Language",
+                                CreateInstance);
 }
 
-void
-JavaLanguage::Terminate()
-{
-    PluginManager::UnregisterPlugin(CreateInstance);
+void JavaLanguage::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString
-JavaLanguage::GetPluginNameStatic()
-{
-    static ConstString g_name("Java");
-    return g_name;
+lldb_private::ConstString JavaLanguage::GetPluginNameStatic() {
+  static ConstString g_name("Java");
+  return g_name;
 }
 
-lldb_private::ConstString
-JavaLanguage::GetPluginName()
-{
-    return GetPluginNameStatic();
+lldb_private::ConstString JavaLanguage::GetPluginName() {
+  return GetPluginNameStatic();
 }
 
-uint32_t
-JavaLanguage::GetPluginVersion()
-{
-    return 1;
+uint32_t JavaLanguage::GetPluginVersion() { return 1; }
+
+Language *JavaLanguage::CreateInstance(lldb::LanguageType language) {
+  if (language == eLanguageTypeJava)
+    return new JavaLanguage();
+  return nullptr;
 }
 
-Language *
-JavaLanguage::CreateInstance(lldb::LanguageType language)
-{
-    if (language == eLanguageTypeJava)
-        return new JavaLanguage();
-    return nullptr;
+bool JavaLanguage::IsNilReference(ValueObject &valobj) {
+  if (!valobj.GetCompilerType().IsReferenceType())
+    return false;
+
+  // If we failed to read the value then it is not a nil reference.
+  return valobj.GetValueAsUnsigned(UINT64_MAX) == 0;
 }
 
-bool
-JavaLanguage::IsNilReference(ValueObject &valobj)
-{
-    if (!valobj.GetCompilerType().IsReferenceType())
-        return false;
+lldb::TypeCategoryImplSP JavaLanguage::GetFormatters() {
+  static std::once_flag g_initialize;
+  static TypeCategoryImplSP g_category;
 
-    // If we failed to read the value then it is not a nil reference.
-    return valobj.GetValueAsUnsigned(UINT64_MAX) == 0;
-}
+  std::call_once(g_initialize, [this]() -> void {
+    DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
+    if (g_category) {
+      lldb::TypeSummaryImplSP string_summary_sp(new CXXFunctionSummaryFormat(
+          TypeSummaryImpl::Flags().SetDontShowChildren(true),
+          lldb_private::formatters::JavaStringSummaryProvider,
+          "java.lang.String summary provider"));
 
-lldb::TypeCategoryImplSP
-JavaLanguage::GetFormatters()
-{
-    static std::once_flag g_initialize;
-    static TypeCategoryImplSP g_category;
-
-    std::call_once(g_initialize, [this]() -> void {
-        DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
-        if (g_category)
-        {
-            lldb::TypeSummaryImplSP string_summary_sp(new CXXFunctionSummaryFormat(
-                TypeSummaryImpl::Flags().SetDontShowChildren(true), lldb_private::formatters::JavaStringSummaryProvider,
-                "java.lang.String summary provider"));
-
-            g_category->GetTypeSummariesContainer()->Add(ConstString("java::lang::String"), string_summary_sp);
-        }
-    });
-    return g_category;
+      g_category->GetTypeSummariesContainer()->Add(
+          ConstString("java::lang::String"), string_summary_sp);
+    }
+  });
+  return g_category;
 }

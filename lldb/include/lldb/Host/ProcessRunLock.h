@@ -17,9 +17,9 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-defines.h"
-#include "lldb/Host/Mutex.h"
 #include "lldb/Host/Condition.h"
+#include "lldb/Host/Mutex.h"
+#include "lldb/lldb-defines.h"
 
 //----------------------------------------------------------------------
 /// Enumerations for broadcasting.
@@ -32,77 +32,61 @@ namespace lldb_private {
 /// threads are accessing its data, and prevent access to its data while
 /// it is running.
 //----------------------------------------------------------------------
-    
-class ProcessRunLock
-{
+
+class ProcessRunLock {
 public:
-    ProcessRunLock();
-    ~ProcessRunLock();
+  ProcessRunLock();
+  ~ProcessRunLock();
 
-    bool ReadTryLock ();
-    bool ReadUnlock ();
-    bool SetRunning ();
-    bool TrySetRunning ();
-    bool SetStopped ();
+  bool ReadTryLock();
+  bool ReadUnlock();
+  bool SetRunning();
+  bool TrySetRunning();
+  bool SetStopped();
 
-    class ProcessRunLocker
-    {
-    public:
-        ProcessRunLocker () :
-            m_lock (nullptr)
-        {
+  class ProcessRunLocker {
+  public:
+    ProcessRunLocker() : m_lock(nullptr) {}
+
+    ~ProcessRunLocker() { Unlock(); }
+
+    // Try to lock the read lock, but only do so if there are no writers.
+    bool TryLock(ProcessRunLock *lock) {
+      if (m_lock) {
+        if (m_lock == lock)
+          return true; // We already have this lock locked
+        else
+          Unlock();
+      }
+      if (lock) {
+        if (lock->ReadTryLock()) {
+          m_lock = lock;
+          return true;
         }
+      }
+      return false;
+    }
 
-        ~ProcessRunLocker()
-        {
-            Unlock();
-        }
+  protected:
+    void Unlock() {
+      if (m_lock) {
+        m_lock->ReadUnlock();
+        m_lock = nullptr;
+      }
+    }
 
-        // Try to lock the read lock, but only do so if there are no writers.
-        bool
-        TryLock (ProcessRunLock *lock)
-        {
-            if (m_lock)
-            {
-                if (m_lock == lock)
-                    return true; // We already have this lock locked
-                else
-                    Unlock();
-            }
-            if (lock)
-            {
-                if (lock->ReadTryLock())
-                {
-                    m_lock = lock;
-                    return true;
-                }
-            }
-            return false;
-        }
+    ProcessRunLock *m_lock;
 
-    protected:
-        void
-        Unlock ()
-        {
-            if (m_lock)
-            {
-                m_lock->ReadUnlock();
-                m_lock = nullptr;
-            }
-        }
-        
-        ProcessRunLock *m_lock;
-
-    private:
-        DISALLOW_COPY_AND_ASSIGN(ProcessRunLocker);
-    };
+  private:
+    DISALLOW_COPY_AND_ASSIGN(ProcessRunLocker);
+  };
 
 protected:
-    lldb::rwlock_t m_rwlock;
-    bool m_running;
+  lldb::rwlock_t m_rwlock;
+  bool m_running;
 
 private:
-    DISALLOW_COPY_AND_ASSIGN(ProcessRunLock);
+  DISALLOW_COPY_AND_ASSIGN(ProcessRunLock);
 };
 
 } // namespace lldb_private

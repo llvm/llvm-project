@@ -18,6 +18,7 @@ import lldbsuite.test.decorators as decorators
 import lldbsuite.test.lldbutil as lldbutil
 import unittest2
 
+
 class TestSwiftFixIts(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
@@ -43,7 +44,8 @@ class TestSwiftFixIts(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('break here to test fixits', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here to test fixits', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -52,26 +54,34 @@ class TestSwiftFixIts(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (self.process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            self.process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
 
         frame = self.thread.frames[0]
-                                                              
+
         options = lldb.SBExpressionOptions()
         options.SetAutoApplyFixIts(False)
 
         # First make sure the expression fails with no fixits:
-        value = frame.EvaluateExpression ("var $tmp : Int = does_have.could_be", options)
+        value = frame.EvaluateExpression(
+            "var $tmp : Int = does_have.could_be", options)
         self.assertTrue(value.GetError().Fail())
-        self.assertTrue(value.GetError().GetError() != 0x1001, 'Failure was not "no return type"')
+        self.assertTrue(
+            value.GetError().GetError() != 0x1001,
+            'Failure was not "no return type"')
 
         # Now turn on auto apply:
         options.SetAutoApplyFixIts(True)
-        value = frame.EvaluateExpression ("var $tmp : Int = does_have.could_be", options)
-        self.assertTrue(value.GetError().Fail(), "There's no result so this is counted a fail.")
-        self.assertTrue(value.GetError().GetError() == 0x1001, 'This error is "no return type"')
+        value = frame.EvaluateExpression(
+            "var $tmp : Int = does_have.could_be", options)
+        self.assertTrue(value.GetError().Fail(),
+                        "There's no result so this is counted a fail.")
+        self.assertTrue(
+            value.GetError().GetError() == 0x1001,
+            'This error is "no return type"')
 
         # Check that the expression was correct:
         tmp_value = frame.EvaluateExpression("$tmp == 100")

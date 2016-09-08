@@ -14,68 +14,56 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Host/FileSpec.h"
 #include "PlatformDarwin.h"
 #include "PlatformiOSSimulatorCoreSimulatorSupport.h"
+#include "lldb/Host/FileSpec.h"
 
 #include "llvm/ADT/Optional.h"
 
-class PlatformAppleSimulator : public PlatformDarwin
-{
+class PlatformAppleSimulator : public PlatformDarwin {
 public:
-    //------------------------------------------------------------
-    // Class Functions
-    //------------------------------------------------------------
-    static void
-    Initialize ();
-    
-    static void
-    Terminate ();
-    
-    //------------------------------------------------------------
-    // Class Methods
-    //------------------------------------------------------------
-    PlatformAppleSimulator ();
-    
-    virtual
-    ~PlatformAppleSimulator();
-    
-    lldb_private::Error
-    LaunchProcess (lldb_private::ProcessLaunchInfo &launch_info) override;
+  //------------------------------------------------------------
+  // Class Functions
+  //------------------------------------------------------------
+  static void Initialize();
 
-    void
-    GetStatus (lldb_private::Stream &strm) override;
+  static void Terminate();
 
-    lldb_private::Error
-    ConnectRemote (lldb_private::Args& args) override;
+  //------------------------------------------------------------
+  // Class Methods
+  //------------------------------------------------------------
+  PlatformAppleSimulator();
 
-    lldb_private::Error
-    DisconnectRemote () override;
+  virtual ~PlatformAppleSimulator();
 
-    lldb::ProcessSP
-    DebugProcess (lldb_private::ProcessLaunchInfo &launch_info,
-                  lldb_private::Debugger &debugger,
-                  lldb_private::Target *target,
-                  lldb_private::Error &error) override;
+  lldb_private::Error
+  LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
+
+  void GetStatus(lldb_private::Stream &strm) override;
+
+  lldb_private::Error ConnectRemote(lldb_private::Args &args) override;
+
+  lldb_private::Error DisconnectRemote() override;
+
+  lldb::ProcessSP DebugProcess(lldb_private::ProcessLaunchInfo &launch_info,
+                               lldb_private::Debugger &debugger,
+                               lldb_private::Target *target,
+                               lldb_private::Error &error) override;
 
 protected:
-    llvm::Optional<lldb_private::FileSpec> m_core_simulator_framework_path;
-    llvm::Optional<CoreSimulatorSupport::Device> m_device;
-    
-    lldb_private::FileSpec
-    GetCoreSimulatorPath();
-    
-    void
-    LoadCoreSimulator ();
-    
+  llvm::Optional<lldb_private::FileSpec> m_core_simulator_framework_path;
+  llvm::Optional<CoreSimulatorSupport::Device> m_device;
+
+  lldb_private::FileSpec GetCoreSimulatorPath();
+
+  void LoadCoreSimulator();
+
 #if defined(__APPLE__)
-    CoreSimulatorSupport::Device
-    GetSimulatorDevice ();
+  CoreSimulatorSupport::Device GetSimulatorDevice();
 #endif
-    
+
 private:
-    DISALLOW_COPY_AND_ASSIGN (PlatformAppleSimulator);
-    
+  DISALLOW_COPY_AND_ASSIGN(PlatformAppleSimulator);
 };
 
-#endif  // liblldb_PlatformAppleSimulator_h_
+#endif // liblldb_PlatformAppleSimulator_h_

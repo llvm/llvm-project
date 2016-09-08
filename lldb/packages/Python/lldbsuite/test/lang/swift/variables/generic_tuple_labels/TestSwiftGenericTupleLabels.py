@@ -33,7 +33,7 @@ class TestSwiftGenericTupleLabels(lldbtest.TestBase):
     def setUp(self):
         lldbtest.TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
         """Test that LLDB can reconstruct tuple labels from metadata"""
@@ -45,8 +45,11 @@ class TestSwiftGenericTupleLabels(lldbtest.TestBase):
         self.assertTrue(target, lldbtest.VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('break here', self.main_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, lldbtest.VALID_BREAKPOINT)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here', self.main_source_spec)
+        self.assertTrue(
+            breakpoint.GetNumLocations() > 0,
+            lldbtest.VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
@@ -54,7 +57,8 @@ class TestSwiftGenericTupleLabels(lldbtest.TestBase):
         self.assertTrue(process, lldbtest.PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -64,13 +68,19 @@ class TestSwiftGenericTupleLabels(lldbtest.TestBase):
         the_tuple = self.frame.FindVariable('x')
         the_tuple.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         the_tuple.SetPreferSyntheticValue(True)
-        
-        self.assertTrue(the_tuple.GetChildAtIndex(0).GetName() == 'x', '.0 == x')
-        self.assertTrue(the_tuple.GetChildAtIndex(1).GetName() == '1', '.1 == 1')
-        self.assertTrue(the_tuple.GetChildAtIndex(2).GetName() == 'z', '.2 == z')
-        self.assertTrue(the_tuple.GetChildAtIndex(3).GetName() == '3', '.3 == 3')
-        self.assertTrue(the_tuple.GetChildAtIndex(4).GetName() == 'q', '.4 == q')
-        self.assertTrue(the_tuple.GetChildAtIndex(5).GetName() == 'w', '.5 == q')
+
+        self.assertTrue(the_tuple.GetChildAtIndex(
+            0).GetName() == 'x', '.0 == x')
+        self.assertTrue(the_tuple.GetChildAtIndex(
+            1).GetName() == '1', '.1 == 1')
+        self.assertTrue(the_tuple.GetChildAtIndex(
+            2).GetName() == 'z', '.2 == z')
+        self.assertTrue(the_tuple.GetChildAtIndex(
+            3).GetName() == '3', '.3 == 3')
+        self.assertTrue(the_tuple.GetChildAtIndex(
+            4).GetName() == 'q', '.4 == q')
+        self.assertTrue(the_tuple.GetChildAtIndex(
+            5).GetName() == 'w', '.5 == q')
 
         self.expect('frame variable -d run -- x.w', substrs=['72'])
         self.expect('expression -d run -- x.z', substrs=['36'])

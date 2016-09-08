@@ -33,7 +33,7 @@ class TestSwiftInstancePointerSetSP(lldbtest.TestBase):
     def setUp(self):
         lldbtest.TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
         """Test that we correctly track instance pointers in ValueObjectPrinter"""
@@ -45,8 +45,11 @@ class TestSwiftInstancePointerSetSP(lldbtest.TestBase):
         self.assertTrue(target, lldbtest.VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('break here', self.main_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, lldbtest.VALID_BREAKPOINT)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here', self.main_source_spec)
+        self.assertTrue(
+            breakpoint.GetNumLocations() > 0,
+            lldbtest.VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
         process = target.LaunchSimple(None, None, os.getcwd())
@@ -54,10 +57,21 @@ class TestSwiftInstancePointerSetSP(lldbtest.TestBase):
         self.assertTrue(process, lldbtest.PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
-        self.expect("frame variable -d run -- o", substrs=['"Hello World"', '{...}'], matching=True)
-        self.expect("expression -d run -- o", substrs=['"Hello World"', '{...}'], matching=True)
+        self.expect(
+            "frame variable -d run -- o",
+            substrs=[
+                '"Hello World"',
+                '{...}'],
+            matching=True)
+        self.expect(
+            "expression -d run -- o",
+            substrs=[
+                '"Hello World"',
+                '{...}'],
+            matching=True)
 
 if __name__ == '__main__':
     import atexit

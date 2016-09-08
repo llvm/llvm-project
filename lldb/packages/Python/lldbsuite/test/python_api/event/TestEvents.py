@@ -5,13 +5,14 @@ Test lldb Python event APIs.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 @skipIfDarwin  # llvm.org/pr25924, sometimes generating SIGSEGV
 @skipIfLinux   # llvm.org/pr25924, sometimes generating SIGSEGV
@@ -23,10 +24,13 @@ class EventAPITestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to of function 'c'.
-        self.line = line_number('main.c', '// Find the line number of function "c" here.')
+        self.line = line_number(
+            'main.c', '// Find the line number of function "c" here.')
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr23730 Flaky, fails ~1/10 cases")
+    @expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="llvm.org/pr23730 Flaky, fails ~1/10 cases")
     def test_listen_for_and_print_event(self):
         """Exercise SBEvent API."""
         self.build()
@@ -45,18 +49,20 @@ class EventAPITestCase(TestBase):
 
         # Now launch the process, and do not stop at the entry point.
         error = lldb.SBError()
-        process = target.Launch (listener, 
-                                 None,      # argv
-                                 None,      # envp
-                                 None,      # stdin_path
-                                 None,      # stdout_path
-                                 None,      # stderr_path
-                                 None,      # working directory
-                                 0,         # launch flags
-                                 False,     # Stop at entry
-                                 error)     # error
+        process = target.Launch(listener,
+                                None,      # argv
+                                None,      # envp
+                                None,      # stdin_path
+                                None,      # stdout_path
+                                None,      # stderr_path
+                                None,      # working directory
+                                0,         # launch flags
+                                False,     # Stop at entry
+                                error)     # error
 
-        self.assertTrue(process.GetState() == lldb.eStateStopped, PROCESS_STOPPED)
+        self.assertTrue(
+            process.GetState() == lldb.eStateStopped,
+            PROCESS_STOPPED)
 
         # Create an empty event object.
         event = lldb.SBEvent()
@@ -67,7 +73,9 @@ class EventAPITestCase(TestBase):
 
         # Create MyListeningThread class to wait for any kind of event.
         import threading
+
         class MyListeningThread(threading.Thread):
+
             def run(self):
                 count = 0
                 # Let's only try at most 4 times to retrieve any kind of event.
@@ -80,7 +88,10 @@ class EventAPITestCase(TestBase):
                             desc = lldbutil.get_description(event)
                             print("Event description:", desc)
                             print("Event data flavor:", event.GetDataFlavor())
-                            print("Process state:", lldbutil.state_type_to_str(process.GetState()))
+                            print(
+                                "Process state:",
+                                lldbutil.state_type_to_str(
+                                    process.GetState()))
                             print()
                     else:
                         if traceOn:
@@ -104,7 +115,7 @@ class EventAPITestCase(TestBase):
         my_thread.join()
 
     @add_test_categories(['pyapi'])
-    @expectedFlakeyLinux("llvm.org/pr23730") # Flaky, fails ~1/100 cases
+    @expectedFlakeyLinux("llvm.org/pr23730")  # Flaky, fails ~1/100 cases
     @skipIfDarwin  # "<rdar://problem/23634488>"
     def test_wait_for_event(self):
         """Exercise SBListener.WaitForEvent() API."""
@@ -129,16 +140,16 @@ class EventAPITestCase(TestBase):
 
         # Now launch the process, and do not stop at entry point.
         error = lldb.SBError()
-        process = target.Launch (listener, 
-                                 None,      # argv
-                                 None,      # envp
-                                 None,      # stdin_path
-                                 None,      # stdout_path
-                                 None,      # stderr_path
-                                 None,      # working directory
-                                 0,         # launch flags
-                                 False,     # Stop at entry
-                                 error)     # error
+        process = target.Launch(listener,
+                                None,      # argv
+                                None,      # envp
+                                None,      # stdin_path
+                                None,      # stdout_path
+                                None,      # stderr_path
+                                None,      # working directory
+                                0,         # launch flags
+                                False,     # Stop at entry
+                                error)     # error
         self.assertTrue(error.Success() and process, PROCESS_IS_VALID)
 
         # Create an empty event object.
@@ -147,7 +158,9 @@ class EventAPITestCase(TestBase):
 
         # Create MyListeningThread to wait for any kind of event.
         import threading
+
         class MyListeningThread(threading.Thread):
+
             def run(self):
                 count = 0
                 # Let's only try at most 3 times to retrieve any kind of event.
@@ -176,9 +189,11 @@ class EventAPITestCase(TestBase):
         self.assertTrue(event,
                         "My listening thread successfully received an event")
 
-    @skipIfFreeBSD # llvm.org/pr21325
+    @skipIfFreeBSD  # llvm.org/pr21325
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr23617 Flaky, fails ~1/10 cases")
+    @expectedFailureAll(
+        oslist=["linux"],
+        bugnumber="llvm.org/pr23617 Flaky, fails ~1/10 cases")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_add_listener_to_broadcaster(self):
         """Exercise some SBBroadcaster APIs."""
@@ -202,21 +217,20 @@ class EventAPITestCase(TestBase):
 
         # Now launch the process, and do not stop at the entry point.
         error = lldb.SBError()
-        process = target.Launch (listener, 
-                                 None,      # argv
-                                 None,      # envp
-                                 None,      # stdin_path
-                                 None,      # stdout_path
-                                 None,      # stderr_path
-                                 None,      # working directory
-                                 0,         # launch flags
-                                 False,     # Stop at entry
-                                 error)     # error
+        process = target.Launch(listener,
+                                None,      # argv
+                                None,      # envp
+                                None,      # stdin_path
+                                None,      # stdout_path
+                                None,      # stderr_path
+                                None,      # working directory
+                                0,         # launch flags
+                                False,     # Stop at entry
+                                error)     # error
 
         # Create an empty event object.
         event = lldb.SBEvent()
         self.assertFalse(event, "Event should not be valid initially")
-
 
         # The finite state machine for our custom listening thread, with an
         # initial state of None, which means no event has been received.
@@ -228,9 +242,12 @@ class EventAPITestCase(TestBase):
         self.state = None
 
         # Create MyListeningThread to wait for state changed events.
-        # By design, a "running" event is expected following by a "stopped" event.
+        # By design, a "running" event is expected following by a "stopped"
+        # event.
         import threading
+
         class MyListeningThread(threading.Thread):
+
             def run(self):
                 #print("Running MyListeningThread:", self)
 
@@ -245,19 +262,21 @@ class EventAPITestCase(TestBase):
                         #print("Event description:", desc)
                         match = pattern.search(desc)
                         if not match:
-                            break;
+                            break
                         if match.group(1) == 'connected':
                             # When debugging remote targets with lldb-server, we
                             # first get the 'connected' event.
-                            self.context.assertTrue(self.context.state == None)
+                            self.context.assertTrue(self.context.state is None)
                             self.context.state = 'connected'
                             continue
                         elif match.group(1) == 'running':
-                            self.context.assertTrue(self.context.state == None or self.context.state == 'connected')
+                            self.context.assertTrue(
+                                self.context.state is None or self.context.state == 'connected')
                             self.context.state = 'running'
                             continue
                         elif match.group(1) == 'stopped':
-                            self.context.assertTrue(self.context.state == 'running')
+                            self.context.assertTrue(
+                                self.context.state == 'running')
                             # Whoopee, both events have been received!
                             self.context.state = 'stopped'
                             break

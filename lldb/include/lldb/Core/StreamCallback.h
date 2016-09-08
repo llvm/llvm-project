@@ -18,28 +18,24 @@
 
 namespace lldb_private {
 
-class StreamCallback : 
-    public Stream
-{
+class StreamCallback : public Stream {
 public:
-    StreamCallback (lldb::LogOutputCallback callback, void *baton);
-    
-    ~StreamCallback () override;
-    
-    void
-    Flush () override;
-    
-    size_t
-    Write (const void *src, size_t src_len) override;
-    
+  StreamCallback(lldb::LogOutputCallback callback, void *baton);
+
+  ~StreamCallback() override;
+
+  void Flush() override;
+
+  size_t Write(const void *src, size_t src_len) override;
+
 private:
-    typedef std::map<lldb::tid_t, StreamString> collection;
-    lldb::LogOutputCallback m_callback;
-    void *m_baton;
-    collection m_accumulated_data;
-    Mutex m_collection_mutex;
-    
-    StreamString &FindStreamForThread(lldb::tid_t cur_tid);
+  typedef std::map<lldb::tid_t, StreamString> collection;
+  lldb::LogOutputCallback m_callback;
+  void *m_baton;
+  collection m_accumulated_data;
+  Mutex m_collection_mutex;
+
+  StreamString &FindStreamForThread(lldb::tid_t cur_tid);
 };
 
 } // namespace lldb_private

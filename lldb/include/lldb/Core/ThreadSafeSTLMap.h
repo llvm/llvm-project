@@ -16,170 +16,122 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/lldb-defines.h"
 #include "lldb/Host/Mutex.h"
+#include "lldb/lldb-defines.h"
 
 namespace lldb_private {
 
-template <typename _Key, typename _Tp>
-class ThreadSafeSTLMap
-{
+template <typename _Key, typename _Tp> class ThreadSafeSTLMap {
 public:
-    typedef std::map<_Key,_Tp> collection;
-    typedef typename collection::iterator iterator;
-    typedef typename collection::const_iterator const_iterator;
-    //------------------------------------------------------------------
-    // Constructors and Destructors
-    //------------------------------------------------------------------
-    ThreadSafeSTLMap() :
-        m_collection (),
-        m_mutex (Mutex::eMutexTypeRecursive)
-    {
-    }
+  typedef std::map<_Key, _Tp> collection;
+  typedef typename collection::iterator iterator;
+  typedef typename collection::const_iterator const_iterator;
+  //------------------------------------------------------------------
+  // Constructors and Destructors
+  //------------------------------------------------------------------
+  ThreadSafeSTLMap() : m_collection(), m_mutex(Mutex::eMutexTypeRecursive) {}
 
-    ~ThreadSafeSTLMap()
-    {
-    }
+  ~ThreadSafeSTLMap() {}
 
-    bool
-    IsEmpty() const
-    {
-        Mutex::Locker locker(m_mutex);
-        return m_collection.empty();
-    }
-    
-    void
-    Clear()
-    {
-        Mutex::Locker locker(m_mutex);
-        return m_collection.clear();
-    }
+  bool IsEmpty() const {
+    Mutex::Locker locker(m_mutex);
+    return m_collection.empty();
+  }
 
-    size_t
-    Erase (const _Key& key)
-    {
-        Mutex::Locker locker(m_mutex);
-        return EraseNoLock (key);
-    }
+  void Clear() {
+    Mutex::Locker locker(m_mutex);
+    return m_collection.clear();
+  }
 
-    size_t
-    EraseNoLock (const _Key& key)
-    {
-        return m_collection.erase (key);
-    }
+  size_t Erase(const _Key &key) {
+    Mutex::Locker locker(m_mutex);
+    return EraseNoLock(key);
+  }
 
-    bool
-    GetValueForKey (const _Key& key, _Tp &value) const
-    {
-        Mutex::Locker locker(m_mutex);
-        return GetValueForKeyNoLock (key, value);
-    }
+  size_t EraseNoLock(const _Key &key) { return m_collection.erase(key); }
 
-    // Call this if you have already manually locked the mutex using the
-    // GetMutex() accessor
-    bool
-    GetValueForKeyNoLock (const _Key& key, _Tp &value) const
-    {
-        const_iterator pos = m_collection.find(key);
-        if (pos != m_collection.end())
-        {
-            value = pos->second;
-            return true;
-        }
-        return false;
-    }
+  bool GetValueForKey(const _Key &key, _Tp &value) const {
+    Mutex::Locker locker(m_mutex);
+    return GetValueForKeyNoLock(key, value);
+  }
 
-    bool
-    GetFirstKeyForValue (const _Tp &value, _Key& key) const
-    {
-        Mutex::Locker locker(m_mutex);
-        return GetFirstKeyForValueNoLock (value, key);
+  // Call this if you have already manually locked the mutex using the
+  // GetMutex() accessor
+  bool GetValueForKeyNoLock(const _Key &key, _Tp &value) const {
+    const_iterator pos = m_collection.find(key);
+    if (pos != m_collection.end()) {
+      value = pos->second;
+      return true;
     }
+    return false;
+  }
 
-    bool
-    GetFirstKeyForValueNoLock (const _Tp &value, _Key& key) const
-    {
-        const_iterator pos, end = m_collection.end();
-        for (pos = m_collection.begin(); pos != end; ++pos)
-        {
-            if (pos->second == value)
-            {
-                key = pos->first;
-                return true;
-            }
-        }
-        return false;
-    }
+  bool GetFirstKeyForValue(const _Tp &value, _Key &key) const {
+    Mutex::Locker locker(m_mutex);
+    return GetFirstKeyForValueNoLock(value, key);
+  }
 
-    bool
-    LowerBound (const _Key& key,
-                _Key& match_key,
-                _Tp &match_value,
-                bool decrement_if_not_equal) const
-    {
-        Mutex::Locker locker(m_mutex);
-        return LowerBoundNoLock (key, match_key, match_value, decrement_if_not_equal);
+  bool GetFirstKeyForValueNoLock(const _Tp &value, _Key &key) const {
+    const_iterator pos, end = m_collection.end();
+    for (pos = m_collection.begin(); pos != end; ++pos) {
+      if (pos->second == value) {
+        key = pos->first;
+        return true;
+      }
     }
+    return false;
+  }
 
-    bool
-    LowerBoundNoLock (const _Key& key,
-                      _Key& match_key,
-                      _Tp &match_value,
-                      bool decrement_if_not_equal) const
-    {
-        const_iterator pos = m_collection.lower_bound (key);
-        if (pos != m_collection.end())
-        {
-            match_key = pos->first;
-            if (decrement_if_not_equal && key != match_key && pos != m_collection.begin())
-            {
-                --pos;
-                match_key = pos->first;
-            }
-            match_value = pos->second;
-            return true;
-        }
-        return false;
-    }
+  bool LowerBound(const _Key &key, _Key &match_key, _Tp &match_value,
+                  bool decrement_if_not_equal) const {
+    Mutex::Locker locker(m_mutex);
+    return LowerBoundNoLock(key, match_key, match_value,
+                            decrement_if_not_equal);
+  }
 
-    iterator
-    lower_bound_unsafe (const _Key& key)
-    {
-        return m_collection.lower_bound (key);
+  bool LowerBoundNoLock(const _Key &key, _Key &match_key, _Tp &match_value,
+                        bool decrement_if_not_equal) const {
+    const_iterator pos = m_collection.lower_bound(key);
+    if (pos != m_collection.end()) {
+      match_key = pos->first;
+      if (decrement_if_not_equal && key != match_key &&
+          pos != m_collection.begin()) {
+        --pos;
+        match_key = pos->first;
+      }
+      match_value = pos->second;
+      return true;
     }
+    return false;
+  }
 
-    void
-    SetValueForKey (const _Key& key, const _Tp &value)
-    {
-        Mutex::Locker locker(m_mutex);
-        SetValueForKeyNoLock (key, value);
-    }
+  iterator lower_bound_unsafe(const _Key &key) {
+    return m_collection.lower_bound(key);
+  }
 
-    // Call this if you have already manually locked the mutex using the
-    // GetMutex() accessor
-    void
-    SetValueForKeyNoLock (const _Key& key, const _Tp &value)
-    {
-        m_collection[key] = value;
-    }
+  void SetValueForKey(const _Key &key, const _Tp &value) {
+    Mutex::Locker locker(m_mutex);
+    SetValueForKeyNoLock(key, value);
+  }
 
-    Mutex &
-    GetMutex ()
-    {
-        return m_mutex;
-    }
+  // Call this if you have already manually locked the mutex using the
+  // GetMutex() accessor
+  void SetValueForKeyNoLock(const _Key &key, const _Tp &value) {
+    m_collection[key] = value;
+  }
+
+  Mutex &GetMutex() { return m_mutex; }
 
 private:
-    collection m_collection;
-    mutable Mutex m_mutex;
+  collection m_collection;
+  mutable Mutex m_mutex;
 
-    //------------------------------------------------------------------
-    // For ThreadSafeSTLMap only
-    //------------------------------------------------------------------
-    DISALLOW_COPY_AND_ASSIGN (ThreadSafeSTLMap);
+  //------------------------------------------------------------------
+  // For ThreadSafeSTLMap only
+  //------------------------------------------------------------------
+  DISALLOW_COPY_AND_ASSIGN(ThreadSafeSTLMap);
 };
-
 
 } // namespace lldb_private
 
-#endif  // liblldb_ThreadSafeSTLMap_h_
+#endif // liblldb_ThreadSafeSTLMap_h_

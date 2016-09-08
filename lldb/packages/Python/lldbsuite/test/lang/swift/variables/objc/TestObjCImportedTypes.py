@@ -35,7 +35,7 @@ class TestSwiftObjCImportedTypes(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_test(self):
         """Test that we are able to deal with ObjC-imported types"""
@@ -47,7 +47,8 @@ class TestSwiftObjCImportedTypes(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex('Set breakpoint here', self.main_source_spec)
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here', self.main_source_spec)
         self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
         # Launch the process, and do not stop at the entry point.
@@ -56,7 +57,8 @@ class TestSwiftObjCImportedTypes(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
         # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
         self.assertTrue(len(threads) == 1)
         self.thread = threads[0]
@@ -68,16 +70,40 @@ class TestSwiftObjCImportedTypes(TestBase):
         nsmo = self.frame.FindVariable("nsmo")
         nsmd = self.frame.FindVariable("nsmd")
 
-        lldbutil.check_variable(self, nss, use_dynamic=False, typename="Foundation.NSString")
-        lldbutil.check_variable(self, nsn, use_dynamic=False, typename="Foundation.NSNumber")
-        lldbutil.check_variable(self, nsmo, use_dynamic=False, typename="CoreData.NSManagedObject")
-        lldbutil.check_variable(self, nsmd, use_dynamic=False, typename="Foundation.NSMutableDictionary")
+        lldbutil.check_variable(
+            self,
+            nss,
+            use_dynamic=False,
+            typename="Foundation.NSString")
+        lldbutil.check_variable(
+            self,
+            nsn,
+            use_dynamic=False,
+            typename="Foundation.NSNumber")
+        lldbutil.check_variable(
+            self,
+            nsmo,
+            use_dynamic=False,
+            typename="CoreData.NSManagedObject")
+        lldbutil.check_variable(
+            self,
+            nsmd,
+            use_dynamic=False,
+            typename="Foundation.NSMutableDictionary")
 
-        #pending rdar://15798504, but not critical for the test
+        # pending rdar://15798504, but not critical for the test
         #lldbutil.check_variable(self, nss, use_dynamic=True, summary='@"abc"')
         lldbutil.check_variable(self, nsn, use_dynamic=True, summary='(long)3')
-        lldbutil.check_variable(self, nsmo, use_dynamic=True, typename='NSManagedObject *')
-        lldbutil.check_variable(self, nsmd, use_dynamic=True, summary='1 key/value pair')
+        lldbutil.check_variable(
+            self,
+            nsmo,
+            use_dynamic=True,
+            typename='NSManagedObject *')
+        lldbutil.check_variable(
+            self,
+            nsmd,
+            use_dynamic=True,
+            summary='1 key/value pair')
 
 if __name__ == '__main__':
     import atexit

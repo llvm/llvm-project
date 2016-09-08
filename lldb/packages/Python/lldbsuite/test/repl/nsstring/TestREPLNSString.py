@@ -11,16 +11,18 @@
 # ------------------------------------------------------------------------------
 """Test that NSString is usable in the REPL."""
 
-import os, time
+import os
+import time
 import unittest2
 import lldb
 import lldbsuite.test.decorators as decorators
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
 
+
 class REPLNSStringTestCase (REPLTest):
 
     mydir = REPLTest.compute_mydir(__file__)
-    
+
     @decorators.swiftTest
     @decorators.skipUnlessDarwin
     @decorators.no_debug_info_test
@@ -29,5 +31,11 @@ class REPLNSStringTestCase (REPLTest):
 
     def doTest(self):
         self.command('import Foundation', timeout=20)
-        self.command('"hello world" as NSString', patterns=['\\$R0: NSString = "hello world"'], timeout=20)
-        self.command('$R0.substring(to: 5)', patterns=['\\$R1: String = "hello"'], timeout=20)
+        self.command(
+            '"hello world" as NSString',
+            patterns=['\\$R0: NSString = "hello world"'],
+            timeout=20)
+        self.command(
+            '$R0.substring(to: 5)',
+            patterns=['\\$R1: String = "hello"'],
+            timeout=20)

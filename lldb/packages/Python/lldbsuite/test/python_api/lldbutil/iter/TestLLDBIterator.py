@@ -5,13 +5,14 @@ Test the iteration protocol for some lldb container objects.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class LLDBIteratorTestCase(TestBase):
 
@@ -21,7 +22,8 @@ class LLDBIteratorTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line numbers to break inside main().
-        self.line1 = line_number('main.cpp', '// Set break point at this line.')
+        self.line1 = line_number(
+            'main.cpp', '// Set break point at this line.')
         self.line2 = line_number('main.cpp', '// And that line.')
 
     @add_test_categories(['pyapi'])
@@ -37,7 +39,8 @@ class LLDBIteratorTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         if not process:
             self.fail("SBTarget.LaunchProcess() failed")
@@ -55,8 +58,9 @@ class LLDBIteratorTestCase(TestBase):
             if self.TraceOn():
                 print("yours[%d]='%s'" % (i, get_description(yours[i])))
                 print("mine[%d]='%s'" % (i, get_description(mine[i])))
-            self.assertTrue(yours[i] == mine[i],
-                            "UUID+FileSpec of yours[{0}] and mine[{0}] matches".format(i))
+            self.assertTrue(
+                yours[i] == mine[i],
+                "UUID+FileSpec of yours[{0}] and mine[{0}] matches".format(i))
 
     @add_test_categories(['pyapi'])
     def test_lldb_iter_breakpoint(self):
@@ -103,7 +107,8 @@ class LLDBIteratorTestCase(TestBase):
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
 
         # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple (None, None, self.get_process_working_directory())
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
 
         if not process:
             self.fail("SBTarget.LaunchProcess() failed")

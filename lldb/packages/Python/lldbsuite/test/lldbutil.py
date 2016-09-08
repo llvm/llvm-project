@@ -29,6 +29,7 @@ def is_exe(fpath):
     """Returns True if fpath is an executable."""
     return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
+
 def which(program):
     """Returns the full path to a program; None otherwise."""
     fpath, fname = os.path.split(program)
@@ -46,6 +47,7 @@ def which(program):
 # Disassembly for an SBFunction or an SBSymbol object
 # ===================================================
 
+
 def disassemble(target, function_or_symbol):
     """Disassemble the function or symbol given a target.
 
@@ -60,6 +62,7 @@ def disassemble(target, function_or_symbol):
 # ==========================================================
 # Integer (byte size 1, 2, 4, and 8) to bytearray conversion
 # ==========================================================
+
 
 def int_to_bytearray(val, bytesize):
     """Utility function to convert an integer into a bytearray.
@@ -85,6 +88,7 @@ def int_to_bytearray(val, bytesize):
 
     packed = struct.pack(fmt, val)
     return bytearray(packed)
+
 
 def bytearray_to_int(bytes, bytesize):
     """Utility function to convert a bytearray into an integer.
@@ -141,7 +145,7 @@ def get_description(obj, option=None):
     if not success:
         return None
     return stream.GetData()
-        
+
 
 # =================================================
 # Convert some enum value to its string counterpart
@@ -176,6 +180,7 @@ def state_type_to_str(enum):
     else:
         raise Exception("Unknown StateType enum")
 
+
 def stop_reason_to_str(enum):
     """Returns the stopReason string given an enum."""
     if enum == lldb.eStopReasonInvalid:
@@ -200,6 +205,7 @@ def stop_reason_to_str(enum):
         return "threadexiting"
     else:
         raise Exception("Unknown StopReason enum")
+
 
 def symbol_type_to_str(enum):
     """Returns the symbolType string given an enum."""
@@ -252,6 +258,7 @@ def symbol_type_to_str(enum):
     elif enum == lldb.eSymbolTypeUndefined:
         return "undefined"
 
+
 def value_type_to_str(enum):
     """Returns the valueType string given an enum."""
     if enum == lldb.eValueTypeInvalid:
@@ -279,12 +286,12 @@ def value_type_to_str(enum):
 # ==================================================
 
 def sort_stopped_threads(process,
-                         breakpoint_threads = None,
-                         crashed_threads = None,
-                         watchpoint_threads = None,
-                         signal_threads = None,
-                         exiting_threads = None,
-                         other_threads = None):
+                         breakpoint_threads=None,
+                         crashed_threads=None,
+                         watchpoint_threads=None,
+                         signal_threads=None,
+                         exiting_threads=None,
+                         other_threads=None):
     """ Fills array *_threads with threads stopped for the corresponding stop
         reason.
     """
@@ -313,8 +320,16 @@ def sort_stopped_threads(process,
 # Utility functions for setting breakpoints
 # ==================================================
 
-def run_break_set_by_file_and_line (test, file_name, line_number, extra_options = None, num_expected_locations = 1, loc_exact=False, module_name=None):
-    """Set a breakpoint by file and line, returning the breakpoint number. 
+
+def run_break_set_by_file_and_line(
+        test,
+        file_name,
+        line_number,
+        extra_options=None,
+        num_expected_locations=1,
+        loc_exact=False,
+        module_name=None):
+    """Set a breakpoint by file and line, returning the breakpoint number.
 
     If extra_options is not None, then we append it to the breakpoint set command.
 
@@ -322,10 +337,10 @@ def run_break_set_by_file_and_line (test, file_name, line_number, extra_options 
 
     If loc_exact is true, we check that there is one location, and that location must be at the input file and line number."""
 
-    if file_name == None:
-        command = 'breakpoint set -l %d'%(line_number)
+    if file_name is None:
+        command = 'breakpoint set -l %d' % (line_number)
     else:
-        command = 'breakpoint set -f "%s" -l %d'%(file_name, line_number)
+        command = 'breakpoint set -f "%s" -l %d' % (file_name, line_number)
 
     if module_name:
         command += " --shlib '%s'" % (module_name)
@@ -333,20 +348,36 @@ def run_break_set_by_file_and_line (test, file_name, line_number, extra_options 
     if extra_options:
         command += " " + extra_options
 
-    break_results = run_break_set_command (test, command)
+    break_results = run_break_set_command(test, command)
 
     if num_expected_locations == 1 and loc_exact:
-        check_breakpoint_result (test, break_results, num_locations=num_expected_locations, file_name = file_name, line_number = line_number, module_name=module_name)
+        check_breakpoint_result(
+            test,
+            break_results,
+            num_locations=num_expected_locations,
+            file_name=file_name,
+            line_number=line_number,
+            module_name=module_name)
     else:
-        check_breakpoint_result (test, break_results, num_locations = num_expected_locations)
+        check_breakpoint_result(
+            test,
+            break_results,
+            num_locations=num_expected_locations)
 
-    return get_bpno_from_match (break_results)
+    return get_bpno_from_match(break_results)
 
-def run_break_set_by_symbol (test, symbol, extra_options = None, num_expected_locations = -1, sym_exact = False, module_name=None):
+
+def run_break_set_by_symbol(
+        test,
+        symbol,
+        extra_options=None,
+        num_expected_locations=-1,
+        sym_exact=False,
+        module_name=None):
     """Set a breakpoint by symbol name.  Common options are the same as run_break_set_by_file_and_line.
 
     If sym_exact is true, then the output symbol must match the input exactly, otherwise we do a substring match."""
-    command = 'breakpoint set -n "%s"'%(symbol)
+    command = 'breakpoint set -n "%s"' % (symbol)
 
     if module_name:
         command += " --shlib '%s'" % (module_name)
@@ -354,16 +385,30 @@ def run_break_set_by_symbol (test, symbol, extra_options = None, num_expected_lo
     if extra_options:
         command += " " + extra_options
 
-    break_results = run_break_set_command (test, command)
+    break_results = run_break_set_command(test, command)
 
     if num_expected_locations == 1 and sym_exact:
-        check_breakpoint_result (test, break_results, num_locations = num_expected_locations, symbol_name = symbol, module_name=module_name)
+        check_breakpoint_result(
+            test,
+            break_results,
+            num_locations=num_expected_locations,
+            symbol_name=symbol,
+            module_name=module_name)
     else:
-        check_breakpoint_result (test, break_results, num_locations = num_expected_locations)
+        check_breakpoint_result(
+            test,
+            break_results,
+            num_locations=num_expected_locations)
 
-    return get_bpno_from_match (break_results)
+    return get_bpno_from_match(break_results)
 
-def run_break_set_by_selector (test, selector, extra_options = None, num_expected_locations = -1, module_name=None):
+
+def run_break_set_by_selector(
+        test,
+        selector,
+        extra_options=None,
+        num_expected_locations=-1,
+        module_name=None):
     """Set a breakpoint by selector.  Common options are the same as run_break_set_by_file_and_line."""
 
     command = 'breakpoint set -S "%s"' % (selector)
@@ -374,42 +419,68 @@ def run_break_set_by_selector (test, selector, extra_options = None, num_expecte
     if extra_options:
         command += " " + extra_options
 
-    break_results = run_break_set_command (test, command)
+    break_results = run_break_set_command(test, command)
 
     if num_expected_locations == 1:
-        check_breakpoint_result (test, break_results, num_locations = num_expected_locations, symbol_name = selector, symbol_match_exact=False, module_name=module_name)
+        check_breakpoint_result(
+            test,
+            break_results,
+            num_locations=num_expected_locations,
+            symbol_name=selector,
+            symbol_match_exact=False,
+            module_name=module_name)
     else:
-        check_breakpoint_result (test, break_results, num_locations = num_expected_locations)
+        check_breakpoint_result(
+            test,
+            break_results,
+            num_locations=num_expected_locations)
 
-    return get_bpno_from_match (break_results)
+    return get_bpno_from_match(break_results)
 
-def run_break_set_by_regexp (test, regexp, extra_options=None, num_expected_locations=-1):
+
+def run_break_set_by_regexp(
+        test,
+        regexp,
+        extra_options=None,
+        num_expected_locations=-1):
     """Set a breakpoint by regular expression match on symbol name.  Common options are the same as run_break_set_by_file_and_line."""
 
-    command = 'breakpoint set -r "%s"'%(regexp)
+    command = 'breakpoint set -r "%s"' % (regexp)
     if extra_options:
         command += " " + extra_options
-    
-    break_results = run_break_set_command (test, command)
-    
-    check_breakpoint_result (test, break_results, num_locations=num_expected_locations)
 
-    return get_bpno_from_match (break_results)
+    break_results = run_break_set_command(test, command)
 
-def run_break_set_by_source_regexp (test, regexp, extra_options=None, num_expected_locations=-1):
+    check_breakpoint_result(
+        test,
+        break_results,
+        num_locations=num_expected_locations)
+
+    return get_bpno_from_match(break_results)
+
+
+def run_break_set_by_source_regexp(
+        test,
+        regexp,
+        extra_options=None,
+        num_expected_locations=-1):
     """Set a breakpoint by source regular expression.  Common options are the same as run_break_set_by_file_and_line."""
-    command = 'breakpoint set -p "%s"'%(regexp)
+    command = 'breakpoint set -p "%s"' % (regexp)
     if extra_options:
         command += " " + extra_options
-    
-    break_results = run_break_set_command (test, command)
-    
-    check_breakpoint_result (test, break_results, num_locations=num_expected_locations)
 
-    return get_bpno_from_match (break_results)
+    break_results = run_break_set_command(test, command)
 
-def run_break_set_command (test, command):
-    """Run the command passed in - it must be some break set variant - and analyze the result.  
+    check_breakpoint_result(
+        test,
+        break_results,
+        num_locations=num_expected_locations)
+
+    return get_bpno_from_match(break_results)
+
+
+def run_break_set_command(test, command):
+    """Run the command passed in - it must be some break set variant - and analyze the result.
     Returns a dictionary of information gleaned from the command-line results.
     Will assert if the breakpoint setting fails altogether.
 
@@ -426,11 +497,12 @@ def run_break_set_command (test, command):
         module        - module
         address       - address at which the breakpoint was set."""
 
-    patterns = [r"^Breakpoint (?P<bpno>[0-9]+): (?P<num_locations>[0-9]+) locations\.$",
-                r"^Breakpoint (?P<bpno>[0-9]+): (?P<num_locations>no) locations \(pending\)\.",
-                r"^Breakpoint (?P<bpno>[0-9]+): where = (?P<module>.*)`(?P<symbol>[+\-]{0,1}[^+]+)( \+ (?P<offset>[0-9]+)){0,1}( \[inlined\] (?P<inline_symbol>.*)){0,1} at (?P<file>[^:]+):(?P<line_no>[0-9]+), address = (?P<address>0x[0-9a-fA-F]+)$",
-                r"^Breakpoint (?P<bpno>[0-9]+): where = (?P<module>.*)`(?P<symbol>.*)( \+ (?P<offset>[0-9]+)){0,1}, address = (?P<address>0x[0-9a-fA-F]+)$"]
-    match_object = test.match (command, patterns)
+    patterns = [
+        r"^Breakpoint (?P<bpno>[0-9]+): (?P<num_locations>[0-9]+) locations\.$",
+        r"^Breakpoint (?P<bpno>[0-9]+): (?P<num_locations>no) locations \(pending\)\.",
+        r"^Breakpoint (?P<bpno>[0-9]+): where = (?P<module>.*)`(?P<symbol>[+\-]{0,1}[^+]+)( \+ (?P<offset>[0-9]+)){0,1}( \[inlined\] (?P<inline_symbol>.*)){0,1} at (?P<file>[^:]+):(?P<line_no>[0-9]+), address = (?P<address>0x[0-9a-fA-F]+)$",
+        r"^Breakpoint (?P<bpno>[0-9]+): where = (?P<module>.*)`(?P<symbol>.*)( \+ (?P<offset>[0-9]+)){0,1}, address = (?P<address>0x[0-9a-fA-F]+)$"]
+    match_object = test.match(command, patterns)
     break_results = match_object.groupdict()
 
     # We always insert the breakpoint number, setting it to -1 if we couldn't find it
@@ -439,7 +511,7 @@ def run_break_set_command (test, command):
         break_results['bpno'] = -1
     else:
         break_results['bpno'] = int(break_results['bpno'])
-        
+
     # We always insert the number of locations
     # If ONE location is set for the breakpoint, then the output doesn't mention locations, but it has to be 1...
     # We also make sure it is an integer.
@@ -454,60 +526,100 @@ def run_break_set_command (test, command):
             num_locations = int(break_results['num_locations'])
 
     break_results['num_locations'] = num_locations
-    
+
     if 'line_no' in break_results:
         break_results['line_no'] = int(break_results['line_no'])
 
     return break_results
 
-def get_bpno_from_match (break_results):
-    return int (break_results['bpno'])
 
-def check_breakpoint_result (test, break_results, file_name=None, line_number=-1, symbol_name=None, symbol_match_exact=True, module_name=None, offset=-1, num_locations=-1):
+def get_bpno_from_match(break_results):
+    return int(break_results['bpno'])
+
+
+def check_breakpoint_result(
+        test,
+        break_results,
+        file_name=None,
+        line_number=-1,
+        symbol_name=None,
+        symbol_match_exact=True,
+        module_name=None,
+        offset=-1,
+        num_locations=-1):
 
     out_num_locations = break_results['num_locations']
 
     if num_locations == -1:
-        test.assertTrue (out_num_locations > 0, "Expecting one or more locations, got none.")
+        test.assertTrue(out_num_locations > 0,
+                        "Expecting one or more locations, got none.")
     else:
-        test.assertTrue (num_locations == out_num_locations, "Expecting %d locations, got %d."%(num_locations, out_num_locations))
+        test.assertTrue(
+            num_locations == out_num_locations,
+            "Expecting %d locations, got %d." %
+            (num_locations,
+             out_num_locations))
 
     if file_name:
         out_file_name = ""
         if 'file' in break_results:
             out_file_name = break_results['file']
-        test.assertTrue (file_name == out_file_name, "Breakpoint file name '%s' doesn't match resultant name '%s'."%(file_name, out_file_name))
+        test.assertTrue(
+            file_name == out_file_name,
+            "Breakpoint file name '%s' doesn't match resultant name '%s'." %
+            (file_name,
+             out_file_name))
 
     if line_number != -1:
         out_line_number = -1
         if 'line_no' in break_results:
             out_line_number = break_results['line_no']
 
-        test.assertTrue (line_number == out_line_number, "Breakpoint line number %s doesn't match resultant line %s."%(line_number, out_line_number))
+        test.assertTrue(
+            line_number == out_line_number,
+            "Breakpoint line number %s doesn't match resultant line %s." %
+            (line_number,
+             out_line_number))
 
     if symbol_name:
         out_symbol_name = ""
-        # Look first for the inlined symbol name, otherwise use the symbol name:
+        # Look first for the inlined symbol name, otherwise use the symbol
+        # name:
         if 'inline_symbol' in break_results and break_results['inline_symbol']:
             out_symbol_name = break_results['inline_symbol']
         elif 'symbol' in break_results:
             out_symbol_name = break_results['symbol']
 
         if symbol_match_exact:
-            test.assertTrue(symbol_name == out_symbol_name, "Symbol name '%s' doesn't match resultant symbol '%s'."%(symbol_name, out_symbol_name))
+            test.assertTrue(
+                symbol_name == out_symbol_name,
+                "Symbol name '%s' doesn't match resultant symbol '%s'." %
+                (symbol_name,
+                 out_symbol_name))
         else:
-            test.assertTrue(out_symbol_name.find(symbol_name) != -1, "Symbol name '%s' isn't in resultant symbol '%s'."%(symbol_name, out_symbol_name))
+            test.assertTrue(
+                out_symbol_name.find(symbol_name) != -
+                1,
+                "Symbol name '%s' isn't in resultant symbol '%s'." %
+                (symbol_name,
+                 out_symbol_name))
 
     if module_name:
         out_module_name = None
         if 'module' in break_results:
             out_module_name = break_results['module']
-        
-        test.assertTrue (module_name.find(out_module_name) != -1, "Symbol module name '%s' isn't in expected module name '%s'."%(out_module_name, module_name))
+
+        test.assertTrue(
+            module_name.find(out_module_name) != -
+            1,
+            "Symbol module name '%s' isn't in expected module name '%s'." %
+            (out_module_name,
+             module_name))
 
 # ==================================================
 # Utility functions related to Threads and Processes
 # ==================================================
+
 
 def get_stopped_threads(process, reason):
     """Returns the thread(s) with the specified stop reason in a list.
@@ -519,6 +631,7 @@ def get_stopped_threads(process, reason):
         if t.GetStopReason() == reason:
             threads.append(t)
     return threads
+
 
 def get_stopped_thread(process, reason):
     """A convenience function which returns the first thread with the given stop
@@ -548,28 +661,32 @@ def get_stopped_thread(process, reason):
         return None
     return threads[0]
 
+
 def get_threads_stopped_at_breakpoint_id(process, bpid):
     """ For a stopped process returns the thread stopped at the breakpoint passed in bkpt"""
     stopped_threads = []
     threads = []
 
-    stopped_threads = get_stopped_threads (process, lldb.eStopReasonBreakpoint)
+    stopped_threads = get_stopped_threads(process, lldb.eStopReasonBreakpoint)
 
     if len(stopped_threads) == 0:
         return threads
-    
+
     for thread in stopped_threads:
         # Make sure we've hit our breakpoint...
-        break_id = thread.GetStopReasonDataAtIndex (0)
+        break_id = thread.GetStopReasonDataAtIndex(0)
         if break_id == bpid:
             threads.append(thread)
 
     return threads
 
-def get_threads_stopped_at_breakpoint (process, bkpt):
+
+def get_threads_stopped_at_breakpoint(process, bkpt):
     return get_threads_stopped_at_breakpoint_id(process, bkpt.GetID())
 
-def get_one_thread_stopped_at_breakpoint_id(process, bpid, require_exactly_one = True):
+
+def get_one_thread_stopped_at_breakpoint_id(
+        process, bpid, require_exactly_one=True):
     threads = get_threads_stopped_at_breakpoint_id(process, bpid)
     if len(threads) == 0:
         return None
@@ -578,20 +695,27 @@ def get_one_thread_stopped_at_breakpoint_id(process, bpid, require_exactly_one =
 
     return threads[0]
 
-def get_one_thread_stopped_at_breakpoint(process, bkpt, require_exactly_one = True):
-    return get_one_thread_stopped_at_breakpoint_id(process, bkpt.GetID(), require_exactly_one)
 
-def is_thread_crashed (test, thread):
+def get_one_thread_stopped_at_breakpoint(
+        process, bkpt, require_exactly_one=True):
+    return get_one_thread_stopped_at_breakpoint_id(
+        process, bkpt.GetID(), require_exactly_one)
+
+
+def is_thread_crashed(test, thread):
     """In the test suite we dereference a null pointer to simulate a crash. The way this is
     reported depends on the platform."""
     if test.platformIsDarwin():
-        return thread.GetStopReason() == lldb.eStopReasonException and "EXC_BAD_ACCESS" in thread.GetStopDescription(100)
+        return thread.GetStopReason(
+        ) == lldb.eStopReasonException and "EXC_BAD_ACCESS" in thread.GetStopDescription(100)
     elif test.getPlatform() == "linux":
-        return thread.GetStopReason() == lldb.eStopReasonSignal and thread.GetStopReasonDataAtIndex(0) == thread.GetProcess().GetUnixSignals().GetSignalNumberFromName("SIGSEGV")
+        return thread.GetStopReason() == lldb.eStopReasonSignal and thread.GetStopReasonDataAtIndex(
+            0) == thread.GetProcess().GetUnixSignals().GetSignalNumberFromName("SIGSEGV")
     else:
         return "invalid address" in thread.GetStopDescription(100)
 
-def get_crashed_threads (test, process):
+
+def get_crashed_threads(test, process):
     threads = []
     if process.GetState() != lldb.eStateStopped:
         return threads
@@ -600,13 +724,15 @@ def get_crashed_threads (test, process):
             threads.append(thread)
     return threads
 
-def continue_to_breakpoint (process, bkpt):
+
+def continue_to_breakpoint(process, bkpt):
     """ Continues the process, if it stops, returns the threads stopped at bkpt; otherwise, returns None"""
     process.Continue()
     if process.GetState() != lldb.eStateStopped:
         return None
     else:
-        return get_threads_stopped_at_breakpoint (process, bkpt)
+        return get_threads_stopped_at_breakpoint(process, bkpt)
+
 
 def get_caller_symbol(thread):
     """
@@ -657,7 +783,8 @@ def get_filenames(thread):
     Returns a sequence of file names from the stack frames of this thread.
     """
     def GetFilename(i):
-        return thread.GetFrameAtIndex(i).GetLineEntry().GetFileSpec().GetFilename()
+        return thread.GetFrameAtIndex(
+            i).GetLineEntry().GetFileSpec().GetFilename()
 
     return list(map(GetFilename, list(range(thread.GetNumFrames()))))
 
@@ -677,7 +804,8 @@ def get_module_names(thread):
     Returns a sequence of module names from the stack frames of this thread.
     """
     def GetModuleName(i):
-        return thread.GetFrameAtIndex(i).GetModule().GetFileSpec().GetFilename()
+        return thread.GetFrameAtIndex(
+            i).GetModule().GetFileSpec().GetFilename()
 
     return list(map(GetModuleName, list(range(thread.GetNumFrames()))))
 
@@ -692,7 +820,7 @@ def get_stack_frames(thread):
     return list(map(GetStackFrame, list(range(thread.GetNumFrames()))))
 
 
-def print_stacktrace(thread, string_buffer = False):
+def print_stacktrace(thread, string_buffer=False):
     """Prints a simple stack trace of this thread."""
 
     output = SixStringIO() if string_buffer else sys.stdout
@@ -708,11 +836,15 @@ def print_stacktrace(thread, string_buffer = False):
     addrs = get_pc_addresses(thread)
 
     if thread.GetStopReason() != lldb.eStopReasonInvalid:
-        desc =  "stop reason=" + stop_reason_to_str(thread.GetStopReason())
+        desc = "stop reason=" + stop_reason_to_str(thread.GetStopReason())
     else:
         desc = ""
-    print("Stack trace for thread id={0:#x} name={1} queue={2} ".format(
-        thread.GetThreadID(), thread.GetName(), thread.GetQueueName()) + desc, file=output)
+    print(
+        "Stack trace for thread id={0:#x} name={1} queue={2} ".format(
+            thread.GetThreadID(),
+            thread.GetName(),
+            thread.GetQueueName()) + desc,
+        file=output)
 
     for i in range(depth):
         frame = thread.GetFrameAtIndex(i)
@@ -723,20 +855,34 @@ def print_stacktrace(thread, string_buffer = False):
             file_addr = addrs[i].GetFileAddress()
             start_addr = frame.GetSymbol().GetStartAddress().GetFileAddress()
             symbol_offset = file_addr - start_addr
-            print("  frame #{num}: {addr:#016x} {mod}`{symbol} + {offset}".format(
-                num=i, addr=load_addr, mod=mods[i], symbol=symbols[i], offset=symbol_offset), file=output)
+            print(
+                "  frame #{num}: {addr:#016x} {mod}`{symbol} + {offset}".format(
+                    num=i,
+                    addr=load_addr,
+                    mod=mods[i],
+                    symbol=symbols[i],
+                    offset=symbol_offset),
+                file=output)
         else:
-            print("  frame #{num}: {addr:#016x} {mod}`{func} at {file}:{line} {args}".format(
-                num=i, addr=load_addr, mod=mods[i],
-                func='%s [inlined]' % funcs[i] if frame.IsInlined() else funcs[i],
-                file=files[i], line=lines[i],
-                args=get_args_as_string(frame, showFuncName=False) if not frame.IsInlined() else '()'), file=output)
+            print(
+                "  frame #{num}: {addr:#016x} {mod}`{func} at {file}:{line} {args}".format(
+                    num=i,
+                    addr=load_addr,
+                    mod=mods[i],
+                    func='%s [inlined]' %
+                    funcs[i] if frame.IsInlined() else funcs[i],
+                    file=files[i],
+                    line=lines[i],
+                    args=get_args_as_string(
+                        frame,
+                        showFuncName=False) if not frame.IsInlined() else '()'),
+                file=output)
 
     if string_buffer:
         return output.getvalue()
 
 
-def print_stacktraces(process, string_buffer = False):
+def print_stacktraces(process, string_buffer=False):
     """Prints the stack traces of all the threads."""
 
     output = SixStringIO() if string_buffer else sys.stdout
@@ -749,7 +895,8 @@ def print_stacktraces(process, string_buffer = False):
     if string_buffer:
         return output.getvalue()
 
-def expect_state_changes(test, listener, states, timeout = 5):
+
+def expect_state_changes(test, listener, states, timeout=5):
     """Listens for state changed events on the listener and makes sure they match what we
     expect. Stop-and-restart events (where GetRestartedFromEvent() returns true) are ignored."""
 
@@ -757,7 +904,8 @@ def expect_state_changes(test, listener, states, timeout = 5):
         def get_next_event():
             event = lldb.SBEvent()
             if not listener.WaitForEvent(timeout, event):
-                test.fail("Timed out while waiting for a transition to state %s" %
+                test.fail(
+                    "Timed out while waiting for a transition to state %s" %
                     lldb.SBDebugger.StateAsCString(expected_state))
             return event
 
@@ -766,15 +914,20 @@ def expect_state_changes(test, listener, states, timeout = 5):
                 lldb.SBProcess.GetRestartedFromEvent(event)):
             # Ignore restarted event and the subsequent running event.
             event = get_next_event()
-            test.assertEqual(lldb.SBProcess.GetStateFromEvent(event), lldb.eStateRunning,
-                    "Restarted event followed by a running event")
+            test.assertEqual(
+                lldb.SBProcess.GetStateFromEvent(event),
+                lldb.eStateRunning,
+                "Restarted event followed by a running event")
             event = get_next_event()
 
-        test.assertEqual(lldb.SBProcess.GetStateFromEvent(event), expected_state)
+        test.assertEqual(
+            lldb.SBProcess.GetStateFromEvent(event),
+            expected_state)
 
 # ===================================
 # Utility functions related to Frames
 # ===================================
+
 
 def get_parent_frame(frame):
     """
@@ -791,6 +944,7 @@ def get_parent_frame(frame):
     # If we reach here, no parent has been found, return None.
     return None
 
+
 def get_args_as_string(frame, showFuncName=True):
     """
     Returns the args of the input frame object as a string.
@@ -799,8 +953,8 @@ def get_args_as_string(frame, showFuncName=True):
     # locals        => False
     # statics       => False
     # in_scope_only => True
-    vars = frame.GetVariables(True, False, False, True) # type of SBValueList
-    args = [] # list of strings
+    vars = frame.GetVariables(True, False, False, True)  # type of SBValueList
+    args = []  # list of strings
     for var in vars:
         args.append("(%s)%s=%s" % (var.GetTypeName(),
                                    var.GetName(),
@@ -815,36 +969,45 @@ def get_args_as_string(frame, showFuncName=True):
         return "%s(%s)" % (name, ", ".join(args))
     else:
         return "(%s)" % (", ".join(args))
-        
-def print_registers(frame, string_buffer = False):
+
+
+def print_registers(frame, string_buffer=False):
     """Prints all the register sets of the frame."""
 
     output = SixStringIO() if string_buffer else sys.stdout
 
     print("Register sets for " + str(frame), file=output)
 
-    registerSet = frame.GetRegisters() # Return type of SBValueList.
-    print("Frame registers (size of register set = %d):" % registerSet.GetSize(), file=output)
+    registerSet = frame.GetRegisters()  # Return type of SBValueList.
+    print("Frame registers (size of register set = %d):" %
+          registerSet.GetSize(), file=output)
     for value in registerSet:
         #print(value, file=output)
-        print("%s (number of children = %d):" % (value.GetName(), value.GetNumChildren()), file=output)
+        print("%s (number of children = %d):" %
+              (value.GetName(), value.GetNumChildren()), file=output)
         for child in value:
-            print("Name: %s, Value: %s" % (child.GetName(), child.GetValue()), file=output)
+            print(
+                "Name: %s, Value: %s" %
+                (child.GetName(),
+                 child.GetValue()),
+                file=output)
 
     if string_buffer:
         return output.getvalue()
+
 
 def get_registers(frame, kind):
     """Returns the registers given the frame and the kind of registers desired.
 
     Returns None if there's no such kind.
     """
-    registerSet = frame.GetRegisters() # Return type of SBValueList.
+    registerSet = frame.GetRegisters()  # Return type of SBValueList.
     for value in registerSet:
         if kind.lower() in value.GetName().lower():
             return value
 
     return None
+
 
 def get_GPRs(frame):
     """Returns the general purpose registers of the frame as an SBValue.
@@ -859,6 +1022,7 @@ def get_GPRs(frame):
     """
     return get_registers(frame, "general purpose")
 
+
 def get_FPRs(frame):
     """Returns the floating point registers of the frame as an SBValue.
 
@@ -871,6 +1035,7 @@ def get_FPRs(frame):
         ...
     """
     return get_registers(frame, "floating point")
+
 
 def get_ESRs(frame):
     """Returns the exception state registers of the frame as an SBValue.
@@ -889,8 +1054,10 @@ def get_ESRs(frame):
 # Utility classes/functions for SBValues
 # ======================================
 
+
 class BasicFormatter(object):
     """The basic formatter inspects the value object and prints the value."""
+
     def format(self, value, buffer=None, indent=0):
         if not buffer:
             output = SixStringIO()
@@ -899,25 +1066,28 @@ class BasicFormatter(object):
         # If there is a summary, it suffices.
         val = value.GetSummary()
         # Otherwise, get the value.
-        if val == None:
+        if val is None:
             val = value.GetValue()
-        if val == None and value.GetNumChildren() > 0:
+        if val is None and value.GetNumChildren() > 0:
             val = "%s (location)" % value.GetLocation()
         print("{indentation}({type}) {name} = {value}".format(
-            indentation = ' ' * indent,
-            type = value.GetTypeName(),
-            name = value.GetName(),
-            value = val), file=output)
+            indentation=' ' * indent,
+            type=value.GetTypeName(),
+            name=value.GetName(),
+            value=val), file=output)
         return output.getvalue()
+
 
 class ChildVisitingFormatter(BasicFormatter):
     """The child visiting formatter prints the value and its immediate children.
 
     The constructor takes a keyword arg: indent_child, which defaults to 2.
     """
+
     def __init__(self, indent_child=2):
         """Default indentation of 2 SPC's for the children."""
         self.cindent = indent_child
+
     def format(self, value, buffer=None):
         if not buffer:
             output = SixStringIO()
@@ -926,9 +1096,11 @@ class ChildVisitingFormatter(BasicFormatter):
 
         BasicFormatter.format(self, value, buffer=output)
         for child in value:
-            BasicFormatter.format(self, child, buffer=output, indent=self.cindent)
+            BasicFormatter.format(
+                self, child, buffer=output, indent=self.cindent)
 
         return output.getvalue()
+
 
 class RecursiveDecentFormatter(BasicFormatter):
     """The recursive decent formatter prints the value and the decendents.
@@ -936,11 +1108,13 @@ class RecursiveDecentFormatter(BasicFormatter):
     The constructor takes two keyword args: indent_level, which defaults to 0,
     and indent_child, which defaults to 2.  The current indentation level is
     determined by indent_level, while the immediate children has an additional
-    indentation by inden_child. 
+    indentation by inden_child.
     """
+
     def __init__(self, indent_level=0, indent_child=2):
         self.lindent = indent_level
         self.cindent = indent_child
+
     def format(self, value, buffer=None):
         if not buffer:
             output = SixStringIO()
@@ -950,50 +1124,96 @@ class RecursiveDecentFormatter(BasicFormatter):
         BasicFormatter.format(self, value, buffer=output, indent=self.lindent)
         new_indent = self.lindent + self.cindent
         for child in value:
-            if child.GetSummary() != None:
-                BasicFormatter.format(self, child, buffer=output, indent=new_indent)
+            if child.GetSummary() is not None:
+                BasicFormatter.format(
+                    self, child, buffer=output, indent=new_indent)
             else:
                 if child.GetNumChildren() > 0:
                     rdf = RecursiveDecentFormatter(indent_level=new_indent)
                     rdf.format(child, buffer=output)
                 else:
-                    BasicFormatter.format(self, child, buffer=output, indent=new_indent)
+                    BasicFormatter.format(
+                        self, child, buffer=output, indent=new_indent)
 
         return output.getvalue()
 
-def check_variable (test, valobj, use_dynamic = False, summary = None, value = None, typename = None, num_children = None,use_synthetic=True):
-    test.assertTrue(valobj.IsValid(), "variable %s is not valid" % (valobj.GetName() if valobj else "<unknown>"))
-    if use_dynamic:
-            valobj = valobj.GetDynamicValue(lldb.eDynamicCanRunTarget)
-            test.assertTrue(valobj.IsValid(), "dynamic value of %s is not valid" % (valobj.GetName() if valobj else "<unknown>"))
-            test.assertTrue(valobj.IsDynamic(), "dynamic value of %s is not dynamic" % (valobj.GetName() if valobj else "<unknown>"))
-    if use_synthetic: valobj.SetPreferSyntheticValue(True)
-    if summary:
-            test.assertTrue(valobj.GetSummary() == summary, "expected summary: '%s' - actual summary: '%s'" % (summary,valobj.GetSummary() if valobj else "<unknown>"))
-    if value:
-            test.assertTrue(valobj.GetValue() == value, "expected value: '%s' - actual value: '%s'" % (value,valobj.GetValue() if valobj else "<unknown>"))
-    if typename:
-            test.assertTrue(valobj.GetTypeName() == typename, "expected typename: '%s' - actual typename: '%s'" % (typename,valobj.GetTypeName() if valobj else "<unknown>"))
-    if num_children:
-            test.assertTrue(valobj.GetNumChildren() == num_children, "expected num children: '%s' - actual num children: '%s'" % (num_children,valobj.GetNumChildren() if valobj else "<unknown>"))
 
-def check_children (test, valobj, thecallable):
-    test.assertTrue(valobj.IsValid(), "variable %s is not valid" % (valobj.GetName() if valobj else "<unknown>"))
+def check_variable(
+        test,
+        valobj,
+        use_dynamic=False,
+        summary=None,
+        value=None,
+        typename=None,
+        num_children=None,
+        use_synthetic=True):
+    test.assertTrue(
+        valobj.IsValid(),
+        "variable %s is not valid" %
+        (valobj.GetName() if valobj else "<unknown>"))
+    if use_dynamic:
+        valobj = valobj.GetDynamicValue(lldb.eDynamicCanRunTarget)
+        test.assertTrue(
+            valobj.IsValid(),
+            "dynamic value of %s is not valid" %
+            (valobj.GetName() if valobj else "<unknown>"))
+        test.assertTrue(
+            valobj.IsDynamic(),
+            "dynamic value of %s is not dynamic" %
+            (valobj.GetName() if valobj else "<unknown>"))
+    if use_synthetic:
+        valobj.SetPreferSyntheticValue(True)
+    if summary:
+        test.assertTrue(
+            valobj.GetSummary() == summary,
+            "expected summary: '%s' - actual summary: '%s'" %
+            (summary,
+             valobj.GetSummary() if valobj else "<unknown>"))
+    if value:
+        test.assertTrue(
+            valobj.GetValue() == value, "expected value: '%s' - actual value: '%s'" %
+            (value, valobj.GetValue() if valobj else "<unknown>"))
+    if typename:
+        test.assertTrue(
+            valobj.GetTypeName() == typename,
+            "expected typename: '%s' - actual typename: '%s'" %
+            (typename,
+             valobj.GetTypeName() if valobj else "<unknown>"))
+    if num_children:
+        test.assertTrue(
+            valobj.GetNumChildren() == num_children,
+            "expected num children: '%s' - actual num children: '%s'" %
+            (num_children,
+             valobj.GetNumChildren() if valobj else "<unknown>"))
+
+
+def check_children(test, valobj, thecallable):
+    test.assertTrue(
+        valobj.IsValid(),
+        "variable %s is not valid" %
+        (valobj.GetName() if valobj else "<unknown>"))
     i = 0
     while i < valobj.GetNumChildren():
         child = valobj.GetChildAtIndex(i)
-        test.assertTrue(thecallable(child,i), "child %d failed the test" % (i))
+        test.assertTrue(
+            thecallable(
+                child,
+                i),
+            "child %d failed the test" %
+            (i))
         i = i + 1
 
 # ===========================================================
 # Utility functions for path manipulation on remote platforms
 # ===========================================================
 
+
 def join_remote_paths(*paths):
     # TODO: update with actual platform name for remote windows once it exists
     if lldb.remote_platform.GetName() == 'remote-windows':
         return os.path.join(*paths).replace(os.path.sep, '\\')
     return os.path.join(*paths).replace(os.path.sep, '/')
+
 
 def append_to_process_working_directory(*paths):
     remote = lldb.remote_platform
@@ -1007,6 +1227,7 @@ def append_to_process_working_directory(*paths):
 
 import signal
 
+
 def get_signal_number(signal_name):
     platform = lldb.remote_platform
     if platform and platform.IsValid():
@@ -1018,19 +1239,22 @@ def get_signal_number(signal_name):
     # No remote platform; fall back to using local python signals.
     return getattr(signal, signal_name)
 
+
 class PrintableRegex(object):
+
     def __init__(self, text):
         self.regex = re.compile(text)
         self.text = text
-    
+
     def match(self, str):
         return self.regex.match(str)
-    
+
     def __str__(self):
         return "%s" % (self.text)
-    
+
     def __repr__(self):
         return "re.compile(%s) -> %s" % (self.text, self.regex)
+
 
 def skip_if_callable(test, mycallable, reason):
     if six.callable(mycallable):
@@ -1038,6 +1262,7 @@ def skip_if_callable(test, mycallable, reason):
             test.skipTest(reason)
             return True
     return False
+
 
 def skip_if_library_missing(test, target, library):
     def find_library(target, library):
@@ -1050,11 +1275,18 @@ def skip_if_library_missing(test, target, library):
                 if library.match(filename):
                     return False
         return True
+
     def find_library_callable(test):
         return find_library(target, library)
-    return skip_if_callable(test, find_library_callable, "could not find library matching '%s' in target %s" % (library, target))
+    return skip_if_callable(
+        test,
+        find_library_callable,
+        "could not find library matching '%s' in target %s" %
+        (library,
+         target))
 
-def wait_for_file_on_target(testcase, file_path, max_attempts = 6):
+
+def wait_for_file_on_target(testcase, file_path, max_attempts=6):
     for i in range(max_attempts):
         err, retcode, msg = testcase.run_platform_command("ls %s" % file_path)
         if err.Success() and retcode == 0:
@@ -1064,10 +1296,13 @@ def wait_for_file_on_target(testcase, file_path, max_attempts = 6):
             import time
             time.sleep(pow(2, i) * 0.25)
     else:
-        testcase.fail("File %s not found even after %d attempts." % (file_path, max_attempts))
+        testcase.fail(
+            "File %s not found even after %d attempts." %
+            (file_path, max_attempts))
 
     err, retcode, data = testcase.run_platform_command("cat %s" % (file_path))
 
-    testcase.assertTrue(err.Success() and retcode == 0,
-            "Failed to read file %s: %s, retcode: %d" % (file_path, err.GetCString(), retcode))
+    testcase.assertTrue(
+        err.Success() and retcode == 0, "Failed to read file %s: %s, retcode: %d" %
+        (file_path, err.GetCString(), retcode))
     return data

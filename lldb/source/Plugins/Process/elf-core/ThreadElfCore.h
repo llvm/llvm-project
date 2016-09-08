@@ -16,13 +16,12 @@
 
 // Other libraries and framework includes
 // Project includes
-#include "lldb/Target/Thread.h"
 #include "lldb/Core/DataExtractor.h"
+#include "lldb/Target/Thread.h"
 
-struct compat_timeval
-{
-    int64_t tv_sec;
-    int32_t tv_usec;
+struct compat_timeval {
+  int64_t tv_sec;
+  int32_t tv_usec;
 };
 
 // PRSTATUS structure's size differs based on architecture.
@@ -37,147 +36,124 @@ struct compat_timeval
 #undef si_code
 #undef si_errno
 
-struct ELFLinuxPrStatus
-{
-    int32_t         si_signo;
-    int32_t         si_code;
-    int32_t         si_errno;
+struct ELFLinuxPrStatus {
+  int32_t si_signo;
+  int32_t si_code;
+  int32_t si_errno;
 
-    int16_t         pr_cursig;
+  int16_t pr_cursig;
 
-    uint64_t        pr_sigpend;
-    uint64_t        pr_sighold;
+  uint64_t pr_sigpend;
+  uint64_t pr_sighold;
 
-    uint32_t        pr_pid;
-    uint32_t        pr_ppid;
-    uint32_t        pr_pgrp;
-    uint32_t        pr_sid;
+  uint32_t pr_pid;
+  uint32_t pr_ppid;
+  uint32_t pr_pgrp;
+  uint32_t pr_sid;
 
-    compat_timeval  pr_utime;
-    compat_timeval  pr_stime;
-    compat_timeval  pr_cutime;
-    compat_timeval  pr_cstime;
+  compat_timeval pr_utime;
+  compat_timeval pr_stime;
+  compat_timeval pr_cutime;
+  compat_timeval pr_cstime;
 
-    ELFLinuxPrStatus();
+  ELFLinuxPrStatus();
 
-    bool
-    Parse(lldb_private::DataExtractor &data, lldb_private::ArchSpec &arch);
+  bool Parse(lldb_private::DataExtractor &data, lldb_private::ArchSpec &arch);
 
-    static size_t
-    GetSize(lldb_private::ArchSpec &arch)
-    {
-        switch(arch.GetCore())
-        {
-            case lldb_private::ArchSpec::eCore_s390x_generic:
-            case lldb_private::ArchSpec::eCore_x86_64_x86_64:
-                return ELFLINUXPRSTATUS64_SIZE;
-            default:
-                return 0;
-        }
+  static size_t GetSize(lldb_private::ArchSpec &arch) {
+    switch (arch.GetCore()) {
+    case lldb_private::ArchSpec::eCore_s390x_generic:
+    case lldb_private::ArchSpec::eCore_x86_64_x86_64:
+      return ELFLINUXPRSTATUS64_SIZE;
+    default:
+      return 0;
     }
+  }
 };
 
-struct ELFLinuxPrPsInfo
-{
-    char        pr_state;
-    char        pr_sname;
-    char        pr_zomb;
-    char        pr_nice;
-    uint64_t    pr_flag;
-    uint32_t    pr_uid;
-    uint32_t    pr_gid;
-    int32_t     pr_pid;
-    int32_t     pr_ppid;
-    int32_t     pr_pgrp;
-    int32_t     pr_sid;
-    char        pr_fname[16];
-    char        pr_psargs[80];
+struct ELFLinuxPrPsInfo {
+  char pr_state;
+  char pr_sname;
+  char pr_zomb;
+  char pr_nice;
+  uint64_t pr_flag;
+  uint32_t pr_uid;
+  uint32_t pr_gid;
+  int32_t pr_pid;
+  int32_t pr_ppid;
+  int32_t pr_pgrp;
+  int32_t pr_sid;
+  char pr_fname[16];
+  char pr_psargs[80];
 
-    ELFLinuxPrPsInfo();
+  ELFLinuxPrPsInfo();
 
-    bool
-    Parse(lldb_private::DataExtractor &data, lldb_private::ArchSpec &arch);
+  bool Parse(lldb_private::DataExtractor &data, lldb_private::ArchSpec &arch);
 
-    static size_t
-    GetSize(lldb_private::ArchSpec &arch)
-    {
-        switch(arch.GetCore())
-        {
-            case lldb_private::ArchSpec::eCore_s390x_generic:
-            case lldb_private::ArchSpec::eCore_x86_64_x86_64:
-                return ELFLINUXPRPSINFO64_SIZE;
-            default:
-                return 0;
-        }
+  static size_t GetSize(lldb_private::ArchSpec &arch) {
+    switch (arch.GetCore()) {
+    case lldb_private::ArchSpec::eCore_s390x_generic:
+    case lldb_private::ArchSpec::eCore_x86_64_x86_64:
+      return ELFLINUXPRPSINFO64_SIZE;
+    default:
+      return 0;
     }
+  }
 };
 
-struct ThreadData
-{
-    lldb_private::DataExtractor gpregset;
-    lldb_private::DataExtractor fpregset;
-    lldb_private::DataExtractor vregset;
-    lldb::tid_t tid;
-    int signo;
-    std::string name;
+struct ThreadData {
+  lldb_private::DataExtractor gpregset;
+  lldb_private::DataExtractor fpregset;
+  lldb_private::DataExtractor vregset;
+  lldb::tid_t tid;
+  int signo;
+  std::string name;
 };
 
-class ThreadElfCore : public lldb_private::Thread
-{
+class ThreadElfCore : public lldb_private::Thread {
 public:
-    ThreadElfCore (lldb_private::Process &process, const ThreadData &td);
+  ThreadElfCore(lldb_private::Process &process, const ThreadData &td);
 
-    ~ThreadElfCore() override;
+  ~ThreadElfCore() override;
 
-    void
-    RefreshStateAfterStop() override;
+  void RefreshStateAfterStop() override;
 
-    lldb::RegisterContextSP
-    GetRegisterContext() override;
+  lldb::RegisterContextSP GetRegisterContext() override;
 
-    lldb::RegisterContextSP
-    CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
+  lldb::RegisterContextSP
+  CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
-    void
-    ClearStackFrames() override;
+  void ClearStackFrames() override;
 
-    static bool
-    ThreadIDIsValid (lldb::tid_t thread)
-    {
-        return thread != 0;
-    }
+  static bool ThreadIDIsValid(lldb::tid_t thread) { return thread != 0; }
 
-    const char *
-    GetName() override
-    {
-        if (m_thread_name.empty())
-            return NULL;
-        return m_thread_name.c_str();
-    }
+  const char *GetName() override {
+    if (m_thread_name.empty())
+      return NULL;
+    return m_thread_name.c_str();
+  }
 
-    void
-    SetName(const char *name) override
-    {
-        if (name && name[0])
-            m_thread_name.assign (name);
-        else
-            m_thread_name.clear();
-    }
+  void SetName(const char *name) override {
+    if (name && name[0])
+      m_thread_name.assign(name);
+    else
+      m_thread_name.clear();
+  }
 
 protected:
-    //------------------------------------------------------------------
-    // Member variables.
-    //------------------------------------------------------------------
-    std::string m_thread_name;
-    lldb::RegisterContextSP m_thread_reg_ctx_sp;
+  //------------------------------------------------------------------
+  // Member variables.
+  //------------------------------------------------------------------
+  std::string m_thread_name;
+  lldb::RegisterContextSP m_thread_reg_ctx_sp;
 
-    int m_signo;
+  int m_signo;
 
-    lldb_private::DataExtractor m_gpregset_data;
-    lldb_private::DataExtractor m_fpregset_data;
-    lldb_private::DataExtractor m_vregset_data;
+  lldb_private::DataExtractor m_gpregset_data;
+  lldb_private::DataExtractor m_fpregset_data;
+  lldb_private::DataExtractor m_vregset_data;
 
-    bool CalculateStopInfo() override;
+  bool CalculateStopInfo() override;
 };
 
 #endif // liblldb_ThreadElfCore_h_

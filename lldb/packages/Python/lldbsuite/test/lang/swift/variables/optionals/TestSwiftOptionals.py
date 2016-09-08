@@ -35,37 +35,47 @@ class TestSwiftOptionalType(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec (self.main_source)
+        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     def do_check_consistency(self):
-      """Check formatting for T? and T!"""
-      exe_name = "a.out"
-      exe = os.path.join(os.getcwd(), exe_name)
+        """Check formatting for T? and T!"""
+        exe_name = "a.out"
+        exe = os.path.join(os.getcwd(), exe_name)
 
-      # Create the target
-      target = self.dbg.CreateTarget(exe)
-      self.assertTrue(target, VALID_TARGET)
+        # Create the target
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
 
-      # Set the breakpoints
-      breakpoint = target.BreakpointCreateBySourceRegex('Set breakpoint here', self.main_source_spec)
-      self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
+        # Set the breakpoints
+        breakpoint = target.BreakpointCreateBySourceRegex(
+            'Set breakpoint here', self.main_source_spec)
+        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
 
-      # Launch the process, and do not stop at the entry point.
-      process = target.LaunchSimple(None, None, os.getcwd())
+        # Launch the process, and do not stop at the entry point.
+        process = target.LaunchSimple(None, None, os.getcwd())
 
-      self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertTrue(process, PROCESS_IS_VALID)
 
-      # Frame #0 should be at our breakpoint.
-      threads = lldbutil.get_threads_stopped_at_breakpoint (process, breakpoint)
+        # Frame #0 should be at our breakpoint.
+        threads = lldbutil.get_threads_stopped_at_breakpoint(
+            process, breakpoint)
 
-      self.assertTrue(len(threads) == 1)
-      self.thread = threads[0]
-      self.frame = self.thread.frames[0]
+        self.assertTrue(len(threads) == 1)
+        self.thread = threads[0]
+        self.frame = self.thread.frames[0]
 
     def do_check_visuals(self):
         """Check formatting for T? and T!"""
-        self.expect("frame variable optS_Some", substrs=['a = 12','b = "Hello world"'])
-        self.expect("frame variable uoptS_Some", substrs=['a = 12','b = "Hello world"'])
+        self.expect(
+            "frame variable optS_Some",
+            substrs=[
+                'a = 12',
+                'b = "Hello world"'])
+        self.expect(
+            "frame variable uoptS_Some",
+            substrs=[
+                'a = 12',
+                'b = "Hello world"'])
 
         self.expect("frame variable optString_Some", substrs=['"hello"'])
         self.expect("frame variable uoptString_Some", substrs=['"hello"'])
@@ -79,19 +89,43 @@ class TestSwiftOptionalType(TestBase):
     def do_check_api(self):
         """Check formatting for T? and T!"""
         optS_Some = self.frame.FindVariable("optS_Some")
-        lldbutil.check_variable(self,optS_Some,use_dynamic = False, num_children=2)
+        lldbutil.check_variable(
+            self,
+            optS_Some,
+            use_dynamic=False,
+            num_children=2)
         uoptS_Some = self.frame.FindVariable("uoptS_Some")
-        lldbutil.check_variable(self,uoptS_Some,use_dynamic = False, num_children=2)
+        lldbutil.check_variable(
+            self,
+            uoptS_Some,
+            use_dynamic=False,
+            num_children=2)
 
         optString_None = self.frame.FindVariable("optString_None")
-        lldbutil.check_variable(self,optString_None,use_dynamic = False, num_children=0)
+        lldbutil.check_variable(
+            self,
+            optString_None,
+            use_dynamic=False,
+            num_children=0)
         uoptString_None = self.frame.FindVariable("uoptString_None")
-        lldbutil.check_variable(self,uoptString_None,use_dynamic = False, num_children=0)
+        lldbutil.check_variable(
+            self,
+            uoptString_None,
+            use_dynamic=False,
+            num_children=0)
 
         optString_Some = self.frame.FindVariable("optString_Some")
-        lldbutil.check_variable(self,optString_Some,use_dynamic = False, num_children=1)
+        lldbutil.check_variable(
+            self,
+            optString_Some,
+            use_dynamic=False,
+            num_children=1)
         uoptString_Some = self.frame.FindVariable("uoptString_Some")
-        lldbutil.check_variable(self,uoptString_Some,use_dynamic = False, num_children=1)
+        lldbutil.check_variable(
+            self,
+            uoptString_Some,
+            use_dynamic=False,
+            num_children=1)
 
 if __name__ == '__main__':
     import atexit

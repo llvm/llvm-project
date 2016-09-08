@@ -12,19 +12,17 @@
 
 #include "lldb/Host/posix/HostThreadPosix.h"
 
-namespace lldb_private
-{
+namespace lldb_private {
 
-class HostThreadMacOSX : public HostThreadPosix
-{
-    friend class ThreadLauncher;
+class HostThreadMacOSX : public HostThreadPosix {
+  friend class ThreadLauncher;
 
-  public:
-    HostThreadMacOSX();
-    HostThreadMacOSX(lldb::thread_t thread);
+public:
+  HostThreadMacOSX();
+  HostThreadMacOSX(lldb::thread_t thread);
 
-  protected:
-    static lldb::thread_result_t ThreadCreateTrampoline(lldb::thread_arg_t arg);
+protected:
+  static lldb::thread_result_t ThreadCreateTrampoline(lldb::thread_arg_t arg);
 };
 }
 

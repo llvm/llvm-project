@@ -5,13 +5,14 @@ Test SBBreakpoint APIs.
 from __future__ import print_function
 
 
-
-import os, time
+import os
+import time
 import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class BreakpointAPITestCase(TestBase):
 
@@ -36,11 +37,15 @@ class BreakpointAPITestCase(TestBase):
 
         # Now delete it:
         did_delete = target.BreakpointDelete(breakpoint.GetID())
-        self.assertTrue (did_delete, "Did delete the breakpoint we just created.")
+        self.assertTrue(
+            did_delete,
+            "Did delete the breakpoint we just created.")
 
         # Make sure we can't find it:
-        del_bkpt = target.FindBreakpointByID (breakpoint.GetID())
-        self.assertTrue (not del_bkpt, "We did delete the breakpoint.")
+        del_bkpt = target.FindBreakpointByID(breakpoint.GetID())
+        self.assertTrue(not del_bkpt, "We did delete the breakpoint.")
 
         # Finally make sure the original breakpoint is no longer valid.
-        self.assertTrue (not breakpoint, "Breakpoint we deleted is no longer valid.")
+        self.assertTrue(
+            not breakpoint,
+            "Breakpoint we deleted is no longer valid.")

@@ -64,10 +64,13 @@ class TestSwiftRangeType(TestBase):
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
-        self.expect("frame variable a", substrs=['(ClosedRange<Int>) a = 1...100'])
+        self.expect("frame variable a", substrs=[
+                    '(ClosedRange<Int>) a = 1...100'])
         self.expect("frame variable b", substrs=['(Range<Int>) b = 1..<100'])
-        self.expect("frame variable c", substrs=['(CountableClosedRange<Int>) c = 1...100'])
-        self.expect("frame variable d", substrs=['(CountableRange<Int>) d = 1..<100'])
+        self.expect("frame variable c", substrs=[
+                    '(CountableClosedRange<Int>) c = 1...100'])
+        self.expect("frame variable d", substrs=[
+                    '(CountableRange<Int>) d = 1..<100'])
 
 if __name__ == '__main__':
     import atexit

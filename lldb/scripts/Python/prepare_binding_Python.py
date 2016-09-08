@@ -18,8 +18,10 @@ import subprocess
 import sys
 import platform
 
+
 class SwigSettings(object):
     """Provides a single object to represent swig files and settings."""
+
     def __init__(self):
         self.extensions_file = None
         self.header_files = None
@@ -213,7 +215,7 @@ def do_swig_rebuild(options, dependency_file, config_build_dir, settings):
         "-outdir", "\"%s\"" % config_build_dir,
         "-o", "\"%s\"" % settings.output_file,
         "\"%s\"" % settings.input_file
-        ])
+    ])
     logging.info("running swig with: %s", command)
 
     # Execute swig

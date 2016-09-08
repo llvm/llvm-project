@@ -1,4 +1,5 @@
-//===-- LibStdCpp.h ---------------------------------------------------*- C++ -*-===//
+//===-- LibStdCpp.h ---------------------------------------------------*- C++
+//-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -16,18 +17,23 @@
 #include "lldb/DataFormatters/TypeSynthetic.h"
 
 namespace lldb_private {
-    namespace formatters
-    {
-        bool
-        LibStdcppStringSummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options); // libcstdc++ c++11 std::string
+namespace formatters {
+bool LibStdcppStringSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libcstdc++ c++11 std::string
 
-        bool
-        LibStdcppWStringSummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options); // libcstdc++ c++11 std::wstring
+bool LibStdcppWStringSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libcstdc++ c++11 std::wstring
 
-        SyntheticChildrenFrontEnd* LibstdcppMapIteratorSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP);
-        
-        SyntheticChildrenFrontEnd* LibStdcppVectorIteratorSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP);
-    } // namespace formatters
+SyntheticChildrenFrontEnd *
+LibstdcppMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                             lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
+LibStdcppVectorIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                                lldb::ValueObjectSP);
+} // namespace formatters
 } // namespace lldb_private
 
 #endif // liblldb_LibStdCpp_h_
