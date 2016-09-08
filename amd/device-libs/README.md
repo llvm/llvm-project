@@ -46,8 +46,15 @@ The following build steps are performed:
     export LLVM_BUILD=... (path to LLVM build)
     CC=$LLVM_BUILD/bin/clang cmake -DLLVM_DIR=$LLVM_BUILD -DAMDHSACOD=$HSA_DIR/bin/x86_64/amdhsacod ..
     make
+
+To install artifacts:
     make install
+
+To run offline tests:
     make test
+
+To create packages for the library:
+   make package
 
 ## TESTING
 
