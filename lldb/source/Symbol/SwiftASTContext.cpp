@@ -5591,6 +5591,16 @@ bool SwiftASTContext::IsSelfArchetypeType(const CompilerType &compiler_type) {
 
   if (llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
     if (swift::ArchetypeType *archetype = llvm::dyn_cast<swift::ArchetypeType>(
+            (swift::TypeBase *)compiler_type.GetOpaqueQualType())) {
+      // Hack: Just assume if we have an archetype as the type of 'self',
+      // it's going to be a protocol 'Self' type.
+      return true;
+    }
+  }
+  return false;
+
+  if (llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
+    if (swift::ArchetypeType *archetype = llvm::dyn_cast<swift::ArchetypeType>(
             (swift::TypeBase *)compiler_type.GetOpaqueQualType()))
       return archetype->isSelfDerived();
   }
