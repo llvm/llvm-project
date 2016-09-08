@@ -11805,6 +11805,10 @@ class SBType(_object):
         """GetArrayElementType(self) -> SBType"""
         return _lldb.SBType_GetArrayElementType(self)
 
+    def GetArrayType(self, *args):
+        """GetArrayType(self, uint64_t size) -> SBType"""
+        return _lldb.SBType_GetArrayType(self, *args)
+
     def GetVectorElementType(self):
         """GetVectorElementType(self) -> SBType"""
         return _lldb.SBType_GetVectorElementType(self)

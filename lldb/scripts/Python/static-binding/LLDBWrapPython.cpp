@@ -2511,12 +2511,6 @@ SWIGRUNTIMEINLINE PyObject *SWIG_Python_NewPackedObj(void *ptr, size_t sz,
  *  Get type list
  * -----------------------------------------------------------------------------*/
 
-#if PY_VERSION_HEX >= 0x03030000
-#define _SWIG_PYTHON_CAPSULE_NAME                                              \
-  (char *)"swig_runtime_data" SWIG_RUNTIME_VERSION                             \
-          ".type_pointer_capsule" SWIG_TYPE_TABLE_NAME
-#endif
-
 #ifdef SWIG_LINK_RUNTIME
 void *SWIG_ReturnGlobalTypeList(void *);
 #endif
@@ -2528,13 +2522,9 @@ SWIGRUNTIME swig_module_info *SWIG_Python_GetModule(void) {
 #ifdef SWIG_LINK_RUNTIME
     type_pointer = SWIG_ReturnGlobalTypeList((void *)0);
 #else
-#if PY_VERSION_HEX >= 0x03030000
-    type_pointer = PyCapsule_Import(_SWIG_PYTHON_CAPSULE_NAME, 0);
-#else
     type_pointer =
         PyCObject_Import((char *)"swig_runtime_data" SWIG_RUNTIME_VERSION,
                          (char *)"type_pointer" SWIG_TYPE_TABLE_NAME);
-#endif
     if (PyErr_Occurred()) {
       PyErr_Clear();
       type_pointer = (void *)0;
@@ -2575,19 +2565,8 @@ SWIGINTERN int PyModule_AddObject(PyObject *m, char *name, PyObject *o) {
 }
 #endif
 
-SWIGRUNTIME void
-#if PY_VERSION_HEX >= 0x03030000
-SWIG_Python_DestroyModule(PyObject *obj)
-#else
-SWIG_Python_DestroyModule(void *vptr)
-#endif
-{
-#if PY_VERSION_HEX >= 0x03030000
-  swig_module_info *swig_module =
-      (swig_module_info *)PyCapsule_GetPointer(obj, _SWIG_PYTHON_CAPSULE_NAME);
-#else
+SWIGRUNTIME void SWIG_Python_DestroyModule(void *vptr) {
   swig_module_info *swig_module = (swig_module_info *)vptr;
-#endif
   swig_type_info **types = swig_module->types;
   size_t i;
   for (i = 0; i < swig_module->size; ++i) {
@@ -2614,22 +2593,11 @@ SWIGRUNTIME void SWIG_Python_SetModule(swig_module_info *swig_module) {
       Py_InitModule((char *)"swig_runtime_data" SWIG_RUNTIME_VERSION,
                     swig_empty_runtime_method_table);
 #endif
-#if PY_VERSION_HEX >= 0x03030000
-  PyObject *pointer =
-      PyCapsule_New((void *)swig_module, _SWIG_PYTHON_CAPSULE_NAME,
-                    SWIG_Python_DestroyModule);
-#else
   PyObject *pointer =
       PyCObject_FromVoidPtr((void *)swig_module, SWIG_Python_DestroyModule);
-#endif
   if (pointer && module) {
-#if PY_VERSION_HEX >= 0x03030000
-    PyModule_AddObject(
-        module, (char *)"type_pointer_capsule" SWIG_TYPE_TABLE_NAME, pointer);
-#else
     PyModule_AddObject(module, (char *)"type_pointer" SWIG_TYPE_TABLE_NAME,
                        pointer);
-#endif
   } else {
     Py_XDECREF(pointer);
   }
@@ -2647,20 +2615,12 @@ SWIGRUNTIME swig_type_info *SWIG_Python_TypeQuery(const char *type) {
   PyObject *obj = PyDict_GetItem(cache, key);
   swig_type_info *descriptor;
   if (obj) {
-#if PY_VERSION_HEX >= 0x03030000
-    descriptor = (swig_type_info *)PyCapsule_GetPointer(obj, NULL);
-#else
     descriptor = (swig_type_info *)PyCObject_AsVoidPtr(obj);
-#endif
   } else {
     swig_module_info *swig_module = SWIG_Python_GetModule();
     descriptor = SWIG_TypeQueryModule(swig_module, swig_module, type);
     if (descriptor) {
-#if PY_VERSION_HEX >= 0x03030000
-      obj = PyCapsule_New((void *)descriptor, NULL, NULL);
-#else
       obj = PyCObject_FromVoidPtr(descriptor, NULL);
-#endif
       PyDict_SetItem(cache, key, obj);
       Py_DECREF(obj);
     }
@@ -77274,6 +77234,56 @@ fail:
   return NULL;
 }
 
+SWIGINTERN PyObject *_wrap_SBType_GetArrayType(PyObject *SWIGUNUSEDPARM(self),
+                                               PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBType *arg1 = (lldb::SBType *)0;
+  uint64_t arg2;
+  void *argp1 = 0;
+  int res1 = 0;
+  unsigned long long val2;
+  int ecode2 = 0;
+  PyObject *obj0 = 0;
+  PyObject *obj1 = 0;
+  lldb::SBType result;
+
+  if (!PyArg_ParseTuple(args, (char *)"OO:SBType_GetArrayType", &obj0, &obj1))
+    SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_lldb__SBType, 0 | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '"
+                                             "SBType_GetArrayType"
+                                             "', argument "
+                                             "1"
+                                             " of type '"
+                                             "lldb::SBType *"
+                                             "'");
+  }
+  arg1 = reinterpret_cast<lldb::SBType *>(argp1);
+  ecode2 = SWIG_AsVal_unsigned_SS_long_SS_long(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '"
+                                               "SBType_GetArrayType"
+                                               "', argument "
+                                               "2"
+                                               " of type '"
+                                               "uint64_t"
+                                               "'");
+  }
+  arg2 = static_cast<uint64_t>(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->GetArrayType(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj(
+      (new lldb::SBType(static_cast<const lldb::SBType &>(result))),
+      SWIGTYPE_p_lldb__SBType, SWIG_POINTER_OWN | 0);
+  return resultobj;
+fail:
+  return NULL;
+}
+
 SWIGINTERN PyObject *
 _wrap_SBType_GetVectorElementType(PyObject *SWIGUNUSEDPARM(self),
                                   PyObject *args) {
@@ -100902,6 +100912,8 @@ static PyMethodDef SwigMethods[] = {
      METH_VARARGS, (char *)"SBType_GetCanonicalType(SBType self) -> SBType"},
     {(char *)"SBType_GetArrayElementType", _wrap_SBType_GetArrayElementType,
      METH_VARARGS, (char *)"SBType_GetArrayElementType(SBType self) -> SBType"},
+    {(char *)"SBType_GetArrayType", _wrap_SBType_GetArrayType, METH_VARARGS,
+     (char *)"SBType_GetArrayType(SBType self, uint64_t size) -> SBType"},
     {(char *)"SBType_GetVectorElementType", _wrap_SBType_GetVectorElementType,
      METH_VARARGS,
      (char *)"SBType_GetVectorElementType(SBType self) -> SBType"},
