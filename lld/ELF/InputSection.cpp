@@ -50,8 +50,8 @@ template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
 template <class ELFT>
 ArrayRef<uint8_t> InputSectionBase<ELFT>::getSectionData() const {
   if (Compressed)
-    return ArrayRef<uint8_t>((const uint8_t *)Uncompressed.data(),
-                             Uncompressed.size());
+    return ArrayRef<uint8_t>((const uint8_t *)UncompressedData.get(),
+                             UncompressedDataSize);
   return check(this->File->getObj().getSectionContents(this->Header));
 }
 
@@ -106,7 +106,10 @@ template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
     fatal(getName(this) + ": unsupported compression type");
 
   StringRef Buf((const char *)Data.data(), Data.size());
-  if (zlib::uncompress(Buf, Uncompressed, Hdr->ch_size) != zlib::StatusOK)
+  UncompressedDataSize = Hdr->ch_size;
+  UncompressedData.reset(new char[UncompressedDataSize]);
+  if (zlib::uncompress(Buf, UncompressedData.get(), UncompressedDataSize) !=
+      zlib::StatusOK)
     fatal(getName(this) + ": error uncompressing section");
 }
 

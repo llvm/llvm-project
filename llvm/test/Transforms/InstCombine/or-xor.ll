@@ -140,6 +140,23 @@ define i32 @test12(i32 %x, i32 %y) {
   ret i32 %and
 }
 
+; FIXME: We miss the fold because the pattern matching is inadequate.
+
+define i32 @test12_commuted(i32 %x, i32 %y) {
+; CHECK-LABEL: @test12_commuted(
+; CHECK-NEXT:    [[NEG:%.*]] = xor i32 %x, -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[NEG]], %y
+; CHECK-NEXT:    [[OR:%.*]] = or i32 %y, %x
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[OR]]
+; CHECK-NEXT:    ret i32 [[AND]]
+;
+  %neg = xor i32 %x, -1
+  %xor = xor i32 %neg, %y
+  %or = or i32 %y, %x
+  %and = and i32 %xor, %or
+  ret i32 %and
+}
+
 ; ((x | y) ^ (x ^ y)) -> (x & y)
 define i32 @test13(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test13(
@@ -166,6 +183,25 @@ define i32 @test14(i32 %x, i32 %y) {
   ret i32 %xor
 }
 
+; FIXME: We miss the fold because the pattern matching is inadequate.
+
+define i32 @test14_commuted(i32 %x, i32 %y) {
+; CHECK-LABEL: @test14_commuted(
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i32 %y, -1
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 %x, -1
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[NOTY]], %x
+; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[NOTX]], %y
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[OR1]], [[OR2]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %noty = xor i32 %y, -1
+  %notx = xor i32 %x, -1
+  %or1 = or i32 %noty, %x
+  %or2 = or i32 %notx, %y
+  %xor = xor i32 %or1, %or2
+  ret i32 %xor
+}
+
 ; ((x & ~y) ^ (~x & y)) -> x ^ y
 define i32 @test15(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test15(
@@ -175,6 +211,25 @@ define i32 @test15(i32 %x, i32 %y) {
   %noty = xor i32 %y, -1
   %notx = xor i32 %x, -1
   %and1 = and i32 %x, %noty
+  %and2 = and i32 %notx, %y
+  %xor = xor i32 %and1, %and2
+  ret i32 %xor
+}
+
+; FIXME: We miss the fold because the pattern matching is inadequate.
+
+define i32 @test15_commuted(i32 %x, i32 %y) {
+; CHECK-LABEL: @test15_commuted(
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i32 %y, -1
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i32 %x, -1
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[NOTY]], %x
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[NOTX]], %y
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %noty = xor i32 %y, -1
+  %notx = xor i32 %x, -1
+  %and1 = and i32 %noty, %x
   %and2 = and i32 %notx, %y
   %xor = xor i32 %and1, %and2
   ret i32 %xor

@@ -12,22 +12,50 @@
         addqh.w         $s7,$s7,$k1
         addqh_r.w       $8,$v1,$zero
         alnv.ps         $f12,$f18,$f30,$12
+        c.eq.d          $fcc1,$f15,$f15
         c.eq.ps         $fcc5,$f0,$f9
+        c.eq.s          $fcc5,$f24,$f17
+        c.f.d           $fcc4,$f11,$f21
         c.f.ps          $fcc6,$f11,$f11
+        c.f.s           $fcc4,$f30,$f7
+        c.le.d          $fcc4,$f18,$f1
         c.le.ps         $fcc1,$f7,$f20
+        c.le.s          $fcc6,$f24,$f4
+        c.lt.d          $fcc3,$f9,$f3
         c.lt.ps         $f19,$f5
+        c.lt.s          $fcc2,$f17,$f14
+        c.nge.d         $fcc5,$f21,$f16
         c.nge.ps        $f1,$f26
+        c.nge.s         $fcc3,$f11,$f8
         c.ngl.ps        $f21,$f30
+        c.ngl.s         $fcc2,$f31,$f23
         c.ngle.ps       $fcc7,$f12,$f20
+        c.ngle.s        $fcc2,$f18,$f23
+        c.ngt.d         $fcc4,$f24,$f7
         c.ngt.ps        $fcc5,$f30,$f6
+        c.ngt.s         $fcc5,$f8,$f13
+        c.ole.d         $fcc2,$f16,$f31
         c.ole.ps        $fcc7,$f21,$f8
+        c.ole.s         $fcc3,$f7,$f20
+        c.olt.d         $fcc4,$f19,$f28
         c.olt.ps        $fcc3,$f7,$f16
+        c.olt.s         $fcc6,$f20,$f7
+        c.seq.d         $fcc4,$f31,$f7
         c.seq.ps        $fcc6,$f31,$f14
+        c.seq.s         $fcc7,$f1,$f25
         c.sf.ps         $fcc6,$f4,$f6
+        c.ueq.d         $fcc4,$f13,$f25
         c.ueq.ps        $fcc1,$f5,$f29
+        c.ueq.s         $fcc6,$f3,$f30
+        c.ule.d         $fcc7,$f25,$f18
         c.ule.ps        $fcc6,$f17,$f3
+        c.ule.s         $fcc7,$f21,$f30
+        c.ult.d         $fcc6,$f6,$f17
         c.ult.ps        $fcc7,$f14,$f0
+        c.ult.s         $fcc7,$f24,$f10
+        c.un.d          $fcc6,$f23,$f24
         c.un.ps         $fcc4,$f2,$f26
+        c.un.s          $fcc1,$f30,$f4
         ceil.l.d        $f1,$f3
         ceil.l.s        $f18,$f13
         cfcmsa          $s6,$19

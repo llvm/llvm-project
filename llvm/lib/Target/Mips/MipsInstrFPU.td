@@ -23,6 +23,12 @@
 //    - 32 32-bit registers (within single-only mode)
 //===----------------------------------------------------------------------===//
 
+// Floating Point Compare and Branch
+def SDT_MipsFPBrcond : SDTypeProfile<0, 3, [SDTCisInt<0>,
+                                            SDTCisVT<1, i32>,
+                                            SDTCisVT<2, OtherVT>]>;
+def SDT_MipsFPCmp : SDTypeProfile<0, 3, [SDTCisSameAs<0, 1>, SDTCisFP<1>,
+                                         SDTCisVT<2, i32>]>;
 def SDT_MipsCMovFP : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>, SDTCisVT<2, i32>,
                                           SDTCisSameAs<1, 3>]>;
 def SDT_MipsTruncIntFP : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisFP<1>]>;
@@ -33,15 +39,19 @@ def SDT_MipsExtractElementF64 : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
                                                      SDTCisVT<1, f64>,
                                                      SDTCisVT<2, i32>]>;
 
+def MipsFPCmp : SDNode<"MipsISD::FPCmp", SDT_MipsFPCmp, [SDNPOutGlue]>;
 def MipsCMovFP_T : SDNode<"MipsISD::CMovFP_T", SDT_MipsCMovFP, [SDNPInGlue]>;
 def MipsCMovFP_F : SDNode<"MipsISD::CMovFP_F", SDT_MipsCMovFP, [SDNPInGlue]>;
+def MipsFPBrcond : SDNode<"MipsISD::FPBrcond", SDT_MipsFPBrcond,
+                          [SDNPHasChain, SDNPOptInGlue]>;
 def MipsTruncIntFP : SDNode<"MipsISD::TruncIntFP", SDT_MipsTruncIntFP>;
 def MipsBuildPairF64 : SDNode<"MipsISD::BuildPairF64", SDT_MipsBuildPairF64>;
 def MipsExtractElementF64 : SDNode<"MipsISD::ExtractElementF64",
                                    SDT_MipsExtractElementF64>;
 
 // Operand for printing out a condition code.
-def invertbit : Operand<i1>;
+let PrintMethod = "printFCCOperand", DecoderMethod = "DecodeCondCode" in
+  def condcode : Operand<i32>;
 
 //===----------------------------------------------------------------------===//
 // Feature predicates.
@@ -202,22 +212,30 @@ class SWXC1_FT<string opstr, RegisterOperand DRC,
 class BC1F_FT<string opstr, DAGOperand opnd, InstrItinClass Itin,
               SDPatternOperator Op = null_frag, bit DelaySlot = 1> :
   InstSE<(outs), (ins FCCRegsOpnd:$fcc, opnd:$offset),
-         !strconcat(opstr, "\t$fcc, $offset"), [], Itin, FrmFI, opstr>,
-         HARDFLOAT {
+         !strconcat(opstr, "\t$fcc, $offset"),
+         [(MipsFPBrcond Op, FCCRegsOpnd:$fcc, bb:$offset)], Itin,
+         FrmFI, opstr>, HARDFLOAT {
   let isBranch = 1;
   let isTerminator = 1;
   let hasDelaySlot = DelaySlot;
   let Defs = [AT];
 }
 
-class C_COND_FT<string CondStr, string Typestr, RegisterOperand RC,
-                InstrItinClass itin> :
-   InstSE<(outs FCCRegsOpnd:$fcc), (ins RC:$fs, RC:$ft),
-          !strconcat("c.", CondStr, ".", Typestr, "\t$fcc, $fs, $ft"),
-          [(set FCCRegsOpnd:$fcc, (null_frag RC:$fs, RC:$ft))], itin,
-          FrmFR>, HARDFLOAT {
-  let BaseOpcode = !strconcat("c.", CondStr, ".", Typestr);
+class CEQS_FT<string typestr, RegisterClass RC, InstrItinClass Itin,
+              SDPatternOperator OpNode = null_frag>  :
+  InstSE<(outs), (ins RC:$fs, RC:$ft, condcode:$cond),
+         !strconcat("c.$cond.", typestr, "\t$fs, $ft"),
+         [(OpNode RC:$fs, RC:$ft, imm:$cond)], Itin, FrmFR,
+         !strconcat("c.$cond.", typestr)>, HARDFLOAT {
+  let Defs = [FCC0];
+  let isCodeGenOnly = 1;
 }
+
+class C_COND_FT<string CondStr, string Typestr, RegisterOperand RC,
+                InstrItinClass itin>  :
+   InstSE<(outs), (ins RC:$fs, RC:$ft),
+          !strconcat("c.", CondStr, ".", Typestr, "\t$fs, $ft"), [], itin,
+          FrmFR>, HARDFLOAT;
 
 multiclass C_COND_M<string TypeStr, RegisterOperand RC, bits<5> fmt,
                     InstrItinClass itin> {
@@ -240,11 +258,11 @@ multiclass C_COND_M<string TypeStr, RegisterOperand RC, bits<5> fmt,
 }
 
 defm S : C_COND_M<"s", FGR32Opnd, 16, II_C_CC_S>, ISA_MIPS1_NOT_32R6_64R6;
-defm D32 : C_COND_M<"d", AFGR64Opnd, 17, II_C_CC_D>,
-           ISA_MIPS1_NOT_32R6_64R6, FGR_32;
+defm D32 : C_COND_M<"d", AFGR64Opnd, 17, II_C_CC_D>, ISA_MIPS1_NOT_32R6_64R6,
+           FGR_32;
 let DecoderNamespace = "Mips64" in
-defm D64 : C_COND_M<"d", FGR64Opnd, 17, II_C_CC_D>,
-           ISA_MIPS1_NOT_32R6_64R6, FGR_64;
+defm D64 : C_COND_M<"d", FGR64Opnd, 17, II_C_CC_D>, ISA_MIPS1_NOT_32R6_64R6,
+           FGR_64;
 
 //===----------------------------------------------------------------------===//
 // Floating Point Instructions
@@ -518,60 +536,16 @@ def BC1T : MMRel, BC1F_FT<"bc1t", brtarget, II_BC1T, MIPS_BRANCH_T>,
 def BC1TL : MMRel, BC1F_FT<"bc1tl", brtarget, II_BC1TL, MIPS_BRANCH_T, 0>,
             BC1F_FM<1, 1>, ISA_MIPS2_NOT_32R6_64R6;
 
-// Compare and branch patterns
-multiclass FPBrcondPats<RegisterOperand RC> {
-  // Ordered
-  def : MipsPat<(brcond (i32 (setoeq RC:$lhs, RC:$rhs)), bb:$dst),
-       (BC1T (!cast<Instruction>("C_EQ_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setogt RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1F (!cast<Instruction>("C_OLE_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setoge RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1F (!cast<Instruction>("C_LT_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setolt RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1T (!cast<Instruction>("C_LT_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setole RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1T (!cast<Instruction>("C_OLE_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setone RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1F (!cast<Instruction>("C_EQ_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (seto RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1F (!cast<Instruction>("C_UN_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  // Unordered
-  def : MipsPat<(brcond (i32 (setuo RC:$lhs, RC:$rhs)), bb:$dst),
-       (BC1T (!cast<Instruction>("C_UN_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setueq RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1T (!cast<Instruction>("C_UEQ_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setugt RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1F (!cast<Instruction>("C_OLE_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setuge RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1F (!cast<Instruction>("C_OLT_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setult RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1T (!cast<Instruction>("C_ULT_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setule RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1T (!cast<Instruction>("C_ULE_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setune RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1F (!cast<Instruction>("C_EQ_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setuo RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1T (!cast<Instruction>("C_EQ_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  // Unspecified ordering - treated as ordered.
-  def : MipsPat<(brcond (i32 (seteq RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1T (!cast<Instruction>("C_EQ_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setgt RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1F (!cast<Instruction>("C_OLE_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setge RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1F (!cast<Instruction>("C_LT_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setlt RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1T (!cast<Instruction>("C_LT_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setle RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1T (!cast<Instruction>("C_OLE_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-  def : MipsPat<(brcond (i32 (setne RC:$lhs, RC:$rhs)), bb:$dst),
-        (BC1F (!cast<Instruction>("C_EQ_"#NAME) RC:$lhs, RC:$rhs), bb:$dst)>;
-}
-
+/// Floating Point Compare
 let AdditionalPredicates = [NotInMicroMips] in {
-  defm S : FPBrcondPats<FGR32Opnd>, ISA_MIPS1_NOT_32R6_64R6;
-  defm D32 : FPBrcondPats<AFGR64Opnd>, FGR_32, ISA_MIPS1_NOT_32R6_64R6;
-  defm D64 : FPBrcondPats<FGR64Opnd>, FGR_64, ISA_MIPS1_NOT_32R6_64R6;
+  def FCMP_S32 : MMRel, CEQS_FT<"s", FGR32, II_C_CC_S, MipsFPCmp>, CEQS_FM<16>,
+                 ISA_MIPS1_NOT_32R6_64R6;
+  def FCMP_D32 : MMRel, CEQS_FT<"d", AFGR64, II_C_CC_D, MipsFPCmp>, CEQS_FM<17>,
+                 ISA_MIPS1_NOT_32R6_64R6, FGR_32;
 }
+let DecoderNamespace = "Mips64" in
+def FCMP_D64 : CEQS_FT<"d", FGR64, II_C_CC_D, MipsFPCmp>, CEQS_FM<17>,
+               ISA_MIPS1_NOT_32R6_64R6, FGR_64;
 
 //===----------------------------------------------------------------------===//
 // Floating Point Pseudo-Instructions
@@ -615,78 +589,6 @@ def PseudoTRUNC_W_D : MipsAsmPseudoInst<(outs FGR32Opnd:$fd),
                                         "trunc.w.d\t$fd, $fs, $rs">,
                       FGR_64, HARDFLOAT;
 
-// Pseudo instructions to read $fcc0 - $fcc7
-def PseudoReadFCC :
-  PseudoSE<(outs GPR32Opnd:$rd), (ins invertbit:$invert, FCC:$fcc),
-                                      [], II_CFC1>;
-
-multiclass Mips3ReadFCC<RegisterOperand RC> {
-  def : MipsPat<(seteq RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 0,
-          (!cast<Instruction>("C_EQ_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setgt RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 1,
-          (!cast<Instruction>("C_ULE_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setge RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 1,
-          (!cast<Instruction>("C_ULT_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setlt RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 0,
-          (!cast<Instruction>("C_OLT_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setle RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 0,
-          (!cast<Instruction>("C_OLE_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setne RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 1,
-          (!cast<Instruction>("C_UEQ_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setoeq RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 0,
-          (!cast<Instruction>("C_EQ_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setogt RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 1,
-          (!cast<Instruction>("C_ULE_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setoge RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 1,
-          (!cast<Instruction>("C_ULT_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setolt RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 0,
-          (!cast<Instruction>("C_OLT_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setole RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 0,
-          (!cast<Instruction>("C_OLE_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setone RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 1,
-          (!cast<Instruction>("C_UEQ_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(seto RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 1,
-          (!cast<Instruction>("C_UN_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setuo RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 0,
-          (!cast<Instruction>("C_UN_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setueq RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 0,
-          (!cast<Instruction>("C_UEQ_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setugt RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 1,
-          (!cast<Instruction>("C_OLE_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setuge RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 1,
-          (!cast<Instruction>("C_OLT_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setult RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 0,
-          (!cast<Instruction>("C_ULT_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setule RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 0,
-          (!cast<Instruction>("C_ULE_"#NAME) RC:$lhs, RC:$rhs))>;
-  def : MipsPat<(setune RC:$lhs, RC:$rhs),
-        (PseudoReadFCC 1,
-          (!cast<Instruction>("C_EQ_"#NAME) RC:$lhs, RC:$rhs))>;
-}
-
-defm S : Mips3ReadFCC<FGR32Opnd>, ISA_MIPS1_NOT_4_32;
-defm D32 : Mips3ReadFCC<AFGR64Opnd>, FGR_32, ISA_MIPS1_NOT_4_32;
-defm D64 : Mips3ReadFCC<FGR64Opnd>, FGR_64, ISA_MIPS1_NOT_4_32;
-
 //===----------------------------------------------------------------------===//
 // InstAliases.
 //===----------------------------------------------------------------------===//
@@ -718,48 +620,6 @@ def : MipsInstAlias
 def : MipsInstAlias
         <"l.d $fd, $addr", (LDC164 FGR64Opnd:$fd, mem_simm16:$addr), 0>,
       FGR_64, ISA_MIPS2, HARDFLOAT;
-
-multiclass FPCAliases<RegisterOperand RC, string TypeString> {
-  def : MipsInstAlias<!strconcat("c.f.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_F_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.un.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_UN_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.eq.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_EQ_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.ueq.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_UEQ_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.olt.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_OLT_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.ult.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_ULT_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.ole.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_OLE_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.ule.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_ULE_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.sf.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_SF_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.ngle.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_NGLE_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.seq.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_SEQ_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.ngl.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_NGL_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.lt.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_LT_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.nge.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_NGE_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.le.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_LE_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-  def : MipsInstAlias<!strconcat("c.ngt.", TypeString, " $rs, $rt"),
-        (!cast<Instruction>("C_NGT_"#NAME) FCC0, RC:$rs, RC:$rt), 1>;
-}
-
-let AdditionalPredicates = [NotInMicroMips] in {
-  defm S : FPCAliases<FGR32Opnd, "s">, HARDFLOAT, ISA_MIPS1_NOT_32R6_64R6;
-  defm D32 : FPCAliases<AFGR64Opnd, "d">, HARDFLOAT, ISA_MIPS1_NOT_32R6_64R6;
-  defm D64 : FPCAliases<FGR64Opnd, "d">, HARDFLOAT, ISA_MIPS1_NOT_32R6_64R6;
-}
-
 //===----------------------------------------------------------------------===//
 // Floating Point Patterns
 //===----------------------------------------------------------------------===//

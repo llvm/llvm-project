@@ -10,12 +10,12 @@ declare i32 @llvm.amdgcn.workgroup.id.z() #0
 ; ALL-LABEL {{^}}test_workgroup_id_x:
 
 ; HSA: .amd_kernel_code_t
-; HSA: compute_pgm_rsrc2_user_sgpr = 6
-; HSA: compute_pgm_rsrc2_tgid_x_en = 1
-; HSA: compute_pgm_rsrc2_tgid_y_en = 0
-; HSA: compute_pgm_rsrc2_tgid_z_en = 0
-; HSA: compute_pgm_rsrc2_tg_size_en = 0
-; HSA: compute_pgm_rsrc2_tidig_comp_cnt = 0
+; HSA: user_sgpr_count = 6
+; HSA: enable_sgpr_workgroup_id_x = 1
+; HSA: enable_sgpr_workgroup_id_y = 0
+; HSA: enable_sgpr_workgroup_id_z = 0
+; HSA: enable_sgpr_workgroup_info = 0
+; HSA: enable_vgpr_workitem_id = 0
 ; HSA: enable_sgpr_grid_workgroup_count_x = 0
 ; HSA: enable_sgpr_grid_workgroup_count_y = 0
 ; HSA: enable_sgpr_grid_workgroup_count_z = 0
@@ -40,11 +40,11 @@ define void @test_workgroup_id_x(i32 addrspace(1)* %out) #1 {
 }
 
 ; ALL-LABEL {{^}}test_workgroup_id_y:
-; HSA: compute_pgm_rsrc2_user_sgpr = 6
-; HSA: compute_pgm_rsrc2_tgid_x_en = 1
-; HSA: compute_pgm_rsrc2_tgid_y_en = 1
-; HSA: compute_pgm_rsrc2_tgid_z_en = 0
-; HSA: compute_pgm_rsrc2_tg_size_en = 0
+; HSA: user_sgpr_count = 6
+; HSA: enable_sgpr_workgroup_id_x = 1
+; HSA: enable_sgpr_workgroup_id_y = 1
+; HSA: enable_sgpr_workgroup_id_z = 0
+; HSA: enable_sgpr_workgroup_info = 0
 ; HSA: enable_sgpr_grid_workgroup_count_x = 0
 ; HSA: enable_sgpr_grid_workgroup_count_y = 0
 ; HSA: enable_sgpr_grid_workgroup_count_z = 0
@@ -68,12 +68,12 @@ define void @test_workgroup_id_y(i32 addrspace(1)* %out) #1 {
 }
 
 ; ALL-LABEL {{^}}test_workgroup_id_z:
-; HSA: compute_pgm_rsrc2_user_sgpr = 6
-; HSA: compute_pgm_rsrc2_tgid_x_en = 1
-; HSA: compute_pgm_rsrc2_tgid_y_en = 0
-; HSA: compute_pgm_rsrc2_tgid_z_en = 1
-; HSA: compute_pgm_rsrc2_tg_size_en = 0
-; HSA: compute_pgm_rsrc2_tidig_comp_cnt = 0
+; HSA: user_sgpr_count = 6
+; HSA: enable_sgpr_workgroup_id_x = 1
+; HSA: enable_sgpr_workgroup_id_y = 0
+; HSA: enable_sgpr_workgroup_id_z = 1
+; HSA: enable_sgpr_workgroup_info = 0
+; HSA: enable_vgpr_workitem_id = 0
 ; HSA: enable_sgpr_private_segment_buffer = 1
 ; HSA: enable_sgpr_dispatch_ptr = 0
 ; HSA: enable_sgpr_queue_ptr = 0

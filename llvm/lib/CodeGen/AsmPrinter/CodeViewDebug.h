@@ -36,6 +36,7 @@ struct ClassInfo;
 /// \brief Collects and handles line tables information in a CodeView format.
 class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   MCStreamer &OS;
+  llvm::BumpPtrAllocator Allocator;
   codeview::MemoryTypeTableBuilder TypeTable;
 
   /// Represents the most general definition range.

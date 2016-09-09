@@ -63,18 +63,17 @@ public:
   ScopedPrinter *getPrinter() { return W; }
 
   /// Action to take on unknown types. By default, they are ignored.
-  Error visitUnknownType(const CVRecord<TypeLeafKind> &Record) override;
-  Error visitUnknownMember(const CVRecord<TypeLeafKind> &Record) override;
+  Error visitUnknownType(CVRecord<TypeLeafKind> &Record) override;
+  Error visitUnknownMember(CVRecord<TypeLeafKind> &Record) override;
 
   /// Paired begin/end actions for all types. Receives all record data,
   /// including the fixed-length record prefix.
-  Expected<TypeLeafKind>
-  visitTypeBegin(const CVRecord<TypeLeafKind> &Record) override;
-  Error visitTypeEnd(const CVRecord<TypeLeafKind> &Record) override;
+  Error visitTypeBegin(CVRecord<TypeLeafKind> &Record) override;
+  Error visitTypeEnd(CVRecord<TypeLeafKind> &Record) override;
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
-  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,                    \
-                         Name##Record &Record) override;
+  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR, Name##Record &Record)    \
+      override;
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   TYPE_RECORD(EnumName, EnumVal, Name)
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)

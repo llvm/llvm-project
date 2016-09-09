@@ -26,17 +26,6 @@ s_mov_b64 s1, s[0:1]
 s_mov_b64 s[0:1], s1
 // GCN: error: invalid operand for instruction
 
-// Immediate greater than 32-bits
-s_mov_b32 s1, 0xfffffffff
-// GCN: error: invalid immediate: only 32-bit values are legal
-
-// Immediate greater than 32-bits
-s_mov_b64 s[0:1], 0xfffffffff
-// GCN: error: invalid immediate: only 32-bit values are legal
-
-s_mov_b64 s[0:1], 0x0000000200000000
-// GCN: error: invalid immediate: only 32-bit values are legal
-
 // FIXME: This shoudl probably say failed to parse.
 s_mov_b32 s
 // GCN: error: not a valid operand

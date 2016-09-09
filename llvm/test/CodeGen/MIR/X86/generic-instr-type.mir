@@ -31,22 +31,26 @@ registers:
   - { id: 3, class: _ }
   - { id: 4, class: _ }
   - { id: 5, class: _ }
+  - { id: 6, class: _ }
+  - { id: 7, class: _ }
+  - { id: 8, class: _ }
 body: |
   bb.0:
-    liveins: %edi
-    ; CHECK:      %1(32) = G_ADD s32 %0
-    %0(32) = COPY %edi
-    %1(32) = G_ADD s32 %0, %0
-    ; CHECK:      %2(64) = G_ADD <2 x s32> %0
-    %2(64) = G_ADD <2 x s32> %0, %0
-    ; CHECK:      %3(64) = G_ADD s64 %0
-    %3(64) = G_ADD s64 %0, %0
-    ; G_ADD is actually not a valid operand for structure type,
-    ; but that is the only one we have for now for testing.
-    ; CHECK:      %4(64) = G_ADD s64 %0
-    %4(64) = G_ADD s64 %0, %0
-    ; CHECK:      %5(48) = G_ADD s48 %0
-    %5(48) = G_ADD s48 %0, %0
+    liveins: %edi, %xmm0
+    ; CHECK:      %1(s32) = G_ADD %0
+    %0(s32) = COPY %edi
+    %6(<2 x s32>) = COPY %xmm0
+    %7(s64) = COPY %rdi
+
+    %1(s32) = G_ADD %0, %0
+    ; CHECK:      %2(<2 x s32>) = G_ADD %6, %6
+    %2(<2 x s32>) = G_ADD %6, %6
+    ; CHECK:      %3(s64) = G_ADD %7, %7
+    %3(s64) = G_ADD %7, %7
+
+    ; CHECK:      %5(s48) = G_ADD %8, %8
+    %8(s48) = G_TRUNC %7
+    %5(s48) = G_ADD %8, %8
 ...
 
 ---
@@ -55,6 +59,6 @@ body: |
   bb.0:
     successors: %bb.0
 
-    ; CHECK:      G_BR unsized %bb.0
-    G_BR unsized %bb.0
+    ; CHECK:      G_BR %bb.0
+    G_BR  %bb.0
 ...

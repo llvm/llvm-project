@@ -1,9 +1,16 @@
 set(LLVM_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm)
 set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
 
+# First for users who use an installed LLVM, create the LLVMExports.cmake file.
+set(LLVM_EXPORTS_FILE ${llvm_cmake_builddir}/LLVMExports.cmake)
 get_property(LLVM_EXPORTS GLOBAL PROPERTY LLVM_EXPORTS)
-export(TARGETS ${LLVM_EXPORTS}
-  FILE ${llvm_cmake_builddir}/LLVMExports.cmake)
+export(TARGETS ${LLVM_EXPORTS} FILE ${LLVM_EXPORTS_FILE})
+
+# Then for users who want to link against the LLVM build tree, provide the
+# normal targets and the build tree only targets.
+set(LLVM_BUILDTREEONLY_EXPORTS_FILE ${llvm_cmake_builddir}/LLVMBuildTreeOnlyTargets.cmake)
+get_property(LLVM_EXPORTS_BUILDTREE_ONLY GLOBAL PROPERTY LLVM_EXPORTS_BUILDTREE_ONLY)
+export(TARGETS ${LLVM_EXPORTS_BUILDTREE_ONLY} FILE ${LLVM_BUILDTREEONLY_EXPORTS_FILE})
 
 get_property(LLVM_AVAILABLE_LIBS GLOBAL PROPERTY LLVM_LIBS)
 
@@ -31,11 +38,21 @@ set(LLVM_CONFIG_LIBRARY_DIRS
 set(LLVM_CONFIG_CMAKE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(LLVM_CONFIG_BINARY_DIR "${LLVM_BINARY_DIR}")
 set(LLVM_CONFIG_TOOLS_BINARY_DIR "${LLVM_TOOLS_BINARY_DIR}")
-set(LLVM_CONFIG_EXPORTS_FILE "${llvm_cmake_builddir}/LLVMExports.cmake")
+# We need to use the full path to the LLVM Exports file to make sure we get the
+# one from the build tree. This is due to our cmake files being split between
+# this source dir and the binary dir in the build tree configuration and the
+# LLVM_CONFIG_CMAKE_DIR being the source directory. In contrast in the install
+# tree, both the generated LLVMExports.cmake file and the rest of the cmake
+# source files are put in the same cmake directory.
+set(LLVM_CONFIG_EXPORTS_FILE "${LLVM_EXPORTS_FILE}")
+set(LLVM_CONFIG_EXPORTS "${LLVM_EXPORTS};${LLVM_EXPORTS_BUILDTREE_ONLY}")
+set(llvm_config_include_buildtree_only_exports
+"include(\"${LLVM_BUILDTREEONLY_EXPORTS_FILE}\")")
 configure_file(
   LLVMConfig.cmake.in
   ${llvm_cmake_builddir}/LLVMConfig.cmake
   @ONLY)
+set(llvm_config_include_buildtree_only_exports)
 
 # For compatibility with projects that include(LLVMConfig)
 # via CMAKE_MODULE_PATH, place API modules next to it.
@@ -64,6 +81,7 @@ set(LLVM_CONFIG_CMAKE_DIR "\${LLVM_INSTALL_PREFIX}/${LLVM_INSTALL_PACKAGE_DIR}")
 set(LLVM_CONFIG_BINARY_DIR "\${LLVM_INSTALL_PREFIX}")
 set(LLVM_CONFIG_TOOLS_BINARY_DIR "\${LLVM_INSTALL_PREFIX}/bin")
 set(LLVM_CONFIG_EXPORTS_FILE "\${LLVM_CMAKE_DIR}/LLVMExports.cmake")
+set(LLVM_CONFIG_EXPORTS "${LLVM_EXPORTS}")
 configure_file(
   LLVMConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/LLVMConfig.cmake

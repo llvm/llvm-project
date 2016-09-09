@@ -19,7 +19,7 @@ bb0:                                      ; preds = %land.lhs.true, %entry
   %x.tr = phi %struct.a* [ %x, %entry ], [ null, %land.lhs.true ]
   %code1 = getelementptr inbounds %struct.a, %struct.a* %x.tr, i32 0, i32 0
   %0 = load i16, i16* %code1, align 4
-; CHECK: load i32, i32*
+; CHECK: load i16, i16*
   %conv = zext i16 %0 to i32
   switch i32 %conv, label %if.end.50 [
     i32 43, label %cleanup
@@ -38,7 +38,7 @@ if.then.26:                                       ; preds = %if.then.5
 
 cond.false:                                       ; preds = %if.then.26
 ; CHECK: cond.false:
-; CHECK-NOT: load
+; CHECK: load i16
   %mode = getelementptr inbounds %struct.a, %struct.a* %x.tr.lcssa163, i32 0, i32 1
   %bf.load = load i16, i16* %mode, align 2
   %bf.shl = shl i16 %bf.load, 8

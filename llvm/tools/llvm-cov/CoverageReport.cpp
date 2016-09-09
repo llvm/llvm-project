@@ -15,6 +15,7 @@
 #include "RenderingSupport.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Path.h"
 #include <numeric>
 
 using namespace llvm;
@@ -140,7 +141,10 @@ void CoverageReport::render(const FileCoverageSummary &File,
   auto FuncCoverageColor =
       determineCoveragePercentageColor(File.FunctionCoverage);
   auto LineCoverageColor = determineCoveragePercentageColor(File.LineCoverage);
-  OS << column(File.Name, FileReportColumns[0], Column::NoTrim)
+  SmallString<256> FileName = File.Name;
+  sys::path::remove_dots(FileName, /*remove_dot_dots=*/true);
+  sys::path::native(FileName);
+  OS << column(FileName, FileReportColumns[0], Column::NoTrim)
      << format("%*u", FileReportColumns[1],
                (unsigned)File.RegionCoverage.NumRegions);
   Options.colored_ostream(OS, FileCoverageColor) << format(

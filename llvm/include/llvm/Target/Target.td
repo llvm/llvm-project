@@ -700,6 +700,20 @@ def f32imm : Operand<f32>;
 def f64imm : Operand<f64>;
 }
 
+// Register operands for generic instructions don't have an MVT, but do have
+// constraints linking the operands (e.g. all operands of a G_ADD must
+// have the same LLT).
+class TypedOperand<string Ty> : Operand<untyped> {
+  let OperandType = Ty;
+}
+
+def type0 : TypedOperand<"OPERAND_GENERIC_0">;
+def type1 : TypedOperand<"OPERAND_GENERIC_1">;
+def type2 : TypedOperand<"OPERAND_GENERIC_2">;
+def type3 : TypedOperand<"OPERAND_GENERIC_3">;
+def type4 : TypedOperand<"OPERAND_GENERIC_4">;
+def type5 : TypedOperand<"OPERAND_GENERIC_5">;
+
 /// zero_reg definition - Special node to stand for the zero register.
 ///
 def zero_reg;

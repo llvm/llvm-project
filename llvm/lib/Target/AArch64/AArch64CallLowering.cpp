@@ -125,7 +125,7 @@ bool AArch64CallLowering::lowerFormalArguments(
                            [](MachineIRBuilder &MIRBuilder, Type *Ty,
                               unsigned ValReg, unsigned PhysReg) {
                              MIRBuilder.getMBB().addLiveIn(PhysReg);
-                             MIRBuilder.buildType(LLT{*Ty}, ValReg, PhysReg);
+                             MIRBuilder.buildCopy(ValReg, PhysReg);
                            });
 }
 
@@ -172,7 +172,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     handleAssignments(MIRBuilder, RetAssignFn, ResTys, ResRegs,
                       [&](MachineIRBuilder &MIRBuilder, Type *Ty,
                           unsigned ValReg, unsigned PhysReg) {
-                        MIRBuilder.buildType(LLT{*Ty}, ValReg, PhysReg);
+                        MIRBuilder.buildCopy(ValReg, PhysReg);
                         MIB.addDef(PhysReg, RegState::Implicit);
                       });
 

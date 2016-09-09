@@ -10,9 +10,11 @@
 #include "PdbYaml.h"
 
 #include "CodeViewYaml.h"
+#include "YamlSerializationContext.h"
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/CodeView/TypeSerializationVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
@@ -134,7 +136,7 @@ void MappingTraits<PdbObject>::mapping(IO &IO, PdbObject &Obj) {
   IO.mapOptional("StreamMap", Obj.StreamMap);
   IO.mapOptional("PdbStream", Obj.PdbStream);
   IO.mapOptional("DbiStream", Obj.DbiStream);
-  IO.mapOptional("TpiStream", Obj.TpiStream);
+  IO.mapOptionalWithContext("TpiStream", Obj.TpiStream, Obj.Allocator);
 }
 
 void MappingTraits<MSFHeaders>::mapping(IO &IO, MSFHeaders &Obj) {
@@ -181,10 +183,18 @@ void MappingTraits<PdbDbiStream>::mapping(IO &IO, PdbDbiStream &Obj) {
   IO.mapOptional("Modules", Obj.ModInfos);
 }
 
-void MappingTraits<PdbTpiStream>::mapping(IO &IO,
-                                          pdb::yaml::PdbTpiStream &Obj) {
+void MappingContextTraits<PdbTpiStream, BumpPtrAllocator>::mapping(
+    IO &IO, pdb::yaml::PdbTpiStream &Obj, BumpPtrAllocator &Allocator) {
+  // Create a single serialization context that will be passed through the
+  // entire process of serializing / deserializing a Tpi Stream.  This is
+  // especially important when we are going from Pdb -> Yaml because we need
+  // to maintain state in a TypeTableBuilder across mappings, and at the end of
+  // the entire process, we need to have one TypeTableBuilder that has every
+  // record.
+  pdb::yaml::SerializationContext Context(IO, Allocator);
+
   IO.mapRequired("Version", Obj.Version);
-  IO.mapRequired("Records", Obj.Records);
+  IO.mapRequired("Records", Obj.Records, Context);
 }
 
 void MappingTraits<NamedStreamMapping>::mapping(IO &IO,
@@ -199,21 +209,25 @@ void MappingTraits<PdbDbiModuleInfo>::mapping(IO &IO, PdbDbiModuleInfo &Obj) {
   IO.mapOptional("SourceFiles", Obj.SourceFiles);
 }
 
-void MappingTraits<PdbTpiRecord>::mapping(IO &IO,
-                                          pdb::yaml::PdbTpiRecord &Obj) {
+void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::
+    mapping(IO &IO, pdb::yaml::PdbTpiRecord &Obj,
+            pdb::yaml::SerializationContext &Context) {
+  codeview::TypeVisitorCallbackPipeline Pipeline;
+  codeview::TypeDeserializer Deserializer;
+  codeview::TypeSerializationVisitor Serializer(Context.FieldListBuilder,
+                                                Context.TypeTableBuilder);
+
   if (IO.outputting()) {
-    codeview::TypeDeserializer Deserializer;
-    codeview::yaml::YamlTypeDumperCallbacks Callbacks(IO);
-
-    codeview::TypeVisitorCallbackPipeline Pipeline;
+    // For PDB to Yaml, deserialize into a high level record type, then dump it.
     Pipeline.addCallbackToPipeline(Deserializer);
-    Pipeline.addCallbackToPipeline(Callbacks);
-
-    codeview::CVTypeVisitor Visitor(Pipeline);
-    consumeError(Visitor.visitTypeRecord(Obj.Record));
+    Pipeline.addCallbackToPipeline(Context.Dumper);
   } else {
-    codeview::yaml::YamlTypeDumperCallbacks Callbacks(IO);
-    codeview::CVTypeVisitor Visitor(Callbacks);
-    consumeError(Visitor.visitTypeRecord(Obj.Record));
+    // For Yaml to PDB, extract from the high level record type, then write it
+    // to bytes.
+    Pipeline.addCallbackToPipeline(Context.Dumper);
+    Pipeline.addCallbackToPipeline(Serializer);
   }
+
+  codeview::CVTypeVisitor Visitor(Pipeline);
+  consumeError(Visitor.visitTypeRecord(Obj.Record));
 }

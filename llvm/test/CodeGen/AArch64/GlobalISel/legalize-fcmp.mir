@@ -21,15 +21,15 @@ registers:
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
-    %0(64) = G_TYPE s64 %x0
-    %1(64) = G_TYPE s64 %x0
+    %0(s64) = COPY %x0
+    %1(s64) = COPY %x0
 
-    %2(8) = G_TRUNC { s32, s64 } %0
-    %3(8) = G_TRUNC { s32, s64 } %1
+    %2(s32) = G_TRUNC %0
+    %3(s32) = G_TRUNC %1
 
-    ; CHECK: %4(1) = G_FCMP { s1, s64 } floatpred(oge), %0, %1
-    %4(1) = G_FCMP { s1, s64 } floatpred(oge), %0, %1
+    ; CHECK: %4(s1) = G_FCMP floatpred(oge), %0, %1
+    %4(s1) = G_FCMP floatpred(oge), %0, %1
 
-    ; CHECK: %5(1) = G_FCMP { s1, s32 } floatpred(uno), %2, %3
-    %5(1) = G_FCMP { s1, s32 } floatpred(uno), %2, %3
+    ; CHECK: %5(s1) = G_FCMP floatpred(uno), %2, %3
+    %5(s1) = G_FCMP floatpred(uno), %2, %3
 ...

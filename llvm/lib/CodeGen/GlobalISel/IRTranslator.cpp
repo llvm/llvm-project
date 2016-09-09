@@ -55,8 +55,7 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
     // we need to concat together to produce the value.
     assert(Val.getType()->isSized() &&
            "Don't know how to create an empty vreg");
-    unsigned Size = DL->getTypeSizeInBits(Val.getType());
-    unsigned VReg = MRI->createGenericVirtualRegister(Size);
+    unsigned VReg = MRI->createGenericVirtualRegister(LLT{*Val.getType(), DL});
     ValReg = VReg;
 
     if (auto CV = dyn_cast<Constant>(&Val)) {
@@ -113,10 +112,7 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const User &U) {
   unsigned Op0 = getOrCreateVReg(*U.getOperand(0));
   unsigned Op1 = getOrCreateVReg(*U.getOperand(1));
   unsigned Res = getOrCreateVReg(U);
-  MIRBuilder.buildInstr(Opcode, LLT{*U.getType()})
-      .addDef(Res)
-      .addUse(Op0)
-      .addUse(Op1);
+  MIRBuilder.buildInstr(Opcode).addDef(Res).addUse(Op0).addUse(Op1);
   return true;
 }
 
@@ -130,13 +126,9 @@ bool IRTranslator::translateCompare(const User &U) {
                                     cast<ConstantExpr>(U).getPredicate());
 
   if (CmpInst::isIntPredicate(Pred))
-    MIRBuilder.buildICmp(
-        {LLT{*U.getType()}, LLT{*U.getOperand(0)->getType()}}, Pred, Res, Op0,
-        Op1);
+    MIRBuilder.buildICmp(Pred, Res, Op0, Op1);
   else
-    MIRBuilder.buildFCmp(
-        {LLT{*U.getType()}, LLT{*U.getOperand(0)->getType()}}, Pred, Res, Op0,
-        Op1);
+    MIRBuilder.buildFCmp(Pred, Res, Op0, Op1);
 
   return true;
 }
@@ -158,7 +150,7 @@ bool IRTranslator::translateBr(const User &U) {
     unsigned Tst = getOrCreateVReg(*BrInst.getCondition());
     const BasicBlock &TrueTgt = *cast<BasicBlock>(BrInst.getSuccessor(Succ++));
     MachineBasicBlock &TrueBB = getOrCreateBB(TrueTgt);
-    MIRBuilder.buildBrCond(LLT{*BrInst.getCondition()->getType()}, Tst, TrueBB);
+    MIRBuilder.buildBrCond(Tst, TrueBB);
   }
 
   const BasicBlock &BrTgt = *cast<BasicBlock>(BrInst.getSuccessor(Succ));
@@ -186,7 +178,7 @@ bool IRTranslator::translateLoad(const User &U) {
   LLT VTy{*LI.getType(), DL}, PTy{*LI.getPointerOperand()->getType()};
 
   MIRBuilder.buildLoad(
-      VTy, PTy, Res, Addr,
+      Res, Addr,
       *MF.getMachineMemOperand(
           MachinePointerInfo(LI.getPointerOperand()), MachineMemOperand::MOLoad,
           DL->getTypeStoreSize(LI.getType()), getMemOpAlignment(LI)));
@@ -208,7 +200,7 @@ bool IRTranslator::translateStore(const User &U) {
       PTy{*SI.getPointerOperand()->getType()};
 
   MIRBuilder.buildStore(
-      VTy, PTy, Val, Addr,
+      Val, Addr,
       *MF.getMachineMemOperand(
           MachinePointerInfo(SI.getPointerOperand()),
           MachineMemOperand::MOStore,
@@ -237,8 +229,7 @@ bool IRTranslator::translateExtractValue(const User &U) {
   uint64_t Offset = 8 * DL->getIndexedOffsetInType(Src->getType(), Indices);
 
   unsigned Res = getOrCreateVReg(U);
-  MIRBuilder.buildExtract(LLT{*U.getType(), DL}, Res, Offset,
-                          LLT{*Src->getType(), DL}, getOrCreateVReg(*Src));
+  MIRBuilder.buildExtract(Res, Offset, getOrCreateVReg(*Src));
 
   return true;
 }
@@ -264,17 +255,16 @@ bool IRTranslator::translateInsertValue(const User &U) {
 
   unsigned Res = getOrCreateVReg(U);
   const Value &Inserted = *U.getOperand(1);
-  MIRBuilder.buildInsert(LLT{*U.getType(), DL}, Res, getOrCreateVReg(*Src),
-                         LLT{*Inserted.getType(), DL},
-                         getOrCreateVReg(Inserted), Offset);
+  MIRBuilder.buildInsert(Res, getOrCreateVReg(*Src), getOrCreateVReg(Inserted),
+                         Offset);
 
   return true;
 }
 
 bool IRTranslator::translateSelect(const User &U) {
-  MIRBuilder.buildSelect(
-      LLT{*U.getType()}, getOrCreateVReg(U), getOrCreateVReg(*U.getOperand(0)),
-      getOrCreateVReg(*U.getOperand(1)), getOrCreateVReg(*U.getOperand(2)));
+  MIRBuilder.buildSelect(getOrCreateVReg(U), getOrCreateVReg(*U.getOperand(0)),
+                         getOrCreateVReg(*U.getOperand(1)),
+                         getOrCreateVReg(*U.getOperand(2)));
   return true;
 }
 
@@ -293,10 +283,7 @@ bool IRTranslator::translateBitCast(const User &U) {
 bool IRTranslator::translateCast(unsigned Opcode, const User &U) {
   unsigned Op = getOrCreateVReg(*U.getOperand(0));
   unsigned Res = getOrCreateVReg(U);
-  MIRBuilder
-      .buildInstr(Opcode, {LLT{*U.getType()}, LLT{*U.getOperand(0)->getType()}})
-      .addDef(Res)
-      .addUse(Op);
+  MIRBuilder.buildInstr(Opcode).addDef(Res).addUse(Op);
   return true;
 }
 
@@ -316,22 +303,21 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI,
   LLT Ty{*CI.getOperand(0)->getType()};
   LLT s1 = LLT::scalar(1);
   unsigned Width = Ty.getSizeInBits();
-  unsigned Res = MRI->createGenericVirtualRegister(Width);
-  unsigned Overflow = MRI->createGenericVirtualRegister(1);
-  auto MIB = MIRBuilder.buildInstr(Op, {Ty, s1})
+  unsigned Res = MRI->createGenericVirtualRegister(Ty);
+  unsigned Overflow = MRI->createGenericVirtualRegister(s1);
+  auto MIB = MIRBuilder.buildInstr(Op)
                  .addDef(Res)
                  .addDef(Overflow)
                  .addUse(getOrCreateVReg(*CI.getOperand(0)))
                  .addUse(getOrCreateVReg(*CI.getOperand(1)));
 
   if (Op == TargetOpcode::G_UADDE || Op == TargetOpcode::G_USUBE) {
-    unsigned Zero = MRI->createGenericVirtualRegister(1);
-    EntryBuilder.buildConstant(s1, Zero, 0);
+    unsigned Zero = MRI->createGenericVirtualRegister(s1);
+    EntryBuilder.buildConstant(Zero, 0);
     MIB.addUse(Zero);
   }
 
-  MIRBuilder.buildSequence(LLT{*CI.getType(), DL}, getOrCreateVReg(CI), Ty, Res,
-                           0, s1, Overflow, Width);
+  MIRBuilder.buildSequence(getOrCreateVReg(CI), Res, 0, Overflow, Width);
   return true;
 }
 
@@ -361,15 +347,9 @@ bool IRTranslator::translateCall(const User &U) {
   if (translateKnownIntrinsic(CI, ID))
     return true;
 
-  // Need types (starting with return) & args.
-  SmallVector<LLT, 4> Tys;
-  Tys.emplace_back(*CI.getType());
-  for (auto &Arg : CI.arg_operands())
-    Tys.emplace_back(*Arg->getType());
-
   unsigned Res = CI.getType()->isVoidTy() ? 0 : getOrCreateVReg(CI);
   MachineInstrBuilder MIB =
-      MIRBuilder.buildIntrinsic(Tys, ID, Res, !CI.doesNotAccessMemory());
+      MIRBuilder.buildIntrinsic(ID, Res, !CI.doesNotAccessMemory());
 
   for (auto &Arg : CI.arg_operands()) {
     if (ConstantInt *CI = dyn_cast<ConstantInt>(Arg))
@@ -399,13 +379,13 @@ bool IRTranslator::translateStaticAlloca(const AllocaInst &AI) {
 
   unsigned Res = getOrCreateVReg(AI);
   int FI = MF.getFrameInfo().CreateStackObject(Size, Alignment, false, &AI);
-  MIRBuilder.buildFrameIndex(LLT::pointer(0), Res, FI);
+  MIRBuilder.buildFrameIndex(Res, FI);
   return true;
 }
 
 bool IRTranslator::translatePHI(const User &U) {
   const PHINode &PI = cast<PHINode>(U);
-  auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_PHI, LLT{*U.getType()});
+  auto MIB = MIRBuilder.buildInstr(TargetOpcode::PHI);
   MIB.addDef(getOrCreateVReg(PI));
 
   PendingPHIs.emplace_back(&PI, MIB.getInstr());
@@ -447,13 +427,13 @@ bool IRTranslator::translate(const Instruction &Inst) {
 
 bool IRTranslator::translate(const Constant &C, unsigned Reg) {
   if (auto CI = dyn_cast<ConstantInt>(&C))
-    EntryBuilder.buildConstant(LLT{*CI->getType()}, Reg, CI->getZExtValue());
+    EntryBuilder.buildConstant(Reg, CI->getZExtValue());
   else if (auto CF = dyn_cast<ConstantFP>(&C))
-    EntryBuilder.buildFConstant(LLT{*CF->getType()}, Reg, *CF);
+    EntryBuilder.buildFConstant(Reg, *CF);
   else if (isa<UndefValue>(C))
     EntryBuilder.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(Reg);
   else if (isa<ConstantPointerNull>(C))
-    EntryBuilder.buildInstr(TargetOpcode::G_CONSTANT, LLT{*C.getType()})
+    EntryBuilder.buildInstr(TargetOpcode::G_CONSTANT)
         .addDef(Reg)
         .addImm(0);
   else if (auto CE = dyn_cast<ConstantExpr>(&C)) {

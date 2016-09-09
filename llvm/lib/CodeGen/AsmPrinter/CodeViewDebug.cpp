@@ -40,7 +40,8 @@ using namespace llvm::codeview;
 using namespace llvm::msf;
 
 CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
-    : DebugHandlerBase(AP), OS(*Asm->OutStreamer), CurFn(nullptr) {
+    : DebugHandlerBase(AP), OS(*Asm->OutStreamer), Allocator(),
+      TypeTable(Allocator), CurFn(nullptr) {
   // If module doesn't have named metadata anchors or COFF debug section
   // is not available, skip any debug info related stuff.
   if (!MMI->getModule()->getNamedMetadata("llvm.dbg.cu") ||
@@ -994,20 +995,25 @@ TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {
 
   uint64_t ElementSize = getBaseTypeSize(ElementTypeRef) / 8;
 
-  bool UndefinedSubrange = false;
 
-  // FIXME:
-  // There is a bug in the front-end where an array of a structure, which was
-  // declared as incomplete structure first, ends up not getting a size assigned
-  // to it. (PR28303)
+  // We want to assert that the element type multiplied by the array lengths
+  // match the size of the overall array. However, if we don't have complete
+  // type information for the base type, we can't make this assertion. This
+  // happens if limited debug info is enabled in this case:
+  //   struct VTableOptzn { VTableOptzn(); virtual ~VTableOptzn(); };
+  //   VTableOptzn array[3];
+  // The DICompositeType of VTableOptzn will have size zero, and the array will
+  // have size 3 * sizeof(void*), and we should avoid asserting.
+  //
+  // There is a related bug in the front-end where an array of a structure,
+  // which was declared as incomplete structure first, ends up not getting a
+  // size assigned to it. (PR28303)
   // Example:
   //   struct A(*p)[3];
   //   struct A { int f; } a[3];
-  //
-  // This needs to be fixed in the front-end, but in the meantime we don't want
-  // to trigger an assertion because of this.
-  if (Ty->getSizeInBits() == 0) {
-    UndefinedSubrange = true;
+  bool PartiallyIncomplete = false;
+  if (Ty->getSizeInBits() == 0 || ElementSize == 0) {
+    PartiallyIncomplete = true;
   }
 
   // Add subranges to array type.
@@ -1026,18 +1032,24 @@ TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {
     // FIXME: Make front-end support VLA subrange and emit LF_DIMVARLU.
     if (Count == -1) {
       Count = 1;
-      UndefinedSubrange = true;
+      PartiallyIncomplete = true;
     }
 
-    StringRef Name = (i == 0) ? Ty->getName() : "";
     // Update the element size and element type index for subsequent subranges.
     ElementSize *= Count;
+
+    // If this is the outermost array, use the size from the array. It will be
+    // more accurate if PartiallyIncomplete is true.
+    uint64_t ArraySize =
+        (i == 0 && ElementSize == 0) ? Ty->getSizeInBits() / 8 : ElementSize;
+
+    StringRef Name = (i == 0) ? Ty->getName() : "";
     ElementTypeIndex = TypeTable.writeKnownType(
-        ArrayRecord(ElementTypeIndex, IndexType, ElementSize, Name));
+        ArrayRecord(ElementTypeIndex, IndexType, ArraySize, Name));
   }
 
-  (void)UndefinedSubrange;
-  assert(UndefinedSubrange || ElementSize == (Ty->getSizeInBits() / 8));
+  (void)PartiallyIncomplete;
+  assert(PartiallyIncomplete || ElementSize == (Ty->getSizeInBits() / 8));
 
   return ElementTypeIndex;
 }

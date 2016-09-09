@@ -9,11 +9,11 @@
 ...
 ---
 # Completely invalid code, but it checks that intrinsics round-trip properly.
-# CHECK: %0(64) = COPY intrinsic(@llvm.AMDGPU.bfe.i32)
+# CHECK: %0(s64) = COPY intrinsic(@llvm.AMDGPU.bfe.i32)
 name:            use_intrin
 registers:
   - { id: 0, class: _ }
 body: |
   bb.0:
-    %0(64) = COPY intrinsic(@llvm.AMDGPU.bfe.i32)
+    %0(s64) = COPY intrinsic(@llvm.AMDGPU.bfe.i32)
 ...

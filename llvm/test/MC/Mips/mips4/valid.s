@@ -41,38 +41,10 @@ a:
         bltzl     $s1,-9964            # CHECK: bltzl $17, -9964     # encoding: [0x06,0x22,0xf6,0x45]
         bnel      $gp,$s4,5107         # CHECK: bnel $gp, $20, 5107  # encoding: [0x57,0x94,0x04,0xfc]
         cache     1, 8($5)             # CHECK: cache 1, 8($5)   # encoding: [0xbc,0xa1,0x00,0x08]
-        c.eq.d    $fcc1, $f14, $f14    # CHECK: c.eq.d    $fcc1, $f14, $f14       # encoding: [0x46,0x2e,0x71,0x32]
-        c.eq.s    $fcc5, $f24, $f17    # CHECK: c.eq.s    $fcc5, $f24, $f17       # encoding: [0x46,0x11,0xc5,0x32]
-        c.f.d     $fcc4, $f10, $f20    # CHECK: c.f.d     $fcc4, $f10, $f20       # encoding: [0x46,0x34,0x54,0x30]
-        c.f.s     $fcc4, $f30, $f7     # CHECK: c.f.s     $fcc4, $f30, $f7        # encoding: [0x46,0x07,0xf4,0x30]
-        c.le.d    $fcc4, $f18, $f0     # CHECK: c.le.d    $fcc4, $f18, $f0        # encoding: [0x46,0x20,0x94,0x3e]
-        c.le.s    $fcc6, $f24, $f4     # CHECK: c.le.s    $fcc6, $f24, $f4        # encoding: [0x46,0x04,0xc6,0x3e]
-        c.lt.d    $fcc3, $f8, $f2      # CHECK: c.lt.d    $fcc3, $f8, $f2         # encoding: [0x46,0x22,0x43,0x3c]
-        c.lt.s    $fcc2, $f17, $f14    # CHECK: c.lt.s    $fcc2, $f17, $f14       # encoding: [0x46,0x0e,0x8a,0x3c]
-        c.nge.d   $fcc5, $f20, $f16    # CHECK: c.nge.d   $fcc5, $f20, $f16       # encoding: [0x46,0x30,0xa5,0x3d]
-        c.nge.s   $fcc3, $f11, $f8     # CHECK: c.nge.s   $fcc3, $f11, $f8        # encoding: [0x46,0x08,0x5b,0x3d]
-        c.ngl.s   $fcc2, $f31, $f23    # CHECK: c.ngl.s   $fcc2, $f31, $f23       # encoding: [0x46,0x17,0xfa,0x3b]
-        c.ngle.s  $fcc2, $f18, $f23    # CHECK: c.ngle.s  $fcc2, $f18, $f23       # encoding: [0x46,0x17,0x92,0x39]
-        c.ngl.d   $f28, $f28           # CHECK: c.ngl.d   $f28, $f28              # encoding: [0x46,0x3c,0xe0,0x3b]
-        c.ngle.d  $f0, $f16            # CHECK: c.ngle.d  $f0, $f16               # encoding: [0x46,0x30,0x00,0x39]
-        c.ngt.d   $fcc4, $f24, $f6     # CHECK: c.ngt.d   $fcc4, $f24, $f6        # encoding: [0x46,0x26,0xc4,0x3f]
-        c.ngt.s   $fcc5, $f8, $f13     # CHECK: c.ngt.s   $fcc5, $f8, $f13        # encoding: [0x46,0x0d,0x45,0x3f]
-        c.ole.d   $fcc2, $f16, $f30    # CHECK: c.ole.d   $fcc2, $f16, $f30       # encoding: [0x46,0x3e,0x82,0x36]
-        c.ole.s   $fcc3, $f7, $f20     # CHECK: c.ole.s   $fcc3, $f7, $f20        # encoding: [0x46,0x14,0x3b,0x36]
-        c.olt.d   $fcc4, $f18, $f28    # CHECK: c.olt.d   $fcc4, $f18, $f28       # encoding: [0x46,0x3c,0x94,0x34]
-        c.olt.s   $fcc6, $f20, $f7     # CHECK: c.olt.s   $fcc6, $f20, $f7        # encoding: [0x46,0x07,0xa6,0x34]
-        c.seq.d   $fcc4, $f30, $f6     # CHECK: c.seq.d   $fcc4, $f30, $f6        # encoding: [0x46,0x26,0xf4,0x3a]
-        c.seq.s   $fcc7, $f1, $f25     # CHECK: c.seq.s   $fcc7, $f1, $f25        # encoding: [0x46,0x19,0x0f,0x3a]
-        c.sf.d    $f30, $f0            # CHECK: c.sf.d    $f30, $f0               # encoding: [0x46,0x20,0xf0,0x38]
-        c.sf.s    $f14, $f22           # CHECK: c.sf.s    $f14, $f22              # encoding: [0x46,0x16,0x70,0x38]
-        c.ueq.d   $fcc4, $f12, $f24    # CHECK: c.ueq.d   $fcc4, $f12, $f24       # encoding: [0x46,0x38,0x64,0x33]
-        c.ueq.s   $fcc6, $f3, $f30     # CHECK: c.ueq.s   $fcc6, $f3, $f30        # encoding: [0x46,0x1e,0x1e,0x33]
-        c.ule.d   $fcc7, $f24, $f18    # CHECK: c.ule.d   $fcc7, $f24, $f18       # encoding: [0x46,0x32,0xc7,0x37]
-        c.ule.s   $fcc7, $f21, $f30    # CHECK: c.ule.s   $fcc7, $f21, $f30       # encoding: [0x46,0x1e,0xaf,0x37]
-        c.ult.d   $fcc6, $f6, $f16     # CHECK: c.ult.d   $fcc6, $f6, $f16        # encoding: [0x46,0x30,0x36,0x35]
-        c.ult.s   $fcc7, $f24, $f10    # CHECK: c.ult.s   $fcc7, $f24, $f10       # encoding: [0x46,0x0a,0xc7,0x35]
-        c.un.d    $fcc6, $f22, $f24    # CHECK: c.un.d    $fcc6, $f22, $f24       # encoding: [0x46,0x38,0xb6,0x31]
-        c.un.s    $fcc1, $f30, $f4     # CHECK: c.un.s    $fcc1, $f30, $f4        # encoding: [0x46,0x04,0xf1,0x31]
+        c.ngl.d   $f29,$f29
+        c.ngle.d  $f0,$f16
+        c.sf.d    $f30,$f0
+        c.sf.s    $f14,$f22
         ceil.l.d  $f1,$f3
         ceil.l.s  $f18,$f13
         ceil.w.d  $f11,$f25
