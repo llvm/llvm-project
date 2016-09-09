@@ -47,74 +47,74 @@ registers:
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
-    %0(64) = G_TYPE s64 %x0
+    %0(s64) = COPY %x0
 
     ; CHECK-LABEL: name: test_simple
-    ; CHECK: %1(64) = G_PTRTOINT { s64, p0 } %0
-    ; CHECK: %2(64) = G_INTTOPTR { p0, s64 } %1
-    %1(64) = G_PTRTOINT { s64, p0 } %0
-    %2(64) = G_INTTOPTR { p0, s64 } %1
+    ; CHECK: %1(p0) = G_INTTOPTR %0
+    ; CHECK: %2(s64) = G_PTRTOINT %1
+    %1(p0) = G_INTTOPTR %0
+    %2(s64) = G_PTRTOINT %1
 
-    ; CHECK: [[TST32:%[0-9]+]](32) = G_ANYEXT { s32, s1 } %3
-    ; CHECK: G_BRCOND s32 [[TST32]], %bb.1.next
-    %3(1) = G_TRUNC { s1, s64 } %0
-    G_BRCOND s1 %3, %bb.1.next
+    ; CHECK: [[TST32:%[0-9]+]](s32) = G_ANYEXT %3
+    ; CHECK: G_BRCOND [[TST32]], %bb.1.next
+    %3(s1) = G_TRUNC %0
+    G_BRCOND %3, %bb.1.next
 
   bb.1.next:
-    %4(32) = G_TRUNC { s32, s64 } %0
+    %4(s32) = G_TRUNC %0
 
-    ; CHECK: %5(1) = G_FPTOSI { s1, s32 } %4
-    ; CHECK: %6(8) = G_FPTOUI { s8, s32 } %4
-    ; CHECK: %7(16) = G_FPTOSI { s16, s32 } %4
-    ; CHECK: %8(32) = G_FPTOUI { s32, s32 } %4
-    ; CHECK: %9(64) = G_FPTOSI { s64, s32 } %4
-    %5(1) = G_FPTOSI { s1, s32 } %4
-    %6(8) = G_FPTOUI { s8, s32 } %4
-    %7(16) = G_FPTOSI { s16, s32 } %4
-    %8(32) = G_FPTOUI { s32, s32 } %4
-    %9(64) = G_FPTOSI { s64, s32 } %4
+    ; CHECK: %5(s1) = G_FPTOSI %4
+    ; CHECK: %6(s8) = G_FPTOUI %4
+    ; CHECK: %7(s16) = G_FPTOSI %4
+    ; CHECK: %8(s32) = G_FPTOUI %4
+    ; CHECK: %9(s64) = G_FPTOSI %4
+    %5(s1) = G_FPTOSI %4
+    %6(s8) = G_FPTOUI %4
+    %7(s16) = G_FPTOSI %4
+    %8(s32) = G_FPTOUI %4
+    %9(s64) = G_FPTOSI %4
 
-    ; CHECK: %10(1) = G_FPTOUI { s1, s64 } %0
-    ; CHECK: %11(8) = G_FPTOSI { s8, s64 } %0
-    ; CHECK: %12(16) = G_FPTOUI { s16, s64 } %0
-    ; CHECK: %13(32) = G_FPTOSI { s32, s64 } %0
-    ; CHECK: %14(32) = G_FPTOUI { s64, s64 } %0
-    %10(1) = G_FPTOUI { s1, s64 } %0
-    %11(8) = G_FPTOSI { s8, s64 } %0
-    %12(16) = G_FPTOUI { s16, s64 } %0
-    %13(32) = G_FPTOSI { s32, s64 } %0
-    %14(32) = G_FPTOUI { s64, s64 } %0
+    ; CHECK: %10(s1) = G_FPTOUI %0
+    ; CHECK: %11(s8) = G_FPTOSI %0
+    ; CHECK: %12(s16) = G_FPTOUI %0
+    ; CHECK: %13(s32) = G_FPTOSI %0
+    ; CHECK: %14(s32) = G_FPTOUI %0
+    %10(s1) = G_FPTOUI %0
+    %11(s8) = G_FPTOSI %0
+    %12(s16) = G_FPTOUI %0
+    %13(s32) = G_FPTOSI %0
+    %14(s32) = G_FPTOUI %0
 
-    ; CHECK: %15(32) = G_UITOFP { s32, s1 } %5
-    ; CHECK: %16(32) = G_SITOFP { s32, s8 } %11
-    ; CHECK: %17(32) = G_UITOFP { s32, s16 } %7
-    ; CHECK: %18(32) = G_SITOFP { s32, s32 } %4
-    ; CHECK: %19(32) = G_UITOFP { s32, s64 } %0
-    %15(32) = G_UITOFP { s32, s1 } %5
-    %16(32) = G_SITOFP { s32, s8 } %11
-    %17(32) = G_UITOFP { s32, s16 } %7
-    %18(32) = G_SITOFP { s32, s32 } %4
-    %19(32) = G_UITOFP { s32, s64 } %0
+    ; CHECK: %15(s32) = G_UITOFP %5
+    ; CHECK: %16(s32) = G_SITOFP %11
+    ; CHECK: %17(s32) = G_UITOFP %7
+    ; CHECK: %18(s32) = G_SITOFP %4
+    ; CHECK: %19(s32) = G_UITOFP %0
+    %15(s32) = G_UITOFP %5
+    %16(s32) = G_SITOFP %11
+    %17(s32) = G_UITOFP %7
+    %18(s32) = G_SITOFP %4
+    %19(s32) = G_UITOFP %0
 
-    ; CHECK: %20(64) = G_SITOFP { s64, s1 } %5
-    ; CHECK: %21(64) = G_UITOFP { s64, s8 } %11
-    ; CHECK: %22(64) = G_SITOFP { s64, s16 } %7
-    ; CHECK: %23(64) = G_UITOFP { s64, s32 } %4
-    ; CHECK: %24(64) = G_SITOFP { s64, s64 } %0
-    %20(64) = G_SITOFP { s64, s1 } %5
-    %21(64) = G_UITOFP { s64, s8 } %11
-    %22(64) = G_SITOFP { s64, s16 } %7
-    %23(64) = G_UITOFP { s64, s32 } %4
-    %24(64) = G_SITOFP { s64, s64 } %0
+    ; CHECK: %20(s64) = G_SITOFP %5
+    ; CHECK: %21(s64) = G_UITOFP %11
+    ; CHECK: %22(s64) = G_SITOFP %7
+    ; CHECK: %23(s64) = G_UITOFP %4
+    ; CHECK: %24(s64) = G_SITOFP %0
+    %20(s64) = G_SITOFP %5
+    %21(s64) = G_UITOFP %11
+    %22(s64) = G_SITOFP %7
+    %23(s64) = G_UITOFP %4
+    %24(s64) = G_SITOFP %0
 
-    ; CHECK: %25(1) = G_SELECT { s1, s1 } %10, %10, %5
-    ; CHECK: %26(8) = G_SELECT { s8, s1 } %10, %6, %11
-    ; CHECK: %27(16) = G_SELECT { s16, s1 } %10, %12, %7
-    ; CHECK: %28(32) = G_SELECT { s32, s1 } %10, %15, %16
-    ; CHECK: %29(64) = G_SELECT { s64, s1 } %10, %9, %24
-    %25(1) = G_SELECT { s1, s1 } %10, %10, %5
-    %26(8) = G_SELECT { s8, s1 } %10, %6, %11
-    %27(16) = G_SELECT { s16, s1 } %10, %12, %7
-    %28(32) = G_SELECT { s32, s1 } %10, %15, %16
-    %29(64) = G_SELECT { s64, s1 } %10, %9, %24
+    ; CHECK: %25(s1) = G_SELECT %10, %10, %5
+    ; CHECK: %26(s8) = G_SELECT %10, %6, %11
+    ; CHECK: %27(s16) = G_SELECT %10, %12, %7
+    ; CHECK: %28(s32) = G_SELECT %10, %15, %16
+    ; CHECK: %29(s64) = G_SELECT %10, %9, %24
+    %25(s1) = G_SELECT %10, %10, %5
+    %26(s8) = G_SELECT %10, %6, %11
+    %27(s16) = G_SELECT %10, %12, %7
+    %28(s32) = G_SELECT %10, %15, %16
+    %29(s64) = G_SELECT %10, %9, %24
 ...

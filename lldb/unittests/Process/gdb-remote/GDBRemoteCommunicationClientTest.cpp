@@ -196,8 +196,9 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
 
   llvm::Triple triple("i386-pc-linux");
 
-  FileSpec file_specs[] = {FileSpec("/foo/bar.so", false),
-                           FileSpec("/foo/baz.so", false)};
+  FileSpec file_specs[] = {
+      FileSpec("/foo/bar.so", false, FileSpec::ePathSyntaxPosix),
+      FileSpec("/foo/baz.so", false, FileSpec::ePathSyntaxPosix)};
   std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
       std::async(std::launch::async,
                  [&] { return client.GetModulesInfo(file_specs, triple); });
@@ -226,7 +227,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfoInvalidResponse) {
     return;
 
   llvm::Triple triple("i386-pc-linux");
-  FileSpec file_spec("/foo/bar.so", false);
+  FileSpec file_spec("/foo/bar.so", false, FileSpec::ePathSyntaxPosix);
 
   const char *invalid_responses[] = {
       "OK", "E47", "[]",

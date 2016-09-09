@@ -112,47 +112,47 @@ MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass){
   return Reg;
 }
 
-unsigned
-MachineRegisterInfo::getSize(unsigned VReg) const {
-  VRegToSizeMap::const_iterator SizeIt = getVRegToSize().find(VReg);
-  return SizeIt != getVRegToSize().end() ? SizeIt->second : 0;
+LLT MachineRegisterInfo::getType(unsigned VReg) const {
+  VRegToTypeMap::const_iterator TypeIt = getVRegToType().find(VReg);
+  return TypeIt != getVRegToType().end() ? TypeIt->second : LLT{};
 }
 
-void MachineRegisterInfo::setSize(unsigned VReg, unsigned Size) {
+void MachineRegisterInfo::setType(unsigned VReg, LLT Ty) {
   // Check that VReg doesn't have a class.
   assert(!getRegClassOrRegBank(VReg).is<const TargetRegisterClass *>() &&
          "Can't set the size of a non-generic virtual register");
-  getVRegToSize()[VReg] = Size;
+  getVRegToType()[VReg] = Ty;
 }
 
 unsigned
-MachineRegisterInfo::createGenericVirtualRegister(unsigned Size) {
-  assert(Size && "Cannot create empty virtual register");
+MachineRegisterInfo::createGenericVirtualRegister(LLT Ty) {
+  assert(Ty.isValid() && "Cannot create empty virtual register");
 
   // New virtual register number.
   unsigned Reg = TargetRegisterInfo::index2VirtReg(getNumVirtRegs());
   VRegInfo.grow(Reg);
   // FIXME: Should we use a dummy register bank?
   VRegInfo[Reg].first = static_cast<RegisterBank *>(nullptr);
-  getVRegToSize()[Reg] = Size;
+  getVRegToType()[Reg] = Ty;
   RegAllocHints.grow(Reg);
   if (TheDelegate)
     TheDelegate->MRI_NoteNewVirtualRegister(Reg);
   return Reg;
 }
 
-void MachineRegisterInfo::clearVirtRegSizes() {
+void MachineRegisterInfo::clearVirtRegTypes() {
 #ifndef NDEBUG
   // Verify that the size of the now-constrained vreg is unchanged.
-  for (auto &VRegToSize : getVRegToSize()) {
-    auto *RC = getRegClass(VRegToSize.first);
-    if (VRegToSize.second != (RC->getSize() * 8))
+  for (auto &VRegToType : getVRegToType()) {
+    auto *RC = getRegClass(VRegToType.first);
+    if (VRegToType.second.isSized() &&
+        VRegToType.second.getSizeInBits() > (RC->getSize() * 8))
       llvm_unreachable(
           "Virtual register has explicit size different from its class size");
   }
 #endif
 
-  getVRegToSize().clear();
+  getVRegToType().clear();
 }
 
 /// clearVirtRegs - Remove all virtual registers (after physreg assignment).

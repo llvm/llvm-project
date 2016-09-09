@@ -34,46 +34,46 @@ registers:
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
-    %0(64) = G_TYPE s64 %x0
+    %0(s64) = COPY %x0
 
-    ; CHECK: %1(1) = G_TRUNC { s1, s64 } %0
-    ; CHECK: %2(8) = G_TRUNC { s8, s64 } %0
-    ; CHECK: %3(16) = G_TRUNC { s16, s64 } %0
-    ; CHECK: %4(32) = G_TRUNC { s16, s64 } %0
-    %1(1) = G_TRUNC { s1, s64 } %0
-    %2(8) = G_TRUNC { s8, s64 } %0
-    %3(16) = G_TRUNC { s16, s64 } %0
-    %4(32) = G_TRUNC { s16, s64 } %0
+    ; CHECK: %1(s1) = G_TRUNC %0
+    ; CHECK: %2(s8) = G_TRUNC %0
+    ; CHECK: %3(s16) = G_TRUNC %0
+    ; CHECK: %4(s32) = G_TRUNC %0
+    %1(s1) = G_TRUNC %0
+    %2(s8) = G_TRUNC %0
+    %3(s16) = G_TRUNC %0
+    %4(s32) = G_TRUNC %0
 
-    ; CHECK: %5(64) = G_ANYEXT { s64, s1 } %1
-    ; CHECK: %6(64) = G_ZEXT { s64, s8 } %2
-    ; CHECK: %7(64) = G_ANYEXT { s64, s16 } %3
-    ; CHECK: %8(64) = G_SEXT { s64, s32 } %4
-    %5(64) = G_ANYEXT { s64, s1 } %1
-    %6(64) = G_ZEXT { s64, s8 } %2
-    %7(64) = G_ANYEXT { s64, s16 } %3
-    %8(64) = G_SEXT { s64, s32 } %4
+    ; CHECK: %5(s64) = G_ANYEXT %1
+    ; CHECK: %6(s64) = G_ZEXT %2
+    ; CHECK: %7(s64) = G_ANYEXT %3
+    ; CHECK: %8(s64) = G_SEXT %4
+    %5(s64) = G_ANYEXT %1
+    %6(s64) = G_ZEXT %2
+    %7(s64) = G_ANYEXT %3
+    %8(s64) = G_SEXT %4
 
-    ; CHECK: %9(32) = G_SEXT { s32, s1 } %1
-    ; CHECK: %10(32) = G_ZEXT { s32, s8 } %2
-    ; CHECK: %11(32) = G_ANYEXT { s32, s16 } %3
-    %9(32) = G_SEXT { s32, s1 } %1
-    %10(32) = G_ZEXT { s32, s8 } %2
-    %11(32) = G_ANYEXT { s32, s16 } %3
+    ; CHECK: %9(s32) = G_SEXT %1
+    ; CHECK: %10(s32) = G_ZEXT %2
+    ; CHECK: %11(s32) = G_ANYEXT %3
+    %9(s32) = G_SEXT %1
+    %10(s32) = G_ZEXT %2
+    %11(s32) = G_ANYEXT %3
 
-    ; CHECK: %12(32) = G_ZEXT { s32, s1 } %1
-    ; CHECK: %13(32) = G_ANYEXT { s32, s8 } %2
-    ; CHECK: %14(32) = G_SEXT { s32, s16 } %3
-    %12(32) = G_ZEXT { s32, s1 } %1
-    %13(32) = G_ANYEXT { s32, s8 } %2
-    %14(32) = G_SEXT { s32, s16 } %3
+    ; CHECK: %12(s32) = G_ZEXT %1
+    ; CHECK: %13(s32) = G_ANYEXT %2
+    ; CHECK: %14(s32) = G_SEXT %3
+    %12(s32) = G_ZEXT %1
+    %13(s32) = G_ANYEXT %2
+    %14(s32) = G_SEXT %3
 
-    ; CHECK: %15(8) = G_ZEXT { s8, s1 } %1
-    ; CHECK: %16(16) = G_ANYEXT { s16, s8 } %2
-    %15(8) = G_ZEXT { s8, s1 } %1
-    %16(16) = G_ANYEXT { s16, s8 } %2
+    ; CHECK: %15(s8) = G_ZEXT %1
+    ; CHECK: %16(s16) = G_ANYEXT %2
+    %15(s8) = G_ZEXT %1
+    %16(s16) = G_ANYEXT %2
 
-    ; CHECK: %18(64) = G_FPEXT { s64, s32 } %17
-    %17(32) = G_TRUNC { s32, s64 }  %0
-    %18(64) = G_FPEXT { s64, s32 } %17
+    ; CHECK: %18(s64) = G_FPEXT %17
+    %17(s32) = G_TRUNC  %0
+    %18(s64) = G_FPEXT %17
 ...

@@ -280,7 +280,7 @@ entry:
 ; ARM: and r0, {{r[0-9]+}}, {{r[0-9]+}}
 
 ; T2-LABEL: t18:
-; T2: and.w r0, {{r[0-9]+}}
+; T2: and{{s|.w}} r0, {{r[0-9]+}}
   %cmp = icmp ne i32 %x, 0
   %cond = select i1 %cmp, i32 5, i32 2
   %cmp1 = icmp ne i32 %x, -1

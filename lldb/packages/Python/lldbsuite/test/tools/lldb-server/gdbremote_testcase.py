@@ -724,7 +724,9 @@ class GdbRemoteTestCaseBase(TestBase):
         "dwarf",
         "generic",
         "container-regs",
-        "invalidate-regs"
+        "invalidate-regs",
+        "dynamic_size_dwarf_expr_bytes",
+        "dynamic_size_dwarf_len"
     ]
 
     def assert_valid_reg_info(self, reg_info):

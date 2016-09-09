@@ -730,8 +730,8 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
   return NewAccesses;
 }
 
-void IslNodeBuilder::createSubstitutions(isl_ast_expr *Expr, ScopStmt *Stmt,
-                                         LoopToScevMapT &LTS) {
+void IslNodeBuilder::createSubstitutions(__isl_take isl_ast_expr *Expr,
+                                         ScopStmt *Stmt, LoopToScevMapT &LTS) {
   assert(isl_ast_expr_get_type(Expr) == isl_ast_expr_op &&
          "Expression of type 'op' expected");
   assert(isl_ast_expr_get_op_type(Expr) == isl_ast_op_call &&

@@ -25,6 +25,7 @@
 namespace llvm {
 class LLVMContext;
 class MachineInstr;
+class MachineRegisterInfo;
 class Type;
 class VectorType;
 
@@ -131,13 +132,14 @@ public:
   /// performed and the destination type.
   std::pair<LegalizeAction, LLT> getAction(const InstrAspect &Aspect) const;
 
-  /// Determine what action should be taken to legalize the given generic instruction.
+  /// Determine what action should be taken to legalize the given generic
+  /// instruction.
   ///
   /// \returns a tuple consisting of the LegalizeAction that should be
   /// performed, the type-index it should be performed on and the destination
   /// type.
   std::tuple<LegalizeAction, unsigned, LLT>
-  getAction(const MachineInstr &MI) const;
+  getAction(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
 
   /// Iterate the given function (typically something like doubling the width)
   /// on Ty until we find a legal type for this operation.
@@ -182,7 +184,7 @@ public:
     return ActionIt->second;
   }
 
-  bool isLegal(const MachineInstr &MI) const;
+  bool isLegal(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
 
 private:
   static const int FirstOp = TargetOpcode::PRE_ISEL_GENERIC_OPCODE_START;

@@ -1168,10 +1168,14 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
     else if (H.p_type == PT_GNU_RELRO)
       H.p_align = 1;
 
-    H.p_paddr = H.p_vaddr;
-    if (H.p_type == PT_LOAD && First)
-      if (Expr LmaExpr = Script<ELFT>::X->getLma(First->getName()))
-        H.p_paddr = LmaExpr(H.p_vaddr);
+    if (!P.HasLMA) {
+    // The p_paddr field can be set using linker script AT command.
+    // By default, it is the same value as p_vaddr.
+      H.p_paddr = H.p_vaddr;
+      if (H.p_type == PT_LOAD && First)
+        if (Expr LmaExpr = Script<ELFT>::X->getLma(First->getName()))
+          H.p_paddr = LmaExpr(H.p_vaddr);
+    }
 
     // The TLS pointer goes after PT_TLS. At least glibc will align it,
     // so round up the size to make sure the offsets are correct.

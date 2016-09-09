@@ -12,7 +12,7 @@ declare i32 @llvm.amdgcn.workitem.id.z() #0
 ; MESA-NEXT: .long 132{{$}}
 
 ; ALL-LABEL {{^}}test_workitem_id_x:
-; HSA: compute_pgm_rsrc2_tidig_comp_cnt = 0
+; HSA: enable_vgpr_workitem_id = 0
 
 ; ALL-NOT: v0
 ; ALL: {{buffer|flat}}_store_dword {{.*}}v0
@@ -27,7 +27,7 @@ define void @test_workitem_id_x(i32 addrspace(1)* %out) #1 {
 ; MESA-NEXT: .long 2180{{$}}
 
 ; ALL-LABEL {{^}}test_workitem_id_y:
-; HSA: compute_pgm_rsrc2_tidig_comp_cnt = 1
+; HSA: enable_vgpr_workitem_id = 1
 
 ; ALL-NOT: v1
 ; ALL: {{buffer|flat}}_store_dword {{.*}}v1
@@ -42,7 +42,7 @@ define void @test_workitem_id_y(i32 addrspace(1)* %out) #1 {
 ; MESA-NEXT: .long 4228{{$}}
 
 ; ALL-LABEL {{^}}test_workitem_id_z:
-; HSA: compute_pgm_rsrc2_tidig_comp_cnt = 2
+; HSA: enable_vgpr_workitem_id = 2
 
 ; ALL-NOT: v2
 ; ALL: {{buffer|flat}}_store_dword {{.*}}v2

@@ -49,7 +49,8 @@ static bool unsupportedBinOp(const MachineInstr &I,
                              const AArch64RegisterBankInfo &RBI,
                              const MachineRegisterInfo &MRI,
                              const AArch64RegisterInfo &TRI) {
-  if (!I.getType().isSized()) {
+  LLT Ty = MRI.getType(I.getOperand(0).getReg());
+  if (!Ty.isSized()) {
     DEBUG(dbgs() << "Generic binop should be sized\n");
     return true;
   }
@@ -219,38 +220,25 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return false;
   }
 
-  const LLT Ty = I.getType();
+  const LLT Ty = I.getOperand(0).isReg() ? MRI.getType(I.getOperand(0).getReg())
+                                         : LLT::unsized();
   assert(Ty.isValid() && "Generic instruction doesn't have a type");
 
   switch (I.getOpcode()) {
   case TargetOpcode::G_BR: {
     I.setDesc(TII.get(AArch64::B));
-    I.removeTypes();
     return true;
   }
-
-  case TargetOpcode::G_TYPE: {
-    I.setDesc(TII.get(TargetOpcode::COPY));
-    I.removeTypes();
-    return true;
-  }
-
-   case TargetOpcode::G_PHI: {
-     I.setDesc(TII.get(TargetOpcode::PHI));
-     I.removeTypes();
-     return true;
-   }
 
   case TargetOpcode::G_FRAME_INDEX: {
     // allocas and G_FRAME_INDEX are only supported in addrspace(0).
-    if (I.getType() != LLT::pointer(0)) {
-      DEBUG(dbgs() << "G_FRAME_INDEX pointer has type: " << I.getType()
+    if (Ty != LLT::pointer(0)) {
+      DEBUG(dbgs() << "G_FRAME_INDEX pointer has type: " << Ty
                    << ", expected: " << LLT::pointer(0) << '\n');
       return false;
     }
 
     I.setDesc(TII.get(AArch64::ADDXri));
-    I.removeTypes();
 
     // MOs for a #0 shifted immediate.
     I.addOperand(MachineOperand::CreateImm(0));
@@ -260,8 +248,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
   }
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE: {
-    LLT MemTy = I.getType(0);
-    LLT PtrTy = I.getType(1);
+    LLT MemTy = Ty;
+    LLT PtrTy = MRI.getType(I.getOperand(1).getReg());
 
     if (PtrTy != LLT::pointer(0)) {
       DEBUG(dbgs() << "Load/Store pointer has type: " << PtrTy
@@ -275,8 +263,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     const RegisterBank &PtrRB = *RBI.getRegBank(PtrReg, MRI, TRI);
     assert(PtrRB.getID() == AArch64::GPRRegBankID &&
            "Load/Store pointer operand isn't a GPR");
-    assert(MRI.getSize(PtrReg) == 64 &&
-           "Load/Store pointer operand isn't 64-bit");
+    assert(MRI.getType(PtrReg).isPointer() &&
+           "Load/Store pointer operand isn't a pointer");
 #endif
 
     const unsigned ValReg = I.getOperand(0).getReg();
@@ -288,7 +276,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
       return false;
 
     I.setDesc(TII.get(NewOpc));
-    I.removeTypes();
 
     I.addOperand(MachineOperand::CreateImm(0));
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
@@ -322,7 +309,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     }
 
     I.setDesc(TII.get(NewOpc));
-    I.removeTypes();
 
     I.addOperand(MachineOperand::CreateReg(ZeroReg, /*isDef=*/false));
 
@@ -361,7 +347,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
     I.setDesc(TII.get(NewOpc));
     // FIXME: Should the type be always reset in setDesc?
-    I.removeTypes();
 
     // Now that we selected an opcode, we need to constrain the register
     // operands to use appropriate classes.

@@ -21,22 +21,22 @@ registers:
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
-    %0(64) = G_TYPE s64 %x0
-    %1(64) = G_TYPE s64 %x1
-    %2(32) = G_TRUNC { s8, s64 } %0
-    %3(32) = G_TRUNC { s8, s64 } %1
+    %0(s64) = COPY %x0
+    %1(s64) = COPY %x1
+    %2(s8) = G_TRUNC %0
+    %3(s8) = G_TRUNC %1
 
 
-    ; CHECK: [[LHS32:%[0-9]+]](32) = G_SEXT { s32, s8 } %2
-    ; CHECK: [[RHS32:%[0-9]+]](32) = G_SEXT { s32, s8 } %3
-    ; CHECK: [[QUOT32:%[0-9]+]](32) = G_SDIV s32 [[LHS32]], [[RHS32]]
-    ; CHECK: [[RES:%[0-9]+]](8) = G_TRUNC { s8, s32 } [[QUOT32]]
-    %4(8) = G_SDIV s8 %2, %3
+    ; CHECK: [[LHS32:%[0-9]+]](s32) = G_SEXT %2
+    ; CHECK: [[RHS32:%[0-9]+]](s32) = G_SEXT %3
+    ; CHECK: [[QUOT32:%[0-9]+]](s32) = G_SDIV [[LHS32]], [[RHS32]]
+    ; CHECK: [[RES:%[0-9]+]](s8) = G_TRUNC [[QUOT32]]
+    %4(s8) = G_SDIV %2, %3
 
-    ; CHECK: [[LHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %2
-    ; CHECK: [[RHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %3
-    ; CHECK: [[QUOT32:%[0-9]+]](32) = G_UDIV s32 [[LHS32]], [[RHS32]]
-    ; CHECK: [[RES:%[0-9]+]](8) = G_TRUNC { s8, s32 } [[QUOT32]]
-    %5(8) = G_UDIV s8 %2, %3
+    ; CHECK: [[LHS32:%[0-9]+]](s32) = G_ZEXT %2
+    ; CHECK: [[RHS32:%[0-9]+]](s32) = G_ZEXT %3
+    ; CHECK: [[QUOT32:%[0-9]+]](s32) = G_UDIV [[LHS32]], [[RHS32]]
+    ; CHECK: [[RES:%[0-9]+]](s8) = G_TRUNC [[QUOT32]]
+    %5(s8) = G_UDIV %2, %3
 
 ...

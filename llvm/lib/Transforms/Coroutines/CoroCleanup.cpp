@@ -49,7 +49,7 @@ bool Lowerer::lowerRemainingCoroIntrinsics(Function &F) {
         II->replaceAllUsesWith(II->getArgOperand(1));
         break;
       case Intrinsic::coro_free:
-        II->replaceAllUsesWith(II->getArgOperand(0));
+        II->replaceAllUsesWith(II->getArgOperand(1));
         break;
       case Intrinsic::coro_alloc:
         II->replaceAllUsesWith(ConstantInt::getTrue(Context));

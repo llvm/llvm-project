@@ -140,6 +140,7 @@ class VOP_DPP <dag outs, dag ins, string asm, list<dag> pattern, bit HasMods = 0
   let Size = 8;
 
   let AsmMatchConverter = !if(!eq(HasMods,1), "cvtDPP", "");
+  let AsmVariantName = AMDGPUAsmVariants.DPP;
 }
 
 class VOP_DPPe : Enc64 {
@@ -186,6 +187,7 @@ class VOP_SDWA <dag outs, dag ins, string asm, list<dag> pattern, bit HasMods = 
     VOPAnyCommon <outs, ins, asm, pattern> {
   let SDWA = 1;
   let Size = 8;
+  let AsmVariantName = AMDGPUAsmVariants.SDWA;
 }
 
 class VOP_SDWAe : Enc64 {

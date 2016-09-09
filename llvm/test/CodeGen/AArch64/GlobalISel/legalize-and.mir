@@ -22,13 +22,13 @@ body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
     ; CHECK-LABEL: name: test_scalar_and_small
-    ; CHECK: %4(8) = G_AND s8 %2, %3
+    ; CHECK: %4(s8) = G_AND %2, %3
 
-    %0(64) = G_TYPE s64 %x0
-    %1(64) = G_TYPE s64 %x1
-    %2(8) = G_TRUNC { s8, s64 } %0
-    %3(8) = G_TRUNC { s8, s64 } %1
-    %4(8) = G_AND s8 %2, %3
-    %5(64) = G_ANYEXT { s64, s8 } %2
+    %0(s64) = COPY %x0
+    %1(s64) = COPY %x1
+    %2(s8) = G_TRUNC %0
+    %3(s8) = G_TRUNC %1
+    %4(s8) = G_AND %2, %3
+    %5(s64) = G_ANYEXT %2
     %x0 = COPY %5
 ...

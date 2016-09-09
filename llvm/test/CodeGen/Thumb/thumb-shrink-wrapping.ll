@@ -139,7 +139,6 @@ declare i32 @doSomething(i32, i32*)
 ; CHECK: movs [[TMP:r[0-9]+]], #1
 ; CHECK: adds [[SUM]], [[TMP]], [[SUM]]
 ; CHECK-NEXT: subs [[IV]], [[IV]], #1
-; CHECK-NEXT: cmp [[IV]], #0
 ; CHECK-NEXT: bne [[LOOP]]
 ;
 ; Next BB.
@@ -209,7 +208,6 @@ declare i32 @something(...)
 ; CHECK: movs [[TMP:r[0-9]+]], #1
 ; CHECK: adds [[SUM]], [[TMP]], [[SUM]]
 ; CHECK-NEXT: subs [[IV]], [[IV]], #1
-; CHECK-NEXT: cmp [[IV]], #0
 ; CHECK-NEXT: bne [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: @ %for.exit
@@ -265,7 +263,6 @@ for.end:                                          ; preds = %for.body
 ; CHECK: movs [[TMP:r[0-9]+]], #1
 ; CHECK: adds [[SUM]], [[TMP]], [[SUM]]
 ; CHECK-NEXT: subs [[IV]], [[IV]], #1
-; CHECK-NEXT: cmp [[IV]], #0
 ; CHECK-NEXT: bne [[LOOP]]
 ;
 ; Next BB.
@@ -349,7 +346,6 @@ declare void @somethingElse(...)
 ; CHECK: movs [[TMP:r[0-9]+]], #1
 ; CHECK: adds [[SUM]], [[TMP]], [[SUM]]
 ; CHECK-NEXT: subs [[IV]], [[IV]], #1
-; CHECK-NEXT: cmp [[IV]], #0
 ; CHECK-NEXT: bne [[LOOP]]
 ;
 ; Next BB.
@@ -435,7 +431,6 @@ entry:
 ; CHECK: [[LOOP:LBB[0-9_]+]]: @ %for.body
 ; CHECK: movs r4, #1
 ; CHECK: subs [[IV]], [[IV]], #1
-; CHECK-NEXT: cmp [[IV]], #0
 ; CHECK-NEXT: bne [[LOOP]]
 ;
 ; Next BB.

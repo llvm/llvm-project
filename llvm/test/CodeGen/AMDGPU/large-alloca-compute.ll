@@ -18,13 +18,13 @@
 
 ; GCNHSA: .amd_kernel_code_t
 
-; GCNHSA: compute_pgm_rsrc2_scratch_en = 1
-; GCNHSA: compute_pgm_rsrc2_user_sgpr = 8
-; GCNHSA: compute_pgm_rsrc2_tgid_x_en = 1
-; GCNHSA: compute_pgm_rsrc2_tgid_y_en = 0
-; GCNHSA: compute_pgm_rsrc2_tgid_z_en = 0
-; GCNHSA: compute_pgm_rsrc2_tg_size_en = 0
-; GCNHSA: compute_pgm_rsrc2_tidig_comp_cnt = 0
+; GCNHSA: enable_sgpr_private_segment_wave_byte_offset = 1
+; GCNHSA: user_sgpr_count = 8
+; GCNHSA: enable_sgpr_workgroup_id_x = 1
+; GCNHSA: enable_sgpr_workgroup_id_y = 0
+; GCNHSA: enable_sgpr_workgroup_id_z = 0
+; GCNHSA: enable_sgpr_workgroup_info = 0
+; GCNHSA: enable_vgpr_workitem_id = 0
 
 ; GCNHSA: enable_sgpr_private_segment_buffer = 1
 ; GCNHSA: enable_sgpr_dispatch_ptr = 0
