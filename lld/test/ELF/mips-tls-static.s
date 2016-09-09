@@ -7,17 +7,22 @@
 
 # REQUIRES: mips
 
+# CHECK:      Contents of section .got:
+# CHECK-NEXT:  30008 00000000 80000000 00000001 ffff8000
+# CHECK-NEXT:  30018 00000001 00000000 ffff9000
 # CHECK:      Contents of section .data:
-# CHECK-NEXT:  40000 00020004 ffff8004 ffff9004
+# CHECK-NEXT:  40000 0002000c ffff8004 ffff9004
 #
 # CHECK: SYMBOL TABLE:
-# CHECK: 00020004         .text           00000000 __tls_get_addr
+# CHECK: 0002000c         .text           00000000 __tls_get_addr
 # CHECK: 00000000 g       .tdata          00000000 tls1
 
   .text
   .global __start
 __start:
-  nop
+  addiu $2, $3, %tlsgd(tls1)      # R_MIPS_TLS_GD
+  addiu $2, $3, %tlsldm(tls2)     # R_MIPS_TLS_LDM
+  addiu $2, $3, %gottprel(tls1)   # R_MIPS_TLS_GOTTPREL
 
   .global __tls_get_addr
 __tls_get_addr:
@@ -33,4 +38,5 @@ loc:
  .global tls1
 tls1:
  .word __tls_get_addr
+tls2:
  .word 0

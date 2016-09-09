@@ -369,7 +369,6 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
 
   const uint32_t max_opcode_byte_size =
       disasm_ptr->GetInstructionList().GetMaxOpcocdeByteSize();
-  uint32_t offset = 0;
   SymbolContext sc;
   SymbolContext prev_sc;
   AddressRange current_source_line_range;
@@ -549,7 +548,7 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
                   if (this_line != previous_line) {
 
                     std::vector<uint32_t> previous_lines;
-                    for (int i = 0;
+                    for (uint32_t i = 0;
                          i < num_mixed_context_lines &&
                          (this_line.line - num_mixed_context_lines) > 0;
                          i++) {
@@ -579,7 +578,7 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
                     source_lines_to_display.current_source_line =
                         source_lines_to_display.lines.size() - 1;
 
-                    for (int i = 0; i < num_mixed_context_lines; i++) {
+                    for (uint32_t i = 0; i < num_mixed_context_lines; i++) {
                       SourceLine next_line;
                       next_line.file = this_line.file;
                       next_line.line = this_line.line + i + 1;

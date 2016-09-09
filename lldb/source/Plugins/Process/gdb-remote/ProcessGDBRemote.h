@@ -25,6 +25,7 @@
 #include "lldb/Core/ConstString.h"
 #include "lldb/Core/Error.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Core/StructuredData.h"
@@ -37,6 +38,8 @@
 
 #include "GDBRemoteCommunicationClient.h"
 #include "GDBRemoteRegisterContext.h"
+
+#include "llvm/ADT/DenseMap.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {
@@ -193,6 +196,9 @@ public:
 
   bool GetModuleSpec(const FileSpec &module_file_spec, const ArchSpec &arch,
                      ModuleSpec &module_spec) override;
+
+  void PrefetchModuleSpecs(llvm::ArrayRef<FileSpec> module_file_specs,
+                           const llvm::Triple &triple) override;
 
   bool GetHostOSVersion(uint32_t &major, uint32_t &minor,
                         uint32_t &update) override;
@@ -411,6 +417,31 @@ private:
   void HandleStopReply() override;
   bool
   HandleAsyncStructuredData(const StructuredData::ObjectSP &object_sp) override;
+
+  using ModuleCacheKey = std::pair<std::string, std::string>;
+  // KeyInfo for the cached module spec DenseMap.
+  // The invariant is that all real keys will have the file and architecture
+  // set.
+  // The empty key has an empty file and an empty arch.
+  // The tombstone key has an invalid arch and an empty file.
+  // The comparison and hash functions take the file name and architecture
+  // triple into account.
+  struct ModuleCacheInfo {
+    static ModuleCacheKey getEmptyKey() { return ModuleCacheKey(); }
+
+    static ModuleCacheKey getTombstoneKey() { return ModuleCacheKey("", "T"); }
+
+    static unsigned getHashValue(const ModuleCacheKey &key) {
+      return llvm::hash_combine(key.first, key.second);
+    }
+
+    static bool isEqual(const ModuleCacheKey &LHS, const ModuleCacheKey &RHS) {
+      return LHS == RHS;
+    }
+  };
+
+  llvm::DenseMap<ModuleCacheKey, ModuleSpec, ModuleCacheInfo>
+      m_cached_module_specs;
 
   DISALLOW_COPY_AND_ASSIGN(ProcessGDBRemote);
 };

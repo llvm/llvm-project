@@ -26,6 +26,8 @@
 #include "lldb/Core/StructuredData.h"
 #include "lldb/Target/Process.h"
 
+#include "llvm/ADT/Optional.h"
+
 namespace lldb_private {
 namespace process_gdb_remote {
 
@@ -437,6 +439,10 @@ public:
   bool GetModuleInfo(const FileSpec &module_file_spec,
                      const ArchSpec &arch_spec, ModuleSpec &module_spec);
 
+  llvm::Optional<std::vector<ModuleSpec>>
+  GetModulesInfo(llvm::ArrayRef<FileSpec> module_file_specs,
+                 const llvm::Triple &triple);
+
   bool ReadExtFeature(const lldb_private::ConstString object,
                       const lldb_private::ConstString annex, std::string &out,
                       lldb_private::Error &err);
@@ -527,7 +533,8 @@ protected:
       m_supports_z2 : 1, m_supports_z3 : 1, m_supports_z4 : 1,
       m_supports_QEnvironment : 1, m_supports_QEnvironmentHexEncoded : 1,
       m_supports_qSymbol : 1, m_qSymbol_requests_done : 1,
-      m_supports_qModuleInfo : 1, m_supports_jThreadsInfo : 1;
+      m_supports_qModuleInfo : 1, m_supports_jThreadsInfo : 1,
+      m_supports_jModulesInfo : 1;
 
   lldb::pid_t m_curr_pid;
   lldb::tid_t m_curr_tid; // Current gdb remote protocol thread index for all

@@ -121,6 +121,19 @@ struct PhdrsCommand {
   bool HasFilehdr;
   bool HasPhdrs;
   unsigned Flags;
+  Expr LMAExpr;
+};
+
+class LinkerScriptBase {
+protected:
+  ~LinkerScriptBase() = default;
+
+public:
+  virtual uint64_t getOutputSectionAddress(StringRef Name) = 0;
+  virtual uint64_t getOutputSectionSize(StringRef Name) = 0;
+  virtual uint64_t getOutputSectionAlign(StringRef Name) = 0;
+  virtual uint64_t getHeaderSize() = 0;
+  virtual uint64_t getSymbolValue(StringRef S) = 0;
 };
 
 // ScriptConfiguration holds linker script parse results.
@@ -145,7 +158,7 @@ struct ScriptConfiguration {
 extern ScriptConfiguration *ScriptConfig;
 
 // This is a runner of the linker script.
-template <class ELFT> class LinkerScript {
+template <class ELFT> class LinkerScript final : public LinkerScriptBase {
   typedef typename ELFT::uint uintX_t;
 
 public:
@@ -163,9 +176,11 @@ public:
   void assignAddresses();
   int compareSections(StringRef A, StringRef B);
   bool hasPhdrsCommands();
-  uintX_t getOutputSectionAddress(StringRef Name);
-  uintX_t getOutputSectionSize(StringRef Name);
-  uintX_t getHeaderSize();
+  uint64_t getOutputSectionAddress(StringRef Name) override;
+  uint64_t getOutputSectionSize(StringRef Name) override;
+  uint64_t getOutputSectionAlign(StringRef Name) override;
+  uint64_t getHeaderSize() override;
+  uint64_t getSymbolValue(StringRef S) override;
 
   std::vector<OutputSectionBase<ELFT> *> *OutputSections;
 
@@ -192,6 +207,8 @@ private:
 // a global variable. Use a struct to workaround.
 template <class ELFT> struct Script { static LinkerScript<ELFT> *X; };
 template <class ELFT> LinkerScript<ELFT> *Script<ELFT>::X;
+
+extern LinkerScriptBase *ScriptBase;
 
 } // namespace elf
 } // namespace lld

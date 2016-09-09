@@ -1,43 +1,39 @@
 #include <clc/clc.h>
 #include "../clcmacro.h"
 
-// This file provides OpenCL C implementations of nextafter for targets that
-// don't support the clang builtin.
+// This file provides OpenCL C implementations of nextafter for
+// targets that don't support the clang builtin.
 
-#define FLT_NAN 0.0f/0.0f
+#define AS_TYPE(x) as_##x
 
-#define NEXTAFTER(FLOAT_TYPE, UINT_TYPE, NAN, ZERO, NEXTAFTER_ZERO) \
+#define NEXTAFTER(FLOAT_TYPE, UINT_TYPE, INT_TYPE)                      \
 _CLC_OVERLOAD _CLC_DEF FLOAT_TYPE __clc_nextafter(FLOAT_TYPE x, FLOAT_TYPE y) { \
-  union {                     \
-    FLOAT_TYPE f;             \
-    UINT_TYPE i;              \
-  } next;                     \
-  if (isnan(x) || isnan(y)) { \
-    return NAN;               \
-  }                           \
-  if (x == y) {               \
-    return y;                 \
-  }                           \
-  next.f = x;                 \
-  if (x < y) {                \
-    next.i++;                 \
-  } else {                    \
-    if (next.f == ZERO) {     \
-    next.i = NEXTAFTER_ZERO;  \
-    } else {                  \
-      next.i--;               \
-    }                         \
-  }                           \
-  return next.f;              \
+  const UINT_TYPE sign_bit                                        \
+   = (UINT_TYPE)1 << (sizeof(INT_TYPE) * 8 - 1);                  \
+  const UINT_TYPE sign_bit_mask = sign_bit - 1;                   \
+  INT_TYPE ix = AS_TYPE(INT_TYPE)(x);                             \
+  INT_TYPE ax = ix & sign_bit_mask;                               \
+  INT_TYPE mx = sign_bit - ix;                                    \
+  mx = ix < 0 ? mx : ix;                                          \
+  INT_TYPE iy = AS_TYPE(INT_TYPE)(y);                             \
+  INT_TYPE ay = iy & sign_bit_mask;                               \
+  INT_TYPE my = sign_bit - iy;                                    \
+  my = iy < 0 ? my : iy;                                          \
+  INT_TYPE t = mx + (mx < my ? 1 : -1);                           \
+  INT_TYPE r = sign_bit - t;                                      \
+  r = t < 0 ? r : t;                                              \
+  r = isnan(x) ? ix : r;                                          \
+  r = isnan(y) ? iy : r;                                          \
+  r = ((ax | ay) == 0 | ix == iy) ? iy : r;                       \
+  return AS_TYPE(FLOAT_TYPE)(r);                                  \
 }
 
-NEXTAFTER(float, uint, FLT_NAN, 0.0f, 0x80000001)
+NEXTAFTER(float, uint, int)
 _CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_nextafter, float, float)
 
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#define DBL_NAN 0.0/0.0
 
-NEXTAFTER(double, ulong, DBL_NAN, 0.0, 0x8000000000000001)
+NEXTAFTER(double, ulong, long)
 _CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __clc_nextafter, double, double)
 #endif

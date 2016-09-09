@@ -19,6 +19,7 @@
 
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
 #include "lldb/Core/DataBuffer.h"
+#include "lldb/Core/ModuleSpec.h"
 
 #include "llvm/ADT/ArrayRef.h"
 
@@ -184,4 +185,78 @@ TEST_F(GDBRemoteCommunicationClientTest, SyncThreadState) {
   HandlePacket(server, "qSyncThreadStateSupported", "OK");
   HandlePacket(server, "QSyncThreadState:0047;", "OK");
   ASSERT_TRUE(async_result.get());
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
+  TestClient client;
+  MockServer server;
+  Connect(client, server);
+  if (HasFailure())
+    return;
+
+  llvm::Triple triple("i386-pc-linux");
+
+  FileSpec file_specs[] = {
+      FileSpec("/foo/bar.so", false, FileSpec::ePathSyntaxPosix),
+      FileSpec("/foo/baz.so", false, FileSpec::ePathSyntaxPosix)};
+  std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
+      std::async(std::launch::async,
+                 [&] { return client.GetModulesInfo(file_specs, triple); });
+  HandlePacket(
+      server, "jModulesInfo:["
+              R"({"file":"/foo/bar.so","triple":"i386-pc-linux"},)"
+              R"({"file":"/foo/baz.so","triple":"i386-pc-linux"}])",
+      R"([{"uuid":"404142434445464748494a4b4c4d4e4f","triple":"i386-pc-linux",)"
+      R"("file_path":"/foo/bar.so","file_offset":0,"file_size":1234}]])");
+
+  auto result = async_result.get();
+  ASSERT_TRUE(result.hasValue());
+  ASSERT_EQ(1u, result->size());
+  EXPECT_EQ("/foo/bar.so", result.getValue()[0].GetFileSpec().GetPath());
+  EXPECT_EQ(triple, result.getValue()[0].GetArchitecture().GetTriple());
+  EXPECT_EQ(UUID("@ABCDEFGHIJKLMNO", 16), result.getValue()[0].GetUUID());
+  EXPECT_EQ(0u, result.getValue()[0].GetObjectOffset());
+  EXPECT_EQ(1234u, result.getValue()[0].GetObjectSize());
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfoInvalidResponse) {
+  TestClient client;
+  MockServer server;
+  Connect(client, server);
+  if (HasFailure())
+    return;
+
+  llvm::Triple triple("i386-pc-linux");
+  FileSpec file_spec("/foo/bar.so", false, FileSpec::ePathSyntaxPosix);
+
+  const char *invalid_responses[] = {
+      "OK", "E47", "[]",
+      // no UUID
+      R"([{"triple":"i386-pc-linux",)"
+      R"("file_path":"/foo/bar.so","file_offset":0,"file_size":1234}])",
+      // no triple
+      R"([{"uuid":"404142434445464748494a4b4c4d4e4f",)"
+      R"("file_path":"/foo/bar.so","file_offset":0,"file_size":1234}])",
+      // no file_path
+      R"([{"uuid":"404142434445464748494a4b4c4d4e4f","triple":"i386-pc-linux",)"
+      R"("file_offset":0,"file_size":1234}])",
+      // no file_offset
+      R"([{"uuid":"404142434445464748494a4b4c4d4e4f","triple":"i386-pc-linux",)"
+      R"("file_path":"/foo/bar.so","file_size":1234}])",
+      // no file_size
+      R"([{"uuid":"404142434445464748494a4b4c4d4e4f","triple":"i386-pc-linux",)"
+      R"("file_path":"/foo/bar.so","file_offset":0}])",
+  };
+
+  for (const char *response : invalid_responses) {
+    std::future<llvm::Optional<std::vector<ModuleSpec>>> async_result =
+        std::async(std::launch::async,
+                   [&] { return client.GetModulesInfo(file_spec, triple); });
+    HandlePacket(
+        server,
+        R"(jModulesInfo:[{"file":"/foo/bar.so","triple":"i386-pc-linux"}])",
+        response);
+
+    ASSERT_FALSE(async_result.get().hasValue()) << "response was: " << response;
+  }
 }

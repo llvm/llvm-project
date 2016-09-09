@@ -93,7 +93,7 @@ handleMipsTlsRelocation(uint32_t Type, SymbolBody &Body,
                         InputSectionBase<ELFT> &C, typename ELFT::uint Offset,
                         typename ELFT::uint Addend, RelExpr Expr) {
   if (Expr == R_MIPS_TLSLD) {
-    if (Out<ELFT>::Got->addTlsIndex())
+    if (Out<ELFT>::Got->addTlsIndex() && Config->Pic)
       Out<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, Out<ELFT>::Got,
                                     Out<ELFT>::Got->getTlsIndexOff(), false,
                                     nullptr, 0});
@@ -101,7 +101,7 @@ handleMipsTlsRelocation(uint32_t Type, SymbolBody &Body,
     return 1;
   }
   if (Target->isTlsGlobalDynamicRel(Type)) {
-    if (Out<ELFT>::Got->addDynTlsEntry(Body)) {
+    if (Out<ELFT>::Got->addDynTlsEntry(Body) && Body.isPreemptible()) {
       typedef typename ELFT::uint uintX_t;
       uintX_t Off = Out<ELFT>::Got->getGlobalDynOffset(Body);
       Out<ELFT>::RelaDyn->addReloc(
@@ -658,15 +658,17 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 
     if (refersToGotEntry(Expr)) {
       if (Config->EMachine == EM_MIPS) {
-        // MIPS ABI has special rules to process GOT entries
-        // and doesn't require relocation entries for them.
+        // MIPS ABI has special rules to process GOT entries and doesn't
+        // require relocation entries for them. A special case is TLS
+        // relocations. In that case dynamic loader applies dynamic
+        // relocations to initialize TLS GOT entries.
         // See "Global Offset Table" in Chapter 5 in the following document
         // for detailed description:
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
         Out<ELFT>::Got->addMipsEntry(Body, Addend, Expr);
-        if (Body.isTls())
+        if (Body.isTls() && Body.isPreemptible())
           AddDyn({Target->TlsGotRel, Out<ELFT>::Got, Body.getGotOffset<ELFT>(),
-                  !Preemptible, &Body, 0});
+                  false, &Body, 0});
         continue;
       }
 

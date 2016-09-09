@@ -1307,6 +1307,9 @@ bool ScopDetection::hasSufficientCompute(DetectionContext &Context,
                                          int NumLoops) const {
   int InstCount = 0;
 
+  if (NumLoops == 0)
+    return false;
+
   for (auto *BB : Context.CurRegion.blocks())
     if (Context.CurRegion.contains(LI->getLoopFor(BB)))
       InstCount += BB->size();

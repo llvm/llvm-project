@@ -70,7 +70,7 @@ _start:
 // CHECK-NEXT:    Section: .rel.plt
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: _start (6)
+// CHECK-NEXT:    Name: _start (38)
 // CHECK-NEXT:    Value: 0x11008
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global

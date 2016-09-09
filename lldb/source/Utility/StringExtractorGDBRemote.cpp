@@ -279,6 +279,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
     break;
 
   case 'j':
+    if (PACKET_STARTS_WITH("jModulesInfo:"))
+      return eServerPacketType_jModulesInfo;
     if (PACKET_MATCHES("jSignalsInfo"))
       return eServerPacketType_jSignalsInfo;
     if (PACKET_MATCHES("jThreadsInfo"))

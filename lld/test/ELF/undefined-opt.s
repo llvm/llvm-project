@@ -31,6 +31,8 @@
 # Use the option couple of times, both short and long forms
 # RUN: ld.lld -o %t3 %t.o %tar.a -u bar --undefined=abs
 # RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=TWO-UNDEFINED %s
+# RUN: ld.lld -o %t3 %t.o %tar.a -u bar --undefined abs
+# RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=TWO-UNDEFINED %s
 # TWO-UNDEFINED: Symbols [
 # TWO-UNDEFINED: Name: abs
 # TWO-UNDEFINED: Name: big
