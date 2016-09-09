@@ -95,6 +95,10 @@ ModulePass *createAMDGPUOCL12AdapterPass();
 void initializeAMDGPUOCL12AdapterPass(PassRegistry&);
 extern char &AMDGPUOCL12AdapterID;
 
+ModulePass *createAMDGPUPrintfRuntimeBinding();
+void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
+extern char &AMDGPUPrintfRuntimeBindingID;
+
 void initializeSIFixControlFlowLiveIntervalsPass(PassRegistry&);
 extern char &SIFixControlFlowLiveIntervalsID;
 
