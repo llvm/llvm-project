@@ -192,7 +192,8 @@ bool DescribeAddressIfHeap(uptr addr, uptr access_size) {
 }
 
 // Stack descriptions
-bool GetStackAddressInformation(uptr addr, StackAddressDescription *descr) {
+bool GetStackAddressInformation(uptr addr, uptr access_size,
+                                StackAddressDescription *descr) {
   AsanThread *t = FindThreadByStackAddress(addr);
   if (!t) return false;
 
@@ -206,6 +207,7 @@ bool GetStackAddressInformation(uptr addr, StackAddressDescription *descr) {
   }
 
   descr->offset = access.offset;
+  descr->access_size = access_size;
   descr->frame_pc = access.frame_pc;
   descr->frame_descr = access.frame_descr;
 
@@ -264,8 +266,8 @@ static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
 
 bool DescribeAddressIfStack(uptr addr, uptr access_size) {
   StackAddressDescription descr;
-  if (!GetStackAddressInformation(addr, &descr)) return false;
-  descr.Print(access_size);
+  if (!GetStackAddressInformation(addr, access_size, &descr)) return false;
+  descr.Print();
   return true;
 }
 
@@ -295,28 +297,30 @@ static void DescribeAddressRelativeToGlobal(uptr addr, uptr access_size,
   Printf("%s", str.data());
 }
 
-bool GetGlobalAddressInformation(uptr addr, GlobalAddressDescription *descr) {
+bool GetGlobalAddressInformation(uptr addr, uptr access_size,
+                                 GlobalAddressDescription *descr) {
   descr->addr = addr;
   int globals_num = GetGlobalsForAddress(addr, descr->globals, descr->reg_sites,
                                          ARRAY_SIZE(descr->globals));
   descr->size = globals_num;
+  descr->access_size = access_size;
   return globals_num != 0;
 }
 
 bool DescribeAddressIfGlobal(uptr addr, uptr access_size,
                              const char *bug_type) {
   GlobalAddressDescription descr;
-  if (!GetGlobalAddressInformation(addr, &descr)) return false;
+  if (!GetGlobalAddressInformation(addr, access_size, &descr)) return false;
 
-  descr.Print(access_size, bug_type);
+  descr.Print(bug_type);
   return true;
 }
 
-void ShadowAddressDescription::Print() {
+void ShadowAddressDescription::Print() const {
   Printf("Address %p is located in the %s area.\n", addr, ShadowNames[kind]);
 }
 
-void GlobalAddressDescription::Print(uptr access_size, const char *bug_type) {
+void GlobalAddressDescription::Print(const char *bug_type) const {
   for (int i = 0; i < size; i++) {
     DescribeAddressRelativeToGlobal(addr, access_size, globals[i]);
     if (0 == internal_strcmp(bug_type, "initialization-order-fiasco") &&
@@ -327,7 +331,7 @@ void GlobalAddressDescription::Print(uptr access_size, const char *bug_type) {
   }
 }
 
-void StackAddressDescription::Print(uptr access_size) {
+void StackAddressDescription::Print() const {
   Decorator d;
   char tname[128];
   Printf("%s", d.Location());
@@ -382,7 +386,7 @@ void StackAddressDescription::Print(uptr access_size) {
   DescribeThread(GetThreadContextByTidLocked(tid));
 }
 
-void HeapAddressDescription::Print() {
+void HeapAddressDescription::Print() const {
   PrintHeapChunkAccess(addr, chunk_access);
 
   asanThreadRegistry().CheckLocked();
@@ -416,6 +420,37 @@ void HeapAddressDescription::Print() {
   DescribeThread(alloc_thread);
 }
 
+AddressDescription::AddressDescription(uptr addr, uptr access_size,
+                                       bool shouldLockThreadRegistry) {
+  if (GetShadowAddressInformation(addr, &data.shadow)) {
+    data.kind = kAddressKindShadow;
+    return;
+  }
+  if (GetHeapAddressInformation(addr, access_size, &data.heap)) {
+    data.kind = kAddressKindHeap;
+    return;
+  }
+
+  bool isStackMemory = false;
+  if (shouldLockThreadRegistry) {
+    ThreadRegistryLock l(&asanThreadRegistry());
+    isStackMemory = GetStackAddressInformation(addr, access_size, &data.stack);
+  } else {
+    isStackMemory = GetStackAddressInformation(addr, access_size, &data.stack);
+  }
+  if (isStackMemory) {
+    data.kind = kAddressKindStack;
+    return;
+  }
+
+  if (GetGlobalAddressInformation(addr, access_size, &data.global)) {
+    data.kind = kAddressKindGlobal;
+    return;
+  }
+  data.kind = kAddressKindWild;
+  addr = 0;
+}
+
 void PrintAddressDescription(uptr addr, uptr access_size,
                              const char *bug_type) {
   ShadowAddressDescription shadow_descr;
@@ -425,14 +460,14 @@ void PrintAddressDescription(uptr addr, uptr access_size,
   }
 
   GlobalAddressDescription global_descr;
-  if (GetGlobalAddressInformation(addr, &global_descr)) {
-    global_descr.Print(access_size, bug_type);
+  if (GetGlobalAddressInformation(addr, access_size, &global_descr)) {
+    global_descr.Print(bug_type);
     return;
   }
 
   StackAddressDescription stack_descr;
-  if (GetStackAddressInformation(addr, &stack_descr)) {
-    stack_descr.Print(access_size);
+  if (GetStackAddressInformation(addr, access_size, &stack_descr)) {
+    stack_descr.Print();
     return;
   }
 

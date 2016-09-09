@@ -45,6 +45,7 @@ public:
     LazyObjectKind,
     ArchiveKind,
     BitcodeKind,
+    BinaryKind,
   };
 
   Kind kind() const { return FileKind; }
@@ -295,6 +296,18 @@ public:
   bool AsNeeded = false;
   bool IsUsed = false;
   bool isNeeded() const { return !AsNeeded || IsUsed; }
+};
+
+class BinaryFile : public InputFile {
+public:
+  explicit BinaryFile(MemoryBufferRef M) : InputFile(BinaryKind, M) {}
+
+  static bool classof(const InputFile *F) { return F->kind() == BinaryKind; }
+
+  template <class ELFT> std::unique_ptr<InputFile> createELF();
+
+private:
+  std::vector<uint8_t> ELFData;
 };
 
 std::unique_ptr<InputFile> createObjectFile(MemoryBufferRef MB,

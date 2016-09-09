@@ -74,6 +74,9 @@ def fatal_warnings: F<"fatal-warnings">,
 def fini: S<"fini">, MetaVarName<"<symbol>">,
   HelpText<"Specify a finalizer function">;
 
+def format: J<"format=">, MetaVarName<"<input-format>">,
+  HelpText<"Change the input format of the inputs following this option">;
+
 def gc_sections: F<"gc-sections">,
   HelpText<"Enable garbage collection of unused sections">;
 
@@ -212,6 +215,7 @@ def alias_export_dynamic_E: Flag<["-"], "E">, Alias<export_dynamic>;
 def alias_export_dynamic_symbol: J<"export-dynamic-symbol=">,
   Alias<export_dynamic_symbol>;
 def alias_fini_fini: J<"fini=">, Alias<fini>;
+def alias_format_b: S<"b">, Alias<format>;
 def alias_hash_style_hash_style: J<"hash-style=">, Alias<hash_style>;
 def alias_init_init: J<"init=">, Alias<init>;
 def alias_l__library: J<"library=">, Alias<l>;

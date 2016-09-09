@@ -61,9 +61,8 @@ public:
 
   StringRef Name;
 
-  // If a section is compressed, this has the uncompressed section data.
-  std::unique_ptr<char[]> UncompressedData;
-  size_t UncompressedDataSize = 0;
+  // If a section is compressed, this vector has uncompressed section data.
+  SmallVector<char, 0> Uncompressed;
 
   std::vector<Relocation> Relocations;
 };
