@@ -253,7 +253,7 @@ private:
 
 public:
   IslPtr() : Obj(nullptr) {}
-  /* implicit */ IslPtr(nullptr_t That) : IslPtr() {}
+  /* implicit */ IslPtr(std::nullptr_t That) : IslPtr() {}
 
   /* implicit */ IslPtr(const ThisTy &That) : IslPtr(That.Obj, false) {}
   /* implicit */ IslPtr(ThisTy &&That) : IslPtr(That.Obj, true) {
@@ -320,7 +320,7 @@ private:
 
 public:
   NonowningIslPtr() : Obj(nullptr) {}
-  /* implicit */ NonowningIslPtr(nullptr_t That) : NonowningIslPtr() {}
+  /* implicit */ NonowningIslPtr(std::nullptr_t That) : NonowningIslPtr() {}
 
   /* implicit */ NonowningIslPtr(const IslPtr<T> &That)
       : NonowningIslPtr(That.keep()) {}

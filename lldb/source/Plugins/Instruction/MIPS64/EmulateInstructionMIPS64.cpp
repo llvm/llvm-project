@@ -869,6 +869,7 @@ EmulateInstructionMIPS64::GetOpcodeForInstruction(const char *op_name) {
       {"JAL", &EmulateInstructionMIPS64::Emulate_JAL, "JAL target"},
       {"JALX", &EmulateInstructionMIPS64::Emulate_JAL, "JALX target"},
       {"JALR", &EmulateInstructionMIPS64::Emulate_JALR, "JALR target"},
+      {"JALR64", &EmulateInstructionMIPS64::Emulate_JALR, "JALR target"},
       {"JALR_HB", &EmulateInstructionMIPS64::Emulate_JALR, "JALR.HB target"},
       {"JIALC", &EmulateInstructionMIPS64::Emulate_JIALC, "JIALC rt,offset"},
       {"JIC", &EmulateInstructionMIPS64::Emulate_JIC, "JIC rt,offset"},

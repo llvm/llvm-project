@@ -3035,6 +3035,7 @@ __kmp_get_global_icvs( void ) {
       r_sched,                      //kmp_r_sched_t sched;      //internal control for runtime schedule {sched,chunk} pair
 #if OMP_40_ENABLED
       __kmp_nested_proc_bind.bind_types[0],
+      __kmp_default_device,
 #endif /* OMP_40_ENABLED */
       NULL                          //struct kmp_internal_control *next;
     };

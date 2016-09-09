@@ -904,18 +904,27 @@ xexpand(FTN_GET_TEAM_NUM)( void )
     #endif
 }
 
-#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
-
 int FTN_STDCALL
-FTN_GET_DEFAULT_DEVICE( void )
+xexpand(FTN_GET_DEFAULT_DEVICE)( void )
 {
-    return 0;
+    #if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
+        return 0;
+    #else
+        return __kmp_entry_thread() -> th.th_current_task -> td_icvs.default_device;
+    #endif
 }
 
 void FTN_STDCALL
-FTN_SET_DEFAULT_DEVICE( int KMP_DEREF arg )
+xexpand(FTN_SET_DEFAULT_DEVICE)( int KMP_DEREF arg )
 {
+    #if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
+    // Nothing.
+    #else
+        __kmp_entry_thread() -> th.th_current_task -> td_icvs.default_device = KMP_DEREF arg;
+    #endif
 }
+
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
 
 int FTN_STDCALL
 FTN_GET_NUM_DEVICES( void )
@@ -1391,6 +1400,8 @@ xaliasify(FTN_GET_PROC_BIND, 40);
 xaliasify(FTN_GET_NUM_TEAMS, 40);
 xaliasify(FTN_GET_TEAM_NUM, 40);
 xaliasify(FTN_GET_CANCELLATION, 40);
+xaliasify(FTN_GET_DEFAULT_DEVICE, 40);
+xaliasify(FTN_SET_DEFAULT_DEVICE, 40);
 xaliasify(FTN_IS_INITIAL_DEVICE, 40);
 #endif /* OMP_40_ENABLED */
 
@@ -1456,11 +1467,13 @@ xversionify(FTN_IN_FINAL,          31, "OMP_3.1");
 
 #if OMP_40_ENABLED
 // OMP_4.0 versioned symbols
-xversionify(FTN_GET_PROC_BIND,     40, "OMP_4.0");
-xversionify(FTN_GET_NUM_TEAMS,     40, "OMP_4.0");
-xversionify(FTN_GET_TEAM_NUM,      40, "OMP_4.0");
-xversionify(FTN_GET_CANCELLATION,  40, "OMP_4.0");
-xversionify(FTN_IS_INITIAL_DEVICE, 40, "OMP_4.0");
+xversionify(FTN_GET_PROC_BIND,      40, "OMP_4.0");
+xversionify(FTN_GET_NUM_TEAMS,      40, "OMP_4.0");
+xversionify(FTN_GET_TEAM_NUM,       40, "OMP_4.0");
+xversionify(FTN_GET_CANCELLATION,   40, "OMP_4.0");
+xversionify(FTN_GET_DEFAULT_DEVICE, 40, "OMP_4.0");
+xversionify(FTN_SET_DEFAULT_DEVICE, 40, "OMP_4.0");
+xversionify(FTN_IS_INITIAL_DEVICE,  40, "OMP_4.0");
 #endif /* OMP_40_ENABLED */
 
 #if OMP_45_ENABLED

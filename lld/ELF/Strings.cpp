@@ -24,6 +24,12 @@ bool elf::hasWildcard(StringRef S) {
   return S.find_first_of("?*[") != StringRef::npos;
 }
 
+StringRef elf::unquote(StringRef S) {
+  if (!S.startswith("\""))
+    return S;
+  return S.substr(1, S.size() - 2);
+}
+
 // Converts a glob pattern to a regular expression.
 static std::string toRegex(StringRef S) {
   std::string T;
