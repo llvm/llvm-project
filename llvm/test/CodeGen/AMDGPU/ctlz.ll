@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=cypress -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
@@ -19,7 +19,7 @@ declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 ; FUNC-LABEL: {{^}}s_ctlz_i32:
 ; SI: s_load_dword [[VAL:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
 ; SI-DAG: s_flbit_i32_b32 [[CTLZ:s[0-9]+]], [[VAL]]
-; SI-DAG: v_cmp_eq_i32_e64 [[CMPZ:s\[[0-9]+:[0-9]+\]]], 0, [[VAL]]
+; SI-DAG: v_cmp_eq_i32_e64 [[CMPZ:s\[[0-9]+:[0-9]+\]]], [[VAL]], 0{{$}}
 ; SI-DAG: v_mov_b32_e32 [[VCTLZ:v[0-9]+]], [[CTLZ]]
 ; SI: v_cndmask_b32_e64 [[RESULT:v[0-9]+]], [[VCTLZ]], 32, [[CMPZ]]
 ; SI: buffer_store_dword [[RESULT]]
@@ -112,7 +112,7 @@ define void @v_ctlz_i8(i8 addrspace(1)* noalias %out, i8 addrspace(1)* noalias %
 
 ; FUNC-LABEL: {{^}}s_ctlz_i64:
 ; SI: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
-; SI-DAG: v_cmp_eq_i32_e64 vcc, 0, s[[HI]]
+; SI-DAG: v_cmp_eq_i32_e64 vcc, s[[HI]], 0{{$}}
 ; SI-DAG: s_flbit_i32_b32 [[FFBH_LO:s[0-9]+]], s[[LO]]
 ; SI-DAG: s_add_i32 [[ADD:s[0-9]+]], [[FFBH_LO]], 32
 ; SI-DAG: s_flbit_i32_b32 [[FFBH_HI:s[0-9]+]], s[[HI]]

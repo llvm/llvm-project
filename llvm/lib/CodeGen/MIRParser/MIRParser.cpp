@@ -257,7 +257,8 @@ std::unique_ptr<Module> MIRParserImpl::parse() {
 bool MIRParserImpl::parseMachineFunction(yaml::Input &In, Module &M,
                                          bool NoLLVMIR) {
   auto MF = llvm::make_unique<yaml::MachineFunction>();
-  yaml::yamlize(In, *MF, false);
+  yaml::EmptyContext Ctx;
+  yaml::yamlize(In, *MF, false, Ctx);
   if (In.error())
     return true;
   auto FunctionName = MF->Name;

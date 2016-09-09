@@ -299,6 +299,23 @@ static Value *getPointerOperand(Value *I) {
   return nullptr;
 }
 
+/// A helper function that returns true if the given type is irregular. The
+/// type is irregular if its allocated size doesn't equal the store size of an
+/// element of the corresponding vector type at the given vectorization factor.
+static bool hasIrregularType(Type *Ty, const DataLayout &DL, unsigned VF) {
+
+  // Determine if an array of VF elements of type Ty is "bitcast compatible"
+  // with a <VF x Ty> vector.
+  if (VF > 1) {
+    auto *VectorTy = VectorType::get(Ty, VF);
+    return VF * DL.getTypeAllocSize(Ty) != DL.getTypeStoreSize(VectorTy);
+  }
+
+  // If the vectorization factor is one, we just check if an array of type Ty
+  // requires padding between elements.
+  return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
+}
+
 /// InnerLoopVectorizer vectorizes loops which contain only one basic
 /// block to a specified vectorization factor (VF).
 /// This class performs the widening of scalars into vectors, or multiple
@@ -1611,6 +1628,20 @@ public:
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
   unsigned getNumPredStores() const { return NumPredStores; }
 
+  /// Returns true if \p I is a store instruction in a predicated block that
+  /// will be scalarized during vectorization.
+  bool isPredicatedStore(Instruction *I);
+
+  /// Returns true if \p I is a memory instruction that has a consecutive or
+  /// consecutive-like pointer operand. Consecutive-like pointers are pointers
+  /// that are treated like consecutive pointers during vectorization. The
+  /// pointer operands of interleaved accesses are an example.
+  bool hasConsecutiveLikePtrOperand(Instruction *I);
+
+  /// Returns true if \p I is a memory instruction that must be scalarized
+  /// during vectorization.
+  bool memoryInstructionMustBeScalarized(Instruction *I, unsigned VF = 1);
+
 private:
   /// Check if a single basic block loop is vectorizable.
   /// At this point we know that this is a loop with a constant trip count
@@ -2733,30 +2764,19 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
   if (!Alignment)
     Alignment = DL.getABITypeAlignment(ScalarDataTy);
   unsigned AddressSpace = Ptr->getType()->getPointerAddressSpace();
-  uint64_t ScalarAllocatedSize = DL.getTypeAllocSize(ScalarDataTy);
-  uint64_t VectorElementSize = DL.getTypeStoreSize(DataTy) / VF;
 
-  if (SI && Legal->blockNeedsPredication(SI->getParent()) &&
-      !Legal->isMaskRequired(SI))
-    return scalarizeInstruction(Instr, true);
+  // Scalarize the memory instruction if necessary.
+  if (Legal->memoryInstructionMustBeScalarized(Instr, VF))
+    return scalarizeInstruction(Instr, Legal->isPredicatedStore(Instr));
 
-  if (ScalarAllocatedSize != VectorElementSize)
-    return scalarizeInstruction(Instr);
-
-  // If the pointer is loop invariant scalarize the load.
-  if (LI && Legal->isUniform(Ptr))
-    return scalarizeInstruction(Instr);
-
-  // If the pointer is non-consecutive and gather/scatter is not supported
-  // scalarize the instruction.
+  // Determine if the pointer operand of the access is either consecutive or
+  // reverse consecutive.
   int ConsecutiveStride = Legal->isConsecutivePtr(Ptr);
   bool Reverse = ConsecutiveStride < 0;
-  bool CreateGatherScatter =
-      !ConsecutiveStride && ((LI && Legal->isLegalMaskedGather(ScalarDataTy)) ||
-                             (SI && Legal->isLegalMaskedScatter(ScalarDataTy)));
 
-  if (!ConsecutiveStride && !CreateGatherScatter)
-    return scalarizeInstruction(Instr);
+  // Determine if either a gather or scatter operation is legal.
+  bool CreateGatherScatter =
+      !ConsecutiveStride && Legal->isLegalGatherOrScatter(Instr);
 
   VectorParts VectorGep;
 
@@ -5273,6 +5293,60 @@ void LoopVectorizationLegality::collectLoopScalars() {
   }
 }
 
+bool LoopVectorizationLegality::hasConsecutiveLikePtrOperand(Instruction *I) {
+  if (isAccessInterleaved(I))
+    return true;
+  if (auto *Ptr = getPointerOperand(I))
+    return isConsecutivePtr(Ptr);
+  return false;
+}
+
+bool LoopVectorizationLegality::isPredicatedStore(Instruction *I) {
+  auto *SI = dyn_cast<StoreInst>(I);
+  return SI && blockNeedsPredication(SI->getParent()) && !isMaskRequired(SI);
+}
+
+bool LoopVectorizationLegality::memoryInstructionMustBeScalarized(
+    Instruction *I, unsigned VF) {
+
+  // If the memory instruction is in an interleaved group, it will be
+  // vectorized and its pointer will remain uniform.
+  if (isAccessInterleaved(I))
+    return false;
+
+  // Get and ensure we have a valid memory instruction.
+  LoadInst *LI = dyn_cast<LoadInst>(I);
+  StoreInst *SI = dyn_cast<StoreInst>(I);
+  assert((LI || SI) && "Invalid memory instruction");
+
+  // If the pointer operand is uniform (loop invariant), the memory instruction
+  // will be scalarized.
+  auto *Ptr = getPointerOperand(I);
+  if (LI && isUniform(Ptr))
+    return true;
+
+  // If the pointer operand is non-consecutive and neither a gather nor a
+  // scatter operation is legal, the memory instruction will be scalarized.
+  if (!isConsecutivePtr(Ptr) && !isLegalGatherOrScatter(I))
+    return true;
+
+  // If the instruction is a store located in a predicated block, it will be
+  // scalarized.
+  if (isPredicatedStore(I))
+    return true;
+
+  // If the instruction's allocated size doesn't equal it's type size, it
+  // requires padding and will be scalarized.
+  auto &DL = I->getModule()->getDataLayout();
+  auto *ScalarTy = LI ? LI->getType() : SI->getValueOperand()->getType();
+  if (hasIrregularType(ScalarTy, DL, VF))
+    return true;
+
+  // Otherwise, the memory instruction should be vectorized if the rest of the
+  // loop is.
+  return false;
+}
+
 void LoopVectorizationLegality::collectLoopUniforms() {
   // We now know that the loop is vectorizable!
   // Collect instructions inside the loop that will remain uniform after
@@ -5294,21 +5368,48 @@ void LoopVectorizationLegality::collectLoopUniforms() {
     DEBUG(dbgs() << "LV: Found uniform instruction: " << *Cmp << "\n");
   }
 
-  // Add all consecutive pointer values; these values will be uniform after
-  // vectorization (and subsequent cleanup). Although non-consecutive, we also
-  // add the pointer operands of interleaved accesses since they are treated
-  // like consecutive pointers during vectorization.
+  // Holds consecutive and consecutive-like pointers. Consecutive-like pointers
+  // are pointers that are treated like consecutive pointers during
+  // vectorization. The pointer operands of interleaved accesses are an
+  // example.
+  SmallPtrSet<Instruction *, 8> ConsecutiveLikePtrs;
+
+  // Holds pointer operands of instructions that are possibly non-uniform.
+  SmallPtrSet<Instruction *, 8> PossibleNonUniformPtrs;
+
+  // Iterate over the instructions in the loop, and collect all
+  // consecutive-like pointer operands in ConsecutiveLikePtrs. If it's possible
+  // that a consecutive-like pointer operand will be scalarized, we collect it
+  // in PossibleNonUniformPtrs instead. We use two sets here because a single
+  // getelementptr instruction can be used by both vectorized and scalarized
+  // memory instructions. For example, if a loop loads and stores from the same
+  // location, but the store is conditional, the store will be scalarized, and
+  // the getelementptr won't remain uniform.
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
-      Instruction *Ptr = nullptr;
-      if (I.getType()->isPointerTy() && isConsecutivePtr(&I))
-        Ptr = &I;
-      else if (isAccessInterleaved(&I))
-        Ptr = cast<Instruction>(getPointerOperand(&I));
-      else
+
+      // If there's no pointer operand, there's nothing to do.
+      auto *Ptr = dyn_cast_or_null<Instruction>(getPointerOperand(&I));
+      if (!Ptr)
         continue;
-      Worklist.insert(Ptr);
-      DEBUG(dbgs() << "LV: Found uniform instruction: " << *Ptr << "\n");
+
+      // Ensure the memory instruction will not be scalarized, making its
+      // pointer operand non-uniform.
+      if (memoryInstructionMustBeScalarized(&I))
+        PossibleNonUniformPtrs.insert(Ptr);
+
+      // If the memory instruction will be vectorized and its pointer operand
+      // is consecutive-like, the pointer operand should remain uniform.
+      else if (hasConsecutiveLikePtrOperand(&I))
+        ConsecutiveLikePtrs.insert(Ptr);
+    }
+
+  // Add to the Worklist all consecutive and consecutive-like pointers that
+  // aren't also identified as possibly non-uniform.
+  for (auto *V : ConsecutiveLikePtrs)
+    if (!PossibleNonUniformPtrs.count(V)) {
+      DEBUG(dbgs() << "LV: Found uniform instruction: " << *V << "\n");
+      Worklist.insert(V);
     }
 
   // Expand Worklist in topological order: whenever a new instruction
@@ -6519,17 +6620,8 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       return Cost;
     }
 
-    // Scalarized loads/stores.
-    int ConsecutiveStride = Legal->isConsecutivePtr(Ptr);
-    bool UseGatherOrScatter =
-        (ConsecutiveStride == 0) && Legal->isLegalGatherOrScatter(I);
-
-    bool Reverse = ConsecutiveStride < 0;
-    const DataLayout &DL = I->getModule()->getDataLayout();
-    uint64_t ScalarAllocatedSize = DL.getTypeAllocSize(ValTy);
-    uint64_t VectorElementSize = DL.getTypeStoreSize(VectorTy) / VF;
-    if ((!ConsecutiveStride && !UseGatherOrScatter) ||
-        ScalarAllocatedSize != VectorElementSize) {
+    // Check if the memory instruction will be scalarized.
+    if (Legal->memoryInstructionMustBeScalarized(I, VF)) {
       bool IsComplexComputation =
           isLikelyComplexAddressComputation(Ptr, Legal, SE, TheLoop);
       unsigned Cost = 0;
@@ -6553,6 +6645,15 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
                                   Alignment, AS);
       return Cost;
     }
+
+    // Determine if the pointer operand of the access is either consecutive or
+    // reverse consecutive.
+    int ConsecutiveStride = Legal->isConsecutivePtr(Ptr);
+    bool Reverse = ConsecutiveStride < 0;
+
+    // Determine if either a gather or scatter operation is legal.
+    bool UseGatherOrScatter =
+        !ConsecutiveStride && Legal->isLegalGatherOrScatter(I);
 
     unsigned Cost = TTI.getAddressComputationCost(VectorTy);
     if (UseGatherOrScatter) {

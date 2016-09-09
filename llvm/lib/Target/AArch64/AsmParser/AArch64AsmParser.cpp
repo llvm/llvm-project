@@ -14,6 +14,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCContext.h"
@@ -28,6 +29,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetParser.h"
@@ -4193,6 +4195,7 @@ static const struct {
   { "crypto", {AArch64::FeatureCrypto} },
   { "fp", {AArch64::FeatureFPARMv8} },
   { "simd", {AArch64::FeatureNEON} },
+  { "ras", {AArch64::FeatureRAS} },
 
   // FIXME: Unsupported extensions
   { "lse", {} },
@@ -4217,12 +4220,45 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
     return false;
   }
 
-  MCSubtargetInfo &STI = copySTI();
-  STI.setDefaultFeatures("", "");
-  if (!ExtensionString.empty())
-    STI.setDefaultFeatures("", ("+" + ExtensionString).str());
-  setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+  // Get the architecture and extension features.
+  std::vector<const char *> AArch64Features;
+  AArch64::getArchFeatures(ID, AArch64Features);
+  AArch64::getExtensionFeatures(AArch64::getDefaultExtensions("generic", ID),
+                                AArch64Features);
 
+  MCSubtargetInfo &STI = copySTI();
+  std::vector<std::string> ArchFeatures(AArch64Features.begin(), AArch64Features.end());
+  STI.setDefaultFeatures("generic", join(ArchFeatures.begin(), ArchFeatures.end(), ","));
+
+  SmallVector<StringRef, 4> RequestedExtensions;
+  if (!ExtensionString.empty())
+    ExtensionString.split(RequestedExtensions, '+');
+
+  FeatureBitset Features = STI.getFeatureBits();
+  for (auto Name : RequestedExtensions) {
+    bool EnableFeature = true;
+
+    if (Name.startswith_lower("no")) {
+      EnableFeature = false;
+      Name = Name.substr(2);
+    }
+
+    for (const auto &Extension : ExtensionMap) {
+      if (Extension.Name != Name)
+        continue;
+
+      if (Extension.Features.none())
+        report_fatal_error("unsupported architectural extension: " + Name);
+
+      FeatureBitset ToggleFeatures = EnableFeature
+                                         ? (~Features & Extension.Features)
+                                         : ( Features & Extension.Features);
+      uint64_t Features =
+          ComputeAvailableFeatures(STI.ToggleFeature(ToggleFeatures));
+      setAvailableFeatures(Features);
+      break;
+    }
+  }
   return false;
 }
 

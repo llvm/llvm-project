@@ -27,7 +27,7 @@ define void @test_mul_legacy_undef1_f32(float addrspace(1)* %out, float %a) #0 {
 }
 
 ; GCN-LABEL: {{^}}test_mul_legacy_fabs_f32:
-; GCN: v_mul_legacy_f32_e64 v{{[0-9]+}}, |s{{[0-9]+}}|, |v{{[0-9]+}}|
+; GCN: v_mul_legacy_f32_e64 v{{[0-9]+}}, |v{{[0-9]+}}|, |s{{[0-9]+}}|
 define void @test_mul_legacy_fabs_f32(float addrspace(1)* %out, float %a, float %b) #0 {
   %a.fabs = call float @llvm.fabs.f32(float %a)
   %b.fabs = call float @llvm.fabs.f32(float %b)

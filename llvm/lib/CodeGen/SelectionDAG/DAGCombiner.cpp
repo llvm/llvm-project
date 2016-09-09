@@ -3099,7 +3099,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
 
   // fold (and c1, c2) -> c1&c2
   ConstantSDNode *N0C = getAsNonOpaqueConstant(N0);
-  ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
+  ConstantSDNode *N1C = isConstOrConstSplat(N1);
   if (N0C && N1C && !N1C->isOpaque())
     return DAG.FoldConstantArithmetic(ISD::AND, SDLoc(N), VT, N0C, N1C);
   // canonicalize constant to RHS
@@ -3119,14 +3119,14 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     return RAND;
   // fold (and (or x, C), D) -> D if (C & D) == D
   if (N1C && N0.getOpcode() == ISD::OR)
-    if (ConstantSDNode *ORI = dyn_cast<ConstantSDNode>(N0.getOperand(1)))
+    if (ConstantSDNode *ORI = isConstOrConstSplat(N0.getOperand(1)))
       if ((ORI->getAPIntValue() & N1C->getAPIntValue()) == N1C->getAPIntValue())
         return N1;
   // fold (and (any_ext V), c) -> (zero_ext V) if 'and' only clears top bits.
   if (N1C && N0.getOpcode() == ISD::ANY_EXTEND) {
     SDValue N0Op0 = N0.getOperand(0);
     APInt Mask = ~N1C->getAPIntValue();
-    Mask = Mask.trunc(N0Op0.getValueSizeInBits());
+    Mask = Mask.trunc(N0Op0.getScalarValueSizeInBits());
     if (DAG.MaskedValueIsZero(N0Op0, Mask)) {
       SDValue Zext = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N),
                                  N0.getValueType(), N0Op0);
@@ -3177,7 +3177,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
         // that will apply equally to all members of the vector, so AND all the
         // lanes of the constant together.
         EVT VT = Vector->getValueType(0);
-        unsigned BitWidth = VT.getVectorElementType().getSizeInBits();
+        unsigned BitWidth = VT.getScalarType().getSizeInBits();
 
         // If the splat value has been compressed to a bitlength lower
         // than the size of the vector lane, we need to re-expand it to
@@ -3251,9 +3251,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   // fold (and (load x), 255) -> (zextload x, i8)
   // fold (and (extload x, i16), 255) -> (zextload x, i8)
   // fold (and (any_ext (extload x, i16)), 255) -> (zextload x, i8)
-  if (N1C && (N0.getOpcode() == ISD::LOAD ||
-              (N0.getOpcode() == ISD::ANY_EXTEND &&
-               N0.getOperand(0).getOpcode() == ISD::LOAD))) {
+  if (!VT.isVector() && N1C && (N0.getOpcode() == ISD::LOAD ||
+                                (N0.getOpcode() == ISD::ANY_EXTEND &&
+                                 N0.getOperand(0).getOpcode() == ISD::LOAD))) {
     bool HasAnyExt = N0.getOpcode() == ISD::ANY_EXTEND;
     LoadSDNode *LN0 = HasAnyExt
       ? cast<LoadSDNode>(N0.getOperand(0))

@@ -2016,6 +2016,26 @@ void SelectionDAG::computeKnownBits(SDValue Op, APInt &KnownZero,
     KnownOne = cast<ConstantSDNode>(Op)->getAPIntValue();
     KnownZero = ~KnownOne;
     break;
+  case ISD::BUILD_VECTOR:
+    // Collect the known bits that are shared by every vector element.
+    KnownZero = KnownOne = APInt::getAllOnesValue(BitWidth);
+    for (SDValue SrcOp : Op->ops()) {
+      computeKnownBits(SrcOp, KnownZero2, KnownOne2, Depth + 1);
+
+      // BUILD_VECTOR can implicitly truncate sources, we must handle this.
+      if (SrcOp.getValueSizeInBits() != BitWidth) {
+        assert(SrcOp.getValueSizeInBits() > BitWidth &&
+               "Expected BUILD_VECTOR implicit truncation");
+        KnownOne2 = KnownOne2.trunc(BitWidth);
+        KnownZero2 = KnownZero2.trunc(BitWidth);
+      }
+
+      // Known bits are the values that are shared by every element.
+      // TODO: support per-element known bits.
+      KnownOne &= KnownOne2;
+      KnownZero &= KnownZero2;
+    }
+    break;
   case ISD::AND:
     // If either the LHS or the RHS are Zero, the result is zero.
     computeKnownBits(Op.getOperand(1), KnownZero, KnownOne, Depth+1);

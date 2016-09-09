@@ -26,11 +26,6 @@ def LUXC1_MM : MMRel, LWXC1_FT<"luxc1", AFGR64Opnd, II_LUXC1>,
 def SUXC1_MM : MMRel, SWXC1_FT<"suxc1", AFGR64Opnd, II_SUXC1>,
                SWXC1_FM_MM<0x188>, INSN_MIPS5_32R2_NOT_32R6_64R6;
 
-def FCMP_S32_MM : MMRel, CEQS_FT<"s", FGR32, II_C_CC_S, MipsFPCmp>,
-                  CEQS_FM_MM<0>;
-def FCMP_D32_MM : MMRel, CEQS_FT<"d", AFGR64, II_C_CC_D, MipsFPCmp>,
-                  CEQS_FM_MM<1>;
-
 def BC1F_MM : MMRel, BC1F_FT<"bc1f", brtarget_mm, II_BC1F, MIPS_BRANCH_F>,
               BC1F_FM_MM<0x1c>, ISA_MIPS1_NOT_32R6_64R6;
 def BC1T_MM : MMRel, BC1F_FT<"bc1t", brtarget_mm, II_BC1T, MIPS_BRANCH_T>,
@@ -167,4 +162,77 @@ let AdditionalPredicates = [InMicroMips] in {
     def : LoadRegImmPat<LWC1_MM, f32, load>;
     def : StoreRegImmPat<SWC1_MM, f32>;
   }
+
+  // Floating point comparisons
+  multiclass C_COND_M_MM<string TypeStr, RegisterOperand RC, bits<2> fmt,
+                      InstrItinClass itin> {
+     def C_F_#NAME : C_COND_FT<"f", TypeStr, RC, itin>,
+                     C_COND_FM_MM<fmt, 0>;
+     def C_UN_#NAME : C_COND_FT<"un", TypeStr, RC, itin>,
+                      C_COND_FM_MM<fmt, 1>;
+     def C_EQ_#NAME : C_COND_FT<"eq", TypeStr, RC, itin>,
+                      C_COND_FM_MM<fmt, 2>;
+     def C_UEQ_#NAME : C_COND_FT<"ueq", TypeStr, RC, itin>,
+                       C_COND_FM_MM<fmt, 3>;
+     def C_OLT_#NAME : C_COND_FT<"olt", TypeStr, RC, itin>,
+                       C_COND_FM_MM<fmt, 4>;
+     def C_ULT_#NAME : C_COND_FT<"ult", TypeStr, RC, itin>,
+                       C_COND_FM_MM<fmt, 5>;
+     def C_OLE_#NAME : C_COND_FT<"ole", TypeStr, RC, itin>,
+                       C_COND_FM_MM<fmt, 6>;
+     def C_ULE_#NAME : C_COND_FT<"ule", TypeStr, RC, itin>,
+                       C_COND_FM_MM<fmt, 7>;
+     def C_SF_#NAME : C_COND_FT<"sf", TypeStr, RC, itin>,
+                      C_COND_FM_MM<fmt, 8>;
+     def C_NGLE_#NAME : C_COND_FT<"ngle", TypeStr, RC, itin>,
+                        C_COND_FM_MM<fmt, 9>;
+     def C_SEQ_#NAME : C_COND_FT<"seq", TypeStr, RC, itin>,
+                       C_COND_FM_MM<fmt, 10>;
+     def C_NGL_#NAME : C_COND_FT<"ngl", TypeStr, RC, itin>,
+                       C_COND_FM_MM<fmt, 11>;
+     def C_LT_#NAME : C_COND_FT<"lt", TypeStr, RC, itin>,
+                      C_COND_FM_MM<fmt, 12>;
+     def C_NGE_#NAME : C_COND_FT<"nge", TypeStr, RC, itin>,
+                       C_COND_FM_MM<fmt, 13>;
+     def C_LE_#NAME : C_COND_FT<"le", TypeStr, RC, itin>,
+                      C_COND_FM_MM<fmt, 14>;
+     def C_NGT_#NAME : C_COND_FT<"ngt", TypeStr, RC, itin>,
+                       C_COND_FM_MM<fmt, 15>;
+  }
+
+  defm S_MM : C_COND_M_MM<"s", FGR32Opnd, 0b00, II_C_CC_S>;
+  defm D32_MM : C_COND_M_MM<"d", AFGR64Opnd, 0b01, II_C_CC_D>, FGR_32;
+
+  // Floating point branch patterns
+  defm S_MM : FPBrcondPats<FGR32Opnd>, ISA_MIPS1_NOT_32R6_64R6;
+  defm D32_MM : FPBrcondPats<AFGR64Opnd>, FGR_32, ISA_MIPS1_NOT_32R6_64R6;
+
+  // Floating point setcc
+  defm S_MM : FPSetccPats<MOVT_I_MM, MOVF_I_MM, (LI16_MM 1), FGR32Opnd>;
+  defm D32_MM : FPSetccPats<MOVT_I_MM, MOVF_I_MM, (LI16_MM 1), AFGR64Opnd>,
+                FGR_32;
+
+  // Floating point select patterns
+  defm : FPSelectPats<FGR32Opnd, FGR32Opnd, "S_MM", MOVT_S, MOVF_S_MM>,
+         ISA_MIPS1_NOT_32R6_64R6;
+  defm : FPSelectPats<FGR32Opnd, AFGR64Opnd, "S_MM", MOVT_D32, MOVF_D32_MM>,
+         FGR_32, ISA_MIPS1_NOT_32R6_64R6;
+
+  defm : FPSelectPats<AFGR64Opnd, AFGR64Opnd, "D32_MM", MOVT_D32, MOVF_D32_MM>,
+         FGR_32, ISA_MIPS1_NOT_32R6_64R6;
+  defm : FPSelectPats<AFGR64Opnd, FGR32Opnd, "D32_MM", MOVT_S, MOVF_S_MM>,
+         FGR_32, ISA_MIPS1_NOT_32R6_64R6;
+
+  defm : FPSelectPats<FGR32Opnd, GPR32Opnd, "S_MM", MOVT_I, MOVF_I_MM>,
+         ISA_MIPS1_NOT_32R6_64R6;
+  defm : FPSelectPats<AFGR64Opnd, GPR32Opnd, "D32_MM", MOVT_I, MOVF_I_MM>,
+         FGR_32, ISA_MIPS1_NOT_32R6_64R6;
+}
+
+//===----------------------------------------------------------------------===//
+// Instruction aliases.
+//===----------------------------------------------------------------------===//
+let AdditionalPredicates = [InMicroMips] in {
+  defm S_MM : FPCAliases<FGR32Opnd, "s">;
+  defm D32_MM : FPCAliases<AFGR64Opnd, "d">;
 }

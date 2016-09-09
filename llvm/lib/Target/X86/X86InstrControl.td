@@ -323,11 +323,8 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
   def TAILJMPm64 : I<0xFF, MRM4m, (outs), (ins i64mem_TC:$dst),
                      "jmp{q}\t{*}$dst", [], IIC_JMP_MEM>;
 
-  // Win64 wants jumps leaving the function to have a REX_W prefix.
+  // Win64 wants indirect jumps leaving the function to have a REX_W prefix.
   let hasREX_WPrefix = 1 in {
-    def TAILJMPd64_REX : Ii32PCRel<0xE9, RawFrm, (outs),
-                                   (ins i64i32imm_pcrel:$dst),
-                                   "rex64 jmp\t$dst", [], IIC_JMP_REL>;
     def TAILJMPr64_REX : I<0xFF, MRM4r, (outs), (ins ptr_rc_tailcall:$dst),
                            "rex64 jmp{q}\t{*}$dst", [], IIC_JMP_MEM>;
 

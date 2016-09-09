@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
 
@@ -9,7 +9,7 @@
 ; SI-DAG: v_sub_f32_e32 [[SUB:v[0-9]+]], [[SX]], [[TRUNC]]
 ; SI-DAG: v_mov_b32_e32 [[VX:v[0-9]+]], [[SX]]
 ; SI: v_bfi_b32 [[COPYSIGN:v[0-9]+]], [[K]], 1.0, [[VX]]
-; SI: v_cmp_le_f32_e64 vcc, 0.5, |[[SUB]]|
+; SI: v_cmp_ge_f32_e64 vcc, |[[SUB]]|, 0.5
 ; SI: v_cndmask_b32_e32 [[SEL:v[0-9]+]], 0, [[VX]]
 ; SI: v_add_f32_e32 [[RESULT:v[0-9]+]], [[SEL]], [[TRUNC]]
 ; SI: buffer_store_dword [[RESULT]]

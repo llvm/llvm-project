@@ -460,8 +460,6 @@ public:
   bool hasPKU() const { return HasPKU; }
   bool hasMPX() const { return HasMPX; }
 
-  virtual bool isXRaySupported() const override { return is64Bit(); }
-
   bool isAtom() const { return X86ProcFamily == IntelAtom; }
   bool isSLM() const { return X86ProcFamily == IntelSLM; }
   bool useSoftFloat() const { return UseSoftFloat; }

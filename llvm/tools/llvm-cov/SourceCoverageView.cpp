@@ -29,7 +29,8 @@ void CoveragePrinter::StreamDestructor::operator()(raw_ostream *OS) const {
 }
 
 std::string CoveragePrinter::getOutputPath(StringRef Path, StringRef Extension,
-                                           bool InToplevel, bool Relative) {
+                                           bool InToplevel,
+                                           bool Relative) const {
   assert(Extension.size() && "The file extension may not be empty");
 
   SmallString<256> FullPath;
@@ -53,7 +54,7 @@ std::string CoveragePrinter::getOutputPath(StringRef Path, StringRef Extension,
 
 Expected<CoveragePrinter::OwnedStream>
 CoveragePrinter::createOutputStream(StringRef Path, StringRef Extension,
-                                    bool InToplevel) {
+                                    bool InToplevel) const {
   if (!Opts.hasOutputDirectory())
     return OwnedStream(&outs());
 

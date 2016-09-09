@@ -229,19 +229,16 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
 
   // Calculate the number of iterations ahead to prefetch
   CodeMetrics Metrics;
-  for (Loop::block_iterator I = L->block_begin(), IE = L->block_end();
-       I != IE; ++I) {
-
+  for (const auto BB : L->blocks()) {
     // If the loop already has prefetches, then assume that the user knows
     // what they are doing and don't add any more.
-    for (BasicBlock::iterator J = (*I)->begin(), JE = (*I)->end();
-         J != JE; ++J)
-      if (CallInst *CI = dyn_cast<CallInst>(J))
+    for (auto &I : *BB)
+      if (CallInst *CI = dyn_cast<CallInst>(&I))
         if (Function *F = CI->getCalledFunction())
           if (F->getIntrinsicID() == Intrinsic::prefetch)
             return MadeChange;
 
-    Metrics.analyzeBasicBlock(*I, *TTI, EphValues);
+    Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
   }
   unsigned LoopSize = Metrics.NumInsts;
   if (!LoopSize)
@@ -259,17 +256,15 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
                << L->getHeader()->getParent()->getName() << ": " << *L);
 
   SmallVector<std::pair<Instruction *, const SCEVAddRecExpr *>, 16> PrefLoads;
-  for (Loop::block_iterator I = L->block_begin(), IE = L->block_end();
-       I != IE; ++I) {
-    for (BasicBlock::iterator J = (*I)->begin(), JE = (*I)->end();
-        J != JE; ++J) {
+  for (const auto BB : L->blocks()) {
+    for (auto &I : *BB) {
       Value *PtrValue;
       Instruction *MemI;
 
-      if (LoadInst *LMemI = dyn_cast<LoadInst>(J)) {
+      if (LoadInst *LMemI = dyn_cast<LoadInst>(&I)) {
         MemI = LMemI;
         PtrValue = LMemI->getPointerOperand();
-      } else if (StoreInst *SMemI = dyn_cast<StoreInst>(J)) {
+      } else if (StoreInst *SMemI = dyn_cast<StoreInst>(&I)) {
         if (!PrefetchWrites) continue;
         MemI = SMemI;
         PtrValue = SMemI->getPointerOperand();
@@ -318,13 +313,13 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
 
       PrefLoads.push_back(std::make_pair(MemI, LSCEVAddRec));
 
-      Type *I8Ptr = Type::getInt8PtrTy((*I)->getContext(), PtrAddrSpace);
-      SCEVExpander SCEVE(*SE, J->getModule()->getDataLayout(), "prefaddr");
+      Type *I8Ptr = Type::getInt8PtrTy(BB->getContext(), PtrAddrSpace);
+      SCEVExpander SCEVE(*SE, I.getModule()->getDataLayout(), "prefaddr");
       Value *PrefPtrValue = SCEVE.expandCodeFor(NextLSCEV, I8Ptr, MemI);
 
       IRBuilder<> Builder(MemI);
-      Module *M = (*I)->getParent()->getParent();
-      Type *I32 = Type::getInt32Ty((*I)->getContext());
+      Module *M = BB->getParent()->getParent();
+      Type *I32 = Type::getInt32Ty(BB->getContext());
       Value *PrefetchFunc = Intrinsic::getDeclaration(M, Intrinsic::prefetch);
       Builder.CreateCall(
           PrefetchFunc,

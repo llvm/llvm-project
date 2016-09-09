@@ -286,22 +286,27 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       // satisfied.
       if (MI.getOpcode() == AMDGPU::S_ADD_I32 ||
           MI.getOpcode() == AMDGPU::S_MUL_I32) {
-        const MachineOperand &Dest = MI.getOperand(0);
-        const MachineOperand &Src0 = MI.getOperand(1);
-        const MachineOperand &Src1 = MI.getOperand(2);
+        const MachineOperand *Dest = &MI.getOperand(0);
+        MachineOperand *Src0 = &MI.getOperand(1);
+        MachineOperand *Src1 = &MI.getOperand(2);
+
+        if (!Src0->isReg() && Src1->isReg()) {
+          if (TII->commuteInstruction(MI, false, 1, 2))
+            std::swap(Src0, Src1);
+        }
 
         // FIXME: This could work better if hints worked with subregisters. If
         // we have a vector add of a constant, we usually don't get the correct
         // allocation due to the subregister usage.
-        if (TargetRegisterInfo::isVirtualRegister(Dest.getReg()) &&
-            Src0.isReg()) {
-          MRI.setRegAllocationHint(Dest.getReg(), 0, Src0.getReg());
-          MRI.setRegAllocationHint(Src0.getReg(), 0, Dest.getReg());
+        if (TargetRegisterInfo::isVirtualRegister(Dest->getReg()) &&
+            Src0->isReg()) {
+          MRI.setRegAllocationHint(Dest->getReg(), 0, Src0->getReg());
+          MRI.setRegAllocationHint(Src0->getReg(), 0, Dest->getReg());
           continue;
         }
 
-        if (Src0.isReg() && Src0.getReg() == Dest.getReg()) {
-          if (Src1.isImm() && isKImmOperand(TII, Src1)) {
+        if (Src0->isReg() && Src0->getReg() == Dest->getReg()) {
+          if (Src1->isImm() && isKImmOperand(TII, *Src1)) {
             unsigned Opc = (MI.getOpcode() == AMDGPU::S_ADD_I32) ?
               AMDGPU::S_ADDK_I32 : AMDGPU::S_MULK_I32;
 

@@ -11,11 +11,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "CoverageReport.h"
 #include "SourceCoverageViewHTML.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 
 using namespace llvm;
@@ -73,7 +75,7 @@ const char *BeginHeader =
 
 const char *CSSForCoverage =
     R"(.red {
-  background-color: #FFD0D0;
+  background-color: #ffd0d0;
 }
 .cyan {
   background-color: cyan;
@@ -109,6 +111,25 @@ pre {
 }
 table {
   border-collapse: collapse;
+}
+.light-row {
+  background: #ffffff;
+  border: 1px solid #dbdbdb;
+}
+.column-entry {
+  text-align: right;
+}
+.column-entry-yellow {
+  text-align: right;
+  background-color: #ffffd0;
+}
+.column-entry-red {
+  text-align: right;
+  background-color: #ffd0d0;
+}
+.column-entry-green {
+  text-align: right;
+  background-color: #d0ffd0;
 }
 .line-number {
   text-align: right;
@@ -284,16 +305,88 @@ void CoveragePrinterHTML::closeViewFile(OwnedStream OS) {
   emitEpilog(*OS.get());
 }
 
-Error CoveragePrinterHTML::createIndexFile(ArrayRef<StringRef> SourceFiles) {
+/// Emit column labels for the table in the index.
+static void emitColumnLabelsForIndex(raw_ostream &OS) {
+  SmallVector<std::string, 4> Columns;
+  for (const char *Label :
+       {"Filename", "Region Coverage", "Function Coverage", "Line Coverage"})
+    Columns.emplace_back(tag("td", Label, "column-entry"));
+  OS << tag("tr", join(Columns.begin(), Columns.end(), ""));
+}
+
+/// Render a file coverage summary (\p FCS) in a table row. If \p IsTotals is
+/// false, link the summary to \p SF.
+void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
+                                          const FileCoverageSummary &FCS,
+                                          bool IsTotals) const {
+  SmallVector<std::string, 4> Columns;
+
+  // Format a coverage triple and add the result to the list of columns.
+  auto AddCoverageTripleToColumn = [&Columns](unsigned Hit, unsigned Total,
+                                              float Pctg) {
+    std::string S;
+    {
+      raw_string_ostream RSO{S};
+      RSO << format("%*.2f", 7, Pctg) << "% (" << Hit << '/' << Total << ')';
+    }
+    const char *CellClass = "column-entry-yellow";
+    if (Pctg < 80.0)
+      CellClass = "column-entry-red";
+    else if (Hit == Total)
+      CellClass = "column-entry-green";
+    Columns.emplace_back(tag("td", tag("pre", S, "code"), CellClass));
+  };
+
+  // Simplify the display file path, and wrap it in a link if requested.
+  std::string Filename;
+  SmallString<128> LinkTextStr(sys::path::relative_path(FCS.Name));
+  sys::path::remove_dots(LinkTextStr, /*remove_dot_dots=*/true);
+  sys::path::native(LinkTextStr);
+  std::string LinkText = escape(LinkTextStr, Opts);
+  if (IsTotals) {
+    Filename = LinkText;
+  } else {
+    std::string LinkTarget =
+        escape(getOutputPath(SF, "html", /*InToplevel=*/false), Opts);
+    Filename = a(LinkTarget, LinkText);
+  }
+
+  Columns.emplace_back(tag("td", tag("pre", Filename, "code")));
+  AddCoverageTripleToColumn(
+      FCS.RegionCoverage.NumRegions - FCS.RegionCoverage.NotCovered,
+      FCS.RegionCoverage.NumRegions, FCS.RegionCoverage.getPercentCovered());
+  AddCoverageTripleToColumn(FCS.FunctionCoverage.Executed,
+                            FCS.FunctionCoverage.NumFunctions,
+                            FCS.FunctionCoverage.getPercentCovered());
+  AddCoverageTripleToColumn(
+      FCS.LineCoverage.NumLines - FCS.LineCoverage.NotCovered,
+      FCS.LineCoverage.NumLines, FCS.LineCoverage.getPercentCovered());
+
+  OS << tag("tr", join(Columns.begin(), Columns.end(), ""), "light-row");
+}
+
+Error CoveragePrinterHTML::createIndexFile(
+    ArrayRef<StringRef> SourceFiles,
+    const coverage::CoverageMapping &Coverage) {
+  // Emit the default stylesheet.
+  auto CSSOrErr = createOutputStream("style", "css", /*InToplevel=*/true);
+  if (Error E = CSSOrErr.takeError())
+    return E;
+
+  OwnedStream CSS = std::move(CSSOrErr.get());
+  CSS->operator<<(CSSForCoverage);
+
+  // Emit a file index along with some coverage statistics.
   auto OSOrErr = createOutputStream("index", "html", /*InToplevel=*/true);
   if (Error E = OSOrErr.takeError())
     return E;
   auto OS = std::move(OSOrErr.get());
   raw_ostream &OSRef = *OS.get();
 
-  // Emit a table containing links to reports for each file in the covmapping.
   assert(Opts.hasOutputDirectory() && "No output directory for index file");
   emitPrelude(OSRef, Opts, getPathToStyle(""));
+
+  // Emit some basic information about the coverage report.
   if (Opts.hasProjectTitle())
     OSRef << BeginProjectTitleDiv
           << tag("span", escape(Opts.ProjectTitle, Opts)) << EndProjectTitleDiv;
@@ -305,27 +398,18 @@ Error CoveragePrinterHTML::createIndexFile(ArrayRef<StringRef> SourceFiles) {
           << tag("span", escape(Opts.CreatedTimeStr, Opts))
           << EndCreatedTimeDiv;
   OSRef << LineBreak;
+
+  // Emit a table containing links to reports for each file in the covmapping.
+  CoverageReport Report(Opts, Coverage);
   OSRef << BeginCenteredDiv << BeginTable;
-  OSRef << BeginSourceNameDiv << "Index" << EndSourceNameDiv;
-  for (StringRef SF : SourceFiles) {
-    SmallString<128> LinkTextStr(sys::path::relative_path(SF));
-    sys::path::remove_dots(LinkTextStr, /*remove_dot_dots=*/true);
-    sys::path::native(LinkTextStr);
-    std::string LinkText = escape(sys::path::relative_path(LinkTextStr), Opts);
-    std::string LinkTarget =
-        escape(getOutputPath(SF, "html", /*InToplevel=*/false), Opts);
-    OSRef << tag("tr", tag("td", tag("pre", a(LinkTarget, LinkText), "code")));
-  }
+  emitColumnLabelsForIndex(OSRef);
+  FileCoverageSummary Totals("TOTALS");
+  auto FileReports = Report.prepareFileReports(Totals, SourceFiles);
+  for (unsigned I = 0, E = FileReports.size(); I < E; ++I)
+    emitFileSummary(OSRef, SourceFiles[I], FileReports[I]);
+  emitFileSummary(OSRef, "Totals", Totals, /*IsTotals=*/true);
   OSRef << EndTable << EndCenteredDiv;
   emitEpilog(OSRef);
-
-  // Emit the default stylesheet.
-  auto CSSOrErr = createOutputStream("style", "css", /*InToplevel=*/true);
-  if (Error E = CSSOrErr.takeError())
-    return E;
-
-  OwnedStream CSS = std::move(CSSOrErr.get());
-  CSS->operator<<(CSSForCoverage);
 
   return Error::success();
 }
@@ -415,26 +499,21 @@ void SourceCoverageViewHTML::renderLine(
   //    snippet 3, and so on.
 
   Optional<std::string> Color;
-  SmallVector<std::pair<unsigned, unsigned>, 4> HighlightedRanges;
+  SmallVector<std::pair<unsigned, unsigned>, 2> HighlightedRanges;
   auto Highlight = [&](const std::string &Snippet, unsigned LC, unsigned RC) {
-    if (getOptions().Debug) {
-      if (!HighlightedRanges.empty() &&
-          HighlightedRanges.back().second == LC - 1) {
-        HighlightedRanges.back().second = RC;
-      } else
-        HighlightedRanges.emplace_back(LC, RC);
-    }
+    if (getOptions().Debug)
+      HighlightedRanges.emplace_back(LC, RC);
     return tag("span", Snippet, Color.getValue());
   };
 
   auto CheckIfUncovered = [](const coverage::CoverageSegment *S) {
-    return S && (S->HasCount && S->Count == 0);
+    return S && S->HasCount && S->Count == 0;
   };
 
-  if (CheckIfUncovered(WrappedSegment) ||
-      CheckIfUncovered(Segments.empty() ? nullptr : Segments.front())) {
+  if (CheckIfUncovered(WrappedSegment)) {
     Color = "red";
-    Snippets[0] = Highlight(Snippets[0], 0, Snippets[0].size());
+    if (!Snippets[0].empty())
+      Snippets[0] = Highlight(Snippets[0], 1, 1 + Snippets[0].size());
   }
 
   for (unsigned I = 0, E = Segments.size(); I < E; ++I) {
@@ -452,16 +531,15 @@ void SourceCoverageViewHTML::renderLine(
   }
 
   if (Color.hasValue() && Segments.empty())
-    Snippets.back() = Highlight(Snippets.back(), Snippets[0].size(), 0);
+    Snippets.back() = Highlight(Snippets.back(), 1, 1 + Snippets.back().size());
 
   if (getOptions().Debug) {
     for (const auto &Range : HighlightedRanges) {
-      errs() << "Highlighted line " << LineNo << ", " << Range.first + 1
-             << " -> ";
+      errs() << "Highlighted line " << LineNo << ", " << Range.first << " -> ";
       if (Range.second == 0)
         errs() << "?";
       else
-        errs() << Range.second + 1;
+        errs() << Range.second;
       errs() << "\n";
     }
   }

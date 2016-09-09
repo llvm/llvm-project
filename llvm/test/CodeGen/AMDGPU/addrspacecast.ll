@@ -11,7 +11,7 @@
 ; HSA-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
 ; HSA-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 
-; HSA-DAG: v_cmp_ne_i32_e64 vcc, -1, [[PTR]]
+; HSA-DAG: v_cmp_ne_i32_e64 vcc, [[PTR]], -1
 ; HSA-DAG: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]]
 ; HSA-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
 ; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
@@ -34,7 +34,7 @@ define void @use_group_to_flat_addrspacecast(i32 addrspace(3)* %ptr) #0 {
 ; HSA-DAG: v_mov_b32_e32 [[VAPERTURE:v[0-9]+]], [[APERTURE]]
 ; HSA-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 
-; HSA-DAG: v_cmp_ne_i32_e64 vcc, -1, [[PTR]]
+; HSA-DAG: v_cmp_ne_i32_e64 vcc, [[PTR]], -1
 ; HSA-DAG: v_cndmask_b32_e32 v[[HI:[0-9]+]], 0, [[VAPERTURE]]
 ; HSA-DAG: v_cndmask_b32_e32 v[[LO:[0-9]+]], 0, [[VPTR]]
 ; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
@@ -79,7 +79,7 @@ define void @use_constant_to_flat_addrspacecast(i32 addrspace(2)* %ptr) #0 {
 ; HSA: enable_sgpr_queue_ptr = 0
 
 ; HSA: s_load_dwordx2 s{{\[}}[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]{{\]}}
-; HSA-DAG: v_cmp_ne_i64_e64 vcc, 0, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}
+; HSA-DAG: v_cmp_ne_i64_e64 vcc, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], s[[PTR_LO]]
 ; HSA-DAG: v_cndmask_b32_e32 [[CASTPTR:v[0-9]+]], -1, v[[VPTR_LO]]
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 0{{$}}
@@ -96,7 +96,7 @@ define void @use_flat_to_group_addrspacecast(i32 addrspace(4)* %ptr) #0 {
 ; HSA: enable_sgpr_queue_ptr = 0
 
 ; HSA: s_load_dwordx2 s{{\[}}[[PTR_LO:[0-9]+]]:[[PTR_HI:[0-9]+]]{{\]}}
-; HSA-DAG: v_cmp_ne_i64_e64 vcc, 0, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}
+; HSA-DAG: v_cmp_ne_i64_e64 vcc, s{{\[}}[[PTR_LO]]:[[PTR_HI]]{{\]}}, 0{{$}}
 ; HSA-DAG: v_mov_b32_e32 v[[VPTR_LO:[0-9]+]], s[[PTR_LO]]
 ; HSA-DAG: v_cndmask_b32_e32 [[CASTPTR:v[0-9]+]], -1, v[[VPTR_LO]]
 ; HSA-DAG: v_mov_b32_e32 v[[K:[0-9]+]], 0{{$}}

@@ -463,6 +463,11 @@ std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
       Phdr.add(Out<ELFT>::ElfHeader);
     if (Cmd.HasPhdrs)
       Phdr.add(Out<ELFT>::ProgramHeaders);
+
+    if (Cmd.LMAExpr) {
+      Phdr.H.p_paddr = Cmd.LMAExpr(0);
+      Phdr.HasLMA = true;
+    }
   }
 
   // Add output sections to program headers.
@@ -860,7 +865,8 @@ void ScriptParser::readPhdrs() {
   expect("{");
   while (!Error && !skip("}")) {
     StringRef Tok = next();
-    Opt.PhdrsCommands.push_back({Tok, PT_NULL, false, false, UINT_MAX});
+    Opt.PhdrsCommands.push_back(
+        {Tok, PT_NULL, false, false, UINT_MAX, nullptr});
     PhdrsCommand &PhdrCmd = Opt.PhdrsCommands.back();
 
     PhdrCmd.Type = readPhdrType();
@@ -872,6 +878,8 @@ void ScriptParser::readPhdrs() {
         PhdrCmd.HasFilehdr = true;
       else if (Tok == "PHDRS")
         PhdrCmd.HasPhdrs = true;
+      else if (Tok == "AT")
+        PhdrCmd.LMAExpr = readParenExpr();
       else if (Tok == "FLAGS") {
         expect("(");
         // Passing 0 for the value of dot is a bit of a hack. It means that

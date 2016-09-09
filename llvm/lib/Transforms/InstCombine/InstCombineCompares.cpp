@@ -1431,9 +1431,9 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
         // special case, check to see if this means that the result is always
         // true or false now.
         if (Cmp.getPredicate() == ICmpInst::ICMP_EQ)
-          return replaceInstUsesWith(Cmp, Builder->getFalse());
+          return replaceInstUsesWith(Cmp, ConstantInt::getFalse(Cmp.getType()));
         if (Cmp.getPredicate() == ICmpInst::ICMP_NE)
-          return replaceInstUsesWith(Cmp, Builder->getTrue());
+          return replaceInstUsesWith(Cmp, ConstantInt::getTrue(Cmp.getType()));
       } else {
         Cmp.setOperand(1, ConstantInt::get(And->getType(), NewCst));
         APInt NewAndCst = IsShl ? C2->lshr(*C3) : C2->shl(*C3);

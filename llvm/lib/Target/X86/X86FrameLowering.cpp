@@ -1400,9 +1400,9 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
 
 bool X86FrameLowering::canUseLEAForSPInEpilogue(
     const MachineFunction &MF) const {
-  // We can't use LEA instructions for adjusting the stack pointer if this is a
-  // leaf function in the Win64 ABI.  Only ADD instructions may be used to
-  // deallocate the stack.
+  // We can't use LEA instructions for adjusting the stack pointer if we don't
+  // have a frame pointer in the Win64 ABI.  Only ADD instructions may be used
+  // to deallocate the stack.
   // This means that we can use LEA for SP in two situations:
   // 1. We *aren't* using the Win64 ABI which means we are free to use LEA.
   // 2. We *have* a frame pointer which means we are permitted to use LEA.

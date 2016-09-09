@@ -722,6 +722,23 @@ class ADDS_FM_MM<bits<2> fmt, bits<8> funct> : MMArch {
   list<dag> Pattern = [];
 }
 
+class C_COND_FM_MM<bits<2> fmt, bits<4> cond> : MMArch {
+  bits <5> ft;
+  bits <5> fs;
+  bits <3> cc;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b010101;
+  let Inst{25-21} = ft;
+  let Inst{20-16} = fs;
+  let Inst{15-13} = cc;
+  let Inst{12} = 0;
+  let Inst{11-10} = fmt;
+  let Inst{9-6} = cond;
+  let Inst{5-0} = 0b111100;
+}
+
 class LWXC1_FM_MM<bits<9> funct> : MMArch {
   bits<5> fd;
   bits<5> base;

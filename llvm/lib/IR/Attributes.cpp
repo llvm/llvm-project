@@ -1115,6 +1115,10 @@ bool AttributeSet::hasFnAttribute(Attribute::AttrKind Kind) const {
   return pImpl && pImpl->hasFnAttribute(Kind);
 }
 
+bool AttributeSet::hasFnAttribute(StringRef Kind) const {
+  return hasAttribute(AttributeSet::FunctionIndex, Kind);
+}
+
 bool AttributeSet::hasAttrSomewhere(Attribute::AttrKind Attr,
                                     unsigned *Index) const {
   if (!pImpl) return false;

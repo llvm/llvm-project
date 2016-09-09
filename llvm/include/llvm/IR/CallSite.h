@@ -313,19 +313,15 @@ public:
 
   /// getAttributes/setAttributes - get or set the parameter attributes of
   /// the call.
-  const AttributeSet &getAttributes() const {
+  AttributeSet getAttributes() const {
     CALLSITE_DELEGATE_GETTER(getAttributes());
   }
-  void setAttributes(const AttributeSet &PAL) {
+  void setAttributes(AttributeSet PAL) {
     CALLSITE_DELEGATE_SETTER(setAttributes(PAL));
   }
 
   void addAttribute(unsigned i, Attribute::AttrKind Kind) {
     CALLSITE_DELEGATE_SETTER(addAttribute(i, Kind));
-  }
-
-  void addAttribute(unsigned i, StringRef Kind, StringRef Value) {
-    CALLSITE_DELEGATE_SETTER(addAttribute(i, Kind, Value));
   }
 
   void addAttribute(unsigned i, Attribute Attr) {
@@ -338,10 +334,6 @@ public:
 
   void removeAttribute(unsigned i, StringRef Kind) {
     CALLSITE_DELEGATE_SETTER(removeAttribute(i, Kind));
-  }
-
-  void removeAttribute(unsigned i, Attribute Attr) {
-    CALLSITE_DELEGATE_SETTER(removeAttribute(i, Attr));
   }
 
   /// \brief Return true if this function has the given attribute.

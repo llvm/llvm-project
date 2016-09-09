@@ -57,8 +57,11 @@ template <> struct MappingTraits<codeview::MemberPointerInfo> {
   static void mapping(IO &IO, codeview::MemberPointerInfo &Obj);
 };
 
-template <> struct MappingTraits<codeview::CVType> {
-  static void mapping(IO &IO, codeview::CVType &Obj);
+template <>
+struct MappingContextTraits<codeview::CVType,
+                            codeview::yaml::YamlTypeDumperCallbacks> {
+  static void mapping(IO &IO, codeview::CVType &Obj,
+                      codeview::yaml::YamlTypeDumperCallbacks &Context);
 };
 
 template <> struct ScalarEnumerationTraits<codeview::TypeLeafKind> {
@@ -74,6 +77,13 @@ template <> struct ScalarEnumerationTraits<codeview::TypeLeafKind> {
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
+
+template <>
+struct MappingContextTraits<codeview::FieldListRecord,
+                            codeview::yaml::YamlTypeDumperCallbacks> {
+  static void mapping(IO &IO, codeview::FieldListRecord &Record,
+                      codeview::yaml::YamlTypeDumperCallbacks &Context);
+};
 }
 }
 

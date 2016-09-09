@@ -105,6 +105,15 @@ namespace SIOutMods {
   };
 }
 
+namespace AMDGPUAsmVariants {
+  enum {
+    DEFAULT = 0,
+    VOP3 = 1,
+    SDWA = 2,
+    DPP = 3
+  };
+}
+
 namespace llvm {
 namespace AMDGPU {
 namespace EncValues { // Encoding values of enum9/8/7 operands
