@@ -71,7 +71,9 @@ for.end:
   %tmp4 = phi i32 [ %tmp3, %for.body ]
   ret i32 %tmp4
 }
+
 ; CHECK-LABEL: interleaved_access_forward
+; INTER-LABEL: interleaved_access_forward
 ;
 ; Check that a consecutive-like pointer used by a forward interleaved group is
 ; recognized as uniform and remains uniform after vectorization. When
@@ -127,6 +129,7 @@ for.end:
 }
 
 ; CHECK-LABEL: interleaved_access_reverse
+; INTER-LABEL: interleaved_access_reverse
 ;
 ; Check that a consecutive-like pointer used by a reverse interleaved group is
 ; recognized as uniform and remains uniform after vectorization. When
@@ -185,7 +188,7 @@ for.end:
   ret i32 %tmp14
 }
 
-; CHECK-LABEL: predicated_store
+; INTER-LABEL: predicated_store
 ;
 ; Check that a consecutive-like pointer used by a forward interleaved group and
 ; scalarized store is not recognized as uniform and is not uniform after

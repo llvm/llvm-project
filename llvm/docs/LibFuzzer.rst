@@ -238,6 +238,9 @@ The most important command line options are:
   If set to 1, any corpus inputs from the 2nd, 3rd etc. corpus directories
   that trigger new code coverage will be merged into the first corpus
   directory.  Defaults to 0. This flag can be used to minimize a corpus.
+``-minimize_crash``
+  If 1, minimizes the provided crash input.
+  Use with -runs=N or -max_total_time=N to limit the number attempts.
 ``-reload``
   If set to 1 (the default), the corpus directory is re-read periodically to
   check for new inputs; this allows detection of new inputs that were discovered

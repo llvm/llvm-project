@@ -672,6 +672,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case FriendTemplate:
     case AccessSpec:
     case LinkageSpec:
+    case Export:
     case FileScopeAsm:
     case StaticAssert:
     case ObjCPropertyImpl:
@@ -957,7 +958,7 @@ bool DeclContext::isDependentContext() const {
 bool DeclContext::isTransparentContext() const {
   if (DeclKind == Decl::Enum)
     return !cast<EnumDecl>(this)->isScoped();
-  else if (DeclKind == Decl::LinkageSpec)
+  else if (DeclKind == Decl::LinkageSpec || DeclKind == Decl::Export)
     return true;
 
   return false;
@@ -996,6 +997,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::TranslationUnit:
   case Decl::ExternCContext:
   case Decl::LinkageSpec:
+  case Decl::Export:
   case Decl::Block:
   case Decl::Captured:
   case Decl::OMPDeclareReduction:
@@ -1408,8 +1410,8 @@ NamedDecl *const DeclContextLookupResult::SingleElementDummyList = nullptr;
 
 DeclContext::lookup_result
 DeclContext::lookup(DeclarationName Name) const {
-  assert(DeclKind != Decl::LinkageSpec &&
-         "Should not perform lookups into linkage specs!");
+  assert(DeclKind != Decl::LinkageSpec && DeclKind != Decl::Export &&
+         "should not perform lookups into transparent contexts");
 
   // If we have an external source, ensure that any later redeclarations of this
   // context have been loaded, since they may add names to the result of this
@@ -1472,8 +1474,8 @@ DeclContext::lookup(DeclarationName Name) const {
 
 DeclContext::lookup_result
 DeclContext::noload_lookup(DeclarationName Name) {
-  assert(DeclKind != Decl::LinkageSpec &&
-         "Should not perform lookups into linkage specs!");
+  assert(DeclKind != Decl::LinkageSpec && DeclKind != Decl::Export &&
+         "should not perform lookups into transparent contexts");
 
   DeclContext *PrimaryContext = getPrimaryContext();
   if (PrimaryContext != this)

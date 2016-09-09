@@ -313,7 +313,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     link<ELF64BE>(Args);
     return;
   default:
-    error("-m or at least a .o file required");
+    error("target emulation unknown: -m or at least one .o file required");
   }
 }
 

@@ -1242,6 +1242,14 @@ static bool HoistThenElseCodeToIf(BranchInst *BI,
                            LLVMContext::MD_dereferenceable_or_null,
                            LLVMContext::MD_mem_parallel_loop_access};
     combineMetadata(I1, I2, KnownIDs);
+
+    // If the debug loc for I1 and I2 are different, as we are combining them
+    // into one instruction, we do not want to select debug loc randomly from 
+    // I1 or I2. Instead, we set the 0-line DebugLoc to note that we do not
+    // know the debug loc of the hoisted instruction.
+    if (!isa<CallInst>(I1) &&  I1->getDebugLoc() != I2->getDebugLoc())
+      I1->setDebugLoc(DebugLoc());
+ 
     I2->eraseFromParent();
     Changed = true;
 

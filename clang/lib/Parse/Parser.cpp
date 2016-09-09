@@ -770,11 +770,17 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
                                               : Sema::PCC_Namespace);
     cutOffParsing();
     return nullptr;
+  case tok::kw_export:
+    if (getLangOpts().ModulesTS) {
+      SingleDecl = ParseExportDeclaration();
+      break;
+    }
+    // This must be 'export template'. Parse it so we can diagnose our lack
+    // of support.
   case tok::kw_using:
   case tok::kw_namespace:
   case tok::kw_typedef:
   case tok::kw_template:
-  case tok::kw_export:    // As in 'export template'
   case tok::kw_static_assert:
   case tok::kw__Static_assert:
     // A function definition cannot start with any of these keywords.

@@ -5892,9 +5892,7 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
   if (Ctx && Ctx->isExternCContext())
     return Diag(TemplateParams->getTemplateLoc(), diag::err_template_linkage)
              << TemplateParams->getSourceRange();
-
-  while (Ctx && isa<LinkageSpecDecl>(Ctx))
-    Ctx = Ctx->getParent();
+  Ctx = Ctx->getRedeclContext();
 
   // C++ [temp]p2:
   //   A template-declaration can appear only as a namespace scope or

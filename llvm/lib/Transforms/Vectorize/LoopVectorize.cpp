@@ -5388,9 +5388,9 @@ void LoopVectorizationLegality::collectLoopUniforms() {
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
 
-      // If the pointer operand is not consecutive-like, there's nothing to do.
+      // If there's no pointer operand, there's nothing to do.
       auto *Ptr = dyn_cast_or_null<Instruction>(getPointerOperand(&I));
-      if (!Ptr || isUniform(Ptr) || !hasConsecutiveLikePtrOperand(&I))
+      if (!Ptr)
         continue;
 
       // Ensure the memory instruction will not be scalarized, making its
@@ -5398,9 +5398,9 @@ void LoopVectorizationLegality::collectLoopUniforms() {
       if (memoryInstructionMustBeScalarized(&I))
         PossibleNonUniformPtrs.insert(Ptr);
 
-      // If the memory instruction will be vectorized, its consecutive-like
-      // pointer operand should remain uniform.
-      else
+      // If the memory instruction will be vectorized and its pointer operand
+      // is consecutive-like, the pointer operand should remain uniform.
+      else if (hasConsecutiveLikePtrOperand(&I))
         ConsecutiveLikePtrs.insert(Ptr);
     }
 

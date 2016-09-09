@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -477,7 +478,7 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
   }
 
   this->initStringTable();
-  SoName = this->getName();
+  SoName = sys::path::filename(this->getName());
 
   if (!DynamicSec)
     return;

@@ -109,9 +109,8 @@ NodeList Liveness::getAllReachingDefs(RegisterRef RefRR,
       continue;
     // Stop at the covering/overwriting def of the initial register reference.
     RegisterRef RR = TA.Addr->getRegRef();
-    if (RAI.covers(RR, RefRR))
-      if (!DFG.IsPreservingDef(TA))
-        continue;
+    if (!DFG.IsPreservingDef(TA) && RAI.covers(RR, RefRR))
+      continue;
     // Get the next level of reaching defs. This will include multiple
     // reaching defs for shadows.
     for (auto S : DFG.getRelatedRefs(TA.Addr->getOwner(DFG), TA))
@@ -336,13 +335,6 @@ void Liveness::computePhiInfo() {
   std::map<NodeId,std::map<NodeId,RegisterSet>> PhiUp;
   std::vector<NodeId> PhiUQ;  // Work list of phis for upward propagation.
 
-  auto isEntryPhi = [this] (NodeId P) -> bool {
-    auto PA = DFG.addr<PhiNode*>(P);
-    NodeAddr<BlockNode*> BA = PA.Addr->getOwner(DFG);
-    MachineBasicBlock *BB = BA.Addr->getCode();
-    return BB == &BB->getParent()->front();
-  };
-
   // Go over all phis.
   for (NodeAddr<PhiNode*> PhiA : Phis) {
     // Go over all defs and collect the reached uses that are non-phi uses
@@ -440,38 +432,31 @@ void Liveness::computePhiInfo() {
     // the set of registers defined between this phi (PhiA) and the owner phi
     // of the reaching def.
     NodeSet SeenUses;
+
     for (auto I : PhiRefs) {
       if (!DFG.IsRef<NodeAttrs::Use>(I) || SeenUses.count(I.Id))
         continue;
       NodeAddr<UseNode*> UA = I;
-      std::map<NodeId,RegisterSet> &PUM = PhiUp[UA.Id];
-      RegisterSet DefRRs;
-      NodeId RP = 0;  // Phi node reached upwards.
+
+      // Given a phi use UA, traverse all related phi uses (including UA).
+      // The related phi uses may reach different phi nodes or may reach the
+      // same phi node. If multiple uses reach the same phi P, the intervening
+      // defs must be accumulated for all such uses. To group all such uses
+      // into one set, map their node ids to the first use id that reaches P.
+      std::map<NodeId,NodeId> FirstUse; // Phi reached up -> first phi use.
 
       for (NodeAddr<UseNode*> VA : DFG.getRelatedRefs(PhiA, UA)) {
         SeenUses.insert(VA.Id);
+        RegisterSet DefRRs;
         for (NodeAddr<DefNode*> DA : getAllReachingDefs(VA)) {
           if (DA.Addr->getFlags() & NodeAttrs::PhiRef) {
-            // For all related phi uses, if they are reached by a phi def,
-            // all the reaching defs must belong to the same phi node.
-            // The only exception to that are the function entry phis, but
-            // are not playing any role in the subsequent propagation.
-            NodeId P = DA.Addr->getOwner(DFG).Id;
-            if (RP == 0)
-              RP = P;
-            assert(P == RP || (isEntryPhi(P) && isEntryPhi(RP)));
-          } else
-            DefRRs.insert(DA.Addr->getRegRef());
+            NodeId RP = DA.Addr->getOwner(DFG).Id;
+            NodeId FU = FirstUse.insert({RP,VA.Id}).first->second;
+            PhiUp[FU][RP].insert(DefRRs.begin(), DefRRs.end());
+          }
+          DefRRs.insert(DA.Addr->getRegRef());
         }
       }
-      // Do not add reaching information for entry phis. The data collection
-      // above was done under the assumption that registers on all phis
-      // contain all actual data-flow (i.e. a phi for R0 will not convey
-      // data-flow information for D0). This is not true for entry phis.
-      // They are not participating in the propagation anyway, so that is
-      // not a problem.
-      if (RP && !isEntryPhi(RP))
-        PUM[RP] = DefRRs;
     }
   }
 

@@ -1538,8 +1538,8 @@ bool LookupResult::isVisibleSlow(Sema &SemaRef, NamedDecl *D) {
   // If this declaration is not at namespace scope nor module-private,
   // then it is visible if its lexical parent has a visible definition.
   DeclContext *DC = D->getLexicalDeclContext();
-  if (!D->isModulePrivate() &&
-      DC && !DC->isFileContext() && !isa<LinkageSpecDecl>(DC)) {
+  if (!D->isModulePrivate() && DC && !DC->isFileContext() &&
+      !isa<LinkageSpecDecl>(DC) && !isa<ExportDecl>(DC)) {
     // For a parameter, check whether our current template declaration's
     // lexical context is visible, not whether there's some other visible
     // definition of it, because parameters aren't "within" the definition.

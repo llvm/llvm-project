@@ -15422,6 +15422,36 @@ void Sema::createImplicitModuleImportForErrorRecovery(SourceLocation Loc,
   VisibleModules.setVisible(Mod, Loc);
 }
 
+/// We have parsed the start of an export declaration, including the '{'
+/// (if present).
+Decl *Sema::ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
+                                 SourceLocation LBraceLoc) {
+  // FIXME: C++ Modules TS:
+  //   An export-declaration [...] shall not contain more than one
+  //   export keyword.
+  //
+  // The intent here is that an export-declaration cannot appear within another
+  // export-declaration.
+
+  ExportDecl *D = ExportDecl::Create(Context, CurContext, ExportLoc);
+  CurContext->addDecl(D);
+  PushDeclContext(S, D);
+  return D;
+}
+
+/// Complete the definition of an export declaration.
+Decl *Sema::ActOnFinishExportDecl(Scope *S, Decl *D, SourceLocation RBraceLoc) {
+  auto *ED = cast<ExportDecl>(D);
+  if (RBraceLoc.isValid())
+    ED->setRBraceLoc(RBraceLoc);
+
+  // FIXME: Diagnose export of internal-linkage declaration (including
+  // anonymous namespace).
+
+  PopDeclContext();
+  return D;
+}
+
 void Sema::ActOnPragmaRedefineExtname(IdentifierInfo* Name,
                                       IdentifierInfo* AliasName,
                                       SourceLocation PragmaLoc,
