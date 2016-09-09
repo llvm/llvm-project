@@ -133,12 +133,14 @@ struct StackAddressDescription {
   uptr tid;
   uptr offset;
   uptr frame_pc;
+  uptr access_size;
   const char *frame_descr;
 
-  void Print(uptr access_size = 1) const;
+  void Print() const;
 };
 
-bool GetStackAddressInformation(uptr addr, StackAddressDescription *descr);
+bool GetStackAddressInformation(uptr addr, uptr access_size,
+                                StackAddressDescription *descr);
 
 struct GlobalAddressDescription {
   uptr addr;
@@ -146,12 +148,14 @@ struct GlobalAddressDescription {
   static const int kMaxGlobals = 4;
   __asan_global globals[kMaxGlobals];
   u32 reg_sites[kMaxGlobals];
+  uptr access_size;
   u8 size;
 
-  void Print(uptr access_size = 1, const char *bug_type = "") const;
+  void Print(const char *bug_type = "") const;
 };
 
-bool GetGlobalAddressInformation(uptr addr, GlobalAddressDescription *descr);
+bool GetGlobalAddressInformation(uptr addr, uptr access_size,
+                                 GlobalAddressDescription *descr);
 bool DescribeAddressIfGlobal(uptr addr, uptr access_size, const char *bug_type);
 
 // General function to describe an address. Will try to describe the address as
