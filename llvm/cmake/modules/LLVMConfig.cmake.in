@@ -62,8 +62,9 @@ set(LLVM_TOOLS_BINARY_DIR "@LLVM_CONFIG_TOOLS_BINARY_DIR@")
 set(LLVM_TOOLS_INSTALL_DIR "@LLVM_TOOLS_INSTALL_DIR@")
 
 if(NOT TARGET LLVMSupport)
-  set(LLVM_EXPORTED_TARGETS "@LLVM_EXPORTS@")
+  set(LLVM_EXPORTED_TARGETS "@LLVM_CONFIG_EXPORTS@")
   include("@LLVM_CONFIG_EXPORTS_FILE@")
+  @llvm_config_include_buildtree_only_exports@
 endif()
 
 include(${LLVM_CMAKE_DIR}/LLVM-Config.cmake)
