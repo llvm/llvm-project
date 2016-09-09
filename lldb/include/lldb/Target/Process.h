@@ -50,6 +50,8 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/lldb-private.h"
 
+#include "llvm/ADT/ArrayRef.h"
+
 namespace lldb_private {
 
 template <typename B, typename S> struct Range;
@@ -2645,6 +2647,9 @@ public:
   //------------------------------------------------------------------
   virtual bool GetModuleSpec(const FileSpec &module_file_spec,
                              const ArchSpec &arch, ModuleSpec &module_spec);
+
+  virtual void PrefetchModuleSpecs(llvm::ArrayRef<FileSpec> module_file_specs,
+                                   const llvm::Triple &triple) {}
 
   //------------------------------------------------------------------
   /// Try to find the load address of a file.

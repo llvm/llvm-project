@@ -90,6 +90,9 @@ public:
     SectionType
     GetSectionType ();
 
+    uint32_t
+    GetPermissions() const;
+
     %feature("docstring", "
     //------------------------------------------------------------------
     /// Return the size of a target's byte represented by this section

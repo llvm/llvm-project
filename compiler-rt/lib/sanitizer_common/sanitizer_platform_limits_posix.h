@@ -617,21 +617,13 @@ namespace __sanitizer {
 
   // Linux system headers define the 'sa_handler' and 'sa_sigaction' macros.
   struct __sanitizer_kernel_sigaction_t {
-#if SANITIZER_MIPS
-    unsigned long sa_flags;
-#endif
     union {
       void (*handler)(int signo);
       void (*sigaction)(int signo, void *info, void *ctx);
     };
-#if !SANITIZER_MIPS
     unsigned long sa_flags;
     void (*sa_restorer)(void);
-#endif
     __sanitizer_kernel_sigset_t sa_mask;
-#if SANITIZER_MIPS
-    void (*sa_restorer)(void);
-#endif
   };
 
   extern uptr sig_ign;

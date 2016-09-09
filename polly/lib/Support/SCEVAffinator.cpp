@@ -53,7 +53,8 @@ static bool isPreciseTruncate(unsigned Width) {
 }
 
 /// Add the number of basic sets in @p Domain to @p User
-static isl_stat addNumBasicSets(isl_set *Domain, isl_aff *Aff, void *User) {
+static isl_stat addNumBasicSets(__isl_take isl_set *Domain,
+                                __isl_take isl_aff *Aff, void *User) {
   auto *NumBasicSets = static_cast<unsigned *>(User);
   *NumBasicSets += isl_set_n_basic_set(Domain);
   isl_set_free(Domain);

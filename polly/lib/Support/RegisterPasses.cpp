@@ -24,6 +24,7 @@
 #include "polly/CodeGen/CodeGeneration.h"
 #include "polly/CodeGen/CodegenCleanup.h"
 #include "polly/DependenceInfo.h"
+#include "polly/FlattenSchedule.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/PolyhedralInfo.h"
@@ -180,6 +181,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeScopInfoRegionPassPass(Registry);
   initializeScopInfoWrapperPassPass(Registry);
   initializeCodegenCleanupPass(Registry);
+  initializeFlattenSchedulePass(Registry);
 }
 
 /// Register Polly passes such that they form a polyhedral optimizer.

@@ -20,3 +20,4 @@ function(add_polly_unittest test_name)
 endfunction()
 
 add_subdirectory(Isl)
+add_subdirectory(Flatten)

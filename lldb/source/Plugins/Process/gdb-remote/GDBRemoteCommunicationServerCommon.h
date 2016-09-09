@@ -86,6 +86,8 @@ protected:
 
   PacketResult Handle_qModuleInfo(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_jModulesInfo(StringExtractorGDBRemote &packet);
+
   PacketResult Handle_qPlatform_shell(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qPlatform_mkdir(StringExtractorGDBRemote &packet);
@@ -149,6 +151,10 @@ protected:
 
   virtual FileSpec FindModuleFile(const std::string &module_path,
                                   const ArchSpec &arch);
+
+private:
+  ModuleSpec GetModuleInfo(const std::string &module_path,
+                           const std::string &triple);
 };
 
 } // namespace process_gdb_remote

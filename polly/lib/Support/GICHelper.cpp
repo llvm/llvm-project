@@ -99,7 +99,7 @@ static inline std::string stringFromIslObjInternal(__isl_keep ISLTy *isl_obj,
     return "null";
   isl_ctx *ctx = ctx_getter_fn(isl_obj);
   isl_printer *p = isl_printer_to_str(ctx);
-  printer_fn(p, isl_obj);
+  p = printer_fn(p, isl_obj);
   char *char_str = isl_printer_get_str(p);
   std::string string;
   if (char_str)
@@ -197,4 +197,72 @@ std::string polly::getIslCompatibleName(const std::string &Prefix,
   // Remove the leading %
   ValStr.erase(0, 1);
   return getIslCompatibleName(Prefix, ValStr, Suffix);
+}
+
+void polly::foreachElt(NonowningIslPtr<isl_union_map> UMap,
+                       const std::function<void(IslPtr<isl_map> Map)> &F) {
+  isl_union_map_foreach_map(
+      UMap.keep(),
+      [](__isl_take isl_map *Map, void *User) -> isl_stat {
+        auto &F =
+            *static_cast<const std::function<void(IslPtr<isl_map>)> *>(User);
+        F(give(Map));
+        return isl_stat_ok;
+      },
+      const_cast<void *>(static_cast<const void *>(&F)));
+}
+
+void polly::foreachElt(NonowningIslPtr<isl_union_pw_aff> UPwAff,
+                       const std::function<void(IslPtr<isl_pw_aff>)> &F) {
+  isl_union_pw_aff_foreach_pw_aff(
+      UPwAff.keep(),
+      [](__isl_take isl_pw_aff *PwAff, void *User) -> isl_stat {
+        auto &F =
+            *static_cast<const std::function<void(IslPtr<isl_pw_aff>)> *>(User);
+        F(give(PwAff));
+        return isl_stat_ok;
+      },
+      const_cast<void *>(static_cast<const void *>(&F)));
+}
+
+isl_stat polly::foreachEltWithBreak(
+    NonowningIslPtr<isl_map> Map,
+    const std::function<isl_stat(IslPtr<isl_basic_map>)> &F) {
+  return isl_map_foreach_basic_map(
+      Map.keep(),
+      [](__isl_take isl_basic_map *BMap, void *User) -> isl_stat {
+        auto &F = *static_cast<
+            const std::function<isl_stat(IslPtr<isl_basic_map>)> *>(User);
+        return F(give(BMap));
+      },
+      const_cast<void *>(static_cast<const void *>(&F)));
+}
+
+isl_stat polly::foreachEltWithBreak(
+    NonowningIslPtr<isl_union_map> UMap,
+    const std::function<isl_stat(IslPtr<isl_map> Map)> &F) {
+  return isl_union_map_foreach_map(
+      UMap.keep(),
+      [](__isl_take isl_map *Map, void *User) -> isl_stat {
+        auto &F =
+            *static_cast<const std::function<isl_stat(IslPtr<isl_map> Map)> *>(
+                User);
+        return F(give(Map));
+      },
+      const_cast<void *>(static_cast<const void *>(&F)));
+}
+
+isl_stat polly::foreachPieceWithBreak(
+    NonowningIslPtr<isl_pw_aff> PwAff,
+    const std::function<isl_stat(IslPtr<isl_set>, IslPtr<isl_aff>)> &F) {
+  return isl_pw_aff_foreach_piece(
+      PwAff.keep(),
+      [](__isl_take isl_set *Domain, __isl_take isl_aff *Aff,
+         void *User) -> isl_stat {
+        auto &F = *static_cast<
+            const std::function<isl_stat(IslPtr<isl_set>, IslPtr<isl_aff>)> *>(
+            User);
+        return F(give(Domain), give(Aff));
+      },
+      const_cast<void *>(static_cast<const void *>(&F)));
 }

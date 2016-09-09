@@ -42,6 +42,9 @@ const char *MaybeDemangleGlobalName(const char *name);
 void PrintGlobalNameIfASCII(InternalScopedString *str, const __asan_global &g);
 void PrintGlobalLocation(InternalScopedString *str, const __asan_global &g);
 
+void PrintMemoryByte(InternalScopedString *str, const char *before, u8 byte,
+                     bool in_shadow, const char *after = "\n");
+
 // The following functions prints address description depending
 // on the memory type (shadow/heap/stack/global).
 bool ParseFrameDescription(const char *frame_descr,
@@ -51,7 +54,7 @@ bool ParseFrameDescription(const char *frame_descr,
 void ReportGenericError(uptr pc, uptr bp, uptr sp, uptr addr, bool is_write,
                         uptr access_size, u32 exp, bool fatal);
 void ReportStackOverflow(const SignalContext &sig);
-void ReportDeadlySignal(const char *description, const SignalContext &sig);
+void ReportDeadlySignal(int signo, const SignalContext &sig);
 void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
                                  BufferedStackTrace *free_stack);
 void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack);

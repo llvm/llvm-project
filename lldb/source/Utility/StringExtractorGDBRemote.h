@@ -128,6 +128,7 @@ public:
     eServerPacketType_qXfer_auxv_read,
 
     eServerPacketType_jSignalsInfo,
+    eServerPacketType_jModulesInfo,
 
     eServerPacketType_vAttach,
     eServerPacketType_vAttachWait,
