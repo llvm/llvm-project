@@ -142,7 +142,8 @@ public:
   virtual void closeViewFile(OwnedStream OS) = 0;
 
   /// \brief Create an index which lists reports for the given source files.
-  virtual Error createIndexFile(ArrayRef<StringRef> SourceFiles) = 0;
+  virtual Error createIndexFile(ArrayRef<StringRef> SourceFiles,
+                                const coverage::CoverageMapping &Coverage) = 0;
 
   /// @}
 };
