@@ -1110,7 +1110,8 @@ def VOP_I32_F32_I32_I32 : VOPProfile <[i32, f32, i32, i32]>;
 def VOP_I64_I64_I32_I64 : VOPProfile <[i64, i64, i32, i64]>;
 
 // This class is used only with VOPC instructions. Use $sdst for out operand
-class SIInstAlias <string asm, Instruction inst, VOPProfile p> :
+class SIInstAlias <string asm, Instruction inst, VOPProfile p,
+                   string VariantName = ""> :
     InstAlias <asm, (inst)>, PredicateControl {
 
   field bit isCompare;
@@ -1139,23 +1140,25 @@ class SIInstAlias <string asm, Instruction inst, VOPProfile p> :
       // else
         // 0 dst, 0 src
         (inst))));
+
+    let AsmVariantName = VariantName;
 }
 
-class SIInstAliasSI <string asm, string op_name, VOPProfile p> :
-  SIInstAlias <asm, !cast<Instruction>(op_name#"_e32_si"), p> {
+class SIInstAliasSI <string asm, string op_name, VOPProfile p, string VariantName = ""> :
+  SIInstAlias <asm, !cast<Instruction>(op_name#"_e32_si"), p, VariantName> {
   let AssemblerPredicate = SIAssemblerPredicate;
 }
 
-class SIInstAliasVI <string asm, string op_name, VOPProfile p> :
-  SIInstAlias <asm, !cast<Instruction>(op_name#"_e32_vi"), p> {
+class SIInstAliasVI <string asm, string op_name, VOPProfile p, string VariantName = ""> :
+  SIInstAlias <asm, !cast<Instruction>(op_name#"_e32_vi"), p, VariantName> {
   let AssemblerPredicates = [isVI];
 }
 
-multiclass SIInstAliasBuilder <string asm, VOPProfile p> {
+multiclass SIInstAliasBuilder <string asm, VOPProfile p, string VariantName = ""> {
 
-  def : SIInstAliasSI <asm, NAME, p>;
+  def : SIInstAliasSI <asm, NAME, p, VariantName>;
 
-  def : SIInstAliasVI <asm, NAME, p>;
+  def : SIInstAliasVI <asm, NAME, p, VariantName>;
 }
 
 class VOP <string opName> {
@@ -1818,7 +1821,7 @@ multiclass VOPC_m <vopc op, dag ins, string op_asm, list<dag> pattern,
 
   } // End AssemblerPredicates = [isVI]
 
-  defm : SIInstAliasBuilder<alias_asm, p>;
+  defm : SIInstAliasBuilder<alias_asm, p, AMDGPUAsmVariants.Default>;
 }
 
 multiclass VOPC_Helper <vopc op, string opName, list<dag> pat32,

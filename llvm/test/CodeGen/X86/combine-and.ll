@@ -186,8 +186,7 @@ define <4 x i32> @test17(<4 x i32> %A, <4 x i32> %B) {
 define <2 x i64> @and_or_v2i64(<2 x i64> %a0) {
 ; CHECK-LABEL: and_or_v2i64:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [8,8]
 ; CHECK-NEXT:    retq
   %1 = or <2 x i64> %a0, <i64 255, i64 255>
   %2 = and <2 x i64> %1, <i64 8, i64 8>
@@ -197,8 +196,7 @@ define <2 x i64> @and_or_v2i64(<2 x i64> %a0) {
 define <4 x i32> @and_or_v4i32(<4 x i32> %a0) {
 ; CHECK-LABEL: and_or_v4i32:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [3,3,3,3]
 ; CHECK-NEXT:    retq
   %1 = or <4 x i32> %a0, <i32 15, i32 15, i32 15, i32 15>
   %2 = and <4 x i32> %1, <i32 3, i32 3, i32 3, i32 3>
@@ -212,10 +210,7 @@ define <4 x i32> @and_or_v4i32(<4 x i32> %a0) {
 define <2 x i64> @and_or_zext_v2i32(<2 x i32> %a0) {
 ; CHECK-LABEL: and_or_zext_v2i32:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
-; CHECK-NEXT:    por {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = zext <2 x i32> %a0 to <2 x i64>
   %2 = or <2 x i64> %1, <i64 1, i64 1>
@@ -226,10 +221,7 @@ define <2 x i64> @and_or_zext_v2i32(<2 x i32> %a0) {
 define <4 x i32> @and_or_zext_v4i16(<4 x i16> %a0) {
 ; CHECK-LABEL: and_or_zext_v4i16:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
-; CHECK-NEXT:    por {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = zext <4 x i16> %a0 to <4 x i32>
   %2 = or <4 x i32> %1, <i32 1, i32 1, i32 1, i32 1>

@@ -6,30 +6,27 @@
 # CHECK:	      ^
 
 	.arch armv8
+	aese v0.8h, v1.8h
 
-	fminnm d0, d0, d1
-
-# CHECK: error: instruction requires: fp-armv8
-# CHECK: 	fminnm d0, d0, d1
+# CHECK: error: invalid operand for instruction
+# CHECK: 	aese v0.8h, v1.8h
 # CHECK:	^
 
-	.arch armv8+fp
+// We silently ignore invalid features.
+	.arch armv8+foo
+	aese v0.8h, v1.8h
 
-# CHECK: '+fp' is not a recognized feature for this target (ignoring feature)
-
-	fminnm d0, d0, d1
-
-# CHECK: error: instruction requires: fp-armv8
-# CHECK: 	fminnm d0, d0, d1
+# CHECK: error: invalid operand for instruction
+# CHECK:	aese v0.8h, v1.8h
 # CHECK:	^
 
-	.arch armv8+neon
+	.arch armv8+crypto
 
 	.arch armv8
 
-	fminnm d0, d0, d1
+	aese v0.8h, v1.8h
 
-# CHECK: error: instruction requires: fp-armv8
-# CHECK: 	fminnm d0, d0, d1
+# CHECK: error: invalid operand for instruction
+# CHECK: 	aese v0.8h, v1.8h
 # CHECK:	^
 

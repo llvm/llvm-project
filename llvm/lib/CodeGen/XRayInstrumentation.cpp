@@ -34,33 +34,37 @@ struct XRayInstrumentation : public MachineFunctionPass {
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-
-private:
-  // Replace the original RET instruction with the exit sled code ("patchable
-  //   ret" pseudo-instruction), so that at runtime XRay can replace the sled
-  //   with a code jumping to XRay trampoline, which calls the tracing handler
-  //   and, in the end, issues the RET instruction.
-  // This is the approach to go on CPUs which have a single RET instruction,
-  //   like x86/x86_64.
-  void replaceRetWithPatchableRet(MachineFunction &MF,
-    const TargetInstrInfo *TII);
-  // Prepend the original return instruction with the exit sled code ("patchable
-  //   function exit" pseudo-instruction), preserving the original return
-  //   instruction just after the exit sled code.
-  // This is the approach to go on CPUs which have multiple options for the
-  //   return instruction, like ARM. For such CPUs we can't just jump into the
-  //   XRay trampoline and issue a single return instruction there. We rather
-  //   have to call the trampoline and return from it to the original return
-  //   instruction of the function being instrumented.
-  void prependRetWithPatchableExit(MachineFunction &MF,
-    const TargetInstrInfo *TII);
 };
-} // anonymous namespace
+}
 
-void XRayInstrumentation::replaceRetWithPatchableRet(MachineFunction &MF,
-  const TargetInstrInfo *TII)
-{
-  // We look for *all* terminators and returns, then replace those with
+bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
+  auto &F = *MF.getFunction();
+  auto InstrAttr = F.getFnAttribute("function-instrument");
+  bool AlwaysInstrument = !InstrAttr.hasAttribute(Attribute::None) &&
+                          InstrAttr.isStringAttribute() &&
+                          InstrAttr.getValueAsString() == "xray-always";
+  Attribute Attr = F.getFnAttribute("xray-instruction-threshold");
+  unsigned XRayThreshold = 0;
+  if (!AlwaysInstrument) {
+    if (Attr.hasAttribute(Attribute::None) || !Attr.isStringAttribute())
+      return false; // XRay threshold attribute not found.
+    if (Attr.getValueAsString().getAsInteger(10, XRayThreshold))
+      return false; // Invalid value for threshold.
+    if (F.size() < XRayThreshold)
+      return false; // Function is too small.
+  }
+
+  // FIXME: Do the loop triviality analysis here or in an earlier pass.
+
+  // First, insert an PATCHABLE_FUNCTION_ENTER as the first instruction of the
+  // MachineFunction.
+  auto &FirstMBB = *MF.begin();
+  auto &FirstMI = *FirstMBB.begin();
+  auto *TII = MF.getSubtarget().getInstrInfo();
+  BuildMI(FirstMBB, FirstMI, FirstMI.getDebugLoc(),
+          TII->get(TargetOpcode::PATCHABLE_FUNCTION_ENTER));
+
+  // Then we look for *all* terminators and returns, then replace those with
   // PATCHABLE_RET instructions.
   SmallVector<MachineInstr *, 4> Terminators;
   for (auto &MBB : MF) {
@@ -88,65 +92,7 @@ void XRayInstrumentation::replaceRetWithPatchableRet(MachineFunction &MF,
 
   for (auto &I : Terminators)
     I->eraseFromParent();
-}
 
-void XRayInstrumentation::prependRetWithPatchableExit(MachineFunction &MF,
-  const TargetInstrInfo *TII)
-{
-  for (auto &MBB : MF) {
-    for (auto &T : MBB.terminators()) {
-      if (T.isReturn()) {
-        // Prepend the return instruction with PATCHABLE_FUNCTION_EXIT
-        BuildMI(MBB, T, T.getDebugLoc(),
-                TII->get(TargetOpcode::PATCHABLE_FUNCTION_EXIT));
-      }
-    }
-  }
-}
-
-bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
-  auto &F = *MF.getFunction();
-  auto InstrAttr = F.getFnAttribute("function-instrument");
-  bool AlwaysInstrument = !InstrAttr.hasAttribute(Attribute::None) &&
-                          InstrAttr.isStringAttribute() &&
-                          InstrAttr.getValueAsString() == "xray-always";
-  Attribute Attr = F.getFnAttribute("xray-instruction-threshold");
-  unsigned XRayThreshold = 0;
-  if (!AlwaysInstrument) {
-    if (Attr.hasAttribute(Attribute::None) || !Attr.isStringAttribute())
-      return false; // XRay threshold attribute not found.
-    if (Attr.getValueAsString().getAsInteger(10, XRayThreshold))
-      return false; // Invalid value for threshold.
-    if (F.size() < XRayThreshold)
-      return false; // Function is too small.
-  }
-
-  if (!MF.getSubtarget().isXRaySupported()) {
-    //FIXME: can this be reported somehow?
-    return false;
-  }
-
-  // FIXME: Do the loop triviality analysis here or in an earlier pass.
-
-  // First, insert an PATCHABLE_FUNCTION_ENTER as the first instruction of the
-  // MachineFunction.
-  auto &FirstMBB = *MF.begin();
-  auto &FirstMI = *FirstMBB.begin();
-  auto *TII = MF.getSubtarget().getInstrInfo();
-  BuildMI(FirstMBB, FirstMI, FirstMI.getDebugLoc(),
-          TII->get(TargetOpcode::PATCHABLE_FUNCTION_ENTER));
-
-  switch (MF.getTarget().getTargetTriple().getArch()) {
-  case Triple::ArchType::arm:
-    // For the architectures which don't have a single return instruction
-    prependRetWithPatchableExit(MF, TII);
-    break;
-  default:
-    // For the architectures that have a single return instruction (such as
-    //   RETQ on x86_64).
-    replaceRetWithPatchableRet(MF, TII);
-    break;
-  }
   return true;
 }
 

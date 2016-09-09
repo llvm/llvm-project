@@ -229,7 +229,6 @@ struct FuzzingOptions {
   int MutateDepth = 5;
   bool UseCounters = false;
   bool UseIndirCalls = true;
-  bool UseTraces = false;
   bool UseMemcmp = true;
   bool UseMemmem = true;
   bool UseFullCoverageSet = false;
@@ -375,14 +374,12 @@ public:
       PCMapBits = 0;
       VPMap.Reset();
       VPMapBits = 0;
-      PcBufferPos = 0;
     }
 
     std::string DebugString() const;
 
     size_t BlockCoverage;
     size_t CallerCalleeCoverage;
-    size_t PcBufferPos;
     // Precalculated number of bits in CounterBitmap.
     size_t CounterBitmapBits;
     std::vector<uint8_t> CounterBitmap;
@@ -520,7 +517,7 @@ private:
   // For -print_pcs
   uintptr_t* PcBuffer = nullptr;
   size_t PcBufferLen = 0;
-  size_t PrevPcBufferPos;
+  size_t PcBufferPos = 0, PrevPcBufferPos = 0;
 
   // Need to know our own thread.
   static thread_local bool IsMyThread;

@@ -468,6 +468,33 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     KnownOne = cast<ConstantSDNode>(Op)->getAPIntValue();
     KnownZero = ~KnownOne;
     return false;   // Don't fall through, will infinitely loop.
+  case ISD::BUILD_VECTOR:
+    // Collect the known bits that are shared by every constant vector element.
+    KnownZero = KnownOne = APInt::getAllOnesValue(BitWidth);
+    for (SDValue SrcOp : Op->ops()) {
+      if (!isa<ConstantSDNode>(SrcOp)) {
+        // We can only handle all constant values - bail out with no known bits.
+        KnownZero = KnownOne = APInt(BitWidth, 0);
+        return false;
+      }
+      KnownOne2 = cast<ConstantSDNode>(SrcOp)->getAPIntValue();
+      KnownZero2 = ~KnownOne2;
+
+      // BUILD_VECTOR can implicitly truncate sources, we must handle this.
+      if (KnownOne2.getBitWidth() != BitWidth) {
+        assert(KnownOne2.getBitWidth() > BitWidth &&
+               KnownZero2.getBitWidth() > BitWidth &&
+               "Expected BUILD_VECTOR implicit truncation");
+        KnownOne2 = KnownOne2.trunc(BitWidth);
+        KnownZero2 = KnownZero2.trunc(BitWidth);
+      }
+
+      // Known bits are the values that are shared by every element.
+      // TODO: support per-element known bits.
+      KnownOne &= KnownOne2;
+      KnownZero &= KnownZero2;
+    }
+    return false;   // Don't fall through, will infinitely loop.
   case ISD::AND:
     // If the RHS is a constant, check to see if the LHS would be zero without
     // using the bits from the RHS.  Below, we use knowledge about the RHS to

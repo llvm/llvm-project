@@ -393,8 +393,7 @@ def CCR : RegisterClass<"Mips", [i32], 32, (sequence "FCR%u", 0, 31)>,
           Unallocatable;
 
 // FP condition code registers.
-def FCC : RegisterClass<"Mips", [i32], 32, (sequence "FCC%u", 0, 7)>,
-          Unallocatable;
+def FCC : RegisterClass<"Mips", [i32], 32, (sequence "FCC%u", 0, 7)>;
 
 // MIPS32r6/MIPS64r6 store FPU condition codes in normal FGR registers.
 // This class allows us to represent this in codegen patterns.

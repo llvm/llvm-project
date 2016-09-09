@@ -238,6 +238,9 @@ The most important command line options are:
   If set to 1, any corpus inputs from the 2nd, 3rd etc. corpus directories
   that trigger new code coverage will be merged into the first corpus
   directory.  Defaults to 0. This flag can be used to minimize a corpus.
+``-minimize_crash``
+  If 1, minimizes the provided crash input.
+  Use with -runs=N or -max_total_time=N to limit the number of attempts.
 ``-reload``
   If set to 1 (the default), the corpus directory is re-read periodically to
   check for new inputs; this allows detection of new inputs that were discovered
@@ -258,8 +261,6 @@ The most important command line options are:
   blocks are hit; defaults to 1.
 ``-use_value_profile``
   Use `value profile`_ to guide corpus expansion; defaults to 0.
-``-use_traces``
-  Use instruction traces (experimental, defaults to 0); see `Data-flow-guided fuzzing`_.
 ``-only_ascii``
   If 1, generate only ASCII (``isprint``+``isspace``) inputs. Defaults to 0.
 ``-artifact_prefix``
@@ -616,19 +617,6 @@ but there are two downsides.
 First, the extra instrumentation may bring up to 2x additional slowdown.
 Second, the corpus may grow by several times.
 
-
-Data-flow-guided fuzzing
-------------------------
-
-*EXPERIMENTAL*.
-With an additional compiler flag ``-fsanitize-coverage=trace-cmp`` (see SanitizerCoverageTraceDataFlow_)
-and extra run-time flag ``-use_traces=1`` the fuzzer will try to apply *data-flow-guided fuzzing*.
-That is, the fuzzer will record the inputs to comparison instructions, switch statements,
-and several libc functions (``memcmp``, ``strcmp``, ``strncmp``, etc).
-It will later use those recorded inputs during mutations.
-
-This mode can be combined with DataFlowSanitizer_ to achieve better sensitivity.
-
 Fuzzer-friendly build mode
 ---------------------------
 Sometimes the code under test is not fuzzing-friendly. Examples:
@@ -919,7 +907,6 @@ Trophies
 .. _AFL: http://lcamtuf.coredump.cx/afl/
 .. _SanitizerCoverage: http://clang.llvm.org/docs/SanitizerCoverage.html
 .. _SanitizerCoverageTraceDataFlow: http://clang.llvm.org/docs/SanitizerCoverage.html#tracing-data-flow
-.. _DataFlowSanitizer: http://clang.llvm.org/docs/DataFlowSanitizer.html
 .. _AddressSanitizer: http://clang.llvm.org/docs/AddressSanitizer.html
 .. _LeakSanitizer: http://clang.llvm.org/docs/LeakSanitizer.html
 .. _Heartbleed: http://en.wikipedia.org/wiki/Heartbleed

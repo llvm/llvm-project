@@ -353,6 +353,7 @@ public:
   std::string TokenizingCharacters;
   std::string SeparatorCharacters;
   std::string BreakCharacters;
+  std::string Name;
   int AsmVariantNo;
 };
 
@@ -1468,6 +1469,7 @@ void AsmMatcherInfo::buildInfo() {
         AsmVariant->getValueAsString("SeparatorCharacters");
     Variant.BreakCharacters =
         AsmVariant->getValueAsString("BreakCharacters");
+    Variant.Name = AsmVariant->getValueAsString("Name");
     Variant.AsmVariantNo = AsmVariant->getValueAsInt("Variant");
 
     for (const CodeGenInstruction *CGI : Target.getInstructionsByEnumValue()) {
@@ -1479,6 +1481,11 @@ void AsmMatcherInfo::buildInfo() {
 
       // Ignore "codegen only" instructions.
       if (CGI->TheDef->getValueAsBit("isCodeGenOnly"))
+        continue;
+
+      // Ignore instructions for different instructions
+      const std::string V = CGI->TheDef->getValueAsString("AsmVariantName");
+      if (!V.empty() && V != Variant.Name)
         continue;
 
       auto II = llvm::make_unique<MatchableInfo>(*CGI);
@@ -1507,6 +1514,10 @@ void AsmMatcherInfo::buildInfo() {
       // instruction.
       if (!StringRef(Alias->ResultInst->TheDef->getName())
             .startswith( MatchPrefix))
+        continue;
+
+      const std::string V = Alias->TheDef->getValueAsString("AsmVariantName");
+      if (!V.empty() && V != Variant.Name)
         continue;
 
       auto II = llvm::make_unique<MatchableInfo>(std::move(Alias));

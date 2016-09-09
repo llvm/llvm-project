@@ -261,22 +261,220 @@ defm : MovnPats<GPR32, FGR64, MOVN_I_D64, XOR>, INSN_MIPS4_32_NOT_32R6_64R6,
 defm : MovnPats<GPR64, FGR64, MOVN_I64_D64, XOR64>, INSN_MIPS4_32_NOT_32R6_64R6,
        FGR_64;
 
+multiclass FPSetccPats<Instruction MOVT, Instruction MOVF, dag ADD,
+                       RegisterOperand RC> {
+  def : MipsPat<(seteq RC:$lhs, RC:$rhs),
+        (MOVF ZERO, (!cast<Instruction>("C_EQ_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setgt RC:$lhs, RC:$rhs),
+        (MOVT ZERO, (!cast<Instruction>("C_ULE_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setge RC:$lhs, RC:$rhs),
+        (MOVT ZERO, (!cast<Instruction>("C_ULT_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setlt RC:$lhs, RC:$rhs),
+        (MOVF ZERO, (!cast<Instruction>("C_OLT_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setle RC:$lhs, RC:$rhs),
+        (MOVF ZERO, (!cast<Instruction>("C_OLE_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setne RC:$lhs, RC:$rhs),
+        (MOVT ZERO, (!cast<Instruction>("C_UEQ_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setoeq RC:$lhs, RC:$rhs),
+        (MOVF ZERO, (!cast<Instruction>("C_EQ_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setogt RC:$lhs, RC:$rhs),
+        (MOVT ZERO, (!cast<Instruction>("C_ULE_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setoge RC:$lhs, RC:$rhs),
+        (MOVT ZERO, (!cast<Instruction>("C_ULT_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setolt RC:$lhs, RC:$rhs),
+        (MOVF ZERO, (!cast<Instruction>("C_OLT_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setole RC:$lhs, RC:$rhs),
+        (MOVF ZERO, (!cast<Instruction>("C_OLE_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setone RC:$lhs, RC:$rhs),
+        (MOVT ZERO, (!cast<Instruction>("C_UEQ_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(seto RC:$lhs, RC:$rhs),
+        (MOVT ZERO, (!cast<Instruction>("C_UN_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setuo RC:$lhs, RC:$rhs),
+        (MOVF ZERO, (!cast<Instruction>("C_UN_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setueq RC:$lhs, RC:$rhs),
+        (MOVF ZERO, (!cast<Instruction>("C_UEQ_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setugt RC:$lhs, RC:$rhs),
+        (MOVT ZERO, (!cast<Instruction>("C_OLE_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setuge RC:$lhs, RC:$rhs),
+        (MOVT ZERO, (!cast<Instruction>("C_OLT_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setult RC:$lhs, RC:$rhs),
+        (MOVF ZERO, (!cast<Instruction>("C_ULT_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setule RC:$lhs, RC:$rhs),
+        (MOVF ZERO, (!cast<Instruction>("C_ULE_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+  def : MipsPat<(setune RC:$lhs, RC:$rhs),
+        (MOVT ZERO, (!cast<Instruction>("C_EQ_"#NAME) RC:$lhs, RC:$rhs),
+                    ADD)>;
+}
+
+let AdditionalPredicates = [NotInMicroMips] in {
+  defm S : FPSetccPats<MOVT_I, MOVF_I, (ADDiu ZERO, 1), FGR32Opnd>,
+           INSN_MIPS4_32_NOT_32R6_64R6;
+  defm D32 : FPSetccPats<MOVT_I, MOVF_I, (ADDiu ZERO, 1), AFGR64Opnd>, FGR_32,
+             INSN_MIPS4_32_NOT_32R6_64R6;
+  defm D64 : FPSetccPats<MOVT_I, MOVF_I, (ADDiu ZERO, 1), FGR64Opnd>, FGR_64,
+             INSN_MIPS4_32_NOT_32R6_64R6;
+}
+
+multiclass FPSelectPats<RegisterOperand RC, RegisterOperand RO, string Type,
+                        Instruction MOVT, Instruction MOVF> {
+  // Ordered
+  def : MipsPat<(select (i32 (setoeq RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVT RO:$t, (!cast<Instruction>("C_EQ_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setogt RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVF RO:$t, (!cast<Instruction>("C_ULE_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setoge RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVF RO:$t, (!cast<Instruction>("C_ULT_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setolt RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVT RO:$t, (!cast<Instruction>("C_OLT_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setole RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVT RO:$t, (!cast<Instruction>("C_OLE_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setone RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVF RO:$t, (!cast<Instruction>("C_UEQ_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (seto RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVF RO:$t, (!cast<Instruction>("C_UN_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  // Unordered
+  def : MipsPat<(select (i32 (setuo RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+      (MOVT RO:$t, (!cast<Instruction>("C_UN_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setueq RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVT RO:$t, (!cast<Instruction>("C_UEQ_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setugt RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVF RO:$t, (!cast<Instruction>("C_ULE_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setuge RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVF RO:$t, (!cast<Instruction>("C_ULE_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setult RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVT RO:$t, (!cast<Instruction>("C_ULT_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setule RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVT RO:$t, (!cast<Instruction>("C_ULE_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setune RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVF RO:$t, (!cast<Instruction>("C_UEQ_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setuo RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVT RO:$t, (!cast<Instruction>("C_EQ_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  // Unspecified ordering - treated as ordered.
+  def : MipsPat<(select (i32 (seteq RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVT RO:$t, (!cast<Instruction>("C_EQ_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setgt RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVF RO:$t, (!cast<Instruction>("C_OLE_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setge RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVF RO:$t, (!cast<Instruction>("C_LT_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setlt RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVT RO:$t, (!cast<Instruction>("C_LT_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setle RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVT RO:$t, (!cast<Instruction>("C_OLE_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+  def : MipsPat<(select (i32 (setne RC:$lhs, RC:$rhs)), RO:$t, RO:$f),
+                (MOVF RO:$t, (!cast<Instruction>("C_EQ_"#Type) RC:$lhs,
+                                                               RC:$rhs),
+                      RO:$f)>;
+}
+
+let AdditionalPredicates = [NotInMicroMips] in {
+  defm : FPSelectPats<FGR32Opnd, FGR32Opnd, "S", MOVT_S, MOVF_S>,
+         INSN_MIPS4_32_NOT_32R6_64R6;
+  defm : FPSelectPats<FGR32Opnd, AFGR64Opnd, "S", MOVT_D32, MOVF_D32>,
+         FGR_32, INSN_MIPS4_32_NOT_32R6_64R6;
+  defm : FPSelectPats<FGR32Opnd, FGR64Opnd, "S", MOVT_D64, MOVF_D64>,
+         FGR_64, INSN_MIPS4_32_NOT_32R6_64R6;
+
+  defm : FPSelectPats<AFGR64Opnd, AFGR64Opnd, "D32", MOVT_D32, MOVF_D32>,
+         FGR_32, INSN_MIPS4_32_NOT_32R6_64R6;
+  defm : FPSelectPats<AFGR64Opnd, FGR32Opnd, "D32", MOVT_S, MOVF_S>,
+         FGR_32, INSN_MIPS4_32_NOT_32R6_64R6;
+
+
+  defm : FPSelectPats<FGR64Opnd, FGR64Opnd, "D64", MOVT_D64, MOVF_D64>,
+         FGR_64, INSN_MIPS4_32_NOT_32R6_64R6;
+  defm : FPSelectPats<FGR64Opnd, FGR32Opnd, "D64", MOVT_S, MOVF_S>,
+         FGR_64, INSN_MIPS4_32_NOT_32R6_64R6;
+
+  defm : FPSelectPats<FGR32Opnd, GPR32Opnd, "S", MOVT_I, MOVF_I>,
+         INSN_MIPS4_32_NOT_32R6_64R6;
+  defm : FPSelectPats<AFGR64Opnd, GPR32Opnd, "D32", MOVT_I, MOVF_I>,
+         FGR_32, INSN_MIPS4_32_NOT_32R6_64R6;
+  defm : FPSelectPats<FGR64Opnd, GPR32Opnd, "D64", MOVT_I, MOVF_I>,
+         FGR_64, INSN_MIPS4_32_NOT_32R6_64R6;
+
+  defm : FPSelectPats<FGR32Opnd, GPR64Opnd,"S", MOVT_I64, MOVF_I64>,
+         INSN_MIPS4_32_NOT_32R6_64R6;
+  defm : FPSelectPats<AFGR64Opnd, GPR64Opnd, "D32", MOVT_I64, MOVF_I64>,
+         FGR_32, INSN_MIPS4_32_NOT_32R6_64R6;
+  defm : FPSelectPats<FGR64Opnd, GPR64Opnd, "D64", MOVT_I64, MOVF_I64>,
+         FGR_64, INSN_MIPS4_32_NOT_32R6_64R6;
+}
+
 // For targets that don't have conditional-move instructions
 // we have to match SELECT nodes with pseudo instructions.
 let usesCustomInserter = 1 in {
   class Select_Pseudo<RegisterOperand RC> :
-    PseudoSE<(outs RC:$dst), (ins GPR32Opnd:$cond, RC:$T, RC:$F),
+    PseudoSE<(outs RC:$dst), (ins RC:$T, GPR32Opnd:$cond, RC:$F),
             [(set RC:$dst, (select GPR32Opnd:$cond, RC:$T, RC:$F))]>,
     ISA_MIPS1_NOT_4_32;
 
   class SelectFP_Pseudo_T<RegisterOperand RC> :
-    PseudoSE<(outs RC:$dst), (ins GPR32Opnd:$cond, RC:$T, RC:$F),
-             [(set RC:$dst, (MipsCMovFP_T RC:$T, GPR32Opnd:$cond, RC:$F))]>,
+    PseudoSE<(outs RC:$dst), (ins RC:$T, FCC:$cond, RC:$F),
+             [(set RC:$dst, (MipsCMovFP_T RC:$T, FCC:$cond, RC:$F))]>,
     ISA_MIPS1_NOT_4_32;
 
   class SelectFP_Pseudo_F<RegisterOperand RC> :
-    PseudoSE<(outs RC:$dst), (ins GPR32Opnd:$cond, RC:$T, RC:$F),
-             [(set RC:$dst, (MipsCMovFP_F RC:$T, GPR32Opnd:$cond, RC:$F))]>,
+    PseudoSE<(outs RC:$dst), (ins RC:$T, FCC:$cond, RC:$F),
+             [(set RC:$dst, (MipsCMovFP_F RC:$T, FCC:$cond, RC:$F))]>,
     ISA_MIPS1_NOT_4_32;
 }
 
@@ -297,3 +495,12 @@ def PseudoSELECTFP_F_I64 : SelectFP_Pseudo_F<GPR64Opnd>;
 def PseudoSELECTFP_F_S : SelectFP_Pseudo_F<FGR32Opnd>;
 def PseudoSELECTFP_F_D32 : SelectFP_Pseudo_F<AFGR64Opnd>, FGR_32;
 def PseudoSELECTFP_F_D64 : SelectFP_Pseudo_F<FGR64Opnd>, FGR_64;
+
+let AdditionalPredicates = [NotInMicroMips] in {
+  defm : FPSelectPats<FGR32Opnd, FGR32Opnd, "S", PseudoSELECTFP_T_S,
+                      PseudoSELECTFP_F_S>, ISA_MIPS1_NOT_4_32;
+  defm : FPSelectPats<AFGR64Opnd, AFGR64Opnd, "D32", PseudoSELECTFP_T_D32,
+                      PseudoSELECTFP_F_D32>, FGR_32, ISA_MIPS1_NOT_4_32;
+  defm : FPSelectPats<FGR64Opnd, FGR64Opnd, "D64", PseudoSELECTFP_T_D64,
+                      PseudoSELECTFP_F_D64>, FGR_64, ISA_MIPS1_NOT_4_32;
+}

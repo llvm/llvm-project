@@ -24,8 +24,8 @@ class CoverageReport {
   const CoverageViewOptions &Options;
   const coverage::CoverageMapping &Coverage;
 
-  void render(const FileCoverageSummary &File, raw_ostream &OS);
-  void render(const FunctionCoverageSummary &Function, raw_ostream &OS);
+  void render(const FileCoverageSummary &File, raw_ostream &OS) const;
+  void render(const FunctionCoverageSummary &Function, raw_ostream &OS) const;
 
 public:
   CoverageReport(const CoverageViewOptions &Options,
@@ -34,7 +34,16 @@ public:
 
   void renderFunctionReports(ArrayRef<StringRef> Files, raw_ostream &OS);
 
-  void renderFileReports(raw_ostream &OS);
+  /// Prepare file reports for the files specified in \p Files.
+  std::vector<FileCoverageSummary>
+  prepareFileReports(FileCoverageSummary &Totals,
+                     ArrayRef<StringRef> Files) const;
+
+  /// Render file reports for every unique file in the coverage mapping.
+  void renderFileReports(raw_ostream &OS) const;
+
+  /// Render file reports for the files specified in \p Files.
+  void renderFileReports(raw_ostream &OS, ArrayRef<StringRef> Files) const;
 };
 
 } // end namespace llvm

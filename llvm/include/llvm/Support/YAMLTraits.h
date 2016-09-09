@@ -27,6 +27,8 @@
 namespace llvm {
 namespace yaml {
 
+struct EmptyContext {};
+
 /// This class should be specialized by any type that needs to be converted
 /// to/from a YAML mapping.  For example:
 ///
@@ -43,6 +45,28 @@ struct MappingTraits {
   // static void mapping(IO &io, T &fields);
   // Optionally may provide:
   // static StringRef validate(IO &io, T &fields);
+  //
+  // The optional flow flag will cause generated YAML to use a flow mapping
+  // (e.g. { a: 0, b: 1 }):
+  // static const bool flow = true;
+};
+
+/// This class is similar to MappingTraits<T> but allows you to pass in
+/// additional context for each map operation.  For example:
+///
+///     struct MappingContextTraits<MyStruct, MyContext> {
+///       static void mapping(IO &io, MyStruct &s, MyContext &c) {
+///         io.mapRequired("name", s.name);
+///         io.mapRequired("size", s.size);
+///         io.mapOptional("age",  s.age);
+///         ++c.TimesMapped;
+///       }
+///     };
+template <class T, class Context> struct MappingContextTraits {
+  // Must provide:
+  // static void mapping(IO &io, T &fields, Context &Ctx);
+  // Optionally may provide:
+  // static StringRef validate(IO &io, T &fields, Context &Ctx);
   //
   // The optional flow flag will cause generated YAML to use a flow mapping
   // (e.g. { a: 0, b: 1 }):
@@ -258,11 +282,9 @@ public:
       (sizeof(test<BlockScalarTraits<T>>(nullptr, nullptr)) == 1);
 };
 
-// Test if MappingTraits<T> is defined on type T.
-template <class T>
-struct has_MappingTraits
-{
-  typedef void (*Signature_mapping)(class IO&, T&);
+// Test if MappingContextTraits<T> is defined on type T.
+template <class T, class Context> struct has_MappingTraits {
+  typedef void (*Signature_mapping)(class IO &, T &, Context &);
 
   template <typename U>
   static char test(SameType<Signature_mapping, &U::mapping>*);
@@ -271,14 +293,26 @@ struct has_MappingTraits
   static double test(...);
 
 public:
-  static bool const value = (sizeof(test<MappingTraits<T> >(nullptr)) == 1);
+  static bool const value =
+      (sizeof(test<MappingContextTraits<T, Context>>(nullptr)) == 1);
 };
 
-// Test if MappingTraits<T>::validate() is defined on type T.
-template <class T>
-struct has_MappingValidateTraits
-{
-  typedef StringRef (*Signature_validate)(class IO&, T&);
+// Test if MappingTraits<T> is defined on type T.
+template <class T> struct has_MappingTraits<T, EmptyContext> {
+  typedef void (*Signature_mapping)(class IO &, T &);
+
+  template <typename U>
+  static char test(SameType<Signature_mapping, &U::mapping> *);
+
+  template <typename U> static double test(...);
+
+public:
+  static bool const value = (sizeof(test<MappingTraits<T>>(nullptr)) == 1);
+};
+
+// Test if MappingContextTraits<T>::validate() is defined on type T.
+template <class T, class Context> struct has_MappingValidateTraits {
+  typedef StringRef (*Signature_validate)(class IO &, T &, Context &);
 
   template <typename U>
   static char test(SameType<Signature_validate, &U::validate>*);
@@ -287,7 +321,21 @@ struct has_MappingValidateTraits
   static double test(...);
 
 public:
-  static bool const value = (sizeof(test<MappingTraits<T> >(nullptr)) == 1);
+  static bool const value =
+      (sizeof(test<MappingContextTraits<T, Context>>(nullptr)) == 1);
+};
+
+// Test if MappingTraits<T>::validate() is defined on type T.
+template <class T> struct has_MappingValidateTraits<T, EmptyContext> {
+  typedef StringRef (*Signature_validate)(class IO &, T &);
+
+  template <typename U>
+  static char test(SameType<Signature_validate, &U::validate> *);
+
+  template <typename U> static double test(...);
+
+public:
+  static bool const value = (sizeof(test<MappingTraits<T>>(nullptr)) == 1);
 };
 
 // Test if SequenceTraits<T> is defined on type T.
@@ -432,25 +480,29 @@ inline bool needsQuotes(StringRef S) {
   return false;
 }
 
-template<typename T>
-struct missingTraits : public std::integral_constant<bool,
-                                         !has_ScalarEnumerationTraits<T>::value
-                                      && !has_ScalarBitSetTraits<T>::value
-                                      && !has_ScalarTraits<T>::value
-                                      && !has_BlockScalarTraits<T>::value
-                                      && !has_MappingTraits<T>::value
-                                      && !has_SequenceTraits<T>::value
-                                      && !has_DocumentListTraits<T>::value >  {};
+template <typename T, typename Context>
+struct missingTraits
+    : public std::integral_constant<bool,
+                                    !has_ScalarEnumerationTraits<T>::value &&
+                                        !has_ScalarBitSetTraits<T>::value &&
+                                        !has_ScalarTraits<T>::value &&
+                                        !has_BlockScalarTraits<T>::value &&
+                                        !has_MappingTraits<T, Context>::value &&
+                                        !has_SequenceTraits<T>::value &&
+                                        !has_DocumentListTraits<T>::value> {};
 
-template<typename T>
-struct validatedMappingTraits : public std::integral_constant<bool,
-                                       has_MappingTraits<T>::value
-                                    && has_MappingValidateTraits<T>::value> {};
+template <typename T, typename Context>
+struct validatedMappingTraits
+    : public std::integral_constant<
+          bool, has_MappingTraits<T, Context>::value &&
+                    has_MappingValidateTraits<T, Context>::value> {};
 
-template<typename T>
-struct unvalidatedMappingTraits : public std::integral_constant<bool,
-                                        has_MappingTraits<T>::value
-                                    && !has_MappingValidateTraits<T>::value> {};
+template <typename T, typename Context>
+struct unvalidatedMappingTraits
+    : public std::integral_constant<
+          bool, has_MappingTraits<T, Context>::value &&
+                    !has_MappingValidateTraits<T, Context>::value> {};
+
 // Base class for Input and Output.
 class IO {
 public:
@@ -512,9 +564,10 @@ public:
   template <typename FBT, typename T>
   void enumFallback(T &Val) {
     if (matchEnumFallback()) {
+      EmptyContext Context;
       // FIXME: Force integral conversion to allow strong typedefs to convert.
       FBT Res = static_cast<typename FBT::BaseType>(Val);
-      yamlize(*this, Res, true);
+      yamlize(*this, Res, true, Context);
       Val = static_cast<T>(static_cast<typename FBT::BaseType>(Res));
     }
   }
@@ -550,40 +603,58 @@ public:
   void *getContext();
   void setContext(void *);
 
-  template <typename T>
-  void mapRequired(const char* Key, T& Val) {
-    this->processKey(Key, Val, true);
+  template <typename T> void mapRequired(const char *Key, T &Val) {
+    EmptyContext Ctx;
+    this->processKey(Key, Val, true, Ctx);
+  }
+  template <typename T, typename Context>
+  void mapRequired(const char *Key, T &Val, Context &Ctx) {
+    this->processKey(Key, Val, true, Ctx);
+  }
+
+  template <typename T> void mapOptional(const char *Key, T &Val) {
+    EmptyContext Ctx;
+    mapOptionalWithContext(Key, Val, Ctx);
   }
 
   template <typename T>
-  typename std::enable_if<has_SequenceTraits<T>::value,void>::type
-  mapOptional(const char* Key, T& Val) {
+  void mapOptional(const char *Key, T &Val, const T &Default) {
+    EmptyContext Ctx;
+    mapOptionalWithContext(Key, Val, Default, Ctx);
+  }
+
+  template <typename T, typename Context>
+  typename std::enable_if<has_SequenceTraits<T>::value, void>::type
+  mapOptionalWithContext(const char *Key, T &Val, Context &Ctx) {
     // omit key/value instead of outputting empty sequence
-    if ( this->canElideEmptySequence() && !(Val.begin() != Val.end()) )
+    if (this->canElideEmptySequence() && !(Val.begin() != Val.end()))
       return;
-    this->processKey(Key, Val, false);
+    this->processKey(Key, Val, false, Ctx);
   }
 
-  template <typename T>
-  void mapOptional(const char* Key, Optional<T> &Val) {
-    processKeyWithDefault(Key, Val, Optional<T>(), /*Required=*/false);
+  template <typename T, typename Context>
+  void mapOptionalWithContext(const char *Key, Optional<T> &Val, Context &Ctx) {
+    this->processKeyWithDefault(Key, Val, Optional<T>(), /*Required=*/false,
+                                Ctx);
   }
 
-  template <typename T>
-  typename std::enable_if<!has_SequenceTraits<T>::value,void>::type
-  mapOptional(const char* Key, T& Val) {
-    this->processKey(Key, Val, false);
+  template <typename T, typename Context>
+  typename std::enable_if<!has_SequenceTraits<T>::value, void>::type
+  mapOptionalWithContext(const char *Key, T &Val, Context &Ctx) {
+    this->processKey(Key, Val, false, Ctx);
   }
 
-  template <typename T>
-  void mapOptional(const char* Key, T& Val, const T& Default) {
-    this->processKeyWithDefault(Key, Val, Default, false);
+  template <typename T, typename Context>
+  void mapOptionalWithContext(const char *Key, T &Val, const T &Default,
+                              Context &Ctx) {
+    this->processKeyWithDefault(Key, Val, Default, false, Ctx);
   }
 
 private:
-  template <typename T>
+  template <typename T, typename Context>
   void processKeyWithDefault(const char *Key, Optional<T> &Val,
-                             const Optional<T> &DefaultValue, bool Required) {
+                             const Optional<T> &DefaultValue, bool Required,
+                             Context &Ctx) {
     assert(DefaultValue.hasValue() == false &&
            "Optional<T> shouldn't have a value!");
     void *SaveInfo;
@@ -593,7 +664,7 @@ private:
       Val = T();
     if (this->preflightKey(Key, Required, sameAsDefault, UseDefault,
                            SaveInfo)) {
-      yamlize(*this, Val.getValue(), Required);
+      yamlize(*this, Val.getValue(), Required, Ctx);
       this->postflightKey(SaveInfo);
     } else {
       if (UseDefault)
@@ -601,15 +672,15 @@ private:
     }
   }
 
-  template <typename T>
-  void processKeyWithDefault(const char *Key, T &Val, const T& DefaultValue,
-                                                                bool Required) {
+  template <typename T, typename Context>
+  void processKeyWithDefault(const char *Key, T &Val, const T &DefaultValue,
+                             bool Required, Context &Ctx) {
     void *SaveInfo;
     bool UseDefault;
     const bool sameAsDefault = outputting() && Val == DefaultValue;
     if ( this->preflightKey(Key, Required, sameAsDefault, UseDefault,
                                                                   SaveInfo) ) {
-      yamlize(*this, Val, Required);
+      yamlize(*this, Val, Required, Ctx);
       this->postflightKey(SaveInfo);
     }
     else {
@@ -618,12 +689,12 @@ private:
     }
   }
 
-  template <typename T>
-  void processKey(const char *Key, T &Val, bool Required) {
+  template <typename T, typename Context>
+  void processKey(const char *Key, T &Val, bool Required, Context &Ctx) {
     void *SaveInfo;
     bool UseDefault;
     if ( this->preflightKey(Key, Required, false, UseDefault, SaveInfo) ) {
-      yamlize(*this, Val, Required);
+      yamlize(*this, Val, Required, Ctx);
       this->postflightKey(SaveInfo);
     }
   }
@@ -632,17 +703,28 @@ private:
   void  *Ctxt;
 };
 
-template<typename T>
-typename std::enable_if<has_ScalarEnumerationTraits<T>::value,void>::type
-yamlize(IO &io, T &Val, bool) {
+namespace detail {
+template <typename T, typename Context>
+void doMapping(IO &io, T &Val, Context &Ctx) {
+  MappingContextTraits<T, Context>::mapping(io, Val, Ctx);
+}
+
+template <typename T> void doMapping(IO &io, T &Val, EmptyContext &Ctx) {
+  MappingTraits<T>::mapping(io, Val);
+}
+}
+
+template <typename T>
+typename std::enable_if<has_ScalarEnumerationTraits<T>::value, void>::type
+yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
   io.beginEnumScalar();
   ScalarEnumerationTraits<T>::enumeration(io, Val);
   io.endEnumScalar();
 }
 
-template<typename T>
-typename std::enable_if<has_ScalarBitSetTraits<T>::value,void>::type
-yamlize(IO &io, T &Val, bool) {
+template <typename T>
+typename std::enable_if<has_ScalarBitSetTraits<T>::value, void>::type
+yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
   bool DoClear;
   if ( io.beginBitSetScalar(DoClear) ) {
     if ( DoClear )
@@ -652,9 +734,9 @@ yamlize(IO &io, T &Val, bool) {
   }
 }
 
-template<typename T>
-typename std::enable_if<has_ScalarTraits<T>::value,void>::type
-yamlize(IO &io, T &Val, bool) {
+template <typename T>
+typename std::enable_if<has_ScalarTraits<T>::value, void>::type
+yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
   if ( io.outputting() ) {
     std::string Storage;
     llvm::raw_string_ostream Buffer(Storage);
@@ -674,7 +756,7 @@ yamlize(IO &io, T &Val, bool) {
 
 template <typename T>
 typename std::enable_if<has_BlockScalarTraits<T>::value, void>::type
-yamlize(IO &YamlIO, T &Val, bool) {
+yamlize(IO &YamlIO, T &Val, bool, EmptyContext &Ctx) {
   if (YamlIO.outputting()) {
     std::string Storage;
     llvm::raw_string_ostream Buffer(Storage);
@@ -691,9 +773,9 @@ yamlize(IO &YamlIO, T &Val, bool) {
   }
 }
 
-template<typename T>
-typename std::enable_if<validatedMappingTraits<T>::value, void>::type
-yamlize(IO &io, T &Val, bool) {
+template <typename T, typename Context>
+typename std::enable_if<validatedMappingTraits<T, Context>::value, void>::type
+yamlize(IO &io, T &Val, bool, Context &Ctx) {
   if (has_FlowTraits<MappingTraits<T>>::value)
     io.beginFlowMapping();
   else
@@ -705,7 +787,7 @@ yamlize(IO &io, T &Val, bool) {
       assert(Err.empty() && "invalid struct trying to be written as yaml");
     }
   }
-  MappingTraits<T>::mapping(io, Val);
+  detail::doMapping(io, Val, Ctx);
   if (!io.outputting()) {
     StringRef Err = MappingTraits<T>::validate(io, Val);
     if (!Err.empty())
@@ -717,36 +799,36 @@ yamlize(IO &io, T &Val, bool) {
     io.endMapping();
 }
 
-template<typename T>
-typename std::enable_if<unvalidatedMappingTraits<T>::value, void>::type
-yamlize(IO &io, T &Val, bool) {
+template <typename T, typename Context>
+typename std::enable_if<unvalidatedMappingTraits<T, Context>::value, void>::type
+yamlize(IO &io, T &Val, bool, Context &Ctx) {
   if (has_FlowTraits<MappingTraits<T>>::value) {
     io.beginFlowMapping();
-    MappingTraits<T>::mapping(io, Val);
+    detail::doMapping(io, Val, Ctx);
     io.endFlowMapping();
   } else {
     io.beginMapping();
-    MappingTraits<T>::mapping(io, Val);
+    detail::doMapping(io, Val, Ctx);
     io.endMapping();
   }
 }
 
-template<typename T>
-typename std::enable_if<missingTraits<T>::value, void>::type
-yamlize(IO &io, T &Val, bool) {
+template <typename T>
+typename std::enable_if<missingTraits<T, EmptyContext>::value, void>::type
+yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
   char missing_yaml_trait_for_type[sizeof(MissingTrait<T>)];
 }
 
-template<typename T>
-typename std::enable_if<has_SequenceTraits<T>::value,void>::type
-yamlize(IO &io, T &Seq, bool) {
+template <typename T, typename Context>
+typename std::enable_if<has_SequenceTraits<T>::value, void>::type
+yamlize(IO &io, T &Seq, bool, Context &Ctx) {
   if ( has_FlowTraits< SequenceTraits<T> >::value ) {
     unsigned incnt = io.beginFlowSequence();
     unsigned count = io.outputting() ? SequenceTraits<T>::size(io, Seq) : incnt;
     for(unsigned i=0; i < count; ++i) {
       void *SaveInfo;
       if ( io.preflightFlowElement(i, SaveInfo) ) {
-        yamlize(io, SequenceTraits<T>::element(io, Seq, i), true);
+        yamlize(io, SequenceTraits<T>::element(io, Seq, i), true, Ctx);
         io.postflightFlowElement(SaveInfo);
       }
     }
@@ -758,7 +840,7 @@ yamlize(IO &io, T &Seq, bool) {
     for(unsigned i=0; i < count; ++i) {
       void *SaveInfo;
       if ( io.preflightElement(i, SaveInfo) ) {
-        yamlize(io, SequenceTraits<T>::element(io, Seq, i), true);
+        yamlize(io, SequenceTraits<T>::element(io, Seq, i), true, Ctx);
         io.postflightElement(SaveInfo);
       }
     }
@@ -1241,8 +1323,9 @@ inline
 typename std::enable_if<has_DocumentListTraits<T>::value, Input &>::type
 operator>>(Input &yin, T &docList) {
   int i = 0;
+  EmptyContext Ctx;
   while ( yin.setCurrentDocument() ) {
-    yamlize(yin, DocumentListTraits<T>::element(yin, docList, i), true);
+    yamlize(yin, DocumentListTraits<T>::element(yin, docList, i), true, Ctx);
     if ( yin.error() )
       return yin;
     yin.nextDocument();
@@ -1253,11 +1336,12 @@ operator>>(Input &yin, T &docList) {
 
 // Define non-member operator>> so that Input can stream in a map as a document.
 template <typename T>
-inline
-typename std::enable_if<has_MappingTraits<T>::value, Input &>::type
+inline typename std::enable_if<has_MappingTraits<T, EmptyContext>::value,
+                               Input &>::type
 operator>>(Input &yin, T &docMap) {
+  EmptyContext Ctx;
   yin.setCurrentDocument();
-  yamlize(yin, docMap, true);
+  yamlize(yin, docMap, true, Ctx);
   return yin;
 }
 
@@ -1267,8 +1351,9 @@ template <typename T>
 inline
 typename std::enable_if<has_SequenceTraits<T>::value, Input &>::type
 operator>>(Input &yin, T &docSeq) {
+  EmptyContext Ctx;
   if (yin.setCurrentDocument())
-    yamlize(yin, docSeq, true);
+    yamlize(yin, docSeq, true, Ctx);
   return yin;
 }
 
@@ -1277,15 +1362,16 @@ template <typename T>
 inline
 typename std::enable_if<has_BlockScalarTraits<T>::value, Input &>::type
 operator>>(Input &In, T &Val) {
+  EmptyContext Ctx;
   if (In.setCurrentDocument())
-    yamlize(In, Val, true);
+    yamlize(In, Val, true, Ctx);
   return In;
 }
 
 // Provide better error message about types missing a trait specialization
 template <typename T>
-inline
-typename std::enable_if<missingTraits<T>::value, Input &>::type
+inline typename std::enable_if<missingTraits<T, EmptyContext>::value,
+                               Input &>::type
 operator>>(Input &yin, T &docSeq) {
   char missing_yaml_trait_for_type[sizeof(MissingTrait<T>)];
   return yin;
@@ -1296,11 +1382,13 @@ template <typename T>
 inline
 typename std::enable_if<has_DocumentListTraits<T>::value, Output &>::type
 operator<<(Output &yout, T &docList) {
+  EmptyContext Ctx;
   yout.beginDocuments();
   const size_t count = DocumentListTraits<T>::size(yout, docList);
   for(size_t i=0; i < count; ++i) {
     if ( yout.preflightDocument(i) ) {
-      yamlize(yout, DocumentListTraits<T>::element(yout, docList, i), true);
+      yamlize(yout, DocumentListTraits<T>::element(yout, docList, i), true,
+              Ctx);
       yout.postflightDocument();
     }
   }
@@ -1310,12 +1398,13 @@ operator<<(Output &yout, T &docList) {
 
 // Define non-member operator<< so that Output can stream out a map.
 template <typename T>
-inline
-typename std::enable_if<has_MappingTraits<T>::value, Output &>::type
+inline typename std::enable_if<has_MappingTraits<T, EmptyContext>::value,
+                               Output &>::type
 operator<<(Output &yout, T &map) {
+  EmptyContext Ctx;
   yout.beginDocuments();
   if ( yout.preflightDocument(0) ) {
-    yamlize(yout, map, true);
+    yamlize(yout, map, true, Ctx);
     yout.postflightDocument();
   }
   yout.endDocuments();
@@ -1327,9 +1416,10 @@ template <typename T>
 inline
 typename std::enable_if<has_SequenceTraits<T>::value, Output &>::type
 operator<<(Output &yout, T &seq) {
+  EmptyContext Ctx;
   yout.beginDocuments();
   if ( yout.preflightDocument(0) ) {
-    yamlize(yout, seq, true);
+    yamlize(yout, seq, true, Ctx);
     yout.postflightDocument();
   }
   yout.endDocuments();
@@ -1341,9 +1431,10 @@ template <typename T>
 inline
 typename std::enable_if<has_BlockScalarTraits<T>::value, Output &>::type
 operator<<(Output &Out, T &Val) {
+  EmptyContext Ctx;
   Out.beginDocuments();
   if (Out.preflightDocument(0)) {
-    yamlize(Out, Val, true);
+    yamlize(Out, Val, true, Ctx);
     Out.postflightDocument();
   }
   Out.endDocuments();
@@ -1352,8 +1443,8 @@ operator<<(Output &Out, T &Val) {
 
 // Provide better error message about types missing a trait specialization
 template <typename T>
-inline
-typename std::enable_if<missingTraits<T>::value, Output &>::type
+inline typename std::enable_if<missingTraits<T, EmptyContext>::value,
+                               Output &>::type
 operator<<(Output &yout, T &seq) {
   char missing_yaml_trait_for_type[sizeof(MissingTrait<T>)];
   return yout;

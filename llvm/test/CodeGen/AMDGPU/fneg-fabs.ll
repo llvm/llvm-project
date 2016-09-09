@@ -1,10 +1,10 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}fneg_fabs_fadd_f32:
 ; SI-NOT: and
-; SI: v_sub_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, |{{v[0-9]+}}|
+; SI: v_subrev_f32_e64 {{v[0-9]+}}, |{{v[0-9]+}}|, {{s[0-9]+}}
 define void @fneg_fabs_fadd_f32(float addrspace(1)* %out, float %x, float %y) {
   %fabs = call float @llvm.fabs.f32(float %x)
   %fsub = fsub float -0.000000e+00, %fabs
@@ -15,7 +15,7 @@ define void @fneg_fabs_fadd_f32(float addrspace(1)* %out, float %x, float %y) {
 
 ; FUNC-LABEL: {{^}}fneg_fabs_fmul_f32:
 ; SI-NOT: and
-; SI: v_mul_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, -|{{v[0-9]+}}|
+; SI: v_mul_f32_e64 {{v[0-9]+}}, -|{{v[0-9]+}}|, {{s[0-9]+}}
 ; SI-NOT: and
 define void @fneg_fabs_fmul_f32(float addrspace(1)* %out, float %x, float %y) {
   %fabs = call float @llvm.fabs.f32(float %x)

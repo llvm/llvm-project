@@ -49,10 +49,6 @@ public:
       : VirtualFileMapping(VirtualFileMapping), Expressions(Expressions),
         MappingRegions(MappingRegions) {}
 
-  CoverageMappingWriter(ArrayRef<CounterExpression> Expressions,
-                        MutableArrayRef<CounterMappingRegion> MappingRegions)
-      : Expressions(Expressions), MappingRegions(MappingRegions) {}
-
   /// \brief Write encoded coverage mapping data to the given output stream.
   void write(raw_ostream &OS);
 };

@@ -1147,35 +1147,76 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                               MCStreamer &Out,
                                               uint64_t &ErrorInfo,
                                               bool MatchingInlineAsm) {
+  // What asm variants we should check
+  std::vector<unsigned> MatchedVariants;
+  if (getForcedEncodingSize() == 32) {
+    MatchedVariants = {AMDGPUAsmVariants::DEFAULT};
+  } else if (isForcedVOP3()) {
+    MatchedVariants = {AMDGPUAsmVariants::VOP3};
+  } else if (isForcedSDWA()) {
+    MatchedVariants = {AMDGPUAsmVariants::SDWA};
+  } else if (isForcedDPP()) {
+    MatchedVariants = {AMDGPUAsmVariants::DPP};
+  } else {
+    MatchedVariants = {AMDGPUAsmVariants::DEFAULT,
+                       AMDGPUAsmVariants::VOP3,
+                       AMDGPUAsmVariants::SDWA,
+                       AMDGPUAsmVariants::DPP};
+  }
+
   MCInst Inst;
-
-  switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
-    default: break;
-    case Match_Success:
-      Inst.setLoc(IDLoc);
-      Out.EmitInstruction(Inst, getSTI());
-      return false;
-    case Match_MissingFeature:
-      return Error(IDLoc, "instruction not supported on this GPU");
-
-    case Match_MnemonicFail:
-      return Error(IDLoc, "unrecognized instruction mnemonic");
-
-    case Match_InvalidOperand: {
-      SMLoc ErrorLoc = IDLoc;
-      if (ErrorInfo != ~0ULL) {
-        if (ErrorInfo >= Operands.size()) {
-          return Error(IDLoc, "too few operands for instruction");
-        }
-        ErrorLoc = ((AMDGPUOperand &)*Operands[ErrorInfo]).getStartLoc();
-        if (ErrorLoc == SMLoc())
-          ErrorLoc = IDLoc;
-      }
-      return Error(ErrorLoc, "invalid operand for instruction");
+  unsigned Result = Match_Success;
+  for (auto Variant : MatchedVariants) {
+    uint64_t EI;
+    auto R = MatchInstructionImpl(Operands, Inst, EI, MatchingInlineAsm,
+                                  Variant);
+    // We order match statuses from least to most specific. We use most specific
+    // status as resulting
+    // Match_MnemonicFail < Match_InvalidOperand < Match_MissingFeature < Match_PreferE32
+    if ((R == Match_Success) ||
+        (R == Match_PreferE32) ||
+        (R == Match_MissingFeature && Result != Match_PreferE32) ||
+        (R == Match_InvalidOperand && Result != Match_MissingFeature
+                                   && Result != Match_PreferE32) ||
+        (R == Match_MnemonicFail   && Result != Match_InvalidOperand
+                                   && Result != Match_MissingFeature
+                                   && Result != Match_PreferE32)) {
+      Result = R;
+      ErrorInfo = EI;
     }
-    case Match_PreferE32:
-      return Error(IDLoc, "internal error: instruction without _e64 suffix "
-                          "should be encoded as e32");
+    if (R == Match_Success)
+      break;
+  }
+
+  switch (Result) {
+  default: break;
+  case Match_Success:
+    Inst.setLoc(IDLoc);
+    Out.EmitInstruction(Inst, getSTI());
+    return false;
+
+  case Match_MissingFeature:
+    return Error(IDLoc, "instruction not supported on this GPU");
+
+  case Match_MnemonicFail:
+    return Error(IDLoc, "unrecognized instruction mnemonic");
+
+  case Match_InvalidOperand: {
+    SMLoc ErrorLoc = IDLoc;
+    if (ErrorInfo != ~0ULL) {
+      if (ErrorInfo >= Operands.size()) {
+        return Error(IDLoc, "too few operands for instruction");
+      }
+      ErrorLoc = ((AMDGPUOperand &)*Operands[ErrorInfo]).getStartLoc();
+      if (ErrorLoc == SMLoc())
+        ErrorLoc = IDLoc;
+    }
+    return Error(ErrorLoc, "invalid operand for instruction");
+  }
+
+  case Match_PreferE32:
+    return Error(IDLoc, "internal error: instruction without _e64 suffix "
+                        "should be encoded as e32");
   }
   llvm_unreachable("Implement any new match types added!");
 }

@@ -269,29 +269,28 @@ template <> struct ScalarTraits<APSInt> {
   static bool mustQuote(StringRef Scalar) { return false; }
 };
 
-void MappingTraits<CVType>::mapping(IO &IO, CVType &Record) {
+void MappingContextTraits<CVType, YamlTypeDumperCallbacks>::mapping(
+    IO &IO, CVType &Record, YamlTypeDumperCallbacks &Dumper) {
   if (IO.outputting()) {
     codeview::TypeDeserializer Deserializer;
-    codeview::yaml::YamlTypeDumperCallbacks Callbacks(IO);
 
     codeview::TypeVisitorCallbackPipeline Pipeline;
     Pipeline.addCallbackToPipeline(Deserializer);
-    Pipeline.addCallbackToPipeline(Callbacks);
+    Pipeline.addCallbackToPipeline(Dumper);
 
     codeview::CVTypeVisitor Visitor(Pipeline);
     consumeError(Visitor.visitTypeRecord(Record));
   }
 }
 
-void MappingTraits<FieldListRecord>::mapping(IO &IO,
-                                             FieldListRecord &FieldList) {
+void MappingContextTraits<FieldListRecord, YamlTypeDumperCallbacks>::mapping(
+    IO &IO, FieldListRecord &FieldList, YamlTypeDumperCallbacks &Dumper) {
   if (IO.outputting()) {
-    codeview::yaml::YamlTypeDumperCallbacks Callbacks(IO);
     codeview::TypeDeserializer Deserializer;
 
     codeview::TypeVisitorCallbackPipeline Pipeline;
     Pipeline.addCallbackToPipeline(Deserializer);
-    Pipeline.addCallbackToPipeline(Callbacks);
+    Pipeline.addCallbackToPipeline(Dumper);
 
     codeview::CVTypeVisitor Visitor(Pipeline);
     consumeError(Visitor.visitFieldListMemberStream(FieldList.Data));

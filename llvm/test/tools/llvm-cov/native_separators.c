@@ -15,15 +15,13 @@
 
 // TEXT-INDEX: \tmp\native_separators.c
 // HTML-INDEX: >tmp\native_separators.c</a>
-// HTML: <pre>Source: \tmp\native_separators.c</pre>
-// HTML: tools\llvm-cov\Inputs\native_separators.covmapping</pre>
+// HTML: <pre>Source: \tmp\native_separators.c (Binary: native_separators.covmapping)</pre>
 
 int main() {}
 
 // RUN: llvm-cov show %S/Inputs/native_separators.covmapping -instr-profile=%t.profdata -filename-equivalence %s -o %t.dir
 // RUN: FileCheck -check-prefixes=TEXT -input-file=%t.dir/coverage/tmp/native_separators.c.txt %s
-// TEXT: {{^}}Source: \tmp\native_separators.c:{{$}}
-// TEXT: {{^}}Binary: {{.*}}tools\llvm-cov\Inputs\native_separators.covmapping:{{$}}
+// TEXT: Source: \tmp\native_separators.c (Binary: native_separators.covmapping)
 
 // Re-purpose this file to test that "Go to first unexecuted line" feature.
 

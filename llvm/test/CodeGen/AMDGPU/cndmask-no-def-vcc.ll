@@ -5,7 +5,7 @@ declare i1 @llvm.amdgcn.class.f32(float, i32)
 ; Produces error after adding an implicit def to v_cndmask_b32
 
 ; GCN-LABEL: {{^}}vcc_shrink_vcc_def:
-; GCN: v_cmp_eq_i32_e64 vcc, 0, s{{[0-9]+}}
+; GCN: v_cmp_eq_i32_e64 vcc, s{{[0-9]+}}, 0{{$}}
 ; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}, vcc
 ; GCN: v_cndmask_b32_e64 v1, 0, 1, s{{\[[0-9]+:[0-9]+\]}}
 define void @vcc_shrink_vcc_def(float %arg, i32 %arg1, float %arg2, i32 %arg3) {

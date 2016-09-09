@@ -1594,17 +1594,14 @@ public:
 
   /// Return the parameter attributes for this call.
   ///
-  const AttributeSet &getAttributes() const { return AttributeList; }
+  AttributeSet getAttributes() const { return AttributeList; }
 
   /// Set the parameter attributes for this call.
   ///
-  void setAttributes(const AttributeSet &Attrs) { AttributeList = Attrs; }
+  void setAttributes(AttributeSet Attrs) { AttributeList = Attrs; }
 
   /// adds the attribute to the list of attributes.
   void addAttribute(unsigned i, Attribute::AttrKind Kind);
-
-  /// adds the attribute to the list of attributes.
-  void addAttribute(unsigned i, StringRef Kind, StringRef Value);
 
   /// adds the attribute to the list of attributes.
   void addAttribute(unsigned i, Attribute Attr);
@@ -1614,9 +1611,6 @@ public:
 
   /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, StringRef Kind);
-
-  /// removes the attribute from the list of attributes.
-  void removeAttribute(unsigned i, Attribute Attr);
 
   /// adds the dereferenceable attribute to the list of attributes.
   void addDereferenceableAttr(unsigned i, uint64_t Bytes);
@@ -1641,10 +1635,14 @@ public:
   bool paramHasAttr(unsigned i, Attribute::AttrKind Kind) const;
 
   /// Get the attribute of a given kind at a position.
-  Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const;
+  Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const {
+    return getAttributes().getAttribute(i, Kind);
+  }
 
   /// Get the attribute of a given kind at a position.
-  Attribute getAttribute(unsigned i, StringRef Kind) const;
+  Attribute getAttribute(unsigned i, StringRef Kind) const {
+    return getAttributes().getAttribute(i, Kind);
+  }
 
   /// Return true if the data operand at index \p i has the attribute \p
   /// A.
@@ -1763,8 +1761,7 @@ public:
     addAttribute(AttributeSet::FunctionIndex, Attribute::Convergent);
   }
   void setNotConvergent() {
-    removeAttribute(AttributeSet::FunctionIndex,
-                    Attribute::get(getContext(), Attribute::Convergent));
+    removeAttribute(AttributeSet::FunctionIndex, Attribute::Convergent);
   }
 
   /// Determine if the call returns a structure through first
@@ -1821,17 +1818,17 @@ public:
   }
 
 private:
-  template <typename AttrKind> bool hasFnAttrImpl(AttrKind A) const {
-    if (AttributeList.hasAttribute(AttributeSet::FunctionIndex, A))
+  template <typename AttrKind> bool hasFnAttrImpl(AttrKind Kind) const {
+    if (AttributeList.hasAttribute(AttributeSet::FunctionIndex, Kind))
       return true;
 
     // Operand bundles override attributes on the called function, but don't
     // override attributes directly present on the call instruction.
-    if (isFnAttrDisallowedByOpBundle(A))
+    if (isFnAttrDisallowedByOpBundle(Kind))
       return false;
 
     if (const Function *F = getCalledFunction())
-      return F->getAttributes().hasAttribute(AttributeSet::FunctionIndex, A);
+      return F->getAttributes().hasAttribute(AttributeSet::FunctionIndex, Kind);
     return false;
   }
 
@@ -3567,11 +3564,11 @@ public:
 
   /// Return the parameter attributes for this invoke.
   ///
-  const AttributeSet &getAttributes() const { return AttributeList; }
+  AttributeSet getAttributes() const { return AttributeList; }
 
   /// Set the parameter attributes for this invoke.
   ///
-  void setAttributes(const AttributeSet &Attrs) { AttributeList = Attrs; }
+  void setAttributes(AttributeSet Attrs) { AttributeList = Attrs; }
 
   /// adds the attribute to the list of attributes.
   void addAttribute(unsigned i, Attribute::AttrKind Kind);
@@ -3584,9 +3581,6 @@ public:
 
   /// removes the attribute from the list of attributes.
   void removeAttribute(unsigned i, StringRef Kind);
-
-  /// removes the attribute from the list of attributes.
-  void removeAttribute(unsigned i, Attribute Attr);
 
   /// adds the dereferenceable attribute to the list of attributes.
   void addDereferenceableAttr(unsigned i, uint64_t Bytes);
@@ -3611,10 +3605,14 @@ public:
   bool paramHasAttr(unsigned i, Attribute::AttrKind Kind) const;
 
   /// Get the attribute of a given kind at a position.
-  Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const;
+  Attribute getAttribute(unsigned i, Attribute::AttrKind Kind) const {
+    return getAttributes().getAttribute(i, Kind);
+  }
 
   /// Get the attribute of a given kind at a position.
-  Attribute getAttribute(unsigned i, StringRef Kind) const;
+  Attribute getAttribute(unsigned i, StringRef Kind) const {
+    return getAttributes().getAttribute(i, Kind);
+  }
 
   /// Return true if the data operand at index \p i has the attribute \p
   /// A.
@@ -3728,8 +3726,7 @@ public:
     addAttribute(AttributeSet::FunctionIndex, Attribute::Convergent);
   }
   void setNotConvergent() {
-    removeAttribute(AttributeSet::FunctionIndex,
-                    Attribute::get(getContext(), Attribute::Convergent));
+    removeAttribute(AttributeSet::FunctionIndex, Attribute::Convergent);
   }
 
   /// Determine if the call returns a structure through first
@@ -3815,17 +3812,17 @@ private:
   unsigned getNumSuccessorsV() const override;
   void setSuccessorV(unsigned idx, BasicBlock *B) override;
 
-  template <typename AttrKind> bool hasFnAttrImpl(AttrKind A) const {
-    if (AttributeList.hasAttribute(AttributeSet::FunctionIndex, A))
+  template <typename AttrKind> bool hasFnAttrImpl(AttrKind Kind) const {
+    if (AttributeList.hasAttribute(AttributeSet::FunctionIndex, Kind))
       return true;
 
     // Operand bundles override attributes on the called function, but don't
     // override attributes directly present on the invoke instruction.
-    if (isFnAttrDisallowedByOpBundle(A))
+    if (isFnAttrDisallowedByOpBundle(Kind))
       return false;
 
     if (const Function *F = getCalledFunction())
-      return F->getAttributes().hasAttribute(AttributeSet::FunctionIndex, A);
+      return F->getAttributes().hasAttribute(AttributeSet::FunctionIndex, Kind);
     return false;
   }
 

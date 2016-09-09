@@ -1022,6 +1022,16 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
            getSubtargetInfo());
 }
 
+void X86AsmPrinter::recordSled(MCSymbol *Sled, const MachineInstr &MI,
+                               SledKind Kind) {
+  auto Fn = MI.getParent()->getParent()->getFunction();
+  auto Attr = Fn->getFnAttribute("function-instrument");
+  bool AlwaysInstrument =
+      Attr.isStringAttribute() && Attr.getValueAsString() == "xray-always";
+  Sleds.emplace_back(
+      XRayFunctionEntry{Sled, CurrentFnSym, Kind, AlwaysInstrument, Fn});
+}
+
 void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
                                                   X86MCInstLower &MCIL) {
   // We want to emit the following pattern:
@@ -1301,7 +1311,6 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::TAILJMPd64:
   case X86::TAILJMPr64_REX:
   case X86::TAILJMPm64_REX:
-  case X86::TAILJMPd64_REX:
     // Lower these as normal, but add some comments.
     OutStreamer->AddComment("TAILCALL");
     break;

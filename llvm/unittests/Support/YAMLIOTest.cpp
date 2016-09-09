@@ -2299,3 +2299,72 @@ TEST(YAMLIO, TestWrapFlow) {
     out.clear();
   }
 }
+
+struct MappingContext {
+  int A = 0;
+};
+struct SimpleMap {
+  int B = 0;
+  int C = 0;
+};
+
+struct NestedMap {
+  NestedMap(MappingContext &Context) : Context(Context) {}
+  SimpleMap Simple;
+  MappingContext &Context;
+};
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingContextTraits<SimpleMap, MappingContext> {
+  static void mapping(IO &io, SimpleMap &sm, MappingContext &Context) {
+    io.mapRequired("B", sm.B);
+    io.mapRequired("C", sm.C);
+    ++Context.A;
+    io.mapRequired("Context", Context.A);
+  }
+};
+
+template <> struct MappingTraits<NestedMap> {
+  static void mapping(IO &io, NestedMap &nm) {
+    io.mapRequired("Simple", nm.Simple, nm.Context);
+  }
+};
+}
+}
+
+TEST(YAMLIO, TestMapWithContext) {
+  MappingContext Context;
+  NestedMap Nested(Context);
+  std::string out;
+  llvm::raw_string_ostream ostr(out);
+
+  Output yout(ostr, nullptr, 15);
+
+  yout << Nested;
+  ostr.flush();
+  EXPECT_EQ(1, Context.A);
+  EXPECT_EQ("---\n"
+            "Simple:          \n"
+            "  B:               0\n"
+            "  C:               0\n"
+            "  Context:         1\n"
+            "...\n",
+            out);
+
+  out.clear();
+
+  Nested.Simple.B = 2;
+  Nested.Simple.C = 3;
+  yout << Nested;
+  ostr.flush();
+  EXPECT_EQ(2, Context.A);
+  EXPECT_EQ("---\n"
+            "Simple:          \n"
+            "  B:               2\n"
+            "  C:               3\n"
+            "  Context:         2\n"
+            "...\n",
+            out);
+  out.clear();
+}
