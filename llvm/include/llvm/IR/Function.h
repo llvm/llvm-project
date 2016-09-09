@@ -164,27 +164,23 @@ public:
   void setAttributes(AttributeSet Attrs) { AttributeSets = Attrs; }
 
   /// @brief Add function attributes to this function.
-  void addFnAttr(Attribute::AttrKind N) {
-    setAttributes(AttributeSets.addAttribute(getContext(),
-                                             AttributeSet::FunctionIndex, N));
+  void addFnAttr(Attribute::AttrKind Kind) {
+    addAttribute(AttributeSet::FunctionIndex, Kind);
+  }
+
+  /// @brief Add function attributes to this function.
+  void addFnAttr(StringRef Kind, StringRef Val = StringRef()) {
+    addAttribute(AttributeSet::FunctionIndex,
+                 Attribute::get(getContext(), Kind, Val));
+  }
+
+  void addFnAttr(Attribute Attr) {
+    addAttribute(AttributeSet::FunctionIndex, Attr);
   }
 
   /// @brief Remove function attributes from this function.
   void removeFnAttr(Attribute::AttrKind Kind) {
-    setAttributes(AttributeSets.removeAttribute(
-        getContext(), AttributeSet::FunctionIndex, Kind));
-  }
-
-  /// @brief Add function attributes to this function.
-  void addFnAttr(StringRef Kind) {
-    setAttributes(
-      AttributeSets.addAttribute(getContext(),
-                                 AttributeSet::FunctionIndex, Kind));
-  }
-  void addFnAttr(StringRef Kind, StringRef Value) {
-    setAttributes(
-      AttributeSets.addAttribute(getContext(),
-                                 AttributeSet::FunctionIndex, Kind, Value));
+    removeAttribute(AttributeSet::FunctionIndex, Kind);
   }
 
   /// @brief Remove function attribute from this function.
@@ -204,7 +200,7 @@ public:
     return AttributeSets.hasFnAttribute(Kind);
   }
   bool hasFnAttribute(StringRef Kind) const {
-    return AttributeSets.hasAttribute(AttributeSet::FunctionIndex, Kind);
+    return AttributeSets.hasFnAttribute(Kind);
   }
 
   /// @brief Return the attribute for the given attribute kind.
