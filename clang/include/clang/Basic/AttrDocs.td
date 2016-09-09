@@ -119,7 +119,7 @@ The ``carries_dependency`` attribute specifies dependency propagation into and
 out of functions.
 
 When specified on a function or Objective-C method, the ``carries_dependency``
-attribute means that the return value carries a dependency out of the function, 
+attribute means that the return value carries a dependency out of the function,
 so that the implementation need not constrain ordering upon return from that
 function. Implementations of the function and its caller may choose to preserve
 dependencies instead of emitting memory ordering instructions such as fences.
@@ -691,10 +691,10 @@ This attribute specifies that the Objective-C class to which it applies is visib
 def ObjCBoxableDocs : Documentation {
     let Category = DocCatFunction;
     let Content = [{
-Structs and unions marked with the ``objc_boxable`` attribute can be used 
+Structs and unions marked with the ``objc_boxable`` attribute can be used
 with the Objective-C boxed expression syntax, ``@(...)``.
 
-**Usage**: ``__attribute__((objc_boxable))``. This attribute 
+**Usage**: ``__attribute__((objc_boxable))``. This attribute
 can only be placed on a declaration of a trivially-copyable struct or union:
 
 .. code-block:: objc
@@ -847,8 +847,8 @@ is not a constant initializer, an error will be produced. This attribute may
 only be used in C++.
 
 Note that in C++03 strict constant expression checking is not done. Instead
-the attribute reports if Clang can emit the the variable as a constant, even
-if it's not technically a 'constant initializer'. This behavior is non-portable.
+the attribute reports if Clang can emit the variable as a constant, even if it's
+not technically a 'constant initializer'. This behavior is non-portable.
 
 Static storage duration variables with constant initializers avoid hard-to-find
 bugs caused by the indeterminate order of dynamic initialization. They can also
@@ -920,7 +920,7 @@ potentially-evaluated discarded-value expression that is not explicitly cast to
     launch_missiles();
   }
   error_info &foo();
-  void f() { foo(); } // Does not diagnose, error_info is a reference.  
+  void f() { foo(); } // Does not diagnose, error_info is a reference.
   }];
 }
 
@@ -1238,7 +1238,7 @@ passed in RCX, RDX, R8, and R9 as is done for the default Windows x64 calling
 convention.
 
 On both 32-bit x86 and x86_64 targets, vector and floating point arguments are
-passed in XMM0-XMM5. Homogenous vector aggregates of up to four elements are
+passed in XMM0-XMM5. Homogeneous vector aggregates of up to four elements are
 passed in sequential SSE registers if enough are available. If AVX is enabled,
 256 bit vectors are passed in YMM0-YMM5. Any vector or aggregate type that
 cannot be passed in registers for any reason is passed by reference, which
@@ -1373,7 +1373,7 @@ def NoSanitizeMemoryDocs : Documentation {
 .. _langext-memory_sanitizer:
 
 Use ``__attribute__((no_sanitize_memory))`` on a function declaration to
-specify that checks for uninitialized memory should not be inserted 
+specify that checks for uninitialized memory should not be inserted
 (e.g. by MemorySanitizer). The function may still be instrumented by the tool
 to avoid false positives in other places.
   }];
@@ -1991,7 +1991,7 @@ by Clang.
 }
 def NullabilityDocs : DocumentationCategory<"Nullability Attributes"> {
   let Content = [{
-Whether a particular pointer may be "null" is an important concern when working with pointers in the C family of languages. The various nullability attributes indicate whether a particular pointer can be null or not, which makes APIs more expressive and can help static analysis tools identify bugs involving null pointers. Clang supports several kinds of nullability attributes: the ``nonnull`` and ``returns_nonnull`` attributes indicate which function or method parameters and result types can never be null, while nullability type qualifiers indicate which pointer types can be null (``_Nullable``) or cannot be null (``_Nonnull``). 
+Whether a particular pointer may be "null" is an important concern when working with pointers in the C family of languages. The various nullability attributes indicate whether a particular pointer can be null or not, which makes APIs more expressive and can help static analysis tools identify bugs involving null pointers. Clang supports several kinds of nullability attributes: the ``nonnull`` and ``returns_nonnull`` attributes indicate which function or method parameters and result types can never be null, while nullability type qualifiers indicate which pointer types can be null (``_Nullable``) or cannot be null (``_Nonnull``).
 
 The nullability (type) qualifiers express whether a value of a given pointer type can be null (the ``_Nullable`` qualifier), doesn't have a defined meaning for null (the ``_Nonnull`` qualifier), or for which the purpose of null is unclear (the ``_Null_unspecified`` qualifier). Because nullability qualifiers are expressed within the type system, they are more general than the ``nonnull`` and ``returns_nonnull`` attributes, allowing one to express (for example) a nullable pointer to an array of nonnull pointers. Nullability qualifiers are written to the right of the pointer to which they apply. For example:
 
@@ -2483,7 +2483,7 @@ def SwiftIndirectResultDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
 The ``swift_indirect_result`` attribute marks a parameter of a ``swiftcall``
-function as having the special indirect-result ABI treatmenet.
+function as having the special indirect-result ABI treatment.
 
 This treatment gives the parameter the target's normal indirect-result
 ABI treatment, which may involve passing it differently from an ordinary

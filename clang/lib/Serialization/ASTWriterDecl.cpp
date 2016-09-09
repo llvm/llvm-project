@@ -110,6 +110,7 @@ namespace clang {
     void VisitUsingShadowDecl(UsingShadowDecl *D);
     void VisitConstructorUsingShadowDecl(ConstructorUsingShadowDecl *D);
     void VisitLinkageSpecDecl(LinkageSpecDecl *D);
+    void VisitExportDecl(ExportDecl *D);
     void VisitFileScopeAsmDecl(FileScopeAsmDecl *D);
     void VisitImportDecl(ImportDecl *D);
     void VisitAccessSpecDecl(AccessSpecDecl *D);
@@ -1078,6 +1079,12 @@ void ASTDeclWriter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
   Record.AddSourceLocation(D->getExternLoc());
   Record.AddSourceLocation(D->getRBraceLoc());
   Code = serialization::DECL_LINKAGE_SPEC;
+}
+
+void ASTDeclWriter::VisitExportDecl(ExportDecl *D) {
+  VisitDecl(D);
+  Record.AddSourceLocation(D->getRBraceLoc());
+  Code = serialization::DECL_EXPORT;
 }
 
 void ASTDeclWriter::VisitLabelDecl(LabelDecl *D) {

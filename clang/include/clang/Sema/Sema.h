@@ -1942,6 +1942,11 @@ public:
                              SourceLocation DeclLoc, ArrayRef<Module *> Modules,
                              MissingImportKind MIK, bool Recover);
 
+  Decl *ActOnStartExportDecl(Scope *S, SourceLocation ExportLoc,
+                             SourceLocation LBraceLoc);
+  Decl *ActOnFinishExportDecl(Scope *S, Decl *ExportDecl,
+                              SourceLocation RBraceLoc);
+
   /// \brief We've found a use of a templated declaration that would trigger an
   /// implicit instantiation. Check that any relevant explicit specializations
   /// and partial specializations are visible, and diagnose if not.

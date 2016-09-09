@@ -303,7 +303,10 @@
 
 // ================== Check that a bogus CPU gives an error
 // RUN: %clang -target arm -mcpu=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-CPU %s
+// RUN: %clang -target armv8-apple-darwin -arch arm64 -mcpu=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-CPU %s
 // CHECK-BOGUS-CPU: error: {{.*}} does not support '-mcpu=bogus'
+// RUN: %clang -target armv8-apple-darwin -arch arm64 -mtune=bogus -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BOGUS-TUNE %s
+// CHECK-BOGUS-TUNE: error: {{.*}} does not support '-mtune=bogus'
 
 // ================== Check default Architecture on each ARM11 CPU
 // RUN: %clang -target arm-linux-gnueabi -mcpu=arm1136j-s -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-CPUV6 %s
