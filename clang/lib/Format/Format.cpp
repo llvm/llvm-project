@@ -1132,6 +1132,8 @@ private:
         break;
       if (Left->is(LK) && Right->is(RK)) {
         deleteToken(DeleteLeft ? Left : Right);
+        for (auto *Tok = Left->Next; Tok && Tok != Right; Tok = Tok->Next)
+          deleteToken(Tok);
         // If the right token is deleted, we should keep the left token
         // unchanged and pair it with the new right token.
         if (!DeleteLeft)

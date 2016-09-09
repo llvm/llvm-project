@@ -1147,6 +1147,7 @@ public:
       llvm::opt::ArgStringList &CC1Args) const override;
   Tool *SelectTool(const JobAction &JA) const override;
   unsigned GetDefaultDwarfVersion() const override { return 2; }
+  SanitizerMask getSupportedSanitizers() const override;
 
 protected:
   Tool *buildLinker() const override;

@@ -188,39 +188,34 @@ TEST_F(CleanupTest, RedundantCommaNotInAffectedRanges) {
   EXPECT_EQ(Expected, Result);
 }
 
-// FIXME: delete comments too.
-TEST_F(CleanupTest, CtorInitializationCommentAroundCommas) {
-  // Remove redundant commas around comment.
-  std::string Code = "class A {\nA() : x({1}), /* comment */, {} };";
-  std::string Expected = "class A {\nA() : x({1}) /* comment */ {} };";
+TEST_F(CleanupTest, RemoveCommentsAroundDeleteCode) {
+  std::string Code =
+      "class A {\nA() : x({1}), /* comment */, /* comment */ {} };";
+  std::string Expected = "class A {\nA() : x({1}) {} };";
   std::vector<tooling::Range> Ranges;
   Ranges.push_back(tooling::Range(25, 0));
   Ranges.push_back(tooling::Range(40, 0));
   std::string Result = cleanup(Code, Ranges);
   EXPECT_EQ(Expected, Result);
 
-  // Remove trailing comma and ignore comment.
-  Code = "class A {\nA() : x({1}), // comment\n{} };";
-  Expected = "class A {\nA() : x({1}) // comment\n{} };";
+  Code = "class A {\nA() : x({1}), // comment\n {} };";
+  Expected = "class A {\nA() : x({1})\n {} };";
   Ranges = std::vector<tooling::Range>(1, tooling::Range(25, 0));
   Result = cleanup(Code, Ranges);
   EXPECT_EQ(Expected, Result);
 
-  // Remove trailing comma and ignore comment.
   Code = "class A {\nA() : x({1}), // comment\n , y(1),{} };";
-  Expected = "class A {\nA() : x({1}), // comment\n  y(1){} };";
+  Expected = "class A {\nA() : x({1}),  y(1){} };";
   Ranges = std::vector<tooling::Range>(1, tooling::Range(38, 0));
   Result = cleanup(Code, Ranges);
   EXPECT_EQ(Expected, Result);
 
-  // Remove trailing comma and ignore comment.
   Code = "class A {\nA() : x({1}), \n/* comment */, y(1),{} };";
-  Expected = "class A {\nA() : x({1}), \n/* comment */ y(1){} };";
+  Expected = "class A {\nA() : x({1}), \n y(1){} };";
   Ranges = std::vector<tooling::Range>(1, tooling::Range(40, 0));
   Result = cleanup(Code, Ranges);
   EXPECT_EQ(Expected, Result);
 
-  // Remove trailing comma and ignore comment.
   Code = "class A {\nA() : , // comment\n y(1),{} };";
   Expected = "class A {\nA() :  // comment\n y(1){} };";
   Ranges = std::vector<tooling::Range>(1, tooling::Range(17, 0));
