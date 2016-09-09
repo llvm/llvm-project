@@ -257,11 +257,15 @@ TypeIndex TypeTableBuilder::writeKnownType(const BuildInfoRecord &Record) {
 }
 
 TypeIndex TypeTableBuilder::writeRecord(TypeRecordBuilder &Builder) {
-  return writeRecord(Builder.str());
+  TypeIndex I = writeRecord(Builder.str());
+  RecordKinds.push_back(Builder.kind());
+  return I;
 }
 
 TypeIndex TypeTableBuilder::writeFieldList(FieldListRecordBuilder &FieldList) {
-  return FieldList.writeListRecord(*this);
+  TypeIndex I = FieldList.writeListRecord(*this);
+  RecordKinds.push_back(TypeRecordKind::FieldList);
+  return I;
 }
 
 TypeIndex

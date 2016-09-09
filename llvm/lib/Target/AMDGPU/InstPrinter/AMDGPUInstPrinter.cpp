@@ -359,7 +359,7 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm, raw_ostream &O) {
   else if (Imm == DoubleToBits(-4.0))
     O << "-4.0";
   else {
-    assert(isUInt<32>(Imm));
+    assert(isUInt<32>(Imm) || Imm == 0x3fc45f306dc9c882);
 
     // In rare situations, we will have a 32-bit literal in a 64-bit
     // operand. This is technically allowed for the encoding of s_mov_b64.

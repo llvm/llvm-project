@@ -29,7 +29,7 @@ define void @test_implicit(i32 addrspace(1)* %out) #1 {
 
 ; ALL-LABEL: {{^}}test_implicit_alignment
 ; MESA: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0xc
-; HSA: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x3
+; HSA: s_load_dword [[VAL:s[0-9]+]], s[{{[0-9]+:[0-9]+}}], 0x4
 ; ALL: v_mov_b32_e32 [[V_VAL:v[0-9]+]], [[VAL]]
 ; MESA: buffer_store_dword [[V_VAL]]
 ; HSA: flat_store_dword v[{{[0-9]+:[0-9]+}}], [[V_VAL]]

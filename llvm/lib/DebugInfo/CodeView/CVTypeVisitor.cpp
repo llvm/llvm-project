@@ -65,7 +65,7 @@ CVTypeVisitor::CVTypeVisitor(TypeVisitorCallbacks &Callbacks)
     : Callbacks(Callbacks) {}
 
 template <typename T>
-static Error visitKnownRecord(const CVRecord<TypeLeafKind> &Record,
+static Error visitKnownRecord(CVRecord<TypeLeafKind> &Record,
                               TypeVisitorCallbacks &Callbacks) {
   TypeRecordKind RK = static_cast<TypeRecordKind>(Record.Type);
   T KnownRecord(RK);
@@ -74,14 +74,11 @@ static Error visitKnownRecord(const CVRecord<TypeLeafKind> &Record,
   return Error::success();
 }
 
-Error CVTypeVisitor::visitTypeRecord(const CVRecord<TypeLeafKind> &Record) {
-  TypeLeafKind Kind;
-  if (auto ExpectedKind = Callbacks.visitTypeBegin(Record))
-    Kind = *ExpectedKind;
-  else
-    return ExpectedKind.takeError();
+Error CVTypeVisitor::visitTypeRecord(CVRecord<TypeLeafKind> &Record) {
+  if (auto EC = Callbacks.visitTypeBegin(Record))
+    return EC;
 
-  switch (Kind) {
+  switch (Record.Type) {
   default:
     if (auto EC = Callbacks.visitUnknownType(Record))
       return EC;
@@ -109,10 +106,26 @@ Error CVTypeVisitor::visitTypeRecord(const CVRecord<TypeLeafKind> &Record) {
 
 /// Visits the type records in Data. Sets the error flag on parse failures.
 Error CVTypeVisitor::visitTypeStream(const CVTypeArray &Types) {
-  for (const auto &I : Types) {
+  for (auto I : Types) {
     if (auto EC = visitTypeRecord(I))
       return EC;
   }
+  return Error::success();
+}
+
+template <typename MR>
+static Error visitKnownMember(ArrayRef<uint8_t> &Data, TypeLeafKind Leaf,
+                              TypeVisitorCallbacks &Callbacks) {
+  auto ExpectedRecord = deserializeMemberRecord<MR>(Data, Leaf);
+  if (!ExpectedRecord)
+    return ExpectedRecord.takeError();
+  CVType &Record = *ExpectedRecord;
+  if (auto EC = Callbacks.visitTypeBegin(Record))
+    return EC;
+  if (auto EC = visitKnownRecord<MR>(Record, Callbacks))
+    return EC;
+  if (auto EC = Callbacks.visitTypeEnd(Record))
+    return EC;
   return Error::success();
 }
 
@@ -132,16 +145,7 @@ Error CVTypeVisitor::visitFieldListMemberStream(ArrayRef<uint8_t> Data) {
           cv_error_code::unknown_member_record);
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   case EnumName: {                                                             \
-    auto ExpectedRecord = deserializeMemberRecord<Name##Record>(Data, Leaf);   \
-    if (!ExpectedRecord)                                                       \
-      return ExpectedRecord.takeError();                                       \
-    auto &Record = *ExpectedRecord;                                            \
-    auto ExpectedKind = Callbacks.visitTypeBegin(Record);                      \
-    if (!ExpectedKind || *ExpectedKind != Leaf)                                \
-      return ExpectedKind.takeError();                                         \
-    if (auto EC = visitKnownRecord<Name##Record>(Record, Callbacks))           \
-      return EC;                                                               \
-    if (auto EC = Callbacks.visitTypeEnd(Record))                              \
+    if (auto EC = visitKnownMember<Name##Record>(Data, Leaf, Callbacks))       \
       return EC;                                                               \
     break;                                                                     \
   }

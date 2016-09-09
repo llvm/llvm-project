@@ -31,35 +31,6 @@ using namespace llvm::support;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-namespace {
-const uint32_t MinHashBuckets = 0x1000;
-const uint32_t MaxHashBuckets = 0x40000;
-}
-
-// This corresponds to `HDR` in PDB/dbi/tpi.h.
-struct TpiStream::HeaderInfo {
-  struct EmbeddedBuf {
-    little32_t Off;
-    ulittle32_t Length;
-  };
-
-  ulittle32_t Version;
-  ulittle32_t HeaderSize;
-  ulittle32_t TypeIndexBegin;
-  ulittle32_t TypeIndexEnd;
-  ulittle32_t TypeRecordBytes;
-
-  // The following members correspond to `TpiHash` in PDB/dbi/tpi.h.
-  ulittle16_t HashStreamIndex;
-  ulittle16_t HashAuxStreamIndex;
-  ulittle32_t HashKeySize;
-  ulittle32_t NumHashBuckets;
-
-  EmbeddedBuf HashValueBuffer;
-  EmbeddedBuf IndexOffsetBuffer;
-  EmbeddedBuf HashAdjBuffer;
-};
-
 TpiStream::TpiStream(const PDBFile &File,
                      std::unique_ptr<MappedBlockStream> Stream)
     : Pdb(File), Stream(std::move(Stream)) {}
@@ -98,34 +69,33 @@ public:
                   uint32_t NumHashBuckets)
       : HashValues(HashValues), NumHashBuckets(NumHashBuckets) {}
 
-  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
                          UdtSourceLineRecord &Rec) override {
     return verifySourceLine(Rec);
   }
 
-  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
                          UdtModSourceLineRecord &Rec) override {
     return verifySourceLine(Rec);
   }
 
-  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
                          ClassRecord &Rec) override {
     return verify(Rec);
   }
-  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
                          EnumRecord &Rec) override {
     return verify(Rec);
   }
-  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,
+  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
                          UnionRecord &Rec) override {
     return verify(Rec);
   }
 
-  Expected<TypeLeafKind>
-  visitTypeBegin(const CVRecord<TypeLeafKind> &Rec) override {
+  Error visitTypeBegin(CVRecord<TypeLeafKind> &Rec) override {
     ++Index;
     RawRecord = Rec;
-    return Rec.Type;
+    return Error::success();
   }
 
 private:
@@ -175,7 +145,7 @@ Error TpiStream::verifyHashValues() {
 Error TpiStream::reload() {
   StreamReader Reader(*Stream);
 
-  if (Reader.bytesRemaining() < sizeof(HeaderInfo))
+  if (Reader.bytesRemaining() < sizeof(TpiStreamHeader))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "TPI Stream does not contain a header.");
 
@@ -187,7 +157,7 @@ Error TpiStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Unsupported TPI Version.");
 
-  if (Header->HeaderSize != sizeof(HeaderInfo))
+  if (Header->HeaderSize != sizeof(TpiStreamHeader))
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Corrupt TPI Header size.");
 
@@ -195,8 +165,8 @@ Error TpiStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "TPI Stream expected 4 byte hash key size.");
 
-  if (Header->NumHashBuckets < MinHashBuckets ||
-      Header->NumHashBuckets > MaxHashBuckets)
+  if (Header->NumHashBuckets < MinTpiHashBuckets ||
+      Header->NumHashBuckets > MaxTpiHashBuckets)
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "TPI Stream Invalid number of hash buckets.");
 
@@ -205,40 +175,44 @@ Error TpiStream::reload() {
     return EC;
 
   // Hash indices, hash values, etc come from the hash stream.
-  if (Header->HashStreamIndex >= Pdb.getNumStreams())
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Invalid TPI hash stream index.");
-  auto HS = MappedBlockStream::createIndexedStream(
-      Pdb.getMsfLayout(), Pdb.getMsfBuffer(), Header->HashStreamIndex);
-  StreamReader HSR(*HS);
+  if (Header->HashStreamIndex != kInvalidStreamIndex) {
+    if (Header->HashStreamIndex >= Pdb.getNumStreams())
+      return make_error<RawError>(raw_error_code::corrupt_file,
+                                  "Invalid TPI hash stream index.");
 
-  uint32_t NumHashValues = Header->HashValueBuffer.Length / sizeof(ulittle32_t);
-  if (NumHashValues != NumTypeRecords())
-    return make_error<RawError>(
-        raw_error_code::corrupt_file,
-        "TPI hash count does not match with the number of type records.");
-  HSR.setOffset(Header->HashValueBuffer.Off);
-  if (auto EC = HSR.readArray(HashValues, NumHashValues))
-    return EC;
+    auto HS = MappedBlockStream::createIndexedStream(
+        Pdb.getMsfLayout(), Pdb.getMsfBuffer(), Header->HashStreamIndex);
+    StreamReader HSR(*HS);
 
-  HSR.setOffset(Header->IndexOffsetBuffer.Off);
-  uint32_t NumTypeIndexOffsets =
-      Header->IndexOffsetBuffer.Length / sizeof(TypeIndexOffset);
-  if (auto EC = HSR.readArray(TypeIndexOffsets, NumTypeIndexOffsets))
-    return EC;
+    uint32_t NumHashValues =
+        Header->HashValueBuffer.Length / sizeof(ulittle32_t);
+    if (NumHashValues != NumTypeRecords())
+      return make_error<RawError>(
+          raw_error_code::corrupt_file,
+          "TPI hash count does not match with the number of type records.");
+    HSR.setOffset(Header->HashValueBuffer.Off);
+    if (auto EC = HSR.readArray(HashValues, NumHashValues))
+      return EC;
 
-  HSR.setOffset(Header->HashAdjBuffer.Off);
-  uint32_t NumHashAdjustments =
-      Header->HashAdjBuffer.Length / sizeof(TypeIndexOffset);
-  if (auto EC = HSR.readArray(HashAdjustments, NumHashAdjustments))
-    return EC;
+    HSR.setOffset(Header->IndexOffsetBuffer.Off);
+    uint32_t NumTypeIndexOffsets =
+        Header->IndexOffsetBuffer.Length / sizeof(TypeIndexOffset);
+    if (auto EC = HSR.readArray(TypeIndexOffsets, NumTypeIndexOffsets))
+      return EC;
 
-  HashStream = std::move(HS);
+    HSR.setOffset(Header->HashAdjBuffer.Off);
+    uint32_t NumHashAdjustments =
+        Header->HashAdjBuffer.Length / sizeof(TypeIndexOffset);
+    if (auto EC = HSR.readArray(HashAdjustments, NumHashAdjustments))
+      return EC;
 
-  // TPI hash table is a parallel array for the type records.
-  // Verify that the hash values match with type records.
-  if (auto EC = verifyHashValues())
-    return EC;
+    HashStream = std::move(HS);
+
+    // TPI hash table is a parallel array for the type records.
+    // Verify that the hash values match with type records.
+    if (auto EC = verifyHashValues())
+      return EC;
+  }
 
   return Error::success();
 }

@@ -1253,7 +1253,7 @@ static void mergeIncomingSwiftErrors(FunctionLoweringInfo *FuncInfo,
     FuncInfo->SwiftErrorMap[FuncInfo->MBB].push_back(VReg);
 
     MachineInstrBuilder SwiftErrorPHI = BuildMI(*FuncInfo->MBB,
-        FuncInfo->MBB->begin(), SDB->getCurDebugLoc(),
+        FuncInfo->InsertPt, SDB->getCurDebugLoc(),
         TII->get(TargetOpcode::PHI), VReg);
     for (const_pred_iterator PI = pred_begin(LLVMBB), PE = pred_end(LLVMBB);
          PI != PE; ++PI) {

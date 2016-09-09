@@ -8,10 +8,13 @@
 //===----------------------------------------------------------------------===//
 #include "AMDGPUBaseInfo.h"
 #include "AMDGPU.h"
+#include "SIDefines.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
@@ -199,6 +202,73 @@ unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI) {
   }
   return Reg;
 }
+
+bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo) {
+  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+
+  return OpType == AMDGPU::OPERAND_REG_IMM32_INT ||
+         OpType == AMDGPU::OPERAND_REG_IMM32_FP ||
+         OpType == AMDGPU::OPERAND_REG_INLINE_C_INT ||
+         OpType == AMDGPU::OPERAND_REG_INLINE_C_FP;
+}
+
+bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
+  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+
+  return OpType == AMDGPU::OPERAND_REG_IMM32_FP ||
+         OpType == AMDGPU::OPERAND_REG_INLINE_C_FP;
+}
+
+bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
+  unsigned OpType = Desc.OpInfo[OpNo].OperandType;
+
+  return OpType == AMDGPU::OPERAND_REG_INLINE_C_INT ||
+         OpType == AMDGPU::OPERAND_REG_INLINE_C_FP;
+}
+
+unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
+                           unsigned OpNo) {
+  int RCID = Desc.OpInfo[OpNo].RegClass;
+  const MCRegisterClass &RC = MRI->getRegClass(RCID);
+  return RC.getSize();
+}
+
+bool isInlinableLiteral64(int64_t Literal, bool IsVI) {
+  if (Literal >= -16 && Literal <= 64)
+    return true;
+
+  double D = BitsToDouble(Literal);
+
+  if (D == 0.5 || D == -0.5 ||
+      D == 1.0 || D == -1.0 ||
+      D == 2.0 || D == -2.0 ||
+      D == 4.0 || D == -4.0)
+    return true;
+
+  if (IsVI && Literal == 0x3fc45f306dc9c882)
+    return true;
+
+  return false;
+}
+
+bool isInlinableLiteral32(int32_t Literal, bool IsVI) {
+  if (Literal >= -16 && Literal <= 64)
+    return true;
+
+  float F = BitsToFloat(Literal);
+
+  if (F == 0.5 || F == -0.5 ||
+      F == 1.0 || F == -1.0 ||
+      F == 2.0 || F == -2.0 ||
+      F == 4.0 || F == -4.0)
+    return true;
+
+  if (IsVI && Literal == 0x3e22f983)
+    return true;
+
+  return false;
+}
+
 
 } // End namespace AMDGPU
 } // End namespace llvm

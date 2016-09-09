@@ -533,26 +533,28 @@ endfunction()
 
 macro(add_llvm_library name)
   cmake_parse_arguments(ARG
-    "SHARED"
+    "SHARED;BUILDTREE_ONLY"
     ""
     ""
     ${ARGN})
-  if( BUILD_SHARED_LIBS )
-    llvm_add_library(${name} SHARED ${ARGN})
+  if( BUILD_SHARED_LIBS OR ARG_SHARED )
+    llvm_add_library(${name} SHARED ${ARG_UNPARSED_ARGUMENTS})
   else()
-    llvm_add_library(${name} ${ARGN})
+    llvm_add_library(${name} ${ARG_UNPARSED_ARGUMENTS})
   endif()
-  # The gtest libraries should not be installed or exported as a target
-  if ("${name}" STREQUAL gtest OR "${name}" STREQUAL gtest_main)
-    set(_is_gtest TRUE)
-  else()
-    set(_is_gtest FALSE)
+
+  # Libraries that are meant to only be exposed via the build tree only are
+  # never installed and are only exported as a target in the special build tree
+  # config file.
+  if (NOT ARG_BUILDTREE_ONLY)
     set_property( GLOBAL APPEND PROPERTY LLVM_LIBS ${name} )
   endif()
 
   if( EXCLUDE_FROM_ALL )
     set_target_properties( ${name} PROPERTIES EXCLUDE_FROM_ALL ON)
-  elseif(NOT _is_gtest)
+  elseif(ARG_BUILDTREE_ONLY)
+    set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS_BUILDTREE_ONLY ${name})
+  else()
     if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "LTO")
       set(install_dir lib${LLVM_LIBDIR_SUFFIX})
       if(ARG_SHARED OR BUILD_SHARED_LIBS)

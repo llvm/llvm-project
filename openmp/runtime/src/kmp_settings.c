@@ -1182,6 +1182,19 @@ __kmp_stg_print_max_active_levels( kmp_str_buf_t * buffer, char const * name, vo
     __kmp_stg_print_int( buffer, name, __kmp_dflt_max_active_levels );
 } // __kmp_stg_print_max_active_levels
 
+#if OMP_40_ENABLED
+// -------------------------------------------------------------------------------------------------
+// OpenMP 4.0: OMP_DEFAULT_DEVICE
+// -------------------------------------------------------------------------------------------------
+static void __kmp_stg_parse_default_device(char const *name, char const *value, void *data) {
+  __kmp_stg_parse_int(name, value, 0, KMP_MAX_DEFAULT_DEVICE_LIMIT, &__kmp_default_device);
+} // __kmp_stg_parse_default_device
+
+static void __kmp_stg_print_default_device(kmp_str_buf_t *buffer, char const *name, void *data) {
+  __kmp_stg_print_int(buffer, name, __kmp_default_device);
+} // __kmp_stg_print_default_device
+#endif
+
 #if OMP_45_ENABLED
 // -------------------------------------------------------------------------------------------------
 // OpenMP 4.5: OMP_MAX_TASK_PRIORITY
@@ -4677,6 +4690,9 @@ static kmp_setting_t __kmp_stg_table[] = {
     { "KMP_TASKING",                       __kmp_stg_parse_tasking,            __kmp_stg_print_tasking,            NULL, 0, 0 },
     { "KMP_TASK_STEALING_CONSTRAINT",      __kmp_stg_parse_task_stealing,      __kmp_stg_print_task_stealing,      NULL, 0, 0 },
     { "OMP_MAX_ACTIVE_LEVELS",             __kmp_stg_parse_max_active_levels,  __kmp_stg_print_max_active_levels,  NULL, 0, 0 },
+#if OMP_40_ENABLED
+    { "OMP_DEFAULT_DEVICE",                __kmp_stg_parse_default_device,     __kmp_stg_print_default_device,     NULL, 0, 0 },
+#endif
 #if OMP_45_ENABLED
     { "OMP_MAX_TASK_PRIORITY",             __kmp_stg_parse_max_task_priority,  __kmp_stg_print_max_task_priority,  NULL, 0, 0 },
 #endif

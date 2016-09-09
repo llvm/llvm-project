@@ -60,19 +60,18 @@ public:
 
 /// TypeVisitorCallbacks overrides.
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
-  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,                    \
-                         Name##Record &Record) override;
+  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR, Name##Record &Record)    \
+      override;
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
   TYPE_RECORD(EnumName, EnumVal, Name)
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
 
-  Error visitUnknownType(const CVRecord<TypeLeafKind> &Record) override;
+  Error visitUnknownType(CVRecord<TypeLeafKind> &Record) override;
 
-  Expected<TypeLeafKind>
-  visitTypeBegin(const CVRecord<TypeLeafKind> &Record) override;
-  Error visitTypeEnd(const CVRecord<TypeLeafKind> &Record) override;
+  Error visitTypeBegin(CVRecord<TypeLeafKind> &Record) override;
+  Error visitTypeEnd(CVRecord<TypeLeafKind> &Record) override;
 
   bool mergeStream(const CVTypeArray &Types);
 
@@ -124,17 +123,16 @@ private:
 
 } // end anonymous namespace
 
-Expected<TypeLeafKind>
-TypeStreamMerger::visitTypeBegin(const CVRecord<TypeLeafKind> &Rec) {
+Error TypeStreamMerger::visitTypeBegin(CVRecord<TypeLeafKind> &Rec) {
   if (Rec.Type == TypeLeafKind::LF_FIELDLIST) {
     assert(!IsInFieldList);
     IsInFieldList = true;
   } else
     BeginIndexMapSize = IndexMap.size();
-  return Rec.Type;
+  return Error::success();
 }
 
-Error TypeStreamMerger::visitTypeEnd(const CVRecord<TypeLeafKind> &Rec) {
+Error TypeStreamMerger::visitTypeEnd(CVRecord<TypeLeafKind> &Rec) {
   if (Rec.Type == TypeLeafKind::LF_FIELDLIST) {
     IndexMap.push_back(DestStream.writeFieldList(FieldBuilder));
     FieldBuilder.reset();
@@ -146,20 +144,20 @@ Error TypeStreamMerger::visitTypeEnd(const CVRecord<TypeLeafKind> &Rec) {
 }
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
-  Error TypeStreamMerger::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,  \
+  Error TypeStreamMerger::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,        \
                                            Name##Record &Record) {             \
     return visitKnownRecordImpl(Record);                                       \
   }
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
-  Error TypeStreamMerger::visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,  \
+  Error TypeStreamMerger::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,        \
                                            Name##Record &Record) {             \
     return visitKnownMemberRecordImpl(Record);                                 \
   }
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
 
-Error TypeStreamMerger::visitUnknownType(const CVRecord<TypeLeafKind> &Rec) {
+Error TypeStreamMerger::visitUnknownType(CVRecord<TypeLeafKind> &Rec) {
   // We failed to translate a type. Translate this index as "not translated".
   IndexMap.push_back(
       TypeIndex(SimpleTypeKind::NotTranslated, SimpleTypeMode::Direct));

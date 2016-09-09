@@ -11,22 +11,29 @@
 #define LLVM_TOOLS_LLVMPDBDUMP_CODEVIEWYAML_H
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/CodeView/MemoryTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/Support/YAMLTraits.h"
 
 namespace llvm {
+namespace pdb {
+namespace yaml {
+struct SerializationContext;
+}
+}
 namespace codeview {
 namespace yaml {
 class YamlTypeDumperCallbacks : public TypeVisitorCallbacks {
 public:
-  YamlTypeDumperCallbacks(llvm::yaml::IO &IO) : YamlIO(IO) {}
+  YamlTypeDumperCallbacks(llvm::yaml::IO &IO,
+                          llvm::pdb::yaml::SerializationContext &Context)
+      : YamlIO(IO), Context(Context) {}
 
-  virtual Expected<TypeLeafKind>
-  visitTypeBegin(const CVRecord<TypeLeafKind> &Record) override;
+  virtual Error visitTypeBegin(CVRecord<TypeLeafKind> &Record) override;
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
-  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,                    \
-                         Name##Record &Record) override {                      \
+  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR, Name##Record &Record)    \
+      override {                                                               \
     visitKnownRecordImpl(#Name, CVR, Record);                                  \
     return Error::success();                                                   \
   }
@@ -38,15 +45,21 @@ public:
 
 private:
   template <typename T>
-  void visitKnownRecordImpl(const char *Name, const CVType &Type, T &Record) {
+  void visitKnownRecordImpl(const char *Name, CVType &Type, T &Record) {
     YamlIO.mapRequired(Name, Record);
   }
 
-  void visitKnownRecordImpl(const char *Name, const CVType &Type,
+  void visitKnownRecordImpl(const char *Name, CVType &CVR,
                             FieldListRecord &FieldList);
 
   llvm::yaml::IO &YamlIO;
+  llvm::pdb::yaml::SerializationContext &Context;
 };
+}
+}
+namespace pdb {
+namespace yaml {
+struct SerializationContext;
 }
 }
 }
@@ -58,10 +71,9 @@ template <> struct MappingTraits<codeview::MemberPointerInfo> {
 };
 
 template <>
-struct MappingContextTraits<codeview::CVType,
-                            codeview::yaml::YamlTypeDumperCallbacks> {
+struct MappingContextTraits<codeview::CVType, pdb::yaml::SerializationContext> {
   static void mapping(IO &IO, codeview::CVType &Obj,
-                      codeview::yaml::YamlTypeDumperCallbacks &Context);
+                      pdb::yaml::SerializationContext &Context);
 };
 
 template <> struct ScalarEnumerationTraits<codeview::TypeLeafKind> {
@@ -77,13 +89,6 @@ template <> struct ScalarEnumerationTraits<codeview::TypeLeafKind> {
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
-
-template <>
-struct MappingContextTraits<codeview::FieldListRecord,
-                            codeview::yaml::YamlTypeDumperCallbacks> {
-  static void mapping(IO &IO, codeview::FieldListRecord &Record,
-                      codeview::yaml::YamlTypeDumperCallbacks &Context);
-};
 }
 }
 

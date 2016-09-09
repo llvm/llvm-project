@@ -98,13 +98,13 @@ Error LLVMOutputStyle::dump() {
   if (auto EC = dumpStreamBlocks())
     return EC;
 
-  if (auto EC = dumpStreamData())
+  if (auto EC = dumpBlockRanges())
+    return EC;
+
+  if (auto EC = dumpStreamBytes())
     return EC;
 
   if (auto EC = dumpInfoStream())
-    return EC;
-
-  if (auto EC = dumpNamedStream())
     return EC;
 
   if (auto EC = dumpTpiStream(StreamTPI))
@@ -157,9 +157,9 @@ Error LLVMOutputStyle::dumpFileHeaders() {
   return Error::success();
 }
 
-Error LLVMOutputStyle::dumpStreamSummary() {
-  if (!opts::raw::DumpStreamSummary)
-    return Error::success();
+void LLVMOutputStyle::discoverStreamPurposes() {
+  if (!StreamPurposes.empty())
+    return;
 
   // It's OK if we fail to load some of these streams, we still attempt to print
   // what we can.
@@ -168,7 +168,6 @@ Error LLVMOutputStyle::dumpStreamSummary() {
   auto Ipi = File.getPDBIpiStream();
   auto Info = File.getPDBInfoStream();
 
-  ListScope L(P, "Streams");
   uint32_t StreamCount = File.getNumStreams();
   std::unordered_map<uint16_t, const ModuleInfoEx *> ModStreams;
   std::unordered_map<uint16_t, std::string> NamedStreams;
@@ -185,9 +184,8 @@ Error LLVMOutputStyle::dumpStreamSummary() {
     }
   }
 
+  StreamPurposes.resize(StreamCount);
   for (uint16_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
-    std::string Label("Stream ");
-    Label += to_string(StreamIdx);
     std::string Value;
     if (StreamIdx == OldMSFDirectory)
       Value = "Old MSF Directory";
@@ -258,11 +256,7 @@ Error LLVMOutputStyle::dumpStreamSummary() {
         Value = "???";
       }
     }
-    Value = "[" + Value + "]";
-    Value =
-        Value + " (" + to_string(File.getStreamByteSize(StreamIdx)) + " bytes)";
-
-    P.printString(Label, Value);
+    StreamPurposes[StreamIdx] = Value;
   }
 
   // Consume errors from missing streams.
@@ -274,6 +268,27 @@ Error LLVMOutputStyle::dumpStreamSummary() {
     consumeError(Ipi.takeError());
   if (!Info)
     consumeError(Info.takeError());
+}
+
+Error LLVMOutputStyle::dumpStreamSummary() {
+  if (!opts::raw::DumpStreamSummary)
+    return Error::success();
+
+  discoverStreamPurposes();
+
+  uint32_t StreamCount = File.getNumStreams();
+
+  ListScope L(P, "Streams");
+  for (uint16_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
+    std::string Label("Stream ");
+    Label += to_string(StreamIdx);
+
+    std::string Value = "[" + StreamPurposes[StreamIdx] + "] (";
+    Value += to_string(File.getStreamByteSize(StreamIdx));
+    Value += " bytes)";
+
+    P.printString(Label, Value);
+  }
 
   P.flush();
   return Error::success();
@@ -343,28 +358,64 @@ Error LLVMOutputStyle::dumpStreamBlocks() {
   return Error::success();
 }
 
-Error LLVMOutputStyle::dumpStreamData() {
-  uint32_t StreamCount = File.getNumStreams();
-  StringRef DumpStreamStr = opts::raw::DumpStreamDataIdx;
-  uint32_t DumpStreamNum;
-  if (DumpStreamStr.getAsInteger(/*Radix=*/0U, DumpStreamNum))
+Error LLVMOutputStyle::dumpBlockRanges() {
+  if (!opts::raw::DumpBlockRange.hasValue())
+    return Error::success();
+  auto &R = *opts::raw::DumpBlockRange;
+  uint32_t Max = R.Max.getValueOr(R.Min);
+
+  if (Max < R.Min)
+    return make_error<StringError>(
+        "Invalid block range specified.  Max < Min",
+        std::make_error_code(std::errc::bad_address));
+  if (Max >= File.getBlockCount())
+    return make_error<StringError>(
+        "Invalid block range specified.  Requested block out of bounds",
+        std::make_error_code(std::errc::bad_address));
+
+  DictScope D(P, "Block Data");
+  for (uint32_t I = R.Min; I <= Max; ++I) {
+    auto ExpectedData = File.getBlockData(I, File.getBlockSize());
+    if (!ExpectedData)
+      return ExpectedData.takeError();
+    std::string Label;
+    llvm::raw_string_ostream S(Label);
+    S << "Block " << I;
+    S.flush();
+    P.printBinaryBlock(Label, *ExpectedData);
+  }
+
+  return Error::success();
+}
+
+Error LLVMOutputStyle::dumpStreamBytes() {
+  if (opts::raw::DumpStreamData.empty())
     return Error::success();
 
-  if (DumpStreamNum >= StreamCount)
-    return make_error<RawError>(raw_error_code::no_stream);
+  discoverStreamPurposes();
 
-  auto S = MappedBlockStream::createIndexedStream(
-      File.getMsfLayout(), File.getMsfBuffer(), DumpStreamNum);
-  StreamReader R(*S);
-  while (R.bytesRemaining() > 0) {
-    ArrayRef<uint8_t> Data;
-    uint32_t BytesToReadInBlock = std::min(
-        R.bytesRemaining(), static_cast<uint32_t>(File.getBlockSize()));
-    if (auto EC = R.readBytes(Data, BytesToReadInBlock))
+  DictScope D(P, "Stream Data");
+  for (uint32_t SI : opts::raw::DumpStreamData) {
+    if (SI >= File.getNumStreams())
+      return make_error<RawError>(raw_error_code::no_stream);
+
+    auto S = MappedBlockStream::createIndexedStream(File.getMsfLayout(),
+                                                    File.getMsfBuffer(), SI);
+    if (!S)
+      continue;
+    DictScope DD(P, "Stream");
+
+    P.printNumber("Index", SI);
+    P.printString("Type", StreamPurposes[SI]);
+    P.printNumber("Size", S->getLength());
+    auto Blocks = File.getMsfLayout().StreamMap[SI];
+    P.printList("Blocks", Blocks);
+
+    StreamReader R(*S);
+    ArrayRef<uint8_t> StreamData;
+    if (auto EC = R.readBytes(StreamData, S->getLength()))
       return EC;
-    P.printBinaryBlock(
-        "Data",
-        StringRef(reinterpret_cast<const char *>(Data.begin()), Data.size()));
+    P.printBinaryBlock("Data", StreamData);
   }
   return Error::success();
 }
@@ -381,47 +432,6 @@ Error LLVMOutputStyle::dumpInfoStream() {
   P.printHex("Signature", IS->getSignature());
   P.printNumber("Age", IS->getAge());
   P.printObject("Guid", IS->getGuid());
-  return Error::success();
-}
-
-Error LLVMOutputStyle::dumpNamedStream() {
-  if (opts::raw::DumpStreamDataName.empty())
-    return Error::success();
-
-  auto IS = File.getPDBInfoStream();
-  if (!IS)
-    return IS.takeError();
-
-  uint32_t NameStreamIndex =
-      IS->getNamedStreamIndex(opts::raw::DumpStreamDataName);
-  if (NameStreamIndex == 0 || NameStreamIndex >= File.getNumStreams())
-    return make_error<RawError>(raw_error_code::no_stream);
-
-  if (NameStreamIndex != 0) {
-    std::string Name("Stream '");
-    Name += opts::raw::DumpStreamDataName;
-    Name += "'";
-    DictScope D(P, Name);
-    P.printNumber("Index", NameStreamIndex);
-
-    auto NameStream = MappedBlockStream::createIndexedStream(
-        File.getMsfLayout(), File.getMsfBuffer(), NameStreamIndex);
-    StreamReader Reader(*NameStream);
-
-    NameHashTable NameTable;
-    if (auto EC = NameTable.load(Reader))
-      return EC;
-
-    P.printHex("Signature", NameTable.getSignature());
-    P.printNumber("Version", NameTable.getHashVersion());
-    P.printNumber("Name Count", NameTable.getNameCount());
-    ListScope L(P, "Names");
-    for (uint32_t ID : NameTable.name_ids()) {
-      StringRef Str = NameTable.getStringForID(ID);
-      if (!Str.empty())
-        P.printString(to_string(ID), Str);
-    }
-  }
   return Error::success();
 }
 

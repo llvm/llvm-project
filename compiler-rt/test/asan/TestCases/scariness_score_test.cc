@@ -32,6 +32,7 @@
 // RUN: not %run %t 24 2>&1 | FileCheck %s --check-prefix=CHECK24
 // RUN: not %run %t 25 2>&1 | FileCheck %s --check-prefix=CHECK25
 // RUN: not %run %t 26 2>&1 | FileCheck %s --check-prefix=CHECK26
+// RUN: not %run %t 27 2>&1 | FileCheck %s --check-prefix=CHECK27
 // Parts of the test are too platform-specific:
 // REQUIRES: x86_64-target-arch
 // REQUIRES: shell
@@ -161,6 +162,7 @@ int main(int argc, char **argv) {
     case 24: free((char*)malloc(100) + 10); break;
     case 25: memcpy(arr, arr+10, 20);  break;
     case 26: UseAfterPoison(); break;
+    case 27: abort();
     // CHECK1: SCARINESS: 12 (1-byte-read-heap-buffer-overflow)
     // CHECK2: SCARINESS: 17 (4-byte-read-heap-buffer-overflow)
     // CHECK3: SCARINESS: 33 (2-byte-write-heap-buffer-overflow)
@@ -187,5 +189,6 @@ int main(int argc, char **argv) {
     // CHECK24: SCARINESS: 40 (bad-free)
     // CHECK25: SCARINESS: 10 (memcpy-param-overlap)
     // CHECK26: SCARINESS: 27 (4-byte-read-use-after-poison)
+    // CHECK27: SCARINESS: 10 (signal)
   }
 }

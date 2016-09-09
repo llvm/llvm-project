@@ -4,9 +4,22 @@
 // be imported from a DLL.  Otherwise, the debugger wouldn't be able to show the
 // members.
 
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "OutOfLineCtor",
+// CHECK-SAME:             DIFlagFwdDecl
+// CHECK-SAME:             ){{$}}
+
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ImportedBase",
 // CHECK-NOT:              DIFlagFwdDecl
 // CHECK-SAME:             ){{$}}
+
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ImportedMethod",
+// CHECK-NOT:              DIFlagFwdDecl
+// CHECK-SAME:             ){{$}}
+
+struct OutOfLineCtor {
+  OutOfLineCtor();
+  virtual void Foo();
+};
 
 struct __declspec(dllimport) ImportedBase {
   ImportedBase();
@@ -15,6 +28,14 @@ struct __declspec(dllimport) ImportedBase {
 
 struct DerivedFromImported : public ImportedBase {};
 
+struct ImportedMethod {
+  ImportedMethod();
+  virtual void Foo();
+  static void __declspec(dllimport) create();
+};
+
 int main() {
+  OutOfLineCtor o;
   DerivedFromImported d;
+  ImportedMethod m;
 }

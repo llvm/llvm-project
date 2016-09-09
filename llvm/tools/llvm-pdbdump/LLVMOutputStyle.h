@@ -25,13 +25,15 @@ public:
   Error dump() override;
 
 private:
+  void discoverStreamPurposes();
+
   Error dumpFileHeaders();
   Error dumpStreamSummary();
   Error dumpFreePageMap();
+  Error dumpBlockRanges();
+  Error dumpStreamBytes();
   Error dumpStreamBlocks();
-  Error dumpStreamData();
   Error dumpInfoStream();
-  Error dumpNamedStream();
   Error dumpTpiStream(uint32_t StreamIdx);
   Error dumpDbiStream();
   Error dumpSectionContribs();
@@ -47,6 +49,7 @@ private:
   PDBFile &File;
   ScopedPrinter P;
   codeview::CVTypeDumper Dumper;
+  std::vector<std::string> StreamPurposes;
 };
 }
 }

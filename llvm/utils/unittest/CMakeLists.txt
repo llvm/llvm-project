@@ -45,6 +45,9 @@ add_llvm_library(gtest
 
   LINK_COMPONENTS
   Support # Depends on llvm::raw_ostream
+
+  # This is a library meant only for the build tree.
+  BUILDTREE_ONLY
 )
 
 add_subdirectory(UnitTestMain)

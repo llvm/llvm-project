@@ -164,8 +164,6 @@ MachineLegalizeHelper::narrowScalar(MachineInstr &MI, unsigned TypeIdx,
 MachineLegalizeHelper::LegalizeResult
 MachineLegalizeHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx,
                                    LLT WideTy) {
-  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-  unsigned WideSize = WideTy.getSizeInBits();
   MIRBuilder.setInstr(MI);
 
   switch (MI.getOpcode()) {
@@ -220,7 +218,8 @@ MachineLegalizeHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx,
     return Legalized;
   }
   case TargetOpcode::G_LOAD: {
-    assert(alignTo(Ty.getSizeInBits(), 8) == WideSize &&
+    assert(alignTo(MRI.getType(MI.getOperand(0).getReg()).getSizeInBits(), 8) ==
+               WideTy.getSizeInBits() &&
            "illegal to increase number of bytes loaded");
 
     unsigned DstExt = MRI.createGenericVirtualRegister(WideTy);
@@ -231,7 +230,8 @@ MachineLegalizeHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx,
     return Legalized;
   }
   case TargetOpcode::G_STORE: {
-    assert(alignTo(Ty.getSizeInBits(), 8) == WideSize &&
+    assert(alignTo(MRI.getType(MI.getOperand(0).getReg()).getSizeInBits(), 8) ==
+               WideTy.getSizeInBits() &&
            "illegal to increase number of bytes modified by a store");
 
     unsigned SrcExt = MRI.createGenericVirtualRegister(WideTy);

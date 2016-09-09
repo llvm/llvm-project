@@ -9,6 +9,8 @@
 // lit doesn't set ASAN_OPTIONS anyway.
 // RUN: not %run %t 2>&1 | FileCheck %s
 
+// UNSUPPORTED: android
+
 #include <stdlib.h>
 int main() {
   char *x = (char*)malloc(10 * sizeof(char));

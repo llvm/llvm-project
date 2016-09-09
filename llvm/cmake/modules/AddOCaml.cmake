@@ -211,3 +211,4 @@ function(add_ocaml_library name)
 endfunction()
 
 add_custom_target("ocaml_all")
+set_target_properties(ocaml_all PROPERTIES FOLDER "Misc")
