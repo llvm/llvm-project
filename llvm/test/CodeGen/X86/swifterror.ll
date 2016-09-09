@@ -357,3 +357,22 @@ handler2:
 
   ret float 1.0
 }
+
+%swift.refcounted = type opaque
+
+; This test checks that we don't create bad phi nodes as part of swifterror
+; isel. We used to fail machine ir verification.
+; CHECK-APPLE: _swifterror_isel
+; CHECK-O0: _swifterror_isel
+define void @swifterror_isel(%swift.refcounted*) {
+entry:
+  %swifterror = alloca swifterror %swift_error*, align 8
+  br i1 undef, label %5, label %1
+
+  %2 = phi i16 [ %4, %1 ], [ undef, %entry ]
+  %3 = call i1 undef(i16 %2, %swift.refcounted* swiftself %0, %swift_error** nocapture swifterror %swifterror)
+  %4 = load i16, i16* undef, align 2
+  br label %1
+
+  ret void
+}
