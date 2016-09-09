@@ -18,6 +18,8 @@
 
 namespace llvm {
 
+struct FileCoverageSummary;
+
 /// \brief A coverage printer for html output.
 class CoveragePrinterHTML : public CoveragePrinter {
 public:
@@ -26,10 +28,16 @@ public:
 
   void closeViewFile(OwnedStream OS) override;
 
-  Error createIndexFile(ArrayRef<StringRef> SourceFiles) override;
+  Error createIndexFile(ArrayRef<StringRef> SourceFiles,
+                        const coverage::CoverageMapping &Coverage) override;
 
   CoveragePrinterHTML(const CoverageViewOptions &Opts)
       : CoveragePrinter(Opts) {}
+
+private:
+  void emitFileSummary(raw_ostream &OS, StringRef SF,
+                       const FileCoverageSummary &FCS,
+                       bool IsTotals = false) const;
 };
 
 /// \brief A code coverage view which supports html-based rendering.

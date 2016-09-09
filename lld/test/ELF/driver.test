@@ -44,6 +44,14 @@
 # RUN: not ld.lld -shared -pie %t -o %tfail 2>&1 | FileCheck -check-prefix=ERR6 %s
 # ERR6: -shared and -pie may not be used together
 
+## "--output=foo" is equivalent to "-o foo".
+# RUN: not ld.lld %t --output=/no/such/file 2>&1 | FileCheck -check-prefix=ERR7 %s
+# ERR7: failed to open /no/such/file
+
+## "-output=foo" is equivalent to "-o utput=foo".
+# RUN: not ld.lld %t -output=/no/such/file 2>&1 | FileCheck -check-prefix=ERR8 %s
+# ERR8: failed to open utput=/no/such/file
+
 .globl _start
 _start:
   nop

@@ -121,7 +121,9 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         Op = X86::TAILJMPd_CC;
         break;
       default:
-        Op = IsWin64 ? X86::TAILJMPd64_REX : X86::TAILJMPd64;
+        // Note: Win64 uses REX prefixes indirect jumps out of functions, but
+        // not direct ones.
+        Op = X86::TAILJMPd64;
         break;
       }
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII->get(Op));

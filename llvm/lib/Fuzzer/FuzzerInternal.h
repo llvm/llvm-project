@@ -229,7 +229,6 @@ struct FuzzingOptions {
   int MutateDepth = 5;
   bool UseCounters = false;
   bool UseIndirCalls = true;
-  bool UseTraces = false;
   bool UseMemcmp = true;
   bool UseMemmem = true;
   bool UseFullCoverageSet = false;

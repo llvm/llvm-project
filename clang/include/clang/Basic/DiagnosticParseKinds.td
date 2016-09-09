@@ -1040,6 +1040,8 @@ def err_attribute_not_import_attr : Error<
 def err_module_expected_semi : Error<
   "expected ';' after module name">;
 def err_missing_before_module_end : Error<"expected %0 at end of module">;
+
+def err_export_empty : Error<"export declaration cannot be empty">;
 }
 
 let CategoryName = "Generics Issue" in {

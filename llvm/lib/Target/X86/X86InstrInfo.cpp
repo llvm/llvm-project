@@ -1789,6 +1789,14 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPCMPGTDZrr,       X86::VPCMPGTDZrm,         0 },
     { X86::VPCMPGTQZrr,       X86::VPCMPGTQZrm,         0 },
     { X86::VPCMPGTWZrr,       X86::VPCMPGTWZrm,         0 },
+    { X86::VPCMPBZrri,        X86::VPCMPBZrmi,          0 },
+    { X86::VPCMPDZrri,        X86::VPCMPDZrmi,          0 },
+    { X86::VPCMPQZrri,        X86::VPCMPQZrmi,          0 },
+    { X86::VPCMPWZrri,        X86::VPCMPWZrmi,          0 },
+    { X86::VPCMPUBZrri,       X86::VPCMPUBZrmi,         0 },
+    { X86::VPCMPUDZrri,       X86::VPCMPUDZrmi,         0 },
+    { X86::VPCMPUQZrri,       X86::VPCMPUQZrmi,         0 },
+    { X86::VPCMPUWZrri,       X86::VPCMPUWZrmi,         0 },
 
     // AVX-512{F,VL} foldable instructions
     { X86::VBROADCASTSSZ256rkz,  X86::VBROADCASTSSZ256mkz,      TB_NO_REVERSE },
@@ -1872,6 +1880,22 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPCMPGTQZ256rr,    X86::VPCMPGTQZ256rm,      0 },
     { X86::VPCMPGTWZ128rr,    X86::VPCMPGTWZ128rm,      0 },
     { X86::VPCMPGTWZ256rr,    X86::VPCMPGTWZ256rm,      0 },
+    { X86::VPCMPBZ128rri,     X86::VPCMPBZ128rmi,       0 },
+    { X86::VPCMPBZ256rri,     X86::VPCMPBZ256rmi,       0 },
+    { X86::VPCMPDZ128rri,     X86::VPCMPDZ128rmi,       0 },
+    { X86::VPCMPDZ256rri,     X86::VPCMPDZ256rmi,       0 },
+    { X86::VPCMPQZ128rri,     X86::VPCMPQZ128rmi,       0 },
+    { X86::VPCMPQZ256rri,     X86::VPCMPQZ256rmi,       0 },
+    { X86::VPCMPWZ128rri,     X86::VPCMPWZ128rmi,       0 },
+    { X86::VPCMPWZ256rri,     X86::VPCMPWZ256rmi,       0 },
+    { X86::VPCMPUBZ128rri,    X86::VPCMPUBZ128rmi,      0 },
+    { X86::VPCMPUBZ256rri,    X86::VPCMPUBZ256rmi,      0 },
+    { X86::VPCMPUDZ128rri,    X86::VPCMPUDZ128rmi,      0 },
+    { X86::VPCMPUDZ256rri,    X86::VPCMPUDZ256rmi,      0 },
+    { X86::VPCMPUQZ128rri,    X86::VPCMPUQZ128rmi,      0 },
+    { X86::VPCMPUQZ256rri,    X86::VPCMPUQZ256rmi,      0 },
+    { X86::VPCMPUWZ128rri,    X86::VPCMPUWZ128rmi,      0 },
+    { X86::VPCMPUWZ256rri,    X86::VPCMPUWZ256rmi,      0 },
     { X86::VPADDBZ128rr,      X86::VPADDBZ128rm,        0 },
     { X86::VPADDBZ256rr,      X86::VPADDBZ256rm,        0 },
     { X86::VPADDDZ128rr,      X86::VPADDDZ128rm,        0 },
@@ -3484,6 +3508,37 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
       return nullptr;
     }
   }
+  case X86::VPCMPBZ128rri: case X86::VPCMPUBZ128rri:
+  case X86::VPCMPBZ256rri: case X86::VPCMPUBZ256rri:
+  case X86::VPCMPBZrri:    case X86::VPCMPUBZrri:
+  case X86::VPCMPDZ128rri: case X86::VPCMPUDZ128rri:
+  case X86::VPCMPDZ256rri: case X86::VPCMPUDZ256rri:
+  case X86::VPCMPDZrri:    case X86::VPCMPUDZrri:
+  case X86::VPCMPQZ128rri: case X86::VPCMPUQZ128rri:
+  case X86::VPCMPQZ256rri: case X86::VPCMPUQZ256rri:
+  case X86::VPCMPQZrri:    case X86::VPCMPUQZrri:
+  case X86::VPCMPWZ128rri: case X86::VPCMPUWZ128rri:
+  case X86::VPCMPWZ256rri: case X86::VPCMPUWZ256rri:
+  case X86::VPCMPWZrri:    case X86::VPCMPUWZrri: {
+    // Flip comparison mode immediate (if necessary).
+    unsigned Imm = MI.getOperand(3).getImm() & 0x7;
+    switch (Imm) {
+    default: llvm_unreachable("Unreachable!");
+    case 0x01: Imm = 0x06; break; // LT  -> NLE
+    case 0x02: Imm = 0x05; break; // LE  -> NLT
+    case 0x05: Imm = 0x02; break; // NLT -> LE
+    case 0x06: Imm = 0x01; break; // NLE -> LT
+    case 0x00: // EQ
+    case 0x03: // FALSE
+    case 0x04: // NE
+    case 0x07: // TRUE
+      break;
+    }
+    auto &WorkingMI = cloneIfNew(MI);
+    WorkingMI.getOperand(3).setImm(Imm);
+    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
+                                                   OpIdx1, OpIdx2);
+  }
   case X86::VPCOMBri: case X86::VPCOMUBri:
   case X86::VPCOMDri: case X86::VPCOMUDri:
   case X86::VPCOMQri: case X86::VPCOMUQri:
@@ -3491,6 +3546,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     // Flip comparison mode immediate (if necessary).
     unsigned Imm = MI.getOperand(3).getImm() & 0x7;
     switch (Imm) {
+    default: llvm_unreachable("Unreachable!");
     case 0x00: Imm = 0x02; break; // LT -> GT
     case 0x01: Imm = 0x03; break; // LE -> GE
     case 0x02: Imm = 0x00; break; // GT -> LT
@@ -3499,7 +3555,6 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     case 0x05: // NE
     case 0x06: // FALSE
     case 0x07: // TRUE
-    default:
       break;
     }
     auto &WorkingMI = cloneIfNew(MI);
@@ -8286,7 +8341,6 @@ bool X86InstrInfo::isTailCall(const MachineInstr &Inst) const {
     case X86::TAILJMPd64:
     case X86::TAILJMPm64:
     case X86::TAILJMPr64:
-    case X86::TAILJMPd64_REX:
     case X86::TAILJMPm64_REX:
     case X86::TAILJMPr64_REX:
       return true;

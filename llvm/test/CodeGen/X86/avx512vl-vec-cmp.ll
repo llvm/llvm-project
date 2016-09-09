@@ -57,6 +57,18 @@ define <8 x i32> @test256_5(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %yp) nounwin
   ret <8 x i32> %max
 }
 
+define <8 x i32> @test256_5b(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %yp) nounwind {
+; CHECK-LABEL: test256_5b:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqd (%rdi), %ymm0, %k1
+; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <8 x i32>, <8 x i32>* %yp, align 4
+  %mask = icmp eq <8 x i32> %y, %x
+  %max = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %x1
+  ret <8 x i32> %max
+}
+
 define <8 x i32> @test256_6(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) nounwind {
 ; CHECK-LABEL: test256_6:
 ; CHECK:       ## BB#0:
@@ -65,6 +77,18 @@ define <8 x i32> @test256_6(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) noun
 ; CHECK-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %y.ptr, align 4
   %mask = icmp sgt <8 x i32> %x, %y
+  %max = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %x1
+  ret <8 x i32> %max
+}
+
+define <8 x i32> @test256_6b(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) nounwind {
+; CHECK-LABEL: test256_6b:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpgtd (%rdi), %ymm0, %k1
+; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <8 x i32>, <8 x i32>* %y.ptr, align 4
+  %mask = icmp slt <8 x i32> %y, %x
   %max = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %x1
   ret <8 x i32> %max
 }
@@ -81,6 +105,18 @@ define <8 x i32> @test256_7(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) noun
   ret <8 x i32> %max
 }
 
+define <8 x i32> @test256_7b(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) nounwind {
+; CHECK-LABEL: test256_7b:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpled (%rdi), %ymm0, %k1
+; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <8 x i32>, <8 x i32>* %y.ptr, align 4
+  %mask = icmp sge <8 x i32> %y, %x
+  %max = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %x1
+  ret <8 x i32> %max
+}
+
 define <8 x i32> @test256_8(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) nounwind {
 ; CHECK-LABEL: test256_8:
 ; CHECK:       ## BB#0:
@@ -89,6 +125,18 @@ define <8 x i32> @test256_8(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) noun
 ; CHECK-NEXT:    retq
   %y = load <8 x i32>, <8 x i32>* %y.ptr, align 4
   %mask = icmp ule <8 x i32> %x, %y
+  %max = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %x1
+  ret <8 x i32> %max
+}
+
+define <8 x i32> @test256_8b(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %y.ptr) nounwind {
+; CHECK-LABEL: test256_8b:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpleud (%rdi), %ymm0, %k1
+; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <8 x i32>, <8 x i32>* %y.ptr, align 4
+  %mask = icmp uge <8 x i32> %y, %x
   %max = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %x1
   ret <8 x i32> %max
 }
@@ -213,6 +261,54 @@ define <4 x i64> @test256_16(<4 x i64> %x, i64* %yb.ptr, <4 x i64> %x1, <4 x i64
   ret <4 x i64> %max
 }
 
+define <8 x i32> @test256_17(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %yp) nounwind {
+; CHECK-LABEL: test256_17:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpneqd (%rdi), %ymm0, %k1
+; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <8 x i32>, <8 x i32>* %yp, align 4
+  %mask = icmp ne <8 x i32> %x, %y
+  %max = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %x1
+  ret <8 x i32> %max
+}
+
+define <8 x i32> @test256_18(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %yp) nounwind {
+; CHECK-LABEL: test256_18:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpneqd (%rdi), %ymm0, %k1
+; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <8 x i32>, <8 x i32>* %yp, align 4
+  %mask = icmp ne <8 x i32> %y, %x
+  %max = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %x1
+  ret <8 x i32> %max
+}
+
+define <8 x i32> @test256_19(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %yp) nounwind {
+; CHECK-LABEL: test256_19:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpnltud (%rdi), %ymm0, %k1
+; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <8 x i32>, <8 x i32>* %yp, align 4
+  %mask = icmp uge <8 x i32> %x, %y
+  %max = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %x1
+  ret <8 x i32> %max
+}
+
+define <8 x i32> @test256_20(<8 x i32> %x, <8 x i32> %x1, <8 x i32>* %yp) nounwind {
+; CHECK-LABEL: test256_20:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpleud (%rdi), %ymm0, %k1
+; CHECK-NEXT:    vpblendmd %ymm0, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <8 x i32>, <8 x i32>* %yp, align 4
+  %mask = icmp uge <8 x i32> %y, %x
+  %max = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %x1
+  ret <8 x i32> %max
+}
+
 define <2 x i64> @test128_1(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; CHECK-LABEL: test128_1:
 ; CHECK:       ## BB#0:
@@ -269,6 +365,18 @@ define <4 x i32> @test128_5(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %yp) nounwin
   ret <4 x i32> %max
 }
 
+define <4 x i32> @test128_5b(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %yp) nounwind {
+; CHECK-LABEL: test128_5b:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqd (%rdi), %xmm0, %k1
+; CHECK-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <4 x i32>, <4 x i32>* %yp, align 4
+  %mask = icmp eq <4 x i32> %y, %x
+  %max = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %x1
+  ret <4 x i32> %max
+}
+
 define <4 x i32> @test128_6(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) nounwind {
 ; CHECK-LABEL: test128_6:
 ; CHECK:       ## BB#0:
@@ -277,6 +385,18 @@ define <4 x i32> @test128_6(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) noun
 ; CHECK-NEXT:    retq
   %y = load <4 x i32>, <4 x i32>* %y.ptr, align 4
   %mask = icmp sgt <4 x i32> %x, %y
+  %max = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %x1
+  ret <4 x i32> %max
+}
+
+define <4 x i32> @test128_6b(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) nounwind {
+; CHECK-LABEL: test128_6b:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpgtd (%rdi), %xmm0, %k1
+; CHECK-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <4 x i32>, <4 x i32>* %y.ptr, align 4
+  %mask = icmp slt <4 x i32> %y, %x
   %max = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %x1
   ret <4 x i32> %max
 }
@@ -293,6 +413,18 @@ define <4 x i32> @test128_7(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) noun
   ret <4 x i32> %max
 }
 
+define <4 x i32> @test128_7b(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) nounwind {
+; CHECK-LABEL: test128_7b:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpled (%rdi), %xmm0, %k1
+; CHECK-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <4 x i32>, <4 x i32>* %y.ptr, align 4
+  %mask = icmp sge <4 x i32> %y, %x
+  %max = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %x1
+  ret <4 x i32> %max
+}
+
 define <4 x i32> @test128_8(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) nounwind {
 ; CHECK-LABEL: test128_8:
 ; CHECK:       ## BB#0:
@@ -301,6 +433,18 @@ define <4 x i32> @test128_8(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) noun
 ; CHECK-NEXT:    retq
   %y = load <4 x i32>, <4 x i32>* %y.ptr, align 4
   %mask = icmp ule <4 x i32> %x, %y
+  %max = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %x1
+  ret <4 x i32> %max
+}
+
+define <4 x i32> @test128_8b(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) nounwind {
+; CHECK-LABEL: test128_8b:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpleud (%rdi), %xmm0, %k1
+; CHECK-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <4 x i32>, <4 x i32>* %y.ptr, align 4
+  %mask = icmp uge <4 x i32> %y, %x
   %max = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %x1
   ret <4 x i32> %max
 }
@@ -423,4 +567,52 @@ define <2 x i64> @test128_16(<2 x i64> %x, i64* %yb.ptr, <2 x i64> %x1, <2 x i64
   %mask = select <2 x i1> %mask0, <2 x i1> %mask1, <2 x i1> zeroinitializer
   %max = select <2 x i1> %mask, <2 x i64> %x, <2 x i64> %x1
   ret <2 x i64> %max
+}
+
+define <4 x i32> @test128_17(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) nounwind {
+; CHECK-LABEL: test128_17:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpneqd (%rdi), %xmm0, %k1
+; CHECK-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <4 x i32>, <4 x i32>* %y.ptr, align 4
+  %mask = icmp ne <4 x i32> %x, %y
+  %max = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %x1
+  ret <4 x i32> %max
+}
+
+define <4 x i32> @test128_18(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) nounwind {
+; CHECK-LABEL: test128_18:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpneqd (%rdi), %xmm0, %k1
+; CHECK-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <4 x i32>, <4 x i32>* %y.ptr, align 4
+  %mask = icmp ne <4 x i32> %y, %x
+  %max = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %x1
+  ret <4 x i32> %max
+}
+
+define <4 x i32> @test128_19(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) nounwind {
+; CHECK-LABEL: test128_19:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpnltud (%rdi), %xmm0, %k1
+; CHECK-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <4 x i32>, <4 x i32>* %y.ptr, align 4
+  %mask = icmp uge <4 x i32> %x, %y
+  %max = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %x1
+  ret <4 x i32> %max
+}
+
+define <4 x i32> @test128_20(<4 x i32> %x, <4 x i32> %x1, <4 x i32>* %y.ptr) nounwind {
+; CHECK-LABEL: test128_20:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpleud (%rdi), %xmm0, %k1
+; CHECK-NEXT:    vpblendmd %xmm0, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    retq
+  %y = load <4 x i32>, <4 x i32>* %y.ptr, align 4
+  %mask = icmp uge <4 x i32> %y, %x
+  %max = select <4 x i1> %mask, <4 x i32> %x, <4 x i32> %x1
+  ret <4 x i32> %max
 }

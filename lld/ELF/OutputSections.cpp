@@ -261,6 +261,12 @@ template <class ELFT> void GotSection<ELFT>::finalize() {
   this->Header.sh_size = EntriesNum * sizeof(uintX_t);
 }
 
+template <class ELFT>
+static void writeUint(uint8_t *Buf, typename ELFT::uint Val) {
+  typedef typename ELFT::uint uintX_t;
+  write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Buf, Val);
+}
+
 template <class ELFT> void GotSection<ELFT>::writeMipsGot(uint8_t *Buf) {
   // Set the MSB of the second GOT slot. This is not required by any
   // MIPS ABI documentation, though.
@@ -281,7 +287,7 @@ template <class ELFT> void GotSection<ELFT>::writeMipsGot(uint8_t *Buf) {
   // Write 'page address' entries to the local part of the GOT.
   for (std::pair<uintX_t, size_t> &L : MipsLocalGotPos) {
     uint8_t *Entry = Buf + L.second * sizeof(uintX_t);
-    write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry, L.first);
+    writeUint<ELFT>(Entry, L.first);
   }
   Buf += MipsPageEntries * sizeof(uintX_t);
   auto AddEntry = [&](const MipsGotEntry &SA) {
@@ -289,7 +295,7 @@ template <class ELFT> void GotSection<ELFT>::writeMipsGot(uint8_t *Buf) {
     Buf += sizeof(uintX_t);
     const SymbolBody* Body = SA.first;
     uintX_t VA = Body->template getVA<ELFT>(SA.second);
-    write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry, VA);
+    writeUint<ELFT>(Entry, VA);
   };
   std::for_each(std::begin(MipsLocal), std::end(MipsLocal), AddEntry);
   std::for_each(std::begin(MipsGlobal), std::end(MipsGlobal), AddEntry);
@@ -299,23 +305,20 @@ template <class ELFT> void GotSection<ELFT>::writeMipsGot(uint8_t *Buf) {
   // for thread-local storage.
   // https://www.linux-mips.org/wiki/NPTL
   if (TlsIndexOff != -1U && !Config->Pic)
-    write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Buf + TlsIndexOff,
-                                                            1);
+    writeUint<ELFT>(Buf + TlsIndexOff, 1);
   for (const SymbolBody *B : Entries) {
     if (!B || B->isPreemptible())
       continue;
     uintX_t VA = B->getVA<ELFT>();
     if (B->GotIndex != -1U) {
       uint8_t *Entry = Buf + B->GotIndex * sizeof(uintX_t);
-      write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry,
-                                                              VA - 0x7000);
+      writeUint<ELFT>(Entry, VA - 0x7000);
     }
     if (B->GlobalDynIndex != -1U) {
       uint8_t *Entry = Buf + B->GlobalDynIndex * sizeof(uintX_t);
-      write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry, 1);
+      writeUint<ELFT>(Entry, 1);
       Entry += sizeof(uintX_t);
-      write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry,
-                                                              VA - 0x8000);
+      writeUint<ELFT>(Entry, VA - 0x8000);
     }
   }
 }
@@ -333,7 +336,7 @@ template <class ELFT> void GotSection<ELFT>::writeTo(uint8_t *Buf) {
     if (B->isPreemptible())
       continue; // The dynamic linker will take care of it.
     uintX_t VA = B->getVA<ELFT>();
-    write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry, VA);
+    writeUint<ELFT>(Entry, VA);
   }
 }
 
