@@ -312,11 +312,12 @@ bool DescribeAddressIfGlobal(uptr addr, uptr access_size,
   return true;
 }
 
-void ShadowAddressDescription::Print() {
+void ShadowAddressDescription::Print() const {
   Printf("Address %p is located in the %s area.\n", addr, ShadowNames[kind]);
 }
 
-void GlobalAddressDescription::Print(uptr access_size, const char *bug_type) {
+void GlobalAddressDescription::Print(uptr access_size,
+                                     const char *bug_type) const {
   for (int i = 0; i < size; i++) {
     DescribeAddressRelativeToGlobal(addr, access_size, globals[i]);
     if (0 == internal_strcmp(bug_type, "initialization-order-fiasco") &&
@@ -327,7 +328,7 @@ void GlobalAddressDescription::Print(uptr access_size, const char *bug_type) {
   }
 }
 
-void StackAddressDescription::Print(uptr access_size) {
+void StackAddressDescription::Print(uptr access_size) const {
   Decorator d;
   char tname[128];
   Printf("%s", d.Location());
@@ -382,7 +383,7 @@ void StackAddressDescription::Print(uptr access_size) {
   DescribeThread(GetThreadContextByTidLocked(tid));
 }
 
-void HeapAddressDescription::Print() {
+void HeapAddressDescription::Print() const {
   PrintHeapChunkAccess(addr, chunk_access);
 
   asanThreadRegistry().CheckLocked();
@@ -414,6 +415,37 @@ void HeapAddressDescription::Print() {
   DescribeThread(GetCurrentThread());
   if (free_thread) DescribeThread(free_thread);
   DescribeThread(alloc_thread);
+}
+
+AddressDescription::AddressDescription(uptr addr, uptr access_size,
+                                       bool shouldLockThreadRegistry) {
+  if (GetShadowAddressInformation(addr, &data.shadow)) {
+    data.kind = kAddressKindShadow;
+    return;
+  }
+  if (GetHeapAddressInformation(addr, access_size, &data.heap)) {
+    data.kind = kAddressKindHeap;
+    return;
+  }
+
+  bool isStackMemory = false;
+  if (shouldLockThreadRegistry) {
+    ThreadRegistryLock l(&asanThreadRegistry());
+    isStackMemory = GetStackAddressInformation(addr, &data.stack);
+  } else {
+    isStackMemory = GetStackAddressInformation(addr, &data.stack);
+  }
+  if (isStackMemory) {
+    data.kind = kAddressKindStack;
+    return;
+  }
+
+  if (GetGlobalAddressInformation(addr, &data.global)) {
+    data.kind = kAddressKindGlobal;
+    return;
+  }
+  data.kind = kAddressKindWild;
+  addr = 0;
 }
 
 void PrintAddressDescription(uptr addr, uptr access_size,

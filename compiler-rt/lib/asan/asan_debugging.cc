@@ -24,8 +24,9 @@
 namespace {
 using namespace __asan;
 
-void FindInfoForStackVar(uptr addr, const char *frame_descr, uptr offset,
-                         AddressDescription *descr) {
+static void FindInfoForStackVar(uptr addr, const char *frame_descr, uptr offset,
+                                char *name, uptr name_size,
+                                uptr &region_address, uptr &region_size) {
   InternalMmapVector<StackVarDescr> vars(16);
   if (!ParseFrameDescription(frame_descr, &vars)) {
     return;
@@ -36,60 +37,13 @@ void FindInfoForStackVar(uptr addr, const char *frame_descr, uptr offset,
       // We use name_len + 1 because strlcpy will guarantee a \0 at the end, so
       // if we're limiting the copy due to name_len, we add 1 to ensure we copy
       // the whole name and then terminate with '\0'.
-      internal_strlcpy(descr->name, vars[i].name_pos,
-                       Min(descr->name_size, vars[i].name_len + 1));
-      descr->region_address = addr - (offset - vars[i].beg);
-      descr->region_size = vars[i].size;
+      internal_strlcpy(name, vars[i].name_pos,
+                       Min(name_size, vars[i].name_len + 1));
+      region_address = addr - (offset - vars[i].beg);
+      region_size = vars[i].size;
       return;
     }
   }
-}
-
-void AsanLocateAddress(uptr addr, AddressDescription *descr) {
-  ShadowAddressDescription shadow_descr;
-  if (GetShadowAddressInformation(addr, &shadow_descr)) {
-    descr->region_kind = ShadowNames[shadow_descr.kind];
-    return;
-  }
-  GlobalAddressDescription global_descr;
-  if (GetGlobalAddressInformation(addr, &global_descr)) {
-    descr->region_kind = "global";
-    auto &g = global_descr.globals[0];
-    internal_strlcpy(descr->name, g.name, descr->name_size);
-    descr->region_address = g.beg;
-    descr->region_size = g.size;
-    return;
-  }
-
-  StackAddressDescription stack_descr;
-  asanThreadRegistry().Lock();
-  if (GetStackAddressInformation(addr, &stack_descr)) {
-    asanThreadRegistry().Unlock();
-    descr->region_kind = "stack";
-    if (!stack_descr.frame_descr) {
-      descr->name[0] = 0;
-      descr->region_address = 0;
-      descr->region_size = 0;
-    } else {
-      FindInfoForStackVar(addr, stack_descr.frame_descr, stack_descr.offset,
-                          descr);
-    }
-    return;
-  }
-  asanThreadRegistry().Unlock();
-
-  descr->name[0] = 0;
-  HeapAddressDescription heap_descr;
-  if (GetHeapAddressInformation(addr, 1, &heap_descr)) {
-    descr->region_address = heap_descr.chunk_access.chunk_begin;
-    descr->region_size = heap_descr.chunk_access.chunk_size;
-    descr->region_kind = "heap";
-    return;
-  }
-
-  descr->region_address = 0;
-  descr->region_size = 0;
-  descr->region_kind = "heap-invalid";
 }
 
 uptr AsanGetStack(uptr addr, uptr *trace, u32 size, u32 *thread_id,
@@ -123,12 +77,54 @@ uptr AsanGetStack(uptr addr, uptr *trace, u32 size, u32 *thread_id,
 
 SANITIZER_INTERFACE_ATTRIBUTE
 const char *__asan_locate_address(uptr addr, char *name, uptr name_size,
-                                  uptr *region_address, uptr *region_size) {
-  AddressDescription descr = { name, name_size, 0, 0, nullptr };
-  AsanLocateAddress(addr, &descr);
-  if (region_address) *region_address = descr.region_address;
-  if (region_size) *region_size = descr.region_size;
-  return descr.region_kind;
+                                  uptr *region_address_ptr,
+                                  uptr *region_size_ptr) {
+  AddressDescription descr(addr);
+  uptr region_address = 0;
+  uptr region_size = 0;
+  const char *region_kind = nullptr;
+  if (name && name_size > 0) name[0] = 0;
+
+  if (auto shadow = descr.AsShadow()) {
+    // region_{address,size} are already 0
+    switch (shadow->kind) {
+      case kShadowKindLow:
+        region_kind = "low shadow";
+        break;
+      case kShadowKindGap:
+        region_kind = "shadow gap";
+        break;
+      case kShadowKindHigh:
+        region_kind = "high shadow";
+        break;
+    }
+  } else if (auto heap = descr.AsHeap()) {
+    region_kind = "heap";
+    region_address = heap->chunk_access.chunk_begin;
+    region_size = heap->chunk_access.chunk_size;
+  } else if (auto stack = descr.AsStack()) {
+    region_kind = "stack";
+    if (!stack->frame_descr) {
+      // region_{address,size} are already 0
+    } else {
+      FindInfoForStackVar(addr, stack->frame_descr, stack->offset, name,
+                          name_size, region_address, region_size);
+    }
+  } else if (auto global = descr.AsGlobal()) {
+    region_kind = "global";
+    auto &g = global->globals[0];
+    internal_strlcpy(name, g.name, name_size);
+    region_address = g.beg;
+    region_size = g.size;
+  } else {
+    // region_{address,size} are already 0
+    region_kind = "heap-invalid";
+  }
+
+  CHECK(region_kind);
+  if (region_address_ptr) *region_address_ptr = region_address;
+  if (region_size_ptr) *region_size_ptr = region_size;
+  return region_kind;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
