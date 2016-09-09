@@ -6,13 +6,21 @@
 #include <stdio.h>
 #include <sanitizer/common_interface_defs.h>
 void SymbolizeCaller() {
-  char data[1000];
+  char data[100];
   __sanitizer_symbolize_pc(__builtin_return_address(0), "%p %F %L", data,
                            sizeof(data));
   printf("FIRST_FORMAT %s\n", data);
   __sanitizer_symbolize_pc(__builtin_return_address(0),
                            "FUNC:%f LINE:%l FILE:%s", data, sizeof(data));
   printf("SECOND_FORMAT %s\n", data);
+  __sanitizer_symbolize_pc(__builtin_return_address(0),
+                          "LOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
+                          "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
+                          "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
+                          "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
+                          "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOONG"
+                          "FUNC:%f LINE:%l FILE:%s", data, sizeof(data));
+  printf("LONG_FORMAT %s\n", data);
 }
 
 // CHECK: FIRST_FORMAT 0x{{.*}} in main symbolize_pc.cc:[[@LINE+3]]

@@ -141,16 +141,8 @@ static bool verifyShadowScheme() {
 }
 #endif
 
-uptr VmaSize;
-
 static void initializeShadow() {
   verifyAddressSpace();
-
-  // This is based on the assumption that the intial stack is always allocated
-  // in the topmost segment of the user address space and the assumption
-  // holds true on all the platforms currently supported.
-  VmaSize =
-    (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
 
   DCHECK(verifyShadowScheme());
 

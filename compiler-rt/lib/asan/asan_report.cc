@@ -69,8 +69,8 @@ void AppendToErrorMessageBuffer(const char *buffer) {
 
 // ---------------------- Helper functions ----------------------- {{{1
 
-static void PrintMemoryByte(InternalScopedString *str, const char *before,
-    u8 byte, bool in_shadow, const char *after = "\n") {
+void PrintMemoryByte(InternalScopedString *str, const char *before, u8 byte,
+                     bool in_shadow, const char *after) {
   Decorator d;
   str->append("%s%s%x%x%s%s", before,
               in_shadow ? d.ShadowByte(byte) : d.MemoryByte(),
@@ -133,22 +133,6 @@ static void PrintLegend(InternalScopedString *str) {
   PrintShadowByte(str, "  ASan internal:           ", kAsanInternalHeapMagic);
   PrintShadowByte(str, "  Left alloca redzone:     ", kAsanAllocaLeftMagic);
   PrintShadowByte(str, "  Right alloca redzone:    ", kAsanAllocaRightMagic);
-}
-
-void MaybeDumpInstructionBytes(uptr pc) {
-  if (!flags()->dump_instruction_bytes || (pc < GetPageSizeCached()))
-    return;
-  InternalScopedString str(1024);
-  str.append("First 16 instruction bytes at pc: ");
-  if (IsAccessibleMemoryRange(pc, 16)) {
-    for (int i = 0; i < 16; ++i) {
-      PrintMemoryByte(&str, "", ((u8 *)pc)[i], /*in_shadow*/false, " ");
-    }
-    str.append("\n");
-  } else {
-    str.append("unaccessible\n");
-  }
-  Report("%s", str.data());
 }
 
 static void PrintShadowMemoryForAddress(uptr addr) {
@@ -344,46 +328,10 @@ void ReportStackOverflow(const SignalContext &sig) {
   in_report.ReportError(error);
 }
 
-void ReportDeadlySignal(const char *description, const SignalContext &sig) {
+void ReportDeadlySignal(int signo, const SignalContext &sig) {
   ScopedInErrorReport in_report(/*report*/ nullptr, /*fatal*/ true);
-  Decorator d;
-  Printf("%s", d.Warning());
-  Report(
-      "ERROR: AddressSanitizer: %s on unknown address %p"
-      " (pc %p bp %p sp %p T%d)\n",
-      description, (void *)sig.addr, (void *)sig.pc, (void *)sig.bp,
-      (void *)sig.sp, GetCurrentTidOrInvalid());
-  Printf("%s", d.EndWarning());
-  ScarinessScore SS;
-  if (sig.pc < GetPageSizeCached())
-    Report("Hint: pc points to the zero page.\n");
-  if (sig.is_memory_access) {
-    const char *access_type =
-        sig.write_flag == SignalContext::WRITE
-            ? "WRITE"
-            : (sig.write_flag == SignalContext::READ ? "READ" : "UNKNOWN");
-    Report("The signal is caused by a %s memory access.\n", access_type);
-    if (sig.addr < GetPageSizeCached()) {
-      Report("Hint: address points to the zero page.\n");
-      SS.Scare(10, "null-deref");
-    } else if (sig.addr == sig.pc) {
-      SS.Scare(60, "wild-jump");
-    } else if (sig.write_flag == SignalContext::WRITE) {
-      SS.Scare(30, "wild-addr-write");
-    } else if (sig.write_flag == SignalContext::READ) {
-      SS.Scare(20, "wild-addr-read");
-    } else {
-      SS.Scare(25, "wild-addr");
-    }
-  } else {
-    SS.Scare(10, "signal");
-  }
-  SS.Print();
-  GET_STACK_TRACE_SIGNAL(sig);
-  stack.Print();
-  MaybeDumpInstructionBytes(sig.pc);
-  Printf("AddressSanitizer can not provide additional info.\n");
-  ReportErrorSummary(description, &stack);
+  ErrorDeadlySignal error(signo, sig, GetCurrentTidOrInvalid());
+  in_report.ReportError(error);
 }
 
 void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack) {

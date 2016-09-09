@@ -100,12 +100,11 @@ TEST(AddressSanitizerInterface, GetHeapSizeTest) {
   }
 }
 
-static const size_t kManyThreadsMallocSizes[] = {5, 1UL<<10, 1UL<<14, 357};
-static const size_t kManyThreadsIterations = 250;
-
 #ifndef __powerpc64__
 // FIXME: This has not reliably worked on powerpc since r279664.  Re-enable
 // this once the problem is tracked down and fixed.
+static const size_t kManyThreadsMallocSizes[] = {5, 1UL<<10, 1UL<<14, 357};
+static const size_t kManyThreadsIterations = 250;
 static const size_t kManyThreadsNumThreads =
   (SANITIZER_WORDSIZE == 32) ? 40 : 200;
 
