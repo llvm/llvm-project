@@ -115,12 +115,12 @@ protected:
   /// false, skip the ToplevelDir component. If \p Relative is false, skip the
   /// OutputDir component.
   std::string getOutputPath(StringRef Path, StringRef Extension,
-                            bool InToplevel, bool Relative = true);
+                            bool InToplevel, bool Relative = true) const;
 
   /// \brief If directory output is enabled, create a file in that directory
   /// at the path given by getOutputPath(). Otherwise, return stdout.
   Expected<OwnedStream> createOutputStream(StringRef Path, StringRef Extension,
-                                           bool InToplevel);
+                                           bool InToplevel) const;
 
   /// \brief Return the sub-directory name for file coverage reports.
   static StringRef getCoverageDir() { return "coverage"; }
