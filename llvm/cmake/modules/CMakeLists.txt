@@ -1,8 +1,7 @@
 set(LLVM_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm)
 set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
 
-# First for users who use an installed LLVM, create the
-# LLVMInstallationExports.cmake
+# First for users who use an installed LLVM, create the LLVMExports.cmake file.
 set(LLVM_EXPORTS_FILE ${llvm_cmake_builddir}/LLVMExports.cmake)
 get_property(LLVM_EXPORTS GLOBAL PROPERTY LLVM_EXPORTS)
 export(TARGETS ${LLVM_EXPORTS} FILE ${LLVM_EXPORTS_FILE})
