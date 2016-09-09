@@ -86,6 +86,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIMemoryLegalizerPass(*PR);
   initializeSIDebuggerInsertNopsPass(*PR);
   initializeAMDConvertAtomicLibCallsPass(*PR);
+  initializeAMDGPUOCL12AdapterPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -185,6 +186,7 @@ StringRef AMDGPUTargetMachine::getFeatureString(const Function &F) const {
 
 void AMDGPUTargetMachine::addPreLinkPasses(PassManagerBase & PM) {
   PM.add(llvm::createAMDConvertAtomicLibCallsPass());
+  PM.add(llvm::createAMDGPUOCL12AdapterPass());
 }
 
 //===----------------------------------------------------------------------===//
