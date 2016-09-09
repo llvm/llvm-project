@@ -372,6 +372,53 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, unsigned Context) {
                      : nullptr;
 }
 
+/// Parse a C++ Modules TS export-declaration.
+///
+///       export-declaration:
+///         'export' declaration
+///         'export' '{' declaration-seq[opt] '}'
+///
+Decl *Parser::ParseExportDeclaration() {
+  assert(Tok.is(tok::kw_export));
+  SourceLocation ExportLoc = ConsumeToken();
+
+  ParseScope ExportScope(this, Scope::DeclScope);
+  Decl *ExportDecl = Actions.ActOnStartExportDecl(
+      getCurScope(), ExportLoc,
+      Tok.is(tok::l_brace) ? Tok.getLocation() : SourceLocation());
+
+  if (Tok.isNot(tok::l_brace)) {
+    // FIXME: Factor out a ParseExternalDeclarationWithAttrs.
+    ParsedAttributesWithRange Attrs(AttrFactory);
+    MaybeParseCXX11Attributes(Attrs);
+    MaybeParseMicrosoftAttributes(Attrs);
+    ParseExternalDeclaration(Attrs);
+    return Actions.ActOnFinishExportDecl(getCurScope(), ExportDecl,
+                                         SourceLocation());
+  }
+
+  BalancedDelimiterTracker T(*this, tok::l_brace);
+  T.consumeOpen();
+
+  // The Modules TS draft says "An export-declaration shall declare at least one
+  // entity", but the intent is that it shall contain at least one declaration.
+  if (Tok.is(tok::r_brace))
+    Diag(ExportLoc, diag::err_export_empty)
+        << SourceRange(ExportLoc, Tok.getLocation());
+
+  while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
+         Tok.isNot(tok::eof)) {
+    ParsedAttributesWithRange Attrs(AttrFactory);
+    MaybeParseCXX11Attributes(Attrs);
+    MaybeParseMicrosoftAttributes(Attrs);
+    ParseExternalDeclaration(Attrs);
+  }
+
+  T.consumeClose();
+  return Actions.ActOnFinishExportDecl(getCurScope(), ExportDecl,
+                                       T.getCloseLocation());
+}
+
 /// ParseUsingDirectiveOrDeclaration - Parse C++ using using-declaration or
 /// using-directive. Assumes that current token is 'using'.
 Decl *Parser::ParseUsingDirectiveOrDeclaration(unsigned Context,

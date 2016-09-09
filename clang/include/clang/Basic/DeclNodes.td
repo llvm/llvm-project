@@ -80,6 +80,7 @@ def Named : Decl<1>;
   def ObjCProperty : DDecl<Named>;
   def ObjCCompatibleAlias : DDecl<Named>;
 def LinkageSpec : Decl, DeclContext;
+def Export : Decl, DeclContext;
 def ObjCPropertyImpl : Decl;
 def FileScopeAsm : Decl;
 def AccessSpec : Decl;

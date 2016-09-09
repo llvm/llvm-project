@@ -327,6 +327,7 @@ namespace clang {
     void VisitUsingShadowDecl(UsingShadowDecl *D);
     void VisitConstructorUsingShadowDecl(ConstructorUsingShadowDecl *D);
     void VisitLinkageSpecDecl(LinkageSpecDecl *D);
+    void VisitExportDecl(ExportDecl *D);
     void VisitFileScopeAsmDecl(FileScopeAsmDecl *AD);
     void VisitImportDecl(ImportDecl *D);
     void VisitAccessSpecDecl(AccessSpecDecl *D);
@@ -1364,6 +1365,11 @@ void ASTDeclReader::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
   D->setLanguage((LinkageSpecDecl::LanguageIDs)Record[Idx++]);
   D->setExternLoc(ReadSourceLocation(Record, Idx));
   D->setRBraceLoc(ReadSourceLocation(Record, Idx));
+}
+
+void ASTDeclReader::VisitExportDecl(ExportDecl *D) {
+  VisitDecl(D);
+  D->RBraceLoc = ReadSourceLocation(Record, Idx);
 }
 
 void ASTDeclReader::VisitLabelDecl(LabelDecl *D) {
@@ -3265,6 +3271,9 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_LINKAGE_SPEC:
     D = LinkageSpecDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_EXPORT:
+    D = ExportDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_LABEL:
     D = LabelDecl::CreateDeserialized(Context, ID);

@@ -1388,6 +1388,8 @@ DEF_TRAVERSE_DECL(ClassScopeFunctionSpecializationDecl, {
 
 DEF_TRAVERSE_DECL(LinkageSpecDecl, {})
 
+DEF_TRAVERSE_DECL(ExportDecl, {})
+
 DEF_TRAVERSE_DECL(ObjCPropertyImplDecl, {// FIXME: implement this
                                         })
 

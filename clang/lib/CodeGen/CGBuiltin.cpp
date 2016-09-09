@@ -708,6 +708,58 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                                      "cast");
     return RValue::get(Result);
   }
+  case Builtin::BI_rotr8:
+  case Builtin::BI_rotr16:
+  case Builtin::BI_rotr:
+  case Builtin::BI_lrotr:
+  case Builtin::BI_rotr64: {
+    Value *Val = EmitScalarExpr(E->getArg(0));
+    Value *Shift = EmitScalarExpr(E->getArg(1));
+
+    llvm::Type *ArgType = Val->getType();
+    Shift = Builder.CreateIntCast(Shift, ArgType, false);
+    unsigned ArgWidth = cast<llvm::IntegerType>(ArgType)->getBitWidth();
+    Value *ArgTypeSize = llvm::ConstantInt::get(ArgType, ArgWidth);
+    Value *ArgZero = llvm::Constant::getNullValue(ArgType);
+
+    Value *Mask = llvm::ConstantInt::get(ArgType, ArgWidth - 1);
+    Shift = Builder.CreateAnd(Shift, Mask);
+    Value *LeftShift = Builder.CreateSub(ArgTypeSize, Shift);
+
+    Value *RightShifted = Builder.CreateLShr(Val, Shift);
+    Value *LeftShifted = Builder.CreateShl(Val, LeftShift);
+    Value *Rotated = Builder.CreateOr(LeftShifted, RightShifted);
+
+    Value *ShiftIsZero = Builder.CreateICmpEQ(Shift, ArgZero);
+    Value *Result = Builder.CreateSelect(ShiftIsZero, Val, Rotated);
+    return RValue::get(Result);
+  }
+  case Builtin::BI_rotl8:
+  case Builtin::BI_rotl16:
+  case Builtin::BI_rotl:
+  case Builtin::BI_lrotl:
+  case Builtin::BI_rotl64: {
+    Value *Val = EmitScalarExpr(E->getArg(0));
+    Value *Shift = EmitScalarExpr(E->getArg(1));
+
+    llvm::Type *ArgType = Val->getType();
+    Shift = Builder.CreateIntCast(Shift, ArgType, false);
+    unsigned ArgWidth = cast<llvm::IntegerType>(ArgType)->getBitWidth();
+    Value *ArgTypeSize = llvm::ConstantInt::get(ArgType, ArgWidth);
+    Value *ArgZero = llvm::Constant::getNullValue(ArgType);
+
+    Value *Mask = llvm::ConstantInt::get(ArgType, ArgWidth - 1);
+    Shift = Builder.CreateAnd(Shift, Mask);
+    Value *RightShift = Builder.CreateSub(ArgTypeSize, Shift);
+
+    Value *LeftShifted = Builder.CreateShl(Val, Shift);
+    Value *RightShifted = Builder.CreateLShr(Val, RightShift);
+    Value *Rotated = Builder.CreateOr(LeftShifted, RightShifted);
+
+    Value *ShiftIsZero = Builder.CreateICmpEQ(Shift, ArgZero);
+    Value *Result = Builder.CreateSelect(ShiftIsZero, Val, Rotated);
+    return RValue::get(Result);
+  }
   case Builtin::BI__builtin_unpredictable: {
     // Always return the argument of __builtin_unpredictable. LLVM does not
     // handle this builtin. Metadata for this builtin should be added directly
