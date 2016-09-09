@@ -16,6 +16,7 @@
 #include "SymbolListFile.h"
 #include "Config.h"
 #include "ScriptParser.h"
+#include "Strings.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
@@ -43,7 +44,7 @@ void DynamicListParser::run() {
   while (!atEOF()) {
     expect("{");
     while (!Error) {
-      Config->DynamicList.push_back(next());
+      Config->DynamicList.push_back(unquote(next()));
       expect(";");
       if (skip("}"))
         break;

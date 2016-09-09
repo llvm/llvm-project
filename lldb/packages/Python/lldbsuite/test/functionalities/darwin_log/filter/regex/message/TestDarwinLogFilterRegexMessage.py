@@ -24,6 +24,8 @@ class TestDarwinLogFilterRegexMessage(darwin_log.DarwinLogEventBasedTestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @decorators.skipUnlessDarwin
+    @decorators.expectedFailureAll(oslist=["macosx"],
+                                   bugnumber="llvm.org/pr30299")
     def test_filter_accept_message_full_match(self):
         """Test that fall-through reject, accept regex whole message works."""
         log_entries = self.do_test(
@@ -49,6 +51,8 @@ class TestDarwinLogFilterRegexMessage(darwin_log.DarwinLogEventBasedTestBase):
                                  "First os_log call should have been skipped.")
 
     @decorators.skipUnlessDarwin
+    @decorators.expectedFailureAll(oslist=["macosx"],
+                                   bugnumber="llvm.org/pr30299")
     def test_filter_accept_message_partial_match(self):
         """Test that fall-through reject, accept regex message via partial
         match works."""
@@ -66,6 +70,8 @@ class TestDarwinLogFilterRegexMessage(darwin_log.DarwinLogEventBasedTestBase):
                                  "First os_log call should have been skipped.")
 
     @decorators.skipUnlessDarwin
+    @decorators.expectedFailureAll(oslist=["macosx"],
+                                   bugnumber="llvm.org/pr30299")
     def test_filter_reject_message_full_match(self):
         """Test that fall-through accept, reject regex message works."""
         log_entries = self.do_test(
@@ -82,6 +88,8 @@ class TestDarwinLogFilterRegexMessage(darwin_log.DarwinLogEventBasedTestBase):
                                  "First os_log call should have been skipped.")
 
     @decorators.skipUnlessDarwin
+    @decorators.expectedFailureAll(oslist=["macosx"],
+                                   bugnumber="llvm.org/pr30299")
     def test_filter_reject_message_partial_match(self):
         """Test that fall-through accept, reject regex message by partial
         match works."""
@@ -99,6 +107,8 @@ class TestDarwinLogFilterRegexMessage(darwin_log.DarwinLogEventBasedTestBase):
                                  "First os_log call should have been skipped.")
 
     @decorators.skipUnlessDarwin
+    @decorators.expectedFailureAll(oslist=["macosx"],
+                                   bugnumber="llvm.org/pr30299")
     def test_filter_accept_message_second_rule(self):
         """Test that fall-through reject, accept regex message on second rule
          works."""

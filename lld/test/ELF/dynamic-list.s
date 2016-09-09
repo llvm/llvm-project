@@ -2,8 +2,6 @@
 ## implemented in Python, and the Cygwin implementations of the Unix utilities.
 ## Avoid running these tests on Windows for now by requiring a real shell.
 
-# REQUIRES: shell
-
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/shared.s -o %t2.o
