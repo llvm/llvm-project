@@ -19,6 +19,8 @@
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
+#include "llvm/DebugInfo/PDB/Raw/TpiStream.h"
+#include "llvm/DebugInfo/PDB/Raw/TpiStreamBuilder.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -58,6 +60,12 @@ DbiStreamBuilder &PDBFileBuilder::getDbiBuilder() {
   return *Dbi;
 }
 
+TpiStreamBuilder &PDBFileBuilder::getTpiBuilder() {
+  if (!Tpi)
+    Tpi = llvm::make_unique<TpiStreamBuilder>(Allocator);
+  return *Tpi;
+}
+
 Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() const {
   if (Info) {
     uint32_t Length = Info->calculateSerializedLength();
@@ -67,6 +75,11 @@ Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() const {
   if (Dbi) {
     uint32_t Length = Dbi->calculateSerializedLength();
     if (auto EC = Msf->setStreamSize(StreamDBI, Length))
+      return std::move(EC);
+  }
+  if (Tpi) {
+    uint32_t Length = Tpi->calculateSerializedLength();
+    if (auto EC = Msf->setStreamSize(StreamTPI, Length))
       return std::move(EC);
   }
 
@@ -94,6 +107,13 @@ PDBFileBuilder::build(std::unique_ptr<msf::WritableStream> PdbFileBuffer) {
     if (!ExpectedDbi)
       return ExpectedDbi.takeError();
     File->Dbi = std::move(*ExpectedDbi);
+  }
+
+  if (Tpi) {
+    auto ExpectedTpi = Tpi->build(*File, *PdbFileBuffer);
+    if (!ExpectedTpi)
+      return ExpectedTpi.takeError();
+    File->Tpi = std::move(*ExpectedTpi);
   }
 
   if (File->Info && File->Dbi && File->Info->getAge() != File->Dbi->getAge())
@@ -141,6 +161,11 @@ Error PDBFileBuilder::commit(const msf::WritableStream &Buffer) {
 
   if (Dbi) {
     if (auto EC = Dbi->commit(Layout, Buffer))
+      return EC;
+  }
+
+  if (Tpi) {
+    if (auto EC = Tpi->commit(Layout, Buffer))
       return EC;
   }
 

@@ -43,7 +43,7 @@ s_mov_b64 [tma_lo,tma_hi], s[2:3]
 // SICI:  s_mov_b64 tma, s[2:3]           ; encoding: [0x02,0x04,0xee,0xbe]
 // VI:    s_mov_b64 tma, s[2:3]           ; encoding: [0x02,0x01,0xee,0xbe]
 
-v_mov_b32 [v1], [v2]
+v_mov_b32_e32 [v1], [v2]
 // GCN:  v_mov_b32_e32 v1, v2 ; encoding: [0x02,0x03,0x02,0x7e]
 
 v_rcp_f64 [v1,v2], [v2,v3]

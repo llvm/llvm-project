@@ -62,7 +62,7 @@ s_lshr_b32    ttmp8, ttmp8, 12
 // SICI: s_lshr_b32 ttmp8, ttmp8, 12     ; encoding: [0x78,0x8c,0x78,0x90]
 // VI:   s_lshr_b32 ttmp8, ttmp8, 12     ; encoding: [0x78,0x8c,0x78,0x8f]
 
-v_mov_b32     v1, ttmp8
+v_mov_b32_e32     v1, ttmp8
 // SICI: v_mov_b32_e32 v1, ttmp8         ; encoding: [0x78,0x02,0x02,0x7e]
 // VI:   v_mov_b32_e32 v1, ttmp8         ; encoding: [0x78,0x02,0x02,0x7e]
 

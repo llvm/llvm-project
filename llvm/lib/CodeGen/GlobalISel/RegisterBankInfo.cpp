@@ -224,8 +224,7 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
   bool CompleteMapping = true;
   // For copies we want to walk over the operands and try to find one
   // that has a register bank.
-  bool isCopyLike =
-      MI.isCopy() || MI.isPHI() || MI.getOpcode() == TargetOpcode::G_TYPE;
+  bool isCopyLike = MI.isCopy() || MI.isPHI();
   // Remember the register bank for reuse for copy-like instructions.
   const RegisterBank *RegBank = nullptr;
   // Remember the size of the register for reuse for copy-like instructions.
@@ -367,7 +366,8 @@ unsigned RegisterBankInfo::getSizeInBits(unsigned Reg,
     // get the size of that register class.
     RC = TRI.getMinimalPhysRegClass(Reg);
   } else {
-    unsigned RegSize = MRI.getSize(Reg);
+    LLT Ty = MRI.getType(Reg);
+    unsigned RegSize = Ty.isSized() ? Ty.getSizeInBits() : 0;
     // If Reg is not a generic register, query the register class to
     // get its size.
     if (RegSize)
@@ -566,7 +566,7 @@ void RegisterBankInfo::OperandsMapper::createVRegs(unsigned OpIdx) {
   for (unsigned &NewVReg : NewVRegsForOpIdx) {
     assert(PartMap != PartMapList.end() && "Out-of-bound access");
     assert(NewVReg == 0 && "Register has already been created");
-    NewVReg = MRI.createGenericVirtualRegister(PartMap->Length);
+    NewVReg = MRI.createGenericVirtualRegister(LLT::scalar(PartMap->Length));
     MRI.setRegBank(NewVReg, *PartMap->RegBank);
     ++PartMap;
   }

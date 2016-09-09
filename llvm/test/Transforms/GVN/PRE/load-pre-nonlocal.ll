@@ -51,15 +51,16 @@ for.end:
 }
 
 ; %1 is partially redundant if %0 can be widened to a 64-bit load.
+; But we should not widen %0 to 64-bit load.
 
 ; CHECK-LABEL: define i32 @overaligned_load
 ; CHECK: if.then:
-; CHECK:   %0 = load i64
-; CHECK:   [[LSHR:%[0-9]+]] = lshr i64 %0, 32, !dbg [[LSHR_LOC:![0-9]+]]
-; CHECK:   trunc i64 [[LSHR]] to i32
+; CHECK-NOT:   %0 = load i64
+; CHECK-NOT:   [[LSHR:%[0-9]+]] = lshr i64 %0, 32, !dbg [[LSHR_LOC:![0-9]+]]
+; CHECK-NOT:   trunc i64 [[LSHR]] to i32
 ; CHECK: if.end:
-; CHECK-NOT: %1 = load i32, i32*
-; CHECK: [[LSHR_LOC]] = !DILocation(line: 101, column: 1, scope: !{{.*}})
+; CHECK: %1 = load i32, i32*
+; CHECK-NOT: [[LSHR_LOC]] = !DILocation(line: 101, column: 1, scope: !{{.*}})
 
 define i32 @overaligned_load(i32 %a, i32* nocapture %b) !dbg !13 {
 entry:

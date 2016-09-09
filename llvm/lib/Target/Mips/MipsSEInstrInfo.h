@@ -106,15 +106,6 @@ private:
   void expandCvtFPInt(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                       unsigned CvtOpc, unsigned MovOpc, bool IsI64) const;
 
-  /// Expand pseudo ReadFCC(I) instructions like so:
-  ///
-  /// cfc1 $dst, $fcr25
-  /// srl $dst, $dst, (register number if not $fcc0)
-  /// nor $dst, $dst, $dst (if inverted)
-  /// andi $dst, $dst, 1
-  ///
-  void expandReadFCC(MachineBasicBlock &MBB,
-                     MachineBasicBlock::iterator I) const;
   void expandExtractElementF64(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I, bool FP64) const;
   void expandBuildPairF64(MachineBasicBlock &MBB,

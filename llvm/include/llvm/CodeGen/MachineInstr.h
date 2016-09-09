@@ -23,7 +23,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -104,13 +103,6 @@ private:
 
   DebugLoc debugLoc;                    // Source line information.
 
-#ifdef LLVM_BUILD_GLOBAL_ISEL
-  /// Type of the instruction in case of a generic opcode.
-  /// \invariant This must be LLT{} if getOpcode() is not
-  /// in the range of generic opcodes.
-  SmallVector<LLT, 1>  Tys;
-#endif
-
   MachineInstr(const MachineInstr&) = delete;
   void operator=(const MachineInstr&) = delete;
   // Use MachineFunction::DeleteMachineInstr() instead.
@@ -185,12 +177,6 @@ public:
     Flags &= ~((uint8_t)Flag);
   }
 
-  /// Set the type of the instruction.
-  /// \pre getOpcode() is in the range of the generic opcodes.
-  void setType(LLT Ty, unsigned Idx = 0);
-  LLT getType(int unsigned = 0) const;
-  unsigned getNumTypes() const;
-  void removeTypes();
 
   /// Return true if MI is in a bundle (but not the first MI in a bundle).
   ///
@@ -793,10 +779,7 @@ public:
       && getOperand(1).isImm();
   }
 
-  bool isPHI() const {
-    return getOpcode() == TargetOpcode::PHI ||
-           getOpcode() == TargetOpcode::G_PHI;
-  }
+  bool isPHI() const { return getOpcode() == TargetOpcode::PHI; }
   bool isKill() const { return getOpcode() == TargetOpcode::KILL; }
   bool isImplicitDef() const { return getOpcode()==TargetOpcode::IMPLICIT_DEF; }
   bool isInlineAsm() const { return getOpcode() == TargetOpcode::INLINEASM; }

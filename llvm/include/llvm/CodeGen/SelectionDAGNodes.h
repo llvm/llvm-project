@@ -463,6 +463,7 @@ protected:
   };
 
   union {
+    char RawSDNodeBits[sizeof(uint16_t)];
     SDNodeBitfields SDNodeBits;
     ConstantSDNodeBitfields ConstantSDNodeBits;
     MemSDNodeBitfields MemSDNodeBits;
@@ -470,6 +471,16 @@ protected:
     LoadSDNodeBitfields LoadSDNodeBits;
     StoreSDNodeBitfields StoreSDNodeBits;
   };
+
+  // RawSDNodeBits must cover the entirety of the union.  This means that all of
+  // the union's members must have size <= RawSDNodeBits.  We write the RHS as
+  // "2" instead of sizeof(RawSDNodeBits) because MSVC can't handle the latter.
+  static_assert(sizeof(SDNodeBitfields) <= 2, "field too wide");
+  static_assert(sizeof(ConstantSDNodeBitfields) <= 2, "field too wide");
+  static_assert(sizeof(MemSDNodeBitfields) <= 2, "field too wide");
+  static_assert(sizeof(LSBaseSDNodeBitfields) <= 2, "field too wide");
+  static_assert(sizeof(LoadSDNodeBitfields) <= 2, "field too wide");
+  static_assert(sizeof(StoreSDNodeBitfields) <= 2, "field too wide");
 
 private:
   /// Unique id per SDNode in the DAG.
@@ -876,7 +887,7 @@ protected:
       : NodeType(Opc), NodeId(-1), OperandList(nullptr), ValueList(VTs.VTs),
         UseList(nullptr), NumOperands(0), NumValues(VTs.NumVTs), IROrder(Order),
         debugLoc(std::move(dl)) {
-    memset(&SDNodeBits, 0, sizeof(SDNodeBits));
+    memset(&RawSDNodeBits, 0, sizeof(RawSDNodeBits));
     assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
     assert(NumValues == VTs.NumVTs &&
            "NumValues wasn't wide enough for its operands!");
@@ -1095,9 +1106,7 @@ public:
   /// function should only be used to compute a FoldingSetNodeID value.
   unsigned getRawSubclassData() const {
     uint16_t Data;
-    memcpy(&Data, &SDNodeBits, sizeof(SDNodeBits));
-    static_assert(sizeof(SDNodeBits) <= sizeof(uint16_t),
-                  "SDNodeBits field too large?");
+    memcpy(&Data, &RawSDNodeBits, sizeof(RawSDNodeBits));
     return Data;
   }
 

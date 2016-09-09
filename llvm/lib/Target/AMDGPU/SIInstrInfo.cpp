@@ -1689,9 +1689,11 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         return false;
       }
       break;
-    case AMDGPU::OPERAND_REG_IMM32:
+    case AMDGPU::OPERAND_REG_IMM32_INT:
+    case AMDGPU::OPERAND_REG_IMM32_FP:
       break;
-    case AMDGPU::OPERAND_REG_INLINE_C:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP:
       if (isLiteralConstant(MI.getOperand(i),
                             RI.getRegClass(RegClass)->getSize())) {
         ErrInfo = "Illegal immediate value for operand.";
@@ -2030,8 +2032,8 @@ bool SIInstrInfo::isLegalRegOperand(const MachineRegisterInfo &MRI,
   // In order to be legal, the common sub-class must be equal to the
   // class of the current operand.  For example:
   //
-  // v_mov_b32 s0 ; Operand defined as vsrc_32
-  //              ; RI.getCommonSubClass(s0,vsrc_32) = sgpr ; LEGAL
+  // v_mov_b32 s0 ; Operand defined as vsrc_b32
+  //              ; RI.getCommonSubClass(s0,vsrc_b32) = sgpr ; LEGAL
   //
   // s_sendmsg 0, s0 ; Operand defined as m0reg
   //                 ; RI.getCommonSubClass(s0,m0reg) = m0reg ; NOT LEGAL

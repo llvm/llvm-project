@@ -377,9 +377,6 @@ bool MipsSEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case Mips::PseudoCVT_D64_W:
     expandCvtFPInt(MBB, MI, Mips::CVT_D64_W, Mips::MTC1, true);
     break;
-  case Mips::PseudoReadFCC:
-    expandReadFCC(MBB, MI);
-    break;
   case Mips::PseudoCVT_D64_L:
     expandCvtFPInt(MBB, MI, Mips::CVT_D64_L, Mips::DMTC1, true);
     break;
@@ -625,37 +622,6 @@ void MipsSEInstrInfo::expandCvtFPInt(MachineBasicBlock &MBB,
 
   BuildMI(MBB, I, DL, MovDesc, TmpReg).addReg(SrcReg, KillSrc);
   BuildMI(MBB, I, DL, CvtDesc, DstReg).addReg(TmpReg, RegState::Kill);
-}
-
-void MipsSEInstrInfo::expandReadFCC(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator I) const {
-  assert(I->getOperand(1).isImm() && "Malformed PseudoReadFCC Node");
-
-  bool Invert = (I->getOperand(1).getImm()) == 1;
-  const MachineOperand &Dest = I->getOperand(0), &Src = I->getOperand(2);
-  unsigned DstReg = Dest.getReg(), SrcReg = Src.getReg();
-
-  DebugLoc DL = I->getDebugLoc();
-  BuildMI(MBB, I, DL, get(Mips::CFC1), DstReg).addReg(Mips::FCR31);
-  unsigned Shift = 0;
-  switch (SrcReg) {
-  case Mips::FCC0:      Shift = 23; break;
-  case Mips::FCC1:      Shift = 25; break;
-  case Mips::FCC2:      Shift = 26; break;
-  case Mips::FCC3:      Shift = 27; break;
-  case Mips::FCC4:      Shift = 28; break;
-  case Mips::FCC5:      Shift = 29; break;
-  case Mips::FCC6:      Shift = 30; break;
-  case Mips::FCC7:      Shift = 31; break;
-  default:
-    llvm_unreachable("Unknown $fcc register for expandReadFCC!");
-  }
-  BuildMI(MBB, I, DL, get(Mips::SRL), DstReg).addReg(DstReg).addImm(Shift);
-
-  if (Invert)
-    BuildMI(MBB, I, DL, get(Mips::NOR), DstReg).addReg(DstReg).addReg(DstReg);
-
-  BuildMI(MBB, I, DL, get(Mips::ANDi), DstReg).addReg(DstReg).addImm(1);
 }
 
 void MipsSEInstrInfo::expandExtractElementF64(MachineBasicBlock &MBB,

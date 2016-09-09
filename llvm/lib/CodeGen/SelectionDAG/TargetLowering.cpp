@@ -946,8 +946,8 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
 
     // If the input sign bit is known zero, convert this into a zero extension.
     if (KnownZero.intersects(InSignBit))
-      return TLO.CombineTo(Op,
-                          TLO.DAG.getZeroExtendInReg(Op.getOperand(0),dl,ExVT));
+      return TLO.CombineTo(Op, TLO.DAG.getZeroExtendInReg(
+                                   Op.getOperand(0), dl, ExVT.getScalarType()));
 
     if (KnownOne.intersects(InSignBit)) {    // Input sign bit known set
       KnownOne |= NewBits;

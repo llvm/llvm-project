@@ -887,21 +887,28 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   }
 
   // Check types.
-  const unsigned NumTypes = MI->getNumTypes();
   if (isPreISelGenericOpcode(MCID.getOpcode())) {
     if (isFunctionSelected)
       report("Unexpected generic instruction in a Selected function", MI);
 
-    if (NumTypes == 0)
-      report("Generic instruction must have a type", MI);
-  } else {
-    if (NumTypes != 0)
-      report("Non-generic instruction cannot have a type", MI);
+    // Generic instructions specify equality constraints between some
+    // of their operands. Make sure these are consistent.
+    SmallVector<LLT, 4> Types;
+    for (unsigned i = 0; i < MCID.getNumOperands(); ++i) {
+      if (!MCID.OpInfo[i].isGenericType())
+        continue;
+      size_t TypeIdx = MCID.OpInfo[i].getGenericTypeIndex();
+      Types.resize(std::max(TypeIdx + 1, Types.size()));
+
+      LLT OpTy = MRI->getType(MI->getOperand(i).getReg());
+      if (Types[TypeIdx].isValid() && Types[TypeIdx] != OpTy)
+        report("type mismatch in generic instruction", MI);
+      Types[TypeIdx] = OpTy;
+    }
   }
 
   // Generic opcodes must not have physical register operands.
-  if (isPreISelGenericOpcode(MCID.getOpcode()) &&
-      MCID.getOpcode() != TargetOpcode::G_TYPE) {
+  if (isPreISelGenericOpcode(MCID.getOpcode())) {
     for (auto &Op : MI->operands()) {
       if (Op.isReg() && TargetRegisterInfo::isPhysicalRegister(Op.getReg()))
         report("Generic instruction cannot have physical register", MI);
@@ -1026,9 +1033,10 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
           }
 
           // The gvreg must have a size and it must not have a SubIdx.
-          unsigned Size = MRI->getSize(Reg);
-          if (!Size) {
-            report("Generic virtual register must have a size", MO, MONum);
+          LLT Ty = MRI->getType(Reg);
+          if (!Ty.isValid()) {
+            report("Generic virtual register must have a valid type", MO,
+                   MONum);
             return;
           }
 
@@ -1043,15 +1051,18 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
           }
 
           // Make sure the register fits into its register bank if any.
-          if (RegBank && RegBank->getSize() < Size) {
+          if (RegBank && Ty.isSized() &&
+              RegBank->getSize() < Ty.getSizeInBits()) {
             report("Register bank is too small for virtual register", MO,
                    MONum);
             errs() << "Register bank " << RegBank->getName() << " too small("
-                   << RegBank->getSize() << ") to fit " << Size << "-bits\n";
+                   << RegBank->getSize() << ") to fit " << Ty.getSizeInBits()
+                   << "-bits\n";
             return;
           }
           if (SubIdx)  {
-            report("Generic virtual register does not subregister index", MO, MONum);
+            report("Generic virtual register does not subregister index", MO,
+                   MONum);
             return;
           }
           break;

@@ -18,7 +18,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/MachineLegalizer.h"
+
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Target/TargetOpcodes.h"
@@ -29,11 +32,6 @@ MachineLegalizer::MachineLegalizer() : TablesInitialized(false) {
   // proposed. Once loads & stores are supported.
   DefaultActions[TargetOpcode::G_ANYEXT] = Legal;
   DefaultActions[TargetOpcode::G_TRUNC] = Legal;
-
-  // G_TYPE and G_PHI are essentially an annotated COPY/PHI instructions so
-  // they're always legal.
-  DefaultActions[TargetOpcode::G_TYPE] = Legal;
-  DefaultActions[TargetOpcode::G_PHI] = Legal;
 
   DefaultActions[TargetOpcode::G_INTRINSIC] = Legal;
   DefaultActions[TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS] = Legal;
@@ -116,17 +114,33 @@ MachineLegalizer::getAction(const InstrAspect &Aspect) const {
 }
 
 std::tuple<MachineLegalizer::LegalizeAction, unsigned, LLT>
-MachineLegalizer::getAction(const MachineInstr &MI) const {
-  for (unsigned i = 0; i < MI.getNumTypes(); ++i) {
-    auto Action = getAction({MI.getOpcode(), i, MI.getType(i)});
+MachineLegalizer::getAction(const MachineInstr &MI,
+                            const MachineRegisterInfo &MRI) const {
+  SmallBitVector SeenTypes(8);
+  const MCOperandInfo *OpInfo = MI.getDesc().OpInfo;
+  for (unsigned i = 0; i < MI.getDesc().getNumOperands(); ++i) {
+    if (!OpInfo[i].isGenericType())
+      continue;
+
+    // We don't want to repeatedly check the same operand index, that
+    // could get expensive.
+    unsigned TypeIdx = OpInfo[i].getGenericTypeIndex();
+    if (SeenTypes[TypeIdx])
+      continue;
+
+    SeenTypes.set(TypeIdx);
+
+    LLT Ty = MRI.getType(MI.getOperand(i).getReg());
+    auto Action = getAction({MI.getOpcode(), TypeIdx, Ty});
     if (Action.first != Legal)
-      return std::make_tuple(Action.first, i, Action.second);
+      return std::make_tuple(Action.first, TypeIdx, Action.second);
   }
   return std::make_tuple(Legal, 0, LLT{});
 }
 
-bool MachineLegalizer::isLegal(const MachineInstr &MI) const {
-  return std::get<0>(getAction(MI)) == Legal;
+bool MachineLegalizer::isLegal(const MachineInstr &MI,
+                               const MachineRegisterInfo &MRI) const {
+  return std::get<0>(getAction(MI, MRI)) == Legal;
 }
 
 LLT MachineLegalizer::findLegalType(const InstrAspect &Aspect,

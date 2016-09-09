@@ -77,14 +77,18 @@ bool MachineLegalizePass::combineExtracts(MachineInstr &MI,
            SeqI.getOperand(2 * SeqIdx + 2).getImm() < ExtractPos)
       ++SeqIdx;
 
-    if (SeqIdx == NumSeqSrcs ||
-        SeqI.getOperand(2 * SeqIdx + 2).getImm() != ExtractPos ||
-        SeqI.getType(SeqIdx + 1) != MI.getType(Idx)) {
+    if (SeqIdx == NumSeqSrcs) {
       AllDefsReplaced = false;
       continue;
     }
 
     unsigned OrigReg = SeqI.getOperand(2 * SeqIdx + 1).getReg();
+    if (SeqI.getOperand(2 * SeqIdx + 2).getImm() != ExtractPos ||
+        MRI.getType(OrigReg) != MRI.getType(ExtractReg)) {
+      AllDefsReplaced = false;
+      continue;
+    }
+
     assert(!TargetRegisterInfo::isPhysicalRegister(OrigReg) &&
            "unexpected physical register in G_SEQUENCE");
 

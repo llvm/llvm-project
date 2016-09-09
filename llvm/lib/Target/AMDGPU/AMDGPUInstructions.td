@@ -49,13 +49,6 @@ def UnsafeFPMath : Predicate<"TM.Options.UnsafeFPMath">;
 def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
 def ADDRIndirect : ComplexPattern<iPTR, 2, "SelectADDRIndirect", [], []>;
 
-// 32-bit VALU immediate operand that uses the constant bus.
-def u32kimm : Operand<i32> {
-  let OperandNamespace = "AMDGPU";
-  let OperandType = "OPERAND_KIMM32";
-  let PrintMethod = "printU32ImmOperand";
-}
-
 let OperandType = "OPERAND_IMMEDIATE" in {
 
 def u32imm : Operand<i32> {

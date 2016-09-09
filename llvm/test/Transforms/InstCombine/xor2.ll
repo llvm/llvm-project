@@ -180,6 +180,27 @@ define i32 @test12(i32 %a, i32 %b) {
   ret i32 %xor
 }
 
+; FIXME: We miss the fold because the pattern matching is inadequate.
+
+define i32 @test12commuted(i32 %a, i32 %b) {
+; CHECK-LABEL: @test12commuted(
+; CHECK-NEXT:    [[NEGB:%.*]] = xor i32 %b, -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEGB]], %a
+; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 %a, -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], [[NEGA]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %negb = xor i32 %b, -1
+  %and = and i32 %negb, %a
+  %nega = xor i32 %a, -1
+  %xor = xor i32 %and, %nega
+  ret i32 %xor
+}
+
+; This is a test of canonicalization via operand complexity.
+; The final xor has a binary operator and a (fake) unary operator, 
+; so binary (more complex) should come first.
+
 define i32 @test13(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %a, %b
@@ -189,6 +210,23 @@ define i32 @test13(i32 %a, i32 %b) {
   %nega = xor i32 %a, -1
   %negb = xor i32 %b, -1
   %and = and i32 %a, %negb
+  %xor = xor i32 %nega, %and
+  ret i32 %xor
+}
+
+; FIXME: We miss the fold because the pattern matching is inadequate.
+
+define i32 @test13commuted(i32 %a, i32 %b) {
+; CHECK-LABEL: @test13commuted(
+; CHECK-NEXT:    [[NEGA:%.*]] = xor i32 %a, -1
+; CHECK-NEXT:    [[NEGB:%.*]] = xor i32 %b, -1
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[NEGB]], %a
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], [[NEGA]]
+; CHECK-NEXT:    ret i32 [[XOR]]
+;
+  %nega = xor i32 %a, -1
+  %negb = xor i32 %b, -1
+  %and = and i32 %negb, %a
   %xor = xor i32 %nega, %and
   ret i32 %xor
 }

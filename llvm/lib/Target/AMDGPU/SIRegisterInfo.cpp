@@ -791,14 +791,16 @@ bool SIRegisterInfo::shouldRewriteCopySrc(
 }
 
 bool SIRegisterInfo::opCanUseLiteralConstant(unsigned OpType) const {
-  return OpType == AMDGPU::OPERAND_REG_IMM32;
+  return OpType == AMDGPU::OPERAND_REG_IMM32_INT ||
+         OpType == AMDGPU::OPERAND_REG_IMM32_FP;
 }
 
 bool SIRegisterInfo::opCanUseInlineConstant(unsigned OpType) const {
   if (opCanUseLiteralConstant(OpType))
     return true;
 
-  return OpType == AMDGPU::OPERAND_REG_INLINE_C;
+  return OpType == AMDGPU::OPERAND_REG_INLINE_C_INT ||
+         OpType == AMDGPU::OPERAND_REG_INLINE_C_FP;
 }
 
 // FIXME: Most of these are flexible with HSA and we don't need to reserve them

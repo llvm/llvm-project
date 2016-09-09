@@ -709,10 +709,8 @@ bool MipsFastISel::emitCmp(unsigned ResultReg, const CmpInst *CI) {
     unsigned RegWithOne = createResultReg(&Mips::GPR32RegClass);
     emitInst(Mips::ADDiu, RegWithZero).addReg(Mips::ZERO).addImm(0);
     emitInst(Mips::ADDiu, RegWithOne).addReg(Mips::ZERO).addImm(1);
-    emitInst(Opc)
-        .addReg(Mips::FCC0, RegState::Define)
-        .addReg(LeftReg)
-        .addReg(RightReg);
+    emitInst(Opc).addReg(LeftReg).addReg(RightReg).addReg(
+        Mips::FCC0, RegState::ImplicitDefine);
     emitInst(CondMovOpc, ResultReg)
         .addReg(RegWithOne)
         .addReg(Mips::FCC0)

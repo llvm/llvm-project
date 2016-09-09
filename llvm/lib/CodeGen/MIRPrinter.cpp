@@ -223,7 +223,8 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
       VReg.Class = StringRef(RegInfo.getRegBankOrNull(Reg)->getName()).lower();
     else {
       VReg.Class = std::string("_");
-      assert(RegInfo.getSize(Reg) && "Generic registers must have a size");
+      assert(RegInfo.getType(Reg).isValid() &&
+             "Generic registers must have a valid type");
     }
     unsigned PreferredReg = RegInfo.getSimpleHint(Reg);
     if (PreferredReg)
@@ -568,17 +569,6 @@ void MIPrinter::print(const MachineInstr &MI) {
   if (MI.getFlag(MachineInstr::FrameSetup))
     OS << "frame-setup ";
   OS << TII->getName(MI.getOpcode());
-  if (isPreISelGenericOpcode(MI.getOpcode())) {
-    assert(MI.getType().isValid() && "Generic instructions must have a type");
-    unsigned NumTypes = MI.getNumTypes();
-    OS << (NumTypes > 1 ? " {" : "") << ' ';
-    for (unsigned i = 0; i < NumTypes; ++i) {
-      MI.getType(i).print(OS);
-      if (i + 1 != NumTypes)
-        OS <<  ", ";
-    }
-    OS << (NumTypes > 1 ? " }" : "") << ' ';
-  }
   if (I < E)
     OS << ' ';
 
@@ -787,8 +777,8 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
     if (ShouldPrintRegisterTies && Op.isTied() && !Op.isDef())
       OS << "(tied-def " << Op.getParent()->findTiedOperandIdx(I) << ")";
     assert((!IsDef || MRI) && "for IsDef, MRI must be provided");
-    if (IsDef && MRI->getSize(Op.getReg()))
-      OS << '(' << MRI->getSize(Op.getReg()) << ')';
+    if (IsDef && MRI->getType(Op.getReg()).isValid())
+      OS << '(' << MRI->getType(Op.getReg()) << ')';
     break;
   case MachineOperand::MO_Immediate:
     OS << Op.getImm();

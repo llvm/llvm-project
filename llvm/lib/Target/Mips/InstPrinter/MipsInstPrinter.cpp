@@ -192,6 +192,12 @@ printMemOperandEA(const MCInst *MI, int opNum, raw_ostream &O) {
 }
 
 void MipsInstPrinter::
+printFCCOperand(const MCInst *MI, int opNum, raw_ostream &O) {
+  const MCOperand& MO = MI->getOperand(opNum);
+  O << MipsFCCToString((Mips::CondCode)MO.getImm());
+}
+
+void MipsInstPrinter::
 printRegisterPair(const MCInst *MI, int opNum, raw_ostream &O) {
   printRegName(O, MI->getOperand(opNum).getReg());
 }

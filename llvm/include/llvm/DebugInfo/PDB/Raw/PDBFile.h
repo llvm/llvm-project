@@ -92,6 +92,8 @@ public:
   Expected<SymbolStream &> getPDBSymbolStream();
   Expected<NameHashTable &> getStringTable();
 
+  BumpPtrAllocator &getAllocator() { return Allocator; }
+
 private:
   BumpPtrAllocator &Allocator;
 

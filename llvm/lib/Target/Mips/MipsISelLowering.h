@@ -108,9 +108,6 @@ namespace llvm {
       Ext,
       Ins,
 
-      // Pseudo Node used to read the FCC registers.
-      PseudoReadFCC,
-
       // EXTR.W instrinsic nodes.
       EXTP,
       EXTPDP,
