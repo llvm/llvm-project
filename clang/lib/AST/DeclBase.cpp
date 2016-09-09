@@ -1413,18 +1413,16 @@ DeclContext::lookup(DeclarationName Name) const {
   assert(DeclKind != Decl::LinkageSpec && DeclKind != Decl::Export &&
          "should not perform lookups into transparent contexts");
 
+  const DeclContext *PrimaryContext = getPrimaryContext();
+  if (PrimaryContext != this)
+    return PrimaryContext->lookup(Name);
+
   // If we have an external source, ensure that any later redeclarations of this
   // context have been loaded, since they may add names to the result of this
   // lookup (or add external visible storage).
   ExternalASTSource *Source = getParentASTContext().getExternalSource();
   if (Source)
     (void)cast<Decl>(this)->getMostRecentDecl();
-
-  // getMostRecentDecl can change the result of getPrimaryContext. Call
-  // getPrimaryContext afterwards.
-  const DeclContext *PrimaryContext = getPrimaryContext();
-  if (PrimaryContext != this)
-    return PrimaryContext->lookup(Name);
 
   if (hasExternalVisibleStorage()) {
     assert(Source && "external visible storage but no external source?");

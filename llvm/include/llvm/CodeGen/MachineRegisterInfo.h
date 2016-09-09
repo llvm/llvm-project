@@ -20,6 +20,7 @@
 #include "llvm/ADT/iterator_range.h"
 // PointerUnion needs to have access to the full RegisterBank type.
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/Target/TargetRegisterInfo.h"
@@ -104,16 +105,16 @@ private:
   /// started.
   BitVector ReservedRegs;
 
-  typedef DenseMap<unsigned, unsigned> VRegToSizeMap;
+  typedef DenseMap<unsigned, LLT> VRegToTypeMap;
   /// Map generic virtual registers to their actual size.
-  mutable std::unique_ptr<VRegToSizeMap> VRegToSize;
+  mutable std::unique_ptr<VRegToTypeMap> VRegToType;
 
-  /// Accessor for VRegToSize. This accessor should only be used
+  /// Accessor for VRegToType. This accessor should only be used
   /// by global-isel related work.
-  VRegToSizeMap &getVRegToSize() const {
-    if (!VRegToSize)
-      VRegToSize.reset(new VRegToSizeMap);
-    return *VRegToSize.get();
+  VRegToTypeMap &getVRegToType() const {
+    if (!VRegToType)
+      VRegToType.reset(new VRegToTypeMap);
+    return *VRegToType.get();
   }
 
   /// Keep track of the physical registers that are live in to the function.
@@ -641,22 +642,20 @@ public:
   ///
   unsigned createVirtualRegister(const TargetRegisterClass *RegClass);
 
-  /// Get the size in bits of \p VReg or 0 if VReg is not a generic
+  /// Get the low-level type of \p VReg or LLT{} if VReg is not a generic
   /// (target independent) virtual register.
-  unsigned getSize(unsigned VReg) const;
+  LLT getType(unsigned VReg) const;
 
-  /// Set the size in bits of \p VReg to \p Size.
-  /// Although the size should be set at build time, mir infrastructure
-  /// is not yet able to do it.
-  void setSize(unsigned VReg, unsigned Size);
+  /// Set the low-level type of \p VReg to \p Ty.
+  void setType(unsigned VReg, LLT Ty);
 
-  /// Create and return a new generic virtual register with a size of \p Size.
-  /// \pre Size > 0.
-  unsigned createGenericVirtualRegister(unsigned Size);
+  /// Create and return a new generic virtual register with low-level
+  /// type \p Ty.
+  unsigned createGenericVirtualRegister(LLT Ty);
 
-  /// Remove all sizes associated to virtual registers (after instruction
+  /// Remove all types associated to virtual registers (after instruction
   /// selection and constraining of all generic virtual registers).
-  void clearVirtRegSizes();
+  void clearVirtRegTypes();
 
   /// getNumVirtRegs - Return the number of virtual registers created.
   ///

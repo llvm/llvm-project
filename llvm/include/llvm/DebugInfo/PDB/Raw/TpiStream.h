@@ -27,7 +27,7 @@ namespace pdb {
 class PDBFile;
 
 class TpiStream {
-  struct HeaderInfo;
+  friend class TpiStreamBuilder;
 
 public:
   TpiStream(const PDBFile &File,
@@ -66,7 +66,7 @@ private:
   msf::FixedStreamArray<TypeIndexOffset> TypeIndexOffsets;
   msf::FixedStreamArray<TypeIndexOffset> HashAdjustments;
 
-  const HeaderInfo *Header;
+  const TpiStreamHeader *Header;
 };
 }
 }

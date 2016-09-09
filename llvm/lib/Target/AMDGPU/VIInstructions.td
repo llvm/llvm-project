@@ -90,9 +90,10 @@ let isCommutable = 1 in {
 
 class SI2_VI3Alias <string name, Instruction inst> : InstAlias <
   name#" $dst, $src0, $src1",
-  (inst VGPR_32:$dst, 0, VCSrc_32:$src0, 0, VCSrc_32:$src1, 0, 0)
+  (inst VGPR_32:$dst, 0, VCSrc_f32:$src0, 0, VCSrc_f32:$src1, 0, 0)
 >, PredicateControl {
   let UseInstAsmMatchConverter = 0;
+  let AsmVariantName = AMDGPUAsmVariants.VOP3;
 }
 
 def : SI2_VI3Alias <"v_ldexp_f32", V_LDEXP_F32_e64_vi>;

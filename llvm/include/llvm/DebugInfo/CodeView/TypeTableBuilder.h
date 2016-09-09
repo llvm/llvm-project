@@ -63,6 +63,11 @@ public:
   TypeIndex writeRecord(TypeRecordBuilder &builder);
 
   virtual TypeIndex writeRecord(llvm::StringRef record) = 0;
+
+  ArrayRef<TypeRecordKind> getRecordKinds() const { return RecordKinds; }
+
+private:
+  std::vector<TypeRecordKind> RecordKinds;
 };
 }
 }

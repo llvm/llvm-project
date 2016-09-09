@@ -49,14 +49,17 @@ enum {
 namespace llvm {
 namespace AMDGPU {
   enum OperandType {
-    /// Operand with register or 32-bit immediate
-    OPERAND_REG_IMM32 = MCOI::OPERAND_FIRST_TARGET,
-    /// Operand with register or inline constant
-    OPERAND_REG_INLINE_C,
+    /// Operands with register or 32-bit immediate
+    OPERAND_REG_IMM32_INT = MCOI::OPERAND_FIRST_TARGET,
+    OPERAND_REG_IMM32_FP,
+    /// Operands with register or inline constant
+    OPERAND_REG_INLINE_C_INT,
+    OPERAND_REG_INLINE_C_FP,
 
-    /// Operand with 32-bit immediate that uses the constant bus. The standard
-    /// OPERAND_IMMEDIATE should be used for special immediates such as source
-    /// modifiers.
+    // Operand for source modifiers for VOP instructions
+    OPERAND_INPUT_MODS,
+
+    /// Operand with 32-bit immediate that uses the constant bus.
     OPERAND_KIMM32
   };
 }
@@ -102,6 +105,15 @@ namespace SIOutMods {
     MUL2 = 1,
     MUL4 = 2,
     DIV2 = 3
+  };
+}
+
+namespace AMDGPUAsmVariants {
+  enum {
+    DEFAULT = 0,
+    VOP3 = 1,
+    SDWA = 2,
+    DPP = 3
   };
 }
 

@@ -227,7 +227,8 @@ IslPtr<isl_union_map> tryFlattenSequence(IslPtr<isl_union_map> Schedule) {
   auto ScatterSet =
       give(isl_set_from_union_set(isl_union_map_range(Schedule.copy())));
 
-  auto ParamSpace = give(isl_union_map_get_space(Schedule.keep()));
+  auto ParamSpace =
+      give(isl_space_params(isl_union_map_get_space(Schedule.keep())));
   auto Dims = isl_set_dim(ScatterSet.keep(), isl_dim_set);
   assert(Dims >= 2);
 

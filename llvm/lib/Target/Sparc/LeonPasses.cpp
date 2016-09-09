@@ -89,15 +89,6 @@ bool InsertNOPLoad::runOnMachineFunction(MachineFunction &MF) {
         MachineBasicBlock::iterator NMBBI = std::next(MBBI);
         BuildMI(MBB, NMBBI, DL, TII.get(SP::NOP));
         Modified = true;
-      } else if (MI.isInlineAsm()) {
-        // Look for an inline ld or ldf instruction.
-        StringRef AsmString =
-            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName();
-        if (AsmString.startswith_lower("ld")) {
-          MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-          BuildMI(MBB, NMBBI, DL, TII.get(SP::NOP));
-          Modified = true;
-        }
       }
     }
   }
@@ -147,32 +138,6 @@ bool FixFSMULD::runOnMachineFunction(MachineFunction &MF) {
         Reg1Index = MI.getOperand(0).getReg();
         Reg2Index = MI.getOperand(1).getReg();
         Reg3Index = MI.getOperand(2).getReg();
-      } else if (MI.isInlineAsm()) {
-        std::string AsmString(
-            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName());
-        std::string FMULSOpCoode("fsmuld");
-        std::transform(AsmString.begin(), AsmString.end(), AsmString.begin(),
-                       ::tolower);
-        if (AsmString.find(FMULSOpCoode) ==
-            0) { // this is an inline FSMULD instruction
-
-          unsigned StartOp = InlineAsm::MIOp_FirstOperand;
-
-          // extracts the registers from the inline assembly instruction
-          for (unsigned i = StartOp, e = MI.getNumOperands(); i != e; ++i) {
-            const MachineOperand &MO = MI.getOperand(i);
-            if (MO.isReg()) {
-              if (Reg1Index == UNASSIGNED_INDEX)
-                Reg1Index = MO.getReg();
-              else if (Reg2Index == UNASSIGNED_INDEX)
-                Reg2Index = MO.getReg();
-              else if (Reg3Index == UNASSIGNED_INDEX)
-                Reg3Index = MO.getReg();
-            }
-            if (Reg3Index != UNASSIGNED_INDEX)
-              break;
-          }
-        }
       }
 
       if (Reg1Index != UNASSIGNED_INDEX && Reg2Index != UNASSIGNED_INDEX &&
@@ -262,31 +227,6 @@ bool ReplaceFMULS::runOnMachineFunction(MachineFunction &MF) {
         Reg1Index = MI.getOperand(0).getReg();
         Reg2Index = MI.getOperand(1).getReg();
         Reg3Index = MI.getOperand(2).getReg();
-      } else if (MI.isInlineAsm()) {
-        std::string AsmString(
-            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName());
-        std::string FMULSOpCoode("fmuls");
-        std::transform(AsmString.begin(), AsmString.end(), AsmString.begin(),
-                       ::tolower);
-        if (AsmString.find(FMULSOpCoode) ==
-            0) { // this is an inline FMULS instruction
-          unsigned StartOp = InlineAsm::MIOp_FirstOperand;
-
-          // extracts the registers from the inline assembly instruction
-          for (unsigned i = StartOp, e = MI.getNumOperands(); i != e; ++i) {
-            const MachineOperand &MO = MI.getOperand(i);
-            if (MO.isReg()) {
-              if (Reg1Index == UNASSIGNED_INDEX)
-                Reg1Index = MO.getReg();
-              else if (Reg2Index == UNASSIGNED_INDEX)
-                Reg2Index = MO.getReg();
-              else if (Reg3Index == UNASSIGNED_INDEX)
-                Reg3Index = MO.getReg();
-            }
-            if (Reg3Index != UNASSIGNED_INDEX)
-              break;
-          }
-        }
       }
 
       if (Reg1Index != UNASSIGNED_INDEX && Reg2Index != UNASSIGNED_INDEX &&
@@ -367,22 +307,6 @@ bool FixAllFDIVSQRT::runOnMachineFunction(MachineFunction &MF) {
     for (auto MBBI = MBB.begin(), E = MBB.end(); MBBI != E; ++MBBI) {
       MachineInstr &MI = *MBBI;
       unsigned Opcode = MI.getOpcode();
-
-      if (MI.isInlineAsm()) {
-        std::string AsmString(
-            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName());
-        std::string FSQRTDOpCode("fsqrtd");
-        std::string FDIVDOpCode("fdivd");
-        std::transform(AsmString.begin(), AsmString.end(), AsmString.begin(),
-                       ::tolower);
-        if (AsmString.find(FSQRTDOpCode) ==
-            0) { // this is an inline fsqrts instruction
-          Opcode = SP::FSQRTD;
-        } else if (AsmString.find(FDIVDOpCode) ==
-                   0) { // this is an inline fsqrts instruction
-          Opcode = SP::FDIVD;
-        }
-      }
 
       // Note: FDIVS and FSQRTS cannot be generated when this erratum fix is
       // switched on so we don't need to check for them here. They will

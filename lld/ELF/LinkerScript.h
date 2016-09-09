@@ -121,6 +121,7 @@ struct PhdrsCommand {
   bool HasFilehdr;
   bool HasPhdrs;
   unsigned Flags;
+  Expr LMAExpr;
 };
 
 class LinkerScriptBase {

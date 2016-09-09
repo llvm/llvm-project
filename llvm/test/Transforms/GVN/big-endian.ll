@@ -7,9 +7,9 @@ target triple = "powerpc64-unknown-linux-gnu"
 ;; loads reusing a load value.
 define i64 @test1({ i1, i8 }* %predA, { i1, i8 }* %predB) {
 ; CHECK-LABEL: @test1
-; CHECK: [[V1:%.*]] = load i16, i16* %{{.*}}
-; CHECK: [[V2:%.*]] = lshr i16 [[V1]], 8
-; CHECK: trunc i16 [[V2]] to i1
+; CHECK-NOT: [[V1:%.*]] = load i16, i16* %{{.*}}
+; CHECK-NOT: [[V2:%.*]] = lshr i16 [[V1]], 8
+; CHECK-NOT: trunc i16 [[V2]] to i1
 
   %valueLoadA.fca.0.gep = getelementptr inbounds { i1, i8 }, { i1, i8 }* %predA, i64 0, i32 0
   %valueLoadA.fca.0.load = load i1, i1* %valueLoadA.fca.0.gep, align 8

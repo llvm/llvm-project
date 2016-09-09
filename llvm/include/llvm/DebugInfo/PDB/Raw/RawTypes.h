@@ -266,6 +266,34 @@ struct PDB_UniqueId {
   char Guid[16];
 };
 
+// The header preceeding the global TPI stream.
+// This corresponds to `HDR` in PDB/dbi/tpi.h.
+struct TpiStreamHeader {
+  struct EmbeddedBuf {
+    support::little32_t Off;
+    support::ulittle32_t Length;
+  };
+
+  support::ulittle32_t Version;
+  support::ulittle32_t HeaderSize;
+  support::ulittle32_t TypeIndexBegin;
+  support::ulittle32_t TypeIndexEnd;
+  support::ulittle32_t TypeRecordBytes;
+
+  // The following members correspond to `TpiHash` in PDB/dbi/tpi.h.
+  support::ulittle16_t HashStreamIndex;
+  support::ulittle16_t HashAuxStreamIndex;
+  support::ulittle32_t HashKeySize;
+  support::ulittle32_t NumHashBuckets;
+
+  EmbeddedBuf HashValueBuffer;
+  EmbeddedBuf IndexOffsetBuffer;
+  EmbeddedBuf HashAdjBuffer;
+};
+
+const uint32_t MinTpiHashBuckets = 0x1000;
+const uint32_t MaxTpiHashBuckets = 0x40000;
+
 /// The header preceeding the global PDB Stream (Stream 1)
 struct InfoStreamHeader {
   support::ulittle32_t Version;

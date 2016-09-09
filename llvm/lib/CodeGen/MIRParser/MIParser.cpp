@@ -599,25 +599,6 @@ bool MIParser::parse(MachineInstr *&MI) {
   if (Token.isError() || parseInstruction(OpCode, Flags))
     return true;
 
-  SmallVector<LLT, 1> Tys;
-  if (isPreISelGenericOpcode(OpCode)) {
-    // For generic opcode, at least one type is mandatory.
-    auto Loc = Token.location();
-    bool ManyTypes = Token.is(MIToken::lbrace);
-    if (ManyTypes)
-      lex();
-
-    // Now actually parse the type(s).
-    do {
-      Tys.resize(Tys.size() + 1);
-      if (parseLowLevelType(Loc, Tys[Tys.size() - 1]))
-        return true;
-    } while (ManyTypes && consumeIfPresent(MIToken::comma));
-
-    if (ManyTypes)
-      expectAndConsume(MIToken::rbrace);
-  }
-
   // Parse the remaining machine operands.
   while (!Token.isNewlineOrEOF() && Token.isNot(MIToken::kw_debug_location) &&
          Token.isNot(MIToken::coloncolon) && Token.isNot(MIToken::lbrace)) {
@@ -673,10 +654,6 @@ bool MIParser::parse(MachineInstr *&MI) {
   // TODO: Check for extraneous machine operands.
   MI = MF.CreateMachineInstr(MCID, DebugLocation, /*NoImplicit=*/true);
   MI->setFlags(Flags);
-  if (Tys.size() > 0) {
-    for (unsigned i = 0; i < Tys.size(); ++i)
-      MI->setType(Tys[i], i);
-  }
   for (const auto &Operand : Operands)
     MI->addOperand(MF, Operand.Operand);
   if (assignRegisterTies(*MI, Operands))
@@ -996,11 +973,14 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     if (MRI.getRegClassOrRegBank(Reg).is<const TargetRegisterClass *>())
       return error("unexpected size on non-generic virtual register");
 
-    unsigned Size;
-    if (parseSize(Size))
+    LLT Ty;
+    if (parseLowLevelType(Token.location(), Ty))
       return true;
 
-    MRI.setSize(Reg, Size);
+    if (expectAndConsume(MIToken::rparen))
+      return true;
+
+    MRI.setType(Reg, Ty);
   } else if (PFS.GenericVRegs.count(Reg)) {
     // Generic virtual registers must have a size.
     // If we end up here this means the size hasn't been specified and

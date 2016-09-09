@@ -95,6 +95,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   field bits<1> DisableDecoder = 0;
 
   let isAsmParserOnly = !if(!eq(DisableDecoder{0}, {0}), 0, 1);
+  let AsmVariantName = AMDGPUAsmVariants.Default;
 }
 
 class PseudoInstSI<dag outs, dag ins, list<dag> pattern = []>
@@ -186,6 +187,8 @@ class VOP3Common <dag outs, dag ins, string asm = "",
     !if(!eq(VOP3Only,1),
         "cvtVOP3",
         !if(!eq(HasMods,1), "cvtVOP3_2_mod", ""));
+
+  let AsmVariantName = AMDGPUAsmVariants.VOP3;
 
   let isCodeGenOnly = 0;
 

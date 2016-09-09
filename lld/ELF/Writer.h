@@ -38,6 +38,7 @@ struct PhdrEntry {
   typename ELFT::Phdr H = {};
   OutputSectionBase<ELFT> *First = nullptr;
   OutputSectionBase<ELFT> *Last = nullptr;
+  bool HasLMA = false;
 };
 
 template <class ELFT>

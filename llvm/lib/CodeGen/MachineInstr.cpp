@@ -680,12 +680,7 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &tid,
                            DebugLoc dl, bool NoImp)
     : MCID(&tid), Parent(nullptr), Operands(nullptr), NumOperands(0), Flags(0),
       AsmPrinterFlags(0), NumMemRefs(0), MemRefs(nullptr),
-      debugLoc(std::move(dl))
-#ifdef LLVM_BUILD_GLOBAL_ISEL
-      ,
-      Tys(0)
-#endif
-{
+      debugLoc(std::move(dl)) {
   assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   // Reserve space for the expected number of operands.
@@ -704,12 +699,7 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &tid,
 MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
     : MCID(&MI.getDesc()), Parent(nullptr), Operands(nullptr), NumOperands(0),
       Flags(0), AsmPrinterFlags(0), NumMemRefs(MI.NumMemRefs),
-      MemRefs(MI.MemRefs), debugLoc(MI.getDebugLoc())
-#ifdef LLVM_BUILD_GLOBAL_ISEL
-      ,
-      Tys(0)
-#endif
-{
+      MemRefs(MI.MemRefs), debugLoc(MI.getDebugLoc()) {
   assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
 
   CapOperands = OperandCapacity::get(MI.getNumOperands());
@@ -731,37 +721,6 @@ MachineRegisterInfo *MachineInstr::getRegInfo() {
     return &MBB->getParent()->getRegInfo();
   return nullptr;
 }
-
-// Implement dummy setter and getter for type when
-// global-isel is not built.
-// The proper implementation is WIP and is tracked here:
-// PR26576.
-#ifndef LLVM_BUILD_GLOBAL_ISEL
-unsigned MachineInstr::getNumTypes() const { return 0; }
-
-void MachineInstr::setType(LLT Ty, unsigned Idx) {}
-
-LLT MachineInstr::getType(unsigned Idx) const { return LLT{}; }
-
-void MachineInstr::removeTypes() {}
-
-#else
-unsigned MachineInstr::getNumTypes() const { return Tys.size(); }
-
-void MachineInstr::setType(LLT Ty, unsigned Idx) {
-  assert((!Ty.isValid() || isPreISelGenericOpcode(getOpcode())) &&
-         "Non generic instructions are not supposed to be typed");
-  if (Tys.size() < Idx + 1)
-    Tys.resize(Idx+1);
-  Tys[Idx] = Ty;
-}
-
-LLT MachineInstr::getType(unsigned Idx) const { return Tys[Idx]; }
-
-void MachineInstr::removeTypes() {
-  Tys.clear();
-}
-#endif // LLVM_BUILD_GLOBAL_ISEL
 
 /// RemoveRegOperandsFromUseLists - Unlink all of the register operands in
 /// this instruction from their respective use lists.  This requires that the
@@ -1751,9 +1710,9 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     unsigned Reg = getOperand(StartOp).getReg();
     if (TargetRegisterInfo::isVirtualRegister(Reg)) {
       VirtRegs.push_back(Reg);
-      unsigned Size;
-      if (MRI && (Size = MRI->getSize(Reg)))
-        OS << '(' << Size << ')';
+      LLT Ty = MRI ? MRI->getType(Reg) : LLT{};
+      if (Ty.isValid())
+        OS << '(' << Ty << ')';
     }
   }
 
@@ -1765,16 +1724,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << TII->getName(getOpcode());
   else
     OS << "UNKNOWN";
-
-  if (getNumTypes() > 0) {
-    OS << " { ";
-    for (unsigned i = 0; i < getNumTypes(); ++i) {
-      getType(i).print(OS);
-      if (i + 1 != getNumTypes())
-        OS << ", ";
-    }
-    OS << " } ";
-  }
 
   if (SkipOpers)
     return;

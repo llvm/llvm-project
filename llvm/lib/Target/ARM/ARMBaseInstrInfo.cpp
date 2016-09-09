@@ -2294,6 +2294,7 @@ bool ARMBaseInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
   default: break;
   case ARM::CMPri:
   case ARM::t2CMPri:
+  case ARM::tCMPi8:
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = 0;
     CmpMask = ~0;
@@ -2480,8 +2481,21 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   if (isPredicated(*MI))
     return false;
 
+  bool IsThumb1 = false;
   switch (MI->getOpcode()) {
   default: break;
+  case ARM::tLSLri:
+  case ARM::tLSRri:
+  case ARM::tLSLrr:
+  case ARM::tLSRrr:
+  case ARM::tSUBrr:
+  case ARM::tADDrr:
+  case ARM::tADDi3:
+  case ARM::tADDi8:
+  case ARM::tSUBi3:
+  case ARM::tSUBi8:
+    IsThumb1 = true;
+    LLVM_FALLTHROUGH;
   case ARM::RSBrr:
   case ARM::RSBri:
   case ARM::RSCrr:
@@ -2621,9 +2635,12 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
           return false;
     }
 
-    // Toggle the optional operand to CPSR.
-    MI->getOperand(5).setReg(ARM::CPSR);
-    MI->getOperand(5).setIsDef(true);
+    // Toggle the optional operand to CPSR (if it exists - in Thumb1 we always
+    // set CPSR so this is represented as an explicit output)
+    if (!IsThumb1) {
+      MI->getOperand(5).setReg(ARM::CPSR);
+      MI->getOperand(5).setIsDef(true);
+    }
     assert(!isPredicated(*MI) && "Can't use flags from predicated instruction");
     CmpInstr.eraseFromParent();
 
@@ -2635,7 +2652,7 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
     return true;
   }
   }
-
+  
   return false;
 }
 

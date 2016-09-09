@@ -1648,9 +1648,13 @@ void CGDebugInfo::completeRequiredType(const RecordDecl *RD) {
   if (DebugKind <= codegenoptions::DebugLineTablesOnly)
     return;
 
-  if (const auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD))
-    if (CXXDecl->isDynamicClass())
-      return;
+  // If this is a dynamic class and we're emitting limited debug info, wait
+  // until the vtable is emitted to complete the class debug info.
+  if (DebugKind <= codegenoptions::LimitedDebugInfo) {
+    if (const auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD))
+      if (CXXDecl->isDynamicClass())
+        return;
+  }
 
   if (DebugTypeExtRefs && RD->isFromASTFile())
     return;
@@ -1707,6 +1711,16 @@ static bool isDefinedInClangModule(const RecordDecl *RD) {
   return true;
 }
 
+/// Return true if the class or any of its methods are marked dllimport.
+static bool isClassOrMethodDLLImport(const CXXRecordDecl *RD) {
+  if (RD->hasAttr<DLLImportAttr>())
+    return true;
+  for (const CXXMethodDecl *MD : RD->methods())
+    if (MD->hasAttr<DLLImportAttr>())
+      return true;
+  return false;
+}
+
 static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
                                  bool DebugTypeExtRefs, const RecordDecl *RD,
                                  const LangOptions &LangOpts) {
@@ -1729,10 +1743,12 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
 
   // Only emit complete debug info for a dynamic class when its vtable is
   // emitted.  However, Microsoft debuggers don't resolve type information
-  // across DLL boundaries, so skip this optimization if the class is marked
-  // dllimport.
+  // across DLL boundaries, so skip this optimization if the class or any of its
+  // methods are marked dllimport. This isn't a complete solution, since objects
+  // without any dllimport methods can be used in one DLL and constructed in
+  // another, but it is the current behavior of LimitedDebugInfo.
   if (CXXDecl->hasDefinition() && CXXDecl->isDynamicClass() &&
-      !CXXDecl->hasAttr<DLLImportAttr>())
+      !isClassOrMethodDLLImport(CXXDecl))
     return true;
 
   TemplateSpecializationKind Spec = TSK_Undeclared;

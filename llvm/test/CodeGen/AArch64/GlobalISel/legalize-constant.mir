@@ -25,22 +25,22 @@ registers:
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: test_constant
-    ; CHECK: [[TMP:%[0-9]+]](32) = G_CONSTANT s32 0
-    ; CHECK: %0(1) = G_TRUNC { s1, s32 } [[TMP]]
-    ; CHECK: [[TMP:%[0-9]+]](32) = G_CONSTANT s32 42
-    ; CHECK: %1(8) = G_TRUNC { s8, s32 } [[TMP]]
-    ; CHECK: [[TMP:%[0-9]+]](32) = G_CONSTANT s32 65535
-    ; CHECK: %2(16) = G_TRUNC { s16, s32 } [[TMP]]
-    ; CHECK: %3(32) = G_CONSTANT s32 -1
-    ; CHECK: %4(64) = G_CONSTANT s64 1
-    ; CHECK: %5(64) = G_CONSTANT p0 0
+    ; CHECK: [[TMP:%[0-9]+]](s32) = G_CONSTANT 0
+    ; CHECK: %0(s1) = G_TRUNC [[TMP]]
+    ; CHECK: [[TMP:%[0-9]+]](s32) = G_CONSTANT 42
+    ; CHECK: %1(s8) = G_TRUNC [[TMP]]
+    ; CHECK: [[TMP:%[0-9]+]](s32) = G_CONSTANT 65535
+    ; CHECK: %2(s16) = G_TRUNC [[TMP]]
+    ; CHECK: %3(s32) = G_CONSTANT -1
+    ; CHECK: %4(s64) = G_CONSTANT 1
+    ; CHECK: %5(s64) = G_CONSTANT 0
 
-    %0(1) = G_CONSTANT s1 0
-    %1(8) = G_CONSTANT s8 42
-    %2(16) = G_CONSTANT s16 65535
-    %3(32) = G_CONSTANT s32 -1
-    %4(64) = G_CONSTANT s64 1
-    %5(64) = G_CONSTANT p0 0
+    %0(s1) = G_CONSTANT 0
+    %1(s8) = G_CONSTANT 42
+    %2(s16) = G_CONSTANT 65535
+    %3(s32) = G_CONSTANT -1
+    %4(s64) = G_CONSTANT 1
+    %5(s64) = G_CONSTANT 0
 ...
 
 ---
@@ -52,12 +52,12 @@ registers:
 body: |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fconstant
-    ; CHECK: %0(32) = G_FCONSTANT s32  float 1.000000e+00
-    ; CHECK: %1(64) = G_FCONSTANT s64  double 2.000000e+00
-    ; CHECK: [[TMP:%[0-9]+]](32) = G_FCONSTANT s32 half 0xH0000
-    ; CHECK; %2(16) = G_FPTRUNC { s16, s32 } [[TMP]]
+    ; CHECK: %0(s32) = G_FCONSTANT  float 1.000000e+00
+    ; CHECK: %1(s64) = G_FCONSTANT  double 2.000000e+00
+    ; CHECK: [[TMP:%[0-9]+]](s32) = G_FCONSTANT half 0xH0000
+    ; CHECK; %2(s16) = G_FPTRUNC [[TMP]]
 
-    %0(32) = G_FCONSTANT s32 float 1.0
-    %1(64) = G_FCONSTANT s64 double 2.0
-    %2(16) = G_FCONSTANT s16 half 0.0
+    %0(s32) = G_FCONSTANT float 1.0
+    %1(s64) = G_FCONSTANT double 2.0
+    %2(s16) = G_FCONSTANT half 0.0
 ...

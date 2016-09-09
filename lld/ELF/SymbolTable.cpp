@@ -18,7 +18,6 @@
 #include "Config.h"
 #include "Error.h"
 #include "LinkerScript.h"
-#include "Strings.h"
 #include "SymbolListFile.h"
 #include "Symbols.h"
 #include "llvm/Bitcode/ReaderWriter.h"
@@ -678,7 +677,7 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   // i.e. version definitions not containing any glob meta-characters.
   for (VersionDefinition &V : Config->VersionDefinitions) {
     for (SymbolVersion Sym : V.Globals) {
-      if (hasWildcard(Sym.Name))
+      if (Sym.HasWildcards)
         continue;
       StringRef N = Sym.Name;
       SymbolBody *B = Sym.IsExternCpp ? findDemangled(Demangled, N) : find(N);
@@ -693,7 +692,7 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   for (size_t I = Config->VersionDefinitions.size() - 1; I != (size_t)-1; --I) {
     VersionDefinition &V = Config->VersionDefinitions[I];
     for (SymbolVersion &Sym : V.Globals) {
-      if (!hasWildcard(Sym.Name))
+      if (!Sym.HasWildcards)
         continue;
       Regex Re = compileGlobPatterns({Sym.Name});
       std::vector<SymbolBody *> Syms =

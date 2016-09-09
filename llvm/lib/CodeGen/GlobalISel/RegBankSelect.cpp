@@ -575,10 +575,11 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   // Legalized property, so it should be.
   // FIXME: This should be in the MachineVerifier, but it can't use the
   // MachineLegalizer as it's currently in the separate GlobalISel library.
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   if (const MachineLegalizer *MLI = MF.getSubtarget().getMachineLegalizer()) {
     for (const MachineBasicBlock &MBB : MF) {
       for (const MachineInstr &MI : MBB) {
-        if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI)) {
+        if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI)) {
           if (!TPC->isGlobalISelAbortEnabled()) {
             MF.getProperties().set(
                 MachineFunctionProperties::Property::FailedISel);

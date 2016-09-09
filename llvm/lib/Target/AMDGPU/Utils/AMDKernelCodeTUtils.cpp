@@ -24,22 +24,37 @@ using namespace llvm;
 static ArrayRef<StringRef> get_amd_kernel_code_t_FldNames() {
   static StringRef const Table[] = {
     "", // not found placeholder
-#define RECORD(name, print, parse) #name
+#define RECORD(name, altName, print, parse) #name
 #include "AMDKernelCodeTInfo.h"
 #undef RECORD
   };
   return makeArrayRef(Table);
 }
 
-static StringMap<int> createIndexMap(const ArrayRef<StringRef> &a) {
+static ArrayRef<StringRef> get_amd_kernel_code_t_FldAltNames() {
+  static StringRef const Table[] = {
+    "", // not found placeholder
+#define RECORD(name, altName, print, parse) #altName
+#include "AMDKernelCodeTInfo.h"
+#undef RECORD
+  };
+  return makeArrayRef(Table);
+}
+
+static StringMap<int> createIndexMap(const ArrayRef<StringRef> &names,
+                                     const ArrayRef<StringRef> &altNames) {
   StringMap<int> map;
-  for (auto Name : a)
-    map.insert(std::make_pair(Name, map.size()));
+  assert(names.size() == altNames.size());
+  for (unsigned i = 0; i < names.size(); ++i) {
+    map.insert(std::make_pair(names[i], i));
+    map.insert(std::make_pair(altNames[i], i));
+  }
   return map;
 }
 
 static int get_amd_kernel_code_t_FieldIndex(StringRef name) {
-  static const auto map = createIndexMap(get_amd_kernel_code_t_FldNames());
+  static const auto map = createIndexMap(get_amd_kernel_code_t_FldNames(),
+                                         get_amd_kernel_code_t_FldAltNames());
   return map.lookup(name) - 1; // returns -1 if not found
 }
 
@@ -73,7 +88,7 @@ typedef void(*PrintFx)(StringRef,
 
 static ArrayRef<PrintFx> getPrinterTable() {
   static const PrintFx Table[] = {
-#define RECORD(name, print, parse) print
+#define RECORD(name, altName, print, parse) print
 #include "AMDKernelCodeTInfo.h"
 #undef RECORD
   };
@@ -145,7 +160,7 @@ typedef bool(*ParseFx)(amd_kernel_code_t &,
 
 static ArrayRef<ParseFx> getParserTable() {
   static const ParseFx Table[] = {
-#define RECORD(name, print, parse) parse
+#define RECORD(name, altName, print, parse) parse
 #include "AMDKernelCodeTInfo.h"
 #undef RECORD
   };

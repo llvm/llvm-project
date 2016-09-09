@@ -45,7 +45,8 @@ add_pdb_impl_folder(Raw
   Raw/RawError.cpp
   Raw/RawSession.cpp
   Raw/SymbolStream.cpp
-  Raw/TpiStream.cpp)
+  Raw/TpiStream.cpp
+  Raw/TpiStreamBuilder.cpp)
 
 list(APPEND LIBPDB_ADDITIONAL_HEADER_DIRS "${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/PDB/Raw")
 list(APPEND LIBPDB_ADDITIONAL_HEADER_DIRS "${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/PDB")

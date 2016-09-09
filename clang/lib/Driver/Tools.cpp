@@ -3081,11 +3081,15 @@ static void linkSanitizerRuntimeDeps(const ToolChain &TC,
   // Force linking against the system libraries sanitizers depends on
   // (see PR15823 why this is necessary).
   CmdArgs.push_back("--no-as-needed");
-  CmdArgs.push_back("-lpthread");
-  CmdArgs.push_back("-lrt");
+  // There's no libpthread or librt on RTEMS.
+  if (TC.getTriple().getOS() != llvm::Triple::RTEMS) {
+    CmdArgs.push_back("-lpthread");
+    CmdArgs.push_back("-lrt");
+  }
   CmdArgs.push_back("-lm");
-  // There's no libdl on FreeBSD.
-  if (TC.getTriple().getOS() != llvm::Triple::FreeBSD)
+  // There's no libdl on FreeBSD or RTEMS.
+  if (TC.getTriple().getOS() != llvm::Triple::FreeBSD &&
+      TC.getTriple().getOS() != llvm::Triple::RTEMS)
     CmdArgs.push_back("-ldl");
 }
 
@@ -11055,9 +11059,12 @@ void tools::Myriad::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
 
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(TC, Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs);
 
   if (UseDefaultLibs) {
+    if (NeedsSanitizerDeps)
+      linkSanitizerRuntimeDeps(TC, CmdArgs);
     if (C.getDriver().CCCIsCXX())
       CmdArgs.push_back("-lstdc++");
     if (T.getOS() == llvm::Triple::RTEMS) {

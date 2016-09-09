@@ -27,40 +27,40 @@ body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
 
-    ; CHECK: [[QUOT:%[0-9]+]](64) = G_UDIV s64 %0, %1
-    ; CHECK: [[PROD:%[0-9]+]](64) = G_MUL s64 [[QUOT]], %1
-    ; CHECK: [[RES:%[0-9]+]](64) = G_SUB s64 %0, [[PROD]]
-    %0(64) = G_TYPE s64 %x0
-    %1(64) = G_TYPE s64 %x1
-    %2(64) = G_UREM s64 %0, %1
+    ; CHECK: [[QUOT:%[0-9]+]](s64) = G_UDIV %0, %1
+    ; CHECK: [[PROD:%[0-9]+]](s64) = G_MUL [[QUOT]], %1
+    ; CHECK: [[RES:%[0-9]+]](s64) = G_SUB %0, [[PROD]]
+    %0(s64) = COPY %x0
+    %1(s64) = COPY %x1
+    %2(s64) = G_UREM %0, %1
 
-    ; CHECK: [[QUOT:%[0-9]+]](32) = G_SDIV s32 %3, %4
-    ; CHECK: [[PROD:%[0-9]+]](32) = G_MUL s32 [[QUOT]], %4
-    ; CHECK: [[RES:%[0-9]+]](32) = G_SUB s32 %3, [[PROD]]
-    %3(32) = G_TRUNC { s32, s64 } %0
-    %4(32) = G_TRUNC { s32, s64 } %1
-    %5(32) = G_SREM s32 %3, %4
+    ; CHECK: [[QUOT:%[0-9]+]](s32) = G_SDIV %3, %4
+    ; CHECK: [[PROD:%[0-9]+]](s32) = G_MUL [[QUOT]], %4
+    ; CHECK: [[RES:%[0-9]+]](s32) = G_SUB %3, [[PROD]]
+    %3(s32) = G_TRUNC %0
+    %4(s32) = G_TRUNC %1
+    %5(s32) = G_SREM %3, %4
 
-    ; CHECK: [[LHS32:%[0-9]+]](32) = G_SEXT { s32, s8 } %6
-    ; CHECK: [[RHS32:%[0-9]+]](32) = G_SEXT { s32, s8 } %7
-    ; CHECK: [[QUOT32:%[0-9]+]](32) = G_SDIV s32 [[LHS32]], [[RHS32]]
-    ; CHECK: [[QUOT:%[0-9]+]](8) = G_TRUNC { s8, s32 } [[QUOT32]]
-    ; CHECK: [[PROD:%[0-9]+]](8) = G_MUL s8 [[QUOT]], %7
-    ; CHECK: [[RES:%[0-9]+]](8) = G_SUB s8 %6, [[PROD]]
-    %6(8) = G_TRUNC { s8, s64 } %0
-    %7(8) = G_TRUNC { s8, s64 } %1
-    %8(8) = G_SREM s8 %6, %7
+    ; CHECK: [[LHS32:%[0-9]+]](s32) = G_SEXT %6
+    ; CHECK: [[RHS32:%[0-9]+]](s32) = G_SEXT %7
+    ; CHECK: [[QUOT32:%[0-9]+]](s32) = G_SDIV [[LHS32]], [[RHS32]]
+    ; CHECK: [[QUOT:%[0-9]+]](s8) = G_TRUNC [[QUOT32]]
+    ; CHECK: [[PROD:%[0-9]+]](s8) = G_MUL [[QUOT]], %7
+    ; CHECK: [[RES:%[0-9]+]](s8) = G_SUB %6, [[PROD]]
+    %6(s8) = G_TRUNC %0
+    %7(s8) = G_TRUNC %1
+    %8(s8) = G_SREM %6, %7
 
     ; CHECK: %d0 = COPY %0
     ; CHECK: %d1 = COPY %1
     ; CHECK: BL $fmod, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %d0, implicit %d1, implicit-def %d0
-    ; CHECK: %9(64) = G_TYPE s64 %d0
-    %9(64) = G_FREM s64 %0, %1
+    ; CHECK: %9(s64) = COPY %d0
+    %9(s64) = G_FREM %0, %1
 
     ; CHECK: %s0 = COPY %3
     ; CHECK: %s1 = COPY %4
     ; CHECK: BL $fmodf, csr_aarch64_aapcs, implicit-def %lr, implicit %sp, implicit %s0, implicit %s1, implicit-def %s0
-    ; CHECK: %10(32) = G_TYPE s32 %s0
-    %10(32) = G_FREM s32 %3, %4
+    ; CHECK: %10(s32) = COPY %s0
+    %10(s32) = G_FREM %3, %4
 
 ...

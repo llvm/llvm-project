@@ -19,6 +19,8 @@ class FeatureBitset;
 class Function;
 class GlobalValue;
 class MCContext;
+class MCInstrDesc;
+class MCRegisterInfo;
 class MCSection;
 class MCSubtargetInfo;
 
@@ -79,6 +81,23 @@ bool isVI(const MCSubtargetInfo &STI);
 /// If \p Reg is a pseudo reg, return the correct hardware register given
 /// \p STI otherwise return \p Reg.
 unsigned getMCReg(unsigned Reg, const MCSubtargetInfo &STI);
+
+/// \brief Can this operand also contain immediate values?
+bool isSISrcOperand(const MCInstrDesc &Desc, unsigned OpNo);
+
+/// \brief Is this floating-point operand?
+bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo);
+
+/// \brief Does this opearnd support only inlinable literals?
+bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo);
+
+/// \brief Get size of register operand
+unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
+                           unsigned OpNo);
+
+/// \brief Is this literal inlinable
+bool isInlinableLiteral64(int64_t Literal, bool IsVI);
+bool isInlinableLiteral32(int32_t Literal, bool IsVI);
 
 } // end namespace AMDGPU
 } // end namespace llvm

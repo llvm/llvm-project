@@ -75,10 +75,11 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // The RegBankSelected property is already checked in the verifier. Note
   // that it has the same layering problem, but we only use inline methods so
   // end up not needing to link against the GlobalISel library.
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   if (const MachineLegalizer *MLI = MF.getSubtarget().getMachineLegalizer())
     for (const MachineBasicBlock &MBB : MF)
       for (const MachineInstr &MI : MBB)
-        if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI))
+        if (isPreISelGenericOpcode(MI.getOpcode()) && !MLI->isLegal(MI, MRI))
           reportSelectionError(MI, "Instruction is not legal");
 
 #endif
@@ -118,7 +119,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // the vreg instead, but that's not ideal either, because it's saying that
   // vregs have types, which they really don't. But then again, LLT is just
   // a size and a "shape": it's probably the same information as regbank info.
-  MF.getRegInfo().clearVirtRegSizes();
+  MF.getRegInfo().clearVirtRegTypes();
 
   // FIXME: Should we accurately track changes?
   return true;

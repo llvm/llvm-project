@@ -34,7 +34,7 @@ define void @end_test_widening_bad() {
   ret void
 }
 
-;; Accessing bytes 4 and 5. Ok to widen to i16.
+;; Accessing bytes 4 and 5. No widen to i16.
 
 define i32 @test_widening_ok(i8* %P) nounwind ssp noredzone sanitize_address {
 entry:
@@ -45,7 +45,8 @@ entry:
   %add = add nsw i32 %conv, %conv2
   ret i32 %add
 ; CHECK: @test_widening_ok
-; CHECK: __asan_report_load2
+; CHECK: __asan_report_load1
+; CHECK: __asan_report_load1
 ; CHECK-NOT: __asan_report
 ; CHECK: end_test_widening_ok
 }

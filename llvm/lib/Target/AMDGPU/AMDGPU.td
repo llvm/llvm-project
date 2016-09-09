@@ -349,10 +349,45 @@ def AMDGPUAsmParser : AsmParser {
   let ShouldEmitMatchRegisterName = 0;
 }
 
+def AMDGPUAsmVariants {
+  string Default = "Default";
+  int Default_ID = 0;
+  string VOP3 = "VOP3";
+  int VOP3_ID = 1;
+  string SDWA = "SDWA";
+  int SDWA_ID = 2;
+  string DPP = "DPP";
+  int DPP_ID = 3;
+}
+
+def DefaultAMDGPUAsmParserVariant : AsmParserVariant {
+  let Variant = AMDGPUAsmVariants.Default_ID;
+  let Name = AMDGPUAsmVariants.Default;
+}
+
+def VOP3AsmParserVariant : AsmParserVariant {
+  let Variant = AMDGPUAsmVariants.VOP3_ID;
+  let Name = AMDGPUAsmVariants.VOP3;
+}
+
+def SDWAAsmParserVariant : AsmParserVariant {
+  let Variant = AMDGPUAsmVariants.SDWA_ID;
+  let Name = AMDGPUAsmVariants.SDWA;
+}
+
+def DPPAsmParserVariant : AsmParserVariant {
+  let Variant = AMDGPUAsmVariants.DPP_ID;
+  let Name = AMDGPUAsmVariants.DPP;
+}
+
 def AMDGPU : Target {
   // Pull in Instruction Info:
   let InstructionSet = AMDGPUInstrInfo;
   let AssemblyParsers = [AMDGPUAsmParser];
+  let AssemblyParserVariants = [DefaultAMDGPUAsmParserVariant,
+                                VOP3AsmParserVariant,
+                                SDWAAsmParserVariant,
+                                DPPAsmParserVariant];
 }
 
 // Dummy Instruction itineraries for pseudo instructions

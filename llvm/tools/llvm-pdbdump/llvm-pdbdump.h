@@ -10,6 +10,7 @@
 #ifndef LLVM_TOOLS_LLVMPDBDUMP_LLVMPDBDUMP_H
 #define LLVM_TOOLS_LLVMPDBDUMP_LLVMPDBDUMP_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -34,6 +35,14 @@ extern llvm::cl::list<std::string> IncludeCompilands;
 }
 
 namespace raw {
+struct BlockRange {
+  uint32_t Min;
+  llvm::Optional<uint32_t> Max;
+};
+
+extern llvm::Optional<BlockRange> DumpBlockRange;
+extern llvm::cl::list<uint32_t> DumpStreamData;
+
 extern llvm::cl::opt<bool> DumpHeaders;
 extern llvm::cl::opt<bool> DumpStreamBlocks;
 extern llvm::cl::opt<bool> DumpStreamSummary;
@@ -43,8 +52,6 @@ extern llvm::cl::opt<bool> DumpTpiRecordBytes;
 extern llvm::cl::opt<bool> DumpTpiRecords;
 extern llvm::cl::opt<bool> DumpIpiRecords;
 extern llvm::cl::opt<bool> DumpIpiRecordBytes;
-extern llvm::cl::opt<std::string> DumpStreamDataIdx;
-extern llvm::cl::opt<std::string> DumpStreamDataName;
 extern llvm::cl::opt<bool> DumpModules;
 extern llvm::cl::opt<bool> DumpModuleFiles;
 extern llvm::cl::opt<bool> DumpModuleSyms;

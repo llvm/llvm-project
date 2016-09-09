@@ -45,12 +45,12 @@
 
 amd_kernel_code_t_minimal:
 .amd_kernel_code_t
-        kernel_code_version_major = .option.machine_version_major
+        amd_code_version_major = .option.machine_version_major
 	enable_sgpr_kernarg_segment_ptr = 1
 	is_ptr64 = my_is_ptr64
-	compute_pgm_rsrc1_vgprs = 1
-	compute_pgm_rsrc1_sgprs = 1+(my_sgpr-1)/8
-	compute_pgm_rsrc2_user_sgpr = 2
+	granulated_workitem_vgpr_count = 1
+	granulated_wavefront_sgpr_count = 1+(my_sgpr-1)/8
+	user_sgpr_count = 2
 	kernarg_segment_byte_size = my_kernarg_segment_byte_size
 	wavefront_sgpr_count = my_sgpr
 //      wavefront_sgpr_count = 7
@@ -58,39 +58,39 @@ amd_kernel_code_t_minimal:
 // Make sure a blank line won't break anything:
 
 // Make sure a line with whitespace won't break anything:
-   
+
 	workitem_vgpr_count = 16
 .end_amd_kernel_code_t
 
 // ASM-LABEL: {{^}}amd_kernel_code_t_minimal:
 // ASM: .amd_kernel_code_t
-// ASM:	kernel_code_version_major = 7
-// ASM:	kernel_code_version_minor = 0
-// ASM:	machine_kind = 1
-// ASM:	machine_version_major = 7
-// ASM:	machine_version_minor = 0
-// ASM:	machine_version_stepping = 0
+// ASM:	amd_code_version_major = 7
+// ASM:	amd_code_version_minor = 0
+// ASM:	amd_machine_kind = 1
+// ASM:	amd_machine_version_major = 7
+// ASM:	amd_machine_version_minor = 0
+// ASM:	amd_machine_version_stepping = 0
 // ASM:	kernel_code_entry_byte_offset = 256
 // ASM:	kernel_code_prefetch_byte_size = 0
 // ASM:	max_scratch_backing_memory_byte_size = 0
-// ASM:	compute_pgm_rsrc1_vgprs = 1
-// ASM:	compute_pgm_rsrc1_sgprs = 1
-// ASM:	compute_pgm_rsrc1_priority = 0
-// ASM:	compute_pgm_rsrc1_float_mode = 0
-// ASM:	compute_pgm_rsrc1_priv = 0
-// ASM:	compute_pgm_rsrc1_dx10_clamp = 0
-// ASM:	compute_pgm_rsrc1_debug_mode = 0
-// ASM:	compute_pgm_rsrc1_ieee_mode = 0
-// ASM:	compute_pgm_rsrc2_scratch_en = 0
-// ASM:	compute_pgm_rsrc2_user_sgpr = 2
-// ASM:	compute_pgm_rsrc2_tgid_x_en = 0
-// ASM:	compute_pgm_rsrc2_tgid_y_en = 0
-// ASM:	compute_pgm_rsrc2_tgid_z_en = 0
-// ASM:	compute_pgm_rsrc2_tg_size_en = 0
-// ASM:	compute_pgm_rsrc2_tidig_comp_cnt = 0
-// ASM:	compute_pgm_rsrc2_excp_en_msb = 0
-// ASM:	compute_pgm_rsrc2_lds_size = 0
-// ASM:	compute_pgm_rsrc2_excp_en = 0
+// ASM: granulated_workitem_vgpr_count = 1
+// ASM: granulated_wavefront_sgpr_count = 1
+// ASM: priority = 0
+// ASM: float_mode = 0
+// ASM: priv = 0
+// ASM: enable_dx10_clamp = 0
+// ASM: debug_mode = 0
+// ASM: enable_ieee_mode = 0
+// ASM: enable_sgpr_private_segment_wave_byte_offset = 0
+// ASM: user_sgpr_count = 2
+// ASM: enable_sgpr_workgroup_id_x = 0
+// ASM: enable_sgpr_workgroup_id_y = 0
+// ASM: enable_sgpr_workgroup_id_z = 0
+// ASM: enable_sgpr_workgroup_info = 0
+// ASM: enable_vgpr_workitem_id = 0
+// ASM: enable_exception_msb = 0
+// ASM: granulated_lds_size = 0
+// ASM: enable_exception = 0
 // ASM:	enable_sgpr_private_segment_buffer = 0
 // ASM:	enable_sgpr_dispatch_ptr = 0
 // ASM:	enable_sgpr_queue_ptr = 0

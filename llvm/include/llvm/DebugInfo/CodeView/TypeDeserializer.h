@@ -20,8 +20,8 @@ public:
   TypeDeserializer() {}
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
-  Error visitKnownRecord(const CVRecord<TypeLeafKind> &CVR,                    \
-                         Name##Record &Record) override {                      \
+  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR, Name##Record &Record)    \
+      override {                                                               \
     return defaultVisitKnownRecord(CVR, Record);                               \
   }
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
@@ -45,7 +45,7 @@ protected:
 
 private:
   template <typename T>
-  Error defaultVisitKnownRecord(const CVRecord<TypeLeafKind> &CVR, T &Record) {
+  Error defaultVisitKnownRecord(CVRecord<TypeLeafKind> &CVR, T &Record) {
     ArrayRef<uint8_t> RD = CVR.Data;
     if (auto EC = deserializeRecord(RD, CVR.Type, Record))
       return EC;

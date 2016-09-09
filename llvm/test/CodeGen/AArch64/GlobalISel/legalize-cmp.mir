@@ -24,17 +24,17 @@ registers:
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
-    %0(64) = G_TYPE s64 %x0
-    %1(64) = G_TYPE s64 %x0
+    %0(s64) = COPY %x0
+    %1(s64) = COPY %x0
 
-    %2(8) = G_TRUNC { s8, s64 } %0
-    %3(8) = G_TRUNC { s8, s64 } %1
+    %2(s8) = G_TRUNC %0
+    %3(s8) = G_TRUNC %1
 
-    ; CHECK: %4(1) = G_ICMP { s1, s64 } intpred(sge), %0, %1
-    %4(1) = G_ICMP { s1, s64 } intpred(sge), %0, %1
+    ; CHECK: %4(s1) = G_ICMP intpred(sge), %0, %1
+    %4(s1) = G_ICMP intpred(sge), %0, %1
 
-    ; CHECK: [[LHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %2
-    ; CHECK: [[RHS32:%[0-9]+]](32) = G_ZEXT { s32, s8 } %3
-    ; CHECK: %8(1) = G_ICMP { s1, s32 } intpred(ult), [[LHS32]], [[RHS32]]
-    %8(1) = G_ICMP { s1, s8 } intpred(ult), %2, %3
+    ; CHECK: [[LHS32:%[0-9]+]](s32) = G_ZEXT %2
+    ; CHECK: [[RHS32:%[0-9]+]](s32) = G_ZEXT %3
+    ; CHECK: %8(s1) = G_ICMP intpred(ult), [[LHS32]], [[RHS32]]
+    %8(s1) = G_ICMP intpred(ult), %2, %3
 ...

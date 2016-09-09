@@ -358,56 +358,61 @@ def VS_64 : RegisterClass<"AMDGPU", [i64, f64], 32, (add VReg_64, SReg_64)> {
 //  Register operands
 //===----------------------------------------------------------------------===//
 
-class RegImmOperand <RegisterClass rc> : RegisterOperand<rc> {
-  let OperandNamespace = "AMDGPU";
-  let OperandType = "OPERAND_REG_IMM32";
-}
-
-class RegInlineOperand <RegisterClass rc> : RegisterOperand<rc> {
-  let OperandNamespace = "AMDGPU";
-  let OperandType = "OPERAND_REG_INLINE_C";
-}
-
 class RegImmMatcher<string name> : AsmOperandClass {
   let Name = name;
   let RenderMethod = "addRegOrImmOperands";
 }
 
+multiclass SIRegOperand <string rc, string MatchName, string opType> {
+  let OperandNamespace = "AMDGPU" in {
+    
+    def _b32 : RegisterOperand<!cast<RegisterClass>(rc#"_32")> {
+      let OperandType = opType#"_INT";
+      let ParserMatchClass = RegImmMatcher<MatchName#"B32">;
+    }
+  
+    def _f32 : RegisterOperand<!cast<RegisterClass>(rc#"_32")> {
+      let OperandType = opType#"_FP";
+      let ParserMatchClass = RegImmMatcher<MatchName#"F32">;
+    }
+    
+    def _b64 : RegisterOperand<!cast<RegisterClass>(rc#"_64")> {
+      let OperandType = opType#"_INT";
+      let ParserMatchClass = RegImmMatcher<MatchName#"B64">;
+    }
+
+    def _f64 : RegisterOperand<!cast<RegisterClass>(rc#"_64")> {
+      let OperandType = opType#"_FP";
+      let ParserMatchClass = RegImmMatcher<MatchName#"F64">;
+    }
+  }
+}
+
+multiclass RegImmOperand <string rc, string MatchName> 
+  : SIRegOperand<rc, MatchName, "OPERAND_REG_IMM32">;
+
+multiclass RegInlineOperand <string rc, string MatchName> 
+  : SIRegOperand<rc, MatchName, "OPERAND_REG_INLINE_C">;
+
 //===----------------------------------------------------------------------===//
 //  SSrc_* Operands with an SGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//
 
-def SSrc_32 : RegImmOperand<SReg_32> {
-  let ParserMatchClass = RegImmMatcher<"SSrc32">;
-}
-
-def SSrc_64 : RegImmOperand<SReg_64> {
-  let ParserMatchClass = RegImmMatcher<"SSrc64">;
-}
+defm SSrc : RegImmOperand<"SReg", "SSrc">;
 
 //===----------------------------------------------------------------------===//
 //  SCSrc_* Operands with an SGPR or a inline constant
 //===----------------------------------------------------------------------===//
 
-def SCSrc_32 : RegInlineOperand<SReg_32> {
-  let ParserMatchClass = RegImmMatcher<"SCSrc32">;
-}
-
-def SCSrc_64 : RegInlineOperand<SReg_64> {
-  let ParserMatchClass = RegImmMatcher<"SCSrc64">;
-}
+defm SCSrc : RegInlineOperand<"SReg", "SCSrc"> ;
 
 //===----------------------------------------------------------------------===//
 //  VSrc_* Operands with an SGPR, VGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//
 
-def VSrc_32 : RegImmOperand<VS_32> {
-  let ParserMatchClass = RegImmMatcher<"VSrc32">;
-}
+defm VSrc : RegImmOperand<"VS", "VSrc">;
 
-def VSrc_64 : RegImmOperand<VS_64> {
-  let ParserMatchClass = RegImmMatcher<"VSrc64">;
-}
+def VSrc_128 : RegisterOperand<VReg_128>;
 
 //===----------------------------------------------------------------------===//
 //  VSrc_* Operands with an VGPR
@@ -424,10 +429,4 @@ def VRegSrc_32 : RegisterOperand<VGPR_32> {
 //  VCSrc_* Operands with an SGPR, VGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
-def VCSrc_32 : RegInlineOperand<VS_32> {
-  let ParserMatchClass = RegImmMatcher<"VCSrc32">;
-}
-
-def VCSrc_64 : RegInlineOperand<VS_64> {
-  let ParserMatchClass = RegImmMatcher<"VCSrc64">;
-}
+defm VCSrc : RegInlineOperand<"VS", "VCSrc">;

@@ -276,6 +276,10 @@ public:
     return isAmdHsaOS() ? 0 : 36;
   }
 
+  unsigned getAlignmentForImplicitArgPtr() const {
+    return isAmdHsaOS() ? 8 : 4;
+  }
+
   unsigned getStackAlignment() const {
     // Scratch is allocated in 256 dword per wave blocks.
     return 4 * 256 / getWavefrontSize();

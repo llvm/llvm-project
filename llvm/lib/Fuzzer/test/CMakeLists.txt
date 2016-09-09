@@ -62,6 +62,7 @@ set(TestBinaries)
 ###############################################################################
 
 set(Tests
+  AbsNegAndConstantTest
   AccumulateAllocationsTest
   BufferOverflowOnInput
   CallerCalleeTest

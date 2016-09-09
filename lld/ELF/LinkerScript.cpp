@@ -463,6 +463,11 @@ std::vector<PhdrEntry<ELFT>> LinkerScript<ELFT>::createPhdrs() {
       Phdr.add(Out<ELFT>::ElfHeader);
     if (Cmd.HasPhdrs)
       Phdr.add(Out<ELFT>::ProgramHeaders);
+
+    if (Cmd.LMAExpr) {
+      Phdr.H.p_paddr = Cmd.LMAExpr(0);
+      Phdr.HasLMA = true;
+    }
   }
 
   // Add output sections to program headers.
@@ -780,7 +785,7 @@ void ScriptParser::readAsNeeded() {
   bool Orig = Config->AsNeeded;
   Config->AsNeeded = true;
   while (!Error && !skip(")"))
-    addFile(next());
+    addFile(unquote(next()));
   Config->AsNeeded = Orig;
 }
 
@@ -806,13 +811,13 @@ void ScriptParser::readGroup() {
     if (Tok == "AS_NEEDED")
       readAsNeeded();
     else
-      addFile(Tok);
+      addFile(unquote(Tok));
   }
 }
 
 void ScriptParser::readInclude() {
   StringRef Tok = next();
-  auto MBOrErr = MemoryBuffer::getFile(Tok);
+  auto MBOrErr = MemoryBuffer::getFile(unquote(Tok));
   if (!MBOrErr) {
     setError("cannot open " + Tok);
     return;
@@ -828,7 +833,7 @@ void ScriptParser::readOutput() {
   expect("(");
   StringRef Tok = next();
   if (Config->OutputFile.empty())
-    Config->OutputFile = Tok;
+    Config->OutputFile = unquote(Tok);
   expect(")");
 }
 
@@ -860,7 +865,8 @@ void ScriptParser::readPhdrs() {
   expect("{");
   while (!Error && !skip("}")) {
     StringRef Tok = next();
-    Opt.PhdrsCommands.push_back({Tok, PT_NULL, false, false, UINT_MAX});
+    Opt.PhdrsCommands.push_back(
+        {Tok, PT_NULL, false, false, UINT_MAX, nullptr});
     PhdrsCommand &PhdrCmd = Opt.PhdrsCommands.back();
 
     PhdrCmd.Type = readPhdrType();
@@ -872,6 +878,8 @@ void ScriptParser::readPhdrs() {
         PhdrCmd.HasFilehdr = true;
       else if (Tok == "PHDRS")
         PhdrCmd.HasPhdrs = true;
+      else if (Tok == "AT")
+        PhdrCmd.LMAExpr = readParenExpr();
       else if (Tok == "FLAGS") {
         expect("(");
         // Passing 0 for the value of dot is a bit of a hack. It means that
@@ -888,7 +896,7 @@ void ScriptParser::readSearchDir() {
   expect("(");
   StringRef Tok = next();
   if (!Config->Nostdlib)
-    Config->SearchPaths.push_back(Tok);
+    Config->SearchPaths.push_back(unquote(Tok));
   expect(")");
 }
 
@@ -996,7 +1004,7 @@ Expr ScriptParser::readAssert() {
   expect("(");
   Expr E = readExpr();
   expect(",");
-  StringRef Msg = next();
+  StringRef Msg = unquote(next());
   expect(")");
   return [=](uint64_t Dot) {
     uint64_t V = E(Dot);
@@ -1413,13 +1421,14 @@ void ScriptParser::readLocal() {
 }
 
 void ScriptParser::readExtern(std::vector<SymbolVersion> *Globals) {
-  expect("C++");
+  expect("\"C++\"");
   expect("{");
 
   for (;;) {
     if (peek() == "}" || Error)
       break;
-    Globals->push_back({next(), true});
+    bool HasWildcard = !peek().startswith("\"") && hasWildcard(peek());
+    Globals->push_back({unquote(next()), true, HasWildcard});
     expect(";");
   }
 
@@ -1442,7 +1451,7 @@ void ScriptParser::readGlobal(StringRef VerStr) {
     if (Cur == "}" || Cur == "local:" || Error)
       return;
     next();
-    Globals->push_back({Cur, false});
+    Globals->push_back({unquote(Cur), false, hasWildcard(Cur)});
     expect(";");
   }
 }
