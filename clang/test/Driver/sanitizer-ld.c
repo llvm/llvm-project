@@ -151,6 +151,15 @@
 // CHECK-ASAN-ANDROID-SHARED: libclang_rt.asan-arm-android.so"
 // CHECK-ASAN-ANDROID-SHARED-NOT: "-lpthread"
 
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     -target sparcel-myriad-rtems-elf -fsanitize=address \
+// RUN:     --sysroot=%S/Inputs/basic_myriad_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-MYRIAD %s
+//
+// CHECK-ASAN-MYRIAD: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-ASAN-MYRIAD-NOT: "-lc"
+// CHECK-ASAN-MYRIAD: libclang_rt.asan-sparcel.a"
+
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-unknown-linux -stdlib=platform -lstdc++ \
 // RUN:     -fsanitize=thread \
