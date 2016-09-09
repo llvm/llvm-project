@@ -25,14 +25,6 @@ struct StackVarDescr {
   uptr name_len;
 };
 
-struct AddressDescription {
-  char *name;
-  uptr name_size;
-  uptr region_address;
-  uptr region_size;
-  const char *region_kind;
-};
-
 // Returns the number of globals close to the provided address and copies
 // them to "globals" array.
 int GetGlobalsForAddress(uptr addr, __asan_global *globals, u32 *reg_sites,

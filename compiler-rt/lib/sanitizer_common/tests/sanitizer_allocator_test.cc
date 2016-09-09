@@ -931,16 +931,33 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
 
   // ...one man is on a mission to overflow a region with a series of
   // successive allocations.
+
   const uptr kClassID = 107;
-  const uptr kAllocationSize = DefaultSizeClassMap::Size(kClassID);
+  const uptr kAllocationSize = SpecialSizeClassMap::Size(kClassID);
   ASSERT_LT(2 * kAllocationSize, kRegionSize);
   ASSERT_GT(3 * kAllocationSize, kRegionSize);
   cache.Allocate(a, kClassID);
   EXPECT_DEATH(cache.Allocate(a, kClassID) && cache.Allocate(a, kClassID),
                "The process has exhausted");
+
+  const uptr Class2 = 100;
+  const uptr Size2 = SpecialSizeClassMap::Size(Class2);
+  ASSERT_EQ(Size2 * 8, kRegionSize);
+  char *p[7];
+  for (int i = 0; i < 7; i++) {
+    p[i] = (char*)cache.Allocate(a, Class2);
+    fprintf(stderr, "p[%d] %p s = %lx\n", i, (void*)p[i], Size2);
+    p[i][Size2 - 1] = 42;
+    if (i) ASSERT_LT(p[i - 1], p[i]);
+  }
+  EXPECT_DEATH(cache.Allocate(a, Class2), "The process has exhausted");
+  cache.Deallocate(a, Class2, p[0]);
+  cache.Drain(a);
+  ASSERT_EQ(p[6][Size2 - 1], 42);
   a->TestOnlyUnmap();
   delete a;
 }
+
 #endif
 
 TEST(SanitizerCommon, TwoLevelByteMap) {
