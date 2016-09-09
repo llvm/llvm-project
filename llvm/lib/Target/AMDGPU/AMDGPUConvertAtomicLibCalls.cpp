@@ -1,4 +1,4 @@
-//===- AMDConvertAtomicLibCalls.cpp ------------===//
+//===- AMDGPUConvertAtomicLibCalls.cpp ------------===//
 //
 // Copyright(c) 2014 Advanced Micro Devices, Inc. All rights reserved.
 //
@@ -69,11 +69,11 @@ llvm::Value *LowerOCL1XAtomic(IRBuilder<> &llvmBuilder,
 
 // Pass for lowering OCL 2.0 atomics
 namespace llvm {
-class AMDConvertAtomicLibCalls : public ModulePass {
+class AMDGPUConvertAtomicLibCalls : public ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  AMDConvertAtomicLibCalls() : ModulePass(ID) {
-    initializeAMDConvertAtomicLibCallsPass(*PassRegistry::getPassRegistry());
+  AMDGPUConvertAtomicLibCalls() : ModulePass(ID) {
+    initializeAMDGPUConvertAtomicLibCallsPass(*PassRegistry::getPassRegistry());
   }
   virtual bool runOnModule(Module &M);
 
@@ -90,20 +90,20 @@ private:
 };
 }
 
-char AMDConvertAtomicLibCalls::ID = 0;
+char AMDGPUConvertAtomicLibCalls::ID = 0;
 
 INITIALIZE_PASS(
-    AMDConvertAtomicLibCalls, "amdgpu-lower-opencl-atomic-builtins",
+    AMDGPUConvertAtomicLibCalls, "amdgpu-lower-opencl-atomic-builtins",
     "Convert OpenCL atomic intrinsic calls into LLVM IR Instructions ", false,
     false);
 
-char &llvm::AMDConvertAtomicLibCallsID = AMDConvertAtomicLibCalls::ID;
+char &llvm::AMDGPUConvertAtomicLibCallsID = AMDGPUConvertAtomicLibCalls::ID;
 
 namespace llvm {
-ModulePass *createAMDConvertAtomicLibCallsPass() { return new AMDConvertAtomicLibCalls(); }
+ModulePass *createAMDGPUConvertAtomicLibCallsPass() { return new AMDGPUConvertAtomicLibCalls(); }
 }
 
-void AMDConvertAtomicLibCalls::setModule(Module *M) { Mod = M; }
+void AMDGPUConvertAtomicLibCalls::setModule(Module *M) { Mod = M; }
 
 static bool isOCLAtomicLoad(StringRef FuncName) {
   if (!FuncName.startswith("_Z") ||
@@ -234,7 +234,7 @@ static AMDGPUSynchronizationScope getMemoryScope(CallSite *CS,
              : getDefaultMemScope(CS->getInstruction()->getOperand(0));
 }
 
-Value *AMDConvertAtomicLibCalls::lowerAtomic(StringRef Name, CallSite *CS) {
+Value *AMDGPUConvertAtomicLibCalls::lowerAtomic(StringRef Name, CallSite *CS) {
   IRBuilder<> LlvmBuilder(Mod->getContext());
   LlvmBuilder.SetInsertPoint(CS->getInstruction());
 
@@ -251,7 +251,7 @@ Value *AMDConvertAtomicLibCalls::lowerAtomic(StringRef Name, CallSite *CS) {
   return AMDOCL1XAtomic::LowerOCL1XAtomic(LlvmBuilder, CS);
 }
 
-Value *AMDConvertAtomicLibCalls::lowerAtomicLoad(IRBuilder<> LlvmBuilder,
+Value *AMDGPUConvertAtomicLibCalls::lowerAtomicLoad(IRBuilder<> LlvmBuilder,
                                            CallSite *Inst) {
   Value *Ptr = Inst->getArgOperand(0);
   AtomicOrdering MemOrd = getMemoryOrder(Inst, 1);
@@ -276,7 +276,7 @@ Value *AMDConvertAtomicLibCalls::lowerAtomicLoad(IRBuilder<> LlvmBuilder,
   return LdInst;
 }
 
-Value *AMDConvertAtomicLibCalls::lowerAtomicStore(IRBuilder<> LlvmBuilder,
+Value *AMDGPUConvertAtomicLibCalls::lowerAtomicStore(IRBuilder<> LlvmBuilder,
                                             StringRef FuncName,
                                             CallSite *Inst) {
   bool isAtomicClear = FuncName.startswith("atomic_flag_clear") ? true : false;
@@ -307,7 +307,7 @@ Value *AMDConvertAtomicLibCalls::lowerAtomicStore(IRBuilder<> LlvmBuilder,
   return StInst;
 }
 
-Value *AMDConvertAtomicLibCalls::lowerAtomicCmpXchg(IRBuilder<> llvmBuilder,
+Value *AMDGPUConvertAtomicLibCalls::lowerAtomicCmpXchg(IRBuilder<> llvmBuilder,
                                               CallSite *Inst) {
   LLVMContext &llvmContext = Mod->getContext();
   Value *Ptr = Inst->getArgOperand(0);
@@ -360,7 +360,7 @@ static AtomicRMWInst::BinOp atomicFetchBinOp(StringRef Name, bool IsSigned) {
   return AtomicRMWInst::BAD_BINOP;
 }
 
-Value *AMDConvertAtomicLibCalls::lowerAtomicRMW(IRBuilder<> LlvmBuilder,
+Value *AMDGPUConvertAtomicLibCalls::lowerAtomicRMW(IRBuilder<> LlvmBuilder,
                                           StringRef FuncName, CallSite *Inst) {
   LLVMContext &llvmContext = Mod->getContext();
   bool TestAndSet =
@@ -401,7 +401,7 @@ Value *AMDConvertAtomicLibCalls::lowerAtomicRMW(IRBuilder<> LlvmBuilder,
   return AtomicRMW;
 }
 
-Value *AMDConvertAtomicLibCalls::lowerAtomicInit(IRBuilder<> llvmBuilder,
+Value *AMDGPUConvertAtomicLibCalls::lowerAtomicInit(IRBuilder<> llvmBuilder,
                                            CallSite *Inst) {
   Value *Ptr = Inst->getArgOperand(0);
   Value *Val = Inst->getArgOperand(1);
@@ -420,7 +420,7 @@ const Function *getCallee(CallSite &CS) {
   return Callee;
 }
 
-bool AMDConvertAtomicLibCalls::runOnModule(Module &M) {
+bool AMDGPUConvertAtomicLibCalls::runOnModule(Module &M) {
 
   setModule(&M);
   bool Changed = false;
