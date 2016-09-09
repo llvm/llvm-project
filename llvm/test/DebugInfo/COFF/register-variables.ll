@@ -54,7 +54,7 @@
 ; ASM:         addq    $32, %rsp
 ; ASM:         popq    %rsi
 ; ASM: [[func_end:\.Ltmp.*]]:
-; ASM:         rex64 jmp       putint          # TAILCALL
+; ASM:         jmp     putint                  # TAILCALL
 
 ; ASM:         .short  4414                    # Record kind: S_LOCAL
 ; ASM:         .asciz  "p"

@@ -21,7 +21,7 @@ entry:
 
 ; WIN_X64:	xorl	%r8d, %r8d
 ; WIN_X64:	popq	%rax
-; WIN_X64:	rex64 jmp	C2              # TAILCALL
+; WIN_X64:	jmp	  C2                  # TAILCALL
 ; LINUX:	xorl	%edx, %edx
 ; LINUX:	jmp	C2                      # TAILCALL
 
