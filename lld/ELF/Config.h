@@ -85,6 +85,7 @@ struct Configuration {
   std::vector<uint8_t> BuildIdVector;
   bool AllowMultipleDefinition;
   bool AsNeeded = false;
+  bool Binary = false;
   bool Bsymbolic;
   bool BsymbolicFunctions;
   bool Demangle = true;

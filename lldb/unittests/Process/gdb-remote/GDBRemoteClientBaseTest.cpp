@@ -20,6 +20,7 @@
 #include "Plugins/Process/Utility/LinuxSignals.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteClientBase.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServer.h"
+#include "lldb/Core/StreamGDBRemote.h"
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -34,14 +35,14 @@ struct MockDelegate : public GDBRemoteClientBase::ContinueDelegate {
   std::string output;
   std::string misc_data;
   unsigned stop_reply_called = 0;
+  std::vector<std::string> structured_data_packets;
 
   void HandleAsyncStdout(llvm::StringRef out) { output += out; }
   void HandleAsyncMisc(llvm::StringRef data) { misc_data += data; }
   void HandleStopReply() { ++stop_reply_called; }
 
-  bool HandleAsyncStructuredData(const StructuredData::ObjectSP &object_sp) {
-    // TODO work in a test here after I fix the gtest breakage.
-    return true;
+  void HandleAsyncStructuredDataPacket(llvm::StringRef data) {
+    structured_data_packets.push_back(data);
   }
 };
 
@@ -319,6 +320,37 @@ TEST_F(GDBRemoteClientBaseTest, SendContinueDelegateInterface) {
   EXPECT_EQ("ABCD", fix.delegate.output);
   EXPECT_EQ("profile", fix.delegate.misc_data);
   EXPECT_EQ(1u, fix.delegate.stop_reply_called);
+}
+
+TEST_F(GDBRemoteClientBaseTest, SendContinueDelegateStructuredDataReceipt) {
+  // Build the plain-text version of the JSON data we will have the
+  // server send.
+  const std::string json_payload =
+      "{ \"type\": \"MyFeatureType\", "
+      "  \"elements\": [ \"entry1\", \"entry2\" ] }";
+  const std::string json_packet = "JSON-async:" + json_payload;
+
+  // Escape it properly for transit.
+  StreamGDBRemote stream;
+  stream.PutEscapedBytes(json_packet.c_str(), json_packet.length());
+  stream.Flush();
+
+  // Set up the
+  StringExtractorGDBRemote response;
+  ContinueFixture fix;
+  if (HasFailure())
+    return;
+
+  // Send async structured data packet, then stop.
+  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket(stream.GetData()));
+  ASSERT_EQ(PacketResult::Success, fix.server.SendPacket("T01"));
+  ASSERT_EQ(eStateStopped, fix.SendCPacket(response));
+  ASSERT_EQ("T01", response.GetStringRef());
+  ASSERT_EQ(1, fix.delegate.structured_data_packets.size());
+
+  // Verify the packet contents.  It should have been unescaped upon packet
+  // reception.
+  ASSERT_EQ(json_packet, fix.delegate.structured_data_packets[0]);
 }
 
 TEST_F(GDBRemoteClientBaseTest, InterruptNoResponse) {

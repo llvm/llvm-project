@@ -18,7 +18,7 @@
 #ifndef STREAMEXECUTOR_PLATFORM_H
 #define STREAMEXECUTOR_PLATFORM_H
 
-#include "streamexecutor/Utils/Error.h"
+#include "streamexecutor/Error.h"
 
 namespace streamexecutor {
 

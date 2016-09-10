@@ -12,6 +12,7 @@
 #include "Error.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
+#include "ELFCreator.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
@@ -19,6 +20,7 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -730,6 +732,48 @@ static std::unique_ptr<InputFile> createELFFile(MemoryBufferRef MB) {
   return Obj;
 }
 
+template <class ELFT> std::unique_ptr<InputFile> BinaryFile::createELF() {
+  ELFCreator<ELFT> ELF(ET_REL, Config->EMachine);
+  auto DataSec = ELF.addSection(".data");
+  DataSec.Header->sh_flags = SHF_ALLOC;
+  DataSec.Header->sh_size = MB.getBufferSize();
+  DataSec.Header->sh_type = SHT_PROGBITS;
+  DataSec.Header->sh_addralign = 8;
+
+  std::string Filepath = MB.getBufferIdentifier();
+  std::transform(Filepath.begin(), Filepath.end(), Filepath.begin(),
+                 [](char C) { return isalnum(C) ? C : '_'; });
+  std::string StartSym = "_binary_" + Filepath + "_start";
+  std::string EndSym = "_binary_" + Filepath + "_end";
+  std::string SizeSym = "_binary_" + Filepath + "_size";
+
+  auto SSym = ELF.addSymbol(StartSym);
+  SSym.Sym->setBindingAndType(STB_GLOBAL, STT_OBJECT);
+  SSym.Sym->st_shndx = DataSec.Index;
+
+  auto ESym = ELF.addSymbol(EndSym);
+  ESym.Sym->setBindingAndType(STB_GLOBAL, STT_OBJECT);
+  ESym.Sym->st_shndx = DataSec.Index;
+  ESym.Sym->st_value = MB.getBufferSize();
+
+  auto SZSym = ELF.addSymbol(SizeSym);
+  SZSym.Sym->setBindingAndType(STB_GLOBAL, STT_OBJECT);
+  SZSym.Sym->st_shndx = SHN_ABS;
+  SZSym.Sym->st_value = MB.getBufferSize();
+
+  std::size_t Size = ELF.layout();
+  ELFData.resize(Size);
+
+  ELF.write(ELFData.data());
+
+  // .data
+  std::copy(MB.getBufferStart(), MB.getBufferEnd(),
+            ELFData.data() + DataSec.Header->sh_offset);
+
+  return createELFFile<ObjectFile>(MemoryBufferRef(
+      StringRef((char *)ELFData.data(), Size), MB.getBufferIdentifier()));
+}
+
 static bool isBitcode(MemoryBufferRef MB) {
   using namespace sys::fs;
   return identify_magic(MB.getBuffer()) == file_magic::bitcode;
@@ -850,3 +894,8 @@ template class elf::SharedFile<ELF32LE>;
 template class elf::SharedFile<ELF32BE>;
 template class elf::SharedFile<ELF64LE>;
 template class elf::SharedFile<ELF64BE>;
+
+template std::unique_ptr<InputFile> BinaryFile::createELF<ELF32LE>();
+template std::unique_ptr<InputFile> BinaryFile::createELF<ELF32BE>();
+template std::unique_ptr<InputFile> BinaryFile::createELF<ELF64LE>();
+template std::unique_ptr<InputFile> BinaryFile::createELF<ELF64BE>();

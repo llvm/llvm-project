@@ -35,11 +35,11 @@
 #include <string>
 
 #include "streamexecutor/DeviceMemory.h"
+#include "streamexecutor/Error.h"
 #include "streamexecutor/Kernel.h"
 #include "streamexecutor/LaunchDimensions.h"
 #include "streamexecutor/PackedKernelArgumentArray.h"
 #include "streamexecutor/PlatformDevice.h"
-#include "streamexecutor/Utils/Error.h"
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Twine.h"

@@ -597,8 +597,8 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     }
 
     BuildMI(MBB, MI, DL, OpDesc)
-      .addReg(SrcReg, getKillRegState(isKill)) // src
-      .addFrameIndex(FrameIndex) // frame_idx
+      .addReg(SrcReg, getKillRegState(isKill)) // data
+      .addFrameIndex(FrameIndex)               // addr
       .addMemOperand(MMO);
 
     return;
@@ -619,8 +619,8 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   unsigned Opcode = getVGPRSpillSaveOpcode(RC->getSize());
   MFI->setHasSpilledVGPRs();
   BuildMI(MBB, MI, DL, get(Opcode))
-    .addReg(SrcReg, getKillRegState(isKill)) // src
-    .addFrameIndex(FrameIndex)               // frame_idx
+    .addReg(SrcReg, getKillRegState(isKill)) // data
+    .addFrameIndex(FrameIndex)               // addr
     .addReg(MFI->getScratchRSrcReg())        // scratch_rsrc
     .addReg(MFI->getScratchWaveOffsetReg())  // scratch_offset
     .addImm(0)                               // offset
@@ -691,7 +691,7 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     }
 
     BuildMI(MBB, MI, DL, OpDesc, DestReg)
-      .addFrameIndex(FrameIndex) // frame_idx
+      .addFrameIndex(FrameIndex) // addr
       .addMemOperand(MMO);
 
     return;
@@ -710,7 +710,7 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
   unsigned Opcode = getVGPRSpillRestoreOpcode(RC->getSize());
   BuildMI(MBB, MI, DL, get(Opcode), DestReg)
-    .addFrameIndex(FrameIndex)        // frame_idx
+    .addFrameIndex(FrameIndex)              // vaddr
     .addReg(MFI->getScratchRSrcReg())       // scratch_rsrc
     .addReg(MFI->getScratchWaveOffsetReg()) // scratch_offset
     .addImm(0)                              // offset
@@ -1852,13 +1852,13 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) {
   case AMDGPU::S_SUB_U32: return AMDGPU::V_SUB_I32_e32;
   case AMDGPU::S_SUBB_U32: return AMDGPU::V_SUBB_U32_e32;
   case AMDGPU::S_MUL_I32: return AMDGPU::V_MUL_LO_I32;
-  case AMDGPU::S_AND_B32: return AMDGPU::V_AND_B32_e32;
-  case AMDGPU::S_OR_B32: return AMDGPU::V_OR_B32_e32;
-  case AMDGPU::S_XOR_B32: return AMDGPU::V_XOR_B32_e32;
-  case AMDGPU::S_MIN_I32: return AMDGPU::V_MIN_I32_e32;
-  case AMDGPU::S_MIN_U32: return AMDGPU::V_MIN_U32_e32;
-  case AMDGPU::S_MAX_I32: return AMDGPU::V_MAX_I32_e32;
-  case AMDGPU::S_MAX_U32: return AMDGPU::V_MAX_U32_e32;
+  case AMDGPU::S_AND_B32: return AMDGPU::V_AND_B32_e64;
+  case AMDGPU::S_OR_B32: return AMDGPU::V_OR_B32_e64;
+  case AMDGPU::S_XOR_B32: return AMDGPU::V_XOR_B32_e64;
+  case AMDGPU::S_MIN_I32: return AMDGPU::V_MIN_I32_e64;
+  case AMDGPU::S_MIN_U32: return AMDGPU::V_MIN_U32_e64;
+  case AMDGPU::S_MAX_I32: return AMDGPU::V_MAX_I32_e64;
+  case AMDGPU::S_MAX_U32: return AMDGPU::V_MAX_U32_e64;
   case AMDGPU::S_ASHR_I32: return AMDGPU::V_ASHR_I32_e32;
   case AMDGPU::S_ASHR_I64: return AMDGPU::V_ASHR_I64;
   case AMDGPU::S_LSHL_B32: return AMDGPU::V_LSHL_B32_e32;
@@ -3142,6 +3142,56 @@ bool SIInstrInfo::isHighLatencyInstruction(const MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
 
   return isMUBUF(Opc) || isMTBUF(Opc) || isMIMG(Opc);
+}
+
+unsigned SIInstrInfo::isStackAccess(const MachineInstr &MI,
+                                    int &FrameIndex) const {
+  const MachineOperand *Addr = getNamedOperand(MI, AMDGPU::OpName::vaddr);
+  if (!Addr || !Addr->isFI())
+    return AMDGPU::NoRegister;
+
+  assert(!MI.memoperands_empty() &&
+         (*MI.memoperands_begin())->getAddrSpace() == AMDGPUAS::PRIVATE_ADDRESS);
+
+  FrameIndex = Addr->getIndex();
+  return getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
+}
+
+unsigned SIInstrInfo::isSGPRStackAccess(const MachineInstr &MI,
+                                        int &FrameIndex) const {
+  const MachineOperand *Addr = getNamedOperand(MI, AMDGPU::OpName::addr);
+  assert(Addr && Addr->isFI());
+  FrameIndex = Addr->getIndex();
+  return getNamedOperand(MI, AMDGPU::OpName::data)->getReg();
+}
+
+unsigned SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+                                          int &FrameIndex) const {
+
+  if (!MI.mayLoad())
+    return AMDGPU::NoRegister;
+
+  if (isMUBUF(MI) || isVGPRSpill(MI))
+    return isStackAccess(MI, FrameIndex);
+
+  if (isSGPRSpill(MI))
+    return isSGPRStackAccess(MI, FrameIndex);
+
+  return AMDGPU::NoRegister;
+}
+
+unsigned SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+                                         int &FrameIndex) const {
+  if (!MI.mayStore())
+    return AMDGPU::NoRegister;
+
+  if (isMUBUF(MI) || isVGPRSpill(MI))
+    return isStackAccess(MI, FrameIndex);
+
+  if (isSGPRSpill(MI))
+    return isSGPRStackAccess(MI, FrameIndex);
+
+  return AMDGPU::NoRegister;
 }
 
 unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {

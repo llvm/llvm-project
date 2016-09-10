@@ -45,6 +45,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   // Whether WQM _must_ be enabled for this instruction.
   field bits<1> WQM = 0;
   field bits<1> VGPRSpill = 0;
+  field bits<1> SGPRSpill = 0;
 
   // This bit tells the assembler to use the 32-bit encoding in case it
   // is unable to infer the encoding from the operands.
@@ -84,9 +85,10 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{21} = FLAT;
   let TSFlags{22} = WQM;
   let TSFlags{23} = VGPRSpill;
-  let TSFlags{24} = VOPAsmPrefer32Bit;
-  let TSFlags{25} = Gather4;
-  let TSFlags{26} = DisableWQM;
+  let TSFlags{24} = SGPRSpill;
+  let TSFlags{25} = VOPAsmPrefer32Bit;
+  let TSFlags{26} = Gather4;
+  let TSFlags{27} = DisableWQM;
 
   let SchedRW = [Write32Bit];
 

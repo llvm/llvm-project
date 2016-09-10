@@ -25466,29 +25466,29 @@ static bool combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     // Bits[2:0] - (Per Lane) PS Shuffle Mask.
     unsigned NumLanes = MaskVT.getSizeInBits() / 128;
     unsigned NumEltsPerLane = NumMaskElts / NumLanes;
-    SmallVector<SDValue, 8> VPerm2Idx;
+    SmallVector<int, 8> VPerm2Idx;
     MVT MaskIdxSVT = MVT::getIntegerVT(MaskVT.getScalarSizeInBits());
     MVT MaskIdxVT = MVT::getVectorVT(MaskIdxSVT, NumMaskElts);
     unsigned M2ZImm = 0;
     for (int M : Mask) {
       if (M == SM_SentinelUndef) {
-        VPerm2Idx.push_back(DAG.getUNDEF(MaskIdxSVT));
+        VPerm2Idx.push_back(-1);
         continue;
       }
       if (M == SM_SentinelZero) {
         M2ZImm = 2;
-        VPerm2Idx.push_back(DAG.getConstant(8, DL, MaskIdxSVT));
+        VPerm2Idx.push_back(8);
         continue;
       }
       int Index = (M % NumEltsPerLane) + ((M / NumMaskElts) * NumEltsPerLane);
       Index = (MaskVT.getScalarSizeInBits() == 64 ? Index << 1 : Index);
-      VPerm2Idx.push_back(DAG.getConstant(Index, DL, MaskIdxSVT));
+      VPerm2Idx.push_back(Index);
     }
     V1 = DAG.getBitcast(MaskVT, V1);
     DCI.AddToWorklist(V1.getNode());
     V2 = DAG.getBitcast(MaskVT, V2);
     DCI.AddToWorklist(V2.getNode());
-    SDValue VPerm2MaskOp = DAG.getBuildVector(MaskIdxVT, DL, VPerm2Idx);
+    SDValue VPerm2MaskOp = getConstVector(VPerm2Idx, MaskIdxVT, DAG, DL, true);
     DCI.AddToWorklist(VPerm2MaskOp.getNode());
     Res = DAG.getNode(X86ISD::VPERMIL2, DL, MaskVT, V1, V2, VPerm2MaskOp,
                       DAG.getConstant(M2ZImm, DL, MVT::i8));

@@ -12,7 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "streamexecutor/Utils/Error.h"
+#include "streamexecutor/Error.h"
 
 #include "llvm/ADT/StringRef.h"
 

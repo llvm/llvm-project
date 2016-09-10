@@ -1789,6 +1789,9 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     IRBuilder<> builder(&FirstNewBlock->front());
     for (unsigned ai = 0, ae = IFI.StaticAllocas.size(); ai != ae; ++ai) {
       AllocaInst *AI = IFI.StaticAllocas[ai];
+      // Don't mark swifterror allocas. They can't have bitcast uses.
+      if (AI->isSwiftError())
+        continue;
 
       // If the alloca is already scoped to something smaller than the whole
       // function then there's no need to add redundant, less accurate markers.

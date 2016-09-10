@@ -997,7 +997,7 @@ static bool isSuccOrder(SUnit *SUa, SUnit *SUb) {
 static bool isDependenceBarrier(MachineInstr &MI, AliasAnalysis *AA) {
   return MI.isCall() || MI.hasUnmodeledSideEffects() ||
          (MI.hasOrderedMemoryRef() &&
-          (!MI.mayLoad() || !MI.isInvariantLoad(AA)));
+          (!MI.mayLoad() || !MI.isDereferenceableInvariantLoad(AA)));
 }
 
 /// Return the underlying objects for the memory references of an instruction.

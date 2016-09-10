@@ -80,11 +80,10 @@ define i1 @test_shift_and_cmp_changed2(i8 %p) {
   ret i1 %cmp
 }
 
-; FIXME: icmp ult X, 1 -> icmp eq X, 0 
 define <2 x i1> @test_shift_and_cmp_changed2_vec(<2 x i8> %p) {
 ; CHECK-LABEL: @test_shift_and_cmp_changed2_vec(
 ; CHECK-NEXT:    [[ANDP:%.*]] = and <2 x i8> %p, <i8 6, i8 6>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[ANDP]], <i8 1, i8 1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ANDP]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shlp = shl <2 x i8> %p, <i8 5, i8 5>

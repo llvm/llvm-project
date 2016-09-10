@@ -4183,6 +4183,20 @@ INTERCEPTOR(char *, tmpnam_r, char *s) {
 #define INIT_TMPNAM_R
 #endif
 
+#if SANITIZER_INTERCEPT_TTYNAME_R
+INTERCEPTOR(int, ttyname_r, int fd, char *name, SIZE_T namesize) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, ttyname_r, fd, name, namesize);
+  int res = REAL(ttyname_r)(fd, name, namesize);
+  if (res == 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, name, REAL(strlen)(name) + 1);
+  return res;
+}
+#define INIT_TTYNAME_R COMMON_INTERCEPT_FUNCTION(ttyname_r);
+#else
+#define INIT_TTYNAME_R
+#endif
+
 #if SANITIZER_INTERCEPT_TEMPNAM
 INTERCEPTOR(char *, tempnam, char *dir, char *pfx) {
   void *ctx;
@@ -6008,6 +6022,7 @@ static void InitializeCommonInterceptors() {
   INIT_PTHREAD_BARRIERATTR_GETPSHARED;
   INIT_TMPNAM;
   INIT_TMPNAM_R;
+  INIT_TTYNAME_R;
   INIT_TEMPNAM;
   INIT_PTHREAD_SETNAME_NP;
   INIT_SINCOS;
