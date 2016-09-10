@@ -11,5 +11,7 @@
 # ------------------------------------------------------------------------------
 import lldbsuite.test.lldbinline as lldbinline
 import lldbsuite.test.lldbtest as lldbtest
+from lldbsuite.test import decorators
 
-lldbinline.MakeInlineTest(__file__, globals())
+lldbinline.MakeInlineTest(__file__, globals(), decorators=[
+    decorators.expectedFailureAll(bugnumber="rdar://28234825")])
