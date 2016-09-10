@@ -19,18 +19,20 @@ namespace llvm {
 
 /// Implementations of list algorithms using ilist_node_base.
 class ilist_base {
+  typedef ilist_node_base node_base_type;
+
 public:
-  static void insertBeforeImpl(ilist_node_base &Next, ilist_node_base &N) {
-    ilist_node_base &Prev = *Next.getPrev();
+  static void insertBeforeImpl(node_base_type &Next, node_base_type &N) {
+    node_base_type &Prev = *Next.getPrev();
     N.setNext(&Next);
     N.setPrev(&Prev);
     Prev.setNext(&N);
     Next.setPrev(&N);
   }
 
-  static void removeImpl(ilist_node_base &N) {
-    ilist_node_base *Prev = N.getPrev();
-    ilist_node_base *Next = N.getNext();
+  static void removeImpl(node_base_type &N) {
+    node_base_type *Prev = N.getPrev();
+    node_base_type *Next = N.getNext();
     Next->setPrev(Prev);
     Prev->setNext(Next);
 
@@ -39,9 +41,9 @@ public:
     N.setNext(nullptr);
   }
 
-  static void removeRangeImpl(ilist_node_base &First, ilist_node_base &Last) {
-    ilist_node_base *Prev = First.getPrev();
-    ilist_node_base *Final = Last.getPrev();
+  static void removeRangeImpl(node_base_type &First, node_base_type &Last) {
+    node_base_type *Prev = First.getPrev();
+    node_base_type *Final = Last.getPrev();
     Last.setPrev(Prev);
     Prev->setNext(&Last);
 
@@ -50,8 +52,8 @@ public:
     Final->setNext(nullptr);
   }
 
-  static void transferBeforeImpl(ilist_node_base &Next, ilist_node_base &First,
-                                 ilist_node_base &Last) {
+  static void transferBeforeImpl(node_base_type &Next, node_base_type &First,
+                                 node_base_type &Last) {
     if (&Next == &Last || &First == &Last)
       return;
 
@@ -60,14 +62,14 @@ public:
            // Check for the most common mistake.
            "Insertion point can't be one of the transferred nodes");
 
-    ilist_node_base &Final = *Last.getPrev();
+    node_base_type &Final = *Last.getPrev();
 
     // Detach from old list/position.
     First.getPrev()->setNext(&Last);
     Last.setPrev(First.getPrev());
 
     // Splice [First, Final] into its new list/position.
-    ilist_node_base &Prev = *Next.getPrev();
+    node_base_type &Prev = *Next.getPrev();
     Final.setNext(&Next);
     First.setPrev(&Prev);
     Prev.setNext(&First);

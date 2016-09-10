@@ -47,6 +47,7 @@ namespace llvm {
 /// because the extra semantic is otherwise non-obvious.  They are equivalent
 /// to calling \a std::for_each() on the range to be discarded.
 template <typename T> class simple_ilist : ilist_base, ilist_node_access {
+  typedef ilist_base list_base_type;
   ilist_sentinel<T> Sentinel;
 
 public:
@@ -120,7 +121,7 @@ public:
 
   /// Insert a node by reference; never copies.
   iterator insert(iterator I, reference Node) {
-    ilist_base::insertBefore(*I.getNodePtr(), *this->getNodePtr(&Node));
+    list_base_type::insertBefore(*I.getNodePtr(), *this->getNodePtr(&Node));
     return iterator(&Node);
   }
 
@@ -135,7 +136,7 @@ public:
   ///
   /// \see \a erase() for removing by iterator.
   /// \see \a removeAndDispose() if the node should be deleted.
-  void remove(reference N) { ilist_base::remove(*this->getNodePtr(&N)); }
+  void remove(reference N) { list_base_type::remove(*this->getNodePtr(&N)); }
 
   /// Remove a node by reference and dispose of it.
   template <class Disposer>
@@ -158,7 +159,7 @@ public:
   ///
   /// \see \a eraseAndDispose() if the nodes should be deleted.
   iterator erase(iterator First, iterator Last) {
-    ilist_base::removeRange(*First.getNodePtr(), *Last.getNodePtr());
+    list_base_type::removeRange(*First.getNodePtr(), *Last.getNodePtr());
     return Last;
   }
 
@@ -201,8 +202,8 @@ public:
 
   /// Splice in a range of nodes from another list.
   void splice(iterator I, simple_ilist &, iterator First, iterator Last) {
-    ilist_base::transferBefore(*I.getNodePtr(), *First.getNodePtr(),
-                               *Last.getNodePtr());
+    list_base_type::transferBefore(*I.getNodePtr(), *First.getNodePtr(),
+                                   *Last.getNodePtr());
   }
 
   /// Merge in another list.
