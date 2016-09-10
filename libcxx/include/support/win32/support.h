@@ -22,7 +22,7 @@
 #include <intrin.h>
 #endif
 #if defined(_LIBCPP_MSVCRT)
-#include <xlocinfo.h>
+#include <crtversion.h>
 #endif
 #define swprintf _snwprintf
 #define vswprintf _vsnwprintf
@@ -44,26 +44,8 @@ size_t wcsnrtombs(char *__restrict dst, const wchar_t **__restrict src,
 }
 #endif // __MINGW32__
 
-#if defined(_LIBCPP_MSVCRT)
+#if defined(_VC_CRT_MAJOR_VERSION) && _VC_CRT_MAJOR_VERSION < 14
 #define snprintf _snprintf
-#define atoll _atoi64
-#define strtoll _strtoi64
-#define strtoull _strtoui64
-#define wcstoll _wcstoi64
-#define wcstoull _wcstoui64
-_LIBCPP_ALWAYS_INLINE float strtof(const char *nptr, char **endptr)
-{
-  return _Stof(nptr, endptr, 0);
-}
-_LIBCPP_ALWAYS_INLINE double strtod(const char *nptr, char **endptr)
-{
-  return _Stod(nptr, endptr, 0);
-}
-_LIBCPP_ALWAYS_INLINE long double strtold(const char *nptr, char **endptr)
-{
-  return _Stold(nptr, endptr, 0);
-}
-
 #define _Exit _exit
 #endif
 

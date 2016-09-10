@@ -74,6 +74,17 @@ public:
     friend constexpr bool operator==(const Z& x, const Z& y) {return x.i_ == y.i_;}
 };
 
+
+class ConstMovable
+{
+    int i_;
+public:
+    ConstMovable(int i) : i_(i) {}
+    ConstMovable(const ConstMovable&& x) : i_(x.i_) {}
+    ~ConstMovable() {i_ = 0;}
+    friend bool operator==(const ConstMovable& x, const ConstMovable& y) {return x.i_ == y.i_;}
+};
+
 int main()
 {
     {
@@ -87,6 +98,11 @@ int main()
         test(rhs);
     }
     {
+        typedef const int T;
+        optional<T> rhs(3);
+        test(rhs);
+    }
+    {
         typedef X T;
         optional<T> rhs;
         test(rhs);
@@ -94,6 +110,11 @@ int main()
     {
         typedef X T;
         optional<T> rhs(X(3));
+        test(rhs);
+    }
+    {
+        typedef const ConstMovable T;
+        optional<T> rhs(ConstMovable(3));
         test(rhs);
     }
     {

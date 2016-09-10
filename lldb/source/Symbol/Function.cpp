@@ -163,6 +163,9 @@ void Function::GetStartLineSourceInfo(FileSpec &source_file,
   if (m_comp_unit == nullptr)
     return;
 
+  // Initialize m_type if it hasn't been initialized already
+  GetType();
+
   if (m_type != nullptr && m_type->GetDeclaration().GetLine() != 0) {
     source_file = m_type->GetDeclaration().GetFile();
     line_no = m_type->GetDeclaration().GetLine();

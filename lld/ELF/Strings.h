@@ -20,6 +20,7 @@ llvm::Regex compileGlobPatterns(ArrayRef<StringRef> V);
 bool hasWildcard(StringRef S);
 std::vector<uint8_t> parseHex(StringRef S);
 bool isValidCIdentifier(StringRef S);
+StringRef unquote(StringRef S);
 
 // Returns a demangled C++ symbol name. If Name is not a mangled
 // name or the system does not provide __cxa_demangle function,

@@ -1413,7 +1413,7 @@ HostThread Host::StartMonitoringChildProcess(
     // This works around a bug in the static analyzer where it claims
     // "dispatch_release" isn't a valid identifier.
     ::dispatch_source_set_cancel_handler(source, ^{
-      ::dispatch_release(source);
+      dispatch_release(source);
     });
 #endif
     ::dispatch_source_set_event_handler(source, ^{

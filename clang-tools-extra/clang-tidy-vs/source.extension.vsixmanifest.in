@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Vsix Version="1.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2010">
+  <Identifier Id="405594C3-042A-4155-B9A6-E25DAB8B1924">
+    <Name>ClangFormat</Name>
+    <Author>LLVM</Author>
+    <Version>@CLANG_TIDY_VS_VERSION@</Version>
+    <Description xml:space="preserve">A static analysis tool for C/C++ code.</Description>
+    <Locale>1033</Locale>
+    <MoreInfoUrl>http://clang.llvm.org/extra/clang-tidy/</MoreInfoUrl>
+    <License>license.txt</License>
+    <InstalledByMsi>false</InstalledByMsi>
+    <SupportedProducts>
+      <VisualStudio Version="10.0">
+        <Edition>Pro</Edition>
+      </VisualStudio>
+      <VisualStudio Version="11.0">
+        <Edition>Pro</Edition>
+      </VisualStudio>
+      <VisualStudio Version="12.0">
+        <Edition>Pro</Edition>
+      </VisualStudio>
+      <VisualStudio Version="14.0">
+        <Edition>Pro</Edition>
+      </VisualStudio>
+    </SupportedProducts>
+    <SupportedFrameworkRuntimeEdition MinVersion="4.0" MaxVersion="4.0" />
+  </Identifier>
+  <References>
+        <Reference Id="Microsoft.VisualStudio.MPF" MinVersion="10.0">
+            <Name>Visual Studio MPF</Name>
+        </Reference>
+  </References>
+  <Content>
+    <VsPackage>|%CurrentProject%;PkgdefProjectOutputGroup|</VsPackage>
+  </Content>
+</Vsix>

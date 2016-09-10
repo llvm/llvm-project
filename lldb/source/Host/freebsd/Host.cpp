@@ -9,17 +9,19 @@
 //===----------------------------------------------------------------------===//
 
 // C Includes
-#include <dlfcn.h>
-#include <execinfo.h>
-#include <stdio.h>
-#include <sys/proc.h>
-#include <sys/sysctl.h>
 #include <sys/types.h>
+
+#include <sys/exec.h>
+#include <sys/proc.h>
+#include <sys/ptrace.h>
+#include <sys/sysctl.h>
 #include <sys/user.h>
 
 #include <machine/elf.h>
-#include <sys/exec.h>
-#include <sys/ptrace.h>
+
+#include <dlfcn.h>
+#include <execinfo.h>
+#include <stdio.h>
 
 // C++ Includes
 // Other libraries and framework includes

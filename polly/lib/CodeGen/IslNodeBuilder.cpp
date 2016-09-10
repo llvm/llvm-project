@@ -235,7 +235,8 @@ isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
 /// @param Set     A set which references the ScopStmt we are interested in.
 /// @param UserPtr A void pointer that can be casted to a SubtreeReferences
 ///                structure.
-static isl_stat addReferencesFromStmtSet(isl_set *Set, void *UserPtr) {
+static isl_stat addReferencesFromStmtSet(__isl_take isl_set *Set,
+                                         void *UserPtr) {
   isl_id *Id = isl_set_get_tuple_id(Set);
   auto *Stmt = static_cast<const ScopStmt *>(isl_id_get_user(Id));
   isl_id_free(Id);
@@ -729,8 +730,8 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
   return NewAccesses;
 }
 
-void IslNodeBuilder::createSubstitutions(isl_ast_expr *Expr, ScopStmt *Stmt,
-                                         LoopToScevMapT &LTS) {
+void IslNodeBuilder::createSubstitutions(__isl_take isl_ast_expr *Expr,
+                                         ScopStmt *Stmt, LoopToScevMapT &LTS) {
   assert(isl_ast_expr_get_type(Expr) == isl_ast_expr_op &&
          "Expression of type 'op' expected");
   assert(isl_ast_expr_get_op_type(Expr) == isl_ast_op_call &&
@@ -905,7 +906,7 @@ bool IslNodeBuilder::materializeParameters(isl_set *Set, bool All) {
 }
 
 /// Add the number of dimensions in @p BS to @p U.
-static isl_stat countTotalDims(isl_basic_set *BS, void *U) {
+static isl_stat countTotalDims(__isl_take isl_basic_set *BS, void *U) {
   unsigned *NumTotalDim = static_cast<unsigned *>(U);
   *NumTotalDim += isl_basic_set_total_dim(BS);
   isl_basic_set_free(BS);

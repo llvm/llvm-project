@@ -9,8 +9,9 @@
 #ifndef lldb_unittests_Process_gdb_remote_GDBRemoteTestUtils_h
 #define lldb_unittests_Process_gdb_remote_GDBRemoteTestUtils_h
 
-#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServer.h"
 #include "gtest/gtest.h"
+
+#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServer.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {

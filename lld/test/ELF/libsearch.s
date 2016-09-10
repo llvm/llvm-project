@@ -88,7 +88,9 @@
 // -nostdlib
 // RUN: echo 'SEARCH_DIR(' %t.dir ')' > %t.script
 // RUN: ld.lld -o %t3 %t.o -script %t.script -lls
-// RUN: not ld.lld -o %t3 %t.o -script %t.script -lls -nostdlib
+// RUN: not ld.lld -o %t3 %t.o -script %t.script -lls -nostdlib \
+// RUN:   2>&1 | FileCheck --check-prefix=NOSTDLIB %s
+// NOSTDLIB: unable to find library -lls
 
 .globl _start,_bar
 _start:

@@ -62,6 +62,10 @@ public:
     friend void swap(Z& x, Z& y) {throw 6;}
 };
 
+struct ConstSwappable {
+};
+void swap(ConstSwappable const&, ConstSwappable const&) {}
+
 int main()
 {
     {
@@ -111,6 +115,11 @@ int main()
         assert(*opt1 == 2);
         assert(static_cast<bool>(opt2) == true);
         assert(*opt2 == 1);
+    }
+    {
+        optional<const ConstSwappable> opt;
+        optional<const ConstSwappable> opt2;
+        opt.swap(opt2);
     }
     {
         optional<X> opt1;

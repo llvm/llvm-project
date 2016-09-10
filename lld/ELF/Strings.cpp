@@ -21,25 +21,38 @@ using namespace lld;
 using namespace lld::elf;
 
 bool elf::hasWildcard(StringRef S) {
-  return S.find_first_of("?*") != StringRef::npos;
+  return S.find_first_of("?*[") != StringRef::npos;
+}
+
+StringRef elf::unquote(StringRef S) {
+  if (!S.startswith("\""))
+    return S;
+  return S.substr(1, S.size() - 2);
 }
 
 // Converts a glob pattern to a regular expression.
 static std::string toRegex(StringRef S) {
-  if (S.find_first_of("[]") != StringRef::npos)
-    warning("unsupported wildcard: " + S);
-
   std::string T;
+  bool InBracket = false;
   while (!S.empty()) {
     char C = S.front();
+    if (InBracket) {
+      InBracket = C != ']';
+      T += C;
+      S = S.drop_front();
+      continue;
+    }
+
     if (C == '*')
       T += ".*";
     else if (C == '?')
       T += '.';
-    else if (StringRef(".+^${}()|/\\[]").find_first_of(C) != StringRef::npos)
+    else if (StringRef(".+^${}()|/\\").find_first_of(C) != StringRef::npos)
       T += std::string("\\") + C;
     else
       T += C;
+
+    InBracket = C == '[';
     S = S.substr(1);
   }
   return T;

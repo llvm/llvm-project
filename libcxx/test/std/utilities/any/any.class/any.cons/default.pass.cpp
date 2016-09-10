@@ -21,15 +21,6 @@
 #include "any_helpers.h"
 #include "count_new.hpp"
 
-#if TEST_HAS_BUILTIN_IDENTIFIER(__has_constant_initializer)
-// std::any must have a constexpr default constructor, but it's a non-literal
-// type so we can't create a constexpr variable. This tests that we actually
-// get 'constant initialization'.
-std::any a;
-static_assert(__has_constant_initializer(a),
-              "any must be constant initializable");
-#endif
-
 int main()
 {
     using std::any;
@@ -38,6 +29,15 @@ int main()
             std::is_nothrow_default_constructible<any>::value
           , "Must be default constructible"
           );
+    }
+    {
+        struct TestConstexpr : public std::any {
+          constexpr TestConstexpr() : std::any() {}
+        };
+#ifdef _LIBCPP_SAFE_STATIC
+        _LIBCPP_SAFE_STATIC static std::any a;
+        ((void)a);
+#endif
     }
     {
         DisableAllocationGuard g; ((void)g);

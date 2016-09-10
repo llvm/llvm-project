@@ -38,6 +38,7 @@
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/JSON.h"
 #include "llvm/ADT/Triple.h"
 
 // Project includes
@@ -101,6 +102,9 @@ GDBRemoteCommunicationServerCommon::GDBRemoteCommunicationServerCommon(
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qModuleInfo,
       &GDBRemoteCommunicationServerCommon::Handle_qModuleInfo);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jModulesInfo,
+      &GDBRemoteCommunicationServerCommon::Handle_jModulesInfo);
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qPlatform_chmod,
       &GDBRemoteCommunicationServerCommon::Handle_qPlatform_chmod);
@@ -1078,21 +1082,10 @@ GDBRemoteCommunicationServerCommon::Handle_qModuleInfo(
 
   std::string triple;
   packet.GetHexByteString(triple);
-  ArchSpec arch(triple.c_str());
 
-  const FileSpec req_module_path_spec(module_path.c_str(), true);
-  const FileSpec module_path_spec =
-      FindModuleFile(req_module_path_spec.GetPath(), arch);
-  const ModuleSpec module_spec(module_path_spec, arch);
-
-  ModuleSpecList module_specs;
-  if (!ObjectFile::GetModuleSpecifications(module_path_spec, 0, 0,
-                                           module_specs))
+  ModuleSpec matched_module_spec = GetModuleInfo(module_path, triple);
+  if (!matched_module_spec.GetFileSpec())
     return SendErrorResponse(3);
-
-  ModuleSpec matched_module_spec;
-  if (!module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec))
-    return SendErrorResponse(4);
 
   const auto file_offset = matched_module_spec.GetObjectOffset();
   const auto file_size = matched_module_spec.GetObjectSize();
@@ -1119,7 +1112,7 @@ GDBRemoteCommunicationServerCommon::Handle_qModuleInfo(
   response.PutChar(';');
 
   response.PutCString("file_path:");
-  response.PutCStringAsRawHex8(module_path_spec.GetCString());
+  response.PutCStringAsRawHex8(matched_module_spec.GetFileSpec().GetCString());
   response.PutChar(';');
   response.PutCString("file_offset:");
   response.PutHex64(file_offset);
@@ -1129,6 +1122,63 @@ GDBRemoteCommunicationServerCommon::Handle_qModuleInfo(
   response.PutChar(';');
 
   return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerCommon::Handle_jModulesInfo(
+    StringExtractorGDBRemote &packet) {
+  packet.SetFilePos(::strlen("jModulesInfo:"));
+
+  StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(packet.Peek());
+  if (!object_sp)
+    return SendErrorResponse(1);
+
+  StructuredData::Array *packet_array = object_sp->GetAsArray();
+  if (!packet_array)
+    return SendErrorResponse(2);
+
+  JSONArray::SP response_array_sp = std::make_shared<JSONArray>();
+  for (size_t i = 0; i < packet_array->GetSize(); ++i) {
+    StructuredData::Dictionary *query =
+        packet_array->GetItemAtIndex(i)->GetAsDictionary();
+    if (!query)
+      continue;
+    std::string file, triple;
+    if (!query->GetValueForKeyAsString("file", file) ||
+        !query->GetValueForKeyAsString("triple", triple))
+      continue;
+
+    ModuleSpec matched_module_spec = GetModuleInfo(file, triple);
+    if (!matched_module_spec.GetFileSpec())
+      continue;
+
+    const auto file_offset = matched_module_spec.GetObjectOffset();
+    const auto file_size = matched_module_spec.GetObjectSize();
+    const auto uuid_str = matched_module_spec.GetUUID().GetAsString("");
+
+    if (uuid_str.empty())
+      continue;
+
+    JSONObject::SP response = std::make_shared<JSONObject>();
+    response_array_sp->AppendObject(response);
+    response->SetObject("uuid", std::make_shared<JSONString>(uuid_str));
+    response->SetObject(
+        "triple",
+        std::make_shared<JSONString>(
+            matched_module_spec.GetArchitecture().GetTriple().getTriple()));
+    response->SetObject("file_path",
+                        std::make_shared<JSONString>(
+                            matched_module_spec.GetFileSpec().GetPath()));
+    response->SetObject("file_offset",
+                        std::make_shared<JSONNumber>(file_offset));
+    response->SetObject("file_size", std::make_shared<JSONNumber>(file_size));
+  }
+
+  StreamString response;
+  response_array_sp->Write(response);
+  StreamGDBRemote escaped_response;
+  escaped_response.PutEscapedBytes(response.GetData(), response.GetSize());
+  return SendPacketNoLock(escaped_response.GetString());
 }
 
 void GDBRemoteCommunicationServerCommon::CreateProcessInfoResponse(
@@ -1229,4 +1279,25 @@ FileSpec GDBRemoteCommunicationServerCommon::FindModuleFile(
 #else
   return FileSpec(module_path.c_str(), true);
 #endif
+}
+
+ModuleSpec GDBRemoteCommunicationServerCommon::GetModuleInfo(
+    const std::string &module_path, const std::string &triple) {
+  ArchSpec arch(triple.c_str());
+
+  const FileSpec req_module_path_spec(module_path.c_str(), true);
+  const FileSpec module_path_spec =
+      FindModuleFile(req_module_path_spec.GetPath(), arch);
+  const ModuleSpec module_spec(module_path_spec, arch);
+
+  ModuleSpecList module_specs;
+  if (!ObjectFile::GetModuleSpecifications(module_path_spec, 0, 0,
+                                           module_specs))
+    return ModuleSpec();
+
+  ModuleSpec matched_module_spec;
+  if (!module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec))
+    return ModuleSpec();
+
+  return matched_module_spec;
 }

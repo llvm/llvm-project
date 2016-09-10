@@ -34,4 +34,4 @@
 
 # RUN: echo "{ extern \"BOGUS\" { test }; };" > %t1
 # RUN: not ld.lld --dynamic-list %t1 2>&1 | FileCheck -check-prefix=ERR6 %s
-# ERR6: line 1: ; expected, but got BOGUS
+# ERR6: line 1: ; expected, but got "BOGUS"

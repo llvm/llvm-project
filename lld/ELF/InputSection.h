@@ -42,17 +42,29 @@ public:
 
   // The garbage collector sets sections' Live bits.
   // If GC is disabled, all sections are considered live by default.
-  InputSectionData(Kind SectionKind, bool Compressed, bool Live)
-      : SectionKind(SectionKind), Live(Live), Compressed(Compressed) {}
+  InputSectionData(Kind SectionKind, StringRef Name, bool Compressed, bool Live)
+      : SectionKind(SectionKind), Live(Live), Compressed(Compressed),
+        Name(Name) {}
 
-  Kind SectionKind;
-  uint32_t Alignment;
+private:
+  unsigned SectionKind : 3;
+
+public:
+  Kind kind() const { return (Kind)SectionKind; }
+
   // Used for garbage collection.
-  bool Live;
+  unsigned Live : 1;
 
-  bool Compressed;
+  unsigned Compressed : 1;
+
+  uint32_t Alignment;
+
+  StringRef Name;
+
   // If a section is compressed, this vector has uncompressed section data.
   SmallVector<char, 0> Uncompressed;
+
+  std::vector<Relocation> Relocations;
 };
 
 // This corresponds to a section of an input file.
@@ -70,10 +82,11 @@ protected:
   ObjectFile<ELFT> *File;
 
 public:
-  InputSectionBase() : InputSectionData(Regular, false, false), Repl(this) {}
+  InputSectionBase()
+      : InputSectionData(Regular, "", false, false), Repl(this) {}
 
   InputSectionBase(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
-                   Kind SectionKind);
+                   StringRef Name, Kind SectionKind);
   OutputSectionBase<ELFT> *OutSec = nullptr;
 
   // This pointer points to the "real" instance of this instance.
@@ -88,7 +101,6 @@ public:
 
   static InputSectionBase<ELFT> Discarded;
 
-  StringRef getSectionName() const;
   const Elf_Shdr *getSectionHdr() const { return Header; }
   ObjectFile<ELFT> *getFile() const { return File; }
   uintX_t getOffset(const DefinedRegular<ELFT> &Sym) const;
@@ -102,7 +114,6 @@ public:
   void uncompress();
 
   void relocate(uint8_t *Buf, uint8_t *BufEnd);
-  std::vector<Relocation<ELFT>> Relocations;
 };
 
 template <class ELFT> InputSectionBase<ELFT> InputSectionBase<ELFT>::Discarded;
@@ -137,7 +148,8 @@ template <class ELFT> class MergeInputSection : public InputSectionBase<ELFT> {
   typedef typename ELFT::Shdr Elf_Shdr;
 
 public:
-  MergeInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
+  MergeInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header,
+                    StringRef Name);
   static bool classof(const InputSectionBase<ELFT> *S);
   void splitIntoPieces();
 
@@ -177,7 +189,7 @@ template <class ELFT> class EhInputSection : public InputSectionBase<ELFT> {
 public:
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::uint uintX_t;
-  EhInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
+  EhInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header, StringRef Name);
   static bool classof(const InputSectionBase<ELFT> *S);
   void split();
   template <class RelTy> void split(ArrayRef<RelTy> Rels);
@@ -201,7 +213,7 @@ template <class ELFT> class InputSection : public InputSectionBase<ELFT> {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  InputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
+  InputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header, StringRef Name);
 
   // Write this section to a mmap'ed file, assuming Buf is pointing to
   // beginning of the output section.
@@ -256,7 +268,8 @@ class MipsReginfoInputSection : public InputSectionBase<ELFT> {
   typedef typename ELFT::Shdr Elf_Shdr;
 
 public:
-  MipsReginfoInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr);
+  MipsReginfoInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr,
+                          StringRef Name);
   static bool classof(const InputSectionBase<ELFT> *S);
 
   const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
@@ -267,7 +280,8 @@ class MipsOptionsInputSection : public InputSectionBase<ELFT> {
   typedef typename ELFT::Shdr Elf_Shdr;
 
 public:
-  MipsOptionsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr);
+  MipsOptionsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr,
+                          StringRef Name);
   static bool classof(const InputSectionBase<ELFT> *S);
 
   const llvm::object::Elf_Mips_RegInfo<ELFT> *Reginfo = nullptr;
@@ -278,7 +292,8 @@ class MipsAbiFlagsInputSection : public InputSectionBase<ELFT> {
   typedef typename ELFT::Shdr Elf_Shdr;
 
 public:
-  MipsAbiFlagsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr);
+  MipsAbiFlagsInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Hdr,
+                           StringRef Name);
   static bool classof(const InputSectionBase<ELFT> *S);
 
   const llvm::object::Elf_Mips_ABIFlags<ELFT> *Flags = nullptr;

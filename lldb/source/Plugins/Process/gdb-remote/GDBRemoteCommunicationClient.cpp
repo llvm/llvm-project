@@ -32,6 +32,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/JSON.h"
 #include "lldb/Utility/LLDBAssert.h"
 
 // Project includes
@@ -93,8 +94,8 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supports_z4(true), m_supports_QEnvironment(true),
       m_supports_QEnvironmentHexEncoded(true), m_supports_qSymbol(true),
       m_qSymbol_requests_done(false), m_supports_qModuleInfo(true),
-      m_supports_jThreadsInfo(true), m_curr_pid(LLDB_INVALID_PROCESS_ID),
-      m_curr_tid(LLDB_INVALID_THREAD_ID),
+      m_supports_jThreadsInfo(true), m_supports_jModulesInfo(true),
+      m_curr_pid(LLDB_INVALID_PROCESS_ID), m_curr_tid(LLDB_INVALID_THREAD_ID),
       m_curr_tid_run(LLDB_INVALID_THREAD_ID),
       m_num_supported_hardware_watchpoints(0), m_host_arch(), m_process_arch(),
       m_os_version_major(UINT32_MAX), m_os_version_minor(UINT32_MAX),
@@ -323,6 +324,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_qSupported_response.clear();
     m_supported_async_json_packets_is_valid = false;
     m_supported_async_json_packets_sp.reset();
+    m_supports_jModulesInfo = true;
   }
 
   // These flags should be reset when we first connect to a GDB server
@@ -3230,6 +3232,90 @@ bool GDBRemoteCommunicationClient::GetModuleInfo(
   }
 
   return true;
+}
+
+static llvm::Optional<ModuleSpec>
+ParseModuleSpec(StructuredData::Dictionary *dict) {
+  ModuleSpec result;
+  if (!dict)
+    return llvm::None;
+
+  std::string string;
+  uint64_t integer;
+
+  if (!dict->GetValueForKeyAsString("uuid", string))
+    return llvm::None;
+  result.GetUUID().SetFromCString(string.c_str(), string.size());
+
+  if (!dict->GetValueForKeyAsInteger("file_offset", integer))
+    return llvm::None;
+  result.SetObjectOffset(integer);
+
+  if (!dict->GetValueForKeyAsInteger("file_size", integer))
+    return llvm::None;
+  result.SetObjectSize(integer);
+
+  if (!dict->GetValueForKeyAsString("triple", string))
+    return llvm::None;
+  result.GetArchitecture().SetTriple(string.c_str());
+
+  if (!dict->GetValueForKeyAsString("file_path", string))
+    return llvm::None;
+  result.GetFileSpec() = FileSpec(string, false, result.GetArchitecture());
+
+  return result;
+}
+
+llvm::Optional<std::vector<ModuleSpec>>
+GDBRemoteCommunicationClient::GetModulesInfo(
+    llvm::ArrayRef<FileSpec> module_file_specs, const llvm::Triple &triple) {
+  if (!m_supports_jModulesInfo)
+    return llvm::None;
+
+  JSONArray::SP module_array_sp = std::make_shared<JSONArray>();
+  for (const FileSpec &module_file_spec : module_file_specs) {
+    JSONObject::SP module_sp = std::make_shared<JSONObject>();
+    module_array_sp->AppendObject(module_sp);
+    module_sp->SetObject(
+        "file", std::make_shared<JSONString>(module_file_spec.GetPath()));
+    module_sp->SetObject("triple",
+                         std::make_shared<JSONString>(triple.getTriple()));
+  }
+  StreamString unescaped_payload;
+  unescaped_payload.PutCString("jModulesInfo:");
+  module_array_sp->Write(unescaped_payload);
+  StreamGDBRemote payload;
+  payload.PutEscapedBytes(unescaped_payload.GetData(),
+                          unescaped_payload.GetSize());
+
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(payload.GetString(), response, false) !=
+          PacketResult::Success ||
+      response.IsErrorResponse())
+    return llvm::None;
+
+  if (response.IsUnsupportedResponse()) {
+    m_supports_jModulesInfo = false;
+    return llvm::None;
+  }
+
+  StructuredData::ObjectSP response_object_sp =
+      StructuredData::ParseJSON(response.GetStringRef());
+  if (!response_object_sp)
+    return llvm::None;
+
+  StructuredData::Array *response_array = response_object_sp->GetAsArray();
+  if (!response_array)
+    return llvm::None;
+
+  std::vector<ModuleSpec> result;
+  for (size_t i = 0; i < response_array->GetSize(); ++i) {
+    if (llvm::Optional<ModuleSpec> module_spec = ParseModuleSpec(
+            response_array->GetItemAtIndex(i)->GetAsDictionary()))
+      result.push_back(*module_spec);
+  }
+
+  return result;
 }
 
 // query the target remote for extended information using the qXfer packet

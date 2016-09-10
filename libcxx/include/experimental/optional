@@ -8,8 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_OPTIONAL
-#define _LIBCPP_OPTIONAL
+#ifndef _LIBCPP_EXPERIMENTAL_OPTIONAL
+#define _LIBCPP_EXPERIMENTAL_OPTIONAL
 
 /*
     optional synopsis
@@ -211,7 +211,7 @@ protected:
         :  __engaged_(__x.__engaged_)
         {
             if (__engaged_)
-                ::new(_VSTD::addressof(__val_)) value_type(__x.__val_);
+                ::new((void*)_VSTD::addressof(__val_)) value_type(__x.__val_);
         }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -220,7 +220,7 @@ protected:
         :  __engaged_(__x.__engaged_)
         {
             if (__engaged_)
-                ::new(_VSTD::addressof(__val_)) value_type(_VSTD::move(__x.__val_));
+                ::new((void*)_VSTD::addressof(__val_)) value_type(_VSTD::move(__x.__val_));
         }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -262,7 +262,7 @@ protected:
         :  __engaged_(__x.__engaged_)
         {
             if (__engaged_)
-                ::new(_VSTD::addressof(__val_)) value_type(__x.__val_);
+                ::new((void*)_VSTD::addressof(__val_)) value_type(__x.__val_);
         }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -271,7 +271,7 @@ protected:
         :  __engaged_(__x.__engaged_)
         {
             if (__engaged_)
-                ::new(_VSTD::addressof(__val_)) value_type(_VSTD::move(__x.__val_));
+                ::new((void*)_VSTD::addressof(__val_)) value_type(_VSTD::move(__x.__val_));
         }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -368,7 +368,7 @@ public:
             if (this->__engaged_)
                 this->__val_.~value_type();
             else
-                ::new(_VSTD::addressof(this->__val_)) value_type(__opt.__val_);
+                ::new((void*)_VSTD::addressof(this->__val_)) value_type(__opt.__val_);
             this->__engaged_ = __opt.__engaged_;
         }
         return *this;
@@ -390,7 +390,8 @@ public:
             if (this->__engaged_)
                 this->__val_.~value_type();
             else
-                ::new(_VSTD::addressof(this->__val_)) value_type(_VSTD::move(__opt.__val_));
+                ::new((void*)_VSTD::addressof(this->__val_))
+                    value_type(_VSTD::move(__opt.__val_));
             this->__engaged_ = __opt.__engaged_;
         }
         return *this;
@@ -412,7 +413,7 @@ public:
             this->__val_ = _VSTD::forward<_Up>(__v);
         else
         {
-            ::new(_VSTD::addressof(this->__val_)) value_type(_VSTD::forward<_Up>(__v));
+            ::new((void*)_VSTD::addressof(this->__val_)) value_type(_VSTD::forward<_Up>(__v));
             this->__engaged_ = true;
         }
         return *this;
@@ -429,7 +430,8 @@ public:
     emplace(_Args&&... __args)
     {
         *this = nullopt;
-        ::new(_VSTD::addressof(this->__val_)) value_type(_VSTD::forward<_Args>(__args)...);
+        ::new((void*)_VSTD::addressof(this->__val_))
+            value_type(_VSTD::forward<_Args>(__args)...);
         this->__engaged_ = true;
     }
 
@@ -444,7 +446,8 @@ public:
     emplace(initializer_list<_Up> __il, _Args&&... __args)
     {
         *this = nullopt;
-        ::new(_VSTD::addressof(this->__val_)) value_type(__il, _VSTD::forward<_Args>(__args)...);
+        ::new((void*)_VSTD::addressof(this->__val_))
+            value_type(__il, _VSTD::forward<_Args>(__args)...);
         this->__engaged_ = true;
     }
 
@@ -464,12 +467,14 @@ public:
         {
             if (this->__engaged_)
             {
-                ::new(_VSTD::addressof(__opt.__val_)) value_type(_VSTD::move(this->__val_));
+                ::new((void*)_VSTD::addressof(__opt.__val_))
+                    value_type(_VSTD::move(this->__val_));
                 this->__val_.~value_type();
             }
             else
             {
-                ::new(_VSTD::addressof(this->__val_)) value_type(_VSTD::move(__opt.__val_));
+                ::new((void*)_VSTD::addressof(this->__val_))
+                    value_type(_VSTD::move(__opt.__val_));
                 __opt.__val_.~value_type();
             }
             swap(this->__engaged_, __opt.__engaged_);
@@ -901,4 +906,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif  // _LIBCPP_STD_VER > 11
 
-#endif  // _LIBCPP_OPTIONAL
+#endif  // _LIBCPP_EXPERIMENTAL_OPTIONAL

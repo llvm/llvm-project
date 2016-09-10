@@ -1920,8 +1920,6 @@ void AppleObjCRuntimeV2::WarnIfNoClassesCached(
                          "reduce the quality of type information available.\n");
       m_noclasses_warning_emitted = true;
       break;
-    default:
-      break;
     }
   }
 }

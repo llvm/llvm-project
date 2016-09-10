@@ -181,7 +181,7 @@ private:
   MipsGotEntries MipsGlobal;
 
   // Write MIPS-specific parts of the GOT.
-  void writeMipsGot(uint8_t *&Buf);
+  void writeMipsGot(uint8_t *Buf);
 };
 
 template <class ELFT>

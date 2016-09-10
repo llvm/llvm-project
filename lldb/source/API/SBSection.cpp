@@ -188,6 +188,15 @@ SectionType SBSection::GetSectionType() {
   return eSectionTypeInvalid;
 }
 
+uint32_t
+SBSection::GetPermissions() const
+{
+    SectionSP section_sp(GetSP());
+    if (section_sp)
+        return section_sp->GetPermissions();
+    return 0;
+}
+
 uint32_t SBSection::GetTargetByteSize() {
   SectionSP section_sp(GetSP());
   if (section_sp.get())

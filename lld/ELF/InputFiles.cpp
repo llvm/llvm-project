@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -233,53 +234,6 @@ void elf::ObjectFile<ELFT>::initializeSections(
     case SHT_STRTAB:
     case SHT_NULL:
       break;
-    case SHT_RELA:
-    case SHT_REL: {
-      // This section contains relocation information.
-      // If -r is given, we do not interpret or apply relocation
-      // but just copy relocation sections to output.
-      if (Config->Relocatable) {
-        Sections[I] = new (IAlloc.Allocate()) InputSection<ELFT>(this, &Sec);
-        break;
-      }
-
-      // Find the relocation target section and associate this
-      // section with it.
-      InputSectionBase<ELFT> *Target = getRelocTarget(Sec);
-      if (!Target)
-        break;
-      if (auto *S = dyn_cast<InputSection<ELFT>>(Target)) {
-        S->RelocSections.push_back(&Sec);
-        break;
-      }
-      if (auto *S = dyn_cast<EhInputSection<ELFT>>(Target)) {
-        if (S->RelocSection)
-          fatal(
-              getFilename(this) +
-              ": multiple relocation sections to .eh_frame are not supported");
-        S->RelocSection = &Sec;
-        break;
-      }
-      fatal(getFilename(this) +
-            ": relocations pointing to SHF_MERGE are not supported");
-    }
-    case SHT_ARM_ATTRIBUTES:
-      // FIXME: ARM meta-data section. At present attributes are ignored,
-      // they can be used to reason about object compatibility.
-      Sections[I] = &InputSection<ELFT>::Discarded;
-      break;
-    case SHT_MIPS_REGINFO:
-      MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec));
-      Sections[I] = MipsReginfo.get();
-      break;
-    case SHT_MIPS_OPTIONS:
-      MipsOptions.reset(new MipsOptionsInputSection<ELFT>(this, &Sec));
-      Sections[I] = MipsOptions.get();
-      break;
-    case SHT_MIPS_ABIFLAGS:
-      MipsAbiFlags.reset(new MipsAbiFlagsInputSection<ELFT>(this, &Sec));
-      Sections[I] = MipsAbiFlags.get();
-      break;
     default:
       Sections[I] = createInputSection(Sec);
     }
@@ -311,6 +265,49 @@ InputSectionBase<ELFT> *
 elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   StringRef Name = check(this->ELFObj.getSectionName(&Sec));
 
+  switch (Sec.sh_type) {
+  case SHT_ARM_ATTRIBUTES:
+    // FIXME: ARM meta-data section. At present attributes are ignored,
+    // they can be used to reason about object compatibility.
+    return &InputSection<ELFT>::Discarded;
+  case SHT_MIPS_REGINFO:
+    MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec, Name));
+    return MipsReginfo.get();
+  case SHT_MIPS_OPTIONS:
+    MipsOptions.reset(new MipsOptionsInputSection<ELFT>(this, &Sec, Name));
+    return MipsOptions.get();
+  case SHT_MIPS_ABIFLAGS:
+    MipsAbiFlags.reset(new MipsAbiFlagsInputSection<ELFT>(this, &Sec, Name));
+    return MipsAbiFlags.get();
+  case SHT_RELA:
+  case SHT_REL: {
+    // This section contains relocation information.
+    // If -r is given, we do not interpret or apply relocation
+    // but just copy relocation sections to output.
+    if (Config->Relocatable)
+      return new (IAlloc.Allocate()) InputSection<ELFT>(this, &Sec, Name);
+
+    // Find the relocation target section and associate this
+    // section with it.
+    InputSectionBase<ELFT> *Target = getRelocTarget(Sec);
+    if (!Target)
+      return nullptr;
+    if (auto *S = dyn_cast<InputSection<ELFT>>(Target)) {
+      S->RelocSections.push_back(&Sec);
+      return nullptr;
+    }
+    if (auto *S = dyn_cast<EhInputSection<ELFT>>(Target)) {
+      if (S->RelocSection)
+        fatal(getFilename(this) +
+              ": multiple relocation sections to .eh_frame are not supported");
+      S->RelocSection = &Sec;
+      return nullptr;
+    }
+    fatal(getFilename(this) +
+          ": relocations pointing to SHF_MERGE are not supported");
+  }
+  }
+
   // .note.GNU-stack is a marker section to control the presence of
   // PT_GNU_STACK segment in outputs. Since the presence of the segment
   // is controlled only by the command line option (-z execstack) in LLD,
@@ -330,11 +327,11 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // .eh_frame_hdr section for runtime. So we handle them with a special
   // class. For relocatable outputs, they are just passed through.
   if (Name == ".eh_frame" && !Config->Relocatable)
-    return new (EHAlloc.Allocate()) EhInputSection<ELFT>(this, &Sec);
+    return new (EHAlloc.Allocate()) EhInputSection<ELFT>(this, &Sec, Name);
 
   if (shouldMerge(Sec))
-    return new (MAlloc.Allocate()) MergeInputSection<ELFT>(this, &Sec);
-  return new (IAlloc.Allocate()) InputSection<ELFT>(this, &Sec);
+    return new (MAlloc.Allocate()) MergeInputSection<ELFT>(this, &Sec, Name);
+  return new (IAlloc.Allocate()) InputSection<ELFT>(this, &Sec, Name);
 }
 
 template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
@@ -481,7 +478,7 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
   }
 
   this->initStringTable();
-  SoName = this->getName();
+  SoName = sys::path::filename(this->getName());
 
   if (!DynamicSec)
     return;

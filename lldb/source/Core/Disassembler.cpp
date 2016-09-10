@@ -29,6 +29,7 @@
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Interpreter/OptionValueArray.h"
 #include "lldb/Interpreter/OptionValueDictionary.h"
+#include "lldb/Interpreter/OptionValueRegex.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Symbol/Function.h"
@@ -120,6 +121,7 @@ size_t Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                  const ExecutionContext &exe_ctx,
                                  SymbolContextList &sc_list,
                                  uint32_t num_instructions,
+                                 bool mixed_source_and_assembly,
                                  uint32_t num_mixed_context_lines,
                                  uint32_t options, Stream &strm) {
   size_t success_count = 0;
@@ -136,8 +138,8 @@ size_t Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
          sc.GetAddressRange(scope, range_idx, use_inline_block_range, range);
          ++range_idx) {
       if (Disassemble(debugger, arch, plugin_name, flavor, exe_ctx, range,
-                      num_instructions, num_mixed_context_lines, options,
-                      strm)) {
+                      num_instructions, mixed_source_and_assembly,
+                      num_mixed_context_lines, options, strm)) {
         ++success_count;
         strm.EOL();
       }
@@ -151,6 +153,7 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                const ExecutionContext &exe_ctx,
                                const ConstString &name, Module *module,
                                uint32_t num_instructions,
+                               bool mixed_source_and_assembly,
                                uint32_t num_mixed_context_lines,
                                uint32_t options, Stream &strm) {
   SymbolContextList sc_list;
@@ -169,8 +172,8 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
 
   if (sc_list.GetSize()) {
     return Disassemble(debugger, arch, plugin_name, flavor, exe_ctx, sc_list,
-                       num_instructions, num_mixed_context_lines, options,
-                       strm);
+                       num_instructions, mixed_source_and_assembly,
+                       num_mixed_context_lines, options, strm);
   }
   return false;
 }
@@ -221,6 +224,7 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                const ExecutionContext &exe_ctx,
                                const AddressRange &disasm_range,
                                uint32_t num_instructions,
+                               bool mixed_source_and_assembly,
                                uint32_t num_mixed_context_lines,
                                uint32_t options, Stream &strm) {
   if (disasm_range.GetByteSize()) {
@@ -239,8 +243,8 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
         return false;
 
       return PrintInstructions(disasm_sp.get(), debugger, arch, exe_ctx,
-                               num_instructions, num_mixed_context_lines,
-                               options, strm);
+                               num_instructions, mixed_source_and_assembly,
+                               num_mixed_context_lines, options, strm);
     }
   }
   return false;
@@ -251,6 +255,7 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                const ExecutionContext &exe_ctx,
                                const Address &start_address,
                                uint32_t num_instructions,
+                               bool mixed_source_and_assembly,
                                uint32_t num_mixed_context_lines,
                                uint32_t options, Stream &strm) {
   if (num_instructions > 0) {
@@ -265,10 +270,87 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
       if (bytes_disassembled == 0)
         return false;
       return PrintInstructions(disasm_sp.get(), debugger, arch, exe_ctx,
-                               num_instructions, num_mixed_context_lines,
-                               options, strm);
+                               num_instructions, mixed_source_and_assembly,
+                               num_mixed_context_lines, options, strm);
     }
   }
+  return false;
+}
+
+Disassembler::SourceLine
+Disassembler::GetFunctionDeclLineEntry(const SymbolContext &sc) {
+  SourceLine decl_line;
+  if (sc.function && sc.line_entry.IsValid()) {
+    LineEntry prologue_end_line = sc.line_entry;
+    FileSpec func_decl_file;
+    uint32_t func_decl_line;
+    sc.function->GetStartLineSourceInfo(func_decl_file, func_decl_line);
+    if (func_decl_file == prologue_end_line.file ||
+        func_decl_file == prologue_end_line.original_file) {
+      decl_line.file = func_decl_file;
+      decl_line.line = func_decl_line;
+    }
+  }
+  return decl_line;
+}
+
+void Disassembler::AddLineToSourceLineTables(
+    SourceLine &line,
+    std::map<FileSpec, std::set<uint32_t>> &source_lines_seen) {
+  if (line.IsValid()) {
+    auto source_lines_seen_pos = source_lines_seen.find(line.file);
+    if (source_lines_seen_pos == source_lines_seen.end()) {
+      std::set<uint32_t> lines;
+      lines.insert(line.line);
+      source_lines_seen.emplace(line.file, lines);
+    } else {
+      source_lines_seen_pos->second.insert(line.line);
+    }
+  }
+}
+
+bool Disassembler::ElideMixedSourceAndDisassemblyLine(
+    const ExecutionContext &exe_ctx, const SymbolContext &sc,
+    SourceLine &line) {
+
+  // TODO: should we also check target.process.thread.step-avoid-libraries ?
+
+  const RegularExpression *avoid_regex = nullptr;
+
+  // Skip any line #0 entries - they are implementation details
+  if (line.line == 0)
+    return false;
+
+  ThreadSP thread_sp = exe_ctx.GetThreadSP();
+  if (thread_sp) {
+    avoid_regex = thread_sp->GetSymbolsToAvoidRegexp();
+  } else {
+    TargetSP target_sp = exe_ctx.GetTargetSP();
+    if (target_sp) {
+      Error error;
+      OptionValueSP value_sp = target_sp->GetDebugger().GetPropertyValue(
+          &exe_ctx, "target.process.thread.step-avoid-regexp", false, error);
+      if (value_sp && value_sp->GetType() == OptionValue::eTypeRegex) {
+        OptionValueRegex *re = value_sp->GetAsRegex();
+        if (re) {
+          avoid_regex = re->GetCurrentValue();
+        }
+      }
+    }
+  }
+  if (avoid_regex && sc.symbol != nullptr) {
+    const char *function_name =
+        sc.GetFunctionName(Mangled::ePreferDemangledWithoutArguments)
+            .GetCString();
+    if (function_name) {
+      RegularExpression::Match regex_match(1);
+      if (avoid_regex->Execute(function_name, &regex_match)) {
+        // skip this source line
+        return true;
+      }
+    }
+  }
+  // don't skip this source line
   return false;
 }
 
@@ -276,6 +358,7 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
                                      Debugger &debugger, const ArchSpec &arch,
                                      const ExecutionContext &exe_ctx,
                                      uint32_t num_instructions,
+                                     bool mixed_source_and_assembly,
                                      uint32_t num_mixed_context_lines,
                                      uint32_t options, Stream &strm) {
   // We got some things disassembled...
@@ -286,10 +369,9 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
 
   const uint32_t max_opcode_byte_size =
       disasm_ptr->GetInstructionList().GetMaxOpcocdeByteSize();
-  uint32_t offset = 0;
   SymbolContext sc;
   SymbolContext prev_sc;
-  AddressRange sc_range;
+  AddressRange current_source_line_range;
   const Address *pc_addr_ptr = nullptr;
   StackFrame *frame = exe_ctx.GetFramePtr();
 
@@ -317,6 +399,16 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
   // First pass: step through the list of instructions,
   // find how long the initial addresses strings are, insert padding
   // in the second pass so the opcodes all line up nicely.
+
+  // Also build up the source line mapping if this is mixed source & assembly
+  // mode.
+  // Calculate the source line for each assembly instruction (eliding inlined
+  // functions
+  // which the user wants to skip).
+
+  std::map<FileSpec, std::set<uint32_t>> source_lines_seen;
+  Symbol *previous_symbol = nullptr;
+
   size_t address_text_size = 0;
   for (size_t i = 0; i < num_instructions_found; ++i) {
     Instruction *inst =
@@ -325,8 +417,9 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
       const Address &addr = inst->GetAddress();
       ModuleSP module_sp(addr.GetModule());
       if (module_sp) {
-        const uint32_t resolve_mask =
-            eSymbolContextFunction | eSymbolContextSymbol;
+        const uint32_t resolve_mask = eSymbolContextFunction |
+                                      eSymbolContextSymbol |
+                                      eSymbolContextLineEntry;
         uint32_t resolved_mask =
             module_sp->ResolveSymbolContextForAddress(addr, resolve_mask, sc);
         if (resolved_mask) {
@@ -336,18 +429,46 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
           size_t cur_line = strmstr.GetSizeOfLastLine();
           if (cur_line > address_text_size)
             address_text_size = cur_line;
+
+          // Add entries to our "source_lines_seen" map+set which list which
+          // sources lines occur in this disassembly session.  We will print
+          // lines of context around a source line, but we don't want to print
+          // a source line that has a line table entry of its own - we'll leave
+          // that source line to be printed when it actually occurs in the
+          // disassembly.
+
+          if (mixed_source_and_assembly && sc.line_entry.IsValid()) {
+            if (sc.symbol != previous_symbol) {
+              SourceLine decl_line = GetFunctionDeclLineEntry(sc);
+              if (ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, decl_line) ==
+                  false)
+                AddLineToSourceLineTables(decl_line, source_lines_seen);
+            }
+            if (sc.line_entry.IsValid()) {
+              SourceLine this_line;
+              this_line.file = sc.line_entry.file;
+              this_line.line = sc.line_entry.line;
+              if (ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, this_line) ==
+                  false)
+                AddLineToSourceLineTables(this_line, source_lines_seen);
+            }
+          }
         }
         sc.Clear(false);
       }
     }
   }
 
+  previous_symbol = nullptr;
+  SourceLine previous_line;
   for (size_t i = 0; i < num_instructions_found; ++i) {
     Instruction *inst =
         disasm_ptr->GetInstructionList().GetInstructionAtIndex(i).get();
+
     if (inst) {
       const Address &addr = inst->GetAddress();
       const bool inst_is_at_pc = pc_addr_ptr && addr == *pc_addr_ptr;
+      SourceLinesToDisplay source_lines_to_display;
 
       prev_sc = sc;
 
@@ -356,26 +477,121 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
         uint32_t resolved_mask = module_sp->ResolveSymbolContextForAddress(
             addr, eSymbolContextEverything, sc);
         if (resolved_mask) {
-          if (num_mixed_context_lines) {
-            if (!sc_range.ContainsFileAddress(addr)) {
-              sc.GetAddressRange(scope, 0, use_inline_block_range, sc_range);
+          if (mixed_source_and_assembly) {
 
-              if (sc != prev_sc) {
-                if (offset != 0)
-                  strm.EOL();
+            // If we've started a new function (non-inlined), print all of the
+            // source lines from the
+            // function declaration until the first line table entry - typically
+            // the opening curly brace of
+            // the function.
+            if (previous_symbol != sc.symbol) {
+              // The default disassembly format puts an extra blank line between
+              // functions - so
+              // when we're displaying the source context for a function, we
+              // don't want to add
+              // a blank line after the source context or we'll end up with two
+              // of them.
+              if (previous_symbol != nullptr)
+                source_lines_to_display.print_source_context_end_eol = false;
 
-                sc.DumpStopContext(&strm, exe_ctx.GetProcessPtr(), addr, false,
-                                   true, false, false, true);
-                strm.EOL();
+              previous_symbol = sc.symbol;
+              if (sc.function && sc.line_entry.IsValid()) {
+                LineEntry prologue_end_line = sc.line_entry;
+                if (ElideMixedSourceAndDisassemblyLine(
+                        exe_ctx, sc, prologue_end_line) == false) {
+                  FileSpec func_decl_file;
+                  uint32_t func_decl_line;
+                  sc.function->GetStartLineSourceInfo(func_decl_file,
+                                                      func_decl_line);
+                  if (func_decl_file == prologue_end_line.file ||
+                      func_decl_file == prologue_end_line.original_file) {
+                    // Add all the lines between the function declaration
+                    // and the first non-prologue source line to the list
+                    // of lines to print.
+                    for (uint32_t lineno = func_decl_line;
+                         lineno <= prologue_end_line.line; lineno++) {
+                      SourceLine this_line;
+                      this_line.file = func_decl_file;
+                      this_line.line = lineno;
+                      source_lines_to_display.lines.push_back(this_line);
+                    }
+                    // Mark the last line as the "current" one.  Usually
+                    // this is the open curly brace.
+                    if (source_lines_to_display.lines.size() > 0)
+                      source_lines_to_display.current_source_line =
+                          source_lines_to_display.lines.size() - 1;
+                  }
+                }
+              }
+              sc.GetAddressRange(scope, 0, use_inline_block_range,
+                                 current_source_line_range);
+            }
 
-                if (sc.comp_unit && sc.line_entry.IsValid()) {
-                  source_manager.DisplaySourceLinesWithLineNumbers(
-                      sc.line_entry.file, sc.line_entry.line,
-                      num_mixed_context_lines, num_mixed_context_lines,
-                      ((inst_is_at_pc && (options & eOptionMarkPCSourceLine))
-                           ? "->"
-                           : ""),
-                      &strm);
+            // If we've left a previous source line's address range, print a new
+            // source line
+            if (!current_source_line_range.ContainsFileAddress(addr)) {
+              sc.GetAddressRange(scope, 0, use_inline_block_range,
+                                 current_source_line_range);
+
+              if (sc != prev_sc && sc.comp_unit && sc.line_entry.IsValid()) {
+                SourceLine this_line;
+                this_line.file = sc.line_entry.file;
+                this_line.line = sc.line_entry.line;
+
+                if (ElideMixedSourceAndDisassemblyLine(exe_ctx, sc,
+                                                       this_line) == false) {
+                  // Only print this source line if it is different from the
+                  // last source line we printed.  There may have been inlined
+                  // functions between these lines that we elided, resulting in
+                  // the same line being printed twice in a row for a contiguous
+                  // block of assembly instructions.
+                  if (this_line != previous_line) {
+
+                    std::vector<uint32_t> previous_lines;
+                    for (uint32_t i = 0;
+                         i < num_mixed_context_lines &&
+                         (this_line.line - num_mixed_context_lines) > 0;
+                         i++) {
+                      uint32_t line =
+                          this_line.line - num_mixed_context_lines + i;
+                      auto pos = source_lines_seen.find(this_line.file);
+                      if (pos != source_lines_seen.end()) {
+                        if (pos->second.count(line) == 1) {
+                          previous_lines.clear();
+                        } else {
+                          previous_lines.push_back(line);
+                        }
+                      }
+                    }
+                    for (size_t i = 0; i < previous_lines.size(); i++) {
+                      SourceLine previous_line;
+                      previous_line.file = this_line.file;
+                      previous_line.line = previous_lines[i];
+                      auto pos = source_lines_seen.find(previous_line.file);
+                      if (pos != source_lines_seen.end()) {
+                        pos->second.insert(previous_line.line);
+                      }
+                      source_lines_to_display.lines.push_back(previous_line);
+                    }
+
+                    source_lines_to_display.lines.push_back(this_line);
+                    source_lines_to_display.current_source_line =
+                        source_lines_to_display.lines.size() - 1;
+
+                    for (uint32_t i = 0; i < num_mixed_context_lines; i++) {
+                      SourceLine next_line;
+                      next_line.file = this_line.file;
+                      next_line.line = this_line.line + i + 1;
+                      auto pos = source_lines_seen.find(next_line.file);
+                      if (pos != source_lines_seen.end()) {
+                        if (pos->second.count(next_line.line) == 1)
+                          break;
+                        pos->second.insert(next_line.line);
+                      }
+                      source_lines_to_display.lines.push_back(next_line);
+                    }
+                  }
+                  previous_line = this_line;
                 }
               }
             }
@@ -383,6 +599,24 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
         } else {
           sc.Clear(true);
         }
+      }
+
+      if (source_lines_to_display.lines.size() > 0) {
+        strm.EOL();
+        for (size_t idx = 0; idx < source_lines_to_display.lines.size();
+             idx++) {
+          SourceLine ln = source_lines_to_display.lines[idx];
+          const char *line_highlight = "";
+          if (inst_is_at_pc && (options & eOptionMarkPCSourceLine)) {
+            line_highlight = "->";
+          } else if (idx == source_lines_to_display.current_source_line) {
+            line_highlight = "**";
+          }
+          source_manager.DisplaySourceLinesWithLineNumbers(
+              ln.file, ln.line, 0, 0, line_highlight, &strm);
+        }
+        if (source_lines_to_display.print_source_context_end_eol)
+          strm.EOL();
       }
 
       const bool show_bytes = (options & eOptionShowBytes) != 0;
@@ -401,6 +635,7 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                const char *plugin_name, const char *flavor,
                                const ExecutionContext &exe_ctx,
                                uint32_t num_instructions,
+                               bool mixed_source_and_assembly,
                                uint32_t num_mixed_context_lines,
                                uint32_t options, Stream &strm) {
   AddressRange range;
@@ -422,7 +657,8 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
   }
 
   return Disassemble(debugger, arch, plugin_name, flavor, exe_ctx, range,
-                     num_instructions, num_mixed_context_lines, options, strm);
+                     num_instructions, mixed_source_and_assembly,
+                     num_mixed_context_lines, options, strm);
 }
 
 Instruction::Instruction(const Address &address, AddressClass addr_class)

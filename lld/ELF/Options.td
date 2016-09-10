@@ -74,6 +74,9 @@ def fatal_warnings: F<"fatal-warnings">,
 def fini: S<"fini">, MetaVarName<"<symbol>">,
   HelpText<"Specify a finalizer function">;
 
+def gc_sections: F<"gc-sections">,
+  HelpText<"Enable garbage collection of unused sections">;
+
 def hash_style: S<"hash-style">,
   HelpText<"Specify hash style (sysv, gnu or both)">;
 
@@ -82,9 +85,6 @@ def help: F<"help">, HelpText<"Print option help">;
 def icf: F<"icf=all">, HelpText<"Enable identical code folding">;
 
 def image_base : J<"image-base=">, HelpText<"Set the base address">;
-
-def gc_sections: F<"gc-sections">,
-  HelpText<"Enable garbage collection of unused sections">;
 
 def init: S<"init">, MetaVarName<"<symbol>">,
   HelpText<"Specify an initializer function">;
@@ -167,7 +167,7 @@ def trace: F<"trace">, HelpText<"Print the names of the input files">;
 
 def trace_symbol : J<"trace-symbol=">, HelpText<"Trace references to symbols">;
 
-def undefined: J<"undefined=">,
+def undefined: S<"undefined">,
   HelpText<"Force undefined symbol during linking">;
 
 def unresolved_symbols: J<"unresolved-symbols=">,
@@ -215,8 +215,8 @@ def alias_fini_fini: J<"fini=">, Alias<fini>;
 def alias_hash_style_hash_style: J<"hash-style=">, Alias<hash_style>;
 def alias_init_init: J<"init=">, Alias<init>;
 def alias_l__library: J<"library=">, Alias<l>;
-def alias_o_output: J<"output=">, Alias<o>;
-def alias_o_output2 : S<"output">, Alias<o>;
+def alias_o_output: Joined<["--"], "output=">, Alias<o>;
+def alias_o_output2 : Separate<["--"], "output">, Alias<o>;
 def alias_pie_pic_executable: F<"pic-executable">, Alias<pie>;
 def alias_relocatable_r: Flag<["-"], "r">, Alias<relocatable>;
 def alias_rpath_R: Joined<["-"], "R">, Alias<rpath>;
@@ -229,6 +229,7 @@ def alias_strip_all: Flag<["-"], "s">, Alias<strip_all>;
 def alias_strip_debug_S: Flag<["-"], "S">, Alias<strip_debug>;
 def alias_trace: Flag<["-"], "t">, Alias<trace>;
 def alias_trace_symbol_y : JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>;
+def alias_undefined_eq: J<"undefined=">, Alias<undefined>;
 def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 def alias_version_V: Flag<["-"], "V">, Alias<version>;
 def alias_version_v: Flag<["-"], "v">, Alias<version>;
@@ -277,6 +278,7 @@ def warn_shared_textrel: F<"warn-shared-textrel">;
 def EB : F<"EB">;
 def EL : F<"EL">;
 def G: JoinedOrSeparate<["-"], "G">;
+def Qy : F<"Qy">;
 
 // Aliases for ignored options
 def alias_define_common_d: Flag<["-"], "d">, Alias<define_common>;

@@ -186,4 +186,12 @@ int main()
 	assert(s_long == "Lorem ipsum dolor sit amet, consectetur/Lorem ipsum dolor sit amet, consectetur/");
 	}
 
+	{ // test assigning a different type
+    typedef std::string S;
+	const uint8_t p[] = "ABCD";
+
+	S s;
+	s.insert(s.begin(), p, p + 4);
+	assert(s == "ABCD");
+	}
 }

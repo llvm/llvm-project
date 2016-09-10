@@ -10,6 +10,8 @@
 #ifndef LLDB_lldb_Host_windows_AutoHandle_h_
 #define LLDB_lldb_Host_windows_AutoHandle_h_
 
+#include "lldb/Host/windows/windows.h"
+
 namespace lldb_private {
 
 class AutoHandle {

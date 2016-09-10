@@ -36,11 +36,17 @@
 
 (defcustom clang-include-fixer-init-string
   ""
-  "clang-include-fixer input format."
+  "clang-include-fixer init string."
   :group 'clang-include-fixer
   :type 'string
   :risky t)
 
+(defcustom clang-include-fixer-query-mode
+  nil
+  "clang-include-fixer query mode."
+  :group 'clang-include-fixer
+  :type 'boolean
+  :risky t)
 
 (defun clang-include-fixer-call-executable (callee
                                             include-fixer-parameter-a
@@ -197,11 +203,28 @@
   (message (concat "Calling the include fixer. "
            "This might take some seconds. Please wait."))
 
-  (clang-include-fixer-call-executable
-   'clang-include-fixer-add-header
-   (concat "-db=" clang-include-fixer-input-format)
-   (concat "-input=" clang-include-fixer-init-string)
-   "-output-headers"))
+  (if clang-include-fixer-query-mode
+      (let (p1 p2)
+      (save-excursion
+        (skip-chars-backward "-a-zA-Z0-9_:")
+        (setq p1 (point))
+        (skip-chars-forward "-a-zA-Z0-9_:")
+        (setq p2 (point))
+        (setq query-symbol (buffer-substring-no-properties p1 p2))
+        (if (string= "" query-symbol)
+            (message "Skip querying empty symbol.")
+          (clang-include-fixer-call-executable
+            'clang-include-fixer-add-header
+            (concat "-db=" clang-include-fixer-input-format)
+            (concat "-input=" clang-include-fixer-init-string)
+            (concat "-query-symbol=" (thing-at-point 'symbol))
+          ))))
+    (clang-include-fixer-call-executable
+      'clang-include-fixer-add-header
+      (concat "-db=" clang-include-fixer-input-format)
+      (concat "-input=" clang-include-fixer-init-string)
+      "-output-headers"))
+  )
 
 (provide 'clang-include-fixer)
 ;;; clang-include-fixer.el ends here

@@ -32,6 +32,7 @@ add_lld_library(lldELF
   BitWriter
   Codegen
   Core
+  Demangle
   IPO
   Linker
   LTO

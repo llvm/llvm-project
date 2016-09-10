@@ -89,7 +89,7 @@ private:
 
 template <class ELFT>
 StringRef elf::getOutputSectionName(InputSectionBase<ELFT> *S) {
-  StringRef Name = S->getSectionName();
+  StringRef Name = S->Name;
   for (StringRef V : {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
                       ".init_array.", ".fini_array.", ".ctors.", ".dtors.",
                       ".tbss.", ".gcc_except_table.", ".tdata.", ".ARM.exidx."})
@@ -101,8 +101,8 @@ StringRef elf::getOutputSectionName(InputSectionBase<ELFT> *S) {
 template <class ELFT> void elf::reportDiscarded(InputSectionBase<ELFT> *IS) {
   if (!Config->PrintGcSections || !IS || IS->Live)
     return;
-  errs() << "removing unused section from '" << IS->getSectionName()
-         << "' in file '" << IS->getFile()->getName() << "'\n";
+  errs() << "removing unused section from '" << IS->Name << "' in file '"
+         << IS->getFile()->getName() << "'\n";
 }
 
 template <class ELFT> static bool needsInterpSection() {
@@ -1168,10 +1168,14 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
     else if (H.p_type == PT_GNU_RELRO)
       H.p_align = 1;
 
-    H.p_paddr = H.p_vaddr;
-    if (H.p_type == PT_LOAD && First)
-      if (Expr LmaExpr = Script<ELFT>::X->getLma(First->getName()))
-        H.p_paddr = LmaExpr(H.p_vaddr);
+    if (!P.HasLMA) {
+    // The p_paddr field can be set using linker script AT command.
+    // By default, it is the same value as p_vaddr.
+      H.p_paddr = H.p_vaddr;
+      if (H.p_type == PT_LOAD && First)
+        if (Expr LmaExpr = Script<ELFT>::X->getLma(First->getName()))
+          H.p_paddr = LmaExpr(H.p_vaddr);
+    }
 
     // The TLS pointer goes after PT_TLS. At least glibc will align it,
     // so round up the size to make sure the offsets are correct.
@@ -1186,9 +1190,7 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
 template <class ELFT> static typename ELFT::uint getEntryAddr() {
   if (Symbol *S = Config->EntrySym)
     return S->body()->getVA<ELFT>();
-  if (Config->EntryAddr != uint64_t(-1))
-    return Config->EntryAddr;
-  return 0;
+  return Config->EntryAddr;
 }
 
 template <class ELFT> static uint8_t getELFEncoding() {
