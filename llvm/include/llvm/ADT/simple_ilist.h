@@ -46,7 +46,8 @@ namespace llvm {
 /// eraseAndDispose(), and \a clearAndDispose().  These have different names
 /// because the extra semantic is otherwise non-obvious.  They are equivalent
 /// to calling \a std::for_each() on the range to be discarded.
-template <typename T> class simple_ilist : ilist_base, ilist_node_access {
+template <typename T>
+class simple_ilist : ilist_base, ilist_detail::SpecificNodeAccess<T> {
   typedef ilist_base list_base_type;
   ilist_sentinel<T> Sentinel;
 

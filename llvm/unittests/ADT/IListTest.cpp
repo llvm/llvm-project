@@ -218,7 +218,7 @@ TEST(IListTest, addNodeToList) {
 }
 
 struct PrivateNode : private ilist_node<PrivateNode> {
-  friend struct llvm::ilist_node_access;
+  friend struct llvm::ilist_detail::NodeAccess;
 
   int Value = 0;
 

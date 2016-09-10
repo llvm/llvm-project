@@ -27,27 +27,28 @@ template <class NodeTy> struct ConstCorrectNodeType<const NodeTy> {
   typedef const ilist_node<NodeTy> type;
 };
 
-template <bool IsReverse = false> struct IteratorHelper {
-  template <class T> static void increment(T *&I) {
-    I = ilist_node_access::getNext(*I);
-  }
-  template <class T> static void decrement(T *&I) {
-    I = ilist_node_access::getPrev(*I);
-  }
+template <bool IsReverse> struct IteratorHelper;
+template <> struct IteratorHelper<false> : ilist_detail::NodeAccess {
+  typedef ilist_detail::NodeAccess Access;
+  template <class T> static void increment(T *&I) { I = Access::getNext(*I); }
+  template <class T> static void decrement(T *&I) { I = Access::getPrev(*I); }
 };
-template <> struct IteratorHelper<true> {
-  template <class T> static void increment(T *&I) {
-    IteratorHelper<false>::decrement(I);
-  }
-  template <class T> static void decrement(T *&I) {
-    IteratorHelper<false>::increment(I);
-  }
+template <> struct IteratorHelper<true> : ilist_detail::NodeAccess {
+  typedef ilist_detail::NodeAccess Access;
+  template <class T> static void increment(T *&I) { I = Access::getPrev(*I); }
+  template <class T> static void decrement(T *&I) { I = Access::getNext(*I); }
 };
 
 } // end namespace ilist_detail
 
 /// Iterator for intrusive lists  based on ilist_node.
-template <typename NodeTy, bool IsReverse> class ilist_iterator {
+template <typename NodeTy, bool IsReverse>
+class ilist_iterator : ilist_detail::SpecificNodeAccess<
+                           typename std::remove_const<NodeTy>::type> {
+  typedef ilist_detail::SpecificNodeAccess<
+      typename std::remove_const<NodeTy>::type>
+      Access;
+
 public:
   typedef NodeTy value_type;
   typedef value_type *pointer;
@@ -69,10 +70,8 @@ public:
   /// Create from an ilist_node.
   explicit ilist_iterator(node_reference N) : NodePtr(&N) {}
 
-  explicit ilist_iterator(pointer NP)
-      : NodePtr(ilist_node_access::getNodePtr(NP)) {}
-  explicit ilist_iterator(reference NR)
-      : NodePtr(ilist_node_access::getNodePtr(&NR)) {}
+  explicit ilist_iterator(pointer NP) : NodePtr(Access::getNodePtr(NP)) {}
+  explicit ilist_iterator(reference NR) : NodePtr(Access::getNodePtr(&NR)) {}
   ilist_iterator() : NodePtr(nullptr) {}
 
   // This is templated so that we can allow constructing a const iterator from
@@ -108,7 +107,7 @@ public:
   // Accessors...
   reference operator*() const {
     assert(!NodePtr->isKnownSentinel());
-    return *ilist_node_access::getValuePtr(NodePtr);
+    return *Access::getValuePtr(NodePtr);
   }
   pointer operator->() const { return &operator*(); }
 
