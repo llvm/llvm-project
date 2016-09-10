@@ -150,7 +150,7 @@ std::string SourceCoverageView::getSourceName() const {
 }
 
 std::string SourceCoverageView::getVerboseSourceName() const {
-  return "Source: " + getSourceName() + " (Binary: " +
+  return getSourceName() + " (Binary: " +
          sys::path::filename(getOptions().ObjectFilename).str() + ")";
 }
 
@@ -169,7 +169,7 @@ void SourceCoverageView::addInstantiation(
 void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
                                bool ShowSourceName, unsigned ViewDepth) {
   if (WholeFile)
-    renderCellInTitle(OS, "Code Coverage Report");
+    renderCellInTitle(OS, "Coverage Report");
 
   renderViewHeader(OS);
 
