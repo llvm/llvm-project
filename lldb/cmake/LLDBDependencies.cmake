@@ -204,7 +204,6 @@ set(LLVM_LINK_COMPONENTS
   bitreader
   bitwriter
   codegen
-  demangle
   ipo
   selectiondag
   bitreader

@@ -12,6 +12,7 @@ add_lldb_library(lldbCore
   ConnectionMachPort.cpp
   ConnectionSharedMemory.cpp
   ConstString.cpp
+  CxaDemangle.cpp
   DataBufferHeap.cpp
   DataBufferMemoryMap.cpp
   DataEncoder.cpp
