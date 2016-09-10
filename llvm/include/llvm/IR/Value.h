@@ -453,6 +453,12 @@ public:
   /// \brief Return true if there is metadata referencing this value.
   bool isUsedByMetadata() const { return IsUsedByMD; }
 
+  /// \brief Return true if this value is a swifterror value.
+  ///
+  /// swifterror values can be either a function argument or an alloca with a
+  /// swifterror attribute.
+  bool isSwiftError() const;
+
   /// \brief Strip off pointer casts, all-zero GEPs, and aliases.
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
