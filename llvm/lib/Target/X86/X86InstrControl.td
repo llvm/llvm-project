@@ -305,17 +305,27 @@ let isCall = 1, Uses = [RSP], SchedRW = [WriteJump] in {
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     isCodeGenOnly = 1, Uses = [RSP], usesCustomInserter = 1,
     SchedRW = [WriteJump] in {
-  def TCRETURNdi64 : PseudoI<(outs),
-                      (ins i64i32imm_pcrel:$dst, i32imm:$offset),
-                      []>;
-  def TCRETURNri64 : PseudoI<(outs),
-                      (ins ptr_rc_tailcall:$dst, i32imm:$offset), []>;
+  def TCRETURNdi64   : PseudoI<(outs),
+                        (ins i64i32imm_pcrel:$dst, i32imm:$offset),
+                        []>;
+  def TCRETURNdi64cc : PseudoI<(outs),
+                        (ins i64i32imm_pcrel:$dst, i32imm:$offset,
+                         i32imm:$cond), []>;
+  def TCRETURNri64   : PseudoI<(outs),
+                        (ins ptr_rc_tailcall:$dst, i32imm:$offset), []>;
   let mayLoad = 1 in
-  def TCRETURNmi64 : PseudoI<(outs),
-                       (ins i64mem_TC:$dst, i32imm:$offset), []>;
+  def TCRETURNmi64   : PseudoI<(outs),
+                        (ins i64mem_TC:$dst, i32imm:$offset), []>;
 
   def TAILJMPd64 : Ii32PCRel<0xE9, RawFrm, (outs), (ins i64i32imm_pcrel:$dst),
                    "jmp\t$dst", [], IIC_JMP_REL>;
+
+  // This gets substituted to a conditional jump instruction in MC lowering.
+  def TAILJMPd64_CC : Ii32PCRel<0x80, RawFrm, (outs),
+                           (ins i64i32imm_pcrel:$dst, i32imm:$cond),
+                           "",
+                           [], IIC_JMP_REL>;
+
   def TAILJMPr64 : I<0xFF, MRM4r, (outs), (ins ptr_rc_tailcall:$dst),
                      "jmp{q}\t{*}$dst", [], IIC_JMP_MEM>;
 

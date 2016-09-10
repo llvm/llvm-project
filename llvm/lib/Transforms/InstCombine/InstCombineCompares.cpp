@@ -3540,24 +3540,29 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
       }
       break;
     }
-    case ICmpInst::ICMP_ULT:
+    case ICmpInst::ICMP_ULT: {
       if (Op0Max.ult(Op1Min))          // A <u B -> true if max(A) < min(B)
         return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
       if (Op0Min.uge(Op1Max))          // A <u B -> false if min(A) >= max(B)
         return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
       if (Op1Min == Op0Max)            // A <u B -> A != B if max(A) == min(B)
         return new ICmpInst(ICmpInst::ICMP_NE, Op0, Op1);
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(Op1)) {
-        if (Op1Max == Op0Min+1)        // A <u C -> A == C-1 if min(A)+1 == C
-          return new ICmpInst(ICmpInst::ICMP_EQ, Op0,
-                              Builder->getInt(CI->getValue()-1));
 
+      const APInt *CmpC;
+      if (match(Op1, m_APInt(CmpC))) {
+        // A <u C -> A == C-1 if min(A)+1 == C
+        if (Op1Max == Op0Min + 1) {
+          Constant *CMinus1 = ConstantInt::get(Op0->getType(), *CmpC - 1);
+          return new ICmpInst(ICmpInst::ICMP_EQ, Op0, CMinus1);
+        }
         // (x <u 2147483648) -> (x >s -1)  -> true if sign bit clear
-        if (CI->isMinValue(true))
-          return new ICmpInst(ICmpInst::ICMP_SGT, Op0,
-                           Constant::getAllOnesValue(Op0->getType()));
+        if (CmpC->isMinSignedValue()) {
+          Constant *AllOnes = Constant::getAllOnesValue(Op0->getType());
+          return new ICmpInst(ICmpInst::ICMP_SGT, Op0, AllOnes);
+        }
       }
       break;
+    }
     case ICmpInst::ICMP_UGT: {
       if (Op0Min.ugt(Op1Max))          // A >u B -> true if min(A) > max(B)
         return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));

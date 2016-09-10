@@ -1871,7 +1871,7 @@ def : Pat <
 
 def : Pat <
   (fneg (fabs f32:$src)),
-  (S_OR_B32 $src, 0x80000000) // Set sign bit
+  (S_OR_B32 $src, (S_MOV_B32 0x80000000)) // Set sign bit
 >;
 
 // FIXME: Should use S_OR_B32

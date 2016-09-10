@@ -3,12 +3,11 @@ macro(add_se_library name)
   set_target_properties(${name} PROPERTIES FOLDER "streamexecutor libraries")
 endmacro(add_se_library)
 
-add_subdirectory(Utils)
-
 add_se_library(
     streamexecutor
     Device.cpp
     DeviceMemory.cpp
+    Error.cpp
     Kernel.cpp
     KernelSpec.cpp
     PackedKernelArgumentArray.cpp
@@ -16,9 +15,6 @@ add_se_library(
     PlatformDevice.cpp
     PlatformManager.cpp
     Stream.cpp
-
-    LINK_LIBS
-      utils
     )
 
 install(TARGETS streamexecutor DESTINATION lib)

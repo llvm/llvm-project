@@ -48,8 +48,8 @@ done:
 }
 
 ; GCN-LABEL: {{^}}legal_offset_fi_offset:
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
-; GCN: v_add_i32_e32 [[OFFSET:v[0-9]+]], vcc, 0x8000
+; GCN-DAG: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
+; GCN-DAG: v_add_i32_e32 [[OFFSET:v[0-9]+]], vcc, 0x8000
 ; GCN: buffer_store_dword v{{[0-9]+}}, [[OFFSET]], s[{{[0-9]+}}:{{[0-9]+}}], s{{[0-9]+}} offen{{$}}
 
 define void @legal_offset_fi_offset(i32 addrspace(1)* %out, i32 %cond, i32 addrspace(1)* %offsets, i32 %if_offset, i32 %else_offset) {

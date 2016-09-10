@@ -17,9 +17,9 @@
 
 #include <type_traits>
 
+#include "streamexecutor/Error.h"
 #include "streamexecutor/KernelSpec.h"
 #include "streamexecutor/PlatformDevice.h"
-#include "streamexecutor/Utils/Error.h"
 
 namespace streamexecutor {
 

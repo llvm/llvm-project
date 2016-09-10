@@ -505,6 +505,7 @@ ReSimplify:
   case X86::TAILJMPd:
   case X86::TAILJMPd64: Opcode = X86::JMP_1;  goto SetTailJmpOpcode;
   case X86::TAILJMPd_CC:
+  case X86::TAILJMPd64_CC:
     Opcode = X86::GetCondBranchFromCond(
         static_cast<X86::CondCode>(MI->getOperand(1).getImm()));
     goto SetTailJmpOpcode;
@@ -1309,6 +1310,7 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::TAILJMPr64:
   case X86::TAILJMPm64:
   case X86::TAILJMPd64:
+  case X86::TAILJMPd64_CC:
   case X86::TAILJMPr64_REX:
   case X86::TAILJMPm64_REX:
     // Lower these as normal, but add some comments.

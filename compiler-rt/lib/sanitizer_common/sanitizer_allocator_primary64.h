@@ -401,12 +401,12 @@ class SizeClassAllocator64 {
     uptr beg_idx = region->allocated_user;
     uptr end_idx = beg_idx + requested_count * size;
     uptr region_beg = GetRegionBeginBySizeClass(class_id);
-    if (end_idx + size > region->mapped_user) {
+    if (end_idx > region->mapped_user) {
       if (!kUsingConstantSpaceBeg && region->mapped_user == 0)
         region->rand_state = static_cast<u32>(region_beg >> 12);  // From ASLR.
       // Do the mmap for the user memory.
       uptr map_size = kUserMapSize;
-      while (end_idx + size > region->mapped_user + map_size)
+      while (end_idx > region->mapped_user + map_size)
         map_size += kUserMapSize;
       CHECK_GE(region->mapped_user + map_size, end_idx);
       MapWithCallback(region_beg + region->mapped_user, map_size);
@@ -441,7 +441,8 @@ class SizeClassAllocator64 {
       region->mapped_meta += map_size;
     }
     CHECK_LE(region->allocated_meta, region->mapped_meta);
-    if (region->mapped_user + region->mapped_meta > kRegionSize) {
+    if (region->mapped_user + region->mapped_meta >
+        kRegionSize - kFreeArraySize) {
       Printf("%s: Out of memory. Dying. ", SanitizerToolName);
       Printf("The process has exhausted %zuMB for size class %zu.\n",
           kRegionSize / 1024 / 1024, size);

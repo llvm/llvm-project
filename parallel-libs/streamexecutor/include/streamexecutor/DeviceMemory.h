@@ -32,7 +32,7 @@
 #include <cassert>
 #include <cstddef>
 
-#include "streamexecutor/Utils/Error.h"
+#include "streamexecutor/Error.h"
 
 namespace streamexecutor {
 

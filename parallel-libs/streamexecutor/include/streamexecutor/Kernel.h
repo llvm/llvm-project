@@ -21,8 +21,8 @@
 #ifndef STREAMEXECUTOR_KERNEL_H
 #define STREAMEXECUTOR_KERNEL_H
 
+#include "streamexecutor/Error.h"
 #include "streamexecutor/KernelSpec.h"
-#include "streamexecutor/Utils/Error.h"
 
 #include <memory>
 

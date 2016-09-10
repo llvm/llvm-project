@@ -175,10 +175,9 @@ define i1 @udiv_icmp2(i64 %X) {
   ret i1 %B
 }
 
-; FIXME: missing vector fold for ult 1 -> eq 0
 define <2 x i1> @udiv_icmp2_vec(<2 x i64> %X) {
 ; CHECK-LABEL: @udiv_icmp2_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i64> %X, <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> %X, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %A = udiv exact <2 x i64> %X, <i64 5, i64 5>
@@ -196,10 +195,9 @@ define i1 @sdiv_icmp1(i64 %X) {
   ret i1 %B
 }
 
-; FIXME: missing vector fold for ult 1 -> eq 0
 define <2 x i1> @sdiv_icmp1_vec(<2 x i64> %X) {
 ; CHECK-LABEL: @sdiv_icmp1_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i64> %X, <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> %X, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %A = sdiv exact <2 x i64> %X, <i64 5, i64 5>
@@ -257,10 +255,9 @@ define i1 @sdiv_icmp4(i64 %X) {
   ret i1 %B
 }
 
-; FIXME: missing vector fold for ult 1 -> eq 0
 define <2 x i1> @sdiv_icmp4_vec(<2 x i64> %X) {
 ; CHECK-LABEL: @sdiv_icmp4_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i64> %X, <i64 1, i64 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> %X, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %A = sdiv exact <2 x i64> %X, <i64 -5, i64 -5>
