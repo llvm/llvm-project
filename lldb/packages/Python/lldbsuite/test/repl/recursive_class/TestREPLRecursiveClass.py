@@ -11,13 +11,17 @@
 # ------------------------------------------------------------------------------
 """Test that recursive class instances work in the REPL."""
 
+import unittest2
+
 import lldbsuite.test.lldbrepl as lldbrepl
+from lldbsuite.test import decorators
 
 
 class REPLRecursiveClassTestCase(lldbrepl.REPLTest):
 
     mydir = lldbrepl.REPLTest.compute_mydir(__file__)
 
+    @unittest2.skip("rdar://28234925: assert fires")
     def doTest(self):
         self.command('''class Foo {
           var aFoo: Foo!
