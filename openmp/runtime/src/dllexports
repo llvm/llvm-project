@@ -494,9 +494,9 @@ kmp_set_warnings_off                        780
     omp_get_cancellation                    867
     kmp_get_cancellation_status             868
     omp_is_initial_device                   869
+    omp_set_default_device                  879
+    omp_get_default_device                  880
     %ifdef stub
-        omp_set_default_device              879
-        omp_get_default_device              880
         omp_get_num_devices                 881
     %endif
 %endif # OMP_40

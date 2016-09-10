@@ -116,7 +116,7 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
 
 // Opens and parses a file. Path has to be resolved already.
 // Newly created memory buffers are owned by this driver.
-void LinkerDriver::addFile(StringRef Path) {
+void LinkerDriver::addFile(StringRef Path, bool KnownScript) {
   using namespace sys::fs;
   if (Config->Verbose)
     outs() << Path << "\n";
@@ -125,6 +125,11 @@ void LinkerDriver::addFile(StringRef Path) {
   if (!Buffer.hasValue())
     return;
   MemoryBufferRef MBRef = *Buffer;
+
+  if (Config->Binary && !KnownScript) {
+    Files.push_back(make_unique<BinaryFile>(MBRef));
+    return;
+  }
 
   switch (identify_magic(MBRef.getBuffer())) {
   case file_magic::unknown:
@@ -515,14 +520,27 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
     case OPT_l:
       addLibrary(Arg->getValue());
       break;
-    case OPT_alias_script_T:
     case OPT_INPUT:
-    case OPT_script:
       addFile(Arg->getValue());
+      break;
+    case OPT_alias_script_T:
+    case OPT_script:
+      addFile(Arg->getValue(), true);
       break;
     case OPT_as_needed:
       Config->AsNeeded = true;
       break;
+    case OPT_format: {
+      StringRef Val = Arg->getValue();
+      if (Val == "elf" || Val == "default")
+        Config->Binary = false;
+      else if (Val == "binary")
+        Config->Binary = true;
+      else
+        error("unknown " + Arg->getSpelling() + " format: " + Arg->getValue() +
+              " (supported formats: elf, default, binary)");
+      break;
+    }
     case OPT_no_as_needed:
       Config->AsNeeded = false;
       break;

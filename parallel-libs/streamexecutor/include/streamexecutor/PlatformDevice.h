@@ -20,10 +20,10 @@
 #define STREAMEXECUTOR_PLATFORMDEVICE_H
 
 #include "streamexecutor/DeviceMemory.h"
+#include "streamexecutor/Error.h"
 #include "streamexecutor/Kernel.h"
 #include "streamexecutor/LaunchDimensions.h"
 #include "streamexecutor/PackedKernelArgumentArray.h"
-#include "streamexecutor/Utils/Error.h"
 
 namespace streamexecutor {
 

@@ -103,10 +103,10 @@
 
 #if OMP_40_ENABLED
 #if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
-    #define FTN_GET_DEFAULT_DEVICE               omp_get_default_device
-    #define FTN_SET_DEFAULT_DEVICE               omp_set_default_device
     #define FTN_GET_NUM_DEVICES                  omp_get_num_devices
 #endif
+    #define FTN_GET_DEFAULT_DEVICE               omp_get_default_device
+    #define FTN_SET_DEFAULT_DEVICE               omp_set_default_device
     #define FTN_IS_INITIAL_DEVICE                omp_is_initial_device
 #endif
 
@@ -221,10 +221,10 @@
 
 #if OMP_40_ENABLED
 #if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
-    #define FTN_GET_DEFAULT_DEVICE               omp_get_default_device_
-    #define FTN_SET_DEFAULT_DEVICE               omp_set_default_device_
     #define FTN_GET_NUM_DEVICES                  omp_get_num_devices_
 #endif
+    #define FTN_GET_DEFAULT_DEVICE               omp_get_default_device_
+    #define FTN_SET_DEFAULT_DEVICE               omp_set_default_device_
     #define FTN_IS_INITIAL_DEVICE                omp_is_initial_device_
 #endif
 
@@ -340,10 +340,10 @@
 
 #if OMP_40_ENABLED
 #if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
-    #define FTN_GET_DEFAULT_DEVICE               OMP_GET_DEFAULT_DEVICE
-    #define FTN_SET_DEFAULT_DEVICE               OMP_SET_DEFAULT_DEVICE
     #define FTN_GET_NUM_DEVICES                  OMP_GET_NUM_DEVICES
 #endif
+    #define FTN_GET_DEFAULT_DEVICE               OMP_GET_DEFAULT_DEVICE
+    #define FTN_SET_DEFAULT_DEVICE               OMP_SET_DEFAULT_DEVICE
     #define FTN_IS_INITIAL_DEVICE                OMP_IS_INITIAL_DEVICE
 #endif
 
@@ -459,10 +459,10 @@
 
 #if OMP_40_ENABLED
 #if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
-    #define FTN_GET_DEFAULT_DEVICE               OMP_GET_DEFAULT_DEVICE_
-    #define FTN_SET_DEFAULT_DEVICE               OMP_SET_DEFAULT_DEVICE_
     #define FTN_GET_NUM_DEVICES                  OMP_GET_NUM_DEVICES_
 #endif
+    #define FTN_GET_DEFAULT_DEVICE               OMP_GET_DEFAULT_DEVICE_
+    #define FTN_SET_DEFAULT_DEVICE               OMP_SET_DEFAULT_DEVICE_
     #define FTN_IS_INITIAL_DEVICE                OMP_IS_INITIAL_DEVICE_
 #endif
 

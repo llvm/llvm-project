@@ -1,24 +1,20 @@
-add_library(
-    utils
-    OBJECT
-    Utils/Error.cpp)
+macro(add_se_library name)
+  add_llvm_library(${name} ${ARGN})
+  set_target_properties(${name} PROPERTIES FOLDER "streamexecutor libraries")
+endmacro(add_se_library)
 
-add_library(
+add_se_library(
     streamexecutor
-    $<TARGET_OBJECTS:utils>
     Device.cpp
     DeviceMemory.cpp
+    Error.cpp
     Kernel.cpp
     KernelSpec.cpp
     PackedKernelArgumentArray.cpp
     Platform.cpp
     PlatformDevice.cpp
     PlatformManager.cpp
-    Stream.cpp)
-target_link_libraries(streamexecutor ${llvm_libs})
+    Stream.cpp
+    )
 
 install(TARGETS streamexecutor DESTINATION lib)
-
-if(STREAM_EXECUTOR_UNIT_TESTS)
-    add_subdirectory(unittests)
-endif()
