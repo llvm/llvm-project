@@ -50,7 +50,6 @@ struct WinEHFuncInfo;
 
 template <> struct ilist_alloc_traits<MachineBasicBlock> {
   void deleteNode(MachineBasicBlock *MBB);
-  // Disallow createNode...
 };
 
 template <> struct ilist_callback_traits<MachineBasicBlock> {

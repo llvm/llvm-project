@@ -53,7 +53,6 @@ public:
                              instr_iterator Last);
 
   void deleteNode(MachineInstr *MI);
-  // Leave out createNode...
 };
 
 class MachineBasicBlock

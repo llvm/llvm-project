@@ -33,7 +33,6 @@ class raw_ostream;
 
 template <> struct ilist_alloc_traits<MCFragment> {
   static void deleteNode(MCFragment *V);
-  // Leave out createNode...
 };
 
 /// Instances of this class represent a uniqued identifier for a section in the

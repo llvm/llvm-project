@@ -85,7 +85,6 @@ template <> struct ilist_alloc_traits<SDNode> {
   static void deleteNode(SDNode *) {
     llvm_unreachable("ilist_traits<SDNode> shouldn't see a deleteNode call!");
   }
-  // Don't implement createNode...
 };
 
 /// Keeps track of dbg_value information through SDISel.  We do
