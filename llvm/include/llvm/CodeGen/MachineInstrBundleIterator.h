@@ -20,12 +20,12 @@
 namespace llvm {
 
 template <class T> struct MachineInstrBundleIteratorTraits {
-  typedef simple_ilist<T> list_type;
+  typedef simple_ilist<T, ilist_sentinel_tracking<true>> list_type;
   typedef typename list_type::iterator instr_iterator;
   typedef typename list_type::iterator nonconst_instr_iterator;
 };
 template <class T> struct MachineInstrBundleIteratorTraits<const T> {
-  typedef simple_ilist<T> list_type;
+  typedef simple_ilist<T, ilist_sentinel_tracking<true>> list_type;
   typedef typename list_type::const_iterator instr_iterator;
   typedef typename list_type::iterator nonconst_instr_iterator;
 };

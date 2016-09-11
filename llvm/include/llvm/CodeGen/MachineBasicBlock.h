@@ -43,12 +43,14 @@ private:
   friend class MachineBasicBlock; // Set by the owning MachineBasicBlock.
   MachineBasicBlock *Parent;
 
+  typedef simple_ilist<MachineInstr, ilist_sentinel_tracking<true>>::iterator
+      instr_iterator;
+
 public:
   void addNodeToList(MachineInstr *N);
   void removeNodeFromList(MachineInstr *N);
-  void transferNodesFromList(ilist_traits &OldList,
-                             simple_ilist<MachineInstr>::iterator First,
-                             simple_ilist<MachineInstr>::iterator Last);
+  void transferNodesFromList(ilist_traits &OldList, instr_iterator First,
+                             instr_iterator Last);
 
   void deleteNode(MachineInstr *MI);
   // Leave out createNode...
@@ -70,7 +72,7 @@ public:
   };
 
 private:
-  typedef ilist<MachineInstr> Instructions;
+  typedef ilist<MachineInstr, ilist_sentinel_tracking<true>> Instructions;
   Instructions Insts;
   const BasicBlock *BB;
   int Number;

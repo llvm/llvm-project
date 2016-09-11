@@ -118,9 +118,9 @@ void ilist_traits<MachineInstr>::removeNodeFromList(MachineInstr *N) {
 
 /// When moving a range of instructions from one MBB list to another, we need to
 /// update the parent pointers and the use/def lists.
-void ilist_traits<MachineInstr>::transferNodesFromList(
-    ilist_traits &FromList, simple_ilist<MachineInstr>::iterator First,
-    simple_ilist<MachineInstr>::iterator Last) {
+void ilist_traits<MachineInstr>::transferNodesFromList(ilist_traits &FromList,
+                                                       instr_iterator First,
+                                                       instr_iterator Last) {
   assert(Parent->getParent() == FromList.Parent->getParent() &&
         "MachineInstr parent mismatch!");
   assert(this != &FromList && "Called without a real transfer...");

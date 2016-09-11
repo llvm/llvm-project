@@ -15,7 +15,8 @@ using namespace llvm;
 
 namespace {
 
-struct MyBundledInstr : public ilist_node<MyBundledInstr> {
+struct MyBundledInstr
+    : public ilist_node<MyBundledInstr, ilist_sentinel_tracking<true>> {
   bool isBundledWithPred() const { return true; }
   bool isBundledWithSucc() const { return true; }
 };
