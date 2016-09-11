@@ -583,4 +583,55 @@ TEST(SimpleIListTest, sortEmpty) {
   L.sort();
 }
 
+struct Tag1 {};
+struct Tag2 {};
+
+struct DoubleNode : ilist_node<DoubleNode, ilist_tag<Tag1>>,
+                    ilist_node<DoubleNode, ilist_tag<Tag2>> {
+  typedef ilist_node<DoubleNode, ilist_tag<Tag1>> Node1Type;
+  typedef ilist_node<DoubleNode, ilist_tag<Tag2>> Node2Type;
+
+  Node1Type::self_iterator getIterator1() { return Node1Type::getIterator(); }
+  Node2Type::self_iterator getIterator2() { return Node2Type::getIterator(); }
+  Node1Type::const_self_iterator getIterator1() const {
+    return Node1Type::getIterator();
+  }
+  Node2Type::const_self_iterator getIterator2() const {
+    return Node2Type::getIterator();
+  }
+};
+typedef simple_ilist<DoubleNode, ilist_tag<Tag1>> TaggedList1Type;
+typedef simple_ilist<DoubleNode, ilist_tag<Tag2>> TaggedList2Type;
+
+TEST(SimpleIListTest, TaggedLists) {
+  TaggedList1Type L1;
+  TaggedList2Type L2;
+
+  // Build the two lists, sharing a couple of nodes.
+  DoubleNode Ns[10];
+  int Order1[] = {0, 1, 2, 3, 4, 7, 9};
+  int Order2[] = {2, 5, 6, 7, 8, 4, 9, 1};
+  for (int I : Order1)
+    L1.push_back(Ns[I]);
+  for (int I : Order2)
+    L2.push_back(Ns[I]);
+
+  // Check that each list is correct.
+  EXPECT_EQ(sizeof(Order1) / sizeof(int), L1.size());
+  auto I1 = L1.begin();
+  for (int I : Order1) {
+    EXPECT_EQ(Ns[I].getIterator1(), I1);
+    EXPECT_EQ(&Ns[I], &*I1++);
+  }
+  EXPECT_EQ(L1.end(), I1);
+
+  EXPECT_EQ(sizeof(Order2) / sizeof(int), L2.size());
+  auto I2 = L2.begin();
+  for (int I : Order2) {
+    EXPECT_EQ(Ns[I].getIterator2(), I2);
+    EXPECT_EQ(&Ns[I], &*I2++);
+  }
+  EXPECT_EQ(L2.end(), I2);
+}
+
 } // end namespace

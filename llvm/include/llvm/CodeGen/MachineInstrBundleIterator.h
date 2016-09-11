@@ -19,10 +19,22 @@
 
 namespace llvm {
 
+template <class T> struct MachineInstrBundleIteratorTraits {
+  typedef simple_ilist<T> list_type;
+  typedef typename list_type::iterator instr_iterator;
+  typedef typename list_type::iterator nonconst_instr_iterator;
+};
+template <class T> struct MachineInstrBundleIteratorTraits<const T> {
+  typedef simple_ilist<T> list_type;
+  typedef typename list_type::const_iterator instr_iterator;
+  typedef typename list_type::iterator nonconst_instr_iterator;
+};
+
 /// MachineBasicBlock iterator that automatically skips over MIs that are
 /// inside bundles (i.e. walk top level MIs only).
 template <typename Ty> class MachineInstrBundleIterator {
-  typedef ilist_iterator<Ty> instr_iterator;
+  typedef typename MachineInstrBundleIteratorTraits<Ty>::instr_iterator
+      instr_iterator;
   instr_iterator MII;
 
 public:
@@ -37,8 +49,8 @@ public:
 
 private:
   typedef typename std::remove_const<value_type>::type nonconst_value_type;
-  typedef ilist_node<nonconst_value_type> node_type;
-  typedef ilist_iterator<nonconst_value_type> nonconst_instr_iterator;
+  typedef typename MachineInstrBundleIteratorTraits<Ty>::nonconst_instr_iterator
+      nonconst_instr_iterator;
   typedef MachineInstrBundleIterator<nonconst_value_type> nonconst_iterator;
 
 public:
@@ -136,11 +148,7 @@ public:
 
   instr_iterator getInstrIterator() const { return MII; }
 
-  nonconst_iterator getNonConstIterator() const {
-    if (auto *N = const_cast<node_type *>(MII.getNodePtr()))
-      return nonconst_iterator(nonconst_instr_iterator(*N));
-    return nonconst_iterator();
-  }
+  nonconst_iterator getNonConstIterator() const { return MII.getNonConst(); }
 };
 
 } // end namespace llvm

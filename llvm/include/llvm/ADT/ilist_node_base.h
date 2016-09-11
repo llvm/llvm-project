@@ -15,31 +15,37 @@
 namespace llvm {
 
 /// Base class for ilist nodes.
-class ilist_node_base {
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-  PointerIntPair<ilist_node_base *, 1> PrevAndSentinel;
-#else
+///
+/// Optionally tracks whether this node is the sentinel.
+template <bool EnableSentinelTracking> class ilist_node_base;
+
+template <> class ilist_node_base<false> {
   ilist_node_base *Prev = nullptr;
-#endif
   ilist_node_base *Next = nullptr;
 
 public:
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
-  void setPrev(ilist_node_base *Prev) { PrevAndSentinel.setPointer(Prev); }
-  ilist_node_base *getPrev() const { return PrevAndSentinel.getPointer(); }
-
-  bool isKnownSentinel() const { return PrevAndSentinel.getInt(); }
-  void initializeSentinel() { PrevAndSentinel.setInt(true); }
-#else
   void setPrev(ilist_node_base *Prev) { this->Prev = Prev; }
+  void setNext(ilist_node_base *Next) { this->Next = Next; }
   ilist_node_base *getPrev() const { return Prev; }
+  ilist_node_base *getNext() const { return Next; }
 
   bool isKnownSentinel() const { return false; }
   void initializeSentinel() {}
-#endif
+};
 
+template <> class ilist_node_base<true> {
+  PointerIntPair<ilist_node_base *, 1> PrevAndSentinel;
+  ilist_node_base *Next = nullptr;
+
+public:
+  void setPrev(ilist_node_base *Prev) { PrevAndSentinel.setPointer(Prev); }
   void setNext(ilist_node_base *Next) { this->Next = Next; }
+  ilist_node_base *getPrev() const { return PrevAndSentinel.getPointer(); }
   ilist_node_base *getNext() const { return Next; }
+
+  bool isSentinel() const { return PrevAndSentinel.getInt(); }
+  bool isKnownSentinel() const { return isSentinel(); }
+  void initializeSentinel() { PrevAndSentinel.setInt(true); }
 };
 
 } // end namespace llvm

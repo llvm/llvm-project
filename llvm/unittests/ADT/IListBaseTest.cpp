@@ -14,11 +14,20 @@ using namespace llvm;
 
 namespace {
 
-typedef ilist_base list_base_type;
-typedef ilist_node_base node_base_type;
+// Test fixture.
+template <typename T> class IListBaseTest : public ::testing::Test {};
 
-TEST(IListBaseTest, insertBeforeImpl) {
+// Test variants with the same test.
+typedef ::testing::Types<ilist_base<false>, ilist_base<true>>
+    IListBaseTestTypes;
+TYPED_TEST_CASE(IListBaseTest, IListBaseTestTypes);
+
+TYPED_TEST(IListBaseTest, insertBeforeImpl) {
+  typedef TypeParam list_base_type;
+  typedef typename list_base_type::node_base_type node_base_type;
+
   node_base_type S, A, B;
+
   // [S] <-> [S]
   S.setPrev(&S);
   S.setNext(&S);
@@ -40,7 +49,10 @@ TEST(IListBaseTest, insertBeforeImpl) {
   EXPECT_EQ(&S, B.getNext());
 }
 
-TEST(IListBaseTest, removeImpl) {
+TYPED_TEST(IListBaseTest, removeImpl) {
+  typedef TypeParam list_base_type;
+  typedef typename list_base_type::node_base_type node_base_type;
+
   node_base_type S, A, B;
 
   // [S] <-> A <-> B <-> [S]
@@ -66,7 +78,10 @@ TEST(IListBaseTest, removeImpl) {
   EXPECT_EQ(nullptr, B.getNext());
 }
 
-TEST(IListBaseTest, removeRangeImpl) {
+TYPED_TEST(IListBaseTest, removeRangeImpl) {
+  typedef TypeParam list_base_type;
+  typedef typename list_base_type::node_base_type node_base_type;
+
   node_base_type S, A, B, C, D;
 
   // [S] <-> A <-> B <-> C <-> D <-> [S]
@@ -89,7 +104,10 @@ TEST(IListBaseTest, removeRangeImpl) {
   EXPECT_EQ(nullptr, C.getNext());
 }
 
-TEST(IListBaseTest, removeRangeImplAllButSentinel) {
+TYPED_TEST(IListBaseTest, removeRangeImplAllButSentinel) {
+  typedef TypeParam list_base_type;
+  typedef typename list_base_type::node_base_type node_base_type;
+
   node_base_type S, A, B;
 
   // [S] <-> A <-> B <-> [S]
@@ -106,7 +124,10 @@ TEST(IListBaseTest, removeRangeImplAllButSentinel) {
   EXPECT_EQ(nullptr, B.getNext());
 }
 
-TEST(IListBaseTest, transferBeforeImpl) {
+TYPED_TEST(IListBaseTest, transferBeforeImpl) {
+  typedef TypeParam list_base_type;
+  typedef typename list_base_type::node_base_type node_base_type;
+
   node_base_type S1, S2, A, B, C, D, E;
 
   // [S1] <-> A <-> B <-> C <-> [S1]
