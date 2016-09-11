@@ -1802,8 +1802,7 @@ bool IfConverter::IfConvertDiamondCommon(
   // This is everything used+live in BB2 after the duplicated instructions. We
   // can compute this set by simulating liveness backwards from the end of BB2.
   DontKill.init(TRI);
-  for (const MachineInstr &MI :
-       make_range(MBB2.rbegin(), MachineBasicBlock::reverse_iterator(DI2)))
+  for (const MachineInstr &MI : make_range(MBB2.rbegin(), ++DI2.getReverse()))
     DontKill.stepBackward(MI);
 
   for (const MachineInstr &MI : make_range(MBB1.begin(), DI1)) {

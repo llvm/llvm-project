@@ -362,13 +362,18 @@ public:
 
 /// An intrusive list with ownership and callbacks specified/controlled by
 /// ilist_traits, only with API safe for polymorphic types.
-template <class T>
-class iplist : public iplist_impl<simple_ilist<T>, ilist_traits<T>> {};
+///
+/// The \p Options parameters are the same as those for \a simple_ilist.  See
+/// there for a description of what's available.
+template <class T, class... Options>
+class iplist
+    : public iplist_impl<simple_ilist<T, Options...>, ilist_traits<T>> {};
 
 /// An intrusive list with ownership and callbacks specified/controlled by
 /// ilist_traits, with API that is unsafe for polymorphic types.
-template <class T> class ilist : public iplist<T> {
-  typedef iplist<T> base_list_type;
+template <class T, class... Options>
+class ilist : public iplist<T, Options...> {
+  typedef iplist<T, Options...> base_list_type;
 
 public:
   typedef typename base_list_type::size_type size_type;

@@ -20,6 +20,7 @@ set(ADTSources
   IListBaseTest.cpp
   IListIteratorTest.cpp
   IListNodeBaseTest.cpp
+  IListNodeTest.cpp
   IListSentinelTest.cpp
   IListTest.cpp
   ImmutableMapTest.cpp
