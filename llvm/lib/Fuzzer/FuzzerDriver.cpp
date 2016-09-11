@@ -88,6 +88,7 @@ static void PrintHelp() {
 
   for (size_t F = 0; F < kNumFlags; F++) {
     const auto &D = FlagDescriptions[F];
+    if (strstr(D.Description, "internal flag") == D.Description) continue;
     Printf(" %s", D.Name);
     for (size_t i = 0, n = MaxFlagLen - strlen(D.Name); i < n; i++)
       Printf(" ");

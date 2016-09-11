@@ -1171,6 +1171,9 @@ bool TwoAddressInstructionPass::tryInstructionCommute(MachineInstr *MI,
                                                       unsigned BaseOpIdx,
                                                       bool BaseOpKilled,
                                                       unsigned Dist) {
+  if (!MI->isCommutable())
+    return false;
+
   unsigned DstOpReg = MI->getOperand(DstOpIdx).getReg();
   unsigned BaseOpReg = MI->getOperand(BaseOpIdx).getReg();
   unsigned OpsNum = MI->getDesc().getNumOperands();
@@ -1180,7 +1183,7 @@ bool TwoAddressInstructionPass::tryInstructionCommute(MachineInstr *MI,
     // and OtherOpIdx are commutable, it does not really search for
     // other commutable operands and does not change the values of passed
     // variables.
-    if (OtherOpIdx == BaseOpIdx ||
+    if (OtherOpIdx == BaseOpIdx || !MI->getOperand(OtherOpIdx).isReg() ||
         !TII->findCommutedOpIndices(*MI, BaseOpIdx, OtherOpIdx))
       continue;
 

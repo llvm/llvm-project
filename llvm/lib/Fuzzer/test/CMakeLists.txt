@@ -63,6 +63,7 @@ set(TestBinaries)
 
 set(Tests
   AbsNegAndConstantTest
+  AbsNegAndConstant64Test
   AccumulateAllocationsTest
   BufferOverflowOnInput
   CallerCalleeTest

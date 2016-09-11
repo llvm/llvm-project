@@ -82,8 +82,10 @@ define void @v_fneg_fabs_f32(float addrspace(1)* %out, float addrspace(1)* %in) 
 ; R600: |{{(PV|T[0-9])\.[XYZW]}}|
 ; R600: -PV
 
-; SI: v_or_b32_e32 v{{[0-9]+}}, 0x80000000, v{{[0-9]+}}
-; SI: v_or_b32_e32 v{{[0-9]+}}, 0x80000000, v{{[0-9]+}}
+; FIXME: In this case two uses of the constant should be folded
+; SI: s_mov_b32 [[SIGNBITK:s[0-9]+]], 0x80000000
+; SI: v_or_b32_e32 v{{[0-9]+}}, [[SIGNBITK]], v{{[0-9]+}}
+; SI: v_or_b32_e32 v{{[0-9]+}}, [[SIGNBITK]], v{{[0-9]+}}
 define void @fneg_fabs_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %in) {
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %in)
   %fsub = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, %fabs
@@ -92,10 +94,11 @@ define void @fneg_fabs_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %in) {
 }
 
 ; FUNC-LABEL: {{^}}fneg_fabs_v4f32:
-; SI: v_or_b32_e32 v{{[0-9]+}}, 0x80000000, v{{[0-9]+}}
-; SI: v_or_b32_e32 v{{[0-9]+}}, 0x80000000, v{{[0-9]+}}
-; SI: v_or_b32_e32 v{{[0-9]+}}, 0x80000000, v{{[0-9]+}}
-; SI: v_or_b32_e32 v{{[0-9]+}}, 0x80000000, v{{[0-9]+}}
+; SI: s_mov_b32 [[SIGNBITK:s[0-9]+]], 0x80000000
+; SI: v_or_b32_e32 v{{[0-9]+}}, [[SIGNBITK]], v{{[0-9]+}}
+; SI: v_or_b32_e32 v{{[0-9]+}}, [[SIGNBITK]], v{{[0-9]+}}
+; SI: v_or_b32_e32 v{{[0-9]+}}, [[SIGNBITK]], v{{[0-9]+}}
+; SI: v_or_b32_e32 v{{[0-9]+}}, [[SIGNBITK]], v{{[0-9]+}}
 define void @fneg_fabs_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %in) {
   %fabs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %in)
   %fsub = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %fabs

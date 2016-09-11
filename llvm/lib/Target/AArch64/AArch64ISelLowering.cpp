@@ -3445,11 +3445,12 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
   // The first entry in the descriptor is a function pointer that we must call
   // to obtain the address of the variable.
   SDValue Chain = DAG.getEntryNode();
-  SDValue FuncTLVGet =
-      DAG.getLoad(MVT::i64, DL, Chain, DescAddr,
-                  MachinePointerInfo::getGOT(DAG.getMachineFunction()),
-                  /* Alignment = */ 8, MachineMemOperand::MONonTemporal |
-                                           MachineMemOperand::MOInvariant);
+  SDValue FuncTLVGet = DAG.getLoad(
+      MVT::i64, DL, Chain, DescAddr,
+      MachinePointerInfo::getGOT(DAG.getMachineFunction()),
+      /* Alignment = */ 8,
+      MachineMemOperand::MONonTemporal | MachineMemOperand::MOInvariant |
+          MachineMemOperand::MODereferenceable);
   Chain = FuncTLVGet.getValue(1);
 
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();

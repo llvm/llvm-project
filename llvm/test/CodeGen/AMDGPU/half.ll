@@ -16,7 +16,7 @@ define void @load_f16_arg(half addrspace(1)* %out, half %arg) #0 {
 ; GCN-DAG: buffer_load_ushort [[V0:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:44
 ; GCN-DAG: buffer_load_ushort [[V1:v[0-9]+]], off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:46
 ; GCN: v_lshlrev_b32_e32 [[HI:v[0-9]+]], 16, [[V1]]
-; GCN: v_or_b32_e32 [[PACKED:v[0-9]+]], [[V0]], [[HI]]
+; GCN: v_or_b32_e32 [[PACKED:v[0-9]+]], [[HI]], [[V0]]
 ; GCN: buffer_store_dword [[PACKED]], off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
 ; GCN: s_endpgm
 define void @load_v2f16_arg(<2 x half> addrspace(1)* %out, <2 x half> %arg) #0 {
@@ -440,7 +440,7 @@ define void @global_truncstore_f32_to_f16(half addrspace(1)* %out, float addrspa
 ; GCN-DAG: v_cvt_f16_f32_e32 [[CVT0:v[0-9]+]], v[[LO]]
 ; GCN-DAG: v_cvt_f16_f32_e32 [[CVT1:v[0-9]+]], v[[HI]]
 ; GCN-DAG: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], 16, [[CVT1]]
-; GCN-DAG: v_or_b32_e32 [[PACKED:v[0-9]+]], [[CVT0]], [[SHL]]
+; GCN-DAG: v_or_b32_e32 [[PACKED:v[0-9]+]], [[SHL]], [[CVT0]]
 ; GCN-DAG: buffer_store_dword [[PACKED]]
 ; GCN: s_endpgm
 define void @global_truncstore_v2f32_to_v2f16(<2 x half> addrspace(1)* %out, <2 x float> addrspace(1)* %in) #0 {

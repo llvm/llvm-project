@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=i686-linux -show-mc-encoding | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-linux -show-mc-encoding | FileCheck %s
 
 declare void @foo()
 declare void @bar()

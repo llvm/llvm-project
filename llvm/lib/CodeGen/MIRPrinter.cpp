@@ -892,6 +892,8 @@ void MIPrinter::print(const MachineMemOperand &Op) {
     OS << "volatile ";
   if (Op.isNonTemporal())
     OS << "non-temporal ";
+  if (Op.isDereferenceable())
+    OS << "dereferenceable ";
   if (Op.isInvariant())
     OS << "invariant ";
   if (Op.isLoad())

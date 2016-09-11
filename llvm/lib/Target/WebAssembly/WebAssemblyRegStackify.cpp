@@ -130,7 +130,7 @@ static void Query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
     return;
 
   // Check for loads.
-  if (MI.mayLoad() && !MI.isInvariantLoad(&AA))
+  if (MI.mayLoad() && !MI.isDereferenceableInvariantLoad(&AA))
     Read = true;
 
   // Check for stores.

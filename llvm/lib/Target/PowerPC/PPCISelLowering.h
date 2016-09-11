@@ -761,12 +761,24 @@ namespace llvm {
       SDValue Chain;
       SDValue ResChain;
       MachinePointerInfo MPI;
+      bool IsDereferenceable;
       bool IsInvariant;
       unsigned Alignment;
       AAMDNodes AAInfo;
       const MDNode *Ranges;
 
-      ReuseLoadInfo() : IsInvariant(false), Alignment(0), Ranges(nullptr) {}
+      ReuseLoadInfo()
+          : IsDereferenceable(false), IsInvariant(false), Alignment(0),
+            Ranges(nullptr) {}
+
+      MachineMemOperand::Flags MMOFlags() const {
+        MachineMemOperand::Flags F = MachineMemOperand::MONone;
+        if (IsDereferenceable)
+          F |= MachineMemOperand::MODereferenceable;
+        if (IsInvariant)
+          F |= MachineMemOperand::MOInvariant;
+        return F;
+      }
     };
 
     bool canReuseLoadAddress(SDValue Op, EVT MemVT, ReuseLoadInfo &RLI,

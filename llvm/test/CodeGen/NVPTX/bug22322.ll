@@ -22,7 +22,7 @@ _ZL11compute_vecRK6float3jb.exit:
   %8 = icmp eq i32 %7, 0
   %9 = select i1 %8, float 0.000000e+00, float -1.000000e+00
   store float %9, float* %ret_vec.sroa.8.i, align 4
-; CHECK: setp.lt.f32     %p{{[0-9]+}}, %f{{[0-9]+}}, 0f00000000
+; CHECK: max.f32 %f{{[0-9]+}}, %f{{[0-9]+}}, 0f00000000
   %10 = fcmp olt float %9, 0.000000e+00
   %ret_vec.sroa.8.i.val = load float, float* %ret_vec.sroa.8.i, align 4
   %11 = select i1 %10, float 0.000000e+00, float %ret_vec.sroa.8.i.val

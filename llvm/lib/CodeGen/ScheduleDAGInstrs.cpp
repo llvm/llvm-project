@@ -554,7 +554,7 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
 /// (like a call or something with unmodeled side effects).
 static inline bool isGlobalMemoryObject(AliasAnalysis *AA, MachineInstr *MI) {
   return MI->isCall() || MI->hasUnmodeledSideEffects() ||
-         (MI->hasOrderedMemoryRef() && !MI->isInvariantLoad(AA));
+         (MI->hasOrderedMemoryRef() && !MI->isDereferenceableInvariantLoad(AA));
 }
 
 /// This returns true if the two MIs need a chain edge between them.
@@ -1023,7 +1023,8 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
     }
 
     // If it's not a store or a variant load, we're done.
-    if (!MI.mayStore() && !(MI.mayLoad() && !MI.isInvariantLoad(AA)))
+    if (!MI.mayStore() &&
+        !(MI.mayLoad() && !MI.isDereferenceableInvariantLoad(AA)))
       continue;
 
     // Always add dependecy edge to BarrierChain if present.

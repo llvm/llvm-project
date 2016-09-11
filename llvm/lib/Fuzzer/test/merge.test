@@ -28,3 +28,9 @@ CHECK2: === Merge: written 3 units
 RUN: LLVMFuzzer-FullCoverageSetTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=CHECK3
 CHECK3: === Minimizing the initial corpus of 6 units
 CHECK3: === Merge: written 0 units
+
+
+# Check that when merge fails we print an error message.
+RUN: echo 'Hi!' > %tmp/T1/HiI
+RUN: not LLVMFuzzer-NullDerefTest -merge=1 %tmp/T1 %tmp/T2 2>&1 | FileCheck %s --check-prefix=MERGE_FAIL
+MERGE_FAIL: NOTE: merge did not succeed due to a failure on one of the inputs.

@@ -16,10 +16,15 @@ namespace {
 
 class Node : public ilist_node<Node> {};
 
+struct LocalAccess : ilist_detail::NodeAccess {
+  using NodeAccess::getPrev;
+  using NodeAccess::getNext;
+};
+
 TEST(IListSentinelTest, DefaultConstructor) {
   ilist_sentinel<Node> S;
-  EXPECT_EQ(&S, ilist_node_access::getPrev(S));
-  EXPECT_EQ(&S, ilist_node_access::getNext(S));
+  EXPECT_EQ(&S, LocalAccess::getPrev(S));
+  EXPECT_EQ(&S, LocalAccess::getNext(S));
 #ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
   EXPECT_TRUE(S.isKnownSentinel());
 #else
@@ -29,8 +34,8 @@ TEST(IListSentinelTest, DefaultConstructor) {
 
 TEST(IListSentinelTest, NormalNodeIsNotKnownSentinel) {
   Node N;
-  EXPECT_EQ(nullptr, ilist_node_access::getPrev(N));
-  EXPECT_EQ(nullptr, ilist_node_access::getNext(N));
+  EXPECT_EQ(nullptr, LocalAccess::getPrev(N));
+  EXPECT_EQ(nullptr, LocalAccess::getNext(N));
   EXPECT_FALSE(N.isKnownSentinel());
 }
 

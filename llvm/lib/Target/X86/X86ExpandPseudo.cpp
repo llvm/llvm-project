@@ -81,6 +81,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::TCRETURNri:
   case X86::TCRETURNmi:
   case X86::TCRETURNdi64:
+  case X86::TCRETURNdi64cc:
   case X86::TCRETURNri64:
   case X86::TCRETURNmi64: {
     bool isMem = Opcode == X86::TCRETURNmi || Opcode == X86::TCRETURNmi64;
@@ -98,7 +99,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     Offset = StackAdj - MaxTCDelta;
     assert(Offset >= 0 && "Offset should never be negative");
 
-    if (Opcode == X86::TCRETURNdicc) {
+    if (Opcode == X86::TCRETURNdicc || Opcode == X86::TCRETURNdi64cc) {
       assert(Offset == 0 && "Conditional tail call cannot adjust the stack.");
     }
 
@@ -111,7 +112,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     // Jump to label or value in register.
     bool IsWin64 = STI->isTargetWin64();
     if (Opcode == X86::TCRETURNdi || Opcode == X86::TCRETURNdicc ||
-        Opcode == X86::TCRETURNdi64) {
+        Opcode == X86::TCRETURNdi64 || Opcode == X86::TCRETURNdi64cc) {
       unsigned Op;
       switch (Opcode) {
       case X86::TCRETURNdi:
@@ -119,6 +120,11 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         break;
       case X86::TCRETURNdicc:
         Op = X86::TAILJMPd_CC;
+        break;
+      case X86::TCRETURNdi64cc:
+        assert(!IsWin64 && "Conditional tail calls confuse the Win64 unwinder.");
+        // TODO: We could do it for Win64 "leaf" functions though; PR30337.
+        Op = X86::TAILJMPd64_CC;
         break;
       default:
         // Note: Win64 uses REX prefixes indirect jumps out of functions, but
@@ -135,7 +141,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         MIB.addExternalSymbol(JumpTarget.getSymbolName(),
                               JumpTarget.getTargetFlags());
       }
-      if (Op == X86::TAILJMPd_CC) {
+      if (Op == X86::TAILJMPd_CC || Op == X86::TAILJMPd64_CC) {
         MIB.addImm(MBBI->getOperand(2).getImm());
       }
 

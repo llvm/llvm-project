@@ -32,4 +32,19 @@ entry:
   ret void
 }
 
+; Check that we don't combine the bitcast into the store. This would create a
+; bitcast of the swifterror which is invalid.
+
+; CHECK-LABEL; @swifterror_store
+; CHECK: bitcast i64
+; CHECK: store %swift.error
+
+%swift.error = type opaque
+define void @swifterror_store(i64* %x, %swift.error** swifterror %err) {
+entry:
+  %casted = bitcast i64* %x to %swift.error*
+  store %swift.error* %casted, %swift.error** %err
+  ret void
+}
+
 !0 = !{!0}

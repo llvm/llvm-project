@@ -1501,6 +1501,9 @@ void HexagonDisassembler::addSubinstOperands(MCInst *MI, unsigned opcode,
     operand = getRegFromSubinstEncoding(inst & 0xf);
     Op = MCOperand::createReg(operand);
     MI->addOperand(Op);
+    if (opcode == Hexagon::V4_SA1_setin1)
+      break;
+    MI->addOperand(MCOperand::createReg(Hexagon::P0));
     break;
   case Hexagon::V4_SA1_cmpeqi:
     // Rs 7-4, u 1-0

@@ -357,3 +357,112 @@ handler2:
 
   ret float 1.0
 }
+
+%swift.refcounted = type opaque
+
+; This test checks that we don't create bad phi nodes as part of swifterror
+; isel. We used to fail machine ir verification.
+; CHECK-APPLE: _swifterror_isel
+; CHECK-O0: _swifterror_isel
+define void @swifterror_isel(%swift.refcounted*) {
+entry:
+  %swifterror = alloca swifterror %swift_error*, align 8
+  br i1 undef, label %5, label %1
+
+  %2 = phi i16 [ %4, %1 ], [ undef, %entry ]
+  %3 = call i1 undef(i16 %2, %swift.refcounted* swiftself %0, %swift_error** nocapture swifterror %swifterror)
+  %4 = load i16, i16* undef, align 2
+  br label %1
+
+  ret void
+}
+
+; This tests the basic usage of a swifterror parameter with swiftcc.
+define swiftcc float @foo_swiftcc(%swift_error** swifterror %error_ptr_ref) {
+; CHECK-APPLE-LABEL: foo_swiftcc:
+; CHECK-APPLE: movl $16, %edi
+; CHECK-APPLE: malloc
+; CHECK-APPLE: movb $1, 8(%rax)
+; CHECK-APPLE: movq %rax, %r12
+
+; CHECK-O0-LABEL: foo_swiftcc:
+; CHECK-O0: movl $16
+; CHECK-O0: malloc
+; CHECK-O0: movb $1, 8(%rax)
+; CHECK-O0: movq %{{.*}}, %r12
+entry:
+  %call = call i8* @malloc(i64 16)
+  %call.0 = bitcast i8* %call to %swift_error*
+  store %swift_error* %call.0, %swift_error** %error_ptr_ref
+  %tmp = getelementptr inbounds i8, i8* %call, i64 8
+  store i8 1, i8* %tmp
+  ret float 1.0
+}
+
+declare swiftcc float @moo(%swift_error** swifterror)
+
+; Test parameter forwarding.
+define swiftcc float @forward_swifterror(%swift_error** swifterror %error_ptr_ref) {
+; CHECK-APPLE-LABEL: forward_swifterror:
+; CHECK-APPLE: pushq %rax
+; CHECK-APPLE: callq _moo
+; CHECK-APPLE: popq %rax
+; CHECK-APPLE: retq
+
+; CHECK-O0-LABEL: forward_swifterror:
+; CHECK-O0:  subq $24, %rsp
+; CHECK-O0:  movq %r12, %rcx
+; CHECK-O0:  movq %rcx, 16(%rsp)
+; CHECK-O0:  movq %rax, 8(%rsp)
+; CHECK-O0:  callq _moo
+; CHECK-O0:  addq $24, %rsp
+; CHECK-O0:  retq
+
+entry:
+  %call = call swiftcc float @moo(%swift_error** swifterror %error_ptr_ref)
+  ret float %call
+}
+
+define swiftcc float @conditionally_forward_swifterror(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
+; CHECK-APPLE-LABEL: conditionally_forward_swifterror:
+; CHECK-APPLE:  pushq %rax
+; CHECK-APPLE:	testl %edi, %edi
+; CHECK-APPLE:  je
+
+; CHECK-APPLE:  callq _moo
+; CHECK-APPLE:  popq %rax
+; CHECK-APPLE:  retq
+
+; CHECK-APPLE:  xorps %xmm0, %xmm0
+; CHECK-APPLE:  popq %rax
+; CHECK-APPLE:  retq
+
+; CHECK-O0-LABEL: conditionally_forward_swifterror:
+; CHECK-O0:  subq $24, %rsp
+; CHECK-O0:  movq %r12, %rcx
+; CHECK-O0:  cmpl $0, %edi
+; CHECK-O0:  movq %rax, 16(%rsp)
+; CHECK-O0:  movq %r12, 8(%rsp)
+; CHECK-O0:  movq %rcx, (%rsp)
+; CHECK-O0:  je
+
+; CHECK-O0:  movq 8(%rsp), %r12
+; CHECK-O0:  callq _moo
+; CHECK-O0:  addq $24, %rsp
+; CHECK-O0:  retq
+
+; CHECK-O0:  xorps %xmm0, %xmm0
+; CHECK-O0:  movq 8(%rsp), %r12
+; CHECK-O0:  addq $24, %rsp
+; CHECK-O0:  retq
+entry:
+  %cond = icmp ne i32 %cc, 0
+  br i1 %cond, label %gen_error, label %normal
+
+gen_error:
+  %call = call swiftcc float @moo(%swift_error** swifterror %error_ptr_ref)
+  ret float %call
+
+normal:
+  ret float 0.0
+}
