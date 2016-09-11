@@ -19,23 +19,92 @@
 
 namespace llvm {
 
-template <class T> struct MachineInstrBundleIteratorTraits {
+template <class T, bool IsReverse> struct MachineInstrBundleIteratorTraits;
+template <class T> struct MachineInstrBundleIteratorTraits<T, false> {
   typedef simple_ilist<T, ilist_sentinel_tracking<true>> list_type;
   typedef typename list_type::iterator instr_iterator;
   typedef typename list_type::iterator nonconst_instr_iterator;
   typedef typename list_type::const_iterator const_instr_iterator;
 };
-template <class T> struct MachineInstrBundleIteratorTraits<const T> {
+template <class T> struct MachineInstrBundleIteratorTraits<T, true> {
+  typedef simple_ilist<T, ilist_sentinel_tracking<true>> list_type;
+  typedef typename list_type::reverse_iterator instr_iterator;
+  typedef typename list_type::reverse_iterator nonconst_instr_iterator;
+  typedef typename list_type::const_reverse_iterator const_instr_iterator;
+};
+template <class T> struct MachineInstrBundleIteratorTraits<const T, false> {
   typedef simple_ilist<T, ilist_sentinel_tracking<true>> list_type;
   typedef typename list_type::const_iterator instr_iterator;
   typedef typename list_type::iterator nonconst_instr_iterator;
   typedef typename list_type::const_iterator const_instr_iterator;
 };
+template <class T> struct MachineInstrBundleIteratorTraits<const T, true> {
+  typedef simple_ilist<T, ilist_sentinel_tracking<true>> list_type;
+  typedef typename list_type::const_reverse_iterator instr_iterator;
+  typedef typename list_type::reverse_iterator nonconst_instr_iterator;
+  typedef typename list_type::const_reverse_iterator const_instr_iterator;
+};
+
+template <bool IsReverse> struct MachineInstrBundleIteratorHelper;
+template <> struct MachineInstrBundleIteratorHelper<false> {
+  /// Get the beginning of the current bundle.
+  template <class Iterator> static Iterator getBundleBegin(Iterator I) {
+    if (!I.isEnd())
+      while (I->isBundledWithPred())
+        --I;
+    return I;
+  }
+
+  /// Get the final node of the current bundle.
+  template <class Iterator> static Iterator getBundleFinal(Iterator I) {
+    if (!I.isEnd())
+      while (I->isBundledWithSucc())
+        ++I;
+    return I;
+  }
+
+  /// Increment forward ilist iterator.
+  template <class Iterator> static void increment(Iterator &I) {
+    I = std::next(getBundleFinal(I));
+  }
+
+  /// Decrement forward ilist iterator.
+  template <class Iterator> static void decrement(Iterator &I) {
+    I = getBundleBegin(std::prev(I));
+  }
+};
+
+template <> struct MachineInstrBundleIteratorHelper<true> {
+  /// Get the beginning of the current bundle.
+  template <class Iterator> static Iterator getBundleBegin(Iterator I) {
+    return MachineInstrBundleIteratorHelper<false>::getBundleBegin(
+               I.getReverse())
+        .getReverse();
+  }
+
+  /// Get the final node of the current bundle.
+  template <class Iterator> static Iterator getBundleFinal(Iterator I) {
+    return MachineInstrBundleIteratorHelper<false>::getBundleFinal(
+               I.getReverse())
+        .getReverse();
+  }
+
+  /// Increment reverse ilist iterator.
+  template <class Iterator> static void increment(Iterator &I) {
+    I = getBundleBegin(std::next(I));
+  }
+
+  /// Decrement reverse ilist iterator.
+  template <class Iterator> static void decrement(Iterator &I) {
+    I = std::prev(getBundleFinal(I));
+  }
+};
 
 /// MachineBasicBlock iterator that automatically skips over MIs that are
 /// inside bundles (i.e. walk top level MIs only).
-template <typename Ty> class MachineInstrBundleIterator {
-  typedef MachineInstrBundleIteratorTraits<Ty> Traits;
+template <typename Ty, bool IsReverse = false>
+class MachineInstrBundleIterator : MachineInstrBundleIteratorHelper<IsReverse> {
+  typedef MachineInstrBundleIteratorTraits<Ty, IsReverse> Traits;
   typedef typename Traits::instr_iterator instr_iterator;
   instr_iterator MII;
 
@@ -53,8 +122,9 @@ private:
   typedef typename Traits::nonconst_instr_iterator nonconst_instr_iterator;
   typedef typename Traits::const_instr_iterator const_instr_iterator;
   typedef MachineInstrBundleIterator<
-      typename nonconst_instr_iterator::value_type>
+      typename nonconst_instr_iterator::value_type, IsReverse>
       nonconst_iterator;
+  typedef MachineInstrBundleIterator<Ty, !IsReverse> reverse_iterator;
 
 public:
   MachineInstrBundleIterator(instr_iterator MI) : MII(MI) {
@@ -77,11 +147,16 @@ public:
   // Template allows conversion from const to nonconst.
   template <class OtherTy>
   MachineInstrBundleIterator(
-      const MachineInstrBundleIterator<OtherTy> &I,
+      const MachineInstrBundleIterator<OtherTy, IsReverse> &I,
       typename std::enable_if<std::is_convertible<OtherTy *, Ty *>::value,
                               void *>::type = nullptr)
       : MII(I.getInstrIterator()) {}
   MachineInstrBundleIterator() : MII(nullptr) {}
+
+  /// Get the bundle iterator for the given instruction's bundle.
+  static MachineInstrBundleIterator getAtBundleBegin(instr_iterator MI) {
+    return MachineInstrBundleIteratorHelper<IsReverse>::getBundleBegin(MI);
+  }
 
   reference operator*() const { return *MII; }
   pointer operator->() const { return &operator*(); }
@@ -161,15 +236,11 @@ public:
 
   // Increment and decrement operators...
   MachineInstrBundleIterator &operator--() {
-    do
-      --MII;
-    while (MII->isBundledWithPred());
+    this->decrement(MII);
     return *this;
   }
   MachineInstrBundleIterator &operator++() {
-    while (MII->isBundledWithSucc())
-      ++MII;
-    ++MII;
+    this->increment(MII);
     return *this;
   }
   MachineInstrBundleIterator operator--(int) {
@@ -186,6 +257,8 @@ public:
   instr_iterator getInstrIterator() const { return MII; }
 
   nonconst_iterator getNonConstIterator() const { return MII.getNonConst(); }
+
+  reverse_iterator getReverse() const { return MII.getReverse(); }
 };
 
 } // end namespace llvm

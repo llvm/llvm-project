@@ -22,24 +22,46 @@ struct MyBundledInstr
 };
 typedef MachineInstrBundleIterator<MyBundledInstr> bundled_iterator;
 typedef MachineInstrBundleIterator<const MyBundledInstr> const_bundled_iterator;
+typedef MachineInstrBundleIterator<MyBundledInstr, true>
+    reverse_bundled_iterator;
+typedef MachineInstrBundleIterator<const MyBundledInstr, true>
+    const_reverse_bundled_iterator;
 
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG
 TEST(MachineInstrBundleIteratorTest, CheckForBundles) {
   MyBundledInstr MBI;
+  auto I = MBI.getIterator();
+  auto RI = I.getReverse();
 
   // Confirm that MBI is always considered bundled.
   EXPECT_TRUE(MBI.isBundledWithPred());
   EXPECT_TRUE(MBI.isBundledWithSucc());
 
   // Confirm that iterators check in their constructor for bundled iterators.
+  EXPECT_DEATH((void)static_cast<bundled_iterator>(I),
+               "not legal to initialize");
   EXPECT_DEATH((void)static_cast<bundled_iterator>(MBI),
                "not legal to initialize");
   EXPECT_DEATH((void)static_cast<bundled_iterator>(&MBI),
                "not legal to initialize");
+  EXPECT_DEATH((void)static_cast<const_bundled_iterator>(I),
+               "not legal to initialize");
   EXPECT_DEATH((void)static_cast<const_bundled_iterator>(MBI),
                "not legal to initialize");
   EXPECT_DEATH((void)static_cast<const_bundled_iterator>(&MBI),
+               "not legal to initialize");
+  EXPECT_DEATH((void)static_cast<reverse_bundled_iterator>(RI),
+               "not legal to initialize");
+  EXPECT_DEATH((void)static_cast<reverse_bundled_iterator>(MBI),
+               "not legal to initialize");
+  EXPECT_DEATH((void)static_cast<reverse_bundled_iterator>(&MBI),
+               "not legal to initialize");
+  EXPECT_DEATH((void)static_cast<const_reverse_bundled_iterator>(RI),
+               "not legal to initialize");
+  EXPECT_DEATH((void)static_cast<const_reverse_bundled_iterator>(MBI),
+               "not legal to initialize");
+  EXPECT_DEATH((void)static_cast<const_reverse_bundled_iterator>(&MBI),
                "not legal to initialize");
 }
 #endif
