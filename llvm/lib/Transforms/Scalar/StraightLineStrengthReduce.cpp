@@ -66,6 +66,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <list>
 #include <vector>
 
 using namespace llvm;
@@ -79,7 +80,7 @@ class StraightLineStrengthReduce : public FunctionPass {
 public:
   // SLSR candidate. Such a candidate must be in one of the forms described in
   // the header comments.
-  struct Candidate : public ilist_node<Candidate> {
+  struct Candidate {
     enum Kind {
       Invalid, // reserved for the default constructor
       Add,     // B + i * S
@@ -199,7 +200,7 @@ private:
   DominatorTree *DT;
   ScalarEvolution *SE;
   TargetTransformInfo *TTI;
-  ilist<Candidate> Candidates;
+  std::list<Candidate> Candidates;
   // Temporarily holds all instructions that are unlinked (but not deleted) by
   // rewriteCandidateWithBasis. These instructions will be actually removed
   // after all rewriting finishes.
