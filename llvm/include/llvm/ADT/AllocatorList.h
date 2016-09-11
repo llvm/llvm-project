@@ -86,7 +86,7 @@ private:
     typedef iterator_adaptor_base<IteratorImpl<ValueT, IteratorBase>,
                                   IteratorBase, std::bidirectional_iterator_tag,
                                   ValueT>
-        iterator_adaptor_base;
+        base_type;
 
   public:
     typedef ValueT value_type;
@@ -98,15 +98,15 @@ private:
     IteratorImpl &operator=(const IteratorImpl &) = default;
     ~IteratorImpl() = default;
 
-    explicit IteratorImpl(const IteratorBase &I) : iterator_adaptor_base(I) {}
+    explicit IteratorImpl(const IteratorBase &I) : base_type(I) {}
 
     template <class OtherValueT, class OtherIteratorBase>
     IteratorImpl(const IteratorImpl<OtherValueT, OtherIteratorBase> &X,
                  typename std::enable_if<std::is_convertible<
                      OtherIteratorBase, IteratorBase>::value>::type * = nullptr)
-        : iterator_adaptor_base(X.wrapped()) {}
+        : base_type(X.wrapped()) {}
 
-    reference operator*() const { return iterator_adaptor_base::wrapped()->V; }
+    reference operator*() const { return base_type::wrapped()->V; }
     pointer operator->() const { return &operator*(); }
 
     friend bool operator==(const IteratorImpl &L, const IteratorImpl &R) {
