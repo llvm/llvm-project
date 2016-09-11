@@ -40,6 +40,9 @@ namespace llvm {
 ///
 /// \see ilist_noalloc_traits
 template <typename NodeTy> struct ilist_alloc_traits {
+  /// Clone a node.
+  ///
+  /// TODO: Remove this and API that relies on it (it's dead code).
   static NodeTy *createNode(const NodeTy &V) { return new NodeTy(V); }
   static void deleteNode(NodeTy *V) { delete V; }
 };

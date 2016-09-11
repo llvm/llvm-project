@@ -164,6 +164,14 @@ public:
       insert(I, *First);
   }
 
+  /// Clone another list.
+  template <class Cloner, class Disposer>
+  void cloneFrom(const simple_ilist &L2, Cloner clone, Disposer dispose) {
+    clearAndDispose(dispose);
+    for (const_reference V : L2)
+      push_back(*clone(V));
+  }
+
   /// Remove a node by reference; never deletes.
   ///
   /// \see \a erase() for removing by iterator.
