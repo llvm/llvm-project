@@ -74,6 +74,14 @@ TEST(MachineInstrBundleIteratorTest, CompareToBundledMI) {
   ASSERT_FALSE(CI == &MBI);
   ASSERT_FALSE(CI == CMBI);
   ASSERT_FALSE(CI == &CMBI);
+  ASSERT_FALSE(MBI.getIterator() == I);
+  ASSERT_FALSE(CMBI.getIterator() == I);
+  ASSERT_FALSE(I == MBI.getIterator());
+  ASSERT_FALSE(I == CMBI.getIterator());
+  ASSERT_FALSE(MBI.getIterator() == CI);
+  ASSERT_FALSE(CMBI.getIterator() == CI);
+  ASSERT_FALSE(CI == MBI.getIterator());
+  ASSERT_FALSE(CI == CMBI.getIterator());
   ASSERT_TRUE(MBI != I);
   ASSERT_TRUE(&MBI != I);
   ASSERT_TRUE(CMBI != I);
@@ -90,6 +98,14 @@ TEST(MachineInstrBundleIteratorTest, CompareToBundledMI) {
   ASSERT_TRUE(CI != &MBI);
   ASSERT_TRUE(CI != CMBI);
   ASSERT_TRUE(CI != &CMBI);
+  ASSERT_TRUE(MBI.getIterator() != I);
+  ASSERT_TRUE(CMBI.getIterator() != I);
+  ASSERT_TRUE(I != MBI.getIterator());
+  ASSERT_TRUE(I != CMBI.getIterator());
+  ASSERT_TRUE(MBI.getIterator() != CI);
+  ASSERT_TRUE(CMBI.getIterator() != CI);
+  ASSERT_TRUE(CI != MBI.getIterator());
+  ASSERT_TRUE(CI != CMBI.getIterator());
 }
 
 } // end namespace

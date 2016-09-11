@@ -23,18 +23,20 @@ template <class T> struct MachineInstrBundleIteratorTraits {
   typedef simple_ilist<T, ilist_sentinel_tracking<true>> list_type;
   typedef typename list_type::iterator instr_iterator;
   typedef typename list_type::iterator nonconst_instr_iterator;
+  typedef typename list_type::const_iterator const_instr_iterator;
 };
 template <class T> struct MachineInstrBundleIteratorTraits<const T> {
   typedef simple_ilist<T, ilist_sentinel_tracking<true>> list_type;
   typedef typename list_type::const_iterator instr_iterator;
   typedef typename list_type::iterator nonconst_instr_iterator;
+  typedef typename list_type::const_iterator const_instr_iterator;
 };
 
 /// MachineBasicBlock iterator that automatically skips over MIs that are
 /// inside bundles (i.e. walk top level MIs only).
 template <typename Ty> class MachineInstrBundleIterator {
-  typedef typename MachineInstrBundleIteratorTraits<Ty>::instr_iterator
-      instr_iterator;
+  typedef MachineInstrBundleIteratorTraits<Ty> Traits;
+  typedef typename Traits::instr_iterator instr_iterator;
   instr_iterator MII;
 
 public:
@@ -48,13 +50,18 @@ public:
   typedef typename instr_iterator::const_reference const_reference;
 
 private:
-  typedef typename std::remove_const<value_type>::type nonconst_value_type;
-  typedef typename MachineInstrBundleIteratorTraits<Ty>::nonconst_instr_iterator
-      nonconst_instr_iterator;
-  typedef MachineInstrBundleIterator<nonconst_value_type> nonconst_iterator;
+  typedef typename Traits::nonconst_instr_iterator nonconst_instr_iterator;
+  typedef typename Traits::const_instr_iterator const_instr_iterator;
+  typedef MachineInstrBundleIterator<
+      typename nonconst_instr_iterator::value_type>
+      nonconst_iterator;
 
 public:
-  MachineInstrBundleIterator(instr_iterator MI) : MII(MI) {}
+  MachineInstrBundleIterator(instr_iterator MI) : MII(MI) {
+    assert((!MI.getNodePtr() || MI.isEnd() || !MI->isBundledWithPred()) &&
+           "It's not legal to initialize MachineInstrBundleIterator with a "
+           "bundled MI");
+  }
 
   MachineInstrBundleIterator(reference MI) : MII(MI) {
     assert(!MI.isBundledWithPred() && "It's not legal to initialize "
@@ -86,13 +93,27 @@ public:
                          const MachineInstrBundleIterator &R) {
     return L.MII == R.MII;
   }
+  friend bool operator==(const MachineInstrBundleIterator &L,
+                         const const_instr_iterator &R) {
+    return L.MII == R; // Avoid assertion about validity of R.
+  }
+  friend bool operator==(const const_instr_iterator &L,
+                         const MachineInstrBundleIterator &R) {
+    return L == R.MII; // Avoid assertion about validity of L.
+  }
+  friend bool operator==(const MachineInstrBundleIterator &L,
+                         const nonconst_instr_iterator &R) {
+    return L.MII == R; // Avoid assertion about validity of R.
+  }
+  friend bool operator==(const nonconst_instr_iterator &L,
+                         const MachineInstrBundleIterator &R) {
+    return L == R.MII; // Avoid assertion about validity of L.
+  }
   friend bool operator==(const MachineInstrBundleIterator &L, const_pointer R) {
-    // Avoid assertion about validity of R.
-    return L.MII == instr_iterator(const_cast<pointer>(R));
+    return L == const_instr_iterator(R); // Avoid assertion about validity of R.
   }
   friend bool operator==(const_pointer L, const MachineInstrBundleIterator &R) {
-    // Avoid assertion about validity of L.
-    return instr_iterator(const_cast<pointer>(L)) == R.MII;
+    return const_instr_iterator(L) == R; // Avoid assertion about validity of L.
   }
   friend bool operator==(const MachineInstrBundleIterator &L,
                          const_reference R) {
@@ -104,6 +125,22 @@ public:
   }
 
   friend bool operator!=(const MachineInstrBundleIterator &L,
+                         const MachineInstrBundleIterator &R) {
+    return !(L == R);
+  }
+  friend bool operator!=(const MachineInstrBundleIterator &L,
+                         const const_instr_iterator &R) {
+    return !(L == R);
+  }
+  friend bool operator!=(const const_instr_iterator &L,
+                         const MachineInstrBundleIterator &R) {
+    return !(L == R);
+  }
+  friend bool operator!=(const MachineInstrBundleIterator &L,
+                         const nonconst_instr_iterator &R) {
+    return !(L == R);
+  }
+  friend bool operator!=(const nonconst_instr_iterator &L,
                          const MachineInstrBundleIterator &R) {
     return !(L == R);
   }
