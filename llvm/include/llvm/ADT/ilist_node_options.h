@@ -10,6 +10,8 @@
 #ifndef LLVM_ADT_ILIST_NODE_OPTIONS_H
 #define LLVM_ADT_ILIST_NODE_OPTIONS_H
 
+#include <type_traits>
+
 namespace llvm {
 
 template <bool EnableSentinelTracking> class ilist_node_base;
