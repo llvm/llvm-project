@@ -3152,7 +3152,6 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
 
   llvm::Constant *Zero = llvm::Constant::getNullValue(Int32Ty);
   llvm::Constant *Zeros[] = { Zero, Zero };
-  llvm::Value *V;
 
   // If we don't already have it, get __CFConstantStringClassReference.
   if (!CFConstantStringClassRef) {
@@ -3182,10 +3181,8 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
     }
 
     // Decay array -> ptr
-    V = llvm::ConstantExpr::getGetElementPtr(Ty, GV, Zeros);
-    CFConstantStringClassRef = V;
-  } else {
-    V = CFConstantStringClassRef;
+    CFConstantStringClassRef =
+        llvm::ConstantExpr::getGetElementPtr(Ty, GV, Zeros);
   }
 
   QualType CFTy = getContext().getCFConstantStringType();
@@ -3195,7 +3192,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   llvm::Constant *Fields[4];
 
   // Class pointer.
-  Fields[0] = cast<llvm::ConstantExpr>(V);
+  Fields[0] = cast<llvm::ConstantExpr>(CFConstantStringClassRef);
 
   // Flags.
   llvm::Type *Ty = getTypes().ConvertType(getContext().UnsignedIntTy);
