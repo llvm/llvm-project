@@ -119,6 +119,9 @@ table {
 .column-entry {
   text-align: right;
 }
+.column-entry-left {
+  text-align: left;
+}
 .column-entry-yellow {
   text-align: right;
   background-color: #ffffd0;
@@ -192,23 +195,6 @@ td:first-child {
 td:last-child {
   border-right: none;
 }
-.project-title {
-  font-size:36.0pt;
-  line-height:200%;
-  font-family:Calibri;
-  font-weight: bold;
-}
-.report-title {
-  font-size:16.0pt;
-  line-height:120%;
-  font-family:Arial;
-  font-weight: bold;
-}
-.created-time {
-  font-size:14.0pt;
-  line-height:120%;
-  font-family:Arial;
-}
 )";
 
 const char *EndHeader = "</head>";
@@ -237,19 +223,11 @@ const char *BeginTable = "<table>";
 
 const char *EndTable = "</table>";
 
-const char *BeginProjectTitleDiv = "<div class='project-title'>";
+const char *ProjectTitleTag = "h1";
 
-const char *EndProjectTitleDiv = "</div>";
+const char *ReportTitleTag = "h2";
 
-const char *BeginReportTitleDiv = "<div class='report-title'>";
-
-const char *EndReportTitleDiv = "</div>";
-
-const char *BeginCreatedTimeDiv = "<div class='created-time'>";
-
-const char *EndCreatedTimeDiv = "</div>";
-
-const char *LineBreak = "<br>";
+const char *CreatedTimeTag = "h4";
 
 std::string getPathToStyle(StringRef ViewPath) {
   std::string PathToStyle = "";
@@ -308,8 +286,9 @@ void CoveragePrinterHTML::closeViewFile(OwnedStream OS) {
 /// Emit column labels for the table in the index.
 static void emitColumnLabelsForIndex(raw_ostream &OS) {
   SmallVector<std::string, 4> Columns;
+  Columns.emplace_back(tag("td", "Filename", "column-entry-left"));
   for (const char *Label :
-       {"Filename", "Region Coverage", "Function Coverage", "Line Coverage"})
+       {"Function Coverage", "Line Coverage", "Region Coverage"})
     Columns.emplace_back(tag("td", Label, "column-entry"));
   OS << tag("tr", join(Columns.begin(), Columns.end(), ""));
 }
@@ -334,7 +313,7 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
       CellClass = "column-entry-red";
     else if (Hit == Total)
       CellClass = "column-entry-green";
-    Columns.emplace_back(tag("td", tag("pre", S, "code"), CellClass));
+    Columns.emplace_back(tag("td", tag("pre", S), CellClass));
   };
 
   // Simplify the display file path, and wrap it in a link if requested.
@@ -351,16 +330,16 @@ void CoveragePrinterHTML::emitFileSummary(raw_ostream &OS, StringRef SF,
     Filename = a(LinkTarget, LinkText);
   }
 
-  Columns.emplace_back(tag("td", tag("pre", Filename, "code")));
-  AddCoverageTripleToColumn(
-      FCS.RegionCoverage.NumRegions - FCS.RegionCoverage.NotCovered,
-      FCS.RegionCoverage.NumRegions, FCS.RegionCoverage.getPercentCovered());
+  Columns.emplace_back(tag("td", tag("pre", Filename)));
   AddCoverageTripleToColumn(FCS.FunctionCoverage.Executed,
                             FCS.FunctionCoverage.NumFunctions,
                             FCS.FunctionCoverage.getPercentCovered());
   AddCoverageTripleToColumn(
       FCS.LineCoverage.NumLines - FCS.LineCoverage.NotCovered,
       FCS.LineCoverage.NumLines, FCS.LineCoverage.getPercentCovered());
+  AddCoverageTripleToColumn(
+      FCS.RegionCoverage.NumRegions - FCS.RegionCoverage.NotCovered,
+      FCS.RegionCoverage.NumRegions, FCS.RegionCoverage.getPercentCovered());
 
   OS << tag("tr", join(Columns.begin(), Columns.end(), ""), "light-row");
 }
@@ -388,16 +367,10 @@ Error CoveragePrinterHTML::createIndexFile(
 
   // Emit some basic information about the coverage report.
   if (Opts.hasProjectTitle())
-    OSRef << BeginProjectTitleDiv
-          << tag("span", escape(Opts.ProjectTitle, Opts)) << EndProjectTitleDiv;
-  OSRef << BeginReportTitleDiv
-        << tag("span", escape("Code Coverage Report", Opts))
-        << EndReportTitleDiv;
+    OSRef << tag(ProjectTitleTag, escape(Opts.ProjectTitle, Opts));
+  OSRef << tag(ReportTitleTag, "Coverage Report");
   if (Opts.hasCreatedTime())
-    OSRef << BeginCreatedTimeDiv
-          << tag("span", escape(Opts.CreatedTimeStr, Opts))
-          << EndCreatedTimeDiv;
-  OSRef << LineBreak;
+    OSRef << tag(CreatedTimeTag, escape(Opts.CreatedTimeStr, Opts));
 
   // Emit a table containing links to reports for each file in the covmapping.
   CoverageReport Report(Opts, Coverage);
@@ -415,28 +388,18 @@ Error CoveragePrinterHTML::createIndexFile(
 }
 
 void SourceCoverageViewHTML::renderViewHeader(raw_ostream &OS) {
-  OS << LineBreak << BeginCenteredDiv << BeginTable;
+  OS << BeginCenteredDiv << BeginTable;
 }
 
 void SourceCoverageViewHTML::renderViewFooter(raw_ostream &OS) {
   OS << EndTable << EndCenteredDiv;
 }
 
-void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile,
-                                              unsigned FirstUncoveredLineNo) {
+void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile) {
   OS << BeginSourceNameDiv;
   std::string ViewInfo = escape(
       WholeFile ? getVerboseSourceName() : getSourceName(), getOptions());
   OS << tag("pre", ViewInfo);
-  if (WholeFile) {
-    // Render the "Go to first unexecuted line" link for the view.
-    if (FirstUncoveredLineNo != 0) { // The file is not fully covered
-      std::string LinkText =
-          escape("Go to first unexecuted line", getOptions());
-      std::string LinkTarget = "#L" + utostr(uint64_t(FirstUncoveredLineNo));
-      OS << tag("pre", a(LinkTarget, LinkText));
-    }
-  }
   OS << EndSourceNameDiv;
 }
 
@@ -627,24 +590,29 @@ void SourceCoverageViewHTML::renderInstantiationView(raw_ostream &OS,
 void SourceCoverageViewHTML::renderCellInTitle(raw_ostream &OS,
                                                StringRef CellText) {
   if (getOptions().hasProjectTitle())
-    OS << BeginProjectTitleDiv
-       << tag("span", escape(getOptions().ProjectTitle, getOptions()))
-       << EndProjectTitleDiv;
-
-  OS << BeginReportTitleDiv << tag("span", escape(CellText, getOptions()))
-     << EndReportTitleDiv;
-
+    OS << tag(ProjectTitleTag, escape(getOptions().ProjectTitle, getOptions()));
+  OS << tag(ReportTitleTag, escape(CellText, getOptions()));
   if (getOptions().hasCreatedTime())
-    OS << BeginCreatedTimeDiv
-       << tag("span", escape(getOptions().CreatedTimeStr, getOptions()))
-       << EndCreatedTimeDiv;
+    OS << tag(CreatedTimeTag,
+              escape(getOptions().CreatedTimeStr, getOptions()));
 }
 
 void SourceCoverageViewHTML::renderTableHeader(raw_ostream &OS,
+                                               unsigned FirstUncoveredLineNo,
                                                unsigned ViewDepth) {
+  std::string SourceLabel;
+  if (FirstUncoveredLineNo == 0) {
+    SourceLabel = tag("td", tag("pre", "Source"));
+  } else {
+    std::string LinkTarget = "#L" + utostr(uint64_t(FirstUncoveredLineNo));
+    SourceLabel =
+        tag("td", tag("pre", "Source (" +
+                                 a(LinkTarget, "jump to first uncovered line") +
+                                 ")"));
+  }
+
   renderLinePrefix(OS, ViewDepth);
-  OS << tag("td", tag("span", tag("pre", escape("Line No.", getOptions()))))
-     << tag("td", tag("span", tag("pre", escape("Count", getOptions()))))
-     << tag("td", tag("span", tag("pre", escape("Source", getOptions()))));
+  OS << tag("td", tag("pre", "Line No.")) << tag("td", tag("pre", "Count"))
+     << SourceLabel;
   renderLineSuffix(OS, ViewDepth);
 }

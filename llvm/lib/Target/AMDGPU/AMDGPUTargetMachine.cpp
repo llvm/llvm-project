@@ -58,7 +58,7 @@ static cl::opt<bool> EnableR600IfConvert(
 static cl::opt<bool> EnableLoadStoreVectorizer(
   "amdgpu-load-store-vectorizer",
   cl::desc("Enable load store vectorizer"),
-  cl::init(false),
+  cl::init(true),
   cl::Hidden);
 
 extern "C" void LLVMInitializeAMDGPUTarget() {

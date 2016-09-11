@@ -2010,7 +2010,8 @@ static SDValue getLoadStackGuard(SelectionDAG &DAG, const SDLoc &DL,
   if (Global) {
     MachinePointerInfo MPInfo(Global);
     MachineInstr::mmo_iterator MemRefs = MF.allocateMemRefsArray(1);
-    auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant;
+    auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
+                 MachineMemOperand::MODereferenceable;
     *MemRefs = MF.getMachineMemOperand(MPInfo, Flags, PtrTy.getSizeInBits() / 8,
                                        DAG.getEVTAlignment(PtrTy));
     Node->setMemRefs(MemRefs, MemRefs + 1);
@@ -3473,17 +3474,8 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
 
   bool isVolatile = I.isVolatile();
   bool isNonTemporal = I.getMetadata(LLVMContext::MD_nontemporal) != nullptr;
-
-  // The IR notion of invariant_load only guarantees that all *non-faulting*
-  // invariant loads result in the same value.  The MI notion of invariant load
-  // guarantees that the load can be legally moved to any location within its
-  // containing function.  The MI notion of invariant_load is stronger than the
-  // IR notion of invariant_load -- an MI invariant_load is an IR invariant_load
-  // with a guarantee that the location being loaded from is dereferenceable
-  // throughout the function's lifetime.
-
-  bool isInvariant = I.getMetadata(LLVMContext::MD_invariant_load) != nullptr &&
-                     isDereferenceablePointer(SV, DAG.getDataLayout());
+  bool isInvariant = I.getMetadata(LLVMContext::MD_invariant_load) != nullptr;
+  bool isDereferenceable = isDereferenceablePointer(SV, DAG.getDataLayout());
   unsigned Alignment = I.getAlignment();
 
   AAMDNodes AAInfo;
@@ -3551,6 +3543,8 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
       MMOFlags |= MachineMemOperand::MONonTemporal;
     if (isInvariant)
       MMOFlags |= MachineMemOperand::MOInvariant;
+    if (isDereferenceable)
+      MMOFlags |= MachineMemOperand::MODereferenceable;
 
     SDValue L = DAG.getLoad(ValueVTs[i], dl, Root, A,
                             MachinePointerInfo(SV, Offsets[i]), Alignment,

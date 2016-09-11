@@ -581,8 +581,10 @@ SDValue SITargetLowering::LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
 
   SDValue Ptr = LowerParameterPtr(DAG, SL, Chain, Offset);
   return DAG.getLoad(ISD::UNINDEXED, ExtTy, VT, SL, Chain, Ptr, PtrOffset,
-                     PtrInfo, MemVT, Align, MachineMemOperand::MONonTemporal |
-                                                MachineMemOperand::MOInvariant);
+                     PtrInfo, MemVT, Align,
+                     MachineMemOperand::MONonTemporal |
+                         MachineMemOperand::MODereferenceable |
+                         MachineMemOperand::MOInvariant);
 }
 
 SDValue SITargetLowering::LowerFormalArguments(
@@ -1792,7 +1794,8 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS,
   MachinePointerInfo PtrInfo(V, StructOffset);
   return DAG.getLoad(MVT::i32, SL, QueuePtr.getValue(1), Ptr, PtrInfo,
                      MinAlign(64, StructOffset),
-                     MachineMemOperand::MOInvariant);
+                     MachineMemOperand::MODereferenceable |
+                         MachineMemOperand::MOInvariant);
 }
 
 SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
@@ -1910,7 +1913,8 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
   MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
 
   return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), GOTAddr, PtrInfo, Align,
-                     MachineMemOperand::MOInvariant);
+                     MachineMemOperand::MODereferenceable |
+                         MachineMemOperand::MOInvariant);
 }
 
 SDValue SITargetLowering::lowerTRAP(SDValue Op,
@@ -2130,9 +2134,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     };
 
     MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(),
-      MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant,
-      VT.getStoreSize(), 4);
+        MachinePointerInfo(),
+        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+            MachineMemOperand::MOInvariant,
+        VT.getStoreSize(), 4);
     return DAG.getMemIntrinsicNode(AMDGPUISD::LOAD_CONSTANT, DL,
                                    Op->getVTList(), Ops, VT, MMO);
   }

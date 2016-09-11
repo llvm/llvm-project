@@ -113,11 +113,9 @@ define void @scalar_vector_or_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %a, 
 }
 
 ; FUNC-LABEL: {{^}}vector_or_i64_loadimm:
-; SI-DAG: s_mov_b32 [[LO_S_IMM:s[0-9]+]], 0xdf77987f
-; SI-DAG: s_movk_i32 [[HI_S_IMM:s[0-9]+]], 0x146f
 ; SI-DAG: buffer_load_dwordx2 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}},
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[LO_S_IMM]], v[[LO_VREG]]
-; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, [[HI_S_IMM]], v[[HI_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0xdf77987f, v[[LO_VREG]]
+; SI-DAG: v_or_b32_e32 {{v[0-9]+}}, 0x146f, v[[HI_VREG]]
 ; SI: s_endpgm
 define void @vector_or_i64_loadimm(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
   %loada = load i64, i64 addrspace(1)* %a, align 8

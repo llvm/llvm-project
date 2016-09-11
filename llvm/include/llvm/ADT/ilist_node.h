@@ -19,17 +19,20 @@
 
 namespace llvm {
 
+namespace ilist_detail {
+struct NodeAccess;
+} // end namespace ilist_detail
+
 template<typename NodeTy>
 struct ilist_traits;
 
-struct ilist_node_access;
 template <typename NodeTy, bool IsReverse = false> class ilist_iterator;
 template <typename NodeTy> class ilist_sentinel;
 
 /// Templated wrapper class.
 template <typename NodeTy> class ilist_node : ilist_node_base {
   friend class ilist_base;
-  friend struct ilist_node_access;
+  friend struct ilist_detail::NodeAccess;
   friend struct ilist_traits<NodeTy>;
   friend class ilist_iterator<NodeTy, false>;
   friend class ilist_iterator<NodeTy, true>;
@@ -65,13 +68,15 @@ public:
   using ilist_node_base::isKnownSentinel;
 };
 
+namespace ilist_detail {
 /// An access class for ilist_node private API.
 ///
 /// This gives access to the private parts of ilist nodes.  Nodes for an ilist
 /// should friend this class if they inherit privately from ilist_node.
 ///
 /// Using this class outside of the ilist implementation is unsupported.
-struct ilist_node_access {
+struct NodeAccess {
+protected:
   template <typename T> static ilist_node<T> *getNodePtr(T *N) { return N; }
   template <typename T> static const ilist_node<T> *getNodePtr(const T *N) {
     return N;
@@ -98,6 +103,27 @@ struct ilist_node_access {
     return N.getNext();
   }
 };
+
+template <class T> struct SpecificNodeAccess : NodeAccess {
+protected:
+  typedef T *pointer;
+  typedef const T *const_pointer;
+  typedef ilist_node<T> node_type;
+
+  static node_type *getNodePtr(pointer N) {
+    return NodeAccess::getNodePtr<T>(N);
+  }
+  static const ilist_node<T> *getNodePtr(const_pointer N) {
+    return NodeAccess::getNodePtr<T>(N);
+  }
+  static pointer getValuePtr(node_type *N) {
+    return NodeAccess::getValuePtr<T>(N);
+  }
+  static const_pointer getValuePtr(const node_type *N) {
+    return NodeAccess::getValuePtr<T>(N);
+  }
+};
+} // end namespace ilist_detail
 
 template <typename NodeTy> class ilist_sentinel : public ilist_node<NodeTy> {
 public:

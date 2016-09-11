@@ -1176,7 +1176,7 @@ bool SystemZDAGToDAGISel::canUseBlockOperation(StoreSDNode *Store,
     return false;
 
   // There's no chance of overlap if the load is invariant.
-  if (Load->isInvariant())
+  if (Load->isInvariant() && Load->isDereferenceable())
     return true;
 
   // Otherwise we need to check whether there's an alias.

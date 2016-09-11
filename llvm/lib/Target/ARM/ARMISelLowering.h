@@ -506,6 +506,8 @@ namespace llvm {
 
     bool HasStandaloneRem = true;
 
+    void InitLibcallCallingConvs();
+
     void addTypeForNEON(MVT VT, MVT PromotedLdStVT, MVT PromotedBitwiseVT);
     void addDRTypeForNEON(MVT VT);
     void addQRTypeForNEON(MVT VT);

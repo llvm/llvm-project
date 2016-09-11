@@ -1,9 +1,8 @@
-; XFAIL: *
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-; CHECK-LABEL: {{^}}main:
-; CHECK-NOT: v_mov_b32_e32 v{{[0-9]+}}, 0xbf4353f8
-
+; GCN-LABEL: {{^}}main:
+; GCN: v_mul_f32_e32 v{{[0-9]+}}, 0x3f4353f8, v{{[0-9]+}}
+; GCN: v_mul_f32_e32 v{{[0-9]+}}, 0xbf4353f8, v{{[0-9]+}}
 define amdgpu_vs void @main(float) {
 main_body:
   %1 = fmul float %0, 0x3FE86A7F00000000

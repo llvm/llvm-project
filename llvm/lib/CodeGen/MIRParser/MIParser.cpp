@@ -1766,6 +1766,9 @@ bool MIParser::parseMemoryOperandFlag(MachineMemOperand::Flags &Flags) {
   case MIToken::kw_non_temporal:
     Flags |= MachineMemOperand::MONonTemporal;
     break;
+  case MIToken::kw_dereferenceable:
+    Flags |= MachineMemOperand::MODereferenceable;
+    break;
   case MIToken::kw_invariant:
     Flags |= MachineMemOperand::MOInvariant;
     break;

@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -amdgpu-load-store-vectorizer=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GatherAllAliases gives up on trying to analyze cases where the
 ; pointer may have been loaded from an aliased store, so make sure

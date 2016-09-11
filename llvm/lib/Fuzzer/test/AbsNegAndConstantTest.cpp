@@ -12,8 +12,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (Size < 8) return 0;
   int x;
   unsigned y;
-  memcpy(&x, Data, 4);
-  memcpy(&y, Data + 4, 4);
+  memcpy(&x, Data, sizeof(x));
+  memcpy(&y, Data + sizeof(x), sizeof(y));
   if (abs(x) < 0 && y == 0xbaddcafe) {
     printf("BINGO; Found the target, exiting; x = 0x%x y 0x%x\n", x, y);
     exit(1);

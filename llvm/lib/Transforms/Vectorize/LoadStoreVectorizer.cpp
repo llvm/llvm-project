@@ -31,6 +31,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Vectorize.h"
 
 using namespace llvm;
@@ -742,7 +743,8 @@ bool Vectorizer::vectorizeStoreChain(
 
   // Store size should be 1B, 2B or multiple of 4B.
   // TODO: Target hook for size constraint?
-  unsigned SzInBytes = (Sz / 8) * ChainSize;
+  unsigned EltSzInBytes = Sz / 8;
+  unsigned SzInBytes = EltSzInBytes * ChainSize;
   if (SzInBytes > 2 && SzInBytes % 4 != 0) {
     DEBUG(dbgs() << "LSV: Size should be 1B, 2B "
                     "or multiple of 4B. Splitting.\n");
@@ -790,15 +792,11 @@ bool Vectorizer::vectorizeStoreChain(
     if (S0->getPointerAddressSpace() != 0)
       return false;
 
-    // If we're storing to an object on the stack, we control its alignment,
-    // so we can cheat and change it!
-    Value *V = GetUnderlyingObject(S0->getPointerOperand(), DL);
-    if (AllocaInst *AI = dyn_cast_or_null<AllocaInst>(V)) {
-      AI->setAlignment(StackAdjustedAlignment);
-      Alignment = StackAdjustedAlignment;
-    } else {
+    unsigned NewAlign = getOrEnforceKnownAlignment(S0->getPointerOperand(),
+                                                   StackAdjustedAlignment,
+                                                   DL, S0, nullptr, &DT);
+    if (NewAlign < StackAdjustedAlignment)
       return false;
-    }
   }
 
   BasicBlock::iterator First, Last;
@@ -899,7 +897,8 @@ bool Vectorizer::vectorizeLoadChain(
 
   // Load size should be 1B, 2B or multiple of 4B.
   // TODO: Should size constraint be a target hook?
-  unsigned SzInBytes = (Sz / 8) * ChainSize;
+  unsigned EltSzInBytes = Sz / 8;
+  unsigned SzInBytes = EltSzInBytes * ChainSize;
   if (SzInBytes > 2 && SzInBytes % 4 != 0) {
     DEBUG(dbgs() << "LSV: Size should be 1B, 2B "
                     "or multiple of 4B. Splitting.\n");
@@ -940,15 +939,13 @@ bool Vectorizer::vectorizeLoadChain(
     if (L0->getPointerAddressSpace() != 0)
       return false;
 
-    // If we're loading from an object on the stack, we control its alignment,
-    // so we can cheat and change it!
-    Value *V = GetUnderlyingObject(L0->getPointerOperand(), DL);
-    if (AllocaInst *AI = dyn_cast_or_null<AllocaInst>(V)) {
-      AI->setAlignment(StackAdjustedAlignment);
-      Alignment = StackAdjustedAlignment;
-    } else {
+    unsigned NewAlign = getOrEnforceKnownAlignment(L0->getPointerOperand(),
+                                                   StackAdjustedAlignment,
+                                                   DL, L0, nullptr, &DT);
+    if (NewAlign < StackAdjustedAlignment)
       return false;
-    }
+
+    Alignment = NewAlign;
   }
 
   DEBUG({
@@ -1029,6 +1026,7 @@ bool Vectorizer::accessIsMisaligned(unsigned SzInBytes, unsigned AddressSpace,
                                     unsigned Alignment) {
   if (Alignment % SzInBytes == 0)
     return false;
+
   bool Fast = false;
   bool Allows = TTI.allowsMisalignedMemoryAccesses(F.getParent()->getContext(),
                                                    SzInBytes * 8, AddressSpace,

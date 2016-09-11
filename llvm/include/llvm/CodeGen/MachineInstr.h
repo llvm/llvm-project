@@ -1110,12 +1110,14 @@ public:
   /// ordered or volatile memory references.
   bool hasOrderedMemoryRef() const;
 
-  /// Return true if this instruction is loading from a
-  /// location whose value is invariant across the function.  For example,
-  /// loading a value from the constant pool or from the argument area of
-  /// a function if it does not change.  This should only return true of *all*
-  /// loads the instruction does are invariant (if it does multiple loads).
-  bool isInvariantLoad(AliasAnalysis *AA) const;
+  /// Return true if this load instruction never traps and points to a memory
+  /// location whose value doesn't change during the execution of this function.
+  ///
+  /// Examples include loading a value from the constant pool or from the
+  /// argument area of a function (if it does not change).  If the instruction
+  /// does multiple loads, this returns true only if all of the loads are
+  /// dereferenceable and invariant.
+  bool isDereferenceableInvariantLoad(AliasAnalysis *AA) const;
 
   /// If the specified instruction is a PHI that always merges together the
   /// same virtual register, return the register, otherwise return 0.

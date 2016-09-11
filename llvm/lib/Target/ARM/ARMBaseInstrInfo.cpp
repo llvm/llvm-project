@@ -4155,7 +4155,9 @@ void ARMBaseInstrInfo::expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
   if (Subtarget.isGVIndirectSymbol(GV)) {
     MIB = BuildMI(MBB, MI, DL, get(LoadOpc), Reg);
     MIB.addReg(Reg, RegState::Kill).addImm(0);
-    auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant;
+    auto Flags = MachineMemOperand::MOLoad |
+                 MachineMemOperand::MODereferenceable |
+                 MachineMemOperand::MOInvariant;
     MachineMemOperand *MMO = MBB.getParent()->getMachineMemOperand(
         MachinePointerInfo::getGOT(*MBB.getParent()), Flags, 4, 4);
     MIB.addMemOperand(MMO);

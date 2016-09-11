@@ -101,13 +101,15 @@ public:
     MOVolatile = 1u << 2,
     /// The memory access is non-temporal.
     MONonTemporal = 1u << 3,
-    /// The memory access is invariant.
-    MOInvariant = 1u << 4,
+    /// The memory access is dereferenceable (i.e., doesn't trap).
+    MODereferenceable = 1u << 4,
+    /// The memory access always returns the same value (or traps).
+    MOInvariant = 1u << 5,
 
     // Reserved for use by target-specific passes.
-    MOTargetFlag1 = 1u << 5,
-    MOTargetFlag2 = 1u << 6,
-    MOTargetFlag3 = 1u << 7,
+    MOTargetFlag1 = 1u << 6,
+    MOTargetFlag2 = 1u << 7,
+    MOTargetFlag3 = 1u << 8,
 
     LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ MOTargetFlag3)
   };
@@ -178,6 +180,7 @@ public:
   bool isStore() const { return FlagVals & MOStore; }
   bool isVolatile() const { return FlagVals & MOVolatile; }
   bool isNonTemporal() const { return FlagVals & MONonTemporal; }
+  bool isDereferenceable() const { return FlagVals & MODereferenceable; }
   bool isInvariant() const { return FlagVals & MOInvariant; }
 
   /// Returns true if this memory operation doesn't have any ordering

@@ -5167,9 +5167,10 @@ SDValue SelectionDAG::getIndexedLoad(SDValue OrigLoad, const SDLoc &dl,
                                      ISD::MemIndexedMode AM) {
   LoadSDNode *LD = cast<LoadSDNode>(OrigLoad);
   assert(LD->getOffset().isUndef() && "Load is already a indexed load!");
-  // Don't propagate the invariant flag.
+  // Don't propagate the invariant or dereferenceable flags.
   auto MMOFlags =
-      LD->getMemOperand()->getFlags() & ~MachineMemOperand::MOInvariant;
+      LD->getMemOperand()->getFlags() &
+      ~(MachineMemOperand::MOInvariant | MachineMemOperand::MODereferenceable);
   return getLoad(AM, LD->getExtensionType(), OrigLoad.getValueType(), dl,
                  LD->getChain(), Base, Offset, LD->getPointerInfo(),
                  LD->getMemoryVT(), LD->getAlignment(), MMOFlags,
@@ -6716,6 +6717,7 @@ MemSDNode::MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
     : SDNode(Opc, Order, dl, VTs), MemoryVT(memvt), MMO(mmo) {
   MemSDNodeBits.IsVolatile = MMO->isVolatile();
   MemSDNodeBits.IsNonTemporal = MMO->isNonTemporal();
+  MemSDNodeBits.IsDereferenceable = MMO->isDereferenceable();
   MemSDNodeBits.IsInvariant = MMO->isInvariant();
 
   // We check here that the size of the memory operand fits within the size of

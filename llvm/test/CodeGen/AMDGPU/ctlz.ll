@@ -143,7 +143,7 @@ define void @s_ctlz_i64_trunc(i32 addrspace(1)* noalias %out, i64 %val) nounwind
 ; SI-DAG: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, 32, [[FFBH_LO]]
 ; SI-DAG: v_ffbh_u32_e32 [[FFBH_HI:v[0-9]+]], v[[HI]]
 ; SI-DAG: v_cndmask_b32_e64 v[[CTLZ:[0-9]+]], [[FFBH_HI]], [[ADD]], [[CMPHI]]
-; SI-DAG: v_or_b32_e32 [[OR:v[0-9]+]], v[[LO]], v[[HI]]
+; SI-DAG: v_or_b32_e32 [[OR:v[0-9]+]], v[[HI]], v[[LO]]
 ; SI-DAG: v_cmp_eq_i32_e32 vcc, 0, [[OR]]
 ; SI-DAG: v_cndmask_b32_e64 v[[CLTZ_LO:[0-9]+]], v[[CTLZ:[0-9]+]], 64, vcc
 ; SI: {{buffer|flat}}_store_dwordx2 {{.*}}v{{\[}}[[CLTZ_LO]]:[[CTLZ_HI]]{{\]}}

@@ -134,7 +134,6 @@ static void foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
 
   assert(TII->isVOP1(MI) || TII->isVOP2(MI) || TII->isVOPC(MI));
 
-  const SIRegisterInfo &TRI = TII->getRegisterInfo();
   int Src0Idx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src0);
   MachineOperand &Src0 = MI.getOperand(Src0Idx);
 
@@ -142,12 +141,6 @@ static void foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
   // literal constant then we can't do any folding.
   if (Src0.isImm() &&
       TII->isLiteralConstant(Src0, TII->getOpSize(MI, Src0Idx)))
-    return;
-
-  // Literal constants and SGPRs can only be used in Src0, so if Src0 is an
-  // SGPR, we cannot commute the instruction, so we can't fold any literal
-  // constants.
-  if (Src0.isReg() && !isVGPR(&Src0, TRI, MRI))
     return;
 
   // Try to fold Src0
@@ -158,7 +151,8 @@ static void foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
       MachineOperand &MovSrc = Def->getOperand(1);
       bool ConstantFolded = false;
 
-      if (MovSrc.isImm() && isUInt<32>(MovSrc.getImm())) {
+      if (MovSrc.isImm() && (isInt<32>(MovSrc.getImm()) ||
+                             isUInt<32>(MovSrc.getImm()))) {
         Src0.ChangeToImmediate(MovSrc.getImm());
         ConstantFolded = true;
       }

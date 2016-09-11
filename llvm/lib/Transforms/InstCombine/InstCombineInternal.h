@@ -555,7 +555,8 @@ private:
   Instruction *foldICmpAddOpConst(Instruction &ICI, Value *X, ConstantInt *CI,
                                   ICmpInst::Predicate Pred);
   Instruction *foldICmpWithCastAndCast(ICmpInst &ICI);
-  Instruction *foldICmpWithConstant(ICmpInst &Cmp);
+
+  Instruction *foldICmpInstWithConstant(ICmpInst &Cmp);
 
   Instruction *foldICmpTruncConstant(ICmpInst &Cmp, Instruction *Trunc,
                                      const APInt *C);
@@ -584,8 +585,10 @@ private:
   Instruction *foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
                                 const APInt *C1, const APInt *C2);
 
-  Instruction *foldICmpEqualityWithConstant(ICmpInst &ICI);
-  Instruction *foldICmpIntrinsicWithConstant(ICmpInst &ICI);
+  Instruction *foldICmpBinOpEqualityWithConstant(ICmpInst &Cmp,
+                                                 BinaryOperator *BO,
+                                                 const APInt *C);
+  Instruction *foldICmpIntrinsicWithConstant(ICmpInst &ICI, const APInt *C);
 
   Instruction *OptAndOp(Instruction *Op, ConstantInt *OpRHS,
                         ConstantInt *AndRHS, BinaryOperator &TheAnd);

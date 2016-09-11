@@ -1,9 +1,10 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-NOAA %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-NOAA %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-NOAA %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-NOAA %s
 
-; RUN: llc -march=amdgcn -verify-machineinstrs -combiner-alias-analysis < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -combiner-alias-analysis < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -combiner-alias-analysis -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -combiner-alias-analysis -amdgpu-load-store-vectorizer=0 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=GCN-AA %s
 
+; This test is mostly to test DAG store merging, so disable the vectorizer.
 ; Run with devices with different unaligned load restrictions.
 
 ; TODO: Vector element tests

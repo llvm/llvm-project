@@ -13,8 +13,6 @@
 // S_CBRANCH_CDBGSYS
 // S_CBRANCH_CDBGSYS_OR_USER
 // S_CBRANCH_CDBGSYS_AND_USER
-// BUFFER_LOAD_DWORDX3
-// BUFFER_STORE_DWORDX3
 
 //===----------------------------------------------------------------------===//
 // VOP1 Instructions
@@ -70,15 +68,5 @@ defm V_MAD_I64_I32 : VOP3Inst <vop3<0x177>, "v_mad_i64_i32",
   VOP_I64_I32_I32_I64
 >;
 } // End isCommutable = 1
-
-//===----------------------------------------------------------------------===//
-// MUBUF Instructions
-//===----------------------------------------------------------------------===//
-
-let DisableSIDecoder = 1 in {
-defm BUFFER_WBINVL1_VOL : MUBUF_Invalidate <mubuf<0x70, 0x3f>,
-  "buffer_wbinvl1_vol", int_amdgcn_buffer_wbinvl1_vol
->;
-}
 
 } // End SubtargetPredicate = isCIVI
