@@ -161,6 +161,9 @@ template <class IntrusiveListT, class TraitsT>
 class iplist_impl : public TraitsT, IntrusiveListT {
   typedef IntrusiveListT base_list_type;
 
+protected:
+  typedef iplist_impl iplist_impl_type;
+
 public:
   typedef typename base_list_type::pointer pointer;
   typedef typename base_list_type::const_pointer const_pointer;
@@ -192,6 +195,13 @@ private:
 
 public:
   iplist_impl() = default;
+  iplist_impl(iplist_impl &&X)
+      : TraitsT(std::move(X)), IntrusiveListT(std::move(X)) {}
+  iplist_impl &operator=(iplist_impl &&X) {
+    *static_cast<TraitsT *>(this) = std::move(X);
+    *static_cast<IntrusiveListT *>(this) = std::move(X);
+    return *this;
+  }
   ~iplist_impl() { clear(); }
 
   // Miscellaneous inspection routines.
@@ -367,7 +377,19 @@ public:
 /// there for a description of what's available.
 template <class T, class... Options>
 class iplist
-    : public iplist_impl<simple_ilist<T, Options...>, ilist_traits<T>> {};
+    : public iplist_impl<simple_ilist<T, Options...>, ilist_traits<T>> {
+  typedef typename iplist::iplist_impl_type iplist_impl_type;
+
+public:
+  iplist() = default;
+  iplist(iplist &&X) : iplist_impl_type(std::move(X)) {}
+  iplist(const iplist &X) = delete;
+  iplist &operator=(iplist &&X) {
+    *static_cast<iplist_impl_type *>(this) = std::move(X);
+    return *this;
+  }
+  iplist &operator=(const iplist &X) = delete;
+};
 
 /// An intrusive list with ownership and callbacks specified/controlled by
 /// ilist_traits, with API that is unsafe for polymorphic types.
@@ -393,6 +415,12 @@ public:
   }
   template<class InIt> ilist(InIt first, InIt last) {
     insert(this->begin(), first, last);
+  }
+
+  ilist(ilist &&X) : base_list_type(std::move(X)) {}
+  ilist &operator=(ilist &&X) {
+    *static_cast<base_list_type *>(this) = std::move(X);
+    return *this;
   }
 
   // bring hidden functions into scope
