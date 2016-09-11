@@ -121,8 +121,6 @@ public:
     return ilist_iterator<OptionsT, IsReverse, false>();
   }
 
-  void reset(pointer NP) { NodePtr = NP; }
-
   // Accessors...
   reference operator*() const {
     assert(!NodePtr->isKnownSentinel());
