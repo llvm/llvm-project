@@ -16,6 +16,7 @@
 #define LLVM_ADT_ILIST_NODE_H
 
 #include "llvm/ADT/ilist_node_base.h"
+#include "llvm/ADT/ilist_node_options.h"
 
 namespace llvm {
 
@@ -26,46 +27,121 @@ struct NodeAccess;
 template<typename NodeTy>
 struct ilist_traits;
 
-template <typename NodeTy, bool IsReverse = false> class ilist_iterator;
-template <typename NodeTy> class ilist_sentinel;
+template <class OptionsT, bool IsReverse, bool IsConst> class ilist_iterator;
+template <class OptionsT> class ilist_sentinel;
 
-/// Templated wrapper class.
-template <typename NodeTy> class ilist_node : ilist_node_base {
-  friend class ilist_base;
+/// Implementation for an ilist node.
+///
+/// Templated on an appropriate \a ilist_detail::node_options, usually computed
+/// by \a ilist_detail::compute_node_options.
+///
+/// This is a wrapper around \a ilist_node_base whose main purpose is to
+/// provide type safety: you can't insert nodes of \a ilist_node_impl into the
+/// wrong \a simple_ilist or \a iplist.
+template <class OptionsT> class ilist_node_impl : OptionsT::node_base_type {
+  typedef typename OptionsT::value_type value_type;
+  typedef typename OptionsT::node_base_type node_base_type;
+  typedef typename OptionsT::list_base_type list_base_type;
+
+  friend typename OptionsT::list_base_type;
   friend struct ilist_detail::NodeAccess;
-  friend struct ilist_traits<NodeTy>;
-  friend class ilist_iterator<NodeTy, false>;
-  friend class ilist_iterator<NodeTy, true>;
-  friend class ilist_sentinel<NodeTy>;
+  friend class ilist_sentinel<OptionsT>;
+  friend class ilist_iterator<OptionsT, false, false>;
+  friend class ilist_iterator<OptionsT, false, true>;
+  friend class ilist_iterator<OptionsT, true, false>;
+  friend class ilist_iterator<OptionsT, true, true>;
 
 protected:
-  ilist_node() = default;
+  ilist_node_impl() = default;
+
+  typedef ilist_iterator<OptionsT, false, false> self_iterator;
+  typedef ilist_iterator<OptionsT, false, true> const_self_iterator;
+  typedef ilist_iterator<OptionsT, true, false> reverse_self_iterator;
+  typedef ilist_iterator<OptionsT, true, true> const_reverse_self_iterator;
 
 private:
-  ilist_node *getPrev() {
-    return static_cast<ilist_node *>(ilist_node_base::getPrev());
+  ilist_node_impl *getPrev() {
+    return static_cast<ilist_node_impl *>(node_base_type::getPrev());
   }
-  ilist_node *getNext() {
-    return static_cast<ilist_node *>(ilist_node_base::getNext());
-  }
-
-  const ilist_node *getPrev() const {
-    return static_cast<ilist_node *>(ilist_node_base::getPrev());
-  }
-  const ilist_node *getNext() const {
-    return static_cast<ilist_node *>(ilist_node_base::getNext());
+  ilist_node_impl *getNext() {
+    return static_cast<ilist_node_impl *>(node_base_type::getNext());
   }
 
-  void setPrev(ilist_node *N) { ilist_node_base::setPrev(N); }
-  void setNext(ilist_node *N) { ilist_node_base::setNext(N); }
+  const ilist_node_impl *getPrev() const {
+    return static_cast<ilist_node_impl *>(node_base_type::getPrev());
+  }
+  const ilist_node_impl *getNext() const {
+    return static_cast<ilist_node_impl *>(node_base_type::getNext());
+  }
+
+  void setPrev(ilist_node_impl *N) { node_base_type::setPrev(N); }
+  void setNext(ilist_node_impl *N) { node_base_type::setNext(N); }
 
 public:
-  ilist_iterator<NodeTy> getIterator() { return ilist_iterator<NodeTy>(*this); }
-  ilist_iterator<const NodeTy> getIterator() const {
-    return ilist_iterator<const NodeTy>(*this);
-  }
+  self_iterator getIterator() { return self_iterator(*this); }
+  const_self_iterator getIterator() const { return const_self_iterator(*this); }
 
-  using ilist_node_base::isKnownSentinel;
+  // Under-approximation, but always available for assertions.
+  using node_base_type::isKnownSentinel;
+
+  /// Check whether this is the sentinel node.
+  ///
+  /// This requires sentinel tracking to be explicitly enabled.  Use the
+  /// ilist_sentinel_tracking<true> option to get this API.
+  bool isSentinel() const {
+    static_assert(OptionsT::is_sentinel_tracking_explicit,
+                  "Use ilist_sentinel_tracking<true> to enable isSentinel()");
+    return node_base_type::isSentinel();
+  }
+};
+
+/// An intrusive list node.
+///
+/// A base class to enable membership in intrusive lists, including \a
+/// simple_ilist, \a iplist, and \a ilist.  The first template parameter is the
+/// \a value_type for the list.
+///
+/// An ilist node can be configured with compile-time options to change
+/// behaviour and/or add API.
+///
+/// By default, an \a ilist_node knows whether it is the list sentinel (an
+/// instance of \a ilist_sentinel) if and only if
+/// LLVM_ENABLE_ABI_BREAKING_CHECKS.  The function \a isKnownSentinel() always
+/// returns \c false tracking is off.  Sentinel tracking steals a bit from the
+/// "prev" link, which adds a mask operation when decrementing an iterator, but
+/// enables bug-finding assertions in \a ilist_iterator.
+///
+/// To turn sentinel tracking on all the time, pass in the
+/// ilist_sentinel_tracking<true> template parameter.  This also enables the \a
+/// isSentinel() function.  The same option must be passed to the intrusive
+/// list.  (ilist_sentinel_tracking<false> turns sentinel tracking off all the
+/// time.)
+///
+/// A type can inherit from ilist_node multiple times by passing in different
+/// \a ilist_tag options.  This allows a single instance to be inserted into
+/// multiple lists simultaneously, where each list is given the same tag.
+///
+/// \example
+/// struct A {};
+/// struct B {};
+/// struct N : ilist_node<N, ilist_tag<A>>, ilist_node<N, ilist_tag<B>> {};
+///
+/// void foo() {
+///   simple_ilist<N, ilist_tag<A>> ListA;
+///   simple_ilist<N, ilist_tag<B>> ListB;
+///   N N1;
+///   ListA.push_back(N1);
+///   ListB.push_back(N1);
+/// }
+/// \endexample
+///
+/// See \a is_valid_option for steps on adding a new option.
+template <class T, class... Options>
+class ilist_node
+    : public ilist_node_impl<
+          typename ilist_detail::compute_node_options<T, Options...>::type> {
+  static_assert(ilist_detail::check_options<Options...>::value,
+                "Unrecognized node option!");
 };
 
 namespace ilist_detail {
@@ -77,58 +153,71 @@ namespace ilist_detail {
 /// Using this class outside of the ilist implementation is unsupported.
 struct NodeAccess {
 protected:
-  template <typename T> static ilist_node<T> *getNodePtr(T *N) { return N; }
-  template <typename T> static const ilist_node<T> *getNodePtr(const T *N) {
+  template <class OptionsT>
+  static ilist_node_impl<OptionsT> *getNodePtr(typename OptionsT::pointer N) {
     return N;
   }
-  template <typename T> static T *getValuePtr(ilist_node<T> *N) {
-    return static_cast<T *>(N);
+  template <class OptionsT>
+  static const ilist_node_impl<OptionsT> *
+  getNodePtr(typename OptionsT::const_pointer N) {
+    return N;
   }
-  template <typename T> static const T *getValuePtr(const ilist_node<T> *N) {
-    return static_cast<const T *>(N);
+  template <class OptionsT>
+  static typename OptionsT::pointer getValuePtr(ilist_node_impl<OptionsT> *N) {
+    return static_cast<typename OptionsT::pointer>(N);
+  }
+  template <class OptionsT>
+  static typename OptionsT::const_pointer
+  getValuePtr(const ilist_node_impl<OptionsT> *N) {
+    return static_cast<typename OptionsT::const_pointer>(N);
   }
 
-  template <typename T> static ilist_node<T> *getPrev(ilist_node<T> &N) {
+  template <class OptionsT>
+  static ilist_node_impl<OptionsT> *getPrev(ilist_node_impl<OptionsT> &N) {
     return N.getPrev();
   }
-  template <typename T> static ilist_node<T> *getNext(ilist_node<T> &N) {
+  template <class OptionsT>
+  static ilist_node_impl<OptionsT> *getNext(ilist_node_impl<OptionsT> &N) {
     return N.getNext();
   }
-  template <typename T>
-  static const ilist_node<T> *getPrev(const ilist_node<T> &N) {
+  template <class OptionsT>
+  static const ilist_node_impl<OptionsT> *
+  getPrev(const ilist_node_impl<OptionsT> &N) {
     return N.getPrev();
   }
-  template <typename T>
-  static const ilist_node<T> *getNext(const ilist_node<T> &N) {
+  template <class OptionsT>
+  static const ilist_node_impl<OptionsT> *
+  getNext(const ilist_node_impl<OptionsT> &N) {
     return N.getNext();
   }
 };
 
-template <class T> struct SpecificNodeAccess : NodeAccess {
+template <class OptionsT> struct SpecificNodeAccess : NodeAccess {
 protected:
-  typedef T *pointer;
-  typedef const T *const_pointer;
-  typedef ilist_node<T> node_type;
+  typedef typename OptionsT::pointer pointer;
+  typedef typename OptionsT::const_pointer const_pointer;
+  typedef ilist_node_impl<OptionsT> node_type;
 
   static node_type *getNodePtr(pointer N) {
-    return NodeAccess::getNodePtr<T>(N);
+    return NodeAccess::getNodePtr<OptionsT>(N);
   }
-  static const ilist_node<T> *getNodePtr(const_pointer N) {
-    return NodeAccess::getNodePtr<T>(N);
+  static const node_type *getNodePtr(const_pointer N) {
+    return NodeAccess::getNodePtr<OptionsT>(N);
   }
   static pointer getValuePtr(node_type *N) {
-    return NodeAccess::getValuePtr<T>(N);
+    return NodeAccess::getValuePtr<OptionsT>(N);
   }
   static const_pointer getValuePtr(const node_type *N) {
-    return NodeAccess::getValuePtr<T>(N);
+    return NodeAccess::getValuePtr<OptionsT>(N);
   }
 };
 } // end namespace ilist_detail
 
-template <typename NodeTy> class ilist_sentinel : public ilist_node<NodeTy> {
+template <class OptionsT>
+class ilist_sentinel : public ilist_node_impl<OptionsT> {
 public:
   ilist_sentinel() {
-    ilist_node_base::initializeSentinel();
+    this->initializeSentinel();
     reset();
   }
 
@@ -144,8 +233,8 @@ public:
 ///
 /// Requires \c NodeTy to have \a getParent() to find the parent node, and the
 /// \c ParentTy to have \a getSublistAccess() to get a reference to the list.
-template <typename NodeTy, typename ParentTy>
-class ilist_node_with_parent : public ilist_node<NodeTy> {
+template <typename NodeTy, typename ParentTy, class... Options>
+class ilist_node_with_parent : public ilist_node<NodeTy, Options...> {
 protected:
   ilist_node_with_parent() = default;
 

@@ -7587,20 +7587,13 @@ multiclass avx512_fp_scalar_imm<bits<8> opc, string OpcodeStr, SDNode OpNode,
                               (i32 imm:$src3),
                               (i32 FROUND_CURRENT))>;
   defm rmi : AVX512_maskable_scalar<opc, MRMSrcMem, _, (outs _.RC:$dst),
-                    (ins _.RC:$src1, _.MemOp:$src2, i32u8imm:$src3),
+                    (ins _.RC:$src1, _.ScalarMemOp:$src2, i32u8imm:$src3),
                     OpcodeStr, "$src3, $src2, $src1", "$src1, $src2, $src3",
                     (OpNode (_.VT _.RC:$src1),
                             (_.VT (scalar_to_vector
                                       (_.ScalarLdFrag addr:$src2))),
                             (i32 imm:$src3),
                             (i32 FROUND_CURRENT))>;
-
-  let isAsmParserOnly = 1, mayLoad = 1, hasSideEffects = 0 in {
-    defm rmi_alt :AVX512_maskable_in_asm<opc, MRMSrcMem, _, (outs _.FRC:$dst),
-                    (ins _.FRC:$src1, _.ScalarMemOp:$src2, u8imm:$src3),
-                    OpcodeStr, "$src3, $src2, $src1", "$src1, $src2, $src3",
-                    []>;
-  }
   }
 }
 

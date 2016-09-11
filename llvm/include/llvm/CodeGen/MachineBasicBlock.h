@@ -43,12 +43,14 @@ private:
   friend class MachineBasicBlock; // Set by the owning MachineBasicBlock.
   MachineBasicBlock *Parent;
 
+  typedef simple_ilist<MachineInstr, ilist_sentinel_tracking<true>>::iterator
+      instr_iterator;
+
 public:
   void addNodeToList(MachineInstr *N);
   void removeNodeFromList(MachineInstr *N);
-  void transferNodesFromList(ilist_traits &OldList,
-                             simple_ilist<MachineInstr>::iterator First,
-                             simple_ilist<MachineInstr>::iterator Last);
+  void transferNodesFromList(ilist_traits &OldList, instr_iterator First,
+                             instr_iterator Last);
 
   void deleteNode(MachineInstr *MI);
   // Leave out createNode...
@@ -70,7 +72,7 @@ public:
   };
 
 private:
-  typedef ilist<MachineInstr> Instructions;
+  typedef ilist<MachineInstr, ilist_sentinel_tracking<true>> Instructions;
   Instructions Insts;
   const BasicBlock *BB;
   int Number;
@@ -153,9 +155,9 @@ public:
 
   typedef MachineInstrBundleIterator<MachineInstr> iterator;
   typedef MachineInstrBundleIterator<const MachineInstr> const_iterator;
-  typedef std::reverse_iterator<const_iterator>          const_reverse_iterator;
-  typedef std::reverse_iterator<iterator>                      reverse_iterator;
-
+  typedef MachineInstrBundleIterator<MachineInstr, true> reverse_iterator;
+  typedef MachineInstrBundleIterator<const MachineInstr, true>
+      const_reverse_iterator;
 
   unsigned size() const { return (unsigned)Insts.size(); }
   bool empty() const { return Insts.empty(); }
@@ -190,13 +192,15 @@ public:
   const_iterator          begin() const { return instr_begin();  }
   iterator                end  ()       { return instr_end();    }
   const_iterator          end  () const { return instr_end();    }
-  reverse_iterator rbegin() { return reverse_iterator(end()); }
-  const_reverse_iterator rbegin() const {
-    return const_reverse_iterator(end());
+  reverse_iterator rbegin() {
+    return reverse_iterator::getAtBundleBegin(instr_rbegin());
   }
-  reverse_iterator rend() { return reverse_iterator(begin()); }
+  const_reverse_iterator rbegin() const {
+    return const_reverse_iterator::getAtBundleBegin(instr_rbegin());
+  }
+  reverse_iterator rend() { return reverse_iterator(instr_rend()); }
   const_reverse_iterator rend() const {
-    return const_reverse_iterator(begin());
+    return const_reverse_iterator(instr_rend());
   }
 
   /// Support for MachineInstr::getNextNode().
