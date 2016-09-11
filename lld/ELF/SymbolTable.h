@@ -127,6 +127,7 @@ private:
 
   // The symbol table owns all file objects.
   std::vector<std::unique_ptr<ArchiveFile>> ArchiveFiles;
+  std::vector<std::unique_ptr<BinaryFile>> BinaryFiles;
   std::vector<std::unique_ptr<ObjectFile<ELFT>>> ObjectFiles;
   std::vector<std::unique_ptr<LazyObjectFile>> LazyObjectFiles;
   std::vector<std::unique_ptr<SharedFile<ELFT>>> SharedFiles;

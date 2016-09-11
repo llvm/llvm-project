@@ -160,8 +160,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef STREAMEXECUTOR_UTILS_ERROR_H
-#define STREAMEXECUTOR_UTILS_ERROR_H
+#ifndef STREAMEXECUTOR_ERROR_H
+#define STREAMEXECUTOR_ERROR_H
 
 #include <cstdio>
 #include <cstdlib>
@@ -212,4 +212,4 @@ void dieIfError(Error &&E);
 
 } // namespace streamexecutor
 
-#endif // STREAMEXECUTOR_UTILS_ERROR_H
+#endif // STREAMEXECUTOR_ERROR_H

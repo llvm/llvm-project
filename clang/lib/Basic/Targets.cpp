@@ -1768,6 +1768,12 @@ public:
     UseExplicitBitFieldAlignment = HostTarget->useExplicitBitFieldAlignment();
     ZeroLengthBitfieldBoundary = HostTarget->getZeroLengthBitfieldBoundary();
 
+    // This is a bit of a lie, but it controls __GCC_ATOMIC_XXX_LOCK_FREE, and
+    // we need those macros to be identical on host and device, because (among
+    // other things) they affect which standard library classes are defined, and
+    // we need all classes to be defined on both the host and device.
+    MaxAtomicInlineWidth = HostTarget->getMaxAtomicInlineWidth();
+
     // Properties intentionally not copied from host:
     // - LargeArrayMinWidth, LargeArrayAlign: Not visible across the
     //   host/device boundary.
