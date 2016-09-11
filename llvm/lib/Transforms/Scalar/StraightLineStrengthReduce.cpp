@@ -55,8 +55,6 @@
 //
 // - When (i' - i) is constant but i and i' are not, we could still perform
 //   SLSR.
-#include <vector>
-
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -68,6 +66,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <vector>
 
 using namespace llvm;
 using namespace PatternMatch;
