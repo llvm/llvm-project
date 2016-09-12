@@ -94,6 +94,10 @@ zlib::Status zlib::compress(StringRef InputBuffer,
                             CompressionLevel Level) {
   return zlib::StatusUnsupported;
 }
+zlib::Status zlib::uncompress(StringRef InputBuffer, char *UncompressedBuffer,
+                              size_t &UncompressedSize) {
+  return zlib::StatusUnsupported;
+}
 zlib::Status zlib::uncompress(StringRef InputBuffer,
                               SmallVectorImpl<char> &UncompressedBuffer,
                               size_t UncompressedSize) {

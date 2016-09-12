@@ -55,6 +55,7 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
 
   // Binary file
   if (auto *F = dyn_cast<BinaryFile>(FileP)) {
+    BinaryFiles.emplace_back(cast<BinaryFile>(File.release()));
     addFile(F->createELF<ELFT>());
     return;
   }

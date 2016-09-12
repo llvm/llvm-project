@@ -877,7 +877,7 @@ bool MIParser::parseSubRegisterIndex(unsigned &SubReg) {
 
 bool MIParser::parseRegisterTiedDefIndex(unsigned &TiedDefIdx) {
   if (!consumeIfPresent(MIToken::kw_tied_def))
-    return error("expected 'tied-def' after '('");
+    return true;
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected an integer literal after 'tied-def'");
   if (getUnsigned(TiedDefIdx))
@@ -957,16 +957,28 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     if (!TargetRegisterInfo::isVirtualRegister(Reg))
       return error("subregister index expects a virtual register");
   }
+  MachineRegisterInfo &MRI = MF.getRegInfo();
   if ((Flags & RegState::Define) == 0) {
     if (consumeIfPresent(MIToken::lparen)) {
       unsigned Idx;
-      if (parseRegisterTiedDefIndex(Idx))
-        return true;
-      TiedDefIdx = Idx;
+      if (!parseRegisterTiedDefIndex(Idx))
+        TiedDefIdx = Idx;
+      else {
+        // Try a redundant low-level type.
+        LLT Ty;
+        if (parseLowLevelType(Token.location(), Ty))
+          return error("expected tied-def or low-level type after '('");
+
+        if (expectAndConsume(MIToken::rparen))
+          return true;
+
+        if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
+          return error("inconsistent type for generic virtual register");
+
+        MRI.setType(Reg, Ty);
+      }
     }
   } else if (consumeIfPresent(MIToken::lparen)) {
-    MachineRegisterInfo &MRI = MF.getRegInfo();
-
     // Virtual registers may have a size with GlobalISel.
     if (!TargetRegisterInfo::isVirtualRegister(Reg))
       return error("unexpected size on physical register");
@@ -979,6 +991,9 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
 
     if (expectAndConsume(MIToken::rparen))
       return true;
+
+    if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
+      return error("inconsistent type for generic virtual register");
 
     MRI.setType(Reg, Ty);
   } else if (PFS.GenericVRegs.count(Reg)) {
@@ -1765,6 +1780,9 @@ bool MIParser::parseMemoryOperandFlag(MachineMemOperand::Flags &Flags) {
     break;
   case MIToken::kw_non_temporal:
     Flags |= MachineMemOperand::MONonTemporal;
+    break;
+  case MIToken::kw_dereferenceable:
+    Flags |= MachineMemOperand::MODereferenceable;
     break;
   case MIToken::kw_invariant:
     Flags |= MachineMemOperand::MOInvariant;

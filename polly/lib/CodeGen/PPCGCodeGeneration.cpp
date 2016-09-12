@@ -152,6 +152,12 @@ public:
   /// Finalize the generated scop.
   virtual void finalize();
 
+  /// Track if the full build process was successful.
+  ///
+  /// This value is set to false, if throughout the build process an error
+  /// occurred which prevents us from generating valid GPU code.
+  bool BuildSuccessful = true;
+
 private:
   /// A vector of array base pointers for which a new ScopArrayInfo was created.
   ///
@@ -1409,10 +1415,10 @@ std::string GPUNodeBuilder::createKernelASM() {
 }
 
 std::string GPUNodeBuilder::finalizeKernelFunction() {
-  // Verify module.
-  llvm::legacy::PassManager Passes;
-  Passes.add(createVerifierPass());
-  Passes.run(*GPUModule);
+  if (verifyModule(*GPUModule)) {
+    BuildSuccessful = false;
+    return "";
+  }
 
   if (DumpKernelIR)
     outs() << *GPUModule << "\n";
@@ -1784,17 +1790,27 @@ public:
   /// @param Array The polly array from which to take the information.
   void setArrayBounds(gpu_array_info &PPCGArray, ScopArrayInfo *Array) {
     if (PPCGArray.n_index > 0) {
-      isl_set *Dom = isl_set_copy(PPCGArray.extent);
-      Dom = isl_set_project_out(Dom, isl_dim_set, 1, PPCGArray.n_index - 1);
-      isl_pw_aff *Bound = isl_set_dim_max(isl_set_copy(Dom), 0);
-      isl_set_free(Dom);
-      Dom = isl_pw_aff_domain(isl_pw_aff_copy(Bound));
-      isl_local_space *LS = isl_local_space_from_space(isl_set_get_space(Dom));
-      isl_aff *One = isl_aff_zero_on_domain(LS);
-      One = isl_aff_add_constant_si(One, 1);
-      Bound = isl_pw_aff_add(Bound, isl_pw_aff_alloc(Dom, One));
-      Bound = isl_pw_aff_gist(Bound, S->getContext());
-      PPCGArray.bound[0] = Bound;
+      if (isl_set_is_empty(PPCGArray.extent)) {
+        isl_set *Dom = isl_set_copy(PPCGArray.extent);
+        isl_local_space *LS = isl_local_space_from_space(
+            isl_space_params(isl_set_get_space(Dom)));
+        isl_set_free(Dom);
+        isl_aff *Zero = isl_aff_zero_on_domain(LS);
+        PPCGArray.bound[0] = isl_pw_aff_from_aff(Zero);
+      } else {
+        isl_set *Dom = isl_set_copy(PPCGArray.extent);
+        Dom = isl_set_project_out(Dom, isl_dim_set, 1, PPCGArray.n_index - 1);
+        isl_pw_aff *Bound = isl_set_dim_max(isl_set_copy(Dom), 0);
+        isl_set_free(Dom);
+        Dom = isl_pw_aff_domain(isl_pw_aff_copy(Bound));
+        isl_local_space *LS =
+            isl_local_space_from_space(isl_set_get_space(Dom));
+        isl_aff *One = isl_aff_zero_on_domain(LS);
+        One = isl_aff_add_constant_si(One, 1);
+        Bound = isl_pw_aff_add(Bound, isl_pw_aff_alloc(Dom, One));
+        Bound = isl_pw_aff_gist(Bound, S->getContext());
+        PPCGArray.bound[0] = Bound;
+      }
     }
 
     for (unsigned i = 1; i < PPCGArray.n_index; ++i) {
@@ -2129,6 +2145,9 @@ public:
     NodeBuilder.initializeAfterRTH();
     NodeBuilder.create(Root);
     NodeBuilder.finalize();
+
+    if (!NodeBuilder.BuildSuccessful)
+      SplitBlock->getTerminator()->setOperand(0, Builder.getFalse());
   }
 
   bool runOnScop(Scop &CurrentScop) override {

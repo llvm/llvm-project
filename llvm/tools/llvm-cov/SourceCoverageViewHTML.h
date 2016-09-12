@@ -46,8 +46,7 @@ class SourceCoverageViewHTML : public SourceCoverageView {
 
   void renderViewFooter(raw_ostream &OS) override;
 
-  void renderSourceName(raw_ostream &OS, bool WholeFile,
-                        unsigned FirstUncoveredLineNo) override;
+  void renderSourceName(raw_ostream &OS, bool WholeFile) override;
 
   void renderLinePrefix(raw_ostream &OS, unsigned ViewDepth) override;
 
@@ -81,7 +80,8 @@ class SourceCoverageViewHTML : public SourceCoverageView {
 
   void renderCellInTitle(raw_ostream &OS, StringRef CellText) override;
 
-  void renderTableHeader(raw_ostream &OS, unsigned IndentLevel) override;
+  void renderTableHeader(raw_ostream &OS, unsigned FirstUncoveredLineNo,
+                         unsigned IndentLevel) override;
 
 public:
   SourceCoverageViewHTML(StringRef SourceName, const MemoryBuffer &File,

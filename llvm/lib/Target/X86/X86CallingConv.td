@@ -196,6 +196,9 @@ def RetCC_X86_64_WebKit_JS : CallingConv<[
 ]>;
 
 def RetCC_X86_64_Swift : CallingConv<[
+
+  CCIfSwiftError<CCIfType<[i64], CCAssignToReg<[R12]>>>,
+
   // For integers, ECX, R8D can be used as extra return registers.
   CCIfType<[i1],  CCPromoteToType<i8>>,
   CCIfType<[i8] , CCAssignToReg<[AL, DL, CL, R8B]>>,

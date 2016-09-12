@@ -57,7 +57,7 @@
 ///    variables are used for both exceptions and setjmp/longjmps.
 ///    __THREW__ indicates whether an exception or a longjmp occurred or not. 0
 ///    means nothing occurred, 1 means an exception occurred, and other numbers
-///    mean a longjmp occurred. In the case of longjmp, threwValue variable
+///    mean a longjmp occurred. In the case of longjmp, __threwValue variable
 ///    indicates the corresponding setjmp buffer the longjmp corresponds to.
 ///    In exception handling, __tempRet0 indicates the type of an exception
 ///    caught, and in setjmp/longjmp, it means the second argument to longjmp
@@ -87,10 +87,13 @@
 ///      invoke @func(arg1, arg2) to label %invoke.cont unwind label %lpad
 ///    into
 ///      __THREW__ = 0;
-///      call @invoke_SIG(func, arg1, arg2)
+///      call @__invoke_SIG(func, arg1, arg2)
 ///      %__THREW__.val = __THREW__;
 ///      __THREW__ = 0;
-///      br %__THREW__.val, label %lpad, label %invoke.cont
+///      if (%__THREW__.val == 1)
+///        goto %lpad
+///      else
+///         goto %invoke.cont
 ///    SIG is a mangled string generated based on the LLVM IR-level function
 ///    signature. After LLVM IR types are lowered to the target wasm types,
 ///    the names for these wrappers will change based on wasm types as well,
@@ -165,28 +168,28 @@
 ///
 /// 10) Lower every call that might longjmp into
 ///      __THREW__ = 0;
-///      call @invoke_SIG(func, arg1, arg2)
+///      call @__invoke_SIG(func, arg1, arg2)
 ///      %__THREW__.val = __THREW__;
 ///      __THREW__ = 0;
-///      if (%__THREW__.val != 0 & threwValue != 0) {
+///      if (%__THREW__.val != 0 & __threwValue != 0) {
 ///        %label = testSetjmp(mem[%__THREW__.val], setjmpTable,
 ///                            setjmpTableSize);
 ///        if (%label == 0)
-///          emscripten_longjmp(%__THREW__.val, threwValue);
-///        __tempRet0 = threwValue;
+///          emscripten_longjmp(%__THREW__.val, __threwValue);
+///        __tempRet0 = __threwValue;
 ///      } else {
 ///        %label = -1;
 ///      }
 ///      longjmp_result = __tempRet0;
 ///      switch label {
-///        label 1: post-setjmp BB 1
-///        label 2: post-setjmp BB 2
+///        label 1: goto post-setjmp BB 1
+///        label 2: goto post-setjmp BB 2
 ///        ...
-///        default: splited next BB
+///        default: goto splitted next BB
 ///      }
 ///     testSetjmp examines setjmpTable to see if there is a matching setjmp
 ///     call. After calling an invoke wrapper, if a longjmp occurred, __THREW__
-///     will be the address of matching jmp_buf buffer and threwValue be the
+///     will be the address of matching jmp_buf buffer and __threwValue be the
 ///     second argument to longjmp. mem[__THREW__.val] is a setjmp ID that is
 ///     stored in saveSetjmp. testSetjmp returns a setjmp label, a unique ID to
 ///     each setjmp callsite. Label 0 means this longjmp buffer does not

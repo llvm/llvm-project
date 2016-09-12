@@ -9,6 +9,7 @@ set(ADTSources
   ArrayRefTest.cpp
   BitmaskEnumTest.cpp
   BitVectorTest.cpp
+  BumpPtrListTest.cpp
   DAGDeltaAlgorithmTest.cpp
   DeltaAlgorithmTest.cpp
   DenseMapTest.cpp
@@ -20,6 +21,7 @@ set(ADTSources
   IListBaseTest.cpp
   IListIteratorTest.cpp
   IListNodeBaseTest.cpp
+  IListNodeTest.cpp
   IListSentinelTest.cpp
   IListTest.cpp
   ImmutableMapTest.cpp

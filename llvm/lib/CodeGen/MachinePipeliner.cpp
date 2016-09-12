@@ -997,7 +997,7 @@ static bool isSuccOrder(SUnit *SUa, SUnit *SUb) {
 static bool isDependenceBarrier(MachineInstr &MI, AliasAnalysis *AA) {
   return MI.isCall() || MI.hasUnmodeledSideEffects() ||
          (MI.hasOrderedMemoryRef() &&
-          (!MI.mayLoad() || !MI.isInvariantLoad(AA)));
+          (!MI.mayLoad() || !MI.isDereferenceableInvariantLoad(AA)));
 }
 
 /// Return the underlying objects for the memory references of an instruction.
@@ -3082,7 +3082,8 @@ void SwingSchedulerDAG::updateMemOperands(MachineInstr &NewMI,
   MachineInstr::mmo_iterator NewMemRefs = MF.allocateMemRefsArray(NumRefs);
   unsigned Refs = 0;
   for (MachineMemOperand *MMO : NewMI.memoperands()) {
-    if (MMO->isVolatile() || MMO->isInvariant() || (!MMO->getValue())) {
+    if (MMO->isVolatile() || (MMO->isInvariant() && MMO->isDereferenceable()) ||
+        (!MMO->getValue())) {
       NewMemRefs[Refs++] = MMO;
       continue;
     }

@@ -14,21 +14,33 @@ using namespace llvm;
 
 namespace {
 
-TEST(IListBaseTest, insertBeforeImpl) {
-  ilist_node_base S, A, B;
+// Test fixture.
+template <typename T> class IListBaseTest : public ::testing::Test {};
+
+// Test variants with the same test.
+typedef ::testing::Types<ilist_base<false>, ilist_base<true>>
+    IListBaseTestTypes;
+TYPED_TEST_CASE(IListBaseTest, IListBaseTestTypes);
+
+TYPED_TEST(IListBaseTest, insertBeforeImpl) {
+  typedef TypeParam list_base_type;
+  typedef typename list_base_type::node_base_type node_base_type;
+
+  node_base_type S, A, B;
+
   // [S] <-> [S]
   S.setPrev(&S);
   S.setNext(&S);
 
   // [S] <-> A <-> [S]
-  ilist_base::insertBeforeImpl(S, A);
+  list_base_type::insertBeforeImpl(S, A);
   EXPECT_EQ(&A, S.getPrev());
   EXPECT_EQ(&S, A.getPrev());
   EXPECT_EQ(&A, S.getNext());
   EXPECT_EQ(&S, A.getNext());
 
   // [S] <-> A <-> B <-> [S]
-  ilist_base::insertBeforeImpl(S, B);
+  list_base_type::insertBeforeImpl(S, B);
   EXPECT_EQ(&B, S.getPrev());
   EXPECT_EQ(&A, B.getPrev());
   EXPECT_EQ(&S, A.getPrev());
@@ -37,17 +49,20 @@ TEST(IListBaseTest, insertBeforeImpl) {
   EXPECT_EQ(&S, B.getNext());
 }
 
-TEST(IListBaseTest, removeImpl) {
-  ilist_node_base S, A, B;
+TYPED_TEST(IListBaseTest, removeImpl) {
+  typedef TypeParam list_base_type;
+  typedef typename list_base_type::node_base_type node_base_type;
+
+  node_base_type S, A, B;
 
   // [S] <-> A <-> B <-> [S]
   S.setPrev(&S);
   S.setNext(&S);
-  ilist_base::insertBeforeImpl(S, A);
-  ilist_base::insertBeforeImpl(S, B);
+  list_base_type::insertBeforeImpl(S, A);
+  list_base_type::insertBeforeImpl(S, B);
 
   // [S] <-> B <-> [S]
-  ilist_base::removeImpl(A);
+  list_base_type::removeImpl(A);
   EXPECT_EQ(&B, S.getPrev());
   EXPECT_EQ(&S, B.getPrev());
   EXPECT_EQ(&B, S.getNext());
@@ -56,26 +71,29 @@ TEST(IListBaseTest, removeImpl) {
   EXPECT_EQ(nullptr, A.getNext());
 
   // [S] <-> [S]
-  ilist_base::removeImpl(B);
+  list_base_type::removeImpl(B);
   EXPECT_EQ(&S, S.getPrev());
   EXPECT_EQ(&S, S.getNext());
   EXPECT_EQ(nullptr, B.getPrev());
   EXPECT_EQ(nullptr, B.getNext());
 }
 
-TEST(IListBaseTest, removeRangeImpl) {
-  ilist_node_base S, A, B, C, D;
+TYPED_TEST(IListBaseTest, removeRangeImpl) {
+  typedef TypeParam list_base_type;
+  typedef typename list_base_type::node_base_type node_base_type;
+
+  node_base_type S, A, B, C, D;
 
   // [S] <-> A <-> B <-> C <-> D <-> [S]
   S.setPrev(&S);
   S.setNext(&S);
-  ilist_base::insertBeforeImpl(S, A);
-  ilist_base::insertBeforeImpl(S, B);
-  ilist_base::insertBeforeImpl(S, C);
-  ilist_base::insertBeforeImpl(S, D);
+  list_base_type::insertBeforeImpl(S, A);
+  list_base_type::insertBeforeImpl(S, B);
+  list_base_type::insertBeforeImpl(S, C);
+  list_base_type::insertBeforeImpl(S, D);
 
   // [S] <-> A <-> D <-> [S]
-  ilist_base::removeRangeImpl(B, D);
+  list_base_type::removeRangeImpl(B, D);
   EXPECT_EQ(&D, S.getPrev());
   EXPECT_EQ(&A, D.getPrev());
   EXPECT_EQ(&S, A.getPrev());
@@ -86,41 +104,47 @@ TEST(IListBaseTest, removeRangeImpl) {
   EXPECT_EQ(nullptr, C.getNext());
 }
 
-TEST(IListBaseTest, removeRangeImplAllButSentinel) {
-  ilist_node_base S, A, B;
+TYPED_TEST(IListBaseTest, removeRangeImplAllButSentinel) {
+  typedef TypeParam list_base_type;
+  typedef typename list_base_type::node_base_type node_base_type;
+
+  node_base_type S, A, B;
 
   // [S] <-> A <-> B <-> [S]
   S.setPrev(&S);
   S.setNext(&S);
-  ilist_base::insertBeforeImpl(S, A);
-  ilist_base::insertBeforeImpl(S, B);
+  list_base_type::insertBeforeImpl(S, A);
+  list_base_type::insertBeforeImpl(S, B);
 
   // [S] <-> [S]
-  ilist_base::removeRangeImpl(A, S);
+  list_base_type::removeRangeImpl(A, S);
   EXPECT_EQ(&S, S.getPrev());
   EXPECT_EQ(&S, S.getNext());
   EXPECT_EQ(nullptr, A.getPrev());
   EXPECT_EQ(nullptr, B.getNext());
 }
 
-TEST(IListBaseTest, transferBeforeImpl) {
-  ilist_node_base S1, S2, A, B, C, D, E;
+TYPED_TEST(IListBaseTest, transferBeforeImpl) {
+  typedef TypeParam list_base_type;
+  typedef typename list_base_type::node_base_type node_base_type;
+
+  node_base_type S1, S2, A, B, C, D, E;
 
   // [S1] <-> A <-> B <-> C <-> [S1]
   S1.setPrev(&S1);
   S1.setNext(&S1);
-  ilist_base::insertBeforeImpl(S1, A);
-  ilist_base::insertBeforeImpl(S1, B);
-  ilist_base::insertBeforeImpl(S1, C);
+  list_base_type::insertBeforeImpl(S1, A);
+  list_base_type::insertBeforeImpl(S1, B);
+  list_base_type::insertBeforeImpl(S1, C);
 
   // [S2] <-> D <-> E <-> [S2]
   S2.setPrev(&S2);
   S2.setNext(&S2);
-  ilist_base::insertBeforeImpl(S2, D);
-  ilist_base::insertBeforeImpl(S2, E);
+  list_base_type::insertBeforeImpl(S2, D);
+  list_base_type::insertBeforeImpl(S2, E);
 
   // [S1] <-> C <-> [S1]
-  ilist_base::transferBeforeImpl(D, A, C);
+  list_base_type::transferBeforeImpl(D, A, C);
   EXPECT_EQ(&C, S1.getPrev());
   EXPECT_EQ(&S1, C.getPrev());
   EXPECT_EQ(&C, S1.getNext());

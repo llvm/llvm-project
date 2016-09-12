@@ -16,7 +16,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_ORCREMOTETARGETRPCAPI_H
 #define LLVM_EXECUTIONENGINE_ORC_ORCREMOTETARGETRPCAPI_H
 
-#include "RPCChannel.h"
+#include "RPCByteChannel.h"
 #include "RPCUtils.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 
@@ -40,7 +40,7 @@ private:
   uint64_t Size;
 };
 
-inline Error serialize(RPCChannel &C, const DirectBufferWriter &DBW) {
+inline Error serialize(RPCByteChannel &C, const DirectBufferWriter &DBW) {
   if (auto EC = serialize(C, DBW.getDst()))
     return EC;
   if (auto EC = serialize(C, DBW.getSize()))
@@ -48,7 +48,7 @@ inline Error serialize(RPCChannel &C, const DirectBufferWriter &DBW) {
   return C.appendBytes(DBW.getSrc(), DBW.getSize());
 }
 
-inline Error deserialize(RPCChannel &C, DirectBufferWriter &DBW) {
+inline Error deserialize(RPCByteChannel &C, DirectBufferWriter &DBW) {
   JITTargetAddress Dst;
   if (auto EC = deserialize(C, Dst))
     return EC;
@@ -62,7 +62,7 @@ inline Error deserialize(RPCChannel &C, DirectBufferWriter &DBW) {
   return C.readBytes(Addr, Size);
 }
 
-class OrcRemoteTargetRPCAPI : public RPC<RPCChannel> {
+class OrcRemoteTargetRPCAPI : public RPC<RPCByteChannel> {
 protected:
   class ResourceIdMgr {
   public:

@@ -68,8 +68,7 @@ public:
 
   /// Copies data from the device to the host.
   ///
-  /// HostDst should have been allocated by allocateHostMemory or registered
-  /// with registerHostMemory.
+  /// HostDst should have been registered with registerHostMemory.
   virtual Error copyD2H(const void *PlatformStreamHandle,
                         const void *DeviceSrcHandle, size_t SrcByteOffset,
                         void *HostDst, size_t DstByteOffset, size_t ByteCount) {
@@ -78,8 +77,7 @@ public:
 
   /// Copies data from the host to the device.
   ///
-  /// HostSrc should have been allocated by allocateHostMemory or registered
-  /// with registerHostMemory.
+  /// HostSrc should have been registered with registerHostMemory.
   virtual Error copyH2D(const void *PlatformStreamHandle, const void *HostSrc,
                         size_t SrcByteOffset, const void *DeviceDstHandle,
                         size_t DstByteOffset, size_t ByteCount) {
@@ -113,21 +111,6 @@ public:
                       getName());
   }
 
-  /// Allocates untyped host memory of a given size in bytes.
-  ///
-  /// Host memory allocated via this method is suitable for use with copyH2D and
-  /// copyD2H.
-  virtual Expected<void *> allocateHostMemory(size_t ByteCount) {
-    return make_error("allocateHostMemory not implemented for platform " +
-                      getName());
-  }
-
-  /// Frees host memory allocated by allocateHostMemory.
-  virtual Error freeHostMemory(void *Memory) {
-    return make_error("freeHostMemory not implemented for platform " +
-                      getName());
-  }
-
   /// Registers previously allocated host memory so it can be used with copyH2D
   /// and copyD2H.
   virtual Error registerHostMemory(void *Memory, size_t ByteCount) {
@@ -136,7 +119,7 @@ public:
   }
 
   /// Unregisters host memory previously registered with registerHostMemory.
-  virtual Error unregisterHostMemory(void *Memory) {
+  virtual Error unregisterHostMemory(const void *Memory) {
     return make_error("unregisterHostMemory not implemented for platform " +
                       getName());
   }
@@ -144,8 +127,8 @@ public:
   /// Copies the given number of bytes from device memory to host memory.
   ///
   /// Blocks the calling host thread until the copy is completed. Can operate on
-  /// any host memory, not just registered host memory or host memory allocated
-  /// by allocateHostMemory. Does not block any ongoing device calls.
+  /// any host memory, not just registered host memory. Does not block any
+  /// ongoing device calls.
   virtual Error synchronousCopyD2H(const void *DeviceSrcHandle,
                                    size_t SrcByteOffset, void *HostDst,
                                    size_t DstByteOffset, size_t ByteCount) {

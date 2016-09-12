@@ -84,16 +84,11 @@ TEST_F(DeviceTest, AllocateAndFreeDeviceMemory) {
   EXPECT_TRUE(static_cast<bool>(MaybeMemory));
 }
 
-TEST_F(DeviceTest, AllocateAndFreeHostMemory) {
-  se::Expected<int *> MaybeMemory = Device.allocateHostMemory<int>(10);
-  EXPECT_TRUE(static_cast<bool>(MaybeMemory));
-  EXPECT_NO_ERROR(Device.freeHostMemory(*MaybeMemory));
-}
-
 TEST_F(DeviceTest, RegisterAndUnregisterHostMemory) {
   std::vector<int> Data(10);
-  EXPECT_NO_ERROR(Device.registerHostMemory(Data.data(), 10));
-  EXPECT_NO_ERROR(Device.unregisterHostMemory(Data.data()));
+  se::Expected<se::RegisteredHostMemory<int>> MaybeMemory =
+      Device.registerHostMemory<int>(Data);
+  EXPECT_TRUE(static_cast<bool>(MaybeMemory));
 }
 
 // D2H tests

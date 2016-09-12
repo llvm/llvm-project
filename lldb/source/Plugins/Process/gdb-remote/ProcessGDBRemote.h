@@ -415,8 +415,7 @@ private:
   void HandleAsyncStdout(llvm::StringRef out) override;
   void HandleAsyncMisc(llvm::StringRef data) override;
   void HandleStopReply() override;
-  bool
-  HandleAsyncStructuredData(const StructuredData::ObjectSP &object_sp) override;
+  void HandleAsyncStructuredDataPacket(llvm::StringRef data) override;
 
   using ModuleCacheKey = std::pair<std::string, std::string>;
   // KeyInfo for the cached module spec DenseMap.

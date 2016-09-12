@@ -54,7 +54,6 @@ class vop3 <bits<9> si, bits<10> vi = {0, si}> : vop {
   let VI3 = vi;
 }
 
-
 // Execpt for the NONE field, this must be kept in sync with the
 // SIEncodingFamily enum in AMDGPUInstrInfo.cpp
 def SIEncodingFamily {
@@ -117,22 +116,6 @@ def SIsamplel : SDSample<"AMDGPUISD::SAMPLEL">;
 def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
   SDTypeProfile<1, 1, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>]>
 >;
-
-class MubufLoad <SDPatternOperator op> : PatFrag <
-  (ops node:$ptr), (op node:$ptr), [{
-
-  const MemSDNode *LD = cast<MemSDNode>(N);
-  return LD->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
-         LD->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
-}]>;
-
-def mubuf_load : MubufLoad <load>;
-def mubuf_az_extloadi8 : MubufLoad <az_extloadi8>;
-def mubuf_sextloadi8 : MubufLoad <sextloadi8>;
-def mubuf_az_extloadi16 : MubufLoad <az_extloadi16>;
-def mubuf_sextloadi16 : MubufLoad <sextloadi16>;
-
-def mubuf_load_atomic : MubufLoad <atomic_load>;
 
 //===----------------------------------------------------------------------===//
 // PatFrags for global memory operations
@@ -309,11 +292,6 @@ def IMM20bit : PatLeaf <(imm),
   [{return isUInt<20>(N->getZExtValue());}]
 >;
 
-def mubuf_vaddr_offset : PatFrag<
-  (ops node:$ptr, node:$offset, node:$imm_offset),
-  (add (add node:$ptr, node:$offset), node:$imm_offset)
->;
-
 class InlineImm <ValueType vt> : PatLeaf <(vt imm), [{
   return isInlineImmediate(N);
 }]>;
@@ -428,7 +406,6 @@ def gds : NamedOperandBit<"GDS", NamedMatchClass<"GDS">>;
 def omod : NamedOperandU32<"OModSI", NamedMatchClass<"OModSI">>;
 def clampmod : NamedOperandBit<"ClampSI", NamedMatchClass<"ClampSI">>;
 
-
 def glc : NamedOperandBit<"GLC", NamedMatchClass<"GLC">>;
 def slc : NamedOperandBit<"SLC", NamedMatchClass<"SLC">>;
 def tfe : NamedOperandBit<"TFE", NamedMatchClass<"TFE">>;
@@ -511,16 +488,6 @@ def Int64InputMods : IntInputMods<Int64InputModsMatchClass>;
 
 def DS1Addr1Offset : ComplexPattern<i32, 2, "SelectDS1Addr1Offset">;
 def DS64Bit4ByteAligned : ComplexPattern<i32, 3, "SelectDS64Bit4ByteAligned">;
-
-def MUBUFAddr32 : ComplexPattern<i64, 9, "SelectMUBUFAddr32">;
-def MUBUFAddr64 : ComplexPattern<i64, 7, "SelectMUBUFAddr64">;
-def MUBUFAddr64Atomic : ComplexPattern<i64, 5, "SelectMUBUFAddr64">;
-def MUBUFScratch : ComplexPattern<i64, 4, "SelectMUBUFScratch">;
-def MUBUFOffset : ComplexPattern<i64, 6, "SelectMUBUFOffset">;
-def MUBUFOffsetNoGLC : ComplexPattern<i64, 3, "SelectMUBUFOffset">;
-def MUBUFOffsetAtomic : ComplexPattern<i64, 4, "SelectMUBUFOffset">;
-def MUBUFIntrinsicOffset : ComplexPattern<i32, 2, "SelectMUBUFIntrinsicOffset">;
-def MUBUFIntrinsicVOffset : ComplexPattern<i32, 3, "SelectMUBUFIntrinsicVOffset">;
 
 def MOVRELOffset : ComplexPattern<i32, 2, "SelectMOVRELOffset">;
 
@@ -1278,6 +1245,8 @@ class VOP1_DPP <vop1 op, string opName, VOPProfile p> :
   VOP1_DPPe <op.VI>,
   VOP_DPP <p.OutsDPP, p.InsDPP, opName#p.AsmDPP, [], p.HasModifiers> {
   let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
+  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.DPP,
+                                     AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "DPP";
   let DisableDecoder = DisableVIDecoder;
   let src0_modifiers = !if(p.HasModifiers, ?, 0);
@@ -1313,6 +1282,8 @@ class VOP1_SDWA <vop1 op, string opName, VOPProfile p> :
   SDWADisableFields <p> {
   let AsmMatchConverter = "cvtSdwaVOP1";
   let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
+  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.SDWA,
+                                     AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "SDWA";
   let DisableDecoder = DisableVIDecoder;
 }
@@ -1375,6 +1346,8 @@ class VOP2_DPP <vop2 op, string opName, VOPProfile p> :
   VOP2_DPPe <op.VI>,
   VOP_DPP <p.OutsDPP, p.InsDPP, opName#p.AsmDPP, [], p.HasModifiers> {
   let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
+  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.DPP,
+                                     AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "DPP";
   let DisableDecoder = DisableVIDecoder;
   let src0_modifiers = !if(p.HasModifiers, ?, 0);
@@ -1387,6 +1360,8 @@ class VOP2_SDWA <vop2 op, string opName, VOPProfile p> :
   SDWADisableFields <p> {
   let AsmMatchConverter = "cvtSdwaVOP2";
   let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
+  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.SDWA,
+                                     AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "SDWA";
   let DisableDecoder = DisableVIDecoder;
 }
@@ -1842,6 +1817,8 @@ class VOPC_SDWA <vopc op, string opName, bit DefExec, VOPProfile p> :
   let hasSideEffects = DefExec;
   let AsmMatchConverter = "cvtSdwaVOPC";
   let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
+  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.SDWA,
+                                     AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "SDWA";
   let DisableDecoder = DisableVIDecoder;
 }
@@ -2095,450 +2072,6 @@ multiclass VINTRP_m <bits <2> op, dag outs, dag ins, string asm,
   def _si : VINTRP_Real_si <op, NAME, outs, ins, asm>;
 
   def _vi : VINTRP_Real_vi <op, NAME, outs, ins, asm>;
-}
-
-//===----------------------------------------------------------------------===//
-// MTBUF classes
-//===----------------------------------------------------------------------===//
-
-class MTBUF_Pseudo <string opName, dag outs, dag ins, list<dag> pattern> :
-  MTBUF <outs, ins, "", pattern>,
-  SIMCInstr<opName, SIEncodingFamily.NONE> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-}
-
-class MTBUF_Real_si <bits<3> op, string opName, dag outs, dag ins,
-                    string asm> :
-  MTBUF <outs, ins, asm, []>,
-  MTBUFe <op>,
-  SIMCInstr<opName, SIEncodingFamily.SI> {
-  let DecoderNamespace="SICI";
-  let DisableDecoder = DisableSIDecoder;
-}
-
-class MTBUF_Real_vi <bits<4> op, string opName, dag outs, dag ins, string asm> :
-  MTBUF <outs, ins, asm, []>,
-  MTBUFe_vi <op>,
-  SIMCInstr <opName, SIEncodingFamily.VI> {
-  let DecoderNamespace="VI";
-  let DisableDecoder = DisableVIDecoder;
-}
-
-multiclass MTBUF_m <bits<3> op, string opName, dag outs, dag ins, string asm,
-                    list<dag> pattern> {
-
-  def "" : MTBUF_Pseudo <opName, outs, ins, pattern>;
-
-  def _si : MTBUF_Real_si <op, opName, outs, ins, asm>;
-
-  def _vi : MTBUF_Real_vi <{0, op{2}, op{1}, op{0}}, opName, outs, ins, asm>;
-
-}
-
-let mayStore = 1, mayLoad = 0 in {
-
-multiclass MTBUF_Store_Helper <bits<3> op, string opName,
-                               RegisterClass regClass> : MTBUF_m <
-  op, opName, (outs),
-  (ins regClass:$vdata, u16imm:$offset, i1imm:$offen, i1imm:$idxen, i1imm:$glc,
-   i1imm:$addr64, i8imm:$dfmt, i8imm:$nfmt, VGPR_32:$vaddr,
-   SReg_128:$srsrc, i1imm:$slc, i1imm:$tfe, SCSrc_b32:$soffset),
-  opName#" $vdata, $offset, $offen, $idxen, $glc, $addr64, $dfmt,"
-        #" $nfmt, $vaddr, $srsrc, $slc, $tfe, $soffset", []
->;
-
-} // mayStore = 1, mayLoad = 0
-
-let mayLoad = 1, mayStore = 0 in {
-
-multiclass MTBUF_Load_Helper <bits<3> op, string opName,
-                              RegisterClass regClass> : MTBUF_m <
-  op, opName, (outs regClass:$dst),
-  (ins u16imm:$offset, i1imm:$offen, i1imm:$idxen, i1imm:$glc, i1imm:$addr64,
-       i8imm:$dfmt, i8imm:$nfmt, VGPR_32:$vaddr, SReg_128:$srsrc,
-       i1imm:$slc, i1imm:$tfe, SCSrc_b32:$soffset),
-  opName#" $dst, $offset, $offen, $idxen, $glc, $addr64, $dfmt,"
-        #" $nfmt, $vaddr, $srsrc, $slc, $tfe, $soffset", []
->;
-
-} // mayLoad = 1, mayStore = 0
-
-//===----------------------------------------------------------------------===//
-// MUBUF classes
-//===----------------------------------------------------------------------===//
-
-class mubuf <bits<7> si, bits<7> vi = si> {
-  field bits<7> SI = si;
-  field bits<7> VI = vi;
-}
-
-let isCodeGenOnly = 0 in {
-
-class MUBUF_si <bits<7> op, dag outs, dag ins, string asm, list<dag> pattern> :
-  MUBUF <outs, ins, asm, pattern>, MUBUFe <op> {
-  let lds  = 0;
-}
-
-} // End let isCodeGenOnly = 0
-
-class MUBUF_vi <bits<7> op, dag outs, dag ins, string asm, list<dag> pattern> :
-  MUBUF <outs, ins, asm, pattern>, MUBUFe_vi <op> {
-  let lds = 0;
-}
-
-class MUBUFAddr64Table <bit is_addr64, string suffix = ""> {
-  bit IsAddr64 = is_addr64;
-  string OpName = NAME # suffix;
-}
-
-class MUBUF_Pseudo <string opName, dag outs, dag ins, list<dag> pattern> :
-  MUBUF <outs, ins, "", pattern>,
-  SIMCInstr<opName, SIEncodingFamily.NONE> {
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-
-  // dummy fields, so that we can use let statements around multiclasses
-  bits<1> offen;
-  bits<1> idxen;
-  bits<8> vaddr;
-  bits<1> glc;
-  bits<1> slc;
-  bits<1> tfe;
-  bits<8> soffset;
-}
-
-class MUBUF_Real_si <mubuf op, string opName, dag outs, dag ins,
-                     string asm> :
-  MUBUF <outs, ins, asm, []>,
-  MUBUFe <op.SI>,
-  SIMCInstr<opName, SIEncodingFamily.SI> {
-  let lds = 0;
-  let AssemblerPredicate = SIAssemblerPredicate;
-  let DecoderNamespace="SICI";
-  let DisableDecoder = DisableSIDecoder;
-}
-
-class MUBUF_Real_vi <mubuf op, string opName, dag outs, dag ins,
-                     string asm> :
-  MUBUF <outs, ins, asm, []>,
-  MUBUFe_vi <op.VI>,
-  SIMCInstr<opName, SIEncodingFamily.VI> {
-  let lds = 0;
-  let AssemblerPredicate = VIAssemblerPredicate;
-  let DecoderNamespace="VI";
-  let DisableDecoder = DisableVIDecoder;
-}
-
-multiclass MUBUF_m <mubuf op, string opName, dag outs, dag ins, string asm,
-                    list<dag> pattern> {
-
-  def "" : MUBUF_Pseudo <opName, outs, ins, pattern>,
-           MUBUFAddr64Table <0>;
-
-  let DisableWQM = 1 in {
-    def "_exact" : MUBUF_Pseudo <opName, outs, ins, []>;
-  }
-
-  let addr64 = 0, isCodeGenOnly = 0 in {
-    def _si : MUBUF_Real_si <op, opName, outs, ins, asm>;
-  }
-
-  def _vi : MUBUF_Real_vi <op, opName, outs, ins, asm>;
-}
-
-multiclass MUBUFAddr64_m <mubuf op, string opName, dag outs,
-                          dag ins, string asm, list<dag> pattern> {
-
-  def "" : MUBUF_Pseudo <opName, outs, ins, pattern>,
-           MUBUFAddr64Table <1>;
-
-  let addr64 = 1, isCodeGenOnly = 0 in {
-    def _si : MUBUF_Real_si <op, opName, outs, ins, asm>;
-  }
-
-  // There is no VI version. If the pseudo is selected, it should be lowered
-  // for VI appropriately.
-}
-
-multiclass MUBUFAtomicOffset_m <mubuf op, string opName, dag outs, dag ins,
-                                string asm, list<dag> pattern, bit is_return> {
-
-  def "" : MUBUF_Pseudo <opName, outs, ins, pattern>,
-           MUBUFAddr64Table <0, !if(is_return, "_RTN", "")>,
-           AtomicNoRet<NAME#"_OFFSET", is_return>;
-
-  let offen = 0, idxen = 0, tfe = 0, vaddr = 0 in {
-    let addr64 = 0 in {
-      def _si : MUBUF_Real_si <op, opName, outs, ins, asm>;
-    }
-
-    def _vi : MUBUF_Real_vi <op, opName, outs, ins, asm>;
-  }
-}
-
-multiclass MUBUFAtomicAddr64_m <mubuf op, string opName, dag outs, dag ins,
-                                string asm, list<dag> pattern, bit is_return> {
-
-  def "" : MUBUF_Pseudo <opName, outs, ins, pattern>,
-           MUBUFAddr64Table <1, !if(is_return, "_RTN", "")>,
-           AtomicNoRet<NAME#"_ADDR64", is_return>;
-
-  let offen = 0, idxen = 0, addr64 = 1, tfe = 0 in {
-    def _si : MUBUF_Real_si <op, opName, outs, ins, asm>;
-  }
-
-  // There is no VI version. If the pseudo is selected, it should be lowered
-  // for VI appropriately.
-}
-
-multiclass MUBUFAtomicOther_m <mubuf op, string opName, dag outs, dag ins,
-                               string asm, list<dag> pattern, bit is_return> {
-
-  def "" : MUBUF_Pseudo <opName, outs, ins, pattern>,
-           AtomicNoRet<opName, is_return>;
-
-  let tfe = 0 in {
-    let addr64 = 0 in {
-      def _si : MUBUF_Real_si <op, opName, outs, ins, asm>;
-    }
-
-    def _vi : MUBUF_Real_vi <op, opName, outs, ins, asm>;
-  }
-}
-
-multiclass MUBUF_Atomic <mubuf op, string name, RegisterClass rc,
-                         ValueType vt, SDPatternOperator atomic> {
-
-  let mayStore = 1, mayLoad = 1, hasPostISelHook = 1, hasSideEffects = 1,
-      DisableWQM = 1 in {
-
-    // No return variants
-    let glc = 0, AsmMatchConverter = "cvtMubufAtomic" in {
-
-      defm _ADDR64 : MUBUFAtomicAddr64_m <
-        op, name#"_addr64", (outs),
-        (ins rc:$vdata, VReg_64:$vaddr, SReg_128:$srsrc,
-             SCSrc_b32:$soffset, offset:$offset, slc:$slc),
-        name#" $vdata, $vaddr, $srsrc, $soffset addr64$offset$slc", [], 0
-      >;
-
-      defm _OFFSET : MUBUFAtomicOffset_m <
-        op, name#"_offset", (outs),
-        (ins rc:$vdata, SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset,
-             slc:$slc),
-        name#" $vdata, off, $srsrc, $soffset$offset$slc", [], 0
-      >;
-
-      let offen = 1, idxen = 0 in {
-        defm _OFFEN : MUBUFAtomicOther_m <
-          op, name#"_offen", (outs),
-          (ins rc:$vdata, VGPR_32:$vaddr, SReg_128:$srsrc, SCSrc_b32:$soffset,
-                offset:$offset, slc:$slc),
-          name#" $vdata, $vaddr, $srsrc, $soffset offen$offset$slc", [], 0
-        >;
-      }
-
-      let offen = 0, idxen = 1 in {
-        defm _IDXEN : MUBUFAtomicOther_m <
-          op, name#"_idxen", (outs),
-          (ins rc:$vdata, VGPR_32:$vaddr, SReg_128:$srsrc, SCSrc_b32:$soffset,
-                offset:$offset, slc:$slc),
-          name#" $vdata, $vaddr, $srsrc, $soffset idxen$offset$slc", [], 0
-        >;
-      }
-
-      let offen = 1, idxen = 1 in {
-        defm _BOTHEN : MUBUFAtomicOther_m <
-          op, name#"_bothen", (outs),
-          (ins rc:$vdata, VReg_64:$vaddr, SReg_128:$srsrc, SCSrc_b32:$soffset,
-                offset:$offset, slc:$slc),
-          name#" $vdata, $vaddr, $srsrc, $soffset idxen offen$offset$slc",
-          [], 0
-        >;
-      }
-    } // glc = 0
-
-    // Variant that return values
-    let glc = 1, Constraints = "$vdata = $vdata_in",
-        AsmMatchConverter = "cvtMubufAtomicReturn",
-        DisableEncoding = "$vdata_in"  in {
-
-      defm _RTN_ADDR64 : MUBUFAtomicAddr64_m <
-        op, name#"_rtn_addr64", (outs rc:$vdata),
-        (ins rc:$vdata_in, VReg_64:$vaddr, SReg_128:$srsrc,
-             SCSrc_b32:$soffset, offset:$offset, slc:$slc),
-        name#" $vdata, $vaddr, $srsrc, $soffset addr64$offset glc$slc",
-        [(set vt:$vdata,
-         (atomic (MUBUFAddr64Atomic v4i32:$srsrc, i64:$vaddr, i32:$soffset,
-	                            i16:$offset, i1:$slc), vt:$vdata_in))], 1
-      >;
-
-      defm _RTN_OFFSET : MUBUFAtomicOffset_m <
-        op, name#"_rtn_offset", (outs rc:$vdata),
-        (ins rc:$vdata_in, SReg_128:$srsrc, SCSrc_b32:$soffset,
-             offset:$offset, slc:$slc),
-        name#" $vdata, off, $srsrc, $soffset$offset glc$slc",
-        [(set vt:$vdata,
-         (atomic (MUBUFOffsetAtomic v4i32:$srsrc, i32:$soffset, i16:$offset,
-                                    i1:$slc), vt:$vdata_in))], 1
-      >;
-
-      let offen = 1, idxen = 0 in {
-        defm _RTN_OFFEN : MUBUFAtomicOther_m <
-          op, name#"_rtn_offen", (outs rc:$vdata),
-          (ins rc:$vdata_in, VGPR_32:$vaddr, SReg_128:$srsrc, SCSrc_b32:$soffset,
-                offset:$offset, slc:$slc),
-          name#" $vdata, $vaddr, $srsrc, $soffset offen$offset glc$slc",
-          [], 1
-        >;
-      }
-
-      let offen = 0, idxen = 1 in {
-        defm _RTN_IDXEN : MUBUFAtomicOther_m <
-          op, name#"_rtn_idxen", (outs rc:$vdata),
-          (ins rc:$vdata_in, VGPR_32:$vaddr, SReg_128:$srsrc, SCSrc_b32:$soffset,
-                offset:$offset, slc:$slc),
-          name#" $vdata, $vaddr, $srsrc, $soffset idxen$offset glc$slc",
-          [], 1
-        >;
-      }
-
-      let offen = 1, idxen = 1 in {
-        defm _RTN_BOTHEN : MUBUFAtomicOther_m <
-          op, name#"_rtn_bothen", (outs rc:$vdata),
-          (ins rc:$vdata_in, VReg_64:$vaddr, SReg_128:$srsrc, SCSrc_b32:$soffset,
-                offset:$offset, slc:$slc),
-          name#" $vdata, $vaddr, $srsrc, $soffset idxen offen$offset glc$slc",
-          [], 1
-        >;
-      }
-    } // glc = 1
-
-  } // mayStore = 1, mayLoad = 1, hasPostISelHook = 1
-}
-
-// FIXME: tfe can't be an operand because it requires a separate
-// opcode because it needs an N+1 register class dest register.
-multiclass MUBUF_Load_Helper <mubuf op, string name, RegisterClass regClass,
-                              ValueType load_vt = i32,
-                              SDPatternOperator ld = null_frag> {
-
-  let mayLoad = 1, mayStore = 0 in {
-    let offen = 0, idxen = 0, vaddr = 0 in {
-      defm _OFFSET : MUBUF_m <op, name#"_offset", (outs regClass:$vdata),
-                           (ins SReg_128:$srsrc, SCSrc_b32:$soffset,
-                           offset:$offset, glc:$glc, slc:$slc, tfe:$tfe),
-                           name#" $vdata, off, $srsrc, $soffset$offset$glc$slc$tfe",
-                           [(set load_vt:$vdata, (ld (MUBUFOffset v4i32:$srsrc,
-                                                     i32:$soffset, i16:$offset,
-                                                     i1:$glc, i1:$slc, i1:$tfe)))]>;
-    }
-
-    let offen = 1, idxen = 0  in {
-      defm _OFFEN  : MUBUF_m <op, name#"_offen", (outs regClass:$vdata),
-                           (ins VGPR_32:$vaddr, SReg_128:$srsrc,
-                           SCSrc_b32:$soffset, offset:$offset, glc:$glc, slc:$slc,
-                           tfe:$tfe),
-                           name#" $vdata, $vaddr, $srsrc, $soffset offen$offset$glc$slc$tfe", []>;
-    }
-
-    let offen = 0, idxen = 1 in {
-      defm _IDXEN  : MUBUF_m <op, name#"_idxen", (outs regClass:$vdata),
-                           (ins VGPR_32:$vaddr, SReg_128:$srsrc,
-                           SCSrc_b32:$soffset, offset:$offset, glc:$glc,
-                           slc:$slc, tfe:$tfe),
-                           name#" $vdata, $vaddr, $srsrc, $soffset idxen$offset$glc$slc$tfe", []>;
-    }
-
-    let offen = 1, idxen = 1 in {
-      defm _BOTHEN : MUBUF_m <op, name#"_bothen", (outs regClass:$vdata),
-                           (ins VReg_64:$vaddr, SReg_128:$srsrc, SCSrc_b32:$soffset,
-                           offset:$offset, glc:$glc, slc:$slc, tfe:$tfe),
-                           name#" $vdata, $vaddr, $srsrc, $soffset idxen offen$offset$glc$slc$tfe", []>;
-    }
-
-    let offen = 0, idxen = 0 in {
-      defm _ADDR64 : MUBUFAddr64_m <op, name#"_addr64", (outs regClass:$vdata),
-                           (ins VReg_64:$vaddr, SReg_128:$srsrc,
-                                SCSrc_b32:$soffset, offset:$offset,
-				glc:$glc, slc:$slc, tfe:$tfe),
-                           name#" $vdata, $vaddr, $srsrc, $soffset addr64$offset$glc$slc$tfe",
-                           [(set load_vt:$vdata, (ld (MUBUFAddr64 v4i32:$srsrc,
-                                                  i64:$vaddr, i32:$soffset,
-                                                  i16:$offset, i1:$glc, i1:$slc,
-						  i1:$tfe)))]>;
-    }
-  }
-}
-
-multiclass MUBUF_Store_Helper <mubuf op, string name, RegisterClass vdataClass,
-                          ValueType store_vt = i32, SDPatternOperator st = null_frag> {
-  let mayLoad = 0, mayStore = 1 in {
-    let offen = 0, idxen = 0, vaddr = 0 in {
-      defm _OFFSET : MUBUF_m <op, name#"_offset",(outs),
-                              (ins vdataClass:$vdata, SReg_128:$srsrc, SCSrc_b32:$soffset,
-                              offset:$offset, glc:$glc, slc:$slc, tfe:$tfe),
-                              name#" $vdata, off, $srsrc, $soffset$offset$glc$slc$tfe",
-                              [(st store_vt:$vdata, (MUBUFOffset v4i32:$srsrc, i32:$soffset,
-                                   i16:$offset, i1:$glc, i1:$slc, i1:$tfe))]>;
-    } // offen = 0, idxen = 0, vaddr = 0
-
-    let offen = 1, idxen = 0  in {
-      defm _OFFEN : MUBUF_m <op, name#"_offen", (outs),
-                             (ins vdataClass:$vdata, VGPR_32:$vaddr, SReg_128:$srsrc,
-                              SCSrc_b32:$soffset, offset:$offset, glc:$glc,
-                              slc:$slc, tfe:$tfe),
-                             name#" $vdata, $vaddr, $srsrc, $soffset offen"#
-                             "$offset$glc$slc$tfe", []>;
-    } // end offen = 1, idxen = 0
-
-    let offen = 0, idxen = 1 in {
-      defm _IDXEN  : MUBUF_m <op, name#"_idxen", (outs),
-                           (ins vdataClass:$vdata, VGPR_32:$vaddr, SReg_128:$srsrc,
-                           SCSrc_b32:$soffset, offset:$offset, glc:$glc,
-                           slc:$slc, tfe:$tfe),
-                           name#" $vdata, $vaddr, $srsrc, $soffset idxen$offset$glc$slc$tfe", []>;
-    }
-
-    let offen = 1, idxen = 1 in {
-      defm _BOTHEN : MUBUF_m <op, name#"_bothen", (outs),
-                           (ins vdataClass:$vdata, VReg_64:$vaddr, SReg_128:$srsrc, SCSrc_b32:$soffset,
-                           offset:$offset, glc:$glc, slc:$slc, tfe:$tfe),
-                           name#" $vdata, $vaddr, $srsrc, $soffset idxen offen$offset$glc$slc$tfe", []>;
-    }
-
-    let offen = 0, idxen = 0 in {
-      defm _ADDR64 : MUBUFAddr64_m <op, name#"_addr64", (outs),
-                                    (ins vdataClass:$vdata, VReg_64:$vaddr, SReg_128:$srsrc,
-                                         SCSrc_b32:$soffset,
-                                         offset:$offset, glc:$glc, slc:$slc,
-                                         tfe:$tfe),
-                                    name#" $vdata, $vaddr, $srsrc, $soffset addr64"#
-                                         "$offset$glc$slc$tfe",
-                                    [(st store_vt:$vdata,
-                                      (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr,
-                                                   i32:$soffset, i16:$offset,
-                                                   i1:$glc, i1:$slc, i1:$tfe))]>;
-    }
-  } // End mayLoad = 0, mayStore = 1
-}
-
-// For cache invalidation instructions.
-multiclass MUBUF_Invalidate <mubuf op, string opName, SDPatternOperator node> {
-  let hasSideEffects = 1, mayStore = 1, AsmMatchConverter = "" in {
-    def "" : MUBUF_Pseudo <opName, (outs), (ins), [(node)]>;
-
-    // Set everything to 0.
-    let offset = 0, offen = 0, idxen = 0, glc = 0, vaddr = 0,
-        vdata = 0, srsrc = 0, slc = 0, tfe = 0, soffset = 0 in {
-      let addr64 = 0 in {
-        def _si : MUBUF_Real_si <op, opName, (outs), (ins), opName>;
-      }
-
-      def _vi : MUBUF_Real_vi <op, opName, (outs), (ins), opName>;
-    }
-  } // End hasSideEffects = 1, mayStore = 1, AsmMatchConverter = ""
 }
 
 //===----------------------------------------------------------------------===//

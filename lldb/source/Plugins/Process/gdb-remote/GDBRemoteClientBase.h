@@ -25,14 +25,13 @@ public:
     virtual void HandleAsyncMisc(llvm::StringRef data) = 0;
     virtual void HandleStopReply() = 0;
 
-    //
-    /// Processes async structured data.
+    // =========================================================================
+    /// Process asynchronously-received structured data.
     ///
-    /// @return
-    ///    true if the data was handled; otherwise, false.
-    //
-    virtual bool
-    HandleAsyncStructuredData(const StructuredData::ObjectSP &object_sp) = 0;
+    /// @param[in] data
+    ///   The complete data packet, expected to start with JSON-async.
+    // =========================================================================
+    virtual void HandleAsyncStructuredDataPacket(llvm::StringRef data) = 0;
   };
 
   GDBRemoteClientBase(const char *comm_name, const char *listener_name);

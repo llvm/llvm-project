@@ -4808,9 +4808,49 @@ void ProcessGDBRemote::HandleStopReply() {
   BuildDynamicRegisterInfo(true);
 }
 
-bool ProcessGDBRemote::HandleAsyncStructuredData(
-    const StructuredData::ObjectSP &object_sp) {
-  return RouteAsyncStructuredData(object_sp);
+static const char *const s_async_json_packet_prefix = "JSON-async:";
+
+static StructuredData::ObjectSP
+ParseStructuredDataPacket(llvm::StringRef packet) {
+  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+
+  if (!packet.consume_front(s_async_json_packet_prefix)) {
+    if (log) {
+      log->Printf(
+          "GDBRemoteCommmunicationClientBase::%s() received $J packet "
+          "but was not a StructuredData packet: packet starts with "
+          "%s",
+          __FUNCTION__,
+          packet.slice(0, strlen(s_async_json_packet_prefix)).str().c_str());
+    }
+    return StructuredData::ObjectSP();
+  }
+
+  // This is an asynchronous JSON packet, destined for a
+  // StructuredDataPlugin.
+  StructuredData::ObjectSP json_sp = StructuredData::ParseJSON(packet);
+  if (log) {
+    if (json_sp) {
+      StreamString json_str;
+      json_sp->Dump(json_str);
+      json_str.Flush();
+      log->Printf("ProcessGDBRemote::%s() "
+                  "received Async StructuredData packet: %s",
+                  __FUNCTION__, json_str.GetString().c_str());
+    } else {
+      log->Printf("ProcessGDBRemote::%s"
+                  "() received StructuredData packet:"
+                  " parse failure",
+                  __FUNCTION__);
+    }
+  }
+  return json_sp;
+}
+
+void ProcessGDBRemote::HandleAsyncStructuredDataPacket(llvm::StringRef data) {
+  auto structured_data_sp = ParseStructuredDataPacket(data);
+  if (structured_data_sp)
+    RouteAsyncStructuredData(structured_data_sp);
 }
 
 class CommandObjectProcessGDBRemoteSpeedTest : public CommandObjectParsed {

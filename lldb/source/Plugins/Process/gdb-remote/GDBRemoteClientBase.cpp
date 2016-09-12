@@ -103,38 +103,9 @@ StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
       delegate.HandleAsyncMisc(
           llvm::StringRef(response.GetStringRef()).substr(1));
       break;
-
     case 'J':
-      // Asynchronous JSON packet, destined for a
-      // StructuredDataPlugin.
-      {
-        // Parse the content into a StructuredData instance.
-        auto payload_index = strlen("JSON-async:");
-        StructuredData::ObjectSP json_sp = StructuredData::ParseJSON(
-            response.GetStringRef().substr(payload_index));
-        if (log) {
-          if (json_sp)
-            log->Printf("GDBRemoteCommmunicationClientBase::%s() "
-                        "received Async StructuredData packet: %s",
-                        __FUNCTION__,
-                        response.GetStringRef().substr(payload_index).c_str());
-          else
-            log->Printf("GDBRemoteCommmunicationClientBase::%s"
-                        "() received StructuredData packet:"
-                        " parse failure",
-                        __FUNCTION__);
-        }
-
-        // Pass the data to the process to route to the
-        // appropriate plugin.  The plugin controls what happens
-        // to it from there.
-        bool routed = delegate.HandleAsyncStructuredData(json_sp);
-        if (log)
-          log->Printf("GDBRemoteCommmunicationClientBase::%s()"
-                      " packet %s",
-                      __FUNCTION__, routed ? "handled" : "not handled");
-        break;
-      }
+      delegate.HandleAsyncStructuredDataPacket(response.GetStringRef());
+      break;
     case 'T':
     case 'S':
       // Do this with the continue lock held.

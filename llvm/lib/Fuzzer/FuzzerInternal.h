@@ -521,6 +521,8 @@ private:
 
   // Need to know our own thread.
   static thread_local bool IsMyThread;
+
+  bool InMergeMode = false;
 };
 
 // Global interface to functions that may or may not be available.

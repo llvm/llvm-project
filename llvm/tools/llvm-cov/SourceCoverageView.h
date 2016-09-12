@@ -196,8 +196,7 @@ protected:
   virtual void renderViewFooter(raw_ostream &OS) = 0;
 
   /// \brief Render the source name for the view.
-  virtual void renderSourceName(raw_ostream &OS, bool WholeFile,
-                                unsigned FirstUncoveredLineNo) = 0;
+  virtual void renderSourceName(raw_ostream &OS, bool WholeFile) = 0;
 
   /// \brief Render the line prefix at the given \p ViewDepth.
   virtual void renderLinePrefix(raw_ostream &OS, unsigned ViewDepth) = 0;
@@ -245,8 +244,9 @@ protected:
   /// created time for the view.
   virtual void renderCellInTitle(raw_ostream &OS, StringRef CellText) = 0;
 
-  /// \brief Render the table header for a given source file
-  virtual void renderTableHeader(raw_ostream &OS, unsigned IndentLevel = 0) = 0;
+  /// \brief Render the table header for a given source file.
+  virtual void renderTableHeader(raw_ostream &OS, unsigned FirstUncoveredLineNo,
+                                 unsigned IndentLevel) = 0;
 
   /// @}
 

@@ -298,7 +298,6 @@ static void populateWorklist(Loop &L, SmallVector<LoopVector, 8> &V) {
   }
   LoopList.push_back(CurrentLoop);
   V.push_back(std::move(LoopList));
-  DEBUG(dbgs() << "Worklist size = " << V.size() << "\n");
 }
 
 static PHINode *getInductionVariable(Loop *L, ScalarEvolution *SE) {
@@ -464,6 +463,7 @@ struct LoopInterchange : public FunctionPass {
     for (Loop *L : *LI)
       populateWorklist(*L, Worklist);
 
+    DEBUG(dbgs() << "Worklist size = " << Worklist.size() << "\n");
     bool Changed = true;
     while (!Worklist.empty()) {
       LoopVector LoopList = Worklist.pop_back_val();
@@ -506,7 +506,7 @@ struct LoopInterchange : public FunctionPass {
       return false;
     }
     if (!isComputableLoopNest(LoopList)) {
-      DEBUG(dbgs() << "Not vaild loop candidate for interchange\n");
+      DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
       return false;
     }
     Loop *OuterMostLoop = *(LoopList.begin());

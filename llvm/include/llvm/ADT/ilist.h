@@ -33,22 +33,24 @@
 
 namespace llvm {
 
-/// Use new/delete by default for iplist and ilist.
+/// Use delete by default for iplist and ilist.
 ///
-/// Specialize this to get different behaviour for allocation-related API.  (If
-/// you really want new/delete, consider just using std::list.)
+/// Specialize this to get different behaviour for ownership-related API.  (If
+/// you really want ownership semantics, consider using std::list or building
+/// something like \a BumpPtrList.)
 ///
 /// \see ilist_noalloc_traits
 template <typename NodeTy> struct ilist_alloc_traits {
-  static NodeTy *createNode(const NodeTy &V) { return new NodeTy(V); }
   static void deleteNode(NodeTy *V) { delete V; }
 };
 
-/// Custom traits to disable node creation and do nothing on deletion.
+/// Custom traits to do nothing on deletion.
 ///
 /// Specialize ilist_alloc_traits to inherit from this to disable the
-/// non-intrusive parts of iplist and/or ilist.  It has no createNode function,
-/// and deleteNode does nothing.
+/// non-intrusive deletion in iplist (which implies ownership).
+///
+/// If you want purely intrusive semantics with no callbacks, consider using \a
+/// simple_ilist instead.
 ///
 /// \code
 /// template <>
@@ -136,9 +138,26 @@ public:
   static const bool value = sizeof(test<TraitsT>(nullptr)) == sizeof(Yes);
 };
 
+/// Type trait to check for a traits class that has a createNode member.
+/// Allocation should be managed in a wrapper class, instead of in
+/// ilist_traits.
+template <class TraitsT, class NodeT> struct HasCreateNode {
+  typedef char Yes[1];
+  typedef char No[2];
+  template <size_t N> struct SFINAE {};
+
+  template <class U>
+  static Yes &test(U *I, decltype(I->createNode(make<NodeT>())) * = 0);
+  template <class> static No &test(...);
+
+public:
+  static const bool value = sizeof(test<TraitsT>(nullptr)) == sizeof(Yes);
+};
+
 template <class TraitsT, class NodeT> struct HasObsoleteCustomization {
-  static const bool value =
-      HasGetNext<TraitsT, NodeT>::value || HasCreateSentinel<TraitsT>::value;
+  static const bool value = HasGetNext<TraitsT, NodeT>::value ||
+                            HasCreateSentinel<TraitsT>::value ||
+                            HasCreateNode<TraitsT, NodeT>::value;
 };
 
 } // end namespace ilist_detail
@@ -160,6 +179,9 @@ template <class TraitsT, class NodeT> struct HasObsoleteCustomization {
 template <class IntrusiveListT, class TraitsT>
 class iplist_impl : public TraitsT, IntrusiveListT {
   typedef IntrusiveListT base_list_type;
+
+protected:
+  typedef iplist_impl iplist_impl_type;
 
 public:
   typedef typename base_list_type::pointer pointer;
@@ -192,6 +214,13 @@ private:
 
 public:
   iplist_impl() = default;
+  iplist_impl(iplist_impl &&X)
+      : TraitsT(std::move(X)), IntrusiveListT(std::move(X)) {}
+  iplist_impl &operator=(iplist_impl &&X) {
+    *static_cast<TraitsT *>(this) = std::move(X);
+    *static_cast<IntrusiveListT *>(this) = std::move(X);
+    return *this;
+  }
   ~iplist_impl() { clear(); }
 
   // Miscellaneous inspection routines.
@@ -224,6 +253,13 @@ public:
       return insert(begin(), New);
     else
       return insert(++where, New);
+  }
+
+  /// Clone another list.
+  template <class Cloner> void cloneFrom(const iplist_impl &L2, Cloner clone) {
+    clear();
+    for (const_reference V : L2)
+      push_back(clone(V));
   }
 
   pointer remove(iterator &IT) {
@@ -362,87 +398,26 @@ public:
 
 /// An intrusive list with ownership and callbacks specified/controlled by
 /// ilist_traits, only with API safe for polymorphic types.
-template <class T>
-class iplist : public iplist_impl<simple_ilist<T>, ilist_traits<T>> {};
-
-/// An intrusive list with ownership and callbacks specified/controlled by
-/// ilist_traits, with API that is unsafe for polymorphic types.
-template <class T> class ilist : public iplist<T> {
-  typedef iplist<T> base_list_type;
+///
+/// The \p Options parameters are the same as those for \a simple_ilist.  See
+/// there for a description of what's available.
+template <class T, class... Options>
+class iplist
+    : public iplist_impl<simple_ilist<T, Options...>, ilist_traits<T>> {
+  typedef typename iplist::iplist_impl_type iplist_impl_type;
 
 public:
-  typedef typename base_list_type::size_type size_type;
-  typedef typename base_list_type::iterator iterator;
-  typedef typename base_list_type::value_type value_type;
-  typedef typename base_list_type::const_reference const_reference;
-
-  ilist() {}
-  ilist(const ilist &right) : base_list_type() {
-    insert(this->begin(), right.begin(), right.end());
+  iplist() = default;
+  iplist(iplist &&X) : iplist_impl_type(std::move(X)) {}
+  iplist(const iplist &X) = delete;
+  iplist &operator=(iplist &&X) {
+    *static_cast<iplist_impl_type *>(this) = std::move(X);
+    return *this;
   }
-  explicit ilist(size_type count) {
-    insert(this->begin(), count, value_type());
-  }
-  ilist(size_type count, const_reference val) {
-    insert(this->begin(), count, val);
-  }
-  template<class InIt> ilist(InIt first, InIt last) {
-    insert(this->begin(), first, last);
-  }
-
-  // bring hidden functions into scope
-  using base_list_type::insert;
-  using base_list_type::push_front;
-  using base_list_type::push_back;
-
-  // Main implementation here - Insert for a node passed by value...
-  iterator insert(iterator where, const_reference val) {
-    return insert(where, this->createNode(val));
-  }
-
-
-  // Front and back inserters...
-  void push_front(const_reference val) { insert(this->begin(), val); }
-  void push_back(const_reference val) { insert(this->end(), val); }
-
-  void insert(iterator where, size_type count, const_reference val) {
-    for (; count != 0; --count) insert(where, val);
-  }
-
-  // Assign special forms...
-  void assign(size_type count, const_reference val) {
-    iterator I = this->begin();
-    for (; I != this->end() && count != 0; ++I, --count)
-      *I = val;
-    if (count != 0)
-      insert(this->end(), val, val);
-    else
-      erase(I, this->end());
-  }
-  template<class InIt> void assign(InIt first1, InIt last1) {
-    iterator first2 = this->begin(), last2 = this->end();
-    for ( ; first1 != last1 && first2 != last2; ++first1, ++first2)
-      *first1 = *first2;
-    if (first2 == last2)
-      erase(first1, last1);
-    else
-      insert(last1, first2, last2);
-  }
-
-
-  // Resize members...
-  void resize(size_type newsize, value_type val) {
-    iterator i = this->begin();
-    size_type len = 0;
-    for ( ; i != this->end() && len < newsize; ++i, ++len) /* empty*/ ;
-
-    if (len == newsize)
-      erase(i, this->end());
-    else                                          // i == end()
-      insert(this->end(), newsize - len, val);
-  }
-  void resize(size_type newsize) { resize(newsize, value_type()); }
+  iplist &operator=(const iplist &X) = delete;
 };
+
+template <class T, class... Options> using ilist = iplist<T, Options...>;
 
 } // End llvm namespace
 

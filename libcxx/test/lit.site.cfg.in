@@ -26,6 +26,7 @@ config.has_libatomic            = "@LIBCXX_HAS_ATOMIC_LIB@"
 config.use_libatomic            = "@LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB@"
 
 config.libcxxabi_shared         = "@LIBCXXABI_ENABLE_SHARED@"
+config.libcxx_external_thread_api  = "@LIBCXX_HAS_EXTERNAL_THREAD_API@"
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@LIBCXX_SOURCE_DIR@/test/lit.cfg")

@@ -920,9 +920,9 @@ static bool areCFlagsAccessedBetweenInstrs(
     return true;
 
   // From must be above To.
-  assert(std::find_if(MachineBasicBlock::reverse_iterator(To),
-                      To->getParent()->rend(), [From](MachineInstr &MI) {
-                        return MachineBasicBlock::iterator(MI) == From;
+  assert(std::find_if(++To.getReverse(), To->getParent()->rend(),
+                      [From](MachineInstr &MI) {
+                        return MI.getIterator() == From;
                       }) != To->getParent()->rend());
 
   // We iterate backward starting \p To until we hit \p From.

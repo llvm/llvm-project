@@ -132,7 +132,7 @@ define <2 x i1> @ashr_icmp2_vec(<2 x i64> %X) {
 
 ; PR9998
 ; Make sure we don't transform the ashr here into an sdiv
-define i1 @pr9998(i32 %V) nounwind {
+define i1 @pr9998(i32 %V) {
 ; CHECK-LABEL: @pr9998(
 ; CHECK-NEXT:    [[W_MASK:%.*]] = and i32 %V, 1
 ; CHECK-NEXT:    [[Z:%.*]] = icmp ne i32 [[W_MASK]], 0
@@ -143,6 +143,22 @@ define i1 @pr9998(i32 %V) nounwind {
   %Y = sext i32 %X to i64
   %Z = icmp ugt i64 %Y, 7297771788697658747
   ret i1 %Z
+}
+
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @pr9998vec(<2 x i32> %V) {
+; CHECK-LABEL: @pr9998vec(
+; CHECK-NEXT:    [[W:%.*]] = shl <2 x i32> %V, <i32 31, i32 31>
+; CHECK-NEXT:    [[X:%.*]] = ashr exact <2 x i32> [[W]], <i32 31, i32 31>
+; CHECK-NEXT:    [[Y:%.*]] = sext <2 x i32> [[X]] to <2 x i64>
+; CHECK-NEXT:    [[Z:%.*]] = icmp ugt <2 x i64> [[Y]], <i64 7297771788697658747, i64 7297771788697658747>
+; CHECK-NEXT:    ret <2 x i1> [[Z]]
+;
+  %W = shl <2 x i32> %V, <i32 31, i32 31>
+  %X = ashr exact <2 x i32> %W, <i32 31, i32 31>
+  %Y = sext <2 x i32> %X to <2 x i64>
+  %Z = icmp ugt <2 x i64> %Y, <i64 7297771788697658747, i64 7297771788697658747>
+  ret <2 x i1> %Z
 }
 
 define i1 @udiv_icmp1(i64 %X) {

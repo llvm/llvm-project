@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the OrcRemoteTargetClient class and helpers. This class
-// can be used to communicate over an RPCChannel with an OrcRemoteTargetServer
-// instance to support remote-JITing.
+// can be used to communicate over an RPCByteChannel with an
+// OrcRemoteTargetServer instance to support remote-JITing.
 //
 //===----------------------------------------------------------------------===//
 
@@ -601,7 +601,7 @@ public:
   Expected<int> callIntVoid(JITTargetAddress Addr) {
     DEBUG(dbgs() << "Calling int(*)(void) " << format("0x%016x", Addr) << "\n");
 
-    auto Listen = [&](RPCChannel &C, uint32_t Id) {
+    auto Listen = [&](RPCByteChannel &C, uint32_t Id) {
       return listenForCompileRequests(C, Id);
     };
     return callSTHandling<CallIntVoid>(Channel, Listen, Addr);
@@ -614,7 +614,7 @@ public:
     DEBUG(dbgs() << "Calling int(*)(int, char*[]) " << format("0x%016x", Addr)
                  << "\n");
 
-    auto Listen = [&](RPCChannel &C, uint32_t Id) {
+    auto Listen = [&](RPCByteChannel &C, uint32_t Id) {
       return listenForCompileRequests(C, Id);
     };
     return callSTHandling<CallMain>(Channel, Listen, Addr, Args);
@@ -626,7 +626,7 @@ public:
     DEBUG(dbgs() << "Calling void(*)(void) " << format("0x%016x", Addr)
                  << "\n");
 
-    auto Listen = [&](RPCChannel &C, uint32_t Id) {
+    auto Listen = [&](RPCByteChannel &C, uint32_t Id) {
       return listenForCompileRequests(C, Id);
     };
     return callSTHandling<CallVoidVoid>(Channel, Listen, Addr);
@@ -736,7 +736,7 @@ private:
 
   uint32_t getTrampolineSize() const { return RemoteTrampolineSize; }
 
-  Error listenForCompileRequests(RPCChannel &C, uint32_t &Id) {
+  Error listenForCompileRequests(RPCByteChannel &C, uint32_t &Id) {
     assert(CallbackManager &&
            "No calback manager. enableCompileCallbacks must be called first");
 

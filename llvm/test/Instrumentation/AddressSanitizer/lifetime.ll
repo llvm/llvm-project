@@ -1,6 +1,7 @@
 ; Test handling of llvm.lifetime intrinsics.
-; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -S | FileCheck %s
-; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -asan-instrument-dynamic-allocas=0 -S | FileCheck %s --check-prefix=CHECK-NO-DYNAMIC
+; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT
+; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -asan-instrument-dynamic-allocas=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK-NO-DYNAMIC
+; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -asan-skip-ambiguous-lifetime-allocas=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK-AMBIGUOUS
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -69,14 +70,14 @@ define void @lifetime() sanitize_address {
   %arr.ptr = bitcast [10 x i32]* %arr to i8*
 
   call void @llvm.lifetime.start(i64 40, i8* %arr.ptr)
-  ; CHECK: call void @__asan_unpoison_stack_memory(i64 %{{[^ ]+}}, i64 40)
+  ; CHECK-DEFAULT: call void @__asan_unpoison_stack_memory(i64 %{{[^ ]+}}, i64 40)
   ; CHECK-NO-DYNAMIC-NOT: call void @__asan_unpoison_stack_memory(i64 %{{[^ ]+}}, i64 40)
 
   store volatile i8 0, i8* %arr.ptr
   ; CHECK: store volatile
 
   call void @llvm.lifetime.end(i64 40, i8* %arr.ptr)
-  ; CHECK: call void @__asan_poison_stack_memory(i64 %{{[^ ]+}}, i64 40)
+  ; CHECK-DEFAULT: call void @__asan_poison_stack_memory(i64 %{{[^ ]+}}, i64 40)
   ; CHECK-NO-DYNAMIC-NOT: call void @__asan_poison_stack_memory(i64 %{{[^ ]+}}, i64 40)
 
   ; One more lifetime start/end for the same variable %i.
@@ -116,7 +117,8 @@ bb0:
   ; CHECK-LABEL: bb0:
 
   call void @llvm.lifetime.start(i64 1, i8* %j)
-  ; CHECK-NOT: store i8 1, i8* %{{[0-9]+}}
+  ; CHECK-DEFAULT-NOT: store i8 1, i8* %{{[0-9]+}}
+  ; CHECK-AMBIGUOUS: store i8 1, i8* %{{[0-9]+}}
   ; CHECK-NEXT: call void @llvm.lifetime.start
 
   br label %bb1
@@ -132,7 +134,8 @@ bb1:
   ; CHECK-NEXT: call void @llvm.lifetime.end
 
   call void @llvm.lifetime.end(i64 1, i8* %j)
-  ; CHECK-NOT: store i8 -8, i8* %{{[0-9]+}}
+  ; CHECK-DEFAULT-NOT: store i8 -8, i8* %{{[0-9]+}}
+  ; CHECK-AMBIGUOUS: store i8 -8, i8* %{{[0-9]+}}
   ; CHECK-NEXT: call void @llvm.lifetime.end
 
   ret void

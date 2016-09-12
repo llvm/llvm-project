@@ -183,6 +183,10 @@ static cl::opt<bool> ClExperimentalPoisoning(
     "asan-experimental-poisoning",
     cl::desc("Enable experimental red zones and scope poisoning"), cl::Hidden,
     cl::init(true));
+static cl::opt<bool> ClSkipAmbiguousLifetimeAllocas(
+    "asan-skip-ambiguous-lifetime-allocas",
+    cl::desc("Disabled lifetime check for allocas with ambiguous lifetime"),
+    cl::Hidden, cl::init(true));
 // This flag may need to be replaced with -f[no]asan-globals.
 static cl::opt<bool> ClGlobals("asan-globals",
                                cl::desc("Handle global objects"), cl::Hidden,
@@ -890,6 +894,8 @@ public:
 // This is workaround for PR28267.
 void removeAllocasWithAmbiguousLifetime(
     SmallVectorImpl<FunctionStackPoisoner::AllocaPoisonCall> &PoisonCallVec) {
+  if (!ClSkipAmbiguousLifetimeAllocas)
+    return;
   DenseMap<const AllocaInst *, AllocaLifetimeChecker> Checkers;
   for (const auto &APC : PoisonCallVec)
     Checkers[APC.AI].AddMarker(APC.InsBefore->getParent(), !APC.DoPoison);

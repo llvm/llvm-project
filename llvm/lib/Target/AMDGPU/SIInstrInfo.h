@@ -365,6 +365,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::VGPRSpill;
   }
 
+  static bool isSGPRSpill(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::SGPRSpill;
+  }
+
+  bool isSGPRSpill(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::SGPRSpill;
+  }
+
   static bool isDPP(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::DPP;
   }
@@ -549,6 +557,14 @@ public:
   const MCInstrDesc &getMCOpcodeFromPseudo(unsigned Opcode) const {
     return get(pseudoToMCOpcode(Opcode));
   }
+
+  unsigned isStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+  unsigned isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex) const;
+
+  unsigned isLoadFromStackSlot(const MachineInstr &MI,
+                               int &FrameIndex) const override;
+  unsigned isStoreToStackSlot(const MachineInstr &MI,
+                              int &FrameIndex) const override;
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 

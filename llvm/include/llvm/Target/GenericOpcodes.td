@@ -55,6 +55,12 @@ def G_FRAME_INDEX : Instruction {
   let hasSideEffects = 0;
 }
 
+def G_GLOBAL_VALUE : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$src);
+  let hasSideEffects = 0;
+}
+
 def G_INTTOPTR : Instruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
@@ -95,6 +101,13 @@ def G_ADD : Instruction {
   let InOperandList = (ins type0:$src1, type0:$src2);
   let hasSideEffects = 0;
   let isCommutable = 1;
+}
+
+// Generic pointer offset.
+def G_GEP : Instruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = 0;
 }
 
 // Generic subtraction.

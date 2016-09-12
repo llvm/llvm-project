@@ -358,6 +358,8 @@ def AMDGPUAsmVariants {
   int SDWA_ID = 2;
   string DPP = "DPP";
   int DPP_ID = 3;
+  string Disable = "Disable";
+  int Disable_ID = 4;
 }
 
 def DefaultAMDGPUAsmParserVariant : AsmParserVariant {

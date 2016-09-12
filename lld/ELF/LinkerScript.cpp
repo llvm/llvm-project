@@ -149,14 +149,10 @@ getComparator(SortKind K) {
 }
 
 template <class ELFT>
-void LinkerScript<ELFT>::discard(OutputSectionCommand &Cmd) {
-  for (const std::unique_ptr<BaseCommand> &Base : Cmd.Commands) {
-    if (auto *Cmd = dyn_cast<InputSectionDescription>(Base.get())) {
-      for (InputSectionBase<ELFT> *S : getInputSections(Cmd)) {
-        S->Live = false;
-        reportDiscarded(S);
-      }
-    }
+void LinkerScript<ELFT>::discard(ArrayRef<InputSectionBase<ELFT> *> V) {
+  for (InputSectionBase<ELFT> *S : V) {
+    S->Live = false;
+    reportDiscarded(S);
   }
 }
 
@@ -228,12 +224,13 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
     }
 
     if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base1.get())) {
+      std::vector<InputSectionBase<ELFT> *> V = createInputSectionList(*Cmd);
+
       if (Cmd->Name == "/DISCARD/") {
-        discard(*Cmd);
+        discard(V);
         continue;
       }
 
-      std::vector<InputSectionBase<ELFT> *> V = createInputSectionList(*Cmd);
       if (V.empty())
         continue;
 

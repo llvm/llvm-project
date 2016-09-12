@@ -14,6 +14,7 @@
 
 #include "MIRPrinter.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -123,7 +124,7 @@ public:
   void printTargetFlags(const MachineOperand &Op);
   void print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
              unsigned I, bool ShouldPrintRegisterTies,
-             const MachineRegisterInfo *MRI = nullptr, bool IsDef = false);
+             LLT TypeToPrint, bool IsDef = false);
   void print(const MachineMemOperand &Op);
 
   void print(const MCCFIInstruction &CFI, const TargetRegisterInfo *TRI);
@@ -223,7 +224,7 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
       VReg.Class = StringRef(RegInfo.getRegBankOrNull(Reg)->getName()).lower();
     else {
       VReg.Class = std::string("_");
-      assert(RegInfo.getType(Reg).isValid() &&
+      assert((RegInfo.def_empty(Reg) || RegInfo.getType(Reg).isValid()) &&
              "Generic registers must have a valid type");
     }
     unsigned PreferredReg = RegInfo.getSimpleHint(Reg);
@@ -542,6 +543,27 @@ static bool hasComplexRegisterTies(const MachineInstr &MI) {
   return false;
 }
 
+static LLT getTypeToPrint(const MachineInstr &MI, unsigned OpIdx,
+                          SmallBitVector &PrintedTypes,
+                          const MachineRegisterInfo &MRI) {
+  const MachineOperand &Op = MI.getOperand(OpIdx);
+  if (!Op.isReg())
+    return LLT{};
+
+  if (MI.isVariadic() || OpIdx >= MI.getNumExplicitOperands())
+    return MRI.getType(Op.getReg());
+
+  auto &OpInfo = MI.getDesc().OpInfo[OpIdx];
+  if (!OpInfo.isGenericType())
+    return MRI.getType(Op.getReg());
+
+  if (PrintedTypes[OpInfo.getGenericTypeIndex()])
+    return LLT{};
+
+  PrintedTypes.set(OpInfo.getGenericTypeIndex());
+  return MRI.getType(Op.getReg());
+}
+
 void MIPrinter::print(const MachineInstr &MI) {
   const auto *MF = MI.getParent()->getParent();
   const auto &MRI = MF->getRegInfo();
@@ -553,6 +575,7 @@ void MIPrinter::print(const MachineInstr &MI) {
   if (MI.isCFIInstruction())
     assert(MI.getNumOperands() == 1 && "Expected 1 operand in CFI instruction");
 
+  SmallBitVector PrintedTypes(8);
   bool ShouldPrintRegisterTies = hasComplexRegisterTies(MI);
   unsigned I = 0, E = MI.getNumOperands();
   for (; I < E && MI.getOperand(I).isReg() && MI.getOperand(I).isDef() &&
@@ -560,7 +583,8 @@ void MIPrinter::print(const MachineInstr &MI) {
        ++I) {
     if (I)
       OS << ", ";
-    print(MI.getOperand(I), TRI, I, ShouldPrintRegisterTies, &MRI,
+    print(MI.getOperand(I), TRI, I, ShouldPrintRegisterTies,
+          getTypeToPrint(MI, I, PrintedTypes, MRI),
           /*IsDef=*/true);
   }
 
@@ -576,7 +600,8 @@ void MIPrinter::print(const MachineInstr &MI) {
   for (; I < E; ++I) {
     if (NeedComma)
       OS << ", ";
-    print(MI.getOperand(I), TRI, I, ShouldPrintRegisterTies);
+    print(MI.getOperand(I), TRI, I, ShouldPrintRegisterTies,
+          getTypeToPrint(MI, I, PrintedTypes, MRI));
     NeedComma = true;
   }
 
@@ -748,8 +773,8 @@ static const char *getTargetIndexName(const MachineFunction &MF, int Index) {
 }
 
 void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
-                      unsigned I, bool ShouldPrintRegisterTies,
-                      const MachineRegisterInfo *MRI, bool IsDef) {
+                      unsigned I, bool ShouldPrintRegisterTies, LLT TypeToPrint,
+                      bool IsDef) {
   printTargetFlags(Op);
   switch (Op.getType()) {
   case MachineOperand::MO_Register:
@@ -776,9 +801,8 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
       OS << '.' << TRI->getSubRegIndexName(Op.getSubReg());
     if (ShouldPrintRegisterTies && Op.isTied() && !Op.isDef())
       OS << "(tied-def " << Op.getParent()->findTiedOperandIdx(I) << ")";
-    assert((!IsDef || MRI) && "for IsDef, MRI must be provided");
-    if (IsDef && MRI->getType(Op.getReg()).isValid())
-      OS << '(' << MRI->getType(Op.getReg()) << ')';
+    if (TypeToPrint.isValid())
+      OS << '(' << TypeToPrint << ')';
     break;
   case MachineOperand::MO_Immediate:
     OS << Op.getImm();
@@ -892,6 +916,8 @@ void MIPrinter::print(const MachineMemOperand &Op) {
     OS << "volatile ";
   if (Op.isNonTemporal())
     OS << "non-temporal ";
+  if (Op.isDereferenceable())
+    OS << "dereferenceable ";
   if (Op.isInvariant())
     OS << "invariant ";
   if (Op.isLoad())

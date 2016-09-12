@@ -130,7 +130,7 @@ static void Query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
     return;
 
   // Check for loads.
-  if (MI.mayLoad() && !MI.isInvariantLoad(&AA))
+  if (MI.mayLoad() && !MI.isDereferenceableInvariantLoad(&AA))
     Read = true;
 
   // Check for stores.
@@ -812,8 +812,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
       // the next instruction we can build a tree on.
       if (Insert != &*MII) {
         ImposeStackOrdering(&*MII);
-        MII = std::prev(
-            llvm::make_reverse_iterator(MachineBasicBlock::iterator(Insert)));
+        MII = MachineBasicBlock::iterator(Insert).getReverse();
         Changed = true;
       }
     }

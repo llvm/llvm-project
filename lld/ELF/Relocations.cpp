@@ -534,7 +534,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
   };
 
   const elf::ObjectFile<ELFT> &File = *C.getFile();
-  ArrayRef<uint8_t> SectionData = C.getSectionData();
+  ArrayRef<uint8_t> SectionData = C.Data;
   const uint8_t *Buf = SectionData.begin();
 
   ArrayRef<EhSectionPiece> Pieces;
