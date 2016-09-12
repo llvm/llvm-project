@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -27,6 +28,7 @@
 #include <cctype>
 #include <functional>
 #include <map>
+#include <set>
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
@@ -139,6 +141,11 @@ static bool beforeThanCompare(const Record *LHS, const Record *RHS) {
   assert(!LHS->getLoc().empty() && !RHS->getLoc().empty());
   return
     LHS->getLoc().front().getPointer() < RHS->getLoc().front().getPointer();
+}
+
+static bool diagGroupBeforeByName(const Record *LHS, const Record *RHS) {
+  return LHS->getValueAsString("GroupName") <
+         RHS->getValueAsString("GroupName");
 }
 
 static bool beforeThanCompareGroups(const GroupInfo *LHS, const GroupInfo *RHS){
@@ -892,4 +899,428 @@ void EmitClangDiagsIndexName(RecordKeeper &Records, raw_ostream &OS) {
     OS << "DIAG_NAME_INDEX(" << R.Name << ")\n";
   }
 }
+
+//===----------------------------------------------------------------------===//
+// Diagnostic documentation generation
+//===----------------------------------------------------------------------===//
+
+namespace docs {
+namespace {
+
+/// Diagnostic text, parsed into pieces.
+struct DiagText {
+  struct Piece {
+    virtual void print(std::vector<std::string> &RST) = 0;
+    virtual ~Piece() {}
+  };
+  struct TextPiece : Piece {
+    StringRef Role;
+    std::string Text;
+    void print(std::vector<std::string> &RST) override;
+  };
+  struct PlaceholderPiece : Piece {
+    int Index;
+    void print(std::vector<std::string> &RST) override;
+  };
+  struct SelectPiece : Piece {
+    std::vector<DiagText> Options;
+    void print(std::vector<std::string> &RST) override;
+  };
+
+  // FIXME: This should be a unique_ptr, but I can't figure out how to get MSVC
+  // to not issue errors on that.
+  std::vector<std::shared_ptr<Piece>> Pieces;
+
+  DiagText();
+  DiagText(DiagText &&O) LLVM_NOEXCEPT : Pieces(std::move(O.Pieces)) {}
+
+  DiagText(StringRef Text);
+  DiagText(StringRef Kind, StringRef Text);
+
+  template<typename P> void add(P Piece) {
+    Pieces.push_back(std::make_shared<P>(std::move(Piece)));
+  }
+  void print(std::vector<std::string> &RST);
+};
+
+DiagText parseDiagText(StringRef &Text, bool Nested = false) {
+  DiagText Parsed;
+
+  while (!Text.empty()) {
+    size_t End = (size_t)-2;
+    do
+      End = Nested ? Text.find_first_of("%|}", End + 2)
+                   : Text.find_first_of('%', End + 2);
+    while (End < Text.size() - 1 && Text[End] == '%' && Text[End + 1] == '%');
+
+    if (End) {
+      DiagText::TextPiece Piece;
+      Piece.Role = "diagtext";
+      Piece.Text = Text.slice(0, End);
+      Parsed.add(std::move(Piece));
+      Text = Text.slice(End, StringRef::npos);
+      if (Text.empty()) break;
+    }
+
+    if (Text[0] == '|' || Text[0] == '}')
+      break;
+
+    // Drop the '%'.
+    Text = Text.drop_front();
+
+    // Extract the (optional) modifier.
+    size_t ModLength = Text.find_first_of("0123456789{");
+    StringRef Modifier = Text.slice(0, ModLength);
+    Text = Text.slice(ModLength, StringRef::npos);
+
+    // FIXME: Handle %ordinal here.
+    if (Modifier == "select" || Modifier == "plural") {
+      DiagText::SelectPiece Select;
+      do {
+        Text = Text.drop_front();
+        if (Modifier == "plural")
+          while (Text[0] != ':')
+            Text = Text.drop_front();
+        Select.Options.push_back(parseDiagText(Text, true));
+        assert(!Text.empty() && "malformed %select");
+      } while (Text.front() == '|');
+      Parsed.add(std::move(Select));
+
+      // Drop the trailing '}n'.
+      Text = Text.drop_front(2);
+      continue;
+    }
+
+    // For %diff, just take the second alternative (tree diagnostic). It would
+    // be preferable to take the first one, and replace the $ with the suitable
+    // placeholders.
+    if (Modifier == "diff") {
+      Text = Text.drop_front(); // '{'
+      parseDiagText(Text, true);
+      Text = Text.drop_front(); // '|'
+
+      DiagText D = parseDiagText(Text, true);
+      for (auto &P : D.Pieces)
+        Parsed.Pieces.push_back(std::move(P));
+
+      Text = Text.drop_front(4); // '}n,m'
+      continue;
+    }
+
+    if (Modifier == "s") {
+      Text = Text.drop_front();
+      DiagText::SelectPiece Select;
+      Select.Options.push_back(DiagText(""));
+      Select.Options.push_back(DiagText("s"));
+      Parsed.add(std::move(Select));
+      continue;
+    }
+
+    assert(!Text.empty() && isdigit(Text[0]) && "malformed placeholder");
+    DiagText::PlaceholderPiece Placeholder;
+    Placeholder.Index = Text[0] - '0';
+    Parsed.add(std::move(Placeholder));
+    Text = Text.drop_front();
+    continue;
+  }
+  return Parsed;
+}
+
+DiagText::DiagText() {}
+
+DiagText::DiagText(StringRef Text) : DiagText(parseDiagText(Text, false)) {}
+
+DiagText::DiagText(StringRef Kind, StringRef Text) : DiagText(parseDiagText(Text, false)) {
+  TextPiece Prefix;
+  Prefix.Role = Kind;
+  Prefix.Text = Kind;
+  Prefix.Text += ": ";
+  Pieces.insert(Pieces.begin(), std::make_shared<TextPiece>(std::move(Prefix)));
+}
+
+void escapeRST(StringRef Str, std::string &Out) {
+  for (auto K : Str) {
+    if (StringRef("`*|_[]\\").count(K))
+      Out.push_back('\\');
+    Out.push_back(K);
+  }
+}
+
+template<typename It> void padToSameLength(It Begin, It End) {
+  size_t Width = 0;
+  for (It I = Begin; I != End; ++I)
+    Width = std::max(Width, I->size());
+  for (It I = Begin; I != End; ++I)
+    (*I) += std::string(Width - I->size(), ' ');
+}
+
+template<typename It> void makeTableRows(It Begin, It End) {
+  if (Begin == End) return;
+  padToSameLength(Begin, End);
+  for (It I = Begin; I != End; ++I)
+    *I = "|" + *I + "|";
+}
+
+void makeRowSeparator(std::string &Str) {
+  for (char &K : Str)
+    K = (K == '|' ? '+' : '-');
+}
+
+void DiagText::print(std::vector<std::string> &RST) {
+  if (Pieces.empty()) {
+    RST.push_back("");
+    return;
+  }
+
+  if (Pieces.size() == 1)
+    return Pieces[0]->print(RST);
+
+  std::string EmptyLinePrefix;
+  size_t Start = RST.size();
+  bool HasMultipleLines = true;
+  for (auto &P : Pieces) {
+    std::vector<std::string> Lines;
+    P->print(Lines);
+    if (Lines.empty())
+      continue;
+
+    // We need a vertical separator if either this or the previous piece is a
+    // multi-line piece, or this is the last piece.
+    const char *Separator = (Lines.size() > 1 || HasMultipleLines) ? "|" : "";
+    HasMultipleLines = Lines.size() > 1;
+
+    if (Start + Lines.size() > RST.size())
+      RST.resize(Start + Lines.size(), EmptyLinePrefix);
+
+    padToSameLength(Lines.begin(), Lines.end());
+    for (size_t I = 0; I != Lines.size(); ++I)
+      RST[Start + I] += Separator + Lines[I];
+    std::string Empty(Lines[0].size(), ' ');
+    for (size_t I = Start + Lines.size(); I != RST.size(); ++I)
+      RST[I] += Separator + Empty;
+    EmptyLinePrefix += Separator + Empty;
+  }
+  for (size_t I = Start; I != RST.size(); ++I)
+    RST[I] += "|";
+  EmptyLinePrefix += "|";
+
+  makeRowSeparator(EmptyLinePrefix);
+  RST.insert(RST.begin() + Start, EmptyLinePrefix);
+  RST.insert(RST.end(), EmptyLinePrefix);
+}
+
+void DiagText::TextPiece::print(std::vector<std::string> &RST) {
+  RST.push_back("");
+  auto &S = RST.back();
+
+  StringRef T = Text;
+  while (!T.empty() && T.front() == ' ') {
+    RST.back() += " |nbsp| ";
+    T = T.drop_front();
+  }
+
+  std::string Suffix;
+  while (!T.empty() && T.back() == ' ') {
+    Suffix += " |nbsp| ";
+    T = T.drop_back();
+  }
+
+  if (!T.empty()) {
+    S += ':';
+    S += Role;
+    S += ":`";
+    escapeRST(T, S);
+    S += '`';
+  }
+  
+  S += Suffix;
+}
+
+void DiagText::PlaceholderPiece::print(std::vector<std::string> &RST) {
+  RST.push_back(std::string(":placeholder:`") + char('A' + Index) + "`");
+}
+
+void DiagText::SelectPiece::print(std::vector<std::string> &RST) {
+  std::vector<size_t> SeparatorIndexes;
+  SeparatorIndexes.push_back(RST.size());
+  RST.emplace_back();
+  for (auto &O : Options) {
+    O.print(RST);
+    SeparatorIndexes.push_back(RST.size());
+    RST.emplace_back();
+  }
+
+  makeTableRows(RST.begin() + SeparatorIndexes.front(),
+                RST.begin() + SeparatorIndexes.back() + 1);
+  for (size_t I : SeparatorIndexes)
+    makeRowSeparator(RST[I]);
+}
+
+bool isRemarkGroup(const Record *DiagGroup,
+                   const std::map<std::string, GroupInfo> &DiagsInGroup) {
+  bool AnyRemarks = false, AnyNonRemarks = false;
+
+  std::function<void(StringRef)> Visit = [&](StringRef GroupName) {
+    auto &GroupInfo = DiagsInGroup.find(GroupName)->second;
+    for (const Record *Diag : GroupInfo.DiagsInGroup)
+      (isRemark(*Diag) ? AnyRemarks : AnyNonRemarks) = true;
+    for (const auto &Name : GroupInfo.SubGroups)
+      Visit(Name);
+  };
+  Visit(DiagGroup->getValueAsString("GroupName"));
+
+  if (AnyRemarks && AnyNonRemarks)
+    PrintFatalError(
+        DiagGroup->getLoc(),
+        "Diagnostic group contains both remark and non-remark diagnostics");
+  return AnyRemarks;
+}
+
+std::string getDefaultSeverity(const Record *Diag) {
+  return Diag->getValueAsDef("DefaultSeverity")->getValueAsString("Name");
+}
+
+std::set<std::string>
+getDefaultSeverities(const Record *DiagGroup,
+                     const std::map<std::string, GroupInfo> &DiagsInGroup) {
+  std::set<std::string> States;
+
+  std::function<void(StringRef)> Visit = [&](StringRef GroupName) {
+    auto &GroupInfo = DiagsInGroup.find(GroupName)->second;
+    for (const Record *Diag : GroupInfo.DiagsInGroup)
+      States.insert(getDefaultSeverity(Diag));
+    for (const auto &Name : GroupInfo.SubGroups)
+      Visit(Name);
+  };
+  Visit(DiagGroup->getValueAsString("GroupName"));
+  return States;
+}
+
+void writeHeader(StringRef Str, raw_ostream &OS, char Kind = '-') {
+  OS << Str << "\n" << std::string(Str.size(), Kind) << "\n";
+}
+
+void writeDiagnosticText(StringRef Role, StringRef Text, raw_ostream &OS) {
+  if (Text == "%0")
+    OS << "The text of this diagnostic is not controlled by Clang.\n\n";
+  else {
+    std::vector<std::string> Out;
+    DiagText(Role, Text).print(Out);
+    for (auto &Line : Out)
+      OS << Line << "\n";
+    OS << "\n";
+  }
+}
+
+}  // namespace
+}  // namespace docs
+
+void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS) {
+  using namespace docs;
+
+  // Get the documentation introduction paragraph.
+  const Record *Documentation = Records.getDef("GlobalDocumentation");
+  if (!Documentation) {
+    PrintFatalError("The Documentation top-level definition is missing, "
+                    "no documentation will be generated.");
+    return;
+  }
+
+  OS << Documentation->getValueAsString("Intro") << "\n";
+
+  std::vector<Record*> Diags =
+      Records.getAllDerivedDefinitions("Diagnostic");
+  std::vector<Record*> DiagGroups =
+      Records.getAllDerivedDefinitions("DiagGroup");
+  std::sort(DiagGroups.begin(), DiagGroups.end(), diagGroupBeforeByName);
+
+  DiagGroupParentMap DGParentMap(Records);
+
+  std::map<std::string, GroupInfo> DiagsInGroup;
+  groupDiagnostics(Diags, DiagGroups, DiagsInGroup);
+
+  // Compute the set of diagnostics that are in -Wpedantic.
+  {
+    RecordSet DiagsInPedantic;
+    RecordSet GroupsInPedantic;
+    InferPedantic inferPedantic(DGParentMap, Diags, DiagGroups, DiagsInGroup);
+    inferPedantic.compute(&DiagsInPedantic, &GroupsInPedantic);
+    auto &PedDiags = DiagsInGroup["pedantic"];
+    PedDiags.DiagsInGroup.insert(PedDiags.DiagsInGroup.end(),
+                                 DiagsInPedantic.begin(),
+                                 DiagsInPedantic.end());
+    for (auto *Group : GroupsInPedantic)
+      PedDiags.SubGroups.push_back(Group->getValueAsString("GroupName"));
+  }
+
+  // FIXME: Write diagnostic categories and link to diagnostic groups in each.
+
+  // Write out the diagnostic groups.
+  for (const Record *G : DiagGroups) {
+    bool IsRemarkGroup = isRemarkGroup(G, DiagsInGroup);
+    auto &GroupInfo = DiagsInGroup[G->getValueAsString("GroupName")];
+    bool IsSynonym = GroupInfo.DiagsInGroup.empty() &&
+                     GroupInfo.SubGroups.size() == 1;
+
+    writeHeader((IsRemarkGroup ? "-R" : "-W") +
+                    G->getValueAsString("GroupName"),
+                OS);
+
+    if (!IsSynonym) {
+      // FIXME: Ideally, all the diagnostics in a group should have the same
+      // default state, but that is not currently the case.
+      auto DefaultSeverities = getDefaultSeverities(G, DiagsInGroup);
+      if (!DefaultSeverities.empty() && !DefaultSeverities.count("Ignored")) {
+        bool AnyNonErrors = DefaultSeverities.count("Warning") ||
+                            DefaultSeverities.count("Remark");
+        if (!AnyNonErrors)
+          OS << "This diagnostic is an error by default, but the flag ``-Wno-"
+             << G->getValueAsString("GroupName") << "`` can be used to disable "
+             << "the error.\n\n";
+        else
+          OS << "This diagnostic is enabled by default.\n\n";
+      } else if (DefaultSeverities.size() > 1) {
+        OS << "Some of the diagnostics controlled by this flag are enabled "
+           << "by default.\n\n";
+      }
+    }
+
+    if (!GroupInfo.SubGroups.empty()) {
+      if (IsSynonym)
+        OS << "Synonym for ";
+      else if (GroupInfo.DiagsInGroup.empty())
+        OS << "Controls ";
+      else
+        OS << "Also controls ";
+
+      bool First = true;
+      for (const auto &Name : GroupInfo.SubGroups) {
+        if (!First) OS << ", ";
+        OS << "`" << (IsRemarkGroup ? "-R" : "-W") << Name << "`_";
+        First = false;
+      }
+      OS << ".\n\n";
+    }
+
+    if (!GroupInfo.DiagsInGroup.empty()) {
+      OS << "**Diagnostic text:**\n\n";
+      for (const Record *D : GroupInfo.DiagsInGroup) {
+        auto Severity = getDefaultSeverity(D);
+        Severity[0] = tolower(Severity[0]);
+        if (Severity == "ignored")
+          Severity = IsRemarkGroup ? "remark" : "warning";
+        writeDiagnosticText(Severity, D->getValueAsString("Text"), OS);
+      }
+    }
+
+    auto Doc = G->getValueAsString("Documentation");
+    if (!Doc.empty())
+      OS << Doc;
+    else if (GroupInfo.SubGroups.empty() && GroupInfo.DiagsInGroup.empty())
+      OS << "This diagnostic flag exists for GCC compatibility, and has no "
+            "effect in Clang.\n";
+    OS << "\n";
+  }
+}
+
 } // end namespace clang
