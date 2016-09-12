@@ -9,6 +9,7 @@ set(ADTSources
   ArrayRefTest.cpp
   BitmaskEnumTest.cpp
   BitVectorTest.cpp
+  BumpPtrListTest.cpp
   DAGDeltaAlgorithmTest.cpp
   DeltaAlgorithmTest.cpp
   DenseMapTest.cpp

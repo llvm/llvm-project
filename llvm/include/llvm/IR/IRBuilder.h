@@ -114,7 +114,7 @@ public:
   /// inserted into a block.
   void ClearInsertionPoint() {
     BB = nullptr;
-    InsertPt.reset(nullptr);
+    InsertPt = BasicBlock::iterator();
   }
 
   BasicBlock *GetInsertBlock() const { return BB; }

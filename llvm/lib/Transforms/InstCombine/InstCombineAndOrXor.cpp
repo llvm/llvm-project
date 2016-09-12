@@ -1131,6 +1131,45 @@ bool InstCombiner::shouldOptimizeCast(CastInst *CI) {
   return true;
 }
 
+/// Fold {and,or,xor} (cast X), C.
+static Instruction *foldLogicCastConstant(BinaryOperator &Logic, CastInst *Cast,
+                                          InstCombiner::BuilderTy *Builder) {
+  Constant *C;
+  if (!match(Logic.getOperand(1), m_Constant(C)))
+    return nullptr;
+
+  auto LogicOpc = Logic.getOpcode();
+  Type *DestTy = Logic.getType();
+  Type *SrcTy = Cast->getSrcTy();
+
+  // If the first operand is bitcast, move the logic operation ahead of the
+  // bitcast (do the logic operation in the original type). This can eliminate
+  // bitcasts and allow combines that would otherwise be impeded by the bitcast.
+  Value *X;
+  if (match(Cast, m_BitCast(m_Value(X)))) {
+    Value *NewConstant = ConstantExpr::getBitCast(C, SrcTy);
+    Value *NewOp = Builder->CreateBinOp(LogicOpc, X, NewConstant);
+    return CastInst::CreateBitOrPointerCast(NewOp, DestTy);
+  }
+
+  // Similarly, move the logic operation ahead of a zext if the constant is
+  // unchanged in the smaller source type. Performing the logic in a smaller
+  // type may provide more information to later folds, and the smaller logic
+  // instruction may be cheaper (particularly in the case of vectors).
+  if (match(Cast, m_OneUse(m_ZExt(m_Value(X))))) {
+    Constant *TruncC = ConstantExpr::getTrunc(C, SrcTy);
+    Constant *ZextTruncC = ConstantExpr::getZExt(TruncC, DestTy);
+    if (ZextTruncC == C) {
+      // LogicOpc (zext X), C --> zext (LogicOpc X, C)
+      Value *NewOp = Builder->CreateBinOp(LogicOpc, X, TruncC);
+      return new ZExtInst(NewOp, DestTy);
+    }
+  }
+
+  return nullptr;
+}
+
+/// Fold {and,or,xor} (cast X), Y.
 Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
   auto LogicOpc = I.getOpcode();
   assert((LogicOpc == Instruction::And || LogicOpc == Instruction::Or ||
@@ -1149,34 +1188,8 @@ Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
   if (!SrcTy->isIntOrIntVectorTy())
     return nullptr;
 
-  // If one operand is a bitcast and the other is a constant, move the logic
-  // operation ahead of the bitcast. That is, do the logic operation in the
-  // original type. This can eliminate useless bitcasts and allow normal
-  // combines that would otherwise be impeded by the bitcast. Canonicalization
-  // ensures that if there is a constant operand, it will be the second operand.
-  Value *BC = nullptr;
-  Constant *C = nullptr;
-  if ((match(Op0, m_BitCast(m_Value(BC))) && match(Op1, m_Constant(C)))) {
-    Value *NewConstant = ConstantExpr::getBitCast(C, SrcTy);
-    Value *NewOp = Builder->CreateBinOp(LogicOpc, BC, NewConstant, I.getName());
-    return CastInst::CreateBitOrPointerCast(NewOp, DestTy);
-  }
-
-  // Similarly, if one operand is zexted and the other is a constant, move the
-  // logic operation ahead of the zext if the constant is unchanged in the
-  // smaller source type. Performing the logic in a smaller type may provide
-  // more information to later folds, and the smaller logic instruction may be
-  // cheaper (particularly in the case of vectors).
-  Value *X;
-  if (match(Op0, m_OneUse(m_ZExt(m_Value(X)))) && match(Op1, m_Constant(C))) {
-    Constant *TruncC = ConstantExpr::getTrunc(C, SrcTy);
-    Constant *ZextTruncC = ConstantExpr::getZExt(TruncC, DestTy);
-    if (ZextTruncC == C) {
-      // LogicOpc (zext X), C --> zext (LogicOpc X, C)
-      Value *NewOp = Builder->CreateBinOp(LogicOpc, X, TruncC);
-      return new ZExtInst(NewOp, DestTy);
-    }
-  }
+  if (Instruction *Ret = foldLogicCastConstant(I, Cast0, Builder))
+    return Ret;
 
   CastInst *Cast1 = dyn_cast<CastInst>(Op1);
   if (!Cast1)
