@@ -3170,6 +3170,7 @@ extern void __kmp_affinity_set_place(int gtid);
 extern void __kmp_affinity_determine_capable( const char *env_var );
 extern int __kmp_aux_set_affinity(void **mask);
 extern int __kmp_aux_get_affinity(void **mask);
+extern int __kmp_aux_get_affinity_max_proc();
 extern int __kmp_aux_set_affinity_mask_proc(int proc, void **mask);
 extern int __kmp_aux_unset_affinity_mask_proc(int proc, void **mask);
 extern int __kmp_aux_get_affinity_mask_proc(int proc, void **mask);

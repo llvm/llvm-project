@@ -1206,6 +1206,7 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     SmallVector<const SCEV *, 4> Sizes;
     isl_ast_build *Build =
         isl_ast_build_from_context(isl_set_copy(Prog->context));
+    Sizes.push_back(nullptr);
     for (long j = 1; j < Kernel->array[i].array->n_index; j++) {
       isl_ast_expr *DimSize = isl_ast_build_expr_from_pw_aff(
           Build, isl_pw_aff_copy(Kernel->array[i].array->bound[j]));
@@ -1315,6 +1316,7 @@ void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
     Type *ArrayTy = EleTy;
     SmallVector<const SCEV *, 4> Sizes;
 
+    Sizes.push_back(nullptr);
     for (unsigned int j = 1; j < Var.array->n_index; ++j) {
       isl_val *Val = isl_vec_get_element_val(Var.size, j);
       long Bound = isl_val_get_num_si(Val);

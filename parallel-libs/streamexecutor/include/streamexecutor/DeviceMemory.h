@@ -46,6 +46,8 @@ template <typename ElemT> class GlobalDeviceMemory;
 /// memory, and an element count for the size of the slice.
 template <typename ElemT> class GlobalDeviceMemorySlice {
 public:
+  using ElementTy = ElemT;
+
   /// Intentionally implicit so GlobalDeviceMemory<T> can be passed to functions
   /// expecting GlobalDeviceMemorySlice<T> arguments.
   GlobalDeviceMemorySlice(const GlobalDeviceMemory<ElemT> &Memory)
@@ -75,7 +77,8 @@ public:
   size_t getByteCount() const { return ElementCount * sizeof(ElemT); }
 
   /// Creates a slice of the memory with the first DropCount elements removed.
-  GlobalDeviceMemorySlice<ElemT> drop_front(size_t DropCount) const {
+  LLVM_ATTRIBUTE_UNUSED_RESULT
+  GlobalDeviceMemorySlice<ElemT> slice(size_t DropCount) const {
     assert(DropCount <= ElementCount &&
            "dropping more than the size of a slice");
     return GlobalDeviceMemorySlice<ElemT>(BaseMemory, ElementOffset + DropCount,
@@ -83,6 +86,7 @@ public:
   }
 
   /// Creates a slice of the memory with the last DropCount elements removed.
+  LLVM_ATTRIBUTE_UNUSED_RESULT
   GlobalDeviceMemorySlice<ElemT> drop_back(size_t DropCount) const {
     assert(DropCount <= ElementCount &&
            "dropping more than the size of a slice");
@@ -92,6 +96,7 @@ public:
 
   /// Creates a slice of the memory that chops off the first DropCount elements
   /// and keeps the next TakeCount elements.
+  LLVM_ATTRIBUTE_UNUSED_RESULT
   GlobalDeviceMemorySlice<ElemT> slice(size_t DropCount,
                                        size_t TakeCount) const {
     assert(DropCount + TakeCount <= ElementCount &&
@@ -171,6 +176,8 @@ protected:
 template <typename ElemT>
 class GlobalDeviceMemory : public GlobalDeviceMemoryBase {
 public:
+  using ElementTy = ElemT;
+
   GlobalDeviceMemory(GlobalDeviceMemory &&Other) = default;
   GlobalDeviceMemory &operator=(GlobalDeviceMemory &&Other) = default;
 

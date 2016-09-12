@@ -84,16 +84,11 @@ TEST_F(DeviceTest, AllocateAndFreeDeviceMemory) {
   EXPECT_TRUE(static_cast<bool>(MaybeMemory));
 }
 
-TEST_F(DeviceTest, AllocateAndFreeHostMemory) {
-  se::Expected<int *> MaybeMemory = Device.allocateHostMemory<int>(10);
-  EXPECT_TRUE(static_cast<bool>(MaybeMemory));
-  EXPECT_NO_ERROR(Device.freeHostMemory(*MaybeMemory));
-}
-
 TEST_F(DeviceTest, RegisterAndUnregisterHostMemory) {
   std::vector<int> Data(10);
-  EXPECT_NO_ERROR(Device.registerHostMemory(Data.data(), 10));
-  EXPECT_NO_ERROR(Device.unregisterHostMemory(Data.data()));
+  se::Expected<se::RegisteredHostMemory<int>> MaybeMemory =
+      Device.registerHostMemory<int>(Data);
+  EXPECT_TRUE(static_cast<bool>(MaybeMemory));
 }
 
 // D2H tests
@@ -146,7 +141,7 @@ TEST_F(DeviceTest, SyncCopyD2HToPointer) {
 
 TEST_F(DeviceTest, SyncCopyD2HSliceToMutableArrayRefByCount) {
   EXPECT_NO_ERROR(Device.synchronousCopyD2H(
-      DeviceA5.asSlice().drop_front(1), MutableArrayRef<int>(Host5 + 1, 4), 4));
+      DeviceA5.asSlice().slice(1), MutableArrayRef<int>(Host5 + 1, 4), 4));
   for (int I = 1; I < 5; ++I) {
     EXPECT_EQ(HostA5[I], Host5[I]);
   }
@@ -182,8 +177,8 @@ TEST_F(DeviceTest, SyncCopyD2HSliceToMutableArrayRef) {
 }
 
 TEST_F(DeviceTest, SyncCopyD2HSliceToPointer) {
-  EXPECT_NO_ERROR(Device.synchronousCopyD2H(DeviceA5.asSlice().drop_front(1),
-                                            Host5 + 1, 4));
+  EXPECT_NO_ERROR(
+      Device.synchronousCopyD2H(DeviceA5.asSlice().slice(1), Host5 + 1, 4));
   for (int I = 1; I < 5; ++I) {
     EXPECT_EQ(HostA5[I], Host5[I]);
   }
@@ -232,8 +227,8 @@ TEST_F(DeviceTest, SyncCopyH2DToPointer) {
 }
 
 TEST_F(DeviceTest, SyncCopyH2DSliceToArrayRefByCount) {
-  EXPECT_NO_ERROR(Device.synchronousCopyH2D(
-      ArrayRef<int>(Host5 + 1, 4), DeviceA5.asSlice().drop_front(1), 4));
+  EXPECT_NO_ERROR(Device.synchronousCopyH2D(ArrayRef<int>(Host5 + 1, 4),
+                                            DeviceA5.asSlice().slice(1), 4));
   for (int I = 1; I < 5; ++I) {
     EXPECT_EQ(getDeviceValue(DeviceA5, I), Host5[I]);
   }
@@ -310,7 +305,7 @@ TEST_F(DeviceTest, SyncCopyD2D) {
 
 TEST_F(DeviceTest, SyncCopySliceD2DByCount) {
   EXPECT_NO_ERROR(
-      Device.synchronousCopyD2D(DeviceA5.asSlice().drop_front(1), DeviceB5, 4));
+      Device.synchronousCopyD2D(DeviceA5.asSlice().slice(1), DeviceB5, 4));
   for (int I = 0; I < 4; ++I) {
     EXPECT_EQ(getDeviceValue(DeviceA5, I + 1), getDeviceValue(DeviceB5, I));
   }
@@ -336,7 +331,7 @@ TEST_F(DeviceTest, SyncCopySliceD2D) {
   }
 
   EXPECT_ERROR(
-      Device.synchronousCopyD2D(DeviceA7.asSlice().drop_front(1), DeviceB5));
+      Device.synchronousCopyD2D(DeviceA7.asSlice().slice(1), DeviceB5));
 
   EXPECT_ERROR(
       Device.synchronousCopyD2D(DeviceA5.asSlice().drop_back(1), DeviceB7));
@@ -344,7 +339,7 @@ TEST_F(DeviceTest, SyncCopySliceD2D) {
 
 TEST_F(DeviceTest, SyncCopyD2DSliceByCount) {
   EXPECT_NO_ERROR(
-      Device.synchronousCopyD2D(DeviceA5, DeviceB7.asSlice().drop_front(2), 5));
+      Device.synchronousCopyD2D(DeviceA5, DeviceB7.asSlice().slice(2), 5));
   for (int I = 0; I < 5; ++I) {
     EXPECT_EQ(getDeviceValue(DeviceA5, I), getDeviceValue(DeviceB7, I + 2));
   }

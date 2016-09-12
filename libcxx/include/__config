@@ -34,7 +34,7 @@
 #endif
 
 #if defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
-// Change short string represention so that string data starts at offset 0,
+// Change short string representation so that string data starts at offset 0,
 // improving its alignment in some cases.
 #define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 // Fix deque iterator type in order to support incomplete types.

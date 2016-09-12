@@ -89,6 +89,11 @@ Improvements to clang-tidy
   Warns about the performance overhead arising from concatenating strings using
   the ``operator+``, instead of ``operator+=``.
 
+- New `readability-misplaced-array-index
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-misplaced-array-index.html>`_ check
+
+  Warns when there is array index before the [] instead of inside it.
+
 - New `readability-non-const-parameter
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-non-const-parameter.html>`_ check
 

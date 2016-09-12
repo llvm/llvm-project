@@ -1357,6 +1357,18 @@ void AArch64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_AARCH64_LDST64_ABS_LO12_NC:
     or32le(Loc, (Val & 0xFF8) << 7);
     break;
+  case R_AARCH64_MOVW_UABS_G0_NC:
+    or32le(Loc, (Val & 0xFFFF) << 5);
+    break;
+  case R_AARCH64_MOVW_UABS_G1_NC:
+    or32le(Loc, (Val & 0xFFFF0000) >> 11);
+    break;
+  case R_AARCH64_MOVW_UABS_G2_NC:
+    or32le(Loc, (Val & 0xFFFF00000000) >> 27);
+    break;
+  case R_AARCH64_MOVW_UABS_G3:
+    or32le(Loc, (Val & 0xFFFF000000000000) >> 43);
+    break;
   case R_AARCH64_TSTBR14:
     checkInt<16>(Val, Type);
     or32le(Loc, (Val & 0xFFFC) << 3);

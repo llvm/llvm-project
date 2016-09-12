@@ -1,5 +1,6 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %s -o %t
-# RUN: ld.lld %t -o %t2
+# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %p/Inputs/uabs_label.s -o %t2.o
+# RUN: ld.lld %t %t2.o -o %t2
 # RUN: llvm-objdump -d %t2 | FileCheck %s
 # REQUIRES: aarch64
 
@@ -150,3 +151,20 @@ foo16:
 # CHECK: Disassembly of section .R_AARCH64_LDST16_ABS_LO12_NC:
 # CHECK-NEXT: ldst16:
 # CHECK-NEXT:   11054:       71 b2 40 7d     ldr     h17, [x19, #88]
+
+.section .R_AARCH64_MOVW_UABS,"ax",@progbits
+movz1:
+   movk x12, #:abs_g0_nc:uabs_label
+   movk x13, #:abs_g1_nc:uabs_label
+   movk x14, #:abs_g2_nc:uabs_label
+   movz x15, #:abs_g3:uabs_label
+   movk x16, #:abs_g3:uabs_label
+
+## 4222124650659840 == (0xF << 48)
+# CHECK: Disassembly of section .R_AARCH64_MOVW_UABS:
+# CHECK-NEXT: movz1:
+# CHECK-NEXT: 8c 01 80 f2   movk  x12, #12
+# CHECK-NEXT: ad 01 a0 f2   movk  x13, #13, lsl #16
+# CHECK-NEXT: ce 01 c0 f2   movk  x14, #14, lsl #32
+# CHECK-NEXT: ef 01 e0 d2   mov x15, #4222124650659840
+# CHECK-NEXT: f0 01 e0 f2   movk  x16, #15, lsl #48

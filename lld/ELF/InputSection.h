@@ -42,9 +42,10 @@ public:
 
   // The garbage collector sets sections' Live bits.
   // If GC is disabled, all sections are considered live by default.
-  InputSectionData(Kind SectionKind, StringRef Name, bool Compressed, bool Live)
+  InputSectionData(Kind SectionKind, StringRef Name, ArrayRef<uint8_t> Data,
+                   bool Compressed, bool Live)
       : SectionKind(SectionKind), Live(Live), Compressed(Compressed),
-        Name(Name) {}
+        Name(Name), Data(Data) {}
 
 private:
   unsigned SectionKind : 3;
@@ -61,8 +62,10 @@ public:
 
   StringRef Name;
 
-  // If a section is compressed, this vector has uncompressed section data.
-  SmallVector<char, 0> Uncompressed;
+  ArrayRef<uint8_t> Data;
+
+  // If a section is compressed, this has the uncompressed section data.
+  std::unique_ptr<char[]> UncompressedData;
 
   std::vector<Relocation> Relocations;
 };
@@ -83,7 +86,8 @@ protected:
 
 public:
   InputSectionBase()
-      : InputSectionData(Regular, "", false, false), Repl(this) {}
+      : InputSectionData(Regular, "", ArrayRef<uint8_t>(), false, false),
+        Repl(this) {}
 
   InputSectionBase(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
                    StringRef Name, Kind SectionKind);
@@ -108,8 +112,6 @@ public:
   // Translate an offset in the input section to an offset in the output
   // section.
   uintX_t getOffset(uintX_t Offset) const;
-
-  ArrayRef<uint8_t> getSectionData() const;
 
   void uncompress();
 
