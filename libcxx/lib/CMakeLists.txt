@@ -201,6 +201,23 @@ if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
   )
 endif()
 
+if (LIBCXX_HAS_EXTERNAL_THREAD_API)
+  file(GLOB LIBCXX_EXTERNAL_THREADING_SUPPORT_SOURCES ../test/support/external_threads.cpp)
+
+  if (LIBCXX_ENABLE_SHARED)
+    add_library(cxx_external_threads SHARED ${LIBCXX_EXTERNAL_THREADING_SUPPORT_SOURCES})
+  else()
+    add_library(cxx_external_threads STATIC ${LIBCXX_EXTERNAL_THREADING_SUPPORT_SOURCES})
+  endif()
+
+  set_target_properties(cxx_external_threads
+    PROPERTIES
+      LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
+      COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
+      OUTPUT_NAME   "c++external_threads"
+  )
+endif()
+
 # Generate a linker script inplace of a libc++.so symlink. Rerun this command
 # after cxx builds.
 if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)

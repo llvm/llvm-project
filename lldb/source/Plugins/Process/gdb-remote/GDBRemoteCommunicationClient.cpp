@@ -3653,7 +3653,7 @@ Error GDBRemoteCommunicationClient::ConfigureRemoteStructuredData(
     error.SetErrorStringWithFormat("configuring StructuredData feature %s "
                                    "failed when sending packet: "
                                    "PacketResult=%d",
-                                   type_name.AsCString(), result);
+                                   type_name.AsCString(), (int)result);
   }
   return error;
 }

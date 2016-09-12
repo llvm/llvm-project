@@ -1938,9 +1938,9 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         sect_type = eSectionTypeGoSymtab;
 
       const uint32_t permissions =
-          ((header.sh_flags & SHF_ALLOC) ? ePermissionsReadable : 0) |
-          ((header.sh_flags & SHF_WRITE) ? ePermissionsWritable : 0) |
-          ((header.sh_flags & SHF_EXECINSTR) ? ePermissionsExecutable : 0);
+          ((header.sh_flags & SHF_ALLOC) ? ePermissionsReadable : 0u) |
+          ((header.sh_flags & SHF_WRITE) ? ePermissionsWritable : 0u) |
+          ((header.sh_flags & SHF_EXECINSTR) ? ePermissionsExecutable : 0u);
       switch (header.sh_type) {
       case SHT_SYMTAB:
         assert(sect_type == eSectionTypeOther);

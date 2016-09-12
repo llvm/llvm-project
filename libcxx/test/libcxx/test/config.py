@@ -510,6 +510,10 @@ class Configuration(object):
                 self.cxx.link_flags += [abs_path]
             else:
                 self.cxx.link_flags += ['-lc++']
+        # This needs to come after -lc++ as we want its unresolved thread-api symbols
+        # to be picked up from this one.
+        if self.get_lit_bool('libcxx_external_thread_api', default=False):
+            self.cxx.link_flags += ['-lc++external_threads']
 
     def configure_link_flags_abi_library(self):
         cxx_abi = self.get_lit_conf('cxx_abi', 'libcxxabi')

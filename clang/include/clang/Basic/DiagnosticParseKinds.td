@@ -427,7 +427,7 @@ def err_synthesized_property_name : Error<
   "expected a property name in @synthesize">;
 def warn_semicolon_before_method_body : Warning<
   "semicolon before method body is ignored">,
-  InGroup<DiagGroup<"semicolon-before-method-body">>, DefaultIgnore;
+  InGroup<SemiBeforeMethodBody>, DefaultIgnore;
 def note_extra_comma_message_arg : Note<
   "comma separating Objective-C messaging arguments">;
 

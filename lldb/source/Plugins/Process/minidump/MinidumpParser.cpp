@@ -138,6 +138,8 @@ ArchSpec MinidumpParser::GetArchitecture() {
   case MinidumpCPUArchitecture::ARM64:
     arch_spec.GetTriple().setArch(llvm::Triple::ArchType::aarch64);
     break;
+  default:
+    break;
   }
 
   return arch_spec;

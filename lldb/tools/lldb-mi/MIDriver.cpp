@@ -602,9 +602,6 @@ bool CMIDriver::DoMainLoop() {
   // Close and wait for the workers to stop
   StopWorkerThreads();
 
-  // Ensure that a new line is sent as the last act of the dying driver
-  m_rStdOut.WriteMIResponse("\n", false);
-
   return MIstatus::success;
 }
 

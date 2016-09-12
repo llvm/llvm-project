@@ -1458,13 +1458,13 @@ void ObjectFileMachO::CreateSections(SectionList &unified_section_list) {
             }
           }
           if (m_data.GetU32(&offset, &load_cmd.maxprot, 4)) {
-            const uint32_t segment_permissions =
-                ((load_cmd.initprot & VM_PROT_READ) ? ePermissionsReadable
-                                                    : 0) |
-                ((load_cmd.initprot & VM_PROT_WRITE) ? ePermissionsWritable
-                                                     : 0) |
-                ((load_cmd.initprot & VM_PROT_EXECUTE) ? ePermissionsExecutable
-                                                       : 0);
+            uint32_t segment_permissions = 0;
+            if (load_cmd.initprot & VM_PROT_READ)
+              segment_permissions |= ePermissionsReadable;
+            if (load_cmd.initprot & VM_PROT_WRITE)
+              segment_permissions |= ePermissionsWritable;
+            if (load_cmd.initprot & VM_PROT_EXECUTE)
+              segment_permissions |= ePermissionsExecutable;
 
             const bool segment_is_encrypted =
                 (load_cmd.flags & SG_PROTECTED_VERSION_1) != 0;
@@ -2621,8 +2621,7 @@ size_t ObjectFileMachO::ParseSymtab() {
           "/System/Library/Caches/com.apple.dyld/", /* IPHONE_DYLD_SHARED_CACHE_DIR
                                                        */
           "dyld_shared_cache_", /* DYLD_SHARED_CACHE_BASE_NAME */
-          header_arch.GetArchitectureName(),
-          ".development");
+          header_arch.GetArchitectureName(), ".development");
 
       FileSpec dsc_nondevelopment_filespec(dsc_path, false);
       FileSpec dsc_development_filespec(dsc_path_development, false);

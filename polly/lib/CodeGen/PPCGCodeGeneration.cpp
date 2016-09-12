@@ -152,6 +152,12 @@ public:
   /// Finalize the generated scop.
   virtual void finalize();
 
+  /// Track if the full build process was successful.
+  ///
+  /// This value is set to false, if throughout the build process an error
+  /// occurred which prevents us from generating valid GPU code.
+  bool BuildSuccessful = true;
+
 private:
   /// A vector of array base pointers for which a new ScopArrayInfo was created.
   ///
@@ -1409,10 +1415,10 @@ std::string GPUNodeBuilder::createKernelASM() {
 }
 
 std::string GPUNodeBuilder::finalizeKernelFunction() {
-  // Verify module.
-  llvm::legacy::PassManager Passes;
-  Passes.add(createVerifierPass());
-  Passes.run(*GPUModule);
+  if (verifyModule(*GPUModule)) {
+    BuildSuccessful = false;
+    return "";
+  }
 
   if (DumpKernelIR)
     outs() << *GPUModule << "\n";
@@ -2139,6 +2145,9 @@ public:
     NodeBuilder.initializeAfterRTH();
     NodeBuilder.create(Root);
     NodeBuilder.finalize();
+
+    if (!NodeBuilder.BuildSuccessful)
+      SplitBlock->getTerminator()->setOperand(0, Builder.getFalse());
   }
 
   bool runOnScop(Scop &CurrentScop) override {

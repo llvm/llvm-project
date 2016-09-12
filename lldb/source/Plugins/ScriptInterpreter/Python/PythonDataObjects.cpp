@@ -518,7 +518,7 @@ int64_t PythonInteger::GetInteger() const {
       // 0xffffffffffffffff. If we use the unsigned long long
       // it will work as expected.
       const uint64_t uval = PyLong_AsUnsignedLongLong(m_py_obj);
-      result = *((int64_t *)&uval);
+      result = static_cast<int64_t>(uval);
     }
     return result;
   }

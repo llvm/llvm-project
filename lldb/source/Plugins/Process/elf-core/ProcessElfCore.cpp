@@ -139,9 +139,9 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
   // Keep a separate map of permissions that that isn't coalesced so all ranges
   // are maintained.
   const uint32_t permissions =
-      ((header->p_flags & llvm::ELF::PF_R) ? lldb::ePermissionsReadable : 0) |
-      ((header->p_flags & llvm::ELF::PF_W) ? lldb::ePermissionsWritable : 0) |
-      ((header->p_flags & llvm::ELF::PF_X) ? lldb::ePermissionsExecutable : 0);
+      ((header->p_flags & llvm::ELF::PF_R) ? lldb::ePermissionsReadable : 0u) |
+      ((header->p_flags & llvm::ELF::PF_W) ? lldb::ePermissionsWritable : 0u) |
+      ((header->p_flags & llvm::ELF::PF_X) ? lldb::ePermissionsExecutable : 0u);
 
   m_core_range_infos.Append(
       VMRangeToPermissions::Entry(addr, header->p_memsz, permissions));

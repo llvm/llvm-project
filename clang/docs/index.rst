@@ -19,6 +19,7 @@ Using Clang as a Compiler
    UsersManual
    LanguageExtensions
    AttributeReference
+   DiagnosticsReference
    CrossCompilation
    ThreadSafetyAnalysis
    AddressSanitizer
