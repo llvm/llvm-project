@@ -452,8 +452,8 @@ CachedMemberInfo *SwiftASTContext::GetCachedMemberInfo(void *type) {
                 const char *child_name_cstr = var_decl->getName().get();
                 if (child_name_cstr)
                   member_info.name.SetCString(child_name_cstr);
-                field_type_infos.push_back(GetSwiftTypeInfo(
-                    member_info.clang_type.GetOpaqueQualType()));
+                field_type_infos.push_back(
+                    GetSwiftTypeInfo(nominal_type, var_decl));
                 assert(field_type_infos.back() != nullptr);
                 member_infos_sp->member_infos.push_back(member_info);
               }
@@ -1052,6 +1052,10 @@ private:
   SwiftAllPayloadEnumDescriptor m_payload_cases;
 };
 
+static swift::CanType
+CreateEquivalentOptionalForIOU(swift::ASTContext *ast,
+                               swift::CanType swift_can_type) {}
+
 SwiftEnumDescriptor *
 SwiftEnumDescriptor::CreateDescriptor(swift::ASTContext *ast,
                                       swift::CanType swift_can_type,
@@ -1061,6 +1065,21 @@ SwiftEnumDescriptor::CreateDescriptor(swift::ASTContext *ast,
   assert(swift_can_type.getPointer());
   SwiftASTContext *swift_ast_ctx = SwiftASTContext::GetSwiftASTContext(ast);
   assert(swift_ast_ctx);
+  if (enum_decl == ast->getImplicitlyUnwrappedOptionalDecl()) {
+    swift::EnumDecl *optional_decl = ast->getOptionalDecl();
+    swift::Type optional_type = optional_decl->getDeclaredType();
+    CompilerType optional_compiler_type(ast, optional_type.getPointer());
+    CompilerType iou_compiler_type(ast, swift_can_type.getPointer());
+    lldb::TemplateArgumentKind kind;
+    CompilerType iou_arg_type = iou_compiler_type.GetTemplateArgument(0, kind);
+    std::vector<CompilerType> args = {iou_arg_type};
+    SwiftASTContext *swift_ast_ctx = SwiftASTContext::GetSwiftASTContext(ast);
+    CompilerType bound_optional_type =
+        swift_ast_ctx->BindGenericType(optional_compiler_type, args, true);
+    swift::CanType bound_optional_can_type =
+        GetCanonicalSwiftType(bound_optional_type.GetOpaqueQualType());
+    return CreateDescriptor(ast, bound_optional_can_type, optional_decl);
+  }
   swift::irgen::IRGenModule &irgen_module = swift_ast_ctx->GetIRGenModule();
   const swift::irgen::EnumImplStrategy &enum_impl_strategy =
       swift::irgen::getEnumImplStrategy(irgen_module, swift_can_type);
@@ -6709,12 +6728,37 @@ CompilerType SwiftASTContext::GetFloatTypeFromBitSize(size_t bit_size) {
 // Exploring the type
 //----------------------------------------------------------------------
 
+const swift::irgen::TypeInfo *
+SwiftASTContext::GetSwiftTypeInfo(swift::Type container_type,
+                                  swift::VarDecl *item_decl) {
+  VALID_OR_RETURN(nullptr);
+
+  if (container_type && item_decl) {
+    auto &irgen_module = GetIRGenModule();
+    swift::CanType container_can_type(
+        GetCanonicalSwiftType(container_type.getPointer()));
+    swift::SILType lowered_container_type =
+        irgen_module.getLoweredType(container_can_type);
+    swift::SILType lowered_field_type =
+        lowered_container_type.getFieldType(item_decl, *GetSILModule());
+    return &irgen_module.getTypeInfo(lowered_field_type);
+  }
+
+  return nullptr;
+}
+
 const swift::irgen::TypeInfo *SwiftASTContext::GetSwiftTypeInfo(void *type) {
   VALID_OR_RETURN(nullptr);
 
   if (type) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
     switch (swift_can_type->getKind()) {
+    case swift::TypeKind::BoundGenericEnum:
+    case swift::TypeKind::WeakStorage: {
+      auto &irgen_module = GetIRGenModule();
+      return &irgen_module.getTypeInfo(
+          irgen_module.getLoweredType(swift_can_type));
+    }
     case swift::TypeKind::Metatype: {
       swift::MetatypeType *metatype_type =
           swift_can_type->getAs<swift::MetatypeType>();

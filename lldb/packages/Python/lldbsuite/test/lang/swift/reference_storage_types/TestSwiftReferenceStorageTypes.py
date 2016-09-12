@@ -25,7 +25,6 @@ class TestSwiftReferenceStorageTypes(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
-    @unittest2.skip("rdar://28234876: raises assert")
     def test_swift_reference_storage_types(self):
         """Test weak, unowned and unmanaged types"""
         self.build()
