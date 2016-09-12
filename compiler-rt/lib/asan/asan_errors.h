@@ -122,12 +122,25 @@ struct ErrorNewDeleteSizeMismatch : ErrorBase {
   void Print();
 };
 
+// clang-format off
+#define ASAN_FOR_EACH_ERROR_KIND(macro) \
+  macro(StackOverflow)                  \
+  macro(DeadlySignal)                   \
+  macro(DoubleFree)                     \
+  macro(NewDeleteSizeMismatch)
+// clang-format on
+
+#define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,
+#define ASAN_ERROR_DESCRIPTION_MEMBER(name) Error##name name;
+#define ASAN_ERROR_DESCRIPTION_CONSTRUCTOR(name) \
+  ErrorDescription(Error##name const &e) : kind(kErrorKind##name), name(e) {}
+#define ASAN_ERROR_DESCRIPTION_PRINT(name) \
+  case kErrorKind##name:                   \
+    return name.Print();
+
 enum ErrorKind {
   kErrorKindInvalid = 0,
-  kErrorKindStackOverflow,
-  kErrorKindDeadlySignal,
-  kErrorKindDoubleFree,
-  kErrorKindNewDeleteSizeMismatch,
+  ASAN_FOR_EACH_ERROR_KIND(ASAN_DEFINE_ERROR_KIND)
 };
 
 struct ErrorDescription {
@@ -138,46 +151,28 @@ struct ErrorDescription {
   // We can add a wrapper around it to make it "more c++-like", but that would
   // add a lot of code and the benefit wouldn't be that big.
   union {
-    ErrorStackOverflow stack_overflow;
-    ErrorDeadlySignal deadly_signal;
-    ErrorDoubleFree double_free;
-    ErrorNewDeleteSizeMismatch new_delete_size_mismatch;
+    ASAN_FOR_EACH_ERROR_KIND(ASAN_ERROR_DESCRIPTION_MEMBER)
   };
+
   ErrorDescription() { internal_memset(this, 0, sizeof(*this)); }
-  ErrorDescription(const ErrorStackOverflow &e)  // NOLINT
-      : kind(kErrorKindStackOverflow),
-        stack_overflow(e) {}
-  ErrorDescription(const ErrorDeadlySignal &e)  // NOLINT
-      : kind(kErrorKindDeadlySignal),
-        deadly_signal(e) {}
-  ErrorDescription(const ErrorDoubleFree &e)  // NOLINT
-      : kind(kErrorKindDoubleFree),
-        double_free(e) {}
-  ErrorDescription(const ErrorNewDeleteSizeMismatch &e)  // NOLINT
-      : kind(kErrorKindNewDeleteSizeMismatch),
-        new_delete_size_mismatch(e) {}
+  ASAN_FOR_EACH_ERROR_KIND(ASAN_ERROR_DESCRIPTION_CONSTRUCTOR)
 
   bool IsValid() { return kind != kErrorKindInvalid; }
   void Print() {
     switch (kind) {
-      case kErrorKindStackOverflow:
-        stack_overflow.Print();
-        return;
-      case kErrorKindDeadlySignal:
-        deadly_signal.Print();
-        return;
-      case kErrorKindDoubleFree:
-        double_free.Print();
-        return;
-      case kErrorKindNewDeleteSizeMismatch:
-        new_delete_size_mismatch.Print();
-        return;
+      ASAN_FOR_EACH_ERROR_KIND(ASAN_ERROR_DESCRIPTION_PRINT)
       case kErrorKindInvalid:
         CHECK(0);
     }
     CHECK(0);
   }
 };
+
+#undef ASAN_FOR_EACH_ERROR_KIND
+#undef ASAN_DEFINE_ERROR_KIND
+#undef ASAN_ERROR_DESCRIPTION_MEMBER
+#undef ASAN_ERROR_DESCRIPTION_CONSTRUCTOR
+#undef ASAN_ERROR_DESCRIPTION_PRINT
 
 }  // namespace __asan
 
