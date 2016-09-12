@@ -584,9 +584,6 @@ private:
   /// operand and follow operands form a reference to the stack frame.
   bool isFrameOperand(const MachineInstr &MI, unsigned int Op,
                       int &FrameIndex) const;
-
-  /// Expand the MOVImmSExti8 pseudo-instructions.
-  bool ExpandMOVImmSExti8(MachineInstrBuilder &MIB) const;
 };
 
 } // End llvm namespace

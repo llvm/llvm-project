@@ -152,7 +152,12 @@ Json::Value exportArrays(const Scop &S) {
 
     Json::Value Array;
     Array["name"] = SAI->getName();
-    for (unsigned i = 1; i < SAI->getNumberOfDimensions(); i++) {
+    unsigned i = 0;
+    if (!SAI->getDimensionSize(i)) {
+      Array["sizes"].append("*");
+      i++;
+    }
+    for (; i < SAI->getNumberOfDimensions(); i++) {
       SAI->getDimensionSize(i)->print(RawStringOstream);
       Array["sizes"].append(RawStringOstream.str());
       Buffer.clear();
@@ -477,11 +482,11 @@ bool areArraysEqual(ScopArrayInfo *SAI, Json::Value Array) {
   if (SAI->getName() != Array["name"].asCString())
     return false;
 
-  if (SAI->getNumberOfDimensions() != Array["sizes"].size() + 1)
+  if (SAI->getNumberOfDimensions() != Array["sizes"].size())
     return false;
 
-  for (unsigned i = 0; i < Array["sizes"].size(); i++) {
-    SAI->getDimensionSize(i + 1)->print(RawStringOstream);
+  for (unsigned i = 1; i < Array["sizes"].size(); i++) {
+    SAI->getDimensionSize(i)->print(RawStringOstream);
     if (RawStringOstream.str() != Array["sizes"][i].asCString())
       return false;
     Buffer.clear();

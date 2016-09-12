@@ -983,7 +983,7 @@ void HexagonInstrInfo::loadRegFromStackSlot(
 static void getLiveRegsAt(LivePhysRegs &Regs, const MachineInstr &MI) {
   const MachineBasicBlock &B = *MI.getParent();
   Regs.addLiveOuts(B);
-  auto E = MachineBasicBlock::const_reverse_iterator(MI.getIterator());
+  auto E = ++MachineBasicBlock::const_iterator(MI.getIterator()).getReverse();
   for (auto I = B.rbegin(); I != E; ++I)
     Regs.stepBackward(*I);
 }

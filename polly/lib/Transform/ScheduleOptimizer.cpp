@@ -717,7 +717,7 @@ MemoryAccess *identifyAccessB(ScopStmt *Stmt) {
 ///        the matrix multiplication pattern.
 ///
 /// Create an access relation of the following form:
-/// [O0, O1, O2, O3, O4, O5, O6, O7, O8] -> [0, O5 + K * OI, OJ],
+/// [O0, O1, O2, O3, O4, O5, O6, O7, O8] -> [O5 + K * OI, OJ],
 /// where K is @p Coeff, I is @p FirstDim, J is @p SecondDim.
 ///
 /// It can be used, for example, to create relations that helps to consequently
@@ -745,17 +745,16 @@ __isl_give isl_map *getMatMulAccRel(__isl_take isl_map *MapOldIndVar,
                                     unsigned Coeff, unsigned FirstDim,
                                     unsigned SecondDim) {
   auto *Ctx = isl_map_get_ctx(MapOldIndVar);
-  auto *AccessRelSpace = isl_space_alloc(Ctx, 0, 9, 3);
+  auto *AccessRelSpace = isl_space_alloc(Ctx, 0, 9, 2);
   auto *AccessRel = isl_map_universe(isl_space_copy(AccessRelSpace));
   auto *ConstrSpace = isl_local_space_from_space(AccessRelSpace);
   auto *Constr = isl_constraint_alloc_equality(ConstrSpace);
-  Constr = isl_constraint_set_coefficient_si(Constr, isl_dim_out, 1, -1);
+  Constr = isl_constraint_set_coefficient_si(Constr, isl_dim_out, 0, -1);
   Constr = isl_constraint_set_coefficient_si(Constr, isl_dim_in, 5, 1);
   Constr =
       isl_constraint_set_coefficient_si(Constr, isl_dim_in, FirstDim, Coeff);
   AccessRel = isl_map_add_constraint(AccessRel, Constr);
-  AccessRel = isl_map_fix_si(AccessRel, isl_dim_out, 0, 0);
-  AccessRel = isl_map_equate(AccessRel, isl_dim_in, SecondDim, isl_dim_out, 2);
+  AccessRel = isl_map_equate(AccessRel, isl_dim_in, SecondDim, isl_dim_out, 1);
   return isl_map_apply_range(MapOldIndVar, AccessRel);
 }
 

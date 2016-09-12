@@ -200,6 +200,9 @@ HANDLE_TARGET_OPCODE(G_XOR)
 /// stack-based object.
 HANDLE_TARGET_OPCODE(G_FRAME_INDEX)
 
+/// Generic reference to global value.
+HANDLE_TARGET_OPCODE(G_GLOBAL_VALUE)
+
 /// Generic instruction to extract blocks of bits from the register given
 /// (typically a sub-register COPY after instruction selection).
 HANDLE_TARGET_OPCODE(G_EXTRACT)
@@ -332,6 +335,9 @@ HANDLE_TARGET_OPCODE(G_SITOFP)
 
 /// Generic unsigned-int to float conversion
 HANDLE_TARGET_OPCODE(G_UITOFP)
+
+/// Generic unsigned-int to float conversion
+HANDLE_TARGET_OPCODE(G_GEP)
 
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)

@@ -3082,7 +3082,8 @@ void SwingSchedulerDAG::updateMemOperands(MachineInstr &NewMI,
   MachineInstr::mmo_iterator NewMemRefs = MF.allocateMemRefsArray(NumRefs);
   unsigned Refs = 0;
   for (MachineMemOperand *MMO : NewMI.memoperands()) {
-    if (MMO->isVolatile() || MMO->isInvariant() || (!MMO->getValue())) {
+    if (MMO->isVolatile() || (MMO->isInvariant() && MMO->isDereferenceable()) ||
+        (!MMO->getValue())) {
       NewMemRefs[Refs++] = MMO;
       continue;
     }

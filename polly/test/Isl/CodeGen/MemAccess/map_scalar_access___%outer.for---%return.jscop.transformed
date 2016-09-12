@@ -2,6 +2,7 @@
    "arrays" : [
       {
          "name" : "MemRef_A",
+         "sizes" : [ "*" ],
          "type" : "double"
       }
    ],

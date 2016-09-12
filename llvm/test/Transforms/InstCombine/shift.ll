@@ -628,6 +628,16 @@ define i1 @test35(i32 %X) {
   ret i1 %tmp2
 }
 
+define <2 x i1> @test35vec(<2 x i32> %X) {
+; CHECK-LABEL: @test35vec(
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i32> %X, zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+;
+  %tmp1 = ashr <2 x i32> %X, <i32 7, i32 7>
+  %tmp2 = icmp slt <2 x i32> %tmp1, zeroinitializer
+  ret <2 x i1> %tmp2
+}
+
 define i128 @test36(i128 %A, i128 %B) {
 ; CHECK-LABEL: @test36(
 ; CHECK-NEXT:  entry:

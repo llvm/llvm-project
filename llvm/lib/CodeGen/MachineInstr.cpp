@@ -470,9 +470,9 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   case MachineOperand::MO_IntrinsicID: {
     Intrinsic::ID ID = getIntrinsicID();
     if (ID < Intrinsic::num_intrinsics)
-      OS << "<intrinsic:@" << Intrinsic::getName(ID, None) << ')';
+      OS << "<intrinsic:@" << Intrinsic::getName(ID, None) << '>';
     else if (IntrinsicInfo)
-      OS << "<intrinsic:@" << IntrinsicInfo->getName(ID) << ')';
+      OS << "<intrinsic:@" << IntrinsicInfo->getName(ID) << '>';
     else
       OS << "<intrinsic:" << ID << '>';
     break;
@@ -654,10 +654,10 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST) const {
     OS << ")";
   }
 
-  // Print nontemporal info.
   if (isNonTemporal())
     OS << "(nontemporal)";
-
+  if (isDereferenceable())
+    OS << "(dereferenceable)";
   if (isInvariant())
     OS << "(invariant)";
 }
@@ -1584,7 +1584,8 @@ bool MachineInstr::isDereferenceableInvariantLoad(AliasAnalysis *AA) const {
   for (MachineMemOperand *MMO : memoperands()) {
     if (MMO->isVolatile()) return false;
     if (MMO->isStore()) return false;
-    if (MMO->isInvariant()) continue;
+    if (MMO->isInvariant() && MMO->isDereferenceable())
+      continue;
 
     // A load from a constant PseudoSourceValue is invariant.
     if (const PseudoSourceValue *PSV = MMO->getPseudoValue())

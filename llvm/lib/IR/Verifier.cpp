@@ -2586,15 +2586,20 @@ void Verifier::verifyCallSite(CallSite CS) {
   }
 
   // For each argument of the callsite, if it has the swifterror argument,
-  // make sure the underlying alloca has swifterror as well.
+  // make sure the underlying alloca/parameter it comes from has a swifterror as
+  // well.
   for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i)
     if (CS.paramHasAttr(i+1, Attribute::SwiftError)) {
       Value *SwiftErrorArg = CS.getArgument(i);
-      auto AI = dyn_cast<AllocaInst>(SwiftErrorArg->stripInBoundsOffsets());
-      Assert(AI, "swifterror argument should come from alloca", AI, I);
-      if (AI)
+      if (auto AI = dyn_cast<AllocaInst>(SwiftErrorArg->stripInBoundsOffsets())) {
         Assert(AI->isSwiftError(),
                "swifterror argument for call has mismatched alloca", AI, I);
+        continue;
+      }
+      auto ArgI = dyn_cast<Argument>(SwiftErrorArg);
+      Assert(ArgI, "swifterror argument should come from an alloca or parameter", SwiftErrorArg, I);
+      Assert(ArgI->hasSwiftErrorAttr(),
+             "swifterror argument for call has mismatched parameter", ArgI, I);
     }
 
   if (FTy->isVarArg()) {

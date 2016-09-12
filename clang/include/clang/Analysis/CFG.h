@@ -22,6 +22,7 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -522,11 +523,15 @@ public:
   typedef AdjacentBlocks::const_iterator                  const_pred_iterator;
   typedef AdjacentBlocks::reverse_iterator              pred_reverse_iterator;
   typedef AdjacentBlocks::const_reverse_iterator  const_pred_reverse_iterator;
+  typedef llvm::iterator_range<pred_iterator>                      pred_range;
+  typedef llvm::iterator_range<const_pred_iterator>          pred_const_range;
 
   typedef AdjacentBlocks::iterator                              succ_iterator;
   typedef AdjacentBlocks::const_iterator                  const_succ_iterator;
   typedef AdjacentBlocks::reverse_iterator              succ_reverse_iterator;
   typedef AdjacentBlocks::const_reverse_iterator  const_succ_reverse_iterator;
+  typedef llvm::iterator_range<succ_iterator>                      succ_range;
+  typedef llvm::iterator_range<const_succ_iterator>          succ_const_range;
 
   pred_iterator                pred_begin()        { return Preds.begin();   }
   pred_iterator                pred_end()          { return Preds.end();     }
@@ -538,6 +543,13 @@ public:
   const_pred_reverse_iterator  pred_rbegin() const { return Preds.rbegin();  }
   const_pred_reverse_iterator  pred_rend()   const { return Preds.rend();    }
 
+  pred_range                   preds() {
+    return pred_range(pred_begin(), pred_end());
+  }
+  pred_const_range             preds() const {
+    return pred_const_range(pred_begin(), pred_end());
+  }
+
   succ_iterator                succ_begin()        { return Succs.begin();   }
   succ_iterator                succ_end()          { return Succs.end();     }
   const_succ_iterator          succ_begin()  const { return Succs.begin();   }
@@ -547,6 +559,13 @@ public:
   succ_reverse_iterator        succ_rend()         { return Succs.rend();    }
   const_succ_reverse_iterator  succ_rbegin() const { return Succs.rbegin();  }
   const_succ_reverse_iterator  succ_rend()   const { return Succs.rend();    }
+
+  succ_range                   succs() {
+    return succ_range(succ_begin(), succ_end());
+  }
+  succ_const_range             succs() const {
+    return succ_const_range(succ_begin(), succ_end());
+  }
 
   unsigned                     succ_size()   const { return Succs.size();    }
   bool                         succ_empty()  const { return Succs.empty();   }
@@ -840,6 +859,7 @@ public:
 
   typedef llvm::DenseMap<const DeclStmt *, const DeclStmt *>::const_iterator
     synthetic_stmt_iterator;
+  typedef llvm::iterator_range<synthetic_stmt_iterator> synthetic_stmt_range;
 
   /// Iterates over synthetic DeclStmts in the CFG.
   ///
@@ -853,6 +873,11 @@ public:
   /// \sa synthetic_stmt_begin
   synthetic_stmt_iterator synthetic_stmt_end() const {
     return SyntheticDeclStmts.end();
+  }
+
+  /// \sa synthetic_stmt_begin
+  synthetic_stmt_range synthetic_stmts() const {
+    return synthetic_stmt_range(synthetic_stmt_begin(), synthetic_stmt_end());
   }
 
   //===--------------------------------------------------------------------===//

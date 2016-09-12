@@ -27,9 +27,9 @@ body: |
     %2(s32) = G_TRUNC %0
     %3(s32) = G_TRUNC %1
 
-    ; CHECK: %4(s1) = G_FCMP floatpred(oge), %0, %1
+    ; CHECK: %4(s1) = G_FCMP floatpred(oge), %0(s64), %1
     %4(s1) = G_FCMP floatpred(oge), %0, %1
 
-    ; CHECK: %5(s1) = G_FCMP floatpred(uno), %2, %3
+    ; CHECK: %5(s1) = G_FCMP floatpred(uno), %2(s32), %3
     %5(s1) = G_FCMP floatpred(uno), %2, %3
 ...

@@ -182,6 +182,8 @@ bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, Loop *L) {
   if (Sizes.empty())
     return false;
 
+  SizesSCEV.push_back(nullptr);
+
   for (auto V : Sizes)
     SizesSCEV.push_back(SE.getSCEV(
         ConstantInt::get(IntegerType::getInt64Ty(BasePtr->getContext()), V)));
@@ -213,9 +215,10 @@ bool ScopBuilder::buildAccessMultiDimParam(MemAccInst Inst, Loop *L) {
   if (AccItr == InsnToMemAcc.end())
     return false;
 
-  std::vector<const SCEV *> Sizes(
-      AccItr->second.Shape->DelinearizedSizes.begin(),
-      AccItr->second.Shape->DelinearizedSizes.end());
+  std::vector<const SCEV *> Sizes = {nullptr};
+
+  Sizes.insert(Sizes.end(), AccItr->second.Shape->DelinearizedSizes.begin(),
+               AccItr->second.Shape->DelinearizedSizes.end());
   // Remove the element size. This information is already provided by the
   // ElementSize parameter. In case the element size of this access and the
   // element size used for delinearization differs the delinearization is
@@ -273,7 +276,7 @@ bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, Loop *L) {
   DestAccFunc = SE.getMinusSCEV(DestAccFunc, DestPtrSCEV);
   addArrayAccess(Inst, MemoryAccess::MUST_WRITE, DestPtrSCEV->getValue(),
                  IntegerType::getInt8Ty(DestPtrVal->getContext()), false,
-                 {DestAccFunc, LengthVal}, {}, Inst.getValueOperand());
+                 {DestAccFunc, LengthVal}, {nullptr}, Inst.getValueOperand());
 
   auto *MemTrans = dyn_cast<MemTransferInst>(MemIntr);
   if (!MemTrans)
@@ -294,7 +297,7 @@ bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, Loop *L) {
   SrcAccFunc = SE.getMinusSCEV(SrcAccFunc, SrcPtrSCEV);
   addArrayAccess(Inst, MemoryAccess::READ, SrcPtrSCEV->getValue(),
                  IntegerType::getInt8Ty(SrcPtrVal->getContext()), false,
-                 {SrcAccFunc, LengthVal}, {}, Inst.getValueOperand());
+                 {SrcAccFunc, LengthVal}, {nullptr}, Inst.getValueOperand());
 
   return true;
 }
@@ -336,7 +339,7 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, Loop *L) {
 
       auto *ArgBasePtr = cast<SCEVUnknown>(SE.getPointerBase(ArgSCEV));
       addArrayAccess(Inst, AccType, ArgBasePtr->getValue(),
-                     ArgBasePtr->getType(), false, {AF}, {}, CI);
+                     ArgBasePtr->getType(), false, {AF}, {nullptr}, CI);
     }
     return true;
   }
@@ -383,7 +386,7 @@ void ScopBuilder::buildAccessSingleDim(MemAccInst Inst, Loop *L) {
     AccType = MemoryAccess::MAY_WRITE;
 
   addArrayAccess(Inst, AccType, BasePointer->getValue(), ElementType, IsAffine,
-                 {AccessFunction}, {}, Val);
+                 {AccessFunction}, {nullptr}, Val);
 }
 
 void ScopBuilder::buildMemoryAccess(MemAccInst Inst, Loop *L) {
@@ -662,7 +665,7 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   for (auto *GlobalRead : GlobalReads)
     for (auto *BP : ArrayBasePointers)
       addArrayAccess(MemAccInst(GlobalRead), MemoryAccess::READ, BP,
-                     BP->getType(), false, {AF}, {}, GlobalRead);
+                     BP->getType(), false, {AF}, {nullptr}, GlobalRead);
 
   scop->init(AA, AC, DT, LI);
 }

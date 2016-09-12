@@ -8,6 +8,7 @@ add_se_library(
     Device.cpp
     DeviceMemory.cpp
     Error.cpp
+    HostMemory.cpp
     Kernel.cpp
     KernelSpec.cpp
     PackedKernelArgumentArray.cpp

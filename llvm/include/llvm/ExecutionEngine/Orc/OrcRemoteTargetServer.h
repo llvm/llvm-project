@@ -119,7 +119,7 @@ public:
   }
 
   Expected<JITTargetAddress> requestCompile(JITTargetAddress TrampolineAddr) {
-    auto Listen = [&](RPCChannel &C, uint32_t Id) {
+    auto Listen = [&](RPCByteChannel &C, uint32_t Id) {
       return handleKnownFunction(static_cast<JITFuncId>(Id));
     };
 

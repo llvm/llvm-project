@@ -396,7 +396,7 @@ void ReportErrorSummary(const char *error_message);
 //   error_type file:line[:column][ function]
 void ReportErrorSummary(const char *error_type, const AddressInfo &info);
 // Same as above, but obtains AddressInfo by symbolizing top stack trace frame.
-void ReportErrorSummary(const char *error_type, StackTrace *trace);
+void ReportErrorSummary(const char *error_type, const StackTrace *trace);
 
 // Math
 #if SANITIZER_WINDOWS && !defined(__clang__) && !defined(__GNUC__)

@@ -33,9 +33,11 @@
 #include <cassert>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 #include "streamexecutor/DeviceMemory.h"
 #include "streamexecutor/Error.h"
+#include "streamexecutor/HostMemory.h"
 #include "streamexecutor/Kernel.h"
 #include "streamexecutor/LaunchDimensions.h"
 #include "streamexecutor/PackedKernelArgumentArray.h"
@@ -118,202 +120,154 @@ public:
   /// These methods enqueue a device memory copy operation on the stream and
   /// return without waiting for the operation to complete.
   ///
-  /// Any host memory used as a source or destination for one of these
-  /// operations must be allocated with Device::allocateHostMemory or registered
-  /// with Device::registerHostMemory. Otherwise, the enqueuing operation may
-  /// block until the copy operation is fully complete.
-  ///
   /// The arguments and bounds checking for these methods match the API of the
   /// \ref DeviceHostSyncCopyGroup
   /// "host-synchronous device memory copying functions" of Device.
+  ///
+  /// The template types SrcTy and DstTy must match the following constraints:
+  ///   * Must define typename ElementTy (the type of element stored in the
+  ///   memory);
+  ///   * ElementTy for the source argument must be the same as ElementTy for
+  ///     the destination argument;
+  ///   * Must be convertible to the correct slice type:
+  ///     * GlobalDeviceMemorySlice<ElementTy> for device memory arguments,
+  ///     * RegisteredHostMemorySlice<ElementTy> for host memory source
+  ///       arguments,
+  ///     * MutableRegisteredHostMemorySlice<ElementT> for host memory
+  ///       destination arguments.
   ///@{
 
-  template <typename T>
-  Stream &thenCopyD2H(GlobalDeviceMemorySlice<T> Src,
-                      llvm::MutableArrayRef<T> Dst, size_t ElementCount) {
+  // D2H
+
+  template <typename SrcTy, typename DstTy>
+  Stream &thenCopyD2H(SrcTy &&Src, DstTy &&Dst, size_t ElementCount) {
+    using SrcElemTy = typename std::remove_reference<SrcTy>::type::ElementTy;
+    using DstElemTy = typename std::remove_reference<DstTy>::type::ElementTy;
+    static_assert(std::is_same<SrcElemTy, DstElemTy>::value,
+                  "src/dst element type mismatch for thenCopyD2H");
+    GlobalDeviceMemorySlice<SrcElemTy> SrcSlice(Src);
+    MutableRegisteredHostMemorySlice<DstElemTy> DstSlice(Dst);
     if (ElementCount > Src.getElementCount())
       setError("copying too many elements, " + llvm::Twine(ElementCount) +
                ", from a device array of element count " +
-               llvm::Twine(Src.getElementCount()));
-    else if (ElementCount > Dst.size())
+               llvm::Twine(SrcSlice.getElementCount()));
+    else if (ElementCount > DstSlice.getElementCount())
       setError("copying too many elements, " + llvm::Twine(ElementCount) +
-               ", to a host array of element count " + llvm::Twine(Dst.size()));
+               ", to a host array of element count " +
+               llvm::Twine(DstSlice.getElementCount()));
     else
-      setError(PDevice->copyD2H(PlatformStreamHandle,
-                                Src.getBaseMemory().getHandle(),
-                                Src.getElementOffset() * sizeof(T), Dst.data(),
-                                0, ElementCount * sizeof(T)));
+      setError(PDevice->copyD2H(
+          PlatformStreamHandle, SrcSlice.getBaseMemory().getHandle(),
+          SrcSlice.getElementOffset() * sizeof(SrcElemTy),
+          DstSlice.getPointer(), 0, ElementCount * sizeof(DstElemTy)));
     return *this;
   }
 
-  template <typename T>
-  Stream &thenCopyD2H(GlobalDeviceMemorySlice<T> Src,
-                      llvm::MutableArrayRef<T> Dst) {
-    if (Src.getElementCount() != Dst.size())
+  template <typename SrcTy, typename DstTy>
+  Stream &thenCopyD2H(SrcTy &&Src, DstTy &&Dst) {
+    using SrcElemTy = typename std::remove_reference<SrcTy>::type::ElementTy;
+    using DstElemTy = typename std::remove_reference<DstTy>::type::ElementTy;
+    static_assert(std::is_same<SrcElemTy, DstElemTy>::value,
+                  "src/dst element type mismatch for thenCopyD2H");
+    GlobalDeviceMemorySlice<SrcElemTy> SrcSlice(Src);
+    MutableRegisteredHostMemorySlice<DstElemTy> DstSlice(Dst);
+    if (SrcSlice.getElementCount() != DstSlice.getElementCount())
       setError("array size mismatch for D2H, device source has element count " +
-               llvm::Twine(Src.getElementCount()) +
+               llvm::Twine(SrcSlice.getElementCount()) +
                " but host destination has element count " +
-               llvm::Twine(Dst.size()));
+               llvm::Twine(DstSlice.getElementCount()));
     else
-      thenCopyD2H(Src, Dst, Src.getElementCount());
+      thenCopyD2H(SrcSlice, DstSlice, SrcSlice.getElementCount());
     return *this;
   }
 
-  template <typename T>
-  Stream &thenCopyD2H(GlobalDeviceMemorySlice<T> Src, T *Dst,
-                      size_t ElementCount) {
-    thenCopyD2H(Src, llvm::MutableArrayRef<T>(Dst, ElementCount), ElementCount);
-    return *this;
-  }
+  // H2D
 
-  template <typename T>
-  Stream &thenCopyD2H(const GlobalDeviceMemory<T> &Src,
-                      llvm::MutableArrayRef<T> Dst, size_t ElementCount) {
-    thenCopyD2H(Src.asSlice(), Dst, ElementCount);
-    return *this;
-  }
-
-  template <typename T>
-  Stream &thenCopyD2H(const GlobalDeviceMemory<T> &Src,
-                      llvm::MutableArrayRef<T> Dst) {
-    thenCopyD2H(Src.asSlice(), Dst);
-    return *this;
-  }
-
-  template <typename T>
-  Stream &thenCopyD2H(const GlobalDeviceMemory<T> &Src, T *Dst,
-                      size_t ElementCount) {
-    thenCopyD2H(Src.asSlice(), Dst, ElementCount);
-    return *this;
-  }
-
-  template <typename T>
-  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemorySlice<T> Dst,
-                      size_t ElementCount) {
-    if (ElementCount > Src.size())
+  template <typename SrcTy, typename DstTy>
+  Stream &thenCopyH2D(SrcTy &&Src, DstTy &&Dst, size_t ElementCount) {
+    using SrcElemTy = typename std::remove_reference<SrcTy>::type::ElementTy;
+    using DstElemTy = typename std::remove_reference<DstTy>::type::ElementTy;
+    static_assert(std::is_same<SrcElemTy, DstElemTy>::value,
+                  "src/dst element type mismatch for thenCopyH2D");
+    RegisteredHostMemorySlice<SrcElemTy> SrcSlice(Src);
+    GlobalDeviceMemorySlice<DstElemTy> DstSlice(Dst);
+    if (ElementCount > SrcSlice.getElementCount())
       setError("copying too many elements, " + llvm::Twine(ElementCount) +
                ", from a host array of element count " +
-               llvm::Twine(Src.size()));
-    else if (ElementCount > Dst.getElementCount())
+               llvm::Twine(SrcSlice.getElementCount()));
+    else if (ElementCount > DstSlice.getElementCount())
       setError("copying too many elements, " + llvm::Twine(ElementCount) +
                ", to a device array of element count " +
-               llvm::Twine(Dst.getElementCount()));
+               llvm::Twine(DstSlice.getElementCount()));
     else
-      setError(PDevice->copyH2D(
-          PlatformStreamHandle, Src.data(), 0, Dst.getBaseMemory().getHandle(),
-          Dst.getElementOffset() * sizeof(T), ElementCount * sizeof(T)));
+      setError(PDevice->copyH2D(PlatformStreamHandle, SrcSlice.getPointer(), 0,
+                                DstSlice.getBaseMemory().getHandle(),
+                                DstSlice.getElementOffset() * sizeof(DstElemTy),
+                                ElementCount * sizeof(SrcElemTy)));
     return *this;
   }
 
-  template <typename T>
-  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemorySlice<T> Dst) {
-    if (Src.size() != Dst.getElementCount())
+  template <typename SrcTy, typename DstTy>
+  Stream &thenCopyH2D(SrcTy &&Src, DstTy &&Dst) {
+    using SrcElemTy = typename std::remove_reference<SrcTy>::type::ElementTy;
+    using DstElemTy = typename std::remove_reference<DstTy>::type::ElementTy;
+    static_assert(std::is_same<SrcElemTy, DstElemTy>::value,
+                  "src/dst element type mismatch for thenCopyH2D");
+    RegisteredHostMemorySlice<SrcElemTy> SrcSlice(Src);
+    GlobalDeviceMemorySlice<DstElemTy> DstSlice(Dst);
+    if (SrcSlice.getElementCount() != DstSlice.getElementCount())
       setError("array size mismatch for H2D, host source has element count " +
-               llvm::Twine(Src.size()) +
+               llvm::Twine(SrcSlice.getElementCount()) +
                " but device destination has element count " +
-               llvm::Twine(Dst.getElementCount()));
+               llvm::Twine(DstSlice.getElementCount()));
     else
-      thenCopyH2D(Src, Dst, Dst.getElementCount());
+      thenCopyH2D(SrcSlice, DstSlice, DstSlice.getElementCount());
     return *this;
   }
 
-  template <typename T>
-  Stream &thenCopyH2D(T *Src, GlobalDeviceMemorySlice<T> Dst,
-                      size_t ElementCount) {
-    thenCopyH2D(llvm::ArrayRef<T>(Src, ElementCount), Dst, ElementCount);
-    return *this;
-  }
+  // D2D
 
-  template <typename T>
-  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> &Dst,
-                      size_t ElementCount) {
-    thenCopyH2D(Src, Dst.asSlice(), ElementCount);
-    return *this;
-  }
-
-  template <typename T>
-  Stream &thenCopyH2D(llvm::ArrayRef<T> Src, GlobalDeviceMemory<T> &Dst) {
-    thenCopyH2D(Src, Dst.asSlice());
-    return *this;
-  }
-
-  template <typename T>
-  Stream &thenCopyH2D(T *Src, GlobalDeviceMemory<T> &Dst, size_t ElementCount) {
-    thenCopyH2D(Src, Dst.asSlice(), ElementCount);
-    return *this;
-  }
-
-  template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src,
-                      GlobalDeviceMemorySlice<T> Dst, size_t ElementCount) {
-    if (ElementCount > Src.getElementCount())
+  template <typename SrcTy, typename DstTy>
+  Stream &thenCopyD2D(SrcTy &&Src, DstTy &&Dst, size_t ElementCount) {
+    using SrcElemTy = typename std::remove_reference<SrcTy>::type::ElementTy;
+    using DstElemTy = typename std::remove_reference<DstTy>::type::ElementTy;
+    static_assert(std::is_same<SrcElemTy, DstElemTy>::value,
+                  "src/dst element type mismatch for thenCopyD2D");
+    GlobalDeviceMemorySlice<SrcElemTy> SrcSlice(Src);
+    GlobalDeviceMemorySlice<DstElemTy> DstSlice(Dst);
+    if (ElementCount > SrcSlice.getElementCount())
       setError("copying too many elements, " + llvm::Twine(ElementCount) +
                ", from a device array of element count " +
-               llvm::Twine(Src.getElementCount()));
-    else if (ElementCount > Dst.getElementCount())
+               llvm::Twine(SrcSlice.getElementCount()));
+    else if (ElementCount > DstSlice.getElementCount())
       setError("copying too many elements, " + llvm::Twine(ElementCount) +
                ", to a device array of element count " +
-               llvm::Twine(Dst.getElementCount()));
+               llvm::Twine(DstSlice.getElementCount()));
     else
-      setError(PDevice->copyD2D(
-          PlatformStreamHandle, Src.getBaseMemory().getHandle(),
-          Src.getElementOffset() * sizeof(T), Dst.getBaseMemory().getHandle(),
-          Dst.getElementOffset() * sizeof(T), ElementCount * sizeof(T)));
+      setError(PDevice->copyD2D(PlatformStreamHandle,
+                                SrcSlice.getBaseMemory().getHandle(),
+                                SrcSlice.getElementOffset() * sizeof(SrcElemTy),
+                                DstSlice.getBaseMemory().getHandle(),
+                                DstSlice.getElementOffset() * sizeof(DstElemTy),
+                                ElementCount * sizeof(SrcElemTy)));
     return *this;
   }
 
-  template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src,
-                      GlobalDeviceMemorySlice<T> Dst) {
-    if (Src.getElementCount() != Dst.getElementCount())
+  template <typename SrcTy, typename DstTy>
+  Stream &thenCopyD2D(SrcTy &&Src, DstTy &&Dst) {
+    using SrcElemTy = typename std::remove_reference<SrcTy>::type::ElementTy;
+    using DstElemTy = typename std::remove_reference<DstTy>::type::ElementTy;
+    static_assert(std::is_same<SrcElemTy, DstElemTy>::value,
+                  "src/dst element type mismatch for thenCopyD2D");
+    GlobalDeviceMemorySlice<SrcElemTy> SrcSlice(Src);
+    GlobalDeviceMemorySlice<DstElemTy> DstSlice(Dst);
+    if (SrcSlice.getElementCount() != DstSlice.getElementCount())
       setError("array size mismatch for D2D, device source has element count " +
-               llvm::Twine(Src.getElementCount()) +
+               llvm::Twine(SrcSlice.getElementCount()) +
                " but device destination has element count " +
-               llvm::Twine(Dst.getElementCount()));
+               llvm::Twine(DstSlice.getElementCount()));
     else
-      thenCopyD2D(Src, Dst, Src.getElementCount());
-    return *this;
-  }
-
-  template <typename T>
-  Stream &thenCopyD2D(const GlobalDeviceMemory<T> &Src,
-                      GlobalDeviceMemorySlice<T> Dst, size_t ElementCount) {
-    thenCopyD2D(Src.asSlice(), Dst, ElementCount);
-    return *this;
-  }
-
-  template <typename T>
-  Stream &thenCopyD2D(const GlobalDeviceMemory<T> &Src,
-                      GlobalDeviceMemorySlice<T> Dst) {
-    thenCopyD2D(Src.asSlice(), Dst);
-    return *this;
-  }
-
-  template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src,
-                      GlobalDeviceMemory<T> &Dst, size_t ElementCount) {
-    thenCopyD2D(Src, Dst.asSlice(), ElementCount);
-    return *this;
-  }
-
-  template <typename T>
-  Stream &thenCopyD2D(GlobalDeviceMemorySlice<T> Src,
-                      GlobalDeviceMemory<T> &Dst) {
-    thenCopyD2D(Src, Dst.asSlice());
-    return *this;
-  }
-
-  template <typename T>
-  Stream &thenCopyD2D(const GlobalDeviceMemory<T> &Src,
-                      GlobalDeviceMemory<T> &Dst, size_t ElementCount) {
-    thenCopyD2D(Src.asSlice(), Dst.asSlice(), ElementCount);
-    return *this;
-  }
-
-  template <typename T>
-  Stream &thenCopyD2D(const GlobalDeviceMemory<T> &Src,
-                      GlobalDeviceMemory<T> &Dst) {
-    thenCopyD2D(Src.asSlice(), Dst.asSlice());
+      thenCopyD2D(SrcSlice, DstSlice, SrcSlice.getElementCount());
     return *this;
   }
 

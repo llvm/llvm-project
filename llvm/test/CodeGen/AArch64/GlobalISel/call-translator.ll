@@ -32,7 +32,7 @@ define void @test_simple_arg(i32 %in) {
 
 ; CHECK-LABEL: name: test_indirect_call
 ; CHECK: [[FUNC:%[0-9]+]](p0) = COPY %x0
-; CHECK: BLR [[FUNC]], csr_aarch64_aapcs, implicit-def %lr, implicit %sp
+; CHECK: BLR [[FUNC]](p0), csr_aarch64_aapcs, implicit-def %lr, implicit %sp
 ; CHECK: RET_ReallyLR
 define void @test_indirect_call(void()* %func) {
   call void %func()

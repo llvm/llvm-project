@@ -46,21 +46,54 @@ namespace llvm {
 /// eraseAndDispose(), and \a clearAndDispose().  These have different names
 /// because the extra semantic is otherwise non-obvious.  They are equivalent
 /// to calling \a std::for_each() on the range to be discarded.
-template <typename T> class simple_ilist : ilist_base, ilist_node_access {
-  ilist_sentinel<T> Sentinel;
+///
+/// The currently available \p Options customize the nodes in the list.  The
+/// same options must be specified in the \a ilist_node instantation for
+/// compatibility (although the order is irrelevant).
+/// \li Use \a ilist_tag to designate which ilist_node for a given \p T this
+/// list should use.  This is useful if a type \p T is part of multiple,
+/// independent lists simultaneously.
+/// \li Use \a ilist_sentinel_tracking to always (or never) track whether a
+/// node is a sentinel.  Specifying \c true enables the \a
+/// ilist_node::isSentinel() API.  Unlike \a ilist_node::isKnownSentinel(),
+/// which is only appropriate for assertions, \a ilist_node::isSentinel() is
+/// appropriate for real logic.
+///
+/// Here are examples of \p Options usage:
+/// \li \c simple_ilist<T> gives the defaults.  \li \c
+/// simple_ilist<T,ilist_sentinel_tracking<true>> enables the \a
+/// ilist_node::isSentinel() API.
+/// \li \c simple_ilist<T,ilist_tag<A>,ilist_sentinel_tracking<false>>
+/// specifies a tag of A and that tracking should be off (even when
+/// LLVM_ENABLE_ABI_BREAKING_CHECKS are enabled).
+/// \li \c simple_ilist<T,ilist_sentinel_tracking<false>,ilist_tag<A>> is
+/// equivalent to the last.
+///
+/// See \a is_valid_option for steps on adding a new option.
+template <typename T, class... Options>
+class simple_ilist
+    : ilist_detail::compute_node_options<T, Options...>::type::list_base_type,
+      ilist_detail::SpecificNodeAccess<
+          typename ilist_detail::compute_node_options<T, Options...>::type> {
+  static_assert(ilist_detail::check_options<Options...>::value,
+                "Unrecognized node option!");
+  typedef
+      typename ilist_detail::compute_node_options<T, Options...>::type OptionsT;
+  typedef typename OptionsT::list_base_type list_base_type;
+  ilist_sentinel<OptionsT> Sentinel;
 
 public:
-  typedef T value_type;
-  typedef T *pointer;
-  typedef T &reference;
-  typedef const T *const_pointer;
-  typedef const T &const_reference;
-  typedef ilist_iterator<T> iterator;
-  typedef ilist_iterator<const T> const_iterator;
+  typedef typename OptionsT::value_type value_type;
+  typedef typename OptionsT::pointer pointer;
+  typedef typename OptionsT::reference reference;
+  typedef typename OptionsT::const_pointer const_pointer;
+  typedef typename OptionsT::const_reference const_reference;
+  typedef ilist_iterator<OptionsT, false, false> iterator;
+  typedef ilist_iterator<OptionsT, false, true> const_iterator;
+  typedef ilist_iterator<OptionsT, true, false> reverse_iterator;
+  typedef ilist_iterator<OptionsT, true, true> const_reverse_iterator;
   typedef size_t size_type;
   typedef ptrdiff_t difference_type;
-  typedef ilist_iterator<const T, true> const_reverse_iterator;
-  typedef ilist_iterator<T, true> reverse_iterator;
 
   simple_ilist() = default;
   ~simple_ilist() = default;
@@ -120,7 +153,7 @@ public:
 
   /// Insert a node by reference; never copies.
   iterator insert(iterator I, reference Node) {
-    ilist_base::insertBefore(*I.getNodePtr(), *this->getNodePtr(&Node));
+    list_base_type::insertBefore(*I.getNodePtr(), *this->getNodePtr(&Node));
     return iterator(&Node);
   }
 
@@ -131,11 +164,19 @@ public:
       insert(I, *First);
   }
 
+  /// Clone another list.
+  template <class Cloner, class Disposer>
+  void cloneFrom(const simple_ilist &L2, Cloner clone, Disposer dispose) {
+    clearAndDispose(dispose);
+    for (const_reference V : L2)
+      push_back(*clone(V));
+  }
+
   /// Remove a node by reference; never deletes.
   ///
   /// \see \a erase() for removing by iterator.
   /// \see \a removeAndDispose() if the node should be deleted.
-  void remove(reference N) { ilist_base::remove(*this->getNodePtr(&N)); }
+  void remove(reference N) { list_base_type::remove(*this->getNodePtr(&N)); }
 
   /// Remove a node by reference and dispose of it.
   template <class Disposer>
@@ -158,7 +199,7 @@ public:
   ///
   /// \see \a eraseAndDispose() if the nodes should be deleted.
   iterator erase(iterator First, iterator Last) {
-    ilist_base::removeRange(*First.getNodePtr(), *Last.getNodePtr());
+    list_base_type::removeRange(*First.getNodePtr(), *Last.getNodePtr());
     return Last;
   }
 
@@ -201,8 +242,8 @@ public:
 
   /// Splice in a range of nodes from another list.
   void splice(iterator I, simple_ilist &, iterator First, iterator Last) {
-    ilist_base::transferBefore(*I.getNodePtr(), *First.getNodePtr(),
-                               *Last.getNodePtr());
+    list_base_type::transferBefore(*I.getNodePtr(), *First.getNodePtr(),
+                                   *Last.getNodePtr());
   }
 
   /// Merge in another list.
@@ -220,9 +261,9 @@ public:
   ///@}
 };
 
-template <class T>
+template <class T, class... Options>
 template <class Compare>
-void simple_ilist<T>::merge(simple_ilist<T> &RHS, Compare comp) {
+void simple_ilist<T, Options...>::merge(simple_ilist &RHS, Compare comp) {
   if (this == &RHS || RHS.empty())
     return;
   iterator LI = begin(), LE = end();
@@ -242,9 +283,9 @@ void simple_ilist<T>::merge(simple_ilist<T> &RHS, Compare comp) {
   splice(LE, RHS, RI, RE);
 }
 
-template <class T>
+template <class T, class... Options>
 template <class Compare>
-void simple_ilist<T>::sort(Compare comp) {
+void simple_ilist<T, Options...>::sort(Compare comp) {
   // Vacuously sorted.
   if (empty() || std::next(begin()) == end())
     return;
@@ -255,7 +296,7 @@ void simple_ilist<T>::sort(Compare comp) {
     ++Center;
     ++End;
   }
-  simple_ilist<T> RHS;
+  simple_ilist RHS;
   RHS.splice(RHS.end(), *this, Center, end());
 
   // Sort the sublists and merge back together.

@@ -109,7 +109,7 @@ class TwoAddressInstructionPass : public MachineFunctionPass {
   bool isProfitableToCommute(unsigned regA, unsigned regB, unsigned regC,
                              MachineInstr *MI, unsigned Dist);
 
-  bool commuteInstruction(MachineInstr *MI,
+  bool commuteInstruction(MachineInstr *MI, unsigned DstIdx,
                           unsigned RegBIdx, unsigned RegCIdx, unsigned Dist);
 
   bool isProfitableToConv3Addr(unsigned RegA, unsigned RegB);
@@ -651,6 +651,7 @@ isProfitableToCommute(unsigned regA, unsigned regB, unsigned regC,
 /// Commute a two-address instruction and update the basic block, distance map,
 /// and live variables if needed. Return true if it is successful.
 bool TwoAddressInstructionPass::commuteInstruction(MachineInstr *MI,
+                                                   unsigned DstIdx,
                                                    unsigned RegBIdx,
                                                    unsigned RegCIdx,
                                                    unsigned Dist) {
@@ -671,7 +672,7 @@ bool TwoAddressInstructionPass::commuteInstruction(MachineInstr *MI,
   // Update source register map.
   unsigned FromRegC = getMappedReg(RegC, SrcRegMap);
   if (FromRegC) {
-    unsigned RegA = MI->getOperand(0).getReg();
+    unsigned RegA = MI->getOperand(DstIdx).getReg();
     SrcRegMap[RegA] = FromRegC;
   }
 
@@ -1171,6 +1172,9 @@ bool TwoAddressInstructionPass::tryInstructionCommute(MachineInstr *MI,
                                                       unsigned BaseOpIdx,
                                                       bool BaseOpKilled,
                                                       unsigned Dist) {
+  if (!MI->isCommutable())
+    return false;
+
   unsigned DstOpReg = MI->getOperand(DstOpIdx).getReg();
   unsigned BaseOpReg = MI->getOperand(BaseOpIdx).getReg();
   unsigned OpsNum = MI->getDesc().getNumOperands();
@@ -1180,7 +1184,7 @@ bool TwoAddressInstructionPass::tryInstructionCommute(MachineInstr *MI,
     // and OtherOpIdx are commutable, it does not really search for
     // other commutable operands and does not change the values of passed
     // variables.
-    if (OtherOpIdx == BaseOpIdx ||
+    if (OtherOpIdx == BaseOpIdx || !MI->getOperand(OtherOpIdx).isReg() ||
         !TII->findCommutedOpIndices(*MI, BaseOpIdx, OtherOpIdx))
       continue;
 
@@ -1199,7 +1203,8 @@ bool TwoAddressInstructionPass::tryInstructionCommute(MachineInstr *MI,
     }
 
     // If it's profitable to commute, try to do so.
-    if (DoCommute && commuteInstruction(MI, BaseOpIdx, OtherOpIdx, Dist)) {
+    if (DoCommute && commuteInstruction(MI, DstOpIdx, BaseOpIdx, OtherOpIdx,
+                                        Dist)) {
       ++NumCommuted;
       if (AggressiveCommute)
         ++NumAggrCommuted;

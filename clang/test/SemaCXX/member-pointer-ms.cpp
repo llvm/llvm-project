@@ -291,3 +291,11 @@ static_assert(sizeof(int SingleInheritanceAsVirtualBeforePragma::*) == 12, "");
 
 #pragma pointers_to_members(single) // expected-error{{unexpected 'single'}}
 #endif
+
+namespace merging {
+struct __single_inheritance S;
+struct __single_inheritance S;
+
+struct __single_inheritance M; // expected-note{{previous inheritance model specified here}}
+struct __multiple_inheritance M; // expected-error{{inheritance model does not match previous declaration}}
+}

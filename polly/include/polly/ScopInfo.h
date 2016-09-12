@@ -278,29 +278,27 @@ public:
   unsigned getNumberOfDimensions() const {
     if (Kind == MK_PHI || Kind == MK_ExitPHI || Kind == MK_Value)
       return 0;
-    return DimensionSizes.size() + 1;
+    return DimensionSizes.size();
   }
 
   /// Return the size of dimension @p dim as SCEV*.
   //
   //  Scalars do not have array dimensions and the first dimension of
   //  a (possibly multi-dimensional) array also does not carry any size
-  //  information.
+  //  information, in case the array is not newly created.
   const SCEV *getDimensionSize(unsigned Dim) const {
-    assert(Dim > 0 && "Only dimensions larger than zero are sized.");
     assert(Dim < getNumberOfDimensions() && "Invalid dimension");
-    return DimensionSizes[Dim - 1];
+    return DimensionSizes[Dim];
   }
 
   /// Return the size of dimension @p dim as isl_pw_aff.
   //
   //  Scalars do not have array dimensions and the first dimension of
   //  a (possibly multi-dimensional) array also does not carry any size
-  //  information.
+  //  information, in case the array is not newly created.
   __isl_give isl_pw_aff *getDimensionSizePw(unsigned Dim) const {
-    assert(Dim > 0 && "Only dimensions larger than zero are sized.");
     assert(Dim < getNumberOfDimensions() && "Invalid dimension");
-    return isl_pw_aff_copy(DimensionSizesPw[Dim - 1]);
+    return isl_pw_aff_copy(DimensionSizesPw[Dim]);
   }
 
   /// Get the canonical element type of this array.

@@ -28,12 +28,12 @@ struct Node : ilist_node<Node> {
 
 TEST(IListTest, Basic) {
   ilist<Node> List;
-  List.push_back(Node(1));
+  List.push_back(new Node(1));
   EXPECT_EQ(1, List.back().Value);
   EXPECT_EQ(nullptr, List.getPrevNode(List.back()));
   EXPECT_EQ(nullptr, List.getNextNode(List.back()));
 
-  List.push_back(Node(2));
+  List.push_back(new Node(2));
   EXPECT_EQ(2, List.back().Value);
   EXPECT_EQ(2, List.getNextNode(List.front())->Value);
   EXPECT_EQ(1, List.getPrevNode(List.back())->Value);
@@ -44,9 +44,40 @@ TEST(IListTest, Basic) {
   EXPECT_EQ(1, ConstList.getPrevNode(ConstList.back())->Value);
 }
 
+TEST(IListTest, cloneFrom) {
+  Node L1Nodes[] = {Node(0), Node(1)};
+  Node L2Nodes[] = {Node(0), Node(1)};
+  ilist<Node> L1, L2, L3;
+
+  // Build L1 from L1Nodes.
+  L1.push_back(&L1Nodes[0]);
+  L1.push_back(&L1Nodes[1]);
+
+  // Build L2 from L2Nodes, based on L1 nodes.
+  L2.cloneFrom(L1, [&](const Node &N) { return &L2Nodes[N.Value]; });
+
+  // Add a node to L3 to be deleted, and then rebuild L3 by copying L1.
+  L3.push_back(new Node(7));
+  L3.cloneFrom(L1, [](const Node &N) { return new Node(N); });
+
+  EXPECT_EQ(2u, L1.size());
+  EXPECT_EQ(&L1Nodes[0], &L1.front());
+  EXPECT_EQ(&L1Nodes[1], &L1.back());
+  EXPECT_EQ(2u, L2.size());
+  EXPECT_EQ(&L2Nodes[0], &L2.front());
+  EXPECT_EQ(&L2Nodes[1], &L2.back());
+  EXPECT_EQ(2u, L3.size());
+  EXPECT_EQ(0, L3.front().Value);
+  EXPECT_EQ(1, L3.back().Value);
+
+  // Don't free nodes on the stack.
+  L1.clearAndLeakNodesUnsafely();
+  L2.clearAndLeakNodesUnsafely();
+}
+
 TEST(IListTest, SpliceOne) {
   ilist<Node> List;
-  List.push_back(1);
+  List.push_back(new Node(1));
 
   // The single-element splice operation supports noops.
   List.splice(List.begin(), List, List.begin());
@@ -55,8 +86,8 @@ TEST(IListTest, SpliceOne) {
   EXPECT_TRUE(std::next(List.begin()) == List.end());
 
   // Altenative noop. Move the first element behind itself.
-  List.push_back(2);
-  List.push_back(3);
+  List.push_back(new Node(2));
+  List.push_back(new Node(3));
   List.splice(std::next(List.begin()), List, List.begin());
   EXPECT_EQ(3u, List.size());
   EXPECT_EQ(1, List.front().Value);
@@ -111,7 +142,7 @@ TEST(IListTest, UnsafeClear) {
   EXPECT_TRUE(E == List.end());
 
   // List with contents.
-  List.push_back(1);
+  List.push_back(new Node(1));
   ASSERT_EQ(1u, List.size());
   Node *N = &*List.begin();
   EXPECT_EQ(1, N->Value);
@@ -121,8 +152,8 @@ TEST(IListTest, UnsafeClear) {
   delete N;
 
   // List is still functional.
-  List.push_back(5);
-  List.push_back(6);
+  List.push_back(new Node(5));
+  List.push_back(new Node(6));
   ASSERT_EQ(2u, List.size());
   EXPECT_EQ(5, List.front().Value);
   EXPECT_EQ(6, List.back().Value);
@@ -218,7 +249,7 @@ TEST(IListTest, addNodeToList) {
 }
 
 struct PrivateNode : private ilist_node<PrivateNode> {
-  friend struct llvm::ilist_node_access;
+  friend struct llvm::ilist_detail::NodeAccess;
 
   int Value = 0;
 

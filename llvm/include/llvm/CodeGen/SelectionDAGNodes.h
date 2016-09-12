@@ -422,9 +422,10 @@ protected:
 
     uint16_t IsVolatile : 1;
     uint16_t IsNonTemporal : 1;
+    uint16_t IsDereferenceable : 1;
     uint16_t IsInvariant : 1;
   };
-  enum { NumMemSDNodeBits = NumSDNodeBits + 3 };
+  enum { NumMemSDNodeBits = NumSDNodeBits + 4 };
 
   class LSBaseSDNodeBitfields {
     friend class LSBaseSDNode;
@@ -1100,10 +1101,9 @@ public:
     return Data;
   }
 
-  // We access subclass data here so that we can check consistency
-  // with MachineMemOperand information.
   bool isVolatile() const { return MemSDNodeBits.IsVolatile; }
   bool isNonTemporal() const { return MemSDNodeBits.IsNonTemporal; }
+  bool isDereferenceable() const { return MemSDNodeBits.IsDereferenceable; }
   bool isInvariant() const { return MemSDNodeBits.IsInvariant; }
 
   // Returns the offset from the location of the access.

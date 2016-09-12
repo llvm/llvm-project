@@ -107,6 +107,8 @@ Options to Control Error and Warning Messages
 .. option:: -Wfoo
 
   Enable warning "foo".
+  See the :doc:`diagnostics reference <DiagnosticsReference>` for a complete
+  list of the warning flags that can be specified in this way.
 
 .. option:: -Wno-foo
 

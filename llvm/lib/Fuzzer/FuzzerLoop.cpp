@@ -189,6 +189,7 @@ void Fuzzer::StaticDeathCallback() {
 }
 
 static void WarnOnUnsuccessfullMerge(bool DoWarn) {
+  if (!DoWarn) return;
   Printf(
    "***\n"
    "***\n"

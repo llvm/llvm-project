@@ -2047,6 +2047,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPORQZrrkz,            X86::VPORQZrmkz,            0 },
     { X86::VPXORDZrrkz,           X86::VPXORDZrmkz,           0 },
     { X86::VPXORQZrrkz,           X86::VPXORQZrmkz,           0 },
+    { X86::VPTERNLOGDZrri,        X86::VPTERNLOGDZrmi,        0 },
+    { X86::VPTERNLOGQZrri,        X86::VPTERNLOGQZrmi,        0 },
     // AVX-512{F,VL} arithmetic instructions 256-bit
     { X86::VADDPSZ256rrkz,        X86::VADDPSZ256rmkz,        0 },
     { X86::VADDPDZ256rrkz,        X86::VADDPDZ256rmkz,        0 },
@@ -2080,6 +2082,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPORQZ256rrkz,         X86::VPORQZ256rmkz,         0 },
     { X86::VPXORDZ256rrkz,        X86::VPXORDZ256rmkz,        0 },
     { X86::VPXORQZ256rrkz,        X86::VPXORQZ256rmkz,        0 },
+    { X86::VPTERNLOGDZ256rri,     X86::VPTERNLOGDZ256rmi,     0 },
+    { X86::VPTERNLOGQZ256rri,     X86::VPTERNLOGQZ256rmi,     0 },
     // AVX-512{F,VL} arithmetic instructions 128-bit
     { X86::VADDPSZ128rrkz,        X86::VADDPSZ128rmkz,        0 },
     { X86::VADDPDZ128rrkz,        X86::VADDPDZ128rmkz,        0 },
@@ -2113,6 +2117,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPORQZ128rrkz,         X86::VPORQZ128rmkz,         0 },
     { X86::VPXORDZ128rrkz,        X86::VPXORDZ128rmkz,        0 },
     { X86::VPXORQZ128rrkz,        X86::VPXORQZ128rmkz,        0 },
+    { X86::VPTERNLOGDZ128rri,     X86::VPTERNLOGDZ128rmi,     0 },
+    { X86::VPTERNLOGQZ128rri,     X86::VPTERNLOGQZ128rmi,     0 },
   };
 
   for (X86MemoryFoldTableEntry Entry : MemoryFoldTable3) {
@@ -2163,6 +2169,10 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPORQZrrk,          X86::VPORQZrmk,            0 },
     { X86::VPXORDZrrk,         X86::VPXORDZrmk,           0 },
     { X86::VPXORQZrrk,         X86::VPXORQZrmk,           0 },
+    { X86::VPTERNLOGDZrrik,    X86::VPTERNLOGDZrmik,      0 },
+    { X86::VPTERNLOGDZrrikz,   X86::VPTERNLOGDZrmikz,     0 },
+    { X86::VPTERNLOGQZrrik,    X86::VPTERNLOGQZrmik,      0 },
+    { X86::VPTERNLOGQZrrikz,   X86::VPTERNLOGQZrmikz,     0 },
     // AVX-512{F,VL} foldable instructions 256-bit
     { X86::VADDPSZ256rrk,      X86::VADDPSZ256rmk,        0 },
     { X86::VADDPDZ256rrk,      X86::VADDPDZ256rmk,        0 },
@@ -2196,6 +2206,10 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPORQZ256rrk,       X86::VPORQZ256rmk,         0 },
     { X86::VPXORDZ256rrk,      X86::VPXORDZ256rmk,        0 },
     { X86::VPXORQZ256rrk,      X86::VPXORQZ256rmk,        0 },
+    { X86::VPTERNLOGDZ256rrik, X86::VPTERNLOGDZ256rmik,   0 },
+    { X86::VPTERNLOGDZ256rrikz,X86::VPTERNLOGDZ256rmikz,  0 },
+    { X86::VPTERNLOGQZ256rrik, X86::VPTERNLOGQZ256rmik,   0 },
+    { X86::VPTERNLOGQZ256rrikz,X86::VPTERNLOGQZ256rmikz,  0 },
     // AVX-512{F,VL} foldable instructions 128-bit
     { X86::VADDPSZ128rrk,      X86::VADDPSZ128rmk,        0 },
     { X86::VADDPDZ128rrk,      X86::VADDPDZ128rmk,        0 },
@@ -2229,6 +2243,10 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPORQZ128rrk,       X86::VPORQZ128rmk,         0 },
     { X86::VPXORDZ128rrk,      X86::VPXORDZ128rmk,        0 },
     { X86::VPXORQZ128rrk,      X86::VPXORQZ128rmk,        0 },
+    { X86::VPTERNLOGDZ128rrik, X86::VPTERNLOGDZ128rmik,   0 },
+    { X86::VPTERNLOGDZ128rrikz,X86::VPTERNLOGDZ128rmikz,  0 },
+    { X86::VPTERNLOGQZ128rrik, X86::VPTERNLOGQZ128rmik,   0 },
+    { X86::VPTERNLOGQZ128rrikz,X86::VPTERNLOGQZ128rmikz,  0 },
   };
 
   for (X86MemoryFoldTableEntry Entry : MemoryFoldTable4) {
@@ -4158,7 +4176,7 @@ void X86InstrInfo::replaceBranchWithTailCall(
   MIB->addOperand(TailCall.getOperand(0)); // Destination.
   MIB.addImm(0); // Stack offset (not used).
   MIB->addOperand(BranchCond[0]); // Condition.
-  MIB->addOperand(TailCall.getOperand(2)); // Regmask.
+  MIB.copyImplicitOps(TailCall); // Regmask and (imp-used) parameters.
 
   I->eraseFromParent();
 }
@@ -5331,9 +5349,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
   // If the definition is in this basic block, RE points to the definition;
   // otherwise, RE is the rend of the basic block.
   MachineBasicBlock::reverse_iterator
-      RI = MachineBasicBlock::reverse_iterator(I),
+      RI = ++I.getReverse(),
       RE = CmpInstr.getParent() == MI->getParent()
-               ? MachineBasicBlock::reverse_iterator(++Def) /* points to MI */
+               ? Def.getReverse() /* points to MI */
                : CmpInstr.getParent()->rend();
   MachineInstr *Movr0Inst = nullptr;
   for (; RI != RE; ++RI) {
@@ -5479,9 +5497,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
   if (Movr0Inst) {
     // Look backwards until we find a def that doesn't use the current EFLAGS.
     Def = Sub;
-    MachineBasicBlock::reverse_iterator
-      InsertI = MachineBasicBlock::reverse_iterator(++Def),
-                InsertE = Sub->getParent()->rend();
+    MachineBasicBlock::reverse_iterator InsertI = Def.getReverse(),
+                                        InsertE = Sub->getParent()->rend();
     for (; InsertI != InsertE; ++InsertI) {
       MachineInstr *Instr = &*InsertI;
       if (!Instr->readsRegister(X86::EFLAGS, TRI) &&
@@ -5621,7 +5638,9 @@ static bool expandMOV32r1(MachineInstrBuilder &MIB, const TargetInstrInfo &TII,
   return true;
 }
 
-bool X86InstrInfo::ExpandMOVImmSExti8(MachineInstrBuilder &MIB) const {
+static bool ExpandMOVImmSExti8(MachineInstrBuilder &MIB,
+                               const TargetInstrInfo &TII,
+                               const X86Subtarget &Subtarget) {
   MachineBasicBlock &MBB = *MIB->getParent();
   DebugLoc DL = MIB->getDebugLoc();
   int64_t Imm = MIB->getOperand(1).getImm();
@@ -5638,23 +5657,23 @@ bool X86InstrInfo::ExpandMOVImmSExti8(MachineInstrBuilder &MIB) const {
     X86MachineFunctionInfo *X86FI =
         MBB.getParent()->getInfo<X86MachineFunctionInfo>();
     if (X86FI->getUsesRedZone()) {
-      MIB->setDesc(get(MIB->getOpcode() == X86::MOV32ImmSExti8 ? X86::MOV32ri
-                                                               : X86::MOV64ri));
+      MIB->setDesc(TII.get(MIB->getOpcode() ==
+                           X86::MOV32ImmSExti8 ? X86::MOV32ri : X86::MOV64ri));
       return true;
     }
 
     // 64-bit mode doesn't have 32-bit push/pop, so use 64-bit operations and
     // widen the register if necessary.
     StackAdjustment = 8;
-    BuildMI(MBB, I, DL, get(X86::PUSH64i8)).addImm(Imm);
-    MIB->setDesc(get(X86::POP64r));
+    BuildMI(MBB, I, DL, TII.get(X86::PUSH64i8)).addImm(Imm);
+    MIB->setDesc(TII.get(X86::POP64r));
     MIB->getOperand(0)
         .setReg(getX86SubSuperRegister(MIB->getOperand(0).getReg(), 64));
   } else {
     assert(MIB->getOpcode() == X86::MOV32ImmSExti8);
     StackAdjustment = 4;
-    BuildMI(MBB, I, DL, get(X86::PUSH32i8)).addImm(Imm);
-    MIB->setDesc(get(X86::POP32r));
+    BuildMI(MBB, I, DL, TII.get(X86::PUSH32i8)).addImm(Imm);
+    MIB->setDesc(TII.get(X86::POP32r));
   }
 
   // Build CFI if necessary.
@@ -5684,7 +5703,9 @@ static void expandLoadStackGuard(MachineInstrBuilder &MIB,
   unsigned Reg = MIB->getOperand(0).getReg();
   const GlobalValue *GV =
       cast<GlobalValue>((*MIB->memoperands_begin())->getValue());
-  auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant;
+  auto Flags = MachineMemOperand::MOLoad |
+               MachineMemOperand::MODereferenceable |
+               MachineMemOperand::MOInvariant;
   MachineMemOperand *MMO = MBB.getParent()->getMachineMemOperand(
       MachinePointerInfo::getGOT(*MBB.getParent()), Flags, 8, 8);
   MachineBasicBlock::iterator I = MIB.getInstr();
@@ -5709,7 +5730,7 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return expandMOV32r1(MIB, *this, /*MinusOne=*/ true);
   case X86::MOV32ImmSExti8:
   case X86::MOV64ImmSExti8:
-    return ExpandMOVImmSExti8(MIB);
+    return ExpandMOVImmSExti8(MIB, *this, Subtarget);
   case X86::SETB_C8r:
     return Expand2AddrUndef(MIB, get(X86::SBB8rr));
   case X86::SETB_C16r:

@@ -324,27 +324,27 @@ ErrorDescription ScopedInErrorReport::current_error_;
 
 void ReportStackOverflow(const SignalContext &sig) {
   ScopedInErrorReport in_report(/*report*/ nullptr, /*fatal*/ true);
-  ErrorStackOverflow error{sig, GetCurrentTidOrInvalid()};  // NOLINT
+  ErrorStackOverflow error(GetCurrentTidOrInvalid(), sig);
   in_report.ReportError(error);
 }
 
 void ReportDeadlySignal(int signo, const SignalContext &sig) {
   ScopedInErrorReport in_report(/*report*/ nullptr, /*fatal*/ true);
-  ErrorDeadlySignal error(signo, sig, GetCurrentTidOrInvalid());
+  ErrorDeadlySignal error(GetCurrentTidOrInvalid(), sig, signo);
   in_report.ReportError(error);
 }
 
 void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
-  ErrorDoubleFree error{addr, GetCurrentTidOrInvalid(), free_stack};  // NOLINT
+  ErrorDoubleFree error(GetCurrentTidOrInvalid(), free_stack, addr);
   in_report.ReportError(error);
 }
 
 void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
                                  BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
-  ErrorNewDeleteSizeMismatch error(addr, GetCurrentTidOrInvalid(), delete_size,
-                                   free_stack);
+  ErrorNewDeleteSizeMismatch error(GetCurrentTidOrInvalid(), free_stack, addr,
+                                   delete_size);
   in_report.ReportError(error);
 }
 

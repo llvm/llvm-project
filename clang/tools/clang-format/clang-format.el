@@ -122,7 +122,7 @@ is no active region.  If no style is given uses `clang-format-style'."
         (let (status stderr operations)
           (setq status
                 (call-process-region
-                 (point-min) (point-max) clang-format-executable
+                 nil nil clang-format-executable
                  nil `(,temp-buffer ,temp-file) nil
 
                  "-output-replacements-xml"

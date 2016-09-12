@@ -2,12 +2,12 @@
    "arrays" : [
        {
          "name" : "MemRef_B",
-         "sizes" : [ "1024" ],
+         "sizes" : [ "*", "1024" ],
          "type" : "double"
       },
       {
          "name" : "MemRef_A",
-         "sizes" : [ "1056" ],
+         "sizes" : [ "*", "1056" ],
          "type" : "double"
       },
       {
@@ -33,7 +33,7 @@
          "accesses" : [
             {
                "kind" : "read",
-               "relation" : "{ Stmt_bb12[i0, i1, i2] -> E[0, i2, i0] }"
+               "relation" : "{ Stmt_bb12[i0, i1, i2] -> E[i2, i0] }"
             },
             {
                "kind" : "read",

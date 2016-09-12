@@ -50,7 +50,8 @@ class MachineMemOperand;
 /// without having their destructor called.
 ///
 class MachineInstr
-    : public ilist_node_with_parent<MachineInstr, MachineBasicBlock> {
+    : public ilist_node_with_parent<MachineInstr, MachineBasicBlock,
+                                    ilist_sentinel_tracking<true>> {
 public:
   typedef MachineMemOperand **mmo_iterator;
 

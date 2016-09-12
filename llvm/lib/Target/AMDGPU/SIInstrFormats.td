@@ -332,68 +332,6 @@ class VINTRPe <bits<2> op> : Enc32 {
   let Inst{31-26} = 0x32; // encoding
 }
 
-class MUBUFe <bits<7> op> : Enc64 {
-  bits<12> offset;
-  bits<1> offen;
-  bits<1> idxen;
-  bits<1> glc;
-  bits<1> addr64;
-  bits<1> lds;
-  bits<8> vaddr;
-  bits<8> vdata;
-  bits<7> srsrc;
-  bits<1> slc;
-  bits<1> tfe;
-  bits<8> soffset;
-
-  let Inst{11-0} = offset;
-  let Inst{12} = offen;
-  let Inst{13} = idxen;
-  let Inst{14} = glc;
-  let Inst{15} = addr64;
-  let Inst{16} = lds;
-  let Inst{24-18} = op;
-  let Inst{31-26} = 0x38; //encoding
-  let Inst{39-32} = vaddr;
-  let Inst{47-40} = vdata;
-  let Inst{52-48} = srsrc{6-2};
-  let Inst{54} = slc;
-  let Inst{55} = tfe;
-  let Inst{63-56} = soffset;
-}
-
-class MTBUFe <bits<3> op> : Enc64 {
-  bits<8> vdata;
-  bits<12> offset;
-  bits<1> offen;
-  bits<1> idxen;
-  bits<1> glc;
-  bits<1> addr64;
-  bits<4> dfmt;
-  bits<3> nfmt;
-  bits<8> vaddr;
-  bits<7> srsrc;
-  bits<1> slc;
-  bits<1> tfe;
-  bits<8> soffset;
-
-  let Inst{11-0} = offset;
-  let Inst{12} = offen;
-  let Inst{13} = idxen;
-  let Inst{14} = glc;
-  let Inst{15} = addr64;
-  let Inst{18-16} = op;
-  let Inst{22-19} = dfmt;
-  let Inst{25-23} = nfmt;
-  let Inst{31-26} = 0x3a; //encoding
-  let Inst{39-32} = vaddr;
-  let Inst{47-40} = vdata;
-  let Inst{52-48} = srsrc{6-2};
-  let Inst{54} = slc;
-  let Inst{55} = tfe;
-  let Inst{63-56} = soffset;
-}
-
 class MIMGe <bits<7> op> : Enc64 {
   bits<8> vdata;
   bits<4> dmask;
@@ -471,37 +409,6 @@ class VINTRPCommon <dag outs, dag ins, string asm, list<dag> pattern> :
 }
 
 } // End Uses = [EXEC]
-
-//===----------------------------------------------------------------------===//
-// Vector I/O operations
-//===----------------------------------------------------------------------===//
-
-class MUBUF <dag outs, dag ins, string asm, list<dag> pattern> :
-    InstSI<outs, ins, asm, pattern> {
-
-  let VM_CNT = 1;
-  let EXP_CNT = 1;
-  let MUBUF = 1;
-  let Uses = [EXEC];
-
-  let hasSideEffects = 0;
-  let UseNamedOperandTable = 1;
-  let AsmMatchConverter = "cvtMubuf";
-  let SchedRW = [WriteVMEM];
-}
-
-class MTBUF <dag outs, dag ins, string asm, list<dag> pattern> :
-    InstSI<outs, ins, asm, pattern> {
-
-  let VM_CNT = 1;
-  let EXP_CNT = 1;
-  let MTBUF = 1;
-  let Uses = [EXEC];
-
-  let hasSideEffects = 0;
-  let UseNamedOperandTable = 1;
-  let SchedRW = [WriteVMEM];
-}
 
 class MIMG <dag outs, dag ins, string asm, list<dag> pattern> :
     InstSI <outs, ins, asm, pattern> {

@@ -29,11 +29,19 @@ using namespace lld;
 using namespace lld::elf;
 
 template <class ELFT>
+static ArrayRef<uint8_t> getSectionContents(elf::ObjectFile<ELFT> *File,
+                                            const typename ELFT::Shdr *Hdr) {
+  if (!File || Hdr->sh_type == SHT_NOBITS)
+    return {};
+  return check(File->getObj().getSectionContents(Hdr));
+}
+
+template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          const Elf_Shdr *Hdr, StringRef Name,
                                          Kind SectionKind)
-    : InputSectionData(SectionKind, Name, Hdr->sh_flags & SHF_COMPRESSED,
-                       !Config->GcSections),
+    : InputSectionData(SectionKind, Name, getSectionContents(File, Hdr),
+                       Hdr->sh_flags & SHF_COMPRESSED, !Config->GcSections),
       Header(Hdr), File(File), Repl(this) {
   // The ELF spec states that a value of 0 means the section has
   // no alignment constraits.
@@ -45,14 +53,6 @@ template <class ELFT> size_t InputSectionBase<ELFT>::getSize() const {
     if (D->getThunksSize() > 0)
       return D->getThunkOff() + D->getThunksSize();
   return Header->sh_size;
-}
-
-template <class ELFT>
-ArrayRef<uint8_t> InputSectionBase<ELFT>::getSectionData() const {
-  if (Compressed)
-    return ArrayRef<uint8_t>((const uint8_t *)Uncompressed.data(),
-                             Uncompressed.size());
-  return check(this->File->getObj().getSectionContents(this->Header));
 }
 
 // Returns a string for an error message.
@@ -94,8 +94,6 @@ template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
 
   // A compressed section consists of a header of Elf_Chdr type
   // followed by compressed data.
-  ArrayRef<uint8_t> Data =
-      check(this->File->getObj().getSectionContents(this->Header));
   if (Data.size() < sizeof(Elf_Chdr))
     fatal("corrupt compressed section");
 
@@ -106,8 +104,13 @@ template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
     fatal(getName(this) + ": unsupported compression type");
 
   StringRef Buf((const char *)Data.data(), Data.size());
-  if (zlib::uncompress(Buf, Uncompressed, Hdr->ch_size) != zlib::StatusOK)
+  size_t UncompressedDataSize = Hdr->ch_size;
+  UncompressedData.reset(new char[UncompressedDataSize]);
+  if (zlib::uncompress(Buf, UncompressedData.get(), UncompressedDataSize) !=
+      zlib::StatusOK)
     fatal(getName(this) + ": error uncompressing section");
+  Data = ArrayRef<uint8_t>((uint8_t *)UncompressedData.get(),
+                           UncompressedDataSize);
 }
 
 template <class ELFT>
@@ -403,7 +406,7 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
   }
 
   // Copy section contents from source object file to output file.
-  ArrayRef<uint8_t> Data = this->getSectionData();
+  ArrayRef<uint8_t> Data = this->Data;
   memcpy(Buf + OutSecOff, Data.data(), Data.size());
 
   // Iterate over all relocation sections that apply to this section.
@@ -487,7 +490,7 @@ void EhInputSection<ELFT>::split() {
 template <class ELFT>
 template <class RelTy>
 void EhInputSection<ELFT>::split(ArrayRef<RelTy> Rels) {
-  ArrayRef<uint8_t> Data = this->getSectionData();
+  ArrayRef<uint8_t> Data = this->Data;
   unsigned RelI = 0;
   for (size_t Off = 0, End = Data.size(); Off != End;) {
     size_t Size = readEhRecordSize<ELFT>(Data.slice(Off));
@@ -554,7 +557,7 @@ MergeInputSection<ELFT>::MergeInputSection(elf::ObjectFile<ELFT> *F,
     : InputSectionBase<ELFT>(F, Header, Name, InputSectionBase<ELFT>::Merge) {}
 
 template <class ELFT> void MergeInputSection<ELFT>::splitIntoPieces() {
-  ArrayRef<uint8_t> Data = this->getSectionData();
+  ArrayRef<uint8_t> Data = this->Data;
   uintX_t EntSize = this->Header->sh_entsize;
   if (this->Header->sh_flags & SHF_STRINGS)
     this->Pieces = splitStrings(Data, EntSize);
@@ -581,9 +584,7 @@ SectionPiece *MergeInputSection<ELFT>::getSectionPiece(uintX_t Offset) {
 template <class ELFT>
 const SectionPiece *
 MergeInputSection<ELFT>::getSectionPiece(uintX_t Offset) const {
-  ArrayRef<uint8_t> D = this->getSectionData();
-  StringRef Data((const char *)D.data(), D.size());
-  uintX_t Size = Data.size();
+  uintX_t Size = this->Data.size();
   if (Offset >= Size)
     fatal(getName(this) + ": entry is past the end of the section");
 
@@ -636,13 +637,13 @@ MipsReginfoInputSection<ELFT>::MipsReginfoInputSection(elf::ObjectFile<ELFT> *F,
                                                        StringRef Name)
     : InputSectionBase<ELFT>(F, Hdr, Name,
                              InputSectionBase<ELFT>::MipsReginfo) {
+  ArrayRef<uint8_t> Data = this->Data;
   // Initialize this->Reginfo.
-  ArrayRef<uint8_t> D = this->getSectionData();
-  if (D.size() != sizeof(Elf_Mips_RegInfo<ELFT>)) {
+  if (Data.size() != sizeof(Elf_Mips_RegInfo<ELFT>)) {
     error(getName(this) + ": invalid size of .reginfo section");
     return;
   }
-  Reginfo = reinterpret_cast<const Elf_Mips_RegInfo<ELFT> *>(D.data());
+  Reginfo = reinterpret_cast<const Elf_Mips_RegInfo<ELFT> *>(Data.data());
 }
 
 template <class ELFT>
@@ -657,7 +658,7 @@ MipsOptionsInputSection<ELFT>::MipsOptionsInputSection(elf::ObjectFile<ELFT> *F,
     : InputSectionBase<ELFT>(F, Hdr, Name,
                              InputSectionBase<ELFT>::MipsOptions) {
   // Find ODK_REGINFO option in the section's content.
-  ArrayRef<uint8_t> D = this->getSectionData();
+  ArrayRef<uint8_t> D = this->Data;
   while (!D.empty()) {
     if (D.size() < sizeof(Elf_Mips_Options<ELFT>)) {
       error(getName(this) + ": invalid size of .MIPS.options section");
@@ -683,12 +684,12 @@ MipsAbiFlagsInputSection<ELFT>::MipsAbiFlagsInputSection(
     : InputSectionBase<ELFT>(F, Hdr, Name,
                              InputSectionBase<ELFT>::MipsAbiFlags) {
   // Initialize this->Flags.
-  ArrayRef<uint8_t> D = this->getSectionData();
-  if (D.size() != sizeof(Elf_Mips_ABIFlags<ELFT>)) {
+  ArrayRef<uint8_t> Data = this->Data;
+  if (Data.size() != sizeof(Elf_Mips_ABIFlags<ELFT>)) {
     error("invalid size of .MIPS.abiflags section");
     return;
   }
-  Flags = reinterpret_cast<const Elf_Mips_ABIFlags<ELFT> *>(D.data());
+  Flags = reinterpret_cast<const Elf_Mips_ABIFlags<ELFT> *>(Data.data());
 }
 
 template <class ELFT>

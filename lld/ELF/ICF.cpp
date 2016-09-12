@@ -233,8 +233,7 @@ bool ICF<ELFT>::equalsConstant(const InputSection<ELFT> *A,
   }
 
   return A->getSectionHdr()->sh_flags == B->getSectionHdr()->sh_flags &&
-         A->getSize() == B->getSize() &&
-         A->getSectionData() == B->getSectionData();
+         A->getSize() == B->getSize() && A->Data == B->Data;
 }
 
 template <class ELFT>

@@ -46,6 +46,8 @@ template <typename ElemT> class GlobalDeviceMemory;
 /// memory, and an element count for the size of the slice.
 template <typename ElemT> class GlobalDeviceMemorySlice {
 public:
+  using ElementTy = ElemT;
+
   /// Intentionally implicit so GlobalDeviceMemory<T> can be passed to functions
   /// expecting GlobalDeviceMemorySlice<T> arguments.
   GlobalDeviceMemorySlice(const GlobalDeviceMemory<ElemT> &Memory)
@@ -171,6 +173,8 @@ protected:
 template <typename ElemT>
 class GlobalDeviceMemory : public GlobalDeviceMemoryBase {
 public:
+  using ElementTy = ElemT;
+
   GlobalDeviceMemory(GlobalDeviceMemory &&Other) = default;
   GlobalDeviceMemory &operator=(GlobalDeviceMemory &&Other) = default;
 

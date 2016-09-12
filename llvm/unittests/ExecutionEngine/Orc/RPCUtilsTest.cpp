@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ExecutionEngine/Orc/RPCChannel.h"
+#include "llvm/ExecutionEngine/Orc/RPCByteChannel.h"
 #include "llvm/ExecutionEngine/Orc/RPCUtils.h"
 #include "gtest/gtest.h"
 
@@ -25,7 +25,7 @@ private:
   std::mutex Lock;
 };
 
-class QueueChannel : public RPCChannel {
+class QueueChannel : public RPCByteChannel {
 public:
   QueueChannel(Queue &InQueue, Queue &OutQueue)
       : InQueue(InQueue), OutQueue(OutQueue) {}

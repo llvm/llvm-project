@@ -165,6 +165,8 @@ public:
       return GV && llvm::canBeOmittedFromSymbolTable(GV);
     }
     Expected<const Comdat *> getComdat() const {
+      if (!GV)
+        return nullptr;
       const GlobalObject *GO;
       if (auto *GA = dyn_cast<GlobalAlias>(GV)) {
         GO = GA->getBaseObject();

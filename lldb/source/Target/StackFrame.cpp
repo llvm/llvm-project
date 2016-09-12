@@ -1278,6 +1278,8 @@ GetBaseExplainingValue(const Instruction::Operand &operand,
       return std::make_pair(nullptr, 0);
     }
   }
+  default:
+    return std::make_pair(nullptr, 0);
   }
 }
 
@@ -1291,7 +1293,7 @@ GetBaseExplainingDereference(const Instruction::Operand &operand,
   }
   return std::make_pair(nullptr, 0);
 }
-};
+}
 
 lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
   TargetSP target_sp = CalculateTarget();
@@ -1420,7 +1422,7 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
   Error error;
   ValueObjectSP pointee = base->Dereference(error);
 
-  if (offset >= pointee->GetByteSize()) {
+  if (offset >= 0 && uint64_t(offset) >= pointee->GetByteSize()) {
     int64_t index = offset / pointee->GetByteSize();
     offset = offset % pointee->GetByteSize();
     const bool can_create = true;
@@ -1586,17 +1588,16 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
       continue;
     }
 
-    Instruction::Operand *register_operand = nullptr;
     Instruction::Operand *origin_operand = nullptr;
     if (operands[0].m_type == Instruction::Operand::Type::Register &&
         operands[0].m_clobbered == true && operands[0].m_register == reg) {
-      register_operand = &operands[0];
+      // operands[0] is a register operand
       origin_operand = &operands[1];
     } else if (operands[1].m_type == Instruction::Operand::Type::Register &&
                operands[1].m_clobbered == true &&
                operands[1].m_register == reg) {
-      register_operand = &operands[1];
       origin_operand = &operands[0];
+      // operands[1] is a register operand
     } else {
       continue;
     }

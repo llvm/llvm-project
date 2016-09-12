@@ -496,6 +496,11 @@ static bool addArgumentReturnedAttrs(const SCCNodeSet &SCCNodes) {
     if (F->getReturnType()->isVoidTy())
       continue;
 
+    // There is nothing to do if an argument is already marked as 'returned'.
+    if (any_of(F->args(),
+               [](const Argument &Arg) { return Arg.hasReturnedAttr(); }))
+      continue;
+
     auto FindRetArg = [&]() -> Value * {
       Value *RetArg = nullptr;
       for (BasicBlock &BB : *F)

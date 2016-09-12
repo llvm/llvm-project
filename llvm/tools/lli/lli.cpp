@@ -662,7 +662,8 @@ int main(int argc, char **argv, char * const *envp) {
     }
 
     // Create a remote target client running over the channel.
-    typedef orc::remote::OrcRemoteTargetClient<orc::remote::RPCChannel> MyRemote;
+    typedef orc::remote::OrcRemoteTargetClient<orc::remote::RPCByteChannel>
+      MyRemote;
     MyRemote R = ExitOnErr(MyRemote::Create(*C));
 
     // Create a remote memory manager.
