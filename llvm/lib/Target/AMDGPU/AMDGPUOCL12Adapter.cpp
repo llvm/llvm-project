@@ -68,7 +68,7 @@ static bool isNonDefaultAddrSpacePtr(Type *Ty) {
   StructType* StrType = dyn_cast<StructType>(PtrType->getElementType());
   if(StrType && StrType->isOpaque())
     return false;
-  return (PtrType->getAddressSpace() != 4);
+  return (PtrType->getAddressSpace() != 4 && PtrType->getAddressSpace() != 2);
 }
 
 /// \brief Check whether the Function signature has any of the
