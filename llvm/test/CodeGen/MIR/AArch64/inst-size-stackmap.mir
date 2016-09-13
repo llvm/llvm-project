@@ -1,0 +1,75 @@
+# RUN: llc -mtriple=aarch64-unknown -run-pass aarch64-branch-relax -aarch64-tbz-offset-bits=4 %s -o - | FileCheck %s
+--- |
+  ; ModuleID = 'test.ll'
+  source_filename = "test.ll"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown"
+
+  define void @test_stackmap_length(i32 %in) {
+    %val = and i32 %in, 1
+    %tst = icmp eq i32 %val, 0
+    br i1 %tst, label %true, label %false
+
+  true:                                             ; preds = %0
+    tail call void (i64, i32, ...) @llvm.experimental.stackmap(i64 0, i32 32)
+    ret void
+
+  false:                                            ; preds = %0
+    ret void
+  }
+
+  declare void @llvm.experimental.stackmap(i64, i32, ...)
+...
+---
+# CHECK-LABEL: name:{{.*}}test_stackmap_length
+# If the size of the stackmap is computed correctly, that will push
+# the bb.2.false block too far away from the TBNZW, so the branch will
+# have to be relaxed (note that we're using -aarch64-tbz-offset-bits to
+# constrain the range that can be reached with the TBNZW to something smaller
+# than what the stackmap is lowered to).
+# CHECK: TBZW killed %w0, 0, %bb.1.true
+# CHECK: B %bb.2.false
+name:            test_stackmap_length
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: false
+liveins:
+  - { reg: '%w0' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     true
+  hasPatchPoint:   false
+  stackSize:       16
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '%lr' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '%fp' }
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.1.true, %bb.2.false
+    liveins: %w0, %lr, %fp
+
+    TBNZW killed %w0, 0, %bb.2.false
+
+  bb.1.true:
+    successors: %bb.2.false
+    liveins: %lr, %fp
+
+    STACKMAP 0, 32, implicit-def dead early-clobber %x16, implicit-def dead early-clobber %x17, implicit-def dead early-clobber %lr
+
+  bb.2.false:
+    liveins: %lr, %fp
+
+    RET killed %lr
+

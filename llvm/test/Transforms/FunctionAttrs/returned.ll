@@ -16,3 +16,15 @@ lor.lhs.false:                                    ; preds = %entry
 cond.end:                                         ; preds = %entry
   ret i32 %p
 }
+
+; CHECK: define i32 @test2(i32 %p1, i32 returned %p2)
+define i32 @test2(i32 %p1, i32 returned %p2) {
+  %_tmp4 = icmp eq i32 %p1, %p2
+  br i1 %_tmp4, label %bb2, label %bb1
+
+bb2:                                              ; preds = %0
+  ret i32 %p1
+
+bb1:                                              ; preds = %bb1, %0
+  br label %bb1
+}

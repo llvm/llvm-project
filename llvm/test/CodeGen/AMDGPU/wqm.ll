@@ -466,6 +466,42 @@ else:
   ret <4 x float> %dtex
 }
 
+; Test awareness that s_wqm_b64 clobbers SCC.
+;
+; CHECK-LABEL: {{^}}test_scc:
+; CHECK: s_mov_b64 [[ORIG:s\[[0-9]+:[0-9]+\]]], exec
+; CHECK: s_wqm_b64 exec, exec
+; CHECK: s_cmp_
+; CHECK-NEXT: s_cbranch_scc
+; CHECK: ; %if
+; CHECK: s_and_b64 exec, exec, [[ORIG]]
+; CHECK: image_sample
+; CHECK: ; %else
+; CHECK: s_and_b64 exec, exec, [[ORIG]]
+; CHECK: image_sample
+; CHECK: ; %end
+define amdgpu_ps <4 x float> @test_scc(i32 inreg %sel, i32 %idx) #1 {
+main_body:
+  %cc = icmp sgt i32 %sel, 0
+  br i1 %cc, label %if, label %else
+
+if:
+  %r.if = call <4 x float> @llvm.SI.image.sample.i32(i32 0, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  br label %end
+
+else:
+  %r.else = call <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32> <i32 0, i32 1>, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  br label %end
+
+end:
+  %r = phi <4 x float> [ %r.if, %if ], [ %r.else, %else ]
+
+  call void @llvm.amdgcn.buffer.store.f32(float 1.0, <4 x i32> undef, i32 %idx, i32 0, i1 0, i1 0)
+
+  ret <4 x float> %r
+}
+
+
 declare void @llvm.amdgcn.image.store.v4i32(<4 x float>, <4 x i32>, <8 x i32>, i32, i1, i1, i1, i1) #1
 declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) #1
 declare void @llvm.amdgcn.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #1
@@ -474,6 +510,7 @@ declare <4 x float> @llvm.amdgcn.image.load.v4i32(<4 x i32>, <8 x i32>, i32, i1,
 declare float @llvm.amdgcn.buffer.load.f32(<4 x i32>, i32, i32, i1, i1) #2
 
 declare <4 x float> @llvm.SI.image.sample.i32(i32, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #3
+declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #3
 declare <4 x float> @llvm.SI.image.sample.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #3
 
 declare void @llvm.AMDGPU.kill(float)

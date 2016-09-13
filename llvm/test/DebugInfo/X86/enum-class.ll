@@ -1,9 +1,9 @@
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin %s -o %t -filetype=obj
 ; RUN: llvm-dwarfdump -debug-dump=info %t | FileCheck %s
 
-@a = global i32 0, align 4
-@b = global i64 0, align 8
-@c = global i32 0, align 4
+@a = global i32 0, align 4, !dbg !19
+@b = global i64 0, align 8, !dbg !20
+@c = global i32 0, align 4, !dbg !21
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!23}
@@ -24,9 +24,9 @@
 !14 = !DIEnumerator(name: "C1", value: 1) ; [ DW_TAG_enumerator ]
 !15 = !{}
 !17 = !{!19, !20, !21}
-!19 = !DIGlobalVariable(name: "a", line: 4, isLocal: false, isDefinition: true, scope: null, file: !4, type: !3, variable: i32* @a)
-!20 = !DIGlobalVariable(name: "b", line: 5, isLocal: false, isDefinition: true, scope: null, file: !4, type: !8, variable: i64* @b)
-!21 = !DIGlobalVariable(name: "c", line: 6, isLocal: false, isDefinition: true, scope: null, file: !4, type: !12, variable: i32* @c)
+!19 = !DIGlobalVariable(name: "a", line: 4, isLocal: false, isDefinition: true, scope: null, file: !4, type: !3)
+!20 = !DIGlobalVariable(name: "b", line: 5, isLocal: false, isDefinition: true, scope: null, file: !4, type: !8)
+!21 = !DIGlobalVariable(name: "c", line: 6, isLocal: false, isDefinition: true, scope: null, file: !4, type: !12)
 !22 = !DIFile(filename: "foo.cpp", directory: "/Users/echristo/tmp")
 
 ; CHECK: DW_TAG_enumeration_type [{{.*}}]

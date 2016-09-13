@@ -1,0 +1,84 @@
+# RUN: llc -mtriple x86_64-- -verify-machineinstrs -run-pass branch-folder -o - %s | FileCheck %s
+
+# Check the TCRETURNdi64cc optimization.
+
+--- |
+  target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
+
+  define i64 @test(i64 %arg, i8* %arg1) optsize {
+    %tmp = icmp ult i64 %arg, 100
+    br i1 %tmp, label %1, label %4
+
+    %tmp3 = icmp ult i64 %arg, 10
+    br i1 %tmp3, label %2, label %3
+
+    %tmp5 = tail call i64 @f1(i8* %arg1, i64 %arg)
+    ret i64 %tmp5
+
+    %tmp7 = tail call i64 @f2(i8* %arg1, i64 %arg)
+    ret i64 %tmp7
+
+    ret i64 123
+  }
+
+  declare i64 @f1(i8*, i64)
+  declare i64 @f2(i8*, i64)
+
+...
+---
+name:            test
+liveins:
+  - { reg: '%rdi' }
+  - { reg: '%rsi' }
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.4
+    liveins: %rdi, %rsi
+
+    %rax = COPY %rdi
+    CMP64ri8 %rax, 99, implicit-def %eflags
+    JA_1 %bb.4, implicit %eflags
+    JMP_1 %bb.1
+
+  ; CHECK: bb.1:
+  ; CHECK-NEXT: successors: %bb.2({{[^)]+}}){{$}}
+  ; CHECK-NEXT: liveins: %rax, %rsi
+  ; CHECK-NEXT: {{^  $}}
+  ; CHECK-NEXT: %rdi = COPY %rsi
+  ; CHECK-NEXT: %rsi = COPY %rax
+  ; CHECK-NEXT: CMP64ri8 %rax, 9, implicit-def %eflags
+  ; CHECK-NEXT: TCRETURNdi64cc @f1, 0, 3, csr_64, implicit %rsp, implicit %eflags, implicit %rsp, implicit %rdi, implicit %rsi
+
+  bb.1:
+    successors: %bb.2, %bb.3
+    liveins: %rax, %rsi
+
+    CMP64ri8 %rax, 9, implicit-def %eflags
+    JA_1 %bb.3, implicit %eflags
+    JMP_1 %bb.2
+
+  bb.2:
+    liveins: %rax, %rsi
+
+    %rdi = COPY %rsi
+    %rsi = COPY %rax
+
+    TCRETURNdi64 @f1, 0, csr_64, implicit %rsp, implicit %rdi, implicit %rsi
+
+  ; CHECK: bb.2:
+  ; CHECK-NEXT: liveins: %rax, %rdi, %rsi
+  ; CHECK-NEXT: {{^  $}}
+  ; CHECK-NEXT: TCRETURNdi64 @f2, 0, csr_64, implicit %rsp, implicit %rdi, implicit %rsi
+
+  bb.3:
+    liveins: %rax, %rsi
+
+    %rdi = COPY %rsi
+    %rsi = COPY %rax
+    TCRETURNdi64 @f2, 0, csr_64, implicit %rsp, implicit %rdi, implicit %rsi
+
+  bb.4:
+    dead %eax = MOV32ri64 123, implicit-def %rax
+    RET 0, %rax
+
+...

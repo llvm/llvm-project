@@ -3,7 +3,7 @@
 
 ; ModuleID = 'test.c'
 
-@GLB = common global i32 0, align 4
+@GLB = common global i32 0, align 4, !dbg !14
 
 define i32 @f() nounwind !dbg !5 {
   %LOC = alloca i32, align 4
@@ -27,7 +27,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !8 = !{!9}
 !9 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !12 = !{!14}
-!14 = !DIGlobalVariable(name: "GLB", line: 1, isLocal: false, isDefinition: true, scope: null, file: !6, type: !9, variable: i32* @GLB)
+!14 = !DIGlobalVariable(name: "GLB", line: 1, isLocal: false, isDefinition: true, scope: null, file: !6, type: !9)
 !15 = !DILocalVariable(name: "LOC", line: 4, scope: !16, file: !6, type: !9)
 !16 = distinct !DILexicalBlock(line: 3, column: 9, file: !20, scope: !5)
 !17 = !DILocation(line: 4, column: 9, scope: !16)

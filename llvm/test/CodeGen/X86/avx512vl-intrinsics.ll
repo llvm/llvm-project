@@ -3885,83 +3885,6 @@ define <8 x float>@test_int_x86_avx512_mask_getmant_ps_256(<8 x float> %x0, <8 x
   ret <8 x float> %res2
 }
 
-declare <2 x double> @llvm.x86.avx512.mask.shuf.pd.128(<2 x double>, <2 x double>, i32, <2 x double>, i8)
-
-define <2 x double>@test_int_x86_avx512_mask_shuf_pd_128(<2 x double> %x0, <2 x double> %x1, <2 x double> %x3, i8 %x4) {
-; CHECK-LABEL: test_int_x86_avx512_mask_shuf_pd_128:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vshufpd $22, %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf1,0xfd,0x09,0xc6,0xd1,0x16]
-; CHECK-NEXT:    ## xmm2 {%k1} = xmm0[0],xmm1[1]
-; CHECK-NEXT:    vshufpd $22, %xmm1, %xmm0, %xmm3 {%k1} {z} ## encoding: [0x62,0xf1,0xfd,0x89,0xc6,0xd9,0x16]
-; CHECK-NEXT:    ## xmm3 {%k1} {z} = xmm0[0],xmm1[1]
-; CHECK-NEXT:    vshufpd $22, %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0xc6,0xc1,0x16]
-; CHECK-NEXT:    ## xmm0 = xmm0[0],xmm1[1]
-; CHECK-NEXT:    vaddpd %xmm0, %xmm2, %xmm0 ## encoding: [0x62,0xf1,0xed,0x08,0x58,0xc0]
-; CHECK-NEXT:    vaddpd %xmm0, %xmm3, %xmm0 ## encoding: [0x62,0xf1,0xe5,0x08,0x58,0xc0]
-; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <2 x double> @llvm.x86.avx512.mask.shuf.pd.128(<2 x double> %x0, <2 x double> %x1, i32 22, <2 x double> %x3, i8 %x4)
-  %res1 = call <2 x double> @llvm.x86.avx512.mask.shuf.pd.128(<2 x double> %x0, <2 x double> %x1, i32 22, <2 x double> %x3, i8 -1)
-  %res2 = call <2 x double> @llvm.x86.avx512.mask.shuf.pd.128(<2 x double> %x0, <2 x double> %x1, i32 22, <2 x double> zeroinitializer, i8 %x4)
-  %res3 = fadd <2 x double> %res, %res1
-  %res4 = fadd <2 x double> %res2, %res3
-  ret <2 x double> %res4
-}
-
-declare <4 x double> @llvm.x86.avx512.mask.shuf.pd.256(<4 x double>, <4 x double>, i32, <4 x double>, i8)
-
-define <4 x double>@test_int_x86_avx512_mask_shuf_pd_256(<4 x double> %x0, <4 x double> %x1, <4 x double> %x3, i8 %x4) {
-; CHECK-LABEL: test_int_x86_avx512_mask_shuf_pd_256:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vshufpd $22, %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf1,0xfd,0x29,0xc6,0xd1,0x16]
-; CHECK-NEXT:    ## ymm2 {%k1} = ymm0[0],ymm1[1],ymm0[3],ymm1[2]
-; CHECK-NEXT:    vshufpd $22, %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0xc6,0xc1,0x16]
-; CHECK-NEXT:    ## ymm0 = ymm0[0],ymm1[1],ymm0[3],ymm1[2]
-; CHECK-NEXT:    vaddpd %ymm0, %ymm2, %ymm0 ## encoding: [0x62,0xf1,0xed,0x28,0x58,0xc0]
-; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <4 x double> @llvm.x86.avx512.mask.shuf.pd.256(<4 x double> %x0, <4 x double> %x1, i32 22, <4 x double> %x3, i8 %x4)
-  %res1 = call <4 x double> @llvm.x86.avx512.mask.shuf.pd.256(<4 x double> %x0, <4 x double> %x1, i32 22, <4 x double> %x3, i8 -1)
-  %res2 = fadd <4 x double> %res, %res1
-  ret <4 x double> %res2
-}
-
-declare <4 x float> @llvm.x86.avx512.mask.shuf.ps.128(<4 x float>, <4 x float>, i32, <4 x float>, i8)
-
-define <4 x float>@test_int_x86_avx512_mask_shuf_ps_128(<4 x float> %x0, <4 x float> %x1, <4 x float> %x3, i8 %x4) {
-; CHECK-LABEL: test_int_x86_avx512_mask_shuf_ps_128:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vshufps $22, %xmm1, %xmm0, %xmm2 {%k1} ## encoding: [0x62,0xf1,0x7c,0x09,0xc6,0xd1,0x16]
-; CHECK-NEXT:    ## xmm2 {%k1} = xmm0[2,1],xmm1[1,0]
-; CHECK-NEXT:    vshufps $22, %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0xc6,0xc1,0x16]
-; CHECK-NEXT:    ## xmm0 = xmm0[2,1],xmm1[1,0]
-; CHECK-NEXT:    vaddps %xmm0, %xmm2, %xmm0 ## encoding: [0x62,0xf1,0x6c,0x08,0x58,0xc0]
-; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <4 x float> @llvm.x86.avx512.mask.shuf.ps.128(<4 x float> %x0, <4 x float> %x1, i32 22, <4 x float> %x3, i8 %x4)
-  %res1 = call <4 x float> @llvm.x86.avx512.mask.shuf.ps.128(<4 x float> %x0, <4 x float> %x1, i32 22, <4 x float> %x3, i8 -1)
-  %res2 = fadd <4 x float> %res, %res1
-  ret <4 x float> %res2
-}
-
-declare <8 x float> @llvm.x86.avx512.mask.shuf.ps.256(<8 x float>, <8 x float>, i32, <8 x float>, i8)
-
-define <8 x float>@test_int_x86_avx512_mask_shuf_ps_256(<8 x float> %x0, <8 x float> %x1, <8 x float> %x3, i8 %x4) {
-; CHECK-LABEL: test_int_x86_avx512_mask_shuf_ps_256:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
-; CHECK-NEXT:    vshufps $22, %ymm1, %ymm0, %ymm2 {%k1} ## encoding: [0x62,0xf1,0x7c,0x29,0xc6,0xd1,0x16]
-; CHECK-NEXT:    ## ymm2 {%k1} = ymm0[2,1],ymm1[1,0],ymm0[6,5],ymm1[5,4]
-; CHECK-NEXT:    vshufps $22, %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7c,0x28,0xc6,0xc1,0x16]
-; CHECK-NEXT:    ## ymm0 = ymm0[2,1],ymm1[1,0],ymm0[6,5],ymm1[5,4]
-; CHECK-NEXT:    vaddps %ymm0, %ymm2, %ymm0 ## encoding: [0x62,0xf1,0x6c,0x28,0x58,0xc0]
-; CHECK-NEXT:    retq ## encoding: [0xc3]
-  %res = call <8 x float> @llvm.x86.avx512.mask.shuf.ps.256(<8 x float> %x0, <8 x float> %x1, i32 22, <8 x float> %x3, i8 %x4)
-  %res1 = call <8 x float> @llvm.x86.avx512.mask.shuf.ps.256(<8 x float> %x0, <8 x float> %x1, i32 22, <8 x float> %x3, i8 -1)
-  %res2 = fadd <8 x float> %res, %res1
-  ret <8 x float> %res2
-}
-
 declare <4 x i32> @llvm.x86.avx512.mask.valign.d.128(<4 x i32>, <4 x i32>, i32, <4 x i32>, i8)
 
 define <4 x i32>@test_int_x86_avx512_mask_valign_d_128(<4 x i32> %x0, <4 x i32> %x1,<4 x i32> %x3, i8 %x4) {
@@ -5296,9 +5219,9 @@ define <8 x i32>@test_int_x86_avx512_mask_psrav8_si_const() {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vmovdqa32 {{.*#+}} ymm0 = [2,9,4294967284,23,4294967270,37,4294967256,51]
 ; CHECK-NEXT:    ## encoding: [0x62,0xf1,0x7d,0x28,0x6f,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI312_0-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI308_0-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    vpsravd {{.*}}(%rip), %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x46,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI312_1-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI308_1-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <8 x i32> @llvm.x86.avx512.mask.psrav8.si(<8 x i32> <i32 2, i32 9, i32 -12, i32 23, i32 -26, i32 37, i32 -40, i32 51>, <8 x i32> <i32 1, i32 18, i32 35, i32 52, i32 69, i32 15, i32 32, i32 49>, <8 x i32> zeroinitializer, i8 -1)
   ret <8 x i32> %res
@@ -5329,9 +5252,9 @@ define <2 x i64>@test_int_x86_avx512_mask_psrav_q_128_const(i8 %x3) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vmovdqa64 {{.*#+}} xmm0 = [2,18446744073709551607]
 ; CHECK-NEXT:    ## encoding: [0x62,0xf1,0xfd,0x08,0x6f,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI314_0-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI310_0-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    vpsravq {{.*}}(%rip), %xmm0, %xmm0 ## encoding: [0x62,0xf2,0xfd,0x08,0x46,0x05,A,A,A,A]
-; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI314_1-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI310_1-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <2 x i64> @llvm.x86.avx512.mask.psrav.q.128(<2 x i64> <i64 2, i64 -9>, <2 x i64> <i64 1, i64 90>, <2 x i64> zeroinitializer, i8 -1)
   ret <2 x i64> %res

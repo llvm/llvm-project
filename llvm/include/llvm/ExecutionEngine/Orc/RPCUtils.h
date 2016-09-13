@@ -166,7 +166,7 @@ protected:
     template <typename ChannelT>
     static Error readResult(ChannelT &C, std::promise<PErrorReturn> &P) {
       RetT Val;
-      auto Err = deserialize(C, Val);
+      auto Err = deserializeSeq(C, Val);
       auto Err2 = endReceiveMessage(C);
       Err = joinErrors(std::move(Err), std::move(Err2));
       if (Err)
@@ -581,7 +581,7 @@ public:
     if (auto Err = startReceiveMessage(C))
       return Err;
 
-    return deserialize(C, Id);
+    return deserializeSeq(C, Id);
   }
 
   /// Deserialize args for Func from C and call Handler. The signature of
@@ -645,7 +645,7 @@ public:
   /// This should be called from the receive loop to retrieve results.
   Error handleResponse(ChannelT &C, SequenceNumberT *SeqNoRet = nullptr) {
     SequenceNumberT SeqNo;
-    if (auto Err = deserialize(C, SeqNo)) {
+    if (auto Err = deserializeSeq(C, SeqNo)) {
       abandonOutstandingResults();
       return Err;
     }

@@ -239,14 +239,11 @@ let isCall = 1 in
 
 
 // Tail call stuff.
-
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     isCodeGenOnly = 1, SchedRW = [WriteJumpLd] in
   let Uses = [ESP] in {
   def TCRETURNdi : PseudoI<(outs),
                      (ins i32imm_pcrel:$dst, i32imm:$offset), []>;
-  def TCRETURNdicc : PseudoI<(outs),
-                     (ins i32imm_pcrel:$dst, i32imm:$offset, i32imm:$cond), []>;
   def TCRETURNri : PseudoI<(outs),
                      (ins ptr_rc_tailcall:$dst, i32imm:$offset), []>;
   let mayLoad = 1 in
@@ -260,17 +257,26 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
                            "jmp\t$dst",
                            [], IIC_JMP_REL>;
 
-  // This gets substituted to a conditional jump instruction in MC lowering.
-  def TAILJMPd_CC : Ii32PCRel<0x80, RawFrm, (outs),
-                           (ins i32imm_pcrel:$dst, i32imm:$cond),
-                           "",
-                           [], IIC_JMP_REL>;
-
   def TAILJMPr : I<0xFF, MRM4r, (outs), (ins ptr_rc_tailcall:$dst),
                    "", [], IIC_JMP_REG>;  // FIXME: Remove encoding when JIT is dead.
   let mayLoad = 1 in
   def TAILJMPm : I<0xFF, MRM4m, (outs), (ins i32mem_TC:$dst),
                    "jmp{l}\t{*}$dst", [], IIC_JMP_MEM>;
+}
+
+// Conditional tail calls are similar to the above, but they are branches
+// rather than barriers, and they use EFLAGS.
+let isCall = 1, isTerminator = 1, isReturn = 1, isBranch = 1,
+    isCodeGenOnly = 1, SchedRW = [WriteJumpLd] in
+  let Uses = [ESP, EFLAGS] in {
+  def TCRETURNdicc : PseudoI<(outs),
+                     (ins i32imm_pcrel:$dst, i32imm:$offset, i32imm:$cond), []>;
+
+  // This gets substituted to a conditional jump instruction in MC lowering.
+  def TAILJMPd_CC : Ii32PCRel<0x80, RawFrm, (outs),
+                           (ins i32imm_pcrel:$dst, i32imm:$cond),
+                           "",
+                           [], IIC_JMP_REL>;
 }
 
 
@@ -308,9 +314,6 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
   def TCRETURNdi64   : PseudoI<(outs),
                         (ins i64i32imm_pcrel:$dst, i32imm:$offset),
                         []>;
-  def TCRETURNdi64cc : PseudoI<(outs),
-                        (ins i64i32imm_pcrel:$dst, i32imm:$offset,
-                         i32imm:$cond), []>;
   def TCRETURNri64   : PseudoI<(outs),
                         (ins ptr_rc_tailcall:$dst, i32imm:$offset), []>;
   let mayLoad = 1 in
@@ -319,12 +322,6 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
 
   def TAILJMPd64 : Ii32PCRel<0xE9, RawFrm, (outs), (ins i64i32imm_pcrel:$dst),
                    "jmp\t$dst", [], IIC_JMP_REL>;
-
-  // This gets substituted to a conditional jump instruction in MC lowering.
-  def TAILJMPd64_CC : Ii32PCRel<0x80, RawFrm, (outs),
-                           (ins i64i32imm_pcrel:$dst, i32imm:$cond),
-                           "",
-                           [], IIC_JMP_REL>;
 
   def TAILJMPr64 : I<0xFF, MRM4r, (outs), (ins ptr_rc_tailcall:$dst),
                      "jmp{q}\t{*}$dst", [], IIC_JMP_MEM>;
@@ -342,4 +339,20 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     def TAILJMPm64_REX : I<0xFF, MRM4m, (outs), (ins i64mem_TC:$dst),
                            "rex64 jmp{q}\t{*}$dst", [], IIC_JMP_MEM>;
   }
+}
+
+// Conditional tail calls are similar to the above, but they are branches
+// rather than barriers, and they use EFLAGS.
+let isCall = 1, isTerminator = 1, isReturn = 1, isBranch = 1,
+    isCodeGenOnly = 1, SchedRW = [WriteJumpLd] in
+  let Uses = [RSP, EFLAGS] in {
+  def TCRETURNdi64cc : PseudoI<(outs),
+                           (ins i64i32imm_pcrel:$dst, i32imm:$offset,
+                            i32imm:$cond), []>;
+
+  // This gets substituted to a conditional jump instruction in MC lowering.
+  def TAILJMPd64_CC : Ii32PCRel<0x80, RawFrm, (outs),
+                           (ins i64i32imm_pcrel:$dst, i32imm:$cond),
+                           "",
+                           [], IIC_JMP_REL>;
 }

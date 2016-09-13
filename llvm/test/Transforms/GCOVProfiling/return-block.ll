@@ -22,7 +22,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@A = common global i32 0, align 4
+@A = common global i32 0, align 4, !dbg !9
 
 ; Function Attrs: nounwind uwtable
 define void @test() #0 !dbg !4 {
@@ -61,7 +61,7 @@ attributes #2 = { nounwind }
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
 !8 = !{!9}
-!9 = !DIGlobalVariable(name: "A", line: 3, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10, variable: i32* @A)
+!9 = !DIGlobalVariable(name: "A", line: 3, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10)
 !10 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !11 = !{i32 2, !"Dwarf Version", i32 4}
 !12 = !{i32 2, !"Debug Info Version", i32 3}

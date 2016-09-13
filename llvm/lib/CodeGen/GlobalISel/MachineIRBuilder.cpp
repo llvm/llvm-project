@@ -84,6 +84,18 @@ MachineInstrBuilder MachineIRBuilder::buildFrameIndex(unsigned Res, int Idx) {
       .addFrameIndex(Idx);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildGlobalValue(unsigned Res,
+                                                       const GlobalValue *GV) {
+  assert(MRI->getType(Res).isPointer() && "invalid operand type");
+  assert(MRI->getType(Res).getAddressSpace() ==
+             GV->getType()->getAddressSpace() &&
+         "address space mismatch");
+
+  return buildInstr(TargetOpcode::G_GLOBAL_VALUE)
+      .addDef(Res)
+      .addGlobalAddress(GV);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildAdd(unsigned Res, unsigned Op0,
                                                unsigned Op1) {
   assert((MRI->getType(Res).isScalar() || MRI->getType(Res).isVector()) &&
@@ -92,6 +104,18 @@ MachineInstrBuilder MachineIRBuilder::buildAdd(unsigned Res, unsigned Op0,
          MRI->getType(Res) == MRI->getType(Op1) && "type mismatch");
 
   return buildInstr(TargetOpcode::G_ADD)
+      .addDef(Res)
+      .addUse(Op0)
+      .addUse(Op1);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildGEP(unsigned Res, unsigned Op0,
+                                               unsigned Op1) {
+  assert(MRI->getType(Res).isPointer() &&
+         MRI->getType(Res) == MRI->getType(Op0) && "type mismatch");
+  assert(MRI->getType(Op1).isScalar()  && "invalid offset type");
+
+  return buildInstr(TargetOpcode::G_GEP)
       .addDef(Res)
       .addUse(Op0)
       .addUse(Op1);
@@ -204,6 +228,17 @@ MachineInstrBuilder MachineIRBuilder::buildSExt(unsigned Res, unsigned Op) {
 MachineInstrBuilder MachineIRBuilder::buildZExt(unsigned Res, unsigned Op) {
   validateTruncExt(Res, Op, true);
   return buildInstr(TargetOpcode::G_ZEXT).addDef(Res).addUse(Op);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildSExtOrTrunc(unsigned Res,
+                                                       unsigned Op) {
+  unsigned Opcode = TargetOpcode::COPY;
+  if (MRI->getType(Res).getSizeInBits() > MRI->getType(Op).getSizeInBits())
+    Opcode = TargetOpcode::G_SEXT;
+  else if (MRI->getType(Res).getSizeInBits() < MRI->getType(Op).getSizeInBits())
+    Opcode = TargetOpcode::G_TRUNC;
+
+  return buildInstr(Opcode).addDef(Res).addUse(Op);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildExtract(ArrayRef<unsigned> Results,

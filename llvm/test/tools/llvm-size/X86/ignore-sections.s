@@ -1,6 +1,6 @@
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=x86_64-pc-linux
 // RUN: llvm-size -A %t.o | FileCheck --check-prefix="SYSV" %s
-// RUN: llvm-size -B %t.o| FileCheck --check-prefix="BSD" %s
+// RUN: llvm-size -B -t %t.o| FileCheck --check-prefix="BSD" %s
 
         .text
         .zero 4
@@ -26,3 +26,4 @@
 
 // BSD:        text    data     bss     dec     hex filename
 // BSD-NEXT:      4       4       4      12       c {{[ -\(\)_A-Za-z0-9.\\/:]+}}
+// BSD-NEXT:      4       4       4      12       c (TOTALS)

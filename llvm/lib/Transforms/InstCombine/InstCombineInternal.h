@@ -289,16 +289,16 @@ public:
   Instruction *visitVAStartInst(VAStartInst &I);
   Instruction *visitVACopyInst(VACopyInst &I);
 
-  // visitInstruction - Specify what to return for unhandled instructions...
+  /// Specify what to return for unhandled instructions.
   Instruction *visitInstruction(Instruction &I) { return nullptr; }
 
-  // True when DB dominates all uses of DI execpt UI.
-  // UI must be in the same block as DI.
-  // The routine checks that the DI parent and DB are different.
+  /// True when DB dominates all uses of DI except UI.
+  /// UI must be in the same block as DI.
+  /// The routine checks that the DI parent and DB are different.
   bool dominatesAllUses(const Instruction *DI, const Instruction *UI,
                         const BasicBlock *DB) const;
 
-  // Replace select with select operand SIOpd in SI-ICmp sequence when possible
+  /// Try to replace select with select operand SIOpd in SI-ICmp sequence.
   bool replacedSelectWithOperand(SelectInst *SI, const ICmpInst *Icmp,
                                  const unsigned SIOpd);
 
@@ -556,6 +556,7 @@ private:
                                   ICmpInst::Predicate Pred);
   Instruction *foldICmpWithCastAndCast(ICmpInst &ICI);
 
+  Instruction *foldICmpUsingKnownBits(ICmpInst &Cmp);
   Instruction *foldICmpInstWithConstant(ICmpInst &Cmp);
 
   Instruction *foldICmpTruncConstant(ICmpInst &Cmp, Instruction *Trunc,

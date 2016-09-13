@@ -309,10 +309,17 @@ public:
 
   // @}
 
+  // Takes a mangled name and returns the corresponding JITSymbol (if a
+  // definition of that mangled name has been added to the JIT).
   JITSymbol findSymbol(const std::string &Name, bool CheckFunctionsOnly);
+
   // DEPRECATED - Please use findSymbol instead.
+  //
   // This is not directly exposed via the ExecutionEngine API, but it is
   // used by the LinkingMemoryManager.
+  //
+  // getSymbolAddress takes an unmangled name and returns the corresponding
+  // JITSymbol if a definition of the name has been added to the JIT.
   uint64_t getSymbolAddress(const std::string &Name,
                             bool CheckFunctionsOnly);
 

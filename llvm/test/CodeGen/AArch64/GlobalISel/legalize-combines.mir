@@ -48,11 +48,11 @@ body: |
       ; Only one of these extracts can be eliminated, the offsets don't match
       ; properly in the other cases.
     ; CHECK-LABEL: name: test_combines
-    ; CHECK: %3(s32) = G_SEQUENCE %2, 1
-    ; CHECK: %4(s8) = G_EXTRACT %3, 0
+    ; CHECK: %3(s32) = G_SEQUENCE %2(s8), 1
+    ; CHECK: %4(s8) = G_EXTRACT %3(s32), 0
     ; CHECK-NOT: G_EXTRACT
-    ; CHECK: %6(s8) = G_EXTRACT %3, 2
-    ; CHECK: %7(s32) = G_ZEXT %2
+    ; CHECK: %6(s8) = G_EXTRACT %3(s32), 2
+    ; CHECK: %7(s32) = G_ZEXT %2(s8)
     %3(s32) = G_SEQUENCE %2, 1
     %4(s8) = G_EXTRACT %3, 0
     %5(s8) = G_EXTRACT %3, 1
@@ -60,9 +60,9 @@ body: |
     %7(s32) = G_ZEXT %5
 
       ; Similarly, here the types don't match.
-    ; CHECK: %10(s32) = G_SEQUENCE %8, 0, %9, 16
-    ; CHECK: %11(s1) = G_EXTRACT %10, 0
-    ; CHECK: %12(s32) = G_EXTRACT %10, 0
+    ; CHECK: %10(s32) = G_SEQUENCE %8(s16), 0, %9(s16), 16
+    ; CHECK: %11(s1) = G_EXTRACT %10(s32), 0
+    ; CHECK: %12(s32) = G_EXTRACT %10(s32), 0
     %8(s16) = G_TRUNC %0
     %9(s16) = G_ADD %8, %8
     %10(s32) = G_SEQUENCE %8, 0, %9, 16
@@ -74,7 +74,7 @@ body: |
     %13(s16), %14(s16) = G_EXTRACT %10, 0, 16
     %15(s16) = G_ADD %13, %14
 
-    ; CHECK: %18(<2 x s32>) = G_EXTRACT %17, 0
+    ; CHECK: %18(<2 x s32>) = G_EXTRACT %17(s128), 0
     ; CHECK: %19(<2 x s32>) = G_ADD %18, %18
     %16(s64) = COPY %x0
     %17(s128) = G_SEQUENCE %16, 0, %16, 64

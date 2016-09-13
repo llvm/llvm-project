@@ -7,7 +7,7 @@ source_filename = "source-interleave-hexagon.c"
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon-unknown--elf"
 
-@a = global i32 1, align 4
+@a = global i32 1, align 4, !dbg !4
 
 ; Function Attrs: nounwind
 define i32 @foo() #0 !dbg !9 {
@@ -45,7 +45,7 @@ attributes #1 = { nounwind readnone }
 !1 = !DIFile(filename: "source-interleave-hexagon.c", directory: "SRC_COMPDIR")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, variable: i32* @a)
+!4 = distinct !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true)
 !5 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !6 = !{i32 2, !"Dwarf Version", i32 4}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
