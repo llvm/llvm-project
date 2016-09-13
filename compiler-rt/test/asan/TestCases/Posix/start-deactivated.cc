@@ -2,8 +2,8 @@
 // Main executable is uninstrumented, but linked to ASan runtime. The shared
 // library is instrumented. Memory errors before dlopen are not detected.
 
-// RUN: %clangxx_asan -O0 -DSHARED_LIB %s -fPIC -shared -o %t-so.so
-// RUN: %clangxx -O0 %s -c -o %t.o
+// RUN: %clangxx_asan -O0 -DSHARED_LIB %s -std=c++11 -fPIC -shared -o %t-so.so
+// RUN: %clangxx -O0 %s -std=c++11 -c -o %t.o
 // RUN: %clangxx_asan -O0 %t.o %libdl -o %t
 // RUN: %env_asan_opts=start_deactivated=1,allocator_may_return_null=0 \
 // RUN:   ASAN_ACTIVATION_OPTIONS=allocator_may_return_null=1 not %run %t 2>&1 | FileCheck %s
@@ -32,18 +32,25 @@
 
 #include "sanitizer/asan_interface.h"
 
-void test_malloc_shadow() {
-  char *p = (char *)malloc(100);
-  char *q = (char *)__asan_region_is_poisoned(p + 95, 8);
-  fprintf(stderr, "=%zd=\n", q ? q - (p + 95) : -1);
-  free(p);
+constexpr unsigned nPtrs = 200;
+char *ptrs[nPtrs];
+
+void test_malloc_shadow(char *p, size_t sz, bool expect_redzones) {
+  assert((char *)__asan_region_is_poisoned(p - 1, sz + 1) ==
+         (expect_redzones ? p - 1 : nullptr));
+  assert((char *)__asan_region_is_poisoned(p, sz) == nullptr);
+  assert((char *)__asan_region_is_poisoned(p, sz + 1) ==
+         (expect_redzones ? p + sz : nullptr));
 }
 
 typedef void (*Fn)();
 
 int main(int argc, char *argv[]) {
-  test_malloc_shadow();
-  // CHECK: =-1=
+  // Before activation: no redzones.
+  for (size_t sz = 1; sz < nPtrs; ++sz) {
+    ptrs[sz] = (char *)malloc(sz);
+    test_malloc_shadow(ptrs[sz], sz, false);
+  }
 
   std::string path = std::string(argv[0]) + "-so.so";
   void *dso = dlopen(path.c_str(), RTLD_NOW);
@@ -52,14 +59,24 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  test_malloc_shadow();
-  // CHECK: =5=
-
   // After this line ASan is activated and starts detecting errors.
   void *fn = dlsym(dso, "do_another_bad_thing");
   if (!fn) {
     fprintf(stderr, "dlsym failed: %s\n", dlerror());
     return 1;
+  }
+
+  // After activation: redzones.
+  {
+    char *p = (char *)malloc(100);
+    test_malloc_shadow(p, 100, true);
+    free(p);
+  }
+
+  // Pre-existing allocations got redzones, too.
+  for (size_t sz = 1; sz < nPtrs; ++sz) {
+    test_malloc_shadow(ptrs[sz], sz, true);
+    free(ptrs[sz]);
   }
 
   // Test that ASAN_ACTIVATION_OPTIONS=allocator_may_return_null=1 has effect.
