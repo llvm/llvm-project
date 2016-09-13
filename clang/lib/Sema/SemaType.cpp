@@ -1000,6 +1000,29 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
   return S.Context.getObjCObjectType(type, finalTypeArgs, { }, false);
 }
 
+QualType Sema::BuildObjCTypeParamType(const ObjCTypeParamDecl *Decl,
+                                      SourceLocation ProtocolLAngleLoc,
+                                      ArrayRef<ObjCProtocolDecl *> Protocols,
+                                      ArrayRef<SourceLocation> ProtocolLocs,
+                                      SourceLocation ProtocolRAngleLoc,
+                                      bool FailOnError) {
+  QualType Result = QualType(Decl->getTypeForDecl(), 0);
+  if (!Protocols.empty()) {
+    bool HasError;
+    Result = Context.applyObjCProtocolQualifiers(Result, Protocols,
+                                                 HasError);
+    if (HasError) {
+      Diag(SourceLocation(), diag::err_invalid_protocol_qualifiers)
+        << SourceRange(ProtocolLAngleLoc, ProtocolRAngleLoc);
+      if (FailOnError) Result = QualType();
+    }
+    if (FailOnError && Result.isNull())
+      return QualType();
+  }
+
+  return Result;
+}
+
 QualType Sema::BuildObjCObjectType(QualType BaseType,
                                    SourceLocation Loc,
                                    SourceLocation TypeArgsLAngleLoc,

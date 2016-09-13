@@ -450,6 +450,14 @@ void ASTTypeWriter::VisitObjCInterfaceType(const ObjCInterfaceType *T) {
   Code = TYPE_OBJC_INTERFACE;
 }
 
+void ASTTypeWriter::VisitObjCTypeParamType(const ObjCTypeParamType *T) {
+  Record.AddDeclRef(T->getDecl());
+  Record.push_back(T->getNumProtocols());
+  for (const auto *I : T->quals())
+    Record.AddDeclRef(I);
+  Code = TYPE_OBJC_TYPE_PARAM;
+}
+
 void ASTTypeWriter::VisitObjCObjectType(const ObjCObjectType *T) {
   Record.AddTypeRef(T->getBaseType());
   Record.push_back(T->getTypeArgsAsWritten().size());
@@ -586,6 +594,14 @@ void TypeLocWriter::VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
 }
 void TypeLocWriter::VisitTypedefTypeLoc(TypedefTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
+}
+void TypeLocWriter::VisitObjCTypeParamTypeLoc(ObjCTypeParamTypeLoc TL) {
+  if (TL.getNumProtocols()) {
+    Record.AddSourceLocation(TL.getProtocolLAngleLoc());
+    Record.AddSourceLocation(TL.getProtocolRAngleLoc());
+  }
+  for (unsigned i = 0, e = TL.getNumProtocols(); i != e; ++i)
+    Record.AddSourceLocation(TL.getProtocolLoc(i));
 }
 void TypeLocWriter::VisitTypeOfExprTypeLoc(TypeOfExprTypeLoc TL) {
   Record.AddSourceLocation(TL.getTypeofLoc());
@@ -1066,6 +1082,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(TYPE_ATOMIC);
   RECORD(TYPE_DECAYED);
   RECORD(TYPE_ADJUSTED);
+  RECORD(TYPE_OBJC_TYPE_PARAM);
   RECORD(LOCAL_REDECLARATIONS);
   RECORD(DECL_TYPEDEF);
   RECORD(DECL_TYPEALIAS);

@@ -1534,6 +1534,18 @@ bool CursorVisitor::VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
   return Visit(MakeCursorObjCClassRef(TL.getIFaceDecl(), TL.getNameLoc(), TU));
 }
 
+bool CursorVisitor::VisitObjCTypeParamTypeLoc(ObjCTypeParamTypeLoc TL) {
+  if (Visit(MakeCursorTypeRef(TL.getDecl(), TL.getLocStart(), TU)))
+    return true;
+  for (unsigned I = 0, N = TL.getNumProtocols(); I != N; ++I) {
+    if (Visit(MakeCursorObjCProtocolRef(TL.getProtocol(I), TL.getProtocolLoc(I),
+                                        TU)))
+      return true;
+  }
+
+  return false;
+}
+
 bool CursorVisitor::VisitObjCObjectTypeLoc(ObjCObjectTypeLoc TL) {
   if (TL.hasBaseTypeAsWritten() && Visit(TL.getBaseLoc()))
     return true;
