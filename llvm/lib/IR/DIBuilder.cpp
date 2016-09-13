@@ -535,13 +535,13 @@ static void checkGlobalVariableScope(DIScope *Context) {
 
 DIGlobalVariable *DIBuilder::createGlobalVariable(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *F,
-    unsigned LineNumber, DIType *Ty, bool isLocalToUnit, Constant *Val,
+    unsigned LineNumber, DIType *Ty, bool isLocalToUnit, DIExpression *Expr,
     MDNode *Decl) {
   checkGlobalVariableScope(Context);
 
   auto *N = DIGlobalVariable::getDistinct(
       VMContext, cast_or_null<DIScope>(Context), Name, LinkageName, F,
-      LineNumber, Ty, isLocalToUnit, true, Val,
+      LineNumber, Ty, isLocalToUnit, true, Expr,
       cast_or_null<DIDerivedType>(Decl));
   AllGVs.push_back(N);
   return N;
@@ -549,13 +549,13 @@ DIGlobalVariable *DIBuilder::createGlobalVariable(
 
 DIGlobalVariable *DIBuilder::createTempGlobalVariableFwdDecl(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *F,
-    unsigned LineNumber, DIType *Ty, bool isLocalToUnit, Constant *Val,
+    unsigned LineNumber, DIType *Ty, bool isLocalToUnit, DIExpression *Expr,
     MDNode *Decl) {
   checkGlobalVariableScope(Context);
 
   return DIGlobalVariable::getTemporary(
              VMContext, cast_or_null<DIScope>(Context), Name, LinkageName, F,
-             LineNumber, Ty, isLocalToUnit, false, Val,
+             LineNumber, Ty, isLocalToUnit, false, Expr,
              cast_or_null<DIDerivedType>(Decl))
       .release();
 }

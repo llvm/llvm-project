@@ -4,7 +4,7 @@
 ; CHECK-NOT: "bar"
 ; CHECK-NOT: "abcd"
 
-@xyz = global i32 2
+@xyz = global i32 2, !dbg !17
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #0
@@ -47,7 +47,7 @@ attributes #2 = { nounwind readonly ssp }
 !14 = distinct !DILexicalBlock(line: 5, column: 0, file: !1, scope: !3)
 !15 = !DILocalVariable(name: "i", line: 7, arg: 1, scope: !10, file: !5, type: !9)
 !16 = !DIGlobalVariable(name: "abcd", line: 2, isLocal: true, isDefinition: true, scope: !5, file: !5, type: !9)
-!17 = !DIGlobalVariable(name: "xyz", line: 3, isLocal: false, isDefinition: true, scope: !5, file: !5, type: !9, variable: i32* @xyz)
+!17 = !DIGlobalVariable(name: "xyz", line: 3, isLocal: false, isDefinition: true, scope: !5, file: !5, type: !9)
 !18 = !DILocation(line: 6, scope: !19)
 !19 = distinct !DILexicalBlock(line: 6, column: 0, file: !1, scope: !6)
 !20 = !DILocation(line: 7, scope: !10)

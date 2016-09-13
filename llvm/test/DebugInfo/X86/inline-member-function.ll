@@ -34,7 +34,7 @@
 
 %struct.foo = type { i8 }
 
-@i = global i32 0, align 4
+@i = global i32 0, align 4, !dbg !19
 
 ; Function Attrs: uwtable
 define i32 @main() #0 !dbg !13 {
@@ -82,7 +82,7 @@ attributes #1 = { nounwind readnone }
 !16 = !{!9}
 !17 = distinct !DISubprogram(name: "func", linkageName: "_ZN3foo4funcEi", line: 2, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 2, file: !1, scope: !4, type: !7, declaration: !6, variables: !2)
 !18 = !{!19}
-!19 = !DIGlobalVariable(name: "i", line: 5, isLocal: false, isDefinition: true, scope: null, file: !14, type: !9, variable: i32* @i)
+!19 = !DIGlobalVariable(name: "i", line: 5, isLocal: false, isDefinition: true, scope: null, file: !14, type: !9)
 !20 = !{i32 2, !"Dwarf Version", i32 4}
 !21 = !{i32 1, !"Debug Info Version", i32 3}
 !22 = !{!"clang version 3.5.0 "}

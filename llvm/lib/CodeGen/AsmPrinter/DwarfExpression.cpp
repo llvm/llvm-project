@@ -278,6 +278,13 @@ void DwarfExpression::AddExpression(DIExpression::expr_op_iterator I,
     case dwarf::DW_OP_deref:
       EmitOp(dwarf::DW_OP_deref);
       break;
+    case dwarf::DW_OP_constu:
+      EmitOp(dwarf::DW_OP_constu);
+      EmitUnsigned(I->getArg(0));
+      break;
+    case dwarf::DW_OP_stack_value:
+      AddStackValue();
+      break;
     default:
       llvm_unreachable("unhandled opcode found in expression");
     }

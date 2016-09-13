@@ -73,36 +73,9 @@ unsigned DwarfCompileUnit::getOrCreateSourceID(StringRef FileName,
       Asm->OutStreamer->hasRawTextSupport() ? 0 : getUniqueID());
 }
 
-// Return const expression if value is a GEP to access merged global
-// constant. e.g.
-// i8* getelementptr ({ i8, i8, i8, i8 }* @_MergedGlobals, i32 0, i32 0)
-static const ConstantExpr *getMergedGlobalExpr(const Value *V) {
-  const ConstantExpr *CE = dyn_cast_or_null<ConstantExpr>(V);
-  if (!CE || CE->getNumOperands() != 3 ||
-      CE->getOpcode() != Instruction::GetElementPtr)
-    return nullptr;
-
-  // First operand points to a global struct.
-  Value *Ptr = CE->getOperand(0);
-  GlobalValue *GV = dyn_cast<GlobalValue>(Ptr);
-  if (!GV || !isa<StructType>(GV->getValueType()))
-    return nullptr;
-
-  // Second operand is zero.
-  const ConstantInt *CI = dyn_cast_or_null<ConstantInt>(CE->getOperand(1));
-  if (!CI || !CI->isZero())
-    return nullptr;
-
-  // Third operand is offset.
-  if (!isa<ConstantInt>(CE->getOperand(2)))
-    return nullptr;
-
-  return CE;
-}
-
 /// getOrCreateGlobalVariableDIE - get or create global variable DIE.
 DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
-    const DIGlobalVariable *GV) {
+    const DIGlobalVariable *GV, const GlobalVariable *Global) {
   // Check for pre-existence.
   if (DIE *Die = getDIE(GV))
     return Die;
@@ -147,12 +120,22 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
 
   // Add location.
   bool addToAccelTable = false;
-  if (auto *Global = dyn_cast_or_null<GlobalVariable>(GV->getVariable())) {
+
+  DIExpression *Expr = GV->getExpr();
+
+  // For compatibility with DWARF 3 and earlier,
+  // DW_AT_location(DW_OP_constu, X, DW_OP_stack_value) becomes
+  // DW_AT_const_value(X).
+  if (Expr && Expr->getNumElements() == 3 &&
+      Expr->getElement(0) == dwarf::DW_OP_constu &&
+      Expr->getElement(2) == dwarf::DW_OP_stack_value) {
+    addConstantValue(*VariableDIE, /*Unsigned=*/true, Expr->getElement(1));
     // We cannot describe the location of dllimport'd variables: the computation
     // of their address requires loads from the IAT.
-    if (!Global->hasDLLImportStorageClass()) {
+  } else if (!Global || !Global->hasDLLImportStorageClass()) {
+    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+    if (Global) {
       addToAccelTable = true;
-      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       const MCSymbol *Sym = Asm->getSymbol(Global);
       if (Global->isThreadLocal()) {
         if (Asm->TM.Options.EmulatedTLS) {
@@ -187,30 +170,16 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
         addOpAddress(*Loc, Sym);
       }
 
-      addBlock(*VariableDIE, dwarf::DW_AT_location, Loc);
-      if (DD->useAllLinkageNames())
-        addLinkageName(*VariableDIE, GV->getLinkageName());
+      if (Expr) {
+        DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+        DwarfExpr.AddExpression(Expr->expr_op_begin(), Expr->expr_op_end());
+      }
     }
-  } else if (const ConstantInt *CI =
-                 dyn_cast_or_null<ConstantInt>(GV->getVariable())) {
-    addConstantValue(*VariableDIE, CI, GTy);
-  } else if (const ConstantExpr *CE = getMergedGlobalExpr(GV->getVariable())) {
-    auto *Ptr = cast<GlobalValue>(CE->getOperand(0));
-    if (!Ptr->hasDLLImportStorageClass()) {
-      addToAccelTable = true;
-      // GV is a merged global.
-      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-      MCSymbol *Sym = Asm->getSymbol(Ptr);
-      DD->addArangeLabel(SymbolCU(this, Sym));
-      addOpAddress(*Loc, Sym);
-      addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_constu);
-      SmallVector<Value *, 3> Idx(CE->op_begin() + 1, CE->op_end());
-      addUInt(*Loc, dwarf::DW_FORM_udata,
-              Asm->getDataLayout().getIndexedOffsetInType(Ptr->getValueType(),
-                                                          Idx));
-      addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_plus);
-      addBlock(*VariableDIE, dwarf::DW_AT_location, Loc);
-    }
+
+    addBlock(*VariableDIE, dwarf::DW_AT_location, Loc);
+
+    if (DD->useAllLinkageNames())
+      addLinkageName(*VariableDIE, GV->getLinkageName());
   }
 
   if (addToAccelTable) {
@@ -674,7 +643,7 @@ DIE *DwarfCompileUnit::constructImportedEntityDIE(
   else if (auto *T = dyn_cast<DIType>(Entity))
     EntityDie = getOrCreateTypeDIE(T);
   else if (auto *GV = dyn_cast<DIGlobalVariable>(Entity))
-    EntityDie = getOrCreateGlobalVariableDIE(GV);
+    EntityDie = getOrCreateGlobalVariableDIE(GV, nullptr);
   else
     EntityDie = getDIE(Entity);
   assert(EntityDie);

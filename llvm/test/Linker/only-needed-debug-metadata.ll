@@ -11,8 +11,8 @@
 ; ONLYNEEDED: distinct !DISubprogram(name: "foo"
 ; ONLYNEEDED-NOT: distinct !DISubprogram(name: "unused"
 
-@X = global i32 5
-@U = global i32 6
+@X = global i32 5, !dbg !14
+@U = global i32 6, !dbg !15
 @U_linkonce = linkonce_odr hidden global i32 6
 define i32 @foo() !dbg !4 {
     ret i32 7, !dbg !20
@@ -38,8 +38,8 @@ define i32 @unused() !dbg !10 {
 !11 = !DISubroutineType(types: !12)
 !12 = !{!7}
 !13 = !{!14, !15}
-!14 = !DIGlobalVariable(name: "X", scope: !0, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true, variable: i32* @X)
-!15 = !DIGlobalVariable(name: "U", scope: !0, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true, variable: i32* @U)
+!14 = !DIGlobalVariable(name: "X", scope: !0, file: !1, line: 1, type: !7, isLocal: false, isDefinition: true)
+!15 = !DIGlobalVariable(name: "U", scope: !0, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true)
 !16 = !{i32 2, !"Dwarf Version", i32 4}
 !17 = !{i32 2, !"Debug Info Version", i32 3}
 !18 = !{!"clang version 3.8.0 (trunk 251407) (llvm/trunk 251401)"}

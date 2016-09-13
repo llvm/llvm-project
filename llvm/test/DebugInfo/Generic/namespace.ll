@@ -200,8 +200,8 @@
 ; }
 ; void B::func_fwd() {}
 
-@_ZN1A1B1iE = global i32 0, align 4
-@_ZN1A1B7var_fwdE = global i32 0, align 4
+@_ZN1A1B1iE = global i32 0, align 4, !dbg !31
+@_ZN1A1B7var_fwdE = global i32 0, align 4, !dbg !32
 @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_debug_info_namespace.cpp, i8* null }]
 
 ; Function Attrs: nounwind ssp uwtable
@@ -317,8 +317,8 @@ attributes #1 = { nounwind readnone }
 !28 = !DIFile(filename: "debug-info-namespace.cpp", directory: "/tmp")
 !29 = !DISubroutineType(types: !2)
 !30 = !{!31, !32}
-!31 = !DIGlobalVariable(name: "i", linkageName: "_ZN1A1B1iE", line: 20, isLocal: false, isDefinition: true, scope: !6, file: !18, type: !13, variable: i32* @_ZN1A1B1iE)
-!32 = !DIGlobalVariable(name: "var_fwd", linkageName: "_ZN1A1B7var_fwdE", line: 44, isLocal: false, isDefinition: true, scope: !6, file: !18, type: !13, variable: i32* @_ZN1A1B7var_fwdE)
+!31 = !DIGlobalVariable(name: "i", linkageName: "_ZN1A1B1iE", line: 20, isLocal: false, isDefinition: true, scope: !6, file: !18, type: !13)
+!32 = !DIGlobalVariable(name: "var_fwd", linkageName: "_ZN1A1B7var_fwdE", line: 44, isLocal: false, isDefinition: true, scope: !6, file: !18, type: !13)
 !33 = !{!34, !35, !36, !37, !40, !41, !42, !43, !44, !45, !47, !48, !49, !51, !54, !55, !56}
 !34 = !DIImportedEntity(tag: DW_TAG_imported_module, line: 15, scope: !7, entity: !6)
 !35 = !DIImportedEntity(tag: DW_TAG_imported_module, line: 18, scope: !0, entity: !7)

@@ -173,10 +173,10 @@
 %struct.anon = type { i32, i32 }
 %struct.baz = type { i8 }
 
-@b = global %struct.bar zeroinitializer, align 1
-@_ZN7echidna8capybara8mongoose6animalE = global %"class.echidna::capybara::mongoose::fluffy" zeroinitializer, align 4
-@w = internal global %"struct.<anonymous namespace>::walrus" zeroinitializer, align 1
-@wom = global %struct.wombat zeroinitializer, align 4
+@b = global %struct.bar zeroinitializer, align 1, !dbg !39
+@_ZN7echidna8capybara8mongoose6animalE = global %"class.echidna::capybara::mongoose::fluffy" zeroinitializer, align 4, !dbg !40
+@w = internal global %"struct.<anonymous namespace>::walrus" zeroinitializer, align 1, !dbg !41
+@wom = global %struct.wombat zeroinitializer, align 4, !dbg !42
 @llvm.global_ctors = appending global [1 x { i32, void ()* }] [{ i32, void ()* } { i32 65535, void ()* @_GLOBAL__I_a }]
 
 ; Function Attrs: nounwind uwtable
@@ -256,10 +256,10 @@ attributes #1 = { nounwind readnone }
 !36 = distinct !DISubprogram(name: "", linkageName: "_GLOBAL__I_a", line: 25, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagArtificial, isOptimized: false, unit: !0, scopeLine: 25, file: !1, scope: !23, type: !37, variables: !2)
 !37 = !DISubroutineType(types: !2)
 !38 = !{!39, !40, !41, !42}
-!39 = !DIGlobalVariable(name: "b", line: 3, isLocal: false, isDefinition: true, scope: null, file: !23, type: !4, variable: %struct.bar* @b)
-!40 = !DIGlobalVariable(name: "animal", linkageName: "_ZN7echidna8capybara8mongoose6animalE", line: 18, isLocal: false, isDefinition: true, scope: !7, file: !23, type: !6, variable: %"class.echidna::capybara::mongoose::fluffy"* @_ZN7echidna8capybara8mongoose6animalE)
-!41 = !DIGlobalVariable(name: "w", line: 29, isLocal: true, isDefinition: true, scope: null, file: !23, type: !28, variable: %"struct.<anonymous namespace>::walrus"* @w)
-!42 = !DIGlobalVariable(name: "wom", line: 38, isLocal: false, isDefinition: true, scope: null, file: !23, type: !14, variable: %struct.wombat* @wom)
+!39 = !DIGlobalVariable(name: "b", line: 3, isLocal: false, isDefinition: true, scope: null, file: !23, type: !4)
+!40 = !DIGlobalVariable(name: "animal", linkageName: "_ZN7echidna8capybara8mongoose6animalE", line: 18, isLocal: false, isDefinition: true, scope: !7, file: !23, type: !6)
+!41 = !DIGlobalVariable(name: "w", line: 29, isLocal: true, isDefinition: true, scope: null, file: !23, type: !28)
+!42 = !DIGlobalVariable(name: "wom", line: 38, isLocal: false, isDefinition: true, scope: null, file: !23, type: !14)
 !43 = !{i32 2, !"Dwarf Version", i32 4}
 !44 = !{i32 1, !"Debug Info Version", i32 3}
 !45 = !{!"clang version 3.5 "}
