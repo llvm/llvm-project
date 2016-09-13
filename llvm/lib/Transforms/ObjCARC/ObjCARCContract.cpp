@@ -601,7 +601,8 @@ bool ObjCARCContract::runOnFunction(Function &F) {
     };
 
 
-    Value *Arg = cast<CallInst>(Inst)->getArgOperand(0), *OrigArg = Arg;
+    Value *Arg = cast<CallInst>(Inst)->getArgOperand(0);
+    Value *OrigArg = Arg;
 
     // TODO: Change this to a do-while.
     for (;;) {
