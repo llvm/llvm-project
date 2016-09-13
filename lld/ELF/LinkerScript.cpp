@@ -215,7 +215,47 @@ template <class ELFT> void LinkerScript<ELFT>::createAssignments() {
 }
 
 template <class ELFT>
+static SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
+                                            StringRef OutsecName) {
+  // When using linker script the merge rules are different.
+  // Unfortunately, linker scripts are name based. This means that expressions
+  // like *(.foo*) can refer to multiple input sections that would normally be
+  // placed in different output sections. We cannot put them in different
+  // output sections or we would produce wrong results for
+  // start = .; *(.foo.*) end = .; *(.bar)
+  // and a mapping of .foo1 and .bar1 to one section and .foo2 and .bar2 to
+  // another. The problem is that there is no way to layout those output
+  // sections such that the .foo sections are the only thing between the
+  // start and end symbols.
+
+  // An extra annoyance is that we cannot simply disable merging of the contents
+  // of SHF_MERGE sections, but our implementation requires one output section
+  // per "kind" (string or not, which size/aligment).
+  // Fortunately, creating symbols in the middle of a merge section is not
+  // supported by bfd or gold, so we can just create multiple section in that
+  // case.
+  const typename ELFT::Shdr *H = C->getSectionHdr();
+  typedef typename ELFT::uint uintX_t;
+  uintX_t Flags = H->sh_flags & (SHF_MERGE | SHF_STRINGS);
+
+  uintX_t Alignment = 0;
+  if (isa<MergeInputSection<ELFT>>(C))
+    Alignment = std::max(H->sh_addralign, H->sh_entsize);
+
+  return SectionKey<ELFT::Is64Bits>{OutsecName, /*Type*/ 0, Flags, Alignment};
+}
+
+template <class ELFT>
 void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
+  auto AddSec = [&](InputSectionBase<ELFT> *Sec, StringRef Name) {
+    OutputSectionBase<ELFT> *OutSec;
+    bool IsNew;
+    std::tie(OutSec, IsNew) = Factory.create(createKey(Sec, Name), Sec);
+    if (IsNew)
+      OutputSections->push_back(OutSec);
+    return OutSec;
+  };
+
   for (const std::unique_ptr<BaseCommand> &Base1 : Opt.Commands) {
     if (auto *Cmd = dyn_cast<SymbolAssignment>(Base1.get())) {
       if (shouldDefine<ELFT>(Cmd))
@@ -235,12 +275,7 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
         continue;
 
       for (InputSectionBase<ELFT> *Sec : V) {
-        OutputSectionBase<ELFT> *OutSec;
-        bool IsNew;
-        std::tie(OutSec, IsNew) = Factory.create(Sec, Cmd->Name);
-        if (IsNew)
-          OutputSections->push_back(OutSec);
-
+        OutputSectionBase<ELFT> *OutSec = AddSec(Sec, Cmd->Name);
         uint32_t Subalign = Cmd->SubalignExpr ? Cmd->SubalignExpr(0) : 0;
 
         if (Subalign)
@@ -256,11 +291,7 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
     for (InputSectionBase<ELFT> *S : F->getSections()) {
       if (isDiscarded(S) || S->OutSec)
         continue;
-      OutputSectionBase<ELFT> *OutSec;
-      bool IsNew;
-      std::tie(OutSec, IsNew) = Factory.create(S, getOutputSectionName(S));
-      if (IsNew)
-        OutputSections->push_back(OutSec);
+      OutputSectionBase<ELFT> *OutSec = AddSec(S, getOutputSectionName(S));
       OutSec->addSection(S);
     }
   }
@@ -410,9 +441,6 @@ template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
 
       if (Cmd->AddrExpr)
         Dot = Cmd->AddrExpr(Dot);
-
-      if (Cmd->AlignExpr)
-        Sec->updateAlignment(Cmd->AlignExpr(Dot));
 
       if ((Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS) {
         uintX_t TVA = Dot + ThreadBssOffset;

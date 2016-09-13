@@ -166,14 +166,6 @@ bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   if (Config->Optimize == 0)
     return false;
 
-  // We don't merge if linker script has SECTIONS command. When script
-  // do layout it can merge several sections with different attributes
-  // into single output sections. We currently do not support adding
-  // mergeable input sections to regular output ones as well as adding
-  // regular input sections to mergeable output.
-  if (ScriptConfig->HasContents)
-    return false;
-
   // A mergeable section with size 0 is useless because they don't have
   // any data to merge. A mergeable string section with size 0 can be
   // argued as invalid because it doesn't end with a null character.

@@ -18,6 +18,9 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 
 // C includes
@@ -148,6 +151,12 @@ enum class MinidumpPCPUInformationARMElfHwCaps : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ IDIVT)
 };
 
+enum class MinidumpMiscInfoFlags : uint32_t {
+  ProcessID = (1 << 0),
+  ProcessTimes = (1 << 1),
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ ProcessTimes)
+};
+
 template <typename T>
 Error consumeObject(llvm::ArrayRef<uint8_t> &Buffer, const T *&Object) {
   Error error;
@@ -160,6 +169,11 @@ Error consumeObject(llvm::ArrayRef<uint8_t> &Buffer, const T *&Object) {
   Buffer = Buffer.drop_front(sizeof(T));
   return error;
 }
+
+// parse a MinidumpString which is with UTF-16
+// Reference:
+// https://msdn.microsoft.com/en-us/library/windows/desktop/ms680395(v=vs.85).aspx
+llvm::Optional<std::string> parseMinidumpString(llvm::ArrayRef<uint8_t> &data);
 
 // Reference:
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms680378(v=vs.85).aspx
@@ -219,7 +233,7 @@ struct MinidumpThread {
 
   static const MinidumpThread *Parse(llvm::ArrayRef<uint8_t> &data);
 
-  static llvm::Optional<std::vector<const MinidumpThread *>>
+  static llvm::ArrayRef<MinidumpThread>
   ParseThreadList(llvm::ArrayRef<uint8_t> &data);
 };
 static_assert(sizeof(MinidumpThread) == 48,
@@ -272,12 +286,12 @@ struct MinidumpSystemInfo {
 static_assert(sizeof(MinidumpSystemInfo) == 56,
               "sizeof MinidumpSystemInfo is not correct!");
 
-// TODO check flags to see what's valid
 // TODO misc2, misc3 ?
 // Reference:
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms680389(v=vs.85).aspx
 struct MinidumpMiscInfo {
   llvm::support::ulittle32_t size;
+  // flags1 represents what info in the struct is valid
   llvm::support::ulittle32_t flags1;
   llvm::support::ulittle32_t process_id;
   llvm::support::ulittle32_t process_create_time;
@@ -285,9 +299,93 @@ struct MinidumpMiscInfo {
   llvm::support::ulittle32_t process_kernel_time;
 
   static const MinidumpMiscInfo *Parse(llvm::ArrayRef<uint8_t> &data);
+
+  llvm::Optional<lldb::pid_t> GetPid() const;
 };
 static_assert(sizeof(MinidumpMiscInfo) == 24,
               "sizeof MinidumpMiscInfo is not correct!");
+
+// The /proc/pid/status is saved as an ascii string in the file
+class LinuxProcStatus {
+public:
+  llvm::StringRef proc_status;
+  lldb::pid_t pid;
+
+  static llvm::Optional<LinuxProcStatus> Parse(llvm::ArrayRef<uint8_t> &data);
+
+  lldb::pid_t GetPid() const;
+
+private:
+  LinuxProcStatus() = default;
+};
+
+// MinidumpModule stuff
+struct MinidumpVSFixedFileInfo {
+  llvm::support::ulittle32_t signature;
+  llvm::support::ulittle32_t struct_version;
+  llvm::support::ulittle32_t file_version_hi;
+  llvm::support::ulittle32_t file_version_lo;
+  llvm::support::ulittle32_t product_version_hi;
+  llvm::support::ulittle32_t product_version_lo;
+  // file_flags_mask - identifies valid bits in fileFlags
+  llvm::support::ulittle32_t file_flags_mask;
+  llvm::support::ulittle32_t file_flags;
+  llvm::support::ulittle32_t file_os;
+  llvm::support::ulittle32_t file_type;
+  llvm::support::ulittle32_t file_subtype;
+  llvm::support::ulittle32_t file_date_hi;
+  llvm::support::ulittle32_t file_date_lo;
+};
+static_assert(sizeof(MinidumpVSFixedFileInfo) == 52,
+              "sizeof MinidumpVSFixedFileInfo is not correct!");
+
+struct MinidumpModule {
+  llvm::support::ulittle64_t base_of_image;
+  llvm::support::ulittle32_t size_of_image;
+  llvm::support::ulittle32_t checksum;
+  llvm::support::ulittle32_t time_date_stamp;
+  llvm::support::ulittle32_t module_name_rva;
+  MinidumpVSFixedFileInfo version_info;
+  MinidumpLocationDescriptor CV_record;
+  MinidumpLocationDescriptor misc_record;
+  llvm::support::ulittle32_t reserved0[2];
+  llvm::support::ulittle32_t reserved1[2];
+
+  static const MinidumpModule *Parse(llvm::ArrayRef<uint8_t> &data);
+
+  static llvm::ArrayRef<MinidumpModule>
+  ParseModuleList(llvm::ArrayRef<uint8_t> &data);
+};
+static_assert(sizeof(MinidumpModule) == 108,
+              "sizeof MinidumpVSFixedFileInfo is not correct!");
+
+// Exception stuff
+struct MinidumpException {
+  enum {
+    MaxParams = 15,
+  };
+
+  llvm::support::ulittle32_t exception_code;
+  llvm::support::ulittle32_t exception_flags;
+  llvm::support::ulittle64_t exception_record;
+  llvm::support::ulittle64_t exception_address;
+  llvm::support::ulittle32_t number_parameters;
+  llvm::support::ulittle32_t unused_alignment;
+  llvm::support::ulittle64_t exception_information[MaxParams];
+};
+static_assert(sizeof(MinidumpException) == 152,
+              "sizeof MinidumpException is not correct!");
+
+struct MinidumpExceptionStream {
+  llvm::support::ulittle32_t thread_id;
+  llvm::support::ulittle32_t alignment;
+  MinidumpException exception_record;
+  MinidumpLocationDescriptor thread_context;
+
+  static const MinidumpExceptionStream *Parse(llvm::ArrayRef<uint8_t> &data);
+};
+static_assert(sizeof(MinidumpExceptionStream) == 168,
+              "sizeof MinidumpExceptionStream is not correct!");
 
 } // namespace minidump
 } // namespace lldb_private

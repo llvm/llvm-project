@@ -998,7 +998,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
     const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
 
-    Value *DevArray = DeviceAllocations[(ScopArrayInfo *)SAI];
+    Value *DevArray = DeviceAllocations[const_cast<ScopArrayInfo *>(SAI)];
     DevArray = createCallGetDevicePtr(DevArray);
     Instruction *Param = new AllocaInst(
         Builder.getInt8PtrTy(), Launch + "_param_" + std::to_string(Index),

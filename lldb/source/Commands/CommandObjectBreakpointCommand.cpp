@@ -24,6 +24,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
+#include "llvm/ADT/STLExtras.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -215,10 +217,9 @@ are no syntax errors may indicate that a function was declared but never called.
       if (!bp_options)
         continue;
 
-      BreakpointOptions::CommandData *cmd_data =
-          new BreakpointOptions::CommandData();
+      auto cmd_data = llvm::make_unique<BreakpointOptions::CommandData>();
       cmd_data->user_source.SplitIntoLines(line.c_str(), line.size());
-      bp_options->SetCommandDataCallback(cmd_data);
+      bp_options->SetCommandDataCallback(std::move(cmd_data));
     }
   }
 
@@ -238,8 +239,7 @@ are no syntax errors may indicate that a function was declared but never called.
   SetBreakpointCommandCallback(std::vector<BreakpointOptions *> &bp_options_vec,
                                const char *oneliner) {
     for (auto bp_options : bp_options_vec) {
-      BreakpointOptions::CommandData *cmd_data =
-          new BreakpointOptions::CommandData();
+      auto cmd_data = llvm::make_unique<BreakpointOptions::CommandData>();
 
       // It's necessary to set both user_source and script_source to the
       // oneliner.
@@ -251,7 +251,7 @@ are no syntax errors may indicate that a function was declared but never called.
       cmd_data->script_source.assign(oneliner);
       cmd_data->stop_on_error = m_options.m_stop_on_error;
 
-      bp_options->SetCommandDataCallback(cmd_data);
+      bp_options->SetCommandDataCallback(std::move(cmd_data));
     }
   }
 

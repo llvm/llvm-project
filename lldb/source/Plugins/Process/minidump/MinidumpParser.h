@@ -22,6 +22,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringRef.h"
 
 // C includes
 
@@ -40,10 +41,11 @@ public:
 
   lldb::offset_t GetByteSize();
 
-  llvm::Optional<llvm::ArrayRef<uint8_t>>
-  GetStream(MinidumpStreamType stream_type);
+  llvm::ArrayRef<uint8_t> GetStream(MinidumpStreamType stream_type);
 
-  llvm::Optional<std::vector<const MinidumpThread *>> GetThreads();
+  llvm::Optional<std::string> GetMinidumpString(uint32_t rva);
+
+  llvm::ArrayRef<MinidumpThread> GetThreads();
 
   const MinidumpSystemInfo *GetSystemInfo();
 
@@ -51,15 +53,22 @@ public:
 
   const MinidumpMiscInfo *GetMiscInfo();
 
+  llvm::Optional<LinuxProcStatus> GetLinuxProcStatus();
+
+  llvm::Optional<lldb::pid_t> GetPid();
+
+  llvm::ArrayRef<MinidumpModule> GetModuleList();
+
+  const MinidumpExceptionStream *GetExceptionStream();
+
 private:
   lldb::DataBufferSP m_data_sp;
   const MinidumpHeader *m_header;
   llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> m_directory_map;
 
-  MinidumpParser(const lldb::DataBufferSP &data_buf_sp,
-                 const MinidumpHeader *header,
-                 const llvm::DenseMap<uint32_t, MinidumpLocationDescriptor>
-                     &directory_map);
+  MinidumpParser(
+      const lldb::DataBufferSP &data_buf_sp, const MinidumpHeader *header,
+      llvm::DenseMap<uint32_t, MinidumpLocationDescriptor> &&directory_map);
 };
 
 } // namespace minidump

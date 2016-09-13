@@ -38,6 +38,8 @@
 
 #include "lldb/lldb-enumerations.h"
 
+#include "llvm/ADT/STLExtras.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -46,23 +48,13 @@ struct CallbackData {
   void *callback_baton;
 };
 
-class SBBreakpointCallbackBaton : public Baton {
+class SBBreakpointCallbackBaton : public TypedBaton<CallbackData> {
 public:
   SBBreakpointCallbackBaton(SBBreakpoint::BreakpointHitCallback callback,
                             void *baton)
-      : Baton(new CallbackData) {
-    CallbackData *data = (CallbackData *)m_data;
-    data->callback = callback;
-    data->callback_baton = baton;
-  }
-
-  ~SBBreakpointCallbackBaton() override {
-    CallbackData *data = (CallbackData *)m_data;
-
-    if (data) {
-      delete data;
-      m_data = nullptr;
-    }
+      : TypedBaton(llvm::make_unique<CallbackData>()) {
+    getItem()->callback = callback;
+    getItem()->callback_baton = baton;
   }
 };
 
