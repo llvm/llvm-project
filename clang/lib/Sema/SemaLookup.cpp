@@ -1339,7 +1339,7 @@ Module *Sema::getOwningModule(Decl *Entity) {
     // instance, maybe this is a lazily-declared special member of an imported
     // class).
     auto *Parent = cast<NamedDecl>(Entity->getDeclContext());
-    assert(Parent->isHidden() && "unexpectedly hidden decl");
+    assert(!Parent->isHidden() && "unexpectedly hidden decl");
     return getOwningModule(Parent);
   }
 
