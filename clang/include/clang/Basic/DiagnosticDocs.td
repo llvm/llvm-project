@@ -35,7 +35,7 @@ def GlobalDocumentation {
     .error {
       font-family: monospace;
       font-weight: bold;
-      color: #c70;
+      color: #c00;
     }
     .warning {
       font-family: monospace;

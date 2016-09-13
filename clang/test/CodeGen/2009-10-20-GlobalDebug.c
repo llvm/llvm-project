@@ -1,16 +1,18 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang -target i386-apple-darwin10 -flto -S -g %s -o - | FileCheck %s
+
+// CHECK: @main.localstatic = internal global i32 0, align 4, !dbg [[L:![0-9]+]]
+// CHECK: @global = common global i32 0, align 4, !dbg [[G:![0-9]+]]
+
 int global;
 int main() { 
   static int localstatic;
   return 0;
 }
 
-// CHECK: !DIGlobalVariable(name: "localstatic"
+// CHECK: [[L]] = distinct !DIGlobalVariable(name: "localstatic"
 // CHECK-NOT:               linkageName:
-// CHECK-SAME:              line: 5,
-// CHECK-SAME:              variable: i32* @main.localstatic
-// CHECK: !DIGlobalVariable(name: "global"
+// CHECK-SAME:              line: 9,
+// CHECK: [[G]] = distinct !DIGlobalVariable(name: "global"
 // CHECK-NOT:               linkageName:
-// CHECK-SAME:              line: 3,
-// CHECK-SAME:              variable: i32* @global
+// CHECK-SAME:              line: 7,

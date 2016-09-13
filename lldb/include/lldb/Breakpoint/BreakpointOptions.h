@@ -19,6 +19,7 @@
 // Project includes
 #include "lldb/Core/Baton.h"
 #include "lldb/Core/StringList.h"
+#include "lldb/Core/StructuredData.h"
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {
@@ -32,6 +33,52 @@ namespace lldb_private {
 
 class BreakpointOptions {
 public:
+  struct CommandData {
+    CommandData() : user_source(), script_source(), stop_on_error(true) {}
+
+    ~CommandData() = default;
+
+    static const char *GetSerializationKey() { return "BKPTCMDData"; }
+
+    StructuredData::ObjectSP SerializeToStructuredData();
+
+    static std::unique_ptr<CommandData>
+    CreateFromStructuredData(const StructuredData::Dictionary &options_dict,
+                             Error &error);
+
+    StringList user_source;
+    std::string script_source;
+    bool stop_on_error;
+
+  private:
+    enum OptionNames {
+      UserSource = 0,
+      ScriptSource,
+      StopOnError,
+      LastOptionName
+    };
+
+    static const char *g_option_names[LastOptionName];
+
+    static const char *GetKey(enum OptionNames enum_value) {
+      return g_option_names[enum_value];
+    }
+  };
+
+  class CommandBaton : public Baton {
+  public:
+    CommandBaton(CommandData *data) : Baton(data) {}
+
+    ~CommandBaton() override {
+      delete ((CommandData *)m_data);
+      m_data = nullptr;
+    }
+
+    void GetDescription(Stream *s, lldb::DescriptionLevel level) const override;
+  };
+
+  typedef std::shared_ptr<CommandBaton> CommandBatonSP;
+
   //------------------------------------------------------------------
   // Constructors and Destructors
   //------------------------------------------------------------------
@@ -43,18 +90,14 @@ public:
   BreakpointOptions(const BreakpointOptions &rhs);
 
   static BreakpointOptions *CopyOptionsNoCallback(BreakpointOptions &rhs);
+
   //------------------------------------------------------------------
-  /// This constructor allows you to specify all the breakpoint options.
+  /// This constructor allows you to specify all the breakpoint options
+  /// except the callback.  That one is more complicated, and better
+  /// to do by hand.
   ///
   /// @param[in] condition
   ///    The expression which if it evaluates to \b true if we are to stop
-  ///
-  /// @param[in] callback
-  ///    This is the plugin for some code that gets run, returns \b true if we
-  ///    are to stop.
-  ///
-  /// @param[in] baton
-  ///    Client data that will get passed to the callback.
   ///
   /// @param[in] enabled
   ///    Is this breakpoint enabled.
@@ -62,15 +105,19 @@ public:
   /// @param[in] ignore
   ///    How many breakpoint hits we should ignore before stopping.
   ///
-  /// @param[in] thread_id
-  ///    Only stop if \a thread_id hits the breakpoint.
   //------------------------------------------------------------------
-  BreakpointOptions(void *condition, BreakpointHitCallback callback,
-                    void *baton, bool enabled = true, int32_t ignore = 0,
-                    lldb::tid_t thread_id = LLDB_INVALID_THREAD_ID,
-                    bool one_shot = false);
+  BreakpointOptions(const char *condition, bool enabled = true,
+                    int32_t ignore = 0, bool one_shot = false);
 
   virtual ~BreakpointOptions();
+
+  static std::unique_ptr<BreakpointOptions>
+  CreateFromStructuredData(const StructuredData::Dictionary &data_dict,
+                           Error &error);
+
+  virtual StructuredData::ObjectSP SerializeToStructuredData();
+
+  static const char *GetSerializationKey() { return "BKPTOptions"; }
 
   //------------------------------------------------------------------
   // Operators
@@ -130,6 +177,10 @@ public:
   //------------------------------------------------------------------
   void SetCallback(BreakpointHitCallback callback,
                    const lldb::BatonSP &baton_sp, bool synchronous = false);
+
+  void SetCallback(BreakpointHitCallback callback,
+                   const BreakpointOptions::CommandBatonSP &command_baton_sp,
+                   bool synchronous = false);
 
   //------------------------------------------------------------------
   /// Remove the callback from this option set.
@@ -279,40 +330,39 @@ public:
 
   //------------------------------------------------------------------
   /// This is the default empty callback.
-  /// @return
-  ///     The thread id for which the breakpoint hit will stop,
-  ///     LLDB_INVALID_THREAD_ID for all threads.
   //------------------------------------------------------------------
   static bool NullCallback(void *baton, StoppointCallbackContext *context,
                            lldb::user_id_t break_id,
                            lldb::user_id_t break_loc_id);
 
-  struct CommandData {
-    CommandData() : user_source(), script_source(), stop_on_error(true) {}
-
-    ~CommandData() = default;
-
-    StringList user_source;
-    std::string script_source;
-    bool stop_on_error;
-  };
-
-  class CommandBaton : public Baton {
-  public:
-    CommandBaton(CommandData *data) : Baton(data) {}
-
-    ~CommandBaton() override {
-      delete ((CommandData *)m_data);
-      m_data = nullptr;
-    }
-
-    void GetDescription(Stream *s, lldb::DescriptionLevel level) const override;
-  };
+  //------------------------------------------------------------------
+  /// Set a callback based on BreakpointOptions::CommandData.
+  /// @param[in] cmd_data
+  ///     A new'ed CommandData object.  The breakpoint will take ownership
+  ///     of this object.
+  //------------------------------------------------------------------
+  void SetCommandDataCallback(CommandData *cmd_data);
 
 protected:
   //------------------------------------------------------------------
   // Classes that inherit from BreakpointOptions can see and modify these
   //------------------------------------------------------------------
+  enum OptionNames {
+    ConditionText = 0,
+    IgnoreCount,
+    EnabledState,
+    OneShotState,
+    LastOptionName
+  };
+  static const char *g_option_names[LastOptionName];
+
+  static const char *GetKey(enum OptionNames enum_value) {
+    return g_option_names[enum_value];
+  }
+
+  static bool BreakpointOptionsCallbackFunction(
+      void *baton, StoppointCallbackContext *context, lldb::user_id_t break_id,
+      lldb::user_id_t break_loc_id);
 
 private:
   //------------------------------------------------------------------
@@ -320,6 +370,7 @@ private:
   //------------------------------------------------------------------
   BreakpointHitCallback m_callback;  // This is the callback function pointer
   lldb::BatonSP m_callback_baton_sp; // This is the client data for the callback
+  bool m_baton_is_command_baton;
   bool m_callback_is_synchronous;
   bool m_enabled;
   bool m_one_shot;

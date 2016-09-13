@@ -3469,6 +3469,31 @@ void ASTReader::makeModuleVisible(Module *Mod,
   }
 }
 
+/// We've merged the definition \p MergedDef into the existing definition
+/// \p Def. Ensure that \p Def is made visible whenever \p MergedDef is made
+/// visible.
+void ASTReader::mergeDefinitionVisibility(NamedDecl *Def,
+                                          NamedDecl *MergedDef) {
+  // FIXME: This doesn't correctly handle the case where MergedDef is visible
+  // in modules other than its owning module. We should instead give the
+  // ASTContext a list of merged definitions for Def.
+  if (Def->isHidden()) {
+    // If MergedDef is visible or becomes visible, make the definition visible.
+    if (!MergedDef->isHidden())
+      Def->Hidden = false;
+    else if (getContext().getLangOpts().ModulesLocalVisibility) {
+      getContext().mergeDefinitionIntoModule(
+          Def, MergedDef->getImportedOwningModule(),
+          /*NotifyListeners*/ false);
+      PendingMergedDefinitionsToDeduplicate.insert(Def);
+    } else {
+      auto SubmoduleID = MergedDef->getOwningModuleID();
+      assert(SubmoduleID && "hidden definition in no module");
+      HiddenNamesMap[getSubmodule(SubmoduleID)].push_back(Def);
+    }
+  }
+}
+
 bool ASTReader::loadGlobalIndex() {
   if (GlobalIndex)
     return false;
@@ -8576,8 +8601,11 @@ void ASTReader::finishPendingActions() {
     if (FunctionDecl *FD = dyn_cast<FunctionDecl>(PB->first)) {
       // FIXME: Check for =delete/=default?
       // FIXME: Complain about ODR violations here?
-      if (!getContext().getLangOpts().Modules || !FD->hasBody())
+      const FunctionDecl *Defn = nullptr;
+      if (!getContext().getLangOpts().Modules || !FD->hasBody(Defn))
         FD->setLazyBody(PB->second);
+      else
+        mergeDefinitionVisibility(const_cast<FunctionDecl*>(Defn), FD);
       continue;
     }
 

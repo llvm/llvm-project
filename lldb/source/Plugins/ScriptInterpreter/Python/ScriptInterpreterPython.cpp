@@ -420,7 +420,7 @@ void ScriptInterpreterPython::IOHandlerInputComplete(IOHandler &io_handler,
         if (GenerateBreakpointCommandCallbackData(data_ap->user_source,
                                                   data_ap->script_source)
                 .Success()) {
-          BatonSP baton_sp(
+          BreakpointOptions::CommandBatonSP baton_sp(
               new BreakpointOptions::CommandBaton(data_ap.release()));
           bp_options->SetCallback(
               ScriptInterpreterPython::BreakpointCallbackFunction, baton_sp);
@@ -1050,11 +1050,11 @@ bool ScriptInterpreterPython::ExecuteOneLineWithReturn(
       }
       case eScriptReturnTypeCharStrOrNone: // char* or NULL if py_return ==
                                            // Py_None
-      {
-        const char format[3] = "z";
-        success = PyArg_Parse(py_return.get(), format, (char **)ret_value);
-        break;
-      }
+        {
+          const char format[3] = "z";
+          success = PyArg_Parse(py_return.get(), format, (char **)ret_value);
+          break;
+        }
       case eScriptReturnTypeBool: {
         const char format[2] = "b";
         success = PyArg_Parse(py_return.get(), format, (bool *)ret_value);
@@ -1251,7 +1251,8 @@ Error ScriptInterpreterPython::SetBreakpointCommandCallback(
   Error error = GenerateBreakpointCommandCallbackData(data_ap->user_source,
                                                       data_ap->script_source);
   if (error.Success()) {
-    BatonSP baton_sp(new BreakpointOptions::CommandBaton(data_ap.release()));
+    BreakpointOptions::CommandBatonSP baton_sp(
+        new BreakpointOptions::CommandBaton(data_ap.release()));
     bp_options->SetCallback(ScriptInterpreterPython::BreakpointCallbackFunction,
                             baton_sp);
     return error;

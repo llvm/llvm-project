@@ -18,7 +18,6 @@ class TestMultipleSimultaneousDebuggers(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfNoSBHeaders
-    @expectedFlakeyDarwin()
     @expectedFailureAll(
         archs="i[3-6]86",
         bugnumber="multi-process-driver.cpp creates an x64 target")

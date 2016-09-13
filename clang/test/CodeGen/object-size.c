@@ -276,7 +276,7 @@ void test23(struct Test23Ty *p) {
 
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false)
   gi = __builtin_object_size(&p->t[5], 0);
-  // CHECK: store i32 20
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false)
   gi = __builtin_object_size(&p->t[5], 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true)
   gi = __builtin_object_size(&p->t[5], 2);
@@ -444,7 +444,7 @@ void test29(struct DynStructVar *dv, struct DynStruct0 *d0,
 
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false)
   gi = __builtin_object_size(ss->snd, 0);
-  // CHECK: store i32 2
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false)
   gi = __builtin_object_size(ss->snd, 1);
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true)
   gi = __builtin_object_size(ss->snd, 2);
@@ -505,7 +505,7 @@ void test31() {
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false)
   gi = __builtin_object_size(ds1[9].snd, 1);
 
-  // CHECK: store i32 2
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false)
   gi = __builtin_object_size(&ss[9].snd[0], 1);
 
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false)
@@ -516,4 +516,23 @@ void test31() {
 
   // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false)
   gi = __builtin_object_size(&dsv[9].snd[0], 1);
+}
+
+// CHECK-LABEL: @PR30346
+void PR30346() {
+  struct sa_family_t {};
+  struct sockaddr {
+    struct sa_family_t sa_family;
+    char sa_data[14];
+  };
+
+  struct sockaddr *sa;
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false)
+  gi = __builtin_object_size(sa->sa_data, 0);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 false)
+  gi = __builtin_object_size(sa->sa_data, 1);
+  // CHECK: call i64 @llvm.objectsize.i64.p0i8(i8* %{{.*}}, i1 true)
+  gi = __builtin_object_size(sa->sa_data, 2);
+  // CHECK: store i32 14
+  gi = __builtin_object_size(sa->sa_data, 3);
 }

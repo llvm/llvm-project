@@ -15,6 +15,12 @@ struct D { D(); D(const D&); int x; };
 int d(int x) { D y[10]; return [x,y] { return y[x].x; }(); }
 
 // Randomness for file. -- 6
+
+// VAR:
+// CHECK: !DIGlobalVariable(name: "var"
+// CHECK-SAME:              line: [[VAR_LINE:[0-9]+]]
+// CHECK-SAME:              type: ![[VAR_T:[0-9]+]]
+
 // CHECK: [[FILE:.*]] = !DIFile(filename: "{{.*}}debug-lambda-expressions.cpp",
 
 // CVAR:
@@ -26,10 +32,6 @@ int d(int x) { D y[10]; return [x,y] { return y[x].x; }(); }
 // CHECK-SAME:                           elements: ![[CVAR_ARGS:[0-9]+]]
 // CHECK: ![[CVAR_ARGS]] = !{!{{[0-9]+}}}
 
-// VAR:
-// CHECK: !DIGlobalVariable(name: "var"
-// CHECK-SAME:              line: [[VAR_LINE:[0-9]+]]
-// CHECK-SAME:              type: ![[VAR_T:[0-9]+]]
 // CHECK: ![[VAR_T]] = distinct !DICompositeType(tag: DW_TAG_class_type
 // CHECK-SAME:                          line: [[VAR_LINE]],
 // CHECK-SAME:                          elements: ![[VAR_ARGS:[0-9]+]]
