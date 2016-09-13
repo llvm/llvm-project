@@ -150,6 +150,10 @@ def detect_source_layout(args):
                 'lib',
                 'libclang.dylib')):
             args.llvmbuild = os.path.join(args.llvmbuild, args.llvmbarch)
+    if not(os.path.exists(args.swiftbuild)):
+      args.swiftbuild = os.path.abspath(os.path.join(args.llvmbuild,'..',args.llvmbarch.replace('llvm','swift')))
+      if not(os.path.exists(args.swiftbuild)):
+        return False
     if os.path.isdir(
         os.path.join(
             args.lldb,
