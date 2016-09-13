@@ -748,6 +748,19 @@ public:
     list = newList;
   }
 
+  void addAllAtEnd(AttributeList *newList) {
+    if (!list) {
+      list = newList;
+      return;
+    }
+
+    AttributeList *lastInList = list;
+    while (AttributeList *next = lastInList->getNext())
+      lastInList = next;
+
+    lastInList->setNext(newList);
+  }
+
   void set(AttributeList *newList) {
     list = newList;
   }

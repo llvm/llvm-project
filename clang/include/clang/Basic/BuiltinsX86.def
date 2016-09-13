@@ -23,6 +23,10 @@
 #   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
 
+#if defined(BUILTIN) && !defined(TARGET_HEADER_BUILTIN)
+#  define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANG, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
+
 // FIXME: Are these nothrow/const?
 
 // Miscellaneous builtin for checking x86 cpu features.
@@ -301,7 +305,9 @@ TARGET_BUILTIN(__builtin_ia32_pabsw128, "V8sV8s", "", "ssse3")
 TARGET_BUILTIN(__builtin_ia32_pabsd128, "V4iV4i", "", "ssse3")
 
 TARGET_BUILTIN(__builtin_ia32_ldmxcsr, "vUi", "", "sse")
+TARGET_HEADER_BUILTIN(_mm_setcsr, "vUi", "h","xmmintrin.h", ALL_LANGUAGES, "sse")
 TARGET_BUILTIN(__builtin_ia32_stmxcsr, "Ui", "", "sse")
+TARGET_HEADER_BUILTIN(_mm_getcsr, "Ui", "h", "xmmintrin.h", ALL_LANGUAGES, "sse")
 TARGET_BUILTIN(__builtin_ia32_cvtss2si, "iV4f", "", "sse")
 TARGET_BUILTIN(__builtin_ia32_cvttss2si, "iV4f", "", "sse")
 TARGET_BUILTIN(__builtin_ia32_cvtss2si64, "LLiV4f", "", "sse")
@@ -310,6 +316,7 @@ TARGET_BUILTIN(__builtin_ia32_storehps, "vV2i*V4f", "", "sse")
 TARGET_BUILTIN(__builtin_ia32_storelps, "vV2i*V4f", "", "sse")
 TARGET_BUILTIN(__builtin_ia32_movmskps, "iV4f", "", "sse")
 TARGET_BUILTIN(__builtin_ia32_sfence, "v", "", "sse")
+TARGET_HEADER_BUILTIN(_mm_sfence, "v", "h", "xmmintrin.h", ALL_LANGUAGES, "sse")
 TARGET_BUILTIN(__builtin_ia32_rcpps, "V4fV4f", "", "sse")
 TARGET_BUILTIN(__builtin_ia32_rcpss, "V4fV4f", "", "sse")
 TARGET_BUILTIN(__builtin_ia32_rsqrtps, "V4fV4f", "", "sse")
@@ -337,9 +344,13 @@ TARGET_BUILTIN(__builtin_ia32_cvtsd2ss, "V4fV4fV2d", "", "sse2")
 TARGET_BUILTIN(__builtin_ia32_cvtps2dq, "V4iV4f", "", "sse2")
 TARGET_BUILTIN(__builtin_ia32_cvttps2dq, "V4iV4f", "", "sse2")
 TARGET_BUILTIN(__builtin_ia32_clflush, "vvC*", "", "sse2")
+TARGET_HEADER_BUILTIN(_mm_clflush, "vvC*", "h", "emmintrin.h", ALL_LANGUAGES, "sse2")
 TARGET_BUILTIN(__builtin_ia32_lfence, "v", "", "sse2")
+TARGET_HEADER_BUILTIN(_mm_lfence, "v", "h", "emmintrin.h", ALL_LANGUAGES, "sse2")
 TARGET_BUILTIN(__builtin_ia32_mfence, "v", "", "sse2")
+TARGET_HEADER_BUILTIN(_mm_mfence, "v", "h", "emmintrin.h", ALL_LANGUAGES, "sse2")
 TARGET_BUILTIN(__builtin_ia32_pause, "v", "", "sse2")
+TARGET_HEADER_BUILTIN(_mm_pause, "v", "h", "emmintrin.h", ALL_LANGUAGES, "sse2")
 TARGET_BUILTIN(__builtin_ia32_pmuludq128, "V2LLiV4iV4i", "", "sse2")
 TARGET_BUILTIN(__builtin_ia32_psraw128, "V8sV8sV8s", "", "sse2")
 TARGET_BUILTIN(__builtin_ia32_psrad128, "V4iV4iV4i", "", "sse2")
@@ -894,6 +905,7 @@ TARGET_BUILTIN(__builtin_ia32_xtest, "i", "", "rtm")
 
 BUILTIN(__builtin_ia32_rdpmc, "ULLii", "")
 BUILTIN(__builtin_ia32_rdtsc, "ULLi", "")
+BUILTIN(__rdtsc, "ULLi", "")
 BUILTIN(__builtin_ia32_rdtscp, "ULLiUi*", "")
 // PKU
 TARGET_BUILTIN(__builtin_ia32_rdpkru, "Ui", "", "pku")
@@ -2059,3 +2071,4 @@ TARGET_BUILTIN(__builtin_ia32_mwaitx, "vUiUiUi", "", "mwaitx")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN
+#undef TARGET_HEADER_BUILTIN

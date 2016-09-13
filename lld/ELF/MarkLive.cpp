@@ -77,25 +77,20 @@ static ResolvedReloc<ELFT> resolveReloc(InputSectionBase<ELFT> &Sec,
   return {D->Section->Repl, Offset};
 }
 
-template <class ELFT, class Elf_Shdr>
-static void run(ELFFile<ELFT> &Obj, InputSectionBase<ELFT> &Sec,
-                Elf_Shdr *RelSec, std::function<void(ResolvedReloc<ELFT>)> Fn) {
-  if (RelSec->sh_type == SHT_RELA) {
-    for (const typename ELFT::Rela &RI : Obj.relas(RelSec))
-      Fn(resolveReloc(Sec, RI));
-  } else {
-    for (const typename ELFT::Rel &RI : Obj.rels(RelSec))
-      Fn(resolveReloc(Sec, RI));
-  }
-}
-
 // Calls Fn for each section that Sec refers to via relocations.
 template <class ELFT>
 static void forEachSuccessor(InputSection<ELFT> &Sec,
                              std::function<void(ResolvedReloc<ELFT>)> Fn) {
   ELFFile<ELFT> &Obj = Sec.getFile()->getObj();
-  for (const typename ELFT::Shdr *RelSec : Sec.RelocSections)
-    run(Obj, Sec, RelSec, Fn);
+  for (const typename ELFT::Shdr *RelSec : Sec.RelocSections) {
+    if (RelSec->sh_type == SHT_RELA) {
+      for (const typename ELFT::Rela &Rel : Obj.relas(RelSec))
+        Fn(resolveReloc(Sec, Rel));
+    } else {
+      for (const typename ELFT::Rel &Rel : Obj.rels(RelSec))
+        Fn(resolveReloc(Sec, Rel));
+    }
+  }
 }
 
 // The .eh_frame section is an unfortunate special case.

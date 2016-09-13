@@ -693,6 +693,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                                      "cast");
     return RValue::get(Result);
   }
+  case Builtin::BI__popcnt16:
+  case Builtin::BI__popcnt:
+  case Builtin::BI__popcnt64:
   case Builtin::BI__builtin_popcount:
   case Builtin::BI__builtin_popcountl:
   case Builtin::BI__builtin_popcountll: {
@@ -1972,7 +1975,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                     EmitScalarExpr(Call->getCallee()), Call, ReturnValue,
                     Call->getCalleeDecl(), EmitScalarExpr(Chain));
   }
+  case Builtin::BI_InterlockedExchange8:
+  case Builtin::BI_InterlockedExchange16:
   case Builtin::BI_InterlockedExchange:
+  case Builtin::BI_InterlockedExchange64:
   case Builtin::BI_InterlockedExchangePointer:
     return EmitBinaryAtomic(*this, llvm::AtomicRMWInst::Xchg, E);
   case Builtin::BI_InterlockedCompareExchangePointer: {
@@ -2002,7 +2008,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
                                                                          0),
                                               RTy));
   }
-  case Builtin::BI_InterlockedCompareExchange: {
+  case Builtin::BI_InterlockedCompareExchange8:
+  case Builtin::BI_InterlockedCompareExchange16:
+  case Builtin::BI_InterlockedCompareExchange:
+  case Builtin::BI_InterlockedCompareExchange64: {
     AtomicCmpXchgInst *CXI = Builder.CreateAtomicCmpXchg(
         EmitScalarExpr(E->getArg(0)),
         EmitScalarExpr(E->getArg(2)),
@@ -2012,35 +2021,53 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
       CXI->setVolatile(true);
       return RValue::get(Builder.CreateExtractValue(CXI, 0));
   }
-  case Builtin::BI_InterlockedIncrement: {
+  case Builtin::BI_InterlockedIncrement16:
+  case Builtin::BI_InterlockedIncrement:
+  case Builtin::BI_InterlockedIncrement64: {
     llvm::Type *IntTy = ConvertType(E->getType());
     AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
       AtomicRMWInst::Add,
       EmitScalarExpr(E->getArg(0)),
       ConstantInt::get(IntTy, 1),
       llvm::AtomicOrdering::SequentiallyConsistent);
-    RMWI->setVolatile(true);
     return RValue::get(Builder.CreateAdd(RMWI, ConstantInt::get(IntTy, 1)));
   }
-  case Builtin::BI_InterlockedDecrement: {
+  case Builtin::BI_InterlockedDecrement16:
+  case Builtin::BI_InterlockedDecrement:
+  case Builtin::BI_InterlockedDecrement64: {
     llvm::Type *IntTy = ConvertType(E->getType());
     AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
       AtomicRMWInst::Sub,
       EmitScalarExpr(E->getArg(0)),
       ConstantInt::get(IntTy, 1),
       llvm::AtomicOrdering::SequentiallyConsistent);
-    RMWI->setVolatile(true);
     return RValue::get(Builder.CreateSub(RMWI, ConstantInt::get(IntTy, 1)));
   }
-  case Builtin::BI_InterlockedExchangeAdd: {
-    AtomicRMWInst *RMWI = Builder.CreateAtomicRMW(
-      AtomicRMWInst::Add,
-      EmitScalarExpr(E->getArg(0)),
-      EmitScalarExpr(E->getArg(1)),
-      llvm::AtomicOrdering::SequentiallyConsistent);
-    RMWI->setVolatile(true);
-    return RValue::get(RMWI);
-  }
+  case Builtin::BI_InterlockedAnd8:
+  case Builtin::BI_InterlockedAnd16:
+  case Builtin::BI_InterlockedAnd:
+  case Builtin::BI_InterlockedAnd64:
+    return EmitBinaryAtomic(*this, AtomicRMWInst::And, E);
+  case Builtin::BI_InterlockedExchangeAdd8:
+  case Builtin::BI_InterlockedExchangeAdd16:
+  case Builtin::BI_InterlockedExchangeAdd:
+  case Builtin::BI_InterlockedExchangeAdd64:
+    return EmitBinaryAtomic(*this, AtomicRMWInst::Add, E);
+  case Builtin::BI_InterlockedExchangeSub8:
+  case Builtin::BI_InterlockedExchangeSub16:
+  case Builtin::BI_InterlockedExchangeSub:
+  case Builtin::BI_InterlockedExchangeSub64:
+    return EmitBinaryAtomic(*this, AtomicRMWInst::Sub, E);
+  case Builtin::BI_InterlockedOr8:
+  case Builtin::BI_InterlockedOr16:
+  case Builtin::BI_InterlockedOr:
+  case Builtin::BI_InterlockedOr64:
+    return EmitBinaryAtomic(*this, AtomicRMWInst::Or, E);
+  case Builtin::BI_InterlockedXor8:
+  case Builtin::BI_InterlockedXor16:
+  case Builtin::BI_InterlockedXor:
+  case Builtin::BI_InterlockedXor64:
+    return EmitBinaryAtomic(*this, AtomicRMWInst::Xor, E);
   case Builtin::BI__readfsdword: {
     llvm::Type *IntTy = ConvertType(E->getType());
     Value *IntToPtr =
@@ -7014,6 +7041,25 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Value *F = CGM.getIntrinsic(Intrinsic::prefetch);
     return Builder.CreateCall(F, {Address, RW, Locality, Data});
   }
+  case X86::BI_mm_clflush: {
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse2_clflush),
+                              Ops[0]);
+  }
+  case X86::BI_mm_lfence: {
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse2_lfence));
+  }
+  case X86::BI_mm_mfence: {
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse2_mfence));
+  }
+  case X86::BI_mm_sfence: {
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse_sfence));
+  }
+  case X86::BI_mm_pause: {
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse2_pause));
+  }
+  case X86::BI__rdtsc: {
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_rdtsc));
+  }
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
   case X86::BI__builtin_ia32_undef512:
@@ -7026,12 +7072,14 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vec_ext_v2si:
     return Builder.CreateExtractElement(Ops[0],
                                   llvm::ConstantInt::get(Ops[1]->getType(), 0));
+  case X86::BI_mm_setcsr:
   case X86::BI__builtin_ia32_ldmxcsr: {
     Address Tmp = CreateMemTemp(E->getArg(0)->getType());
     Builder.CreateStore(Ops[0], Tmp);
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse_ldmxcsr),
                           Builder.CreateBitCast(Tmp.getPointer(), Int8PtrTy));
   }
+  case X86::BI_mm_getcsr:
   case X86::BI__builtin_ia32_stmxcsr: {
     Address Tmp = CreateMemTemp(E->getType());
     Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse_stmxcsr),

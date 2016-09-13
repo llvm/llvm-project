@@ -650,7 +650,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_wrap))
     Symtab.wrap(Arg->getValue());
 
-  // Write the result to the file.
+  // Do size optimizations: garbage collection and identical code folding.
   if (Config->GcSections)
     markLive<ELFT>();
   if (Config->ICF)
@@ -669,5 +669,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
         MS->splitIntoPieces();
     }
 
+  // Write the result to the file.
   writeResult<ELFT>();
 }
