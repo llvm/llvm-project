@@ -1495,6 +1495,8 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
                                                    NewEndLoc);
       if (NewType.isUsable())
         Ty = NewType.get();
+      else if (Tok.is(tok::eof)) // Nothing to do here, bail out...
+        return ANK_Error;
     }
 
     Tok.setKind(tok::annot_typename);
@@ -1726,6 +1728,8 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(bool EnteringContext,
                                                    NewEndLoc);
         if (NewType.isUsable())
           Ty = NewType.get();
+        else if (Tok.is(tok::eof)) // Nothing to do here, bail out...
+          return false;
       }
 
       // This is a typename. Replace the current token in-place with an
