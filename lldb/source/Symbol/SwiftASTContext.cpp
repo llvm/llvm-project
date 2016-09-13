@@ -1199,11 +1199,7 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
       m_compiler_invocation_ap->getIRGenOptions();
   ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
   ir_gen_opts.UseJIT = true;
-#if defined(__CYGWIN__)
-  ir_gen_opts.DWARFVersion = swift::CygwinDWARFVersion;
-#else
-  ir_gen_opts.DWARFVersion = swift::GenericDWARFVersion;
-#endif
+  ir_gen_opts.DWARFVersion = swift::DWARFVersion;
 }
 
 SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
