@@ -1180,10 +1180,10 @@ CodeGenFunction::tryEmitAsConstant(DeclRefExpr *refExpr) {
   // This should probably fire even for
   if (isa<VarDecl>(value)) {
     if (!getContext().DeclMustBeEmitted(cast<VarDecl>(value)))
-      EmitDeclRefExprDbgValue(refExpr, C);
+      EmitDeclRefExprDbgValue(refExpr, result.Val);
   } else {
     assert(isa<EnumConstantDecl>(value));
-    EmitDeclRefExprDbgValue(refExpr, C);
+    EmitDeclRefExprDbgValue(refExpr, result.Val);
   }
 
   // If we emitted a reference constant, we need to dereference that.

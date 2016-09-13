@@ -3602,8 +3602,8 @@ llvm::DIGlobalVariable *CGDebugInfo::CollectAnonRecordDecls(
     }
     // Use VarDecl's Tag, Scope and Line number.
     GV = DBuilder.createGlobalVariable(DContext, FieldName, LinkageName, Unit,
-                                       LineNo, FieldTy,
-                                       Var->hasLocalLinkage(), Var, nullptr);
+                                       LineNo, FieldTy, Var->hasLocalLinkage());
+    Var->addDebugInfo(GV);
   }
   return GV;
 }
@@ -3636,14 +3636,14 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
   } else {
     GV = DBuilder.createGlobalVariable(
         DContext, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
-        Var->hasLocalLinkage(), Var,
+        Var->hasLocalLinkage(), /*Expr=*/nullptr,
         getOrCreateStaticDataMemberDeclarationOrNull(D));
+    Var->addDebugInfo(GV);
   }
   DeclCache[D->getCanonicalDecl()].reset(GV);
 }
 
-void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD,
-                                     llvm::Constant *Init) {
+void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
   assert(DebugKind >= codegenoptions::LimitedDebugInfo);
   if (VD->hasAttr<NoDebugAttr>())
     return;
@@ -3683,9 +3683,13 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD,
   auto &GV = DeclCache[VD];
   if (GV)
     return;
+  llvm::DIExpression *InitExpr = nullptr;
+  if (Init.isInt())
+    InitExpr =
+        DBuilder.createConstantValueExpression(Init.getInt().getExtValue());
   GV.reset(DBuilder.createGlobalVariable(
       DContext, Name, StringRef(), Unit, getLineNumber(VD->getLocation()), Ty,
-      true, Init, getOrCreateStaticDataMemberDeclarationOrNull(VarD)));
+      true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD)));
 }
 
 llvm::DIScope *CGDebugInfo::getCurrentContextDescriptor(const Decl *D) {

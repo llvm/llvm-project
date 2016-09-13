@@ -356,8 +356,8 @@ public:
   /// Emit information about a global variable.
   void EmitGlobalVariable(llvm::GlobalVariable *GV, const VarDecl *Decl);
 
-  /// Emit global variable's debug info.
-  void EmitGlobalVariable(const ValueDecl *VD, llvm::Constant *Init);
+  /// Emit a constant global variable's debug info.
+  void EmitGlobalVariable(const ValueDecl *VD, const APValue &Init);
 
   /// Emit C++ using directive.
   void EmitUsingDirective(const UsingDirectiveDecl &UD);
