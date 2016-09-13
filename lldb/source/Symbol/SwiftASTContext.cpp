@@ -8235,7 +8235,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
 uint32_t
 SwiftASTContext::GetIndexOfChildWithName(void *type, const char *name,
                                          bool omit_empty_base_classes) {
-  VALID_OR_RETURN(0);
+  VALID_OR_RETURN(UINT32_MAX);
 
   if (type && name && name[0]) {
     swift::CanType swift_can_type(GetCanonicalSwiftType(type));
