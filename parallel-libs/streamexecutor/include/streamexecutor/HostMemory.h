@@ -151,14 +151,14 @@ public:
   RegisteredHostMemory(const RegisteredHostMemory &) = delete;
   RegisteredHostMemory &operator=(const RegisteredHostMemory &) = delete;
 
-  RegisteredHostMemory(RegisteredHostMemory &&Other)
+  RegisteredHostMemory(RegisteredHostMemory &&Other) noexcept
       : TheDevice(Other.TheDevice), Pointer(Other.Pointer),
         ElementCount(Other.ElementCount) {
     Other.TheDevice = nullptr;
     Other.Pointer = nullptr;
   }
 
-  RegisteredHostMemory &operator=(RegisteredHostMemory &&Other) {
+  RegisteredHostMemory &operator=(RegisteredHostMemory &&Other) noexcept {
     TheDevice = Other.TheDevice;
     Pointer = Other.Pointer;
     ElementCount = Other.ElementCount;

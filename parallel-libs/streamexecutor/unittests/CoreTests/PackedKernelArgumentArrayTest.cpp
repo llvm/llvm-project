@@ -12,11 +12,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "SimpleHostPlatformDevice.h"
 #include "streamexecutor/Device.h"
 #include "streamexecutor/DeviceMemory.h"
 #include "streamexecutor/PackedKernelArgumentArray.h"
 #include "streamexecutor/PlatformDevice.h"
+#include "streamexecutor/unittests/CoreTests/SimpleHostPlatformDevice.h"
 
 #include "llvm/ADT/Twine.h"
 

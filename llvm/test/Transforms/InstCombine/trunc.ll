@@ -160,24 +160,245 @@ define i32 @trunc_bitcast3(<4 x i32> %v) {
 ; CHECK-NEXT:  ret i32 %ext
 }
 
-; CHECK-LABEL: @trunc_shl_infloop(
-; CHECK: %tmp = lshr i64 %arg, 1
-; CHECK: %tmp21 = shl i64 %tmp, 2
-; CHECK: %tmp2 = trunc i64 %tmp21 to i32
-; CHECK: icmp sgt i32 %tmp2, 0
-define void @trunc_shl_infloop(i64 %arg) {
-bb:
-  %tmp = lshr i64 %arg, 1
-  %tmp1 = trunc i64 %tmp to i32
-  %tmp2 = shl i32 %tmp1, 2
-  %tmp3 = icmp sgt i32 %tmp2, 0
-  br i1 %tmp3, label %bb2, label %bb1
+; CHECK-LABEL: @trunc_shl_31_i32_i64(
+; CHECK: %val.tr = trunc i64 %val to i32
+; CHECK-NEXT: shl i32 %val.tr, 31
+define i32 @trunc_shl_31_i32_i64(i64 %val) {
+  %shl = shl i64 %val, 31
+  %trunc = trunc i64 %shl to i32
+  ret i32 %trunc
+}
 
-bb1:
-  %tmp5 = sub i32 0, %tmp1
-  %tmp6 = sub i32 %tmp5, 1
-  unreachable
+; CHECK-LABEL: @trunc_shl_nsw_31_i32_i64(
+; CHECK: %val.tr = trunc i64 %val to i32
+; CHECK-NEXT: shl i32 %val.tr, 31
+define i32 @trunc_shl_nsw_31_i32_i64(i64 %val) {
+  %shl = shl nsw i64 %val, 31
+  %trunc = trunc i64 %shl to i32
+  ret i32 %trunc
+}
 
-bb2:
-  unreachable
+; CHECK-LABEL: @trunc_shl_nuw_31_i32_i64(
+; CHECK: %val.tr = trunc i64 %val to i32
+; CHECK-NEXT: shl i32 %val.tr, 31
+define i32 @trunc_shl_nuw_31_i32_i64(i64 %val) {
+  %shl = shl nuw i64 %val, 31
+  %trunc = trunc i64 %shl to i32
+  ret i32 %trunc
+}
+
+; CHECK-LABEL: @trunc_shl_nsw_nuw_31_i32_i64(
+; CHECK: %val.tr = trunc i64 %val to i32
+; CHECK-NEXT: shl i32 %val.tr, 31
+define i32 @trunc_shl_nsw_nuw_31_i32_i64(i64 %val) {
+  %shl = shl nsw nuw i64 %val, 31
+  %trunc = trunc i64 %shl to i32
+  ret i32 %trunc
+}
+
+; CHECK-LABEL: @trunc_shl_15_i16_i64(
+; CHECK: %val.tr = trunc i64 %val to i16
+; CHECK-NEXT: shl i16 %val.tr, 15
+define i16 @trunc_shl_15_i16_i64(i64 %val) {
+  %shl = shl i64 %val, 15
+  %trunc = trunc i64 %shl to i16
+  ret i16 %trunc
+}
+
+; CHECK-LABEL: @trunc_shl_15_i16_i32(
+; CHECK: %val.tr = trunc i32 %val to i16
+; CHECK-NEXT: shl i16 %val.tr, 15
+define i16 @trunc_shl_15_i16_i32(i32 %val) {
+  %shl = shl i32 %val, 15
+  %trunc = trunc i32 %shl to i16
+  ret i16 %trunc
+}
+
+; CHECK-LABEL: @trunc_shl_7_i8_i64(
+; CHECK: %val.tr = trunc i64 %val to i8
+; CHECK-NEXT: shl i8 %val.tr, 7
+define i8 @trunc_shl_7_i8_i64(i64 %val) {
+  %shl = shl i64 %val, 7
+  %trunc = trunc i64 %shl to i8
+  ret i8 %trunc
+}
+
+; CHECK-LABEL: @trunc_shl_1_i2_i64(
+; CHECK: shl i64 %val, 1
+; CHECK-NEXT: trunc i64 %shl to i2
+define i2 @trunc_shl_1_i2_i64(i64 %val) {
+  %shl = shl i64 %val, 1
+  %trunc = trunc i64 %shl to i2
+  ret i2 %trunc
+}
+
+; CHECK-LABEL: @trunc_shl_1_i32_i64(
+; CHECK: %val.tr = trunc i64 %val to i32
+; CHECK-NEXT: shl i32 %val.tr, 1
+define i32 @trunc_shl_1_i32_i64(i64 %val) {
+  %shl = shl i64 %val, 1
+  %trunc = trunc i64 %shl to i32
+  ret i32 %trunc
+}
+
+; CHECK-LABEL: @trunc_shl_16_i32_i64(
+; CHECK: %val.tr = trunc i64 %val to i32
+; CHECK-NEXT: shl i32 %val.tr, 16
+define i32 @trunc_shl_16_i32_i64(i64 %val) {
+  %shl = shl i64 %val, 16
+  %trunc = trunc i64 %shl to i32
+  ret i32 %trunc
+}
+
+; CHECK-LABEL: @trunc_shl_33_i32_i64(
+; CHECK: ret i32 0
+define i32 @trunc_shl_33_i32_i64(i64 %val) {
+  %shl = shl i64 %val, 33
+  %trunc = trunc i64 %shl to i32
+  ret i32 %trunc
+}
+
+; CHECK-LABEL: @trunc_shl_32_i32_i64(
+; CHECK: ret i32 0
+define i32 @trunc_shl_32_i32_i64(i64 %val) {
+  %shl = shl i64 %val, 32
+  %trunc = trunc i64 %shl to i32
+  ret i32 %trunc
+}
+
+; TODO: Should be able to handle vectors
+; CHECK-LABEL: @trunc_shl_16_v2i32_v2i64(
+; CHECK: shl <2 x i64>
+define <2 x i32> @trunc_shl_16_v2i32_v2i64(<2 x i64> %val) {
+  %shl = shl <2 x i64> %val, <i64 16, i64 16>
+  %trunc = trunc <2 x i64> %shl to <2 x i32>
+  ret <2 x i32> %trunc
+}
+
+; CHECK-LABEL: @trunc_shl_nosplat_v2i32_v2i64(
+; CHECK: shl <2 x i64>
+define <2 x i32> @trunc_shl_nosplat_v2i32_v2i64(<2 x i64> %val) {
+  %shl = shl <2 x i64> %val, <i64 15, i64 16>
+  %trunc = trunc <2 x i64> %shl to <2 x i32>
+  ret <2 x i32> %trunc
+}
+
+; CHECK-LABEL: @trunc_shl_31_i32_i64_multi_use(
+; CHECK: shl i64 %val, 31
+; CHECK-NOT: shl i32
+; CHECK: trunc i64 %shl to i32
+; CHECK-NOT: shl i32
+define void @trunc_shl_31_i32_i64_multi_use(i64 %val, i32 addrspace(1)* %ptr0, i64 addrspace(1)* %ptr1) {
+  %shl = shl i64 %val, 31
+  %trunc = trunc i64 %shl to i32
+  store volatile i32 %trunc, i32 addrspace(1)* %ptr0
+  store volatile i64 %shl, i64 addrspace(1)* %ptr1
+  ret void
+}
+
+; CHECK-LABEL: @trunc_shl_lshr_infloop(
+; CHECK-NEXT: %tmp0 = lshr i64 %arg, 1
+; CHECK-NEXT: %tmp1 = shl i64 %tmp0, 2
+; CHECK-NEXT: %tmp2 = trunc i64 %tmp1 to i32
+; CHECK-NEXT: ret i32 %tmp2
+define i32 @trunc_shl_lshr_infloop(i64 %arg) {
+  %tmp0 = lshr i64 %arg, 1
+  %tmp1 = shl i64 %tmp0, 2
+  %tmp2 = trunc i64 %tmp1 to i32
+  ret i32 %tmp2
+}
+
+; CHECK-LABEL: @trunc_shl_ashr_infloop(
+; CHECK-NEXT: %tmp0 = ashr i64 %arg, 3
+; CHECK-NEXT: %tmp1 = shl nsw i64 %tmp0, 2
+; CHECK-NEXT: %tmp2 = trunc i64 %tmp1 to i32
+; CHECK-NEXT: ret i32 %tmp2
+define i32 @trunc_shl_ashr_infloop(i64 %arg) {
+  %tmp0 = ashr i64 %arg, 3
+  %tmp1 = shl i64 %tmp0, 2
+  %tmp2 = trunc i64 %tmp1 to i32
+  ret i32 %tmp2
+}
+
+; CHECK-LABEL: @trunc_shl_shl_infloop(
+; CHECK-NEXT: %arg.tr = trunc i64 %arg to i32
+; CHECK-NEXT: %tmp2 = shl i32 %arg.tr, 3
+; CHECK-NEXT: ret i32 %tmp2
+define i32 @trunc_shl_shl_infloop(i64 %arg) {
+  %tmp0 = shl i64 %arg, 1
+  %tmp1 = shl i64 %tmp0, 2
+  %tmp2 = trunc i64 %tmp1 to i32
+  ret i32 %tmp2
+}
+
+; CHECK-LABEL: @trunc_shl_lshr_var(
+; CHECK-NEXT: %tmp0 = lshr i64 %arg, %val
+; CHECK-NEXT: %tmp0.tr = trunc i64 %tmp0 to i32
+; CHECK-NEXT: %tmp2 = shl i32 %tmp0.tr, 2
+; CHECK-NEXT: ret i32 %tmp2
+define i32 @trunc_shl_lshr_var(i64 %arg, i64 %val) {
+  %tmp0 = lshr i64 %arg, %val
+  %tmp1 = shl i64 %tmp0, 2
+  %tmp2 = trunc i64 %tmp1 to i32
+  ret i32 %tmp2
+}
+
+; CHECK-LABEL: @trunc_shl_ashr_var(
+; CHECK-NEXT: %tmp0 = ashr i64 %arg, %val
+; CHECK-NEXT: %tmp0.tr = trunc i64 %tmp0 to i32
+; CHECK-NEXT: %tmp2 = shl i32 %tmp0.tr, 2
+; CHECK-NEXT: ret i32 %tmp2
+define i32 @trunc_shl_ashr_var(i64 %arg, i64 %val) {
+  %tmp0 = ashr i64 %arg, %val
+  %tmp1 = shl i64 %tmp0, 2
+  %tmp2 = trunc i64 %tmp1 to i32
+  ret i32 %tmp2
+}
+
+; CHECK-LABEL: @trunc_shl_shl_var(
+; CHECK-NEXT: %tmp0 = shl i64 %arg, %val
+; CHECK-NEXT: %tmp0.tr = trunc i64 %tmp0 to i32
+; CHECK-NEXT: %tmp2 = shl i32 %tmp0.tr, 2
+; CHECK-NEXT: ret i32 %tmp2
+define i32 @trunc_shl_shl_var(i64 %arg, i64 %val) {
+  %tmp0 = shl i64 %arg, %val
+  %tmp1 = shl i64 %tmp0, 2
+  %tmp2 = trunc i64 %tmp1 to i32
+  ret i32 %tmp2
+}
+
+; CHECK-LABEL: @trunc_shl_v8i15_v8i32_15(
+; CHECK: %shl = shl <8 x i32> %a, <i32 15,
+; CHECK: trunc <8 x i32> %shl to <8 x i16>
+define <8 x i16> @trunc_shl_v8i15_v8i32_15(<8 x i32> %a) {
+  %shl = shl <8 x i32> %a, <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
+  %conv = trunc <8 x i32> %shl to <8 x i16>
+  ret <8 x i16> %conv
+}
+
+; CHECK-LABEL: @trunc_shl_v8i16_v8i32_16(
+; CHECK: %shl = shl <8 x i32> %a, <i32 16
+; CHECK: trunc <8 x i32> %shl to <8 x i16>
+define <8 x i16> @trunc_shl_v8i16_v8i32_16(<8 x i32> %a) {
+  %shl = shl <8 x i32> %a, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %conv = trunc <8 x i32> %shl to <8 x i16>
+  ret <8 x i16> %conv
+}
+
+; CHECK-LABEL: @trunc_shl_v8i16_v8i32_17(
+; CHECK: %shl = shl <8 x i32> %a, <i32 17
+; CHECK: %conv = trunc <8 x i32> %shl to <8 x i16>
+define <8 x i16> @trunc_shl_v8i16_v8i32_17(<8 x i32> %a) {
+  %shl = shl <8 x i32> %a, <i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17, i32 17>
+  %conv = trunc <8 x i32> %shl to <8 x i16>
+  ret <8 x i16> %conv
+}
+
+; CHECK-LABEL: @trunc_shl_v8i16_v8i32_4(
+; CHECK: %shl = shl <8 x i32> %a, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
+; CHECK: trunc <8 x i32> %shl to <8 x i16>
+define <8 x i16> @trunc_shl_v8i16_v8i32_4(<8 x i32> %a) {
+  %shl = shl <8 x i32> %a, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
+  %conv = trunc <8 x i32> %shl to <8 x i16>
+  ret <8 x i16> %conv
 }

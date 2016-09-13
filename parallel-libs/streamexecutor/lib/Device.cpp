@@ -29,9 +29,8 @@ Device::~Device() = default;
 
 Expected<Stream> Device::createStream() {
   Expected<const void *> MaybePlatformStream = PDevice->createStream();
-  if (!MaybePlatformStream) {
+  if (!MaybePlatformStream)
     return MaybePlatformStream.takeError();
-  }
   return Stream(PDevice, *MaybePlatformStream);
 }
 

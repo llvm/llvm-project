@@ -2528,7 +2528,11 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   case ARM::EORrr:
   case ARM::EORri:
   case ARM::t2EORrr:
-  case ARM::t2EORri: {
+  case ARM::t2EORri:
+  case ARM::t2LSRri:
+  case ARM::t2LSRrr:
+  case ARM::t2LSLri:
+  case ARM::t2LSLrr: {
     // Scan forward for the use of CPSR
     // When checking against MI: if it's a conditional code that requires
     // checking of the V bit or C bit, then this is not safe to do.
