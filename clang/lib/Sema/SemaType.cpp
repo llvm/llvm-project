@@ -1000,57 +1000,6 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
   return S.Context.getObjCObjectType(type, finalTypeArgs, { }, false);
 }
 
-/// Apply Objective-C protocol qualifiers to the given type.
-static QualType applyObjCProtocolQualifiers(
-                  Sema &S, SourceLocation loc, SourceRange range, QualType type,
-                  ArrayRef<ObjCProtocolDecl *> protocols,
-                  const SourceLocation *protocolLocs,
-                  bool failOnError = false) {
-  ASTContext &ctx = S.Context;
-  if (const ObjCObjectType *objT = dyn_cast<ObjCObjectType>(type.getTypePtr())){
-    // FIXME: Check for protocols to which the class type is already
-    // known to conform.
-
-    return ctx.getObjCObjectType(objT->getBaseType(),
-                                 objT->getTypeArgsAsWritten(),
-                                 protocols,
-                                 objT->isKindOfTypeAsWritten());
-  }
-
-  if (type->isObjCObjectType()) {
-    // Silently overwrite any existing protocol qualifiers.
-    // TODO: determine whether that's the right thing to do.
-
-    // FIXME: Check for protocols to which the class type is already
-    // known to conform.
-    return ctx.getObjCObjectType(type, { }, protocols, false);
-  }
-
-  // id<protocol-list>
-  if (type->isObjCIdType()) {
-    const ObjCObjectPointerType *objPtr = type->castAs<ObjCObjectPointerType>();
-    type = ctx.getObjCObjectType(ctx.ObjCBuiltinIdTy, { }, protocols,
-                                 objPtr->isKindOfType());
-    return ctx.getObjCObjectPointerType(type);
-  }
-
-  // Class<protocol-list>
-  if (type->isObjCClassType()) {
-    const ObjCObjectPointerType *objPtr = type->castAs<ObjCObjectPointerType>();
-    type = ctx.getObjCObjectType(ctx.ObjCBuiltinClassTy, { }, protocols,
-                                 objPtr->isKindOfType());
-    return ctx.getObjCObjectPointerType(type);
-  }
-
-  S.Diag(loc, diag::err_invalid_protocol_qualifiers)
-    << range;
-
-  if (failOnError)
-    return QualType();
-
-  return type;
-}
-
 QualType Sema::BuildObjCObjectType(QualType BaseType,
                                    SourceLocation Loc,
                                    SourceLocation TypeArgsLAngleLoc,
@@ -1072,12 +1021,14 @@ QualType Sema::BuildObjCObjectType(QualType BaseType,
   }
 
   if (!Protocols.empty()) {
-    Result = applyObjCProtocolQualifiers(*this, Loc,
-                                         SourceRange(ProtocolLAngleLoc,
-                                                     ProtocolRAngleLoc),
-                                         Result, Protocols,
-                                         ProtocolLocs.data(),
-                                         FailOnError);
+    bool HasError;
+    Result = Context.applyObjCProtocolQualifiers(Result, Protocols,
+                                                 HasError);
+    if (HasError) {
+      Diag(Loc, diag::err_invalid_protocol_qualifiers)
+        << SourceRange(ProtocolLAngleLoc, ProtocolRAngleLoc);
+      if (FailOnError) Result = QualType();
+    }
     if (FailOnError && Result.isNull())
       return QualType();
   }
