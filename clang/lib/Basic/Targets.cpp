@@ -1965,7 +1965,7 @@ class AMDGPUTargetInfo final : public TargetInfo {
   bool hasFP64:1;
   bool hasFMAF:1;
   bool hasLDEXPF:1;
-  bool hasDenormSupport:1;
+  bool hasFullSpeedFP32Denorms:1;
 
   static bool isAMDGCN(const llvm::Triple &TT) {
     return TT.getArch() == llvm::Triple::amdgcn;
@@ -1978,14 +1978,12 @@ public:
       hasFP64(false),
       hasFMAF(false),
       hasLDEXPF(false),
-      hasDenormSupport(false){
+      hasFullSpeedFP32Denorms(false){
     if (getTriple().getArch() == llvm::Triple::amdgcn) {
       hasFP64 = true;
       hasFMAF = true;
       hasLDEXPF = true;
     }
-    if (Opts.CPU == "fiji")
-      hasDenormSupport = true;
 
     resetDataLayout(getTriple().getArch() == llvm::Triple::amdgcn ?
                     DataLayoutStringSI : DataLayoutStringR600);
@@ -2040,8 +2038,6 @@ public:
 
   void adjustTargetOptions(const CodeGenOptions &CGOpts,
                            TargetOptions &TargetOpts) const override {
-    if (!hasDenormSupport)
-      return;
     bool hasFP32Denormals = false;
     bool hasFP64Denormals = false;
     for (auto &I : TargetOpts.FeaturesAsWritten) {
@@ -2051,11 +2047,11 @@ public:
         hasFP64Denormals = true;
     }
     if (!hasFP32Denormals)
-      TargetOpts.Features.push_back((Twine(CGOpts.FlushDenorm ? '-' : '+') +
-                                     Twine("fp32-denormals")).str());
+      TargetOpts.Features.push_back((Twine(hasFullSpeedFP32Denorms &&
+          !CGOpts.FlushDenorm ? '+' : '-') + Twine("fp32-denormals")).str());
+    // Always do not flush fp64 denorms.
     if (!hasFP64Denormals && hasFP64)
-      TargetOpts.Features.push_back((Twine(CGOpts.FlushDenorm ? '-' : '+') +
-                                     Twine("fp64-denormals")).str());
+      TargetOpts.Features.push_back("+fp64-denormals");
   }
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {

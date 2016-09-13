@@ -910,6 +910,11 @@ namespace {
 /// Diagnostic text, parsed into pieces.
 struct DiagText {
   struct Piece {
+    // This type and its derived classes are move-only.
+    Piece() = default;
+    Piece(Piece &&O) = default;
+    Piece &operator=(Piece &&O) = default;
+
     virtual void print(std::vector<std::string> &RST) = 0;
     virtual ~Piece() {}
   };

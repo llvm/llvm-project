@@ -23,6 +23,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
 
+#include "llvm/ADT/STLExtras.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -212,11 +214,10 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
     }
   }
 
-  BreakpointOptions *bp_options = new BreakpointOptions(
+  auto bp_options = llvm::make_unique<BreakpointOptions>(
       condition_text.c_str(), enabled, ignore_count, one_shot);
-  if (cmd_data)
-    bp_options->SetCommandDataCallback(cmd_data.release());
-  return std::unique_ptr<BreakpointOptions>(bp_options);
+  bp_options->SetCommandDataCallback(std::move(cmd_data));
+  return bp_options;
 }
 
 StructuredData::ObjectSP BreakpointOptions::SerializeToStructuredData() {
@@ -230,10 +231,10 @@ StructuredData::ObjectSP BreakpointOptions::SerializeToStructuredData() {
   options_dict_sp->AddStringItem(GetKey(OptionNames::ConditionText),
                                  m_condition_text);
   if (m_baton_is_command_baton) {
-    CommandData *cmd_data =
-        static_cast<CommandData *>(m_callback_baton_sp->m_data);
+    auto cmd_baton =
+        std::static_pointer_cast<CommandBaton>(m_callback_baton_sp);
     StructuredData::ObjectSP commands_sp =
-        cmd_data->SerializeToStructuredData();
+        cmd_baton->getItem()->SerializeToStructuredData();
     if (commands_sp) {
       options_dict_sp->AddItem(
           BreakpointOptions::CommandData::GetSerializationKey(), commands_sp);
@@ -249,6 +250,17 @@ StructuredData::ObjectSP BreakpointOptions::SerializeToStructuredData() {
 void BreakpointOptions::SetCallback(BreakpointHitCallback callback,
                                     const lldb::BatonSP &callback_baton_sp,
                                     bool callback_is_synchronous) {
+  // FIXME: This seems unsafe.  If BatonSP actually *is* a CommandBaton, but
+  // in a shared_ptr<Baton> instead of a shared_ptr<CommandBaton>, then we
+  // will set m_baton_is_command_baton to false, which is incorrect.
+  // One possible solution is to make the base Baton class provide a method
+  // such as:
+  //     virtual StringRef getBatonId() const { return ""; }
+  // and have CommandBaton override this to return something unique, and then
+  // check for it here.  Another option might be to make Baton using the llvm
+  // casting infrastructure, so that we could write something like:
+  //     if (llvm::isa<CommandBaton>(callback_baton_sp))
+  // at relevant callsites instead of storing a boolean.
   m_callback_is_synchronous = callback_is_synchronous;
   m_callback = callback;
   m_callback_baton_sp = callback_baton_sp;
@@ -282,7 +294,7 @@ bool BreakpointOptions::InvokeCallback(StoppointCallbackContext *context,
                                        lldb::user_id_t break_id,
                                        lldb::user_id_t break_loc_id) {
   if (m_callback && context->is_synchronous == IsCallbackSynchronous()) {
-    return m_callback(m_callback_baton_sp ? m_callback_baton_sp->m_data
+    return m_callback(m_callback_baton_sp ? m_callback_baton_sp->data()
                                           : nullptr,
                       context, break_id, break_loc_id);
   } else
@@ -379,7 +391,7 @@ void BreakpointOptions::GetDescription(Stream *s,
 
 void BreakpointOptions::CommandBaton::GetDescription(
     Stream *s, lldb::DescriptionLevel level) const {
-  CommandData *data = (CommandData *)m_data;
+  const CommandData *data = getItem();
 
   if (level == eDescriptionLevelBrief) {
     s->Printf(", commands = %s",
@@ -404,8 +416,9 @@ void BreakpointOptions::CommandBaton::GetDescription(
   s->IndentLess();
 }
 
-void BreakpointOptions::SetCommandDataCallback(CommandData *cmd_data) {
-  CommandBatonSP baton_sp(new CommandBaton(cmd_data));
+void BreakpointOptions::SetCommandDataCallback(
+    std::unique_ptr<CommandData> cmd_data) {
+  auto baton_sp = std::make_shared<CommandBaton>(std::move(cmd_data));
   SetCallback(BreakpointOptions::BreakpointOptionsCallbackFunction, baton_sp);
 }
 

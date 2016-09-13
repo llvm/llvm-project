@@ -29,7 +29,7 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
 
-  const auto validContainer = cxxRecordDecl(isSameOrDerivedFrom(
+  const auto ValidContainer = cxxRecordDecl(isSameOrDerivedFrom(
       namedDecl(
           has(cxxMethodDecl(
                   isConst(), parameterCountIs(0), isPublic(), hasName("size"),
@@ -54,9 +54,9 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
       hasParent(explicitCastExpr(hasDestinationType(booleanType()))));
 
   Finder->addMatcher(
-      cxxMemberCallExpr(on(expr(anyOf(hasType(validContainer),
-                                      hasType(pointsTo(validContainer)),
-                                      hasType(references(validContainer))))
+      cxxMemberCallExpr(on(expr(anyOf(hasType(ValidContainer),
+                                      hasType(pointsTo(ValidContainer)),
+                                      hasType(references(ValidContainer))))
                                .bind("STLObject")),
                         callee(cxxMethodDecl(hasName("size"))), WrongUse)
           .bind("SizeCallExpr"),

@@ -352,7 +352,7 @@ void Breakpoint::SetCallback(BreakpointHitCallback callback, void *baton,
                              bool is_synchronous) {
   // The default "Baton" class will keep a copy of "baton" and won't free
   // or delete it when it goes goes out of scope.
-  m_options_up->SetCallback(callback, BatonSP(new Baton(baton)),
+  m_options_up->SetCallback(callback, std::make_shared<UntypedBaton>(baton),
                             is_synchronous);
 
   SendBreakpointChangedEvent(eBreakpointEventTypeCommandChanged);

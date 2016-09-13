@@ -220,8 +220,8 @@ bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes) {
   int ExtraDimsOld = DimensionSizes.size() - SharedDims;
 
   for (int i = 0; i < SharedDims; i++) {
-    auto &NewSize = NewSizes[i + ExtraDimsNew];
-    auto &KnownSize = DimensionSizes[i + ExtraDimsOld];
+    auto *NewSize = NewSizes[i + ExtraDimsNew];
+    auto *KnownSize = DimensionSizes[i + ExtraDimsOld];
     if (NewSize && KnownSize && NewSize != KnownSize)
       return false;
   }

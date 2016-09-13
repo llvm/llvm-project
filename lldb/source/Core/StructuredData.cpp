@@ -55,7 +55,7 @@ StructuredData::ObjectSP StructuredData::ParseJSONFromFile(FileSpec &input_spec,
   }
 
   lldb::DataBufferSP input_data;
-  size_t num_bytes = SIZE_T_MAX;
+  size_t num_bytes = std::numeric_limits<size_t>::max();
   off_t offset = 0;
   error = input_file.Read(num_bytes, offset, true, input_data);
   if (!error.Success()) {

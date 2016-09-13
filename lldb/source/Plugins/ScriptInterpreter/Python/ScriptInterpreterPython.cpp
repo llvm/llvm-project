@@ -412,24 +412,23 @@ void ScriptInterpreterPython::IOHandlerInputComplete(IOHandler &io_handler,
       if (!bp_options)
         continue;
 
-      std::unique_ptr<BreakpointOptions::CommandData> data_ap(
-          new BreakpointOptions::CommandData());
-      if (data_ap.get()) {
-        data_ap->user_source.SplitIntoLines(data);
+      auto data_ap = llvm::make_unique<BreakpointOptions::CommandData>();
+      if (!data_ap)
+        break;
+      data_ap->user_source.SplitIntoLines(data);
 
-        if (GenerateBreakpointCommandCallbackData(data_ap->user_source,
-                                                  data_ap->script_source)
-                .Success()) {
-          BreakpointOptions::CommandBatonSP baton_sp(
-              new BreakpointOptions::CommandBaton(data_ap.release()));
-          bp_options->SetCallback(
-              ScriptInterpreterPython::BreakpointCallbackFunction, baton_sp);
-        } else if (!batch_mode) {
-          StreamFileSP error_sp = io_handler.GetErrorStreamFile();
-          if (error_sp) {
-            error_sp->Printf("Warning: No command attached to breakpoint.\n");
-            error_sp->Flush();
-          }
+      if (GenerateBreakpointCommandCallbackData(data_ap->user_source,
+                                                data_ap->script_source)
+              .Success()) {
+        auto baton_sp = std::make_shared<BreakpointOptions::CommandBaton>(
+            std::move(data_ap));
+        bp_options->SetCallback(
+            ScriptInterpreterPython::BreakpointCallbackFunction, baton_sp);
+      } else if (!batch_mode) {
+        StreamFileSP error_sp = io_handler.GetErrorStreamFile();
+        if (error_sp) {
+          error_sp->Printf("Warning: No command attached to breakpoint.\n");
+          error_sp->Flush();
         }
       }
     }
@@ -438,23 +437,20 @@ void ScriptInterpreterPython::IOHandlerInputComplete(IOHandler &io_handler,
   case eIOHandlerWatchpoint: {
     WatchpointOptions *wp_options =
         (WatchpointOptions *)io_handler.GetUserData();
-    std::unique_ptr<WatchpointOptions::CommandData> data_ap(
-        new WatchpointOptions::CommandData());
-    if (data_ap.get()) {
-      data_ap->user_source.SplitIntoLines(data);
+    auto data_ap = llvm::make_unique<WatchpointOptions::CommandData>();
+    data_ap->user_source.SplitIntoLines(data);
 
-      if (GenerateWatchpointCommandCallbackData(data_ap->user_source,
-                                                data_ap->script_source)) {
-        BatonSP baton_sp(
-            new WatchpointOptions::CommandBaton(data_ap.release()));
-        wp_options->SetCallback(
-            ScriptInterpreterPython::WatchpointCallbackFunction, baton_sp);
-      } else if (!batch_mode) {
-        StreamFileSP error_sp = io_handler.GetErrorStreamFile();
-        if (error_sp) {
-          error_sp->Printf("Warning: No command attached to breakpoint.\n");
-          error_sp->Flush();
-        }
+    if (GenerateWatchpointCommandCallbackData(data_ap->user_source,
+                                              data_ap->script_source)) {
+      auto baton_sp =
+          std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_ap));
+      wp_options->SetCallback(
+          ScriptInterpreterPython::WatchpointCallbackFunction, baton_sp);
+    } else if (!batch_mode) {
+      StreamFileSP error_sp = io_handler.GetErrorStreamFile();
+      if (error_sp) {
+        error_sp->Printf("Warning: No command attached to breakpoint.\n");
+        error_sp->Flush();
       }
     }
     m_active_io_handler = eIOHandlerNone;
@@ -1238,8 +1234,7 @@ void ScriptInterpreterPython::SetBreakpointCommandCallbackFunction(
 // Set a Python one-liner as the callback for the breakpoint.
 Error ScriptInterpreterPython::SetBreakpointCommandCallback(
     BreakpointOptions *bp_options, const char *command_body_text) {
-  std::unique_ptr<BreakpointOptions::CommandData> data_ap(
-      new BreakpointOptions::CommandData());
+  auto data_ap = llvm::make_unique<BreakpointOptions::CommandData>();
 
   // Split the command_body_text into lines, and pass that to
   // GenerateBreakpointCommandCallbackData.  That will
@@ -1251,8 +1246,8 @@ Error ScriptInterpreterPython::SetBreakpointCommandCallback(
   Error error = GenerateBreakpointCommandCallbackData(data_ap->user_source,
                                                       data_ap->script_source);
   if (error.Success()) {
-    BreakpointOptions::CommandBatonSP baton_sp(
-        new BreakpointOptions::CommandBaton(data_ap.release()));
+    auto baton_sp =
+        std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_ap));
     bp_options->SetCallback(ScriptInterpreterPython::BreakpointCallbackFunction,
                             baton_sp);
     return error;
@@ -1263,8 +1258,7 @@ Error ScriptInterpreterPython::SetBreakpointCommandCallback(
 // Set a Python one-liner as the callback for the watchpoint.
 void ScriptInterpreterPython::SetWatchpointCommandCallback(
     WatchpointOptions *wp_options, const char *oneliner) {
-  std::unique_ptr<WatchpointOptions::CommandData> data_ap(
-      new WatchpointOptions::CommandData());
+  auto data_ap = llvm::make_unique<WatchpointOptions::CommandData>();
 
   // It's necessary to set both user_source and script_source to the oneliner.
   // The former is used to generate callback description (as in watchpoint
@@ -1277,7 +1271,8 @@ void ScriptInterpreterPython::SetWatchpointCommandCallback(
 
   if (GenerateWatchpointCommandCallbackData(data_ap->user_source,
                                             data_ap->script_source)) {
-    BatonSP baton_sp(new WatchpointOptions::CommandBaton(data_ap.release()));
+    auto baton_sp =
+        std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_ap));
     wp_options->SetCallback(ScriptInterpreterPython::WatchpointCallbackFunction,
                             baton_sp);
   }
