@@ -4518,18 +4518,22 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       N0.getOperand(0).getOpcode() == ISD::SHL) {
     SDValue N0Op0 = N0.getOperand(0);
     if (ConstantSDNode *N0Op0C1 = isConstOrConstSplat(N0Op0.getOperand(1))) {
-      uint64_t c1 = N0Op0C1->getZExtValue();
-      uint64_t c2 = N1C->getZExtValue();
+      APInt c1 = N0Op0C1->getAPIntValue();
+      APInt c2 = N1C->getAPIntValue();
+      zeroExtendToMatch(c1, c2, 1 /* Overflow Bit */);
+
       EVT InnerShiftVT = N0Op0.getValueType();
       uint64_t InnerShiftSize = InnerShiftVT.getScalarSizeInBits();
-      if (c2 >= OpSizeInBits - InnerShiftSize) {
+      if (c2.uge(OpSizeInBits - InnerShiftSize)) {
         SDLoc DL(N0);
-        if (c1 + c2 >= OpSizeInBits)
+        APInt Sum = c1 + c2;
+        if (Sum.uge(OpSizeInBits))
           return DAG.getConstant(0, DL, VT);
-        return DAG.getNode(ISD::SHL, DL, VT,
-                           DAG.getNode(N0.getOpcode(), DL, VT,
-                                       N0Op0->getOperand(0)),
-                           DAG.getConstant(c1 + c2, DL, N1.getValueType()));
+
+        return DAG.getNode(
+            ISD::SHL, DL, VT,
+            DAG.getNode(N0.getOpcode(), DL, VT, N0Op0->getOperand(0)),
+            DAG.getConstant(Sum.getZExtValue(), DL, N1.getValueType()));
       }
     }
   }
@@ -4541,8 +4545,8 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       N0.getOperand(0).getOpcode() == ISD::SRL) {
     SDValue N0Op0 = N0.getOperand(0);
     if (ConstantSDNode *N0Op0C1 = isConstOrConstSplat(N0Op0.getOperand(1))) {
-      uint64_t c1 = N0Op0C1->getZExtValue();
-      if (c1 < VT.getScalarSizeInBits()) {
+      if (N0Op0C1->getAPIntValue().ult(VT.getScalarSizeInBits())) {
+        uint64_t c1 = N0Op0C1->getZExtValue();
         uint64_t c2 = N1C->getZExtValue();
         if (c1 == c2) {
           SDValue NewOp0 = N0.getOperand(0);
@@ -5264,11 +5268,11 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     if (N0->getOpcode() == ISD::XOR) {
       if (auto *C = dyn_cast<ConstantSDNode>(N0->getOperand(1))) {
         SDValue Cond0 = N0->getOperand(0);
-        if (C->isOne()) 
-          return DAG.getNode(ISD::SELECT, SDLoc(N), N1.getValueType(), 
+        if (C->isOne())
+          return DAG.getNode(ISD::SELECT, SDLoc(N), N1.getValueType(),
                              Cond0, N2, N1);
         else
-          return DAG.getNode(ISD::SELECT, SDLoc(N), N1.getValueType(), 
+          return DAG.getNode(ISD::SELECT, SDLoc(N), N1.getValueType(),
                              Cond0, N1, N2);
       }
     }

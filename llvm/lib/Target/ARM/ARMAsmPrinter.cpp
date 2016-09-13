@@ -74,8 +74,9 @@ void ARMAsmPrinter::EmitFunctionEntryLabel() {
   if (AFI->isThumbFunction()) {
     OutStreamer->EmitAssemblerFlag(MCAF_Code16);
     OutStreamer->EmitThumbFunc(CurrentFnSym);
+  } else {
+    OutStreamer->EmitAssemblerFlag(MCAF_Code32);
   }
-
   OutStreamer->EmitLabel(CurrentFnSym);
 }
 

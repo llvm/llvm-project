@@ -18,9 +18,6 @@ module LLVM_Backend {
     umbrella "CodeGen"
     module * { export * }
 
-    // FIXME: Why is this excluded?
-    exclude header "CodeGen/MachineValueType.h"
-
     // Exclude these; they're intended to be included into only a single
     // translation unit (or none) and aren't part of this module.
     exclude header "CodeGen/CommandFlags.h"
@@ -225,9 +222,6 @@ module LLVM_Transforms {
   requires cplusplus
   umbrella "Transforms"
   module * { export * }
-
-  // FIXME: Excluded because it does bad things with the legacy pass manager.
-  exclude header "Transforms/IPO/PassManagerBuilder.h"
 }
 
 // A module covering ADT/ and Support/. These are intertwined and
@@ -251,9 +245,6 @@ module LLVM_Utils {
 
     // Exclude this; it's fundamentally non-modular.
     exclude header "Support/PluginLoader.h"
-
-    // FIXME: Mislayered?
-    exclude header "Support/TargetRegistry.h"
 
     // These are intended for textual inclusion.
     textual header "Support/ARMTargetParser.def"

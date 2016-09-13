@@ -244,7 +244,8 @@ private:
   bool tryInlineAsm(SDNode *N);
 
   void SelectConcatVector(SDNode *N);
-
+  void SelectCMPZ(SDNode *N, bool &SwitchEQNEToPLMI);
+  
   bool trySMLAWSMULW(SDNode *N);
 
   void SelectCMP_SWAP(SDNode *N);
@@ -2693,6 +2694,83 @@ void ARMDAGToDAGISel::SelectConcatVector(SDNode *N) {
   ReplaceNode(N, createDRegPairNode(VT, N->getOperand(0), N->getOperand(1)));
 }
 
+static Optional<std::pair<unsigned, unsigned>>
+getContiguousRangeOfSetBits(const APInt &A) {
+  unsigned FirstOne = A.getBitWidth() - A.countLeadingZeros() - 1;
+  unsigned LastOne = A.countTrailingZeros();
+  if (A.countPopulation() != (FirstOne - LastOne + 1))
+    return Optional<std::pair<unsigned,unsigned>>();
+  return std::make_pair(FirstOne, LastOne);
+}
+
+void ARMDAGToDAGISel::SelectCMPZ(SDNode *N, bool &SwitchEQNEToPLMI) {
+  assert(N->getOpcode() == ARMISD::CMPZ);
+  SwitchEQNEToPLMI = false;
+  
+  if (!Subtarget->isThumb())
+    // FIXME: Work out whether it is profitable to do this in A32 mode - LSL and
+    // LSR don't exist as standalone instructions - they need the barrel shifter.
+    return;
+  // select (cmpz (and X, C), #0) -> (LSLS X) or (LSRS X) or (LSRS (LSLS X))
+  SDValue And = N->getOperand(0);
+  SDValue Zero = N->getOperand(1);
+  if (!isa<ConstantSDNode>(Zero) || !cast<ConstantSDNode>(Zero)->isNullValue() ||
+      And->getOpcode() != ISD::AND)
+    return;
+  SDValue X = And.getOperand(0);
+  auto C = dyn_cast<ConstantSDNode>(And.getOperand(1));
+
+  if (!C || !X->hasOneUse())
+    return;
+  auto Range = getContiguousRangeOfSetBits(C->getAPIntValue());
+  if (!Range)
+    return;
+
+  // There are several ways to lower this:
+  SDNode *NewN;
+  SDLoc dl(N);
+
+  auto EmitShift = [&](unsigned Opc, SDValue Src, unsigned Imm) -> SDNode* {
+    if (Subtarget->isThumb2()) {
+      Opc = (Opc == ARM::tLSLri) ? ARM::t2LSLri : ARM::t2LSRri;
+      SDValue Ops[] = { Src, CurDAG->getTargetConstant(Imm, dl, MVT::i32),
+                        getAL(CurDAG, dl), CurDAG->getRegister(0, MVT::i32),
+                        CurDAG->getRegister(0, MVT::i32) };
+      return CurDAG->getMachineNode(Opc, dl, MVT::i32, Ops);
+    } else {
+      SDValue Ops[] = {CurDAG->getRegister(ARM::CPSR, MVT::i32), Src,
+                       CurDAG->getTargetConstant(Imm, dl, MVT::i32),
+                       getAL(CurDAG, dl), CurDAG->getRegister(0, MVT::i32)};
+      return CurDAG->getMachineNode(Opc, dl, MVT::i32, Ops);
+    }
+  };
+  
+  if (Range->second == 0) {
+    //  1. Mask includes the LSB -> Simply shift the top N bits off
+    NewN = EmitShift(ARM::tLSLri, X, 31 - Range->first);
+    ReplaceNode(And.getNode(), NewN);
+  } else if (Range->first == 31) {
+    //  2. Mask includes the MSB -> Simply shift the bottom N bits off
+    NewN = EmitShift(ARM::tLSRri, X, Range->second);
+    ReplaceNode(And.getNode(), NewN);
+  } else if (Range->first == Range->second) {
+    //  3. Only one bit is set. We can shift this into the sign bit and use a
+    //     PL/MI comparison.
+    NewN = EmitShift(ARM::tLSLri, X, 31 - Range->first);
+    ReplaceNode(And.getNode(), NewN);
+
+    SwitchEQNEToPLMI = true;
+  } else if (!Subtarget->hasV6T2Ops()) {
+    //  4. Do a double shift to clear bottom and top bits, but only in
+    //     thumb-1 mode as in thumb-2 we can use UBFX.
+    NewN = EmitShift(ARM::tLSLri, X, 31 - Range->first);
+    NewN = EmitShift(ARM::tLSRri, SDValue(NewN, 0),
+                     Range->second + (31 - Range->first));
+    ReplaceNode(And.getNode(), NewN);
+  }
+
+}
+
 void ARMDAGToDAGISel::Select(SDNode *N) {
   SDLoc dl(N);
 
@@ -2920,6 +2998,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
         return;
       }
     }
+
     break;
   }
   case ARMISD::VMOVRRD:
@@ -3110,9 +3189,27 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     assert(N2.getOpcode() == ISD::Constant);
     assert(N3.getOpcode() == ISD::Register);
 
-    SDValue Tmp2 = CurDAG->getTargetConstant(((unsigned)
-                               cast<ConstantSDNode>(N2)->getZExtValue()), dl,
-                               MVT::i32);
+    unsigned CC = (unsigned) cast<ConstantSDNode>(N2)->getZExtValue();
+    
+    if (InFlag.getOpcode() == ARMISD::CMPZ) {
+      bool SwitchEQNEToPLMI;
+      SelectCMPZ(InFlag.getNode(), SwitchEQNEToPLMI);
+      InFlag = N->getOperand(4);
+
+      if (SwitchEQNEToPLMI) {
+        switch ((ARMCC::CondCodes)CC) {
+        default: llvm_unreachable("CMPZ must be either NE or EQ!");
+        case ARMCC::NE:
+          CC = (unsigned)ARMCC::MI;
+          break;
+        case ARMCC::EQ:
+          CC = (unsigned)ARMCC::PL;
+          break;
+        }
+      }
+    }
+
+    SDValue Tmp2 = CurDAG->getTargetConstant(CC, dl, MVT::i32);
     SDValue Ops[] = { N1, Tmp2, N3, Chain, InFlag };
     SDNode *ResNode = CurDAG->getMachineNode(Opc, dl, MVT::Other,
                                              MVT::Glue, Ops);
@@ -3163,6 +3260,38 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
         SDValue Ops2[] = {SDValue(Add, 0), CurDAG->getConstant(0, dl, MVT::i32)};
         CurDAG->MorphNodeTo(N, ARMISD::CMPZ, CurDAG->getVTList(MVT::Glue), Ops2);
       }
+    }
+    // Other cases are autogenerated.
+    break;
+  }
+
+  case ARMISD::CMOV: {
+    SDValue InFlag = N->getOperand(4);
+
+    if (InFlag.getOpcode() == ARMISD::CMPZ) {
+      bool SwitchEQNEToPLMI;
+      SelectCMPZ(InFlag.getNode(), SwitchEQNEToPLMI);
+
+      if (SwitchEQNEToPLMI) {
+        SDValue ARMcc = N->getOperand(2);
+        ARMCC::CondCodes CC =
+          (ARMCC::CondCodes)cast<ConstantSDNode>(ARMcc)->getZExtValue();
+
+        switch (CC) {
+        default: llvm_unreachable("CMPZ must be either NE or EQ!");
+        case ARMCC::NE:
+          CC = ARMCC::MI;
+          break;
+        case ARMCC::EQ:
+          CC = ARMCC::PL;
+          break;
+        }
+        SDValue NewARMcc = CurDAG->getConstant((unsigned)CC, dl, MVT::i32);
+        SDValue Ops[] = {N->getOperand(0), N->getOperand(1), NewARMcc,
+                         N->getOperand(3), N->getOperand(4)};
+        CurDAG->MorphNodeTo(N, ARMISD::CMOV, N->getVTList(), Ops);
+      }
+
     }
     // Other cases are autogenerated.
     break;

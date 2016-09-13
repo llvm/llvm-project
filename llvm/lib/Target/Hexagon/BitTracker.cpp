@@ -1054,6 +1054,11 @@ void BT::visit(const MachineInstr &MI) {
   assert(!MI.isBranch() && "Only non-branches are allowed");
   InstrExec.insert(&MI);
   visitNonBranch(MI);
+  // The call to visitNonBranch could propagate the changes until a branch
+  // is actually visited. This could result in adding CFG edges to the flow
+  // queue. Since the queue won't be processed, clear it.
+  while (!FlowQ.empty())
+    FlowQ.pop();
 }
 
 

@@ -2,6 +2,7 @@
 ; RUN: llc %s -O0 -march=sparc -mcpu=gr712rc -o - | FileCheck %s
 ; RUN: llc %s -O0 -march=sparc -mcpu=leon4 -o - | FileCheck %s
 ; RUN: llc %s -O0 -march=sparc -mcpu=gr740 -o - | FileCheck %s
+; RUN: llc %s -O0 -march=sparc -mcpu=myriad2 -o - | FileCheck %s
 
 ; CHECK-LABEL: casa_test
 ; CHECK:       casa [%o0] 10, %o3, %o2

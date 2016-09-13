@@ -937,17 +937,24 @@ bool SIInstrInfo::swapSourceModifiers(MachineInstr &MI,
 
 static MachineInstr *swapRegAndNonRegOperand(MachineInstr &MI,
                                              MachineOperand &RegOp,
-                                             MachineOperand &ImmOp) {
-  // TODO: Handle other immediate like types.
-  if (!ImmOp.isImm())
+                                             MachineOperand &NonRegOp) {
+  unsigned Reg = RegOp.getReg();
+  unsigned SubReg = RegOp.getSubReg();
+  bool IsKill = RegOp.isKill();
+  bool IsDead = RegOp.isDead();
+  bool IsUndef = RegOp.isUndef();
+  bool IsDebug = RegOp.isDebug();
+
+  if (NonRegOp.isImm())
+    RegOp.ChangeToImmediate(NonRegOp.getImm());
+  else if (NonRegOp.isFI())
+    RegOp.ChangeToFrameIndex(NonRegOp.getIndex());
+  else
     return nullptr;
 
-  int64_t ImmVal = ImmOp.getImm();
-  ImmOp.ChangeToRegister(RegOp.getReg(), false, false,
-                         RegOp.isKill(), RegOp.isDead(), RegOp.isUndef(),
-                         RegOp.isDebug());
-  ImmOp.setSubReg(RegOp.getSubReg());
-  RegOp.ChangeToImmediate(ImmVal);
+  NonRegOp.ChangeToRegister(Reg, false, false, IsKill, IsDead, IsUndef, IsDebug);
+  NonRegOp.setSubReg(SubReg);
+
   return &MI;
 }
 
