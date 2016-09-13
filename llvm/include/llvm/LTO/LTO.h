@@ -234,6 +234,10 @@ public:
   MemoryBufferRef getMemoryBufferRef() const {
     return Obj->getMemoryBufferRef();
   }
+
+  Module &getModule() const {
+    return Obj->getModule();
+  }
 };
 
 /// A ThinBackend defines what happens after the thin-link phase during ThinLTO.
