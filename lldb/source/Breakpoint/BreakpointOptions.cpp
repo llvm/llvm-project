@@ -17,12 +17,77 @@
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/StringList.h"
 #include "lldb/Core/Value.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+const char *BreakpointOptions::CommandData::g_option_names
+    [BreakpointOptions::CommandData::OptionNames::LastOptionName]{
+        "UserSource", "ScriptSource", "StopOnError"};
+
+StructuredData::ObjectSP
+BreakpointOptions::CommandData::SerializeToStructuredData() {
+  size_t num_strings = user_source.GetSize();
+  if (num_strings == 0 && script_source.empty()) {
+    // We shouldn't serialize commands if there aren't any, return an empty sp
+    // to indicate this.
+    return StructuredData::ObjectSP();
+  }
+
+  StructuredData::DictionarySP options_dict_sp(
+      new StructuredData::Dictionary());
+  options_dict_sp->AddBooleanItem(GetKey(OptionNames::StopOnError),
+                                  stop_on_error);
+
+  StructuredData::ArraySP user_source_sp(new StructuredData::Array());
+  for (size_t i = 0; i < num_strings; i++) {
+    StructuredData::StringSP item_sp(
+        new StructuredData::String(user_source[i]));
+    user_source_sp->AddItem(item_sp);
+    options_dict_sp->AddItem(GetKey(OptionNames::UserSource), user_source_sp);
+  }
+
+  if (!script_source.empty()) {
+    StructuredData::StringSP item_sp(new StructuredData::String(script_source));
+    options_dict_sp->AddItem(GetKey(OptionNames::ScriptSource), user_source_sp);
+  }
+  return options_dict_sp;
+}
+
+std::unique_ptr<BreakpointOptions::CommandData>
+BreakpointOptions::CommandData::CreateFromStructuredData(
+    const StructuredData::Dictionary &options_dict, Error &error) {
+  std::string script_source;
+  CommandData *data = new CommandData();
+  bool success = options_dict.GetValueForKeyAsBoolean(
+      GetKey(OptionNames::StopOnError), data->stop_on_error);
+
+  success = options_dict.GetValueForKeyAsString(
+      GetKey(OptionNames::ScriptSource), data->script_source);
+
+  StructuredData::Array *user_source;
+  success = options_dict.GetValueForKeyAsArray(GetKey(OptionNames::UserSource),
+                                               user_source);
+  if (success) {
+    size_t num_elems = user_source->GetSize();
+    for (size_t i = 0; i < num_elems; i++) {
+      std::string elem_string;
+      success = user_source->GetItemAtIndexAsString(i, elem_string);
+      if (success)
+        data->user_source.AppendString(elem_string);
+    }
+  }
+  return std::unique_ptr<BreakpointOptions::CommandData>(data);
+}
+
+const char *BreakpointOptions::g_option_names
+    [BreakpointOptions::OptionNames::LastOptionName]{
+        "ConditionText", "IgnoreCount", "EnabledState", "OneShotState"};
 
 bool BreakpointOptions::NullCallback(void *baton,
                                      StoppointCallbackContext *context,
@@ -36,15 +101,25 @@ bool BreakpointOptions::NullCallback(void *baton,
 //----------------------------------------------------------------------
 BreakpointOptions::BreakpointOptions()
     : m_callback(BreakpointOptions::NullCallback), m_callback_baton_sp(),
-      m_callback_is_synchronous(false), m_enabled(true), m_one_shot(false),
-      m_ignore_count(0), m_thread_spec_ap(), m_condition_text(),
-      m_condition_text_hash(0) {}
+      m_baton_is_command_baton(false), m_callback_is_synchronous(false),
+      m_enabled(true), m_one_shot(false), m_ignore_count(0), m_thread_spec_ap(),
+      m_condition_text(), m_condition_text_hash(0) {}
+
+BreakpointOptions::BreakpointOptions(const char *condition, bool enabled,
+                                     int32_t ignore, bool one_shot)
+    : m_callback(nullptr), m_baton_is_command_baton(false),
+      m_callback_is_synchronous(false), m_enabled(enabled),
+      m_one_shot(one_shot), m_ignore_count(ignore), m_condition_text(condition),
+      m_condition_text_hash(0)
+
+{}
 
 //----------------------------------------------------------------------
 // BreakpointOptions copy constructor
 //----------------------------------------------------------------------
 BreakpointOptions::BreakpointOptions(const BreakpointOptions &rhs)
     : m_callback(rhs.m_callback), m_callback_baton_sp(rhs.m_callback_baton_sp),
+      m_baton_is_command_baton(rhs.m_baton_is_command_baton),
       m_callback_is_synchronous(rhs.m_callback_is_synchronous),
       m_enabled(rhs.m_enabled), m_one_shot(rhs.m_one_shot),
       m_ignore_count(rhs.m_ignore_count), m_thread_spec_ap() {
@@ -61,6 +136,7 @@ const BreakpointOptions &BreakpointOptions::
 operator=(const BreakpointOptions &rhs) {
   m_callback = rhs.m_callback;
   m_callback_baton_sp = rhs.m_callback_baton_sp;
+  m_baton_is_command_baton = rhs.m_baton_is_command_baton;
   m_callback_is_synchronous = rhs.m_callback_is_synchronous;
   m_enabled = rhs.m_enabled;
   m_one_shot = rhs.m_one_shot;
@@ -91,21 +167,109 @@ BreakpointOptions::CopyOptionsNoCallback(BreakpointOptions &orig) {
 //----------------------------------------------------------------------
 BreakpointOptions::~BreakpointOptions() = default;
 
+std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
+    const StructuredData::Dictionary &options_dict, Error &error) {
+  bool enabled = true;
+  bool one_shot = false;
+  int32_t ignore_count = 0;
+  std::string condition_text;
+
+  bool success = options_dict.GetValueForKeyAsBoolean(
+      GetKey(OptionNames::EnabledState), enabled);
+  if (!success) {
+    error.SetErrorStringWithFormat("%s key is not a boolean.",
+                                   GetKey(OptionNames::EnabledState));
+    return nullptr;
+  }
+
+  success = options_dict.GetValueForKeyAsBoolean(
+      GetKey(OptionNames::OneShotState), one_shot);
+  if (!success) {
+    error.SetErrorStringWithFormat("%s key is not a boolean.",
+                                   GetKey(OptionNames::OneShotState));
+    return nullptr;
+  }
+  success = options_dict.GetValueForKeyAsInteger(
+      GetKey(OptionNames::IgnoreCount), ignore_count);
+  if (!success) {
+    error.SetErrorStringWithFormat("%s key is not an integer.",
+                                   GetKey(OptionNames::IgnoreCount));
+    return nullptr;
+  }
+
+  std::unique_ptr<CommandData> cmd_data;
+  StructuredData::Dictionary *cmds_dict;
+  success = options_dict.GetValueForKeyAsDictionary(
+      CommandData::GetSerializationKey(), cmds_dict);
+  if (success && cmds_dict) {
+    Error cmds_error;
+    cmd_data = CommandData::CreateFromStructuredData(*cmds_dict, cmds_error);
+    if (cmds_error.Fail()) {
+      error.SetErrorStringWithFormat(
+          "Failed to deserialize breakpoint command options: %s.",
+          cmds_error.AsCString());
+      return nullptr;
+    }
+  }
+
+  BreakpointOptions *bp_options = new BreakpointOptions(
+      condition_text.c_str(), enabled, ignore_count, one_shot);
+  if (cmd_data)
+    bp_options->SetCommandDataCallback(cmd_data.release());
+  return std::unique_ptr<BreakpointOptions>(bp_options);
+}
+
+StructuredData::ObjectSP BreakpointOptions::SerializeToStructuredData() {
+  StructuredData::DictionarySP options_dict_sp(
+      new StructuredData::Dictionary());
+  options_dict_sp->AddBooleanItem(GetKey(OptionNames::EnabledState), m_enabled);
+  options_dict_sp->AddBooleanItem(GetKey(OptionNames::OneShotState),
+                                  m_one_shot);
+  options_dict_sp->AddIntegerItem(GetKey(OptionNames::IgnoreCount),
+                                  m_ignore_count);
+  options_dict_sp->AddStringItem(GetKey(OptionNames::ConditionText),
+                                 m_condition_text);
+  if (m_baton_is_command_baton) {
+    CommandData *cmd_data =
+        static_cast<CommandData *>(m_callback_baton_sp->m_data);
+    StructuredData::ObjectSP commands_sp =
+        cmd_data->SerializeToStructuredData();
+    if (commands_sp) {
+      options_dict_sp->AddItem(
+          BreakpointOptions::CommandData::GetSerializationKey(), commands_sp);
+    }
+  }
+  // FIXME: Need to serialize thread filter...
+  return options_dict_sp;
+}
+
 //------------------------------------------------------------------
 // Callbacks
 //------------------------------------------------------------------
 void BreakpointOptions::SetCallback(BreakpointHitCallback callback,
-                                    const BatonSP &callback_baton_sp,
+                                    const lldb::BatonSP &callback_baton_sp,
                                     bool callback_is_synchronous) {
   m_callback_is_synchronous = callback_is_synchronous;
   m_callback = callback;
   m_callback_baton_sp = callback_baton_sp;
+  m_baton_is_command_baton = false;
+}
+
+void BreakpointOptions::SetCallback(
+    BreakpointHitCallback callback,
+    const BreakpointOptions::CommandBatonSP &callback_baton_sp,
+    bool callback_is_synchronous) {
+  m_callback_is_synchronous = callback_is_synchronous;
+  m_callback = callback;
+  m_callback_baton_sp = callback_baton_sp;
+  m_baton_is_command_baton = true;
 }
 
 void BreakpointOptions::ClearCallback() {
   m_callback = BreakpointOptions::NullCallback;
   m_callback_is_synchronous = false;
   m_callback_baton_sp.reset();
+  m_baton_is_command_baton = false;
 }
 
 Baton *BreakpointOptions::GetBaton() { return m_callback_baton_sp.get(); }
@@ -238,4 +402,50 @@ void BreakpointOptions::CommandBaton::GetDescription(
   }
   s->IndentLess();
   s->IndentLess();
+}
+
+void BreakpointOptions::SetCommandDataCallback(CommandData *cmd_data) {
+  CommandBatonSP baton_sp(new CommandBaton(cmd_data));
+  SetCallback(BreakpointOptions::BreakpointOptionsCallbackFunction, baton_sp);
+}
+
+bool BreakpointOptions::BreakpointOptionsCallbackFunction(
+    void *baton, StoppointCallbackContext *context, lldb::user_id_t break_id,
+    lldb::user_id_t break_loc_id) {
+  bool ret_value = true;
+  if (baton == nullptr)
+    return true;
+
+  CommandData *data = (CommandData *)baton;
+  StringList &commands = data->user_source;
+
+  if (commands.GetSize() > 0) {
+    ExecutionContext exe_ctx(context->exe_ctx_ref);
+    Target *target = exe_ctx.GetTargetPtr();
+    if (target) {
+      CommandReturnObject result;
+      Debugger &debugger = target->GetDebugger();
+      // Rig up the results secondary output stream to the debugger's, so the
+      // output will come out synchronously
+      // if the debugger is set up that way.
+
+      StreamSP output_stream(debugger.GetAsyncOutputStream());
+      StreamSP error_stream(debugger.GetAsyncErrorStream());
+      result.SetImmediateOutputStream(output_stream);
+      result.SetImmediateErrorStream(error_stream);
+
+      CommandInterpreterRunOptions options;
+      options.SetStopOnContinue(true);
+      options.SetStopOnError(data->stop_on_error);
+      options.SetEchoCommands(true);
+      options.SetPrintResults(true);
+      options.SetAddToHistory(false);
+
+      debugger.GetCommandInterpreter().HandleCommands(commands, &exe_ctx,
+                                                      options, result);
+      result.GetImmediateOutputStream()->Flush();
+      result.GetImmediateErrorStream()->Flush();
+    }
+  }
+  return ret_value;
 }

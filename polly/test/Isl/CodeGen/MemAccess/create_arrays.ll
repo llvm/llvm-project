@@ -11,11 +11,11 @@
 ; CHECK:        double MemRef_B[*][1024]; // Element size 8
 ; CHECK:        double MemRef_beta; // Element size 8
 ; CHECK:        double MemRef_A[*][1056]; // Element size 8
-; CHECK:        double D[*][270336]; // Element size 8
-; CHECK:        double E[*][270336][200000]; // Element size 8
-; CHECK:        i64 F[*][270336]; // Element size 8
+; CHECK:        double D[270336]; // Element size 8
+; CHECK:        double E[270336][200000]; // Element size 8
+; CHECK:        i64 F[270336]; // Element size 8
 ;
-; CHECK:New access function '{ Stmt_bb12[i0, i1, i2] -> E[0, i2, i0] }' detected in JSCOP file
+; CHECK:New access function '{ Stmt_bb12[i0, i1, i2] -> E[i2, i0] }' detected in JSCOP file
 ;
 ; CODEGEN:define internal void @create_arrays(i32 %arg, i32 %arg1, i32 %arg2, double %arg3, double %beta, [1056 x double]* %A, [1024 x double]* %B, [1056 x double]* %arg7) #0 {
 ; CODEGEN:bb:
@@ -27,9 +27,8 @@
 ;
 ; CODEGEN:  %beta.s2a.reload = load double, double* %beta.s2a
 ; CODEGEN:  %polly.access.cast.E = bitcast [270336 x [200000 x double]]* %E to double*
-; CODEGEN:  %polly.access.add.E = add nsw i64 0, %polly.indvar33
-; CODEGEN:  %polly.access.mul.E = mul nsw i64 %polly.access.add.E, 200000
-; CODEGEN:  %polly.access.add.E36 = add nsw i64 %polly.access.mul.E, %polly.indvar
+; CODEGEN:  %polly.access.mul.E = mul nsw i64 %polly.indvar33, 200000
+; CODEGEN:  %polly.access.add.E = add nsw i64 %polly.access.mul.E, %polly.indvar
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

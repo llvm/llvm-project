@@ -6,6 +6,11 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+//
+// This file contains a class to create an ELF file in memory. This is
+// supposed to be used for "-format binary" option.
+//
+//===----------------------------------------------------------------------===//
 
 #include "ELFCreator.h"
 

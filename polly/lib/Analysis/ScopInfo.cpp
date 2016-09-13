@@ -218,9 +218,13 @@ bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes) {
   int SharedDims = std::min(NewSizes.size(), DimensionSizes.size());
   int ExtraDimsNew = NewSizes.size() - SharedDims;
   int ExtraDimsOld = DimensionSizes.size() - SharedDims;
-  for (int i = 0; i < SharedDims; i++)
-    if (NewSizes[i + ExtraDimsNew] != DimensionSizes[i + ExtraDimsOld])
+
+  for (int i = 0; i < SharedDims; i++) {
+    auto &NewSize = NewSizes[i + ExtraDimsNew];
+    auto &KnownSize = DimensionSizes[i + ExtraDimsOld];
+    if (NewSize && KnownSize && NewSize != KnownSize)
       return false;
+  }
 
   if (DimensionSizes.size() >= NewSizes.size())
     return true;
@@ -232,6 +236,10 @@ bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes) {
     isl_pw_aff_free(Size);
   DimensionSizesPw.clear();
   for (const SCEV *Expr : DimensionSizes) {
+    if (!Expr) {
+      DimensionSizesPw.push_back(nullptr);
+      continue;
+    }
     isl_pw_aff *Size = S.getPwAffOnly(Expr);
     DimensionSizesPw.push_back(Size);
   }
@@ -258,9 +266,12 @@ void ScopArrayInfo::dump() const { print(errs()); }
 
 void ScopArrayInfo::print(raw_ostream &OS, bool SizeAsPwAff) const {
   OS.indent(8) << *getElementType() << " " << getName();
-  if (getNumberOfDimensions() > 0)
+  unsigned u = 0;
+  if (getNumberOfDimensions() > 0 && !getDimensionSize(0)) {
     OS << "[*]";
-  for (unsigned u = 1; u < getNumberOfDimensions(); u++) {
+    u++;
+  }
+  for (; u < getNumberOfDimensions(); u++) {
     OS << "[";
 
     if (SizeAsPwAff) {
@@ -636,7 +647,7 @@ void MemoryAccess::assumeNoOutOfBound() {
 
 void MemoryAccess::buildMemIntrinsicAccessRelation() {
   assert(isa<MemIntrinsic>(getAccessInstruction()));
-  assert(Subscripts.size() == 2 && Sizes.size() == 0);
+  assert(Subscripts.size() == 2 && Sizes.size() == 1);
 
   auto *SubscriptPWA = getPwAff(Subscripts[0]);
   auto *SubscriptMap = isl_map_from_pw_aff(SubscriptPWA);
@@ -704,7 +715,7 @@ __isl_give isl_map *MemoryAccess::foldAccess(__isl_take isl_map *AccessRelation,
   for (int i = Size - 2; i >= 0; --i) {
     isl_space *Space;
     isl_map *MapOne, *MapTwo;
-    isl_pw_aff *DimSize = getPwAff(Sizes[i]);
+    isl_pw_aff *DimSize = getPwAff(Sizes[i + 1]);
 
     isl_space *SpaceSize = isl_pw_aff_get_space(DimSize);
     isl_pw_aff_free(DimSize);
@@ -813,7 +824,7 @@ void MemoryAccess::buildAccessRelation(const ScopArrayInfo *SAI) {
     AccessRelation = isl_map_flat_range_product(AccessRelation, SubscriptMap);
   }
 
-  if (Sizes.size() >= 1 && !isa<SCEVConstant>(Sizes[0]))
+  if (Sizes.size() >= 2 && !isa<SCEVConstant>(Sizes[1]))
     AccessRelation = foldAccess(AccessRelation, Statement);
 
   Space = Statement->getDomainSpace();
@@ -3499,7 +3510,10 @@ Scop::createScopArrayInfo(Type *ElementType, const std::string &BaseName,
   std::vector<const SCEV *> SCEVSizes;
 
   for (auto size : Sizes)
-    SCEVSizes.push_back(getSE()->getConstant(DimSizeType, size, false));
+    if (size)
+      SCEVSizes.push_back(getSE()->getConstant(DimSizeType, size, false));
+    else
+      SCEVSizes.push_back(nullptr);
 
   auto *SAI =
       getOrCreateScopArrayInfo(nullptr, ElementType, SCEVSizes,

@@ -80,19 +80,6 @@ BreakpointResolverName::BreakpointResolverName(Breakpoint *bkpt,
       m_match_type(Breakpoint::Regexp), m_language(language),
       m_skip_prologue(skip_prologue) {}
 
-BreakpointResolverName::BreakpointResolverName(
-    Breakpoint *bkpt, const char *class_name, const char *method,
-    Breakpoint::MatchType type, lldb::addr_t offset, bool skip_prologue)
-    : BreakpointResolver(bkpt, BreakpointResolver::NameResolver, offset),
-      m_class_name(class_name), m_regex(), m_match_type(type),
-      m_language(eLanguageTypeUnknown), m_skip_prologue(skip_prologue) {
-  Module::LookupInfo lookup;
-  lookup.SetName(ConstString(method));
-  lookup.SetLookupName(lookup.GetName());
-  lookup.SetNameTypeMask(eFunctionNameTypeMethod);
-  m_lookups.push_back(lookup);
-}
-
 BreakpointResolverName::~BreakpointResolverName() = default;
 
 BreakpointResolverName::BreakpointResolverName(
@@ -102,6 +89,133 @@ BreakpointResolverName::BreakpointResolverName(
       m_lookups(rhs.m_lookups), m_class_name(rhs.m_class_name),
       m_regex(rhs.m_regex), m_match_type(rhs.m_match_type),
       m_language(rhs.m_language), m_skip_prologue(rhs.m_skip_prologue) {}
+
+BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
+    Breakpoint *bkpt, const StructuredData::Dictionary &options_dict,
+    Error &error) {
+  LanguageType language = eLanguageTypeUnknown;
+  std::string language_name;
+  bool success = options_dict.GetValueForKeyAsString(
+      GetKey(OptionNames::LanguageName), language_name);
+  if (success) {
+    language = Language::GetLanguageTypeFromString(language_name.c_str());
+    if (language == eLanguageTypeUnknown) {
+      error.SetErrorStringWithFormat("BRN::CFSD: Unknown language: %s.",
+                                     language_name.c_str());
+      return nullptr;
+    }
+  }
+
+  lldb::addr_t offset = 0;
+  success =
+      options_dict.GetValueForKeyAsInteger(GetKey(OptionNames::Offset), offset);
+  if (!success) {
+    error.SetErrorStringWithFormat("BRN::CFSD: Missing offset entry.");
+    return nullptr;
+  }
+
+  bool skip_prologue;
+  success = options_dict.GetValueForKeyAsBoolean(
+      GetKey(OptionNames::SkipPrologue), skip_prologue);
+  if (!success) {
+    error.SetErrorStringWithFormat("BRN::CFSD: Missing Skip prologue entry.");
+    return nullptr;
+  }
+
+  std::string regex_text;
+  success = options_dict.GetValueForKeyAsString(
+      GetKey(OptionNames::RegexString), regex_text);
+  if (success) {
+    RegularExpression regex(regex_text.c_str());
+    return new BreakpointResolverName(bkpt, regex, language, offset,
+                                      skip_prologue);
+  } else {
+    StructuredData::Array *names_array;
+    success = options_dict.GetValueForKeyAsArray(
+        GetKey(OptionNames::SymbolNameArray), names_array);
+    if (!success) {
+      error.SetErrorStringWithFormat("BRN::CFSD: Missing symbol names entry.");
+      return nullptr;
+    }
+    StructuredData::Array *names_mask_array;
+    success = options_dict.GetValueForKeyAsArray(
+        GetKey(OptionNames::NameMaskArray), names_mask_array);
+    if (!success) {
+      error.SetErrorStringWithFormat(
+          "BRN::CFSD: Missing symbol names mask entry.");
+      return nullptr;
+    }
+
+    size_t num_elem = names_array->GetSize();
+    if (num_elem != names_mask_array->GetSize()) {
+      error.SetErrorString(
+          "BRN::CFSD: names and names mask arrays have different sizes.");
+      return nullptr;
+    }
+
+    if (num_elem == 0) {
+      error.SetErrorString(
+          "BRN::CFSD: no name entry in a breakpoint by name breakpoint.");
+      return nullptr;
+    }
+    std::vector<std::string> names;
+    std::vector<uint32_t> name_masks;
+    for (size_t i = 0; i < num_elem; i++) {
+      uint32_t name_mask;
+      std::string name;
+
+      success = names_array->GetItemAtIndexAsString(i, name);
+      if (!success) {
+        error.SetErrorString("BRN::CFSD: name entry is not a string.");
+        return nullptr;
+      }
+      success = names_mask_array->GetItemAtIndexAsInteger(i, name_mask);
+      if (!success) {
+        error.SetErrorString("BRN::CFSD: name mask entry is not an integer.");
+        return nullptr;
+      }
+      names.push_back(name);
+      name_masks.push_back(name_mask);
+    }
+
+    BreakpointResolverName *resolver = new BreakpointResolverName(
+        bkpt, names[0].c_str(), name_masks[0], language,
+        Breakpoint::MatchType::Exact, offset, skip_prologue);
+    for (size_t i = 1; i < num_elem; i++) {
+      resolver->AddNameLookup(ConstString(names[i]), name_masks[i]);
+    }
+    return resolver;
+  }
+}
+
+StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
+  StructuredData::DictionarySP options_dict_sp(
+      new StructuredData::Dictionary());
+
+  if (m_regex.IsValid()) {
+    options_dict_sp->AddStringItem(GetKey(OptionNames::RegexString),
+                                   m_regex.GetText());
+  } else {
+    StructuredData::ArraySP names_sp(new StructuredData::Array());
+    StructuredData::ArraySP name_masks_sp(new StructuredData::Array());
+    for (auto lookup : m_lookups) {
+      names_sp->AddItem(StructuredData::StringSP(
+          new StructuredData::String(lookup.GetName().AsCString())));
+      name_masks_sp->AddItem(StructuredData::IntegerSP(
+          new StructuredData::Integer(lookup.GetNameTypeMask())));
+    }
+    options_dict_sp->AddItem(GetKey(OptionNames::SymbolNameArray), names_sp);
+    options_dict_sp->AddItem(GetKey(OptionNames::NameMaskArray), name_masks_sp);
+  }
+  if (m_language != eLanguageTypeUnknown)
+    options_dict_sp->AddStringItem(
+        GetKey(OptionNames::LanguageName),
+        Language::GetNameForLanguageType(m_language));
+  options_dict_sp->AddBooleanItem(GetKey(OptionNames::SkipPrologue),
+                                  m_skip_prologue);
+
+  return WrapOptionsDict(options_dict_sp);
+}
 
 void BreakpointResolverName::AddNameLookup(const ConstString &name,
                                            uint32_t name_type_mask) {

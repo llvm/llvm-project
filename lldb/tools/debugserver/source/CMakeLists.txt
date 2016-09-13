@@ -44,9 +44,9 @@ add_library(lldbDebugserverCommon
   DNBRegisterInfo.cpp
   DNBThreadResumeActions.cpp
   JSON.cpp
+  StdStringExtractor.cpp
   # JSON reader depends on the following LLDB-common files
   ${LLDB_SOURCE_DIR}/source/Host/common/StringConvert.cpp
-  ${LLDB_SOURCE_DIR}/source/Utility/StdStringExtractor.cpp
   # end JSON reader dependencies
   libdebugserver.cpp
   PseudoTerminal.cpp

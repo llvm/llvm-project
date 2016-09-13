@@ -733,6 +733,8 @@ static std::unique_ptr<InputFile> createELFFile(MemoryBufferRef MB) {
 }
 
 template <class ELFT> std::unique_ptr<InputFile> BinaryFile::createELF() {
+  // Wrap the binary blob with an ELF header and footer
+  // so that we can link it as a regular ELF file.
   ELFCreator<ELFT> ELF(ET_REL, Config->EMachine);
   auto DataSec = ELF.addSection(".data");
   DataSec.Header->sh_flags = SHF_ALLOC;

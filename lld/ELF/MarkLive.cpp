@@ -54,7 +54,7 @@ struct ResolvedReloc {
 template <class ELFT>
 static typename ELFT::uint getAddend(InputSectionBase<ELFT> &Sec,
                                      const typename ELFT::Rel &Rel) {
-  return Target->getImplicitAddend(Sec.getSectionData().begin(),
+  return Target->getImplicitAddend(Sec.Data.begin(),
                                    Rel.getType(Config->Mips64EL));
 }
 

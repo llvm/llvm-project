@@ -188,7 +188,7 @@ private:
   std::vector<InputSectionBase<ELFT> *>
   getInputSections(const InputSectionDescription *);
 
-  void discard(OutputSectionCommand &Cmd);
+  void discard(ArrayRef<InputSectionBase<ELFT> *> V);
 
   std::vector<InputSectionBase<ELFT> *>
   createInputSectionList(OutputSectionCommand &Cmd);

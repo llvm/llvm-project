@@ -889,6 +889,16 @@ std::string MachOLinkingContext::demangle(StringRef symbolName) const {
   return symbolName;
 }
 
+static void addDependencyInfoHelper(llvm::raw_fd_ostream *DepInfo,
+                                    char Opcode, StringRef Path) {
+  if (!DepInfo)
+    return;
+
+  *DepInfo << Opcode;
+  *DepInfo << Path;
+  *DepInfo << '\0';
+}
+
 std::error_code MachOLinkingContext::createDependencyFile(StringRef path) {
   std::error_code ec;
   _dependencyInfo = std::unique_ptr<llvm::raw_fd_ostream>(new
@@ -898,42 +908,20 @@ std::error_code MachOLinkingContext::createDependencyFile(StringRef path) {
     return ec;
   }
 
-  char linkerVersionOpcode = 0x00;
-  *_dependencyInfo << linkerVersionOpcode;
-  *_dependencyInfo << "lld";     // FIXME
-  *_dependencyInfo << '\0';
-
+  addDependencyInfoHelper(_dependencyInfo.get(), 0x00, "lld" /*FIXME*/);
   return std::error_code();
 }
 
 void MachOLinkingContext::addInputFileDependency(StringRef path) const {
-  if (!_dependencyInfo)
-    return;
-
-  char inputFileOpcode = 0x10;
-  *_dependencyInfo << inputFileOpcode;
-  *_dependencyInfo << path;
-  *_dependencyInfo << '\0';
+  addDependencyInfoHelper(_dependencyInfo.get(), 0x10, path);
 }
 
 void MachOLinkingContext::addInputFileNotFound(StringRef path) const {
-  if (!_dependencyInfo)
-    return;
-
-  char inputFileOpcode = 0x11;
-  *_dependencyInfo << inputFileOpcode;
-  *_dependencyInfo << path;
-  *_dependencyInfo << '\0';
+  addDependencyInfoHelper(_dependencyInfo.get(), 0x11, path);
 }
 
 void MachOLinkingContext::addOutputFileDependency(StringRef path) const {
-  if (!_dependencyInfo)
-    return;
-
-  char outputFileOpcode = 0x40;
-  *_dependencyInfo << outputFileOpcode;
-  *_dependencyInfo << path;
-  *_dependencyInfo << '\0';
+  addDependencyInfoHelper(_dependencyInfo.get(), 0x40, path);
 }
 
 void MachOLinkingContext::appendOrderedSymbol(StringRef symbol,

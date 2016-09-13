@@ -48,22 +48,12 @@ public:
     return streamexecutor::Error::success();
   }
 
-  streamexecutor::Expected<void *>
-  allocateHostMemory(size_t ByteCount) override {
-    return std::malloc(ByteCount);
-  }
-
-  streamexecutor::Error freeHostMemory(void *Memory) override {
-    std::free(const_cast<void *>(Memory));
-    return streamexecutor::Error::success();
-  }
-
   streamexecutor::Error registerHostMemory(void *Memory,
                                            size_t ByteCount) override {
     return streamexecutor::Error::success();
   }
 
-  streamexecutor::Error unregisterHostMemory(void *Memory) override {
+  streamexecutor::Error unregisterHostMemory(const void *Memory) override {
     return streamexecutor::Error::success();
   }
 
