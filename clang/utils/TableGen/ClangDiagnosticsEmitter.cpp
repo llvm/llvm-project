@@ -911,9 +911,9 @@ namespace {
 struct DiagText {
   struct Piece {
     // This type and its derived classes are move-only.
-    Piece() = default;
-    Piece(Piece &&O) = default;
-    Piece &operator=(Piece &&O) = default;
+    Piece() {}
+    Piece(Piece &&O) {}
+    Piece &operator=(Piece &&O) { return *this; }
 
     virtual void print(std::vector<std::string> &RST) = 0;
     virtual ~Piece() {}
