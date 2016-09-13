@@ -1019,6 +1019,8 @@ public:
       if (Line->Affected) {
         cleanupRight(Line->First, tok::comma, tok::comma);
         cleanupRight(Line->First, TT_CtorInitializerColon, tok::comma);
+        cleanupRight(Line->First, tok::l_paren, tok::comma);
+        cleanupLeft(Line->First, tok::comma, tok::r_paren);
         cleanupLeft(Line->First, TT_CtorInitializerComma, tok::l_brace);
         cleanupLeft(Line->First, TT_CtorInitializerColon, tok::l_brace);
       }

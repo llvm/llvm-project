@@ -1829,6 +1829,18 @@ llvm::DIType *CGDebugInfo::CreateType(const ObjCObjectType *Ty,
   return getOrCreateType(Ty->getBaseType(), Unit);
 }
 
+llvm::DIType *CGDebugInfo::CreateType(const ObjCTypeParamType *Ty,
+                                      llvm::DIFile *Unit) {
+  // Ignore protocols.
+  SourceLocation Loc = Ty->getDecl()->getLocation();
+
+  // Use Typedefs to represent ObjCTypeParamType.
+  return DBuilder.createTypedef(
+      getOrCreateType(Ty->getDecl()->getUnderlyingType(), Unit),
+      Ty->getDecl()->getName(), getOrCreateFile(Loc), getLineNumber(Loc),
+      getDeclContextDescriptor(Ty->getDecl()));
+}
+
 /// \return true if Getter has the default name for the property PD.
 static bool hasDefaultGetterName(const ObjCPropertyDecl *PD,
                                  const ObjCMethodDecl *Getter) {
@@ -2481,6 +2493,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
     return CreateType(cast<ObjCObjectPointerType>(Ty), Unit);
   case Type::ObjCObject:
     return CreateType(cast<ObjCObjectType>(Ty), Unit);
+  case Type::ObjCTypeParam:
+    return CreateType(cast<ObjCTypeParamType>(Ty), Unit);
   case Type::ObjCInterface:
     return CreateType(cast<ObjCInterfaceType>(Ty), Unit);
   case Type::Builtin:

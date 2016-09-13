@@ -194,6 +194,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::DependentName:
     case Type::DependentTemplateSpecialization:
     case Type::ObjCObject:
+    case Type::ObjCTypeParam:
     case Type::ObjCInterface:
     case Type::Atomic:
     case Type::Pipe:
@@ -1367,6 +1368,28 @@ void TypePrinter::printObjCInterfaceBefore(const ObjCInterfaceType *T,
 }
 void TypePrinter::printObjCInterfaceAfter(const ObjCInterfaceType *T, 
                                           raw_ostream &OS) { } 
+
+void TypePrinter::printObjCTypeParamBefore(const ObjCTypeParamType *T,
+                                          raw_ostream &OS) {
+  OS << T->getDecl()->getName();
+  if (!T->qual_empty()) {
+    bool isFirst = true;
+    OS << '<';
+    for (const auto *I : T->quals()) {
+      if (isFirst)
+        isFirst = false;
+      else
+        OS << ',';
+      OS << I->getName();
+    }
+    OS << '>';
+  }
+
+  spaceBeforePlaceHolder(OS);
+}
+
+void TypePrinter::printObjCTypeParamAfter(const ObjCTypeParamType *T,
+                                          raw_ostream &OS) { }
 
 void TypePrinter::printObjCObjectBefore(const ObjCObjectType *T,
                                         raw_ostream &OS) {
