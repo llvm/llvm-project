@@ -71,19 +71,13 @@ void foo() {
   anon.i = GlobalStruct.i = GlobalUnion.i = GlobalEnum;
 }
 
-
-// CHECK: ![[STRUCT:.*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "Struct",
+// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "Enum",
 // CHECK-SAME:             scope: ![[NS:[0-9]+]],
 // CHECK-SAME:             flags: DIFlagFwdDecl,
-// CHECK-SAME:             identifier: "_ZTSN8DebugCXX6StructE")
+// CHECK-SAME:             identifier:  "_ZTSN8DebugCXX4EnumE")
 
 // CHECK: ![[NS]] = !DINamespace(name: "DebugCXX", scope: ![[MOD:[0-9]+]],
 // CHECK: ![[MOD]] = !DIModule(scope: null, name: {{.*}}DebugCXX
-
-// CHECK: !DICompositeType(tag: DW_TAG_enumeration_type, name: "Enum",
-// CHECK-SAME:             scope: ![[NS]],
-// CHECK-SAME:             flags: DIFlagFwdDecl,
-// CHECK-SAME:             identifier:  "_ZTSN8DebugCXX4EnumE")
 
 // This type is anchored in the module by an explicit template instantiation.
 // CHECK: !DICompositeType(tag: DW_TAG_class_type,
@@ -125,7 +119,12 @@ void foo() {
 // CHECK-SAME:             identifier: "_ZTSN8DebugCXX1AIJvEEE")
 
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "static_member",
-// CHECK-SAME:           scope: ![[STRUCT]]
+// CHECK-SAME:           scope: ![[STRUCT:[0-9]*]]
+
+// CHECK: ![[STRUCT]] = !DICompositeType(tag: DW_TAG_structure_type, name: "Struct",
+// CHECK-SAME:             scope: ![[NS]],
+// CHECK-SAME:             flags: DIFlagFwdDecl,
+// CHECK-SAME:             identifier: "_ZTSN8DebugCXX6StructE")
 
 // CHECK: !DICompositeType(tag: DW_TAG_union_type,
 // CHECK-SAME:             flags: DIFlagFwdDecl,
@@ -202,7 +201,7 @@ void foo() {
 // CHECK-SAME:              name: "InAnonymousNamespace", {{.*}}DIFlagFwdDecl)
 
 
-// CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !0, entity: ![[STRUCT]], line: 27)
+// CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !{{[0-9]+}}, entity: ![[STRUCT]], line: 27)
 
 // CHECK: !DICompileUnit(
 // CHECK-SAME:           splitDebugFilename:

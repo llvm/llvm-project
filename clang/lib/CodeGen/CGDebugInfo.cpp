@@ -1644,27 +1644,6 @@ void CGDebugInfo::completeType(const RecordDecl *RD) {
     completeRequiredType(RD);
 }
 
-void CGDebugInfo::completeRequiredType(const RecordDecl *RD) {
-  if (DebugKind <= codegenoptions::DebugLineTablesOnly)
-    return;
-
-  // If this is a dynamic class and we're emitting limited debug info, wait
-  // until the vtable is emitted to complete the class debug info.
-  if (DebugKind <= codegenoptions::LimitedDebugInfo) {
-    if (const auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD))
-      if (CXXDecl->isDynamicClass())
-        return;
-  }
-
-  if (DebugTypeExtRefs && RD->isFromASTFile())
-    return;
-
-  QualType Ty = CGM.getContext().getRecordType(RD);
-  llvm::DIType *T = getTypeOrNull(Ty);
-  if (T && T->isForwardDecl())
-    completeClassData(RD);
-}
-
 void CGDebugInfo::completeClassData(const RecordDecl *RD) {
   if (DebugKind <= codegenoptions::DebugLineTablesOnly)
     return;
@@ -1761,6 +1740,16 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
     return true;
 
   return false;
+}
+
+void CGDebugInfo::completeRequiredType(const RecordDecl *RD) {
+  if (shouldOmitDefinition(DebugKind, DebugTypeExtRefs, RD, CGM.getLangOpts()))
+    return;
+
+  QualType Ty = CGM.getContext().getRecordType(RD);
+  llvm::DIType *T = getTypeOrNull(Ty);
+  if (T && T->isForwardDecl())
+    completeClassData(RD);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const RecordType *Ty) {
@@ -3617,8 +3606,8 @@ llvm::DIGlobalVariable *CGDebugInfo::CollectAnonRecordDecls(
     }
     // Use VarDecl's Tag, Scope and Line number.
     GV = DBuilder.createGlobalVariable(DContext, FieldName, LinkageName, Unit,
-                                       LineNo, FieldTy,
-                                       Var->hasLocalLinkage(), Var, nullptr);
+                                       LineNo, FieldTy, Var->hasLocalLinkage());
+    Var->addDebugInfo(GV);
   }
   return GV;
 }
@@ -3651,14 +3640,14 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
   } else {
     GV = DBuilder.createGlobalVariable(
         DContext, DeclName, LinkageName, Unit, LineNo, getOrCreateType(T, Unit),
-        Var->hasLocalLinkage(), Var,
+        Var->hasLocalLinkage(), /*Expr=*/nullptr,
         getOrCreateStaticDataMemberDeclarationOrNull(D));
+    Var->addDebugInfo(GV);
   }
   DeclCache[D->getCanonicalDecl()].reset(GV);
 }
 
-void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD,
-                                     llvm::Constant *Init) {
+void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
   assert(DebugKind >= codegenoptions::LimitedDebugInfo);
   if (VD->hasAttr<NoDebugAttr>())
     return;
@@ -3698,9 +3687,13 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD,
   auto &GV = DeclCache[VD];
   if (GV)
     return;
+  llvm::DIExpression *InitExpr = nullptr;
+  if (Init.isInt())
+    InitExpr =
+        DBuilder.createConstantValueExpression(Init.getInt().getExtValue());
   GV.reset(DBuilder.createGlobalVariable(
       DContext, Name, StringRef(), Unit, getLineNumber(VD->getLocation()), Ty,
-      true, Init, getOrCreateStaticDataMemberDeclarationOrNull(VarD)));
+      true, InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD)));
 }
 
 llvm::DIScope *CGDebugInfo::getCurrentContextDescriptor(const Decl *D) {

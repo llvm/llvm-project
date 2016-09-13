@@ -1840,8 +1840,8 @@ Address CodeGenFunction::EmitMSVAListRef(const Expr *E) {
 }
 
 void CodeGenFunction::EmitDeclRefExprDbgValue(const DeclRefExpr *E,
-                                              llvm::Constant *Init) {
-  assert (Init && "Invalid DeclRefExpr initializer!");
+                                              const APValue &Init) {
+  assert(!Init.isUninit() && "Invalid DeclRefExpr initializer!");
   if (CGDebugInfo *Dbg = getDebugInfo())
     if (CGM.getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo)
       Dbg->EmitGlobalVariable(E->getDecl(), Init);

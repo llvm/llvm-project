@@ -910,10 +910,10 @@ not support ``__weak`` references.
   binary compatibility.
 
 A class may indicate that it does not support weak references by providing the
-``objc_arc_weak_unavailable`` attribute on the class's interface declaration.  A
+``objc_arc_weak_reference_unavailable`` attribute on the class's interface declaration.  A
 retainable object pointer type is **weak-unavailable** if
 is a pointer to an (optionally protocol-qualified) Objective-C class ``T`` where
-``T`` or one of its superclasses has the ``objc_arc_weak_unavailable``
+``T`` or one of its superclasses has the ``objc_arc_weak_reference_unavailable``
 attribute.  A program is ill-formed if it applies the ``__weak`` ownership
 qualifier to a weak-unavailable type or if the value operand of a weak
 assignment operation has a weak-unavailable type.

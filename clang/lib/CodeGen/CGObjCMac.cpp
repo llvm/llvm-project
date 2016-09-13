@@ -5180,27 +5180,23 @@ void CGObjCMac::FinishModule() {
   // important for correct linker interaction.
   //
   // FIXME: It would be nice if we had an LLVM construct for this.
-  if (!LazySymbols.empty() || !DefinedSymbols.empty()) {
+  if ((!LazySymbols.empty() || !DefinedSymbols.empty()) &&
+      CGM.getTriple().isOSBinFormatMachO()) {
     SmallString<256> Asm;
     Asm += CGM.getModule().getModuleInlineAsm();
     if (!Asm.empty() && Asm.back() != '\n')
       Asm += '\n';
 
     llvm::raw_svector_ostream OS(Asm);
-    for (llvm::SetVector<IdentifierInfo*>::iterator I = DefinedSymbols.begin(),
-           e = DefinedSymbols.end(); I != e; ++I)
-      OS << "\t.objc_class_name_" << (*I)->getName() << "=0\n"
-         << "\t.globl .objc_class_name_" << (*I)->getName() << "\n";
-    for (llvm::SetVector<IdentifierInfo*>::iterator I = LazySymbols.begin(),
-         e = LazySymbols.end(); I != e; ++I) {
-      OS << "\t.lazy_reference .objc_class_name_" << (*I)->getName() << "\n";
-    }
+    for (const auto &Sym : DefinedSymbols)
+      OS << "\t.objc_class_name_" << Sym->getName() << "=0\n"
+         << "\t.globl .objc_class_name_" << Sym->getName() << "\n";
+    for (const auto &Sym : LazySymbols)
+      OS << "\t.lazy_reference .objc_class_name_" << Sym->getName() << "\n";
+    for (const auto &Category : DefinedCategoryNames)
+      OS << "\t.objc_category_name_" << Category << "=0\n"
+         << "\t.globl .objc_category_name_" << Category << "\n";
 
-    for (size_t i = 0, e = DefinedCategoryNames.size(); i < e; ++i) {
-      OS << "\t.objc_category_name_" << DefinedCategoryNames[i] << "=0\n"
-         << "\t.globl .objc_category_name_" << DefinedCategoryNames[i] << "\n";
-    }
-    
     CGM.getModule().setModuleInlineAsm(OS.str());
   }
 }
