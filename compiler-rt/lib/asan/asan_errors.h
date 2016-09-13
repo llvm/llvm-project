@@ -139,13 +139,35 @@ struct ErrorFreeNotMalloced : ErrorBase {
   void Print();
 };
 
+struct ErrorAllocTypeMismatch : ErrorBase {
+  // ErrorAllocTypeMismatch doesn't own the stack trace.
+  const BufferedStackTrace *dealloc_stack;
+  HeapAddressDescription addr_description;
+  AllocType alloc_type, dealloc_type;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorAllocTypeMismatch() = default;
+  ErrorAllocTypeMismatch(u32 tid, BufferedStackTrace *stack, uptr addr,
+                         AllocType alloc_type_, AllocType dealloc_type_)
+      : ErrorBase(tid),
+        dealloc_stack(stack),
+        alloc_type(alloc_type_),
+        dealloc_type(dealloc_type_) {
+    GetHeapAddressInformation(addr, 1, &addr_description);
+    scariness.Clear();
+    scariness.Scare(10, "alloc-dealloc-mismatch");
+  };
+  void Print();
+};
+
 // clang-format off
 #define ASAN_FOR_EACH_ERROR_KIND(macro) \
   macro(StackOverflow)                  \
   macro(DeadlySignal)                   \
   macro(DoubleFree)                     \
   macro(NewDeleteSizeMismatch)          \
-  macro(FreeNotMalloced)
+  macro(FreeNotMalloced)                \
+  macro(AllocTypeMismatch)
 // clang-format on
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,

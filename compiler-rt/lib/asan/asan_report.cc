@@ -359,25 +359,10 @@ void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack) {
 void ReportAllocTypeMismatch(uptr addr, BufferedStackTrace *free_stack,
                              AllocType alloc_type,
                              AllocType dealloc_type) {
-  static const char *alloc_names[] =
-    {"INVALID", "malloc", "operator new", "operator new []"};
-  static const char *dealloc_names[] =
-    {"INVALID", "free", "operator delete", "operator delete []"};
-  CHECK_NE(alloc_type, dealloc_type);
   ScopedInErrorReport in_report;
-  Decorator d;
-  Printf("%s", d.Warning());
-  Report("ERROR: AddressSanitizer: alloc-dealloc-mismatch (%s vs %s) on %p\n",
-        alloc_names[alloc_type], dealloc_names[dealloc_type], addr);
-  Printf("%s", d.EndWarning());
-  CHECK_GT(free_stack->size, 0);
-  ScarinessScore::PrintSimple(10, "alloc-dealloc-mismatch");
-  GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
-  stack.Print();
-  DescribeAddressIfHeap(addr);
-  ReportErrorSummary("alloc-dealloc-mismatch", &stack);
-  Report("HINT: if you don't care about these errors you may set "
-         "ASAN_OPTIONS=alloc_dealloc_mismatch=0\n");
+  ErrorAllocTypeMismatch error(GetCurrentTidOrInvalid(), free_stack, addr,
+                               alloc_type, dealloc_type);
+  in_report.ReportError(error);
 }
 
 void ReportMallocUsableSizeNotOwned(uptr addr, BufferedStackTrace *stack) {
