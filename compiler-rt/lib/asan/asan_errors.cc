@@ -123,4 +123,22 @@ void ErrorNewDeleteSizeMismatch::Print() {
       "ASAN_OPTIONS=new_delete_type_mismatch=0\n");
 }
 
+void ErrorFreeNotMalloced::Print() {
+  Decorator d;
+  Printf("%s", d.Warning());
+  char tname[128];
+  Report(
+      "ERROR: AddressSanitizer: attempting free on address "
+      "which was not malloc()-ed: %p in thread T%d%s\n",
+      addr_description.Address(), tid,
+      ThreadNameWithParenthesis(tid, tname, sizeof(tname)));
+  Printf("%s", d.EndWarning());
+  CHECK_GT(free_stack->size, 0);
+  scariness.Print();
+  GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
+  stack.Print();
+  addr_description.Print();
+  ReportErrorSummary("bad-free", &stack);
+}
+
 }  // namespace __asan

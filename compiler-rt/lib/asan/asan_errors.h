@@ -122,12 +122,30 @@ struct ErrorNewDeleteSizeMismatch : ErrorBase {
   void Print();
 };
 
+struct ErrorFreeNotMalloced : ErrorBase {
+  // ErrorFreeNotMalloced doesn't own the stack trace.
+  const BufferedStackTrace *free_stack;
+  AddressDescription addr_description;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorFreeNotMalloced() = default;
+  ErrorFreeNotMalloced(u32 tid, BufferedStackTrace *stack, uptr addr)
+      : ErrorBase(tid),
+        free_stack(stack),
+        addr_description(addr, /*shouldLockThreadRegistry=*/false) {
+    scariness.Clear();
+    scariness.Scare(40, "bad-free");
+  }
+  void Print();
+};
+
 // clang-format off
 #define ASAN_FOR_EACH_ERROR_KIND(macro) \
   macro(StackOverflow)                  \
   macro(DeadlySignal)                   \
   macro(DoubleFree)                     \
-  macro(NewDeleteSizeMismatch)
+  macro(NewDeleteSizeMismatch)          \
+  macro(FreeNotMalloced)
 // clang-format on
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,
