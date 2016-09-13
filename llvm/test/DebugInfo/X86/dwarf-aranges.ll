@@ -44,9 +44,9 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-@some_data = global i32 4, align 4
-@some_other = global i32 5, section "strange+section", align 4
-@some_bss = common global i32 0, align 4
+@some_data = global i32 4, align 4, !dbg !9
+@some_other = global i32 5, section "strange+section", align 4, !dbg !11
+@some_bss = common global i32 0, align 4, !dbg !12
 
 define void @some_code() !dbg !4 {
 entry:
@@ -70,10 +70,10 @@ entry:
 !6 = !DISubroutineType(types: !7)
 !7 = !{null}
 !8 = !{!9, !11, !12}
-!9 = !DIGlobalVariable(name: "some_data", line: 1, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10, variable: i32* @some_data)
+!9 = !DIGlobalVariable(name: "some_data", line: 1, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10)
 !10 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!11 = !DIGlobalVariable(name: "some_other", line: 3, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10, variable: i32* @some_other)
-!12 = !DIGlobalVariable(name: "some_bss", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10, variable: i32* @some_bss)
+!11 = !DIGlobalVariable(name: "some_other", line: 3, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10)
+!12 = !DIGlobalVariable(name: "some_bss", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !10)
 !13 = !{i32 2, !"Dwarf Version", i32 4}
 !14 = !DILocation(line: 7, scope: !4)
 !15 = !DILocation(line: 8, scope: !4)

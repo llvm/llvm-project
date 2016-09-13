@@ -2696,14 +2696,35 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
         return error("Invalid record");
 
       IsDistinct = Record[0];
-      MetadataList.assignValue(
-          GET_OR_DISTINCT(DIGlobalVariable,
-                          (Context, getMDOrNull(Record[1]),
-                           getMDString(Record[2]), getMDString(Record[3]),
-                           getMDOrNull(Record[4]), Record[5],
-                           getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-                           getMDOrNull(Record[9]), getMDOrNull(Record[10]))),
-          NextMetadataNo++);
+
+      // Upgrade old metadata, which stored a global variable reference or a
+      // ConstantInt here.
+      Metadata *Expr = getMDOrNull(Record[9]);
+      GlobalVariable *Attach = nullptr;
+      if (auto *CMD = dyn_cast_or_null<ConstantAsMetadata>(Expr)) {
+        if (auto *GV = dyn_cast<GlobalVariable>(CMD->getValue())) {
+          Attach = GV;
+          Expr = nullptr;
+        } else if (auto *CI = dyn_cast<ConstantInt>(CMD->getValue())) {
+          Expr = DIExpression::get(Context,
+                                   {dwarf::DW_OP_constu, CI->getZExtValue(),
+                                    dwarf::DW_OP_stack_value});
+        } else {
+          Expr = nullptr;
+        }
+      }
+
+      DIGlobalVariable *DGV = GET_OR_DISTINCT(
+          DIGlobalVariable,
+          (Context, getMDOrNull(Record[1]), getMDString(Record[2]),
+           getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
+           getDITypeRefOrNull(Record[6]), Record[7], Record[8], Expr,
+           getMDOrNull(Record[10])));
+      MetadataList.assignValue(DGV, NextMetadataNo++);
+
+      if (Attach)
+        Attach->addDebugInfo(DGV);
+
       break;
     }
     case bitc::METADATA_LOCAL_VAR: {

@@ -5,7 +5,7 @@
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc"
 
-@"\01?id@?$numpunct@D@@0HA" = available_externally dllimport global i32 0, align 4
+@"\01?id@?$numpunct@D@@0HA" = available_externally dllimport global i32 0, align 4, !dbg !4
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!13, !14}
@@ -15,7 +15,7 @@ target triple = "i686-pc-windows-msvc"
 !1 = !DIFile(filename: "/usr/local/google/home/majnemer/Downloads/<stdin>", directory: "/usr/local/google/home/majnemer/llvm/src")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "id", linkageName: "\01?id@?$numpunct@D@@0HA", scope: !0, file: !5, line: 4, type: !6, isLocal: false, isDefinition: true, variable: i32* @"\01?id@?$numpunct@D@@0HA", declaration: !7)
+!4 = distinct !DIGlobalVariable(name: "id", linkageName: "\01?id@?$numpunct@D@@0HA", scope: !0, file: !5, line: 4, type: !6, isLocal: false, isDefinition: true, declaration: !7)
 !5 = !DIFile(filename: "/usr/local/google/home/majnemer/Downloads/t.ii", directory: "/usr/local/google/home/majnemer/llvm/src")
 !6 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !7 = !DIDerivedType(tag: DW_TAG_member, name: "id", scope: !8, file: !5, line: 2, baseType: !6, flags: DIFlagStaticMember)

@@ -4176,7 +4176,7 @@ void X86InstrInfo::replaceBranchWithTailCall(
   MIB->addOperand(TailCall.getOperand(0)); // Destination.
   MIB.addImm(0); // Stack offset (not used).
   MIB->addOperand(BranchCond[0]); // Condition.
-  MIB->addOperand(TailCall.getOperand(2)); // Regmask.
+  MIB.copyImplicitOps(TailCall); // Regmask and (imp-used) parameters.
 
   I->eraseFromParent();
 }

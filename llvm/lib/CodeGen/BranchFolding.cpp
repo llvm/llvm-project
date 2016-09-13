@@ -1972,12 +1972,19 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   FBB->erase(FBB->begin(), FIB);
 
   // Update livein's.
+  bool AddedLiveIns = false;
   for (unsigned i = 0, e = LocalDefs.size(); i != e; ++i) {
     unsigned Def = LocalDefs[i];
     if (LocalDefsSet.count(Def)) {
       TBB->addLiveIn(Def);
       FBB->addLiveIn(Def);
+      AddedLiveIns = true;
     }
+  }
+
+  if (AddedLiveIns) {
+    TBB->sortUniqueLiveIns();
+    FBB->sortUniqueLiveIns();
   }
 
   ++NumHoist;

@@ -3,11 +3,11 @@
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-n32"
 target triple = "thumbv7-apple-darwin10"
 
-@x1 = internal global i8 1, align 1
-@x2 = internal global i8 1, align 1
-@x3 = internal global i8 1, align 1
-@x4 = internal global i8 1, align 1
-@x5 = global i8 1, align 1
+@x1 = internal global i8 1, align 1, !dbg !13
+@x2 = internal global i8 1, align 1, !dbg !14
+@x3 = internal global i8 1, align 1, !dbg !15
+@x4 = internal global i8 1, align 1, !dbg !16
+@x5 = global i8 1, align 1, !dbg !17
 
 ; Check debug info output for merged global.
 ; DW_AT_location
@@ -21,12 +21,12 @@ target triple = "thumbv7-apple-darwin10"
 ; CHECK-NOT: DW_TAG
 ; CHECK:    DW_AT_name {{.*}} "x1"
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:    DW_AT_location [DW_FORM_exprloc]        (<0x8> 03 [[ADDR:.. .. .. ..]] 10 00 22  )
+; CHECK:    DW_AT_location [DW_FORM_exprloc]        (<0x5> 03 [[ADDR:.. .. .. ..]]   )
 ; CHECK: DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK:    DW_AT_name {{.*}} "x2"
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:    DW_AT_location [DW_FORM_exprloc]        (<0x8> 03 [[ADDR]] 10 01 22  )
+; CHECK:    DW_AT_location [DW_FORM_exprloc]        (<0x7> 03 [[ADDR]] 23 01  )
 
 define zeroext i8 @get1(i8 zeroext %a) nounwind optsize !dbg !0 {
 entry:
@@ -91,11 +91,11 @@ entry:
 !10 = !DILocalVariable(name: "a", line: 4, arg: 1, scope: !0, file: !1, type: !5)
 !11 = !DILocalVariable(name: "b", line: 4, scope: !12, file: !1, type: !5)
 !12 = distinct !DILexicalBlock(line: 4, column: 0, file: !47, scope: !0)
-!13 = !DIGlobalVariable(name: "x1", line: 3, isLocal: true, isDefinition: true, scope: !1, file: !1, type: !5, variable: i8* @x1)
-!14 = !DIGlobalVariable(name: "x2", line: 6, isLocal: true, isDefinition: true, scope: !1, file: !1, type: !5, variable: i8* @x2)
-!15 = !DIGlobalVariable(name: "x3", line: 9, isLocal: true, isDefinition: true, scope: !1, file: !1, type: !5, variable: i8* @x3)
-!16 = !DIGlobalVariable(name: "x4", line: 12, isLocal: true, isDefinition: true, scope: !1, file: !1, type: !5, variable: i8* @x4)
-!17 = !DIGlobalVariable(name: "x5", line: 15, isLocal: false, isDefinition: true, scope: !1, file: !1, type: !5, variable: i8* @x5)
+!13 = !DIGlobalVariable(name: "x1", line: 3, isLocal: true, isDefinition: true, scope: !1, file: !1, type: !5)
+!14 = !DIGlobalVariable(name: "x2", line: 6, isLocal: true, isDefinition: true, scope: !1, file: !1, type: !5)
+!15 = !DIGlobalVariable(name: "x3", line: 9, isLocal: true, isDefinition: true, scope: !1, file: !1, type: !5)
+!16 = !DIGlobalVariable(name: "x4", line: 12, isLocal: true, isDefinition: true, scope: !1, file: !1, type: !5)
+!17 = !DIGlobalVariable(name: "x5", line: 15, isLocal: false, isDefinition: true, scope: !1, file: !1, type: !5)
 !18 = !DILocalVariable(name: "a", line: 7, arg: 1, scope: !6, file: !1, type: !5)
 !19 = !DILocalVariable(name: "b", line: 7, scope: !20, file: !1, type: !5)
 !20 = distinct !DILexicalBlock(line: 7, column: 0, file: !47, scope: !6)

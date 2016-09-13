@@ -1600,3 +1600,40 @@ define <16 x i32> @test_mask_mullo_epi32_rmbkz_512(<16 x i32> %a, i32* %ptr_b, i
 
 declare <16 x i32> @llvm.x86.avx512.mask.pmull.d.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
 
+declare <8 x double> @llvm.x86.avx512.mask.shuf.pd.512(<8 x double>, <8 x double>, i32, <8 x double>, i8)
+
+define <8 x double>@test_int_x86_avx512_mask_shuf_pd_512(<8 x double> %x0, <8 x double> %x1, <8 x double> %x3, i8 %x4) {
+; CHECK-LABEL: test_int_x86_avx512_mask_shuf_pd_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vshufpd {{.*#+}} zmm3 = zmm0[0],zmm1[1],zmm0[3],zmm1[2],zmm0[5],zmm1[4],zmm0[6],zmm1[6]
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vshufpd {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[1],zmm0[3],zmm1[2],zmm0[5],zmm1[4],zmm0[6],zmm1[6]
+; CHECK-NEXT:    vshufpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[1],zmm0[3],zmm1[2],zmm0[5],zmm1[4],zmm0[6],zmm1[6]
+; CHECK-NEXT:    vaddpd %zmm3, %zmm2, %zmm1
+; CHECK-NEXT:    vaddpd %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <8 x double> @llvm.x86.avx512.mask.shuf.pd.512(<8 x double> %x0, <8 x double> %x1, i32 22, <8 x double> %x3, i8 %x4)
+  %res1 = call <8 x double> @llvm.x86.avx512.mask.shuf.pd.512(<8 x double> %x0, <8 x double> %x1, i32 22, <8 x double> %x3, i8 -1)
+  %res2 = call <8 x double> @llvm.x86.avx512.mask.shuf.pd.512(<8 x double> %x0, <8 x double> %x1, i32 22, <8 x double> zeroinitializer, i8 %x4)
+
+  %res3 = fadd <8 x double> %res, %res1
+  %res4 = fadd <8 x double> %res3, %res2
+  ret <8 x double> %res4
+}
+
+declare <16 x float> @llvm.x86.avx512.mask.shuf.ps.512(<16 x float>, <16 x float>, i32, <16 x float>, i16)
+
+define <16 x float>@test_int_x86_avx512_mask_shuf_ps_512(<16 x float> %x0, <16 x float> %x1, <16 x float> %x3, i16 %x4) {
+; CHECK-LABEL: test_int_x86_avx512_mask_shuf_ps_512:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vshufps {{.*#+}} zmm3 = zmm0[2,1],zmm1[1,0],zmm0[6,5],zmm1[5,4],zmm0[10,9],zmm1[9,8],zmm0[14,13],zmm1[13,12]
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vshufps {{.*#+}} zmm2 {%k1} = zmm0[2,1],zmm1[1,0],zmm0[6,5],zmm1[5,4],zmm0[10,9],zmm1[9,8],zmm0[14,13],zmm1[13,12]
+; CHECK-NEXT:    vaddps %zmm3, %zmm2, %zmm0
+; CHECK-NEXT:    retq
+  %res = call <16 x float> @llvm.x86.avx512.mask.shuf.ps.512(<16 x float> %x0, <16 x float> %x1, i32 22, <16 x float> %x3, i16 %x4)
+  %res1 = call <16 x float> @llvm.x86.avx512.mask.shuf.ps.512(<16 x float> %x0, <16 x float> %x1, i32 22, <16 x float> %x3, i16 -1)
+  %res2 = fadd <16 x float> %res, %res1
+  ret <16 x float> %res2
+}
+

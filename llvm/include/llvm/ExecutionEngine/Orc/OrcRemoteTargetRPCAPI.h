@@ -40,27 +40,34 @@ private:
   uint64_t Size;
 };
 
-inline Error serialize(RPCByteChannel &C, const DirectBufferWriter &DBW) {
-  if (auto EC = serialize(C, DBW.getDst()))
-    return EC;
-  if (auto EC = serialize(C, DBW.getSize()))
-    return EC;
-  return C.appendBytes(DBW.getSrc(), DBW.getSize());
-}
+template <>
+class SerializationTraits<RPCByteChannel, DirectBufferWriter> {
+public:
 
-inline Error deserialize(RPCByteChannel &C, DirectBufferWriter &DBW) {
-  JITTargetAddress Dst;
-  if (auto EC = deserialize(C, Dst))
-    return EC;
-  uint64_t Size;
-  if (auto EC = deserialize(C, Size))
-    return EC;
-  char *Addr = reinterpret_cast<char *>(static_cast<uintptr_t>(Dst));
+  static const char* getName() { return "DirectBufferWriter"; }
 
-  DBW = DirectBufferWriter(0, Dst, Size);
+  static Error serialize(RPCByteChannel &C, const DirectBufferWriter &DBW) {
+    if (auto EC = serializeSeq(C, DBW.getDst()))
+      return EC;
+    if (auto EC = serializeSeq(C, DBW.getSize()))
+      return EC;
+    return C.appendBytes(DBW.getSrc(), DBW.getSize());
+  }
 
-  return C.readBytes(Addr, Size);
-}
+  static Error deserialize(RPCByteChannel &C, DirectBufferWriter &DBW) {
+    JITTargetAddress Dst;
+    if (auto EC = deserializeSeq(C, Dst))
+      return EC;
+    uint64_t Size;
+    if (auto EC = deserializeSeq(C, Size))
+      return EC;
+    char *Addr = reinterpret_cast<char *>(static_cast<uintptr_t>(Dst));
+
+    DBW = DirectBufferWriter(0, Dst, Size);
+
+    return C.readBytes(Addr, Size);
+  }
+};
 
 class OrcRemoteTargetRPCAPI : public RPC<RPCByteChannel> {
 protected:

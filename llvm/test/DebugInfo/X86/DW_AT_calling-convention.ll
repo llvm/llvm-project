@@ -42,7 +42,7 @@ source_filename = "t.cpp"
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i386-pc-windows-msvc19.0.23918"
 
-@"\01?fptr@@3P6IHHH@ZA" = global i32 (i32, i32)* @"\01?f@@YIHHH@Z", align 4
+@"\01?fptr@@3P6IHHH@ZA" = global i32 (i32, i32)* @"\01?f@@YIHHH@Z", align 4, !dbg !4
 
 ; Function Attrs: nounwind readnone
 define x86_fastcallcc i32 @"\01?f@@YIHHH@Z"(i32 inreg %a, i32 inreg %b) #0 !dbg !12 {
@@ -67,7 +67,7 @@ attributes #1 = { nounwind readnone }
 !1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "fptr", linkageName: "\01?fptr@@3P6IHHH@ZA", scope: !0, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true, variable: i32 (i32, i32)** @"\01?fptr@@3P6IHHH@ZA")
+!4 = distinct !DIGlobalVariable(name: "fptr", linkageName: "\01?fptr@@3P6IHHH@ZA", scope: !0, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true)
 !5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 32, align: 32)
 !6 = !DISubroutineType(cc: DW_CC_BORLAND_msfastcall, types: !7)
 !7 = !{!8, !8, !8}

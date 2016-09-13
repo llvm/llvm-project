@@ -79,7 +79,7 @@ target triple = "i686-pc-windows-msvc19.0.23918"
 
 %struct.A = type { i8 }
 
-@"\01?a@@3UA@@A" = global %struct.A zeroinitializer, align 1
+@"\01?a@@3UA@@A" = global %struct.A zeroinitializer, align 1, !dbg !4
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}
@@ -89,7 +89,7 @@ target triple = "i686-pc-windows-msvc19.0.23918"
 !1 = !DIFile(filename: "hello.cpp", directory: "D:\5Csrc\5Chello")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "a", linkageName: "\01?a@@3UA@@A", scope: !0, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true, variable: %struct.A* @"\01?a@@3UA@@A")
+!4 = distinct !DIGlobalVariable(name: "a", linkageName: "\01?a@@3UA@@A", scope: !0, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true)
 !5 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "A", file: !1, line: 1, size: 8, align: 8, elements: !6, identifier: ".?AUA@@")
 !6 = !{!7}
 !7 = !DICompositeType(tag: DW_TAG_structure_type, name: "Nested", scope: !5, file: !1, line: 2, size: 8, align: 8, flags: DIFlagFwdDecl, identifier: ".?AUNested@A@@")

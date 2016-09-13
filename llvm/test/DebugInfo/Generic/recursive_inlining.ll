@@ -88,7 +88,7 @@
 
 %struct.C = type { i32 }
 
-@x = global %struct.C* null, align 8
+@x = global %struct.C* null, align 8, !dbg !27
 
 ; Function Attrs: nounwind
 define void @_Z3fn6v() #0 !dbg !14 {
@@ -225,7 +225,7 @@ attributes #3 = { nounwind }
 !24 = !DILocalVariable(name: "this", arg: 1, flags: DIFlagArtificial | DIFlagObjectPointer, scope: !22, type: !25)
 !25 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !4)
 !26 = !{!27}
-!27 = !DIGlobalVariable(name: "x", line: 13, isLocal: false, isDefinition: true, scope: null, file: !15, type: !25, variable: %struct.C** @x)
+!27 = !DIGlobalVariable(name: "x", line: 13, isLocal: false, isDefinition: true, scope: null, file: !15, type: !25)
 !28 = !{i32 2, !"Dwarf Version", i32 4}
 !29 = !{i32 2, !"Debug Info Version", i32 3}
 !30 = !{!"clang version 3.6.0 "}

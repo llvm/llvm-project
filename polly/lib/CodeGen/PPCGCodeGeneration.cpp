@@ -713,6 +713,8 @@ Value *GPUNodeBuilder::getArraySize(gpu_array_info *Array) {
     }
 
     Value *NumElements = ExprBuilder.create(Res);
+    if (NumElements->getType() != ArraySize->getType())
+      NumElements = Builder.CreateSExt(NumElements, ArraySize->getType());
     ArraySize = Builder.CreateMul(ArraySize, NumElements);
   }
   isl_ast_build_free(Build);
@@ -832,7 +834,7 @@ void GPUNodeBuilder::createScopStmt(isl_ast_expr *Expr,
   if (Stmt->isBlockStmt())
     BlockGen.copyStmt(*Stmt, LTS, Indexes);
   else
-    assert(0 && "Region statement not supported\n");
+    RegionGen.copyStmt(*Stmt, LTS, Indexes);
 }
 
 void GPUNodeBuilder::createKernelSync() {

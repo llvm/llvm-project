@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -287,6 +288,77 @@ bool IRTranslator::translateCast(unsigned Opcode, const User &U) {
   return true;
 }
 
+bool IRTranslator::translateGetElementPtr(const User &U) {
+  // FIXME: support vector GEPs.
+  if (U.getType()->isVectorTy())
+    return false;
+
+  Value &Op0 = *U.getOperand(0);
+  unsigned BaseReg = getOrCreateVReg(Op0);
+  LLT PtrTy(*Op0.getType());
+  unsigned PtrSize = DL->getPointerSizeInBits(PtrTy.getAddressSpace());
+  LLT OffsetTy = LLT::scalar(PtrSize);
+
+  int64_t Offset = 0;
+  for (gep_type_iterator GTI = gep_type_begin(&U), E = gep_type_end(&U);
+       GTI != E; ++GTI) {
+    const Value *Idx = GTI.getOperand();
+    if (StructType *StTy = dyn_cast<StructType>(*GTI)) {
+      unsigned Field = cast<Constant>(Idx)->getUniqueInteger().getZExtValue();
+      Offset += DL->getStructLayout(StTy)->getElementOffset(Field);
+      continue;
+    } else {
+      uint64_t ElementSize = DL->getTypeAllocSize(GTI.getIndexedType());
+
+      // If this is a scalar constant or a splat vector of constants,
+      // handle it quickly.
+      if (const auto *CI = dyn_cast<ConstantInt>(Idx)) {
+        Offset += ElementSize * CI->getSExtValue();
+        continue;
+      }
+
+      if (Offset != 0) {
+        unsigned NewBaseReg = MRI->createGenericVirtualRegister(PtrTy);
+        unsigned OffsetReg = MRI->createGenericVirtualRegister(OffsetTy);
+        MIRBuilder.buildConstant(OffsetReg, Offset);
+        MIRBuilder.buildGEP(NewBaseReg, BaseReg, OffsetReg);
+
+        BaseReg = NewBaseReg;
+        Offset = 0;
+      }
+
+      // N = N + Idx * ElementSize;
+      unsigned ElementSizeReg = MRI->createGenericVirtualRegister(OffsetTy);
+      MIRBuilder.buildConstant(ElementSizeReg, ElementSize);
+
+      unsigned IdxReg = getOrCreateVReg(*Idx);
+      if (MRI->getType(IdxReg) != OffsetTy) {
+        unsigned NewIdxReg = MRI->createGenericVirtualRegister(OffsetTy);
+        MIRBuilder.buildSExtOrTrunc(NewIdxReg, IdxReg);
+        IdxReg = NewIdxReg;
+      }
+
+      unsigned OffsetReg = MRI->createGenericVirtualRegister(OffsetTy);
+      MIRBuilder.buildMul(OffsetReg, ElementSizeReg, IdxReg);
+
+      unsigned NewBaseReg = MRI->createGenericVirtualRegister(PtrTy);
+      MIRBuilder.buildGEP(NewBaseReg, BaseReg, OffsetReg);
+      BaseReg = NewBaseReg;
+    }
+  }
+
+  if (Offset != 0) {
+    unsigned OffsetReg = MRI->createGenericVirtualRegister(OffsetTy);
+    MIRBuilder.buildConstant(OffsetReg, Offset);
+    MIRBuilder.buildGEP(getOrCreateVReg(U), BaseReg, OffsetReg);
+    return true;
+  }
+
+  MIRBuilder.buildCopy(getOrCreateVReg(U), BaseReg);
+  return true;
+}
+
+
 bool IRTranslator::translateKnownIntrinsic(const CallInst &CI,
                                            Intrinsic::ID ID) {
   unsigned Op = 0;
@@ -436,6 +508,8 @@ bool IRTranslator::translate(const Constant &C, unsigned Reg) {
     EntryBuilder.buildInstr(TargetOpcode::G_CONSTANT)
         .addDef(Reg)
         .addImm(0);
+  else if (auto GV = dyn_cast<GlobalValue>(&C))
+    EntryBuilder.buildGlobalValue(Reg, GV);
   else if (auto CE = dyn_cast<ConstantExpr>(&C)) {
     switch(CE->getOpcode()) {
 #define HANDLE_INST(NUM, OPCODE, CLASS)                         \

@@ -117,10 +117,10 @@ target triple = "x86_64-pc-windows-msvc19.0.23918"
 
 $"\01?comdat@?$A@X@@2HB" = comdat any
 
-@"\01?first@@3HA" = internal global i32 0, align 4
-@"\01?comdat@?$A@X@@2HB" = linkonce_odr constant i32 3, comdat, align 4
-@"\01?middle@@3PEBHEB" = thread_local global i32* @"\01?comdat@?$A@X@@2HB", align 8
-@"\01?last@@3HA" = global i32 0, align 4
+@"\01?first@@3HA" = internal global i32 0, align 4, !dbg !4
+@"\01?comdat@?$A@X@@2HB" = linkonce_odr constant i32 3, comdat, align 4, !dbg !6
+@"\01?middle@@3PEBHEB" = thread_local global i32* @"\01?comdat@?$A@X@@2HB", align 8, !dbg !13
+@"\01?last@@3HA" = global i32 0, align 4, !dbg !15
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!16, !17, !18}
@@ -130,18 +130,18 @@ $"\01?comdat@?$A@X@@2HB" = comdat any
 !1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
 !3 = !{!4, !6, !13, !15}
-!4 = distinct !DIGlobalVariable(name: "first", linkageName: "\01?first@@3HA", scope: !0, file: !1, line: 1, type: !5, isLocal: true, isDefinition: true, variable: i32* @"\01?first@@3HA")
+!4 = distinct !DIGlobalVariable(name: "first", linkageName: "\01?first@@3HA", scope: !0, file: !1, line: 1, type: !5, isLocal: true, isDefinition: true)
 !5 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!6 = distinct !DIGlobalVariable(name: "comdat", linkageName: "\01?comdat@?$A@X@@2HB", scope: !0, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true, variable: i32* @"\01?comdat@?$A@X@@2HB", declaration: !8)
+!6 = distinct !DIGlobalVariable(name: "comdat", linkageName: "\01?comdat@?$A@X@@2HB", scope: !0, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true, declaration: !8)
 !7 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !5)
 !8 = !DIDerivedType(tag: DW_TAG_member, name: "comdat", scope: !9, file: !1, line: 2, baseType: !7, flags: DIFlagStaticMember, extraData: i32 3)
 !9 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "A<void>", file: !1, line: 2, size: 8, align: 8, elements: !10, templateParams: !11)
 !10 = !{!8}
 !11 = !{!12}
 !12 = !DITemplateTypeParameter(name: "T", type: null)
-!13 = distinct !DIGlobalVariable(name: "middle", linkageName: "\01?middle@@3PEBHEB", scope: !0, file: !1, line: 3, type: !14, isLocal: false, isDefinition: true, variable: i32** @"\01?middle@@3PEBHEB")
+!13 = distinct !DIGlobalVariable(name: "middle", linkageName: "\01?middle@@3PEBHEB", scope: !0, file: !1, line: 3, type: !14, isLocal: false, isDefinition: true)
 !14 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64, align: 64)
-!15 = distinct !DIGlobalVariable(name: "last", linkageName: "\01?last@@3HA", scope: !0, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true, variable: i32* @"\01?last@@3HA")
+!15 = distinct !DIGlobalVariable(name: "last", linkageName: "\01?last@@3HA", scope: !0, file: !1, line: 4, type: !5, isLocal: false, isDefinition: true)
 !16 = !{i32 2, !"CodeView", i32 1}
 !17 = !{i32 2, !"Debug Info Version", i32 3}
 !18 = !{i32 1, !"PIC Level", i32 2}

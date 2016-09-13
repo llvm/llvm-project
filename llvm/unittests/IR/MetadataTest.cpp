@@ -1820,13 +1820,14 @@ TEST_F(DIGlobalVariableTest, get) {
   DIType *Type = getDerivedType();
   bool IsLocalToUnit = false;
   bool IsDefinition = true;
-  Constant *Variable = getConstant();
+  auto *Expr = DIExpression::get(Context, {1, 2});
+  auto *Expr2 = DIExpression::get(Context, {1, 2, 3});
   DIDerivedType *StaticDataMemberDeclaration =
       cast<DIDerivedType>(getDerivedType());
 
   auto *N = DIGlobalVariable::get(Context, Scope, Name, LinkageName, File, Line,
-                                  Type, IsLocalToUnit, IsDefinition, Variable,
-                                  StaticDataMemberDeclaration);
+                                  Type, IsLocalToUnit, IsDefinition,
+                                  Expr, StaticDataMemberDeclaration);
   EXPECT_EQ(dwarf::DW_TAG_variable, N->getTag());
   EXPECT_EQ(Scope, N->getScope());
   EXPECT_EQ(Name, N->getName());
@@ -1836,47 +1837,46 @@ TEST_F(DIGlobalVariableTest, get) {
   EXPECT_EQ(Type, N->getType());
   EXPECT_EQ(IsLocalToUnit, N->isLocalToUnit());
   EXPECT_EQ(IsDefinition, N->isDefinition());
-  EXPECT_EQ(Variable, N->getVariable());
+  EXPECT_EQ(Expr, N->getExpr());
   EXPECT_EQ(StaticDataMemberDeclaration, N->getStaticDataMemberDeclaration());
   EXPECT_EQ(N, DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
                                      Line, Type, IsLocalToUnit, IsDefinition,
-                                     Variable, StaticDataMemberDeclaration));
+                                     Expr, StaticDataMemberDeclaration));
 
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, getSubprogram(), Name, LinkageName,
                                   File, Line, Type, IsLocalToUnit, IsDefinition,
-                                  Variable, StaticDataMemberDeclaration));
+                                  Expr, StaticDataMemberDeclaration));
   EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, "other", LinkageName, File,
                                      Line, Type, IsLocalToUnit, IsDefinition,
-                                     Variable, StaticDataMemberDeclaration));
+                                     Expr, StaticDataMemberDeclaration));
   EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, Name, "other", File, Line,
-                                     Type, IsLocalToUnit, IsDefinition,
-                                     Variable, StaticDataMemberDeclaration));
+                                     Type, IsLocalToUnit, IsDefinition, Expr,
+                                     StaticDataMemberDeclaration));
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, Scope, Name, LinkageName, getFile(),
-                                  Line, Type, IsLocalToUnit, IsDefinition,
-                                  Variable, StaticDataMemberDeclaration));
+                                  Line, Type, IsLocalToUnit, IsDefinition, Expr,
+                                  StaticDataMemberDeclaration));
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
                                   Line + 1, Type, IsLocalToUnit, IsDefinition,
-                                  Variable, StaticDataMemberDeclaration));
+                                  Expr, StaticDataMemberDeclaration));
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, Scope, Name, LinkageName, File, Line,
                                   getDerivedType(), IsLocalToUnit, IsDefinition,
-                                  Variable, StaticDataMemberDeclaration));
+                                  Expr, StaticDataMemberDeclaration));
   EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
                                      Line, Type, !IsLocalToUnit, IsDefinition,
-                                     Variable, StaticDataMemberDeclaration));
+                                     Expr, StaticDataMemberDeclaration));
   EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
                                      Line, Type, IsLocalToUnit, !IsDefinition,
-                                     Variable, StaticDataMemberDeclaration));
+                                     Expr, StaticDataMemberDeclaration));
+  EXPECT_NE(N, DIGlobalVariable::get(Context, Scope, Name, LinkageName, File,
+                                     Line, Type, IsLocalToUnit, IsDefinition,
+                                     Expr2, StaticDataMemberDeclaration));
   EXPECT_NE(N,
             DIGlobalVariable::get(Context, Scope, Name, LinkageName, File, Line,
-                                  Type, IsLocalToUnit, IsDefinition,
-                                  getConstant(), StaticDataMemberDeclaration));
-  EXPECT_NE(N,
-            DIGlobalVariable::get(Context, Scope, Name, LinkageName, File, Line,
-                                  Type, IsLocalToUnit, IsDefinition, Variable,
+                                  Type, IsLocalToUnit, IsDefinition, Expr,
                                   cast<DIDerivedType>(getDerivedType())));
 
   TempDIGlobalVariable Temp = N->clone();

@@ -55,7 +55,7 @@ target triple = "i686-pc-windows-msvc18.0.0"
 %struct.S = type { i32 }
 %union.pun = type { i32 }
 
-@"\01?u@@3UU@@A" = global %struct.U zeroinitializer, align 4
+@"\01?u@@3UU@@A" = global %struct.U zeroinitializer, align 4, !dbg !4
 
 ; Function Attrs: nounwind uwtable
 define void @"\01?f@@YAXXZ"() #0 !dbg !14 {
@@ -97,7 +97,7 @@ attributes #1 = { nounwind readnone }
 !1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "u", linkageName: "\01?u@@3UU@@A", scope: !0, file: !1, line: 13, type: !5, isLocal: false, isDefinition: true, variable: %struct.U* @"\01?u@@3UU@@A")
+!4 = distinct !DIGlobalVariable(name: "u", linkageName: "\01?u@@3UU@@A", scope: !0, file: !1, line: 13, type: !5, isLocal: false, isDefinition: true)
 !5 = !DIDerivedType(tag: DW_TAG_typedef, name: "U", file: !1, line: 12, baseType: !6)
 !6 = distinct !DICompositeType(tag: DW_TAG_structure_type, file: !1, line: 12, size: 32, align: 32, elements: !7, identifier: ".?AUU@@")
 !7 = !{!8}

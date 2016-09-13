@@ -205,6 +205,13 @@ cl::opt<bool> PrintLines("line-numbers",
 
 cl::alias PrintLinesShort("l", cl::desc("Alias for -line-numbers"),
                           cl::aliasopt(PrintLines));
+
+cl::opt<unsigned long long>
+    StartAddress("start-address", cl::desc("Disassemble beginning at address"),
+                 cl::value_desc("address"), cl::init(0));
+cl::opt<unsigned long long>
+    StopAddress("stop-address", cl::desc("Stop disassembly at address"),
+                cl::value_desc("address"), cl::init(UINT64_MAX));
 static StringRef ToolName;
 
 namespace {
@@ -1060,6 +1067,9 @@ static uint8_t getElfSymbolType(const ObjectFile *Obj, const SymbolRef &Sym) {
 }
 
 static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
+  if (StartAddress > StopAddress)
+    error("Start address should be less than stop address");
+
   const Target *TheTarget = getTarget(Obj);
 
   // Package up features to be passed to target/subtarget
@@ -1238,10 +1248,14 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
     }
     StringRef name;
     error(Section.getName(name));
+
+    if ((SectionAddr <= StopAddress) &&
+        (SectionAddr + SectSize) >= StartAddress) {
     outs() << "Disassembly of section ";
     if (!SegmentName.empty())
       outs() << SegmentName << ",";
     outs() << name << ':';
+    }
 
     // If the section has no symbol at the start, just insert a dummy one.
     if (Symbols.empty() || std::get<0>(Symbols[0]) != 0) {
@@ -1278,6 +1292,17 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
       if (Start >= End)
         continue;
 
+      // Check if we need to skip symbol
+      // Skip if the symbol's data is not between StartAddress and StopAddress
+      if (End + SectionAddr < StartAddress ||
+          Start + SectionAddr > StopAddress) {
+        continue;
+      }
+
+      // Stop disassembly at the stop address specified
+      if (End + SectionAddr > StopAddress)
+        End = StopAddress - SectionAddr;
+
       if (Obj->isELF() && Obj->getArch() == Triple::amdgcn) {
         // make size 4 bytes folded
         End = Start + ((End - Start) & ~0x3ull);
@@ -1308,6 +1333,12 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
       for (Index = Start; Index < End; Index += Size) {
         MCInst Inst;
 
+        if (Index + SectionAddr < StartAddress ||
+            Index + SectionAddr > StopAddress) {
+          // skip byte by byte till StartAddress is reached
+          Size = 1;
+          continue;
+        }
         // AArch64 ELF binaries can interleave data and text in the
         // same section. We rely on the markers introduced to
         // understand what we need to dump. If the data marker is within a
@@ -1384,6 +1415,9 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
           int NumBytes = 0;
 
           for (Index = Start; Index < End; Index += 1) {
+            if (((SectionAddr + Index) < StartAddress) ||
+                ((SectionAddr + Index) > StopAddress))
+              continue;
             if (NumBytes == 0) {
               outs() << format("%8" PRIx64 ":", SectionAddr + Index);
               outs() << "\t";
@@ -1489,7 +1523,10 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
           SmallString<32> val;
 
           // If this relocation is hidden, skip it.
-          if (hidden) goto skip_print_rel;
+          if (hidden || ((SectionAddr + addr) < StartAddress)) {
+            ++rel_cur;
+            continue;
+          }
 
           // Stop when rel_cur's address is past the current instruction.
           if (addr >= Index + Size) break;
@@ -1497,8 +1534,6 @@ static void DisassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
           error(getRelocationValueString(*rel_cur, val));
           outs() << format(Fmt.data(), SectionAddr + addr) << name
                  << "\t" << val << "\n";
-
-        skip_print_rel:
           ++rel_cur;
         }
       }
@@ -1525,7 +1560,7 @@ void llvm::PrintRelocations(const ObjectFile *Obj) {
       uint64_t address = Reloc.getOffset();
       SmallString<32> relocname;
       SmallString<32> valuestr;
-      if (hidden)
+      if (address < StartAddress || address > StopAddress || hidden)
         continue;
       Reloc.getTypeName(relocname);
       error(getRelocationValueString(Reloc, valuestr));
@@ -1616,6 +1651,8 @@ void llvm::PrintSymbolTable(const ObjectFile *o, StringRef ArchiveName,
     if (!AddressOrError)
       report_error(ArchiveName, o->getFileName(), AddressOrError.takeError());
     uint64_t Address = *AddressOrError;
+    if ((Address < StartAddress) || (Address > StopAddress))
+      continue;
     Expected<SymbolRef::Type> TypeOrError = Symbol.getType();
     if (!TypeOrError)
       report_error(ArchiveName, o->getFileName(), TypeOrError.takeError());

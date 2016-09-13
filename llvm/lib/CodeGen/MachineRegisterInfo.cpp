@@ -126,8 +126,6 @@ void MachineRegisterInfo::setType(unsigned VReg, LLT Ty) {
 
 unsigned
 MachineRegisterInfo::createGenericVirtualRegister(LLT Ty) {
-  assert(Ty.isValid() && "Cannot create empty virtual register");
-
   // New virtual register number.
   unsigned Reg = TargetRegisterInfo::index2VirtReg(getNumVirtRegs());
   VRegInfo.grow(Reg);

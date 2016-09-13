@@ -1245,6 +1245,8 @@ class VOP1_DPP <vop1 op, string opName, VOPProfile p> :
   VOP1_DPPe <op.VI>,
   VOP_DPP <p.OutsDPP, p.InsDPP, opName#p.AsmDPP, [], p.HasModifiers> {
   let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
+  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.DPP,
+                                     AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "DPP";
   let DisableDecoder = DisableVIDecoder;
   let src0_modifiers = !if(p.HasModifiers, ?, 0);
@@ -1280,6 +1282,8 @@ class VOP1_SDWA <vop1 op, string opName, VOPProfile p> :
   SDWADisableFields <p> {
   let AsmMatchConverter = "cvtSdwaVOP1";
   let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
+  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.SDWA,
+                                     AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "SDWA";
   let DisableDecoder = DisableVIDecoder;
 }
@@ -1342,6 +1346,8 @@ class VOP2_DPP <vop2 op, string opName, VOPProfile p> :
   VOP2_DPPe <op.VI>,
   VOP_DPP <p.OutsDPP, p.InsDPP, opName#p.AsmDPP, [], p.HasModifiers> {
   let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
+  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.DPP,
+                                     AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "DPP";
   let DisableDecoder = DisableVIDecoder;
   let src0_modifiers = !if(p.HasModifiers, ?, 0);
@@ -1354,6 +1360,8 @@ class VOP2_SDWA <vop2 op, string opName, VOPProfile p> :
   SDWADisableFields <p> {
   let AsmMatchConverter = "cvtSdwaVOP2";
   let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
+  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.SDWA,
+                                     AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "SDWA";
   let DisableDecoder = DisableVIDecoder;
 }
@@ -1809,6 +1817,8 @@ class VOPC_SDWA <vopc op, string opName, bit DefExec, VOPProfile p> :
   let hasSideEffects = DefExec;
   let AsmMatchConverter = "cvtSdwaVOPC";
   let AssemblerPredicates = !if(p.HasExt, [isVI], [DisableInst]);
+  let AsmVariantName = !if(p.HasExt, AMDGPUAsmVariants.SDWA,
+                                     AMDGPUAsmVariants.Disable);
   let DecoderNamespace = "SDWA";
   let DisableDecoder = DisableVIDecoder;
 }

@@ -8,7 +8,7 @@ source_filename = "source-interleave-x86_64.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@a = global i32 1, align 4
+@a = global i32 1, align 4, !dbg !4
 
 ; Function Attrs: nounwind uwtable
 define i32 @foo() #0 !dbg !9 {
@@ -46,7 +46,7 @@ attributes #1 = { nounwind readnone }
 !1 = !DIFile(filename: "source-interleave-x86_64.c", directory: "SRC_COMPDIR")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, variable: i32* @a)
+!4 = distinct !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true)
 !5 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !6 = !{i32 2, !"Dwarf Version", i32 4}
 !7 = !{i32 2, !"Debug Info Version", i32 3}

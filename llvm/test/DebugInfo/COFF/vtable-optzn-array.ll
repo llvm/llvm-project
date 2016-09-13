@@ -40,8 +40,8 @@ target triple = "x86_64-pc-windows-msvc"
 
 $"\01??_DUseCompleteType@@QEAA@XZ" = comdat any
 
-@"\01?force_fwd_decl@@3UGetFwdDecl@@A" = global %struct.GetFwdDecl zeroinitializer, align 1
-@"\01?require_complete@@3UUseCompleteType@@A" = global %struct.UseCompleteType zeroinitializer, align 8
+@"\01?force_fwd_decl@@3UGetFwdDecl@@A" = global %struct.GetFwdDecl zeroinitializer, align 1, !dbg !4
+@"\01?require_complete@@3UUseCompleteType@@A" = global %struct.UseCompleteType zeroinitializer, align 8, !dbg !10
 @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_t.cpp, i8* null }]
 
 ; Function Attrs: nounwind
@@ -100,13 +100,13 @@ attributes #3 = { nounwind readnone }
 !1 = !DIFile(filename: "<stdin>", directory: "C:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
 !3 = !{!4, !10}
-!4 = distinct !DIGlobalVariable(name: "force_fwd_decl", linkageName: "\01?force_fwd_decl@@3UGetFwdDecl@@A", scope: !0, file: !5, line: 5, type: !6, isLocal: false, isDefinition: true, variable: %struct.GetFwdDecl* @"\01?force_fwd_decl@@3UGetFwdDecl@@A")
+!4 = distinct !DIGlobalVariable(name: "force_fwd_decl", linkageName: "\01?force_fwd_decl@@3UGetFwdDecl@@A", scope: !0, file: !5, line: 5, type: !6, isLocal: false, isDefinition: true)
 !5 = !DIFile(filename: "t.cpp", directory: "C:\5Csrc\5Cllvm\5Cbuild")
 !6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "GetFwdDecl", file: !5, line: 2, size: 8, align: 8, elements: !7, identifier: ".?AUGetFwdDecl@@")
 !7 = !{!8}
 !8 = !DIDerivedType(tag: DW_TAG_member, name: "format", scope: !6, file: !5, line: 3, baseType: !9, flags: DIFlagStaticMember)
 !9 = !DICompositeType(tag: DW_TAG_structure_type, name: "UnicodeString", file: !5, line: 1, flags: DIFlagFwdDecl, identifier: ".?AUUnicodeString@@")
-!10 = distinct !DIGlobalVariable(name: "require_complete", linkageName: "\01?require_complete@@3UUseCompleteType@@A", scope: !0, file: !5, line: 15, type: !11, isLocal: false, isDefinition: true, variable: %struct.UseCompleteType* @"\01?require_complete@@3UUseCompleteType@@A")
+!10 = distinct !DIGlobalVariable(name: "require_complete", linkageName: "\01?require_complete@@3UUseCompleteType@@A", scope: !0, file: !5, line: 15, type: !11, isLocal: false, isDefinition: true)
 !11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "UseCompleteType", file: !5, line: 10, size: 64, align: 64, elements: !12, identifier: ".?AUUseCompleteType@@")
 !12 = !{!13, !17, !21}
 !13 = !DIDerivedType(tag: DW_TAG_member, name: "currencySpcAfterSym", scope: !11, file: !5, line: 13, baseType: !14, size: 64, align: 64)

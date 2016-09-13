@@ -343,11 +343,6 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                               const DebugLoc &DL, unsigned DestReg,
                               unsigned SrcReg, bool KillSrc) const {
 
-  // If we are trying to copy to or from SCC, there is a bug somewhere else in
-  // the backend.  While it may be theoretically possible to do this, it should
-  // never be necessary.
-  assert(DestReg != AMDGPU::SCC && SrcReg != AMDGPU::SCC);
-
   static const int16_t Sub0_15[] = {
     AMDGPU::sub0, AMDGPU::sub1, AMDGPU::sub2, AMDGPU::sub3,
     AMDGPU::sub4, AMDGPU::sub5, AMDGPU::sub6, AMDGPU::sub7,
@@ -392,6 +387,13 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   ArrayRef<int16_t> SubIndices;
 
   if (AMDGPU::SReg_32RegClass.contains(DestReg)) {
+    if (SrcReg == AMDGPU::SCC) {
+      BuildMI(MBB, MI, DL, get(AMDGPU::S_CSELECT_B32), DestReg)
+          .addImm(-1)
+          .addImm(0);
+      return;
+    }
+
     assert(AMDGPU::SReg_32RegClass.contains(SrcReg));
     BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DestReg)
             .addReg(SrcReg, getKillRegState(KillSrc));
@@ -418,6 +420,12 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
             .addReg(SrcReg, getKillRegState(KillSrc));
     return;
 
+  } else if (DestReg == AMDGPU::SCC) {
+    assert(AMDGPU::SReg_32RegClass.contains(SrcReg));
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_CMP_LG_U32))
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addImm(0);
+    return;
   } else if (AMDGPU::SReg_128RegClass.contains(DestReg)) {
     assert(AMDGPU::SReg_128RegClass.contains(SrcReg));
     Opcode = AMDGPU::S_MOV_B64;
