@@ -374,15 +374,9 @@ void ReportMallocUsableSizeNotOwned(uptr addr, BufferedStackTrace *stack) {
 void ReportSanitizerGetAllocatedSizeNotOwned(uptr addr,
                                              BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  Decorator d;
-  Printf("%s", d.Warning());
-  Report("ERROR: AddressSanitizer: attempting to call "
-             "__sanitizer_get_allocated_size() for pointer which is "
-             "not owned: %p\n", addr);
-  Printf("%s", d.EndWarning());
-  stack->Print();
-  DescribeAddressIfHeap(addr);
-  ReportErrorSummary("bad-__sanitizer_get_allocated_size", stack);
+  ErrorSanitizerGetAllocatedSizeNotOwned error(GetCurrentTidOrInvalid(), stack,
+                                               addr);
+  in_report.ReportError(error);
 }
 
 void ReportStringFunctionMemoryRangesOverlap(const char *function,

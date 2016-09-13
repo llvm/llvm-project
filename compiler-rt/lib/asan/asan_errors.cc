@@ -177,4 +177,17 @@ void ErrorMallocUsableSizeNotOwned::Print() {
   ReportErrorSummary("bad-malloc_usable_size", stack);
 }
 
+void ErrorSanitizerGetAllocatedSizeNotOwned::Print() {
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report(
+      "ERROR: AddressSanitizer: attempting to call "
+      "__sanitizer_get_allocated_size() for pointer which is not owned: %p\n",
+      addr_description.Address());
+  Printf("%s", d.EndWarning());
+  stack->Print();
+  addr_description.Print();
+  ReportErrorSummary("bad-__sanitizer_get_allocated_size", stack);
+}
+
 }  // namespace __asan
