@@ -2763,15 +2763,29 @@ SDValue AArch64TargetLowering::LowerCallResult(
   return Chain;
 }
 
+/// Return true if the calling convention is one that we can guarantee TCO for.
+static bool canGuaranteeTCO(CallingConv::ID CC) {
+  return CC == CallingConv::Fast;
+}
+
+/// Return true if we might ever do TCO for calls with this calling convention.
+static bool mayTailCallThisCC(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::C:
+  case CallingConv::PreserveMost:
+  case CallingConv::Swift:
+    return true;
+  default:
+    return canGuaranteeTCO(CC);
+  }
+}
+
 bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals,
     const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const {
-  // For CallingConv::C this function knows whether the ABI needs
-  // changing. That's not true for other conventions so they will have to opt in
-  // manually.
-  if (!IsTailCallConvention(CalleeCC) && CalleeCC != CallingConv::C)
+  if (!mayTailCallThisCC(CalleeCC))
     return false;
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -2788,9 +2802,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     if (i->hasByValAttr())
       return false;
 
-  if (getTargetMachine().Options.GuaranteedTailCallOpt) {
-    return IsTailCallConvention(CalleeCC) && CCMatch;
-  }
+  if (getTargetMachine().Options.GuaranteedTailCallOpt)
+    return canGuaranteeTCO(CalleeCC) && CCMatch;
 
   // Externally-defined functions with weak linkage should not be
   // tail-called on AArch64 when the OS does not support dynamic
@@ -2906,11 +2919,6 @@ SDValue AArch64TargetLowering::addTokenForArgument(SDValue Chain,
 bool AArch64TargetLowering::DoesCalleeRestoreStack(CallingConv::ID CallCC,
                                                    bool TailCallOpt) const {
   return CallCC == CallingConv::Fast && TailCallOpt;
-}
-
-bool AArch64TargetLowering::IsTailCallConvention(CallingConv::ID CallCC) const {
-  return CallCC == CallingConv::Fast ||
-         CallCC == CallingConv::PreserveMost;
 }
 
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,

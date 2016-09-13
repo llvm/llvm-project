@@ -460,8 +460,6 @@ private:
 
   bool DoesCalleeRestoreStack(CallingConv::ID CallCC, bool TailCallOpt) const;
 
-  bool IsTailCallConvention(CallingConv::ID CallCC) const;
-
   void saveVarArgRegisters(CCState &CCInfo, SelectionDAG &DAG, const SDLoc &DL,
                            SDValue &Chain) const;
 
