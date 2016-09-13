@@ -337,6 +337,8 @@ Error LTO::addRegularLTO(std::unique_ptr<InputFile> Input,
     addSymbolToGlobalRes(Obj.get(), Used, Sym, Res, 0);
 
     GlobalValue *GV = Obj->getSymbolGV(Sym.I->getRawDataRefImpl());
+    if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
+      continue;
     if (Res.Prevailing && GV) {
       Keep.push_back(GV);
       switch (GV->getLinkage()) {
