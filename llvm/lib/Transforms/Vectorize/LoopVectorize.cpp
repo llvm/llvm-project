@@ -284,7 +284,7 @@ static bool hasCyclesInLoopBody(const Loop &L) {
   if (!L.empty())
     return true;
 
-  for (const auto SCC :
+  for (const auto &SCC :
        make_range(scc_iterator<Loop, LoopBodyTraits>::begin(L),
                   scc_iterator<Loop, LoopBodyTraits>::end(L))) {
     if (SCC.size() > 1) {
