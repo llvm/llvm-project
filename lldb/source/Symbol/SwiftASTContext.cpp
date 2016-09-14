@@ -1052,10 +1052,6 @@ private:
   SwiftAllPayloadEnumDescriptor m_payload_cases;
 };
 
-static swift::CanType
-CreateEquivalentOptionalForIOU(swift::ASTContext *ast,
-                               swift::CanType swift_can_type) {}
-
 SwiftEnumDescriptor *
 SwiftEnumDescriptor::CreateDescriptor(swift::ASTContext *ast,
                                       swift::CanType swift_can_type,
