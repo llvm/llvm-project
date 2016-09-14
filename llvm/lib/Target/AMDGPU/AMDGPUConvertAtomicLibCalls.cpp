@@ -434,7 +434,7 @@ bool AMDGPUConvertAtomicLibCalls::runOnModule(Module &M) {
         if (!CS)
           continue;
         const Function *Callee = getCallee(CS);
-        if (!Callee && Callee->hasName())
+        if (!Callee || !Callee->hasName())
           continue;
         Value *newAtomicInstr = lowerAtomic(Callee->getName(), &CS);
         if (newAtomicInstr) {
