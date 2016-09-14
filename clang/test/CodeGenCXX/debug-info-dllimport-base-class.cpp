@@ -4,6 +4,10 @@
 // be imported from a DLL.  Otherwise, the debugger wouldn't be able to show the
 // members.
 
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ImportedAfterCompletion",
+// CHECK-NOT:              DIFlagFwdDecl
+// CHECK-SAME:             ){{$}}
+
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "OutOfLineCtor",
 // CHECK-SAME:             DIFlagFwdDecl
 // CHECK-SAME:             ){{$}}
@@ -15,6 +19,13 @@
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ImportedMethod",
 // CHECK-NOT:              DIFlagFwdDecl
 // CHECK-SAME:             ){{$}}
+
+
+struct ImportedAfterCompletion;
+ImportedAfterCompletion *force_fwd_decl;
+struct __declspec(dllimport) ImportedAfterCompletion {
+  virtual ~ImportedAfterCompletion();
+};
 
 struct OutOfLineCtor {
   OutOfLineCtor();
@@ -35,6 +46,7 @@ struct ImportedMethod {
 };
 
 int main() {
+  ImportedAfterCompletion c;
   OutOfLineCtor o;
   DerivedFromImported d;
   ImportedMethod m;

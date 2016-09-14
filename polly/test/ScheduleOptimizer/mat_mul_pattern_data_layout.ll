@@ -9,14 +9,14 @@
 ;	     C[i][j] += alpha * A[i][k] * B[k][j];
 ;        }
 ;
-; CHECK:        double Packed_A[*][ { [] -> [(1024)] } ][ { [] -> [(4)] } ]; // Element size 8
-; CHECK:        double Packed_B[*][ { [] -> [(3072)] } ][ { [] -> [(8)] } ]; // Element size 8
+; CHECK:        double Packed_A[ { [] -> [(1024)] } ][ { [] -> [(4)] } ]; // Element size 8
+; CHECK:        double Packed_B[ { [] -> [(3072)] } ][ { [] -> [(8)] } ]; // Element size 8
 ;
 ; CHECK:                { Stmt_bb14[i0, i1, i2] -> MemRef_arg6[i0, i2] };
-; CHECK:           new: { Stmt_bb14[i0, i1, i2] -> Packed_A[0, o1, o2] : 256*floor((-i2 + o1)/256) = -i2 + o1 and 4*floor((-i0 + o2)/4) = -i0 + o2 and 0 <= o2 <= 3 and -3 + i0 - 16*floor((i0)/16) <= 4*floor((o1)/256) <= i0 - 16*floor((i0)/16) };
+; CHECK:           new: { Stmt_bb14[i0, i1, i2] -> Packed_A[o0, o1] : 256*floor((-i2 + o0)/256) = -i2 + o0 and 4*floor((-i0 + o1)/4) = -i0 + o1 and 0 <= o1 <= 3 and -3 + i0 - 16*floor((i0)/16) <= 4*floor((o0)/256) <= i0 - 16*floor((i0)/16) };
 ;
 ; CHECK:                { Stmt_bb14[i0, i1, i2] -> MemRef_arg7[i2, i1] };
-; CHECK:           new: { Stmt_bb14[i0, i1, i2] -> Packed_B[0, o1, o2] : 256*floor((-i2 + o1)/256) = -i2 + o1 and 8*floor((-i1 + o2)/8) = -i1 + o2 and 0 <= o2 <= 7 and -7 + i1 - 96*floor((i1)/96) <= 8*floor((o1)/256) <= i1 - 96*floor((i1)/96) };
+; CHECK:           new: { Stmt_bb14[i0, i1, i2] -> Packed_B[o0, o1] : 256*floor((-i2 + o0)/256) = -i2 + o0 and 8*floor((-i1 + o1)/8) = -i1 + o1 and 0 <= o1 <= 7 and -7 + i1 - 96*floor((i1)/96) <= 8*floor((o0)/256) <= i1 - 96*floor((i1)/96) };
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"

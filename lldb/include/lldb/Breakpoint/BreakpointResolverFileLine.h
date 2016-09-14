@@ -33,6 +33,13 @@ public:
                              bool check_inlines, bool skip_prologue,
                              bool exact_match);
 
+  static BreakpointResolver *
+  CreateFromStructuredData(Breakpoint *bkpt,
+                           const StructuredData::Dictionary &data_dict,
+                           Error &error);
+
+  StructuredData::ObjectSP SerializeToStructuredData() override;
+
   ~BreakpointResolverFileLine() override;
 
   Searcher::CallbackReturn SearchCallback(SearchFilter &filter,

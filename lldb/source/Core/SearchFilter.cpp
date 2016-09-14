@@ -21,20 +21,103 @@
 using namespace lldb;
 using namespace lldb_private;
 
+const char *SearchFilter::g_ty_to_name[] = {"Unconstrained", "Exception",
+                                            "Module",        "Modules",
+                                            "ModulesAndCU",  "Unknown"};
+
+const char
+    *SearchFilter::g_option_names[SearchFilter::OptionNames::LastOptionName] = {
+        "ModuleList", "CUList"};
+
+const char *SearchFilter::FilterTyToName(enum FilterTy type) {
+  if (type > LastKnownFilterType)
+    return g_ty_to_name[UnknownFilter];
+
+  return g_ty_to_name[type];
+}
+
+SearchFilter::FilterTy SearchFilter::NameToFilterTy(const char *name) {
+  for (size_t i = 0; i < LastKnownFilterType; i++) {
+    if (strcmp(name, g_ty_to_name[i]) == 0)
+      return (FilterTy)i;
+  }
+  return UnknownFilter;
+}
+
 Searcher::Searcher() = default;
 
 Searcher::~Searcher() = default;
 
 void Searcher::GetDescription(Stream *s) {}
 
-SearchFilter::SearchFilter(const TargetSP &target_sp)
-    : m_target_sp(target_sp) {}
+SearchFilter::SearchFilter(const TargetSP &target_sp, unsigned char filterType)
+    : m_target_sp(target_sp), SubclassID(filterType) {}
 
 SearchFilter::SearchFilter(const SearchFilter &rhs) = default;
 
 SearchFilter &SearchFilter::operator=(const SearchFilter &rhs) = default;
 
 SearchFilter::~SearchFilter() = default;
+
+SearchFilterSP SearchFilter::CreateFromStructuredData(
+    Target &target, const StructuredData::Dictionary &filter_dict,
+    Error &error) {
+  SearchFilterSP result_sp;
+  if (!filter_dict.IsValid()) {
+    error.SetErrorString("Can't deserialize from an invalid data object.");
+    return result_sp;
+  }
+
+  std::string subclass_name;
+
+  bool success = filter_dict.GetValueForKeyAsString(
+      GetSerializationSubclassKey(), subclass_name);
+  if (!success) {
+    error.SetErrorStringWithFormat("Filter data missing subclass key");
+    return result_sp;
+  }
+
+  FilterTy filter_type = NameToFilterTy(subclass_name.c_str());
+  if (filter_type == UnknownFilter) {
+    error.SetErrorStringWithFormat("Unknown filter type: %s.",
+                                   subclass_name.c_str());
+    return result_sp;
+  }
+
+  StructuredData::Dictionary *subclass_options = nullptr;
+  success = filter_dict.GetValueForKeyAsDictionary(
+      GetSerializationSubclassOptionsKey(), subclass_options);
+  if (!success || !subclass_options || !subclass_options->IsValid()) {
+    error.SetErrorString("Filter data missing subclass options key.");
+    return result_sp;
+  }
+
+  switch (filter_type) {
+  case Unconstrained:
+    result_sp = SearchFilterForUnconstrainedSearches::CreateFromStructuredData(
+        target, *subclass_options, error);
+    break;
+  case ByModule:
+    result_sp = SearchFilterByModule::CreateFromStructuredData(
+        target, *subclass_options, error);
+    break;
+  case ByModules:
+    result_sp = SearchFilterByModuleList::CreateFromStructuredData(
+        target, *subclass_options, error);
+    break;
+  case ByModulesAndCU:
+    result_sp = SearchFilterByModuleListAndCU::CreateFromStructuredData(
+        target, *subclass_options, error);
+    break;
+  case Exception:
+    error.SetErrorString("Can't serialize exception breakpoints yet.");
+    break;
+  default:
+    llvm_unreachable("Should never get an uresolvable filter type.");
+  }
+
+  return result_sp;
+}
 
 bool SearchFilter::ModulePasses(const FileSpec &spec) { return true; }
 
@@ -59,6 +142,34 @@ lldb::SearchFilterSP SearchFilter::CopyForBreakpoint(Breakpoint &breakpoint) {
   TargetSP target_sp = breakpoint.GetTargetSP();
   ret_sp->SetTarget(target_sp);
   return ret_sp;
+}
+
+//----------------------------------------------------------------------
+// Helper functions for serialization.
+//----------------------------------------------------------------------
+
+StructuredData::DictionarySP
+SearchFilter::WrapOptionsDict(StructuredData::DictionarySP options_dict_sp) {
+  if (!options_dict_sp || !options_dict_sp->IsValid())
+    return StructuredData::DictionarySP();
+
+  StructuredData::DictionarySP type_dict_sp(new StructuredData::Dictionary());
+  type_dict_sp->AddStringItem(GetSerializationSubclassKey(), GetFilterName());
+  type_dict_sp->AddItem(GetSerializationSubclassOptionsKey(), options_dict_sp);
+
+  return type_dict_sp;
+}
+
+void SearchFilter::SerializeFileSpecList(
+    StructuredData::DictionarySP &options_dict_sp, OptionNames name,
+    FileSpecList &file_list) {
+  StructuredData::ArraySP module_array_sp(new StructuredData::Array());
+  size_t num_modules = file_list.GetSize();
+  for (size_t i = 0; i < num_modules; i++) {
+    module_array_sp->AddItem(StructuredData::StringSP(
+        new StructuredData::String(file_list.GetFileSpecAtIndex(i).GetPath())));
+  }
+  options_dict_sp->AddItem(GetKey(name), module_array_sp);
 }
 
 //----------------------------------------------------------------------
@@ -202,6 +313,19 @@ Searcher::CallbackReturn SearchFilter::DoFunctionIteration(
 //  Selects a shared library matching a given file spec, consulting the targets
 //  "black list".
 //----------------------------------------------------------------------
+SearchFilterSP SearchFilterForUnconstrainedSearches::CreateFromStructuredData(
+    Target &target, const StructuredData::Dictionary &data_dict, Error &error) {
+  // No options for an unconstrained search.
+  return SearchFilterSP(
+      new SearchFilterForUnconstrainedSearches(target.shared_from_this()));
+}
+
+StructuredData::ObjectSP
+SearchFilterForUnconstrainedSearches::SerializeToStructuredData() {
+  // The options dictionary is an empty dictionary:
+  StructuredData::DictionarySP result_sp(new StructuredData::Dictionary());
+  return WrapOptionsDict(result_sp);
+}
 
 bool SearchFilterForUnconstrainedSearches::ModulePasses(
     const FileSpec &module_spec) {
@@ -234,7 +358,7 @@ lldb::SearchFilterSP SearchFilterForUnconstrainedSearches::DoCopyForBreakpoint(
 
 SearchFilterByModule::SearchFilterByModule(const lldb::TargetSP &target_sp,
                                            const FileSpec &module)
-    : SearchFilter(target_sp), m_module_spec(module) {}
+    : SearchFilter(target_sp, FilterTy::ByModule), m_module_spec(module) {}
 
 SearchFilterByModule::SearchFilterByModule(const SearchFilterByModule &rhs) =
     default;
@@ -325,6 +449,45 @@ SearchFilterByModule::DoCopyForBreakpoint(Breakpoint &breakpoint) {
   return ret_sp;
 }
 
+SearchFilterSP SearchFilterByModule::CreateFromStructuredData(
+    Target &target, const StructuredData::Dictionary &data_dict, Error &error) {
+  StructuredData::Array *modules_array;
+  bool success = data_dict.GetValueForKeyAsArray(GetKey(OptionNames::ModList),
+                                                 modules_array);
+  if (!success) {
+    error.SetErrorString("SFBM::CFSD: Could not find the module list key.");
+    return nullptr;
+  }
+
+  size_t num_modules = modules_array->GetSize();
+  if (num_modules > 1) {
+    error.SetErrorString(
+        "SFBM::CFSD: Only one modules allowed for SearchFilterByModule.");
+    return nullptr;
+  }
+
+  std::string module;
+  success = modules_array->GetItemAtIndexAsString(0, module);
+  if (!success) {
+    error.SetErrorString("SFBM::CFSD: filter module item not a string.");
+    return nullptr;
+  }
+  FileSpec module_spec(module.c_str(), false);
+
+  return SearchFilterSP(
+      new SearchFilterByModule(target.shared_from_this(), module_spec));
+}
+
+StructuredData::ObjectSP SearchFilterByModule::SerializeToStructuredData() {
+  StructuredData::DictionarySP options_dict_sp(
+      new StructuredData::Dictionary());
+  StructuredData::ArraySP module_array_sp(new StructuredData::Array());
+  module_array_sp->AddItem(StructuredData::StringSP(
+      new StructuredData::String(m_module_spec.GetPath())));
+  options_dict_sp->AddItem(GetKey(OptionNames::ModList), module_array_sp);
+  return WrapOptionsDict(options_dict_sp);
+}
+
 //----------------------------------------------------------------------
 //  SearchFilterByModuleList:
 //  Selects a shared library matching a given file spec
@@ -332,7 +495,13 @@ SearchFilterByModule::DoCopyForBreakpoint(Breakpoint &breakpoint) {
 
 SearchFilterByModuleList::SearchFilterByModuleList(
     const lldb::TargetSP &target_sp, const FileSpecList &module_list)
-    : SearchFilter(target_sp), m_module_spec_list(module_list) {}
+    : SearchFilter(target_sp, FilterTy::ByModules),
+      m_module_spec_list(module_list) {}
+
+SearchFilterByModuleList::SearchFilterByModuleList(
+    const lldb::TargetSP &target_sp, const FileSpecList &module_list,
+    enum FilterTy filter_ty)
+    : SearchFilter(target_sp, filter_ty), m_module_spec_list(module_list) {}
 
 SearchFilterByModuleList::SearchFilterByModuleList(
     const SearchFilterByModuleList &rhs) = default;
@@ -456,6 +625,46 @@ SearchFilterByModuleList::DoCopyForBreakpoint(Breakpoint &breakpoint) {
   return ret_sp;
 }
 
+SearchFilterSP SearchFilterByModuleList::CreateFromStructuredData(
+    Target &target, const StructuredData::Dictionary &data_dict, Error &error) {
+  StructuredData::Array *modules_array;
+  bool success = data_dict.GetValueForKeyAsArray(GetKey(OptionNames::ModList),
+                                                 modules_array);
+  if (!success) {
+    error.SetErrorString("SFBM::CFSD: Could not find the module list key.");
+    return nullptr;
+  }
+
+  size_t num_modules = modules_array->GetSize();
+  FileSpecList modules;
+  for (size_t i = 0; i < num_modules; i++) {
+    std::string module;
+    success = modules_array->GetItemAtIndexAsString(i, module);
+    if (!success) {
+      error.SetErrorStringWithFormat(
+          "SFBM::CFSD: filter module item %zu not a string.", i);
+      return nullptr;
+    }
+    modules.Append(FileSpec(module.c_str(), false));
+  }
+
+  return SearchFilterSP(
+      new SearchFilterByModuleList(target.shared_from_this(), modules));
+}
+
+void SearchFilterByModuleList::SerializeUnwrapped(
+    StructuredData::DictionarySP &options_dict_sp) {
+  SerializeFileSpecList(options_dict_sp, OptionNames::ModList,
+                        m_module_spec_list);
+}
+
+StructuredData::ObjectSP SearchFilterByModuleList::SerializeToStructuredData() {
+  StructuredData::DictionarySP options_dict_sp(
+      new StructuredData::Dictionary());
+  SerializeUnwrapped(options_dict_sp);
+  return WrapOptionsDict(options_dict_sp);
+}
+
 //----------------------------------------------------------------------
 //  SearchFilterByModuleListAndCU:
 //  Selects a shared library matching a given file spec
@@ -464,7 +673,8 @@ SearchFilterByModuleList::DoCopyForBreakpoint(Breakpoint &breakpoint) {
 SearchFilterByModuleListAndCU::SearchFilterByModuleListAndCU(
     const lldb::TargetSP &target_sp, const FileSpecList &module_list,
     const FileSpecList &cu_list)
-    : SearchFilterByModuleList(target_sp, module_list),
+    : SearchFilterByModuleList(target_sp, module_list,
+                               FilterTy::ByModulesAndCU),
       m_cu_spec_list(cu_list) {}
 
 SearchFilterByModuleListAndCU::SearchFilterByModuleListAndCU(
@@ -481,6 +691,64 @@ operator=(const SearchFilterByModuleListAndCU &rhs) {
 }
 
 SearchFilterByModuleListAndCU::~SearchFilterByModuleListAndCU() = default;
+
+lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
+    Target &target, const StructuredData::Dictionary &data_dict, Error &error) {
+  StructuredData::Array *modules_array;
+  SearchFilterSP result_sp;
+  bool success = data_dict.GetValueForKeyAsArray(GetKey(OptionNames::ModList),
+                                                 modules_array);
+  if (!success) {
+    error.SetErrorString("SFBM::CFSD: Could not find the module list key.");
+    return result_sp;
+  }
+
+  size_t num_modules = modules_array->GetSize();
+  FileSpecList modules;
+  for (size_t i = 0; i < num_modules; i++) {
+    std::string module;
+    success = modules_array->GetItemAtIndexAsString(i, module);
+    if (!success) {
+      error.SetErrorStringWithFormat(
+          "SFBM::CFSD: filter module item %zu not a string.", i);
+      return result_sp;
+    }
+    modules.Append(FileSpec(module.c_str(), false));
+  }
+
+  StructuredData::Array *cus_array;
+  success =
+      data_dict.GetValueForKeyAsArray(GetKey(OptionNames::CUList), cus_array);
+  if (!success) {
+    error.SetErrorString("SFBM::CFSD: Could not find the CU list key.");
+    return result_sp;
+  }
+
+  size_t num_cus = cus_array->GetSize();
+  FileSpecList cus;
+  for (size_t i = 0; i < num_cus; i++) {
+    std::string cu;
+    success = modules_array->GetItemAtIndexAsString(i, cu);
+    if (!success) {
+      error.SetErrorStringWithFormat(
+          "SFBM::CFSD: filter cu item %zu not a string.", i);
+      return nullptr;
+    }
+    cus.Append(FileSpec(cu.c_str(), false));
+  }
+
+  return SearchFilterSP(new SearchFilterByModuleListAndCU(
+      target.shared_from_this(), modules, cus));
+}
+
+StructuredData::ObjectSP
+SearchFilterByModuleListAndCU::SerializeToStructuredData() {
+  StructuredData::DictionarySP options_dict_sp(
+      new StructuredData::Dictionary());
+  SearchFilterByModuleList::SerializeUnwrapped(options_dict_sp);
+  SerializeFileSpecList(options_dict_sp, OptionNames::CUList, m_cu_spec_list);
+  return WrapOptionsDict(options_dict_sp);
+}
 
 bool SearchFilterByModuleListAndCU::AddressPasses(Address &address) {
   return true;

@@ -47,19 +47,26 @@ public:
   ElemT *getPointer() const { return MutableArrayRef.data(); }
   size_t getElementCount() const { return MutableArrayRef.size(); }
 
-  /// Chops off the first N elements of the slice.
-  MutableRegisteredHostMemorySlice slice(size_t N) const {
-    return MutableRegisteredHostMemorySlice(MutableArrayRef.slice(N));
+  /// Chops off the first DropCount elements of the slice.
+  LLVM_ATTRIBUTE_UNUSED_RESULT
+  MutableRegisteredHostMemorySlice slice(size_t DropCount) const {
+    return MutableRegisteredHostMemorySlice(MutableArrayRef.slice(DropCount));
   }
 
-  /// Chops off the first N elements of the slice and keeps the next M elements.
-  MutableRegisteredHostMemorySlice slice(size_t N, size_t M) const {
-    return MutableRegisteredHostMemorySlice(MutableArrayRef.slice(N, M));
+  /// Chops off the first DropCount elements of the slice and keeps the next
+  /// TakeCount elements.
+  LLVM_ATTRIBUTE_UNUSED_RESULT
+  MutableRegisteredHostMemorySlice slice(size_t DropCount,
+                                         size_t TakeCount) const {
+    return MutableRegisteredHostMemorySlice(
+        MutableArrayRef.slice(DropCount, TakeCount));
   }
 
-  /// Chops off the last N elements of the slice.
-  MutableRegisteredHostMemorySlice drop_back(size_t N) const {
-    return MutableRegisteredHostMemorySlice(MutableArrayRef.drop_back(N));
+  /// Chops off the last DropCount elements of the slice.
+  LLVM_ATTRIBUTE_UNUSED_RESULT
+  MutableRegisteredHostMemorySlice drop_back(size_t DropCount) const {
+    return MutableRegisteredHostMemorySlice(
+        MutableArrayRef.drop_back(DropCount));
   }
 
 private:
@@ -91,16 +98,19 @@ public:
   size_t getElementCount() const { return ArrayRef.size(); }
 
   /// Chops off the first N elements of the slice.
+  LLVM_ATTRIBUTE_UNUSED_RESULT
   RegisteredHostMemorySlice slice(size_t N) const {
     return RegisteredHostMemorySlice(ArrayRef.slice(N));
   }
 
   /// Chops off the first N elements of the slice and keeps the next M elements.
+  LLVM_ATTRIBUTE_UNUSED_RESULT
   RegisteredHostMemorySlice slice(size_t N, size_t M) const {
     return RegisteredHostMemorySlice(ArrayRef.slice(N, M));
   }
 
   /// Chops off the last N elements of the slice.
+  LLVM_ATTRIBUTE_UNUSED_RESULT
   RegisteredHostMemorySlice drop_back(size_t N) const {
     return RegisteredHostMemorySlice(ArrayRef.drop_back(N));
   }
@@ -141,14 +151,14 @@ public:
   RegisteredHostMemory(const RegisteredHostMemory &) = delete;
   RegisteredHostMemory &operator=(const RegisteredHostMemory &) = delete;
 
-  RegisteredHostMemory(RegisteredHostMemory &&Other)
+  RegisteredHostMemory(RegisteredHostMemory &&Other) noexcept
       : TheDevice(Other.TheDevice), Pointer(Other.Pointer),
         ElementCount(Other.ElementCount) {
     Other.TheDevice = nullptr;
     Other.Pointer = nullptr;
   }
 
-  RegisteredHostMemory &operator=(RegisteredHostMemory &&Other) {
+  RegisteredHostMemory &operator=(RegisteredHostMemory &&Other) noexcept {
     TheDevice = Other.TheDevice;
     Pointer = Other.Pointer;
     ElementCount = Other.ElementCount;

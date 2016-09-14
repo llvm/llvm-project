@@ -402,6 +402,7 @@ public:
 
   const char *getPassName() const { return PassName; }
   const Twine &getMsg() const { return Msg; }
+  Optional<uint64_t> getHotness() const { return Hotness; }
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() >= DK_FirstRemark &&

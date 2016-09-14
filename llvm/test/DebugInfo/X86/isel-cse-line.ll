@@ -31,8 +31,8 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@glb_start = global i64 17, align 8
-@glb_end = global i64 42, align 8
+@glb_start = global i64 17, align 8, !dbg !7
+@glb_end = global i64 42, align 8, !dbg !10
 
 ; Function Attrs: norecurse nounwind uwtable
 define i32 @main() !dbg !14 {
@@ -73,10 +73,10 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !4 = !DIDerivedType(tag: DW_TAG_typedef, name: "fp_t", file: !1, line: 1, baseType: !5)
 !5 = !DIBasicType(name: "double", size: 64, align: 64, encoding: DW_ATE_float)
 !6 = !{!7, !10}
-!7 = distinct !DIGlobalVariable(name: "glb_start", scope: !0, file: !1, line: 4, type: !8, isLocal: false, isDefinition: true, variable: i64* @glb_start)
+!7 = distinct !DIGlobalVariable(name: "glb_start", scope: !0, file: !1, line: 4, type: !8, isLocal: false, isDefinition: true)
 !8 = !DIDerivedType(tag: DW_TAG_typedef, name: "int_t", file: !1, line: 2, baseType: !9)
 !9 = !DIBasicType(name: "long unsigned int", size: 64, align: 64, encoding: DW_ATE_unsigned)
-!10 = distinct !DIGlobalVariable(name: "glb_end", scope: !0, file: !1, line: 5, type: !8, isLocal: false, isDefinition: true, variable: i64* @glb_end)
+!10 = distinct !DIGlobalVariable(name: "glb_end", scope: !0, file: !1, line: 5, type: !8, isLocal: false, isDefinition: true)
 !11 = !{i32 2, !"Dwarf Version", i32 4}
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !{!"clang version 3.9.0 (trunk 268246)"}

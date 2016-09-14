@@ -39,6 +39,6 @@ private:
 // CHECK-SAME:          flags: DIFlagPrototyped,
 void free() {}
 
+U u;
 A a;
 B b;
-U u;

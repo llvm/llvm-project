@@ -75,30 +75,23 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   typedef SmallVector<Value *, 16> ValueVector;
   ValueVector MemInstr;
 
-  if (Level > MaxLoopNestDepth) {
-    DEBUG(dbgs() << "Cannot handle loops of depth greater than "
-                 << MaxLoopNestDepth << "\n");
-    return false;
-  }
-
   // For each block.
   for (Loop::block_iterator BB = L->block_begin(), BE = L->block_end();
        BB != BE; ++BB) {
     // Scan the BB and collect legal loads and stores.
     for (BasicBlock::iterator I = (*BB)->begin(), E = (*BB)->end(); I != E;
          ++I) {
-      Instruction *Ins = dyn_cast<Instruction>(I);
-      if (!Ins)
+      if (!isa<Instruction>(I))
         return false;
-      LoadInst *Ld = dyn_cast<LoadInst>(I);
-      StoreInst *St = dyn_cast<StoreInst>(I);
-      if (!St && !Ld)
-        continue;
-      if (Ld && !Ld->isSimple())
-        return false;
-      if (St && !St->isSimple())
-        return false;
-      MemInstr.push_back(&*I);
+      if (LoadInst *Ld = dyn_cast<LoadInst>(I)) {
+        if (!Ld->isSimple())
+          return false;
+        MemInstr.push_back(&*I);
+      } else if (StoreInst *St = dyn_cast<StoreInst>(I)) {
+        if (!St->isSimple())
+          return false;
+        MemInstr.push_back(&*I);
+      }
     }
   }
 
@@ -110,8 +103,8 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   for (I = MemInstr.begin(), IE = MemInstr.end(); I != IE; ++I) {
     for (J = I, JE = MemInstr.end(); J != JE; ++J) {
       std::vector<char> Dep;
-      Instruction *Src = dyn_cast<Instruction>(*I);
-      Instruction *Dst = dyn_cast<Instruction>(*J);
+      Instruction *Src = cast<Instruction>(*I);
+      Instruction *Dst = cast<Instruction>(*J);
       if (Src == Dst)
         continue;
       if (isa<LoadInst>(Src) && isa<LoadInst>(Dst))
@@ -183,8 +176,8 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
 
 // A loop is moved from index 'from' to an index 'to'. Update the Dependence
 // matrix by exchanging the two columns.
-static void interChangeDepedencies(CharMatrix &DepMatrix, unsigned FromIndx,
-                                   unsigned ToIndx) {
+static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
+                                    unsigned ToIndx) {
   unsigned numRows = DepMatrix.size();
   for (unsigned i = 0; i < numRows; ++i) {
     char TmpVal = DepMatrix[i][ToIndx];
@@ -255,9 +248,8 @@ static bool validDepInterchange(CharMatrix &DepMatrix, unsigned Row,
 
 // Checks if it is legal to interchange 2 loops.
 // [Theorem] A permutation of the loops in a perfect nest is legal if and only
-// if
-// the direction matrix, after the same permutation is applied to its columns,
-// has no ">" direction as the leftmost non-"=" direction in any row.
+// if the direction matrix, after the same permutation is applied to its
+// columns, has no ">" direction as the leftmost non-"=" direction in any row.
 static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
                                       unsigned InnerLoopId,
                                       unsigned OuterLoopId) {
@@ -269,8 +261,7 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
     char OuterDep = DepMatrix[Row][OuterLoopId];
     if (InnerDep == '*' || OuterDep == '*')
       return false;
-    else if (!validDepInterchange(DepMatrix, Row, OuterLoopId, InnerDep,
-                                  OuterDep))
+    if (!validDepInterchange(DepMatrix, Row, OuterLoopId, InnerDep, OuterDep))
       return false;
   }
   return true;
@@ -500,21 +491,26 @@ struct LoopInterchange : public FunctionPass {
   bool processLoopList(LoopVector LoopList, Function &F) {
 
     bool Changed = false;
-    CharMatrix DependencyMatrix;
-    if (LoopList.size() < 2) {
+    unsigned LoopNestDepth = LoopList.size();
+    if (LoopNestDepth < 2) {
       DEBUG(dbgs() << "Loop doesn't contain minimum nesting level.\n");
+      return false;
+    }
+    if (LoopNestDepth > MaxLoopNestDepth) {
+      DEBUG(dbgs() << "Cannot handle loops of depth greater than "
+                   << MaxLoopNestDepth << "\n");
       return false;
     }
     if (!isComputableLoopNest(LoopList)) {
       DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
       return false;
     }
+
+    DEBUG(dbgs() << "Processing LoopList of size = " << LoopNestDepth << "\n");
+
+    CharMatrix DependencyMatrix;
     Loop *OuterMostLoop = *(LoopList.begin());
-
-    DEBUG(dbgs() << "Processing LoopList of size = " << LoopList.size()
-                 << "\n");
-
-    if (!populateDependencyMatrix(DependencyMatrix, LoopList.size(),
+    if (!populateDependencyMatrix(DependencyMatrix, LoopNestDepth,
                                   OuterMostLoop, DI)) {
       DEBUG(dbgs() << "Populating Dependency matrix failed\n");
       return false;
@@ -558,7 +554,7 @@ struct LoopInterchange : public FunctionPass {
       std::swap(LoopList[i - 1], LoopList[i]);
 
       // Update the DependencyMatrix
-      interChangeDepedencies(DependencyMatrix, i, i - 1);
+      interChangeDependencies(DependencyMatrix, i, i - 1);
       DT->recalculate(F);
 #ifdef DUMP_DEP_MATRICIES
       DEBUG(dbgs() << "Dependence after inter change \n");

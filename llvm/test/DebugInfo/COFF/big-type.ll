@@ -57,7 +57,7 @@ source_filename = "t.cpp"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.0.23918"
 
-@"\01?x@@3W4BigThing@@A" = global i32 0, align 4
+@"\01?x@@3W4BigThing@@A" = global i32 0, align 4, !dbg !5703
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!5704, !5705, !5706}
@@ -5766,7 +5766,7 @@ target triple = "x86_64-pc-windows-msvc19.0.23918"
 !5700 = !DIEnumerator(name: "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE5695", value: 5694)
 !5701 = !DIEnumerator(name: "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE5696", value: 5695)
 !5702 = !{!5703}
-!5703 = distinct !DIGlobalVariable(name: "x", linkageName: "\01?x@@3W4BigThing@@A", scope: !0, file: !1, line: 5698, type: !3, isLocal: false, isDefinition: true, variable: i32* @"\01?x@@3W4BigThing@@A")
+!5703 = distinct !DIGlobalVariable(name: "x", linkageName: "\01?x@@3W4BigThing@@A", scope: !0, file: !1, line: 5698, type: !3, isLocal: false, isDefinition: true)
 !5704 = !{i32 2, !"CodeView", i32 1}
 !5705 = !{i32 2, !"Debug Info Version", i32 3}
 !5706 = !{i32 1, !"PIC Level", i32 2}

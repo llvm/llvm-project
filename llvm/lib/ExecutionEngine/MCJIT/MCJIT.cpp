@@ -275,19 +275,20 @@ void MCJIT::finalizeModule(Module *M) {
 }
 
 JITSymbol MCJIT::findExistingSymbol(const std::string &Name) {
-  SmallString<128> FullName;
-  Mangler::getNameWithPrefix(FullName, Name, getDataLayout());
-
-  if (void *Addr = getPointerToGlobalIfAvailable(FullName))
+  if (void *Addr = getPointerToGlobalIfAvailable(Name))
     return JITSymbol(static_cast<uint64_t>(
                          reinterpret_cast<uintptr_t>(Addr)),
                      JITSymbolFlags::Exported);
 
-  return Dyld.getSymbol(FullName);
+  return Dyld.getSymbol(Name);
 }
 
 Module *MCJIT::findModuleForSymbol(const std::string &Name,
                                    bool CheckFunctionsOnly) {
+  StringRef DemangledName = Name;
+  if (DemangledName[0] == getDataLayout().getGlobalPrefix())
+    DemangledName = DemangledName.substr(1);
+
   MutexGuard locked(lock);
 
   // If it hasn't already been generated, see if it's in one of our modules.
@@ -295,11 +296,11 @@ Module *MCJIT::findModuleForSymbol(const std::string &Name,
                               E = OwnedModules.end_added();
        I != E; ++I) {
     Module *M = *I;
-    Function *F = M->getFunction(Name);
+    Function *F = M->getFunction(DemangledName);
     if (F && !F->isDeclaration())
       return M;
     if (!CheckFunctionsOnly) {
-      GlobalVariable *G = M->getGlobalVariable(Name);
+      GlobalVariable *G = M->getGlobalVariable(DemangledName);
       if (G && !G->isDeclaration())
         return M;
       // FIXME: Do we need to worry about global aliases?
@@ -311,7 +312,12 @@ Module *MCJIT::findModuleForSymbol(const std::string &Name,
 
 uint64_t MCJIT::getSymbolAddress(const std::string &Name,
                                  bool CheckFunctionsOnly) {
-  return findSymbol(Name, CheckFunctionsOnly).getAddress();
+  std::string MangledName;
+  {
+    raw_string_ostream MangledNameStream(MangledName);
+    Mangler::getNameWithPrefix(MangledNameStream, Name, getDataLayout());
+  }
+  return findSymbol(MangledName, CheckFunctionsOnly).getAddress();
 }
 
 JITSymbol MCJIT::findSymbol(const std::string &Name,
@@ -648,10 +654,6 @@ void MCJIT::NotifyFreeingObject(const object::ObjectFile& Obj) {
 JITSymbol
 LinkingSymbolResolver::findSymbol(const std::string &Name) {
   auto Result = ParentEngine.findSymbol(Name, false);
-  // If the symbols wasn't found and it begins with an underscore, try again
-  // without the underscore.
-  if (!Result && Name[0] == '_')
-    Result = ParentEngine.findSymbol(Name.substr(1), false);
   if (Result)
     return Result;
   if (ParentEngine.isSymbolSearchingDisabled())

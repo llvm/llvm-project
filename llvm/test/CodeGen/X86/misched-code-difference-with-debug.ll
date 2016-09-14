@@ -22,7 +22,7 @@
 
 %class.C = type { i8 }
 
-@argc = global i8 0, align 1
+@argc = global i8 0, align 1, !dbg !21
 
 declare i32 @test_function(%class.C*, i8 signext, i8 signext, i8 signext, ...)
 
@@ -82,7 +82,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !18 = !DILocalVariable(name: "c", line: 7, scope: !13, file: !14, type: !4)
 !19 = !DILocalVariable(name: "lc", line: 8, scope: !13, file: !14, type: !11)
 !20 = !{!21}
-!21 = !DIGlobalVariable(name: "argc", line: 1, isLocal: false, isDefinition: true, scope: null, file: !14, type: !11, variable: i8* @argc)
+!21 = !DIGlobalVariable(name: "argc", line: 1, isLocal: false, isDefinition: true, scope: null, file: !14, type: !11)
 !22 = !{i32 2, !"Dwarf Version", i32 4}
 !23 = !{i32 2, !"Debug Info Version", i32 3}
 !25 = !DILocation(line: 8, column: 3, scope: !13)

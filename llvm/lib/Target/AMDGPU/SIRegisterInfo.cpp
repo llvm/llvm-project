@@ -265,34 +265,10 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
 
   MachineOperand *OffsetOp = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
   int64_t NewOffset = OffsetOp->getImm() + Offset;
-  if (isUInt<12>(NewOffset)) {
-    // If we have a legal offset, fold it directly into the instruction.
-    FIOp->ChangeToRegister(BaseReg, false);
-    OffsetOp->setImm(NewOffset);
-    return;
-  }
+  assert(isUInt<12>(NewOffset) && "offset should be legal");
 
-  // The offset is not legal, so we must insert an add of the offset.
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  unsigned NewReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  DebugLoc DL = MI.getDebugLoc();
-
-  assert(Offset != 0 && "Non-zero offset expected");
-
-  unsigned UnusedCarry = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
-  unsigned OffsetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
-
-  // In the case the instruction already had an immediate offset, here only
-  // the requested new offset is added because we are leaving the original
-  // immediate in place.
-  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), OffsetReg)
-    .addImm(Offset);
-  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_I32_e64), NewReg)
-    .addReg(UnusedCarry, RegState::Define | RegState::Dead)
-    .addReg(OffsetReg, RegState::Kill)
-    .addReg(BaseReg);
-
-  FIOp->ChangeToRegister(NewReg, false);
+  FIOp->ChangeToRegister(BaseReg, false);
+  OffsetOp->setImm(NewOffset);
 }
 
 bool SIRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,

@@ -6,10 +6,7 @@
 // more general than that.
 
 struct UnicodeString;
-struct GetFwdDecl {
-  static UnicodeString format;
-};
-GetFwdDecl force_fwd_decl;
+UnicodeString *force_fwd_decl;
 struct UnicodeString {
 private:
   virtual ~UnicodeString();

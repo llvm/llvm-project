@@ -9,7 +9,7 @@
 
 %"union.PR15637::Value" = type { i32 }
 
-@_ZN7PR156371fE = global %"union.PR15637::Value" zeroinitializer, align 4
+@_ZN7PR156371fE = global %"union.PR15637::Value" zeroinitializer, align 4, !dbg !10
 
 define void @_ZN7PR156371gEf(float %value) #0 !dbg !4 {
 entry:
@@ -38,7 +38,7 @@ attributes #1 = { nounwind readnone }
 !7 = !{null, !8}
 !8 = !DIBasicType(tag: DW_TAG_base_type, name: "float", size: 32, align: 32, encoding: DW_ATE_float)
 !9 = !{!10}
-!10 = !DIGlobalVariable(name: "f", linkageName: "_ZN7PR156371fE", line: 6, isLocal: false, isDefinition: true, scope: !5, file: !11, type: !12, variable: %"union.PR15637::Value"* @_ZN7PR156371fE)
+!10 = !DIGlobalVariable(name: "f", linkageName: "_ZN7PR156371fE", line: 6, isLocal: false, isDefinition: true, scope: !5, file: !11, type: !12)
 !11 = !DIFile(filename: "foo.cc", directory: "/usr/local/google/home/echristo/tmp")
 !12 = !DICompositeType(tag: DW_TAG_union_type, name: "Value<float>", line: 2, size: 32, align: 32, file: !1, scope: !5, elements: !13, templateParams: !21)
 !13 = !{!14, !16}

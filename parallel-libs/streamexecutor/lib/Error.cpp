@@ -44,14 +44,13 @@ char StreamExecutorError::ID = 0;
 
 namespace streamexecutor {
 
-Error make_error(Twine Message) {
+Error make_error(const Twine &Message) {
   return llvm::make_error<StreamExecutorError>(Message.str());
 }
 
 std::string consumeAndGetMessage(Error &&E) {
-  if (!E) {
+  if (!E)
     return "success";
-  }
   std::string Message;
   llvm::handleAllErrors(std::move(E),
                         [&Message](const StreamExecutorError &SEE) {

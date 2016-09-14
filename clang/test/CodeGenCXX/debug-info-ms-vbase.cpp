@@ -2,28 +2,6 @@
 
 // Tests virtual bases in the MS ABI.
 
-struct POD { int pod; };
-
-struct DynamicNoVFPtr : virtual POD { };
-
-DynamicNoVFPtr dynamic_no_vfptr;
-
-// CHECK: ![[DynamicNoVFPtr:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "DynamicNoVFPtr",
-// CHECK-SAME: elements: ![[elements:[0-9]+]]
-
-// CHECK: ![[elements]] = !{![[POD_base:[0-9]+]]}
-
-// CHECK: ![[POD_base]] = !DIDerivedType(tag: DW_TAG_inheritance, scope: ![[DynamicNoVFPtr]],
-// CHECK-SAME: baseType: ![[POD:[0-9]+]], offset: 4, flags: DIFlagVirtual)
-
-// CHECK: ![[POD]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "POD"
-
-struct HasVirtualMethod { virtual void f(); };
-
-struct NoPrimaryBase : virtual HasVirtualMethod { };
-
-NoPrimaryBase no_primary_base;
-
 // CHECK: ![[NoPrimaryBase:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "NoPrimaryBase",
 // CHECK-SAME: elements: ![[elements:[0-9]+]]
 
@@ -33,12 +11,6 @@ NoPrimaryBase no_primary_base;
 // CHECK-SAME: baseType: ![[HasVirtualMethod:[0-9]+]], offset: 4, flags: DIFlagVirtual)
 
 // CHECK: ![[HasVirtualMethod]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "HasVirtualMethod"
-
-struct SecondaryVTable { virtual void g(); };
-
-struct HasPrimaryBase : virtual SecondaryVTable, HasVirtualMethod { };
-
-HasPrimaryBase has_primary_base;
 
 // CHECK: ![[HasPrimaryBase:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "HasPrimaryBase",
 // CHECK-SAME: elements: ![[elements:[0-9]+]]
@@ -51,4 +23,32 @@ HasPrimaryBase has_primary_base;
 // CHECK: ![[SecondaryVTable]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "SecondaryVTable"
 
 // CHECK: ![[HasVirtualMethod_base]] = !DIDerivedType(tag: DW_TAG_inheritance, scope: ![[HasPrimaryBase]], baseType: ![[HasVirtualMethod]])
+
+// CHECK: ![[DynamicNoVFPtr:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "DynamicNoVFPtr",
+// CHECK-SAME: elements: ![[elements:[0-9]+]]
+
+// CHECK: ![[elements]] = !{![[POD_base:[0-9]+]]}
+
+// CHECK: ![[POD_base]] = !DIDerivedType(tag: DW_TAG_inheritance, scope: ![[DynamicNoVFPtr]],
+// CHECK-SAME: baseType: ![[POD:[0-9]+]], offset: 4, flags: DIFlagVirtual)
+
+// CHECK: ![[POD]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "POD"
+
+struct POD { int pod; };
+
+struct DynamicNoVFPtr : virtual POD { };
+
+DynamicNoVFPtr dynamic_no_vfptr;
+
+struct HasVirtualMethod { virtual void f(); };
+
+struct NoPrimaryBase : virtual HasVirtualMethod { };
+
+NoPrimaryBase no_primary_base;
+
+struct SecondaryVTable { virtual void g(); };
+
+struct HasPrimaryBase : virtual SecondaryVTable, HasVirtualMethod { };
+
+HasPrimaryBase has_primary_base;
 

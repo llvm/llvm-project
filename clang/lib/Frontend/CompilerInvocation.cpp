@@ -839,6 +839,12 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     NeedLocTracking = true;
   }
 
+  Opts.DiagnosticsWithHotness =
+      Args.hasArg(options::OPT_fdiagnostics_show_hotness);
+  if (Opts.DiagnosticsWithHotness &&
+      Opts.getProfileUse() == CodeGenOptions::ProfileNone)
+    Diags.Report(diag::warn_drv_fdiagnostics_show_hotness_requires_pgo);
+
   // If the user requested to use a sample profile for PGO, then the
   // backend will need to track source location information so the profile
   // can be incorporated into the IR.

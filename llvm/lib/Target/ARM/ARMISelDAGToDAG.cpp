@@ -3289,8 +3289,7 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
         SDValue NewARMcc = CurDAG->getConstant((unsigned)CC, dl, MVT::i32);
         SDValue Ops[] = {N->getOperand(0), N->getOperand(1), NewARMcc,
                          N->getOperand(3), N->getOperand(4)};
-        CurDAG->MorphNodeTo(N, ARMISD::CMOV, CurDAG->getVTList(MVT::i32),
-                            Ops);
+        CurDAG->MorphNodeTo(N, ARMISD::CMOV, N->getVTList(), Ops);
       }
 
     }

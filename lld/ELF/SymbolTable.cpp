@@ -600,11 +600,12 @@ static void setVersionId(SymbolBody *Body, StringRef VersionName,
 }
 
 template <class ELFT>
-std::map<std::string, SymbolBody *> SymbolTable<ELFT>::getDemangledSyms() {
-  std::map<std::string, SymbolBody *> Result;
+std::map<std::string, std::vector<SymbolBody *>>
+SymbolTable<ELFT>::getDemangledSyms() {
+  std::map<std::string, std::vector<SymbolBody *>> Result;
   for (Symbol *Sym : SymVector) {
     SymbolBody *B = Sym->body();
-    Result[demangle(B->getName())] = B;
+    Result[demangle(B->getName())].push_back(B);
   }
   return Result;
 }
@@ -617,22 +618,24 @@ static bool hasExternCpp() {
   return false;
 }
 
-static SymbolBody *findDemangled(const std::map<std::string, SymbolBody *> &D,
-                                 StringRef Name) {
+static ArrayRef<SymbolBody *>
+findDemangled(std::map<std::string, std::vector<SymbolBody *>> &D,
+              StringRef Name) {
   auto I = D.find(Name);
   if (I != D.end())
     return I->second;
-  return nullptr;
+  return {};
 }
 
 static std::vector<SymbolBody *>
-findAllDemangled(const std::map<std::string, SymbolBody *> &D,
+findAllDemangled(const std::map<std::string, std::vector<SymbolBody *>> &D,
                  const Regex &Re) {
   std::vector<SymbolBody *> Res;
   for (auto &P : D) {
-    SymbolBody *Body = P.second;
-    if (!Body->isUndefined() && const_cast<Regex &>(Re).match(P.first))
-      Res.push_back(Body);
+    if (const_cast<Regex &>(Re).match(P.first))
+      for (SymbolBody *Body : P.second)
+        if (!Body->isUndefined())
+          Res.push_back(Body);
   }
   return Res;
 }
@@ -676,7 +679,7 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   // "llvm::*::foo(int, ?)". Obviously, there's no way to handle this
   // other than trying to match a regexp against all demangled symbols.
   // So, if "extern C++" feature is used, we demangle all known symbols.
-  std::map<std::string, SymbolBody *> Demangled;
+  std::map<std::string, std::vector<SymbolBody *>> Demangled;
   if (hasExternCpp())
     Demangled = getDemangledSyms();
 
@@ -686,9 +689,13 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
     for (SymbolVersion Sym : V.Globals) {
       if (Sym.HasWildcards)
         continue;
+
       StringRef N = Sym.Name;
-      SymbolBody *B = Sym.IsExternCpp ? findDemangled(Demangled, N) : find(N);
-      setVersionId(B, V.Name, N, V.Id);
+      ArrayRef<SymbolBody *> Arr = Sym.IsExternCpp
+                                       ? findDemangled(Demangled, N)
+                                       : ArrayRef<SymbolBody *>(find(N));
+      for (SymbolBody *B : Arr)
+        setVersionId(B, V.Name, N, V.Id);
     }
   }
 

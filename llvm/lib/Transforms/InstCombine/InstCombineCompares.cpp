@@ -3153,9 +3153,10 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
   // If this is a normal comparison, it demands all bits. If it is a sign bit
   // comparison, it only demands the sign bit.
   bool IsSignBit = false;
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(Op1)) {
+  const APInt *CmpC;
+  if (match(Op1, m_APInt(CmpC))) {
     bool UnusedBit;
-    IsSignBit = isSignBitCheck(Pred, CI->getValue(), UnusedBit);
+    IsSignBit = isSignBitCheck(Pred, *CmpC, UnusedBit);
   }
 
   APInt Op0KnownZero(BitWidth, 0), Op0KnownOne(BitWidth, 0);

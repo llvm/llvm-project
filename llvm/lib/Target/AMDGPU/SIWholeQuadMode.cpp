@@ -129,6 +129,14 @@ private:
   void propagateBlock(MachineBasicBlock &MBB, std::vector<WorkItem> &Worklist);
   char analyzeFunction(MachineFunction &MF);
 
+  bool requiresCorrectState(const MachineInstr &MI) const;
+
+  MachineBasicBlock::iterator saveSCC(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator Before);
+  MachineBasicBlock::iterator
+  prepareInsertion(MachineBasicBlock &MBB, MachineBasicBlock::iterator First,
+                   MachineBasicBlock::iterator Last, bool PreferLast,
+                   bool SaveSCC);
   void toExact(MachineBasicBlock &MBB, MachineBasicBlock::iterator Before,
                unsigned SaveWQM, unsigned LiveMaskReg);
   void toWQM(MachineBasicBlock &MBB, MachineBasicBlock::iterator Before,
@@ -398,32 +406,140 @@ char SIWholeQuadMode::analyzeFunction(MachineFunction &MF) {
   return GlobalFlags;
 }
 
+/// Whether \p MI really requires the exec state computed during analysis.
+///
+/// Scalar instructions must occasionally be marked WQM for correct propagation
+/// (e.g. thread masks leading up to branches), but when it comes to actual
+/// execution, they don't care about EXEC.
+bool SIWholeQuadMode::requiresCorrectState(const MachineInstr &MI) const {
+  if (MI.isTerminator())
+    return true;
+
+  // Skip instructions that are not affected by EXEC
+  if (TII->isScalarUnit(MI))
+    return false;
+
+  // Generic instructions such as COPY will either disappear by register
+  // coalescing or be lowered to SALU or VALU instructions.
+  if (MI.isTransient()) {
+    if (MI.getNumExplicitOperands() >= 1) {
+      const MachineOperand &Op = MI.getOperand(0);
+      if (Op.isReg()) {
+        if (TRI->isSGPRReg(*MRI, Op.getReg())) {
+          // SGPR instructions are not affected by EXEC
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+MachineBasicBlock::iterator
+SIWholeQuadMode::saveSCC(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator Before) {
+  unsigned SaveReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+  MachineInstr *Save =
+      BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), SaveReg)
+          .addReg(AMDGPU::SCC);
+  MachineInstr *Restore =
+      BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), AMDGPU::SCC)
+          .addReg(SaveReg);
+
+  LIS->InsertMachineInstrInMaps(*Save);
+  LIS->InsertMachineInstrInMaps(*Restore);
+  LIS->createAndComputeVirtRegInterval(SaveReg);
+
+  return Restore;
+}
+
+// Return an iterator in the (inclusive) range [First, Last] at which
+// instructions can be safely inserted, keeping in mind that some of the
+// instructions we want to add necessarily clobber SCC.
+MachineBasicBlock::iterator SIWholeQuadMode::prepareInsertion(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator First,
+    MachineBasicBlock::iterator Last, bool PreferLast, bool SaveSCC) {
+  if (!SaveSCC)
+    return PreferLast ? Last : First;
+
+  LiveRange &LR = LIS->getRegUnit(*MCRegUnitIterator(AMDGPU::SCC, TRI));
+  auto MBBE = MBB.end();
+  SlotIndex FirstIdx = First != MBBE ? LIS->getInstructionIndex(*First)
+                                     : LIS->getMBBEndIdx(&MBB);
+  SlotIndex LastIdx =
+      Last != MBBE ? LIS->getInstructionIndex(*Last) : LIS->getMBBEndIdx(&MBB);
+  SlotIndex Idx = PreferLast ? LastIdx : FirstIdx;
+  const LiveRange::Segment *S;
+
+  for (;;) {
+    S = LR.getSegmentContaining(Idx);
+    if (!S)
+      break;
+
+    if (PreferLast) {
+      SlotIndex Next = S->start.getBaseIndex();
+      if (Next < FirstIdx)
+        break;
+      Idx = Next;
+    } else {
+      SlotIndex Next = S->end.getNextIndex().getBaseIndex();
+      if (Next > LastIdx)
+        break;
+      Idx = Next;
+    }
+  }
+
+  MachineBasicBlock::iterator MBBI;
+
+  if (MachineInstr *MI = LIS->getInstructionFromIndex(Idx))
+    MBBI = MI;
+  else {
+    assert(Idx == LIS->getMBBEndIdx(&MBB));
+    MBBI = MBB.end();
+  }
+
+  if (S)
+    MBBI = saveSCC(MBB, MBBI);
+
+  return MBBI;
+}
+
 void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator Before,
                               unsigned SaveWQM, unsigned LiveMaskReg) {
+  MachineInstr *MI;
+
   if (SaveWQM) {
-    BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::S_AND_SAVEEXEC_B64),
-            SaveWQM)
-        .addReg(LiveMaskReg);
+    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::S_AND_SAVEEXEC_B64),
+                 SaveWQM)
+             .addReg(LiveMaskReg);
   } else {
-    BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::S_AND_B64),
-            AMDGPU::EXEC)
-        .addReg(AMDGPU::EXEC)
-        .addReg(LiveMaskReg);
+    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::S_AND_B64),
+                 AMDGPU::EXEC)
+             .addReg(AMDGPU::EXEC)
+             .addReg(LiveMaskReg);
   }
+
+  LIS->InsertMachineInstrInMaps(*MI);
 }
 
 void SIWholeQuadMode::toWQM(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator Before,
                             unsigned SavedWQM) {
+  MachineInstr *MI;
+
   if (SavedWQM) {
-    BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), AMDGPU::EXEC)
-        .addReg(SavedWQM);
+    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), AMDGPU::EXEC)
+             .addReg(SavedWQM);
   } else {
-    BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::S_WQM_B64),
-            AMDGPU::EXEC)
-        .addReg(AMDGPU::EXEC);
+    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::S_WQM_B64),
+                 AMDGPU::EXEC)
+             .addReg(AMDGPU::EXEC);
   }
+
+  LIS->InsertMachineInstrInMaps(*MI);
 }
 
 void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, unsigned LiveMaskReg,
@@ -447,76 +563,77 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, unsigned LiveMaskReg,
   unsigned SavedWQMReg = 0;
   bool WQMFromExec = isEntry;
   char State = isEntry ? StateExact : StateWQM;
-  MachineInstr *FirstNonWQM = nullptr;
 
   auto II = MBB.getFirstNonPHI(), IE = MBB.end();
-  while (II != IE) {
-    MachineInstr &MI = *II;
-    ++II;
+  if (isEntry)
+    ++II; // Skip the instruction that saves LiveMask
 
-    // Skip instructions that are not affected by EXEC
-    if (TII->isScalarUnit(MI) && !MI.isTerminator())
-      continue;
-
-    // Generic instructions such as COPY will either disappear by register
-    // coalescing or be lowered to SALU or VALU instructions.
-    if (TargetInstrInfo::isGenericOpcode(MI.getOpcode())) {
-      if (MI.getNumExplicitOperands() >= 1) {
-        const MachineOperand &Op = MI.getOperand(0);
-        if (Op.isReg()) {
-          if (TRI->isSGPRReg(*MRI, Op.getReg())) {
-            // SGPR instructions are not affected by EXEC
-            continue;
-          }
-        }
-      }
-    }
-
+  MachineBasicBlock::iterator First = IE;
+  for (;;) {
+    MachineBasicBlock::iterator Next = II;
     char Needs = 0;
     char OutNeeds = 0;
-    auto InstrInfoIt = Instructions.find(&MI);
-    if (InstrInfoIt != Instructions.end()) {
-      Needs = InstrInfoIt->second.Needs;
-      OutNeeds = InstrInfoIt->second.OutNeeds;
-    }
 
-    // Keep track of the first consecutive non-WQM instruction, so that we
-    // switch away from WQM as soon as possible, potentially saving a small
-    // bit of bandwidth on loads.
-    if (Needs == StateWQM)
-      FirstNonWQM = nullptr;
-    else if (!FirstNonWQM)
-      FirstNonWQM = &MI;
+    if (First == IE)
+      First = II;
 
-    // State switching
-    if (Needs && State != Needs) {
-      if (Needs == StateExact) {
-        assert(!SavedWQMReg);
+    if (II != IE) {
+      MachineInstr &MI = *II;
 
-        if (!WQMFromExec && (OutNeeds & StateWQM))
-          SavedWQMReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
-
-        toExact(MBB, FirstNonWQM, SavedWQMReg, LiveMaskReg);
-      } else {
-        assert(WQMFromExec == (SavedWQMReg == 0));
-        toWQM(MBB, &MI, SavedWQMReg);
-        SavedWQMReg = 0;
+      if (requiresCorrectState(MI)) {
+        auto III = Instructions.find(&MI);
+        if (III != Instructions.end()) {
+          Needs = III->second.Needs;
+          OutNeeds = III->second.OutNeeds;
+        }
       }
 
-      State = Needs;
+      if (MI.isTerminator() && !Needs && OutNeeds == StateExact)
+        Needs = StateExact;
+
+      if (MI.getOpcode() == AMDGPU::SI_ELSE && BI.OutNeeds == StateExact)
+        MI.getOperand(3).setImm(1);
+
+      ++Next;
+    } else {
+      // End of basic block
+      if (BI.OutNeeds & StateWQM)
+        Needs = StateWQM;
+      else if (BI.OutNeeds == StateExact)
+        Needs = StateExact;
     }
 
-    if (MI.getOpcode() == AMDGPU::SI_ELSE && BI.OutNeeds == StateExact)
-      MI.getOperand(3).setImm(1);
-  }
+    if (Needs) {
+      if (Needs != State) {
+        MachineBasicBlock::iterator Before =
+            prepareInsertion(MBB, First, II, Needs == StateWQM,
+                             Needs == StateExact || WQMFromExec);
 
-  if ((BI.OutNeeds & StateWQM) && State != StateWQM) {
-    assert(WQMFromExec == (SavedWQMReg == 0));
-    toWQM(MBB, MBB.end(), SavedWQMReg);
-  } else if (BI.OutNeeds == StateExact && State != StateExact) {
-    toExact(MBB, FirstNonWQM ? MachineBasicBlock::iterator(FirstNonWQM)
-                             : MBB.getFirstTerminator(),
-            0, LiveMaskReg);
+        if (Needs == StateExact) {
+          if (!WQMFromExec && (OutNeeds & StateWQM))
+            SavedWQMReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+
+          toExact(MBB, Before, SavedWQMReg, LiveMaskReg);
+        } else {
+          assert(WQMFromExec == (SavedWQMReg == 0));
+
+          toWQM(MBB, Before, SavedWQMReg);
+
+          if (SavedWQMReg) {
+            LIS->createAndComputeVirtRegInterval(SavedWQMReg);
+            SavedWQMReg = 0;
+          }
+        }
+
+        State = Needs;
+      }
+
+      First = IE;
+    }
+
+    if (II == IE)
+      break;
+    II = Next;
   }
 }
 
@@ -524,8 +641,11 @@ void SIWholeQuadMode::lowerLiveMaskQueries(unsigned LiveMaskReg) {
   for (MachineInstr *MI : LiveMaskQueries) {
     const DebugLoc &DL = MI->getDebugLoc();
     unsigned Dest = MI->getOperand(0).getReg();
-    BuildMI(*MI->getParent(), MI, DL, TII->get(AMDGPU::COPY), Dest)
-        .addReg(LiveMaskReg);
+    MachineInstr *Copy =
+        BuildMI(*MI->getParent(), MI, DL, TII->get(AMDGPU::COPY), Dest)
+            .addReg(LiveMaskReg);
+
+    LIS->ReplaceMachineInstrInMaps(*MI, *Copy);
     MI->eraseFromParent();
   }
 }
@@ -559,8 +679,10 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
 
     if (GlobalFlags & StateExact || !LiveMaskQueries.empty()) {
       LiveMaskReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
-      BuildMI(Entry, EntryMI, DebugLoc(), TII->get(AMDGPU::COPY), LiveMaskReg)
-          .addReg(AMDGPU::EXEC);
+      MachineInstr *MI = BuildMI(Entry, EntryMI, DebugLoc(),
+                                 TII->get(AMDGPU::COPY), LiveMaskReg)
+                             .addReg(AMDGPU::EXEC);
+      LIS->InsertMachineInstrInMaps(*MI);
     }
 
     if (GlobalFlags == StateWQM) {
@@ -582,6 +704,11 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   // Handle the general case
   for (auto BII : Blocks)
     processBlock(*BII.first, LiveMaskReg, BII.first == &*MF.begin());
+
+  // Physical registers like SCC aren't tracked by default anyway, so just
+  // removing the ranges we computed is the simplest option for maintaining
+  // the analysis results.
+  LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::SCC, TRI));
 
   return true;
 }

@@ -593,6 +593,9 @@ public:
   /// ChangeToMCSymbol - Replace this operand with a new MC symbol operand.
   void ChangeToMCSymbol(MCSymbol *Sym);
 
+  /// Replace this operand with a frame index.
+  void ChangeToFrameIndex(int Idx);
+
   /// ChangeToRegister - Replace this operand with a new register operand of
   /// the specified value.  If an operand is known to be an register already,
   /// the setReg method should be used.

@@ -56,7 +56,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !960 = distinct !DISubprogram(name: "main", line: 73, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 73, file: !1802, scope: null, type: !54, variables: !955)
 !961 = !DIFile(filename: "student2.cpp", directory: "/privite/tmp")
 !1786 = !{!1800}
-!1800 = !DIGlobalVariable(name: "badbit", linkageName: "badbit", line: 331, isLocal: true, isDefinition: true, scope: !5, file: !5, type: !78, variable: i32 1, declaration: !77)
+!1800 = !DIGlobalVariable(name: "badbit", linkageName: "badbit", line: 331, isLocal: true, isDefinition: true, scope: !5, file: !5, type: !78, expr: !DIExpression(DW_OP_constu, 1, DW_OP_stack_value), declaration: !77)
 !1801 = !DIFile(filename: "os_base.h", directory: "/privite/tmp")
 !1802 = !DIFile(filename: "student2.cpp", directory: "/privite/tmp")
 !1803 = !{i32 1, !"Debug Info Version", i32 3}

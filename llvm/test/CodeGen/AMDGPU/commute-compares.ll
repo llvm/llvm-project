@@ -693,5 +693,20 @@ define void @commute_uno_2.0_f64(i32 addrspace(1)* %out, double addrspace(1)* %i
   ret void
 }
 
+; Without commuting the frame index in the pre-regalloc run of
+; SIShrinkInstructions, this was using the VOP3 compare.
+
+; GCN-LABEL: {{^}}commute_frameindex:
+; GCN: v_cmp_eq_i32_e32 vcc, 0, v{{[0-9]+}}
+define void @commute_frameindex(i32 addrspace(1)* nocapture %out) #0 {
+entry:
+  %stack0 = alloca i32
+  %ptr0 = load volatile i32*, i32* addrspace(1)* undef
+  %eq = icmp eq i32* %ptr0, %stack0
+  %ext = zext i1 %eq to i32
+  store volatile i32 %ext, i32 addrspace(1)* %out
+  ret void
+}
+
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

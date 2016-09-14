@@ -713,6 +713,8 @@ Value *GPUNodeBuilder::getArraySize(gpu_array_info *Array) {
     }
 
     Value *NumElements = ExprBuilder.create(Res);
+    if (NumElements->getType() != ArraySize->getType())
+      NumElements = Builder.CreateSExt(NumElements, ArraySize->getType());
     ArraySize = Builder.CreateMul(ArraySize, NumElements);
   }
   isl_ast_build_free(Build);
@@ -832,7 +834,7 @@ void GPUNodeBuilder::createScopStmt(isl_ast_expr *Expr,
   if (Stmt->isBlockStmt())
     BlockGen.copyStmt(*Stmt, LTS, Indexes);
   else
-    assert(0 && "Region statement not supported\n");
+    RegionGen.copyStmt(*Stmt, LTS, Indexes);
 }
 
 void GPUNodeBuilder::createKernelSync() {
@@ -996,7 +998,7 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
     isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
     const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
 
-    Value *DevArray = DeviceAllocations[(ScopArrayInfo *)SAI];
+    Value *DevArray = DeviceAllocations[const_cast<ScopArrayInfo *>(SAI)];
     DevArray = createCallGetDevicePtr(DevArray);
     Instruction *Param = new AllocaInst(
         Builder.getInt8PtrTy(), Launch + "_param_" + std::to_string(Index),
@@ -1206,6 +1208,7 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     SmallVector<const SCEV *, 4> Sizes;
     isl_ast_build *Build =
         isl_ast_build_from_context(isl_set_copy(Prog->context));
+    Sizes.push_back(nullptr);
     for (long j = 1; j < Kernel->array[i].array->n_index; j++) {
       isl_ast_expr *DimSize = isl_ast_build_expr_from_pw_aff(
           Build, isl_pw_aff_copy(Kernel->array[i].array->bound[j]));
@@ -1315,6 +1318,7 @@ void GPUNodeBuilder::createKernelVariables(ppcg_kernel *Kernel, Function *FN) {
     Type *ArrayTy = EleTy;
     SmallVector<const SCEV *, 4> Sizes;
 
+    Sizes.push_back(nullptr);
     for (unsigned int j = 1; j < Var.array->n_index; ++j) {
       isl_val *Val = isl_vec_get_element_val(Var.size, j);
       long Bound = isl_val_get_num_si(Val);

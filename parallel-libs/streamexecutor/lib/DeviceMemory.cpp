@@ -19,10 +19,9 @@
 namespace streamexecutor {
 
 GlobalDeviceMemoryBase::~GlobalDeviceMemoryBase() {
-  if (Handle) {
+  if (Handle)
     // TODO(jhen): How to handle errors here.
     consumeError(TheDevice->freeDeviceMemory(*this));
-  }
 }
 
 } // namespace streamexecutor

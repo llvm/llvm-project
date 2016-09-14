@@ -14,7 +14,11 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
+#include "lldb/Core/DataBuffer.h"
+#include "lldb/Core/Error.h"
 #include "lldb/Core/StreamString.h"
+#include "lldb/Host/File.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/JSON.h"
 
@@ -26,6 +30,44 @@ using namespace lldb_private;
 static StructuredData::ObjectSP ParseJSONValue(JSONParser &json_parser);
 static StructuredData::ObjectSP ParseJSONObject(JSONParser &json_parser);
 static StructuredData::ObjectSP ParseJSONArray(JSONParser &json_parser);
+
+StructuredData::ObjectSP StructuredData::ParseJSONFromFile(FileSpec &input_spec,
+                                                           Error &error) {
+  StructuredData::ObjectSP return_sp;
+  if (!input_spec.Exists()) {
+    error.SetErrorStringWithFormat("input file %s does not exist.",
+                                   input_spec.GetPath().c_str());
+    return return_sp;
+  }
+
+  File input_file(nullptr, File::OpenOptions::eOpenOptionRead,
+                  lldb::eFilePermissionsUserRead);
+  std::string input_path = input_spec.GetPath();
+  error =
+      input_file.Open(input_path.c_str(), File::OpenOptions::eOpenOptionRead,
+                      lldb::eFilePermissionsUserRead);
+
+  if (!error.Success()) {
+    error.SetErrorStringWithFormat("could not open input file: %s - %s.",
+                                   input_spec.GetPath().c_str(),
+                                   error.AsCString());
+    return return_sp;
+  }
+
+  lldb::DataBufferSP input_data;
+  size_t num_bytes = std::numeric_limits<size_t>::max();
+  off_t offset = 0;
+  error = input_file.Read(num_bytes, offset, true, input_data);
+  if (!error.Success()) {
+    error.SetErrorStringWithFormat("could not read input file: %s - %s.",
+                                   input_spec.GetPath().c_str(),
+                                   error.AsCString());
+    return return_sp;
+  }
+  JSONParser json_parser((char *)input_data->GetBytes());
+  return_sp = ParseJSONValue(json_parser);
+  return return_sp;
+}
 
 static StructuredData::ObjectSP ParseJSONObject(JSONParser &json_parser) {
   // The "JSONParser::Token::ObjectStart" token should have already been

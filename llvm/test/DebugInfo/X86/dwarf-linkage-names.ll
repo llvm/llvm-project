@@ -38,7 +38,7 @@
 ; NOLINKAGE-NOT: .asciz   "_ZN4test10global_varE"
 ; NOLINKAGE-NOT: .asciz   "_ZN4test3barEv"
 
-@_ZN4test10global_varE = global i32 0, align 4
+@_ZN4test10global_varE = global i32 0, align 4, !dbg !10
 
 ; Function Attrs: nounwind uwtable
 define i32 @_ZN4test3barEv() #0 !dbg !4 {
@@ -62,7 +62,7 @@ attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fp
 !7 = !{!8}
 !8 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !9 = !{!10}
-!10 = !DIGlobalVariable(name: "global_var", linkageName: "_ZN4test10global_varE", scope: !5, file: !1, line: 2, type: !8, isLocal: false, isDefinition: true, variable: i32* @_ZN4test10global_varE)
+!10 = !DIGlobalVariable(name: "global_var", linkageName: "_ZN4test10global_varE", scope: !5, file: !1, line: 2, type: !8, isLocal: false, isDefinition: true)
 !11 = !{i32 2, !"Dwarf Version", i32 4}
 !12 = !{i32 2, !"Debug Info Version", i32 3}
 !13 = !{!"clang version 3.8.0 (trunk 244662)"}

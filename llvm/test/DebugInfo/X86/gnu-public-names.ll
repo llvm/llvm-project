@@ -230,14 +230,14 @@
 %struct.C = type { i8 }
 %"struct.ns::D" = type { i32 }
 
-@_ZN1C22static_member_variableE = global i32 0, align 4
-@global_variable = global %struct.C zeroinitializer, align 1
-@_ZN2ns25global_namespace_variableE = global i32 1, align 4
-@_ZN2ns1dE = global %"struct.ns::D" zeroinitializer, align 4
-@_ZZ2f3vE1z = internal global i32 0, align 4
-@_ZN12_GLOBAL__N_11iE = internal global i32 0, align 4
-@_ZN12_GLOBAL__N_15inner1bE = internal global i32 0, align 4
-@_ZN5outer12_GLOBAL__N_11cE = internal global i32 0, align 4
+@_ZN1C22static_member_variableE = global i32 0, align 4, !dbg !32
+@global_variable = global %struct.C zeroinitializer, align 1, !dbg !33
+@_ZN2ns25global_namespace_variableE = global i32 1, align 4, !dbg !34
+@_ZN2ns1dE = global %"struct.ns::D" zeroinitializer, align 4, !dbg !35
+@_ZZ2f3vE1z = internal global i32 0, align 4, !dbg !36
+@_ZN12_GLOBAL__N_11iE = internal global i32 0, align 4, !dbg !37
+@_ZN12_GLOBAL__N_15inner1bE = internal global i32 0, align 4, !dbg !39
+@_ZN5outer12_GLOBAL__N_11cE = internal global i32 0, align 4, !dbg !41
 
 ; Function Attrs: nounwind uwtable
 define void @_ZN1C15member_functionEv(%struct.C* %this) #0 align 2 !dbg !20 {
@@ -331,16 +331,16 @@ attributes #1 = { nounwind readnone }
 !29 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64, align: 64)
 !30 = distinct !DISubprogram(name: "f7", linkageName: "_Z2f7v", scope: !1, file: !1, line: 57, type: !13, isLocal: false, isDefinition: true, scopeLine: 57, flags: DIFlagPrototyped, isOptimized: false, unit: !0, variables: !2)
 !31 = !{!32, !33, !34, !35, !36, !37, !39, !41}
-!32 = !DIGlobalVariable(name: "static_member_variable", linkageName: "_ZN1C22static_member_variableE", scope: !0, file: !1, line: 7, type: !7, isLocal: false, isDefinition: true, variable: i32* @_ZN1C22static_member_variableE, declaration: !6)
-!33 = !DIGlobalVariable(name: "global_variable", scope: !0, file: !1, line: 17, type: !4, isLocal: false, isDefinition: true, variable: %struct.C* @global_variable)
-!34 = !DIGlobalVariable(name: "global_namespace_variable", linkageName: "_ZN2ns25global_namespace_variableE", scope: !16, file: !1, line: 27, type: !7, isLocal: false, isDefinition: true, variable: i32* @_ZN2ns25global_namespace_variableE)
-!35 = !DIGlobalVariable(name: "d", linkageName: "_ZN2ns1dE", scope: !16, file: !1, line: 31, type: !15, isLocal: false, isDefinition: true, variable: %"struct.ns::D"* @_ZN2ns1dE)
-!36 = !DIGlobalVariable(name: "z", scope: !26, file: !1, line: 41, type: !7, isLocal: true, isDefinition: true, variable: i32* @_ZZ2f3vE1z)
-!37 = !DIGlobalVariable(name: "i", linkageName: "_ZN12_GLOBAL__N_11iE", scope: !38, file: !1, line: 37, type: !7, isLocal: true, isDefinition: true, variable: i32* @_ZN12_GLOBAL__N_11iE)
+!32 = !DIGlobalVariable(name: "static_member_variable", linkageName: "_ZN1C22static_member_variableE", scope: !0, file: !1, line: 7, type: !7, isLocal: false, isDefinition: true, declaration: !6)
+!33 = !DIGlobalVariable(name: "global_variable", scope: !0, file: !1, line: 17, type: !4, isLocal: false, isDefinition: true)
+!34 = !DIGlobalVariable(name: "global_namespace_variable", linkageName: "_ZN2ns25global_namespace_variableE", scope: !16, file: !1, line: 27, type: !7, isLocal: false, isDefinition: true)
+!35 = !DIGlobalVariable(name: "d", linkageName: "_ZN2ns1dE", scope: !16, file: !1, line: 31, type: !15, isLocal: false, isDefinition: true)
+!36 = !DIGlobalVariable(name: "z", scope: !26, file: !1, line: 41, type: !7, isLocal: true, isDefinition: true)
+!37 = !DIGlobalVariable(name: "i", linkageName: "_ZN12_GLOBAL__N_11iE", scope: !38, file: !1, line: 37, type: !7, isLocal: true, isDefinition: true)
 !38 = !DINamespace(scope: null, file: !1, line: 36)
-!39 = !DIGlobalVariable(name: "b", linkageName: "_ZN12_GLOBAL__N_15inner1bE", scope: !40, file: !1, line: 47, type: !7, isLocal: true, isDefinition: true, variable: i32* @_ZN12_GLOBAL__N_15inner1bE)
+!39 = !DIGlobalVariable(name: "b", linkageName: "_ZN12_GLOBAL__N_15inner1bE", scope: !40, file: !1, line: 47, type: !7, isLocal: true, isDefinition: true)
 !40 = !DINamespace(name: "inner", scope: !38, file: !1, line: 46)
-!41 = !DIGlobalVariable(name: "c", linkageName: "_ZN5outer12_GLOBAL__N_11cE", scope: !42, file: !1, line: 53, type: !7, isLocal: true, isDefinition: true, variable: i32* @_ZN5outer12_GLOBAL__N_11cE)
+!41 = !DIGlobalVariable(name: "c", linkageName: "_ZN5outer12_GLOBAL__N_11cE", scope: !42, file: !1, line: 53, type: !7, isLocal: true, isDefinition: true)
 !42 = !DINamespace(scope: !43, file: !1, line: 52)
 !43 = !DINamespace(name: "outer", scope: null, file: !1, line: 51)
 !44 = !{!45, !47}

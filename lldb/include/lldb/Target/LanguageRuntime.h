@@ -1,5 +1,5 @@
 //===-- LanguageRuntime.h ---------------------------------------------------*-
-//C++ -*-===//
+// C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -28,6 +28,39 @@
 #include "clang/Basic/TargetOptions.h"
 
 namespace lldb_private {
+
+class ExceptionSearchFilter : public SearchFilter {
+public:
+  ExceptionSearchFilter(const lldb::TargetSP &target_sp,
+                        lldb::LanguageType language,
+                        bool update_module_list = true);
+
+  ~ExceptionSearchFilter() override = default;
+
+  bool ModulePasses(const lldb::ModuleSP &module_sp) override;
+
+  bool ModulePasses(const FileSpec &spec) override;
+
+  void Search(Searcher &searcher) override;
+
+  void GetDescription(Stream *s) override;
+
+  static SearchFilter *
+  CreateFromStructuredData(Target &target,
+                           const StructuredData::Dictionary &data_dict,
+                           Error &error);
+
+  StructuredData::ObjectSP SerializeToStructuredData() override;
+
+protected:
+  lldb::LanguageType m_language;
+  LanguageRuntime *m_language_runtime;
+  lldb::SearchFilterSP m_filter_sp;
+
+  lldb::SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override;
+
+  void UpdateModuleListIfNeeded();
+};
 
 class LanguageRuntime : public PluginInterface {
 public:

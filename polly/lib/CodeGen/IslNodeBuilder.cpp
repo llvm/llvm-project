@@ -1155,8 +1155,12 @@ void IslNodeBuilder::allocateNewArrays() {
     if (SAI->getBasePtr())
       continue;
 
+    assert(SAI->getNumberOfDimensions() > 0 && SAI->getDimensionSize(0) &&
+           "The size of the outermost dimension is used to declare newly "
+           "created arrays that require memory allocation.");
+
     Type *NewArrayType = nullptr;
-    for (unsigned i = SAI->getNumberOfDimensions() - 1; i >= 1; i--) {
+    for (int i = SAI->getNumberOfDimensions() - 1; i >= 0; i--) {
       auto *DimSize = SAI->getDimensionSize(i);
       unsigned UnsignedDimSize = static_cast<const SCEVConstant *>(DimSize)
                                      ->getAPInt()

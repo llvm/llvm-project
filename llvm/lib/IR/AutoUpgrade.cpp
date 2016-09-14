@@ -256,6 +256,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
          Name.startswith("avx512.mask.pshuf.d.") ||
          Name.startswith("avx512.mask.pshufl.w.") ||
          Name.startswith("avx512.mask.pshufh.w.") ||
+         Name.startswith("avx512.mask.shuf.p") ||
          Name.startswith("avx512.mask.vpermil.p") ||
          Name.startswith("avx512.mask.perm.df.") ||
          Name.startswith("avx512.mask.perm.di.") ||
@@ -1149,6 +1150,31 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       if (CI->getNumArgOperands() == 4)
         Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                             CI->getArgOperand(2));
+    } else if (IsX86 && Name.startswith("avx512.mask.shuf.p")) {
+      Value *Op0 = CI->getArgOperand(0);
+      Value *Op1 = CI->getArgOperand(1);
+      unsigned Imm = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+      unsigned NumElts = CI->getType()->getVectorNumElements();
+
+      unsigned NumLaneElts = 128/CI->getType()->getScalarSizeInBits();
+      unsigned HalfLaneElts = NumLaneElts / 2;
+
+      SmallVector<uint32_t, 16> Idxs(NumElts);
+      for (unsigned i = 0; i != NumElts; ++i) {
+        // Base index is the starting element of the lane.
+        Idxs[i] = i - (i % NumLaneElts);
+        // If we are half way through the lane switch to the other source.
+        if ((i % NumLaneElts) >= HalfLaneElts)
+          Idxs[i] += NumElts;
+        // Now select the specific element. By adding HalfLaneElts bits from
+        // the immediate. Wrapping around the immediate every 8-bits.
+        Idxs[i] += (Imm >> ((i * HalfLaneElts) % 8)) & ((1 << HalfLaneElts) - 1);
+      }
+
+      Rep = Builder.CreateShuffleVector(Op0, Op1, Idxs);
+
+      Rep = EmitX86Select(Builder, CI->getArgOperand(4), Rep,
+                          CI->getArgOperand(3));
     } else if (IsX86 && (Name.startswith("avx512.mask.movddup") ||
                          Name.startswith("avx512.mask.movshdup") ||
                          Name.startswith("avx512.mask.movsldup"))) {

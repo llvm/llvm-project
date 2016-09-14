@@ -3,9 +3,6 @@
 // CHECK: imports: [[IMPS:![0-9]*]]
 // CHECK: [[EMPTY:![0-9]*]] = !{}
 
-// CHECK: [[FOO:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "foo",
-// CHECK-SAME:             elements: [[EMPTY]]
-
 // CHECK: [[IMPS]] = !{[[IMP:![0-9]*]]}
 // CHECK: [[IMP]] = !DIImportedEntity(
 // CHECK-SAME: entity: [[F3:![0-9]*]]
@@ -14,6 +11,9 @@
 // CHECK: [[SUBROUTINE_TYPE]] = !DISubroutineType(types: [[TYPE_LIST:![0-9]*]])
 // CHECK: [[TYPE_LIST]] = !{[[INT:![0-9]*]]}
 // CHECK: [[INT]] = !DIBasicType(name: "int"
+
+// CHECK: [[FOO:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "foo",
+// CHECK-SAME:             elements: [[EMPTY]]
 
 // FIXME: The context of this definition should be the CU/file scope, not the class.
 // CHECK: !DISubprogram(name: "func", {{.*}} scope: [[FOO]]

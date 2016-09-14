@@ -4125,17 +4125,17 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
   // unit.
   if (!Def) {
     if (DefinitionRequired) {
-      if (VarSpec)
+      if (VarSpec) {
         Diag(PointOfInstantiation,
              diag::err_explicit_instantiation_undefined_var_template) << Var;
+        Var->setInvalidDecl();
+      }
       else
         Diag(PointOfInstantiation,
              diag::err_explicit_instantiation_undefined_member)
             << 2 << Var->getDeclName() << Var->getDeclContext();
       Diag(PatternDecl->getLocation(),
            diag::note_explicit_instantiation_here);
-      if (VarSpec)
-        Var->setInvalidDecl();
     } else if (Var->getTemplateSpecializationKind()
                  == TSK_ExplicitInstantiationDefinition) {
       PendingInstantiations.push_back(

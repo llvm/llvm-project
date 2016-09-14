@@ -25,9 +25,8 @@ CUDAPTXInMemorySpec::CUDAPTXInMemorySpec(
     llvm::StringRef KernelName,
     const llvm::ArrayRef<CUDAPTXInMemorySpec::PTXSpec> SpecList)
     : KernelLoaderSpec(KernelName) {
-  for (const auto &Spec : SpecList) {
+  for (const auto &Spec : SpecList)
     PTXByComputeCapability.emplace(Spec.TheComputeCapability, Spec.PTXCode);
-  }
 }
 
 const char *CUDAPTXInMemorySpec::getCode(int ComputeCapabilityMajor,
@@ -35,9 +34,8 @@ const char *CUDAPTXInMemorySpec::getCode(int ComputeCapabilityMajor,
   auto PTXIter =
       PTXByComputeCapability.find(CUDAPTXInMemorySpec::ComputeCapability{
           ComputeCapabilityMajor, ComputeCapabilityMinor});
-  if (PTXIter == PTXByComputeCapability.end()) {
+  if (PTXIter == PTXByComputeCapability.end())
     return nullptr;
-  }
   return PTXIter->second;
 }
 
@@ -50,12 +48,11 @@ OpenCLTextInMemorySpec::OpenCLTextInMemorySpec(llvm::StringRef KernelName,
     : KernelLoaderSpec(KernelName), Text(Text) {}
 
 void MultiKernelLoaderSpec::setKernelName(llvm::StringRef KernelName) {
-  if (TheKernelName) {
+  if (TheKernelName)
     assert(KernelName.equals(*TheKernelName) &&
            "different kernel names in one MultiKernelLoaderSpec");
-  } else {
+  else
     TheKernelName = llvm::make_unique<std::string>(KernelName);
-  }
 }
 
 MultiKernelLoaderSpec &MultiKernelLoaderSpec::addCUDAPTXInMemory(

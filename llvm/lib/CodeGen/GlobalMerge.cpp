@@ -451,9 +451,15 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
         M, MergedTy, isConst, GlobalValue::PrivateLinkage, MergedInit,
         "_MergedGlobals", nullptr, GlobalVariable::NotThreadLocal, AddrSpace);
 
+    const StructLayout *MergedLayout = DL.getStructLayout(MergedTy);
+
     for (ssize_t k = i, idx = 0; k != j; k = GlobalSet.find_next(k), ++idx) {
       GlobalValue::LinkageTypes Linkage = Globals[k]->getLinkage();
       std::string Name = Globals[k]->getName();
+
+      // Copy metadata while adjusting any debug info metadata by the original
+      // global's offset within the merged global.
+      MergedGV->copyMetadata(Globals[k], MergedLayout->getElementOffset(idx));
 
       Constant *Idx[2] = {
         ConstantInt::get(Int32Ty, 0),
