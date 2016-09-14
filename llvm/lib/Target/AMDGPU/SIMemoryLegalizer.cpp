@@ -28,7 +28,7 @@ namespace {
 class SIMemoryLegalizer final : public MachineFunctionPass {
 private:
   /// \brief Immediate for "vmcnt(0)".
-  static constexpr unsigned Vmcnt0 = 0x7 << 4 | 0xF << 8;
+  static const unsigned Vmcnt0;
 
   /// \brief Target instruction info.
   const SIInstrInfo *TII;
@@ -106,6 +106,7 @@ public:
 
 INITIALIZE_PASS(SIMemoryLegalizer, DEBUG_TYPE, PASS_NAME, false, false)
 
+const unsigned SIMemoryLegalizer::Vmcnt0 = 0x7 << 4 | 0xF << 8;
 char SIMemoryLegalizer::ID = 0;
 char &llvm::SIMemoryLegalizerID = SIMemoryLegalizer::ID;
 
