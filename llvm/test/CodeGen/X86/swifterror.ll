@@ -376,3 +376,25 @@ entry:
 
   ret void
 }
+
+; This tests the basic usage of a swifterror parameter with swiftcc.
+define swiftcc float @foo_swiftcc(%swift_error** swifterror %error_ptr_ref) {
+; CHECK-APPLE-LABEL: foo_swiftcc:
+; CHECK-APPLE: movl $16, %edi
+; CHECK-APPLE: malloc
+; CHECK-APPLE: movb $1, 8(%rax)
+; CHECK-APPLE: movq %rax, %r12
+
+; CHECK-O0-LABEL: foo_swiftcc:
+; CHECK-O0: movl $16
+; CHECK-O0: malloc
+; CHECK-O0: movb $1, 8(%rax)
+; CHECK-O0: movq %{{.*}}, %r12
+entry:
+  %call = call i8* @malloc(i64 16)
+  %call.0 = bitcast i8* %call to %swift_error*
+  store %swift_error* %call.0, %swift_error** %error_ptr_ref
+  %tmp = getelementptr inbounds i8, i8* %call, i64 8
+  store i8 1, i8* %tmp
+  ret float 1.0
+}
