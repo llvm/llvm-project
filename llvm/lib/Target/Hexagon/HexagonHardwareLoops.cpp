@@ -1246,7 +1246,7 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
       if (LastI != LastMBB->end())
         LastI = LastMBB->erase(LastI);
       SmallVector<MachineOperand, 0> Cond;
-      TII->InsertBranch(*LastMBB, BranchTarget, nullptr, Cond, LastIDL);
+      TII->insertBranch(*LastMBB, BranchTarget, nullptr, Cond, LastIDL);
     }
   } else {
     // Conditional branch to loop start; just delete it.
@@ -1923,7 +1923,7 @@ MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
       (void)NotAnalyzed; // suppress compiler warning
       assert (!NotAnalyzed && "Should be analyzable!");
       if (TB != Header && (Tmp2.empty() || FB != Header))
-        TII->InsertBranch(*PB, NewPH, nullptr, EmptyCond, DL);
+        TII->insertBranch(*PB, NewPH, nullptr, EmptyCond, DL);
       PB->ReplaceUsesOfBlockWith(Header, NewPH);
     }
   }
@@ -1935,10 +1935,10 @@ MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
   (void)LatchNotAnalyzed; // suppress compiler warning
   assert (!LatchNotAnalyzed && "Should be analyzable!");
   if (!TB && !FB)
-    TII->InsertBranch(*Latch, Header, nullptr, EmptyCond, DL);
+    TII->insertBranch(*Latch, Header, nullptr, EmptyCond, DL);
 
   // Finally, the branch from the preheader to the header.
-  TII->InsertBranch(*NewPH, Header, nullptr, EmptyCond, DL);
+  TII->insertBranch(*NewPH, Header, nullptr, EmptyCond, DL);
   NewPH->addSuccessor(Header);
 
   MachineLoop *ParentLoop = L->getParentLoop();

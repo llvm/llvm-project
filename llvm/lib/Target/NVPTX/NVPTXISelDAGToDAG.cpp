@@ -4911,7 +4911,7 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
         uint64_t StartVal = StartConst->getZExtValue();
         // How many "good" bits do we have left?  "good" is defined here as bits
         // that exist in the original value, not shifted in.
-        uint64_t GoodBits = Start.getValueType().getSizeInBits() - StartVal;
+        uint64_t GoodBits = Start.getValueSizeInBits() - StartVal;
         if (NumBits > GoodBits) {
           // Do not handle the case where bits have been shifted in. In theory
           // we could handle this, but the cost is likely higher than just
@@ -5019,15 +5019,14 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
       // If the outer shift is more than the type size, we have no bitfield to
       // extract (since we also check that the inner shift is <= the outer shift
       // then this also implies that the inner shift is < the type size)
-      if (OuterShiftAmt >= Val.getValueType().getSizeInBits()) {
+      if (OuterShiftAmt >= Val.getValueSizeInBits()) {
         return false;
       }
 
-      Start =
-        CurDAG->getTargetConstant(OuterShiftAmt - InnerShiftAmt, DL, MVT::i32);
-      Len =
-        CurDAG->getTargetConstant(Val.getValueType().getSizeInBits() -
-                                  OuterShiftAmt, DL, MVT::i32);
+      Start = CurDAG->getTargetConstant(OuterShiftAmt - InnerShiftAmt, DL,
+                                        MVT::i32);
+      Len = CurDAG->getTargetConstant(Val.getValueSizeInBits() - OuterShiftAmt,
+                                      DL, MVT::i32);
 
       if (N->getOpcode() == ISD::SRA) {
         // If we have a arithmetic right shift, we need to use the signed bfe

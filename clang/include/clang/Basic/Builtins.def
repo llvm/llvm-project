@@ -937,6 +937,14 @@ LIBBUILTIN(fabs, "dd", "fnc", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(fabsf, "ff", "fnc", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(fabsl, "LdLd", "fnc", "math.h", ALL_LANGUAGES)
 
+LIBBUILTIN(finite, "id", "fnc", "math.h", GNU_LANG)
+LIBBUILTIN(finitef, "if", "fnc", "math.h", GNU_LANG)
+LIBBUILTIN(finitel, "iLd", "fnc", "math.h", GNU_LANG)
+// glibc's math.h generates calls to __finite
+LIBBUILTIN(__finite, "id", "fnc", "math.h", ALL_LANGUAGES)
+LIBBUILTIN(__finitef, "if", "fnc", "math.h", ALL_LANGUAGES)
+LIBBUILTIN(__finitel, "iLd", "fnc", "math.h", ALL_LANGUAGES)
+
 LIBBUILTIN(fmod, "ddd", "fne", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(fmodf, "fff", "fne", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(fmodl, "LdLdLd", "fne", "math.h", ALL_LANGUAGES)

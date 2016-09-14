@@ -2109,9 +2109,9 @@ void Verifier::visitFunction(const Function &F) {
         continue;
 
       // FIXME: Once N is canonical, check "SP == &N".
-      Assert(SP->describes(&F),
-             "!dbg attachment points at wrong subprogram for function", N, &F,
-             &I, DL, Scope, SP);
+      AssertDI(SP->describes(&F),
+               "!dbg attachment points at wrong subprogram for function", N, &F,
+               &I, DL, Scope, SP);
     }
 }
 
@@ -4261,10 +4261,10 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgIntrinsicTy &DII) {
   if (!VarSP || !LocSP)
     return; // Broken scope chains are checked elsewhere.
 
-  Assert(VarSP == LocSP, "mismatched subprogram between llvm.dbg." + Kind +
-                             " variable and !dbg attachment",
-         &DII, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
-         Loc->getScope()->getSubprogram());
+  AssertDI(VarSP == LocSP, "mismatched subprogram between llvm.dbg." + Kind +
+                               " variable and !dbg attachment",
+           &DII, BB, F, Var, Var->getScope()->getSubprogram(), Loc,
+           Loc->getScope()->getSubprogram());
 }
 
 static uint64_t getVariableSize(const DILocalVariable &V) {
@@ -4327,9 +4327,9 @@ void Verifier::verifyBitPieceExpression(const DbgInfoIntrinsic &I) {
 
   unsigned PieceSize = E->getBitPieceSize();
   unsigned PieceOffset = E->getBitPieceOffset();
-  Assert(PieceSize + PieceOffset <= VarSize,
+  AssertDI(PieceSize + PieceOffset <= VarSize,
          "piece is larger than or outside of variable", &I, V, E);
-  Assert(PieceSize != VarSize, "piece covers entire variable", &I, V, E);
+  AssertDI(PieceSize != VarSize, "piece covers entire variable", &I, V, E);
 }
 
 void Verifier::verifyCompileUnits() {
@@ -4337,7 +4337,7 @@ void Verifier::verifyCompileUnits() {
   SmallPtrSet<const Metadata *, 2> Listed;
   if (CUs)
     Listed.insert(CUs->op_begin(), CUs->op_end());
-  Assert(
+  AssertDI(
       all_of(CUVisited,
              [&Listed](const Metadata *CU) { return Listed.count(CU); }),
       "All DICompileUnits must be listed in llvm.dbg.cu");

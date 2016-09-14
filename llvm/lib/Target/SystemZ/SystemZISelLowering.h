@@ -382,7 +382,7 @@ public:
     //
     // (c) there are no multiplication instructions for the widest integer
     //     type (v2i64).
-    if (VT.getVectorElementType().getSizeInBits() % 8 == 0)
+    if (VT.getScalarSizeInBits() % 8 == 0)
       return TypeWidenVector;
     return TargetLoweringBase::getPreferredVectorAction(VT);
   }

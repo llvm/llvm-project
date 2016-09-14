@@ -65,6 +65,7 @@ struct VersionDefinition {
 struct Configuration {
   Symbol *EntrySym = nullptr;
   InputFile *FirstElf = nullptr;
+  llvm::StringMap<uint64_t> SectionStartMap;
   llvm::StringRef DynamicLinker;
   llvm::StringRef Entry;
   llvm::StringRef Emulation;

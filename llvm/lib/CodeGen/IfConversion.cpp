@@ -505,7 +505,7 @@ bool IfConverter::ReverseBranchCondition(BBInfo &BBI) const {
   DebugLoc dl;  // FIXME: this is nowhere
   if (!TII->ReverseBranchCondition(BBI.BrCond)) {
     TII->RemoveBranch(*BBI.BB);
-    TII->InsertBranch(*BBI.BB, BBI.FalseBB, BBI.TrueBB, BBI.BrCond, dl);
+    TII->insertBranch(*BBI.BB, BBI.FalseBB, BBI.TrueBB, BBI.BrCond, dl);
     std::swap(BBI.TrueBB, BBI.FalseBB);
     return true;
   }
@@ -1394,7 +1394,7 @@ static void InsertUncondBranch(MachineBasicBlock &MBB, MachineBasicBlock &ToMBB,
                                const TargetInstrInfo *TII) {
   DebugLoc dl;  // FIXME: this is nowhere
   SmallVector<MachineOperand, 0> NoCond;
-  TII->InsertBranch(MBB, &ToMBB, nullptr, NoCond, dl);
+  TII->insertBranch(MBB, &ToMBB, nullptr, NoCond, dl);
 }
 
 /// Remove true / false edges if either / both are no longer successors.
@@ -1667,7 +1667,7 @@ bool IfConverter::IfConvertTriangle(BBInfo &BBI, IfcvtKind Kind) {
       BBI.BB->setSuccProbability(NewTrueBBIter, NewNext);
 
     auto NewFalse = BBCvt * CvtFalse;
-    TII->InsertBranch(*BBI.BB, CvtBBI->FalseBB, nullptr, RevCond, dl);
+    TII->insertBranch(*BBI.BB, CvtBBI->FalseBB, nullptr, RevCond, dl);
     BBI.BB->addSuccessor(CvtBBI->FalseBB, NewFalse);
   }
 
@@ -1951,7 +1951,7 @@ bool IfConverter::IfConvertForkedDiamond(
 
   // Add back the branch.
   // Debug location saved above when removing the branch from BBI2
-  TII->InsertBranch(*BBI.BB, TrueBBI.TrueBB, TrueBBI.FalseBB,
+  TII->insertBranch(*BBI.BB, TrueBBI.TrueBB, TrueBBI.FalseBB,
                     TrueBBI.BrCond, dl);
 
   RemoveExtraEdges(BBI);

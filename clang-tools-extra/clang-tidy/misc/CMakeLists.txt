@@ -47,6 +47,7 @@ add_clang_library(clangTidyMiscModule
   VirtualNearMissCheck.cpp
 
   LINK_LIBS
+  clangAnalysis
   clangAST
   clangASTMatchers
   clangBasic

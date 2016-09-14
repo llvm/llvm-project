@@ -380,6 +380,33 @@ static StripPolicy getStripOption(opt::InputArgList &Args) {
   return StripPolicy::None;
 }
 
+static uint64_t parseSectionAddress(StringRef S, opt::Arg *Arg) {
+  uint64_t VA = 0;
+  if (S.startswith("0x"))
+    S = S.drop_front(2);
+  if (S.getAsInteger(16, VA))
+    error("invalid argument: " + stringize(Arg));
+  return VA;
+}
+
+static StringMap<uint64_t> getSectionStartMap(opt::InputArgList &Args) {
+  StringMap<uint64_t> Ret;
+  for (auto *Arg : Args.filtered(OPT_section_start)) {
+    StringRef Name;
+    StringRef Addr;
+    std::tie(Name, Addr) = StringRef(Arg->getValue()).split('=');
+    Ret[Name] = parseSectionAddress(Addr, Arg);
+  }
+
+  if (auto *Arg = Args.getLastArg(OPT_Ttext))
+    Ret[".text"] = parseSectionAddress(Arg->getValue(), Arg);
+  if (auto *Arg = Args.getLastArg(OPT_Tdata))
+    Ret[".data"] = parseSectionAddress(Arg->getValue(), Arg);
+  if (auto *Arg = Args.getLastArg(OPT_Tbss))
+    Ret[".bss"] = parseSectionAddress(Arg->getValue(), Arg);
+  return Ret;
+}
+
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_L))
@@ -390,6 +417,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     RPaths.push_back(Arg->getValue());
   if (!RPaths.empty())
     Config->RPath = llvm::join(RPaths.begin(), RPaths.end(), ":");
+
+  Config->SectionStartMap = getSectionStartMap(Args);
 
   if (auto *Arg = Args.getLastArg(OPT_m)) {
     // Parse ELF{32,64}{LE,BE} and CPU type.

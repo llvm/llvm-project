@@ -1080,6 +1080,10 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
     if (Sec->PageAlign)
       Alignment = std::max<uintX_t>(Alignment, Target->PageSize);
 
+    auto I = Config->SectionStartMap.find(Sec->getName());
+    if (I != Config->SectionStartMap.end())
+      VA = I->second;
+
     // We only assign VAs to allocated sections.
     if (needsPtLoad(Sec)) {
       VA = alignTo(VA, Alignment);

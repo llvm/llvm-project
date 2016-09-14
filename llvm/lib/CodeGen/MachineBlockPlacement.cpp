@@ -1643,7 +1643,7 @@ void MachineBlockPlacement::optimizeBranches() {
                      << MBPI->getEdgeProbability(ChainBB, TBB) << "\n");
         DebugLoc dl; // FIXME: this is nowhere
         TII->RemoveBranch(*ChainBB);
-        TII->InsertBranch(*ChainBB, FBB, TBB, Cond, dl);
+        TII->insertBranch(*ChainBB, FBB, TBB, Cond, dl);
         ChainBB->updateTerminator();
       }
     }

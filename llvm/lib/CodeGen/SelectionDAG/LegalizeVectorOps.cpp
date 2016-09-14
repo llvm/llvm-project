@@ -770,8 +770,8 @@ SDValue VectorLegalizer::ExpandSEXTINREG(SDValue Op) {
   SDLoc DL(Op);
   EVT OrigTy = cast<VTSDNode>(Op->getOperand(1))->getVT();
 
-  unsigned BW = VT.getScalarType().getSizeInBits();
-  unsigned OrigBW = OrigTy.getScalarType().getSizeInBits();
+  unsigned BW = VT.getScalarSizeInBits();
+  unsigned OrigBW = OrigTy.getScalarSizeInBits();
   SDValue ShiftSz = DAG.getConstant(BW - OrigBW, DL, VT);
 
   Op = Op.getOperand(0);
@@ -817,8 +817,8 @@ SDValue VectorLegalizer::ExpandSIGN_EXTEND_VECTOR_INREG(SDValue Op) {
   // Now we need sign extend. Do this by shifting the elements. Even if these
   // aren't legal operations, they have a better chance of being legalized
   // without full scalarization than the sign extension does.
-  unsigned EltWidth = VT.getVectorElementType().getSizeInBits();
-  unsigned SrcEltWidth = SrcVT.getVectorElementType().getSizeInBits();
+  unsigned EltWidth = VT.getScalarSizeInBits();
+  unsigned SrcEltWidth = SrcVT.getScalarSizeInBits();
   SDValue ShiftAmount = DAG.getConstant(EltWidth - SrcEltWidth, DL, VT);
   return DAG.getNode(ISD::SRA, DL, VT,
                      DAG.getNode(ISD::SHL, DL, VT, Op, ShiftAmount),
@@ -951,7 +951,7 @@ SDValue VectorLegalizer::ExpandVSELECT(SDValue Op) {
   // If the mask and the type are different sizes, unroll the vector op. This
   // can occur when getSetCCResultType returns something that is different in
   // size from the operand types. For example, v4i8 = select v4i32, v4i8, v4i8.
-  if (VT.getSizeInBits() != Op1.getValueType().getSizeInBits())
+  if (VT.getSizeInBits() != Op1.getValueSizeInBits())
     return DAG.UnrollVectorOp(Op.getNode());
 
   // Bitcast the operands to be the same type as the mask.
@@ -961,7 +961,7 @@ SDValue VectorLegalizer::ExpandVSELECT(SDValue Op) {
   Op2 = DAG.getNode(ISD::BITCAST, DL, VT, Op2);
 
   SDValue AllOnes = DAG.getConstant(
-    APInt::getAllOnesValue(VT.getScalarType().getSizeInBits()), DL, VT);
+    APInt::getAllOnesValue(VT.getScalarSizeInBits()), DL, VT);
   SDValue NotMask = DAG.getNode(ISD::XOR, DL, VT, Mask, AllOnes);
 
   Op1 = DAG.getNode(ISD::AND, DL, VT, Op1, Mask);

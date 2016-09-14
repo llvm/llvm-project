@@ -852,7 +852,7 @@ static SDValue performDSPShiftCombine(unsigned Opc, SDNode *N, EVT Ty,
   APInt SplatValue, SplatUndef;
   unsigned SplatBitSize;
   bool HasAnyUndefs;
-  unsigned EltSize = Ty.getVectorElementType().getSizeInBits();
+  unsigned EltSize = Ty.getScalarSizeInBits();
   BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(N->getOperand(1));
 
   if (!Subtarget.hasDSP())
@@ -1504,7 +1504,7 @@ static SDValue lowerMSABitClear(SDValue Op, SelectionDAG &DAG) {
 static SDValue lowerMSABitClearImm(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
   EVT ResTy = Op->getValueType(0);
-  APInt BitImm = APInt(ResTy.getVectorElementType().getSizeInBits(), 1)
+  APInt BitImm = APInt(ResTy.getScalarSizeInBits(), 1)
                  << cast<ConstantSDNode>(Op->getOperand(2))->getAPIntValue();
   SDValue BitMask = DAG.getConstant(~BitImm, DL, ResTy);
 

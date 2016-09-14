@@ -62,7 +62,10 @@ protected:
   bool shouldCombineMemoryType(EVT VT) const;
   SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performAndCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+
+  SDValue splitBinaryBitConstantOpImpl(DAGCombinerInfo &DCI, const SDLoc &SL,
+                                       unsigned Opc, SDValue LHS,
+                                       uint32_t ValLo, uint32_t ValHi) const;
   SDValue performShlCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSraCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSrlCombine(SDNode *N, DAGCombinerInfo &DCI) const;

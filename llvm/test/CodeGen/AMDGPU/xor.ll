@@ -171,3 +171,81 @@ endif:
   store i64 %3, i64 addrspace(1)* %out
   ret void
 }
+
+; FUNC-LABEL: {{^}}scalar_xor_literal_i64:
+; SI: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; SI-DAG: s_xor_b32 s[[RES_HI:[0-9]+]], s[[HI]], 0xf237b
+; SI-DAG: s_xor_b32 s[[RES_LO:[0-9]+]], s[[LO]], 0x3039
+; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[RES_LO]]
+; SI-DAG: v_mov_b32_e32 v{{[0-9]+}}, s[[RES_HI]]
+define void @scalar_xor_literal_i64(i64 addrspace(1)* %out, i64 %a) {
+  %or = xor i64 %a, 4261135838621753
+  store i64 %or, i64 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}scalar_xor_literal_multi_use_i64:
+; SI: s_load_dwordx2 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; SI-DAG: s_mov_b32 s[[K_HI:[0-9]+]], 0xf237b
+; SI-DAG: s_movk_i32 s[[K_LO:[0-9]+]], 0x3039
+; SI: s_xor_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[K_LO]]:[[K_HI]]{{\]}}
+
+; SI: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, s[[K_LO]]
+; SI: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, s[[K_HI]]
+define void @scalar_xor_literal_multi_use_i64(i64 addrspace(1)* %out, i64 %a, i64 %b) {
+  %or = xor i64 %a, 4261135838621753
+  store i64 %or, i64 addrspace(1)* %out
+
+  %foo = add i64 %b, 4261135838621753
+  store volatile i64 %foo, i64 addrspace(1)* undef
+  ret void
+}
+
+; FUNC-LABEL: {{^}}scalar_xor_inline_imm_i64:
+; SI: s_load_dwordx2 s{{\[}}[[VAL_LO:[0-9]+]]:[[VAL_HI:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; SI-NOT: xor_b32
+; SI: s_xor_b32 s[[VAL_LO]], s[[VAL_LO]], 63
+; SI-NOT: xor_b32
+; SI: v_mov_b32_e32 v[[VLO:[0-9]+]], s[[VAL_LO]]
+; SI-NOT: xor_b32
+; SI: v_mov_b32_e32 v[[VHI:[0-9]+]], s[[VAL_HI]]
+; SI-NOT: xor_b32
+; SI: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}}
+define void @scalar_xor_inline_imm_i64(i64 addrspace(1)* %out, i64 %a) {
+  %or = xor i64 %a, 63
+  store i64 %or, i64 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}scalar_xor_neg_inline_imm_i64:
+; SI: s_load_dwordx2 [[VAL:s\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; SI: s_xor_b64 [[VAL]], [[VAL]], -8
+define void @scalar_xor_neg_inline_imm_i64(i64 addrspace(1)* %out, i64 %a) {
+  %or = xor i64 %a, -8
+  store i64 %or, i64 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}vector_xor_i64_neg_inline_imm:
+; SI: buffer_load_dwordx2 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}},
+; SI: v_xor_b32_e32 {{v[0-9]+}}, -8, v[[LO_VREG]]
+; SI: v_xor_b32_e32 {{v[0-9]+}}, -1, {{.*}}
+; SI: s_endpgm
+define void @vector_xor_i64_neg_inline_imm(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
+  %loada = load i64, i64 addrspace(1)* %a, align 8
+  %or = xor i64 %loada, -8
+  store i64 %or, i64 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}vector_xor_literal_i64:
+; SI-DAG: buffer_load_dwordx2 v{{\[}}[[LO_VREG:[0-9]+]]:[[HI_VREG:[0-9]+]]{{\]}},
+; SI-DAG: v_xor_b32_e32 {{v[0-9]+}}, 0xdf77987f, v[[LO_VREG]]
+; SI-DAG: v_xor_b32_e32 {{v[0-9]+}}, 0x146f, v[[HI_VREG]]
+; SI: s_endpgm
+define void @vector_xor_literal_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %a, i64 addrspace(1)* %b) {
+  %loada = load i64, i64 addrspace(1)* %a, align 8
+  %or = xor i64 %loada, 22470723082367
+  store i64 %or, i64 addrspace(1)* %out
+  ret void
+}

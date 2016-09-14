@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 declare i32 @llvm.bswap.i32(i32) nounwind readnone
@@ -93,6 +93,8 @@ define void @test_bswap_v8i32(<8 x i32> addrspace(1)* %out, <8 x i32> addrspace(
   ret void
 }
 
+; FUNC-LABEL: {{^}}test_bswap_i64:
+; SI-NOT: v_or_b32_e64 v{{[0-9]+}}, 0, 0
 define void @test_bswap_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) nounwind {
   %val = load i64, i64 addrspace(1)* %in, align 8
   %bswap = call i64 @llvm.bswap.i64(i64 %val) nounwind readnone

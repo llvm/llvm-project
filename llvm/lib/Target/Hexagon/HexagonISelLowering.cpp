@@ -2389,7 +2389,7 @@ HexagonTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG)
   if (UseHVX) {
     ArrayRef<int> Mask = SVN->getMask();
     size_t MaskLen = Mask.size();
-    int ElemSizeInBits = VT.getVectorElementType().getSizeInBits();
+    int ElemSizeInBits = VT.getScalarSizeInBits();
     if ((Subtarget.useHVXSglOps() && (ElemSizeInBits * MaskLen) == 64 * 8) ||
         (Subtarget.useHVXDblOps() && (ElemSizeInBits * MaskLen) == 128 * 8)) {
       // Return 1 for odd and 2 of even
@@ -2612,7 +2612,7 @@ HexagonTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
         continue;
 
       if (VT.getSizeInBits() == 64 &&
-          Operand.getValueType().getSizeInBits() == 32) {
+          Operand.getValueSizeInBits() == 32) {
         SDValue C = DAG.getConstant(0, dl, MVT::i32);
         Operand = DAG.getNode(HexagonISD::COMBINE, dl, VT, C, Operand);
       }
@@ -2677,7 +2677,7 @@ HexagonTargetLowering::LowerCONCAT_VECTORS(SDValue Op,
     unsigned N = NElts-i-1;
     SDValue OpN = Op.getOperand(N);
 
-    if (VT.getSizeInBits() == 64 && OpN.getValueType().getSizeInBits() == 32) {
+    if (VT.getSizeInBits() == 64 && OpN.getValueSizeInBits() == 32) {
       SDValue C = DAG.getConstant(0, dl, MVT::i32);
       OpN = DAG.getNode(HexagonISD::COMBINE, dl, VT, C, OpN);
     }
@@ -2857,8 +2857,7 @@ HexagonTargetLowering::LowerINSERT_VECTOR(SDValue Op,
                                 DAG.getConstant(32, dl, MVT::i64));
   SDValue Combined = DAG.getNode(ISD::OR, dl, MVT::i64, Shifted, Offset);
 
-  if (VT.getSizeInBits() == 64 &&
-      Val.getValueType().getSizeInBits() == 32) {
+  if (VT.getSizeInBits() == 64 && Val.getValueSizeInBits() == 32) {
     SDValue C = DAG.getConstant(0, dl, MVT::i32);
     Val = DAG.getNode(HexagonISD::COMBINE, dl, VT, C, Val);
   }

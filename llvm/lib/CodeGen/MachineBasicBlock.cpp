@@ -436,7 +436,7 @@ void MachineBasicBlock::updateTerminator() {
       // Finally update the unconditional successor to be reached via a branch
       // if it would not be reached by fallthrough.
       if (!isLayoutSuccessor(TBB))
-        TII->InsertBranch(*this, TBB, nullptr, Cond, DL);
+        TII->insertBranch(*this, TBB, nullptr, Cond, DL);
     }
     return;
   }
@@ -449,10 +449,10 @@ void MachineBasicBlock::updateTerminator() {
       if (TII->ReverseBranchCondition(Cond))
         return;
       TII->RemoveBranch(*this);
-      TII->InsertBranch(*this, FBB, nullptr, Cond, DL);
+      TII->insertBranch(*this, FBB, nullptr, Cond, DL);
     } else if (isLayoutSuccessor(FBB)) {
       TII->RemoveBranch(*this);
-      TII->InsertBranch(*this, TBB, nullptr, Cond, DL);
+      TII->insertBranch(*this, TBB, nullptr, Cond, DL);
     }
     return;
   }
@@ -479,7 +479,7 @@ void MachineBasicBlock::updateTerminator() {
       // Finally update the unconditional successor to be reached via a branch if
       // it would not be reached by fallthrough.
       if (!isLayoutSuccessor(TBB))
-        TII->InsertBranch(*this, TBB, nullptr, Cond, DL);
+        TII->insertBranch(*this, TBB, nullptr, Cond, DL);
       return;
     }
 
@@ -488,7 +488,7 @@ void MachineBasicBlock::updateTerminator() {
     // change the conditional branch into unconditional branch.
     TII->RemoveBranch(*this);
     Cond.clear();
-    TII->InsertBranch(*this, TBB, nullptr, Cond, DL);
+    TII->insertBranch(*this, TBB, nullptr, Cond, DL);
     return;
   }
 
@@ -497,14 +497,14 @@ void MachineBasicBlock::updateTerminator() {
     if (TII->ReverseBranchCondition(Cond)) {
       // We can't reverse the condition, add an unconditional branch.
       Cond.clear();
-      TII->InsertBranch(*this, FallthroughBB, nullptr, Cond, DL);
+      TII->insertBranch(*this, FallthroughBB, nullptr, Cond, DL);
       return;
     }
     TII->RemoveBranch(*this);
-    TII->InsertBranch(*this, FallthroughBB, nullptr, Cond, DL);
+    TII->insertBranch(*this, FallthroughBB, nullptr, Cond, DL);
   } else if (!isLayoutSuccessor(FallthroughBB)) {
     TII->RemoveBranch(*this);
-    TII->InsertBranch(*this, TBB, FallthroughBB, Cond, DL);
+    TII->insertBranch(*this, TBB, FallthroughBB, Cond, DL);
   }
 }
 
@@ -810,7 +810,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
   if (!NMBB->isLayoutSuccessor(Succ)) {
     SmallVector<MachineOperand, 4> Cond;
     const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
-    TII->InsertBranch(*NMBB, Succ, nullptr, Cond, DL);
+    TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL);
 
     if (Indexes) {
       for (MachineInstr &MI : NMBB->instrs()) {

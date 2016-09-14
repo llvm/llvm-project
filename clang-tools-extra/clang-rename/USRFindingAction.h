@@ -15,11 +15,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_FINDING_ACTION_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_FINDING_ACTION_H
 
-#include "clang/Basic/LLVM.h"
-#include "llvm/ADT/ArrayRef.h"
-
-#include <string>
-#include <vector>
+#include "clang/Frontend/FrontendAction.h"
 
 namespace clang {
 class ASTConsumer;
@@ -29,22 +25,20 @@ class NamedDecl;
 namespace rename {
 
 struct USRFindingAction {
-  USRFindingAction(ArrayRef<unsigned> SymbolOffsets,
-                   ArrayRef<std::string> QualifiedNames)
-      : SymbolOffsets(SymbolOffsets), QualifiedNames(QualifiedNames),
-        ErrorOccurred(false) {}
+  USRFindingAction(unsigned Offset, const std::string &Name)
+      : SymbolOffset(Offset), OldName(Name) {}
   std::unique_ptr<ASTConsumer> newASTConsumer();
 
-  ArrayRef<std::string> getUSRSpellings() { return SpellingNames; }
-  ArrayRef<std::vector<std::string>> getUSRList() { return USRList; }
-  bool errorOccurred() { return ErrorOccurred; }
+  // \brief get the spelling of the USR(s) as it would appear in source files.
+  const std::string &getUSRSpelling() { return SpellingName; }
+
+  const std::vector<std::string> &getUSRs() { return USRs; }
 
 private:
-  std::vector<unsigned> SymbolOffsets;
-  std::vector<std::string> QualifiedNames;
-  std::vector<std::string> SpellingNames;
-  std::vector<std::vector<std::string>> USRList;
-  bool ErrorOccurred;
+  unsigned SymbolOffset;
+  std::string OldName;
+  std::string SpellingName;
+  std::vector<std::string> USRs;
 };
 
 } // namespace rename
