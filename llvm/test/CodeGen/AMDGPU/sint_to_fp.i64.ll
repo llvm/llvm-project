@@ -38,6 +38,7 @@ define void @v_sint_to_fp_i64_to_f32(float addrspace(1)* %out, i64 addrspace(1)*
 }
 
 ; FUNC-LABEL: {{^}}s_sint_to_fp_v2i64:
+; GCN-NOT: v_and_b32_e32 v{{[0-9]+}}, -1,
 define void @s_sint_to_fp_v2i64(<2 x float> addrspace(1)* %out, <2 x i64> %in) #0{
   %result = sitofp <2 x i64> %in to <2 x float>
   store <2 x float> %result, <2 x float> addrspace(1)* %out

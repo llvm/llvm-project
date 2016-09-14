@@ -1435,7 +1435,7 @@ bool X86DAGToDAGISel::selectVectorAddr(SDNode *Parent, SDValue N, SDValue &Base,
   SDLoc DL(N);
   Base = Mgs->getBasePtr();
   Index = Mgs->getIndex();
-  unsigned ScalarSize = Mgs->getValue().getValueType().getScalarSizeInBits();
+  unsigned ScalarSize = Mgs->getValue().getScalarValueSizeInBits();
   Scale = getI8Imm(ScalarSize/8, DL);
 
   // If Base is 0, the whole address is in index and the Scale is 1

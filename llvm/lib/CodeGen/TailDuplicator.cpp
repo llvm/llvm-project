@@ -726,7 +726,7 @@ bool TailDuplicator::duplicateSimpleBB(
     }
 
     if (PredTBB)
-      TII->InsertBranch(*PredBB, PredTBB, PredFBB, PredCond, DebugLoc());
+      TII->insertBranch(*PredBB, PredTBB, PredFBB, PredCond, DebugLoc());
 
     TDBBs.push_back(PredBB);
   }

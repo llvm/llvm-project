@@ -121,6 +121,9 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// copies.
   bool IsSplitCSR;
 
+  /// Globals that have had their storage promoted into the constant pool.
+  SmallVector<const GlobalVariable*,2> PromotedGlobals;
+  
 public:
   ARMFunctionInfo() :
     isThumb(false),
@@ -225,6 +228,16 @@ public:
       It = CoalescedWeights.insert(std::make_pair(MBB, 0)).first;
     }
     return It;
+  }
+
+  /// Indicate to the backend that \c GV has had its storage changed to inside
+  /// a constant pool. This means it no longer needs to be emitted as a
+  /// global variable.
+  void markGlobalAsPromotedToConstantPool(const GlobalVariable *GV) {
+    PromotedGlobals.push_back(GV);
+  }
+  ArrayRef<const GlobalVariable*> getGlobalsPromotedToConstantPool() {
+    return PromotedGlobals;
   }
 };
 } // End llvm namespace

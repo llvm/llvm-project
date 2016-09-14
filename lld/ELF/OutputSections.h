@@ -711,9 +711,10 @@ protected:
   uint8_t *HashBuf = nullptr;
 };
 
-template <class ELFT> class BuildIdFnv1 final : public BuildIdSection<ELFT> {
+template <class ELFT>
+class BuildIdFastHash final : public BuildIdSection<ELFT> {
 public:
-  BuildIdFnv1() : BuildIdSection<ELFT>(8) {}
+  BuildIdFastHash() : BuildIdSection<ELFT>(8) {}
   void writeBuildId(ArrayRef<uint8_t> Buf) override;
 };
 

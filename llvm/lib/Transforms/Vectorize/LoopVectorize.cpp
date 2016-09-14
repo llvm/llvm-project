@@ -5393,9 +5393,18 @@ void LoopVectorizationLegality::collectLoopUniforms() {
       if (!Ptr)
         continue;
 
+      // True if all users of Ptr are memory accesses that have Ptr as their
+      // pointer operand.
+      auto UsersAreMemAccesses = all_of(Ptr->users(), [&](User *U) -> bool {
+        return getPointerOperand(U) == Ptr;
+      });
+
       // Ensure the memory instruction will not be scalarized, making its
-      // pointer operand non-uniform.
-      if (memoryInstructionMustBeScalarized(&I))
+      // pointer operand non-uniform. If the pointer operand is used by some
+      // instruction other than a memory access, we're not going to check if
+      // that other instruction may be scalarized here. Thus, conservatively
+      // assume the pointer operand may be non-uniform.
+      if (!UsersAreMemAccesses || memoryInstructionMustBeScalarized(&I))
         PossibleNonUniformPtrs.insert(Ptr);
 
       // If the memory instruction will be vectorized and its pointer operand
@@ -5433,11 +5442,18 @@ void LoopVectorizationLegality::collectLoopUniforms() {
     }
   }
 
+  // Returns true if Ptr is the pointer operand of a memory access instruction
+  // I, and I is known to not require scalarization.
+  auto isVectorizedMemAccessUse = [&](Instruction *I, Value *Ptr) -> bool {
+    return getPointerOperand(I) == Ptr && !memoryInstructionMustBeScalarized(I);
+  };
+
   // For an instruction to be added into Worklist above, all its users inside
   // the loop should also be in Worklist. However, this condition cannot be
   // true for phi nodes that form a cyclic dependence. We must process phi
   // nodes separately. An induction variable will remain uniform if all users
   // of the induction variable and induction variable update remain uniform.
+  // The code below handles both pointer and non-pointer induction variables.
   for (auto &Induction : Inductions) {
     auto *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
@@ -5446,7 +5462,8 @@ void LoopVectorizationLegality::collectLoopUniforms() {
     // vectorization.
     auto UniformInd = all_of(Ind->users(), [&](User *U) -> bool {
       auto *I = cast<Instruction>(U);
-      return I == IndUpdate || !TheLoop->contains(I) || Worklist.count(I);
+      return I == IndUpdate || !TheLoop->contains(I) || Worklist.count(I) ||
+             isVectorizedMemAccessUse(I, Ind);
     });
     if (!UniformInd)
       continue;
@@ -5455,7 +5472,8 @@ void LoopVectorizationLegality::collectLoopUniforms() {
     // uniform after vectorization.
     auto UniformIndUpdate = all_of(IndUpdate->users(), [&](User *U) -> bool {
       auto *I = cast<Instruction>(U);
-      return I == Ind || !TheLoop->contains(I) || Worklist.count(I);
+      return I == Ind || !TheLoop->contains(I) || Worklist.count(I) ||
+             isVectorizedMemAccessUse(I, IndUpdate);
     });
     if (!UniformIndUpdate)
       continue;

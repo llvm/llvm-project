@@ -31,7 +31,7 @@ enum ELFKind {
 };
 
 // For --build-id.
-enum class BuildIdKind { None, Fnv1, Md5, Sha1, Hexstring, Uuid };
+enum class BuildIdKind { None, Fast, Md5, Sha1, Hexstring, Uuid };
 
 // For --discard-{all,locals,none}.
 enum class DiscardPolicy { Default, All, Locals, None };
@@ -65,6 +65,7 @@ struct VersionDefinition {
 struct Configuration {
   Symbol *EntrySym = nullptr;
   InputFile *FirstElf = nullptr;
+  llvm::StringMap<uint64_t> SectionStartMap;
   llvm::StringRef DynamicLinker;
   llvm::StringRef Entry;
   llvm::StringRef Emulation;

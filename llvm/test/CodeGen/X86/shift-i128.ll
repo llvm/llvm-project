@@ -141,3 +141,9 @@ define <2 x i256> @shl_zext_lshr_outofrange(<2 x i128> %a0) {
   %3 = shl <2 x i256> %2, <i256 128, i256 128>
   ret <2 x i256> %3
 }
+
+define i128 @lshr_shl_mask(i128 %a0) {
+  %1 = shl i128 %a0, 1
+  %2 = lshr i128 %1, 1
+  ret i128 %2
+}

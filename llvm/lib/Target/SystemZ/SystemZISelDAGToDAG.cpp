@@ -117,7 +117,7 @@ static uint64_t allOnes(unsigned int Count) {
 // case the result will be truncated as part of the operation).
 struct RxSBGOperands {
   RxSBGOperands(unsigned Op, SDValue N)
-    : Opcode(Op), BitSize(N.getValueType().getSizeInBits()),
+    : Opcode(Op), BitSize(N.getValueSizeInBits()),
       Mask(allOnes(BitSize)), Input(N), Start(64 - BitSize), End(63),
       Rotate(0) {}
 
@@ -709,7 +709,7 @@ bool SystemZDAGToDAGISel::detectOrAndInsertion(SDValue &Op,
 
   // It's only an insertion if all bits are covered or are known to be zero.
   // The inner check covers all cases but is more expensive.
-  uint64_t Used = allOnes(Op.getValueType().getSizeInBits());
+  uint64_t Used = allOnes(Op.getValueSizeInBits());
   if (Used != (AndMask | InsertMask)) {
     APInt KnownZero, KnownOne;
     CurDAG->computeKnownBits(Op.getOperand(0), KnownZero, KnownOne);
@@ -749,7 +749,7 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
   case ISD::TRUNCATE: {
     if (RxSBG.Opcode == SystemZ::RNSBG)
       return false;
-    uint64_t BitSize = N.getValueType().getSizeInBits();
+    uint64_t BitSize = N.getValueSizeInBits();
     uint64_t Mask = allOnes(BitSize);
     if (!refineRxSBGMask(RxSBG, Mask))
       return false;
@@ -825,7 +825,7 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
   case ISD::ZERO_EXTEND:
     if (RxSBG.Opcode != SystemZ::RNSBG) {
       // Restrict the mask to the extended operand.
-      unsigned InnerBitSize = N.getOperand(0).getValueType().getSizeInBits();
+      unsigned InnerBitSize = N.getOperand(0).getValueSizeInBits();
       if (!refineRxSBGMask(RxSBG, allOnes(InnerBitSize)))
         return false;
 
@@ -837,7 +837,7 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
   case ISD::SIGN_EXTEND: {
     // Check that the extension bits are don't-care (i.e. are masked out
     // by the final mask).
-    unsigned InnerBitSize = N.getOperand(0).getValueType().getSizeInBits();
+    unsigned InnerBitSize = N.getOperand(0).getValueSizeInBits();
     if (maskMatters(RxSBG, allOnes(RxSBG.BitSize) - allOnes(InnerBitSize)))
       return false;
 
@@ -851,7 +851,7 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
       return false;
 
     uint64_t Count = CountNode->getZExtValue();
-    unsigned BitSize = N.getValueType().getSizeInBits();
+    unsigned BitSize = N.getValueSizeInBits();
     if (Count < 1 || Count >= BitSize)
       return false;
 
@@ -878,7 +878,7 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
       return false;
 
     uint64_t Count = CountNode->getZExtValue();
-    unsigned BitSize = N.getValueType().getSizeInBits();
+    unsigned BitSize = N.getValueSizeInBits();
     if (Count < 1 || Count >= BitSize)
       return false;
 
@@ -1136,8 +1136,7 @@ bool SystemZDAGToDAGISel::tryScatter(StoreSDNode *Store, unsigned Opcode) {
   SDValue Value = Store->getValue();
   if (Value.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
     return false;
-  if (Store->getMemoryVT().getSizeInBits() !=
-      Value.getValueType().getSizeInBits())
+  if (Store->getMemoryVT().getSizeInBits() != Value.getValueSizeInBits())
     return false;
 
   SDValue ElemV = Value.getOperand(1);
@@ -1310,7 +1309,7 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
 
   case ISD::INSERT_VECTOR_ELT: {
     EVT VT = Node->getValueType(0);
-    unsigned ElemBitSize = VT.getVectorElementType().getSizeInBits();
+    unsigned ElemBitSize = VT.getScalarSizeInBits();
     if (ElemBitSize == 32) {
       if (tryGather(Node, SystemZ::VGEF))
         return;
@@ -1323,7 +1322,7 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
 
   case ISD::STORE: {
     auto *Store = cast<StoreSDNode>(Node);
-    unsigned ElemBitSize = Store->getValue().getValueType().getSizeInBits();
+    unsigned ElemBitSize = Store->getValue().getValueSizeInBits();
     if (ElemBitSize == 32) {
       if (tryScatter(Store, SystemZ::VSCEF))
         return;

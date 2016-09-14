@@ -150,8 +150,8 @@ template <class ELFT> void elf::writeResult() {
   if (needsInterpSection<ELFT>())
     Interp.reset(new InterpSection<ELFT>);
 
-  if (Config->BuildId == BuildIdKind::Fnv1)
-    BuildId.reset(new BuildIdFnv1<ELFT>);
+  if (Config->BuildId == BuildIdKind::Fast)
+    BuildId.reset(new BuildIdFastHash<ELFT>);
   else if (Config->BuildId == BuildIdKind::Md5)
     BuildId.reset(new BuildIdMd5<ELFT>);
   else if (Config->BuildId == BuildIdKind::Sha1)
@@ -1079,6 +1079,10 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
     uintX_t Alignment = Sec->getAlignment();
     if (Sec->PageAlign)
       Alignment = std::max<uintX_t>(Alignment, Target->PageSize);
+
+    auto I = Config->SectionStartMap.find(Sec->getName());
+    if (I != Config->SectionStartMap.end())
+      VA = I->second;
 
     // We only assign VAs to allocated sections.
     if (needsPtLoad(Sec)) {

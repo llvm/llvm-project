@@ -97,7 +97,6 @@ define void @v_uextract_bit_127_i128(i128 addrspace(1)* %out, i128 addrspace(1)*
 ; GCN-DAG: v_bfe_u32 v[[ELT2PART:[0-9]+]], v[[VAL3]], 2, 2{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; GCN-DAG: v_or_b32_e32 v[[OR0:[0-9]+]], v[[SHLLO]], v[[ELT1PART]]
-; GCN-DAG: v_or_b32_e32 v[[OR1:[0-9]+]], 0, v[[SHLHI]]{{$}}
 
 ; GCN-DAG: buffer_store_dwordx4 v{{\[}}[[OR0]]:[[ZERO]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; GCN: s_endpgm

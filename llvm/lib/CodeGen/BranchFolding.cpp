@@ -517,12 +517,12 @@ static void FixTail(MachineBasicBlock *CurMBB, MachineBasicBlock *SuccBB,
     if (TBB == NextBB && !Cond.empty() && !FBB) {
       if (!TII->ReverseBranchCondition(Cond)) {
         TII->RemoveBranch(*CurMBB);
-        TII->InsertBranch(*CurMBB, SuccBB, nullptr, Cond, dl);
+        TII->insertBranch(*CurMBB, SuccBB, nullptr, Cond, dl);
         return;
       }
     }
   }
-  TII->InsertBranch(*CurMBB, SuccBB, nullptr,
+  TII->insertBranch(*CurMBB, SuccBB, nullptr,
                     SmallVector<MachineOperand, 0>(), dl);
 }
 
@@ -1110,7 +1110,7 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
           TII->RemoveBranch(*PBB);
           if (!Cond.empty())
             // reinsert conditional branch only, for now
-            TII->InsertBranch(*PBB, (TBB == IBB) ? FBB : TBB, nullptr,
+            TII->insertBranch(*PBB, (TBB == IBB) ? FBB : TBB, nullptr,
                               NewCond, dl);
         }
 
@@ -1329,7 +1329,7 @@ ReoptimizeBlock:
       TII->RemoveBranch(PrevBB);
       PriorCond.clear();
       if (PriorTBB != MBB)
-        TII->InsertBranch(PrevBB, PriorTBB, nullptr, PriorCond, dl);
+        TII->insertBranch(PrevBB, PriorTBB, nullptr, PriorCond, dl);
       MadeChange = true;
       ++NumBranchOpts;
       goto ReoptimizeBlock;
@@ -1385,7 +1385,7 @@ ReoptimizeBlock:
     if (PriorFBB == MBB) {
       DebugLoc dl = getBranchDebugLoc(PrevBB);
       TII->RemoveBranch(PrevBB);
-      TII->InsertBranch(PrevBB, PriorTBB, nullptr, PriorCond, dl);
+      TII->insertBranch(PrevBB, PriorTBB, nullptr, PriorCond, dl);
       MadeChange = true;
       ++NumBranchOpts;
       goto ReoptimizeBlock;
@@ -1399,7 +1399,7 @@ ReoptimizeBlock:
       if (!TII->ReverseBranchCondition(NewPriorCond)) {
         DebugLoc dl = getBranchDebugLoc(PrevBB);
         TII->RemoveBranch(PrevBB);
-        TII->InsertBranch(PrevBB, PriorFBB, nullptr, NewPriorCond, dl);
+        TII->insertBranch(PrevBB, PriorFBB, nullptr, NewPriorCond, dl);
         MadeChange = true;
         ++NumBranchOpts;
         goto ReoptimizeBlock;
@@ -1437,7 +1437,7 @@ ReoptimizeBlock:
 
           DebugLoc dl = getBranchDebugLoc(PrevBB);
           TII->RemoveBranch(PrevBB);
-          TII->InsertBranch(PrevBB, MBB, nullptr, NewPriorCond, dl);
+          TII->insertBranch(PrevBB, MBB, nullptr, NewPriorCond, dl);
 
           // Move this block to the end of the function.
           MBB->moveAfter(&MF.back());
@@ -1504,7 +1504,7 @@ ReoptimizeBlock:
       if (!TII->ReverseBranchCondition(NewCond)) {
         DebugLoc dl = getBranchDebugLoc(*MBB);
         TII->RemoveBranch(*MBB);
-        TII->InsertBranch(*MBB, CurFBB, CurTBB, NewCond, dl);
+        TII->insertBranch(*MBB, CurFBB, CurTBB, NewCond, dl);
         MadeChange = true;
         ++NumBranchOpts;
         goto ReoptimizeBlock;
@@ -1552,7 +1552,7 @@ ReoptimizeBlock:
             }
             DebugLoc pdl = getBranchDebugLoc(PrevBB);
             TII->RemoveBranch(PrevBB);
-            TII->InsertBranch(PrevBB, PriorTBB, PriorFBB, PriorCond, pdl);
+            TII->insertBranch(PrevBB, PriorTBB, PriorFBB, PriorCond, pdl);
           }
 
           // Iterate through all the predecessors, revectoring each in-turn.
@@ -1579,7 +1579,7 @@ ReoptimizeBlock:
                 DebugLoc pdl = getBranchDebugLoc(*PMBB);
                 TII->RemoveBranch(*PMBB);
                 NewCurCond.clear();
-                TII->InsertBranch(*PMBB, NewCurTBB, nullptr, NewCurCond, pdl);
+                TII->insertBranch(*PMBB, NewCurTBB, nullptr, NewCurCond, pdl);
                 MadeChange = true;
                 ++NumBranchOpts;
                 PMBB->CorrectExtraCFGEdges(NewCurTBB, nullptr, false);
@@ -1599,7 +1599,7 @@ ReoptimizeBlock:
       }
 
       // Add the branch back if the block is more than just an uncond branch.
-      TII->InsertBranch(*MBB, CurTBB, nullptr, CurCond, dl);
+      TII->insertBranch(*MBB, CurTBB, nullptr, CurCond, dl);
     }
   }
 
@@ -1636,7 +1636,7 @@ ReoptimizeBlock:
           if (CurFallsThru) {
             MachineBasicBlock *NextBB = &*std::next(MBB->getIterator());
             CurCond.clear();
-            TII->InsertBranch(*MBB, NextBB, nullptr, CurCond, DebugLoc());
+            TII->insertBranch(*MBB, NextBB, nullptr, CurCond, DebugLoc());
           }
           MBB->moveAfter(PredBB);
           MadeChange = true;
