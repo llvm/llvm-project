@@ -16,7 +16,7 @@
 #include "streamexecutor/DeviceMemory.h"
 #include "streamexecutor/PackedKernelArgumentArray.h"
 #include "streamexecutor/PlatformDevice.h"
-#include "streamexecutor/unittests/CoreTests/SimpleHostPlatformDevice.h"
+#include "streamexecutor/platforms/host/HostPlatformDevice.h"
 
 #include "llvm/ADT/Twine.h"
 
@@ -41,7 +41,7 @@ public:
         TypedShared(
             se::SharedDeviceMemory<int>::makeFromElementCount(ElementCount)) {}
 
-  se::test::SimpleHostPlatformDevice PDevice;
+  se::host::HostPlatformDevice PDevice;
   se::Device Device;
   int Value;
   void *Handle;
@@ -76,7 +76,7 @@ TEST_F(DeviceMemoryPackingTest, SingleValue) {
 
 TEST_F(DeviceMemoryPackingTest, SingleTypedGlobal) {
   auto Array = se::make_kernel_argument_pack(TypedGlobal);
-  ExpectEqual(TypedGlobal.getHandle(), sizeof(void *),
+  ExpectEqual(TypedGlobal.getHandleAddress(), sizeof(void *),
               Type::GLOBAL_DEVICE_MEMORY, Array, 0);
   EXPECT_EQ(1u, Array.getArgumentCount());
   EXPECT_EQ(0u, Array.getSharedCount());
@@ -84,7 +84,7 @@ TEST_F(DeviceMemoryPackingTest, SingleTypedGlobal) {
 
 TEST_F(DeviceMemoryPackingTest, SingleTypedGlobalPointer) {
   auto Array = se::make_kernel_argument_pack(&TypedGlobal);
-  ExpectEqual(TypedGlobal.getHandle(), sizeof(void *),
+  ExpectEqual(TypedGlobal.getHandleAddress(), sizeof(void *),
               Type::GLOBAL_DEVICE_MEMORY, Array, 0);
   EXPECT_EQ(1u, Array.getArgumentCount());
   EXPECT_EQ(0u, Array.getSharedCount());
@@ -93,7 +93,7 @@ TEST_F(DeviceMemoryPackingTest, SingleTypedGlobalPointer) {
 TEST_F(DeviceMemoryPackingTest, SingleConstTypedGlobalPointer) {
   const se::GlobalDeviceMemory<int> *ArgumentPointer = &TypedGlobal;
   auto Array = se::make_kernel_argument_pack(ArgumentPointer);
-  ExpectEqual(TypedGlobal.getHandle(), sizeof(void *),
+  ExpectEqual(TypedGlobal.getHandleAddress(), sizeof(void *),
               Type::GLOBAL_DEVICE_MEMORY, Array, 0);
   EXPECT_EQ(1u, Array.getArgumentCount());
   EXPECT_EQ(0u, Array.getSharedCount());
@@ -131,11 +131,11 @@ TEST_F(DeviceMemoryPackingTest, PackSeveralArguments) {
                                              TypedGlobalPointer, TypedShared,
                                              &TypedShared, TypedSharedPointer);
   ExpectEqual(&Value, sizeof(Value), Type::VALUE, Array, 0);
-  ExpectEqual(TypedGlobal.getHandle(), sizeof(void *),
+  ExpectEqual(TypedGlobal.getHandleAddress(), sizeof(void *),
               Type::GLOBAL_DEVICE_MEMORY, Array, 1);
-  ExpectEqual(TypedGlobal.getHandle(), sizeof(void *),
+  ExpectEqual(TypedGlobal.getHandleAddress(), sizeof(void *),
               Type::GLOBAL_DEVICE_MEMORY, Array, 2);
-  ExpectEqual(TypedGlobal.getHandle(), sizeof(void *),
+  ExpectEqual(TypedGlobal.getHandleAddress(), sizeof(void *),
               Type::GLOBAL_DEVICE_MEMORY, Array, 3);
   ExpectEqual(nullptr, TypedShared.getByteCount(), Type::SHARED_DEVICE_MEMORY,
               Array, 4);

@@ -50,6 +50,7 @@ bool elf::link(ArrayRef<const char *> Args, raw_ostream &Error) {
   ScriptConfig = &SC;
 
   Driver->main(Args);
+  InputFile::freePool();
   return !HasError;
 }
 
@@ -127,7 +128,7 @@ void LinkerDriver::addFile(StringRef Path, bool KnownScript) {
   MemoryBufferRef MBRef = *Buffer;
 
   if (Config->Binary && !KnownScript) {
-    Files.push_back(make_unique<BinaryFile>(MBRef));
+    Files.push_back(new BinaryFile(MBRef));
     return;
   }
 
@@ -141,7 +142,7 @@ void LinkerDriver::addFile(StringRef Path, bool KnownScript) {
         Files.push_back(createObjectFile(MB, Path));
       return;
     }
-    Files.push_back(make_unique<ArchiveFile>(MBRef));
+    Files.push_back(new ArchiveFile(MBRef));
     return;
   case file_magic::elf_shared_object:
     if (Config->Relocatable) {
@@ -152,7 +153,7 @@ void LinkerDriver::addFile(StringRef Path, bool KnownScript) {
     return;
   default:
     if (InLib)
-      Files.push_back(make_unique<LazyObjectFile>(MBRef));
+      Files.push_back(new LazyObjectFile(MBRef));
     else
       Files.push_back(createObjectFile(MBRef));
   }
@@ -570,7 +571,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
 
   // If -m <machine_type> was not given, infer it from object files.
   if (Config->EKind == ELFNoneKind) {
-    for (std::unique_ptr<InputFile> &F : Files) {
+    for (InputFile *F : Files) {
       if (F->EKind == ELFNoneKind)
         continue;
       Config->EKind = F->EKind;
@@ -616,8 +617,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Add all files to the symbol table. After this, the symbol table
   // contains all known names except a few linker-synthesized symbols.
-  for (std::unique_ptr<InputFile> &F : Files)
-    Symtab.addFile(std::move(F));
+  for (InputFile *F : Files)
+    Symtab.addFile(F);
 
   // Add the start symbol.
   // It initializes either Config->Entry or Config->EntryAddr.
@@ -658,8 +659,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // MergeInputSection::splitIntoPieces needs to be called before
   // any call of MergeInputSection::getOffset. Do that.
-  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
-       Symtab.getObjectFiles())
+  for (elf::ObjectFile<ELFT> *F : Symtab.getObjectFiles()) {
     for (InputSectionBase<ELFT> *S : F->getSections()) {
       if (!S || S == &InputSection<ELFT>::Discarded || !S->Live)
         continue;
@@ -668,6 +668,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
       if (auto *MS = dyn_cast<MergeInputSection<ELFT>>(S))
         MS->splitIntoPieces();
     }
+  }
 
   // Write the result to the file.
   writeResult<ELFT>();

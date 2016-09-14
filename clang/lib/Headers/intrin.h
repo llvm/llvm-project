@@ -463,6 +463,14 @@ _BitScanReverse(unsigned long *_Index, unsigned long _Mask) {
   *_Index = 31 - __builtin_clzl(_Mask);
   return 1;
 }
+static __inline__ unsigned short __DEFAULT_FN_ATTRS
+__popcnt16(unsigned short _Value) {
+  return __builtin_popcount((int)_Value);
+}
+static __inline__ unsigned int __DEFAULT_FN_ATTRS
+__popcnt(unsigned int _Value) {
+  return __builtin_popcount(_Value);
+}
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _bittest(long const *_BitBase, long _BitPos) {
   return (*_BitBase >> _BitPos) & 1;
@@ -505,6 +513,11 @@ _BitScanReverse64(unsigned long *_Index, unsigned __int64 _Mask) {
   *_Index = 63 - __builtin_clzll(_Mask);
   return 1;
 }
+static __inline__
+unsigned __int64 __DEFAULT_FN_ATTRS
+__popcnt64(unsigned __int64 _Value) {
+  return __builtin_popcountll(_Value);
+}
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _bittest64(__int64 const *_BitBase, __int64 _BitPos) {
   return (*_BitBase >> _BitPos) & 1;
@@ -532,6 +545,63 @@ _interlockedbittestandset64(__int64 volatile *_BitBase, __int64 _BitPos) {
   long long _PrevVal =
       __atomic_fetch_or(_BitBase, 1ll << _BitPos, __ATOMIC_SEQ_CST);
   return (_PrevVal >> _BitPos) & 1;
+}
+/*----------------------------------------------------------------------------*\
+|* Interlocked Exchange Add
+\*----------------------------------------------------------------------------*/
+static __inline__ __int64 __DEFAULT_FN_ATTRS
+_InterlockedExchangeAdd64(__int64 volatile *_Addend, __int64 _Value) {
+	return __atomic_fetch_add(_Addend, _Value, __ATOMIC_SEQ_CST);
+}
+/*----------------------------------------------------------------------------*\
+|* Interlocked Exchange Sub
+\*----------------------------------------------------------------------------*/
+static __inline__ __int64 __DEFAULT_FN_ATTRS
+_InterlockedExchangeSub64(__int64 volatile *_Subend, __int64 _Value) {
+	return __atomic_fetch_sub(_Subend, _Value, __ATOMIC_SEQ_CST);
+}
+/*----------------------------------------------------------------------------*\
+|* Interlocked Increment
+\*----------------------------------------------------------------------------*/
+static __inline__ __int64 __DEFAULT_FN_ATTRS
+_InterlockedIncrement64(__int64 volatile *_Value) {
+	return __atomic_add_fetch(_Value, 1, __ATOMIC_SEQ_CST);
+}
+/*----------------------------------------------------------------------------*\
+|* Interlocked Decrement
+\*----------------------------------------------------------------------------*/
+static __inline__ __int64 __DEFAULT_FN_ATTRS
+_InterlockedDecrement64(__int64 volatile *_Value) {
+	return __atomic_sub_fetch(_Value, 1, __ATOMIC_SEQ_CST);
+}
+/*----------------------------------------------------------------------------*\
+|* Interlocked And
+\*----------------------------------------------------------------------------*/
+static __inline__ __int64 __DEFAULT_FN_ATTRS
+_InterlockedAnd64(__int64 volatile *_Value, __int64 _Mask) {
+	return __atomic_fetch_and(_Value, _Mask, __ATOMIC_SEQ_CST);
+}
+/*----------------------------------------------------------------------------*\
+|* Interlocked Or
+\*----------------------------------------------------------------------------*/
+static __inline__ __int64 __DEFAULT_FN_ATTRS
+_InterlockedOr64(__int64 volatile *_Value, __int64 _Mask) {
+	return __atomic_fetch_or(_Value, _Mask, __ATOMIC_SEQ_CST);
+}
+/*----------------------------------------------------------------------------*\
+|* Interlocked Xor
+\*----------------------------------------------------------------------------*/
+static __inline__ __int64 __DEFAULT_FN_ATTRS
+_InterlockedXor64(__int64 volatile *_Value, __int64 _Mask) {
+	return __atomic_fetch_xor(_Value, _Mask, __ATOMIC_SEQ_CST);
+}
+/*----------------------------------------------------------------------------*\
+|* Interlocked Exchange
+\*----------------------------------------------------------------------------*/
+static __inline__ __int64 __DEFAULT_FN_ATTRS
+_InterlockedExchange64(__int64 volatile *_Target, __int64 _Value) {
+	__atomic_exchange(_Target, &_Value, &_Value, __ATOMIC_SEQ_CST);
+	return _Value;
 }
 #endif
 /*----------------------------------------------------------------------------*\

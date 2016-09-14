@@ -169,6 +169,13 @@ public:
     bool m_clobbered = false;
 
     bool IsValid() { return m_type != Type::Invalid; }
+
+    static Operand BuildRegister(ConstString &r);
+    static Operand BuildImmediate(lldb::addr_t imm, bool neg);
+    static Operand BuildImmediate(int64_t imm);
+    static Operand BuildDereference(const Operand &ref);
+    static Operand BuildSum(const Operand &lhs, const Operand &rhs);
+    static Operand BuildProduct(const Operand &lhs, const Operand &rhs);
   };
 
   virtual bool ParseOperands(llvm::SmallVectorImpl<Operand> &operands) {
@@ -203,6 +210,27 @@ protected:
     }
   }
 };
+
+namespace OperandMatchers {
+std::function<bool(const Instruction::Operand &)>
+MatchBinaryOp(std::function<bool(const Instruction::Operand &)> base,
+              std::function<bool(const Instruction::Operand &)> left,
+              std::function<bool(const Instruction::Operand &)> right);
+
+std::function<bool(const Instruction::Operand &)>
+MatchUnaryOp(std::function<bool(const Instruction::Operand &)> base,
+             std::function<bool(const Instruction::Operand &)> child);
+
+std::function<bool(const Instruction::Operand &)>
+MatchRegOp(const RegisterInfo &info);
+
+std::function<bool(const Instruction::Operand &)> MatchImmOp(int64_t imm);
+
+std::function<bool(const Instruction::Operand &)> FetchImmOp(int64_t &imm);
+
+std::function<bool(const Instruction::Operand &)>
+MatchOpType(Instruction::Operand::Type type);
+}
 
 class InstructionList {
 public:

@@ -3,6 +3,8 @@
 #include <dispatch/dispatch.h>
 #include <pthread.h>
 
+int finished_enqueueing_work = 0;
+
 void
 doing_the_work_1(void *in)
 {
@@ -45,6 +47,7 @@ submit_work_2(void *in)
         dispatch_async_f (*work_performer_2, NULL, doing_the_work_2);
         dispatch_async_f (*work_performer_2, NULL, doing_the_work_2);
     }
+    finished_enqueueing_work = 1;
 }
 
 
@@ -72,6 +75,7 @@ stopper ()
     while (1)
         sleep (1);
 }
+
 
 int main ()
 {
@@ -126,8 +130,8 @@ int main ()
                 });
 
 
-    sleep (1);
+    while (finished_enqueueing_work == 0)
+        sleep (1);
     stopper ();
 
 }
-

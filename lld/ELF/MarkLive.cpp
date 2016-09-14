@@ -226,9 +226,8 @@ template <class ELFT> void elf::markLive() {
 
   // Preserve special sections and those which are specified in linker
   // script KEEP command.
-  for (const std::unique_ptr<ObjectFile<ELFT>> &F :
-       Symtab<ELFT>::X->getObjectFiles())
-    for (InputSectionBase<ELFT> *Sec : F->getSections())
+  for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
+    for (InputSectionBase<ELFT> *Sec : F->getSections()) {
       if (Sec && Sec != &InputSection<ELFT>::Discarded) {
         // .eh_frame is always marked as live now, but also it can reference to
         // sections that contain personality. We preserve all non-text sections
@@ -238,6 +237,8 @@ template <class ELFT> void elf::markLive() {
         if (isReserved(Sec) || Script<ELFT>::X->shouldKeep(Sec))
           Enqueue({Sec, 0});
       }
+    }
+  }
 
   // Mark all reachable sections.
   while (!Q.empty())

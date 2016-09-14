@@ -1532,7 +1532,8 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
       cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
 
     // Ignore empty bases.
-    if (base->isEmpty())
+    if (base->isEmpty() ||
+        CGM.getContext().getASTRecordLayout(base).getNonVirtualSize().isZero())
       continue;
     
     unsigned fieldIndex = layout.getNonVirtualBaseLLVMFieldNo(base);

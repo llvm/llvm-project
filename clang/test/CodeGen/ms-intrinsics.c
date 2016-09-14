@@ -86,14 +86,6 @@ long test_InterlockedExchange(long volatile *value, long mask) {
 // CHECK:   ret i32 [[RESULT:%[0-9]+]]
 // CHECK: }
 
-__int64 test_InterlockedExchange64(__int64 volatile *value, __int64 mask) {
-  return _InterlockedExchange64(value, mask);
-}
-// CHECK: define{{.*}}i64 @test_InterlockedExchange64(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
-// CHECK:   [[RESULT:%[0-9]+]] = atomicrmw xchg i64* %value, i64 %mask seq_cst
-// CHECK:   ret i64 [[RESULT:%[0-9]+]]
-// CHECK: }
-
 char test_InterlockedExchangeAdd8(char volatile *value, char mask) {
   return _InterlockedExchangeAdd8(value, mask);
 }
@@ -116,14 +108,6 @@ long test_InterlockedExchangeAdd(long volatile *value, long mask) {
 // CHECK: define{{.*}}i32 @test_InterlockedExchangeAdd(i32*{{[a-z_ ]*}}%value, i32{{[a-z_ ]*}}%mask){{.*}}{
 // CHECK:   [[RESULT:%[0-9]+]] = atomicrmw add i32* %value, i32 %mask seq_cst
 // CHECK:   ret i32 [[RESULT:%[0-9]+]]
-// CHECK: }
-
-__int64 test_InterlockedExchangeAdd64(__int64 volatile *value, __int64 mask) {
-  return _InterlockedExchangeAdd64(value, mask);
-}
-// CHECK: define{{.*}}i64 @test_InterlockedExchangeAdd64(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
-// CHECK:   [[RESULT:%[0-9]+]] = atomicrmw add i64* %value, i64 %mask seq_cst
-// CHECK:   ret i64 [[RESULT:%[0-9]+]]
 // CHECK: }
 
 char test_InterlockedExchangeSub8(char volatile *value, char mask) {
@@ -150,14 +134,6 @@ long test_InterlockedExchangeSub(long volatile *value, long mask) {
 // CHECK:   ret i32 [[RESULT:%[0-9]+]]
 // CHECK: }
 
-__int64 test_InterlockedExchangeSub64(__int64 volatile *value, __int64 mask) {
-  return _InterlockedExchangeSub64(value, mask);
-}
-// CHECK: define{{.*}}i64 @test_InterlockedExchangeSub64(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
-// CHECK:   [[RESULT:%[0-9]+]] = atomicrmw sub i64* %value, i64 %mask seq_cst
-// CHECK:   ret i64 [[RESULT:%[0-9]+]]
-// CHECK: }
-
 char test_InterlockedOr8(char volatile *value, char mask) {
   return _InterlockedOr8(value, mask);
 }
@@ -180,14 +156,6 @@ long test_InterlockedOr(long volatile *value, long mask) {
 // CHECK: define{{.*}}i32 @test_InterlockedOr(i32*{{[a-z_ ]*}}%value, i32{{[a-z_ ]*}}%mask){{.*}}{
 // CHECK:   [[RESULT:%[0-9]+]] = atomicrmw or i32* %value, i32 %mask seq_cst
 // CHECK:   ret i32 [[RESULT:%[0-9]+]]
-// CHECK: }
-
-__int64 test_InterlockedOr64(__int64 volatile *value, __int64 mask) {
-  return _InterlockedOr64(value, mask);
-}
-// CHECK: define{{.*}}i64 @test_InterlockedOr64(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
-// CHECK:   [[RESULT:%[0-9]+]] = atomicrmw or i64* %value, i64 %mask seq_cst
-// CHECK:   ret i64 [[RESULT:%[0-9]+]]
 // CHECK: }
 
 char test_InterlockedXor8(char volatile *value, char mask) {
@@ -214,14 +182,6 @@ long test_InterlockedXor(long volatile *value, long mask) {
 // CHECK:   ret i32 [[RESULT:%[0-9]+]]
 // CHECK: }
 
-__int64 test_InterlockedXor64(__int64 volatile *value, __int64 mask) {
-  return _InterlockedXor64(value, mask);
-}
-// CHECK: define{{.*}}i64 @test_InterlockedXor64(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
-// CHECK:   [[RESULT:%[0-9]+]] = atomicrmw xor i64* %value, i64 %mask seq_cst
-// CHECK:   ret i64 [[RESULT:%[0-9]+]]
-// CHECK: }
-
 char test_InterlockedAnd8(char volatile *value, char mask) {
   return _InterlockedAnd8(value, mask);
 }
@@ -244,14 +204,6 @@ long test_InterlockedAnd(long volatile *value, long mask) {
 // CHECK: define{{.*}}i32 @test_InterlockedAnd(i32*{{[a-z_ ]*}}%value, i32{{[a-z_ ]*}}%mask){{.*}}{
 // CHECK:   [[RESULT:%[0-9]+]] = atomicrmw and i32* %value, i32 %mask seq_cst
 // CHECK:   ret i32 [[RESULT:%[0-9]+]]
-// CHECK: }
-
-__int64 test_InterlockedAnd64(__int64 volatile *value, __int64 mask) {
-  return _InterlockedAnd64(value, mask);
-}
-// CHECK: define{{.*}}i64 @test_InterlockedAnd64(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
-// CHECK:   [[RESULT:%[0-9]+]] = atomicrmw and i64* %value, i64 %mask seq_cst
-// CHECK:   ret i64 [[RESULT:%[0-9]+]]
 // CHECK: }
 
 char test_InterlockedCompareExchange8(char volatile *Destination, char Exchange, char Comperand) {
@@ -308,15 +260,6 @@ long test_InterlockedIncrement(long volatile *Addend) {
 // CHECK: ret i32 [[RESULT]]
 // CHECK: }
 
-__int64 test_InterlockedIncrement64(__int64 volatile *Addend) {
-  return _InterlockedIncrement64(Addend);
-}
-// CHECK: define{{.*}}i64 @test_InterlockedIncrement64(i64*{{[a-z_ ]*}}%Addend){{.*}}{
-// CHECK: [[TMP:%[0-9]+]] = atomicrmw add i64* %Addend, i64 1 seq_cst
-// CHECK: [[RESULT:%[0-9]+]] = add i64 [[TMP]], 1
-// CHECK: ret i64 [[RESULT]]
-// CHECK: }
-
 short test_InterlockedDecrement16(short volatile *Addend) {
   return _InterlockedDecrement16(Addend);
 }
@@ -333,13 +276,4 @@ long test_InterlockedDecrement(long volatile *Addend) {
 // CHECK: [[TMP:%[0-9]+]] = atomicrmw sub i32* %Addend, i32 1 seq_cst
 // CHECK: [[RESULT:%[0-9]+]] = add i32 [[TMP]], -1
 // CHECK: ret i32 [[RESULT]]
-// CHECK: }
-
-__int64 test_InterlockedDecrement64(__int64 volatile *Addend) {
-  return _InterlockedDecrement64(Addend);
-}
-// CHECK: define{{.*}}i64 @test_InterlockedDecrement64(i64*{{[a-z_ ]*}}%Addend){{.*}}{
-// CHECK: [[TMP:%[0-9]+]] = atomicrmw sub i64* %Addend, i64 1 seq_cst
-// CHECK: [[RESULT:%[0-9]+]] = add i64 [[TMP]], -1
-// CHECK: ret i64 [[RESULT]]
 // CHECK: }

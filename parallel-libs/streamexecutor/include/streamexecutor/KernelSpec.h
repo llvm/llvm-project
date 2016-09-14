@@ -121,12 +121,11 @@ public:
       llvm::StringRef KernelName,
       const llvm::ArrayRef<CUDAPTXInMemorySpec::PTXSpec> SpecList);
 
-  /// Returns a pointer to the PTX code for the requested compute capability.
+  /// Returns a pointer to the PTX code for the greatest compute capability not
+  /// exceeding the requested compute capability.
   ///
-  /// Returns nullptr on failed lookup (if the requested compute capability is
-  /// not available). Matches exactly the specified compute capability. Doesn't
-  /// try to do anything smart like finding the next best compute capability if
-  /// the specified capability cannot be found.
+  /// Returns nullptr on failed lookup (if the requested version is not
+  /// available and no lower versions are available).
   const char *getCode(int ComputeCapabilityMajor,
                       int ComputeCapabilityMinor) const;
 

@@ -44,7 +44,7 @@ void useSpecials() {
 }
 
 // Used to force non-trivial special members.
-struct ForceNonTrivial {
+struct __declspec(dllimport) ForceNonTrivial {
   ForceNonTrivial();
   ~ForceNonTrivial();
   ForceNonTrivial(const ForceNonTrivial&);

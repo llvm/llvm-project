@@ -625,6 +625,8 @@ protected:
 //------------------------------------------------------------------
 bool operator<(const ArchSpec &lhs, const ArchSpec &rhs);
 
+bool ParseMachCPUDashSubtypeTriple(const char *triple_cstr, ArchSpec &arch);
+
 } // namespace lldb_private
 
 #endif // #if defined(__cplusplus)

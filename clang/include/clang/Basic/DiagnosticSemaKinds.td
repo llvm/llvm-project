@@ -7901,7 +7901,7 @@ def err_invalid_protocol_qualifiers : Error<
   "invalid protocol qualifiers on non-ObjC type">;
 def warn_ivar_use_hidden : Warning<
   "local declaration of %0 hides instance variable">,
-   InGroup<DiagGroup<"shadow-ivar">>;
+   InGroup<ShadowIvar>;
 def warn_direct_initialize_call : Warning<
   "explicit call to +initialize results in duplicate call to +initialize">,
    InGroup<ExplicitInitializeCall>;

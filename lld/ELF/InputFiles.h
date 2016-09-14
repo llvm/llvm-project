@@ -39,6 +39,8 @@ class SymbolBody;
 // The root class of input files.
 class InputFile {
 public:
+  virtual ~InputFile() = default;
+
   enum Kind {
     ObjectKind,
     SharedKind,
@@ -63,11 +65,19 @@ public:
   ELFKind EKind = ELFNoneKind;
   uint16_t EMachine = llvm::ELF::EM_NONE;
 
+  static void freePool();
+
 protected:
-  InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {}
+  InputFile(Kind K, MemoryBufferRef M) : MB(M), FileKind(K) {
+    Pool.push_back(this);
+  }
 
 private:
   const Kind FileKind;
+
+  // All InputFile instances are added to the pool
+  // and freed all at once on exit by freePool().
+  static std::vector<InputFile *> Pool;
 };
 
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".
@@ -304,15 +314,14 @@ public:
 
   static bool classof(const InputFile *F) { return F->kind() == BinaryKind; }
 
-  template <class ELFT> std::unique_ptr<InputFile> createELF();
+  template <class ELFT> InputFile *createELF();
 
 private:
   std::vector<uint8_t> ELFData;
 };
 
-std::unique_ptr<InputFile> createObjectFile(MemoryBufferRef MB,
-                                            StringRef ArchiveName = "");
-std::unique_ptr<InputFile> createSharedFile(MemoryBufferRef MB);
+InputFile *createObjectFile(MemoryBufferRef MB, StringRef ArchiveName = "");
+InputFile *createSharedFile(MemoryBufferRef MB);
 
 } // namespace elf
 } // namespace lld

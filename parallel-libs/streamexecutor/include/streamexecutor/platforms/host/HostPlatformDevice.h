@@ -139,6 +139,14 @@ public:
     return Error::success();
   }
 
+  /// Gets the value at the given index from a GlobalDeviceMemory<T> instance
+  /// created by this class.
+  template <typename T>
+  static T getDeviceValue(const streamexecutor::GlobalDeviceMemory<T> &Memory,
+                          size_t Index) {
+    return static_cast<const T *>(Memory.getHandle())[Index];
+  }
+
 private:
   static void *offset(const void *Base, size_t Offset) {
     return const_cast<char *>(static_cast<const char *>(Base) + Offset);

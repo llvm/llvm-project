@@ -30,24 +30,21 @@ class HostPlatform : public Platform {
 public:
   size_t getDeviceCount() const override { return 1; }
 
-  Expected<Device *> getDevice(size_t DeviceIndex) override {
+  Expected<Device> getDevice(size_t DeviceIndex) override {
     if (DeviceIndex != 0) {
       return make_error(
           "Requested device index " + llvm::Twine(DeviceIndex) +
           " from host platform which only supports device index 0");
     }
     llvm::sys::ScopedLock Lock(Mutex);
-    if (!TheDevice) {
+    if (!ThePlatformDevice)
       ThePlatformDevice = llvm::make_unique<HostPlatformDevice>();
-      TheDevice = llvm::make_unique<Device>(ThePlatformDevice.get());
-    }
-    return TheDevice.get();
+    return Device(ThePlatformDevice.get());
   }
 
 private:
   llvm::sys::Mutex Mutex;
   std::unique_ptr<HostPlatformDevice> ThePlatformDevice;
-  std::unique_ptr<Device> TheDevice;
 };
 
 } // namespace host

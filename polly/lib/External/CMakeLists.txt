@@ -327,6 +327,8 @@ add_polly_library(PollyPPCG
   ${PPCG_FILES}
 )
 
+target_link_libraries(PollyPPCG PollyISL)
+
 if (NOT MSVC)
   set_target_properties(PollyPPCG PROPERTIES
     COMPILE_FLAGS "-w"

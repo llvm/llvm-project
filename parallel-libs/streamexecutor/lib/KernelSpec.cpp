@@ -31,12 +31,13 @@ CUDAPTXInMemorySpec::CUDAPTXInMemorySpec(
 
 const char *CUDAPTXInMemorySpec::getCode(int ComputeCapabilityMajor,
                                          int ComputeCapabilityMinor) const {
-  auto PTXIter =
-      PTXByComputeCapability.find(CUDAPTXInMemorySpec::ComputeCapability{
+  auto Iterator =
+      PTXByComputeCapability.upper_bound(CUDAPTXInMemorySpec::ComputeCapability{
           ComputeCapabilityMajor, ComputeCapabilityMinor});
-  if (PTXIter == PTXByComputeCapability.end())
+  if (Iterator == PTXByComputeCapability.begin())
     return nullptr;
-  return PTXIter->second;
+  --Iterator;
+  return Iterator->second;
 }
 
 CUDAFatbinInMemorySpec::CUDAFatbinInMemorySpec(llvm::StringRef KernelName,
