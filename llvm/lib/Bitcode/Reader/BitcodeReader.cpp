@@ -210,8 +210,6 @@ class BitcodeReader : public GVMaterializer {
   std::vector<std::pair<Function*, unsigned> > FunctionPrologues;
   std::vector<std::pair<Function*, unsigned> > FunctionPersonalityFns;
 
-  SmallVector<Instruction*, 64> InstsWithTBAATag;
-
   bool HasSeenOldLoopTags = false;
 
   /// The set of attributes by index.  Index zero in the file is for null, and
@@ -4351,11 +4349,11 @@ std::error_code BitcodeReader::parseMetadataAttachment(Function &F) {
         if (HasSeenOldLoopTags && I->second == LLVMContext::MD_loop)
           MD = upgradeInstructionLoopAttachment(*MD);
 
-        Inst->setMetadata(I->second, MD);
         if (I->second == LLVMContext::MD_tbaa) {
-          InstsWithTBAATag.push_back(Inst);
-          continue;
+          assert(!MD->isTemporary() && "should load MDs before attachments");
+          MD = UpgradeTBAANode(*MD);
         }
+        Inst->setMetadata(I->second, MD);
       }
       break;
     }
@@ -5766,11 +5764,6 @@ std::error_code BitcodeReader::materializeModule() {
   // promised above).
   if (!BasicBlockFwdRefs.empty())
     return error("Never resolved function from blockaddress");
-
-  // Upgrading intrinsic calls before TBAA can cause TBAA metadata to be lost,
-  // to prevent this instructions with TBAA tags should be upgraded first.
-  for (unsigned I = 0, E = InstsWithTBAATag.size(); I < E; I++)
-    UpgradeInstWithTBAATag(InstsWithTBAATag[I]);
 
   // Upgrade any intrinsic calls that slipped through (should not happen!) and
   // delete the old functions to clean up. We can't do this unless the entire
