@@ -22,6 +22,7 @@
 #define DEBUG_TYPE "cache-pruning"
 
 #include <set>
+#include <system_error>
 
 using namespace llvm;
 

@@ -470,12 +470,74 @@ entry:
 }
 
 ;PR25684
-;define void @trunc16i16_16i8(<16 x i16> %a) {
-;entry:
-;  %0 = trunc <16 x i16> %a to <16 x i8>
-;  store <16 x i8> %0, <16 x i8>* undef, align 4
-;  ret void
-;}
+define void @trunc16i16_16i8(<16 x i16> %a) {
+; SSE2-LABEL: trunc16i16_16i8:
+; SSE2:       # BB#0: # %entry
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    packuswb %xmm1, %xmm0
+; SSE2-NEXT:    movdqu %xmm0, (%rax)
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: trunc16i16_16i8:
+; SSSE3:       # BB#0: # %entry
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; SSSE3-NEXT:    pshufb %xmm2, %xmm1
+; SSSE3-NEXT:    pshufb %xmm2, %xmm0
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSSE3-NEXT:    movdqu %xmm0, (%rax)
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: trunc16i16_16i8:
+; SSE41:       # BB#0: # %entry
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; SSE41-NEXT:    pshufb %xmm2, %xmm1
+; SSE41-NEXT:    pshufb %xmm2, %xmm0
+; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE41-NEXT:    movdqu %xmm0, (%rax)
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: trunc16i16_16i8:
+; AVX1:       # BB#0: # %entry
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX1-NEXT:    vmovdqu %xmm0, (%rax)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: trunc16i16_16i8:
+; AVX2:       # BB#0: # %entry
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
+; AVX2-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX2-NEXT:    vmovdqu %xmm0, (%rax)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512F-LABEL: trunc16i16_16i8:
+; AVX512F:       # BB#0: # %entry
+; AVX512F-NEXT:    vpmovsxwd %ymm0, %zmm0
+; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vmovdqu %xmm0, (%rax)
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: trunc16i16_16i8:
+; AVX512BW:       # BB#0: # %entry
+; AVX512BW-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
+; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    vmovdqu %xmm0, (%rax)
+; AVX512BW-NEXT:    retq
+entry:
+  %0 = trunc <16 x i16> %a to <16 x i8>
+  store <16 x i8> %0, <16 x i8>* undef, align 4
+  ret void
+}
 
 define void @trunc32i16_32i8(<32 x i16> %a) {
 ; SSE2-LABEL: trunc32i16_32i8:
@@ -1010,3 +1072,4 @@ entry:
   %1 = shufflevector <16 x i8> %0, <16 x i8> %0, <16 x i32> <i32 28, i32 30, i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 undef, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26>
   ret <16 x i8> %1
 }
+

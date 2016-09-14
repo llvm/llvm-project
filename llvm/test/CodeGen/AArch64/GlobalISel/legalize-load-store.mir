@@ -22,6 +22,7 @@ registers:
   - { id: 3, class: _ }
   - { id: 4, class: _ }
   - { id: 5, class: _ }
+  - { id: 6, class: _ }
 body: |
   bb.0.entry:
     liveins: %x0, %x1, %x2, %x3
@@ -43,6 +44,9 @@ body: |
 
     ; CHECK: %5(s64) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
     %5(s64) = G_LOAD %0 :: (load 8 from %ir.addr)
+
+    ; CHECK: %6(p0) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
+    %6(p0) = G_LOAD %0(p0) :: (load 8 from %ir.addr)
 ...
 
 ---
@@ -81,4 +85,7 @@ body: |
     ; CHECK: G_STORE %5(s64), %0(p0) :: (store 8 into %ir.addr)
     %5(s64) = G_PTRTOINT %0(p0)
     G_STORE %5, %0 :: (store 8 into %ir.addr)
+
+    ; CHECK: G_STORE %0(p0), %0(p0) :: (store 8 into %ir.addr)
+    G_STORE %0(p0), %0(p0) :: (store 8 into %ir.addr)
 ...

@@ -30,28 +30,16 @@
 # CHECK: TBZW killed %w0, 0, %bb.1.true
 # CHECK: B %bb.2.false
 name:            test_stackmap_length
-alignment:       2
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
 tracksRegLiveness: false
 liveins:
   - { reg: '%w0' }
 frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
   hasStackMap:     true
-  hasPatchPoint:   false
   stackSize:       16
   offsetAdjustment: 0
   maxAlignment:    8
   adjustsStack:    true
   hasCalls:        true
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
 stack:
   - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '%lr' }
   - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '%fp' }

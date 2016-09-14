@@ -252,7 +252,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   Script<ELFT>::X->createAssignments();
 
   Script<ELFT>::X->OutputSections = &OutputSections;
-  if (ScriptConfig->HasContents)
+  if (ScriptConfig->HasSections)
     Script<ELFT>::X->createSections(Factory);
   else
     createSections();
@@ -267,7 +267,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     Phdrs = Script<ELFT>::X->hasPhdrsCommands() ? Script<ELFT>::X->createPhdrs()
                                                 : createPhdrs();
     fixHeaders();
-    if (ScriptConfig->HasContents) {
+    if (ScriptConfig->HasSections) {
       Script<ELFT>::X->assignAddresses();
     } else {
       fixSectionAlignments();
@@ -610,7 +610,7 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     Symtab<ELFT>::X->addIgnored("__tls_get_addr");
 
   // If linker script do layout we do not need to create any standart symbols.
-  if (ScriptConfig->HasContents)
+  if (ScriptConfig->HasSections)
     return;
 
   ElfSym<ELFT>::EhdrStart = Symtab<ELFT>::X->addIgnored("__ehdr_start");
@@ -1060,7 +1060,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // sections. These are special, we do not include them into output sections
 // list, but have them to simplify the code.
 template <class ELFT> void Writer<ELFT>::fixHeaders() {
-  uintX_t BaseVA = ScriptConfig->HasContents ? 0 : Config->ImageBase;
+  uintX_t BaseVA = ScriptConfig->HasSections ? 0 : Config->ImageBase;
   Out<ELFT>::ElfHeader->setVA(BaseVA);
   uintX_t Off = Out<ELFT>::ElfHeader->getSize();
   Out<ELFT>::ProgramHeaders->setVA(Off + BaseVA);

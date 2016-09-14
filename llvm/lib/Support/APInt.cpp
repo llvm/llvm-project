@@ -22,10 +22,10 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <climits>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
-#include <limits>
 using namespace llvm;
 
 #define DEBUG_TYPE "apint"

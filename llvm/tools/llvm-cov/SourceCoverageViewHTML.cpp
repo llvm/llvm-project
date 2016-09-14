@@ -393,8 +393,7 @@ void SourceCoverageViewHTML::renderViewHeader(raw_ostream &OS) {
 }
 
 void SourceCoverageViewHTML::renderViewFooter(raw_ostream &OS) {
-  OS << EndTable << EndCenteredDiv
-     << tag("h5", escape(getOptions().getLLVMVersionString(), getOptions()));
+  OS << EndTable << EndCenteredDiv;
 }
 
 void SourceCoverageViewHTML::renderSourceName(raw_ostream &OS, bool WholeFile) {

@@ -67,10 +67,7 @@ unsigned getDividerWidth(const CoverageViewOptions &Opts) {
 
 void SourceCoverageViewText::renderViewHeader(raw_ostream &) {}
 
-void SourceCoverageViewText::renderViewFooter(raw_ostream &OS) {
-  getOptions().colored_ostream(OS, raw_ostream::CYAN)
-      << "\n" << getOptions().getLLVMVersionString();
-}
+void SourceCoverageViewText::renderViewFooter(raw_ostream &) {}
 
 void SourceCoverageViewText::renderSourceName(raw_ostream &OS, bool WholeFile) {
   std::string ViewInfo = WholeFile ? getVerboseSourceName() : getSourceName();

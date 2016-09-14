@@ -762,7 +762,7 @@ void ScriptParser::readLinkerScript() {
     } else if (Tok == "VERSION") {
       readVersion();
     } else if (SymbolAssignment *Cmd = readProvideOrAssignment(Tok, true)) {
-      if (Opt.HasContents)
+      if (Opt.HasSections)
         Opt.Commands.emplace_back(Cmd);
       else
         Opt.Assignments.emplace_back(Cmd);
@@ -923,7 +923,7 @@ void ScriptParser::readSearchDir() {
 }
 
 void ScriptParser::readSections() {
-  Opt.HasContents = true;
+  Opt.HasSections = true;
   expect("{");
   while (!Error && !skip("}")) {
     StringRef Tok = next();

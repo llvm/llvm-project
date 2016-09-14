@@ -224,3 +224,41 @@ INVALID-LINKOPTHINT-DATAOFF: macho-invalid-linkopthint-dataoff': truncated or ma
 RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dataincode-dataoff-datasize 2>&1 | FileCheck -check-prefix INVALID-DATAINCODE-DATAOFF-DATASIZE %s
 INVALID-DATAINCODE-DATAOFF-DATASIZE: macho-invalid-dataincode-dataoff-datasize': truncated or malformed object (dataoff field plus datasize field of LC_DATA_IN_CODE command 0 extends past the end of the file)
 
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfo-small 2>&1 | FileCheck -check-prefix INVALID-DYLDINFO-SMALL %s
+INVALID-DYLDINFO-SMALL: macho-invalid-dyldinfo-small': truncated or malformed object (load command 0 LC_DYLD_INFO cmdsize too small)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfoonly-bad-size 2>&1 | FileCheck -check-prefix INVALID-DYLDINFOONLY-BAD-SIZE %s
+INVALID-DYLDINFOONLY-BAD-SIZE: macho-invalid-dyldinfoonly-bad-size': truncated or malformed object (LC_DYLD_INFO_ONLY command 0 has incorrect cmdsize)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfo-rebase_off 2>&1 | FileCheck -check-prefix INVALID-DYLDINFO-REBASE_OFF %s
+INVALID-DYLDINFO-REBASE_OFF: macho-invalid-dyldinfo-rebase_off': truncated or malformed object (rebase_off field of LC_DYLD_INFO command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfo-rebase_off-rebase_size 2>&1 | FileCheck -check-prefix INVALID-DYLDINFO-REBASE_OFF-REBASE_SIZE %s
+INVALID-DYLDINFO-REBASE_OFF-REBASE_SIZE: macho-invalid-dyldinfo-rebase_off-rebase_size': truncated or malformed object (rebase_off field plus rebase_size field of LC_DYLD_INFO command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfoonly-bind_off  2>&1 | FileCheck -check-prefix INVALID-DYLDINFOONLY-BIND_OFF %s
+INVALID-DYLDINFOONLY-BIND_OFF: macho-invalid-dyldinfoonly-bind_off': truncated or malformed object (bind_off field of LC_DYLD_INFO_ONLY command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfo-bind_off-bind_size  2>&1 | FileCheck -check-prefix INVALID-DYLDINFO-BIND_OFF-BIND_SIZE %s
+INVALID-DYLDINFO-BIND_OFF-BIND_SIZE: macho-invalid-dyldinfo-bind_off-bind_size': truncated or malformed object (bind_off field plus bind_size field of LC_DYLD_INFO command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfoonly-weak_bind_off  2>&1 | FileCheck -check-prefix INVALID-DYLDINFOONLY-WEAK_BIND_OFF %s
+INVALID-DYLDINFOONLY-WEAK_BIND_OFF: macho-invalid-dyldinfoonly-weak_bind_off': truncated or malformed object (weak_bind_off field of LC_DYLD_INFO_ONLY command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfo-weak_bind_off-weak_bind_size  2>&1 | FileCheck -check-prefix INVALID-DYLDINFO-WEAK_BIND_OFF-WEAK_BIND_SIZE %s
+INVALID-DYLDINFO-WEAK_BIND_OFF-WEAK_BIND_SIZE: macho-invalid-dyldinfo-weak_bind_off-weak_bind_size': truncated or malformed object (weak_bind_off field plus weak_bind_size field of LC_DYLD_INFO command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfoonly-lazy_bind_off  2>&1 | FileCheck -check-prefix INVALID-DYLDINFOONLY-LAZY_BIND_OFF %s
+INVALID-DYLDINFOONLY-LAZY_BIND_OFF: macho-invalid-dyldinfoonly-lazy_bind_off': truncated or malformed object (lazy_bind_off field of LC_DYLD_INFO_ONLY command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfo-lazy_bind_off-lazy_bind_size  2>&1 | FileCheck -check-prefix INVALID-DYLDINFO-LAZY_BIND_OFF-LAZY_BIND_SIZE %s
+INVALID-DYLDINFO-LAZY_BIND_OFF-LAZY_BIND_SIZE: macho-invalid-dyldinfo-lazy_bind_off-lazy_bind_size': truncated or malformed object (lazy_bind_off field plus lazy_bind_size field of LC_DYLD_INFO command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfoonly-export_off  2>&1 | FileCheck -check-prefix INVALID-DYLDINFOONLY-EXPORT_OFF %s
+INVALID-DYLDINFOONLY-EXPORT_OFF: macho-invalid-dyldinfoonly-export_off': truncated or malformed object (export_off field of LC_DYLD_INFO_ONLY command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfo-export_off-export_size  2>&1 | FileCheck -check-prefix INVALID-DYLDINFO-EXPORT_OFF-EXPORT_SIZE %s
+INVALID-DYLDINFO-EXPORT_OFF-EXPORT_SIZE: macho-invalid-dyldinfo-export_off-export_size': truncated or malformed object (export_off field plus export_size field of LC_DYLD_INFO command 0 extends past the end of the file)
+
+RUN: not llvm-objdump -macho -private-headers %p/Inputs/macho-invalid-dyldinfo-more-than-one  2>&1 | FileCheck -check-prefix INVALID-DYLDINFO-MORE-THAN-ONE %s
+INVALID-DYLDINFO-MORE-THAN-ONE: macho-invalid-dyldinfo-more-than-one': truncated or malformed object (more than one LC_DYLD_INFO and or LC_DYLD_INFO_ONLY command)

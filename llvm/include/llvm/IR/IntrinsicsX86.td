@@ -4361,9 +4361,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx512_cvtsi2ss64 : GCCBuiltin<"__builtin_ia32_cvtsi2ss64">,
               Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty,
                          llvm_i64_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_avx512_cvtsi2sd32 : GCCBuiltin<"__builtin_ia32_cvtsi2sd32">,
-              Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty,
-                         llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
   def int_x86_avx512_cvtsi2sd64 : GCCBuiltin<"__builtin_ia32_cvtsi2sd64">,
               Intrinsic<[llvm_v2f64_ty], [llvm_v2f64_ty,
                          llvm_i64_ty, llvm_i32_ty], [IntrNoMem]>;
