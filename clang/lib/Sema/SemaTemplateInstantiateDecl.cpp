@@ -3545,7 +3545,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 
   // Never instantiate an explicit specialization except if it is a class scope
   // explicit specialization.
-  if (Function->getTemplateSpecializationKind() == TSK_ExplicitSpecialization &&
+  TemplateSpecializationKind TSK = Function->getTemplateSpecializationKind();
+  if (TSK == TSK_ExplicitSpecialization &&
       !Function->getClassScopeSpecializationPattern())
     return;
 
@@ -3560,6 +3561,16 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     PatternDecl->isDefined(PatternDecl);
   }
   assert(PatternDecl && "template definition is not a template");
+
+  // FIXME: We need to track the instantiation stack in order to know which
+  // definitions should be visible within this instantiation.
+  if (DiagnoseUninstantiableTemplate(PointOfInstantiation, Function,
+                                Function->getInstantiatedFromMemberFunction(),
+                                     PatternDecl, PatternDecl, TSK,
+                                     /*Complain*/DefinitionRequired))
+     return;
+
+
 
   // Postpone late parsed template instantiations.
   if (PatternDecl->isLateTemplateParsed() &&
@@ -3593,10 +3604,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     Pattern = PatternDecl->getBody(PatternDecl);
   }
 
-  // FIXME: Check that the definition is visible before trying to instantiate
-  // it. This requires us to track the instantiation stack in order to know
-  // which definitions should be visible.
-
+  // FIXME: Check if we could sink these diagnostics in
+  // DiagnoseUninstantiableTemplate.
   if (!Pattern && !PatternDecl->isDefaulted()) {
     if (DefinitionRequired) {
       if (Function->getPrimaryTemplate())
@@ -3612,13 +3621,11 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
         Diag(PatternDecl->getLocation(),
              diag::note_explicit_instantiation_here);
       Function->setInvalidDecl();
-    } else if (Function->getTemplateSpecializationKind()
-                 == TSK_ExplicitInstantiationDefinition) {
+    } else if (TSK == TSK_ExplicitInstantiationDefinition) {
       assert(!Recursive);
       PendingInstantiations.push_back(
         std::make_pair(Function, PointOfInstantiation));
-    } else if (Function->getTemplateSpecializationKind()
-                 == TSK_ImplicitInstantiation) {
+    } else if (TSK == TSK_ImplicitInstantiation) {
       if (AtEndOfTU && !getDiagnostics().hasErrorOccurred()) {
         Diag(PointOfInstantiation, diag::warn_func_template_missing)
           << Function;
@@ -3637,8 +3644,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   //   initializer or return value, and class template specializations, other
   //   explicit instantiation declarations have the effect of suppressing the
   //   implicit instantiation of the entity to which they refer.
-  if (Function->getTemplateSpecializationKind() ==
-          TSK_ExplicitInstantiationDeclaration &&
+  if (TSK == TSK_ExplicitInstantiationDeclaration &&
       !PatternDecl->isInlined() &&
       !PatternDecl->getReturnType()->getContainedAutoType())
     return;
@@ -3659,6 +3665,10 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     return;
   PrettyDeclStackTraceEntry CrashInfo(*this, Function, SourceLocation(),
                                       "instantiating function definition");
+
+  // The instantiation is visible here, even if it was first declared in an
+  // unimported module.
+  Function->setHidden(false);
 
   // Copy the inner loc start from the pattern.
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());

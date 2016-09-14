@@ -1845,62 +1845,6 @@ namespace clang {
   }
 }
 
-/// Determine whether we would be unable to instantiate this template (because
-/// it either has no definition, or is in the process of being instantiated).
-static bool DiagnoseUninstantiableTemplate(Sema &S,
-                                           SourceLocation PointOfInstantiation,
-                                           TagDecl *Instantiation,
-                                           bool InstantiatedFromMember,
-                                           TagDecl *Pattern,
-                                           TagDecl *PatternDef,
-                                           TemplateSpecializationKind TSK,
-                                           bool Complain = true) {
-  if (PatternDef && !PatternDef->isBeingDefined()) {
-    NamedDecl *SuggestedDef = nullptr;
-    if (!S.hasVisibleDefinition(PatternDef, &SuggestedDef,
-                                /*OnlyNeedComplete*/false)) {
-      // If we're allowed to diagnose this and recover, do so.
-      bool Recover = Complain && !S.isSFINAEContext();
-      if (Complain)
-        S.diagnoseMissingImport(PointOfInstantiation, SuggestedDef,
-                                Sema::MissingImportKind::Definition, Recover);
-      return !Recover;
-    }
-    return false;
-  }
-
-  if (!Complain || (PatternDef && PatternDef->isInvalidDecl())) {
-    // Say nothing
-  } else if (PatternDef) {
-    assert(PatternDef->isBeingDefined());
-    S.Diag(PointOfInstantiation,
-           diag::err_template_instantiate_within_definition)
-      << (TSK != TSK_ImplicitInstantiation)
-      << S.Context.getTypeDeclType(Instantiation);
-    // Not much point in noting the template declaration here, since
-    // we're lexically inside it.
-    Instantiation->setInvalidDecl();
-  } else if (InstantiatedFromMember) {
-    S.Diag(PointOfInstantiation,
-           diag::err_implicit_instantiate_member_undefined)
-      << S.Context.getTypeDeclType(Instantiation);
-    S.Diag(Pattern->getLocation(), diag::note_member_declared_at);
-  } else {
-    S.Diag(PointOfInstantiation, diag::err_template_instantiate_undefined)
-      << (TSK != TSK_ImplicitInstantiation)
-      << S.Context.getTypeDeclType(Instantiation);
-    S.Diag(Pattern->getLocation(), diag::note_template_decl_here);
-  }
-
-  // In general, Instantiation isn't marked invalid to get more than one
-  // error for multiple undefined instantiations. But the code that does
-  // explicit declaration -> explicit definition conversion can't handle
-  // invalid declarations, so mark as invalid in that case.
-  if (TSK == TSK_ExplicitInstantiationDeclaration)
-    Instantiation->setInvalidDecl();
-  return true;
-}
-
 /// \brief Instantiate the definition of a class from a given pattern.
 ///
 /// \param PointOfInstantiation The point of instantiation within the
@@ -1931,7 +1875,7 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
                        bool Complain) {
   CXXRecordDecl *PatternDef
     = cast_or_null<CXXRecordDecl>(Pattern->getDefinition());
-  if (DiagnoseUninstantiableTemplate(*this, PointOfInstantiation, Instantiation,
+  if (DiagnoseUninstantiableTemplate(PointOfInstantiation, Instantiation,
                                 Instantiation->getInstantiatedFromMemberClass(),
                                      Pattern, PatternDef, TSK, Complain))
     return true;
@@ -2160,7 +2104,7 @@ bool Sema::InstantiateEnum(SourceLocation PointOfInstantiation,
                            const MultiLevelTemplateArgumentList &TemplateArgs,
                            TemplateSpecializationKind TSK) {
   EnumDecl *PatternDef = Pattern->getDefinition();
-  if (DiagnoseUninstantiableTemplate(*this, PointOfInstantiation, Instantiation,
+  if (DiagnoseUninstantiableTemplate(PointOfInstantiation, Instantiation,
                                  Instantiation->getInstantiatedFromMemberEnum(),
                                      Pattern, PatternDef, TSK,/*Complain*/true))
     return true;
