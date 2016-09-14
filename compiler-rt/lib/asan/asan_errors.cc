@@ -190,4 +190,23 @@ void ErrorSanitizerGetAllocatedSizeNotOwned::Print() {
   ReportErrorSummary("bad-__sanitizer_get_allocated_size", stack);
 }
 
+void ErrorStringFunctionMemoryRangesOverlap::Print() {
+  Decorator d;
+  char bug_type[100];
+  internal_snprintf(bug_type, sizeof(bug_type), "%s-param-overlap", function);
+  Printf("%s", d.Warning());
+  Report(
+      "ERROR: AddressSanitizer: %s: memory ranges [%p,%p) and [%p, %p) "
+      "overlap\n",
+      bug_type, addr1_description.Address(),
+      addr1_description.Address() + length1, addr2_description.Address(),
+      addr2_description.Address() + length2);
+  Printf("%s", d.EndWarning());
+  scariness.Print();
+  stack->Print();
+  addr1_description.Print();
+  addr2_description.Print();
+  ReportErrorSummary(bug_type, stack);
+}
+
 }  // namespace __asan
