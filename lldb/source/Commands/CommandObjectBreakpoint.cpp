@@ -523,25 +523,26 @@ protected:
 
     case eSetTypeFunctionRegexp: // Breakpoint by regular expression function
                                  // name
-    {
-      RegularExpression regexp(m_options.m_func_regexp.c_str());
-      if (!regexp.IsValid()) {
-        char err_str[1024];
-        regexp.GetErrorAsCString(err_str, sizeof(err_str));
-        result.AppendErrorWithFormat(
-            "Function name regular expression could not be compiled: \"%s\"",
-            err_str);
-        result.SetStatus(eReturnStatusFailed);
-        return false;
-      }
+      {
+        RegularExpression regexp(m_options.m_func_regexp.c_str());
+        if (!regexp.IsValid()) {
+          char err_str[1024];
+          regexp.GetErrorAsCString(err_str, sizeof(err_str));
+          result.AppendErrorWithFormat(
+              "Function name regular expression could not be compiled: \"%s\"",
+              err_str);
+          result.SetStatus(eReturnStatusFailed);
+          return false;
+        }
 
-      bp = target
-               ->CreateFuncRegexBreakpoint(
-                   &(m_options.m_modules), &(m_options.m_filenames), regexp,
-                   m_options.m_language, m_options.m_skip_prologue, internal,
-                   m_options.m_hardware)
-               .get();
-    } break;
+        bp = target
+                 ->CreateFuncRegexBreakpoint(
+                     &(m_options.m_modules), &(m_options.m_filenames), regexp,
+                     m_options.m_language, m_options.m_skip_prologue, internal,
+                     m_options.m_hardware)
+                 .get();
+      }
+      break;
     case eSetTypeSourceRegexp: // Breakpoint by regexp on source text.
     {
       const size_t num_files = m_options.m_filenames.GetSize();
@@ -2058,7 +2059,7 @@ private:
 };
 
 //-------------------------------------------------------------------------
-// CommandObjectMultiwordBreakpoint
+// CommandObjectBreakpointName
 //-------------------------------------------------------------------------
 class CommandObjectBreakpointName : public CommandObjectMultiword {
 public:
@@ -2079,6 +2080,307 @@ public:
   }
 
   ~CommandObjectBreakpointName() override = default;
+};
+
+//-------------------------------------------------------------------------
+// CommandObjectBreakpointRead
+//-------------------------------------------------------------------------
+#pragma mark Restore
+
+class CommandObjectBreakpointRead : public CommandObjectParsed {
+public:
+  CommandObjectBreakpointRead(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "breakpoint read",
+                            "Read and set the breakpoints previously saved to "
+                            "a file with \"breakpoint write\".  ",
+                            nullptr),
+        m_options() {
+    CommandArgumentEntry arg;
+    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
+                                      eArgTypeBreakpointIDRange);
+    // Add the entry for the first argument for this command to the object's
+    // arguments vector.
+    m_arguments.push_back(arg);
+  }
+
+  ~CommandObjectBreakpointRead() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() : Options() {}
+
+    ~CommandOptions() override = default;
+
+    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'f':
+        m_filename.assign(option_arg);
+        break;
+      default:
+        error.SetErrorStringWithFormat("unrecognized option '%c'",
+                                       short_option);
+        break;
+      }
+
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_filename.clear();
+    }
+
+    const OptionDefinition *GetDefinitions() override { return g_option_table; }
+
+    // Options table: Required for subclasses of Options.
+
+    static OptionDefinition g_option_table[];
+
+    // Instance variables to hold the values for command options.
+
+    std::string m_filename;
+  };
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = GetSelectedOrDummyTarget();
+    if (target == nullptr) {
+      result.AppendError("Invalid target.  No existing target or breakpoints.");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    std::unique_lock<std::recursive_mutex> lock;
+    target->GetBreakpointList().GetListMutex(lock);
+
+    FileSpec input_spec(m_options.m_filename, true);
+    Error error;
+    StructuredData::ObjectSP input_data_sp =
+        StructuredData::ParseJSONFromFile(input_spec, error);
+    if (!error.Success()) {
+      result.AppendErrorWithFormat("Error reading data from input file: %s.",
+                                   error.AsCString());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    } else if (!input_data_sp || !input_data_sp->IsValid()) {
+      result.AppendErrorWithFormat("Invalid JSON from input file: %s.",
+                                   input_spec.GetPath().c_str());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    StructuredData::Array *bkpt_array = input_data_sp->GetAsArray();
+    if (!bkpt_array) {
+      result.AppendErrorWithFormat(
+          "Invalid breakpoint data from input file: %s.",
+          input_spec.GetPath().c_str());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    size_t num_bkpts = bkpt_array->GetSize();
+    for (size_t i = 0; i < num_bkpts; i++) {
+      StructuredData::ObjectSP bkpt_object_sp = bkpt_array->GetItemAtIndex(i);
+      // Peel off the breakpoint key, and feed the rest to the Breakpoint:
+      StructuredData::Dictionary *bkpt_dict = bkpt_object_sp->GetAsDictionary();
+      if (!bkpt_dict) {
+        result.AppendErrorWithFormat(
+            "Invalid breakpoint data for element %zu from input file: %s.", i,
+            input_spec.GetPath().c_str());
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+      StructuredData::ObjectSP bkpt_data_sp =
+          bkpt_dict->GetValueForKey(Breakpoint::GetSerializationKey());
+      BreakpointSP bkpt_sp =
+          Breakpoint::CreateFromStructuredData(*target, bkpt_data_sp, error);
+      if (!error.Success()) {
+        result.AppendErrorWithFormat(
+            "Error restoring breakpoint %zu from %s: %s.", i,
+            input_spec.GetPath().c_str(), error.AsCString());
+        result.SetStatus(eReturnStatusFailed);
+      }
+    }
+    return result.Succeeded();
+  }
+
+private:
+  CommandOptions m_options;
+};
+
+#pragma mark Modify::CommandOptions
+OptionDefinition CommandObjectBreakpointRead::CommandOptions::g_option_table[] =
+    {
+        // clang-format off
+  {LLDB_OPT_SET_ALL, true, "file", 'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eDiskFileCompletion, eArgTypeFilename,    "The file from which to read the breakpoints."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+        // clang-format on
+};
+
+//-------------------------------------------------------------------------
+// CommandObjectBreakpointWrite
+//-------------------------------------------------------------------------
+#pragma mark Save
+class CommandObjectBreakpointWrite : public CommandObjectParsed {
+public:
+  CommandObjectBreakpointWrite(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "breakpoint write",
+                            "Write the breakpoints listed to a file that can "
+                            "be read in with \"breakpoint read\".  "
+                            "If given no arguments, writes all breakpoints.",
+                            nullptr),
+        m_options() {
+    CommandArgumentEntry arg;
+    CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID,
+                                      eArgTypeBreakpointIDRange);
+    // Add the entry for the first argument for this command to the object's
+    // arguments vector.
+    m_arguments.push_back(arg);
+  }
+
+  ~CommandObjectBreakpointWrite() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() : Options() {}
+
+    ~CommandOptions() override = default;
+
+    Error SetOptionValue(uint32_t option_idx, const char *option_arg,
+                         ExecutionContext *execution_context) override {
+      Error error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'f':
+        m_filename.assign(option_arg);
+        break;
+      default:
+        error.SetErrorStringWithFormat("unrecognized option '%c'",
+                                       short_option);
+        break;
+      }
+
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_filename.clear();
+    }
+
+    const OptionDefinition *GetDefinitions() override { return g_option_table; }
+
+    // Options table: Required for subclasses of Options.
+
+    static OptionDefinition g_option_table[];
+
+    // Instance variables to hold the values for command options.
+
+    std::string m_filename;
+  };
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = GetSelectedOrDummyTarget();
+    if (target == nullptr) {
+      result.AppendError("Invalid target.  No existing target or breakpoints.");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    // Before we do anything else make sure we can actually write to this file:
+    StreamFile out_file(m_options.m_filename.c_str(),
+                        File::OpenOptions::eOpenOptionTruncate |
+                            File::OpenOptions::eOpenOptionWrite |
+                            File::OpenOptions::eOpenOptionCanCreate |
+                            File::OpenOptions::eOpenOptionCloseOnExec,
+                        lldb::eFilePermissionsFileDefault);
+    if (!out_file.GetFile().IsValid()) {
+      result.AppendErrorWithFormat("Unable to open output file: %s.",
+                                   m_options.m_filename.c_str());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    std::unique_lock<std::recursive_mutex> lock;
+    target->GetBreakpointList().GetListMutex(lock);
+
+    StructuredData::ArraySP break_store_sp(new StructuredData::Array());
+
+    if (command.GetArgumentCount() == 0) {
+      const BreakpointList &breakpoints = target->GetBreakpointList();
+
+      size_t num_breakpoints = breakpoints.GetSize();
+      for (size_t i = 0; i < num_breakpoints; i++) {
+        Breakpoint *bp = breakpoints.GetBreakpointAtIndex(i).get();
+        StructuredData::ObjectSP bkpt_save_sp = bp->SerializeToStructuredData();
+        // If a breakpoint can't serialize it, just ignore it for now:
+        if (bkpt_save_sp)
+          break_store_sp->AddItem(bkpt_save_sp);
+      }
+    } else {
+
+      BreakpointIDList valid_bp_ids;
+
+      CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
+          command, target, result, &valid_bp_ids);
+
+      if (result.Succeeded()) {
+        std::unordered_set<lldb::break_id_t> processed_bkpts;
+        const size_t count = valid_bp_ids.GetSize();
+        for (size_t i = 0; i < count; ++i) {
+          BreakpointID cur_bp_id = valid_bp_ids.GetBreakpointIDAtIndex(i);
+          lldb::break_id_t bp_id = cur_bp_id.GetBreakpointID();
+
+          if (bp_id != LLDB_INVALID_BREAK_ID) {
+            // Only do each breakpoint once:
+            std::pair<std::unordered_set<lldb::break_id_t>::iterator, bool>
+                insert_result = processed_bkpts.insert(bp_id);
+            if (!insert_result.second)
+              continue;
+
+            Breakpoint *bp = target->GetBreakpointByID(bp_id).get();
+            StructuredData::ObjectSP bkpt_save_sp =
+                bp->SerializeToStructuredData();
+            // If the user explicitly asked to serialize a breakpoint, and we
+            // can't, then
+            // raise an error:
+            if (!bkpt_save_sp) {
+              result.AppendErrorWithFormat("Unable to serialize breakpoint %d",
+                                           bp_id);
+              result.SetStatus(eReturnStatusFailed);
+              return false;
+            }
+            break_store_sp->AddItem(bkpt_save_sp);
+          }
+        }
+      }
+    }
+
+    break_store_sp->Dump(out_file, false);
+    out_file.PutChar('\n');
+
+    return result.Succeeded();
+  }
+
+private:
+  CommandOptions m_options;
+};
+
+#pragma mark Modify::CommandOptions
+OptionDefinition
+    CommandObjectBreakpointWrite::CommandOptions::g_option_table[] = {
+        // clang-format off
+  {LLDB_OPT_SET_ALL, true, "file", 'f', OptionParser::eRequiredArgument, nullptr, nullptr, CommandCompletions::eDiskFileCompletion, eArgTypeFilename,    "The file into which to write the breakpoints."},
+  {0, false, nullptr, 0, 0, nullptr, nullptr, 0, eArgTypeNone, nullptr}
+        // clang-format on
 };
 
 //-------------------------------------------------------------------------
@@ -2110,6 +2412,10 @@ CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint(
       new CommandObjectBreakpointModify(interpreter));
   CommandObjectSP name_command_object(
       new CommandObjectBreakpointName(interpreter));
+  CommandObjectSP write_command_object(
+      new CommandObjectBreakpointWrite(interpreter));
+  CommandObjectSP read_command_object(
+      new CommandObjectBreakpointRead(interpreter));
 
   list_command_object->SetCommandName("breakpoint list");
   enable_command_object->SetCommandName("breakpoint enable");
@@ -2120,6 +2426,8 @@ CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint(
   command_command_object->SetCommandName("breakpoint command");
   modify_command_object->SetCommandName("breakpoint modify");
   name_command_object->SetCommandName("breakpoint name");
+  write_command_object->SetCommandName("breakpoint write");
+  read_command_object->SetCommandName("breakpoint read");
 
   LoadSubCommand("list", list_command_object);
   LoadSubCommand("enable", enable_command_object);
@@ -2130,6 +2438,8 @@ CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint(
   LoadSubCommand("command", command_command_object);
   LoadSubCommand("modify", modify_command_object);
   LoadSubCommand("name", name_command_object);
+  LoadSubCommand("write", write_command_object);
+  LoadSubCommand("read", read_command_object);
 }
 
 CommandObjectMultiwordBreakpoint::~CommandObjectMultiwordBreakpoint() = default;

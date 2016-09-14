@@ -388,6 +388,17 @@ TypeLoc TypeLoc::findExplicitQualifierLoc() const {
   return TypeLoc();
 }
 
+void ObjCTypeParamTypeLoc::initializeLocal(ASTContext &Context,
+                                           SourceLocation Loc) {
+  setNameLoc(Loc);
+  if (!getNumProtocols()) return;
+
+  setProtocolLAngleLoc(Loc);
+  setProtocolRAngleLoc(Loc);
+  for (unsigned i = 0, e = getNumProtocols(); i != e; ++i)
+    setProtocolLoc(i, Loc);
+}
+
 void ObjCObjectTypeLoc::initializeLocal(ASTContext &Context, 
                                         SourceLocation Loc) {
   setHasBaseTypeAsWritten(true);

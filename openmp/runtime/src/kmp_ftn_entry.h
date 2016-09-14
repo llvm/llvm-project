@@ -266,16 +266,7 @@ FTN_GET_AFFINITY_MAX_PROC( void )
         if ( ! TCR_4(__kmp_init_middle) ) {
             __kmp_middle_initialize();
         }
-        if ( ! ( KMP_AFFINITY_CAPABLE() ) ) {
-            return 0;
-        }
-
-    #if KMP_GROUP_AFFINITY
-        if ( __kmp_num_proc_groups > 1 ) {
-            return (int)(__kmp_num_proc_groups*sizeof(DWORD_PTR)*CHAR_BIT);
-        }
-    #endif /* KMP_GROUP_AFFINITY */
-        return __kmp_xproc;
+        return __kmp_aux_get_affinity_max_proc();
     #endif
 }
 

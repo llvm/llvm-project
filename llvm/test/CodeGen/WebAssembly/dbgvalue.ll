@@ -45,7 +45,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !1 = !DIFile(filename: "crash.c", directory: "wasm/tests")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "key", scope: !0, file: !1, line: 7, type: !5, isLocal: false, isDefinition: true, variable: [15 x i8]* @key)
+!4 = distinct !DIGlobalVariable(name: "key", scope: !0, file: !1, line: 7, type: !5, isLocal: false, isDefinition: true)
 !5 = !DICompositeType(tag: DW_TAG_array_type, baseType: !6, size: 120, align: 8, elements: !9)
 !6 = !DIDerivedType(tag: DW_TAG_typedef, name: "uint8_t", file: !7, line: 185, baseType: !8)
 !7 = !DIFile(filename: "wasm/emscripten/system/include/libc/bits/alltypes.h", directory: "wasm/tests")

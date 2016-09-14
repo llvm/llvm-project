@@ -121,7 +121,7 @@ $"\01??_7A@@6B@" = comdat largest
 
 $"\01??_R4A@@6B@" = comdat any
 
-@"\01?p@@3PEAUC@@EA" = global %struct.C* null, align 8
+@"\01?p@@3PEAUC@@EA" = global %struct.C* null, align 8, !dbg !4
 @0 = private unnamed_addr constant [3 x i8*] [i8* bitcast (%rtti.CompleteObjectLocator* @"\01??_R4C@@6B@" to i8*), i8* bitcast (void (%struct.C*)* @"\01?f@C@@UEAAXXZ" to i8*), i8* bitcast (void (%struct.C*)* @"\01?g@C@@UEAAXXZ" to i8*)], comdat($"\01??_7C@@6B@")
 @"\01??_R4C@@6B@" = linkonce_odr constant %rtti.CompleteObjectLocator { i32 1, i32 0, i32 0, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%rtti.TypeDescriptor7* @"\01??_R0?AUC@@@8" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32), i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%rtti.ClassHierarchyDescriptor* @"\01??_R3C@@8" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32), i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%rtti.CompleteObjectLocator* @"\01??_R4C@@6B@" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32) }, comdat
 @"\01??_7type_info@@6B@" = external constant i8*
@@ -237,7 +237,7 @@ attributes #6 = { nounwind }
 !1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
 !3 = !{!4}
-!4 = distinct !DIGlobalVariable(name: "p", linkageName: "\01?p@@3PEAUC@@EA", scope: !0, file: !1, line: 13, type: !5, isLocal: false, isDefinition: true, variable: %struct.C** @"\01?p@@3PEAUC@@EA")
+!4 = distinct !DIGlobalVariable(name: "p", linkageName: "\01?p@@3PEAUC@@EA", scope: !0, file: !1, line: 13, type: !5, isLocal: false, isDefinition: true)
 !5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 64, align: 64)
 !6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "C", file: !1, line: 9, size: 64, align: 64, elements: !7, vtableHolder: !12, identifier: ".?AUC@@")
 !7 = !{!8, !30, !34}

@@ -123,3 +123,147 @@ define <2 x double> @foo6() {
   %cast = bitcast <4 x i32><i32 -1, i32 -1, i32 -1, i32 -1> to <2 x double>
   ret <2 x double> %cast
 }
+
+define <4 x i32> @bitcast_constexpr_4i32_2i64_u2() {
+; CHECK-LABEL: @bitcast_constexpr_4i32_2i64_u2(
+; CHECK-NEXT:    ret <4 x i32> <i32 undef, i32 undef, i32 2, i32 0>
+;
+  %cast = bitcast <2 x i64><i64 undef, i64 2> to <4 x i32>
+  ret <4 x i32> %cast
+}
+
+define <4 x i32> @bitcast_constexpr_4i32_2i64_1u() {
+; CHECK-LABEL: @bitcast_constexpr_4i32_2i64_1u(
+; CHECK-NEXT:    ret <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
+;
+  %cast = bitcast <2 x i64><i64 1, i64 undef> to <4 x i32>
+  ret <4 x i32> %cast
+}
+
+define <4 x i32> @bitcast_constexpr_4i32_2i64() {
+; CHECK-LABEL: @bitcast_constexpr_4i32_2i64(
+; CHECK-NEXT:    ret <4 x i32> <i32 undef, i32 undef, i32 2, i32 0>
+;
+  %cast = bitcast <2 x i64><i64 undef, i64 2> to <4 x i32>
+  ret <4 x i32> %cast
+}
+
+define <8 x i16> @bitcast_constexpr_8i16_2i64_u2() {
+; CHECK-LABEL: @bitcast_constexpr_8i16_2i64_u2(
+; CHECK-NEXT:    ret <8 x i16> <i16 undef, i16 undef, i16 undef, i16 undef, i16 2, i16 0, i16 0, i16 0>
+;
+  %cast = bitcast <2 x i64><i64 undef, i64 2> to <8 x i16>
+  ret <8 x i16> %cast
+}
+
+define <8 x i16> @bitcast_constexpr_8i16_2i64_1u() {
+; CHECK-LABEL: @bitcast_constexpr_8i16_2i64_1u(
+; CHECK-NEXT:    ret <8 x i16> <i16 1, i16 0, i16 0, i16 0, i16 undef, i16 undef, i16 undef, i16 undef>
+;
+  %cast = bitcast <2 x i64><i64 1, i64 undef> to <8 x i16>
+  ret <8 x i16> %cast
+}
+
+define <8 x i16> @bitcast_constexpr_8i16_2i64_u65536() {
+; CHECK-LABEL: @bitcast_constexpr_8i16_2i64_u65536(
+; CHECK-NEXT:    ret <8 x i16> <i16 undef, i16 undef, i16 undef, i16 undef, i16 0, i16 1, i16 0, i16 0>
+;
+  %cast = bitcast <2 x i64><i64 undef, i64 65536> to <8 x i16>
+  ret <8 x i16> %cast
+}
+
+define <16 x i8> @bitcast_constexpr_16i8_2i64_u2() {
+; CHECK-LABEL: @bitcast_constexpr_16i8_2i64_u2(
+; CHECK-NEXT:    ret <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 2, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+;
+  %cast = bitcast <2 x i64><i64 undef, i64 2> to <16 x i8>
+  ret <16 x i8> %cast
+}
+
+define <16 x i8> @bitcast_constexpr_16i8_2i64_256u() {
+; CHECK-LABEL: @bitcast_constexpr_16i8_2i64_256u(
+; CHECK-NEXT:    ret <16 x i8> <i8 0, i8 1, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>
+;
+  %cast = bitcast <2 x i64><i64 256, i64 undef> to <16 x i8>
+  ret <16 x i8> %cast
+}
+
+define <16 x i8> @bitcast_constexpr_16i8_2i64_u256() {
+; CHECK-LABEL: @bitcast_constexpr_16i8_2i64_u256(
+; CHECK-NEXT:    ret <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 1, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+;
+  %cast = bitcast <2 x i64><i64 undef, i64 256> to <16 x i8>
+  ret <16 x i8> %cast
+}
+
+define <8 x i16> @bitcast_constexpr_8i16_4i32_uu22() {
+; CHECK-LABEL: @bitcast_constexpr_8i16_4i32_uu22(
+; CHECK-NEXT:    ret <8 x i16> <i16 undef, i16 undef, i16 undef, i16 undef, i16 2, i16 0, i16 2, i16 0>
+;
+  %cast = bitcast <4 x i32><i32 undef, i32 undef, i32 2, i32 2> to <8 x i16>
+  ret <8 x i16> %cast
+}
+
+define <8 x i16> @bitcast_constexpr_8i16_4i32_10uu() {
+; CHECK-LABEL: @bitcast_constexpr_8i16_4i32_10uu(
+; CHECK-NEXT:    ret <8 x i16> <i16 1, i16 0, i16 0, i16 0, i16 undef, i16 undef, i16 undef, i16 undef>
+;
+  %cast = bitcast <4 x i32><i32 1, i32 0, i32 undef, i32 undef> to <8 x i16>
+  ret <8 x i16> %cast
+}
+
+define <8 x i16> @bitcast_constexpr_8i16_4i32_u257u256() {
+; CHECK-LABEL: @bitcast_constexpr_8i16_4i32_u257u256(
+; CHECK-NEXT:    ret <8 x i16> <i16 undef, i16 undef, i16 0, i16 1, i16 undef, i16 undef, i16 0, i16 1>
+;
+  %cast = bitcast <4 x i32><i32 undef, i32 65536, i32 undef, i32 65536> to <8 x i16>
+  ret <8 x i16> %cast
+}
+
+define <16 x i8> @bitcast_constexpr_16i8_4i32_u2u2() {
+; CHECK-LABEL: @bitcast_constexpr_16i8_4i32_u2u2(
+; CHECK-NEXT:    ret <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 2, i8 0, i8 0, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 2, i8 0, i8 0, i8 0>
+;
+  %cast = bitcast <4 x i32><i32 undef, i32 2, i32 undef, i32 2> to <16 x i8>
+  ret <16 x i8> %cast
+}
+
+define <16 x i8> @bitcast_constexpr_16i8_4i32_1u1u() {
+; CHECK-LABEL: @bitcast_constexpr_16i8_4i32_1u1u(
+; CHECK-NEXT:    ret <16 x i8> <i8 1, i8 0, i8 0, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 1, i8 0, i8 0, i8 0, i8 undef, i8 undef, i8 undef, i8 undef>
+;
+  %cast = bitcast <4 x i32><i32 1, i32 undef, i32 1, i32 undef> to <16 x i8>
+  ret <16 x i8> %cast
+}
+
+define <16 x i8> @bitcast_constexpr_16i8_4i32_u256uu() {
+; CHECK-LABEL: @bitcast_constexpr_16i8_4i32_u256uu(
+; CHECK-NEXT:    ret <16 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 1, i8 0, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>
+;
+  %cast = bitcast <4 x i32><i32 undef, i32 256, i32 undef, i32 undef> to <16 x i8>
+  ret <16 x i8> %cast
+}
+
+define <16 x i8> @bitcast_constexpr_16i8_8i16_u2u2u2u2() {
+; CHECK-LABEL: @bitcast_constexpr_16i8_8i16_u2u2u2u2(
+; CHECK-NEXT:    ret <16 x i8> <i8 undef, i8 undef, i8 2, i8 0, i8 undef, i8 undef, i8 2, i8 0, i8 undef, i8 undef, i8 2, i8 0, i8 undef, i8 undef, i8 2, i8 0>
+;
+  %cast = bitcast <8 x i16><i16 undef, i16 2, i16 undef, i16 2, i16 undef, i16 2, i16 undef, i16 2> to <16 x i8>
+  ret <16 x i8> %cast
+}
+
+define <16 x i8> @bitcast_constexpr_16i8_8i16_1u1u1u1u() {
+; CHECK-LABEL: @bitcast_constexpr_16i8_8i16_1u1u1u1u(
+; CHECK-NEXT:    ret <16 x i8> <i8 1, i8 0, i8 undef, i8 undef, i8 1, i8 0, i8 undef, i8 undef, i8 1, i8 0, i8 undef, i8 undef, i8 1, i8 0, i8 undef, i8 undef>
+;
+  %cast = bitcast <8 x i16><i16 1, i16 undef, i16 1, i16 undef, i16 1, i16 undef, i16 1, i16 undef> to <16 x i8>
+  ret <16 x i8> %cast
+}
+
+define <16 x i8> @bitcast_constexpr_16i8_8i16_u256uuu256uu() {
+; CHECK-LABEL: @bitcast_constexpr_16i8_8i16_u256uuu256uu(
+; CHECK-NEXT:    ret <16 x i8> <i8 undef, i8 undef, i8 0, i8 1, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 0, i8 1, i8 undef, i8 undef, i8 undef, i8 undef>
+;
+  %cast = bitcast <8 x i16><i16 undef, i16 256, i16 undef, i16 undef, i16 undef, i16 256, i16 undef, i16 undef> to <16 x i8>
+  ret <16 x i8> %cast
+}

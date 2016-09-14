@@ -97,7 +97,8 @@ public:
   void applyStmtList(DIE &D);
 
   /// getOrCreateGlobalVariableDIE - get or create global variable DIE.
-  DIE *getOrCreateGlobalVariableDIE(const DIGlobalVariable *GV);
+  DIE *getOrCreateGlobalVariableDIE(const DIGlobalVariable *GV,
+                                    const GlobalVariable *Global);
 
   /// addLabelAddress - Add a dwarf label attribute data and value using
   /// either DW_FORM_addr or DW_FORM_GNU_addr_index.

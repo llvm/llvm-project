@@ -31,7 +31,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 
 %struct.S0 = type { i16, i32 }
 
-@a = common global %struct.S0 zeroinitializer, align 4
+@a = common global %struct.S0 zeroinitializer, align 4, !dbg !21
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
@@ -84,7 +84,7 @@ entry:
 !18 = !DISubroutineType(types: !19)
 !19 = !{!15}
 !20 = !{!21}
-!21 = !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 4, type: !11, isLocal: false, isDefinition: true, variable: %struct.S0* @a)
+!21 = !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 4, type: !11, isLocal: false, isDefinition: true)
 !22 = !{i32 2, !"Dwarf Version", i32 2}
 !23 = !{i32 2, !"Debug Info Version", i32 3}
 !24 = !{i32 1, !"PIC Level", i32 2}

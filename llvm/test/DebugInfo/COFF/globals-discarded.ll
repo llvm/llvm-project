@@ -15,7 +15,7 @@ source_filename = "t.ii"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.0.0"
 
-@x = global i32 42
+@x = global i32 42, !dbg !6
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!35, !36, !37}
@@ -27,7 +27,7 @@ target triple = "x86_64-pc-windows-msvc19.0.0"
 !3 = !{!4, !6}
 !4 = distinct !DIGlobalVariable(name: "_OptionsStorage", scope: !0, file: !1, line: 3, type: !5, isLocal: true, isDefinition: true)
 !5 = !DIBasicType(name: "unsigned int", size: 32, align: 32, encoding: DW_ATE_unsigned)
-!6 = distinct !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 4, type: !5, isLocal: true, isDefinition: true, variable: i32* @x)
+!6 = distinct !DIGlobalVariable(name: "x", scope: !0, file: !1, line: 4, type: !5, isLocal: true, isDefinition: true)
 
 !35 = !{i32 2, !"CodeView", i32 1}
 !36 = !{i32 2, !"Debug Info Version", i32 3}

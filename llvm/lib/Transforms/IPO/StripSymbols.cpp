@@ -312,13 +312,14 @@ bool StripDeadDebugInfo::runOnModule(Module &M) {
   // replace the current list of potentially dead global variables/functions
   // with the live list.
   SmallVector<Metadata *, 64> LiveGlobalVariables;
-  SmallVector<Metadata *, 64> LiveSubprograms;
   DenseSet<const MDNode *> VisitedSet;
 
-  std::set<DISubprogram *> LiveSPs;
-  for (Function &F : M) {
-    if (DISubprogram *SP = F.getSubprogram())
-      LiveSPs.insert(SP);
+  std::set<DIGlobalVariable *> LiveGVs;
+  for (GlobalVariable &GV : M.globals()) {
+    SmallVector<DIGlobalVariable *, 1> DIs;
+    GV.getDebugInfo(DIs);
+    for (DIGlobalVariable *DI : DIs)
+      LiveGVs.insert(DI);
   }
 
   for (DICompileUnit *DIC : F.compile_units()) {
@@ -329,9 +330,8 @@ bool StripDeadDebugInfo::runOnModule(Module &M) {
       if (!VisitedSet.insert(DIG).second)
         continue;
 
-      // If the global variable referenced by DIG is not null, the global
-      // variable is live.
-      if (DIG->getVariable())
+      // If a global variable references DIG, the global variable is live.
+      if (LiveGVs.count(DIG))
         LiveGlobalVariables.push_back(DIG);
       else
         GlobalVariableChange = true;
@@ -345,7 +345,6 @@ bool StripDeadDebugInfo::runOnModule(Module &M) {
     }
 
     // Reset lists for the next iteration.
-    LiveSubprograms.clear();
     LiveGlobalVariables.clear();
   }
 

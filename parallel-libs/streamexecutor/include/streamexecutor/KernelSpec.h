@@ -200,9 +200,8 @@ private:
 class MultiKernelLoaderSpec {
 public:
   std::string getKernelName() const {
-    if (TheKernelName) {
+    if (TheKernelName)
       return *TheKernelName;
-    }
     return "";
   }
 

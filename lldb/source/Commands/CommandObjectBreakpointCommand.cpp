@@ -24,6 +24,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
+#include "llvm/ADT/STLExtras.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -215,14 +217,9 @@ are no syntax errors may indicate that a function was declared but never called.
       if (!bp_options)
         continue;
 
-      std::unique_ptr<BreakpointOptions::CommandData> data_ap(
-          new BreakpointOptions::CommandData());
-      if (data_ap) {
-        data_ap->user_source.SplitIntoLines(line.c_str(), line.size());
-        BatonSP baton_sp(
-            new BreakpointOptions::CommandBaton(data_ap.release()));
-        bp_options->SetCallback(BreakpointOptionsCallbackFunction, baton_sp);
-      }
+      auto cmd_data = llvm::make_unique<BreakpointOptions::CommandData>();
+      cmd_data->user_source.SplitIntoLines(line.c_str(), line.size());
+      bp_options->SetCommandDataCallback(std::move(cmd_data));
     }
   }
 
@@ -242,8 +239,7 @@ are no syntax errors may indicate that a function was declared but never called.
   SetBreakpointCommandCallback(std::vector<BreakpointOptions *> &bp_options_vec,
                                const char *oneliner) {
     for (auto bp_options : bp_options_vec) {
-      std::unique_ptr<BreakpointOptions::CommandData> data_ap(
-          new BreakpointOptions::CommandData());
+      auto cmd_data = llvm::make_unique<BreakpointOptions::CommandData>();
 
       // It's necessary to set both user_source and script_source to the
       // oneliner.
@@ -251,55 +247,12 @@ are no syntax errors may indicate that a function was declared but never called.
       // command list)
       // while the latter is used for Python to interpret during the actual
       // callback.
-      data_ap->user_source.AppendString(oneliner);
-      data_ap->script_source.assign(oneliner);
-      data_ap->stop_on_error = m_options.m_stop_on_error;
+      cmd_data->user_source.AppendString(oneliner);
+      cmd_data->script_source.assign(oneliner);
+      cmd_data->stop_on_error = m_options.m_stop_on_error;
 
-      BatonSP baton_sp(new BreakpointOptions::CommandBaton(data_ap.release()));
-      bp_options->SetCallback(BreakpointOptionsCallbackFunction, baton_sp);
+      bp_options->SetCommandDataCallback(std::move(cmd_data));
     }
-  }
-
-  static bool BreakpointOptionsCallbackFunction(
-      void *baton, StoppointCallbackContext *context, lldb::user_id_t break_id,
-      lldb::user_id_t break_loc_id) {
-    bool ret_value = true;
-    if (baton == nullptr)
-      return true;
-
-    BreakpointOptions::CommandData *data =
-        (BreakpointOptions::CommandData *)baton;
-    StringList &commands = data->user_source;
-
-    if (commands.GetSize() > 0) {
-      ExecutionContext exe_ctx(context->exe_ctx_ref);
-      Target *target = exe_ctx.GetTargetPtr();
-      if (target) {
-        CommandReturnObject result;
-        Debugger &debugger = target->GetDebugger();
-        // Rig up the results secondary output stream to the debugger's, so the
-        // output will come out synchronously
-        // if the debugger is set up that way.
-
-        StreamSP output_stream(debugger.GetAsyncOutputStream());
-        StreamSP error_stream(debugger.GetAsyncErrorStream());
-        result.SetImmediateOutputStream(output_stream);
-        result.SetImmediateErrorStream(error_stream);
-
-        CommandInterpreterRunOptions options;
-        options.SetStopOnContinue(true);
-        options.SetStopOnError(data->stop_on_error);
-        options.SetEchoCommands(true);
-        options.SetPrintResults(true);
-        options.SetAddToHistory(false);
-
-        debugger.GetCommandInterpreter().HandleCommands(commands, &exe_ctx,
-                                                        options, result);
-        result.GetImmediateOutputStream()->Flush();
-        result.GetImmediateErrorStream()->Flush();
-      }
-    }
-    return ret_value;
   }
 
   class CommandOptions : public Options {

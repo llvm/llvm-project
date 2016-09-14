@@ -47,7 +47,7 @@ body:             |
   ; CHECK-NEXT: %rdi = COPY %rsi
   ; CHECK-NEXT: %rsi = COPY %rax
   ; CHECK-NEXT: CMP64ri8 %rax, 9, implicit-def %eflags
-  ; CHECK-NEXT: TCRETURNdi64cc @f1, 0, 3, csr_64, implicit %rsp, implicit %rsp, implicit %rdi, implicit %rsi
+  ; CHECK-NEXT: TCRETURNdi64cc @f1, 0, 3, csr_64, implicit %rsp, implicit %eflags, implicit %rsp, implicit %rdi, implicit %rsi
 
   bb.1:
     successors: %bb.2, %bb.3

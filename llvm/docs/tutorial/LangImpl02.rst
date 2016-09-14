@@ -708,7 +708,7 @@ For example, here is a sample interaction:
 
 There is a lot of room for extension here. You can define new AST nodes,
 extend the language in many ways, etc. In the `next
-installment <LangImpl3.html>`_, we will describe how to generate LLVM
+installment <LangImpl03.html>`_, we will describe how to generate LLVM
 Intermediate Representation (IR) from the AST.
 
 Full Code Listing

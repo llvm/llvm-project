@@ -3,7 +3,7 @@
 
 %class.A = type { [42 x i32] }
 
-@a = global %class.A zeroinitializer, align 4
+@a = global %class.A zeroinitializer, align 4, !dbg !5
 
 ; Check that we can handle non-default array bounds. In this case, the array
 ; goes from [-3, 38].
@@ -33,7 +33,7 @@
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.3 (trunk 169136)", isOptimized: false, emissionKind: FullDebug, file: !20, enums: !1, retainedTypes: !1, globals: !3, imports:  !1)
 !1 = !{}
 !3 = !{!5}
-!5 = !DIGlobalVariable(name: "a", line: 1, isLocal: false, isDefinition: true, scope: null, file: !6, type: !7, variable: %class.A* @a)
+!5 = !DIGlobalVariable(name: "a", line: 1, isLocal: false, isDefinition: true, scope: null, file: !6, type: !7)
 !6 = !DIFile(filename: "t.cpp", directory: "/Volumes/Sandbox/llvm")
 !7 = !DICompositeType(tag: DW_TAG_class_type, name: "A", line: 1, align: 32, file: !20, elements: !8)
 !8 = !{!9, !14}

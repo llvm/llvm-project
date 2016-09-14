@@ -93,6 +93,7 @@ public:
   uintX_t getSize() const { return Header.sh_size; }
   void setSize(uintX_t Val) { Header.sh_size = Val; }
   uintX_t getFlags() const { return Header.sh_flags; }
+  void updateFlags(uintX_t Val) { Header.sh_flags |= Val; }
   uint32_t getPhdrFlags() const;
   uintX_t getFileOff() const { return Header.sh_offset; }
   uintX_t getAlignment() const { return Header.sh_addralign; }
@@ -803,10 +804,10 @@ template <class ELFT> class OutputSectionFactory {
 public:
   std::pair<OutputSectionBase<ELFT> *, bool> create(InputSectionBase<ELFT> *C,
                                                     StringRef OutsecName);
+  std::pair<OutputSectionBase<ELFT> *, bool>
+  create(const SectionKey<ELFT::Is64Bits> &Key, InputSectionBase<ELFT> *C);
 
 private:
-  Key createKey(InputSectionBase<ELFT> *C, StringRef OutsecName);
-
   llvm::SmallDenseMap<Key, OutputSectionBase<ELFT> *> Map;
 };
 

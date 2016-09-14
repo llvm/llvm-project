@@ -56,6 +56,38 @@ static bool ignoreCallingConv(LibFunc::Func Func) {
          Func == LibFunc::llabs || Func == LibFunc::strlen;
 }
 
+static bool isCallingConvCCompatible(CallInst *CI) {
+  switch(CI->getCallingConv()) {
+  default:
+    return false;
+  case llvm::CallingConv::C:
+    return true;
+  case llvm::CallingConv::ARM_APCS:
+  case llvm::CallingConv::ARM_AAPCS:
+  case llvm::CallingConv::ARM_AAPCS_VFP: {
+
+    // The iOS ABI diverges from the standard in some cases, so for now don't
+    // try to simplify those calls.
+    if (Triple(CI->getModule()->getTargetTriple()).isiOS())
+      return false;
+
+    auto *FuncTy = CI->getFunctionType();
+
+    if (!FuncTy->getReturnType()->isPointerTy() &&
+        !FuncTy->getReturnType()->isIntegerTy() &&
+        !FuncTy->getReturnType()->isVoidTy())
+      return false;
+
+    for (auto Param : FuncTy->params()) {
+      if (!Param->isPointerTy() && !Param->isIntegerTy())
+        return false;
+    }
+    return true;
+  }
+  }
+  return false;
+}
+
 /// Return true if it only matters that the value is equal or not-equal to zero.
 static bool isOnlyUsedInZeroEqualityComparison(Value *V) {
   for (User *U : V->users()) {
@@ -1898,7 +1930,7 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
   if (TLI->getLibFunc(*Callee, Func) && TLI->has(Func)) {
     // Make sure we never change the calling convention.
     assert((ignoreCallingConv(Func) ||
-            CI->getCallingConv() == llvm::CallingConv::C) &&
+            isCallingConvCCompatible(CI)) &&
       "Optimizing string/memory libcall would change the calling convention");
     switch (Func) {
     case LibFunc::strcat:
@@ -1965,7 +1997,7 @@ Value *LibCallSimplifier::optimizeCall(CallInst *CI) {
   SmallVector<OperandBundleDef, 2> OpBundles;
   CI->getOperandBundlesAsDefs(OpBundles);
   IRBuilder<> Builder(CI, /*FPMathTag=*/nullptr, OpBundles);
-  bool isCallingConvC = CI->getCallingConv() == llvm::CallingConv::C;
+  bool isCallingConvC = isCallingConvCCompatible(CI);
 
   // Command-line parameter overrides instruction attribute.
   if (EnableUnsafeFPShrink.getNumOccurrences() > 0)
@@ -2321,7 +2353,7 @@ Value *FortifiedLibCallSimplifier::optimizeCall(CallInst *CI) {
   SmallVector<OperandBundleDef, 2> OpBundles;
   CI->getOperandBundlesAsDefs(OpBundles);
   IRBuilder<> Builder(CI, /*FPMathTag=*/nullptr, OpBundles);
-  bool isCallingConvC = CI->getCallingConv() == llvm::CallingConv::C;
+  bool isCallingConvC = isCallingConvCCompatible(CI);
 
   // First, check that this is a known library functions and that the prototype
   // is correct.

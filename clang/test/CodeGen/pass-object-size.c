@@ -59,7 +59,8 @@ void test1() {
 
 // CHECK-LABEL: define void @test2
 void test2(struct Foo *t) {
-  // CHECK: call i32 @ObjectSize1(i8* %{{.*}}, i64 36)
+  // CHECK: [[VAR:%[0-9]+]] = call i64 @llvm.objectsize
+  // CHECK: call i32 @ObjectSize1(i8* %{{.*}}, i64 [[VAR]])
   gi = ObjectSize1(&t->t[1]);
   // CHECK: call i32 @ObjectSize3(i8* %{{.*}}, i64 36)
   gi = ObjectSize3(&t->t[1]);
@@ -168,7 +169,8 @@ void test4(struct Foo *t) {
 
   // CHECK: call i32 @_Z27NoViableOverloadObjectSize0PvU17pass_object_size0(i8* %{{.*}}, i64 %{{.*}})
   gi = NoViableOverloadObjectSize0(&t[1].t[1]);
-  // CHECK: call i32 @_Z27NoViableOverloadObjectSize1PvU17pass_object_size1(i8* %{{.*}}, i64 36)
+  // CHECK: [[VAR:%[0-9]+]] = call i64 @llvm.objectsize
+  // CHECK: call i32 @_Z27NoViableOverloadObjectSize1PvU17pass_object_size1(i8* %{{.*}}, i64 [[VAR]])
   gi = NoViableOverloadObjectSize1(&t[1].t[1]);
   // CHECK: call i32 @_Z27NoViableOverloadObjectSize2PvU17pass_object_size2(i8* %{{.*}}, i64 %{{.*}})
   gi = NoViableOverloadObjectSize2(&t[1].t[1]);
@@ -274,7 +276,8 @@ void test7() {
 
 // CHECK-LABEL: define void @test8
 void test8(struct Foo *t) {
-  // CHECK: call i32 @"\01Identity"(i8* %{{.*}}, i64 36)
+  // CHECK: [[VAR:%[0-9]+]] = call i64 @llvm.objectsize
+  // CHECK: call i32 @"\01Identity"(i8* %{{.*}}, i64 [[VAR]])
   gi = AsmObjectSize1(&t[1].t[1]);
   // CHECK: call i32 @"\01Identity"(i8* %{{.*}}, i64 36)
   gi = AsmObjectSize3(&t[1].t[1]);

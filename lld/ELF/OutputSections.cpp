@@ -1831,23 +1831,56 @@ void MipsAbiFlagsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
 }
 
 template <class ELFT>
+static typename ELFT::uint getOutFlags(InputSectionBase<ELFT> *S) {
+  return S->getSectionHdr()->sh_flags & ~SHF_GROUP & ~SHF_COMPRESSED;
+}
+
+template <class ELFT>
+static SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
+                                            StringRef OutsecName) {
+  const typename ELFT::Shdr *H = C->getSectionHdr();
+  typedef typename ELFT::uint uintX_t;
+  uintX_t Flags = getOutFlags(C);
+
+  // For SHF_MERGE we create different output sections for each alignment.
+  // This makes each output section simple and keeps a single level mapping from
+  // input to output.
+  uintX_t Alignment = 0;
+  if (isa<MergeInputSection<ELFT>>(C))
+    Alignment = std::max(H->sh_addralign, H->sh_entsize);
+
+  uint32_t Type = H->sh_type;
+  return SectionKey<ELFT::Is64Bits>{OutsecName, Type, Flags, Alignment};
+}
+
+template <class ELFT>
 std::pair<OutputSectionBase<ELFT> *, bool>
 OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
                                    StringRef OutsecName) {
   SectionKey<ELFT::Is64Bits> Key = createKey(C, OutsecName);
-  OutputSectionBase<ELFT> *&Sec = Map[Key];
-  if (Sec)
-    return {Sec, false};
+  return create(Key, C);
+}
 
+template <class ELFT>
+std::pair<OutputSectionBase<ELFT> *, bool>
+OutputSectionFactory<ELFT>::create(const SectionKey<ELFT::Is64Bits> &Key,
+                                   InputSectionBase<ELFT> *C) {
+  uintX_t Flags = getOutFlags(C);
+  OutputSectionBase<ELFT> *&Sec = Map[Key];
+  if (Sec) {
+    Sec->updateFlags(Flags);
+    return {Sec, false};
+  }
+
+  uint32_t Type = C->getSectionHdr()->sh_type;
   switch (C->kind()) {
   case InputSectionBase<ELFT>::Regular:
-    Sec = new OutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
+    Sec = new OutputSection<ELFT>(Key.Name, Type, Flags);
     break;
   case InputSectionBase<ELFT>::EHFrame:
     return {Out<ELFT>::EhFrame, false};
   case InputSectionBase<ELFT>::Merge:
-    Sec = new MergeOutputSection<ELFT>(Key.Name, Key.Type, Key.Flags,
-                                       Key.Alignment);
+    Sec = new MergeOutputSection<ELFT>(Key.Name, Type, Flags, Key.Alignment);
     break;
   case InputSectionBase<ELFT>::MipsReginfo:
     Sec = new MipsReginfoOutputSection<ELFT>();
@@ -1861,24 +1894,6 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
   }
   Out<ELFT>::Pool.emplace_back(Sec);
   return {Sec, true};
-}
-
-template <class ELFT>
-SectionKey<ELFT::Is64Bits>
-OutputSectionFactory<ELFT>::createKey(InputSectionBase<ELFT> *C,
-                                      StringRef OutsecName) {
-  const Elf_Shdr *H = C->getSectionHdr();
-  uintX_t Flags = H->sh_flags & ~SHF_GROUP & ~SHF_COMPRESSED;
-
-  // For SHF_MERGE we create different output sections for each alignment.
-  // This makes each output section simple and keeps a single level mapping from
-  // input to output.
-  uintX_t Alignment = 0;
-  if (isa<MergeInputSection<ELFT>>(C))
-    Alignment = std::max(H->sh_addralign, H->sh_entsize);
-
-  uint32_t Type = H->sh_type;
-  return SectionKey<ELFT::Is64Bits>{OutsecName, Type, Flags, Alignment};
 }
 
 template <bool Is64Bits>

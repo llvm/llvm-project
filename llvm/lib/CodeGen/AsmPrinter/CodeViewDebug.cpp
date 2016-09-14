@@ -2001,6 +2001,14 @@ void CodeViewDebug::emitDebugInfoForUDTs(
 }
 
 void CodeViewDebug::emitDebugInfoForGlobals() {
+  DenseMap<const DIGlobalVariable *, const GlobalVariable *> GlobalMap;
+  for (const GlobalVariable &GV : MMI->getModule()->globals()) {
+    SmallVector<MDNode *, 1> MDs;
+    GV.getMetadata(LLVMContext::MD_dbg, MDs);
+    for (MDNode *MD : MDs)
+      GlobalMap[cast<DIGlobalVariable>(MD)] = &GV;
+  }
+
   NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
   for (const MDNode *Node : CUs->operands()) {
     const auto *CU = cast<DICompileUnit>(Node);
@@ -2011,15 +2019,14 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
     switchToDebugSectionForSymbol(nullptr);
     MCSymbol *EndLabel = nullptr;
     for (const DIGlobalVariable *G : CU->getGlobalVariables()) {
-      if (const auto *GV = dyn_cast_or_null<GlobalVariable>(G->getVariable())) {
+      if (const auto *GV = GlobalMap.lookup(G))
         if (!GV->hasComdat() && !GV->isDeclarationForLinker()) {
           if (!EndLabel) {
             OS.AddComment("Symbol subsection for globals");
             EndLabel = beginCVSubsection(ModuleSubstreamKind::Symbols);
           }
-          emitDebugInfoForGlobal(G, Asm->getSymbol(GV));
+          emitDebugInfoForGlobal(G, GV, Asm->getSymbol(GV));
         }
-      }
     }
     if (EndLabel)
       endCVSubsection(EndLabel);
@@ -2027,14 +2034,14 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
     // Second, emit each global that is in a comdat into its own .debug$S
     // section along with its own symbol substream.
     for (const DIGlobalVariable *G : CU->getGlobalVariables()) {
-      if (const auto *GV = dyn_cast_or_null<GlobalVariable>(G->getVariable())) {
+      if (const auto *GV = GlobalMap.lookup(G)) {
         if (GV->hasComdat()) {
           MCSymbol *GVSym = Asm->getSymbol(GV);
           OS.AddComment("Symbol subsection for " +
                         Twine(GlobalValue::getRealLinkageName(GV->getName())));
           switchToDebugSectionForSymbol(GVSym);
           EndLabel = beginCVSubsection(ModuleSubstreamKind::Symbols);
-          emitDebugInfoForGlobal(G, GVSym);
+          emitDebugInfoForGlobal(G, GV, GVSym);
           endCVSubsection(EndLabel);
         }
       }
@@ -2055,6 +2062,7 @@ void CodeViewDebug::emitDebugInfoForRetainedTypes() {
 }
 
 void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
+                                           const GlobalVariable *GV,
                                            MCSymbol *GVSym) {
   // DataSym record, see SymbolRecord.h for more info.
   // FIXME: Thread local data, etc
@@ -2063,7 +2071,6 @@ void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
   OS.AddComment("Record length");
   OS.emitAbsoluteSymbolDiff(DataEnd, DataBegin, 2);
   OS.EmitLabel(DataBegin);
-  const auto *GV = cast<GlobalVariable>(DIGV->getVariable());
   if (DIGV->isLocalToUnit()) {
     if (GV->isThreadLocal()) {
       OS.AddComment("Record kind: S_LTHREAD32");

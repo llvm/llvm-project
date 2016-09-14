@@ -317,6 +317,28 @@ output format of the diagnostics that it generates.
    by category, so it should be a high level category. We want dozens
    of these, not hundreds or thousands of them.
 
+.. _opt_fdiagnostics-show-hotness:
+
+**-f[no-]diagnostics-show-hotness**
+   Enable profile hotness information in diagnostic line.
+
+   This option, which defaults to off, controls whether Clang prints the
+   profile hotness associated with a diagnostics in the presence of
+   profile-guided optimization information.  This is currently supported with
+   optimization remarks (see :ref:`Options to Emit Optimization Reports
+   <rpass>`).  The hotness information allows users to focus on the hot
+   optimization remarks that are likely to be more relevant for run-time
+   performance.
+
+   For example, in this output, the block containing the callsite of `foo` was
+   executed 3000 times according to the profile data:
+
+   ::
+
+         s.c:7:10: remark: foo inlined into bar (hotness: 3000) [-Rpass-analysis=inline]
+           sum += foo(x, x - 2);
+                  ^
+
 .. _opt_fdiagnostics-fixit-info:
 
 **-f[no-]diagnostics-fixit-info**
@@ -535,6 +557,8 @@ control the crash diagnostics.
 The -fno-crash-diagnostics flag can be helpful for speeding the process
 of generating a delta reduced test case.
 
+.. _rpass:
+
 Options to Emit Optimization Reports
 ------------------------------------
 
@@ -577,6 +601,10 @@ made by the compiler. Optimization remarks do not really make sense
 outside of the major transformations (e.g., inlining, vectorization,
 loop optimizations) and not every optimization pass supports this
 feature.
+
+Note that when using profile-guided optimization information, profile hotness
+information can be included in the remarks (see
+:ref:`-fdiagnostics-show-hotness <opt_fdiagnostics-show-hotness>`).
 
 Current limitations
 ^^^^^^^^^^^^^^^^^^^

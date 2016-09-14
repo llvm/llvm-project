@@ -36,6 +36,78 @@ BreakpointResolverFileLine::BreakpointResolverFileLine(
 
 BreakpointResolverFileLine::~BreakpointResolverFileLine() {}
 
+BreakpointResolver *BreakpointResolverFileLine::CreateFromStructuredData(
+    Breakpoint *bkpt, const StructuredData::Dictionary &options_dict,
+    Error &error) {
+  std::string filename;
+  uint32_t line_no;
+  bool check_inlines;
+  bool skip_prologue;
+  bool exact_match;
+  bool success;
+
+  lldb::addr_t offset = 0;
+
+  success = options_dict.GetValueForKeyAsString(GetKey(OptionNames::FileName),
+                                                filename);
+  if (!success) {
+    error.SetErrorString("BRFL::CFSD: Couldn't find filename entry.");
+    return nullptr;
+  }
+
+  success = options_dict.GetValueForKeyAsInteger(
+      GetKey(OptionNames::LineNumber), line_no);
+  if (!success) {
+    error.SetErrorString("BRFL::CFSD: Couldn't find line number entry.");
+    return nullptr;
+  }
+
+  success = options_dict.GetValueForKeyAsBoolean(GetKey(OptionNames::Inlines),
+                                                 check_inlines);
+  if (!success) {
+    error.SetErrorString("BRFL::CFSD: Couldn't find check inlines entry.");
+    return nullptr;
+  }
+
+  success = options_dict.GetValueForKeyAsBoolean(
+      GetKey(OptionNames::SkipPrologue), skip_prologue);
+  if (!success) {
+    error.SetErrorString("BRFL::CFSD: Couldn't find skip prologue entry.");
+    return nullptr;
+  }
+
+  success = options_dict.GetValueForKeyAsBoolean(
+      GetKey(OptionNames::ExactMatch), exact_match);
+  if (!success) {
+    error.SetErrorString("BRFL::CFSD: Couldn't find exact match entry.");
+    return nullptr;
+  }
+
+  FileSpec file_spec(filename.c_str(), false);
+
+  return new BreakpointResolverFileLine(bkpt, file_spec, line_no, offset,
+                                        check_inlines, skip_prologue,
+                                        exact_match);
+}
+
+StructuredData::ObjectSP
+BreakpointResolverFileLine::SerializeToStructuredData() {
+  StructuredData::DictionarySP options_dict_sp(
+      new StructuredData::Dictionary());
+
+  options_dict_sp->AddStringItem(GetKey(OptionNames::FileName),
+                                 m_file_spec.GetPath());
+  options_dict_sp->AddIntegerItem(GetKey(OptionNames::LineNumber),
+                                  m_line_number);
+  options_dict_sp->AddBooleanItem(GetKey(OptionNames::Inlines), m_inlines);
+  options_dict_sp->AddBooleanItem(GetKey(OptionNames::SkipPrologue),
+                                  m_skip_prologue);
+  options_dict_sp->AddBooleanItem(GetKey(OptionNames::ExactMatch),
+                                  m_exact_match);
+
+  return WrapOptionsDict(options_dict_sp);
+}
+
 Searcher::CallbackReturn
 BreakpointResolverFileLine::SearchCallback(SearchFilter &filter,
                                            SymbolContext &context,

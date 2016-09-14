@@ -23,80 +23,83 @@
 using namespace lldb;
 using namespace lldb_private;
 
-class ExceptionSearchFilter : public SearchFilter {
-public:
-  ExceptionSearchFilter(const lldb::TargetSP &target_sp,
-                        lldb::LanguageType language,
-                        bool update_module_list = true)
-      : SearchFilter(target_sp), m_language(language),
-        m_language_runtime(nullptr), m_filter_sp() {
-    if (update_module_list)
-      UpdateModuleListIfNeeded();
-  }
-
-  ~ExceptionSearchFilter() override = default;
-
-  bool ModulePasses(const lldb::ModuleSP &module_sp) override {
+ExceptionSearchFilter::ExceptionSearchFilter(const lldb::TargetSP &target_sp,
+                                             lldb::LanguageType language,
+                                             bool update_module_list)
+    : SearchFilter(target_sp, FilterTy::Exception), m_language(language),
+      m_language_runtime(nullptr), m_filter_sp() {
+  if (update_module_list)
     UpdateModuleListIfNeeded();
-    if (m_filter_sp)
-      return m_filter_sp->ModulePasses(module_sp);
-    return false;
-  }
+}
 
-  bool ModulePasses(const FileSpec &spec) override {
-    UpdateModuleListIfNeeded();
-    if (m_filter_sp)
-      return m_filter_sp->ModulePasses(spec);
-    return false;
-  }
+bool ExceptionSearchFilter::ModulePasses(const lldb::ModuleSP &module_sp) {
+  UpdateModuleListIfNeeded();
+  if (m_filter_sp)
+    return m_filter_sp->ModulePasses(module_sp);
+  return false;
+}
 
-  void Search(Searcher &searcher) override {
-    UpdateModuleListIfNeeded();
-    if (m_filter_sp)
-      m_filter_sp->Search(searcher);
-  }
+bool ExceptionSearchFilter::ModulePasses(const FileSpec &spec) {
+  UpdateModuleListIfNeeded();
+  if (m_filter_sp)
+    return m_filter_sp->ModulePasses(spec);
+  return false;
+}
 
-  void GetDescription(Stream *s) override {
-    UpdateModuleListIfNeeded();
-    if (m_filter_sp)
-      m_filter_sp->GetDescription(s);
-  }
+void ExceptionSearchFilter::Search(Searcher &searcher) {
+  UpdateModuleListIfNeeded();
+  if (m_filter_sp)
+    m_filter_sp->Search(searcher);
+}
 
-protected:
-  LanguageType m_language;
-  LanguageRuntime *m_language_runtime;
-  SearchFilterSP m_filter_sp;
+void ExceptionSearchFilter::GetDescription(Stream *s) {
+  UpdateModuleListIfNeeded();
+  if (m_filter_sp)
+    m_filter_sp->GetDescription(s);
+}
 
-  SearchFilterSP DoCopyForBreakpoint(Breakpoint &breakpoint) override {
-    return SearchFilterSP(
-        new ExceptionSearchFilter(TargetSP(), m_language, false));
-  }
-
-  void UpdateModuleListIfNeeded() {
-    ProcessSP process_sp(m_target_sp->GetProcessSP());
-    if (process_sp) {
-      bool refreash_filter = !m_filter_sp;
-      if (m_language_runtime == nullptr) {
-        m_language_runtime = process_sp->GetLanguageRuntime(m_language);
-        refreash_filter = true;
-      } else {
-        LanguageRuntime *language_runtime =
-            process_sp->GetLanguageRuntime(m_language);
-        if (m_language_runtime != language_runtime) {
-          m_language_runtime = language_runtime;
-          refreash_filter = true;
-        }
-      }
-
-      if (refreash_filter && m_language_runtime) {
-        m_filter_sp = m_language_runtime->CreateExceptionSearchFilter();
-      }
+void ExceptionSearchFilter::UpdateModuleListIfNeeded() {
+  ProcessSP process_sp(m_target_sp->GetProcessSP());
+  if (process_sp) {
+    bool refreash_filter = !m_filter_sp;
+    if (m_language_runtime == nullptr) {
+      m_language_runtime = process_sp->GetLanguageRuntime(m_language);
+      refreash_filter = true;
     } else {
-      m_filter_sp.reset();
-      m_language_runtime = nullptr;
+      LanguageRuntime *language_runtime =
+          process_sp->GetLanguageRuntime(m_language);
+      if (m_language_runtime != language_runtime) {
+        m_language_runtime = language_runtime;
+        refreash_filter = true;
+      }
     }
+
+    if (refreash_filter && m_language_runtime) {
+      m_filter_sp = m_language_runtime->CreateExceptionSearchFilter();
+    }
+  } else {
+    m_filter_sp.reset();
+    m_language_runtime = nullptr;
   }
-};
+}
+
+SearchFilterSP
+ExceptionSearchFilter::DoCopyForBreakpoint(Breakpoint &breakpoint) {
+  return SearchFilterSP(
+      new ExceptionSearchFilter(TargetSP(), m_language, false));
+}
+
+SearchFilter *ExceptionSearchFilter::CreateFromStructuredData(
+    Target &target, const StructuredData::Dictionary &data_dict, Error &error) {
+  SearchFilter *result = nullptr;
+  return result;
+}
+
+StructuredData::ObjectSP ExceptionSearchFilter::SerializeToStructuredData() {
+  StructuredData::ObjectSP result_sp;
+
+  return result_sp;
+}
 
 // The Target is the one that knows how to create breakpoints, so this function
 // is meant to be used either by the target or internally in

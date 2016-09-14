@@ -41,8 +41,8 @@ public:
   KernelBase(const KernelBase &Other) = delete;
   KernelBase &operator=(const KernelBase &Other) = delete;
 
-  KernelBase(KernelBase &&Other);
-  KernelBase &operator=(KernelBase &&Other);
+  KernelBase(KernelBase &&Other) noexcept;
+  KernelBase &operator=(KernelBase &&Other) noexcept;
 
   ~KernelBase();
 
@@ -68,9 +68,16 @@ public:
          llvm::StringRef Name)
       : KernelBase(D, PlatformKernelHandle, Name) {}
 
-  Kernel(Kernel &&Other) = default;
-  Kernel &operator=(Kernel &&Other) = default;
+  Kernel(Kernel &&Other) noexcept;
+  Kernel &operator=(Kernel &&Other) noexcept;
 };
+
+template <typename... ParameterTs>
+Kernel<ParameterTs...>::Kernel(Kernel<ParameterTs...> &&) noexcept = default;
+
+template <typename... ParameterTs>
+Kernel<ParameterTs...> &Kernel<ParameterTs...>::
+operator=(Kernel<ParameterTs...> &&) noexcept = default;
 
 } // namespace streamexecutor
 

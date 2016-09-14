@@ -15,6 +15,12 @@
 // Project includes
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+// Have to include the other breakpoint resolver types here so the static create
+// from StructuredData can call them.
+#include "lldb/Breakpoint/BreakpointResolverAddress.h"
+#include "lldb/Breakpoint/BreakpointResolverFileLine.h"
+#include "lldb/Breakpoint/BreakpointResolverFileRegex.h"
+#include "lldb/Breakpoint/BreakpointResolverName.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Log.h"
 #include "lldb/Core/ModuleList.h"
@@ -32,12 +38,130 @@ using namespace lldb;
 //----------------------------------------------------------------------
 // BreakpointResolver:
 //----------------------------------------------------------------------
+const char *BreakpointResolver::g_ty_to_name[] = {"FileAndLine", "Address",
+                                                  "SymbolName",  "SourceRegex",
+                                                  "Exception",   "Unknown"};
+
+const char *BreakpointResolver::g_option_names
+    [BreakpointResolver::OptionNames::LastOptionName] = {
+        "AddressOffset", "Exact",        "FileName",   "Inlines", "Language",
+        "LineNumber",    "ModuleName",   "NameMask",   "Offset",  "Regex",
+        "SectionName",   "SkipPrologue", "SymbolNames"};
+
+const char *BreakpointResolver::ResolverTyToName(enum ResolverTy type) {
+  if (type > LastKnownResolverType)
+    return g_ty_to_name[UnknownResolver];
+
+  return g_ty_to_name[type];
+}
+
+BreakpointResolver::ResolverTy
+BreakpointResolver::NameToResolverTy(const char *name) {
+  for (size_t i = 0; i < LastKnownResolverType; i++) {
+    if (strcmp(name, g_ty_to_name[i]) == 0)
+      return (ResolverTy)i;
+  }
+  return UnknownResolver;
+}
+
 BreakpointResolver::BreakpointResolver(Breakpoint *bkpt,
                                        const unsigned char resolverTy,
                                        lldb::addr_t offset)
     : m_breakpoint(bkpt), m_offset(offset), SubclassID(resolverTy) {}
 
 BreakpointResolver::~BreakpointResolver() {}
+
+BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
+    const StructuredData::Dictionary &resolver_dict, Error &error) {
+  BreakpointResolverSP result_sp;
+  if (!resolver_dict.IsValid()) {
+    error.SetErrorString("Can't deserialize from an invalid data object.");
+    return result_sp;
+  }
+
+  std::string subclass_name;
+
+  bool success = resolver_dict.GetValueForKeyAsString(
+      GetSerializationSubclassKey(), subclass_name);
+
+  if (!success) {
+    error.SetErrorStringWithFormat(
+        "Resolver data missing subclass resolver key");
+    return result_sp;
+  }
+
+  ResolverTy resolver_type = NameToResolverTy(subclass_name.c_str());
+  if (resolver_type == UnknownResolver) {
+    error.SetErrorStringWithFormat("Unknown resolver type: %s.",
+                                   subclass_name.c_str());
+    return result_sp;
+  }
+
+  StructuredData::Dictionary *subclass_options = nullptr;
+  success = resolver_dict.GetValueForKeyAsDictionary(
+      GetSerializationSubclassOptionsKey(), subclass_options);
+  if (!success || !subclass_options || !subclass_options->IsValid()) {
+    error.SetErrorString("Resolver data missing subclass options key.");
+    return result_sp;
+  }
+
+  lldb::addr_t offset;
+  success = subclass_options->GetValueForKeyAsInteger(
+      GetKey(OptionNames::Offset), offset);
+  if (!success) {
+    error.SetErrorString("Resolver data missing offset options key.");
+    return result_sp;
+  }
+
+  BreakpointResolver *resolver;
+
+  switch (resolver_type) {
+  case FileLineResolver:
+    resolver = BreakpointResolverFileLine::CreateFromStructuredData(
+        nullptr, *subclass_options, error);
+    break;
+  case AddressResolver:
+    resolver = BreakpointResolverAddress::CreateFromStructuredData(
+        nullptr, *subclass_options, error);
+    break;
+  case NameResolver:
+    resolver = BreakpointResolverName::CreateFromStructuredData(
+        nullptr, *subclass_options, error);
+    break;
+  case FileRegexResolver:
+    resolver = BreakpointResolverFileRegex::CreateFromStructuredData(
+        nullptr, *subclass_options, error);
+    break;
+  case ExceptionResolver:
+    error.SetErrorString("Exception resolvers are hard.");
+    break;
+  default:
+    llvm_unreachable("Should never get an unresolvable resolver type.");
+  }
+
+  if (!error.Success()) {
+    return result_sp;
+  } else {
+    // Add on the global offset option:
+    resolver->SetOffset(offset);
+    return BreakpointResolverSP(resolver);
+  }
+}
+
+StructuredData::DictionarySP BreakpointResolver::WrapOptionsDict(
+    StructuredData::DictionarySP options_dict_sp) {
+  if (!options_dict_sp || !options_dict_sp->IsValid())
+    return StructuredData::DictionarySP();
+
+  StructuredData::DictionarySP type_dict_sp(new StructuredData::Dictionary());
+  type_dict_sp->AddStringItem(GetSerializationSubclassKey(), GetResolverName());
+  type_dict_sp->AddItem(GetSerializationSubclassOptionsKey(), options_dict_sp);
+
+  // Add the m_offset to the dictionary:
+  options_dict_sp->AddIntegerItem(GetKey(OptionNames::Offset), m_offset);
+
+  return type_dict_sp;
+}
 
 void BreakpointResolver::SetBreakpoint(Breakpoint *bkpt) {
   m_breakpoint = bkpt;

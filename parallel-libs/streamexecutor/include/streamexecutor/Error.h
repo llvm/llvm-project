@@ -178,7 +178,7 @@ using llvm::Expected;
 using llvm::Twine;
 
 /// Makes an Error object from an error message.
-Error make_error(Twine Message);
+Error make_error(const Twine &Message);
 
 /// Consumes the input error and returns its error message.
 ///

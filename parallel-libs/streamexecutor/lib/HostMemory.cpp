@@ -20,9 +20,8 @@ namespace internal {
 
 void destroyRegisteredHostMemoryInternals(Device *TheDevice, void *Pointer) {
   // TODO(jhen): How to handle errors here?
-  if (Pointer) {
+  if (Pointer)
     consumeError(TheDevice->unregisterHostMemory(Pointer));
-  }
 }
 
 } // namespace internal

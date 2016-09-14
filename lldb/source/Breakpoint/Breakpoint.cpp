@@ -48,16 +48,17 @@ Breakpoint::Breakpoint(Target &target, SearchFilterSP &filter_sp,
                        BreakpointResolverSP &resolver_sp, bool hardware,
                        bool resolve_indirect_symbols)
     : m_being_created(true), m_hardware(hardware), m_target(target),
-      m_filter_sp(filter_sp), m_resolver_sp(resolver_sp), m_options(),
-      m_locations(*this), m_resolve_indirect_symbols(resolve_indirect_symbols),
-      m_hit_count(0) {
+      m_filter_sp(filter_sp), m_resolver_sp(resolver_sp),
+      m_options_up(new BreakpointOptions()), m_locations(*this),
+      m_resolve_indirect_symbols(resolve_indirect_symbols), m_hit_count(0) {
   m_being_created = false;
 }
 
 Breakpoint::Breakpoint(Target &new_target, Breakpoint &source_bp)
     : m_being_created(true), m_hardware(source_bp.m_hardware),
       m_target(new_target), m_name_list(source_bp.m_name_list),
-      m_options(source_bp.m_options), m_locations(*this),
+      m_options_up(new BreakpointOptions(*source_bp.m_options_up.get())),
+      m_locations(*this),
       m_resolve_indirect_symbols(source_bp.m_resolve_indirect_symbols),
       m_hit_count(0) {
   // Now go through and copy the filter & resolver:
@@ -69,6 +70,115 @@ Breakpoint::Breakpoint(Target &new_target, Breakpoint &source_bp)
 // Destructor
 //----------------------------------------------------------------------
 Breakpoint::~Breakpoint() = default;
+
+//----------------------------------------------------------------------
+// Serialization
+//----------------------------------------------------------------------
+StructuredData::ObjectSP Breakpoint::SerializeToStructuredData() {
+  // Serialize the resolver:
+  StructuredData::DictionarySP breakpoint_dict_sp(
+      new StructuredData::Dictionary());
+  StructuredData::DictionarySP breakpoint_contents_sp(
+      new StructuredData::Dictionary());
+
+  StructuredData::ObjectSP resolver_dict_sp(
+      m_resolver_sp->SerializeToStructuredData());
+  if (!resolver_dict_sp)
+    return StructuredData::ObjectSP();
+
+  breakpoint_contents_sp->AddItem(BreakpointResolver::GetSerializationKey(),
+                                  resolver_dict_sp);
+
+  StructuredData::ObjectSP filter_dict_sp(
+      m_filter_sp->SerializeToStructuredData());
+  if (!filter_dict_sp)
+    return StructuredData::ObjectSP();
+
+  breakpoint_contents_sp->AddItem(SearchFilter::GetSerializationKey(),
+                                  filter_dict_sp);
+
+  StructuredData::ObjectSP options_dict_sp(
+      m_options_up->SerializeToStructuredData());
+  if (!options_dict_sp)
+    return StructuredData::ObjectSP();
+
+  breakpoint_contents_sp->AddItem(BreakpointOptions::GetSerializationKey(),
+                                  options_dict_sp);
+
+  breakpoint_dict_sp->AddItem(GetSerializationKey(), breakpoint_contents_sp);
+  return breakpoint_dict_sp;
+}
+
+lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
+    Target &target, StructuredData::ObjectSP &object_data, Error &error) {
+  BreakpointSP result_sp;
+
+  StructuredData::Dictionary *breakpoint_dict = object_data->GetAsDictionary();
+
+  if (!breakpoint_dict || !breakpoint_dict->IsValid()) {
+    error.SetErrorString("Can't deserialize from an invalid data object.");
+    return result_sp;
+  }
+
+  StructuredData::Dictionary *resolver_dict;
+  bool success = breakpoint_dict->GetValueForKeyAsDictionary(
+      BreakpointResolver::GetSerializationKey(), resolver_dict);
+  if (!success) {
+    error.SetErrorStringWithFormat(
+        "Breakpoint data missing toplevel resolver key");
+    return result_sp;
+  }
+
+  Error create_error;
+  BreakpointResolverSP resolver_sp =
+      BreakpointResolver::CreateFromStructuredData(*resolver_dict,
+                                                   create_error);
+  if (create_error.Fail()) {
+    error.SetErrorStringWithFormat(
+        "Error creating breakpoint resolver from data: %s.",
+        create_error.AsCString());
+    return result_sp;
+  }
+
+  StructuredData::Dictionary *filter_dict;
+  success = breakpoint_dict->GetValueForKeyAsDictionary(
+      SearchFilter::GetSerializationKey(), filter_dict);
+  SearchFilterSP filter_sp;
+  if (!success)
+    filter_sp.reset(
+        new SearchFilterForUnconstrainedSearches(target.shared_from_this()));
+  else {
+    filter_sp = SearchFilter::CreateFromStructuredData(target, *filter_dict,
+                                                       create_error);
+    if (create_error.Fail()) {
+      error.SetErrorStringWithFormat(
+          "Error creating breakpoint filter from data: %s.",
+          create_error.AsCString());
+      return result_sp;
+    }
+  }
+
+  std::unique_ptr<BreakpointOptions> options_up;
+  StructuredData::Dictionary *options_dict;
+  success = breakpoint_dict->GetValueForKeyAsDictionary(
+      BreakpointOptions::GetSerializationKey(), options_dict);
+  if (success) {
+    options_up = BreakpointOptions::CreateFromStructuredData(*options_dict,
+                                                             create_error);
+    if (create_error.Fail()) {
+      error.SetErrorStringWithFormat(
+          "Error creating breakpoint options from data: %s.",
+          create_error.AsCString());
+      return result_sp;
+    }
+  }
+  result_sp =
+      target.CreateBreakpoint(filter_sp, resolver_sp, false, false, true);
+  if (result_sp && options_up) {
+    result_sp->m_options_up = std::move(options_up);
+  }
+  return result_sp;
+}
 
 const lldb::TargetSP Breakpoint::GetTargetSP() {
   return m_target.shared_from_this();
@@ -111,10 +221,10 @@ void Breakpoint::RemoveInvalidLocations(const ArchSpec &arch) {
 // up the individual settings.
 
 void Breakpoint::SetEnabled(bool enable) {
-  if (enable == m_options.IsEnabled())
+  if (enable == m_options_up->IsEnabled())
     return;
 
-  m_options.SetEnabled(enable);
+  m_options_up->SetEnabled(enable);
   if (enable)
     m_locations.ResolveAllBreakpointSites();
   else
@@ -124,24 +234,24 @@ void Breakpoint::SetEnabled(bool enable) {
                                     : eBreakpointEventTypeDisabled);
 }
 
-bool Breakpoint::IsEnabled() { return m_options.IsEnabled(); }
+bool Breakpoint::IsEnabled() { return m_options_up->IsEnabled(); }
 
 void Breakpoint::SetIgnoreCount(uint32_t n) {
-  if (m_options.GetIgnoreCount() == n)
+  if (m_options_up->GetIgnoreCount() == n)
     return;
 
-  m_options.SetIgnoreCount(n);
+  m_options_up->SetIgnoreCount(n);
   SendBreakpointChangedEvent(eBreakpointEventTypeIgnoreChanged);
 }
 
 void Breakpoint::DecrementIgnoreCount() {
-  uint32_t ignore = m_options.GetIgnoreCount();
+  uint32_t ignore = m_options_up->GetIgnoreCount();
   if (ignore != 0)
-    m_options.SetIgnoreCount(ignore - 1);
+    m_options_up->SetIgnoreCount(ignore - 1);
 }
 
 uint32_t Breakpoint::GetIgnoreCount() const {
-  return m_options.GetIgnoreCount();
+  return m_options_up->GetIgnoreCount();
 }
 
 bool Breakpoint::IgnoreCountShouldStop() {
@@ -160,79 +270,81 @@ bool Breakpoint::IgnoreCountShouldStop() {
 
 uint32_t Breakpoint::GetHitCount() const { return m_hit_count; }
 
-bool Breakpoint::IsOneShot() const { return m_options.IsOneShot(); }
+bool Breakpoint::IsOneShot() const { return m_options_up->IsOneShot(); }
 
-void Breakpoint::SetOneShot(bool one_shot) { m_options.SetOneShot(one_shot); }
+void Breakpoint::SetOneShot(bool one_shot) {
+  m_options_up->SetOneShot(one_shot);
+}
 
 void Breakpoint::SetThreadID(lldb::tid_t thread_id) {
-  if (m_options.GetThreadSpec()->GetTID() == thread_id)
+  if (m_options_up->GetThreadSpec()->GetTID() == thread_id)
     return;
 
-  m_options.GetThreadSpec()->SetTID(thread_id);
+  m_options_up->GetThreadSpec()->SetTID(thread_id);
   SendBreakpointChangedEvent(eBreakpointEventTypeThreadChanged);
 }
 
 lldb::tid_t Breakpoint::GetThreadID() const {
-  if (m_options.GetThreadSpecNoCreate() == nullptr)
+  if (m_options_up->GetThreadSpecNoCreate() == nullptr)
     return LLDB_INVALID_THREAD_ID;
   else
-    return m_options.GetThreadSpecNoCreate()->GetTID();
+    return m_options_up->GetThreadSpecNoCreate()->GetTID();
 }
 
 void Breakpoint::SetThreadIndex(uint32_t index) {
-  if (m_options.GetThreadSpec()->GetIndex() == index)
+  if (m_options_up->GetThreadSpec()->GetIndex() == index)
     return;
 
-  m_options.GetThreadSpec()->SetIndex(index);
+  m_options_up->GetThreadSpec()->SetIndex(index);
   SendBreakpointChangedEvent(eBreakpointEventTypeThreadChanged);
 }
 
 uint32_t Breakpoint::GetThreadIndex() const {
-  if (m_options.GetThreadSpecNoCreate() == nullptr)
+  if (m_options_up->GetThreadSpecNoCreate() == nullptr)
     return 0;
   else
-    return m_options.GetThreadSpecNoCreate()->GetIndex();
+    return m_options_up->GetThreadSpecNoCreate()->GetIndex();
 }
 
 void Breakpoint::SetThreadName(const char *thread_name) {
-  if (m_options.GetThreadSpec()->GetName() != nullptr &&
-      ::strcmp(m_options.GetThreadSpec()->GetName(), thread_name) == 0)
+  if (m_options_up->GetThreadSpec()->GetName() != nullptr &&
+      ::strcmp(m_options_up->GetThreadSpec()->GetName(), thread_name) == 0)
     return;
 
-  m_options.GetThreadSpec()->SetName(thread_name);
+  m_options_up->GetThreadSpec()->SetName(thread_name);
   SendBreakpointChangedEvent(eBreakpointEventTypeThreadChanged);
 }
 
 const char *Breakpoint::GetThreadName() const {
-  if (m_options.GetThreadSpecNoCreate() == nullptr)
+  if (m_options_up->GetThreadSpecNoCreate() == nullptr)
     return nullptr;
   else
-    return m_options.GetThreadSpecNoCreate()->GetName();
+    return m_options_up->GetThreadSpecNoCreate()->GetName();
 }
 
 void Breakpoint::SetQueueName(const char *queue_name) {
-  if (m_options.GetThreadSpec()->GetQueueName() != nullptr &&
-      ::strcmp(m_options.GetThreadSpec()->GetQueueName(), queue_name) == 0)
+  if (m_options_up->GetThreadSpec()->GetQueueName() != nullptr &&
+      ::strcmp(m_options_up->GetThreadSpec()->GetQueueName(), queue_name) == 0)
     return;
 
-  m_options.GetThreadSpec()->SetQueueName(queue_name);
+  m_options_up->GetThreadSpec()->SetQueueName(queue_name);
   SendBreakpointChangedEvent(eBreakpointEventTypeThreadChanged);
 }
 
 const char *Breakpoint::GetQueueName() const {
-  if (m_options.GetThreadSpecNoCreate() == nullptr)
+  if (m_options_up->GetThreadSpecNoCreate() == nullptr)
     return nullptr;
   else
-    return m_options.GetThreadSpecNoCreate()->GetQueueName();
+    return m_options_up->GetThreadSpecNoCreate()->GetQueueName();
 }
 
 void Breakpoint::SetCondition(const char *condition) {
-  m_options.SetCondition(condition);
+  m_options_up->SetCondition(condition);
   SendBreakpointChangedEvent(eBreakpointEventTypeConditionChanged);
 }
 
 const char *Breakpoint::GetConditionText() const {
-  return m_options.GetConditionText();
+  return m_options_up->GetConditionText();
 }
 
 // This function is used when "baton" doesn't need to be freed
@@ -240,7 +352,8 @@ void Breakpoint::SetCallback(BreakpointHitCallback callback, void *baton,
                              bool is_synchronous) {
   // The default "Baton" class will keep a copy of "baton" and won't free
   // or delete it when it goes goes out of scope.
-  m_options.SetCallback(callback, BatonSP(new Baton(baton)), is_synchronous);
+  m_options_up->SetCallback(callback, std::make_shared<UntypedBaton>(baton),
+                            is_synchronous);
 
   SendBreakpointChangedEvent(eBreakpointEventTypeCommandChanged);
 }
@@ -250,17 +363,17 @@ void Breakpoint::SetCallback(BreakpointHitCallback callback, void *baton,
 void Breakpoint::SetCallback(BreakpointHitCallback callback,
                              const BatonSP &callback_baton_sp,
                              bool is_synchronous) {
-  m_options.SetCallback(callback, callback_baton_sp, is_synchronous);
+  m_options_up->SetCallback(callback, callback_baton_sp, is_synchronous);
 }
 
-void Breakpoint::ClearCallback() { m_options.ClearCallback(); }
+void Breakpoint::ClearCallback() { m_options_up->ClearCallback(); }
 
 bool Breakpoint::InvokeCallback(StoppointCallbackContext *context,
                                 break_id_t bp_loc_id) {
-  return m_options.InvokeCallback(context, GetID(), bp_loc_id);
+  return m_options_up->InvokeCallback(context, GetID(), bp_loc_id);
 }
 
-BreakpointOptions *Breakpoint::GetOptions() { return &m_options; }
+BreakpointOptions *Breakpoint::GetOptions() { return m_options_up.get(); }
 
 void Breakpoint::ResolveBreakpoint() {
   if (m_resolver_sp)

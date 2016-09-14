@@ -1,0 +1,95 @@
+# RUN: llc -mtriple=aarch64-unknown -run-pass aarch64-branch-relax -aarch64-tbz-offset-bits=4 %s -o - | FileCheck %s
+--- |
+  ; ModuleID = '/tmp/test.ll'
+  source_filename = "test.ll"
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown"
+
+  define void @test_patchpoint_length(i32 %in) {
+    %val = and i32 %in, 1
+    %tst = icmp eq i32 %val, 0
+    br i1 %tst, label %true, label %false
+
+  true:                                             ; preds = %0
+    tail call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 0, i32 32, i8* null, i32 0)
+    ret void
+
+  false:                                            ; preds = %0
+    ret void
+  }
+
+  declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
+...
+---
+# CHECK-LABEL: name:{{.*}}test_patchpoint_length
+# If the size of the patchpoint is computed correctly, that will push
+# the bb.2.false block too far away from the TBNZW, so the branch will
+# have to be relaxed (note that we're using -aarch64-tbz-offset-bits to
+# constrain the range that can be reached with the TBNZW to something smaller
+# than what the patchpoint is lowered to).
+# CHECK: TBZW killed %w0, 0, %bb.1.true
+# CHECK: B %bb.2.false
+name:            test_patchpoint_length
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+tracksRegLiveness: false
+liveins:
+  - { reg: '%w0' }
+calleeSavedRegisters: [ '%fp', '%lr', '%b8', '%b9', '%b10', '%b11', '%b12',
+                        '%b13', '%b14', '%b15', '%d8', '%d9', '%d10', '%d11',
+                        '%d12', '%d13', '%d14', '%d15', '%h8', '%h9', '%h10',
+                        '%h11', '%h12', '%h13', '%h14', '%h15', '%s8',
+                        '%s9', '%s10', '%s11', '%s12', '%s13', '%s14',
+                        '%s15', '%w19', '%w20', '%w21', '%w22', '%w23',
+                        '%w24', '%w25', '%w26', '%w27', '%w28', '%w29',
+                        '%w30', '%x19', '%x20', '%x21', '%x22', '%x23',
+                        '%x24', '%x25', '%x26', '%x27', '%x28', '%d8_d9',
+                        '%d9_d10', '%d10_d11', '%d11_d12', '%d12_d13',
+                        '%d13_d14', '%d14_d15', '%d8_d9_d10_d11', '%d9_d10_d11_d12',
+                        '%d10_d11_d12_d13', '%d11_d12_d13_d14', '%d12_d13_d14_d15',
+                        '%d8_d9_d10', '%d9_d10_d11', '%d10_d11_d12', '%d11_d12_d13',
+                        '%d12_d13_d14', '%d13_d14_d15', '%w19_w20', '%w20_w21',
+                        '%w21_w22', '%w22_w23', '%w23_w24', '%w24_w25',
+                        '%w25_w26', '%w26_w27', '%w27_w28', '%w28_w29',
+                        '%w29_w30', '%fp_lr', '%x28_fp', '%x19_x20', '%x20_x21',
+                        '%x21_x22', '%x22_x23', '%x23_x24', '%x24_x25',
+                        '%x25_x26', '%x26_x27', '%x27_x28' ]
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   true
+  stackSize:       16
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, callee-saved-register: '%lr' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, callee-saved-register: '%fp' }
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.1.true, %bb.2.false
+    liveins: %w0, %lr, %fp
+
+    TBNZW killed %w0, 0, %bb.2.false
+
+  bb.1.true:
+    successors: %bb.2.false
+    liveins: %lr, %fp
+
+    PATCHPOINT 0, 32, 0, 0, 0, csr_aarch64_aapcs, implicit-def dead early-clobber %x16, implicit-def dead early-clobber %x17, implicit-def dead early-clobber %lr, implicit-def %sp
+
+  bb.2.false:
+    liveins: %lr, %fp
+
+    RET killed %lr
+
+...

@@ -47,7 +47,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !10 = distinct !DILexicalBlock(line: 4, column: 3, file: !1, scope: !4)
 !11 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !12 = !{!13}
-!13 = !DIGlobalVariable(name: "A", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !14, variable: i32** @A)
+!13 = !DIGlobalVariable(name: "A", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !14)
 !14 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !11)
 !15 = !{i32 2, !"Dwarf Version", i32 4}
 !16 = !{i32 2, !"Debug Info Version", i32 3}

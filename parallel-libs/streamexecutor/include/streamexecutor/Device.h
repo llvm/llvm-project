@@ -40,9 +40,8 @@ public:
                                    KernelT>::type>
   createKernel(const MultiKernelLoaderSpec &Spec) {
     Expected<const void *> MaybeKernelHandle = PDevice->createKernel(Spec);
-    if (!MaybeKernelHandle) {
+    if (!MaybeKernelHandle)
       return MaybeKernelHandle.takeError();
-    }
     return KernelT(PDevice, *MaybeKernelHandle, Spec.getKernelName());
   }
 
@@ -68,9 +67,8 @@ public:
   Expected<RegisteredHostMemory<T>>
   registerHostMemory(llvm::MutableArrayRef<T> Memory) {
     if (Error E = PDevice->registerHostMemory(Memory.data(),
-                                              Memory.size() * sizeof(T))) {
+                                              Memory.size() * sizeof(T)))
       return std::move(E);
-    }
     return RegisteredHostMemory<T>(this, Memory.data(), Memory.size());
   }
 

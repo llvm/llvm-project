@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 #include "ContainerSizeEmptyCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringRef.h"
-#include "../utils/Matchers.h"
 
 using namespace clang::ast_matchers;
 
@@ -29,11 +29,16 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
 
-  const auto stlContainer = hasAnyName(
-      "array", "basic_string", "deque", "forward_list", "list", "map",
-      "multimap", "multiset", "priority_queue", "queue", "set", "stack",
-      "unordered_map", "unordered_multimap", "unordered_multiset",
-      "unordered_set", "vector");
+  const auto ValidContainer = cxxRecordDecl(isSameOrDerivedFrom(
+      namedDecl(
+          has(cxxMethodDecl(
+                  isConst(), parameterCountIs(0), isPublic(), hasName("size"),
+                  returns(qualType(isInteger(), unless(booleanType()))))
+                  .bind("size")),
+          has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
+                            hasName("empty"), returns(booleanType()))
+                  .bind("empty")))
+          .bind("container")));
 
   const auto WrongUse = anyOf(
       hasParent(binaryOperator(
@@ -49,12 +54,11 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
       hasParent(explicitCastExpr(hasDestinationType(booleanType()))));
 
   Finder->addMatcher(
-      cxxMemberCallExpr(
-          on(expr(anyOf(hasType(namedDecl(stlContainer)),
-                        hasType(pointsTo(namedDecl(stlContainer))),
-                        hasType(references(namedDecl(stlContainer)))))
-                 .bind("STLObject")),
-          callee(cxxMethodDecl(hasName("size"))), WrongUse)
+      cxxMemberCallExpr(on(expr(anyOf(hasType(ValidContainer),
+                                      hasType(pointsTo(ValidContainer)),
+                                      hasType(references(ValidContainer))))
+                               .bind("STLObject")),
+                        callee(cxxMethodDecl(hasName("size"))), WrongUse)
           .bind("SizeCallExpr"),
       this);
 }
@@ -142,9 +146,17 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
       Hint = FixItHint::CreateReplacement(MemberCall->getSourceRange(),
                                           "!" + ReplacementText);
   }
+
   diag(MemberCall->getLocStart(), "the 'empty' method should be used to check "
                                   "for emptiness instead of 'size'")
       << Hint;
+
+  const auto *Container = Result.Nodes.getNodeAs<NamedDecl>("container");
+  const auto *Empty = Result.Nodes.getNodeAs<FunctionDecl>("empty");
+
+  diag(Empty->getLocation(), "method %0::empty() defined here",
+       DiagnosticIDs::Note)
+      << Container;
 }
 
 } // namespace readability

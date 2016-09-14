@@ -25,7 +25,7 @@
 #include <chrono>
 #include <thread>
 
-#define NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS 20
+#define NUMBER_OF_SIMULTANEOUS_DEBUG_SESSIONS 10
 
 #define DEBUG 0
 

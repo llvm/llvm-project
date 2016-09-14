@@ -27,6 +27,7 @@
 #include "lldb/Core/Event.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/StringList.h"
+#include "lldb/Core/StructuredData.h"
 
 namespace lldb_private {
 
@@ -164,6 +165,13 @@ public:
 
   typedef std::shared_ptr<BreakpointPrecondition> BreakpointPreconditionSP;
 
+  // Saving & restoring breakpoints:
+  static lldb::BreakpointSP CreateFromStructuredData(
+      Target &target, StructuredData::ObjectSP &data_object_sp, Error &error);
+
+  virtual StructuredData::ObjectSP SerializeToStructuredData();
+
+  static const char *GetSerializationKey() { return "Breakpoint"; }
   //------------------------------------------------------------------
   /// Destructor.
   ///
@@ -717,7 +725,8 @@ private:
   // to skip certain breakpoint hits.  For instance, exception breakpoints
   // use this to limit the stop to certain exception classes, while leaving
   // the condition & callback free for user specification.
-  BreakpointOptions m_options; // Settable breakpoint options
+  std::unique_ptr<BreakpointOptions>
+      m_options_up; // Settable breakpoint options
   BreakpointLocationList
       m_locations; // The list of locations currently found for this breakpoint.
   std::string m_kind_description;

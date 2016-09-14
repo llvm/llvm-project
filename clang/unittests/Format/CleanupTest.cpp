@@ -33,6 +33,15 @@ protected:
     EXPECT_TRUE(static_cast<bool>(Result));
     return *Result;
   }
+
+  // Returns code after cleanup around \p Offsets.
+  std::string cleanupAroundOffsets(llvm::ArrayRef<unsigned> Offsets,
+                                   llvm::StringRef Code) {
+    std::vector<tooling::Range> Ranges;
+    for (auto Offset : Offsets)
+      Ranges.push_back(tooling::Range(Offset, 0));
+    return cleanup(Code, Ranges);
+  }
 };
 
 TEST_F(CleanupTest, DeleteEmptyNamespaces) {
@@ -47,12 +56,7 @@ TEST_F(CleanupTest, DeleteEmptyNamespaces) {
   std::string Expected = "\n\n\n\n\nnamespace C {\n"
                          "namespace D { int i; }\n   \n"
                          "}";
-  std::vector<tooling::Range> Ranges;
-  Ranges.push_back(tooling::Range(28, 0));
-  Ranges.push_back(tooling::Range(91, 6));
-  Ranges.push_back(tooling::Range(132, 0));
-  std::string Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanupAroundOffsets({28, 91, 132}, Code));
 }
 
 TEST_F(CleanupTest, NamespaceWithSyntaxError) {
@@ -68,8 +72,7 @@ TEST_F(CleanupTest, NamespaceWithSyntaxError) {
                          "namespace D int i; }\n   \n"
                          "}";
   std::vector<tooling::Range> Ranges(1, tooling::Range(0, Code.size()));
-  std::string Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanup(Code, Ranges));
 }
 
 TEST_F(CleanupTest, EmptyNamespaceNotAffected) {
@@ -80,9 +83,7 @@ TEST_F(CleanupTest, EmptyNamespaceNotAffected) {
   std::string Expected = "namespace A {\n\n"
                          "namespace {\n\n}}";
   // Set the changed range to be the second "\n".
-  std::vector<tooling::Range> Ranges(1, tooling::Range(14, 0));
-  std::string Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanupAroundOffsets({14}, Code));
 }
 
 TEST_F(CleanupTest, EmptyNamespaceWithCommentsNoBreakBeforeBrace) {
@@ -121,52 +122,63 @@ TEST_F(CleanupTest, EmptyNamespaceWithCommentsBreakBeforeBrace) {
 TEST_F(CleanupTest, CtorInitializationSimpleRedundantComma) {
   std::string Code = "class A {\nA() : , {} };";
   std::string Expected = "class A {\nA()  {} };";
-  std::vector<tooling::Range> Ranges;
-  Ranges.push_back(tooling::Range(17, 0));
-  Ranges.push_back(tooling::Range(19, 0));
-  std::string Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanupAroundOffsets({17, 19}, Code));
 
   Code = "class A {\nA() : x(1), {} };";
   Expected = "class A {\nA() : x(1) {} };";
-  Ranges.clear();
-  Ranges.push_back(tooling::Range(23, 0));
-  Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanupAroundOffsets({23}, Code));
 
   Code = "class A {\nA() :,,,,{} };";
   Expected = "class A {\nA() {} };";
-  Ranges.clear();
-  Ranges.push_back(tooling::Range(15, 0));
-  Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanupAroundOffsets({15}, Code));
 }
 
-TEST_F(CleanupTest, ListSimpleRedundantComma) {
+TEST_F(CleanupTest, ListRedundantComma) {
   std::string Code = "void f() { std::vector<int> v = {1,2,,,3,{4,5}}; }";
   std::string Expected = "void f() { std::vector<int> v = {1,2,3,{4,5}}; }";
-  std::vector<tooling::Range> Ranges;
-  Ranges.push_back(tooling::Range(40, 0));
-  std::string Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanupAroundOffsets({40}, Code));
 
   Code = "int main() { f(1,,2,3,,4);}";
   Expected = "int main() { f(1,2,3,4);}";
-  Ranges.clear();
-  Ranges.push_back(tooling::Range(17, 0));
-  Ranges.push_back(tooling::Range(22, 0));
-  Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanupAroundOffsets({17, 22}, Code));
+}
+
+TEST_F(CleanupTest, TrailingCommaInParens) {
+  std::string Code = "int main() { f(,1,,2,3,f(1,2,),4,,);}";
+  std::string Expected = "int main() { f(1,2,3,f(1,2),4);}";
+  EXPECT_EQ(Expected, cleanupAroundOffsets({15, 18, 29, 33}, Code));
+}
+
+TEST_F(CleanupTest, TrailingCommaInBraces) {
+  // Trainling comma is allowed in brace list.
+  // If there was trailing comma in the original code, then trailing comma is
+  // preserved. In this example, element between the last two commas is deleted
+  // causing the second-last comma to be redundant.
+  std::string Code = "void f() { std::vector<int> v = {1,2,3,,}; }";
+  std::string Expected = "void f() { std::vector<int> v = {1,2,3,}; }";
+  EXPECT_EQ(Expected, cleanupAroundOffsets({39}, Code));
+
+  // If there was no trailing comma in the original code, then trainling comma
+  // introduced by replacements should be cleaned up. In this example, the
+  // element after the last comma is deleted causing the last comma to be
+  // redundant.
+  Code = "void f() { std::vector<int> v = {1,2,3,}; }";
+  // FIXME: redundant trailing comma should be removed.
+  Expected = "void f() { std::vector<int> v = {1,2,3,}; }";
+  EXPECT_EQ(Expected, cleanupAroundOffsets({39}, Code));
+
+  // Still no trailing comma in the original code, but two elements are deleted,
+  // which makes it seems like there was trailing comma.
+  Code = "void f() { std::vector<int> v = {1, 2, 3, , }; }";
+  // FIXME: redundant trailing comma should also be removed.
+  Expected = "void f() { std::vector<int> v = {1, 2, 3,  }; }";
+  EXPECT_EQ(Expected, cleanupAroundOffsets({42, 44}, Code));
 }
 
 TEST_F(CleanupTest, CtorInitializationBracesInParens) {
   std::string Code = "class A {\nA() : x({1}),, {} };";
   std::string Expected = "class A {\nA() : x({1}) {} };";
-  std::vector<tooling::Range> Ranges;
-  Ranges.push_back(tooling::Range(24, 0));
-  Ranges.push_back(tooling::Range(26, 0));
-  std::string Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanupAroundOffsets({24, 26}, Code));
 }
 
 TEST_F(CleanupTest, RedundantCommaNotInAffectedRanges) {
@@ -192,35 +204,23 @@ TEST_F(CleanupTest, RemoveCommentsAroundDeleteCode) {
   std::string Code =
       "class A {\nA() : x({1}), /* comment */, /* comment */ {} };";
   std::string Expected = "class A {\nA() : x({1}) {} };";
-  std::vector<tooling::Range> Ranges;
-  Ranges.push_back(tooling::Range(25, 0));
-  Ranges.push_back(tooling::Range(40, 0));
-  std::string Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanupAroundOffsets({25, 40}, Code));
 
   Code = "class A {\nA() : x({1}), // comment\n {} };";
   Expected = "class A {\nA() : x({1})\n {} };";
-  Ranges = std::vector<tooling::Range>(1, tooling::Range(25, 0));
-  Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanupAroundOffsets({25}, Code));
 
   Code = "class A {\nA() : x({1}), // comment\n , y(1),{} };";
   Expected = "class A {\nA() : x({1}),  y(1){} };";
-  Ranges = std::vector<tooling::Range>(1, tooling::Range(38, 0));
-  Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanupAroundOffsets({38}, Code));
 
   Code = "class A {\nA() : x({1}), \n/* comment */, y(1),{} };";
   Expected = "class A {\nA() : x({1}), \n y(1){} };";
-  Ranges = std::vector<tooling::Range>(1, tooling::Range(40, 0));
-  Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanupAroundOffsets({40}, Code));
 
   Code = "class A {\nA() : , // comment\n y(1),{} };";
   Expected = "class A {\nA() :  // comment\n y(1){} };";
-  Ranges = std::vector<tooling::Range>(1, tooling::Range(17, 0));
-  Result = cleanup(Code, Ranges);
-  EXPECT_EQ(Expected, Result);
+  EXPECT_EQ(Expected, cleanupAroundOffsets({17}, Code));
 }
 
 TEST_F(CleanupTest, CtorInitializerInNamespace) {

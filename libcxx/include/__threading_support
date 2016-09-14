@@ -19,9 +19,20 @@
 
 #ifndef _LIBCPP_HAS_NO_THREADS
 
-#if defined(_LIBCPP_HAS_THREAD_API_EXTERNAL) && (!defined(__has_include) || __has_include(<__external_threading>))
+// These checks are carefully arranged so as not to trigger a gcc pre-processor
+// defect which causes it to fail to parse the __has_include check below, the
+// redundancy is intentional.
+#if defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
+#if !defined(__clang__) && (_GNUC_VER < 500)
 #include <__external_threading>
-#else
+#define _LIBCPP_EXTERNAL_THREADING
+#elif !defined(__has_include) || __has_include(<__external_threading>)
+#include <__external_threading>
+#define _LIBCPP_EXTERNAL_THREADING
+#endif
+#endif
+
+#if !defined(_LIBCPP_EXTERNAL_THREADING)
 #include <pthread.h>
 #include <sched.h>
 #endif

@@ -15,7 +15,6 @@ define zeroext i16 @select_cmov_i16(i1 zeroext %cond, i16 zeroext %a, i16 zeroex
 ;
 ; AVX512-LABEL: select_cmov_i16:
 ; AVX512:       ## BB#0:
-; AVX512-NEXT:    andl $1, %edi
 ; AVX512-NEXT:    kmovw %edi, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    cmovew %dx, %si
@@ -47,7 +46,6 @@ define i32 @select_cmov_i32(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; AVX512-LABEL: select_cmov_i32:
 ; AVX512:       ## BB#0:
-; AVX512-NEXT:    andl $1, %edi
 ; AVX512-NEXT:    kmovw %edi, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    cmovel %edx, %esi
@@ -79,7 +77,6 @@ define i64 @select_cmov_i64(i1 zeroext %cond, i64 %a, i64 %b) {
 ;
 ; AVX512-LABEL: select_cmov_i64:
 ; AVX512:       ## BB#0:
-; AVX512-NEXT:    andl $1, %edi
 ; AVX512-NEXT:    kmovw %edi, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    cmoveq %rdx, %rsi

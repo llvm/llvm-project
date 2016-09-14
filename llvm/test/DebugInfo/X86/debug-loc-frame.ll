@@ -42,10 +42,10 @@
 ; ModuleID = 'frame.c'
 source_filename = "frame.c"
 
-@data = global i32 17, align 4
-@sum = local_unnamed_addr global i32 0, align 4
-@zero = local_unnamed_addr global i32 0, align 4
-@ptr = common local_unnamed_addr global i32* null, align 8
+@data = global i32 17, align 4, !dbg !4
+@sum = local_unnamed_addr global i32 0, align 4, !dbg !6
+@zero = local_unnamed_addr global i32 0, align 4, !dbg !7
+@ptr = common local_unnamed_addr global i32* null, align 8, !dbg !8
 
 ; Function Attrs: nounwind uwtable
 define i32 @main() local_unnamed_addr !dbg !13 {
@@ -83,11 +83,11 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 !1 = !DIFile(filename: "frame.c", directory: "/home/user/test")
 !2 = !{}
 !3 = !{!4, !6, !7, !8}
-!4 = distinct !DIGlobalVariable(name: "data", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, variable: i32* @data)
+!4 = distinct !DIGlobalVariable(name: "data", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true)
 !5 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!6 = distinct !DIGlobalVariable(name: "sum", scope: !0, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true, variable: i32* @sum)
-!7 = distinct !DIGlobalVariable(name: "zero", scope: !0, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true, variable: i32* @zero)
-!8 = distinct !DIGlobalVariable(name: "ptr", scope: !0, file: !1, line: 4, type: !9, isLocal: false, isDefinition: true, variable: i32** @ptr)
+!6 = distinct !DIGlobalVariable(name: "sum", scope: !0, file: !1, line: 2, type: !5, isLocal: false, isDefinition: true)
+!7 = distinct !DIGlobalVariable(name: "zero", scope: !0, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true)
+!8 = distinct !DIGlobalVariable(name: "ptr", scope: !0, file: !1, line: 4, type: !9, isLocal: false, isDefinition: true)
 !9 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !5, size: 64, align: 64)
 !10 = !{i32 2, !"Dwarf Version", i32 4}
 !11 = !{i32 2, !"Debug Info Version", i32 3}

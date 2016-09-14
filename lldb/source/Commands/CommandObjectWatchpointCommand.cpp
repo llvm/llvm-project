@@ -207,8 +207,8 @@ are no syntax errors may indicate that a function was declared but never called.
           new WatchpointOptions::CommandData());
       if (data_ap) {
         data_ap->user_source.SplitIntoLines(line);
-        BatonSP baton_sp(
-            new WatchpointOptions::CommandBaton(data_ap.release()));
+        auto baton_sp = std::make_shared<WatchpointOptions::CommandBaton>(
+            std::move(data_ap));
         wp_options->SetCallback(WatchpointOptionsCallbackFunction, baton_sp);
       }
     }
@@ -239,7 +239,8 @@ are no syntax errors may indicate that a function was declared but never called.
     data_ap->script_source.assign(oneliner);
     data_ap->stop_on_error = m_options.m_stop_on_error;
 
-    BatonSP baton_sp(new WatchpointOptions::CommandBaton(data_ap.release()));
+    auto baton_sp =
+        std::make_shared<WatchpointOptions::CommandBaton>(std::move(data_ap));
     wp_options->SetCallback(WatchpointOptionsCallbackFunction, baton_sp);
   }
 

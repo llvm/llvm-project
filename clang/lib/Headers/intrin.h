@@ -463,14 +463,6 @@ _BitScanReverse(unsigned long *_Index, unsigned long _Mask) {
   *_Index = 31 - __builtin_clzl(_Mask);
   return 1;
 }
-static __inline__ unsigned short __DEFAULT_FN_ATTRS
-__popcnt16(unsigned short _Value) {
-  return __builtin_popcount((int)_Value);
-}
-static __inline__ unsigned int __DEFAULT_FN_ATTRS
-__popcnt(unsigned int _Value) {
-  return __builtin_popcount(_Value);
-}
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _bittest(long const *_BitBase, long _BitPos) {
   return (*_BitBase >> _BitPos) & 1;
@@ -512,11 +504,6 @@ _BitScanReverse64(unsigned long *_Index, unsigned __int64 _Mask) {
     return 0;
   *_Index = 63 - __builtin_clzll(_Mask);
   return 1;
-}
-static __inline__
-unsigned __int64 __DEFAULT_FN_ATTRS
-__popcnt64(unsigned __int64 _Value) {
-  return __builtin_popcountll(_Value);
 }
 static __inline__ unsigned char __DEFAULT_FN_ATTRS
 _bittest64(__int64 const *_BitBase, __int64 _BitPos) {

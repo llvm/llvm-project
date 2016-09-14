@@ -1420,6 +1420,10 @@ public:
   /// \brief Make the names within this set of hidden names visible.
   void makeNamesVisible(const HiddenNames &Names, Module *Owner);
 
+  /// \brief Note that MergedDef is a redefinition of the canonical definition
+  /// Def, so Def should be visible whenever MergedDef is.
+  void mergeDefinitionVisibility(NamedDecl *Def, NamedDecl *MergedDef);
+
   /// \brief Take the AST callbacks listener.
   std::unique_ptr<ASTReaderListener> takeListener() {
     return std::move(Listener);

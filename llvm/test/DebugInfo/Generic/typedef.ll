@@ -12,7 +12,7 @@
 ; CHECK-NOT: DW_AT_type
 ; CHECK: {{DW_TAG|NULL}}
 
-@y = global i8* null, align 8
+@y = global i8* null, align 8, !dbg !4
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9}
@@ -22,7 +22,7 @@
 !1 = !DIFile(filename: "typedef.cpp", directory: "/tmp/dbginfo")
 !2 = !{}
 !3 = !{!4}
-!4 = !DIGlobalVariable(name: "y", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !6, variable: i8** @y)
+!4 = !DIGlobalVariable(name: "y", line: 2, isLocal: false, isDefinition: true, scope: null, file: !5, type: !6)
 !5 = !DIFile(filename: "typedef.cpp", directory: "/tmp/dbginfo")
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !7)
 !7 = !DIDerivedType(tag: DW_TAG_typedef, name: "x", line: 1, file: !1, baseType: null)

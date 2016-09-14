@@ -2,7 +2,7 @@
 
 ; CHECK-NOT: call void @llvm.dbg.value
 
-@x = common global i32 0                          ; <i32*> [#uses=0]
+@x = common global i32 0, !dbg !8                          ; <i32*> [#uses=0]
 
 define void @foo() nounwind readnone optsize ssp !dbg !0 {
 entry:
@@ -23,7 +23,7 @@ declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnon
 !5 = !DILocalVariable(name: "y", line: 3, scope: !6, file: !1, type: !7)
 !6 = distinct !DILexicalBlock(line: 2, column: 0, file: !12, scope: !0)
 !7 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!8 = !DIGlobalVariable(name: "x", line: 1, isLocal: false, isDefinition: true, scope: !1, file: !1, type: !7, variable: i32* @x)
+!8 = !DIGlobalVariable(name: "x", line: 1, isLocal: false, isDefinition: true, scope: !1, file: !1, type: !7)
 !9 = !{i32 0}
 !10 = !DILocation(line: 3, scope: !6)
 !11 = !DILocation(line: 4, scope: !6)
