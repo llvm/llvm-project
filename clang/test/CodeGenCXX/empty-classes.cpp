@@ -96,3 +96,24 @@ namespace rdar20621065 {
   // Type checked at the top of the file.
   B b;
 };
+
+// This test used to crash when CGRecordLayout::getNonVirtualBaseLLVMFieldNo was called.
+namespace record_layout {
+struct X0 {
+  int x[0];
+};
+
+template<typename>
+struct X2 : X0 {
+};
+
+template<typename>
+struct X3 : X2<int> {
+  X3() : X2<int>() {}
+};
+
+
+void test0() {
+  X3<int>();
+}
+}

@@ -2094,7 +2094,11 @@ _mm_stream_ps(float *__p, __m128 __a)
 ///
 /// This intrinsic corresponds to the \c SFENCE instruction.
 ///
-void _mm_sfence(void);
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_sfence(void)
+{
+  __builtin_ia32_sfence();
+}
 
 /// \brief Extracts 16-bit element from a 64-bit vector of [4 x i16] and
 ///    returns it, as specified by the immediate integer operand.
@@ -2404,7 +2408,11 @@ _mm_sad_pu8(__m64 __a, __m64 __b)
 ///
 /// \returns A 32-bit unsigned integer containing the contents of the MXCSR
 ///    register.
-unsigned int _mm_getcsr(void);
+static __inline__ unsigned int __DEFAULT_FN_ATTRS
+_mm_getcsr(void)
+{
+  return __builtin_ia32_stmxcsr();
+}
 
 /// \brief Sets the MXCSR register with the 32-bit unsigned integer value. There
 ///    are several groups of macros associated with this intrinsic, including:
@@ -2442,7 +2450,11 @@ unsigned int _mm_getcsr(void);
 ///
 /// \param __i
 ///    A 32-bit unsigned integer value to be written to the MXCSR register.
-void _mm_setcsr(unsigned int);
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_setcsr(unsigned int __i)
+{
+  __builtin_ia32_ldmxcsr(__i);
+}
 
 /// \brief Selects 4 float values from the 128-bit operands of [4 x float], as
 ///    specified by the immediate value operand.

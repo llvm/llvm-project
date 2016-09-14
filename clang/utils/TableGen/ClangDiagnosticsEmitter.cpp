@@ -928,13 +928,14 @@ struct DiagText {
     void print(std::vector<std::string> &RST) override;
   };
   struct SelectPiece : Piece {
+    SelectPiece() {}
+    SelectPiece(SelectPiece &&O) LLVM_NOEXCEPT : Options(std::move(O.Options)) {
+    }
     std::vector<DiagText> Options;
     void print(std::vector<std::string> &RST) override;
   };
 
-  // FIXME: This should be a unique_ptr, but I can't figure out how to get MSVC
-  // to not issue errors on that.
-  std::vector<std::shared_ptr<Piece>> Pieces;
+  std::vector<std::unique_ptr<Piece>> Pieces;
 
   DiagText();
   DiagText(DiagText &&O) LLVM_NOEXCEPT : Pieces(std::move(O.Pieces)) {}
@@ -943,7 +944,7 @@ struct DiagText {
   DiagText(StringRef Kind, StringRef Text);
 
   template<typename P> void add(P Piece) {
-    Pieces.push_back(std::make_shared<P>(std::move(Piece)));
+    Pieces.push_back(llvm::make_unique<P>(std::move(Piece)));
   }
   void print(std::vector<std::string> &RST);
 };
@@ -1040,7 +1041,8 @@ DiagText::DiagText(StringRef Kind, StringRef Text) : DiagText(parseDiagText(Text
   Prefix.Role = Kind;
   Prefix.Text = Kind;
   Prefix.Text += ": ";
-  Pieces.insert(Pieces.begin(), std::make_shared<TextPiece>(std::move(Prefix)));
+  Pieces.insert(Pieces.begin(),
+                llvm::make_unique<TextPiece>(std::move(Prefix)));
 }
 
 void escapeRST(StringRef Str, std::string &Out) {
@@ -1246,11 +1248,20 @@ void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS) {
 
   // Compute the set of diagnostics that are in -Wpedantic.
   {
-    RecordSet DiagsInPedantic;
-    RecordSet GroupsInPedantic;
+    RecordSet DiagsInPedanticSet;
+    RecordSet GroupsInPedanticSet;
     InferPedantic inferPedantic(DGParentMap, Diags, DiagGroups, DiagsInGroup);
-    inferPedantic.compute(&DiagsInPedantic, &GroupsInPedantic);
+    inferPedantic.compute(&DiagsInPedanticSet, &GroupsInPedanticSet);
     auto &PedDiags = DiagsInGroup["pedantic"];
+    // Put the diagnostics into a deterministic order.
+    RecordVec DiagsInPedantic(DiagsInPedanticSet.begin(),
+                              DiagsInPedanticSet.end());
+    RecordVec GroupsInPedantic(GroupsInPedanticSet.begin(),
+                               GroupsInPedanticSet.end());
+    std::sort(DiagsInPedantic.begin(), DiagsInPedantic.end(),
+              beforeThanCompare);
+    std::sort(GroupsInPedantic.begin(), GroupsInPedantic.end(),
+              beforeThanCompare);
     PedDiags.DiagsInGroup.insert(PedDiags.DiagsInGroup.end(),
                                  DiagsInPedantic.begin(),
                                  DiagsInPedantic.end());
@@ -1299,6 +1310,7 @@ void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS) {
         OS << "Also controls ";
 
       bool First = true;
+      std::sort(GroupInfo.SubGroups.begin(), GroupInfo.SubGroups.end());
       for (const auto &Name : GroupInfo.SubGroups) {
         if (!First) OS << ", ";
         OS << "`" << (IsRemarkGroup ? "-R" : "-W") << Name << "`_";

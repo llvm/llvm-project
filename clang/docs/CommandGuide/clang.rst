@@ -105,7 +105,12 @@ Language Selection and Mode Options
 .. option:: -stdlib=<library>
 
  Specify the C++ standard library to use; supported options are libstdc++ and
- libc++.
+ libc++. If not specified, platform default will be used.
+
+.. option:: -rtlib=<library>
+
+ Specify the compiler runtime library to use; supported options are libgcc and
+ compiler-rt. If not specified, platform default will be used.
 
 .. option:: -ansi
 

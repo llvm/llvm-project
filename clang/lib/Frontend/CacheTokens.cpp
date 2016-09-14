@@ -182,14 +182,14 @@ class PTHWriter {
   typedef llvm::DenseMap<const IdentifierInfo*,uint32_t> IDMap;
   typedef llvm::StringMap<OffsetOpt, llvm::BumpPtrAllocator> CachedStrsTy;
 
-  IDMap IM;
   raw_pwrite_stream &Out;
   Preprocessor& PP;
-  uint32_t idcount;
+  IDMap IM;
+  std::vector<llvm::StringMapEntry<OffsetOpt>*> StrEntries;
   PTHMap PM;
   CachedStrsTy CachedStrs;
+  uint32_t idcount;
   Offset CurStrOffset;
-  std::vector<llvm::StringMapEntry<OffsetOpt>*> StrEntries;
 
   //// Get the persistent id for the given IdentifierInfo*.
   uint32_t ResolveID(const IdentifierInfo* II);

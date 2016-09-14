@@ -321,6 +321,32 @@ by the user. So, these flags do not require the other sanitizer to be used.
 This mechanism is used for fuzzing the Linux kernel (https://github.com/google/syzkaller)
 and can be used with `AFL <http://lcamtuf.coredump.cx/afl>`__.
 
+Tracing PCs with guards
+=======================
+Another *experimental* feature that tries to combine `trace-pc`,
+`8bit-counters` and boolean coverage
+
+With ``-fsanitize-coverage=trace-pc-guard`` the compiler will insert the following code
+on every edge:
+
+.. code-block:: none
+
+   if (guard_variable != 0xff)
+     __sanitizer_cov_trace_pc_guard(&guard_variable)
+
+Every edge will have its own 1-byte `guard_variable`.
+All such guard variables will reside in a dedicated section
+(i.e. they essentially form an array).
+
+The compler will also insert a module constructor that will call
+
+.. code-block:: c++
+
+   // The guard section is the address range [start, stop).
+   __sanitizer_cov_trace_pc_guard_init(void *start, void *stop);
+
+The functions `__sanitizer_cov_trace_pc_guard[_init]` should be defined by the user.
+
 Tracing data flow
 =================
 

@@ -2457,7 +2457,11 @@ _mm_stream_si64(long long *__p, long long __a)
 /// \param __p
 ///    A pointer to the memory location used to identify the cache line to be
 ///    flushed.
-void _mm_clflush(void const *);
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_clflush(void const *__p)
+{
+  __builtin_ia32_clflush(__p);
+}
 
 /// \brief Forces strong memory ordering (serialization) between load
 ///    instructions preceding this instruction and load instructions following
@@ -2468,7 +2472,11 @@ void _mm_clflush(void const *);
 ///
 /// This intrinsic corresponds to the \c LFENCE instruction.
 ///
-void _mm_lfence(void);
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_lfence(void)
+{
+  __builtin_ia32_lfence();
+}
 
 /// \brief Forces strong memory ordering (serialization) between load and store
 ///    instructions preceding this instruction and load and store instructions
@@ -2479,7 +2487,11 @@ void _mm_lfence(void);
 ///
 /// This intrinsic corresponds to the \c MFENCE instruction.
 ///
-void _mm_mfence(void);
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_mfence(void)
+{
+  __builtin_ia32_mfence();
+}
 
 /// \brief Converts 16-bit signed integers from both 128-bit integer vector
 ///    operands into 8-bit signed integers, and packs the results into the
@@ -3201,7 +3213,11 @@ _mm_castsi128_pd(__m128i __a)
 ///
 /// This intrinsic corresponds to the \c PAUSE instruction.
 ///
-void _mm_pause(void);
+static __inline__ void __DEFAULT_FN_ATTRS
+_mm_pause(void)
+{
+  __builtin_ia32_pause();
+}
 
 #undef __DEFAULT_FN_ATTRS
 
