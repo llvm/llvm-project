@@ -821,8 +821,8 @@ bool ArchSpec::SetTriple(const llvm::Triple &triple) {
   return IsValid();
 }
 
-static bool ParseMachCPUDashSubtypeTriple(const char *triple_cstr,
-                                          ArchSpec &arch) {
+bool lldb_private::ParseMachCPUDashSubtypeTriple(const char *triple_cstr,
+                                                 ArchSpec &arch) {
   // Accept "12-10" or "12.10" as cpu type/subtype
   if (isdigit(triple_cstr[0])) {
     char *end = nullptr;

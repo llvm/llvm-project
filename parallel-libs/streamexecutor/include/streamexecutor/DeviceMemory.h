@@ -133,6 +133,9 @@ public:
   /// Returns an opaque handle to the underlying memory.
   const void *getHandle() const { return Handle; }
 
+  /// Returns the address of the opaque handle as stored by this object.
+  const void *const *getHandleAddress() const { return &Handle; }
+
   // Cannot copy because the handle must be owned by a single object.
   GlobalDeviceMemoryBase(const GlobalDeviceMemoryBase &) = delete;
   GlobalDeviceMemoryBase &operator=(const GlobalDeviceMemoryBase &) = delete;
@@ -143,7 +146,7 @@ protected:
       : TheDevice(D), Handle(Handle), ByteCount(ByteCount) {}
 
   /// Transfer ownership of the underlying handle.
-  GlobalDeviceMemoryBase(GlobalDeviceMemoryBase &&Other)
+  GlobalDeviceMemoryBase(GlobalDeviceMemoryBase &&Other) noexcept
       : TheDevice(Other.TheDevice), Handle(Other.Handle),
         ByteCount(Other.ByteCount) {
     Other.TheDevice = nullptr;
@@ -151,7 +154,7 @@ protected:
     Other.ByteCount = 0;
   }
 
-  GlobalDeviceMemoryBase &operator=(GlobalDeviceMemoryBase &&Other) {
+  GlobalDeviceMemoryBase &operator=(GlobalDeviceMemoryBase &&Other) noexcept {
     TheDevice = Other.TheDevice;
     Handle = Other.Handle;
     ByteCount = Other.ByteCount;
@@ -178,8 +181,8 @@ class GlobalDeviceMemory : public GlobalDeviceMemoryBase {
 public:
   using ElementTy = ElemT;
 
-  GlobalDeviceMemory(GlobalDeviceMemory &&Other) = default;
-  GlobalDeviceMemory &operator=(GlobalDeviceMemory &&Other) = default;
+  GlobalDeviceMemory(GlobalDeviceMemory &&) noexcept;
+  GlobalDeviceMemory &operator=(GlobalDeviceMemory &&) noexcept;
 
   /// Returns the number of elements of type ElemT that constitute this
   /// allocation.
@@ -202,6 +205,14 @@ private:
   GlobalDeviceMemory(Device *D, const void *Handle, size_t ElementCount)
       : GlobalDeviceMemoryBase(D, Handle, ElementCount * sizeof(ElemT)) {}
 };
+
+template <typename ElemT>
+GlobalDeviceMemory<ElemT>::GlobalDeviceMemory(
+    GlobalDeviceMemory<ElemT> &&) noexcept = default;
+
+template <typename ElemT>
+GlobalDeviceMemory<ElemT> &GlobalDeviceMemory<ElemT>::
+operator=(GlobalDeviceMemory<ElemT> &&) noexcept = default;
 
 /// A class to represent the size of a dynamic shared memory buffer of elements
 /// of type T on a device.

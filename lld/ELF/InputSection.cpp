@@ -429,7 +429,7 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
 
 template <class ELFT>
 void InputSection<ELFT>::replace(InputSection<ELFT> *Other) {
-  this->Alignment = std::max(this->Alignment, Other->Alignment);
+  assert(Other->Alignment <= this->Alignment);
   Other->Repl = this->Repl;
   Other->Live = false;
 }

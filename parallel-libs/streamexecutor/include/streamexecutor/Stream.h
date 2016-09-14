@@ -66,8 +66,8 @@ public:
   Stream(const Stream &Other) = delete;
   Stream &operator=(const Stream &Other) = delete;
 
-  Stream(Stream &&Other);
-  Stream &operator=(Stream &&Other);
+  Stream(Stream &&Other) noexcept;
+  Stream &operator=(Stream &&Other) noexcept;
 
   ~Stream();
 
@@ -288,7 +288,7 @@ private:
   /// Sets the error state from an error message.
   ///
   /// Does not overwrite the error if it is already set.
-  void setError(llvm::Twine Message) {
+  void setError(const llvm::Twine &Message) {
     llvm::sys::ScopedWriter WriterLock(*ErrorMessageMutex);
     if (!ErrorMessage)
       ErrorMessage = Message.str();

@@ -26,6 +26,10 @@ namespace streamexecutor {
 
 class Stream;
 
+/// A class representing a StreamExecutor device.
+///
+/// Device instances are basically just pointers to the underlying
+/// implementation, so they are small and can be passed around by value.
 class Device {
 public:
   explicit Device(PlatformDevice *PDevice);
@@ -40,9 +44,8 @@ public:
                                    KernelT>::type>
   createKernel(const MultiKernelLoaderSpec &Spec) {
     Expected<const void *> MaybeKernelHandle = PDevice->createKernel(Spec);
-    if (!MaybeKernelHandle) {
+    if (!MaybeKernelHandle)
       return MaybeKernelHandle.takeError();
-    }
     return KernelT(PDevice, *MaybeKernelHandle, Spec.getKernelName());
   }
 
@@ -68,9 +71,8 @@ public:
   Expected<RegisteredHostMemory<T>>
   registerHostMemory(llvm::MutableArrayRef<T> Memory) {
     if (Error E = PDevice->registerHostMemory(Memory.data(),
-                                              Memory.size() * sizeof(T))) {
+                                              Memory.size() * sizeof(T)))
       return std::move(E);
-    }
     return RegisteredHostMemory<T>(this, Memory.data(), Memory.size());
   }
 

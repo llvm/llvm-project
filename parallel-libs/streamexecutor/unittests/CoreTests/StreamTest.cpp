@@ -14,12 +14,12 @@
 
 #include <cstring>
 
-#include "SimpleHostPlatformDevice.h"
 #include "streamexecutor/Device.h"
 #include "streamexecutor/Kernel.h"
 #include "streamexecutor/KernelSpec.h"
 #include "streamexecutor/PlatformDevice.h"
 #include "streamexecutor/Stream.h"
+#include "streamexecutor/platforms/host/HostPlatformDevice.h"
 
 #include "gtest/gtest.h"
 
@@ -27,8 +27,7 @@ namespace {
 
 namespace se = ::streamexecutor;
 
-const auto &getDeviceValue =
-    se::test::SimpleHostPlatformDevice::getDeviceValue<int>;
+const auto &getDeviceValue = se::host::HostPlatformDevice::getDeviceValue<int>;
 
 /// Test fixture to hold objects used by tests.
 class StreamTest : public ::testing::Test {
@@ -56,7 +55,7 @@ public:
 protected:
   int DummyPlatformStream; // Mimicking a platform where the platform stream
                            // handle is just a stream number.
-  se::test::SimpleHostPlatformDevice PDevice;
+  se::host::HostPlatformDevice PDevice;
   se::Device Device;
   se::Stream Stream;
 
@@ -80,23 +79,18 @@ protected:
   se::GlobalDeviceMemory<int> DeviceB7;
 };
 
-using llvm::ArrayRef;
-using llvm::MutableArrayRef;
-
 // D2H tests
 
 TEST_F(StreamTest, CopyD2HToRegisteredRefByCount) {
   Stream.thenCopyD2H(DeviceA5, RegisteredHost5, 5);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(HostA5[I], Host5[I]);
-  }
 
   Stream.thenCopyD2H(DeviceB5, RegisteredHost5, 2);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 2; ++I) {
+  for (int I = 0; I < 2; ++I)
     EXPECT_EQ(HostB5[I], Host5[I]);
-  }
 
   Stream.thenCopyD2H(DeviceA7, RegisteredHost5, 7);
   EXPECT_FALSE(Stream.isOK());
@@ -105,9 +99,8 @@ TEST_F(StreamTest, CopyD2HToRegisteredRefByCount) {
 TEST_F(StreamTest, CopyD2HToRegistered) {
   Stream.thenCopyD2H(DeviceA5, RegisteredHost5);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(HostA5[I], Host5[I]);
-  }
 
   Stream.thenCopyD2H(DeviceA5, RegisteredHost7);
   EXPECT_FALSE(Stream.isOK());
@@ -117,15 +110,13 @@ TEST_F(StreamTest, CopyD2HSliceToRegiseredSliceByCount) {
   Stream.thenCopyD2H(DeviceA5.asSlice().slice(1),
                      RegisteredHost5.asSlice().slice(1, 4), 4);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 1; I < 5; ++I) {
+  for (int I = 1; I < 5; ++I)
     EXPECT_EQ(HostA5[I], Host5[I]);
-  }
 
   Stream.thenCopyD2H(DeviceB5.asSlice().drop_back(1), RegisteredHost5, 2);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 2; ++I) {
+  for (int I = 0; I < 2; ++I)
     EXPECT_EQ(HostB5[I], Host5[I]);
-  }
 
   Stream.thenCopyD2H(DeviceA5.asSlice(), RegisteredHost7, 7);
   EXPECT_FALSE(Stream.isOK());
@@ -134,9 +125,8 @@ TEST_F(StreamTest, CopyD2HSliceToRegiseredSliceByCount) {
 TEST_F(StreamTest, CopyD2HSliceToRegistered) {
   Stream.thenCopyD2H(DeviceA7.asSlice().slice(1, 5), RegisteredHost5);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(HostA7[I + 1], Host5[I]);
-  }
 
   Stream.thenCopyD2H(DeviceA5.asSlice(), RegisteredHost7);
   EXPECT_FALSE(Stream.isOK());
@@ -147,15 +137,13 @@ TEST_F(StreamTest, CopyD2HSliceToRegistered) {
 TEST_F(StreamTest, CopyH2DFromRegisterdByCount) {
   Stream.thenCopyH2D(RegisteredHost5, DeviceA5, 5);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA5, I), Host5[I]);
-  }
 
   Stream.thenCopyH2D(RegisteredHost5, DeviceB5, 2);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 2; ++I) {
+  for (int I = 0; I < 2; ++I)
     EXPECT_EQ(getDeviceValue(DeviceB5, I), Host5[I]);
-  }
 
   Stream.thenCopyH2D(RegisteredHost7, DeviceA5, 7);
   EXPECT_FALSE(Stream.isOK());
@@ -164,9 +152,8 @@ TEST_F(StreamTest, CopyH2DFromRegisterdByCount) {
 TEST_F(StreamTest, CopyH2DFromRegistered) {
   Stream.thenCopyH2D(RegisteredHost5, DeviceA5);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA5, I), Host5[I]);
-  }
 
   Stream.thenCopyH2D(RegisteredHost7, DeviceA5);
   EXPECT_FALSE(Stream.isOK());
@@ -176,15 +163,13 @@ TEST_F(StreamTest, CopyH2DFromRegisteredSliceToSlice) {
   Stream.thenCopyH2D(RegisteredHost5.asSlice().slice(1, 4),
                      DeviceA5.asSlice().slice(1), 4);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 1; I < 5; ++I) {
+  for (int I = 1; I < 5; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA5, I), Host5[I]);
-  }
 
   Stream.thenCopyH2D(RegisteredHost5, DeviceB5.asSlice().drop_back(1), 2);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 2; ++I) {
+  for (int I = 0; I < 2; ++I)
     EXPECT_EQ(getDeviceValue(DeviceB5, I), Host5[I]);
-  }
 
   Stream.thenCopyH2D(RegisteredHost5, DeviceA5.asSlice(), 7);
   EXPECT_FALSE(Stream.isOK());
@@ -193,9 +178,8 @@ TEST_F(StreamTest, CopyH2DFromRegisteredSliceToSlice) {
 TEST_F(StreamTest, CopyH2DRegisteredToSlice) {
   Stream.thenCopyH2D(RegisteredHost5, DeviceA5.asSlice());
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA5, I), Host5[I]);
-  }
 
   Stream.thenCopyH2D(RegisteredHost7, DeviceA5.asSlice());
   EXPECT_FALSE(Stream.isOK());
@@ -206,15 +190,13 @@ TEST_F(StreamTest, CopyH2DRegisteredToSlice) {
 TEST_F(StreamTest, CopyD2DByCount) {
   Stream.thenCopyD2D(DeviceA5, DeviceB5, 5);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA5, I), getDeviceValue(DeviceB5, I));
-  }
 
   Stream.thenCopyD2D(DeviceA7, DeviceB7, 2);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 2; ++I) {
+  for (int I = 0; I < 2; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA7, I), getDeviceValue(DeviceB7, I));
-  }
 
   Stream.thenCopyD2D(DeviceA7, DeviceB5, 7);
   EXPECT_FALSE(Stream.isOK());
@@ -223,9 +205,8 @@ TEST_F(StreamTest, CopyD2DByCount) {
 TEST_F(StreamTest, CopyD2D) {
   Stream.thenCopyD2D(DeviceA5, DeviceB5);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA5, I), getDeviceValue(DeviceB5, I));
-  }
 
   Stream.thenCopyD2D(DeviceA7, DeviceB5);
   EXPECT_FALSE(Stream.isOK());
@@ -234,15 +215,13 @@ TEST_F(StreamTest, CopyD2D) {
 TEST_F(StreamTest, CopySliceD2DByCount) {
   Stream.thenCopyD2D(DeviceA5.asSlice().slice(1), DeviceB5, 4);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 4; ++I) {
+  for (int I = 0; I < 4; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA5, I + 1), getDeviceValue(DeviceB5, I));
-  }
 
   Stream.thenCopyD2D(DeviceA7.asSlice().drop_back(1), DeviceB7, 2);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 2; ++I) {
+  for (int I = 0; I < 2; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA7, I), getDeviceValue(DeviceB7, I));
-  }
 
   Stream.thenCopyD2D(DeviceA5.asSlice(), DeviceB5, 7);
   EXPECT_FALSE(Stream.isOK());
@@ -251,9 +230,8 @@ TEST_F(StreamTest, CopySliceD2DByCount) {
 TEST_F(StreamTest, CopySliceD2D) {
   Stream.thenCopyD2D(DeviceA7.asSlice().drop_back(2), DeviceB5);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA7, I), getDeviceValue(DeviceB5, I));
-  }
 
   Stream.thenCopyD2D(DeviceA5.asSlice().drop_back(1), DeviceB7);
   EXPECT_FALSE(Stream.isOK());
@@ -262,15 +240,13 @@ TEST_F(StreamTest, CopySliceD2D) {
 TEST_F(StreamTest, CopyD2DSliceByCount) {
   Stream.thenCopyD2D(DeviceA5, DeviceB7.asSlice().slice(2), 5);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA5, I), getDeviceValue(DeviceB7, I + 2));
-  }
 
   Stream.thenCopyD2D(DeviceA7, DeviceB7.asSlice().drop_back(3), 2);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 2; ++I) {
+  for (int I = 0; I < 2; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA7, I), getDeviceValue(DeviceB7, I));
-  }
 
   Stream.thenCopyD2D(DeviceA5, DeviceB7.asSlice(), 7);
   EXPECT_FALSE(Stream.isOK());
@@ -279,9 +255,8 @@ TEST_F(StreamTest, CopyD2DSliceByCount) {
 TEST_F(StreamTest, CopyD2DSlice) {
   Stream.thenCopyD2D(DeviceA5, DeviceB7.asSlice().drop_back(2));
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA5, I), getDeviceValue(DeviceB7, I));
-  }
 
   Stream.thenCopyD2D(DeviceA5, DeviceB7.asSlice());
   EXPECT_FALSE(Stream.isOK());
@@ -290,15 +265,13 @@ TEST_F(StreamTest, CopyD2DSlice) {
 TEST_F(StreamTest, CopySliceD2DSliceByCount) {
   Stream.thenCopyD2D(DeviceA5.asSlice(), DeviceB5.asSlice(), 5);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA5, I), getDeviceValue(DeviceB5, I));
-  }
 
   Stream.thenCopyD2D(DeviceA7.asSlice(), DeviceB7.asSlice(), 2);
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 2; ++I) {
+  for (int I = 0; I < 2; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA7, I), getDeviceValue(DeviceB7, I));
-  }
 
   Stream.thenCopyD2D(DeviceA7.asSlice(), DeviceB5.asSlice(), 7);
   EXPECT_FALSE(Stream.isOK());
@@ -307,9 +280,8 @@ TEST_F(StreamTest, CopySliceD2DSliceByCount) {
 TEST_F(StreamTest, CopySliceD2DSlice) {
   Stream.thenCopyD2D(DeviceA5.asSlice(), DeviceB5.asSlice());
   EXPECT_TRUE(Stream.isOK());
-  for (int I = 0; I < 5; ++I) {
+  for (int I = 0; I < 5; ++I)
     EXPECT_EQ(getDeviceValue(DeviceA5, I), getDeviceValue(DeviceB5, I));
-  }
 
   Stream.thenCopyD2D(DeviceA5.asSlice(), DeviceB7.asSlice());
   EXPECT_FALSE(Stream.isOK());

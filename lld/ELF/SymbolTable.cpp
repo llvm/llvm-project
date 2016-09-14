@@ -47,58 +47,52 @@ template <class ELFT> static bool isCompatible(InputFile *F) {
 }
 
 // Add symbols in File to the symbol table.
-template <class ELFT>
-void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
-  InputFile *FileP = File.get();
-  if (!isCompatible<ELFT>(FileP))
+template <class ELFT> void SymbolTable<ELFT>::addFile(InputFile *File) {
+  if (!isCompatible<ELFT>(File))
     return;
 
   // Binary file
-  if (auto *F = dyn_cast<BinaryFile>(FileP)) {
-    BinaryFiles.emplace_back(cast<BinaryFile>(File.release()));
+  if (auto *F = dyn_cast<BinaryFile>(File)) {
     addFile(F->createELF<ELFT>());
     return;
   }
 
   // .a file
-  if (auto *F = dyn_cast<ArchiveFile>(FileP)) {
-    ArchiveFiles.emplace_back(cast<ArchiveFile>(File.release()));
+  if (auto *F = dyn_cast<ArchiveFile>(File)) {
     F->parse<ELFT>();
     return;
   }
 
   // Lazy object file
-  if (auto *F = dyn_cast<LazyObjectFile>(FileP)) {
-    LazyObjectFiles.emplace_back(cast<LazyObjectFile>(File.release()));
+  if (auto *F = dyn_cast<LazyObjectFile>(File)) {
     F->parse<ELFT>();
     return;
   }
 
   if (Config->Trace)
-    outs() << getFilename(FileP) << "\n";
+    outs() << getFilename(File) << "\n";
 
   // .so file
-  if (auto *F = dyn_cast<SharedFile<ELFT>>(FileP)) {
+  if (auto *F = dyn_cast<SharedFile<ELFT>>(File)) {
     // DSOs are uniquified not by filename but by soname.
     F->parseSoName();
     if (!SoNames.insert(F->getSoName()).second)
       return;
-
-    SharedFiles.emplace_back(cast<SharedFile<ELFT>>(File.release()));
+    SharedFiles.push_back(F);
     F->parseRest();
     return;
   }
 
   // LLVM bitcode file
-  if (auto *F = dyn_cast<BitcodeFile>(FileP)) {
-    BitcodeFiles.emplace_back(cast<BitcodeFile>(File.release()));
+  if (auto *F = dyn_cast<BitcodeFile>(File)) {
+    BitcodeFiles.push_back(F);
     F->parse<ELFT>(ComdatGroups);
     return;
   }
 
   // Regular object file
-  auto *F = cast<ObjectFile<ELFT>>(FileP);
-  ObjectFiles.emplace_back(cast<ObjectFile<ELFT>>(File.release()));
+  auto *F = cast<ObjectFile<ELFT>>(File);
+  ObjectFiles.push_back(F);
   F->parse(ComdatGroups);
 }
 
@@ -113,19 +107,16 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
   if (BitcodeFiles.empty())
     return;
 
-  // Compile bitcode files.
+  // Compile bitcode files and replace bitcode symbols.
   Lto.reset(new BitcodeCompiler);
-  for (const std::unique_ptr<BitcodeFile> &F : BitcodeFiles)
+  for (BitcodeFile *F : BitcodeFiles)
     Lto->add(*F);
-  std::vector<std::unique_ptr<InputFile>> IFs = Lto->compile();
 
-  // Replace bitcode symbols.
-  for (auto &IF : IFs) {
-    ObjectFile<ELFT> *Obj = cast<ObjectFile<ELFT>>(IF.release());
-
+  for (InputFile *File : Lto->compile()) {
+    ObjectFile<ELFT> *Obj = cast<ObjectFile<ELFT>>(File);
     DenseSet<StringRef> DummyGroups;
     Obj->parse(DummyGroups);
-    ObjectFiles.emplace_back(Obj);
+    ObjectFiles.push_back(Obj);
   }
 }
 
@@ -307,8 +298,8 @@ Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name, uint8_t Binding,
     // its type. See also comment in addLazyArchive.
     if (S->isWeak())
       L->Type = Type;
-    else if (auto F = L->fetch())
-      addFile(std::move(F));
+    else if (InputFile *F = L->fetch())
+      addFile(F);
   }
   return S;
 }
@@ -558,8 +549,8 @@ void SymbolTable<ELFT>::addLazyObject(StringRef Name, LazyObjectFile &Obj) {
 template <class ELFT> void SymbolTable<ELFT>::scanUndefinedFlags() {
   for (StringRef S : Config->Undefined)
     if (auto *L = dyn_cast_or_null<Lazy>(find(S)))
-      if (std::unique_ptr<InputFile> File = L->fetch())
-        addFile(std::move(File));
+      if (InputFile *File = L->fetch())
+        addFile(File);
 }
 
 // This function takes care of the case in which shared libraries depend on
@@ -570,7 +561,7 @@ template <class ELFT> void SymbolTable<ELFT>::scanUndefinedFlags() {
 // shared libraries can find them.
 // Except this, we ignore undefined symbols in DSOs.
 template <class ELFT> void SymbolTable<ELFT>::scanShlibUndefined() {
-  for (std::unique_ptr<SharedFile<ELFT>> &File : SharedFiles)
+  for (SharedFile<ELFT> *File : SharedFiles)
     for (StringRef U : File->getUndefinedSymbols())
       if (SymbolBody *Sym = find(U))
         if (Sym->isDefined())
@@ -599,13 +590,15 @@ static void setVersionId(SymbolBody *Body, StringRef VersionName,
   Sym->VersionId = Version;
 }
 
+// Returns a map from demangled symbols to symbol objects.
+// The relationship is 1:N instead of 1:1 because with the symbol
+// versioning, more than one symbol may have the same name.
 template <class ELFT>
-std::map<std::string, std::vector<SymbolBody *>>
-SymbolTable<ELFT>::getDemangledSyms() {
-  std::map<std::string, std::vector<SymbolBody *>> Result;
+std::map<std::string, SymbolBody *> SymbolTable<ELFT>::getDemangledSyms() {
+  std::map<std::string, SymbolBody *> Result;
   for (Symbol *Sym : SymVector) {
     SymbolBody *B = Sym->body();
-    Result[demangle(B->getName())].push_back(B);
+    Result[demangle(B->getName())] = B;
   }
   return Result;
 }
@@ -618,52 +611,55 @@ static bool hasExternCpp() {
   return false;
 }
 
-static ArrayRef<SymbolBody *>
-findDemangled(std::map<std::string, std::vector<SymbolBody *>> &D,
-              StringRef Name) {
+static SymbolBody *findDemangled(const std::map<std::string, SymbolBody *> &D,
+                                 StringRef Name) {
   auto I = D.find(Name);
   if (I != D.end())
     return I->second;
-  return {};
+  return nullptr;
 }
 
 static std::vector<SymbolBody *>
-findAllDemangled(const std::map<std::string, std::vector<SymbolBody *>> &D,
+findAllDemangled(const std::map<std::string, SymbolBody *> &D,
                  const Regex &Re) {
   std::vector<SymbolBody *> Res;
   for (auto &P : D) {
-    if (const_cast<Regex &>(Re).match(P.first))
-      for (SymbolBody *Body : P.second)
-        if (!Body->isUndefined())
-          Res.push_back(Body);
+    SymbolBody *Body = P.second;
+    if (!Body->isUndefined() && const_cast<Regex &>(Re).match(P.first))
+      Res.push_back(Body);
   }
   return Res;
+}
+
+// If there's only one anonymous version definition in a version
+// script file, the script does not actullay define any symbol version,
+// but just specifies symbols visibilities. We assume that the script was
+// in the form of { global: foo; bar; local *; }. So, local is default.
+// In this function, we make specified symbols global.
+template <class ELFT> void SymbolTable<ELFT>::handleAnonymousVersion() {
+  std::vector<StringRef> Patterns;
+  for (SymbolVersion &Sym : Config->VersionScriptGlobals) {
+    if (hasWildcard(Sym.Name)) {
+      Patterns.push_back(Sym.Name);
+      continue;
+    }
+    if (SymbolBody *B = find(Sym.Name))
+      B->symbol()->VersionId = VER_NDX_GLOBAL;
+  }
+  if (Patterns.empty())
+    return;
+  Regex Re = compileGlobPatterns(Patterns);
+  std::vector<SymbolBody *> Syms = findAll(Re);
+  for (SymbolBody *B : Syms)
+    B->symbol()->VersionId = VER_NDX_GLOBAL;
 }
 
 // This function processes version scripts by updating VersionId
 // member of symbols.
 template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
-  // If there's only one anonymous version definition in a version
-  // script file, the script does not actullay define any symbol version,
-  // but just specifies symbols visibilities. We assume that the script was
-  // in the form of { global: foo; bar; local *; }. So, local is default.
-  // Here, we make specified symbols global.
+  // Handle edge cases first.
   if (!Config->VersionScriptGlobals.empty()) {
-    std::vector<StringRef> Globs;
-    for (SymbolVersion &Sym : Config->VersionScriptGlobals) {
-      if (hasWildcard(Sym.Name)) {
-        Globs.push_back(Sym.Name);
-        continue;
-      }
-      if (SymbolBody *B = find(Sym.Name))
-        B->symbol()->VersionId = VER_NDX_GLOBAL;
-    }
-    if (Globs.empty())
-      return;
-    Regex Re = compileGlobPatterns(Globs);
-    std::vector<SymbolBody *> Syms = findAll(Re);
-    for (SymbolBody *B : Syms)
-      B->symbol()->VersionId = VER_NDX_GLOBAL;
+    handleAnonymousVersion();
     return;
   }
 
@@ -679,7 +675,7 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   // "llvm::*::foo(int, ?)". Obviously, there's no way to handle this
   // other than trying to match a regexp against all demangled symbols.
   // So, if "extern C++" feature is used, we demangle all known symbols.
-  std::map<std::string, std::vector<SymbolBody *>> Demangled;
+  std::map<std::string, SymbolBody *> Demangled;
   if (hasExternCpp())
     Demangled = getDemangledSyms();
 
@@ -689,13 +685,9 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
     for (SymbolVersion Sym : V.Globals) {
       if (Sym.HasWildcards)
         continue;
-
       StringRef N = Sym.Name;
-      ArrayRef<SymbolBody *> Arr = Sym.IsExternCpp
-                                       ? findDemangled(Demangled, N)
-                                       : ArrayRef<SymbolBody *>(find(N));
-      for (SymbolBody *B : Arr)
-        setVersionId(B, V.Name, N, V.Id);
+      SymbolBody *B = Sym.IsExternCpp ? findDemangled(Demangled, N) : find(N);
+      setVersionId(B, V.Name, N, V.Id);
     }
   }
 
