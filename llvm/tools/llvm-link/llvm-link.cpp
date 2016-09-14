@@ -82,8 +82,11 @@ static cl::opt<bool>
 Force("f", cl::desc("Enable binary output on terminals"));
 
 static cl::opt<bool>
-OutputAssembly("S",
-         cl::desc("Write output as LLVM assembly"), cl::Hidden);
+    DisableLazyLoad("disable-lazy-loading",
+                    cl::desc("Enable binary output on terminals"));
+
+static cl::opt<bool>
+    OutputAssembly("S", cl::desc("Write output as LLVM assembly"), cl::Hidden);
 
 static cl::opt<bool>
 Verbose("v", cl::desc("Print information about actions taken"));
@@ -114,8 +117,12 @@ static std::unique_ptr<Module> loadFile(const char *argv0,
                                         bool MaterializeMetadata = true) {
   SMDiagnostic Err;
   if (Verbose) errs() << "Loading '" << FN << "'\n";
-  std::unique_ptr<Module> Result =
-      getLazyIRFileModule(FN, Err, Context, !MaterializeMetadata);
+  std::unique_ptr<Module> Result;
+  if (DisableLazyLoad)
+    Result = parseIRFile(FN, Err, Context);
+  else
+    Result = getLazyIRFileModule(FN, Err, Context, !MaterializeMetadata);
+
   if (!Result) {
     Err.print(argv0, errs());
     return nullptr;
