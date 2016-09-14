@@ -5609,13 +5609,6 @@ bool SwiftASTContext::IsSelfArchetypeType(const CompilerType &compiler_type) {
     }
   }
   return false;
-
-  if (llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
-    if (swift::ArchetypeType *archetype = llvm::dyn_cast<swift::ArchetypeType>(
-            (swift::TypeBase *)compiler_type.GetOpaqueQualType()))
-      return archetype->isSelfDerived();
-  }
-  return false;
 }
 
 bool SwiftASTContext::IsPossibleZeroSizeType(
