@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 // Trace PCs.
-// This module implements __sanitizer_cov_trace_pc, a callback required
-// for -fsanitize-coverage=trace-pc instrumentation.
+// This module implements __sanitizer_cov_trace_pc_guard[_init],
+// the callback required for -fsanitize-coverage=trace-pc-guard instrumentation.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,37 +16,27 @@
 
 namespace fuzzer {
 
-static size_t PreviouslyComputedPCHash;
-static ValueBitMap CurrentPCMap;
+TracePC TPC;
 
-// Merges CurrentPCMap into M, returns the number of new bits.
-size_t PCMapMergeFromCurrent(ValueBitMap &M) {
-  if (!PreviouslyComputedPCHash)
-    return 0;
-  PreviouslyComputedPCHash = 0;
-  return M.MergeFrom(CurrentPCMap);
+void TracePC::HandleTrace(uint8_t *guard, uintptr_t PC) {
+  *guard = 0xff;
+  TotalCoverage++;
 }
-
-static void HandlePC(uint32_t PC) {
-  // We take 12 bits of PC and mix it with the previous PCs.
-  uintptr_t Next = (PreviouslyComputedPCHash << 5) ^ (PC & 4095);
-  CurrentPCMap.AddValue(Next);
-  PreviouslyComputedPCHash = Next;
+void TracePC::HandleInit(uint8_t *start, uint8_t *stop) {
+  Printf("INFO: guards: [%p,%p)\n", start, stop);
 }
+size_t TracePC::GetTotalCoverage() { return TotalCoverage; }
 
 } // namespace fuzzer
 
 extern "C" {
 __attribute__((visibility("default")))
-void __sanitizer_cov_trace_pc() {
-  fuzzer::HandlePC(static_cast<uint32_t>(
-      reinterpret_cast<uintptr_t>(__builtin_return_address(0))));
+void __sanitizer_cov_trace_pc_guard(uint8_t *guard) {
+  uintptr_t PC = (uintptr_t)__builtin_return_address(0);
+  fuzzer::TPC.HandleTrace(guard, PC);
 }
 
 __attribute__((visibility("default")))
-void __sanitizer_cov_trace_pc_indir(int *) {
-  // Stub to allow linking with code built with
-  // -fsanitize=indirect-calls,trace-pc.
-  // This isn't used currently.
+void __sanitizer_cov_trace_pc_guard_init(uint8_t *start, uint8_t *stop) {
 }
 }

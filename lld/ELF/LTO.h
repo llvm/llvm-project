@@ -37,10 +37,10 @@ class BitcodeCompiler {
 public:
   BitcodeCompiler();
   void add(BitcodeFile &F);
-  std::vector<std::unique_ptr<InputFile>> compile();
+  std::vector<InputFile *> compile();
 
 private:
-  std::vector<std::unique_ptr<InputFile>> runSplitCodegen(
+  std::vector<InputFile *> runSplitCodegen(
       const std::function<std::unique_ptr<llvm::TargetMachine>()> &TMFactory);
 
   std::unique_ptr<llvm::Module> Combined;

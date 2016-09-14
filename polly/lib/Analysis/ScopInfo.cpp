@@ -857,6 +857,28 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
   Id = isl_id_alloc(Stmt->getParent()->getIslCtx(), IdName.c_str(), this);
 }
 
+MemoryAccess::MemoryAccess(ScopStmt *Stmt, AccessType AccType,
+                           __isl_take isl_map *AccRel)
+    : Kind(ScopArrayInfo::MemoryKind::MK_Array), AccType(AccType),
+      RedType(RT_NONE), Statement(Stmt), InvalidDomain(nullptr),
+      AccessInstruction(nullptr), IsAffine(true), AccessRelation(nullptr),
+      NewAccessRelation(AccRel) {
+  auto *ArrayInfoId = isl_map_get_tuple_id(NewAccessRelation, isl_dim_out);
+  auto *SAI = ScopArrayInfo::getFromId(ArrayInfoId);
+  Sizes.push_back(nullptr);
+  for (unsigned i = 1; i < SAI->getNumberOfDimensions(); i++)
+    Sizes.push_back(SAI->getDimensionSize(i));
+  ElementType = SAI->getElementType();
+  BaseAddr = SAI->getBasePtr();
+  BaseName = SAI->getName();
+  static const std::string TypeStrings[] = {"", "_Read", "_Write", "_MayWrite"};
+  const std::string Access = TypeStrings[AccType] + utostr(Stmt->size()) + "_";
+
+  std::string IdName =
+      getIslCompatibleName(Stmt->getBaseName(), Access, BaseName);
+  Id = isl_id_alloc(Stmt->getParent()->getIslCtx(), IdName.c_str(), this);
+}
+
 void MemoryAccess::realignParams() {
   auto *Ctx = Statement->getParent()->getContext();
   InvalidDomain = isl_set_gist_params(InvalidDomain, isl_set_copy(Ctx));
@@ -1040,6 +1062,10 @@ __isl_give isl_map *ScopStmt::getSchedule() const {
         isl_aff_zero_on_domain(isl_local_space_from_space(getDomainSpace())));
   }
   auto *Schedule = getParent()->getSchedule();
+  if (!Schedule) {
+    isl_set_free(Domain);
+    return nullptr;
+  }
   Schedule = isl_union_map_intersect_domain(
       Schedule, isl_union_set_from_set(isl_set_copy(Domain)));
   if (isl_union_map_is_empty(Schedule)) {
@@ -1430,6 +1456,25 @@ ScopStmt::ScopStmt(Scop &parent, BasicBlock &bb)
   BaseName = getIslCompatibleName("Stmt_", &bb, "");
 }
 
+ScopStmt::ScopStmt(Scop &parent, __isl_take isl_map *SourceRel,
+                   __isl_take isl_map *TargetRel, __isl_take isl_set *NewDomain)
+    : Parent(parent), InvalidDomain(nullptr), Domain(NewDomain), BB(nullptr),
+      R(nullptr), Build(nullptr) {
+  BaseName = getIslCompatibleName("CopyStmt_", "",
+                                  std::to_string(parent.getCopyStmtsNum()));
+  auto *Id = isl_id_alloc(getIslCtx(), getBaseName(), this);
+  Domain = isl_set_set_tuple_id(Domain, isl_id_copy(Id));
+  TargetRel = isl_map_set_tuple_id(TargetRel, isl_dim_in, Id);
+  auto *Access =
+      new MemoryAccess(this, MemoryAccess::AccessType::MUST_WRITE, TargetRel);
+  parent.addAccessFunction(Access);
+  addAccess(Access);
+  SourceRel = isl_map_set_tuple_id(SourceRel, isl_dim_in, isl_id_copy(Id));
+  Access = new MemoryAccess(this, MemoryAccess::AccessType::READ, SourceRel);
+  parent.addAccessFunction(Access);
+  addAccess(Access);
+}
+
 void ScopStmt::init(LoopInfo &LI) {
   assert(!Domain && "init must be called only once");
 
@@ -1576,6 +1621,8 @@ std::string ScopStmt::getDomainStr() const { return stringFromIslObj(Domain); }
 
 std::string ScopStmt::getScheduleStr() const {
   auto *S = getSchedule();
+  if (!S)
+    return "";
   auto Str = stringFromIslObj(S);
   isl_map_free(S);
   return Str;
@@ -3041,9 +3088,10 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
            ScopDetection::DetectionContext &DC)
     : SE(&ScalarEvolution), R(R), IsOptimized(false),
       HasSingleExitEdge(R.getExitingBlock()), HasErrorBlock(false),
-      MaxLoopDepth(0), DC(DC), IslCtx(isl_ctx_alloc(), isl_ctx_free),
-      Context(nullptr), Affinator(this, LI), AssumedContext(nullptr),
-      InvalidContext(nullptr), Schedule(nullptr) {
+      MaxLoopDepth(0), CopyStmtsNum(0), DC(DC),
+      IslCtx(isl_ctx_alloc(), isl_ctx_free), Context(nullptr),
+      Affinator(this, LI), AssumedContext(nullptr), InvalidContext(nullptr),
+      Schedule(nullptr) {
   if (IslOnErrorAbort)
     isl_options_set_on_error(getIslCtx(), ISL_ON_ERROR_ABORT);
   buildContext();
@@ -3922,8 +3970,27 @@ __isl_give isl_union_map *Scop::getAccesses() {
   return getAccessesOfType([](MemoryAccess &MA) { return true; });
 }
 
+// Check whether @p Node is an extension node.
+//
+// @return true if @p Node is an extension node.
+isl_bool isNotExtNode(__isl_keep isl_schedule_node *Node, void *User) {
+  if (isl_schedule_node_get_type(Node) == isl_schedule_node_extension)
+    return isl_bool_error;
+  else
+    return isl_bool_true;
+}
+
+bool Scop::containsExtensionNode(__isl_keep isl_schedule *Schedule) {
+  return isl_schedule_foreach_schedule_node_top_down(Schedule, isNotExtNode,
+                                                     nullptr) == isl_stat_error;
+}
+
 __isl_give isl_union_map *Scop::getSchedule() const {
   auto *Tree = getScheduleTree();
+  if (containsExtensionNode(Tree)) {
+    isl_schedule_free(Tree);
+    return nullptr;
+  }
   auto *S = isl_schedule_get_map(Tree);
   isl_schedule_free(Tree);
   return S;
@@ -4057,6 +4124,14 @@ void Scop::addScopStmt(BasicBlock *BB, Region *R) {
     for (BasicBlock *BB : R->blocks())
       StmtMap[BB] = Stmt;
   }
+}
+
+ScopStmt *Scop::addScopStmt(__isl_take isl_map *SourceRel,
+                            __isl_take isl_map *TargetRel,
+                            __isl_take isl_set *Domain) {
+  Stmts.emplace_back(*this, SourceRel, TargetRel, Domain);
+  CopyStmtsNum++;
+  return &(Stmts.back());
 }
 
 void Scop::buildSchedule(LoopInfo &LI) {

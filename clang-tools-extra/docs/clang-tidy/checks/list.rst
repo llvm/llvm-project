@@ -93,6 +93,7 @@ Clang-Tidy Checks
    misc-unused-parameters
    misc-unused-raii
    misc-unused-using-decls
+   misc-use-after-move
    misc-virtual-near-miss
    modernize-avoid-bind
    modernize-deprecated-headers

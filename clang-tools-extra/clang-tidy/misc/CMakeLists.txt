@@ -43,6 +43,7 @@ add_clang_library(clangTidyMiscModule
   UnusedParametersCheck.cpp
   UnusedRAIICheck.cpp
   UnusedUsingDeclsCheck.cpp
+  UseAfterMoveCheck.cpp
   VirtualNearMissCheck.cpp
 
   LINK_LIBS

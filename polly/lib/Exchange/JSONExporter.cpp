@@ -294,6 +294,8 @@ bool JSONImporter::importSchedule(Scop &S, Json::Value &JScop,
   int Index = 0;
   for (ScopStmt &Stmt : S) {
     Json::Value Schedule = JScop["statements"][Index]["schedule"];
+    assert(!Schedule.asString().empty() &&
+           "Schedules that contain extension nodes require special handling.");
     isl_map *Map = isl_map_read_from_str(S.getIslCtx(), Schedule.asCString());
     isl_space *Space = Stmt.getDomainSpace();
 

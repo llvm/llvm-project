@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "streamexecutor/PlatformManager.h"
+#include "streamexecutor/platforms/host/HostPlatform.h"
 
 namespace streamexecutor {
 
@@ -23,6 +24,8 @@ PlatformManager::PlatformManager() {
   //    appropriate code to include here.
   //  * Use static initialization tricks to have platform libraries register
   //    themselves when they are loaded.
+
+  PlatformsByName.emplace("host", llvm::make_unique<host::HostPlatform>());
 }
 
 Expected<Platform *> PlatformManager::getPlatformByName(llvm::StringRef Name) {

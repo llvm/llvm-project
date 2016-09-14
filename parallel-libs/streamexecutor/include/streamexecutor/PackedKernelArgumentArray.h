@@ -164,31 +164,10 @@ private:
     Types[Index] = KernelArgumentType::VALUE;
   }
 
-  // Pack a GlobalDeviceMemoryBase argument.
-  void PackOneArgument(size_t Index, const GlobalDeviceMemoryBase &Argument) {
-    Addresses[Index] = Argument.getHandle();
-    Sizes[Index] = sizeof(void *);
-    Types[Index] = KernelArgumentType::GLOBAL_DEVICE_MEMORY;
-  }
-
-  // Pack a GlobalDeviceMemoryBase pointer argument.
-  void PackOneArgument(size_t Index, GlobalDeviceMemoryBase *Argument) {
-    Addresses[Index] = Argument->getHandle();
-    Sizes[Index] = sizeof(void *);
-    Types[Index] = KernelArgumentType::GLOBAL_DEVICE_MEMORY;
-  }
-
-  // Pack a const GlobalDeviceMemoryBase pointer argument.
-  void PackOneArgument(size_t Index, const GlobalDeviceMemoryBase *Argument) {
-    Addresses[Index] = Argument->getHandle();
-    Sizes[Index] = sizeof(void *);
-    Types[Index] = KernelArgumentType::GLOBAL_DEVICE_MEMORY;
-  }
-
   // Pack a GlobalDeviceMemory<T> argument.
   template <typename T>
   void PackOneArgument(size_t Index, const GlobalDeviceMemory<T> &Argument) {
-    Addresses[Index] = Argument.getHandle();
+    Addresses[Index] = Argument.getHandleAddress();
     Sizes[Index] = sizeof(void *);
     Types[Index] = KernelArgumentType::GLOBAL_DEVICE_MEMORY;
   }
@@ -196,7 +175,7 @@ private:
   // Pack a GlobalDeviceMemory<T> pointer argument.
   template <typename T>
   void PackOneArgument(size_t Index, GlobalDeviceMemory<T> *Argument) {
-    Addresses[Index] = Argument->getHandle();
+    Addresses[Index] = Argument->getHandleAddress();
     Sizes[Index] = sizeof(void *);
     Types[Index] = KernelArgumentType::GLOBAL_DEVICE_MEMORY;
   }
@@ -204,7 +183,7 @@ private:
   // Pack a const GlobalDeviceMemory<T> pointer argument.
   template <typename T>
   void PackOneArgument(size_t Index, const GlobalDeviceMemory<T> *Argument) {
-    Addresses[Index] = Argument->getHandle();
+    Addresses[Index] = Argument->getHandleAddress();
     Sizes[Index] = sizeof(void *);
     Types[Index] = KernelArgumentType::GLOBAL_DEVICE_MEMORY;
   }

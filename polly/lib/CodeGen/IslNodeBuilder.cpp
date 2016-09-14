@@ -767,6 +767,23 @@ void IslNodeBuilder::createSubstitutionsVector(
   isl_ast_expr_free(Expr);
 }
 
+void IslNodeBuilder::generateCopyStmt(
+    ScopStmt *Stmt, __isl_keep isl_id_to_ast_expr *NewAccesses) {
+  assert(Stmt->size() == 2);
+  auto ReadAccess = Stmt->begin();
+  auto WriteAccess = ReadAccess++;
+  assert((*ReadAccess)->isRead() && (*WriteAccess)->isMustWrite());
+  assert((*ReadAccess)->getElementType() == (*WriteAccess)->getElementType() &&
+         "Accesses use the same data type");
+  assert((*ReadAccess)->isArrayKind() && (*WriteAccess)->isArrayKind());
+  auto *AccessExpr =
+      isl_id_to_ast_expr_get(NewAccesses, (*ReadAccess)->getId());
+  auto *LoadValue = ExprBuilder.create(AccessExpr);
+  AccessExpr = isl_id_to_ast_expr_get(NewAccesses, (*WriteAccess)->getId());
+  auto *StoreAddr = ExprBuilder.createAccessAddress(AccessExpr);
+  Builder.CreateStore(LoadValue, StoreAddr);
+}
+
 void IslNodeBuilder::createUser(__isl_take isl_ast_node *User) {
   LoopToScevMapT LTS;
   isl_id *Id;
@@ -781,12 +798,17 @@ void IslNodeBuilder::createUser(__isl_take isl_ast_node *User) {
 
   Stmt = (ScopStmt *)isl_id_get_user(Id);
   auto *NewAccesses = createNewAccesses(Stmt, User);
-  createSubstitutions(Expr, Stmt, LTS);
+  if (Stmt->isCopyStmt()) {
+    generateCopyStmt(Stmt, NewAccesses);
+    isl_ast_expr_free(Expr);
+  } else {
+    createSubstitutions(Expr, Stmt, LTS);
 
-  if (Stmt->isBlockStmt())
-    BlockGen.copyStmt(*Stmt, LTS, NewAccesses);
-  else
-    RegionGen.copyStmt(*Stmt, LTS, NewAccesses);
+    if (Stmt->isBlockStmt())
+      BlockGen.copyStmt(*Stmt, LTS, NewAccesses);
+    else
+      RegionGen.copyStmt(*Stmt, LTS, NewAccesses);
+  }
 
   isl_id_to_ast_expr_free(NewAccesses);
   isl_ast_node_free(User);

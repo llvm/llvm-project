@@ -4607,7 +4607,7 @@ static void handleObjCPreciseLifetimeAttr(Sema &S, Decl *D,
 UuidAttr *Sema::mergeUuidAttr(Decl *D, SourceRange Range,
                               unsigned AttrSpellingListIndex, StringRef Uuid) {
   if (const auto *UA = D->getAttr<UuidAttr>()) {
-    if (UA->getGuid() == Uuid)
+    if (UA->getGuid().equals_lower(Uuid))
       return nullptr;
     Diag(UA->getLocation(), diag::err_mismatched_uuid);
     Diag(Range.getBegin(), diag::note_previous_uuid);

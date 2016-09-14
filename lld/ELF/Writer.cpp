@@ -150,8 +150,8 @@ template <class ELFT> void elf::writeResult() {
   if (needsInterpSection<ELFT>())
     Interp.reset(new InterpSection<ELFT>);
 
-  if (Config->BuildId == BuildIdKind::Fnv1)
-    BuildId.reset(new BuildIdFnv1<ELFT>);
+  if (Config->BuildId == BuildIdKind::Fast)
+    BuildId.reset(new BuildIdFastHash<ELFT>);
   else if (Config->BuildId == BuildIdKind::Md5)
     BuildId.reset(new BuildIdMd5<ELFT>);
   else if (Config->BuildId == BuildIdKind::Sha1)
@@ -252,7 +252,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   Script<ELFT>::X->createAssignments();
 
   Script<ELFT>::X->OutputSections = &OutputSections;
-  if (ScriptConfig->HasContents)
+  if (ScriptConfig->HasSections)
     Script<ELFT>::X->createSections(Factory);
   else
     createSections();
@@ -267,7 +267,7 @@ template <class ELFT> void Writer<ELFT>::run() {
     Phdrs = Script<ELFT>::X->hasPhdrsCommands() ? Script<ELFT>::X->createPhdrs()
                                                 : createPhdrs();
     fixHeaders();
-    if (ScriptConfig->HasContents) {
+    if (ScriptConfig->HasSections) {
       Script<ELFT>::X->assignAddresses();
     } else {
       fixSectionAlignments();
@@ -370,8 +370,7 @@ template <class ELFT> static bool includeInSymtab(const SymbolBody &B) {
 template <class ELFT> void Writer<ELFT>::copyLocalSymbols() {
   if (!Out<ELFT>::SymTab)
     return;
-  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
-       Symtab<ELFT>::X->getObjectFiles()) {
+  for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
     const char *StrTab = F->getStringTable().data();
     for (SymbolBody *B : F->getLocalSymbols()) {
       auto *DR = dyn_cast<DefinedRegular<ELFT>>(B);
@@ -611,7 +610,7 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
     Symtab<ELFT>::X->addIgnored("__tls_get_addr");
 
   // If linker script do layout we do not need to create any standart symbols.
-  if (ScriptConfig->HasContents)
+  if (ScriptConfig->HasSections)
     return;
 
   ElfSym<ELFT>::EhdrStart = Symtab<ELFT>::X->addIgnored("__ehdr_start");
@@ -651,8 +650,7 @@ template <class ELFT>
 void Writer<ELFT>::forEachRelSec(
     std::function<void(InputSectionBase<ELFT> &, const typename ELFT::Shdr &)>
         Fn) {
-  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
-       Symtab<ELFT>::X->getObjectFiles()) {
+  for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
     for (InputSectionBase<ELFT> *C : F->getSections()) {
       if (isDiscarded(C))
         continue;
@@ -676,8 +674,7 @@ void Writer<ELFT>::forEachRelSec(
 }
 
 template <class ELFT> void Writer<ELFT>::createSections() {
-  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
-       Symtab<ELFT>::X->getObjectFiles()) {
+  for (elf::ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
     for (InputSectionBase<ELFT> *C : F->getSections()) {
       if (isDiscarded(C)) {
         reportDiscarded(C);
@@ -1063,7 +1060,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // sections. These are special, we do not include them into output sections
 // list, but have them to simplify the code.
 template <class ELFT> void Writer<ELFT>::fixHeaders() {
-  uintX_t BaseVA = ScriptConfig->HasContents ? 0 : Config->ImageBase;
+  uintX_t BaseVA = ScriptConfig->HasSections ? 0 : Config->ImageBase;
   Out<ELFT>::ElfHeader->setVA(BaseVA);
   uintX_t Off = Out<ELFT>::ElfHeader->getSize();
   Out<ELFT>::ProgramHeaders->setVA(Off + BaseVA);
@@ -1262,7 +1259,12 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_shnum = OutputSections.size() + 1;
   EHdr->e_shstrndx = Out<ELFT>::ShStrTab->SectionIndex;
 
-  if (Config->EMachine == EM_MIPS)
+  if (Config->EMachine == EM_ARM)
+    // We don't currently use any features incompatible with EF_ARM_EABI_VER5,
+    // but we don't have any firm guarantees of conformance. Linux AArch64
+    // kernels (as of 2016) require an EABI version to be set.
+    EHdr->e_flags = EF_ARM_EABI_VER5;
+  else if (Config->EMachine == EM_MIPS)
     EHdr->e_flags = getMipsEFlags<ELFT>();
 
   if (!Config->Relocatable) {

@@ -32,7 +32,9 @@ entry:
 ; CHECK-NOT: mul i32
   %mul = mul i32 %sub, -4
 ; CHECK: sub i32
-; CHECK-NEXT: shl
+; CHECK-NEXT: trunc i32
+; CHECK-NEXT: %conv = shl i16 %{{.*}}, 2
+; CHECK-NEXT: ret i16 %conv
   store i32 %mul, i32* %a, align 4
   %tmp2 = load i32, i32* %a, align 4
   %conv = trunc i32 %tmp2 to i16

@@ -92,6 +92,8 @@ char DeadCodeElim::ID = 0;
 // no point in trying to remove them from the live-out set.
 __isl_give isl_union_set *DeadCodeElim::getLiveOut(Scop &S) {
   isl_union_map *Schedule = S.getSchedule();
+  assert(Schedule &&
+         "Schedules that contain extension nodes require special handling.");
   isl_union_map *WriteIterations = isl_union_map_reverse(S.getMustWrites());
   isl_union_map *WriteTimes =
       isl_union_map_apply_range(WriteIterations, isl_union_map_copy(Schedule));

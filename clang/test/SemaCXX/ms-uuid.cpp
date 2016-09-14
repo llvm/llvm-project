@@ -29,7 +29,8 @@ namespace {
 
 // Both cl and clang-cl accept this:
 class __declspec(uuid("000000A0-0000-0000-C000-000000000049")) C1;
-class __declspec(uuid("000000A0-0000-0000-C000-000000000049")) C1;
+class __declspec(uuid("000000a0-0000-0000-c000-000000000049")) C1;
+class __declspec(uuid("{000000a0-0000-0000-C000-000000000049}")) C1;
 class __declspec(uuid("000000A0-0000-0000-C000-000000000049")) C1 {};
 
 // Both cl and clang-cl error out on this:

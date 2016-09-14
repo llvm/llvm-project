@@ -685,8 +685,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   if (!Config->RPath.empty())
     Add({Config->EnableNewDtags ? DT_RUNPATH : DT_RPATH,
          Out<ELFT>::DynStrTab->addString(Config->RPath)});
-  for (const std::unique_ptr<SharedFile<ELFT>> &F :
-       Symtab<ELFT>::X->getSharedFiles())
+  for (SharedFile<ELFT> *F : Symtab<ELFT>::X->getSharedFiles())
     if (F->isNeeded())
       Add({DT_NEEDED, Out<ELFT>::DynStrTab->addString(F->getSoName())});
   if (!Config->SoName.empty())
@@ -1431,8 +1430,7 @@ template <class ELFT>
 void SymbolTableSection<ELFT>::writeLocalSymbols(uint8_t *&Buf) {
   // Iterate over all input object files to copy their local symbols
   // to the output symbol table pointed by Buf.
-  for (const std::unique_ptr<ObjectFile<ELFT>> &File :
-       Symtab<ELFT>::X->getObjectFiles()) {
+  for (ObjectFile<ELFT> *File : Symtab<ELFT>::X->getObjectFiles()) {
     for (const std::pair<const DefinedRegular<ELFT> *, size_t> &P :
          File->KeptLocalSyms) {
       const DefinedRegular<ELFT> &Body = *P.first;
@@ -1693,16 +1691,59 @@ template <class ELFT> void BuildIdSection<ELFT>::writeTo(uint8_t *Buf) {
   HashBuf = Buf + 16;
 }
 
+static uint64_t murmurHash64A(const void *Key, int Len) {
+  uint64_t Seed = 0;
+  const uint64_t M = 0xc6a4a7935bd1e995LLU;
+  const int R = 47;
+
+  uint64_t H = Seed ^ (Len * M);
+
+  const uint64_t *Data = (const uint64_t *)Key;
+  const uint64_t *End = Data + (Len / 8);
+
+  while (Data != End) {
+    uint64_t K = *Data++;
+
+    K *= M;
+    K ^= K >> R;
+    K *= M;
+
+    H ^= K;
+    H *= M;
+  }
+
+  const unsigned char *Data2 = (const unsigned char *)Data;
+  switch (Len & 7) {
+  case 7:
+    H ^= uint64_t(Data2[6]) << 48;
+  case 6:
+    H ^= uint64_t(Data2[5]) << 40;
+  case 5:
+    H ^= uint64_t(Data2[4]) << 32;
+  case 4:
+    H ^= uint64_t(Data2[3]) << 24;
+  case 3:
+    H ^= uint64_t(Data2[2]) << 16;
+  case 2:
+    H ^= uint64_t(Data2[1]) << 8;
+  case 1:
+    H ^= uint64_t(Data2[0]);
+    H *= M;
+  };
+
+  H ^= H >> R;
+  H *= M;
+  H ^= H >> R;
+
+  return H;
+}
+
 template <class ELFT>
-void BuildIdFnv1<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
+void BuildIdFastHash<ELFT>::writeBuildId(ArrayRef<uint8_t> Buf) {
   const endianness E = ELFT::TargetEndianness;
 
-  // 64-bit FNV-1 hash
-  uint64_t Hash = 0xcbf29ce484222325;
-  for (uint8_t B : Buf) {
-    Hash *= 0x100000001b3;
-    Hash ^= B;
-  }
+  // 64-bit murmur2 hash
+  uint64_t Hash = murmurHash64A(Buf.data(), Buf.size());
   write64<E>(this->HashBuf, Hash);
 }
 
@@ -2040,10 +2081,10 @@ template class BuildIdSection<ELF32BE>;
 template class BuildIdSection<ELF64LE>;
 template class BuildIdSection<ELF64BE>;
 
-template class BuildIdFnv1<ELF32LE>;
-template class BuildIdFnv1<ELF32BE>;
-template class BuildIdFnv1<ELF64LE>;
-template class BuildIdFnv1<ELF64BE>;
+template class BuildIdFastHash<ELF32LE>;
+template class BuildIdFastHash<ELF32BE>;
+template class BuildIdFastHash<ELF64LE>;
+template class BuildIdFastHash<ELF64BE>;
 
 template class BuildIdMd5<ELF32LE>;
 template class BuildIdMd5<ELF32BE>;

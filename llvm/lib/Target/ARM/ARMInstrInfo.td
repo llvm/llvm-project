@@ -3498,6 +3498,7 @@ def UBFX  : I<(outs GPRnopc:$Rd),
 //  Arithmetic Instructions.
 //
 
+let isAdd = 1 in
 defm ADD  : AsI1_bin_irs<0b0100, "add",
                          IIC_iALUi, IIC_iALUr, IIC_iALUsr, add, 1>;
 defm SUB  : AsI1_bin_irs<0b0010, "sub",
@@ -3513,9 +3514,11 @@ defm SUB  : AsI1_bin_irs<0b0010, "sub",
 // FIXME: Eliminate ADDS/SUBS pseudo opcodes after adding tablegen
 // support for an optional CPSR definition that corresponds to the DAG
 // node's second value. We can then eliminate the implicit def of CPSR.
+let isAdd = 1 in
 defm ADDS : AsI1_bin_s_irs<IIC_iALUi, IIC_iALUr, IIC_iALUsr, ARMaddc, 1>;
 defm SUBS : AsI1_bin_s_irs<IIC_iALUi, IIC_iALUr, IIC_iALUsr, ARMsubc>;
 
+let isAdd = 1 in
 defm ADC : AI1_adde_sube_irs<0b0101, "adc", ARMadde, 1>;
 defm SBC : AI1_adde_sube_irs<0b0110, "sbc", ARMsube>;
 

@@ -149,10 +149,10 @@ public:
   /// Similar to synchronousCopyD2H(const void *, size_t, void
   /// *, size_t, size_t), but copies memory from one location in device memory
   /// to another rather than from device to host.
-  virtual Error synchronousCopyD2D(const void *DeviceDstHandle,
-                                   size_t DstByteOffset,
-                                   const void *DeviceSrcHandle,
-                                   size_t SrcByteOffset, size_t ByteCount) {
+  virtual Error synchronousCopyD2D(const void *DeviceSrcHandle,
+                                   size_t SrcByteOffset,
+                                   const void *DeviceDstHandle,
+                                   size_t DstByteOffset, size_t ByteCount) {
     return make_error("synchronousCopyD2D not implemented for platform " +
                       getName());
   }

@@ -88,7 +88,7 @@ public:
   ///
   /// @return True, if we believe @p NewSchedule is an improvement for @p S.
   static bool isProfitableSchedule(polly::Scop &S,
-                                   __isl_keep isl_union_map *NewSchedule);
+                                   __isl_keep isl_schedule *NewSchedule);
 
   /// Isolate a set of partial tile prefixes.
   ///

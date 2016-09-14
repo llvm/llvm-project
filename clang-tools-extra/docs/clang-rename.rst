@@ -52,21 +52,29 @@ editors, such as Vim and Emacs, and improve the workflow of users.
 Although a command line interface exists, it is highly recommended to use the
 text editor interface instead for better experience.
 
-You can also identify one or more symbols to be renamed by giving the fully qualified
-name:
+You can also identify one or more symbols to be renamed by giving the fully
+qualified name:
 
 .. code-block:: console
 
-  $ clang-rename rename-all -old-name=foo -new-name=bar test.cpp
+  $ clang-rename -qualified-name=foo -new-name=bar test.cpp
 
+Or even combine it:
 
-Alternatively, old name / new name pairs can be put into a YAML file:
+.. code-block:: console
+
+  $ clang-rename -offset=42 -new-name=whatever -qualified-name=foo -new-name=bar test.cpp
+
+Alternatively, {offset | qualified-name} / new-name pairs can be put into a YAML
+file:
 
 .. code-block:: yaml
 
   ---
-  - OldName:        foo
+  - Offset:         42
     NewName:        bar
+  - QualifiedName:  foo
+    NewName:        something
   ...
 
 
@@ -76,90 +84,34 @@ That way you can avoid spelling out all the names as command line arguments:
 
   $ clang-rename rename-all -input=test.yaml test.cpp
 
-
-The YAML file also supports offsets:
-
-.. code-block:: yaml
-
-  ---
-  - Offset:         42
-    NewName:        foo
-  ...
-
-
 :program:`clang-rename` offers the following options:
 
 .. code-block:: console
 
-  $ clang-rename -help
-  Usage: clang-rename {rename-at|rename-all} [OPTION]...
+  $ clang-rename --help
+  USAGE: clang-rename [subcommand] [options] <source0> [... <sourceN>]
 
-  A tool to rename symbols in C/C++ code.
-
-  Subcommands:
-    rename-at:  Perform rename off of a location in a file. (This is the default.)
-    rename-all: Perform rename of all symbols matching one or more fully qualified names.
-
-
-.. code-block:: console
-
-  $ clang-rename rename-at -help
-  OVERVIEW: A tool to rename symbols in C/C++ code.
-  clang-rename renames every occurrence of a symbol found at <offset> in
-  <source0>. If -i is specified, the edited files are overwritten to disk.
-  Otherwise, the results are written to stdout.
-  
-  USAGE: clang-rename rename-at [subcommand] [options] <source0> [... <sourceN>]
-  
   OPTIONS:
-  
+
   Generic Options:
-  
+
     -help                      - Display available options (-help-hidden for more)
     -help-list                 - Display list of available options (-help-list-hidden for more)
     -version                   - Display the version of this program
 
-  clang-rename rename-at options:
+  clang-rename common options:
 
     -export-fixes=<filename>   - YAML file to store suggested fixes in.
-    -extra-arg=<string>        - Additional argument to append to the compiler command line.
-    -extra-arg-before=<string> - Additional argument to prepend to the compiler command line.
-    -i                         - Overwrite edited <file>s.
-    -new-name=<string>         - The new name to change the symbol to.
-    -offset=<uint>             - Locates the symbol by offset as opposed to <line>:<column>.
-    -p=<string>                - Build path.
-    -pl                        - Print the locations affected by renaming to stderr.
-    -pn                        - Print the found symbol's name prior to renaming to stderr.
-
-
-.. code-block:: console
-
-  $ clang-rename rename-all -help
-  OVERVIEW: A tool to rename symbols in C/C++ code.
-  clang-rename renames every occurrence of a symbol named <old-name>.
-
-  USAGE: clang-rename rename-all [subcommand] [options] <source0> [... <sourceN>]
-
-  OPTIONS:
-
-  Generic Options:
-
-    -help                      - Display available options (-help-hidden for more).
-    -help-list                 - Display list of available options (-help-list-hidden for more).
-    -version                   - Display the version of this program.
-
-  clang-rename rename-all options:
-
-    -export-fixes=<filename>   - YAML file to store suggested fixes in.
-    -extra-arg=<string>        - Additional argument to append to the compiler command line.
-    -extra-arg-before=<string> - Additional argument to prepend to the compiler command line.
+    -extra-arg=<string>        - Additional argument to append to the compiler command line
+    -extra-arg-before=<string> - Additional argument to prepend to the compiler command line
     -i                         - Overwrite edited <file>s.
     -input=<string>            - YAML file to load oldname-newname pairs from.
     -new-name=<string>         - The new name to change the symbol to.
     -offset=<uint>             - Locates the symbol by offset as opposed to <line>:<column>.
-    -old-name=<string>         - The fully qualified name of the symbol, if -offset is not used.
-    -p=<string>                - Build path.
-
+    -p=<string>                - Build path
+    -pl                        - Print the locations affected by renaming to stderr.
+    -pn                        - Print the found symbol's name prior to renaming to stderr.
+    -qualified-name=<string>   - The fully qualified name of the symbol.
 
 Vim Integration
 ===============

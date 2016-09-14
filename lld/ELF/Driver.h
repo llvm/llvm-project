@@ -46,7 +46,7 @@ private:
   bool InLib = false;
 
   llvm::BumpPtrAllocator Alloc;
-  std::vector<std::unique_ptr<InputFile>> Files;
+  std::vector<InputFile *> Files;
   std::vector<std::unique_ptr<MemoryBuffer>> OwningMBs;
 };
 

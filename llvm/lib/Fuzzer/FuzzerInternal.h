@@ -137,9 +137,6 @@ int NumberOfCpuCores();
 int GetPid();
 void SleepSeconds(int Seconds);
 
-// See FuzzerTracePC.cpp
-size_t PCMapMergeFromCurrent(ValueBitMap &M);
-
 // See FuzzerTraceState.cpp
 void EnableValueProfile();
 size_t VPMapMergeFromCurrent(ValueBitMap &M);
@@ -358,6 +355,18 @@ private:
   std::vector<Mutator> DefaultMutators;
 };
 
+// See TracePC.cpp
+class TracePC {
+ public:
+  void HandleTrace(uint8_t *guard, uintptr_t PC);
+  void HandleInit(uint8_t *start, uint8_t *stop);
+  size_t GetTotalCoverage();
+ private:
+  size_t TotalCoverage = 0;
+};
+
+extern TracePC TPC;
+
 class Fuzzer {
 public:
 
@@ -370,8 +379,6 @@ public:
       CallerCalleeCoverage = 0;
       CounterBitmapBits = 0;
       CounterBitmap.clear();
-      PCMap.Reset();
-      PCMapBits = 0;
       VPMap.Reset();
       VPMapBits = 0;
     }
@@ -383,8 +390,6 @@ public:
     // Precalculated number of bits in CounterBitmap.
     size_t CounterBitmapBits;
     std::vector<uint8_t> CounterBitmap;
-    ValueBitMap PCMap;
-    size_t PCMapBits;
     ValueBitMap VPMap;
     size_t VPMapBits;
   };

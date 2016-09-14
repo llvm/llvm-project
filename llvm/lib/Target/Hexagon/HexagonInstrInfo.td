@@ -406,7 +406,7 @@ multiclass Addri_Pred<string mnemonic, bit PredNot> {
 let isExtendable = 1, isExtentSigned = 1, InputType = "imm" in
 multiclass Addri_base<string mnemonic, SDNode OpNode> {
   let CextOpcode = mnemonic, BaseOpcode = mnemonic#_ri in {
-    let opExtendable = 2, opExtentBits = 16, isPredicable = 1 in
+    let opExtendable = 2, opExtentBits = 16, isPredicable = 1, isAdd = 1 in
     def A2_#NAME : T_Addri<s16Ext>;
 
     let opExtendable = 3, opExtentBits = 8, isPredicated = 1 in {
@@ -1292,6 +1292,7 @@ class T_ALU64_arith<string mnemonic, bits<3> MajOp, bits<3> MinOp, bit IsSat,
   : T_ALU64_rr<mnemonic, !if(IsSat,":sat",""), 0b0011, MajOp, MinOp, OpsRev,
                IsComm, "">;
 
+let isAdd = 1 in
 def A2_addp : T_ALU64_arith<"add", 0b000, 0b111, 0, 0, 1>;
 def A2_subp : T_ALU64_arith<"sub", 0b001, 0b111, 0, 1, 0>;
 

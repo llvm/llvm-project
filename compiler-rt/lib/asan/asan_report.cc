@@ -350,71 +350,31 @@ void ReportNewDeleteSizeMismatch(uptr addr, uptr delete_size,
 
 void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack) {
   ScopedInErrorReport in_report;
-  Decorator d;
-  Printf("%s", d.Warning());
-  char tname[128];
-  u32 curr_tid = GetCurrentTidOrInvalid();
-  Report("ERROR: AddressSanitizer: attempting free on address "
-             "which was not malloc()-ed: %p in thread T%d%s\n", addr,
-         curr_tid, ThreadNameWithParenthesis(curr_tid, tname, sizeof(tname)));
-  Printf("%s", d.EndWarning());
-  CHECK_GT(free_stack->size, 0);
-  ScarinessScore::PrintSimple(40, "bad-free");
-  GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
-  stack.Print();
-  DescribeAddressIfHeap(addr);
-  ReportErrorSummary("bad-free", &stack);
+  ErrorFreeNotMalloced error(GetCurrentTidOrInvalid(), free_stack, addr);
+  in_report.ReportError(error);
 }
 
 void ReportAllocTypeMismatch(uptr addr, BufferedStackTrace *free_stack,
                              AllocType alloc_type,
                              AllocType dealloc_type) {
-  static const char *alloc_names[] =
-    {"INVALID", "malloc", "operator new", "operator new []"};
-  static const char *dealloc_names[] =
-    {"INVALID", "free", "operator delete", "operator delete []"};
-  CHECK_NE(alloc_type, dealloc_type);
   ScopedInErrorReport in_report;
-  Decorator d;
-  Printf("%s", d.Warning());
-  Report("ERROR: AddressSanitizer: alloc-dealloc-mismatch (%s vs %s) on %p\n",
-        alloc_names[alloc_type], dealloc_names[dealloc_type], addr);
-  Printf("%s", d.EndWarning());
-  CHECK_GT(free_stack->size, 0);
-  ScarinessScore::PrintSimple(10, "alloc-dealloc-mismatch");
-  GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
-  stack.Print();
-  DescribeAddressIfHeap(addr);
-  ReportErrorSummary("alloc-dealloc-mismatch", &stack);
-  Report("HINT: if you don't care about these errors you may set "
-         "ASAN_OPTIONS=alloc_dealloc_mismatch=0\n");
+  ErrorAllocTypeMismatch error(GetCurrentTidOrInvalid(), free_stack, addr,
+                               alloc_type, dealloc_type);
+  in_report.ReportError(error);
 }
 
 void ReportMallocUsableSizeNotOwned(uptr addr, BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  Decorator d;
-  Printf("%s", d.Warning());
-  Report("ERROR: AddressSanitizer: attempting to call "
-             "malloc_usable_size() for pointer which is "
-             "not owned: %p\n", addr);
-  Printf("%s", d.EndWarning());
-  stack->Print();
-  DescribeAddressIfHeap(addr);
-  ReportErrorSummary("bad-malloc_usable_size", stack);
+  ErrorMallocUsableSizeNotOwned error(GetCurrentTidOrInvalid(), stack, addr);
+  in_report.ReportError(error);
 }
 
 void ReportSanitizerGetAllocatedSizeNotOwned(uptr addr,
                                              BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  Decorator d;
-  Printf("%s", d.Warning());
-  Report("ERROR: AddressSanitizer: attempting to call "
-             "__sanitizer_get_allocated_size() for pointer which is "
-             "not owned: %p\n", addr);
-  Printf("%s", d.EndWarning());
-  stack->Print();
-  DescribeAddressIfHeap(addr);
-  ReportErrorSummary("bad-__sanitizer_get_allocated_size", stack);
+  ErrorSanitizerGetAllocatedSizeNotOwned error(GetCurrentTidOrInvalid(), stack,
+                                               addr);
+  in_report.ReportError(error);
 }
 
 void ReportStringFunctionMemoryRangesOverlap(const char *function,
@@ -422,33 +382,18 @@ void ReportStringFunctionMemoryRangesOverlap(const char *function,
                                              const char *offset2, uptr length2,
                                              BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  Decorator d;
-  char bug_type[100];
-  internal_snprintf(bug_type, sizeof(bug_type), "%s-param-overlap", function);
-  Printf("%s", d.Warning());
-  Report("ERROR: AddressSanitizer: %s: "
-             "memory ranges [%p,%p) and [%p, %p) overlap\n", \
-             bug_type, offset1, offset1 + length1, offset2, offset2 + length2);
-  Printf("%s", d.EndWarning());
-  ScarinessScore::PrintSimple(10, bug_type);
-  stack->Print();
-  PrintAddressDescription((uptr)offset1, length1, bug_type);
-  PrintAddressDescription((uptr)offset2, length2, bug_type);
-  ReportErrorSummary(bug_type, stack);
+  ErrorStringFunctionMemoryRangesOverlap error(
+      GetCurrentTidOrInvalid(), stack, (uptr)offset1, length1, (uptr)offset2,
+      length2, function);
+  in_report.ReportError(error);
 }
 
 void ReportStringFunctionSizeOverflow(uptr offset, uptr size,
                                       BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  Decorator d;
-  const char *bug_type = "negative-size-param";
-  Printf("%s", d.Warning());
-  Report("ERROR: AddressSanitizer: %s: (size=%zd)\n", bug_type, size);
-  Printf("%s", d.EndWarning());
-  ScarinessScore::PrintSimple(10, bug_type);
-  stack->Print();
-  PrintAddressDescription(offset, size, bug_type);
-  ReportErrorSummary(bug_type, stack);
+  ErrorStringFunctionSizeOverflow error(GetCurrentTidOrInvalid(), stack, offset,
+                                        size);
+  in_report.ReportError(error);
 }
 
 void ReportBadParamsToAnnotateContiguousContainer(uptr beg, uptr end,

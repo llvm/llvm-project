@@ -137,7 +137,7 @@ struct SanitizerCoverageOptions {
   SanitizerCoverageOptions()
       : CoverageType(SCK_None), IndirectCalls(false), TraceBB(false),
         TraceCmp(false), TraceDiv(false), TraceGep(false),
-        Use8bitCounters(false), TracePC(false) {}
+        Use8bitCounters(false), TracePC(false), TracePCGuard(false) {}
 
   enum Type {
     SCK_None = 0,
@@ -152,6 +152,7 @@ struct SanitizerCoverageOptions {
   bool TraceGep;
   bool Use8bitCounters;
   bool TracePC;
+  bool TracePCGuard;
 };
 
 // Insert SanitizerCoverage instrumentation.

@@ -904,49 +904,51 @@ class T1sItGenEncodeImm<bits<5> opA, dag oops, dag iops, InstrItinClass itin,
   let Inst{7-0}  = imm8;
 }
 
-// Add with carry register
-let isCommutable = 1, Uses = [CPSR] in
-def tADC :                      // A8.6.2
-  T1sItDPEncode<0b0101, (outs tGPR:$Rdn), (ins tGPR:$Rn, tGPR:$Rm), IIC_iALUr,
-                "adc", "\t$Rdn, $Rm",
-                [(set tGPR:$Rdn, (adde tGPR:$Rn, tGPR:$Rm))]>, Sched<[WriteALU]>;
+let isAdd = 1 in {
+  // Add with carry register
+  let isCommutable = 1, Uses = [CPSR] in
+  def tADC :                      // A8.6.2
+    T1sItDPEncode<0b0101, (outs tGPR:$Rdn), (ins tGPR:$Rn, tGPR:$Rm), IIC_iALUr,
+                  "adc", "\t$Rdn, $Rm",
+                  [(set tGPR:$Rdn, (adde tGPR:$Rn, tGPR:$Rm))]>, Sched<[WriteALU]>;
 
-// Add immediate
-def tADDi3 :                    // A8.6.4 T1
-  T1sIGenEncodeImm<0b01110, (outs tGPR:$Rd), (ins tGPR:$Rm, imm0_7:$imm3),
-                   IIC_iALUi,
-                   "add", "\t$Rd, $Rm, $imm3",
-                   [(set tGPR:$Rd, (add tGPR:$Rm, imm0_7:$imm3))]>,
-                   Sched<[WriteALU]> {
-  bits<3> imm3;
-  let Inst{8-6} = imm3;
-}
+  // Add immediate
+  def tADDi3 :                    // A8.6.4 T1
+    T1sIGenEncodeImm<0b01110, (outs tGPR:$Rd), (ins tGPR:$Rm, imm0_7:$imm3),
+                     IIC_iALUi,
+                     "add", "\t$Rd, $Rm, $imm3",
+                     [(set tGPR:$Rd, (add tGPR:$Rm, imm0_7:$imm3))]>,
+                     Sched<[WriteALU]> {
+    bits<3> imm3;
+    let Inst{8-6} = imm3;
+  }
 
-def tADDi8 :                    // A8.6.4 T2
-  T1sItGenEncodeImm<{1,1,0,?,?}, (outs tGPR:$Rdn),
-                    (ins tGPR:$Rn, imm0_255:$imm8), IIC_iALUi,
-                    "add", "\t$Rdn, $imm8",
-                    [(set tGPR:$Rdn, (add tGPR:$Rn, imm8_255:$imm8))]>,
-                    Sched<[WriteALU]>;
+  def tADDi8 :                    // A8.6.4 T2
+    T1sItGenEncodeImm<{1,1,0,?,?}, (outs tGPR:$Rdn),
+                      (ins tGPR:$Rn, imm0_255:$imm8), IIC_iALUi,
+                      "add", "\t$Rdn, $imm8",
+                      [(set tGPR:$Rdn, (add tGPR:$Rn, imm8_255:$imm8))]>,
+                      Sched<[WriteALU]>;
 
-// Add register
-let isCommutable = 1 in
-def tADDrr :                    // A8.6.6 T1
-  T1sIGenEncode<0b01100, (outs tGPR:$Rd), (ins tGPR:$Rn, tGPR:$Rm),
-                IIC_iALUr,
-                "add", "\t$Rd, $Rn, $Rm",
-                [(set tGPR:$Rd, (add tGPR:$Rn, tGPR:$Rm))]>, Sched<[WriteALU]>;
+  // Add register
+  let isCommutable = 1 in
+  def tADDrr :                    // A8.6.6 T1
+    T1sIGenEncode<0b01100, (outs tGPR:$Rd), (ins tGPR:$Rn, tGPR:$Rm),
+                  IIC_iALUr,
+                  "add", "\t$Rd, $Rn, $Rm",
+                  [(set tGPR:$Rd, (add tGPR:$Rn, tGPR:$Rm))]>, Sched<[WriteALU]>;
 
-let hasSideEffects = 0 in
-def tADDhirr : T1pIt<(outs GPR:$Rdn), (ins GPR:$Rn, GPR:$Rm), IIC_iALUr,
-                     "add", "\t$Rdn, $Rm", []>,
-               T1Special<{0,0,?,?}>, Sched<[WriteALU]> {
-  // A8.6.6 T2
-  bits<4> Rdn;
-  bits<4> Rm;
-  let Inst{7}   = Rdn{3};
-  let Inst{6-3} = Rm;
-  let Inst{2-0} = Rdn{2-0};
+  let hasSideEffects = 0 in
+  def tADDhirr : T1pIt<(outs GPR:$Rdn), (ins GPR:$Rn, GPR:$Rm), IIC_iALUr,
+                       "add", "\t$Rdn, $Rm", []>,
+                 T1Special<{0,0,?,?}>, Sched<[WriteALU]> {
+    // A8.6.6 T2
+    bits<4> Rdn;
+    bits<4> Rm;
+    let Inst{7}   = Rdn{3};
+    let Inst{6-3} = Rm;
+    let Inst{2-0} = Rdn{2-0};
+  }
 }
 
 // AND register

@@ -150,7 +150,8 @@ enum Flag {
   RegSequence,
   ExtractSubreg,
   InsertSubreg,
-  Convergent
+  Convergent,
+  Add
 };
 }
 
@@ -233,6 +234,9 @@ public:
 
   /// \brief Return true if the instruction is a return.
   bool isReturn() const { return Flags & (1ULL << MCID::Return); }
+
+  /// \brief Return true if the instruction is an add instruction.
+  bool isAdd() const { return Flags & (1ULL << MCID::Add); }
 
   /// \brief  Return true if the instruction is a call.
   bool isCall() const { return Flags & (1ULL << MCID::Call); }

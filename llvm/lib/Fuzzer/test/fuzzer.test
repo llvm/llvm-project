@@ -2,6 +2,7 @@ CHECK: BINGO
 Done1000000: Done 1000000 runs in
 
 RUN: LLVMFuzzer-SimpleTest 2>&1 | FileCheck %s
+RUN: LLVMFuzzer-SimpleTest-TracePC 2>&1 | FileCheck %s
 
 # only_ascii mode. Will perform some minimal self-validation.
 RUN: LLVMFuzzer-SimpleTest -only_ascii=1 2>&1

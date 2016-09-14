@@ -114,7 +114,8 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAttributes,
 def LibLTO : DiagGroup<"liblto">;
 def : DiagGroup<"disabled-optimization">;
 def : DiagGroup<"discard-qual">;
-def : DiagGroup<"div-by-zero">;
+def DivZero : DiagGroup<"division-by-zero">;
+def : DiagGroup<"div-by-zero", [DivZero]>;
 
 def DocumentationHTML : DiagGroup<"documentation-html">;
 def DocumentationUnknownCommand : DiagGroup<"documentation-unknown-command">;
@@ -201,8 +202,6 @@ def CXX14CompatPedantic : DiagGroup<"c++14-compat-pedantic",
 def CXX1zCompat : DiagGroup<"c++1z-compat", [DeprecatedRegister,
                                              DeprecatedIncrementBool]>;
 
-def : DiagGroup<"effc++">;
-def DivZero : DiagGroup<"division-by-zero">;
 def ExitTimeDestructors : DiagGroup<"exit-time-destructors">;
 def FlexibleArrayExtensions : DiagGroup<"flexible-array-extensions">;
 def FourByteMultiChar : DiagGroup<"four-char-constants">;
@@ -290,6 +289,7 @@ def NonPODVarargs : DiagGroup<"non-pod-varargs">;
 def ClassVarargs : DiagGroup<"class-varargs", [NonPODVarargs]>;
 def : DiagGroup<"nonportable-cfstrings">;
 def NonVirtualDtor : DiagGroup<"non-virtual-dtor">;
+def : DiagGroup<"effc++", [NonVirtualDtor]>;
 def OveralignedType : DiagGroup<"over-aligned">;
 def OldStyleCast : DiagGroup<"old-style-cast">;
 def : DiagGroup<"old-style-definition">;
@@ -348,10 +348,12 @@ def MissingMethodReturnType : DiagGroup<"missing-method-return-type">;
 def ShadowFieldInConstructorModified : DiagGroup<"shadow-field-in-constructor-modified">;
 def ShadowFieldInConstructor : DiagGroup<"shadow-field-in-constructor",
                                          [ShadowFieldInConstructorModified]>;
+def ShadowIvar : DiagGroup<"shadow-ivar">;
 
 // -Wshadow-all is a catch-all for all shadowing. -Wshadow is just the
 // shadowing that we think is unsafe.
-def Shadow : DiagGroup<"shadow", [ShadowFieldInConstructorModified]>;
+def Shadow : DiagGroup<"shadow", [ShadowFieldInConstructorModified,
+                                  ShadowIvar]>;
 def ShadowAll : DiagGroup<"shadow-all", [Shadow, ShadowFieldInConstructor]>;
 
 def Shorten64To32 : DiagGroup<"shorten-64-to-32">;
