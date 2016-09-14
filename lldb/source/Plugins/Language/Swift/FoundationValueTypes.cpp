@@ -307,6 +307,7 @@ public:
 #define COMPONENT(Name, PrettyName, ID) , m_##Name(nullptr)
 #include "URLComponents.def"
   {
+    SetValid(false);
   }
 
   ~URLComponentsSyntheticChildrenFrontEnd() override = default;
@@ -322,7 +323,7 @@ public:
       switch (idx) {
 #define COMPONENT(Name, PrettyName, ID)                                        \
   case ID:                                                                     \
-    return (m_##Name)->GetSP();
+    return (m_##Name) ? (m_##Name)->GetSP() : nullptr;
 #include "URLComponents.def"
       default:
         break;
