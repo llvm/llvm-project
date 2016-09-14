@@ -398,3 +398,71 @@ entry:
   store i8 1, i8* %tmp
   ret float 1.0
 }
+
+declare swiftcc float @moo(%swift_error** swifterror)
+
+; Test parameter forwarding.
+define swiftcc float @forward_swifterror(%swift_error** swifterror %error_ptr_ref) {
+; CHECK-APPLE-LABEL: forward_swifterror:
+; CHECK-APPLE: pushq %rax
+; CHECK-APPLE: callq _moo
+; CHECK-APPLE: popq %rax
+; CHECK-APPLE: retq
+
+; CHECK-O0-LABEL: forward_swifterror:
+; CHECK-O0:  subq $24, %rsp
+; CHECK-O0:  movq %r12, %rcx
+; CHECK-O0:  movq %rcx, 16(%rsp)
+; CHECK-O0:  movq %rax, 8(%rsp)
+; CHECK-O0:  callq _moo
+; CHECK-O0:  addq $24, %rsp
+; CHECK-O0:  retq
+
+entry:
+  %call = call swiftcc float @moo(%swift_error** swifterror %error_ptr_ref)
+  ret float %call
+}
+
+define swiftcc float @conditionally_forward_swifterror(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
+; CHECK-APPLE-LABEL: conditionally_forward_swifterror:
+; CHECK-APPLE:  pushq %rax
+; CHECK-APPLE:	testl %edi, %edi
+; CHECK-APPLE:  je
+
+; CHECK-APPLE:  callq _moo
+; CHECK-APPLE:  popq %rax
+; CHECK-APPLE:  retq
+
+; CHECK-APPLE:  xorps %xmm0, %xmm0
+; CHECK-APPLE:  popq %rax
+; CHECK-APPLE:  retq
+
+; CHECK-O0-LABEL: conditionally_forward_swifterror:
+; CHECK-O0:  subq $24, %rsp
+; CHECK-O0:  movq %r12, %rcx
+; CHECK-O0:  cmpl $0, %edi
+; CHECK-O0:  movq %rax, 16(%rsp)
+; CHECK-O0:  movq %r12, 8(%rsp)
+; CHECK-O0:  movq %rcx, (%rsp)
+; CHECK-O0:  je
+
+; CHECK-O0:  movq 8(%rsp), %r12
+; CHECK-O0:  callq _moo
+; CHECK-O0:  addq $24, %rsp
+; CHECK-O0:  retq
+
+; CHECK-O0:  xorps %xmm0, %xmm0
+; CHECK-O0:  movq 8(%rsp), %r12
+; CHECK-O0:  addq $24, %rsp
+; CHECK-O0:  retq
+entry:
+  %cond = icmp ne i32 %cc, 0
+  br i1 %cond, label %gen_error, label %normal
+
+gen_error:
+  %call = call swiftcc float @moo(%swift_error** swifterror %error_ptr_ref)
+  ret float %call
+
+normal:
+  ret float 0.0
+}
