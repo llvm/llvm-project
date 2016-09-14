@@ -77,8 +77,8 @@ protected:
 
 private:
   // Private member types.
-  enum XStateType { eXStateTypeNotValid = 0, eXStateTypeFXSAVE, eXStateTypeXSAVE };
-  enum RegSet { gpr, fpu, avx, mpx };
+  enum class XStateType { Invalid, FXSAVE, XSAVE };
+  enum class RegSet { gpr, fpu, avx, mpx };
 
   // Info about register ranges.
   struct RegInfo {

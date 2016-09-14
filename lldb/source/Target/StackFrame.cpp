@@ -1492,6 +1492,12 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
 
   using namespace OperandMatchers;
 
+  const RegisterInfo *reg_info =
+      frame.GetRegisterContext()->GetRegisterInfoByName(reg.AsCString());
+  if (!reg_info) {
+    return ValueObjectSP();
+  }
+
   Instruction::Operand op =
       offset ? Instruction::Operand::BuildDereference(
                    Instruction::Operand::BuildSum(
@@ -1517,9 +1523,9 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
 
   for (uint32_t ii = current_inst - 1; ii != (uint32_t)-1; --ii) {
     // This is not an exact algorithm, and it sacrifices accuracy for
-    // generality.
-    // Recognizing "mov" and "ld" instructions –– and which are their source and
-    // destination operands -- is something the disassembler should do for us.
+    // generality.  Recognizing "mov" and "ld" instructions –– and which are
+    // their source and destination operands -- is something the disassembler
+    // should do for us.
     InstructionSP instruction_sp =
         disassembler.GetInstructionList().GetInstructionAtIndex(ii);
 
@@ -1602,16 +1608,17 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
     }
 
     Instruction::Operand *origin_operand = nullptr;
-    if (operands[0].m_type == Instruction::Operand::Type::Register &&
-        operands[0].m_clobbered == true && operands[0].m_register == reg) {
-      // operands[0] is a register operand
+    auto clobbered_reg_matcher = [reg_info](const Instruction::Operand &op) {
+      return MatchRegOp(*reg_info)(op) && op.m_clobbered;
+    };
+
+    if (clobbered_reg_matcher(operands[0])) {
       origin_operand = &operands[1];
-    } else if (operands[1].m_type == Instruction::Operand::Type::Register &&
-               operands[1].m_clobbered == true &&
-               operands[1].m_register == reg) {
+    }
+    else if (clobbered_reg_matcher(operands[1])) {
       origin_operand = &operands[0];
-      // operands[1] is a register operand
-    } else {
+    }
+    else {
       continue;
     }
 

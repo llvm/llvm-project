@@ -74,6 +74,7 @@
 //  f -> this is a libc/libm function without the '__builtin_' prefix. It can
 //       be followed by ':headername:' to state which header this function
 //       comes from.
+//  h -> this function requires a specific header or an explicit declaration.
 //  i -> this is a runtime library implemented function without the
 //       '__builtin_' prefix. It will be implemented in compiler-rt or libgcc.
 //  p:N: -> this is a printf-like function whose Nth argument is the format
@@ -708,6 +709,9 @@ BUILTIN(__builtin_rindex, "c*cC*i", "Fn")
 // Microsoft builtins.  These are only active with -fms-extensions.
 LANGBUILTIN(_alloca,          "v*z", "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(__assume,         "vb",  "n", ALL_MS_LANGUAGES)
+LIBBUILTIN(_byteswap_ushort, "UsUs",     "fnc", "stdlib.h", ALL_MS_LANGUAGES)
+LIBBUILTIN(_byteswap_ulong,  "ULiULi",   "fnc", "stdlib.h", ALL_MS_LANGUAGES)
+LIBBUILTIN(_byteswap_uint64, "ULLiULLi", "fnc", "stdlib.h", ALL_MS_LANGUAGES)
 LANGBUILTIN(__debugbreak,     "v",   "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(__exception_code, "ULi", "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_exception_code,  "ULi", "n", ALL_MS_LANGUAGES)
@@ -745,6 +749,9 @@ LANGBUILTIN(_InterlockedXor8,  "ccD*c",       "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_InterlockedXor16, "ssD*s",       "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_InterlockedXor,   "LiLiD*Li",    "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(__noop,           "i.",  "n", ALL_MS_LANGUAGES)
+LANGBUILTIN(__popcnt16, "UsUs",     "nc", ALL_MS_LANGUAGES)
+LANGBUILTIN(__popcnt,   "UiUi",     "nc", ALL_MS_LANGUAGES)
+LANGBUILTIN(__popcnt64, "ULLiULLi", "nc", ALL_MS_LANGUAGES)
 LANGBUILTIN(__readfsdword,    "ULiULi", "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_rotl8,  "UcUcUc",    "n", ALL_MS_LANGUAGES)
 LANGBUILTIN(_rotl16, "UsUsUc",    "n", ALL_MS_LANGUAGES)

@@ -716,7 +716,7 @@ bool TailDuplicator::duplicateSimpleBB(
     if (PredTBB == NextBB && PredFBB == nullptr)
       PredTBB = nullptr;
 
-    TII->RemoveBranch(*PredBB);
+    TII->removeBranch(*PredBB);
 
     if (!PredBB->isSuccessor(NewTarget))
       PredBB->replaceSuccessor(TailBB, NewTarget);
@@ -784,7 +784,7 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
     TDBBs.push_back(PredBB);
 
     // Remove PredBB's unconditional branch.
-    TII->RemoveBranch(*PredBB);
+    TII->removeBranch(*PredBB);
 
     // Clone the contents of TailBB into PredBB.
     DenseMap<unsigned, RegSubRegPair> LocalVRMap;

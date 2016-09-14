@@ -34,9 +34,9 @@ public:
 
   virtual ~BreakpointIDList();
 
-  size_t GetSize();
+  size_t GetSize() const;
 
-  BreakpointID &GetBreakpointIDAtIndex(size_t index);
+  const BreakpointID &GetBreakpointIDAtIndex(size_t index) const;
 
   bool RemoveBreakpointIDAtIndex(size_t index);
 
@@ -46,9 +46,9 @@ public:
 
   bool AddBreakpointID(const char *bp_id);
 
-  bool FindBreakpointID(BreakpointID &bp_id, size_t *position);
+  bool FindBreakpointID(BreakpointID &bp_id, size_t *position) const;
 
-  bool FindBreakpointID(const char *bp_id, size_t *position);
+  bool FindBreakpointID(const char *bp_id, size_t *position) const;
 
   void InsertStringArray(const char **string_array, size_t array_size,
                          CommandReturnObject &result);

@@ -147,7 +147,7 @@ unsigned MipsInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return 1;
 }
 
-unsigned MipsInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned MipsInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                      int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
@@ -174,9 +174,9 @@ unsigned MipsInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
   return removed;
 }
 
-/// ReverseBranchCondition - Return the inverse opcode of the
+/// reverseBranchCondition - Return the inverse opcode of the
 /// specified Branch instruction.
-bool MipsInstrInfo::ReverseBranchCondition(
+bool MipsInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
   assert( (Cond.size() && Cond.size() <= 3) &&
           "Invalid Mips branch condition!");

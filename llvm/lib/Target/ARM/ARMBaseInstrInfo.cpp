@@ -382,7 +382,7 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 
-unsigned ARMBaseInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned ARMBaseInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                         int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
@@ -453,7 +453,7 @@ unsigned ARMBaseInstrInfo::insertBranch(MachineBasicBlock &MBB,
 }
 
 bool ARMBaseInstrInfo::
-ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
+reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   ARMCC::CondCodes CC = (ARMCC::CondCodes)(int)Cond[0].getImm();
   Cond[0].setImm(ARMCC::getOppositeCondition(CC));
   return false;

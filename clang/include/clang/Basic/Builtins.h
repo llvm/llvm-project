@@ -139,6 +139,13 @@ public:
     return strchr(getRecord(ID).Attributes, 'f') != nullptr;
   }
 
+  /// \brief Returns true if this builtin requires appropriate header in other
+  /// compilers. In Clang it will work even without including it, but we can emit
+  /// a warning about missing header.
+  bool isHeaderDependentFunction(unsigned ID) const {
+    return strchr(getRecord(ID).Attributes, 'h') != nullptr;
+  }
+
   /// \brief Determines whether this builtin is a predefined compiler-rt/libgcc
   /// function, such as "__clear_cache", where we know the signature a
   /// priori.

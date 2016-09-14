@@ -1635,14 +1635,14 @@ void MachineBlockPlacement::optimizeBranches() {
       if (TBB && !Cond.empty() && FBB &&
           MBPI->getEdgeProbability(ChainBB, FBB) >
               MBPI->getEdgeProbability(ChainBB, TBB) &&
-          !TII->ReverseBranchCondition(Cond)) {
+          !TII->reverseBranchCondition(Cond)) {
         DEBUG(dbgs() << "Reverse order of the two branches: "
                      << getBlockName(ChainBB) << "\n");
         DEBUG(dbgs() << "    Edge probability: "
                      << MBPI->getEdgeProbability(ChainBB, FBB) << " vs "
                      << MBPI->getEdgeProbability(ChainBB, TBB) << "\n");
         DebugLoc dl; // FIXME: this is nowhere
-        TII->RemoveBranch(*ChainBB);
+        TII->removeBranch(*ChainBB);
         TII->insertBranch(*ChainBB, FBB, TBB, Cond, dl);
         ChainBB->updateTerminator();
       }

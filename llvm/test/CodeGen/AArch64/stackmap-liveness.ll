@@ -5,7 +5,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 ; CHECK-LABEL:  .section  __LLVM_STACKMAPS,__llvm_stackmaps
 ; CHECK-NEXT:   __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 2
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
@@ -44,4 +44,3 @@ define i64 @stackmap_liveness(i1 %c) {
 }
 
 declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
-

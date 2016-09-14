@@ -1330,7 +1330,7 @@ Expr ScriptParser::readPrimary() {
   // the next page boundary for simplicity.
   if (Tok == "DATA_SEGMENT_RELRO_END") {
     expect("(");
-    next();
+    readExpr();
     expect(",");
     readExpr();
     expect(")");

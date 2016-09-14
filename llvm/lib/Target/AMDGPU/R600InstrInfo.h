@@ -159,7 +159,7 @@ public:
   DFAPacketizer *
   CreateTargetScheduleState(const TargetSubtargetInfo &) const override;
 
-  bool ReverseBranchCondition(
+  bool reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const override;
 
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
@@ -172,7 +172,7 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
 
-  unsigned RemoveBranch(MachineBasicBlock &MBB,
+  unsigned removeBranch(MachineBasicBlock &MBB,
                         int *BytesRemvoed = nullptr) const override;
 
   bool isPredicated(const MachineInstr &MI) const override;

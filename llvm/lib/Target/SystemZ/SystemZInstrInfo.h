@@ -164,7 +164,7 @@ public:
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify) const override;
-  unsigned RemoveBranch(MachineBasicBlock &MBB,
+  unsigned removeBranch(MachineBasicBlock &MBB,
                         int *BytesRemoved = nullptr) const override;
   unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
@@ -214,7 +214,7 @@ public:
       MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
       LiveIntervals *LIS = nullptr) const override;
   bool expandPostRAPseudo(MachineInstr &MBBI) const override;
-  bool ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const
+  bool reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const
     override;
 
   // Return the SystemZRegisterInfo, which this class owns.

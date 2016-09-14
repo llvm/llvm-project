@@ -184,7 +184,7 @@ static inline XCore::CondCode GetOppositeBranchCondition(XCore::CondCode CC)
 ///    operands can be passed to other TargetInstrInfo methods to create new
 ///    branches.
 ///
-/// Note that RemoveBranch and insertBranch must be implemented to support
+/// Note that removeBranch and insertBranch must be implemented to support
 /// cases where this method returns success.
 ///
 bool XCoreInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
@@ -304,7 +304,7 @@ unsigned XCoreInstrInfo::insertBranch(MachineBasicBlock &MBB,
 }
 
 unsigned
-XCoreInstrInfo::RemoveBranch(MachineBasicBlock &MBB, int *BytesRemoved) const {
+XCoreInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
@@ -400,11 +400,9 @@ void XCoreInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     .addMemOperand(MMO);
 }
 
-/// ReverseBranchCondition - Return the inverse opcode of the 
-/// specified Branch instruction.
 bool XCoreInstrInfo::
-ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
-  assert((Cond.size() == 2) && 
+reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
+  assert((Cond.size() == 2) &&
           "Invalid XCore branch condition!");
   Cond[0].setImm(GetOppositeBranchCondition((XCore::CondCode)Cond[0].getImm()));
   return false;

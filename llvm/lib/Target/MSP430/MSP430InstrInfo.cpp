@@ -104,7 +104,7 @@ void MSP430InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     .addReg(SrcReg, getKillRegState(KillSrc));
 }
 
-unsigned MSP430InstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned MSP430InstrInfo::removeBranch(MachineBasicBlock &MBB,
                                        int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
@@ -130,7 +130,7 @@ unsigned MSP430InstrInfo::RemoveBranch(MachineBasicBlock &MBB,
 }
 
 bool MSP430InstrInfo::
-ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
+reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 1 && "Invalid Xbranch condition!");
 
   MSP430CC::CondCodes CC = static_cast<MSP430CC::CondCodes>(Cond[0].getImm());

@@ -73,7 +73,7 @@ public:
   ///    condition.  These operands can be passed to other TargetInstrInfo
   ///    methods to create new branches.
   ///
-  /// Note that RemoveBranch and insertBranch must be implemented to support
+  /// Note that removeBranch and insertBranch must be implemented to support
   /// cases where this method returns success.
   ///
   /// If AllowModify is true, then this routine is allowed to modify the basic
@@ -87,7 +87,7 @@ public:
   /// Remove the branching code at the end of the specific MBB.
   /// This is only invoked in cases where AnalyzeBranch returns success. It
   /// returns the number of instructions that were removed.
-  unsigned RemoveBranch(MachineBasicBlock &MBB,
+  unsigned removeBranch(MachineBasicBlock &MBB,
                         int *BytesRemoved = nullptr) const override;
 
   /// Insert branch code into the end of the specified MachineBasicBlock.
@@ -197,7 +197,7 @@ public:
 
   /// Reverses the branch condition of the specified condition list,
   /// returning false on success and true if it cannot be reversed.
-  bool ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond)
+  bool reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond)
         const override;
 
   /// Insert a noop into the instruction stream at the specified point.

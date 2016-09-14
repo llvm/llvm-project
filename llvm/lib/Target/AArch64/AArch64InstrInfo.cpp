@@ -257,7 +257,7 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
-bool AArch64InstrInfo::ReverseBranchCondition(
+bool AArch64InstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
   if (Cond[0].getImm() != -1) {
     // Regular Bcc
@@ -298,7 +298,7 @@ bool AArch64InstrInfo::ReverseBranchCondition(
   return false;
 }
 
-unsigned AArch64InstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned AArch64InstrInfo::removeBranch(MachineBasicBlock &MBB,
                                         int *BytesRemoved) const {
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
   if (I == MBB.end())

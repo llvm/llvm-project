@@ -4,7 +4,7 @@
 ; CHECK-LABEL:  .section  __LLVM_STACKMAPS,__llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 2
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
@@ -17,12 +17,16 @@
 ; Functions and stack size
 ; CHECK-NEXT:   .quad _constantargs
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _liveConstant
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _directFrameIdx
 ; CHECK-NEXT:   .quad 40
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _longid
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 4
 
 ; Large Constants
 ; CHECK-NEXT:   .quad   2147483648

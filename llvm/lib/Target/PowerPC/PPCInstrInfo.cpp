@@ -605,7 +605,7 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned PPCInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned PPCInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                     int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
@@ -1204,7 +1204,7 @@ PPCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 }
 
 bool PPCInstrInfo::
-ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
+reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 2 && "Invalid PPC branch opcode!");
   if (Cond[1].getReg() == PPC::CTR8 || Cond[1].getReg() == PPC::CTR)
     Cond[0].setImm(Cond[0].getImm() == 0 ? 1 : 0);

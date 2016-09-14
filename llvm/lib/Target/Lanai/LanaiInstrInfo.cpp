@@ -641,10 +641,10 @@ bool LanaiInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return false;
 }
 
-// ReverseBranchCondition - Reverses the branch condition of the specified
+// reverseBranchCondition - Reverses the branch condition of the specified
 // condition list, returning false on success and true if it cannot be
 // reversed.
-bool LanaiInstrInfo::ReverseBranchCondition(
+bool LanaiInstrInfo::reverseBranchCondition(
     SmallVectorImpl<llvm::MachineOperand> &Condition) const {
   assert((Condition.size() == 1) &&
          "Lanai branch conditions should have one component.");
@@ -690,7 +690,7 @@ unsigned LanaiInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return 2;
 }
 
-unsigned LanaiInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned LanaiInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                       int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 

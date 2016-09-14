@@ -963,7 +963,7 @@ void HexagonEarlyIfConversion::mergeBlocks(MachineBasicBlock *PredB,
                << PrintMB(SuccB) << "\n");
   bool TermOk = hasUncondBranch(SuccB);
   eliminatePhis(SuccB);
-  HII->RemoveBranch(*PredB);
+  HII->removeBranch(*PredB);
   PredB->removeSuccessor(SuccB);
   PredB->splice(PredB->end(), SuccB, SuccB->begin(), SuccB->end());
   MachineBasicBlock::succ_iterator I, E = SuccB->succ_end();

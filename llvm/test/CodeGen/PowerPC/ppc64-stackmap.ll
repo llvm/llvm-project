@@ -44,7 +44,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; CHECK-LABEL:  .section  .llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 2
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
@@ -57,26 +57,37 @@ target triple = "powerpc64-unknown-linux-gnu"
 ; Functions and stack size
 ; CHECK-NEXT:   .quad constantargs
 ; CHECK-NEXT:   .quad 128
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad osrinline
 ; CHECK-NEXT:   .quad 144
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad osrcold
 ; CHECK-NEXT:   .quad 128
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad propertyRead
 ; CHECK-NEXT:   .quad 128
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad propertyWrite
 ; CHECK-NEXT:   .quad 128
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad jsVoidCall
 ; CHECK-NEXT:   .quad 128
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad jsIntCall
 ; CHECK-NEXT:   .quad 128
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad spilledValue
 ; CHECK-NEXT:   .quad 304
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad spilledStackMapValue
 ; CHECK-NEXT:   .quad 224
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad liveConstant
 ; CHECK-NEXT:   .quad 64
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad clobberLR
 ; CHECK-NEXT:   .quad 208
+; CHECK-NEXT:   .quad 1
 
 ; Num LargeConstants
 ; CHECK-NEXT:   .quad   4294967295

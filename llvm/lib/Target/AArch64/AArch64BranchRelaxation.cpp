@@ -300,9 +300,9 @@ bool AArch64BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
     DEBUG(dbgs() << "  Invert condition and swap "
                     "its destination with " << MBB->back());
 
-    TII->ReverseBranchCondition(Cond);
+    TII->reverseBranchCondition(Cond);
     int OldSize = 0, NewSize = 0;
-    TII->RemoveBranch(*MBB, &OldSize);
+    TII->removeBranch(*MBB, &OldSize);
     TII->insertBranch(*MBB, FBB, TBB, Cond, DL, &NewSize);
 
     BlockInfo[MBB->getNumber()].Size += (NewSize - OldSize);
@@ -340,8 +340,8 @@ bool AArch64BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
 
   // Insert a new conditional branch and a new unconditional branch.
   int RemovedSize = 0;
-  TII->ReverseBranchCondition(Cond);
-  TII->RemoveBranch(*MBB, &RemovedSize);
+  TII->reverseBranchCondition(Cond);
+  TII->removeBranch(*MBB, &RemovedSize);
   MBBSize -= RemovedSize;
 
   int AddedSize = 0;

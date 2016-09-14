@@ -31,9 +31,10 @@ BreakpointIDList::BreakpointIDList()
 
 BreakpointIDList::~BreakpointIDList() = default;
 
-size_t BreakpointIDList::GetSize() { return m_breakpoint_ids.size(); }
+size_t BreakpointIDList::GetSize() const { return m_breakpoint_ids.size(); }
 
-BreakpointID &BreakpointIDList::GetBreakpointIDAtIndex(size_t index) {
+const BreakpointID &
+BreakpointIDList::GetBreakpointIDAtIndex(size_t index) const {
   return ((index < m_breakpoint_ids.size()) ? m_breakpoint_ids[index]
                                             : m_invalid_id);
 }
@@ -71,7 +72,8 @@ bool BreakpointIDList::AddBreakpointID(const char *bp_id_str) {
   return success;
 }
 
-bool BreakpointIDList::FindBreakpointID(BreakpointID &bp_id, size_t *position) {
+bool BreakpointIDList::FindBreakpointID(BreakpointID &bp_id,
+                                        size_t *position) const {
   for (size_t i = 0; i < m_breakpoint_ids.size(); ++i) {
     BreakpointID tmp_id = m_breakpoint_ids[i];
     if (tmp_id.GetBreakpointID() == bp_id.GetBreakpointID() &&
@@ -85,7 +87,7 @@ bool BreakpointIDList::FindBreakpointID(BreakpointID &bp_id, size_t *position) {
 }
 
 bool BreakpointIDList::FindBreakpointID(const char *bp_id_str,
-                                        size_t *position) {
+                                        size_t *position) const {
   BreakpointID temp_bp_id;
   break_id_t bp_id;
   break_id_t loc_id;

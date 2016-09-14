@@ -1,0 +1,23 @@
+//===-- PlatformOptions.h - Platform option macros --------------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This contents of this file are filled in at configuration time. This file
+/// defines macros that represent the platform configuration state of the build,
+/// e.g. which platforms are enabled.
+///
+//===----------------------------------------------------------------------===//
+
+
+#ifndef STREAMEXECUTOR_PLATFORMOPTIONS_H
+#define STREAMEXECUTOR_PLATFORMOPTIONS_H
+
+#cmakedefine STREAM_EXECUTOR_ENABLE_CUDA_PLATFORM
+
+#endif // STREAMEXECUTOR_PLATFORMOPTIONS_H
