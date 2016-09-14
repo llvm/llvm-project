@@ -2038,6 +2038,7 @@ def : Thumb2ExtractPat<(add rGPR:$Rn, (and (srl rGPR:$Rm, imm8_or_16:$rot),
 //  Arithmetic Instructions.
 //
 
+let isAdd = 1 in
 defm t2ADD  : T2I_bin_ii12rs<0b000, "add", add, 1>;
 defm t2SUB  : T2I_bin_ii12rs<0b101, "sub", sub>;
 

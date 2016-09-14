@@ -70,7 +70,7 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
   setAction({G_FREM, s64}, Libcall);
 
   for (auto MemOp : {G_LOAD, G_STORE}) {
-    for (auto Ty : {s8, s16, s32, s64})
+    for (auto Ty : {s8, s16, s32, s64, p0})
       setAction({MemOp, Ty}, Legal);
 
     setAction({MemOp, s1}, WidenScalar);
