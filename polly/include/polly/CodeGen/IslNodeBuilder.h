@@ -375,6 +375,21 @@ protected:
   ///
   virtual __isl_give isl_union_map *
   getScheduleForAstNode(__isl_take isl_ast_node *Node);
+
+private:
+  /// Create code for a copy statement.
+  ///
+  /// A copy statement is expected to have one read memory access and one write
+  /// memory access (in this very order). Data is loaded from the location
+  /// described by the read memory access and written to the location described
+  /// by the write memory access. @p NewAccesses contains for each access
+  /// the isl ast expression that describes the location accessed.
+  ///
+  /// @param Stmt The copy statement that contains the accesses.
+  /// @param NewAccesses The hash table that contains remappings from memory
+  ///                    ids to new access expressions.
+  void generateCopyStmt(ScopStmt *Stmt,
+                        __isl_keep isl_id_to_ast_expr *NewAccesses);
 };
 
 #endif

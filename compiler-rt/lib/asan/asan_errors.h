@@ -122,12 +122,137 @@ struct ErrorNewDeleteSizeMismatch : ErrorBase {
   void Print();
 };
 
+struct ErrorFreeNotMalloced : ErrorBase {
+  // ErrorFreeNotMalloced doesn't own the stack trace.
+  const BufferedStackTrace *free_stack;
+  AddressDescription addr_description;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorFreeNotMalloced() = default;
+  ErrorFreeNotMalloced(u32 tid, BufferedStackTrace *stack, uptr addr)
+      : ErrorBase(tid),
+        free_stack(stack),
+        addr_description(addr, /*shouldLockThreadRegistry=*/false) {
+    scariness.Clear();
+    scariness.Scare(40, "bad-free");
+  }
+  void Print();
+};
+
+struct ErrorAllocTypeMismatch : ErrorBase {
+  // ErrorAllocTypeMismatch doesn't own the stack trace.
+  const BufferedStackTrace *dealloc_stack;
+  HeapAddressDescription addr_description;
+  AllocType alloc_type, dealloc_type;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorAllocTypeMismatch() = default;
+  ErrorAllocTypeMismatch(u32 tid, BufferedStackTrace *stack, uptr addr,
+                         AllocType alloc_type_, AllocType dealloc_type_)
+      : ErrorBase(tid),
+        dealloc_stack(stack),
+        alloc_type(alloc_type_),
+        dealloc_type(dealloc_type_) {
+    GetHeapAddressInformation(addr, 1, &addr_description);
+    scariness.Clear();
+    scariness.Scare(10, "alloc-dealloc-mismatch");
+  };
+  void Print();
+};
+
+struct ErrorMallocUsableSizeNotOwned : ErrorBase {
+  // ErrorMallocUsableSizeNotOwned doesn't own the stack trace.
+  const BufferedStackTrace *stack;
+  AddressDescription addr_description;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorMallocUsableSizeNotOwned() = default;
+  ErrorMallocUsableSizeNotOwned(u32 tid, BufferedStackTrace *stack_, uptr addr)
+      : ErrorBase(tid),
+        stack(stack_),
+        addr_description(addr, /*shouldLockThreadRegistry=*/false) {
+    scariness.Clear();
+  }
+  void Print();
+};
+
+struct ErrorSanitizerGetAllocatedSizeNotOwned : ErrorBase {
+  // ErrorSanitizerGetAllocatedSizeNotOwned doesn't own the stack trace.
+  const BufferedStackTrace *stack;
+  AddressDescription addr_description;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorSanitizerGetAllocatedSizeNotOwned() = default;
+  ErrorSanitizerGetAllocatedSizeNotOwned(u32 tid, BufferedStackTrace *stack_,
+                                         uptr addr)
+      : ErrorBase(tid),
+        stack(stack_),
+        addr_description(addr, /*shouldLockThreadRegistry=*/false) {
+    scariness.Clear();
+  }
+  void Print();
+};
+
+struct ErrorStringFunctionMemoryRangesOverlap : ErrorBase {
+  // ErrorStringFunctionMemoryRangesOverlap doesn't own the stack trace.
+  const BufferedStackTrace *stack;
+  uptr length1, length2;
+  AddressDescription addr1_description;
+  AddressDescription addr2_description;
+  const char *function;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorStringFunctionMemoryRangesOverlap() = default;
+  ErrorStringFunctionMemoryRangesOverlap(u32 tid, BufferedStackTrace *stack_,
+                                         uptr addr1, uptr length1_, uptr addr2,
+                                         uptr length2_, const char *function_)
+      : ErrorBase(tid),
+        stack(stack_),
+        length1(length1_),
+        length2(length2_),
+        addr1_description(addr1, length1, /*shouldLockThreadRegistry=*/false),
+        addr2_description(addr2, length2, /*shouldLockThreadRegistry=*/false),
+        function(function_) {
+    char bug_type[100];
+    internal_snprintf(bug_type, sizeof(bug_type), "%s-param-overlap", function);
+    scariness.Clear();
+    scariness.Scare(10, bug_type);
+  }
+  void Print();
+};
+
+struct ErrorStringFunctionSizeOverflow : ErrorBase {
+  // ErrorStringFunctionSizeOverflow doesn't own the stack trace.
+  const BufferedStackTrace *stack;
+  AddressDescription addr_description;
+  uptr size;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorStringFunctionSizeOverflow() = default;
+  ErrorStringFunctionSizeOverflow(u32 tid, BufferedStackTrace *stack_,
+                                  uptr addr, uptr size_)
+      : ErrorBase(tid),
+        stack(stack_),
+        addr_description(addr, /*shouldLockThreadRegistry=*/false),
+        size(size_) {
+    scariness.Clear();
+    scariness.Scare(10, "negative-size-param");
+  }
+  void Print();
+};
+
 // clang-format off
-#define ASAN_FOR_EACH_ERROR_KIND(macro) \
-  macro(StackOverflow)                  \
-  macro(DeadlySignal)                   \
-  macro(DoubleFree)                     \
-  macro(NewDeleteSizeMismatch)
+#define ASAN_FOR_EACH_ERROR_KIND(macro)    \
+  macro(StackOverflow)                     \
+  macro(DeadlySignal)                      \
+  macro(DoubleFree)                        \
+  macro(NewDeleteSizeMismatch)             \
+  macro(FreeNotMalloced)                   \
+  macro(AllocTypeMismatch)                 \
+  macro(MallocUsableSizeNotOwned)          \
+  macro(SanitizerGetAllocatedSizeNotOwned) \
+  macro(StringFunctionMemoryRangesOverlap) \
+  macro(StringFunctionSizeOverflow)
 // clang-format on
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,

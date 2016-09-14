@@ -593,8 +593,7 @@ void IslAstInfo::printScop(raw_ostream &OS, Scop &S) const {
   P = isl_ast_node_print(RootNode, P, Options);
   AstStr = isl_printer_get_str(P);
 
-  isl_union_map *Schedule =
-      isl_union_map_intersect_domain(S.getSchedule(), S.getDomains());
+  auto *Schedule = S.getScheduleTree();
 
   DEBUG({
     dbgs() << S.getContextStr() << "\n";
@@ -609,7 +608,7 @@ void IslAstInfo::printScop(raw_ostream &OS, Scop &S) const {
   free(AstStr);
 
   isl_ast_expr_free(RunCondition);
-  isl_union_map_free(Schedule);
+  isl_schedule_free(Schedule);
   isl_ast_node_free(RootNode);
   isl_printer_free(P);
 }

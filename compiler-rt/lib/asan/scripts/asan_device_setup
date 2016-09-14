@@ -300,9 +300,7 @@ if [[ -n "$ASAN_RT64" ]]; then
   cp "$ASAN_RT_PATH/$ASAN_RT64" "$TMPDIR/"
 fi
 
-# FIXME: alloc_dealloc_mismatch=0 prevents a failure in libdvm startup,
-# which may or may not be a real bug (probably not).
-ASAN_OPTIONS=start_deactivated=1,alloc_dealloc_mismatch=0,malloc_context_size=0
+ASAN_OPTIONS=start_deactivated=1,malloc_context_size=0
 
 function generate_zygote_wrapper { # from, to, asan_rt
   local _from=$1
