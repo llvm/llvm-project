@@ -21,6 +21,7 @@
 #include <ctime>
 #include <memory>
 #include <tuple>
+#include <system_error>
 #include <sys/stat.h>
 #include <sys/types.h>
 #if LLVM_ON_WIN32

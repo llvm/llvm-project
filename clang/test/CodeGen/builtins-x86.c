@@ -262,9 +262,7 @@ void f0() {
   tmp_i = __builtin_ia32_vec_ext_v2si(tmp_V2i, 0);
 
   (void) __builtin_ia32_ldmxcsr(tmp_Ui);
-  (void) _mm_setcsr(tmp_Ui);
   tmp_Ui = __builtin_ia32_stmxcsr();
-  tmp_Ui = _mm_getcsr();
   (void)__builtin_ia32_fxsave(tmp_vp);
   (void)__builtin_ia32_fxsave64(tmp_vp);
   (void)__builtin_ia32_fxrstor(tmp_vp);
@@ -292,7 +290,6 @@ void f0() {
   tmp_i = __builtin_ia32_cvttss2si(tmp_V4f);
 
   tmp_i = __builtin_ia32_rdtsc();
-  tmp_i = __rdtsc();
   tmp_i = __builtin_ia32_rdtscp(&tmp_Ui);
   tmp_LLi = __builtin_ia32_rdpmc(tmp_i);
 #ifdef USE_64
@@ -307,7 +304,6 @@ void f0() {
   tmp_i = __builtin_ia32_pmovmskb(tmp_V8c);
   (void) __builtin_ia32_movntq(tmp_V1LLip, tmp_V1LLi);
   (void) __builtin_ia32_sfence();
-  (void) _mm_sfence();
 
   tmp_V4s = __builtin_ia32_psadbw(tmp_V8c, tmp_V8c);
   tmp_V4f = __builtin_ia32_rcpps(tmp_V4f);
@@ -343,13 +339,8 @@ void f0() {
   tmp_V4i = __builtin_ia32_cvtps2dq(tmp_V4f);
   tmp_V4i = __builtin_ia32_cvttps2dq(tmp_V4f);
   (void) __builtin_ia32_clflush(tmp_vCp);
-  (void) _mm_clflush(tmp_vCp);
   (void) __builtin_ia32_lfence();
-  (void) _mm_lfence();
   (void) __builtin_ia32_mfence();
-  (void) _mm_mfence();
-  (void) __builtin_ia32_pause();
-  (void) _mm_pause();
   tmp_V4s = __builtin_ia32_psllwi(tmp_V4s, tmp_i);
   tmp_V2i = __builtin_ia32_pslldi(tmp_V2i, tmp_i);
   tmp_V1LLi = __builtin_ia32_psllqi(tmp_V1LLi, tmp_i);

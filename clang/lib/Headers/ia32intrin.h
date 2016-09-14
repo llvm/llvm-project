@@ -60,6 +60,12 @@ __rdpmc(int __A) {
   return __builtin_ia32_rdpmc(__A);
 }
 
+/* __rdtsc */
+static __inline__ unsigned long long __attribute__((__always_inline__, __nodebug__))
+__rdtsc(void) {
+  return __builtin_ia32_rdtsc();
+}
+
 /* __rdtscp */
 static __inline__ unsigned long long __attribute__((__always_inline__, __nodebug__))
 __rdtscp(unsigned int *__A) {

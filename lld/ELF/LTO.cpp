@@ -259,7 +259,7 @@ static void internalize(GlobalValue &GV) {
   GV.setLinkage(GlobalValue::InternalLinkage);
 }
 
-std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::runSplitCodegen(
+std::vector<InputFile *> BitcodeCompiler::runSplitCodegen(
     const std::function<std::unique_ptr<TargetMachine>()> &TMFactory) {
   unsigned NumThreads = Config->LtoJobs;
   OwningData.resize(NumThreads);
@@ -273,7 +273,7 @@ std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::runSplitCodegen(
 
   splitCodeGen(std::move(Combined), OSPtrs, {}, TMFactory);
 
-  std::vector<std::unique_ptr<InputFile>> ObjFiles;
+  std::vector<InputFile *> ObjFiles;
   for (SmallString<0> &Obj : OwningData)
     ObjFiles.push_back(createObjectFile(
         MemoryBufferRef(Obj, "LLD-INTERNAL-combined-lto-object")));
@@ -294,7 +294,7 @@ std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::runSplitCodegen(
 
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting ObjectFile.
-std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::compile() {
+std::vector<InputFile *> BitcodeCompiler::compile() {
   for (const auto &Name : InternalizedSyms) {
     GlobalValue *GV = Combined->getNamedValue(Name.first());
     assert(GV);

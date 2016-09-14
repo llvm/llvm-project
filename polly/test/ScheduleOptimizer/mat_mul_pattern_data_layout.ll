@@ -12,11 +12,34 @@
 ; CHECK:        double Packed_A[ { [] -> [(1024)] } ][ { [] -> [(4)] } ]; // Element size 8
 ; CHECK:        double Packed_B[ { [] -> [(3072)] } ][ { [] -> [(8)] } ]; // Element size 8
 ;
-; CHECK:                { Stmt_bb14[i0, i1, i2] -> MemRef_arg6[i0, i2] };
-; CHECK:           new: { Stmt_bb14[i0, i1, i2] -> Packed_A[o0, o1] : 256*floor((-i2 + o0)/256) = -i2 + o0 and 4*floor((-i0 + o1)/4) = -i0 + o1 and 0 <= o1 <= 3 and -3 + i0 - 16*floor((i0)/16) <= 4*floor((o0)/256) <= i0 - 16*floor((i0)/16) };
+; CHECK:                { Stmt_Copy_0[i0, i1, i2] -> MemRef_arg6[i0, i2] };
+; CHECK:           new: { Stmt_Copy_0[i0, i1, i2] -> Packed_A[o0, o1] : 256*floor((-i2 + o0)/256) = -i2 + o0 and 4*floor((-i0 + o1)/4) = -i0 + o1 and 0 <= o1 <= 3 and -3 + i0 - 16*floor((i0)/16) <= 4*floor((o0)/256) <= i0 - 16*floor((i0)/16) };
 ;
-; CHECK:                { Stmt_bb14[i0, i1, i2] -> MemRef_arg7[i2, i1] };
-; CHECK:           new: { Stmt_bb14[i0, i1, i2] -> Packed_B[o0, o1] : 256*floor((-i2 + o0)/256) = -i2 + o0 and 8*floor((-i1 + o1)/8) = -i1 + o1 and 0 <= o1 <= 7 and -7 + i1 - 96*floor((i1)/96) <= 8*floor((o0)/256) <= i1 - 96*floor((i1)/96) };
+; CHECK:                { Stmt_Copy_0[i0, i1, i2] -> MemRef_arg7[i2, i1] };
+; CHECK:           new: { Stmt_Copy_0[i0, i1, i2] -> Packed_B[o0, o1] : 256*floor((-i2 + o0)/256) = -i2 + o0 and 8*floor((-i1 + o1)/8) = -i1 + o1 and 0 <= o1 <= 7 and -7 + i1 - 96*floor((i1)/96) <= 8*floor((o0)/256) <= i1 - 96*floor((i1)/96) };
+;
+; CHECK:    	CopyStmt_0
+; CHECK:            Domain :=
+; CHECK:                { CopyStmt_0[i0, i1, i2] : 0 <= i0 <= 1055 and 0 <= i1 <= 1055 and 0 <= i2 <= 1023 };
+; CHECK:            Schedule :=
+; CHECK:                ;
+; CHECK:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; CHECK:                null;
+; CHECK:           new: { CopyStmt_0[i0, i1, i2] -> Packed_A[o0, o1] : 256*floor((-i2 + o0)/256) = -i2 + o0 and 4*floor((-i0 + o1)/4) = -i0 + o1 and 0 <= o1 <= 3 and -3 + i0 - 16*floor((i0)/16) <= 4*floor((o0)/256) <= i0 - 16*floor((i0)/16) };
+; CHECK:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; CHECK:                null;
+; CHECK:           new: { CopyStmt_0[i0, i1, i2] -> MemRef_arg6[i0, i2] };
+; CHECK:    	CopyStmt_1
+; CHECK:            Domain :=
+; CHECK:                { CopyStmt_1[i0, i1, i2] : 0 <= i0 <= 1055 and 0 <= i1 <= 1055 and 0 <= i2 <= 1023 };
+; CHECK:            Schedule :=
+; CHECK:                ;
+; CHECK:            MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; CHECK:                null;
+; CHECK:           new: { CopyStmt_1[i0, i1, i2] -> Packed_B[o0, o1] : 256*floor((-i2 + o0)/256) = -i2 + o0 and 8*floor((-i1 + o1)/8) = -i1 + o1 and 0 <= o1 <= 7 and -7 + i1 - 96*floor((i1)/96) <= 8*floor((o0)/256) <= i1 - 96*floor((i1)/96) };
+; CHECK:            ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
+; CHECK:                null;
+; CHECK:           new: { CopyStmt_1[i0, i1, i2] -> MemRef_arg7[i2, i1] };
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"
@@ -35,10 +58,10 @@ bb9:                                              ; preds = %bb26, %bb8
   %tmp12 = load double, double* %tmp11, align 8
   %tmp13 = fmul double %tmp12, %arg4
   store double %tmp13, double* %tmp11, align 8
-  br label %bb14
+  br label %Copy_0
 
-bb14:                                             ; preds = %bb14, %bb9
-  %tmp15 = phi i64 [ 0, %bb9 ], [ %tmp24, %bb14 ]
+Copy_0:                                             ; preds = %Copy_0, %bb9
+  %tmp15 = phi i64 [ 0, %bb9 ], [ %tmp24, %Copy_0 ]
   %tmp16 = getelementptr inbounds [1024 x double], [1024 x double]* %arg6, i64 %tmp, i64 %tmp15
   %tmp17 = load double, double* %tmp16, align 8
   %tmp18 = fmul double %tmp17, %arg3
@@ -50,9 +73,9 @@ bb14:                                             ; preds = %bb14, %bb9
   store double %tmp23, double* %tmp11, align 8
   %tmp24 = add nuw nsw i64 %tmp15, 1
   %tmp25 = icmp ne i64 %tmp24, 1024
-  br i1 %tmp25, label %bb14, label %bb26
+  br i1 %tmp25, label %Copy_0, label %bb26
 
-bb26:                                             ; preds = %bb14
+bb26:                                             ; preds = %Copy_0
   %tmp27 = add nuw nsw i64 %tmp10, 1
   %tmp28 = icmp ne i64 %tmp27, 1056
   br i1 %tmp28, label %bb9, label %bb29

@@ -215,7 +215,7 @@ DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
   this->File = File;
 }
 
-std::unique_ptr<InputFile> Lazy::fetch() {
+InputFile *Lazy::fetch() {
   if (auto *S = dyn_cast<LazyArchive>(this))
     return S->fetch();
   return cast<LazyObject>(this)->fetch();
@@ -232,20 +232,20 @@ LazyObject::LazyObject(StringRef Name, LazyObjectFile &File, uint8_t Type)
   this->File = &File;
 }
 
-std::unique_ptr<InputFile> LazyArchive::fetch() {
+InputFile *LazyArchive::fetch() {
   MemoryBufferRef MBRef = file()->getMember(&Sym);
 
   // getMember returns an empty buffer if the member was already
   // read from the library.
   if (MBRef.getBuffer().empty())
-    return std::unique_ptr<InputFile>(nullptr);
+    return nullptr;
   return createObjectFile(MBRef, file()->getName());
 }
 
-std::unique_ptr<InputFile> LazyObject::fetch() {
+InputFile *LazyObject::fetch() {
   MemoryBufferRef MBRef = file()->getBuffer();
   if (MBRef.getBuffer().empty())
-    return std::unique_ptr<InputFile>(nullptr);
+    return nullptr;
   return createObjectFile(MBRef);
 }
 

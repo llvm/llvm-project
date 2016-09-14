@@ -11,3 +11,33 @@ define i64 @rem_unsigned(i64 %x1, i64 %y2) {
   %r8 = sub i64 %x1, %r7
   ret i64 %r8
 }
+
+; PR28672 - https://llvm.org/bugs/show_bug.cgi?id=28672
+
+define i8 @big_divisor(i8 %x) {
+; CHECK-LABEL: @big_divisor(
+; CHECK-NEXT:    [[REM:%.*]] = urem i8 %x, -127
+; CHECK-NEXT:    ret i8 [[REM]]
+;
+  %rem = urem i8 %x, 129
+  ret i8 %rem
+}
+
+define i5 @biggest_divisor(i5 %x) {
+; CHECK-LABEL: @biggest_divisor(
+; CHECK-NEXT:    [[REM:%.*]] = urem i5 %x, -1
+; CHECK-NEXT:    ret i5 [[REM]]
+;
+  %rem = urem i5 %x, -1
+  ret i5 %rem
+}
+
+define <2 x i4> @big_divisor_vec(<2 x i4> %x) {
+; CHECK-LABEL: @big_divisor_vec(
+; CHECK-NEXT:    [[REM:%.*]] = urem <2 x i4> %x, <i4 -3, i4 -3>
+; CHECK-NEXT:    ret <2 x i4> [[REM]]
+;
+  %rem = urem <2 x i4> %x, <i4 13, i4 13>
+  ret <2 x i4> %rem
+}
+

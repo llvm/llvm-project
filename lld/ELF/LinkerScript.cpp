@@ -116,14 +116,12 @@ std::vector<InputSectionBase<ELFT> *>
 LinkerScript<ELFT>::getInputSections(const InputSectionDescription *I) {
   const Regex &Re = I->SectionRe;
   std::vector<InputSectionBase<ELFT> *> Ret;
-  for (const std::unique_ptr<ObjectFile<ELFT>> &F :
-       Symtab<ELFT>::X->getObjectFiles()) {
+  for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles())
     if (fileMatches(I, sys::path::filename(F->getName())))
       for (InputSectionBase<ELFT> *S : F->getSections())
         if (!isDiscarded(S) && !S->OutSec &&
             const_cast<Regex &>(Re).match(S->Name))
           Ret.push_back(S);
-  }
 
   if (const_cast<Regex &>(Re).match("COMMON"))
     Ret.push_back(CommonInputSection<ELFT>::X);
@@ -286,8 +284,7 @@ void LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
   }
 
   // Add orphan sections.
-  for (const std::unique_ptr<ObjectFile<ELFT>> &F :
-       Symtab<ELFT>::X->getObjectFiles()) {
+  for (ObjectFile<ELFT> *F : Symtab<ELFT>::X->getObjectFiles()) {
     for (InputSectionBase<ELFT> *S : F->getSections()) {
       if (isDiscarded(S) || S->OutSec)
         continue;
@@ -765,7 +762,7 @@ void ScriptParser::readLinkerScript() {
     } else if (Tok == "VERSION") {
       readVersion();
     } else if (SymbolAssignment *Cmd = readProvideOrAssignment(Tok, true)) {
-      if (Opt.HasContents)
+      if (Opt.HasSections)
         Opt.Commands.emplace_back(Cmd);
       else
         Opt.Assignments.emplace_back(Cmd);
@@ -926,7 +923,7 @@ void ScriptParser::readSearchDir() {
 }
 
 void ScriptParser::readSections() {
-  Opt.HasContents = true;
+  Opt.HasSections = true;
   expect("{");
   while (!Error && !skip("}")) {
     StringRef Tok = next();

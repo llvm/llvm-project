@@ -32,6 +32,17 @@ using namespace llvm::sys::fs;
 using namespace lld;
 using namespace lld::elf;
 
+std::vector<InputFile *> InputFile::Pool;
+
+// Deletes all InputFile instances created so far.
+void InputFile::freePool() {
+  // Files are freed in reverse order so that files created
+  // from other files (e.g. object files extracted from archives)
+  // are freed in the proper order.
+  for (int I = Pool.size() - 1; I >= 0; --I)
+    delete Pool[I];
+}
+
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".
 std::string elf::getFilename(const InputFile *F) {
   if (!F)
@@ -700,31 +711,31 @@ void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
 }
 
 template <template <class> class T>
-static std::unique_ptr<InputFile> createELFFile(MemoryBufferRef MB) {
+static InputFile *createELFFile(MemoryBufferRef MB) {
   unsigned char Size;
   unsigned char Endian;
   std::tie(Size, Endian) = getElfArchType(MB.getBuffer());
   if (Endian != ELFDATA2LSB && Endian != ELFDATA2MSB)
     fatal("invalid data encoding: " + MB.getBufferIdentifier());
 
-  std::unique_ptr<InputFile> Obj;
+  InputFile *Obj;
   if (Size == ELFCLASS32 && Endian == ELFDATA2LSB)
-    Obj.reset(new T<ELF32LE>(MB));
+    Obj = new T<ELF32LE>(MB);
   else if (Size == ELFCLASS32 && Endian == ELFDATA2MSB)
-    Obj.reset(new T<ELF32BE>(MB));
+    Obj = new T<ELF32BE>(MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2LSB)
-    Obj.reset(new T<ELF64LE>(MB));
+    Obj = new T<ELF64LE>(MB);
   else if (Size == ELFCLASS64 && Endian == ELFDATA2MSB)
-    Obj.reset(new T<ELF64BE>(MB));
+    Obj = new T<ELF64BE>(MB);
   else
     fatal("invalid file class: " + MB.getBufferIdentifier());
 
   if (!Config->FirstElf)
-    Config->FirstElf = Obj.get();
+    Config->FirstElf = Obj;
   return Obj;
 }
 
-template <class ELFT> std::unique_ptr<InputFile> BinaryFile::createELF() {
+template <class ELFT> InputFile *BinaryFile::createELF() {
   // Wrap the binary blob with an ELF header and footer
   // so that we can link it as a regular ELF file.
   ELFCreator<ELFT> ELF(ET_REL, Config->EMachine);
@@ -773,18 +784,14 @@ static bool isBitcode(MemoryBufferRef MB) {
   return identify_magic(MB.getBuffer()) == file_magic::bitcode;
 }
 
-std::unique_ptr<InputFile> elf::createObjectFile(MemoryBufferRef MB,
-                                                 StringRef ArchiveName) {
-  std::unique_ptr<InputFile> F;
-  if (isBitcode(MB))
-    F.reset(new BitcodeFile(MB));
-  else
-    F = createELFFile<ObjectFile>(MB);
+InputFile *elf::createObjectFile(MemoryBufferRef MB, StringRef ArchiveName) {
+  InputFile *F =
+      isBitcode(MB) ? new BitcodeFile(MB) : createELFFile<ObjectFile>(MB);
   F->ArchiveName = ArchiveName;
   return F;
 }
 
-std::unique_ptr<InputFile> elf::createSharedFile(MemoryBufferRef MB) {
+InputFile *elf::createSharedFile(MemoryBufferRef MB) {
   return createELFFile<SharedFile>(MB);
 }
 
@@ -889,7 +896,7 @@ template class elf::SharedFile<ELF32BE>;
 template class elf::SharedFile<ELF64LE>;
 template class elf::SharedFile<ELF64BE>;
 
-template std::unique_ptr<InputFile> BinaryFile::createELF<ELF32LE>();
-template std::unique_ptr<InputFile> BinaryFile::createELF<ELF32BE>();
-template std::unique_ptr<InputFile> BinaryFile::createELF<ELF64LE>();
-template std::unique_ptr<InputFile> BinaryFile::createELF<ELF64BE>();
+template InputFile *BinaryFile::createELF<ELF32LE>();
+template InputFile *BinaryFile::createELF<ELF32BE>();
+template InputFile *BinaryFile::createELF<ELF64LE>();
+template InputFile *BinaryFile::createELF<ELF64BE>();

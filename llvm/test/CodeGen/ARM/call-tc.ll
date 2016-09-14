@@ -120,7 +120,7 @@ if.end:                                           ; preds = %entry
   br i1 %tobool2, label %if.end5, label %if.then3
 
 if.then3:                                         ; preds = %if.end
-; CHECKT2D: bmi.w _b
+; CHECKT2D: bne.w _b
   %call4 = tail call i32 @b(i32 %x) nounwind
   br label %return
 

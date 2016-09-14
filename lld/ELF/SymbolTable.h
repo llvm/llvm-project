@@ -40,16 +40,16 @@ template <class ELFT> class SymbolTable {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  void addFile(std::unique_ptr<InputFile> File);
+  void addFile(InputFile *File);
   void addCombinedLtoObject();
 
   llvm::ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 
-  const std::vector<std::unique_ptr<ObjectFile<ELFT>>> &getObjectFiles() const {
+  const std::vector<ObjectFile<ELFT> *> &getObjectFiles() const {
     return ObjectFiles;
   }
 
-  const std::vector<std::unique_ptr<SharedFile<ELFT>>> &getSharedFiles() const {
+  const std::vector<SharedFile<ELFT> *> &getSharedFiles() const {
     return SharedFiles;
   }
 
@@ -101,7 +101,8 @@ private:
   std::string conflictMsg(SymbolBody *Existing, InputFile *NewFile);
   void reportDuplicate(SymbolBody *Existing, InputFile *NewFile);
 
-  std::map<std::string, std::vector<SymbolBody *>> getDemangledSyms();
+  std::map<std::string, SymbolBody *> getDemangledSyms();
+  void handleAnonymousVersion();
 
   struct SymIndex {
     SymIndex(int Idx, bool Traced) : Idx(Idx), Traced(Traced) {}
@@ -125,13 +126,9 @@ private:
   // is used to uniquify them.
   llvm::DenseSet<StringRef> ComdatGroups;
 
-  // The symbol table owns all file objects.
-  std::vector<std::unique_ptr<ArchiveFile>> ArchiveFiles;
-  std::vector<std::unique_ptr<BinaryFile>> BinaryFiles;
-  std::vector<std::unique_ptr<ObjectFile<ELFT>>> ObjectFiles;
-  std::vector<std::unique_ptr<LazyObjectFile>> LazyObjectFiles;
-  std::vector<std::unique_ptr<SharedFile<ELFT>>> SharedFiles;
-  std::vector<std::unique_ptr<BitcodeFile>> BitcodeFiles;
+  std::vector<ObjectFile<ELFT> *> ObjectFiles;
+  std::vector<SharedFile<ELFT> *> SharedFiles;
+  std::vector<BitcodeFile *> BitcodeFiles;
 
   // Set of .so files to not link the same shared object file more than once.
   llvm::DenseSet<StringRef> SoNames;

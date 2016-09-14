@@ -547,13 +547,13 @@ bool ObjCARCContract::runOnFunction(Function &F) {
 
     // Don't use GetArgRCIdentityRoot because we don't want to look through bitcasts
     // and such; to do the replacement, the argument must have type i8*.
-    Value *Arg = cast<CallInst>(Inst)->getArgOperand(0);
 
-    // TODO: Change this to a do-while.
-    for (;;) {
+    // Function for replacing uses of Arg dominated by Inst.
+    auto ReplaceArgUses = [Inst, this](Value *Arg) {
       // If we're compiling bugpointed code, don't get in trouble.
       if (!isa<Instruction>(Arg) && !isa<Argument>(Arg))
-        break;
+        return;
+
       // Look through the uses of the pointer.
       for (Value::use_iterator UI = Arg->use_begin(), UE = Arg->use_end();
            UI != UE; ) {
@@ -598,6 +598,15 @@ bool ObjCARCContract::runOnFunction(Function &F) {
           }
         }
       }
+    };
+
+
+    Value *Arg = cast<CallInst>(Inst)->getArgOperand(0);
+    Value *OrigArg = Arg;
+
+    // TODO: Change this to a do-while.
+    for (;;) {
+      ReplaceArgUses(Arg);
 
       // If Arg is a no-op casted pointer, strip one level of casts and iterate.
       if (const BitCastInst *BI = dyn_cast<BitCastInst>(Arg))
@@ -610,6 +619,24 @@ bool ObjCARCContract::runOnFunction(Function &F) {
         Arg = cast<GlobalAlias>(Arg)->getAliasee();
       else
         break;
+    }
+
+    // Replace bitcast users of Arg that are dominated by Inst.
+    SmallVector<BitCastInst *, 2> BitCastUsers;
+
+    // Add all bitcast users of the function argument first.
+    for (User *U : OrigArg->users())
+      if (auto *BC = dyn_cast<BitCastInst>(U))
+        BitCastUsers.push_back(BC);
+
+    // Replace the bitcasts with the call return. Iterate until list is empty.
+    while (!BitCastUsers.empty()) {
+      auto *BC = BitCastUsers.pop_back_val();
+      for (User *U : BC->users())
+        if (auto *B = dyn_cast<BitCastInst>(U))
+          BitCastUsers.push_back(B);
+
+      ReplaceArgUses(BC);
     }
   }
 

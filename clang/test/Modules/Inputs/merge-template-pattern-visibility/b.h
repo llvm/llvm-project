@@ -17,4 +17,6 @@ namespace CrossModuleMerge {
   template<typename, typename> struct A {};
   template<typename T> struct B : A<T> {};
   template<typename T> inline auto C(T) {}
+
+  template<typename T> inline auto D(T) {}
 }

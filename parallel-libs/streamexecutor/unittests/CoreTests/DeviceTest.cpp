@@ -17,7 +17,7 @@
 
 #include "streamexecutor/Device.h"
 #include "streamexecutor/PlatformDevice.h"
-#include "streamexecutor/unittests/CoreTests/SimpleHostPlatformDevice.h"
+#include "streamexecutor/platforms/host/HostPlatformDevice.h"
 
 #include "gtest/gtest.h"
 
@@ -25,8 +25,7 @@ namespace {
 
 namespace se = ::streamexecutor;
 
-const auto &getDeviceValue =
-    se::test::SimpleHostPlatformDevice::getDeviceValue<int>;
+const auto &getDeviceValue = se::host::HostPlatformDevice::getDeviceValue<int>;
 
 /// Test fixture to hold objects used by tests.
 class DeviceTest : public ::testing::Test {
@@ -45,7 +44,7 @@ public:
     se::dieIfError(Device.synchronousCopyH2D<int>(HostB7, DeviceB7));
   }
 
-  se::test::SimpleHostPlatformDevice PDevice;
+  se::host::HostPlatformDevice PDevice;
   se::Device Device;
 
   // Device memory is backed by host arrays.
@@ -74,9 +73,7 @@ public:
 using llvm::ArrayRef;
 using llvm::MutableArrayRef;
 
-TEST_F(DeviceTest, GetName) {
-  EXPECT_EQ(Device.getName(), "SimpleHostPlatformDevice");
-}
+TEST_F(DeviceTest, GetName) { EXPECT_EQ(Device.getName(), "host"); }
 
 TEST_F(DeviceTest, AllocateAndFreeDeviceMemory) {
   se::Expected<se::GlobalDeviceMemory<int>> MaybeMemory =

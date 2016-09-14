@@ -681,7 +681,9 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
 
 void BlockGenerator::invalidateScalarEvolution(Scop &S) {
   for (auto &Stmt : S)
-    if (Stmt.isBlockStmt())
+    if (Stmt.isCopyStmt())
+      continue;
+    else if (Stmt.isBlockStmt())
       for (auto &Inst : *Stmt.getBasicBlock())
         SE.forgetValue(&Inst);
     else if (Stmt.isRegionStmt())

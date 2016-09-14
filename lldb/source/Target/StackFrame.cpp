@@ -1489,37 +1489,21 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
 
   // First, check the variable list to see if anything is at the specified
   // location.
+
+  using namespace OperandMatchers;
+
+  Instruction::Operand op =
+      offset ? Instruction::Operand::BuildDereference(
+                   Instruction::Operand::BuildSum(
+                       Instruction::Operand::BuildRegister(reg),
+                       Instruction::Operand::BuildImmediate(offset)))
+             : Instruction::Operand::BuildDereference(
+                   Instruction::Operand::BuildRegister(reg));
+
   for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi) {
     VariableSP var_sp = variables.GetVariableAtIndex(vi);
-    DWARFExpression &dwarf_expression = var_sp->LocationExpression();
-
-    const RegisterInfo *expression_reg;
-    int64_t expression_offset;
-    ExecutionContext exe_ctx;
-
-    if (dwarf_expression.IsDereferenceOfRegister(frame, expression_reg,
-                                                 expression_offset)) {
-      if ((reg == ConstString(expression_reg->name) ||
-           reg == ConstString(expression_reg->alt_name)) &&
-          expression_offset == offset) {
-        return frame.GetValueObjectForFrameVariable(var_sp, eNoDynamicValues);
-      }
-    }
-  }
-
-  bool is_in_return_register = false;
-  ABISP abi_sp = frame.CalculateProcess()->GetABI();
-  RegisterInfo return_register_info;
-
-  if (abi_sp) {
-    const char *return_register_name;
-    const RegisterInfo *reg_info = nullptr;
-    if (abi_sp->GetPointerReturnRegister(return_register_name) &&
-        reg == ConstString(return_register_name) &&
-        (reg_info = frame.GetRegisterContext()->GetRegisterInfoByName(
-             return_register_name))) {
-      is_in_return_register = true;
-      return_register_info = *reg_info;
+    if (var_sp->LocationExpression().MatchesOperand(frame, op)) {
+      return frame.GetValueObjectForFrameVariable(var_sp, eNoDynamicValues);
     }
   }
 
@@ -1539,7 +1523,36 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
     InstructionSP instruction_sp =
         disassembler.GetInstructionList().GetInstructionAtIndex(ii);
 
-    if (is_in_return_register && instruction_sp->IsCall()) {
+    if (instruction_sp->IsCall()) {
+      ABISP abi_sp = frame.CalculateProcess()->GetABI();
+      if (!abi_sp) {
+        continue;
+      }
+
+      const char *return_register_name;
+      if (!abi_sp->GetPointerReturnRegister(return_register_name)) {
+        continue;
+      }
+
+      const RegisterInfo *return_register_info =
+          frame.GetRegisterContext()->GetRegisterInfoByName(
+              return_register_name);
+      if (!return_register_info) {
+        continue;
+      }
+
+      int64_t offset = 0;
+
+      if (!MatchUnaryOp(MatchOpType(Instruction::Operand::Type::Dereference),
+                        MatchRegOp(*return_register_info))(op) &&
+          !MatchUnaryOp(
+              MatchOpType(Instruction::Operand::Type::Dereference),
+              MatchBinaryOp(MatchOpType(Instruction::Operand::Type::Sum),
+                            MatchRegOp(*return_register_info),
+                            FetchImmOp(offset)))(op)) {
+        continue;
+      }
+
       llvm::SmallVector<Instruction::Operand, 1> operands;
       if (!instruction_sp->ParseOperands(operands) || operands.size() != 1) {
         continue;
@@ -1566,7 +1579,7 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
         }
         CompilerType return_type = function_type.GetFunctionReturnType();
         RegisterValue return_value;
-        if (!frame.GetRegisterContext()->ReadRegister(&return_register_info,
+        if (!frame.GetRegisterContext()->ReadRegister(return_register_info,
                                                       return_value)) {
           break;
         }

@@ -19,7 +19,7 @@
 #include "streamexecutor/KernelSpec.h"
 #include "streamexecutor/PlatformDevice.h"
 #include "streamexecutor/Stream.h"
-#include "streamexecutor/unittests/CoreTests/SimpleHostPlatformDevice.h"
+#include "streamexecutor/platforms/host/HostPlatformDevice.h"
 
 #include "gtest/gtest.h"
 
@@ -27,8 +27,7 @@ namespace {
 
 namespace se = ::streamexecutor;
 
-const auto &getDeviceValue =
-    se::test::SimpleHostPlatformDevice::getDeviceValue<int>;
+const auto &getDeviceValue = se::host::HostPlatformDevice::getDeviceValue<int>;
 
 /// Test fixture to hold objects used by tests.
 class StreamTest : public ::testing::Test {
@@ -56,7 +55,7 @@ public:
 protected:
   int DummyPlatformStream; // Mimicking a platform where the platform stream
                            // handle is just a stream number.
-  se::test::SimpleHostPlatformDevice PDevice;
+  se::host::HostPlatformDevice PDevice;
   se::Device Device;
   se::Stream Stream;
 

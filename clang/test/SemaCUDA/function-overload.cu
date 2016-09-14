@@ -379,3 +379,14 @@ __host__ __device__ void test_host_device_single_side_overloading() {
   HostReturnTy ret3 = host_only_function(1);
   HostReturnTy2 ret4 = host_only_function(1.0f);
 }
+
+// Verify that we allow overloading function templates.
+template <typename T> __host__ T template_overload(const T &a) { return a; };
+template <typename T> __device__ T template_overload(const T &a) { return a; };
+
+__host__ void test_host_template_overload() {
+  template_overload(1); // OK. Attribute-based overloading picks __host__ variant.
+}
+__device__ void test_device_template_overload() {
+  template_overload(1); // OK. Attribute-based overloading picks __device__ variant.
+}

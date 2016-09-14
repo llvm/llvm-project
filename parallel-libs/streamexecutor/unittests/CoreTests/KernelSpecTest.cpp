@@ -30,8 +30,9 @@ TEST(CUDAPTXInMemorySpec, SingleComputeCapability) {
   const char *PTXCodeString = "Dummy PTX code";
   se::CUDAPTXInMemorySpec Spec("KernelName", {{{1, 0}, PTXCodeString}});
   EXPECT_EQ("KernelName", Spec.getKernelName());
+  EXPECT_EQ(nullptr, Spec.getCode(0, 5));
   EXPECT_EQ(PTXCodeString, Spec.getCode(1, 0));
-  EXPECT_EQ(nullptr, Spec.getCode(2, 0));
+  EXPECT_EQ(PTXCodeString, Spec.getCode(2, 0));
 }
 
 TEST(CUDAPTXInMemorySpec, TwoComputeCapabilities) {
@@ -40,9 +41,10 @@ TEST(CUDAPTXInMemorySpec, TwoComputeCapabilities) {
   se::CUDAPTXInMemorySpec Spec(
       "KernelName", {{{1, 0}, PTXCodeString10}, {{3, 0}, PTXCodeString30}});
   EXPECT_EQ("KernelName", Spec.getKernelName());
+  EXPECT_EQ(nullptr, Spec.getCode(0, 5));
   EXPECT_EQ(PTXCodeString10, Spec.getCode(1, 0));
   EXPECT_EQ(PTXCodeString30, Spec.getCode(3, 0));
-  EXPECT_EQ(nullptr, Spec.getCode(2, 0));
+  EXPECT_EQ(PTXCodeString10, Spec.getCode(2, 0));
 }
 
 TEST(CUDAFatbinInMemorySpec, BasicUsage) {
@@ -89,8 +91,9 @@ TEST(MultiKernelLoaderSpec, Registration) {
   EXPECT_TRUE(MultiSpec.hasOpenCLTextInMemory());
 
   EXPECT_EQ(KernelName, MultiSpec.getCUDAPTXInMemory().getKernelName());
+  EXPECT_EQ(nullptr, MultiSpec.getCUDAPTXInMemory().getCode(0, 5));
   EXPECT_EQ(PTXCodeString, MultiSpec.getCUDAPTXInMemory().getCode(1, 0));
-  EXPECT_EQ(nullptr, MultiSpec.getCUDAPTXInMemory().getCode(2, 0));
+  EXPECT_EQ(PTXCodeString, MultiSpec.getCUDAPTXInMemory().getCode(2, 0));
 
   EXPECT_EQ(KernelName, MultiSpec.getCUDAFatbinInMemory().getKernelName());
   EXPECT_EQ(FatbinBytes, MultiSpec.getCUDAFatbinInMemory().getBytes());

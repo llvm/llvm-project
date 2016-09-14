@@ -125,6 +125,9 @@ bool isPositiveHalfWord(SDNode *N);
     bool shouldExpandBuildVectorWithShuffles(EVT VT,
         unsigned DefinedValues) const override;
 
+    bool isShuffleMaskLegal(const SmallVectorImpl<int> &Mask, EVT VT)
+        const override;
+
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
     const char *getTargetNodeName(unsigned Opcode) const override;
     SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;

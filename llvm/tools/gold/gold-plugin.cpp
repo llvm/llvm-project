@@ -568,14 +568,10 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View) {
     message(LDPL_FATAL, "Could not read bitcode from file : %s",
             toString(ObjOrErr.takeError()).c_str());
 
-  InputFile &Obj = **ObjOrErr;
-
   unsigned SymNum = 0;
   std::vector<SymbolResolution> Resols(F.syms.size());
-  for (LLVM_ATTRIBUTE_UNUSED auto &ObjSym : Obj.symbols()) {
-    ld_plugin_symbol &Sym = F.syms[SymNum];
-    SymbolResolution &R = Resols[SymNum];
-    ++SymNum;
+  for (ld_plugin_symbol &Sym : F.syms) {
+    SymbolResolution &R = Resols[SymNum++];
 
     ld_plugin_symbol_resolution Resolution =
         (ld_plugin_symbol_resolution)Sym.resolution;

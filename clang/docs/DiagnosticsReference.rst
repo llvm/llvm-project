@@ -14,10 +14,11 @@
     }
     table.docutils td {
       border: none;
-      padding: 0;
+      padding: 0 0 0 0.2em;
       vertical-align: middle;
       white-space: nowrap;
       width: 1px;
+      font-family: monospace;
     }
     table.docutils tr + tr {
       border-top: 0.2em solid #aaa;
@@ -30,7 +31,7 @@
     .warning {
       font-family: monospace;
       font-weight: bold;
-      color: #c70;
+      color: #80a;
     }
     .remark {
       font-family: monospace;
@@ -43,7 +44,8 @@
     }
     </style>
 
-.. FIXME: Format this as .diagtext. rST appears to not support this. :(
+.. FIXME: rST doesn't support formatting this, so we format all <td> elements
+          as monospace font face instead.
 .. |nbsp| unicode:: 0xA0
    :trim:
 
@@ -312,7 +314,7 @@ This diagnostic is enabled by default.
 -----
 This diagnostic is enabled by default.
 
-Controls `-Warc-unsafe-retained-assign`_, `-Warc-retain-cycles`_, `-Warc-non-pod-memaccess`_.
+Controls `-Warc-non-pod-memaccess`_, `-Warc-retain-cycles`_, `-Warc-unsafe-retained-assign`_.
 
 
 -Warc-bridge-casts-disallowed-in-nonarc
@@ -538,7 +540,7 @@ This diagnostic is enabled by default.
 
 -Watomic-properties
 -------------------
-Controls `-Wimplicit-atomic-properties`_, `-Wcustom-atomic-properties`_.
+Controls `-Wcustom-atomic-properties`_, `-Wimplicit-atomic-properties`_.
 
 
 -Watomic-property-with-user-defined-accessor
@@ -571,7 +573,7 @@ This diagnostic is enabled by default.
 ------------
 This diagnostic is enabled by default.
 
-Controls `-Wunknown-attributes`_, `-Wignored-attributes`_.
+Controls `-Wignored-attributes`_, `-Wunknown-attributes`_.
 
 
 -Wauto-disable-vptr-sanitizer
@@ -918,7 +920,7 @@ Synonym for `-Wc++11-narrowing`_.
 --------------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Also controls `-Wc++11-narrowing`_, `-Wc++11-compat-reserved-user-defined-literal`_, `-Wc++11-compat-deprecated-writable-strings`_, `-Wc++98-c++11-compat`_, `-Wc++98-c++11-c++14-compat`_.
+Also controls `-Wc++11-compat-deprecated-writable-strings`_, `-Wc++11-compat-reserved-user-defined-literal`_, `-Wc++11-narrowing`_, `-Wc++98-c++11-c++14-compat`_, `-Wc++98-c++11-compat`_.
 
 **Diagnostic text:**
 
@@ -984,7 +986,7 @@ This diagnostic is enabled by default.
 
 -Wc++11-compat-pedantic
 -----------------------
-Controls `-Wc++98-c++11-compat-pedantic`_, `-Wc++98-c++11-c++14-compat-pedantic`_.
+Controls `-Wc++98-c++11-c++14-compat-pedantic`_, `-Wc++98-c++11-compat-pedantic`_.
 
 
 -Wc++11-compat-reserved-user-defined-literal
@@ -1304,7 +1306,7 @@ Synonym for `-Wc++14-extensions`_.
 --------------
 This diagnostic is enabled by default.
 
-Controls `-Wdeprecated-register`_, `-Wdeprecated-increment-bool`_.
+Controls `-Wdeprecated-increment-bool`_, `-Wdeprecated-register`_.
 
 
 -Wc++1z-extensions
@@ -1504,7 +1506,7 @@ Also controls `-Wc++98-c++11-compat`_.
 
 -Wc++98-compat
 --------------
-Also controls `-Wc++98-compat-local-type-template-args`_, `-Wc++98-compat-unnamed-type-template-args`_, `-Wc++98-c++11-compat`_, `-Wc++98-c++11-c++14-compat`_.
+Also controls `-Wc++98-c++11-c++14-compat`_, `-Wc++98-c++11-compat`_, `-Wc++98-compat-local-type-template-args`_, `-Wc++98-compat-unnamed-type-template-args`_.
 
 **Diagnostic text:**
 
@@ -1845,7 +1847,7 @@ Also controls `-Wc++98-compat-local-type-template-args`_, `-Wc++98-compat-unname
 
 -Wc++98-compat-pedantic
 -----------------------
-Also controls `-Wc++98-compat`_, `-Wc++98-compat-bind-to-temporary-copy`_, `-Wc++98-c++11-compat-pedantic`_, `-Wc++98-c++11-c++14-compat-pedantic`_.
+Also controls `-Wc++98-c++11-c++14-compat-pedantic`_, `-Wc++98-c++11-compat-pedantic`_, `-Wc++98-compat`_, `-Wc++98-compat-bind-to-temporary-copy`_.
 
 **Diagnostic text:**
 
@@ -2307,7 +2309,7 @@ This diagnostic is enabled by default.
 ------------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Also controls `-Wbool-conversion`_, `-Wconstant-conversion`_, `-Wenum-conversion`_, `-Wfloat-conversion`_, `-Wshorten-64-to-32`_, `-Wint-conversion`_, `-Wliteral-conversion`_, `-Wnon-literal-null-conversion`_, `-Wnull-conversion`_, `-Wobjc-literal-conversion`_, `-Wsign-conversion`_, `-Wstring-conversion`_.
+Also controls `-Wbool-conversion`_, `-Wconstant-conversion`_, `-Wenum-conversion`_, `-Wfloat-conversion`_, `-Wint-conversion`_, `-Wliteral-conversion`_, `-Wnon-literal-null-conversion`_, `-Wnull-conversion`_, `-Wobjc-literal-conversion`_, `-Wshorten-64-to-32`_, `-Wsign-conversion`_, `-Wstring-conversion`_.
 
 **Diagnostic text:**
 
@@ -2769,7 +2771,8 @@ This diagnostic is enabled by default.
 
 -Wdiv-by-zero
 -------------
-This diagnostic flag exists for GCC compatibility, and has no effect in Clang.
+Synonym for `-Wdivision-by-zero`_.
+
 
 -Wdivision-by-zero
 ------------------
@@ -2821,7 +2824,7 @@ This diagnostic is enabled by default.
 
 -Wdocumentation
 ---------------
-Also controls `-Wdocumentation-html`_, `-Wdocumentation-deprecated-sync`_.
+Also controls `-Wdocumentation-deprecated-sync`_, `-Wdocumentation-html`_.
 
 **Diagnostic text:**
 
@@ -3107,7 +3110,8 @@ This diagnostic is enabled by default.
 
 -Weffc++
 --------
-This diagnostic flag exists for GCC compatibility, and has no effect in Clang.
+Synonym for `-Wnon-virtual-dtor`_.
+
 
 -Wembedded-directive
 --------------------
@@ -3324,7 +3328,7 @@ This diagnostic is enabled by default.
 -------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Controls `-Wmissing-field-initializers`_, `-Wignored-qualifiers`_, `-Winitializer-overrides`_, `-Wsemicolon-before-method-body`_, `-Wmissing-method-return-type`_, `-Wsign-compare`_, `-Wunused-parameter`_.
+Controls `-Wignored-qualifiers`_, `-Winitializer-overrides`_, `-Wmissing-field-initializers`_, `-Wmissing-method-return-type`_, `-Wsemicolon-before-method-body`_, `-Wsign-compare`_, `-Wunused-parameter`_.
 
 
 -Wextra-qualification
@@ -3490,7 +3494,7 @@ Also controls `-Wfloat-overflow-conversion`_, `-Wfloat-zero-conversion`_.
 --------
 This diagnostic is enabled by default.
 
-Also controls `-Wformat-extra-args`_, `-Wformat-zero-length`_, `-Wnonnull`_, `-Wformat-security`_, `-Wformat-y2k`_, `-Wformat-invalid-specifier`_.
+Also controls `-Wformat-extra-args`_, `-Wformat-invalid-specifier`_, `-Wformat-security`_, `-Wformat-y2k`_, `-Wformat-zero-length`_, `-Wnonnull`_.
 
 **Diagnostic text:**
 
@@ -3798,7 +3802,7 @@ Some of the diagnostics controlled by this flag are enabled by default.
 -----
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Controls `-Wgnu-alignof-expression`_, `-Wgnu-anonymous-struct`_, `-Wgnu-auto-type`_, `-Wgnu-binary-literal`_, `-Wgnu-case-range`_, `-Wgnu-complex-integer`_, `-Wgnu-compound-literal-initializer`_, `-Wgnu-conditional-omitted-operand`_, `-Wgnu-designator`_, `-Wgnu-empty-initializer`_, `-Wgnu-empty-struct`_, `-Wvla-extension`_, `-Wgnu-flexible-array-initializer`_, `-Wgnu-flexible-array-union-member`_, `-Wgnu-folding-constant`_, `-Wgnu-imaginary-constant`_, `-Wgnu-include-next`_, `-Wgnu-label-as-value`_, `-Wredeclared-class-member`_, `-Wgnu-redeclared-enum`_, `-Wgnu-statement-expression`_, `-Wgnu-static-float-init`_, `-Wgnu-string-literal-operator-template`_, `-Wgnu-union-cast`_, `-Wgnu-variable-sized-type-not-at-end`_, `-Wzero-length-array`_, `-Wgnu-zero-line-directive`_, `-Wgnu-zero-variadic-macro-arguments`_.
+Controls `-Wgnu-alignof-expression`_, `-Wgnu-anonymous-struct`_, `-Wgnu-auto-type`_, `-Wgnu-binary-literal`_, `-Wgnu-case-range`_, `-Wgnu-complex-integer`_, `-Wgnu-compound-literal-initializer`_, `-Wgnu-conditional-omitted-operand`_, `-Wgnu-designator`_, `-Wgnu-empty-initializer`_, `-Wgnu-empty-struct`_, `-Wgnu-flexible-array-initializer`_, `-Wgnu-flexible-array-union-member`_, `-Wgnu-folding-constant`_, `-Wgnu-imaginary-constant`_, `-Wgnu-include-next`_, `-Wgnu-label-as-value`_, `-Wgnu-redeclared-enum`_, `-Wgnu-statement-expression`_, `-Wgnu-static-float-init`_, `-Wgnu-string-literal-operator-template`_, `-Wgnu-union-cast`_, `-Wgnu-variable-sized-type-not-at-end`_, `-Wgnu-zero-line-directive`_, `-Wgnu-zero-variadic-macro-arguments`_, `-Wredeclared-class-member`_, `-Wvla-extension`_, `-Wzero-length-array`_.
 
 
 -Wgnu-alignof-expression
@@ -4320,6 +4324,8 @@ This diagnostic is enabled by default.
 |                                                                                                |+----------------------------------------------------------------------------------------------------------------+|
 |                                                                                                ||:diagtext:`Objective-C protocols`                                                                               ||
 |                                                                                                |+----------------------------------------------------------------------------------------------------------------+|
+|                                                                                                ||:diagtext:`variables with static or thread storage duration`                                                    ||
+|                                                                                                |+----------------------------------------------------------------------------------------------------------------+|
 |                                                                                                ||:diagtext:`functions and global variables`                                                                      ||
 |                                                                                                |+----------------------------------------------------------------------------------------------------------------+|
 |                                                                                                ||:diagtext:`structs, unions, and typedefs`                                                                       ||
@@ -4607,6 +4613,14 @@ This diagnostic is enabled by default.
 +-------------------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`'#pragma init\_seg' is only supported when targeting a Microsoft environment`|
 +-------------------------------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------------+------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :placeholder:`A` |nbsp| :diagtext:`is not a recognized builtin`|+----------------------------------------------------------------------------+|
+|                                                                                          ||                                                                            ||
+|                                                                                          |+----------------------------------------------------------------------------+|
+|                                                                                          ||:diagtext:`; consider including <intrin.h> to access non-builtin intrinsics`||
+|                                                                                          |+----------------------------------------------------------------------------+|
++------------------------------------------------------------------------------------------+------------------------------------------------------------------------------+
 
 +-----------------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`unknown action for '#pragma` |nbsp| :placeholder:`A`:diagtext:`' - ignored`|
@@ -4931,7 +4945,7 @@ This diagnostic is an error by default, but the flag ``-Wno-incompatible-ms-stru
 ----------------------------
 This diagnostic is enabled by default.
 
-Also controls `-Wincompatible-pointer-types-discards-qualifiers`_, `-Wincompatible-function-pointer-types`_.
+Also controls `-Wincompatible-function-pointer-types`_, `-Wincompatible-pointer-types-discards-qualifiers`_.
 
 **Diagnostic text:**
 
@@ -5650,7 +5664,7 @@ This diagnostic is enabled by default.
 -----------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Controls `-Wmicrosoft-charize`_, `-Wmicrosoft-include`_, `-Wmicrosoft-cpp-macro`_, `-Wmicrosoft-fixed-enum`_, `-Wmicrosoft-sealed`_, `-Wmicrosoft-unqualified-friend`_, `-Wmicrosoft-exception-spec`_, `-Wmicrosoft-using-decl`_, `-Wmicrosoft-mutable-reference`_, `-Wmicrosoft-pure-definition`_, `-Wmicrosoft-union-member-reference`_, `-Wmicrosoft-explicit-constructor-call`_, `-Wmicrosoft-enum-value`_, `-Wmicrosoft-default-arg-redefinition`_, `-Wmicrosoft-template`_, `-Wmicrosoft-redeclare-static`_, `-Wmicrosoft-enum-forward-reference`_, `-Wmicrosoft-goto`_, `-Wmicrosoft-flexible-array`_, `-Wmicrosoft-extra-qualification`_, `-Wmicrosoft-cast`_, `-Wmicrosoft-const-init`_, `-Wmicrosoft-void-pseudo-dtor`_, `-Wmicrosoft-anon-tag`_, `-Wmicrosoft-comment-paste`_, `-Wmicrosoft-end-of-file`_, `-Winconsistent-dllimport`_.
+Controls `-Winconsistent-dllimport`_, `-Wmicrosoft-anon-tag`_, `-Wmicrosoft-cast`_, `-Wmicrosoft-charize`_, `-Wmicrosoft-comment-paste`_, `-Wmicrosoft-const-init`_, `-Wmicrosoft-cpp-macro`_, `-Wmicrosoft-default-arg-redefinition`_, `-Wmicrosoft-end-of-file`_, `-Wmicrosoft-enum-forward-reference`_, `-Wmicrosoft-enum-value`_, `-Wmicrosoft-exception-spec`_, `-Wmicrosoft-explicit-constructor-call`_, `-Wmicrosoft-extra-qualification`_, `-Wmicrosoft-fixed-enum`_, `-Wmicrosoft-flexible-array`_, `-Wmicrosoft-goto`_, `-Wmicrosoft-include`_, `-Wmicrosoft-mutable-reference`_, `-Wmicrosoft-pure-definition`_, `-Wmicrosoft-redeclare-static`_, `-Wmicrosoft-sealed`_, `-Wmicrosoft-template`_, `-Wmicrosoft-union-member-reference`_, `-Wmicrosoft-unqualified-friend`_, `-Wmicrosoft-using-decl`_, `-Wmicrosoft-void-pseudo-dtor`_.
 
 
 -Wmicrosoft-anon-tag
@@ -6326,7 +6340,7 @@ This diagnostic is an error by default, but the flag ``-Wno-modules-import-neste
 ------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Controls `-Wchar-subscripts`_, `-Wcomment`_, `-Wdelete-non-virtual-dtor`_, `-Wfor-loop-analysis`_, `-Wformat`_, `-Wimplicit`_, `-Winfinite-recursion`_, `-Wmismatched-tags`_, `-Wmissing-braces`_, `-Wmove`_, `-Wmultichar`_, `-Wreorder`_, `-Wreturn-type`_, `-Wself-assign`_, `-Wself-move`_, `-Wsizeof-array-argument`_, `-Wsizeof-array-decay`_, `-Wstring-plus-int`_, `-Wtrigraphs`_, `-Wuninitialized`_, `-Wunknown-pragmas`_, `-Wunused`_, `-Wvolatile-register-var`_, `-Wobjc-missing-super-calls`_, `-Wobjc-designated-initializers`_, `-Woverloaded-virtual`_, `-Wprivate-extern`_, `-Wcast-of-sel-type`_, `-Wextern-c-compat`_.
+Controls `-Wcast-of-sel-type`_, `-Wchar-subscripts`_, `-Wcomment`_, `-Wdelete-non-virtual-dtor`_, `-Wextern-c-compat`_, `-Wfor-loop-analysis`_, `-Wformat`_, `-Wimplicit`_, `-Winfinite-recursion`_, `-Wmismatched-tags`_, `-Wmissing-braces`_, `-Wmove`_, `-Wmultichar`_, `-Wobjc-designated-initializers`_, `-Wobjc-missing-super-calls`_, `-Woverloaded-virtual`_, `-Wprivate-extern`_, `-Wreorder`_, `-Wreturn-type`_, `-Wself-assign`_, `-Wself-move`_, `-Wsizeof-array-argument`_, `-Wsizeof-array-decay`_, `-Wstring-plus-int`_, `-Wtrigraphs`_, `-Wuninitialized`_, `-Wunknown-pragmas`_, `-Wunused`_, `-Wvolatile-register-var`_.
 
 
 -Wmove
@@ -6415,7 +6429,7 @@ This diagnostic is enabled by default.
 ---------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Controls `-Wsign-compare`_, `-Wconversion`_, `-Wliteral-range`_.
+Controls `-Wconversion`_, `-Wliteral-range`_, `-Wsign-compare`_.
 
 
 -Wnon-literal-null-conversion
@@ -7358,7 +7372,7 @@ This diagnostic is enabled by default.
 -------------
 This diagnostic is enabled by default.
 
-Also controls `-Wlogical-op-parentheses`_, `-Wlogical-not-parentheses`_, `-Wbitwise-op-parentheses`_, `-Wshift-op-parentheses`_, `-Woverloaded-shift-op-parentheses`_, `-Wparentheses-equality`_, `-Wdangling-else`_.
+Also controls `-Wbitwise-op-parentheses`_, `-Wdangling-else`_, `-Wlogical-not-parentheses`_, `-Wlogical-op-parentheses`_, `-Woverloaded-shift-op-parentheses`_, `-Wparentheses-equality`_, `-Wshift-op-parentheses`_.
 
 **Diagnostic text:**
 
@@ -7446,131 +7460,37 @@ This diagnostic is enabled by default.
 
 -Wpedantic
 ----------
-Also controls `-Wgnu-union-cast`_, `-Wdollar-in-identifier-extension`_, `-Wgnu-zero-line-directive`_, `-Wc11-extensions`_, `-Wgnu-flexible-array-union-member`_, `-Wvariadic-macros`_, `-Wempty-translation-unit`_, `-Wgnu-include-next`_, `-Wembedded-directive`_, `-Wgnu-statement-expression`_, `-Wimport-preprocessor-directive-pedantic`_, `-Wfour-char-constants`_, `-Wgnu-conditional-omitted-operand`_, `-Wgnu-redeclared-enum`_, `-Wmicrosoft-enum-forward-reference`_, `-Wc++14-binary-literal`_, `-Wgnu-empty-initializer`_, `-Wmicrosoft-charize`_, `-Wdeclaration-after-statement`_, `-Woverlength-strings`_, `-Wcomplex-component-init`_, `-Wmicrosoft-end-of-file`_, `-Wgnu-folding-constant`_, `-Wmicrosoft-fixed-enum`_, `-Wkeyword-macro`_, `-Wlong-long`_, `-Wgnu-compound-literal-initializer`_, `-Wc++11-extra-semi`_, `-Wformat-pedantic`_, `-Wnullability-extension`_, `-Wgnu-flexible-array-initializer`_, `-Wmicrosoft-flexible-array`_, `-Wmicrosoft-cpp-macro`_, `-Wgnu-case-range`_, `-Wvla-extension`_, `-Wgnu-zero-variadic-macro-arguments`_, `-Wlanguage-extension-token`_, `-Wgnu-empty-struct`_, `-Wgnu-auto-type`_, `-Wzero-length-array`_, `-Wgnu-complex-integer`_, `-Wmicrosoft-redeclare-static`_, `-Wc++11-long-long`_, `-Wretained-language-linkage`_, `-Wgnu-imaginary-constant`_, `-Wgnu-anonymous-struct`_, `-Wflexible-array-extensions`_, `-Wgnu-binary-literal`_, `-Wgnu-label-as-value`_, `-Wnested-anon-types`_, `-Wmicrosoft-comment-paste`_, `-Wextended-offsetof`_.
+Also controls `-Wc++11-extra-semi`_, `-Wc++11-long-long`_, `-Wc++14-binary-literal`_, `-Wc11-extensions`_, `-Wcomplex-component-init`_, `-Wdeclaration-after-statement`_, `-Wdollar-in-identifier-extension`_, `-Wembedded-directive`_, `-Wempty-translation-unit`_, `-Wextended-offsetof`_, `-Wflexible-array-extensions`_, `-Wformat-pedantic`_, `-Wfour-char-constants`_, `-Wgnu-anonymous-struct`_, `-Wgnu-auto-type`_, `-Wgnu-binary-literal`_, `-Wgnu-case-range`_, `-Wgnu-complex-integer`_, `-Wgnu-compound-literal-initializer`_, `-Wgnu-conditional-omitted-operand`_, `-Wgnu-empty-initializer`_, `-Wgnu-empty-struct`_, `-Wgnu-flexible-array-initializer`_, `-Wgnu-flexible-array-union-member`_, `-Wgnu-folding-constant`_, `-Wgnu-imaginary-constant`_, `-Wgnu-include-next`_, `-Wgnu-label-as-value`_, `-Wgnu-redeclared-enum`_, `-Wgnu-statement-expression`_, `-Wgnu-union-cast`_, `-Wgnu-zero-line-directive`_, `-Wgnu-zero-variadic-macro-arguments`_, `-Wimport-preprocessor-directive-pedantic`_, `-Wkeyword-macro`_, `-Wlanguage-extension-token`_, `-Wlong-long`_, `-Wmicrosoft-charize`_, `-Wmicrosoft-comment-paste`_, `-Wmicrosoft-cpp-macro`_, `-Wmicrosoft-end-of-file`_, `-Wmicrosoft-enum-forward-reference`_, `-Wmicrosoft-fixed-enum`_, `-Wmicrosoft-flexible-array`_, `-Wmicrosoft-redeclare-static`_, `-Wnested-anon-types`_, `-Wnullability-extension`_, `-Woverlength-strings`_, `-Wretained-language-linkage`_, `-Wvariadic-macros`_, `-Wvla-extension`_, `-Wzero-length-array`_.
 
 **Diagnostic text:**
-
-+----------------------------------------------------+-----------------------+---------------------------+---------------+----------------------+-------------------------+---------------------------------+---------------+------------------------+---------------------------------------------------+--------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`arithmetic on`|+---------------------+| |nbsp| :diagtext:`pointer`|+-------------+| |nbsp| :diagtext:`to`|+-----------------------+| |nbsp| :diagtext:`function type`|+-------------+| |nbsp| :placeholder:`B`|+-------------------------------------------------+| |nbsp| :diagtext:`is a GNU extension`|
-|                                                    || |nbsp| :diagtext:`a`||                           ||             ||                      || |nbsp| :diagtext:`the`||                                 ||             ||                        ||                                                 ||                                      |
-|                                                    |+---------------------+|                           |+-------------+|                      |+-----------------------+|                                 |+-------------+|                        |+-------------------------------------------------+|                                      |
-|                                                    ||                     ||                           ||:diagtext:`s`||                      ||                       ||                                 ||:diagtext:`s`||                        ||+-----------------------------------------------+||                                      |
-|                                                    |+---------------------+|                           |+-------------+|                      |+-----------------------+|                                 |+-------------+|                        ||| |nbsp| :diagtext:`and` |nbsp| :placeholder:`D`|||                                      |
-|                                                    |                       |                           |               |                      |                         |                                 |               |                        ||+-----------------------------------------------+||                                      |
-|                                                    |                       |                           |               |                      |                         |                                 |               |                        |+-------------------------------------------------+|                                      |
-+----------------------------------------------------+-----------------------+---------------------------+---------------+----------------------+-------------------------+---------------------------------+---------------+------------------------+---------------------------------------------------+--------------------------------------+
-
-+---------------------------------------------------------------+-----------------------+----------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`invalid application of '`|+---------------------+|:diagtext:`' to a void type`|
-|                                                               ||:diagtext:`sizeof`   ||                            |
-|                                                               |+---------------------+|                            |
-|                                                               ||:diagtext:`alignof`  ||                            |
-|                                                               |+---------------------+|                            |
-|                                                               ||:diagtext:`vec\_step`||                            |
-|                                                               |+---------------------+|                            |
-+---------------------------------------------------------------+-----------------------+----------------------------+
-
-+----------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`\_\_VA\_ARGS\_\_ can only appear in the expansion of a C99 variadic macro`|
-+----------------------------------------------------------------------------------------------------------------+
-
-+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`ordered comparison between pointer and zero (`:placeholder:`A` |nbsp| :diagtext:`and` |nbsp| :placeholder:`B`:diagtext:`) is an extension`|
-+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
-+---------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`ISO C forbids forward references to 'enum' types`|
-+---------------------------------------------------------------------------------------+
-
-+---------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`use of the` |nbsp| :placeholder:`A` |nbsp| :diagtext:`attribute is a C++1z extension`|
-+---------------------------------------------------------------------------------------------------------------------------+
-
-+------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`use of non-standard escape character '\\`:placeholder:`A`:diagtext:`'`|
-+------------------------------------------------------------------------------------------------------------+
-
-+---------------------------+----------------------------------+------------------------------+-----------------------+----------------------------+
-|:warning:`warning:` |nbsp| |+--------------------------------+|:diagtext:`array size` |nbsp| |+---------------------+|:diagtext:`is a C99 feature`|
-|                           ||:diagtext:`qualifier in` |nbsp| ||                              ||                     ||                            |
-|                           |+--------------------------------+|                              |+---------------------+|                            |
-|                           ||:diagtext:`static` |nbsp|       ||                              ||                     ||                            |
-|                           |+--------------------------------+|                              |+---------------------+|                            |
-|                           ||                                ||                              ||:diagtext:`'\[\*\] '`||                            |
-|                           |+--------------------------------+|                              |+---------------------+|                            |
-+---------------------------+----------------------------------+------------------------------+-----------------------+----------------------------+
-
-+----------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`no newline at end of file`|
-+----------------------------------------------------------------+
-
-+-------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`macro expansion producing 'defined' has undefined behavior`|
-+-------------------------------------------------------------------------------------------------+
-
-+------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`exception specification of '...' is a Microsoft extension`|
-+------------------------------------------------------------------------------------------------+
-
-+-------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`variable declaration in for loop is a C99-specific feature`|
-+-------------------------------------------------------------------------------------------------+
-
-+---------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------+----------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`implicit conversion from array size expression of type` |nbsp| :placeholder:`A` |nbsp| :diagtext:`to` |nbsp| |+-----------------------+| |nbsp| :diagtext:`type` |nbsp| :placeholder:`C` |nbsp| :diagtext:`is a C++11 extension`|
-|                                                                                                                                                   ||:diagtext:`integral`   ||                                                                                        |
-|                                                                                                                                                   |+-----------------------+|                                                                                        |
-|                                                                                                                                                   ||:diagtext:`enumeration`||                                                                                        |
-|                                                                                                                                                   |+-----------------------+|                                                                                        |
-+---------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------+----------------------------------------------------------------------------------------+
-
-+-------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`cast between pointer-to-function and pointer-to-object is an extension`|
-+-------------------------------------------------------------------------------------------------------------+
 
 +------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`'enable\_if' is a clang extension`|
 +------------------------------------------------------------------------+
 
-+---------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`hexadecimal floating constants are a C99 feature`|
-+---------------------------------------------------------------------------------------+
++--------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`designated initializers are a C99 feature`|
++--------------------------------------------------------------------------------+
 
-+-------------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`C99 forbids casting nonscalar type` |nbsp| :placeholder:`A` |nbsp| :diagtext:`to the same type`|
-+-------------------------------------------------------------------------------------------------------------------------------------+
++--------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`ISO C++ does not allow 'main' to be used by a program`|
++--------------------------------------------------------------------------------------------+
 
-+-------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`ISO C forbids taking the address of an expression of type 'void'`|
-+-------------------------------------------------------------------------------------------------------+
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------+
+|:warning:`warning:` |nbsp| :diagtext:`C++98 requires an accessible copy constructor for class` |nbsp| :placeholder:`C` |nbsp| :diagtext:`when binding a reference to a temporary; was` |nbsp| |+---------------------+|
+|                                                                                                                                                                                              ||:diagtext:`private`  ||
+|                                                                                                                                                                                              |+---------------------+|
+|                                                                                                                                                                                              ||:diagtext:`protected`||
+|                                                                                                                                                                                              |+---------------------+|
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------+
 
-+---------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`#ident is a language extension`|
-+---------------------------------------------------------------------+
-
-+-----------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`initializer for aggregate is not a compile-time constant`|
-+-----------------------------------------------------------------------------------------------+
-
-+--------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`'`:placeholder:`A`:diagtext:`' cannot be signed or unsigned`|
-+--------------------------------------------------------------------------------------------------+
-
-+-------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`ISO C90 does not allow subscripting non-lvalue array`|
-+-------------------------------------------------------------------------------------------+
-
-+-------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`flexible array members are a C99 feature`|
-+-------------------------------------------------------------------------------+
-
-+-----------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`use of GNU array range extension`|
-+-----------------------------------------------------------------------+
-
-+------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`empty macro arguments are a C99 feature`|
-+------------------------------------------------------------------------------+
++--------------------------------------------------------+--------------------+------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`anonymous` |nbsp| |+------------------+| |nbsp| :diagtext:`cannot be '`:placeholder:`B`:diagtext:`'`|
+|                                                        ||:diagtext:`struct`||                                                            |
+|                                                        |+------------------+|                                                            |
+|                                                        ||:diagtext:`union` ||                                                            |
+|                                                        |+------------------+|                                                            |
++--------------------------------------------------------+--------------------+------------------------------------------------------------+
 
 +--------------------------------------------------------------------+-----------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`no viable constructor` |nbsp| |+---------------------------------------+| |nbsp| :diagtext:`of type` |nbsp| :placeholder:`B`:diagtext:`; C++98 requires a copy constructor when binding a reference to a temporary`|
@@ -7598,45 +7518,13 @@ Also controls `-Wgnu-union-cast`_, `-Wdollar-in-identifier-extension`_, `-Wgnu-z
 |                                                                    |+---------------------------------------+|                                                                                                                                          |
 +--------------------------------------------------------------------+-----------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------+
 
-+--------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`ISO C does not support '~' for complex conjugation of` |nbsp| :placeholder:`A`|
-+--------------------------------------------------------------------------------------------------------------------+
-
-+-----------------------------------------------------------------------------+--------------------+---------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`types declared in an anonymous` |nbsp| |+------------------+| |nbsp| :diagtext:`are a Microsoft extension`|
-|                                                                             ||:diagtext:`struct`||                                             |
-|                                                                             |+------------------+|                                             |
-|                                                                             ||:diagtext:`union` ||                                             |
-|                                                                             |+------------------+|                                             |
-+-----------------------------------------------------------------------------+--------------------+---------------------------------------------+
-
 +--------------------------------------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`parameter` |nbsp| :placeholder:`A` |nbsp| :diagtext:`was not declared, defaulting to type 'int'`|
 +--------------------------------------------------------------------------------------------------------------------------------------+
 
-+--------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`ISO C++ does not allow 'main' to be used by a program`|
-+--------------------------------------------------------------------------------------------+
-
-+-----------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`extern templates are a C++11 extension`|
-+-----------------------------------------------------------------------------+
-
 +----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`qualifier in explicit instantiation of` |nbsp| :placeholder:`A` |nbsp| :diagtext:`requires a template-id (a typedef is not permitted)`|
 +----------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
-+----------------------------------------------------+-----------------------+---------------------------+---------------+----------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`arithmetic on`|+---------------------+| |nbsp| :diagtext:`pointer`|+-------------+| |nbsp| :diagtext:`to void is a GNU extension`|
-|                                                    || |nbsp| :diagtext:`a`||                           ||             ||                                              |
-|                                                    |+---------------------+|                           |+-------------+|                                              |
-|                                                    ||                     ||                           ||:diagtext:`s`||                                              |
-|                                                    |+---------------------+|                           |+-------------+|                                              |
-+----------------------------------------------------+-----------------------+---------------------------+---------------+----------------------------------------------+
-
-+-----------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`comma operator in operand of #if`|
-+-----------------------------------------------------------------------+
 
 +-----------------------------------------------------+----------------------+-----------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`static` |nbsp| |+--------------------+| |nbsp| :placeholder:`B` |nbsp| :diagtext:`is used in an inline function with external linkage`|
@@ -7646,21 +7534,9 @@ Also controls `-Wgnu-union-cast`_, `-Wdollar-in-identifier-extension`_, `-Wgnu-z
 |                                                     |+--------------------+|                                                                                               |
 +-----------------------------------------------------+----------------------+-----------------------------------------------------------------------------------------------+
 
-+--------------------------------------------------------+--------------------+------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`anonymous` |nbsp| |+------------------+| |nbsp| :diagtext:`cannot be '`:placeholder:`B`:diagtext:`'`|
-|                                                        ||:diagtext:`struct`||                                                            |
-|                                                        |+------------------+|                                                            |
-|                                                        ||:diagtext:`union` ||                                                            |
-|                                                        |+------------------+|                                                            |
-+--------------------------------------------------------+--------------------+------------------------------------------------------------+
-
-+-----------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`ISO C does not support '++'/'--' on complex integer type` |nbsp| :placeholder:`A`|
-+-----------------------------------------------------------------------------------------------------------------------+
-
-+--------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`commas at the end of enumerator lists are a C++11 extension`|
-+--------------------------------------------------------------------------------------------------+
++---------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`ISO C forbids forward references to 'enum' types`|
++---------------------------------------------------------------------------------------+
 
 +----------------------------------------------------------------------------------------------------------------------------------------------+-------------------+-------------+
 |:warning:`warning:` |nbsp| :diagtext:`ISO C restricts enumerator values to range of 'int' (`:placeholder:`A` |nbsp| :diagtext:`is too` |nbsp| |+-----------------+|:diagtext:`)`|
@@ -7670,63 +7546,99 @@ Also controls `-Wgnu-union-cast`_, `-Wdollar-in-identifier-extension`_, `-Wgnu-z
 |                                                                                                                                              |+-----------------+|             |
 +----------------------------------------------------------------------------------------------------------------------------------------------+-------------------+-------------+
 
-+---------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`use of the` |nbsp| :placeholder:`A` |nbsp| :diagtext:`attribute is a C++14 extension`|
-+---------------------------------------------------------------------------------------------------------------------------+
++--------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`size of static array must be an integer constant expression`|
++--------------------------------------------------------------------------------------------------+
+
++-----------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`initializer for aggregate is not a compile-time constant`|
++-----------------------------------------------------------------------------------------------+
+
++-------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`flexible array members are a C99 feature`|
++-------------------------------------------------------------------------------+
+
++---------------------------------------------------------------+-----------------------+--------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`invalid application of '`|+---------------------+|:diagtext:`' to a function type`|
+|                                                               ||:diagtext:`sizeof`   ||                                |
+|                                                               |+---------------------+|                                |
+|                                                               ||:diagtext:`alignof`  ||                                |
+|                                                               |+---------------------+|                                |
+|                                                               ||:diagtext:`vec\_step`||                                |
+|                                                               |+---------------------+|                                |
++---------------------------------------------------------------+-----------------------+--------------------------------+
+
++---------------------------------------------------------------+-----------------------+----------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`invalid application of '`|+---------------------+|:diagtext:`' to a void type`|
+|                                                               ||:diagtext:`sizeof`   ||                            |
+|                                                               |+---------------------+|                            |
+|                                                               ||:diagtext:`alignof`  ||                            |
+|                                                               |+---------------------+|                            |
+|                                                               ||:diagtext:`vec\_step`||                            |
+|                                                               |+---------------------+|                            |
++---------------------------------------------------------------+-----------------------+----------------------------+
+
++-------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`ISO C90 does not allow subscripting non-lvalue array`|
++-------------------------------------------------------------------------------------------+
 
 +----------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`hexadecimal floating literals are a C++1z feature`|
+|:warning:`warning:` |nbsp| :diagtext:`subscript of a pointer to void is a GNU extension`|
 +----------------------------------------------------------------------------------------+
 
-+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`kernel function` |nbsp| :placeholder:`A` |nbsp| :diagtext:`is a member function; this may not be accepted by nvcc`|
-+--------------------------------------------------------------------------------------------------------------------------------------------------------+
++-------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`ISO C forbids taking the address of an expression of type 'void'`|
++-------------------------------------------------------------------------------------------------------+
 
-+----------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`type-less parameter names in function declaration`|
-+----------------------------------------------------------------------------------------+
-
-+----------------------------------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`C requires #line number to be less than` |nbsp| :placeholder:`A`:diagtext:`, allowed as extension`|
-+----------------------------------------------------------------------------------------------------------------------------------------+
-
-+---------------------------------------------------+----------------------+-----------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`void` |nbsp| |+--------------------+| |nbsp| :placeholder:`A` |nbsp| :diagtext:`should not return void expression`|
-|                                                   ||:diagtext:`function`||                                                                             |
-|                                                   |+--------------------+|                                                                             |
-|                                                   ||:diagtext:`method`  ||                                                                             |
-|                                                   |+--------------------+|                                                                             |
-|                                                   ||:diagtext:`block`   ||                                                                             |
-|                                                   |+--------------------+|                                                                             |
-+---------------------------------------------------+----------------------+-----------------------------------------------------------------------------+
-
-+------------------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`complex numbers are an extension in a freestanding C99 implementation`|
-+------------------------------------------------------------------------------------------------------------+
++--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`ordered comparison between pointer and zero (`:placeholder:`A` |nbsp| :diagtext:`and` |nbsp| :placeholder:`B`:diagtext:`) is an extension`|
++--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 +----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`equality comparison between function pointer and void pointer (`:placeholder:`A` |nbsp| :diagtext:`and` |nbsp| :placeholder:`B`:diagtext:`)`|
 +----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
-+-----------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`'\_\_thread' before '`:placeholder:`A`:diagtext:`'`|
-+-----------------------------------------------------------------------------------------+
++----------------------------------------------------+-----------------------+---------------------------+---------------+----------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`arithmetic on`|+---------------------+| |nbsp| :diagtext:`pointer`|+-------------+| |nbsp| :diagtext:`to void is a GNU extension`|
+|                                                    || |nbsp| :diagtext:`a`||                           ||             ||                                              |
+|                                                    |+---------------------+|                           |+-------------+|                                              |
+|                                                    ||                     ||                           ||:diagtext:`s`||                                              |
+|                                                    |+---------------------+|                           |+-------------+|                                              |
++----------------------------------------------------+-----------------------+---------------------------+---------------+----------------------------------------------+
 
-+--------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`C99 forbids conditional expressions with only one void side`|
-+--------------------------------------------------------------------------------------------------+
++----------------------------------------------------+-----------------------+---------------------------+---------------+----------------------+-------------------------+---------------------------------+---------------+------------------------+---------------------------------------------------+--------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`arithmetic on`|+---------------------+| |nbsp| :diagtext:`pointer`|+-------------+| |nbsp| :diagtext:`to`|+-----------------------+| |nbsp| :diagtext:`function type`|+-------------+| |nbsp| :placeholder:`B`|+-------------------------------------------------+| |nbsp| :diagtext:`is a GNU extension`|
+|                                                    || |nbsp| :diagtext:`a`||                           ||             ||                      || |nbsp| :diagtext:`the`||                                 ||             ||                        ||                                                 ||                                      |
+|                                                    |+---------------------+|                           |+-------------+|                      |+-----------------------+|                                 |+-------------+|                        |+-------------------------------------------------+|                                      |
+|                                                    ||                     ||                           ||:diagtext:`s`||                      ||                       ||                                 ||:diagtext:`s`||                        ||+-----------------------------------------------+||                                      |
+|                                                    |+---------------------+|                           |+-------------+|                      |+-----------------------+|                                 |+-------------+|                        ||| |nbsp| :diagtext:`and` |nbsp| :placeholder:`D`|||                                      |
+|                                                    |                       |                           |               |                      |                         |                                 |               |                        ||+-----------------------------------------------+||                                      |
+|                                                    |                       |                           |               |                      |                         |                                 |               |                        |+-------------------------------------------------+|                                      |
++----------------------------------------------------+-----------------------+---------------------------+---------------+----------------------+-------------------------+---------------------------------+---------------+------------------------+---------------------------------------------------+--------------------------------------+
 
-+------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`multi-line // comment`|
-+------------------------------------------------------------+
++-----------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`ISO C does not support '++'/'--' on complex integer type` |nbsp| :placeholder:`A`|
++-----------------------------------------------------------------------------------------------------------------------+
 
-+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------+
-|:warning:`warning:` |nbsp| :diagtext:`C++98 requires an accessible copy constructor for class` |nbsp| :placeholder:`C` |nbsp| :diagtext:`when binding a reference to a temporary; was` |nbsp| |+---------------------+|
-|                                                                                                                                                                                              ||:diagtext:`private`  ||
-|                                                                                                                                                                                              |+---------------------+|
-|                                                                                                                                                                                              ||:diagtext:`protected`||
-|                                                                                                                                                                                              |+---------------------+|
-+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------+
++--------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`ISO C does not support '~' for complex conjugation of` |nbsp| :placeholder:`A`|
++--------------------------------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`complex numbers are an extension in a freestanding C99 implementation`|
++------------------------------------------------------------------------------------------------------------+
+
++-------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`cast between pointer-to-function and pointer-to-object is an extension`|
++-------------------------------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------+----------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`implicit conversion from array size expression of type` |nbsp| :placeholder:`A` |nbsp| :diagtext:`to` |nbsp| |+-----------------------+| |nbsp| :diagtext:`type` |nbsp| :placeholder:`C` |nbsp| :diagtext:`is a C++11 extension`|
+|                                                                                                                                                   ||:diagtext:`integral`   ||                                                                                        |
+|                                                                                                                                                   |+-----------------------+|                                                                                        |
+|                                                                                                                                                   ||:diagtext:`enumeration`||                                                                                        |
+|                                                                                                                                                   |+-----------------------+|                                                                                        |
++---------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------+----------------------------------------------------------------------------------------+
 
 +---------------------------+----------------------------------------------------------------+----------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| |+--------------------------------------------------------------+| |nbsp| :diagtext:`converts between void pointer and function pointer`|
@@ -7746,9 +7658,57 @@ Also controls `-Wgnu-union-cast`_, `-Wdollar-in-identifier-extension`_, `-Wgnu-z
 |                           |+--------------------------------------------------------------+|                                                                      |
 +---------------------------+----------------------------------------------------------------+----------------------------------------------------------------------+
 
-+-----------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`compound literals are a C99-specific feature`|
-+-----------------------------------------------------------------------------------+
++--------------------------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`kernel function` |nbsp| :placeholder:`A` |nbsp| :diagtext:`is a member function; this may not be accepted by nvcc`|
++--------------------------------------------------------------------------------------------------------------------------------------------------------+
+
++--------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`C99 forbids conditional expressions with only one void side`|
++--------------------------------------------------------------------------------------------------+
+
++-------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`C99 forbids casting nonscalar type` |nbsp| :placeholder:`A` |nbsp| :diagtext:`to the same type`|
++-------------------------------------------------------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`use of the` |nbsp| :placeholder:`A` |nbsp| :diagtext:`attribute is a C++14 extension`|
++---------------------------------------------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`use of the` |nbsp| :placeholder:`A` |nbsp| :diagtext:`attribute is a C++1z extension`|
++---------------------------------------------------------------------------------------------------------------------------+
+
++-----------------------------------------------------------------------------+--------------------+---------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`types declared in an anonymous` |nbsp| |+------------------+| |nbsp| :diagtext:`are a Microsoft extension`|
+|                                                                             ||:diagtext:`struct`||                                             |
+|                                                                             |+------------------+|                                             |
+|                                                                             ||:diagtext:`union` ||                                             |
+|                                                                             |+------------------+|                                             |
++-----------------------------------------------------------------------------+--------------------+---------------------------------------------+
+
++---------------------------------------------------+----------------------+-----------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`void` |nbsp| |+--------------------+| |nbsp| :placeholder:`A` |nbsp| :diagtext:`should not return void expression`|
+|                                                   ||:diagtext:`function`||                                                                             |
+|                                                   |+--------------------+|                                                                             |
+|                                                   ||:diagtext:`method`  ||                                                                             |
+|                                                   |+--------------------+|                                                                             |
+|                                                   ||:diagtext:`block`   ||                                                                             |
+|                                                   |+--------------------+|                                                                             |
++---------------------------------------------------+----------------------+-----------------------------------------------------------------------------+
+
++--------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`'`:placeholder:`A`:diagtext:`' cannot be signed or unsigned`|
++--------------------------------------------------------------------------------------------------+
+
++---------------------------+----------------------------------+------------------------------+-----------------------+----------------------------+
+|:warning:`warning:` |nbsp| |+--------------------------------+|:diagtext:`array size` |nbsp| |+---------------------+|:diagtext:`is a C99 feature`|
+|                           ||:diagtext:`qualifier in` |nbsp| ||                              ||                     ||                            |
+|                           |+--------------------------------+|                              |+---------------------+|                            |
+|                           ||:diagtext:`static` |nbsp|       ||                              ||                     ||                            |
+|                           |+--------------------------------+|                              |+---------------------+|                            |
+|                           ||                                ||                              ||:diagtext:`'\[\*\] '`||                            |
+|                           |+--------------------------------+|                              |+---------------------+|                            |
++---------------------------+----------------------------------+------------------------------+-----------------------+----------------------------+
 
 +--------------------------------------------------------+------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`extra ';'` |nbsp| |+----------------------------------------------+|
@@ -7764,43 +7724,97 @@ Also controls `-Wgnu-union-cast`_, `-Wdollar-in-identifier-extension`_, `-Wgnu-z
 |                                                        |+----------------------------------------------+|
 +--------------------------------------------------------+------------------------------------------------+
 
-+-----------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`#warning is a language extension`|
-+-----------------------------------------------------------------------+
++-----------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`'\_\_thread' before '`:placeholder:`A`:diagtext:`'`|
++-----------------------------------------------------------------------------------------+
 
 +----------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`subscript of a pointer to void is a GNU extension`|
+|:warning:`warning:` |nbsp| :diagtext:`type-less parameter names in function declaration`|
 +----------------------------------------------------------------------------------------+
 
-+--------------------------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`size of static array must be an integer constant expression`|
-+--------------------------------------------------------------------------------------------------+
++-------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`variable declaration in for loop is a C99-specific feature`|
++-------------------------------------------------------------------------------------------------+
+
++-----------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`compound literals are a C99-specific feature`|
++-----------------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`commas at the end of enumerator lists are a C99-specific feature`|
 +-------------------------------------------------------------------------------------------------------+
 
++--------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`commas at the end of enumerator lists are a C++11 extension`|
++--------------------------------------------------------------------------------------------------+
+
 +-----------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`enumeration types with a fixed underlying type are a C++11 extension`|
 +-----------------------------------------------------------------------------------------------------------+
 
-+--------------------------------------------------------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`designated initializers are a C99 feature`|
-+--------------------------------------------------------------------------------+
++-----------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`use of GNU array range extension`|
++-----------------------------------------------------------------------+
 
-+---------------------------------------------------------------+-----------------------+--------------------------------+
-|:warning:`warning:` |nbsp| :diagtext:`invalid application of '`|+---------------------+|:diagtext:`' to a function type`|
-|                                                               ||:diagtext:`sizeof`   ||                                |
-|                                                               |+---------------------+|                                |
-|                                                               ||:diagtext:`alignof`  ||                                |
-|                                                               |+---------------------+|                                |
-|                                                               ||:diagtext:`vec\_step`||                                |
-|                                                               |+---------------------+|                                |
-+---------------------------------------------------------------+-----------------------+--------------------------------+
++------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`exception specification of '...' is a Microsoft extension`|
++------------------------------------------------------------------------------------------------+
+
++-----------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`extern templates are a C++11 extension`|
++-----------------------------------------------------------------------------+
+
++------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`multi-line // comment`|
++------------------------------------------------------------+
 
 +-----------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`// comments are not allowed in this language`|
 +-----------------------------------------------------------------------------------+
+
++----------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`no newline at end of file`|
++----------------------------------------------------------------+
+
++------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`use of non-standard escape character '\\`:placeholder:`A`:diagtext:`'`|
++------------------------------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`hexadecimal floating constants are a C99 feature`|
++---------------------------------------------------------------------------------------+
+
++----------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`hexadecimal floating literals are a C++1z feature`|
++----------------------------------------------------------------------------------------+
+
++---------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`#ident is a language extension`|
++---------------------------------------------------------------------+
+
++-----------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`#warning is a language extension`|
++-----------------------------------------------------------------------+
+
++-----------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`comma operator in operand of #if`|
++-----------------------------------------------------------------------+
+
++----------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`\_\_VA\_ARGS\_\_ can only appear in the expansion of a C99 variadic macro`|
++----------------------------------------------------------------------------------------------------------------+
+
++------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`empty macro arguments are a C99 feature`|
++------------------------------------------------------------------------------+
+
++----------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`C requires #line number to be less than` |nbsp| :placeholder:`A`:diagtext:`, allowed as extension`|
++----------------------------------------------------------------------------------------------------------------------------------------+
+
++-------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`macro expansion producing 'defined' has undefined behavior`|
++-------------------------------------------------------------------------------------------------+
 
 
 -Wpedantic-core-features
@@ -7980,7 +7994,7 @@ This diagnostic is enabled by default.
 ---------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Also controls `-Wunknown-pragmas`_, `-Wignored-pragmas`_.
+Also controls `-Wignored-pragmas`_, `-Wunknown-pragmas`_.
 
 **Diagnostic text:**
 
@@ -8550,7 +8564,9 @@ This diagnostic is enabled by default.
 
 -Wshadow
 --------
-Also controls `-Wshadow-field-in-constructor-modified`_.
+Some of the diagnostics controlled by this flag are enabled by default.
+
+Also controls `-Wshadow-field-in-constructor-modified`_, `-Wshadow-ivar`_.
 
 **Diagnostic text:**
 
@@ -8575,6 +8591,8 @@ Also controls `-Wshadow-field-in-constructor-modified`_.
 
 -Wshadow-all
 ------------
+Some of the diagnostics controlled by this flag are enabled by default.
+
 Controls `-Wshadow`_, `-Wshadow-field-in-constructor`_.
 
 
@@ -9129,7 +9147,7 @@ This diagnostic flag exists for GCC compatibility, and has no effect in Clang.
 ----------------------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Also controls `-Wtautological-constant-out-of-range-compare`_, `-Wtautological-pointer-compare`_, `-Wtautological-overlap-compare`_, `-Wtautological-undefined-compare`_.
+Also controls `-Wtautological-constant-out-of-range-compare`_, `-Wtautological-overlap-compare`_, `-Wtautological-pointer-compare`_, `-Wtautological-undefined-compare`_.
 
 **Diagnostic text:**
 
@@ -9261,7 +9279,7 @@ This diagnostic is enabled by default.
 
 -Wthread-safety
 ---------------
-Controls `-Wthread-safety-attributes`_, `-Wthread-safety-analysis`_, `-Wthread-safety-precise`_, `-Wthread-safety-reference`_.
+Controls `-Wthread-safety-analysis`_, `-Wthread-safety-attributes`_, `-Wthread-safety-precise`_, `-Wthread-safety-reference`_.
 
 
 -Wthread-safety-analysis
@@ -10099,7 +10117,7 @@ This diagnostic is enabled by default.
 --------
 Some of the diagnostics controlled by this flag are enabled by default.
 
-Controls `-Wunused-argument`_, `-Wunused-function`_, `-Wunused-label`_, `-Wunused-private-field`_, `-Wunused-local-typedef`_, `-Wunused-value`_, `-Wunused-variable`_, `-Wunused-property-ivar`_.
+Controls `-Wunused-argument`_, `-Wunused-function`_, `-Wunused-label`_, `-Wunused-local-typedef`_, `-Wunused-private-field`_, `-Wunused-property-ivar`_, `-Wunused-value`_, `-Wunused-variable`_.
 
 
 -Wunused-argument
@@ -10115,6 +10133,10 @@ This diagnostic is enabled by default.
 +---------------------------------------------------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :diagtext:`joined argument expects additional value: '`:placeholder:`A`:diagtext:`'`|
 +---------------------------------------------------------------------------------------------------------------+
+
++-----------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`argument '-fdiagnostics-show-hotness' requires profile-guided optimization information`|
++-----------------------------------------------------------------------------------------------------------------------------+
 
 +----------------------------------------------------------------------------------------------------+----------------------------------------------------------------------+
 |:warning:`warning:` |nbsp| :placeholder:`A`:diagtext:`: '`:placeholder:`B`:diagtext:`' input unused`|+--------------------------------------------------------------------+|
@@ -10295,7 +10317,7 @@ This diagnostic is enabled by default.
 --------------
 This diagnostic is enabled by default.
 
-Also controls `-Wunused-comparison`_, `-Wunused-result`_, `-Wunevaluated-expression`_.
+Also controls `-Wunevaluated-expression`_, `-Wunused-comparison`_, `-Wunused-result`_.
 
 **Diagnostic text:**
 

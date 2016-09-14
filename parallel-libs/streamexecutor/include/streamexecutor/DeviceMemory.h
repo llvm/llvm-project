@@ -133,6 +133,9 @@ public:
   /// Returns an opaque handle to the underlying memory.
   const void *getHandle() const { return Handle; }
 
+  /// Returns the address of the opaque handle as stored by this object.
+  const void *const *getHandleAddress() const { return &Handle; }
+
   // Cannot copy because the handle must be owned by a single object.
   GlobalDeviceMemoryBase(const GlobalDeviceMemoryBase &) = delete;
   GlobalDeviceMemoryBase &operator=(const GlobalDeviceMemoryBase &) = delete;

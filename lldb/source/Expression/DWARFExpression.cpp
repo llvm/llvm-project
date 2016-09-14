@@ -3305,8 +3305,10 @@ bool DWARFExpression::GetOpAndEndOffsets(StackFrame &frame,
   return true;
 }
 
-bool DWARFExpression::IsRegister(StackFrame &frame,
-                                 const RegisterInfo *&register_info) {
+bool DWARFExpression::MatchesOperand(StackFrame &frame,
+                                     const Instruction::Operand &operand) {
+  using namespace OperandMatchers;
+
   lldb::offset_t op_offset;
   lldb::offset_t end_offset;
   if (!GetOpAndEndOffsets(frame, op_offset, end_offset)) {
@@ -3325,77 +3327,69 @@ bool DWARFExpression::IsRegister(StackFrame &frame,
   DataExtractor opcodes = m_data;
   uint8_t opcode = opcodes.GetU8(&op_offset);
 
-  if (opcode >= DW_OP_reg0 && opcode <= DW_OP_breg31) {
-    register_info =
-        reg_ctx_sp->GetRegisterInfo(m_reg_kind, opcode - DW_OP_reg0);
-    return register_info != nullptr;
-  }
-  switch (opcode) {
-  default:
-    return false;
-  case DW_OP_regx: {
-    uint32_t reg_num = m_data.GetULEB128(&op_offset);
-    register_info = reg_ctx_sp->GetRegisterInfo(m_reg_kind, reg_num);
-    return register_info != nullptr;
-  }
-  }
-}
+  if (opcode == DW_OP_fbreg) {
+    int64_t offset = opcodes.GetSLEB128(&op_offset);
 
-bool DWARFExpression::IsDereferenceOfRegister(
-    StackFrame &frame, const RegisterInfo *&register_info, int64_t &offset) {
-  lldb::offset_t op_offset;
-  lldb::offset_t end_offset;
-  if (!GetOpAndEndOffsets(frame, op_offset, end_offset)) {
-    return false;
-  }
+    DWARFExpression *fb_expr = frame.GetFrameBaseExpression(nullptr);
+    if (!fb_expr) {
+      return false;
+    }
 
-  if (!m_data.ValidOffset(op_offset) || op_offset >= end_offset) {
-    return false;
+    std::function<bool(const Instruction::Operand &)> recurse =
+        [&frame, fb_expr](const Instruction::Operand &child) {
+          return fb_expr->MatchesOperand(frame, child);
+        };
+
+    if (!offset &&
+        MatchUnaryOp(MatchOpType(Instruction::Operand::Type::Dereference),
+                     recurse)(operand)) {
+      return true;
+    }
+
+    return MatchUnaryOp(
+        MatchOpType(Instruction::Operand::Type::Dereference),
+        MatchBinaryOp(MatchOpType(Instruction::Operand::Type::Sum),
+                      MatchImmOp(offset), recurse))(operand);
   }
 
-  RegisterContextSP reg_ctx_sp = frame.GetRegisterContext();
-  if (!reg_ctx_sp) {
-    return false;
-  }
+  bool dereference = false;
+  const RegisterInfo *reg = nullptr;
+  int64_t offset = 0;
 
-  DataExtractor opcodes = m_data;
-  uint8_t opcode = opcodes.GetU8(&op_offset);
-
-  switch (opcode) {
-  default:
-    return false;
-  case DW_OP_bregx: {
+  if (opcode >= DW_OP_reg0 && opcode <= DW_OP_reg31) {
+    reg = reg_ctx_sp->GetRegisterInfo(m_reg_kind, opcode - DW_OP_reg0);
+  } else if (opcode >= DW_OP_breg0 && opcode <= DW_OP_breg31) {
+    offset = opcodes.GetSLEB128(&op_offset);
+    reg = reg_ctx_sp->GetRegisterInfo(m_reg_kind, opcode - DW_OP_breg0);
+  } else if (opcode == DW_OP_regx) {
     uint32_t reg_num = static_cast<uint32_t>(opcodes.GetULEB128(&op_offset));
-    int64_t breg_offset = opcodes.GetSLEB128(&op_offset);
-
-    const RegisterInfo *reg_info =
-        reg_ctx_sp->GetRegisterInfo(m_reg_kind, reg_num);
-    if (!reg_info) {
-      return false;
-    }
-
-    register_info = reg_info;
-    offset = breg_offset;
-    return true;
+    reg = reg_ctx_sp->GetRegisterInfo(m_reg_kind, reg_num);
+  } else if (opcode == DW_OP_bregx) {
+    uint32_t reg_num = static_cast<uint32_t>(opcodes.GetULEB128(&op_offset));
+    offset = opcodes.GetSLEB128(&op_offset);
+    reg = reg_ctx_sp->GetRegisterInfo(m_reg_kind, reg_num);
+  } else {
+    return false;
   }
-  case DW_OP_fbreg: {
-    int64_t fbreg_offset = opcodes.GetSLEB128(&op_offset);
 
-    DWARFExpression *dwarf_expression = frame.GetFrameBaseExpression(nullptr);
-
-    if (!dwarf_expression) {
-      return false;
-    }
-
-    const RegisterInfo *fbr_info;
-
-    if (!dwarf_expression->IsRegister(frame, fbr_info)) {
-      return false;
-    }
-
-    register_info = fbr_info;
-    offset = fbreg_offset;
-    return true;
+  if (!reg) {
+    return false;
   }
+
+  if (dereference) {
+    if (!offset &&
+        MatchUnaryOp(MatchOpType(Instruction::Operand::Type::Dereference),
+                     MatchRegOp(*reg))(operand)) {
+      return true;
+    }
+
+    return MatchUnaryOp(
+        MatchOpType(Instruction::Operand::Type::Dereference),
+        MatchBinaryOp(MatchOpType(Instruction::Operand::Type::Sum),
+                      MatchRegOp(*reg),
+                      MatchImmOp(offset)))(operand);
+  } else {
+    return MatchRegOp(*reg)(operand);
   }
 }
+

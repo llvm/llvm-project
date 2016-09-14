@@ -763,7 +763,9 @@ public:
 
   unsigned getExtraLocalDataSize() const {
     if (!this->getNumProtocols()) return 0;
-    return this->getNumProtocols() * sizeof(SourceLocation) ;
+    // When there are protocol qualifers, we have LAngleLoc and RAngleLoc
+    // as well.
+    return (this->getNumProtocols() + 2) * sizeof(SourceLocation) ;
   }
   unsigned getExtraLocalDataAlignment() const {
     return llvm::alignOf<SourceLocation>();

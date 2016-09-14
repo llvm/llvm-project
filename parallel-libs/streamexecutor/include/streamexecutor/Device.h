@@ -26,6 +26,10 @@ namespace streamexecutor {
 
 class Stream;
 
+/// A class representing a StreamExecutor device.
+///
+/// Device instances are basically just pointers to the underlying
+/// implementation, so they are small and can be passed around by value.
 class Device {
 public:
   explicit Device(PlatformDevice *PDevice);

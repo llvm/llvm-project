@@ -1,11 +1,10 @@
 # These tests are not instrumented with coverage.
 
 set(CMAKE_CXX_FLAGS
-  "${LIBFUZZER_FLAGS_BASE} -fno-sanitize-coverage=8bit-counters -fsanitize-coverage=trace-pc")
+  "${LIBFUZZER_FLAGS_BASE} -fno-sanitize-coverage=8bit-counters -fsanitize-coverage=trace-pc-guard")
 
 set(TracePCTests
-  FourIndependentBranchesTest
-  FullCoverageSetTest
+  SimpleTest
   )
 
 foreach(Test ${TracePCTests})
