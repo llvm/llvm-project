@@ -542,7 +542,7 @@ Value *LowerOCL1XAtomic(IRBuilder<> &Builder, CallSite * CS) {
     dyn_cast<AtomicRMWInst>(NI)->setSynchScope(
         (SynchronizationScope)OCL1XAtomicScope.getValue());
     if (NeedCast) {
-      NI = Builder.CreateBitCast(NI, F->getType());
+      NI = Builder.CreateBitCast(NI, F->getReturnType());
     }
   } else if (Type == CMPXCHG) {
     NI = Builder.CreateAtomicCmpXchg(
