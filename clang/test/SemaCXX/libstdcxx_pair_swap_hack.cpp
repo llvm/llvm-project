@@ -8,6 +8,7 @@
 // affected are array, pair, priority_queue, stack, and queue.
 
 // RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array
+// RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=array -DPR28423
 // RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=pair
 // RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=priority_queue
 // RUN: %clang_cc1 -fsyntax-only %s -std=c++11 -verify -fexceptions -fcxx-exceptions -DCLASS=stack
@@ -21,6 +22,10 @@
 #ifdef BE_THE_HEADER
 
 #pragma GCC system_header
+#ifdef PR28423
+using namespace std;
+#endif
+
 namespace std {
   template<typename T> void swap(T &, T &);
   template<typename T> void do_swap(T &a, T &b) noexcept(noexcept(swap(a, b))) {

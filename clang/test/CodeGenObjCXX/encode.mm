@@ -224,3 +224,24 @@ namespace PR17142 {
   // CHECK: @_ZN7PR171421xE = constant [14 x i8] c"{E=^^?i^^?ii}\00"
   extern const char x[] = @encode(E);
 }
+
+// This test used to cause infinite recursion.
+template<typename T>
+struct S {
+  typedef T Ty;
+  Ty *t;
+};
+
+@interface N
+{
+  S<N> a;
+}
+@end
+
+@implementation N
+@end
+
+const char *expand_struct() {
+  // CHECK: @{{.*}} = private unnamed_addr constant [16 x i8] c"{N={S<N>=^{N}}}\00"
+  return @encode(N);
+}
