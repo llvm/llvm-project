@@ -271,7 +271,7 @@ unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return 2;
 }
 
-unsigned SparcInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                       int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
@@ -295,7 +295,7 @@ unsigned SparcInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-bool SparcInstrInfo::ReverseBranchCondition(
+bool SparcInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 1);
   SPCC::CondCodes CC = static_cast<SPCC::CondCodes>(Cond[0].getImm());

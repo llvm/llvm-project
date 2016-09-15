@@ -220,6 +220,10 @@ void test_float_builtins(float F, double D, long double LD) {
   // CHECK: call float @llvm.fabs.f32(float
   // CHECK: fcmp one float {{.*}}, 0x7FF0000000000000
 
+  res = finite(D);
+  // CHECK: call double @llvm.fabs.f64(double
+  // CHECK: fcmp one double {{.*}}, 0x7FF0000000000000
+
   res = __builtin_isnormal(F);
   // CHECK: fcmp oeq float
   // CHECK: call float @llvm.fabs.f32(float

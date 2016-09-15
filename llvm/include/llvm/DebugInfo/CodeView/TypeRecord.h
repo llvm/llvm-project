@@ -29,6 +29,11 @@ using llvm::support::ulittle16_t;
 using llvm::support::ulittle32_t;
 
 typedef CVRecord<TypeLeafKind> CVType;
+
+struct CVMemberRecord {
+  TypeLeafKind Kind;
+  ArrayRef<uint8_t> Data;
+};
 typedef msf::VarStreamArray<CVType> CVTypeArray;
 
 /// Equvalent to CV_fldattr_t in cvinfo.h.

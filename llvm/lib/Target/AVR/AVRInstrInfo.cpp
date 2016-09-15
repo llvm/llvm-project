@@ -407,7 +407,7 @@ unsigned AVRInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-unsigned AVRInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned AVRInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                     int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
@@ -435,7 +435,7 @@ unsigned AVRInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-bool AVRInstrInfo::ReverseBranchCondition(
+bool AVRInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 1 && "Invalid AVR branch condition!");
 

@@ -18,25 +18,60 @@ namespace fuzzer {
 
 TracePC TPC;
 
-void TracePC::HandleTrace(uint8_t *guard, uintptr_t PC) {
-  *guard = 0xff;
-  TotalCoverage++;
+void TracePC::HandleTrace(uint8_t *Guard, uintptr_t PC) {
+  if (UseCounters) {
+    uintptr_t GV = *Guard;
+    if (GV == 0)
+      TotalCoverage++;
+    if (GV < 255)
+      GV++;
+    *Guard = GV;
+  } else {
+    *Guard = 0xff;
+    TotalCoverage++;
+  }
 }
-void TracePC::HandleInit(uint8_t *start, uint8_t *stop) {
-  Printf("INFO: guards: [%p,%p)\n", start, stop);
+
+void TracePC::HandleInit(uint8_t *Start, uint8_t *Stop) {
+  // TODO: this handles only one DSO/binary.
+  this->Start = Start;
+  this->Stop = Stop;
 }
-size_t TracePC::GetTotalCoverage() { return TotalCoverage; }
+
+void TracePC::FinalizeTrace() {
+  if (UseCounters && TotalCoverage) {
+    for (uint8_t *X = Start; X < Stop; X++) {
+      uint8_t Value = *X;
+      size_t Idx = X - Start;
+      if (Value >= 2) {
+        unsigned Bit = 31 - __builtin_clz(Value);
+        assert(Bit < 8);
+        CounterMap.AddValue(Idx * 8 + Bit);
+      }
+      *X = 1;
+    }
+  }
+}
+
+size_t TracePC::UpdateCounterMap(ValueBitMap *Map) {
+  if (!TotalCoverage) return 0;
+  size_t NewTotalCounterBits = Map->MergeFrom(CounterMap);
+  size_t Delta = NewTotalCounterBits - TotalCounterBits;
+  TotalCounterBits = NewTotalCounterBits;
+  return Delta;
+}
 
 } // namespace fuzzer
 
 extern "C" {
 __attribute__((visibility("default")))
-void __sanitizer_cov_trace_pc_guard(uint8_t *guard) {
+void __sanitizer_cov_trace_pc_guard(uint8_t *Guard) {
   uintptr_t PC = (uintptr_t)__builtin_return_address(0);
-  fuzzer::TPC.HandleTrace(guard, PC);
+  fuzzer::TPC.HandleTrace(Guard, PC);
 }
 
 __attribute__((visibility("default")))
-void __sanitizer_cov_trace_pc_guard_init(uint8_t *start, uint8_t *stop) {
+void __sanitizer_cov_trace_pc_guard_init(uint8_t *Start, uint8_t *Stop) {
+  fuzzer::TPC.HandleInit(Start, Stop);
 }
 }

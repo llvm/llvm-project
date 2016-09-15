@@ -25,16 +25,16 @@ namespace codeview {
 class TypeRecord;
 }
 namespace msf {
+class ByteStream;
+class MSFBuilder;
 struct MSFLayout;
 class ReadableStreamRef;
 class WritableStream;
 
 template <> struct SequencedItemTraits<llvm::codeview::CVType> {
-  static size_t length(const codeview::CVType &Item) {
-    return Item.RawData.size();
-  }
+  static size_t length(const codeview::CVType &Item) { return Item.length(); }
   static ArrayRef<uint8_t> bytes(const codeview::CVType &Item) {
-    return Item.RawData;
+    return Item.data();
   }
 };
 }
@@ -45,7 +45,7 @@ struct TpiStreamHeader;
 
 class TpiStreamBuilder {
 public:
-  explicit TpiStreamBuilder(BumpPtrAllocator &Allocator);
+  explicit TpiStreamBuilder(msf::MSFBuilder &Msf);
   ~TpiStreamBuilder();
 
   TpiStreamBuilder(const TpiStreamBuilder &) = delete;
@@ -53,6 +53,8 @@ public:
 
   void setVersionHeader(PdbRaw_TpiVer Version);
   void addTypeRecord(const codeview::CVType &Record);
+
+  Error finalizeMsfLayout();
 
   Expected<std::unique_ptr<TpiStream>> build(PDBFile &File,
                                              const msf::WritableStream &Buffer);
@@ -62,13 +64,17 @@ public:
   uint32_t calculateSerializedLength() const;
 
 private:
+  uint32_t calculateHashBufferSize() const;
   Error finalize();
 
+  msf::MSFBuilder &Msf;
   BumpPtrAllocator &Allocator;
 
   Optional<PdbRaw_TpiVer> VerHeader;
   std::vector<codeview::CVType> TypeRecords;
   msf::SequencedItemStream<codeview::CVType> TypeRecordStream;
+  uint32_t HashStreamIndex = kInvalidStreamIndex;
+  std::unique_ptr<msf::ByteStream> HashValueStream;
 
   const TpiStreamHeader *Header;
 };

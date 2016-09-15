@@ -25,30 +25,32 @@ public:
   virtual ~TypeVisitorCallbacks() {}
 
   /// Action to take on unknown types. By default, they are ignored.
-  virtual Error visitUnknownType(CVRecord<TypeLeafKind> &Record) {
-    return Error::success();
-  }
-  virtual Error visitUnknownMember(CVRecord<TypeLeafKind> &Record) {
-    return Error::success();
-  }
-
+  virtual Error visitUnknownType(CVType &Record) { return Error::success(); }
   /// Paired begin/end actions for all types. Receives all record data,
   /// including the fixed-length record prefix.  visitTypeBegin() should return
   /// the type of the Record, or an error if it cannot be determined.
-  virtual Error visitTypeBegin(CVRecord<TypeLeafKind> &Record) {
+  virtual Error visitTypeBegin(CVType &Record) { return Error::success(); }
+  virtual Error visitTypeEnd(CVType &Record) { return Error::success(); }
+
+  virtual Error visitUnknownMember(CVMemberRecord &Record) {
     return Error::success();
   }
-  virtual Error visitTypeEnd(CVRecord<TypeLeafKind> &Record) {
+  virtual Error visitMemberBegin(CVMemberRecord &Record) {
+    return Error::success();
+  }
+  virtual Error visitMemberEnd(CVMemberRecord &Record) {
     return Error::success();
   }
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
-  virtual Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR,                  \
-                                 Name##Record &Record) {                       \
+  virtual Error visitKnownRecord(CVType &CVR, Name##Record &Record) {          \
     return Error::success();                                                   \
   }
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
-  TYPE_RECORD(EnumName, EnumVal, Name)
+  virtual Error visitKnownMember(CVMemberRecord &CVM, Name##Record &Record) {  \
+    return Error::success();                                                   \
+  }
+
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "TypeRecords.def"

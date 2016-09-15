@@ -10,7 +10,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-LABEL:  .section  __LLVM_STACKMAPS,__llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 2
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
@@ -23,26 +23,37 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; Functions and stack size
 ; CHECK-NEXT:   .quad _constantargs
 ; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _osrinline
 ; CHECK-NEXT:   .quad 32
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _osrcold
 ; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _propertyRead
 ; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _propertyWrite
 ; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _jsVoidCall
 ; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _jsIntCall
 ; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _spilledValue
 ; CHECK-NEXT:   .quad 160
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _spilledStackMapValue
 ; CHECK-NEXT:   .quad 128
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _liveConstant
 ; CHECK-NEXT:   .quad 16
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _clobberLR
 ; CHECK-NEXT:   .quad 112
+; CHECK-NEXT:   .quad 1
 
 ; Num LargeConstants
 ; CHECK-NEXT:   .quad   4294967295

@@ -118,6 +118,7 @@ COMMON_FLAG(uptr, soft_rss_limit_mb, 0,
             " until the RSS goes below the soft limit."
             " This limit does not affect memory allocations other than"
             " malloc/new.")
+COMMON_FLAG(bool, heap_profile, false, "Experimental heap profiler, asan-only")
 COMMON_FLAG(bool, allocator_release_to_os, false,
             "Experimental. If true, try to periodically release unused"
             " memory to the OS.\n")

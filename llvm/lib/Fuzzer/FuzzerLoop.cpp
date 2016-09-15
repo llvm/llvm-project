@@ -77,6 +77,8 @@ void Fuzzer::PrepareCounters(Fuzzer::Coverage *C) {
 bool Fuzzer::RecordMaxCoverage(Fuzzer::Coverage *C) {
   bool Res = false;
 
+  TPC.FinalizeTrace();
+
   uint64_t NewBlockCoverage =
       EF->__sanitizer_get_total_unique_coverage() + TPC.GetTotalCoverage();
   if (NewBlockCoverage > C->BlockCoverage) {
@@ -97,11 +99,13 @@ bool Fuzzer::RecordMaxCoverage(Fuzzer::Coverage *C) {
   if (Options.UseCounters) {
     uint64_t CounterDelta =
         EF->__sanitizer_update_counter_bitset_and_clear_counters(
-            C->CounterBitmap.data());
+            C->CounterBitmap.data()) +
+        TPC.UpdateCounterMap(&C->TPCMap);
     if (CounterDelta > 0) {
       Res = true;
       C->CounterBitmapBits += CounterDelta;
     }
+
   }
 
   size_t NewVPMapBits = VPMapMergeFromCurrent(C->VPMap);
@@ -158,6 +162,7 @@ Fuzzer::Fuzzer(UserCallback CB, MutationDispatcher &MD, FuzzingOptions Options)
   IsMyThread = true;
   if (Options.DetectLeaks && EF->__sanitizer_install_malloc_and_free_hooks)
     EF->__sanitizer_install_malloc_and_free_hooks(MallocHook, FreeHook);
+  TPC.SetUseCounters(Options.UseCounters);
 
   if (Options.PrintNewCovPcs) {
     PcBufferLen = 1 << 24;

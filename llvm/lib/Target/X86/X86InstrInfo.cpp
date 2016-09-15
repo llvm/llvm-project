@@ -4441,7 +4441,7 @@ bool X86InstrInfo::analyzeBranchPredicate(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned X86InstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned X86InstrInfo::removeBranch(MachineBasicBlock &MBB,
                                     int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
@@ -7276,7 +7276,7 @@ bool X86InstrInfo::shouldScheduleAdjacent(MachineInstr &First,
 }
 
 bool X86InstrInfo::
-ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
+reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 1 && "Invalid X86 branch condition!");
   X86::CondCode CC = static_cast<X86::CondCode>(Cond[0].getImm());
   Cond[0].setImm(GetOppositeBranchCondition(CC));

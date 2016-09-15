@@ -158,18 +158,14 @@ class Replacements {
 
   /// \brief Adds a new replacement \p R to the current set of replacements.
   /// \p R must have the same file path as all existing replacements.
-  /// Returns `success` if the replacement is successfully inserted; otherwise,
+  /// Returns true if the replacement is successfully inserted; otherwise,
   /// it returns an llvm::Error, i.e. there is a conflict between R and the
-  /// existing replacements (i.e. they are order-dependent) or R's file path is
-  /// different from the filepath of existing replacements. Callers must
-  /// explicitly check the Error returned. This prevents users from adding
-  /// order-dependent replacements. To control the order in which
-  /// order-dependent replacements are applied, use merge({R}) with R referring
-  /// to the changed code after applying all existing replacements.
-  /// Two replacements are considered order-independent if they:
-  ///   - don't overlap (being directly adjacent is fine) and
-  ///   - aren't both inserts at the same code location (would be
-  ///     order-dependent).
+  /// existing replacements or R's file path is different from the filepath of
+  /// existing replacements. Callers must explicitly check the Error returned.
+  /// This prevents users from adding order-dependent replacements. To control
+  /// the order in which order-dependent replacements are applied, use
+  /// merge({R}) with R referring to the changed code after applying all
+  /// existing replacements.
   /// Replacements with offset UINT_MAX are special - we do not detect conflicts
   /// for such replacements since users may add them intentionally as a special
   /// category of replacements.

@@ -778,7 +778,7 @@ unsigned R600InstrInfo::insertBranch(MachineBasicBlock &MBB,
   }
 }
 
-unsigned R600InstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned R600InstrInfo::removeBranch(MachineBasicBlock &MBB,
                                      int *BytesRemoved) const {
     assert(!BytesRemoved && "code size not handled");
 
@@ -910,7 +910,7 @@ R600InstrInfo::isProfitableToUnpredicate(MachineBasicBlock &TMBB,
 
 
 bool
-R600InstrInfo::ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
+R600InstrInfo::reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   MachineOperand &MO = Cond[1];
   switch (MO.getImm()) {
   case AMDGPU::PRED_SETE_INT:

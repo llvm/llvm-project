@@ -352,13 +352,14 @@ Error LTO::addRegularLTO(std::unique_ptr<InputFile> Input,
         break;
       }
     }
-    // Common resolution: collect the maximum size/alignment.
-    // FIXME: right now we ignore the prevailing information, it is not clear
-    // what is the "right" behavior here.
+    // Common resolution: collect the maximum size/alignment over all commons.
+    // We also record if we see an instance of a common as prevailing, so that
+    // if none is prevailing we can ignore it later.
     if (Sym.getFlags() & object::BasicSymbolRef::SF_Common) {
       auto &CommonRes = RegularLTO.Commons[Sym.getIRName()];
       CommonRes.Size = std::max(CommonRes.Size, Sym.getCommonSize());
       CommonRes.Align = std::max(CommonRes.Align, Sym.getCommonAlignment());
+      CommonRes.Prevailing |= Res.Prevailing;
     }
 
     // FIXME: use proposed local attribute for FinalDefinitionInLinkageUnit.
@@ -421,6 +422,9 @@ Error LTO::runRegularLTO(AddOutputFn AddOutput) {
   // all the prevailing when adding the inputs, and we apply it here.
   const DataLayout &DL = RegularLTO.CombinedModule->getDataLayout();
   for (auto &I : RegularLTO.Commons) {
+    if (!I.second.Prevailing)
+      // Don't do anything if no instance of this common was prevailing.
+      continue;
     GlobalVariable *OldGV = RegularLTO.CombinedModule->getNamedGlobal(I.first);
     if (OldGV && DL.getTypeAllocSize(OldGV->getValueType()) == I.second.Size) {
       // Don't create a new global if the type is already correct, just make

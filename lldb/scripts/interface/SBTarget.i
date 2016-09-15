@@ -713,6 +713,16 @@ public:
     bool
     DeleteAllBreakpoints ();
 
+    lldb::SBError
+    BreakpointsCreateFromFile(SBFileSpec &source_file, 
+                              SBBreakpointList &bkpt_list);
+
+    lldb::SBError
+    BreakpointsWriteToFile(SBFileSpec &dest_file);
+      
+    lldb::SBError
+    BreakpointsWriteToFile(SBFileSpec &dest_file, SBBreakpointList &bkpt_list);
+
     uint32_t
     GetNumWatchpoints () const;
     

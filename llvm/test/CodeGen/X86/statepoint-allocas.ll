@@ -48,7 +48,7 @@ declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i3
 ; CHECK-LABEL: .section .llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 2
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
@@ -61,8 +61,10 @@ declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i3
 ; Functions and stack size
 ; CHECK-NEXT:   .quad test
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad test2
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
 
 ; Large Constants
 ; Statepoint ID only
@@ -127,4 +129,3 @@ declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i3
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .p2align	3
-

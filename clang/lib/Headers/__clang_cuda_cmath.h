@@ -327,6 +327,7 @@ using ::atan2;
 using ::atanh;
 using ::cbrt;
 using ::ceil;
+using ::copysign;
 using ::cos;
 using ::cosh;
 using ::erf;
@@ -335,9 +336,24 @@ using ::exp;
 using ::exp2;
 using ::expm1;
 using ::fabs;
+using ::fdim;
 using ::floor;
+using ::fma;
+using ::fmax;
+using ::fmin;
+using ::fmod;
+using ::fpclassify;
 using ::frexp;
+using ::hypot;
 using ::ilogb;
+using ::isfinite;
+using ::isgreater;
+using ::isgreaterequal;
+using ::isless;
+using ::islessequal;
+using ::islessgreater;
+using ::isnormal;
+using ::isunordered;
 using ::ldexp;
 using ::lgamma;
 using ::llrint;
@@ -349,17 +365,32 @@ using ::log2;
 using ::logb;
 using ::lrint;
 using ::lround;
+using ::nearbyint;
+using ::nextafter;
 using ::nexttoward;
 using ::pow;
+using ::remainder;
 using ::remquo;
+using ::rint;
+using ::round;
 using ::scalbln;
 using ::scalbn;
+using ::signbit;
 using ::sin;
 using ::sinh;
 using ::sqrt;
 using ::tan;
 using ::tanh;
 using ::tgamma;
+using ::trunc;
+
+// Well this is fun: We need to pull these symbols in for libc++, but we can't
+// pull them in with libstdc++, because its ::isinf and ::isnan are different
+// than its std::isinf and std::isnan.
+#ifndef __GLIBCXX__
+using ::isinf;
+using ::isnan;
+#endif
 
 // Finally, pull the "foobarf" functions that CUDA defines in its headers into
 // namespace std.

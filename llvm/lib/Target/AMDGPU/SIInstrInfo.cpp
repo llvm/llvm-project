@@ -1105,7 +1105,7 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
   return true;
 }
 
-unsigned SIInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned SIInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                    int *BytesRemoved) const {
   MachineBasicBlock::iterator I = MBB.getFirstTerminator();
 
@@ -1167,7 +1167,7 @@ unsigned SIInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return 2;
 }
 
-bool SIInstrInfo::ReverseBranchCondition(
+bool SIInstrInfo::reverseBranchCondition(
   SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 1);
   Cond[0].setImm(-Cond[0].getImm());

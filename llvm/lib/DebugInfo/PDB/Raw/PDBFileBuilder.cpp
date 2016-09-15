@@ -50,36 +50,33 @@ MSFBuilder &PDBFileBuilder::getMsfBuilder() { return *Msf; }
 
 InfoStreamBuilder &PDBFileBuilder::getInfoBuilder() {
   if (!Info)
-    Info = llvm::make_unique<InfoStreamBuilder>();
+    Info = llvm::make_unique<InfoStreamBuilder>(*Msf);
   return *Info;
 }
 
 DbiStreamBuilder &PDBFileBuilder::getDbiBuilder() {
   if (!Dbi)
-    Dbi = llvm::make_unique<DbiStreamBuilder>(Allocator);
+    Dbi = llvm::make_unique<DbiStreamBuilder>(*Msf);
   return *Dbi;
 }
 
 TpiStreamBuilder &PDBFileBuilder::getTpiBuilder() {
   if (!Tpi)
-    Tpi = llvm::make_unique<TpiStreamBuilder>(Allocator);
+    Tpi = llvm::make_unique<TpiStreamBuilder>(*Msf);
   return *Tpi;
 }
 
 Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() const {
   if (Info) {
-    uint32_t Length = Info->calculateSerializedLength();
-    if (auto EC = Msf->setStreamSize(StreamPDB, Length))
+    if (auto EC = Info->finalizeMsfLayout())
       return std::move(EC);
   }
   if (Dbi) {
-    uint32_t Length = Dbi->calculateSerializedLength();
-    if (auto EC = Msf->setStreamSize(StreamDBI, Length))
+    if (auto EC = Dbi->finalizeMsfLayout())
       return std::move(EC);
   }
   if (Tpi) {
-    uint32_t Length = Tpi->calculateSerializedLength();
-    if (auto EC = Msf->setStreamSize(StreamTPI, Length))
+    if (auto EC = Tpi->finalizeMsfLayout())
       return std::move(EC);
   }
 

@@ -462,7 +462,7 @@ public:
   ///    condition.  These operands can be passed to other TargetInstrInfo
   ///    methods to create new branches.
   ///
-  /// Note that RemoveBranch and insertBranch must be implemented to support
+  /// Note that removeBranch and insertBranch must be implemented to support
   /// cases where this method returns success.
   ///
   /// If AllowModify is true, then this routine is allowed to modify the basic
@@ -527,9 +527,9 @@ public:
   /// returns the number of instructions that were removed.
   /// If \p BytesRemoved is non-null, report the change in code size from the
   /// removed instructions.
-  virtual unsigned RemoveBranch(MachineBasicBlock &MBB,
+  virtual unsigned removeBranch(MachineBasicBlock &MBB,
                                 int *BytesRemoved = nullptr) const {
-    llvm_unreachable("Target didn't implement TargetInstrInfo::RemoveBranch!");
+    llvm_unreachable("Target didn't implement TargetInstrInfo::removeBranch!");
   }
 
   /// Insert branch code into the end of the specified MachineBasicBlock. The
@@ -1073,7 +1073,7 @@ public:
   /// Reverses the branch condition of the specified condition list,
   /// returning false on success and true if it cannot be reversed.
   virtual
-  bool ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
+  bool reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
     return true;
   }
 

@@ -2363,7 +2363,7 @@ void SwingSchedulerDAG::generateProlog(SMSchedule &Schedule, unsigned LastStage,
 
   // Check if we need to remove the branch from the preheader to the original
   // loop, and replace it with a branch to the new loop.
-  unsigned numBranches = TII->RemoveBranch(*PreheaderBB);
+  unsigned numBranches = TII->removeBranch(*PreheaderBB);
   if (numBranches) {
     SmallVector<MachineOperand, 0> Cond;
     TII->insertBranch(*PreheaderBB, PrologBBs[0], nullptr, Cond, DebugLoc());
@@ -2452,7 +2452,7 @@ void SwingSchedulerDAG::generateEpilog(SMSchedule &Schedule, unsigned LastStage,
 
   // Create a branch to the new epilog from the kernel.
   // Remove the original branch and add a new branch to the epilog.
-  TII->RemoveBranch(*KernelBB);
+  TII->removeBranch(*KernelBB);
   TII->insertBranch(*KernelBB, KernelBB, EpilogStart, Cond, DebugLoc());
   // Add a branch to the loop exit.
   if (EpilogBBs.size() > 0) {

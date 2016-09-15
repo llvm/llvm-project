@@ -340,6 +340,10 @@ endif()
 
 set(LIBOMP_LIB_FILE ${LIBOMP_LIB_NAME}${LIBOMP_LIBRARY_SUFFIX})
 
+# Optional backwards compatibility aliases.
+set(LIBOMP_INSTALL_ALIASES TRUE CACHE BOOL
+  "Install libgomp and libiomp5 library aliases for backwards compatibility")
+
 # Print configuration after all variables are set.
 if(${LIBOMP_STANDALONE_BUILD})
   libomp_say("Operating System     -- ${CMAKE_SYSTEM_NAME}")

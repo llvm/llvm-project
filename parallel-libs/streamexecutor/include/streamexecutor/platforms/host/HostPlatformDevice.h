@@ -29,6 +29,8 @@ class HostPlatformDevice : public PlatformDevice {
 public:
   std::string getName() const override { return "host"; }
 
+  std::string getPlatformName() const override { return "host"; }
+
   Expected<const void *>
   createKernel(const MultiKernelLoaderSpec &Spec) override {
     if (!Spec.hasHostFunction()) {

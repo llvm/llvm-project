@@ -30,9 +30,9 @@ public:
 
   virtual ~BreakpointID();
 
-  lldb::break_id_t GetBreakpointID() { return m_break_id; }
+  lldb::break_id_t GetBreakpointID() const { return m_break_id; }
 
-  lldb::break_id_t GetLocationID() { return m_location_id; }
+  lldb::break_id_t GetLocationID() const { return m_location_id; }
 
   void SetID(lldb::break_id_t bp_id, lldb::break_id_t loc_id) {
     m_break_id = bp_id;

@@ -363,7 +363,7 @@ bool SystemZInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return false;
 }
 
-unsigned SystemZInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned SystemZInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                         int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
@@ -389,7 +389,7 @@ unsigned SystemZInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
 }
 
 bool SystemZInstrInfo::
-ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
+reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 2 && "Invalid condition");
   Cond[1].setImm(Cond[1].getImm() ^ Cond[0].getImm());
   return false;

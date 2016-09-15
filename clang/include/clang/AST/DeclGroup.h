@@ -84,7 +84,7 @@ public:
   bool isDeclGroup() const { return getKind() == DeclGroupKind; }
 
   Decl *getSingleDecl() {
-    assert(isSingleDecl() && "Isn't a declgroup");
+    assert(isSingleDecl() && "Isn't a single decl");
     return D;
   }
   const Decl *getSingleDecl() const {

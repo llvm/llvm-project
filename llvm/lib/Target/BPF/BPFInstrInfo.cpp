@@ -151,7 +151,7 @@ unsigned BPFInstrInfo::insertBranch(MachineBasicBlock &MBB,
   llvm_unreachable("Unexpected conditional branch");
 }
 
-unsigned BPFInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned BPFInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                     int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 

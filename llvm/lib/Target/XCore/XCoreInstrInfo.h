@@ -60,7 +60,7 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
 
-  unsigned RemoveBranch(MachineBasicBlock &MBB,
+  unsigned removeBranch(MachineBasicBlock &MBB,
                         int *BytesRemoved = nullptr) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
@@ -79,7 +79,7 @@ public:
                             const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
-  bool ReverseBranchCondition(
+  bool reverseBranchCondition(
                           SmallVectorImpl<MachineOperand> &Cond) const override;
 
   // Emit code before MBBI to load immediate value into physical register Reg.

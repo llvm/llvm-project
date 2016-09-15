@@ -360,9 +360,18 @@ class TracePC {
  public:
   void HandleTrace(uint8_t *guard, uintptr_t PC);
   void HandleInit(uint8_t *start, uint8_t *stop);
-  size_t GetTotalCoverage();
- private:
+  size_t GetTotalCoverage() { return TotalCoverage; }
+  void SetUseCounters(bool UC) { UseCounters = UC; }
+  size_t UpdateCounterMap(ValueBitMap *Map);
+  void FinalizeTrace();
+
+private:
+  bool UseCounters = false;
   size_t TotalCoverage = 0;
+  size_t TotalCounterBits = 0;
+
+  uint8_t *Start, *Stop;
+  ValueBitMap CounterMap;
 };
 
 extern TracePC TPC;
@@ -380,6 +389,7 @@ public:
       CounterBitmapBits = 0;
       CounterBitmap.clear();
       VPMap.Reset();
+      TPCMap.Reset();
       VPMapBits = 0;
     }
 
@@ -390,6 +400,7 @@ public:
     // Precalculated number of bits in CounterBitmap.
     size_t CounterBitmapBits;
     std::vector<uint8_t> CounterBitmap;
+    ValueBitMap TPCMap;
     ValueBitMap VPMap;
     size_t VPMapBits;
   };

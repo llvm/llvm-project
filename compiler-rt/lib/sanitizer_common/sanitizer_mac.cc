@@ -747,4 +747,12 @@ void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) { }
 
 }  // namespace __sanitizer
 
+extern "C" {
+// Provide a definition on mac, where 'weak' symbols don't behave like on linux.
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+void __sanitizer_print_memory_profile(int top_percent) {
+  (void)top_percent;
+}
+} // extern "C"
+
 #endif  // SANITIZER_MAC

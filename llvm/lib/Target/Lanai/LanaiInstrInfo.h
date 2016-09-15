@@ -86,7 +86,7 @@ public:
                      SmallVectorImpl<MachineOperand> &Condition,
                      bool AllowModify) const override;
 
-  unsigned RemoveBranch(MachineBasicBlock &MBB,
+  unsigned removeBranch(MachineBasicBlock &MBB,
                         int *BytesRemoved = nullptr) const override;
 
   // For a comparison instruction, return the source registers in SrcReg and
@@ -130,7 +130,7 @@ public:
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
                                bool PreferFalse) const override;
 
-  bool ReverseBranchCondition(
+  bool reverseBranchCondition(
       SmallVectorImpl<MachineOperand> &Condition) const override;
 
   unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TrueBlock,

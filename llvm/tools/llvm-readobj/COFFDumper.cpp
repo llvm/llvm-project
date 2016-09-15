@@ -1527,10 +1527,10 @@ void COFFDumper::printStackMap() const {
   if (Obj->isLittleEndian())
     prettyPrintStackMap(
                       llvm::outs(),
-                      StackMapV1Parser<support::little>(StackMapContentsArray));
+                      StackMapV2Parser<support::little>(StackMapContentsArray));
   else
     prettyPrintStackMap(llvm::outs(),
-                        StackMapV1Parser<support::big>(StackMapContentsArray));
+                        StackMapV2Parser<support::big>(StackMapContentsArray));
 }
 
 void llvm::dumpCodeViewMergedTypes(

@@ -537,7 +537,7 @@ bool HexagonInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 
-unsigned HexagonInstrInfo::RemoveBranch(MachineBasicBlock &MBB,
+unsigned HexagonInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                         int *BytesRemoved) const {
   assert(!BytesRemoved && "code size not handled");
 
@@ -572,7 +572,7 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert(!BytesAdded && "code size not handled");
 
-  // Check if ReverseBranchCondition has asked to reverse this branch
+  // Check if reverseBranchCondition has asked to reverse this branch
   // If we want to reverse the branch an odd number of times, we want
   // J2_jumpf.
   if (!Cond.empty() && Cond[0].isImm())
@@ -590,8 +590,8 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
       if (Term != MBB.end() && isPredicated(*Term) &&
           !analyzeBranch(MBB, NewTBB, NewFBB, Cond, false) &&
           MachineFunction::iterator(NewTBB) == ++MBB.getIterator()) {
-        ReverseBranchCondition(Cond);
-        RemoveBranch(MBB);
+        reverseBranchCondition(Cond);
+        removeBranch(MBB);
         return insertBranch(MBB, TBB, nullptr, Cond, DL);
       }
       BuildMI(&MBB, DL, get(BOpc)).addMBB(TBB);
@@ -1360,7 +1360,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
 // We indicate that we want to reverse the branch by
 // inserting the reversed branching opcode.
-bool HexagonInstrInfo::ReverseBranchCondition(
+bool HexagonInstrInfo::reverseBranchCondition(
       SmallVectorImpl<MachineOperand> &Cond) const {
   if (Cond.empty())
     return true;
