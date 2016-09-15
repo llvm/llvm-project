@@ -11,6 +11,10 @@
 // Tests for interception_linux.h.
 //
 //===----------------------------------------------------------------------===//
+
+// Do not declare isdigit in ctype.h.
+#define __NO_CTYPE
+
 #include "interception/interception.h"
 
 #include "gtest/gtest.h"

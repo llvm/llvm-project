@@ -16,6 +16,7 @@
 // Project includes
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBAttachInfo.h"
+#include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBFileSpec.h"
@@ -641,6 +642,18 @@ public:
 
   lldb::SBBreakpoint BreakpointCreateBySBAddress(SBAddress &address);
 
+  // Reads in breakpoints from source_file, returning the newly created
+  // breakpoints in new_bps.
+  lldb::SBError BreakpointsCreateFromFile(SBFileSpec &source_file,
+                                          SBBreakpointList &new_bps);
+
+  // Writes all breakpoints to dest_file.
+  lldb::SBError BreakpointsWriteToFile(SBFileSpec &dest_file);
+
+  // Writes the breakpoints in bkpt_list to dest_file
+  lldb::SBError BreakpointsWriteToFile(SBFileSpec &dest_file,
+                                       SBBreakpointList &bkpt_list);
+
   uint32_t GetNumBreakpoints() const;
 
   lldb::SBBreakpoint GetBreakpointAtIndex(uint32_t idx) const;
@@ -741,6 +754,7 @@ public:
 protected:
   friend class SBAddress;
   friend class SBBlock;
+  friend class SBBreakpointListImpl;
   friend class SBDebugger;
   friend class SBExecutionContext;
   friend class SBFunction;

@@ -9,7 +9,7 @@
 # RUN:  . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE)); \
 # RUN:  .dynamic        : { *(.dynamic) } \
 # RUN:  .got            : { *(.got) } \
-# RUN:  . = DATA_SEGMENT_RELRO_END (24, .); \
+# RUN:  . = DATA_SEGMENT_RELRO_END (1 ? 24 : 0, .); \
 # RUN:  .got.plt : { *(.got.plt) } \
 # RUN:  .data : { *(.data) } \
 # RUN:  .bss        : { *(.bss) } \

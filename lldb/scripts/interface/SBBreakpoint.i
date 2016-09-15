@@ -263,4 +263,29 @@ public:
     
 };
 
+class SBBreakpointListImpl;
+
+class LLDB_API SBBreakpointList
+{
+public:
+  SBBreakpointList(SBTarget &target);
+    
+  ~SBBreakpointList();
+
+  size_t GetSize() const;
+  
+  SBBreakpoint
+  GetBreakpointAtIndex(size_t idx);
+
+  void Append(const SBBreakpoint &sb_bkpt);
+
+  bool AppendIfUnique(const SBBreakpoint &sb_bkpt);
+
+  void AppendByID (lldb::break_id_t id);
+
+  void Clear();
+private:
+  std::shared_ptr<SBBreakpointListImpl> m_opaque_sp;
+};
+
 } // namespace lldb

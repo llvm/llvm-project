@@ -1097,6 +1097,58 @@ bool SBTarget::DeleteAllBreakpoints() {
   return false;
 }
 
+lldb::SBError SBTarget::BreakpointsCreateFromFile(SBFileSpec &source_file,
+                                                  SBBreakpointList &new_bps) {
+  SBError sberr;
+  TargetSP target_sp(GetSP());
+  if (!target_sp) {
+    sberr.SetErrorString(
+        "BreakpointCreateFromFile called with invalid target.");
+    return sberr;
+  }
+  std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+
+  BreakpointIDList bp_ids;
+  sberr.ref() = target_sp->CreateBreakpointsFromFile(source_file.ref(), bp_ids);
+  if (sberr.Fail())
+    return sberr;
+
+  size_t num_bkpts = bp_ids.GetSize();
+  for (size_t i = 0; i < num_bkpts; i++) {
+    BreakpointID bp_id = bp_ids.GetBreakpointIDAtIndex(i);
+    new_bps.AppendByID(bp_id.GetBreakpointID());
+  }
+  return sberr;
+}
+
+lldb::SBError SBTarget::BreakpointsWriteToFile(SBFileSpec &dest_file) {
+  SBError sberr;
+  TargetSP target_sp(GetSP());
+  if (!target_sp) {
+    sberr.SetErrorString("BreakpointWriteToFile called with invalid target.");
+    return sberr;
+  }
+  SBBreakpointList bkpt_list(*this);
+  return BreakpointsWriteToFile(dest_file, bkpt_list);
+}
+
+lldb::SBError SBTarget::BreakpointsWriteToFile(SBFileSpec &dest_file,
+                                               SBBreakpointList &bkpt_list) {
+  SBError sberr;
+  TargetSP target_sp(GetSP());
+  if (!target_sp) {
+    sberr.SetErrorString("BreakpointWriteToFile called with invalid target.");
+    return sberr;
+  }
+
+  std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+  BreakpointIDList bp_id_list;
+  bkpt_list.CopyToBreakpointIDList(bp_id_list);
+  sberr.ref() =
+      target_sp->SerializeBreakpointsToFile(dest_file.ref(), bp_id_list);
+  return sberr;
+}
+
 uint32_t SBTarget::GetNumWatchpoints() const {
   TargetSP target_sp(GetSP());
   if (target_sp) {

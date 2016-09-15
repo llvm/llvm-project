@@ -31,8 +31,8 @@ static StructuredData::ObjectSP ParseJSONValue(JSONParser &json_parser);
 static StructuredData::ObjectSP ParseJSONObject(JSONParser &json_parser);
 static StructuredData::ObjectSP ParseJSONArray(JSONParser &json_parser);
 
-StructuredData::ObjectSP StructuredData::ParseJSONFromFile(FileSpec &input_spec,
-                                                           Error &error) {
+StructuredData::ObjectSP
+StructuredData::ParseJSONFromFile(const FileSpec &input_spec, Error &error) {
   StructuredData::ObjectSP return_sp;
   if (!input_spec.Exists()) {
     error.SetErrorStringWithFormat("input file %s does not exist.",

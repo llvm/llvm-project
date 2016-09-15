@@ -2155,57 +2155,16 @@ protected:
       return false;
     }
 
-    std::unique_lock<std::recursive_mutex> lock;
-    target->GetBreakpointList().GetListMutex(lock);
-
     FileSpec input_spec(m_options.m_filename, true);
-    Error error;
-    StructuredData::ObjectSP input_data_sp =
-        StructuredData::ParseJSONFromFile(input_spec, error);
+    BreakpointIDList new_bps;
+    Error error = target->CreateBreakpointsFromFile(input_spec, new_bps);
+
     if (!error.Success()) {
-      result.AppendErrorWithFormat("Error reading data from input file: %s.",
-                                   error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    } else if (!input_data_sp || !input_data_sp->IsValid()) {
-      result.AppendErrorWithFormat("Invalid JSON from input file: %s.",
-                                   input_spec.GetPath().c_str());
+      result.AppendError(error.AsCString());
       result.SetStatus(eReturnStatusFailed);
       return false;
     }
-
-    StructuredData::Array *bkpt_array = input_data_sp->GetAsArray();
-    if (!bkpt_array) {
-      result.AppendErrorWithFormat(
-          "Invalid breakpoint data from input file: %s.",
-          input_spec.GetPath().c_str());
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
-
-    size_t num_bkpts = bkpt_array->GetSize();
-    for (size_t i = 0; i < num_bkpts; i++) {
-      StructuredData::ObjectSP bkpt_object_sp = bkpt_array->GetItemAtIndex(i);
-      // Peel off the breakpoint key, and feed the rest to the Breakpoint:
-      StructuredData::Dictionary *bkpt_dict = bkpt_object_sp->GetAsDictionary();
-      if (!bkpt_dict) {
-        result.AppendErrorWithFormat(
-            "Invalid breakpoint data for element %zu from input file: %s.", i,
-            input_spec.GetPath().c_str());
-        result.SetStatus(eReturnStatusFailed);
-        return false;
-      }
-      StructuredData::ObjectSP bkpt_data_sp =
-          bkpt_dict->GetValueForKey(Breakpoint::GetSerializationKey());
-      BreakpointSP bkpt_sp =
-          Breakpoint::CreateFromStructuredData(*target, bkpt_data_sp, error);
-      if (!error.Success()) {
-        result.AppendErrorWithFormat(
-            "Error restoring breakpoint %zu from %s: %s.", i,
-            input_spec.GetPath().c_str(), error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
-      }
-    }
+    // FIXME: Report the newly created breakpoints.
     return result.Succeeded();
   }
 
@@ -2295,78 +2254,26 @@ protected:
       return false;
     }
 
-    // Before we do anything else make sure we can actually write to this file:
-    StreamFile out_file(m_options.m_filename.c_str(),
-                        File::OpenOptions::eOpenOptionTruncate |
-                            File::OpenOptions::eOpenOptionWrite |
-                            File::OpenOptions::eOpenOptionCanCreate |
-                            File::OpenOptions::eOpenOptionCloseOnExec,
-                        lldb::eFilePermissionsFileDefault);
-    if (!out_file.GetFile().IsValid()) {
-      result.AppendErrorWithFormat("Unable to open output file: %s.",
-                                   m_options.m_filename.c_str());
-      result.SetStatus(eReturnStatusFailed);
-      return false;
-    }
-
     std::unique_lock<std::recursive_mutex> lock;
     target->GetBreakpointList().GetListMutex(lock);
 
-    StructuredData::ArraySP break_store_sp(new StructuredData::Array());
-
-    if (command.GetArgumentCount() == 0) {
-      const BreakpointList &breakpoints = target->GetBreakpointList();
-
-      size_t num_breakpoints = breakpoints.GetSize();
-      for (size_t i = 0; i < num_breakpoints; i++) {
-        Breakpoint *bp = breakpoints.GetBreakpointAtIndex(i).get();
-        StructuredData::ObjectSP bkpt_save_sp = bp->SerializeToStructuredData();
-        // If a breakpoint can't serialize it, just ignore it for now:
-        if (bkpt_save_sp)
-          break_store_sp->AddItem(bkpt_save_sp);
-      }
-    } else {
-
-      BreakpointIDList valid_bp_ids;
-
+    BreakpointIDList valid_bp_ids;
+    if (command.GetArgumentCount() > 0) {
       CommandObjectMultiwordBreakpoint::VerifyBreakpointIDs(
           command, target, result, &valid_bp_ids);
 
-      if (result.Succeeded()) {
-        std::unordered_set<lldb::break_id_t> processed_bkpts;
-        const size_t count = valid_bp_ids.GetSize();
-        for (size_t i = 0; i < count; ++i) {
-          BreakpointID cur_bp_id = valid_bp_ids.GetBreakpointIDAtIndex(i);
-          lldb::break_id_t bp_id = cur_bp_id.GetBreakpointID();
-
-          if (bp_id != LLDB_INVALID_BREAK_ID) {
-            // Only do each breakpoint once:
-            std::pair<std::unordered_set<lldb::break_id_t>::iterator, bool>
-                insert_result = processed_bkpts.insert(bp_id);
-            if (!insert_result.second)
-              continue;
-
-            Breakpoint *bp = target->GetBreakpointByID(bp_id).get();
-            StructuredData::ObjectSP bkpt_save_sp =
-                bp->SerializeToStructuredData();
-            // If the user explicitly asked to serialize a breakpoint, and we
-            // can't, then
-            // raise an error:
-            if (!bkpt_save_sp) {
-              result.AppendErrorWithFormat("Unable to serialize breakpoint %d",
-                                           bp_id);
-              result.SetStatus(eReturnStatusFailed);
-              return false;
-            }
-            break_store_sp->AddItem(bkpt_save_sp);
-          }
-        }
+      if (!result.Succeeded()) {
+        result.SetStatus(eReturnStatusFailed);
+        return false;
       }
     }
-
-    break_store_sp->Dump(out_file, false);
-    out_file.PutChar('\n');
-
+    Error error = target->SerializeBreakpointsToFile(
+        FileSpec(m_options.m_filename.c_str(), true), valid_bp_ids);
+    if (!error.Success()) {
+      result.AppendErrorWithFormat("error serializing breakpoints: %s.",
+                                   error.AsCString());
+      result.SetStatus(eReturnStatusFailed);
+    }
     return result.Succeeded();
   }
 

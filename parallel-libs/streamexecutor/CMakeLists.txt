@@ -3,9 +3,14 @@ cmake_minimum_required(VERSION 3.1)
 option(STREAM_EXECUTOR_UNIT_TESTS "enable unit tests" ON)
 option(STREAM_EXECUTOR_ENABLE_DOXYGEN "enable StreamExecutor doxygen" ON)
 option(STREAM_EXECUTOR_ENABLE_CONFIG_TOOL "enable building streamexecutor-config tool" ON)
+option(STREAM_EXECUTOR_ENABLE_CUDA_PLATFORM "enable building the CUDA StreamExecutor platform" OFF)
+
+configure_file("include/streamexecutor/PlatformOptions.h.in" "include/streamexecutor/PlatformOptions.h")
 
 # First find includes relative to the streamexecutor top-level source path.
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# Also look for configured headers in the top-level binary directory.
+include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 # If we are not building as part of LLVM, build StreamExecutor as a standalone
 # project using LLVM as an external library:

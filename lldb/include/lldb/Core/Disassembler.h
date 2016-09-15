@@ -224,6 +224,8 @@ MatchUnaryOp(std::function<bool(const Instruction::Operand &)> base,
 std::function<bool(const Instruction::Operand &)>
 MatchRegOp(const RegisterInfo &info);
 
+std::function<bool(const Instruction::Operand &)> FetchRegOp(ConstString &reg);
+
 std::function<bool(const Instruction::Operand &)> MatchImmOp(int64_t imm);
 
 std::function<bool(const Instruction::Operand &)> FetchImmOp(int64_t &imm);

@@ -51,17 +51,18 @@ public:
     bool stop_on_error;
 
   private:
-    enum OptionNames {
+    enum class OptionNames : uint32_t {
       UserSource = 0,
       ScriptSource,
       StopOnError,
       LastOptionName
     };
 
-    static const char *g_option_names[LastOptionName];
+    static const char
+        *g_option_names[static_cast<uint32_t>(OptionNames::LastOptionName)];
 
     static const char *GetKey(enum OptionNames enum_value) {
-      return g_option_names[enum_value];
+      return g_option_names[static_cast<uint32_t>(enum_value)];
     }
   };
 

@@ -13,7 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "streamexecutor/PlatformManager.h"
+
+#include "streamexecutor/PlatformOptions.h"
 #include "streamexecutor/platforms/host/HostPlatform.h"
+
+#ifdef STREAM_EXECUTOR_ENABLE_CUDA_PLATFORM
+#include "streamexecutor/platforms/cuda/CUDAPlatform.h"
+#endif
 
 namespace streamexecutor {
 
@@ -26,6 +32,10 @@ PlatformManager::PlatformManager() {
   //    themselves when they are loaded.
 
   PlatformsByName.emplace("host", llvm::make_unique<host::HostPlatform>());
+
+#ifdef STREAM_EXECUTOR_ENABLE_CUDA_PLATFORM
+  PlatformsByName.emplace("cuda", llvm::make_unique<cuda::CUDAPlatform>());
+#endif
 }
 
 Expected<Platform *> PlatformManager::getPlatformByName(llvm::StringRef Name) {

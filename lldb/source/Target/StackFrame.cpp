@@ -1492,6 +1492,12 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
 
   using namespace OperandMatchers;
 
+  const RegisterInfo *reg_info =
+      frame.GetRegisterContext()->GetRegisterInfoByName(reg.AsCString());
+  if (!reg_info) {
+    return ValueObjectSP();
+  }
+
   Instruction::Operand op =
       offset ? Instruction::Operand::BuildDereference(
                    Instruction::Operand::BuildSum(
@@ -1513,13 +1519,11 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
     return ValueObjectSP();
   }
 
-  ValueObjectSP source_path;
-
   for (uint32_t ii = current_inst - 1; ii != (uint32_t)-1; --ii) {
     // This is not an exact algorithm, and it sacrifices accuracy for
-    // generality.
-    // Recognizing "mov" and "ld" instructions –– and which are their source and
-    // destination operands -- is something the disassembler should do for us.
+    // generality.  Recognizing "mov" and "ld" instructions –– and which are
+    // their source and destination operands -- is something the disassembler
+    // should do for us.
     InstructionSP instruction_sp =
         disassembler.GetInstructionList().GetInstructionAtIndex(ii);
 
@@ -1602,81 +1606,44 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
     }
 
     Instruction::Operand *origin_operand = nullptr;
-    if (operands[0].m_type == Instruction::Operand::Type::Register &&
-        operands[0].m_clobbered == true && operands[0].m_register == reg) {
-      // operands[0] is a register operand
+    auto clobbered_reg_matcher = [reg_info](const Instruction::Operand &op) {
+      return MatchRegOp(*reg_info)(op) && op.m_clobbered;
+    };
+
+    if (clobbered_reg_matcher(operands[0])) {
       origin_operand = &operands[1];
-    } else if (operands[1].m_type == Instruction::Operand::Type::Register &&
-               operands[1].m_clobbered == true &&
-               operands[1].m_register == reg) {
+    }
+    else if (clobbered_reg_matcher(operands[1])) {
       origin_operand = &operands[0];
-      // operands[1] is a register operand
-    } else {
+    }
+    else {
       continue;
     }
 
     // We have an origin operand.  Can we track its value down?
-    switch (origin_operand->m_type) {
-    default:
-      break;
-    case Instruction::Operand::Type::Register:
+    ValueObjectSP source_path;
+    ConstString origin_register;
+    int64_t origin_offset = 0;
+
+    if (FetchRegOp(origin_register)(*origin_operand)) {
+      source_path = DoGuessValueAt(frame, origin_register, 0, disassembler,
+                                   variables, instruction_sp->GetAddress());
+    } else if (MatchUnaryOp(
+                   MatchOpType(Instruction::Operand::Type::Dereference),
+                   FetchRegOp(origin_register))(*origin_operand) ||
+               MatchUnaryOp(
+                   MatchOpType(Instruction::Operand::Type::Dereference),
+                   MatchBinaryOp(MatchOpType(Instruction::Operand::Type::Sum),
+                                 FetchRegOp(origin_register),
+                                 FetchImmOp(origin_offset)))(*origin_operand)) {
       source_path =
-          DoGuessValueAt(frame, origin_operand->m_register, 0, disassembler,
+          DoGuessValueAt(frame, origin_register, origin_offset, disassembler,
                          variables, instruction_sp->GetAddress());
-      break;
-    case Instruction::Operand::Type::Dereference: {
-      const Instruction::Operand &pointer = origin_operand->m_children[0];
-      switch (pointer.m_type) {
-      default:
-        break;
-      case Instruction::Operand::Type::Register:
-        source_path = DoGuessValueAt(frame, pointer.m_register, 0, disassembler,
-                                     variables, instruction_sp->GetAddress());
-        if (source_path) {
-          Error err;
-          source_path = source_path->Dereference(err);
-          if (!err.Success()) {
-            source_path.reset();
-          }
-        }
-        break;
-      case Instruction::Operand::Type::Sum: {
-        const Instruction::Operand *origin_register = nullptr;
-        const Instruction::Operand *origin_offset = nullptr;
-        if (pointer.m_children.size() != 2) {
-          break;
-        }
-        if (pointer.m_children[0].m_type ==
-                Instruction::Operand::Type::Register &&
-            pointer.m_children[1].m_type ==
-                Instruction::Operand::Type::Immediate) {
-          origin_register = &pointer.m_children[0];
-          origin_offset = &pointer.m_children[1];
-        } else if (pointer.m_children[1].m_type ==
-                       Instruction::Operand::Type::Register &&
-                   pointer.m_children[0].m_type ==
-                       Instruction::Operand::Type::Immediate) {
-          origin_register = &pointer.m_children[1];
-          origin_offset = &pointer.m_children[0];
-        }
-        if (!origin_register) {
-          break;
-        }
-        int64_t signed_origin_offset =
-            origin_offset->m_negative ? -((int64_t)origin_offset->m_immediate)
-                                      : origin_offset->m_immediate;
-        source_path = DoGuessValueAt(frame, origin_register->m_register,
-                                     signed_origin_offset, disassembler,
-                                     variables, instruction_sp->GetAddress());
-        if (!source_path) {
-          break;
-        }
-        source_path =
-            GetValueForDereferincingOffset(frame, source_path, offset);
-        break;
+      if (!source_path) {
+        continue;
       }
-      }
-    }
+      source_path =
+          GetValueForDereferincingOffset(frame, source_path, offset);
     }
 
     if (source_path) {

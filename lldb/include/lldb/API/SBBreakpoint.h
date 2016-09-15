@@ -119,6 +119,7 @@ public:
   GetNumBreakpointLocationsFromEvent(const lldb::SBEvent &event_sp);
 
 private:
+  friend class SBBreakpointList;
   friend class SBBreakpointLocation;
   friend class SBTarget;
 
@@ -137,6 +138,35 @@ private:
       lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
 
   lldb::BreakpointSP m_opaque_sp;
+};
+
+class SBBreakpointListImpl;
+
+class LLDB_API SBBreakpointList {
+public:
+  SBBreakpointList(SBTarget &target);
+
+  ~SBBreakpointList();
+
+  size_t GetSize() const;
+
+  SBBreakpoint GetBreakpointAtIndex(size_t idx);
+
+  void Append(const SBBreakpoint &sb_file);
+
+  bool AppendIfUnique(const SBBreakpoint &sb_file);
+
+  void AppendByID(lldb::break_id_t id);
+
+  void Clear();
+
+protected:
+  friend class SBTarget;
+
+  void CopyToBreakpointIDList(lldb_private::BreakpointIDList &bp_id_list);
+
+private:
+  std::shared_ptr<SBBreakpointListImpl> m_opaque_sp;
 };
 
 } // namespace lldb
