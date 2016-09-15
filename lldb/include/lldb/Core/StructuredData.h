@@ -552,7 +552,7 @@ public:
 
   static ObjectSP ParseJSON(std::string json_text);
 
-  static ObjectSP ParseJSONFromFile(FileSpec &file, Error &error);
+  static ObjectSP ParseJSONFromFile(const FileSpec &file, Error &error);
 };
 
 } // namespace lldb_private

@@ -77,7 +77,8 @@ protected:
 
 private:
   // Private member types.
-  enum FPRType { eFPRTypeNotValid = 0, eFPRTypeFXSAVE, eFPRTypeXSAVE };
+  enum class XStateType { Invalid, FXSAVE, XSAVE };
+  enum class RegSet { gpr, fpu, avx, mpx };
 
   // Info about register ranges.
   struct RegInfo {
@@ -106,8 +107,8 @@ private:
   };
 
   // Private member variables.
-  mutable FPRType m_fpr_type;
-  FPR m_fpr;
+  mutable XStateType m_xstate_type;
+  FPR m_fpr; // Extended States Area, named FPR for historical reasons.
   IOVEC m_iovec;
   YMM m_ymm_set;
   MPX m_mpx_set;
@@ -116,15 +117,19 @@ private:
   uint32_t m_fctrl_offset_in_userarea;
 
   // Private member methods.
+  bool HasFXSAVE() const;
+
+  bool HasXSAVE() const;
+
+  bool IsCPUFeatureAvailable(RegSet feature_code) const;
+
   bool IsRegisterSetAvailable(uint32_t set_index) const;
 
   bool IsGPR(uint32_t reg_index) const;
 
-  FPRType GetFPRType() const;
+  XStateType GetXStateType() const;
 
   bool IsFPR(uint32_t reg_index) const;
-
-  bool IsFPR(uint32_t reg_index, FPRType fpr_type) const;
 
   bool CopyXSTATEtoYMM(uint32_t reg_index, lldb::ByteOrder byte_order);
 

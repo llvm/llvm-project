@@ -3335,10 +3335,9 @@ bool DWARFExpression::MatchesOperand(StackFrame &frame,
       return false;
     }
 
-    std::function<bool(const Instruction::Operand &)> recurse =
-        [&frame, fb_expr](const Instruction::Operand &child) {
-          return fb_expr->MatchesOperand(frame, child);
-        };
+    auto recurse = [&frame, fb_expr](const Instruction::Operand &child) {
+      return fb_expr->MatchesOperand(frame, child);
+    };
 
     if (!offset &&
         MatchUnaryOp(MatchOpType(Instruction::Operand::Type::Dereference),

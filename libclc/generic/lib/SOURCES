@@ -97,6 +97,8 @@ math/hypot.cl
 math/ilogb.cl
 math/clc_ldexp.cl
 math/ldexp.cl
+math/lgamma.cl
+math/lgamma_r.cl
 math/log.cl
 math/log10.cl
 math/log1p.cl
@@ -117,6 +119,7 @@ math/clc_sqrt.cl
 math/sqrt.cl
 math/tan.cl
 math/tanh.cl
+math/tgamma.cl
 relational/all.cl
 relational/any.cl
 relational/bitselect.cl

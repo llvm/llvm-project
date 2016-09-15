@@ -305,13 +305,15 @@ else()
 
   install(TARGETS omp ${LIBOMP_INSTALL_KIND} DESTINATION lib${LIBOMP_LIBDIR_SUFFIX})
 
-  # Create aliases (symlinks) of the library for backwards compatibility
-  set(LIBOMP_ALIASES "libgomp;libiomp5")
-  foreach(alias IN LISTS LIBOMP_ALIASES)
-    install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
-      \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY
-      \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/lib${LIBOMP_LIBDIR_SUFFIX})")
-  endforeach()
+  if(${LIBOMP_INSTALL_ALIASES})
+    # Create aliases (symlinks) of the library for backwards compatibility
+    set(LIBOMP_ALIASES "libgomp;libiomp5")
+    foreach(alias IN LISTS LIBOMP_ALIASES)
+      install(CODE "execute_process(COMMAND \"\${CMAKE_COMMAND}\" -E create_symlink \"${LIBOMP_LIB_FILE}\"
+        \"${alias}${LIBOMP_LIBRARY_SUFFIX}\" WORKING_DIRECTORY
+        \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/lib${LIBOMP_LIBDIR_SUFFIX})")
+    endforeach()
+  endif()
 endif()
 install(
   FILES

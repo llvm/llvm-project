@@ -73,6 +73,12 @@ Improvements to clang-tidy
   Warns when ``std::move`` is applied to a forwarding reference instead of
   ``std::forward``.
 
+- New `misc-use-after-move
+  <http://clang.llvm.org/extra/clang-tidy/checks/misc-use-after-move.html>`_ check
+
+  Warns if an object is used after it has been moved, without an intervening
+  reinitialization.
+
 - New `mpi-buffer-deref
   <http://clang.llvm.org/extra/clang-tidy/checks/mpi-buffer-deref.html>`_ check
 
@@ -88,6 +94,11 @@ Improvements to clang-tidy
 
   Warns about the performance overhead arising from concatenating strings using
   the ``operator+``, instead of ``operator+=``.
+
+- `readability-container-size-empty
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-container-size-empty.html>`_ check
+  supports arbitrary containers with with suitable ``empty()`` and ``size()``
+  methods.
 
 - New `readability-misplaced-array-index
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-misplaced-array-index.html>`_ check

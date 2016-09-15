@@ -153,6 +153,8 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
         // to match the new access domains, thus we need
         //   [Stmt[i0, i1] -> MemAcc_A[i0 + i1]] -> [0, i0, 2, i1, 0]
         isl_map *Schedule = Stmt.getSchedule();
+        assert(Schedule && "Schedules that contain extension nodes require "
+                           "special handling.");
         Schedule = isl_map_apply_domain(
             Schedule,
             isl_map_reverse(isl_map_domain_map(isl_map_copy(accdom))));
@@ -162,7 +164,10 @@ static void collectInfo(Scop &S, isl_union_map **Read, isl_union_map **Write,
       } else {
         accdom = tag(accdom, MA, Level);
         if (Level > Dependences::AL_Statement) {
-          isl_map *Schedule = tag(Stmt.getSchedule(), MA, Level);
+          auto *StmtScheduleMap = Stmt.getSchedule();
+          assert(StmtScheduleMap && "Schedules that contain extension nodes "
+                                    "require special handling.");
+          isl_map *Schedule = tag(StmtScheduleMap, MA, Level);
           *StmtSchedule = isl_union_map_add_map(*StmtSchedule, Schedule);
         }
       }
@@ -610,6 +615,8 @@ bool Dependences::isValidSchedule(Scop &S,
       StmtScat = Stmt.getSchedule();
     else
       StmtScat = isl_map_copy((*NewSchedule)[&Stmt]);
+    assert(StmtScat &&
+           "Schedules that contain extension nodes require special handling.");
 
     if (!ScheduleSpace)
       ScheduleSpace = isl_space_range(isl_map_get_space(StmtScat));
