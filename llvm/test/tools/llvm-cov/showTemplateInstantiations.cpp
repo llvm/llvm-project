@@ -83,3 +83,7 @@ int main() {         // ALL:         [[@LINE]]| 1|int main() {
 
 // HTML-ALL: <td class='line-number'><a name='L[[@LINE-45]]'><pre>[[@LINE-45]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// after
 // HTML-FILTER-NOT: <td class='line-number'><a name='L[[@LINE-46]]'><pre>[[@LINE-46]]</pre></a></td><td class='uncovered-line'></td><td class='code'><pre>// after
+
+// RUN: FileCheck -check-prefix=HTML-JUMP -input-file=%t.html.dir/coverage/tmp/showTemplateInstantiations.cpp.html %s
+// HTML-JUMP: <pre>Source (<a href='#L{{[0-9]+}}'>jump to first uncovered line</a>)</pre>
+// HTML-JUMP-NOT: <pre>Source (<a href='#L{{[0-9]+}}'>jump to first uncovered line</a>)</pre>

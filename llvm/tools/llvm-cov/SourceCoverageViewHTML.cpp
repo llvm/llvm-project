@@ -601,7 +601,7 @@ void SourceCoverageViewHTML::renderTableHeader(raw_ostream &OS,
                                                unsigned FirstUncoveredLineNo,
                                                unsigned ViewDepth) {
   std::string SourceLabel;
-  if (FirstUncoveredLineNo == 0) {
+  if (FirstUncoveredLineNo == 0 || ViewDepth > 0) {
     SourceLabel = tag("td", tag("pre", "Source"));
   } else {
     std::string LinkTarget = "#L" + utostr(uint64_t(FirstUncoveredLineNo));
