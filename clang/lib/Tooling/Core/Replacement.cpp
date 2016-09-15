@@ -137,14 +137,6 @@ void Replacement::setFromSourceRange(const SourceManager &Sources,
                         ReplacementText);
 }
 
-llvm::Error makeConflictReplacementsError(const Replacement &New,
-                                          const Replacement &Existing) {
-  return llvm::make_error<llvm::StringError>(
-      "New replacement:\n" + New.toString() +
-          "\nconflicts with existing replacement:\n" + Existing.toString(),
-      llvm::inconvertibleErrorCode());
-}
-
 llvm::Error Replacements::add(const Replacement &R) {
   // Check the file path.
   if (!Replaces.empty() && R.getFilePath() != Replaces.begin()->getFilePath())
@@ -171,22 +163,11 @@ llvm::Error Replacements::add(const Replacement &R) {
   // entries that start at the end can still be conflicting if R is an
   // insertion.
   auto I = Replaces.lower_bound(AtEnd);
-  // If `I` starts at the same offset as `R`, `R` must be an insertion.
-  if (I != Replaces.end() && R.getOffset() == I->getOffset()) {
-    assert(R.getLength() == 0);
-    // `I` is also an insertion, `R` and `I` conflict.
-    if (I->getLength() == 0)
-      return makeConflictReplacementsError(R, *I);
-    // Insertion `R` is adjacent to a non-insertion replacement `I`, so they
-    // are order-independent. It is safe to assume that `R` will not conflict
-    // with any replacement before `I` since all replacements before `I` must
-    // either end before `R` or end at `R` but has length > 0 (if the
-    // replacement before `I` is an insertion at `R`, it would have been `I`
-    // since it is a lower bound of `AtEnd` and ordered before the current `I`
-    // in the set).
-    Replaces.insert(R);
-    return llvm::Error::success();
-  }
+  // If it starts at the same offset as R (can only happen if R is an
+  // insertion), we have a conflict.  In that case, increase I to fall through
+  // to the conflict check.
+  if (I != Replaces.end() && R.getOffset() == I->getOffset())
+    ++I;
 
   // I is the smallest iterator whose entry cannot overlap.
   // If that is begin(), there are no overlaps.
@@ -197,19 +178,16 @@ llvm::Error Replacements::add(const Replacement &R) {
   --I;
   // If the previous entry does not overlap, we know that entries before it
   // can also not overlap.
-  if (!Range(R.getOffset(), R.getLength())
+  if (R.getOffset() != I->getOffset() &&
+      !Range(R.getOffset(), R.getLength())
            .overlapsWith(Range(I->getOffset(), I->getLength()))) {
-    // If `R` and `I` do not have the same offset, it is safe to add `R` since
-    // it must come after `I`. Otherwise:
-    //   - If `R` is an insertion, `I` must not be an insertion since it would
-    //   have come after `AtEnd` if it has length 0.
-    //   - If `R` is not an insertion, `I` must be an insertion; otherwise, `R`
-    //   and `I` would have overlapped.
-    // In either case, we can safely insert `R`.
     Replaces.insert(R);
     return llvm::Error::success();
   }
-  return makeConflictReplacementsError(R, *I);
+  return llvm::make_error<llvm::StringError>(
+      "New replacement:\n" + R.toString() +
+          "\nconflicts with existing replacement:\n" + I->toString(),
+      llvm::inconvertibleErrorCode());
 }
 
 namespace {

@@ -204,15 +204,12 @@ static StringRef getLeafTypeName(TypeLeafKind LT) {
 }
 
 Error CVTypeDumper::visitTypeBegin(CVRecord<TypeLeafKind> &Record) {
+  assert(!IsInFieldList);
   // Reset Name to the empty string. If the visitor sets it, we know it.
   Name = "";
 
   W->startLine() << getLeafTypeName(Record.Type);
-  if (!IsInFieldList) {
-    // If this is a field list member, don't record its type index because it
-    // doesn't have one.  Only the outer field list has a type index.
-    W->getOStream() << " (" << HexNumber(getNextTypeIndex()) << ")";
-  }
+  W->getOStream() << " (" << HexNumber(getNextTypeIndex()) << ")";
   W->getOStream() << " {\n";
   W->indent();
   W->printEnum("TypeLeafKind", unsigned(Record.Type),
@@ -220,7 +217,6 @@ Error CVTypeDumper::visitTypeBegin(CVRecord<TypeLeafKind> &Record) {
   if (Record.Type == LF_FIELDLIST) {
     // Record that we're in a field list so that members do not get assigned
     // type indices.
-    assert(!IsInFieldList);
     IsInFieldList = true;
   }
   return Error::success();
@@ -231,15 +227,37 @@ Error CVTypeDumper::visitTypeEnd(CVRecord<TypeLeafKind> &Record) {
     assert(IsInFieldList);
     IsInFieldList = false;
   }
+  assert(!IsInFieldList);
 
-  if (!IsInFieldList) {
-    // Record every type that is not a field list member, even if Name is empty.
-    // CVUDTNames is indexed by type index, and must have one entry for every
-    // type.  Field list members are not recorded, and are only referenced by
-    // their containing field list record.
-    recordType(Name);
-  }
+  // Record every type that is not a field list member, even if Name is empty.
+  // CVUDTNames is indexed by type index, and must have one entry for every
+  // type.  Field list members are not recorded, and are only referenced by
+  // their containing field list record.
+  recordType(Name);
 
+  if (PrintRecordBytes)
+    W->printBinaryBlock("LeafData", getBytesAsCharacters(Record.content()));
+
+  W->unindent();
+  W->startLine() << "}\n";
+  return Error::success();
+}
+
+Error CVTypeDumper::visitMemberBegin(CVMemberRecord &Record) {
+  assert(IsInFieldList);
+  // Reset Name to the empty string. If the visitor sets it, we know it.
+  Name = "";
+
+  W->startLine() << getLeafTypeName(Record.Kind);
+  W->getOStream() << " {\n";
+  W->indent();
+  W->printEnum("TypeLeafKind", unsigned(Record.Kind),
+               makeArrayRef(LeafTypeNames));
+  return Error::success();
+}
+
+Error CVTypeDumper::visitMemberEnd(CVMemberRecord &Record) {
+  assert(IsInFieldList);
   if (PrintRecordBytes)
     W->printBinaryBlock("LeafData", getBytesAsCharacters(Record.Data));
 
@@ -573,18 +591,18 @@ void CVTypeDumper::printMemberAttributes(MemberAccess Access, MethodKind Kind,
   }
 }
 
-Error CVTypeDumper::visitUnknownMember(CVRecord<TypeLeafKind> &Record) {
-  W->printHex("UnknownMember", unsigned(Record.Type));
+Error CVTypeDumper::visitUnknownMember(CVMemberRecord &Record) {
+  W->printHex("UnknownMember", unsigned(Record.Kind));
   return Error::success();
 }
 
 Error CVTypeDumper::visitUnknownType(CVRecord<TypeLeafKind> &Record) {
-  W->printEnum("Kind", uint16_t(Record.Type), makeArrayRef(LeafTypeNames));
-  W->printNumber("Length", uint32_t(Record.Data.size()));
+  W->printEnum("Kind", uint16_t(Record.kind()), makeArrayRef(LeafTypeNames));
+  W->printNumber("Length", uint32_t(Record.content().size()));
   return Error::success();
 }
 
-Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
+Error CVTypeDumper::visitKnownMember(CVMemberRecord &CVR,
                                      NestedTypeRecord &Nested) {
   printTypeIndex("Type", Nested.getNestedType());
   W->printString("Name", Nested.getName());
@@ -592,7 +610,7 @@ Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
   return Error::success();
 }
 
-Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
+Error CVTypeDumper::visitKnownMember(CVMemberRecord &CVR,
                                      OneMethodRecord &Method) {
   MethodKind K = Method.getKind();
   printMemberAttributes(Method.getAccess(), K, Method.getOptions());
@@ -605,7 +623,7 @@ Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
   return Error::success();
 }
 
-Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
+Error CVTypeDumper::visitKnownMember(CVMemberRecord &CVR,
                                      OverloadedMethodRecord &Method) {
   W->printHex("MethodCount", Method.getNumOverloads());
   printTypeIndex("MethodListIndex", Method.getMethodList());
@@ -614,7 +632,7 @@ Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
   return Error::success();
 }
 
-Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
+Error CVTypeDumper::visitKnownMember(CVMemberRecord &CVR,
                                      DataMemberRecord &Field) {
   printMemberAttributes(Field.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -625,7 +643,7 @@ Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
   return Error::success();
 }
 
-Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
+Error CVTypeDumper::visitKnownMember(CVMemberRecord &CVR,
                                      StaticDataMemberRecord &Field) {
   printMemberAttributes(Field.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -635,13 +653,13 @@ Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
   return Error::success();
 }
 
-Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
+Error CVTypeDumper::visitKnownMember(CVMemberRecord &CVR,
                                      VFPtrRecord &VFTable) {
   printTypeIndex("Type", VFTable.getType());
   return Error::success();
 }
 
-Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
+Error CVTypeDumper::visitKnownMember(CVMemberRecord &CVR,
                                      EnumeratorRecord &Enum) {
   printMemberAttributes(Enum.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -651,7 +669,7 @@ Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
   return Error::success();
 }
 
-Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
+Error CVTypeDumper::visitKnownMember(CVMemberRecord &CVR,
                                      BaseClassRecord &Base) {
   printMemberAttributes(Base.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -660,7 +678,7 @@ Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
   return Error::success();
 }
 
-Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
+Error CVTypeDumper::visitKnownMember(CVMemberRecord &CVR,
                                      VirtualBaseClassRecord &Base) {
   printMemberAttributes(Base.getAccess(), MethodKind::Vanilla,
                         MethodOptions::None);
@@ -671,7 +689,7 @@ Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
   return Error::success();
 }
 
-Error CVTypeDumper::visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
+Error CVTypeDumper::visitKnownMember(CVMemberRecord &CVR,
                                      ListContinuationRecord &Cont) {
   printTypeIndex("ContinuationIndex", Cont.getContinuationIndex());
   return Error::success();

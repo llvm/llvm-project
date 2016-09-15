@@ -63,6 +63,8 @@ enum SpecialStream : uint32_t {
   StreamTPI = 2,
   StreamDBI = 3,
   StreamIPI = 4,
+
+  kSpecialStreamCount
 };
 
 enum class DbgHeaderType : uint16_t {

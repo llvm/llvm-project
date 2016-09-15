@@ -15,7 +15,9 @@
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeSerializationVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
+#include "llvm/DebugInfo/PDB/Raw/TpiHashing.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -27,33 +29,33 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(OneMethodRecord)
 LLVM_YAML_IS_SEQUENCE_VECTOR(VFTableSlotKind)
 LLVM_YAML_IS_SEQUENCE_VECTOR(StringRef)
 LLVM_YAML_IS_SEQUENCE_VECTOR(CVType)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbTpiRecord)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbTpiFieldListRecord)
 
 namespace {
 struct FieldListRecordSplitter : public TypeVisitorCallbacks {
 public:
   explicit FieldListRecordSplitter(
-      std::vector<llvm::pdb::yaml::PdbTpiRecord> &Records)
+      std::vector<llvm::pdb::yaml::PdbTpiFieldListRecord> &Records)
       : Records(Records) {}
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
-  Error visitKnownRecord(CVType &CVT, Name##Record &Record) override {         \
-    visitKnownRecordImpl(CVT);                                                 \
+  Error visitKnownMember(CVMemberRecord &CVT, Name##Record &Record) override { \
+    visitKnownMemberImpl(CVT);                                                 \
     return Error::success();                                                   \
   }
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
 
 private:
-  void visitKnownRecordImpl(CVType &CVT) {
-    llvm::pdb::yaml::PdbTpiRecord R;
+  void visitKnownMemberImpl(CVMemberRecord &CVT) {
+    llvm::pdb::yaml::PdbTpiFieldListRecord R;
     R.Record = CVT;
     Records.push_back(std::move(R));
   }
 
-  std::vector<llvm::pdb::yaml::PdbTpiRecord> &Records;
+  std::vector<llvm::pdb::yaml::PdbTpiFieldListRecord> &Records;
 };
 }
 
@@ -525,14 +527,20 @@ void ScalarEnumerationTraits<TypeLeafKind>::enumeration(IO &io,
 }
 
 Error llvm::codeview::yaml::YamlTypeDumperCallbacks::visitTypeBegin(
-    CVRecord<TypeLeafKind> &CVR) {
+    CVType &CVR) {
   YamlIO.mapRequired("Kind", CVR.Type);
+  return Error::success();
+}
+
+Error llvm::codeview::yaml::YamlTypeDumperCallbacks::visitMemberBegin(
+    CVMemberRecord &Record) {
+  YamlIO.mapRequired("Kind", Record.Kind);
   return Error::success();
 }
 
 void llvm::codeview::yaml::YamlTypeDumperCallbacks::visitKnownRecordImpl(
     const char *Name, CVType &CVR, FieldListRecord &FieldList) {
-  std::vector<llvm::pdb::yaml::PdbTpiRecord> FieldListRecords;
+  std::vector<llvm::pdb::yaml::PdbTpiFieldListRecord> FieldListRecords;
   if (YamlIO.outputting()) {
     // If we are outputting, then `FieldList.Data` contains a huge chunk of data
     // representing the serialized list of members.  We need to split it up into
@@ -550,4 +558,37 @@ void llvm::codeview::yaml::YamlTypeDumperCallbacks::visitKnownRecordImpl(
     consumeError(V.visitFieldListMemberStream(FieldList.Data));
   }
   YamlIO.mapRequired("FieldList", FieldListRecords, Context);
+}
+
+namespace llvm {
+namespace yaml {
+template <>
+struct MappingContextTraits<pdb::yaml::PdbTpiFieldListRecord,
+                            pdb::yaml::SerializationContext> {
+  static void mapping(IO &IO, pdb::yaml::PdbTpiFieldListRecord &Obj,
+                      pdb::yaml::SerializationContext &Context) {
+    codeview::TypeVisitorCallbackPipeline Pipeline;
+    codeview::TypeDeserializer Deserializer;
+    codeview::TypeSerializationVisitor Serializer(Context.FieldListBuilder,
+                                                  Context.TypeTableBuilder);
+    pdb::TpiHashUpdater Hasher;
+
+    if (IO.outputting()) {
+      // For PDB to Yaml, deserialize into a high level record type, then dump
+      // it.
+      Pipeline.addCallbackToPipeline(Deserializer);
+      Pipeline.addCallbackToPipeline(Context.Dumper);
+    } else {
+      // For Yaml to PDB, extract from the high level record type, then write it
+      // to bytes.
+      Pipeline.addCallbackToPipeline(Context.Dumper);
+      Pipeline.addCallbackToPipeline(Serializer);
+      Pipeline.addCallbackToPipeline(Hasher);
+    }
+
+    codeview::CVTypeVisitor Visitor(Pipeline);
+    consumeError(Visitor.visitMemberRecord(Obj.Record));
+  }
+};
+}
 }

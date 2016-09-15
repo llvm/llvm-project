@@ -9,6 +9,7 @@
 
 #include "llvm/DebugInfo/PDB/Raw/InfoStreamBuilder.h"
 
+#include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
@@ -20,8 +21,8 @@ using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-InfoStreamBuilder::InfoStreamBuilder()
-    : Ver(PdbRaw_ImplVer::PdbImplVC70), Sig(-1), Age(0) {}
+InfoStreamBuilder::InfoStreamBuilder(msf::MSFBuilder &Msf)
+    : Msf(Msf), Ver(PdbRaw_ImplVer::PdbImplVC70), Sig(-1), Age(0) {}
 
 void InfoStreamBuilder::setVersion(PdbRaw_ImplVer V) { Ver = V; }
 
@@ -37,6 +38,13 @@ NameMapBuilder &InfoStreamBuilder::getNamedStreamsBuilder() {
 
 uint32_t InfoStreamBuilder::calculateSerializedLength() const {
   return sizeof(InfoStreamHeader) + NamedStreams.calculateSerializedLength();
+}
+
+Error InfoStreamBuilder::finalizeMsfLayout() {
+  uint32_t Length = calculateSerializedLength();
+  if (auto EC = Msf.setStreamSize(StreamPDB, Length))
+    return EC;
+  return Error::success();
 }
 
 Expected<std::unique_ptr<InfoStream>>

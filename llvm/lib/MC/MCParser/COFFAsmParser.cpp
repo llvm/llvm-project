@@ -41,7 +41,8 @@ class COFFAsmParser : public MCAsmParserExtension {
                           COFF::COMDATType Type);
 
   bool ParseSectionName(StringRef &SectionName);
-  bool ParseSectionFlags(StringRef FlagsString, unsigned* Flags);
+  bool ParseSectionFlags(StringRef SectionName, StringRef FlagsString,
+                         unsigned *Flags);
 
   void Initialize(MCAsmParser &Parser) override {
     // Call the base implementation.
@@ -155,17 +156,19 @@ static SectionKind computeSectionKind(unsigned Flags) {
   return SectionKind::getData();
 }
 
-bool COFFAsmParser::ParseSectionFlags(StringRef FlagsString, unsigned* Flags) {
+bool COFFAsmParser::ParseSectionFlags(StringRef SectionName,
+                                      StringRef FlagsString, unsigned *Flags) {
   enum {
-    None      = 0,
-    Alloc     = 1 << 0,
-    Code      = 1 << 1,
-    Load      = 1 << 2,
-    InitData  = 1 << 3,
-    Shared    = 1 << 4,
-    NoLoad    = 1 << 5,
-    NoRead    = 1 << 6,
-    NoWrite  =  1 << 7
+    None        = 0,
+    Alloc       = 1 << 0,
+    Code        = 1 << 1,
+    Load        = 1 << 2,
+    InitData    = 1 << 3,
+    Shared      = 1 << 4,
+    NoLoad      = 1 << 5,
+    NoRead      = 1 << 6,
+    NoWrite     = 1 << 7,
+    Discardable = 1 << 8,
   };
 
   bool ReadOnlyRemoved = false;
@@ -196,6 +199,10 @@ bool COFFAsmParser::ParseSectionFlags(StringRef FlagsString, unsigned* Flags) {
     case 'n': // section is not loaded
       SecFlags |= NoLoad;
       SecFlags &= ~Load;
+      break;
+
+    case 'D': // discardable
+      SecFlags |= Discardable;
       break;
 
     case 'r': // read-only
@@ -249,6 +256,9 @@ bool COFFAsmParser::ParseSectionFlags(StringRef FlagsString, unsigned* Flags) {
     *Flags |= COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA;
   if (SecFlags & NoLoad)
     *Flags |= COFF::IMAGE_SCN_LNK_REMOVE;
+  if ((SecFlags & Discardable) ||
+      MCSectionCOFF::isImplicitlyDiscardable(SectionName))
+    *Flags |= COFF::IMAGE_SCN_MEM_DISCARDABLE;
   if ((SecFlags & NoRead) == 0)
     *Flags |= COFF::IMAGE_SCN_MEM_READ;
   if ((SecFlags & NoWrite) == 0)
@@ -326,7 +336,8 @@ bool COFFAsmParser::ParseSectionName(StringRef &SectionName) {
 //   a: Ignored.
 //   b: BSS section (uninitialized data)
 //   d: data section (initialized data)
-//   n: Discardable section
+//   n: "noload" section (removed by linker)
+//   D: Discardable section
 //   r: Readable section
 //   s: Shared section
 //   w: Writable section
@@ -353,7 +364,7 @@ bool COFFAsmParser::ParseDirectiveSection(StringRef, SMLoc) {
     StringRef FlagsStr = getTok().getStringContents();
     Lex();
 
-    if (ParseSectionFlags(FlagsStr, &Flags))
+    if (ParseSectionFlags(SectionName, FlagsStr, &Flags))
       return true;
   }
 

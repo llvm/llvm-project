@@ -115,16 +115,15 @@ TEST_F(ReplacementTest, FailAddReplacements) {
   llvm::consumeError(std::move(Err));
 }
 
-TEST_F(ReplacementTest, AddAdjacentInsertionAndReplacement) {
+TEST_F(ReplacementTest, FailAddOverlappingInsertions) {
   Replacements Replaces;
   // Test adding an insertion at the offset of an existing replacement.
   auto Err = Replaces.add(Replacement("x.cc", 10, 3, "replace"));
   EXPECT_TRUE(!Err);
   llvm::consumeError(std::move(Err));
   Err = Replaces.add(Replacement("x.cc", 10, 0, "insert"));
-  EXPECT_TRUE(!Err);
+  EXPECT_TRUE((bool)Err);
   llvm::consumeError(std::move(Err));
-  EXPECT_EQ(Replaces.size(), 2u);
 
   Replaces.clear();
   // Test overlap with an existing insertion.
@@ -132,9 +131,8 @@ TEST_F(ReplacementTest, AddAdjacentInsertionAndReplacement) {
   EXPECT_TRUE(!Err);
   llvm::consumeError(std::move(Err));
   Err = Replaces.add(Replacement("x.cc", 10, 3, "replace"));
-  EXPECT_TRUE(!Err);
+  EXPECT_TRUE((bool)Err);
   llvm::consumeError(std::move(Err));
-  EXPECT_EQ(Replaces.size(), 2u);
 }
 
 TEST_F(ReplacementTest, FailAddRegression) {
@@ -159,24 +157,14 @@ TEST_F(ReplacementTest, FailAddRegression) {
   llvm::consumeError(std::move(Err));
 }
 
-TEST_F(ReplacementTest, InsertAtOffsetOfReplacement) {
+TEST_F(ReplacementTest, FailAddInsertAtOffsetOfReplacement) {
   Replacements Replaces;
   auto Err = Replaces.add(Replacement("x.cc", 10, 2, ""));
   EXPECT_TRUE(!Err);
   llvm::consumeError(std::move(Err));
   Err = Replaces.add(Replacement("x.cc", 10, 0, ""));
-  EXPECT_TRUE(!Err);
+  EXPECT_TRUE((bool)Err);
   llvm::consumeError(std::move(Err));
-  EXPECT_EQ(Replaces.size(), 2u);
-
-  Replaces.clear();
-  Err = Replaces.add(Replacement("x.cc", 10, 0, ""));
-  EXPECT_TRUE(!Err);
-  llvm::consumeError(std::move(Err));
-  Err = Replaces.add(Replacement("x.cc", 10, 2, ""));
-  EXPECT_TRUE(!Err);
-  llvm::consumeError(std::move(Err));
-  EXPECT_EQ(Replaces.size(), 2u);
 }
 
 TEST_F(ReplacementTest, FailAddInsertAtOtherInsert) {
@@ -186,38 +174,6 @@ TEST_F(ReplacementTest, FailAddInsertAtOtherInsert) {
   llvm::consumeError(std::move(Err));
   Err = Replaces.add(Replacement("x.cc", 10, 0, "b"));
   EXPECT_TRUE((bool)Err);
-  llvm::consumeError(std::move(Err));
-
-  Replaces.clear();
-  Err = Replaces.add(Replacement("x.cc", 10, 0, ""));
-  EXPECT_TRUE(!Err);
-  llvm::consumeError(std::move(Err));
-  Err = Replaces.add(Replacement("x.cc", 10, 0, ""));
-  EXPECT_TRUE((bool)Err);
-  llvm::consumeError(std::move(Err));
-
-  Replaces.clear();
-  Err = Replaces.add(Replacement("x.cc", 10, 0, ""));
-  EXPECT_TRUE(!Err);
-  llvm::consumeError(std::move(Err));
-  Err = Replaces.add(Replacement("x.cc", 10, 3, ""));
-  EXPECT_TRUE(!Err);
-  llvm::consumeError(std::move(Err));
-  Err = Replaces.add(Replacement("x.cc", 10, 0, ""));
-  EXPECT_TRUE((bool)Err);
-  llvm::consumeError(std::move(Err));
-}
-
-TEST_F(ReplacementTest, InsertBetweenAdjacentReplacements) {
-  Replacements Replaces;
-  auto Err = Replaces.add(Replacement("x.cc", 10, 5, "a"));
-  EXPECT_TRUE(!Err);
-  llvm::consumeError(std::move(Err));
-  Err = Replaces.add(Replacement("x.cc", 8, 2, "a"));
-  EXPECT_TRUE(!Err);
-  llvm::consumeError(std::move(Err));
-  Err = Replaces.add(Replacement("x.cc", 10, 0, "b"));
-  EXPECT_TRUE(!Err);
   llvm::consumeError(std::move(Err));
 }
 
@@ -231,29 +187,6 @@ TEST_F(ReplacementTest, CanApplyReplacements) {
                                   Context.getLocation(ID, 3, 1), 5, "other")});
   EXPECT_TRUE(applyAllReplacements(Replaces, Context.Rewrite));
   EXPECT_EQ("line1\nreplaced\nother\nline4", Context.getRewrittenText(ID));
-}
-
-// Verifies that replacement/deletion is applied before insertion at the same
-// offset.
-TEST_F(ReplacementTest, InsertAndDelete) {
-  FileID ID = Context.createInMemoryFile("input.cpp",
-                                         "line1\nline2\nline3\nline4");
-  Replacements Replaces = toReplacements(
-      {Replacement(Context.Sources, Context.getLocation(ID, 2, 1), 6, ""),
-       Replacement(Context.Sources, Context.getLocation(ID, 2, 1), 0,
-                   "other\n")});
-  EXPECT_TRUE(applyAllReplacements(Replaces, Context.Rewrite));
-  EXPECT_EQ("line1\nother\nline3\nline4", Context.getRewrittenText(ID));
-}
-
-TEST_F(ReplacementTest, AdjacentReplacements) {
-  FileID ID = Context.createInMemoryFile("input.cpp",
-                                         "ab");
-  Replacements Replaces = toReplacements(
-      {Replacement(Context.Sources, Context.getLocation(ID, 1, 1), 1, "x"),
-       Replacement(Context.Sources, Context.getLocation(ID, 1, 2), 1, "y")});
-  EXPECT_TRUE(applyAllReplacements(Replaces, Context.Rewrite));
-  EXPECT_EQ("xy", Context.getRewrittenText(ID));
 }
 
 TEST_F(ReplacementTest, SkipsDuplicateReplacements) {

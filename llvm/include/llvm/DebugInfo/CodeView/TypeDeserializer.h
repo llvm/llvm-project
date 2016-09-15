@@ -20,12 +20,13 @@ public:
   TypeDeserializer() {}
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
-  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR, Name##Record &Record)    \
-      override {                                                               \
+  Error visitKnownRecord(CVType &CVR, Name##Record &Record) override {         \
     return defaultVisitKnownRecord(CVR, Record);                               \
   }
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
-  TYPE_RECORD(EnumName, EnumVal, Name)
+  Error visitKnownMember(CVMemberRecord &CVR, Name##Record &Record) override { \
+    return defaultVisitKnownMember(CVR, Record);                               \
+  }
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "TypeRecords.def"
@@ -44,10 +45,16 @@ protected:
   }
 
 private:
-  template <typename T>
-  Error defaultVisitKnownRecord(CVRecord<TypeLeafKind> &CVR, T &Record) {
-    ArrayRef<uint8_t> RD = CVR.Data;
+  template <typename T> Error defaultVisitKnownRecord(CVType &CVR, T &Record) {
+    ArrayRef<uint8_t> RD = CVR.content();
     if (auto EC = deserializeRecord(RD, CVR.Type, Record))
+      return EC;
+    return Error::success();
+  }
+  template <typename T>
+  Error defaultVisitKnownMember(CVMemberRecord &CVMR, T &Record) {
+    ArrayRef<uint8_t> RD = CVMR.Data;
+    if (auto EC = deserializeRecord(RD, CVMR.Kind, Record))
       return EC;
     return Error::success();
   }

@@ -47,7 +47,7 @@ public:
 #include "CVSymbolTypes.def"
 
   void visitSymbolRecord(const CVRecord<SymbolKind> &Record) {
-    ArrayRef<uint8_t> Data = Record.Data;
+    ArrayRef<uint8_t> Data = Record.content();
     auto *DerivedThis = static_cast<Derived *>(this);
     DerivedThis->visitSymbolBegin(Record.Type, Data);
     uint32_t RecordOffset = Delegate ? Delegate->getRecordOffset(Data) : 0;
@@ -70,7 +70,7 @@ public:
   SYMBOL_RECORD(EnumVal, EnumVal, AliasName)
 #include "CVSymbolTypes.def"
     }
-    DerivedThis->visitSymbolEnd(Record.Type, Record.Data);
+    DerivedThis->visitSymbolEnd(Record.Type, Record.content());
   }
 
   /// Visits the symbol records in Data. Sets the error flag on parse failures.

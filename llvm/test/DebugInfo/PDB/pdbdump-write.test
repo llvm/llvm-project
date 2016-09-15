@@ -12,6 +12,6 @@
 ;
 ; RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory -pdb-stream -tpi-stream %p/Inputs/empty.pdb > %t.1
 ; RUN: llvm-pdbdump yaml2pdb -pdb=%t.2 %t.1
-; RUN: llvm-pdbdump pdb2yaml -pdb-stream -tpi-stream %p/Inputs/empty.pdb > %t.3
-; RUN: llvm-pdbdump pdb2yaml -pdb-stream -tpi-stream %t.2 > %t.4
+; RUN: llvm-pdbdump pdb2yaml -pdb-stream -tpi-stream -no-file-headers %p/Inputs/empty.pdb > %t.3
+; RUN: llvm-pdbdump pdb2yaml -pdb-stream -tpi-stream -no-file-headers %t.2 > %t.4
 ; RUN: diff %t.3 %t.4

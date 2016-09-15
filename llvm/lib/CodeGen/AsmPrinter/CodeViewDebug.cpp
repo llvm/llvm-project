@@ -642,13 +642,13 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.emitAbsoluteSymbolDiff(ProcRecordEnd, ProcRecordBegin, 2);
     OS.EmitLabel(ProcRecordBegin);
 
-  if (GV->hasLocalLinkage()) {
-    OS.AddComment("Record kind: S_LPROC32_ID");
-    OS.EmitIntValue(unsigned(SymbolKind::S_LPROC32_ID), 2);
-  } else {
-    OS.AddComment("Record kind: S_GPROC32_ID");
-    OS.EmitIntValue(unsigned(SymbolKind::S_GPROC32_ID), 2);
-  }
+    if (GV->hasLocalLinkage()) {
+      OS.AddComment("Record kind: S_LPROC32_ID");
+      OS.EmitIntValue(unsigned(SymbolKind::S_LPROC32_ID), 2);
+    } else {
+      OS.AddComment("Record kind: S_GPROC32_ID");
+      OS.EmitIntValue(unsigned(SymbolKind::S_GPROC32_ID), 2);
+    }
 
     // These fields are filled in by tools like CVPACK which run after the fact.
     OS.AddComment("PtrParent");

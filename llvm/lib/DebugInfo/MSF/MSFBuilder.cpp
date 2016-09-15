@@ -122,7 +122,8 @@ uint32_t MSFBuilder::getTotalBlockCount() const { return FreeBlocks.size(); }
 
 bool MSFBuilder::isBlockFree(uint32_t Idx) const { return FreeBlocks[Idx]; }
 
-Error MSFBuilder::addStream(uint32_t Size, ArrayRef<uint32_t> Blocks) {
+Expected<uint32_t> MSFBuilder::addStream(uint32_t Size,
+                                         ArrayRef<uint32_t> Blocks) {
   // Add a new stream mapped to the specified blocks.  Verify that the specified
   // blocks are both necessary and sufficient for holding the requested number
   // of bytes, and verify that all requested blocks are free.
@@ -145,17 +146,17 @@ Error MSFBuilder::addStream(uint32_t Size, ArrayRef<uint32_t> Blocks) {
     FreeBlocks.reset(Block);
   }
   StreamData.push_back(std::make_pair(Size, Blocks));
-  return Error::success();
+  return StreamData.size() - 1;
 }
 
-Error MSFBuilder::addStream(uint32_t Size) {
+Expected<uint32_t> MSFBuilder::addStream(uint32_t Size) {
   uint32_t ReqBlocks = bytesToBlocks(Size, BlockSize);
   std::vector<uint32_t> NewBlocks;
   NewBlocks.resize(ReqBlocks);
   if (auto EC = allocateBlocks(ReqBlocks, NewBlocks))
-    return EC;
+    return std::move(EC);
   StreamData.push_back(std::make_pair(Size, NewBlocks));
-  return Error::success();
+  return StreamData.size() - 1;
 }
 
 Error MSFBuilder::setStreamSize(uint32_t Idx, uint32_t Size) {

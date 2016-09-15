@@ -1405,6 +1405,17 @@ lldb_private::OperandMatchers::MatchRegOp(const RegisterInfo &info) {
 }
 
 std::function<bool(const Instruction::Operand &)>
+lldb_private::OperandMatchers::FetchRegOp(ConstString &reg) {
+  return [&reg](const Instruction::Operand &op) {
+    if (op.m_type != Instruction::Operand::Type::Register) {
+      return false;
+    }
+    reg = op.m_register;
+    return true;
+  };
+}
+
+std::function<bool(const Instruction::Operand &)>
 lldb_private::OperandMatchers::MatchImmOp(int64_t imm) {
   return [imm](const Instruction::Operand &op) {
     return (op.m_type == Instruction::Operand::Type::Immediate &&
