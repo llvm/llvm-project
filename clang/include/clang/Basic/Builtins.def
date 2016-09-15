@@ -944,6 +944,10 @@ LIBBUILTIN(fabs, "dd", "fnc", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(fabsf, "ff", "fnc", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(fabsl, "LdLd", "fnc", "math.h", ALL_LANGUAGES)
 
+// Some systems define finitef as alias of _finitef.
+#if defined (finitef)
+#undef finitef
+#endif
 LIBBUILTIN(finite, "id", "fnc", "math.h", GNU_LANG)
 LIBBUILTIN(finitef, "if", "fnc", "math.h", GNU_LANG)
 LIBBUILTIN(finitel, "iLd", "fnc", "math.h", GNU_LANG)

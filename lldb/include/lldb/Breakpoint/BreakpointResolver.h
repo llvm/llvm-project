@@ -202,7 +202,7 @@ protected:
   // Used for serializing resolver options:
   // The options in this enum and the strings in the
   // g_option_names must be kept in sync.
-  enum OptionNames {
+  enum class OptionNames : uint32_t {
     AddressOffset = 0,
     ExactMatch,
     FileName,
@@ -218,11 +218,12 @@ protected:
     SymbolNameArray,
     LastOptionName
   };
-  static const char *g_option_names[LastOptionName];
+  static const char
+      *g_option_names[static_cast<uint32_t>(OptionNames::LastOptionName)];
 
 public:
-  static const char *GetKey(enum OptionNames enum_value) {
-    return g_option_names[enum_value];
+  static const char *GetKey(OptionNames enum_value) {
+    return g_option_names[static_cast<uint32_t>(enum_value)];
   }
 
 protected:

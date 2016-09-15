@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 %s -triple arm-apple-darwin -verify -fsyntax-only
+// RUN: %clang_cc1 %s -triple thumb-apple-darwin -verify -fsyntax-only
+// RUN: %clang_cc1 %s -triple armeb-none-eabi -verify -fsyntax-only
+// RUN: %clang_cc1 %s -triple thumbeb-none-eabi -verify -fsyntax-only
 
 __attribute__((interrupt(IRQ))) void foo() {} // expected-error {{'interrupt' attribute requires a string}}
 __attribute__((interrupt("irq"))) void foo1() {} // expected-warning {{'interrupt' attribute argument not supported: irq}}

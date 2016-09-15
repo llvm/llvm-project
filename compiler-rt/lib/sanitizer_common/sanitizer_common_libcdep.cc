@@ -127,7 +127,7 @@ void BackgroundThread(void *arg) {
       }
     }
     if (allocator_release_to_os && ReleseCallback) ReleseCallback();
-    if (heap_profile && /* weak */ &__sanitizer_print_memory_profile &&
+    if (heap_profile &&
         current_rss_mb > rss_during_last_reported_profile * 1.1) {
       Printf("\n\nHEAP PROFILE at RSS %zdMb\n", current_rss_mb);
       __sanitizer_print_memory_profile(90);

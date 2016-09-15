@@ -241,18 +241,69 @@ struct ErrorStringFunctionSizeOverflow : ErrorBase {
   void Print();
 };
 
+struct ErrorBadParamsToAnnotateContiguousContainer : ErrorBase {
+  // ErrorBadParamsToAnnotateContiguousContainer doesn't own the stack trace.
+  const BufferedStackTrace *stack;
+  uptr beg, end, old_mid, new_mid;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorBadParamsToAnnotateContiguousContainer() = default;
+  // PS4: Do we want an AddressDescription for beg?
+  ErrorBadParamsToAnnotateContiguousContainer(u32 tid,
+                                              BufferedStackTrace *stack_,
+                                              uptr beg_, uptr end_,
+                                              uptr old_mid_, uptr new_mid_)
+      : ErrorBase(tid),
+        stack(stack_),
+        beg(beg_),
+        end(end_),
+        old_mid(old_mid_),
+        new_mid(new_mid_) {}
+  void Print();
+};
+
+struct ErrorODRViolation : ErrorBase {
+  __asan_global global1, global2;
+  u32 stack_id1, stack_id2;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorODRViolation() = default;
+  ErrorODRViolation(u32 tid, const __asan_global *g1, u32 stack_id1_,
+                    const __asan_global *g2, u32 stack_id2_)
+      : ErrorBase(tid),
+        global1(*g1),
+        global2(*g2),
+        stack_id1(stack_id1_),
+        stack_id2(stack_id2_) {}
+  void Print();
+};
+
+struct ErrorInvalidPointerPair : ErrorBase {
+  uptr pc, bp, sp, p1, p2;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorInvalidPointerPair() = default;
+  ErrorInvalidPointerPair(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr p1_,
+                          uptr p2_)
+      : ErrorBase(tid), pc(pc_), bp(bp_), sp(sp_), p1(p1_), p2(p2_) {}
+  void Print();
+};
+
 // clang-format off
-#define ASAN_FOR_EACH_ERROR_KIND(macro)    \
-  macro(StackOverflow)                     \
-  macro(DeadlySignal)                      \
-  macro(DoubleFree)                        \
-  macro(NewDeleteSizeMismatch)             \
-  macro(FreeNotMalloced)                   \
-  macro(AllocTypeMismatch)                 \
-  macro(MallocUsableSizeNotOwned)          \
-  macro(SanitizerGetAllocatedSizeNotOwned) \
-  macro(StringFunctionMemoryRangesOverlap) \
-  macro(StringFunctionSizeOverflow)
+#define ASAN_FOR_EACH_ERROR_KIND(macro)         \
+  macro(StackOverflow)                          \
+  macro(DeadlySignal)                           \
+  macro(DoubleFree)                             \
+  macro(NewDeleteSizeMismatch)                  \
+  macro(FreeNotMalloced)                        \
+  macro(AllocTypeMismatch)                      \
+  macro(MallocUsableSizeNotOwned)               \
+  macro(SanitizerGetAllocatedSizeNotOwned)      \
+  macro(StringFunctionMemoryRangesOverlap)      \
+  macro(StringFunctionSizeOverflow)             \
+  macro(BadParamsToAnnotateContiguousContainer) \
+  macro(ODRViolation)                           \
+  macro(InvalidPointerPair)
 // clang-format on
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,

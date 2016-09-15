@@ -42,11 +42,11 @@ const char *BreakpointResolver::g_ty_to_name[] = {"FileAndLine", "Address",
                                                   "SymbolName",  "SourceRegex",
                                                   "Exception",   "Unknown"};
 
-const char *BreakpointResolver::g_option_names
-    [BreakpointResolver::OptionNames::LastOptionName] = {
-        "AddressOffset", "Exact",        "FileName",   "Inlines", "Language",
-        "LineNumber",    "ModuleName",   "NameMask",   "Offset",  "Regex",
-        "SectionName",   "SkipPrologue", "SymbolNames"};
+const char *BreakpointResolver::g_option_names[static_cast<uint32_t>(
+    BreakpointResolver::OptionNames::LastOptionName)] = {
+    "AddressOffset", "Exact",        "FileName",   "Inlines", "Language",
+    "LineNumber",    "ModuleName",   "NameMask",   "Offset",  "Regex",
+    "SectionName",   "SkipPrologue", "SymbolNames"};
 
 const char *BreakpointResolver::ResolverTyToName(enum ResolverTy type) {
   if (type > LastKnownResolverType)

@@ -70,7 +70,8 @@ public:
   uint8_t GetAddressByteSize() const { return m_addr_size; }
   dw_addr_t GetBaseAddress() const { return m_base_addr; }
   dw_addr_t GetAddrBase() const { return m_addr_base; }
-  void SetAddrBase(dw_addr_t addr_base, dw_offset_t base_obj_offset);
+  dw_addr_t GetRangesBase() const { return m_ranges_base; }
+  void SetAddrBase(dw_addr_t addr_base, dw_addr_t ranges_base, dw_offset_t base_obj_offset);
   void ClearDIEs(bool keep_compile_unit_die);
   void BuildAddressRangeTable(SymbolFileDWARF *dwarf2Data,
                               DWARFDebugAranges *debug_aranges);
@@ -185,10 +186,11 @@ protected:
   lldb::LanguageType m_language_type;
   bool m_is_dwarf64;
   lldb_private::LazyBool m_is_optimized;
-  dw_addr_t m_addr_base; // Value of DW_AT_addr_base
-  dw_offset_t
-      m_base_obj_offset; // If this is a dwo compile unit this is the offset of
-                         // the base compile unit in the main object file
+  dw_addr_t m_addr_base;         // Value of DW_AT_addr_base
+  dw_addr_t m_ranges_base;       // Value of DW_AT_ranges_base
+  dw_offset_t m_base_obj_offset; // If this is a dwo compile unit this is the
+                                 // offset of the base compile unit in the main
+                                 // object file
 
   void ParseProducerInfo();
 

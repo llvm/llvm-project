@@ -9,16 +9,16 @@ A Baz(const A&);
 void Test1() {
   // CHECK-LABEL: @_Z5Test1v(
   // CHECK: getelementptr
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 1, i8* [[TMP:[^ ]+]])
+  // CHECK-NEXT: call void @llvm.lifetime.start(i64 1, i8* nonnull [[TMP:[^ ]+]])
   // CHECK-NEXT: getelementptr
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 1, i8* [[TMP1:[^ ]+]])
+  // CHECK-NEXT: call void @llvm.lifetime.start(i64 1, i8* nonnull [[TMP1:[^ ]+]])
 
   // Normal exit
-  // CHECK: call void @llvm.lifetime.end(i64 1, i8* [[TMP1]])
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 1, i8* [[TMP]])
+  // CHECK: call void @llvm.lifetime.end(i64 1, i8* nonnull [[TMP1]])
+  // CHECK-NEXT: call void @llvm.lifetime.end(i64 1, i8* nonnull [[TMP]])
 
   // Exception exit
-  // CHECK: call void @llvm.lifetime.end(i64 1, i8* [[TMP1]])
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 1, i8* [[TMP]])
+  // CHECK: call void @llvm.lifetime.end(i64 1, i8* nonnull [[TMP1]])
+  // CHECK-NEXT: call void @llvm.lifetime.end(i64 1, i8* nonnull [[TMP]])
   Baz(Baz(A()));
 }
