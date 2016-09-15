@@ -1856,7 +1856,7 @@ bool AddressSanitizer::runOnFunction(Function &F) {
   if (&F == AsanCtorFunction) return false;
   if (F.getLinkage() == GlobalValue::AvailableExternallyLinkage) return false;
   if (!ClDebugFunc.empty() && ClDebugFunc == F.getName()) return false;
-  if (F.getName().find("__asan_") != std::string::npos) return false;
+  if (F.getName().startswith("__asan_") != std::string::npos) return false;
 
   // If needed, insert __asan_init before checking for SanitizeAddress attr.
   // This function needs to be called even if the function body is not
