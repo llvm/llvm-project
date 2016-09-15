@@ -584,7 +584,15 @@ void SourceCoverageViewHTML::renderInstantiationView(raw_ostream &OS,
                                                      InstantiationView &ISV,
                                                      unsigned ViewDepth) {
   OS << BeginExpansionDiv;
-  ISV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/true, ViewDepth);
+  if (!ISV.View)
+    OS << BeginSourceNameDiv
+       << tag("pre",
+              escape("Unexecuted instantiation: " + ISV.FunctionName.str(),
+                     getOptions()))
+       << EndSourceNameDiv;
+  else
+    ISV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/true,
+                    ViewDepth);
   OS << EndExpansionDiv;
 }
 
