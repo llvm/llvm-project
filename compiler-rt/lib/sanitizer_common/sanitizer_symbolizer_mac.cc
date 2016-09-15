@@ -19,14 +19,14 @@
 #include "sanitizer_mac.h"
 #include "sanitizer_symbolizer_mac.h"
 
-namespace __sanitizer {
-
 #include <dlfcn.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <util.h>
+
+namespace __sanitizer {
 
 bool DlAddrSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   Dl_info info;
