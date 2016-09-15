@@ -1,4 +1,5 @@
 ; RUN: opt -S -correlated-propagation -debug-only=lazy-value-info <%s 2>&1 | FileCheck %s
+; REQUIRES: asserts
 ;
 ; Shortcut in Correlated Value Propagation ensures not to take Lazy Value Info
 ; analysis for %a.i and %tmp because %a.i is defined by alloca and %tmp is

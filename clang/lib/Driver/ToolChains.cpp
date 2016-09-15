@@ -2778,6 +2778,13 @@ bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
     return true;
+  case llvm::Triple::mips64:
+  case llvm::Triple::mips64el:
+    // Enabled for Debian mips64/mips64el only. Other targets are unable to
+    // distinguish N32 from N64.
+    if (getTriple().getEnvironment() == llvm::Triple::GNUABI64)
+      return true;
+    return false;
   default:
     return false;
   }

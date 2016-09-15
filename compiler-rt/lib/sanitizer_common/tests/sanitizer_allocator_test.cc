@@ -34,8 +34,8 @@
 // space that is always available. Thus, a dynamically allocated address space
 // is used instead (i.e. ~(uptr)0).
 static const uptr kAllocatorSpace = ~(uptr)0;
-static const uptr kAllocatorSize  =  0x10000000000ULL;  // 1T.
-static const u64 kAddressSpaceSize = 1ULL << 40;
+static const uptr kAllocatorSize  =  0x8000000000ULL;  // 500G
+static const u64 kAddressSpaceSize = 1ULL << 47;
 #else
 static const uptr kAllocatorSpace = 0x700000000000ULL;
 static const uptr kAllocatorSize  = 0x010000000000ULL;  // 1T.

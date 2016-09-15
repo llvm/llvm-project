@@ -542,6 +542,18 @@ define void @int_comparison(i32 %a, i32 %b, i1* %addr) {
   ret void
 }
 
+; CHECK-LABEL: name: ptr_comparison
+; CHECK: [[LHS:%[0-9]+]](p0) = COPY %x0
+; CHECK: [[RHS:%[0-9]+]](p0) = COPY %x1
+; CHECK: [[ADDR:%[0-9]+]](p0) = COPY %x2
+; CHECK: [[TST:%[0-9]+]](s1) = G_ICMP intpred(eq), [[LHS]](p0), [[RHS]]
+; CHECK: G_STORE [[TST]](s1), [[ADDR]](p0)
+define void @ptr_comparison(i8* %a, i8* %b, i1* %addr) {
+  %res = icmp eq i8* %a, %b
+  store i1 %res, i1* %addr
+  ret void
+}
+
 ; CHECK-LABEL: name: test_fadd
 ; CHECK: [[ARG1:%[0-9]+]](s32) = COPY %s0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](s32) = COPY %s1

@@ -284,6 +284,21 @@ private:
   /// @param Array The array for which to compute a size.
   Value *getArraySize(gpu_array_info *Array);
 
+  /// Generate code to compute the minimal offset at which an array is accessed.
+  ///
+  /// The offset of an array is the minimal array location accessed in a scop.
+  ///
+  /// Example:
+  ///
+  ///   for (long i = 0; i < 100; i++)
+  ///     A[i + 42] += ...
+  ///
+  ///   getArrayOffset(A) results in 42.
+  ///
+  /// @param Array The array for which to compute the offset.
+  /// @returns An llvm::Value that contains the offset of the array.
+  Value *getArrayOffset(gpu_array_info *Array);
+
   /// Prepare the kernel arguments for kernel code generation
   ///
   /// @param Kernel The kernel to generate code for.
@@ -468,6 +483,12 @@ void GPUNodeBuilder::allocateDeviceArrays() {
     DevArrayName.append(Array->name);
 
     Value *ArraySize = getArraySize(Array);
+    Value *Offset = getArrayOffset(Array);
+    if (Offset)
+      ArraySize = Builder.CreateSub(
+          ArraySize,
+          Builder.CreateMul(Offset,
+                            Builder.getInt64(ScopArray->getElemSizeInBytes())));
     Value *DevArray = createCallAllocateMemoryForDevice(ArraySize);
     DevArray->setName(DevArrayName);
     DeviceAllocations[ScopArray] = DevArray;
@@ -721,6 +742,48 @@ Value *GPUNodeBuilder::getArraySize(gpu_array_info *Array) {
   return ArraySize;
 }
 
+Value *GPUNodeBuilder::getArrayOffset(gpu_array_info *Array) {
+  if (gpu_array_is_scalar(Array))
+    return nullptr;
+
+  isl_ast_build *Build = isl_ast_build_from_context(S.getContext());
+
+  isl_set *Min = isl_set_lexmin(isl_set_copy(Array->extent));
+
+  isl_set *ZeroSet = isl_set_universe(isl_set_get_space(Min));
+
+  for (long i = 0; i < isl_set_dim(Min, isl_dim_set); i++)
+    ZeroSet = isl_set_fix_si(ZeroSet, isl_dim_set, i, 0);
+
+  if (isl_set_is_subset(Min, ZeroSet)) {
+    isl_set_free(Min);
+    isl_set_free(ZeroSet);
+    isl_ast_build_free(Build);
+    return nullptr;
+  }
+  isl_set_free(ZeroSet);
+
+  isl_ast_expr *Result =
+      isl_ast_expr_from_val(isl_val_int_from_si(isl_set_get_ctx(Min), 0));
+
+  for (long i = 0; i < isl_set_dim(Min, isl_dim_set); i++) {
+    if (i > 0) {
+      isl_pw_aff *Bound_I = isl_pw_aff_copy(Array->bound[i - 1]);
+      isl_ast_expr *BExpr = isl_ast_build_expr_from_pw_aff(Build, Bound_I);
+      Result = isl_ast_expr_mul(Result, BExpr);
+    }
+    isl_pw_aff *DimMin = isl_set_dim_min(isl_set_copy(Min), i);
+    isl_ast_expr *MExpr = isl_ast_build_expr_from_pw_aff(Build, DimMin);
+    Result = isl_ast_expr_add(Result, MExpr);
+  }
+
+  Value *ResultValue = ExprBuilder.create(Result);
+  isl_set_free(Min);
+  isl_ast_build_free(Build);
+
+  return ResultValue;
+}
+
 void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
                                         enum DataDirection Direction) {
   isl_ast_expr *Expr = isl_ast_node_user_get_expr(TransferStmt);
@@ -730,6 +793,7 @@ void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
   auto ScopArray = (ScopArrayInfo *)(Array->user);
 
   Value *Size = getArraySize(Array);
+  Value *Offset = getArrayOffset(Array);
   Value *DevPtr = DeviceAllocations[ScopArray];
 
   Value *HostPtr;
@@ -739,7 +803,19 @@ void GPUNodeBuilder::createDataTransfer(__isl_take isl_ast_node *TransferStmt,
   else
     HostPtr = ScopArray->getBasePtr();
 
+  if (Offset) {
+    HostPtr = Builder.CreatePointerCast(
+        HostPtr, ScopArray->getElementType()->getPointerTo());
+    HostPtr = Builder.CreateGEP(HostPtr, Offset);
+  }
+
   HostPtr = Builder.CreatePointerCast(HostPtr, Builder.getInt8PtrTy());
+
+  if (Offset) {
+    Size = Builder.CreateSub(
+        Size, Builder.CreateMul(
+                  Offset, Builder.getInt64(ScopArray->getElemSizeInBytes())));
+  }
 
   if (Direction == HOST_TO_DEVICE)
     createCallCopyFromHostToDevice(HostPtr, DevPtr, Size);
@@ -1000,6 +1076,16 @@ GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel, Function *F,
 
     Value *DevArray = DeviceAllocations[const_cast<ScopArrayInfo *>(SAI)];
     DevArray = createCallGetDevicePtr(DevArray);
+
+    Value *Offset = getArrayOffset(&Prog->array[i]);
+
+    if (Offset) {
+      DevArray = Builder.CreatePointerCast(
+          DevArray, SAI->getElementType()->getPointerTo());
+      DevArray = Builder.CreateGEP(DevArray, Builder.CreateNeg(Offset));
+      DevArray = Builder.CreatePointerCast(DevArray, Builder.getInt8PtrTy());
+    }
+
     Instruction *Param = new AllocaInst(
         Builder.getInt8PtrTy(), Launch + "_param_" + std::to_string(Index),
         EntryBlock->getTerminator());

@@ -610,9 +610,17 @@ class Configuration(object):
                     os.pathsep + symbolizer_search_paths)
             llvm_symbolizer = lit.util.which('llvm-symbolizer',
                                              symbolizer_search_paths)
+
+            def add_ubsan():
+                self.cxx.flags += ['-fsanitize=undefined',
+                                   '-fno-sanitize=vptr,function,float-divide-by-zero',
+                                   '-fno-sanitize-recover=all']
+                self.env['UBSAN_OPTIONS'] = 'print_stacktrace=1'
+                self.config.available_features.add('ubsan')
+
             # Setup the sanitizer compile flags
             self.cxx.flags += ['-g', '-fno-omit-frame-pointer']
-            if san == 'Address':
+            if san == 'Address' or san == 'Address;Undefined' or san == 'Undefined;Address':
                 self.cxx.flags += ['-fsanitize=address']
                 if llvm_symbolizer is not None:
                     self.env['ASAN_SYMBOLIZER_PATH'] = llvm_symbolizer
@@ -622,6 +630,8 @@ class Configuration(object):
                 self.config.available_features.add('asan')
                 self.config.available_features.add('sanitizer-new-delete')
                 self.cxx.compile_flags += ['-O1']
+                if san == 'Address;Undefined' or san == 'Undefined;Address':
+                    add_ubsan()
             elif san == 'Memory' or san == 'MemoryWithOrigins':
                 self.cxx.flags += ['-fsanitize=memory']
                 if san == 'MemoryWithOrigins':
@@ -633,12 +643,8 @@ class Configuration(object):
                 self.config.available_features.add('sanitizer-new-delete')
                 self.cxx.compile_flags += ['-O1']
             elif san == 'Undefined':
-                self.cxx.flags += ['-fsanitize=undefined',
-                                   '-fno-sanitize=vptr,function,float-divide-by-zero',
-                                   '-fno-sanitize-recover=all']
+                add_ubsan()
                 self.cxx.compile_flags += ['-O2']
-                self.env['UBSAN_OPTIONS'] = 'print_stacktrace=1'
-                self.config.available_features.add('ubsan')
             elif san == 'Thread':
                 self.cxx.flags += ['-fsanitize=thread']
                 self.config.available_features.add('tsan')

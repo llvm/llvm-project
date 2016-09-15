@@ -1307,7 +1307,8 @@ Expr ScriptParser::readPrimary() {
     next();
     expect(",");
     uint64_t Val;
-    next().getAsInteger(0, Val);
+    if (next().getAsInteger(0, Val))
+      setError("integer expected");
     expect(")");
     return [=](uint64_t Dot) { return Val; };
   }
