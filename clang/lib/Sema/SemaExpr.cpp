@@ -8716,7 +8716,8 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
 static QualType checkVectorShift(Sema &S, ExprResult &LHS, ExprResult &RHS,
                                  SourceLocation Loc, bool IsCompAssign) {
   // OpenCL v1.1 s6.3.j says RHS can be a vector only if LHS is a vector.
-  if (!LHS.get()->getType()->isVectorType()) {
+  if ((S.LangOpts.OpenCL || S.LangOpts.ZVector) &&
+      !LHS.get()->getType()->isVectorType()) {
     S.Diag(Loc, diag::err_shift_rhs_only_vector)
       << RHS.get()->getType() << LHS.get()->getType()
       << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
@@ -8732,15 +8733,17 @@ static QualType checkVectorShift(Sema &S, ExprResult &LHS, ExprResult &RHS,
   if (RHS.isInvalid()) return QualType();
 
   QualType LHSType = LHS.get()->getType();
-  const VectorType *LHSVecTy = LHSType->castAs<VectorType>();
-  QualType LHSEleType = LHSVecTy->getElementType();
+  // Note that LHS might be a scalar because the routine calls not only in
+  // OpenCL case.
+  const VectorType *LHSVecTy = LHSType->getAs<VectorType>();
+  QualType LHSEleType = LHSVecTy ? LHSVecTy->getElementType() : LHSType;
 
   // Note that RHS might not be a vector.
   QualType RHSType = RHS.get()->getType();
   const VectorType *RHSVecTy = RHSType->getAs<VectorType>();
   QualType RHSEleType = RHSVecTy ? RHSVecTy->getElementType() : RHSType;
 
-  // OpenCL v1.1 s6.3.j says that the operands need to be integers.
+  // The operands need to be integers.
   if (!LHSEleType->isIntegerType()) {
     S.Diag(Loc, diag::err_typecheck_expect_int)
       << LHS.get()->getType() << LHS.get()->getSourceRange();
@@ -8753,7 +8756,19 @@ static QualType checkVectorShift(Sema &S, ExprResult &LHS, ExprResult &RHS,
     return QualType();
   }
 
-  if (RHSVecTy) {
+  if (!LHSVecTy) {
+    assert(RHSVecTy);
+    if (IsCompAssign)
+      return RHSType;
+    if (LHSEleType != RHSEleType) {
+      LHS = S.ImpCastExprToType(LHS.get(),RHSEleType, CK_IntegralCast);
+      LHSEleType = RHSEleType;
+    }
+    QualType VecTy =
+        S.Context.getExtVectorType(LHSEleType, RHSVecTy->getNumElements());
+    LHS = S.ImpCastExprToType(LHS.get(), VecTy, CK_VectorSplat);
+    LHSType = VecTy;
+  } else if (RHSVecTy) {
     // OpenCL v1.1 s6.3.j says that for vector types, the operators
     // are applied component-wise. So if RHS is a vector, then ensure
     // that the number of elements is the same as LHS...
