@@ -267,4 +267,17 @@ void ErrorODRViolation::Print() {
   ReportErrorSummary(error_msg.data());
 }
 
+void ErrorInvalidPointerPair::Print() {
+  const char *bug_type = "invalid-pointer-pair";
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report("ERROR: AddressSanitizer: invalid-pointer-pair: %p %p\n", p1, p2);
+  Printf("%s", d.EndWarning());
+  GET_STACK_TRACE_FATAL(pc, bp);
+  stack.Print();
+  PrintAddressDescription(p1, 1, bug_type);
+  PrintAddressDescription(p2, 1, bug_type);
+  ReportErrorSummary(bug_type, &stack);
+}
+
 }  // namespace __asan

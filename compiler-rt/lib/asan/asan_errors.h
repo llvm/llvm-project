@@ -278,6 +278,17 @@ struct ErrorODRViolation : ErrorBase {
   void Print();
 };
 
+struct ErrorInvalidPointerPair : ErrorBase {
+  uptr pc, bp, sp, p1, p2;
+  // VS2013 doesn't implement unrestricted unions, so we need a trivial default
+  // constructor
+  ErrorInvalidPointerPair() = default;
+  ErrorInvalidPointerPair(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr p1_,
+                          uptr p2_)
+      : ErrorBase(tid), pc(pc_), bp(bp_), sp(sp_), p1(p1_), p2(p2_) {}
+  void Print();
+};
+
 // clang-format off
 #define ASAN_FOR_EACH_ERROR_KIND(macro)         \
   macro(StackOverflow)                          \
@@ -291,7 +302,8 @@ struct ErrorODRViolation : ErrorBase {
   macro(StringFunctionMemoryRangesOverlap)      \
   macro(StringFunctionSizeOverflow)             \
   macro(BadParamsToAnnotateContiguousContainer) \
-  macro(ODRViolation)
+  macro(ODRViolation)                           \
+  macro(InvalidPointerPair)
 // clang-format on
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,

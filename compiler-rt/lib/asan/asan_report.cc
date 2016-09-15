@@ -416,19 +416,11 @@ void ReportODRViolation(const __asan_global *g1, u32 stack_id1,
 }
 
 // ----------------------- CheckForInvalidPointerPair ----------- {{{1
-static NOINLINE void
-ReportInvalidPointerPair(uptr pc, uptr bp, uptr sp, uptr a1, uptr a2) {
+static NOINLINE void ReportInvalidPointerPair(uptr pc, uptr bp, uptr sp,
+                                              uptr a1, uptr a2) {
   ScopedInErrorReport in_report;
-  const char *bug_type = "invalid-pointer-pair";
-  Decorator d;
-  Printf("%s", d.Warning());
-  Report("ERROR: AddressSanitizer: invalid-pointer-pair: %p %p\n", a1, a2);
-  Printf("%s", d.EndWarning());
-  GET_STACK_TRACE_FATAL(pc, bp);
-  stack.Print();
-  PrintAddressDescription(a1, 1, bug_type);
-  PrintAddressDescription(a2, 1, bug_type);
-  ReportErrorSummary(bug_type, &stack);
+  ErrorInvalidPointerPair error(GetCurrentTidOrInvalid(), pc, bp, sp, a1, a2);
+  in_report.ReportError(error);
 }
 
 static INLINE void CheckForInvalidPointerPair(void *p1, void *p2) {
