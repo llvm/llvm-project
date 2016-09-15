@@ -410,30 +410,9 @@ void ReportBadParamsToAnnotateContiguousContainer(uptr beg, uptr end,
 void ReportODRViolation(const __asan_global *g1, u32 stack_id1,
                         const __asan_global *g2, u32 stack_id2) {
   ScopedInErrorReport in_report;
-  Decorator d;
-  Printf("%s", d.Warning());
-  Report("ERROR: AddressSanitizer: odr-violation (%p):\n", g1->beg);
-  Printf("%s", d.EndWarning());
-  InternalScopedString g1_loc(256), g2_loc(256);
-  PrintGlobalLocation(&g1_loc, *g1);
-  PrintGlobalLocation(&g2_loc, *g2);
-  Printf("  [1] size=%zd '%s' %s\n", g1->size,
-         MaybeDemangleGlobalName(g1->name), g1_loc.data());
-  Printf("  [2] size=%zd '%s' %s\n", g2->size,
-         MaybeDemangleGlobalName(g2->name), g2_loc.data());
-  if (stack_id1 && stack_id2) {
-    Printf("These globals were registered at these points:\n");
-    Printf("  [1]:\n");
-    StackDepotGet(stack_id1).Print();
-    Printf("  [2]:\n");
-    StackDepotGet(stack_id2).Print();
-  }
-  Report("HINT: if you don't care about these errors you may set "
-         "ASAN_OPTIONS=detect_odr_violation=0\n");
-  InternalScopedString error_msg(256);
-  error_msg.append("odr-violation: global '%s' at %s",
-                   MaybeDemangleGlobalName(g1->name), g1_loc.data());
-  ReportErrorSummary(error_msg.data());
+  ErrorODRViolation error(GetCurrentTidOrInvalid(), g1, stack_id1, g2,
+                          stack_id2);
+  in_report.ReportError(error);
 }
 
 // ----------------------- CheckForInvalidPointerPair ----------- {{{1

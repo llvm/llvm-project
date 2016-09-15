@@ -18,6 +18,7 @@
 #include "asan_mapping.h"
 #include "asan_report.h"
 #include "asan_stack.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 
 namespace __asan {
 
@@ -236,6 +237,34 @@ void ErrorBadParamsToAnnotateContiguousContainer::Print() {
     Report("ERROR: beg is not aligned by %d\n", granularity);
   stack->Print();
   ReportErrorSummary("bad-__sanitizer_annotate_contiguous_container", stack);
+}
+
+void ErrorODRViolation::Print() {
+  Decorator d;
+  Printf("%s", d.Warning());
+  Report("ERROR: AddressSanitizer: odr-violation (%p):\n", global1.beg);
+  Printf("%s", d.EndWarning());
+  InternalScopedString g1_loc(256), g2_loc(256);
+  PrintGlobalLocation(&g1_loc, global1);
+  PrintGlobalLocation(&g2_loc, global2);
+  Printf("  [1] size=%zd '%s' %s\n", global1.size,
+         MaybeDemangleGlobalName(global1.name), g1_loc.data());
+  Printf("  [2] size=%zd '%s' %s\n", global2.size,
+         MaybeDemangleGlobalName(global2.name), g2_loc.data());
+  if (stack_id1 && stack_id2) {
+    Printf("These globals were registered at these points:\n");
+    Printf("  [1]:\n");
+    StackDepotGet(stack_id1).Print();
+    Printf("  [2]:\n");
+    StackDepotGet(stack_id2).Print();
+  }
+  Report(
+      "HINT: if you don't care about these errors you may set "
+      "ASAN_OPTIONS=detect_odr_violation=0\n");
+  InternalScopedString error_msg(256);
+  error_msg.append("odr-violation: global '%s' at %s",
+                   MaybeDemangleGlobalName(global1.name), g1_loc.data());
+  ReportErrorSummary(error_msg.data());
 }
 
 }  // namespace __asan
