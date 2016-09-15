@@ -168,9 +168,7 @@
 // For such platforms build this code with -DSANITIZER_CAN_USE_ALLOCATOR64=0 or
 // change the definition of SANITIZER_CAN_USE_ALLOCATOR64 here.
 #ifndef SANITIZER_CAN_USE_ALLOCATOR64
-# if SANITIZER_ANDROID && defined(__aarch64__)
-#  define SANITIZER_CAN_USE_ALLOCATOR64 1
-# elif defined(__mips64) || defined(__aarch64__)
+#if defined(__mips64) || defined(__aarch64__)
 #  define SANITIZER_CAN_USE_ALLOCATOR64 0
 # else
 #  define SANITIZER_CAN_USE_ALLOCATOR64 (SANITIZER_WORDSIZE == 64)
