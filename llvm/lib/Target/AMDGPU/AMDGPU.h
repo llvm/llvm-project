@@ -208,7 +208,10 @@ enum class AMDGPUSynchronizationScope : unsigned {
 
   /// Synchronized with respect to image fence instruction executing in the same
   /// work-item.
-  Image
+  Image,
+
+  /// Unknown synchronization scope.
+  Unknown
 };
 
 #endif
