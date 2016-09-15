@@ -240,14 +240,16 @@ bool SparcInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned SparcInstrInfo::InsertBranch(MachineBasicBlock &MBB,
+unsigned SparcInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                       MachineBasicBlock *TBB,
                                       MachineBasicBlock *FBB,
                                       ArrayRef<MachineOperand> Cond,
-                                      const DebugLoc &DL) const {
-  assert(TBB && "InsertBranch must not be told to insert a fallthrough");
+                                      const DebugLoc &DL,
+                                      int *BytesAdded) const {
+  assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 1 || Cond.size() == 0) &&
          "Sparc branch conditions should have one component!");
+  assert(!BytesAdded && "code size not handled");
 
   if (Cond.empty()) {
     assert(!FBB && "Unconditional branch with multiple successors!");
@@ -269,8 +271,10 @@ unsigned SparcInstrInfo::InsertBranch(MachineBasicBlock &MBB,
   return 2;
 }
 
-unsigned SparcInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const
-{
+unsigned SparcInstrInfo::removeBranch(MachineBasicBlock &MBB,
+                                      int *BytesRemoved) const {
+  assert(!BytesRemoved && "code size not handled");
+
   MachineBasicBlock::iterator I = MBB.end();
   unsigned Count = 0;
   while (I != MBB.begin()) {
@@ -291,7 +295,7 @@ unsigned SparcInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const
   return Count;
 }
 
-bool SparcInstrInfo::ReverseBranchCondition(
+bool SparcInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 1);
   SPCC::CondCodes CC = static_cast<SPCC::CondCodes>(Cond[0].getImm());

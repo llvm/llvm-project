@@ -24,7 +24,13 @@ NULL_DEREF_ON_EMPTY: stat::number_of_executed_units:
 
 #not LLVMFuzzer-FullCoverageSetTest -timeout=15 -seed=1 -mutate_depth=2 -use_full_coverage_set=1 2>&1 | FileCheck %s
 
-RUN: not LLVMFuzzer-CounterTest -use_counters=1 -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s
+RUN: not LLVMFuzzer-CounterTest         -use_counters=1 -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s --check-prefix=COUNTERS
+RUN: not LLVMFuzzer-CounterTest-TracePC -use_counters=1 -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s --check-prefix=COUNTERS
+
+COUNTERS: INITED {{.*}} bits:
+COUNTERS: NEW {{.*}} bits: {{[1-9]*}}
+COUNTERS: NEW {{.*}} bits: {{[1-9]*}}
+COUNTERS: BINGO
 
 RUN: not LLVMFuzzer-CallerCalleeTest                     -cross_over=0 -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s
 # This one is flaky, may actually find the goal even w/o use_indir_calls.

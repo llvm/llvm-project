@@ -29,7 +29,8 @@ public:
                           llvm::pdb::yaml::SerializationContext &Context)
       : YamlIO(IO), Context(Context) {}
 
-  virtual Error visitTypeBegin(CVRecord<TypeLeafKind> &Record) override;
+  virtual Error visitTypeBegin(CVType &Record) override;
+  virtual Error visitMemberBegin(CVMemberRecord &Record) override;
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR, Name##Record &Record)    \
@@ -38,12 +39,19 @@ public:
     return Error::success();                                                   \
   }
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
-  TYPE_RECORD(EnumName, EnumVal, Name)
+  Error visitKnownMember(CVMemberRecord &CVR, Name##Record &Record) override { \
+    visitKnownMemberImpl(#Name, Record);                                       \
+    return Error::success();                                                   \
+  }
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
 
 private:
+  template <typename T> void visitKnownMemberImpl(const char *Name, T &Record) {
+    YamlIO.mapRequired(Name, Record);
+  }
+
   template <typename T>
   void visitKnownRecordImpl(const char *Name, CVType &Type, T &Record) {
     YamlIO.mapRequired(Name, Record);

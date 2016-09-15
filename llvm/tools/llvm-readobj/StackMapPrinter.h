@@ -24,7 +24,8 @@ void prettyPrintStackMap(OStreamT &OS, const StackMapParserT &SMP) {
   // Functions:
   for (const auto &F : SMP.functions())
     OS << "\n  Function address: " << F.getFunctionAddress()
-       << ", stack size: " << F.getStackSize();
+       << ", stack size: " << F.getStackSize()
+       << ", callsite record count: " << F.getRecordCount();
 
   // Constants:
   OS << "\nNum Constants: " << SMP.getNumConstants();

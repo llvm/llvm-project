@@ -141,11 +141,10 @@ void DAGTypeLegalizer::ExpandRes_BITCAST(SDNode *N, SDValue &Lo, SDValue &Hi) {
         if (DAG.getDataLayout().isBigEndian())
           std::swap(LHS, RHS);
 
-        Vals.push_back(DAG.getNode(ISD::BUILD_PAIR, dl,
-                                   EVT::getIntegerVT(
-                                     *DAG.getContext(),
-                                     LHS.getValueType().getSizeInBits() << 1),
-                                   LHS, RHS));
+        Vals.push_back(DAG.getNode(
+            ISD::BUILD_PAIR, dl,
+            EVT::getIntegerVT(*DAG.getContext(), LHS.getValueSizeInBits() << 1),
+            LHS, RHS));
       }
       Lo = Vals[Slot++];
       Hi = Vals[Slot++];

@@ -257,7 +257,7 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
-bool AArch64InstrInfo::ReverseBranchCondition(
+bool AArch64InstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
   if (Cond[0].getImm() != -1) {
     // Regular Bcc
@@ -298,7 +298,8 @@ bool AArch64InstrInfo::ReverseBranchCondition(
   return false;
 }
 
-unsigned AArch64InstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
+unsigned AArch64InstrInfo::removeBranch(MachineBasicBlock &MBB,
+                                        int *BytesRemoved) const {
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
   if (I == MBB.end())
     return 0;
@@ -312,14 +313,23 @@ unsigned AArch64InstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
 
   I = MBB.end();
 
-  if (I == MBB.begin())
+  if (I == MBB.begin()) {
+    if (BytesRemoved)
+      *BytesRemoved = 4;
     return 1;
+  }
   --I;
-  if (!isCondBranchOpcode(I->getOpcode()))
+  if (!isCondBranchOpcode(I->getOpcode())) {
+    if (BytesRemoved)
+      *BytesRemoved = 4;
     return 1;
+  }
 
   // Remove the branch.
   I->eraseFromParent();
+  if (BytesRemoved)
+    *BytesRemoved = 8;
+
   return 2;
 }
 
@@ -340,25 +350,34 @@ void AArch64InstrInfo::instantiateCondBranch(
   }
 }
 
-unsigned AArch64InstrInfo::InsertBranch(MachineBasicBlock &MBB,
+unsigned AArch64InstrInfo::insertBranch(MachineBasicBlock &MBB,
                                         MachineBasicBlock *TBB,
                                         MachineBasicBlock *FBB,
                                         ArrayRef<MachineOperand> Cond,
-                                        const DebugLoc &DL) const {
+                                        const DebugLoc &DL,
+                                        int *BytesAdded) const {
   // Shouldn't be a fall through.
-  assert(TBB && "InsertBranch must not be told to insert a fallthrough");
+  assert(TBB && "insertBranch must not be told to insert a fallthrough");
 
   if (!FBB) {
     if (Cond.empty()) // Unconditional branch?
       BuildMI(&MBB, DL, get(AArch64::B)).addMBB(TBB);
     else
       instantiateCondBranch(MBB, DL, TBB, Cond);
+
+    if (BytesAdded)
+      *BytesAdded = 4;
+
     return 1;
   }
 
   // Two-way conditional branch.
   instantiateCondBranch(MBB, DL, TBB, Cond);
   BuildMI(&MBB, DL, get(AArch64::B)).addMBB(FBB);
+
+  if (BytesAdded)
+    *BytesAdded = 8;
+
   return 2;
 }
 

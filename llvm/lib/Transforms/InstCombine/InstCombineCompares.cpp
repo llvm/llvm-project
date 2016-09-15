@@ -3201,53 +3201,13 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
   switch (Pred) {
   default:
     llvm_unreachable("Unknown icmp opcode!");
-  case ICmpInst::ICMP_EQ: {
-    if (Op0Max.ult(Op1Min) || Op0Min.ugt(Op1Max))
-      return replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
-
-    // If all bits are known zero except for one, then we know at most one bit
-    // is set. If the comparison is against zero, then this is a check to see if
-    // *that* bit is set.
-    APInt Op0KnownZeroInverted = ~Op0KnownZero;
-    if (~Op1KnownZero == 0) {
-      // If the LHS is an AND with the same constant, look through it.
-      Value *LHS = nullptr;
-      ConstantInt *LHSC = nullptr;
-      if (!match(Op0, m_And(m_Value(LHS), m_ConstantInt(LHSC))) ||
-          LHSC->getValue() != Op0KnownZeroInverted)
-        LHS = Op0;
-
-      // If the LHS is 1 << x, and we know the result is a power of 2 like 8,
-      // then turn "((1 << x)&8) == 0" into "x != 3".
-      // or turn "((1 << x)&7) == 0" into "x > 2".
-      Value *X = nullptr;
-      if (match(LHS, m_Shl(m_One(), m_Value(X)))) {
-        APInt ValToCheck = Op0KnownZeroInverted;
-        if (ValToCheck.isPowerOf2()) {
-          unsigned CmpVal = ValToCheck.countTrailingZeros();
-          return new ICmpInst(ICmpInst::ICMP_NE, X,
-                              ConstantInt::get(X->getType(), CmpVal));
-        } else if ((++ValToCheck).isPowerOf2()) {
-          unsigned CmpVal = ValToCheck.countTrailingZeros() - 1;
-          return new ICmpInst(ICmpInst::ICMP_UGT, X,
-                              ConstantInt::get(X->getType(), CmpVal));
-        }
-      }
-
-      // If the LHS is 8 >>u x, and we know the result is a power of 2 like 1,
-      // then turn "((8 >>u x)&1) == 0" into "x != 3".
-      const APInt *CI;
-      if (Op0KnownZeroInverted == 1 &&
-          match(LHS, m_LShr(m_Power2(CI), m_Value(X))))
-        return new ICmpInst(
-            ICmpInst::ICMP_NE, X,
-            ConstantInt::get(X->getType(), CI->countTrailingZeros()));
-    }
-    break;
-  }
+  case ICmpInst::ICMP_EQ:
   case ICmpInst::ICMP_NE: {
-    if (Op0Max.ult(Op1Min) || Op0Min.ugt(Op1Max))
-      return replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
+    if (Op0Max.ult(Op1Min) || Op0Min.ugt(Op1Max)) {
+      return Pred == CmpInst::ICMP_EQ
+                 ? replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()))
+                 : replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
+    }
 
     // If all bits are known zero except for one, then we know at most one bit
     // is set. If the comparison is against zero, then this is a check to see if
@@ -3261,31 +3221,36 @@ Instruction *InstCombiner::foldICmpUsingKnownBits(ICmpInst &I) {
           LHSC->getValue() != Op0KnownZeroInverted)
         LHS = Op0;
 
-      // If the LHS is 1 << x, and we know the result is a power of 2 like 8,
-      // then turn "((1 << x)&8) != 0" into "x == 3".
-      // or turn "((1 << x)&7) != 0" into "x < 3".
-      Value *X = nullptr;
+      Value *X;
       if (match(LHS, m_Shl(m_One(), m_Value(X)))) {
         APInt ValToCheck = Op0KnownZeroInverted;
+        Type *XTy = X->getType();
         if (ValToCheck.isPowerOf2()) {
-          unsigned CmpVal = ValToCheck.countTrailingZeros();
-          return new ICmpInst(ICmpInst::ICMP_EQ, X,
-                              ConstantInt::get(X->getType(), CmpVal));
+          // ((1 << X) & 8) == 0 -> X != 3
+          // ((1 << X) & 8) != 0 -> X == 3
+          auto *CmpC = ConstantInt::get(XTy, ValToCheck.countTrailingZeros());
+          auto NewPred = ICmpInst::getInversePredicate(Pred);
+          return new ICmpInst(NewPred, X, CmpC);
         } else if ((++ValToCheck).isPowerOf2()) {
-          unsigned CmpVal = ValToCheck.countTrailingZeros();
-          return new ICmpInst(ICmpInst::ICMP_ULT, X,
-                              ConstantInt::get(X->getType(), CmpVal));
+          // ((1 << X) & 7) == 0 -> X >= 3
+          // ((1 << X) & 7) != 0 -> X  < 3
+          auto *CmpC = ConstantInt::get(XTy, ValToCheck.countTrailingZeros());
+          auto NewPred =
+              Pred == CmpInst::ICMP_EQ ? CmpInst::ICMP_UGE : CmpInst::ICMP_ULT;
+          return new ICmpInst(NewPred, X, CmpC);
         }
       }
 
-      // If the LHS is 8 >>u x, and we know the result is a power of 2 like 1,
-      // then turn "((8 >>u x)&1) != 0" into "x == 3".
+      // Check if the LHS is 8 >>u x and the result is a power of 2 like 1.
       const APInt *CI;
       if (Op0KnownZeroInverted == 1 &&
-          match(LHS, m_LShr(m_Power2(CI), m_Value(X))))
-        return new ICmpInst(
-            ICmpInst::ICMP_EQ, X,
-            ConstantInt::get(X->getType(), CI->countTrailingZeros()));
+          match(LHS, m_LShr(m_Power2(CI), m_Value(X)))) {
+        // ((8 >>u X) & 1) == 0 -> X != 3
+        // ((8 >>u X) & 1) != 0 -> X == 3
+        unsigned CmpVal = CI->countTrailingZeros();
+        auto NewPred = ICmpInst::getInversePredicate(Pred);
+        return new ICmpInst(NewPred, X, ConstantInt::get(X->getType(), CmpVal));
+      }
     }
     break;
   }

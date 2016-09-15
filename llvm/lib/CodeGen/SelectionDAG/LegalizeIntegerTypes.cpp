@@ -951,11 +951,11 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
     // than the width of NewLHS/NewRH, we can avoid inserting real truncate
     // instruction, which is redudant eventually.
     unsigned OpLEffectiveBits =
-        OpL.getValueType().getSizeInBits() - DAG.ComputeNumSignBits(OpL) + 1;
+        OpL.getValueSizeInBits() - DAG.ComputeNumSignBits(OpL) + 1;
     unsigned OpREffectiveBits =
-        OpR.getValueType().getSizeInBits() - DAG.ComputeNumSignBits(OpR) + 1;
-    if (OpLEffectiveBits <= NewLHS.getValueType().getSizeInBits() &&
-        OpREffectiveBits <= NewRHS.getValueType().getSizeInBits()) {
+        OpR.getValueSizeInBits() - DAG.ComputeNumSignBits(OpR) + 1;
+    if (OpLEffectiveBits <= NewLHS.getValueSizeInBits() &&
+        OpREffectiveBits <= NewRHS.getValueSizeInBits()) {
       NewLHS = OpL;
       NewRHS = OpR;
     } else {
@@ -1053,8 +1053,8 @@ SDValue DAGTypeLegalizer::PromoteIntOp_BUILD_VECTOR(SDNode *N) {
   // Promote the inserted value.  The type does not need to match the
   // vector element type.  Check that any extra bits introduced will be
   // truncated away.
-  assert(N->getOperand(0).getValueType().getSizeInBits() >=
-         N->getValueType(0).getVectorElementType().getSizeInBits() &&
+  assert(N->getOperand(0).getValueSizeInBits() >=
+         N->getValueType(0).getScalarSizeInBits() &&
          "Type of inserted value narrower than vector element type!");
 
   SmallVector<SDValue, 16> NewOps;
@@ -1083,8 +1083,8 @@ SDValue DAGTypeLegalizer::PromoteIntOp_INSERT_VECTOR_ELT(SDNode *N,
     // have to match the vector element type.
 
     // Check that any extra bits introduced will be truncated away.
-    assert(N->getOperand(1).getValueType().getSizeInBits() >=
-           N->getValueType(0).getVectorElementType().getSizeInBits() &&
+    assert(N->getOperand(1).getValueSizeInBits() >=
+           N->getValueType(0).getScalarSizeInBits() &&
            "Type of inserted value narrower than vector element type!");
     return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0),
                                   GetPromotedInteger(N->getOperand(1)),
@@ -1518,8 +1518,8 @@ ExpandShiftWithKnownAmountBit(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue Amt = N->getOperand(1);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   EVT ShTy = Amt.getValueType();
-  unsigned ShBits = ShTy.getScalarType().getSizeInBits();
-  unsigned NVTBits = NVT.getScalarType().getSizeInBits();
+  unsigned ShBits = ShTy.getScalarSizeInBits();
+  unsigned NVTBits = NVT.getScalarSizeInBits();
   assert(isPowerOf2_32(NVTBits) &&
          "Expanded integer type size not a power of two!");
   SDLoc dl(N);
@@ -2075,7 +2075,7 @@ void DAGTypeLegalizer::ExpandIntRes_LOAD(LoadSDNode *N,
     if (ExtType == ISD::SEXTLOAD) {
       // The high part is obtained by SRA'ing all but one of the bits of the
       // lo part.
-      unsigned LoSize = Lo.getValueType().getSizeInBits();
+      unsigned LoSize = Lo.getValueSizeInBits();
       Hi = DAG.getNode(ISD::SRA, dl, NVT, Lo,
                        DAG.getConstant(LoSize - 1, dl,
                                        TLI.getPointerTy(DAG.getDataLayout())));
@@ -2364,8 +2364,8 @@ void DAGTypeLegalizer::ExpandIntRes_Shift(SDNode *N,
     // the new SHL_PARTS operation would need further legalization.
     SDValue ShiftOp = N->getOperand(1);
     EVT ShiftTy = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
-    assert(ShiftTy.getScalarType().getSizeInBits() >=
-           Log2_32_Ceil(VT.getScalarType().getSizeInBits()) &&
+    assert(ShiftTy.getScalarSizeInBits() >=
+           Log2_32_Ceil(VT.getScalarSizeInBits()) &&
            "ShiftAmountTy is too small to cover the range of this type!");
     if (ShiftOp.getValueType() != ShiftTy)
       ShiftOp = DAG.getZExtOrTrunc(ShiftOp, dl, ShiftTy);
@@ -2446,8 +2446,7 @@ void DAGTypeLegalizer::ExpandIntRes_SIGN_EXTEND(SDNode *N,
            "Operand over promoted?");
     // Split the promoted operand.  This will simplify when it is expanded.
     SplitInteger(Res, Lo, Hi);
-    unsigned ExcessBits =
-      Op.getValueType().getSizeInBits() - NVT.getSizeInBits();
+    unsigned ExcessBits = Op.getValueSizeInBits() - NVT.getSizeInBits();
     Hi = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, Hi.getValueType(), Hi,
                      DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(),
                                                         ExcessBits)));
@@ -2468,13 +2467,12 @@ ExpandIntRes_SIGN_EXTEND_INREG(SDNode *N, SDValue &Lo, SDValue &Hi) {
     // The high part gets the sign extension from the lo-part.  This handles
     // things like sextinreg V:i64 from i8.
     Hi = DAG.getNode(ISD::SRA, dl, Hi.getValueType(), Lo,
-                     DAG.getConstant(Hi.getValueType().getSizeInBits() - 1, dl,
+                     DAG.getConstant(Hi.getValueSizeInBits() - 1, dl,
                                      TLI.getPointerTy(DAG.getDataLayout())));
   } else {
     // For example, extension of an i48 to an i64.  Leave the low part alone,
     // sext_inreg the high part.
-    unsigned ExcessBits =
-      EVT.getSizeInBits() - Lo.getValueType().getSizeInBits();
+    unsigned ExcessBits = EVT.getSizeInBits() - Lo.getValueSizeInBits();
     Hi = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, Hi.getValueType(), Hi,
                      DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(),
                                                         ExcessBits)));
@@ -2700,8 +2698,7 @@ void DAGTypeLegalizer::ExpandIntRes_ZERO_EXTEND(SDNode *N,
            "Operand over promoted?");
     // Split the promoted operand.  This will simplify when it is expanded.
     SplitInteger(Res, Lo, Hi);
-    unsigned ExcessBits =
-      Op.getValueType().getSizeInBits() - NVT.getSizeInBits();
+    unsigned ExcessBits = Op.getValueSizeInBits() - NVT.getSizeInBits();
     Hi = DAG.getZeroExtendInReg(Hi, dl,
                                 EVT::getIntegerVT(*DAG.getContext(),
                                                   ExcessBits));

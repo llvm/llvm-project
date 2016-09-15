@@ -351,8 +351,7 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
     // can consider allowing spills of smaller values to larger slots
     // (i.e. change the '==' in the assert below to a '>=').
     MachineFrameInfo &MFI = Builder.DAG.getMachineFunction().getFrameInfo();
-    assert((MFI.getObjectSize(Index) * 8) ==
-               Incoming.getValueType().getSizeInBits() &&
+    assert((MFI.getObjectSize(Index) * 8) == Incoming.getValueSizeInBits() &&
            "Bad spill:  stack slot does not match!");
 #endif
 

@@ -1488,28 +1488,26 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
   }
 }
 
-void llvm::UpgradeInstWithTBAATag(Instruction *I) {
-  MDNode *MD = I->getMetadata(LLVMContext::MD_tbaa);
-  assert(MD && "UpgradeInstWithTBAATag should have a TBAA tag");
+MDNode *llvm::UpgradeTBAANode(MDNode &MD) {
   // Check if the tag uses struct-path aware TBAA format.
-  if (isa<MDNode>(MD->getOperand(0)) && MD->getNumOperands() >= 3)
-    return;
+  if (isa<MDNode>(MD.getOperand(0)) && MD.getNumOperands() >= 3)
+    return &MD;
 
-  if (MD->getNumOperands() == 3) {
-    Metadata *Elts[] = {MD->getOperand(0), MD->getOperand(1)};
-    MDNode *ScalarType = MDNode::get(I->getContext(), Elts);
+  auto &Context = MD.getContext();
+  if (MD.getNumOperands() == 3) {
+    Metadata *Elts[] = {MD.getOperand(0), MD.getOperand(1)};
+    MDNode *ScalarType = MDNode::get(Context, Elts);
     // Create a MDNode <ScalarType, ScalarType, offset 0, const>
     Metadata *Elts2[] = {ScalarType, ScalarType,
-                         ConstantAsMetadata::get(Constant::getNullValue(
-                             Type::getInt64Ty(I->getContext()))),
-                         MD->getOperand(2)};
-    I->setMetadata(LLVMContext::MD_tbaa, MDNode::get(I->getContext(), Elts2));
-  } else {
-    // Create a MDNode <MD, MD, offset 0>
-    Metadata *Elts[] = {MD, MD, ConstantAsMetadata::get(Constant::getNullValue(
-                                    Type::getInt64Ty(I->getContext())))};
-    I->setMetadata(LLVMContext::MD_tbaa, MDNode::get(I->getContext(), Elts));
+                         ConstantAsMetadata::get(
+                             Constant::getNullValue(Type::getInt64Ty(Context))),
+                         MD.getOperand(2)};
+    return MDNode::get(Context, Elts2);
   }
+  // Create a MDNode <MD, MD, offset 0>
+  Metadata *Elts[] = {&MD, &MD, ConstantAsMetadata::get(Constant::getNullValue(
+                                    Type::getInt64Ty(Context)))};
+  return MDNode::get(Context, Elts);
 }
 
 Instruction *llvm::UpgradeBitCastInst(unsigned Opc, Value *V, Type *DestTy,

@@ -51,9 +51,10 @@ namespace llvm {
   /// module is modified.
   bool UpgradeModuleFlags(Module &M);
 
-  /// If the TBAA tag for the given instruction uses the scalar TBAA format,
-  /// we upgrade it to the struct-path aware TBAA format.
-  void UpgradeInstWithTBAATag(Instruction *I);
+  /// If the given TBAA tag uses the scalar TBAA format, create a new node
+  /// corresponding to the upgrade to the struct-path aware TBAA format.
+  /// Otherwise return the \p TBAANode itself.
+  MDNode *UpgradeTBAANode(MDNode &TBAANode);
 
   /// This is an auto-upgrade for bitcast between pointers with different
   /// address spaces: the instruction is replaced by a pair ptrtoint+inttoptr.

@@ -558,7 +558,7 @@ LanaiInstrInfo::optimizeSelect(MachineInstr &MI,
 // - FalseBlock is set to the destination if condition evaluates to false (it
 //   is the nullptr if the branch is unconditional);
 // - condition is populated with machine operands needed to generate the branch
-//   to insert in InsertBranch;
+//   to insert in insertBranch;
 // Returns: false if branch could successfully be analyzed.
 bool LanaiInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *&TrueBlock,
@@ -641,10 +641,10 @@ bool LanaiInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return false;
 }
 
-// ReverseBranchCondition - Reverses the branch condition of the specified
+// reverseBranchCondition - Reverses the branch condition of the specified
 // condition list, returning false on success and true if it cannot be
 // reversed.
-bool LanaiInstrInfo::ReverseBranchCondition(
+bool LanaiInstrInfo::reverseBranchCondition(
     SmallVectorImpl<llvm::MachineOperand> &Condition) const {
   assert((Condition.size() == 1) &&
          "Lanai branch conditions should have one component.");
@@ -658,13 +658,15 @@ bool LanaiInstrInfo::ReverseBranchCondition(
 // Insert the branch with condition specified in condition and given targets
 // (TrueBlock and FalseBlock). This function returns the number of machine
 // instructions inserted.
-unsigned LanaiInstrInfo::InsertBranch(MachineBasicBlock &MBB,
+unsigned LanaiInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                       MachineBasicBlock *TrueBlock,
                                       MachineBasicBlock *FalseBlock,
                                       ArrayRef<MachineOperand> Condition,
-                                      const DebugLoc &DL) const {
+                                      const DebugLoc &DL,
+                                      int *BytesAdded) const {
   // Shouldn't be a fall through.
-  assert(TrueBlock && "InsertBranch must not be told to insert a fallthrough");
+  assert(TrueBlock && "insertBranch must not be told to insert a fallthrough");
+  assert(!BytesAdded && "code size not handled");
 
   // If condition is empty then an unconditional branch is being inserted.
   if (Condition.empty()) {
@@ -688,7 +690,10 @@ unsigned LanaiInstrInfo::InsertBranch(MachineBasicBlock &MBB,
   return 2;
 }
 
-unsigned LanaiInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
+unsigned LanaiInstrInfo::removeBranch(MachineBasicBlock &MBB,
+                                      int *BytesRemoved) const {
+  assert(!BytesRemoved && "code size not handled");
+
   MachineBasicBlock::iterator Instruction = MBB.end();
   unsigned Count = 0;
 

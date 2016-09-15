@@ -17,11 +17,11 @@
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbackPipeline.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/MSF/StreamReader.h"
-#include "llvm/DebugInfo/PDB/Raw/Hash.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
+#include "llvm/DebugInfo/PDB/Raw/TpiHashing.h"
 
 #include "llvm/Support/Endian.h"
 
@@ -36,97 +36,6 @@ TpiStream::TpiStream(const PDBFile &File,
     : Pdb(File), Stream(std::move(Stream)) {}
 
 TpiStream::~TpiStream() {}
-
-// Corresponds to `fUDTAnon`.
-template <typename T> static bool isAnonymous(T &Rec) {
-  StringRef Name = Rec.getName();
-  return Name == "<unnamed-tag>" || Name == "__unnamed" ||
-      Name.endswith("::<unnamed-tag>") || Name.endswith("::__unnamed");
-}
-
-// Computes a hash for a given TPI record.
-template <typename T>
-static uint32_t getTpiHash(T &Rec, const CVRecord<TypeLeafKind> &RawRec) {
-  auto Opts = static_cast<uint16_t>(Rec.getOptions());
-
-  bool ForwardRef =
-      Opts & static_cast<uint16_t>(ClassOptions::ForwardReference);
-  bool Scoped = Opts & static_cast<uint16_t>(ClassOptions::Scoped);
-  bool UniqueName = Opts & static_cast<uint16_t>(ClassOptions::HasUniqueName);
-  bool IsAnon = UniqueName && isAnonymous(Rec);
-
-  if (!ForwardRef && !Scoped && !IsAnon)
-    return hashStringV1(Rec.getName());
-  if (!ForwardRef && UniqueName && !IsAnon)
-    return hashStringV1(Rec.getUniqueName());
-  return hashBufferV8(RawRec.RawData);
-}
-
-namespace {
-class TpiHashVerifier : public TypeVisitorCallbacks {
-public:
-  TpiHashVerifier(FixedStreamArray<support::ulittle32_t> &HashValues,
-                  uint32_t NumHashBuckets)
-      : HashValues(HashValues), NumHashBuckets(NumHashBuckets) {}
-
-  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
-                         UdtSourceLineRecord &Rec) override {
-    return verifySourceLine(Rec);
-  }
-
-  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
-                         UdtModSourceLineRecord &Rec) override {
-    return verifySourceLine(Rec);
-  }
-
-  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
-                         ClassRecord &Rec) override {
-    return verify(Rec);
-  }
-  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
-                         EnumRecord &Rec) override {
-    return verify(Rec);
-  }
-  Error visitKnownRecord(CVRecord<TypeLeafKind> &CVR,
-                         UnionRecord &Rec) override {
-    return verify(Rec);
-  }
-
-  Error visitTypeBegin(CVRecord<TypeLeafKind> &Rec) override {
-    ++Index;
-    RawRecord = Rec;
-    return Error::success();
-  }
-
-private:
-  template <typename T> Error verify(T &Rec) {
-    uint32_t Hash = getTpiHash(Rec, RawRecord);
-    if (Hash % NumHashBuckets != HashValues[Index])
-      return errorInvalidHash();
-    return Error::success();
-  }
-
-  template <typename T> Error verifySourceLine(T &Rec) {
-    char Buf[4];
-    support::endian::write32le(Buf, Rec.getUDT().getIndex());
-    uint32_t Hash = hashStringV1(StringRef(Buf, 4));
-    if (Hash % NumHashBuckets != HashValues[Index])
-      return errorInvalidHash();
-    return Error::success();
-  }
-
-  Error errorInvalidHash() {
-    return make_error<RawError>(
-        raw_error_code::invalid_tpi_hash,
-        "Type index is 0x" + utohexstr(TypeIndex::FirstNonSimpleIndex + Index));
-  }
-
-  FixedStreamArray<support::ulittle32_t> HashValues;
-  CVRecord<TypeLeafKind> RawRecord;
-  uint32_t NumHashBuckets;
-  uint32_t Index = -1;
-};
-}
 
 // Verifies that a given type record matches with a given hash value.
 // Currently we only verify SRC_LINE records.
@@ -193,6 +102,9 @@ Error TpiStream::reload() {
     HSR.setOffset(Header->HashValueBuffer.Off);
     if (auto EC = HSR.readArray(HashValues, NumHashValues))
       return EC;
+    std::vector<ulittle32_t> HashValueList;
+    for (auto I : HashValues)
+      HashValueList.push_back(I);
 
     HSR.setOffset(Header->IndexOffsetBuffer.Off);
     uint32_t NumTypeIndexOffsets =

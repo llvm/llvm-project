@@ -154,7 +154,7 @@ bool MSP430BSel::runOnMachineFunction(MachineFunction &Fn) {
           Cond.push_back(I->getOperand(1));
 
           // Jump over the uncond branch inst (i.e. $+6) on opposite condition.
-          TII->ReverseBranchCondition(Cond);
+          TII->reverseBranchCondition(Cond);
           BuildMI(MBB, I, dl, TII->get(MSP430::JCC))
             .addImm(4).addOperand(Cond[0]);
 

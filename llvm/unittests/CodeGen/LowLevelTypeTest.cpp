@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LowLevelType.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
@@ -31,6 +32,7 @@ namespace {
 
 TEST(LowLevelTypeTest, Scalar) {
   LLVMContext C;
+  DataLayout DL("");
 
   for (unsigned S : {1U, 17U, 32U, 64U, 0xfffffU}) {
     const LLT Ty = LLT::scalar(S);
@@ -67,12 +69,13 @@ TEST(LowLevelTypeTest, Scalar) {
 
     // Test Type->LLT conversion.
     Type *IRTy = IntegerType::get(C, S);
-    EXPECT_EQ(Ty, LLT(*IRTy));
+    EXPECT_EQ(Ty, LLT(*IRTy, DL));
   }
 }
 
 TEST(LowLevelTypeTest, Vector) {
   LLVMContext C;
+  DataLayout DL("");
 
   for (unsigned S : {1U, 17U, 32U, 64U, 0xfffU}) {
     for (uint16_t Elts : {2U, 3U, 4U, 32U, 0xffU}) {
@@ -160,22 +163,23 @@ TEST(LowLevelTypeTest, Vector) {
       // Test Type->LLT conversion.
       Type *IRSTy = IntegerType::get(C, S);
       Type *IRTy = VectorType::get(IRSTy, Elts);
-      EXPECT_EQ(VTy, LLT(*IRTy));
+      EXPECT_EQ(VTy, LLT(*IRTy, DL));
     }
   }
 }
 
 TEST(LowLevelTypeTest, Pointer) {
   LLVMContext C;
+  DataLayout DL("");
 
   for (unsigned AS : {0U, 1U, 127U, 0xffffU}) {
-    const LLT Ty = LLT::pointer(AS);
+    const LLT Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
 
     // Test kind.
     ASSERT_TRUE(Ty.isValid());
     ASSERT_TRUE(Ty.isPointer());
+    ASSERT_TRUE(Ty.isSized());
 
-    ASSERT_FALSE(Ty.isSized());
     ASSERT_FALSE(Ty.isScalar());
     ASSERT_FALSE(Ty.isVector());
 
@@ -188,7 +192,7 @@ TEST(LowLevelTypeTest, Pointer) {
 
     // Test Type->LLT conversion.
     Type *IRTy = PointerType::get(IntegerType::get(C, 8), AS);
-    EXPECT_EQ(Ty, LLT(*IRTy));
+    EXPECT_EQ(Ty, LLT(*IRTy, DL));
   }
 }
 
@@ -204,6 +208,7 @@ TEST(LowLevelTypeTest, Invalid) {
 
 TEST(LowLevelTypeTest, Unsized) {
   LLVMContext C;
+  DataLayout DL("");
 
   const LLT Ty = LLT::unsized();
 
@@ -214,6 +219,6 @@ TEST(LowLevelTypeTest, Unsized) {
   ASSERT_FALSE(Ty.isVector());
 
   Type *IRTy = Type::getLabelTy(C);
-  EXPECT_EQ(Ty, LLT(*IRTy));
+  EXPECT_EQ(Ty, LLT(*IRTy, DL));
 }
 }

@@ -2366,7 +2366,7 @@ template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {
   ArrayRef<uint8_t> StackMapContentsArray =
       unwrapOrError(Obj->getSectionContents(StackMapSection));
 
-  prettyPrintStackMap(llvm::outs(), StackMapV1Parser<ELFT::TargetEndianness>(
+  prettyPrintStackMap(llvm::outs(), StackMapV2Parser<ELFT::TargetEndianness>(
                                         StackMapContentsArray));
 }
 

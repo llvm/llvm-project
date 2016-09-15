@@ -757,7 +757,7 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     case Intrinsic::aarch64_ldxr: {
       unsigned BitWidth = KnownOne.getBitWidth();
       EVT VT = cast<MemIntrinsicSDNode>(Op)->getMemoryVT();
-      unsigned MemBits = VT.getScalarType().getSizeInBits();
+      unsigned MemBits = VT.getScalarSizeInBits();
       KnownZero |= APInt::getHighBitsSet(BitWidth, BitWidth - MemBits);
       return;
     }
@@ -2130,7 +2130,7 @@ static bool isExtendedBUILD_VECTOR(SDNode *N, SelectionDAG &DAG,
 
   for (const SDValue &Elt : N->op_values()) {
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Elt)) {
-      unsigned EltSize = VT.getVectorElementType().getSizeInBits();
+      unsigned EltSize = VT.getScalarSizeInBits();
       unsigned HalfSize = EltSize / 2;
       if (isSigned) {
         if (!isIntN(HalfSize, C->getSExtValue()))
@@ -2157,7 +2157,7 @@ static SDValue skipExtensionForVectorMULL(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::BUILD_VECTOR && "expected BUILD_VECTOR");
   EVT VT = N->getValueType(0);
   SDLoc dl(N);
-  unsigned EltSize = VT.getVectorElementType().getSizeInBits() / 2;
+  unsigned EltSize = VT.getScalarSizeInBits() / 2;
   unsigned NumElts = VT.getVectorNumElements();
   MVT TruncVT = MVT::getIntegerVT(EltSize);
   SmallVector<SDValue, 8> Ops;
@@ -3715,7 +3715,7 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
         // Don't combine AND since emitComparison converts the AND to an ANDS
         // (a.k.a. TST) and the test in the test bit and branch instruction
         // becomes redundant.  This would also increase register pressure.
-        uint64_t Mask = LHS.getValueType().getSizeInBits() - 1;
+        uint64_t Mask = LHS.getValueSizeInBits() - 1;
         return DAG.getNode(AArch64ISD::TBNZ, dl, MVT::Other, Chain, LHS,
                            DAG.getConstant(Mask, dl, MVT::i64), Dest);
       }
@@ -3725,7 +3725,7 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
       // Don't combine AND since emitComparison converts the AND to an ANDS
       // (a.k.a. TST) and the test in the test bit and branch instruction
       // becomes redundant.  This would also increase register pressure.
-      uint64_t Mask = LHS.getValueType().getSizeInBits() - 1;
+      uint64_t Mask = LHS.getValueSizeInBits() - 1;
       return DAG.getNode(AArch64ISD::TBZ, dl, MVT::Other, Chain, LHS,
                          DAG.getConstant(Mask, dl, MVT::i64), Dest);
     }
@@ -5028,7 +5028,7 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     }
   }
   unsigned ResMultiplier =
-      VT.getVectorElementType().getSizeInBits() / SmallestEltTy.getSizeInBits();
+      VT.getScalarSizeInBits() / SmallestEltTy.getSizeInBits();
   NumElts = VT.getSizeInBits() / SmallestEltTy.getSizeInBits();
   EVT ShuffleVT = EVT::getVectorVT(*DAG.getContext(), SmallestEltTy, NumElts);
 
@@ -5113,7 +5113,7 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
 
   // The stars all align, our next step is to produce the mask for the shuffle.
   SmallVector<int, 8> Mask(ShuffleVT.getVectorNumElements(), -1);
-  int BitsPerShuffleLane = ShuffleVT.getVectorElementType().getSizeInBits();
+  int BitsPerShuffleLane = ShuffleVT.getScalarSizeInBits();
   for (unsigned i = 0; i < VT.getVectorNumElements(); ++i) {
     SDValue Entry = Op.getOperand(i);
     if (Entry.isUndef())
@@ -5126,8 +5126,8 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     // trunc. So only std::min(SrcBits, DestBits) actually get defined in this
     // segment.
     EVT OrigEltTy = Entry.getOperand(0).getValueType().getVectorElementType();
-    int BitsDefined = std::min(OrigEltTy.getSizeInBits(),
-                               VT.getVectorElementType().getSizeInBits());
+    int BitsDefined =
+        std::min(OrigEltTy.getSizeInBits(), VT.getScalarSizeInBits());
     int LanesDefined = BitsDefined / BitsPerShuffleLane;
 
     // This source is expected to fill ResMultiplier lanes of the final shuffle,
@@ -5231,7 +5231,7 @@ static bool isREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
   assert((BlockSize == 16 || BlockSize == 32 || BlockSize == 64) &&
          "Only possible block sizes for REV are: 16, 32, 64");
 
-  unsigned EltSz = VT.getVectorElementType().getSizeInBits();
+  unsigned EltSz = VT.getScalarSizeInBits();
   if (EltSz == 64)
     return false;
 
@@ -5412,7 +5412,7 @@ static SDValue tryFormConcatFromShuffle(SDValue Op, SelectionDAG &DAG) {
       VT.getVectorElementType() != V1.getValueType().getVectorElementType())
     return SDValue();
 
-  bool SplitV0 = V0.getValueType().getSizeInBits() == 128;
+  bool SplitV0 = V0.getValueSizeInBits() == 128;
 
   if (!isConcatMask(Mask, VT, SplitV0))
     return SDValue();
@@ -5423,7 +5423,7 @@ static SDValue tryFormConcatFromShuffle(SDValue Op, SelectionDAG &DAG) {
     V0 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, CastVT, V0,
                      DAG.getConstant(0, DL, MVT::i64));
   }
-  if (V1.getValueType().getSizeInBits() == 128) {
+  if (V1.getValueSizeInBits() == 128) {
     V1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, CastVT, V1,
                      DAG.getConstant(0, DL, MVT::i64));
   }
@@ -5554,7 +5554,7 @@ static SDValue GenerateTBL(SDValue Op, ArrayRef<int> ShuffleMask,
 
   MVT IndexVT = MVT::v8i8;
   unsigned IndexLen = 8;
-  if (Op.getValueType().getSizeInBits() == 128) {
+  if (Op.getValueSizeInBits() == 128) {
     IndexVT = MVT::v16i8;
     IndexLen = 16;
   }
@@ -5949,7 +5949,7 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
   // Is C1 == ~C2, taking into account how much one can shift elements of a
   // particular size?
   uint64_t C2 = C2node->getZExtValue();
-  unsigned ElemSizeInBits = VT.getVectorElementType().getSizeInBits();
+  unsigned ElemSizeInBits = VT.getScalarSizeInBits();
   if (C2 > ElemSizeInBits)
     return SDValue();
   unsigned ElemMask = (1 << ElemSizeInBits) - 1;
@@ -6382,7 +6382,7 @@ FailedModImm:
       // DUPLANE works on 128-bit vectors, widen it if necessary.
       SDValue Lane = Value.getOperand(1);
       Value = Value.getOperand(0);
-      if (Value.getValueType().getSizeInBits() == 64)
+      if (Value.getValueSizeInBits() == 64)
         Value = WidenVector(Value, DAG);
 
       unsigned Opcode = getDUPLANEOp(VT.getVectorElementType());
@@ -6445,7 +6445,7 @@ FailedModImm:
   if (!isConstant && !usesOnlyOneValue) {
     SDValue Vec = DAG.getUNDEF(VT);
     SDValue Op0 = Op.getOperand(0);
-    unsigned ElemSize = VT.getVectorElementType().getSizeInBits();
+    unsigned ElemSize = VT.getScalarSizeInBits();
     unsigned i = 0;
     // For 32 and 64 bit types, use INSERT_SUBREG for lane zero to
     // a) Avoid a RMW dependency on the full vector register, and
@@ -6559,7 +6559,7 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
     return SDValue();
   unsigned Val = Cst->getZExtValue();
 
-  unsigned Size = Op.getValueType().getSizeInBits();
+  unsigned Size = Op.getValueSizeInBits();
 
   // This will get lowered to an appropriate EXTRACT_SUBREG in ISel.
   if (Val == 0)
@@ -6567,7 +6567,7 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
 
   // If this is extracting the upper 64-bits of a 128-bit vector, we match
   // that directly.
-  if (Size == 64 && Val * VT.getVectorElementType().getSizeInBits() == 64)
+  if (Size == 64 && Val * VT.getScalarSizeInBits() == 64)
     return Op;
 
   return SDValue();
@@ -6637,7 +6637,7 @@ static bool getVShiftImm(SDValue Op, unsigned ElementBits, int64_t &Cnt) {
 ///   0 <= Value <= ElementBits for a long left shift.
 static bool isVShiftLImm(SDValue Op, EVT VT, bool isLong, int64_t &Cnt) {
   assert(VT.isVector() && "vector shift count is not a vector type");
-  int64_t ElementBits = VT.getVectorElementType().getSizeInBits();
+  int64_t ElementBits = VT.getScalarSizeInBits();
   if (!getVShiftImm(Op, ElementBits, Cnt))
     return false;
   return (Cnt >= 0 && (isLong ? Cnt - 1 : Cnt) < ElementBits);
@@ -6648,7 +6648,7 @@ static bool isVShiftLImm(SDValue Op, EVT VT, bool isLong, int64_t &Cnt) {
 ///   1 <= Value <= ElementBits for a right shift; or
 static bool isVShiftRImm(SDValue Op, EVT VT, bool isNarrow, int64_t &Cnt) {
   assert(VT.isVector() && "vector shift count is not a vector type");
-  int64_t ElementBits = VT.getVectorElementType().getSizeInBits();
+  int64_t ElementBits = VT.getScalarSizeInBits();
   if (!getVShiftImm(Op, ElementBits, Cnt))
     return false;
   return (Cnt >= 1 && Cnt <= (isNarrow ? ElementBits / 2 : ElementBits));
@@ -6662,7 +6662,7 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
 
   if (!Op.getOperand(1).getValueType().isVector())
     return Op;
-  unsigned EltSize = VT.getVectorElementType().getSizeInBits();
+  unsigned EltSize = VT.getScalarSizeInBits();
 
   switch (Op.getOpcode()) {
   default:
@@ -7686,7 +7686,7 @@ static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Only optimize when the source and destination types have the same width.
-  if (VT.getSizeInBits() != N->getOperand(0).getValueType().getSizeInBits())
+  if (VT.getSizeInBits() != N->getOperand(0).getValueSizeInBits())
     return SDValue();
 
   // If the result of an integer load is only used by an integer-to-float
@@ -7937,7 +7937,7 @@ static SDValue tryCombineToBSL(SDNode *N,
 
   // We only have to look for constant vectors here since the general, variable
   // case can be handled in TableGen.
-  unsigned Bits = VT.getVectorElementType().getSizeInBits();
+  unsigned Bits = VT.getScalarSizeInBits();
   uint64_t BitMask = Bits == 64 ? -1ULL : ((1ULL << Bits) - 1);
   for (int i = 1; i >= 0; --i)
     for (int j = 1; j >= 0; --j) {
@@ -8126,7 +8126,7 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   // splat. The indexed instructions are going to be expecting a DUPLANE64, so
   // canonicalise to that.
   if (N0 == N1 && VT.getVectorNumElements() == 2) {
-    assert(VT.getVectorElementType().getSizeInBits() == 64);
+    assert(VT.getScalarSizeInBits() == 64);
     return DAG.getNode(AArch64ISD::DUPLANE64, dl, VT, WidenVector(N0, DAG),
                        DAG.getConstant(0, dl, MVT::i64));
   }
@@ -8189,7 +8189,7 @@ static SDValue tryCombineFixedPointConvert(SDNode *N,
     // The vector width should be 128 bits by the time we get here, even
     // if it started as 64 bits (the extract_vector handling will have
     // done so).
-    assert(Vec.getValueType().getSizeInBits() == 128 &&
+    assert(Vec.getValueSizeInBits() == 128 &&
            "unexpected vector size on extract_vector_elt!");
     if (Vec.getValueType() == MVT::v4i32)
       VecResTy = MVT::v4f32;
@@ -8691,7 +8691,7 @@ static SDValue performExtendCombine(SDNode *N,
   if (SrcVT.getSizeInBits() != 64)
     return SDValue();
 
-  unsigned SrcEltSize = SrcVT.getVectorElementType().getSizeInBits();
+  unsigned SrcEltSize = SrcVT.getScalarSizeInBits();
   unsigned ElementCount = SrcVT.getVectorNumElements();
   SrcVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize * 2), ElementCount);
   SDLoc DL(N);

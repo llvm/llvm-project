@@ -26,7 +26,7 @@ using namespace llvm;
 
 AArch64MachineLegalizer::AArch64MachineLegalizer() {
   using namespace TargetOpcode;
-  const LLT p0 = LLT::pointer(0);
+  const LLT p0 = LLT::pointer(0, 64);
   const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);

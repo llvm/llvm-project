@@ -23,7 +23,8 @@ class CVTypeVisitor {
 public:
   explicit CVTypeVisitor(TypeVisitorCallbacks &Callbacks);
 
-  Error visitTypeRecord(CVRecord<TypeLeafKind> &Record);
+  Error visitTypeRecord(CVType &Record);
+  Error visitMemberRecord(CVMemberRecord &Record);
 
   /// Visits the type records in Data. Sets the error flag on parse failures.
   Error visitTypeStream(const CVTypeArray &Types);

@@ -136,7 +136,7 @@ void DecodePSRLDQMask(MVT VT, unsigned Imm, SmallVectorImpl<int> &ShuffleMask) {
 void DecodePALIGNRMask(MVT VT, unsigned Imm,
                        SmallVectorImpl<int> &ShuffleMask) {
   unsigned NumElts = VT.getVectorNumElements();
-  unsigned Offset = Imm * (VT.getVectorElementType().getSizeInBits() / 8);
+  unsigned Offset = Imm * (VT.getScalarSizeInBits() / 8);
 
   unsigned NumLanes = VT.getSizeInBits() / 128;
   unsigned NumLaneElts = NumElts / NumLanes;

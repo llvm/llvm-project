@@ -203,7 +203,7 @@ def ProcessorFeatures {
   list<SubtargetFeature> Power8FeatureList =
       !listconcat(Power7FeatureList, Power8SpecificFeatures);
   list<SubtargetFeature> Power9SpecificFeatures =
-      [FeatureP9Altivec, FeatureP9Vector, FeatureISA3_0];
+      [DirectivePwr9, FeatureP9Altivec, FeatureP9Vector, FeatureISA3_0];
   list<SubtargetFeature> Power9FeatureList =
       !listconcat(Power8FeatureList, Power9SpecificFeatures);
 }

@@ -2363,10 +2363,10 @@ void SwingSchedulerDAG::generateProlog(SMSchedule &Schedule, unsigned LastStage,
 
   // Check if we need to remove the branch from the preheader to the original
   // loop, and replace it with a branch to the new loop.
-  unsigned numBranches = TII->RemoveBranch(*PreheaderBB);
+  unsigned numBranches = TII->removeBranch(*PreheaderBB);
   if (numBranches) {
     SmallVector<MachineOperand, 0> Cond;
-    TII->InsertBranch(*PreheaderBB, PrologBBs[0], nullptr, Cond, DebugLoc());
+    TII->insertBranch(*PreheaderBB, PrologBBs[0], nullptr, Cond, DebugLoc());
   }
 }
 
@@ -2452,13 +2452,13 @@ void SwingSchedulerDAG::generateEpilog(SMSchedule &Schedule, unsigned LastStage,
 
   // Create a branch to the new epilog from the kernel.
   // Remove the original branch and add a new branch to the epilog.
-  TII->RemoveBranch(*KernelBB);
-  TII->InsertBranch(*KernelBB, KernelBB, EpilogStart, Cond, DebugLoc());
+  TII->removeBranch(*KernelBB);
+  TII->insertBranch(*KernelBB, KernelBB, EpilogStart, Cond, DebugLoc());
   // Add a branch to the loop exit.
   if (EpilogBBs.size() > 0) {
     MachineBasicBlock *LastEpilogBB = EpilogBBs.back();
     SmallVector<MachineOperand, 4> Cond1;
-    TII->InsertBranch(*LastEpilogBB, LoopExitBB, nullptr, Cond1, DebugLoc());
+    TII->insertBranch(*LastEpilogBB, LoopExitBB, nullptr, Cond1, DebugLoc());
   }
 }
 
@@ -3013,12 +3013,12 @@ void SwingSchedulerDAG::addBranches(MBBVectorTy &PrologBBs,
     unsigned numAdded = 0;
     if (TargetRegisterInfo::isVirtualRegister(LC)) {
       Prolog->addSuccessor(Epilog);
-      numAdded = TII->InsertBranch(*Prolog, Epilog, LastPro, Cond, DebugLoc());
+      numAdded = TII->insertBranch(*Prolog, Epilog, LastPro, Cond, DebugLoc());
     } else if (j >= LCMin) {
       Prolog->addSuccessor(Epilog);
       Prolog->removeSuccessor(LastPro);
       LastEpi->removeSuccessor(Epilog);
-      numAdded = TII->InsertBranch(*Prolog, Epilog, nullptr, Cond, DebugLoc());
+      numAdded = TII->insertBranch(*Prolog, Epilog, nullptr, Cond, DebugLoc());
       removePhis(Epilog, LastEpi);
       // Remove the blocks that are no longer referenced.
       if (LastPro != LastEpi) {
@@ -3028,7 +3028,7 @@ void SwingSchedulerDAG::addBranches(MBBVectorTy &PrologBBs,
       LastPro->clear();
       LastPro->eraseFromParent();
     } else {
-      numAdded = TII->InsertBranch(*Prolog, LastPro, nullptr, Cond, DebugLoc());
+      numAdded = TII->insertBranch(*Prolog, LastPro, nullptr, Cond, DebugLoc());
       removePhis(Epilog, Prolog);
     }
     LastPro = Prolog;

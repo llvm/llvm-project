@@ -605,7 +605,10 @@ bool PPCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned PPCInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
+unsigned PPCInstrInfo::removeBranch(MachineBasicBlock &MBB,
+                                    int *BytesRemoved) const {
+  assert(!BytesRemoved && "code size not handled");
+
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
   if (I == MBB.end())
     return 0;
@@ -634,15 +637,17 @@ unsigned PPCInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
   return 2;
 }
 
-unsigned PPCInstrInfo::InsertBranch(MachineBasicBlock &MBB,
+unsigned PPCInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     ArrayRef<MachineOperand> Cond,
-                                    const DebugLoc &DL) const {
+                                    const DebugLoc &DL,
+                                    int *BytesAdded) const {
   // Shouldn't be a fall through.
-  assert(TBB && "InsertBranch must not be told to insert a fallthrough");
+  assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 2 || Cond.size() == 0) &&
          "PPC branch conditions have two components!");
+  assert(!BytesAdded && "code size not handled");
 
   bool isPPC64 = Subtarget.isPPC64();
 
@@ -1199,7 +1204,7 @@ PPCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 }
 
 bool PPCInstrInfo::
-ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
+reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 2 && "Invalid PPC branch opcode!");
   if (Cond[1].getReg() == PPC::CTR8 || Cond[1].getReg() == PPC::CTR)
     Cond[0].setImm(Cond[0].getImm() == 0 ? 1 : 0);

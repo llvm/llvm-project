@@ -21,6 +21,9 @@
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 
 namespace llvm {
+namespace msf {
+class MSFBuilder;
+}
 namespace pdb {
 class DbiStream;
 struct DbiStreamHeader;
@@ -28,7 +31,7 @@ class PDBFile;
 
 class DbiStreamBuilder {
 public:
-  DbiStreamBuilder(BumpPtrAllocator &Allocator);
+  DbiStreamBuilder(msf::MSFBuilder &Msf);
 
   DbiStreamBuilder(const DbiStreamBuilder &) = delete;
   DbiStreamBuilder &operator=(const DbiStreamBuilder &) = delete;
@@ -45,6 +48,8 @@ public:
 
   Error addModuleInfo(StringRef ObjFile, StringRef Module);
   Error addModuleSourceFile(StringRef Module, StringRef File);
+
+  Error finalizeMsfLayout();
 
   Expected<std::unique_ptr<DbiStream>> build(PDBFile &File,
                                              const msf::WritableStream &Buffer);
@@ -66,6 +71,7 @@ private:
     StringRef Mod;
   };
 
+  msf::MSFBuilder &Msf;
   BumpPtrAllocator &Allocator;
 
   Optional<PdbRaw_DbiVer> VerHeader;
