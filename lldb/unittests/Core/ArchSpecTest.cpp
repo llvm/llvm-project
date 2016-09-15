@@ -87,17 +87,9 @@ TEST(ArchSpecTest, TestParseMachCPUDashSubtypeTripleExtra) {
   EXPECT_EQ("", AS.GetTriple().getOSName());
 
   AS = ArchSpec();
-  EXPECT_TRUE(ParseMachCPUDashSubtypeTriple("12.10.10", AS));
-  EXPECT_EQ(12, AS.GetMachOCPUType());
-  EXPECT_EQ(10, AS.GetMachOCPUSubType());
-  EXPECT_EQ("apple", AS.GetTriple().getVendorName());
-  EXPECT_EQ("", AS.GetTriple().getOSName());
+  EXPECT_FALSE(ParseMachCPUDashSubtypeTriple("12.10.10", AS));
 
   AS = ArchSpec();
-  EXPECT_TRUE(ParseMachCPUDashSubtypeTriple("12-10.10", AS));
-  EXPECT_EQ(12, AS.GetMachOCPUType());
-  EXPECT_EQ(10, AS.GetMachOCPUSubType());
-  EXPECT_EQ("apple", AS.GetTriple().getVendorName());
-  EXPECT_EQ("", AS.GetTriple().getOSName());
+  EXPECT_FALSE(ParseMachCPUDashSubtypeTriple("12-10.10", AS));
 }
 

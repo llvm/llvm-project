@@ -2,10 +2,18 @@ cmake_minimum_required(VERSION 3.1)
 
 option(STREAM_EXECUTOR_UNIT_TESTS "enable unit tests" ON)
 option(STREAM_EXECUTOR_ENABLE_DOXYGEN "enable StreamExecutor doxygen" ON)
-option(STREAM_EXECUTOR_ENABLE_CONFIG_TOOL "enable building streamexecutor-config tool" ON)
-option(STREAM_EXECUTOR_ENABLE_CUDA_PLATFORM "enable building the CUDA StreamExecutor platform" OFF)
+option(
+    STREAM_EXECUTOR_ENABLE_CONFIG_TOOL
+    "enable building streamexecutor-config tool"
+    ON)
+option(STREAM_EXECUTOR_ENABLE_CUDA_PLATFORM
+    "enable building the CUDA StreamExecutor platform \
+(see CMake's 'FindCUDA' documentation for info on specifying the CUDA path)"
+    OFF)
 
-configure_file("include/streamexecutor/PlatformOptions.h.in" "include/streamexecutor/PlatformOptions.h")
+configure_file(
+    "include/streamexecutor/PlatformOptions.h.in"
+    "include/streamexecutor/PlatformOptions.h")
 
 # First find includes relative to the streamexecutor top-level source path.
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -63,6 +71,24 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add warning flags.
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
+
+# Check for CUDA if it is enabled.
+if(STREAM_EXECUTOR_ENABLE_CUDA_PLATFORM)
+    find_package(CUDA REQUIRED)
+    include_directories(${CUDA_INCLUDE_DIRS})
+    find_library(CUDA_DRIVER_LIBRARY cuda)
+    if(NOT CUDA_DRIVER_LIBRARY)
+        message(FATAL_ERROR
+            "could not find libcuda, \
+is the CUDA driver is installed on your system?")
+    endif()
+    set(
+        STREAM_EXECUTOR_CUDA_PLATFORM_TARGET_OBJECT
+        $<TARGET_OBJECTS:streamexecutor_cuda_platform>)
+    set(
+        STREAM_EXECUTOR_LIBCUDA_LIBRARIES
+        ${CUDA_DRIVER_LIBRARY})
+endif(STREAM_EXECUTOR_ENABLE_CUDA_PLATFORM)
 
 add_subdirectory(lib)
 add_subdirectory(examples)

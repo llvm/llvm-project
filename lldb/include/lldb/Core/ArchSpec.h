@@ -625,7 +625,7 @@ protected:
 //------------------------------------------------------------------
 bool operator<(const ArchSpec &lhs, const ArchSpec &rhs);
 
-bool ParseMachCPUDashSubtypeTriple(const char *triple_cstr, ArchSpec &arch);
+bool ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch);
 
 } // namespace lldb_private
 

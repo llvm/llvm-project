@@ -821,51 +821,48 @@ bool ArchSpec::SetTriple(const llvm::Triple &triple) {
   return IsValid();
 }
 
-bool lldb_private::ParseMachCPUDashSubtypeTriple(const char *triple_cstr,
-                                                 ArchSpec &arch) {
+bool lldb_private::ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch) {
   // Accept "12-10" or "12.10" as cpu type/subtype
-  if (isdigit(triple_cstr[0])) {
-    char *end = nullptr;
-    errno = 0;
-    uint32_t cpu = (uint32_t)::strtoul(triple_cstr, &end, 0);
-    if (errno == 0 && cpu != 0 && end && ((*end == '-') || (*end == '.'))) {
-      errno = 0;
-      uint32_t sub = (uint32_t)::strtoul(end + 1, &end, 0);
-      if (errno == 0 && end &&
-          ((*end == '-') || (*end == '.') || (*end == '\0'))) {
-        if (arch.SetArchitecture(eArchTypeMachO, cpu, sub)) {
-          if (*end == '-') {
-            llvm::StringRef vendor_os(end + 1);
-            size_t dash_pos = vendor_os.find('-');
-            if (dash_pos != llvm::StringRef::npos) {
-              llvm::StringRef vendor_str(vendor_os.substr(0, dash_pos));
-              arch.GetTriple().setVendorName(vendor_str);
-              const size_t vendor_start_pos = dash_pos + 1;
-              dash_pos = vendor_os.find('-', vendor_start_pos);
-              if (dash_pos == llvm::StringRef::npos) {
-                if (vendor_start_pos < vendor_os.size())
-                  arch.GetTriple().setOSName(
-                      vendor_os.substr(vendor_start_pos));
-              } else {
-                arch.GetTriple().setOSName(vendor_os.substr(
-                    vendor_start_pos, dash_pos - vendor_start_pos));
-              }
-            }
-          }
-          return true;
-        }
-      }
-    }
+  if (triple_str.empty())
+    return false;
+
+  size_t pos = triple_str.find_first_of("-.");
+  if (pos == llvm::StringRef::npos)
+    return false;
+
+  llvm::StringRef cpu_str = triple_str.substr(0, pos);
+  llvm::StringRef remainder = triple_str.substr(pos + 1);
+  if (cpu_str.empty() || remainder.empty())
+    return false;
+
+  llvm::StringRef sub_str;
+  llvm::StringRef vendor;
+  llvm::StringRef os;
+  std::tie(sub_str, remainder) = remainder.split('-');
+  std::tie(vendor, os) = remainder.split('-');
+
+  uint32_t cpu = 0;
+  uint32_t sub = 0;
+  if (cpu_str.getAsInteger(10, cpu) || sub_str.getAsInteger(10, sub))
+    return false;
+
+  if (!arch.SetArchitecture(eArchTypeMachO, cpu, sub))
+    return false;
+  if (!vendor.empty() && !os.empty()) {
+    arch.GetTriple().setVendorName(vendor);
+    arch.GetTriple().setOSName(os);
   }
-  return false;
+
+  return true;
 }
 
 bool ArchSpec::SetTriple(const char *triple_cstr) {
   if (triple_cstr && triple_cstr[0]) {
-    if (ParseMachCPUDashSubtypeTriple(triple_cstr, *this))
+    llvm::StringRef triple_stref(triple_cstr);
+
+    if (ParseMachCPUDashSubtypeTriple(triple_stref, *this))
       return true;
 
-    llvm::StringRef triple_stref(triple_cstr);
     if (triple_stref.startswith(LLDB_ARCH_DEFAULT)) {
       // Special case for the current host default architectures...
       if (triple_stref.equals(LLDB_ARCH_DEFAULT_32BIT))

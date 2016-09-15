@@ -93,6 +93,7 @@ struct PdbObject {
   Optional<PdbInfoStream> PdbStream;
   Optional<PdbDbiStream> DbiStream;
   Optional<PdbTpiStream> TpiStream;
+  Optional<PdbTpiStream> IpiStream;
 
   BumpPtrAllocator &Allocator;
 };

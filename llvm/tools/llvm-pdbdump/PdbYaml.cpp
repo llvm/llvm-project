@@ -138,6 +138,7 @@ void MappingTraits<PdbObject>::mapping(IO &IO, PdbObject &Obj) {
   IO.mapOptional("PdbStream", Obj.PdbStream);
   IO.mapOptional("DbiStream", Obj.DbiStream);
   IO.mapOptionalWithContext("TpiStream", Obj.TpiStream, Obj.Allocator);
+  IO.mapOptionalWithContext("IpiStream", Obj.IpiStream, Obj.Allocator);
 }
 
 void MappingTraits<MSFHeaders>::mapping(IO &IO, MSFHeaders &Obj) {

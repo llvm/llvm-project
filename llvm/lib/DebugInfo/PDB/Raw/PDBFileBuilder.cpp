@@ -62,8 +62,14 @@ DbiStreamBuilder &PDBFileBuilder::getDbiBuilder() {
 
 TpiStreamBuilder &PDBFileBuilder::getTpiBuilder() {
   if (!Tpi)
-    Tpi = llvm::make_unique<TpiStreamBuilder>(*Msf);
+    Tpi = llvm::make_unique<TpiStreamBuilder>(*Msf, StreamTPI);
   return *Tpi;
+}
+
+TpiStreamBuilder &PDBFileBuilder::getIpiBuilder() {
+  if (!Ipi)
+    Ipi = llvm::make_unique<TpiStreamBuilder>(*Msf, StreamIPI);
+  return *Ipi;
 }
 
 Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() const {
@@ -77,6 +83,10 @@ Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() const {
   }
   if (Tpi) {
     if (auto EC = Tpi->finalizeMsfLayout())
+      return std::move(EC);
+  }
+  if (Ipi) {
+    if (auto EC = Ipi->finalizeMsfLayout())
       return std::move(EC);
   }
 
@@ -111,6 +121,13 @@ PDBFileBuilder::build(std::unique_ptr<msf::WritableStream> PdbFileBuffer) {
     if (!ExpectedTpi)
       return ExpectedTpi.takeError();
     File->Tpi = std::move(*ExpectedTpi);
+  }
+
+  if (Ipi) {
+    auto ExpectedIpi = Ipi->build(*File, *PdbFileBuffer);
+    if (!ExpectedIpi)
+      return ExpectedIpi.takeError();
+    File->Ipi = std::move(*ExpectedIpi);
   }
 
   if (File->Info && File->Dbi && File->Info->getAge() != File->Dbi->getAge())
@@ -163,6 +180,11 @@ Error PDBFileBuilder::commit(const msf::WritableStream &Buffer) {
 
   if (Tpi) {
     if (auto EC = Tpi->commit(Layout, Buffer))
+      return EC;
+  }
+
+  if (Ipi) {
+    if (auto EC = Ipi->commit(Layout, Buffer))
       return EC;
   }
 

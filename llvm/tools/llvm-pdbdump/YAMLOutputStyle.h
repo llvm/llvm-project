@@ -32,6 +32,7 @@ private:
   Error dumpPDBStream();
   Error dumpDbiStream();
   Error dumpTpiStream();
+  Error dumpIpiStream();
 
   void flush();
 

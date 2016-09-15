@@ -44,7 +44,7 @@ D: libc++
 
 N: Peter Collingbourne
 E: peter@pcc.me.uk
-D: llgo
+D: llgo, libLTO (lib/LTO/* tools/lto/*)
 
 N: Quentin Colombet
 E: qcolombet@apple.com
@@ -194,7 +194,7 @@ D: SystemZ Backend
 
 N: Bill Wendling
 E: isanbard@gmail.com
-D: libLTO, IR Linker
+D: IR Linker
 
 N: Hans Wennborg
 E: hans@chromium.org

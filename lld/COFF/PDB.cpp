@@ -10,6 +10,7 @@
 #include "Driver.h"
 #include "Error.h"
 #include "Symbols.h"
+#include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include <memory>
@@ -18,24 +19,11 @@ using namespace llvm;
 using namespace llvm::support;
 using namespace llvm::support::endian;
 
-const int PageSize = 4096;
-const uint8_t Magic[32] = "Microsoft C/C++ MSF 7.00\r\n\032DS\0\0";
-
-namespace {
-struct PDBHeader {
-  uint8_t Magic[32];
-  ulittle32_t PageSize;
-  ulittle32_t FpmPage;
-  ulittle32_t PageCount;
-  ulittle32_t RootSize;
-  ulittle32_t Reserved;
-  ulittle32_t RootPointer;
-};
-}
+const int BlockSize = 4096;
 
 void lld::coff::createPDB(StringRef Path) {
   // Create a file.
-  size_t FileSize = PageSize * 3;
+  size_t FileSize = BlockSize * 3;
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Path, FileSize);
   if (auto EC = BufferOrErr.getError())
@@ -44,18 +32,23 @@ void lld::coff::createPDB(StringRef Path) {
 
   // Write the file header.
   uint8_t *Buf = Buffer->getBufferStart();
-  auto *Hdr = reinterpret_cast<PDBHeader *>(Buf);
-  memcpy(Hdr->Magic, Magic, sizeof(Magic));
-  Hdr->PageSize = PageSize;
-  // I don't know what FpmPage field means, but it must not be 0.
-  Hdr->FpmPage = 1;
-  Hdr->PageCount = FileSize / PageSize;
+  auto *SB = reinterpret_cast<msf::SuperBlock *>(Buf);
+  memcpy(SB->MagicBytes, msf::Magic, sizeof(msf::Magic));
+  SB->BlockSize = BlockSize;
+
+  // FreeBlockMap is a page number containing free page map bitmap.
+  // Set a dummy value for now.
+  SB->FreeBlockMapBlock = 1;
+
+  SB->NumBlocks = FileSize / BlockSize;
+
   // Root directory is empty, containing only the length field.
-  Hdr->RootSize = 4;
+  SB->NumDirectoryBytes = 4;
+
   // Root directory is on page 1.
-  Hdr->RootPointer = 1;
+  SB->BlockMapAddr = 1;
 
   // Write the root directory. Root stream is on page 2.
-  write32le(Buf + PageSize, 2);
+  write32le(Buf + BlockSize, 2);
   Buffer->commit();
 }
