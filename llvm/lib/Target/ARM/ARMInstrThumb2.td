@@ -4819,6 +4819,10 @@ def : t2InstAlias<"add${p} $Rd, pc, $imm",
 def t2LDRConstPool
   : t2AsmPseudo<"ldr${p} $Rt, $immediate",
                 (ins GPRnopc:$Rt, const_pool_asm_imm:$immediate, pred:$p)>;
+// Version w/ the .w suffix.
+def : t2InstAlias<"ldr${p}.w $Rt, $immediate",
+                  (t2LDRConstPool GPRnopc:$Rt,
+                  const_pool_asm_imm:$immediate, pred:$p)>;
 
 // PLD/PLDW/PLI with alternate literal form.
 def : t2InstAlias<"pld${p} $addr",

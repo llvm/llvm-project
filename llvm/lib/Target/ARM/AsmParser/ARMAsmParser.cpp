@@ -6933,6 +6933,9 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     else if (Inst.getOpcode() == ARM::t2LDRConstPool)
       TmpInst.setOpcode(ARM::t2LDRpci);
     const ARMOperand &PoolOperand =
+      (static_cast<ARMOperand &>(*Operands[2]).isToken() &&
+       static_cast<ARMOperand &>(*Operands[2]).getToken() == ".w") ?
+      static_cast<ARMOperand &>(*Operands[4]) :
       static_cast<ARMOperand &>(*Operands[3]);
     const MCExpr *SubExprVal = PoolOperand.getConstantPoolImm();
     // If SubExprVal is a constant we may be able to use a MOV
