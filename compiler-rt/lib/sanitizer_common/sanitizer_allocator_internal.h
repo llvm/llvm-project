@@ -61,8 +61,8 @@ enum InternalAllocEnum {
 } // namespace __sanitizer
 
 inline void *operator new(__sanitizer::operator_new_size_type size,
-                          InternalAllocEnum) {
-  return InternalAlloc(size);
+                          __sanitizer::InternalAllocEnum) {
+  return __sanitizer::InternalAlloc(size);
 }
 
 #endif // SANITIZER_ALLOCATOR_INTERNAL_H

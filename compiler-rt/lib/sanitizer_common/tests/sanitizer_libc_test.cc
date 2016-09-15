@@ -25,6 +25,8 @@
 # include "sanitizer_common/sanitizer_posix.h"
 #endif
 
+using namespace __sanitizer;
+
 // A regression test for internal_memmove() implementation.
 TEST(SanitizerCommon, InternalMemmoveRegression) {
   char src[] = "Hello World";

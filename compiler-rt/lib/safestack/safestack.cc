@@ -92,6 +92,8 @@ static __thread void *unsafe_stack_start = nullptr;
 static __thread size_t unsafe_stack_size = 0;
 static __thread size_t unsafe_stack_guard = 0;
 
+using namespace __sanitizer;
+
 static inline void *unsafe_stack_alloc(size_t size, size_t guard) {
   CHECK_GE(size + guard, size);
   void *addr = MmapOrDie(size + guard, "unsafe_stack_alloc");
