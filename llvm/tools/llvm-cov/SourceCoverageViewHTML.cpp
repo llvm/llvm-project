@@ -588,11 +588,10 @@ void SourceCoverageViewHTML::renderInstantiationView(raw_ostream &OS,
   OS << EndExpansionDiv;
 }
 
-void SourceCoverageViewHTML::renderCellInTitle(raw_ostream &OS,
-                                               StringRef CellText) {
+void SourceCoverageViewHTML::renderTitle(raw_ostream &OS, StringRef Title) {
   if (getOptions().hasProjectTitle())
     OS << tag(ProjectTitleTag, escape(getOptions().ProjectTitle, getOptions()));
-  OS << tag(ReportTitleTag, escape(CellText, getOptions()));
+  OS << tag(ReportTitleTag, escape(Title, getOptions()));
   if (getOptions().hasCreatedTime())
     OS << tag(CreatedTimeTag,
               escape(getOptions().CreatedTimeStr, getOptions()));

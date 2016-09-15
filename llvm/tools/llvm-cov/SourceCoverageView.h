@@ -240,9 +240,9 @@ protected:
   virtual void renderInstantiationView(raw_ostream &OS, InstantiationView &ISV,
                                        unsigned ViewDepth) = 0;
 
-  /// \brief Render the project title, the report title \p CellText and the
-  /// created time for the view.
-  virtual void renderCellInTitle(raw_ostream &OS, StringRef CellText) = 0;
+  /// \brief Render \p Title, a project title if one is available, and the
+  /// created time.
+  virtual void renderTitle(raw_ostream &OS, StringRef CellText) = 0;
 
   /// \brief Render the table header for a given source file.
   virtual void renderTableHeader(raw_ostream &OS, unsigned FirstUncoveredLineNo,
