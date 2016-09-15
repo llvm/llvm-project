@@ -33,7 +33,8 @@ bool DlAddrSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   int result = dladdr((const void *)addr, &info);
   if (!result) return false;
   const char *demangled = DemangleSwiftAndCXX(info.dli_sname);
-  stack->info.function = demangled ? internal_strdup(demangled) : nullptr;
+  if (!demangled) return false;
+  stack->info.function = internal_strdup(demangled);
   return true;
 }
 
