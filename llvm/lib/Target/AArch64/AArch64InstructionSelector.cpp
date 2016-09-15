@@ -50,8 +50,8 @@ static bool unsupportedBinOp(const MachineInstr &I,
                              const MachineRegisterInfo &MRI,
                              const AArch64RegisterInfo &TRI) {
   LLT Ty = MRI.getType(I.getOperand(0).getReg());
-  if (!Ty.isSized()) {
-    DEBUG(dbgs() << "Generic binop should be sized\n");
+  if (!Ty.isValid()) {
+    DEBUG(dbgs() << "Generic binop register should be typed\n");
     return true;
   }
 
@@ -220,9 +220,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     return false;
   }
 
-  const LLT Ty = I.getOperand(0).isReg() ? MRI.getType(I.getOperand(0).getReg())
-                                         : LLT::unsized();
-  assert(Ty.isValid() && "Generic instruction doesn't have a type");
+  LLT Ty =
+      I.getOperand(0).isReg() ? MRI.getType(I.getOperand(0).getReg()) : LLT{};
 
   switch (I.getOpcode()) {
   case TargetOpcode::G_BR: {
@@ -232,9 +231,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
   case TargetOpcode::G_FRAME_INDEX: {
     // allocas and G_FRAME_INDEX are only supported in addrspace(0).
-    if (Ty != LLT::pointer(0)) {
+    if (Ty != LLT::pointer(0, 64)) {
       DEBUG(dbgs() << "G_FRAME_INDEX pointer has type: " << Ty
-                   << ", expected: " << LLT::pointer(0) << '\n');
+            << ", expected: " << LLT::pointer(0, 64) << '\n');
       return false;
     }
 
@@ -251,9 +250,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     LLT MemTy = Ty;
     LLT PtrTy = MRI.getType(I.getOperand(1).getReg());
 
-    if (PtrTy != LLT::pointer(0)) {
+    if (PtrTy != LLT::pointer(0, 64)) {
       DEBUG(dbgs() << "Load/Store pointer has type: " << PtrTy
-                   << ", expected: " << LLT::pointer(0) << '\n');
+                   << ", expected: " << LLT::pointer(0, 64) << '\n');
       return false;
     }
 

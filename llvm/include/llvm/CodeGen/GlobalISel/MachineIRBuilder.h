@@ -437,8 +437,8 @@ public:
   /// \pre \p Res must be a generic virtual register with scalar or
   ///      vector type. Typically this starts as s1 or <N x s1>.
   /// \pre \p Op0 and Op1 must be generic virtual registers with the
-  ///      same number of elements as \p Res (or scalar, if \p Res is
-  ///      scalar).
+  ///      same number of elements as \p Res. If \p Res is a scalar,
+  ///      \p Op0 must be either a scalar or pointer.
   /// \pre \p Pred must be an integer predicate.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.

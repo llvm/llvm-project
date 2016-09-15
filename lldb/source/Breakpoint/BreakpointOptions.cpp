@@ -28,8 +28,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-const char *BreakpointOptions::CommandData::g_option_names
-    [BreakpointOptions::CommandData::OptionNames::LastOptionName]{
+const char
+    *BreakpointOptions::CommandData::g_option_names[static_cast<uint32_t>(
+        BreakpointOptions::CommandData::OptionNames::LastOptionName)]{
         "UserSource", "ScriptSource", "StopOnError"};
 
 StructuredData::ObjectSP

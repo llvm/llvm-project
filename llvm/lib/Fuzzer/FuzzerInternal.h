@@ -365,13 +365,27 @@ class TracePC {
   size_t UpdateCounterMap(ValueBitMap *Map);
   void FinalizeTrace();
 
+  size_t GetNewPCsAndFlush(uintptr_t **NewPCsPtr = nullptr) {
+    if (NewPCsPtr)
+      *NewPCsPtr = NewPCs;
+    size_t Res = NumNewPCs;
+    NumNewPCs = 0;
+    return Res;
+  }
+
 private:
   bool UseCounters = false;
   size_t TotalCoverage = 0;
   size_t TotalCounterBits = 0;
 
+  static const size_t kMaxNewPCs = 64;
+  uintptr_t NewPCs[kMaxNewPCs];
+  size_t NumNewPCs = 0;
+  void AddNewPC(uintptr_t PC) { NewPCs[(NumNewPCs++) % kMaxNewPCs] = PC; }
+
   uint8_t *Start, *Stop;
   ValueBitMap CounterMap;
+  ValueBitMap TotalCoverageMap;
 };
 
 extern TracePC TPC;
@@ -469,6 +483,7 @@ private:
   void MutateAndTestOne();
   void ReportNewCoverage(const Unit &U);
   void PrintNewPCs();
+  void PrintOneNewPC(uintptr_t PC);
   bool RunOne(const Unit &U) { return RunOne(U.data(), U.size()); }
   void RunOneAndUpdateCorpus(const uint8_t *Data, size_t Size);
   void WriteToOutputCorpus(const Unit &U);

@@ -42,8 +42,6 @@ extern "C" void __tsan_resume() {
   __tsan_resumed = 1;
 }
 
-extern "C" void __sanitizer_print_memory_profile(int percent) {}  // Stub.
-
 namespace __tsan {
 
 #if !defined(SANITIZER_GO) && !SANITIZER_MAC

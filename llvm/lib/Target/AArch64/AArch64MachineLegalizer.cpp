@@ -26,7 +26,7 @@ using namespace llvm;
 
 AArch64MachineLegalizer::AArch64MachineLegalizer() {
   using namespace TargetOpcode;
-  const LLT p0 = LLT::pointer(0);
+  const LLT p0 = LLT::pointer(0, 64);
   const LLT s1 = LLT::scalar(1);
   const LLT s8 = LLT::scalar(8);
   const LLT s16 = LLT::scalar(16);
@@ -42,6 +42,12 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
     for (auto Ty : {s1, s8, s16, s32, s64, v2s32, v4s32, v2s64})
       setAction({BinOp, Ty}, Legal);
   }
+
+  setAction({G_GEP, p0}, Legal);
+  setAction({G_GEP, 1, s64}, Legal);
+
+  for (auto Ty : {s1, s8, s16, s32})
+    setAction({G_GEP, 1, Ty}, WidenScalar);
 
   for (auto BinOp : {G_LSHR, G_ASHR, G_SDIV, G_UDIV}) {
     for (auto Ty : {s32, s64})
@@ -95,6 +101,7 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
   setAction({G_ICMP, s1}, Legal);
   setAction({G_ICMP, 1, s32}, Legal);
   setAction({G_ICMP, 1, s64}, Legal);
+  setAction({G_ICMP, 1, p0}, Legal);
 
   for (auto Ty : {s1, s8, s16}) {
     setAction({G_ICMP, 1, Ty}, WidenScalar);
@@ -149,7 +156,6 @@ AArch64MachineLegalizer::AArch64MachineLegalizer() {
   }
 
   // Control-flow
-  setAction({G_BR, LLT::unsized()}, Legal);
   setAction({G_BRCOND, s32}, Legal);
   for (auto Ty : {s1, s8, s16})
     setAction({G_BRCOND, Ty}, WidenScalar);

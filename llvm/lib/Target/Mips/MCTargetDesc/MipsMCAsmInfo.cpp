@@ -59,4 +59,8 @@ MipsMCAsmInfo::MipsMCAsmInfo(const Triple &TheTriple) {
   if (TheTriple.getArch() == Triple::mips ||
       TheTriple.getArch() == Triple::mipsel)
     UseIntegratedAssembler = true;
+
+  // Enable IAS by default for Debian mips64/mips64el.
+  if (TheTriple.getEnvironment() == Triple::GNUABI64)
+    UseIntegratedAssembler = true;
 }

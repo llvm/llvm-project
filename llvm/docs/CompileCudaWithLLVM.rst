@@ -126,6 +126,63 @@ Flags you may wish to tweak include:
 
   This is implied by ``-ffast-math``.
 
+Standard library support
+========================
+
+In clang and nvcc, most of the C++ standard library is not supported on the
+device side.
+
+``math.h`` and ``cmath``
+------------------------
+
+In clang, ``math.h`` and ``cmath`` are available and `pass
+<https://github.com/llvm-mirror/test-suite/blob/master/External/CUDA/math_h.cu>`_
+`tests
+<https://github.com/llvm-mirror/test-suite/blob/master/External/CUDA/cmath.cu>`_
+adapted from libc++'s test suite.
+
+In nvcc ``math.h`` and ``cmath`` are mostly available.  Versions of ``::foof``
+in namespace std (e.g. ``std::sinf``) are not available, and where the standard
+calls for overloads that take integral arguments, these are usually not
+available.
+
+.. code-block:: c++
+
+  #include <math.h>
+  #include <cmath.h>
+
+  // clang is OK with everything in this function.
+  __device__ void test() {
+    std::sin(0.); // nvcc - ok
+    std::sin(0);  // nvcc - error, because no std::sin(int) override is available.
+    sin(0);       // nvcc - same as above.
+
+    sinf(0.);       // nvcc - ok
+    std::sinf(0.);  // nvcc - no such function
+  }
+
+``std::complex``
+----------------
+
+nvcc does not officially support ``std::complex``.  It's an error to use
+``std::complex`` in ``__device__`` code, but it often works in ``__host__
+__device__`` code due to nvcc's interpretation of the "wrong-side rule" (see
+below).  However, we have heard from implementers that it's possible to get
+into situations where nvcc will omit a call to an ``std::complex`` function,
+especially when compiling without optimizations.
+
+clang does not yet support ``std::complex``.  Because we interpret the
+"wrong-side rule" more strictly than nvcc, ``std::complex`` doesn't work in
+``__device__`` or ``__host__ __device__`` code.
+
+In the meantime, you can get limited ``std::complex`` support in clang by
+building your code for C++14.  In clang, all ``constexpr`` functions are always
+implicitly ``__host__ __device__`` (this corresponds to nvcc's
+``--relaxed-constexpr`` flag).  In C++14, many ``std::complex`` functions are
+``constexpr``, so you can use these with clang.  (nvcc does not currently
+support C++14.)
+
+
 Detecting clang vs NVCC from code
 =================================
 
@@ -145,15 +202,292 @@ compilation, in host and device modes:
 .. code-block:: c++
 
   #if defined(__clang__) && defined(__CUDA__) && !defined(__CUDA_ARCH__)
-    // clang compiling CUDA code, host mode.
+  // clang compiling CUDA code, host mode.
   #endif
 
   #if defined(__clang__) && defined(__CUDA__) && defined(__CUDA_ARCH__)
-    // clang compiling CUDA code, device mode.
+  // clang compiling CUDA code, device mode.
   #endif
 
 Both clang and nvcc define ``__CUDACC__`` during CUDA compilation.  You can
 detect NVCC specifically by looking for ``__NVCC__``.
+
+Dialect Differences Between clang and nvcc
+==========================================
+
+There is no formal CUDA spec, and clang and nvcc speak slightly different
+dialects of the language.  Below, we describe some of the differences.
+
+This section is painful; hopefully you can skip this section and live your life
+blissfully unaware.
+
+Compilation Models
+------------------
+
+Most of the differences between clang and nvcc stem from the different
+compilation models used by clang and nvcc.  nvcc uses *split compilation*,
+which works roughly as follows:
+
+ * Run a preprocessor over the input ``.cu`` file to split it into two source
+   files: ``H``, containing source code for the host, and ``D``, containing
+   source code for the device.
+
+ * For each GPU architecture ``arch`` that we're compiling for, do:
+
+   * Compile ``D`` using nvcc proper.  The result of this is a ``ptx`` file for
+     ``P_arch``.
+
+   * Optionally, invoke ``ptxas``, the PTX assembler, to generate a file,
+     ``S_arch``, containing GPU machine code (SASS) for ``arch``.
+
+ * Invoke ``fatbin`` to combine all ``P_arch`` and ``S_arch`` files into a
+   single "fat binary" file, ``F``.
+
+ * Compile ``H`` using an external host compiler (gcc, clang, or whatever you
+   like).  ``F`` is packaged up into a header file which is force-included into
+   ``H``; nvcc generates code that calls into this header to e.g. launch
+   kernels.
+
+clang uses *merged parsing*.  This is similar to split compilation, except all
+of the host and device code is present and must be semantically-correct in both
+compilation steps.
+
+  * For each GPU architecture ``arch`` that we're compiling for, do:
+
+    * Compile the input ``.cu`` file for device, using clang.  ``__host__`` code
+      is parsed and must be semantically correct, even though we're not
+      generating code for the host at this time.
+
+      The output of this step is a ``ptx`` file ``P_arch``.
+
+    * Invoke ``ptxas`` to generate a SASS file, ``S_arch``.  Note that, unlike
+      nvcc, clang always generates SASS code.
+
+  * Invoke ``fatbin`` to combine all ``P_arch`` and ``S_arch`` files into a
+    single fat binary file, ``F``.
+
+  * Compile ``H`` using clang.  ``__device__`` code is parsed and must be
+    semantically correct, even though we're not generating code for the device
+    at this time.
+
+    ``F`` is passed to this compilation, and clang includes it in a special ELF
+    section, where it can be found by tools like ``cuobjdump``.
+
+(You may ask at this point, why does clang need to parse the input file
+multiple times?  Why not parse it just once, and then use the AST to generate
+code for the host and each device architecture?
+
+Unfortunately this can't work because we have to define different macros during
+host compilation and during device compilation for each GPU architecture.)
+
+clang's approach allows it to be highly robust to C++ edge cases, as it doesn't
+need to decide at an early stage which declarations to keep and which to throw
+away.  But it has some consequences you should be aware of.
+
+Overloading Based on ``__host__`` and ``__device__`` Attributes
+---------------------------------------------------------------
+
+Let "H", "D", and "HD" stand for "``__host__`` functions", "``__device__``
+functions", and "``__host__ __device__`` functions", respectively.  Functions
+with no attributes behave the same as H.
+
+nvcc does not allow you to create H and D functions with the same signature:
+
+.. code-block:: c++
+
+  // nvcc: error - function "foo" has already been defined
+  __host__ void foo() {}
+  __device__ void foo() {}
+
+However, nvcc allows you to "overload" H and D functions with different
+signatures:
+
+.. code-block:: c++
+
+  // nvcc: no error
+  __host__ void foo(int) {}
+  __device__ void foo() {}
+
+In clang, the ``__host__`` and ``__device__`` attributes are part of a
+function's signature, and so it's legal to have H and D functions with
+(otherwise) the same signature:
+
+.. code-block:: c++
+
+  // clang: no error
+  __host__ void foo() {}
+  __device__ void foo() {}
+
+HD functions cannot be overloaded by H or D functions with the same signature:
+
+.. code-block:: c++
+
+  // nvcc: error - function "foo" has already been defined
+  // clang: error - redefinition of 'foo'
+  __host__ __device__ void foo() {}
+  __device__ void foo() {}
+
+  // nvcc: no error
+  // clang: no error
+  __host__ __device__ void bar(int) {}
+  __device__ void bar() {}
+
+When resolving an overloaded function, clang considers the host/device
+attributes of the caller and callee.  These are used as a tiebreaker during
+overload resolution.  See `IdentifyCUDAPreference
+<http://clang.llvm.org/doxygen/SemaCUDA_8cpp.html>`_ for the full set of rules,
+but at a high level they are:
+
+ * D functions prefer to call other Ds.  HDs are given lower priority.
+
+ * Similarly, H functions prefer to call other Hs, or ``__global__`` functions
+   (with equal priority).  HDs are given lower priority.
+
+ * HD functions prefer to call other HDs.
+
+   When compiling for device, HDs will call Ds with lower priority than HD, and
+   will call Hs with still lower priority.  If it's forced to call an H, the
+   program is malformed if we emit code for this HD function.  We call this the
+   "wrong-side rule", see example below.
+
+   The rules are symmetrical when compiling for host.
+
+Some examples:
+
+.. code-block:: c++
+
+   __host__ void foo();
+   __device__ void foo();
+
+   __host__ void bar();
+   __host__ __device__ void bar();
+
+   __host__ void test_host() {
+     foo();  // calls H overload
+     bar();  // calls H overload
+   }
+
+   __device__ void test_device() {
+     foo();  // calls D overload
+     bar();  // calls HD overload
+   }
+
+   __host__ __device__ void test_hd() {
+     foo();  // calls H overload when compiling for host, otherwise D overload
+     bar();  // always calls HD overload
+   }
+
+Wrong-side rule example:
+
+.. code-block:: c++
+
+  __host__ void host_only();
+
+  // We don't codegen inline functions unless they're referenced by a
+  // non-inline function.  inline_hd1() is called only from the host side, so
+  // does not generate an error.  inline_hd2() is called from the device side,
+  // so it generates an error.
+  inline __host__ __device__ void inline_hd1() { host_only(); }  // no error
+  inline __host__ __device__ void inline_hd2() { host_only(); }  // error
+
+  __host__ void host_fn() { inline_hd1(); }
+  __device__ void device_fn() { inline_hd2(); }
+
+  // This function is not inline, so it's always codegen'ed on both the host
+  // and the device.  Therefore, it generates an error.
+  __host__ __device__ void not_inline_hd() { host_only(); }
+
+For the purposes of the wrong-side rule, templated functions also behave like
+``inline`` functions: They aren't codegen'ed unless they're instantiated
+(usually as part of the process of invoking them).
+
+clang's behavior with respect to the wrong-side rule matches nvcc's, except
+nvcc only emits a warning for ``not_inline_hd``; device code is allowed to call
+``not_inline_hd``.  In its generated code, nvcc may omit ``not_inline_hd``'s
+call to ``host_only`` entirely, or it may try to generate code for
+``host_only`` on the device.  What you get seems to depend on whether or not
+the compiler chooses to inline ``host_only``.
+
+Member functions, including constructors, may be overloaded using H and D
+attributes.  However, destructors cannot be overloaded.
+
+Using a Different Class on Host/Device
+--------------------------------------
+
+Occasionally you may want to have a class with different host/device versions.
+
+If all of the class's members are the same on the host and device, you can just
+provide overloads for the class's member functions.
+
+However, if you want your class to have different members on host/device, you
+won't be able to provide working H and D overloads in both classes. In this
+case, clang is likely to be unhappy with you.
+
+.. code-block:: c++
+
+  #ifdef __CUDA_ARCH__
+  struct S {
+    __device__ void foo() { /* use device_only */ }
+    int device_only;
+  };
+  #else
+  struct S {
+    __host__ void foo() { /* use host_only */ }
+    double host_only;
+  };
+
+  __device__ void test() {
+    S s;
+    // clang generates an error here, because during host compilation, we
+    // have ifdef'ed away the __device__ overload of S::foo().  The __device__
+    // overload must be present *even during host compilation*.
+    S.foo();
+  }
+  #endif
+
+We posit that you don't really want to have classes with different members on H
+and D.  For example, if you were to pass one of these as a parameter to a
+kernel, it would have a different layout on H and D, so would not work
+properly.
+
+To make code like this compatible with clang, we recommend you separate it out
+into two classes.  If you need to write code that works on both host and
+device, consider writing an overloaded wrapper function that returns different
+types on host and device.
+
+.. code-block:: c++
+
+  struct HostS { ... };
+  struct DeviceS { ... };
+
+  __host__ HostS MakeStruct() { return HostS(); }
+  __device__ DeviceS MakeStruct() { return DeviceS(); }
+
+  // Now host and device code can call MakeStruct().
+
+Unfortunately, this idiom isn't compatible with nvcc, because it doesn't allow
+you to overload based on the H/D attributes.  Here's an idiom that works with
+both clang and nvcc:
+
+.. code-block:: c++
+
+  struct HostS { ... };
+  struct DeviceS { ... };
+
+  #ifdef __NVCC__
+    #ifndef __CUDA_ARCH__
+      __host__ HostS MakeStruct() { return HostS(); }
+    #else
+      __device__ DeviceS MakeStruct() { return DeviceS(); }
+    #endif
+  #else
+    __host__ HostS MakeStruct() { return HostS(); }
+    __device__ DeviceS MakeStruct() { return DeviceS(); }
+  #endif
+
+  // Now host and device code can call MakeStruct().
+
+Hopefully you don't have to do this sort of thing often.
 
 Optimizations
 =============

@@ -188,7 +188,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     BankID = AArch64::GPRRegBankID;
 
   Mapping = InstructionMapping{1, 1, MI.getNumOperands()};
-  int Size = Ty.isSized() ? Ty.getSizeInBits() : 0;
+  int Size = Ty.isValid() ? Ty.getSizeInBits() : 0;
   for (unsigned Idx = 0; Idx < MI.getNumOperands(); ++Idx)
     Mapping.setOperandMapping(Idx, Size, getRegBank(BankID));
 

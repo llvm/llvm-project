@@ -59,11 +59,23 @@ using namespace llvm;
 STATISTIC(NumTailCalls, "Number of tail calls");
 STATISTIC(NumMovwMovt, "Number of GAs materialized with movw + movt");
 STATISTIC(NumLoopByVals, "Number of loops generated for byval arguments");
+STATISTIC(NumConstpoolPromoted,
+  "Number of constants with their storage promoted into constant pools");
 
 static cl::opt<bool>
 ARMInterworking("arm-interworking", cl::Hidden,
   cl::desc("Enable / disable ARM interworking (for debugging only)"),
   cl::init(true));
+
+static cl::opt<bool> EnableConstpoolPromotion(
+    "arm-promote-constant", cl::Hidden,
+    cl::desc("Enable / disable promotion of unnamed_addr constants into "
+             "constant pools"),
+    cl::init(true));
+static cl::opt<unsigned> ConstpoolPromotionMaxSize(
+    "arm-promote-constant-max-size", cl::Hidden,
+    cl::desc("Maximum size of constant to promote into a constant pool"),
+    cl::init(64));
 
 namespace {
   class ARMCCState : public CCState {
@@ -2963,6 +2975,110 @@ ARMTargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
   llvm_unreachable("bogus TLS model");
 }
 
+/// Return true if all users of V are within function F, looking through
+/// ConstantExprs.
+static bool allUsersAreInFunction(const Value *V, const Function *F) {
+  SmallVector<const User*,4> Worklist;
+  for (auto *U : V->users())
+    Worklist.push_back(U);
+  while (!Worklist.empty()) {
+    auto *U = Worklist.pop_back_val();
+    if (isa<ConstantExpr>(U)) {
+      for (auto *UU : U->users())
+        Worklist.push_back(UU);
+      continue;
+    }
+
+    auto *I = dyn_cast<Instruction>(U);
+    if (!I || I->getParent()->getParent() != F)
+      return false;
+  }
+  return true;
+}
+
+/// Return true if all users of V are within some (any) function, looking through
+/// ConstantExprs. In other words, are there any global constant users?
+static bool allUsersAreInFunctions(const Value *V) {
+  SmallVector<const User*,4> Worklist;
+  for (auto *U : V->users())
+    Worklist.push_back(U);
+  while (!Worklist.empty()) {
+    auto *U = Worklist.pop_back_val();
+    if (isa<ConstantExpr>(U)) {
+      for (auto *UU : U->users())
+        Worklist.push_back(UU);
+      continue;
+    }
+
+    if (!isa<Instruction>(U))
+      return false;
+  }
+  return true;
+}
+
+static SDValue promoteToConstantPool(const GlobalValue *GV, SelectionDAG &DAG,
+                                     EVT PtrVT, SDLoc dl) {
+  // If we're creating a pool entry for a constant global with unnamed address,
+  // and the global is small enough, we can emit it inline into the constant pool
+  // to save ourselves an indirection.
+  //
+  // This is a win if the constant is only used in one function (so it doesn't
+  // need to be duplicated) or duplicating the constant wouldn't increase code
+  // size (implying the constant is no larger than 4 bytes).
+  const Function *F = DAG.getMachineFunction().getFunction();
+
+  // We rely on this decision to inline being idemopotent and unrelated to the
+  // use-site. We know that if we inline a variable at one use site, we'll
+  // inline it elsewhere too (and reuse the constant pool entry). Fast-isel
+  // doesn't know about this optimization, so bail out if it's enabled else
+  // we could decide to inline here (and thus never emit the GV) but require
+  // the GV from fast-isel generated code.
+  if (DAG.getMachineFunction().getTarget().Options.EnableFastISel)
+      return SDValue();
+  
+  auto *GVar = dyn_cast<GlobalVariable>(GV);
+  if (EnableConstpoolPromotion && GVar && GVar->hasInitializer() &&
+      GVar->isConstant() && GVar->hasGlobalUnnamedAddr() &&
+      GVar->hasLocalLinkage()) {
+    // The constant islands pass can only really deal with alignment requests
+    // <= 4 bytes and cannot pad constants itself. Therefore we cannot promote
+    // any type wanting greater alignment requirements than 4 bytes. We also
+    // can only promote constants that are multiples of 4 bytes in size or
+    // are paddable to a multiple of 4. Currently we only try and pad constants
+    // that are strings for simplicity.
+    auto *Init = GVar->getInitializer();
+    auto *CDAInit = dyn_cast<ConstantDataArray>(Init);
+    unsigned Size = DAG.getDataLayout().getTypeAllocSize(Init->getType());
+    unsigned Align = DAG.getDataLayout().getABITypeAlignment(Init->getType());
+    unsigned RequiredPadding = 4 - (Size % 4);
+    bool PaddingPossible =
+        RequiredPadding == 4 || (CDAInit && CDAInit->isString());
+    
+    if (PaddingPossible && Align <= 4 && Size <= ConstpoolPromotionMaxSize &&
+        (allUsersAreInFunction(GVar, F) ||
+         (Size <= 4 && allUsersAreInFunctions(GVar)))) {
+      if (RequiredPadding != 4) {
+        StringRef S = CDAInit->getAsString();
+
+        SmallVector<uint8_t,16> V(S.size());
+        std::copy(S.bytes_begin(), S.bytes_end(), V.begin());
+        while (RequiredPadding--)
+          V.push_back(0);
+        Init = ConstantDataArray::get(*DAG.getContext(), V);
+      }
+      
+      SDValue CPAddr =
+        DAG.getTargetConstantPool(Init, PtrVT, /*Align=*/4);
+      MachineFunction &MF = DAG.getMachineFunction();
+      ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
+      AFI->markGlobalAsPromotedToConstantPool(GVar);
+      ++NumConstpoolPromoted;
+      return DAG.getNode(ARMISD::Wrapper, dl, MVT::i32, CPAddr);
+    }
+  }
+  return SDValue();
+}
+
 SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -2974,6 +3090,11 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
   bool IsRO =
       (isa<GlobalVariable>(GV) && cast<GlobalVariable>(GV)->isConstant()) ||
       isa<Function>(GV);
+  
+  if (TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+    if (SDValue V = promoteToConstantPool(GV, DAG, PtrVT, dl))
+      return V;
+
   if (isPositionIndependent()) {
     bool UseGOT_PREL = !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
 

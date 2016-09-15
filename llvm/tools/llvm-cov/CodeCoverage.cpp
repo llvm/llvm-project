@@ -234,21 +234,23 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   attachExpansionSubViews(*View, Expansions, Coverage);
 
   for (const auto *Function : Coverage.getInstantiations(SourceFile)) {
-    auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
-    auto SubViewExpansions = SubViewCoverage.getExpansions();
-    auto SubView = SourceCoverageView::create(
-        getSymbolForHumans(Function->Name), SourceBuffer.get(), ViewOpts,
-        std::move(SubViewCoverage));
-    attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
+    std::unique_ptr<SourceCoverageView> SubView{nullptr};
 
-    if (SubView) {
-      unsigned FileID = Function->CountedRegions.front().FileID;
-      unsigned Line = 0;
-      for (const auto &CR : Function->CountedRegions)
-        if (CR.FileID == FileID)
-          Line = std::max(CR.LineEnd, Line);
-      View->addInstantiation(Function->Name, Line, std::move(SubView));
+    if (Function->ExecutionCount > 0) {
+      auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
+      auto SubViewExpansions = SubViewCoverage.getExpansions();
+      SubView = SourceCoverageView::create(
+          getSymbolForHumans(Function->Name), SourceBuffer.get(), ViewOpts,
+          std::move(SubViewCoverage));
+      attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
     }
+
+    unsigned FileID = Function->CountedRegions.front().FileID;
+    unsigned Line = 0;
+    for (const auto &CR : Function->CountedRegions)
+      if (CR.FileID == FileID)
+        Line = std::max(CR.LineEnd, Line);
+    View->addInstantiation(Function->Name, Line, std::move(SubView));
   }
   return View;
 }

@@ -63,6 +63,7 @@ void Fuzzer::ResetCounters() {
   }
   if (EF->__sanitizer_get_coverage_pc_buffer_pos)
     PcBufferPos = EF->__sanitizer_get_coverage_pc_buffer_pos();
+  TPC.GetNewPCsAndFlush();
 }
 
 void Fuzzer::PrepareCounters(Fuzzer::Coverage *C) {
@@ -556,22 +557,31 @@ void Fuzzer::PrintStatusForNewUnit(const Unit &U) {
   }
 }
 
+void Fuzzer::PrintOneNewPC(uintptr_t PC) {
+  if (EF->__sanitizer_symbolize_pc) {
+    char PcDescr[1024];
+    EF->__sanitizer_symbolize_pc(reinterpret_cast<void*>(PC),
+                                 "%p %F %L", PcDescr, sizeof(PcDescr));
+    PcDescr[sizeof(PcDescr) - 1] = 0;  // Just in case.
+    Printf("\tNEW_PC: %s\n", PcDescr);
+  } else {
+    Printf("\tNEW_PC: %p\n", PC);
+  }
+}
+
 void Fuzzer::PrintNewPCs() {
-  if (Options.PrintNewCovPcs && PrevPcBufferPos != PcBufferPos) {
+  if (!Options.PrintNewCovPcs) return;
+  if (PrevPcBufferPos != PcBufferPos) {
     int NumPrinted = 0;
     for (size_t I = PrevPcBufferPos; I < PcBufferPos; ++I) {
       if (NumPrinted++ > 30) break;  // Don't print too many new PCs.
-      if (EF->__sanitizer_symbolize_pc) {
-        char PcDescr[1024];
-        EF->__sanitizer_symbolize_pc(reinterpret_cast<void*>(PcBuffer[I]),
-                                     "%p %F %L", PcDescr, sizeof(PcDescr));
-        PcDescr[sizeof(PcDescr) - 1] = 0;  // Just in case.
-        Printf("\tNEW_PC: %s\n", PcDescr);
-      } else {
-        Printf("\tNEW_PC: %p\n", PcBuffer[I]);
-      }
+      PrintOneNewPC(PcBuffer[I]);
     }
   }
+  uintptr_t *PCs;
+  if (size_t NumNewPCs = TPC.GetNewPCsAndFlush(&PCs))
+    for (size_t i = 0; i < NumNewPCs; i++)
+      PrintOneNewPC(PCs[i]);
 }
 
 void Fuzzer::ReportNewCoverage(const Unit &U) {

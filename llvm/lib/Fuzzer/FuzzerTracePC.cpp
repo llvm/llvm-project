@@ -21,14 +21,20 @@ TracePC TPC;
 void TracePC::HandleTrace(uint8_t *Guard, uintptr_t PC) {
   if (UseCounters) {
     uintptr_t GV = *Guard;
-    if (GV == 0)
-      TotalCoverage++;
+    if (GV == 0) {
+      size_t Idx = Guard - Start;
+      if (TotalCoverageMap.AddValue(Idx)) {
+        TotalCoverage++;
+        AddNewPC(PC);
+      }
+    }
     if (GV < 255)
       GV++;
     *Guard = GV;
   } else {
     *Guard = 0xff;
     TotalCoverage++;
+    AddNewPC(PC);
   }
 }
 
@@ -43,12 +49,18 @@ void TracePC::FinalizeTrace() {
     for (uint8_t *X = Start; X < Stop; X++) {
       uint8_t Value = *X;
       size_t Idx = X - Start;
-      if (Value >= 2) {
-        unsigned Bit = 31 - __builtin_clz(Value);
-        assert(Bit < 8);
+      if (Value >= 1) {
+        unsigned Bit = 0;
+        /**/ if (Value >= 128) Bit = 7;
+        else if (Value >= 32) Bit = 6;
+        else if (Value >= 16) Bit = 5;
+        else if (Value >= 8) Bit = 4;
+        else if (Value >= 4) Bit = 3;
+        else if (Value >= 3) Bit = 2;
+        else if (Value >= 2) Bit = 1;
         CounterMap.AddValue(Idx * 8 + Bit);
       }
-      *X = 1;
+      *X = 0;
     }
   }
 }
