@@ -79,9 +79,9 @@
 // thread-local variables used by libc will be shared between the tracer task
 // and the thread which spawned it.
 
-COMPILER_CHECK(sizeof(SuspendedThreadID) == sizeof(pid_t));
-
 namespace __sanitizer {
+
+COMPILER_CHECK(sizeof(SuspendedThreadID) == sizeof(pid_t));
 
 // Structure for passing arguments into the tracer thread.
 struct TracerThreadArgument {

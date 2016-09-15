@@ -30,6 +30,8 @@ void *__stdcall GetProcAddress(void *module, const char *proc_name);
 void abort();
 }
 
+using namespace __sanitizer;
+
 static uptr getRealProcAddressOrDie(const char *name) {
   uptr ret =
       __interception::InternalGetProcAddress((void *)GetModuleHandleA(0), name);

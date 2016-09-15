@@ -17,6 +17,7 @@
 namespace lld {
 namespace elf {
 llvm::Regex compileGlobPatterns(ArrayRef<StringRef> V);
+int getPriority(StringRef S);
 bool hasWildcard(StringRef S);
 std::vector<uint8_t> parseHex(StringRef S);
 bool isValidCIdentifier(StringRef S);

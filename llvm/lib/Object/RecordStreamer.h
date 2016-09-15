@@ -15,7 +15,8 @@
 namespace llvm {
 class RecordStreamer : public MCStreamer {
 public:
-  enum State { NeverSeen, Global, GlobalWeak, Defined, DefinedGlobal, Used };
+  enum State { NeverSeen, Global, Defined, DefinedGlobal, DefinedWeak, Used,
+               UndefinedWeak};
 
 private:
   StringMap<State> Symbols;

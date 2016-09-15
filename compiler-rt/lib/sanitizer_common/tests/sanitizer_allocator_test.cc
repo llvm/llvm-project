@@ -25,6 +25,8 @@
 #include <vector>
 #include <set>
 
+using namespace __sanitizer;
+
 // Too slow for debug build
 #if !SANITIZER_DEBUG
 

@@ -290,6 +290,10 @@ cl::opt<bool> TpiStream("tpi-stream",
                         cl::desc("Dump the TPI Stream (Stream 3)"),
                         cl::sub(PdbToYamlSubcommand), cl::init(false));
 
+cl::opt<bool> IpiStream("ipi-stream",
+                        cl::desc("Dump the IPI Stream (Stream 5)"),
+                        cl::sub(PdbToYamlSubcommand), cl::init(false));
+
 cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
                                     cl::sub(PdbToYamlSubcommand));
@@ -369,6 +373,13 @@ static void yamlToPdb(StringRef Path) {
     TpiBuilder.setVersionHeader(YamlObj.TpiStream->Version);
     for (const auto &R : YamlObj.TpiStream->Records)
       TpiBuilder.addTypeRecord(R.Record);
+  }
+
+  if (YamlObj.IpiStream.hasValue()) {
+    auto &IpiBuilder = Builder.getIpiBuilder();
+    IpiBuilder.setVersionHeader(YamlObj.IpiStream->Version);
+    for (const auto &R : YamlObj.IpiStream->Records)
+      IpiBuilder.addTypeRecord(R.Record);
   }
 
   ExitOnErr(Builder.commit(*FileByteStream));

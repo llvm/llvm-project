@@ -895,19 +895,6 @@ void OutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   this->updateAlignment(S->Alignment);
 }
 
-// If an input string is in the form of "foo.N" where N is a number,
-// return N. Otherwise, returns 65536, which is one greater than the
-// lowest priority.
-static int getPriority(StringRef S) {
-  size_t Pos = S.rfind('.');
-  if (Pos == StringRef::npos)
-    return 65536;
-  int V;
-  if (S.substr(Pos + 1).getAsInteger(10, V))
-    return 65536;
-  return V;
-}
-
 // This function is called after we sort input sections
 // and scan relocations to setup sections' offsets.
 template <class ELFT> void OutputSection<ELFT>::assignOffsets() {

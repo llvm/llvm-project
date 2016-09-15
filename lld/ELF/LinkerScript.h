@@ -95,7 +95,7 @@ struct OutputSectionCommand : BaseCommand {
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
 };
 
-enum SortKind { SortNone, SortByName, SortByAlignment };
+enum SortKind { SortNone, SortByPriority, SortByName, SortByAlignment };
 
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription(StringRef FilePattern)

@@ -549,9 +549,9 @@ private:
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);
   Instruction *foldICmpCstShrConst(ICmpInst &I, Value *Op, Value *A,
-                                   ConstantInt *CI1, ConstantInt *CI2);
+                                   const APInt &C1, const APInt &C2);
   Instruction *foldICmpCstShlConst(ICmpInst &I, Value *Op, Value *A,
-                                   ConstantInt *CI1, ConstantInt *CI2);
+                                   const APInt &C1, const APInt &C2);
   Instruction *foldICmpAddOpConst(Instruction &ICI, Value *X, ConstantInt *CI,
                                   ICmpInst::Predicate Pred);
   Instruction *foldICmpWithCastAndCast(ICmpInst &ICI);

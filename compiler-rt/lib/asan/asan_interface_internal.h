@@ -23,6 +23,8 @@
 #include "asan_init_version.h"
 
 using __sanitizer::uptr;
+using __sanitizer::u64;
+using __sanitizer::u32;
 
 extern "C" {
   // This function should be called at the very beginning of the process,
