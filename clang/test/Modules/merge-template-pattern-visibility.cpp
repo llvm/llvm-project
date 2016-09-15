@@ -7,8 +7,6 @@
 // RUN:            -fmodules-local-submodule-visibility -o %t/Y.pcm
 // RUN: %clang_cc1 -fmodules -fno-modules-error-recovery -std=c++14 -fmodule-file=%t/X.pcm -fmodule-file=%t/Y.pcm \
 // RUN:            -fmodules-local-submodule-visibility -verify %s -I%S/Inputs/merge-template-pattern-visibility
-// RUN: %clang_cc1 -fmodules -fno-modules-error-recovery -std=c++14 -fmodule-file=%t/Y.pcm -fmodule-file=%t/X.pcm \
-// RUN:            -fmodules-local-submodule-visibility -verify %s -I%S/Inputs/merge-template-pattern-visibility
 
 #include "b.h"
 #include "d.h"
@@ -17,5 +15,4 @@
 void g() {
   CrossModuleMerge::B<int> bi;
   CrossModuleMerge::C(0);
-  CrossModuleMerge::D(0);
 }

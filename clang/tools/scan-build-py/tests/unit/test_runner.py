@@ -219,20 +219,6 @@ class AnalyzerTest(unittest.TestCase):
         self.assertEqual(['-DNDEBUG', '-UNDEBUG'], test(['-DNDEBUG']))
         self.assertEqual(['-DSomething', '-UNDEBUG'], test(['-DSomething']))
 
-    def test_set_file_relative_path(self):
-        def test(expected, input):
-            spy = Spy()
-            self.assertEqual(spy.success,
-                             sut.set_file_path_relative(input, spy.call))
-            self.assertEqual(expected, spy.arg['file'])
-
-        test('source.c',
-             {'file': '/home/me/source.c', 'directory': '/home/me'})
-        test('me/source.c',
-             {'file': '/home/me/source.c', 'directory': '/home'})
-        test('../home/me/source.c',
-             {'file': '/home/me/source.c', 'directory': '/tmp'})
-
     def test_set_language_fall_through(self):
         def language(expected, input):
             spy = Spy()

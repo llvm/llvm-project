@@ -2447,6 +2447,10 @@ _mm_stream_si64(long long *__p, long long __a)
 }
 #endif
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 /// \brief The cache line containing __p is flushed and invalidated from all
 ///    caches in the coherency domain.
 ///
@@ -2457,11 +2461,7 @@ _mm_stream_si64(long long *__p, long long __a)
 /// \param __p
 ///    A pointer to the memory location used to identify the cache line to be
 ///    flushed.
-static __inline__ void __DEFAULT_FN_ATTRS
-_mm_clflush(void const *__p)
-{
-  __builtin_ia32_clflush(__p);
-}
+void _mm_clflush(void const *);
 
 /// \brief Forces strong memory ordering (serialization) between load
 ///    instructions preceding this instruction and load instructions following
@@ -2472,11 +2472,7 @@ _mm_clflush(void const *__p)
 ///
 /// This intrinsic corresponds to the \c LFENCE instruction.
 ///
-static __inline__ void __DEFAULT_FN_ATTRS
-_mm_lfence(void)
-{
-  __builtin_ia32_lfence();
-}
+void _mm_lfence(void);
 
 /// \brief Forces strong memory ordering (serialization) between load and store
 ///    instructions preceding this instruction and load and store instructions
@@ -2487,11 +2483,11 @@ _mm_lfence(void)
 ///
 /// This intrinsic corresponds to the \c MFENCE instruction.
 ///
-static __inline__ void __DEFAULT_FN_ATTRS
-_mm_mfence(void)
-{
-  __builtin_ia32_mfence();
-}
+void _mm_mfence(void);
+
+#if defined(__cplusplus)
+} // extern "C"
+#endif
 
 /// \brief Converts 16-bit signed integers from both 128-bit integer vector
 ///    operands into 8-bit signed integers, and packs the results into the
@@ -3213,11 +3209,10 @@ _mm_castsi128_pd(__m128i __a)
 ///
 /// This intrinsic corresponds to the \c PAUSE instruction.
 ///
-static __inline__ void __DEFAULT_FN_ATTRS
-_mm_pause(void)
-{
-  __builtin_ia32_pause();
-}
+#if defined(__cplusplus)
+extern "C"
+#endif
+void _mm_pause(void);
 
 #undef __DEFAULT_FN_ATTRS
 

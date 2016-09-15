@@ -178,11 +178,11 @@ X test6() {
   return a;
   // CHECK:      [[A:%.*]] = alloca [[X:%.*]], align 8
   // CHECK-NEXT: [[PTR:%.*]] = getelementptr inbounds %class.X, %class.X* [[A]], i32 0, i32 0
-  // CHECK-NEXT: call void @llvm.lifetime.start(i64 1, i8* [[PTR]])
+  // CHECK-NEXT: call void @llvm.lifetime.start(i64 1, i8* nonnull [[PTR]])
   // CHECK-NEXT: call {{.*}} @_ZN1XC1Ev([[X]]* nonnull [[A]])
   // CHECK-NEXT: call {{.*}} @_ZN1XC1ERKS_([[X]]* {{%.*}}, [[X]]* nonnull dereferenceable({{[0-9]+}}) [[A]])
   // CHECK-NEXT: call {{.*}} @_ZN1XD1Ev([[X]]* nonnull [[A]])
-  // CHECK-NEXT: call void @llvm.lifetime.end(i64 1, i8* [[PTR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end(i64 1, i8* nonnull [[PTR]])
   // CHECK-NEXT: ret void
 }
 

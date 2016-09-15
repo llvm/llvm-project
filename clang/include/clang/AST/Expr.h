@@ -2406,8 +2406,8 @@ public:
 
   /// \brief Retrieve the member declaration to which this expression refers.
   ///
-  /// The returned declaration will either be a FieldDecl or (in C++)
-  /// a CXXMethodDecl.
+  /// The returned declaration will be a FieldDecl or (in C++) a VarDecl (for
+  /// static data members), a CXXMethodDecl, or an EnumConstantDecl.
   ValueDecl *getMemberDecl() const { return MemberDecl; }
   void setMemberDecl(ValueDecl *D) { MemberDecl = D; }
 
