@@ -402,18 +402,9 @@ void ReportBadParamsToAnnotateContiguousContainer(uptr beg, uptr end,
                                                   uptr old_mid, uptr new_mid,
                                                   BufferedStackTrace *stack) {
   ScopedInErrorReport in_report;
-  Report("ERROR: AddressSanitizer: bad parameters to "
-         "__sanitizer_annotate_contiguous_container:\n"
-         "      beg     : %p\n"
-         "      end     : %p\n"
-         "      old_mid : %p\n"
-         "      new_mid : %p\n",
-         beg, end, old_mid, new_mid);
-  uptr granularity = SHADOW_GRANULARITY;
-  if (!IsAligned(beg, granularity))
-    Report("ERROR: beg is not aligned by %d\n", granularity);
-  stack->Print();
-  ReportErrorSummary("bad-__sanitizer_annotate_contiguous_container", stack);
+  ErrorBadParamsToAnnotateContiguousContainer error(
+      GetCurrentTidOrInvalid(), stack, beg, end, old_mid, new_mid);
+  in_report.ReportError(error);
 }
 
 void ReportODRViolation(const __asan_global *g1, u32 stack_id1,
