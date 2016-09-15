@@ -3810,7 +3810,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             if (form_value.Form() == DW_FORM_sec_offset) {
               DWARFRangeList dwarf_scope_ranges;
               const DWARFDebugRanges *debug_ranges = DebugRanges();
-              debug_ranges->FindRanges(form_value.Unsigned(),
+              debug_ranges->FindRanges(die.GetCU()->GetRangesBase(),
+                                       form_value.Unsigned(),
                                        dwarf_scope_ranges);
 
               // All DW_AT_start_scope are relative to the base address of the

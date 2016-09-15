@@ -222,7 +222,7 @@ protected:
       *g_option_names[static_cast<uint32_t>(OptionNames::LastOptionName)];
 
 public:
-  static const char *GetKey(enum OptionNames enum_value) {
+  static const char *GetKey(OptionNames enum_value) {
     return g_option_names[static_cast<uint32_t>(enum_value)];
   }
 

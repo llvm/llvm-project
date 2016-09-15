@@ -890,59 +890,10 @@ void ASTContext::mergeDefinitionIntoModule(NamedDecl *ND, Module *M,
     if (auto *Listener = getASTMutationListener())
       Listener->RedefinedHiddenDefinition(ND, M);
 
-  if (getLangOpts().ModulesLocalVisibility) {
-    auto *Merged = &MergedDefModules[ND];
-    if (auto *CanonDef = Merged->CanonicalDef)
-      Merged = &MergedDefModules[CanonDef];
-    Merged->MergedModules.push_back(M);
-  } else {
-    auto MergedIt = MergedDefModules.find(ND);
-    if (MergedIt != MergedDefModules.end() && MergedIt->second.CanonicalDef)
-      ND = MergedIt->second.CanonicalDef;
+  if (getLangOpts().ModulesLocalVisibility)
+    MergedDefModules[ND].push_back(M);
+  else
     ND->setHidden(false);
-  }
-}
-
-void ASTContext::mergeDefinitionIntoModulesOf(NamedDecl *Def,
-                                              NamedDecl *Other) {
-  // We need to know the owning module of the merge source.
-  assert(Other->isFromASTFile() && "merge of non-imported decl not supported");
-  assert(Def != Other && "merging definition into itself");
-
-  if (!getLangOpts().ModulesLocalVisibility && !Other->isHidden()) {
-    Def->setHidden(false);
-    return;
-  }
-  assert(Other->getImportedOwningModule() &&
-         "hidden, imported declaration has no owning module");
-
-  // Mark Def as the canonical definition of merged definition Other.
-  {
-    auto &OtherMerged = MergedDefModules[Other];
-    assert((!OtherMerged.CanonicalDef || OtherMerged.CanonicalDef == Def) &&
-           "mismatched canonical definitions for declaration");
-    OtherMerged.CanonicalDef = Def;
-  }
-
-  auto &Merged = MergedDefModules[Def];
-  // Grab this again, we potentially just invalidated our reference.
-  auto &OtherMerged = MergedDefModules[Other];
-
-  if (Module *M = Other->getImportedOwningModule())
-    Merged.MergedModules.push_back(M);
-
-  // If this definition had any others merged into it, they're now merged into
-  // the canonical definition instead.
-  if (!OtherMerged.MergedModules.empty()) {
-    assert(!Merged.CanonicalDef && "canonical definition not canonical");
-    if (Merged.MergedModules.empty())
-      Merged.MergedModules = std::move(OtherMerged.MergedModules);
-    else
-      Merged.MergedModules.insert(Merged.MergedModules.end(),
-                                  OtherMerged.MergedModules.begin(),
-                                  OtherMerged.MergedModules.end());
-    OtherMerged.MergedModules.clear();
-  }
 }
 
 void ASTContext::deduplicateMergedDefinitonsFor(NamedDecl *ND) {
@@ -950,13 +901,7 @@ void ASTContext::deduplicateMergedDefinitonsFor(NamedDecl *ND) {
   if (It == MergedDefModules.end())
     return;
 
-  if (auto *CanonDef = It->second.CanonicalDef) {
-    It = MergedDefModules.find(CanonDef);
-    if (It == MergedDefModules.end())
-      return;
-  }
-
-  auto &Merged = It->second.MergedModules;
+  auto &Merged = It->second;
   llvm::DenseSet<Module*> Found;
   for (Module *&M : Merged)
     if (!Found.insert(M).second)

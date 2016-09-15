@@ -13,8 +13,8 @@ int test() {
   return *p;
 // CHECK: [[X:%.*]] = alloca i32
 // CHECK: [[P:%.*]] = alloca i32*
-// LIFETIME: call void @llvm.lifetime.start(i64 4, i8* %{{.*}}){{( #[0-9]+)?}}, !dbg
-// LIFETIME: call void @llvm.lifetime.start(i64 8, i8* %{{.*}}){{( #[0-9]+)?}}, !dbg
+// LIFETIME: call void @llvm.lifetime.start(i64 4, i8* nonnull %{{.*}}){{( #[0-9]+)?}}, !dbg
+// LIFETIME: call void @llvm.lifetime.start(i64 8, i8* nonnull %{{.*}}){{( #[0-9]+)?}}, !dbg
 // CHECK-NOT: store i32 %{{.*}}, i32* %cleanup.dest.slot
 // LIFETIME: call void @llvm.lifetime.end(i64 8, {{.*}}){{( #[0-9]+)?}}, !dbg
 // LIFETIME: call void @llvm.lifetime.end(i64 4, {{.*}}){{( #[0-9]+)?}}, !dbg
