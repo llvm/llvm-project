@@ -45,6 +45,7 @@ add_pdb_impl_folder(Raw
   Raw/RawError.cpp
   Raw/RawSession.cpp
   Raw/SymbolStream.cpp
+  Raw/TpiHashing.cpp
   Raw/TpiStream.cpp
   Raw/TpiStreamBuilder.cpp)
 

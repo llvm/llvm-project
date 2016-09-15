@@ -416,7 +416,7 @@ void MachineBasicBlock::updateTerminator() {
       // The block has an unconditional branch. If its successor is now its
       // layout successor, delete the branch.
       if (isLayoutSuccessor(TBB))
-        TII->RemoveBranch(*this);
+        TII->removeBranch(*this);
     } else {
       // The block has an unconditional fallthrough. If its successor is not its
       // layout successor, insert a branch. First we have to locate the only
@@ -436,7 +436,7 @@ void MachineBasicBlock::updateTerminator() {
       // Finally update the unconditional successor to be reached via a branch
       // if it would not be reached by fallthrough.
       if (!isLayoutSuccessor(TBB))
-        TII->InsertBranch(*this, TBB, nullptr, Cond, DL);
+        TII->insertBranch(*this, TBB, nullptr, Cond, DL);
     }
     return;
   }
@@ -446,13 +446,13 @@ void MachineBasicBlock::updateTerminator() {
     // successors is its layout successor, rewrite it to a fallthrough
     // conditional branch.
     if (isLayoutSuccessor(TBB)) {
-      if (TII->ReverseBranchCondition(Cond))
+      if (TII->reverseBranchCondition(Cond))
         return;
-      TII->RemoveBranch(*this);
-      TII->InsertBranch(*this, FBB, nullptr, Cond, DL);
+      TII->removeBranch(*this);
+      TII->insertBranch(*this, FBB, nullptr, Cond, DL);
     } else if (isLayoutSuccessor(FBB)) {
-      TII->RemoveBranch(*this);
-      TII->InsertBranch(*this, TBB, nullptr, Cond, DL);
+      TII->removeBranch(*this);
+      TII->insertBranch(*this, TBB, nullptr, Cond, DL);
     }
     return;
   }
@@ -474,37 +474,37 @@ void MachineBasicBlock::updateTerminator() {
       // Remove the conditional jump, leaving unconditional fallthrough.
       // FIXME: This does not seem like a reasonable pattern to support, but it
       // has been seen in the wild coming out of degenerate ARM test cases.
-      TII->RemoveBranch(*this);
+      TII->removeBranch(*this);
   
       // Finally update the unconditional successor to be reached via a branch if
       // it would not be reached by fallthrough.
       if (!isLayoutSuccessor(TBB))
-        TII->InsertBranch(*this, TBB, nullptr, Cond, DL);
+        TII->insertBranch(*this, TBB, nullptr, Cond, DL);
       return;
     }
 
     // We enter here iff exactly one successor is TBB which cannot fallthrough
     // and the rest successors if any are EHPads.  In this case, we need to
     // change the conditional branch into unconditional branch.
-    TII->RemoveBranch(*this);
+    TII->removeBranch(*this);
     Cond.clear();
-    TII->InsertBranch(*this, TBB, nullptr, Cond, DL);
+    TII->insertBranch(*this, TBB, nullptr, Cond, DL);
     return;
   }
 
   // The block has a fallthrough conditional branch.
   if (isLayoutSuccessor(TBB)) {
-    if (TII->ReverseBranchCondition(Cond)) {
+    if (TII->reverseBranchCondition(Cond)) {
       // We can't reverse the condition, add an unconditional branch.
       Cond.clear();
-      TII->InsertBranch(*this, FallthroughBB, nullptr, Cond, DL);
+      TII->insertBranch(*this, FallthroughBB, nullptr, Cond, DL);
       return;
     }
-    TII->RemoveBranch(*this);
-    TII->InsertBranch(*this, FallthroughBB, nullptr, Cond, DL);
+    TII->removeBranch(*this);
+    TII->insertBranch(*this, FallthroughBB, nullptr, Cond, DL);
   } else if (!isLayoutSuccessor(FallthroughBB)) {
-    TII->RemoveBranch(*this);
-    TII->InsertBranch(*this, TBB, FallthroughBB, Cond, DL);
+    TII->removeBranch(*this);
+    TII->insertBranch(*this, TBB, FallthroughBB, Cond, DL);
   }
 }
 
@@ -810,7 +810,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(MachineBasicBlock *Succ,
   if (!NMBB->isLayoutSuccessor(Succ)) {
     SmallVector<MachineOperand, 4> Cond;
     const TargetInstrInfo *TII = getParent()->getSubtarget().getInstrInfo();
-    TII->InsertBranch(*NMBB, Succ, nullptr, Cond, DL);
+    TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL);
 
     if (Indexes) {
       for (MachineInstr &MI : NMBB->instrs()) {

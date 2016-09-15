@@ -71,13 +71,13 @@ public:
   /// particular stream to occupy the original set of blocks.  If the given
   /// blocks are already allocated, or if the number of blocks specified is
   /// incorrect for the given stream size, this function will return an Error.
-  Error addStream(uint32_t Size, ArrayRef<uint32_t> Blocks);
+  Expected<uint32_t> addStream(uint32_t Size, ArrayRef<uint32_t> Blocks);
 
   /// Add a stream to the MSF file with the given size, occupying any available
   /// blocks that the builder decides to use.  This is useful when building a
   /// new PDB file from scratch and you don't care what blocks a stream occupies
   /// but you just want it to work.
-  Error addStream(uint32_t Size);
+  Expected<uint32_t> addStream(uint32_t Size);
 
   /// Update the size of an existing stream.  This will allocate or deallocate
   /// blocks as needed to match the requested size.  This can fail if `CanGrow`
@@ -112,6 +112,8 @@ public:
   /// Finalize the layout and build the headers and structures that describe the
   /// MSF layout and can be written directly to the MSF file.
   Expected<MSFLayout> build();
+
+  BumpPtrAllocator &getAllocator() { return Allocator; }
 
 private:
   MSFBuilder(uint32_t BlockSize, uint32_t MinBlockCount, bool CanGrow,

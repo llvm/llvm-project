@@ -5,7 +5,7 @@
 ; CHECK-LABEL:  .section  __LLVM_STACKMAPS,__llvm_stackmaps
 ; CHECK-NEXT:  __LLVM_StackMaps:
 ; Header
-; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 2
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
@@ -18,36 +18,52 @@
 ; Functions and stack size
 ; CHECK-NEXT:   .quad _constantargs
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _osrinline
 ; CHECK-NEXT:   .quad 24
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _osrcold
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _propertyRead
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _propertyWrite
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _jsVoidCall
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _jsIntCall
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _spilledValue
 ; CHECK-NEXT:   .quad 56
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _spilledStackMapValue
 ; CHECK-NEXT:   .quad 56
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _spillSubReg
 ; CHECK-NEXT:   .quad 56
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _subRegOffset
 ; CHECK-NEXT:   .quad 56
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _liveConstant
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _directFrameIdx
 ; CHECK-NEXT:   .quad 56
+; CHECK-NEXT:   .quad 2
 ; CHECK-NEXT:   .quad _longid
 ; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 4
 ; CHECK-NEXT:   .quad _clobberScratch
 ; CHECK-NEXT:   .quad 56
+; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad _needsStackRealignment
 ; CHECK-NEXT:   .quad -1
+; CHECK-NEXT:   .quad 1
 
 ; Large Constants
 ; CHECK-NEXT:   .quad   2147483648

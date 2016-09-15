@@ -7,10 +7,8 @@
 ;
 ; CHECK-LABEL: {{^}}main:
 ; CHECK: v_lshlrev_b32_e32 [[BYTES:v[0-9]+]], 2, v0
-; CHECK: v_mov_b32_e32 [[HI_CONST:v[0-9]+]], 0x200
-; CHECK: v_mov_b32_e32 [[LO_CONST:v[0-9]+]], 0
-; CHECK: v_add_i32_e32 [[HI_OFF:v[0-9]+]], vcc, [[BYTES]], [[HI_CONST]]
-; CHECK: v_add_i32_e32 [[LO_OFF:v[0-9]+]], vcc, [[BYTES]], [[LO_CONST]]
+; CHECK: v_add_i32_e32 [[HI_OFF:v[0-9]+]], vcc, 0x200, [[BYTES]]
+; CHECK: v_add_i32_e32 [[LO_OFF:v[0-9]+]], vcc, 0, [[BYTES]]
 ; CHECK: buffer_load_dword {{v[0-9]+}}, [[LO_OFF]], {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen
 ; CHECK: buffer_load_dword {{v[0-9]+}}, [[HI_OFF]], {{s\[[0-9]+:[0-9]+\]}}, {{s[0-9]+}} offen
 define amdgpu_ps float @main(i32 %idx) {

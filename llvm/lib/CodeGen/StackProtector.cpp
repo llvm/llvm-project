@@ -50,7 +50,7 @@ static cl::opt<bool> EnableSelectionDAGSP("enable-selectiondag-sp",
                                           cl::init(true), cl::Hidden);
 
 char StackProtector::ID = 0;
-INITIALIZE_PASS(StackProtector, "stack-protector", "Insert stack protectors",
+INITIALIZE_TM_PASS(StackProtector, "stack-protector", "Insert stack protectors",
                 false, true)
 
 FunctionPass *llvm::createStackProtectorPass(const TargetMachine *TM) {

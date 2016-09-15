@@ -518,7 +518,7 @@ void ImplicitNullChecks::rewriteNullChecks(
 
   for (auto &NC : NullCheckList) {
     // Remove the conditional branch dependent on the null check.
-    unsigned BranchesRemoved = TII->RemoveBranch(*NC.getCheckBlock());
+    unsigned BranchesRemoved = TII->removeBranch(*NC.getCheckBlock());
     (void)BranchesRemoved;
     assert(BranchesRemoved > 0 && "expected at least one branch!");
 
@@ -560,7 +560,7 @@ void ImplicitNullChecks::rewriteNullChecks(
     NC.getCheckOperation()->eraseFromParent();
 
     // Insert an *unconditional* branch to not-null successor.
-    TII->InsertBranch(*NC.getCheckBlock(), NC.getNotNullSucc(), nullptr,
+    TII->insertBranch(*NC.getCheckBlock(), NC.getNotNullSucc(), nullptr,
                       /*Cond=*/None, DL);
 
     NumImplicitNullChecks++;

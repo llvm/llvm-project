@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -262,6 +263,70 @@ TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
   // PHI node.
   EXPECT_EQ(S1, ZeroConst);
   EXPECT_EQ(S1, S2);
+}
+
+TEST_F(ScalarEvolutionsTest, ExpandPtrTypeSCEV) {
+  // It is to test the fix for PR30213. It exercises the branch in scev
+  // expansion when the value in ValueOffsetPair is a ptr and the offset
+  // is not divisible by the elem type size of value.
+  auto *I8Ty = Type::getInt8Ty(Context);
+  auto *I8PtrTy = Type::getInt8PtrTy(Context);
+  auto *I32Ty = Type::getInt32Ty(Context);
+  auto *I32PtrTy = Type::getInt32PtrTy(Context);
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(Context), std::vector<Type *>(), false);
+  Function *F = cast<Function>(M.getOrInsertFunction("f", FTy));
+  BasicBlock *EntryBB = BasicBlock::Create(Context, "entry", F);
+  BasicBlock *LoopBB = BasicBlock::Create(Context, "loop", F);
+  BasicBlock *ExitBB = BasicBlock::Create(Context, "exit", F);
+  BranchInst::Create(LoopBB, EntryBB);
+  ReturnInst::Create(Context, nullptr, ExitBB);
+
+  // loop:                            ; preds = %loop, %entry
+  //   %alloca = alloca i32
+  //   %gep0 = getelementptr i32, i32* %alloca, i32 1
+  //   %bitcast1 = bitcast i32* %gep0 to i8*
+  //   %gep1 = getelementptr i8, i8* %bitcast1, i32 1
+  //   %gep2 = getelementptr i8, i8* undef, i32 1
+  //   %cmp = icmp ult i8* undef, %bitcast1
+  //   %select = select i1 %cmp, i8* %gep1, i8* %gep2
+  //   %bitcast2 = bitcast i8* %select to i32*
+  //   br i1 undef, label %loop, label %exit
+
+  BranchInst *Br = BranchInst::Create(
+      LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
+  AllocaInst *Alloca = new AllocaInst(I32Ty, "alloca", Br);
+  ConstantInt *Ci32 = ConstantInt::get(Context, APInt(32, 1));
+  GetElementPtrInst *Gep0 =
+      GetElementPtrInst::Create(I32Ty, Alloca, Ci32, "gep0", Br);
+  CastInst *CastA =
+      CastInst::CreateBitOrPointerCast(Gep0, I8PtrTy, "bitcast1", Br);
+  GetElementPtrInst *Gep1 =
+      GetElementPtrInst::Create(I8Ty, CastA, Ci32, "gep1", Br);
+  GetElementPtrInst *Gep2 = GetElementPtrInst::Create(
+      I8Ty, UndefValue::get(I8PtrTy), Ci32, "gep2", Br);
+  CmpInst *Cmp = CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_ULT,
+                                 UndefValue::get(I8PtrTy), CastA, "cmp", Br);
+  SelectInst *Sel = SelectInst::Create(Cmp, Gep1, Gep2, "select", Br);
+  CastInst *CastB =
+      CastInst::CreateBitOrPointerCast(Sel, I32PtrTy, "bitcast2", Br);
+
+  ScalarEvolution SE = buildSE(*F);
+  auto *S = SE.getSCEV(CastB);
+  SCEVExpander Exp(SE, M.getDataLayout(), "expander");
+  Value *V =
+      Exp.expandCodeFor(cast<SCEVAddExpr>(S)->getOperand(1), nullptr, Br);
+
+  // Expect the expansion code contains:
+  //   %0 = bitcast i32* %bitcast2 to i8*
+  //   %uglygep = getelementptr i8, i8* %0, i64 -1
+  //   %1 = bitcast i8* %uglygep to i32*
+  EXPECT_TRUE(isa<BitCastInst>(V));
+  Instruction *Gep = cast<Instruction>(V)->getPrevNode();
+  EXPECT_TRUE(isa<GetElementPtrInst>(Gep));
+  EXPECT_TRUE(isa<ConstantInt>(Gep->getOperand(1)));
+  EXPECT_EQ(cast<ConstantInt>(Gep->getOperand(1))->getSExtValue(), -1);
+  EXPECT_TRUE(isa<BitCastInst>(Gep->getPrevNode()));
 }
 
 }  // end anonymous namespace

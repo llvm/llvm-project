@@ -42,8 +42,8 @@ static Error skipPadding(ArrayRef<uint8_t> &Data) {
 }
 
 template <typename T>
-static Expected<CVType> deserializeMemberRecord(ArrayRef<uint8_t> &Data,
-                                                TypeLeafKind Kind) {
+static Expected<CVMemberRecord> deserializeMemberRecord(ArrayRef<uint8_t> &Data,
+                                                        TypeLeafKind Kind) {
   ArrayRef<uint8_t> OldData = Data;
   TypeRecordKind RK = static_cast<TypeRecordKind>(Kind);
   auto ExpectedRecord = T::deserialize(RK, Data);
@@ -53,20 +53,17 @@ static Expected<CVType> deserializeMemberRecord(ArrayRef<uint8_t> &Data,
   if (auto EC = skipPadding(Data))
     return std::move(EC);
 
-  CVType CVR;
-  CVR.Type = Kind;
-  CVR.Length = OldData.size() - Data.size();
-  CVR.Data = OldData.slice(0, CVR.Length);
-  CVR.RawData = CVR.Data;
-  return CVR;
+  CVMemberRecord CVMR;
+  CVMR.Kind = Kind;
+  CVMR.Data = OldData.drop_back(Data.size());
+  return CVMR;
 }
 
 CVTypeVisitor::CVTypeVisitor(TypeVisitorCallbacks &Callbacks)
     : Callbacks(Callbacks) {}
 
 template <typename T>
-static Error visitKnownRecord(CVRecord<TypeLeafKind> &Record,
-                              TypeVisitorCallbacks &Callbacks) {
+static Error visitKnownRecord(CVType &Record, TypeVisitorCallbacks &Callbacks) {
   TypeRecordKind RK = static_cast<TypeRecordKind>(Record.Type);
   T KnownRecord(RK);
   if (auto EC = Callbacks.visitKnownRecord(Record, KnownRecord))
@@ -74,7 +71,17 @@ static Error visitKnownRecord(CVRecord<TypeLeafKind> &Record,
   return Error::success();
 }
 
-Error CVTypeVisitor::visitTypeRecord(CVRecord<TypeLeafKind> &Record) {
+template <typename T>
+static Error visitKnownMember(CVMemberRecord &Record,
+                              TypeVisitorCallbacks &Callbacks) {
+  TypeRecordKind RK = static_cast<TypeRecordKind>(Record.Kind);
+  T KnownRecord(RK);
+  if (auto EC = Callbacks.visitKnownMember(Record, KnownRecord))
+    return EC;
+  return Error::success();
+}
+
+Error CVTypeVisitor::visitTypeRecord(CVType &Record) {
   if (auto EC = Callbacks.visitTypeBegin(Record))
     return EC;
 
@@ -91,14 +98,40 @@ Error CVTypeVisitor::visitTypeRecord(CVRecord<TypeLeafKind> &Record) {
   }
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)                  \
   TYPE_RECORD(EnumVal, EnumVal, AliasName)
-#define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
-  TYPE_RECORD(EnumName, EnumVal, Name)
-#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)                \
-  MEMBER_RECORD(EnumName, EnumVal, AliasName)
+#define MEMBER_RECORD(EnumName, EnumVal, Name)
+#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
   }
 
   if (auto EC = Callbacks.visitTypeEnd(Record))
+    return EC;
+
+  return Error::success();
+}
+
+Error CVTypeVisitor::visitMemberRecord(CVMemberRecord &Record) {
+  if (auto EC = Callbacks.visitMemberBegin(Record))
+    return EC;
+
+  switch (Record.Kind) {
+  default:
+    if (auto EC = Callbacks.visitUnknownMember(Record))
+      return EC;
+    break;
+#define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
+  case EnumName: {                                                             \
+    if (auto EC = visitKnownMember<Name##Record>(Record, Callbacks))           \
+      return EC;                                                               \
+    break;                                                                     \
+  }
+#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)                \
+  MEMBER_RECORD(EnumVal, EnumVal, AliasName)
+#define TYPE_RECORD(EnumName, EnumVal, Name)
+#define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#include "llvm/DebugInfo/CodeView/TypeRecords.def"
+  }
+
+  if (auto EC = Callbacks.visitMemberEnd(Record))
     return EC;
 
   return Error::success();
@@ -119,12 +152,12 @@ static Error visitKnownMember(ArrayRef<uint8_t> &Data, TypeLeafKind Leaf,
   auto ExpectedRecord = deserializeMemberRecord<MR>(Data, Leaf);
   if (!ExpectedRecord)
     return ExpectedRecord.takeError();
-  CVType &Record = *ExpectedRecord;
-  if (auto EC = Callbacks.visitTypeBegin(Record))
+  CVMemberRecord &Record = *ExpectedRecord;
+  if (auto EC = Callbacks.visitMemberBegin(Record))
     return EC;
-  if (auto EC = visitKnownRecord<MR>(Record, Callbacks))
+  if (auto EC = visitKnownMember<MR>(Record, Callbacks))
     return EC;
-  if (auto EC = Callbacks.visitTypeEnd(Record))
+  if (auto EC = Callbacks.visitMemberEnd(Record))
     return EC;
   return Error::success();
 }

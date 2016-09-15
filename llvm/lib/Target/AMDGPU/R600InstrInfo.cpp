@@ -731,12 +731,14 @@ MachineBasicBlock::iterator FindLastAluClause(MachineBasicBlock &MBB) {
   return MBB.end();
 }
 
-unsigned R600InstrInfo::InsertBranch(MachineBasicBlock &MBB,
+unsigned R600InstrInfo::insertBranch(MachineBasicBlock &MBB,
                                      MachineBasicBlock *TBB,
                                      MachineBasicBlock *FBB,
                                      ArrayRef<MachineOperand> Cond,
-                                     const DebugLoc &DL) const {
-  assert(TBB && "InsertBranch must not be told to insert a fallthrough");
+                                     const DebugLoc &DL,
+                                     int *BytesAdded) const {
+  assert(TBB && "insertBranch must not be told to insert a fallthrough");
+  assert(!BytesAdded && "code size not handled");
 
   if (!FBB) {
     if (Cond.empty()) {
@@ -776,8 +778,9 @@ unsigned R600InstrInfo::InsertBranch(MachineBasicBlock &MBB,
   }
 }
 
-unsigned
-R600InstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
+unsigned R600InstrInfo::removeBranch(MachineBasicBlock &MBB,
+                                     int *BytesRemoved) const {
+    assert(!BytesRemoved && "code size not handled");
 
   // Note : we leave PRED* instructions there.
   // They may be needed when predicating instructions.
@@ -907,7 +910,7 @@ R600InstrInfo::isProfitableToUnpredicate(MachineBasicBlock &TMBB,
 
 
 bool
-R600InstrInfo::ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
+R600InstrInfo::reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   MachineOperand &MO = Cond[1];
   switch (MO.getImm()) {
   case AMDGPU::PRED_SETE_INT:

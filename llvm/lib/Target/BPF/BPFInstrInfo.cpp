@@ -130,13 +130,16 @@ bool BPFInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return false;
 }
 
-unsigned BPFInstrInfo::InsertBranch(MachineBasicBlock &MBB,
+unsigned BPFInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     ArrayRef<MachineOperand> Cond,
-                                    const DebugLoc &DL) const {
+                                    const DebugLoc &DL,
+                                    int *BytesAdded) const {
+  assert(!BytesAdded && "code size not handled");
+
   // Shouldn't be a fall through.
-  assert(TBB && "InsertBranch must not be told to insert a fallthrough");
+  assert(TBB && "insertBranch must not be told to insert a fallthrough");
 
   if (Cond.empty()) {
     // Unconditional branch
@@ -148,7 +151,10 @@ unsigned BPFInstrInfo::InsertBranch(MachineBasicBlock &MBB,
   llvm_unreachable("Unexpected conditional branch");
 }
 
-unsigned BPFInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
+unsigned BPFInstrInfo::removeBranch(MachineBasicBlock &MBB,
+                                    int *BytesRemoved) const {
+  assert(!BytesRemoved && "code size not handled");
+
   MachineBasicBlock::iterator I = MBB.end();
   unsigned Count = 0;
 

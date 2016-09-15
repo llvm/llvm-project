@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Raw/TpiHashing.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
@@ -216,6 +217,7 @@ void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::
   codeview::TypeDeserializer Deserializer;
   codeview::TypeSerializationVisitor Serializer(Context.FieldListBuilder,
                                                 Context.TypeTableBuilder);
+  pdb::TpiHashUpdater Hasher;
 
   if (IO.outputting()) {
     // For PDB to Yaml, deserialize into a high level record type, then dump it.
@@ -226,6 +228,7 @@ void MappingContextTraits<PdbTpiRecord, pdb::yaml::SerializationContext>::
     // to bytes.
     Pipeline.addCallbackToPipeline(Context.Dumper);
     Pipeline.addCallbackToPipeline(Serializer);
+    Pipeline.addCallbackToPipeline(Hasher);
   }
 
   codeview::CVTypeVisitor Visitor(Pipeline);

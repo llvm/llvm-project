@@ -119,18 +119,6 @@ foreach(Test ${Tests})
   add_libfuzzer_test(${Test} SOURCES ${Test}.cpp)
 endforeach()
 
-###############################################################################
-# AFL Driver test
-###############################################################################
-
-add_executable(AFLDriverTest
-  AFLDriverTest.cpp ../afl/afl_driver.cpp)
-
-set_target_properties(AFLDriverTest
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-    "${CMAKE_BINARY_DIR}/lib/Fuzzer/test"
-    )
-set(TestBinaries ${TestBinaries} AFLDriverTest)
 
 ###############################################################################
 # Unit tests

@@ -61,7 +61,7 @@ private:
 
   codeview::CVTypeArray TypeRecords;
 
-  std::unique_ptr<msf::MappedBlockStream> HashStream;
+  std::unique_ptr<msf::ReadableStream> HashStream;
   msf::FixedStreamArray<support::ulittle32_t> HashValues;
   msf::FixedStreamArray<TypeIndexOffset> TypeIndexOffsets;
   msf::FixedStreamArray<TypeIndexOffset> HashAdjustments;

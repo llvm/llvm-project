@@ -20,6 +20,7 @@
 
 namespace llvm {
 namespace msf {
+class MSFBuilder;
 class StreamWriter;
 }
 namespace pdb {
@@ -27,7 +28,7 @@ class PDBFile;
 
 class InfoStreamBuilder {
 public:
-  InfoStreamBuilder();
+  InfoStreamBuilder(msf::MSFBuilder &Msf);
   InfoStreamBuilder(const InfoStreamBuilder &) = delete;
   InfoStreamBuilder &operator=(const InfoStreamBuilder &) = delete;
 
@@ -40,6 +41,8 @@ public:
 
   uint32_t calculateSerializedLength() const;
 
+  Error finalizeMsfLayout();
+
   Expected<std::unique_ptr<InfoStream>>
   build(PDBFile &File, const msf::WritableStream &Buffer);
 
@@ -47,6 +50,8 @@ public:
                const msf::WritableStream &Buffer) const;
 
 private:
+  msf::MSFBuilder &Msf;
+
   PdbRaw_ImplVer Ver;
   uint32_t Sig;
   uint32_t Age;

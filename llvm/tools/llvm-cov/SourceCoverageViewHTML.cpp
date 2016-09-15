@@ -584,15 +584,22 @@ void SourceCoverageViewHTML::renderInstantiationView(raw_ostream &OS,
                                                      InstantiationView &ISV,
                                                      unsigned ViewDepth) {
   OS << BeginExpansionDiv;
-  ISV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/true, ViewDepth);
+  if (!ISV.View)
+    OS << BeginSourceNameDiv
+       << tag("pre",
+              escape("Unexecuted instantiation: " + ISV.FunctionName.str(),
+                     getOptions()))
+       << EndSourceNameDiv;
+  else
+    ISV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/true,
+                    ViewDepth);
   OS << EndExpansionDiv;
 }
 
-void SourceCoverageViewHTML::renderCellInTitle(raw_ostream &OS,
-                                               StringRef CellText) {
+void SourceCoverageViewHTML::renderTitle(raw_ostream &OS, StringRef Title) {
   if (getOptions().hasProjectTitle())
     OS << tag(ProjectTitleTag, escape(getOptions().ProjectTitle, getOptions()));
-  OS << tag(ReportTitleTag, escape(CellText, getOptions()));
+  OS << tag(ReportTitleTag, escape(Title, getOptions()));
   if (getOptions().hasCreatedTime())
     OS << tag(CreatedTimeTag,
               escape(getOptions().CreatedTimeStr, getOptions()));

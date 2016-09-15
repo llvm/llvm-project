@@ -1512,7 +1512,7 @@ def : Pat <
 
 def : Pat <
   (fabs f32:$src),
-  (V_AND_B32_e32 $src, (V_MOV_B32_e32 0x7fffffff))
+  (V_AND_B32_e64 $src, (V_MOV_B32_e32 0x7fffffff))
 >;
 
 def : Pat <
@@ -1525,7 +1525,7 @@ def : Pat <
   (REG_SEQUENCE VReg_64,
     (i32 (EXTRACT_SUBREG f64:$src, sub0)),
     sub0,
-    (V_AND_B32_e32 (EXTRACT_SUBREG f64:$src, sub1),
+    (V_AND_B32_e64 (EXTRACT_SUBREG f64:$src, sub1),
                    (V_MOV_B32_e32 0x7fffffff)), // Set sign bit.
      sub1)
 >;

@@ -232,9 +232,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
   case TargetOpcode::G_FRAME_INDEX: {
     // allocas and G_FRAME_INDEX are only supported in addrspace(0).
-    if (Ty != LLT::pointer(0)) {
+    if (Ty != LLT::pointer(0, 64)) {
       DEBUG(dbgs() << "G_FRAME_INDEX pointer has type: " << Ty
-                   << ", expected: " << LLT::pointer(0) << '\n');
+            << ", expected: " << LLT::pointer(0, 64) << '\n');
       return false;
     }
 
@@ -251,9 +251,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
     LLT MemTy = Ty;
     LLT PtrTy = MRI.getType(I.getOperand(1).getReg());
 
-    if (PtrTy != LLT::pointer(0)) {
+    if (PtrTy != LLT::pointer(0, 64)) {
       DEBUG(dbgs() << "Load/Store pointer has type: " << PtrTy
-                   << ", expected: " << LLT::pointer(0) << '\n');
+                   << ", expected: " << LLT::pointer(0, 64) << '\n');
       return false;
     }
 

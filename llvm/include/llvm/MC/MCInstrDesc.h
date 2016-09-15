@@ -216,7 +216,7 @@ public:
   unsigned getNumDefs() const { return NumDefs; }
 
   /// \brief Return flags of this instruction.
-  unsigned getFlags() const { return Flags; }
+  uint64_t getFlags() const { return Flags; }
 
   /// \brief Return true if this instruction can have a variable number of
   /// operands.  In this case, the variable operands will be after the normal

@@ -497,7 +497,7 @@ Error LLVMOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
       }
 
       if (DumpRecordBytes)
-        P.printBinaryBlock("Bytes", Type.Data);
+        P.printBinaryBlock("Bytes", Type.content());
     }
     dumpTpiHash(P, *Tpi);
     if (HadError)
@@ -604,7 +604,7 @@ Error LLVMOutputStyle::dumpDbiStream() {
             if (opts::raw::DumpModuleSyms)
               SD.dump(S);
             if (opts::raw::DumpSymRecordBytes)
-              P.printBinaryBlock("Bytes", S.Data);
+              P.printBinaryBlock("Bytes", S.content());
           }
           if (HadError)
             return make_error<RawError>(
@@ -813,7 +813,7 @@ Error LLVMOutputStyle::dumpPublicsStream() {
 
     SD.dump(S);
     if (opts::raw::DumpSymRecordBytes)
-      P.printBinaryBlock("Bytes", S.Data);
+      P.printBinaryBlock("Bytes", S.content());
   }
   if (HadError)
     return make_error<RawError>(

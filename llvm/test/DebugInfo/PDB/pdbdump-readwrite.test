@@ -10,12 +10,12 @@ CHECK:      FileHeaders {
 CHECK-NEXT:   BlockSize: 4096
 CHECK-NEXT:   FreeBlockMap: 2
 CHECK-NEXT:   NumBlocks: 25
-CHECK-NEXT:   NumDirectoryBytes: 136
+CHECK-NEXT:   NumDirectoryBytes:
 CHECK-NEXT:   Unknown1: 0
-CHECK-NEXT:   BlockMapAddr: 24
+CHECK-NEXT:   BlockMapAddr:
 CHECK-NEXT:   NumDirectoryBlocks: 1
-CHECK-NEXT:   DirectoryBlocks: [23]
-CHECK-NEXT:   NumStreams: 17
+CHECK-NEXT:   DirectoryBlocks:
+CHECK-NEXT:   NumStreams:
 CHECK-NEXT: }
 CHECK:      PDB Stream {
 CHECK-NEXT:   Version: 20000404

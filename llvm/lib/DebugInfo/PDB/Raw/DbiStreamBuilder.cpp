@@ -9,6 +9,7 @@
 
 #include "llvm/DebugInfo/PDB/Raw/DbiStreamBuilder.h"
 
+#include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
@@ -23,9 +24,10 @@ namespace {
 class ModiSubstreamBuilder {};
 }
 
-DbiStreamBuilder::DbiStreamBuilder(BumpPtrAllocator &Allocator)
-    : Allocator(Allocator), Age(1), BuildNumber(0), PdbDllVersion(0),
-      PdbDllRbld(0), Flags(0), MachineType(PDB_Machine::x86), Header(nullptr) {}
+DbiStreamBuilder::DbiStreamBuilder(msf::MSFBuilder &Msf)
+    : Msf(Msf), Allocator(Msf.getAllocator()), Age(1), BuildNumber(0),
+      PdbDllVersion(0), PdbDllRbld(0), Flags(0), MachineType(PDB_Machine::x86),
+      Header(nullptr) {}
 
 void DbiStreamBuilder::setVersionHeader(PdbRaw_DbiVer V) { VerHeader = V; }
 
@@ -224,6 +226,13 @@ Error DbiStreamBuilder::finalize() {
   H->GlobalSymbolStreamIndex = kInvalidStreamIndex;
 
   Header = H;
+  return Error::success();
+}
+
+Error DbiStreamBuilder::finalizeMsfLayout() {
+  uint32_t Length = calculateSerializedLength();
+  if (auto EC = Msf.setStreamSize(StreamDBI, Length))
+    return EC;
   return Error::success();
 }
 

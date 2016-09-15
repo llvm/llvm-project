@@ -75,6 +75,10 @@ struct PdbTpiRecord {
   codeview::CVType Record;
 };
 
+struct PdbTpiFieldListRecord {
+  codeview::CVMemberRecord Record;
+};
+
 struct PdbTpiStream {
   PdbRaw_TpiVer Version;
   std::vector<PdbTpiRecord> Records;
