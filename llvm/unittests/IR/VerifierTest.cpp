@@ -14,6 +14,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -176,26 +177,58 @@ TEST(VerifierTest, InvalidFunctionLinkage) {
 #ifndef _MSC_VER
 // FIXME: This test causes an ICE in MSVC 2013.
 TEST(VerifierTest, StripInvalidDebugInfo) {
-  LLVMContext C;
-  Module M("M", C);
-  DIBuilder DIB(M);
-  DIB.createCompileUnit(dwarf::DW_LANG_C89, "broken.c", "/",
-                        "unittest", false, "", 0);
-  DIB.finalize();
-  EXPECT_FALSE(verifyModule(M));
+  {
+    LLVMContext C;
+    Module M("M", C);
+    DIBuilder DIB(M);
+    DIB.createCompileUnit(dwarf::DW_LANG_C89, "broken.c", "/", "unittest",
+                          false, "", 0);
+    DIB.finalize();
+    EXPECT_FALSE(verifyModule(M));
 
-  // Now break it.
-  auto *File = DIB.createFile("not-a-CU.f", ".");
-  NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");
-  NMD->addOperand(File);
-  EXPECT_TRUE(verifyModule(M));
+    // Now break it by inserting non-CU node to the list of CUs.
+    auto *File = DIB.createFile("not-a-CU.f", ".");
+    NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");
+    NMD->addOperand(File);
+    EXPECT_TRUE(verifyModule(M));
 
-  ModulePassManager MPM(true);
-  MPM.addPass(VerifierPass(false));
-  ModuleAnalysisManager MAM(true);
-  MAM.registerPass([&] { return VerifierAnalysis(); });
-  MPM.run(M, MAM);
-  EXPECT_FALSE(verifyModule(M));
+    ModulePassManager MPM(true);
+    MPM.addPass(VerifierPass(false));
+    ModuleAnalysisManager MAM(true);
+    MAM.registerPass([&] { return VerifierAnalysis(); });
+    MPM.run(M, MAM);
+    EXPECT_FALSE(verifyModule(M));
+  }
+  {
+    LLVMContext C;
+    Module M("M", C);
+    DIBuilder DIB(M);
+    auto *CU = DIB.createCompileUnit(dwarf::DW_LANG_C89, "broken.c", "/",
+                                     "unittest", false, "", 0);
+    new GlobalVariable(M, Type::getInt8Ty(C), false,
+                       GlobalValue::ExternalLinkage, nullptr, "g");
+
+    auto *F = cast<Function>(M.getOrInsertFunction(
+        "f", FunctionType::get(Type::getVoidTy(C), false)));
+    IRBuilder<> Builder(BasicBlock::Create(C, "", F));
+    Builder.CreateUnreachable();
+    F->setSubprogram(DIB.createFunction(CU, "f", "f",
+                                        DIB.createFile("broken.c", "/"), 1,
+                                        nullptr, true, true, 1));
+    DIB.finalize();
+    EXPECT_FALSE(verifyModule(M));
+
+    // Now break it by not listing the CU at all.
+    M.eraseNamedMetadata(M.getOrInsertNamedMetadata("llvm.dbg.cu"));
+    EXPECT_TRUE(verifyModule(M));
+
+    ModulePassManager MPM(true);
+    MPM.addPass(VerifierPass(false));
+    ModuleAnalysisManager MAM(true);
+    MAM.registerPass([&] { return VerifierAnalysis(); });
+    MPM.run(M, MAM);
+    EXPECT_FALSE(verifyModule(M));
+  }
 }
 #endif
 
