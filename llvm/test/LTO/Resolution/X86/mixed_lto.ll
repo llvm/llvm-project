@@ -5,11 +5,11 @@
 ; RUN: llvm-lto2 -o %t3.o %t2.o %t1.o -r %t2.o,main,px -r %t2.o,g, -r %t1.o,g,px
 
 ; Task 0 is the regular LTO file (this file)
-; RUN: nm %t3.o.0 | FileCheck %s --check-prefix=NM0
+; RUN: llvm-nm %t3.o.0 | FileCheck %s --check-prefix=NM0
 ; NM0: T g
 
 ; Task 1 is the (first) ThinLTO file (Inputs/mixed_lto.ll)
-; RUN: nm %t3.o.1 | FileCheck %s --check-prefix=NM1
+; RUN: llvm-nm %t3.o.1 | FileCheck %s --check-prefix=NM1
 ; NM1-DAG: T main
 ; NM1-DAG: U g
 

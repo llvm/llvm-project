@@ -7,7 +7,7 @@
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=-import-instr-limit=0 \
 ; RUN:     -o %t3.o %t2.o %t.o
-; RUN: nm %t3.o | FileCheck %s
+; RUN: llvm-nm %t3.o | FileCheck %s
 
 ; CHECK-DAG: T main
 ; CHECK-DAG: T g
