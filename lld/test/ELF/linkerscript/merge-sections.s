@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 
-# RUN: echo "SECTIONS {.foo : {*(.foo.*)} }" > %t.script
+# RUN: echo "SECTIONS {.foo : { begin = .; *(.foo.*) end = .;} }" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t -shared
 # RUN: llvm-readobj -s -t %t1 | FileCheck %s
 
@@ -51,6 +51,13 @@
 # CHECK-NEXT:   Info: 0
 # CHECK-NEXT:   AddressAlignment: 2
 # CHECK-NEXT:   EntrySize: 2
+
+
+# CHECK:      Name: begin
+# CHECK-NEXT: Value: 0x1C8
+
+# CHECK:      Name: end
+# CHECK-NEXT: Value: 0x1D0
 
 .section        .foo.1a,"aMS",@progbits,1
 .asciz "foo"

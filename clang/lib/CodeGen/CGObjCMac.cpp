@@ -5186,10 +5186,10 @@ void CGObjCMac::FinishModule() {
       Asm += '\n';
 
     llvm::raw_svector_ostream OS(Asm);
-    for (const auto &Sym : DefinedSymbols)
+    for (const auto *Sym : DefinedSymbols)
       OS << "\t.objc_class_name_" << Sym->getName() << "=0\n"
          << "\t.globl .objc_class_name_" << Sym->getName() << "\n";
-    for (const auto &Sym : LazySymbols)
+    for (const auto *Sym : LazySymbols)
       OS << "\t.lazy_reference .objc_class_name_" << Sym->getName() << "\n";
     for (const auto &Category : DefinedCategoryNames)
       OS << "\t.objc_category_name_" << Category << "=0\n"

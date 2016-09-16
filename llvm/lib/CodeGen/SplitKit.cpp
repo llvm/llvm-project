@@ -675,7 +675,7 @@ SlotIndex SplitEditor::leaveIntvAtTop(MachineBasicBlock &MBB) {
   }
 
   VNInfo *VNI = defFromParent(0, ParentVNI, Start, MBB,
-                              MBB.SkipPHIsAndLabels(MBB.begin()));
+                              MBB.SkipPHIsLabelsAndDebug(MBB.begin()));
   RegAssign.insert(Start, VNI->def, OpenIdx);
   DEBUG(dump());
   return VNI->def;
