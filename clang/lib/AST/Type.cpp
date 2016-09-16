@@ -1081,13 +1081,24 @@ QualType QualType::substObjCTypeArgs(
 
     // Replace an Objective-C type parameter reference with the corresponding
     // type argument.
-    if (const auto *typedefTy = dyn_cast<TypedefType>(splitType.Ty)) {
-      if (auto *typeParam = dyn_cast<ObjCTypeParamDecl>(typedefTy->getDecl())) {
+    if (const auto *OTPTy = dyn_cast<ObjCTypeParamType>(splitType.Ty)) {
+      if (auto *typeParam = dyn_cast<ObjCTypeParamDecl>(OTPTy->getDecl())) {
         // If we have type arguments, use them.
         if (!typeArgs.empty()) {
-          // FIXME: Introduce SubstObjCTypeParamType ?
           QualType argType = typeArgs[typeParam->getIndex()];
-          return ctx.getQualifiedType(argType, splitType.Quals);
+          if (OTPTy->qual_empty())
+            return ctx.getQualifiedType(argType, splitType.Quals);
+
+          // Apply protocol lists if exists.
+          bool hasError;
+          SmallVector<ObjCProtocolDecl*, 8> protocolsVec;
+          protocolsVec.append(OTPTy->qual_begin(),
+                              OTPTy->qual_end());
+          ArrayRef<ObjCProtocolDecl *> protocolsToApply = protocolsVec;
+          QualType resultTy = ctx.applyObjCProtocolQualifiers(argType,
+              protocolsToApply, hasError, true/*allowOnPointerType*/);
+
+          return ctx.getQualifiedType(resultTy, splitType.Quals);
         }
 
         switch (context) {
