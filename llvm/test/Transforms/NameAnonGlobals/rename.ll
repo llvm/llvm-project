@@ -1,4 +1,4 @@
-; RUN: opt -S -name-anon-functions < %s | FileCheck %s
+; RUN: opt -S -name-anon-globals < %s | FileCheck %s
 
 
 ; foo contribute to the unique hash for the module
