@@ -843,7 +843,7 @@ This attribute specifies that the variable to which it is attached is intended
 to have a `constant initializer <http://en.cppreference.com/w/cpp/language/constant_initialization>`_
 according to the rules of [basic.start.static]. The variable is required to
 have static or thread storage duration. If the initialization of the variable
-is not a constant initializer, an error will be produced. This attribute may
+is not a constant initializer an error will be produced. This attribute may
 only be used in C++.
 
 Note that in C++03 strict constant expression checking is not done. Instead
@@ -862,7 +862,7 @@ of silently falling back on dynamic initialization.
 .. code-block:: c++
 
   // -std=c++14
-  #define SAFE_STATIC __attribute__((require_constant_initialization)) static
+  #define SAFE_STATIC [[clang::require_constant_initialization]]
   struct T {
     constexpr T(int) {}
     ~T(); // non-trivial
