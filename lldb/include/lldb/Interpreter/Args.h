@@ -179,6 +179,7 @@ public:
   /// @return
   ///     The NULL terminated C string of the copy of \a arg_cstr.
   //------------------------------------------------------------------
+  // TODO: Convert this function to use a StringRef.
   const char *AppendArgument(const char *arg_cstr, char quote_char = '\0');
 
   void AppendArguments(const Args &rhs);
@@ -353,24 +354,26 @@ public:
     return min <= sval64 && sval64 <= max;
   }
 
+  // TODO: Make this function take a StringRef
   static lldb::addr_t StringToAddress(const ExecutionContext *exe_ctx,
                                       const char *s, lldb::addr_t fail_value,
                                       Error *error);
 
   static bool StringToBoolean(const char *s, bool fail_value,
-                              bool *success_ptr);
+    bool *success_ptr);
 
   static bool StringToBoolean(llvm::StringRef s, bool fail_value,
                               bool *success_ptr);
 
-  static char StringToChar(const char *s, char fail_value, bool *success_ptr);
+  static char StringToChar(llvm::StringRef s, char fail_value,
+                           bool *success_ptr);
 
   static int64_t StringToOptionEnum(const char *s,
                                     OptionEnumValueElement *enum_values,
                                     int32_t fail_value, Error &error);
 
   static lldb::ScriptLanguage
-  StringToScriptLanguage(const char *s, lldb::ScriptLanguage fail_value,
+  StringToScriptLanguage(llvm::StringRef s, lldb::ScriptLanguage fail_value,
                          bool *success_ptr);
 
   // TODO: Use StringRef

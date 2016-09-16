@@ -732,24 +732,21 @@ const char *Args::StripSpaces(std::string &s, bool leading, bool trailing,
   return s.c_str();
 }
 
-bool Args::StringToBoolean(const char *s, bool fail_value, bool *success_ptr) {
-  if (!s)
-    return fail_value;
-  return Args::StringToBoolean(llvm::StringRef(s), fail_value, success_ptr);
+bool Args::StringToBoolean(const char *s, bool fail_value,
+  bool *success_ptr) {
+  return StringToBoolean(llvm::StringRef(s ? s : ""), fail_value, success_ptr);
 }
 
 bool Args::StringToBoolean(llvm::StringRef ref, bool fail_value,
                            bool *success_ptr) {
+  if (success_ptr)
+    *success_ptr = true;
   ref = ref.trim();
   if (ref.equals_lower("false") || ref.equals_lower("off") ||
       ref.equals_lower("no") || ref.equals_lower("0")) {
-    if (success_ptr)
-      *success_ptr = true;
     return false;
   } else if (ref.equals_lower("true") || ref.equals_lower("on") ||
              ref.equals_lower("yes") || ref.equals_lower("1")) {
-    if (success_ptr)
-      *success_ptr = true;
     return true;
   }
   if (success_ptr)
@@ -757,20 +754,15 @@ bool Args::StringToBoolean(llvm::StringRef ref, bool fail_value,
   return fail_value;
 }
 
-char Args::StringToChar(const char *s, char fail_value, bool *success_ptr) {
-  bool success = false;
-  char result = fail_value;
-
-  if (s) {
-    size_t length = strlen(s);
-    if (length == 1) {
-      success = true;
-      result = s[0];
-    }
-  }
+char Args::StringToChar(llvm::StringRef s, char fail_value, bool *success_ptr) {
   if (success_ptr)
-    *success_ptr = success;
-  return result;
+    *success_ptr = false;
+  if (s.size() != 1)
+    return fail_value;
+
+  if (success_ptr)
+    *success_ptr = true;
+  return s[0];
 }
 
 const char *Args::StringToVersion(const char *s, uint32_t &major,
@@ -870,23 +862,19 @@ int64_t Args::StringToOptionEnum(const char *s,
   return fail_value;
 }
 
-ScriptLanguage Args::StringToScriptLanguage(const char *s,
-                                            ScriptLanguage fail_value,
-                                            bool *success_ptr) {
-  if (s && s[0]) {
-    if ((::strcasecmp(s, "python") == 0) ||
-        (::strcasecmp(s, "default") == 0 &&
-         eScriptLanguagePython == eScriptLanguageDefault)) {
-      if (success_ptr)
-        *success_ptr = true;
-      return eScriptLanguagePython;
-    }
-    if (::strcasecmp(s, "none")) {
-      if (success_ptr)
-        *success_ptr = true;
-      return eScriptLanguageNone;
-    }
-  }
+lldb::ScriptLanguage
+Args::StringToScriptLanguage(llvm::StringRef s, lldb::ScriptLanguage fail_value,
+                             bool *success_ptr) {
+  if (success_ptr)
+    *success_ptr = true;
+
+  if (s.equals_lower("python"))
+    return eScriptLanguagePython;
+  if (s.equals_lower("default"))
+    return eScriptLanguageDefault;
+  if (s.equals_lower("none"))
+    return eScriptLanguageNone;
+
   if (success_ptr)
     *success_ptr = false;
   return fail_value;

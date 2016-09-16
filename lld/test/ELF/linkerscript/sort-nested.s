@@ -23,6 +23,16 @@
 # SORTED_NA:   02000000 00000000 00000000 00000000
 # SORTED_NA:   55000000 00000000
 
+## If the section sorting command in linker script isn't nested, the
+## command line option will make the section sorting command to be treated
+## as nested sorting command.
+# RUN: echo "SECTIONS { .aaa : { *(SORT_BY_ALIGNMENT(.aaa.*)) } }" > %t3.script
+# RUN: ld.lld --sort-section name -o %t3 --script %t3.script %t1.o %t2.o
+# RUN: llvm-objdump -s %t3 | FileCheck -check-prefix=SORTED_AN %s
+# RUN: echo "SECTIONS { .aaa : { *(SORT_BY_NAME(.aaa.*)) } }" > %t4.script
+# RUN: ld.lld --sort-section alignment -o %t4 --script %t4.script %t1.o %t2.o
+# RUN: llvm-objdump -s %t4 | FileCheck -check-prefix=SORTED_NA %s
+
 .global _start
 _start:
  nop

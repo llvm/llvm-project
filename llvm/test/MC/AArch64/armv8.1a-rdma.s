@@ -21,47 +21,21 @@
 // CHECK: sqrdmlsh  v0.8h, v1.8h, v2.8h // encoding: [0x20,0x8c,0x42,0x6e]
 
   sqrdmlah v0.2h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:12: error: invalid operand for instruction
   sqrdmlsh v0.2h, v1.2h, v2.2h
+// CHECK-ERROR: [[@LINE-1]]:12: error: invalid operand for instruction
   sqrdmlah v0.8s, v1.8s, v2.8s
+// CHECK-ERROR: [[@LINE-1]]:12: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:19: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-3]]:26: error: invalid vector kind qualifier
   sqrdmlsh v0.8s, v1.8s, v2.8s
+// CHECK-ERROR: [[@LINE-1]]:12: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-2]]:19: error: invalid vector kind qualifier
+// CHECK-ERROR: [[@LINE-3]]:26: error: invalid vector kind qualifier
   sqrdmlah v0.2s, v1.4h, v2.8h
+// CHECK-ERROR: [[@LINE-1]]:19: error: invalid operand for instruction
   sqrdmlsh v0.4s, v1.8h, v2.2s
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:   sqrdmlah v0.2h, v1.2h, v2.2h
-// CHECK-ERROR:            ^
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:   sqrdmlsh v0.2h, v1.2h, v2.2h
-// CHECK-ERROR:            ^
-// CHECK-ERROR: error: invalid vector kind qualifier
-// CHECK-ERROR:   sqrdmlah v0.8s, v1.8s, v2.8s
-// CHECK-ERROR:            ^
-// CHECK-ERROR: error: invalid vector kind qualifier
-// CHECK-ERROR:   sqrdmlah v0.8s, v1.8s, v2.8s
-// CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid vector kind qualifier
-// CHECK-ERROR:   sqrdmlah v0.8s, v1.8s, v2.8s
-// CHECK-ERROR:                          ^
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:   sqrdmlah v0.8s, v1.8s, v2.8s
-// CHECK-ERROR:            ^
-// CHECK-ERROR: error: invalid vector kind qualifier
-// CHECK-ERROR:   sqrdmlsh v0.8s, v1.8s, v2.8s
-// CHECK-ERROR:            ^
-// CHECK-ERROR: error: invalid vector kind qualifier
-// CHECK-ERROR:   sqrdmlsh v0.8s, v1.8s, v2.8s
-// CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid vector kind qualifier
-// CHECK-ERROR:   sqrdmlsh v0.8s, v1.8s, v2.8s
-// CHECK-ERROR:                          ^
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:   sqrdmlsh v0.8s, v1.8s, v2.8s
-// CHECK-ERROR:            ^
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:   sqrdmlah v0.2s, v1.4h, v2.8h
-// CHECK-ERROR:                   ^
-// CHECK-ERROR: error: invalid operand for instruction
-// CHECK-ERROR:   sqrdmlsh v0.4s, v1.8h, v2.2s
-// CHECK-ERROR:                   ^
+// CHECK-ERROR: [[@LINE-1]]:19: error: invalid operand for instruction
 
   //AdvSIMD RDMA scalar
   sqrdmlah h0, h1, h2

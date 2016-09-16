@@ -17,3 +17,5 @@ diagnostics:
 
     .inst 0x5e104020 0x5e104020
 // CHECK-ERROR: unexpected token in directive
+
+// CHECK-ERROR-NOT: unexpected token at start of statement	

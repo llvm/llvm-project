@@ -47,7 +47,7 @@ Error OptionValueChar::SetValueFromString(llvm::StringRef value,
   case eVarSetOperationReplace:
   case eVarSetOperationAssign: {
     bool success = false;
-    char char_value = Args::StringToChar(value.str().c_str(), '\0', &success);
+    char char_value = Args::StringToChar(value, '\0', &success);
     if (success) {
       m_current_value = char_value;
       m_value_was_set = true;

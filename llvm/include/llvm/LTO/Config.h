@@ -83,6 +83,11 @@ struct Config {
   /// manager as the old one doesn't have this ability.
   std::string OptPipeline;
 
+  // If this field is set, it has the same effect of specifying an AA pipeline
+  // identified by the string. Only works with the new pass manager, in
+  // conjunction OptPipeline.
+  std::string AAPipeline;
+
   /// Setting this field will replace target triples in input files with this
   /// triple.
   std::string OverrideTriple;
@@ -170,6 +175,7 @@ struct Config {
         CGOptLevel(std::move(X.CGOptLevel)), OptLevel(std::move(X.OptLevel)),
         DisableVerify(std::move(X.DisableVerify)),
         OptPipeline(std::move(X.OptPipeline)),
+        AAPipeline(std::move(X.AAPipeline)),
         OverrideTriple(std::move(X.OverrideTriple)),
         DefaultTriple(std::move(X.DefaultTriple)),
         ShouldDiscardValueNames(std::move(X.ShouldDiscardValueNames)),
@@ -194,6 +200,7 @@ struct Config {
     OptLevel = std::move(X.OptLevel);
     DisableVerify = std::move(X.DisableVerify);
     OptPipeline = std::move(X.OptPipeline);
+    AAPipeline = std::move(X.AAPipeline);
     OverrideTriple = std::move(X.OverrideTriple);
     DefaultTriple = std::move(X.DefaultTriple);
     ShouldDiscardValueNames = std::move(X.ShouldDiscardValueNames);

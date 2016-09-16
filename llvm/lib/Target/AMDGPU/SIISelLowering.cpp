@@ -872,12 +872,12 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (HasStackObjects)
     Info->setHasNonSpillStackObjects(true);
 
-  if (ST.isAmdHsaOS()) {
+  if (ST.isAmdCodeObjectV2()) {
     // TODO: Assume we will spill without optimizations.
     if (HasStackObjects) {
       // If we have stack objects, we unquestionably need the private buffer
-      // resource. For the HSA ABI, this will be the first 4 user SGPR
-      // inputs. We can reserve those and use them directly.
+      // resource. For the Code Object V2 ABI, this will be the first 4 user
+      // SGPR inputs. We can reserve those and use them directly.
 
       unsigned PrivateSegmentBufferReg = TRI->getPreloadedValue(
         MF, SIRegisterInfo::PRIVATE_SEGMENT_BUFFER);
@@ -1994,7 +1994,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_dispatch_ptr:
   case Intrinsic::amdgcn_queue_ptr: {
-    if (!Subtarget->isAmdHsaOS()) {
+    if (!Subtarget->isAmdCodeObjectV2()) {
       DiagnosticInfoUnsupported BadIntrin(
           *MF.getFunction(), "unsupported hsa intrinsic without hsa target",
           DL.getDebugLoc());

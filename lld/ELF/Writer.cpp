@@ -437,10 +437,6 @@ static bool compareSections(OutputSectionBase<ELFT> *A,
                             OutputSectionBase<ELFT> *B) {
   typedef typename ELFT::uint uintX_t;
 
-  int Comp = Script<ELFT>::X->compareSections(A->getName(), B->getName());
-  if (Comp != 0)
-    return Comp < 0;
-
   uintX_t AFlags = A->getFlags();
   uintX_t BFlags = B->getFlags();
 
@@ -450,6 +446,10 @@ static bool compareSections(OutputSectionBase<ELFT> *A,
   bool BIsAlloc = BFlags & SHF_ALLOC;
   if (AIsAlloc != BIsAlloc)
     return AIsAlloc;
+
+  int Comp = Script<ELFT>::X->compareSections(A->getName(), B->getName());
+  if (Comp != 0)
+    return Comp < 0;
 
   // We don't have any special requirements for the relative order of
   // two non allocatable sections.
@@ -971,15 +971,8 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
   Phdr RelRo(PT_GNU_RELRO, PF_R);
   Phdr Note(PT_NOTE, PF_R);
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
-    // Skip non alloc section.
-    // The reason we skip instead of just breaking out of the loop is the way
-    // we implement linker scripts. We always put the linker script sections
-    // first, which means that a non alloc section can be in the middle of the
-    // file. Continuing in here means it will be included in a PT_LOAD anyway.
-    // We should probably sort sections based of SHF_ALLOC even if they are
-    // on linker scripts.
     if (!(Sec->getFlags() & SHF_ALLOC))
-      continue;
+      break;
 
     // If we meet TLS section then we create TLS header
     // and put all TLS sections inside for futher use when

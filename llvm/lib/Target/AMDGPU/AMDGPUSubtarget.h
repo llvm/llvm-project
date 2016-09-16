@@ -138,6 +138,10 @@ public:
     return TargetTriple.getOS() == Triple::AMDHSA;
   }
 
+  bool isMesa3DOS() const {
+    return TargetTriple.getOS() == Triple::Mesa3D;
+  }
+
   Generation getGeneration() const {
     return Gen;
   }
@@ -270,10 +274,14 @@ public:
     return EnableXNACK;
   }
 
+  bool isAmdCodeObjectV2() const {
+    return isAmdHsaOS() || isMesa3DOS();
+  }
+
   /// \brief Returns the offset in bytes from the start of the input buffer
   ///        of the first explicit kernel argument.
   unsigned getExplicitKernelArgOffset() const {
-    return isAmdHsaOS() ? 0 : 36;
+    return isAmdCodeObjectV2() ? 0 : 36;
   }
 
   unsigned getAlignmentForImplicitArgPtr() const {

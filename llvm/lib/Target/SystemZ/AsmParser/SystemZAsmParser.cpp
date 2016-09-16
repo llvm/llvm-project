@@ -959,7 +959,6 @@ bool SystemZAsmParser::ParseInstruction(ParseInstructionInfo &Info,
   if (getLexer().isNot(AsmToken::EndOfStatement)) {
     // Read the first operand.
     if (parseOperand(Operands, Name)) {
-      Parser.eatToEndOfStatement();
       return true;
     }
 
@@ -967,13 +966,11 @@ bool SystemZAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     while (getLexer().is(AsmToken::Comma)) {
       Parser.Lex();
       if (parseOperand(Operands, Name)) {
-        Parser.eatToEndOfStatement();
         return true;
       }
     }
     if (getLexer().isNot(AsmToken::EndOfStatement)) {
       SMLoc Loc = getLexer().getLoc();
-      Parser.eatToEndOfStatement();
       return Error(Loc, "unexpected token in argument list");
     }
   }
