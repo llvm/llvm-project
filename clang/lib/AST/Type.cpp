@@ -546,15 +546,9 @@ ObjCObjectType::ObjCObjectType(QualType Canonical, QualType Base,
   ObjCObjectTypeBits.NumTypeArgs = typeArgs.size();
   assert(getTypeArgsAsWritten().size() == typeArgs.size() &&
          "bitfield overflow in type argument count");
-  ObjCObjectTypeBits.NumProtocols = protocols.size();
-  assert(getNumProtocols() == protocols.size() &&
-         "bitfield overflow in protocol count");
   if (!typeArgs.empty())
     memcpy(getTypeArgStorage(), typeArgs.data(),
            typeArgs.size() * sizeof(QualType));
-  if (!protocols.empty())
-    memcpy(getProtocolStorage(), protocols.data(),
-           protocols.size() * sizeof(ObjCProtocolDecl*));
 
   for (auto typeArg : typeArgs) {
     if (typeArg->isDependentType())
@@ -565,6 +559,9 @@ ObjCObjectType::ObjCObjectType(QualType Canonical, QualType Base,
     if (typeArg->containsUnexpandedParameterPack())
       setContainsUnexpandedParameterPack();
   }
+  // Initialize the protocol qualifiers. The protocol storage is known
+  // after we set number of type arguments.
+  initialize(protocols);
 }
 
 bool ObjCObjectType::isSpecialized() const { 
