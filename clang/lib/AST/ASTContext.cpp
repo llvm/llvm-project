@@ -1860,6 +1860,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   case Type::Paren:
     return getTypeInfo(cast<ParenType>(T)->getInnerType().getTypePtr());
 
+  case Type::ObjCTypeParam:
+    return getTypeInfo(cast<ObjCTypeParamType>(T)->desugar().getTypePtr());
+
   case Type::Typedef: {
     const TypedefNameDecl *Typedef = cast<TypedefType>(T)->getDecl();
     TypeInfo Info = getTypeInfo(Typedef->getUnderlyingType().getTypePtr());
@@ -3869,6 +3872,116 @@ QualType ASTContext::getObjCObjectType(
   Types.push_back(T);
   ObjCObjectTypes.InsertNode(T, InsertPos);
   return QualType(T, 0);
+}
+
+/// Apply Objective-C protocol qualifiers to the given type.
+/// If this is for the canonical type of a type parameter, we can apply
+/// protocol qualifiers on the ObjCObjectPointerType.
+QualType
+ASTContext::applyObjCProtocolQualifiers(QualType type,
+                  ArrayRef<ObjCProtocolDecl *> protocols, bool &hasError,
+                  bool allowOnPointerType) const {
+  hasError = false;
+
+  if (const ObjCTypeParamType *objT =
+      dyn_cast<ObjCTypeParamType>(type.getTypePtr())) {
+    return getObjCTypeParamType(objT->getDecl(), protocols);
+  }
+
+  // Apply protocol qualifiers to ObjCObjectPointerType.
+  if (allowOnPointerType) {
+    if (const ObjCObjectPointerType *objPtr =
+        dyn_cast<ObjCObjectPointerType>(type.getTypePtr())) {
+      const ObjCObjectType *objT = objPtr->getObjectType();
+      // Merge protocol lists and construct ObjCObjectType.
+      SmallVector<ObjCProtocolDecl*, 8> protocolsVec;
+      protocolsVec.append(objT->qual_begin(),
+                          objT->qual_end());
+      protocolsVec.append(protocols.begin(), protocols.end());
+      ArrayRef<ObjCProtocolDecl *> protocols = protocolsVec;
+      type = getObjCObjectType(
+             objT->getBaseType(),
+             objT->getTypeArgsAsWritten(),
+             protocols,
+             objT->isKindOfTypeAsWritten());
+      return getObjCObjectPointerType(type);
+    }
+  }
+
+  // Apply protocol qualifiers to ObjCObjectType.
+  if (const ObjCObjectType *objT = dyn_cast<ObjCObjectType>(type.getTypePtr())){
+    // FIXME: Check for protocols to which the class type is already
+    // known to conform.
+
+    return getObjCObjectType(objT->getBaseType(),
+                             objT->getTypeArgsAsWritten(),
+                             protocols,
+                             objT->isKindOfTypeAsWritten());
+  }
+
+  // If the canonical type is ObjCObjectType, ...
+  if (type->isObjCObjectType()) {
+    // Silently overwrite any existing protocol qualifiers.
+    // TODO: determine whether that's the right thing to do.
+
+    // FIXME: Check for protocols to which the class type is already
+    // known to conform.
+    return getObjCObjectType(type, { }, protocols, false);
+  }
+
+  // id<protocol-list>
+  if (type->isObjCIdType()) {
+    const ObjCObjectPointerType *objPtr = type->castAs<ObjCObjectPointerType>();
+    type = getObjCObjectType(ObjCBuiltinIdTy, { }, protocols,
+                                 objPtr->isKindOfType());
+    return getObjCObjectPointerType(type);
+  }
+
+  // Class<protocol-list>
+  if (type->isObjCClassType()) {
+    const ObjCObjectPointerType *objPtr = type->castAs<ObjCObjectPointerType>();
+    type = getObjCObjectType(ObjCBuiltinClassTy, { }, protocols,
+                                 objPtr->isKindOfType());
+    return getObjCObjectPointerType(type);
+  }
+
+  hasError = true;
+  return type;
+}
+
+QualType
+ASTContext::getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
+                           ArrayRef<ObjCProtocolDecl *> protocols,
+                           QualType Canonical) const {
+  // Look in the folding set for an existing type.
+  llvm::FoldingSetNodeID ID;
+  ObjCTypeParamType::Profile(ID, Decl, protocols);
+  void *InsertPos = nullptr;
+  if (ObjCTypeParamType *TypeParam =
+      ObjCTypeParamTypes.FindNodeOrInsertPos(ID, InsertPos))
+    return QualType(TypeParam, 0);
+
+  if (Canonical.isNull()) {
+    // We canonicalize to the underlying type.
+    Canonical = getCanonicalType(Decl->getUnderlyingType());
+    if (!protocols.empty()) {
+      // Apply the protocol qualifers.
+      bool hasError;
+      Canonical = applyObjCProtocolQualifiers(Canonical, protocols, hasError,
+          true/*allowOnPointerType*/);
+      assert(!hasError && "Error when apply protocol qualifier to bound type");
+    }
+  }
+
+  unsigned size = sizeof(ObjCTypeParamType);
+  size += protocols.size() * sizeof(ObjCProtocolDecl *);
+  void *mem = Allocate(size, TypeAlignment);
+  ObjCTypeParamType *newType = new (mem)
+    ObjCTypeParamType(Decl, Canonical, protocols);
+
+  Types.push_back(newType);
+  ObjCTypeParamTypes.InsertNode(newType, InsertPos);
+  return QualType(newType, 0);
 }
 
 /// ObjCObjectAdoptsQTypeProtocols - Checks that protocols in IC's
