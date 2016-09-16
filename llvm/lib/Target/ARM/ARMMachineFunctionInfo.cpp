@@ -21,4 +21,4 @@ ARMFunctionInfo::ARMFunctionInfo(MachineFunction &MF)
       FramePtrSpillOffset(0), GPRCS1Offset(0), GPRCS2Offset(0), DPRCSOffset(0),
       GPRCS1Size(0), GPRCS2Size(0), DPRCSSize(0),
       PICLabelUId(0), VarArgsFrameIndex(0), HasITBlocks(false),
-      ArgumentStackSize(0), IsSplitCSR(false) {}
+      ArgumentStackSize(0), IsSplitCSR(false), PromotedGlobalsIncrease(0) {}

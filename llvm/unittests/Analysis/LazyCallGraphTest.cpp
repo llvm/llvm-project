@@ -120,6 +120,101 @@ static const char DiamondOfTriangles[] =
      "  ret void\n"
      "}\n";
 
+/*
+   IR forming a reference graph with a diamond of triangle-shaped RefSCCs
+
+           d1
+          /  \
+         d3--d2
+        /     \
+       b1     c1
+     /  \    /  \
+    b3--b2  c3--c2
+         \  /
+          a1
+         /  \
+        a3--a2
+
+   All call edges go up between RefSCCs, and clockwise around the RefSCC.
+ */
+static const char DiamondOfTrianglesRefGraph[] =
+     "define void @a1() {\n"
+     "entry:\n"
+     "  %a = alloca void ()*\n"
+     "  store void ()* @a2, void ()** %a\n"
+     "  store void ()* @b2, void ()** %a\n"
+     "  store void ()* @c3, void ()** %a\n"
+     "  ret void\n"
+     "}\n"
+     "define void @a2() {\n"
+     "entry:\n"
+     "  %a = alloca void ()*\n"
+     "  store void ()* @a3, void ()** %a\n"
+     "  ret void\n"
+     "}\n"
+     "define void @a3() {\n"
+     "entry:\n"
+     "  %a = alloca void ()*\n"
+     "  store void ()* @a1, void ()** %a\n"
+     "  ret void\n"
+     "}\n"
+     "define void @b1() {\n"
+     "entry:\n"
+     "  %a = alloca void ()*\n"
+     "  store void ()* @b2, void ()** %a\n"
+     "  store void ()* @d3, void ()** %a\n"
+     "  ret void\n"
+     "}\n"
+     "define void @b2() {\n"
+     "entry:\n"
+     "  %a = alloca void ()*\n"
+     "  store void ()* @b3, void ()** %a\n"
+     "  ret void\n"
+     "}\n"
+     "define void @b3() {\n"
+     "entry:\n"
+     "  %a = alloca void ()*\n"
+     "  store void ()* @b1, void ()** %a\n"
+     "  ret void\n"
+     "}\n"
+     "define void @c1() {\n"
+     "entry:\n"
+     "  %a = alloca void ()*\n"
+     "  store void ()* @c2, void ()** %a\n"
+     "  store void ()* @d2, void ()** %a\n"
+     "  ret void\n"
+     "}\n"
+     "define void @c2() {\n"
+     "entry:\n"
+     "  %a = alloca void ()*\n"
+     "  store void ()* @c3, void ()** %a\n"
+     "  ret void\n"
+     "}\n"
+     "define void @c3() {\n"
+     "entry:\n"
+     "  %a = alloca void ()*\n"
+     "  store void ()* @c1, void ()** %a\n"
+     "  ret void\n"
+     "}\n"
+     "define void @d1() {\n"
+     "entry:\n"
+     "  %a = alloca void ()*\n"
+     "  store void ()* @d2, void ()** %a\n"
+     "  ret void\n"
+     "}\n"
+     "define void @d2() {\n"
+     "entry:\n"
+     "  %a = alloca void ()*\n"
+     "  store void ()* @d3, void ()** %a\n"
+     "  ret void\n"
+     "}\n"
+     "define void @d3() {\n"
+     "entry:\n"
+     "  %a = alloca void ()*\n"
+     "  store void ()* @d1, void ()** %a\n"
+     "  ret void\n"
+     "}\n";
+
 TEST(LazyCallGraphTest, BasicGraphFormation) {
   LLVMContext Context;
   std::unique_ptr<Module> M = parseAssembly(Context, DiamondOfTriangles);
@@ -220,6 +315,7 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   EXPECT_FALSE(D.isChildOf(D));
   EXPECT_FALSE(D.isAncestorOf(D));
   EXPECT_FALSE(D.isDescendantOf(D));
+  EXPECT_EQ(&D, &*CG.postorder_ref_scc_begin());
 
   LazyCallGraph::RefSCC &C = *J++;
   ASSERT_EQ(1, C.size());
@@ -235,6 +331,7 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   EXPECT_FALSE(C.isChildOf(D));
   EXPECT_TRUE(C.isAncestorOf(D));
   EXPECT_FALSE(C.isDescendantOf(D));
+  EXPECT_EQ(&C, &*std::next(CG.postorder_ref_scc_begin()));
 
   LazyCallGraph::RefSCC &B = *J++;
   ASSERT_EQ(1, B.size());
@@ -252,6 +349,7 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   EXPECT_FALSE(B.isDescendantOf(D));
   EXPECT_FALSE(B.isAncestorOf(C));
   EXPECT_FALSE(C.isAncestorOf(B));
+  EXPECT_EQ(&B, &*std::next(CG.postorder_ref_scc_begin(), 2));
 
   LazyCallGraph::RefSCC &A = *J++;
   ASSERT_EQ(1, A.size());
@@ -269,8 +367,10 @@ TEST(LazyCallGraphTest, BasicGraphFormation) {
   EXPECT_TRUE(A.isAncestorOf(B));
   EXPECT_TRUE(A.isAncestorOf(C));
   EXPECT_TRUE(A.isAncestorOf(D));
+  EXPECT_EQ(&A, &*std::next(CG.postorder_ref_scc_begin(), 3));
 
   EXPECT_EQ(CG.postorder_ref_scc_end(), J);
+  EXPECT_EQ(J, std::next(CG.postorder_ref_scc_begin(), 4));
 }
 
 static Function &lookupFunction(Module &M, StringRef Name) {
@@ -478,7 +578,7 @@ TEST(LazyCallGraphTest, OutgoingEdgeMutation) {
 
   // Force the graph to be fully expanded.
   for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs())
-    (void)RC;
+    dbgs() << "Formed RefSCC: " << RC << "\n";
 
   LazyCallGraph::Node &A = *CG.lookup(lookupFunction(*M, "a"));
   LazyCallGraph::Node &B = *CG.lookup(lookupFunction(*M, "b"));
@@ -599,7 +699,7 @@ TEST(LazyCallGraphTest, IncomingEdgeInsertion) {
 
   // Force the graph to be fully expanded.
   for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs())
-    (void)RC;
+    dbgs() << "Formed RefSCC: " << RC << "\n";
 
   LazyCallGraph::Node &A1 = *CG.lookup(lookupFunction(*M, "a1"));
   LazyCallGraph::Node &A2 = *CG.lookup(lookupFunction(*M, "a2"));
@@ -668,6 +768,16 @@ TEST(LazyCallGraphTest, IncomingEdgeInsertion) {
   // And that ancestry tests have been updated.
   EXPECT_TRUE(ARC.isParentOf(CRC));
   EXPECT_TRUE(BRC.isParentOf(CRC));
+
+  // And verify the post-order walk reflects the updated structure.
+  auto I = CG.postorder_ref_scc_begin(), E = CG.postorder_ref_scc_end();
+  ASSERT_NE(I, E);
+  EXPECT_EQ(&CRC, &*I) << "Actual RefSCC: " << *I;
+  ASSERT_NE(++I, E);
+  EXPECT_EQ(&BRC, &*I) << "Actual RefSCC: " << *I;
+  ASSERT_NE(++I, E);
+  EXPECT_EQ(&ARC, &*I) << "Actual RefSCC: " << *I;
+  EXPECT_EQ(++I, E);
 }
 
 TEST(LazyCallGraphTest, IncomingEdgeInsertionMidTraversal) {
@@ -726,15 +836,29 @@ TEST(LazyCallGraphTest, IncomingEdgeInsertionMidTraversal) {
   EXPECT_EQ(&CRC, CG.lookupRefSCC(D2));
   EXPECT_EQ(&CRC, CG.lookupRefSCC(D3));
 
-  // Check that we can form the last two RefSCCs now in a coherent way.
-  ++I;
-  EXPECT_NE(I, E);
-  LazyCallGraph::RefSCC &BRC = *I;
+  // Verify that the post-order walk reflects the updated but still incomplete
+  // structure.
+  auto J = CG.postorder_ref_scc_begin();
+  EXPECT_NE(J, E);
+  EXPECT_EQ(&CRC, &*J) << "Actual RefSCC: " << *J;
+  EXPECT_EQ(I, J);
+
+  // Check that we can form the last two RefSCCs now, and even that we can do
+  // it with alternating iterators.
+  ++J;
+  EXPECT_NE(J, E);
+  LazyCallGraph::RefSCC &BRC = *J;
   EXPECT_NE(&BRC, nullptr);
   EXPECT_EQ(&BRC, CG.lookupRefSCC(*CG.lookup(lookupFunction(*M, "b1"))));
   EXPECT_EQ(&BRC, CG.lookupRefSCC(*CG.lookup(lookupFunction(*M, "b2"))));
   EXPECT_EQ(&BRC, CG.lookupRefSCC(*CG.lookup(lookupFunction(*M, "b3"))));
   EXPECT_TRUE(BRC.isParentOf(CRC));
+  ++I;
+  EXPECT_EQ(J, I);
+  EXPECT_EQ(&BRC, &*I) << "Actual RefSCC: " << *I;
+
+  // Increment I this time to form the new RefSCC, flopping back to the first
+  // iterator.
   ++I;
   EXPECT_NE(I, E);
   LazyCallGraph::RefSCC &ARC = *I;
@@ -743,8 +867,242 @@ TEST(LazyCallGraphTest, IncomingEdgeInsertionMidTraversal) {
   EXPECT_EQ(&ARC, CG.lookupRefSCC(*CG.lookup(lookupFunction(*M, "a2"))));
   EXPECT_EQ(&ARC, CG.lookupRefSCC(*CG.lookup(lookupFunction(*M, "a3"))));
   EXPECT_TRUE(ARC.isParentOf(CRC));
+  ++J;
+  EXPECT_EQ(I, J);
+  EXPECT_EQ(&ARC, &*J) << "Actual RefSCC: " << *J;
   ++I;
   EXPECT_EQ(E, I);
+  ++J;
+  EXPECT_EQ(E, J);
+}
+
+TEST(LazyCallGraphTest, IncomingEdgeInsertionRefGraph) {
+  LLVMContext Context;
+  // Another variation of the above test but with all the edges switched to
+  // references rather than calls.
+  std::unique_ptr<Module> M =
+      parseAssembly(Context, DiamondOfTrianglesRefGraph);
+  LazyCallGraph CG(*M);
+
+  // Force the graph to be fully expanded.
+  for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs())
+    dbgs() << "Formed RefSCC: " << RC << "\n";
+
+  LazyCallGraph::Node &A1 = *CG.lookup(lookupFunction(*M, "a1"));
+  LazyCallGraph::Node &A2 = *CG.lookup(lookupFunction(*M, "a2"));
+  LazyCallGraph::Node &A3 = *CG.lookup(lookupFunction(*M, "a3"));
+  LazyCallGraph::Node &B1 = *CG.lookup(lookupFunction(*M, "b1"));
+  LazyCallGraph::Node &B2 = *CG.lookup(lookupFunction(*M, "b2"));
+  LazyCallGraph::Node &B3 = *CG.lookup(lookupFunction(*M, "b3"));
+  LazyCallGraph::Node &C1 = *CG.lookup(lookupFunction(*M, "c1"));
+  LazyCallGraph::Node &C2 = *CG.lookup(lookupFunction(*M, "c2"));
+  LazyCallGraph::Node &C3 = *CG.lookup(lookupFunction(*M, "c3"));
+  LazyCallGraph::Node &D1 = *CG.lookup(lookupFunction(*M, "d1"));
+  LazyCallGraph::Node &D2 = *CG.lookup(lookupFunction(*M, "d2"));
+  LazyCallGraph::Node &D3 = *CG.lookup(lookupFunction(*M, "d3"));
+  LazyCallGraph::RefSCC &ARC = *CG.lookupRefSCC(A1);
+  LazyCallGraph::RefSCC &BRC = *CG.lookupRefSCC(B1);
+  LazyCallGraph::RefSCC &CRC = *CG.lookupRefSCC(C1);
+  LazyCallGraph::RefSCC &DRC = *CG.lookupRefSCC(D1);
+  ASSERT_EQ(&ARC, CG.lookupRefSCC(A2));
+  ASSERT_EQ(&ARC, CG.lookupRefSCC(A3));
+  ASSERT_EQ(&BRC, CG.lookupRefSCC(B2));
+  ASSERT_EQ(&BRC, CG.lookupRefSCC(B3));
+  ASSERT_EQ(&CRC, CG.lookupRefSCC(C2));
+  ASSERT_EQ(&CRC, CG.lookupRefSCC(C3));
+  ASSERT_EQ(&DRC, CG.lookupRefSCC(D2));
+  ASSERT_EQ(&DRC, CG.lookupRefSCC(D3));
+  ASSERT_EQ(1, std::distance(D2.begin(), D2.end()));
+
+  // Add an edge to make the graph:
+  //
+  //         d1         |
+  //        /  \        |
+  //       d3--d2---.   |
+  //      /     \    |  |
+  //     b1     c1   |  |
+  //   /  \    /  \ /   |
+  //  b3--b2  c3--c2    |
+  //       \  /         |
+  //        a1          |
+  //       /  \         |
+  //      a3--a2        |
+  auto MergedRCs = CRC.insertIncomingRefEdge(D2, C2);
+  // Make sure we connected the nodes.
+  for (LazyCallGraph::Edge E : D2) {
+    if (E.getNode() == &D3)
+      continue;
+    EXPECT_EQ(&C2, E.getNode());
+  }
+  // And marked the D ref-SCC as no longer valid.
+  EXPECT_EQ(1u, MergedRCs.size());
+  EXPECT_EQ(&DRC, MergedRCs[0]);
+
+  // Make sure we have the correct nodes in the SCC sets.
+  EXPECT_EQ(&ARC, CG.lookupRefSCC(A1));
+  EXPECT_EQ(&ARC, CG.lookupRefSCC(A2));
+  EXPECT_EQ(&ARC, CG.lookupRefSCC(A3));
+  EXPECT_EQ(&BRC, CG.lookupRefSCC(B1));
+  EXPECT_EQ(&BRC, CG.lookupRefSCC(B2));
+  EXPECT_EQ(&BRC, CG.lookupRefSCC(B3));
+  EXPECT_EQ(&CRC, CG.lookupRefSCC(C1));
+  EXPECT_EQ(&CRC, CG.lookupRefSCC(C2));
+  EXPECT_EQ(&CRC, CG.lookupRefSCC(C3));
+  EXPECT_EQ(&CRC, CG.lookupRefSCC(D1));
+  EXPECT_EQ(&CRC, CG.lookupRefSCC(D2));
+  EXPECT_EQ(&CRC, CG.lookupRefSCC(D3));
+
+  // And that ancestry tests have been updated.
+  EXPECT_TRUE(ARC.isParentOf(CRC));
+  EXPECT_TRUE(BRC.isParentOf(CRC));
+
+  // And verify the post-order walk reflects the updated structure.
+  auto I = CG.postorder_ref_scc_begin(), E = CG.postorder_ref_scc_end();
+  ASSERT_NE(I, E);
+  EXPECT_EQ(&CRC, &*I) << "Actual RefSCC: " << *I;
+  ASSERT_NE(++I, E);
+  EXPECT_EQ(&BRC, &*I) << "Actual RefSCC: " << *I;
+  ASSERT_NE(++I, E);
+  EXPECT_EQ(&ARC, &*I) << "Actual RefSCC: " << *I;
+  EXPECT_EQ(++I, E);
+}
+
+TEST(LazyCallGraphTest, IncomingEdgeInsertionLargeCallCycle) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseAssembly(Context, "define void @a() {\n"
+                                                     "entry:\n"
+                                                     "  call void @b()\n"
+                                                     "  ret void\n"
+                                                     "}\n"
+                                                     "define void @b() {\n"
+                                                     "entry:\n"
+                                                     "  call void @c()\n"
+                                                     "  ret void\n"
+                                                     "}\n"
+                                                     "define void @c() {\n"
+                                                     "entry:\n"
+                                                     "  call void @d()\n"
+                                                     "  ret void\n"
+                                                     "}\n"
+                                                     "define void @d() {\n"
+                                                     "entry:\n"
+                                                     "  ret void\n"
+                                                     "}\n");
+  LazyCallGraph CG(*M);
+
+  // Force the graph to be fully expanded.
+  for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs())
+    dbgs() << "Formed RefSCC: " << RC << "\n";
+
+  LazyCallGraph::Node &A = *CG.lookup(lookupFunction(*M, "a"));
+  LazyCallGraph::Node &B = *CG.lookup(lookupFunction(*M, "b"));
+  LazyCallGraph::Node &C = *CG.lookup(lookupFunction(*M, "c"));
+  LazyCallGraph::Node &D = *CG.lookup(lookupFunction(*M, "d"));
+  LazyCallGraph::SCC &AC = *CG.lookupSCC(A);
+  LazyCallGraph::SCC &BC = *CG.lookupSCC(B);
+  LazyCallGraph::SCC &CC = *CG.lookupSCC(C);
+  LazyCallGraph::SCC &DC = *CG.lookupSCC(D);
+  LazyCallGraph::RefSCC &ARC = *CG.lookupRefSCC(A);
+  LazyCallGraph::RefSCC &BRC = *CG.lookupRefSCC(B);
+  LazyCallGraph::RefSCC &CRC = *CG.lookupRefSCC(C);
+  LazyCallGraph::RefSCC &DRC = *CG.lookupRefSCC(D);
+
+  // Connect the top to the bottom forming a large RefSCC made up mostly of calls.
+  auto MergedRCs = ARC.insertIncomingRefEdge(D, A);
+  // Make sure we connected the nodes.
+  EXPECT_NE(D.begin(), D.end());
+  EXPECT_EQ(&A, D.begin()->getNode());
+
+  // Check that we have the dead RCs, but ignore the order.
+  EXPECT_EQ(3u, MergedRCs.size());
+  EXPECT_NE(find(MergedRCs, &BRC), MergedRCs.end());
+  EXPECT_NE(find(MergedRCs, &CRC), MergedRCs.end());
+  EXPECT_NE(find(MergedRCs, &DRC), MergedRCs.end());
+
+  // Make sure the nodes point to the right place now.
+  EXPECT_EQ(&ARC, CG.lookupRefSCC(A));
+  EXPECT_EQ(&ARC, CG.lookupRefSCC(B));
+  EXPECT_EQ(&ARC, CG.lookupRefSCC(C));
+  EXPECT_EQ(&ARC, CG.lookupRefSCC(D));
+
+  // Check that the SCCs are in postorder.
+  EXPECT_EQ(4, ARC.size());
+  EXPECT_EQ(&DC, &ARC[0]);
+  EXPECT_EQ(&CC, &ARC[1]);
+  EXPECT_EQ(&BC, &ARC[2]);
+  EXPECT_EQ(&AC, &ARC[3]);
+
+  // And verify the post-order walk reflects the updated structure.
+  auto I = CG.postorder_ref_scc_begin(), E = CG.postorder_ref_scc_end();
+  ASSERT_NE(I, E);
+  EXPECT_EQ(&ARC, &*I) << "Actual RefSCC: " << *I;
+  EXPECT_EQ(++I, E);
+}
+
+TEST(LazyCallGraphTest, IncomingEdgeInsertionLargeRefCycle) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M =
+      parseAssembly(Context, "define void @a() {\n"
+                             "entry:\n"
+                             "  %p = alloca void ()*\n"
+                             "  store void ()* @b, void ()** %p\n"
+                             "  ret void\n"
+                             "}\n"
+                             "define void @b() {\n"
+                             "entry:\n"
+                             "  %p = alloca void ()*\n"
+                             "  store void ()* @c, void ()** %p\n"
+                             "  ret void\n"
+                             "}\n"
+                             "define void @c() {\n"
+                             "entry:\n"
+                             "  %p = alloca void ()*\n"
+                             "  store void ()* @d, void ()** %p\n"
+                             "  ret void\n"
+                             "}\n"
+                             "define void @d() {\n"
+                             "entry:\n"
+                             "  ret void\n"
+                             "}\n");
+  LazyCallGraph CG(*M);
+
+  // Force the graph to be fully expanded.
+  for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs())
+    dbgs() << "Formed RefSCC: " << RC << "\n";
+
+  LazyCallGraph::Node &A = *CG.lookup(lookupFunction(*M, "a"));
+  LazyCallGraph::Node &B = *CG.lookup(lookupFunction(*M, "b"));
+  LazyCallGraph::Node &C = *CG.lookup(lookupFunction(*M, "c"));
+  LazyCallGraph::Node &D = *CG.lookup(lookupFunction(*M, "d"));
+  LazyCallGraph::RefSCC &ARC = *CG.lookupRefSCC(A);
+  LazyCallGraph::RefSCC &BRC = *CG.lookupRefSCC(B);
+  LazyCallGraph::RefSCC &CRC = *CG.lookupRefSCC(C);
+  LazyCallGraph::RefSCC &DRC = *CG.lookupRefSCC(D);
+
+  // Connect the top to the bottom forming a large RefSCC made up just of
+  // references.
+  auto MergedRCs = ARC.insertIncomingRefEdge(D, A);
+  // Make sure we connected the nodes.
+  EXPECT_NE(D.begin(), D.end());
+  EXPECT_EQ(&A, D.begin()->getNode());
+
+  // Check that we have the dead RCs, but ignore the order.
+  EXPECT_EQ(3u, MergedRCs.size());
+  EXPECT_NE(find(MergedRCs, &BRC), MergedRCs.end());
+  EXPECT_NE(find(MergedRCs, &CRC), MergedRCs.end());
+  EXPECT_NE(find(MergedRCs, &DRC), MergedRCs.end());
+
+  // Make sure the nodes point to the right place now.
+  EXPECT_EQ(&ARC, CG.lookupRefSCC(A));
+  EXPECT_EQ(&ARC, CG.lookupRefSCC(B));
+  EXPECT_EQ(&ARC, CG.lookupRefSCC(C));
+  EXPECT_EQ(&ARC, CG.lookupRefSCC(D));
+
+  // And verify the post-order walk reflects the updated structure.
+  auto I = CG.postorder_ref_scc_begin(), End = CG.postorder_ref_scc_end();
+  ASSERT_NE(I, End);
+  EXPECT_EQ(&ARC, &*I) << "Actual RefSCC: " << *I;
+  EXPECT_EQ(++I, End);
 }
 
 TEST(LazyCallGraphTest, InternalEdgeMutation) {
@@ -855,9 +1213,9 @@ TEST(LazyCallGraphTest, InternalEdgeRemoval) {
   LazyCallGraph CG(*M);
 
   // Force the graph to be fully expanded.
-  auto I = CG.postorder_ref_scc_begin();
-  LazyCallGraph::RefSCC &RC = *I++;
-  EXPECT_EQ(CG.postorder_ref_scc_end(), I);
+  auto I = CG.postorder_ref_scc_begin(), E = CG.postorder_ref_scc_end();
+  LazyCallGraph::RefSCC &RC = *I;
+  EXPECT_EQ(E, std::next(I));
 
   LazyCallGraph::Node &A = *CG.lookup(lookupFunction(*M, "a"));
   LazyCallGraph::Node &B = *CG.lookup(lookupFunction(*M, "b"));
@@ -874,6 +1232,10 @@ TEST(LazyCallGraphTest, InternalEdgeRemoval) {
   EXPECT_EQ(&RC, CG.lookupRefSCC(A));
   EXPECT_EQ(&RC, CG.lookupRefSCC(B));
   EXPECT_EQ(&RC, CG.lookupRefSCC(C));
+  auto J = CG.postorder_ref_scc_begin();
+  EXPECT_EQ(I, J);
+  EXPECT_EQ(&RC, &*J);
+  EXPECT_EQ(E, std::next(J));
 
   // Remove the edge from c -> a, which should leave 'a' in the original RefSCC
   // and form a new RefSCC for 'b' and 'c'.
@@ -881,9 +1243,19 @@ TEST(LazyCallGraphTest, InternalEdgeRemoval) {
   EXPECT_EQ(1u, NewRCs.size());
   EXPECT_EQ(&RC, CG.lookupRefSCC(A));
   EXPECT_EQ(1, std::distance(RC.begin(), RC.end()));
-  LazyCallGraph::RefSCC *RC2 = CG.lookupRefSCC(B);
-  EXPECT_EQ(RC2, CG.lookupRefSCC(C));
-  EXPECT_EQ(RC2, NewRCs[0]);
+  LazyCallGraph::RefSCC &RC2 = *CG.lookupRefSCC(B);
+  EXPECT_EQ(&RC2, CG.lookupRefSCC(C));
+  EXPECT_EQ(&RC2, NewRCs[0]);
+  J = CG.postorder_ref_scc_begin();
+  EXPECT_NE(I, J);
+  EXPECT_EQ(&RC2, &*J);
+  ++J;
+  EXPECT_EQ(I, J);
+  EXPECT_EQ(&RC, &*J);
+  ++I;
+  EXPECT_EQ(E, I);
+  ++J;
+  EXPECT_EQ(E, J);
 }
 
 TEST(LazyCallGraphTest, InternalCallEdgeToRef) {

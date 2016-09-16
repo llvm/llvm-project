@@ -38,7 +38,7 @@ class TargetLoweringObjectFile : public MCObjectFileInfo {
   MCContext *Ctx;
 
   /// Name-mangler for global names.
-  Mangler *Mang;
+  Mangler *Mang = nullptr;
 
   TargetLoweringObjectFile(
     const TargetLoweringObjectFile&) = delete;
