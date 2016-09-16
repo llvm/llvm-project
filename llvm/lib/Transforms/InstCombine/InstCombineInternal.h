@@ -555,6 +555,9 @@ private:
   Instruction *foldICmpUsingKnownBits(ICmpInst &Cmp);
   Instruction *foldICmpWithConstant(ICmpInst &Cmp);
   Instruction *foldICmpInstWithConstant(ICmpInst &Cmp);
+  Instruction *foldICmpInstWithConstantNotInt(ICmpInst &Cmp);
+  Instruction *foldICmpBinOp(ICmpInst &Cmp);
+  Instruction *foldICmpEquality(ICmpInst &Cmp);
 
   Instruction *foldICmpTruncConstant(ICmpInst &Cmp, Instruction *Trunc,
                                      const APInt *C);

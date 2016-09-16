@@ -4953,6 +4953,28 @@ bool ScalarEvolution::isAddRecNeverPoison(const Instruction *I, const Loop *L) {
   return LatchControlDependentOnPoison && loopHasNoAbnormalExits(L);
 }
 
+bool ScalarEvolution::loopHasNoSideEffects(const Loop *L) {
+  auto Itr = LoopHasNoSideEffects.find(L);
+  if (Itr == LoopHasNoSideEffects.end()) {
+    auto NoSideEffectsInBB = [&](BasicBlock *BB) {
+      return all_of(*BB, [](Instruction &I) {
+        // Non-atomic, non-volatile stores are ok.
+        if (auto *SI = dyn_cast<StoreInst>(&I))
+          return SI->isSimple();
+
+        return !I.mayHaveSideEffects();
+      });
+    };
+
+    auto InsertPair = LoopHasNoSideEffects.insert(
+        {L, all_of(L->getBlocks(), NoSideEffectsInBB)});
+    assert(InsertPair.second && "We just checked!");
+    Itr = InsertPair.first;
+  }
+
+  return Itr->second;
+}
+
 bool ScalarEvolution::loopHasNoAbnormalExits(const Loop *L) {
   auto Itr = LoopHasNoAbnormalExits.find(L);
   if (Itr == LoopHasNoAbnormalExits.end()) {
@@ -5540,6 +5562,7 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     forgetLoop(I);
 
   LoopHasNoAbnormalExits.erase(L);
+  LoopHasNoSideEffects.erase(L);
 }
 
 void ScalarEvolution::forgetValue(Value *V) {
@@ -8614,6 +8637,8 @@ bool ScalarEvolution::isImpliedCondOperandsViaRanges(ICmpInst::Predicate Pred,
 
 bool ScalarEvolution::doesIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride,
                                          bool IsSigned, bool NoWrap) {
+  assert(isKnownPositive(Stride) && "Positive stride expected!");
+
   if (NoWrap) return false;
 
   unsigned BitWidth = getTypeSizeInBits(RHS->getType());
@@ -8682,11 +8707,15 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     return getCouldNotCompute();
 
   const SCEVAddRecExpr *IV = dyn_cast<SCEVAddRecExpr>(LHS);
-  if (!IV && AllowPredicates)
+  bool PredicatedIV = false;
+
+  if (!IV && AllowPredicates) {
     // Try to make this an AddRec using runtime tests, in the first X
     // iterations of this loop, where X is the SCEV expression found by the
     // algorithm below.
     IV = convertSCEVToAddRecWithPredicates(LHS, L, P);
+    PredicatedIV = true;
+  }
 
   // Avoid weird loops
   if (!IV || IV->getLoop() != L || !IV->isAffine())
@@ -8697,15 +8726,62 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
 
   const SCEV *Stride = IV->getStepRecurrence(*this);
 
-  // Avoid negative or zero stride values
-  if (!isKnownPositive(Stride))
-    return getCouldNotCompute();
+  bool PositiveStride = isKnownPositive(Stride);
 
-  // Avoid proven overflow cases: this will ensure that the backedge taken count
-  // will not generate any unsigned overflow. Relaxed no-overflow conditions
-  // exploit NoWrapFlags, allowing to optimize in presence of undefined
-  // behaviors like the case of C language.
-  if (!Stride->isOne() && doesIVOverflowOnLT(RHS, Stride, IsSigned, NoWrap))
+  // Avoid negative or zero stride values.
+  if (!PositiveStride) {
+    // We can compute the correct backedge taken count for loops with unknown
+    // strides if we can prove that the loop is not an infinite loop with side
+    // effects. Here's the loop structure we are trying to handle -
+    //
+    // i = start
+    // do {
+    //   A[i] = i;
+    //   i += s;
+    // } while (i < end);
+    //
+    // The backedge taken count for such loops is evaluated as -
+    // (max(end, start + stride) - start - 1) /u stride
+    //
+    // The additional preconditions that we need to check to prove correctness
+    // of the above formula is as follows -
+    //
+    // a) IV is either nuw or nsw depending upon signedness (indicated by the
+    //    NoWrap flag).
+    // b) loop is single exit with no side effects.
+    //
+    //
+    // Precondition a) implies that if the stride is negative, this is a single
+    // trip loop. The backedge taken count formula reduces to zero in this case.
+    //
+    // Precondition b) implies that the unknown stride cannot be zero otherwise
+    // we have UB.
+    //
+    // The positive stride case is the same as isKnownPositive(Stride) returning
+    // true (original behavior of the function).
+    //
+    // We want to make sure that the stride is truly unknown as there are edge
+    // cases where ScalarEvolution propagates no wrap flags to the
+    // post-increment/decrement IV even though the increment/decrement operation
+    // itself is wrapping. The computed backedge taken count may be wrong in
+    // such cases. This is prevented by checking that the stride is not known to
+    // be either positive or non-positive. For example, no wrap flags are
+    // propagated to the post-increment IV of this loop with a trip count of 2 -
+    //
+    // unsigned char i;
+    // for(i=127; i<128; i+=129)
+    //   A[i] = i;
+    //
+    if (PredicatedIV || !NoWrap || isKnownNonPositive(Stride) ||
+        !loopHasNoSideEffects(L))
+      return getCouldNotCompute();
+
+  } else if (!Stride->isOne() &&
+             doesIVOverflowOnLT(RHS, Stride, IsSigned, NoWrap))
+    // Avoid proven overflow cases: this will ensure that the backedge taken
+    // count will not generate any unsigned overflow. Relaxed no-overflow
+    // conditions exploit NoWrapFlags, allowing to optimize in presence of
+    // undefined behaviors like the case of C language.
     return getCouldNotCompute();
 
   ICmpInst::Predicate Cond = IsSigned ? ICmpInst::ICMP_SLT
@@ -8720,12 +8796,21 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   APInt MinStart = IsSigned ? getSignedRange(Start).getSignedMin()
                             : getUnsignedRange(Start).getUnsignedMin();
 
-  APInt MinStride = IsSigned ? getSignedRange(Stride).getSignedMin()
-                             : getUnsignedRange(Stride).getUnsignedMin();
-
   unsigned BitWidth = getTypeSizeInBits(LHS->getType());
-  APInt Limit = IsSigned ? APInt::getSignedMaxValue(BitWidth) - (MinStride - 1)
-                         : APInt::getMaxValue(BitWidth) - (MinStride - 1);
+
+  APInt StrideForMaxBECount;
+
+  if (PositiveStride)
+    StrideForMaxBECount = IsSigned ? getSignedRange(Stride).getSignedMin()
+                                   : getUnsignedRange(Stride).getUnsignedMin();
+  else
+    // Using a stride of 1 is safe when computing max backedge taken count for
+    // a loop with unknown stride.
+    StrideForMaxBECount = APInt(BitWidth, 1, IsSigned);
+
+  APInt Limit =
+      IsSigned ? APInt::getSignedMaxValue(BitWidth) - (StrideForMaxBECount - 1)
+               : APInt::getMaxValue(BitWidth) - (StrideForMaxBECount - 1);
 
   // Although End can be a MAX expression we estimate MaxEnd considering only
   // the case End = RHS. This is safe because in the other case (End - Start)
@@ -8739,7 +8824,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     MaxBECount = BECount;
   else
     MaxBECount = computeBECount(getConstant(MaxEnd - MinStart),
-                                getConstant(MinStride), false);
+                                getConstant(StrideForMaxBECount), false);
 
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     MaxBECount = BECount;

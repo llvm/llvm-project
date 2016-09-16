@@ -89,10 +89,6 @@ public:
   /// This is a pointer to the current MachineModuleInfo.
   MachineModuleInfo *MMI;
 
-  /// Name-mangler for global names.
-  ///
-  Mangler *Mang;
-
   /// The symbol for the current function. This is recalculated at the beginning
   /// of each call to runOnMachineFunction().
   ///
