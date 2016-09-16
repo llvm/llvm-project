@@ -10,6 +10,8 @@
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
+#include "llvm/ADT/StringMap.h"
+
 // Project includes
 #include "RenderScriptRuntime.h"
 
@@ -2587,17 +2589,104 @@ void RenderScriptRuntime::Update() {
   }
 }
 
-// The maximum line length of an .rs.info packet
-#define MAXLINE 500
-#define STRINGIFY(x) #x
-#define MAXLINESTR_(x) "%" STRINGIFY(x) "s"
-#define MAXLINESTR MAXLINESTR_(MAXLINE)
+bool RSModuleDescriptor::ParsePragmaCount(llvm::StringRef *lines,
+                                          size_t n_lines) {
+  // Skip the pragma prototype line
+  ++lines;
+  for (; n_lines--; ++lines) {
+    const auto kv_pair = lines->split(" - ");
+    m_pragmas[kv_pair.first.trim().str()] = kv_pair.second.trim().str();
+  }
+  return true;
+}
+
+bool RSModuleDescriptor::ParseExportReduceCount(llvm::StringRef *lines,
+                                                size_t n_lines) {
+  // The list of reduction kernels in the `.rs.info` symbol is of the form
+  // "signature - accumulatordatasize - reduction_name - initializer_name -
+  // accumulator_name - combiner_name -
+  // outconverter_name - halter_name"
+  // Where a function is not explicitly named by the user, or is not generated
+  // by the compiler, it is named "." so the
+  // dash separated list should always be 8 items long
+  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+  // Skip the exportReduceCount line
+  ++lines;
+  for (; n_lines--; ++lines) {
+    llvm::SmallVector<llvm::StringRef, 8> spec;
+    lines->split(spec, " - ");
+    if (spec.size() != 8) {
+      if (spec.size() < 8) {
+        if (log)
+          log->Error("Error parsing RenderScript reduction spec. wrong number "
+                     "of fields");
+        return false;
+      } else if (log)
+        log->Warning("Extraneous members in reduction spec: '%s'",
+                     lines->str().c_str());
+    }
+
+    const auto sig_s = spec[0];
+    uint32_t sig;
+    if (sig_s.getAsInteger(10, sig)) {
+      if (log)
+        log->Error("Error parsing Renderscript reduction spec: invalid kernel "
+                   "signature: '%s'",
+                   sig_s.str().c_str());
+      return false;
+    }
+
+    const auto accum_data_size_s = spec[1];
+    uint32_t accum_data_size;
+    if (accum_data_size_s.getAsInteger(10, accum_data_size)) {
+      if (log)
+        log->Error("Error parsing Renderscript reduction spec: invalid "
+                   "accumulator data size %s",
+                   accum_data_size_s.str().c_str());
+      return false;
+    }
+
+    if (log)
+      log->Printf("Found RenderScript reduction '%s'", spec[2].str().c_str());
+
+    m_reductions.push_back(RSReductionDescriptor(this, sig, accum_data_size,
+                                                 spec[2], spec[3], spec[4],
+                                                 spec[5], spec[6], spec[7]));
+  }
+  return true;
+}
+
+bool RSModuleDescriptor::ParseExportForeachCount(llvm::StringRef *lines,
+                                                 size_t n_lines) {
+  // Skip the exportForeachCount line
+  ++lines;
+  for (; n_lines--; ++lines) {
+    uint32_t slot;
+    // `forEach` kernels are listed in the `.rs.info` packet as a "slot - name"
+    // pair per line
+    const auto kv_pair = lines->split(" - ");
+    if (kv_pair.first.getAsInteger(10, slot))
+      return false;
+    m_kernels.push_back(RSKernelDescriptor(this, kv_pair.second, slot));
+  }
+  return true;
+}
+
+bool RSModuleDescriptor::ParseExportVarCount(llvm::StringRef *lines,
+                                             size_t n_lines) {
+  // Skip the ExportVarCount line
+  ++lines;
+  for (; n_lines--; ++lines)
+    m_globals.push_back(RSGlobalDescriptor(this, *lines));
+  return true;
+}
 
 // The .rs.info symbol in renderscript modules contains a string which needs to
 // be parsed.
 // The string is basic and is parsed on a line by line basis.
 bool RSModuleDescriptor::ParseRSInfo() {
   assert(m_module);
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
   const Symbol *info_sym = m_module->FindFirstSymbolWithNameAndType(
       ConstString(".rs.info"), eSymbolTypeData);
   if (!info_sym)
@@ -2615,61 +2704,85 @@ bool RSModuleDescriptor::ParseRSInfo() {
     return false;
 
   // split rs.info. contents into lines
-  std::vector<std::string> info_lines;
+  llvm::SmallVector<llvm::StringRef, 128> info_lines;
   {
-    const std::string info((const char *)buffer->GetBytes());
-    for (size_t tail = 0; tail < info.size();) {
-      // find next new line or end of string
-      size_t head = info.find('\n', tail);
-      head = (head == std::string::npos) ? info.size() : head;
-      std::string line = info.substr(tail, head - tail);
-      // add to line list
-      info_lines.push_back(line);
-      tail = head + 1;
-    }
+    const llvm::StringRef raw_rs_info((const char *)buffer->GetBytes());
+    raw_rs_info.split(info_lines, '\n');
+    if (log)
+      log->Printf("'.rs.info symbol for '%s':\n%s",
+                  m_module->GetFileSpec().GetCString(),
+                  raw_rs_info.str().c_str());
   }
 
-  std::array<char, MAXLINE> name{{'\0'}};
-  std::array<char, MAXLINE> value{{'\0'}};
+  enum {
+    eExportVar,
+    eExportForEach,
+    eExportReduce,
+    ePragma,
+    eBuildChecksum,
+    eObjectSlot
+  };
+
+  static const llvm::StringMap<int> rs_info_handlers{
+      {// The number of visible global variables in the script
+       {"exportVarCount", eExportVar},
+       // The number of RenderScrip `forEach` kernels __attribute__((kernel))
+       {"exportForEachCount", eExportForEach},
+       // The number of generalreductions: This marked in the script by `#pragma
+       // reduce()`
+       {"exportReduceCount", eExportReduce},
+       // Total count of all RenderScript specific `#pragmas` used in the script
+       {"pragmaCount", ePragma},
+       {"objectSlotCount", eObjectSlot}}};
 
   // parse all text lines of .rs.info
   for (auto line = info_lines.begin(); line != info_lines.end(); ++line) {
-    uint32_t numDefns = 0;
-    if (sscanf(line->c_str(), "exportVarCount: %" PRIu32 "", &numDefns) == 1) {
-      while (numDefns--)
-        m_globals.push_back(RSGlobalDescriptor(this, (++line)->c_str()));
-    } else if (sscanf(line->c_str(), "exportForEachCount: %" PRIu32 "",
-                      &numDefns) == 1) {
-      while (numDefns--) {
-        uint32_t slot = 0;
-        name[0] = '\0';
-        static const char *fmt_s = "%" PRIu32 " - " MAXLINESTR;
-        if (sscanf((++line)->c_str(), fmt_s, &slot, name.data()) == 2) {
-          if (name[0] != '\0')
-            m_kernels.push_back(RSKernelDescriptor(this, name.data(), slot));
-        }
-      }
-    } else if (sscanf(line->c_str(), "pragmaCount: %" PRIu32 "", &numDefns) ==
-               1) {
-      while (numDefns--) {
-        name[0] = value[0] = '\0';
-        static const char *fmt_s = MAXLINESTR " - " MAXLINESTR;
-        if (sscanf((++line)->c_str(), fmt_s, name.data(), value.data()) != 0) {
-          if (name[0] != '\0')
-            m_pragmas[std::string(name.data())] = value.data();
-        }
-      }
-    } else {
-      Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE));
-      if (log) {
-        log->Printf("%s - skipping .rs.info field '%s'", __FUNCTION__,
-                    line->c_str());
-      }
-    }
-  }
+    const auto kv_pair = line->split(": ");
+    const auto key = kv_pair.first;
+    const auto val = kv_pair.second.trim();
 
-  // 'root' kernel should always be present
-  return m_kernels.size() > 0;
+    const auto handler = rs_info_handlers.find(key);
+    if (handler == rs_info_handlers.end())
+      continue;
+    // getAsInteger returns `true` on an error condition - we're only interested
+    // in
+    // numeric fields at the moment
+    uint64_t n_lines;
+    if (val.getAsInteger(10, n_lines)) {
+      if (log)
+        log->Debug("Failed to parse non-numeric '.rs.info' section %s",
+                   line->str().c_str());
+      continue;
+    }
+    if (info_lines.end() - (line + 1) < (ptrdiff_t)n_lines)
+      return false;
+
+    bool success = false;
+    switch (handler->getValue()) {
+    case eExportVar:
+      success = ParseExportVarCount(line, n_lines);
+      break;
+    case eExportForEach:
+      success = ParseExportForeachCount(line, n_lines);
+      break;
+    case eExportReduce:
+      success = ParseExportReduceCount(line, n_lines);
+      break;
+    case ePragma:
+      success = ParsePragmaCount(line, n_lines);
+      break;
+    default: {
+      if (log)
+        log->Printf("%s - skipping .rs.info field '%s'", __FUNCTION__,
+                    line->str().c_str());
+      continue;
+    }
+    }
+    if (!success)
+      return false;
+    line += n_lines;
+  }
+  return info_lines.size() > 0;
 }
 
 void RenderScriptRuntime::Status(Stream &strm) const {
@@ -3419,15 +3532,15 @@ RenderScriptRuntime::CreateAllocation(addr_t address) {
 }
 
 void RSModuleDescriptor::Dump(Stream &strm) const {
+  int indent = strm.GetIndentLevel();
+
   strm.Indent();
   m_module->GetFileSpec().Dump(&strm);
-  if (m_module->GetNumCompileUnits()) {
-    strm.Indent("Debug info loaded.");
-  } else {
-    strm.Indent("Debug info does not exist.");
-  }
+  strm.Indent(m_module->GetNumCompileUnits() ? "Debug info loaded."
+                                             : "Debug info does not exist.");
   strm.EOL();
   strm.IndentMore();
+
   strm.Indent();
   strm.Printf("Globals: %" PRIu64, static_cast<uint64_t>(m_globals.size()));
   strm.EOL();
@@ -3436,6 +3549,7 @@ void RSModuleDescriptor::Dump(Stream &strm) const {
     global.Dump(strm);
   }
   strm.IndentLess();
+
   strm.Indent();
   strm.Printf("Kernels: %" PRIu64, static_cast<uint64_t>(m_kernels.size()));
   strm.EOL();
@@ -3443,14 +3557,29 @@ void RSModuleDescriptor::Dump(Stream &strm) const {
   for (const auto &kernel : m_kernels) {
     kernel.Dump(strm);
   }
+  strm.IndentLess();
+
+  strm.Indent();
   strm.Printf("Pragmas: %" PRIu64, static_cast<uint64_t>(m_pragmas.size()));
   strm.EOL();
   strm.IndentMore();
   for (const auto &key_val : m_pragmas) {
+    strm.Indent();
     strm.Printf("%s: %s", key_val.first.c_str(), key_val.second.c_str());
     strm.EOL();
   }
-  strm.IndentLess(4);
+  strm.IndentLess();
+
+  strm.Indent();
+  strm.Printf("Reductions: %" PRIu64,
+              static_cast<uint64_t>(m_reductions.size()));
+  strm.EOL();
+  strm.IndentMore();
+  for (const auto &reduction : m_reductions) {
+    reduction.Dump(strm);
+  }
+
+  strm.SetIndentLevel(indent);
 }
 
 void RSGlobalDescriptor::Dump(Stream &strm) const {
@@ -3481,6 +3610,29 @@ void RSGlobalDescriptor::Dump(Stream &strm) const {
 void RSKernelDescriptor::Dump(Stream &strm) const {
   strm.Indent(m_name.AsCString());
   strm.EOL();
+}
+
+void RSReductionDescriptor::Dump(lldb_private::Stream &stream) const {
+  stream.Indent(m_reduce_name.AsCString());
+  stream.IndentMore();
+  stream.EOL();
+  stream.Indent();
+  stream.Printf("accumulator: %s", m_accum_name.AsCString());
+  stream.EOL();
+  stream.Indent();
+  stream.Printf("initializer: %s", m_init_name.AsCString());
+  stream.EOL();
+  stream.Indent();
+  stream.Printf("combiner: %s", m_comb_name.AsCString());
+  stream.EOL();
+  stream.Indent();
+  stream.Printf("outconverter: %s", m_outc_name.AsCString());
+  stream.EOL();
+  // XXX This is currently unspecified by RenderScript, and unused
+  // stream.Indent();
+  // stream.Printf("halter: '%s'", m_init_name.AsCString());
+  // stream.EOL();
+  stream.IndentLess();
 }
 
 class CommandObjectRenderScriptRuntimeModuleDump : public CommandObjectParsed {

@@ -951,7 +951,7 @@ findInsertLocation(MachineBasicBlock *MBB, SlotIndex Idx,
   while (!(MI = LIS.getInstructionFromIndex(Idx))) {
     // We've reached the beginning of MBB.
     if (Idx == Start) {
-      MachineBasicBlock::iterator I = MBB->SkipPHIsAndLabels(MBB->begin());
+      MachineBasicBlock::iterator I = MBB->SkipPHIsLabelsAndDebug(MBB->begin());
       return I;
     }
     Idx = Idx.getPrevIndex();

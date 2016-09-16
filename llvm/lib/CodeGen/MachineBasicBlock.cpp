@@ -149,12 +149,25 @@ MachineBasicBlock::iterator MachineBasicBlock::getFirstNonPHI() {
 MachineBasicBlock::iterator
 MachineBasicBlock::SkipPHIsAndLabels(MachineBasicBlock::iterator I) {
   iterator E = end();
+  while (I != E && (I->isPHI() || I->isPosition()))
+    ++I;
+  // FIXME: This needs to change if we wish to bundle labels
+  // inside the bundle.
+  assert((I == E || !I->isInsideBundle()) &&
+         "First non-phi / non-label instruction is inside a bundle!");
+  return I;
+}
+
+MachineBasicBlock::iterator
+MachineBasicBlock::SkipPHIsLabelsAndDebug(MachineBasicBlock::iterator I) {
+  iterator E = end();
   while (I != E && (I->isPHI() || I->isPosition() || I->isDebugValue()))
     ++I;
   // FIXME: This needs to change if we wish to bundle labels / dbg_values
   // inside the bundle.
   assert((I == E || !I->isInsideBundle()) &&
-         "First non-phi / non-label instruction is inside a bundle!");
+         "First non-phi / non-label / non-debug "
+         "instruction is inside a bundle!");
   return I;
 }
 
