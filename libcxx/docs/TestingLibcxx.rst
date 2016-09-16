@@ -191,13 +191,13 @@ Environment Variables
 .. envvar:: LIBCXX_SITE_CONFIG=<path/to/lit.site.cfg>
 
   Specify the site configuration to use when running the tests.
-  Also see :option:`libcxx_site_config`.
+  Also see `libcxx_site_config`.
 
 .. envvar:: LIBCXX_COLOR_DIAGNOSTICS
 
   If ``LIBCXX_COLOR_DIAGNOSTICS`` is defined then the test suite will attempt
   to use color diagnostic outputs from the compiler.
-  Also see :option:`color_diagnostics`.
+  Also see `color_diagnostics`.
 
 Benchmarks
 ==========
