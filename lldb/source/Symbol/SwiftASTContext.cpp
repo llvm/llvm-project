@@ -1345,19 +1345,23 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       if (sym_vendor) {
         // Use the new loadFromSerializedAST if possible:
 
-        DataBufferSP ast_file_data_sp =
-            sym_vendor->GetASTData(eLanguageTypeSwift);
+        auto ast_file_datas = sym_vendor->GetASTData(eLanguageTypeSwift);
 
         bool got_serialized_options = false;
-        if (ast_file_data_sp) {
+        DataBufferSP ast_file_data_sp;
+        if (!ast_file_datas.empty() &&
+            ((ast_file_data_sp = ast_file_datas.front()) != nullptr)) {
           if (log)
-            log->Printf("Found AST file data for library: %s.",
+            log->Printf("Found %d AST file data entries for library: %s.",
+                        (int)ast_file_datas.size(),
                         module->GetSpecificationDescription().c_str());
+
+          // Retrieve the first serialized AST data blob and initialize
+          // the compiler invocation with it.
           llvm::StringRef section_data_ref(
               (const char *)ast_file_data_sp->GetBytes(),
               ast_file_data_sp->GetByteSize());
-
-          swift::serialization::Status result =
+          auto result =
               swift_ast_sp->GetCompilerInvocation().loadFromSerializedAST(
                   section_data_ref);
 
@@ -1702,8 +1706,13 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       if (exe_module_sp) {
         SymbolVendor *sym_vendor = exe_module_sp->GetSymbolVendor();
         if (sym_vendor) {
-          DataBufferSP ast_data_sp = sym_vendor->GetASTData(eLanguageTypeSwift);
-          if (ast_data_sp) {
+          // Retrieve the Swift ASTs from the symbol vendor.
+          auto ast_datas = sym_vendor->GetASTData(eLanguageTypeSwift);
+          if (!ast_datas.empty()) {
+            // We only initialize the compiler invocation with the first
+            // AST since it initializes some data that must remain static, like
+            // the SDK path and the triple for the produced output.
+            auto ast_data_sp = ast_datas.front();
             llvm::StringRef section_data_ref(
                 (const char *)ast_data_sp->GetBytes(),
                 ast_data_sp->GetByteSize());
@@ -1716,8 +1725,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
               Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
               if (log)
                 log->Printf("Attempt to load compiler options from Serialized "
-                            "AST failed: %d.",
-                            result);
+                            "AST failed: %d (%zu AST data blobs total).",
+                            result, ast_datas.size());
             }
           }
         }
@@ -3914,6 +3923,8 @@ bool SwiftASTContext::RegisterSectionModules(
     Module &module, std::vector<std::string> &module_names) {
   VALID_OR_RETURN(false);
 
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
   swift::SerializedModuleLoader *sml = GetSerializeModuleLoader();
   if (sml) {
     SectionList *section_list = module.GetSectionList();
@@ -3940,19 +3951,53 @@ bool SwiftASTContext::RegisterSectionModules(
 
         SymbolVendor *sym_vendor = module.GetSymbolVendor();
         if (sym_vendor) {
-          DataBufferSP ast_file_data_sp =
-              sym_vendor->GetASTData(eLanguageTypeSwift);
-          if (ast_file_data_sp) {
-            m_ast_file_data_map[&module] = ast_file_data_sp;
+          // Grab all the AST blobs from the symbol vendor.
+          auto ast_file_datas = sym_vendor->GetASTData(eLanguageTypeSwift);
+          if (log)
+            log->Printf("SwiftASTContext::%s() retrieved %zu AST Data blobs "
+                        "from the symbol vendor.",
+                        __FUNCTION__, ast_file_datas.size());
+
+          // Add each of the AST blobs to the vector of AST blobs for the
+          // module.
+          auto &ast_vector = GetASTVectorForModule(&module);
+          ast_vector.insert(ast_vector.end(), ast_file_datas.begin(),
+                            ast_file_datas.end());
+
+          // Retrieve the module names from the AST blobs retrieved from the
+          // symbol vendor.
+          size_t parse_fail_count = 0;
+          size_t ast_number = 0;
+          for (auto ast_file_data_sp : ast_file_datas) {
+            // Parse the AST section info from the AST blob.
+            ++ast_number;
             llvm::StringRef section_data_ref(
                 (const char *)ast_file_data_sp->GetBytes(),
                 ast_file_data_sp->GetByteSize());
             llvm::SmallVector<std::string, 4> llvm_modules;
             if (swift::parseASTSection(sml, section_data_ref, llvm_modules)) {
+              // Collect the LLVM module names referenced by the AST.
               for (auto module_name : llvm_modules)
                 module_names.push_back(module_name);
-              return true;
+              if (log)
+                log->Printf("SwiftASTContext::%s() - parsed %zu llvm modules "
+                            "from Swift AST section %zu of %zu.",
+                            __FUNCTION__, llvm_modules.size(), ast_number,
+                            ast_file_datas.size());
+            } else {
+              // Keep track of the fact that we failed to parse the AST
+              // section info.
+              if (log)
+                log->Printf("SwiftASTContext::%s() - failed to parse AST "
+                            "section %zu of %zu.",
+                            __FUNCTION__, ast_number, ast_file_datas.size());
+              ++parse_fail_count;
             }
+          }
+          if (!ast_file_datas.empty() && (parse_fail_count == 0)) {
+            // We found AST data entries and we successfully parsed all of
+            // them.
+            return true;
           }
         }
       }
@@ -5607,13 +5652,6 @@ bool SwiftASTContext::IsSelfArchetypeType(const CompilerType &compiler_type) {
       // it's going to be a protocol 'Self' type.
       return true;
     }
-  }
-  return false;
-
-  if (llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
-    if (swift::ArchetypeType *archetype = llvm::dyn_cast<swift::ArchetypeType>(
-            (swift::TypeBase *)compiler_type.GetOpaqueQualType()))
-      return archetype->isSelfDerived();
   }
   return false;
 }
@@ -9166,6 +9204,11 @@ DWARFASTParser *SwiftASTContext::GetDWARFParser() {
   if (!m_dwarf_ast_parser_ap)
     m_dwarf_ast_parser_ap.reset(new DWARFASTParserSwift(*this));
   return m_dwarf_ast_parser_ap.get();
+}
+
+std::vector<lldb::DataBufferSP> &
+SwiftASTContext::GetASTVectorForModule(const Module *module) {
+  return m_ast_file_data_map[const_cast<Module *>(module)];
 }
 
 SwiftASTContextForExpressions::SwiftASTContextForExpressions(Target &target)
