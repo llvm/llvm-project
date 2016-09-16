@@ -249,7 +249,7 @@ struct _LIBCPP_TYPE_VIS space_info
   uintmax_t available;
 };
 
-enum class _LIBCPP_TYPE_VIS file_type : signed char
+enum class _LIBCPP_ENUM_VIS file_type : signed char
 {
     none       = 0,
     not_found  = -1,
@@ -263,7 +263,7 @@ enum class _LIBCPP_TYPE_VIS file_type : signed char
     unknown    = 8
 };
 
-enum class _LIBCPP_TYPE_VIS perms : unsigned
+enum class _LIBCPP_ENUM_VIS perms : unsigned
 {
     none         = 0,
 
@@ -323,7 +323,7 @@ _LIBCPP_INLINE_VISIBILITY
 inline perms& operator^=(perms& _LHS, perms _RHS)
 { return _LHS = _LHS ^ _RHS; }
 
-enum class _LIBCPP_TYPE_VIS copy_options : unsigned short
+enum class _LIBCPP_ENUM_VIS copy_options : unsigned short
 {
     none               = 0,
     skip_existing      = 1,
@@ -367,7 +367,7 @@ inline copy_options& operator^=(copy_options& _LHS, copy_options _RHS)
 { return _LHS = _LHS ^ _RHS; }
 
 
-enum class directory_options : unsigned char
+enum class _LIBCPP_ENUM_VIS directory_options : unsigned char
 {
     none                     = 0,
     follow_directory_symlink = 1,

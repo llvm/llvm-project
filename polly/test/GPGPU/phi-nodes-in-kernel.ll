@@ -38,13 +38,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CODE-NEXT:     Stmt_for_cond15_for_cond12_loopexit_crit_edge(0);
 ; CODE-NEXT: }
 
-; IR:      %1 = bitcast i32* %out_l.055.phiops to i8*
-; IR-NEXT: call void @polly_copyFromHostToDevice(i8* %1, i8* %p_dev_array_MemRef_out_l_055__phi, i64 4)
+; IR:      [[REGA:%.+]] = bitcast i32* %out_l.055.phiops to i8*
+; IR-NEXT: call void @polly_copyFromHostToDevice(i8* [[REGA]], i8* %p_dev_array_MemRef_out_l_055__phi, i64 4)
 
-; IR:      %14 = bitcast i32* %out_l.055.phiops to i8*
-; IR-NEXT: call void @polly_copyFromDeviceToHost(i8* %p_dev_array_MemRef_out_l_055__phi, i8* %14, i64 4)
-; IR-NEXT: %15 = bitcast i32* %out_l.055.s2a to i8*
-; IR-NEXT: call void @polly_copyFromDeviceToHost(i8* %p_dev_array_MemRef_out_l_055, i8* %15, i64 4)
+; IR:      [[REGB:%.+]] = bitcast i32* %out_l.055.phiops to i8*
+; IR-NEXT: call void @polly_copyFromDeviceToHost(i8* %p_dev_array_MemRef_out_l_055__phi, i8* [[REGB]], i64 4)
+; IR-NEXT: [[REGC:%.+]] = bitcast i32* %out_l.055.s2a to i8*
+; IR-NEXT: call void @polly_copyFromDeviceToHost(i8* %p_dev_array_MemRef_out_l_055, i8* [[REGC]], i64 4)
 
 ; KERNEL-IR: entry:
 ; KERNEL-IR-NEXT:   %out_l.055.s2a = alloca i32

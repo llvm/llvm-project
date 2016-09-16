@@ -32,6 +32,7 @@
 #include <system_error>
 #include <utility>
 
+using namespace llvm;
 using namespace llvm::COFF;
 using namespace llvm::object;
 using namespace llvm::support::endian;
@@ -61,6 +62,8 @@ std::string InputFile::getShortName() {
                      getBasename(getName()) + ")").str();
   return StringRef(Res).lower();
 }
+
+ArchiveFile::ArchiveFile(MemoryBufferRef M) : InputFile(ArchiveKind, M) {}
 
 void ArchiveFile::parse() {
   // Parse a MemoryBufferRef as an archive file.
@@ -105,6 +108,8 @@ MemoryBufferRef ArchiveFile::getMember(const Archive::Symbol *Sym) {
 
   return MB;
 }
+
+MutableArrayRef<Lazy> ArchiveFile::getLazySymbols() { return LazySymbols; }
 
 void ObjectFile::parse() {
   // Parse a memory buffer as a COFF file.

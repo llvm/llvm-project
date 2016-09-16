@@ -202,90 +202,6 @@
 #define _LIBCPP_NO_CFI
 #endif
 
-#ifdef _WIN32
-
-// only really useful for a DLL
-#ifdef _LIBCPP_DLL // this should be a compiler builtin define ideally...
-# ifdef cxx_EXPORTS
-#  define _LIBCPP_HIDDEN
-#  define _LIBCPP_FUNC_VIS __declspec(dllexport)
-#  define _LIBCPP_TYPE_VIS __declspec(dllexport)
-# else
-#  define _LIBCPP_HIDDEN
-#  define _LIBCPP_FUNC_VIS __declspec(dllimport)
-#  define _LIBCPP_TYPE_VIS __declspec(dllimport)
-# endif
-#else
-# define _LIBCPP_HIDDEN
-# define _LIBCPP_FUNC_VIS
-# define _LIBCPP_TYPE_VIS
-#endif
-
-#define _LIBCPP_TYPE_VIS_ONLY
-#define _LIBCPP_FUNC_VIS_ONLY
-
-#ifndef _LIBCPP_INLINE_VISIBILITY
-# ifdef _LIBCPP_MSVC
-#  define _LIBCPP_INLINE_VISIBILITY __forceinline
-# else // MinGW GCC and Clang
-#  define _LIBCPP_INLINE_VISIBILITY __attribute__ ((__always_inline__))
-# endif
-#endif
-
-#ifndef _LIBCPP_EXCEPTION_ABI
-#define _LIBCPP_EXCEPTION_ABI _LIBCPP_TYPE_VIS
-#endif
-
-#ifndef _LIBCPP_ALWAYS_INLINE
-# ifdef _LIBCPP_MSVC
-#  define _LIBCPP_ALWAYS_INLINE __forceinline
-# endif
-#endif
-
-#endif // _WIN32
-
-#ifndef _LIBCPP_HIDDEN
-#define _LIBCPP_HIDDEN __attribute__ ((__visibility__("hidden")))
-#endif
-
-#ifndef _LIBCPP_FUNC_VIS
-#define _LIBCPP_FUNC_VIS __attribute__ ((__visibility__("default")))
-#endif
-
-#ifndef _LIBCPP_TYPE_VIS
-#  if __has_attribute(__type_visibility__)
-#    define _LIBCPP_TYPE_VIS __attribute__ ((__type_visibility__("default")))
-#  else
-#    define _LIBCPP_TYPE_VIS __attribute__ ((__visibility__("default")))
-#  endif
-#endif
-
-#ifndef _LIBCPP_PREFERRED_OVERLOAD
-#  if __has_attribute(__enable_if__)
-#    define _LIBCPP_PREFERRED_OVERLOAD __attribute__ ((__enable_if__(true, "")))
-#  endif
-#endif
-
-#ifndef _LIBCPP_TYPE_VIS_ONLY
-# define _LIBCPP_TYPE_VIS_ONLY _LIBCPP_TYPE_VIS
-#endif
-
-#ifndef _LIBCPP_FUNC_VIS_ONLY
-# define _LIBCPP_FUNC_VIS_ONLY _LIBCPP_FUNC_VIS
-#endif
-
-#ifndef _LIBCPP_INLINE_VISIBILITY
-#define _LIBCPP_INLINE_VISIBILITY __attribute__ ((__visibility__("hidden"), __always_inline__))
-#endif
-
-#ifndef _LIBCPP_EXCEPTION_ABI
-#define _LIBCPP_EXCEPTION_ABI __attribute__ ((__visibility__("default")))
-#endif
-
-#ifndef _LIBCPP_ALWAYS_INLINE
-#define _LIBCPP_ALWAYS_INLINE  __attribute__ ((__visibility__("hidden"), __always_inline__))
-#endif
-
 #if defined(__clang__)
 
 // _LIBCPP_ALTERNATE_STRING_LAYOUT is an old name for
@@ -581,8 +497,6 @@ using namespace _LIBCPP_NAMESPACE __attribute__((__strong__));
 #define _ALIGNAS(x) __declspec(align(x))
 #define _LIBCPP_HAS_NO_VARIADICS
 
-
-
 #define _LIBCPP_BEGIN_NAMESPACE_STD namespace std {
 #define _LIBCPP_END_NAMESPACE_STD  }
 #define _VSTD std
@@ -627,6 +541,95 @@ namespace std {
 #define _LIBCPP_HAS_NO_ASAN
 
 #endif // __clang__ || __GNUC__ || _MSC_VER || __IBMCPP__
+
+
+#ifdef _WIN32
+// only really useful for a DLL. _LIBCPP_DLL should be a compiler builtin define ideally...
+#if defined(_LIBCPP_DLL) && defined(cxx_EXPORTS)
+# define _LIBCPP_DLL_VIS __declspec(dllexport)
+#elif defined(_LIBCPP_DLL)
+# define _LIBCPP_DLL_VIS __declspec(dllimport)
+#else
+# define _LIBCPP_DLL_VIS
+#endif
+#define _LIBCPP_TYPE_VIS            _LIBCPP_DLL_VIS
+#define _LIBCPP_FUNC_VIS            _LIBCPP_DLL_VIS
+#define _LIBCPP_EXCEPTION_ABI       _LIBCPP_DLL_VIS
+#define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_DLL_VIS
+#define _LIBCPP_HIDDEN
+#define _LIBCPP_TYPE_VIS_ONLY
+#define _LIBCPP_FUNC_VIS_ONLY
+#define _LIBCPP_ENUM_VIS
+#define _LIBCPP_INLINE_VISIBILITY __forceinline
+#define _LIBCPP_ALWAYS_INLINE     __forceinline
+#define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __forceinline
+#endif // _WIN32
+
+#ifndef _LIBCPP_HIDDEN
+#define _LIBCPP_HIDDEN __attribute__ ((__visibility__("hidden")))
+#endif
+
+#ifndef _LIBCPP_FUNC_VIS
+#define _LIBCPP_FUNC_VIS __attribute__ ((__visibility__("default")))
+#endif
+
+#ifndef _LIBCPP_TYPE_VIS
+#  if __has_attribute(__type_visibility__)
+#    define _LIBCPP_TYPE_VIS __attribute__ ((__type_visibility__("default")))
+#  else
+#    define _LIBCPP_TYPE_VIS __attribute__ ((__visibility__("default")))
+#  endif
+#endif
+
+#ifndef _LIBCPP_TYPE_VIS_ONLY
+# define _LIBCPP_TYPE_VIS_ONLY _LIBCPP_TYPE_VIS
+#endif
+
+#ifndef _LIBCPP_FUNC_VIS_ONLY
+# define _LIBCPP_FUNC_VIS_ONLY _LIBCPP_FUNC_VIS
+#endif
+
+#ifndef _LIBCPP_EXCEPTION_ABI
+#define _LIBCPP_EXCEPTION_ABI __attribute__ ((__visibility__("default")))
+#endif
+
+#ifndef _LIBCPP_ENUM_VIS
+#  if __has_attribute(__type_visibility__)
+#    define _LIBCPP_ENUM_VIS __attribute__ ((__type_visibility__("default")))
+#  else
+#    define _LIBCPP_ENUM_VIS
+#  endif
+#endif
+
+#ifndef _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
+#  if __has_attribute(__type_visibility__)
+#    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __attribute__ ((__visibility__("default")))
+#  else
+#    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
+#  endif
+#endif
+
+#ifndef _LIBCPP_INLINE_VISIBILITY
+#define _LIBCPP_INLINE_VISIBILITY __attribute__ ((__visibility__("hidden"), __always_inline__))
+#endif
+
+#ifndef _LIBCPP_ALWAYS_INLINE
+#define _LIBCPP_ALWAYS_INLINE  __attribute__ ((__visibility__("hidden"), __always_inline__))
+#endif
+
+#ifndef _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY
+# ifdef _LIBCPP_BUILDING_LIBRARY
+#   define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY __attribute__((__visibility__("default"), __always_inline__))
+# else
+#   define _LIBCPP_EXTERN_TEMPLATE_INLINE_VISIBILITY _LIBCPP_INLINE_VISIBILITY
+# endif
+#endif
+
+#ifndef _LIBCPP_PREFERRED_OVERLOAD
+#  if __has_attribute(__enable_if__)
+#    define _LIBCPP_PREFERRED_OVERLOAD __attribute__ ((__enable_if__(true, "")))
+#  endif
+#endif
 
 #ifndef _LIBCPP_HAS_NO_NOEXCEPT
 #  define _NOEXCEPT noexcept
@@ -716,7 +719,7 @@ template <unsigned> struct __static_assert_check {};
     _LIBCPP_ALWAYS_INLINE operator int() const {return __v_;} \
     };
 #else  // _LIBCPP_HAS_NO_STRONG_ENUMS
-#define _LIBCPP_DECLARE_STRONG_ENUM(x) enum class _LIBCPP_TYPE_VIS_ONLY x
+#define _LIBCPP_DECLARE_STRONG_ENUM(x) enum class _LIBCPP_ENUM_VIS x
 #define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x)
 #endif  // _LIBCPP_HAS_NO_STRONG_ENUMS
 

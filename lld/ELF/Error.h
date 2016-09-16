@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_COFF_ERROR_H
-#define LLD_COFF_ERROR_H
+#ifndef LLD_ELF_ERROR_H
+#define LLD_ELF_ERROR_H
 
 #include "lld/Core/LLVM.h"
 

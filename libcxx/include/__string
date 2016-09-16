@@ -701,7 +701,8 @@ __str_find_last_not_of(const _CharT *__p, _SizeT __sz,
 }
 
 template<class _Ptr>
-size_t _LIBCPP_INLINE_VISIBILITY __do_string_hash(_Ptr __p, _Ptr __e)
+inline _LIBCPP_INLINE_VISIBILITY
+size_t __do_string_hash(_Ptr __p, _Ptr __e)
 {
     typedef typename iterator_traits<_Ptr>::value_type value_type;
     return __murmur2_or_cityhash<size_t>()(__p, (__e-__p)*sizeof(value_type));

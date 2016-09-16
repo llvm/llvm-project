@@ -1,0 +1,11 @@
+# XFAIL: windows
+
+# XFAIL: armhf-linux
+# -> llvm.org/pr27868
+
+# RUN: %cxx %p/Inputs/anonymous-struct.cpp -g -o %t && %lldb -b -s %s -- %t | FileCheck %s
+
+breakpoint set --file anonymous-struct.cpp --line 24
+run
+expression multiply(&s)
+# CHECK: $0 = 1

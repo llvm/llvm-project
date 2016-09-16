@@ -110,6 +110,10 @@ static bool fileMatches(const InputSectionDescription *Desc,
          !const_cast<Regex &>(Desc->ExcludedFileRe).match(Filename);
 }
 
+static bool comparePriority(InputSectionData *A, InputSectionData *B) {
+  return getPriority(A->Name) < getPriority(B->Name);
+}
+
 static bool compareName(InputSectionData *A, InputSectionData *B) {
   return A->Name < B->Name;
 }
@@ -123,6 +127,8 @@ static bool compareAlignment(InputSectionData *A, InputSectionData *B) {
 
 static std::function<bool(InputSectionData *, InputSectionData *)>
 getComparator(SortKind K) {
+  if (K == SortByPriority)
+    return comparePriority;
   if (K == SortByName)
     return compareName;
   return compareAlignment;
@@ -461,11 +467,14 @@ template <class ELFT> void LinkerScript<ELFT>::assignAddresses() {
     }
   }
 
+  uintX_t HeaderSize =
+      Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+  if (HeaderSize > MinVA)
+    fatal("Not enough space for ELF and program headers");
+
   // ELF and Program headers need to be right before the first section in
   // memory. Set their addresses accordingly.
-  MinVA = alignDown(MinVA - Out<ELFT>::ElfHeader->getSize() -
-                        Out<ELFT>::ProgramHeaders->getSize(),
-                    Target->PageSize);
+  MinVA = alignDown(MinVA - HeaderSize, Target->PageSize);
   Out<ELFT>::ElfHeader->setVA(MinVA);
   Out<ELFT>::ProgramHeaders->setVA(Out<ELFT>::ElfHeader->getSize() + MinVA);
 }
@@ -967,6 +976,8 @@ SortKind ScriptParser::readSortKind() {
     return SortByName;
   if (skip("SORT_BY_ALIGNMENT"))
     return SortByAlignment;
+  if (skip("SORT_BY_INIT_PRIORITY"))
+    return SortByPriority;
   return SortNone;
 }
 
@@ -1307,7 +1318,8 @@ Expr ScriptParser::readPrimary() {
     next();
     expect(",");
     uint64_t Val;
-    next().getAsInteger(0, Val);
+    if (next().getAsInteger(0, Val))
+      setError("integer expected");
     expect(")");
     return [=](uint64_t Dot) { return Val; };
   }

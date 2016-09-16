@@ -257,7 +257,9 @@ public:
   //------------------------------------------------------------------
   explicit ArchSpec(const llvm::Triple &triple);
   explicit ArchSpec(const char *triple_cstr);
-  explicit ArchSpec(const char *triple_cstr, Platform *platform);
+  explicit ArchSpec(llvm::StringRef triple_str);
+  ArchSpec(const char *triple_cstr, Platform *platform);
+  ArchSpec(llvm::StringRef triple_str, Platform *platform);
   //------------------------------------------------------------------
   /// Constructor over architecture name.
   ///
@@ -505,8 +507,10 @@ public:
   //------------------------------------------------------------------
   bool SetTriple(const llvm::Triple &triple);
 
-  bool SetTriple(const char *triple_cstr);
+  bool SetTriple(llvm::StringRef triple_str);
+  bool SetTriple(llvm::StringRef triple_str, Platform *platform);
 
+  bool SetTriple(const char *triple_cstr);
   bool SetTriple(const char *triple_cstr, Platform *platform);
 
   //------------------------------------------------------------------
@@ -596,13 +600,13 @@ protected:
   bool IsEqualTo(const ArchSpec &rhs, bool exact_match) const;
 
   llvm::Triple m_triple;
-  Core m_core;
-  lldb::ByteOrder m_byte_order;
+  Core m_core = kCore_invalid;
+  lldb::ByteOrder m_byte_order = lldb::eByteOrderInvalid;
 
   // Additional arch flags which we cannot get from triple and core
   // For MIPS these are application specific extensions like
   // micromips, mips16 etc.
-  uint32_t m_flags;
+  uint32_t m_flags = 0;
 
   ConstString m_distribution_id;
 
@@ -625,7 +629,7 @@ protected:
 //------------------------------------------------------------------
 bool operator<(const ArchSpec &lhs, const ArchSpec &rhs);
 
-bool ParseMachCPUDashSubtypeTriple(const char *triple_cstr, ArchSpec &arch);
+bool ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch);
 
 } // namespace lldb_private
 

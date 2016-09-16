@@ -162,14 +162,41 @@ Error CUDAPlatformDevice::launch(
       reinterpret_cast<CUfunction>(const_cast<void *>(PKernelHandle));
   CUstream Stream =
       reinterpret_cast<CUstream>(const_cast<void *>(PlatformStreamHandle));
-  // TODO(jhen): Deal with shared memory arguments.
-  unsigned SharedMemoryBytes = 0;
+
+  auto Launch = [Function, Stream, BlockSize,
+                 GridSize](size_t SharedMemoryBytes, void **ArgumentAddresses) {
+    return CUresultToError(
+        cuLaunchKernel(Function,                              //
+                       GridSize.X, GridSize.Y, GridSize.Z,    //
+                       BlockSize.X, BlockSize.Y, BlockSize.Z, //
+                       SharedMemoryBytes, Stream, ArgumentAddresses, nullptr),
+        "cuLaunchKernel");
+  };
+
   void **ArgumentAddresses = const_cast<void **>(ArgumentArray.getAddresses());
-  return CUresultToError(cuLaunchKernel(Function, GridSize.X, GridSize.Y,
-                                        GridSize.Z, BlockSize.X, BlockSize.Y,
-                                        BlockSize.Z, SharedMemoryBytes, Stream,
-                                        ArgumentAddresses, nullptr),
-                         "cuLaunchKernel");
+  size_t SharedArgumentCount = ArgumentArray.getSharedCount();
+  if (SharedArgumentCount) {
+    // The argument handling in this case is not very efficient. We may need to
+    // come back and optimize it later.
+    //
+    // Perhaps introduce another branch for the case where there is exactly one
+    // shared memory argument and it is the first one. This is the only case
+    // that will be used for compiler-generated CUDA kernels, and OpenCL users
+    // can choose to take advantage of it by combining their dynamic shared
+    // memory arguments and putting them first in the kernel signature.
+    unsigned SharedMemoryBytes = 0;
+    size_t ArgumentCount = ArgumentArray.getArgumentCount();
+    llvm::SmallVector<void *, 16> NonSharedArgumentAddresses(
+        ArgumentCount - SharedArgumentCount);
+    size_t NonSharedIndex = 0;
+    for (size_t I = 0; I < ArgumentCount; ++I)
+      if (ArgumentArray.getType(I) == KernelArgumentType::SHARED_DEVICE_MEMORY)
+        SharedMemoryBytes += ArgumentArray.getSize(I);
+      else
+        NonSharedArgumentAddresses[NonSharedIndex++] = ArgumentAddresses[I];
+    return Launch(SharedMemoryBytes, NonSharedArgumentAddresses.data());
+  }
+  return Launch(0, ArgumentAddresses);
 }
 
 Error CUDAPlatformDevice::copyD2H(const void *PlatformStreamHandle,
