@@ -1765,3 +1765,36 @@ define <2 x i32> @select_icmp_slt0_xor_vec(<2 x i32> %x) {
   ret <2 x i32> %x.xor
 }
 
+; Make sure that undef elements of the select condition are translated into undef elements of the shuffle mask.
+
+define <4 x i32> @canonicalize_to_shuffle(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @canonicalize_to_shuffle(
+; CHECK-NEXT:    [[SEL:%.*]] = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 undef, i32 6, i32 undef>
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
+;
+  %sel = select <4 x i1> <i1 true, i1 undef, i1 false, i1 undef>, <4 x i32> %a, <4 x i32> %b
+  ret <4 x i32> %sel
+}
+
+; Don't die or try if the condition mask is a constant expression or contains a constant expression.
+
+@g = global i32 0
+
+define <4 x i32> @cannot_canonicalize_to_shuffle1(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @cannot_canonicalize_to_shuffle1(
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> bitcast (i4 ptrtoint (i32* @g to i4) to <4 x i1>), <4 x i32> %a, <4 x i32> %b
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
+;
+  %sel = select <4 x i1> bitcast (i4 ptrtoint (i32* @g to i4) to <4 x i1>), <4 x i32> %a, <4 x i32> %b
+  ret <4 x i32> %sel
+}
+
+define <4 x i32> @cannot_canonicalize_to_shuffle2(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @cannot_canonicalize_to_shuffle2(
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> <i1 true, i1 undef, i1 false, i1 icmp sle (i16 ptrtoint (i32* @g to i16), i16 4)>, <4 x i32> %a, <4 x i32> %b
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
+;
+  %sel = select <4 x i1> <i1 true, i1 undef, i1 false, i1 icmp sle (i16 ptrtoint (i32* @g to i16), i16 4)>, <4 x i32> %a, <4 x i32> %b
+  ret <4 x i32> %sel
+}
+

@@ -56,6 +56,10 @@ class InstSI <dag outs, dag ins, string asm = "",
   // Whether WQM _must_ be disabled for this instruction.
   field bits<1> DisableWQM = 0;
 
+  // Most sopk treat the immediate as a signed 16-bit, however some
+  // use it as unsigned.
+  field bits<1> SOPKZext = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = VM_CNT;
   let TSFlags{1} = EXP_CNT;
@@ -89,6 +93,7 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{25} = VOPAsmPrefer32Bit;
   let TSFlags{26} = Gather4;
   let TSFlags{27} = DisableWQM;
+  let TSFlags{28} = SOPKZext;
 
   let SchedRW = [Write32Bit];
 
@@ -123,6 +128,9 @@ class CFPseudoInstSI<dag outs, dag ins, list<dag> pattern = [],
 
   let Uses = !if(UseExec, [EXEC], []);
   let Defs = !if(DefExec, [EXEC, SCC], [SCC]);
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
 }
 
 class Enc32 {

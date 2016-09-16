@@ -142,6 +142,7 @@ public:
   // These are accessors for general information about the Languages lldb knows
   // about:
 
+  // TODO: Convert this to using a StringRef.
   static lldb::LanguageType GetLanguageTypeFromString(const char *string);
 
   static const char *GetNameForLanguageType(lldb::LanguageType language);

@@ -87,6 +87,7 @@ public:
   ///     \b true if the name is a breakpoint name (as opposed to an ID or
   ///     range) false otherwise.
   //------------------------------------------------------------------
+  // TODO: Convert this function to use a StringRef.
   static bool StringIsBreakpointName(const char *name, Error &error);
 
   //------------------------------------------------------------------

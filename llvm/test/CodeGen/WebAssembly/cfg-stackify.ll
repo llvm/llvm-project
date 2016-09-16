@@ -284,7 +284,7 @@ entry:
 ; OPT: i32.store $drop=, 0($0), $pop{{[0-9]+}}{{$}}
 ; OPT: br 0{{$}}
 ; OPT: .LBB7_2:
-define i32 @minimal_loop(i32* %p) {
+define void @minimal_loop(i32* %p) {
 entry:
   store volatile i32 0, i32* %p
   br label %loop
@@ -429,7 +429,7 @@ exit:
 ; OPT:      br              0{{$}}
 ; OPT:      .LBB11_6:
 ; OPT-NEXT: end_loop{{$}}
-define i32 @doublediamond_in_a_loop(i32 %a, i32 %b, i32* %p) {
+define void @doublediamond_in_a_loop(i32 %a, i32 %b, i32* %p) {
 entry:
   br label %header
 header:
@@ -774,7 +774,7 @@ u1:
 ; OPT-NEXT:  br       0{{$}}
 ; OPT-NEXT:  .LBB17_2:
 ; OPT-NEXT:  end_loop{{$}}
-define i32 @test8() {
+define void @test8() {
 bb:
   br label %bb1
 

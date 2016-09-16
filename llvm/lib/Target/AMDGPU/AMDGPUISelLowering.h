@@ -100,16 +100,8 @@ protected:
   SDValue LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool sign) const;
   void LowerUDIVREM64(SDValue Op, SelectionDAG &DAG,
                                     SmallVectorImpl<SDValue> &Results) const;
-  /// The SelectionDAGBuilder will automatically promote function arguments
-  /// with illegal types.  However, this does not work for the AMDGPU targets
-  /// since the function arguments are stored in memory as these illegal types.
-  /// In order to handle this properly we need to get the origianl types sizes
-  /// from the LLVM IR Function and fixup the ISD:InputArg values before
-  /// passing them to AnalyzeFormalArguments()
-  void getOriginalFunctionArgs(SelectionDAG &DAG,
-                               const Function *F,
-                               const SmallVectorImpl<ISD::InputArg> &Ins,
-                               SmallVectorImpl<ISD::InputArg> &OrigIns) const;
+  void analyzeFormalArgumentsCompute(CCState &State,
+                              const SmallVectorImpl<ISD::InputArg> &Ins) const;
   void AnalyzeFormalArguments(CCState &State,
                               const SmallVectorImpl<ISD::InputArg> &Ins) const;
   void AnalyzeReturn(CCState &State,

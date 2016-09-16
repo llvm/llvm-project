@@ -407,6 +407,17 @@ static StringMap<uint64_t> getSectionStartMap(opt::InputArgList &Args) {
   return Ret;
 }
 
+static SortSectionPolicy getSortKind(opt::InputArgList &Args) {
+  StringRef S = getString(Args, OPT_sort_section);
+  if (S == "alignment")
+    return SortSectionPolicy::Alignment;
+  if (S == "name")
+    return SortSectionPolicy::Name;
+  if (!S.empty())
+    error("unknown --sort-section rule: " + S);
+  return SortSectionPolicy::Default;
+}
+
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_L))
@@ -529,6 +540,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   for (auto *Arg : Args.filtered(OPT_undefined))
     Config->Undefined.push_back(Arg->getValue());
+
+  Config->SortSection = getSortKind(Args);
 
   Config->UnresolvedSymbols = getUnresolvedSymbolOption(Args);
 

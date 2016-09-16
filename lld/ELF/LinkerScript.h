@@ -10,6 +10,7 @@
 #ifndef LLD_ELF_LINKER_SCRIPT_H
 #define LLD_ELF_LINKER_SCRIPT_H
 
+#include "Config.h"
 #include "Strings.h"
 #include "Writer.h"
 #include "lld/Core/LLVM.h"
@@ -20,6 +21,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 #include <functional>
+#include <list>
 
 namespace lld {
 namespace elf {
@@ -96,18 +98,16 @@ struct OutputSectionCommand : BaseCommand {
   ConstraintKind Constraint = ConstraintKind::NoConstraint;
 };
 
-enum SortKind { SortNone, SortByPriority, SortByName, SortByAlignment };
-
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription(StringRef FilePattern)
       : BaseCommand(InputSectionKind),
         FileRe(compileGlobPatterns({FilePattern})) {}
   static bool classof(const BaseCommand *C);
   llvm::Regex FileRe;
-  SortKind SortOuter = SortNone;
-  SortKind SortInner = SortNone;
-  llvm::Regex ExcludedFileRe;
-  llvm::Regex SectionRe;
+  SortSectionPolicy SortOuter = SortSectionPolicy::Default;
+  SortSectionPolicy SortInner = SortSectionPolicy::Default;
+  // Pairs of section regex and files excluded.
+  std::list<std::pair<llvm::Regex, llvm::Regex>> SectionsVec;
   std::vector<InputSectionData *> Sections;
 };
 
@@ -186,8 +186,7 @@ public:
   std::vector<OutputSectionBase<ELFT> *> *OutputSections;
 
 private:
-  void computeInputSections(InputSectionDescription *,
-                            ConstraintKind Constraint);
+  void computeInputSections(InputSectionDescription *);
 
   void addSection(OutputSectionFactory<ELFT> &Factory,
                   InputSectionBase<ELFT> *Sec, StringRef Name);

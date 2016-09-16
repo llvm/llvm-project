@@ -48,6 +48,7 @@
 #include "lldb/Target/TargetList.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ManagedStatic.h"
 
@@ -474,7 +475,8 @@ bool SBDebugger::SetDefaultArchitecture(const char *arch_name) {
 
 ScriptLanguage
 SBDebugger::GetScriptingLanguage(const char *script_language_name) {
-  return Args::StringToScriptLanguage(script_language_name,
+  if (!script_language_name) return eScriptLanguageDefault;
+  return Args::StringToScriptLanguage(llvm::StringRef(script_language_name),
                                       eScriptLanguageDefault, nullptr);
 }
 

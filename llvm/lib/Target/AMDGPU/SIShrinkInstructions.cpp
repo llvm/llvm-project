@@ -188,6 +188,26 @@ static bool isKImmOperand(const SIInstrInfo *TII, const MachineOperand &Src) {
   return isInt<16>(Src.getImm()) && !TII->isInlineConstant(Src, 4);
 }
 
+static bool isKUImmOperand(const SIInstrInfo *TII, const MachineOperand &Src) {
+  return isUInt<16>(Src.getImm()) && !TII->isInlineConstant(Src, 4);
+}
+
+static bool isKImmOrKUImmOperand(const SIInstrInfo *TII,
+                                 const MachineOperand &Src,
+                                 bool &IsUnsigned) {
+  if (isInt<16>(Src.getImm())) {
+    IsUnsigned = false;
+    return !TII->isInlineConstant(Src, 4);
+  }
+
+  if (isUInt<16>(Src.getImm())) {
+    IsUnsigned = true;
+    return !TII->isInlineConstant(Src, 4);
+  }
+
+  return false;
+}
+
 /// Copy implicit register operands from specified instruction to this
 /// instruction that are not part of the instruction definition.
 static void copyExtraImplicitOps(MachineInstr &NewMI, MachineFunction &MF,
@@ -199,6 +219,44 @@ static void copyExtraImplicitOps(MachineInstr &NewMI, MachineFunction &MF,
     const MachineOperand &MO = MI.getOperand(i);
     if ((MO.isReg() && MO.isImplicit()) || MO.isRegMask())
       NewMI.addOperand(MF, MO);
+  }
+}
+
+static void shrinkScalarCompare(const SIInstrInfo *TII, MachineInstr &MI) {
+  // cmpk instructions do scc = dst <cc op> imm16, so commute the instruction to
+  // get constants on the RHS.
+  if (!MI.getOperand(0).isReg())
+    TII->commuteInstruction(MI, false, 0, 1);
+
+  const MachineOperand &Src1 = MI.getOperand(1);
+  if (!Src1.isImm())
+    return;
+
+  int SOPKOpc = AMDGPU::getSOPKOp(MI.getOpcode());
+  if (SOPKOpc == -1)
+    return;
+
+  // eq/ne is special because the imm16 can be treated as signed or unsigned,
+  // and initially selectd to the signed versions.
+  if (SOPKOpc == AMDGPU::S_CMPK_EQ_I32 || SOPKOpc == AMDGPU::S_CMPK_LG_I32) {
+    bool HasUImm;
+    if (isKImmOrKUImmOperand(TII, Src1, HasUImm)) {
+      if (HasUImm) {
+        SOPKOpc = (SOPKOpc == AMDGPU::S_CMPK_EQ_I32) ?
+          AMDGPU::S_CMPK_EQ_U32 : AMDGPU::S_CMPK_LG_U32;
+      }
+
+      MI.setDesc(TII->get(SOPKOpc));
+    }
+
+    return;
+  }
+
+  const MCInstrDesc &NewDesc = TII->get(SOPKOpc);
+
+  if ((TII->sopkIsZext(SOPKOpc) && isKUImmOperand(TII, Src1)) ||
+      (!TII->sopkIsZext(SOPKOpc) && isKImmOperand(TII, Src1))) {
+    MI.setDesc(NewDesc);
   }
 }
 
@@ -308,6 +366,12 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
             MI.tieOperands(0, 1);
           }
         }
+      }
+
+      // Try to use s_cmpk_*
+      if (MI.isCompare() && TII->isSOPC(MI)) {
+        shrinkScalarCompare(TII, MI);
+        continue;
       }
 
       // Try to use S_MOVK_I32, which will save 4 bytes for small immediates.

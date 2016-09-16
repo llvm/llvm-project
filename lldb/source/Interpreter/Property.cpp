@@ -51,8 +51,7 @@ Property::Property(const PropertyDefinition &definition)
     // "definition.default_uint_value" is the default boolean value if
     // "definition.default_cstr_value" is NULL, otherwise interpret
     // "definition.default_cstr_value" as a string value that represents the
-    // default
-    // value.
+    // default value.
     if (definition.default_cstr_value)
       m_value_sp.reset(new OptionValueBoolean(Args::StringToBoolean(
           definition.default_cstr_value, false, nullptr)));
@@ -61,11 +60,11 @@ Property::Property(const PropertyDefinition &definition)
           new OptionValueBoolean(definition.default_uint_value != 0));
     break;
 
-  case OptionValue::eTypeChar:
-    m_value_sp.reset(new OptionValueChar(
-        Args::StringToChar(definition.default_cstr_value, '\0', nullptr)));
+  case OptionValue::eTypeChar: {
+    llvm::StringRef s(definition.default_cstr_value ? definition.default_cstr_value : "");
+    m_value_sp = std::make_shared<OptionValueChar>(Args::StringToChar(s, '\0', nullptr));
     break;
-
+  }
   case OptionValue::eTypeDictionary:
     // "definition.default_uint_value" is always a OptionValue::Type
     m_value_sp.reset(new OptionValueDictionary(OptionValue::ConvertTypeToMask(

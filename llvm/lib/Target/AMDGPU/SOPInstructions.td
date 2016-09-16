@@ -473,6 +473,11 @@ class SOPK_Real64<bits<5> op, SOPK_Pseudo ps> :
   let Inst{63-32} = imm;
 }
 
+class SOPKInstTable <bit is_sopk, string cmpOp = ""> {
+  bit IsSOPK = is_sopk;
+  string BaseCmpOp = cmpOp;
+}
+
 class SOPK_32 <string opName, list<dag> pattern=[]> : SOPK_Pseudo <
   opName,
   (outs SReg_32:$sdst),
@@ -480,12 +485,12 @@ class SOPK_32 <string opName, list<dag> pattern=[]> : SOPK_Pseudo <
   "$sdst, $simm16",
   pattern>;
 
-class SOPK_SCC <string opName, list<dag> pattern=[]> : SOPK_Pseudo <
+class SOPK_SCC <string opName, string base_op = ""> : SOPK_Pseudo <
   opName,
   (outs),
   (ins SReg_32:$sdst, u16imm:$simm16),
-  "$sdst, $simm16",
-  pattern> {
+  "$sdst, $simm16", []>,
+  SOPKInstTable<1, base_op>{
   let Defs = [SCC];
 }
 
@@ -521,18 +526,21 @@ let isCompare = 1 in {
 //   [(set i1:$dst, (setcc i32:$src0, imm:$src1, SETEQ))]
 // >;
 
-def S_CMPK_EQ_I32 : SOPK_SCC <"s_cmpk_eq_i32">;
-def S_CMPK_LG_I32 : SOPK_SCC <"s_cmpk_lg_i32">;
-def S_CMPK_GT_I32 : SOPK_SCC <"s_cmpk_gt_i32">;
-def S_CMPK_GE_I32 : SOPK_SCC <"s_cmpk_ge_i32">;
-def S_CMPK_LT_I32 : SOPK_SCC <"s_cmpk_lt_i32">;
-def S_CMPK_LE_I32 : SOPK_SCC <"s_cmpk_le_i32">;
-def S_CMPK_EQ_U32 : SOPK_SCC <"s_cmpk_eq_u32">;
-def S_CMPK_LG_U32 : SOPK_SCC <"s_cmpk_lg_u32">;
-def S_CMPK_GT_U32 : SOPK_SCC <"s_cmpk_gt_u32">;
-def S_CMPK_GE_U32 : SOPK_SCC <"s_cmpk_ge_u32">;
-def S_CMPK_LT_U32 : SOPK_SCC <"s_cmpk_lt_u32">;
-def S_CMPK_LE_U32 : SOPK_SCC <"s_cmpk_le_u32">;
+def S_CMPK_EQ_I32 : SOPK_SCC <"s_cmpk_eq_i32", "s_cmp_eq_i32">;
+def S_CMPK_LG_I32 : SOPK_SCC <"s_cmpk_lg_i32", "s_cmp_lg_i32">;
+def S_CMPK_GT_I32 : SOPK_SCC <"s_cmpk_gt_i32", "s_cmp_gt_i32">;
+def S_CMPK_GE_I32 : SOPK_SCC <"s_cmpk_ge_i32", "s_cmp_ge_i32">;
+def S_CMPK_LT_I32 : SOPK_SCC <"s_cmpk_lt_i32", "s_cmp_lt_i32">;
+def S_CMPK_LE_I32 : SOPK_SCC <"s_cmpk_le_i32", "s_cmp_le_i32">;
+
+let SOPKZext = 1 in {
+def S_CMPK_EQ_U32 : SOPK_SCC <"s_cmpk_eq_u32", "s_cmp_eq_u32">;
+def S_CMPK_LG_U32 : SOPK_SCC <"s_cmpk_lg_u32", "s_cmp_lg_u32">;
+def S_CMPK_GT_U32 : SOPK_SCC <"s_cmpk_gt_u32", "s_cmp_gt_u32">;
+def S_CMPK_GE_U32 : SOPK_SCC <"s_cmpk_ge_u32", "s_cmp_ge_u32">;
+def S_CMPK_LT_U32 : SOPK_SCC <"s_cmpk_lt_u32", "s_cmp_lt_u32">;
+def S_CMPK_LE_U32 : SOPK_SCC <"s_cmpk_le_u32", "s_cmp_le_u32">;
+} // End SOPKZext = 1
 } // End isCompare = 1
 
 let Defs = [SCC], isCommutable = 1, DisableEncoding = "$src0",
@@ -613,8 +621,14 @@ class SOPC_Helper <bits<7> op, RegisterOperand rc, ValueType vt,
   [(set SCC, (si_setcc_uniform vt:$src0, vt:$src1, cond))] > {
 }
 
-class SOPC_CMP_32<bits<7> op, string opName, PatLeaf cond = COND_NULL>
-  : SOPC_Helper<op, SSrc_b32, i32, opName, cond>;
+class SOPC_CMP_32<bits<7> op, string opName,
+                  PatLeaf cond = COND_NULL, string revOp = opName>
+  : SOPC_Helper<op, SSrc_b32, i32, opName, cond>,
+    Commutable_REV<revOp, !eq(revOp, opName)>,
+    SOPKInstTable<0, opName> {
+  let isCompare = 1;
+  let isCommutable = 1;
+}
 
 class SOPC_32<bits<7> op, string opName, list<dag> pattern = []>
   : SOPC_Base<op, SSrc_b32, SSrc_b32, opName, pattern>;
@@ -622,19 +636,19 @@ class SOPC_32<bits<7> op, string opName, list<dag> pattern = []>
 class SOPC_64_32<bits<7> op, string opName, list<dag> pattern = []>
   : SOPC_Base<op, SSrc_b64, SSrc_b32, opName, pattern>;
 
-
 def S_CMP_EQ_I32 : SOPC_CMP_32 <0x00, "s_cmp_eq_i32", COND_EQ>;
 def S_CMP_LG_I32 : SOPC_CMP_32 <0x01, "s_cmp_lg_i32", COND_NE>;
 def S_CMP_GT_I32 : SOPC_CMP_32 <0x02, "s_cmp_gt_i32", COND_SGT>;
 def S_CMP_GE_I32 : SOPC_CMP_32 <0x03, "s_cmp_ge_i32", COND_SGE>;
-def S_CMP_LT_I32 : SOPC_CMP_32 <0x04, "s_cmp_lt_i32", COND_SLT>;
-def S_CMP_LE_I32 : SOPC_CMP_32 <0x05, "s_cmp_le_i32", COND_SLE>;
+def S_CMP_LT_I32 : SOPC_CMP_32 <0x04, "s_cmp_lt_i32", COND_SLT, "s_cmp_gt_i32">;
+def S_CMP_LE_I32 : SOPC_CMP_32 <0x05, "s_cmp_le_i32", COND_SLE, "s_cmp_ge_i32">;
 def S_CMP_EQ_U32 : SOPC_CMP_32 <0x06, "s_cmp_eq_u32", COND_EQ>;
-def S_CMP_LG_U32 : SOPC_CMP_32 <0x07, "s_cmp_lg_u32", COND_NE >;
+def S_CMP_LG_U32 : SOPC_CMP_32 <0x07, "s_cmp_lg_u32", COND_NE>;
 def S_CMP_GT_U32 : SOPC_CMP_32 <0x08, "s_cmp_gt_u32", COND_UGT>;
 def S_CMP_GE_U32 : SOPC_CMP_32 <0x09, "s_cmp_ge_u32", COND_UGE>;
-def S_CMP_LT_U32 : SOPC_CMP_32 <0x0a, "s_cmp_lt_u32", COND_ULT>;
-def S_CMP_LE_U32 : SOPC_CMP_32 <0x0b, "s_cmp_le_u32", COND_ULE>;
+def S_CMP_LT_U32 : SOPC_CMP_32 <0x0a, "s_cmp_lt_u32", COND_ULT, "s_cmp_gt_u32">;
+def S_CMP_LE_U32 : SOPC_CMP_32 <0x0b, "s_cmp_le_u32", COND_ULE, "s_cmp_ge_u32">;
+
 def S_BITCMP0_B32 : SOPC_32 <0x0c, "s_bitcmp0_b32">;
 def S_BITCMP1_B32 : SOPC_32 <0x0d, "s_bitcmp1_b32">;
 def S_BITCMP0_B64 : SOPC_64_32 <0x0e, "s_bitcmp0_b64">;

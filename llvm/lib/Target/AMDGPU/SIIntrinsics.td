@@ -186,11 +186,11 @@ let TargetPrefix = "amdgcn", isTarget = 1 in {
 
   /* Control flow Intrinsics */
 
-  def int_amdgcn_if : Intrinsic<[llvm_i64_ty], [llvm_i1_ty, llvm_empty_ty], []>;
-  def int_amdgcn_else : Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_empty_ty], []>;
-  def int_amdgcn_break : Intrinsic<[llvm_i64_ty], [llvm_i64_ty], []>;
-  def int_amdgcn_if_break : Intrinsic<[llvm_i64_ty], [llvm_i1_ty, llvm_i64_ty], []>;
-  def int_amdgcn_else_break : Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], []>;
-  def int_amdgcn_loop : Intrinsic<[], [llvm_i64_ty, llvm_empty_ty], []>;
-  def int_amdgcn_end_cf : Intrinsic<[], [llvm_i64_ty], []>;
+  def int_amdgcn_if : Intrinsic<[llvm_i64_ty], [llvm_i1_ty, llvm_empty_ty], [IntrConvergent]>;
+  def int_amdgcn_else : Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_empty_ty], [IntrConvergent]>;
+  def int_amdgcn_break : Intrinsic<[llvm_i64_ty], [llvm_i64_ty], [IntrNoMem, IntrConvergent]>;
+  def int_amdgcn_if_break : Intrinsic<[llvm_i64_ty], [llvm_i1_ty, llvm_i64_ty], [IntrNoMem, IntrConvergent]>;
+  def int_amdgcn_else_break : Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem, IntrConvergent]>;
+  def int_amdgcn_loop : Intrinsic<[], [llvm_i64_ty, llvm_empty_ty], [IntrConvergent]>;
+  def int_amdgcn_end_cf : Intrinsic<[], [llvm_i64_ty], [IntrConvergent]>;
 }

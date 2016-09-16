@@ -43,7 +43,8 @@ enum {
   SGPRSpill = 1 << 24,
   VOPAsmPrefer32Bit = 1 << 25,
   Gather4 = 1 << 26,
-  DisableWQM = 1 << 27
+  DisableWQM = 1 << 27,
+  SOPK_ZEXT = 1 << 28
 };
 }
 

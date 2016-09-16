@@ -1451,9 +1451,10 @@ void computeKnownBits(const Value *V, APInt &KnownZero, APInt &KnownOne,
          KnownOne.getBitWidth() == BitWidth &&
          "V, KnownOne and KnownZero should have same BitWidth");
 
-  if (const ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-    // We know all of the bits for a constant!
-    KnownOne = CI->getValue();
+  const APInt *C;
+  if (match(V, m_APInt(C))) {
+    // We know all of the bits for a scalar constant or a splat vector constant!
+    KnownOne = *C;
     KnownZero = ~KnownOne;
     return;
   }

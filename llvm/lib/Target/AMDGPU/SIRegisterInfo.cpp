@@ -801,7 +801,8 @@ unsigned SIRegisterInfo::getPreloadedValue(const MachineFunction &MF,
   case SIRegisterInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET:
     return MFI->PrivateSegmentWaveByteOffsetSystemSGPR;
   case SIRegisterInfo::PRIVATE_SEGMENT_BUFFER:
-    assert(ST.isAmdHsaOS() && "Non-HSA ABI currently uses relocations");
+    assert(ST.isAmdCodeObjectV2() &&
+           "Non-CodeObjectV2 ABI currently uses relocations");
     assert(MFI->hasPrivateSegmentBuffer());
     return MFI->PrivateSegmentBufferUserSGPR;
   case SIRegisterInfo::KERNARG_SEGMENT_PTR:
