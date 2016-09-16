@@ -171,7 +171,7 @@ void MaybeStartBackgroudThread() {
 
 void NOINLINE
 __sanitizer_sandbox_on_notify(__sanitizer_sandbox_arguments *args) {
-  PrepareForSandboxing(args);
-  if (sandboxing_callback)
-    sandboxing_callback();
+  __sanitizer::PrepareForSandboxing(args);
+  if (__sanitizer::sandboxing_callback)
+    __sanitizer::sandboxing_callback();
 }

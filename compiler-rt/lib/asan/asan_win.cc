@@ -44,7 +44,6 @@ int __asan_should_detect_stack_use_after_return() {
 // __asan_default_options().
 void __sanitizer_default_malloc_hook(void *ptr, uptr size) { }
 void __sanitizer_default_free_hook(void *ptr) { }
-void __sanitizer_default_print_memory_profile(int top_percent) {}
 const char* __asan_default_default_options() { return ""; }
 const char* __asan_default_default_suppressions() { return ""; }
 void __asan_default_on_error() {}
@@ -52,14 +51,12 @@ void __asan_default_on_error() {}
 #ifdef _WIN64
 #pragma comment(linker, "/alternatename:__sanitizer_malloc_hook=__sanitizer_default_malloc_hook")  // NOLINT
 #pragma comment(linker, "/alternatename:__sanitizer_free_hook=__sanitizer_default_free_hook")      // NOLINT
-#pragma comment(linker, "/alternatename:__sanitizer_print_memory_profile=__sanitizer_default_print_memory_profile") // NOLINT
 #pragma comment(linker, "/alternatename:__asan_default_options=__asan_default_default_options")    // NOLINT
 #pragma comment(linker, "/alternatename:__asan_default_suppressions=__asan_default_default_suppressions")    // NOLINT
 #pragma comment(linker, "/alternatename:__asan_on_error=__asan_default_on_error")                  // NOLINT
 #else
 #pragma comment(linker, "/alternatename:___sanitizer_malloc_hook=___sanitizer_default_malloc_hook")  // NOLINT
 #pragma comment(linker, "/alternatename:___sanitizer_free_hook=___sanitizer_default_free_hook")      // NOLINT
-#pragma comment(linker, "/alternatename:___sanitizer_print_memory_profile=___sanitizer_default_print_memory_profile") // NOLINT
 #pragma comment(linker, "/alternatename:___asan_default_options=___asan_default_default_options")    // NOLINT
 #pragma comment(linker, "/alternatename:___asan_default_suppressions=___asan_default_default_suppressions")    // NOLINT
 #pragma comment(linker, "/alternatename:___asan_on_error=___asan_default_on_error")                  // NOLINT

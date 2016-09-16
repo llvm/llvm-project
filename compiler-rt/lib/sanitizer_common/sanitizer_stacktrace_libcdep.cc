@@ -86,8 +86,9 @@ void BufferedStackTrace::Unwind(u32 max_depth, uptr pc, uptr bp, void *context,
 
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_symbolize_pc(uptr pc, const char *fmt, char *out_buf,
-                              uptr out_buf_size) {
+void __sanitizer_symbolize_pc(__sanitizer::uptr pc,
+                              const char *fmt, char *out_buf,
+                              __sanitizer::uptr out_buf_size) {
   if (!out_buf_size) return;
   using namespace __sanitizer;
   pc = StackTrace::GetPreviousInstructionPc(pc);

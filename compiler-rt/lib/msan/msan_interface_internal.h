@@ -37,6 +37,16 @@ void __msan_warning();
 SANITIZER_INTERFACE_ATTRIBUTE __attribute__((noreturn))
 void __msan_warning_noreturn();
 
+using __sanitizer::uptr;
+using __sanitizer::sptr;
+using __sanitizer::uu64;
+using __sanitizer::uu32;
+using __sanitizer::uu16;
+using __sanitizer::u64;
+using __sanitizer::u32;
+using __sanitizer::u16;
+using __sanitizer::u8;
+
 SANITIZER_INTERFACE_ATTRIBUTE
 void __msan_maybe_warning_1(u8 s, u32 o);
 SANITIZER_INTERFACE_ATTRIBUTE
