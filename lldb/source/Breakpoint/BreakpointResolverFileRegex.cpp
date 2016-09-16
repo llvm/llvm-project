@@ -30,7 +30,7 @@ using namespace lldb_private;
 BreakpointResolverFileRegex::BreakpointResolverFileRegex(
     Breakpoint *bkpt, RegularExpression &regex,
     const std::unordered_set<std::string> &func_names, bool exact_match)
-    : BreakpointResolver(bkpt, BreakpointResolver::FileLineResolver),
+    : BreakpointResolver(bkpt, BreakpointResolver::FileRegexResolver),
       m_regex(regex), m_exact_match(exact_match), m_function_names(func_names) {
 }
 

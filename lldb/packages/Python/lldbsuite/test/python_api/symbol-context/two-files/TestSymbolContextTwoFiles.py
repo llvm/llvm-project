@@ -61,7 +61,7 @@ class SymbolContextTwoFilesTestCase(TestBase):
         self.assertIsNotNone(breakpoint2)
         self.assertTrue(breakpoint2.IsValid())
 
-        process = target.LaunchSimple(None, None, os.getcwd())
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertIsNotNone(process, PROCESS_IS_VALID)
 
         threads = lldbutil.get_threads_stopped_at_breakpoint(

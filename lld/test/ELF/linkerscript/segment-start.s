@@ -20,3 +20,8 @@
 .quad foobar2
 .quad foobar3
 .quad foobar4
+
+// RUN: echo "SECTIONS { . = SEGMENT_START(\"foobar\", foo); }" > %t.script
+// RUN: not ld.lld %t.o %t.script -shared -o %t2.so 2>&1 \
+// RUN: | FileCheck --check-prefix=ERR %s
+// ERR: integer expected

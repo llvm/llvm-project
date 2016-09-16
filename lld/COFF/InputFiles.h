@@ -91,7 +91,7 @@ private:
 // .lib or .a file.
 class ArchiveFile : public InputFile {
 public:
-  explicit ArchiveFile(MemoryBufferRef M) : InputFile(ArchiveKind, M) {}
+  explicit ArchiveFile(MemoryBufferRef M);
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
   void parse() override;
 
@@ -100,7 +100,7 @@ public:
   // (So that we don't instantiate same members more than once.)
   MemoryBufferRef getMember(const Archive::Symbol *Sym);
 
-  llvm::MutableArrayRef<Lazy> getLazySymbols() { return LazySymbols; }
+  llvm::MutableArrayRef<Lazy> getLazySymbols();
 
   // All symbols returned by ArchiveFiles are of Lazy type.
   std::vector<SymbolBody *> &getSymbols() override {
